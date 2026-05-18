@@ -19,9 +19,12 @@
     "@hisabche/validation": "*",
     "@hookform/resolvers": "^5.2.2",
     "@react-pdf/renderer": "^4.5.1",
+    "@sentry/nextjs": "^10.53.1",
+    "@supabase/supabase-js": "^2.106.0",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "next": "16.2.6",
+    "posthog-js": "^1.374.0",
     "react": "19.2.6",
     "react-dom": "19.2.6",
     "react-hook-form": "^7.75.0"
