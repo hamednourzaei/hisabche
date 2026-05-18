@@ -6,8 +6,6 @@
 export {
   useAuthStore,
   type User,
-  type LoginCredentials,
-  type SignUpData,
   type AuthState,
 } from './slices/auth.slice'
 
