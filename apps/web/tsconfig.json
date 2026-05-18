@@ -1,0 +1,30 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "jsx": "preserve",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowJs": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "incremental": true,
+    "plugins": [{ "name": "next" }],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"],
+      "react": ["./node_modules/@types/react"],
+      "@hisabche/ui": ["../../packages/ui/src"],
+      "@hisabche/ui/*": ["../../packages/ui/src/*"],
+      "@hisabche/i18n": ["../../packages/i18n/src"],
+      "@hisabche/store": ["../../packages/store/src"],
+      "@hisabche/validation": ["../../packages/validation/src"],
+      "@hisabche/api": ["../../packages/api/src"],
+      "@hisabche/analytics": ["../../packages/analytics/src"],
+      "@hisabche/db": ["../../packages/db/src"]
+    }
+  },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}

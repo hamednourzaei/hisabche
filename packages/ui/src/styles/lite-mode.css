@@ -1,0 +1,43 @@
+/* Lite Mode — reduced animations, shadows, blur */
+.lite-mode * {
+  animation-duration: 0.01ms !important;
+  transition-duration: 0.01ms !important;
+}
+
+.lite-mode .backdrop-blur-sm,
+.lite-mode .backdrop-blur {
+  backdrop-filter: none !important;
+}
+
+.lite-mode .shadow-sm,
+.lite-mode .shadow-md,
+.lite-mode .shadow-lg,
+.lite-mode .shadow-xl,
+.lite-mode [class*="shadow"] {
+  box-shadow: none !important;
+}
+
+.lite-mode .animate-pulse,
+.lite-mode .animate-spin,
+.lite-mode .animate-bounce {
+  animation: none !important;
+}
+
+/* Data Saver — hide heavy images */
+.data-saver img:not([src*="svg"]):not([src*="icon"]) {
+  display: none;
+}
+
+.data-saver [style*="background-image"] {
+  background-image: none !important;
+}
+
+/* Offline queue badge */
+.offline-queue-badge {
+  animation: queuePulse 2s ease-in-out infinite;
+}
+
+@keyframes queuePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}

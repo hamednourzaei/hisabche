@@ -1,0 +1,229 @@
+/* ============================================
+ * Hisabche Design System — CSS Variables
+ * Zero hardcoded colors — all from tokens
+ * Full RTL support — logical properties
+ * ============================================ */
+
+/* ---------- Tailwind Directives ---------- */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ---------- Base Layer ---------- */
+@layer base {
+  :root {
+    /* ----- Colors - HSL (no hex!) ----- */
+    --hisab-primary: 158 100% 37%;
+    --hisab-primary-fg: 0 0% 100%;
+
+    --hisab-secondary: 210 40% 96%;
+    --hisab-secondary-fg: 222 47% 11%;
+
+    --hisab-accent: 35 80% 40%;
+    --hisab-accent-fg: 0 0% 100%;
+
+    --hisab-destructive: 0 84% 60%;
+    --hisab-destructive-fg: 0 0% 100%;
+
+    --hisab-success: 142 76% 36%;
+    --hisab-success-fg: 0 0% 100%;
+
+    --hisab-warning: 35 92% 50%;
+    --hisab-warning-fg: 0 0% 10%;
+
+    --hisab-info: 200 98% 39%;
+    --hisab-info-fg: 0 0% 100%;
+
+    /* ----- Background & Foreground ----- */
+    --hisab-background: 0 0% 100%;
+    --hisab-foreground: 222 47% 11%;
+
+    --hisab-card: 0 0% 100%;
+    --hisab-card-fg: 222 47% 11%;
+
+    --hisab-popover: 0 0% 100%;
+    --hisab-popover-fg: 222 47% 11%;
+
+    --hisab-muted: 210 40% 96%;
+    --hisab-muted-fg: 215 16% 47%;
+
+    /* ----- Borders ----- */
+    --hisab-border: 214 32% 91%;
+    --hisab-input: 214 32% 91%;
+    --hisab-ring: 158 100% 37%;
+
+    /* ----- Radius ----- */
+    --hisab-radius: 0.5rem;
+    --hisab-radius-sm: 0.25rem;
+    --hisab-radius-md: 0.375rem;
+    --hisab-radius-lg: 0.75rem;
+    --hisab-radius-xl: 1rem;
+    --hisab-radius-2xl: 1.5rem;
+
+    /* ----- Spacing ----- */
+    --hisab-spacing-xs: 0.25rem;
+    --hisab-spacing-sm: 0.5rem;
+    --hisab-spacing-md: 1rem;
+    --hisab-spacing-lg: 1.5rem;
+    --hisab-spacing-xl: 2rem;
+
+    /* ----- Shadow ----- */
+    --hisab-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --hisab-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    --hisab-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+
+    /* ----- Typography ----- */
+    --hisab-font-sans: 'Vazirmatn', system-ui, sans-serif;
+    --hisab-font-mono: 'Fira Code', monospace;
+    --hisab-font-size-xs: 0.75rem;
+    --hisab-font-size-sm: 0.875rem;
+    --hisab-font-size-base: 1rem;
+    --hisab-font-size-lg: 1.125rem;
+    --hisab-font-size-xl: 1.25rem;
+
+    /* ----- Transition ----- */
+    --hisab-transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* ---------- Dark Mode ---------- */
+  .dark {
+    --hisab-primary: 158 60% 50%;
+    --hisab-primary-fg: 0 0% 5%;
+
+    --hisab-secondary: 217 33% 17%;
+    --hisab-secondary-fg: 210 40% 98%;
+
+    --hisab-accent: 35 70% 55%;
+    --hisab-accent-fg: 0 0% 5%;
+
+    --hisab-destructive: 0 72% 51%;
+    --hisab-destructive-fg: 0 0% 100%;
+
+    --hisab-success: 142 71% 45%;
+    --hisab-success-fg: 0 0% 5%;
+
+    --hisab-warning: 35 80% 55%;
+    --hisab-warning-fg: 0 0% 5%;
+
+    --hisab-info: 200 85% 55%;
+    --hisab-info-fg: 0 0% 5%;
+
+    --hisab-background: 222 47% 11%;
+    --hisab-foreground: 210 40% 98%;
+
+    --hisab-card: 222 47% 14%;
+    --hisab-card-fg: 210 40% 98%;
+
+    --hisab-popover: 222 47% 14%;
+    --hisab-popover-fg: 210 40% 98%;
+
+    --hisab-muted: 217 33% 17%;
+    --hisab-muted-fg: 215 20% 65%;
+
+    --hisab-border: 217 33% 20%;
+    --hisab-input: 217 33% 20%;
+    --hisab-ring: 158 60% 50%;
+  }
+
+  /* ---------- Global Reset ---------- */
+  *,
+  *::before,
+  *::after {
+    border-color: hsl(var(--hisab-border));
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    -moz-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  body {
+    font-family: var(--hisab-font-sans);
+    font-size: var(--hisab-font-size-base);
+    line-height: 1.6;
+    color: hsl(var(--hisab-foreground));
+    background-color: hsl(var(--hisab-background));
+    transition: background-color var(--hisab-transition),
+                color var(--hisab-transition);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* RTL Support */
+  [dir="rtl"] {
+    text-align: right;
+    direction: rtl;
+    font-family: var(--hisab-font-sans);
+  }
+
+  [dir="ltr"] {
+    text-align: left;
+    direction: ltr;
+  }
+
+  /* Selection */
+  ::selection {
+    background-color: hsl(var(--hisab-primary) / 0.2);
+    color: hsl(var(--hisab-foreground));
+  }
+}
+
+/* ---------- Components Layer ---------- */
+@layer components {
+  /* Custom scrollbar for RTL */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--hisab-border)) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--hisab-border));
+    border-radius: 9999px;
+  }
+}
+
+/* ---------- Utilities Layer ---------- */
+@layer utilities {
+  /* Logical Properties — RTL safe */
+  .p-logical {
+    padding-inline-start: var(--hisab-spacing-md);
+    padding-inline-end: var(--hisab-spacing-md);
+    padding-block-start: var(--hisab-spacing-sm);
+    padding-block-end: var(--hisab-spacing-sm);
+  }
+
+  .m-logical {
+    margin-inline-start: auto;
+    margin-inline-end: auto;
+  }
+}
+@keyframes confettiFall {
+  0% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(100vh) rotate(720deg) scale(0);
+  }
+}
+@keyframes confetti-fall {
+  0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+@keyframes scale-in {
+  0%   { transform: scale(0.5); opacity: 0; }
+  70%  { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}

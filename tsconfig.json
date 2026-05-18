@@ -1,0 +1,39 @@
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "experimentalDecorators": true,
+"emitDecoratorMetadata": true,
+    "resolveJsonModule": true,
+    "allowJs": true,
+    "checkJs": false,
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "outDir": "./dist",
+    "baseUrl": ".",
+    "paths": {
+      "@hisabche/auth": ["./packages/auth/src"],
+      "@hisabche/ui": ["./packages/ui/src"],
+      "@hisabche/ui/*": ["./packages/ui/src/*"],
+      "@hisabche/i18n": ["./packages/i18n/src"],
+      "@hisabche/store": ["./packages/store/src"],
+      "@hisabche/validation": ["./packages/validation/src"],
+      "@hisabche/api": ["./packages/api/src"],
+      "@hisabche/db": ["./packages/db/src"]
+    }
+  },
+  "exclude": ["node_modules", "dist", ".next", ".expo"]
+}

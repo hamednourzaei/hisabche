@@ -1,0 +1,43 @@
+{
+  "name": "@hisabche/web",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf .next node_modules"
+  },
+  "dependencies": {
+    "@hisabche/api": "*",
+    "@hisabche/db": "*",
+    "@hisabche/i18n": "*",
+    "@hisabche/store": "*",
+    "@hisabche/ui": "*",
+    "@hisabche/validation": "*",
+    "@hookform/resolvers": "^5.2.2",
+    "@react-pdf/renderer": "^4.5.1",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
+    "next": "16.2.6",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "react-hook-form": "^7.75.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "autoprefixer": "^10.4.19",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.2.6",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.4",
+    "typescript": "^5.5.0"
+  },
+  "overrides": {
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3"
+  }
+}

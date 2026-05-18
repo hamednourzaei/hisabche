@@ -1,0 +1,70 @@
+// ============================================
+// Auth Hooks — TanStack Query
+// ============================================
+
+import { useMutation, useQuery } from '@tanstack/react-query'
+import apiClient from '../lib/client'
+import type { LoginInput, SignUpInput } from '@hisabche/validation'
+
+interface AuthResponse {
+  data: {
+    user: {
+      id: string
+      email: string
+      fullName: string
+      businessName?: string
+      createdAt: string
+    }
+    token: string
+  }
+}
+
+export function useLogin() {
+  return useMutation({
+    mutationFn: async (input: LoginInput) => {
+      const response = await apiClient.post<AuthResponse['data']>('/auth/login', input)
+      const data = (response as any).data || response
+      if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+        localStorage.setItem('hisabche-token', data.token)
+      }
+      return data
+    },
+  })
+}
+
+export function useSignUp() {
+  return useMutation({
+    mutationFn: async (input: SignUpInput) => {
+      const response = await apiClient.post<AuthResponse['data']>('/auth/signup', input)
+      const data = (response as any).data || response
+      if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+        localStorage.setItem('hisabche-token', data.token)
+      }
+      return data
+    },
+  })
+}
+
+export function useLogout() {
+  return useMutation({
+    mutationFn: async () => {
+      await apiClient.post('/auth/logout')
+      if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
+        localStorage.removeItem('hisabche-token')
+      }
+    },
+  })
+}
+
+export function useCurrentUser() {
+  return useQuery({
+    queryKey: ['auth', 'me'],
+    queryFn: async () => {
+      const response = await apiClient.get<{ user: any }>('/auth/me')
+      const data = (response as any).data || response
+      return data.user
+    },
+    staleTime: 1000 * 60 * 10,
+    retry: false,
+  })
+}

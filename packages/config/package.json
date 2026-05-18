@@ -1,0 +1,7 @@
+{
+  "name": "@hisabche/config",
+  "version": "0.0.1",
+  "private": true,
+  "main": "./src/env.ts",
+  "types": "./src/env.ts"
+}
