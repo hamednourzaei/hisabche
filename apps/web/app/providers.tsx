@@ -1,63 +1,46 @@
 "use client"
 
-import React, {
-  useEffect,
-} from 'react'
+import React, { useEffect } from "react"
 
-import {
-  QueryClient,
-  QueryClientProvider,
-} from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { I18nextProvider } from "react-i18next"
 
-import {
-  I18nextProvider,
-} from 'react-i18next'
-
-import i18n, {
-  changeLanguage,
-} from '@hisabche/i18n'
+import i18n, { changeLanguage } from "@hisabche/i18n"
 
 import {
   useThemeStore,
   useAuthStore,
   useDeviceStore,
-} from '@hisabche/store'
+} from "@hisabche/store"
 
-import {
-  initPostHog,
-  initSentry,
-  identifyUser,
-  setUser,
-} from '@hisabche/analytics'
+// 👇 safe dynamic import for analytics (prevents build crash)
+let analytics: any = null
 
-const queryClient =
-  new QueryClient({
-    defaultOptions: {
-      queries: {
-        staleTime:
-          1000 * 60 * 2,
+async function loadAnalytics() {
+  try {
+    analytics = await import("@hisabche/analytics")
+    analytics.initPostHog?.()
+    analytics.initSentry?.()
+  } catch {
+    // analytics not available → ignore
+  }
+}
 
-        retry: 1,
-
-        refetchOnWindowFocus:
-          false,
-      },
-
-      mutations: {
-        retry: 0,
-      },
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 2,
+      retry: 1,
+      refetchOnWindowFocus: false,
     },
-  })
+    mutations: {
+      retry: 0,
+    },
+  },
+})
 
-function ThemeInitializer({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  const {
-    mode,
-    setMode,
-  } = useThemeStore()
+function ThemeInitializer({ children }: { children: React.ReactNode }) {
+  const { mode, setMode } = useThemeStore()
 
   useEffect(() => {
     setMode(mode)
@@ -71,77 +54,50 @@ function ThemeInitializer({
 
     detectDevice()
 
-    if (
-      performanceMode === 'lite' ||
-      reducedMotion
-    ) {
-      document.documentElement.classList.add(
-        'lite-mode'
-      )
+    if (performanceMode === "lite" || reducedMotion) {
+      document.documentElement.classList.add("lite-mode")
     }
 
     if (dataSaver) {
-      document.documentElement.classList.add(
-        'data-saver'
-      )
+      document.documentElement.classList.add("data-saver")
     }
   }, [mode, setMode])
 
   return <>{children}</>
 }
 
-function AuthInitializer({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  const user = useAuthStore(
-    (s) => s.user
-  )
+function AuthInitializer({ children }: { children: React.ReactNode }) {
+  const user = useAuthStore((s) => s.user)
 
   useEffect(() => {
     if (!user) return
 
-    identifyUser(user.id, {
-      email: user.email,
+    // safe analytics usage
+    try {
+      analytics?.identifyUser?.(user.id, {
+        email: user.email,
+        businessName: user.businessName,
+      })
 
-      businessName:
-        user.businessName,
-    })
-
-    setUser(
-      user.id,
-      user.email
-    )
+      analytics?.setUser?.(user.id, user.email)
+    } catch {
+      // ignore
+    }
   }, [user])
 
   return <>{children}</>
 }
 
-function LanguageInitializer({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+function LanguageInitializer({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     try {
-      const storedLang =
-        localStorage.getItem(
-          'hisabche-lang'
-        )
+      const storedLang = localStorage.getItem("hisabche-lang")
 
       if (storedLang) {
-        changeLanguage(
-          storedLang as
-            | 'fa-AF'
-            | 'fa-IR'
-        )
+        changeLanguage(storedLang as "fa-AF" | "fa-IR")
 
-        document.documentElement.lang =
-          storedLang
-
-        document.documentElement.dir =
-          'rtl'
+        document.documentElement.lang = storedLang
+        document.documentElement.dir = "rtl"
       }
     } catch {
       //
@@ -153,39 +109,23 @@ function LanguageInitializer({
 
 function AnalyticsBootstrap() {
   useEffect(() => {
-    initPostHog()
-
-    initSentry()
+    loadAnalytics()
   }, [])
 
   return null
 }
 
-export function Providers({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <QueryClientProvider
-      client={queryClient}
-    >
+    <QueryClientProvider client={queryClient}>
       <I18nextProvider i18n={i18n}>
-
         <AnalyticsBootstrap />
 
         <ThemeInitializer>
-
           <AuthInitializer>
-
-            <LanguageInitializer>
-              {children}
-            </LanguageInitializer>
-
+            <LanguageInitializer>{children}</LanguageInitializer>
           </AuthInitializer>
-
         </ThemeInitializer>
-
       </I18nextProvider>
     </QueryClientProvider>
   )

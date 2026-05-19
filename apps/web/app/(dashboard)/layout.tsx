@@ -3,10 +3,21 @@
 import type { ReactNode } from "react"
 import { redirect, useRouter } from "next/navigation"
 import { usePathname } from "next/navigation"
+
 import { useAuthStore } from "@hisabche/store"
-import { DashboardHeader } from "../../../../packages/ui/src/components/ui/dashboard-header"
-import { DashboardSidebar } from "../../../../packages/ui/src/components/ui/dashboard-sidebar"
-import { LayoutDashboard, Package, FileText, Settings, BookOpen } from "lucide-react"
+
+import {
+  DashboardHeader,
+  DashboardSidebar,
+} from "@hisabche/ui"
+
+import {
+  LayoutDashboard,
+  Package,
+  FileText,
+  Settings,
+  BookOpen,
+} from "lucide-react"
 
 function LoadingScreen() {
   return (
@@ -25,15 +36,18 @@ function DashboardFooter() {
 }
 
 const navItems = [
-  
   { id: "dashboard", label: "داشبورد", path: "/dashboard", icon: LayoutDashboard },
   { id: "baqidari", label: "باقی‌داری", path: "/baqidari", icon: BookOpen },
-  { id: "godam",     label: "انبار",    path: "/godam",     icon: Package },
-  { id: "invoices",  label: "فاکتورها", path: "/invoices",  icon: FileText },
-  { id: "settings",  label: "تنظیمات", path: "/settings",  icon: Settings },
+  { id: "godam", label: "انبار", path: "/godam", icon: Package },
+  { id: "invoices", label: "فاکتورها", path: "/invoices", icon: FileText },
+  { id: "settings", label: "تنظیمات", path: "/settings", icon: Settings },
 ]
 
-export default function DashboardLayout({ children }: { children: ReactNode }) {
+export default function DashboardLayout({
+  children,
+}: {
+  children: ReactNode
+}) {
   const router = useRouter()
   const pathname = usePathname()
   const { isAuthenticated, hasHydrated } = useAuthStore()
@@ -48,6 +62,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         activeNav={pathname}
         onNavigate={(_id, path) => router.push(path)}
       />
+
       <div className="flex min-h-screen flex-1 flex-col overflow-hidden">
         <DashboardHeader
           lastSyncedAt={Date.now()}
@@ -60,9 +75,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             router.push("/login")
           }}
         />
+
         <main className="flex-1 overflow-y-auto p-4">
           {children}
         </main>
+
         <DashboardFooter />
       </div>
     </div>

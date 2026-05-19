@@ -8,7 +8,7 @@ import {
 import {
   signIn as supabaseSignIn,
   signOut as supabaseSignOut,
-} from '@hisabche/auth'
+} from '../../../auth/src/'
 
 export interface User {
   id: string
