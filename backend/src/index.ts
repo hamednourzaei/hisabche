@@ -6,6 +6,8 @@ import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import rateLimit from '@fastify/rate-limit'
 import dotenv from 'dotenv'
+
+// Routes
 import { syncRoutes } from './routes/sync.routes'
 import { invoiceRoutes } from './routes/invoice.routes'
 import { productRoutes } from './routes/product.routes'
@@ -15,15 +17,23 @@ import { transactionRoutes } from './routes/transaction.routes'
 import { godamRoutes } from './routes/godam.routes'
 import { invoicePdfRoutes } from './routes/invoice-pdf.routes'
 
-// Load environment variables
-dotenv.config({ path: '../../.env' })
+/**
+ * ============================================
+ * ENV SETUP (PRODUCTION SAFE)
+ * ============================================
+ * - Render / Vercel: env vars are injected automatically
+ * - local dev: uses .env file
+ */
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config()
+}
 
 // ============================================
 // Server Setup
 // ============================================
 
-const PORT = parseInt(process.env.PORT || '3001', 10)
-const HOST = process.env.HOST || '0.0.0.0'
+const PORT = Number(process.env.PORT || 3001)
+const HOST = '0.0.0.0'
 
 const isProduction = process.env.NODE_ENV === 'production'
 
@@ -45,21 +55,27 @@ const server = Fastify({
 })
 
 // ============================================
-// Plugins & Routes
+// START FUNCTION
 // ============================================
 
 async function start(): Promise<void> {
   try {
-    // Rate Limit — global
+    // ----------------------------
+    // Rate Limit
+    // ----------------------------
     await server.register(rateLimit, {
       max: 100,
       timeWindow: '1 minute',
     })
 
-    // CORS
+    // ----------------------------
+    // CORS (PRODUCTION SAFE)
+    // ----------------------------
     await server.register(cors, {
       origin: isProduction
-        ? ['https://hisabche.com']
+        ? [
+            process.env.FRONTEND_URL || 'https://hisabche.com',
+          ]
         : [
             'http://localhost:3000',
             'http://localhost:19006',
@@ -69,80 +85,95 @@ async function start(): Promise<void> {
       credentials: true,
     })
 
-    // Health check
+    // ----------------------------
+    // HEALTH CHECK (IMPORTANT FOR RENDER)
+    // ----------------------------
     server.get('/api/health', async () => {
       return {
         status: 'ok',
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
-        version: '0.0.1',
+        env: process.env.NODE_ENV,
       }
     })
 
-    // API info
+    // ----------------------------
+    // API INFO
+    // ----------------------------
     server.get('/api', async () => {
       return {
         name: 'Hisabche API',
         version: '0.0.1',
-        documentation: '/api/docs',
       }
     })
 
-    // Auth routes
-    await server.register(authRoutes)
+    // ----------------------------
+    // ROUTES
+    // ----------------------------
+    await server.register(authRoutes, { prefix: '/api/auth' })
+    await server.register(syncRoutes, { prefix: '/api/sync' })
+    await server.register(invoiceRoutes, { prefix: '/api/invoices' })
+    await server.register(invoicePdfRoutes, { prefix: '/api/invoices/pdf' })
+    await server.register(productRoutes, { prefix: '/api/products' })
+    await server.register(customerRoutes, { prefix: '/api/customers' })
+    await server.register(transactionRoutes, { prefix: '/api/transactions' })
+    await server.register(godamRoutes, { prefix: '/api/godam' })
 
-    // Business routes
-    await server.register(syncRoutes)
-    await server.register(invoiceRoutes)
-    await server.register(invoicePdfRoutes)
-    await server.register(productRoutes)
-    await server.register(customerRoutes)
-    await server.register(transactionRoutes)
-    await server.register(godamRoutes)
-
-    // 404 handler
-    server.setNotFoundHandler((_request, reply) => {
+    // ----------------------------
+    // 404 HANDLER
+    // ----------------------------
+    server.setNotFoundHandler((_req, reply) => {
       reply.status(404).send({
         error: 'Not Found',
-        message: 'The requested resource does not exist',
+        message: 'Route does not exist',
         statusCode: 404,
       })
     })
 
-    // Global error handler
-    server.setErrorHandler((error, _request, reply) => {
-      server.log.error(error.message || 'Unknown error')
-      const statusCode = error.statusCode || 500
-      reply.status(statusCode).send({
+    // ----------------------------
+    // GLOBAL ERROR HANDLER
+    // ----------------------------
+    server.setErrorHandler((error, _req, reply) => {
+      server.log.error(error)
+
+      reply.status(error.statusCode || 500).send({
         error: error.name || 'Internal Server Error',
-        message: error.message || 'An unexpected error occurred',
-        statusCode,
+        message: error.message || 'Unexpected error',
+        statusCode: error.statusCode || 500,
       })
     })
 
-    // Start server
-    await server.listen({ port: PORT, host: HOST })
-    server.log.info(`Server running on http://${HOST}:${PORT}`)
+    // ----------------------------
+    // START SERVER
+    // ----------------------------
+    await server.listen({
+      port: PORT,
+      host: HOST,
+    })
+
+    server.log.info(`🚀 Server running on ${HOST}:${PORT}`)
   } catch (err) {
-    server.log.error(err instanceof Error ? err.message : 'Failed to start server')
+    server.log.error(err)
     process.exit(1)
   }
 }
 
-// Graceful shutdown
-const gracefulShutdown = async (signal: string): Promise<void> => {
-  server.log.info(`Received ${signal}. Shutting down gracefully...`)
+// ============================================
+// GRACEFUL SHUTDOWN (RENDER SAFE)
+// ============================================
+
+async function shutdown(signal: string) {
   try {
+    server.log.info(`Received ${signal}, shutting down...`)
     await server.close()
-    server.log.info('Server closed')
     process.exit(0)
   } catch (err) {
-    server.log.error(err instanceof Error ? err.message : 'Error during shutdown')
+    server.log.error(err)
     process.exit(1)
   }
 }
 
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'))
-process.on('SIGINT', () => gracefulShutdown('SIGINT'))
+process.on('SIGTERM', () => shutdown('SIGTERM'))
+process.on('SIGINT', () => shutdown('SIGINT'))
 
 start()
