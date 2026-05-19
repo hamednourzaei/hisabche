@@ -77,10 +77,9 @@ async function start(): Promise<void> {
             process.env.FRONTEND_URL || 'https://hisabche.com',
           ]
         : [
-            'http://localhost:3000',
-            'http://localhost:19006',
-            'http://localhost:8081',
-            'http://127.0.0.1:8081',
+            'https://project-ro4vn-hisabche-s-projects.vercel.app',
+    'https://project-ro4vn.vercel.app',
+    'http://localhost:3000',
           ],
       credentials: true,
     })
