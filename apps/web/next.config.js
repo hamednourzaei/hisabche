@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: undefined, // ← این خط رو اضافه کن — standalone رو غیرفعال کن
+output: 'standalone',
   reactStrictMode: true,
   transpilePackages: [
     '@hisabche/ui', '@hisabche/i18n', '@hisabche/store',
