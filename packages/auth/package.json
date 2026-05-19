@@ -2,9 +2,9 @@
   "name": "@hisabche/auth",
   "version": "0.0.1",
   "private": true,
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
-  "dependencies": {
-    "@supabase/supabase-js": "^2.106.0"
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc"
   }
 }
