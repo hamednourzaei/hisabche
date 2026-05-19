@@ -107,16 +107,16 @@ async function start(): Promise<void> {
     })
 
     // ----------------------------
-    // ROUTES
+    // ROUTES — no prefix, routes already have /api/...
     // ----------------------------
-    await server.register(authRoutes, { prefix: '/api/auth' })
-    await server.register(syncRoutes, { prefix: '/api/sync' })
-    await server.register(invoiceRoutes, { prefix: '/api/invoices' })
-    await server.register(invoicePdfRoutes, { prefix: '/api/invoices/pdf' })
-    await server.register(productRoutes, { prefix: '/api/products' })
-    await server.register(customerRoutes, { prefix: '/api/customers' })
-    await server.register(transactionRoutes, { prefix: '/api/transactions' })
-    await server.register(godamRoutes, { prefix: '/api/godam' })
+    await server.register(authRoutes)
+    await server.register(syncRoutes)
+    await server.register(invoiceRoutes)
+    await server.register(invoicePdfRoutes)
+    await server.register(productRoutes)
+    await server.register(customerRoutes)
+    await server.register(transactionRoutes)
+    await server.register(godamRoutes)
 
     // ----------------------------
     // 404 HANDLER
