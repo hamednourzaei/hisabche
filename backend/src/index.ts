@@ -74,7 +74,7 @@ async function start(): Promise<void> {
     await server.register(cors, {
       origin: isProduction
         ? [
-            process.env.FRONTEND_URL || 'https://hisabche.com',
+            process.env.FRONTEND_URL || 'https://project-ro4vn-hisabche-s-projects.vercel.app',
           ]
         : [
             'https://project-ro4vn-hisabche-s-projects.vercel.app',
