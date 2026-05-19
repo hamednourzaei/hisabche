@@ -13,7 +13,7 @@ function LoadingScreen() {
     </div>
   )
 }
-
+console.log(process.env.NEXT_PUBLIC_SUPABASE_URL)
 export default function RootPage() {
   const { isAuthenticated, hasHydrated, isLoading } = useAuthStore()
 
