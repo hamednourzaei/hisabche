@@ -108,7 +108,17 @@
     "selectProduct": "انتخاب جنس",
     "faktoorList": "لیست فاکتورها",
     "noFaktoors": "هیچ فاکتوری موجود نیست",
-    "createFirstFaktoor": "اولین فاکتور را بسازید"
+    "createFirstFaktoor": "اولین فاکتور را بسازید",
+    "created": "فاکتور با موفقیت ثبت شد",
+    "clickToView": "کلیک کنید تا فاکتور را ببینید",
+    "detail": "جزئیات فاکتور",
+    "notFound": "فاکتور پیدا نشد",
+    "remaining": "باقی‌مانده",
+    "generatedBy": "تولید شده توسط",
+    "copiedToClipboard": "متن فاکتور کپی شد",
+    "completed": "تکمیل شده",
+    "pending": "در انتظار",
+    "cancelled": "لغو شده"
   },
   "godam": {
     "title": "گدام",
@@ -137,6 +147,11 @@
     "toGodam": "به گدام",
     "transferQuantity": "مقدار انتقال",
     "stockHistory": "تاریخچه موجودی",
+    "newProduct": "محصول جدید",
+    "noProducts": "هیچ محصولی موجود نیست",
+    "addProductModal": "محصول جدید",
+    "initialStock": "موجودی اولیه",
+    "pickProduct": "انتخاب محصول...",
     "categories": {
       "general": "عمومی",
       "food": "مواد غذایی",
@@ -179,7 +194,8 @@
     "noTransactions": "معامله‌ای موجود نیست",
     "dateRange": "از تاریخ... تا تاریخ...",
     "selected": "انتخاب شده",
-    "allCustomers": "همه مشتریان"
+    "allCustomers": "همه مشتریان",
+    "totalDebt": "کل بدهی"
   },
   "currency": {
     "title": "پول",
@@ -261,12 +277,44 @@
     "total": "مجموع",
     "sum": "جمله",
     "average": "اوسط",
-    "count": "تعداد"
+    "count": "تعداد",
+    "undo": "واگرد"
   },
   "customer": {
     "pickPlaceholder": "انتخاب مشتری...",
     "noCustomers": "هیچ مشتری‌ای پیدا نشد",
     "quickCreate": "نام مشتری جدید",
     "createError": "خطا در ایجاد مشتری. دوباره تلاش کنید."
+  },
+  "dashboard": {
+    "welcome": "خوش آمدید",
+    "todaySales": "فروش امروز",
+    "lowStockAlert": "موجودی کم",
+    "totalDebt": "مجموع بدهی",
+    "recentInvoices": "آخرین فاکتورها",
+    "noInvoicesYet": "هنوز فاکتوری ثبت نشده",
+    "viewAllInvoices": "مشاهده همه فاکتورها",
+    "itemsNeedReorder": "قلم نیاز به شارژ",
+    "ready": "همه چیز آماده است!"
+  },
+  "quickInvoice": {
+    "whatSold": "چه چیزی فروختید؟",
+    "toWhom": "به چه کسی فروختید؟ (اختیاری)",
+    "howMuch": "چند فروختید؟",
+    "productPlaceholder": "مثلاً: برنج، روغن، چای...",
+    "customerPlaceholder": "مثلاً: احمد، محمد...",
+    "pricePlaceholder": "مثلاً: ۵۰۰",
+    "lastCustomer": "آخرین مشتری"
+  },
+  "payment": {
+    "record": "ثبت پرداخت",
+    "recorded": "پرداخت ثبت شد",
+    "undone": "پرداخت واگرد شد",
+    "undoneDescription": "مبلغ پرداخت برگشت داده شد"
+  },
+  "debt": {
+    "total": "کل بدهی",
+    "recalculate": "محاسبه مجدد",
+    "recalculated": "بدهی دوباره محاسبه شد"
   }
 }
