@@ -1,27 +1,22 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: undefined, // ← این خط رو اضافه کن — standalone رو غیرفعال کن
   reactStrictMode: true,
   transpilePackages: [
     '@hisabche/ui', '@hisabche/i18n', '@hisabche/store',
-  '@hisabche/validation', '@hisabche/api', '@hisabche/auth',
+    '@hisabche/validation', '@hisabche/api', '@hisabche/auth',
   ],
   images: {
     formats: ['image/webp', 'image/avif'],
-    minimumCacheTTL: 60,
-    deviceSizes: [640, 750, 828, 1080, 1200],
-    imageSizes: [16, 32, 48, 64, 96, 128],
   },
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production',
   },
   experimental: {
-    optimizePackageImports: ['lucide-react'],
     optimizeCss: true,
   },
-  turbopack: {},
   poweredByHeader: false,
   compress: true,
-  productionBrowserSourceMaps: false,
   async headers() {
     return [
       {
@@ -34,7 +29,9 @@ const nextConfig = {
     ]
   },
   async redirects() {
-    return [{ source: '/dashboard', destination: '/', permanent: true }]
+    return [
+      { source: '/dashboard', destination: '/', permanent: true },
+    ]
   },
 }
 

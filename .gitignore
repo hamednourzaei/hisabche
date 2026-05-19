@@ -56,3 +56,5 @@ coverage
 
 # Misc
 *.tsbuildinfo
+.vercel
+.env*.local
