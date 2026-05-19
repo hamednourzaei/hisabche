@@ -36,7 +36,7 @@ export async function authRoutes(fastify: FastifyInstance) {
       }
     }
 
-    reply.status(401).send({
+    return reply.status(401).send({
       error: 'Invalid credentials',
       message: 'Email or password is incorrect',
       statusCode: 401,
