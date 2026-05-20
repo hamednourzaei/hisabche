@@ -21,7 +21,7 @@ export default function InvoicePDFDownload({ invoice }: Props) {
     if (!invoiceId || loading) return
     setLoading(true)
 
-    const url = `${API_URL}/api/invoices/${invoiceId}/pdf`
+const url = `https://hisabche.onrender.com/api/invoices/${invoiceId}/pdf`
 
     // Create hidden iframe
     const iframe = document.createElement("iframe")
