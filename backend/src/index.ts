@@ -80,6 +80,8 @@ async function start(): Promise<void> {
             'https://project-ro4vn-hisabche-s-projects.vercel.app',
     'https://project-ro4vn.vercel.app',
     'http://localhost:3000',
+    'https://hisabche.com',
+  'https://www.hisabche.com',
           ],
       credentials: true,
     })
