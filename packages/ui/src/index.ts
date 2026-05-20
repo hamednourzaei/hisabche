@@ -43,3 +43,8 @@ export { CustomerPicker } from "./components/ui/customer-picker"
 export type SupportedLanguage = 'fa-AF' | 'fa-IR'
 export { AddProductModal } from "./components/ui/add-product-modal"
 export { StockStatsCard } from "./components/ui/stock-stats-card"
+export { LandingPreview } from "./components/ui/landing-preview"
+export {
+  AnimatedCounter, GradientMesh, GlassNavbar, ShimmerCTA,
+  Section, FeatureCard, SectionHeading,
+} from "./components/ui/landing-section"

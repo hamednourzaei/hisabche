@@ -2,6 +2,7 @@
 
 import { useCallback } from "react"
 import { useTranslation } from "react-i18next"
+import { useRouter } from "next/navigation"
 import { useThemeStore } from "@hisabche/store"
 import { changeLanguage, type SupportedLanguage } from "@hisabche/i18n"
 
@@ -39,56 +40,98 @@ function SyncPill({ lastSyncedAt, isOnline, isSyncing, pendingCount }: {
   return null
 }
 
-// ─── DashboardHeader ────────────────────────────────────
-interface DashboardHeaderProps {
+// ─── Universal Header ──────────────────────────────────
+interface HeaderProps {
+  variant?: "landing" | "dashboard"
   businessName?: string
-  lastSyncedAt: number | null
-  isOnline: boolean
-  isSyncing: boolean
-  pendingCount: number
-  currentLang: string
-  onLogout: () => void | Promise<void>
+  lastSyncedAt?: number | null
+  isOnline?: boolean
+  isSyncing?: boolean
+  pendingCount?: number
+  currentLang?: string
+  onLogout?: () => void | Promise<void>
 }
 
 export function DashboardHeader({
-  businessName, lastSyncedAt, isOnline, isSyncing, pendingCount, currentLang, onLogout,
-}: DashboardHeaderProps) {
+  variant = "dashboard",
+  businessName,
+  lastSyncedAt = null,
+  isOnline = true,
+  isSyncing = false,
+  pendingCount = 0,
+  currentLang = "fa-AF",
+  onLogout,
+}: HeaderProps) {
   const { t } = useTranslation()
+  const router = useRouter()
   const { isDark, toggle } = useThemeStore()
 
   const toggleLang = useCallback(() => {
     changeLanguage((currentLang === "fa-AF" ? "fa-IR" : "fa-AF") as SupportedLanguage)
   }, [currentLang])
 
+  // ── Common action buttons (used in both variants) ──
+  const ActionButtons = () => (
+    <>
+      <button type="button" onClick={toggleLang} aria-label="تغییر زبان" className="ghost-btn">
+        {IconGlobe}
+        <span className="lang-pill hidden sm:inline">{currentLang === "fa-AF" ? "FA" : "IR"}</span>
+      </button>
+      <button type="button" onClick={toggle} aria-label={isDark ? "حالت روشن" : "حالت تاریک"} className="ghost-btn">
+        {isDark ? IconSun : IconMoon}
+      </button>
+    </>
+  )
+
   return (
-    <header className="dh border-b border-[var(--hisab-border)] backdrop-blur-lg ">
-      <div className="dh-inner border-b border-[var(--hisab-border)]">
-        {/* Left */}
-        <div className="dh-left">
+    <header className="sticky top-0 z-50 border-b border-[var(--hisab-border)] bg-[var(--hisab-background)]/70 backdrop-blur-xl">
+      <div className="mx-auto flex h-12 sm:h-14 max-w-6xl items-center justify-between px-4">
+
+        {/* ── Left ──────────────────────────────────── */}
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <BrandMark />
-          <div className="dh-brand-text">
-            
-            {businessName && <span className="dh-context">{businessName}</span>}
-          </div>
-          <span className="dh-sep" />
-          <SyncPill lastSyncedAt={lastSyncedAt} isOnline={isOnline} isSyncing={isSyncing} pendingCount={pendingCount} />
+
+          {variant === "dashboard" && (
+            <>
+              <div className="hidden sm:flex flex-col min-w-0">
+                <span className="text-sm font-bold text-[var(--hisab-foreground)] truncate">{t("app.name")}</span>
+                {businessName && (
+                  <span className="text-[10px] text-[var(--hisab-muted-fg)] truncate">{businessName}</span>
+                )}
+              </div>
+              <span className="hidden sm:block w-px h-5 bg-[var(--hisab-border)] mx-1" />
+              <SyncPill lastSyncedAt={lastSyncedAt} isOnline={isOnline} isSyncing={isSyncing} pendingCount={pendingCount} />
+            </>
+          )}
+
+          {variant === "landing" && (
+            <span className="font-bold text-sm text-[var(--hisab-foreground)]">{t("app.name")}</span>
+          )}
         </div>
 
-        {/* Right */}
-        <div className="dh-right">
-          <button type="button" onClick={toggleLang} aria-label="تغییر زبان" className="ghost-btn">
-            {IconGlobe}
-            <span className="lang-pill">{currentLang === "fa-AF" ? "FA" : "IR"}</span>
-          </button>
+        {/* ── Right ──────────────────────────────────── */}
+        <div className="flex items-center gap-1 sm:gap-2">
+          {variant === "dashboard" && (
+            <>
+              <ActionButtons />
+              <button type="button" onClick={onLogout} aria-label="خروج" className="ghost-btn ghost-danger">
+                {IconLogout}
+                <span className="hidden lg:inline text-[11px]">{t("auth.signOut")}</span>
+              </button>
+            </>
+          )}
 
-          <button type="button" onClick={toggle} aria-label={isDark ? "حالت روشن" : "حالت تاریک"} className="ghost-btn">
-            {isDark ? IconSun : IconMoon}
-          </button>
-
-          <button type="button" onClick={onLogout} aria-label="خروج" className="ghost-btn ghost-danger">
-            {IconLogout}
-            <span className="hidden lg:inline text-[11px] xs:text-xs">{t("auth.signOut")}</span>
-          </button>
+          {variant === "landing" && (
+            <>
+              <ActionButtons />
+              <button
+                onClick={() => router.push("/login")}
+                className="rounded-lg bg-[var(--hisab-primary)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--hisab-primary)]/90 transition-all active:scale-95"
+              >
+                {t("auth.signIn")}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </header>

@@ -28,9 +28,9 @@
     "npm": ">=9.0.0"
   },
   "overrides": {
-  "react": "19.2.6",
-  "react-dom": "19.2.6"
-},
+    "react": "19.2.6",
+    "react-dom": "19.2.6"
+  },
   "dependencies": {
     "@sentry/nextjs": "^10.53.1",
     "@supabase/supabase-js": "^2.106.0",
@@ -39,11 +39,12 @@
     "critters": "^0.0.23",
     "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.2",
+    "framer-motion": "^12.39.0",
     "pg": "^8.20.0",
     "postgres": "^3.4.9",
     "posthog-js": "^1.374.0",
     "react": "19.2.6",
-"react-dom": "19.2.6",
+    "react-dom": "19.2.6",
     "socks-proxy-agent": "^10.0.0",
     "tailwind-merge": "^3.5.0",
     "undici": "^8.2.0"
