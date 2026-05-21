@@ -189,10 +189,22 @@ function CTAScene() {
 }
 
 function LandingPage() {
+  const { scrollY } = useScroll()
+  const headerBg = useTransform(scrollY, [0, 80], ["transparent", "var(--hisab-background)"])
+  const headerShadow = useTransform(scrollY, [0, 80], ["none", "0 1px 3px 0 rgb(0 0 0 / 0.1)"])
+
   return (
     <div className="min-h-screen relative text-[var(--hisab-foreground)] overflow-x-hidden">
       <LivingBackground />
-      <DashboardHeader variant="landing" />
+      
+      {/* STICKY HEADER */}
+      <motion.div
+        style={{ backgroundColor: headerBg, boxShadow: headerShadow }}
+        className="sticky top-0 z-50 transition-colors duration-300"
+      >
+        <DashboardHeader variant="landing" />
+      </motion.div>
+
       <CinematicHero />
       <Section bordered>
         <div className="grid grid-cols-3 gap-6">
