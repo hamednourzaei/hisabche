@@ -7,14 +7,35 @@ import { useProducts, useDeleteProduct } from "@hisabche/api"
 import { Button, Badge, Card, CardContent, Input, EmptyState, AddProductModal, StockStatsCard } from "@hisabche/ui"
 import { Plus, Search, Trash2, Package, AlertTriangle, DollarSign, Eye } from "lucide-react"
 
-const CURRENCIES = [
+// ═══ Types ═══
+interface Product {
+  id: string
+  name: string
+  quantity: number | string
+  sell_price?: number | string
+  sellPrice?: number | string
+  buy_price?: number | string
+  buyPrice?: number | string
+  min_stock_level?: number | string
+  minStockLevel?: number | string
+  unit?: string
+  category?: string
+}
+
+interface Currency {
+  code: string
+  label: string
+  rate: number
+}
+
+const CURRENCIES: Currency[] = [
   { code: "AFN", label: "افغانی", rate: 1 },
   { code: "USD", label: "دلار", rate: 0.014 },
   { code: "IRR", label: "تومان", rate: 0.85 },
 ]
 
-const num = (v: any) => { const n = Number(v); return Number.isFinite(n) ? n : 0 }
-const fmt = (v: any) => num(v).toLocaleString("fa-AF")
+const num = (v: unknown): number => { const n = Number(v); return Number.isFinite(n) ? n : 0 }
+const fmt = (v: unknown): string => num(v).toLocaleString("fa-AF")
 
 export default function GodamPage() {
   const { t } = useTranslation()
@@ -24,19 +45,19 @@ export default function GodamPage() {
   const { data, isLoading } = useProducts({ page: 1, limit: 50, sortDirection: "desc", search })
   const deleteProduct = useDeleteProduct()
 
-  const totalValue = data?.products?.reduce((sum: number, p: any) => {
+  const totalValue = (data?.products as Product[] | undefined)?.reduce((sum: number, p: Product) => {
     const qty = num(p.quantity)
     const price = num(p.sell_price ?? p.sellPrice)
     return sum + qty * price
   }, 0) || 0
 
-  const lowStock = data?.products?.filter((p: any) => {
+  const lowStock = (data?.products as Product[] | undefined)?.filter((p: Product) => {
     const qty = num(p.quantity)
     const min = num(p.min_stock_level ?? p.minStockLevel ?? 5)
     return qty > 0 && qty <= min
   }).length || 0
 
-  const outOfStock = data?.products?.filter((p: any) => num(p.quantity) === 0).length || 0
+  const outOfStock = (data?.products as Product[] | undefined)?.filter((p: Product) => num(p.quantity) === 0).length || 0
 
   const stockStatus = (qty: number, min: number): "success" | "warning" | "destructive" | "secondary" => {
     if (qty === 0) return "destructive"
@@ -75,7 +96,7 @@ export default function GodamPage() {
 
       {/* Multi-currency */}
       <div className="flex gap-2 text-xs text-[var(--hisab-muted-fg)]">
-        {CURRENCIES.map((c) => (
+        {CURRENCIES.map((c: Currency) => (
           <span key={c.code} className="bg-[var(--hisab-muted)] px-2 py-1 rounded-lg">
             {c.label}: {fmt(totalValue * c.rate)}
           </span>
@@ -98,7 +119,7 @@ export default function GodamPage() {
             <div key={i} className="h-16 animate-pulse rounded-xl bg-[var(--hisab-muted)]" />
           ))}
         </div>
-      ) : data?.products?.length === 0 ? (
+      ) : (data?.products as Product[] | undefined)?.length === 0 ? (
         <EmptyState
           icon="product"
           title={t("godam.noProducts", { defaultValue: "هیچ محصولی موجود نیست" })}
@@ -107,7 +128,7 @@ export default function GodamPage() {
         />
       ) : (
         <div className="space-y-3">
-          {data?.products?.map((product: any) => {
+          {(data?.products as Product[] | undefined)?.map((product: Product) => {
             const qty = num(product.quantity)
             const min = num(product.min_stock_level ?? product.minStockLevel ?? 5)
             const sellPrice = num(product.sell_price ?? product.sellPrice)

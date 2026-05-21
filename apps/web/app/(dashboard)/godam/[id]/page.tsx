@@ -6,7 +6,6 @@
 
 import { useState, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { useTranslation } from "react-i18next"
 import { useProduct, useUpdateProduct, useDeleteProduct } from "@hisabche/api"
 import { Button, Badge, Card, CardContent, Input } from "@hisabche/ui"
 import {
@@ -19,15 +18,40 @@ import {
   Trash2,
   Edit3,
   X,
+  type LucideIcon,
 } from "lucide-react"
 
+// ─── Types ──────────────────────────────────────────
+interface Product {
+  name?: string
+  sell_price?: number | string
+  sellPrice?: number | string
+  buy_price?: number | string
+  buyPrice?: number | string
+  quantity?: number | string
+  min_stock_level?: number | string
+  minStockLevel?: number | string
+  category?: string
+  unit?: string
+}
+
+interface ProductData {
+  name: string
+  sellPrice: number
+  buyPrice: number
+  quantity: number
+  minStockLevel: number
+  category: string
+  unit: string
+}
+
 // ─── Helpers ──────────────────────────────────────────
-const num = (v: any) => {
+const num = (v: unknown): number => {
   const n = Number(v)
   return Number.isFinite(n) ? n : 0
 }
 
-const fmt = (v: any) => num(v).toLocaleString("fa-AF")
+const fmt = (v: unknown): string => num(v).toLocaleString("fa-AF")
 
 // ─── Mini Info Box ────────────────────────────────────
 function InfoBox({
@@ -36,7 +60,7 @@ function InfoBox({
   value,
   color,
 }: {
-  icon: any
+  icon: LucideIcon
   label: string
   value: string
   color: string
@@ -54,7 +78,6 @@ function InfoBox({
 
 // ─── Page ─────────────────────────────────────────────
 export default function ProductDetailPage() {
-  const { t } = useTranslation()
   const router = useRouter()
   const { id } = useParams<{ id: string }>()
 
@@ -71,8 +94,7 @@ export default function ProductDetailPage() {
   const [category, setCategory] = useState("general")
   const [unit, setUnit] = useState("piece")
 
-  // Resolve snake_case or camelCase from backend
-  const getProduct = useCallback((p: any) => ({
+  const getProduct = useCallback((p: Product): ProductData => ({
     name: p.name ?? "",
     sellPrice: num(p.sell_price ?? p.sellPrice),
     buyPrice: num(p.buy_price ?? p.buyPrice),
@@ -98,18 +120,18 @@ export default function ProductDetailPage() {
   const cancelEditing = useCallback(() => setEditing(false), [])
 
   const handleSave = useCallback(async () => {
-    await updateProduct.mutateAsync({
-      id: id!,
-      name: name.trim(),
-      sellPrice: num(sellPrice),
-      buyPrice: num(buyPrice),
-      quantity: Math.floor(num(quantity)),
-      minStockLevel: Math.floor(num(minStockLevel)) || 5,
-      category: category as any,
-      unit: unit as any,
-    })
-    setEditing(false)
-  }, [id, name, sellPrice, buyPrice, quantity, minStockLevel, category, unit, updateProduct])
+  await updateProduct.mutateAsync({
+    id: id!,
+    name: name.trim(),
+    sellPrice: num(sellPrice),
+    buyPrice: num(buyPrice),
+    quantity: Math.floor(num(quantity)),
+    minStockLevel: Math.floor(num(minStockLevel)) || 5,
+    category: category as "general" | "food" | "electronics" | "clothing" | "construction" | "medicine",
+    unit: unit as "piece" | "kg" | "liter" | "meter" | "box",
+  })
+  setEditing(false)
+}, [id, name, sellPrice, buyPrice, quantity, minStockLevel, category, unit, updateProduct])
 
   const handleDelete = useCallback(async () => {
     if (!confirm("آیا از حذف این محصول اطمینان دارید؟")) return
@@ -117,7 +139,6 @@ export default function ProductDetailPage() {
     router.push("/godam")
   }, [id, deleteProduct, router])
 
-  // ─── Loading ───────────────────────────────────────
   if (isLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -146,7 +167,6 @@ export default function ProductDetailPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon-sm" onClick={() => router.back()}>
@@ -189,7 +209,6 @@ export default function ProductDetailPage() {
         </div>
       </div>
 
-      {/* Product Info Card */}
       <Card>
         <CardContent className="p-6 sm:p-8 space-y-6">
           {editing ? (
@@ -241,7 +260,6 @@ export default function ProductDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Quick Stats */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <Card>
           <CardContent className="p-4 text-center">

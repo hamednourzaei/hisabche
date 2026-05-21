@@ -1,9 +1,8 @@
-import { LayoutDashboard, Package, Receipt, BookOpen, Settings } from 'lucide-react'
-import type { ElementType } from 'react'
+import { LayoutDashboard, Package, Receipt, BookOpen, Settings, type LucideIcon } from 'lucide-react'
 
 export interface NavItem {
   id: 'dashboard' | 'godam' | 'faktoor' | 'baqidari' | 'settings'
-  icon: ElementType<any>
+  icon: LucideIcon
   label: string
   description: string
   path: string

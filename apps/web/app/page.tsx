@@ -3,7 +3,7 @@
 // ═══════════════════════════════════════════════════════════
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useTranslation } from "react-i18next"
 import { motion, useScroll, useSpring, useTransform } from "framer-motion"

@@ -3,10 +3,6 @@
 import React from "react"
 
 import {
-  useTranslation,
-} from "react-i18next"
-
-import {
   useBackupStore,
   useDeviceStore,
   useAuthStore,
@@ -28,16 +24,11 @@ import {
   Cloud,
   Download,
   Trash2,
-  Moon,
-  Sun,
   LogOut,
   Check,
 } from "lucide-react"
 
 export default function SettingsPage() {
-  const { t } =
-    useTranslation()
-
   const {
     autoBackupEnabled,
     setAutoBackup,

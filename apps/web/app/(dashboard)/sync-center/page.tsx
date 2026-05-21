@@ -3,13 +3,8 @@
 import React from "react"
 
 import {
-  useTranslation,
-} from "react-i18next"
-
-import {
   useSyncStore,
   useBackupStore,
-  useThemeStore,
 } from "@hisabche/store"
 
 import {
@@ -36,12 +31,6 @@ import {
 } from "lucide-react"
 
 export default function SyncCenterPage() {
-  const { t } =
-    useTranslation()
-
-  const { isDark } =
-    useThemeStore()
-
   const {
     isOnline,
     isSyncing,
