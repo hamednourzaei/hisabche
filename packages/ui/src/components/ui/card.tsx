@@ -1,115 +1,144 @@
-"use client"
-
 import * as React from "react"
 import { cn } from "../../lib/utils"
+import { type VariantProps, cva } from "class-variance-authority"
 
 // ============================================
-// Card Component
+// Card Variants (CVA)
 // ============================================
-const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div
-      ref={ref}
-      
-      className={cn(
-        "rounded-[var(--hisab-radius-lg)]",
-        "border border-[var(--hisab-border)]",
-        "bg-[var(--hisab-card)] text-[var(--hisab-card-fg)]",
-        "shadow-[var(--hisab-shadow-sm)]",
-        "transition-shadow duration-[var(--hisab-transition)]",
-        "hover:shadow-[var(--hisab-shadow-md)]",
-        "hover:scale-[1.02] active:scale-[0.98] transition-transform duration-200",
-        className,
-      )}
-      {...props}
-    />
-  ),
+const cardVariants = cva(
+  [
+    "rounded-[var(--hisab-radius-lg)]",
+    "border border-[var(--hisab-border)]",
+    "bg-[var(--hisab-card)] text-[var(--hisab-card-fg)]",
+    "shadow-[var(--hisab-shadow-sm)]",
+    "transition-all duration-[var(--hisab-transition)]",
+    "motion-reduce:transition-none",
+  ],
+  {
+    variants: {
+      interactive: {
+        true: [
+          "cursor-pointer",
+          "hover:shadow-[var(--hisab-shadow-md)]",
+          "hover:-translate-y-0.5",
+          "motion-reduce:hover:transform-none",
+        ],
+        false: [],
+      },
+    },
+    defaultVariants: {
+      interactive: false,
+    },
+  }
 )
+
+// ============================================
+// Card
+// ============================================
+const Card = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement> & VariantProps<typeof cardVariants>
+>(({ className, interactive, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn(cardVariants({ interactive }), className)}
+    {...props}
+  />
+))
 Card.displayName = "Card"
 
 // ============================================
 // Card Header
 // ============================================
-const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div
-      ref={ref}
-      className={cn(
-        "flex flex-col gap-1.5",
-        "p-6 pb-0",
-        className,
-      )}
-      {...props}
-    />
-  ),
-)
+const cardHeaderVariants = cva("flex flex-col gap-1.5", {
+  variants: {
+    compact: { true: "px-4 py-3", false: "p-6 pb-0" },
+  },
+  defaultVariants: { compact: false },
+})
+
+const CardHeader = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement> & VariantProps<typeof cardHeaderVariants>
+>(({ className, compact, ...props }, ref) => (
+  <div ref={ref} className={cn(cardHeaderVariants({ compact }), className)} {...props} />
+))
 CardHeader.displayName = "CardHeader"
 
 // ============================================
-// Card Title
+// Card Title (polymorphic heading)
 // ============================================
-const CardTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLHeadingElement>>(
-  ({ className, ...props }, ref) => (
-    <h3
+type CardTitleProps = React.HTMLAttributes<HTMLHeadingElement> & {
+  as?: "h1" | "h2" | "h3" | "h4" | "h5" | "h6"
+}
+
+const CardTitle = React.forwardRef<HTMLHeadingElement, CardTitleProps>(
+  ({ className, as: Tag = "h3", ...props }, ref) => (
+    <Tag
       ref={ref}
       className={cn(
         "text-lg font-semibold leading-none tracking-tight",
         "text-[var(--hisab-foreground)]",
-        className,
+        className
       )}
       {...props}
     />
-  ),
+  )
 )
 CardTitle.displayName = "CardTitle"
 
 // ============================================
 // Card Description
 // ============================================
-const CardDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
-  ({ className, ...props }, ref) => (
-    <p
-      ref={ref}
-      className={cn(
-        "text-sm text-[var(--hisab-muted-fg)]",
-        className,
-      )}
-      {...props}
-    />
-  ),
-)
+const CardDescription = React.forwardRef<
+  HTMLParagraphElement,
+  React.HTMLAttributes<HTMLParagraphElement>
+>(({ className, ...props }, ref) => (
+  <p
+    ref={ref}
+    className={cn("text-sm text-[var(--hisab-muted-fg)]", className)}
+    {...props}
+  />
+))
 CardDescription.displayName = "CardDescription"
 
 // ============================================
-// Card Content
+// Card Content (responsive padding)
 // ============================================
-const CardContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div
-      ref={ref}
-      className={cn("p-6", className)}
-      {...props}
-    />
-  ),
-)
+const cardContentVariants = cva("", {
+  variants: {
+    padded: {
+      sm: "p-3",
+      md: "p-4 sm:p-6",
+      lg: "p-6 sm:p-8",
+      none: "p-0",
+    },
+  },
+  defaultVariants: { padded: "md" },
+})
+
+const CardContent = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement> & VariantProps<typeof cardContentVariants>
+>(({ className, padded, ...props }, ref) => (
+  <div ref={ref} className={cn(cardContentVariants({ padded }), className)} {...props} />
+))
 CardContent.displayName = "CardContent"
 
 // ============================================
 // Card Footer
 // ============================================
-const CardFooter = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div
-      ref={ref}
-      className={cn(
-        "flex items-center gap-2",
-        "p-6 pt-0",
-        className,
-      )}
-      {...props}
-    />
-  ),
-)
+const CardFooter = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement>
+>(({ className, ...props }, ref) => (
+  <div
+    ref={ref}
+    className={cn("flex items-center gap-2 p-6 pt-0", className)}
+    {...props}
+  />
+))
 CardFooter.displayName = "CardFooter"
 
 export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
+export { cardVariants, cardHeaderVariants, cardContentVariants }

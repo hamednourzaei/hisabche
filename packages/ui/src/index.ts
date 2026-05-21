@@ -48,3 +48,5 @@ export {
   AnimatedCounter, GradientMesh, GlassNavbar, ShimmerCTA,
   Section, FeatureCard, SectionHeading,
 } from "./components/ui/landing-section"
+// packages/ui/src/index.ts — add export
+export { LivingBackground } from "./components/ui/living-background"
