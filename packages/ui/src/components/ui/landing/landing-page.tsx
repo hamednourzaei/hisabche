@@ -22,17 +22,11 @@ const stats = [
 ]
 
 export function LandingPage() {
-  // ❌ بدون AuthGate
-  // ❌ بدون useEffect redirect
-  // ✅ فقط landing — سریع و بدون race condition
-
   return (
-    <div className="min-h-screen text-[var(--hisab-foreground)] overflow-x-hidden">
+    <div className="min-h-screen text-[var(--hisab-foreground)] ">
       <LivingBackground />
-      <header className="sticky top-0 z-50 border-b border-[var(--hisab-border)] bg-[var(--hisab-background)]/70 backdrop-blur-xl">
-        <DashboardHeader variant="landing" />
-      </header>
-      <main className="relative">
+      <DashboardHeader variant="landing" />
+      <main className="relative overflow-x-hidden">
         <CinematicHero />
         <Section bordered>
           <div className="grid grid-cols-3 gap-6">

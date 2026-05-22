@@ -135,7 +135,7 @@ export function FeatureCard({
     <Card interactive className="group border-[var(--hisab-border)] motion-safe:animate-fade-in-up motion-reduce:animate-none"
       style={{ animationDelay: `${index * 80}ms` }}>
       <CardContent className="p-6">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[var(--hisab-primary)]/8 text-2xl mb-5 group-hover:scale-110 transition-transform duration-300 motion-reduce:group-hover:scale-100">
+        <div className="flex h-16 w-12 items-center justify-center rounded-xl bg-[var(--hisab-primary)]/8 text-2xl mb-5 group-hover:scale-110 transition-transform duration-300 motion-reduce:group-hover:scale-100">
           {emoji}
         </div>
         <h3 className="font-semibold text-[var(--hisab-foreground)] mb-2">{title}</h3>
@@ -163,7 +163,7 @@ export function GlassNavbar() {
   return (
     <nav className="sticky top-0 z-50 border-b border-[var(--hisab-border)] bg-[var(--hisab-background)]/70 backdrop-blur-md motion-reduce:backdrop-blur-none"
       aria-label={t("nav.ariaLabel", "ناوبری اصلی")}>
-      <div className="mx-auto flex h-12 sm:h-14 max-w-6xl items-center justify-between px-4">
+      <div className="mx-auto flex h-16 sm:h-14 max-w-6xl items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2" aria-label={t("nav.homeAriaLabel", "حسابچه — صفحه اصلی")}>
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--hisab-primary)]">
             <span className="text-white font-bold text-xs">ح</span>

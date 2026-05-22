@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation"
 import { useThemeStore } from "@hisabche/store"
 import { changeLanguage, type SupportedLanguage } from "@hisabche/i18n"
 
-// ─── SVG Icons ─────────────────────────────────────────
 const SvgIcon = ({ d, size = 16 }: { d: React.ReactNode; size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 16 16" fill="none"
        stroke="currentColor" strokeWidth={1.5} strokeLinecap="round"
@@ -18,7 +17,6 @@ const IconSun    = <SvgIcon d={<g><circle cx="8" cy="8" r="2.6"/><path d="M8 1.2
 const IconMoon   = <SvgIcon d="M13.2 9.4A5.4 5.4 0 0 1 6.6 2.8a5.4 5.4 0 1 0 6.6 6.6Z" />
 const IconLogout = <SvgIcon d={<g><path d="M9.5 2H3.5v12h6"/><path d="M11 5.5 13.5 8 11 10.5M6.5 8h7"/></g>} />
 
-// ─── Brand Mark ────────────────────────────────────────
 function BrandMark() {
   return (
     <div className="w-7 h-7 xs:w-8 xs:h-8 rounded-lg bg-[var(--hisab-primary)] flex items-center justify-center shrink-0">
@@ -27,7 +25,6 @@ function BrandMark() {
   )
 }
 
-// ─── Sync Pill ─────────────────────────────────────────
 function SyncPill({ lastSyncedAt, isOnline, isSyncing, pendingCount }: {
   lastSyncedAt: number | null; isOnline: boolean; isSyncing: boolean; pendingCount: number
 }) {
@@ -40,7 +37,6 @@ function SyncPill({ lastSyncedAt, isOnline, isSyncing, pendingCount }: {
   return null
 }
 
-// ─── Universal Header ──────────────────────────────────
 interface HeaderProps {
   variant?: "landing" | "dashboard"
   businessName?: string
@@ -70,7 +66,6 @@ export function DashboardHeader({
     changeLanguage((currentLang === "fa-AF" ? "fa-IR" : "fa-AF") as SupportedLanguage)
   }, [currentLang])
 
-  // ── Common action buttons (used in both variants) ──
   const ActionButtons = () => (
     <>
       <button type="button" onClick={toggleLang} aria-label="تغییر زبان" className="ghost-btn">
@@ -84,40 +79,24 @@ export function DashboardHeader({
   )
 
   return (
-   <header
-  className={`
-    relative
-    z-50
-    ${variant === "dashboard"
-      ? "sticky top-0 border-b border-[var(--hisab-border)] bg-[var(--hisab-background)]/70 backdrop-blur-xl"
-      : ""}
-  `}
->
+    <header className="sticky top-0 z-50 w-full border-b border-[var(--hisab-border)] bg-[var(--hisab-background)]/70 backdrop-blur-xl">
       <div className="mx-auto flex h-12 sm:h-14 max-w-6xl items-center justify-between px-4">
-
-        {/* ── Left ──────────────────────────────────── */}
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <BrandMark />
-
           {variant === "dashboard" && (
             <>
               <div className="hidden sm:flex flex-col min-w-0">
                 <span className="text-sm font-bold text-[var(--hisab-foreground)] truncate">{t("app.name")}</span>
-                {businessName && (
-                  <span className="text-[10px] text-[var(--hisab-muted-fg)] truncate">{businessName}</span>
-                )}
+                {businessName && <span className="text-[10px] text-[var(--hisab-muted-fg)] truncate">{businessName}</span>}
               </div>
-              <span className="hidden sm:block w-px h-5 bg-[var(--hisab-border)] mx-1" />
+              <span className="hidden sm:block w-px h-6 bg-[var(--hisab-border)] mx-1" />
               <SyncPill lastSyncedAt={lastSyncedAt} isOnline={isOnline} isSyncing={isSyncing} pendingCount={pendingCount} />
             </>
           )}
-
           {variant === "landing" && (
             <span className="font-bold text-sm text-[var(--hisab-foreground)]">{t("app.name")}</span>
           )}
         </div>
-
-        {/* ── Right ──────────────────────────────────── */}
         <div className="flex items-center gap-1 sm:gap-2">
           {variant === "dashboard" && (
             <>
@@ -128,14 +107,11 @@ export function DashboardHeader({
               </button>
             </>
           )}
-
           {variant === "landing" && (
             <>
               <ActionButtons />
-              <button
-                onClick={() => router.push("/login")}
-                className="rounded-lg bg-[var(--hisab-primary)] px-4 py-1.5 text-xs font-semibold text-white hover:bg-[var(--hisab-primary)]/90 transition-all active:scale-95"
-              >
+              <button onClick={() => router.push("/login")}
+                className="rounded-lg bg-[var(--hisab-primary)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--hisab-primary)]/90 transition-all active:scale-95">
                 {t("auth.signIn")}
               </button>
             </>

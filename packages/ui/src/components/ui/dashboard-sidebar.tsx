@@ -62,7 +62,7 @@ export function DashboardSidebar({
   return (
    <aside className="hidden w-60 border-e border-[var(--hisab-border)] bg-[var(--hisab-card)] lg:flex lg:flex-col shrink-0 sticky top-0 h-screen overflow-y-auto">
       {/* Workspace header */}
-      <div className="flex items-center gap-2.5 px-4 py-4 border-b border-[var(--hisab-border)]">
+      <div className="flex items-center gap-2.5 px-4 py-[12px] border-b border-[var(--hisab-border)]">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--hisab-primary)] text-white text-sm font-bold shrink-0">
           ح
         </div>
