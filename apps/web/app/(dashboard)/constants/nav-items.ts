@@ -9,7 +9,7 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { id: 'dashboard', icon: LayoutDashboard, label: 'nav.dashboard', description: 'nav.dashboard.description', path: '/' },
+  { id: 'dashboard', icon: LayoutDashboard, label: 'nav.dashboard', description: 'nav.dashboard.description', path: '/dashboard' },
   { id: 'godam', icon: Package, label: 'nav.godam', description: 'nav.godam.description', path: '/godam' },
   { id: 'faktoor', icon: Receipt, label: 'nav.faktoor', description: 'nav.faktoor.description', path: '/invoices' },
   { id: 'baqidari', icon: BookOpen, label: 'nav.baqidari', description: 'nav.baqidari.description', path: '/baqidari' },

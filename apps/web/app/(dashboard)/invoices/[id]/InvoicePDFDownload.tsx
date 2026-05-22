@@ -6,14 +6,16 @@ import { useCallback, useRef, useState } from "react"
 import { FileDown, Loader2 } from "lucide-react"
 import { Button } from "@hisabche/ui"
 
-interface Props {
-  invoice: any
+interface Invoice {
+  id?: string
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
+interface Props {
+  invoice: Invoice
+}
 
 export default function InvoicePDFDownload({ invoice }: Props) {
-  const invoiceId = (invoice as any)?.id ?? ""
+  const invoiceId = invoice?.id ?? ""
   const [loading, setLoading] = useState(false)
   const iframeRef = useRef<HTMLIFrameElement | null>(null)
 
@@ -21,7 +23,7 @@ export default function InvoicePDFDownload({ invoice }: Props) {
     if (!invoiceId || loading) return
     setLoading(true)
 
-const url = `https://hisabche.onrender.com/api/invoices/${invoiceId}/pdf`
+    const url = `https://hisabche.onrender.com/api/invoices/${invoiceId}/pdf`
 
     // Create hidden iframe
     const iframe = document.createElement("iframe")

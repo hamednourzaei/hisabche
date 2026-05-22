@@ -1,5 +1,5 @@
 "use client"
-import AuthShell from "@hisabche/ui/src/components/ui/auth/AuthShell"
+import { AuthShell } from "@hisabche/ui"
 
 export default function LoginClient() {
   return <AuthShell initialMode="login" />

@@ -30,5 +30,12 @@
   "peerDependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
+  },
+ "exports": {
+    ".": "./src/index.ts",
+    "./landing": "./src/components/ui/landing/index.ts",
+    "./landing/*": "./src/components/ui/landing/*.tsx",
+    "./*": "./src/components/ui/*.tsx",
+    "./auth/*": "./src/components/ui/auth/*.tsx"
   }
 }

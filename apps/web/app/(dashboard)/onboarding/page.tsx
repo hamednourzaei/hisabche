@@ -23,6 +23,7 @@ import {
 
 import {
   changeLanguage,
+  SupportedLanguage 
 } from "@hisabche/i18n"
 
 import {
@@ -238,20 +239,10 @@ export default function OnboardingPage() {
               variant="ghost"
               size="icon-sm"
               onClick={() => {
-                const newLang: any =
-                  i18n.language ===
-                  "fa-AF"
-                    ? "fa-IR"
-                    : "fa-AF"
-
-                setLanguage(
-                  newLang
-                )
-
-                changeLanguage(
-                  newLang
-                )
-              }}
+  const newLang = (i18n.language === "fa-AF" ? "fa-IR" : "fa-AF")
+setLanguage(newLang as unknown as Parameters<typeof setLanguage>[0])
+  changeLanguage(newLang as SupportedLanguage)
+}}
             >
               <Languages className="size-4" />
             </Button>
@@ -503,11 +494,7 @@ export default function OnboardingPage() {
                     key={
                       cur.code
                     }
-                    onClick={() =>
-                      setDefaultCurrency(
-                        cur.code as any
-                      )
-                    }
+                    onClick={() => setDefaultCurrency(cur.code as "AFN" | "USD" | "PKR" | "IRR")}
                     className={`rounded-2xl border-2 p-5 transition-all ${
                       defaultCurrency ===
                       cur.code

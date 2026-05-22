@@ -297,16 +297,20 @@ function LoginForm({ onSwitchMode, st }: { onSwitchMode: () => void; st: ReturnT
   const emailValue = watch("email")
   const passwordValue = watch("password")
 
-  const onSubmit = async (data: LoginInput) => {
-    await login(data)
-    const s = useAuthStore.getState()
-    if (s.isAuthenticated && !s.error) router.push("/")
+const onSubmit = async (data: LoginInput) => {
+  await login(data)
+  const s = useAuthStore.getState()
+  if (s.isAuthenticated && !s.error) {
+    router.push("/dashboard")
   }
-  const handleDemoLogin = async () => {
-    await login({ email: "demo@hisabche.com", password: "Demo1234" })
-    const s = useAuthStore.getState()
-    if (s.isAuthenticated && !s.error) router.push("/")
+}
+const handleDemoLogin = async () => {
+  await login({ email: "demo@hisabche.com", password: "Demo1234" })
+  const s = useAuthStore.getState()
+  if (s.isAuthenticated && !s.error) {
+    router.push("/dashboard")
   }
+}
 
   return (
     <div className="backdrop-blur-2xl bg-[var(--hisab-card)]/85 border border-[var(--hisab-border)] rounded-3xl p-6 sm:p-8 shadow-2xl">
@@ -398,14 +402,16 @@ function SignupForm({ onSwitchMode, st }: { onSwitchMode: () => void; st: Return
 
   const tr = (k?: string) => (k ? t(k, k) : undefined)
 
-  const onSubmit = async (data: SignupInput) => {
-    try {
-      await signUp({ email: data.email, password: data.password })
-      await new Promise((r) => setTimeout(r, 100))
-      const s = useAuthStore.getState()
-      if (s.isAuthenticated && !s.error) router.push("/")
-    } catch { /* handled by store */ }
-  }
+const onSubmit = async (data: SignupInput) => {
+  try {
+    await signUp({ email: data.email, password: data.password })
+    await new Promise((r) => setTimeout(r, 100))
+    const s = useAuthStore.getState()
+    if (s.isAuthenticated && !s.error) {
+      router.push("/dashboard")
+    }
+  } catch { /* handled by store */ }
+}
 
   // Reusable field renderer (closes over hooks above)
   const field = (opts: {

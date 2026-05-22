@@ -1,5 +1,5 @@
-import LoginClient from './LoginClient'
+import { AuthShell } from "@hisabche/ui"
 
 export default function LoginPage() {
-  return  <LoginClient />
+  return <AuthShell initialMode="login" />
 }

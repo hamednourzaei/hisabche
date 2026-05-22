@@ -274,12 +274,13 @@ export const useAuthStore =
           isDemo: s.isDemo,
         }),
 
-        onRehydrateStorage:
-          () => (state) => {
-            if (!state) return
-
-            state.initAuth()
-          },
+        onRehydrateStorage: () => () => {
+  // همیشه initAuth رو فراخوانی کن، چه persisted data باشه چه نباشه
+  // queueMicrotask تضمین می‌کنه که useAuthStore کاملاً ساخته شده
+  queueMicrotask(() => {
+    useAuthStore.getState().initAuth()
+  })
+},
       }
     )
   )

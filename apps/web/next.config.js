@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-output: 'standalone',
+  output: 'standalone',
   reactStrictMode: true,
   transpilePackages: [
     '@hisabche/ui', '@hisabche/i18n', '@hisabche/store',
@@ -28,11 +28,7 @@ output: 'standalone',
       },
     ]
   },
-  async redirects() {
-    return [
-      { source: '/dashboard', destination: '/', permanent: true },
-    ]
-  },
+  // ❌ حذف redirects — دیگه /dashboard به / نمی‌ره
 }
 
 module.exports = nextConfig

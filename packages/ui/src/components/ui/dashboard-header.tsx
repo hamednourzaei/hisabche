@@ -84,7 +84,15 @@ export function DashboardHeader({
   )
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[var(--hisab-border)] bg-[var(--hisab-background)]/70 backdrop-blur-xl">
+   <header
+  className={`
+    relative
+    z-50
+    ${variant === "dashboard"
+      ? "sticky top-0 border-b border-[var(--hisab-border)] bg-[var(--hisab-background)]/70 backdrop-blur-xl"
+      : ""}
+  `}
+>
       <div className="mx-auto flex h-12 sm:h-14 max-w-6xl items-center justify-between px-4">
 
         {/* ── Left ──────────────────────────────────── */}

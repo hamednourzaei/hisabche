@@ -50,3 +50,4 @@ export {
 } from "./components/ui/landing-section"
 // packages/ui/src/index.ts — add export
 export { LivingBackground } from "./components/ui/living-background"
+export { default as AuthShell } from "./components/ui/auth/AuthShell"
