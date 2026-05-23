@@ -47,7 +47,7 @@ function BaqidariSkeleton() {
 
 // ═══ 3. Dynamic import — Next.js native ═══
 const BaqidariPage = dynamic(
-  () => import("@hisabche/ui").then((m) => m.BaqidariPage),
+() => import("@hisabche/ui/baqidari-page").then((m) => m.BaqidariPage),
   {
     loading: () => <BaqidariSkeleton />,
     ssr: true,
