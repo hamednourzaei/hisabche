@@ -38,6 +38,7 @@
     "./landing": "./src/components/ui/landing/index.ts",
     "./landing/*": "./src/components/ui/landing/*.tsx",
     "./*": "./src/components/ui/*.tsx",
-    "./auth/*": "./src/components/ui/auth/*.tsx"
+    "./auth/*": "./src/components/ui/auth/*.tsx",
+    "./baqidari-page": "./src/components/ui/baqidari-page.tsx"
   }
 }
