@@ -14,10 +14,8 @@ import {
   ChevronLeft, Plus, ShoppingCart,
 } from "lucide-react"
 
-// ═══ Types ═══
 type ProductOption = NonNullable<Parameters<typeof ProductPicker>[0]["value"]>
 
-// ═══ Types ═══
 interface Customer {
   id: string | undefined
   fullName?: string | undefined
@@ -41,7 +39,6 @@ interface Invoice {
 const num = (v: unknown): number => { const n = Number(v); return Number.isFinite(n) ? n : 0 }
 const fmt = (v: unknown): string => num(v).toLocaleString("fa-AF")
 
-// ═══════════════ Add Customer Modal ═══════════════
 function AddCustomerModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const createCustomer = useCreateCustomer()
   const createInvoice = useCreateInvoice()
@@ -57,55 +54,38 @@ function AddCustomerModal({ open, onClose }: { open: boolean; onClose: () => voi
 
   const handleSubmit = useCallback(async () => {
     if (!name.trim()) return
-
     const newCustomer = await createCustomer.mutateAsync({
-      fullName: name.trim(),
-      phone: phone.trim() || undefined,
-      openingBalance: hasInitialDebt ? parseFloat(initialAmount) || 0 : 0,
-      isActive: true,
+      fullName: name.trim(), phone: phone.trim() || undefined,
+      openingBalance: hasInitialDebt ? parseFloat(initialAmount) || 0 : 0, isActive: true,
     })
-
     if (hasInitialDebt && selectedProduct && unitPrice && parseFloat(unitPrice) > 0) {
       await createInvoice.mutateAsync({
         type: "sale", date: new Date().toISOString(), subtotal: total,
         discountTotal: 0, discountType: "fixed", taxRate: 0, taxTotal: 0,
         total, paidAmount: 0, paymentMethod: "credit", currency: "AFN",
         customerId: newCustomer.id, customerName: name.trim(),
-        items: [{
-          productId: selectedProduct.id, productName: selectedProduct.name,
-          quantity: parseInt(quantity), unitPrice: parseFloat(unitPrice),
-          discount: 0, totalPrice: total,
-        }],
+        items: [{ productId: selectedProduct.id, productName: selectedProduct.name, quantity: parseInt(quantity), unitPrice: parseFloat(unitPrice), discount: 0, totalPrice: total }],
       })
     }
-
     setName(""); setPhone(""); setHasInitialDebt(false); setInitialAmount("")
-    setSelectedProduct(null); setQuantity("1"); setUnitPrice("")
-    onClose()
+    setSelectedProduct(null); setQuantity("1"); setUnitPrice(""); onClose()
   }, [name, phone, hasInitialDebt, initialAmount, selectedProduct, unitPrice, quantity, total, createCustomer, createInvoice, onClose])
 
   if (!open) return null
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-[var(--hisab-card)] rounded-2xl shadow-[var(--hisab-shadow-xl)] border border-[var(--hisab-border)] w-full max-w-md p-6 space-y-4 mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="glass-card w-full max-w-md p-6 space-y-4 mx-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold text-[var(--hisab-foreground)]">مشتری جدید</h3>
-          <button onClick={onClose} className="text-[var(--hisab-muted-fg)]">✕</button>
+          <h3 className="text-lg font-bold">مشتری جدید</h3>
+          <button onClick={onClose} className="ghost-btn">✕</button>
         </div>
-
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="نام مشتری *" autoFocus />
         <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="شماره تماس (اختیاری)" />
-
         <div className="flex gap-2">
-          <button type="button" onClick={() => setHasInitialDebt(false)} className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all ${!hasInitialDebt ? "bg-[var(--hisab-primary)] text-white" : "border border-[var(--hisab-border)] text-[var(--hisab-foreground)]"}`}>
-            ✅ تازه میاد
-          </button>
-          <button type="button" onClick={() => setHasInitialDebt(true)} className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all ${hasInitialDebt ? "bg-[var(--hisab-warning)] text-white" : "border border-[var(--hisab-border)] text-[var(--hisab-foreground)]"}`}>
-            📝 بدهی داره
-          </button>
+          <button type="button" onClick={() => setHasInitialDebt(false)} className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all ${!hasInitialDebt ? "bg-[var(--hisab-primary)] text-white" : "border border-[var(--hisab-border)] text-[var(--hisab-foreground)]"}`}>✅ تازه میاد</button>
+          <button type="button" onClick={() => setHasInitialDebt(true)} className={`flex-1 py-2.5 rounded-xl text-sm font-medium transition-all ${hasInitialDebt ? "bg-[var(--hisab-warning)] text-white" : "border border-[var(--hisab-border)] text-[var(--hisab-foreground)]"}`}>📝 بدهی داره</button>
         </div>
-
         {hasInitialDebt && (
           <>
             <ProductPicker value={selectedProduct} onChange={setSelectedProduct} placeholder="چه جنسی برده؟" />
@@ -117,19 +97,15 @@ function AddCustomerModal({ open, onClose }: { open: boolean; onClose: () => voi
             {unitPrice && <p className="text-center font-bold text-[var(--hisab-primary)]">کل: {fmt(total)} AFN</p>}
           </>
         )}
-
         <div className="flex gap-3 pt-2">
-          <Button variant="outline" fullWidth onClick={onClose}>انصراف</Button>
-          <Button fullWidth onClick={handleSubmit} loading={createCustomer.isPending || createInvoice.isPending} disabled={!name.trim()}>
-            ذخیره
-          </Button>
+          <Button variant="outline" className="w-full" onClick={onClose}>انصراف</Button>
+          <Button className="w-full" onClick={handleSubmit} loading={createCustomer.isPending || createInvoice.isPending} disabled={!name.trim()}>ذخیره</Button>
         </div>
       </div>
     </div>
   )
 }
 
-// ═══════════════ Payment Modal ═══════════════
 function PaymentModal({ open, onClose, customer, openInvoices, onPaid }: {
   open: boolean; onClose: () => void; customer: Customer | null; openInvoices: Invoice[]; onPaid: () => void
 }) {
@@ -139,10 +115,7 @@ function PaymentModal({ open, onClose, customer, openInvoices, onPaid }: {
 
   const defaultAmount = useMemo(() => {
     if (openInvoices.length === 0) return 0
-    if (selectedInvoiceId) {
-      const inv = openInvoices.find((i) => i.id === selectedInvoiceId)
-      return inv ? num(inv.total) - num(inv.paidAmount ?? 0) : 0
-    }
+    if (selectedInvoiceId) { const inv = openInvoices.find((i) => i.id === selectedInvoiceId); return inv ? num(inv.total) - num(inv.paidAmount ?? 0) : 0 }
     return Math.min(...openInvoices.map((i) => num(i.total) - num(i.paidAmount ?? 0)))
   }, [openInvoices, selectedInvoiceId])
 
@@ -151,11 +124,7 @@ function PaymentModal({ open, onClose, customer, openInvoices, onPaid }: {
     if (payAmount <= 0 || !customer?.id) return
     const invoiceId = selectedInvoiceId || openInvoices[0]?.id
     if (!invoiceId) return
-    await createTx.mutateAsync({
-      customerId: customer.id, type: "payment", amount: payAmount, currency: "AFN",
-      date: new Date().toISOString(), reference: invoiceId,
-      description: `پرداخت از ${customer.fullName || customer.name}`,
-    })
+    await createTx.mutateAsync({ customerId: customer.id, type: "payment", amount: payAmount, currency: "AFN", date: new Date().toISOString(), reference: invoiceId, description: `پرداخت از ${customer.fullName || customer.name}` })
     onPaid(); onClose(); setAmount("")
   }, [amount, defaultAmount, selectedInvoiceId, openInvoices, customer, createTx, onPaid, onClose])
 
@@ -163,29 +132,26 @@ function PaymentModal({ open, onClose, customer, openInvoices, onPaid }: {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-[var(--hisab-card)] rounded-2xl shadow-[var(--hisab-shadow-xl)] border border-[var(--hisab-border)] w-full max-w-sm p-6 space-y-4 mx-4" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between"><h3 className="text-lg font-bold text-[var(--hisab-foreground)]">ثبت پرداخت — {customer.fullName || customer.name}</h3><button onClick={onClose} className="text-[var(--hisab-muted-fg)]">✕</button></div>
+      <div className="glass-card w-full max-w-sm p-6 space-y-4 mx-4" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between"><h3 className="text-lg font-bold">ثبت پرداخت — {customer.fullName || customer.name}</h3><button onClick={onClose} className="ghost-btn">✕</button></div>
         {openInvoices.length > 1 && (
-          <select value={selectedInvoiceId} onChange={(e) => setSelectedInvoiceId(e.target.value)} className="w-full rounded-xl border border-[var(--hisab-border)] bg-[var(--hisab-background)] px-4 py-3 text-sm text-[var(--hisab-foreground)]">
+          <select value={selectedInvoiceId} onChange={(e) => setSelectedInvoiceId(e.target.value)} className="w-full rounded-xl border border-[var(--hisab-border)] bg-[var(--hisab-background)] px-4 py-3 text-sm">
             <option value="">انتخاب فاکتور</option>
             {openInvoices.map((inv) => <option key={inv.id} value={inv.id}>#{inv.invoiceNumber ?? ""} — {fmt(num(inv.total) - num(inv.paidAmount ?? 0))} AFN</option>)}
           </select>
         )}
         <Input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder={`پیش‌فرض: ${fmt(defaultAmount)} AFN`} label="مبلغ پرداختی (AFN)" leftIcon={<DollarSign className="size-4" />} autoFocus />
-        <div className="flex gap-3 pt-2"><Button variant="outline" fullWidth onClick={onClose}>انصراف</Button><Button fullWidth onClick={handleSubmit} loading={createTx.isPending}>ثبت پرداخت</Button></div>
+        <div className="flex gap-3 pt-2"><Button variant="outline" className="w-full" onClick={onClose}>انصراف</Button><Button className="w-full" onClick={handleSubmit} loading={createTx.isPending}>ثبت پرداخت</Button></div>
       </div>
     </div>
   )
 }
 
-// ═══════════════ Customer Detail ═══════════════
 function CustomerDetail({ customer, onBack }: { customer: Customer; onBack: () => void }) {
   const { data: invoicesData, refetch } = useInvoices({ page: 1, limit: 50, sortDirection: "desc" })
   const openInvoices = useMemo(() => {
     if (!invoicesData?.invoices) return []
-    return (invoicesData.invoices as unknown as Invoice[]).filter(
-      (inv) => inv.customerId === customer.id && (inv.status === "pending" || inv.status === "partial")
-    )
+    return (invoicesData.invoices as unknown as Invoice[]).filter((inv) => inv.customerId === customer.id && (inv.status === "pending" || inv.status === "partial"))
   }, [invoicesData, customer.id])
   const totalDebt = openInvoices.reduce((sum, inv) => sum + num(inv.total) - num(inv.paidAmount ?? 0), 0)
   const [showPayment, setShowPayment] = useState(false)
@@ -195,18 +161,18 @@ function CustomerDetail({ customer, onBack }: { customer: Customer; onBack: () =
       <PaymentModal open={showPayment} onClose={() => setShowPayment(false)} customer={customer} openInvoices={openInvoices} onPaid={refetch} />
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon-sm" onClick={onBack}><ChevronLeft className="size-5" /></Button>
-        <div><h1 className="text-2xl font-bold text-[var(--hisab-foreground)]">{customer.fullName || customer.name}</h1><p className="text-sm text-[var(--hisab-muted-fg)]">{customer.phone || ""}</p></div>
+        <div><h1 className="text-2xl font-bold">{customer.fullName || customer.name}</h1><p className="text-sm text-[var(--hisab-muted-fg)]">{customer.phone || ""}</p></div>
       </div>
-      <Card><CardContent className="p-5">
+      <Card className="interactive-card"><CardContent className="p-5">
         <div className="flex items-center justify-between"><div><p className="text-xs text-[var(--hisab-muted-fg)]">کل بدهی</p><p className="text-3xl font-bold text-[var(--hisab-destructive)]">{fmt(totalDebt)} AFN</p></div><Button onClick={() => setShowPayment(true)} icon={<DollarSign className="size-4" />}>ثبت پرداخت</Button></div>
       </CardContent></Card>
       <Card><CardContent className="p-5">
-        <h3 className="text-lg font-semibold text-[var(--hisab-foreground)] mb-4">معاملات باز</h3>
+        <h3 className="text-lg font-semibold mb-4">معاملات باز</h3>
         {openInvoices.length === 0 ? <p className="text-center text-sm text-[var(--hisab-muted-fg)] py-8">معامله بازی وجود ندارد</p> : (
           <div className="space-y-3">
             {openInvoices.map((inv) => { const remaining = num(inv.total) - num(inv.paidAmount ?? 0); return (
-              <div key={inv.id} className="flex items-center justify-between rounded-xl border border-[var(--hisab-border)] p-4">
-                <div><p className="font-medium text-[var(--hisab-foreground)]">#{inv.invoiceNumber ?? ""}</p><p className="text-xs text-[var(--hisab-muted-fg)]">{new Date(inv.date).toLocaleDateString("fa-AF")}</p></div>
+              <div key={inv.id} className="interactive-card flex items-center justify-between rounded-xl border border-[var(--hisab-border)] p-4">
+                <div><p className="font-medium">#{inv.invoiceNumber ?? ""}</p><p className="text-xs text-[var(--hisab-muted-fg)]">{new Date(inv.date).toLocaleDateString("fa-AF")}</p></div>
                 <div className="text-right"><p className="font-bold text-[var(--hisab-destructive)]">{fmt(remaining)} AFN</p><p className="text-xs text-[var(--hisab-muted-fg)]">از {fmt(inv.total)} — {fmt(inv.paidAmount ?? 0)} پرداخت شده</p></div>
               </div>
             )})}
@@ -217,7 +183,6 @@ function CustomerDetail({ customer, onBack }: { customer: Customer; onBack: () =
   )
 }
 
-// ═══════════════ Main Page ═══════════════
 export default function BaqidariPage() {
   const [search, setSearch] = useState("")
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null)
@@ -231,9 +196,7 @@ export default function BaqidariPage() {
   const customersWithDebt = useMemo(() => {
     if (!customersData?.customers) return []
     return (customersData.customers as unknown as Customer[]).map((c) => {
-      const openInvs = ((invoicesData?.invoices || []) as unknown as Invoice[]).filter(
-        (inv) => inv.customerId === c.id && (inv.status === "pending" || inv.status === "partial")
-      )
+      const openInvs = ((invoicesData?.invoices || []) as unknown as Invoice[]).filter((inv) => inv.customerId === c.id && (inv.status === "pending" || inv.status === "partial"))
       const totalDebt = openInvs.reduce((sum, inv) => sum + num(inv.total) - num(inv.paidAmount ?? 0), 0)
       return { ...c, totalDebt, openCount: openInvs.length }
     }).sort((a, b) => (b.totalDebt ?? 0) - (a.totalDebt ?? 0))
@@ -252,7 +215,7 @@ export default function BaqidariPage() {
         onPaid={() => {}} />
 
       <div className="flex items-center justify-between">
-        <div><h1 className="text-2xl font-bold text-[var(--hisab-foreground)]">باقی‌داری</h1><p className="mt-1 text-sm text-[var(--hisab-muted-fg)]">مدیریت حساب مشتریان و بدهی‌ها</p></div>
+        <div><h1 className="text-2xl font-bold">باقی‌داری</h1><p className="mt-1 text-sm text-[var(--hisab-muted-fg)]">مدیریت حساب مشتریان و بدهی‌ها</p></div>
         <div className="flex gap-2">
           <Button onClick={() => {}} icon={<ShoppingCart className="size-4" />}>فاکتور نسیه</Button>
           <Button onClick={() => setShowAddCustomer(true)} icon={<Plus className="size-4" />}>مشتری جدید</Button>
@@ -261,41 +224,65 @@ export default function BaqidariPage() {
 
       <Input placeholder="جستجوی مشتری..." leftIcon={<Search className="size-4" />} value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card><CardContent className="p-4 flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--hisab-destructive)]/10"><TrendingUp className="size-5 text-[var(--hisab-destructive)]" /></div><div><p className="text-xl font-bold text-[var(--hisab-foreground)]">{customersWithDebt.filter((c) => (c.totalDebt ?? 0) > 0).length}</p><p className="text-xs text-[var(--hisab-muted-fg)]">مشتری بدهکار</p></div></CardContent></Card>
-        <Card><CardContent className="p-4 flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--hisab-destructive)]/10"><DollarSign className="size-5 text-[var(--hisab-destructive)]" /></div><div><p className="text-xl font-bold text-[var(--hisab-foreground)]">{fmt(customersWithDebt.reduce((s, c) => s + (c.totalDebt ?? 0), 0))}</p><p className="text-xs text-[var(--hisab-muted-fg)]">کل بدهی (AFN)</p></div></CardContent></Card>
-        <Card><CardContent className="p-4 flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--hisab-warning)]/10"><TrendingDown className="size-5 text-[var(--hisab-warning)]" /></div><div><p className="text-xl font-bold text-[var(--hisab-foreground)]">{customersWithDebt.reduce((s, c) => s + (c.openCount ?? 0), 0)}</p><p className="text-xs text-[var(--hisab-muted-fg)]">معامله باز</p></div></CardContent></Card>
+  <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+  <Card className="interactive-card">
+    <CardContent className="p-4 flex items-center gap-3">
+      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--hisab-destructive)]/10">
+        <TrendingUp className="size-5 text-[var(--hisab-destructive)]" />
       </div>
+      <div>
+        <p className="text-xl font-bold">{customersWithDebt.filter((c) => (c.totalDebt ?? 0) > 0).length}</p>
+        <p className="text-xs text-[var(--hisab-muted-fg)]">مشتری بدهکار</p>
+      </div>
+    </CardContent>
+  </Card>
+
+  <Card className="interactive-card">
+    <CardContent className="p-4 flex items-center gap-3">
+      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--hisab-destructive)]/10">
+        <DollarSign className="size-5 text-[var(--hisab-destructive)]" />
+      </div>
+      <div>
+        <p className="text-xl font-bold">{fmt(customersWithDebt.reduce((s, c) => s + (c.totalDebt ?? 0), 0))}</p>
+        <p className="text-xs text-[var(--hisab-muted-fg)]">کل بدهی (AFN)</p>
+      </div>
+    </CardContent>
+  </Card>
+
+  <Card className="interactive-card">
+    <CardContent className="p-4 flex items-center gap-3">
+      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--hisab-warning)]/10">
+        <TrendingDown className="size-5 text-[var(--hisab-warning)]" />
+      </div>
+      <div>
+        <p className="text-xl font-bold">{customersWithDebt.reduce((s, c) => s + (c.openCount ?? 0), 0)}</p>
+        <p className="text-xs text-[var(--hisab-muted-fg)]">معامله باز</p>
+      </div>
+    </CardContent>
+  </Card>
+</div>
 
       {customersWithDebt.length === 0 ? (
         <EmptyState icon="users" title="هیچ مشتری‌ای ثبت نشده" description="اولین مشتری خود را اضافه کنید." />
       ) : (
         <div className="space-y-3">
           {customersWithDebt.map((customer) => (
-            <Card key={customer.id} className="cursor-pointer transition-shadow hover:shadow-[var(--hisab-shadow-md)]" onClick={() => setSelectedCustomerId(customer.id ?? null)}>
+            <Card key={customer.id} className="interactive-card cursor-pointer" onClick={() => setSelectedCustomerId(customer.id ?? null)}>
               <CardContent className="flex items-center justify-between p-5">
                 <div className="flex items-center gap-3">
                   <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${(customer.totalDebt ?? 0) > 0 ? 'bg-[var(--hisab-destructive)]/10' : 'bg-[var(--hisab-success)]/10'}`}>
                     <User className={`size-5 ${(customer.totalDebt ?? 0) > 0 ? 'text-[var(--hisab-destructive)]' : 'text-[var(--hisab-success)]'}`} />
                   </div>
                   <div>
-                    <p className="font-semibold text-[var(--hisab-foreground)]">{customer.fullName || customer.name}</p>
+                    <p className="font-semibold">{customer.fullName || customer.name}</p>
                     <div className="flex items-center gap-2 mt-0.5">
-                      <Badge variant={(customer.totalDebt ?? 0) > 0 ? "destructive" : "success"} size="sm">
-                        {(customer.totalDebt ?? 0) > 0 ? "بدهکار" : "تسویه"}
-                      </Badge>
-                      {(customer.openCount ?? 0) > 0 && (
-                        <span className="text-xs text-[var(--hisab-muted-fg)]">{customer.openCount} معامله باز</span>
-                      )}
+                      <Badge variant={(customer.totalDebt ?? 0) > 0 ? "destructive" : "success"} size="sm">{(customer.totalDebt ?? 0) > 0 ? "بدهکار" : "تسویه"}</Badge>
+                      {(customer.openCount ?? 0) > 0 && <span className="text-xs text-[var(--hisab-muted-fg)]">{customer.openCount} معامله باز</span>}
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  {(customer.totalDebt ?? 0) > 0 && (
-                    <div className="text-right">
-                      <p className="font-bold text-[var(--hisab-destructive)]">{fmt(customer.totalDebt ?? 0)} AFN</p>
-                    </div>
-                  )}
+                  {(customer.totalDebt ?? 0) > 0 && <div className="text-right"><p className="font-bold text-[var(--hisab-destructive)]">{fmt(customer.totalDebt ?? 0)} AFN</p></div>}
                   <Button variant="ghost" size="icon-sm" onClick={(e) => { e.stopPropagation(); setPaymentCustomer(customer); setShowPayment(true) }}>
                     <DollarSign className="size-4 text-[var(--hisab-success)]" />
                   </Button>

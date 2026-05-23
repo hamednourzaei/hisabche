@@ -13,43 +13,27 @@ export interface SyncStatusProps {
 }
 
 function timeAgo(timestamp: number): string {
-  const seconds = Math.floor((Date.now() - timestamp) / 1000)
-  if (seconds < 10) return "لحظاتی پیش"
-  if (seconds < 60) return `${seconds} ثانیه پیش`
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes} دقیقه پیش`
-  const hours = Math.floor(minutes / 60)
-  return `${hours} ساعت پیش`
+  const s = Math.floor((Date.now() - timestamp) / 1000)
+  if (s < 10) return "لحظاتی پیش"
+  if (s < 60) return `${s} ثانیه پیش`
+  const m = Math.floor(s / 60)
+  if (m < 60) return `${m} دقیقه پیش`
+  return `${Math.floor(m / 60)} ساعت پیش`
 }
 
-const SyncStatus: React.FC<SyncStatusProps> = ({
-  lastSyncedAt,
-  isOnline,
-  isSyncing,
-  pendingCount,
-  className,
-}) => {
+const SyncStatus: React.FC<SyncStatusProps> = ({ lastSyncedAt, isOnline, isSyncing, pendingCount, className }) => {
   return (
     <div className={cn("flex items-center gap-3 text-xs", className)}>
       {isOnline ? (
-        <div className="flex items-center gap-1.5 text-[var(--hisab-success)]">
-          <Wifi className="size-3.5" />
-          <span>آنلاین</span>
-        </div>
+        <span className="sync-pill ok">● آنلاین</span>
       ) : (
-        <div className="flex items-center gap-1.5 text-[var(--hisab-warning)]">
-          <WifiOff className="size-3.5" />
-          <span>آفلاین</span>
-        </div>
+        <span className="sync-pill off">● آفلاین</span>
       )}
 
       <div className="w-px h-3 bg-[var(--hisab-border)]" />
 
       {isSyncing ? (
-        <div className="flex items-center gap-1.5 text-[var(--hisab-info)]">
-          <RefreshCw className="size-3.5 animate-spin" />
-          <span>همگام‌سازی...</span>
-        </div>
+        <span className="sync-pill syncing">◉ همگام‌سازی...</span>
       ) : lastSyncedAt ? (
         <div className="flex items-center gap-1.5 text-[var(--hisab-muted-fg)]">
           <Clock className="size-3.5" />
@@ -65,10 +49,7 @@ const SyncStatus: React.FC<SyncStatusProps> = ({
       {pendingCount > 0 && (
         <>
           <div className="w-px h-3 bg-[var(--hisab-border)]" />
-          <div className="flex items-center gap-1.5 text-[var(--hisab-warning)]">
-            <CloudOff className="size-3.5" />
-            <span>{pendingCount} در انتظار</span>
-          </div>
+          <span className="sync-pill off">● {pendingCount} در انتظار</span>
         </>
       )}
     </div>

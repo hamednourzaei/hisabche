@@ -21,22 +21,14 @@ const Celebration: React.FC<CelebrationProps> = ({
 }) => {
   const [phase, setPhase] = useState<"idle" | "visible" | "fading">("idle")
 
-  const handleComplete = useCallback(() => {
-    onComplete?.()
-  }, [onComplete])
+  const handleComplete = useCallback(() => { onComplete?.() }, [onComplete])
 
   useEffect(() => {
     if (show && phase === "idle") {
       setPhase("visible")
       const fadeTimer = setTimeout(() => setPhase("fading"), duration)
-      const cleanupTimer = setTimeout(() => {
-        setPhase("idle")
-        handleComplete()
-      }, duration + 500)
-      return () => {
-        clearTimeout(fadeTimer)
-        clearTimeout(cleanupTimer)
-      }
+      const cleanupTimer = setTimeout(() => { setPhase("idle"); handleComplete() }, duration + 500)
+      return () => { clearTimeout(fadeTimer); clearTimeout(cleanupTimer) }
     }
     return undefined
   }, [show, duration, handleComplete, phase])
@@ -45,57 +37,30 @@ const Celebration: React.FC<CelebrationProps> = ({
 
   return (
     <div
-      className={`fixed inset-0 z-[200] flex items-center justify-center bg-black/30 backdrop-blur-sm transition-opacity duration-500 ${
-        phase === "fading" ? "opacity-0" : "opacity-100"
-      }`}
+      className={`fixed inset-0 z-[200] flex items-center justify-center bg-black/30 backdrop-blur-sm transition-opacity duration-500 ${phase === "fading" ? "opacity-0" : "opacity-100"}`}
       role="alert"
       aria-live="assertive"
     >
-      {/* Confetti layer */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {Array.from({ length: 24 }).map((_, i) => (
           <div
             key={i}
             style={{
-              position: "absolute",
-              width: `${Math.random() * 10 + 6}px`,
-              height: `${Math.random() * 10 + 6}px`,
-              borderRadius: "50%",
-              background: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
-              top: "-5%",
-              left: `${Math.random() * 100}%`,
+              position: "absolute", width: `${Math.random() * 10 + 6}px`, height: `${Math.random() * 10 + 6}px`,
+              borderRadius: "50%", background: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
+              top: "-5%", left: `${Math.random() * 100}%`,
               animation: `confettiFall ${Math.random() * 2 + 2}s linear ${Math.random() * 0.6}s forwards`,
             }}
           />
         ))}
       </div>
 
-      {/* Message card */}
-      <div
-        className="pointer-events-auto relative z-10"
-        style={{
-          animation: "scaleIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
-        }}
-      >
+      <div className="pointer-events-auto relative z-10" style={{ animation: "scaleIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards" }}>
         <div className="text-6xl mb-4 text-center animate-bounce">{emoji}</div>
-        <div className="bg-[var(--hisab-card)] rounded-2xl shadow-[var(--hisab-shadow-xl)] px-8 py-6 border border-[var(--hisab-border)]">
-          <p className="text-xl font-bold text-[var(--hisab-foreground)] text-center">
-            {message}
-          </p>
+        <div className="glass-card px-8 py-6">
+          <p className="text-xl font-bold text-center">{message}</p>
         </div>
       </div>
-
-      <style>{`
-        @keyframes confettiFall {
-          0%   { transform: translateY(0) rotate(0deg); opacity: 1; }
-          100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
-        }
-        @keyframes scaleIn {
-          0%   { transform: scale(0.5); opacity: 0; }
-          70%  { transform: scale(1.05); }
-          100% { transform: scale(1); opacity: 1; }
-        }
-      `}</style>
     </div>
   )
 }

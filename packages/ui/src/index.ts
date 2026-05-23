@@ -7,25 +7,20 @@ import './styles/lite-mode.css'
 // ---------- Utils ----------
 export { cn, formatCurrency, formatDate } from './lib/utils'
 
-// ---------- Components ----------
-export { Button, buttonVariants, type ButtonProps } from './components/ui/button'
-export { Input, type InputProps } from './components/ui/input'
-export {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from './components/ui/card'
-export { Badge, badgeVariants, type BadgeProps } from './components/ui/badge'
-export {
-  Skeleton,
-  SkeletonText,
-  SkeletonAvatar,
-  SkeletonCard,
-  type SkeletonProps,
-} from './components/ui/skeleton'
+// ---------- shadcn/ui Components ----------
+export { Button, buttonVariants } from './components/ui/button'
+export { Input } from './components/ui/input'
+export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './components/ui/card'
+export { Badge, badgeVariants } from './components/ui/badge'
+export { Skeleton } from './components/ui/skeleton'
+export { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from './components/ui/dialog'
+export { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetClose } from './components/ui/sheet'
+export { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel, DropdownMenuGroup, DropdownMenuShortcut, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from './components/ui/dropdown-menu'
+export { Select, SelectTrigger, SelectValue, SelectContent, SelectItem, SelectGroup, SelectLabel, SelectSeparator } from './components/ui/select'
+export { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell, TableCaption } from './components/ui/table'
+export { Toaster } from './components/ui/sonner'
+
+// ---------- Custom Components (unchanged) ----------
 export { Toast, ToastContainer, type ToastProps, type ToastVariant } from './components/ui/toast'
 export { SearchInput, type SearchInputProps } from './components/ui/search-input'
 export { Fab, type FabAction, type FabProps } from './components/ui/fab'
@@ -44,10 +39,6 @@ export type SupportedLanguage = 'fa-AF' | 'fa-IR'
 export { AddProductModal } from "./components/ui/add-product-modal"
 export { StockStatsCard } from "./components/ui/stock-stats-card"
 export { LandingPreview } from "./components/ui/landing-preview"
-export {
-  AnimatedCounter, GradientMesh, GlassNavbar, ShimmerCTA,
-  Section, FeatureCard, SectionHeading,
-} from "./components/ui/landing-section"
-// packages/ui/src/index.ts — add export
+export { AnimatedCounter, GradientMesh, GlassNavbar, ShimmerCTA, Section, FeatureCard, SectionHeading } from "./components/ui/landing-section"
 export { LivingBackground } from "./components/ui/living-background"
 export { default as AuthShell } from "./components/ui/auth/AuthShell"

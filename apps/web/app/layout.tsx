@@ -5,6 +5,9 @@ import { Providers } from './providers'
 import './globals.css'
 
 import { ErrorBoundary } from '@hisabche/ui'
+import { Geist } from "next/font/google";
+import { cn } from "@hisabche/ui"
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   title: {
@@ -28,7 +31,7 @@ export default function RootLayout({
       lang="fa-AF"
       dir="rtl"
       suppressHydrationWarning
-      data-scroll-behavior="smooth"
+      data-scroll-behavior="smooth" className={cn("font-sans", geist.variable)}
     >
       <head>
         <link
