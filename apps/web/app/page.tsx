@@ -1,7 +1,7 @@
 import { Suspense } from "react"
 import { LandingPage } from "@hisabche/ui/landing/landing-page"
+import { AuthGate } from "./auth-gate"
 
-export const dynamic = "force-static"
 export const revalidate = 3600
 
 export const metadata = {
@@ -11,12 +11,14 @@ export const metadata = {
 
 export default function RootPage() {
   return (
-    <Suspense fallback={
-      <div className="flex min-h-screen items-center justify-center bg-[var(--hisab-background)]">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--hisab-primary)] border-t-transparent" />
-      </div>
-    }>
-      <LandingPage />
-    </Suspense>
+    <AuthGate>
+      <Suspense fallback={
+        <div className="flex min-h-screen items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--hisab-primary)] border-t-transparent" />
+        </div>
+      }>
+        <LandingPage />
+      </Suspense>
+    </AuthGate>
   )
 }
