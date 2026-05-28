@@ -48,7 +48,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   // ✅ Authenticated
   return (
-    <div className="flex min-h-screen bg-[var(--hisab-background)]">
+    <div className="hisab-root flex min-h-screen ">
       <DashboardSidebar
         items={navItems}
         activeNav={pathname}

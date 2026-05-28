@@ -194,6 +194,22 @@
   },
   "baqidari": {
     "title": "باقی‌داری",
+    "subtitle": "مدیریت طلب و بدهی مشتریان",
+    "creditInvoice": "فاکتور نسیه",
+    "addCustomer": "مشتری جدید",
+    "searchPlaceholder": "جستجوی مشتری…",
+    "debtor": "بدهکار",
+    "settled": "تسویه",
+    "openDeals": "معامله باز",
+    "debtorCount": "مشتری بدهکار",
+    "totalDebt": "کل بدهی",
+    "recordPayment": "ثبت پرداخت",
+    "selectInvoice": "انتخاب فاکتور",
+    "paymentFrom": "پرداخت از {{name}}",
+    "openDealsTitle": "معاملات باز",
+    "noOpenDeals": "معامله بازی وجود ندارد",
+    "notFound": "مشتری پیدا نشد",
+    "ofPaid": "از {{total}} — {{paid}} پرداخت شده",
     "customerLedger": "دفتر مشتری",
     "supplierLedger": "دفتر عرضه‌کننده",
     "openingBalance": "باقی اولیه",
@@ -218,7 +234,24 @@
     "dateRange": "از تاریخ... تا تاریخ...",
     "selected": "انتخاب شده",
     "allCustomers": "همه مشتریان",
-    "totalDebt": "کل بدهی"
+    "empty": {
+      "title": "هیچ مشتری‌ای ثبت نشده",
+      "subtitle": "اولین مشتری خود را اضافه کنید"
+    },
+    "form": {
+      "nameRequired": "نام مشتری الزامی است",
+      "namePlaceholder": "نام مشتری *",
+      "phonePlaceholder": "شماره تماس (اختیاری)",
+      "newCustomer": "تازه میاد",
+      "hasDebt": "بدهی داره",
+      "whichProduct": "چه جنسی برده؟",
+      "unitPrice": "قیمت واحد",
+      "qty": "تعداد",
+      "total": "کل",
+      "default": "پیش‌فرض",
+      "paymentAmount": "مبلغ پرداختی (AFN)",
+      "invalidPayment": "مبلغ یا فاکتور نامعتبر است"
+    }
   },
   "currency": {
     "title": "پول",
@@ -275,6 +308,13 @@
     "url": "لینک معتبر نیست"
   },
   "common": {
+    "cancel": "انصراف",
+    "save": "ذخیره",
+    "back": "بازگشت",
+    "retry": "تلاش دوباره",
+    "noName": "بدون نام",
+    "saveError": "ذخیره ناموفق بود",
+    "loadError": "بارگذاری ناموفق بود",
     "yes": "بلی",
     "no": "نخیر",
     "ok": "باشه",
@@ -318,26 +358,20 @@
     "noInvoicesYet": "هنوز فاکتوری ثبت نشده",
     "viewAllInvoices": "مشاهده همه فاکتورها",
     "itemsNeedReorder": "قلم نیاز به شارژ",
-    "ready": "همه چیز آماده است!"
-  },
-   "greeting": {
+    "ready": "همه چیز آماده است!",
+    "greeting": {
       "morning": "صبح بخیر",
       "afternoon": "ظهر بخیر",
       "evening": "عصر بخیر",
       "night": "شب بخیر"
     },
     "subtitle": "امروز چه خبر از کسب‌وکارت؟",
-    "todaySales": "فروش امروز",
-    "lowStockAlert": "موجودی کم",
     "lowStockHint": "قلم نیاز به شارژ",
-    "totalDebt": "مجموع بدهی",
-    "recentInvoices": "آخرین فاکتورها",
     "empty": {
       "title": "آماده‌ی اولین فروش",
       "subtitle": "یک فاکتور ثبت کن تا ماجرا شروع بشه"
-    },
-    "viewAllInvoices": "مشاهده همه فاکتورها",
-
+    }
+  },
   "quickInvoice": {
     "whatSold": "چه چیزی فروختید؟",
     "toWhom": "به چه کسی فروختید؟ (اختیاری)",

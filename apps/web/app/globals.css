@@ -1,6 +1,7 @@
 /* ═══════════════════════════════════════════════════════════
    globals.css — HISABCHE CINEMATIC DESIGN SYSTEM v7
    10/10 Elite · Sub-1s FCP · Modern CSS 2025
+   Mobile text-center · Desktop text-right (RTL)
    ═══════════════════════════════════════════════════════════ */
 @tailwind base;
 @tailwind components;
@@ -23,8 +24,8 @@
   :root {
     /* ═══ Colors ═══ */
     --hisab-duration: 200ms;
---hisab-ease-default: cubic-bezier(0.4, 0, 0.2, 1);
---hisab-transition: var(--hisab-duration) var(--hisab-ease-default);
+    --hisab-ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+    --hisab-transition: var(--hisab-duration) var(--hisab-ease-default);
     --hisab-primary: 270 90% 65%;
     --hisab-primary-fg: 0 0% 100%;
     --hisab-primary-hover: 270 90% 60%;
@@ -91,9 +92,6 @@
     /* ═══ Typography ═══ */
     --hisab-font-sans: 'Vazirmatn', system-ui, sans-serif;
     --hisab-font-mono: 'Fira Code', monospace;
---hisab-duration: 200ms;
---hisab-ease-default: cubic-bezier(0.4, 0, 0.2, 1);
---hisab-transition: var(--hisab-duration) var(--hisab-ease-default);
     --ease-out: cubic-bezier(.2, .8, .2, 1);
     --ease-spring: cubic-bezier(.34, 1.56, .64, 1);
 
@@ -222,6 +220,13 @@
     font-variant-numeric: tabular-nums;
     font-feature-settings: "ss01", "cv11";
     font-size-adjust: 0.545;
+    text-align: center; /* ✅ موبایل: وسط */
+  }
+
+  @media (min-width: 768px) {
+    body {
+      text-align: right; /* ✅ دسکتاپ: راست (RTL) */
+    }
   }
 
   h1, h2, h3 { text-rendering: optimizeLegibility; text-wrap: balance; }
@@ -288,7 +293,7 @@
 
   .glass-light { background: var(--glass-light); backdrop-filter: blur(8px); }
   .glass-medium { background: var(--glass-medium); backdrop-filter: blur(16px); }
-  .glass-strong { background: var(--glass-strong); backdrop-filter: blur(28px); }
+  .glass-strong { background: var(--glass-strong); backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px); border: 1px solid var(--glass-border); border-radius: var(--hisab-radius-2xl); box-shadow: var(--elevation-5); }
 
   .glass-card { position: relative; background: linear-gradient(180deg, hsl(var(--hisab-foreground) / .08), hsl(var(--hisab-foreground) / .02)); backdrop-filter: blur(var(--glass-blur)); -webkit-backdrop-filter: blur(var(--glass-blur)); border: 1px solid var(--glass-border); border-radius: var(--hisab-radius-2xl); box-shadow: var(--elevation-4), inset 0 1px 0 hsl(var(--hisab-foreground) / .06);
     &::before { content: ""; position: absolute; inset: 0; background: linear-gradient(135deg, hsl(var(--hisab-foreground) / .12), transparent 30%); pointer-events: none; border-radius: inherit; }
@@ -310,19 +315,9 @@
     }
   }
 
-/* ═══ Skeleton — pulse in place ═══ */
-.skeleton-shimmer {
-  position: relative;
-  overflow: hidden;
-  background: hsl(var(--hisab-foreground) / .06);
-  animation: skeleton-pulse 1.6s ease-in-out infinite;
-  border-radius: var(--hisab-radius);
-}
+  .skeleton-shimmer { position: relative; overflow: hidden; background: hsl(var(--hisab-foreground) / .06); animation: skeleton-pulse 1.6s ease-in-out infinite; border-radius: var(--hisab-radius); }
+  @keyframes skeleton-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .4; } }
 
-@keyframes skeleton-pulse {
-  0%, 100% { opacity: 1; }
-  50%      { opacity: .4; }
-}
   .ghost-btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-1); padding-block: var(--space-1); padding-inline: var(--space-2); border-radius: var(--hisab-radius-md); color: hsl(var(--hisab-muted-fg)); background: transparent; border: none; cursor: pointer; transition: all 200ms; font-size: 13px;
     &:hover { background: hsl(var(--hisab-muted)); color: hsl(var(--hisab-foreground)); }
   }

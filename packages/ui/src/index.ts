@@ -42,4 +42,15 @@ export { LandingPreview } from "./components/ui/landing-preview"
 export { AnimatedCounter, GradientMesh, GlassNavbar, ShimmerCTA, Section, FeatureCard, SectionHeading } from "./components/ui/landing-section"
 export { LivingBackground } from "./components/ui/living-background"
 export { default as AuthShell } from "./components/ui/auth/AuthShell"
-export { BaqidariPage } from "./components/ui/baqidari-page"
+
+// ---------- Baqidari Feature ----------
+export { BaqidariPage } from "./components/ui/baqidari"
+export { AddCustomerModal } from "./components/ui/baqidari"
+export { PaymentModal } from "./components/ui/baqidari"
+export { CustomerDetailView } from "./components/ui/baqidari"
+
+// ---------- Shared Components ----------
+export { Modal } from "./components/ui/Modal"
+
+// ---------- Quick Invoice ----------
+export { QuickInvoicePage } from "./components/ui/quick-invoice"
