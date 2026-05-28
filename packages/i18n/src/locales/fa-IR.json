@@ -323,6 +323,24 @@
     "itemsNeedReorder": "کالا نیاز به شارژ مجدد",
     "ready": "همه چیز آماده است!"
   },
+   "greeting": {
+      "morning": "صبح بخیر",
+      "afternoon": "ظهر بخیر",
+      "evening": "عصر بخیر",
+      "night": "شب بخیر"
+    },
+    "subtitle": "امروز چه خبر از کسب‌وکارت؟",
+    "todaySales": "فروش امروز",
+    "lowStockAlert": "موجودی کم",
+    "lowStockHint": "قلم نیاز به شارژ",
+    "totalDebt": "مجموع بدهی",
+    "recentInvoices": "آخرین فاکتورها",
+    "empty": {
+      "title": "آماده‌ی اولین فروش",
+      "subtitle": "یک فاکتور ثبت کن تا ماجرا شروع بشه"
+    },
+    "viewAllInvoices": "مشاهده همه فاکتورها",
+
   "quickInvoice": {
     "whatSold": "چه چیزی فروختید؟",
     "toWhom": "به چه کسی فروختید؟ (اختیاری)",

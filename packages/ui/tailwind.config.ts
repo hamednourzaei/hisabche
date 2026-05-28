@@ -95,8 +95,12 @@ const config: Config = {
         128: '32rem',
       },
       transitionDuration: {
-        DEFAULT: '200ms',
+        DEFAULT: 'var(--hisab-duration)',
+  hisab: 'var(--hisab-duration)',
       },
+      transitionTimingFunction: {
+  hisab: 'var(--hisab-ease-default)',
+},
       animation: {
         'fade-in': 'fadeIn 200ms ease-in-out',
         'fade-in-slow': 'fadeIn 700ms ease-out',

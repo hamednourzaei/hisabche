@@ -20,6 +20,9 @@
    ═══════════════════════════════════════════ */
 @layer base {
   :root {
+    --hisab-duration: 200ms;
+--hisab-ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+--hisab-transition: var(--hisab-duration) var(--hisab-ease-default);
     /* ═══ Color tokens ═══ */
     --hisab-primary: 270 90% 65%;
     --hisab-primary-fg: 0 0% 100%;
@@ -87,7 +90,9 @@
     /* ═══ Typography ═══ */
     --hisab-font-sans: 'Vazirmatn', system-ui, sans-serif;
     --hisab-font-mono: 'Fira Code', monospace;
-    --hisab-transition: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    --hisab-duration: 200ms;
+--hisab-ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+--hisab-transition: var(--hisab-duration) var(--hisab-ease-default);
     --ease-out: cubic-bezier(.2, .8, .2, 1);
     --ease-spring: cubic-bezier(.34, 1.56, .64, 1);
 
@@ -199,7 +204,8 @@
     line-height: var(--leading-normal);
     color: hsl(var(--hisab-foreground));
     background-color: hsl(var(--hisab-background));
-    transition: background-color var(--hisab-transition), color var(--hisab-transition);
+    transition: background-color var(--hisab-duration) var(--hisab-ease-default), 
+              color var(--hisab-duration) var(--hisab-ease-default);
     -webkit-font-smoothing: antialiased;
     font-variant-numeric: tabular-nums;
     font-feature-settings: "ss01", "cv11";
@@ -337,9 +343,19 @@
   .interactive-card { position: relative; }
   @media (hover: hover) { .interactive-card:hover { transform: translateY(-2px); } .interactive-card::after { content: ""; position: absolute; inset: 0; border-radius: inherit; border: 1px dashed hsl(var(--hisab-border)); opacity: 0; transition: opacity .3s; } .interactive-card:hover::after { opacity: 1; } }
 
-  /* ═══ Skeleton ═══ */
-  .skeleton-shimmer { position: relative; overflow: hidden; border-radius: 999px; background: linear-gradient(90deg, hsl(var(--hisab-foreground) / .04), hsl(var(--hisab-foreground) / .08), hsl(var(--hisab-foreground) / .04)); background-size: 200% 100%; animation: shimmer 1.6s infinite; }
+/* ═══ Skeleton — pulse in place ═══ */
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+  background: hsl(var(--hisab-foreground) / .06);
+  animation: skeleton-pulse 1.6s ease-in-out infinite;
+  border-radius: var(--hisab-radius);
+}
 
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: .4; }
+}
   /* ═══ Ghost Button ═══ */
   .ghost-btn { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-1); padding-block: var(--space-1); padding-inline: var(--space-2); border-radius: var(--hisab-radius-md); color: hsl(var(--hisab-muted-fg)); background: transparent; border: none; cursor: pointer; transition: all 200ms; font-size: 13px; }
   .ghost-btn:hover { background: hsl(var(--hisab-muted)); color: hsl(var(--hisab-foreground)); }
