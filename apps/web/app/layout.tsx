@@ -7,6 +7,8 @@ import './globals.css'
 
 import { Geist } from "next/font/google"
 import { cn } from "@hisabche/ui"
+import { SpeedInsights } from "@vercel/speed-insights/next"
+import { Analytics } from "@vercel/analytics/next"
 
 const geist = Geist({ subsets: ['latin'], variable: '--font-sans' })
 
@@ -49,6 +51,8 @@ export default function RootLayout({
         <ClientErrorBoundary>
           <Providers>{children}</Providers>
         </ClientErrorBoundary>
+        <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   )
