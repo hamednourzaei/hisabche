@@ -1,42 +1,20 @@
 "use client"
 
-import { useMemo } from "react"
-import { useRouter } from "next/navigation"
-import { useTranslation } from "react-i18next"
-import { useInvoices, useProducts, useTransactions } from "@hisabche/api"
 import { Card, CardContent, CardHeader, CardTitle } from "@hisabche/ui"
 import {
   TrendingUp, Package, Users, Receipt,
   ArrowUpRight, PlusCircle, Sparkles, type LucideIcon,
 } from "lucide-react"
 
-interface Transaction { date?: string; created_at?: string; type?: string; amount?: number | string }
-interface Product { quantity?: number | string; min_stock_level?: number | string; minStockLevel?: number | string }
-interface Invoice { id?: string; status?: string; total?: number | string; paid_amount?: number | string; paidAmount?: number | string; customer_name?: string; customerName?: string; date?: string; created_at?: string }
-interface RecentInvoice { id: string; customer: string; total: number; date: string }
-
-const num = (v: unknown): number => { const n = Number(v); return Number.isFinite(n) ? n : 0 }
-const fmt = (v: unknown): string => num(v).toLocaleString("fa-AF")
-const fmtDate = (d: string): string => { try { return new Date(d).toLocaleDateString("fa-AF") } catch { return d } }
-const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0)
-
-function Greeting() {
-  const { t } = useTranslation()
-  const h = new Date().getHours()
-  const k = h < 12 ? "morning" : h < 17 ? "afternoon" : h < 21 ? "evening" : "night"
-  const greetings = { morning: "صبح بخیر", afternoon: "ظهر بخیر", evening: "عصر بخیر", night: "شب بخیر" }
-  return (
-    <div className="space-y-1.5">
-      <h1 className="flex items-center gap-2 text-2xl sm:text-3xl font-bold">
-        {t(`dashboard.greeting.${k}`, greetings[k])}
-        <Sparkles className="size-5 text-[var(--hisab-primary)]" aria-hidden />
-      </h1>
-      <p className="text-sm text-[var(--hisab-muted-fg)]">{t("dashboard.subtitle", "امروز چه خبر از کسب‌وکارت؟")}</p>
-    </div>
-  )
+interface RecentInvoice {
+  id: string
+  customer: string
+  total: number
+  date: string
 }
 
 type Tone = "emerald" | "amber" | "rose"
+
 const TONE_BG: Record<Tone, string> = {
   emerald: "from-emerald-500/10 to-emerald-500/[0.02] border-emerald-500/20",
   amber: "from-amber-500/10 to-amber-500/[0.02] border-amber-500/20",
@@ -60,7 +38,7 @@ function StatCard({ label, value, hint, Icon, tone, onClick, isLoading, delay }:
         {onClick && <ArrowUpRight className="size-4 text-[var(--hisab-muted-fg)] opacity-0 transition-opacity group-hover:opacity-100" aria-hidden />}
       </div>
       <p className="mb-1 text-xs font-medium text-[var(--hisab-muted-fg)]">{label}</p>
-      {isLoading ? <div className="skeleton-shimmer h-8 w-32" /> : <div className="text-2xl sm:text-3xl font-bold tabular-nums">{value}</div>}
+      {isLoading ? <div className="skeleton-shimmer h-8 w-32 rounded-lg" /> : <div className="text-2xl sm:text-3xl font-bold tabular-nums">{value}</div>}
       {hint && <p className="mt-1.5 text-[10px] text-[var(--hisab-muted-fg)]">{hint}</p>}
     </Wrap>
   )
@@ -69,8 +47,8 @@ function StatCard({ label, value, hint, Icon, tone, onClick, isLoading, delay }:
 function InvoiceRowSkeleton() {
   return (
     <div className="flex items-center justify-between rounded-xl border border-[var(--hisab-border)] bg-[var(--hisab-card)]/50 p-4">
-      <div className="space-y-2"><div className="skeleton-shimmer h-3.5 w-32" /><div className="skeleton-shimmer h-3 w-20" /></div>
-      <div className="skeleton-shimmer h-4 w-24" />
+      <div className="space-y-2"><div className="skeleton-shimmer h-3.5 w-32 rounded-md" /><div className="skeleton-shimmer h-3 w-20 rounded-md" /></div>
+      <div className="skeleton-shimmer h-4 w-24 rounded-md" />
     </div>
   )
 }
@@ -82,13 +60,12 @@ function RecentInvoiceRow({ inv, onClick }: { inv: RecentInvoice; onClick: () =>
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-purple-500/15 to-cyan-500/15 text-[var(--hisab-primary)]"><Receipt className="size-4" aria-hidden /></div>
         <div className="min-w-0"><p className="truncate text-sm font-semibold">{inv.customer}</p><p className="text-xs text-[var(--hisab-muted-fg)]">{inv.date}</p></div>
       </div>
-      <div className="ml-3 shrink-0 font-bold tabular-nums">{fmt(inv.total)} <span className="text-xs font-normal text-[var(--hisab-muted-fg)]">AFN</span></div>
+      <div className="ml-3 shrink-0 font-bold tabular-nums">{inv.total} <span className="text-xs font-normal text-[var(--hisab-muted-fg)]">AFN</span></div>
     </button>
   )
 }
 
-function EmptyInvoices({ onCreate }: { onCreate: () => void }) {
-  const { t } = useTranslation()
+function EmptyInvoices({ onCreate, t }: { onCreate: () => void; t: (key: string, fallback?: string) => string }) {
   return (
     <div className="flex flex-col items-center justify-center gap-4 py-10 text-center">
       <div className="relative">
@@ -106,41 +83,73 @@ function EmptyInvoices({ onCreate }: { onCreate: () => void }) {
   )
 }
 
-export function DashboardPage() {
-  const { t } = useTranslation()
-  const router = useRouter()
-  const { data: invoicesData, isLoading: invLoading } = useInvoices({ page: 1, limit: 5, sortDirection: "desc" })
-  const { data: productsData, isLoading: prodLoading } = useProducts({ page: 1, limit: 100, sortDirection: "desc", lowStock: true })
-  const { data: txData, isLoading: txLoading } = useTransactions({ page: 1, limit: 1000, sortDirection: "desc" })
+function Greeting({ t }: { t: (key: string, fallback?: string) => string }) {
+  const h = new Date().getHours()
+  const k = h < 12 ? "morning" : h < 17 ? "afternoon" : h < 21 ? "evening" : "night"
+  const greetings = { morning: "صبح بخیر", afternoon: "ظهر بخیر", evening: "عصر بخیر", night: "شب بخیر" }
+  return (
+    <div className="space-y-1.5">
+      <h1 className="flex items-center gap-2 text-2xl sm:text-3xl font-bold">
+        {t(`dashboard.greeting.${k}`, greetings[k])}
+        <Sparkles className="size-5 text-[var(--hisab-primary)]" aria-hidden />
+      </h1>
+      <p className="text-sm text-[var(--hisab-muted-fg)]">{t("dashboard.subtitle", "امروز چه خبر از کسب‌وکارت؟")}</p>
+    </div>
+  )
+}
 
-  const todaySales = useMemo(() => {
-    if (!txData?.transactions) return 0
-    return (txData.transactions as Transaction[]).filter((tr) => { const d = new Date(tr.date || tr.created_at || ""); return d >= todayStart && (tr.type === "sale" || tr.type === "payment") }).reduce((sum, tr) => sum + num(tr.amount), 0)
-  }, [txData])
-  const lowStockCount = useMemo(() => ((productsData?.products || []) as Product[]).filter((p) => num(p.quantity) > 0 && num(p.quantity) <= num(p.min_stock_level ?? p.minStockLevel ?? 5)).length, [productsData])
-  const totalDebt = useMemo(() => {
-    if (!invoicesData?.invoices) return 0
-    return (invoicesData.invoices as Invoice[]).filter((inv) => inv.status === "pending" || inv.status === "partial").reduce((sum, inv) => { const r = num(inv.total) - num(inv.paid_amount ?? inv.paidAmount); return sum + (r > 0 ? r : 0) }, 0)
-  }, [invoicesData])
-  const recentInvoices: RecentInvoice[] = useMemo(() => ((invoicesData?.invoices || []) as Invoice[]).slice(0, 5).map((inv) => ({ id: inv.id ?? "", customer: inv.customer_name ?? inv.customerName ?? t("common.noName", "بدون نام"), total: num(inv.total), date: fmtDate(inv.date ?? inv.created_at ?? "") })), [invoicesData, t])
+export interface DashboardPageProps {
+  t: (key: string, fallback?: string) => string
+  fmt: (v: number) => string
+  todaySales: number
+  lowStockCount: number
+  totalDebt: number
+  txLoading: boolean
+  prodLoading: boolean
+  invLoading: boolean
+  recentInvoices: RecentInvoice[]
+  onNavigateGodam: () => void
+  onNavigateBaqidari: () => void
+  onNavigateQuickInvoice: () => void
+  onNavigateInvoices: () => void
+  onNavigateInvoice: (id: string) => void
+  onViewAllInvoices: () => void
+}
 
+export function DashboardPage({
+  t,
+  fmt,
+  todaySales,
+  lowStockCount,
+  totalDebt,
+  txLoading,
+  prodLoading,
+  invLoading,
+  recentInvoices,
+  onNavigateGodam,
+  onNavigateBaqidari,
+  onNavigateQuickInvoice,
+  onNavigateInvoices,
+  onNavigateInvoice,
+  onViewAllInvoices,
+}: DashboardPageProps) {
   return (
     <div className="space-y-6">
-      <Greeting />
+      <Greeting t={t} />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard label={t("dashboard.todaySales", "فروش امروز")} value={`${fmt(todaySales)} AFN`} Icon={TrendingUp} tone="emerald" isLoading={txLoading} delay="0.05s" />
-        <StatCard label={t("dashboard.lowStockAlert", "موجودی کم")} value={fmt(lowStockCount)} hint={t("dashboard.lowStockHint", "قلم نیاز به شارژ")} Icon={Package} tone="amber" isLoading={prodLoading} onClick={() => router.push("/godam")} delay="0.12s" />
-        <StatCard label={t("dashboard.totalDebt", "مجموع بدهی")} value={`${fmt(totalDebt)} AFN`} Icon={Users} tone="rose" isLoading={invLoading} onClick={() => router.push("/baqidari")} delay="0.19s" />
+        <StatCard label={t("dashboard.lowStockAlert", "موجودی کم")} value={fmt(lowStockCount)} hint={t("dashboard.lowStockHint", "قلم نیاز به شارژ")} Icon={Package} tone="amber" isLoading={prodLoading} onClick={onNavigateGodam} delay="0.12s" />
+        <StatCard label={t("dashboard.totalDebt", "مجموع بدهی")} value={`${fmt(totalDebt)} AFN`} Icon={Users} tone="rose" isLoading={invLoading} onClick={onNavigateBaqidari} delay="0.19s" />
       </div>
 
       <Card className="glass-card">
         <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Receipt className="size-5 text-[var(--hisab-primary)]" aria-hidden />{t("dashboard.recentInvoices", "آخرین فاکتورها")}</CardTitle></CardHeader>
         <CardContent>
           {invLoading ? <div className="space-y-3">{[0, 1, 2].map((i) => <InvoiceRowSkeleton key={i} />)}</div>
-            : recentInvoices.length === 0 ? <EmptyInvoices onCreate={() => router.push("/quick-invoice")} />
+            : recentInvoices.length === 0 ? <EmptyInvoices onCreate={onNavigateQuickInvoice} t={t} />
             : <div className="space-y-3">
-                {recentInvoices.map((inv) => <RecentInvoiceRow key={inv.id} inv={inv} onClick={() => router.push(`/invoices/${inv.id}`)} />)}
-                <button onClick={() => router.push("/invoices")} className="mt-2 w-full rounded-xl border border-dashed border-[var(--hisab-border)] py-3 text-sm font-medium text-[var(--hisab-muted-fg)] transition-all hover:border-[var(--hisab-primary)]/40 hover:bg-[var(--hisab-card)]/60 hover:text-[var(--hisab-foreground)]">{t("dashboard.viewAllInvoices", "مشاهده همه فاکتورها")}</button>
+                {recentInvoices.map((inv) => <RecentInvoiceRow key={inv.id} inv={inv} onClick={() => onNavigateInvoice(inv.id)} />)}
+                <button onClick={onViewAllInvoices} className="mt-2 w-full rounded-xl border border-dashed border-[var(--hisab-border)] py-3 text-sm font-medium text-[var(--hisab-muted-fg)] transition-all hover:border-[var(--hisab-primary)]/40 hover:bg-[var(--hisab-card)]/60 hover:text-[var(--hisab-foreground)]">{t("dashboard.viewAllInvoices", "مشاهده همه فاکتورها")}</button>
               </div>}
         </CardContent>
       </Card>

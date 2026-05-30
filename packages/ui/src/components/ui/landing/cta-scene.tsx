@@ -1,11 +1,12 @@
 "use client"
 
-import { useRouter } from "next/navigation"
 import { Section, ShimmerCTA } from "@hisabche/ui"
 
-export default function CTAScene() {
-  const router = useRouter()
+export interface CTASceneProps {
+  onNavigateLogin: () => void
+}
 
+export default function CTAScene({ onNavigateLogin }: CTASceneProps) {
   return (
     <Section>
       <div className="mx-auto max-w-2xl text-center rounded-3xl border border-[var(--hisab-border)] bg-gradient-to-br from-[var(--hisab-card)] via-[var(--hisab-card)] to-purple-500/5 p-10 sm:p-14 relative overflow-hidden">
@@ -14,7 +15,7 @@ export default function CTAScene() {
         <div className="relative">
           <h2 className="text-4xl font-bold text-[var(--hisab-foreground)] mb-4">آماده‌ای؟</h2>
           <p className="text-[var(--hisab-muted-fg)] mb-10">۳۰ ثانیه تا اولین فاکتور واقعی</p>
-          <ShimmerCTA onClick={() => router.push("/login")}>شروع کن — رایگان</ShimmerCTA>
+          <ShimmerCTA onClick={onNavigateLogin}>شروع کن — رایگان</ShimmerCTA>
         </div>
       </div>
     </Section>

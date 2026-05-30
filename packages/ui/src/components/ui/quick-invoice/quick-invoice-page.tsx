@@ -1,11 +1,6 @@
 "use client"
 
-import React, { useEffect, useRef, useState, useCallback } from "react"
-import { useRouter } from "next/navigation"
-import { useTranslation } from "react-i18next"
 import { Button, Input, Card, CardContent, ProductPicker, CustomerPicker, SaveIndicator } from "@hisabche/ui"
-import { useCreateInvoice } from "@hisabche/api"
-import { useOnboardingStore, usePreferencesStore, useSyncStore, useBackupStore } from "@hisabche/store"
 import { ArrowRight, Check, User, DollarSign, Package, ShoppingCart, CreditCard } from "lucide-react"
 
 interface ProductOption { id: string; name: string; sellPrice: number; unit: string }
@@ -16,89 +11,51 @@ type PaymentType = "cash" | "credit"
 const STEPS: Step[] = ["product", "customer", "price", "done"] as const
 const QUANTITIES = ["1", "2", "3", "5", "10"] as const
 
-export function QuickInvoicePage() {
-  const { t } = useTranslation()
-  const router = useRouter()
-  const createInvoice = useCreateInvoice()
-  const { markInvoiceCreated } = useOnboardingStore()
-  const preferences = usePreferencesStore()
-  const { setSaveStatus } = useSyncStore()
-  const { addAuditEntry } = useBackupStore()
-  const inputRef = useRef<HTMLInputElement>(null)
+export interface QuickInvoicePageProps {
+  t: (key: string, fallback?: string) => string
+  elapsedFormatted: string
+  showSaved: boolean
+  showCelebration: boolean
+  step: Step
+  selectedProduct: ProductOption | null
+  selectedCustomer: CustomerOption | null
+  price: string
+  quantity: string
+  paymentType: PaymentType
+  paidNow: string
+  total: number
+  productName: string
+  paidAmount: number
+  createdInvoiceId: string | null
+  isPending: boolean
+inputRef: React.Ref<HTMLInputElement>
+  onSelectProduct: (p: ProductOption | null) => void
+  onSelectCustomer: (c: CustomerOption | null) => void
+  onPriceChange: (v: string) => void
+  onQuantityChange: (q: string) => void
+  onPaymentTypeChange: (t: PaymentType) => void
+  onPaidNowChange: (v: string) => void
+  onSetStep: (s: Step) => void
+  onCreate: () => void
+  onDismissCelebration: () => void
+  onViewInvoice: () => void
+  onViewAllInvoices: () => void
+}
 
-  const [step, setStep] = useState<Step>("product")
-  const [selectedProduct, setSelectedProduct] = useState<ProductOption | null>(null)
-  const [selectedCustomer, setSelectedCustomer] = useState<CustomerOption | null>(null)
-  const [price, setPrice] = useState("")
-  const [quantity, setQuantity] = useState("1")
-  const [paymentType, setPaymentType] = useState<PaymentType>("cash")
-  const [paidNow, setPaidNow] = useState("")
-  const [showCelebration, setShowCelebration] = useState(false)
-  const [createdInvoiceId, setCreatedInvoiceId] = useState<string | null>(null)
-  const [startTime] = useState(Date.now())
-  const [elapsed, setElapsed] = useState(0)
-  const [showSaved, setShowSaved] = useState(false)
-
-  useEffect(() => { inputRef.current?.focus() }, [step])
-  useEffect(() => { const t = setInterval(() => setElapsed(Math.floor((Date.now() - startTime) / 1000)), 1000); return () => clearInterval(t) }, [startTime])
-  useEffect(() => { if (selectedProduct?.sellPrice) setPrice(selectedProduct.sellPrice.toString()) }, [selectedProduct])
-
-  const total = (parseFloat(price) || 0) * (parseInt(quantity) || 1)
-  const productName = selectedProduct?.name ?? ""
-  const paidAmount = paymentType === "cash" ? total : (parseFloat(paidNow) || 0)
-
-  const dismissCelebration = useCallback(() => {
-    setShowCelebration(false)
-    router.push(createdInvoiceId ? `/invoices/${createdInvoiceId}` : "/invoices")
-  }, [createdInvoiceId, router])
-
-  const handleCreate = useCallback(async () => {
-    if (!selectedProduct || !price) return
-    
-    setSaveStatus('saving')
-    
-    const newInvoice = await createInvoice.mutateAsync({
-      type: "sale", date: new Date().toISOString(), subtotal: total, discountTotal: 0, discountType: "fixed",
-      taxRate: preferences.lastTaxRate ?? 0, taxTotal: 0, total, paidAmount,
-      paymentMethod: paymentType === "cash" ? "cash" : "credit",
-      currency: (preferences.lastCurrency as "AFN" | "USD" | "PKR" | "IRR") ?? "AFN",
-      customerId: selectedCustomer?.id || undefined, customerName: selectedCustomer?.name || undefined,
-      items: [{ productId: selectedProduct.id, productName: selectedProduct.name, quantity: parseInt(quantity), unitPrice: parseFloat(price), discount: 0, totalPrice: total }],
-    })
-    
-    preferences.addRecentProduct(selectedProduct.name)
-    preferences.addFrequentProduct(selectedProduct.name)
-    if (selectedCustomer) preferences.setLastCustomer(selectedCustomer.name, selectedCustomer.id)
-    markInvoiceCreated()
-    
-    // ═══ Audit log ═══
-    addAuditEntry({
-      action: 'create',
-      entity: 'invoice',
-      entityId: newInvoice.id || '',
-      details: `فاکتور جدید: ${productName} — ${total.toLocaleString()} AFN ${paymentType === 'cash' ? 'نقد' : 'نسیه'}`,
-    })
-    
-    setSaveStatus('saved')
-    setShowSaved(true)
-    setTimeout(() => {
-      setSaveStatus('idle')
-      setShowSaved(false)
-    }, 2000)
-    
-    setCreatedInvoiceId(newInvoice.id ?? null)
-    setShowCelebration(true)
-    setStep("done")
-  }, [selectedProduct, price, total, paidAmount, paymentType, quantity, selectedCustomer, preferences, createInvoice, markInvoiceCreated, setSaveStatus, addAuditEntry])
-
-  const elapsedFormatted = elapsed < 60 ? `${elapsed}s` : `${Math.floor(elapsed / 60)}m ${elapsed % 60}s`
-
+export function QuickInvoicePage({
+  t, elapsedFormatted, showSaved, showCelebration, step,
+  selectedProduct, selectedCustomer, price, quantity, paymentType, paidNow,
+  total, productName, paidAmount, createdInvoiceId, isPending, inputRef,
+  onSelectProduct, onSelectCustomer, onPriceChange, onQuantityChange,
+  onPaymentTypeChange, onPaidNowChange, onSetStep, onCreate, onDismissCelebration,
+  onViewInvoice, onViewAllInvoices,
+}: QuickInvoicePageProps) {
   return (
     <div className="px-4 py-10">
       <SaveIndicator show={showSaved} message={t("faktoor.created", "فاکتور ثبت شد ✅")} />
-      
+
       {showCelebration && (
-        <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-black/30 backdrop-blur-sm cursor-pointer" onClick={dismissCelebration}>
+        <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-black/30 backdrop-blur-sm cursor-pointer" onClick={onDismissCelebration}>
           <div onClick={(e) => e.stopPropagation()} className="text-center pointer-events-none">
             <div className="text-6xl mb-4 animate-bounce">🧾</div>
             <div className="glass-strong px-8 py-6">
@@ -126,16 +83,12 @@ export function QuickInvoicePage() {
           <Card className="glass-strong">
             <CardContent className="space-y-6 p-6">
               <div className="text-center">
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--hisab-primary)]/10">
-                  <Package className="size-8 text-[var(--hisab-primary)]" />
-                </div>
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--hisab-primary)]/10"><Package className="size-8 text-[var(--hisab-primary)]" /></div>
                 <h1 className="text-2xl font-bold">{t("quickInvoice.whatSold", "نام محصول")}</h1>
                 <p className="mt-2 text-sm text-[var(--hisab-muted-fg)]">{t("quickInvoice.whatSold", "چه چیزی فروختید؟")}</p>
               </div>
-              <ProductPicker value={selectedProduct} onChange={setSelectedProduct} placeholder={t("godam.pickProduct", "انتخاب محصول از گدام...")} />
-              <Button className="w-full" size="lg" disabled={!selectedProduct} onClick={() => setStep("customer")} icon={<ArrowRight className="size-4" />}>
-                {t("action.next", "ادامه")}
-              </Button>
+              <ProductPicker value={selectedProduct} onChange={onSelectProduct} placeholder={t("godam.pickProduct", "انتخاب محصول از گدام...")} />
+              <Button className="w-full" size="lg" disabled={!selectedProduct} onClick={() => onSetStep("customer")} icon={<ArrowRight className="size-4" />}>{t("action.next", "ادامه")}</Button>
             </CardContent>
           </Card>
         )}
@@ -148,10 +101,10 @@ export function QuickInvoicePage() {
                 <h1 className="text-2xl font-bold">{t("faktoor.customer", "مشتری")}</h1>
                 <p className="mt-2 text-sm text-[var(--hisab-muted-fg)]">{t("quickInvoice.toWhom", "نام مشتری را انتخاب کنید (اختیاری)")}</p>
               </div>
-              <CustomerPicker value={selectedCustomer} onChange={setSelectedCustomer} placeholder={t("customer.pickPlaceholder", "انتخاب مشتری...")} />
+              <CustomerPicker value={selectedCustomer} onChange={onSelectCustomer} placeholder={t("customer.pickPlaceholder", "انتخاب مشتری...")} />
               <div className="flex gap-3">
-                <Button variant="outline" className="w-full" onClick={() => setStep("product")}>{t("action.back", "برگشت")}</Button>
-                <Button className="w-full" onClick={() => setStep("price")}>{t("action.next", "ادامه")}</Button>
+                <Button variant="outline" className="w-full" onClick={() => onSetStep("product")}>{t("action.back", "برگشت")}</Button>
+                <Button className="w-full" onClick={() => onSetStep("price")}>{t("action.next", "ادامه")}</Button>
               </div>
             </CardContent>
           </Card>
@@ -170,19 +123,19 @@ export function QuickInvoicePage() {
                 {selectedCustomer && <div className="flex items-center justify-between"><span className="text-sm text-[var(--hisab-muted-fg)]">{t("faktoor.customer", "مشتری")}</span><span className="font-medium">{selectedCustomer.name}</span></div>}
               </div>
               <div className="flex gap-2">
-                <button type="button" onClick={() => setPaymentType("cash")} className={`flex-1 py-3 rounded-xl text-sm font-medium transition-all ${paymentType === "cash" ? "bg-[var(--hisab-primary)] text-white" : "border border-[var(--hisab-border)]"}`}>💵 {t("faktoor.cash", "نقد")}</button>
-                <button type="button" onClick={() => setPaymentType("credit")} className={`flex-1 py-3 rounded-xl text-sm font-medium transition-all ${paymentType === "credit" ? "bg-[var(--hisab-warning)] text-white" : "border border-[var(--hisab-border)]"}`}>📝 {t("faktoor.credit", "نسیه")}</button>
+                <button type="button" onClick={() => onPaymentTypeChange("cash")} className={`flex-1 py-3 rounded-xl text-sm font-medium transition-all ${paymentType === "cash" ? "bg-[var(--hisab-primary)] text-white" : "border border-[var(--hisab-border)]"}`}>💵 {t("faktoor.cash", "نقد")}</button>
+                <button type="button" onClick={() => onPaymentTypeChange("credit")} className={`flex-1 py-3 rounded-xl text-sm font-medium transition-all ${paymentType === "credit" ? "bg-[var(--hisab-warning)] text-white" : "border border-[var(--hisab-border)]"}`}>📝 {t("faktoor.credit", "نسیه")}</button>
               </div>
-              {paymentType === "credit" && <Input type="number" value={paidNow} onChange={(e) => setPaidNow(e.target.value)} placeholder={`${t("payment.record", "پیش‌پرداخت")} (کل: ${total.toLocaleString()} AFN)`} label={t("payment.record", "مبلغ پرداخت شده الان")} leftIcon={<CreditCard className="size-4" />} />}
+              {paymentType === "credit" && <Input type="number" value={paidNow} onChange={(e) => onPaidNowChange(e.target.value)} placeholder={`${t("payment.record", "پیش‌پرداخت")} (کل: ${total.toLocaleString()} AFN)`} label={t("payment.record", "مبلغ پرداخت شده الان")} leftIcon={<CreditCard className="size-4" />} />}
               <div>
                 <label className="mb-2 block text-sm font-medium">{t("faktoor.quantity", "تعداد")}</label>
                 <div className="flex gap-2">
                   {QUANTITIES.map((q) => (
-                    <button key={q} type="button" onClick={() => setQuantity(q)} className={`h-10 w-10 rounded-lg border text-sm font-medium transition-all ${quantity === q ? "border-[var(--hisab-primary)] bg-[var(--hisab-primary)]/10 text-[var(--hisab-primary)]" : "border-[var(--hisab-border)] text-[var(--hisab-muted-fg)]"}`}>{q}</button>
+                    <button key={q} type="button" onClick={() => onQuantityChange(q)} className={`h-10 w-10 rounded-lg border text-sm font-medium transition-all ${quantity === q ? "border-[var(--hisab-primary)] bg-[var(--hisab-primary)]/10 text-[var(--hisab-primary)]" : "border-[var(--hisab-border)] text-[var(--hisab-muted-fg)]"}`}>{q}</button>
                   ))}
                 </div>
               </div>
-              <Input ref={inputRef} type="number" value={price} onChange={(e) => setPrice(e.target.value)} placeholder={t("quickInvoice.pricePlaceholder", "مثلاً 500")} label={`${t("faktoor.unitPrice", "قیمت")} (AFN)`} leftIcon={<DollarSign className="size-4" />} />
+              <Input ref={inputRef} type="number" value={price} onChange={(e) => onPriceChange(e.target.value)} placeholder={t("quickInvoice.pricePlaceholder", "مثلاً 500")} label={`${t("faktoor.unitPrice", "قیمت")} (AFN)`} leftIcon={<DollarSign className="size-4" />} />
               {price && (
                 <div className="rounded-2xl bg-[var(--hisab-primary)]/5 p-5 text-center">
                   <p className="mb-2 text-sm text-[var(--hisab-muted-fg)]">{t("common.total", "مبلغ کل")}</p>
@@ -191,8 +144,8 @@ export function QuickInvoicePage() {
                 </div>
               )}
               <div className="flex gap-3">
-                <Button variant="outline" className="w-full" onClick={() => setStep("customer")}>{t("action.back", "برگشت")}</Button>
-                <Button className="w-full" size="lg" loading={createInvoice.isPending} disabled={!price || parseFloat(price) <= 0} onClick={handleCreate} icon={<ShoppingCart className="size-4" />}>{t("action.submit", "ثبت فاکتور")}</Button>
+                <Button variant="outline" className="w-full" onClick={() => onSetStep("customer")}>{t("action.back", "برگشت")}</Button>
+                <Button className="w-full" size="lg" loading={isPending} disabled={!price || parseFloat(price) <= 0} onClick={onCreate} icon={<ShoppingCart className="size-4" />}>{t("action.submit", "ثبت فاکتور")}</Button>
               </div>
             </CardContent>
           </Card>
@@ -217,8 +170,8 @@ export function QuickInvoicePage() {
                 </>}
               </div>
               <div className="flex flex-col gap-3">
-                {createdInvoiceId && <Button className="w-full" size="lg" onClick={() => router.push(`/invoices/${createdInvoiceId}`)} icon={<ArrowRight className="size-5" />}>{t("action.view", "مشاهده فاکتور")}</Button>}
-                <Button className="w-full" variant="outline" onClick={() => router.push("/invoices")}>{t("action.back", "بازگشت به فاکتورها")}</Button>
+                {createdInvoiceId && <Button className="w-full" size="lg" onClick={onViewInvoice} icon={<ArrowRight className="size-5" />}>{t("action.view", "مشاهده فاکتور")}</Button>}
+                <Button className="w-full" variant="outline" onClick={onViewAllInvoices}>{t("action.back", "بازگشت به فاکتورها")}</Button>
               </div>
             </CardContent>
           </Card>

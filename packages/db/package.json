@@ -10,5 +10,9 @@
   },
   "dependencies": {
     "@nozbe/watermelondb": "^0.28.0"
+  },
+  "devDependencies": {
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6"
   }
 }

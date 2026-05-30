@@ -1,0 +1,131 @@
+"use client"
+
+import { useState, useCallback } from "react"
+import { useRouter } from "next/navigation"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { useTranslation } from "react-i18next"
+import { z } from "zod"
+import { useAuthStore } from "@hisabche/store"
+import { loginSchema, type LoginInput } from "@hisabche/validation"
+import { AuthShell } from "@hisabche/ui"
+
+const signupSchema = z.object({
+  fullName: z.string().min(2, "signup.errors.fullName"),
+  companyName: z.string().min(2, "signup.errors.companyName"),
+  phone: z.string().optional().or(z.literal("")),
+  email: z.string().min(1, "signup.errors.emailRequired").email("signup.errors.emailInvalid"),
+  password: z.string().min(8, "signup.errors.passwordMin"),
+})
+type SignupInput = z.infer<typeof signupSchema>
+
+function useSafeT() {
+  const { t } = useTranslation()
+  return (key: string, fallback: string) => {
+    const v = t(key)
+    return v && v !== key ? v : fallback
+  }
+}
+
+export function AuthContainer({ initialMode = "login" }: { initialMode?: "login" | "signup" }) {
+  const router = useRouter()
+  const { t } = useTranslation()
+  const st = useSafeT()
+  const [flipped, setFlipped] = useState(initialMode === "signup")
+
+  // ─── Login form ────────────────────────────────
+  const loginForm = useForm<LoginInput>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: "", password: "" },
+  })
+  const [loginShowPassword, setLoginShowPassword] = useState(false)
+  const loginStore = useAuthStore()
+
+  const onLoginSubmit = loginForm.handleSubmit(async (data: LoginInput) => {
+    await loginStore.login(data)
+    const s = useAuthStore.getState()
+    if (s.isAuthenticated && !s.error) {
+      router.push("/dashboard")
+    }
+  })
+
+  const onDemoLogin = useCallback(async () => {
+    await loginStore.login({ email: "demo@hisabche.com", password: "Demo1234" })
+    const s = useAuthStore.getState()
+    if (s.isAuthenticated && !s.error) {
+      router.push("/dashboard")
+    }
+  }, [loginStore, router])
+
+  const loginProps = {
+    st,
+    serverError: loginStore.error,
+    isLoading: loginStore.isLoading,
+    errors: loginForm.formState.errors as Record<string, { message?: string } | undefined>,
+    register: loginForm.register as any,
+    watch: loginForm.watch as any,
+    handleSubmit: loginForm.handleSubmit as any,
+    showPassword: loginShowPassword,
+    togglePassword: () => setLoginShowPassword(!loginShowPassword),
+    onSwitchMode: () => {},
+    onSubmit: onLoginSubmit as any,
+    onDemoLogin,
+  }
+
+  // ─── Signup form ───────────────────────────────
+  const signupForm = useForm<SignupInput>({
+    resolver: zodResolver(signupSchema),
+    defaultValues: { fullName: "", companyName: "", phone: "", email: "", password: "" },
+  })
+  const [signupShowPassword, setSignupShowPassword] = useState(false)
+  const signupStore = useAuthStore()
+
+  const onSignupSubmit = signupForm.handleSubmit(async (data: SignupInput) => {
+    try {
+      await signupStore.login({ email: data.email, password: data.password })
+      await new Promise((r) => setTimeout(r, 100))
+      const s = useAuthStore.getState()
+      if (s.isAuthenticated && !s.error) {
+        router.push("/dashboard")
+      }
+    } catch { /* handled by store */ }
+  })
+
+  const translateError = (k?: string) => (k ? t(k, k) : undefined)
+
+  const signupProps = {
+    st,
+    serverError: signupStore.error,
+    isLoading: signupStore.isLoading,
+    errors: signupForm.formState.errors as Record<string, { message?: string } | undefined>,
+    register: signupForm.register as any,
+    watch: signupForm.watch as any,
+    handleSubmit: signupForm.handleSubmit as any,
+    showPassword: signupShowPassword,
+    togglePassword: () => setSignupShowPassword(!signupShowPassword),
+    onSwitchMode: () => {},
+    onSubmit: onSignupSubmit as any,
+    translateError,
+  }
+
+  // ─── Switch mode ──────────────────────────────
+  const handleSwitch = useCallback(() => {
+    const willFlip = !flipped
+    setFlipped(willFlip)
+    setTimeout(() => {
+      if (typeof window !== "undefined") {
+        window.history.replaceState(null, "", willFlip ? "/signup" : "/login")
+      }
+    }, 275)
+  }, [flipped])
+
+  return (
+    <AuthShell
+      flipped={flipped}
+      st={st}
+      loginProps={loginProps}
+      signupProps={signupProps}
+      onSwitchMode={handleSwitch}
+    />
+  )
+}

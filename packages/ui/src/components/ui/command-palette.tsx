@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { useRouter } from "next/navigation"
 import { Search } from "lucide-react"
 import { cn } from "../../lib/utils"
 
@@ -9,30 +8,23 @@ interface CommandItem {
   id: string
   label: string
   description: string
-  path: string
   icon?: string
   shortcut?: string
+  onSelect: () => void
 }
 
-const COMMANDS: CommandItem[] = [
-  { id: "dashboard", label: "داشبورد", description: "نمای کلی کسب‌وکار", path: "/dashboard", icon: "📊" },
-  { id: "new-invoice", label: "فاکتور جدید", description: "ثبت فاکتور سریع", path: "/quick-invoice", icon: "🧾", shortcut: "N" },
-  { id: "godam", label: "ګدام", description: "مدیریت محصولات", path: "/godam", icon: "📦" },
-  { id: "invoices", label: "فاکتورها", description: "مشاهده فاکتورها", path: "/invoices", icon: "📋" },
-  { id: "baqidari", label: "باقی‌داری", description: "مدیریت بدهی‌ها", path: "/baqidari", icon: "📒" },
-  { id: "customers", label: "مشتری جدید", description: "اضافه کردن مشتری", path: "/baqidari?add=true", icon: "👤" },
-  { id: "settings", label: "تنظیمات", description: "تنظیمات برنامه", path: "/settings", icon: "⚙️" },
-  { id: "sync", label: "همگام‌سازی", description: "مرکز همگام‌سازی", path: "/sync-center", icon: "🔄" },
-]
+interface CommandPaletteProps {
+  commands: CommandItem[]
+  shortcutKey?: string
+}
 
-export function CommandPalette() {
-  const router = useRouter()
+export function CommandPalette({ commands, shortcutKey = "." }: CommandPaletteProps) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState("")
   const [selectedIndex, setSelectedIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const filtered = COMMANDS.filter(
+  const filtered = commands.filter(
     (cmd) =>
       cmd.label.includes(query) ||
       cmd.description.includes(query) ||
@@ -53,16 +45,15 @@ export function CommandPalette() {
 
   const handleSelect = useCallback(
     (item: CommandItem) => {
-      router.push(item.path)
+      item.onSelect()
       handleClose()
     },
-    [router, handleClose]
+    [handleClose]
   )
 
-  // ═══ Keyboard shortcut: Ctrl+K (بدون Shift) ═══
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.key === "." || e.key === ".") && (e.ctrlKey || e.metaKey)) {
+      if (e.key === shortcutKey && (e.ctrlKey || e.metaKey)) {
         e.preventDefault()
         e.stopPropagation()
         if (open) {
@@ -78,9 +69,8 @@ export function CommandPalette() {
     }
     document.addEventListener("keydown", onKey)
     return () => document.removeEventListener("keydown", onKey)
-  }, [open, handleOpen, handleClose])
+  }, [open, handleOpen, handleClose, shortcutKey])
 
-  // ═══ Arrow key navigation ═══
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
@@ -125,7 +115,7 @@ export function CommandPalette() {
             className="w-full bg-transparent text-sm outline-none placeholder:text-[var(--hisab-muted-fg)]"
           />
           <div className="hidden sm:inline-flex items-center gap-1 rounded-md border border-[var(--hisab-border)] bg-[var(--hisab-muted)] px-1.5 py-0.5 text-[10px] text-[var(--hisab-muted-fg)]">
-            <span className="text-xs">⌘</span>.
+            <span className="text-xs">⌘</span>{shortcutKey}
           </div>
         </div>
 

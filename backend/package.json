@@ -23,8 +23,6 @@
     "fastify": "^4.28.0",
     "ioredis": "^5.10.1",
     "postgres": "^3.4.4",
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6",
     "tiny-lru": "^10.4.1",
     "zod": "^3.23.8"
   },
@@ -32,6 +30,8 @@
     "@types/ioredis": "^4.28.10",
     "@types/node": "^20.14.0",
     "pino-pretty": "^11.0.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
     "tsx": "^4.15.0",
     "typescript": "^5.5.0"
   }

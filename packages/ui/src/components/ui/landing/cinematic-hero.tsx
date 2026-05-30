@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
 import { motion, useScroll, useSpring, useTransform, useReducedMotion } from "framer-motion"
 import { GradientMesh, ShimmerCTA } from "@hisabche/ui"
 import FloatingLines from "./floating-lines"
@@ -26,14 +25,16 @@ function useIsMobile() {
   return isMobile
 }
 
-export default function CinematicHero() {
-  const router = useRouter()
+export interface CinematicHeroProps {
+  onNavigateLogin: () => void
+}
+
+export default function CinematicHero({ onNavigateLogin }: CinematicHeroProps) {
   const { zoom, fade } = useCinematicCamera()
   const reduceMotion = useReducedMotion()
   const isMobile = useIsMobile()
   const shouldAnimate = !reduceMotion && !isMobile
 
-  // ✅ conditional spread — هیچ‌وقت undefined صریح پاس نمی‌دیم
   const sectionMotionProps = shouldAnimate
     ? { style: { scale: zoom, opacity: fade } }
     : {}
@@ -71,7 +72,7 @@ export default function CinematicHero() {
           {...ctaMotionProps}
           className="mt-10 flex gap-4 justify-center"
         >
-          <ShimmerCTA onClick={() => router.push("/login")}>شروع تجربه</ShimmerCTA>
+          <ShimmerCTA onClick={onNavigateLogin}>شروع تجربه</ShimmerCTA>
         </motion.div>
       </div>
     </motion.section>

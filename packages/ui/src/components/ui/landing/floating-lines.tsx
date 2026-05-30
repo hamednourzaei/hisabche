@@ -6,7 +6,6 @@ export default function FloatingLines() {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    // Skip on mobile or reduced motion
     const mql = window.matchMedia("(max-width: 767px), (prefers-reduced-motion: reduce)")
     if (!mql.matches) setMounted(true)
   }, [])

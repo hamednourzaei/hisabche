@@ -1,14 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useTranslation } from "react-i18next"
-import { z } from "zod"
+import type { ReactNode } from "react"
 import { Button } from "@hisabche/ui"
-import { useAuthStore } from "@hisabche/store"
-import { loginSchema, type LoginInput } from "@hisabche/validation"
 
 // ─── Icons ─────────────────────────────────────────────
 const IconMail = () => (
@@ -72,54 +65,74 @@ const IconDoc = () => (
   </svg>
 )
 
-// ─── i18n ──────────────────────────────────────────────
-function useSafeT() {
-  const { t } = useTranslation()
-  return (key: string, fallback: string) => {
-    const v = t(key)
-    return v && v !== key ? v : fallback
-  }
+// ─── Types ─────────────────────────────────────────────
+type SafeT = (key: string, fallback: string) => string
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnyForm = any
+
+interface LoginFormProps {
+  st: SafeT
+  serverError: string | null
+  isLoading: boolean
+  errors: Record<string, { message?: string } | undefined>
+  register: AnyForm
+  watch: AnyForm
+  handleSubmit: AnyForm
+  showPassword: boolean
+  togglePassword: () => void
+  onSwitchMode: () => void
+  onSubmit: (e: React.FormEvent) => void
+  onDemoLogin: () => void
 }
 
-// ─── Signup schema ─────────────────────────────────────
-const signupSchema = z.object({
-  fullName: z.string().min(2, "signup.errors.fullName"),
-  companyName: z.string().min(2, "signup.errors.companyName"),
-  phone: z.string().optional().or(z.literal("")),
-  email: z.string().min(1, "signup.errors.emailRequired").email("signup.errors.emailInvalid"),
-  password: z.string().min(8, "signup.errors.passwordMin"),
-})
-type SignupInput = z.infer<typeof signupSchema>
+interface SignupFieldOpts {
+  name: string
+  type: string
+  label: string
+  icon: ReactNode
+  value: string | undefined
+  err?: { message?: string } | undefined
+  dir?: "ltr" | "rtl"
+  autoComplete?: string
+  rightSlot?: ReactNode
+  extraPaddingLeft?: boolean
+}
 
-// ═══════════════════════════════════════════════════════
-// WORKSPACE PREVIEW — Orders + Pipeline (no numbers)
-// ═══════════════════════════════════════════════════════
-function WorkspacePreview({ st }: { st: ReturnType<typeof useSafeT> }) {
+interface SignupFormProps {
+  st: SafeT
+  serverError: string | null
+  isLoading: boolean
+  errors: Record<string, { message?: string } | undefined>
+  register: AnyForm
+  watch: AnyForm
+  handleSubmit: AnyForm
+  showPassword: boolean
+  togglePassword: () => void
+  onSwitchMode: () => void
+  onSubmit: (e: React.FormEvent) => void
+  translateError: (k?: string) => string | undefined
+}
 
+// ─── WorkspacePreview ──────────────────────────────────
+function WorkspacePreview({ st }: { st: SafeT }) {
   const rows = [
-    { id: 1, status: "paid",    hueA: 280, hueB: 320, w: 65 },
-    { id: 2, status: "pending", hueA: 195, hueB: 220, w: 78 },
-    { id: 3, status: "paid",    hueA: 25,  hueB: 10,  w: 52 },
-    { id: 4, status: "shipped", hueA: 160, hueB: 180, w: 70 },
-    { id: 5, status: "paid",    hueA: 340, hueB: 0,   w: 58 },
+    { id: 1, status: "paid" as const,    hueA: 280, hueB: 320, w: 65 },
+    { id: 2, status: "pending" as const, hueA: 195, hueB: 220, w: 78 },
+    { id: 3, status: "paid" as const,    hueA: 25,  hueB: 10,  w: 52 },
+    { id: 4, status: "shipped" as const, hueA: 160, hueB: 180, w: 70 },
+    { id: 5, status: "paid" as const,    hueA: 340, hueB: 0,   w: 58 },
   ]
 
   const statusMap = {
     paid:    { cls: "bg-emerald-500/15 text-emerald-500 border-emerald-500/25", icon: <IconCheck />, label: st("preview.status.paid", "تکمیل") },
     pending: { cls: "bg-amber-500/15 text-amber-500 border-amber-500/25",       icon: <IconClock />, label: st("preview.status.pending", "در انتظار") },
     shipped: { cls: "bg-sky-500/15 text-sky-500 border-sky-500/25",             icon: <IconTruck />, label: st("preview.status.shipped", "در حال ارسال") },
-  } as const
+  }
 
   return (
     <div className="relative w-full max-w-md flex flex-col gap-4">
-
-      {/* ━━━ MAIN CARD: Orders / Documents ━━━ */}
       <div className="dashboard-reveal relative bg-[var(--hisab-card)]/90 border border-[var(--hisab-border)] rounded-2xl p-5 shadow-2xl backdrop-blur-xl overflow-hidden">
-
-        {/* Top accent gradient */}
         <div className="absolute top-0 right-0 left-0 h-px bg-gradient-to-r from-transparent via-purple-500/40 to-transparent" />
-
-        {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500/20 to-cyan-500/20 border border-purple-500/30 flex items-center justify-center text-purple-500">
@@ -143,8 +156,6 @@ function WorkspacePreview({ st }: { st: ReturnType<typeof useSafeT> }) {
             <button className="p-1.5 rounded-lg hover:bg-[var(--hisab-input)]/40 transition-colors"><IconFilter /></button>
           </div>
         </div>
-
-        {/* Filter chips */}
         <div className="flex items-center gap-1.5 mb-3 chips-reveal">
           <span className="px-2.5 py-1 text-[10px] font-medium rounded-full bg-gradient-to-r from-purple-500 to-cyan-500 text-white shadow-sm">
             {st("preview.chip.all", "همه")}
@@ -159,25 +170,20 @@ function WorkspacePreview({ st }: { st: ReturnType<typeof useSafeT> }) {
             {st("preview.chip.customer", "مشتری")}
           </span>
         </div>
-
-        {/* Search bar mockup */}
         <div className="search-reveal flex items-center gap-2 px-3 py-2 mb-3 rounded-xl bg-[var(--hisab-input)]/30 border border-[var(--hisab-border)]">
           <IconSearch />
           <div className="h-1.5 w-24 rounded-full bg-[var(--hisab-muted-fg)]/25" />
           <div className="ml-auto text-[9px] px-1.5 py-0.5 rounded bg-[var(--hisab-card)] border border-[var(--hisab-border)] text-[var(--hisab-muted-fg)] font-mono">⌘K</div>
         </div>
-
-        {/* Rows */}
         <div className="space-y-0.5">
           {rows.map((row, i) => {
-            const s = statusMap[row.status as keyof typeof statusMap]
+            const s = statusMap[row.status]
             return (
               <div
                 key={row.id}
                 className="ledger-row group flex items-center gap-3 py-2 px-2 -mx-2 rounded-xl hover:bg-[var(--hisab-input)]/30 transition-colors"
                 style={{ animationDelay: `${0.85 + i * 0.08}s` }}
               >
-                {/* Avatar */}
                 <div
                   className="w-8 h-8 rounded-full flex-shrink-0 ring-2 ring-[var(--hisab-card)] shadow-sm relative overflow-hidden"
                   style={{ background: `linear-gradient(135deg, hsl(${row.hueA} 75% 60%), hsl(${row.hueB} 75% 50%))` }}
@@ -186,14 +192,10 @@ function WorkspacePreview({ st }: { st: ReturnType<typeof useSafeT> }) {
                     <IconUser />
                   </div>
                 </div>
-
-                {/* Skeleton name */}
                 <div className="flex-1 min-w-0 space-y-1.5">
                   <div className="h-2 rounded-full bg-[var(--hisab-foreground)]/25" style={{ width: `${row.w}%` }} />
                   <div className="h-1.5 rounded-full bg-[var(--hisab-muted-fg)]/20" style={{ width: `${row.w * 0.55}%` }} />
                 </div>
-
-                {/* Status badge */}
                 <div className={`flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-md border ${s.cls}`}>
                   {s.icon}
                   <span>{s.label}</span>
@@ -203,8 +205,6 @@ function WorkspacePreview({ st }: { st: ReturnType<typeof useSafeT> }) {
           })}
         </div>
       </div>
-
-      {/* ━━━ PIPELINE / WORKFLOW ━━━ */}
       <div className="pipeline-reveal relative bg-[var(--hisab-card)]/80 border border-[var(--hisab-border)] rounded-2xl p-4 backdrop-blur-xl shadow-xl">
         <div className="flex items-center justify-between mb-3">
           <div className="text-[10px] text-[var(--hisab-muted-fg)] uppercase tracking-[0.12em] font-semibold">
@@ -214,7 +214,6 @@ function WorkspacePreview({ st }: { st: ReturnType<typeof useSafeT> }) {
             {st("preview.workflowActive", "در مرحله: ارسال")}
           </div>
         </div>
-
         <div className="relative">
           <svg viewBox="0 0 280 28" className="w-full h-7" preserveAspectRatio="none">
             <defs>
@@ -223,11 +222,8 @@ function WorkspacePreview({ st }: { st: ReturnType<typeof useSafeT> }) {
                 <stop offset="100%" stopColor="rgb(6 182 212)" />
               </linearGradient>
             </defs>
-            {/* Background dashed line */}
             <line x1="14" y1="14" x2="266" y2="14" stroke="currentColor" className="text-[var(--hisab-border)]" strokeWidth="1.5" strokeDasharray="3 4" />
-            {/* Animated progress */}
             <line x1="14" y1="14" x2="194" y2="14" stroke="url(#pipe-progress)" strokeWidth="2" className="pipe-line" />
-            {/* Nodes */}
             {[14, 74, 134, 194, 266].map((cx, i) => {
               const done = i <= 3
               return (
@@ -245,7 +241,6 @@ function WorkspacePreview({ st }: { st: ReturnType<typeof useSafeT> }) {
               )
             })}
           </svg>
-          {/* Labels */}
           <div className="flex justify-between text-[10px] mt-1.5 px-0.5">
             <span className="text-[var(--hisab-foreground)] font-medium">{st("preview.stage.created", "ثبت")}</span>
             <span className="text-[var(--hisab-foreground)] font-medium">{st("preview.stage.approved", "تأیید")}</span>
@@ -255,8 +250,6 @@ function WorkspacePreview({ st }: { st: ReturnType<typeof useSafeT> }) {
           </div>
         </div>
       </div>
-
-      {/* ━━━ Feature pills ━━━ */}
       <div className="pills-reveal flex flex-wrap gap-2 justify-center">
         {[
           { label: st("preview.feature.inventory", "انبارداری"), hue: 280 },
@@ -280,37 +273,13 @@ function WorkspacePreview({ st }: { st: ReturnType<typeof useSafeT> }) {
   )
 }
 
-// ═══════════════════════════════════════════════════════
-// LOGIN FORM
-// ═══════════════════════════════════════════════════════
-function LoginForm({ onSwitchMode, st }: { onSwitchMode: () => void; st: ReturnType<typeof useSafeT> }) {
-  const router = useRouter()
-  const login = useAuthStore((s) => s.login)
-  const isLoading = useAuthStore((s) => s.isLoading)
-  const serverError = useAuthStore((s) => s.error)
-  const [showPassword, setShowPassword] = useState(false)
-
-  const { register, handleSubmit, watch, formState: { errors } } = useForm<LoginInput>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "" },
-  })
+// ─── LoginForm (Pure UI) ──────────────────────────────
+function LoginForm({
+  st, serverError, isLoading, errors, register, watch, handleSubmit,
+  showPassword, togglePassword, onSwitchMode, onSubmit, onDemoLogin,
+}: LoginFormProps) {
   const emailValue = watch("email")
   const passwordValue = watch("password")
-
-const onSubmit = async (data: LoginInput) => {
-  await login(data)
-  const s = useAuthStore.getState()
-  if (s.isAuthenticated && !s.error) {
-    router.push("/dashboard")
-  }
-}
-const handleDemoLogin = async () => {
-  await login({ email: "demo@hisabche.com", password: "Demo1234" })
-  const s = useAuthStore.getState()
-  if (s.isAuthenticated && !s.error) {
-    router.push("/dashboard")
-  }
-}
 
   return (
     <div className="backdrop-blur-2xl bg-[var(--hisab-card)]/85 border border-[var(--hisab-border)] rounded-3xl p-6 sm:p-8 shadow-2xl">
@@ -326,8 +295,7 @@ const handleDemoLogin = async () => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {/* Email */}
+      <form onSubmit={onSubmit} className="space-y-4">
         <div>
           <div className="relative">
             <input {...register("email")} type="email" autoComplete="email" disabled={isLoading}
@@ -339,10 +307,9 @@ const handleDemoLogin = async () => {
             </label>
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--hisab-muted-fg)]"><IconMail /></span>
           </div>
-          {errors.email && <p className="text-xs text-[var(--hisab-destructive)] mt-1.5">{errors.email.message}</p>}
+          {errors.email?.message && <p className="text-xs text-[var(--hisab-destructive)] mt-1.5">{errors.email.message}</p>}
         </div>
 
-        {/* Password */}
         <div>
           <div className="relative">
             <input {...register("password")} type={showPassword ? "text" : "password"} autoComplete="current-password" disabled={isLoading}
@@ -353,19 +320,19 @@ const handleDemoLogin = async () => {
               {st("auth.password", "رمز عبور")}
             </label>
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--hisab-muted-fg)]"><IconLock /></span>
-            <button type="button" onClick={() => setShowPassword(!showPassword)} tabIndex={-1}
+            <button type="button" onClick={togglePassword} tabIndex={-1}
               className="absolute left-3 top-1/2 -translate-y-1/2 text-[11px] font-medium text-[var(--hisab-muted-fg)] hover:text-[var(--hisab-foreground)] transition-colors px-1">
               {showPassword ? st("login.hidePassword", "مخفی") : st("login.showPassword", "نمایش")}
             </button>
           </div>
-          {errors.password && <p className="text-xs text-[var(--hisab-destructive)] mt-1.5">{errors.password.message}</p>}
+          {errors.password?.message && <p className="text-xs text-[var(--hisab-destructive)] mt-1.5">{errors.password.message}</p>}
         </div>
 
         <Button type="submit" loading={isLoading} fullWidth size="lg"
           className="!rounded-2xl !bg-gradient-to-r !from-purple-500 !to-cyan-500 !text-white !font-medium hover:!opacity-90 active:scale-[0.98] !mt-5">
           {st("auth.signIn", "ورود")}
         </Button>
-        <Button type="button" variant="outline" fullWidth onClick={handleDemoLogin} disabled={isLoading} className="!rounded-2xl">
+        <Button type="button" variant="outline" fullWidth onClick={onDemoLogin} disabled={isLoading} className="!rounded-2xl">
           {st("login.demoLogin", "ورود نمایشی")}
         </Button>
       </form>
@@ -380,52 +347,18 @@ const handleDemoLogin = async () => {
   )
 }
 
-// ═══════════════════════════════════════════════════════
-// SIGNUP FORM (unified style, fixed password toggle)
-// ═══════════════════════════════════════════════════════
-function SignupForm({ onSwitchMode, st }: { onSwitchMode: () => void; st: ReturnType<typeof useSafeT> }) {
-  const router = useRouter()
-  const { t } = useTranslation()
-  const { login: signUp, isLoading, error: serverError } = useAuthStore()
-  const [showPassword, setShowPassword] = useState(false)
-
-  const { register, handleSubmit, watch, formState: { errors } } = useForm<SignupInput>({
-    resolver: zodResolver(signupSchema),
-    defaultValues: { fullName: "", companyName: "", phone: "", email: "", password: "" },
-  })
-
-  const fullName    = watch("fullName")
+// ─── SignupForm (Pure UI) ─────────────────────────────
+function SignupForm({
+  st, serverError, isLoading, errors, register, watch, handleSubmit,
+  showPassword, togglePassword, onSwitchMode, onSubmit, translateError,
+}: SignupFormProps) {
+  const fullName = watch("fullName")
   const companyName = watch("companyName")
-  const phone       = watch("phone")
-  const email       = watch("email")
-  const password    = watch("password")
+  const phone = watch("phone")
+  const email = watch("email")
+  const password = watch("password")
 
-  const tr = (k?: string) => (k ? t(k, k) : undefined)
-
-const onSubmit = async (data: SignupInput) => {
-  try {
-    await signUp({ email: data.email, password: data.password })
-    await new Promise((r) => setTimeout(r, 100))
-    const s = useAuthStore.getState()
-    if (s.isAuthenticated && !s.error) {
-      router.push("/dashboard")
-    }
-  } catch { /* handled by store */ }
-}
-
-  // Reusable field renderer (closes over hooks above)
-  const field = (opts: {
-  name: keyof SignupInput
-  type: string
-  label: string
-  icon: React.ReactNode
-  value: string | undefined
-  err?: { message?: string } | undefined
-  dir?: "ltr" | "rtl"
-  autoComplete?: string
-  rightSlot?: React.ReactNode
-  extraPaddingLeft?: boolean
-}) => (
+  const field = (opts: SignupFieldOpts) => (
     <div>
       <div className="relative">
         <input
@@ -446,7 +379,7 @@ const onSubmit = async (data: SignupInput) => {
           <div className="absolute left-3 top-1/2 -translate-y-1/2">{opts.rightSlot}</div>
         )}
       </div>
-      {opts.err?.message && <p className="text-xs text-[var(--hisab-destructive)] mt-1.5">{tr(opts.err.message)}</p>}
+      {opts.err?.message && <p className="text-xs text-[var(--hisab-destructive)] mt-1.5">{translateError(opts.err.message)}</p>}
     </div>
   )
 
@@ -464,7 +397,7 @@ const onSubmit = async (data: SignupInput) => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5" noValidate>
+      <form onSubmit={onSubmit} className="space-y-3.5" noValidate>
         {field({ name: "fullName",    type: "text",     label: st("signup.fullName", "نام و نام خانوادگی"),    icon: <IconUser />,  value: fullName,    err: errors.fullName,    dir: "rtl" })}
         {field({ name: "companyName", type: "text",     label: st("signup.companyName", "نام شرکت / فروشگاه"), icon: <IconStore />, value: companyName, err: errors.companyName, dir: "rtl" })}
         {field({ name: "phone",       type: "tel",      label: st("signup.phone", "شماره تماس (اختیاری)"),       icon: <IconPhone />, value: phone,       err: errors.phone })}
@@ -479,7 +412,7 @@ const onSubmit = async (data: SignupInput) => {
           autoComplete: "new-password",
           extraPaddingLeft: true,
           rightSlot: (
-            <button type="button" onClick={() => setShowPassword(!showPassword)} tabIndex={-1}
+            <button type="button" onClick={togglePassword} tabIndex={-1}
               className="text-[11px] font-medium text-[var(--hisab-muted-fg)] hover:text-[var(--hisab-foreground)] transition-colors px-1">
               {showPassword ? st("login.hidePassword", "مخفی") : st("login.showPassword", "نمایش")}
             </button>
@@ -502,27 +435,25 @@ const onSubmit = async (data: SignupInput) => {
   )
 }
 
-// ═══════════════════════════════════════════════════════
-// MAIN SHELL
-// ═══════════════════════════════════════════════════════
-export default function AuthShell({ initialMode = "login" }: { initialMode?: "login" | "signup" }) {
-  const st = useSafeT()
-  const [flipped, setFlipped] = useState(initialMode === "signup")
+// ─── AuthShell (Pure UI) ───────────────────────────────
+interface AuthShellProps {
+  initialMode?: "login" | "signup"
+  flipped: boolean
+  st: SafeT
+  loginProps: LoginFormProps
+  signupProps: SignupFormProps
+  onSwitchMode: () => void
+}
 
-  const handleSwitch = () => {
-    const willFlip = !flipped
-    setFlipped(willFlip)
-    setTimeout(() => {
-      if (typeof window !== "undefined") {
-        window.history.replaceState(null, "", willFlip ? "/signup" : "/login")
-      }
-    }, 275)
-  }
-
+export function AuthShell({
+  flipped,
+  st,
+  loginProps,
+  signupProps,
+  onSwitchMode,
+}: AuthShellProps) {
   return (
     <div className="relative min-h-screen flex flex-col lg:flex-row overflow-hidden bg-[var(--hisab-background)]" dir="rtl">
-
-      {/* ═════════════ RIGHT (desktop only) — Workspace Preview ═════════════ */}
       <div className="hidden lg:flex lg:w-1/2 relative items-center justify-center overflow-hidden">
         <div className="absolute inset-0 grid-drift" />
         <div className="absolute inset-0 pointer-events-none">
@@ -530,64 +461,46 @@ export default function AuthShell({ initialMode = "login" }: { initialMode?: "lo
           <div className="absolute w-[520px] h-[520px] bg-cyan-500/10 blur-[130px] rounded-full ambient-b bottom-[5%] left-[-120px]" />
         </div>
         <div className="absolute inset-0 bg-gradient-to-t from-[var(--hisab-background)]/50 via-transparent to-[var(--hisab-background)]/20 pointer-events-none" />
-
         <div className="relative z-10 flex flex-col items-center px-8 xl:px-12 py-10 w-full max-w-lg">
           <div className="flex items-center gap-3 mb-6 brand-fade">
             <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-purple-500 to-cyan-500 flex items-center justify-center text-white font-bold shadow-lg shadow-purple-500/25">ح</div>
             <div className="text-right">
-              <div className="text-base font-bold text-[var(--hisab-foreground)] leading-tight">
-                {st("auth.brandTitle", "حسابچه")}
-              </div>
-              <div className="text-[10px] text-[var(--hisab-muted-fg)] mt-0.5">
-                {st("auth.brandSub", "سامانه مدیریت مالی هوشمند")}
-              </div>
+              <div className="text-base font-bold text-[var(--hisab-foreground)] leading-tight">{st("auth.brandTitle", "حسابچه")}</div>
+              <div className="text-[10px] text-[var(--hisab-muted-fg)] mt-0.5">{st("auth.brandSub", "سامانه مدیریت مالی هوشمند")}</div>
             </div>
           </div>
-
           <WorkspacePreview st={st} />
-
           <p className="text-xs text-[var(--hisab-muted-fg)] leading-relaxed mt-6 max-w-sm text-center brand-fade-late">
             {st("auth.tagline", "همه چیز در یک سامانه — فاکتور، انبار، مشتری و گزارش‌های لحظه‌ای")}
           </p>
         </div>
       </div>
-
-      {/* ═════════════ MOBILE brand bar ═════════════ */}
       <div className="lg:hidden relative z-10 flex items-center justify-center pt-8 pb-2 px-6 brand-fade">
         <div className="flex items-center gap-2.5">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-cyan-500 flex items-center justify-center text-white font-bold shadow-lg shadow-purple-500/30">ح</div>
           <div className="text-right">
-            <div className="text-sm font-bold text-[var(--hisab-foreground)] leading-tight">
-              {st("auth.brandTitle", "حسابچه")}
-            </div>
-            <div className="text-[10px] text-[var(--hisab-muted-fg)]">
-              {st("auth.brandSubMobile", "مدیریت مالی هوشمند")}
-            </div>
+            <div className="text-sm font-bold text-[var(--hisab-foreground)] leading-tight">{st("auth.brandTitle", "حسابچه")}</div>
+            <div className="text-[10px] text-[var(--hisab-muted-fg)]">{st("auth.brandSubMobile", "مدیریت مالی هوشمند")}</div>
           </div>
         </div>
       </div>
-
-      {/* ═════════════ FORM panel ═════════════ */}
       <div className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8 relative">
         <div className="lg:hidden absolute inset-0 pointer-events-none">
           <div className="absolute w-[380px] h-[380px] bg-purple-500/10 blur-[100px] rounded-full ambient-a top-[-100px] right-[-100px]" />
           <div className="absolute w-[380px] h-[380px] bg-cyan-500/10 blur-[100px] rounded-full ambient-b bottom-[-100px] left-[-100px]" />
           <div className="lg:hidden absolute inset-0 grid-drift opacity-50" />
         </div>
-
         <div className="relative w-full max-w-md flip-perspective">
           <div className={`flip-inner ${flipped ? "is-flipped" : ""}`}>
             <div className="flip-face flip-front">
-              <LoginForm onSwitchMode={handleSwitch} st={st} />
+              <LoginForm {...loginProps} onSwitchMode={onSwitchMode} />
             </div>
             <div className="flip-face flip-back">
-              <SignupForm onSwitchMode={handleSwitch} st={st} />
+              <SignupForm {...signupProps} onSwitchMode={onSwitchMode} />
             </div>
           </div>
         </div>
       </div>
-
-      
     </div>
   )
 }

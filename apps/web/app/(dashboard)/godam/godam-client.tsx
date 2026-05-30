@@ -1,6 +1,5 @@
 "use client"
 
-import dynamic from "next/dynamic"
 
 const STAT_ITEMS = [1, 2, 3, 4] as const
 const LIST_ITEMS = [1, 2, 3, 4, 5] as const
@@ -43,13 +42,4 @@ export function GodamSkeleton() {
       </div>
     </div>
   )
-}
-
-const GodamPage = dynamic(
-  () => import("@hisabche/ui").then((m) => m.GodamPage),
-  { loading: () => <GodamSkeleton />, ssr: false }
-)
-
-export function GodamClient() {
-  return <GodamPage />
 }

@@ -1,30 +1,46 @@
 "use client"
 
-import React from "react"
-import { useTranslation } from "react-i18next"
-import { useSyncStore, useBackupStore } from "@hisabche/store"
 import { Button, Card, CardContent, Badge } from "@hisabche/ui"
 import {
   Cloud, CloudOff, RefreshCw, Clock, Check, AlertTriangle,
   Download, History, Database, Shield, Activity, HardDrive, Wifi,
 } from "lucide-react"
 
-export function SyncCenterPage() {
-  const { t } = useTranslation()
-  const { isOnline, isSyncing, pendingCount, lastSyncedAt, setLastSynced } = useSyncStore()
-  const { backups, autoBackupEnabled, setAutoBackup, addBackup, auditLog } = useBackupStore()
+interface BackupItem {
+  id: string
+  timestamp: number
+  size: string
+  type: "auto" | "manual"
+  status: "completed" | "failed"
+}
 
-  const handleSync = () => setLastSynced(Date.now())
-  const handleBackup = () => addBackup({ id: `backup-${Date.now()}`, timestamp: Date.now(), size: `${Math.floor(Math.random() * 500 + 100)} KB`, type: "manual", status: "completed" })
+interface AuditItem {
+  id: string
+  action: string
+  entity: string
+  timestamp: number
+}
 
-  const timeAgo = (ts: number) => {
-    const s = Math.floor((Date.now() - ts) / 1000)
-    if (s < 60) return `${s} ${t("sync.secondsAgo", "ثانیه پیش")}`
-    if (s < 3600) return `${Math.floor(s / 60)} ${t("sync.minutesAgo", "دقیقه پیش")}`
-    if (s < 86400) return `${Math.floor(s / 3600)} ${t("sync.hoursAgo", "ساعت پیش")}`
-    return `${Math.floor(s / 86400)} ${t("sync.daysAgo", "روز پیش")}`
-  }
+export interface SyncCenterPageProps {
+  t: (key: string, fallback?: string) => string
+  timeAgo: (ts: number) => string
+  isOnline: boolean
+  isSyncing: boolean
+  pendingCount: number
+  lastSyncedAt: number | null
+  autoBackupEnabled: boolean
+  backups: BackupItem[]
+  auditLog: AuditItem[]
+  onSync: () => void
+  onBackup: () => void
+  onToggleAutoBackup: () => void
+}
 
+export function SyncCenterPage({
+  t, timeAgo, isOnline, isSyncing, pendingCount, lastSyncedAt,
+  autoBackupEnabled, backups, auditLog,
+  onSync, onBackup, onToggleAutoBackup,
+}: SyncCenterPageProps) {
   return (
     <div className="hisab-root space-y-6 p-6">
       <div>
@@ -47,19 +63,15 @@ export function SyncCenterPage() {
             </div>
           </CardContent>
         </Card>
-
         <Card className="interactive-card">
           <CardContent className="flex items-center gap-4 p-5">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--hisab-primary)]/10">
-              <Database className="size-7 text-[var(--hisab-primary)]" />
-            </div>
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--hisab-primary)]/10"><Database className="size-7 text-[var(--hisab-primary)]" /></div>
             <div>
               <p className="text-xl font-bold">{backups.length}</p>
               <p className="text-xs text-[var(--hisab-muted-fg)]">{t("sync.backups", "بکاپ")}</p>
             </div>
           </CardContent>
         </Card>
-
         <Card className="interactive-card">
           <CardContent className="flex items-center gap-4 p-5">
             <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${pendingCount > 0 ? "bg-[var(--hisab-warning)]/10" : "bg-[var(--hisab-success)]/10"}`}>
@@ -71,12 +83,9 @@ export function SyncCenterPage() {
             </div>
           </CardContent>
         </Card>
-
         <Card className="interactive-card">
           <CardContent className="flex items-center gap-4 p-5">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--hisab-accent)]/10">
-              <HardDrive className="size-7 text-[var(--hisab-accent)]" />
-            </div>
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--hisab-accent)]/10"><HardDrive className="size-7 text-[var(--hisab-accent)]" /></div>
             <div>
               <p className="text-xl font-bold">24 MB</p>
               <p className="text-xs text-[var(--hisab-muted-fg)]">{t("sync.localStorage", "حافظه محلی")}</p>
@@ -89,9 +98,9 @@ export function SyncCenterPage() {
         <CardContent className="space-y-5 p-6">
           <div className="flex items-center gap-2"><Activity className="size-5 text-[var(--hisab-primary)]" /><h2 className="text-lg font-semibold">{t("sync.quickActions", "عملیات سریع")}</h2></div>
           <div className="flex flex-wrap gap-3">
-            <Button onClick={handleSync} loading={isSyncing} icon={<RefreshCw className="size-4" />}>{t("sync.syncNow", "همگام‌سازی الآن")}</Button>
-            <Button variant="outline" onClick={handleBackup} icon={<Download className="size-4" />}>{t("sync.manualBackup", "بکاپ دستی")}</Button>
-            <Button variant={autoBackupEnabled ? "default" : "outline"} onClick={() => setAutoBackup(!autoBackupEnabled)} icon={<Database className="size-4" />}>{t("sync.autoBackup", "بکاپ خودکار")}</Button>
+            <Button onClick={onSync} loading={isSyncing} icon={<RefreshCw className="size-4" />}>{t("sync.syncNow", "همگام‌سازی الآن")}</Button>
+            <Button variant="outline" onClick={onBackup} icon={<Download className="size-4" />}>{t("sync.manualBackup", "بکاپ دستی")}</Button>
+            <Button variant={autoBackupEnabled ? "default" : "outline"} onClick={onToggleAutoBackup} icon={<Database className="size-4" />}>{t("sync.autoBackup", "بکاپ خودکار")}</Button>
           </div>
           {lastSyncedAt && (
             <div className="flex items-center gap-2 rounded-xl border border-[var(--hisab-border)] bg-[var(--hisab-card)] p-4 text-sm text-[var(--hisab-muted-fg)]">

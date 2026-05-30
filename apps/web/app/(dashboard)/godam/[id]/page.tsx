@@ -1,4 +1,4 @@
-import dynamic from "next/dynamic"
+import { ProductDetailContainer } from "@hisabche/ui"
 
 export function GodamDetailSkeleton() {
   return (
@@ -10,7 +10,6 @@ export function GodamDetailSkeleton() {
           <div className="skeleton-shimmer h-3 w-20 rounded-md" />
         </div>
       </div>
-
       <div className="rounded-2xl border border-white/10 bg-white/5 p-6 sm:p-8 space-y-6 backdrop-blur-sm">
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
           {[1, 2, 3, 4].map((i) => (
@@ -32,7 +31,6 @@ export function GodamDetailSkeleton() {
           ))}
         </div>
       </div>
-
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {[1, 2, 3].map((i) => (
           <div key={i} className="rounded-2xl border border-white/10 bg-white/5 p-4 text-center space-y-2 backdrop-blur-sm">
@@ -45,11 +43,6 @@ export function GodamDetailSkeleton() {
   )
 }
 
-const ProductDetailPage = dynamic(
-  () => import("@hisabche/ui").then((m) => m.ProductDetailPage),
-  { loading: () => <GodamDetailSkeleton />, ssr: true }
-)
-
 export const metadata = {
   title: "جزئیات محصول | حسابچه",
   robots: { index: false, follow: false },
@@ -58,7 +51,7 @@ export const metadata = {
 export default function Page() {
   return (
     <main className="section">
-      <ProductDetailPage />
+      <ProductDetailContainer />
     </main>
   )
 }

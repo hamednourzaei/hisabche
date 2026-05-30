@@ -1,6 +1,4 @@
-import { DashboardClient } from "./dashboard/dashboard-client"
-
-export const dynamic = 'force-dynamic'
+import { DashboardContainer } from "@hisabche/ui"
 
 export const metadata = {
   title: "داشبورد | حسابچه",
@@ -11,7 +9,7 @@ export const metadata = {
 export default function Page() {
   return (
     <main className="section">
-      <DashboardClient />
+      <DashboardContainer />
     </main>
   )
 }

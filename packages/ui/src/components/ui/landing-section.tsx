@@ -1,11 +1,9 @@
 // ═══════════════════════════════════════════════════════════
-// packages/ui/src/components/ui/landing-section.tsx (v7)
+// packages/ui/src/components/ui/landing-section.tsx (v8 — Purified)
 // ═══════════════════════════════════════════════════════════
 "use client"
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { useTranslation } from "react-i18next"
 import { Card, CardContent } from "./card"
 import { Badge } from "./badge"
 import { Button } from "./button"
@@ -97,18 +95,32 @@ export function SectionHeading({ badge, title, desc }: { badge?: string; title: 
   )
 }
 
-export function GlassNavbar() {
-  const { t } = useTranslation()
-  const router = useRouter()
+export interface GlassNavbarProps {
+  appName: string
+  signInLabel: string
+  navAriaLabel: string
+  homeAriaLabel: string
+  onNavigateLogin: () => void
+}
+
+export function GlassNavbar({
+  appName,
+  signInLabel,
+  navAriaLabel,
+  homeAriaLabel,
+  onNavigateLogin,
+}: GlassNavbarProps) {
   return (
-    <nav className="sticky top-0 z-50 border-b border-[var(--hisab-border)] bg-[var(--hisab-background)]/70 backdrop-blur-md motion-reduce:backdrop-blur-none"
-      aria-label={t("nav.ariaLabel", "ناوبری اصلی")}>
+    <nav
+      className="sticky top-0 z-50 border-b border-[var(--hisab-border)] bg-[var(--hisab-background)]/70 backdrop-blur-md motion-reduce:backdrop-blur-none"
+      aria-label={navAriaLabel}
+    >
       <div className="mx-auto flex h-12 sm:h-14 max-w-6xl items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2" aria-label={t("nav.homeAriaLabel", "حسابچه — صفحه اصلی")}>
+        <Link href="/" className="flex items-center gap-2" aria-label={homeAriaLabel}>
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--hisab-primary)]"><span className="text-white font-bold text-xs">ح</span></div>
-          <span className="font-bold text-sm">{t("app.name")}</span>
+          <span className="font-bold text-sm">{appName}</span>
         </Link>
-        <Button size="sm" onClick={() => router.push("/login")} className="text-xs font-semibold">{t("auth.signIn")}</Button>
+        <Button size="sm" onClick={onNavigateLogin} className="text-xs font-semibold">{signInLabel}</Button>
       </div>
     </nav>
   )

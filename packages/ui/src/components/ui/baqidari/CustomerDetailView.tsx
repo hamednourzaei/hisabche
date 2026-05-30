@@ -1,40 +1,42 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import { useRouter } from "next/navigation"
-import { useTranslation } from "react-i18next"
-import { useCustomers, useInvoices } from "@hisabche/api"
 import { Button, Card, CardContent } from "@hisabche/ui"
 import { ChevronRight, DollarSign } from "lucide-react"
 import { PaymentModal } from "./PaymentModal"
 
-interface InvoiceRecord { id: string; invoiceNumber?: string; total: number; paidAmount: number; date: string; status: string; customerId: string }
-interface CustomerRecord { id: string; fullName?: string; name?: string; phone?: string }
+interface InvoiceRecord {
+  id: string
+  invoiceNumber: string
+  total: number
+  paidAmount: number
+  remaining: number
+  date: string
+  status: string
+}
 
-const fmt = (v: number): string => v.toLocaleString("fa-AF")
-const rem = (inv: InvoiceRecord): number => Math.max(0, inv.total - inv.paidAmount)
-const fmtDate = (d: string): string => { try { return new Date(d).toLocaleDateString("fa-AF") } catch { return d } }
-const num = (v: unknown): number => { const n = Number(v); return Number.isFinite(n) ? n : 0 }
+interface CustomerInfo {
+  id: string
+  name: string
+  phone?: string
+}
 
-export function CustomerDetailView({ customerId, onBack }: { customerId: string; onBack: () => void }) {
-  const { t } = useTranslation()
-  const [payOpen, setPayOpen] = useState(false)
+export interface CustomerDetailViewProps {
+  t: (key: string, fallback?: string) => string
+  fmt: (v: number) => string
+  customer: CustomerInfo | null
+  openInvoices: InvoiceRecord[]
+  totalDebt: number
+  payOpen: boolean
+  onBack: () => void
+  onOpenPayment: () => void
+  onClosePayment: () => void
+  onPaymentSuccess: () => void
+}
 
-  const { data: customersData } = useCustomers({ page: 1, limit: 50, sortDirection: "desc" })
-  const { data: invoicesData, refetch } = useInvoices({ page: 1, limit: 200, sortDirection: "desc" })
-
-  const customer = useMemo(() => {
-    const list = (customersData?.customers ?? []) as unknown as CustomerRecord[]
-    return list.find((c) => c.id === customerId) ?? null
-  }, [customersData, customerId])
-
-  const openInvoices = useMemo(() => {
-    const list = (invoicesData?.invoices ?? []) as unknown as InvoiceRecord[]
-    return list.filter((inv) => inv.customerId === customerId && (inv.status === "pending" || inv.status === "partial"))
-  }, [invoicesData, customerId])
-
-  const totalDebt = openInvoices.reduce((s, inv) => s + rem(inv), 0)
-
+export function CustomerDetailView({
+  t, fmt, customer, openInvoices, totalDebt, payOpen,
+  onBack, onOpenPayment, onClosePayment, onPaymentSuccess,
+}: CustomerDetailViewProps) {
   if (!customer) {
     return (
       <div className="space-y-4 py-12 text-center">
@@ -44,19 +46,17 @@ export function CustomerDetailView({ customerId, onBack }: { customerId: string;
     )
   }
 
-  const name = customer.fullName || customer.name || t("common.noName")
-
   return (
     <div className="space-y-6">
-      <PaymentModal open={payOpen} onClose={() => setPayOpen(false)} onPaid={refetch}
-        openInvoices={openInvoices} customer={customer} />
+      <PaymentModal open={payOpen} onClose={onClosePayment} onPaid={onPaymentSuccess}
+  openInvoices={openInvoices as any} customer={customer as any} />
 
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon-sm" onClick={onBack} aria-label={t("common.back")}>
           <ChevronRight className="size-5" aria-hidden />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold">{name}</h1>
+          <h1 className="text-2xl font-bold">{customer.name}</h1>
           {customer.phone && <p className="text-sm text-[var(--hisab-muted-fg)]">{customer.phone}</p>}
         </div>
       </div>
@@ -67,7 +67,7 @@ export function CustomerDetailView({ customerId, onBack }: { customerId: string;
             <p className="text-xs text-[var(--hisab-muted-fg)]">{t("baqidari.totalDebt")}</p>
             <p className="text-3xl font-bold tabular-nums text-[var(--hisab-destructive)]">{fmt(totalDebt)} AFN</p>
           </div>
-          <Button onClick={() => setPayOpen(true)} icon={<DollarSign className="size-4" />} disabled={totalDebt <= 0}>
+          <Button onClick={onOpenPayment} icon={<DollarSign className="size-4" />} disabled={totalDebt <= 0}>
             {t("baqidari.recordPayment")}
           </Button>
         </CardContent>
@@ -83,12 +83,14 @@ export function CustomerDetailView({ customerId, onBack }: { customerId: string;
               {openInvoices.map((inv) => (
                 <div key={inv.id} className="flex items-center justify-between rounded-xl border border-[var(--hisab-border)] p-4">
                   <div>
-                    <p className="font-medium">#{inv.invoiceNumber ?? ""}</p>
-                    <p className="text-xs text-[var(--hisab-muted-fg)]">{fmtDate(inv.date)}</p>
+                    <p className="font-medium">#{inv.invoiceNumber}</p>
+                    <p className="text-xs text-[var(--hisab-muted-fg)]">{inv.date}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold tabular-nums text-[var(--hisab-destructive)]">{fmt(rem(inv))} AFN</p>
-                    <p className="text-xs text-[var(--hisab-muted-fg)]">{t("baqidari.ofPaid", { total: fmt(inv.total), paid: fmt(inv.paidAmount) })}</p>
+                    <p className="font-bold tabular-nums text-[var(--hisab-destructive)]">{fmt(inv.remaining)} AFN</p>
+                    <p className="text-xs text-[var(--hisab-muted-fg)]">
+  {t("baqidari.ofPaid", `از ${fmt(inv.total)} مبلغ ${fmt(inv.paidAmount)} پرداخت شده`)}
+</p>
                   </div>
                 </div>
               ))}

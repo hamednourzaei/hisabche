@@ -1,7 +1,12 @@
 "use client"
 
-import dynamic from "next/dynamic"
+import { useRouter } from "next/navigation"
+import { useTranslation } from "react-i18next"
+import { useThemeStore } from "@hisabche/store"
+import { changeLanguage, type SupportedLanguage } from "@hisabche/i18n"
 import { DashboardHeader, LivingBackground, Section, AnimatedCounter } from "@hisabche/ui"
+import { useCallback } from "react"
+import dynamic from "next/dynamic"
 
 const CinematicHero = dynamic(() => import("./cinematic-hero"), { ssr: true, loading: () => <SectionSkeleton /> })
 const PainScene = dynamic(() => import("./pain-scene"), { ssr: true, loading: () => <SectionSkeleton /> })
@@ -22,12 +27,33 @@ const stats = [
 ]
 
 export function LandingPage() {
+  const { t } = useTranslation()
+  const router = useRouter()
+  const { isDark, toggle } = useThemeStore()
+
+  const toggleLang = useCallback(() => {
+    const nextLang = typeof document !== "undefined" && document.documentElement.lang === "fa-AF" ? "fa-IR" : "fa-AF"
+    changeLanguage(nextLang as SupportedLanguage)
+  }, [])
+
+  const navigateLogin = () => router.push("/login")
+
   return (
     <div className="min-h-screen text-[var(--hisab-foreground)] ">
       <LivingBackground />
-      <DashboardHeader variant="landing" />
+      <DashboardHeader
+        variant="landing"
+        appName={t("app.name")}
+        signInLabel={t("auth.signIn")}
+        signOutLabel={t("auth.signOut")}
+        isDark={isDark}
+        currentLang={typeof document !== "undefined" ? document.documentElement.lang : "fa-AF"}
+        onToggleTheme={toggle}
+        onToggleLang={toggleLang}
+        onNavigateLogin={navigateLogin}
+      />
       <main className="relative overflow-x-hidden">
-        <CinematicHero />
+        <CinematicHero onNavigateLogin={navigateLogin} />
         <Section bordered>
           <div className="grid grid-cols-3 gap-6">
             {stats.map((s) => (
@@ -40,7 +66,7 @@ export function LandingPage() {
         <FeaturesScene />
         <SocialScene />
         <FaqScene />
-        <CTAScene />
+        <CTAScene onNavigateLogin={navigateLogin} />
         <footer className="border-t border-[var(--hisab-border)] px-4 py-8 text-center">
           <p className="text-xs text-[var(--hisab-muted-fg)]">حسابچه — حافظه‌ی زنده‌ی کسب‌وکار تو</p>
         </footer>

@@ -1,7 +1,3 @@
-"use client"
-
-import dynamic from "next/dynamic"
-
 const STAT_ITEMS = [1, 2, 3] as const
 const ROW_ITEMS = [1, 2, 3] as const
 
@@ -12,7 +8,6 @@ export function DashboardSkeleton() {
         <div className="skeleton-shimmer h-8 w-48 rounded-lg" />
         <div className="skeleton-shimmer h-4 w-64 rounded-lg" />
       </div>
-
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {STAT_ITEMS.map((i) => (
           <div key={i} className="rounded-2xl border border-white/10 bg-white/5 p-5 space-y-4 backdrop-blur-sm">
@@ -25,7 +20,6 @@ export function DashboardSkeleton() {
           </div>
         ))}
       </div>
-
       <div className="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-5 backdrop-blur-sm">
         <div className="skeleton-shimmer h-5 w-32 rounded-md" />
         <div className="space-y-3">
@@ -45,13 +39,4 @@ export function DashboardSkeleton() {
       </div>
     </div>
   )
-}
-
-const DashboardPage = dynamic(
-  () => import("@hisabche/ui").then((m) => m.DashboardPage),
-  { loading: () => <DashboardSkeleton />, ssr: false }
-)
-
-export function DashboardClient() {
-  return <DashboardPage />
 }

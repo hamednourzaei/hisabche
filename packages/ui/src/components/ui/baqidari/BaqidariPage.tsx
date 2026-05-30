@@ -7,13 +7,15 @@ import { Button, Badge, Card, CardContent, Input, EmptyState } from "@hisabche/u
 import { Search, User, DollarSign, TrendingUp, TrendingDown, Plus, ShoppingCart } from "lucide-react"
 import { AddCustomerModal } from "./AddCustomerModal"
 import { PaymentModal } from "./PaymentModal"
-import { CustomerDetailView } from "./CustomerDetailView"
+import { CustomerDetailContainer } from "./containers/customer-detail-container"
 
 interface CustomerRecord { id: string; fullName?: string; name?: string; phone?: string }
 interface InvoiceRecord { id: string; invoiceNumber?: string; total: number; paidAmount: number; date: string; status: string; customerId: string }
 
-const num = (v: unknown): number => { const n = Number(v); return Number.isFinite(n) ? n : 0 }
-const fmt = (v: unknown): string => num(v).toLocaleString("fa-AF")
+const fmt = (v: unknown): string => {
+  const n = Number(v)
+  return Number.isFinite(n) ? n.toLocaleString("fa-AF") : "0"
+}
 
 export function BaqidariPage() {
   const { t } = useTranslation()
@@ -38,7 +40,7 @@ export function BaqidariPage() {
   }, [customersData, invoicesData])
 
   if (selectedCustomerId) {
-    return <CustomerDetailView customerId={selectedCustomerId} onBack={() => setSelectedCustomerId(null)} />
+    return <CustomerDetailContainer customerId={selectedCustomerId} onBack={() => setSelectedCustomerId(null)} />
   }
 
   return (
