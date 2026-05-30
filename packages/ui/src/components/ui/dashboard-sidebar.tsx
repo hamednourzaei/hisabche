@@ -25,10 +25,19 @@ const defaultIcons: Record<string, React.ReactNode> = {
   settings: <SvgIcon d={<g><circle cx="10" cy="10" r="2.4" /><path d="M10 3v2M10 15v2M3 10h2M15 10h2M5.2 5.2l1.4 1.4M13.4 13.4l1.4 1.4M5.2 14.8l1.4-1.4M13.4 6.6l1.4-1.4" /></g>} />,
 }
 
+function isPathActive(currentPath: string, itemPath: string): boolean {
+  if (currentPath === itemPath) return true
+  if (currentPath.startsWith(itemPath + "/")) return true
+  if (currentPath.startsWith(itemPath + "?")) return true
+  return false
+}
+
 export function DashboardSidebar({ items, activeNav, onNavigate }: {
   items: NavItem[]; activeNav: string; onNavigate: (id: string, path: string) => void
 }) {
   const { t } = useTranslation()
+  console.log("activeNav:", activeNav)
+  console.log("items:", items.map(i => i.path))
 
   return (
     <aside className="sidebar-surface hidden w-60 border-e border-[var(--hisab-border)] lg:flex lg:flex-col shrink-0 sticky top-0 h-screen overflow-y-auto">
@@ -43,13 +52,14 @@ export function DashboardSidebar({ items, activeNav, onNavigate }: {
       <nav className="flex flex-col gap-0.5 p-2 flex-1">
         <span className="px-2.5 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--hisab-muted-fg)]">منو</span>
         {items.map((item) => {
-          const isActive = activeNav.startsWith(item.path)
+          const isActive = isPathActive(activeNav, item.path)
+          console.log(`  ${item.id}: path=${item.path} isActive=${isActive}`)
           return (
             <button key={item.id} type="button" onClick={() => onNavigate(item.id, item.path)}
               className={cn(
                 "relative flex items-center gap-2.5 h-9 px-2.5 rounded-lg text-sm font-medium transition-colors text-start w-full",
                 "text-[var(--hisab-muted-fg)] hover:bg-[var(--hisab-muted)] hover:text-[var(--hisab-foreground)]",
-                isActive && "bg-[var(--hisab-muted)] text-[var(--hisab-foreground)] font-semibold shadow-[inset_0_0_0_1px_var(--hisab-border)]"
+                isActive && "bg-purple-500/20 text-purple-400 font-semibold"
               )}
               aria-current={isActive ? "page" : undefined}>
               {isActive && <span className="absolute start-0 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-full bg-[var(--hisab-primary)]" />}
@@ -81,7 +91,7 @@ export function BottomNav({ items, activeNav, onNavigate }: {
     <nav className="bottom-nav lg:hidden">
       <div className="grid grid-cols-5 items-stretch">
         {items.slice(0, 5).map((item) => {
-          const isActive = activeNav.startsWith(item.path)
+          const isActive = isPathActive(activeNav, item.path)
           return (
             <button key={item.id} type="button" onClick={() => onNavigate(item.id, item.path)}
               className={cn(
