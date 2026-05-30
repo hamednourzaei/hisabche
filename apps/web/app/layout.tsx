@@ -1,13 +1,14 @@
 import type { Metadata, Viewport } from 'next'
 
 import { Providers } from './providers'
+import { ClientErrorBoundary } from './client-error-boundary'
 
 import './globals.css'
 
-import { ErrorBoundary } from '@hisabche/ui'
-import { Geist } from "next/font/google";
+import { Geist } from "next/font/google"
 import { cn } from "@hisabche/ui"
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+
+const geist = Geist({ subsets: ['latin'], variable: '--font-sans' })
 
 export const metadata: Metadata = {
   title: {
@@ -31,7 +32,8 @@ export default function RootLayout({
       lang="fa-AF"
       dir="rtl"
       suppressHydrationWarning
-      data-scroll-behavior="smooth" className={cn("font-sans", geist.variable)}
+      data-scroll-behavior="smooth"
+      className={cn("font-sans", geist.variable)}
     >
       <head>
         <link
@@ -44,9 +46,9 @@ export default function RootLayout({
       </head>
 
       <body className="min-h-screen bg-[var(--hisab-background)] text-[var(--hisab-foreground)] antialiased">
-        <ErrorBoundary>
+        <ClientErrorBoundary>
           <Providers>{children}</Providers>
-        </ErrorBoundary>
+        </ClientErrorBoundary>
       </body>
     </html>
   )

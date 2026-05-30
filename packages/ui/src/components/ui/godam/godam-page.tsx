@@ -20,10 +20,10 @@ interface Currency { code: string; label: string; rate: number }
 
 const CURRENCIES: Currency[] = [
   { code: "AFN", label: "افغانی", rate: 1 },
-  { code: "USD", label: "دلار", rate: 0.014 },
-  { code: "IRR", label: "تومان", rate: 0.85 },
+  { code: "USD", label: "دالر", rate: 0.014 },
+  { code: "IRR", label: "پومان", rate: 0.85 },
 ]
-useRealtime({ table: 'products', queryKey: ['products'] })
+
 const num = (v: unknown): number => { const n = Number(v); return Number.isFinite(n) ? n : 0 }
 const fmt = (v: unknown): string => num(v).toLocaleString("fa-AF")
 
@@ -37,6 +37,8 @@ export function GodamPage() {
   const deleteProduct = useDeleteProduct()
   const { setSaveStatus } = useSyncStore()
   const { moveToTrash } = useBackupStore()
+
+  useRealtime({ table: 'products', queryKey: ['products'] })
 
   const totalValue = (data?.products as Product[] | undefined)?.reduce((sum: number, p: Product) => sum + num(p.quantity) * num(p.sell_price ?? p.sellPrice), 0) || 0
   const lowStock = (data?.products as Product[] | undefined)?.filter((p: Product) => { const q = num(p.quantity); const m = num(p.min_stock_level ?? p.minStockLevel ?? 5); return q > 0 && q <= m }).length || 0
@@ -58,15 +60,13 @@ export function GodamPage() {
     e.stopPropagation()
     if (!product.id) return
     setDeletingId(product.id)
-    
-    // ═══ Move to trash before delete ═══
+
     moveToTrash({
       entity: 'product',
       entityId: product.id,
       data: JSON.stringify(product),
     })
-    
-    // ═══ Save indicator ═══
+
     setSaveStatus('saving')
     await deleteProduct.mutateAsync(product.id)
     setSaveStatus('saved')
@@ -76,7 +76,7 @@ export function GodamPage() {
 
   return (
     <div className="space-y-6">
-      <SaveIndicator show={deletingId !== null} message={t("common.saved", "حذف شد")} />
+      <SaveIndicator show={deletingId !== null} message={t("common.saved", "حفظ شد")} />
       <AddProductModal open={showAddModal} onClose={() => setShowAddModal(false)} />
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
