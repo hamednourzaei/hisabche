@@ -3,7 +3,7 @@
 import { useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useTranslation } from "react-i18next"
-import { useProducts, useDeleteProduct } from "@hisabche/api"
+import { useProducts, useDeleteProduct, useRealtime } from "@hisabche/api"
 import { Button, Badge, Card, CardContent, Input, EmptyState, AddProductModal, StockStatsCard, SaveIndicator } from "@hisabche/ui"
 import { Plus, Search, Trash2, Package, AlertTriangle, DollarSign, Eye } from "lucide-react"
 import { useSyncStore, useBackupStore } from "@hisabche/store"
@@ -23,7 +23,7 @@ const CURRENCIES: Currency[] = [
   { code: "USD", label: "دلار", rate: 0.014 },
   { code: "IRR", label: "تومان", rate: 0.85 },
 ]
-
+useRealtime({ table: 'products', queryKey: ['products'] })
 const num = (v: unknown): number => { const n = Number(v); return Number.isFinite(n) ? n : 0 }
 const fmt = (v: unknown): string => num(v).toLocaleString("fa-AF")
 

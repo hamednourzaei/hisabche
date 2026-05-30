@@ -1,25 +1,33 @@
-import { createClient } from '@supabase/supabase-js'
+// ═══ Supabase Realtime — فقط وقتی URL موجود باشه ═══
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+let supabase: any = null
 
-export const supabase = supabaseUrl && supabaseKey
-  ? createClient(supabaseUrl, supabaseKey, {
-      realtime: {
-        params: {
-          eventsPerSecond: 10,
-        },
-      },
+export function getSupabase() {
+  if (typeof window === 'undefined') return null
+  if (supabase) return supabase
+
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!url || !key) return null
+
+  import('@supabase/supabase-js').then(({ createClient }) => {
+    supabase = createClient(url, key, {
+      realtime: { params: { eventsPerSecond: 10 } },
     })
-  : null
+  })
+
+  return null
+}
 
 export function subscribeToChannel(
   table: string,
   callback: () => void,
 ) {
-  if (!supabase) return { unsubscribe: () => {} }
-  
-  return supabase
+  const client = getSupabase()
+  if (!client) return { unsubscribe: () => {} }
+
+  return client
     .channel(`hisabche-${table}`)
     .on(
       'postgres_changes' as any,

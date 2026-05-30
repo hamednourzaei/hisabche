@@ -2,7 +2,6 @@
 
 import * as Sentry from '@sentry/nextjs'
 import { useEffect } from 'react'
-import { Button } from '@hisabche/ui'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
 
 export default function GlobalError({
@@ -26,9 +25,13 @@ export default function GlobalError({
             </div>
             <h1 className="text-2xl font-bold text-white mb-3">خطای سیستمی</h1>
             <p className="text-sm text-gray-400 mb-6">اطلاعات شما امن است. لطفاً دوباره تلاش کنید.</p>
-            <Button variant="default" size="lg" onClick={reset} icon={<RefreshCw className="size-4" />}>
+            <button
+              onClick={reset}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-white font-medium transition-colors"
+            >
+              <RefreshCw className="size-4" />
               تلاش دوباره
-            </Button>
+            </button>
           </div>
         </div>
       </body>

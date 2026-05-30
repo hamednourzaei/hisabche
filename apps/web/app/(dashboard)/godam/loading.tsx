@@ -1,4 +1,4 @@
-import { GodamSkeleton } from "./page"
+import { GodamSkeleton } from "./godam-client"
 
 export default function Loading() {
   return (

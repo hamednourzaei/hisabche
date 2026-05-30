@@ -1,4 +1,4 @@
-import { BaqidariSkeleton } from "./page"
+import { BaqidariSkeleton } from "./baqidari-client"
 
 export default function Loading() {
   return (
