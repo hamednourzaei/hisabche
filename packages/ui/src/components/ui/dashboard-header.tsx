@@ -88,11 +88,21 @@ export function DashboardHeader({
         <div className="flex items-center gap-1 sm:gap-2">
           {variant === "dashboard" && (
             <>
-              <button type="button" onClick={onToggleLang} aria-label="تغییر زبان" className="ghost-btn">
+              <button
+                type="button"
+                onClick={onToggleLang}
+                aria-label="تغییر زبان"
+                className="ghost-btn"
+              >
                 {IconGlobe}
                 <span className="lang-pill hidden sm:inline">{currentLang === "fa-AF" ? "FA" : "IR"}</span>
               </button>
-              <button type="button" onClick={onToggleTheme} aria-label={isDark ? "حالت روشن" : "حالت تاریک"} className="ghost-btn">
+              <button
+                type="button"
+                onClick={onToggleTheme}
+                aria-label={isDark ? "حالت روشن" : "حالت تاریک"}
+                className="ghost-btn"
+              >
                 {isDark ? IconSun : IconMoon}
               </button>
               <button type="button" onClick={onLogout} aria-label="خروج" className="ghost-btn ghost-danger">
@@ -103,13 +113,25 @@ export function DashboardHeader({
           )}
           {variant === "landing" && (
             <>
-              <button type="button" onClick={onToggleLang} aria-label="تغییر زبان" className="ghost-btn">
+              <button
+                type="button"
+                onClick={onToggleLang}
+                aria-label="تغییر زبان"
+                className="ghost-btn"
+              >
                 {IconGlobe}
                 <span className="lang-pill hidden sm:inline">{currentLang === "fa-AF" ? "FA" : "IR"}</span>
               </button>
-              <button type="button" onClick={onToggleTheme} aria-label={isDark ? "حالت روشن" : "حالت تاریک"} className="ghost-btn">
-                {isDark ? IconSun : IconMoon}
-              </button>
+              <button
+  type="button"
+  onClick={onToggleTheme}
+  aria-label={isDark ? "حالت روشن" : "حالت تاریک"}
+  className="ghost-btn"
+>
+  <span style={{ color: isDark ? '#fbbf24' : '#475569', display: 'inline-flex' }}>
+    {isDark ? IconSun : IconMoon}
+  </span>
+</button>
               <button onClick={onNavigateLogin}
                 className="rounded-lg bg-[var(--hisab-primary)] px-4 py-2 text-xs font-semibold text-white hover:bg-[var(--hisab-primary)]/90 transition-all active:scale-95">
                 {signInLabel}

@@ -43,7 +43,7 @@ export function BaqidariSkeleton() {
 
 const BaqidariPage = dynamic(
   () => import("@hisabche/ui").then((m) => m.BaqidariPage),
-  { loading: () => <BaqidariSkeleton />, ssr: false }
+  { loading: () => <BaqidariSkeleton />, ssr: true }
 )
 
 export function BaqidariClient() {

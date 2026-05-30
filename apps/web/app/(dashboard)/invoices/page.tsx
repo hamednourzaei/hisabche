@@ -3,7 +3,7 @@ import { InvoicesContainer } from "@hisabche/ui"
 export const metadata = {
   title: "فاکتورها | حسابچه",
   description: "مدیریت فاکتورها و فروش",
-  robots: { index: false, follow: false },
+  robots: { index: false, follow: true },
 }
 
 export default function Page() {

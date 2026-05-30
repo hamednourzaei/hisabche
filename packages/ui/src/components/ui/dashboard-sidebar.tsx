@@ -41,7 +41,7 @@ export function DashboardSidebar({ items, activeNav, onNavigate }: {
 
   return (
     <aside className="sidebar-surface hidden w-60 border-e border-[var(--hisab-border)] lg:flex lg:flex-col shrink-0 sticky top-0 h-screen overflow-y-auto">
-      <div className="flex items-center gap-2.5 px-4 py-[12px] border-b border-[var(--hisab-border)]">
+      <div className="flex items-center gap-2.5 px-4 py-[11px] border-b border-[var(--hisab-border)]">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--hisab-primary)] text-white text-sm font-bold shrink-0">ح</div>
         <div className="min-w-0 leading-tight">
           <p className="text-sm font-semibold truncate">حسابچه</p>

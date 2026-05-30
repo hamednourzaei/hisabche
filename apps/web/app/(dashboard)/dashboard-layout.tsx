@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next"
 import { changeLanguage, type SupportedLanguage } from "@hisabche/i18n"
 import { DashboardHeader, DashboardSidebar, BottomNav, CommandPalette } from "@hisabche/ui"
 import { LayoutDashboard, Package, FileText, Settings, BookOpen } from "lucide-react"
-import { useEffect, useRef, useCallback, useMemo } from "react"
+import { useEffect, useRef, useCallback, useMemo, useState } from "react"
 
 function LoadingScreen() {
   return (
@@ -35,6 +35,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const toggle = useThemeStore((s) => s.toggle)
   const redirected = useRef(false)
   const lastSyncedAt = useRef(Date.now())
+  const [currentLang, setCurrentLang] = useState<SupportedLanguage>("fa-AF")
 
   useEffect(() => {
     if (hasHydrated && !isAuthenticated && !redirected.current) {
@@ -43,10 +44,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     }
   }, [hasHydrated, isAuthenticated, router])
 
-  const toggleLang = useCallback(() => {
-    const nextLang = document.documentElement.lang === "fa-AF" ? "fa-IR" : "fa-AF"
-    changeLanguage(nextLang as SupportedLanguage)
-  }, [])
+const toggleLang = useCallback(() => {
+  const nextLang = currentLang === "fa-AF" ? "fa-IR" : "fa-AF"
+  setCurrentLang(nextLang)
+  changeLanguage(nextLang)
+  document.documentElement.lang = nextLang
+  document.documentElement.dir = "rtl"
+  try { localStorage.setItem("hisabche-lang", nextLang) } catch {}
+}, [currentLang])
 
   const commands = useMemo(() => [
     { id: "dashboard", label: "داشبورد", description: "نمای کلی کسب‌وکار", icon: "📊", onSelect: () => router.push("/dashboard") },
@@ -87,7 +92,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           isOnline={true}
           isSyncing={false}
           pendingCount={0}
-          currentLang="fa-AF"
+          currentLang={currentLang}
           isDark={isDark}
           signInLabel={t("auth.signIn")}
           signOutLabel={t("auth.signOut")}
