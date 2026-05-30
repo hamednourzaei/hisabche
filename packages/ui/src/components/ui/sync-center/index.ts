@@ -1,0 +1,1 @@
+export { SyncCenterPage } from "./sync-center-page"

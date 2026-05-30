@@ -4,13 +4,13 @@ import type { ReactNode } from "react"
 import { useRouter } from "next/navigation"
 import { usePathname } from "next/navigation"
 import { useAuthStore } from "@hisabche/store"
-import { DashboardHeader, DashboardSidebar, BottomNav } from "@hisabche/ui"
+import { DashboardHeader, DashboardSidebar, BottomNav, CommandPalette } from "@hisabche/ui"
 import { LayoutDashboard, Package, FileText, Settings, BookOpen } from "lucide-react"
 import { useEffect, useRef } from "react"
 
 function LoadingScreen() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[var(--hisab-background)]">
+    <div className="flex min-h-screen items-center justify-center">
       <div className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--hisab-primary)] border-t-transparent" />
     </div>
   )
@@ -29,7 +29,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname()
   const { isAuthenticated, hasHydrated } = useAuthStore()
   const redirected = useRef(false)
-  console.log("🟡 LAYOUT: hasHydrated =", hasHydrated, "isAuthenticated =", isAuthenticated)
 
   useEffect(() => {
     if (hasHydrated && !isAuthenticated && !redirected.current) {
@@ -37,18 +36,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       router.replace("/login")
     }
   }, [hasHydrated, isAuthenticated, router])
-    console.log("🔴 LAYOUT: not auth")
 
-  // Wait for hydration
   if (!hasHydrated) return <LoadingScreen />
-
-  // Not authenticated — show nothing (useEffect handles redirect)
   if (!isAuthenticated) return null
-    console.log("⏳ LAYOUT: showing loading")
 
-  // ✅ Authenticated
   return (
-    <div className="hisab-root flex min-h-screen ">
+    <div className="hisab-root flex min-h-screen">
+      <CommandPalette />
+
       <DashboardSidebar
         items={navItems}
         activeNav={pathname}

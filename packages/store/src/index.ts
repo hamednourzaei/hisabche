@@ -36,5 +36,10 @@ export { usePreferencesStore } from './slices/preferences.slice'
 export { useSyncStore } from './slices/sync.slice'
 export { useDeviceStore } from './slices/device.slice'
 export type { PerformanceMode } from './slices/device.slice'
-export { useBackupStore } from './slices/backup.slice'
-export type { BackupRecord, AuditEntry } from './slices/backup.slice'
+export { useBackupStore, type BackupRecord, type AuditEntry, type DeletedItem } from './slices/backup.slice'
+export {
+  useWorkspaceStore,
+  type WorkspaceRole,
+  type WorkspaceMember,
+  type WorkspaceInvite,
+} from './slices/workspace.slice'

@@ -1,161 +1,72 @@
-"use client"
+import dynamic from "next/dynamic"
 
-import React from "react"
-import { useSyncStore, useBackupStore } from "@hisabche/store"
-import { Button, Card, CardContent, Badge } from "@hisabche/ui"
-import {
-  Cloud, CloudOff, RefreshCw, Clock, Check, AlertTriangle,
-  Download, History, Database, Shield, Activity, HardDrive, Wifi,
-} from "lucide-react"
+const STAT_ITEMS = [1, 2, 3, 4] as const
+const ROW_ITEMS = [1, 2, 3] as const
 
-export default function SyncCenterPage() {
-  const { isOnline, isSyncing, pendingCount, lastSyncedAt, setLastSynced } = useSyncStore()
-  const { backups, autoBackupEnabled, setAutoBackup, addBackup, auditLog } = useBackupStore()
-
-  const handleSync = () => setLastSynced(Date.now())
-  const handleBackup = () => addBackup({ id: `backup-${Date.now()}`, timestamp: Date.now(), size: `${Math.floor(Math.random() * 500 + 100)} KB`, type: "manual", status: "completed" })
-
-  const timeAgo = (ts: number) => {
-    const s = Math.floor((Date.now() - ts) / 1000)
-    if (s < 60) return `${s} ثانیه پیش`
-    if (s < 3600) return `${Math.floor(s / 60)} دقیقه پیش`
-    if (s < 86400) return `${Math.floor(s / 3600)} ساعت پیش`
-    return `${Math.floor(s / 86400)} روز پیش`
-  }
-
+export function SyncCenterSkeleton() {
   return (
-    <div className="hisab-root space-y-6 p-6">
-      <div>
-        <h1 className="mb-2 flex items-center gap-3 text-3xl font-bold">
-          <Shield className="size-8 text-[var(--hisab-primary)]" />مرکز همگام‌سازی
-        </h1>
-        <p className="text-sm text-[var(--hisab-muted-fg)]">مدیریت امنیت، بکاپ و وضعیت اتصال برنامه</p>
+    <div className="hisab-root space-y-6 p-6 animate-fade-in-up">
+      <div className="space-y-2">
+        <div className="flex items-center gap-3">
+          <div className="skeleton-shimmer h-8 w-8" />
+          <div className="skeleton-shimmer h-8 w-48" />
+        </div>
+        <div className="skeleton-shimmer h-4 w-64" />
       </div>
 
-      {/* STATUS CARDS — بدون template literal */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="interactive-card">
-          <CardContent className="flex items-center gap-4 p-5">
-            <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${isOnline ? "bg-[var(--hisab-success)]/10" : "bg-[var(--hisab-warning)]/10"}`}>
-              {isOnline ? <Cloud className="size-7 text-[var(--hisab-success)]" /> : <CloudOff className="size-7 text-[var(--hisab-warning)]" />}
+        {STAT_ITEMS.map((i) => (
+          <div key={i} className="interactive-card p-5 flex items-center gap-4">
+            <div className="skeleton-shimmer h-14 w-14" />
+            <div className="space-y-2">
+              <div className="skeleton-shimmer h-6 w-16" />
+              <div className="skeleton-shimmer h-3 w-20" />
             </div>
-            <div>
-              <p className="text-xl font-bold">{isOnline ? "آنلاین" : "آفلاین"}</p>
-              <p className="text-xs text-[var(--hisab-muted-fg)]">وضعیت اتصال</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="interactive-card">
-          <CardContent className="flex items-center gap-4 p-5">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--hisab-primary)]/10">
-              <Database className="size-7 text-[var(--hisab-primary)]" />
-            </div>
-            <div>
-              <p className="text-xl font-bold">{backups.length}</p>
-              <p className="text-xs text-[var(--hisab-muted-fg)]">بکاپ</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="interactive-card">
-          <CardContent className="flex items-center gap-4 p-5">
-            <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${pendingCount > 0 ? "bg-[var(--hisab-warning)]/10" : "bg-[var(--hisab-success)]/10"}`}>
-              <AlertTriangle className={`size-7 ${pendingCount > 0 ? "text-[var(--hisab-warning)]" : "text-[var(--hisab-success)]"}`} />
-            </div>
-            <div>
-              <p className="text-xl font-bold">{pendingCount}</p>
-              <p className="text-xs text-[var(--hisab-muted-fg)]">عملیات معلق</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="interactive-card">
-          <CardContent className="flex items-center gap-4 p-5">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--hisab-accent)]/10">
-              <HardDrive className="size-7 text-[var(--hisab-accent)]" />
-            </div>
-            <div>
-              <p className="text-xl font-bold">24 MB</p>
-              <p className="text-xs text-[var(--hisab-muted-fg)]">حافظه محلی</p>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        ))}
       </div>
 
-      {/* ACTIONS */}
-      <Card className="glass-card">
-        <CardContent className="space-y-5 p-6">
-          <div className="flex items-center gap-2"><Activity className="size-5 text-[var(--hisab-primary)]" /><h2 className="text-lg font-semibold">عملیات سریع</h2></div>
-          <div className="flex flex-wrap gap-3">
-            <Button onClick={handleSync} loading={isSyncing} icon={<RefreshCw className="size-4" />}>همگام‌سازی الآن</Button>
-            <Button variant="outline" onClick={handleBackup} icon={<Download className="size-4" />}>بکاپ دستی</Button>
-            <Button variant={autoBackupEnabled ? "default" : "outline"} onClick={() => setAutoBackup(!autoBackupEnabled)} icon={<Database className="size-4" />}>بکاپ خودکار</Button>
-          </div>
-          {lastSyncedAt && (
-            <div className="flex items-center gap-2 rounded-xl border border-[var(--hisab-border)] bg-[var(--hisab-card)] p-4 text-sm text-[var(--hisab-muted-fg)]">
-              <Clock className="size-4 text-[var(--hisab-success)]" />آخرین همگام‌سازی: {timeAgo(lastSyncedAt)}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <div className="glass-card p-6 space-y-5">
+        <div className="flex items-center gap-2">
+          <div className="skeleton-shimmer h-5 w-5" />
+          <div className="skeleton-shimmer h-5 w-32" />
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <div className="skeleton-shimmer h-9 w-32" />
+          <div className="skeleton-shimmer h-9 w-28" />
+          <div className="skeleton-shimmer h-9 w-28" />
+        </div>
+      </div>
 
-      {/* BACKUP HISTORY */}
-      <Card className="glass-card">
-        <CardContent className="space-y-5 p-6">
-          <div className="flex items-center gap-2"><History className="size-5 text-[var(--hisab-primary)]" /><h2 className="text-lg font-semibold">تاریخچه بکاپ</h2></div>
-          {backups.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-[var(--hisab-border)] py-10 text-center"><Database className="mx-auto mb-3 size-10 text-[var(--hisab-muted-fg)]" /><p className="text-sm text-[var(--hisab-muted-fg)]">هنوز بکاپی ثبت نشده</p></div>
-          ) : (
-            <div className="space-y-3">
-              {backups.slice(0, 6).map((backup) => (
-                <div key={backup.id} className="interactive-card flex items-center justify-between p-4">
-                  <div className="flex items-center gap-4">
-                    <div className={`flex h-10 w-10 items-center justify-center rounded-full ${backup.status === "completed" ? "bg-[var(--hisab-success)]/10" : "bg-[var(--hisab-destructive)]/10"}`}>
-                      {backup.status === "completed" ? <Check className="size-5 text-[var(--hisab-success)]" /> : <AlertTriangle className="size-5 text-[var(--hisab-destructive)]" />}
-                    </div>
-                    <div>
-                      <p className="font-medium">{backup.type === "auto" ? "بکاپ خودکار" : "بکاپ دستی"}</p>
-                      <p className="text-xs text-[var(--hisab-muted-fg)]">{timeAgo(backup.timestamp)} • {backup.size}</p>
-                    </div>
-                  </div>
-                  <Badge variant={backup.status === "completed" ? "success" : "destructive"}>{backup.status === "completed" ? "موفق" : "خطا"}</Badge>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* AUDIT */}
-      <Card className="glass-card">
-        <CardContent className="space-y-5 p-6">
-          <div className="flex items-center gap-2"><Shield className="size-5 text-[var(--hisab-primary)]" /><h2 className="text-lg font-semibold">فعالیت‌های اخیر</h2></div>
-          {auditLog.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-[var(--hisab-border)] py-10 text-center"><History className="mx-auto mb-3 size-10 text-[var(--hisab-muted-fg)]" /><p className="text-sm text-[var(--hisab-muted-fg)]">هنوز فعالیتی ثبت نشده</p></div>
-          ) : (
-            <div className="space-y-2">
-              {auditLog.slice(0, 10).map((item) => (
-                <div key={item.id} className="interactive-card flex items-center justify-between p-3">
-                  <div className="flex items-center gap-3"><div className="h-2 w-2 rounded-full bg-[var(--hisab-primary)]" /><div><p className="text-sm font-medium">{item.action}</p><p className="text-xs text-[var(--hisab-muted-fg)]">{item.entity}</p></div></div>
-                  <span className="text-xs text-[var(--hisab-muted-fg)]">{timeAgo(item.timestamp)}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* CONNECTION */}
-      <Card className="glass-card">
-        <CardContent className="space-y-5 p-6">
-          <div className="flex items-center gap-2"><Wifi className="size-5 text-[var(--hisab-primary)]" /><h2 className="text-lg font-semibold">وضعیت شبکه</h2></div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl border border-[var(--hisab-border)] p-4"><p className="mb-1 text-sm text-[var(--hisab-muted-fg)]">اینترنت</p><p className={`font-semibold ${isOnline ? "text-[var(--hisab-success)]" : "text-[var(--hisab-warning)]"}`}>{isOnline ? "متصل" : "قطع"}</p></div>
-            <div className="rounded-2xl border border-[var(--hisab-border)] p-4"><p className="mb-1 text-sm text-[var(--hisab-muted-fg)]">وضعیت سرور</p><p className="font-semibold text-[var(--hisab-success)]">پایدار</p></div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="glass-card p-6 space-y-5">
+        <div className="flex items-center gap-2">
+          <div className="skeleton-shimmer h-5 w-5" />
+          <div className="skeleton-shimmer h-5 w-32" />
+        </div>
+        <div className="space-y-3">
+          {ROW_ITEMS.map((i) => (
+            <div key={i} className="skeleton-shimmer h-16" />
+          ))}
+        </div>
+      </div>
     </div>
+  )
+}
+
+const SyncCenterPage = dynamic(
+  () => import("@hisabche/ui").then((m) => m.SyncCenterPage),
+  { loading: () => <SyncCenterSkeleton />, ssr: true }
+)
+
+export const metadata = {
+  title: "مرکز همگام‌سازی | حسابچه",
+  robots: { index: false, follow: false },
+}
+
+export default function Page() {
+  return (
+    <main className="section">
+      <SyncCenterPage />
+    </main>
   )
 }

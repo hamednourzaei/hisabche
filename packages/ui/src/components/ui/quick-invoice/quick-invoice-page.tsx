@@ -3,9 +3,9 @@
 import React, { useEffect, useRef, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useTranslation } from "react-i18next"
-import { Button, Input, Card, CardContent, ProductPicker, CustomerPicker } from "@hisabche/ui"
+import { Button, Input, Card, CardContent, ProductPicker, CustomerPicker, SaveIndicator } from "@hisabche/ui"
 import { useCreateInvoice } from "@hisabche/api"
-import { useOnboardingStore, usePreferencesStore } from "@hisabche/store"
+import { useOnboardingStore, usePreferencesStore, useSyncStore, useBackupStore } from "@hisabche/store"
 import { ArrowRight, Check, User, DollarSign, Package, ShoppingCart, CreditCard } from "lucide-react"
 
 interface ProductOption { id: string; name: string; sellPrice: number; unit: string }
@@ -22,6 +22,8 @@ export function QuickInvoicePage() {
   const createInvoice = useCreateInvoice()
   const { markInvoiceCreated } = useOnboardingStore()
   const preferences = usePreferencesStore()
+  const { setSaveStatus } = useSyncStore()
+  const { addAuditEntry } = useBackupStore()
   const inputRef = useRef<HTMLInputElement>(null)
 
   const [step, setStep] = useState<Step>("product")
@@ -35,6 +37,7 @@ export function QuickInvoicePage() {
   const [createdInvoiceId, setCreatedInvoiceId] = useState<string | null>(null)
   const [startTime] = useState(Date.now())
   const [elapsed, setElapsed] = useState(0)
+  const [showSaved, setShowSaved] = useState(false)
 
   useEffect(() => { inputRef.current?.focus() }, [step])
   useEffect(() => { const t = setInterval(() => setElapsed(Math.floor((Date.now() - startTime) / 1000)), 1000); return () => clearInterval(t) }, [startTime])
@@ -51,6 +54,9 @@ export function QuickInvoicePage() {
 
   const handleCreate = useCallback(async () => {
     if (!selectedProduct || !price) return
+    
+    setSaveStatus('saving')
+    
     const newInvoice = await createInvoice.mutateAsync({
       type: "sale", date: new Date().toISOString(), subtotal: total, discountTotal: 0, discountType: "fixed",
       taxRate: preferences.lastTaxRate ?? 0, taxTotal: 0, total, paidAmount,
@@ -59,15 +65,38 @@ export function QuickInvoicePage() {
       customerId: selectedCustomer?.id || undefined, customerName: selectedCustomer?.name || undefined,
       items: [{ productId: selectedProduct.id, productName: selectedProduct.name, quantity: parseInt(quantity), unitPrice: parseFloat(price), discount: 0, totalPrice: total }],
     })
-    preferences.addRecentProduct(selectedProduct.name); preferences.addFrequentProduct(selectedProduct.name)
+    
+    preferences.addRecentProduct(selectedProduct.name)
+    preferences.addFrequentProduct(selectedProduct.name)
     if (selectedCustomer) preferences.setLastCustomer(selectedCustomer.name, selectedCustomer.id)
-    markInvoiceCreated(); setCreatedInvoiceId(newInvoice.id ?? null); setShowCelebration(true); setStep("done")
-  }, [selectedProduct, price, total, paidAmount, paymentType, quantity, selectedCustomer, preferences, createInvoice, markInvoiceCreated])
+    markInvoiceCreated()
+    
+    // ═══ Audit log ═══
+    addAuditEntry({
+      action: 'create',
+      entity: 'invoice',
+      entityId: newInvoice.id || '',
+      details: `فاکتور جدید: ${productName} — ${total.toLocaleString()} AFN ${paymentType === 'cash' ? 'نقد' : 'نسیه'}`,
+    })
+    
+    setSaveStatus('saved')
+    setShowSaved(true)
+    setTimeout(() => {
+      setSaveStatus('idle')
+      setShowSaved(false)
+    }, 2000)
+    
+    setCreatedInvoiceId(newInvoice.id ?? null)
+    setShowCelebration(true)
+    setStep("done")
+  }, [selectedProduct, price, total, paidAmount, paymentType, quantity, selectedCustomer, preferences, createInvoice, markInvoiceCreated, setSaveStatus, addAuditEntry])
 
   const elapsedFormatted = elapsed < 60 ? `${elapsed}s` : `${Math.floor(elapsed / 60)}m ${elapsed % 60}s`
 
   return (
     <div className="px-4 py-10">
+      <SaveIndicator show={showSaved} message={t("faktoor.created", "فاکتور ثبت شد ✅")} />
+      
       {showCelebration && (
         <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-black/30 backdrop-blur-sm cursor-pointer" onClick={dismissCelebration}>
           <div onClick={(e) => e.stopPropagation()} className="text-center pointer-events-none">

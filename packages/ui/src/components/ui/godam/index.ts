@@ -1,0 +1,1 @@
+export { GodamPage } from "./godam-page"

@@ -32,3 +32,5 @@ export {
   customerKeys,
 } from './hooks/customers'
 export { useTransactions, useCreateTransaction, useLedger, transactionKeys } from './hooks/transactions'
+export { useRealtime } from './hooks/useRealtime'
+export { supabase } from './supabase/realtime'

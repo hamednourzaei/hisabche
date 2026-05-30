@@ -4,7 +4,8 @@ import { useCallback, useMemo, useState, type ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 import { z } from "zod"
 import { useCreateCustomer, useCreateInvoice } from "@hisabche/api"
-import { Button, Input, ProductPicker } from "@hisabche/ui"
+import { Button, Input, ProductPicker, SaveIndicator } from "@hisabche/ui"
+import { useSyncStore, useBackupStore } from "@hisabche/store"
 import { Modal } from "../Modal"
 
 type ProductOption = NonNullable<Parameters<typeof ProductPicker>[0]["value"]>
@@ -21,6 +22,8 @@ export function AddCustomerModal({ open, onClose, onCreated }: Props) {
   const { t } = useTranslation()
   const createCustomer = useCreateCustomer()
   const createInvoice = useCreateInvoice()
+  const { setSaveStatus } = useSyncStore()
+  const { addAuditEntry } = useBackupStore()
 
   const [name, setName] = useState("")
   const [phone, setPhone] = useState("")
@@ -29,6 +32,7 @@ export function AddCustomerModal({ open, onClose, onCreated }: Props) {
   const [qty, setQty] = useState("1")
   const [unitPrice, setUnitPrice] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [showSaved, setShowSaved] = useState(false)
 
   const total = useMemo(() => toNum(unitPrice) * Math.max(1, toNum(qty)), [unitPrice, qty])
   const pending = createCustomer.isPending || createInvoice.isPending
@@ -41,11 +45,23 @@ export function AddCustomerModal({ open, onClose, onCreated }: Props) {
   const submit = useCallback(async () => {
     const parsed = customerSchema.safeParse({ name, phone })
     if (!parsed.success) { setError(t("baqidari.form.nameRequired")); return }
+    
+    setSaveStatus('saving')
+    
     try {
       const customer = await createCustomer.mutateAsync({
         fullName: parsed.data.name, phone: parsed.data.phone || undefined,
         openingBalance: 0, isActive: true,
       })
+      
+      // ═══ Audit log ═══
+      addAuditEntry({
+        action: 'create',
+        entity: 'customer',
+        entityId: customer.id || '',
+        details: `مشتری جدید: ${parsed.data.name}`,
+      })
+      
       if (withDebt && product && total > 0) {
         await createInvoice.mutateAsync({
           type: "sale", date: new Date().toISOString(), subtotal: total,
@@ -55,12 +71,27 @@ export function AddCustomerModal({ open, onClose, onCreated }: Props) {
           items: [{ productId: product.id, productName: product.name, quantity: toNum(qty), unitPrice: toNum(unitPrice), discount: 0, totalPrice: total }],
         })
       }
-      onCreated?.(); close()
-    } catch { setError(t("common.saveError")) }
-  }, [name, phone, withDebt, product, qty, unitPrice, total, createCustomer, createInvoice, onCreated, close, t])
+      
+      setSaveStatus('saved')
+      setShowSaved(true)
+      setTimeout(() => {
+        setSaveStatus('idle')
+        setShowSaved(false)
+      }, 2000)
+      
+      onCreated?.()
+      close()
+    } catch {
+      setSaveStatus('error')
+      setError(t("common.saveError"))
+      setTimeout(() => setSaveStatus('idle'), 2000)
+    }
+  }, [name, phone, withDebt, product, qty, unitPrice, total, createCustomer, createInvoice, onCreated, close, t, setSaveStatus, addAuditEntry])
 
   return (
     <Modal open={open} onClose={close} title={t("baqidari.addCustomer")} size="md">
+      <SaveIndicator show={showSaved} message={t("common.saved", "ذخیره شد ✅")} />
+      
       <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("baqidari.form.namePlaceholder")} autoFocus />
       <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder={t("baqidari.form.phonePlaceholder")} />
       <div className="flex gap-2">

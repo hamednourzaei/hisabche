@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { z } from "zod"
 import { useCreateTransaction } from "@hisabche/api"
-import { Button, Input } from "@hisabche/ui"
+import { Button, Input, SaveIndicator } from "@hisabche/ui"
+import { useSyncStore, useBackupStore } from "@hisabche/store"
 import { DollarSign } from "lucide-react"
 import { Modal } from "../Modal"
 
@@ -30,14 +31,17 @@ interface Props {
 export function PaymentModal({ open, onClose, onPaid, customer, openInvoices }: Props) {
   const { t } = useTranslation()
   const createTx = useCreateTransaction()
+  const { setSaveStatus } = useSyncStore()
+  const { addAuditEntry } = useBackupStore()
   const [amount, setAmount] = useState("")
   const [invoiceId, setInvoiceId] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [showSaved, setShowSaved] = useState(false)
 
   useEffect(() => {
     if (!open) return
     setInvoiceId(openInvoices.length === 1 ? (openInvoices[0]?.id ?? "") : "")
-    setAmount(""); setError(null)
+    setAmount(""); setError(null); setShowSaved(false)
   }, [open, customer?.id, openInvoices])
 
   const suggested = useMemo(() => {
@@ -52,21 +56,47 @@ export function PaymentModal({ open, onClose, onPaid, customer, openInvoices }: 
     const targetInvoice = invoiceId || openInvoices[0]?.id || ""
     const parsed = paymentSchema.safeParse({ amount: payAmount, invoiceId: targetInvoice, customerId: customer.id })
     if (!parsed.success) { setError(t("baqidari.form.invalidPayment")); return }
+    
+    setSaveStatus('saving')
+    
     try {
       await createTx.mutateAsync({
         customerId: parsed.data.customerId, type: "payment", amount: parsed.data.amount,
         currency: "AFN", date: new Date().toISOString(), reference: parsed.data.invoiceId,
         description: t("baqidari.paymentFrom", { name: customer.fullName || customer.name || "" }),
       })
-      onPaid?.(); onClose()
-    } catch { setError(t("common.saveError")) }
-  }, [customer, amount, suggested, invoiceId, openInvoices, createTx, onPaid, onClose, t])
+      
+      // ═══ Audit log ═══
+      addAuditEntry({
+        action: 'payment',
+        entity: 'transaction',
+        entityId: customer.id,
+        details: `پرداخت ${fmt(parsed.data.amount)} AFN از ${customer.fullName || customer.name} — فاکتور #${targetInvoice}`,
+      })
+      
+      setSaveStatus('saved')
+      setShowSaved(true)
+      setTimeout(() => {
+        setSaveStatus('idle')
+        setShowSaved(false)
+      }, 2000)
+      
+      onPaid?.()
+      onClose()
+    } catch {
+      setSaveStatus('error')
+      setError(t("common.saveError"))
+      setTimeout(() => setSaveStatus('idle'), 2000)
+    }
+  }, [customer, amount, suggested, invoiceId, openInvoices, createTx, onPaid, onClose, t, setSaveStatus, addAuditEntry])
 
   if (!customer) return null
   const name = customer.fullName || customer.name || t("common.noName")
 
   return (
     <Modal open={open} onClose={onClose} title={`${t("baqidari.recordPayment")} — ${name}`} size="sm">
+      <SaveIndicator show={showSaved} message={t("common.saved", "پرداخت ثبت شد ✅")} />
+      
       {openInvoices.length > 1 && (
         <select value={invoiceId} onChange={(e) => setInvoiceId(e.target.value)} aria-label={t("baqidari.selectInvoice")}
           className="w-full rounded-xl border border-[var(--hisab-border)] bg-[var(--hisab-background)] px-4 py-3 text-sm">
