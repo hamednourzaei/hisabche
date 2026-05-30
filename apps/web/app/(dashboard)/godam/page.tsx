@@ -1,14 +1,15 @@
-import { ProductDetailContainer } from "@hisabche/ui"
+import { GodamClient } from "./godam-client"
 
 export const metadata = {
-  title: "جزئیات محصول | حسابچه",
+  title: "گدام | حسابچه",
+  description: "مدیریت محصولات و موجودی انبار",
   robots: { index: false, follow: false },
 }
 
 export default function Page() {
   return (
     <main className="section">
-      <ProductDetailContainer />
+      <GodamClient />
     </main>
   )
 }
