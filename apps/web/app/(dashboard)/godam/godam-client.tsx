@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic"
 
 const GodamContainer = dynamic(
-  () => import("@hisabche/ui/").then((m) => m.GodamContainer),
+  () => import("@hisabche/ui").then((m) => m.GodamContainer),
   { ssr: false, loading: () => <GodamSkeleton /> }
 )
 

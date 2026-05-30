@@ -5,29 +5,9 @@ import { useRouter, usePathname } from "next/navigation"
 import { useAuthStore, useThemeStore } from "@hisabche/store"
 import { useTranslation } from "react-i18next"
 import { changeLanguage, type SupportedLanguage } from "@hisabche/i18n"
+import { DashboardHeader, DashboardSidebar, BottomNav, CommandPalette } from "@hisabche/ui"
 import { LayoutDashboard, Package, FileText, Settings, BookOpen } from "lucide-react"
-import { useEffect, useRef, useCallback } from "react"
-import dynamic from "next/dynamic"
-
-const DashboardHeader = dynamic(
-  () => import("@hisabche/ui").then((m) => m.DashboardHeader),
-  { ssr: false }
-)
-
-const DashboardSidebar = dynamic(
-  () => import("@hisabche/ui").then((m) => m.DashboardSidebar),
-  { ssr: false }
-)
-
-const BottomNav = dynamic(
-  () => import("@hisabche/ui").then((m) => m.BottomNav),
-  { ssr: false }
-)
-
-const CommandPalette = dynamic(
-  () => import("@hisabche/ui").then((m) => m.CommandPalette),
-  { ssr: false }
-)
+import { useEffect, useRef, useCallback, useMemo } from "react"
 
 function LoadingScreen() {
   return (
@@ -49,9 +29,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { t } = useTranslation()
   const router = useRouter()
   const pathname = usePathname()
-  const { isAuthenticated, hasHydrated } = useAuthStore()
-  const { isDark, toggle } = useThemeStore()
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const hasHydrated = useAuthStore((s) => s.hasHydrated)
+  const isDark = useThemeStore((s) => s.isDark)
+  const toggle = useThemeStore((s) => s.toggle)
   const redirected = useRef(false)
+  const lastSyncedAt = useRef(Date.now())
 
   useEffect(() => {
     if (hasHydrated && !isAuthenticated && !redirected.current) {
@@ -65,7 +48,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     changeLanguage(nextLang as SupportedLanguage)
   }, [])
 
-  const commands = [
+  const commands = useMemo(() => [
     { id: "dashboard", label: "داشبورد", description: "نمای کلی کسب‌وکار", icon: "📊", onSelect: () => router.push("/dashboard") },
     { id: "new-invoice", label: "فاکتور جدید", description: "ثبت فاکتور سریع", icon: "🧾", shortcut: "N", onSelect: () => router.push("/quick-invoice") },
     { id: "godam", label: "گدام", description: "مدیریت محصولات", icon: "📦", onSelect: () => router.push("/godam") },
@@ -74,7 +57,20 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     { id: "customers", label: "مشتری جدید", description: "اضافه کردن مشتری", icon: "👤", onSelect: () => router.push("/baqidari?add=true") },
     { id: "settings", label: "تنظیمات", description: "تنظیمات برنامه", icon: "⚙️", onSelect: () => router.push("/settings") },
     { id: "sync", label: "همگام‌سازی", description: "مرکز همگام‌سازی", icon: "🔄", onSelect: () => router.push("/sync-center") },
-  ]
+  ], [router])
+
+  const handleLogout = useCallback(() => {
+    useAuthStore.getState().logout()
+    router.push("/login")
+  }, [router])
+
+  const handleNavigate = useCallback((_id: string, path: string) => {
+    router.push(path)
+  }, [router])
+
+  const handleNavigateLogin = useCallback(() => {
+    router.push("/login")
+  }, [router])
 
   if (!hasHydrated) return <LoadingScreen />
   if (!isAuthenticated) return null
@@ -82,39 +78,26 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <div className="hisab-root flex min-h-screen">
       <CommandPalette commands={commands} />
-      <DashboardSidebar
-        items={navItems}
-        activeNav={pathname}
-        onNavigate={(_id, path) => router.push(path)}
-      />
+      <DashboardSidebar items={navItems} activeNav={pathname} onNavigate={handleNavigate} />
       <div className="flex min-h-screen flex-1 flex-col">
         <DashboardHeader
           variant="dashboard"
           appName={t("app.name")}
-          lastSyncedAt={Date.now()}
+          lastSyncedAt={lastSyncedAt.current}
           isOnline={true}
           isSyncing={false}
           pendingCount={0}
-          currentLang={document.documentElement.lang || "fa-AF"}
+          currentLang="fa-AF"
           isDark={isDark}
           signInLabel={t("auth.signIn")}
           signOutLabel={t("auth.signOut")}
           onToggleTheme={toggle}
           onToggleLang={toggleLang}
-          onLogout={() => {
-            useAuthStore.getState().logout()
-            router.push("/login")
-          }}
-          onNavigateLogin={() => router.push("/login")}
+          onLogout={handleLogout}
+          onNavigateLogin={handleNavigateLogin}
         />
-        <main className="flex-1 overflow-y-auto p-4 pb-20 lg:pb-4">
-          {children}
-        </main>
-        <BottomNav
-          items={navItems}
-          activeNav={pathname}
-          onNavigate={(_id, path) => router.push(path)}
-        />
+        <main className="flex-1 overflow-y-auto p-4 pb-20 lg:pb-4">{children}</main>
+        <BottomNav items={navItems} activeNav={pathname} onNavigate={handleNavigate} />
       </div>
     </div>
   )
