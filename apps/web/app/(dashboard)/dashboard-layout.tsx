@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react"
 import { useRouter, usePathname } from "next/navigation"
-import { useAuthStore, useThemeStore } from "@hisabche/store"
+import { useAuthStore, useThemeStore, useOnboardingStore } from "@hisabche/store"
 import { useTranslation } from "react-i18next"
 import {
   DashboardHeader,
@@ -12,6 +12,7 @@ import {
 } from "@hisabche/ui"
 import { useEffect, useRef, useCallback, useMemo } from "react"
 import { NAV_ITEMS, COMMAND_ITEMS } from "./constants/nav-items"
+import "@hisabche/ui/globals.css"
 
 function LoadingScreen() {
   return (
@@ -28,11 +29,7 @@ const navItems = NAV_ITEMS.map((item) => ({
   icon: item.icon,
 }))
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: ReactNode
-}) {
+export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { t, i18n } = useTranslation()
   const router = useRouter()
   const pathname = usePathname()
@@ -40,15 +37,23 @@ export default function DashboardLayout({
   const hasHydrated = useAuthStore((s) => s.hasHydrated)
   const isDark = useThemeStore((s) => s.isDark)
   const toggle = useThemeStore((s) => s.toggle)
+  const isOnboardingComplete = useOnboardingStore((s) => s.isCompleted)
   const redirected = useRef(false)
   const lastSyncedAt = useRef(Date.now())
 
   useEffect(() => {
-    if (hasHydrated && !isAuthenticated && !redirected.current) {
+    if (!hasHydrated) return
+
+    if (!isAuthenticated && !redirected.current) {
       redirected.current = true
       router.replace("/login")
+      return
     }
-  }, [hasHydrated, isAuthenticated, router])
+
+    if (isAuthenticated && !isOnboardingComplete) {
+      router.replace("/onboarding")
+    }
+  }, [hasHydrated, isAuthenticated, isOnboardingComplete, router])
 
   const currentLang = i18n.language || "fa-AF"
 
@@ -57,18 +62,18 @@ export default function DashboardLayout({
     i18n.changeLanguage(nextLang)
   }, [i18n])
 
-const commands = useMemo(
-  () =>
-    COMMAND_ITEMS.map((cmd) => ({
-      id: cmd.id,
-      label: t(cmd.labelKey),
-      description: t(cmd.descriptionKey),
-      icon: cmd.icon,
-      ...(cmd.shortcut ? { shortcut: cmd.shortcut } : {}),
-      onSelect: () => router.push(cmd.path),
-    })),
-  [router, t]
-)
+  const commands = useMemo(
+    () =>
+      COMMAND_ITEMS.map((cmd) => ({
+        id: cmd.id,
+        label: t(cmd.labelKey),
+        description: t(cmd.descriptionKey),
+        icon: cmd.icon,
+        ...(cmd.shortcut ? { shortcut: cmd.shortcut } : {}),
+        onSelect: () => router.push(cmd.path),
+      })),
+    [router, t]
+  )
 
   const handleLogout = useCallback(() => {
     useAuthStore.getState().logout()
@@ -92,13 +97,7 @@ const commands = useMemo(
   return (
     <div className="hisab-root flex min-h-screen">
       <CommandPalette commands={commands} />
-
-      <DashboardSidebar
-        items={navItems}
-        activeNav={pathname}
-        onNavigate={handleNavigate}
-      />
-
+      <DashboardSidebar items={navItems} activeNav={pathname} onNavigate={handleNavigate} />
       <div className="flex min-h-screen flex-1 flex-col">
         <DashboardHeader
           variant="dashboard"
@@ -116,16 +115,8 @@ const commands = useMemo(
           onLogout={handleLogout}
           onNavigateLogin={handleNavigateLogin}
         />
-
-        <main className="flex-1 overflow-y-auto p-4 pb-20 lg:pb-4">
-          {children}
-        </main>
-
-        <BottomNav
-          items={navItems}
-          activeNav={pathname}
-          onNavigate={handleNavigate}
-        />
+        <main className="flex-1 overflow-y-auto p-4 pb-20 lg:pb-4">{children}</main>
+        <BottomNav items={navItems} activeNav={pathname} onNavigate={handleNavigate} />
       </div>
     </div>
   )

@@ -16,6 +16,7 @@ import {
   useBackupStore,
 } from "@hisabche/store"
 import { QuickInvoicePage } from "../quick-invoice-page"
+import { Celebration } from "@hisabche/ui"
 import type { QuickInvoicePageProps } from "../quick-invoice-page"
 
 export function QuickInvoiceContainer() {
@@ -47,12 +48,10 @@ export function QuickInvoiceContainer() {
   const [elapsed, setElapsed] = useState(0)
   const [showSaved, setShowSaved] = useState(false)
 
-  // Focus input on step change
   useEffect(() => {
     inputRef.current?.focus()
   }, [step])
 
-  // Elapsed timer
   useEffect(() => {
     const interval = setInterval(
       () =>
@@ -64,7 +63,6 @@ export function QuickInvoiceContainer() {
     return () => clearInterval(interval)
   }, [startTime])
 
-  // Pre-fill price from selected product
   useEffect(() => {
     if (selectedProduct?.sellPrice) {
       setPrice(selectedProduct.sellPrice.toString())
@@ -195,35 +193,45 @@ export function QuickInvoiceContainer() {
   )
 
   return (
-    <QuickInvoicePage
-      t={safeT}
-      elapsedFormatted={elapsedFormatted}
-      showSaved={showSaved}
-      showCelebration={showCelebration}
-      step={step}
-      selectedProduct={selectedProduct}
-      selectedCustomer={selectedCustomer}
-      price={price}
-      quantity={quantity}
-      paymentType={paymentType}
-      paidNow={paidNow}
-      total={total}
-      productName={productName}
-      paidAmount={paidAmount}
-      createdInvoiceId={createdInvoiceId}
-      isPending={createInvoice.isPending}
-      inputRef={inputRef}
-      onSelectProduct={setSelectedProduct}
-      onSelectCustomer={setSelectedCustomer}
-      onPriceChange={setPrice}
-      onQuantityChange={setQuantity}
-      onPaymentTypeChange={setPaymentType}
-      onPaidNowChange={setPaidNow}
-      onSetStep={setStep}
-      onCreate={handleCreate}
-      onDismissCelebration={dismissCelebration}
-      onViewInvoice={handleViewInvoice}
-      onViewAllInvoices={handleViewAllInvoices}
-    />
+    <>
+      <Celebration
+        show={showCelebration}
+        message={t("faktoor.created", "فاکتور با موفقیت ثبت شد")}
+        emoji="🧾"
+        duration={3000}
+        onComplete={dismissCelebration}
+      />
+
+      <QuickInvoicePage
+        t={safeT}
+        elapsedFormatted={elapsedFormatted}
+        showSaved={showSaved}
+        showCelebration={showCelebration}
+        step={step}
+        selectedProduct={selectedProduct}
+        selectedCustomer={selectedCustomer}
+        price={price}
+        quantity={quantity}
+        paymentType={paymentType}
+        paidNow={paidNow}
+        total={total}
+        productName={productName}
+        paidAmount={paidAmount}
+        createdInvoiceId={createdInvoiceId}
+        isPending={createInvoice.isPending}
+        inputRef={inputRef}
+        onSelectProduct={setSelectedProduct}
+        onSelectCustomer={setSelectedCustomer}
+        onPriceChange={setPrice}
+        onQuantityChange={setQuantity}
+        onPaymentTypeChange={setPaymentType}
+        onPaidNowChange={setPaidNow}
+        onSetStep={setStep}
+        onCreate={handleCreate}
+        onDismissCelebration={dismissCelebration}
+        onViewInvoice={handleViewInvoice}
+        onViewAllInvoices={handleViewAllInvoices}
+      />
+    </>
   )
 }

@@ -1,5 +1,5 @@
 // ============================================
-// Hisabche UI — Barrel Exports
+// Hisabche UI — Barrel Exports v5.0
 // ============================================
 
 import './styles/lite-mode.css'
@@ -20,56 +20,73 @@ export { Select, SelectTrigger, SelectValue, SelectContent, SelectItem, SelectGr
 export { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell, TableCaption } from './components/ui/table'
 export { Toaster } from './components/ui/sonner'
 
-// ---------- Custom Components (unchanged) ----------
+// ---------- Feedback ----------
 export { Toast, ToastContainer, type ToastProps, type ToastVariant } from './components/ui/toast'
-export { SearchInput, type SearchInputProps } from './components/ui/search-input'
-export { Fab, type FabAction, type FabProps } from './components/ui/fab'
-export { SyncStatus, type SyncStatusProps } from './components/ui/sync-status'
-export { OfflineBanner, type OfflineBannerProps } from './components/ui/offline-banner'
-export { SaveIndicator, type SaveIndicatorProps } from "./components/ui/save-indicator"
-export { OfflineQueue, type OfflineQueueProps } from './components/ui/offline-queue'
-export { EmptyState, type EmptyStateProps } from './components/ui/empty-state'
+export { SaveIndicator, type SaveIndicatorProps } from './components/ui/save-indicator'
 export { Celebration, type CelebrationProps } from './components/ui/celebration'
 export { ErrorBoundary } from './components/ui/error-boundary'
+
+// ---------- Navigation ----------
 export { DashboardSidebar, BottomNav, type NavItem } from './components/ui/dashboard-sidebar'
 export { DashboardHeader } from './components/ui/dashboard-header'
-export { ProductPicker } from "./components/ui/product-picker"
-export { CustomerPicker } from "./components/ui/customer-picker"
+export { CommandPalette } from './components/ui/command-palette'
+export { GlassNavbar } from './components/ui/landing-section'
+
+// ---------- Data Display ----------
+export { EmptyState, type EmptyStateProps } from './components/ui/empty-state'
+export { StockStatsCard } from './components/ui/stock-stats-card'
+export { SyncStatus, type SyncStatusProps } from './components/ui/sync-status'
+export { OfflineBanner, type OfflineBannerProps } from './components/ui/offline-banner'
+export { OfflineQueue, type OfflineQueueProps } from './components/ui/offline-queue'
+export { RealtimeIndicator } from './components/ui/realtime-indicator'
+export { LandingPreview } from './components/ui/landing-preview'
+export { AnimatedCounter } from './components/ui/landing-section'
+
+// ---------- Forms ----------
+export { SearchInput, type SearchInputProps } from './components/ui/search-input'
+export { ProductPicker } from './components/ui/product-picker'
+export { CustomerPicker } from './components/ui/customer-picker'
+
+// ---------- Layout ----------
+export { Section, FeatureCard, SectionHeading } from './components/ui/landing-section'
+export { GradientMesh } from './components/ui/landing-section'
+export { ShimmerCTA } from './components/ui/landing-section'
+export { LivingBackground } from './components/ui/living-background'
+export { Fab, type FabAction, type FabProps } from './components/ui/fab'
+
+// ---------- Auth ----------
+export { AuthShell } from './components/ui/auth/AuthShell'
+export { AuthContainer } from './components/ui/auth/containers/auth-container'
+
+// ---------- Modals ----------
+export { Modal } from './components/ui/Modal'
+export { AddProductModal } from './components/ui/add-product-modal'
+export { AddCustomerModal } from './components/ui/baqidari'
+export { PaymentModal } from './components/ui/baqidari'
+export { InviteModal } from './components/ui/invite-modal'
+
+// ---------- Pages (Pure UI) ----------
+export { BaqidariPage } from './components/ui/baqidari'
+export { GodamPage } from './components/ui/godam'
+export { ProductDetailPage } from './components/ui/godam-detail'
+export { InvoicesPage } from './components/ui/invoices'
+export { InvoiceDetailPage } from './components/ui/invoice-detail/invoice-detail-page'
+export { SettingsPage } from './components/ui/settings'
+export { DashboardPage } from './components/ui/dashboard/dashboard-page'
+export { QuickInvoicePage } from './components/ui/quick-invoice'
+export { SyncCenterPage } from './components/ui/sync-center'
+export { WorkspacePage } from './components/ui/workspace'
+export { OnboardingPage } from './components/ui/onboarding/onboarding-page'
+export { CustomerDetailView } from './components/ui/baqidari'
+
+// ---------- Containers (Logic) ----------
+export { DashboardContainer } from './components/ui/dashboard/containers/dashboard-container'
+export { GodamContainer } from './components/ui/godam/containers/godam-container'
+export { ProductDetailContainer } from './components/ui/godam-detail/containers/godam-detail-container'
+export { InvoicesContainer } from './components/ui/invoices/containers/invoices-container'
+export { InvoiceDetailContainer } from './components/ui/invoice-detail/containers/invoice-detail-container'
+export { QuickInvoiceContainer } from './components/ui/quick-invoice/containers/quick-invoice-container'
+export { SyncCenterContainer } from './components/ui/sync-center/containers/sync-center-container'
+export { OnboardingContainer } from './components/ui/onboarding/containers/onboarding-container'
+
 export type SupportedLanguage = 'fa-AF' | 'fa-IR'
-export { AddProductModal } from "./components/ui/add-product-modal"
-export { StockStatsCard } from "./components/ui/stock-stats-card"
-export { LandingPreview } from "./components/ui/landing-preview"
-export { AnimatedCounter, GradientMesh, GlassNavbar, ShimmerCTA, Section, FeatureCard, SectionHeading } from "./components/ui/landing-section"
-export { LivingBackground } from "./components/ui/living-background"
-export { AuthShell } from "./components/ui/auth/AuthShell"
-export { AuthContainer } from "./components/ui/auth/containers/auth-container"
-
-// ---------- Baqidari Feature ----------
-export { BaqidariPage } from "./components/ui/baqidari"
-export { AddCustomerModal } from "./components/ui/baqidari"
-export { PaymentModal } from "./components/ui/baqidari"
-export { CustomerDetailView } from "./components/ui/baqidari"
-
-// ---------- Shared Components ----------
-export { Modal } from "./components/ui/Modal"
-// ---------- Quick Invoice ----------
-export { QuickInvoicePage } from "./components/ui/quick-invoice"
-export { GodamPage } from "./components/ui/godam"
-export { ProductDetailPage } from "./components/ui/godam-detail"
-export { InvoicesPage } from "./components/ui/invoices"
-export { InvoiceDetailPage } from "./components/ui/invoice-detail/invoice-detail-page"
-export { InvoiceDetailContainer } from "./components/ui/invoice-detail/containers/invoice-detail-container"
-export { InvoicesContainer } from "./components/ui/invoices/containers/invoices-container"
-export { SettingsPage } from "./components/ui/settings"
-export { DashboardPage } from "./components/ui/dashboard/dashboard-page"
-export { DashboardContainer } from "./components/ui/dashboard/containers/dashboard-container"
-export { CommandPalette } from "./components/ui/command-palette"
-export { SyncCenterPage } from "./components/ui/sync-center"
-// ---------- Workspace ----------
-export { WorkspacePage } from "./components/ui/workspace"
-export { InviteModal } from "./components/ui/invite-modal"
-export { RealtimeIndicator } from "./components/ui/realtime-indicator"
-export { ProductDetailContainer } from "./components/ui/godam-detail/containers/godam-detail-container"
-export { QuickInvoiceContainer } from "./components/ui/quick-invoice/containers/quick-invoice-container"
-export { SyncCenterContainer } from "./components/ui/sync-center/containers/sync-center-container"
-export { GodamContainer } from "./components/ui/godam/containers/godam-container"
