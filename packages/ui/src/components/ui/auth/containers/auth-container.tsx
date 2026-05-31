@@ -9,6 +9,7 @@ import { z } from "zod"
 import { useAuthStore } from "@hisabche/store"
 import { loginSchema, type LoginInput } from "@hisabche/validation"
 import { AuthShell } from "@hisabche/ui"
+import { supabaseClient } from "../../../../../../auth/src/supabase"
 
 const signupSchema = z.object({
   fullName: z.string().min(2, "signup.errors.fullName"),
@@ -42,6 +43,17 @@ export function AuthContainer({ initialMode = "login" }: { initialMode?: "login"
   const loginStore = useAuthStore()
 
   const onLoginSubmit = loginForm.handleSubmit(async (data: LoginInput) => {
+    // 1. Supabase login
+    const { error } = await supabaseClient.auth.signInWithPassword({
+      email: data.email,
+      password: data.password,
+    })
+    if (error) {
+      useAuthStore.setState({ error: error.message, isLoading: false })
+      return
+    }
+
+    // 2. Zustand state
     await loginStore.login(data)
     const s = useAuthStore.getState()
     if (s.isAuthenticated && !s.error) {
@@ -50,6 +62,7 @@ export function AuthContainer({ initialMode = "login" }: { initialMode?: "login"
   })
 
   const onDemoLogin = useCallback(async () => {
+    // Demo login — only Zustand, no Supabase
     await loginStore.login({ email: "demo@hisabche.com", password: "Demo1234" })
     const s = useAuthStore.getState()
     if (s.isAuthenticated && !s.error) {
@@ -81,6 +94,18 @@ export function AuthContainer({ initialMode = "login" }: { initialMode?: "login"
   const signupStore = useAuthStore()
 
   const onSignupSubmit = signupForm.handleSubmit(async (data: SignupInput) => {
+    // 1. Supabase signup
+    const { error } = await supabaseClient.auth.signUp({
+      email: data.email,
+      password: data.password,
+      options: { data: { full_name: data.fullName } },
+    })
+    if (error) {
+      useAuthStore.setState({ error: error.message, isLoading: false })
+      return
+    }
+
+    // 2. Zustand state
     try {
       await signupStore.login({ email: data.email, password: data.password })
       await new Promise((r) => setTimeout(r, 100))

@@ -6,7 +6,10 @@
     "target": "ES2020",
     "moduleResolution": "Node",
     "strict": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "paths": {
+      "@hisabche/auth": ["../auth/src"]
+    }
   },
   "include": ["src"]
 }
