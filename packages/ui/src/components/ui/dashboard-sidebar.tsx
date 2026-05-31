@@ -87,7 +87,7 @@ export function BottomNav({ items, activeNav, onNavigate }: {
 
   return (
     <nav className="bottom-nav lg:hidden">
-      <div className="grid grid-cols-5 items-stretch">
+      <div className="grid grid-cols-6 items-stretch">
         {items.slice(0, 5).map((item) => {
           const isActive = isPathActive(activeNav, item.path)
           return (
