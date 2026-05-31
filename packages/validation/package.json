@@ -7,13 +7,16 @@
   "scripts": {
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
-    "clean": "rm -rf node_modules"
+    "clean": "rm -rf node_modules",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "react": "^19.2.6",
-    "react-dom": "^19.2.6"
+    "react-dom": "^19.2.6",
+    "vitest": "^4.1.7"
   }
 }

@@ -1,5 +1,5 @@
 // ============================================
-// backend/src/index.ts
+// backend/src/index.ts — RATE LIMIT FIX
 // ============================================
 
 import Fastify from 'fastify'
@@ -17,24 +17,12 @@ import { transactionRoutes } from './routes/transaction.routes'
 import { godamRoutes } from './routes/godam.routes'
 import { invoicePdfRoutes } from './routes/invoice-pdf.routes'
 
-/**
- * ============================================
- * ENV SETUP (PRODUCTION SAFE)
- * ============================================
- * - Render / Vercel: env vars are injected automatically
- * - local dev: uses .env file
- */
 if (process.env.NODE_ENV !== 'production') {
   dotenv.config()
 }
 
-// ============================================
-// Server Setup
-// ============================================
-
 const PORT = Number(process.env.PORT || 3001)
 const HOST = '0.0.0.0'
-
 const isProduction = process.env.NODE_ENV === 'production'
 
 const server = Fastify({
@@ -54,22 +42,24 @@ const server = Fastify({
   },
 })
 
-// ============================================
-// START FUNCTION
-// ============================================
-
 async function start(): Promise<void> {
   try {
     // ----------------------------
-    // Rate Limit
+    // Rate Limit — Global
     // ----------------------------
     await server.register(rateLimit, {
-      max: 100,
+      max: 200,
       timeWindow: '1 minute',
+      keyGenerator: (request) => request.ip,
+      errorResponseBuilder: (_request: any, context: any) => ({
+        success: false,
+        error: 'Too many requests',
+        retryAfter: Math.ceil(context.after / 1000),
+      }),
     })
 
     // ----------------------------
-    // CORS (PRODUCTION SAFE)
+    // CORS
     // ----------------------------
     await server.register(cors, {
       origin: isProduction
@@ -78,38 +68,31 @@ async function start(): Promise<void> {
           ]
         : [
             'https://project-ro4vn-hisabche-s-projects.vercel.app',
-    'https://project-ro4vn.vercel.app',
-    'http://localhost:3000',
-    'https://hisabche.com',
-  'https://www.hisabche.com',
+            'https://project-ro4vn.vercel.app',
+            'http://localhost:3000',
+            'https://hisabche.com',
+            'https://www.hisabche.com',
           ],
       credentials: true,
     })
 
     // ----------------------------
-    // HEALTH CHECK (IMPORTANT FOR RENDER)
+    // Health check
     // ----------------------------
-    server.get('/api/health', async () => {
-      return {
-        status: 'ok',
-        timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
-        env: process.env.NODE_ENV,
-      }
-    })
+    server.get('/api/health', async () => ({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+      env: process.env.NODE_ENV,
+    }))
+
+    server.get('/api', async () => ({
+      name: 'Hisabche API',
+      version: '0.0.1',
+    }))
 
     // ----------------------------
-    // API INFO
-    // ----------------------------
-    server.get('/api', async () => {
-      return {
-        name: 'Hisabche API',
-        version: '0.0.1',
-      }
-    })
-
-    // ----------------------------
-    // ROUTES — no prefix, routes already have /api/...
+    // Routes
     // ----------------------------
     await server.register(authRoutes)
     await server.register(syncRoutes)
@@ -121,7 +104,7 @@ async function start(): Promise<void> {
     await server.register(godamRoutes)
 
     // ----------------------------
-    // 404 HANDLER
+    // 404
     // ----------------------------
     server.setNotFoundHandler((_req, reply) => {
       reply.status(404).send({
@@ -132,36 +115,24 @@ async function start(): Promise<void> {
     })
 
     // ----------------------------
-    // GLOBAL ERROR HANDLER
+    // Error handler
     // ----------------------------
     server.setErrorHandler((error, _req, reply) => {
       server.log.error(error)
-
-      reply.status(error.statusCode || 500).send({
-        error: error.name || 'Internal Server Error',
+      reply.status((error as any).statusCode || 500).send({
+        error: (error as any).name || 'Internal Server Error',
         message: error.message || 'Unexpected error',
-        statusCode: error.statusCode || 500,
+        statusCode: (error as any).statusCode || 500,
       })
     })
 
-    // ----------------------------
-    // START SERVER
-    // ----------------------------
-    await server.listen({
-      port: PORT,
-      host: HOST,
-    })
-
+    await server.listen({ port: PORT, host: HOST })
     server.log.info(`🚀 Server running on ${HOST}:${PORT}`)
   } catch (err) {
     server.log.error(err)
     process.exit(1)
   }
 }
-
-// ============================================
-// GRACEFUL SHUTDOWN (RENDER SAFE)
-// ============================================
 
 async function shutdown(signal: string) {
   try {

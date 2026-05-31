@@ -1,15 +1,40 @@
 import { create } from 'zustand'
+import { persist, createJSONStorage } from 'zustand/middleware'
+import { signIn as supabaseSignIn, signOut as supabaseSignOut } from '../../../auth/src/'
+import CryptoJS from 'crypto-js'
 
-import {
-  persist,
-  createJSONStorage,
-} from 'zustand/middleware'
+// ============================================
+// ENCRYPTION
+// ============================================
+const ENCRYPTION_KEY = process.env.NEXT_PUBLIC_ENCRYPTION_KEY || 'hisabche-dev-key-32-chars!!'
 
-import {
-  signIn as supabaseSignIn,
-  signOut as supabaseSignOut,
-} from '../../../auth/src/'
+const encryptedStorage = {
+  getItem: (key: string): string | null => {
+    if (typeof window === 'undefined') return null
+    try {
+      const encrypted = localStorage.getItem(key)
+      if (!encrypted) return null
+      const bytes = CryptoJS.AES.decrypt(encrypted, ENCRYPTION_KEY)
+      return bytes.toString(CryptoJS.enc.Utf8)
+    } catch {
+      localStorage.removeItem(key)
+      return null
+    }
+  },
+  setItem: (key: string, value: string): void => {
+    if (typeof window === 'undefined') return
+    const encrypted = CryptoJS.AES.encrypt(value, ENCRYPTION_KEY).toString()
+    localStorage.setItem(key, encrypted)
+  },
+  removeItem: (key: string): void => {
+    if (typeof window === 'undefined') return
+    localStorage.removeItem(key)
+  },
+}
 
+// ============================================
+// TYPES
+// ============================================
 export interface User {
   id: string
   email: string
@@ -20,267 +45,110 @@ export interface User {
 
 export interface AuthState {
   user: User | null
-
   isAuthenticated: boolean
-
   isDemo: boolean
-
   isLoading: boolean
-
   hasHydrated: boolean
-
   error: string | null
-
-  login: (c: {
-    email: string
-    password: string
-  }) => Promise<void>
-
+  login: (c: { email: string; password: string }) => Promise<void>
   logout: () => Promise<void>
-
   initAuth: () => void
 }
 
-export const useAuthStore =
-  create<AuthState>()(
-    persist(
-      (set, get) => ({
-        // =====================================
-        // STATE
-        // =====================================
+// ============================================
+// STORE
+// ============================================
+export const useAuthStore = create<AuthState>()(
+  persist(
+    (set, get) => ({
+      user: null,
+      isAuthenticated: false,
+      isDemo: false,
+      isLoading: false,
+      hasHydrated: false,
+      error: null,
 
-        user: null,
+      // =====================================
+      // INIT AUTH
+      // =====================================
+      initAuth: () => {
+        const state = get()
+        set({
+          hasHydrated: true,
+          isAuthenticated: !!state.user,
+        })
+      },
 
-        isAuthenticated: false,
+      // =====================================
+      // LOGIN
+      // =====================================
+      login: async (credentials) => {
+        set({ isLoading: true, error: null })
 
-        isDemo: false,
-
-        isLoading: false,
-
-        hasHydrated: false,
-
-        error: null,
-
-        // =====================================
-        // INIT AUTH
-        // =====================================
-
-        initAuth: () => {
-          const state = get()
-
-          set({
-            hasHydrated: true,
-
-            isAuthenticated:
-              !!state.user,
-          })
-        },
-
-        // =====================================
-        // LOGIN
-        // =====================================
-
-        login: async (
-          credentials
-        ) => {
-          set({
-            isLoading: true,
-
-            error: null,
-          })
-
-          try {
-            // =====================================
-            // DEMO LOGIN
-            // =====================================
-
-            if (
-              credentials.email.trim() ===
-                'demo@hisabche.com' &&
-              credentials.password ===
-                'Demo1234'
-            ) {
-              const user: User = {
-                id: 'demo-user-1',
-
-                email:
-                  credentials.email,
-
-                fullName:
-                  'کاربر آزمایشی',
-
-                businessName:
-                  'فروشگاه نمونه',
-
-                createdAt:
-                  new Date().toISOString(),
-              }
-
-              set({
-                user,
-
-                isAuthenticated: true,
-
-                isDemo: true,
-
-                isLoading: false,
-
-                error: null,
-              })
-
-              return
-            }
-
-            // =====================================
-            // REAL LOGIN
-            // =====================================
-
-            const response =
-              await supabaseSignIn(
-                credentials.email.trim(),
-                credentials.password
-              )
-
-            console.log(
-              'SUPABASE LOGIN:',
-              response
-            )
-
-            // =====================================
-            // VALIDATE RESPONSE
-            // =====================================
-
-            if (
-              !response ||
-              !response.user ||
-              !response.user.id
-            ) {
-              throw new Error(
-                'ایمیل یا رمز عبور اشتباه است'
-              )
-            }
-
-            // =====================================
-            // BUILD USER
-            // =====================================
-
+        try {
+          // Demo login
+          if (credentials.email.trim() === 'demo@hisabche.com' && credentials.password === 'Demo1234') {
             const user: User = {
-              id: response.user.id,
-
-              email:
-                response.user.email ||
-                credentials.email,
-
-              fullName:
-                response.user
-                  .user_metadata
-                  ?.full_name ||
-                'کاربر',
-
-              businessName:
-                response.user
-                  .user_metadata
-                  ?.business_name,
-
-              createdAt:
-                response.user
-                  .created_at ||
-                new Date().toISOString(),
+              id: 'demo-user-1',
+              email: credentials.email,
+              fullName: 'کاربر آزمایشی',
+              businessName: 'فروشگاه نمونه',
+              createdAt: new Date().toISOString(),
             }
-
-            // =====================================
-            // SUCCESS
-            // =====================================
-
-            set({
-              user,
-
-              isAuthenticated: true,
-
-              isDemo: false,
-
-              isLoading: false,
-
-              error: null,
-            })
-          } catch (err: any) {
-            console.error(
-              'LOGIN ERROR:',
-              err
-            )
-
-            set({
-              user: null,
-
-              isAuthenticated: false,
-
-              isDemo: false,
-
-              isLoading: false,
-
-              error:
-                err?.message ||
-                'ورود ناموفق بود',
-            })
+            set({ user, isAuthenticated: true, isDemo: true, isLoading: false, error: null })
+            return
           }
-        },
 
-        // =====================================
-        // LOGOUT
-        // =====================================
+          // Real login
+          const response = await supabaseSignIn(credentials.email.trim(), credentials.password)
 
-        logout: async () => {
-          try {
-            const state = get()
-
-            if (!state.isDemo) {
-              await supabaseSignOut()
-            }
-          } catch (err) {
-            console.error(
-              'LOGOUT ERROR:',
-              err
-            )
-          } finally {
-            set({
-              user: null,
-
-              isAuthenticated: false,
-
-              isDemo: false,
-
-              isLoading: false,
-
-              error: null,
-            })
+          if (!response?.user?.id) {
+            throw new Error('ایمیل یا رمز عبور اشتباه است')
           }
-        },
+
+          const user: User = {
+            id: response.user.id,
+            email: response.user.email || credentials.email,
+            fullName: response.user.user_metadata?.full_name || 'کاربر',
+            businessName: response.user.user_metadata?.business_name,
+            createdAt: response.user.created_at || new Date().toISOString(),
+          }
+
+          set({ user, isAuthenticated: true, isDemo: false, isLoading: false, error: null })
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : 'ورود ناموفق بود'
+          set({ user: null, isAuthenticated: false, isDemo: false, isLoading: false, error: message })
+        }
+      },
+
+      // =====================================
+      // LOGOUT
+      // =====================================
+      logout: async () => {
+        try {
+          const state = get()
+          if (!state.isDemo) {
+            await supabaseSignOut()
+          }
+        } catch (err) {
+          console.error('LOGOUT ERROR:', err)
+        } finally {
+          set({ user: null, isAuthenticated: false, isDemo: false, isLoading: false, error: null })
+        }
+      },
+    }),
+    {
+      name: 'hisabche-auth',
+      storage: typeof window !== 'undefined' ? createJSONStorage(() => encryptedStorage) : undefined,
+      partialize: (s) => ({
+        user: s.user,
+        isDemo: s.isDemo,
       }),
-
-      {
-        name: 'hisabche-auth',
-
-        storage:
-          typeof window !==
-          'undefined'
-            ? createJSONStorage(
-                () => localStorage
-              )
-            : undefined,
-
-        partialize: (s) => ({
-          user: s.user,
-
-          isDemo: s.isDemo,
-        }),
-
-        onRehydrateStorage: () => () => {
-  // همیشه initAuth رو فراخوانی کن، چه persisted data باشه چه نباشه
-  // queueMicrotask تضمین می‌کنه که useAuthStore کاملاً ساخته شده
-  queueMicrotask(() => {
-    useAuthStore.getState().initAuth()
-  })
-},
-      }
-    )
+      onRehydrateStorage: () => () => {
+        queueMicrotask(() => {
+          useAuthStore.getState().initAuth()
+        })
+      },
+    }
   )
+)
