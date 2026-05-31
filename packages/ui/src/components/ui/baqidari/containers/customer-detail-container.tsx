@@ -1,23 +1,61 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useCallback, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useCustomers, useInvoices } from "@hisabche/api"
 import { CustomerDetailView } from "../CustomerDetailView"
 
 const fmt = (v: number): string => v.toLocaleString("fa-AF")
-const rem = (inv: { total: number; paidAmount: number }): number => Math.max(0, inv.total - inv.paidAmount)
-const fmtDate = (d: string): string => { try { return new Date(d).toLocaleDateString("fa-AF") } catch { return d } }
 
-interface ApiInvoiceRecord { id: string; invoiceNumber?: string; total: number; paidAmount: number; date: string; status: string; customerId: string }
-interface CustomerRecord { id: string; fullName?: string; name?: string; phone?: string }
+const rem = (inv: { total: number; paidAmount: number }): number =>
+  Math.max(0, inv.total - inv.paidAmount)
 
-export function CustomerDetailContainer({ customerId, onBack }: { customerId: string; onBack: () => void }) {
+const fmtDate = (d: string): string => {
+  try {
+    return new Date(d).toLocaleDateString("fa-AF")
+  } catch {
+    return d
+  }
+}
+
+interface ApiInvoiceRecord {
+  id: string
+  invoiceNumber?: string
+  total: number
+  paidAmount: number
+  date: string
+  status: string
+  customerId: string
+}
+
+interface CustomerRecord {
+  id: string
+  fullName?: string
+  name?: string
+  phone?: string
+}
+
+export function CustomerDetailContainer({
+  customerId,
+  onBack,
+}: {
+  customerId: string
+  onBack: () => void
+}) {
   const { t } = useTranslation()
   const [payOpen, setPayOpen] = useState(false)
 
-  const { data: customersData } = useCustomers({ page: 1, limit: 50, sortDirection: "desc" })
-  const { data: invoicesData, refetch } = useInvoices({ page: 1, limit: 200, sortDirection: "desc" })
+  const { data: customersData } = useCustomers({
+    page: 1,
+    limit: 50,
+    sortDirection: "desc",
+  })
+
+  const { data: invoicesData, refetch } = useInvoices({
+    page: 1,
+    limit: 200,
+    sortDirection: "desc",
+  })
 
   const customer = useMemo(() => {
     const list = (customersData?.customers ?? []) as unknown as CustomerRecord[]
@@ -33,7 +71,11 @@ export function CustomerDetailContainer({ customerId, onBack }: { customerId: st
   const openInvoices = useMemo(() => {
     const list = (invoicesData?.invoices ?? []) as unknown as ApiInvoiceRecord[]
     return list
-      .filter((inv) => inv.customerId === customerId && (inv.status === "pending" || inv.status === "partial"))
+      .filter(
+        (inv) =>
+          inv.customerId === customerId &&
+          (inv.status === "pending" || inv.status === "partial")
+      )
       .map((inv) => ({
         id: inv.id,
         invoiceNumber: inv.invoiceNumber ?? "",
@@ -45,21 +87,33 @@ export function CustomerDetailContainer({ customerId, onBack }: { customerId: st
       }))
   }, [invoicesData, customerId])
 
-  const totalDebt = openInvoices.reduce((s, inv) => s + inv.remaining, 0)
+  const totalDebt = useMemo(
+    () => openInvoices.reduce((s, inv) => s + inv.remaining, 0),
+    [openInvoices]
+  )
 
-  const safeT = (key: string, fallback?: string) => { const v = t(key); return v && v !== key ? v : (fallback ?? key) }
+  const safeT = useCallback(
+    (key: string, fallback?: string) => {
+      const v = t(key)
+      return v && v !== key ? v : (fallback ?? key)
+    },
+    [t]
+  )
+
+  const handleOpenPayment = useCallback(() => setPayOpen(true), [])
+  const handleClosePayment = useCallback(() => setPayOpen(false), [])
 
   return (
     <CustomerDetailView
       t={safeT}
       fmt={fmt}
-      customer={customer as any}
-      openInvoices={openInvoices as any}
+      customer={customer}
+      openInvoices={openInvoices}
       totalDebt={totalDebt}
       payOpen={payOpen}
       onBack={onBack}
-      onOpenPayment={() => setPayOpen(true)}
-      onClosePayment={() => setPayOpen(false)}
+      onOpenPayment={handleOpenPayment}
+      onClosePayment={handleClosePayment}
       onPaymentSuccess={refetch}
     />
   )

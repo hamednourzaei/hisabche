@@ -9,13 +9,19 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-[var(--hisab-primary)] text-white hover:opacity-90",
-        destructive: "bg-[var(--hisab-destructive)] text-white hover:opacity-90",
-        outline: "border border-[var(--hisab-border)] bg-transparent hover:bg-[var(--hisab-muted)] text-[var(--hisab-foreground)]",
-        secondary: "bg-[var(--hisab-secondary)] text-white hover:opacity-90",
-        ghost: "hover:bg-[var(--hisab-muted)] text-[var(--hisab-foreground)]",
+        default:
+          "bg-[var(--hisab-primary)] text-[var(--hisab-primary-fg)] hover:opacity-90",
+        destructive:
+          "bg-[var(--hisab-destructive)] text-[var(--hisab-destructive-fg)] hover:opacity-90",
+        outline:
+          "border border-[var(--hisab-border)] bg-transparent hover:bg-[var(--hisab-muted)] text-[var(--hisab-foreground)]",
+        secondary:
+          "bg-[var(--hisab-secondary)] text-[var(--hisab-secondary-fg)] hover:opacity-90",
+        ghost:
+          "hover:bg-[var(--hisab-muted)] text-[var(--hisab-foreground)]",
         link: "text-[var(--hisab-primary)] underline-offset-4 hover:underline",
-        success: "bg-[var(--hisab-success)] text-white hover:opacity-90",
+        success:
+          "bg-[var(--hisab-success)] text-[var(--hisab-success-fg)] hover:opacity-90",
       },
       size: {
         default: "h-10 px-4 py-2",
@@ -42,21 +48,44 @@ export interface ButtonProps
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, loading, fullWidth, icon, children, disabled, ...props }, ref) => {
+  (
+    {
+      className,
+      variant,
+      size,
+      asChild = false,
+      loading,
+      fullWidth,
+      icon,
+      children,
+      disabled,
+      ...props
+    },
+    ref
+  ) => {
     const Comp = asChild ? Slot : "button"
+
     return (
       <Comp
-        className={cn(buttonVariants({ variant, size, className }), fullWidth && "w-full")}
+        className={cn(
+          buttonVariants({ variant, size, className }),
+          fullWidth && "w-full"
+        )}
         ref={ref}
         disabled={disabled || loading}
         {...props}
       >
-        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : icon}
+        {loading ? (
+          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+        ) : (
+          icon
+        )}
         {children}
       </Comp>
     )
   }
 )
+
 Button.displayName = "Button"
 
 export { Button, buttonVariants }

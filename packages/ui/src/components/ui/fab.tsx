@@ -21,41 +21,59 @@ export interface FabProps {
 const positionStyles = {
   "bottom-right": "bottom-6 end-6",
   "bottom-left": "bottom-6 start-6",
-  "bottom-center": "bottom-6 start-1/2 -translate-x-1/2",
+  "bottom-center":
+    "bottom-6 start-1/2 -translate-x-1/2",
 }
 
 const Fab = React.forwardRef<HTMLDivElement, FabProps>(
-  ({ actions, position = "bottom-right", className }, ref) => {
+  (
+    { actions, position = "bottom-right", className },
+    ref
+  ) => {
     const [isOpen, setIsOpen] = React.useState(false)
 
+    const toggleOpen = React.useCallback(
+      () => setIsOpen((prev) => !prev),
+      []
+    )
+
+    const handleAction = React.useCallback(
+      (action: FabAction) => {
+        action.onClick()
+        setIsOpen(false)
+      },
+      []
+    )
+
     return (
-      <div ref={ref} className={cn("fixed z-50", positionStyles[position], className)}>
+      <div
+        ref={ref}
+        className={cn(
+          "fixed z-50",
+          positionStyles[position],
+          className
+        )}
+      >
+        {/* Actions list */}
         {isOpen && (
-          <div className="flex flex-col-reverse gap-2 mb-3 animate-fade-in">
+          <div className="mb-3 flex animate-fade-in flex-col-reverse gap-2">
             {actions.map((action, index) => (
               <button
                 key={action.id}
-                onClick={() => {
-                  action.onClick()
-                  setIsOpen(false)
-                }}
+                onClick={() => handleAction(action)}
                 className={cn(
-                  "flex items-center gap-3 px-4 py-3 rounded-xl shadow-[var(--hisab-shadow-md)] transition-all",
-                  "hover:scale-105 active:scale-95",
+                  "flex items-center gap-3 rounded-xl px-4 py-3 shadow-[var(--hisab-shadow-md)] transition-all",
                   "text-sm font-medium",
+                  "hover:scale-105 active:scale-95",
+                  action.variant === "primary" &&
+                    "bg-[var(--hisab-primary)] text-[var(--hisab-primary-fg)]",
+                  action.variant === "warning" &&
+                    "bg-[var(--hisab-warning)] text-[var(--hisab-warning-fg)]",
+                  action.variant !== "primary" &&
+                    action.variant !== "warning" &&
+                    "border border-[var(--hisab-border)] bg-[var(--hisab-card)] text-[var(--hisab-foreground)]"
                 )}
                 style={{
-                  background: action.variant === "primary"
-                    ? "hsl(var(--hisab-primary))"
-                    : action.variant === "warning"
-                      ? "hsl(var(--hisab-warning))"
-                      : "hsl(var(--hisab-card))",
-                  color: action.variant === "primary" || action.variant === "warning"
-                    ? "white"
-                    : "hsl(var(--hisab-foreground))",
-                  border: action.variant !== "primary" && action.variant !== "warning"
-                    ? "1px solid hsl(var(--hisab-border))"
-                    : "none",
                   animationDelay: `${index * 50}ms`,
                 }}
               >
@@ -66,26 +84,37 @@ const Fab = React.forwardRef<HTMLDivElement, FabProps>(
           </div>
         )}
 
+        {/* Main FAB */}
         <button
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={toggleOpen}
+          aria-label={
+            isOpen ? "بستن منو" : "باز کردن منو"
+          }
           className={cn(
-            "w-14 h-14 rounded-full shadow-[var(--hisab-shadow-lg)] flex items-center justify-center transition-all",
+            "flex h-14 w-14 items-center justify-center rounded-full shadow-[var(--hisab-shadow-lg)] transition-all",
             "hover:scale-110 active:scale-95",
+            isOpen
+              ? "bg-[var(--hisab-destructive)]"
+              : "bg-[var(--hisab-primary)]"
           )}
-          style={{
-            background: isOpen ? "hsl(var(--hisab-destructive))" : "hsl(var(--hisab-primary))",
-          }}
         >
           {isOpen ? (
-            <X className="size-6 text-white" />
+            <X
+              className="size-6 text-[var(--hisab-destructive-fg)]"
+              aria-hidden
+            />
           ) : (
-            <Plus className="size-6 text-white" />
+            <Plus
+              className="size-6 text-[var(--hisab-primary-fg)]"
+              aria-hidden
+            />
           )}
         </button>
       </div>
     )
-  },
+  }
 )
+
 Fab.displayName = "Fab"
 
 export { Fab }

@@ -1,7 +1,5 @@
 import { BaqidariClient } from "./baqidari-client"
 
-export const dynamic = 'force-dynamic'
-
 export const metadata = {
   title: "باقی‌داری | حسابچه",
   description: "مدیریت حساب مشتریان و بدهی‌ها",

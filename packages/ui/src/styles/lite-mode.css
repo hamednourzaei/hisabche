@@ -1,3 +1,7 @@
+/* ═══════════════════════════════════════════
+   PERFORMANCE UTILITIES
+   ═══════════════════════════════════════════ */
+
 /* Lite Mode — reduced animations, shadows, blur */
 .lite-mode * {
   animation-duration: 0.01ms !important;
@@ -38,6 +42,11 @@
 }
 
 @keyframes queuePulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }

@@ -4,10 +4,14 @@ import type { ReactNode } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { useAuthStore, useThemeStore } from "@hisabche/store"
 import { useTranslation } from "react-i18next"
-import i18n, { type SupportedLanguage } from "@hisabche/i18n"
-import { DashboardHeader, DashboardSidebar, BottomNav, CommandPalette } from "@hisabche/ui"
+import {
+  DashboardHeader,
+  DashboardSidebar,
+  BottomNav,
+  CommandPalette,
+} from "@hisabche/ui"
 import { useEffect, useRef, useCallback, useMemo } from "react"
-import { NAV_ITEMS } from "./constants/nav-items"
+import { NAV_ITEMS, COMMAND_ITEMS } from "./constants/nav-items"
 
 function LoadingScreen() {
   return (
@@ -19,13 +23,17 @@ function LoadingScreen() {
 
 const navItems = NAV_ITEMS.map((item) => ({
   id: item.id,
-  label: item.label,
+  label: item.labelKey,
   path: item.path,
   icon: item.icon,
 }))
 
-export default function DashboardLayout({ children }: { children: ReactNode }) {
-  const { t } = useTranslation()
+export default function DashboardLayout({
+  children,
+}: {
+  children: ReactNode
+}) {
+  const { t, i18n } = useTranslation()
   const router = useRouter()
   const pathname = usePathname()
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
@@ -42,32 +50,37 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     }
   }, [hasHydrated, isAuthenticated, router])
 
-  const currentLang = (i18n.language as SupportedLanguage) || "fa-AF"
+  const currentLang = i18n.language || "fa-AF"
 
   const toggleLang = useCallback(() => {
     const nextLang = i18n.language === "fa-AF" ? "fa-IR" : "fa-AF"
     i18n.changeLanguage(nextLang)
-  }, [])
+  }, [i18n])
 
-  const commands = useMemo(() => [
-    { id: "dashboard", label: "داشبورد", description: "نمای کلی کسب‌وکار", icon: "📊", onSelect: () => router.push("/dashboard") },
-    { id: "new-invoice", label: "فاکتور جدید", description: "ثبت فاکتور سریع", icon: "🧾", shortcut: "N", onSelect: () => router.push("/quick-invoice") },
-    { id: "godam", label: "گدام", description: "مدیریت محصولات", icon: "📦", onSelect: () => router.push("/godam") },
-    { id: "invoices", label: "فاکتورها", description: "مشاهده فاکتورها", icon: "📋", onSelect: () => router.push("/invoices") },
-    { id: "baqidari", label: "باقی‌داری", description: "مدیریت بدهی‌ها", icon: "📒", onSelect: () => router.push("/baqidari") },
-    { id: "customers", label: "مشتری جدید", description: "اضافه کردن مشتری", icon: "👤", onSelect: () => router.push("/baqidari?add=true") },
-    { id: "settings", label: "تنظیمات", description: "تنظیمات برنامه", icon: "⚙️", onSelect: () => router.push("/settings") },
-    { id: "sync", label: "همگام‌سازی", description: "مرکز همگام‌سازی", icon: "🔄", onSelect: () => router.push("/sync-center") },
-  ], [router])
+const commands = useMemo(
+  () =>
+    COMMAND_ITEMS.map((cmd) => ({
+      id: cmd.id,
+      label: t(cmd.labelKey),
+      description: t(cmd.descriptionKey),
+      icon: cmd.icon,
+      ...(cmd.shortcut ? { shortcut: cmd.shortcut } : {}),
+      onSelect: () => router.push(cmd.path),
+    })),
+  [router, t]
+)
 
   const handleLogout = useCallback(() => {
     useAuthStore.getState().logout()
-    router.push("/login")
+    router.replace("/login")
   }, [router])
 
-  const handleNavigate = useCallback((_id: string, path: string) => {
-    router.push(path)
-  }, [router])
+  const handleNavigate = useCallback(
+    (_id: string, path: string) => {
+      router.push(path)
+    },
+    [router]
+  )
 
   const handleNavigateLogin = useCallback(() => {
     router.push("/login")
@@ -79,7 +92,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   return (
     <div className="hisab-root flex min-h-screen">
       <CommandPalette commands={commands} />
-      <DashboardSidebar items={navItems} activeNav={pathname} onNavigate={handleNavigate} />
+
+      <DashboardSidebar
+        items={navItems}
+        activeNav={pathname}
+        onNavigate={handleNavigate}
+      />
+
       <div className="flex min-h-screen flex-1 flex-col">
         <DashboardHeader
           variant="dashboard"
@@ -97,8 +116,16 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           onLogout={handleLogout}
           onNavigateLogin={handleNavigateLogin}
         />
-        <main className="flex-1 overflow-y-auto p-4 pb-20 lg:pb-4">{children}</main>
-        <BottomNav items={navItems} activeNav={pathname} onNavigate={handleNavigate} />
+
+        <main className="flex-1 overflow-y-auto p-4 pb-20 lg:pb-4">
+          {children}
+        </main>
+
+        <BottomNav
+          items={navItems}
+          activeNav={pathname}
+          onNavigate={handleNavigate}
+        />
       </div>
     </div>
   )

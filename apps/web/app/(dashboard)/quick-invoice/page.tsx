@@ -3,7 +3,7 @@ import { QuickInvoiceContainer } from "@hisabche/ui"
 export const metadata = {
   title: "فاکتور سریع | حسابچه",
   description: "ثبت فاکتور در کمتر از ۳۰ ثانیه",
-  robots: { index: false, follow: true },
+  robots: { index: false, follow: false },
 }
 
 export default function Page() {

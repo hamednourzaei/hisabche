@@ -1,4 +1,4 @@
-// apps/web/app/invoices/[id]/InvoicePDFDownload.tsx
+// apps/web/app/(dashboard)/invoices/[id]/InvoicePDFDownload.tsx
 
 "use client"
 
@@ -21,18 +21,17 @@ export default function InvoicePDFDownload({ invoice }: Props) {
 
   const handleDownload = useCallback(() => {
     if (!invoiceId || loading) return
+
     setLoading(true)
 
     const url = `https://hisabche.onrender.com/api/invoices/${invoiceId}/pdf`
 
-    // Create hidden iframe
     const iframe = document.createElement("iframe")
     iframe.style.display = "none"
     iframe.src = url
     document.body.appendChild(iframe)
     iframeRef.current = iframe
 
-    // Cleanup after download starts
     setTimeout(() => {
       if (iframeRef.current) {
         document.body.removeChild(iframeRef.current)
@@ -43,13 +42,19 @@ export default function InvoicePDFDownload({ invoice }: Props) {
   }, [invoiceId, loading])
 
   return (
-    <Button variant="outline" size="sm" onClick={handleDownload} disabled={loading}>
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={handleDownload}
+      disabled={loading || !invoiceId}
+      aria-label="دانلود PDF"
+    >
       {loading ? (
-        <Loader2 className="size-4 animate-spin" />
+        <Loader2 className="size-4 animate-spin" aria-hidden />
       ) : (
-        <FileDown className="size-4" />
+        <FileDown className="size-4" aria-hidden />
       )}
-      <span className="hidden sm:inline ml-1.5">
+      <span className="hidden sm:inline ms-1.5">
         {loading ? "..." : "PDF"}
       </span>
     </Button>

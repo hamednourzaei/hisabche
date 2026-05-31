@@ -7,33 +7,21 @@ import {
 } from "lucide-react"
 
 interface BackupItem {
-  id: string
-  timestamp: number
-  size: string
-  type: "auto" | "manual"
-  status: "completed" | "failed"
+  id: string; timestamp: number; size: string
+  type: "auto" | "manual"; status: "completed" | "failed"
 }
 
 interface AuditItem {
-  id: string
-  action: string
-  entity: string
-  timestamp: number
+  id: string; action: string; entity: string; timestamp: number
 }
 
 export interface SyncCenterPageProps {
   t: (key: string, fallback?: string) => string
   timeAgo: (ts: number) => string
-  isOnline: boolean
-  isSyncing: boolean
-  pendingCount: number
-  lastSyncedAt: number | null
-  autoBackupEnabled: boolean
-  backups: BackupItem[]
-  auditLog: AuditItem[]
-  onSync: () => void
-  onBackup: () => void
-  onToggleAutoBackup: () => void
+  isOnline: boolean; isSyncing: boolean; pendingCount: number
+  lastSyncedAt: number | null; autoBackupEnabled: boolean
+  backups: BackupItem[]; auditLog: AuditItem[]
+  onSync: () => void; onBackup: () => void; onToggleAutoBackup: () => void
 }
 
 export function SyncCenterPage({
@@ -43,14 +31,18 @@ export function SyncCenterPage({
 }: SyncCenterPageProps) {
   return (
     <div className="hisab-root space-y-6 p-6">
-      <div>
-        <h1 className="mb-2 flex items-center gap-3 text-3xl font-bold">
-          <Shield className="size-8 text-[var(--hisab-primary)]" />
+      {/* Header */}
+      <div className="space-y-1.5">
+        <h1 className="flex items-center gap-3 text-3xl font-bold">
+          <Shield className="size-8 text-[var(--hisab-primary)]" aria-hidden />
           {t("sync.title", "مرکز همگام‌سازی")}
         </h1>
-        <p className="text-sm text-[var(--hisab-muted-fg)]">{t("sync.description", "مدیریت امنیت، بکاپ و وضعیت اتصال برنامه")}</p>
+        <p className="text-sm text-[var(--hisab-muted-fg)]">
+          {t("sync.description", "مدیریت امنیت، بکاپ و وضعیت اتصال برنامه")}
+        </p>
       </div>
 
+      {/* KPI Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="interactive-card">
           <CardContent className="flex items-center gap-4 p-5">
@@ -65,11 +57,10 @@ export function SyncCenterPage({
         </Card>
         <Card className="interactive-card">
           <CardContent className="flex items-center gap-4 p-5">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--hisab-primary)]/10"><Database className="size-7 text-[var(--hisab-primary)]" /></div>
-            <div>
-              <p className="text-xl font-bold">{backups.length}</p>
-              <p className="text-xs text-[var(--hisab-muted-fg)]">{t("sync.backups", "بکاپ")}</p>
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--hisab-primary)]/10">
+              <Database className="size-7 text-[var(--hisab-primary)]" />
             </div>
+            <div><p className="text-xl font-bold">{backups.length}</p><p className="text-xs text-[var(--hisab-muted-fg)]">{t("sync.backups", "بکاپ")}</p></div>
           </CardContent>
         </Card>
         <Card className="interactive-card">
@@ -77,26 +68,25 @@ export function SyncCenterPage({
             <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${pendingCount > 0 ? "bg-[var(--hisab-warning)]/10" : "bg-[var(--hisab-success)]/10"}`}>
               <AlertTriangle className={`size-7 ${pendingCount > 0 ? "text-[var(--hisab-warning)]" : "text-[var(--hisab-success)]"}`} />
             </div>
-            <div>
-              <p className="text-xl font-bold">{pendingCount}</p>
-              <p className="text-xs text-[var(--hisab-muted-fg)]">{t("sync.pending", "عملیات معلق")}</p>
-            </div>
+            <div><p className="text-xl font-bold">{pendingCount}</p><p className="text-xs text-[var(--hisab-muted-fg)]">{t("sync.pending", "عملیات معلق")}</p></div>
           </CardContent>
         </Card>
         <Card className="interactive-card">
           <CardContent className="flex items-center gap-4 p-5">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--hisab-accent)]/10"><HardDrive className="size-7 text-[var(--hisab-accent)]" /></div>
-            <div>
-              <p className="text-xl font-bold">24 MB</p>
-              <p className="text-xs text-[var(--hisab-muted-fg)]">{t("sync.localStorage", "حافظه محلی")}</p>
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--hisab-accent)]/10">
+              <HardDrive className="size-7 text-[var(--hisab-accent)]" />
             </div>
+            <div><p className="text-xl font-bold">24 MB</p><p className="text-xs text-[var(--hisab-muted-fg)]">{t("sync.localStorage", "حافظه محلی")}</p></div>
           </CardContent>
         </Card>
       </div>
 
+      {/* Quick Actions */}
       <Card className="glass-card">
         <CardContent className="space-y-5 p-6">
-          <div className="flex items-center gap-2"><Activity className="size-5 text-[var(--hisab-primary)]" /><h2 className="text-lg font-semibold">{t("sync.quickActions", "عملیات سریع")}</h2></div>
+          <div className="flex items-center gap-2">
+            <Activity className="size-5 text-[var(--hisab-primary)]" /><h2 className="text-lg font-semibold">{t("sync.quickActions", "عملیات سریع")}</h2>
+          </div>
           <div className="flex flex-wrap gap-3">
             <Button onClick={onSync} loading={isSyncing} icon={<RefreshCw className="size-4" />}>{t("sync.syncNow", "همگام‌سازی الآن")}</Button>
             <Button variant="outline" onClick={onBackup} icon={<Download className="size-4" />}>{t("sync.manualBackup", "بکاپ دستی")}</Button>
@@ -110,11 +100,14 @@ export function SyncCenterPage({
         </CardContent>
       </Card>
 
+      {/* Backup History */}
       <Card className="glass-card">
         <CardContent className="space-y-5 p-6">
           <div className="flex items-center gap-2"><History className="size-5 text-[var(--hisab-primary)]" /><h2 className="text-lg font-semibold">{t("sync.backupHistory", "تاریخچه بکاپ")}</h2></div>
           {backups.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-[var(--hisab-border)] py-10 text-center"><Database className="mx-auto mb-3 size-10 text-[var(--hisab-muted-fg)]" /><p className="text-sm text-[var(--hisab-muted-fg)]">{t("sync.noBackups", "هنوز بکاپی ثبت نشده")}</p></div>
+            <div className="rounded-2xl border border-dashed border-[var(--hisab-border)] py-10 text-center">
+              <Database className="mx-auto mb-3 size-10 text-[var(--hisab-muted-fg)]" /><p className="text-sm text-[var(--hisab-muted-fg)]">{t("sync.noBackups", "هنوز بکاپی ثبت نشده")}</p>
+            </div>
           ) : (
             <div className="space-y-3">
               {backups.slice(0, 6).map((backup) => (
@@ -136,6 +129,7 @@ export function SyncCenterPage({
         </CardContent>
       </Card>
 
+      {/* Audit Log */}
       <Card className="glass-card">
         <CardContent className="space-y-5 p-6">
           <div className="flex items-center gap-2"><Shield className="size-5 text-[var(--hisab-primary)]" /><h2 className="text-lg font-semibold">{t("sync.recentActivity", "فعالیت‌های اخیر")}</h2></div>
@@ -154,15 +148,16 @@ export function SyncCenterPage({
         </CardContent>
       </Card>
 
+      {/* Network Status */}
       <Card className="glass-card">
         <CardContent className="space-y-5 p-6">
           <div className="flex items-center gap-2"><Wifi className="size-5 text-[var(--hisab-primary)]" /><h2 className="text-lg font-semibold">{t("sync.networkStatus", "وضعیت شبکه")}</h2></div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl border border-[var(--hisab-border)] p-4">
+            <div className="rounded-2xl border border-[var(--hisab-border)] p-4 text-start">
               <p className="mb-1 text-sm text-[var(--hisab-muted-fg)]">{t("sync.internet", "اینترنت")}</p>
               <p className={`font-semibold ${isOnline ? "text-[var(--hisab-success)]" : "text-[var(--hisab-warning)]"}`}>{isOnline ? t("sync.connected", "متصل") : t("sync.disconnected", "قطع")}</p>
             </div>
-            <div className="rounded-2xl border border-[var(--hisab-border)] p-4">
+            <div className="rounded-2xl border border-[var(--hisab-border)] p-4 text-start">
               <p className="mb-1 text-sm text-[var(--hisab-muted-fg)]">{t("sync.serverStatus", "وضعیت سرور")}</p>
               <p className="font-semibold text-[var(--hisab-success)]">{t("sync.stable", "پایدار")}</p>
             </div>

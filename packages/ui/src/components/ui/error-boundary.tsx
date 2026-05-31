@@ -1,8 +1,8 @@
 "use client"
 
-import React from 'react'
-import { AlertTriangle, RefreshCw } from 'lucide-react'
-import { Button } from './button'
+import React from "react"
+import { AlertTriangle, RefreshCw } from "lucide-react"
+import { Button } from "./button"
 
 interface Props {
   children: React.ReactNode
@@ -39,17 +39,26 @@ class ErrorBoundary extends React.Component<Props, State> {
 
       return (
         <div className="flex min-h-[400px] items-center justify-center p-8">
-          <div className="text-center max-w-md">
-            <div className="w-16 h-16 rounded-2xl bg-[var(--hisab-destructive)]/10 flex items-center justify-center mx-auto mb-4">
-              <AlertTriangle className="size-8 text-[var(--hisab-destructive)]" />
+          <div className="max-w-md text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--hisab-destructive)]/10">
+              <AlertTriangle
+                className="size-8 text-[var(--hisab-destructive)]"
+                aria-hidden
+              />
             </div>
-            <h2 className="text-xl font-bold text-[var(--hisab-foreground)] mb-2">
+            <h2 className="mb-2 text-xl font-bold text-[var(--hisab-foreground)]">
               مشکلی پیش آمد
             </h2>
-            <p className="text-sm text-[var(--hisab-muted-fg)] mb-6">
+            <p className="mb-6 text-sm text-[var(--hisab-muted-fg)]">
               اطلاعات شما از بین نرفته است. لطفاً دوباره تلاش کنید.
             </p>
-            <Button variant="outline" onClick={this.handleReset} icon={<RefreshCw className="size-4" />}>
+            <Button
+              variant="outline"
+              onClick={this.handleReset}
+              icon={
+                <RefreshCw className="size-4" aria-hidden />
+              }
+            >
               تلاش دوباره
             </Button>
           </div>

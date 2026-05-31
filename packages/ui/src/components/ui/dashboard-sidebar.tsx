@@ -91,12 +91,16 @@ export function BottomNav({ items, activeNav, onNavigate }: {
         {items.slice(0, 5).map((item) => {
           const isActive = isPathActive(activeNav, item.path)
           return (
+
             <button key={item.id} type="button" onClick={() => onNavigate(item.id, item.path)}
-              className={cn(
-                "flex flex-col items-center justify-center gap-1 py-2 min-h-[56px] text-[10px] font-medium transition-colors",
-                isActive ? "text-[var(--hisab-foreground)]" : "text-[var(--hisab-muted-fg)]"
-              )}
-              aria-current={isActive ? "page" : undefined} aria-label={t(item.label)}>
+  className={cn(
+    "flex flex-col items-center justify-center gap-1 py-2 min-h-[56px] text-[10px] font-medium transition-colors",
+    isActive
+      ? "bg-purple-500/20 text-purple-400 font-semibold rounded"
+      : "text-[var(--hisab-muted-fg)]"
+  )}
+  aria-current={isActive ? "page" : undefined} aria-label={t(item.label)}>
+    
               <span className={cn("inline-flex relative", isActive && "text-[var(--hisab-primary)]")}>
                 {isActive && <span className="absolute -inset-1.5 -inset-x-2.5 rounded-full bg-[var(--hisab-primary)]/10" />}
                 {defaultIcons[item.id] || <item.icon className="size-[18px]" />}

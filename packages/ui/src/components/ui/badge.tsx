@@ -7,12 +7,18 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: "border-transparent bg-[var(--hisab-primary)] text-white hover:opacity-90",
-        secondary: "border-transparent bg-[var(--hisab-secondary)] text-[var(--hisab-secondary-fg)] hover:opacity-90",
-        destructive: "border-transparent bg-[var(--hisab-destructive)] text-white hover:opacity-90",
-        outline: "text-[var(--hisab-foreground)] border-[var(--hisab-border)]",
-        success: "border-transparent bg-[var(--hisab-success)] text-white hover:opacity-90",
-        warning: "border-transparent bg-[var(--hisab-warning)] text-white hover:opacity-90",
+        default:
+          "border-transparent bg-[var(--hisab-primary)] text-[var(--hisab-primary-fg)]",
+        secondary:
+          "border-transparent bg-[var(--hisab-secondary)] text-[var(--hisab-secondary-fg)]",
+        destructive:
+          "border-transparent bg-[var(--hisab-destructive)] text-[var(--hisab-destructive-fg)]",
+        outline:
+          "text-[var(--hisab-foreground)] border-[var(--hisab-border)]",
+        success:
+          "border-transparent bg-[var(--hisab-success)] text-[var(--hisab-success-fg)]",
+        warning:
+          "border-transparent bg-[var(--hisab-warning)] text-[var(--hisab-warning-fg)]",
       },
       size: {
         default: "",
@@ -23,10 +29,17 @@ const badgeVariants = cva(
   }
 )
 
-export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement>, VariantProps<typeof badgeVariants> {}
+export interface BadgeProps
+  extends React.HTMLAttributes<HTMLDivElement>,
+    VariantProps<typeof badgeVariants> {}
 
 function Badge({ className, variant, size, ...props }: BadgeProps) {
-  return <div className={cn(badgeVariants({ variant, size }), className)} {...props} />
+  return (
+    <div
+      className={cn(badgeVariants({ variant, size }), className)}
+      {...props}
+    />
+  )
 }
 
 export { Badge, badgeVariants }

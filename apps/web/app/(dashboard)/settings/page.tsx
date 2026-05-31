@@ -3,11 +3,13 @@ import dynamic from "next/dynamic"
 export function SettingsSkeleton() {
   return (
     <div className="mx-auto max-w-4xl space-y-6 p-6 animate-fade-in-up">
+      {/* ── Header ── */}
       <div className="space-y-2">
         <div className="skeleton-shimmer h-8 w-32 rounded-lg" />
         <div className="skeleton-shimmer h-4 w-64 rounded-lg" />
       </div>
 
+      {/* ── Account card ── */}
       <div className="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-5 backdrop-blur-sm">
         <div className="flex items-center gap-3">
           <div className="skeleton-shimmer h-12 w-12 rounded-xl" />
@@ -23,8 +25,12 @@ export function SettingsSkeleton() {
         <div className="skeleton-shimmer h-10 w-32 rounded-xl" />
       </div>
 
+      {/* ── 4 section cards ── */}
       {[1, 2, 3, 4].map((i) => (
-        <div key={i} className="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-5 backdrop-blur-sm">
+        <div
+          key={i}
+          className="rounded-2xl border border-white/10 bg-white/5 p-6 space-y-5 backdrop-blur-sm"
+        >
           <div className="flex items-center gap-2">
             <div className="skeleton-shimmer h-5 w-5 rounded-md" />
             <div className="skeleton-shimmer h-5 w-32 rounded-md" />
@@ -42,8 +48,14 @@ export function SettingsSkeleton() {
 }
 
 const SettingsPage = dynamic(
-  () => import("@hisabche/ui/settings/settings-page").then((m) => m.SettingsPage),
-  { loading: () => <SettingsSkeleton />, ssr: true }
+  () =>
+    import("@hisabche/ui/settings/settings-page").then(
+      (m) => m.SettingsPage
+    ),
+  {
+    loading: () => <SettingsSkeleton />,
+    ssr: true,
+  }
 )
 
 export const metadata = {

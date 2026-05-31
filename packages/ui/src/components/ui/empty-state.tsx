@@ -5,7 +5,12 @@ import { cn } from "../../lib/utils"
 import { Package, FileText, Users, SearchX } from "lucide-react"
 
 export interface EmptyStateProps {
-  icon?: "invoice" | "product" | "customer" | "search" | React.ReactNode
+  icon?:
+    | "invoice"
+    | "product"
+    | "customer"
+    | "search"
+    | React.ReactNode
   title: string
   description?: string
   action?: {
@@ -15,32 +20,47 @@ export interface EmptyStateProps {
   className?: string
 }
 
-const iconMap: Record<string, any> = {
+const iconMap: Record<string, React.ElementType> = {
   invoice: FileText,
   product: Package,
   customer: Users,
   search: SearchX,
 }
 
-const EmptyState: React.FC<EmptyStateProps> = ({ icon = "invoice", title, description, action, className }) => {
-  const IconComponent = typeof icon === "string" ? iconMap[icon] : null
+const EmptyState: React.FC<EmptyStateProps> = ({
+  icon = "invoice",
+  title,
+  description,
+  action,
+  className,
+}) => {
+  const IconComponent =
+    typeof icon === "string" ? iconMap[icon] : null
 
   return (
-    <div className={cn("flex flex-col items-center justify-center py-16 px-6 text-center", className)}>
-      <div className="w-20 h-20 rounded-2xl bg-[var(--hisab-muted)] flex items-center justify-center mb-6">
+    <div
+      className={cn(
+        "flex flex-col items-center justify-center px-6 py-16 text-center",
+        className
+      )}
+    >
+      <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-[var(--hisab-muted)]">
         {IconComponent ? (
-          <IconComponent className="size-10 text-[var(--hisab-muted-fg)]" />
+          <IconComponent
+            className="size-10 text-[var(--hisab-muted-fg)]"
+            aria-hidden
+          />
         ) : (
           icon
         )}
       </div>
 
-      <h3 className="text-lg font-bold text-[var(--hisab-foreground)] mb-2">
+      <h3 className="mb-2 text-lg font-bold text-[var(--hisab-foreground)]">
         {title}
       </h3>
 
       {description && (
-        <p className="text-sm text-[var(--hisab-muted-fg)] max-w-sm mb-6 leading-relaxed">
+        <p className="mb-6 max-w-sm text-sm leading-relaxed text-[var(--hisab-muted-fg)]">
           {description}
         </p>
       )}
@@ -48,11 +68,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({ icon = "invoice", title, descri
       {action && (
         <button
           onClick={action.onClick}
-          className="px-6 py-2.5 rounded-[var(--hisab-radius)] text-sm font-medium transition-all hover:scale-105 active:scale-95"
-          style={{
-            background: 'hsl(var(--hisab-primary))',
-            color: 'white',
-          }}
+          className="rounded-[var(--hisab-radius)] bg-[var(--hisab-primary)] px-6 py-2.5 text-sm font-medium text-[var(--hisab-primary-fg)] transition-all hover:scale-105 active:scale-95"
         >
           {action.label}
         </button>
