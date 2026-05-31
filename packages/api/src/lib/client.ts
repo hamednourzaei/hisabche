@@ -1,17 +1,9 @@
 // ============================================
-// API Client — Axios instance with Supabase JWT
+// API Client — Axios instance with Shared Supabase JWT
 // ============================================
 
 import axios, { AxiosInstance, AxiosError } from 'axios'
-import { createClient } from '@supabase/supabase-js'
-
-// ============================================
-// Supabase client (for JWT only)
-// ============================================
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-)
+import { supabaseClient } from '@hisabche/auth'
 
 // ============================================
 // Types
@@ -50,18 +42,16 @@ const isBrowser = (): boolean =>
   typeof window !== 'undefined' && typeof localStorage !== 'undefined'
 
 // ============================================
-// Request Interceptor — Supabase JWT
+// Request Interceptor — Shared Supabase JWT
 // ============================================
 apiClient.interceptors.request.use(
   async (config) => {
-    // Get Supabase session token (live)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
+      const { data: { session } } = await supabaseClient.auth.getSession()
       if (session?.access_token) {
         config.headers.Authorization = `Bearer ${session.access_token}`
       }
     } catch {
-      // Fallback: localStorage token
       if (isBrowser()) {
         const token = localStorage.getItem('hisabche-token')
         if (token) {
@@ -70,7 +60,6 @@ apiClient.interceptors.request.use(
       }
     }
 
-    // Language header
     const lang = isBrowser()
       ? localStorage.getItem('hisabche-lang') || 'fa-AF'
       : 'fa-AF'
