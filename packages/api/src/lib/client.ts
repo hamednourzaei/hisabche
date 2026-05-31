@@ -48,12 +48,21 @@ apiClient.interceptors.request.use(
   async (config) => {
     try {
       const { data: { session } } = await supabaseClient.auth.getSession()
+      console.log('🔍 [API Client] getSession result:', session ? 'SESSION EXISTS' : 'SESSION NULL')
+      console.log('🔍 [API Client] token preview:', session?.access_token?.slice(0, 30) + '...')
+      console.log('🔍 [API Client] localStorage supabase keys:', Object.keys(localStorage).filter(k => k.includes('supabase') || k.includes('auth')))
+      
       if (session?.access_token) {
         config.headers.Authorization = `Bearer ${session.access_token}`
+        console.log('✅ [API Client] Authorization header SET')
+      } else {
+        console.log('❌ [API Client] Authorization header NOT SET — session is null')
       }
-    } catch {
+    } catch (err) {
+      console.error('❌ [API Client] getSession ERROR:', err)
       if (isBrowser()) {
         const token = localStorage.getItem('hisabche-token')
+        console.log('🔍 [API Client] Fallback localStorage token:', token ? 'EXISTS' : 'NULL')
         if (token) {
           config.headers.Authorization = `Bearer ${token}`
         }
@@ -65,6 +74,7 @@ apiClient.interceptors.request.use(
       : 'fa-AF'
     config.headers['Accept-Language'] = lang
 
+    console.log('🔍 [API Client] Final headers:', JSON.stringify(config.headers))
     return config
   },
   (error) => Promise.reject(error),
@@ -86,6 +96,7 @@ apiClient.interceptors.response.use(
     }
 
     if (apiError.status === 401 && isBrowser()) {
+      console.log('🔍 [API Client] 401 received, removing token')
       localStorage.removeItem('hisabche-token')
     }
 
