@@ -102,7 +102,6 @@ export function AddCustomerModal({ open, onClose, onCreated }: Props) {
           paymentMethod: "credit",
           currency: "AFN",
           customerId: customer.id,
-          customerName: parsed.data.name,
           items: [
             {
               productId: product.id,

@@ -110,8 +110,7 @@ export function QuickInvoiceContainer() {
           | "PKR"
           | "IRR") ?? "AFN",
       customerId: selectedCustomer?.id || undefined,
-      customerName:
-        selectedCustomer?.name || undefined,
+      
       items: [
         {
           productId: selectedProduct.id,
