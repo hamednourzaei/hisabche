@@ -1,11 +1,14 @@
 // ============================================
-// backend/src/index.ts — RATE LIMIT FIX
+// backend/src/index.ts — AUTH MIDDLEWARE + RLS
 // ============================================
 
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import rateLimit from '@fastify/rate-limit'
 import dotenv from 'dotenv'
+
+// Auth
+import { authenticate } from './middleware/auth'
 
 // Routes
 import { syncRoutes } from './routes/sync.routes'
@@ -77,7 +80,7 @@ async function start(): Promise<void> {
     })
 
     // ----------------------------
-    // Health check
+    // Health check (public)
     // ----------------------------
     server.get('/api/health', async () => ({
       status: 'ok',
@@ -90,6 +93,18 @@ async function start(): Promise<void> {
       name: 'Hisabche API',
       version: '0.0.1',
     }))
+
+    // ----------------------------
+    // Auth Middleware — All routes except public
+    // ----------------------------
+    const PUBLIC_PATHS = ['/api/health', '/api', '/api/auth/login', '/api/auth/signup']
+
+    server.addHook('preHandler', async (request, reply) => {
+      const url = request.url
+      if (PUBLIC_PATHS.some((p) => url === p || url.startsWith(p + '?'))) return
+      if (request.method === 'OPTIONS') return
+      await authenticate(request, reply)
+    })
 
     // ----------------------------
     // Routes

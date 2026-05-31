@@ -16,7 +16,7 @@ interface CreateTransactionBody {
 // ─── Routes ───────────────────────────────────────────────
 export async function transactionRoutes(fastify: FastifyInstance) {
 
-  // ── GET /api/transactions ──────────────────────────────
+  // GET /api/transactions
   fastify.get('/api/transactions', async (request: FastifyRequest, reply: FastifyReply) => {
     const q          = request.query as Record<string, string>
     const customerId = q.customerId ?? ''
@@ -47,9 +47,10 @@ export async function transactionRoutes(fastify: FastifyInstance) {
     return { transactions: data ?? [], total: count ?? 0, page, limit }
   })
 
-  // ── POST /api/transactions ─────────────────────────────
+  // POST /api/transactions
   fastify.post('/api/transactions', async (request: FastifyRequest, reply: FastifyReply) => {
     const body = request.body as CreateTransactionBody
+    const userId = (request as any).userId
 
     if (!body.amount || body.amount <= 0) {
       return reply.code(400).send({ error: 'مبلغ معتبر نیست' })
@@ -70,6 +71,7 @@ export async function transactionRoutes(fastify: FastifyInstance) {
         description: body.description ?? '',
         reference:   body.reference   ?? '',
         date:        body.date        ?? new Date().toISOString(),
+        user_id:     userId,
       })
       .select()
       .single()
@@ -82,8 +84,7 @@ export async function transactionRoutes(fastify: FastifyInstance) {
     return reply.code(201).send(data)
   })
 
-  // ── GET /api/transactions/balance/:customerId ──────────
-  // باقی‌داری مشتری
+  // GET /api/transactions/balance/:customerId
   fastify.get('/api/transactions/balance/:customerId', async (request: FastifyRequest, reply: FastifyReply) => {
     const { customerId } = request.params as { customerId: string }
 
@@ -94,12 +95,11 @@ export async function transactionRoutes(fastify: FastifyInstance) {
 
     if (error) return reply.code(500).send({ error: error.message })
 
-    // محاسبه باقی‌داری
     const balance = (data ?? []).reduce((acc, tx) => {
       const amount = Number(tx.amount)
-      if (tx.type === 'sale')     return acc + amount   // بدهکار شد
-      if (tx.type === 'payment')  return acc - amount   // پرداخت کرد
-      if (tx.type === 'return')   return acc - amount   // برگشت داد
+      if (tx.type === 'sale')     return acc + amount
+      if (tx.type === 'payment')  return acc - amount
+      if (tx.type === 'return')   return acc - amount
       if (tx.type === 'receipt')  return acc + amount
       return acc
     }, 0)
@@ -112,7 +112,7 @@ export async function transactionRoutes(fastify: FastifyInstance) {
     }
   })
 
-  // ── DELETE /api/transactions/:id ───────────────────────
+  // DELETE /api/transactions/:id
   fastify.delete('/api/transactions/:id', async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string }
 

@@ -10,21 +10,18 @@ import dotenv from 'dotenv'
 import { supabase } from '../db'
 import InvoicePDFDocument from '../pdf/InvoicePDFDocument'
 
-// Load env
 dotenv.config({ path: '../../.env' })
 
 // ─── Supabase Storage Client ───────────────────────────
 const supabaseUrl = process.env.SUPABASE_URL || ''
 const supabaseKey = process.env.SUPABASE_SERVICE_KEY || ''
 
-// Only create storage client if credentials exist
 const storageClient = supabaseUrl && supabaseKey
   ? createClient(supabaseUrl, supabaseKey)
   : null
 
 const BUCKET_NAME = 'pdf-cache'
 
-// Ensure bucket exists (only if client available)
 if (storageClient) {
   storageClient.storage.getBucket(BUCKET_NAME).catch(() => {
     storageClient.storage.createBucket(BUCKET_NAME, { public: true })
@@ -71,14 +68,15 @@ export async function invoicePdfRoutes(fastify: FastifyInstance) {
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string }
+    const userId = (request as any).userId
 
-    // 1. Check cache (if storage available)
+    // 1. Check cache
     const cachedUrl = await getCachedUrl(id)
     if (cachedUrl) {
       return reply.redirect(302, cachedUrl)
     }
 
-    // 2. Fetch invoice
+    // 2. Fetch invoice (RLS-scoped by user_id via supabase client)
     const { data: invoice, error } = await supabase
       .from('invoices')
       .select('*, invoice_items(*)')
@@ -95,7 +93,7 @@ export async function invoicePdfRoutes(fastify: FastifyInstance) {
         InvoicePDFDocument({ invoice: invoice as any })
       )
 
-      // 4. Cache in background (non-blocking)
+      // 4. Cache in background
       const chunks: Buffer[] = []
       stream.on('data', (chunk: Buffer) => chunks.push(chunk))
       stream.on('end', async () => {

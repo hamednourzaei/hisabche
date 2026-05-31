@@ -1,10 +1,10 @@
-import { FastifyInstance, FastifyRequest } from 'fastify'
+import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { supabase } from '../db'
 
 export async function productRoutes(fastify: FastifyInstance) {
 
-  // ── GET /api/products ──────────────────────────────────
-  fastify.get('/api/products', async (request: FastifyRequest, reply) => {
+  // GET /api/products
+  fastify.get('/api/products', async (request: FastifyRequest, reply: FastifyReply) => {
     const query  = request.query as Record<string, string>
     const search = query.search ?? ''
     const page   = Math.max(1, parseInt(query.page  ?? '1'))
@@ -32,25 +32,27 @@ export async function productRoutes(fastify: FastifyInstance) {
     return { products: data, total: count, page, limit }
   })
 
-  // ── POST /api/products ─────────────────────────────────
-  fastify.post('/api/products', async (request: FastifyRequest, reply) => {
+  // POST /api/products
+  fastify.post('/api/products', async (request: FastifyRequest, reply: FastifyReply) => {
     const body = request.body as Record<string, unknown>
+    const userId = (request as any).userId
 
     const { data, error } = await supabase
       .from('products')
       .insert({
-        name:           String(body.name           ?? 'بدون نام'),
-        barcode:        String(body.barcode         ?? ''),
-        sku:            String(body.sku             ?? ''),
-        category:       String(body.category        ?? 'general'),
-        quantity:       Number(body.quantity         ?? 0),
-        unit:           String(body.unit            ?? 'piece'),
-        buy_price:      String(body.buyPrice         ?? '0'),
-        sell_price:     String(body.sellPrice        ?? '0'),
-        wholesale_price:String(body.wholesalePrice   ?? '0'),
-        min_stock_level:Number(body.minStockLevel    ?? 5),
-        description:    String(body.description     ?? ''),
-        is_active:      body.isActive !== false,
+        name:            String(body.name           ?? 'بدون نام'),
+        barcode:         String(body.barcode         ?? ''),
+        sku:             String(body.sku             ?? ''),
+        category:        String(body.category        ?? 'general'),
+        quantity:        Number(body.quantity         ?? 0),
+        unit:            String(body.unit            ?? 'piece'),
+        buy_price:       String(body.buyPrice         ?? '0'),
+        sell_price:      String(body.sellPrice        ?? '0'),
+        wholesale_price: String(body.wholesalePrice   ?? '0'),
+        min_stock_level: Number(body.minStockLevel    ?? 5),
+        description:     String(body.description     ?? ''),
+        is_active:       body.isActive !== false,
+        user_id:         userId,
       })
       .select()
       .single()
@@ -63,8 +65,8 @@ export async function productRoutes(fastify: FastifyInstance) {
     return reply.code(201).send(data)
   })
 
-  // ── GET /api/products/:id ──────────────────────────────
-  fastify.get('/api/products/:id', async (request: FastifyRequest, reply) => {
+  // GET /api/products/:id
+  fastify.get('/api/products/:id', async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string }
 
     const { data, error } = await supabase
@@ -77,8 +79,8 @@ export async function productRoutes(fastify: FastifyInstance) {
     return data
   })
 
-  // ── PUT /api/products/:id ──────────────────────────────
-  fastify.put('/api/products/:id', async (request: FastifyRequest, reply) => {
+  // PUT /api/products/:id
+  fastify.put('/api/products/:id', async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string }
     const body   = request.body as Record<string, unknown>
 
@@ -89,7 +91,7 @@ export async function productRoutes(fastify: FastifyInstance) {
     if (body.unit          != null) updates.unit           = String(body.unit)
     if (body.buyPrice      != null) updates.buy_price      = String(body.buyPrice)
     if (body.sellPrice     != null) updates.sell_price     = String(body.sellPrice)
-    if (body.minStockLevel != null) updates.min_stock_level= Number(body.minStockLevel)
+    if (body.minStockLevel != null) updates.min_stock_level = Number(body.minStockLevel)
     if (body.isActive      != null) updates.is_active      = Boolean(body.isActive)
 
     const { data, error } = await supabase
@@ -103,8 +105,8 @@ export async function productRoutes(fastify: FastifyInstance) {
     return data
   })
 
-  // ── DELETE /api/products/:id ───────────────────────────
-  fastify.delete('/api/products/:id', async (request: FastifyRequest, reply) => {
+  // DELETE /api/products/:id
+  fastify.delete('/api/products/:id', async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string }
 
     const { error } = await supabase

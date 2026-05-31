@@ -1,8 +1,17 @@
 // ============================================
-// API Client — Axios instance with interceptors
+// API Client — Axios instance with Supabase JWT
 // ============================================
 
 import axios, { AxiosInstance, AxiosError } from 'axios'
+import { createClient } from '@supabase/supabase-js'
+
+// ============================================
+// Supabase client (for JWT only)
+// ============================================
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+)
 
 // ============================================
 // Types
@@ -41,17 +50,27 @@ const isBrowser = (): boolean =>
   typeof window !== 'undefined' && typeof localStorage !== 'undefined'
 
 // ============================================
-// Request Interceptor
+// Request Interceptor — Supabase JWT
 // ============================================
 apiClient.interceptors.request.use(
-  (config) => {
-    if (isBrowser()) {
-      const token = localStorage.getItem('hisabche-token')
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`
+  async (config) => {
+    // Get Supabase session token (live)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.access_token) {
+        config.headers.Authorization = `Bearer ${session.access_token}`
+      }
+    } catch {
+      // Fallback: localStorage token
+      if (isBrowser()) {
+        const token = localStorage.getItem('hisabche-token')
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`
+        }
       }
     }
 
+    // Language header
     const lang = isBrowser()
       ? localStorage.getItem('hisabche-lang') || 'fa-AF'
       : 'fa-AF'
@@ -63,7 +82,7 @@ apiClient.interceptors.request.use(
 )
 
 // ============================================
-// Response Interceptor — passthrough, no transform
+// Response Interceptor
 // ============================================
 apiClient.interceptors.response.use(
   (response) => response,

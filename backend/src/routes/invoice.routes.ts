@@ -25,6 +25,7 @@ interface InvoiceItemRow {
   unit_price: number
   discount: number
   total_price: number
+  user_id: string
 }
 
 interface CreateInvoiceBody {
@@ -57,12 +58,13 @@ function isUUID(s: string): boolean {
 }
 
 // ============================================
-// Normalize item — camelCase + snake_case → snake_case row
+// Normalize item
 // ============================================
 function normalizeItem(
   item: InvoiceItemInput,
   invoiceId: string,
-  fallbackProductId: string | null
+  fallbackProductId: string | null,
+  userId: string
 ): InvoiceItemRow {
   const rawId = item.product_id ?? item.productId ?? ''
 
@@ -74,6 +76,7 @@ function normalizeItem(
     unit_price:   item.unit_price ?? item.unitPrice ?? 0,
     discount:     item.discount ?? 0,
     total_price:  item.total_price ?? item.totalPrice ?? 0,
+    user_id:      userId,
   }
 }
 
@@ -129,6 +132,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
   // POST /api/invoices
   fastify.post('/api/invoices', async (request: FastifyRequest, reply: FastifyReply) => {
     const body = request.body as CreateInvoiceBody
+    const userId = (request as any).userId
 
     // 1. Insert invoice
     const { data: invoice, error: invoiceError } = await supabase
@@ -149,7 +153,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
         payment_method: body.paymentMethod ?? 'cash',
         status:         body.status        ?? 'pending',
         notes:          body.notes         ?? '',
-        customer_name:  body.customerName  ?? '',
+        user_id:        userId,
       })
       .select()
       .single()
@@ -159,7 +163,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
       return reply.code(500).send({ error: invoiceError?.message ?? 'Failed to create invoice' })
     }
 
-    // 2. Fetch fallback product if any item has invalid UUID
+    // 2. Fetch fallback product
     let fallbackProductId: string | null = null
     if (body.items?.length) {
       const needsFallback = body.items.some(item => {
@@ -176,10 +180,10 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
       }
     }
 
-    // 3. Insert items with invoice_id
+    // 3. Insert items
     if (body.items && body.items.length > 0) {
       const items: InvoiceItemRow[] = body.items.map(item =>
-        normalizeItem(item, invoice.id, fallbackProductId)
+        normalizeItem(item, invoice.id, fallbackProductId, userId)
       )
 
       const { error: itemsError } = await supabase
@@ -188,13 +192,12 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
 
       if (itemsError) {
         fastify.log.error(itemsError)
-        // Rollback: delete the invoice we just created
         await supabase.from('invoice_items').delete().eq('invoice_id', invoice.id)
         await supabase.from('invoices').delete().eq('id', invoice.id)
         return reply.code(500).send({ error: itemsError.message })
       }
 
-      // 4. Decrement stock for sales (only with real product IDs)
+      // 4. Decrement stock
       if (body.type === 'sale' || !body.type) {
         for (const item of items) {
           if (!item.product_id) continue
@@ -204,13 +207,13 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
               p_quantity:   item.quantity,
             })
           } catch {
-            // RPC not available — skip silently
+            // RPC not available — skip
           }
         }
       }
     }
 
-    // 5. Record transaction for remaining balance
+    // 5. Record transaction
     if (body.customerId && body.paidAmount !== undefined) {
       const remaining = (body.total ?? 0) - (body.paidAmount ?? 0)
       if (remaining > 0) {
@@ -223,6 +226,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
             description: `Invoice ${invoice.invoice_number}`,
             reference:   invoice.id,
             date:        new Date().toISOString(),
+            user_id:     userId,
           })
         } catch (e) {
           fastify.log.error(e, 'Transaction insert failed — non-fatal')
@@ -259,7 +263,6 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
   fastify.delete('/api/invoices/:id', async (request: FastifyRequest, reply: FastifyReply) => {
     const { id } = request.params as { id: string }
 
-    // Delete items first, then invoice (FK constraint safe)
     await supabase.from('invoice_items').delete().eq('invoice_id', id)
 
     const { error } = await supabase.from('invoices').delete().eq('id', id)
