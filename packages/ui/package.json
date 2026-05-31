@@ -39,6 +39,7 @@
     "./landing/*": "./src/components/ui/landing/*.tsx",
     "./*": "./src/components/ui/*.tsx",
     "./auth/*": "./src/components/ui/auth/*.tsx",
-    "./baqidari-page": "./src/components/ui/baqidari-page.tsx"
+    "./baqidari-page": "./src/components/ui/baqidari-page.tsx",
+    "./globals.css": "./src/styles/globals.css"
   }
 }

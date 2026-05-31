@@ -3,7 +3,7 @@
 import React, { useEffect } from "react"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { I18nextProvider } from "react-i18next"
-import i18n, { changeLanguage } from "@hisabche/i18n"
+import i18n, { syncLanguageFromStorage } from "@hisabche/i18n"
 import { useThemeStore, useAuthStore, useDeviceStore } from "@hisabche/store"
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -85,6 +85,9 @@ function ThemeInitializer({ children }: { children: React.ReactNode }) {
   const { mode, setMode } = useThemeStore()
   useEffect(() => {
     setMode(mode)
+    document.documentElement.classList.toggle("dark", mode === "dark")
+    document.documentElement.classList.toggle("light", mode === "light")
+
     const { detectDevice, performanceMode, reducedMotion, dataSaver } = useDeviceStore.getState()
     detectDevice()
     if (performanceMode === "lite" || reducedMotion) {
@@ -113,14 +116,7 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
 
 function LanguageInitializer({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    try {
-      const storedLang = localStorage.getItem("hisabche-lang")
-      if (storedLang) {
-        changeLanguage(storedLang as "fa-AF" | "fa-IR")
-        document.documentElement.lang = storedLang
-        document.documentElement.dir = "rtl"
-      }
-    } catch { /* ignore */ }
+    syncLanguageFromStorage()
   }, [])
   return <>{children}</>
 }

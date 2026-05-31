@@ -127,7 +127,7 @@ if (!i18n.isInitialized) {
       // NEXT 16 HYDRATION FIX
       // ====================================
       react: {
-        useSuspense: false,
+        useSuspense: true,
       },
     })
 }

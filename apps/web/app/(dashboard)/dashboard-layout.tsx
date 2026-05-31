@@ -4,10 +4,10 @@ import type { ReactNode } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { useAuthStore, useThemeStore } from "@hisabche/store"
 import { useTranslation } from "react-i18next"
-import { changeLanguage, type SupportedLanguage } from "@hisabche/i18n"
+import i18n, { type SupportedLanguage } from "@hisabche/i18n"
 import { DashboardHeader, DashboardSidebar, BottomNav, CommandPalette } from "@hisabche/ui"
-import { LayoutDashboard, Package, FileText, Settings, BookOpen } from "lucide-react"
-import { useEffect, useRef, useCallback, useMemo, useState } from "react"
+import { useEffect, useRef, useCallback, useMemo } from "react"
+import { NAV_ITEMS } from "./constants/nav-items"
 
 function LoadingScreen() {
   return (
@@ -17,13 +17,12 @@ function LoadingScreen() {
   )
 }
 
-const navItems = [
-  { id: "dashboard", label: "داشبورد", path: "/dashboard", icon: LayoutDashboard },
-  { id: "baqidari", label: "باقی‌داری", path: "/baqidari", icon: BookOpen },
-  { id: "godam", label: "انبار", path: "/godam", icon: Package },
-  { id: "invoices", label: "فاکتورها", path: "/invoices", icon: FileText },
-  { id: "settings", label: "تنظیمات", path: "/settings", icon: Settings },
-]
+const navItems = NAV_ITEMS.map((item) => ({
+  id: item.id,
+  label: item.label,
+  path: item.path,
+  icon: item.icon,
+}))
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { t } = useTranslation()
@@ -35,7 +34,6 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
   const toggle = useThemeStore((s) => s.toggle)
   const redirected = useRef(false)
   const lastSyncedAt = useRef(Date.now())
-  const [currentLang, setCurrentLang] = useState<SupportedLanguage>("fa-AF")
 
   useEffect(() => {
     if (hasHydrated && !isAuthenticated && !redirected.current) {
@@ -44,14 +42,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     }
   }, [hasHydrated, isAuthenticated, router])
 
-const toggleLang = useCallback(() => {
-  const nextLang = currentLang === "fa-AF" ? "fa-IR" : "fa-AF"
-  setCurrentLang(nextLang)
-  changeLanguage(nextLang)
-  document.documentElement.lang = nextLang
-  document.documentElement.dir = "rtl"
-  try { localStorage.setItem("hisabche-lang", nextLang) } catch {}
-}, [currentLang])
+  const currentLang = (i18n.language as SupportedLanguage) || "fa-AF"
+
+  const toggleLang = useCallback(() => {
+    const nextLang = i18n.language === "fa-AF" ? "fa-IR" : "fa-AF"
+    i18n.changeLanguage(nextLang)
+  }, [])
 
   const commands = useMemo(() => [
     { id: "dashboard", label: "داشبورد", description: "نمای کلی کسب‌وکار", icon: "📊", onSelect: () => router.push("/dashboard") },

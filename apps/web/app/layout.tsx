@@ -3,7 +3,7 @@ import type { Metadata, Viewport } from 'next'
 import { Providers } from './providers'
 import { ClientErrorBoundary } from './client-error-boundary'
 
-import './globals.css'
+import '@hisabche/ui/globals.css'
 
 import { Geist } from "next/font/google"
 import { cn } from "@hisabche/ui"

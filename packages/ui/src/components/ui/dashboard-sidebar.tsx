@@ -36,8 +36,7 @@ export function DashboardSidebar({ items, activeNav, onNavigate }: {
   items: NavItem[]; activeNav: string; onNavigate: (id: string, path: string) => void
 }) {
   const { t } = useTranslation()
-  console.log("activeNav:", activeNav)
-  console.log("items:", items.map(i => i.path))
+
 
   return (
     <aside className="sidebar-surface hidden w-60 border-e border-[var(--hisab-border)] lg:flex lg:flex-col shrink-0 sticky top-0 h-screen overflow-y-auto">
@@ -53,7 +52,6 @@ export function DashboardSidebar({ items, activeNav, onNavigate }: {
         <span className="px-2.5 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--hisab-muted-fg)]">منو</span>
         {items.map((item) => {
           const isActive = isPathActive(activeNav, item.path)
-          console.log(`  ${item.id}: path=${item.path} isActive=${isActive}`)
           return (
             <button key={item.id} type="button" onClick={() => onNavigate(item.id, item.path)}
               className={cn(
