@@ -47,7 +47,6 @@ export const invoiceSchema = z.object({
   // Customer/Supplier
   customerId: uuidSchema.optional(),
   supplierId: uuidSchema.optional(),
-  customerName: nonEmptyStringSchema.optional(),
   supplierName: nonEmptyStringSchema.optional(),
 
   // Items
