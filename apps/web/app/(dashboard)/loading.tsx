@@ -1,4 +1,4 @@
-import { DashboardSkeleton } from "./dashboard/dashboard-client"
+import { DashboardSkeleton } from "./page"
 
 export default function Loading() {
   return (
