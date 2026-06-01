@@ -1,4 +1,3 @@
-import nextDynamic from "next/dynamic"
 import type { Metadata } from "next"
 import DashboardClient from "./dashboard/DashboardClient"
 
