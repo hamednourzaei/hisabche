@@ -1,12 +1,14 @@
 import nextDynamic from "next/dynamic"
 import type { Metadata } from "next"
+import DashboardClient from "./dashboard/DashboardClient"
 
+// ✅ No animation on skeleton — zero main-thread cost
 const STAT_ITEMS = [1, 2, 3] as const
 const ROW_ITEMS = [1, 2, 3] as const
 
 export function DashboardSkeleton() {
   return (
-    <div className="space-y-6 animate-fade-in-up">
+    <div className="space-y-6">
       <div className="space-y-1.5">
         <div className="skeleton-shimmer h-8 w-48 rounded-lg" />
         <div className="skeleton-shimmer h-4 w-64 rounded-lg" />
@@ -44,21 +46,16 @@ export function DashboardSkeleton() {
   )
 }
 
-const DashboardContainer = nextDynamic(
-  () => import("@hisabche/ui").then((m) => ({ default: m.DashboardContainer })),
-  { ssr: true, loading: () => <DashboardSkeleton /> }
-)
-
 export const metadata: Metadata = {
   title: "داشبورد | حسابچه",
-  description: "نمای کلی کسب‌وکار — فروش امروز، موجودی انبار، بدهی مشتریان و آخرین فاکتورها",
+  description: "نمای کلی کسب‌وکار",
   robots: { index: false, follow: false },
 }
 
 export default function Page() {
   return (
     <main className="section">
-      <DashboardContainer />
+      <DashboardClient />
     </main>
   )
 }
