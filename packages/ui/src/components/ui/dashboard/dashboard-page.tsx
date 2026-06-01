@@ -17,12 +17,12 @@ const TONE_ICON: Record<Tone, string> = {
   rose: "bg-rose-500/15 text-rose-500",
 }
 
-function StatCard({ label, value, hint, Icon, tone, onClick, isLoading }: {
-  label: string; value: string; hint?: string; Icon: LucideIcon; tone: Tone; onClick?: () => void; isLoading?: boolean
+function StatCard({ label, value, hint, Icon, tone, onClick, isLoading, delay }: {
+  label: string; value: string; hint?: string; Icon: LucideIcon; tone: Tone; onClick?: () => void; isLoading?: boolean; delay?: string
 }) {
   const Wrap = onClick ? "button" : "div"
   return (
-    <Wrap {...(onClick ? { type: "button" as const, onClick } : {})}
+    <Wrap {...(onClick ? { type: "button" as const, onClick } : {})} style={delay ? { animationDelay: delay } : undefined}
       className={`glass-card group relative overflow-hidden p-5 text-start motion-safe:transition-all motion-safe:hover:-translate-y-0.5 ${onClick ? "cursor-pointer" : "cursor-default"} bg-gradient-to-br ${TONE_BG[tone]}`}>
       <div className="mb-4 flex items-center justify-between">
         <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${TONE_ICON[tone]}`}><Icon className="size-5" aria-hidden /></div>
@@ -96,9 +96,9 @@ export function DashboardPage({
     <div className="space-y-6">
       <Greeting t={t} />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard label={t("dashboard.todaySales", "فروش امروز")} value={`${fmt(todaySales)} AFN`} Icon={TrendingUp} tone="emerald" isLoading={txLoading} />
-        <StatCard label={t("dashboard.lowStockAlert", "موجودی کم")} value={fmt(lowStockCount)} hint={t("dashboard.lowStockHint", "قلم نیاز به شارژ")} Icon={Package} tone="amber" isLoading={prodLoading} onClick={onNavigateGodam} />
-        <StatCard label={t("dashboard.totalDebt", "مجموع بدهی")} value={`${fmt(totalDebt)} AFN`} Icon={Users} tone="rose" isLoading={invLoading} onClick={onNavigateBaqidari} />
+        <StatCard label={t("dashboard.todaySales", "فروش امروز")} value={`${fmt(todaySales)} AFN`} Icon={TrendingUp} tone="emerald" isLoading={txLoading} delay="0.05s" />
+        <StatCard label={t("dashboard.lowStockAlert", "موجودی کم")} value={fmt(lowStockCount)} hint={t("dashboard.lowStockHint", "قلم نیاز به شارژ")} Icon={Package} tone="amber" isLoading={prodLoading} onClick={onNavigateGodam} delay="0.12s" />
+        <StatCard label={t("dashboard.totalDebt", "مجموع بدهی")} value={`${fmt(totalDebt)} AFN`} Icon={Users} tone="rose" isLoading={invLoading} onClick={onNavigateBaqidari} delay="0.19s" />
       </div>
       <Card className="glass-card">
         <CardHeader><CardTitle className="flex items-center gap-2 text-base"><Receipt className="size-5 text-[var(--hisab-primary)]" aria-hidden />{t("dashboard.recentInvoices", "آخرین فاکتورها")}</CardTitle></CardHeader>
