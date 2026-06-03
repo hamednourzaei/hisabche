@@ -69,17 +69,7 @@ const nextConfig = {
   // =========================
   async headers() {
     return [
-      // 🔥 فقط media assets (نه JS chunks)
-      {
-        source: '/_next/static/media/:path*',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
-        ],
-      },
-
+     
       // 🔥 images
       {
         source: '/images/:path*',
