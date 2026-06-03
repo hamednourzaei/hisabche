@@ -62,7 +62,7 @@ export function DashboardSidebar({ items, activeNav, onNavigate }: {
               aria-current={isActive ? "page" : undefined}>
               {isActive && <span className="absolute start-0 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-full bg-[var(--hisab-primary)]" />}
               <span className={cn("inline-flex shrink-0", isActive ? "text-[var(--hisab-primary)]" : "text-[var(--hisab-muted-fg)]")}>
-                {defaultIcons[item.id] || <item.icon className="size-[18px]" />}
+                {defaultIcons[item.id] || <item.icon className="size-[13px]" />}
               </span>
               <span className="flex-1 truncate">{t(item.label)}</span>
               {item.badge != null && (
@@ -103,7 +103,7 @@ export function BottomNav({ items, activeNav, onNavigate }: {
     
               <span className={cn("inline-flex relative", isActive && "text-[var(--hisab-primary)]")}>
                 {isActive && <span className="absolute -inset-1.5 -inset-x-2.5 rounded-full bg-[var(--hisab-primary)]/10" />}
-                {defaultIcons[item.id] || <item.icon className="size-[18px]" />}
+                {defaultIcons[item.id] || <item.icon className="size-[13px]" />}
               </span>
               <span className={cn(isActive && "font-semibold")}>{t(item.label)}</span>
             </button>
