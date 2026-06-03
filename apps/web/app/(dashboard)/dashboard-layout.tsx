@@ -112,9 +112,9 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     router.push("/login")
   }, [router])
 
-  if (!hasHydrated) return <LoadingScreen />
-  if (!isAuthenticated) return null
-
+if (hasHydrated && !isAuthenticated) {
+  return null
+}
   return (
     <div className="hisab-root flex min-h-screen">
       <CommandPalette commands={commands} />
