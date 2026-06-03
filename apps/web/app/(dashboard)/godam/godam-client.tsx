@@ -26,6 +26,7 @@ export function GodamSkeleton() {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {STAT_ITEMS.map((i) => (
           <div
+          
             key={i}
             className="rounded-2xl border border-white/10 bg-white/5 p-4 flex items-center gap-3 backdrop-blur-sm"
           >
