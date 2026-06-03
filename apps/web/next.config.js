@@ -14,6 +14,12 @@ const nextConfig = {
   },
   experimental: {
     optimizeCss: true,
+    optimizePackageImports: [
+      '@hisabche/ui',
+      'lucide-react',
+      'framer-motion',
+      'react-i18next',
+    ],
   },
   poweredByHeader: false,
   compress: true,
@@ -26,9 +32,14 @@ const nextConfig = {
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
       },
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'X-DNS-Prefetch-Control', value: 'on' },
+        ],
+      },
     ]
   },
-  // ❌ حذف redirects — دیگه /dashboard به / نمی‌ره
 }
 
 module.exports = nextConfig
