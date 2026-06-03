@@ -58,6 +58,48 @@ function isUUID(s: string): boolean {
 }
 
 // ============================================
+// Summary Helper Functions
+// ============================================
+async function getTodaySales(): Promise<number> {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const tomorrow = new Date(today)
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  
+  const { data } = await supabase
+    .from('invoices')
+    .select('total')
+    .gte('created_at', today.toISOString())
+    .lt('created_at', tomorrow.toISOString())
+  
+  return data?.reduce((sum, inv) => sum + (inv.total || 0), 0) ?? 0
+}
+
+async function getTotalDebt(): Promise<number> {
+  const { data } = await supabase
+    .from('invoices')
+    .select('total, paid_amount')
+    .neq('status', 'paid')
+  
+  return data?.reduce((sum, inv) => {
+    const debt = (inv.total || 0) - (inv.paid_amount || 0)
+    return sum + Math.max(0, debt)
+  }, 0) ?? 0
+}
+
+async function getLowStockCount(): Promise<number> {
+  const { data } = await supabase
+    .from('products')
+    .select('quantity, min_stock_level')
+  
+  return data?.filter(product => {
+    const qty = product.quantity || 0
+    const min = product.min_stock_level || 0
+    return min > 0 && qty <= min
+  }).length ?? 0
+}
+
+// ============================================
 // Normalize item
 // ============================================
 function normalizeItem(
@@ -112,7 +154,24 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
       return reply.code(500).send({ error: error.message })
     }
 
-    return { invoices: data ?? [], total: count ?? 0, page, limit }
+    // Get summary data
+    const [todaySales, totalDebt, lowStockCount] = await Promise.all([
+      getTodaySales(),
+      getTotalDebt(),
+      getLowStockCount()
+    ])
+
+    return { 
+      invoices: data ?? [], 
+      total: count ?? 0, 
+      page, 
+      limit,
+      summary: {
+        todaySales,
+        totalDebt,
+        lowStockCount
+      }
+    }
   })
 
   // GET /api/invoices/:id

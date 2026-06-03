@@ -5,14 +5,26 @@ import { ClientErrorBoundary } from "./client-error-boundary"
 
 import "@hisabche/ui/globals.css"
 
-import { Geist } from "next/font/google"
+import localFont from "next/font/local"
 import { cn } from "@hisabche/ui"
 import { SpeedInsights } from "@vercel/speed-insights/next"
 import { Analytics } from "@vercel/analytics/next"
 
-const geist = Geist({
-  subsets: ["latin"],
+const vazirmatn = localFont({
+  src: [
+    {
+      path: "../public/fonts/Vazirmatn-Regular.ttf",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../public/fonts/Vazirmatn-Bold.ttf",
+      weight: "700",
+      style: "normal",
+    },
+  ],
   variable: "--font-sans",
+  display: "swap",
 })
 
 export const metadata: Metadata = {
@@ -42,18 +54,8 @@ export default function RootLayout({
       dir="rtl"
       suppressHydrationWarning
       data-scroll-behavior="smooth"
-      className={cn("font-sans", geist.variable)}
+      className={cn("font-sans", vazirmatn.variable)}
     >
-      <head>
-        <link
-          rel="preload"
-          href="https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/fonts/webfonts/Vazirmatn[wght].woff2"
-          as="font"
-          type="font/woff2"
-          crossOrigin="anonymous"
-        />
-      </head>
-
       <body className="min-h-screen bg-[var(--hisab-background)] text-[var(--hisab-foreground)] antialiased">
         <ClientErrorBoundary>
           <Providers>{children}</Providers>

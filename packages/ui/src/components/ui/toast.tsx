@@ -160,7 +160,7 @@ const Toast = React.forwardRef<
             "shrink-0 rounded-full p-1",
             "text-[var(--hisab-muted-fg)]",
             "hover:bg-[var(--hisab-muted)] hover:text-[var(--hisab-foreground)]",
-            "transition-colors duration-[var(--hisab-duration)]"
+            "transition-colors duration-[var(--hisab-duration)] motion-safe:duration-[var(--hisab-duration)]"
           )}
           aria-label="Dismiss notification"
         >

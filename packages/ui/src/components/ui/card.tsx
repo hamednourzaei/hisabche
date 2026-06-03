@@ -9,7 +9,7 @@ const cardVariants = cva(
     "border border-[var(--hisab-border)]",
     "bg-[var(--hisab-card)] text-[var(--hisab-card-fg)]",
     "shadow-[var(--hisab-shadow-sm)]",
-    "transition-all duration-[var(--hisab-duration)]",
+    "transition-all duration-[var(--hisab-duration)] motion-safe:duration-[var(--hisab-duration)]",
     "motion-reduce:transition-none",
   ],
   {
