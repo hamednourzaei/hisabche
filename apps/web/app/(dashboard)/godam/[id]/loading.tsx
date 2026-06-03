@@ -1,4 +1,4 @@
-import { GodamDetailSkeleton } from "./page"
+import { GodamDetailSkeleton } from "./skeleton"
 
 export default function Loading() {
   return (
