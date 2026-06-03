@@ -36,11 +36,13 @@
   },
   "exports": {
     ".": "./src/index.ts",
-    "./landing": "./src/components/ui/landing/index.ts",
-    "./landing/*": "./src/components/ui/landing/*.tsx",
-    "./*": "./src/components/ui/*.tsx",
-    "./auth/*": "./src/components/ui/auth/*.tsx",
-    "./baqidari-page": "./src/components/ui/baqidari-page.tsx",
-    "./globals.css": "./src/styles/globals.css"
+    "./globals.css": "./src/styles/globals.css",
+    "./landing/landing-page": "./src/components/ui/landing/landing-page.tsx",
+    "./settings/settings-page": "./src/components/ui/settings/settings-page.tsx",
+    "./components/ui/dashboard/containers/dashboard-container": "./src/components/ui/dashboard/containers/dashboard-container.tsx",
+    "./components/ui/godam/containers/godam-container": "./src/components/ui/godam/containers/godam-container.tsx",
+    "./components/ui/invoices/containers/invoices-container": "./src/components/ui/invoices/containers/invoices-container.tsx",
+    "./components/ui/baqidari": "./src/components/ui/baqidari.tsx",
+    "./components/ui/quick-invoice/containers/quick-invoice-container": "./src/components/ui/quick-invoice/containers/quick-invoice-container.tsx"
   }
 }
