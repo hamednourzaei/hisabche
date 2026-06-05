@@ -8,6 +8,7 @@ import {
   AccordionTrigger,
 } from "../accordion"
 
+
 const faqs = [
   {
     q: "واقعاً آفلاین کار می‌کنه؟",
