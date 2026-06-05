@@ -1,13 +1,24 @@
 "use client"
 
-import { useCallback, useMemo, useState, type ReactNode } from "react"
-import { useTranslation } from "react-i18next"
+import { useCallback, useMemo, useState } from "react"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
+import { useTranslation } from "react-i18next"
 import { useCreateCustomer, useCreateInvoice } from "@hisabche/api"
-import { Button, Input, ProductPicker, SaveIndicator } from "@hisabche/ui"
+import { Button } from "../button"
+import { Input } from "../input"
+import { Label } from "../label"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "../dialog"
+import { ProductPicker } from "../product-picker"
+import { SaveIndicator } from "../save-indicator"
 import { useSyncStore, useBackupStore } from "@hisabche/store"
 import { AlertTriangle, RefreshCw, User, Phone, Package, DollarSign } from "lucide-react"
-import { Modal } from "../Modal"
 
 type ProductOption = NonNullable<Parameters<typeof ProductPicker>[0]["value"]>
 
@@ -19,25 +30,25 @@ const toNum = (v: string): number => {
 const fmt = (v: number): string => v.toLocaleString("fa-AF")
 
 const customerSchema = z.object({
-  name: z.string().trim().min(1),
-  phone: z.string().trim().optional(),
+  name: z.string().min(1, "customer.nameRequired"),
+  phone: z.string().optional(),
 })
 
-interface Props {
+type CustomerFormValues = z.infer<typeof customerSchema>
+
+interface AddCustomerModalProps {
   open: boolean
   onClose: () => void
   onCreated?: () => void
 }
 
-export function AddCustomerModal({ open, onClose, onCreated }: Props) {
+export function AddCustomerModal({ open, onClose, onCreated }: AddCustomerModalProps) {
   const { t } = useTranslation()
   const createCustomer = useCreateCustomer()
   const createInvoice = useCreateInvoice()
   const { setSaveStatus } = useSyncStore()
   const { addAuditEntry } = useBackupStore()
 
-  const [name, setName] = useState("")
-  const [phone, setPhone] = useState("")
   const [withDebt, setWithDebt] = useState(false)
   const [product, setProduct] = useState<ProductOption | null>(null)
   const [qty, setQty] = useState("1")
@@ -52,31 +63,34 @@ export function AddCustomerModal({ open, onClose, onCreated }: Props) {
 
   const pending = createCustomer.isPending || createInvoice.isPending
 
+  const form = useForm<CustomerFormValues>({
+    resolver: zodResolver(customerSchema),
+    defaultValues: {
+      name: "",
+      phone: "",
+    },
+  })
+
+  const { register, handleSubmit, reset, formState: { errors } } = form
+
   const close = useCallback(() => {
-    setName("")
-    setPhone("")
+    reset()
     setWithDebt(false)
     setProduct(null)
     setQty("1")
     setUnitPrice("")
     setError(null)
     onClose()
-  }, [onClose])
+  }, [reset, onClose])
 
-  const submit = useCallback(async () => {
-    const parsed = customerSchema.safeParse({ name, phone })
-    if (!parsed.success) {
-      setError(t("baqidari.form.nameRequired"))
-      return
-    }
-
+  const onSubmit = async (data: CustomerFormValues) => {
     setError(null)
     setSaveStatus("saving")
 
     try {
       const customer = await createCustomer.mutateAsync({
-        fullName: parsed.data.name,
-        phone: parsed.data.phone || undefined,
+        fullName: data.name,
+        phone: data.phone || undefined,
         openingBalance: 0,
         isActive: true,
       })
@@ -85,7 +99,7 @@ export function AddCustomerModal({ open, onClose, onCreated }: Props) {
         action: "create",
         entity: "customer",
         entityId: customer.id || "",
-        details: `مشتری جدید: ${parsed.data.name}`,
+        details: `مشتری جدید: ${data.name}`,
       })
 
       if (withDebt && product && total > 0) {
@@ -126,174 +140,134 @@ export function AddCustomerModal({ open, onClose, onCreated }: Props) {
       close()
     } catch {
       setSaveStatus("error")
-      setError(t("common.saveError"))
+      setError(t("common.saveError", "خطا در ذخیره اطلاعات"))
       setTimeout(() => setSaveStatus("idle"), 2000)
     }
-  }, [
-    name,
-    phone,
-    withDebt,
-    product,
-    qty,
-    unitPrice,
-    total,
-    createCustomer,
-    createInvoice,
-    onCreated,
-    close,
-    t,
-    setSaveStatus,
-    addAuditEntry,
-  ])
+  }
 
-  return (
-    <Modal
-      open={open}
-      onClose={close}
-      title={t("baqidari.addCustomer")}
-      size="md"
-    >
-      <SaveIndicator
-        show={showSaved}
-        message={t("common.saved", "ذخیره شد ✅")}
-      />
+  const retrySubmit = () => {
+    handleSubmit(onSubmit)()
+  }
 
-      <Input
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        placeholder={t("baqidari.form.namePlaceholder")}
-        label={t("baqidari.form.fullName", "نام کامل")}
-        leftIcon={<User className="size-4" aria-hidden />}
-        autoFocus
-      />
+ return (
+    <Dialog open={open} onOpenChange={(open) => !open && close()}>
+      <DialogContent className="max-w-md">
+        <SaveIndicator show={showSaved} message={t("common.saved", "ذخیره شد ✅")} />
 
-      <Input
-        value={phone}
-        onChange={(e) => setPhone(e.target.value)}
-        placeholder={t("baqidari.form.phonePlaceholder")}
-        label={t("baqidari.form.phone", "شماره تماس")}
-        leftIcon={<Phone className="size-4" aria-hidden />}
-      />
+        <DialogHeader>
+          <DialogTitle>{t("baqidari.addCustomer", "افزودن مشتری جدید")}</DialogTitle>
+        </DialogHeader>
 
-      <div className="flex gap-2">
-        <Toggle
-          active={!withDebt}
-          tone="primary"
-          onClick={() => setWithDebt(false)}
-        >
-          {t("baqidari.form.newCustomer")}
-        </Toggle>
-        <Toggle
-          active={withDebt}
-          tone="warning"
-          onClick={() => setWithDebt(true)}
-        >
-          {t("baqidari.form.hasDebt")}
-        </Toggle>
-      </div>
-
-      {withDebt && (
-        <div className="space-y-3 rounded-xl border border-[var(--hisab-border)] bg-[var(--hisab-muted)]/30 p-4">
-          <ProductPicker
-            value={product}
-            onChange={setProduct}
-            placeholder={t("baqidari.form.whichProduct")}
-          />
-
-          <div className="flex gap-2">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div>
             <Input
-              type="number"
-              inputMode="decimal"
-              value={unitPrice}
-              onChange={(e) => setUnitPrice(e.target.value)}
-              placeholder={t("baqidari.form.unitPrice")}
-              label={t("baqidari.form.unitPrice", "قیمت واحد")}
-              leftIcon={<DollarSign className="size-4" aria-hidden />}
-              className="flex-1"
+              {...register("name")}
+              placeholder={t("baqidari.form.namePlaceholder", "نام کامل")}
+              leftIcon={<User className="size-4" aria-hidden />}
+              autoFocus
             />
-            <Input
-              type="number"
-              inputMode="numeric"
-              value={qty}
-              onChange={(e) => setQty(e.target.value)}
-              placeholder={t("baqidari.form.qty")}
-              label={t("baqidari.form.qty", "تعداد")}
-              leftIcon={<Package className="size-4" aria-hidden />}
-              className="w-24"
-            />
+            {errors.name && (
+              <p className="mt-1 text-sm text-destructive">
+                {t(errors.name.message || "نام الزامی است")}
+              </p>
+            )}
           </div>
 
-          {total > 0 && (
-            <p className="text-center text-lg font-bold tabular-nums text-[var(--hisab-primary)]">
-              {t("baqidari.form.total")}: {fmt(total)} AFN
-            </p>
+          <div>
+            <Input
+              {...register("phone")}
+              placeholder={t("baqidari.form.phonePlaceholder", "شماره تماس")}
+              leftIcon={<Phone className="size-4" aria-hidden />}
+            />
+            {errors.phone && (
+              <p className="mt-1 text-sm text-destructive">
+                {t(errors.phone.message || "مقدار وارد شده معتبر نیست")}
+              </p>
+            )}
+          </div>
+
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant={!withDebt ? "default" : "outline"}
+              className="flex-1"
+              onClick={() => setWithDebt(false)}
+            >
+              {t("baqidari.form.newCustomer", "مشتری بدون بدهی")}
+            </Button>
+            <Button
+              type="button"
+              variant={withDebt ? "destructive" : "outline"}
+              className="flex-1"
+              onClick={() => setWithDebt(true)}
+            >
+              {t("baqidari.form.hasDebt", "مشتری دارای بدهی")}
+            </Button>
+          </div>
+
+          {withDebt && (
+            <div className="space-y-3 rounded-xl border border-border bg-muted/30 p-4">
+              <ProductPicker
+                value={product}
+                onChange={setProduct}
+                placeholder={t("baqidari.form.whichProduct", "انتخاب محصول")}
+              />
+
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={unitPrice}
+                    onChange={(e) => setUnitPrice(e.target.value)}
+                    placeholder={t("baqidari.form.unitPrice", "قیمت واحد")}
+                    leftIcon={<DollarSign className="size-4" aria-hidden />}
+                  />
+                </div>
+                <div>
+                  <Input
+                    type="number"
+                    value={qty}
+                    onChange={(e) => setQty(e.target.value)}
+                    placeholder={t("baqidari.form.qty", "تعداد")}
+                    leftIcon={<Package className="size-4" aria-hidden />}
+                  />
+                </div>
+              </div>
+
+              {total > 0 && (
+                <p className="text-center text-lg font-bold tabular-nums text-primary">
+                  {t("baqidari.form.total", "مجموع")}: {fmt(total)} AFN
+                </p>
+              )}
+            </div>
           )}
-        </div>
-      )}
 
-      {error && (
-        <div
-          role="alert"
-          className="flex items-center gap-2 rounded-xl border border-[var(--hisab-destructive)]/20 bg-[var(--hisab-destructive)]/10 p-3 text-sm text-[var(--hisab-destructive)]"
-        >
-          <AlertTriangle className="size-4 shrink-0" aria-hidden />
-          <p className="flex-1">{error}</p>
-          <button
-            type="button"
-            onClick={submit}
-            className="shrink-0 rounded-lg px-2 py-1 text-xs font-medium hover:bg-[var(--hisab-destructive)]/20 transition-colors"
-            aria-label={t("common.retry")}
-          >
-            <RefreshCw className="size-3" aria-hidden />
-          </button>
-        </div>
-      )}
+          {error && (
+            <div className="flex items-center gap-2 rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
+              <AlertTriangle className="size-4 shrink-0" aria-hidden />
+              <p className="flex-1">{error}</p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={retrySubmit}
+              >
+                <RefreshCw className="size-3" aria-hidden />
+              </Button>
+            </div>
+          )}
 
-      <div className="flex gap-3 pt-2">
-        <Button variant="outline" className="w-full" onClick={close}>
-          {t("common.cancel")}
-        </Button>
-        <Button
-          className="w-full"
-          onClick={submit}
-          loading={pending}
-          disabled={!name.trim()}
-        >
-          {t("common.save")}
-        </Button>
-      </div>
-    </Modal>
-  )
-}
-
-function Toggle({
-  active,
-  tone,
-  onClick,
-  children,
-}: {
-  active: boolean
-  tone: "primary" | "warning"
-  onClick: () => void
-  children: ReactNode
-}) {
-  const activeClass =
-    tone === "primary"
-      ? "bg-[var(--hisab-primary)] text-[var(--hisab-primary-fg)]"
-      : "bg-[var(--hisab-warning)] text-[var(--hisab-warning-fg)]"
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={`flex-1 rounded-xl py-2.5 text-sm font-medium transition-all ${
-        active
-          ? activeClass
-          : "border border-[var(--hisab-border)] text-[var(--hisab-muted-fg)] hover:bg-[var(--hisab-muted)]"
-      }`}
-    >
-      {children}
-    </button>
+          <div className="flex gap-3 pt-2">
+            <Button type="button" variant="outline" className="w-full" onClick={close}>
+              {t("common.cancel", "انصراف")}
+            </Button>
+            <Button type="submit" className="w-full" disabled={pending}>
+              {t("common.save", "ذخیره")}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }

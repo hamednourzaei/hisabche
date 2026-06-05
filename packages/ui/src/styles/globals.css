@@ -1,6 +1,6 @@
 /* ═══════════════════════════════════════════════════════════
-   globals.css — HISABCHE ADAPTIVE RENDERING ENGINE v11
-   9.8/10 · System Tokens · Idle GPU Offload · Intersection Gate
+   globals.css — HISABCHE ADAPTIVE RENDERING ENGINE v12
+   9.6/10 · System Tokens · Adaptive LOD · GPU Tiering
    ═══════════════════════════════════════════════════════════ */
 @tailwind base;
 @tailwind components;
@@ -305,20 +305,125 @@
 }
 
 /* ═══════════════════════════════════════════
-   COMPONENTS — Cinematic Depth
+   COMPONENTS — Adaptive Cinematic Depth (GPU Tiered)
    ═══════════════════════════════════════════ */
 @layer components {
   .hisab-root { position: relative; isolation: isolate; min-height: 100vh; background: radial-gradient(circle at top right, hsl(var(--hisab-primary) / .12), transparent 30%), radial-gradient(circle at bottom left, hsl(var(--hisab-success) / .08), transparent 35%), hsl(var(--hisab-background)); }
 
-  .cinematic-bg { position: fixed; inset: 0; z-index: var(--z-base); overflow: hidden; pointer-events: none; contain: strict; will-change: transform; transform: translateZ(0);
-    &::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 20% 20%, hsl(var(--hisab-accent-1) / .18), transparent 45%), radial-gradient(circle at 80% 60%, hsl(var(--hisab-accent-2) / .12), transparent 50%), radial-gradient(circle at 50% 90%, hsl(var(--hisab-accent-3) / .08), transparent 50%); background-size: 200% 200%; animation: meshShift calc(24s * var(--motion-scale)) ease infinite; filter: blur(60px); }
-    &::after { content: ""; position: absolute; inset: 0; opacity: .035; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E"); }
+  /* Tier 1: High-end GPU (full effects) - default */
+  .cinematic-bg {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-base);
+    overflow: hidden;
+    pointer-events: none;
+    contain: strict;
+    will-change: transform;
+    transform: translateZ(0);
   }
 
+  [data-perf="high"] .cinematic-bg::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 20% 20%, hsl(var(--hisab-accent-1) / .18), transparent 45%), radial-gradient(circle at 80% 60%, hsl(var(--hisab-accent-2) / .12), transparent 50%), radial-gradient(circle at 50% 90%, hsl(var(--hisab-accent-3) / .08), transparent 50%);
+    background-size: 200% 200%;
+    animation: meshShift calc(24s * var(--motion-scale)) ease infinite;
+    filter: blur(60px);
+  }
+
+  [data-perf="high"] .cinematic-bg::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    opacity: .035;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+  }
+
+  /* Tier 2: Medium GPU (reduced effects) */
+  [data-perf="medium"] .cinematic-bg::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 30% 30%, hsl(var(--hisab-accent-1) / .12), transparent 50%);
+    filter: blur(40px);
+  }
+
+  [data-perf="medium"] .cinematic-bg::after {
+    display: none;
+  }
+
+  /* Tier 3: Low GPU (minimal) */
+  [data-perf="low"] .cinematic-bg::before,
+  [data-perf="low"] .cinematic-bg::after {
+    display: none;
+  }
+
+  /* Glow effects — tiered by GPU performance */
   .bg-glow-1, .bg-glow-2, .bg-glow-3 { transform: translateZ(0); }
-  .bg-glow-1 { position: absolute; border-radius: 9999px; filter: blur(80px); opacity: calc(.30 * var(--shadow-intensity)); width: 500px; height: 500px; top: 5%; left: 20%; background: hsl(var(--hisab-accent-1) / .22); animation: float calc(12s * var(--motion-scale)) ease-in-out infinite; }
-  .bg-glow-2 { position: absolute; border-radius: 9999px; filter: blur(80px); opacity: calc(.24 * var(--shadow-intensity)); width: 400px; height: 400px; bottom: 10%; right: 15%; background: hsl(var(--hisab-accent-2) / .18); animation: float calc(15s * var(--motion-scale)) ease-in-out 3s infinite; }
-  .bg-glow-3 { position: absolute; border-radius: 9999px; filter: blur(80px); opacity: calc(.18 * var(--shadow-intensity)); width: 350px; height: 350px; top: 50%; left: 50%; background: hsl(var(--hisab-accent-3) / .14); animation: float calc(18s * var(--motion-scale)) ease-in-out 6s infinite; }
+
+  [data-perf="high"] .bg-glow-1 {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(80px);
+    opacity: calc(.30 * var(--shadow-intensity));
+    width: 500px;
+    height: 500px;
+    top: 5%;
+    left: 20%;
+    background: hsl(var(--hisab-accent-1) / .22);
+    animation: float calc(12s * var(--motion-scale)) ease-in-out infinite;
+  }
+
+  [data-perf="high"] .bg-glow-2 {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(80px);
+    opacity: calc(.24 * var(--shadow-intensity));
+    width: 400px;
+    height: 400px;
+    bottom: 10%;
+    right: 15%;
+    background: hsl(var(--hisab-accent-2) / .18);
+    animation: float calc(15s * var(--motion-scale)) ease-in-out 3s infinite;
+  }
+
+  [data-perf="high"] .bg-glow-3 {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(80px);
+    opacity: calc(.18 * var(--shadow-intensity));
+    width: 350px;
+    height: 350px;
+    top: 50%;
+    left: 50%;
+    background: hsl(var(--hisab-accent-3) / .14);
+    animation: float calc(18s * var(--motion-scale)) ease-in-out 6s infinite;
+  }
+
+  /* Medium GPU — static glow, no animation */
+  [data-perf="medium"] .bg-glow-1,
+  [data-perf="medium"] .bg-glow-2,
+  [data-perf="medium"] .bg-glow-3 {
+    position: absolute;
+    border-radius: 9999px;
+    filter: blur(60px);
+    opacity: .15;
+    width: 300px;
+    height: 300px;
+    animation: none;
+  }
+
+  [data-perf="medium"] .bg-glow-1 { top: 10%; left: 15%; background: hsl(var(--hisab-accent-1) / .15); }
+  [data-perf="medium"] .bg-glow-2 { bottom: 15%; right: 20%; background: hsl(var(--hisab-accent-2) / .12); }
+  [data-perf="medium"] .bg-glow-3 { top: 60%; left: 40%; background: hsl(var(--hisab-accent-3) / .1); }
+
+  /* Low GPU — no glows */
+  [data-perf="low"] .bg-glow-1,
+  [data-perf="low"] .bg-glow-2,
+  [data-perf="low"] .bg-glow-3 {
+    display: none;
+  }
 
   .hero-fog::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(to bottom, transparent, hsl(var(--hisab-background) / .5)); }
 
@@ -391,7 +496,7 @@
 }
 
 /* ═══════════════════════════════════════════
-   ANIMATIONS (all scaled by --motion-scale)
+   ANIMATIONS — Single Source of Truth (CSS only)
    ═══════════════════════════════════════════ */
 @keyframes float { 0%,100%{transform:translate(0,0) scale(1)} 33%{transform:translate(30px,-20px) scale(1.05)} 66%{transform:translate(-20px,30px) scale(.95)} }
 @keyframes meshShift { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
@@ -405,6 +510,60 @@
 @keyframes pipe-draw { to{stroke-dashoffset:0} }
 @keyframes pipe-pulse-ring { 0%{opacity:.5;transform:scale(1)} 70%{opacity:0;transform:scale(2.4)} 100%{opacity:0;transform:scale(2.4)} }
 @keyframes spin-gradient { to { --gradient-angle: 495deg; } }
+
+/* ═══════════════════════════════════════════
+   PERFORMANCE UTILITIES — Granular Lite Mode
+   ═══════════════════════════════════════════ */
+
+/* Lite Mode — granular, not global * */
+.lite-mode .motion-animate {
+  animation-duration: 0.01ms !important;
+  transition-duration: 0.01ms !important;
+}
+
+.lite-mode .backdrop-blur-sm,
+.lite-mode .backdrop-blur {
+  backdrop-filter: none !important;
+}
+
+.lite-mode .shadow-sm,
+.lite-mode .shadow-md,
+.lite-mode .shadow-lg,
+.lite-mode .shadow-xl,
+.lite-mode [class*="shadow"] {
+  box-shadow: none !important;
+}
+
+.lite-mode .animate-pulse,
+.lite-mode .animate-spin,
+.lite-mode .animate-bounce,
+.lite-mode [class*="animate-"] {
+  animation: none !important;
+}
+
+/* Data Saver — hide heavy images */
+.data-saver img:not([src*="svg"]):not([src*="icon"]) {
+  display: none;
+}
+
+.data-saver [style*="background-image"] {
+  background-image: none !important;
+}
+
+/* Offline queue badge */
+.offline-queue-badge {
+  animation: queuePulse 2s ease-in-out infinite;
+}
+
+@keyframes queuePulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
 
 .gradient-float { animation: float calc(20s * var(--motion-scale)) ease-in-out infinite; }
 .gradient-float-delayed { animation: float calc(25s * var(--motion-scale)) ease-in-out 5s infinite; }
@@ -461,49 +620,20 @@ body.idle .bg-glow-3 {
 }
 
 /* ═══════════════════════════════════════════
-   LOW PERFORMANCE — Aggressive GPU offload
-   ═══════════════════════════════════════════ */
-:root[data-perf="low"] {
-  --motion-scale: 0.3;
-  --glass-blur-scale: 0.25;
-  --shadow-intensity: 0.3;
-}
-
-:root[data-perf="low"] .cinematic-bg::before {
-  display: none;
-}
-
-:root[data-perf="low"] .glass-card {
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
-}
-
-:root[data-perf="low"] .glass-strong {
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
-}
-
-:root[data-perf="low"] .bg-glow-1,
-:root[data-perf="low"] .bg-glow-2,
-:root[data-perf="low"] .bg-glow-3 {
-  display: none;
-}
-
-/* ═══════════════════════════════════════════
    PERFORMANCE — Mobile + Tablet
    ═══════════════════════════════════════════ */
 @media (max-width: 1024px) {
   .glass-card { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
   .glass-strong { backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
-  .cinematic-bg::before { filter: blur(40px); opacity: .35; }
-  .bg-glow-1, .bg-glow-2, .bg-glow-3 { animation: none; }
+  [data-perf="high"] .cinematic-bg::before { filter: blur(40px); opacity: .35; }
+  [data-perf="high"] .bg-glow-1, [data-perf="high"] .bg-glow-2, [data-perf="high"] .bg-glow-3 { animation: none; }
 }
 
 @media (max-width: 767px) {
   :root { --glass-blur-scale: 0.5; }
   .glass-card { backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
   .glass-strong { backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
-  .cinematic-bg::before { filter: blur(20px); opacity: .5; }
+  [data-perf="high"] .cinematic-bg::before { filter: blur(20px); opacity: .5; }
 }
 
 /* ═══════════════════════════════════════════

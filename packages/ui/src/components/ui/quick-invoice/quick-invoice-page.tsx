@@ -1,14 +1,11 @@
 "use client"
 
-import {
-  Button,
-  Input,
-  Card,
-  CardContent,
-  ProductPicker,
-  CustomerPicker,
-  SaveIndicator,
-} from "@hisabche/ui"
+import { Button } from "../button"
+import { Input } from "../input"
+import { Card, CardContent } from "../card"
+import { ProductPicker } from "../product-picker"
+import { CustomerPicker } from "../customer-picker"
+import { SaveIndicator } from "../save-indicator"
 import {
   ArrowRight,
   Check,
@@ -109,7 +106,7 @@ export function QuickInvoicePage({
       {/* ── Celebration Modal ── */}
       {showCelebration && (
         <div
-          className="fixed inset-0 z-[var(--z-modal)] flex cursor-pointer items-center justify-center bg-black/30 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex cursor-pointer items-center justify-center bg-black/30 backdrop-blur-sm"
           onClick={onDismissCelebration}
         >
           <div
@@ -117,19 +114,12 @@ export function QuickInvoicePage({
             className="pointer-events-none text-center"
           >
             <div className="mb-4 animate-bounce text-6xl">🧾</div>
-            <div className="glass-strong px-8 py-6">
-              <p className="text-xl font-bold">
-                🎉{" "}
-                {t(
-                  "faktoor.created",
-                  "فاکتور با موفقیت ثبت شد"
-                )}
+            <div className="glass-strong rounded-2xl px-8 py-6 border border-border bg-background/80 backdrop-blur-xl">
+              <p className="text-xl font-bold text-foreground">
+                🎉 {t("faktoor.created", "فاکتور با موفقیت ثبت شد")}
               </p>
-              <p className="mt-2 text-sm text-[var(--hisab-muted-fg)]">
-                {t(
-                  "faktoor.clickToView",
-                  "کلیک کنید تا فاکتور را ببینید"
-                )}
+              <p className="mt-2 text-sm text-muted-foreground">
+                {t("faktoor.clickToView", "کلیک کنید تا فاکتور را ببینید")}
               </p>
             </div>
           </div>
@@ -140,8 +130,8 @@ export function QuickInvoicePage({
         {/* ── Timer + Step Indicators ── */}
         <div className="mb-8 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-3 w-3 animate-pulse rounded-full bg-[var(--hisab-success)]" />
-            <span className="text-sm text-[var(--hisab-muted-fg)]">
+            <div className="h-3 w-3 animate-pulse rounded-full bg-success" />
+            <span className="text-sm text-muted-foreground">
               {elapsedFormatted}
             </span>
           </div>
@@ -150,9 +140,7 @@ export function QuickInvoicePage({
               <div
                 key={s}
                 className={`h-2 w-14 rounded-full transition-all ${
-                  STEPS.indexOf(step) >= i
-                    ? "bg-[var(--hisab-primary)]"
-                    : "bg-[var(--hisab-muted)]"
+                  STEPS.indexOf(step) >= i ? "bg-primary" : "bg-muted"
                 }`}
               />
             ))}
@@ -161,42 +149,31 @@ export function QuickInvoicePage({
 
         {/* ── Step 1: Product ── */}
         {step === "product" && (
-          <Card className="glass-strong">
+          <Card className="glass-strong border-border bg-card/80 backdrop-blur-xl">
             <CardContent className="space-y-6 p-6">
               <div className="text-center">
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--hisab-primary)]/10">
-                  <Package
-                    className="size-8 text-[var(--hisab-primary)]"
-                    aria-hidden
-                  />
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
+                  <Package className="size-8 text-primary" aria-hidden />
                 </div>
-                <h1 className="text-2xl font-bold">
+                <h1 className="text-2xl font-bold text-foreground">
                   {t("quickInvoice.whatSold", "نام محصول")}
                 </h1>
-                <p className="mt-2 text-sm text-[var(--hisab-muted-fg)]">
-                  {t(
-                    "quickInvoice.whatSold",
-                    "چه چیزی فروختید؟"
-                  )}
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {t("quickInvoice.whatSoldDesc", "چه چیزی فروختید؟")}
                 </p>
               </div>
               <ProductPicker
                 value={selectedProduct}
                 onChange={onSelectProduct}
-                placeholder={t(
-                  "godam.pickProduct",
-                  "انتخاب محصول از گدام..."
-                )}
+                placeholder={t("godam.pickProduct", "انتخاب محصول از گدام...")}
               />
               <Button
-                className="w-full"
+                className="w-full gap-2"
                 size="lg"
                 disabled={!selectedProduct}
                 onClick={() => onSetStep("customer")}
-                icon={
-                  <ArrowRight className="size-4" aria-hidden />
-                }
               >
+                <ArrowRight className="size-4" aria-hidden />
                 {t("action.next", "ادامه")}
               </Button>
             </CardContent>
@@ -205,32 +182,23 @@ export function QuickInvoicePage({
 
         {/* ── Step 2: Customer ── */}
         {step === "customer" && (
-          <Card className="glass-strong">
+          <Card className="glass-strong border-border bg-card/80 backdrop-blur-xl">
             <CardContent className="space-y-6 p-6">
               <div className="text-center">
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--hisab-accent)]/10">
-                  <User
-                    className="size-8 text-[var(--hisab-accent)]"
-                    aria-hidden
-                  />
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent/10">
+                  <User className="size-8 text-accent" aria-hidden />
                 </div>
-                <h1 className="text-2xl font-bold">
+                <h1 className="text-2xl font-bold text-foreground">
                   {t("faktoor.customer", "مشتری")}
                 </h1>
-                <p className="mt-2 text-sm text-[var(--hisab-muted-fg)]">
-                  {t(
-                    "quickInvoice.toWhom",
-                    "نام مشتری را انتخاب کنید (اختیاری)"
-                  )}
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {t("quickInvoice.toWhom", "نام مشتری را انتخاب کنید (اختیاری)")}
                 </p>
               </div>
               <CustomerPicker
                 value={selectedCustomer}
                 onChange={onSelectCustomer}
-                placeholder={t(
-                  "customer.pickPlaceholder",
-                  "انتخاب مشتری..."
-                )}
+                placeholder={t("customer.pickPlaceholder", "انتخاب مشتری...")}
               />
               <div className="flex gap-3">
                 <Button
@@ -253,42 +221,36 @@ export function QuickInvoicePage({
 
         {/* ── Step 3: Price ── */}
         {step === "price" && (
-          <Card className="glass-strong">
+          <Card className="glass-strong border-border bg-card/80 backdrop-blur-xl">
             <CardContent className="space-y-6 p-6">
               <div className="text-center">
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--hisab-success)]/10">
-                  <DollarSign
-                    className="size-8 text-[var(--hisab-success)]"
-                    aria-hidden
-                  />
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-success/10">
+                  <DollarSign className="size-8 text-success" aria-hidden />
                 </div>
-                <h1 className="text-2xl font-bold">
+                <h1 className="text-2xl font-bold text-foreground">
                   {t("faktoor.total", "مبلغ فاکتور")}
                 </h1>
-                <p className="mt-2 text-sm text-[var(--hisab-muted-fg)]">
-                  {t(
-                    "quickInvoice.howMuch",
-                    "مبلغ فروش را وارد کنید"
-                  )}
+                <p className="mt-2 text-sm text-muted-foreground">
+                  {t("quickInvoice.howMuch", "مبلغ فروش را وارد کنید")}
                 </p>
               </div>
 
               {/* Summary */}
-              <div className="rounded-2xl border border-[var(--hisab-border)] bg-[var(--hisab-card)] p-4 text-start">
+              <div className="rounded-2xl border border-border bg-card p-4 text-start">
                 <div className="mb-2 flex items-center justify-between">
-                  <span className="text-sm text-[var(--hisab-muted-fg)]">
+                  <span className="text-sm text-muted-foreground">
                     {t("faktoor.items", "محصول")}
                   </span>
-                  <span className="font-medium">
+                  <span className="font-medium text-foreground">
                     {productName}
                   </span>
                 </div>
                 {selectedCustomer && (
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-[var(--hisab-muted-fg)]">
+                    <span className="text-sm text-muted-foreground">
                       {t("faktoor.customer", "مشتری")}
                     </span>
-                    <span className="font-medium">
+                    <span className="font-medium text-foreground">
                       {selectedCustomer.name}
                     </span>
                   </div>
@@ -297,74 +259,51 @@ export function QuickInvoicePage({
 
               {/* Payment type toggle */}
               <div className="flex gap-2">
-                <button
+                <Button
                   type="button"
-                  onClick={() =>
-                    onPaymentTypeChange("cash")
-                  }
-                  className={`flex-1 rounded-xl py-3 text-sm font-medium transition-all ${
-                    paymentType === "cash"
-                      ? "bg-[var(--hisab-primary)] text-white"
-                      : "border border-[var(--hisab-border)] text-[var(--hisab-muted-fg)]"
-                  }`}
+                  variant={paymentType === "cash" ? "default" : "outline"}
+                  className="flex-1"
+                  onClick={() => onPaymentTypeChange("cash")}
                 >
                   💵 {t("faktoor.cash", "نقد")}
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
-                  onClick={() =>
-                    onPaymentTypeChange("credit")
-                  }
-                  className={`flex-1 rounded-xl py-3 text-sm font-medium transition-all ${
-                    paymentType === "credit"
-                      ? "bg-[var(--hisab-warning)] text-white"
-                      : "border border-[var(--hisab-border)] text-[var(--hisab-muted-fg)]"
-                  }`}
+                  variant={paymentType === "credit" ? "default" : "outline"}
+                  className="flex-1"
+                  onClick={() => onPaymentTypeChange("credit")}
                 >
                   📝 {t("faktoor.credit", "نسیه")}
-                </button>
+                </Button>
               </div>
 
               {paymentType === "credit" && (
                 <Input
                   type="number"
                   value={paidNow}
-                  onChange={(e) =>
-                    onPaidNowChange(e.target.value)
-                  }
+                  onChange={(e) => onPaidNowChange(e.target.value)}
                   placeholder={`${t("payment.record", "پیش‌پرداخت")} (کل: ${total.toLocaleString()} AFN)`}
-                  label={t(
-                    "payment.record",
-                    "مبلغ پرداخت شده الان"
-                  )}
-                  leftIcon={
-                    <CreditCard
-                      className="size-4"
-                      aria-hidden
-                    />
-                  }
+                  leftIcon={<CreditCard className="size-4" aria-hidden />}
                 />
               )}
 
               {/* Quantity */}
               <div>
-                <label className="mb-2 block text-sm font-medium">
+                <label className="mb-2 block text-sm font-medium text-foreground">
                   {t("faktoor.quantity", "تعداد")}
                 </label>
                 <div className="flex gap-2">
                   {QUANTITIES.map((q) => (
-                    <button
+                    <Button
                       key={q}
                       type="button"
+                      variant={quantity === q ? "default" : "outline"}
+                      size="sm"
+                      className="h-10 w-10"
                       onClick={() => onQuantityChange(q)}
-                      className={`h-10 w-10 rounded-lg border text-sm font-medium transition-all ${
-                        quantity === q
-                          ? "border-[var(--hisab-primary)] bg-[var(--hisab-primary)]/10 text-[var(--hisab-primary)]"
-                          : "border-[var(--hisab-border)] text-[var(--hisab-muted-fg)]"
-                      }`}
                     >
                       {q}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
@@ -374,32 +313,22 @@ export function QuickInvoicePage({
                 ref={inputRef}
                 type="number"
                 value={price}
-                onChange={(e) =>
-                  onPriceChange(e.target.value)
-                }
-                placeholder={t(
-                  "quickInvoice.pricePlaceholder",
-                  "مثلاً 500"
-                )}
+                onChange={(e) => onPriceChange(e.target.value)}
+                placeholder={t("quickInvoice.pricePlaceholder", "مثلاً 500")}
                 label={`${t("faktoor.unitPrice", "قیمت")} (AFN)`}
-                leftIcon={
-                  <DollarSign
-                    className="size-4"
-                    aria-hidden
-                  />
-                }
+                leftIcon={<DollarSign className="size-4" aria-hidden />}
               />
 
               {/* Total */}
               {price && (
-                <div className="rounded-2xl bg-[var(--hisab-primary)]/5 p-5 text-center">
-                  <p className="mb-2 text-sm text-[var(--hisab-muted-fg)]">
+                <div className="rounded-2xl bg-primary/5 p-5 text-center border border-border">
+                  <p className="mb-2 text-sm text-muted-foreground">
                     {t("common.total", "مبلغ کل")}
                   </p>
-                  <p className="text-4xl font-bold tabular-nums text-[var(--hisab-primary)]">
+                  <p className="text-4xl font-bold tabular-nums text-primary">
                     {total.toLocaleString()}
                   </p>
-                  <p className="mt-1 text-sm text-[var(--hisab-muted-fg)]">
+                  <p className="mt-1 text-sm text-muted-foreground">
                     {paymentType === "cash"
                       ? t("faktoor.paid", "پرداخت کامل")
                       : paidNow
@@ -419,20 +348,13 @@ export function QuickInvoicePage({
                   {t("action.back", "برگشت")}
                 </Button>
                 <Button
-                  className="w-full"
+                  className="w-full gap-2"
                   size="lg"
                   loading={isPending}
-                  disabled={
-                    !price || parseFloat(price) <= 0
-                  }
+                  disabled={!price || parseFloat(price) <= 0}
                   onClick={onCreate}
-                  icon={
-                    <ShoppingCart
-                      className="size-4"
-                      aria-hidden
-                    />
-                  }
                 >
+                  <ShoppingCart className="size-4" aria-hidden />
                   {t("action.submit", "ثبت فاکتور")}
                 </Button>
               </div>
@@ -442,19 +364,16 @@ export function QuickInvoicePage({
 
         {/* ── Step 4: Done ── */}
         {step === "done" && (
-          <Card className="glass-strong">
+          <Card className="glass-strong border-border bg-card/80 backdrop-blur-xl">
             <CardContent className="space-y-8 p-8 text-center">
               <div>
-                <div className="mx-auto mb-5 flex h-24 w-24 items-center justify-center rounded-full bg-[var(--hisab-success)]/10">
-                  <Check
-                    className="size-12 text-[var(--hisab-success)]"
-                    aria-hidden
-                  />
+                <div className="mx-auto mb-5 flex h-24 w-24 items-center justify-center rounded-full bg-success/10">
+                  <Check className="size-12 text-success" aria-hidden />
                 </div>
-                <h1 className="mb-3 text-3xl font-bold">
+                <h1 className="mb-3 text-3xl font-bold text-foreground">
                   {t("faktoor.created", "فاکتور ثبت شد")} 🎉
                 </h1>
-                <p className="text-[var(--hisab-muted-fg)]">
+                <p className="text-muted-foreground">
                   {t("dashboard.ready", "فاکتور شما در")}{" "}
                   <strong>{elapsedFormatted}</strong>{" "}
                   {t("dashboard.ready", "ثبت شد.")}
@@ -462,63 +381,57 @@ export function QuickInvoicePage({
               </div>
 
               {/* Summary */}
-              <div className="rounded-2xl border border-[var(--hisab-border)] bg-[var(--hisab-card)] p-5 text-start">
+              <div className="rounded-2xl border border-border bg-card p-5 text-start">
                 <div className="mb-3 flex justify-between">
-                  <span className="text-[var(--hisab-muted-fg)]">
+                  <span className="text-muted-foreground">
                     {t("faktoor.items", "محصول")}
                   </span>
-                  <span className="font-medium">
+                  <span className="font-medium text-foreground">
                     {productName}
                   </span>
                 </div>
                 <div className="mb-3 flex justify-between">
-                  <span className="text-[var(--hisab-muted-fg)]">
+                  <span className="text-muted-foreground">
                     {t("faktoor.quantity", "تعداد")}
                   </span>
-                  <span className="font-medium">
+                  <span className="font-medium text-foreground">
                     {quantity}
                   </span>
                 </div>
                 <div className="mb-3 flex justify-between">
-                  <span className="text-[var(--hisab-muted-fg)]">
+                  <span className="text-muted-foreground">
                     {t("common.status", "نوع")}
                   </span>
-                  <span className="font-medium">
+                  <span className="font-medium text-foreground">
                     {paymentType === "cash"
                       ? `💵 ${t("faktoor.cash", "نقد")}`
                       : `📝 ${t("faktoor.credit", "نسیه")}`}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[var(--hisab-muted-fg)]">
+                  <span className="text-muted-foreground">
                     {t("common.total", "مبلغ کل")}
                   </span>
-                  <span className="font-bold tabular-nums text-[var(--hisab-primary)]">
+                  <span className="font-bold tabular-nums text-primary">
                     {total.toLocaleString()} AFN
                   </span>
                 </div>
                 {paymentType === "credit" && (
                   <>
                     <div className="mt-2 flex justify-between">
-                      <span className="text-[var(--hisab-muted-fg)]">
+                      <span className="text-muted-foreground">
                         {t("faktoor.paid", "پرداخت شده")}
                       </span>
-                      <span className="font-bold tabular-nums text-[var(--hisab-success)]">
+                      <span className="font-bold tabular-nums text-success">
                         {paidAmount.toLocaleString()} AFN
                       </span>
                     </div>
                     <div className="mt-2 flex justify-between">
-                      <span className="text-[var(--hisab-muted-fg)]">
-                        {t(
-                          "faktoor.remaining",
-                          "باقی‌مانده"
-                        )}
+                      <span className="text-muted-foreground">
+                        {t("faktoor.remaining", "باقی‌مانده")}
                       </span>
-                      <span className="font-bold tabular-nums text-[var(--hisab-destructive)]">
-                        {(
-                          total - paidAmount
-                        ).toLocaleString()}{" "}
-                        AFN
+                      <span className="font-bold tabular-nums text-destructive">
+                        {(total - paidAmount).toLocaleString()} AFN
                       </span>
                     </div>
                   </>
@@ -529,16 +442,11 @@ export function QuickInvoicePage({
               <div className="flex flex-col gap-3">
                 {createdInvoiceId && (
                   <Button
-                    className="w-full"
+                    className="w-full gap-2"
                     size="lg"
                     onClick={onViewInvoice}
-                    icon={
-                      <ArrowRight
-                        className="size-5"
-                        aria-hidden
-                      />
-                    }
                   >
+                    <ArrowRight className="size-5" aria-hidden />
                     {t("action.view", "مشاهده فاکتور")}
                   </Button>
                 )}

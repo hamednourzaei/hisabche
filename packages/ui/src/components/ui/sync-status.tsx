@@ -3,6 +3,7 @@
 import React from "react"
 import { cn } from "../../lib/utils"
 import { Clock, Cloud } from "lucide-react"
+import { Badge } from "./badge"
 
 export interface SyncStatusProps {
   lastSyncedAt: number | null
@@ -13,9 +14,7 @@ export interface SyncStatusProps {
 }
 
 function timeAgo(timestamp: number): string {
-  const s = Math.floor(
-    (Date.now() - timestamp) / 1000
-  )
+  const s = Math.floor((Date.now() - timestamp) / 1000)
   if (s < 10) return "لحظاتی پیش"
   if (s < 60) return `${s} ثانیه پیش`
   const m = Math.floor(s / 60)
@@ -40,26 +39,31 @@ const SyncStatus: React.FC<SyncStatusProps> = ({
       aria-live="polite"
     >
       {isOnline ? (
-        <span className="sync-pill ok">● آنلاین</span>
+        <Badge variant="success" className="gap-1">
+          <span className="h-1.5 w-1.5 rounded-full bg-current" />
+          آنلاین
+        </Badge>
       ) : (
-        <span className="sync-pill off">
-          ● آفلاین
-        </span>
+        <Badge variant="warning" className="gap-1">
+          <span className="h-1.5 w-1.5 rounded-full bg-current" />
+          آفلاین
+        </Badge>
       )}
 
-      <div className="h-3 w-px bg-[var(--hisab-border)]" />
+      <div className="h-3 w-px bg-border" />
 
       {isSyncing ? (
-        <span className="sync-pill syncing">
-          ◉ همگام‌سازی...
-        </span>
+        <Badge variant="secondary" className="gap-1 animate-pulse">
+          <span className="h-1.5 w-1.5 rounded-full bg-current" />
+          همگام‌سازی...
+        </Badge>
       ) : lastSyncedAt ? (
-        <div className="flex items-center gap-1.5 text-[var(--hisab-muted-fg)]">
+        <div className="flex items-center gap-1.5 text-muted-foreground">
           <Clock className="size-3.5" aria-hidden />
           <span>{timeAgo(lastSyncedAt)}</span>
         </div>
       ) : (
-        <div className="flex items-center gap-1.5 text-[var(--hisab-muted-fg)]">
+        <div className="flex items-center gap-1.5 text-muted-foreground">
           <Cloud className="size-3.5" aria-hidden />
           <span>همگام‌سازی نشده</span>
         </div>
@@ -67,10 +71,11 @@ const SyncStatus: React.FC<SyncStatusProps> = ({
 
       {pendingCount > 0 && (
         <>
-          <div className="h-3 w-px bg-[var(--hisab-border)]" />
-          <span className="sync-pill off">
-            ● {pendingCount} در انتظار
-          </span>
+          <div className="h-3 w-px bg-border" />
+          <Badge variant="warning" className="gap-1">
+            <span className="h-1.5 w-1.5 rounded-full bg-current" />
+            {pendingCount} در انتظار
+          </Badge>
         </>
       )}
     </div>

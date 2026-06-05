@@ -1,15 +1,12 @@
 "use client"
 
-import {
-  Button,
-  Badge,
-  Card,
-  CardContent,
-  Input,
-  EmptyState,
-  StockStatsCard,
-  SaveIndicator,
-} from "@hisabche/ui"
+import { Button } from "../button"
+import { Badge } from "../badge"
+import { Card, CardContent } from "../card"
+import { Input } from "../input"
+import { EmptyState } from "../empty-state"
+import { StockStatsCard } from "../stock-stats-card"
+import { SaveIndicator } from "../save-indicator"
 import {
   Plus,
   Search,
@@ -93,19 +90,19 @@ export function GodamPage({
       {/* ── Header ── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1.5">
-          <h1 className="text-2xl font-bold sm:text-3xl">
-            {t("godam.title")}
+          <h1 className="text-2xl font-bold sm:text-3xl text-foreground">
+            {t("godam.title", "انبار")}
           </h1>
-          <p className="text-sm text-[var(--hisab-muted-fg)]">
+          <p className="text-sm text-muted-foreground">
             {t("godam.description", "مدیریت محصولات و موجودی انبار")}
           </p>
         </div>
         <Button
           onClick={onOpenAddModal}
-          icon={<Plus className="size-4" aria-hidden />}
-          className="shimmer-btn"
+          className="shimmer-btn gap-2"
         >
-          {t("godam.addProduct")}
+          <Plus className="size-4" aria-hidden />
+          {t("godam.addProduct", "افزودن محصول")}
         </Button>
       </div>
 
@@ -113,36 +110,36 @@ export function GodamPage({
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StockStatsCard
           value={total}
-          label={t("godam.totalProducts")}
+          label={t("godam.totalProducts", "کل محصولات")}
           icon={Package}
-          color="var(--hisab-primary)"
+          color="hsl(var(--primary))"
         />
         <StockStatsCard
           value={lowStock}
-          label={t("godam.lowStock")}
+          label={t("godam.lowStock", "موجودی کم")}
           icon={AlertTriangle}
-          color="var(--hisab-warning)"
+          color="hsl(var(--warning))"
         />
         <StockStatsCard
           value={outOfStock}
-          label={t("godam.outOfStock")}
+          label={t("godam.outOfStock", "ناموجود")}
           icon={AlertTriangle}
-          color="var(--hisab-destructive)"
+          color="hsl(var(--destructive))"
         />
         <StockStatsCard
           value={fmt(totalValue)}
           label={t("godam.totalValue", "ارزش کل (AFN)")}
           icon={DollarSign}
-          color="var(--hisab-success)"
+          color="hsl(var(--success))"
         />
       </div>
 
       {/* ── Currency chips ── */}
-      <div className="flex gap-2 text-xs text-[var(--hisab-muted-fg)]">
+      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
         {currencies.map((c) => (
           <span
             key={c.code}
-            className="rounded-lg bg-[var(--hisab-muted)] px-2 py-1"
+            className="rounded-lg bg-muted px-2 py-1"
           >
             {c.label}: {fmt(totalValue * c.rate)}
           </span>
@@ -150,13 +147,14 @@ export function GodamPage({
       </div>
 
       {/* ── Search ── */}
-      <Input
-        placeholder={`${t("action.search")}...`}
-        leftIcon={<Search className="size-4" aria-hidden />}
-        value={search}
-        onChange={(e) => onSearchChange(e.target.value)}
-        className="max-w-sm"
-      />
+      <div className="max-w-sm">
+        <Input
+          placeholder={`${t("action.search", "جستجو")}...`}
+          leftIcon={<Search className="size-4" aria-hidden />}
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+        />
+      </div>
 
       {/* ── Product list ── */}
       {isLoading ? (
@@ -174,7 +172,7 @@ export function GodamPage({
             "اولین محصول خود را اضافه کنید"
           )}
           action={{
-            label: t("godam.addProduct"),
+            label: t("godam.addProduct", "افزودن محصول"),
             onClick: onOpenAddModal,
           }}
         />
@@ -190,58 +188,58 @@ export function GodamPage({
                 onClick={() => onNavigate(product.id)}
                 className="cursor-pointer"
               >
-                <Card className="interactive-card">
+                <Card className="interactive-card border-border transition-all hover:border-primary/30">
                   <CardContent className="flex items-center justify-between p-5">
                     <div className="flex min-w-0 flex-1 items-center gap-4 text-start">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--hisab-muted)]">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-muted">
                         <Package
-                          className="size-5 text-[var(--hisab-muted-fg)]"
+                          className="size-5 text-muted-foreground"
                           aria-hidden
                         />
                       </div>
                       <div className="min-w-0">
-                        <p className="truncate font-semibold">
+                        <p className="truncate font-semibold text-foreground">
                           {product.name}
                         </p>
-                        <p className="text-xs text-[var(--hisab-muted-fg)]">
+                        <p className="text-xs text-muted-foreground">
                           {product.category} · {product.unit} ·{" "}
-                          {t("godam.buyPrice")}: {fmt(product.buyPrice)} AFN
+                          {t("godam.buyPrice", "قیمت خرید")}: {fmt(product.buyPrice)} AFN
                         </p>
                       </div>
                     </div>
                     <div className="ms-3 flex shrink-0 items-center gap-4">
                       <div className="text-end">
-                        <p className="font-bold tabular-nums">
+                        <p className="font-bold tabular-nums text-foreground">
                           {fmt(product.sellPrice)} AFN
                         </p>
-                        <Badge
-                          variant={stockStatus(qty, min)}
-                          size="sm"
-                        >
+                        <Badge variant={stockStatus(qty, min)}>
                           {stockLabel(qty, min)} ({qty})
                         </Badge>
                       </div>
-                      <button
-                        className="ghost-btn"
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={(e) => {
                           e.stopPropagation()
                           onNavigate(product.id)
                         }}
-                        aria-label={t("action.view")}
+                        aria-label={t("action.view", "مشاهده")}
                       >
                         <Eye className="size-4" aria-hidden />
-                      </button>
-                      <button
-                        className="ghost-btn ghost-danger"
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={(e) => {
                           e.stopPropagation()
                           onDelete(product)
                         }}
                         disabled={deletingId === product.id}
-                        aria-label={t("action.delete")}
+                        aria-label={t("action.delete", "حذف")}
+                        className="hover:bg-destructive/10 hover:text-destructive"
                       >
                         <Trash2 className="size-4" aria-hidden />
-                      </button>
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>

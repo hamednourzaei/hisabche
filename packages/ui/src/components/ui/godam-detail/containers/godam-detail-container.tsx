@@ -10,12 +10,30 @@ import {
 } from "@hisabche/api"
 import { ProductDetailPage } from "../godam-detail-page"
 
+type UnitType = "piece" | "kg" | "liter" | "meter" | "box"
+
+interface ProductEditValues {
+  name: string
+  sellPrice: number
+  buyPrice: number
+  quantity: number
+  minStockLevel: number
+  category: string
+  unit: UnitType
+}
+
 const num = (v: unknown): number => {
   const n = Number(v)
   return Number.isFinite(n) ? n : 0
 }
 
 const fmt = (v: unknown): string => num(v).toLocaleString("fa-AF")
+
+// Helper to convert string to valid UnitType
+const toUnitType = (unit: string): UnitType => {
+  const validUnits: UnitType[] = ["piece", "kg", "liter", "meter", "box"]
+  return validUnits.includes(unit as UnitType) ? (unit as UnitType) : "piece"
+}
 
 interface RawProduct {
   name?: string
@@ -52,7 +70,7 @@ export function ProductDetailContainer() {
   const [editQuantity, setQuantity] = useState("")
   const [editMinStock, setMinStock] = useState("")
   const [editCategory, setCategory] = useState("general")
-  const [editUnit, setUnit] = useState("piece")
+  const [editUnit, setUnit] = useState<UnitType>("piece")
 
   const getProduct = useCallback(
     (p: RawProduct) => ({
@@ -64,7 +82,7 @@ export function ProductDetailContainer() {
         p.min_stock_level ?? p.minStockLevel ?? 5
       ),
       category: p.category ?? "general",
-      unit: p.unit ?? "piece",
+      unit: toUnitType(p.unit ?? "piece"),
     }),
     []
   )
@@ -85,13 +103,13 @@ export function ProductDetailContainer() {
   const handleSave = useCallback(async () => {
     await updateProduct.mutateAsync({
       id: id!,
-    name: editName.trim(),
-    sellPrice: num(editSellPrice),
-    buyPrice: num(editBuyPrice),
-    quantity: Math.floor(num(editQuantity)),
-    minStockLevel: Math.floor(num(editMinStock)) || 5,
-    category: editCategory as "general" | "food" | "electronics" | "clothing" | "construction" | "medicine",
-    unit: editUnit as "piece" | "kg" | "meter" | "liter" | "box" | "pack",
+      name: editName.trim(),
+      sellPrice: num(editSellPrice),
+      buyPrice: num(editBuyPrice),
+      quantity: Math.floor(num(editQuantity)),
+      minStockLevel: Math.floor(num(editMinStock)) || 5,
+      category: editCategory as "general" | "food" | "electronics" | "clothing" | "construction" | "medicine",
+      unit: editUnit,
     })
     setEditing(false)
   }, [
@@ -144,10 +162,10 @@ export function ProductDetailContainer() {
   const stockLabel = useMemo(() => {
     if (!productData) return ""
     if (productData.quantity === 0)
-      return t("godam.outOfStock")
+      return t("godam.outOfStock", "ناموجود")
     if (productData.quantity <= productData.minStockLevel)
-      return t("godam.lowStock")
-    return t("godam.inStock")
+      return t("godam.lowStock", "موجودی کم")
+    return t("godam.inStock", "موجود")
   }, [productData, t])
 
   const profitPerUnit = productData
@@ -162,42 +180,17 @@ export function ProductDetailContainer() {
     ? productData.quantity * productData.sellPrice
     : 0
 
-  const editValues = useMemo(
-    () => ({
-      name: editName,
-      sellPrice: editSellPrice,
-      buyPrice: editBuyPrice,
-      quantity: editQuantity,
-      minStockLevel: editMinStock,
-      category: editCategory,
-      unit: editUnit,
-    }),
-    [
-      editName,
-      editSellPrice,
-      editBuyPrice,
-      editQuantity,
-      editMinStock,
-      editCategory,
-      editUnit,
-    ]
-  )
-
-  const handleEditValueChange = useCallback(
-    (field: string, value: string) => {
-      const setters: Record<string, (v: string) => void> = {
-        name: setName,
-        sellPrice: setSellPrice,
-        buyPrice: setBuyPrice,
-        quantity: setQuantity,
-        minStockLevel: setMinStock,
-        category: setCategory,
-        unit: setUnit,
-      }
-      setters[field]?.(value)
-    },
-    []
-  )
+  const onSave = useCallback((data: ProductEditValues) => {
+    // This will be called from ProductDetailPage with the edit values
+    setName(data.name)
+    setSellPrice(data.sellPrice.toString())
+    setBuyPrice(data.buyPrice.toString())
+    setQuantity(data.quantity.toString())
+    setMinStock(data.minStockLevel.toString())
+    setCategory(data.category)
+    setUnit(data.unit)
+    handleSave()
+  }, [handleSave])
 
   return (
     <ProductDetailPage
@@ -206,7 +199,6 @@ export function ProductDetailContainer() {
       isLoading={isLoading}
       product={productData}
       editing={editing}
-      editValues={editValues}
       updatePending={updateProduct.isPending}
       stockStatus={stockStatus}
       stockLabel={stockLabel}
@@ -216,9 +208,8 @@ export function ProductDetailContainer() {
       onBack={() => router.back()}
       onStartEditing={startEditing}
       onCancelEditing={() => setEditing(false)}
-      onSave={handleSave}
+      onSave={onSave}
       onDelete={handleDelete}
-      onEditValueChange={handleEditValueChange}
     />
   )
 }

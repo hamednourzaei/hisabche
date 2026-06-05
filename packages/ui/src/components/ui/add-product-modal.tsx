@@ -1,11 +1,41 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
 import { useTranslation } from "react-i18next"
-import { X, DollarSign, Package, AlertTriangle } from "lucide-react"
+import { DollarSign, Package, AlertTriangle } from "lucide-react"
 import { useCreateProduct } from "@hisabche/api"
-import { Button, Input, SaveIndicator } from "@hisabche/ui"
+import { Button } from "./button"
+import { Input } from "./input"
+import { Label } from "./label"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "./dialog"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./select"
+import { SaveIndicator } from "./save-indicator"
 import { useSyncStore, useBackupStore } from "@hisabche/store"
+
+// Product form validation schema
+const productSchema = z.object({
+  name: z.string().min(1, "product.nameRequired"),
+  quantity: z.number().min(0).default(0),
+  buyPrice: z.number().min(0).default(0),
+  sellPrice: z.number().min(0).default(0),
+  unit: z.enum(["piece", "kg", "liter", "meter", "box"]).default("piece"),
+  minStock: z.number().min(0).default(5),
+})
+
+type ProductFormValues = z.infer<typeof productSchema>
 
 interface AddProductModalProps {
   open: boolean
@@ -13,106 +43,191 @@ interface AddProductModalProps {
   onCreated?: () => void
 }
 
+const UNIT_OPTIONS = [
+  { value: "piece", labelKey: "godam.units.piece", fallback: "عدد" },
+  { value: "kg", labelKey: "godam.units.kg", fallback: "کیلوگرم" },
+  { value: "liter", labelKey: "godam.units.liter", fallback: "لیتر" },
+  { value: "meter", labelKey: "godam.units.meter", fallback: "متر" },
+  { value: "box", labelKey: "godam.units.box", fallback: "کارتن" },
+] as const
+
 export function AddProductModal({ open, onClose, onCreated }: AddProductModalProps) {
   const { t } = useTranslation()
   const createProduct = useCreateProduct()
   const { setSaveStatus } = useSyncStore()
   const { addAuditEntry } = useBackupStore()
 
-  const [name, setName] = useState("")
-  const [quantity, setQuantity] = useState("0")
-  const [buyPrice, setBuyPrice] = useState("")
-  const [sellPrice, setSellPrice] = useState("")
-  const [unit, setUnit] = useState("piece")
-  const [minStock, setMinStock] = useState("5")
-  const [showSaved, setShowSaved] = useState(false)
+  const form = useForm({
+    resolver: zodResolver(productSchema),
+    defaultValues: {
+      name: "",
+      quantity: 0,
+      buyPrice: 0,
+      sellPrice: 0,
+      unit: "piece" as const,
+      minStock: 5,
+    },
+  })
 
-  const reset = useCallback(() => {
-    setName("")
-    setQuantity("0")
-    setBuyPrice("")
-    setSellPrice("")
-    setUnit("piece")
-    setMinStock("5")
-  }, [])
+  const { register, handleSubmit, reset, setValue, formState: { isSubmitting, errors } } = form
 
-  const handleSubmit = useCallback(async () => {
-    if (!name.trim()) return
-
+  const onSubmit = async (data: ProductFormValues) => {
     setSaveStatus("saving")
 
-    const product = await createProduct.mutateAsync({
-      name: name.trim(),
-      quantity: parseInt(quantity) || 0,
-      buyPrice: parseFloat(buyPrice) || 0,
-      sellPrice: parseFloat(sellPrice) || 0,
-      unit: unit as "piece" | "kg" | "liter" | "meter" | "box",
-      minStockLevel: parseInt(minStock) || 5,
-      category: "general",
-      isActive: true,
-    })
+    try {
+      const product = await createProduct.mutateAsync({
+        name: data.name.trim(),
+        quantity: data.quantity,
+        buyPrice: data.buyPrice,
+        sellPrice: data.sellPrice,
+        unit: data.unit,
+        minStockLevel: data.minStock,
+        category: "general",
+        isActive: true,
+      })
 
-    addAuditEntry({
-      action: "create",
-      entity: "product",
-      entityId: product.id || "",
-      details: `محصول جدید: ${name.trim()}`,
-    })
+      addAuditEntry({
+        action: "create",
+        entity: "product",
+        entityId: product.id || "",
+        details: `محصول جدید: ${data.name.trim()}`,
+      })
 
-    setSaveStatus("saved")
-    setShowSaved(true)
-    setTimeout(() => {
+      setSaveStatus("saved")
+      setTimeout(() => setSaveStatus("idle"), 2000)
+
+      reset()
+      onCreated?.()
+      onClose()
+    } catch (error) {
       setSaveStatus("idle")
-      setShowSaved(false)
-    }, 2000)
+      console.error("Failed to create product:", error)
+    }
+  }
 
-    onCreated?.()
+  const handleClose = () => {
     reset()
     onClose()
-  }, [name, quantity, buyPrice, sellPrice, unit, minStock, createProduct, onClose, reset, setSaveStatus, addAuditEntry, onCreated])
+  }
 
-  if (!open) return null
+  const getErrorMessage = (error: any) => {
+    if (error?.message) return t(error.message)
+    if (error?.type === "min") return t("validation.min", "مقدار وارد شده معتبر نیست")
+    return undefined
+  }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm" onClick={onClose}>
-      <SaveIndicator show={showSaved} message={t("common.saved", "ذخیره شد ✅")} />
+    <Dialog open={open} onOpenChange={(open) => !open && handleClose()}>
+      <DialogContent className="max-w-md">
+        <SaveIndicator show={isSubmitting} message={t("common.saving", "در حال ذخیره...")} />
 
-      <div className="glass-strong mx-4 w-full max-w-md space-y-4 p-6" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold">{t("godam.addProductModal", "محصول جدید")}</h3>
-          <button onClick={onClose} className="ghost-btn" aria-label={t("action.close")}>
-            <X className="size-5" />
-          </button>
-        </div>
+        <DialogHeader>
+          <DialogTitle>{t("godam.addProductModal", "محصول جدید")}</DialogTitle>
+        </DialogHeader>
 
-        <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("godam.productName") + " *"} label={t("godam.productName")} leftIcon={<Package className="size-4" />} autoFocus />
-
-        <div className="grid grid-cols-2 gap-3">
-          <Input type="number" value={quantity} onChange={(e) => setQuantity(e.target.value)} placeholder={t("godam.initialStock", "موجودی اولیه")} label={t("godam.quantity")} />
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <label className="mb-2 block text-sm font-medium">{t("godam.unit")}</label>
-            <select value={unit} onChange={(e) => setUnit(e.target.value)} className="w-full rounded-xl border border-[var(--hisab-border)] bg-[var(--hisab-card)] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--hisab-primary)]/20">
-              <option value="piece">{t("godam.units.piece", "عدد")}</option>
-              <option value="kg">{t("godam.units.kg", "کیلوگرم")}</option>
-              <option value="liter">{t("godam.units.liter", "لیتر")}</option>
-              <option value="meter">{t("godam.units.meter", "متر")}</option>
-              <option value="box">{t("godam.units.box", "کارتن")}</option>
-            </select>
+            <Input
+              {...register("name")}
+              placeholder={`${t("godam.productName")} *`}
+              leftIcon={<Package className="size-4" />}
+              autoFocus
+            />
+            {errors.name && (
+              <p className="mt-1 text-sm text-destructive">
+                {t(errors.name.message as string || "نام محصول الزامی است")}
+              </p>
+            )}
           </div>
-        </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Input type="number" value={buyPrice} onChange={(e) => setBuyPrice(e.target.value)} placeholder={t("godam.buyPrice", "قیمت خرید (AFN)")} label={t("godam.buyPrice")} leftIcon={<DollarSign className="size-4" />} />
-          <Input type="number" value={sellPrice} onChange={(e) => setSellPrice(e.target.value)} placeholder={t("godam.sellPrice", "قیمت فروش (AFN)")} label={t("godam.sellPrice")} leftIcon={<DollarSign className="size-4" />} />
-        </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Input
+                {...register("quantity", { valueAsNumber: true })}
+                type="number"
+                placeholder={t("godam.initialStock", "موجودی اولیه")}
+              />
+              {errors.quantity && (
+                <p className="mt-1 text-sm text-destructive">
+                  {getErrorMessage(errors.quantity)}
+                </p>
+              )}
+            </div>
+            <div>
+              <Label className="mb-2 block">{t("godam.unit")}</Label>
+              <Select
+                defaultValue="piece"
+                onValueChange={(val) => setValue("unit", val as any)}
+              >
+                <SelectTrigger className="w-full rounded-xl">
+                  <SelectValue placeholder={t("godam.unit")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {UNIT_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {t(opt.labelKey, opt.fallback)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
-        <Input type="number" value={minStock} onChange={(e) => setMinStock(e.target.value)} placeholder={t("godam.minStock", "حداقل موجودی هشدار")} label={t("godam.minStock")} leftIcon={<AlertTriangle className="size-4" />} />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Input
+                {...register("buyPrice", { valueAsNumber: true })}
+                type="number"
+                step="0.01"
+                placeholder={t("godam.buyPrice", "قیمت خرید (AFN)")}
+                leftIcon={<DollarSign className="size-4" />}
+              />
+              {errors.buyPrice && (
+                <p className="mt-1 text-sm text-destructive">
+                  {getErrorMessage(errors.buyPrice)}
+                </p>
+              )}
+            </div>
+            <div>
+              <Input
+                {...register("sellPrice", { valueAsNumber: true })}
+                type="number"
+                step="0.01"
+                placeholder={t("godam.sellPrice", "قیمت فروش (AFN)")}
+                leftIcon={<DollarSign className="size-4" />}
+              />
+              {errors.sellPrice && (
+                <p className="mt-1 text-sm text-destructive">
+                  {getErrorMessage(errors.sellPrice)}
+                </p>
+              )}
+            </div>
+          </div>
 
-        <div className="flex gap-3 pt-2">
-          <Button variant="outline" className="w-full" onClick={onClose}>{t("action.cancel")}</Button>
-          <Button className="w-full" onClick={handleSubmit} loading={createProduct.isPending} disabled={!name.trim()}>{t("action.save")}</Button>
-        </div>
-      </div>
-    </div>
+          <div>
+            <Input
+              {...register("minStock", { valueAsNumber: true })}
+              type="number"
+              placeholder={t("godam.minStock", "حداقل موجودی هشدار")}
+              leftIcon={<AlertTriangle className="size-4" />}
+            />
+            {errors.minStock && (
+              <p className="mt-1 text-sm text-destructive">
+                {getErrorMessage(errors.minStock)}
+              </p>
+            )}
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <Button type="button" variant="outline" className="w-full" onClick={handleClose}>
+              {t("action.cancel")}
+            </Button>
+            <Button type="submit" className="w-full" loading={isSubmitting || createProduct.isPending}>
+              {t("action.save")}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   )
 }

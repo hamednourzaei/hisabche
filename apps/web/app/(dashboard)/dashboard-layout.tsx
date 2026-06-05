@@ -27,13 +27,7 @@ function usePrefetchRoutes() {
   }, [router])
 }
 
-function LoadingScreen() {
-  return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--hisab-primary)] border-t-transparent" />
-    </div>
-  )
-}
+// ❌ LoadingScreen حذف شد (استفاده نمی‌شود)
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { t, i18n } = useTranslation()
@@ -112,9 +106,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     router.push("/login")
   }, [router])
 
-if (hasHydrated && !isAuthenticated) {
-  return null
-}
+  if (hasHydrated && !isAuthenticated) {
+    return null
+  }
+
   return (
     <div className="hisab-root flex min-h-screen">
       <CommandPalette commands={commands} />

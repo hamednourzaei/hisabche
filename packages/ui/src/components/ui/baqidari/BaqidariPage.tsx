@@ -3,7 +3,11 @@
 import { useState, useMemo } from "react"
 import { useTranslation } from "react-i18next"
 import { useCustomers, useInvoices } from "@hisabche/api"
-import { Button, Badge, Card, CardContent, Input, EmptyState } from "@hisabche/ui"
+import { Button } from "../button"
+import { Badge } from "../badge"
+import { Card, CardContent } from "../card"
+import { Input } from "../input"
+import { EmptyState } from "../empty-state"
 import {
   Search,
   User,
@@ -121,76 +125,84 @@ export function BaqidariPage() {
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1.5">
-          <h1 className="text-2xl font-bold sm:text-3xl">{t("baqidari.title")}</h1>
-          <p className="text-sm text-[var(--hisab-muted-fg)]">
-            {t("baqidari.subtitle")}
+          <h1 className="text-2xl font-bold sm:text-3xl text-foreground">
+            {t("baqidari.title", "باقیداری")}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {t("baqidari.subtitle", "مدیریت بدهی‌ها و پرداخت‌ها")}
           </p>
         </div>
         <div className="flex gap-2">
           <Button
             onClick={() => {}}
-            icon={<ShoppingCart className="size-4" aria-hidden />}
+            className="gap-2"
           >
-            {t("baqidari.creditInvoice")}
+            <ShoppingCart className="size-4" aria-hidden />
+            {t("baqidari.creditInvoice", "فاکتور نسیه")}
           </Button>
           <Button
             onClick={() => setShowAddCustomer(true)}
-            icon={<Plus className="size-4" aria-hidden />}
-            className="shimmer-btn"
+            className="shimmer-btn gap-2"
           >
-            {t("baqidari.addCustomer")}
+            <Plus className="size-4" aria-hidden />
+            {t("baqidari.addCustomer", "افزودن مشتری")}
           </Button>
         </div>
       </div>
 
-      <Input
-        placeholder={t("baqidari.searchPlaceholder")}
-        leftIcon={<Search className="size-4" aria-hidden />}
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="max-w-sm"
-      />
+      <div className="max-w-sm">
+        <Input
+          placeholder={t("baqidari.searchPlaceholder", "جستجوی مشتری...")}
+          leftIcon={<Search className="size-4" aria-hidden />}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Card className="glass-card bg-gradient-to-br from-rose-500/10 to-rose-500/[0.02]">
+        <Card className="glass-card bg-gradient-to-br from-rose-500/10 to-rose-500/[0.02] border-border">
           <CardContent className="flex items-center gap-3 p-4">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/10">
               <TrendingUp className="size-5 text-rose-500" aria-hidden />
             </div>
             <div>
-              <p className="text-xl font-bold tabular-nums">{debtorCount}</p>
-              <p className="text-xs text-[var(--hisab-muted-fg)]">
-                {t("baqidari.debtorCount")}
+              <p className="text-xl font-bold tabular-nums text-foreground">
+                {debtorCount}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {t("baqidari.debtorCount", "تعداد بدهکاران")}
               </p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="glass-card bg-gradient-to-br from-rose-500/10 to-rose-500/[0.02]">
+        <Card className="glass-card bg-gradient-to-br from-rose-500/10 to-rose-500/[0.02] border-border">
           <CardContent className="flex items-center gap-3 p-4">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/10">
               <DollarSign className="size-5 text-rose-500" aria-hidden />
             </div>
             <div>
-              <p className="text-xl font-bold tabular-nums">
+              <p className="text-xl font-bold tabular-nums text-foreground">
                 {fmt(totalDebt)}
               </p>
-              <p className="text-xs text-[var(--hisab-muted-fg)]">
-                {t("baqidari.totalDebt")} (AFN)
+              <p className="text-xs text-muted-foreground">
+                {t("baqidari.totalDebt", "مجموع بدهی")} (AFN)
               </p>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="glass-card bg-gradient-to-br from-amber-500/10 to-amber-500/[0.02]">
+        <Card className="glass-card bg-gradient-to-br from-amber-500/10 to-amber-500/[0.02] border-border">
           <CardContent className="flex items-center gap-3 p-4">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10">
               <TrendingDown className="size-5 text-amber-500" aria-hidden />
             </div>
             <div>
-              <p className="text-xl font-bold tabular-nums">{openDealsCount}</p>
-              <p className="text-xs text-[var(--hisab-muted-fg)]">
-                {t("baqidari.openDeals")}
+              <p className="text-xl font-bold tabular-nums text-foreground">
+                {openDealsCount}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {t("baqidari.openDeals", "معاملات باز")}
               </p>
             </div>
           </CardContent>
@@ -200,8 +212,8 @@ export function BaqidariPage() {
       {customersWithDebt.length === 0 ? (
         <EmptyState
           icon="users"
-          title={t("baqidari.empty.title")}
-          description={t("baqidari.empty.subtitle")}
+          title={t("baqidari.empty.title", "هیچ مشتری‌ای یافت نشد")}
+          description={t("baqidari.empty.subtitle", "با افزودن مشتری جدید شروع کنید")}
         />
       ) : (
         <div className="space-y-3">
@@ -210,16 +222,14 @@ export function BaqidariPage() {
             return (
               <Card
                 key={customer.id}
-                className="interactive-card cursor-pointer"
+                className="interactive-card cursor-pointer border-border hover:border-primary/30 transition-all"
                 onClick={() => setSelectedCustomerId(customer.id)}
               >
                 <CardContent className="flex items-center justify-between p-5">
                   <div className="flex min-w-0 flex-1 items-center gap-3 text-start">
                     <div
                       className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
-                        hasDebt
-                          ? "bg-rose-500/10"
-                          : "bg-emerald-500/10"
+                        hasDebt ? "bg-rose-500/10" : "bg-emerald-500/10"
                       }`}
                     >
                       <User
@@ -230,21 +240,18 @@ export function BaqidariPage() {
                       />
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold">
+                      <p className="truncate text-sm font-semibold text-foreground">
                         {customer.fullName || customer.name}
                       </p>
                       <div className="mt-0.5 flex items-center gap-2">
-                        <Badge
-                          variant={hasDebt ? "destructive" : "success"}
-                          size="sm"
-                        >
+                        <Badge variant={hasDebt ? "destructive" : "success"}>
                           {hasDebt
-                            ? t("baqidari.debtor")
-                            : t("baqidari.settled")}
+                            ? t("baqidari.debtor", "بدهکار")
+                            : t("baqidari.settled", "تسویه")}
                         </Badge>
                         {(customer.openCount ?? 0) > 0 && (
-                          <span className="text-xs text-[var(--hisab-muted-fg)]">
-                            {customer.openCount} {t("baqidari.openDeals")}
+                          <span className="text-xs text-muted-foreground">
+                            {customer.openCount} {t("baqidari.openDeals", "معامله باز")}
                           </span>
                         )}
                       </div>
@@ -260,7 +267,7 @@ export function BaqidariPage() {
                     )}
                     <Button
                       variant="ghost"
-                      size="icon-sm"
+                      size="icon"
                       onClick={(e) => {
                         e.stopPropagation()
                         setPaymentCustomer(customer)
@@ -270,10 +277,7 @@ export function BaqidariPage() {
                         defaultValue: `ثبت پرداخت برای ${customer.fullName || customer.name}`,
                       })}
                     >
-                      <DollarSign
-                        className="size-4 text-emerald-500"
-                        aria-hidden
-                      />
+                      <DollarSign className="size-4 text-emerald-500" aria-hidden />
                     </Button>
                   </div>
                 </CardContent>

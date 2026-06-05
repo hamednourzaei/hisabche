@@ -1,28 +1,21 @@
 "use client"
 
-import {
-  useEffect,
-  useId,
-  useRef,
-  type ReactNode,
-} from "react"
-import { createPortal } from "react-dom"
+import * as React from "react"
+import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { X } from "lucide-react"
+import { cn } from "../../lib/utils"
 
 const SIZES = {
   sm: "max-w-sm",
   md: "max-w-md",
 } as const
 
-const FOCUSABLE =
-  'a[href],button:not([disabled]),textarea,input,select,[tabindex]:not([tabindex="-1"])'
-
 interface ModalProps {
   open: boolean
   onClose: () => void
   title: string
   size?: keyof typeof SIZES
-  children: ReactNode
+  children: React.ReactNode
 }
 
 export function Modal({
@@ -32,105 +25,55 @@ export function Modal({
   size = "md",
   children,
 }: ModalProps) {
-  const panelRef = useRef<HTMLDivElement>(null)
-  const restoreRef = useRef<HTMLElement | null>(null)
-  const titleId = useId()
+  const titleId = React.useId()
 
-  useEffect(() => {
-    if (!open) return
-
-    // Save current focus
-    restoreRef.current =
-      document.activeElement as HTMLElement | null
-
-    // Keyboard handlers
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault()
-        onClose()
-      } else if (e.key === "Tab") {
-        trapFocus(e, panelRef.current)
-      }
-    }
-
-    document.addEventListener("keydown", onKey)
-    const prevOverflow = document.body.style.overflow
-    document.body.style.overflow = "hidden"
-
-    // Focus first focusable element
-    queueMicrotask(() =>
-      panelRef.current
-        ?.querySelector<HTMLElement>(FOCUSABLE)
-        ?.focus()
-    )
-
-    return () => {
-      document.removeEventListener("keydown", onKey)
-      document.body.style.overflow = prevOverflow
-      restoreRef.current?.focus?.()
-    }
-  }, [open, onClose])
-
-  if (!open || typeof document === "undefined") return null
-
-  return createPortal(
-    <div
-      role="presentation"
-      onClick={onClose}
-      className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4"
-      style={{
-        background:
-          "hsl(var(--hisab-foreground) / .4)",
-        backdropFilter: "blur(4px)",
-      }}
-    >
-      <div
-        ref={panelRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        onClick={(e) => e.stopPropagation()}
-        className={`glass-strong animate-fade-in-up w-full ${SIZES[size]} max-h-[90vh] space-y-4 overflow-y-auto p-6`}
-      >
-        <div className="flex items-center justify-between">
-          <h3 id={titleId} className="text-lg font-bold">
-            {title}
-          </h3>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="بستن"
-            className="ghost-btn"
-          >
-            <X className="size-4" aria-hidden />
-          </button>
-        </div>
-        {children}
-      </div>
-    </div>,
-    document.body
+  return (
+    <DialogPrimitive.Root open={open} onOpenChange={(open) => !open && onClose()}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay
+          className={cn(
+            "fixed inset-0 z-50 bg-black/50 backdrop-blur-sm",
+            "data-[state=open]:animate-in data-[state=closed]:animate-out",
+            "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+          )}
+        />
+        <DialogPrimitive.Content
+          aria-labelledby={titleId}
+          className={cn(
+            "fixed left-[50%] top-[50%] z-50 grid w-full translate-x-[-50%] translate-y-[-50%] gap-4",
+            "rounded-xl border border-[var(--hisab-border)] bg-[var(--hisab-background)] p-6 shadow-lg",
+            "duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out",
+            "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+            "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+            "data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%]",
+            "data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]",
+            SIZES[size],
+            "max-h-[90vh] overflow-y-auto"
+          )}
+          onInteractOutside={onClose}
+          onEscapeKeyDown={onClose}
+        >
+          <div className="flex items-center justify-between">
+            <h3 id={titleId} className="text-lg font-bold text-[var(--hisab-foreground)]">
+              {title}
+            </h3>
+            <DialogPrimitive.Close asChild>
+              <button
+                type="button"
+                aria-label="بستن"
+                className={cn(
+                  "rounded-full p-1 text-[var(--hisab-muted-fg)]",
+                  "hover:bg-[var(--hisab-muted)] hover:text-[var(--hisab-foreground)]",
+                  "transition-colors"
+                )}
+              >
+                <X className="size-4" aria-hidden />
+              </button>
+            </DialogPrimitive.Close>
+          </div>
+          {children}
+        </DialogPrimitive.Content>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
   )
-}
-
-function trapFocus(
-  e: KeyboardEvent,
-  container: HTMLElement | null
-) {
-  if (!container) return
-  const items = [
-    ...container.querySelectorAll<HTMLElement>(FOCUSABLE),
-  ]
-  if (items.length === 0) return
-  const first = items[0]!
-  const last = items[items.length - 1]!
-  if (e.shiftKey && document.activeElement === first) {
-    e.preventDefault()
-    last.focus()
-  } else if (
-    !e.shiftKey &&
-    document.activeElement === last
-  ) {
-    e.preventDefault()
-    first.focus()
-  }
 }

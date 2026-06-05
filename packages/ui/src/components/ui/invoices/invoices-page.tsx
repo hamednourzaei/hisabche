@@ -1,6 +1,10 @@
 "use client"
 
-import { Button, Badge, Card, CardContent, EmptyState, Input } from "@hisabche/ui"
+import { Button } from "../button"
+import { Badge } from "../badge"
+import { Card, CardContent } from "../card"
+import { EmptyState } from "../empty-state"
+import { Input } from "../input"
 import { Plus, Search, Trash2, Eye, FileText } from "lucide-react"
 
 interface Invoice {
@@ -48,32 +52,33 @@ export function InvoicesPage({
       {/* ── Header ── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1.5">
-          <h1 className="text-2xl font-bold sm:text-3xl">
-            {t("faktoor.title")}
+          <h1 className="text-2xl font-bold sm:text-3xl text-foreground">
+            {t("faktoor.title", "فاکتورها")}
           </h1>
-          <p className="text-sm text-[var(--hisab-muted-fg)]">
+          <p className="text-sm text-muted-foreground">
             {t("faktoor.description", "مدیریت و مشاهده فاکتورها")}
           </p>
         </div>
         <Button
           onClick={onNewInvoice}
-          icon={<Plus className="size-4" aria-hidden />}
-          className="shimmer-btn"
+          className="shimmer-btn gap-2"
         >
-          {t("faktoor.newFaktoor")}
+          <Plus className="size-4" aria-hidden />
+          {t("faktoor.newFaktoor", "فاکتور جدید")}
         </Button>
       </div>
 
       {/* ── Search + Clear ── */}
       <div className="flex flex-col gap-3 sm:flex-row">
-        <Input
-          placeholder={t("action.search")}
-          leftIcon={<Search className="size-4" aria-hidden />}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="max-w-sm"
-        />
+        <div className="max-w-sm">
+          <Input
+            placeholder={t("action.search", "جستجو")}
+            leftIcon={<Search className="size-4" aria-hidden />}
+            onChange={(e) => onSearchChange(e.target.value)}
+          />
+        </div>
         <Button variant="outline" size="sm" onClick={onClearFilters}>
-          {t("action.clear")}
+          {t("action.clear", "پاک کردن")}
         </Button>
       </div>
 
@@ -87,13 +92,13 @@ export function InvoicesPage({
       ) : invoices.length === 0 ? (
         <EmptyState
           icon="invoice"
-          title={t("faktoor.noFaktoors")}
+          title={t("faktoor.noFaktoors", "هیچ فاکتوری یافت نشد")}
           description={t(
             "faktoor.noFaktoorsDesc",
             "هنوز هیچ فاکتوری ثبت نشده است."
           )}
           action={{
-            label: t("faktoor.newFaktoor"),
+            label: t("faktoor.newFaktoor", "فاکتور جدید"),
             onClick: onNewInvoice,
           }}
         />
@@ -105,65 +110,63 @@ export function InvoicesPage({
               onClick={() => onNavigateInvoice(inv.id)}
               className="cursor-pointer"
             >
-              <Card className="interactive-card h-full">
+              <Card className="interactive-card h-full border-border transition-all hover:border-primary/30">
                 <CardContent className="space-y-4 p-5">
                   <div className="flex items-start justify-between">
                     <div className="flex items-start gap-3 text-start">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--hisab-primary)]/10">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10">
                         <FileText
-                          className="size-5 text-[var(--hisab-primary)]"
+                          className="size-5 text-primary"
                           aria-hidden
                         />
                       </div>
                       <div className="min-w-0">
-                        <p className="truncate font-semibold">
+                        <p className="truncate font-semibold text-foreground">
                           #{inv.invoiceNumber}
                         </p>
-                        <p className="text-xs text-[var(--hisab-muted-fg)]">
+                        <p className="text-xs text-muted-foreground">
                           {inv.date}
                         </p>
                       </div>
                     </div>
-                    <Badge
-                      variant={statusVariant(inv.status)}
-                      size="sm"
-                    >
-                      {t(`faktoor.${inv.status}`)}
+                    <Badge variant={statusVariant(inv.status)}>
+                      {t(`faktoor.${inv.status}`, inv.status)}
                     </Badge>
                   </div>
 
                   <div>
-                    <p className="text-xs text-[var(--hisab-muted-fg)]">
-                      {t("faktoor.total")}
+                    <p className="text-xs text-muted-foreground">
+                      {t("faktoor.total", "مجموع")}
                     </p>
-                    <p className="text-2xl font-bold tabular-nums">
+                    <p className="text-2xl font-bold tabular-nums text-foreground">
                       {inv.total.toLocaleString()} {inv.currency}
                     </p>
                   </div>
 
                   <div className="flex items-center justify-end gap-2">
-                    <button
-                      type="button"
-                      className="ghost-btn"
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={(e) => {
                         e.stopPropagation()
                         onNavigateInvoice(inv.id)
                       }}
-                      aria-label={t("action.view")}
+                      aria-label={t("action.view", "مشاهده")}
                     >
                       <Eye className="size-4" aria-hidden />
-                    </button>
-                    <button
-                      type="button"
-                      className="ghost-btn ghost-danger"
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={(e) => {
                         e.stopPropagation()
                         onDeleteInvoice(inv.id)
                       }}
-                      aria-label={t("action.delete")}
+                      aria-label={t("action.delete", "حذف")}
+                      className="hover:bg-destructive/10 hover:text-destructive"
                     >
                       <Trash2 className="size-4" aria-hidden />
-                    </button>
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -181,9 +184,9 @@ export function InvoicesPage({
             disabled={filters.page === 1}
             onClick={() => onPageChange(filters.page - 1)}
           >
-            {t("action.previous")}
+            {t("action.previous", "قبلی")}
           </Button>
-          <span className="text-sm tabular-nums text-[var(--hisab-muted-fg)]">
+          <span className="text-sm tabular-nums text-muted-foreground">
             {filters.page} / {Math.ceil(total / 10)}
           </span>
           <Button
@@ -192,7 +195,7 @@ export function InvoicesPage({
             disabled={filters.page * 10 >= total}
             onClick={() => onPageChange(filters.page + 1)}
           >
-            {t("action.next")}
+            {t("action.next", "بعدی")}
           </Button>
         </div>
       )}

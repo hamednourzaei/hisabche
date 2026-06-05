@@ -1,6 +1,8 @@
 "use client"
 
-import { Button, Badge, Card, CardContent } from "@hisabche/ui"
+import { Button } from "../button"
+import { Badge } from "../badge"
+import { Card, CardContent } from "../card"
 import {
   ArrowRight,
   Printer,
@@ -72,7 +74,7 @@ export function InvoiceDetailPage({
   if (isLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 className="size-8 animate-spin text-[var(--hisab-primary)]" />
+        <Loader2 className="size-8 animate-spin text-primary" />
       </div>
     )
   }
@@ -80,11 +82,13 @@ export function InvoiceDetailPage({
   if (!invoice) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
-        <FileText className="size-16 text-[var(--hisab-muted-fg)]" />
-        <p className="text-lg text-[var(--hisab-muted-fg)]">
-          {t("faktoor.notFound")}
+        <FileText className="size-16 text-muted-foreground" aria-hidden />
+        <p className="text-lg text-muted-foreground">
+          {t("faktoor.notFound", "فاکتور پیدا نشد")}
         </p>
-        <Button onClick={onBack}>{t("action.back")}</Button>
+        <Button onClick={onBack}>
+          {t("action.back", "بازگشت")}
+        </Button>
       </div>
     )
   }
@@ -111,67 +115,61 @@ export function InvoiceDetailPage({
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
-            size="icon-sm"
+            size="icon"
             onClick={onBack}
-            aria-label={t("common.back")}
+            aria-label={t("common.back", "بازگشت")}
           >
             <ArrowRight className="size-5" aria-hidden />
           </Button>
-          <h1 className="text-2xl font-bold">
-            {t("faktoor.detail")} #{invoiceNumber}
+          <h1 className="text-2xl font-bold text-foreground">
+            {t("faktoor.detail", "جزئیات فاکتور")} #{invoiceNumber}
           </h1>
-          <Badge variant={statusVariant(status)} size="sm">
-            {t(`faktoor.${status}`)}
+          <Badge variant={statusVariant(status)}>
+            {t(`faktoor.${status}`, status)}
           </Badge>
         </div>
 
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={onWhatsApp}>
+          <Button variant="outline" size="sm" onClick={onWhatsApp} className="gap-1.5">
             <MessageCircle className="size-4" aria-hidden />
-            <span className="hidden sm:inline ms-1.5">WhatsApp</span>
+            <span className="hidden sm:inline">WhatsApp</span>
           </Button>
-          <Button variant="outline" size="sm" onClick={onTelegram}>
+          <Button variant="outline" size="sm" onClick={onTelegram} className="gap-1.5">
             <Send className="size-4" aria-hidden />
-            <span className="hidden sm:inline ms-1.5">Telegram</span>
+            <span className="hidden sm:inline">Telegram</span>
           </Button>
-          <Button variant="outline" size="sm" onClick={onEmail}>
+          <Button variant="outline" size="sm" onClick={onEmail} className="gap-1.5">
             <Mail className="size-4" aria-hidden />
-            <span className="hidden sm:inline ms-1.5">
-              {t("action.email")}
-            </span>
+            <span className="hidden sm:inline">{t("action.email", "ایمیل")}</span>
           </Button>
-          <Button variant="outline" size="sm" onClick={onSharePDF}>
+          <Button variant="outline" size="sm" onClick={onSharePDF} className="gap-1.5">
             <Share2 className="size-4" aria-hidden />
-            <span className="hidden sm:inline ms-1.5">
-              {t("action.share")}
-            </span>
+            <span className="hidden sm:inline">{t("action.share", "اشتراک")}</span>
           </Button>
-          <Button variant="outline" size="sm" onClick={onPrint}>
+          <Button variant="outline" size="sm" onClick={onPrint} className="gap-1.5">
             <Printer className="size-4" aria-hidden />
-            <span className="hidden sm:inline ms-1.5">
-              {t("action.print")}
-            </span>
+            <span className="hidden sm:inline">{t("action.print", "چاپ")}</span>
           </Button>
           <InvoicePDFDownload invoice={invoice} />
         </div>
       </div>
 
       {/* ── Invoice Paper ── */}
-      <Card className="glass-card">
+      <Card className="glass-card border-border">
         <CardContent className="p-6 sm:p-8">
           {/* Brand + Invoice Info */}
           <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
-              <h2 className="text-3xl font-bold text-[var(--hisab-primary)]">
+              <h2 className="text-3xl font-bold text-primary">
                 Hisabche
               </h2>
-              <p className="mt-1 text-sm text-[var(--hisab-muted-fg)]">
+              <p className="mt-1 text-sm text-muted-foreground">
                 hisabche.com
               </p>
             </div>
             <div className="text-end">
-              <p className="text-2xl font-bold">#{invoiceNumber}</p>
-              <div className="mt-2 space-y-1 text-sm text-[var(--hisab-muted-fg)]">
+              <p className="text-2xl font-bold text-foreground">#{invoiceNumber}</p>
+              <div className="mt-2 space-y-1 text-sm text-muted-foreground">
                 <div className="flex items-center justify-end gap-2">
                   <Calendar className="size-3.5" aria-hidden />
                   {new Date(date).toLocaleDateString("fa-AF")}
@@ -190,21 +188,21 @@ export function InvoiceDetailPage({
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-[var(--hisab-border)]">
-                  <th className="px-2 py-3 text-start font-medium text-[var(--hisab-muted-fg)]">
+                <tr className="border-b border-border">
+                  <th className="px-2 py-3 text-start font-medium text-muted-foreground">
                     #
                   </th>
-                  <th className="px-2 py-3 text-start font-medium text-[var(--hisab-muted-fg)]">
-                    {t("godam.productName")}
+                  <th className="px-2 py-3 text-start font-medium text-muted-foreground">
+                    {t("godam.productName", "نام محصول")}
                   </th>
-                  <th className="px-2 py-3 text-center font-medium text-[var(--hisab-muted-fg)]">
-                    {t("faktoor.quantity")}
+                  <th className="px-2 py-3 text-center font-medium text-muted-foreground">
+                    {t("faktoor.quantity", "تعداد")}
                   </th>
-                  <th className="px-2 py-3 text-end font-medium text-[var(--hisab-muted-fg)]">
-                    {t("faktoor.unitPrice")}
+                  <th className="px-2 py-3 text-end font-medium text-muted-foreground">
+                    {t("faktoor.unitPrice", "قیمت واحد")}
                   </th>
-                  <th className="px-2 py-3 text-end font-medium text-[var(--hisab-muted-fg)]">
-                    {t("faktoor.totalPrice")}
+                  <th className="px-2 py-3 text-end font-medium text-muted-foreground">
+                    {t("faktoor.totalPrice", "قیمت کل")}
                   </th>
                 </tr>
               </thead>
@@ -212,99 +210,79 @@ export function InvoiceDetailPage({
                 {items.map((item, i) => (
                   <tr
                     key={item.id || i}
-                    className="border-b border-[var(--hisab-border)]"
+                    className="border-b border-border"
                   >
-                    <td className="px-2 py-3 text-[var(--hisab-muted-fg)]">
+                    <td className="px-2 py-3 text-muted-foreground">
                       {i + 1}
                     </td>
-                    <td className="px-2 py-3 font-medium">
+                    <td className="px-2 py-3 font-medium text-foreground">
                       {item.productName ?? item.product_name}
                     </td>
-                    <td className="px-2 py-3 text-center">
+                    <td className="px-2 py-3 text-center text-foreground">
                       {item.quantity}
                     </td>
-                    <td className="px-2 py-3 text-end tabular-nums">
-                      {(item.unitPrice ?? item.unit_price)?.toLocaleString()}{" "}
-                      {currency}
+                    <td className="px-2 py-3 text-end tabular-nums text-foreground">
+                      {(item.unitPrice ?? item.unit_price)?.toLocaleString()} {currency}
                     </td>
-                    <td className="px-2 py-3 text-end font-medium tabular-nums">
-                      {(item.totalPrice ?? item.total_price)?.toLocaleString()}{" "}
-                      {currency}
+                    <td className="px-2 py-3 text-end font-medium tabular-nums text-foreground">
+                      {(item.totalPrice ?? item.total_price)?.toLocaleString()} {currency}
                     </td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr>
-                  <td
-                    colSpan={4}
-                    className="px-2 py-3 text-end font-medium"
-                  >
-                    {t("faktoor.subtotal")}
+                  <td colSpan={4} className="px-2 py-3 text-end font-medium text-foreground">
+                    {t("faktoor.subtotal", "جمع")}
                   </td>
-                  <td className="px-2 py-3 text-end font-medium tabular-nums">
+                  <td className="px-2 py-3 text-end font-medium tabular-nums text-foreground">
                     {subtotal.toLocaleString()} {currency}
                   </td>
                 </tr>
                 {discountTotal > 0 && (
                   <tr>
-                    <td
-                      colSpan={4}
-                      className="px-2 py-2 text-end text-[var(--hisab-muted-fg)]"
-                    >
-                      {t("faktoor.discount")}
+                    <td colSpan={4} className="px-2 py-2 text-end text-muted-foreground">
+                      {t("faktoor.discount", "تخفیف")}
                     </td>
-                    <td className="px-2 py-2 text-end text-[var(--hisab-destructive)] tabular-nums">
+                    <td className="px-2 py-2 text-end text-destructive tabular-nums">
                       -{discountTotal.toLocaleString()} {currency}
                     </td>
                   </tr>
                 )}
                 {taxTotal > 0 && (
                   <tr>
-                    <td
-                      colSpan={4}
-                      className="px-2 py-2 text-end text-[var(--hisab-muted-fg)]"
-                    >
-                      {t("faktoor.tax")}
+                    <td colSpan={4} className="px-2 py-2 text-end text-muted-foreground">
+                      {t("faktoor.tax", "مالیات")}
                     </td>
-                    <td className="px-2 py-2 text-end tabular-nums">
+                    <td className="px-2 py-2 text-end tabular-nums text-foreground">
                       {taxTotal.toLocaleString()} {currency}
                     </td>
                   </tr>
                 )}
-                <tr className="border-t-2 border-[var(--hisab-border)]">
-                  <td
-                    colSpan={4}
-                    className="px-2 py-3 text-end text-lg font-bold"
-                  >
-                    {t("faktoor.total")}
+                <tr className="border-t-2 border-border">
+                  <td colSpan={4} className="px-2 py-3 text-end text-lg font-bold text-foreground">
+                    {t("faktoor.total", "مجموع")}
                   </td>
-                  <td className="px-2 py-3 text-end text-lg font-bold text-[var(--hisab-primary)] tabular-nums">
+                  <td className="px-2 py-3 text-end text-lg font-bold text-primary tabular-nums">
                     {total.toLocaleString()} {currency}
                   </td>
                 </tr>
                 {paidAmount > 0 && (
                   <tr>
-                    <td
-                      colSpan={4}
-                      className="px-2 py-2 text-end text-[var(--hisab-muted-fg)]"
-                    >
-                      {t("faktoor.paid")}
+                    <td colSpan={4} className="px-2 py-2 text-end text-muted-foreground">
+                      {t("faktoor.paid", "پرداخت شده")}
                     </td>
-                    <td className="px-2 py-2 text-end text-[var(--hisab-success)] tabular-nums">
+                    <td className="px-2 py-2 text-end text-success tabular-nums">
                       -{paidAmount.toLocaleString()} {currency}
                     </td>
                   </tr>
                 )}
                 {total - paidAmount > 0 && (
                   <tr>
-                    <td
-                      colSpan={4}
-                      className="px-2 py-2 text-end font-medium text-[var(--hisab-destructive)]"
-                    >
-                      {t("faktoor.remaining")}
+                    <td colSpan={4} className="px-2 py-2 text-end font-medium text-destructive">
+                      {t("faktoor.remaining", "باقیمانده")}
                     </td>
-                    <td className="px-2 py-2 text-end font-medium text-[var(--hisab-destructive)] tabular-nums">
+                    <td className="px-2 py-2 text-end font-medium text-destructive tabular-nums">
                       {(total - paidAmount).toLocaleString()} {currency}
                     </td>
                   </tr>
@@ -314,9 +292,9 @@ export function InvoiceDetailPage({
           </div>
 
           {/* Footer */}
-          <div className="mt-8 border-t border-[var(--hisab-border)] pt-4 text-center text-sm text-[var(--hisab-muted-fg)]">
+          <div className="mt-8 border-t border-border pt-4 text-center text-sm text-muted-foreground">
             <p>
-              {t("faktoor.generatedBy")} Hisabche — hisabche.com
+              {t("faktoor.generatedBy", "ایجاد شده توسط")} Hisabche — hisabche.com
             </p>
             <p className="mt-1">
               {new Date(createdAt).toLocaleDateString("fa-AF")}{" "}
