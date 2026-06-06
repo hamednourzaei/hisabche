@@ -74,7 +74,12 @@ export { BaqidariContainer as BaqidariPage } from './components/ui/baqidari/cont
 export { GodamView } from './components/ui/godam/godam-view'
 export { GodamSkeleton } from './components/ui/godam/godam-skeleton'
 export { ProductDetailPage } from './components/ui/godam-detail'
-export { InvoicesPage } from './components/ui/invoices'
+// اضافه کن به index.ts
+
+// Invoices
+export { InvoicesContainer } from './components/ui/invoices/containers/invoices-container'
+export { InvoicesView } from './components/ui/invoices/invoices-view'
+export { InvoicesSkeleton } from './components/ui/invoices/invoices-skeleton'
 export { InvoiceDetailPage } from './components/ui/invoice-detail/invoice-detail-page'
 export { SettingsPage } from './components/ui/settings'
 export { QuickInvoicePage } from './components/ui/quick-invoice'
@@ -87,7 +92,6 @@ export { CustomerDetailView } from './components/ui/baqidari'
 export { DashboardContainer } from './components/ui/dashboard/containers/dashboard-container'
 export { GodamContainer } from './components/ui/godam/containers/godam-container'
 export { ProductDetailContainer } from './components/ui/godam-detail/containers/godam-detail-container'
-export { InvoicesContainer } from './components/ui/invoices/containers/invoices-container'
 export { InvoiceDetailContainer } from './components/ui/invoice-detail/containers/invoice-detail-container'
 export { QuickInvoiceContainer } from './components/ui/quick-invoice/containers/quick-invoice-container'
 export { SyncCenterContainer } from './components/ui/sync-center/containers/sync-center-container'

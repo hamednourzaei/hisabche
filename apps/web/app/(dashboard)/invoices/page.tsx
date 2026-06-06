@@ -1,4 +1,5 @@
-import { InvoicesContainer } from "@hisabche/ui"
+import { InvoicesContainer, InvoicesSkeleton } from "@hisabche/ui"
+import { Suspense } from "react"
 
 export const metadata = {
   title: "فاکتورها | حسابچه",
@@ -6,10 +7,12 @@ export const metadata = {
   robots: { index: false, follow: false },
 }
 
-export default function Page() {
+export default function InvoicesPage() {
   return (
     <main className="section">
-      <InvoicesContainer />
+      <Suspense fallback={<InvoicesSkeleton />}>
+        <InvoicesContainer />
+      </Suspense>
     </main>
   )
 }
