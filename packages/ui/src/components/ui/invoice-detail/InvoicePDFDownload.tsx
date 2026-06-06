@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react"
 import { FileDown, Loader2 } from "lucide-react"
 import { Button } from "@hisabche/ui"
+import { useAuthStore } from "@hisabche/store"
 
 interface Invoice {
   id?: string
@@ -10,15 +11,14 @@ interface Invoice {
 
 interface Props {
   invoice: Invoice
-  token?: string
 }
 
-export default function InvoicePDFDownload({
-  invoice,
-  token,
-}: Props) {
+export default function InvoicePDFDownload({ invoice }: Props) {
   const invoiceId = invoice?.id ?? ""
   const [loading, setLoading] = useState(false)
+  
+  // فرض می‌کنیم توکن در store ذخیره شده
+  const token = useAuthStore((state) => (state as any).token)
 
   const handleDownload = useCallback(async () => {
     if (!invoiceId || loading) return
@@ -31,11 +31,7 @@ export default function InvoicePDFDownload({
         {
           method: "GET",
           headers: {
-            ...(token
-              ? {
-                  Authorization: `Bearer ${token}`,
-                }
-              : {}),
+            ...(token && { 'Authorization': `Bearer ${token}` }),
           },
           credentials: "include",
         },
@@ -46,7 +42,6 @@ export default function InvoicePDFDownload({
       }
 
       const blob = await response.blob()
-
       const blobUrl = window.URL.createObjectURL(blob)
 
       const link = document.createElement("a")
@@ -60,8 +55,7 @@ export default function InvoicePDFDownload({
       window.URL.revokeObjectURL(blobUrl)
     } catch (error) {
       console.error("PDF download failed", error)
-
-      alert("خطا در دانلود PDF")
+      alert("خطا در دانلود PDF. لطفاً دوباره وارد شوید.")
     } finally {
       setLoading(false)
     }
@@ -76,17 +70,10 @@ export default function InvoicePDFDownload({
       aria-label="دانلود PDF"
     >
       {loading ? (
-        <Loader2
-          className="size-4 animate-spin"
-          aria-hidden
-        />
+        <Loader2 className="size-4 animate-spin" aria-hidden />
       ) : (
-        <FileDown
-          className="size-4"
-          aria-hidden
-        />
+        <FileDown className="size-4" aria-hidden />
       )}
-
       <span className="hidden sm:inline ms-1.5">
         {loading ? "در حال دانلود..." : "PDF"}
       </span>
