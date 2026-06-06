@@ -4,7 +4,8 @@
 
 import { useCallback, useRef, useState } from "react"
 import { FileDown, Loader2 } from "lucide-react"
-import { Button } from "@hisabche/ui"
+import { Button } from "@/components/ui/button"
+import { useAuthStore } from "@hisabche/store"
 
 interface Invoice {
   id?: string
@@ -18,28 +19,52 @@ export default function InvoicePDFDownload({ invoice }: Props) {
   const invoiceId = invoice?.id ?? ""
   const [loading, setLoading] = useState(false)
   const iframeRef = useRef<HTMLIFrameElement | null>(null)
+  
+  // گرفتن user از store (برای توکن باید از جای دیگر بیایی)
+  const { user, isAuthenticated } = useAuthStore()
 
-  const handleDownload = useCallback(() => {
-    if (!invoiceId || loading) return
+  const handleDownload = useCallback(async () => {
+    if (!invoiceId || loading || !isAuthenticated) return
 
     setLoading(true)
 
-    const url = `https://hisabche.onrender.com/api/invoices/${invoiceId}/pdf`
+    try {
+      const url = `https://hisabche.onrender.com/api/invoices/${invoiceId}/pdf`
+      
+      // درخواست بدون توکن (اگر بک‌اند عمومی است)
+      // یا اگر نیاز به توکن داری، باید از supabase client استفاده کنی
+      const response = await fetch(url)
 
-    const iframe = document.createElement("iframe")
-    iframe.style.display = "none"
-    iframe.src = url
-    document.body.appendChild(iframe)
-    iframeRef.current = iframe
-
-    setTimeout(() => {
-      if (iframeRef.current) {
-        document.body.removeChild(iframeRef.current)
-        iframeRef.current = null
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`)
       }
+
+      const blob = await response.blob()
+      const blobUrl = URL.createObjectURL(blob)
+      
+      window.open(blobUrl, '_blank')
+      
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
+    } catch (error) {
+      console.error("PDF download failed:", error)
+    } finally {
       setLoading(false)
-    }, 2000)
-  }, [invoiceId, loading])
+    }
+  }, [invoiceId, loading, isAuthenticated])
+
+  if (!isAuthenticated) {
+    return (
+      <Button
+        variant="outline"
+        size="sm"
+        disabled
+        aria-label="PDF (نیاز به ورود)"
+      >
+        <FileDown className="size-4" aria-hidden />
+        <span className="hidden sm:inline ms-1.5">PDF</span>
+      </Button>
+    )
+  }
 
   return (
     <Button
