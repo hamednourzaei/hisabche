@@ -7,7 +7,6 @@ import { changeLanguage, type SupportedLanguage } from "@hisabche/i18n"
 import {
   DashboardHeader,
   LivingBackground,
-  Section,
   AnimatedCounter,
 } from "@hisabche/ui"
 import { useCallback } from "react"
@@ -15,7 +14,7 @@ import dynamic from "next/dynamic"
 
 const CinematicHero = dynamic(
   () => import("./cinematic-hero"),
-  { ssr: true, loading: () => <SectionSkeleton /> }
+  { ssr: true, loading: () => <SectionSkeleton tall /> }
 )
 
 const PainScene = dynamic(() => import("./pain-scene"), {
@@ -48,9 +47,13 @@ const CTAScene = dynamic(() => import("./cta-scene"), {
   loading: () => <SectionSkeleton />,
 })
 
-function SectionSkeleton() {
+function SectionSkeleton({ tall }: { tall?: boolean }) {
   return (
-    <div className="mx-4 my-6 h-[280px] animate-pulse rounded-xl bg-[var(--hisab-card)]/20" />
+    <div
+      className={`mx-4 my-6 animate-pulse rounded-xl bg-[var(--hisab-card)]/20 ${
+        tall ? "min-h-screen" : "h-[280px]"
+      }`}
+    />
   )
 }
 
@@ -74,10 +77,7 @@ export function LandingPage() {
     changeLanguage(nextLang as SupportedLanguage)
   }, [])
 
-  const navigateLogin = useCallback(
-    () => router.push("/login"),
-    [router]
-  )
+  const navigateLogin = useCallback(() => router.push("/login"), [router])
 
   const currentLang =
     typeof document !== "undefined"
@@ -103,15 +103,19 @@ export function LandingPage() {
       <main className="relative overflow-x-hidden">
         <CinematicHero onNavigateLogin={navigateLogin} />
 
-        <Section bordered>
-  <div className="grid grid-cols-3 gap-6 text-center">
-    {stats.map((s) => (
-      <div key={s.label} className="flex flex-col items-center gap-1 min-h-[5rem] justify-center">
-        <AnimatedCounter end={s.end} label={s.label} />
-      </div>
-    ))}
-  </div>
-</Section>
+        {/*
+          CLS fix: section با min-h ثابت — قبل از mount هم جا داره
+          grid-rows-1 + min-h روی هر cell جلوی shift رو میگیره
+        */}
+        <section className="section px-4 py-14 sm:py-18 border-y border-[var(--hisab-border)] bg-[var(--hisab-muted)]/5">
+          <div className="mx-auto max-w-5xl">
+            <div className="grid grid-cols-3 gap-6" style={{ minHeight: "140px" }}>
+              {stats.map((s) => (
+                <AnimatedCounter key={s.label} end={s.end} label={s.label} />
+              ))}
+            </div>
+          </div>
+        </section>
 
         <PainScene />
         <TransformScene />

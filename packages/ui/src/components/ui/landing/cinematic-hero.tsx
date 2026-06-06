@@ -46,12 +46,16 @@ export default function CinematicHero({ onNavigateLogin }: CinematicHeroProps) {
   const shouldAnimate = !reduceMotion && !isMobile
 
   const ctaMotionProps = shouldAnimate
-    ? { initial: { opacity: 0, y: 20 }, animate: { opacity: 1, y: 0 }, transition: { delay: 0.6 } }
+    ? {
+        initial: { opacity: 0, y: 20 },
+        animate: { opacity: 1, y: 0 },
+        transition: { delay: 0.6 },
+      }
     : {}
 
   return (
     <section className="relative flex min-h-screen items-center justify-center overflow-hidden">
-      {/* ✅ animation روی overlay — نه روی h1 */}
+      {/* animation روی overlay — h1 بلاک نمیشه */}
       {shouldAnimate && (
         <motion.div
           style={{ scale: zoom, opacity: fade }}
@@ -69,7 +73,7 @@ export default function CinematicHero({ onNavigateLogin }: CinematicHeroProps) {
           CINEMATIC PRODUCT EXPERIENCE
         </p>
 
-        {/* ✅ h1 مستقیم رندر — LCP element بلاک نیست */}
+        {/* h1 مستقیم رندر میشه — LCP element بلاک نیست */}
         <h1 className="text-5xl font-bold leading-tight text-[var(--hisab-foreground)] md:text-7xl">
           حسابداری‌ای که
           <br />
