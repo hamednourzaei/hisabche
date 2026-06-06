@@ -1,11 +1,8 @@
-// apps/web/app/(dashboard)/invoices/[id]/InvoicePDFDownload.tsx
-
 "use client"
 
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useState } from "react"
 import { FileDown, Loader2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { useAuthStore } from "@hisabche/store"
+import { Button } from "@hisabche/ui"
 
 interface Invoice {
   id?: string
@@ -13,58 +10,62 @@ interface Invoice {
 
 interface Props {
   invoice: Invoice
+  token?: string
 }
 
-export default function InvoicePDFDownload({ invoice }: Props) {
+export default function InvoicePDFDownload({
+  invoice,
+  token,
+}: Props) {
   const invoiceId = invoice?.id ?? ""
   const [loading, setLoading] = useState(false)
-  const iframeRef = useRef<HTMLIFrameElement | null>(null)
-  
-  // گرفتن user از store (برای توکن باید از جای دیگر بیایی)
-  const { user, isAuthenticated } = useAuthStore()
 
   const handleDownload = useCallback(async () => {
-    if (!invoiceId || loading || !isAuthenticated) return
-
-    setLoading(true)
+    if (!invoiceId || loading) return
 
     try {
-      const url = `https://hisabche.onrender.com/api/invoices/${invoiceId}/pdf`
-      
-      // درخواست بدون توکن (اگر بک‌اند عمومی است)
-      // یا اگر نیاز به توکن داری، باید از supabase client استفاده کنی
-      const response = await fetch(url)
+      setLoading(true)
+
+      const response = await fetch(
+        `https://hisabche.onrender.com/api/invoices/${invoiceId}/pdf`,
+        {
+          method: "GET",
+          headers: {
+            ...(token
+              ? {
+                  Authorization: `Bearer ${token}`,
+                }
+              : {}),
+          },
+          credentials: "include",
+        },
+      )
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`)
+        throw new Error(`Download failed: ${response.status}`)
       }
 
       const blob = await response.blob()
-      const blobUrl = URL.createObjectURL(blob)
-      
-      window.open(blobUrl, '_blank')
-      
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
+
+      const blobUrl = window.URL.createObjectURL(blob)
+
+      const link = document.createElement("a")
+      link.href = blobUrl
+      link.download = `invoice-${invoiceId}.pdf`
+
+      document.body.appendChild(link)
+      link.click()
+
+      link.remove()
+      window.URL.revokeObjectURL(blobUrl)
     } catch (error) {
-      console.error("PDF download failed:", error)
+      console.error("PDF download failed", error)
+
+      alert("خطا در دانلود PDF")
     } finally {
       setLoading(false)
     }
-  }, [invoiceId, loading, isAuthenticated])
-
-  if (!isAuthenticated) {
-    return (
-      <Button
-        variant="outline"
-        size="sm"
-        disabled
-        aria-label="PDF (نیاز به ورود)"
-      >
-        <FileDown className="size-4" aria-hidden />
-        <span className="hidden sm:inline ms-1.5">PDF</span>
-      </Button>
-    )
-  }
+  }, [invoiceId, loading, token])
 
   return (
     <Button
@@ -75,12 +76,19 @@ export default function InvoicePDFDownload({ invoice }: Props) {
       aria-label="دانلود PDF"
     >
       {loading ? (
-        <Loader2 className="size-4 animate-spin" aria-hidden />
+        <Loader2
+          className="size-4 animate-spin"
+          aria-hidden
+        />
       ) : (
-        <FileDown className="size-4" aria-hidden />
+        <FileDown
+          className="size-4"
+          aria-hidden
+        />
       )}
+
       <span className="hidden sm:inline ms-1.5">
-        {loading ? "..." : "PDF"}
+        {loading ? "در حال دانلود..." : "PDF"}
       </span>
     </Button>
   )
