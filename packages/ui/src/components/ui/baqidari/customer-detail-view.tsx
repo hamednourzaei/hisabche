@@ -65,14 +65,22 @@ export function CustomerDetailView({
     )
   }
 
+  // تبدیل customer به فرمت مورد انتظار PaymentModal
+  const paymentCustomer = {
+    id: customer.id,
+    fullName: customer.name,
+    name: customer.name,
+    phone: customer.phone || "", // تبدیل undefined به string خالی
+  }
+
   return (
     <div className="space-y-6">
       <PaymentModal
         open={payOpen}
         onClose={onClosePayment}
         onPaid={onPaymentSuccess}
+        customer={paymentCustomer}
         openInvoices={openInvoices as any}
-        customer={customer as any}
       />
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

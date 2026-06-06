@@ -8,7 +8,6 @@ import { useTranslation } from "react-i18next"
 import { useCreateCustomer, useCreateInvoice } from "@hisabche/api"
 import { Button } from "../button"
 import { Input } from "../input"
-import { Label } from "../label"
 import {
   Dialog,
   DialogContent,
@@ -149,7 +148,7 @@ export function AddCustomerModal({ open, onClose, onCreated }: AddCustomerModalP
     handleSubmit(onSubmit)()
   }
 
- return (
+  return (
     <Dialog open={open} onOpenChange={(open) => !open && close()}>
       <DialogContent className="max-w-md">
         <SaveIndicator show={showSaved} message={t("common.saved", "ذخیره شد ✅")} />

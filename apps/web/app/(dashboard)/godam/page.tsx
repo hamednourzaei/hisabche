@@ -1,4 +1,5 @@
-import { GodamClient } from "./godam-client"
+import { GodamContainer, GodamSkeleton } from "@hisabche/ui"
+import { Suspense } from "react"
 
 export const metadata = {
   title: "گدام | حسابچه",
@@ -6,10 +7,12 @@ export const metadata = {
   robots: { index: false, follow: false },
 }
 
-export default function Page() {
+export default function GodamPage() {
   return (
     <main className="section">
-      <GodamClient />
+      <Suspense fallback={<GodamSkeleton />}>
+        <GodamContainer />
+      </Suspense>
     </main>
   )
 }

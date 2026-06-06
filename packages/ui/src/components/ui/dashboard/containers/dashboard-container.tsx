@@ -3,9 +3,9 @@
 
 import { useRouter } from "next/navigation"
 import { useTranslation } from "react-i18next"
-import { useDashboard } from "../../../../hooks/use-dashboard"
+import { useDashboard } from "../../../../hooks/dashboard/use-dashboard"
 import { DashboardView } from "../dashboard-view"
-import { fmt } from "../../../../lib/dashboard-format"
+import { fmt } from "../../../../lib/dashboard/dashboard-format"
 
 export function DashboardContainer() {
   const { t } = useTranslation()

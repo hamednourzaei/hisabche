@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { useCustomers, useInvoices } from "@hisabche/api"
-import { CustomerDetailView } from "../CustomerDetailView"
+import { CustomerDetailView } from "../customer-detail-view"
 
 const fmt = (v: number): string => v.toLocaleString("fa-AF")
 

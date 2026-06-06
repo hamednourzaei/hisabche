@@ -4,8 +4,8 @@
 import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 import { useInvoices, useProducts } from "@hisabche/api"
-import { mapRecentInvoices } from "../lib/dashboard-mappers"
-import type { InvoicesResponse } from "../lib/dashboard-types"
+import { mapRecentInvoices } from "../../lib/dashboard/dashboard-mappers"
+import type { InvoicesResponse } from "../../lib/dashboard/dashboard-types"
 
 export function useDashboard() {
   const { t } = useTranslation()

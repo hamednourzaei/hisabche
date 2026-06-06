@@ -66,13 +66,17 @@ export { PaymentModal } from './components/ui/baqidari'
 export { InviteModal } from './components/ui/invite-modal'
 
 // ---------- Pages (Pure UI) ----------
-export { BaqidariPage } from './components/ui/baqidari'
-export { GodamPage } from './components/ui/godam'
+export { BaqidariView, BaqidariSkeleton } from './components/ui/baqidari'
+export { BaqidariContainer as BaqidariPage } from './components/ui/baqidari/containers/baqidari-container'
+// اضافه کن به index.ts
+
+// Godam
+export { GodamView } from './components/ui/godam/godam-view'
+export { GodamSkeleton } from './components/ui/godam/godam-skeleton'
 export { ProductDetailPage } from './components/ui/godam-detail'
 export { InvoicesPage } from './components/ui/invoices'
 export { InvoiceDetailPage } from './components/ui/invoice-detail/invoice-detail-page'
 export { SettingsPage } from './components/ui/settings'
-export { DashboardPage } from './components/ui/dashboard/dashboard-page'
 export { QuickInvoicePage } from './components/ui/quick-invoice'
 export { SyncCenterPage } from './components/ui/sync-center'
 export { WorkspacePage } from './components/ui/workspace'
@@ -94,5 +98,5 @@ export { OnboardingContainer } from './components/ui/onboarding/containers/onboa
 export { DashboardView } from './components/ui/dashboard/dashboard-view'
 export { StatCard } from './components/ui/dashboard/dashboard-stats'
 export { DashboardInvoices } from './components/ui/dashboard/dashboard-invoices'
-export { useDashboard } from './hooks/use-dashboard'
+export { useDashboard } from './hooks/dashboard/use-dashboard'
 export type SupportedLanguage = 'fa-AF' | 'fa-IR'
