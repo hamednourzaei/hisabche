@@ -1,9 +1,11 @@
+// apps/web/app/(dashboard)/invoices/[id]/InvoicePDFDownload.tsx
+
 "use client"
 
 import { useCallback, useState } from "react"
 import { FileDown, Loader2 } from "lucide-react"
 import { Button } from "@hisabche/ui"
-import { useAuthStore } from "@hisabche/store"
+import { apiClient } from "@hisabche/api"
 
 interface Invoice {
   id?: string
@@ -16,9 +18,6 @@ interface Props {
 export default function InvoicePDFDownload({ invoice }: Props) {
   const invoiceId = invoice?.id ?? ""
   const [loading, setLoading] = useState(false)
-  
-  // فرض می‌کنیم توکن در store ذخیره شده
-  const token = useAuthStore((state) => (state as any).token)
 
   const handleDownload = useCallback(async () => {
     if (!invoiceId || loading) return
@@ -26,22 +25,12 @@ export default function InvoicePDFDownload({ invoice }: Props) {
     try {
       setLoading(true)
 
-      const response = await fetch(
-        `https://hisabche.onrender.com/api/invoices/${invoiceId}/pdf`,
-        {
-          method: "GET",
-          headers: {
-            ...(token && { 'Authorization': `Bearer ${token}` }),
-          },
-          credentials: "include",
-        },
-      )
+      // استفاده از apiClient که خودکار توکن را اضافه می‌کند
+      const response = await apiClient.get(`/invoices/${invoiceId}/pdf`, {
+        responseType: 'blob',
+      })
 
-      if (!response.ok) {
-        throw new Error(`Download failed: ${response.status}`)
-      }
-
-      const blob = await response.blob()
+      const blob = new Blob([response.data], { type: 'application/pdf' })
       const blobUrl = window.URL.createObjectURL(blob)
 
       const link = document.createElement("a")
@@ -59,7 +48,7 @@ export default function InvoicePDFDownload({ invoice }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [invoiceId, loading, token])
+  }, [invoiceId, loading])
 
   return (
     <Button
