@@ -64,29 +64,24 @@ function useEasedCounter(end: number, inView: boolean) {
 }
 
 // ═══ Components ═══
-export function AnimatedCounter({
-  end,
-  label,
-}: {
-  end: number
-  label: string
-}) {
+// بعد — SSR مقدار نهایی رو نشون میده، animation فقط visual
+export function AnimatedCounter({ end, label }: { end: number; label: string }) {
   const { ref, inView } = useInView()
   const count = useEasedCounter(end, inView)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => { setMounted(true) }, [])
+
+  // SSR و قبل از mount: مقدار نهایی نشون بده — بدون shift
+  const display = mounted ? count : end
 
   return (
     <Card ref={ref} className="glass-card min-h-[96px]">
-      <CardContent
-        className="p-4 text-center"
-        role="status"
-        aria-label={`${label}: ${count.toLocaleString("fa-AF")}+`}
-      >
+      <CardContent className="p-4 text-center" role="status" aria-label={`${label}: ${display.toLocaleString("fa-AF")}+`}>
         <div className="flex h-[36px] items-center justify-center text-2xl font-bold sm:h-[40px] sm:text-3xl">
-          {count.toLocaleString("fa-AF")}+
+          {display.toLocaleString("fa-AF")}+
         </div>
-        <div className="mt-1 text-xs text-[var(--hisab-muted-fg)]">
-          {label}
-        </div>
+        <div className="mt-1 text-xs text-[var(--hisab-muted-fg)]">{label}</div>
       </CardContent>
     </Card>
   )

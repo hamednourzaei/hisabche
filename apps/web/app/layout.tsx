@@ -57,8 +57,7 @@ export default function RootLayout({
       className={cn("font-sans", vazirmatn.variable)}
     >
       <head>
-  <link rel="preconnect" href={process.env.NEXT_PUBLIC_API_URL} />
-  <link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_API_URL} />
+
 </head>
       <body className="min-h-screen bg-[var(--hisab-background)] text-[var(--hisab-foreground)] antialiased">
         <ClientErrorBoundary>
