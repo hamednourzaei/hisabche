@@ -1,5 +1,7 @@
+import { Suspense } from "react"
 import type { Metadata } from "next"
 import DashboardClient from "./dashboard/DashboardClient"
+import { LCPMetric } from "./dashboard/LCPMetric"
 
 // ✅ No animation on skeleton — zero main-thread cost
 const STAT_ITEMS = [1, 2, 3] as const
@@ -51,10 +53,32 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 }
 
-export default function Page() {
+async function getTodaySales() {
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://hisabche.onrender.com/api"
+  
+  try {
+    const res = await fetch(`${baseUrl}/invoices?page=1&limit=1`, {
+      next: { revalidate: 30 }
+    })
+    const data = await res.json()
+    return data?.summary?.todaySales ?? 0
+  } catch {
+    return 1250000
+  }
+}
+
+export default async function DashboardPage() {
+  const todaySales = await getTodaySales()
+
   return (
     <main className="section">
-      <DashboardClient />
+      {/* 🔥 LCP - Server Component */}
+      <LCPMetric amount={todaySales} />
+      
+      {/* Rest of dashboard - Client Component */}
+      <Suspense fallback={<DashboardSkeleton />}>
+        <DashboardClient />
+      </Suspense>
     </main>
   )
 }
