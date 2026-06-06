@@ -34,7 +34,8 @@ export function DashboardContainer() {
     page: 1, limit: 100, sortDirection: "desc", lowStock: true,
   })
 
-  // فقط totalDebt و lowStockCount از summary می‌آیند (todaySales حذف شد)
+  // ✅ KPI from backend summary — zero client filter/reduce
+  const todaySales = (invoicesData as any)?.summary?.todaySales ?? 0
   const totalDebt = (invoicesData as any)?.summary?.totalDebt ?? 0
   const lowStockCount = (invoicesData as any)?.summary?.lowStockCount ?? 0
 
@@ -57,7 +58,7 @@ export function DashboardContainer() {
     <DashboardPage
       t={safeT}
       fmt={fmt}
-      todaySales={0}  // مقدار پیش‌فرض - در صفحه اصلی LCP استفاده می‌شود
+      todaySales={todaySales}
       lowStockCount={lowStockCount}
       totalDebt={totalDebt}
       txLoading={false}
