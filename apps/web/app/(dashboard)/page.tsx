@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import DashboardClient from "./dashboard/DashboardClient"
+import { DashboardContainer } from "@hisabche/ui"
 
 // ✅ No animation on skeleton — zero main-thread cost
 const STAT_ITEMS = [1, 2, 3] as const
@@ -54,7 +54,7 @@ export const metadata: Metadata = {
 export default function Page() {
   return (
     <main className="section">
-      <DashboardClient />
+      <DashboardContainer />
     </main>
   )
 }

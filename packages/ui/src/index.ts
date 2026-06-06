@@ -88,5 +88,11 @@ export { InvoiceDetailContainer } from './components/ui/invoice-detail/container
 export { QuickInvoiceContainer } from './components/ui/quick-invoice/containers/quick-invoice-container'
 export { SyncCenterContainer } from './components/ui/sync-center/containers/sync-center-container'
 export { OnboardingContainer } from './components/ui/onboarding/containers/onboarding-container'
+// اضافه کن به index.ts
 
+// Dashboard
+export { DashboardView } from './components/ui/dashboard/dashboard-view'
+export { StatCard } from './components/ui/dashboard/dashboard-stats'
+export { DashboardInvoices } from './components/ui/dashboard/dashboard-invoices'
+export { useDashboard } from './hooks/use-dashboard'
 export type SupportedLanguage = 'fa-AF' | 'fa-IR'
