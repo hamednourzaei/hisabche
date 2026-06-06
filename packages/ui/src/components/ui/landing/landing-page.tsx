@@ -104,16 +104,14 @@ export function LandingPage() {
         <CinematicHero onNavigateLogin={navigateLogin} />
 
         <Section bordered>
-          <div className="grid grid-cols-3 gap-6">
-            {stats.map((s) => (
-              <AnimatedCounter
-                key={s.label}
-                end={s.end}
-                label={s.label}
-              />
-            ))}
-          </div>
-        </Section>
+  <div className="grid grid-cols-3 gap-6">
+    {stats.map((s) => (
+  <div key={s.label} className="min-h-[4.5rem]">
+    <AnimatedCounter end={s.end} label={s.label} />
+  </div>
+))}
+  </div>
+</Section>
 
         <PainScene />
         <TransformScene />
