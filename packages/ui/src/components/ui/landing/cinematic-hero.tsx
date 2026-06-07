@@ -24,15 +24,12 @@ export default function CinematicHero({ onNavigateLogin }: CinematicHeroProps) {
   const ctaRef = useRef<HTMLDivElement>(null)
   const ctaText = getCTA()
 
+  // حذف framer-motion - استفاده از CSS فقط
   useEffect(() => {
-    const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    const isMobile = window.matchMedia("(max-width: 767px)").matches
-    if (prefersReduced || isMobile) return
-
-    import("framer-motion").then(({ animate }) => {
-      if (!ctaRef.current) return
-      animate(ctaRef.current, { opacity: [0, 1], y: [20, 0] }, { duration: 0.4 })
-    })
+    if (!ctaRef.current) return
+    // فقط opacity را با CSS تنظیم کن
+    ctaRef.current.style.opacity = "1"
+    ctaRef.current.style.transform = "translateY(0)"
   }, [])
 
   return (
@@ -44,7 +41,7 @@ export default function CinematicHero({ onNavigateLogin }: CinematicHeroProps) {
       <div className="relative z-10 max-w-4xl px-6 text-center">
         <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-purple-500/20 bg-purple-500/5 px-4 py-1.5 text-xs text-purple-300">
           <span className="h-1.5 w-1.5 rounded-full bg-purple-400" />
-          340+ کسب‌وکار فعال در افغانستان
+          ۳۴۰+ کسب‌وکار فعال در افغانستان
         </div>
 
         <h1 className="mb-6 text-5xl font-bold leading-[1.15] tracking-tight text-foreground md:text-7xl">
@@ -59,10 +56,10 @@ export default function CinematicHero({ onNavigateLogin }: CinematicHeroProps) {
           این فقط یک اپ نیست — حافظه‌ی زنده‌ی کسب‌وکار توئه. فاکتور، گدام، بدهی — همه در یک جا.
         </p>
 
-        <div ref={ctaRef} className="flex flex-col items-center gap-4 sm:flex-row">
+        <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
           <button
             onClick={onNavigateLogin}
-            className="rounded-2xl bg-gradient-to-r from-purple-500 to-cyan-500 px-8 py-4 text-base font-bold text-white shadow-2xl transition-transform hover:scale-105"
+            className="shimmer-btn rounded-2xl px-8 py-4 text-base font-bold text-white shadow-2xl transition-transform hover:scale-105"
           >
             {ctaText}
           </button>
