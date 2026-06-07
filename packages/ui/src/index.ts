@@ -1,5 +1,5 @@
 // ============================================
-// Hisabche UI — Barrel Exports v5.0
+// Hisabche UI — Barrel Exports v6.0
 // ============================================
 
 import './styles/lite-mode.css'
@@ -26,11 +26,17 @@ export { SaveIndicator, type SaveIndicatorProps } from './components/ui/save-ind
 export { Celebration, type CelebrationProps } from './components/ui/celebration'
 export { ErrorBoundary } from './components/ui/error-boundary'
 
-// ---------- Navigation ----------
+// ---------- Navigation (Legacy) ----------
 export { DashboardSidebar, BottomNav, type NavItem } from './components/ui/dashboard-sidebar'
 export { DashboardHeader } from './components/ui/dashboard-header'
 export { CommandPalette } from './components/ui/command-palette'
 export { GlassNavbar } from './components/ui/landing-section'
+
+// ---------- ✨ NEW: Enterprise Navigation System ----------
+export { NavigationProvider, useNavigation } from './hooks/menu/use-navigation-state'
+export { TopNav } from './components/ui/navigation/top-nav'
+export { SideNav } from './components/ui/navigation/side-nav'
+export { NavigationRegistry } from './components/ui/navigation/navigation-registry'
 
 // ---------- Data Display ----------
 export { EmptyState, type EmptyStateProps } from './components/ui/empty-state'
@@ -68,15 +74,9 @@ export { InviteModal } from './components/ui/invite-modal'
 // ---------- Pages (Pure UI) ----------
 export { BaqidariView, BaqidariSkeleton } from './components/ui/baqidari'
 export { BaqidariContainer as BaqidariPage } from './components/ui/baqidari/containers/baqidari-container'
-// اضافه کن به index.ts
-
-// Godam
 export { GodamView } from './components/ui/godam/godam-view'
 export { GodamSkeleton } from './components/ui/godam/godam-skeleton'
 export { ProductDetailPage } from './components/ui/godam-detail'
-// اضافه کن به index.ts
-
-// Invoices
 export { InvoicesContainer } from './components/ui/invoices/containers/invoices-container'
 export { InvoicesView } from './components/ui/invoices/invoices-view'
 export { InvoicesSkeleton } from './components/ui/invoices/invoices-skeleton'
@@ -96,11 +96,11 @@ export { InvoiceDetailContainer } from './components/ui/invoice-detail/container
 export { QuickInvoiceContainer } from './components/ui/quick-invoice/containers/quick-invoice-container'
 export { SyncCenterContainer } from './components/ui/sync-center/containers/sync-center-container'
 export { OnboardingContainer } from './components/ui/onboarding/containers/onboarding-container'
-// اضافه کن به index.ts
 
-// Dashboard
+// ---------- Dashboard ----------
 export { DashboardView } from './components/ui/dashboard/dashboard-view'
 export { StatCard } from './components/ui/dashboard/dashboard-stats'
 export { DashboardInvoices } from './components/ui/dashboard/dashboard-invoices'
 export { useDashboard } from './hooks/dashboard/use-dashboard'
+
 export type SupportedLanguage = 'fa-AF' | 'fa-IR'

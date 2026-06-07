@@ -1,16 +1,22 @@
-/* ═══════════════════════════════════════════
-   PERFORMANCE UTILITIES
-   ═══════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════════════════
+   PERFORMANCE UTILITIES — HISABCHE v20
+   ═══════════════════════════════════════════════════════════════════════════ */
 
-/* Lite Mode — reduced animations, shadows, blur */
+/* ──────────────────────────────────────────────────────────────────────────
+   LITE MODE — Reduced animations, shadows, blur (works with both themes)
+   ────────────────────────────────────────────────────────────────────────── */
 .lite-mode * {
   animation-duration: 0.01ms !important;
   transition-duration: 0.01ms !important;
 }
 
 .lite-mode .backdrop-blur-sm,
-.lite-mode .backdrop-blur {
+.lite-mode .backdrop-blur,
+.lite-mode .glass-card,
+.lite-mode .glass-strong,
+.lite-mode .bottom-nav {
   backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 .lite-mode .shadow-sm,
@@ -23,11 +29,28 @@
 
 .lite-mode .animate-pulse,
 .lite-mode .animate-spin,
-.lite-mode .animate-bounce {
+.lite-mode .animate-bounce,
+.lite-mode [class*="animate-"] {
   animation: none !important;
 }
 
-/* Data Saver — hide heavy images */
+.lite-mode .shimmer-btn::before {
+  display: none;
+}
+
+.lite-mode .cinematic-bg {
+  display: none !important;
+}
+
+.lite-mode .bg-glow-1,
+.lite-mode .bg-glow-2,
+.lite-mode .bg-glow-3 {
+  display: none !important;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   DATA SAVER — Hide heavy images (theme independent)
+   ────────────────────────────────────────────────────────────────────────── */
 .data-saver img:not([src*="svg"]):not([src*="icon"]) {
   display: none;
 }
@@ -36,7 +59,14 @@
   background-image: none !important;
 }
 
-/* Offline queue badge */
+.data-saver .testimonial-card,
+.data-saver .glass-card {
+  background: hsl(var(--hisab-card) / 0.9);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   OFFLINE QUEUE BADGE
+   ────────────────────────────────────────────────────────────────────────── */
 .offline-queue-badge {
   animation: queuePulse 2s ease-in-out infinite;
 }
@@ -49,4 +79,30 @@
   50% {
     opacity: 0.5;
   }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   HIGH CONTRAST MODE (respects system preference)
+   ────────────────────────────────────────────────────────────────────────── */
+@media (prefers-contrast: more) {
+  .lite-mode .glass-card,
+  .lite-mode .testimonial-card {
+    border: 1px solid currentColor;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   DARK MODE OVERRIDES FOR LITE MODE
+   ────────────────────────────────────────────────────────────────────────── */
+.dark .lite-mode .glass-card,
+.dark .lite-mode .testimonial-card {
+  background: hsl(240 16% 11% / 0.95);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
+   LIGHT MODE OVERRIDES FOR LITE MODE
+   ────────────────────────────────────────────────────────────────────────── */
+:root:not(.dark) .lite-mode .glass-card,
+:root:not(.dark) .lite-mode .testimonial-card {
+  background: hsl(0 0% 100% / 0.95);
 }

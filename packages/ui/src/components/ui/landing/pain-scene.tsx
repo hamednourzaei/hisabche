@@ -1,27 +1,55 @@
-const items = [
-  { emoji: "📋", text: "دفترها گم میشن" },
-  { emoji: "😰", text: "حساب‌ها فراموش میشن" },
-  { emoji: "📉", text: "سود واقعی معلوم نیست" },
-]
+"use client";
+
+import { useSceneObserver } from "./use-scene-observer";
+
+const pains = [
+  { emoji: "📋", text: "دفترها گم میشن", impact: "ساعت‌ها وقت تلف میشه" },
+  { emoji: "😰", text: "حساب‌ها فراموش میشن", impact: "بدهی‌ها از یاد میرن" },
+  { emoji: "📉", text: "سود واقعی معلوم نیست", impact: "تصمیمات اشتباه میگیری" },
+];
 
 export default function PainScene() {
+  const { ref, state } = useSceneObserver<HTMLDivElement>({ 
+    threshold: 0.3,
+    narrativeState: "confusion"
+  });
+
   return (
-    <section className="py-24 px-6">
-      <div className="mx-auto max-w-5xl text-center">
-        <p className="mb-3 text-xs tracking-[0.3em] text-muted-foreground uppercase">قبل از حسابچه</p>
-        <h2 className="mb-16 text-4xl font-bold text-foreground">دنیای قدیم</h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-          {items.map((item, i) => (
+    <section
+      id="pain"
+      ref={ref}
+      data-narrative="confusion"
+      className="section-padding"
+    >
+      <div className="container-narrow">
+        <div className="text-center mb-16">
+          <p className="text-sm uppercase tracking-[0.2em] text-muted-foreground mb-3">
+            قبل از حسابچه
+          </p>
+          <h2 className="text-4xl font-bold text-foreground">دنیای قدیم حسابداری</h2>
+          <p className="text-muted-foreground mt-4 max-w-md mx-auto">
+            شاید این مشکلات رو هر روز تجربه میکنی
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-6">
+          {pains.map((pain, i) => (
             <div
               key={i}
-              className="rounded-2xl border border-destructive/20 bg-destructive/5 p-8 text-center text-muted-foreground transition-transform hover:scale-[1.03]"
+              className="rounded-2xl border border-red-500/20 bg-red-500/5 p-8 text-center transition-all duration-400"
+              style={{
+                opacity: state === "animated" ? 1 : 0,
+                transform: state === "animated" ? "translateY(0)" : "translateY(24px)",
+                transition: `opacity 0.4s var(--ease-out) ${i * 0.1}s, transform 0.4s var(--ease-out) ${i * 0.1}s`,
+              }}
             >
-              <div className="mb-3 text-3xl">{item.emoji}</div>
-              {item.text}
+              <div className="text-4xl mb-4">{pain.emoji}</div>
+              <p className="text-lg font-semibold text-foreground mb-2">{pain.text}</p>
+              <p className="text-sm text-muted-foreground">{pain.impact}</p>
             </div>
           ))}
         </div>
       </div>
     </section>
-  )
+  );
 }

@@ -1,50 +1,46 @@
-"use client"
+"use client";
 
-import { useEffect, useRef } from "react"
-import FloatingLines from "./floating-lines"
+import { useSceneObserver } from "./use-scene-observer";
 
 export interface CinematicHeroProps {
-  onNavigateLogin: () => void
+  onNavigateLogin: () => void;
 }
 
 function getCTA() {
-  if (typeof window === "undefined") return "شروع کن — رایگان"
-  const v = localStorage.getItem("cta_variant")
-  if (v) return v === "B" ? "ساخت حساب در ۳۰ ثانیه ←" : "شروع کن — رایگان ←"
+  if (typeof window === "undefined") return "شروع کن — رایگان";
+  const v = localStorage.getItem("cta_variant");
+  if (v) return v === "B" ? "ساخت حساب در ۳۰ ثانیه ←" : "شروع کن — رایگان ←";
 
-  const variant = Math.random() > 0.5 ? "A" : "B"
-  localStorage.setItem("cta_variant", variant)
+  const variant = Math.random() > 0.5 ? "A" : "B";
+  localStorage.setItem("cta_variant", variant);
 
-  return variant === "B"
-    ? "ساخت حساب در ۳۰ ثانیه ←"
-    : "شروع کن — رایگان ←"
+  return variant === "B" ? "ساخت حساب در ۳۰ ثانیه ←" : "شروع کن — رایگان ←";
 }
 
 export default function CinematicHero({ onNavigateLogin }: CinematicHeroProps) {
-  const ctaRef = useRef<HTMLDivElement>(null)
-  const ctaText = getCTA()
-
-  // حذف framer-motion - استفاده از CSS فقط
-  useEffect(() => {
-    if (!ctaRef.current) return
-    // فقط opacity را با CSS تنظیم کن
-    ctaRef.current.style.opacity = "1"
-    ctaRef.current.style.transform = "translateY(0)"
-  }, [])
+  const { ref, state } = useSceneObserver<HTMLDivElement>({ 
+    threshold: 0.1,
+    narrativeState: "frustration"
+  });
+  const ctaText = getCTA();
 
   return (
-    <section className="relative flex min-h-screen items-center justify-center overflow-hidden">
-      <FloatingLines />
+    <section
+      id="hero"
+      ref={ref}
+      data-narrative="frustration"
+      className="relative flex min-h-screen items-center justify-center overflow-hidden section-padding"
+    >
+      {/* Rest remains the same */}
+      <div className="absolute inset-0 bg-clarity pointer-events-none" aria-hidden="true" />
 
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(168,85,247,0.18),transparent_40%),radial-gradient(circle_at_70%_80%,rgba(34,211,238,0.12),transparent_45%)]" />
-
-      <div className="relative z-10 max-w-4xl px-6 text-center">
-        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-purple-500/20 bg-purple-500/5 px-4 py-1.5 text-xs text-purple-300">
+      <div className="relative z-10 max-w-4xl mx-auto text-center">
+        <div className="inline-flex items-center gap-2 rounded-full border border-purple-500/20 bg-purple-500/5 px-4 py-1.5 text-sm text-purple-300 mb-6">
           <span className="h-1.5 w-1.5 rounded-full bg-purple-400" />
           ۳۴۰+ کسب‌وکار فعال در افغانستان
         </div>
 
-        <h1 className="mb-6 text-5xl font-bold leading-[1.15] tracking-tight text-foreground md:text-7xl">
+        <h1 className="font-bold mb-6">
           حسابداری‌ای که
           <br />
           <span className="bg-gradient-to-r from-purple-400 via-cyan-300 to-emerald-300 bg-clip-text text-transparent">
@@ -52,43 +48,40 @@ export default function CinematicHero({ onNavigateLogin }: CinematicHeroProps) {
           </span>
         </h1>
 
-        <p className="mx-auto mb-10 max-w-xl text-lg leading-relaxed text-muted-foreground">
+        <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
           این فقط یک اپ نیست — حافظه‌ی زنده‌ی کسب‌وکار توئه. فاکتور، گدام، بدهی — همه در یک جا.
         </p>
 
-        <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-          <button
-            onClick={onNavigateLogin}
-            className="shimmer-btn rounded-2xl px-8 py-4 text-base font-bold text-white shadow-2xl transition-transform hover:scale-105"
-          >
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <button onClick={onNavigateLogin} className="btn-primary">
             {ctaText}
           </button>
 
           <button
             onClick={() => document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })}
-            className="rounded-2xl border border-border px-8 py-4 text-base text-muted-foreground"
+            className="btn-secondary"
           >
             بیشتر بدون
           </button>
         </div>
 
-        <div className="mt-6 text-xs text-muted-foreground">
+        <div className="mt-6 text-sm text-muted-foreground">
           بدون کارت بانکی · فعال در ۳۰ ثانیه
         </div>
 
-        <div className="mt-16 flex items-center justify-center gap-8 text-sm text-muted-foreground">
+        <div className="mt-16 flex flex-wrap items-center justify-center gap-8 text-sm text-muted-foreground">
           {[
             ["🔌", "آفلاین واقعی"],
             ["🔐", "داده امن"],
             ["📱", "موبایل + وب"],
           ].map(([icon, text]) => (
             <div key={text} className="flex items-center gap-2">
-              <span>{icon}</span>
+              <span className="text-lg">{icon}</span>
               <span>{text}</span>
             </div>
           ))}
         </div>
       </div>
     </section>
-  )
+  );
 }
