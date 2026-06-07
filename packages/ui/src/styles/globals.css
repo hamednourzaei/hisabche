@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   globals.css — HISABCHE v22 (Fixed Responsive Navigation)
+   globals.css — HISABCHE v22 (Fixed Responsive Navigation + FAB)
    ═══════════════════════════════════════════════════════════════════════════ */
 @tailwind base;
 @tailwind components;
@@ -123,16 +123,14 @@
   --z-tooltip: 70;
   --z-toast: 80;
   --z-cmdk: 90;
+  --z-fab: 100;
 }
 
 .dark {
   --hisab-primary: 270 80% 70%;
   --hisab-primary-fg: 0 0% 5%;
   --hisab-background: 240 20% 6%;
-
- 
   --hisab-card: 240 12% 7%;
-
   --hisab-muted: 240 10% 10%;
   --hisab-muted-fg: 240 5% 60%;
   --hisab-border: 240 10% 16%;
@@ -199,7 +197,223 @@ h3, .h3 { font-size: var(--font-heading-3); line-height: var(--leading-tight); f
 @media (max-width: 768px) { .section-padding { padding: var(--space-xl) var(--space-md); } .container-narrow { padding: 0 var(--space-md); } }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   PART 4: ENTERPRISE NAVIGATION SYSTEM — Responsive
+   PART 4: FLOATING ACTION BUTTON (FAB)
+   ═══════════════════════════════════════════════════════════════════════════ */
+.fab-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: var(--z-fab);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.fab-button {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, hsl(262 80% 60%), hsl(190 90% 50%));
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: var(--elevation-5), 0 0 0 0 rgba(168, 85, 247, 0.4);
+  transition: transform 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
+  will-change: transform;
+}
+
+.fab-button:hover {
+  transform: scale(1.08);
+  box-shadow: var(--elevation-6), 0 0 0 8px rgba(168, 85, 247, 0.2);
+}
+
+.fab-button:active {
+  transform: scale(0.96);
+}
+
+.fab-button svg {
+  width: 24px;
+  height: 24px;
+  stroke: white;
+  stroke-width: 2;
+  fill: none;
+}
+
+/* Pulse animation for attention */
+.fab-button.pulse {
+  animation: fabPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes fabPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(168, 85, 247, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 12px rgba(168, 85, 247, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(168, 85, 247, 0);
+  }
+}
+
+/* FAB Tooltip */
+.fab-tooltip {
+  position: absolute;
+  right: 68px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: hsl(var(--hisab-card));
+  border: 1px solid hsl(var(--hisab-border));
+  border-radius: var(--radius-md);
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: hsl(var(--hisab-foreground));
+  white-space: nowrap;
+  box-shadow: var(--elevation-3);
+  backdrop-filter: blur(8px);
+  background: hsl(var(--hisab-card) / 0.9);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s var(--ease-out), visibility 0.2s var(--ease-out);
+  pointer-events: none;
+}
+
+.fab-button:hover + .fab-tooltip,
+.fab-tooltip:hover {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* FAB Menu (expanded) */
+.fab-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.fab-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  cursor: pointer;
+  transition: transform 0.2s var(--ease-out);
+}
+
+.fab-menu-item:hover {
+  transform: translateX(-4px);
+}
+
+.fab-menu-label {
+  background: hsl(var(--hisab-card));
+  border: 1px solid hsl(var(--hisab-border));
+  border-radius: var(--radius-md);
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: hsl(var(--hisab-foreground));
+  box-shadow: var(--elevation-2);
+  backdrop-filter: blur(8px);
+  background: hsl(var(--hisab-card) / 0.9);
+}
+
+.fab-menu-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, hsl(262 80% 60%), hsl(190 90% 50%));
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  cursor: pointer;
+  box-shadow: var(--elevation-3);
+  transition: transform 0.2s var(--ease-out);
+}
+
+.fab-menu-icon:hover {
+  transform: scale(1.05);
+}
+
+/* FAB animations */
+@keyframes fabSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fab-enter {
+  animation: fabSlideUp 0.3s var(--ease-out) forwards;
+}
+
+.fab-exit {
+  animation: fabSlideUp 0.2s var(--ease-out) reverse forwards;
+}
+
+/* Mobile FAB - smaller */
+@media (max-width: 768px) {
+  .fab-container {
+    bottom: 80px;
+    right: 16px;
+  }
+  
+  .fab-button {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .fab-button svg {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .fab-menu-label {
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+  
+  .fab-menu-icon {
+    width: 36px;
+    height: 36px;
+  }
+}
+
+/* Hide FAB on print */
+@media print {
+  .fab-container {
+    display: none !important;
+  }
+}
+
+/* Reduced motion for FAB */
+@media (prefers-reduced-motion: reduce) {
+  .fab-button {
+    animation: none !important;
+  }
+  
+  .fab-button:hover {
+    transform: none;
+  }
+  
+  .fab-enter, .fab-exit {
+    animation: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PART 5: ENTERPRISE NAVIGATION SYSTEM — Responsive
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* Top Navigation */
@@ -343,9 +557,7 @@ h3, .h3 { font-size: var(--font-heading-3); line-height: var(--leading-tight); f
   transition: width 0.12s linear;
 }
 
-/* ──────────────────────────────────────────────────────────────────────────
-   Desktop (≥1024px) — نمایش کامل منو، لوگو، دکمه ورود، CTA
-   ────────────────────────────────────────────────────────────────────────── */
+/* Desktop (≥1024px) */
 @media (min-width: 1024px) {
   .top-nav {
     top: 16px;
@@ -375,9 +587,7 @@ h3, .h3 { font-size: var(--font-heading-3); line-height: var(--leading-tight); f
   .top-nav-menu { display: flex; }
 }
 
-/* ──────────────────────────────────────────────────────────────────────────
-   Tablet (768px - 1023px) — منو کامل، لوگو فقط نقطه (حرف ح)، ورود و CTA نمایش
-   ────────────────────────────────────────────────────────────────────────── */
+/* Tablet (768px - 1023px) */
 @media (min-width: 768px) and (max-width: 1023px) {
   .top-nav {
     top: 0;
@@ -387,25 +597,17 @@ h3, .h3 { font-size: var(--font-heading-3); line-height: var(--leading-tight); f
     border-radius: 0;
   }
   .top-nav-inner { width: 95%; gap: 0.75rem; }
-  
-  /* منو حذف نشود */
   .top-nav-menu { display: flex; }
   .top-nav-list { gap: 1px; }
   .top-nav-btn { padding: 4px 10px; font-size: 12px; }
-  
-  /* لوگو فقط نقطه (حرف ح) */
   .top-nav-logo span:first-child { display: none; }
   .top-nav-logo { font-size: 1.5rem; font-weight: 800; }
   .logo-dot { font-size: 1.5rem; }
-  
-  /* دکمه ورود و CTA نمایش */
   .nav-signin { display: inline-flex; padding: 5px 12px; font-size: 12px; }
   .nav-cta { display: inline-flex; padding: 5px 14px; font-size: 12px; }
 }
 
-/* ──────────────────────────────────────────────────────────────────────────
-   Mobile (≤767px) — منو کامل، لوگو فقط نقطه، ورود حذف، CTA نمایش
-   ────────────────────────────────────────────────────────────────────────── */
+/* Mobile (≤767px) */
 @media (max-width: 767px) {
   .top-nav {
     top: 0;
@@ -415,42 +617,28 @@ h3, .h3 { font-size: var(--font-heading-3); line-height: var(--leading-tight); f
     border-radius: 0;
   }
   .top-nav-inner { width: 100%; padding: 0 0.75rem; gap: 0.5rem; }
-  
-  /* منو حذف نشود */
   .top-nav-menu { display: flex; flex: 2; }
   .top-nav-list { gap: 4px; padding: 4px 8px; width: 100%; justify-content: center; }
   .top-nav-btn { padding: 5px 8px; font-size: 11px; }
-  
-  /* لوگو فقط نقطه */
   .top-nav-logo span:first-child { display: none; }
   .top-nav-logo { font-size: 1.3rem; font-weight: 800; min-width: 32px; }
   .logo-dot { font-size: 1.3rem; }
-  
-  /* دکمه ورود حذف */
   .nav-signin { display: none; }
-  
-  /* CTA نمایش */
   .nav-cta { display: inline-flex; padding: 5px 12px; font-size: 11px; }
 }
 
-/* ──────────────────────────────────────────────────────────────────────────
-   Small Mobile (≤480px) — منو کوچک‌تر، لوگو نقطه، ورود حذف، CTA حذف
-   ────────────────────────────────────────────────────────────────────────── */
+/* Small Mobile (≤480px) */
 @media (max-width: 480px) {
   .top-nav-inner { width: 100%; padding: 0 0.5rem; gap: 0.25rem; }
-  
   .top-nav-list { gap: 2px; padding: 3px 6px; }
   .top-nav-btn { padding: 4px 5px; font-size: 10px; }
-  
   .top-nav-logo { font-size: 1.1rem; min-width: 28px; }
   .logo-dot { font-size: 1.1rem; }
-  
-  /* CTA حذف شود */
   .nav-cta { display: none; }
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   PART 5: SIDE NAVIGATION
+   PART 6: SIDE NAVIGATION
    ═══════════════════════════════════════════════════════════════════════════ */
 .side-nav {
   position: sticky;
@@ -537,7 +725,72 @@ h3, .h3 { font-size: var(--font-heading-3); line-height: var(--leading-tight); f
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   PART 6: REMAINING STYLES (Cards, Buttons, Forms, etc)
+   PART 7: FAQ STYLES (FAB 추가)
+   ═══════════════════════════════════════════════════════════════════════════ */
+.faq-item {
+  border: 1px solid hsl(240 10% 15%);
+  border-radius: var(--radius-lg);
+  background: hsl(240 8% 8% / 0.6);
+  transition: border-color 0.2s;
+  overflow: hidden;
+}
+
+.faq-item.open {
+  border-color: hsl(var(--color-purple) / 0.3);
+}
+
+.faq-question {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-md) var(--space-lg);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  text-align: right;
+  color: white;
+  transition: background 0.2s;
+}
+
+.faq-question:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.faq-icon {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid hsl(240 10% 20%);
+  transition: transform 0.3s var(--ease-soft);
+  flex-shrink: 0;
+}
+
+.faq-icon.open {
+  transform: rotate(45deg);
+  background: hsl(var(--color-purple) / 0.15);
+  border-color: hsl(var(--color-purple) / 0.5);
+}
+
+.faq-answer {
+  padding: 0 var(--space-lg);
+  overflow: hidden;
+  transition: height 0.35s var(--ease-soft);
+  color: hsl(240 5% 70%);
+  font-size: 0.875rem;
+  line-height: var(--leading-relaxed);
+}
+
+.faq-answer-inner {
+  padding-bottom: var(--space-lg);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PART 8: REMAINING STYLES (Cards, Buttons, Forms, etc)
    ═══════════════════════════════════════════════════════════════════════════ */
 .card-base {
   background: hsl(var(--hisab-card));
@@ -651,19 +904,9 @@ h3, .h3 { font-size: var(--font-heading-3); line-height: var(--leading-tight); f
   bottom: 0;
   inset-inline: 0;
   z-index: 30;
-
   padding-bottom: calc(env(safe-area-inset-bottom) + 12px);
-
-  /* 👇 اینو تغییر دادیم */
-  background: linear-gradient(
-    180deg,
-    hsl(var(--hisab-card) / 0.98),
-    hsl(var(--hisab-card) / 0.92)
-  );
-
+  background: linear-gradient(180deg, hsl(var(--hisab-card) / 0.98), hsl(var(--hisab-card) / 0.92));
   border-top: 1px solid hsl(var(--hisab-border) / 0.6);
-
-  /* 👇 کمتر شیشه‌ای، بیشتر readable */
   backdrop-filter: blur(12px);
 }
 
@@ -720,5 +963,322 @@ body.idle { --motion-scale: 0; }
 
 @media print {
   body { background: white !important; color: black !important; }
-  body::after, .no-print, .bottom-nav { display: none !important; }
+  body::after, .no-print, .bottom-nav, .fab-container { display: none !important; }
+}
+/* ═══════════════════════════════════════════════════════════════════════════
+   PART 9: TESTIMONIAL / SOCIAL PROOF STYLES (Trust Section)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Testimonial Card Base */
+.testimonial-card {
+  background: hsl(240 8% 8% / 0.6);
+  border: 1px solid hsl(240 10% 15%);
+  border-radius: var(--radius-card-md);
+  padding: var(--space-lg);
+  transition: all 0.3s var(--ease-soft);
+  backdrop-filter: blur(4px);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Hover Effect */
+.testimonial-card:hover {
+  border-color: hsl(var(--color-purple) / 0.35);
+  transform: translateY(-4px);
+  background: hsl(240 8% 8% / 0.8);
+  box-shadow: var(--elevation-4);
+}
+
+/* Glow effect on hover */
+.testimonial-card:hover::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, 
+    hsl(var(--color-purple) / 0.3), 
+    hsl(var(--color-cyan) / 0.3), 
+    hsl(var(--color-emerald) / 0.3));
+  border-radius: var(--radius-card-md) var(--radius-card-md) 0 0;
+}
+
+/* Quote Icon decoration */
+.testimonial-card .quote-icon {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  opacity: 0.08;
+  font-size: 48px;
+  pointer-events: none;
+  transition: opacity 0.3s var(--ease-soft);
+}
+
+.testimonial-card:hover .quote-icon {
+  opacity: 0.15;
+}
+
+/* Testimonial Text */
+.testimonial-text {
+  font-size: 0.875rem;
+  line-height: var(--leading-relaxed);
+  color: hsl(240 5% 70%);
+  margin-bottom: var(--space-md);
+  position: relative;
+  z-index: 1;
+}
+
+/* Testimonial Author */
+.testimonial-author {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+  position: relative;
+  z-index: 1;
+}
+
+/* Avatar Styles */
+.testimonial-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, 
+    hsl(var(--color-purple) / 0.25), 
+    hsl(var(--color-cyan) / 0.15));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 700;
+  color: hsl(var(--color-purple));
+  border: 1.5px solid hsl(var(--color-purple) / 0.3);
+  transition: all 0.3s var(--ease-soft);
+  flex-shrink: 0;
+}
+
+.testimonial-card:hover .testimonial-avatar {
+  transform: scale(1.05);
+  border-color: hsl(var(--color-purple) / 0.6);
+  background: linear-gradient(135deg, 
+    hsl(var(--color-purple) / 0.35), 
+    hsl(var(--color-cyan) / 0.25));
+}
+
+/* Author Info */
+.testimonial-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: white;
+  margin-bottom: 2px;
+}
+
+.testimonial-role {
+  font-size: 0.75rem;
+  color: hsl(240 5% 60%);
+}
+
+/* Rating Stars */
+.testimonial-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: var(--space-sm);
+}
+
+.testimonial-rating svg {
+  width: 14px;
+  height: 14px;
+  fill: hsl(38 92% 55%);
+}
+
+/* Trust Badge */
+.trust-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  background: hsl(240 8% 8% / 0.6);
+  border: 1px solid hsl(240 10% 15%);
+  border-radius: var(--radius-full);
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  color: hsl(240 5% 70%);
+  backdrop-filter: blur(4px);
+}
+
+.trust-badge .badge-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: hsl(var(--color-emerald));
+  animation: pulseDot 2s ease-in-out infinite;
+}
+
+@keyframes pulseDot {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
+}
+
+/* Social Proof Counter */
+.social-proof-counter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-lg);
+  margin-top: var(--space-2xl);
+  padding-top: var(--space-xl);
+  border-top: 1px solid hsl(240 10% 15%);
+}
+
+.counter-item {
+  text-align: center;
+}
+
+.counter-number {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: white;
+  font-feature-settings: "tnum";
+}
+
+.counter-label {
+  font-size: 0.75rem;
+  color: hsl(240 5% 60%);
+  margin-top: 4px;
+}
+
+/* Testimonial Grid Layout */
+.testimonials-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-lg);
+}
+
+/* Responsive Testimonials */
+@media (max-width: 1023px) {
+  .testimonials-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-md);
+  }
+}
+
+@media (max-width: 767px) {
+  .testimonials-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-md);
+  }
+  
+  .testimonial-card {
+    padding: var(--space-md);
+  }
+  
+  .testimonial-avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 0.875rem;
+  }
+  
+  .social-proof-counter {
+    flex-direction: column;
+    gap: var(--space-md);
+    margin-top: var(--space-xl);
+  }
+}
+
+/* Animation for testimonials on scroll */
+.testimonial-card {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.4s var(--ease-out), transform 0.4s var(--ease-out), border-color 0.3s, box-shadow 0.3s;
+}
+
+.testimonial-card.animated {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Delay classes for staggered animation */
+.testimonial-card.delay-1 { transition-delay: 0.1s; }
+.testimonial-card.delay-2 { transition-delay: 0.2s; }
+.testimonial-card.delay-3 { transition-delay: 0.3s; }
+
+/* Active narrative state styling for trust section */
+section[data-narrative="trust"] {
+  position: relative;
+}
+
+section[data-narrative="trust"]::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent, 
+    hsl(var(--color-purple) / 0.3), 
+    hsl(var(--color-cyan) / 0.3), 
+    hsl(var(--color-emerald) / 0.3), 
+    transparent);
+}
+
+/* Trust section special glow */
+body[data-narrative-state="trust"] section#testimonials {
+  position: relative;
+}
+
+body[data-narrative-state="trust"] section#testimonials::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(circle at 50% 0%, 
+    hsl(var(--color-purple) / 0.06), 
+    transparent 60%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Dark mode specific adjustments */
+.dark .testimonial-card {
+  background: hsl(240 12% 10% / 0.8);
+  border-color: hsl(240 10% 18%);
+}
+
+.dark .testimonial-card:hover {
+  background: hsl(240 12% 12% / 0.95);
+  border-color: hsl(var(--color-purple) / 0.3);
+}
+
+.dark .trust-badge {
+  background: hsl(240 12% 10% / 0.8);
+  border-color: hsl(240 10% 18%);
+}
+
+/* Light mode adjustments */
+.light .testimonial-card {
+  background: hsl(0 0% 100% / 0.9);
+  border-color: hsl(240 10% 88%);
+}
+
+.light .testimonial-text {
+  color: hsl(240 10% 30%);
+}
+
+.light .testimonial-name {
+  color: hsl(240 10% 12%);
+}
+
+.light .trust-badge {
+  background: hsl(0 0% 100% / 0.9);
+  border-color: hsl(240 10% 88%);
 }
