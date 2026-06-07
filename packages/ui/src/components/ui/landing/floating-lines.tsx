@@ -25,7 +25,13 @@ export default function FloatingLines() {
           }}
         />
       ))}
-      <style>{`@keyframes floatLine{0%,100%{transform:translateX(-5%) scaleY(1);opacity:.2}50%{transform:translateX(5%) scaleY(2.5);opacity:.6}}`}</style>
+
+      <style>{`
+        @keyframes floatLine {
+          0%,100% { transform: translateX(-5%) scaleY(1); opacity: .2 }
+          50% { transform: translateX(5%) scaleY(2.5); opacity: .6 }
+        }
+      `}</style>
     </div>
   )
 }

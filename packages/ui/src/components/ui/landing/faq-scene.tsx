@@ -19,7 +19,7 @@ function FAQItem({ faq }: { faq: { q: string; a: string } }) {
 
   return (
     <div
-      className="rounded-2xl border border-[var(--hisab-border)] bg-[var(--hisab-card)]/60 backdrop-blur-sm transition-colors"
+      className="rounded-2xl border border-border bg-card/60 backdrop-blur-sm transition-colors"
       style={{ borderColor: open ? "rgba(168,85,247,0.3)" : undefined }}
     >
       <button
@@ -27,14 +27,11 @@ function FAQItem({ faq }: { faq: { q: string; a: string } }) {
         className="flex w-full items-center justify-between px-6 py-5 text-right"
         aria-expanded={open}
       >
-        <span className="font-semibold text-[var(--hisab-foreground)]">{faq.q}</span>
-        <span
-          className="mr-4 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[var(--hisab-border)] text-[var(--hisab-muted-fg)] transition-transform duration-300"
-          style={{ transform: open ? "rotate(45deg)" : "rotate(0deg)" }}
-        >+</span>
+        <span className="font-semibold text-foreground">{faq.q}</span>
+        <span className="mr-4 flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-border text-muted-foreground transition-transform duration-300" style={{ transform: open ? "rotate(45deg)" : "rotate(0deg)" }}>+</span>
       </button>
       <div style={{ height: open ? height : 0, overflow: "hidden", transition: "height 0.35s cubic-bezier(0.4,0,0.2,1)" }}>
-        <div ref={contentRef} className="px-6 pb-5 text-sm leading-relaxed text-[var(--hisab-muted-fg)]">
+        <div ref={contentRef} className="px-6 pb-5 text-sm leading-relaxed text-muted-foreground">
           {faq.a}
         </div>
       </div>
@@ -47,7 +44,7 @@ export default function FaqScene() {
     <section id="faq" className="py-24 px-6">
       <div className="mx-auto max-w-2xl">
         <div className="mb-16 text-center">
-          <h2 className="text-4xl font-bold text-[var(--hisab-foreground)]">سوالات متداول</h2>
+          <h2 className="text-4xl font-bold text-foreground">سوالات متداول</h2>
         </div>
         <div className="space-y-3">
           {faqs.map((faq, i) => <FAQItem key={i} faq={faq} />)}

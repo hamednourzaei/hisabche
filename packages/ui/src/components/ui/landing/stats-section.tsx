@@ -14,7 +14,6 @@ function AnimatedCounter({ end, label }: StatItem) {
     if (!el) return
     
     const observer = new IntersectionObserver(([entry]) => {
-      // ✅ اضافه کردن optional chaining و fallback
       if (entry?.isIntersecting && !started.current) {
         started.current = true
         
