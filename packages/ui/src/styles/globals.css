@@ -48,7 +48,7 @@
   --hisab-warning-fg: 0 0% 10%;
 
   --hisab-background: 240 15% 98%;
-  --hisab-foreground: 240 10% 12%;
+
   --hisab-card: 0 0% 100%;
   --hisab-muted: 240 8% 96%;
   --hisab-muted-fg: 240 6% 45%;
@@ -152,7 +152,7 @@ html {
 body {
   font-family: var(--font-sans);
   background-color: hsl(var(--surface-base));
-  color: hsl(240 5% 90%);
+  color: hsl(var(--hisab-foreground));
   font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
   line-height: var(--leading-normal);
@@ -970,15 +970,41 @@ body.idle { --motion-scale: 0; }
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* Testimonial Card Base */
+/* Testimonial cards - dynamic by narrative state */
 .testimonial-card {
   background: hsl(240 8% 8% / 0.6);
   border: 1px solid hsl(240 10% 15%);
-  border-radius: var(--radius-card-md);
-  padding: var(--space-lg);
-  transition: all 0.3s var(--ease-soft);
-  backdrop-filter: blur(4px);
-  position: relative;
-  overflow: hidden;
+  transition: background 0.4s var(--ease-soft), border-color 0.4s var(--ease-soft);
+}
+
+body[data-narrative-state="trust"] .testimonial-card {
+  background: linear-gradient(135deg, hsl(240 8% 8% / 0.6), hsl(262 80% 65% / 0.08));
+  border-color: hsl(262 80% 65% / 0.25);
+}
+
+body[data-narrative-state="action"] .testimonial-card {
+  background: linear-gradient(135deg, hsl(240 8% 8% / 0.6), hsl(320 80% 60% / 0.08));
+  border-color: hsl(320 80% 60% / 0.25);
+}
+
+body[data-narrative-state="confidence"] .testimonial-card {
+  background: linear-gradient(135deg, hsl(240 8% 8% / 0.6), hsl(190 90% 55% / 0.08));
+  border-color: hsl(190 90% 55% / 0.25);
+}
+
+body[data-narrative-state="clarity"] .testimonial-card {
+  background: linear-gradient(135deg, hsl(240 8% 8% / 0.6), hsl(160 80% 45% / 0.08));
+  border-color: hsl(160 80% 45% / 0.25);
+}
+
+body[data-narrative-state="confusion"] .testimonial-card {
+  background: linear-gradient(135deg, hsl(240 8% 8% / 0.6), hsl(0 84% 60% / 0.08));
+  border-color: hsl(0 84% 60% / 0.25);
+}
+
+body[data-narrative-state="frustration"] .testimonial-card {
+  background: linear-gradient(135deg, hsl(240 8% 8% / 0.6), hsl(262 80% 65% / 0.08));
+  border-color: hsl(262 80% 65% / 0.25);
 }
 
 /* Hover Effect */
@@ -1768,4 +1794,1361 @@ body[data-narrative-state="trust"] section#testimonials::before {
   .hn-cta:hover {
     transform: none;
   }
+}
+/* ═══════════════════════════════════════════════════════════════════════════
+   globals.css — HISABCHE v19 (Fixed & Production-Ready)
+   ═══════════════════════════════════════════════════════════════════════════ */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PART 1: CSS VARIABLES — Theme System
+   ═══════════════════════════════════════════════════════════════════════════ */
+:root {
+  /* Motion System */
+  --motion-scale: 1;
+  --duration-micro: 150ms;
+  --duration-short: 250ms;
+  --duration-medium: 400ms;
+  --duration-long: 600ms;
+
+  --ease-out:      cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-soft:     cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-identity: cubic-bezier(0.2, 0.8, 0.3, 1);
+  --hisab-ease:    cubic-bezier(0.2, 0.8, 0.2, 1);
+  --hisab-duration: calc(180ms * var(--motion-scale));
+
+  /* Typography Scale */
+  --font-heading-1: clamp(2rem, 5vw, 4rem);
+  --font-heading-2: clamp(1.5rem, 4vw, 2.5rem);
+  --font-heading-3: clamp(1.25rem, 3vw, 1.75rem);
+  --font-body:      clamp(0.875rem, 2vw, 1rem);
+  --font-body-large: clamp(1rem, 2.5vw, 1.125rem);
+
+  --leading-tight:   1.2;
+  --leading-normal:  1.5;
+  --leading-relaxed: 1.6;
+
+  /* Spacing */
+  --space-xs: 0.5rem;
+  --space-sm: 1rem;
+  --space-md: 1.5rem;
+  --space-lg: 2rem;
+  --space-xl: 3rem;
+  --space-2xl: 4rem;
+  --space-3xl: 6rem;
+
+  /* Brand Colors — HSL */
+  --hisab-primary:        270 90% 65%;
+  --hisab-primary-fg:     0 0% 100%;
+  --hisab-destructive:    0 84% 60%;
+  --hisab-destructive-fg: 0 0% 100%;
+  --hisab-success:        150 70% 45%;
+  --hisab-success-fg:     0 0% 100%;
+  --hisab-warning:        38 92% 55%;
+  --hisab-warning-fg:     0 0% 10%;
+
+  /* Surface Colors — Light Mode */
+  --hisab-background:  240 15% 98%;
+ 
+  --hisab-card:        0 0% 100%;
+  --hisab-muted:       240 8% 96%;
+  --hisab-muted-fg:    240 6% 45%;
+  --hisab-border:      240 10% 88%;
+  --hisab-ring:        270 90% 65%;
+  --hisab-accent-1:    270 70% 60%;
+
+  --color-purple:  262 80% 65%;
+  --color-cyan:    190 90% 55%;
+  --color-emerald: 160 80% 45%;
+
+  --surface-base:     240 18% 7%;
+  --surface-muted:    240 8% 8%;
+  --surface-elevated: 240 6% 10%;
+
+  /* Borders & Radius */
+  --radius-sm: 8px;
+  --radius:    12px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-2xl: 24px;
+
+  /* Effects */
+  --glass-blur:   24px;
+  --glass-border: hsl(var(--hisab-border) / 0.5);
+  --elevation-4:  0 8px 24px hsl(var(--hisab-foreground) / 0.10);
+  --elevation-5:  0 12px 32px hsl(var(--hisab-foreground) / 0.12);
+
+  /* Narrative Glow — default transparent */
+  --narrative-glow-color: transparent;
+  --narrative-glow-opacity: 0;
+
+  /* Typography */
+  --font-sans: 'Vazirmatn', system-ui, sans-serif;
+  --touch-target: 44px;
+}
+
+/* Dark mode overrides */
+.dark {
+  --hisab-primary:    270 80% 70%;
+  --hisab-primary-fg: 0 0% 5%;
+  --hisab-background: 240 18% 7%;
+  --hisab-foreground: 0 0% 96%;
+  --hisab-card:       240 16% 11%;
+  --hisab-muted:      240 12% 14%;
+  --hisab-muted-fg:   240 5% 64%;
+  --hisab-border:     240 10% 18%;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PART 2: BASE STYLES
+   ═══════════════════════════════════════════════════════════════════════════ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/*
+  FIX: body تنها یکبار تعریف شده.
+  narrative glow از طریق ::before pseudo-element اعمال میشه
+  تا با background اصلی تداخل نداشته باشه.
+*/
+body {
+  font-family: var(--font-sans);
+  background-color: hsl(var(--surface-base));
+  color: hsl(240 5% 90%);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  line-height: var(--leading-normal);
+  font-size: var(--font-body);
+  position: relative;
+  isolation: isolate;
+}
+
+/* Narrative ambient glow — روی ::after تا با محتوا تداخل نداشته باشه */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(
+    circle at 50% 0%,
+    var(--narrative-glow-color),
+    transparent 70%
+  );
+  opacity: var(--narrative-glow-opacity);
+  pointer-events: none;
+  z-index: 0;
+  transition:
+    opacity 0.6s var(--ease-soft),
+    background 0.6s var(--ease-soft);
+  will-change: opacity;
+}
+
+/* FIX: هر narrative state فقط متغیرهای خودش رو set میکنه */
+body[data-narrative-state="frustration"] {
+  --narrative-glow-color: rgba(168, 85, 247, 0.12);
+  --narrative-glow-opacity: 1;
+}
+body[data-narrative-state="confusion"] {
+  --narrative-glow-color: rgba(239, 68, 68, 0.10);
+  --narrative-glow-opacity: 1;
+}
+body[data-narrative-state="clarity"] {
+  --narrative-glow-color: rgba(16, 185, 129, 0.10);
+  --narrative-glow-opacity: 1;
+}
+body[data-narrative-state="confidence"] {
+  --narrative-glow-color: rgba(6, 182, 212, 0.10);
+  --narrative-glow-opacity: 1;
+}
+body[data-narrative-state="trust"] {
+  --narrative-glow-color: rgba(139, 92, 246, 0.14);
+  --narrative-glow-opacity: 1;
+}
+body[data-narrative-state="action"] {
+  --narrative-glow-color: rgba(236, 72, 153, 0.18);
+  --narrative-glow-opacity: 1;
+}
+
+/* همه محتوا باید روی glow باشه */
+body > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PART 3: TYPOGRAPHY
+   ═══════════════════════════════════════════════════════════════════════════ */
+h1, .h1 {
+  font-size: var(--font-heading-1);
+  line-height: var(--leading-tight);
+  font-weight: 700;
+}
+h2, .h2 {
+  font-size: var(--font-heading-2);
+  line-height: var(--leading-tight);
+  font-weight: 600;
+}
+h3, .h3 {
+  font-size: var(--font-heading-3);
+  line-height: var(--leading-tight);
+  font-weight: 600;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PART 4: INTERACTIVE ELEMENTS
+   ═══════════════════════════════════════════════════════════════════════════ */
+::selection {
+  background: hsl(var(--color-purple) / 0.2);
+}
+
+:focus-visible {
+  outline: 2px solid hsl(var(--hisab-ring) / 0.5);
+  outline-offset: 2px;
+  border-radius: var(--radius);
+}
+
+/* Touch targets فقط برای pointer:coarse — نه همه باتن‌ها */
+@media (pointer: coarse) {
+  button, [role="button"], a {
+    min-height: var(--touch-target);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PART 5: SCENE ANIMATION CLASSES
+   ═══════════════════════════════════════════════════════════════════════════ */
+.scene-hidden {
+  opacity: 0;
+  transform: translateY(24px);
+}
+.scene-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.scene-transition {
+  transition:
+    opacity 0.4s var(--ease-out),
+    transform 0.4s var(--ease-out);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PART 6: NARRATIVE SECTION BACKGROUNDS
+   ═══════════════════════════════════════════════════════════════════════════ */
+.bg-pain {
+  background: radial-gradient(circle at 30% 20%, rgba(80, 40, 120, 0.15), transparent 60%);
+}
+.bg-clarity {
+  background: radial-gradient(circle at 50% 40%, rgba(80, 200, 200, 0.08), transparent 70%);
+}
+.bg-confidence {
+  background: radial-gradient(circle at 60% 50%, rgba(120, 80, 200, 0.10), transparent 65%);
+}
+.bg-trust {
+  background: radial-gradient(circle at 70% 60%, rgba(100, 220, 150, 0.08), transparent 60%);
+}
+.bg-action {
+  background: radial-gradient(circle at 50% 80%, rgba(160, 80, 220, 0.12), transparent 55%);
+}
+/* ═══════════════════════════════════════════════════════════════════════════
+   NARRATIVE SECTION BACKGROUNDS
+   Dual-gradient panels slide in from left + right and meet at center.
+   Each narrative state has its own colour identity.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Palette tokens (override in :root if needed) ────────────────────────── */
+:root {
+  --nb-frustration : 168, 85,  247;   /* purple  */
+  --nb-confusion   : 239, 68,  68;    /* red     */
+  --nb-clarity     : 16,  185, 129;   /* emerald */
+  --nb-confidence  : 6,   182, 212;   /* cyan    */
+  --nb-trust       : 139, 92,  246;   /* violet  */
+  --nb-action      : 236, 72,  153;   /* pink    */
+
+  --nb-transition  : 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+  --nb-opacity-lo  : 0.07;
+  --nb-opacity-hi  : 0.15;
+}
+
+/* ── Base layer for every narrative section ──────────────────────────────── */
+/*
+   Two pseudo-elements carry the background panels.
+   ::before  = left wing   (slides in from -100%)
+   ::after   = right wing  (slides in from +100%)
+   Both start invisible and translate off-screen.
+*/
+section[data-narrative] {
+  position: relative;
+  isolation: isolate;          /* keep pseudo-elements below content */
+}
+
+section[data-narrative]::before,
+section[data-narrative]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0;
+  pointer-events: none;
+
+  /* Start state: wings off-screen */
+  transform: translateX(var(--nb-tx, -100%));
+  transition:
+    opacity   var(--nb-transition),
+    transform var(--nb-transition);
+  will-change: transform, opacity;
+}
+
+section[data-narrative]::before { --nb-tx: -100%; }   /* left  */
+section[data-narrative]::after  { --nb-tx:  100%; }   /* right */
+
+/* ── Active state: wings fly in and merge ────────────────────────────────── */
+/*
+   When the body attribute matches the section's narrative, both wings
+   translate to 0 and become visible. The gradients are designed so the
+   edges overlap and blend at the centre.
+*/
+
+/* — frustration ─────────────────────────────────────────────────────────── */
+body[data-narrative-state="frustration"]
+  section[data-narrative="frustration"]::before,
+body[data-narrative-state="frustration"] #hero::before {
+  background: radial-gradient(
+    ellipse 80% 100% at 0% 50%,
+    rgba(var(--nb-frustration), var(--nb-opacity-hi)) 0%,
+    rgba(var(--nb-frustration), var(--nb-opacity-lo)) 55%,
+    transparent 100%
+  );
+}
+body[data-narrative-state="frustration"]
+  section[data-narrative="frustration"]::after,
+body[data-narrative-state="frustration"] #hero::after {
+  background: radial-gradient(
+    ellipse 80% 100% at 100% 50%,
+    rgba(var(--nb-frustration), var(--nb-opacity-hi)) 0%,
+    rgba(var(--nb-frustration), var(--nb-opacity-lo)) 55%,
+    transparent 100%
+  );
+}
+
+/* — confusion ───────────────────────────────────────────────────────────── */
+body[data-narrative-state="confusion"]
+  section[data-narrative="confusion"]::before,
+body[data-narrative-state="confusion"] #pain::before {
+  background: radial-gradient(
+    ellipse 80% 100% at 0% 50%,
+    rgba(var(--nb-confusion), var(--nb-opacity-hi)) 0%,
+    rgba(var(--nb-confusion), var(--nb-opacity-lo)) 55%,
+    transparent 100%
+  );
+}
+body[data-narrative-state="confusion"]
+  section[data-narrative="confusion"]::after,
+body[data-narrative-state="confusion"] #pain::after {
+  background: radial-gradient(
+    ellipse 80% 100% at 100% 50%,
+    rgba(var(--nb-confusion), var(--nb-opacity-hi)) 0%,
+    rgba(var(--nb-confusion), var(--nb-opacity-lo)) 55%,
+    transparent 100%
+  );
+}
+
+/* — clarity ─────────────────────────────────────────────────────────────── */
+body[data-narrative-state="clarity"]
+  section[data-narrative="clarity"]::before,
+body[data-narrative-state="clarity"] #transform::before {
+  background: radial-gradient(
+    ellipse 80% 100% at 0% 50%,
+    rgba(var(--nb-clarity), var(--nb-opacity-hi)) 0%,
+    rgba(var(--nb-clarity), var(--nb-opacity-lo)) 55%,
+    transparent 100%
+  );
+}
+body[data-narrative-state="clarity"]
+  section[data-narrative="clarity"]::after,
+body[data-narrative-state="clarity"] #transform::after {
+  background: radial-gradient(
+    ellipse 80% 100% at 100% 50%,
+    rgba(var(--nb-clarity), var(--nb-opacity-hi)) 0%,
+    rgba(var(--nb-clarity), var(--nb-opacity-lo)) 55%,
+    transparent 100%
+  );
+}
+
+/* — confidence ──────────────────────────────────────────────────────────── */
+body[data-narrative-state="confidence"]
+  section[data-narrative="confidence"]::before,
+body[data-narrative-state="confidence"] #features::before {
+  background: radial-gradient(
+    ellipse 80% 100% at 0% 50%,
+    rgba(var(--nb-confidence), var(--nb-opacity-hi)) 0%,
+    rgba(var(--nb-confidence), var(--nb-opacity-lo)) 55%,
+    transparent 100%
+  );
+}
+body[data-narrative-state="confidence"]
+  section[data-narrative="confidence"]::after,
+body[data-narrative-state="confidence"] #features::after {
+  background: radial-gradient(
+    ellipse 80% 100% at 100% 50%,
+    rgba(var(--nb-confidence), var(--nb-opacity-hi)) 0%,
+    rgba(var(--nb-confidence), var(--nb-opacity-lo)) 55%,
+    transparent 100%
+  );
+}
+
+/* — trust ───────────────────────────────────────────────────────────────── */
+body[data-narrative-state="trust"]
+  section[data-narrative="trust"]::before,
+body[data-narrative-state="trust"] #testimonials::before {
+  background: radial-gradient(
+    ellipse 80% 100% at 0% 50%,
+    rgba(var(--nb-trust), var(--nb-opacity-hi)) 0%,
+    rgba(var(--nb-trust), var(--nb-opacity-lo)) 55%,
+    transparent 100%
+  );
+}
+body[data-narrative-state="trust"]
+  section[data-narrative="trust"]::after,
+body[data-narrative-state="trust"] #testimonials::after {
+  background: radial-gradient(
+    ellipse 80% 100% at 100% 50%,
+    rgba(var(--nb-trust), var(--nb-opacity-hi)) 0%,
+    rgba(var(--nb-trust), var(--nb-opacity-lo)) 55%,
+    transparent 100%
+  );
+}
+
+/* — action ──────────────────────────────────────────────────────────────── */
+body[data-narrative-state="action"]
+  section[data-narrative="action"]::before,
+body[data-narrative-state="action"] #cta::before {
+  background: radial-gradient(
+    ellipse 80% 100% at 0% 50%,
+    rgba(var(--nb-action), var(--nb-opacity-hi)) 0%,
+    rgba(var(--nb-action), var(--nb-opacity-lo)) 55%,
+    transparent 100%
+  );
+}
+body[data-narrative-state="action"]
+  section[data-narrative="action"]::after,
+body[data-narrative-state="action"] #cta::after {
+  background: radial-gradient(
+    ellipse 80% 100% at 100% 50%,
+    rgba(var(--nb-action), var(--nb-opacity-hi)) 0%,
+    rgba(var(--nb-action), var(--nb-opacity-lo)) 55%,
+    transparent 100%
+  );
+}
+
+/* ── Trigger: wings fly in ───────────────────────────────────────────────── */
+body[data-narrative-state="frustration"] section[data-narrative="frustration"]::before,
+body[data-narrative-state="frustration"] section[data-narrative="frustration"]::after,
+body[data-narrative-state="frustration"] #hero::before,
+body[data-narrative-state="frustration"] #hero::after,
+
+body[data-narrative-state="confusion"] section[data-narrative="confusion"]::before,
+body[data-narrative-state="confusion"] section[data-narrative="confusion"]::after,
+body[data-narrative-state="confusion"] #pain::before,
+body[data-narrative-state="confusion"] #pain::after,
+
+body[data-narrative-state="clarity"] section[data-narrative="clarity"]::before,
+body[data-narrative-state="clarity"] section[data-narrative="clarity"]::after,
+body[data-narrative-state="clarity"] #transform::before,
+body[data-narrative-state="clarity"] #transform::after,
+
+body[data-narrative-state="confidence"] section[data-narrative="confidence"]::before,
+body[data-narrative-state="confidence"] section[data-narrative="confidence"]::after,
+body[data-narrative-state="confidence"] #features::before,
+body[data-narrative-state="confidence"] #features::after,
+
+body[data-narrative-state="trust"] section[data-narrative="trust"]::before,
+body[data-narrative-state="trust"] section[data-narrative="trust"]::after,
+body[data-narrative-state="trust"] #testimonials::before,
+body[data-narrative-state="trust"] #testimonials::after,
+
+body[data-narrative-state="action"] section[data-narrative="action"]::before,
+body[data-narrative-state="action"] section[data-narrative="action"]::after,
+body[data-narrative-state="action"] #cta::before,
+body[data-narrative-state="action"] #cta::after {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* ── Reduced-motion: skip the slide, fade only ───────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  section[data-narrative]::before,
+  section[data-narrative]::after {
+    transform: translateX(0) !important;
+    transition: opacity 0.3s ease;
+  }
+}
+/* ═══════════════════════════════════════════════════════════════════════════
+   PART 7: LAYOUT — Container & Section
+   ═══════════════════════════════════════════════════════════════════════════ */
+.container-narrow {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 var(--space-lg);
+}
+.section-padding {
+  padding: var(--space-3xl) var(--space-lg);
+}
+
+@media (max-width: 768px) {
+  .section-padding {
+    padding: var(--space-xl) var(--space-md);
+  }
+  .container-narrow {
+    padding: 0 var(--space-md);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PART 8: BUTTON SYSTEM
+   ═══════════════════════════════════════════════════════════════════════════ */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-xl);
+  background: linear-gradient(135deg, hsl(262 80% 60%), hsl(190 90% 50%));
+  border-radius: var(--radius-xl);
+  font-weight: 700;
+  font-family: var(--font-sans);
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition:
+    transform 0.2s var(--ease-out),
+    opacity 0.2s var(--ease-out);
+}
+.btn-primary:hover  { transform: scale(1.02); }
+.btn-primary:active { transform: scale(0.98); }
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-xl);
+  border: 1px solid hsl(240 10% 20%);
+  border-radius: var(--radius-xl);
+  font-weight: 500;
+  font-family: var(--font-sans);
+  color: hsl(240 5% 70%);
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background 0.2s var(--ease-soft),
+    border-color 0.2s var(--ease-soft);
+}
+.btn-secondary:hover {
+  background: hsl(240 8% 12%);
+  border-color: hsl(var(--color-purple) / 0.3);
+}
+
+/* FIX: width:100% فقط داخل یک container خاص — نه global */
+.btn-block {
+  width: 100%;
+}
+
+/* Ghost Button */
+.ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: var(--radius);
+  color: hsl(var(--hisab-muted-fg));
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  transition: background 0.2s var(--ease-soft), color 0.2s var(--ease-soft);
+}
+.ghost-btn:hover {
+  background: hsl(var(--hisab-muted));
+  color: hsl(var(--hisab-foreground));
+}
+.ghost-danger:hover {
+  background: hsl(var(--hisab-destructive) / 0.1);
+  color: hsl(var(--hisab-destructive));
+}
+
+/* Shimmer Button */
+.shimmer-btn {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, hsl(var(--hisab-primary)), hsl(var(--hisab-success)));
+  border-radius: var(--radius-2xl);
+  cursor: pointer;
+  border: none;
+  transition: transform 0.25s var(--ease-out);
+}
+.shimmer-btn:hover { transform: translateY(-2px); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PART 9: FORM SYSTEM
+   ═══════════════════════════════════════════════════════════════════════════ */
+.form-input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  border: 1px solid hsl(var(--hisab-border));
+  background-color: hsl(var(--hisab-background));
+  color: hsl(var(--hisab-foreground));
+  font-family: var(--font-sans);
+  transition: border-color 0.2s var(--ease-soft);
+}
+.form-input:focus {
+  outline: none;
+  border-color: hsl(var(--hisab-primary));
+  box-shadow: 0 0 0 3px hsl(var(--hisab-primary) / 0.15);
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: hsl(var(--hisab-foreground));
+}
+.form-error {
+  margin-top: 4px;
+  font-size: 12px;
+  color: hsl(var(--hisab-destructive));
+}
+
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 32px;
+  border-radius: var(--radius-2xl);
+  background: hsl(var(--hisab-card));
+  border: 1px solid hsl(var(--hisab-border));
+}
+.auth-title {
+  font-size: 28px;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 24px;
+  color: hsl(var(--hisab-foreground));
+}
+.auth-link {
+  color: hsl(var(--hisab-primary));
+  text-decoration: none;
+  font-weight: 500;
+}
+.auth-link:hover { text-decoration: underline; }
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+}
+.auth-divider-line {
+  flex: 1;
+  height: 1px;
+  background-color: hsl(var(--hisab-border));
+}
+.auth-divider-text {
+  font-size: 12px;
+  color: hsl(var(--hisab-muted-fg));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PART 10: UI COMPONENTS
+   ═══════════════════════════════════════════════════════════════════════════ */
+.glass-card {
+  background: linear-gradient(
+    180deg,
+    hsl(var(--hisab-foreground) / 0.08),
+    hsl(var(--hisab-foreground) / 0.02)
+  );
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-2xl);
+}
+
+.stat-number {
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 700;
+  font-feature-settings: "tnum";
+  color: white;
+}
+.stat-label {
+  font-size: 0.875rem;
+  color: hsl(240 5% 65%);
+  margin-top: var(--space-xs);
+}
+
+.testimonial-card {
+  background: hsl(240 8% 8% / 0.6);
+  border: 1px solid hsl(240 10% 15%);
+  border-radius: var(--radius-xl);
+  padding: var(--space-lg);
+  transition: border-color 0.2s var(--ease-soft);
+}
+.testimonial-card:hover {
+  border-color: hsl(var(--color-purple) / 0.2);
+}
+
+/* FAQ Accordion */
+.faq-item {
+  border: 1px solid hsl(240 10% 15%);
+  border-radius: var(--radius-lg);
+  background: hsl(240 8% 8% / 0.6);
+  overflow: hidden;
+  transition: border-color 0.2s var(--ease-soft);
+}
+.faq-item.open {
+  border-color: hsl(var(--color-purple) / 0.3);
+}
+.faq-question {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-md) var(--space-lg);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  text-align: right;
+  color: white;
+  min-height: var(--touch-target);
+}
+.faq-icon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  border: 1px solid hsl(240 10% 20%);
+  transition: transform 0.3s var(--ease-soft);
+  line-height: 1;
+  font-size: 18px;
+}
+.faq-icon.open { transform: rotate(45deg); }
+
+.faq-answer {
+  padding: 0 var(--space-lg);
+  overflow: hidden;
+  transition: height 0.35s var(--ease-soft);
+  color: hsl(240 5% 70%);
+  font-size: 0.875rem;
+  line-height: var(--leading-relaxed);
+}
+.faq-answer-inner {
+  padding-bottom: var(--space-lg);
+}
+
+/* Status Pills */
+.sync-pill,
+.lang-pill {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+.sync-pill.ok {
+  color: hsl(var(--hisab-success));
+  background: hsl(var(--hisab-success) / 0.1);
+}
+.sync-pill.off {
+  color: hsl(var(--hisab-warning));
+  background: hsl(var(--hisab-warning) / 0.1);
+}
+
+/* Bottom Nav */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  inset-inline: 0;
+  z-index: 30;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 12px);
+  background: hsl(var(--hisab-background) / 0.9);
+  border-top: 1px solid hsl(var(--hisab-border));
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PART 11: FLIP CARD / CINEMATIC
+   ═══════════════════════════════════════════════════════════════════════════ */
+.cinematic-bg { display: none; }
+
+[data-perf="high"] .cinematic-bg {
+  display: block;
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+[data-perf="high"] .cinematic-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at 20% 20%,
+    hsl(var(--hisab-accent-1) / 0.15),
+    transparent 60%
+  );
+  animation: slowShift 30s ease-in-out infinite;
+}
+
+.flip-perspective { perspective: 2400px; }
+.flip-inner {
+  position: relative;
+  width: 100%;
+  display: grid;
+  transform-style: preserve-3d;
+  transition: transform 0.55s var(--ease-identity);
+}
+.flip-inner.is-flipped { transform: rotateY(180deg); }
+.flip-face {
+  grid-area: 1 / 1;
+  backface-visibility: hidden;
+  width: 100%;
+}
+.flip-back { transform: rotateY(180deg); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PART 12: KEYFRAME ANIMATIONS
+   ═══════════════════════════════════════════════════════════════════════════ */
+@keyframes slowShift {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50%       { transform: translate3d(10px, 10px, 0); }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes nodePulse {
+  0%, 100% { opacity: 0.6; }
+  50%       { opacity: 1; }
+}
+
+@keyframes floatDot {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-3px); }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.45s var(--ease-out) both;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PART 13: SCROLL LINE SYSTEM
+   ═══════════════════════════════════════════════════════════════════════════ */
+.scroll-line-system {
+  pointer-events: none;
+}
+.scroll-line-system svg {
+  display: block;
+  /* FIX: فقط SVG خودش GPU layer میگیره، نه همه children */
+  will-change: contents;
+}
+
+/*
+  FIX: section active glow — از outline استفاده میکنیم
+  تا z-index پیچیدگی نداشته باشه
+*/
+section[data-scroll-active="true"] {
+  outline: 1px solid hsl(var(--color-purple) / 0.06);
+  outline-offset: -1px;
+  border-radius: 2px;
+}
+
+/* FIX: transition: d پشتیبانی نداره — حذف شد */
+/* Path morphing از طریق strokeDashoffset در React اعمال میشه */
+
+/* High-DPI stroke enhancement */
+@media (min-resolution: 2dppx) {
+  .scroll-line-system path {
+    stroke-width: 2.5px;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PART 14: PERFORMANCE FLAGS
+   ═══════════════════════════════════════════════════════════════════════════ */
+.lite-mode .glass-card,
+.lite-mode .bottom-nav {
+  backdrop-filter: none !important;
+}
+.lite-mode [class*="shadow"] {
+  box-shadow: none !important;
+}
+.lite-mode [class*="animate-"] {
+  animation: none !important;
+}
+
+[data-offscreen="true"] {
+  animation: none !important;
+  backdrop-filter: none !important;
+}
+
+body.idle { --motion-scale: 0; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PART 15: MEDIA QUERIES
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Mobile */
+@media (max-width: 768px) {
+  .glass-card,
+  .bottom-nav {
+    backdrop-filter: none !important;
+  }
+  [class*="shadow"] {
+    box-shadow: none !important;
+  }
+  .shimmer-btn::before {
+    display: none;
+  }
+
+  /* FIX: فقط دکمه‌های داخل form یا .mobile-full full-width میشن */
+  .mobile-full.btn-primary,
+  .mobile-full.btn-secondary {
+    width: 100%;
+  }
+
+  .scroll-line-system {
+    display: none !important;
+  }
+  section[data-scroll-active="true"] {
+    outline: none;
+    animation: none;
+  }
+  body::after {
+    display: none;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .scroll-line-system {
+    display: none !important;
+  }
+  body::after {
+    display: none;
+  }
+}
+
+/* High-end enhancement */
+@media (min-width: 1280px) and (min-resolution: 2dppx) {
+  .scroll-line-system {
+    --line-opacity: 0.8;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PART 16: RTL SUPPORT (Farsi/Dari)
+   ═══════════════════════════════════════════════════════════════════════════ */
+[dir="rtl"] {
+  text-align: right;
+}
+[dir="rtl"] .flex-row {
+  flex-direction: row-reverse;
+}
+
+/*
+  FIX: scaleX(-1) روی کل SVG متن‌ها رو mirror میکرد.
+  scroll line container رو left: auto و right: 6 میذاریم.
+  داخل scroll-line-renderer.tsx باید direction: ltr روی container باشه.
+*/
+[dir="rtl"] .scroll-line-container {
+  left: auto;
+  right: 6px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PART 17: UTILITIES
+   ═══════════════════════════════════════════════════════════════════════════ */
+.cta-center {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PART 18: PRINT
+   ═══════════════════════════════════════════════════════════════════════════ */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  body::after,
+  .no-print,
+  .scroll-line-system,
+  .bottom-nav {
+    display: none !important;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   PART 20: UNIVERSAL RADIUS SYSTEM
+   همه کارت‌ها، اینپوت‌ها، باتن‌ها و مدال‌ها رو یکجا cover میکنه
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/*
+  ── چرا این بخش لازمه؟
+  Tailwind کلاس‌های rounded-* از مقادیر ثابت خودش استفاده میکنه
+  نه از CSS variables ما. این بخش همه عناصر رو با متغیرهای
+  سیستم ما align میکنه — بدون نیاز به تغییر هر component.
+*/
+
+/* ── 1. Tailwind rounded overrides ── */
+.rounded,
+.rounded-md    { border-radius: var(--radius-md)  !important; }
+.rounded-sm    { border-radius: var(--radius-sm)  !important; }
+.rounded-lg    { border-radius: var(--radius-lg)  !important; }
+.rounded-xl    { border-radius: var(--radius-xl)  !important; }
+.rounded-2xl   { border-radius: var(--radius-2xl) !important; }
+.rounded-3xl   { border-radius: var(--radius-3xl) !important; }
+.rounded-full  { border-radius: var(--radius-full) !important; }
+.rounded-none  { border-radius: 0 !important; }
+
+/* ── 2. Cards — هر چیزی که ظاهر کارت داره ── */
+[class*="card"],
+[class*="Card"],
+.panel,
+.sheet,
+.surface {
+  border-radius: var(--radius-card) !important;
+}
+
+/* exceptions: avatar و badge نباید radius کارت بگیرن */
+[class*="avatar"],
+[class*="Avatar"],
+[class*="badge"],
+[class*="Badge"],
+[class*="chip"],
+[class*="tag"],
+[class*="pill"] {
+  border-radius: var(--radius-full) !important;
+}
+
+/* ── 3. Buttons ── */
+button:not([class]),
+[role="button"]:not([class]),
+.btn,
+[class*="btn-"],
+[class*="-btn"],
+[class*="button"],
+[class*="Button"] {
+  border-radius: var(--radius-button) !important;
+}
+
+/* icon-only buttons: کاملاً گرد */
+.btn-icon,
+[class*="btn-icon"],
+[class*="IconButton"],
+[class*="icon-button"] {
+  border-radius: var(--radius-full) !important;
+}
+
+/* ── 4. Form inputs ── */
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+textarea,
+select,
+[class*="input"],
+[class*="Input"],
+[class*="textarea"],
+[class*="Textarea"],
+[class*="select"],
+[class*="Select"] {
+  border-radius: var(--radius-input) !important;
+}
+
+/* checkbox و radio شکل خودشون رو دارن */
+input[type="checkbox"] { border-radius: var(--radius-xs)  !important; }
+input[type="radio"]    { border-radius: var(--radius-full) !important; }
+
+/* ── 5. Modals / Dialogs ── */
+[role="dialog"],
+[class*="modal"],
+[class*="Modal"],
+[class*="dialog"],
+[class*="Dialog"],
+[class*="drawer"],
+[class*="Drawer"],
+[class*="sheet"],
+[class*="Sheet"] {
+  border-radius: var(--radius-modal) !important;
+}
+
+/* ── 6. Dropdowns / Popovers / Tooltips ── */
+[role="listbox"],
+[role="menu"],
+[role="tooltip"],
+[class*="dropdown"],
+[class*="Dropdown"],
+[class*="popover"],
+[class*="Popover"],
+[class*="tooltip"],
+[class*="Tooltip"],
+[class*="menu"],
+[class*="Menu"] {
+  border-radius: var(--radius-lg) !important;
+}
+
+/* menu items داخلی */
+[role="menuitem"],
+[role="option"],
+[class*="menu-item"],
+[class*="MenuItem"],
+[class*="dropdown-item"],
+[class*="DropdownItem"] {
+  border-radius: var(--radius-sm) !important;
+}
+
+/* ── 7. Badges / Tags / Pills ── */
+[class*="badge"],
+[class*="Badge"],
+[class*="tag"],
+[class*="Tag"],
+[class*="chip"],
+[class*="Chip"],
+[class*="label"],
+.status-dot + span {
+  border-radius: var(--radius-full) !important;
+}
+
+/* ── 8. Alerts / Toasts / Notifications ── */
+[role="alert"],
+[class*="alert"],
+[class*="Alert"],
+[class*="toast"],
+[class*="Toast"],
+[class*="notification"],
+[class*="Notification"],
+[class*="banner"],
+[class*="Banner"] {
+  border-radius: var(--radius-lg) !important;
+}
+
+/* ── 9. Images & Media ── */
+img[class*="rounded"],
+img[class*="card"],
+img[class*="cover"],
+img[class*="thumbnail"],
+figure[class*="card"] {
+  border-radius: var(--radius-card) !important;
+}
+img[class*="avatar"],
+img[class*="Avatar"] {
+  border-radius: var(--radius-full) !important;
+}
+
+/* ── 10. Shadcn/UI component overrides (اگه استفاده میکنی) ── */
+/* Card */
+
+[data-radix-popper-content-wrapper] > div {
+  border-radius: var(--radius-lg) !important;
+}
+
+/* Progress bar */
+[role="progressbar"] {
+  border-radius: var(--radius-full) !important;
+}
+[role="progressbar"] > * {
+  border-radius: var(--radius-full) !important;
+}
+
+/* Slider */
+[role="slider"] {
+  border-radius: var(--radius-full) !important;
+}
+
+/* Switch */
+[role="switch"] {
+  border-radius: var(--radius-full) !important;
+}
+
+/* Tabs */
+[role="tablist"] {
+  border-radius: var(--radius-lg) !important;
+}
+[role="tab"] {
+  border-radius: var(--radius-md) !important;
+}
+
+/* ── 11. Skeleton loaders ── */
+[class*="skeleton"],
+[class*="Skeleton"],
+[class*="loading"],
+[data-loading="true"] {
+  border-radius: var(--radius-md) !important;
+}
+[class*="skeleton"][class*="circle"],
+[class*="skeleton"][class*="avatar"] {
+  border-radius: var(--radius-full) !important;
+}
+
+/* ── 12. Scrollbar styling ── */
+::-webkit-scrollbar-thumb {
+  border-radius: var(--radius-full);
+}
+
+/* ── Bottom sheet on mobile: فقط بالا radius داره ── */
+@media (max-width: 767px) {
+  [class*="bottom-sheet"],
+  [class*="BottomSheet"],
+  .drawer-bottom,
+  [data-vaul-drawer] {
+    border-radius: var(--radius-2xl) var(--radius-2xl) 0 0 !important;
+  }
+}
+/* بعد از PART 2: BASE STYLES یا داخل PART 3: TYPOGRAPHY اضافه کنید */
+
+.text-foreground {
+  color: hsl(var(--hisab-foreground));
+}
+
+/* برای dark mode هم اطمینان حاصل کنید */
+.dark .text-foreground {
+  color: hsl(var(--hisab-foreground));
+}
+
+/* کلاس‌های مشابه برای consistency (پیشنهادی) */
+.text-muted {
+  color: hsl(var(--hisab-muted-fg));
+}
+
+.text-primary {
+  color: hsl(var(--hisab-primary));
+}
+
+.text-destructive {
+  color: hsl(var(--hisab-destructive));
+}
+/* ═══════════════════════════════════════════════════════════════════════════
+   6. NARRATIVE SECTION BACKGROUNDS (Dual Wings System)
+   ═══════════════════════════════════════════════════════════════════════════ */
+section[data-narrative] {
+  position: relative;
+  isolation: isolate;
+}
+
+section[data-narrative]::before,
+section[data-narrative]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(var(--nb-tx, -100%));
+  transition: opacity var(--nb-transition), transform var(--nb-transition);
+  will-change: transform, opacity;
+}
+
+section[data-narrative]::before { --nb-tx: -100%; }
+section[data-narrative]::after { --nb-tx: 100%; }
+
+/* Frustration / Hero */
+body[data-narrative-state="frustration"] [data-narrative="frustration"]::before,
+body[data-narrative-state="frustration"] [data-narrative="frustration"]::after {
+  opacity: 1;
+  transform: translateX(0);
+}
+body[data-narrative-state="frustration"] [data-narrative="frustration"]::before {
+  background: radial-gradient(ellipse 80% 100% at 0% 50%, rgba(var(--nb-frustration), var(--nb-opacity-hi)) 0%, rgba(var(--nb-frustration), var(--nb-opacity-lo)) 55%, transparent 100%);
+}
+body[data-narrative-state="frustration"] [data-narrative="frustration"]::after {
+  background: radial-gradient(ellipse 80% 100% at 100% 50%, rgba(var(--nb-frustration), var(--nb-opacity-hi)) 0%, rgba(var(--nb-frustration), var(--nb-opacity-lo)) 55%, transparent 100%);
+}
+
+/* Confusion / Pain */
+body[data-narrative-state="confusion"] [data-narrative="confusion"]::before,
+body[data-narrative-state="confusion"] [data-narrative="confusion"]::after {
+  opacity: 1;
+  transform: translateX(0);
+}
+body[data-narrative-state="confusion"] [data-narrative="confusion"]::before {
+  background: radial-gradient(ellipse 80% 100% at 0% 50%, rgba(var(--nb-confusion), var(--nb-opacity-hi)) 0%, rgba(var(--nb-confusion), var(--nb-opacity-lo)) 55%, transparent 100%);
+}
+body[data-narrative-state="confusion"] [data-narrative="confusion"]::after {
+  background: radial-gradient(ellipse 80% 100% at 100% 50%, rgba(var(--nb-confusion), var(--nb-opacity-hi)) 0%, rgba(var(--nb-confusion), var(--nb-opacity-lo)) 55%, transparent 100%);
+}
+
+/* Clarity / Transform */
+body[data-narrative-state="clarity"] [data-narrative="clarity"]::before,
+body[data-narrative-state="clarity"] [data-narrative="clarity"]::after {
+  opacity: 1;
+  transform: translateX(0);
+}
+body[data-narrative-state="clarity"] [data-narrative="clarity"]::before {
+  background: radial-gradient(ellipse 80% 100% at 0% 50%, rgba(var(--nb-clarity), var(--nb-opacity-hi)) 0%, rgba(var(--nb-clarity), var(--nb-opacity-lo)) 55%, transparent 100%);
+}
+body[data-narrative-state="clarity"] [data-narrative="clarity"]::after {
+  background: radial-gradient(ellipse 80% 100% at 100% 50%, rgba(var(--nb-clarity), var(--nb-opacity-hi)) 0%, rgba(var(--nb-clarity), var(--nb-opacity-lo)) 55%, transparent 100%);
+}
+
+/* Confidence / Features */
+body[data-narrative-state="confidence"] [data-narrative="confidence"]::before,
+body[data-narrative-state="confidence"] [data-narrative="confidence"]::after {
+  opacity: 1;
+  transform: translateX(0);
+}
+body[data-narrative-state="confidence"] [data-narrative="confidence"]::before {
+  background: radial-gradient(ellipse 80% 100% at 0% 50%, rgba(var(--nb-confidence), var(--nb-opacity-hi)) 0%, rgba(var(--nb-confidence), var(--nb-opacity-lo)) 55%, transparent 100%);
+}
+body[data-narrative-state="confidence"] [data-narrative="confidence"]::after {
+  background: radial-gradient(ellipse 80% 100% at 100% 50%, rgba(var(--nb-confidence), var(--nb-opacity-hi)) 0%, rgba(var(--nb-confidence), var(--nb-opacity-lo)) 55%, transparent 100%);
+}
+
+/* Trust / Testimonials */
+body[data-narrative-state="trust"] [data-narrative="trust"]::before,
+body[data-narrative-state="trust"] [data-narrative="trust"]::after {
+  opacity: 1;
+  transform: translateX(0);
+}
+body[data-narrative-state="trust"] [data-narrative="trust"]::before {
+  background: radial-gradient(ellipse 80% 100% at 0% 50%, rgba(var(--nb-trust), var(--nb-opacity-hi)) 0%, rgba(var(--nb-trust), var(--nb-opacity-lo)) 55%, transparent 100%);
+}
+body[data-narrative-state="trust"] [data-narrative="trust"]::after {
+  background: radial-gradient(ellipse 80% 100% at 100% 50%, rgba(var(--nb-trust), var(--nb-opacity-hi)) 0%, rgba(var(--nb-trust), var(--nb-opacity-lo)) 55%, transparent 100%);
+}
+
+/* Action / CTA */
+body[data-narrative-state="action"] [data-narrative="action"]::before,
+body[data-narrative-state="action"] [data-narrative="action"]::after {
+  opacity: 1;
+  transform: translateX(0);
+}
+body[data-narrative-state="action"] [data-narrative="action"]::before {
+  background: radial-gradient(ellipse 80% 100% at 0% 50%, rgba(var(--nb-action), var(--nb-opacity-hi)) 0%, rgba(var(--nb-action), var(--nb-opacity-lo)) 55%, transparent 100%);
+}
+body[data-narrative-state="action"] [data-narrative="action"]::after {
+  background: radial-gradient(ellipse 80% 100% at 100% 50%, rgba(var(--nb-action), var(--nb-opacity-hi)) 0%, rgba(var(--nb-action), var(--nb-opacity-lo)) 55%, transparent 100%);
 }

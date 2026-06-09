@@ -1,4 +1,3 @@
-// packages/ui/src/components/navigation/top-nav.tsx
 "use client";
 
 import { useEffect, useRef, useState } from "react";
@@ -36,6 +35,14 @@ export function TopNav({
 
   const accent = getNarrativeColor(narrativeState);
 
+  // اضافه کردن اثر رنگ به body
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.body.style.setProperty('--nav-accent', accent);
+      document.body.setAttribute('data-narrative-state', narrativeState);
+    }
+  }, [narrativeState, accent]);
+
   // Move indicator - measured only on active section change
   useEffect(() => {
     const activeBtn = document.querySelector(`.top-nav-btn[data-id="${activeSection}"]`) as HTMLButtonElement;
@@ -50,11 +57,16 @@ export function TopNav({
     });
   }, [activeSection]);
 
+  // وقتی سکت عوض میشه، به اون بخش اسکرول کن
+  const handleSetSection = (id: string) => {
+    setSection(id);
+  };
+
   return (
     <header className="top-nav" style={{ "--nav-accent": accent } as React.CSSProperties}>
       <div className="top-nav-inner">
         {/* Logo */}
-        <button className="top-nav-logo" onClick={() => setSection(sections[0]?.id || "")}>
+        <button className="top-nav-logo" onClick={() => handleSetSection(sections[0]?.id || "")}>
           <span>{appName}</span>
           <span className="logo-dot" style={{ color: accent }}>.</span>
         </button>
@@ -83,7 +95,7 @@ export function TopNav({
                 <button
                   data-id={id}
                   className={`top-nav-btn ${activeSection === id ? "active" : ""}`}
-                  onClick={() => setSection(id)}
+                  onClick={() => handleSetSection(id)}
                 >
                   {label}
                 </button>

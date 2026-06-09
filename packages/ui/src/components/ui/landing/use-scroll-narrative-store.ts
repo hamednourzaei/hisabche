@@ -1,116 +1,290 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-export type SectionId = 'hero' | 'pain' | 'transform' | 'features' | 'testimonials' | 'cta';
-export type NarrativeState = 'frustration' | 'confusion' | 'clarity' | 'confidence' | 'trust' | 'action';
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-const SECTION_LAYOUT: { id: SectionId; y: number; narrative: NarrativeState }[] = [
-  { id: 'hero',         y: 0.05, narrative: 'frustration' },
-  { id: 'pain',         y: 0.2,  narrative: 'confusion'   },
-  { id: 'transform',    y: 0.4,  narrative: 'clarity'     },
-  { id: 'features',     y: 0.55, narrative: 'confidence'  },
-  { id: 'testimonials', y: 0.75, narrative: 'trust'       },
-  { id: 'cta',          y: 0.9,  narrative: 'action'      },
-];
+export type SectionId =
+  | "hero"
+  | "pain"
+  | "transform"
+  | "features"
+  | "testimonials"
+  | "cta";
+
+export type NarrativeState =
+  | "frustration"
+  | "confusion"
+  | "clarity"
+  | "confidence"
+  | "trust"
+  | "action";
+
+interface SectionMeta {
+  readonly y: number;
+  readonly narrative: NarrativeState;
+}
 
 interface ScrollState {
-  progress: number;
-  activeSection: SectionId;
-  narrativeState: NarrativeState;
+  readonly progress: number;
+  readonly activeSection: SectionId;
+  readonly narrativeState: NarrativeState;
 }
 
-let scrollState: ScrollState = {
-  progress: 0,
-  activeSection: 'hero',
-  narrativeState: 'frustration',
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const SECTION_MAP = {
+  hero:         { y: 0.05, narrative: "frustration" },
+  pain:         { y: 0.2,  narrative: "confusion"   },
+  transform:    { y: 0.4,  narrative: "clarity"     },
+  features:     { y: 0.55, narrative: "confidence"  },
+  testimonials: { y: 0.75, narrative: "trust"       },
+  cta:          { y: 0.9,  narrative: "action"      },
+} as const satisfies Record<SectionId, SectionMeta>;
+
+export const VALID_SECTION_IDS = Object.keys(SECTION_MAP) as SectionId[];
+
+export const NARRATIVE_COLORS: Record<NarrativeState, string> = {
+  frustration: "#A855F7",
+  confusion:   "#EF4444",
+  clarity:     "#10B981",
+  confidence:  "#06B6D4",
+  trust:       "#8B5CF6",
+  action:      "#EC4899",
 };
 
-const listeners = new Set<(state: ScrollState) => void>();
+const INITIAL_STATE: ScrollState = {
+  progress:       0,
+  activeSection:  "hero",
+  narrativeState: "frustration",
+};
 
-function updateScrollState(progress: number) {
-  let activeSection: SectionId = 'hero';
-  let narrativeState: NarrativeState = 'frustration';
+// ─── Type Guards ──────────────────────────────────────────────────────────────
 
-  for (let i = SECTION_LAYOUT.length - 1; i >= 0; i--) {
-    const section = SECTION_LAYOUT[i];
-    if (section && progress >= section.y) {
-      activeSection = section.id;
-      narrativeState = section.narrative;
-      break;
-    }
-  }
-
-  // فقط وقتی section عوض شده body attrs رو آپدیت کن
-  const changed = scrollState.activeSection !== activeSection;
-  scrollState = { progress, activeSection, narrativeState };
-
-  if (changed && typeof document !== 'undefined') {
-    document.body.setAttribute('data-active-section', activeSection);
-    document.body.setAttribute('data-narrative-state', narrativeState);
-  }
-
-  listeners.forEach(l => l(scrollState));
+export function isSectionId(value: string): value is SectionId {
+  return (VALID_SECTION_IDS as string[]).includes(value);
 }
 
-let rafId: number | null = null;
-let lastProgress = -1;
+// ─── Singleton Store ──────────────────────────────────────────────────────────
 
-function startScrollLoop() {
-  if (rafId !== null) return;
+let scrollState: ScrollState = INITIAL_STATE;
 
-  const loop = () => {
-    if (typeof window !== 'undefined') {
-      const maxScroll = document.body.scrollHeight - window.innerHeight;
-      const progress = maxScroll > 0
-        ? Math.min(1, Math.max(0, window.scrollY / maxScroll))
-        : 0;
+// Listeners split by concern: section listeners only fire on section change,
+// progress listeners fire on scroll — keeps re-renders minimal.
+const sectionListeners  = new Set<(state: ScrollState) => void>();
+const progressListeners = new Set<(progress: number) => void>();
 
-      // فقط وقتی تغییر معنادار داشت آپدیت کن
-      if (Math.abs(progress - lastProgress) > 0.001) {
-        lastProgress = progress;
-        updateScrollState(progress);
-      }
-    }
-    rafId = requestAnimationFrame(loop);
+function notifySection(): void {
+  sectionListeners.forEach((l) => l(scrollState));
+}
+
+function notifyProgress(p: number): void {
+  progressListeners.forEach((l) => l(p));
+}
+
+function applySection(section: SectionId): void {
+  if (scrollState.activeSection === section) return;
+
+  const meta = SECTION_MAP[section];
+
+  // Reuse the same progress value — no unnecessary spread on every call
+  scrollState = {
+    progress:       scrollState.progress,
+    activeSection:  section,
+    narrativeState: meta.narrative,
   };
 
-  rafId = requestAnimationFrame(loop);
-}
-
-function stopScrollLoop() {
-  if (rafId !== null) {
-    cancelAnimationFrame(rafId);
-    rafId = null;
+  if (typeof document !== "undefined") {
+    document.body.setAttribute("data-active-section", section);
+    document.body.setAttribute("data-narrative-state", meta.narrative);
   }
+
+  notifySection();
 }
 
-export function useScrollNarrative() {
+// ─── Queue (RAF-aligned, no setTimeout) ──────────────────────────────────────
+
+interface QueueState {
+  pending:     SectionId | null;
+  isScheduled: boolean;
+  lastSection: SectionId | null;
+  lastTime:    number;
+}
+
+const queue: QueueState = {
+  pending:     null,
+  isScheduled: false,
+  lastSection: null,
+  lastTime:    0,
+};
+
+// Flush is now RAF-aligned instead of setTimeout — avoids timer pile-up
+// during fast scroll bursts.
+function scheduleFlush(): void {
+  if (queue.isScheduled) return;
+  queue.isScheduled = true;
+
+  requestAnimationFrame(() => {
+    queue.isScheduled = false;
+
+    const target = queue.pending;
+    if (target === null) return;
+
+    queue.pending     = null;
+    queue.lastSection = target;
+    queue.lastTime    = Date.now();
+
+    applySection(target);
+  });
+}
+
+const SECTION_COOLDOWN_MS = 150; // min ms between same-section triggers
+
+/**
+ * Debounced section update — used by IntersectionObserver callbacks.
+ * Collapses rapid-fire calls into one RAF-aligned state transition.
+ */
+export function queueSetActiveSection(section: SectionId): void {
+  if (
+    queue.lastSection === section &&
+    Date.now() - queue.lastTime < SECTION_COOLDOWN_MS
+  ) {
+    return;
+  }
+
+  // Always overwrite with the latest — only the last one matters
+  queue.pending = section;
+  scheduleFlush();
+}
+
+/**
+ * Immediate section update — used for navbar clicks / programmatic navigation.
+ * Cancels any pending queued update.
+ */
+export function setActiveSection(section: SectionId): void {
+  queue.pending     = null;
+  queue.isScheduled = false;
+
+  applySection(section);
+}
+
+// ─── RAF scroll-progress loop ─────────────────────────────────────────────────
+// Runs on a SINGLE shared RAF loop — not one per listener.
+// Progress updates are throttled to meaningful deltas only.
+
+let rafId:          number | null = null;
+let lastProgress:   number        = -1;
+let frameCount:     number        = 0;
+
+// Throttle: only broadcast progress every N frames.
+// At 60fps → every 3 frames = ~50ms updates. Smooth but not overwhelming.
+const PROGRESS_FRAME_SKIP   = 3;
+const PROGRESS_MIN_DELTA    = 0.002; // 0.2% of page height
+
+function scrollLoop(): void {
+  frameCount++;
+
+  if (frameCount % PROGRESS_FRAME_SKIP === 0) {
+    const maxScroll = document.body.scrollHeight - window.innerHeight;
+    const raw       = maxScroll > 0 ? window.scrollY / maxScroll : 0;
+    const progress  = Math.min(1, Math.max(0, raw));
+
+    if (Math.abs(progress - lastProgress) > PROGRESS_MIN_DELTA) {
+      lastProgress = progress;
+      // Update state object in-place — only progress changed
+      scrollState  = { ...scrollState, progress };
+      notifyProgress(progress);
+    }
+  }
+
+  rafId = requestAnimationFrame(scrollLoop);
+}
+
+function startScrollLoop(): void {
+  if (rafId !== null || typeof window === "undefined") return;
+  frameCount = 0;
+  rafId = requestAnimationFrame(scrollLoop);
+}
+
+function stopScrollLoop(): void {
+  if (rafId === null) return;
+  cancelAnimationFrame(rafId);
+  rafId = null;
+}
+
+// ─── React Hooks ──────────────────────────────────────────────────────────────
+
+/**
+ * Full scroll state — activeSection + narrativeState + progress.
+ * Re-renders on BOTH section changes AND progress changes.
+ * Use only when you need the progress value.
+ */
+export function useScrollNarrative(): ScrollState {
   const [state, setState] = useState<ScrollState>(scrollState);
 
   useEffect(() => {
-    const listener = (s: ScrollState) => setState(s);
-    listeners.add(listener);
+    // Sync in case state changed between render and mount
+    setState(scrollState);
+
+    const onSection  = (s: ScrollState) => setState(s);
+    const onProgress = (p: number) =>
+      setState((prev) => (prev.progress === p ? prev : { ...prev, progress: p }));
+
+    sectionListeners.add(onSection);
+    progressListeners.add(onProgress);
     startScrollLoop();
+
     return () => {
-      listeners.delete(listener);
-      if (listeners.size === 0) stopScrollLoop();
+      sectionListeners.delete(onSection);
+      progressListeners.delete(onProgress);
+      if (sectionListeners.size === 0 && progressListeners.size === 0) {
+        stopScrollLoop();
+      }
     };
   }, []);
 
   return state;
 }
 
-export function getActiveNodeColor(narrativeState: NarrativeState): string {
-  switch (narrativeState) {
-    case 'frustration': return '#A855F7';
-    case 'confusion':   return '#EF4444';
-    case 'clarity':     return '#10B981';
-    case 'confidence':  return '#06B6D4';
-    case 'trust':       return '#8B5CF6';
-    case 'action':      return '#EC4899';
-    default:            return '#A855F7';
-  }
+/**
+ * Section-only state — does NOT re-render on scroll progress.
+ * Prefer this for navbar, indicators, and anything that only cares about
+ * which section is active.
+ */
+export function useActiveSection(): Pick<ScrollState, "activeSection" | "narrativeState"> {
+  const [section,  setSection]  = useState(scrollState.activeSection);
+  const [narrative, setNarrative] = useState(scrollState.narrativeState);
+
+  // Use refs to avoid stale-closure issues in the listener
+  const sectionRef  = useRef(section);
+  const narrativeRef = useRef(narrative);
+
+  useEffect(() => {
+    const onSection = (s: ScrollState) => {
+      if (s.activeSection !== sectionRef.current) {
+        sectionRef.current  = s.activeSection;
+        narrativeRef.current = s.narrativeState;
+        setSection(s.activeSection);
+        setNarrative(s.narrativeState);
+      }
+    };
+
+    sectionListeners.add(onSection);
+    startScrollLoop();
+
+    return () => {
+      sectionListeners.delete(onSection);
+      if (sectionListeners.size === 0 && progressListeners.size === 0) {
+        stopScrollLoop();
+      }
+    };
+  }, []);
+
+  return { activeSection: section, narrativeState: narrative };
 }
 
-export const getSectionLayout = () => SECTION_LAYOUT;
+// ─── Utilities ────────────────────────────────────────────────────────────────
+
+export function getActiveNodeColor(state: NarrativeState): string {
+  return NARRATIVE_COLORS[state];
+}

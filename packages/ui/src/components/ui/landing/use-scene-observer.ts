@@ -1,105 +1,133 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 
-type SceneState = "hidden" | "visible" | "animated";
-export type NarrativeState = "frustration" | "confusion" | "clarity" | "confidence" | "trust" | "action";
+import {
+  isSectionId,
+  queueSetActiveSection,
+  type NarrativeState,
+  type SectionId,
+} from "./use-scroll-narrative-store";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export type SceneState = "hidden" | "visible" | "animated";
 
 interface UseSceneObserverOptions {
+  /** Fraction of element that must be visible to trigger. Default: 0.25 */
   threshold?: number;
-  once?: boolean;
+  /** IntersectionObserver rootMargin. Default: "0px 0px -60px 0px" */
   rootMargin?: string;
-  onVisibilityChange?: (isVisible: boolean) => void;
+  /** Narrative state written as a data-attribute for CSS targeting. */
   narrativeState?: NarrativeState;
+  /** Minimum ms between repeated triggers for the same section. Default: 500 */
+  cooldownMs?: number;
+  /** Delay before initial "visible" state, in ms. Default: 80 */
+  mountDelayMs?: number;
 }
 
-export function useSceneObserver<T extends HTMLElement = HTMLDivElement>({
-  threshold = 0.3,
-  once = true,
-  rootMargin = "0px 0px -100px 0px",
-  onVisibilityChange,
-  narrativeState,
-}: UseSceneObserverOptions = {}) {
-  const ref = useRef<T>(null);
-  const [state, setState] = useState<SceneState>("hidden");
-  const hasAnimated = useRef(false);
+interface UseSceneObserverReturn<T extends HTMLElement> {
+  ref:   React.RefObject<T>;
+  state: SceneState;
+}
 
-  const handleVisibilityChange = useCallback(
-    (isVisible: boolean) => {
-      if (!isVisible) return;
-      
-      if (once && hasAnimated.current) return;
-      
-      setState("visible");
-      onVisibilityChange?.(true);
-      
-      // Set narrative state attribute for CSS targeting
-      if (narrativeState && ref.current) {
-        ref.current.setAttribute('data-narrative', narrativeState);
-        ref.current.setAttribute('data-scroll-active', 'true');
-      }
-      
-      requestAnimationFrame(() => {
-        setState("animated");
-        hasAnimated.current = true;
-      });
-    },
-    [once, onVisibilityChange, narrativeState]
-  );
+// ─── Per-section cooldown tracker ────────────────────────────────────────────
+// Stored outside the hook so it persists across re-mounts of the same section.
+
+const lastTriggerTime = new Map<SectionId, number>();
+
+function canTrigger(section: SectionId, cooldownMs: number): boolean {
+  const last = lastTriggerTime.get(section) ?? 0;
+  return Date.now() - last > cooldownMs;
+}
+
+function recordTrigger(section: SectionId): void {
+  lastTriggerTime.set(section, Date.now());
+}
+
+// ─── Hook ─────────────────────────────────────────────────────────────────────
+
+export function useSceneObserver<T extends HTMLElement = HTMLDivElement>({
+  threshold    = 0.25,
+  rootMargin   = "0px 0px -60px 0px",
+  narrativeState,
+  cooldownMs   = 500,
+  mountDelayMs = 80,
+}: UseSceneObserverOptions = {}): UseSceneObserverReturn<T> {
+  const ref   = useRef<T>(null);
+  const [state, setState] = useState<SceneState>("hidden");
 
   useEffect(() => {
     const element = ref.current;
     if (!element) return;
 
+    // ── Resolve & validate section id ───────────────────────────────────────
+    const rawId = element.id;
+
+    if (!rawId) {
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("[useSceneObserver] Element is missing an id. Observer skipped.", element);
+      }
+      return;
+    }
+
+    if (!isSectionId(rawId)) {
+      if (process.env.NODE_ENV !== "production") {
+        console.warn(`[useSceneObserver] Unknown section id "${rawId}". Observer skipped.`);
+      }
+      return;
+    }
+
+    // rawId is now narrowed to SectionId — no cast needed anywhere below
+    const sectionId: SectionId = rawId;
+
+    // ── Data-attribute for CSS targeting ────────────────────────────────────
+    if (narrativeState) {
+      element.setAttribute("data-narrative", narrativeState);
+    }
+
+    // ── Initial visibility animation ────────────────────────────────────────
+    const mountTimer = setTimeout(() => {
+      setState("visible");
+      requestAnimationFrame(() => setState("animated"));
+    }, mountDelayMs);
+
+    // ── IntersectionObserver ─────────────────────────────────────────────────
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
         if (!entry) return;
-        
-        const isVisible = entry.isIntersecting;
-        if (isVisible) {
-          handleVisibilityChange(true);
-        } else if (element) {
-          element.setAttribute('data-scroll-active', 'false');
+
+        const { isIntersecting, intersectionRatio } = entry;
+
+        element.setAttribute(
+          "data-scroll-active",
+          isIntersecting ? "true" : "false"
+        );
+
+        if (isIntersecting && intersectionRatio >= threshold) {
+          if (canTrigger(sectionId, cooldownMs)) {
+            recordTrigger(sectionId);
+            queueSetActiveSection(sectionId);
+          }
         }
       },
       { threshold, rootMargin }
     );
 
     observer.observe(element);
+
     return () => {
+      clearTimeout(mountTimer);
       observer.disconnect();
     };
-  }, [handleVisibilityChange, threshold, rootMargin]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // ^ Intentionally empty deps: the observer is tied to the mounted element.
+  //   Options changing at runtime is not a supported use-case; consumers should
+  //   stabilise them with useMemo / constants before passing in.
 
   return { ref, state };
 }
 
-// Global narrative state manager
-let globalActiveSection: string = 'hero';
-const narrativeListeners: Set<(section: string, progress: number) => void> = new Set();
-
-export function updateGlobalNarrative(section: string, progress: number) {
-  globalActiveSection = section;
-  narrativeListeners.forEach(listener => listener(section, progress));
-  document.body.setAttribute('data-active-section', section);
-  document.body.setAttribute('data-scroll-progress', String(progress));
-}
-
-export function useGlobalNarrative() {
-  const [activeSection, setActiveSection] = useState(globalActiveSection);
-  const [scrollProgress, setScrollProgress] = useState(0);
-
-  useEffect(() => {
-    const listener = (section: string, progress: number) => {
-      setActiveSection(section);
-      setScrollProgress(progress);
-    };
-    narrativeListeners.add(listener);
-    return () => {
-      narrativeListeners.delete(listener);
-    };
-  }, []);
-
-  return { activeSection, scrollProgress };
-}
+export type { NarrativeState, SectionId };

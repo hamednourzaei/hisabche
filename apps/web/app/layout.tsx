@@ -1,10 +1,7 @@
 import type { Metadata, Viewport } from "next"
-
 import { Providers } from "./providers"
 import { ClientErrorBoundary } from "./client-error-boundary"
-
 import "@hisabche/ui/globals.css"
-
 import localFont from "next/font/local"
 import { cn } from "@hisabche/ui"
 import { SpeedInsights } from "@vercel/speed-insights/next"
@@ -12,16 +9,8 @@ import { Analytics } from "@vercel/analytics/next"
 
 const vazirmatn = localFont({
   src: [
-    {
-      path: "../public/fonts/Vazirmatn-Regular.ttf",
-      weight: "400",
-      style: "normal",
-    },
-    {
-      path: "../public/fonts/Vazirmatn-Bold.ttf",
-      weight: "700",
-      style: "normal",
-    },
+    { path: "../public/fonts/Vazirmatn-Regular.ttf", weight: "400", style: "normal" },
+    { path: "../public/fonts/Vazirmatn-Bold.ttf",    weight: "700", style: "normal" },
   ],
   variable: "--font-sans",
   display: "swap",
@@ -30,36 +19,58 @@ const vazirmatn = localFont({
 export const metadata: Metadata = {
   title: {
     template: "%s | حساب‌چه",
-    default: "حساب‌چه — سیستم مدیریت کسب‌وکار",
+    default:  "حساب‌چه — سیستم مدیریت کسب‌وکار",
   },
 }
 
 export const viewport: Viewport = {
-  width: "device-width",
+  width:        "device-width",
   initialScale: 1,
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#f8f8fb" },
-    { media: "(prefers-color-scheme: dark)", color: "#0e0e14" },
+    { media: "(prefers-color-scheme: dark)",  color: "#0e0e14" },
   ],
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="fa-AF"
       dir="rtl"
-      suppressHydrationWarning
-      data-scroll-behavior="smooth"
-      className={cn("font-sans", vazirmatn.variable)}
+      suppressHydrationWarning          /* ← dark class رو Providers سمت client اضافه میکنه */
+      className={cn(vazirmatn.variable)}
     >
       <head>
-
-</head>
-      <body className="min-h-screen bg-[var(--hisab-background)] text-[var(--hisab-foreground)] antialiased">
+        <script
+          dangerouslySetInnerHTML={{
+            /*
+              این script قبل از paint اجرا میشه و از FOUC جلوگیری میکنه.
+              theme رو از localStorage میخونه و dark class رو inline اعمال میکنه.
+            */
+            __html: `
+              (function() {
+                try {
+                  var theme = localStorage.getItem('hisab-theme');
+                  var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                  if (theme === 'dark' || (!theme && prefersDark)) {
+                    document.documentElement.classList.add('dark');
+                  }
+                } catch(e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
+      <body
+        className={cn(
+          "min-h-screen antialiased font-sans",
+          vazirmatn.variable
+        )}
+        style={{
+          backgroundColor: "hsl(var(--hisab-background))",
+          color:           "hsl(var(--hisab-foreground))",  /* ✅ از CSS var میخونه — dark mode خودکار */
+        }}
+      >
         <ClientErrorBoundary>
           <Providers>{children}</Providers>
         </ClientErrorBoundary>
@@ -68,5 +79,4 @@ export default function RootLayout({
       </body>
     </html>
   )
-
 }

@@ -1,16 +1,36 @@
 "use client";
 
 import { useSceneObserver } from "./use-scene-observer";
+import { useScrollNarrative } from "./use-scroll-narrative-store";
 
 export interface CTASceneProps {
   onNavigateLogin: () => void;
 }
 
 export default function CTAScene({ onNavigateLogin }: CTASceneProps) {
-  const { ref, state } = useSceneObserver<HTMLDivElement>({ 
+  const { ref, state } = useSceneObserver<HTMLDivElement>({
     threshold: 0.3,
-    narrativeState: "action"
+    narrativeState: "action",
   });
+
+  const { narrativeState } = useScrollNarrative();
+  const animated = state === "animated";
+
+  // رنگ‌های متناسب با narrative state
+  const getGradientColors = () => {
+    switch (narrativeState) {
+      case 'action':
+        return { from: 'hsl(var(--surface-elevated))', to: 'hsl(320 80% 60% / 0.15)' };
+      case 'trust':
+        return { from: 'hsl(var(--surface-elevated))', to: 'hsl(262 80% 65% / 0.15)' };
+      case 'confidence':
+        return { from: 'hsl(var(--surface-elevated))', to: 'hsl(190 90% 55% / 0.15)' };
+      default:
+        return { from: 'hsl(var(--surface-elevated))', to: 'hsl(var(--color-purple) / 0.05)' };
+    }
+  };
+
+  const colors = getGradientColors();
 
   return (
     <section
@@ -19,25 +39,81 @@ export default function CTAScene({ onNavigateLogin }: CTASceneProps) {
       data-narrative="action"
       className="section-padding"
     >
-      <div className="container-narrow max-w-2xl">
+      <div className="container-narrow" style={{ maxWidth: "42rem" }}>
         <div
-          className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-surface-elevated to-purple-500/5 p-12 text-center sm:p-16 border border-border"
+          className="relative overflow-hidden text-center"
           style={{
-            opacity: state === "animated" ? 1 : 0,
-            transform: state === "animated" ? "scale(1)" : "scale(0.98)",
-            transition: `opacity 0.5s var(--ease-out), transform 0.5s var(--ease-out)`,
+            opacity:      animated ? 1 : 0,
+            transform:    animated ? "scale(1) translateY(0)" : "scale(0.97) translateY(16px)",
+            transition:   "opacity 0.5s var(--ease-out), transform 0.5s var(--ease-out)",
+            borderRadius: "var(--radius-card)",
+            border:       "1px solid hsl(var(--hisab-border))",
+            background:   `linear-gradient(135deg, ${colors.from}, ${colors.to})`,
+            padding:      "clamp(2.5rem, 6vw, 4rem)",
           }}
         >
-          <div className="absolute right-0 top-0 h-64 w-64 rounded-full bg-purple-500/10 blur-3xl" />
-          <div className="absolute bottom-0 left-0 h-48 w-48 rounded-full bg-cyan-500/10 blur-3xl" />
+          {/* Glow orbs - رنگ متناسب با narrative state */}
+          <div
+            className="pointer-events-none absolute"
+            style={{
+              insetInlineEnd: 0,
+              top:            0,
+              width:          "16rem",
+              height:         "16rem",
+              borderRadius:   "var(--radius-full)",
+              background:     narrativeState === 'action' ? "hsl(320 80% 60% / 0.15)" : "hsl(var(--color-purple) / 0.10)",
+              filter:         "blur(48px)",
+            }}
+            aria-hidden="true"
+          />
+          <div
+            className="pointer-events-none absolute"
+            style={{
+              insetInlineStart: 0,
+              bottom:           0,
+              width:            "12rem",
+              height:           "12rem",
+              borderRadius:     "var(--radius-full)",
+              background:       narrativeState === 'action' ? "hsl(320 80% 60% / 0.12)" : "hsl(var(--color-cyan) / 0.08)",
+              filter:           "blur(40px)",
+            }}
+            aria-hidden="true"
+          />
 
+          {/* Content */}
           <div className="relative">
-            <h2 className="text-4xl font-bold text-foreground mb-4">آماده‌ای؟</h2>
-            <p className="text-muted-foreground mb-8">۳۰ ثانیه تا اولین فاکتور واقعی</p>
-            <button onClick={onNavigateLogin} className="btn-primary mx-auto">
+            <h2
+              className="h2 mb-4"
+              style={{ color: "hsl(var(--hisab-foreground))" }}
+            >
+              آماده‌ای؟
+            </h2>
+
+            <p
+              className="mb-8"
+              style={{
+                color:      "hsl(var(--hisab-muted-fg))",
+                fontSize:   "var(--font-body-large)",
+                lineHeight: "var(--leading-relaxed)",
+              }}
+            >
+              ۳۰ ثانیه تا اولین فاکتور واقعی
+            </p>
+
+            <button
+              onClick={onNavigateLogin}
+              className="btn-primary mx-auto"
+              style={{ fontSize: "var(--font-body-large)" }}
+            >
               شروع کن — رایگان ←
             </button>
-            <p className="text-xs text-muted-foreground mt-6">بدون نیاز به کارت بانکی · لغو آسان</p>
+
+            <p
+              className="mt-6 text-xs"
+              style={{ color: "hsl(var(--hisab-muted-fg))" }}
+            >
+              بدون نیاز به کارت بانکی · لغو آسان
+            </p>
           </div>
         </div>
       </div>
