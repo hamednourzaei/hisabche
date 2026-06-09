@@ -107,10 +107,10 @@ export function TopNav({
         {/* Actions */}
         <div className="top-nav-actions">
           {variant === "landing" && (
-            <>
-              <button className="nav-signin" onClick={onNavigateLogin}>ورود</button>
-              <button className="nav-cta" onClick={onNavigateCta ?? onNavigateLogin}>شروع رایگان ←</button>
-            </>
+           <button className="nav-cta" onClick={onNavigateCta ?? onNavigateLogin}>
+  <span className="cta-text">شروع رایگان</span>
+  <span> ←</span>
+</button>
           )}
           {variant === "dashboard" && (
             <>

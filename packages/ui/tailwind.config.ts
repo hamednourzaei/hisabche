@@ -33,16 +33,50 @@ const config: Config = {
           DEFAULT: 'hsl(var(--hisab-warning))',
           fg:      'hsl(var(--hisab-warning-fg))',
         },
-        // ── Palette ────────────────────────────────────────────
-        purple:  'hsl(var(--color-purple))',
-        cyan:    'hsl(var(--color-cyan))',
-        emerald: 'hsl(var(--color-emerald))',
+        // ── Palette (Base colors) ─────────────────────────────
+        purple: {
+          DEFAULT: 'hsl(var(--color-purple))',
+          50: 'hsl(262 80% 95%)',
+          100: 'hsl(262 80% 90%)',
+          200: 'hsl(262 80% 80%)',
+          300: 'hsl(262 80% 70%)',
+          400: 'hsl(262 80% 68%)',
+          500: 'hsl(var(--color-purple))',
+          600: 'hsl(262 80% 55%)',
+          700: 'hsl(262 80% 45%)',
+          800: 'hsl(262 80% 35%)',
+          900: 'hsl(262 80% 25%)',
+        },
+        cyan: {
+          DEFAULT: 'hsl(var(--color-cyan))',
+          500: 'hsl(var(--color-cyan))',
+        },
+        emerald: {
+          DEFAULT: 'hsl(var(--color-emerald))',
+          500: 'hsl(var(--color-emerald))',
+        },
+        amber: {
+          DEFAULT: 'hsl(38 92% 55%)',
+          500: 'hsl(38 92% 55%)',
+        },
+        rose: {
+          DEFAULT: 'hsl(0 84% 60%)',
+          500: 'hsl(0 84% 60%)',
+        },
+        blue: {
+          DEFAULT: 'hsl(210 90% 55%)',
+          500: 'hsl(210 90% 55%)',
+        },
+        teal: {
+          DEFAULT: 'hsl(180 80% 45%)',
+          500: 'hsl(180 80% 45%)',
+        },
         // ── Surfaces ───────────────────────────────────────────
         background: 'hsl(var(--hisab-background))',
         foreground: 'hsl(var(--hisab-foreground))',
         card: {
           DEFAULT: 'hsl(var(--hisab-card))',
-          fg:      'hsl(var(--hisab-foreground))',  // card text = foreground
+          fg:      'hsl(var(--hisab-foreground))',
         },
         muted: {
           DEFAULT: 'hsl(var(--hisab-muted))',
@@ -50,18 +84,27 @@ const config: Config = {
         },
         border: 'hsl(var(--hisab-border))',
         ring:   'hsl(var(--hisab-ring))',
-        // ── Surface base (dark bg) ──────────────────────────────
+        // ── Surface base ───────────────────────────────────────
         surface: {
           base:     'hsl(var(--surface-base))',
           muted:    'hsl(var(--surface-muted))',
           elevated: 'hsl(var(--surface-elevated))',
         },
+        // ── Narrative Glow Colors ──────────────────────────────
+        narrative: {
+          frustration: 'rgba(168, 85, 247, 0.12)',
+          confusion:   'rgba(239, 68, 68, 0.10)',
+          clarity:     'rgba(16, 185, 129, 0.10)',
+          confidence:  'rgba(6, 182, 212, 0.10)',
+          trust:       'rgba(139, 92, 246, 0.14)',
+          action:      'rgba(236, 72, 153, 0.18)',
+        },
       },
 
       borderRadius: {
-        // map به --radius-* که در globals.css هست
         none:    'var(--radius-none)',
         xxs:     'var(--radius-xxs)',
+        xs:      'var(--radius-xs)',
         sm:      'var(--radius-sm)',
         DEFAULT: 'var(--radius-md)',
         md:      'var(--radius-md)',
@@ -72,9 +115,15 @@ const config: Config = {
         full:    'var(--radius-full)',
         // Semantic aliases
         card:    'var(--radius-card)',
+        'card-sm': 'var(--radius-card-sm)',
+        'card-md': 'var(--radius-card-md)',
+        'card-lg': 'var(--radius-card-lg)',
         button:  'var(--radius-button)',
         modal:   'var(--radius-modal)',
         input:   'var(--radius-input)',
+        badge:   'var(--radius-badge)',
+        pill:    'var(--radius-full)',
+        avatar:  'var(--radius-full)',
       },
 
       fontFamily: {
@@ -82,7 +131,22 @@ const config: Config = {
         mono: ['var(--font-mono)'],
       },
 
+      fontSize: {
+        'heading-1': 'var(--font-heading-1)',
+        'heading-2': 'var(--font-heading-2)',
+        'heading-3': 'var(--font-heading-3)',
+        'body':      'var(--font-body)',
+        'body-large': 'var(--font-body-large)',
+      },
+
+      lineHeight: {
+        tight:    'var(--leading-tight)',
+        normal:   'var(--leading-normal)',
+        relaxed:  'var(--leading-relaxed)',
+      },
+
       boxShadow: {
+        '0': 'var(--elevation-0)',
         '1': 'var(--elevation-1)',
         '2': 'var(--elevation-2)',
         '3': 'var(--elevation-3)',
@@ -100,8 +164,8 @@ const config: Config = {
         md:   'var(--space-md)',
         lg:   'var(--space-lg)',
         xl:   'var(--space-xl)',
-        '2xl':'var(--space-2xl)',
-        '3xl':'var(--space-3xl)',
+        '2xl': 'var(--space-2xl)',
+        '3xl': 'var(--space-3xl)',
         18:   '4.5rem',
         88:   '22rem',
         128:  '32rem',
@@ -109,6 +173,8 @@ const config: Config = {
 
       backdropBlur: {
         xs:    '2px',
+        sm:    '4px',
+        md:    '8px',
         glass: 'var(--glass-blur)',
       },
 
@@ -124,18 +190,100 @@ const config: Config = {
         short:  'var(--duration-short)',
         medium: 'var(--duration-medium)',
         long:   'var(--duration-long)',
+        hisab:  'var(--hisab-duration)',
       },
 
       zIndex: {
-        dropdown:       'var(--z-dropdown)',
-        sticky:         'var(--z-sticky)',
-        fixed:          'var(--z-fixed)',
-        'modal-backdrop':'var(--z-modal-backdrop)',
-        modal:          'var(--z-modal)',
-        popover:        'var(--z-popover)',
-        tooltip:        'var(--z-tooltip)',
-        toast:          'var(--z-toast)',
-        fab:            'var(--z-fab)',
+        base:            'var(--z-base)',
+        dropdown:        'var(--z-dropdown)',
+        sticky:          'var(--z-sticky)',
+        fixed:           'var(--z-fixed)',
+        'modal-backdrop': 'var(--z-modal-backdrop)',
+        modal:           'var(--z-modal)',
+        popover:         'var(--z-popover)',
+        tooltip:         'var(--z-tooltip)',
+        toast:           'var(--z-toast)',
+        cmdk:            'var(--z-cmdk)',
+        fab:             'var(--z-fab)',
+      },
+
+      keyframes: {
+        'fade-in-up': {
+          from: { opacity: '0', transform: 'translateY(12px)' },
+          to:   { opacity: '1', transform: 'translateY(0)' },
+        },
+        'fade-slide-up': {
+          from: { opacity: '0', transform: 'translateY(15px)' },
+          to:   { opacity: '1', transform: 'translateY(0)' },
+        },
+        'drift': {
+          '0%':   { transform: 'translate(0, 0)' },
+          '100%': { transform: 'translate(-40px, -40px)' },
+        },
+        'ambient-pulse': {
+          '0%, 100%': { opacity: '0.3', transform: 'scale(1) translate(0, 0)' },
+          '50%':      { opacity: '0.6', transform: 'scale(1.08) translate(20px, 10px)' },
+        },
+        'fab-pulse': {
+          '0%, 100%': { boxShadow: '0 0 0 0 rgba(168, 85, 247, 0.4)' },
+          '50%':      { boxShadow: '0 0 0 12px rgba(168, 85, 247, 0)' },
+        },
+        'draw-line': {
+          from: { strokeDashoffset: '400' },
+          to:   { strokeDashoffset: '0' },
+        },
+        'node-pop': {
+          '0%':   { opacity: '0', transform: 'scale(0.4)' },
+          '60%':  { opacity: '1', transform: 'scale(1.2)' },
+          '100%': { opacity: '1', transform: 'scale(1)' },
+        },
+        'pipe-pulse': {
+          '0%, 100%': { opacity: '0.6', transform: 'scale(1)' },
+          '50%':      { opacity: '1', transform: 'scale(1.15)' },
+        },
+        'auth-spin': {
+          to: { transform: 'rotate(360deg)' },
+        },
+      },
+
+      animation: {
+        'fade-in-up':    'fade-in-up 0.45s var(--ease-out) both',
+        'fade-slide-up': 'fade-slide-up 0.45s var(--ease-out) forwards',
+        'drift':         'drift 20s linear infinite',
+        'ambient-pulse': 'ambient-pulse 12s ease-in-out infinite',
+        'fab-pulse':     'fab-pulse 1.5s ease-in-out infinite',
+        'draw-line':     'draw-line 1.2s var(--ease-out) forwards',
+        'node-pop':      'node-pop 0.5s var(--ease-out) forwards',
+        'pipe-pulse':    'pipe-pulse 2s ease-in-out infinite',
+        'auth-spin':     'auth-spin 0.8s linear infinite',
+      },
+
+      backgroundImage: {
+        'gradient-purple-cyan': 'linear-gradient(135deg, hsl(262 80% 60%), hsl(190 90% 50%))',
+        'gradient-emerald-cyan': 'linear-gradient(135deg, hsl(160 80% 45%), hsl(190 90% 50%))',
+        // Godam Stats card backgrounds
+        'godam-purple': 'linear-gradient(135deg, hsl(262 80% 65% / 0.1), hsl(262 80% 65% / 0.02))',
+        'godam-emerald': 'linear-gradient(135deg, hsl(160 80% 45% / 0.1), hsl(160 80% 45% / 0.02))',
+        'godam-amber': 'linear-gradient(135deg, hsl(38 92% 55% / 0.1), hsl(38 92% 55% / 0.02))',
+        'godam-rose': 'linear-gradient(135deg, hsl(0 84% 60% / 0.1), hsl(0 84% 60% / 0.02))',
+        'godam-blue': 'linear-gradient(135deg, hsl(210 90% 55% / 0.1), hsl(210 90% 55% / 0.02))',
+        'godam-teal': 'linear-gradient(135deg, hsl(180 80% 45% / 0.1), hsl(180 80% 45% / 0.02))',
+        // Narrative backgrounds
+        'narrative-frustration': 'radial-gradient(circle at 50% 0%, rgba(168, 85, 247, 0.12), transparent 70%)',
+        'narrative-confusion':   'radial-gradient(circle at 50% 0%, rgba(239, 68, 68, 0.10), transparent 70%)',
+        'narrative-clarity':     'radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.10), transparent 70%)',
+        'narrative-confidence':  'radial-gradient(circle at 50% 0%, rgba(6, 182, 212, 0.10), transparent 70%)',
+        'narrative-trust':       'radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.14), transparent 70%)',
+        'narrative-action':      'radial-gradient(circle at 50% 0%, rgba(236, 72, 153, 0.18), transparent 70%)',
+      },
+
+      screens: {
+        'xs': '480px',
+        'sm': '640px',
+        'md': '768px',
+        'lg': '1024px',
+        'xl': '1280px',
+        '2xl': '1440px',
       },
     },
   },

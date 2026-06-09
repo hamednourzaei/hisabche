@@ -30,14 +30,14 @@ function AccountSection() {
   const { user, logout } = useAuthStore()
 
   return (
-    <Card className="glass-card">
-      <CardContent className="p-6">
+    <div className="glass-card">
+      <div className="card-content p-6">
         <div className="mb-5 flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-lg font-bold text-primary">
             {user?.fullName?.charAt(0) || "ح"}
           </div>
           <div className="min-w-0">
-            <h2 className="truncate font-semibold">
+            <h2 className="truncate font-semibold text-foreground">
               {user?.fullName || t("common.noName", "کاربر")}
             </h2>
             <p className="truncate text-sm text-muted-foreground">
@@ -50,19 +50,19 @@ function AccountSection() {
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-xl border p-4 text-start">
+          <div className="rounded-xl border border-border p-4 text-start">
             <p className="mb-1 text-xs text-muted-foreground">
               {t("settings.businessName", "کسب‌وکار")}
             </p>
-            <p className="font-medium">
+            <p className="font-medium text-foreground">
               {user?.businessName || t("settings.notSet", "ثبت نشده")}
             </p>
           </div>
-          <div className="rounded-xl border p-4 text-start">
+          <div className="rounded-xl border border-border p-4 text-start">
             <p className="mb-1 text-xs text-muted-foreground">
               {t("settings.memberSince", "تاریخ عضویت")}
             </p>
-            <p className="font-medium">
+            <p className="font-medium text-foreground">
               {user?.createdAt
                 ? new Date(user.createdAt).toLocaleDateString("fa-AF")
                 : "-"}
@@ -78,8 +78,8 @@ function AccountSection() {
           <LogOut className="me-2 size-4" aria-hidden />
           {t("auth.signOut")}
         </Button>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
 
@@ -122,16 +122,16 @@ function BackupSection() {
   const latestBackup = backups?.[0]
 
   return (
-    <Card className="glass-card">
-      <CardContent className="space-y-5 p-6">
+    <div className="glass-card">
+      <div className="card-content p-6 space-y-5">
         <div className="flex items-center gap-2">
           <Database className="size-5 text-primary" aria-hidden />
-          <h2 className="text-lg font-semibold">{t("settings.backup")}</h2>
+          <h2 className="text-lg font-semibold text-foreground">{t("settings.backup")}</h2>
         </div>
 
-        <div className="flex items-center justify-between rounded-xl border p-4">
+        <div className="flex items-center justify-between rounded-xl border border-border p-4">
           <div className="text-start">
-            <p className="font-medium">{t("settings.autoBackup", "بکاپ خودکار")}</p>
+            <p className="font-medium text-foreground">{t("settings.autoBackup", "بکاپ خودکار")}</p>
             <p className="text-sm text-muted-foreground">
               {t("settings.autoBackupDesc", "هر ۲۴ ساعت بکاپ گرفته شود")}
             </p>
@@ -174,8 +174,8 @@ function BackupSection() {
             </div>
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
 
@@ -190,30 +190,30 @@ function PerformanceSection() {
   ] as const
 
   return (
-    <Card className="glass-card">
-      <CardContent className="space-y-5 p-6">
+    <div className="glass-card">
+      <div className="card-content p-6 space-y-5">
         <div className="flex items-center gap-2">
           <Monitor className="size-5 text-primary" aria-hidden />
-          <h2 className="text-lg font-semibold">{t("settings.performance", "عملکرد")}</h2>
+          <h2 className="text-lg font-semibold text-foreground">{t("settings.performance", "عملکرد")}</h2>
         </div>
 
         <div className="flex flex-wrap gap-2">
           {modes.map(({ value, labelKey, fallback }) => (
-            <Button
+            <button
               key={value}
-              variant={performanceMode === value ? "default" : "outline"}
+              className={performanceMode === value ? "btn-default" : "btn-outline"}
               onClick={() => setPerformanceMode(value)}
             >
               {t(labelKey, fallback)}
-            </Button>
+            </button>
           ))}
         </div>
 
         <p className="text-sm text-muted-foreground">
           {t("settings.perfDesc", "حالت اقتصادی برای دستگاه‌های ضعیف‌تر مناسب است")}
         </p>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
 
@@ -228,23 +228,23 @@ function SafetySection() {
   ]
 
   return (
-    <Card className="glass-card">
-      <CardContent className="space-y-5 p-6">
+    <div className="glass-card">
+      <div className="card-content p-6 space-y-5">
         <div className="flex items-center gap-2">
           <Shield className="size-5 text-primary" aria-hidden />
-          <h2 className="text-lg font-semibold">{t("settings.safety", "امنیت داده‌ها")}</h2>
+          <h2 className="text-lg font-semibold text-foreground">{t("settings.safety", "امنیت داده‌ها")}</h2>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
           {safetyItems.map(({ key, fallback }) => (
-            <div key={key} className="flex items-center gap-2 rounded-xl border p-3 text-start">
+            <div key={key} className="flex items-center gap-2 rounded-xl border border-border p-3 text-start">
               <Check className="size-4 shrink-0 text-success" aria-hidden />
-              <span className="text-sm">{t(key, fallback)}</span>
+              <span className="text-sm text-foreground">{t(key, fallback)}</span>
             </div>
           ))}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
 
@@ -252,25 +252,25 @@ function StorageSection() {
   const { t } = useTranslation()
 
   return (
-    <Card className="glass-card">
-      <CardContent className="space-y-5 p-6">
+    <div className="glass-card">
+      <div className="card-content p-6 space-y-5">
         <div className="flex items-center gap-2">
           <Download className="size-5 text-primary" aria-hidden />
-          <h2 className="text-lg font-semibold">{t("settings.storage", "حافظه و کش")}</h2>
+          <h2 className="text-lg font-semibold text-foreground">{t("settings.storage", "حافظه و کش")}</h2>
         </div>
 
-        <div className="rounded-xl border p-4 text-start">
+        <div className="rounded-xl border border-border p-4 text-start">
           <div className="mb-3 flex items-center justify-between">
             <span className="text-sm text-muted-foreground">{t("settings.cache", "کش برنامه")}</span>
             <Badge variant="secondary">24 MB</Badge>
           </div>
-          <Button variant="outline">
+          <button className="btn-outline">
             <Trash2 className="me-2 size-4" aria-hidden />
             {t("settings.clearCache", "پاک کردن کش")}
-          </Button>
+          </button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
 
@@ -278,10 +278,10 @@ export function SettingsPage() {
   const { t } = useTranslation()
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 p-6">
-      <div className="space-y-1.5">
-        <h1 className="text-3xl font-bold">{t("settings.title")}</h1>
-        <p className="text-sm text-muted-foreground">
+    <div className="settings-container">
+      <div className="settings-header">
+        <h1 className="settings-title">{t("settings.title")}</h1>
+        <p className="settings-description">
           {t("settings.description", "مدیریت حساب، بکاپ و تنظیمات برنامه")}
         </p>
       </div>

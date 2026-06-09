@@ -42,7 +42,7 @@ export default function SocialScene() {
               color: "hsl(var(--hisab-muted-fg))",
             }}
           >
-            <span style={{ color: "#facc15" }}>⭐</span>
+            <span className="testimonial-badge-star">★</span>
             ۴.۹ · ۳۴۰+ کسب‌وکار فعال
           </div>
 
