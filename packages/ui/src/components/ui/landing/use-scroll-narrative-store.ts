@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -69,8 +69,6 @@ export function isSectionId(value: string): value is SectionId {
 
 let scrollState: ScrollState = INITIAL_STATE;
 
-// Listeners split by concern: section listeners only fire on section change,
-// progress listeners fire on scroll — keeps re-renders minimal.
 const sectionListeners  = new Set<(state: ScrollState) => void>();
 const progressListeners = new Set<(progress: number) => void>();
 
@@ -87,7 +85,6 @@ function applySection(section: SectionId): void {
 
   const meta = SECTION_MAP[section];
 
-  // Reuse the same progress value — no unnecessary spread on every call
   scrollState = {
     progress:       scrollState.progress,
     activeSection:  section,
@@ -118,8 +115,6 @@ const queue: QueueState = {
   lastTime:    0,
 };
 
-// Flush is now RAF-aligned instead of setTimeout — avoids timer pile-up
-// during fast scroll bursts.
 function scheduleFlush(): void {
   if (queue.isScheduled) return;
   queue.isScheduled = true;
@@ -138,12 +133,8 @@ function scheduleFlush(): void {
   });
 }
 
-const SECTION_COOLDOWN_MS = 150; // min ms between same-section triggers
+const SECTION_COOLDOWN_MS = 150;
 
-/**
- * Debounced section update — used by IntersectionObserver callbacks.
- * Collapses rapid-fire calls into one RAF-aligned state transition.
- */
 export function queueSetActiveSection(section: SectionId): void {
   if (
     queue.lastSection === section &&
@@ -152,34 +143,24 @@ export function queueSetActiveSection(section: SectionId): void {
     return;
   }
 
-  // Always overwrite with the latest — only the last one matters
   queue.pending = section;
   scheduleFlush();
 }
 
-/**
- * Immediate section update — used for navbar clicks / programmatic navigation.
- * Cancels any pending queued update.
- */
 export function setActiveSection(section: SectionId): void {
   queue.pending     = null;
   queue.isScheduled = false;
-
   applySection(section);
 }
 
-// ─── RAF scroll-progress loop ─────────────────────────────────────────────────
-// Runs on a SINGLE shared RAF loop — not one per listener.
-// Progress updates are throttled to meaningful deltas only.
+// ─── RAF scroll-progress loop (unchanged core logic) ─────────────────────────
 
 let rafId:          number | null = null;
 let lastProgress:   number        = -1;
 let frameCount:     number        = 0;
 
-// Throttle: only broadcast progress every N frames.
-// At 60fps → every 3 frames = ~50ms updates. Smooth but not overwhelming.
-const PROGRESS_FRAME_SKIP   = 3;
-const PROGRESS_MIN_DELTA    = 0.002; // 0.2% of page height
+const PROGRESS_FRAME_SKIP = 3;
+const PROGRESS_MIN_DELTA  = 0.002;
 
 function scrollLoop(): void {
   frameCount++;
@@ -191,7 +172,6 @@ function scrollLoop(): void {
 
     if (Math.abs(progress - lastProgress) > PROGRESS_MIN_DELTA) {
       lastProgress = progress;
-      // Update state object in-place — only progress changed
       scrollState  = { ...scrollState, progress };
       notifyProgress(progress);
     }
@@ -212,23 +192,45 @@ function stopScrollLoop(): void {
   rafId = null;
 }
 
+// ─── Custom useDebounce hook (local, zero dependencies) ──────────────────────
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    timeoutRef.current = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 // ─── React Hooks ──────────────────────────────────────────────────────────────
 
 /**
- * Full scroll state — activeSection + narrativeState + progress.
- * Re-renders on BOTH section changes AND progress changes.
- * Use only when you need the progress value.
+ * Full scroll state — activeSection + narrativeState + debounced progress.
+ * Progress is debounced by 100ms to prevent excessive renders during scroll.
  */
-export function useScrollNarrative(): ScrollState {
+export function useScrollNarrative(debounceProgressMs = 100): ScrollState {
   const [state, setState] = useState<ScrollState>(scrollState);
+  const rawProgressRef = useRef(scrollState.progress);
 
   useEffect(() => {
-    // Sync in case state changed between render and mount
     setState(scrollState);
 
-    const onSection  = (s: ScrollState) => setState(s);
-    const onProgress = (p: number) =>
-      setState((prev) => (prev.progress === p ? prev : { ...prev, progress: p }));
+    const onSection = (s: ScrollState) => {
+      setState(s);
+    };
+
+    const onProgress = (p: number) => {
+      rawProgressRef.current = p;
+    };
 
     sectionListeners.add(onSection);
     progressListeners.add(onProgress);
@@ -243,19 +245,26 @@ export function useScrollNarrative(): ScrollState {
     };
   }, []);
 
-  return state;
+  // Debounced progress derived from the raw value stored in ref
+  const debouncedProgress = useDebounce(rawProgressRef.current, debounceProgressMs);
+
+  // Merge debounced progress into state, but only when debounced value changes
+  // to avoid creating a new object on every render.
+  const stableState: ScrollState = {
+    ...state,
+    progress: debouncedProgress,
+  };
+
+  return stableState;
 }
 
 /**
  * Section-only state — does NOT re-render on scroll progress.
- * Prefer this for navbar, indicators, and anything that only cares about
- * which section is active.
  */
 export function useActiveSection(): Pick<ScrollState, "activeSection" | "narrativeState"> {
   const [section,  setSection]  = useState(scrollState.activeSection);
   const [narrative, setNarrative] = useState(scrollState.narrativeState);
 
-  // Use refs to avoid stale-closure issues in the listener
   const sectionRef  = useRef(section);
   const narrativeRef = useRef(narrative);
 

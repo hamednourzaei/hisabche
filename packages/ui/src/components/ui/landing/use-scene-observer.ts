@@ -32,7 +32,6 @@ interface UseSceneObserverReturn<T extends HTMLElement> {
 }
 
 // ─── Per-section cooldown tracker ────────────────────────────────────────────
-// Stored outside the hook so it persists across re-mounts of the same section.
 
 const lastTriggerTime = new Map<SectionId, number>();
 
@@ -47,19 +46,30 @@ function recordTrigger(section: SectionId): void {
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
-export function useSceneObserver<T extends HTMLElement = HTMLDivElement>({
-  threshold    = 0.25,
-  rootMargin   = "0px 0px -60px 0px",
-  narrativeState,
-  cooldownMs   = 500,
-  mountDelayMs = 80,
-}: UseSceneObserverOptions = {}): UseSceneObserverReturn<T> {
+export function useSceneObserver<T extends HTMLElement = HTMLDivElement>(
+  options: UseSceneObserverOptions = {}
+): UseSceneObserverReturn<T> {
+  const {
+    threshold    = 0.25,
+    rootMargin   = "0px 0px -60px 0px",
+    narrativeState,
+    cooldownMs   = 500,
+    mountDelayMs = 80,
+  } = options;
+
   const ref   = useRef<T>(null);
   const [state, setState] = useState<SceneState>("hidden");
+
+  // Keep options in refs so the effect doesn't need to re-run when they change.
+  // This prevents IntersectionObserver recreation on every render.
+  const optsRef = useRef({ threshold, rootMargin, narrativeState, cooldownMs, mountDelayMs });
+  optsRef.current = { threshold, rootMargin, narrativeState, cooldownMs, mountDelayMs };
 
   useEffect(() => {
     const element = ref.current;
     if (!element) return;
+
+    const { threshold, rootMargin, narrativeState, cooldownMs, mountDelayMs } = optsRef.current;
 
     // ── Resolve & validate section id ───────────────────────────────────────
     const rawId = element.id;
@@ -78,7 +88,6 @@ export function useSceneObserver<T extends HTMLElement = HTMLDivElement>({
       return;
     }
 
-    // rawId is now narrowed to SectionId — no cast needed anywhere below
     const sectionId: SectionId = rawId;
 
     // ── Data-attribute for CSS targeting ────────────────────────────────────
@@ -122,10 +131,7 @@ export function useSceneObserver<T extends HTMLElement = HTMLDivElement>({
       observer.disconnect();
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-  // ^ Intentionally empty deps: the observer is tied to the mounted element.
-  //   Options changing at runtime is not a supported use-case; consumers should
-  //   stabilise them with useMemo / constants before passing in.
+  }, []); // stable reference – observer is tied to element, options via ref
 
   return { ref, state };
 }
