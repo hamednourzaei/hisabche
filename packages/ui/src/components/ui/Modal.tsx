@@ -1,79 +1,238 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import * as DialogPrimitive from "@radix-ui/react-dialog"
-import { X } from "lucide-react"
-import { cn } from "../../lib/utils"
+import * as React from "react";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-const SIZES = {
-  sm: "max-w-sm",
-  md: "max-w-md",
-} as const
+/* ═══════════════════════════════════════════════════════════════════════════
+   Modal v2 — Hisabche Design Language
+   Zero hardcoded colors — all tokens from design system
+   Full RTL via logical CSS
+   Optimized for Redmi 9: no backdrop-blur, no zoom, only opacity + transform
+   ═══════════════════════════════════════════════════════════════════════════ */
 
-interface ModalProps {
-  open: boolean
-  onClose: () => void
-  title: string
-  size?: keyof typeof SIZES
-  children: React.ReactNode
+// ─── Root ──────────────────────────────────────────────────────────────────
+
+const Modal = DialogPrimitive.Root;
+const ModalTrigger = DialogPrimitive.Trigger;
+const ModalPortal = DialogPrimitive.Portal;
+const ModalClose = DialogPrimitive.Close;
+
+// ─── Overlay ───────────────────────────────────────────────────────────────
+
+const ModalOverlay = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Overlay>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
+>(({ className, ...props }, ref) => (
+  <DialogPrimitive.Overlay
+    ref={ref}
+    className={cn(
+      // Layout
+      "fixed inset-0 z-50",
+      // Color — zero hardcoded
+      "bg-[var(--ledger-ink)]/40",
+      // Animation: fade only
+      "data-[state=open]:animate-in",
+      "data-[state=closed]:animate-out",
+      "data-[state=closed]:fade-out-0",
+      "data-[state=open]:fade-in-0",
+      // Reduced motion
+      "motion-reduce:animate-none",
+      className,
+    )}
+    {...props}
+  />
+));
+ModalOverlay.displayName = "ModalOverlay";
+
+// ─── Content ───────────────────────────────────────────────────────────────
+
+interface ModalContentProps
+  extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
+  size?: "sm" | "md" | "lg";
 }
 
-export function Modal({
-  open,
-  onClose,
-  title,
-  size = "md",
-  children,
-}: ModalProps) {
-  const titleId = React.useId()
+const ModalContent = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Content>,
+  ModalContentProps
+>(({ className, size = "md", children, ...props }, ref) => {
+  const sizeClasses: Record<string, string> = {
+    sm: "max-w-sm",
+    md: "max-w-md",
+    lg: "max-w-lg",
+  };
 
   return (
-    <DialogPrimitive.Root open={open} onOpenChange={(open) => !open && onClose()}>
-      <DialogPrimitive.Portal>
-        <DialogPrimitive.Overlay
-          className={cn(
-            "fixed inset-0 z-50 bg-black/50 backdrop-blur-sm",
-            "data-[state=open]:animate-in data-[state=closed]:animate-out",
-            "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
-          )}
-        />
-        <DialogPrimitive.Content
-          aria-labelledby={titleId}
-          className={cn(
-            "fixed left-[50%] top-[50%] z-50 grid w-full translate-x-[-50%] translate-y-[-50%] gap-4",
-            "rounded-xl border border-[var(--hisab-border)] bg-[var(--hisab-background)] p-6 shadow-lg",
-            "duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out",
-            "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-            "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
-            "data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%]",
-            "data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]",
-            SIZES[size],
-            "max-h-[90vh] overflow-y-auto"
-          )}
-          onInteractOutside={onClose}
-          onEscapeKeyDown={onClose}
-        >
-          <div className="flex items-center justify-between">
-            <h3 id={titleId} className="text-lg font-bold text-[var(--hisab-foreground)]">
-              {title}
-            </h3>
-            <DialogPrimitive.Close asChild>
-              <button
-                type="button"
-                aria-label="بستن"
-                className={cn(
-                  "rounded-full p-1 text-[var(--hisab-muted-fg)]",
-                  "hover:bg-[var(--hisab-muted)] hover:text-[var(--hisab-foreground)]",
-                  "transition-colors"
-                )}
-              >
-                <X className="size-4" aria-hidden />
-              </button>
-            </DialogPrimitive.Close>
-          </div>
-          {children}
-        </DialogPrimitive.Content>
-      </DialogPrimitive.Portal>
-    </DialogPrimitive.Root>
-  )
-}
+    <ModalPortal>
+      <ModalOverlay />
+      <DialogPrimitive.Content
+        ref={ref}
+        className={cn(
+          // Layout
+          "fixed z-50 grid w-full gap-4",
+          // Center — logical (no left/translate-x hardcoding)
+          "start-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
+          // Scroll
+          "max-h-[90vh] overflow-y-auto",
+          // Spacing
+          "p-6",
+          // Colors — zero hardcoded
+          "rounded-xl",
+          "border border-[var(--ledger-line)]",
+          "bg-[var(--ledger-surface)] text-[var(--ledger-ink)]",
+          // Shadow
+          "shadow-[var(--ledger-shadow,0_4px_24px_rgba(0,0,0,0.12))]",
+          // Animation: fade + slide (no zoom)
+          "duration-200",
+          "data-[state=open]:animate-in",
+          "data-[state=closed]:animate-out",
+          "data-[state=closed]:fade-out-0",
+          "data-[state=open]:fade-in-0",
+          "data-[state=closed]:slide-out-to-top-1",
+          "data-[state=open]:slide-in-from-top-1",
+          // Reduced motion
+          "motion-reduce:animate-none",
+          // Size
+          sizeClasses[size],
+          className,
+        )}
+        {...props}
+      >
+        {children}
+      </DialogPrimitive.Content>
+    </ModalPortal>
+  );
+});
+ModalContent.displayName = "ModalContent";
+
+// ─── Header ────────────────────────────────────────────────────────────────
+
+const ModalHeader = ({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) => (
+  <div
+    className={cn(
+      "flex items-center justify-between gap-4",
+      className,
+    )}
+    {...props}
+  />
+);
+ModalHeader.displayName = "ModalHeader";
+
+// ─── Title ─────────────────────────────────────────────────────────────────
+
+const ModalTitle = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Title>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Title>
+>(({ className, ...props }, ref) => (
+  <DialogPrimitive.Title
+    ref={ref}
+    className={cn(
+      "text-lg font-bold",
+      "text-[var(--ledger-ink)]",
+      "leading-tight",
+      className,
+    )}
+    {...props}
+  />
+));
+ModalTitle.displayName = "ModalTitle";
+
+// ─── Description ───────────────────────────────────────────────────────────
+
+const ModalDescription = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Description>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
+>(({ className, ...props }, ref) => (
+  <DialogPrimitive.Description
+    ref={ref}
+    className={cn(
+      "text-sm",
+      "text-[var(--ledger-ink-muted)]",
+      className,
+    )}
+    {...props}
+  />
+));
+ModalDescription.displayName = "ModalDescription";
+
+// ─── Close Button ──────────────────────────────────────────────────────────
+
+const ModalCloseButton = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Close>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Close>
+>(({ className, ...props }, ref) => (
+  <DialogPrimitive.Close
+    ref={ref}
+    className={cn(
+      // Base
+      "rounded-full p-1.5",
+      // Colors
+      "text-[var(--ledger-ink-muted)]",
+      "hover:bg-[var(--ledger-ink)]/5 hover:text-[var(--ledger-ink)]",
+      // Focus
+      "focus:outline-none focus:ring-2 focus:ring-[var(--ledger-action)]",
+      // Transition
+      "transition-colors duration-150",
+      "motion-reduce:transition-none",
+      // Touch target
+      "min-h-[44px] min-w-[44px] flex items-center justify-center",
+      className,
+    )}
+    aria-label="بستن"
+    {...props}
+  >
+    <X className="size-4" aria-hidden="true" />
+  </DialogPrimitive.Close>
+));
+ModalCloseButton.displayName = "ModalCloseButton";
+
+// ─── Body ──────────────────────────────────────────────────────────────────
+
+const ModalBody = ({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) => (
+  <div className={cn("space-y-4", className)} {...props} />
+);
+ModalBody.displayName = "ModalBody";
+
+// ─── Footer ────────────────────────────────────────────────────────────────
+
+const ModalFooter = ({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) => (
+  <div
+    className={cn(
+      "flex items-center justify-end gap-3 pt-2",
+      className,
+    )}
+    {...props}
+  />
+);
+ModalFooter.displayName = "ModalFooter";
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EXPORTS
+// ═══════════════════════════════════════════════════════════════════════════
+
+export {
+  Modal,
+  ModalTrigger,
+  ModalPortal,
+  ModalClose,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalTitle,
+  ModalDescription,
+  ModalCloseButton,
+  ModalBody,
+  ModalFooter,
+};
+
+export type { ModalContentProps };

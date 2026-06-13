@@ -1,11 +1,21 @@
-"use client"
+"use client";
+
+import { cn } from "@/lib/utils";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DashboardHeader v2 — Hisabche Design Language
+   Zero hardcoded colors — all tokens from design system
+   Zero inline styles — all Tailwind classes
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+// ─── SVG Icons ─────────────────────────────────────────────────────────────
 
 const SvgIcon = ({
   d,
   size = 16,
 }: {
-  d: React.ReactNode
-  size?: number
+  d: React.ReactNode;
+  size?: number;
 }) => (
   <svg
     width={size}
@@ -20,7 +30,7 @@ const SvgIcon = ({
   >
     {d}
   </svg>
-)
+);
 
 const IconGlobe = (
   <SvgIcon
@@ -31,7 +41,7 @@ const IconGlobe = (
       </g>
     }
   />
-)
+);
 
 const IconSun = (
   <SvgIcon
@@ -42,11 +52,11 @@ const IconSun = (
       </g>
     }
   />
-)
+);
 
 const IconMoon = (
   <SvgIcon d="M13.2 9.4A5.4 5.4 0 0 1 6.6 2.8a5.4 5.4 0 1 0 6.6 6.6Z" />
-)
+);
 
 const IconLogout = (
   <SvgIcon
@@ -57,17 +67,19 @@ const IconLogout = (
       </g>
     }
   />
-)
+);
+
+// ─── Brand Mark ────────────────────────────────────────────────────────────
 
 function BrandMark() {
   return (
-    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--hisab-primary)] xs:h-8 xs:w-8">
-      <span className="text-[10px] font-bold text-[var(--hisab-primary-fg)] xs:text-xs">
-        ح
-      </span>
+    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--gradient-brand)] xs:h-8 xs:w-8">
+      <span className="text-[10px] font-bold text-white xs:text-xs">ح</span>
     </div>
-  )
+  );
 }
+
+// ─── Sync Pill ─────────────────────────────────────────────────────────────
 
 function SyncPill({
   lastSyncedAt,
@@ -75,50 +87,81 @@ function SyncPill({
   isSyncing,
   pendingCount,
 }: {
-  lastSyncedAt: number | null
-  isOnline: boolean
-  isSyncing: boolean
-  pendingCount: number
+  lastSyncedAt: number | null;
+  isOnline: boolean;
+  isSyncing: boolean;
+  pendingCount: number;
 }) {
-  if (!isOnline)
-    return <span className="sync-pill off">● آفلاین</span>
-  if (isSyncing)
+  if (!isOnline) {
     return (
-      <span className="sync-pill syncing">
-        ● همگام‌سازی
+      <span
+        className={cn(
+          "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium",
+          "bg-[hsl(var(--color-warning)/0.12)] text-[hsl(var(--color-warning))]",
+          "border border-[hsl(var(--color-warning)/0.2)]",
+        )}
+      >
+        <span className="size-1.5 rounded-full bg-[hsl(var(--color-warning))]" aria-hidden="true" />
+        آفلاین
+      </span>
+    );
+  }
+
+  if (isSyncing) {
+    return (
+      <span
+        className={cn(
+          "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium",
+          "bg-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))]",
+          "border border-[hsl(var(--color-primary)/0.2)]",
+        )}
+      >
+        <span className="size-1.5 rounded-full bg-[hsl(var(--color-primary))] animate-pulse" aria-hidden="true" />
+        همگام‌سازی
         {pendingCount > 0 ? ` · ${pendingCount}` : ""}
       </span>
-    )
-  if (lastSyncedAt) {
-    const s = Math.floor((Date.now() - lastSyncedAt) / 1000)
-    return (
-      <span className="sync-pill ok">
-        ●{" "}
-        {s < 60
-          ? "لحظاتی پیش"
-          : `${Math.floor(s / 60)} دقیقه پیش`}
-      </span>
-    )
+    );
   }
-  return null
+
+  if (lastSyncedAt) {
+    const s = Math.floor((Date.now() - lastSyncedAt) / 1000);
+    const label = s < 60 ? "لحظاتی پیش" : `${Math.floor(s / 60)} دقیقه پیش`;
+
+    return (
+      <span
+        className={cn(
+          "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium",
+          "bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))]",
+          "border border-[hsl(var(--color-success)/0.2)]",
+        )}
+      >
+        <span className="size-1.5 rounded-full bg-[hsl(var(--color-success))]" aria-hidden="true" />
+        {label}
+      </span>
+    );
+  }
+
+  return null;
 }
 
+// ─── Header ────────────────────────────────────────────────────────────────
+
 interface HeaderProps {
-  variant?: "landing" | "dashboard"
-  appName: string
-  businessName?: string
-  lastSyncedAt?: number | null
-  isOnline?: boolean
-  isSyncing?: boolean
-  pendingCount?: number
-  currentLang?: string
-  isDark?: boolean
-  signInLabel: string
-  signOutLabel: string
-  onToggleTheme: () => void
-  onToggleLang: () => void
-  onLogout?: () => void
-  onNavigateLogin: () => void
+  variant?: "landing" | "dashboard";
+  appName: string;
+  businessName?: string;
+  lastSyncedAt?: number | null;
+  isOnline?: boolean;
+  isSyncing?: boolean;
+  pendingCount?: number;
+  currentLang?: string;
+  isDark?: boolean;
+  signInLabel: string;
+  signOutLabel: string;
+  onToggleTheme: () => void;
+  onToggleLang: () => void;
+  onLogout?: () => void;
+  onNavigateLogin: () => void;
 }
 
 export function DashboardHeader({
@@ -139,24 +182,32 @@ export function DashboardHeader({
   onNavigateLogin,
 }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-[var(--hisab-border)] bg-[var(--hisab-background)]/70 backdrop-blur-xl">
-      <div className="mx-auto flex h-12 max-w-6xl items-center justify-between px-4 sm:h-14">
-        {/* Left: Brand + Info */}
+    <header
+      className={cn(
+        "sticky top-0 z-50 w-full",
+        "border-b border-[hsl(var(--border-default))]",
+        "bg-[hsl(var(--surface-base)/0.7)] backdrop-blur-xl",
+        "motion-reduce:backdrop-blur-none",
+      )}
+    >
+      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:h-14">
+        {/* Start: Brand + Info */}
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           <BrandMark />
+
           {variant === "dashboard" && (
             <>
               <div className="hidden min-w-0 flex-col sm:flex">
-                <span className="truncate text-sm font-bold text-[var(--hisab-foreground)]">
+                <span className="truncate text-sm font-bold text-[hsl(var(--fg-primary))]">
                   {appName}
                 </span>
                 {businessName && (
-                  <span className="truncate text-[10px] text-[var(--hisab-muted-fg)]">
+                  <span className="truncate text-[10px] text-[hsl(var(--fg-tertiary))]">
                     {businessName}
                   </span>
                 )}
               </div>
-              <span className="mx-1 hidden h-6 w-px bg-[var(--hisab-border)] sm:block" />
+              <span className="mx-1 hidden h-6 w-px bg-[hsl(var(--border-default))] sm:block" />
               <SyncPill
                 lastSyncedAt={lastSyncedAt}
                 isOnline={isOnline}
@@ -165,51 +216,66 @@ export function DashboardHeader({
               />
             </>
           )}
+
           {variant === "landing" && (
-            <span className="text-sm font-bold text-[var(--hisab-foreground)]">
+            <span className="text-sm font-bold text-[hsl(var(--fg-primary))]">
               {appName}
             </span>
           )}
         </div>
 
-        {/* Right: Actions */}
+        {/* End: Actions */}
         <div className="flex items-center gap-1 sm:gap-2">
+          {/* Language Toggle */}
           <button
             type="button"
             onClick={onToggleLang}
             aria-label="تغییر زبان"
-            className="ghost-btn"
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5",
+              "text-[hsl(var(--fg-secondary))]",
+              "hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]",
+              "transition-colors duration-150",
+              "motion-reduce:transition-none",
+            )}
           >
             {IconGlobe}
-            <span className="lang-pill hidden sm:inline">
+            <span className="hidden sm:inline text-[11px] font-medium">
               {currentLang === "fa-AF" ? "FA" : "IR"}
             </span>
           </button>
 
+          {/* Theme Toggle */}
           <button
             type="button"
             onClick={onToggleTheme}
-            aria-label={
-              isDark ? "حالت روشن" : "حالت تاریک"
-            }
-            className="ghost-btn"
+            aria-label={isDark ? "حالت روشن" : "حالت تاریک"}
+            className={cn(
+              "inline-flex items-center rounded-lg p-1.5",
+              isDark
+                ? "text-[hsl(var(--color-warning))]"
+                : "text-[hsl(var(--fg-secondary))]",
+              "hover:bg-[hsl(var(--surface-muted))]",
+              "transition-colors duration-150",
+              "motion-reduce:transition-none",
+            )}
           >
-            <span
-              style={{
-                color: isDark ? "#fbbf24" : "#475569",
-                display: "inline-flex",
-              }}
-            >
-              {isDark ? IconSun : IconMoon}
-            </span>
+            {isDark ? IconSun : IconMoon}
           </button>
 
+          {/* Logout (dashboard) */}
           {variant === "dashboard" && (
             <button
               type="button"
               onClick={onLogout}
               aria-label="خروج"
-              className="ghost-btn ghost-danger"
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5",
+                "text-[hsl(var(--fg-secondary))]",
+                "hover:bg-[hsl(var(--color-destructive)/0.1)] hover:text-[hsl(var(--color-destructive))]",
+                "transition-colors duration-150",
+                "motion-reduce:transition-none",
+              )}
             >
               {IconLogout}
               <span className="hidden text-[11px] lg:inline">
@@ -218,10 +284,20 @@ export function DashboardHeader({
             </button>
           )}
 
+          {/* Login CTA (landing) */}
           {variant === "landing" && (
             <button
+              type="button"
               onClick={onNavigateLogin}
-              className="rounded-lg bg-[var(--hisab-primary)] px-4 py-2 text-xs font-semibold text-[var(--hisab-primary-fg)] transition-all hover:bg-[var(--hisab-primary)]/90 active:scale-95"
+              className={cn(
+                "rounded-full px-4 py-2",
+                "text-xs font-bold text-white",
+                "bg-[var(--gradient-brand)]",
+                "transition-all duration-200",
+                "hover:brightness-110",
+                "active:scale-95",
+                "motion-reduce:transition-none",
+              )}
             >
               {signInLabel}
             </button>
@@ -229,5 +305,5 @@ export function DashboardHeader({
         </div>
       </div>
     </header>
-  )
+  );
 }

@@ -1,63 +1,70 @@
-"use client"
+"use client";
 
-import React, { useEffect } from "react"
-import { Check, Loader2 } from "lucide-react"
-import { useSyncStore } from "@hisabche/store"
+import React from "react";
+import { Check, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useSyncStore } from "@hisabche/store";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SaveIndicator v2 — Hisabche Design Language
+   Zero hardcoded colors — all tokens from design system
+   No auto-trigger — purely reactive to store state
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface SaveIndicatorProps {
-  show?: boolean
-  message?: string
+  show?: boolean;
+  message?: string;
 }
 
 const SaveIndicator: React.FC<SaveIndicatorProps> = ({
-  show,
+  show = false,
   message,
 }) => {
-  const { saveStatus, setSaveStatus } = useSyncStore()
+  const { saveStatus } = useSyncStore();
 
-  useEffect(() => {
-    if (show && saveStatus === "idle") {
-      setSaveStatus("saving")
-      setTimeout(
-        () => setSaveStatus("saved"),
-        800
-      )
-      setTimeout(
-        () => setSaveStatus("idle"),
-        2500
-      )
-    }
-  }, [show, saveStatus, setSaveStatus])
+  const isVisible = saveStatus !== "idle" || show;
 
-  if (saveStatus === "idle" && !show) return null
+  if (!isVisible) return null;
 
   return (
-    <div className="fixed start-1/2 top-4 z-[var(--z-toast)] -translate-x-1/2 animate-fade-in-up">
-      <div className="glass-strong flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium">
-        {saveStatus === "saving" ? (
+    <div
+      role="status"
+      aria-live="polite"
+      className="fixed start-1/2 top-4 z-50 -translate-x-1/2"
+    >
+      <div
+        className={cn(
+          "flex items-center gap-2 rounded-full px-4 py-2.5",
+          "text-sm font-medium",
+          "shadow-lg",
+          "bg-[hsl(var(--surface-elevated))]",
+          "border border-[hsl(var(--border-strong))]",
+        )}
+      >
+        {saveStatus === "saving" || (show && saveStatus === "idle") ? (
           <>
             <Loader2
-              className="size-4 animate-spin text-[var(--hisab-primary)]"
-              aria-hidden
+              className="size-4 animate-spin text-[hsl(var(--color-primary))]"
+              aria-hidden="true"
             />
-            <span className="text-[var(--hisab-muted-fg)]">
+            <span className="text-[hsl(var(--fg-secondary))]">
               {message || "در حال ذخیره..."}
             </span>
           </>
         ) : saveStatus === "saved" ? (
           <>
             <Check
-              className="size-4 text-[var(--hisab-success)]"
-              aria-hidden
+              className="size-4 text-[hsl(var(--color-success))]"
+              aria-hidden="true"
             />
-            <span className="text-[var(--hisab-success)]">
+            <span className="text-[hsl(var(--color-success))]">
               {message || "ذخیره شد"}
             </span>
           </>
         ) : null}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export { SaveIndicator }
+export { SaveIndicator };

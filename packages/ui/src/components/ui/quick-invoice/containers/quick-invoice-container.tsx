@@ -16,7 +16,7 @@ import {
   useBackupStore,
 } from "@hisabche/store"
 import { QuickInvoicePage } from "../quick-invoice-page"
-import { Celebration } from "@hisabche/ui"
+import { Celebration } from "../../celebration"
 import type { QuickInvoicePageProps } from "../quick-invoice-page"
 
 export function QuickInvoiceContainer() {

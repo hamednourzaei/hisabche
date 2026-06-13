@@ -1,253 +1,254 @@
-"use client"
+"use client";
 
-import { memo, useEffect, useState } from "react"
-import { Card, CardContent } from "./card"
-import { Badge } from "./badge"
-import { cn } from "../../lib/utils"
+import { memo, useEffect, useState, useCallback } from "react";
+import { cn } from "@/lib/utils";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LandingPreview v2 — Hisabche Design Language
+   Zero hardcoded colors — all tokens from design system
+   No external component dependencies
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+// ─── Data ──────────────────────────────────────────────────────────────────
 
 const KPI_DATA = [
-  {
-    label: "فروش امروز",
-    value: "۱۲۵,۰۰۰",
-    change: "+۱۲٪",
-    changeColor: "text-[var(--hisab-success)]",
-  },
-  {
-    label: "فاکتورها",
-    value: "۲۴",
-    change: "+۳",
-    changeColor: "text-[var(--hisab-success)]",
-  },
-  {
-    label: "بدهی",
-    value: "۸۵,۰۰۰",
-    change: "-۵٪",
-    changeColor: "text-[var(--hisab-destructive)]",
-  },
-] as const
+  { label: "فروش امروز", value: "۱۲۵,۰۰۰", change: "+۱۲٪", tone: "success" as const },
+  { label: "فاکتورها", value: "۲۴", change: "+۳", tone: "success" as const },
+  { label: "بدهی", value: "۸۵,۰۰۰", change: "-۵٪", tone: "destructive" as const },
+];
 
-const CHART_HEIGHTS = [
-  42, 68, 48, 82, 58, 92, 72, 86, 64, 78,
-] as const
+const CHART_HEIGHTS = [42, 68, 48, 82, 58, 92, 72, 86, 64, 78];
 
 const INVOICES = [
-  {
-    name: "احمد رحمانی",
-    amount: "۴۵,۰۰۰",
-    status: "پرداخت",
-    variant: "success" as const,
-  },
-  {
-    name: "فاطمه کریمی",
-    amount: "۱۲۰,۰۰۰",
-    status: "بدهی",
-    variant: "destructive" as const,
-  },
-] as const
+  { name: "احمد رحمانی", amount: "۴۵,۰۰۰", status: "پرداخت", tone: "success" as const },
+  { name: "فاطمه کریمی", amount: "۱۲۰,۰۰۰", status: "بدهی", tone: "destructive" as const },
+];
+
+// ─── Sub-components ────────────────────────────────────────────────────────
 
 function KpiCard({
   label,
   value,
   change,
-  changeColor,
+  tone,
 }: {
-  label: string
-  value: string
-  change: string
-  changeColor: string
+  label: string;
+  value: string;
+  change: string;
+  tone: "success" | "destructive";
 }) {
+  const changeColor =
+    tone === "success"
+      ? "text-[hsl(var(--color-success))]"
+      : "text-[hsl(var(--color-destructive))]";
+
   return (
-    <Card className="interactive-card">
-      <CardContent
-        className="p-2.5"
-        role="group"
-        aria-label={`${label}: ${value}، تغییر ${change}`}
-      >
-        <div className="mb-1 text-[9px] text-[var(--hisab-muted-fg)]">
-          {label}
-        </div>
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-sm font-bold">{value}</span>
-          <span className={cn("text-[10px]", changeColor)}>
-            {change}
-          </span>
-        </div>
-      </CardContent>
-    </Card>
-  )
+    <div
+      className="rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-2.5 transition-shadow duration-200 hover:shadow-[var(--ledger-shadow,0_4px_24px_rgba(0,0,0,0.12))]"
+      role="group"
+      aria-label={`${label}: ${value}، تغییر ${change}`}
+    >
+      <div className="mb-1 text-[9px] text-[hsl(var(--fg-tertiary))]">
+        {label}
+      </div>
+      <div className="flex items-baseline gap-1.5">
+        <span className="text-sm font-bold tabular-nums text-[hsl(var(--fg-primary))]">
+          {value}
+        </span>
+        <span className={cn("text-[10px] font-medium", changeColor)}>
+          {change}
+        </span>
+      </div>
+    </div>
+  );
 }
 
 function ChartBars() {
   return (
-    <Card className="interactive-card">
-      <CardContent
-        className="h-[60px] p-3"
-        role="img"
-        aria-label="نمودار فروش"
-      >
-        <div className="flex h-full items-end gap-1">
-          {CHART_HEIGHTS.map((h, i) => (
-            <div
-              key={i}
-              className="flex-1 rounded-sm bg-[var(--hisab-primary)]/20 transition-all hover:bg-[var(--hisab-primary)]/40"
-              style={{ height: `${h}%` }}
-            />
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  )
+    <div
+      className="rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-3"
+      role="img"
+      aria-label="نمودار فروش"
+    >
+      <div className="flex h-[60px] items-end gap-1">
+        {CHART_HEIGHTS.map((h, i) => (
+          <div
+            key={i}
+            className="flex-1 rounded-sm bg-[hsl(var(--color-primary)/0.15)] transition-all duration-200 hover:bg-[hsl(var(--color-primary)/0.35)]"
+            style={{ height: `${h}%` }}
+          />
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function InvoiceFeed() {
   return (
-    <Card className="interactive-card overflow-hidden">
-      <div className="bg-[var(--hisab-muted)]/20 px-3 py-1.5 text-[10px] font-medium text-[var(--hisab-muted-fg)]">
+    <div className="overflow-hidden rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
+      <div className="bg-[hsl(var(--surface-muted)/0.4)] px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--fg-secondary))]">
         آخرین تراکنش‌ها
       </div>
       {INVOICES.map((inv, i) => (
         <div
           key={i}
-          className="flex items-center justify-between border-b border-[var(--hisab-border)]/50 px-3 py-2 last:border-0"
+          className="flex items-center justify-between border-b border-[hsl(var(--border-default))] px-3 py-2.5 last:border-0"
           role="listitem"
         >
-          <div className="flex items-center gap-2 text-start">
+          <div className="flex items-center gap-2 text-start min-w-0">
             <div
-              className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--hisab-primary)]/10 text-[10px]"
+              className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--color-primary)/0.1)] text-[10px] font-medium text-[hsl(var(--color-primary))]"
               aria-hidden="true"
             >
               {inv.name[0]}
             </div>
-            <span className="text-[11px] text-[var(--hisab-foreground)]/80">
+            <span className="text-[11px] text-[hsl(var(--fg-primary))] truncate">
               {inv.name}
             </span>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-[11px] font-medium">
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[11px] font-medium tabular-nums text-[hsl(var(--fg-primary))]">
               {inv.amount} ؋
             </span>
-            <Badge variant={inv.variant} size="sm">
+            <span
+              className={cn(
+                "inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-medium",
+                inv.tone === "success"
+                  ? "bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))] border border-[hsl(var(--color-success)/0.2)]"
+                  : "bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))] border border-[hsl(var(--color-destructive)/0.2)]",
+              )}
+            >
               {inv.status}
-            </Badge>
+            </span>
           </div>
         </div>
       ))}
-    </Card>
-  )
+    </div>
+  );
 }
+
+// ─── Intersection Observer Hook ────────────────────────────────────────────
 
 function useInView(threshold = 0.05) {
-  const [inView, setInView] = useState(false)
-  const ref = (el: HTMLDivElement | null) => {
-    if (!el) return
-    const obs = new IntersectionObserver(
-      ([e]) => {
-        if (e?.isIntersecting) {
-          setInView(true)
-          obs.disconnect()
-        }
-      },
-      { threshold }
-    )
-    obs.observe(el)
-  }
-  return { ref, inView }
+  const [inView, setInView] = useState(false);
+
+  const ref = useCallback(
+    (el: HTMLDivElement | null) => {
+      if (!el) return;
+      const obs = new IntersectionObserver(
+        ([e]) => {
+          if (e?.isIntersecting) {
+            setInView(true);
+            obs.disconnect();
+          }
+        },
+        { threshold },
+      );
+      obs.observe(el);
+    },
+    [threshold],
+  );
+
+  return { ref, inView };
 }
 
-export const LandingPreview = memo(
-  function LandingPreview() {
-    const { ref, inView } = useInView(0.05)
-    const [hydrated, setHydrated] = useState(false)
+// ─── Main Component ────────────────────────────────────────────────────────
 
-    useEffect(() => {
-      if (inView) setHydrated(true)
-    }, [inView])
+export const LandingPreview = memo(function LandingPreview() {
+  const { ref, inView } = useInView(0.05);
+  const [hydrated, setHydrated] = useState(false);
 
-    return (
+  useEffect(() => {
+    if (inView) setHydrated(true);
+  }, [inView]);
+
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "relative mx-auto max-w-2xl transition-all duration-700",
+        "motion-reduce:transition-none",
+        inView ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0",
+      )}
+      role="complementary"
+      aria-label="پیش‌نمایش داشبورد حسابچه"
+    >
+      {/* Stacked card shadows */}
       <div
-        ref={ref}
-        className={cn(
-          "relative mx-auto max-w-2xl transition-all duration-700",
-          inView
-            ? "translate-y-0 opacity-100"
-            : "translate-y-8 opacity-0"
-        )}
-        role="complementary"
-        aria-label="پیش‌نمایش داشبورد حسابچه"
-      >
-        {/* Stacked card shadows */}
-        <div
-          className="absolute -bottom-4 left-3 right-3 h-full rounded-2xl border border-[var(--hisab-border)]/40 bg-[var(--hisab-card)]/30"
-          aria-hidden="true"
-        />
-        <div
-          className="absolute -bottom-2 left-1 right-1 h-full rounded-2xl border border-[var(--hisab-border)]/60 bg-[var(--hisab-card)]/50"
-          aria-hidden="true"
-        />
+        className="absolute -bottom-4 start-3 end-3 h-full rounded-2xl border border-[hsl(var(--border-default)/0.5)] bg-[hsl(var(--surface-base)/0.5)]"
+        aria-hidden="true"
+      />
+      <div
+        className="absolute -bottom-2 start-1 end-1 h-full rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted)/0.7)]"
+        aria-hidden="true"
+      />
 
-        <Card className="glass-card overflow-hidden">
-          {/* Window chrome */}
-          <div className="flex items-center gap-2 border-b border-[var(--hisab-border)] bg-[var(--hisab-muted)]/10 px-4 py-2.5">
-            <div className="flex gap-1.5" aria-hidden="true">
-              <div className="h-2.5 w-2.5 rounded-full bg-red-400/60" />
-              <div className="h-2.5 w-2.5 rounded-full bg-amber-400/60" />
-              <div className="h-2.5 w-2.5 rounded-full bg-emerald-400/60" />
-            </div>
-            <span className="ms-2 text-[10px] text-[var(--hisab-muted-fg)]">
-              داشبورد
-            </span>
-            <Badge
-              variant="success"
-              size="sm"
-              className="ms-auto"
+      {/* Main card */}
+      <div className="relative overflow-hidden rounded-2xl border border-[hsl(var(--border-strong))] bg-[hsl(var(--surface-elevated))] shadow-lg">
+        {/* Window chrome */}
+        <div className="flex items-center gap-2 border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted)/0.3)] px-4 py-2.5">
+          <div className="flex gap-1.5" aria-hidden="true">
+            <div className="h-2.5 w-2.5 rounded-full bg-[hsl(var(--color-destructive)/0.6)]" />
+            <div className="h-2.5 w-2.5 rounded-full bg-[hsl(var(--color-warning)/0.6)]" />
+            <div className="h-2.5 w-2.5 rounded-full bg-[hsl(var(--color-success)/0.6)]" />
+          </div>
+          <span className="ms-2 text-[10px] text-[hsl(var(--fg-tertiary))]">
+            داشبورد
+          </span>
+          <span
+            className={cn(
+              "ms-auto inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[9px] font-medium",
+              "bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))]",
+              "border border-[hsl(var(--color-success)/0.2)]",
+            )}
+          >
+            <span
+              className="h-1.5 w-1.5 rounded-full bg-[hsl(var(--color-success))]"
+              aria-hidden="true"
+            />
+            آنلاین
+          </span>
+        </div>
+
+        {/* Content */}
+        {hydrated ? (
+          <div className="space-y-3 p-4">
+            <div
+              className="grid grid-cols-3 gap-2"
+              role="list"
+              aria-label="شاخص‌های کلیدی"
             >
-              <span
-                className="me-1 h-1.5 w-1.5 rounded-full bg-[var(--hisab-success)]"
-                aria-hidden="true"
-              />
-              آنلاین
-            </Badge>
-          </div>
-
-          {hydrated ? (
-            <CardContent className="space-y-3 p-4">
-              <div
-                className="grid grid-cols-3 gap-2"
-                role="list"
-                aria-label="شاخص‌های کلیدی"
-              >
-                {KPI_DATA.map((kpi, i) => (
-                  <KpiCard key={i} {...kpi} />
-                ))}
-              </div>
-              <ChartBars />
-              <InvoiceFeed />
-            </CardContent>
-          ) : (
-            <div className="h-[200px] p-4" />
-          )}
-        </Card>
-
-        {/* Floating invoice badge (desktop only) */}
-        <Card
-          className="glass-card animate-float-slow absolute -right-4 -top-4 hidden p-3 shadow-xl lg:block"
-          aria-hidden="true"
-        >
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--hisab-primary)]/10 text-sm">
-              🧾
+              {KPI_DATA.map((kpi, i) => (
+                <KpiCard key={i} {...kpi} />
+              ))}
             </div>
-            <div>
-              <div className="text-[10px] text-[var(--hisab-muted-fg)]">
-                فاکتور جدید
-              </div>
-              <div className="text-xs font-semibold text-[var(--hisab-primary)]">
-                INV-042
-              </div>
-            </div>
+            <ChartBars />
+            <InvoiceFeed />
           </div>
-        </Card>
+        ) : (
+          <div className="h-[200px] p-4" />
+        )}
       </div>
-    )
-  }
-)
+
+      {/* Floating invoice badge (desktop only) */}
+      <div
+        className="absolute -end-4 -top-4 hidden rounded-xl border border-[hsl(var(--border-strong))] bg-[hsl(var(--surface-elevated))] p-3 shadow-xl lg:block"
+        aria-hidden="true"
+      >
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[hsl(var(--color-primary)/0.12)] text-sm">
+            🧾
+          </div>
+          <div className="text-start">
+            <div className="text-[10px] text-[hsl(var(--fg-tertiary))]">
+              فاکتور جدید
+            </div>
+            <div className="text-xs font-semibold text-[hsl(var(--color-primary))]">
+              INV-042
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});

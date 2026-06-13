@@ -1,214 +1,405 @@
-"use client"
+"use client";
 
-import { Button } from "../button"
-import { Card, CardContent } from "../card"
-import { Badge } from "../badge"
+import { cn } from "@/lib/utils";
 import {
-  Cloud, CloudOff, RefreshCw, Clock, Check, AlertTriangle,
-  Download, History, Database, Shield, Activity, HardDrive, Wifi,
-} from "lucide-react"
+  Cloud,
+  CloudOff,
+  RefreshCw,
+  Clock,
+  Check,
+  AlertTriangle,
+  Download,
+  History,
+  Database,
+  Shield,
+  Activity,
+  HardDrive,
+  Wifi,
+} from "lucide-react";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SyncCenterPage v2 — Hisabche Design Language
+   Zero hardcoded colors — all tokens from design system
+   No external component dependencies
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 interface BackupItem {
-  id: string; timestamp: number; size: string
-  type: "auto" | "manual"; status: "completed" | "failed"
+  id: string;
+  timestamp: number;
+  size: string;
+  type: "auto" | "manual";
+  status: "completed" | "failed";
 }
 
 interface AuditItem {
-  id: string; action: string; entity: string; timestamp: number
+  id: string;
+  action: string;
+  entity: string;
+  timestamp: number;
 }
 
 export interface SyncCenterPageProps {
-  t: (key: string, fallback?: string) => string
-  timeAgo: (ts: number) => string
-  isOnline: boolean; isSyncing: boolean; pendingCount: number
-  lastSyncedAt: number | null; autoBackupEnabled: boolean
-  backups: BackupItem[]; auditLog: AuditItem[]
-  onSync: () => void; onBackup: () => void; onToggleAutoBackup: () => void
+  t: (key: string, fallback?: string) => string;
+  timeAgo: (ts: number) => string;
+  isOnline: boolean;
+  isSyncing: boolean;
+  pendingCount: number;
+  lastSyncedAt: number | null;
+  autoBackupEnabled: boolean;
+  backups: BackupItem[];
+  auditLog: AuditItem[];
+  onSync: () => void;
+  onBackup: () => void;
+  onToggleAutoBackup: () => void;
 }
 
 export function SyncCenterPage({
-  t, timeAgo, isOnline, isSyncing, pendingCount, lastSyncedAt,
-  autoBackupEnabled, backups, auditLog,
-  onSync, onBackup, onToggleAutoBackup,
+  t,
+  timeAgo,
+  isOnline,
+  isSyncing,
+  pendingCount,
+  lastSyncedAt,
+  autoBackupEnabled,
+  backups,
+  auditLog,
+  onSync,
+  onBackup,
+  onToggleAutoBackup,
 }: SyncCenterPageProps) {
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-4 sm:p-6">
       {/* Header */}
       <div className="space-y-1.5">
-        <h1 className="flex items-center gap-3 text-3xl font-bold text-foreground">
-          <Shield className="size-8 text-primary" aria-hidden />
+        <h1 className="flex items-center gap-3 text-3xl font-bold text-[hsl(var(--fg-primary))]">
+          <Shield className="size-8 text-[hsl(var(--color-primary))]" aria-hidden="true" />
           {t("sync.title", "مرکز همگام‌سازی")}
         </h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-[hsl(var(--fg-secondary))]">
           {t("sync.description", "مدیریت امنیت، بکاپ و وضعیت اتصال برنامه")}
         </p>
       </div>
 
       {/* KPI Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="interactive-card border-border transition-all hover:border-primary/30">
-          <CardContent className="flex items-center gap-4 p-5">
-            <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${isOnline ? "bg-success/10" : "bg-warning/10"}`}>
-              {isOnline ? <Cloud className="size-7 text-success" aria-hidden /> : <CloudOff className="size-7 text-warning" aria-hidden />}
+        {/* Connection */}
+        <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-5 transition-shadow duration-200 hover:shadow-lg">
+          <div className="flex items-center gap-4">
+            <div
+              className={cn(
+                "flex h-14 w-14 items-center justify-center rounded-2xl shrink-0",
+                isOnline
+                  ? "bg-[hsl(var(--color-success)/0.1)]"
+                  : "bg-[hsl(var(--color-warning)/0.1)]",
+              )}
+            >
+              {isOnline ? (
+                <Cloud className="size-7 text-[hsl(var(--color-success))]" aria-hidden="true" />
+              ) : (
+                <CloudOff className="size-7 text-[hsl(var(--color-warning))]" aria-hidden="true" />
+              )}
             </div>
             <div>
-              <p className="text-xl font-bold text-foreground">{isOnline ? t("sync.online", "آنلاین") : t("sync.offline", "آفلاین")}</p>
-              <p className="text-xs text-muted-foreground">{t("sync.connectionStatus", "وضعیت اتصال")}</p>
+              <p className="text-xl font-bold tabular-nums text-[hsl(var(--fg-primary))]">
+                {isOnline ? t("sync.online", "آنلاین") : t("sync.offline", "آفلاین")}
+              </p>
+              <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+                {t("sync.connectionStatus", "وضعیت اتصال")}
+              </p>
             </div>
-          </CardContent>
-        </Card>
-        <Card className="interactive-card border-border transition-all hover:border-primary/30">
-          <CardContent className="flex items-center gap-4 p-5">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
-              <Database className="size-7 text-primary" aria-hidden />
-            </div>
-            <div>
-              <p className="text-xl font-bold text-foreground">{backups.length}</p>
-              <p className="text-xs text-muted-foreground">{t("sync.backups", "بکاپ")}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="interactive-card border-border transition-all hover:border-primary/30">
-          <CardContent className="flex items-center gap-4 p-5">
-            <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${pendingCount > 0 ? "bg-warning/10" : "bg-success/10"}`}>
-              <AlertTriangle className={`size-7 ${pendingCount > 0 ? "text-warning" : "text-success"}`} aria-hidden />
+          </div>
+        </div>
+
+        {/* Backups count */}
+        <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-5 transition-shadow duration-200 hover:shadow-lg">
+          <div className="flex items-center gap-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[hsl(var(--color-primary)/0.1)] shrink-0">
+              <Database className="size-7 text-[hsl(var(--color-primary))]" aria-hidden="true" />
             </div>
             <div>
-              <p className="text-xl font-bold text-foreground">{pendingCount}</p>
-              <p className="text-xs text-muted-foreground">{t("sync.pending", "عملیات معلق")}</p>
+              <p className="text-xl font-bold tabular-nums text-[hsl(var(--fg-primary))]">
+                {backups.length}
+              </p>
+              <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+                {t("sync.backups", "بکاپ")}
+              </p>
             </div>
-          </CardContent>
-        </Card>
-        <Card className="interactive-card border-border transition-all hover:border-primary/30">
-          <CardContent className="flex items-center gap-4 p-5">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-accent/10">
-              <HardDrive className="size-7 text-accent" aria-hidden />
+          </div>
+        </div>
+
+        {/* Pending */}
+        <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-5 transition-shadow duration-200 hover:shadow-lg">
+          <div className="flex items-center gap-4">
+            <div
+              className={cn(
+                "flex h-14 w-14 items-center justify-center rounded-2xl shrink-0",
+                pendingCount > 0
+                  ? "bg-[hsl(var(--color-warning)/0.1)]"
+                  : "bg-[hsl(var(--color-success)/0.1)]",
+              )}
+            >
+              <AlertTriangle
+                className={cn(
+                  "size-7",
+                  pendingCount > 0
+                    ? "text-[hsl(var(--color-warning))]"
+                    : "text-[hsl(var(--color-success))]",
+                )}
+                aria-hidden="true"
+              />
             </div>
             <div>
-              <p className="text-xl font-bold text-foreground">24 MB</p>
-              <p className="text-xs text-muted-foreground">{t("sync.localStorage", "حافظه محلی")}</p>
+              <p className="text-xl font-bold tabular-nums text-[hsl(var(--fg-primary))]">
+                {pendingCount}
+              </p>
+              <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+                {t("sync.pending", "عملیات معلق")}
+              </p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+
+        {/* Storage */}
+        <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-5 transition-shadow duration-200 hover:shadow-lg">
+          <div className="flex items-center gap-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[hsl(var(--surface-muted))] shrink-0">
+              <HardDrive className="size-7 text-[hsl(var(--fg-secondary))]" aria-hidden="true" />
+            </div>
+            <div>
+              <p className="text-xl font-bold tabular-nums text-[hsl(var(--fg-primary))]">24 MB</p>
+              <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+                {t("sync.localStorage", "حافظه محلی")}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Quick Actions */}
-      <Card className="glass-card border-border">
-        <CardContent className="space-y-5 p-6">
+      <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
+        <div className="p-6 space-y-5">
           <div className="flex items-center gap-2">
-            <Activity className="size-5 text-primary" aria-hidden />
-            <h2 className="text-lg font-semibold text-foreground">{t("sync.quickActions", "عملیات سریع")}</h2>
+            <Activity className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+            <h2 className="text-lg font-bold text-[hsl(var(--fg-primary))]">
+              {t("sync.quickActions", "عملیات سریع")}
+            </h2>
           </div>
+
           <div className="flex flex-wrap gap-3">
-            <Button onClick={onSync} disabled={isSyncing} className="gap-2">
-              <RefreshCw className={`size-4 ${isSyncing ? "animate-spin" : ""}`} aria-hidden />
+            <button
+              type="button"
+              onClick={onSync}
+              disabled={isSyncing}
+              className={cn(
+                "inline-flex items-center gap-2 rounded-full px-4 py-2.5",
+                "text-sm font-bold text-white",
+                "bg-[var(--gradient-brand)]",
+                "shadow-sm shadow-[hsl(var(--color-primary)/0.15)]",
+                "transition-all duration-200 hover:brightness-110 active:scale-[0.98]",
+                "disabled:opacity-40 disabled:cursor-not-allowed",
+                "motion-reduce:transition-none",
+              )}
+            >
+              <RefreshCw
+                className={cn("size-4", isSyncing && "animate-spin")}
+                aria-hidden="true"
+              />
               {t("sync.syncNow", "همگام‌سازی الآن")}
-            </Button>
-            <Button variant="outline" onClick={onBackup} className="gap-2">
-              <Download className="size-4" aria-hidden />
+            </button>
+
+            <button
+              type="button"
+              onClick={onBackup}
+              className={cn(
+                "inline-flex items-center gap-2 rounded-full px-4 py-2.5",
+                "text-sm font-medium",
+                "border border-[hsl(var(--border-default))]",
+                "text-[hsl(var(--fg-secondary))]",
+                "hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]",
+                "transition-colors duration-150",
+                "motion-reduce:transition-none",
+              )}
+            >
+              <Download className="size-4" aria-hidden="true" />
               {t("sync.manualBackup", "بکاپ دستی")}
-            </Button>
-            <Button variant={autoBackupEnabled ? "default" : "outline"} onClick={onToggleAutoBackup} className="gap-2">
-              <Database className="size-4" aria-hidden />
+            </button>
+
+            <button
+              type="button"
+              onClick={onToggleAutoBackup}
+              className={cn(
+                "inline-flex items-center gap-2 rounded-full px-4 py-2.5",
+                "text-sm font-medium transition-all duration-200",
+                "motion-reduce:transition-none",
+                autoBackupEnabled
+                  ? "bg-[var(--gradient-brand)] text-white shadow-sm"
+                  : "border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]",
+              )}
+            >
+              <Database className="size-4" aria-hidden="true" />
               {t("sync.autoBackup", "بکاپ خودکار")}
-            </Button>
+            </button>
           </div>
+
           {lastSyncedAt && (
-            <div className="flex items-center gap-2 rounded-xl border border-border bg-card p-4 text-sm text-muted-foreground">
-              <Clock className="size-4 text-success" aria-hidden />
+            <div className="flex items-center gap-2 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] p-4 text-sm text-[hsl(var(--fg-secondary))]">
+              <Clock className="size-4 text-[hsl(var(--color-success))]" aria-hidden="true" />
               {t("sync.lastSynced", "آخرین همگام‌سازی")}: {timeAgo(lastSyncedAt)}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Backup History */}
-      <Card className="glass-card border-border">
-        <CardContent className="space-y-5 p-6">
+      <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
+        <div className="p-6 space-y-5">
           <div className="flex items-center gap-2">
-            <History className="size-5 text-primary" aria-hidden />
-            <h2 className="text-lg font-semibold text-foreground">{t("sync.backupHistory", "تاریخچه بکاپ")}</h2>
+            <History className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+            <h2 className="text-lg font-bold text-[hsl(var(--fg-primary))]">
+              {t("sync.backupHistory", "تاریخچه بکاپ")}
+            </h2>
           </div>
+
           {backups.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border py-10 text-center">
-              <Database className="mx-auto mb-3 size-10 text-muted-foreground" aria-hidden />
-              <p className="text-sm text-muted-foreground">{t("sync.noBackups", "هنوز بکاپی ثبت نشده")}</p>
+            <div className="rounded-2xl border border-dashed border-[hsl(var(--border-default))] py-10 text-center">
+              <Database className="mx-auto mb-3 size-10 text-[hsl(var(--fg-tertiary))]" aria-hidden="true" />
+              <p className="text-sm text-[hsl(var(--fg-tertiary))]">
+                {t("sync.noBackups", "هنوز بکاپی ثبت نشده")}
+              </p>
             </div>
           ) : (
             <div className="space-y-3">
               {backups.slice(0, 6).map((backup) => (
-                <div key={backup.id} className="interactive-card flex items-center justify-between rounded-xl border border-border p-4 transition-all hover:border-primary/30">
+                <div
+                  key={backup.id}
+                  className="flex items-center justify-between rounded-xl border border-[hsl(var(--border-default))] p-4 transition-all duration-200 hover:border-[hsl(var(--color-primary)/0.3)]"
+                >
                   <div className="flex items-center gap-4">
-                    <div className={`flex h-10 w-10 items-center justify-center rounded-full ${backup.status === "completed" ? "bg-success/10" : "bg-destructive/10"}`}>
-                      {backup.status === "completed" ? <Check className="size-5 text-success" aria-hidden /> : <AlertTriangle className="size-5 text-destructive" aria-hidden />}
+                    <div
+                      className={cn(
+                        "flex h-10 w-10 items-center justify-center rounded-full shrink-0",
+                        backup.status === "completed"
+                          ? "bg-[hsl(var(--color-success)/0.1)]"
+                          : "bg-[hsl(var(--color-destructive)/0.1)]",
+                      )}
+                    >
+                      {backup.status === "completed" ? (
+                        <Check className="size-5 text-[hsl(var(--color-success))]" aria-hidden="true" />
+                      ) : (
+                        <AlertTriangle className="size-5 text-[hsl(var(--color-destructive))]" aria-hidden="true" />
+                      )}
                     </div>
                     <div>
-                      <p className="font-medium text-foreground">{backup.type === "auto" ? t("sync.autoBackup", "بکاپ خودکار") : t("sync.manualBackup", "بکاپ دستی")}</p>
-                      <p className="text-xs text-muted-foreground">{timeAgo(backup.timestamp)} • {backup.size}</p>
+                      <p className="font-medium text-[hsl(var(--fg-primary))]">
+                        {backup.type === "auto"
+                          ? t("sync.autoBackup", "بکاپ خودکار")
+                          : t("sync.manualBackup", "بکاپ دستی")}
+                      </p>
+                      <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+                        {timeAgo(backup.timestamp)} • {backup.size}
+                      </p>
                     </div>
                   </div>
-                  <Badge variant={backup.status === "completed" ? "success" : "destructive"}>
-                    {backup.status === "completed" ? t("sync.success", "موفق") : t("sync.error", "خطا")}
-                  </Badge>
+                  <span
+                    className={cn(
+                      "rounded-full px-2.5 py-0.5 text-xs font-semibold shrink-0",
+                      backup.status === "completed"
+                        ? "bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))] border border-[hsl(var(--color-success)/0.2)]"
+                        : "bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))] border border-[hsl(var(--color-destructive)/0.2)]",
+                    )}
+                  >
+                    {backup.status === "completed"
+                      ? t("sync.success", "موفق")
+                      : t("sync.error", "خطا")}
+                  </span>
                 </div>
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Audit Log */}
-      <Card className="glass-card border-border">
-        <CardContent className="space-y-5 p-6">
+      <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
+        <div className="p-6 space-y-5">
           <div className="flex items-center gap-2">
-            <Shield className="size-5 text-primary" aria-hidden />
-            <h2 className="text-lg font-semibold text-foreground">{t("sync.recentActivity", "فعالیت‌های اخیر")}</h2>
+            <Shield className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+            <h2 className="text-lg font-bold text-[hsl(var(--fg-primary))]">
+              {t("sync.recentActivity", "فعالیت‌های اخیر")}
+            </h2>
           </div>
+
           {auditLog.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border py-10 text-center">
-              <History className="mx-auto mb-3 size-10 text-muted-foreground" aria-hidden />
-              <p className="text-sm text-muted-foreground">{t("sync.noActivity", "هنوز فعالیتی ثبت نشده")}</p>
+            <div className="rounded-2xl border border-dashed border-[hsl(var(--border-default))] py-10 text-center">
+              <History className="mx-auto mb-3 size-10 text-[hsl(var(--fg-tertiary))]" aria-hidden="true" />
+              <p className="text-sm text-[hsl(var(--fg-tertiary))]">
+                {t("sync.noActivity", "هنوز فعالیتی ثبت نشده")}
+              </p>
             </div>
           ) : (
             <div className="space-y-2">
               {auditLog.slice(0, 10).map((item) => (
-                <div key={item.id} className="interactive-card flex items-center justify-between rounded-xl border border-border p-3 transition-all hover:border-primary/30">
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between rounded-xl border border-[hsl(var(--border-default))] p-3 transition-all duration-200 hover:border-[hsl(var(--color-primary)/0.3)]"
+                >
                   <div className="flex items-center gap-3">
-                    <div className="h-2 w-2 rounded-full bg-primary" />
+                    <div className="h-2 w-2 rounded-full bg-[hsl(var(--color-primary))] shrink-0" />
                     <div>
-                      <p className="text-sm font-medium text-foreground">{item.action}</p>
-                      <p className="text-xs text-muted-foreground">{item.entity}</p>
+                      <p className="text-sm font-medium text-[hsl(var(--fg-primary))]">
+                        {item.action}
+                      </p>
+                      <p className="text-xs text-[hsl(var(--fg-tertiary))]">{item.entity}</p>
                     </div>
                   </div>
-                  <span className="text-xs text-muted-foreground">{timeAgo(item.timestamp)}</span>
+                  <span className="text-xs text-[hsl(var(--fg-tertiary))] shrink-0">
+                    {timeAgo(item.timestamp)}
+                  </span>
                 </div>
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Network Status */}
-      <Card className="glass-card border-border">
-        <CardContent className="space-y-5 p-6">
+      <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
+        <div className="p-6 space-y-5">
           <div className="flex items-center gap-2">
-            <Wifi className="size-5 text-primary" aria-hidden />
-            <h2 className="text-lg font-semibold text-foreground">{t("sync.networkStatus", "وضعیت شبکه")}</h2>
+            <Wifi className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+            <h2 className="text-lg font-bold text-[hsl(var(--fg-primary))]">
+              {t("sync.networkStatus", "وضعیت شبکه")}
+            </h2>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl border border-border p-4 text-start">
-              <p className="mb-1 text-sm text-muted-foreground">{t("sync.internet", "اینترنت")}</p>
-              <p className={`font-semibold ${isOnline ? "text-success" : "text-warning"}`}>
-                {isOnline ? t("sync.connected", "متصل") : t("sync.disconnected", "قطع")}
+            <div className="rounded-2xl border border-[hsl(var(--border-default))] p-4 text-start">
+              <p className="mb-1 text-sm text-[hsl(var(--fg-secondary))]">
+                {t("sync.internet", "اینترنت")}
+              </p>
+              <p
+                className={cn(
+                  "font-semibold",
+                  isOnline
+                    ? "text-[hsl(var(--color-success))]"
+                    : "text-[hsl(var(--color-warning))]",
+                )}
+              >
+                {isOnline
+                  ? t("sync.connected", "متصل")
+                  : t("sync.disconnected", "قطع")}
               </p>
             </div>
-            <div className="rounded-2xl border border-border p-4 text-start">
-              <p className="mb-1 text-sm text-muted-foreground">{t("sync.serverStatus", "وضعیت سرور")}</p>
-              <p className="font-semibold text-success">{t("sync.stable", "پایدار")}</p>
+            <div className="rounded-2xl border border-[hsl(var(--border-default))] p-4 text-start">
+              <p className="mb-1 text-sm text-[hsl(var(--fg-secondary))]">
+                {t("sync.serverStatus", "وضعیت سرور")}
+              </p>
+              <p className="font-semibold text-[hsl(var(--color-success))]">
+                {t("sync.stable", "پایدار")}
+              </p>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
-  )
+  );
 }

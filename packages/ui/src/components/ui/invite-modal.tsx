@@ -1,32 +1,37 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useTranslation } from "react-i18next"
-import * as Dialog from "@radix-ui/react-dialog"
-import { X } from "lucide-react"
-import { Button, Input } from "@hisabche/ui"
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import * as Dialog from "@radix-ui/react-dialog";
+import { X, Loader2, Check } from "lucide-react";
 import {
   useWorkspaceStore,
   type WorkspaceRole,
-} from "@hisabche/store"
-import { cn } from "../../lib/utils"
+} from "@hisabche/store";
+import { cn } from "@/lib/utils";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   InviteModal v2 — Hisabche Design Language
+   Zero hardcoded colors — all tokens from design system
+   No external component dependencies
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 interface Props {
-  open: boolean
-  onClose: () => void
+  open: boolean;
+  onClose: () => void;
 }
 
 export function InviteModal({ open, onClose }: Props) {
-  const { t } = useTranslation()
-  const { addInvite, canInvite } = useWorkspaceStore()
-  const [email, setEmail] = useState("")
-  const [role, setRole] = useState<WorkspaceRole>("employee")
-  const [sent, setSent] = useState(false)
+  const { t } = useTranslation();
+  const { addInvite, canInvite } = useWorkspaceStore();
+  const [email, setEmail] = useState("");
+  const [role, setRole] = useState<WorkspaceRole>("employee");
+  const [sent, setSent] = useState(false);
 
-  if (!canInvite()) return null
+  if (!canInvite()) return null;
 
   const handleInvite = () => {
-    if (!email.trim()) return
+    if (!email.trim()) return;
     addInvite({
       id: `invite-${Date.now()}`,
       email: email.trim(),
@@ -34,68 +39,106 @@ export function InviteModal({ open, onClose }: Props) {
       invitedBy: "current-user",
       invitedAt: Date.now(),
       status: "pending",
-    })
-    setSent(true)
+    });
+    setSent(true);
     setTimeout(() => {
-      setSent(false)
-      setEmail("")
-      onClose()
-    }, 1500)
-  }
+      setSent(false);
+      setEmail("");
+      onClose();
+    }, 1500);
+  };
 
   return (
-    <Dialog.Root open={open} onOpenChange={(open) => !open && onClose()}>
+    <Dialog.Root open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <Dialog.Portal>
+        {/* Overlay */}
         <Dialog.Overlay
           className={cn(
-            "fixed inset-0 z-50 bg-black/50 backdrop-blur-sm",
+            "fixed inset-0 z-50",
+            "bg-[hsl(var(--ledger-ink)/0.3)]",
             "data-[state=open]:animate-in data-[state=closed]:animate-out",
-            "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+            "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+            "motion-reduce:animate-none",
           )}
         />
+
+        {/* Content */}
         <Dialog.Content
           className={cn(
-            "fixed left-[50%] top-[50%] z-50 w-full max-w-sm translate-x-[-50%] translate-y-[-50%] gap-4",
-            "rounded-xl border border-[var(--hisab-border)] bg-[var(--hisab-background)] p-6 shadow-lg",
-            "duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out",
+            "fixed z-50 w-full max-w-sm",
+            "start-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
+            "rounded-2xl",
+            "border border-[hsl(var(--border-strong))]",
+            "bg-[hsl(var(--surface-elevated))]",
+            "shadow-lg",
+            "p-6 gap-4",
+            "duration-200",
+            "data-[state=open]:animate-in data-[state=closed]:animate-out",
             "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-            "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
-            "data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%]",
-            "data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]"
+            "data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2",
+            "motion-reduce:animate-none",
           )}
-          onInteractOutside={onClose}
-          onEscapeKeyDown={onClose}
         >
-          <div className="flex items-center justify-between">
-            <Dialog.Title className="text-lg font-bold text-[var(--hisab-foreground)]">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-4">
+            <Dialog.Title className="text-lg font-bold text-[hsl(var(--fg-primary))]">
               {t("workspace.inviteMember", "دعوت عضو جدید")}
             </Dialog.Title>
             <Dialog.Close asChild>
               <button
+                type="button"
                 className={cn(
-                  "rounded-full p-1 text-[var(--hisab-muted-fg)]",
-                  "hover:bg-[var(--hisab-muted)] hover:text-[var(--hisab-foreground)]",
-                  "transition-colors"
+                  "rounded-full p-1.5",
+                  "text-[hsl(var(--fg-tertiary))]",
+                  "hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]",
+                  "transition-colors duration-150",
+                  "motion-reduce:transition-none",
+                  "min-h-[44px] min-w-[44px] flex items-center justify-center",
                 )}
-                aria-label={t("action.close")}
+                aria-label={t("action.close", "بستن")}
               >
-                <X className="size-4" aria-hidden />
+                <X className="size-4" aria-hidden="true" />
               </button>
             </Dialog.Close>
           </div>
 
+          {/* Form */}
           <div className="space-y-4">
-            <Input
+            {/* Email Input */}
+            <input
+              type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder={t("auth.email", "ایمیل")}
               autoFocus
+              className={cn(
+                "w-full rounded-xl px-4 py-3",
+                "text-sm",
+                "border border-[hsl(var(--border-default))]",
+                "bg-[hsl(var(--surface-base))]",
+                "text-[hsl(var(--fg-primary))]",
+                "placeholder:text-[hsl(var(--fg-tertiary))]",
+                "focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]",
+                "transition-all duration-200",
+                "motion-reduce:transition-none",
+              )}
             />
 
+            {/* Role Select */}
             <select
               value={role}
               onChange={(e) => setRole(e.target.value as WorkspaceRole)}
-              className="w-full rounded-xl border border-[var(--hisab-border)] bg-[var(--hisab-card)] px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[var(--hisab-primary)]/20"
+              className={cn(
+                "w-full rounded-xl px-4 py-3",
+                "text-sm",
+                "border border-[hsl(var(--border-default))]",
+                "bg-[hsl(var(--surface-base))]",
+                "text-[hsl(var(--fg-primary))]",
+                "focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]",
+                "transition-all duration-200",
+                "motion-reduce:transition-none",
+                "appearance-none",
+              )}
             >
               <option value="admin">
                 {t("workspace.admin", "مدیر")}
@@ -105,30 +148,61 @@ export function InviteModal({ open, onClose }: Props) {
               </option>
             </select>
 
-            <p className="text-xs text-[var(--hisab-muted-fg)]">
+            {/* Hint */}
+            <p className="text-xs text-[hsl(var(--fg-tertiary))] leading-relaxed">
               {t(
                 "workspace.roleHint",
-                "مدیر می‌تواند فاکتور و محصولات را مدیریت کند. کارمند فقط می‌تواند فاکتور ثبت کند."
+                "مدیر می‌تواند فاکتور و محصولات را مدیریت کند. کارمند فقط می‌تواند فاکتور ثبت کند.",
               )}
             </p>
 
+            {/* Actions */}
             <div className="flex gap-3 pt-2">
-              <Button variant="outline" className="w-full" onClick={onClose}>
-                {t("common.cancel")}
-              </Button>
-              <Button
-                className="w-full"
+              <button
+                type="button"
+                onClick={onClose}
+                className={cn(
+                  "w-full rounded-full px-4 py-2.5",
+                  "text-sm font-medium",
+                  "border border-[hsl(var(--border-default))]",
+                  "text-[hsl(var(--fg-secondary))]",
+                  "hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]",
+                  "transition-colors duration-150",
+                  "motion-reduce:transition-none",
+                )}
+              >
+                {t("common.cancel", "انصراف")}
+              </button>
+
+              <button
+                type="button"
                 onClick={handleInvite}
                 disabled={!email.trim() || sent}
+                className={cn(
+                  "w-full rounded-full px-4 py-2.5",
+                  "text-sm font-bold text-white",
+                  "bg-[var(--gradient-brand)]",
+                  "shadow-sm shadow-[hsl(var(--color-primary)/0.15)]",
+                  "transition-all duration-200",
+                  "hover:brightness-110",
+                  "active:scale-[0.98]",
+                  "disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:brightness-100",
+                  "motion-reduce:transition-none",
+                )}
               >
-                {sent
-                  ? t("workspace.invited", "دعوت شد ✅")
-                  : t("workspace.sendInvite", "ارسال دعوت")}
-              </Button>
+                {sent ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Check className="size-4" aria-hidden="true" />
+                    {t("workspace.invited", "دعوت شد")}
+                  </span>
+                ) : (
+                  t("workspace.sendInvite", "ارسال دعوت")
+                )}
+              </button>
             </div>
           </div>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
-  )
+  );
 }

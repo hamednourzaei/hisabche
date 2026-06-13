@@ -2,6 +2,13 @@
 "use client";
 
 import { useNavigation } from "../../../hooks/menu/use-navigation-state";
+import { cn } from "@/lib/utils";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SideNav v2 — Hisabche Design Language
+   Zero hardcoded colors — all tokens from design system
+   No CSS module dependency
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface SideNavItem {
   id: string;
@@ -17,26 +24,72 @@ export function SideNav({ items }: SideNavProps) {
   const { activeSection, setSection } = useNavigation();
 
   return (
-    <aside className="side-nav">
-      <div className="side-nav-header">
-        <div className="logo-icon">ح</div>
-        <div>
-          <p className="logo-title">حسابچه</p>
-          <p className="logo-subtitle">مدیریت کسب‌وکار</p>
+    <aside
+      className={cn(
+        "hidden lg:flex lg:flex-col shrink-0",
+        "w-60 h-screen sticky top-0 overflow-y-auto",
+        "border-e border-[hsl(var(--border-default))]",
+        "bg-[hsl(var(--surface-base))]",
+      )}
+    >
+      {/* Header */}
+      <div className="flex items-center gap-2.5 px-4 py-[11px] border-b border-[hsl(var(--border-default))]">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--gradient-brand)] text-white text-sm font-bold shrink-0">
+          ح
+        </div>
+        <div className="min-w-0 leading-tight">
+          <p className="text-sm font-semibold truncate text-[hsl(var(--fg-primary))]">
+            حسابچه
+          </p>
+          <p className="text-[11px] text-[hsl(var(--fg-tertiary))]">
+            مدیریت کسب‌وکار
+          </p>
         </div>
       </div>
-      <nav className="side-nav-menu">
-        {items.map(({ id, icon, label }) => (
-          <button
-            key={id}
-            className={`side-nav-item ${activeSection === id ? "active" : ""}`}
-            onClick={() => setSection(id)}
-          >
-            {activeSection === id && <span className="active-indicator" />}
-            <span className="nav-icon">{icon}</span>
-            <span className="nav-label">{label}</span>
-          </button>
-        ))}
+
+      {/* Navigation */}
+      <nav className="flex flex-col gap-0.5 p-2 flex-1">
+        {items.map(({ id, icon, label }) => {
+          const isActive = activeSection === id;
+
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setSection(id)}
+              className={cn(
+                "relative flex items-center gap-2.5 h-9 px-2.5 rounded-lg",
+                "text-sm font-medium text-start w-full",
+                "transition-colors duration-150",
+                "motion-reduce:transition-none",
+                isActive
+                  ? "bg-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))] font-semibold"
+                  : "text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]",
+              )}
+              aria-current={isActive ? "page" : undefined}
+            >
+              {/* Active indicator bar */}
+              {isActive && (
+                <span className="absolute start-0 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-full bg-[hsl(var(--color-primary))]" />
+              )}
+
+              {/* Icon */}
+              <span
+                className={cn(
+                  "inline-flex shrink-0",
+                  isActive
+                    ? "text-[hsl(var(--color-primary))]"
+                    : "text-[hsl(var(--fg-tertiary))]",
+                )}
+              >
+                {icon}
+              </span>
+
+              {/* Label */}
+              <span className="flex-1 truncate">{label}</span>
+            </button>
+          );
+        })}
       </nav>
     </aside>
   );

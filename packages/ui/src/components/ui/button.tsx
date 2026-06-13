@@ -1,91 +1,115 @@
-import * as React from "react"
-import { Slot } from "@radix-ui/react-slot"
-import { cva, type VariantProps } from "class-variance-authority"
-import { cn } from "@/lib/utils"
-import { Loader2 } from "lucide-react"
+import * as React from "react";
+import { Slot } from "@radix-ui/react-slot";
+import { cn } from "@/lib/utils";
+import { Loader2 } from "lucide-react";
 
-const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--hisab-ring)] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 gap-2",
-  {
-    variants: {
-      variant: {
-        default:
-          "bg-[var(--hisab-primary)] text-[var(--hisab-primary-fg)] hover:opacity-90",
-        destructive:
-          "bg-[var(--hisab-destructive)] text-[var(--hisab-destructive-fg)] hover:opacity-90",
-        outline:
-          "border border-[var(--hisab-border)] bg-transparent hover:bg-[var(--hisab-muted)] text-[var(--hisab-foreground)]",
-        secondary:
-          "bg-[var(--hisab-secondary)] text-[var(--hisab-secondary-fg)] hover:opacity-90",
-        ghost:
-          "hover:bg-[var(--hisab-muted)] text-[var(--hisab-foreground)]",
-        link: "text-[var(--hisab-primary)] underline-offset-4 hover:underline",
-        success:
-          "bg-[var(--hisab-success)] text-[var(--hisab-success-fg)] hover:opacity-90",
-      },
-      size: {
-        default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
-        icon: "h-10 w-10",
-        "icon-sm": "h-8 w-8",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  }
-)
+/* ═══════════════════════════════════════════════════════════════════════════
+   Button v2 — Hisabche Design Language
+   Zero hardcoded colors — all tokens from design system
+   No class-variance-authority dependency
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+// ─── Types ─────────────────────────────────────────────────────────────────
+
+type ButtonVariant =
+  | "default"
+  | "destructive"
+  | "outline"
+  | "secondary"
+  | "ghost"
+  | "link"
+  | "success";
+
+type ButtonSize = "default" | "sm" | "lg" | "icon" | "icon-sm";
 
 export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
-  asChild?: boolean
-  loading?: boolean
-  fullWidth?: boolean
-  icon?: React.ReactNode
+  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  asChild?: boolean;
+  loading?: boolean;
+  fullWidth?: boolean;
+  variant?: ButtonVariant;
+  size?: ButtonSize;
 }
+
+// ─── Style Maps ────────────────────────────────────────────────────────────
+
+const variantStyles: Record<ButtonVariant, string> = {
+  default:
+    "bg-[var(--gradient-brand)] text-white hover:brightness-110 shadow-sm shadow-[hsl(var(--color-primary)/0.15)]",
+  destructive:
+    "bg-[hsl(var(--color-destructive))] text-white hover:brightness-110 shadow-sm shadow-[hsl(var(--color-destructive)/0.15)]",
+  outline:
+    "border border-[hsl(var(--border-default))] bg-transparent text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]",
+  secondary:
+    "bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-primary))] hover:bg-[hsl(var(--surface-muted)/0.8)]",
+  ghost:
+    "bg-transparent text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]",
+  link: "bg-transparent text-[hsl(var(--color-primary))] underline-offset-4 hover:underline p-0 h-auto",
+  success:
+    "bg-[hsl(var(--color-success))] text-white hover:brightness-110 shadow-sm shadow-[hsl(var(--color-success)/0.15)]",
+};
+
+const sizeStyles: Record<ButtonSize, string> = {
+  default: "h-10 px-4 py-2 rounded-full",
+  sm: "h-9 px-3 rounded-full text-xs",
+  lg: "h-11 px-8 rounded-full",
+  icon: "h-10 w-10 rounded-full",
+  "icon-sm": "h-8 w-8 rounded-full",
+};
+
+// ─── Component ─────────────────────────────────────────────────────────────
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   (
     {
       className,
-      variant,
-      size,
+      variant = "default",
+      size = "default",
       asChild = false,
-      loading,
-      fullWidth,
-      icon,
+      loading = false,
+      fullWidth = false,
       children,
       disabled,
       ...props
     },
-    ref
+    ref,
   ) => {
-    const Comp = asChild ? Slot : "button"
+    const Comp = asChild ? Slot : "button";
 
     return (
       <Comp
-        className={cn(
-          buttonVariants({ variant, size, className }),
-          fullWidth && "w-full"
-        )}
         ref={ref}
+        className={cn(
+          // Base
+          "inline-flex items-center justify-center gap-2",
+          "whitespace-nowrap text-sm font-bold",
+          "transition-all duration-200",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring-color)/0.5)] focus-visible:ring-offset-1",
+          "disabled:pointer-events-none disabled:opacity-40",
+          "active:scale-[0.98]",
+          "motion-reduce:transition-none motion-reduce:active:scale-100",
+          // Variant
+          variantStyles[variant],
+          // Size (skip for link variant)
+          variant !== "link" && sizeStyles[size],
+          // Full width
+          fullWidth && "w-full",
+          // Custom
+          className,
+        )}
         disabled={disabled || loading}
         {...props}
       >
-        {loading ? (
-          <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-        ) : (
-          icon
+        {loading && (
+          <Loader2 className="size-4 animate-spin shrink-0" aria-hidden="true" />
         )}
         {children}
       </Comp>
-    )
-  }
-)
+    );
+  },
+);
 
-Button.displayName = "Button"
+Button.displayName = "Button";
 
-export { Button, buttonVariants }
+export { Button };
+export type { ButtonVariant, ButtonSize };

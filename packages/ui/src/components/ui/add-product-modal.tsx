@@ -1,47 +1,52 @@
-"use client"
+"use client";
 
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
-import { useTranslation } from "react-i18next"
-import { DollarSign, Package, AlertTriangle } from "lucide-react"
-import { useCreateProduct } from "@hisabche/api"
-import { Button } from "./button"
-import { Input } from "./input"
-import { Label } from "./label"
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useTranslation } from "react-i18next";
+import { DollarSign, Package, AlertTriangle, Loader2 } from "lucide-react";
+import { useCreateProduct } from "@hisabche/api";
+import { Button } from "./button";
+import { Input } from "./input";
+import { Label } from "./label";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "./dialog"
+  DialogDescription,
+} from "./dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "./select"
-import { SaveIndicator } from "./save-indicator"
-import { useSyncStore, useBackupStore } from "@hisabche/store"
+} from "./select";
+import { useSyncStore, useBackupStore } from "@hisabche/store";
 
-// Product form validation schema
+// ─── Schema ────────────────────────────────────────────────────────────────
+
 const productSchema = z.object({
   name: z.string().min(1, "product.nameRequired"),
-  quantity: z.number().min(0).default(0),
-  buyPrice: z.number().min(0).default(0),
-  sellPrice: z.number().min(0).default(0),
-  unit: z.enum(["piece", "kg", "liter", "meter", "box"]).default("piece"),
-  minStock: z.number().min(0).default(5),
-})
+  quantity: z.number().min(0),
+  buyPrice: z.number().min(0),
+  sellPrice: z.number().min(0),
+  unit: z.enum(["piece", "kg", "liter", "meter", "box"]),
+  minStock: z.number().min(0),
+});
 
-type ProductFormValues = z.infer<typeof productSchema>
+type ProductFormValues = z.infer<typeof productSchema>;
+
+// ─── Props ─────────────────────────────────────────────────────────────────
 
 interface AddProductModalProps {
-  open: boolean
-  onClose: () => void
-  onCreated?: () => void
+  open: boolean;
+  onClose: () => void;
+  onCreated?: () => void;
 }
+
+// ─── Constants ─────────────────────────────────────────────────────────────
 
 const UNIT_OPTIONS = [
   { value: "piece", labelKey: "godam.units.piece", fallback: "عدد" },
@@ -49,31 +54,40 @@ const UNIT_OPTIONS = [
   { value: "liter", labelKey: "godam.units.liter", fallback: "لیتر" },
   { value: "meter", labelKey: "godam.units.meter", fallback: "متر" },
   { value: "box", labelKey: "godam.units.box", fallback: "کارتن" },
-] as const
+] as const;
 
-export function AddProductModal({ open, onClose, onCreated }: AddProductModalProps) {
-  const { t } = useTranslation()
-  const createProduct = useCreateProduct()
-  const { setSaveStatus } = useSyncStore()
-  const { addAuditEntry } = useBackupStore()
+// ─── Component ─────────────────────────────────────────────────────────────
 
-  const form = useForm({
+export function AddProductModal({
+  open,
+  onClose,
+  onCreated,
+}: AddProductModalProps) {
+  const { t } = useTranslation();
+  const createProduct = useCreateProduct();
+  const { setSaveStatus } = useSyncStore();
+  const { addAuditEntry } = useBackupStore();
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    control,
+    formState: { isSubmitting, errors },
+  } = useForm<ProductFormValues>({
     resolver: zodResolver(productSchema),
     defaultValues: {
       name: "",
       quantity: 0,
       buyPrice: 0,
       sellPrice: 0,
-      unit: "piece" as const,
+      unit: "piece",
       minStock: 5,
     },
-  })
-
-  const { register, handleSubmit, reset, setValue, formState: { isSubmitting, errors } } = form
+  });
 
   const onSubmit = async (data: ProductFormValues) => {
-    setSaveStatus("saving")
-
+    setSaveStatus("saving");
     try {
       const product = await createProduct.mutateAsync({
         name: data.name.trim(),
@@ -84,150 +98,222 @@ export function AddProductModal({ open, onClose, onCreated }: AddProductModalPro
         minStockLevel: data.minStock,
         category: "general",
         isActive: true,
-      })
-
+      });
       addAuditEntry({
         action: "create",
         entity: "product",
         entityId: product.id || "",
         details: `محصول جدید: ${data.name.trim()}`,
-      })
-
-      setSaveStatus("saved")
-      setTimeout(() => setSaveStatus("idle"), 2000)
-
-      reset()
-      onCreated?.()
-      onClose()
+      });
+      setSaveStatus("saved");
+      setTimeout(() => setSaveStatus("idle"), 2000);
+      reset();
+      onCreated?.();
+      onClose();
     } catch (error) {
-      setSaveStatus("idle")
-      console.error("Failed to create product:", error)
+      setSaveStatus("idle");
+      console.error("Failed to create product:", error);
     }
-  }
+  };
 
   const handleClose = () => {
-    reset()
-    onClose()
-  }
+    reset();
+    onClose();
+  };
 
-  const getErrorMessage = (error: any) => {
-    if (error?.message) return t(error.message)
-    if (error?.type === "min") return t("validation.min", "مقدار وارد شده معتبر نیست")
-    return undefined
-  }
+  const getErrorMessage = (error: unknown): string | undefined => {
+    if (error && typeof error === "object" && "message" in error) {
+      return t((error as { message: string }).message);
+    }
+    return undefined;
+  };
+
+  const isPending = isSubmitting || createProduct.isPending;
 
   return (
-    <Dialog open={open} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="max-w-md">
-        <SaveIndicator show={isSubmitting} message={t("common.saving", "در حال ذخیره...")} />
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
+      <DialogContent className="max-w-md !bg-[hsl(var(--surface-elevated))] !bg-opacity-90 !backdrop-blur-none border-[hsl(var(--border-default))]">
+        {/* ── Save indicator ── */}
+        {isPending && (
+          <div className="absolute top-3 end-3 flex items-center gap-2 text-sm text-[hsl(var(--fg-secondary))]">
+            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+            <span>{t("common.saving", "در حال ذخیره...")}</span>
+          </div>
+        )}
 
         <DialogHeader>
-          <DialogTitle>{t("godam.addProductModal", "محصول جدید")}</DialogTitle>
+          <DialogTitle className="text-[hsl(var(--fg-primary))]">
+            {t("godam.addProductModal", "محصول جدید")}
+          </DialogTitle>
+          <DialogDescription className="sr-only">
+            {t("godam.addProductDescription", "فرم ثبت محصول جدید")}
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <Input
-              {...register("name")}
-              placeholder={`${t("godam.productName")} *`}
-              leftIcon={<Package className="size-4" />}
-              autoFocus
-            />
+          {/* ── Name ── */}
+          <div className="space-y-2">
+            <Label htmlFor="product-name" className="text-[hsl(var(--fg-primary))]">
+              {t("godam.productName", "نام محصول")}
+              <span aria-hidden="true" className="text-[hsl(var(--color-destructive))] ms-1">*</span>
+            </Label>
+            <div className="relative">
+              <Package className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))] pointer-events-none" aria-hidden="true" />
+              <Input
+                id="product-name"
+                {...register("name")}
+                placeholder={t("godam.productNamePlaceholder", "نام محصول را وارد کنید")}
+                className="ps-9 bg-[hsl(var(--surface-base))] border-[hsl(var(--border-default))] text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))] focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]"
+                autoFocus
+              />
+            </div>
             {errors.name && (
-              <p className="mt-1 text-sm text-destructive">
-                {t(errors.name.message as string || "نام محصول الزامی است")}
+              <p className="text-sm text-[hsl(var(--color-destructive))]" role="alert">
+                {t(errors.name.message || "نام محصول الزامی است")}
               </p>
             )}
           </div>
 
+          {/* ── Quantity + Unit ── */}
           <div className="grid grid-cols-2 gap-3">
-            <div>
+            <div className="space-y-2">
+              <Label htmlFor="product-quantity" className="text-[hsl(var(--fg-primary))]">
+                {t("godam.initialStock", "موجودی اولیه")}
+              </Label>
               <Input
+                id="product-quantity"
                 {...register("quantity", { valueAsNumber: true })}
                 type="number"
-                placeholder={t("godam.initialStock", "موجودی اولیه")}
+                min={0}
+                placeholder="0"
+                className="bg-[hsl(var(--surface-base))] border-[hsl(var(--border-default))] text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))] focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]"
               />
               {errors.quantity && (
-                <p className="mt-1 text-sm text-destructive">
-                  {getErrorMessage(errors.quantity)}
+                <p className="text-sm text-[hsl(var(--color-destructive))]" role="alert">
+                  {getErrorMessage(errors.quantity) || t("validation.min", "مقدار وارد شده معتبر نیست")}
                 </p>
               )}
             </div>
-            <div>
-              <Label className="mb-2 block">{t("godam.unit")}</Label>
-              <Select
-                defaultValue="piece"
-                onValueChange={(val) => setValue("unit", val as any)}
-              >
-                <SelectTrigger className="w-full rounded-xl">
-                  <SelectValue placeholder={t("godam.unit")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {UNIT_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {t(opt.labelKey, opt.fallback)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="space-y-2">
+              <Label htmlFor="product-unit" className="text-[hsl(var(--fg-primary))]">
+                {t("godam.unit", "واحد")}
+              </Label>
+              <Controller
+                name="unit"
+                control={control}
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger id="product-unit" className="w-full">
+                      <SelectValue placeholder={t("godam.unit", "واحد")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {UNIT_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {t(opt.labelKey, opt.fallback)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
           </div>
 
+          {/* ── Buy Price + Sell Price ── */}
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Input
-                {...register("buyPrice", { valueAsNumber: true })}
-                type="number"
-                step="0.01"
-                placeholder={t("godam.buyPrice", "قیمت خرید (AFN)")}
-                leftIcon={<DollarSign className="size-4" />}
-              />
+            <div className="space-y-2">
+              <Label htmlFor="product-buy-price" className="text-[hsl(var(--fg-primary))]">
+                {t("godam.buyPrice", "قیمت خرید (AFN)")}
+              </Label>
+              <div className="relative">
+                <DollarSign className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))] pointer-events-none" aria-hidden="true" />
+                <Input
+                  id="product-buy-price"
+                  {...register("buyPrice", { valueAsNumber: true })}
+                  type="number"
+                  step="0.01"
+                  min={0}
+                  placeholder="0.00"
+                  className="ps-9 bg-[hsl(var(--surface-base))] border-[hsl(var(--border-default))] text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))] focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]"
+                />
+              </div>
               {errors.buyPrice && (
-                <p className="mt-1 text-sm text-destructive">
+                <p className="text-sm text-[hsl(var(--color-destructive))]" role="alert">
                   {getErrorMessage(errors.buyPrice)}
                 </p>
               )}
             </div>
-            <div>
-              <Input
-                {...register("sellPrice", { valueAsNumber: true })}
-                type="number"
-                step="0.01"
-                placeholder={t("godam.sellPrice", "قیمت فروش (AFN)")}
-                leftIcon={<DollarSign className="size-4" />}
-              />
+            <div className="space-y-2">
+              <Label htmlFor="product-sell-price" className="text-[hsl(var(--fg-primary))]">
+                {t("godam.sellPrice", "قیمت فروش (AFN)")}
+              </Label>
+              <div className="relative">
+                <DollarSign className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))] pointer-events-none" aria-hidden="true" />
+                <Input
+                  id="product-sell-price"
+                  {...register("sellPrice", { valueAsNumber: true })}
+                  type="number"
+                  step="0.01"
+                  min={0}
+                  placeholder="0.00"
+                  className="ps-9 bg-[hsl(var(--surface-base))] border-[hsl(var(--border-default))] text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))] focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]"
+                />
+              </div>
               {errors.sellPrice && (
-                <p className="mt-1 text-sm text-destructive">
+                <p className="text-sm text-[hsl(var(--color-destructive))]" role="alert">
                   {getErrorMessage(errors.sellPrice)}
                 </p>
               )}
             </div>
           </div>
 
-          <div>
-            <Input
-              {...register("minStock", { valueAsNumber: true })}
-              type="number"
-              placeholder={t("godam.minStock", "حداقل موجودی هشدار")}
-              leftIcon={<AlertTriangle className="size-4" />}
-            />
+          {/* ── Min Stock ── */}
+          <div className="space-y-2">
+            <Label htmlFor="product-min-stock" className="text-[hsl(var(--fg-primary))]">
+              {t("godam.minStock", "حداقل موجودی هشدار")}
+            </Label>
+            <div className="relative">
+              <AlertTriangle className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))] pointer-events-none" aria-hidden="true" />
+              <Input
+                id="product-min-stock"
+                {...register("minStock", { valueAsNumber: true })}
+                type="number"
+                min={0}
+                placeholder="5"
+                className="ps-9 bg-[hsl(var(--surface-base))] border-[hsl(var(--border-default))] text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))] focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]"
+              />
+            </div>
             {errors.minStock && (
-              <p className="mt-1 text-sm text-destructive">
+              <p className="text-sm text-[hsl(var(--color-destructive))]" role="alert">
                 {getErrorMessage(errors.minStock)}
               </p>
             )}
           </div>
 
+          {/* ── Actions ── */}
           <div className="flex gap-3 pt-2">
-            <Button type="button" variant="outline" className="w-full" onClick={handleClose}>
-              {t("action.cancel")}
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={handleClose}
+              disabled={isPending}
+            >
+              {t("action.cancel", "انصراف")}
             </Button>
-            <Button type="submit" className="w-full" loading={isSubmitting || createProduct.isPending}>
-              {t("action.save")}
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isPending}
+            >
+              {isPending && (
+                <Loader2 className="size-4 me-2 animate-spin" aria-hidden="true" />
+              )}
+              {t("action.save", "ذخیره")}
             </Button>
           </div>
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

@@ -14,7 +14,6 @@ export function NavigationRegistry({ id, children }: NavigationRegistryProps) {
 
   useEffect(() => {
     if (ref.current) {
-      console.log("📍 Registering section:", id);
       registerSectionRef(id, ref.current);
     }
     return () => {

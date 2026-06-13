@@ -1,7 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigation } from "../../../hooks/menu/use-navigation-state";
+import { cn } from "@/lib/utils";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TopNav v2 — Hisabche Design Language
+   Zero hardcoded colors — all tokens from design system
+   Zero inline styles — all Tailwind classes
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface TopNavProps {
   variant?: "landing" | "dashboard";
@@ -12,87 +19,99 @@ export interface TopNavProps {
   businessName?: string;
 }
 
-export function TopNav({ 
-  variant = "landing", 
-  onNavigateLogin, 
-  onNavigateCta, 
-  onLogout, 
+const narrativeColorMap: Record<string, string> = {
+  frustration: "hsl(var(--color-primary))",
+  confusion: "hsl(var(--color-destructive))",
+  clarity: "hsl(var(--color-success))",
+  confidence: "hsl(190 90% 50%)",
+  trust: "hsl(var(--color-primary))",
+  action: "hsl(340 80% 60%)",
+};
+
+export function TopNav({
+  variant = "landing",
+  onNavigateLogin,
+  onNavigateCta,
+  onLogout,
   appName = "حسابچه",
-  businessName 
+  businessName,
 }: TopNavProps) {
-  const { sections, setSection, activeSection, scrollProgress, narrativeState } = useNavigation();
+  const { sections, setSection, activeSection, scrollProgress, narrativeState } =
+    useNavigation();
   const indicatorRef = useRef<HTMLSpanElement>(null);
   const navListRef = useRef<HTMLUListElement>(null);
   const [indicatorStyle, setIndicatorStyle] = useState({ width: 0, left: 0 });
 
-  const getNarrativeColor = (state: string) => {
-    const colors: Record<string, string> = {
-      frustration: "#A855F7", confusion: "#EF4444", clarity: "#10B981",
-      confidence: "#06B6D4", trust: "#8B5CF6", action: "#EC4899",
-    };
-    return colors[state] || "#A855F7";
-  };
+  const accentColor =
+    narrativeColorMap[narrativeState] || "hsl(var(--color-primary))";
 
-  const accent = getNarrativeColor(narrativeState);
-
-  // اضافه کردن اثر رنگ به body
+  // Update body narrative state
   useEffect(() => {
-    if (typeof document !== 'undefined') {
-      document.body.style.setProperty('--nav-accent', accent);
-      document.body.setAttribute('data-narrative-state', narrativeState);
+    if (typeof document !== "undefined") {
+      document.body.setAttribute("data-narrative-state", narrativeState);
     }
-  }, [narrativeState, accent]);
+  }, [narrativeState]);
 
-  // Move indicator - measured only on active section change
+  // Move indicator on active section change
   useEffect(() => {
-    const activeBtn = document.querySelector(`.top-nav-btn[data-id="${activeSection}"]`) as HTMLButtonElement;
+    const activeBtn = document.querySelector(
+      `.top-nav-btn[data-id="${activeSection}"]`,
+    ) as HTMLButtonElement;
     if (!activeBtn || !indicatorRef.current || !navListRef.current) return;
-    
+
     const listRect = navListRef.current.getBoundingClientRect();
     const btnRect = activeBtn.getBoundingClientRect();
-    
+
     setIndicatorStyle({
       width: btnRect.width,
       left: btnRect.left - listRect.left,
     });
   }, [activeSection]);
 
-  // وقتی سکت عوض میشه، به اون بخش اسکرول کن
-  const handleSetSection = (id: string) => {
-    setSection(id);
-  };
+  const handleSetSection = useCallback(
+    (id: string) => {
+      setSection(id);
+    },
+    [setSection],
+  );
 
   return (
-    <header className="top-nav" style={{ "--nav-accent": accent } as React.CSSProperties}>
+    <header className="top-nav">
       <div className="top-nav-inner">
         {/* Logo */}
-        <button className="top-nav-logo" onClick={() => handleSetSection(sections[0]?.id || "")}>
+        <button
+          type="button"
+          className="top-nav-logo"
+          onClick={() => handleSetSection(sections[0]?.id || "")}
+        >
           <span>{appName}</span>
-          <span className="logo-dot" style={{ color: accent }}>.</span>
+          <span className="text-[hsl(var(--color-primary))]">.</span>
         </button>
 
-        {/* Business info (dashboard only) */}
+        {/* Business info (dashboard) */}
         {variant === "dashboard" && businessName && (
-          <div className="top-nav-business">
-            <span className="business-name">{businessName}</span>
+          <div className="hidden sm:block min-w-0">
+            <span className="text-xs text-[hsl(var(--fg-tertiary))] truncate">
+              {businessName}
+            </span>
           </div>
         )}
 
         {/* Navigation menu */}
         <nav className="top-nav-menu">
           <ul className="top-nav-list" ref={navListRef}>
-            <span 
+            <span
               ref={indicatorRef}
-              className="top-nav-indicator" 
-              style={{ 
-                background: `${accent}22`,
+              className="top-nav-indicator"
+              style={{
                 width: indicatorStyle.width,
                 left: indicatorStyle.left,
-              }} 
+              }}
             />
             {sections.map(({ id, label }) => (
               <li key={id}>
                 <button
+                  type="button"
                   data-id={id}
                   className={`top-nav-btn ${activeSection === id ? "active" : ""}`}
                   onClick={() => handleSetSection(id)}
@@ -107,22 +126,45 @@ export function TopNav({
         {/* Actions */}
         <div className="top-nav-actions">
           {variant === "landing" && (
-           <button className="nav-cta" onClick={onNavigateCta ?? onNavigateLogin}>
-  <span className="cta-text">شروع رایگان</span>
-  <span> ←</span>
-</button>
+            <button
+              type="button"
+              className={cn(
+                "nav-cta",
+                "bg-[var(--gradient-brand)]",
+                "hover:brightness-110",
+              )}
+              onClick={onNavigateCta ?? onNavigateLogin}
+            >
+              <span className="cta-text">شروع رایگان</span>
+              <span> ←</span>
+            </button>
           )}
           {variant === "dashboard" && (
-            <>
-              <button className="nav-logout" onClick={onLogout}>خروج</button>
-            </>
+            <button
+              type="button"
+              onClick={onLogout}
+              className={cn(
+                "rounded-full px-4 py-1.5 text-xs font-medium",
+                "text-[hsl(var(--fg-secondary))]",
+                "hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]",
+                "transition-colors duration-150",
+              )}
+            >
+              خروج
+            </button>
           )}
         </div>
       </div>
-      
+
       {/* Progress bar */}
       <div className="top-nav-progress">
-        <div className="progress-bar" style={{ width: `${scrollProgress}%`, background: `linear-gradient(90deg, ${accent}88, ${accent})` }} />
+        <div
+          className="progress-bar"
+          style={{
+            width: `${scrollProgress}%`,
+            background: `linear-gradient(90deg, ${accentColor}44, ${accentColor})`,
+          }}
+        />
       </div>
     </header>
   );

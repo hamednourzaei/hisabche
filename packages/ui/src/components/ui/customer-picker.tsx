@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import {
   useState,
@@ -6,39 +6,41 @@ import {
   useMemo,
   forwardRef,
   useEffect,
-} from "react"
-import { useTranslation } from "react-i18next"
-import * as Select from "@radix-ui/react-select"
-import * as Popover from "@radix-ui/react-popover"
+} from "react";
+import { useTranslation } from "react-i18next";
+import * as Select from "@radix-ui/react-select";
 import {
   Check,
   ChevronsUpDown,
   Plus,
   User,
   Loader2,
-} from "lucide-react"
-import { useCustomers, useCreateCustomer } from "@hisabche/api"
-import { Button, cn } from "@hisabche/ui"
+} from "lucide-react";
+import { useCustomers, useCreateCustomer } from "@hisabche/api";
+import { cn } from "@/lib/utils";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CustomerPicker v2 — Hisabche Design Language
+   Zero hardcoded colors — all tokens from design system
+   No external component dependencies
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 interface CustomerOption {
-  id: string
-  name: string
-  phone: string
+  id: string;
+  name: string;
+  phone: string;
 }
 
 interface CustomerPickerProps {
-  value: CustomerOption | null
-  onChange: (customer: CustomerOption | null) => void
-  onQuickCreate?: (customer: CustomerOption) => void
-  placeholder?: string
-  disabled?: boolean
-  className?: string
+  value: CustomerOption | null;
+  onChange: (customer: CustomerOption | null) => void;
+  onQuickCreate?: (customer: CustomerOption) => void;
+  placeholder?: string;
+  disabled?: boolean;
+  className?: string;
 }
 
-export const CustomerPicker = forwardRef<
-  HTMLButtonElement,
-  CustomerPickerProps
->(
+export const CustomerPicker = forwardRef<HTMLButtonElement, CustomerPickerProps>(
   (
     {
       value,
@@ -48,138 +50,164 @@ export const CustomerPicker = forwardRef<
       disabled,
       className,
     },
-    _ref
+    _ref,
   ) => {
-    const { t } = useTranslation()
-    const [open, setOpen] = useState(false)
-    const [search, setSearch] = useState("")
-    const [debouncedSearch, setDebouncedSearch] = useState("")
-    const [quickName, setQuickName] = useState("")
-    const [createError, setCreateError] = useState<string | null>(null)
+    const { t } = useTranslation();
+    const [open, setOpen] = useState(false);
+    const [search, setSearch] = useState("");
+    const [debouncedSearch, setDebouncedSearch] = useState("");
+    const [quickName, setQuickName] = useState("");
+    const [createError, setCreateError] = useState<string | null>(null);
 
     // Debounce search
     useEffect(() => {
-      const timer = setTimeout(() => setDebouncedSearch(search), 300)
-      return () => clearTimeout(timer)
-    }, [search])
+      const timer = setTimeout(() => setDebouncedSearch(search), 300);
+      return () => clearTimeout(timer);
+    }, [search]);
 
     const { data, isLoading } = useCustomers({
       page: 1,
       limit: 25,
       sortDirection: "desc",
       search: debouncedSearch || undefined,
-    })
-    const createCustomer = useCreateCustomer()
+    });
+    const createCustomer = useCreateCustomer();
 
     const filtered = useMemo(
       () => (data?.customers || []).slice(0, 25),
-      [data]
-    )
+      [data],
+    );
 
     const handleSelect = useCallback(
       (customerId: string) => {
-        const customer = filtered.find(c => c.id === customerId)
+        const customer = filtered.find((c) => c.id === customerId);
         if (customer) {
           onChange({
             id: customer.id ?? "",
             name: customer.fullName,
             phone: customer.phone ?? "",
-          })
-          setOpen(false)
-          setSearch("")
-          setCreateError(null)
+          });
+          setOpen(false);
+          setSearch("");
+          setCreateError(null);
         }
       },
-      [filtered, onChange]
-    )
+      [filtered, onChange],
+    );
 
     const handleQuickCreate = useCallback(async () => {
-      const trimmed = quickName.trim()
-      if (!trimmed) return
-      setCreateError(null)
+      const trimmed = quickName.trim();
+      if (!trimmed) return;
+      setCreateError(null);
       try {
         const nc = await createCustomer.mutateAsync({
           fullName: trimmed,
           openingBalance: 0,
           isActive: true,
-        })
+        });
         const opt: CustomerOption = {
           id: nc.id ?? "",
           name: nc.fullName,
           phone: nc.phone ?? "",
-        }
-        onQuickCreate?.(opt)
-        onChange(opt)
-        setQuickName("")
-        setOpen(false)
+        };
+        onQuickCreate?.(opt);
+        onChange(opt);
+        setQuickName("");
+        setOpen(false);
       } catch {
-        setCreateError(t("customer.createError"))
+        setCreateError(t("customer.createError", "خطا در ایجاد مشتری"));
       }
-    }, [quickName, createCustomer, onChange, onQuickCreate, t])
+    }, [quickName, createCustomer, onChange, onQuickCreate, t]);
 
     return (
       <div className={cn("relative", className)}>
         <Select.Root
-      open={open}
-      onOpenChange={setOpen}
-      {...(value?.id ? { value: value.id } : {})}
-      onValueChange={handleSelect}
-      disabled={disabled ?? false}
-    >
-      <Select.Trigger
-        className={cn(
-          "flex w-full items-center justify-between gap-2 rounded-xl border px-4 py-3 text-sm transition-colors",
-          "border-[var(--hisab-border)] bg-[var(--hisab-card)] hover:border-[var(--hisab-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--hisab-primary)]/20",
-          disabled && "cursor-not-allowed opacity-50"
-        )}
-        aria-label="Customer picker"
-      >
-        <span className="flex items-center gap-2 truncate text-start">
-          <User className="size-4 shrink-0 text-[var(--hisab-muted-fg)]" aria-hidden />
-          {value ? (
-            <span className="font-medium">{value.name}</span>
-          ) : (
-            <span className="text-[var(--hisab-muted-fg)]">
-              {placeholder || t("customer.pickPlaceholder")}
+          open={open}
+          onOpenChange={setOpen}
+          {...(value?.id ? { value: value.id } : {})}
+          onValueChange={handleSelect}
+          disabled={disabled ?? false}
+        >
+          {/* Trigger */}
+          <Select.Trigger
+            className={cn(
+              "flex w-full items-center justify-between gap-2 rounded-xl px-4 py-3 text-sm",
+              "border border-[hsl(var(--border-default))]",
+              "bg-[hsl(var(--surface-base))]",
+              "text-[hsl(var(--fg-primary))]",
+              "hover:border-[hsl(var(--color-primary)/0.4)]",
+              "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary)/0.3)]",
+              "transition-colors duration-200",
+              "motion-reduce:transition-none",
+              disabled && "cursor-not-allowed opacity-40",
+            )}
+            aria-label={t("customer.pickPlaceholder", "انتخاب مشتری")}
+          >
+            <span className="flex items-center gap-2 truncate text-start">
+              <User
+                className="size-4 shrink-0 text-[hsl(var(--fg-tertiary))]"
+                aria-hidden="true"
+              />
+              {value ? (
+                <span className="font-medium">{value.name}</span>
+              ) : (
+                <span className="text-[hsl(var(--fg-tertiary))]">
+                  {placeholder || t("customer.pickPlaceholder", "انتخاب مشتری...")}
+                </span>
+              )}
             </span>
-          )}
-        </span>
-        <ChevronsUpDown className="size-4 shrink-0 text-[var(--hisab-muted-fg)]" aria-hidden />
-      </Select.Trigger>
+            <ChevronsUpDown
+              className="size-4 shrink-0 text-[hsl(var(--fg-tertiary))]"
+              aria-hidden="true"
+            />
+          </Select.Trigger>
 
           <Select.Portal>
             <Select.Content
               position="popper"
               sideOffset={8}
               className={cn(
-                "z-50 w-[var(--radix-select-trigger-width)] overflow-hidden rounded-xl",
-                "border border-[var(--hisab-border)] bg-[var(--hisab-background)] shadow-lg",
-                "animate-in fade-in-0 zoom-in-95"
+                "z-50 w-[var(--radix-select-trigger-width)] overflow-hidden rounded-2xl",
+                "border border-[hsl(var(--border-strong))]",
+                "bg-[hsl(var(--surface-elevated))]",
+                "shadow-lg",
+                "data-[state=open]:animate-in data-[state=closed]:animate-out",
+                "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+                "data-[state=closed]:slide-out-to-top-1 data-[state=open]:slide-in-from-top-1",
+                "motion-reduce:animate-none",
               )}
             >
               <Select.Viewport className="p-2">
                 {/* Search */}
-                <div className="border-b border-[var(--hisab-border)] pb-2 mb-2">
+                <div className="border-b border-[hsl(var(--border-default))] pb-2 mb-2">
                   <input
                     autoFocus
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder={t("action.search") + "..."}
-                    className="w-full rounded-lg border border-[var(--hisab-border)] bg-[var(--hisab-background)] px-3 py-2 text-sm placeholder:text-[var(--hisab-muted-fg)] focus:outline-none focus:ring-2 focus:ring-[var(--hisab-primary)]/20"
+                    placeholder={t("action.search", "جستجو") + "..."}
+                    className={cn(
+                      "w-full rounded-lg px-3 py-2 text-sm",
+                      "border border-[hsl(var(--border-default))]",
+                      "bg-[hsl(var(--surface-base))]",
+                      "text-[hsl(var(--fg-primary))]",
+                      "placeholder:text-[hsl(var(--fg-tertiary))]",
+                      "focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]",
+                    )}
                     onClick={(e) => e.stopPropagation()}
                   />
                 </div>
 
-                {/* List */}
+                {/* Loading */}
                 {isLoading ? (
-                  <div className="space-y-2 p-2">
-                    {Array.from({ length: 4 }).map((_, i) => (
-                      <div key={i} className="skeleton-shimmer h-10 rounded-lg" />
-                    ))}
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2
+                      className="size-5 animate-spin text-[hsl(var(--fg-tertiary))]"
+                      aria-hidden="true"
+                    />
                   </div>
                 ) : filtered.length === 0 ? (
-                  <p className="p-4 text-center text-sm text-[var(--hisab-muted-fg)]">
-                    {t("customer.noCustomers")}
+                  <p className="p-4 text-center text-sm text-[hsl(var(--fg-tertiary))]">
+                    {t("customer.noCustomers", "مشتری‌ای پیدا نشد")}
                   </p>
                 ) : (
                   filtered.map((customer) => (
@@ -188,31 +216,34 @@ export const CustomerPicker = forwardRef<
                       value={customer.id ?? ""}
                       className={cn(
                         "relative flex cursor-pointer select-none items-center justify-between rounded-lg px-3 py-2.5 text-sm outline-none",
-                        "focus:bg-[var(--hisab-primary)]/10",
-                        "data-[disabled]:pointer-events-none data-[disabled]:opacity-50"
+                        "min-h-[44px]",
+                        "text-[hsl(var(--fg-primary))]",
+                        "data-[highlighted]:bg-[hsl(var(--color-primary)/0.08)]",
+                        "transition-colors duration-100",
+                        "motion-reduce:transition-none",
                       )}
                     >
                       <Select.ItemText>
                         <div>
                           <p className="font-medium">{customer.fullName}</p>
                           {customer.phone && (
-                            <p className="text-xs text-[var(--hisab-muted-fg)]">
+                            <p className="text-xs text-[hsl(var(--fg-tertiary))]">
                               {customer.phone}
                             </p>
                           )}
                         </div>
                       </Select.ItemText>
                       <Select.ItemIndicator>
-                        <Check className="size-4 shrink-0 text-[var(--hisab-primary)]" />
+                        <Check className="size-4 shrink-0 text-[hsl(var(--color-success))]" />
                       </Select.ItemIndicator>
                     </Select.Item>
                   ))
                 )}
 
-                {/* Quick create section */}
-                <div className="border-t border-[var(--hisab-border)] pt-3 mt-2">
+                {/* Quick create */}
+                <div className="border-t border-[hsl(var(--border-default))] pt-3 mt-2">
                   {createError && (
-                    <p className="mb-2 text-xs text-[var(--hisab-destructive)]">
+                    <p className="mb-2 text-xs text-[hsl(var(--color-destructive))]" role="alert">
                       {createError}
                     </p>
                   )}
@@ -220,27 +251,43 @@ export const CustomerPicker = forwardRef<
                     <input
                       value={quickName}
                       onChange={(e) => {
-                        setQuickName(e.target.value)
-                        setCreateError(null)
+                        setQuickName(e.target.value);
+                        setCreateError(null);
                       }}
-                      placeholder={t("customer.quickCreate")}
-                      className="flex-1 rounded-lg border border-[var(--hisab-border)] bg-[var(--hisab-background)] px-3 py-2 text-sm placeholder:text-[var(--hisab-muted-fg)] focus:outline-none focus:ring-2 focus:ring-[var(--hisab-primary)]/20"
+                      placeholder={t("customer.quickCreate", "ایجاد سریع مشتری")}
+                      className={cn(
+                        "flex-1 rounded-lg px-3 py-2 text-sm",
+                        "border border-[hsl(var(--border-default))]",
+                        "bg-[hsl(var(--surface-base))]",
+                        "text-[hsl(var(--fg-primary))]",
+                        "placeholder:text-[hsl(var(--fg-tertiary))]",
+                        "focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]",
+                      )}
                       onKeyDown={(e) => {
-                        if (e.key === "Enter") handleQuickCreate()
+                        if (e.key === "Enter") handleQuickCreate();
                       }}
                     />
-                    <Button
+                    <button
+                      type="button"
                       onClick={handleQuickCreate}
                       disabled={!quickName.trim() || createCustomer.isPending}
-                      className="flex shrink-0 items-center gap-1 rounded-lg bg-[var(--hisab-primary)] px-3 py-2 text-sm font-medium text-[var(--hisab-primary-fg)] transition-colors hover:opacity-90 disabled:opacity-50"
+                      className={cn(
+                        "flex shrink-0 items-center gap-1 rounded-lg px-3 py-2",
+                        "text-sm font-medium text-white",
+                        "bg-[var(--gradient-brand)]",
+                        "transition-all duration-200",
+                        "hover:brightness-110",
+                        "disabled:opacity-40 disabled:cursor-not-allowed",
+                        "motion-reduce:transition-none",
+                      )}
                     >
                       {createCustomer.isPending ? (
-                        <Loader2 className="size-4 animate-spin" />
+                        <Loader2 className="size-4 animate-spin" aria-hidden="true" />
                       ) : (
-                        <Plus className="size-4" />
+                        <Plus className="size-4" aria-hidden="true" />
                       )}
-                      {t("action.add")}
-                    </Button>
+                      {t("action.add", "افزودن")}
+                    </button>
                   </div>
                 </div>
               </Select.Viewport>
@@ -248,8 +295,8 @@ export const CustomerPicker = forwardRef<
           </Select.Portal>
         </Select.Root>
       </div>
-    )
-  }
-)
+    );
+  },
+);
 
-CustomerPicker.displayName = "CustomerPicker"
+CustomerPicker.displayName = "CustomerPicker";

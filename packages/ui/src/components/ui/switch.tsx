@@ -1,32 +1,71 @@
-"use client"
+"use client";
 
-import { Switch as SwitchPrimitive } from "@base-ui/react/switch"
+import * as React from "react";
+import * as SwitchPrimitive from "@radix-ui/react-switch";
+import { cn } from "@/lib/utils";
 
-import { cn } from "@/lib/utils"
+/* ═══════════════════════════════════════════════════════════════════════════
+   Switch v2 — Hisabche Design Language
+   Zero hardcoded colors — all tokens from design system
+   RTL-ready with logical transforms
+   ═══════════════════════════════════════════════════════════════════════════ */
 
-function Switch({
-  className,
-  size = "default",
-  ...props
-}: SwitchPrimitive.Root.Props & {
-  size?: "sm" | "default"
-}) {
+interface SwitchProps
+  extends React.ComponentPropsWithoutRef<typeof SwitchPrimitive.Root> {
+  size?: "sm" | "default";
+}
+
+function Switch({ className, size = "default", ...props }: SwitchProps) {
   return (
     <SwitchPrimitive.Root
-      data-slot="switch"
       data-size={size}
       className={cn(
-        "peer group/switch relative inline-flex shrink-0 items-center rounded-full border border-transparent transition-all outline-none after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-[size=default]:h-[18.4px] data-[size=default]:w-[32px] data-[size=sm]:h-[14px] data-[size=sm]:w-[24px] dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 data-checked:bg-primary data-unchecked:bg-input dark:data-unchecked:bg-input/80 data-disabled:cursor-not-allowed data-disabled:opacity-50",
-        className
+        // Base
+        "peer inline-flex shrink-0 items-center",
+        "rounded-full",
+        "transition-colors duration-200",
+        "outline-none",
+        // Touch target extension
+        "relative",
+        "after:absolute after:-inset-x-3 after:-inset-y-2",
+        // Focus
+        "focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring-color)/0.5)] focus-visible:ring-offset-1",
+        // Disabled
+        "disabled:cursor-not-allowed disabled:opacity-40",
+        // Invalid
+        "aria-invalid:ring-2 aria-invalid:ring-[hsl(var(--color-destructive)/0.4)]",
+        // Sizes
+        size === "default" && "h-[20px] w-[36px]",
+        size === "sm" && "h-[14px] w-[24px]",
+        // Colors — zero hardcoded
+        "border-2 border-transparent",
+        "bg-[hsl(var(--surface-muted))]",
+        "data-[state=checked]:bg-[hsl(var(--color-success))]",
+        "data-[state=checked]:border-[hsl(var(--color-success))]",
+        // Reduced motion
+        "motion-reduce:transition-none",
+        className,
       )}
       {...props}
     >
       <SwitchPrimitive.Thumb
-        data-slot="switch-thumb"
-        className="pointer-events-none block rounded-full bg-background ring-0 transition-transform group-data-[size=default]/switch:size-4 group-data-[size=sm]/switch:size-3 group-data-[size=default]/switch:data-checked:translate-x-[calc(100%-2px)] group-data-[size=sm]/switch:data-checked:translate-x-[calc(100%-2px)] dark:data-checked:bg-primary-foreground group-data-[size=default]/switch:data-unchecked:translate-x-0 group-data-[size=sm]/switch:data-unchecked:translate-x-0 dark:data-unchecked:bg-foreground"
+        className={cn(
+          "block rounded-full",
+          "bg-[hsl(var(--fg-primary))]",
+          "shadow-sm",
+          "transition-transform duration-200",
+          "motion-reduce:transition-none",
+          // Sizes
+          size === "default" && "size-4",
+          size === "sm" && "size-3",
+          // Position — logical (RTL-compatible via Radix)
+          "data-[state=checked]:translate-x-4",
+          "data-[state=unchecked]:translate-x-0.5",
+        )}
       />
     </SwitchPrimitive.Root>
-  )
+  );
 }
 
-export { Switch }
+export { Switch };
+export type { SwitchProps };
