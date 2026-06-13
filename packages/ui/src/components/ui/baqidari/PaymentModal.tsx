@@ -212,7 +212,7 @@ export function PaymentModal({ open, onClose, onPaid, customer, openInvoices }: 
                 onChange={(e) => setAmount(e.target.value)}
                 placeholder={`${t("baqidari.form.default")}: ${fmt(suggested)} AFN`}
                 label={t("baqidari.form.paymentAmount")}
-                leftIcon={<DollarSign className="size-4" aria-hidden />}
+                startIcon={<DollarSign className="size-4" aria-hidden />}
                 autoFocus
               />
 

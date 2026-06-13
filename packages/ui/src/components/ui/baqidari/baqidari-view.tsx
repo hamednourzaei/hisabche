@@ -113,7 +113,7 @@ export function BaqidariView({
       <div className="max-w-sm">
         <Input
           placeholder={t("baqidari.searchPlaceholder", "جستجوی مشتری...")}
-          leftIcon={<Search className="size-4" aria-hidden />}
+          startIcon={<Search className="size-4" aria-hidden />}
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
         />

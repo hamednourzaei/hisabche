@@ -1,76 +1,93 @@
-"use client"
+"use client";
 
-import type { ReactNode } from "react"
-import { useRouter, usePathname } from "next/navigation"
-import { useAuthStore, useThemeStore, useOnboardingStore } from "@hisabche/store"
-import { useTranslation } from "react-i18next"
+import type { ReactNode } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import {
-  DashboardHeader, DashboardSidebar, BottomNav, CommandPalette,
-} from "@hisabche/ui"
-import { useEffect, useRef, useCallback, useMemo, useState } from "react"
-import { NAV_ITEMS, COMMAND_ITEMS } from "./constants/nav-items"
-import "@hisabche/ui/globals.css"
+  useAuthStore,
+  useThemeStore,
+  useOnboardingStore,
+} from "@hisabche/store";
+import { useTranslation } from "react-i18next";
+import {
+  DashboardHeader,
+  DashboardSidebar,
+  BottomNav,
+  CommandPalette,
+} from "@hisabche/ui";
+import {
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+  useState,
+} from "react";
+import { NAV_ITEMS, COMMAND_ITEMS } from "./constants/nav-items";
+import { cn } from "@/lib/utils";
+import "@hisabche/ui/globals.css";
 
-// ✅ خارج از component — هیچ‌وقت re-create نمی‌شه
+/* ═══════════════════════════════════════════════════════════════════════════
+   DashboardLayout v2 — Hisabche Design Language
+   Zero hardcoded colors — all tokens from design system
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+// خارج از component — هیچ‌وقت re-create نمی‌شه
 const NAV_MAPPED = NAV_ITEMS.map((item) => ({
   id: item.id,
   label: item.labelKey,
   path: item.path,
   icon: item.icon,
-}))
+}));
 
-// ✅ prefetch همه routes در background
 function usePrefetchRoutes() {
-  const router = useRouter()
+  const router = useRouter();
   useEffect(() => {
-    NAV_ITEMS.forEach((item) => router.prefetch(item.path))
-  }, [router])
+    NAV_ITEMS.forEach((item) => router.prefetch(item.path));
+  }, [router]);
 }
 
-// ❌ LoadingScreen حذف شد (استفاده نمی‌شود)
+export default function DashboardLayout({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const { t, i18n } = useTranslation();
+  const router = useRouter();
+  const pathname = usePathname();
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const hasHydrated = useAuthStore((s) => s.hasHydrated);
+  const isDark = useThemeStore((s) => s.isDark);
+  const toggle = useThemeStore((s) => s.toggle);
+  const isOnboardingComplete = useOnboardingStore((s) => s.isCompleted);
+  const redirected = useRef(false);
+  const lastSyncedAt = useRef(Date.now());
 
-export default function DashboardLayout({ children }: { children: ReactNode }) {
-  const { t, i18n } = useTranslation()
-  const router = useRouter()
-  const pathname = usePathname()
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
-  const hasHydrated = useAuthStore((s) => s.hasHydrated)
-  const isDark = useThemeStore((s) => s.isDark)
-  const toggle = useThemeStore((s) => s.toggle)
-  const isOnboardingComplete = useOnboardingStore((s) => s.isCompleted)
-  const redirected = useRef(false)
-  const lastSyncedAt = useRef(Date.now())
+  usePrefetchRoutes();
 
-  // ✅ prefetch در background موقع mount
-  usePrefetchRoutes()
-
-  // ✅ optimistic active state — فوری بدون انتظار
-  const [optimisticPath, setOptimisticPath] = useState<string | null>(null)
-  const activeNav = optimisticPath ?? pathname
-
-  // pathname واقعی رسید → optimistic پاک کن
-  useEffect(() => {
-    setOptimisticPath(null)
-  }, [pathname])
+  const [optimisticPath, setOptimisticPath] = useState<string | null>(null);
+  const activeNav = optimisticPath ?? pathname;
 
   useEffect(() => {
-    if (!hasHydrated) return
+    setOptimisticPath(null);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!hasHydrated) return;
     if (!isAuthenticated && !redirected.current) {
-      redirected.current = true
-      router.replace("/login")
-      return
+      redirected.current = true;
+      router.replace("/login");
+      return;
     }
     if (isAuthenticated && !isOnboardingComplete) {
-      router.replace("/onboarding")
+      router.replace("/onboarding");
     }
-  }, [hasHydrated, isAuthenticated, isOnboardingComplete, router])
+  }, [hasHydrated, isAuthenticated, isOnboardingComplete, router]);
 
-  const currentLang = i18n.language || "fa-AF"
+  const currentLang = i18n.language || "fa-AF";
 
   const toggleLang = useCallback(() => {
-    const nextLang = i18n.language === "fa-AF" ? "fa-IR" : "fa-AF"
-    i18n.changeLanguage(nextLang)
-  }, [i18n])
+    const nextLang = i18n.language === "fa-AF" ? "fa-IR" : "fa-AF";
+    i18n.changeLanguage(nextLang);
+  }, [i18n]);
 
   const commands = useMemo(
     () =>
@@ -81,37 +98,42 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         icon: cmd.icon,
         ...(cmd.shortcut ? { shortcut: cmd.shortcut } : {}),
         onSelect: () => {
-          setOptimisticPath(cmd.path)
-          router.push(cmd.path)
+          setOptimisticPath(cmd.path);
+          router.push(cmd.path);
         },
       })),
-    [router, t]
-  )
+    [router, t],
+  );
 
   const handleLogout = useCallback(() => {
-    useAuthStore.getState().logout()
-    router.replace("/login")
-  }, [router])
+    useAuthStore.getState().logout();
+    router.replace("/login");
+  }, [router]);
 
-  // ✅ optimistic navigation — active state فوری با کلیک
   const handleNavigate = useCallback(
     (_id: string, path: string) => {
-      setOptimisticPath(path)
-      router.push(path)
+      setOptimisticPath(path);
+      router.push(path);
     },
-    [router]
-  )
+    [router],
+  );
 
   const handleNavigateLogin = useCallback(() => {
-    router.push("/login")
-  }, [router])
+    router.push("/login");
+  }, [router]);
 
   if (hasHydrated && !isAuthenticated) {
-    return null
+    return null;
   }
 
   return (
-    <div className="hisab-root flex min-h-screen">
+    <div
+      className={cn(
+        "flex min-h-screen",
+        "bg-[hsl(var(--surface-base))]",
+        "text-[hsl(var(--fg-primary))]",
+      )}
+    >
       <CommandPalette commands={commands} />
       <DashboardSidebar
         items={NAV_MAPPED}
@@ -145,5 +167,5 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         />
       </div>
     </div>
-  )
+  );
 }

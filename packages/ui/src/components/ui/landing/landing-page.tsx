@@ -5,6 +5,7 @@ import { useCallback } from "react";
 import { NavigationProvider } from "../../../hooks/menu/use-navigation-state";
 import { TopNav } from "../navigation/top-nav";
 import { NavigationRegistry } from "../navigation/navigation-registry";
+import { cn } from "@/lib/utils";
 
 import CinematicHero from "./cinematic-hero";
 import PainScene from "./pain-scene";
@@ -14,6 +15,11 @@ import SocialScene from "./social-scene";
 import FaqScene from "./faq-scene";
 import CTAScene from "./cta-scene";
 import StatsSection from "./stats-section";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LandingPage v2 — Hisabche Design Language
+   Zero hardcoded colors — all tokens from design system
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 const NAVIGATION_SECTIONS = [
   { id: "hero", label: "خانه", narrative: "frustration" as const },
@@ -30,47 +36,53 @@ export function LandingPage() {
 
   return (
     <NavigationProvider sections={NAVIGATION_SECTIONS}>
-      <div className="min-h-screen bg-surface-base">
-        <TopNav variant="landing" onNavigateLogin={navigateLogin} appName="حسابچه" />
-        
+      <div className="min-h-screen bg-[hsl(var(--surface-base))]">
+        <TopNav
+          variant="landing"
+          onNavigateLogin={navigateLogin}
+          appName="حسابچه"
+        />
+
         <main>
           {/* Hero section */}
           <NavigationRegistry id="hero">
             <CinematicHero onNavigateLogin={navigateLogin} />
           </NavigationRegistry>
-          
+
           {/* Stats / Pain section */}
           <NavigationRegistry id="pain">
             <StatsSection />
             <PainScene />
           </NavigationRegistry>
-          
+
           {/* Transform / Features sections */}
           <NavigationRegistry id="transform">
             <TransformScene />
           </NavigationRegistry>
-          
+
           <NavigationRegistry id="features">
             <FeaturesScene />
           </NavigationRegistry>
-          
-          {/* Testimonials (اعتماد واقعی) */}
+
+          {/* Testimonials */}
           <NavigationRegistry id="testimonials">
             <SocialScene />
           </NavigationRegistry>
-          
+
           {/* FAQ and CTA */}
           <FaqScene />
-          
+
           <NavigationRegistry id="cta">
             <CTAScene onNavigateLogin={navigateLogin} />
           </NavigationRegistry>
 
-          <footer className="border-t border-border px-4 py-32 text-center">
-            <div className="mb-2 text-lg font-bold">
-              حسابچه<span className="text-purple-400">.</span>
+          {/* Footer */}
+          <footer className="border-t border-[hsl(var(--border-default))] px-4 py-32 text-center">
+            <div className="mb-2 text-lg font-bold text-[hsl(var(--fg-primary))]">
+              حسابچه
+              <span className="text-[hsl(var(--color-primary))]">.</span>
             </div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-[hsl(var(--fg-tertiary))]">
               حافظه‌ی زنده‌ی کسب‌وکار تو · © ۱۴۰۵
             </p>
           </footer>

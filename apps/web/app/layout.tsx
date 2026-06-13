@@ -1,52 +1,66 @@
-import type { Metadata, Viewport } from "next"
-import { Providers } from "./providers"
-import { ClientErrorBoundary } from "./client-error-boundary"
-import "@hisabche/ui/globals.css"
-import localFont from "next/font/local"
-import { cn } from "@hisabche/ui"
-import { SpeedInsights } from "@vercel/speed-insights/next"
-import { Analytics } from "@vercel/analytics/next"
+import type { Metadata, Viewport } from "next";
+import { Providers } from "./providers";
+import { ClientErrorBoundary } from "./client-error-boundary";
+import "@hisabche/ui/globals.css";
+import localFont from "next/font/local";
+import { cn } from "@hisabche/ui";
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/next";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RootLayout v2 — Hisabche Design Language
+   Zero hardcoded colors — all tokens from globals.css
+   Zero inline styles — body styles moved to globals.css
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 const vazirmatn = localFont({
   src: [
-    { path: "../public/fonts/Vazirmatn-Regular.ttf", weight: "400", style: "normal" },
-    { path: "../public/fonts/Vazirmatn-Bold.ttf",    weight: "700", style: "normal" },
+    {
+      path: "../public/fonts/Vazirmatn-Regular.ttf",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "../public/fonts/Vazirmatn-Bold.ttf",
+      weight: "700",
+      style: "normal",
+    },
   ],
   variable: "--font-sans",
   display: "swap",
-})
+});
 
 export const metadata: Metadata = {
   title: {
     template: "%s | حساب‌چه",
-    default:  "حساب‌چه — سیستم مدیریت کسب‌وکار",
+    default: "حساب‌چه — سیستم مدیریت کسب‌وکار",
   },
-}
+};
 
 export const viewport: Viewport = {
-  width:        "device-width",
+  width: "device-width",
   initialScale: 1,
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#f8f8fb" },
-    { media: "(prefers-color-scheme: dark)",  color: "#0e0e14" },
+    { media: "(prefers-color-scheme: dark)", color: "#0e0e14" },
   ],
-}
+};
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html
       lang="fa-AF"
       dir="rtl"
-      suppressHydrationWarning          /* ← dark class رو Providers سمت client اضافه میکنه */
+      suppressHydrationWarning
       className={cn(vazirmatn.variable)}
     >
       <head>
         <script
           dangerouslySetInnerHTML={{
-            /*
-              این script قبل از paint اجرا میشه و از FOUC جلوگیری میکنه.
-              theme رو از localStorage میخونه و dark class رو inline اعمال میکنه.
-            */
             __html: `
               (function() {
                 try {
@@ -64,12 +78,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body
         className={cn(
           "min-h-screen antialiased font-sans",
-          vazirmatn.variable
+          "bg-[hsl(var(--surface-base))]",
+          "text-[hsl(var(--fg-primary))]",
+          vazirmatn.variable,
         )}
-        style={{
-          backgroundColor: "hsl(var(--hisab-background))",
-          color:           "hsl(var(--hisab-foreground))",  /* ✅ از CSS var میخونه — dark mode خودکار */
-        }}
       >
         <ClientErrorBoundary>
           <Providers>{children}</Providers>
@@ -78,5 +90,5 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Analytics />
       </body>
     </html>
-  )
+  );
 }

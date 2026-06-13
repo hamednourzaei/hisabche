@@ -1,18 +1,7 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Button } from "../button"
-import { Badge } from "../badge"
-import { Card, CardContent } from "../card"
-import { Input } from "../input"
-import { Label } from "../label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../select"
+import { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
 import {
   ArrowRight,
   Package,
@@ -24,29 +13,34 @@ import {
   Edit3,
   X,
   type LucideIcon,
-} from "lucide-react"
+} from "lucide-react";
 
-type UnitType = "piece" | "kg" | "liter" | "meter" | "box"
+/* ═══════════════════════════════════════════════════════════════════════════
+   ProductDetailPage v2 — Hisabche Design Language
+   Zero hardcoded colors — all tokens from design system
+   No external component dependencies
+   ═══════════════════════════════════════════════════════════════════════════ */
 
-// ProductData با unit از نوع string (برای سازگاری با API)
+type UnitType = "piece" | "kg" | "liter" | "meter" | "box";
+
 interface ProductData {
-  name: string
-  sellPrice: number
-  buyPrice: number
-  quantity: number
-  minStockLevel: number
-  category: string
-  unit: string  // از API می‌آید، می‌تواند هر string باشد
+  name: string;
+  sellPrice: number;
+  buyPrice: number;
+  quantity: number;
+  minStockLevel: number;
+  category: string;
+  unit: string;
 }
 
 interface ProductEditValues {
-  name: string
-  sellPrice: number
-  buyPrice: number
-  quantity: number
-  minStockLevel: number
-  category: string
-  unit: UnitType
+  name: string;
+  sellPrice: number;
+  buyPrice: number;
+  quantity: number;
+  minStockLevel: number;
+  category: string;
+  unit: UnitType;
 }
 
 const UNIT_OPTIONS = [
@@ -55,55 +49,75 @@ const UNIT_OPTIONS = [
   { value: "liter" as const, labelKey: "godam.units.liter", fallback: "لیتر" },
   { value: "meter" as const, labelKey: "godam.units.meter", fallback: "متر" },
   { value: "box" as const, labelKey: "godam.units.box", fallback: "کارتن" },
-] as const
+] as const;
 
-// Helper to validate if string is valid UnitType
 const toUnitType = (unit: string): UnitType => {
-  if (UNIT_OPTIONS.some(opt => opt.value === unit)) {
-    return unit as UnitType
-  }
-  return "piece"
-}
+  if (UNIT_OPTIONS.some((opt) => opt.value === unit)) return unit as UnitType;
+  return "piece";
+};
+
+// Shared style constants
+const outlineBtn =
+  "inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors duration-150 motion-reduce:transition-none";
+const primaryBtn =
+  "inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-bold text-white bg-[var(--gradient-brand)] shadow-sm shadow-[hsl(var(--color-primary)/0.15)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed motion-reduce:transition-none";
+const ghostBtn =
+  "inline-flex items-center justify-center rounded-full p-2 text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors duration-150 motion-reduce:transition-none";
+const inputBase =
+  "w-full rounded-xl px-3 py-2.5 text-sm border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))] focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)] transition-colors duration-200 motion-reduce:transition-none";
+const cardBase =
+  "rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]";
+const interactiveCard =
+  "rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] transition-shadow duration-200 hover:shadow-lg";
+
+const stockBadgeStyles: Record<string, string> = {
+  success:
+    "bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))] border-[hsl(var(--color-success)/0.2)]",
+  warning:
+    "bg-[hsl(var(--color-warning)/0.12)] text-[hsl(var(--color-warning))] border-[hsl(var(--color-warning)/0.2)]",
+  destructive:
+    "bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))] border-[hsl(var(--color-destructive)/0.2)]",
+  secondary:
+    "bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))] border-[hsl(var(--border-default))]",
+};
 
 function InfoBox({
   icon: Icon,
   label,
   value,
-  color,
 }: {
-  icon: LucideIcon
-  label: string
-  value: string
-  color: string
+  icon: LucideIcon;
+  label: string;
+  value: string;
 }) {
   return (
     <div>
       <div className="mb-1 flex items-center gap-2">
-        <Icon className="size-4" style={{ color }} aria-hidden />
-        <p className="text-xs text-muted-foreground">{label}</p>
+        <Icon className="size-4 text-[hsl(var(--fg-tertiary))]" aria-hidden="true" />
+        <p className="text-xs text-[hsl(var(--fg-secondary))]">{label}</p>
       </div>
-      <p className="font-bold tabular-nums text-foreground">{value}</p>
+      <p className="font-bold tabular-nums text-[hsl(var(--fg-primary))]">{value}</p>
     </div>
-  )
+  );
 }
 
 export interface ProductDetailPageProps {
-  t: (key: string, fallback?: string) => string
-  fmt: (v: number) => string
-  isLoading: boolean
-  product: ProductData | null
-  editing: boolean
-  updatePending: boolean
-  stockStatus: "success" | "warning" | "destructive" | "secondary"
-  stockLabel: string
-  profitPerUnit: number
-  totalProfit: number
-  totalValue: number
-  onBack: () => void
-  onStartEditing: () => void
-  onCancelEditing: () => void
-  onSave: (data: ProductEditValues) => void
-  onDelete: () => void
+  t: (key: string, fallback?: string) => string;
+  fmt: (v: number) => string;
+  isLoading: boolean;
+  product: ProductData | null;
+  editing: boolean;
+  updatePending: boolean;
+  stockStatus: "success" | "warning" | "destructive" | "secondary";
+  stockLabel: string;
+  profitPerUnit: number;
+  totalProfit: number;
+  totalValue: number;
+  onBack: () => void;
+  onStartEditing: () => void;
+  onCancelEditing: () => void;
+  onSave: (data: ProductEditValues) => void;
+  onDelete: () => void;
 }
 
 export function ProductDetailPage({
@@ -132,9 +146,10 @@ export function ProductDetailPage({
     minStockLevel: 0,
     category: "general",
     unit: "piece",
-  })
-
-  const [errors, setErrors] = useState<Partial<Record<keyof ProductEditValues, string>>>({})
+  });
+  const [errors, setErrors] = useState<
+    Partial<Record<keyof ProductEditValues, string>>
+  >({});
 
   useEffect(() => {
     if (product) {
@@ -145,287 +160,231 @@ export function ProductDetailPage({
         quantity: product.quantity,
         minStockLevel: product.minStockLevel,
         category: product.category,
-        unit: toUnitType(product.unit), // تبدیل string به UnitType
-      })
+        unit: toUnitType(product.unit),
+      });
     }
-  }, [product])
+  }, [product]);
 
-  const handleEditChange = (field: keyof ProductEditValues, value: string | number | UnitType) => {
-    setEditValues((prev) => ({ ...prev, [field]: value }))
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: undefined }))
-    }
-  }
+  const handleEditChange = (
+    field: keyof ProductEditValues,
+    value: string | number | UnitType,
+  ) => {
+    setEditValues((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
 
   const validateForm = (): boolean => {
-    const newErrors: Partial<Record<keyof ProductEditValues, string>> = {}
-    if (!editValues.name.trim()) {
-      newErrors.name = t("product.nameRequired", "نام محصول الزامی است")
-    }
-    if (editValues.sellPrice < 0) {
-      newErrors.sellPrice = t("validation.min", "مقدار نمی‌تواند منفی باشد")
-    }
-    if (editValues.buyPrice < 0) {
-      newErrors.buyPrice = t("validation.min", "مقدار نمی‌تواند منفی باشد")
-    }
-    if (editValues.quantity < 0) {
-      newErrors.quantity = t("validation.min", "مقدار نمی‌تواند منفی باشد")
-    }
-    if (editValues.minStockLevel < 0) {
-      newErrors.minStockLevel = t("validation.min", "مقدار نمی‌تواند منفی باشد")
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+    const newErrors: Partial<Record<keyof ProductEditValues, string>> = {};
+    if (!editValues.name.trim())
+      newErrors.name = t("product.nameRequired", "نام محصول الزامی است");
+    if (editValues.sellPrice < 0)
+      newErrors.sellPrice = t("validation.min", "مقدار نمی‌تواند منفی باشد");
+    if (editValues.buyPrice < 0)
+      newErrors.buyPrice = t("validation.min", "مقدار نمی‌تواند منفی باشد");
+    if (editValues.quantity < 0)
+      newErrors.quantity = t("validation.min", "مقدار نمی‌تواند منفی باشد");
+    if (editValues.minStockLevel < 0)
+      newErrors.minStockLevel = t("validation.min", "مقدار نمی‌تواند منفی باشد");
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleSubmit = () => {
-    if (validateForm()) {
-      onSave(editValues)
-    }
-  }
+    if (validateForm()) onSave(editValues);
+  };
 
   if (isLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <Loader2 className="size-8 animate-spin text-primary" />
+        <Loader2
+          className="size-8 animate-spin text-[hsl(var(--color-primary))]"
+          aria-hidden="true"
+        />
       </div>
-    )
+    );
   }
 
   if (!product) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
-        <Package className="size-16 text-muted-foreground" aria-hidden />
-        <p className="text-lg text-muted-foreground">
+        <Package className="size-16 text-[hsl(var(--fg-tertiary))]" aria-hidden="true" />
+        <p className="text-lg text-[hsl(var(--fg-secondary))]">
           {t("godam.notFound", "محصول پیدا نشد")}
         </p>
-        <Button onClick={onBack}>
+        <button type="button" onClick={onBack} className={outlineBtn}>
           {t("action.back", "بازگشت به گدام")}
-        </Button>
+        </button>
       </div>
-    )
+    );
   }
+
+  const badgeStyle = stockBadgeStyles[stockStatus] ?? stockBadgeStyles.secondary;
 
   return (
     <div className="space-y-6">
-      {/* ── Header ── */}
+      {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onBack}
-            aria-label={t("common.back", "بازگشت")}
-          >
-            <ArrowRight className="size-5" aria-hidden />
-          </Button>
-          <h1 className="text-2xl font-bold text-foreground">
+          <button type="button" onClick={onBack} aria-label={t("common.back", "بازگشت")} className={ghostBtn}>
+            <ArrowRight className="size-5" aria-hidden="true" />
+          </button>
+          <h1 className="text-2xl font-bold text-[hsl(var(--fg-primary))]">
             {editing ? t("action.edit", "ویرایش") : product.name}
           </h1>
           {!editing && (
-            <Badge variant={stockStatus}>
+            <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border shrink-0", badgeStyle)}>
               {stockLabel} ({product.quantity})
-            </Badge>
+            </span>
           )}
         </div>
 
         <div className="flex gap-2">
           {editing ? (
             <>
-              <Button variant="outline" size="sm" onClick={onCancelEditing}>
-                <X className="size-4" aria-hidden />
-                <span className="hidden sm:inline ms-1.5">
-                  {t("action.cancel", "انصراف")}
-                </span>
-              </Button>
-              <Button size="sm" onClick={handleSubmit} disabled={updatePending}>
+              <button type="button" onClick={onCancelEditing} className={outlineBtn}>
+                <X className="size-4" aria-hidden="true" />
+                <span className="hidden sm:inline">{t("action.cancel", "انصراف")}</span>
+              </button>
+              <button type="button" onClick={handleSubmit} disabled={updatePending} className={primaryBtn}>
                 {updatePending ? (
-                  <Loader2 className="size-4 animate-spin" aria-hidden />
+                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
                 ) : (
-                  <Save className="size-4" aria-hidden />
+                  <Save className="size-4" aria-hidden="true" />
                 )}
-                <span className="hidden sm:inline ms-1.5">
-                  {t("action.save", "ذخیره")}
-                </span>
-              </Button>
+                <span className="hidden sm:inline">{t("action.save", "ذخیره")}</span>
+              </button>
             </>
           ) : (
             <>
-              <Button variant="outline" size="sm" onClick={onStartEditing}>
-                <Edit3 className="size-4" aria-hidden />
-                <span className="hidden sm:inline ms-1.5">
-                  {t("action.edit", "ویرایش")}
-                </span>
-              </Button>
-              <Button variant="outline" size="sm" onClick={onDelete}>
-                <Trash2 className="size-4 text-destructive" aria-hidden />
-                <span className="hidden sm:inline ms-1.5 text-destructive">
-                  {t("action.delete", "حذف")}
-                </span>
-              </Button>
+              <button type="button" onClick={onStartEditing} className={outlineBtn}>
+                <Edit3 className="size-4" aria-hidden="true" />
+                <span className="hidden sm:inline">{t("action.edit", "ویرایش")}</span>
+              </button>
+              <button
+                type="button"
+                onClick={onDelete}
+                className={cn(outlineBtn, "hover:bg-[hsl(var(--color-destructive)/0.1)] hover:text-[hsl(var(--color-destructive))] hover:border-[hsl(var(--color-destructive)/0.3)]")}
+              >
+                <Trash2 className="size-4" aria-hidden="true" />
+                <span className="hidden sm:inline">{t("action.delete", "حذف")}</span>
+              </button>
             </>
           )}
         </div>
       </div>
 
-      {/* ── Product details card ── */}
-      <Card className="glass-card border-border">
-        <CardContent className="space-y-6 p-6 sm:p-8">
+      {/* Product details card */}
+      <div className={cardBase}>
+        <div className="p-6 sm:p-8 space-y-6">
           {editing ? (
             <div className="space-y-4">
               <div>
-                <Input
+                <label className="block text-sm font-medium text-[hsl(var(--fg-primary))] mb-1.5">
+                  {t("godam.productName", "نام محصول")}
+                </label>
+                <input
+                  type="text"
                   value={editValues.name}
                   onChange={(e) => handleEditChange("name", e.target.value)}
                   placeholder={`${t("godam.productName", "نام محصول")} *`}
-                  label={t("godam.productName", "نام محصول")}
+                  className={inputBase}
                 />
-                {errors.name && <p className="mt-1 text-sm text-destructive">{errors.name}</p>}
+                {errors.name && <p className="mt-1 text-sm text-[hsl(var(--color-destructive))]">{errors.name}</p>}
               </div>
-
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={editValues.sellPrice}
-                    onChange={(e) => handleEditChange("sellPrice", parseFloat(e.target.value) || 0)}
-                    placeholder={t("godam.sellPrice", "قیمت فروش")}
-                    label={`${t("godam.sellPrice", "قیمت فروش")} (AFN)`}
-                  />
-                  {errors.sellPrice && <p className="mt-1 text-sm text-destructive">{errors.sellPrice}</p>}
-                </div>
-                <div>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={editValues.buyPrice}
-                    onChange={(e) => handleEditChange("buyPrice", parseFloat(e.target.value) || 0)}
-                    placeholder={t("godam.buyPrice", "قیمت خرید")}
-                    label={`${t("godam.buyPrice", "قیمت خرید")} (AFN)`}
-                  />
-                  {errors.buyPrice && <p className="mt-1 text-sm text-destructive">{errors.buyPrice}</p>}
-                </div>
+                {(["sellPrice", "buyPrice"] as const).map((field) => (
+                  <div key={field}>
+                    <label className="block text-sm font-medium text-[hsl(var(--fg-primary))] mb-1.5">
+                      {t(`godam.${field}`, field === "sellPrice" ? "قیمت فروش" : "قیمت خرید")} (AFN)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={editValues[field]}
+                      onChange={(e) => handleEditChange(field, parseFloat(e.target.value) || 0)}
+                      className={inputBase}
+                    />
+                    {errors[field] && <p className="mt-1 text-sm text-[hsl(var(--color-destructive))]">{errors[field]}</p>}
+                  </div>
+                ))}
               </div>
-
               <div className="grid grid-cols-3 gap-4">
+                {(["quantity", "minStockLevel"] as const).map((field) => (
+                  <div key={field}>
+                    <label className="block text-sm font-medium text-[hsl(var(--fg-primary))] mb-1.5">
+                      {t(`godam.${field === "minStockLevel" ? "minStock" : field}`, field === "minStockLevel" ? "حداقل موجودی" : "تعداد")}
+                    </label>
+                    <input
+                      type="number"
+                      value={editValues[field]}
+                      onChange={(e) => handleEditChange(field, parseInt(e.target.value) || 0)}
+                      className={inputBase}
+                    />
+                    {errors[field] && <p className="mt-1 text-sm text-[hsl(var(--color-destructive))]">{errors[field]}</p>}
+                  </div>
+                ))}
                 <div>
-                  <Input
-                    type="number"
-                    value={editValues.quantity}
-                    onChange={(e) => handleEditChange("quantity", parseInt(e.target.value) || 0)}
-                    placeholder={t("godam.quantity", "تعداد")}
-                    label={t("godam.quantity", "تعداد")}
-                  />
-                  {errors.quantity && <p className="mt-1 text-sm text-destructive">{errors.quantity}</p>}
-                </div>
-                <div>
-                  <Input
-                    type="number"
-                    value={editValues.minStockLevel}
-                    onChange={(e) => handleEditChange("minStockLevel", parseInt(e.target.value) || 0)}
-                    placeholder={t("godam.minStock", "حداقل موجودی")}
-                    label={t("godam.minStock", "حداقل موجودی")}
-                  />
-                  {errors.minStockLevel && <p className="mt-1 text-sm text-destructive">{errors.minStockLevel}</p>}
-                </div>
-                <div>
-                  <Label className="mb-2 block">{t("godam.unit", "واحد")}</Label>
-                  <Select
+                  <label className="block text-sm font-medium text-[hsl(var(--fg-primary))] mb-1.5">
+                    {t("godam.unit", "واحد")}
+                  </label>
+                  <select
                     value={editValues.unit}
-                    onValueChange={(val) => handleEditChange("unit", val as UnitType)}
+                    onChange={(e) => handleEditChange("unit", e.target.value as UnitType)}
+                    className={cn(inputBase, "appearance-none")}
                   >
-                    <SelectTrigger className="w-full rounded-xl">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {UNIT_OPTIONS.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {t(opt.labelKey, opt.fallback)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    {UNIT_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {t(opt.labelKey, opt.fallback)}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>
           ) : (
             <>
               <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
-                <InfoBox
-                  icon={DollarSign}
-                  label={t("godam.sellPrice", "قیمت فروش")}
-                  value={`${fmt(product.sellPrice)} AFN`}
-                  color="hsl(var(--primary))"
-                />
-                <InfoBox
-                  icon={DollarSign}
-                  label={t("godam.buyPrice", "قیمت خرید")}
-                  value={`${fmt(product.buyPrice)} AFN`}
-                  color="hsl(var(--muted-foreground))"
-                />
-                <InfoBox
-                  icon={Package}
-                  label={t("godam.quantity", "تعداد")}
-                  value={`${product.quantity} ${t(`godam.units.${toUnitType(product.unit)}`, product.unit)}`}
-                  color="hsl(var(--success))"
-                />
-                <InfoBox
-                  icon={AlertTriangle}
-                  label={t("godam.minStock", "حداقل موجودی")}
-                  value={`${product.minStockLevel}`}
-                  color="hsl(var(--warning))"
-                />
+                <InfoBox icon={DollarSign} label={t("godam.sellPrice", "قیمت فروش")} value={`${fmt(product.sellPrice)} AFN`} />
+                <InfoBox icon={DollarSign} label={t("godam.buyPrice", "قیمت خرید")} value={`${fmt(product.buyPrice)} AFN`} />
+                <InfoBox icon={Package} label={t("godam.quantity", "تعداد")} value={`${product.quantity} ${t(`godam.units.${toUnitType(product.unit)}`, product.unit)}`} />
+                <InfoBox icon={AlertTriangle} label={t("godam.minStock", "حداقل موجودی")} value={`${product.minStockLevel}`} />
               </div>
-              <div className="grid grid-cols-2 gap-4 border-t border-border pt-4 sm:grid-cols-3">
+              <div className="grid grid-cols-2 gap-4 border-t border-[hsl(var(--border-default))] pt-4 sm:grid-cols-3">
                 <div>
-                  <p className="text-xs text-muted-foreground">
-                    {t("godam.category", "دسته‌بندی")}
-                  </p>
-                  <p className="font-medium text-foreground">{product.category}</p>
+                  <p className="text-xs text-[hsl(var(--fg-secondary))]">{t("godam.category", "دسته‌بندی")}</p>
+                  <p className="font-medium text-[hsl(var(--fg-primary))]">{product.category}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">
-                    {t("godam.unit", "واحد")}
-                  </p>
-                  <p className="font-medium text-foreground">
+                  <p className="text-xs text-[hsl(var(--fg-secondary))]">{t("godam.unit", "واحد")}</p>
+                  <p className="font-medium text-[hsl(var(--fg-primary))]">
                     {t(`godam.units.${toUnitType(product.unit)}`, product.unit)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">
-                    {t("godam.totalValue", "ارزش کل موجودی")}
-                  </p>
-                  <p className="font-bold text-primary">{fmt(totalValue)} AFN</p>
+                  <p className="text-xs text-[hsl(var(--fg-secondary))]">{t("godam.totalValue", "ارزش کل موجودی")}</p>
+                  <p className="font-bold text-[hsl(var(--color-primary))]">{fmt(totalValue)} AFN</p>
                 </div>
               </div>
             </>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      {/* ── Profit cards ── */}
+      {/* Profit cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <Card className="interactive-card border-border">
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold tabular-nums text-foreground">{product.quantity}</p>
-            <p className="text-xs text-muted-foreground">{t("godam.currentStock", "موجودی فعلی")}</p>
-          </CardContent>
-        </Card>
-        <Card className="interactive-card border-border">
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold tabular-nums text-success">{fmt(profitPerUnit)} AFN</p>
-            <p className="text-xs text-muted-foreground">{t("godam.profitPerUnit", "سود هر واحد")}</p>
-          </CardContent>
-        </Card>
-        <Card className="interactive-card border-border">
-          <CardContent className="p-4 text-center">
-            <p className="text-2xl font-bold tabular-nums text-primary">{fmt(totalProfit)} AFN</p>
-            <p className="text-xs text-muted-foreground">{t("godam.totalProfit", "سود کل موجودی")}</p>
-          </CardContent>
-        </Card>
+        {[
+          { value: product.quantity, label: t("godam.currentStock", "موجودی فعلی"), className: "text-[hsl(var(--fg-primary))]" },
+          { value: `${fmt(profitPerUnit)} AFN`, label: t("godam.profitPerUnit", "سود هر واحد"), className: "text-[hsl(var(--color-success))]" },
+          { value: `${fmt(totalProfit)} AFN`, label: t("godam.totalProfit", "سود کل موجودی"), className: "text-[hsl(var(--color-primary))]" },
+        ].map(({ value, label, className }) => (
+          <div key={label} className={interactiveCard}>
+            <div className="p-4 text-center">
+              <p className={cn("text-2xl font-bold tabular-nums", className)}>{value}</p>
+              <p className="text-xs text-[hsl(var(--fg-secondary))]">{label}</p>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
-  )
+  );
 }

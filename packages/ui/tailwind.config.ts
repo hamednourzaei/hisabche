@@ -190,7 +190,7 @@ const config: Config = {
         short:  'var(--duration-short)',
         medium: 'var(--duration-medium)',
         long:   'var(--duration-long)',
-        hisab:  'var(--hisab-duration)',
+        hisab: '200ms',
       },
 
       zIndex: {

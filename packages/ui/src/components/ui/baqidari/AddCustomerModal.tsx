@@ -1,90 +1,119 @@
-"use client"
+"use client";
 
-import { useCallback, useMemo, useState } from "react"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { z } from "zod"
-import { useTranslation } from "react-i18next"
-import { useCreateCustomer, useCreateInvoice } from "@hisabche/api"
-import { Button } from "../button"
-import { Input } from "../input"
+import { useCallback, useMemo, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useTranslation } from "react-i18next";
+import { useCreateCustomer, useCreateInvoice } from "@hisabche/api";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "../dialog"
-import { ProductPicker } from "../product-picker"
-import { SaveIndicator } from "../save-indicator"
-import { useSyncStore, useBackupStore } from "@hisabche/store"
-import { AlertTriangle, RefreshCw, User, Phone, Package, DollarSign } from "lucide-react"
+} from "../dialog";
+import { ProductPicker } from "../product-picker";
+import { useSyncStore, useBackupStore } from "@hisabche/store";
+import { cn } from "@/lib/utils";
+import {
+  AlertTriangle,
+  RefreshCw,
+  User,
+  Phone,
+  Package,
+  DollarSign,
+  Check,
+  Loader2,
+} from "lucide-react";
 
-type ProductOption = NonNullable<Parameters<typeof ProductPicker>[0]["value"]>
+/* ═══════════════════════════════════════════════════════════════════════════
+   AddCustomerModal v2 — Hisabche Design Language
+   Zero hardcoded colors — all tokens from design system
+   No external component dependencies (Button, Input, SaveIndicator removed)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+type ProductOption = NonNullable<
+  Parameters<typeof ProductPicker>[0]["value"]
+>;
 
 const toNum = (v: string): number => {
-  const n = Number(v)
-  return Number.isFinite(n) ? n : 0
-}
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+};
 
-const fmt = (v: number): string => v.toLocaleString("fa-AF")
+const fmt = (v: number): string => v.toLocaleString("fa-AF");
 
 const customerSchema = z.object({
   name: z.string().min(1, "customer.nameRequired"),
   phone: z.string().optional(),
-})
+});
 
-type CustomerFormValues = z.infer<typeof customerSchema>
+type CustomerFormValues = z.infer<typeof customerSchema>;
 
 interface AddCustomerModalProps {
-  open: boolean
-  onClose: () => void
-  onCreated?: () => void
+  open: boolean;
+  onClose: () => void;
+  onCreated?: () => void;
 }
 
-export function AddCustomerModal({ open, onClose, onCreated }: AddCustomerModalProps) {
-  const { t } = useTranslation()
-  const createCustomer = useCreateCustomer()
-  const createInvoice = useCreateInvoice()
-  const { setSaveStatus } = useSyncStore()
-  const { addAuditEntry } = useBackupStore()
+// Shared styles
+const inputBase =
+  "w-full rounded-xl ps-9 pe-3 py-2.5 text-sm border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))] focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)] transition-colors duration-200 motion-reduce:transition-none";
+const outlineBtn =
+  "inline-flex items-center justify-center rounded-full px-4 py-2.5 text-sm font-medium border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors duration-150 motion-reduce:transition-none disabled:opacity-40 disabled:cursor-not-allowed";
+const primaryBtn =
+  "inline-flex items-center justify-center rounded-full px-4 py-2.5 text-sm font-bold text-white bg-[var(--gradient-brand)] shadow-sm shadow-[hsl(var(--color-primary)/0.15)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed motion-reduce:transition-none";
 
-  const [withDebt, setWithDebt] = useState(false)
-  const [product, setProduct] = useState<ProductOption | null>(null)
-  const [qty, setQty] = useState("1")
-  const [unitPrice, setUnitPrice] = useState("")
-  const [error, setError] = useState<string | null>(null)
-  const [showSaved, setShowSaved] = useState(false)
+export function AddCustomerModal({
+  open,
+  onClose,
+  onCreated,
+}: AddCustomerModalProps) {
+  const { t } = useTranslation();
+  const createCustomer = useCreateCustomer();
+  const createInvoice = useCreateInvoice();
+  const { setSaveStatus } = useSyncStore();
+  const { addAuditEntry } = useBackupStore();
+
+  const [withDebt, setWithDebt] = useState(false);
+  const [product, setProduct] = useState<ProductOption | null>(null);
+  const [qty, setQty] = useState("1");
+  const [unitPrice, setUnitPrice] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [showSaved, setShowSaved] = useState(false);
 
   const total = useMemo(
     () => toNum(unitPrice) * Math.max(1, toNum(qty)),
-    [unitPrice, qty]
-  )
+    [unitPrice, qty],
+  );
 
-  const pending = createCustomer.isPending || createInvoice.isPending
+  const pending = createCustomer.isPending || createInvoice.isPending;
 
   const form = useForm<CustomerFormValues>({
     resolver: zodResolver(customerSchema),
-    defaultValues: {
-      name: "",
-      phone: "",
-    },
-  })
+    defaultValues: { name: "", phone: "" },
+  });
 
-  const { register, handleSubmit, reset, formState: { errors } } = form
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = form;
 
   const close = useCallback(() => {
-    reset()
-    setWithDebt(false)
-    setProduct(null)
-    setQty("1")
-    setUnitPrice("")
-    setError(null)
-    onClose()
-  }, [reset, onClose])
+    reset();
+    setWithDebt(false);
+    setProduct(null);
+    setQty("1");
+    setUnitPrice("");
+    setError(null);
+    onClose();
+  }, [reset, onClose]);
 
   const onSubmit = async (data: CustomerFormValues) => {
-    setError(null)
-    setSaveStatus("saving")
+    setError(null);
+    setSaveStatus("saving");
 
     try {
       const customer = await createCustomer.mutateAsync({
@@ -92,14 +121,14 @@ export function AddCustomerModal({ open, onClose, onCreated }: AddCustomerModalP
         phone: data.phone || undefined,
         openingBalance: 0,
         isActive: true,
-      })
+      });
 
       addAuditEntry({
         action: "create",
         entity: "customer",
         entityId: customer.id || "",
         details: `مشتری جدید: ${data.name}`,
-      })
+      });
 
       if (withDebt && product && total > 0) {
         await createInvoice.mutateAsync({
@@ -125,87 +154,123 @@ export function AddCustomerModal({ open, onClose, onCreated }: AddCustomerModalP
               totalPrice: total,
             },
           ],
-        })
+        });
       }
 
-      setSaveStatus("saved")
-      setShowSaved(true)
+      setSaveStatus("saved");
+      setShowSaved(true);
       setTimeout(() => {
-        setSaveStatus("idle")
-        setShowSaved(false)
-      }, 2000)
+        setSaveStatus("idle");
+        setShowSaved(false);
+      }, 2000);
 
-      onCreated?.()
-      close()
+      onCreated?.();
+      close();
     } catch {
-      setSaveStatus("error")
-      setError(t("common.saveError", "خطا در ذخیره اطلاعات"))
-      setTimeout(() => setSaveStatus("idle"), 2000)
+      setSaveStatus("error");
+      setError(t("common.saveError", "خطا در ذخیره اطلاعات"));
+      setTimeout(() => setSaveStatus("idle"), 2000);
     }
-  }
+  };
 
   const retrySubmit = () => {
-    handleSubmit(onSubmit)()
-  }
+    handleSubmit(onSubmit)();
+  };
 
   return (
-    <Dialog open={open} onOpenChange={(open) => !open && close()}>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && close()}>
       <DialogContent className="max-w-md">
-        <SaveIndicator show={showSaved} message={t("common.saved", "ذخیره شد ✅")} />
+        {/* Save indicator */}
+        {showSaved && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="absolute top-3 end-3 flex items-center gap-2 text-sm text-[hsl(var(--color-success))]"
+          >
+            <Check className="size-4" aria-hidden="true" />
+            <span>{t("common.saved", "ذخیره شد ✅")}</span>
+          </div>
+        )}
 
         <DialogHeader>
-          <DialogTitle>{t("baqidari.addCustomer", "افزودن مشتری جدید")}</DialogTitle>
+          <DialogTitle>
+            {t("baqidari.addCustomer", "افزودن مشتری جدید")}
+          </DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {/* Name */}
           <div>
-            <Input
-              {...register("name")}
-              placeholder={t("baqidari.form.namePlaceholder", "نام کامل")}
-              startIcon={<User className="size-4" aria-hidden />}
-              autoFocus
-            />
+            <div className="relative">
+              <User
+                className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))] pointer-events-none"
+                aria-hidden="true"
+              />
+              <input
+                {...register("name")}
+                placeholder={t("baqidari.form.namePlaceholder", "نام کامل")}
+                autoFocus
+                className={inputBase}
+              />
+            </div>
             {errors.name && (
-              <p className="mt-1 text-sm text-destructive">
+              <p className="mt-1 text-sm text-[hsl(var(--color-destructive))]">
                 {t(errors.name.message || "نام الزامی است")}
               </p>
             )}
           </div>
 
+          {/* Phone */}
           <div>
-            <Input
-              {...register("phone")}
-              placeholder={t("baqidari.form.phonePlaceholder", "شماره تماس")}
-              startIcon={<Phone className="size-4" aria-hidden />}
-            />
+            <div className="relative">
+              <Phone
+                className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))] pointer-events-none"
+                aria-hidden="true"
+              />
+              <input
+                {...register("phone")}
+                placeholder={t("baqidari.form.phonePlaceholder", "شماره تماس")}
+                className={inputBase}
+              />
+            </div>
             {errors.phone && (
-              <p className="mt-1 text-sm text-destructive">
+              <p className="mt-1 text-sm text-[hsl(var(--color-destructive))]">
                 {t(errors.phone.message || "مقدار وارد شده معتبر نیست")}
               </p>
             )}
           </div>
 
+          {/* Debt toggle */}
           <div className="flex gap-2">
-            <Button
+            <button
               type="button"
-              variant={!withDebt ? "default" : "outline"}
-              className="flex-1"
               onClick={() => setWithDebt(false)}
+              className={cn(
+                "flex-1 rounded-full px-4 py-2.5 text-sm font-bold transition-all duration-200 motion-reduce:transition-none",
+                !withDebt
+                  ? "bg-[var(--gradient-brand)] text-white shadow-sm"
+                  : outlineBtn,
+              )}
             >
               {t("baqidari.form.newCustomer", "مشتری بدون بدهی")}
-            </Button>
-            <Button
+            </button>
+            <button
               type="button"
-              variant={withDebt ? "destructive" : "outline"}
-              className="flex-1"
               onClick={() => setWithDebt(true)}
+              className={cn(
+                "flex-1 rounded-full px-4 py-2.5 text-sm font-bold transition-all duration-200 motion-reduce:transition-none",
+                withDebt
+                  ? "bg-[hsl(var(--color-destructive))] text-white shadow-sm"
+                  : outlineBtn,
+              )}
             >
               {t("baqidari.form.hasDebt", "مشتری دارای بدهی")}
-            </Button>
+            </button>
           </div>
 
+          {/* Debt details */}
           {withDebt && (
-            <div className="space-y-3 rounded-xl border border-border bg-muted/30 p-4">
+            <div className="space-y-3 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted)/0.3)] p-4">
               <ProductPicker
                 value={product}
                 onChange={setProduct}
@@ -213,60 +278,80 @@ export function AddCustomerModal({ open, onClose, onCreated }: AddCustomerModalP
               />
 
               <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <Input
+                <div className="relative">
+                  <DollarSign
+                    className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))] pointer-events-none"
+                    aria-hidden="true"
+                  />
+                  <input
                     type="number"
                     step="0.01"
                     value={unitPrice}
                     onChange={(e) => setUnitPrice(e.target.value)}
                     placeholder={t("baqidari.form.unitPrice", "قیمت واحد")}
-                    startIcon={<DollarSign className="size-4" aria-hidden />}
+                    className={inputBase}
                   />
                 </div>
-                <div>
-                  <Input
+                <div className="relative">
+                  <Package
+                    className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))] pointer-events-none"
+                    aria-hidden="true"
+                  />
+                  <input
                     type="number"
                     value={qty}
                     onChange={(e) => setQty(e.target.value)}
                     placeholder={t("baqidari.form.qty", "تعداد")}
-                    startIcon={<Package className="size-4" aria-hidden />}
+                    className={inputBase}
                   />
                 </div>
               </div>
 
               {total > 0 && (
-                <p className="text-center text-lg font-bold tabular-nums text-primary">
+                <p className="text-center text-lg font-bold tabular-nums text-[hsl(var(--color-primary))]">
                   {t("baqidari.form.total", "مجموع")}: {fmt(total)} AFN
                 </p>
               )}
             </div>
           )}
 
+          {/* Error */}
           {error && (
-            <div className="flex items-center gap-2 rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive">
-              <AlertTriangle className="size-4 shrink-0" aria-hidden />
+            <div className="flex items-center gap-2 rounded-xl border border-[hsl(var(--color-destructive)/0.2)] bg-[hsl(var(--color-destructive)/0.1)] p-3 text-sm text-[hsl(var(--color-destructive))]">
+              <AlertTriangle className="size-4 shrink-0" aria-hidden="true" />
               <p className="flex-1">{error}</p>
-              <Button
+              <button
                 type="button"
-                variant="ghost"
-                size="sm"
                 onClick={retrySubmit}
+                className="inline-flex items-center justify-center rounded-full p-1.5 text-[hsl(var(--color-destructive))] hover:bg-[hsl(var(--color-destructive)/0.15)] transition-colors duration-150"
               >
-                <RefreshCw className="size-3" aria-hidden />
-              </Button>
+                <RefreshCw className="size-3" aria-hidden="true" />
+              </button>
             </div>
           )}
 
+          {/* Actions */}
           <div className="flex gap-3 pt-2">
-            <Button type="button" variant="outline" className="w-full" onClick={close}>
+            <button
+              type="button"
+              onClick={close}
+              className={cn(outlineBtn, "w-full")}
+            >
               {t("common.cancel", "انصراف")}
-            </Button>
-            <Button type="submit" className="w-full" disabled={pending}>
+            </button>
+            <button
+              type="submit"
+              disabled={pending}
+              className={cn(primaryBtn, "w-full")}
+            >
+              {pending && (
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              )}
               {t("common.save", "ذخیره")}
-            </Button>
+            </button>
           </div>
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

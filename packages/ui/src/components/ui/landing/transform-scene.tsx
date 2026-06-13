@@ -1,11 +1,18 @@
 "use client";
 
 import { useSceneObserver } from "./use-scene-observer";
+import { cn } from "@/lib/utils";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TransformScene v2 — Hisabche Design Language
+   Zero hardcoded colors — all tokens from design system
+   Zero inline styles — all Tailwind classes (except dynamic delays)
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 const solutions = [
-  { icon: "🧾", title: "فاکتور لحظه‌ای", desc: "صدور در ۳۰ ثانیه",        benefit: "دیگه مشتری منتظر نمیمونه"  },
-  { icon: "📦", title: "گدام زنده",       desc: "موجودی همیشه آپدیت",      benefit: "فروش خارج از انبار نداریم" },
-  { icon: "📒", title: "بدهی شفاف",      desc: "هر بدهی ثبت و پیگیری",    benefit: "پولت گم نمیشه"             },
+  { icon: "🧾", title: "فاکتور لحظه‌ای", desc: "صدور در ۳۰ ثانیه", benefit: "دیگه مشتری منتظر نمیمونه" },
+  { icon: "📦", title: "گدام زنده", desc: "موجودی همیشه آپدیت", benefit: "فروش خارج از انبار نداریم" },
+  { icon: "📒", title: "بدهی شفاف", desc: "هر بدهی ثبت و پیگیری", benefit: "پولت گم نمیشه" },
 ];
 
 export default function TransformScene() {
@@ -21,43 +28,23 @@ export default function TransformScene() {
       id="transform"
       ref={ref}
       data-narrative="clarity"
-      className="section-padding"
-      style={{ background: "hsl(var(--surface-muted) / 0.3)" }}
+      className="section-padding bg-[hsl(var(--surface-muted)/0.3)]"
     >
       <div className="container-narrow">
-
         {/* Header */}
         <div
-          className="text-center mb-14 scene-transition"
-          style={{
-            opacity:   animated ? 1 : 0,
-            transform: animated ? "translateY(0)" : "translateY(20px)",
-          }}
+          className={cn(
+            "text-center mb-14 transition-all duration-500",
+            animated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5",
+          )}
         >
-          <p
-            className="text-sm uppercase mb-3"
-            style={{
-              letterSpacing: "0.2em",
-              color: "hsl(var(--hisab-muted-fg))",
-            }}
-          >
+          <p className="text-sm uppercase tracking-[0.2em] mb-3 text-[hsl(var(--fg-tertiary))]">
             بعد از حسابچه
           </p>
-          <h2
-            className="h2 mb-6"
-            style={{ color: "hsl(var(--color-purple)), hsl(var(--color-cyan)), hsl(var(--color-emerald)))" }}
-          >
+          <h2 className="h2 mb-6 text-[hsl(var(--fg-primary))]">
             همه چیز در یک جا
           </h2>
-          <p
-            className="mx-auto"
-            style={{
-              color:      "hsl(var(--hisab-muted-fg))",
-              maxWidth:   "36rem",
-              fontSize:   "var(--font-body-large)",
-              lineHeight: "var(--leading-relaxed)",
-            }}
-          >
+          <p className="mx-auto max-w-xl text-lg text-[hsl(var(--fg-secondary))] leading-relaxed">
             فاکتور، گدام، بدهی… همه در لحظه. بدون کاغذ، بدون فراموشی.
           </p>
         </div>
@@ -67,71 +54,43 @@ export default function TransformScene() {
           {solutions.map((item, i) => (
             <div
               key={i}
-              className="card-interactive text-center p-8"
-              style={{
-                opacity:      animated ? 1 : 0,
-                transform:    animated ? "translateY(0)" : "translateY(24px)",
-                transition:   `opacity 0.4s var(--ease-out) ${i * 0.12}s, transform 0.4s var(--ease-out) ${i * 0.12}s`,
-                border:       "1px solid hsl(var(--color-purple) / 0.2)",
-                background:   "hsl(var(--color-purple) / 0.05)",
-                borderRadius: "var(--radius-card)",
-              }}
+              className={cn(
+                "text-center p-8",
+                "rounded-[var(--radius-card)]",
+                "border border-[hsl(var(--color-primary)/0.2)]",
+                "bg-[hsl(var(--color-primary)/0.05)]",
+                "transition-all duration-500",
+                animated
+                  ? "opacity-100 translate-y-0"
+                  : "opacity-0 translate-y-6",
+              )}
+              style={{ transitionDelay: `${i * 120}ms` }}
             >
               {/* Icon */}
-              <div
-                className="mx-auto mb-5 flex items-center justify-center"
-                style={{
-                  width:        "56px",
-                  height:       "56px",
-                  borderRadius: "var(--radius-full)",
-                  background:   "hsl(var(--color-purple) / 0.12)",
-                  fontSize:     "1.75rem",
-                }}
-              >
+              <div className="mx-auto mb-5 flex items-center justify-center w-14 h-14 rounded-full bg-[hsl(var(--color-primary)/0.12)] text-[1.75rem]">
                 {item.icon}
               </div>
 
               {/* Title */}
-              <div
-                className="text-lg font-semibold mb-2"
-                style={{ color: "hsl(var(--color-purple)), hsl(var(--color-cyan)), hsl(var(--color-emerald)))" }}
-              >
+              <h3 className="text-lg font-semibold mb-2 text-[hsl(var(--fg-primary))]">
                 {item.title}
-              </div>
+              </h3>
 
-              {/* Desc — با accent رنگ purple */}
-              <div
-                className="text-sm font-medium mb-3"
-                style={{ color: "hsl(var(--color-purple))" }}
-              >
+              {/* Description */}
+              <p className="text-sm font-medium mb-3 text-[hsl(var(--color-primary))]">
                 {item.desc}
-              </div>
+              </p>
 
               {/* Benefit */}
-              <div
-                className="text-xs"
-                style={{
-                  color:      "hsl(var(--hisab-muted-fg))",
-                  lineHeight: "var(--leading-relaxed)",
-                }}
-              >
+              <p className="text-xs text-[hsl(var(--fg-secondary))] leading-relaxed">
                 {item.benefit}
-              </div>
+              </p>
 
               {/* Bottom accent */}
-              <div
-                className="mt-6 mx-auto"
-                style={{
-                  height:       "2px",
-                  width:        "40px",
-                  borderRadius: "var(--radius-full)",
-                  background:   "hsl(var(--color-purple) / 0.4)",
-                }}
-              />
+              <div className="mt-6 mx-auto h-0.5 w-10 rounded-full bg-[hsl(var(--color-primary)/0.4)]" />
             </div>
           ))}
         </div>
-
       </div>
     </section>
   );
