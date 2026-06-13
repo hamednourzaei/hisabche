@@ -162,7 +162,7 @@ export function AddCustomerModal({ open, onClose, onCreated }: AddCustomerModalP
             <Input
               {...register("name")}
               placeholder={t("baqidari.form.namePlaceholder", "نام کامل")}
-              leftIcon={<User className="size-4" aria-hidden />}
+              startIcon={<User className="size-4" aria-hidden />}
               autoFocus
             />
             {errors.name && (
@@ -176,7 +176,7 @@ export function AddCustomerModal({ open, onClose, onCreated }: AddCustomerModalP
             <Input
               {...register("phone")}
               placeholder={t("baqidari.form.phonePlaceholder", "شماره تماس")}
-              leftIcon={<Phone className="size-4" aria-hidden />}
+              startIcon={<Phone className="size-4" aria-hidden />}
             />
             {errors.phone && (
               <p className="mt-1 text-sm text-destructive">
@@ -220,7 +220,7 @@ export function AddCustomerModal({ open, onClose, onCreated }: AddCustomerModalP
                     value={unitPrice}
                     onChange={(e) => setUnitPrice(e.target.value)}
                     placeholder={t("baqidari.form.unitPrice", "قیمت واحد")}
-                    leftIcon={<DollarSign className="size-4" aria-hidden />}
+                    startIcon={<DollarSign className="size-4" aria-hidden />}
                   />
                 </div>
                 <div>
@@ -229,7 +229,7 @@ export function AddCustomerModal({ open, onClose, onCreated }: AddCustomerModalP
                     value={qty}
                     onChange={(e) => setQty(e.target.value)}
                     placeholder={t("baqidari.form.qty", "تعداد")}
-                    leftIcon={<Package className="size-4" aria-hidden />}
+                    startIcon={<Package className="size-4" aria-hidden />}
                   />
                 </div>
               </div>
