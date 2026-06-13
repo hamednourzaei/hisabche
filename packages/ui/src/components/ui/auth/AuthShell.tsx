@@ -120,7 +120,7 @@ interface SignupFormProps {
   translateError: (k?: string) => string | undefined;
 }
 
-// Shared input style
+// Shared input style — base padding-end 10 for icon, no default padding-start
 const inputClass =
   "peer w-full h-12 px-4 pt-5 bg-[hsl(var(--surface-muted)/0.5)] border border-[hsl(var(--border-default))] rounded-2xl text-[hsl(var(--fg-primary))] outline-none transition-all duration-200 pe-10 placeholder:text-transparent disabled:opacity-50 focus:border-[hsl(var(--color-primary)/0.6)]";
 const floatLabelClass =
@@ -301,17 +301,51 @@ function LoginForm({
           </div>
           {errors.email?.message && <p className="text-xs text-[hsl(var(--color-destructive))] mt-1.5">{errors.email.message}</p>}
         </div>
+
         {/* Password */}
         <div>
           <div className="relative">
-            <input {...register("password")} type={showPassword ? "text" : "password"} autoComplete="current-password" disabled={isLoading} className={cn(inputClass, "ps-16", errors.password && "border-[hsl(var(--color-destructive))]")} placeholder=" " dir="ltr" />
-            <label className={cn(floatLabelClass, passwordValue ? floatLabelTop : floatLabelMid)}>{st("auth.password", "رمز عبور")}</label>
-            <span className="absolute end-3 top-1/2 -translate-y-1/2 text-[hsl(var(--fg-tertiary))]"><IconLock /></span>
-            <button type="button" onClick={togglePassword} tabIndex={-1} className="absolute start-3 top-1/2 -translate-y-1/2 text-[11px] font-medium text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--fg-primary))] transition-colors">
-              {showPassword ? st("login.hidePassword", "مخفی") : st("login.showPassword", "نمایش")}
+            <input
+              {...register("password")}
+              type={showPassword ? "text" : "password"}
+              autoComplete="current-password"
+              disabled={isLoading}
+              className={cn(
+                inputClass,
+                "ps-20",
+                errors.password && "border-[hsl(var(--color-destructive))]",
+              )}
+              placeholder=" "
+              dir="ltr"
+            />
+            <label
+              className={cn(
+                floatLabelClass,
+                passwordValue ? floatLabelTop : floatLabelMid,
+              )}
+              style={{ insetInlineStart: "5rem" }}
+            >
+              {st("auth.password", "رمز عبور")}
+            </label>
+            <span className="absolute end-3 top-1/2 -translate-y-1/2 text-[hsl(var(--fg-tertiary))]">
+              <IconLock />
+            </span>
+            <button
+              type="button"
+              onClick={togglePassword}
+              tabIndex={-1}
+              className="absolute start-2 top-1/2 -translate-y-1/2 text-[11px] font-medium text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--fg-primary))] transition-colors px-2 py-1 rounded-lg"
+            >
+              {showPassword
+                ? st("login.hidePassword", "مخفی")
+                : st("login.showPassword", "نمایش")}
             </button>
           </div>
-          {errors.password?.message && <p className="text-xs text-[hsl(var(--color-destructive))] mt-1.5">{errors.password.message}</p>}
+          {errors.password?.message && (
+            <p className="text-xs text-[hsl(var(--color-destructive))] mt-1.5">
+              {errors.password.message}
+            </p>
+          )}
         </div>
 
         <button type="submit" disabled={isLoading} className="w-full inline-flex items-center justify-center rounded-2xl px-6 py-3 text-sm font-bold text-white bg-[var(--gradient-brand)] hover:brightness-110 active:scale-[0.98] transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed mt-5">
@@ -348,10 +382,10 @@ function SignupForm({
     <div>
       <div className="relative">
         <input {...register(opts.name)} type={opts.type} autoComplete={opts.autoComplete} disabled={isLoading} dir={opts.dir ?? "ltr"} placeholder=" "
-          className={cn(inputClass, opts.extraPaddingLeft && "ps-16", opts.err && "border-[hsl(var(--color-destructive))]")} />
-        <label className={cn(floatLabelClass, opts.value ? floatLabelTop : floatLabelMid)}>{opts.label}</label>
+          className={cn(inputClass, opts.extraPaddingLeft && "ps-20", opts.err && "border-[hsl(var(--color-destructive))]")} />
+        <label className={cn(floatLabelClass, opts.value ? floatLabelTop : floatLabelMid)} style={opts.extraPaddingLeft ? { insetInlineStart: "5rem" } : undefined}>{opts.label}</label>
         <span className="absolute end-3 top-1/2 -translate-y-1/2 text-[hsl(var(--fg-tertiary))]">{opts.icon}</span>
-        {opts.rightSlot && <div className="absolute start-3 top-1/2 -translate-y-1/2">{opts.rightSlot}</div>}
+        {opts.rightSlot && <div className="absolute start-2 top-1/2 -translate-y-1/2">{opts.rightSlot}</div>}
       </div>
       {opts.err?.message && <p className="text-xs text-[hsl(var(--color-destructive))] mt-1.5">{translateError(opts.err.message)}</p>}
     </div>
@@ -376,7 +410,7 @@ function SignupForm({
         {field({ name: "email", type: "email", label: st("auth.email", "ایمیل"), icon: <IconMail />, value: email, err: errors.email, autoComplete: "email" })}
         {field({ name: "password", type: showPassword ? "text" : "password", label: st("auth.password", "رمز عبور"), icon: <IconLock />, value: password, err: errors.password, autoComplete: "new-password", extraPaddingLeft: true,
           rightSlot: (
-            <button type="button" onClick={togglePassword} tabIndex={-1} className="text-[11px] font-medium text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--fg-primary))] transition-colors">
+            <button type="button" onClick={togglePassword} tabIndex={-1} className="text-[11px] font-medium text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--fg-primary))] transition-colors px-2 py-1">
               {showPassword ? st("login.hidePassword", "مخفی") : st("login.showPassword", "نمایش")}
             </button>
           ),
