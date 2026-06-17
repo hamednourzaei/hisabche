@@ -54,23 +54,25 @@ export function TopNav({
   );
 
   return (
-    <header
-      className={cn(
-        // Base (Desktop)
-        "sticky top-0 z-[var(--z-sticky)] w-full",
-        "bg-[hsl(var(--surface-base)/0.6)] backdrop-blur-md",
-        "border-b border-transparent",
-        "transition-all duration-300",
-        // Desktop pill
-        "lg:top-4 lg:w-[90%] lg:mx-auto lg:rounded-full",
-        "lg:bg-[hsl(var(--surface-base)/0.7)] lg:backdrop-blur-xl",
-        "lg:border-[hsl(var(--border-default))]",
-        // Mobile override
-        "max-lg:bg-[hsl(var(--surface-base))] max-lg:backdrop-blur-none",
-        "max-lg:border-b max-lg:border-[hsl(var(--border-default))]",
-      )}
-      dir="rtl"
-    >
+<header
+  className={cn(
+    // Base (Desktop)
+    "sticky top-0 z-[var(--z-sticky)] w-full",
+    "bg-[hsl(var(--surface-base)/0.6)] backdrop-blur-md",
+    "border-b border-transparent",
+    "transition-all duration-300",
+    // Mobile — padding from top & bottom
+    "max-lg:py-3",
+    // Desktop pill
+    "lg:top-4 lg:w-[90%] lg:mx-auto lg:rounded-full",
+    "lg:bg-[hsl(var(--surface-base)/0.7)] lg:backdrop-blur-xl",
+    "lg:border-[hsl(var(--border-default))]",
+    // Mobile override
+    "max-lg:bg-[hsl(var(--surface-base))] max-lg:backdrop-blur-none",
+    "max-lg:border-b max-lg:border-[hsl(var(--border-default))]",
+  )}
+  dir="rtl"
+>
       <div
         className={cn(
           "mx-auto flex items-center justify-between",
@@ -80,14 +82,15 @@ export function TopNav({
         )}
       >
         {/* Logo */}
-        <button
-          type="button"
-          className="flex items-center gap-1 text-[hsl(var(--fg-primary))] font-bold text-lg shrink-0"
-          onClick={() => handleSetSection(sections[0]?.id || "")}
-        >
-          <span>{appName}</span>
-          <span className="text-[hsl(var(--color-primary))]">.</span>
-        </button>
+        {/* Logo — hidden below lg (iPad) */}
+<button
+  type="button"
+  className="hidden lg:flex items-center gap-1 text-[hsl(var(--fg-primary))] font-bold text-lg shrink-0"
+  onClick={() => handleSetSection(sections[0]?.id || "")}
+>
+  <span>{appName}</span>
+  <span className="text-[hsl(var(--color-primary))]">.</span>
+</button>
 
         {/* Navigation menu */}
         <nav className="flex-1 flex justify-center px-2">
