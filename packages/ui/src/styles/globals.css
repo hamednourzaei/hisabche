@@ -307,7 +307,38 @@ p, .body { font-size: var(--text-body); line-height: var(--leading-relaxed); fon
 .lite-mode .glass-card, .data-saver .glass-card { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; background: hsl(var(--surface-elevated) / 0.95); }
 .lite-mode [class*="shadow"] { box-shadow: none !important; }
 [dir="rtl"] { text-align: start; }
+/* ───────────────────────────────────────────────────────────────────────────
+   FLIP CARD (Auth Login/Signup)
+   ─────────────────────────────────────────────────────────────────────────── */
+.flip-perspective { perspective: 1200px; width: 100%; }
+.flip-inner {
+  position: relative;
+  width: 100%;
+  transition: transform 0.7s cubic-bezier(0.23, 1, 0.32, 1);
+  transform-style: preserve-3d;
+}
+.flip-inner.is-flipped { transform: rotateY(180deg); }
+.flip-face {
+  position: relative;
+  width: 100%;
+  backface-visibility: hidden;
+  background: hsl(var(--surface-overlay) / 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: var(--radius-2xl);
+  border: 1px solid hsl(var(--color-primary) / 0.2);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+.flip-front { transform: rotateY(0deg); }
+.flip-back { position: absolute; top: 0; left: 0; transform: rotateY(180deg); }
 
+/* Reduced motion: disable flip */
+@media (prefers-reduced-motion: reduce) {
+  .flip-inner { transition: none; }
+  .flip-inner.is-flipped { transform: none; }
+  .flip-back { position: relative; transform: none; }
+}
 
 @media print {
   body { background: white !important; color: black !important; }
