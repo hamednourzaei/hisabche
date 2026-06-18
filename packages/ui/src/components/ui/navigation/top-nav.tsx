@@ -61,14 +61,12 @@ export function TopNav({
     "bg-[hsl(var(--surface-base)/0.6)] backdrop-blur-md",
     "border-b border-transparent",
     "transition-all duration-300",
-    // Mobile — padding from top & bottom
-    "max-lg:py-3",
     // Desktop pill
-    "lg:top-4 lg:w-[90%] lg:mx-auto lg:rounded-full",
+    "lg:top-4 lg:w-[90%] lg:mx-auto lg:rounded-full lg:py-0.5",
     "lg:bg-[hsl(var(--surface-base)/0.7)] lg:backdrop-blur-xl",
     "lg:border-[hsl(var(--border-default))]",
-    // Mobile override
-    "max-lg:bg-[hsl(var(--surface-base))] max-lg:backdrop-blur-none",
+    // Mobile
+    "max-lg:py-3 max-lg:bg-[hsl(var(--surface-base))] max-lg:backdrop-blur-none",
     "max-lg:border-b max-lg:border-[hsl(var(--border-default))]",
   )}
   dir="rtl"
@@ -98,14 +96,15 @@ export function TopNav({
             ref={navListRef}
             className="relative flex items-center gap-1 list-none m-0 px-1 py-1 rounded-full bg-[hsl(var(--fg-primary)/0.04)] border border-[hsl(var(--fg-primary)/0.07)]"
           >
-            <span
-              ref={indicatorRef}
-              className="absolute top-1 h-[calc(100%-8px)] rounded-full bg-[hsl(var(--color-primary)/0.15)] transition-all duration-300 z-0"
-              style={{
-                width: indicatorStyle.width,
-                left: indicatorStyle.left,
-              }}
-            />
+           <span
+  ref={indicatorRef}
+  aria-hidden="true"
+  className="absolute top-1 h-[calc(100%-8px)] rounded-full bg-[hsl(var(--color-primary)/0.15)] transition-all duration-300 z-0"
+  style={{
+    width: indicatorStyle.width,
+    left: indicatorStyle.left,
+  }}
+/>
             {sections.map(({ id, label }) => (
               <li key={id}>
                 <button

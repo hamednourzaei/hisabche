@@ -34,6 +34,17 @@ const nextConfig = {
         : false,
   },
 
+  // ═══════════════════════════════════════════════════════════════
+  // MOBILE PERFORMANCE OPTIMIZATIONS
+  // ═══════════════════════════════════════════════════════════════
+  
+  // Browser targets — modern only (no polyfills)
+  browsersList: [
+    'defaults',
+    'not IE 11',
+    'not op_mini all',
+  ],
+
   experimental: {
     optimizePackageImports: [
       '@hisabche/ui',
@@ -41,12 +52,32 @@ const nextConfig = {
       'framer-motion',
       '@tanstack/react-query',
       'react-i18next',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-select',
+      '@radix-ui/react-popover',
+      '@radix-ui/react-accordion',
+      '@radix-ui/react-switch',
+      '@radix-ui/react-slot',
+      'react-hook-form',
+      'zod',
+      'axios',
     ],
     optimizeCss: true,
+    // Server Components برای کاهش bundle client
+    serverActions: {
+      bodySizeLimit: '2mb',
+    },
   },
 
   async headers() {
     return [
+      {
+        source: '/fonts/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
       {
         source: '/images/:path*',
         headers: [{ key: 'Cache-Control', value: 'public, max-age=86400' }],
