@@ -90,40 +90,40 @@ export function TopNav({
   <span className="text-[hsl(var(--color-primary))]">.</span>
 </button>
 
-        {/* Navigation menu */}
-        <nav className="flex-1 flex justify-center px-2">
-          <ul
-            ref={navListRef}
-            className="relative flex items-center gap-1 list-none m-0 px-1 py-1 rounded-full bg-[hsl(var(--fg-primary)/0.04)] border border-[hsl(var(--fg-primary)/0.07)]"
-          >
-           <span
-  ref={indicatorRef}
-  aria-hidden="true"
-  className="absolute top-1 h-[calc(100%-8px)] rounded-full bg-[hsl(var(--color-primary)/0.15)] transition-all duration-300 z-0"
-  style={{
-    width: indicatorStyle.width,
-    left: indicatorStyle.left,
-  }}
-/>
-            {sections.map(({ id, label }) => (
-              <li key={id}>
-                <button
-                  type="button"
-                  data-id={id}
-                  className={cn(
-                    "relative z-10 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors",
-                    activeSection === id
-                      ? "text-[hsl(var(--fg-primary))] font-semibold"
-                      : "text-[hsl(var(--fg-primary)/0.55)] hover:text-[hsl(var(--fg-primary)/0.85)]",
-                  )}
-                  onClick={() => handleSetSection(id)}
-                >
-                  {label}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </nav>
+      {/* Navigation menu */}
+<nav className="flex-1 flex justify-center px-2 overflow-hidden">
+  <ul
+    ref={navListRef}
+    className="relative flex items-center gap-1 list-none m-0 px-1 py-1 rounded-full bg-[hsl(var(--fg-primary)/0.04)] border border-[hsl(var(--fg-primary)/0.07)] max-w-full overflow-x-auto"
+  >
+    <span
+      ref={indicatorRef}
+      aria-hidden="true"
+      className="absolute top-1 h-[calc(100%-8px)] rounded-full bg-[hsl(var(--color-primary)/0.15)] transition-all duration-300 z-0"
+      style={{
+        width: indicatorStyle.width,
+        left: indicatorStyle.left,
+      }}
+    />
+    {sections.map(({ id, label }) => (
+      <li key={id} className="shrink-0">
+        <button
+          type="button"
+          data-id={id}
+          className={cn(
+            "relative z-10 px-2 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-colors",
+            activeSection === id
+              ? "text-[hsl(var(--fg-primary))] font-semibold"
+              : "text-[hsl(var(--fg-primary)/0.55)] hover:text-[hsl(var(--fg-primary)/0.85)]",
+          )}
+          onClick={() => handleSetSection(id)}
+        >
+          {label}
+        </button>
+      </li>
+    ))}
+  </ul>
+</nav>
 
         {/* CTA button — Desktop only */}
         {variant === "landing" && (
