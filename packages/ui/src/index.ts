@@ -1,5 +1,5 @@
 // ============================================
-// Hisabche UI — Barrel Exports v6.0
+// Hisabche UI — Barrel Exports v7.1
 // ============================================
 
 import './styles/lite-mode.css'
@@ -7,7 +7,7 @@ import './styles/lite-mode.css'
 // ---------- Utils ----------
 export { cn, formatCurrency, formatDate } from './lib/utils'
 
-// ---------- shadcn/ui Components ----------
+// ---------- Primitives ----------
 export { Button } from './components/ui/button'
 export type { ButtonVariant, ButtonSize } from './components/ui/button'
 export { Input } from './components/ui/input'
@@ -28,17 +28,21 @@ export { SaveIndicator, type SaveIndicatorProps } from './components/ui/save-ind
 export { Celebration, type CelebrationProps } from './components/ui/celebration'
 export { ErrorBoundary } from './components/ui/error-boundary'
 
-// ---------- Navigation (Legacy) ----------
+// ---------- Navigation — Dashboard ----------
 export { DashboardSidebar, BottomNav, type NavItem } from './components/ui/dashboard-sidebar'
 export { DashboardHeader } from './components/ui/dashboard-header'
 export { CommandPalette } from './components/ui/command-palette'
-export { GlassNavbar } from './components/ui/landing-section'
 
-// ---------- ✨ NEW: Enterprise Navigation System ----------
+// ---------- Navigation — Enterprise ----------
 export { NavigationProvider, useNavigation } from './hooks/menu/use-navigation-state'
 export { TopNav } from './components/ui/navigation/top-nav'
 export { SideNav } from './components/ui/navigation/side-nav'
 export { NavigationRegistry } from './components/ui/navigation/navigation-registry'
+
+// ---------- Landing (نگه داشتیم — داخل dashboard-header استفاده میشه) ----------
+export { GlassNavbar, AnimatedCounter, Section, FeatureCard, SectionHeading, GradientMesh, ShimmerCTA } from './components/ui/landing-section'
+export { LandingPreview } from './components/ui/landing-preview'
+export { LivingBackground } from './components/ui/living-background'
 
 // ---------- Data Display ----------
 export { EmptyState, type EmptyStateProps } from './components/ui/empty-state'
@@ -47,19 +51,13 @@ export { SyncStatus, type SyncStatusProps } from './components/ui/sync-status'
 export { OfflineBanner, type OfflineBannerProps } from './components/ui/offline-banner'
 export { OfflineQueue, type OfflineQueueProps } from './components/ui/offline-queue'
 export { RealtimeIndicator } from './components/ui/realtime-indicator'
-export { LandingPreview } from './components/ui/landing-preview'
-export { AnimatedCounter } from './components/ui/landing-section'
 
 // ---------- Forms ----------
 export { SearchInput, type SearchInputProps } from './components/ui/search-input'
 export { ProductPicker } from './components/ui/product-picker'
 export { CustomerPicker } from './components/ui/customer-picker'
 
-// ---------- Layout ----------
-export { Section, FeatureCard, SectionHeading } from './components/ui/landing-section'
-export { GradientMesh } from './components/ui/landing-section'
-export { ShimmerCTA } from './components/ui/landing-section'
-export { LivingBackground } from './components/ui/living-background'
+// ---------- Layout / FAB ----------
 export { Fab, type FabAction, type FabProps } from './components/ui/fab'
 
 // ---------- Auth ----------
@@ -73,7 +71,7 @@ export { AddCustomerModal } from './components/ui/baqidari'
 export { PaymentModal } from './components/ui/baqidari'
 export { InviteModal } from './components/ui/invite-modal'
 
-// ---------- Pages (Pure UI) ----------
+// ---------- Pages ----------
 export { BaqidariView, BaqidariSkeleton } from './components/ui/baqidari'
 export { BaqidariContainer as BaqidariPage } from './components/ui/baqidari/containers/baqidari-container'
 export { GodamView } from './components/ui/godam/godam-view'
@@ -90,7 +88,7 @@ export { WorkspacePage } from './components/ui/workspace'
 export { OnboardingPage } from './components/ui/onboarding/onboarding-page'
 export { CustomerDetailView } from './components/ui/baqidari'
 
-// ---------- Containers (Logic) ----------
+// ---------- Containers ----------
 export { DashboardContainer } from './components/ui/dashboard/containers/dashboard-container'
 export { GodamContainer } from './components/ui/godam/containers/godam-container'
 export { ProductDetailContainer } from './components/ui/godam-detail/containers/godam-detail-container'

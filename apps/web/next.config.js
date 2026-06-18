@@ -6,10 +6,6 @@ const nextConfig = {
   compress: true,
   productionBrowserSourceMaps: false,
 
-  generateBuildId: async () => {
-    return `hisabche-${Date.now()}`
-  },
-
   transpilePackages: [
     '@hisabche/ui',
     '@hisabche/i18n',
@@ -21,29 +17,15 @@ const nextConfig = {
 
   images: {
     formats: ['image/avif', 'image/webp'],
-    minimumCacheTTL: 60,
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+    minimumCacheTTL: 31536000,
+    deviceSizes: [640, 750, 828, 1080, 1200],
     imageSizes: [16, 32, 48, 64, 96],
     dangerouslyAllowSVG: false,
   },
 
   compiler: {
-    removeConsole:
-      process.env.NODE_ENV === 'production'
-        ? { exclude: ['error'] }
-        : false,
+    removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error'] } : false,
   },
-
-  // ═══════════════════════════════════════════════════════════════
-  // MOBILE PERFORMANCE OPTIMIZATIONS
-  // ═══════════════════════════════════════════════════════════════
-  
-  // Browser targets — modern only (no polyfills)
-  browsersList: [
-    'defaults',
-    'not IE 11',
-    'not op_mini all',
-  ],
 
   experimental: {
     optimizePackageImports: [
@@ -61,42 +43,82 @@ const nextConfig = {
       '@radix-ui/react-slot',
       'react-hook-form',
       'zod',
-      'axios',
     ],
     optimizeCss: true,
-    // Server Components برای کاهش bundle client
-    serverActions: {
-      bodySizeLimit: '2mb',
-    },
+    serverActions: { bodySizeLimit: '2mb' },
+  },
+
+  // ── Bundle splitting برای کاهش JS اولیه ──────────────────────
+  webpack(config, { isServer, dev }) {
+    if (!isServer && !dev) {
+      config.optimization.splitChunks = {
+        chunks: 'all',
+        maxInitialRequests: 25,
+        minSize: 20000,
+        cacheGroups: {
+          // framer-motion جدا — فقط وقتی لازمه load میشه
+          framerMotion: {
+            test: /[\\/]node_modules[\\/]framer-motion[\\/]/,
+            name: 'framer-motion',
+            chunks: 'async',   // ← فقط async، نه initial bundle
+            priority: 30,
+          },
+          // radix جدا
+          radix: {
+            test: /[\\/]node_modules[\\/]@radix-ui[\\/]/,
+            name: 'radix',
+            chunks: 'async',
+            priority: 20,
+          },
+          // بقیه node_modules
+          vendor: {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'vendor',
+            chunks: 'initial',
+            priority: 10,
+            reuseExistingChunk: true,
+          },
+        },
+      }
+    }
+    return config
   },
 
   async headers() {
     return [
+      // فونت — cache یک سال
       {
         source: '/fonts/:path*',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
       },
+      // تصاویر
       {
         source: '/images/:path*',
-        headers: [{ key: 'Cache-Control', value: 'public, max-age=86400' }],
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' },
+        ],
       },
+      // static assets
+      {
+        source: '/_next/static/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      // security headers روی همه routes
       {
         source: '/:path*',
         headers: [
-          { key: 'X-Content-Type-Options', value: 'nosniff' },
-          { key: 'X-Frame-Options', value: 'DENY' },
-          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-          { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+          { key: 'X-Content-Type-Options',  value: 'nosniff' },
+          { key: 'X-Frame-Options',          value: 'DENY' },
+          { key: 'Referrer-Policy',          value: 'strict-origin-when-cross-origin' },
+          { key: 'Permissions-Policy',       value: 'camera=(), microphone=(), geolocation=()' },
         ],
       },
     ]
   },
-
-  onDemandEntries: {
-    maxInactiveAge: 25 * 1000,
-    pagesBufferLength: 2,
-  },
 }
+
 module.exports = nextConfig
