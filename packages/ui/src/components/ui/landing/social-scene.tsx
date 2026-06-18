@@ -4,9 +4,9 @@ import { useSceneObserver } from "./use-scene-observer";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   SocialScene v2 — Hisabche Design Language
+   SocialScene v3 — Hisabche Design Language
    Zero hardcoded colors — all tokens from design system
-   Zero inline styles — all Tailwind classes (except dynamic delays)
+   Redmi 9 optimized
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const testimonials = [
@@ -35,6 +35,7 @@ export default function SocialScene() {
         <div
           className={cn(
             "text-center mb-16 transition-all duration-500",
+            "motion-reduce:transition-none",
             animated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5",
           )}
         >
@@ -70,7 +71,9 @@ export default function SocialScene() {
                 "border border-[hsl(var(--border-default))]",
                 "bg-[hsl(var(--surface-muted)/0.6)]",
                 "transition-all duration-500",
+                "motion-reduce:transition-none",
                 "hover:border-[hsl(var(--color-primary)/0.35)] hover:-translate-y-1",
+                "motion-reduce:hover:translate-y-0 motion-reduce:hover:border-[hsl(var(--border-default))]",
                 animated
                   ? "opacity-100 translate-y-0"
                   : "opacity-0 translate-y-5",

@@ -5,7 +5,7 @@ import { useScrollNarrative } from "./use-scroll-narrative-store";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   CTAScene v2 — Hisabche Design Language
+   CTAScene v3 — Hisabche Design Language
    Zero hardcoded colors — all tokens from design system
    Zero inline styles — all Tailwind classes
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -71,6 +71,7 @@ export default function CTAScene({ onNavigateLogin }: CTASceneProps) {
             gradient,
             "p-[clamp(2.5rem,6vw,4rem)]",
             "transition-all duration-500",
+            "motion-reduce:transition-none",
             animated
               ? "opacity-100 scale-100 translate-y-0"
               : "opacity-0 scale-[0.97] translate-y-4",

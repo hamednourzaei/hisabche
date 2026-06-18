@@ -4,9 +4,9 @@ import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   FaqScene v2 — Hisabche Design Language
+   FaqScene v3 — Hisabche Design Language
    Zero hardcoded colors — all tokens from design system
-   Zero inline styles — all Tailwind classes
+   Redmi 9 optimized
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const faqs = [
@@ -39,6 +39,7 @@ function FAQItem({ faq }: { faq: { q: string; a: string } }) {
         "border border-[hsl(var(--border-default))] rounded-2xl overflow-hidden",
         "bg-[hsl(var(--surface-muted)/0.6)]",
         "transition-colors duration-300",
+        "motion-reduce:transition-none",
         open && "border-[hsl(var(--color-primary)/0.3)]",
       )}
     >
@@ -50,10 +51,12 @@ function FAQItem({ faq }: { faq: { q: string; a: string } }) {
           "px-6 py-5",
           "text-start font-semibold text-[hsl(var(--fg-primary))]",
           "transition-colors duration-150",
+          "motion-reduce:transition-none",
+          "min-h-[44px]",
         )}
         aria-expanded={open}
       >
-        <span>{faq.q}</span>
+        <span className="text-sm sm:text-base">{faq.q}</span>
         <span
           className={cn(
             "flex items-center justify-center shrink-0",
@@ -61,18 +64,23 @@ function FAQItem({ faq }: { faq: { q: string; a: string } }) {
             "border border-[hsl(var(--border-strong))]",
             "text-[hsl(var(--fg-secondary))]",
             "transition-transform duration-300",
+            "motion-reduce:transition-none",
             open && "rotate-45",
           )}
+          aria-hidden="true"
         >
           +
         </span>
       </button>
       <div
-        className="overflow-hidden transition-[height] duration-300"
+        className="overflow-hidden transition-[height] duration-300 motion-reduce:transition-none"
         style={{ height: open ? height : 0 }}
         aria-hidden={!open}
       >
-        <div ref={contentRef} className="px-6 pb-5 text-sm text-[hsl(var(--fg-secondary))] leading-relaxed">
+        <div
+          ref={contentRef}
+          className="px-6 pb-5 text-sm text-[hsl(var(--fg-secondary))] leading-relaxed"
+        >
           {faq.a}
         </div>
       </div>
@@ -97,9 +105,7 @@ export default function FaqScene() {
         {/* FAQ List */}
         <div className="space-y-3">
           {faqs.map((faq, i) => (
-            <div key={i}>
-              <FAQItem faq={faq} />
-            </div>
+            <FAQItem key={i} faq={faq} />
           ))}
         </div>
       </div>

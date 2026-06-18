@@ -1,71 +1,78 @@
 // apps/web/app/(dashboard)/invoices/[id]/InvoicePDFDownload.tsx
+"use client";
 
-"use client"
+import { useCallback, useState } from "react";
+import { FileDown, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { apiClient } from "@hisabche/api";
 
-import { useCallback, useState } from "react"
-import { FileDown, Loader2 } from "lucide-react"
-import { Button } from "@hisabche/ui"
-import { apiClient } from "@hisabche/api"
+/* ═══════════════════════════════════════════════════════════════════════════
+   InvoicePDFDownload v2 — Hisabche Design Language
+   Zero hardcoded colors — all tokens from design system
+   No external component dependencies (Button removed)
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 interface Invoice {
-  id?: string
+  id?: string;
 }
 
 interface Props {
-  invoice: Invoice
+  invoice: Invoice;
 }
 
+const outlineBtn =
+  "inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors duration-150 motion-reduce:transition-none disabled:opacity-40 disabled:cursor-not-allowed";
+
 export default function InvoicePDFDownload({ invoice }: Props) {
-  const invoiceId = invoice?.id ?? ""
-  const [loading, setLoading] = useState(false)
+  const invoiceId = invoice?.id ?? "";
+  const [loading, setLoading] = useState(false);
 
   const handleDownload = useCallback(async () => {
-    if (!invoiceId || loading) return
+    if (!invoiceId || loading) return;
 
     try {
-      setLoading(true)
+      setLoading(true);
 
-      // استفاده از apiClient که خودکار توکن را اضافه می‌کند
       const response = await apiClient.get(`/invoices/${invoiceId}/pdf`, {
-        responseType: 'blob',
-      })
+        responseType: "blob",
+      });
 
-      const blob = new Blob([response.data], { type: 'application/pdf' })
-      const blobUrl = window.URL.createObjectURL(blob)
+      const blob = new Blob([response.data], { type: "application/pdf" });
+      const blobUrl = window.URL.createObjectURL(blob);
 
-      const link = document.createElement("a")
-      link.href = blobUrl
-      link.download = `invoice-${invoiceId}.pdf`
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = `invoice-${invoiceId}.pdf`;
 
-      document.body.appendChild(link)
-      link.click()
+      document.body.appendChild(link);
+      link.click();
 
-      link.remove()
-      window.URL.revokeObjectURL(blobUrl)
+      link.remove();
+      window.URL.revokeObjectURL(blobUrl);
     } catch (error) {
-      console.error("PDF download failed", error)
-      alert("خطا در دانلود PDF. لطفاً دوباره وارد شوید.")
+      console.error("PDF download failed", error);
+      alert("خطا در دانلود PDF. لطفاً دوباره وارد شوید.");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [invoiceId, loading])
+  }, [invoiceId, loading]);
 
   return (
-    <Button
-      variant="outline"
-      size="sm"
+    <button
+      type="button"
       onClick={handleDownload}
       disabled={loading || !invoiceId}
       aria-label="دانلود PDF"
+      className={outlineBtn}
     >
       {loading ? (
-        <Loader2 className="size-4 animate-spin" aria-hidden />
+        <Loader2 className="size-4 animate-spin" aria-hidden="true" />
       ) : (
-        <FileDown className="size-4" aria-hidden />
+        <FileDown className="size-4" aria-hidden="true" />
       )}
-      <span className="hidden sm:inline ms-1.5">
+      <span className="hidden sm:inline">
         {loading ? "در حال دانلود..." : "PDF"}
       </span>
-    </Button>
-  )
+    </button>
+  );
 }

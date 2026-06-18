@@ -1,9 +1,18 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback } from "react";
-import { useScrollNarrative, setActiveSection, type NarrativeState, type SectionId } from "../../components/ui/landing/use-scroll-narrative-store";
+import {
+  useScrollNarrative,
+  setActiveSection,
+  type NarrativeState,
+  type SectionId,
+} from "../../components/ui/landing/use-scroll-narrative-store";
 import type { NavigationSection } from "../../lib/menu/navigation-core";
 import { getSectionRef } from "../../lib/menu/navigation-core";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NavigationProvider v2 — Clean typed context
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface NavigationState {
   activeSection: string;
@@ -14,15 +23,20 @@ export interface NavigationState {
   registerSection: (section: NavigationSection) => void;
 }
 
-export const NavigationContext = createContext<NavigationState | undefined>(undefined);
+export const NavigationContext = createContext<NavigationState | undefined>(
+  undefined,
+);
 
-export function NavigationProvider({ children, sections: initialSections }: { 
+export function NavigationProvider({
+  children,
+  sections: initialSections,
+}: {
   children: React.ReactNode;
   sections: NavigationSection[];
 }) {
   const [sections] = useState<NavigationSection[]>(initialSections);
   const { progress, activeSection, narrativeState } = useScrollNarrative();
-  
+
   const scrollProgress = Math.round(progress * 100);
 
   const registerSection = useCallback(() => {}, []);
@@ -31,20 +45,19 @@ export function NavigationProvider({ children, sections: initialSections }: {
     const element = getSectionRef(id);
     if (element) {
       element.scrollIntoView({ behavior: "smooth", block: "start" });
-      // 🔥 کلیک روی نوبار: مستقیم activeSection رو ست کن
       setActiveSection(id as SectionId);
     }
   }, []);
 
   return (
-    <NavigationContext.Provider 
-      value={{ 
-        activeSection, 
-        scrollProgress, 
-        narrativeState, 
-        setSection, 
-        sections, 
-        registerSection 
+    <NavigationContext.Provider
+      value={{
+        activeSection,
+        scrollProgress,
+        narrativeState,
+        setSection,
+        sections,
+        registerSection,
       }}
     >
       {children}

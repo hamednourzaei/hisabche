@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   ProductDetailPage v2 — Hisabche Design Language
+   ProductDetailPage v3 — Hisabche Design Language
    Zero hardcoded colors — all tokens from design system
    No external component dependencies
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -193,6 +193,7 @@ export function ProductDetailPage({
     if (validateForm()) onSave(editValues);
   };
 
+  // ── Loading ──
   if (isLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -204,6 +205,7 @@ export function ProductDetailPage({
     );
   }
 
+  // ── Not Found ──
   if (!product) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
@@ -222,7 +224,7 @@ export function ProductDetailPage({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* ── Header ── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           <button type="button" onClick={onBack} aria-label={t("common.back", "بازگشت")} className={ghostBtn}>
@@ -273,11 +275,13 @@ export function ProductDetailPage({
         </div>
       </div>
 
-      {/* Product details card */}
+      {/* ── Product Details Card ── */}
       <div className={cardBase}>
         <div className="p-6 sm:p-8 space-y-6">
           {editing ? (
+            /* ── Edit Form ── */
             <div className="space-y-4">
+              {/* Name */}
               <div>
                 <label className="block text-sm font-medium text-[hsl(var(--fg-primary))] mb-1.5">
                   {t("godam.productName", "نام محصول")}
@@ -286,11 +290,17 @@ export function ProductDetailPage({
                   type="text"
                   value={editValues.name}
                   onChange={(e) => handleEditChange("name", e.target.value)}
-                  placeholder={`${t("godam.productName", "نام محصول")} *`}
-                  className={inputBase}
+                  placeholder={t("godam.productNamePlaceholder", "نام محصول را وارد کنید")}
+                  className={cn(inputBase, errors.name && "border-[hsl(var(--color-destructive))]")}
                 />
-                {errors.name && <p className="mt-1 text-sm text-[hsl(var(--color-destructive))]">{errors.name}</p>}
+                {errors.name && (
+                  <p className="mt-1 text-sm text-[hsl(var(--color-destructive))]" role="alert">
+                    {errors.name}
+                  </p>
+                )}
               </div>
+
+              {/* Prices */}
               <div className="grid grid-cols-2 gap-4">
                 {(["sellPrice", "buyPrice"] as const).map((field) => (
                   <div key={field}>
@@ -302,12 +312,18 @@ export function ProductDetailPage({
                       step="0.01"
                       value={editValues[field]}
                       onChange={(e) => handleEditChange(field, parseFloat(e.target.value) || 0)}
-                      className={inputBase}
+                      className={cn(inputBase, errors[field] && "border-[hsl(var(--color-destructive))]")}
                     />
-                    {errors[field] && <p className="mt-1 text-sm text-[hsl(var(--color-destructive))]">{errors[field]}</p>}
+                    {errors[field] && (
+                      <p className="mt-1 text-sm text-[hsl(var(--color-destructive))]" role="alert">
+                        {errors[field]}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
+
+              {/* Quantity, Min Stock, Unit */}
               <div className="grid grid-cols-3 gap-4">
                 {(["quantity", "minStockLevel"] as const).map((field) => (
                   <div key={field}>
@@ -318,9 +334,13 @@ export function ProductDetailPage({
                       type="number"
                       value={editValues[field]}
                       onChange={(e) => handleEditChange(field, parseInt(e.target.value) || 0)}
-                      className={inputBase}
+                      className={cn(inputBase, errors[field] && "border-[hsl(var(--color-destructive))]")}
                     />
-                    {errors[field] && <p className="mt-1 text-sm text-[hsl(var(--color-destructive))]">{errors[field]}</p>}
+                    {errors[field] && (
+                      <p className="mt-1 text-sm text-[hsl(var(--color-destructive))]" role="alert">
+                        {errors[field]}
+                      </p>
+                    )}
                   </div>
                 ))}
                 <div>
@@ -342,6 +362,7 @@ export function ProductDetailPage({
               </div>
             </div>
           ) : (
+            /* ── View Mode ── */
             <>
               <div className="grid grid-cols-2 gap-6 sm:grid-cols-4">
                 <InfoBox icon={DollarSign} label={t("godam.sellPrice", "قیمت فروش")} value={`${fmt(product.sellPrice)} AFN`} />
@@ -370,7 +391,7 @@ export function ProductDetailPage({
         </div>
       </div>
 
-      {/* Profit cards */}
+      {/* ── Profit Cards ── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {[
           { value: product.quantity, label: t("godam.currentStock", "موجودی فعلی"), className: "text-[hsl(var(--fg-primary))]" },

@@ -5,6 +5,7 @@ import { useCallback } from "react";
 import { NavigationProvider } from "../../../hooks/menu/use-navigation-state";
 import { TopNav } from "../navigation/top-nav";
 import { NavigationRegistry } from "../navigation/navigation-registry";
+import { cn } from "@/lib/utils";
 
 import CinematicHero from "./cinematic-hero";
 import PainScene from "./pain-scene";
@@ -14,6 +15,12 @@ import SocialScene from "./social-scene";
 import FaqScene from "./faq-scene";
 import CTAScene from "./cta-scene";
 import StatsSection from "./stats-section";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LandingPage v3 — Hisabche Design Language
+   Zero hardcoded colors — all tokens from design system
+   Zero inline styles
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 const NAVIGATION_SECTIONS = [
   { id: "hero",         label: "خانه",    narrative: "frustration" as const },
@@ -61,18 +68,18 @@ export function LandingPage() {
             <CTAScene onNavigateLogin={navigateLogin} />
           </NavigationRegistry>
 
+          {/* Footer */}
           <footer
-            className="px-4 py-12 text-center"
-            style={{ borderTop: "1px solid hsl(var(--border-default))" }}
+            className={cn(
+              "px-4 py-12 text-center",
+              "border-t border-[hsl(var(--border-default))]",
+            )}
           >
-            <div
-              className="mb-2 text-lg font-bold"
-              style={{ color: "hsl(var(--fg-primary))" }}
-            >
+            <div className="mb-2 text-lg font-bold text-[hsl(var(--fg-primary))]">
               حسابچه
-              <span style={{ color: "hsl(var(--color-primary))" }}>.</span>
+              <span className="text-[hsl(var(--color-primary))]">.</span>
             </div>
-            <p style={{ fontSize: "var(--text-caption)", color: "hsl(var(--fg-tertiary))" }}>
+            <p className="text-[length:var(--text-caption)] text-[hsl(var(--fg-tertiary))]">
               حافظه‌ی زنده‌ی کسب‌وکار تو · © ۱۴۰۵
             </p>
           </footer>

@@ -16,7 +16,25 @@
   --motion-scale: 1;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
-
+/* ── Legacy shadcn/ui token aliases (for tailwind.config compatibility) ── */
+--hisab-primary: var(--color-primary);
+--hisab-primary-fg: var(--color-primary-fg);
+--hisab-destructive: var(--color-destructive);
+--hisab-destructive-fg: var(--color-destructive-fg);
+--hisab-success: var(--color-success);
+--hisab-success-fg: var(--color-success-fg);
+--hisab-warning: var(--color-warning);
+--hisab-warning-fg: var(--color-warning-fg);
+--hisab-background: var(--surface-base);
+--hisab-foreground: var(--fg-primary);
+--hisab-card: var(--surface-elevated);
+--hisab-muted: var(--surface-muted);
+--hisab-muted-fg: var(--fg-secondary);
+--hisab-border: var(--border-default);
+--hisab-ring: var(--color-primary);
+--color-purple: var(--color-primary);
+--color-cyan: 190 90% 50%;
+--color-emerald: 150 70% 45%;
   /* Type scale */
   --text-hero: clamp(2.25rem, 5vw, 4rem);
   --text-h1: clamp(1.75rem, 4vw, 2.5rem);
@@ -73,12 +91,20 @@
   --surface-base: 240 20% 6%; --surface-muted: 240 10% 10%;
   --surface-elevated: 240 8% 12%; --border-default: 240 10% 18%;
   --fg-secondary: 240 5% 58%; --fg-tertiary: 240 5% 55%;
+  --hisab-ring: var(--color-primary);
+--color-purple: var(--color-primary);
+--color-cyan: 190 90% 50%;
+--color-emerald: 150 70% 45%;
 }
 :root[data-theme="light"], .light {
   --surface-base: 240 15% 98%; --surface-muted: 240 8% 94%;
   --surface-elevated: 0 0% 100%; --fg-primary: 240 10% 6%;
   --fg-secondary: 240 6% 42%; --fg-tertiary: 240 5% 48%;
   --border-default: 240 10% 86%; --border-strong: 240 10% 78%;
+  --hisab-ring: var(--color-primary);
+--color-purple: var(--color-primary);
+--color-cyan: 190 90% 45%;
+--color-emerald: 150 70% 40%;
 }
 
 /* ───────────────────────────────────────────────────────────────────────────

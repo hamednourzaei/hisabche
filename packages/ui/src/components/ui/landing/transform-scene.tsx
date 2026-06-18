@@ -4,9 +4,9 @@ import { useSceneObserver } from "./use-scene-observer";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   TransformScene v2 — Hisabche Design Language
+   TransformScene v3 — Hisabche Design Language
    Zero hardcoded colors — all tokens from design system
-   Zero inline styles — all Tailwind classes (except dynamic delays)
+   Redmi 9 optimized
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const solutions = [
@@ -35,6 +35,7 @@ export default function TransformScene() {
         <div
           className={cn(
             "text-center mb-14 transition-all duration-500",
+            "motion-reduce:transition-none",
             animated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5",
           )}
         >
@@ -60,6 +61,7 @@ export default function TransformScene() {
                 "border border-[hsl(var(--color-primary)/0.2)]",
                 "bg-[hsl(var(--color-primary)/0.05)]",
                 "transition-all duration-500",
+                "motion-reduce:transition-none",
                 animated
                   ? "opacity-100 translate-y-0"
                   : "opacity-0 translate-y-6",

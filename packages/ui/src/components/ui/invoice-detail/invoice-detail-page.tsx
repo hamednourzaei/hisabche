@@ -16,9 +16,9 @@ import {
 import InvoicePDFDownload from "./InvoicePDFDownload";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   InvoiceDetailPage v2 — Hisabche Design Language
+   InvoiceDetailPage v3 — Hisabche Design Language
    Zero hardcoded colors — all tokens from design system
-   No external component dependencies (Button, Badge, Card removed)
+   No external component dependencies
    ═══════════════════════════════════════════════════════════════════════════ */
 
 interface InvoiceItem {
@@ -74,7 +74,6 @@ const statusBadgeStyles: Record<string, string> = {
     "bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))] border-[hsl(var(--border-default))]",
 };
 
-// Shared outline button styles
 const outlineBtn =
   "inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors duration-150 motion-reduce:transition-none";
 const ghostBtn =
@@ -139,6 +138,8 @@ export function InvoiceDetailPage({
 
   const badgeStyle =
     statusBadgeStyles[statusVariant(status)] ?? statusBadgeStyles.secondary;
+
+  const remaining = total - paidAmount;
 
   return (
     <div className="space-y-6">
@@ -307,13 +308,13 @@ export function InvoiceDetailPage({
                     </td>
                   </tr>
                 )}
-                {total - paidAmount > 0 && (
+                {remaining > 0 && (
                   <tr>
                     <td colSpan={4} className="px-2 py-2 text-end font-medium text-[hsl(var(--color-destructive))]">
                       {t("faktoor.remaining", "باقیمانده")}
                     </td>
                     <td className="px-2 py-2 text-end font-medium text-[hsl(var(--color-destructive))] tabular-nums">
-                      {(total - paidAmount).toLocaleString()} {currency}
+                      {remaining.toLocaleString()} {currency}
                     </td>
                   </tr>
                 )}

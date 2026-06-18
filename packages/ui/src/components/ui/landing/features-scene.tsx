@@ -4,9 +4,9 @@ import { useSceneObserver } from "./use-scene-observer";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   FeaturesScene v2 — Hisabche Design Language
+   FeaturesScene v3 — Hisabche Design Language
    Zero hardcoded colors — all tokens from design system
-   Zero inline styles — all Tailwind classes
+   Redmi 9 optimized
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const features = [
@@ -38,6 +38,7 @@ export default function FeaturesScene() {
         <div
           className={cn(
             "text-center mb-16 transition-all duration-500",
+            "motion-reduce:transition-none",
             animated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5",
           )}
         >
@@ -63,6 +64,7 @@ export default function FeaturesScene() {
                 "border border-[hsl(var(--border-default))]",
                 "bg-[hsl(var(--surface-muted)/0.4)]",
                 "transition-all duration-500",
+                "motion-reduce:transition-none",
                 animated
                   ? "opacity-100 translate-y-0 scale-100"
                   : "opacity-0 translate-y-4 scale-[0.97]",

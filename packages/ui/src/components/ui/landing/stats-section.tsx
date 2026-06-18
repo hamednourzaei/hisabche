@@ -4,9 +4,9 @@ import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   StatsSection v2 — Hisabche Design Language
+   StatsSection v3 — Hisabche Design Language
    Zero hardcoded colors — all tokens from design system
-   Zero CSS module dependency
+   Redmi 9 optimized
    ═══════════════════════════════════════════════════════════════════════════ */
 
 interface StatItem {
@@ -62,7 +62,7 @@ function AnimatedCounter({ end, label }: StatItem) {
         {count.toLocaleString("fa-IR")}
         <span className="text-[hsl(var(--color-primary))]">+</span>
       </div>
-      <div className="text-xs sm:text-sm text-[hsl(var(--fg-tertiary))]">
+      <div className="text-xs sm:text-sm text-[hsl(var(--fg-secondary))]">
         {label}
       </div>
     </div>
