@@ -220,7 +220,7 @@ export function BottomNav({
   const { t } = useTranslation();
 
   return (
-    <nav className="fixed bottom-4 start-1/2 -translate-x-1/2 z-50 w-[calc(100%-32px)] max-w-[480px] lg:hidden">
+    <nav className="fixed bottom-4 left-4 right-4 z-50 max-w-[480px] mx-auto lg:hidden">
       <div
         className={cn(
           "relative h-14",
