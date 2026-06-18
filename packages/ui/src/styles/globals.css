@@ -1,10 +1,12 @@
 /* ═══════════════════════════════════════════════════════════════════════════
    globals.css — CRITICAL ONLY (< 12KB inline)
    ═══════════════════════════════════════════════════════════════════════════ */
-
+@import './cinematic-motion.css';
+@import './lite-mode.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
 
 /* ───────────────────────────────────────────────────────────────────────────
    DESIGN TOKENS — Single Source of Truth
