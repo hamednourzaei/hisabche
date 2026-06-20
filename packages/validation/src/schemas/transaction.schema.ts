@@ -1,5 +1,12 @@
 import { z } from 'zod'
-import { uuidSchema, currencyCodeSchema, transactionTypeSchema, positiveNumberSchema, optionalStringSchema, isoDateSchema, paginationSchema } from './common.schema'
+import {
+  uuidSchema,
+  currencyCodeSchema,
+  transactionTypeSchema,
+  positiveNumberSchema,
+  optionalStringSchema,
+  isoDateSchema,
+} from './common.schema'
 
 export const transactionSchema = z.object({
   id: uuidSchema.optional(),
@@ -17,8 +24,17 @@ export const transactionSchema = z.object({
 
 export type Transaction = z.infer<typeof transactionSchema>
 
-export const createTransactionSchema = transactionSchema.omit({ id: true, createdAt: true, syncedAt: true })
+export const createTransactionSchema = transactionSchema.omit({
+  id: true,
+  createdAt: true,
+  syncedAt: true,
+})
+
 export type CreateTransaction = z.infer<typeof createTransactionSchema>
+
+// ============================================
+// Transaction Filters (اصلاح‌شده با تبدیل خودکار Query String)
+// ============================================
 
 export const transactionFiltersSchema = z.object({
   search: z.string().optional(),
@@ -28,8 +44,18 @@ export const transactionFiltersSchema = z.object({
   currency: currencyCodeSchema.optional(),
   dateFrom: isoDateSchema.optional(),
   dateTo: isoDateSchema.optional(),
-  ...paginationSchema.shape,
+  page: z
+    .union([z.number(), z.string()])
+    .transform((val) => (typeof val === 'string' ? parseInt(val, 10) : val))
+    .default(1),
+  limit: z
+    .union([z.number(), z.string()])
+    .transform((val) => (typeof val === 'string' ? parseInt(val, 10) : val))
+    .default(20),
+  sortBy: z.string().optional(),
+  sortDirection: z.enum(['asc', 'desc']).optional().default('desc'),
 })
+
 export type TransactionFilters = z.infer<typeof transactionFiltersSchema>
 
 export const ledgerSummarySchema = z.object({
@@ -40,4 +66,5 @@ export const ledgerSummarySchema = z.object({
   totalCredit: z.number(),
   closingBalance: z.number(),
 })
+
 export type LedgerSummary = z.infer<typeof ledgerSummarySchema>

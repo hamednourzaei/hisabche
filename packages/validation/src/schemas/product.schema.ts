@@ -11,7 +11,6 @@ import {
   optionalStringSchema,
   productCategorySchema,
   unitSchema,
-  paginationSchema,
 } from './common.schema'
 
 // ============================================
@@ -68,18 +67,39 @@ export const updateProductSchema = productSchema.partial().extend({
 export type UpdateProduct = z.infer<typeof updateProductSchema>
 
 // ============================================
-// Product Filters
+// Product Filters (اصلاح‌شده با تبدیل خودکار Query String)
 // ============================================
 
 export const productFiltersSchema = z.object({
   search: z.string().optional(),
   category: productCategorySchema.optional(),
-  isActive: z.boolean().optional(),
-  lowStock: z.boolean().optional(),
-  minPrice: nonNegativeNumberSchema.optional(),
-  maxPrice: positiveNumberSchema.optional(),
+  isActive: z
+    .union([z.boolean(), z.string()])
+    .transform((val) => (typeof val === 'string' ? val === 'true' : val))
+    .optional(),
+  lowStock: z
+    .union([z.boolean(), z.string()])
+    .transform((val) => (typeof val === 'string' ? val === 'true' : val))
+    .optional(),
+  minPrice: z
+    .union([z.number(), z.string()])
+    .transform((val) => (typeof val === 'string' ? parseFloat(val) : val))
+    .optional(),
+  maxPrice: z
+    .union([z.number(), z.string()])
+    .transform((val) => (typeof val === 'string' ? parseFloat(val) : val))
+    .optional(),
   barcode: z.string().optional(),
-  ...paginationSchema.shape,
+  page: z
+    .union([z.number(), z.string()])
+    .transform((val) => (typeof val === 'string' ? parseInt(val, 10) : val))
+    .default(1),
+  limit: z
+    .union([z.number(), z.string()])
+    .transform((val) => (typeof val === 'string' ? parseInt(val, 10) : val))
+    .default(20),
+  sortBy: z.string().optional(),
+  sortDirection: z.enum(['asc', 'desc']).optional().default('desc'),
 })
 
 export type ProductFilters = z.infer<typeof productFiltersSchema>

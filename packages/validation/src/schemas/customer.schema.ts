@@ -10,7 +10,6 @@ import {
   nonEmptyStringSchema,
   optionalStringSchema,
   addressSchema,
-  paginationSchema,
 } from './common.schema'
 
 // ============================================
@@ -71,15 +70,27 @@ export const updateSupplierSchema = updateCustomerSchema
 export type UpdateSupplier = z.infer<typeof updateSupplierSchema>
 
 // ============================================
-// Customer Filters (اصلاح‌شده برای جلوگیری از خطای JSON Schema)
+// Customer Filters (اصلاح‌شده با تبدیل خودکار Query String)
 // ============================================
 
 export const customerFiltersSchema = z.object({
   search: z.string().optional(),
-  isActive: z.boolean().optional(),
-  hasBalance: z.boolean().optional(),
-  page: z.number().int().min(1).default(1),
-  limit: z.number().int().min(1).max(100).default(20),
+  isActive: z
+    .union([z.boolean(), z.string()])
+    .transform((val) => (typeof val === 'string' ? val === 'true' : val))
+    .optional(),
+  hasBalance: z
+    .union([z.boolean(), z.string()])
+    .transform((val) => (typeof val === 'string' ? val === 'true' : val))
+    .optional(),
+  page: z
+    .union([z.number(), z.string()])
+    .transform((val) => (typeof val === 'string' ? parseInt(val, 10) : val))
+    .default(1),
+  limit: z
+    .union([z.number(), z.string()])
+    .transform((val) => (typeof val === 'string' ? parseInt(val, 10) : val))
+    .default(20),
   sortBy: z.string().optional(),
   sortDirection: z.enum(['asc', 'desc']).optional().default('desc'),
 })

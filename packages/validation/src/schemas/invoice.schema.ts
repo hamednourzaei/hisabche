@@ -13,7 +13,6 @@ import {
   percentageSchema,
   nonEmptyStringSchema,
   optionalStringSchema,
-  paginationSchema,
 } from './common.schema'
 
 // ============================================
@@ -102,7 +101,7 @@ export const updateInvoiceSchema = invoiceSchema.partial().extend({
 export type UpdateInvoice = z.infer<typeof updateInvoiceSchema>
 
 // ============================================
-// Invoice Filters
+// Invoice Filters (اصلاح‌شده با تبدیل خودکار Query String)
 // ============================================
 
 export const invoiceFiltersSchema = z.object({
@@ -114,9 +113,24 @@ export const invoiceFiltersSchema = z.object({
   currency: currencyCodeSchema.optional(),
   dateFrom: isoDateSchema.optional(),
   dateTo: isoDateSchema.optional(),
-  minTotal: positiveNumberSchema.optional(),
-  maxTotal: positiveNumberSchema.optional(),
-  ...paginationSchema.shape,
+  minTotal: z
+    .union([z.number(), z.string()])
+    .transform((val) => (typeof val === 'string' ? parseFloat(val) : val))
+    .optional(),
+  maxTotal: z
+    .union([z.number(), z.string()])
+    .transform((val) => (typeof val === 'string' ? parseFloat(val) : val))
+    .optional(),
+  page: z
+    .union([z.number(), z.string()])
+    .transform((val) => (typeof val === 'string' ? parseInt(val, 10) : val))
+    .default(1),
+  limit: z
+    .union([z.number(), z.string()])
+    .transform((val) => (typeof val === 'string' ? parseInt(val, 10) : val))
+    .default(20),
+  sortBy: z.string().optional(),
+  sortDirection: z.enum(['asc', 'desc']).optional().default('desc'),
 })
 
 export type InvoiceFilters = z.infer<typeof invoiceFiltersSchema>

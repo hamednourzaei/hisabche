@@ -16,13 +16,17 @@ import { AuthService } from '../services/auth.service'
 import { AuthError } from '../errors/auth.error'
 import { authenticate } from '../middleware/auth.middleware'
 
-// ✅ تنظیمات برای حذف $schema از خروجی
-const toJsonSchema = (schema: z.ZodTypeAny) => {
-  const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
-  delete result.$schema
+import type { JsonSchema7Type } from 'zod-to-json-schema'
+
+const toJsonSchema = (schema: z.ZodTypeAny): JsonSchema7Type => {
+  const result = zodToJsonSchema(schema, {
+    target: 'jsonSchema7',
+  }) as JsonSchema7Type
+
+  delete (result as any).$schema
+
   return result
 }
-
 export async function authRoutes(fastify: FastifyInstance) {
   const authService = new AuthService()
 
