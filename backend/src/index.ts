@@ -8,7 +8,7 @@ import rateLimit from '@fastify/rate-limit'
 import dotenv from 'dotenv'
 
 // Auth
-import { authenticate } from './middleware/auth'
+import { authenticate } from './middleware/auth.middleware'
 
 // Routes
 import { syncRoutes } from './routes/sync.routes'

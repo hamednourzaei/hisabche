@@ -27,7 +27,7 @@ export const COMMAND_ITEMS = [
   { id: 'invoices',     labelKey: 'nav.faktoor',      descriptionKey: 'nav.faktoor.description',      icon: '📋', shortcut: '', path: '/invoices' },
   { id: 'baqidari',     labelKey: 'nav.baqidari',     descriptionKey: 'nav.baqidari.description',     icon: '📒', shortcut: '', path: '/baqidari' },
   { id: 'customers',    labelKey: 'baqidari.addCustomer', descriptionKey: 'baqidari.addCustomerDesc', icon: '👤', shortcut: '', path: '/baqidari?add=true' },
- { id: 'workspace', labelKey: 'workspace.title', descriptionKey: 'workspace.description', icon: '🏢', shortcut: '', path: '/workspace' },
+  { id: 'workspace',    labelKey: 'workspace.title',  descriptionKey: 'workspace.description',         icon: '🏢', shortcut: '', path: '/workspace' },
   { id: 'settings',     labelKey: 'nav.settings',     descriptionKey: 'nav.settings.description',     icon: '⚙️', shortcut: '', path: '/settings' },
   { id: 'sync',         labelKey: 'sync.title',       descriptionKey: 'sync.description',             icon: '🔄', shortcut: '', path: '/sync-center' },
 ] as const

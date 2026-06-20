@@ -1,0 +1,370 @@
+// ============================================
+// backend/src/services/invoice.service.ts
+// ============================================
+
+import { supabase } from '../db'
+import {
+  CreateInvoice,
+  UpdateInvoice,
+  InvoiceFilters,
+  InvoiceItem,
+} from '@hisabche/validation'
+import { DatabaseError, NotFoundError } from '../errors/database.error'
+
+export class InvoiceService {
+  // ─── List ────────────────────────────────────────────────
+  async list(userId: string, filters: InvoiceFilters) {
+    const {
+      search,
+      type,
+      status,
+      customerId,
+      supplierId,
+      currency,
+      dateFrom,
+      dateTo,
+      minTotal,
+      maxTotal,
+      page,
+      limit,
+      sortBy,
+      sortDirection,
+    } = filters
+    const from = (page - 1) * limit
+    const to = from + limit - 1
+
+    let query = supabase
+      .from('invoices')
+      .select('*, invoice_items(*)', { count: 'exact' })
+      .eq('user_id', userId)
+      .order(sortBy || 'created_at', { ascending: sortDirection === 'asc' })
+      .range(from, to)
+
+    if (search) {
+      query = query.ilike('invoice_number', `%${search}%`)
+    }
+
+    if (type) {
+      query = query.eq('type', type)
+    }
+
+    if (status) {
+      query = query.eq('status', status)
+    }
+
+    if (customerId) {
+      query = query.eq('customer_id', customerId)
+    }
+
+    if (supplierId) {
+      query = query.eq('supplier_id', supplierId)
+    }
+
+    if (currency) {
+      query = query.eq('currency', currency)
+    }
+
+    if (dateFrom) {
+      query = query.gte('date', dateFrom)
+    }
+
+    if (dateTo) {
+      query = query.lte('date', dateTo)
+    }
+
+    if (minTotal !== undefined) {
+      query = query.gte('total', minTotal)
+    }
+
+    if (maxTotal !== undefined) {
+      query = query.lte('total', maxTotal)
+    }
+
+    const { data, error, count } = await query
+
+    if (error) {
+      throw new DatabaseError('Failed to fetch invoices', error)
+    }
+
+    // Get summary data
+    const summary = await this.getSummary(userId)
+
+    return {
+      invoices: data || [],
+      total: count || 0,
+      page,
+      limit,
+      summary,
+    }
+  }
+
+  // ─── Get By ID ──────────────────────────────────────────
+  async getById(id: string, userId: string) {
+    const { data: invoice, error } = await supabase
+      .from('invoices')
+      .select('*, invoice_items(*)')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single()
+
+    if (error || !invoice) {
+      throw new NotFoundError('Invoice')
+    }
+
+    return invoice
+  }
+
+  // ─── Create ─────────────────────────────────────────────
+  async create(userId: string, data: CreateInvoice) {
+    // 1. Generate invoice number
+    const invoiceNumber = await this.generateInvoiceNumber(userId)
+
+    // 2. Insert invoice
+    const { data: invoice, error: invoiceError } = await supabase
+      .from('invoices')
+      .insert({
+        invoice_number: invoiceNumber,
+        type: data.type,
+        date: data.date || new Date().toISOString(),
+        due_date: data.dueDate || null,
+        customer_id: data.customerId || null,
+        supplier_id: data.supplierId || null,
+        subtotal: data.subtotal || 0,
+        discount_total: data.discountTotal || 0,
+        discount_type: data.discountType || 'fixed',
+        tax_rate: data.taxRate || 0,
+        tax_total: data.taxTotal || 0,
+        total: data.total || 0,
+        paid_amount: data.paidAmount || 0,
+        payment_method: data.paymentMethod || 'cash',
+        currency: data.currency || 'AFN',
+        status: data.paidAmount >= data.total ? 'completed' : 'pending',
+        notes: data.notes || '',
+        reference: data.reference || '',
+        user_id: userId,
+      })
+      .select()
+      .single()
+
+    if (invoiceError || !invoice) {
+      throw new DatabaseError('Failed to create invoice', invoiceError)
+    }
+
+    // 3. Insert items
+    if (data.items && data.items.length > 0) {
+      const items = data.items.map((item) => ({
+        invoice_id: invoice.id,
+        product_id: item.productId,
+        product_name: item.productName,
+        quantity: item.quantity,
+        unit_price: item.unitPrice,
+        discount: item.discount || 0,
+        total_price: item.totalPrice,
+        notes: item.notes || '',
+        user_id: userId,
+      }))
+
+      const { error: itemsError } = await supabase
+        .from('invoice_items')
+        .insert(items)
+
+      if (itemsError) {
+        // Rollback invoice
+        await supabase.from('invoices').delete().eq('id', invoice.id)
+        throw new DatabaseError('Failed to create invoice items', itemsError)
+      }
+
+      // 4. Update stock for sale invoices
+      if (data.type === 'sale') {
+        for (const item of data.items) {
+          if (item.productId) {
+            await this.updateStock(item.productId, item.quantity, userId)
+          }
+        }
+      }
+    }
+
+    // 5. Create transaction for unpaid amount
+    if (data.customerId && data.paidAmount < data.total) {
+      const remaining = data.total - data.paidAmount
+      await supabase.from('transactions').insert({
+        customer_id: data.customerId,
+        type: 'sale',
+        amount: remaining,
+        currency: data.currency || 'AFN',
+        description: `Invoice ${invoiceNumber}`,
+        reference: invoice.id,
+        date: new Date().toISOString(),
+        user_id: userId,
+      })
+    }
+
+    return this.getById(invoice.id, userId)
+  }
+
+  // ─── Update ─────────────────────────────────────────────
+  async update(id: string, userId: string, data: UpdateInvoice) {
+    const updates: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+    }
+
+    if (data.status !== undefined) updates.status = data.status
+    if (data.paidAmount !== undefined) updates.paid_amount = data.paidAmount
+    if (data.total !== undefined) updates.total = data.total
+    if (data.notes !== undefined) updates.notes = data.notes
+    if (data.reference !== undefined) updates.reference = data.reference
+
+    const { data: invoice, error } = await supabase
+      .from('invoices')
+      .update(updates)
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select()
+      .single()
+
+    if (error) {
+      throw new DatabaseError('Failed to update invoice', error)
+    }
+
+    if (!invoice) {
+      throw new NotFoundError('Invoice')
+    }
+
+    return invoice
+  }
+
+  // ─── Delete ─────────────────────────────────────────────
+  async delete(id: string, userId: string): Promise<void> {
+    // Delete items first
+    await supabase.from('invoice_items').delete().eq('invoice_id', id)
+
+    // Delete invoice
+    const { error } = await supabase
+      .from('invoices')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId)
+
+    if (error) {
+      throw new DatabaseError('Failed to delete invoice', error)
+    }
+  }
+
+  // ─── Get Items ──────────────────────────────────────────
+  async getItems(invoiceId: string, userId: string) {
+    const { data, error } = await supabase
+      .from('invoice_items')
+      .select('*')
+      .eq('invoice_id', invoiceId)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true })
+
+    if (error) {
+      throw new DatabaseError('Failed to fetch invoice items', error)
+    }
+
+    return data || []
+  }
+
+  // ─── Get Summary ────────────────────────────────────────
+  async getSummary(userId: string) {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+
+    // Today's sales
+    const { data: salesData } = await supabase
+      .from('invoices')
+      .select('total')
+      .eq('user_id', userId)
+      .gte('created_at', today.toISOString())
+      .lt('created_at', tomorrow.toISOString())
+
+    const todaySales =
+      salesData?.reduce((sum, inv) => sum + (inv.total || 0), 0) || 0
+
+    // Total debt
+    const { data: debtData } = await supabase
+      .from('invoices')
+      .select('total, paid_amount')
+      .eq('user_id', userId)
+      .neq('status', 'paid')
+
+    const totalDebt =
+      debtData?.reduce((sum, inv) => {
+        const debt = (inv.total || 0) - (inv.paid_amount || 0)
+        return sum + Math.max(0, debt)
+      }, 0) || 0
+
+    // Low stock count
+    const { data: stockData } = await supabase
+      .from('products')
+      .select('quantity, min_stock_level')
+      .eq('user_id', userId)
+
+    const lowStockCount =
+      stockData?.filter((product) => {
+        const qty = product.quantity || 0
+        const min = product.min_stock_level || 0
+        return min > 0 && qty <= min
+      }).length || 0
+
+    return {
+      todaySales,
+      totalDebt,
+      lowStockCount,
+    }
+  }
+
+  // ─── Private Helpers ────────────────────────────────────
+  private async generateInvoiceNumber(userId: string): Promise<string> {
+    const { count } = await supabase
+      .from('invoices')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+
+    const nextNum = (count || 0) + 1
+    return `INV-${nextNum.toString().padStart(6, '0')}`
+  }
+
+  // ✅ نسخه اصلاح‌شده updateStock (بدون استفاده از supabase.raw)
+  private async updateStock(
+    productId: string,
+    quantity: number,
+    userId: string
+  ): Promise<void> {
+    // ابتدا محصول فعلی را دریافت کن
+    const { data: product, error: fetchError } = await supabase
+      .from('products')
+      .select('quantity')
+      .eq('id', productId)
+      .single()
+
+    if (fetchError || !product) {
+      throw new DatabaseError('Product not found for stock update', fetchError)
+    }
+
+    // مقدار جدید را محاسبه کن (نباید منفی شود)
+    const newQuantity = Math.max(0, product.quantity - quantity)
+
+    // بروزرسانی کن
+    const { error: updateError } = await supabase
+      .from('products')
+      .update({ quantity: newQuantity })
+      .eq('id', productId)
+
+    if (updateError) {
+      throw new DatabaseError('Failed to update stock', updateError)
+    }
+
+    // Record stock movement
+    await supabase.from('stock_movements').insert({
+      product_id: productId,
+      type: 'sale',
+      quantity: -quantity,
+      reference_type: 'invoice',
+      user_id: userId,
+    })
+  }
+}

@@ -1,3 +1,7 @@
+// ============================================
+// backend/src/middleware/auth.ts
+// ============================================
+
 import { FastifyRequest, FastifyReply } from 'fastify'
 import { supabase } from '../db'
 
@@ -18,3 +22,6 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
   ;(request as any).user = user
   ;(request as any).userId = user.id
 }
+
+// برای راحتی، به عنوان preHandler هم کار می‌کنه
+export const authPreHandler = authenticate

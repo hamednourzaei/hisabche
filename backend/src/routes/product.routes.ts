@@ -1,120 +1,185 @@
+// ============================================
+// backend/src/routes/product.routes.ts
+// ============================================
+
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
-import { supabase } from '../db'
+import { z } from 'zod'
+import {
+  createProductSchema,
+  updateProductSchema,
+  productFiltersSchema,
+  CreateProduct,
+  UpdateProduct,
+  ProductFilters,
+} from '@hisabche/validation'
+import { ProductService } from '../services/product.service'
+import { authenticate } from '../middleware/auth.middleware'  // ✅ تغییر از verifyToken به authenticate
+import { NotFoundError } from '../errors/database.error'
 
 export async function productRoutes(fastify: FastifyInstance) {
+  const productService = new ProductService()
 
-  // GET /api/products
-  fastify.get('/api/products', async (request: FastifyRequest, reply: FastifyReply) => {
-    const query  = request.query as Record<string, string>
-    const search = query.search ?? ''
-    const page   = Math.max(1, parseInt(query.page  ?? '1'))
-    const limit  = Math.min(100, parseInt(query.limit ?? '20'))
-    const from   = (page - 1) * limit
-    const to     = from + limit - 1
-
-    let q = supabase
-      .from('products')
-      .select('*', { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(from, to)
-
-    if (search) {
-      q = q.ilike('name', `%${search}%`)
+  // ─── GET /api/products ──────────────────────────────────
+  fastify.get('/api/products', {
+    preHandler: [authenticate],  // ✅ تغییر از verifyToken به authenticate
+    schema: {
+      querystring: productFiltersSchema,
+      response: {
+        200: z.object({
+          products: z.array(z.any()),
+          total: z.number(),
+          page: z.number(),
+          limit: z.number(),
+        }),
+        400: z.object({ error: z.string(), details: z.any().optional() }),
+      },
+    },
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const query = productFiltersSchema.parse(request.query)
+      const userId = (request as any).userId
+      const result = await productService.list(userId, query)
+      return reply.send(result)
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return reply.code(400).send({
+          error: 'Validation failed',
+          details: err.errors,
+        })
+      }
+      fastify.log.error(err)
+      return reply.code(500).send({ error: 'Failed to fetch products' })
     }
+  })
 
-    const { data, error, count } = await q
-
-    if (error) {
-      fastify.log.error(error)
-      return reply.code(500).send({ error: error.message })
+  // ─── GET /api/products/:id ─────────────────────────────
+  fastify.get('/api/products/:id', {
+    preHandler: [authenticate],  // ✅ تغییر از verifyToken به authenticate
+    schema: {
+      params: z.object({ id: z.string().uuid() }),
+      response: {
+        200: z.any(),
+        404: z.object({ error: z.string() }),
+      },
+    },
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const { id } = request.params as { id: string }
+      const userId = (request as any).userId
+      const product = await productService.getById(id, userId)
+      return reply.send(product)
+    } catch (err) {
+      if (err instanceof NotFoundError) {
+        return reply.code(404).send({ error: err.message })
+      }
+      fastify.log.error(err)
+      return reply.code(500).send({ error: 'Failed to fetch product' })
     }
-
-    return { products: data, total: count, page, limit }
   })
 
-  // POST /api/products
-  fastify.post('/api/products', async (request: FastifyRequest, reply: FastifyReply) => {
-    const body = request.body as Record<string, unknown>
-    const userId = (request as any).userId
-
-    const { data, error } = await supabase
-      .from('products')
-      .insert({
-        name:            String(body.name           ?? 'بدون نام'),
-        barcode:         String(body.barcode         ?? ''),
-        sku:             String(body.sku             ?? ''),
-        category:        String(body.category        ?? 'general'),
-        quantity:        Number(body.quantity         ?? 0),
-        unit:            String(body.unit            ?? 'piece'),
-        buy_price:       String(body.buyPrice         ?? '0'),
-        sell_price:      String(body.sellPrice        ?? '0'),
-        wholesale_price: String(body.wholesalePrice   ?? '0'),
-        min_stock_level: Number(body.minStockLevel    ?? 5),
-        description:     String(body.description     ?? ''),
-        is_active:       body.isActive !== false,
-        user_id:         userId,
-      })
-      .select()
-      .single()
-
-    if (error) {
-      fastify.log.error(error)
-      return reply.code(500).send({ error: error.message })
+  // ─── POST /api/products ─────────────────────────────────
+  fastify.post('/api/products', {
+    preHandler: [authenticate],  // ✅ تغییر از verifyToken به authenticate
+    schema: {
+      body: createProductSchema,
+      response: {
+        201: z.any(),
+        400: z.object({ error: z.string(), details: z.any().optional() }),
+      },
+    },
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const body = createProductSchema.parse(request.body)
+      const userId = (request as any).userId
+      const product = await productService.create(userId, body)
+      return reply.code(201).send(product)
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return reply.code(400).send({
+          error: 'Validation failed',
+          details: err.errors,
+        })
+      }
+      fastify.log.error(err)
+      return reply.code(500).send({ error: 'Failed to create product' })
     }
-
-    return reply.code(201).send(data)
   })
 
-  // GET /api/products/:id
-  fastify.get('/api/products/:id', async (request: FastifyRequest, reply: FastifyReply) => {
-    const { id } = request.params as { id: string }
-
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .eq('id', id)
-      .single()
-
-    if (error) return reply.code(404).send({ error: 'Not found' })
-    return data
+  // ─── PATCH /api/products/:id ────────────────────────────
+  fastify.patch('/api/products/:id', {
+    preHandler: [authenticate],  // ✅ تغییر از verifyToken به authenticate
+    schema: {
+      params: z.object({ id: z.string().uuid() }),
+      body: updateProductSchema,
+      response: {
+        200: z.any(),
+        400: z.object({ error: z.string(), details: z.any().optional() }),
+        404: z.object({ error: z.string() }),
+      },
+    },
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const { id } = request.params as { id: string }
+      const body = updateProductSchema.parse(request.body)
+      const userId = (request as any).userId
+      const product = await productService.update(id, userId, body)
+      return reply.send(product)
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return reply.code(400).send({
+          error: 'Validation failed',
+          details: err.errors,
+        })
+      }
+      if (err instanceof NotFoundError) {
+        return reply.code(404).send({ error: err.message })
+      }
+      fastify.log.error(err)
+      return reply.code(500).send({ error: 'Failed to update product' })
+    }
   })
 
-  // PUT /api/products/:id
-  fastify.put('/api/products/:id', async (request: FastifyRequest, reply: FastifyReply) => {
-    const { id } = request.params as { id: string }
-    const body   = request.body as Record<string, unknown>
-
-    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
-    if (body.name          != null) updates.name           = String(body.name)
-    if (body.category      != null) updates.category       = String(body.category)
-    if (body.quantity      != null) updates.quantity       = Number(body.quantity)
-    if (body.unit          != null) updates.unit           = String(body.unit)
-    if (body.buyPrice      != null) updates.buy_price      = String(body.buyPrice)
-    if (body.sellPrice     != null) updates.sell_price     = String(body.sellPrice)
-    if (body.minStockLevel != null) updates.min_stock_level = Number(body.minStockLevel)
-    if (body.isActive      != null) updates.is_active      = Boolean(body.isActive)
-
-    const { data, error } = await supabase
-      .from('products')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single()
-
-    if (error) return reply.code(500).send({ error: error.message })
-    return data
+  // ─── DELETE /api/products/:id ───────────────────────────
+  fastify.delete('/api/products/:id', {
+    preHandler: [authenticate],  // ✅ تغییر از verifyToken به authenticate
+    schema: {
+      params: z.object({ id: z.string().uuid() }),
+      response: {
+        204: z.undefined(),
+        404: z.object({ error: z.string() }),
+      },
+    },
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const { id } = request.params as { id: string }
+      const userId = (request as any).userId
+      await productService.delete(id, userId)
+      return reply.code(204).send()
+    } catch (err) {
+      if (err instanceof NotFoundError) {
+        return reply.code(404).send({ error: err.message })
+      }
+      fastify.log.error(err)
+      return reply.code(500).send({ error: 'Failed to delete product' })
+    }
   })
 
-  // DELETE /api/products/:id
-  fastify.delete('/api/products/:id', async (request: FastifyRequest, reply: FastifyReply) => {
-    const { id } = request.params as { id: string }
-
-    const { error } = await supabase
-      .from('products')
-      .delete()
-      .eq('id', id)
-
-    if (error) return reply.code(500).send({ error: error.message })
-    return reply.code(204).send()
+  // ─── GET /api/products/low-stock ────────────────────────
+  fastify.get('/api/products/low-stock', {
+    preHandler: [authenticate],  // ✅ تغییر از verifyToken به authenticate
+    schema: {
+      response: {
+        200: z.array(z.any()),
+      },
+    },
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const userId = (request as any).userId
+      const products = await productService.getLowStock(userId)
+      return reply.send(products)
+    } catch (err) {
+      fastify.log.error(err)
+      return reply.code(500).send({ error: 'Failed to fetch low stock products' })
+    }
   })
 }

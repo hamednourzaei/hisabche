@@ -180,38 +180,16 @@ export class AuthService {
       .eq('id', resetRecord.id)
   }
 
-  // ─── Update Profile (اصلاح شده برای حل خطای TypeScript) ──
-  async updateProfile(userId: string, data: {
-    fullName?: string
-    businessName?: string
-    avatarUrl?: string
+  // ─── Update Profile ─────────────────────────────────────
+  async updateProfile(userId: string, data: { 
+    fullName?: string 
+    businessName?: string 
+    avatarUrl?: string 
   }) {
-    // فیلتر کردن فیلدهایی که مقدار undefined دارند
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
-    
-    if (data.fullName !== undefined) {
-      updates.full_name = data.fullName
-    }
-    if (data.businessName !== undefined) {
-      updates.business_name = data.businessName
-    }
-    if (data.avatarUrl !== undefined) {
-      updates.avatar_url = data.avatarUrl
-    }
-
-    // اگر هیچ فیلدی برای بروزرسانی وجود نداشت، خطا نده و کاربر فعلی را برگردان
-    if (Object.keys(updates).length === 1) { // فقط updated_at
-      const { data: user, error } = await supabase
-        .from('users')
-        .select('id, email, full_name, business_name, avatar_url, created_at')
-        .eq('id', userId)
-        .single()
-
-      if (error || !user) {
-        throw new AuthError('Failed to fetch user')
-      }
-      return this.sanitizeUser(user)
-    }
+    if (data.fullName !== undefined) updates.full_name = data.fullName
+    if (data.businessName !== undefined) updates.business_name = data.businessName
+    if (data.avatarUrl !== undefined) updates.avatar_url = data.avatarUrl
 
     const { data: user, error } = await supabase
       .from('users')
