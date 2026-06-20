@@ -1,15 +1,19 @@
-"use client"
+"use client";
 
-import { useState, useCallback } from "react"
-import { useRouter } from "next/navigation"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useTranslation } from "react-i18next"
-import { z } from "zod"
-import { useAuthStore } from "@hisabche/store"
-import { loginSchema, type LoginInput } from "@hisabche/validation"
-import { AuthShell } from "@hisabche/ui"
-import { supabaseClient } from "../../../../../../auth/src/supabase"
+import { useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useTranslation } from "react-i18next";
+import { z } from "zod";
+import { useAuthStore } from "@hisabche/store";
+import { loginSchema, type LoginInput } from "@hisabche/validation";
+import { AuthShell } from "@hisabche/ui";
+import { supabaseClient } from "../../../../../../auth/src/supabase";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   AuthContainer v2 — Fixed switch mode + signup submit
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 const signupSchema = z.object({
   fullName: z.string().min(2, "signup.errors.fullName"),
@@ -17,58 +21,60 @@ const signupSchema = z.object({
   phone: z.string().optional().or(z.literal("")),
   email: z.string().min(1, "signup.errors.emailRequired").email("signup.errors.emailInvalid"),
   password: z.string().min(8, "signup.errors.passwordMin"),
-})
-type SignupInput = z.infer<typeof signupSchema>
+});
+type SignupInput = z.infer<typeof signupSchema>;
 
 function useSafeT() {
-  const { t } = useTranslation()
+  const { t } = useTranslation();
   return (key: string, fallback: string) => {
-    const v = t(key)
-    return v && v !== key ? v : fallback
-  }
+    const v = t(key);
+    return v && v !== key ? v : fallback;
+  };
 }
 
 export function AuthContainer({ initialMode = "login" }: { initialMode?: "login" | "signup" }) {
-  const router = useRouter()
-  const { t } = useTranslation()
-  const st = useSafeT()
-  const [flipped, setFlipped] = useState(initialMode === "signup")
+  const router = useRouter();
+  const { t } = useTranslation();
+  const st = useSafeT();
+  const [flipped, setFlipped] = useState(initialMode === "signup");
+
+  // ─── Switch mode ──────────────────────────────
+  const handleSwitch = useCallback(() => {
+    setFlipped((prev) => !prev);
+  }, []);
 
   // ─── Login form ────────────────────────────────
   const loginForm = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
     defaultValues: { email: "", password: "" },
-  })
-  const [loginShowPassword, setLoginShowPassword] = useState(false)
-  const loginStore = useAuthStore()
+  });
+  const [loginShowPassword, setLoginShowPassword] = useState(false);
+  const loginStore = useAuthStore();
 
   const onLoginSubmit = loginForm.handleSubmit(async (data: LoginInput) => {
-    // 1. Supabase login
     const { error } = await supabaseClient.auth.signInWithPassword({
       email: data.email,
       password: data.password,
-    })
+    });
     if (error) {
-      useAuthStore.setState({ error: error.message, isLoading: false })
-      return
+      useAuthStore.setState({ error: error.message, isLoading: false });
+      return;
     }
 
-    // 2. Zustand state
-    await loginStore.login(data)
-    const s = useAuthStore.getState()
+    await loginStore.login(data);
+    const s = useAuthStore.getState();
     if (s.isAuthenticated && !s.error) {
-      router.push("/dashboard")
+      router.push("/dashboard");
     }
-  })
+  });
 
   const onDemoLogin = useCallback(async () => {
-    // Demo login — only Zustand, no Supabase
-    await loginStore.login({ email: "demo@hisabche.com", password: "Demo1234" })
-    const s = useAuthStore.getState()
+    await loginStore.login({ email: "demo@hisabche.com", password: "Demo1234" });
+    const s = useAuthStore.getState();
     if (s.isAuthenticated && !s.error) {
-      router.push("/dashboard")
+      router.push("/dashboard");
     }
-  }, [loginStore, router])
+  }, [loginStore, router]);
 
   const loginProps = {
     st,
@@ -80,43 +86,43 @@ export function AuthContainer({ initialMode = "login" }: { initialMode?: "login"
     handleSubmit: loginForm.handleSubmit as any,
     showPassword: loginShowPassword,
     togglePassword: () => setLoginShowPassword(!loginShowPassword),
-    onSwitchMode: () => {},
+    onSwitchMode: handleSwitch,
     onSubmit: onLoginSubmit as any,
     onDemoLogin,
-  }
+  };
 
   // ─── Signup form ───────────────────────────────
   const signupForm = useForm<SignupInput>({
     resolver: zodResolver(signupSchema),
     defaultValues: { fullName: "", companyName: "", phone: "", email: "", password: "" },
-  })
-  const [signupShowPassword, setSignupShowPassword] = useState(false)
-  const signupStore = useAuthStore()
+  });
+  const [signupShowPassword, setSignupShowPassword] = useState(false);
+  const signupStore = useAuthStore();
 
   const onSignupSubmit = signupForm.handleSubmit(async (data: SignupInput) => {
-    // 1. Supabase signup
     const { error } = await supabaseClient.auth.signUp({
       email: data.email,
       password: data.password,
       options: { data: { full_name: data.fullName } },
-    })
+    });
     if (error) {
-      useAuthStore.setState({ error: error.message, isLoading: false })
-      return
+      useAuthStore.setState({ error: error.message, isLoading: false });
+      return;
     }
 
-    // 2. Zustand state
     try {
-      await signupStore.login({ email: data.email, password: data.password })
-      await new Promise((r) => setTimeout(r, 100))
-      const s = useAuthStore.getState()
+      await signupStore.login({ email: data.email, password: data.password });
+      await new Promise((r) => setTimeout(r, 100));
+      const s = useAuthStore.getState();
       if (s.isAuthenticated && !s.error) {
-        router.push("/dashboard")
+        router.push("/dashboard");
       }
-    } catch { /* handled by store */ }
-  })
+    } catch {
+      /* handled by store */
+    }
+  });
 
-  const translateError = (k?: string) => (k ? t(k, k) : undefined)
+  const translateError = (k?: string) => (k ? t(k, k) : undefined);
 
   const signupProps = {
     st,
@@ -128,21 +134,10 @@ export function AuthContainer({ initialMode = "login" }: { initialMode?: "login"
     handleSubmit: signupForm.handleSubmit as any,
     showPassword: signupShowPassword,
     togglePassword: () => setSignupShowPassword(!signupShowPassword),
-    onSwitchMode: () => {},
+    onSwitchMode: handleSwitch,
     onSubmit: onSignupSubmit as any,
     translateError,
-  }
-
-  // ─── Switch mode ──────────────────────────────
-  const handleSwitch = useCallback(() => {
-    const willFlip = !flipped
-    setFlipped(willFlip)
-    setTimeout(() => {
-      if (typeof window !== "undefined") {
-        window.history.replaceState(null, "", willFlip ? "/signup" : "/login")
-      }
-    }, 275)
-  }, [flipped])
+  };
 
   return (
     <AuthShell
@@ -152,5 +147,5 @@ export function AuthContainer({ initialMode = "login" }: { initialMode?: "login"
       signupProps={signupProps}
       onSwitchMode={handleSwitch}
     />
-  )
+  );
 }
