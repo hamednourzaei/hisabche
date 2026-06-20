@@ -71,14 +71,17 @@ export const updateSupplierSchema = updateCustomerSchema
 export type UpdateSupplier = z.infer<typeof updateSupplierSchema>
 
 // ============================================
-// Customer Filters
+// Customer Filters (اصلاح‌شده برای جلوگیری از خطای JSON Schema)
 // ============================================
 
 export const customerFiltersSchema = z.object({
   search: z.string().optional(),
   isActive: z.boolean().optional(),
   hasBalance: z.boolean().optional(),
-  ...paginationSchema.shape,
+  page: z.number().int().min(1).default(1),
+  limit: z.number().int().min(1).max(100).default(20),
+  sortBy: z.string().optional(),
+  sortDirection: z.enum(['asc', 'desc']).optional().default('desc'),
 })
 
 export type CustomerFilters = z.infer<typeof customerFiltersSchema>
