@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import * as Dialog from "@radix-ui/react-dialog";
-import { X, Loader2, Check } from "lucide-react";
+import { X, Check, ChevronDown } from "lucide-react";
 import {
   useWorkspaceStore,
   type WorkspaceRole,
@@ -11,9 +11,10 @@ import {
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   InviteModal v2 — Hisabche Design Language
-   Zero hardcoded colors — all tokens from design system
-   No external component dependencies
+   InviteModal v4 — Hisabche Design Language
+   ✅ Styled native select with custom dropdown arrow
+   ✅ Blurred backdrop + centered modal
+   ✅ Zero hardcoded colors — all tokens from design system
    ═══════════════════════════════════════════════════════════════════════════ */
 
 interface Props {
@@ -51,31 +52,31 @@ export function InviteModal({ open, onClose }: Props) {
   return (
     <Dialog.Root open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
       <Dialog.Portal>
-        {/* Overlay */}
+        {/* Overlay — blurred */}
         <Dialog.Overlay
           className={cn(
             "fixed inset-0 z-50",
-            "bg-[hsl(var(--ledger-ink)/0.3)]",
+            "bg-[hsl(var(--surface-base)/0.6)] backdrop-blur-md",
             "data-[state=open]:animate-in data-[state=closed]:animate-out",
             "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
             "motion-reduce:animate-none",
           )}
         />
 
-        {/* Content */}
+        {/* Content — centered */}
         <Dialog.Content
           className={cn(
-            "fixed z-50 w-full max-w-sm",
-            "start-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
+            "fixed z-50 w-[calc(100%-32px)] max-w-sm",
+            "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
             "rounded-2xl",
             "border border-[hsl(var(--border-strong))]",
             "bg-[hsl(var(--surface-elevated))]",
-            "shadow-lg",
-            "p-6 gap-4",
-            "duration-200",
+            "shadow-xl",
+            "p-6",
             "data-[state=open]:animate-in data-[state=closed]:animate-out",
             "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
             "data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2",
+            "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
             "motion-reduce:animate-none",
           )}
         >
@@ -124,29 +125,36 @@ export function InviteModal({ open, onClose }: Props) {
               )}
             />
 
-            {/* Role Select */}
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value as WorkspaceRole)}
-              className={cn(
-                "w-full rounded-xl px-4 py-3",
-                "text-sm",
-                "border border-[hsl(var(--border-default))]",
-                "bg-[hsl(var(--surface-base))]",
-                "text-[hsl(var(--fg-primary))]",
-                "focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]",
-                "transition-all duration-200",
-                "motion-reduce:transition-none",
-                "appearance-none",
-              )}
-            >
-              <option value="admin">
-                {t("workspace.admin", "مدیر")}
-              </option>
-              <option value="employee">
-                {t("workspace.employee", "کارمند")}
-              </option>
-            </select>
+            {/* Role Select — styled */}
+            <div className="relative">
+              <select
+                value={role}
+                onChange={(e) => setRole(e.target.value as WorkspaceRole)}
+                className={cn(
+                  "w-full rounded-xl px-4 py-3 pe-10",
+                  "text-sm appearance-none cursor-pointer",
+                  "border-2 border-[hsl(var(--border-default))]",
+                  "bg-[hsl(var(--surface-base))]",
+                  "text-[hsl(var(--fg-primary))]",
+                  "focus:outline-none focus:border-[hsl(var(--color-primary))] focus:shadow-[0_0_0_4px_hsl(var(--color-primary)/0.1)]",
+                  "hover:border-[hsl(var(--border-strong))]",
+                  "transition-all duration-200",
+                  "motion-reduce:transition-none",
+                )}
+              >
+                <option value="admin">
+                  {t("workspace.admin", "مدیر")}
+                </option>
+                <option value="employee">
+                  {t("workspace.employee", "کارمند")}
+                </option>
+              </select>
+              {/* Custom arrow */}
+              <ChevronDown
+                className="absolute end-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))] pointer-events-none"
+                aria-hidden="true"
+              />
+            </div>
 
             {/* Hint */}
             <p className="text-xs text-[hsl(var(--fg-tertiary))] leading-relaxed">
@@ -181,7 +189,7 @@ export function InviteModal({ open, onClose }: Props) {
                 className={cn(
                   "w-full rounded-full px-4 py-2.5",
                   "text-sm font-bold text-white",
-                  "bg-[var(--gradient-brand)]",
+                  "bg-[hsl(var(--color-primary))]",
                   "shadow-sm shadow-[hsl(var(--color-primary)/0.15)]",
                   "transition-all duration-200",
                   "hover:brightness-110",

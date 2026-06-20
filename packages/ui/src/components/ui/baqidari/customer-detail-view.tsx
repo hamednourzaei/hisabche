@@ -5,9 +5,10 @@ import { ChevronRight, DollarSign, FileText } from "lucide-react";
 import { PaymentModal } from "./PaymentModal";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   CustomerDetailView v2 — Hisabche Design Language
-   Zero hardcoded colors — all tokens from design system
-   No external component dependencies (Button, Card, CardContent removed)
+   CustomerDetailView v3 — Hisabche Design Language
+   ✅ Light mode fixed — all backgrounds visible
+   ✅ Zero hardcoded colors — all tokens from design system
+   ✅ No external component dependencies
    ═══════════════════════════════════════════════════════════════════════════ */
 
 interface InvoiceRecord {
@@ -44,9 +45,9 @@ const ghostBtn =
 const outlineBtn =
   "inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors duration-150 motion-reduce:transition-none";
 const primaryBtn =
-  "inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold text-white bg-[var(--gradient-brand)] shadow-sm shadow-[hsl(var(--color-primary)/0.15)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] motion-reduce:transition-none";
+  "inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold text-white bg-[hsl(var(--color-primary))] shadow-sm shadow-[hsl(var(--color-primary)/0.15)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] motion-reduce:transition-none";
 const cardBase =
-  "rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]";
+  "rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] shadow-sm";
 
 export function CustomerDetailView({
   t,
@@ -60,7 +61,6 @@ export function CustomerDetailView({
   onClosePayment,
   onPaymentSuccess,
 }: CustomerDetailViewProps) {
-  // Not found
   if (!customer) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12 text-center">
@@ -140,7 +140,7 @@ export function CustomerDetailView({
       <div
         className={cn(
           cardBase,
-          "bg-gradient-to-br from-[hsl(var(--color-destructive)/0.1)] to-[hsl(var(--color-destructive)/0.02)]",
+          "bg-gradient-to-br from-[hsl(var(--color-destructive)/0.12)] to-[hsl(var(--color-destructive)/0.03)]",
         )}
       >
         <div className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
@@ -172,14 +172,11 @@ export function CustomerDetailView({
 
           {openInvoices.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
-              <div className="relative">
-                <div className="absolute inset-0 rounded-full bg-[hsl(var(--color-success)/0.1)] blur-2xl" />
-                <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl border border-[hsl(var(--border-default))] bg-gradient-to-br from-[hsl(var(--color-success)/0.1)] to-[hsl(170_70%_45%/0.1)]">
-                  <FileText
-                    className="size-6 text-[hsl(var(--color-success))]"
-                    aria-hidden="true"
-                  />
-                </div>
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--color-success)/0.08)]">
+                <FileText
+                  className="size-6 text-[hsl(var(--color-success))]"
+                  aria-hidden="true"
+                />
               </div>
               <p className="text-sm text-[hsl(var(--fg-secondary))]">
                 {t("baqidari.noOpenDeals")}
@@ -190,10 +187,10 @@ export function CustomerDetailView({
               {openInvoices.map((inv) => (
                 <div
                   key={inv.id}
-                  className="flex flex-col gap-2 rounded-xl border border-[hsl(var(--border-default))] p-4 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-2 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] p-4 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[hsl(var(--color-destructive)/0.1)] to-[hsl(var(--color-destructive)/0.02)]">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--color-destructive)/0.1)]">
                       <FileText
                         className="size-4 text-[hsl(var(--color-destructive))]"
                         aria-hidden="true"

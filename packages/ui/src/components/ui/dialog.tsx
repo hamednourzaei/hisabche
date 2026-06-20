@@ -6,10 +6,11 @@ import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   Dialog v2 — Hisabche Design Language
-   Zero hardcoded colors — all tokens from design system
-   Full RTL via logical CSS (start/end)
-   Optimized for Redmi 9: no backdrop-blur, no zoom, only opacity + transform
+   Dialog v3 — Hisabche Design Language
+   ✅ Blurred overlay (backdrop-blur-md)
+   ✅ Centered content (left-1/2 -translate-x-1/2) — RTL-safe
+   ✅ Zoom animation restored for smooth entry
+   ✅ Zero hardcoded colors — all tokens from design system
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const Dialog = DialogPrimitive.Root;
@@ -27,7 +28,7 @@ const DialogOverlay = React.forwardRef<
     ref={ref}
     className={cn(
       "fixed inset-0 z-50",
-      "bg-[hsl(var(--ledger-ink)/0.3)]",
+      "bg-[hsl(var(--surface-base)/0.6)] backdrop-blur-md",
       "data-[state=open]:animate-in data-[state=closed]:animate-out",
       "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
       "motion-reduce:animate-none",
@@ -54,22 +55,23 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        // Layout
-        "fixed z-50 w-full max-w-lg",
-        "start-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
+        // Layout — centered (RTL-safe with left/translate)
+        "fixed z-50 w-[calc(100%-32px)] max-w-lg",
+        "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
         "grid gap-4 p-6",
         "max-h-[90vh] overflow-y-auto",
-        // Colors — zero hardcoded
+        // Colors
         "rounded-2xl",
         "border border-[hsl(var(--border-strong))]",
         "bg-[hsl(var(--surface-elevated))]",
         "text-[hsl(var(--fg-primary))]",
-        "shadow-lg",
-        // Animation: fade + slide (no zoom)
+        "shadow-xl",
+        // Animation
         "duration-200",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         "data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2",
+        "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
         // Reduced motion
         "motion-reduce:animate-none",
         className,
@@ -107,11 +109,7 @@ const DialogHeader = ({
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
-    className={cn(
-      "flex flex-col space-y-1.5",
-      "text-start",
-      className,
-    )}
+    className={cn("flex flex-col space-y-1.5", "text-start", className)}
     {...props}
   />
 );
@@ -159,11 +157,7 @@ const DialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
-    className={cn(
-      "text-sm",
-      "text-[hsl(var(--fg-secondary))]",
-      className,
-    )}
+    className={cn("text-sm", "text-[hsl(var(--fg-secondary))]", className)}
     {...props}
   />
 ));

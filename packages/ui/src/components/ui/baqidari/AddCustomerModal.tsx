@@ -27,9 +27,10 @@ import {
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   AddCustomerModal v2 — Hisabche Design Language
-   Zero hardcoded colors — all tokens from design system
-   No external component dependencies (Button, Input, SaveIndicator removed)
+   AddCustomerModal v3 — Hisabche Design Language
+   ✅ Light mode fixed — all backgrounds visible
+   ✅ Zero hardcoded colors — all tokens from design system
+   ✅ No external component dependencies
    ═══════════════════════════════════════════════════════════════════════════ */
 
 type ProductOption = NonNullable<
@@ -56,13 +57,12 @@ interface AddCustomerModalProps {
   onCreated?: () => void;
 }
 
-// Shared styles
 const inputBase =
   "w-full rounded-xl ps-9 pe-3 py-2.5 text-sm border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))] focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)] transition-colors duration-200 motion-reduce:transition-none";
 const outlineBtn =
   "inline-flex items-center justify-center rounded-full px-4 py-2.5 text-sm font-medium border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors duration-150 motion-reduce:transition-none disabled:opacity-40 disabled:cursor-not-allowed";
 const primaryBtn =
-  "inline-flex items-center justify-center rounded-full px-4 py-2.5 text-sm font-bold text-white bg-[var(--gradient-brand)] shadow-sm shadow-[hsl(var(--color-primary)/0.15)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed motion-reduce:transition-none";
+  "inline-flex items-center justify-center rounded-full px-4 py-2.5 text-sm font-bold text-white bg-[hsl(var(--color-primary))] shadow-sm shadow-[hsl(var(--color-primary)/0.15)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed motion-reduce:transition-none";
 
 export function AddCustomerModal({
   open,
@@ -180,7 +180,6 @@ export function AddCustomerModal({
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && close()}>
       <DialogContent className="max-w-md">
-        {/* Save indicator */}
         {showSaved && (
           <div
             role="status"
@@ -210,11 +209,11 @@ export function AddCustomerModal({
                 {...register("name")}
                 placeholder={t("baqidari.form.namePlaceholder", "نام کامل")}
                 autoFocus
-                className={inputBase}
+                className={cn(inputBase, errors.name && "border-[hsl(var(--color-destructive))]")}
               />
             </div>
             {errors.name && (
-              <p className="mt-1 text-sm text-[hsl(var(--color-destructive))]">
+              <p className="mt-1 text-sm text-[hsl(var(--color-destructive))]" role="alert">
                 {t(errors.name.message || "نام الزامی است")}
               </p>
             )}
@@ -230,11 +229,11 @@ export function AddCustomerModal({
               <input
                 {...register("phone")}
                 placeholder={t("baqidari.form.phonePlaceholder", "شماره تماس")}
-                className={inputBase}
+                className={cn(inputBase, errors.phone && "border-[hsl(var(--color-destructive))]")}
               />
             </div>
             {errors.phone && (
-              <p className="mt-1 text-sm text-[hsl(var(--color-destructive))]">
+              <p className="mt-1 text-sm text-[hsl(var(--color-destructive))]" role="alert">
                 {t(errors.phone.message || "مقدار وارد شده معتبر نیست")}
               </p>
             )}
@@ -248,7 +247,7 @@ export function AddCustomerModal({
               className={cn(
                 "flex-1 rounded-full px-4 py-2.5 text-sm font-bold transition-all duration-200 motion-reduce:transition-none",
                 !withDebt
-                  ? "bg-[var(--gradient-brand)] text-white shadow-sm"
+                  ? "bg-[hsl(var(--color-primary))] text-white shadow-sm"
                   : outlineBtn,
               )}
             >
@@ -270,7 +269,7 @@ export function AddCustomerModal({
 
           {/* Debt details */}
           {withDebt && (
-            <div className="space-y-3 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted)/0.3)] p-4">
+            <div className="space-y-3 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] p-4">
               <ProductPicker
                 value={product}
                 onChange={setProduct}
@@ -317,7 +316,10 @@ export function AddCustomerModal({
 
           {/* Error */}
           {error && (
-            <div className="flex items-center gap-2 rounded-xl border border-[hsl(var(--color-destructive)/0.2)] bg-[hsl(var(--color-destructive)/0.1)] p-3 text-sm text-[hsl(var(--color-destructive))]">
+            <div
+              className="flex items-center gap-2 rounded-xl border border-[hsl(var(--color-destructive)/0.2)] bg-[hsl(var(--color-destructive)/0.1)] p-3 text-sm text-[hsl(var(--color-destructive))]"
+              role="alert"
+            >
               <AlertTriangle className="size-4 shrink-0" aria-hidden="true" />
               <p className="flex-1">{error}</p>
               <button

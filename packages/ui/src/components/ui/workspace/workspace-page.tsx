@@ -1,39 +1,49 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useTranslation } from "react-i18next"
-import { Button } from "../button"
-import { Card, CardContent } from "../card"
-import { Badge } from "../badge"
-import { useWorkspaceStore, type WorkspaceMember } from "@hisabche/store"
-import { InviteModal } from "../invite-modal"
-import { Users, UserPlus, Crown, Shield, User } from "lucide-react"
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { cn } from "@/lib/utils";
+import { useWorkspaceStore, type WorkspaceMember } from "@hisabche/store";
+import { InviteModal } from "../invite-modal";
+import { Users, UserPlus, Crown, Shield, User } from "lucide-react";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   WorkspacePage v2 — Hisabche Design Language
+   Zero hardcoded colors — all tokens from design system
+   No external component dependencies (Button, Card, Badge removed)
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 const roleIconMap: Record<string, React.ReactNode> = {
-  owner: <Crown className="size-4 text-warning" aria-hidden />,
-  admin: <Shield className="size-4 text-primary" aria-hidden />,
-}
+  owner: <Crown className="size-4 text-[hsl(var(--color-warning))]" aria-hidden="true" />,
+  admin: <Shield className="size-4 text-[hsl(var(--color-primary))]" aria-hidden="true" />,
+};
 
-const roleBadgeVariant: Record<string, "warning" | "default" | "secondary"> = {
-  owner: "warning",
-  admin: "default",
-  employee: "secondary",
-}
+const badgeStyles: Record<string, string> = {
+  warning:
+    "bg-[hsl(var(--color-warning)/0.12)] text-[hsl(var(--color-warning))] border-[hsl(var(--color-warning)/0.2)]",
+  default:
+    "bg-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))] border-[hsl(var(--color-primary)/0.2)]",
+  secondary:
+    "bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))] border-[hsl(var(--border-default))]",
+};
 
 export function WorkspacePage() {
-  const { t } = useTranslation()
-  const { workspaceName, members, currentUserRole } = useWorkspaceStore()
-  const [showInvite, setShowInvite] = useState(false)
+  const { t } = useTranslation();
+  const { workspaceName, members, currentUserRole } = useWorkspaceStore();
+  const [showInvite, setShowInvite] = useState(false);
 
   const roleLabel = (role: string) => {
     switch (role) {
-      case "owner": return t("workspace.owner", "مالک")
-      case "admin": return t("workspace.admin", "مدیر")
-      default: return t("workspace.employee", "کارمند")
+      case "owner":
+        return t("workspace.owner", "مالک");
+      case "admin":
+        return t("workspace.admin", "مدیر");
+      default:
+        return t("workspace.employee", "کارمند");
     }
-  }
+  };
 
-  const isAdmin = currentUserRole === "owner" || currentUserRole === "admin"
+  const isAdmin = currentUserRole === "owner" || currentUserRole === "admin";
 
   return (
     <div className="space-y-6">
@@ -42,80 +52,122 @@ export function WorkspacePage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1.5">
-          <h1 className="text-2xl font-bold sm:text-3xl text-foreground">
+          <h1 className="text-2xl font-bold sm:text-3xl text-[hsl(var(--fg-primary))]">
             {t("workspace.title", "ورک‌اسپیس")}
           </h1>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-[hsl(var(--fg-secondary))]">
             {workspaceName || t("workspace.defaultName", "ورک‌اسپیس من")}
           </p>
         </div>
         {isAdmin && (
-          <Button onClick={() => setShowInvite(true)} className="gap-2">
-            <UserPlus className="size-4" aria-hidden />
+          <button
+            type="button"
+            onClick={() => setShowInvite(true)}
+            className={cn(
+              "inline-flex items-center gap-2 rounded-full px-5 py-2.5",
+              "text-sm font-bold",
+              "bg-[hsl(var(--color-primary))] text-white",
+              "shadow-sm shadow-[hsl(var(--color-primary)/0.15)]",
+              "transition-all duration-200 hover:brightness-110 active:scale-[0.98]",
+              "motion-reduce:transition-none",
+            )}
+          >
+            <UserPlus className="size-4" aria-hidden="true" />
             {t("workspace.inviteMember", "دعوت عضو")}
-          </Button>
+          </button>
         )}
       </div>
 
       {/* Members */}
-      <Card className="glass-card border-border">
-        <CardContent className="p-6">
+      <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
+        <div className="p-6">
           <div className="mb-4 flex items-center gap-2">
-            <Users className="size-5 text-primary" aria-hidden />
-            <h2 className="text-lg font-semibold text-foreground">
+            <Users className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+            <h2 className="text-lg font-semibold text-[hsl(var(--fg-primary))]">
               {t("workspace.members", "اعضا")} ({members.length})
             </h2>
           </div>
           {members.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
+            <p className="py-8 text-center text-sm text-[hsl(var(--fg-tertiary))]">
               {t("workspace.noMembers", "هنوز عضوی اضافه نشده")}
             </p>
           ) : (
             <div className="space-y-2">
-              {members.map((member: WorkspaceMember) => (
-                <div key={member.id} className="flex items-center justify-between rounded-xl border border-border p-4">
-                  <div className="flex items-center gap-3 text-start">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 font-bold text-primary">
-                      {member.fullName?.charAt(0) || "?"}
+              {members.map((member: WorkspaceMember) => {
+                const badgeStyle =
+                  badgeStyles[
+                    member.role === "owner"
+                      ? "warning"
+                      : member.role === "admin"
+                        ? "default"
+                        : "secondary"
+                  ] ?? badgeStyles.secondary;
+
+                return (
+                  <div
+                    key={member.id}
+                    className="flex items-center justify-between rounded-xl border border-[hsl(var(--border-default))] p-4"
+                  >
+                    <div className="flex items-center gap-3 text-start">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--color-primary)/0.12)] font-bold text-[hsl(var(--color-primary))]">
+                        {member.fullName?.charAt(0) || "?"}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate font-medium text-[hsl(var(--fg-primary))]">
+                          {member.fullName}
+                        </p>
+                        <p className="truncate text-xs text-[hsl(var(--fg-secondary))]">
+                          {member.email}
+                        </p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="truncate font-medium text-foreground">{member.fullName}</p>
-                      <p className="truncate text-xs text-muted-foreground">{member.email}</p>
-                    </div>
-                  </div>
-                  <Badge variant={roleBadgeVariant[member.role] || "secondary"} className="shrink-0">
-                    <span className="flex items-center gap-1">
-                      {roleIconMap[member.role] || <User className="size-4 text-muted-foreground" aria-hidden />}
+                    <span
+                      className={cn(
+                        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border shrink-0 gap-1",
+                        badgeStyle,
+                      )}
+                    >
+                      {roleIconMap[member.role] || (
+                        <User className="size-4 text-[hsl(var(--fg-secondary))]" aria-hidden="true" />
+                      )}
                       {roleLabel(member.role)}
                     </span>
-                  </Badge>
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Permissions */}
-      <Card className="glass-card border-border">
-        <CardContent className="space-y-3 p-6 text-start">
-          <h3 className="font-semibold text-foreground">{t("workspace.permissions", "دسترسی‌ها")}</h3>
+      <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
+        <div className="space-y-3 p-6 text-start">
+          <h3 className="font-semibold text-[hsl(var(--fg-primary))]">
+            {t("workspace.permissions", "دسترسی‌ها")}
+          </h3>
           <div className="grid gap-2 text-sm">
             <div className="flex items-center gap-2">
-              <Crown className="size-4 text-warning" aria-hidden />
-              <span className="text-muted-foreground">{t("workspace.ownerPerms", "مالک: دسترسی کامل به همه چیز")}</span>
+              <Crown className="size-4 text-[hsl(var(--color-warning))]" aria-hidden="true" />
+              <span className="text-[hsl(var(--fg-secondary))]">
+                {t("workspace.ownerPerms", "مالک: دسترسی کامل به همه چیز")}
+              </span>
             </div>
             <div className="flex items-center gap-2">
-              <Shield className="size-4 text-primary" aria-hidden />
-              <span className="text-muted-foreground">{t("workspace.adminPerms", "مدیر: مدیریت محصولات، فاکتورها و دعوت اعضا")}</span>
+              <Shield className="size-4 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+              <span className="text-[hsl(var(--fg-secondary))]">
+                {t("workspace.adminPerms", "مدیر: مدیریت محصولات، فاکتورها و دعوت اعضا")}
+              </span>
             </div>
             <div className="flex items-center gap-2">
-              <User className="size-4 text-muted-foreground" aria-hidden />
-              <span className="text-muted-foreground">{t("workspace.employeePerms", "کارمند: فقط ثبت فاکتور و مشاهده")}</span>
+              <User className="size-4 text-[hsl(var(--fg-secondary))]" aria-hidden="true" />
+              <span className="text-[hsl(var(--fg-secondary))]">
+                {t("workspace.employeePerms", "کارمند: فقط ثبت فاکتور و مشاهده")}
+              </span>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
-  )
+  );
 }
