@@ -14,6 +14,13 @@ import { ProductService } from '../services/product.service'
 import { authenticate } from '../middleware/auth.middleware'
 import { NotFoundError } from '../errors/database.error'
 
+// ✅ تنظیمات برای حذف $schema از خروجی (با استفاده از any برای جلوگیری از خطای عمق تایپ)
+const toJsonSchema = (schema: any) => {
+  const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
+  delete result.$schema
+  return result
+}
+
 export async function productRoutes(fastify: FastifyInstance) {
   const productService = new ProductService()
 
@@ -21,15 +28,15 @@ export async function productRoutes(fastify: FastifyInstance) {
   fastify.get('/api/products', {
     preHandler: [authenticate],
     schema: {
-      querystring: zodToJsonSchema(productFiltersSchema),
+      querystring: toJsonSchema(productFiltersSchema),
       response: {
-        200: zodToJsonSchema(z.object({
-          products: z.array(z.any()),
+        200: toJsonSchema(z.object({
+          products: z.array(z.unknown()), // ✅ جایگزینی z.any() با z.unknown()
           total: z.number(),
           page: z.number(),
           limit: z.number(),
         })),
-        400: zodToJsonSchema(z.object({ error: z.string(), details: z.any().optional() })),
+        400: toJsonSchema(z.object({ error: z.string(), details: z.unknown().optional() })),
       },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
@@ -54,9 +61,9 @@ export async function productRoutes(fastify: FastifyInstance) {
   fastify.get('/api/products/:id', {
     preHandler: [authenticate],
     schema: {
-      params: zodToJsonSchema(z.object({ id: z.string().uuid() })),
+      params: toJsonSchema(z.object({ id: z.string().uuid() })),
       response: {
-        200: zodToJsonSchema(z.object({
+        200: toJsonSchema(z.object({
           id: z.string().uuid(),
           name: z.string(),
           barcode: z.string().optional(),
@@ -74,7 +81,7 @@ export async function productRoutes(fastify: FastifyInstance) {
           createdAt: z.string().datetime(),
           updatedAt: z.string().datetime().optional(),
         })),
-        404: zodToJsonSchema(z.object({ error: z.string() })),
+        404: toJsonSchema(z.object({ error: z.string() })),
       },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
@@ -96,9 +103,9 @@ export async function productRoutes(fastify: FastifyInstance) {
   fastify.post('/api/products', {
     preHandler: [authenticate],
     schema: {
-      body: zodToJsonSchema(createProductSchema),
+      body: toJsonSchema(createProductSchema),
       response: {
-        201: zodToJsonSchema(z.object({
+        201: toJsonSchema(z.object({
           id: z.string().uuid(),
           name: z.string(),
           barcode: z.string().optional(),
@@ -116,7 +123,7 @@ export async function productRoutes(fastify: FastifyInstance) {
           createdAt: z.string().datetime(),
           updatedAt: z.string().datetime().optional(),
         })),
-        400: zodToJsonSchema(z.object({ error: z.string(), details: z.any().optional() })),
+        400: toJsonSchema(z.object({ error: z.string(), details: z.unknown().optional() })),
       },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
@@ -141,10 +148,10 @@ export async function productRoutes(fastify: FastifyInstance) {
   fastify.patch('/api/products/:id', {
     preHandler: [authenticate],
     schema: {
-      params: zodToJsonSchema(z.object({ id: z.string().uuid() })),
-      body: zodToJsonSchema(updateProductSchema),
+      params: toJsonSchema(z.object({ id: z.string().uuid() })),
+      body: toJsonSchema(updateProductSchema),
       response: {
-        200: zodToJsonSchema(z.object({
+        200: toJsonSchema(z.object({
           id: z.string().uuid(),
           name: z.string(),
           barcode: z.string().optional(),
@@ -162,8 +169,8 @@ export async function productRoutes(fastify: FastifyInstance) {
           createdAt: z.string().datetime(),
           updatedAt: z.string().datetime().optional(),
         })),
-        400: zodToJsonSchema(z.object({ error: z.string(), details: z.any().optional() })),
-        404: zodToJsonSchema(z.object({ error: z.string() })),
+        400: toJsonSchema(z.object({ error: z.string(), details: z.unknown().optional() })),
+        404: toJsonSchema(z.object({ error: z.string() })),
       },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
@@ -192,8 +199,8 @@ export async function productRoutes(fastify: FastifyInstance) {
   fastify.delete('/api/products/:id', {
     preHandler: [authenticate],
     schema: {
-      params: zodToJsonSchema(z.object({ id: z.string().uuid() })),
-      // ✅ حذف response برای 204 (No Content)
+      params: toJsonSchema(z.object({ id: z.string().uuid() })),
+      // حذف response برای 204
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -215,7 +222,7 @@ export async function productRoutes(fastify: FastifyInstance) {
     preHandler: [authenticate],
     schema: {
       response: {
-        200: zodToJsonSchema(z.array(z.any())),
+        200: toJsonSchema(z.array(z.unknown())), // ✅ جایگزینی z.any() با z.unknown()
       },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
