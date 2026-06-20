@@ -10,7 +10,8 @@ import {
   ShoppingCart,
   CreditCard,
 } from "lucide-react";
-
+import { ProductPicker } from "../product-picker";
+import { CustomerPicker } from "../customer-picker";
 /* ═══════════════════════════════════════════════════════════════════════════
    QuickInvoicePage v2 — Hisabche Design Language
    Zero hardcoded colors — all tokens from design system
@@ -176,10 +177,11 @@ export function QuickInvoicePage({
                 </p>
               </div>
 
-              {/* ProductPicker needs to be passed as a prop or rendered inline */}
-              <div className="text-center text-sm text-[hsl(var(--fg-tertiary))]">
-                ProductPicker placeholder
-              </div>
+              <ProductPicker
+  value={selectedProduct}
+  onChange={onSelectProduct}
+  placeholder={t("godam.pickProduct", "انتخاب محصول از گدام...")}
+/>
 
               <button
                 type="button"
@@ -218,10 +220,11 @@ export function QuickInvoicePage({
                 </p>
               </div>
 
-              <div className="text-center text-sm text-[hsl(var(--fg-tertiary))]">
-                CustomerPicker placeholder
-              </div>
-
+              <CustomerPicker
+  value={selectedCustomer}
+  onChange={onSelectCustomer}
+  placeholder={t("customer.pickPlaceholder", "انتخاب مشتری...")}
+/>
               <div className="flex gap-3">
                 <button
                   type="button"
