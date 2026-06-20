@@ -16,15 +16,19 @@ import { AuthService } from '../services/auth.service'
 import { AuthError } from '../errors/auth.error'
 import { authenticate } from '../middleware/auth.middleware'
 
+// تنظیمات پیش‌فرض برای تولید JSON Schema معتبر
+const toJsonSchema = (schema: z.ZodTypeAny) => 
+  zodToJsonSchema(schema, { target: 'jsonSchema7' })
+
 export async function authRoutes(fastify: FastifyInstance) {
   const authService = new AuthService()
 
   // ─── POST /api/auth/login ──────────────────────────────
   fastify.post('/api/auth/login', {
     schema: {
-      body: zodToJsonSchema(loginSchema),
+      body: toJsonSchema(loginSchema),
       response: {
-        200: zodToJsonSchema(z.object({
+        200: toJsonSchema(z.object({
           user: z.object({
             id: z.string().uuid(),
             email: z.string().email(),
@@ -34,8 +38,8 @@ export async function authRoutes(fastify: FastifyInstance) {
           }),
           token: z.string(),
         })),
-        400: zodToJsonSchema(z.object({ error: z.string(), details: z.any().optional() })),
-        401: zodToJsonSchema(z.object({ error: z.string() })),
+        400: toJsonSchema(z.object({ error: z.string(), details: z.any().optional() })),
+        401: toJsonSchema(z.object({ error: z.string() })),
       },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
@@ -61,9 +65,9 @@ export async function authRoutes(fastify: FastifyInstance) {
   // ─── POST /api/auth/signup ─────────────────────────────
   fastify.post('/api/auth/signup', {
     schema: {
-      body: zodToJsonSchema(signUpSchema),
+      body: toJsonSchema(signUpSchema),
       response: {
-        201: zodToJsonSchema(z.object({
+        201: toJsonSchema(z.object({
           user: z.object({
             id: z.string().uuid(),
             email: z.string().email(),
@@ -73,7 +77,7 @@ export async function authRoutes(fastify: FastifyInstance) {
           }),
           token: z.string(),
         })),
-        400: zodToJsonSchema(z.object({ error: z.string(), details: z.any().optional() })),
+        400: toJsonSchema(z.object({ error: z.string(), details: z.any().optional() })),
       },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
@@ -101,7 +105,7 @@ export async function authRoutes(fastify: FastifyInstance) {
     preHandler: [authenticate],
     schema: {
       response: {
-        200: zodToJsonSchema(z.object({ success: z.boolean() })),
+        200: toJsonSchema(z.object({ success: z.boolean() })),
       },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
@@ -120,7 +124,7 @@ export async function authRoutes(fastify: FastifyInstance) {
     preHandler: [authenticate],
     schema: {
       response: {
-        200: zodToJsonSchema(z.object({
+        200: toJsonSchema(z.object({
           user: z.object({
             id: z.string().uuid(),
             email: z.string().email(),
@@ -129,7 +133,7 @@ export async function authRoutes(fastify: FastifyInstance) {
             createdAt: z.string().datetime(),
           }),
         })),
-        401: zodToJsonSchema(z.object({ error: z.string() })),
+        401: toJsonSchema(z.object({ error: z.string() })),
       },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
@@ -149,10 +153,10 @@ export async function authRoutes(fastify: FastifyInstance) {
   // ─── POST /api/auth/forgot-password ────────────────────
   fastify.post('/api/auth/forgot-password', {
     schema: {
-      body: zodToJsonSchema(forgotPasswordSchema),
+      body: toJsonSchema(forgotPasswordSchema),
       response: {
-        200: zodToJsonSchema(z.object({ message: z.string() })),
-        400: zodToJsonSchema(z.object({ error: z.string() })),
+        200: toJsonSchema(z.object({ message: z.string() })),
+        400: toJsonSchema(z.object({ error: z.string() })),
       },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
@@ -179,10 +183,10 @@ export async function authRoutes(fastify: FastifyInstance) {
   // ─── POST /api/auth/reset-password ─────────────────────
   fastify.post('/api/auth/reset-password', {
     schema: {
-      body: zodToJsonSchema(resetPasswordSchema),
+      body: toJsonSchema(resetPasswordSchema),
       response: {
-        200: zodToJsonSchema(z.object({ message: z.string() })),
-        400: zodToJsonSchema(z.object({ error: z.string() })),
+        200: toJsonSchema(z.object({ message: z.string() })),
+        400: toJsonSchema(z.object({ error: z.string() })),
       },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
@@ -209,9 +213,9 @@ export async function authRoutes(fastify: FastifyInstance) {
   fastify.patch('/api/auth/profile', {
     preHandler: [authenticate],
     schema: {
-      body: zodToJsonSchema(updateProfileSchema),
+      body: toJsonSchema(updateProfileSchema),
       response: {
-        200: zodToJsonSchema(z.object({
+        200: toJsonSchema(z.object({
           user: z.object({
             id: z.string().uuid(),
             email: z.string().email(),
@@ -221,7 +225,7 @@ export async function authRoutes(fastify: FastifyInstance) {
             createdAt: z.string().datetime(),
           }),
         })),
-        400: zodToJsonSchema(z.object({ error: z.string() })),
+        400: toJsonSchema(z.object({ error: z.string() })),
       },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
