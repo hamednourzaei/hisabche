@@ -16,9 +16,12 @@ import { AuthService } from '../services/auth.service'
 import { AuthError } from '../errors/auth.error'
 import { authenticate } from '../middleware/auth.middleware'
 
-// تنظیمات پیش‌فرض برای تولید JSON Schema معتبر
-const toJsonSchema = (schema: z.ZodTypeAny) => 
-  zodToJsonSchema(schema, { target: 'jsonSchema7' })
+// ✅ تنظیمات برای حذف $schema از خروجی
+const toJsonSchema = (schema: z.ZodTypeAny) => {
+  const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
+  delete result.$schema
+  return result
+}
 
 export async function authRoutes(fastify: FastifyInstance) {
   const authService = new AuthService()
