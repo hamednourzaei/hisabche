@@ -12,10 +12,12 @@ import {
 } from "lucide-react";
 import { ProductPicker } from "../product-picker";
 import { CustomerPicker } from "../customer-picker";
+
 /* ═══════════════════════════════════════════════════════════════════════════
-   QuickInvoicePage v2 — Hisabche Design Language
-   Zero hardcoded colors — all tokens from design system
-   No external component dependencies (Button, Input, Card, etc.)
+   QuickInvoicePage v3 — Hisabche Design Language
+   ✅ Only Celebration Pop-up (no toast)
+   ✅ Blurred backdrop on celebration
+   ✅ Zero hardcoded colors — all tokens from design system
    ═══════════════════════════════════════════════════════════════════════════ */
 
 interface ProductOption {
@@ -100,38 +102,28 @@ export function QuickInvoicePage({
 }: QuickInvoicePageProps) {
   return (
     <div className="px-4 py-10">
-      {/* Save indicator */}
-      {showSaved && (
+      {/* Celebration Pop-up — only */}
+      {showCelebration && (
         <div
-          role="status"
-          aria-live="polite"
-          className="fixed start-1/2 top-4 z-50 -translate-x-1/2"
+          className="fixed inset-0 z-50 flex cursor-pointer items-center justify-center bg-[hsl(var(--surface-base)/0.6)] backdrop-blur-md"
+          onClick={onDismissCelebration}
         >
-          <div className="flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium bg-[hsl(var(--surface-elevated))] border border-[hsl(var(--border-strong))] shadow-lg">
-            <Check className="size-4 text-[hsl(var(--color-success))]" aria-hidden="true" />
-            <span className="text-[hsl(var(--color-success))]">
-              {t("faktoor.created", "فاکتور ثبت شد ✅")}
-            </span>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="pointer-events-none text-center"
+          >
+            <div className="mb-4 animate-bounce text-6xl motion-reduce:animate-none">🧾</div>
+            <div className="rounded-2xl px-8 py-6 border border-[hsl(var(--border-strong))] bg-[hsl(var(--surface-elevated))] shadow-xl">
+              <p className="text-xl font-bold text-[hsl(var(--fg-primary))]">
+                🎉 {t("faktoor.created", "فاکتور با موفقیت ثبت شد")}
+              </p>
+              <p className="mt-2 text-sm text-[hsl(var(--fg-secondary))]">
+                {t("faktoor.clickToView", "کلیک کنید تا فاکتور را ببینید")}
+              </p>
+            </div>
           </div>
         </div>
       )}
-
-      {/* Celebration Modal */}
-      {showCelebration && (
-  <div className="fixed inset-0 z-50 flex cursor-pointer items-center justify-center bg-[hsl(var(--surface-base)/0.6)] backdrop-blur-md">
-    <div className="pointer-events-none text-center">
-      <div className="mb-4 animate-bounce text-6xl motion-reduce:animate-none">🧾</div>
-      <div className="rounded-2xl px-8 py-6 border border-[hsl(var(--border-strong))] bg-[hsl(var(--surface-elevated))] shadow-lg">
-        <p className="text-xl font-bold text-[hsl(var(--fg-primary))]">
-          🎉 {t("faktoor.created", "فاکتور با موفقیت ثبت شد")}
-        </p>
-        <p className="mt-2 text-sm text-[hsl(var(--fg-secondary))]">
-          {t("faktoor.clickToView", "کلیک کنید تا فاکتور را ببینید")}
-        </p>
-      </div>
-    </div>
-  </div>
-)}
 
       <div className="mx-auto max-w-xl">
         {/* Timer + Step Indicators */}
@@ -172,10 +164,10 @@ export function QuickInvoicePage({
               </div>
 
               <ProductPicker
-  value={selectedProduct}
-  onChange={onSelectProduct}
-  placeholder={t("godam.pickProduct", "انتخاب محصول از گدام...")}
-/>
+                value={selectedProduct}
+                onChange={onSelectProduct}
+                placeholder={t("godam.pickProduct", "انتخاب محصول از گدام...")}
+              />
 
               <button
                 type="button"
@@ -184,7 +176,7 @@ export function QuickInvoicePage({
                 className={cn(
                   "w-full inline-flex items-center justify-center gap-2 rounded-full px-6 py-3",
                   "text-sm font-bold text-white",
-                  "bg-[var(--gradient-brand)]",
+                  "bg-[hsl(var(--color-primary))]",
                   "shadow-sm shadow-[hsl(var(--color-primary)/0.15)]",
                   "transition-all duration-200 hover:brightness-110 active:scale-[0.98]",
                   "disabled:opacity-40 disabled:cursor-not-allowed",
@@ -215,10 +207,11 @@ export function QuickInvoicePage({
               </div>
 
               <CustomerPicker
-  value={selectedCustomer}
-  onChange={onSelectCustomer}
-  placeholder={t("customer.pickPlaceholder", "انتخاب مشتری...")}
-/>
+                value={selectedCustomer}
+                onChange={onSelectCustomer}
+                placeholder={t("customer.pickPlaceholder", "انتخاب مشتری...")}
+              />
+
               <div className="flex gap-3">
                 <button
                   type="button"
@@ -239,7 +232,7 @@ export function QuickInvoicePage({
                   onClick={() => onSetStep("price")}
                   className={cn(
                     "w-full rounded-full px-4 py-2.5 text-sm font-bold text-white",
-                    "bg-[var(--gradient-brand)]",
+                    "bg-[hsl(var(--color-primary))]",
                     "transition-all duration-200 hover:brightness-110 active:scale-[0.98]",
                     "motion-reduce:transition-none",
                   )}
@@ -267,27 +260,19 @@ export function QuickInvoicePage({
                 </p>
               </div>
 
-              {/* Summary */}
               <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] p-4 text-start">
                 <div className="mb-2 flex items-center justify-between">
-                  <span className="text-sm text-[hsl(var(--fg-secondary))]">
-                    {t("faktoor.items", "محصول")}
-                  </span>
+                  <span className="text-sm text-[hsl(var(--fg-secondary))]">{t("faktoor.items", "محصول")}</span>
                   <span className="font-medium text-[hsl(var(--fg-primary))]">{productName}</span>
                 </div>
                 {selectedCustomer && (
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-[hsl(var(--fg-secondary))]">
-                      {t("faktoor.customer", "مشتری")}
-                    </span>
-                    <span className="font-medium text-[hsl(var(--fg-primary))]">
-                      {selectedCustomer.name}
-                    </span>
+                    <span className="text-sm text-[hsl(var(--fg-secondary))]">{t("faktoor.customer", "مشتری")}</span>
+                    <span className="font-medium text-[hsl(var(--fg-primary))]">{selectedCustomer.name}</span>
                   </div>
                 )}
               </div>
 
-              {/* Payment type toggle */}
               <div className="flex gap-2">
                 {(["cash", "credit"] as PaymentType[]).map((type) => (
                   <button
@@ -295,10 +280,9 @@ export function QuickInvoicePage({
                     type="button"
                     onClick={() => onPaymentTypeChange(type)}
                     className={cn(
-                      "flex-1 rounded-full px-4 py-2.5 text-sm font-bold transition-all duration-200",
-                      "motion-reduce:transition-none",
+                      "flex-1 rounded-full px-4 py-2.5 text-sm font-bold transition-all duration-200 motion-reduce:transition-none",
                       paymentType === type
-                        ? "bg-[var(--gradient-brand)] text-white shadow-sm"
+                        ? "bg-[hsl(var(--color-primary))] text-white shadow-sm"
                         : "border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]",
                     )}
                   >
@@ -308,7 +292,6 @@ export function QuickInvoicePage({
                 ))}
               </div>
 
-              {/* Credit advance payment */}
               {paymentType === "credit" && (
                 <div className="relative">
                   <CreditCard className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))] pointer-events-none" aria-hidden="true" />
@@ -329,7 +312,6 @@ export function QuickInvoicePage({
                 </div>
               )}
 
-              {/* Quantity */}
               <div>
                 <label className="mb-2 block text-sm font-medium text-[hsl(var(--fg-primary))]">
                   {t("faktoor.quantity", "تعداد")}
@@ -341,10 +323,9 @@ export function QuickInvoicePage({
                       type="button"
                       onClick={() => onQuantityChange(q)}
                       className={cn(
-                        "h-10 w-10 rounded-full text-sm font-bold transition-all duration-200",
-                        "motion-reduce:transition-none",
+                        "h-10 w-10 rounded-full text-sm font-bold transition-all duration-200 motion-reduce:transition-none",
                         quantity === q
-                          ? "bg-[var(--gradient-brand)] text-white shadow-sm"
+                          ? "bg-[hsl(var(--color-primary))] text-white shadow-sm"
                           : "border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]",
                       )}
                     >
@@ -354,7 +335,6 @@ export function QuickInvoicePage({
                 </div>
               </div>
 
-              {/* Price input */}
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-[hsl(var(--fg-primary))]">
                   {t("faktoor.unitPrice", "قیمت")} (AFN)
@@ -379,15 +359,10 @@ export function QuickInvoicePage({
                 </div>
               </div>
 
-              {/* Total */}
               {price && (
                 <div className="rounded-2xl bg-[hsl(var(--color-primary)/0.05)] p-5 text-center border border-[hsl(var(--border-default))]">
-                  <p className="mb-2 text-sm text-[hsl(var(--fg-secondary))]">
-                    {t("common.total", "مبلغ کل")}
-                  </p>
-                  <p className="text-4xl font-bold tabular-nums text-[hsl(var(--color-primary))]">
-                    {total.toLocaleString()}
-                  </p>
+                  <p className="mb-2 text-sm text-[hsl(var(--fg-secondary))]">{t("common.total", "مبلغ کل")}</p>
+                  <p className="text-4xl font-bold tabular-nums text-[hsl(var(--color-primary))]">{total.toLocaleString()}</p>
                   <p className="mt-1 text-sm text-[hsl(var(--fg-secondary))]">
                     {paymentType === "cash"
                       ? t("faktoor.paid", "پرداخت کامل")
@@ -398,7 +373,6 @@ export function QuickInvoicePage({
                 </div>
               )}
 
-              {/* Actions */}
               <div className="flex gap-3">
                 <button
                   type="button"
@@ -421,7 +395,7 @@ export function QuickInvoicePage({
                   className={cn(
                     "w-full inline-flex items-center justify-center gap-2 rounded-full px-6 py-3",
                     "text-sm font-bold text-white",
-                    "bg-[var(--gradient-brand)]",
+                    "bg-[hsl(var(--color-primary))]",
                     "shadow-sm shadow-[hsl(var(--color-primary)/0.15)]",
                     "transition-all duration-200 hover:brightness-110 active:scale-[0.98]",
                     "disabled:opacity-40 disabled:cursor-not-allowed",
@@ -454,36 +428,19 @@ export function QuickInvoicePage({
                 </p>
               </div>
 
-              {/* Summary */}
               <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] p-5 text-start">
                 <Row label={t("faktoor.items", "محصول")} value={productName} />
                 <Row label={t("faktoor.quantity", "تعداد")} value={quantity} />
-                <Row
-                  label={t("common.status", "نوع")}
-                  value={paymentType === "cash" ? `💵 ${t("faktoor.cash", "نقد")}` : `📝 ${t("faktoor.credit", "نسیه")}`}
-                />
-                <Row
-                  label={t("common.total", "مبلغ کل")}
-                  value={`${total.toLocaleString()} AFN`}
-                  valueClass="font-bold tabular-nums text-[hsl(var(--color-primary))]"
-                />
+                <Row label={t("common.status", "نوع")} value={paymentType === "cash" ? `💵 ${t("faktoor.cash", "نقد")}` : `📝 ${t("faktoor.credit", "نسیه")}`} />
+                <Row label={t("common.total", "مبلغ کل")} value={`${total.toLocaleString()} AFN`} valueClass="font-bold tabular-nums text-[hsl(var(--color-primary))]" />
                 {paymentType === "credit" && (
                   <>
-                    <Row
-                      label={t("faktoor.paid", "پرداخت شده")}
-                      value={`${paidAmount.toLocaleString()} AFN`}
-                      valueClass="font-bold tabular-nums text-[hsl(var(--color-success))]"
-                    />
-                    <Row
-                      label={t("faktoor.remaining", "باقی‌مانده")}
-                      value={`${(total - paidAmount).toLocaleString()} AFN`}
-                      valueClass="font-bold tabular-nums text-[hsl(var(--color-destructive))]"
-                    />
+                    <Row label={t("faktoor.paid", "پرداخت شده")} value={`${paidAmount.toLocaleString()} AFN`} valueClass="font-bold tabular-nums text-[hsl(var(--color-success))]" />
+                    <Row label={t("faktoor.remaining", "باقی‌مانده")} value={`${(total - paidAmount).toLocaleString()} AFN`} valueClass="font-bold tabular-nums text-[hsl(var(--color-destructive))]" />
                   </>
                 )}
               </div>
 
-              {/* Actions */}
               <div className="flex flex-col gap-3">
                 {createdInvoiceId && (
                   <button
@@ -492,7 +449,7 @@ export function QuickInvoicePage({
                     className={cn(
                       "w-full inline-flex items-center justify-center gap-2 rounded-full px-6 py-3",
                       "text-sm font-bold text-white",
-                      "bg-[var(--gradient-brand)]",
+                      "bg-[hsl(var(--color-primary))]",
                       "transition-all duration-200 hover:brightness-110 active:scale-[0.98]",
                       "motion-reduce:transition-none",
                     )}
@@ -524,7 +481,6 @@ export function QuickInvoicePage({
   );
 }
 
-// Helper
 function Row({
   label,
   value,
@@ -537,9 +493,7 @@ function Row({
   return (
     <div className="mb-2 last:mb-0 flex justify-between">
       <span className="text-sm text-[hsl(var(--fg-secondary))]">{label}</span>
-      <span className={cn("font-medium text-[hsl(var(--fg-primary))]", valueClass)}>
-        {value}
-      </span>
+      <span className={cn("font-medium text-[hsl(var(--fg-primary))]", valueClass)}>{value}</span>
     </div>
   );
 }
