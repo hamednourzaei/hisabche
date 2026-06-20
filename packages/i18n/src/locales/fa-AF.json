@@ -1,4 +1,13 @@
 {
+  "app": {
+    "name": "حسابچه",
+    "tagline": "سیستم مدیریت کسب‌وکار",
+    "loading": "در حال بارگذاری...",
+    "error": "خطا رخ داد",
+    "retry": "دوباره تلاش کنید",
+    "noData": "معلوماتی موجود نیست",
+    "comingSoon": "به زودی..."
+  },
   "landing": {
     "heroTitle": "فاکتور، حسابداری و مدیریت ګدام",
     "heroSub": "برای کسب‌وکارهای افغانستان",
@@ -22,15 +31,6 @@
     "finalCTAButton": "شروع رایگان",
     "footer": "Business OS for Afghanistan · ساخته شده برای کسبه افغانستان"
   },
-  "app": {
-    "name": "حسابچه",
-    "tagline": "سیستم مدیریت کسب‌وکار",
-    "loading": "در حال بارگذاری...",
-    "error": "خطا رخ داد",
-    "retry": "دوباره تلاش کنید",
-    "noData": "معلوماتی موجود نیست",
-    "comingSoon": "به زودی..."
-  },
   "nav": {
     "dashboard": "داشبورد",
     "dashboard.description": "نمای کلی تجارت",
@@ -46,6 +46,27 @@
     "settings": "تنظیمات",
     "settings.description": "تنظیمات برنامه",
     "profile": "پروفایل"
+  },
+  "auth": {
+    "signIn": "ورود",
+    "signUp": "ثبت نام",
+    "signOut": "خروج",
+    "email": "ایمیل",
+    "password": "پسورد",
+    "forgotPassword": "پسورد را فراموش کردید؟",
+    "resetPassword": "بازنشانی پسورد",
+    "noAccount": "اکانت ندارید؟",
+    "haveAccount": "اکانت دارید؟",
+    "createAccount": "اکانت بسازید",
+    "welcomeBack": "خوش آمدید",
+    "invalidCredentials": "ایمیل یا پسورد اشتباه است",
+    "passwordMinLength": "پسورد حداقل ۸ حرف باشد",
+    "emailInvalid": "ایمیل معتبر نیست",
+    "sessionExpired": "نشست تمام شد، دوباره وارد شوید",
+    "pinCode": "رمز پین",
+    "enterPin": "رمز پین را وارد کنید",
+    "setupPin": "تنظیم رمز پین",
+    "confirmPin": "تأیید رمز پین"
   },
   "action": {
     "save": "ذخیره",
@@ -72,27 +93,6 @@
     "open": "باز کردن",
     "view": "مشاهده",
     "archive": "آرشیف"
-  },
-  "auth": {
-    "signIn": "ورود",
-    "signUp": "ثبت نام",
-    "signOut": "خروج",
-    "email": "ایمیل",
-    "password": "پسورد",
-    "forgotPassword": "پسورد را فراموش کردید؟",
-    "resetPassword": "بازنشانی پسورد",
-    "noAccount": "اکانت ندارید؟",
-    "haveAccount": "اکانت دارید؟",
-    "createAccount": "اکانت بسازید",
-    "welcomeBack": "خوش آمدید",
-    "invalidCredentials": "ایمیل یا پسورد اشتباه است",
-    "passwordMinLength": "پسورد حداقل ۸ حرف باشد",
-    "emailInvalid": "ایمیل معتبر نیست",
-    "sessionExpired": "نشست تمام شد، دوباره وارد شوید",
-    "pinCode": "رمز پین",
-    "enterPin": "رمز پین را وارد کنید",
-    "setupPin": "تنظیم رمز پین",
-    "confirmPin": "تأیید رمز پین"
   },
   "faktoor": {
     "title": "فاکتور",

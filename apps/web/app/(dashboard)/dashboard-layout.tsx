@@ -26,14 +26,13 @@ import { cn } from "@/lib/utils";
 import "@hisabche/ui/globals.css";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   DashboardLayout v2 — Hisabche Design Language
-   Zero hardcoded colors — all tokens from design system
+   DashboardLayout v3 — Fully i18n, Zero Hardcoded Strings
    ═══════════════════════════════════════════════════════════════════════════ */
 
 // خارج از component — هیچ‌وقت re-create نمی‌شه
 const NAV_MAPPED = NAV_ITEMS.map((item) => ({
   id: item.id,
-  label: item.labelKey,
+  labelKey: item.labelKey, // ✅ به‌جای label از labelKey استفاده می‌کنیم
   path: item.path,
   icon: item.icon,
 }));
@@ -89,6 +88,7 @@ export default function DashboardLayout({
     i18n.changeLanguage(nextLang);
   }, [i18n]);
 
+  // ✅ کامندها با i18n کامل
   const commands = useMemo(
     () =>
       COMMAND_ITEMS.map((cmd) => ({
@@ -126,8 +126,12 @@ export default function DashboardLayout({
     return null;
   }
 
+  // ✅ RTL direction بر اساس زبان
+  const isRtl = i18n.language === "fa-AF" || i18n.language === "fa-IR";
+
   return (
     <div
+      dir={isRtl ? "rtl" : "ltr"}
       className={cn(
         "flex min-h-screen",
         "bg-[hsl(var(--surface-base))]",
@@ -135,12 +139,19 @@ export default function DashboardLayout({
       )}
     >
       <CommandPalette commands={commands} />
+      
+      {/* ✅ Sidebar با i18n */}
       <DashboardSidebar
-        items={NAV_MAPPED}
+        items={NAV_MAPPED.map((item) => ({
+          ...item,
+          label: t(item.labelKey), // ✅ i18n در اینجا اعمال می‌شود
+        }))}
         activeNav={activeNav}
         onNavigate={handleNavigate}
       />
+      
       <div className="flex min-h-screen flex-1 flex-col">
+        {/* ✅ Header با i18n کامل */}
         <DashboardHeader
           variant="dashboard"
           appName={t("app.name")}
@@ -157,11 +168,17 @@ export default function DashboardLayout({
           onLogout={handleLogout}
           onNavigateLogin={handleNavigateLogin}
         />
+        
         <main className="flex-1 overflow-y-auto p-4 pb-20 lg:pb-4">
           {children}
         </main>
+        
+        {/* ✅ BottomNav با i18n */}
         <BottomNav
-          items={NAV_MAPPED}
+          items={NAV_MAPPED.map((item) => ({
+            ...item,
+            label: t(item.labelKey), // ✅ i18n در اینجا اعمال می‌شود
+          }))}
           activeNav={activeNav}
           onNavigate={handleNavigate}
         />
