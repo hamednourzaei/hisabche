@@ -13,6 +13,13 @@ import {
 import { CustomerService } from '../services/customer.service'
 import { authenticate } from '../middleware/auth.middleware'
 
+// ✅ تنظیمات برای حذف $schema از خروجی
+const toJsonSchema = (schema: any) => {
+  const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
+  delete result.$schema
+  return result
+}
+
 export async function customerRoutes(fastify: FastifyInstance) {
   const customerService = new CustomerService()
 
@@ -20,15 +27,15 @@ export async function customerRoutes(fastify: FastifyInstance) {
   fastify.get('/api/customers', {
     preHandler: [authenticate],
     schema: {
-      querystring: zodToJsonSchema(customerFiltersSchema),
+      querystring: toJsonSchema(customerFiltersSchema),
       response: {
-        200: zodToJsonSchema(z.object({
-          customers: z.array(z.any()),
+        200: toJsonSchema(z.object({
+          customers: z.array(z.unknown()),
           total: z.number(),
           page: z.number(),
           limit: z.number(),
         })),
-        400: zodToJsonSchema(z.object({ error: z.string(), details: z.any().optional() })),
+        400: toJsonSchema(z.object({ error: z.string(), details: z.unknown().optional() })),
       },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
@@ -53,14 +60,14 @@ export async function customerRoutes(fastify: FastifyInstance) {
   fastify.get('/api/customers/:id', {
     preHandler: [authenticate],
     schema: {
-      params: zodToJsonSchema(z.object({ id: z.string().uuid() })),
+      params: toJsonSchema(z.object({ id: z.string().uuid() })),
       response: {
-        200: zodToJsonSchema(z.object({
+        200: toJsonSchema(z.object({
           id: z.string().uuid(),
           fullName: z.string(),
           phone: z.string().optional(),
           email: z.string().optional(),
-          address: z.any().optional(),
+          address: z.unknown().optional(),
           notes: z.string().optional(),
           openingBalance: z.number(),
           isActive: z.boolean(),
@@ -68,7 +75,7 @@ export async function customerRoutes(fastify: FastifyInstance) {
           updatedAt: z.string().datetime().optional(),
           balance: z.number(),
         })),
-        404: zodToJsonSchema(z.object({ error: z.string() })),
+        404: toJsonSchema(z.object({ error: z.string() })),
       },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
@@ -87,21 +94,21 @@ export async function customerRoutes(fastify: FastifyInstance) {
   fastify.post('/api/customers', {
     preHandler: [authenticate],
     schema: {
-      body: zodToJsonSchema(createCustomerSchema),
+      body: toJsonSchema(createCustomerSchema),
       response: {
-        201: zodToJsonSchema(z.object({
+        201: toJsonSchema(z.object({
           id: z.string().uuid(),
           fullName: z.string(),
           phone: z.string().optional(),
           email: z.string().optional(),
-          address: z.any().optional(),
+          address: z.unknown().optional(),
           notes: z.string().optional(),
           openingBalance: z.number(),
           isActive: z.boolean(),
           createdAt: z.string().datetime(),
           updatedAt: z.string().datetime().optional(),
         })),
-        400: zodToJsonSchema(z.object({ error: z.string(), details: z.any().optional() })),
+        400: toJsonSchema(z.object({ error: z.string(), details: z.unknown().optional() })),
       },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
@@ -126,23 +133,23 @@ export async function customerRoutes(fastify: FastifyInstance) {
   fastify.patch('/api/customers/:id', {
     preHandler: [authenticate],
     schema: {
-      params: zodToJsonSchema(z.object({ id: z.string().uuid() })),
-      body: zodToJsonSchema(updateCustomerSchema),
+      params: toJsonSchema(z.object({ id: z.string().uuid() })),
+      body: toJsonSchema(updateCustomerSchema),
       response: {
-        200: zodToJsonSchema(z.object({
+        200: toJsonSchema(z.object({
           id: z.string().uuid(),
           fullName: z.string(),
           phone: z.string().optional(),
           email: z.string().optional(),
-          address: z.any().optional(),
+          address: z.unknown().optional(),
           notes: z.string().optional(),
           openingBalance: z.number(),
           isActive: z.boolean(),
           createdAt: z.string().datetime(),
           updatedAt: z.string().datetime().optional(),
         })),
-        400: zodToJsonSchema(z.object({ error: z.string(), details: z.any().optional() })),
-        404: zodToJsonSchema(z.object({ error: z.string() })),
+        400: toJsonSchema(z.object({ error: z.string(), details: z.unknown().optional() })),
+        404: toJsonSchema(z.object({ error: z.string() })),
       },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
@@ -168,8 +175,7 @@ export async function customerRoutes(fastify: FastifyInstance) {
   fastify.delete('/api/customers/:id', {
     preHandler: [authenticate],
     schema: {
-      params: zodToJsonSchema(z.object({ id: z.string().uuid() })),
-      // حذف response برای 204
+      params: toJsonSchema(z.object({ id: z.string().uuid() })),
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -187,9 +193,9 @@ export async function customerRoutes(fastify: FastifyInstance) {
   fastify.get('/api/customers/:id/balance', {
     preHandler: [authenticate],
     schema: {
-      params: zodToJsonSchema(z.object({ id: z.string().uuid() })),
+      params: toJsonSchema(z.object({ id: z.string().uuid() })),
       response: {
-        200: zodToJsonSchema(z.object({
+        200: toJsonSchema(z.object({
           customerId: z.string().uuid(),
           balance: z.number(),
           isDebtor: z.boolean(),
