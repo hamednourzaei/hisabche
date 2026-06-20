@@ -1,95 +1,87 @@
-"use client"
+"use client";
 
 import {
   useEffect,
   useRef,
   useState,
   useCallback,
-} from "react"
-import { useRouter } from "next/navigation"
-import { useTranslation } from "react-i18next"
-import { useCreateInvoice } from "@hisabche/api"
+} from "react";
+import { useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
+import { useCreateInvoice } from "@hisabche/api";
 import {
   useOnboardingStore,
   usePreferencesStore,
   useSyncStore,
   useBackupStore,
-} from "@hisabche/store"
-import { QuickInvoicePage } from "../quick-invoice-page"
-import { Celebration } from "../../celebration"
-import type { QuickInvoicePageProps } from "../quick-invoice-page"
+} from "@hisabche/store";
+import { QuickInvoicePage } from "../quick-invoice-page";
+import type { QuickInvoicePageProps } from "../quick-invoice-page";
 
 export function QuickInvoiceContainer() {
-  const { t } = useTranslation()
-  const router = useRouter()
-  const createInvoice = useCreateInvoice()
-  const { markInvoiceCreated } = useOnboardingStore()
-  const preferences = usePreferencesStore()
-  const { setSaveStatus } = useSyncStore()
-  const { addAuditEntry } = useBackupStore()
-  const inputRef = useRef<HTMLInputElement>(null!)
+  const { t } = useTranslation();
+  const router = useRouter();
+  const createInvoice = useCreateInvoice();
+  const { markInvoiceCreated } = useOnboardingStore();
+  const preferences = usePreferencesStore();
+  const { setSaveStatus } = useSyncStore();
+  const { addAuditEntry } = useBackupStore();
+  const inputRef = useRef<HTMLInputElement>(null!);
 
   const [step, setStep] =
-    useState<QuickInvoicePageProps["step"]>("product")
+    useState<QuickInvoicePageProps["step"]>("product");
   const [selectedProduct, setSelectedProduct] =
-    useState<QuickInvoicePageProps["selectedProduct"]>(null)
+    useState<QuickInvoicePageProps["selectedProduct"]>(null);
   const [selectedCustomer, setSelectedCustomer] =
-    useState<QuickInvoicePageProps["selectedCustomer"]>(null)
-  const [price, setPrice] = useState("")
-  const [quantity, setQuantity] = useState("1")
+    useState<QuickInvoicePageProps["selectedCustomer"]>(null);
+  const [price, setPrice] = useState("");
+  const [quantity, setQuantity] = useState("1");
   const [paymentType, setPaymentType] =
-    useState<QuickInvoicePageProps["paymentType"]>("cash")
-  const [paidNow, setPaidNow] = useState("")
-  const [showCelebration, setShowCelebration] =
-    useState(false)
+    useState<QuickInvoicePageProps["paymentType"]>("cash");
+  const [paidNow, setPaidNow] = useState("");
+  const [showCelebration, setShowCelebration] = useState(false);
   const [createdInvoiceId, setCreatedInvoiceId] =
-    useState<string | null>(null)
-  const [startTime] = useState(Date.now())
-  const [elapsed, setElapsed] = useState(0)
-  const [showSaved, setShowSaved] = useState(false)
+    useState<string | null>(null);
+  const [startTime] = useState(Date.now());
+  const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
-    inputRef.current?.focus()
-  }, [step])
+    inputRef.current?.focus();
+  }, [step]);
 
   useEffect(() => {
     const interval = setInterval(
-      () =>
-        setElapsed(
-          Math.floor((Date.now() - startTime) / 1000)
-        ),
-      1000
-    )
-    return () => clearInterval(interval)
-  }, [startTime])
+      () => setElapsed(Math.floor((Date.now() - startTime) / 1000)),
+      1000,
+    );
+    return () => clearInterval(interval);
+  }, [startTime]);
 
   useEffect(() => {
     if (selectedProduct?.sellPrice) {
-      setPrice(selectedProduct.sellPrice.toString())
+      setPrice(selectedProduct.sellPrice.toString());
     }
-  }, [selectedProduct])
+  }, [selectedProduct]);
 
   const total =
-    (parseFloat(price) || 0) * (parseInt(quantity) || 1)
-  const productName = selectedProduct?.name ?? ""
+    (parseFloat(price) || 0) * (parseInt(quantity) || 1);
+  const productName = selectedProduct?.name ?? "";
   const paidAmount =
-    paymentType === "cash"
-      ? total
-      : parseFloat(paidNow) || 0
+    paymentType === "cash" ? total : parseFloat(paidNow) || 0;
 
   const dismissCelebration = useCallback(() => {
-    setShowCelebration(false)
+    setShowCelebration(false);
     router.push(
       createdInvoiceId
         ? `/invoices/${createdInvoiceId}`
-        : "/invoices"
-    )
-  }, [createdInvoiceId, router])
+        : "/invoices",
+    );
+  }, [createdInvoiceId, router]);
 
   const handleCreate = useCallback(async () => {
-    if (!selectedProduct || !price) return
+    if (!selectedProduct || !price) return;
 
-    setSaveStatus("saving")
+    setSaveStatus("saving");
 
     const newInvoice = await createInvoice.mutateAsync({
       type: "sale",
@@ -110,7 +102,6 @@ export function QuickInvoiceContainer() {
           | "PKR"
           | "IRR") ?? "AFN",
       customerId: selectedCustomer?.id || undefined,
-      
       items: [
         {
           productId: selectedProduct.id,
@@ -121,17 +112,17 @@ export function QuickInvoiceContainer() {
           totalPrice: total,
         },
       ],
-    })
+    });
 
-    preferences.addRecentProduct(selectedProduct.name)
-    preferences.addFrequentProduct(selectedProduct.name)
+    preferences.addRecentProduct(selectedProduct.name);
+    preferences.addFrequentProduct(selectedProduct.name);
     if (selectedCustomer) {
       preferences.setLastCustomer(
         selectedCustomer.name,
-        selectedCustomer.id
-      )
+        selectedCustomer.id,
+      );
     }
-    markInvoiceCreated()
+    markInvoiceCreated();
 
     addAuditEntry({
       action: "create",
@@ -140,18 +131,14 @@ export function QuickInvoiceContainer() {
       details: `فاکتور جدید: ${productName} — ${total.toLocaleString()} AFN ${
         paymentType === "cash" ? "نقد" : "نسیه"
       }`,
-    })
+    });
 
-    setSaveStatus("saved")
-    setShowSaved(true)
-    setTimeout(() => {
-      setSaveStatus("idle")
-      setShowSaved(false)
-    }, 2000)
+    setSaveStatus("saved");
+    setTimeout(() => setSaveStatus("idle"), 2000);
 
-    setCreatedInvoiceId(newInvoice.id ?? null)
-    setShowCelebration(true)
-    setStep("done")
+    setCreatedInvoiceId(newInvoice.id ?? null);
+    setShowCelebration(true);
+    setStep("done");
   }, [
     selectedProduct,
     price,
@@ -165,72 +152,61 @@ export function QuickInvoiceContainer() {
     markInvoiceCreated,
     setSaveStatus,
     addAuditEntry,
-  ])
+  ]);
 
   const safeT = useCallback(
     (key: string, fallback?: string) => {
-      const v = t(key)
-      return v && v !== key ? v : (fallback ?? key)
+      const v = t(key);
+      return v && v !== key ? v : (fallback ?? key);
     },
-    [t]
-  )
+    [t],
+  );
 
   const elapsedFormatted =
     elapsed < 60
       ? `${elapsed}s`
-      : `${Math.floor(elapsed / 60)}m ${elapsed % 60}s`
+      : `${Math.floor(elapsed / 60)}m ${elapsed % 60}s`;
 
   const handleViewInvoice = useCallback(
-    () =>
-      router.push(`/invoices/${createdInvoiceId}`),
-    [createdInvoiceId, router]
-  )
+    () => router.push(`/invoices/${createdInvoiceId}`),
+    [createdInvoiceId, router],
+  );
 
   const handleViewAllInvoices = useCallback(
     () => router.push("/invoices"),
-    [router]
-  )
+    [router],
+  );
 
   return (
-    <>
-      <Celebration
-        show={showCelebration}
-        message={t("faktoor.created", "فاکتور با موفقیت ثبت شد")}
-        emoji="🧾"
-        duration={3000}
-        onComplete={dismissCelebration}
-      />
-
-      <QuickInvoicePage
-        t={safeT}
-        elapsedFormatted={elapsedFormatted}
-        showSaved={showSaved}
-        showCelebration={showCelebration}
-        step={step}
-        selectedProduct={selectedProduct}
-        selectedCustomer={selectedCustomer}
-        price={price}
-        quantity={quantity}
-        paymentType={paymentType}
-        paidNow={paidNow}
-        total={total}
-        productName={productName}
-        paidAmount={paidAmount}
-        createdInvoiceId={createdInvoiceId}
-        isPending={createInvoice.isPending}
-        inputRef={inputRef}
-        onSelectProduct={setSelectedProduct}
-        onSelectCustomer={setSelectedCustomer}
-        onPriceChange={setPrice}
-        onQuantityChange={setQuantity}
-        onPaymentTypeChange={setPaymentType}
-        onPaidNowChange={setPaidNow}
-        onSetStep={setStep}
-        onCreate={handleCreate}
-        onDismissCelebration={dismissCelebration}
-        onViewInvoice={handleViewInvoice}
-        onViewAllInvoices={handleViewAllInvoices}
-      />
-    </>
-  )
+    <QuickInvoicePage
+      t={safeT}
+      elapsedFormatted={elapsedFormatted}
+      showSaved={false}
+      showCelebration={showCelebration}
+      step={step}
+      selectedProduct={selectedProduct}
+      selectedCustomer={selectedCustomer}
+      price={price}
+      quantity={quantity}
+      paymentType={paymentType}
+      paidNow={paidNow}
+      total={total}
+      productName={productName}
+      paidAmount={paidAmount}
+      createdInvoiceId={createdInvoiceId}
+      isPending={createInvoice.isPending}
+      inputRef={inputRef}
+      onSelectProduct={setSelectedProduct}
+      onSelectCustomer={setSelectedCustomer}
+      onPriceChange={setPrice}
+      onQuantityChange={setQuantity}
+      onPaymentTypeChange={setPaymentType}
+      onPaidNowChange={setPaidNow}
+      onSetStep={setStep}
+      onCreate={handleCreate}
+      onDismissCelebration={dismissCelebration}
+      onViewInvoice={handleViewInvoice}
+      onViewAllInvoices={handleViewAllInvoices}
+    />
+  );
 }

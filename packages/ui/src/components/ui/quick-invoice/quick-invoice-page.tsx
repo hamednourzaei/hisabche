@@ -104,26 +104,23 @@ export function QuickInvoicePage({
     <div className="px-4 py-10">
       {/* Celebration Pop-up — only */}
       {showCelebration && (
-        <div
-          className="fixed inset-0 z-50 flex cursor-pointer items-center justify-center bg-[hsl(var(--surface-base)/0.6)] backdrop-blur-md"
-          onClick={onDismissCelebration}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="pointer-events-none text-center"
-          >
-            <div className="mb-4 animate-bounce text-6xl motion-reduce:animate-none">🧾</div>
-            <div className="rounded-2xl px-8 py-6 border border-[hsl(var(--border-strong))] bg-[hsl(var(--surface-elevated))] shadow-xl">
-              <p className="text-xl font-bold text-[hsl(var(--fg-primary))]">
-                🎉 {t("faktoor.created", "فاکتور با موفقیت ثبت شد")}
-              </p>
-              <p className="mt-2 text-sm text-[hsl(var(--fg-secondary))]">
-                {t("faktoor.clickToView", "کلیک کنید تا فاکتور را ببینید")}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+  <div
+    className="fixed inset-0 z-50 flex cursor-pointer items-center justify-center bg-[hsl(var(--surface-base)/0.6)] backdrop-blur-md"
+    onClick={onDismissCelebration}
+  >
+    <div className="text-center">
+      <div className="mb-4 animate-bounce text-6xl motion-reduce:animate-none">🧾</div>
+      <div className="rounded-2xl px-8 py-6 border border-[hsl(var(--border-strong))] bg-[hsl(var(--surface-elevated))] shadow-xl">
+        <p className="text-xl font-bold text-[hsl(var(--fg-primary))]">
+          🎉 {t("faktoor.created", "فاکتور با موفقیت ثبت شد")}
+        </p>
+        <p className="mt-2 text-sm text-[hsl(var(--fg-secondary))]">
+          {t("faktoor.clickToView", "کلیک کنید تا فاکتور را ببینید")}
+        </p>
+      </div>
+    </div>
+  </div>
+)}
 
       <div className="mx-auto max-w-xl">
         {/* Timer + Step Indicators */}
