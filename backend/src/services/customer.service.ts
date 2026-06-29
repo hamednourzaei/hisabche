@@ -6,6 +6,22 @@ import { supabase } from '../db'
 import { CreateCustomer, UpdateCustomer, CustomerFilters } from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
 
+// ✅ مپ کردن snake_case به camelCase
+function mapCustomer(raw: Record<string, any>) {
+  return {
+    id: raw.id,
+    fullName: raw.full_name,
+    phone: raw.phone,
+    email: raw.email,
+    address: raw.address,
+    notes: raw.notes,
+    openingBalance: raw.opening_balance,
+    isActive: raw.is_active,
+    createdAt: raw.created_at,
+    updatedAt: raw.updated_at,
+  }
+}
+
 export class CustomerService {
   // ─── List ────────────────────────────────────────────────
   async list(userId: string, filters: CustomerFilters) {
@@ -43,7 +59,7 @@ export class CustomerService {
     }
 
     return {
-      customers: data || [],
+      customers: (data || []).map(mapCustomer),
       total: count || 0,
       page,
       limit,
@@ -67,10 +83,7 @@ export class CustomerService {
     const balance = await this.getBalance(id, userId)
 
     return {
-      ...customer,
-      fullName: customer.full_name,
-      openingBalance: customer.opening_balance,
-      isActive: customer.is_active,
+      ...mapCustomer(customer),
       balance: balance.balance,
     }
   }
@@ -108,7 +121,7 @@ export class CustomerService {
       })
     }
 
-    return customer
+    return mapCustomer(customer)
   }
 
   // ─── Update ─────────────────────────────────────────────
@@ -138,7 +151,7 @@ export class CustomerService {
       throw new DatabaseError('Customer not found')
     }
 
-    return customer
+    return mapCustomer(customer)
   }
 
   // ─── Delete ─────────────────────────────────────────────
