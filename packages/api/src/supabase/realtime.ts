@@ -1,38 +1,50 @@
-// ═══ Supabase Realtime — فقط وقتی URL موجود باشه ═══
+// ============================================
+// packages/api/src/supabase/realtime.ts
+// ============================================
 
-let supabase: any = null
+import { createClient, SupabaseClient, RealtimeChannel } from '@supabase/supabase-js'
 
-export function getSupabase() {
+let supabase: SupabaseClient | null = null
+let initPromise: Promise<SupabaseClient | null> | null = null
+
+async function getSupabase(): Promise<SupabaseClient | null> {
   if (typeof window === 'undefined') return null
   if (supabase) return supabase
 
+  // جلوگیری از ساخته شدن چند promise موازی
+  if (initPromise) return initPromise
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
   if (!url || !key) return null
 
-  import('@supabase/supabase-js').then(({ createClient }) => {
-    supabase = createClient(url, key, {
+  initPromise = Promise.resolve(
+    createClient(url, key, {
       realtime: { params: { eventsPerSecond: 10 } },
     })
-  })
+  )
 
-  return null
+  supabase = await initPromise
+  return supabase
 }
 
-export function subscribeToChannel(
+export async function subscribeToChannel(
   table: string,
   callback: () => void,
-) {
-  const client = getSupabase()
+): Promise<{ unsubscribe: () => void }> {
+  const client = await getSupabase()
   if (!client) return { unsubscribe: () => {} }
 
-  return client
+  const channel: RealtimeChannel = client
     .channel(`hisabche-${table}`)
     .on(
-      'postgres_changes' as any,
+      'postgres_changes',
       { event: '*', schema: 'public', table },
       () => callback(),
     )
     .subscribe()
+
+  return {
+    unsubscribe: () => client.removeChannel(channel),
+  }
 }
