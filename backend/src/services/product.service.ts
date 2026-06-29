@@ -9,6 +9,16 @@ import {
   ProductFilters,
 } from '@hisabche/validation'
 import { DatabaseError, NotFoundError } from '../errors/database.error'
+import { mapProduct } from '../utils/product.mapper'
+
+// ✅ نگاشت camelCase به snake_case برای sortBy
+const SORT_BY_MAP: Record<string, string> = {
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+  sellPrice: 'sell_price',
+  buyPrice: 'buy_price',
+  minStockLevel: 'min_stock_level',
+}
 
 export class ProductService {
   // ─── List ────────────────────────────────────────────────
@@ -29,11 +39,14 @@ export class ProductService {
     const from = (page - 1) * limit
     const to = from + limit - 1
 
+    // ✅ تبدیل sortBy به snake_case (اگر در نگاشت وجود داشت)
+    const dbSortBy = SORT_BY_MAP[sortBy ?? ''] ?? sortBy ?? 'created_at'
+
     let query = supabase
       .from('products')
       .select('*', { count: 'exact' })
       .eq('user_id', userId)
-      .order(sortBy || 'created_at', { ascending: sortDirection === 'asc' })
+      .order(dbSortBy, { ascending: sortDirection === 'asc' })
       .range(from, to)
 
     if (search) {
@@ -66,17 +79,17 @@ export class ProductService {
       throw new DatabaseError('Failed to fetch products', error)
     }
 
-    // فیلتر lowStock در جاوااسکریپت (بعد از دریافت داده)
-    let products = data || []
-    
+    // ✅ تبدیل به camelCase و سپس فیلتر lowStock
+    let products = (data || []).map(mapProduct)
+
     if (lowStock !== undefined) {
       if (lowStock) {
         products = products.filter(product => 
-          product.quantity <= product.min_stock_level
+          product.quantity <= product.minStockLevel
         )
       } else {
         products = products.filter(product => 
-          product.quantity > product.min_stock_level
+          product.quantity > product.minStockLevel
         )
       }
     }
@@ -102,7 +115,7 @@ export class ProductService {
       throw new NotFoundError('Product')
     }
 
-    return product
+    return mapProduct(product)
   }
 
   // ─── Create ─────────────────────────────────────────────
@@ -132,7 +145,7 @@ export class ProductService {
       throw new DatabaseError('Failed to create product', error)
     }
 
-    return product
+    return mapProduct(product)
   }
 
   // ─── Update ─────────────────────────────────────────────
@@ -175,7 +188,7 @@ export class ProductService {
       throw new NotFoundError('Product')
     }
 
-    return product
+    return mapProduct(product)
   }
 
   // ─── Delete ─────────────────────────────────────────────
@@ -213,7 +226,6 @@ export class ProductService {
 
   // ─── Get Low Stock ──────────────────────────────────────
   async getLowStock(userId: string) {
-    // ✅ دریافت همه محصولات و فیلتر در جاوااسکریپت
     const { data, error } = await supabase
       .from('products')
       .select('*')
@@ -225,9 +237,9 @@ export class ProductService {
       throw new DatabaseError('Failed to fetch low stock products', error)
     }
 
-    // فیلتر lowStock در جاوااسکریپت
-    return (data || []).filter(product => 
-      product.quantity <= product.min_stock_level
-    )
+    // ✅ تبدیل به camelCase و سپس فیلتر
+    return (data || [])
+      .map(mapProduct)
+      .filter(product => product.quantity <= product.minStockLevel)
   }
 }

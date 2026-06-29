@@ -1,4 +1,3 @@
-// packages/ui/src/components/ui/godam/godam-product-list.tsx
 "use client";
 
 import { cn } from "@/lib/utils";
@@ -8,7 +7,7 @@ import type { Product } from "../../../lib/godam/godam-types";
 /* ═══════════════════════════════════════════════════════════════════════════
    GodamProductList v2 — Hisabche Design Language
    Zero hardcoded colors — all tokens from design system
-   No external component dependencies (Card, Button, Badge removed)
+   No external component dependencies
    ═══════════════════════════════════════════════════════════════════════════ */
 
 interface GodamProductListProps {
