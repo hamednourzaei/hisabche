@@ -41,7 +41,7 @@ export async function customerRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const query = customerFiltersSchema.parse(request.query)
-      const userId = (request as any).userId
+      const userId = request.userId // ✅ بدون any
       const result = await customerService.list(userId, query)
       return reply.send(result)
     } catch (err) {
@@ -51,7 +51,7 @@ export async function customerRoutes(fastify: FastifyInstance) {
           details: err.errors
         })
       }
-      fastify.log.error(err)
+      fastify.log.error({ err, userId: request.userId, route: 'GET /api/customers' })
       return reply.code(500).send({ error: 'Failed to fetch customers' })
     }
   })
@@ -81,11 +81,11 @@ export async function customerRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const { id } = request.params as { id: string }
-      const userId = (request as any).userId
+      const userId = request.userId // ✅ بدون any
       const customer = await customerService.getById(id, userId)
       return reply.send(customer)
     } catch (err) {
-      fastify.log.error(err)
+      fastify.log.error({ err, userId: request.userId, route: 'GET /api/customers/:id' })
       return reply.code(404).send({ error: 'Customer not found' })
     }
   })
@@ -114,7 +114,7 @@ export async function customerRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const body = createCustomerSchema.parse(request.body)
-      const userId = (request as any).userId
+      const userId = request.userId // ✅ بدون any
       const customer = await customerService.create(userId, body)
       return reply.code(201).send(customer)
     } catch (err) {
@@ -124,8 +124,11 @@ export async function customerRoutes(fastify: FastifyInstance) {
           details: err.errors
         })
       }
-      fastify.log.error(err)
-      return reply.code(500).send({ error: 'Failed to create customer' })
+      fastify.log.error({ err, userId: request.userId, route: 'POST /api/customers' })
+      return reply.code(500).send({ 
+        error: 'Failed to create customer',
+        details: err instanceof Error ? err.message : 'Unknown error'
+      })
     }
   })
 
@@ -156,7 +159,7 @@ export async function customerRoutes(fastify: FastifyInstance) {
     try {
       const { id } = request.params as { id: string }
       const body = updateCustomerSchema.parse(request.body)
-      const userId = (request as any).userId
+      const userId = request.userId // ✅ بدون any
       const customer = await customerService.update(id, userId, body)
       return reply.send(customer)
     } catch (err) {
@@ -166,7 +169,7 @@ export async function customerRoutes(fastify: FastifyInstance) {
           details: err.errors
         })
       }
-      fastify.log.error(err)
+      fastify.log.error({ err, userId: request.userId, route: 'PATCH /api/customers/:id' })
       return reply.code(500).send({ error: 'Failed to update customer' })
     }
   })
@@ -180,11 +183,11 @@ export async function customerRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const { id } = request.params as { id: string }
-      const userId = (request as any).userId
+      const userId = request.userId // ✅ بدون any
       await customerService.delete(id, userId)
       return reply.code(204).send()
     } catch (err) {
-      fastify.log.error(err)
+      fastify.log.error({ err, userId: request.userId, route: 'DELETE /api/customers/:id' })
       return reply.code(500).send({ error: 'Failed to delete customer' })
     }
   })
@@ -205,11 +208,11 @@ export async function customerRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const { id } = request.params as { id: string }
-      const userId = (request as any).userId
+      const userId = request.userId // ✅ بدون any
       const balance = await customerService.getBalance(id, userId)
       return reply.send(balance)
     } catch (err) {
-      fastify.log.error(err)
+      fastify.log.error({ err, userId: request.userId, route: 'GET /api/customers/:id/balance' })
       return reply.code(500).send({ error: 'Failed to fetch balance' })
     }
   })

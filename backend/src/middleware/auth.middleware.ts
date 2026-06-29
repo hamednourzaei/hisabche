@@ -5,6 +5,14 @@
 import { FastifyRequest, FastifyReply } from 'fastify'
 import { supabase } from '../db'
 
+// ✅ Declaration merging برای تایپ‌دهی صحیح
+declare module 'fastify' {
+  interface FastifyRequest {
+    user: any // بعداً با تایپ واقعی جایگزین می‌شود
+    userId: string
+  }
+}
+
 export async function authenticate(request: FastifyRequest, reply: FastifyReply) {
   const authHeader = request.headers.authorization
   if (!authHeader) {
@@ -19,8 +27,9 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
     return reply.status(401).send({ error: 'Invalid or expired token' })
   }
 
-  ;(request as any).user = user
-  ;(request as any).userId = user.id
+  // ✅ بدون any
+  request.user = user
+  request.userId = user.id
 }
 
 // برای راحتی، به عنوان preHandler هم کار می‌کنه

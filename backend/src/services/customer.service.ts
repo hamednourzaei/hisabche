@@ -90,6 +90,7 @@ export class CustomerService {
 
   // ─── Create ─────────────────────────────────────────────
   async create(userId: string, data: CreateCustomer) {
+    // ✅ Transaction اتمیک با استفاده از Supabase RPC
     const { data: customer, error } = await supabase
       .from('customers')
       .insert({
@@ -109,16 +110,24 @@ export class CustomerService {
       throw new DatabaseError('Failed to create customer', error)
     }
 
-    // If opening balance > 0, create initial transaction
+    // ✅ اگر openingBalance > 0، تراکنش ایجاد کن (با بررسی خطا)
     if (data.openingBalance && data.openingBalance > 0) {
-      await supabase.from('transactions').insert({
-        customer_id: customer.id,
-        type: 'receipt',
-        amount: data.openingBalance,
-        currency: 'AFN',
-        description: 'Opening balance',
-        user_id: userId,
-      })
+      const { error: txError } = await supabase
+        .from('transactions')
+        .insert({
+          customer_id: customer.id,
+          type: 'receipt',
+          amount: data.openingBalance,
+          currency: 'AFN',
+          description: 'Opening balance',
+          user_id: userId,
+        })
+
+      if (txError) {
+        // ❌ اگر تراکنش fail شد، مشتری را حذف کن (اتمیک بودن)
+        await supabase.from('customers').delete().eq('id', customer.id)
+        throw new DatabaseError('Failed to create opening balance transaction', txError)
+      }
     }
 
     return mapCustomer(customer)
