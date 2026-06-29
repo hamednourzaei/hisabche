@@ -18,11 +18,12 @@ export const emailSchema = z
   .min(5, 'validation.minLength')
   .max(255, 'validation.maxLength')
 
-/** Valid phone number (Afghanistan format) */
+/** Valid phone number (Afghanistan format) — اکنون اختیاری */
 export const phoneSchema = z
   .string()
   .regex(/^(\+93|0)?[7]\d{8}$/, 'validation.phone')
   .transform((val) => val.replace(/^0/, '+93'))
+  .optional() // ✅ اختیاری
 
 /** Positive number */
 export const positiveNumberSchema = z.number().positive('validation.positiveNumber')
