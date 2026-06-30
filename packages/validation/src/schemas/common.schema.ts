@@ -21,10 +21,12 @@ export const emailSchema = z
 /** Valid phone number (Afghanistan format) — اکنون اختیاری */
 export const phoneSchema = z
   .string()
-  .regex(/^(\+93|0)?[7]\d{8}$/, 'validation.phone')
-  .transform((val) => val.replace(/^0/, '+93'))
-  .optional() // ✅ اختیاری
-
+  .optional()
+  .refine(
+    (val) => !val || val === '' || /^(\+93|0)?[7]\d{8}$/.test(val),
+    { message: 'validation.phone' }
+  )
+  .transform((val) => (val && val !== '' ? val.replace(/^0/, '+93') : val))
 /** Positive number */
 export const positiveNumberSchema = z.number().positive('validation.positiveNumber')
 
