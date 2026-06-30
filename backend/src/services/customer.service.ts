@@ -186,7 +186,7 @@ export class CustomerService {
     }
   }
 
-  // ─── Get Balance ────────────────────────────────────────
+  //  Get Balance ────────────────────────────────────────
   async getBalance(customerId: string, userId: string) {
     const { data: transactions, error } = await supabase
       .from('transactions')
