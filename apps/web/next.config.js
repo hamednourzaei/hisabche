@@ -53,24 +53,15 @@ const nextConfig = {
 
   async redirects() {
     return [
-      // ✅ ریدایرکت 301 از http:// به https:// و یکپارچه‌سازی www
+      // ✅ فقط از hisabche.com (بدون www) به www.hisabche.com ریدایرکت کن
+      // ❌ rule دوم قبلی حذف شد چون باعث infinite redirect loop می‌شد
+      //    (www.hisabche.com به خودش ریدایرکت می‌شد)
       {
         source: '/:path*',
         has: [
           {
             type: 'host',
             value: 'hisabche.com',
-          },
-        ],
-        destination: 'https://www.hisabche.com/:path*',
-        permanent: true,
-      },
-      {
-        source: '/:path*',
-        has: [
-          {
-            type: 'host',
-            value: 'www.hisabche.com',
           },
         ],
         destination: 'https://www.hisabche.com/:path*',
