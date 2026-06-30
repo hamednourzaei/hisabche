@@ -1,5 +1,5 @@
 // ============================================
-// API Client — Axios instance with Shared Supabase JWT
+// packages/api/src/lib/client.ts
 // ============================================
 
 import axios, { AxiosInstance, AxiosError } from 'axios'
@@ -47,24 +47,39 @@ const isBrowser = (): boolean =>
 apiClient.interceptors.request.use(
   async (config) => {
     try {
+      let token: string | null = null
+
+      // ✅ اولویت ۱: از Supabase session
       const { data: { session } } = await supabaseClient.auth.getSession()
-      console.log('🔍 [API Client] getSession result:', session ? 'SESSION EXISTS' : 'SESSION NULL')
-      console.log('🔍 [API Client] token preview:', session?.access_token?.slice(0, 30) + '...')
-      console.log('🔍 [API Client] localStorage supabase keys:', Object.keys(localStorage).filter(k => k.includes('supabase') || k.includes('auth')))
-      
       if (session?.access_token) {
-        config.headers.Authorization = `Bearer ${session.access_token}`
+        token = session.access_token
+        console.log('✅ [API Client] Token from Supabase session')
+      }
+
+      // ✅ اولویت ۲: از localStorage (fallback)
+      if (!token && isBrowser()) {
+        const storedToken = localStorage.getItem('hisabche-token')
+        if (storedToken) {
+          token = storedToken
+          console.log('✅ [API Client] Token from localStorage')
+        }
+      }
+
+      // ✅ اگر توکن وجود داشت، به هدر اضافه کن
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`
         console.log('✅ [API Client] Authorization header SET')
       } else {
-        console.log('❌ [API Client] Authorization header NOT SET — session is null')
+        console.log('❌ [API Client] Authorization header NOT SET — token not found')
       }
     } catch (err) {
       console.error('❌ [API Client] getSession ERROR:', err)
+      // اگر خطا داشت، از localStorage استفاده کن
       if (isBrowser()) {
-        const token = localStorage.getItem('hisabche-token')
-        console.log('🔍 [API Client] Fallback localStorage token:', token ? 'EXISTS' : 'NULL')
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`
+        const fallbackToken = localStorage.getItem('hisabche-token')
+        if (fallbackToken) {
+          config.headers.Authorization = `Bearer ${fallbackToken}`
+          console.log('✅ [API Client] Authorization header from localStorage (fallback)')
         }
       }
     }
