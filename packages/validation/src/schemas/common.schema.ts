@@ -18,7 +18,10 @@ export const emailSchema = z
   .min(5, 'validation.minLength')
   .max(255, 'validation.maxLength')
 
-/** Valid phone number (Afghanistan format) — اکنون اختیاری */
+/**
+ * Valid phone number (Afghanistan format) — اختیاری و رشته خالی هم قبول می‌شود
+ * مقدار قبول‌شده: undefined، '' یا شماره معتبر افغانستان
+ */
 export const phoneSchema = z
   .string()
   .optional()
@@ -27,6 +30,7 @@ export const phoneSchema = z
     { message: 'validation.phone' }
   )
   .transform((val) => (val && val !== '' ? val.replace(/^0/, '+93') : val))
+
 /** Positive number */
 export const positiveNumberSchema = z.number().positive('validation.positiveNumber')
 

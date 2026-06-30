@@ -19,7 +19,7 @@ import {
 export const customerSchema = z.object({
   id: uuidSchema.optional(),
   fullName: nonEmptyStringSchema,
-  phone: phoneSchema.optional(), // ✅ استفاده از phoneSchema اختیاری
+  phone: phoneSchema, // ✅ phoneSchema از قبل optional است، نیازی به .optional() اضافه نیست
   email: emailSchema.optional().or(z.literal('')),
   address: addressSchema.optional(),
   notes: optionalStringSchema,
