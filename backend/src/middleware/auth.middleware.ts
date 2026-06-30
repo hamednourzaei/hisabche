@@ -32,5 +32,4 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
   request.userId = user.id
 }
 
-// برای راحتی، به عنوان preHandler هم کار می‌کنه
 export const authPreHandler = authenticate
