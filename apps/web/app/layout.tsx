@@ -66,6 +66,10 @@ export const metadata: Metadata = {
   icons: {
     icon: "/favicon.ico",
   },
+    metadataBase: new URL('https://www.hisabche.com'),
+  alternates: {
+    canonical: '/',
+  },
 };
 
 export const viewport: Viewport = {
@@ -154,6 +158,7 @@ export default function RootLayout({
         <meta name="color-scheme" content="light dark" />
         <link rel="dns-prefetch" href="https://api.hisabche.com" />
         <link rel="preconnect" href="https://api.hisabche.com" crossOrigin="anonymous" />
+        
       </head>
 
       <body

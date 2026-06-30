@@ -31,6 +31,7 @@ import {
    ✅ Light mode fixed — all backgrounds visible
    ✅ Zero hardcoded colors — all tokens from design system
    ✅ No external component dependencies
+   ✅ Phone validation matches backend (loose international format)
    ═══════════════════════════════════════════════════════════════════════════ */
 
 type ProductOption = NonNullable<
@@ -44,9 +45,18 @@ const toNum = (v: string): number => {
 
 const fmt = (v: number): string => v.toLocaleString("fa-AF");
 
+// ✅ هماهنگ با phoneSchema بک‌اند: + اختیاری، سپس ۸ تا ۱۵ رقم
+const PHONE_PATTERN = /^\+?\d{8,15}$/;
+
 const customerSchema = z.object({
   name: z.string().min(1, "customer.nameRequired"),
-  phone: z.string().optional(),
+  phone: z
+    .string()
+    .optional()
+    .refine(
+      (val) => !val || val === "" || PHONE_PATTERN.test(val),
+      { message: "validation.phone" }
+    ),
 });
 
 type CustomerFormValues = z.infer<typeof customerSchema>;

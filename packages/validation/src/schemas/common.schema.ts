@@ -19,17 +19,17 @@ export const emailSchema = z
   .max(255, 'validation.maxLength')
 
 /**
- * Valid phone number (Afghanistan format) — اختیاری و رشته خالی هم قبول می‌شود
- * مقدار قبول‌شده: undefined، '' یا شماره معتبر افغانستان
+ * Valid phone number (international, loose format) — اختیاری و رشته خالی هم قبول می‌شود
+ * فرمت قابل قبول: + اختیاری در ابتدا، سپس ۸ تا ۱۵ رقم
+ * مقدار قبول‌شده: undefined، '' یا شماره معتبر
  */
 export const phoneSchema = z
   .string()
   .optional()
   .refine(
-    (val) => !val || val === '' || /^(\+93|0)?[7]\d{8}$/.test(val),
+    (val) => !val || val === '' || /^\+?\d{8,15}$/.test(val),
     { message: 'validation.phone' }
   )
-  .transform((val) => (val && val !== '' ? val.replace(/^0/, '+93') : val))
 
 /** Positive number */
 export const positiveNumberSchema = z.number().positive('validation.positiveNumber')

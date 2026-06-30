@@ -51,6 +51,34 @@ const nextConfig = {
     serverActions: { bodySizeLimit: '2mb' },
   },
 
+  async redirects() {
+    return [
+      // ✅ ریدایرکت 301 از http:// به https:// و یکپارچه‌سازی www
+      {
+        source: '/:path*',
+        has: [
+          {
+            type: 'host',
+            value: 'hisabche.com',
+          },
+        ],
+        destination: 'https://www.hisabche.com/:path*',
+        permanent: true,
+      },
+      {
+        source: '/:path*',
+        has: [
+          {
+            type: 'host',
+            value: 'www.hisabche.com',
+          },
+        ],
+        destination: 'https://www.hisabche.com/:path*',
+        permanent: true,
+      },
+    ]
+  },
+
   async headers() {
     return [
       {
