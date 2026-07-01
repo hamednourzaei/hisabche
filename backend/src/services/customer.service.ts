@@ -17,6 +17,7 @@ function mapCustomer(raw: Record<string, any>) {
     notes: raw.notes,
     openingBalance: raw.opening_balance,
     isActive: raw.is_active,
+    type: raw.type, // ✅ جدید
     createdAt: raw.created_at,
     updatedAt: raw.updated_at,
   }
@@ -25,7 +26,7 @@ function mapCustomer(raw: Record<string, any>) {
 export class CustomerService {
   // ─── List ────────────────────────────────────────────────
   async list(userId: string, filters: CustomerFilters) {
-    const { search, isActive, hasBalance, page, limit, sortBy, sortDirection } = filters
+    const { search, isActive, hasBalance, type, page, limit, sortBy, sortDirection } = filters
     const from = (page - 1) * limit
     const to = from + limit - 1
 
@@ -50,6 +51,10 @@ export class CustomerService {
       } else {
         query = query.eq('opening_balance', 0)
       }
+    }
+
+    if (type !== undefined) {
+      query = query.eq('type', type) // ✅ جدید
     }
 
     const { data, error, count } = await query
@@ -101,6 +106,7 @@ export class CustomerService {
         notes: data.notes || '',
         opening_balance: data.openingBalance || 0,
         is_active: data.isActive !== false,
+        type: data.type || 'cash', // ✅ جدید
         user_id: userId,
       })
       .select()
@@ -110,23 +116,23 @@ export class CustomerService {
       throw new DatabaseError('Failed to create customer', error)
     }
 
-    // ✅ اگر openingBalance > 0، تراکنش ایجاد کن (با بررسی خطا)
-    if (data.openingBalance && data.openingBalance > 0) {
+    // ✅ اگر نوع مشتری credit باشد، یک تراکنش بدهی ایجاد کن
+    if (data.type === 'credit') {
       const { error: txError } = await supabase
         .from('transactions')
         .insert({
           customer_id: customer.id,
-          type: 'receipt',
-          amount: data.openingBalance,
+          type: 'sale',
+          amount: data.openingBalance || 0, // اگر openingBalance نداشته باشد، ۰
           currency: 'AFN',
-          description: 'Opening balance',
+          description: 'Credit sale - opening balance',
           user_id: userId,
         })
 
       if (txError) {
         // ❌ اگر تراکنش fail شد، مشتری را حذف کن (اتمیک بودن)
         await supabase.from('customers').delete().eq('id', customer.id)
-        throw new DatabaseError('Failed to create opening balance transaction', txError)
+        throw new DatabaseError('Failed to create credit transaction', txError)
       }
     }
 
@@ -143,6 +149,7 @@ export class CustomerService {
     if (data.address !== undefined) updates.address = data.address
     if (data.notes !== undefined) updates.notes = data.notes
     if (data.isActive !== undefined) updates.is_active = data.isActive
+    if (data.type !== undefined) updates.type = data.type // ✅ جدید
 
     const { data: customer, error } = await supabase
       .from('customers')
@@ -186,7 +193,7 @@ export class CustomerService {
     }
   }
 
-  //  Get Balance ────────────────────────────────────────
+  // ─── Get Balance ────────────────────────────────────────
   async getBalance(customerId: string, userId: string) {
     const { data: transactions, error } = await supabase
       .from('transactions')

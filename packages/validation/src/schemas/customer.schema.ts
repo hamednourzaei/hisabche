@@ -19,12 +19,13 @@ import {
 export const customerSchema = z.object({
   id: uuidSchema.optional(),
   fullName: nonEmptyStringSchema,
-  phone: phoneSchema, // ✅ phoneSchema از قبل optional است، نیازی به .optional() اضافه نیست
+  phone: phoneSchema.optional(),
   email: emailSchema.optional().or(z.literal('')),
   address: addressSchema.optional(),
   notes: optionalStringSchema,
   openingBalance: z.number().default(0),
   isActive: z.boolean().default(true),
+  type: z.enum(['cash', 'credit']).default('cash'), // ✅ جدید
   createdAt: z.string().datetime().optional(),
   updatedAt: z.string().datetime().optional(),
 })
@@ -70,7 +71,7 @@ export const updateSupplierSchema = updateCustomerSchema
 export type UpdateSupplier = z.infer<typeof updateSupplierSchema>
 
 // ============================================
-// Customer Filters (اصلاح‌شده با تبدیل خودکار Query String)
+// Customer Filters
 // ============================================
 
 export const customerFiltersSchema = z.object({
@@ -83,6 +84,7 @@ export const customerFiltersSchema = z.object({
     .union([z.boolean(), z.string()])
     .transform((val) => (typeof val === 'string' ? val === 'true' : val))
     .optional(),
+  type: z.enum(['cash', 'credit']).optional(), // ✅ جدید
   page: z
     .union([z.number(), z.string()])
     .transform((val) => (typeof val === 'string' ? parseInt(val, 10) : val))
