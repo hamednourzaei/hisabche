@@ -1,8 +1,14 @@
-import { createClient } from '@supabase/supabase-js'
+// ============================================
+// backend/src/db.ts
+// ============================================
+
+import { createClient, SupabaseClientOptions } from '@supabase/supabase-js'
 
 const isLocal = !process.env.RENDER
 
-let clientOptions: any = { auth: { persistSession: false } }
+let clientOptions: SupabaseClientOptions<'public'> = { 
+  auth: { persistSession: false } 
+}
 
 if (isLocal) {
   const { ProxyAgent, fetch: undiciFetch } = require('undici')

@@ -252,5 +252,29 @@
     "sum": "Sum",
     "average": "Average",
     "count": "Count"
+  },
+
+  "accounting": {
+    "title": "Accounting",
+    "accounts": "Accounts",
+    "journal": "Journal Entries",
+    "trialBalance": "Trial Balance",
+    "balanceSheet": "Balance Sheet",
+    "incomeStatement": "Income Statement",
+    "cashFlow": "Cash Flow",
+    "addAccount": "Add Account",
+    "accountCode": "Account Code",
+    "accountName": "Account Name",
+    "accountType": "Account Type",
+    "parentAccount": "Parent Account",
+    "debit": "Debit",
+    "credit": "Credit",
+    "totalDebit": "Total Debit",
+    "totalCredit": "Total Credit",
+    "balance": "Balance",
+    "date": "Date",
+    "description": "Description",
+    "reference": "Reference"
   }
+
 }

@@ -1,5 +1,5 @@
 // ============================================
-// backend/src/index.ts — AUTH MIDDLEWARE + RLS
+// backend/src/index.ts — با همه ۲۳ فاز
 // ============================================
 
 import Fastify from 'fastify'
@@ -10,7 +10,7 @@ import dotenv from 'dotenv'
 // Auth
 import { authenticate } from './middleware/auth.middleware'
 
-// Routes
+// Routes — فازهای ۱-۹
 import { syncRoutes } from './routes/sync.routes'
 import { invoiceRoutes } from './routes/invoice.routes'
 import { productRoutes } from './routes/product.routes'
@@ -19,6 +19,30 @@ import { authRoutes } from './routes/auth.routes'
 import { transactionRoutes } from './routes/transaction.routes'
 import { godamRoutes } from './routes/godam.routes'
 import { invoicePdfRoutes } from './routes/invoice-pdf.routes'
+
+// Routes — فاز ۱۵: HR
+import { hrRoutes } from './routes/hr.routes'
+
+// Routes — فاز ۱۶: Projects
+import { projectRoutes } from './routes/project.routes'
+
+// Routes — فاز ۱۷: Workspace
+import { workspaceRoutes } from './routes/workspace.routes'
+
+// Routes — فاز ۱۸: Permissions
+import { permissionRoutes } from './routes/permission.routes'
+
+// Routes — فاز ۱۹: Audit
+import { auditRoutes } from './routes/audit.routes'
+
+// Routes — فاز ۲۱: Event System
+import { eventRoutes } from './routes/event.routes'
+
+// Routes — فاز ۲۲: Analytics
+import { analyticsRoutes } from './routes/analytics.routes'
+
+// Routes — فاز ۲۳: AI Assistant
+import { aiRoutes } from './routes/ai.routes'
 
 if (process.env.NODE_ENV !== 'production') {
   dotenv.config()
@@ -91,7 +115,9 @@ async function start(): Promise<void> {
 
     server.get('/api', async () => ({
       name: 'Hisabche API',
-      version: '0.0.1',
+      version: '1.0.0',
+      phases: 23,
+      status: 'complete',
     }))
 
     // ----------------------------
@@ -107,7 +133,7 @@ async function start(): Promise<void> {
     })
 
     // ----------------------------
-    // Routes
+    // Routes — فازهای ۱-۹
     // ----------------------------
     await server.register(authRoutes)
     await server.register(syncRoutes)
@@ -117,6 +143,46 @@ async function start(): Promise<void> {
     await server.register(customerRoutes)
     await server.register(transactionRoutes)
     await server.register(godamRoutes)
+
+    // ----------------------------
+    // Routes — فاز ۱۵: HR
+    // ----------------------------
+    await server.register(hrRoutes)
+
+    // ----------------------------
+    // Routes — فاز ۱۶: Projects
+    // ----------------------------
+    await server.register(projectRoutes)
+
+    // ----------------------------
+    // Routes — فاز ۱۷: Workspace
+    // ----------------------------
+    await server.register(workspaceRoutes)
+
+    // ----------------------------
+    // Routes — فاز ۱۸: Permissions
+    // ----------------------------
+    await server.register(permissionRoutes)
+
+    // ----------------------------
+    // Routes — فاز ۱۹: Audit
+    // ----------------------------
+    await server.register(auditRoutes)
+
+    // ----------------------------
+    // Routes — فاز ۲۱: Event System
+    // ----------------------------
+    await server.register(eventRoutes)
+
+    // ----------------------------
+    // Routes — فاز ۲۲: Analytics
+    // ----------------------------
+    await server.register(analyticsRoutes)
+
+    // ----------------------------
+    // Routes — فاز ۲۳: AI Assistant
+    // ----------------------------
+    await server.register(aiRoutes)
 
     // ----------------------------
     // 404
@@ -142,7 +208,7 @@ async function start(): Promise<void> {
     })
 
     await server.listen({ port: PORT, host: HOST })
-    server.log.info(`🚀 Server running on ${HOST}:${PORT}`)
+    server.log.info(`🚀 Server running on ${HOST}:${PORT} — 23 phases loaded`)
   } catch (err) {
     server.log.error(err)
     process.exit(1)

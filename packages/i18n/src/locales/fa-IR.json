@@ -384,5 +384,27 @@
     "total": "کل بدهی",
     "recalculate": "محاسبه مجدد",
     "recalculated": "بدهی دوباره محاسبه شد"
+  },
+  "accounting": {
+    "title": "حسابداری",
+    "accounts": "حساب‌ها",
+    "journal": "ثبت‌های روزانه",
+    "trialBalance": "تراز آزمایشی",
+    "balanceSheet": "ترازنامه",
+    "incomeStatement": "سود و زیان",
+    "cashFlow": "جریان نقدی",
+    "addAccount": "افزودن حساب",
+    "accountCode": "کد حساب",
+    "accountName": "نام حساب",
+    "accountType": "نوع حساب",
+    "parentAccount": "حساب والد",
+    "debit": "بدهکار",
+    "credit": "بستانکار",
+    "totalDebit": "مجموع بدهکار",
+    "totalCredit": "مجموع بستانکار",
+    "balance": "مانده",
+    "date": "تاریخ",
+    "description": "شرح",
+    "reference": "مرجع"
   }
 }
