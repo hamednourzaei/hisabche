@@ -13,7 +13,7 @@ import InvoicePDFDocument from '../pdf/InvoicePDFDocument'
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379'
 const connection = { url: REDIS_URL }
 
-// ─── Supabase Storage ─────────────────────────────────
+// Supabase Storage ─────────────────────────────────
 const supabaseUrl = process.env.SUPABASE_URL || ''
 const supabaseKey = process.env.SUPABASE_SERVICE_KEY || ''
 const supabase = createClient(supabaseUrl, supabaseKey)
