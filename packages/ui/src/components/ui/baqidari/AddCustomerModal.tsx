@@ -126,12 +126,13 @@ export function AddCustomerModal({
     setSaveStatus("saving");
 
     try {
-      const customer = await createCustomer.mutateAsync({
-        fullName: data.name,
-        phone: data.phone || undefined,
-        openingBalance: 0,
-        isActive: true,
-      });
+const customer = await createCustomer.mutateAsync({
+  type: 'cash',  // ✅ اضافه شود
+  fullName: data.name,
+  phone: data.phone || undefined,
+  openingBalance: 0,
+  isActive: true,
+})
 
       addAuditEntry({
         action: "create",
