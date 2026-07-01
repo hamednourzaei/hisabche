@@ -3,18 +3,15 @@
 // ============================================
 
 import { z } from 'zod'
-import {
-  uuidSchema,
-  isoDateSchema,
-} from './common.schema'
+import { uuidSchema } from './common.schema'
 
 // ============================================
-// Date Range
+// Date Range — فقط تاریخ بدون زمان
 // ============================================
 
 export const dateRangeSchema = z.object({
-  startDate: isoDateSchema,
-  endDate: isoDateSchema,
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD format'),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD format'),
 })
 
 export type DateRange = z.infer<typeof dateRangeSchema>

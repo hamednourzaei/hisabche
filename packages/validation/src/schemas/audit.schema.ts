@@ -37,18 +37,20 @@ export const createAuditLogSchema = auditLogSchema.omit({
 export type CreateAuditLog = z.infer<typeof createAuditLogSchema>
 
 // ============================================
-// Audit Filters
+// Audit Filters — فقط تاریخ YYYY-MM-DD
 // ============================================
+
+const dateOnlySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD format')
 
 export const auditFiltersSchema = z.object({
   userId: uuidSchema.optional(),
   action: z.enum(['create', 'update', 'delete', 'login', 'logout', 'export', 'view']).optional(),
   entityType: z.string().optional(),
   entityId: uuidSchema.optional(),
-  startDate: isoDateSchema.optional(),
-  endDate: isoDateSchema.optional(),
-  page: z.number().int().positive().default(1),
-  limit: z.number().int().min(1).max(100).default(50),
+  startDate: dateOnlySchema.optional(),
+  endDate: dateOnlySchema.optional(),
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
 })
 
 export type AuditFilters = z.infer<typeof auditFiltersSchema>
