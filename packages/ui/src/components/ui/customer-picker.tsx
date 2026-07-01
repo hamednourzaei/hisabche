@@ -101,10 +101,11 @@ export const CustomerPicker = forwardRef<HTMLButtonElement, CustomerPickerProps>
       setCreateError(null);
       try {
         const nc = await createCustomer.mutateAsync({
-          fullName: trimmed,
-          openingBalance: 0,
-          isActive: true,
-        });
+  type: 'cash',  // ✅ اضافه شود
+  fullName: trimmed,
+  openingBalance: 0,
+  isActive: true,
+})
         const opt: CustomerOption = {
           id: nc.id ?? "",
           name: nc.fullName,
