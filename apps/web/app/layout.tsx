@@ -8,8 +8,8 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   RootLayout v3 — Optimized
-   TTF fonts + swap + Critical CSS + Schema.org
+   RootLayout v4 — Hisabche Brand Refresh
+   Teal Premium Design System + Full Favicon Set
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const vazirmatn = localFont({
@@ -47,13 +47,13 @@ export const metadata: Metadata = {
     siteName: "حساب‌چه",
     locale: "fa_IR",
     images: [
-    {
-      url: "/og-image.png",
-      width: 1200,
-      height: 630,
-      alt: "حسابچه",
-    },
-  ],
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "حسابچه",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
@@ -72,13 +72,17 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-  icon: [
-    { url: "/favicon.png", sizes: "32x32", type: "image/png" },
-    { url: "/logo-icon.png", sizes: "192x192", type: "image/png" },
-  ],
-  apple: "/logo-icon.png",
-},
-    metadataBase: new URL('https://www.hisabche.com'),
+    icon: [
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
+    shortcut: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+    other: [
+      { rel: "manifest", url: "/manifest.json" },
+    ],
+  },
+  metadataBase: new URL('https://www.hisabche.com'),
   alternates: {
     canonical: '/',
   },
@@ -90,8 +94,8 @@ export const viewport: Viewport = {
   maximumScale: 5,
   colorScheme: "dark light",
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f8f8fb" },
-    { media: "(prefers-color-scheme: dark)", color: "#0e0e14" },
+    { media: "(prefers-color-scheme: light)", color: "#F7FAF9" },
+    { media: "(prefers-color-scheme: dark)", color: "#061417" },
   ],
 };
 
@@ -111,7 +115,7 @@ export default function RootLayout({
         {/* Critical CSS — above the fold */}
         <style>{`
           html{scroll-behavior:smooth}
-          body{font-family:var(--font-sans,system-ui);background-color:hsl(var(--surface-base,240 18% 7%));color:hsl(var(--fg-primary,0 0% 96%));margin:0;padding:0;line-height:1.55;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+          body{font-family:var(--font-sans,system-ui);background-color:hsl(var(--surface-base,192 55% 6%));color:hsl(var(--fg-primary,160 40% 98%));margin:0;padding:0;line-height:1.55;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
           *{box-sizing:border-box;margin:0;padding:0}
           h1,.h1{font-size:clamp(2.25rem,5vw,4rem);line-height:1.2;font-weight:700}
           h2,.h2{font-size:clamp(1.75rem,4vw,2.5rem);line-height:1.2;font-weight:600}
@@ -119,7 +123,7 @@ export default function RootLayout({
           button,[role=button]{cursor:pointer;font-family:inherit}
           img{max-width:100%;height:auto;display:block}
           html{overflow-y:scroll}
-          :focus-visible{outline:2px solid hsl(var(--color-primary,270 90% 65%) / .5);outline-offset:2px;border-radius:6px}
+          :focus-visible{outline:2px solid hsl(var(--color-primary,168 84% 43%) / .5);outline-offset:2px;border-radius:6px}
         `}</style>
 
         {/* Theme initialization */}
@@ -166,11 +170,10 @@ export default function RootLayout({
         />
 
         {/* Performance hints */}
-        <meta name="theme-color" content="#0e0e14" />
-        <meta name="color-scheme" content="light dark" />
+        <meta name="theme-color" content="#061417" />
+        <meta name="color-scheme" content="dark light" />
         <link rel="dns-prefetch" href="https://api.hisabche.com" />
         <link rel="preconnect" href="https://api.hisabche.com" crossOrigin="anonymous" />
-        
       </head>
 
       <body
