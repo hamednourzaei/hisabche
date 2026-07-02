@@ -117,9 +117,13 @@ export function DashboardSidebar({
     >
       {/* Brand */}
       <div className="flex items-center gap-2.5 px-4 py-[11px] border-b border-[hsl(var(--border-default))]">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--gradient-brand)] text-white text-sm font-bold shrink-0">
-          ح
-        </div>
+        <div className="flex h-8 w-8 items-center justify-center shrink-0">
+  <img 
+    src="/logo-icon.png" 
+    alt="حسابچه" 
+    className="h-8 w-8 object-contain"
+  />
+</div>
         <div className="min-w-0 leading-tight">
           <p className="text-sm font-semibold truncate text-[hsl(var(--fg-primary))]">
             حسابچه

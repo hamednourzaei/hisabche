@@ -1,0 +1,358 @@
+# 🚀 Hisabche Connect — Roadmap کامل صفر تا صد
+
+ذخیره کن — هر وقت Hisabche ERP کامل شد، با این نقشه شروع میکنیم.
+
+---
+
+# Hisabche Connect — Complete Development Roadmap
+
+**نسخه:** v1.0  
+**تاریخ طراحی:** ۱۴۰۵/۰۴/۱۱  
+**وضعیت:** طراحی معماری کامل — پیاده‌سازی: بعد از تکمیل Hisabche ERP  
+**زیردامنه:** `connect.hisabche.com`
+
+---
+
+## ۱. ساختار پروژه
+
+```
+hisabche-connect/                    ← ریپوی مجزا (GitHub)
+│
+├── .github/
+│   └── workflows/
+│       ├── deploy-backend.yml       ← Render auto-deploy
+│       └── deploy-frontend.yml      ← Vercel auto-deploy
+│
+├── apps/
+│   ├── web/                         ← Next.js Dashboard (Vercel)
+│   │   ├── app/
+│   │   │   ├── layout.tsx
+│   │   │   ├── page.tsx             ← Landing
+│   │   │   ├── dashboard/
+│   │   │   │   ├── page.tsx         ← Dashboard اصلی
+│   │   │   │   ├── connections/     ← مدیریت اتصال‌ها
+│   │   │   │   ├── mapping/         ← صفحه Mapping
+│   │   │   │   └── logs/            ← تاریخچه Sync
+│   │   │   └── wizard/              ← Setup Wizard
+│   │   │       ├── page.tsx
+│   │   │       └── steps/
+│   │   │           ├── platform.tsx
+│   │   │           ├── credentials.tsx
+│   │   │           ├── preview.tsx
+│   │   │           └── finish.tsx
+│   │   └── ...
+│   │
+│   └── worker/                      ← Background Worker (Render Worker)
+│       └── src/
+│           └── index.ts
+│
+├── packages/
+│   ├── connect-core/                ← موتور اصلی (قفل‌شده)
+│   │   └── src/
+│   │       ├── models/              ← Standard Models
+│   │       ├── contracts/           ← IConnector
+│   │       ├── events/              ← Event System
+│   │       ├── sync/                ← Sync Engine
+│   │       ├── rules/               ← Rule Engine
+│   │       ├── monitoring/          ← Health Check
+│   │       ├── audit/               ← Audit Trail
+│   │       └── index.ts
+│   │
+│   ├── connect-connectors/          ← پلاگین‌ها
+│   │   └── src/
+│   │       ├── woocommerce/
+│   │       ├── shopify/
+│   │       ├── custom-rest/
+│   │       └── index.ts
+│   │
+│   ├── connect-schemas/             ← Zod + DB
+│   │   └── src/
+│   │       └── index.ts
+│   │
+│   ├── connect-credentials/         ← Encryption
+│   │   └── src/
+│   │       └── index.ts
+│   │
+│   ├── connect-ui/                  ← کامپوننت‌های مشترک
+│   │   └── src/
+│   │       ├── wizard.tsx
+│   │       ├── mapping-table.tsx
+│   │       ├── sync-status.tsx
+│   │       └── health-badge.tsx
+│   │
+│   └── connect-sdk/                 ← npm package عمومی
+│       └── src/
+│           └── index.ts
+│
+├── backend/                         ← Fastify API (Render)
+│   └── src/
+│       ├── index.ts
+│       ├── routes/
+│       │   ├── connections.ts
+│       │   ├── sync.ts
+│       │   ├── webhook.ts
+│       │   ├── mapping.ts
+│       │   └── health.ts
+│       ├── services/
+│       │   ├── connection.service.ts
+│       │   ├── sync.service.ts
+│       │   └── webhook.service.ts
+│       └── middleware/
+│           ├── auth.ts
+│           └── rate-limit.ts
+│
+├── database/
+│   └── migrations/
+│       ├── 001_platforms.sql
+│       ├── 002_credentials.sql
+│       ├── 003_connections.sql
+│       ├── 004_sync_jobs.sql
+│       ├── 005_entity_mappings.sql
+│       ├── 006_sync_logs.sql
+│       ├── 007_audit_logs.sql
+│       ├── 008_rules.sql
+│       ├── 009_health_checks.sql
+│       └── 010_rollbacks.sql
+│
+├── turbo.json
+├── package.json
+├── tsconfig.json
+├── .env.example
+└── README.md
+```
+
+---
+
+## ۲. تکنولوژی‌ها
+
+| بخش | فناوری | دلیل |
+|------|--------|------|
+| **Frontend** | Next.js 16 + React 19 | مثل Hisabche — سازگار |
+| **UI** | shadcn/ui + Tailwind CSS | طراحی یکپارچه |
+| **Backend** | Fastify 4 | مثل Hisabche — fast + TypeScript |
+| **Database** | Supabase (PostgreSQL) | مثل Hisabche — RLS + Realtime |
+| **Queue** | BullMQ + Redis | Job processing (بعد از MVP) |
+| **Worker** | Render Background Worker | پردازش Sync جدا |
+| **Monorepo** | Turborepo | مدیریت پکیج‌ها |
+| **Validation** | Zod 3 | Type-safe schemas |
+| **Auth** | Supabase Auth + API Keys | کاربران + ماشین‌ها |
+| **Encryption** | AES-256-GCM | Credential storage |
+| **Webhook** | Fastify + Zod validation | دریافت رویدادها |
+| **Deploy** | Vercel (Frontend) + Render (Backend + Worker) | مثل Hisabche |
+| **SDK** | npm package | `@hisabche/connect-sdk` |
+
+---
+
+## ۳. فازهای پیاده‌سازی
+
+### 📦 فاز ۱: Foundation (هفته ۱-۲)
+
+**هدف:** Core Engine + Database + Basic API
+
+| # | وظیفه | فایل‌ها |
+|---|--------|---------|
+| ۱ | ساخت monorepo + Turborepo | `package.json`, `turbo.json`, `tsconfig.json` |
+| ۲ | Database Migration (۱۰ جدول) | `database/migrations/*` |
+| ۳ | Zod Schemas | `packages/connect-schemas/src/index.ts` |
+| ۴ | ۸ Standard Model | `packages/connect-core/src/models/*` |
+| ۵ | IConnector Contract | `packages/connect-core/src/contracts/*` |
+| ۶ | Event System | `packages/connect-core/src/events/*` |
+| ۷ | Credential Encryption | `packages/connect-credentials/src/index.ts` |
+| ۸ | Basic API Routes | `backend/src/routes/connections.ts` |
+
+**خروجی:** میتونیم یه Connector ساده (Custom REST) رو تست کنیم.
+
+---
+
+### 🔌 فاز ۲: WooCommerce Connector (هفته ۳-۴)
+
+**هدف:** اولین Connector واقعی
+
+| # | وظیفه |
+|---|--------|
+| ۱ | WooCommerce REST Client |
+| ۲ | Product Normalizer |
+| ۳ | Order Normalizer |
+| ۴ | Customer Normalizer |
+| ۵ | Webhook Handler |
+| ۶ | Sync Engine (Chunked) |
+| ۷ | Job Manager |
+| ۸ | Sync Logs |
+
+**خروجی:** یه فروشگاه WooCommerce کامل وصل میشه.
+
+---
+
+### 🎨 فاز ۳: UI Dashboard (هفته ۵-۶)
+
+**هدف:** کاربر بتونه بدون کدنویسی استفاده کنه
+
+| # | وظیفه |
+|---|--------|
+| ۱ | Landing Page |
+| ۲ | Setup Wizard (۴ مرحله) |
+| ۳ | Dashboard Connections |
+| ۴ | Mapping Page |
+| ۵ | Sync Monitor |
+| ۶ | Health Status Badge |
+| ۷ | Logs Viewer |
+
+**خروجی:** UX کامل — یه کلیک اتصال.
+
+---
+
+### 🧠 فاز ۴: هوشمندسازی (هفته ۷-۸)
+
+**هدف:** اتوماسیون + کاهش دخالت کاربر
+
+| # | وظیفه |
+|---|--------|
+| ۱ | Rule Engine |
+| ۲ | Health Monitoring |
+| ۳ | Audit Trail |
+| ۴ | Rollback Manager |
+| ۵ | Notification System |
+| ۶ | Sync Policy Manager |
+
+**خروجی:** سیستم خودکار — فقط استثناها به کاربر میرسه.
+
+---
+
+### 🚀 فاز ۵: Platform (هفته ۹-۱۲)
+
+**هدف:** پشتیبانی از همه پلتفرم‌ها
+
+| # | وظیفه |
+|---|--------|
+| ۱ | Shopify Connector |
+| ۲ | Custom REST Connector |
+| ۳ | SDK (`@hisabche/connect-sdk`) |
+| ۴ | API Key Management |
+| ۵ | Rate Limiting |
+| ۶ | Queue + Worker جدا |
+| ۷ | Monitoring Dashboard |
+
+**خروجی:** Production-ready — آماده فروش.
+
+---
+
+### 🌍 فاز ۶: Enterprise (آینده)
+
+| # | وظیفه |
+|---|--------|
+| ۱ | Database Agent (MySQL, PostgreSQL) |
+| ۲ | GraphQL Connector |
+| ۳ | Multi-tenant Isolation |
+| ۴ | White-label Dashboard |
+| ۵ | Priority Support System |
+| ۶ | Usage-based Billing |
+
+---
+
+## ۴. API Endpoints
+
+```
+# Connections
+POST   /api/connections                    ایجاد اتصال جدید
+GET    /api/connections                    لیست اتصال‌ها
+GET    /api/connections/:id                جزئیات اتصال
+DELETE /api/connections/:id                حذف اتصال
+POST   /api/connections/:id/test           تست connection
+
+# Sync
+POST   /api/connections/:id/sync           شروع Sync
+GET    /api/sync/jobs/:id                  وضعیت Job
+GET    /api/sync/logs                      تاریخچه Sync
+POST   /api/sync/jobs/:id/rollback         بازگشت Sync
+
+# Webhook (public — no auth)
+POST   /api/webhook/woocommerce            دریافت از WooCommerce
+POST   /api/webhook/shopify                دریافت از Shopify
+POST   /api/webhook/custom/:connectionId   دریافت از Custom API
+
+# Mapping
+GET    /api/connections/:id/mapping        لیست مپینگ‌ها
+POST   /api/connections/:id/mapping/bulk   تطبیق گروهی
+
+# Rules
+GET    /api/connections/:id/rules          لیست قوانین
+POST   /api/connections/:id/rules          ایجاد قانون
+
+# Health
+GET    /api/connections/:id/health         وضعیت سلامت
+```
+
+---
+
+## ۵. مدل Pricing
+
+| پلن | قیمت | فروشگاه | سفارش/ماه | Webhook | Priority |
+|-----|-------|---------|-----------|---------|----------|
+| **Free** | ۰ | ۱ | ۱۰۰ | ✅ | ❌ |
+| **Pro** | $۹/ماه | ۵ | ۱,۰۰۰ | ✅ | ❌ |
+| **Business** | $۲۹/ماه | ۲۰ | ۱۰,۰۰۰ | ✅ | Email |
+| **Enterprise** | $۹۹/ماه | نامحدود | نامحدود | ✅ | Phone |
+
+---
+
+## ۶. MVP حداقلی (۸ هفته)
+
+```
+هفته ۱-۲: Foundation (Core + DB + API)
+هفته ۳-۴: WooCommerce Connector
+هفته ۵-۶: UI Wizard + Dashboard
+هفته ۷-۸: تست + Bugfix + Deploy
+
+خروجی MVP:
+✅ ۱ فروشگاه WooCommerce وصل بشه
+✅ سفارشات → Hisabche ERP (از طریق API)
+✅ محصولات Sync بشن
+✅ UI Wizard ساده
+✅ رایگان برای همه
+```
+
+---
+
+## ۷. ارتباط با Hisabche ERP
+
+```typescript
+// Hisabche Connect → Hisabche ERP
+const HISABCHE_API = 'https://api.hisabche.com';
+const CONNECT_API_KEY = process.env.HISABCHE_CONNECT_API_KEY;
+
+// ارسال سفارش به Hisabche
+async function pushOrderToHisabche(order: StandardOrder) {
+  return fetch(`${HISABCHE_API}/api/connect/order`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Connect-API-Key': CONNECT_API_KEY,
+    },
+    body: JSON.stringify(order),
+  });
+}
+```
+
+**Hisabche ERP باید یه endpoint اضافه کنه:**
+- `POST /api/connect/order` — دریافت سفارش از Connect
+- `GET /api/connect/inventory/:id` — ارسال موجودی به Connect
+
+---
+
+## 📊 خلاصه
+
+| مورد | جزئیات |
+|-------|---------|
+| **نام محصول** | Hisabche Connect |
+| **زیردامنه** | `connect.hisabche.com` |
+| **مخزن** | `github.com/hamednourzaei/hisabche-connect` |
+| **MVP** | ۸ هفته — WooCommerce + Wizard |
+| **Production** | ۱۲ هفته — همه پلتفرم‌ها |
+| **قیمت** | Freemium — از $۹/ماه |
+| **تکنولوژی** | مثل Hisabche — Fastify + Next.js + Supabase |
+
+---
+
+**این سند رو ذخیره کن. برمیگردیم سراغش بعد از تکمیل Hisabche ERP.**
+
+**حالا — باگ‌های Hisabche فعلی رو بگو که بگیریم!** 🔧🚀

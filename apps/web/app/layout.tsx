@@ -46,6 +46,14 @@ export const metadata: Metadata = {
     description: "نرم‌افزار حسابداری و موجودی برای کسب‌وکارها.",
     siteName: "حساب‌چه",
     locale: "fa_IR",
+    images: [
+    {
+      url: "/og-image.png",
+      width: 1200,
+      height: 630,
+      alt: "حسابچه",
+    },
+  ],
   },
   twitter: {
     card: "summary_large_image",
@@ -64,8 +72,12 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: "/favicon.ico",
-  },
+  icon: [
+    { url: "/favicon.png", sizes: "32x32", type: "image/png" },
+    { url: "/logo-icon.png", sizes: "192x192", type: "image/png" },
+  ],
+  apple: "/logo-icon.png",
+},
     metadataBase: new URL('https://www.hisabche.com'),
   alternates: {
     canonical: '/',
