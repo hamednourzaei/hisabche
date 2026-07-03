@@ -44,7 +44,9 @@ export function HrView({
       employeeCode: form.employeeCode,
       phone: form.phone || undefined,
       position: form.position || undefined,
-      hireDate: form.hireDate || new Date().toISOString().split("T")[0],
+      hireDate: form.hireDate 
+  ? `${form.hireDate}T00:00:00Z` 
+  : new Date().toISOString(),
       employmentType: "full_time",
       salary: 0,
       salaryCurrency: "AFN",

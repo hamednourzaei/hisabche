@@ -37,20 +37,22 @@ export function ProjectsView({
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: "", description: "", priority: "medium" as typeof PRIORITIES[number], startDate: "" });
 
-  const handleSubmit = async () => {
-    await onCreate({
-      name: form.name,
-      description: form.description || undefined,
-      priority: form.priority,
-      startDate: form.startDate || new Date().toISOString().split("T")[0],
-      status: "planning",
-      budget: 0,
-      currency: "AFN",
-      tags: [],
-    });
-    setShowForm(false);
-    setForm({ name: "", description: "", priority: "medium", startDate: "" });
-  };
+const handleSubmit = async () => {
+  await onCreate({
+    name: form.name,
+    description: form.description || undefined,
+    priority: form.priority,
+    startDate: form.startDate 
+      ? `${form.startDate}T00:00:00.000Z`   // ✅ ISO datetime کامل
+      : new Date().toISOString(),
+    status: "planning",
+    budget: 0,
+    currency: "AFN",
+    tags: [],
+  });
+  setShowForm(false);
+  setForm({ name: "", description: "", priority: "medium", startDate: "" });
+};
 
   const statusColor = (s: string) => {
     const map: Record<string, string> = {
