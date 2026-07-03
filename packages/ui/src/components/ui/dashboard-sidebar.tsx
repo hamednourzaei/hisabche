@@ -237,7 +237,7 @@ export function BottomNav({
             direction: "rtl",
           } as React.CSSProperties}
         >
-          {items.slice(0, 6).map((item) => {
+          {items.slice(0, 12).map((item) => {
             const isActive = isPathActive(activeNav, item.path);
 
             return (

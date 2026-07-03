@@ -9,7 +9,7 @@ import { renderToStream } from '@react-pdf/renderer'
 import { createClient } from '@supabase/supabase-js'
 import InvoicePDFDocument from '../pdf/InvoicePDFDocument'
 
-// ─── Redis Connection ─────────────────────────────────
+// Redis Connection ─────────────────────────────────
 const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379'
 const connection = { url: REDIS_URL }
 
