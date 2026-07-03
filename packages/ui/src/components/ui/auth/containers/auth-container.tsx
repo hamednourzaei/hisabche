@@ -39,9 +39,18 @@ export function AuthContainer({ initialMode = "login" }: { initialMode?: "login"
   const [flipped, setFlipped] = useState(initialMode === "signup");
 
   // ─── Switch mode ──────────────────────────────
-  const handleSwitch = useCallback(() => {
-    setFlipped((prev) => !prev);
-  }, []);
+const handleSwitch = useCallback(() => {
+  setFlipped((prev) => {
+    const newFlipped = !prev;
+    // URL رو با حالت جدید sync کن
+    if (newFlipped) {
+      router.replace("/signup", { scroll: false });
+    } else {
+      router.replace("/login", { scroll: false });
+    }
+    return newFlipped;
+  });
+}, [router]);
 
   // ─── Login form ────────────────────────────────
   const loginForm = useForm<LoginInput>({
