@@ -119,4 +119,6 @@ export { PermissionsView } from './components/ui/permissions/permissions-view'
 // ---------- Audit (فاز ۱۹) ----------
 export { AuditContainer } from './components/ui/audit/containers/audit-container'
 export { AuditView } from './components/ui/audit/audit-view'
+// جایگزین کن export قدیمی workspace-page رو با:
+export { WorkspaceContainer } from './components/ui/workspace/containers/workspace-container'
 export type SupportedLanguage = 'fa-AF' | 'fa-IR'

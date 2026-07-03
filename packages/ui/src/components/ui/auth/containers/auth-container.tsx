@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslation } from "react-i18next";
 import { z } from "zod";
-import { useAuthStore } from "@hisabche/store";
+import { useAuthStore, type User } from "@hisabche/store";
 import { loginSchema, type LoginInput } from "@hisabche/validation";
 import { AuthShell } from "@hisabche/ui";
 import { supabaseClient } from "../../../../../../auth/src/supabase";
@@ -99,29 +99,38 @@ export function AuthContainer({ initialMode = "login" }: { initialMode?: "login"
   const [signupShowPassword, setSignupShowPassword] = useState(false);
   const signupStore = useAuthStore();
 
-  const onSignupSubmit = signupForm.handleSubmit(async (data: SignupInput) => {
-    const { error } = await supabaseClient.auth.signUp({
-      email: data.email,
-      password: data.password,
-      options: { data: { full_name: data.fullName } },
-    });
-    if (error) {
-      useAuthStore.setState({ error: error.message, isLoading: false });
-      return;
-    }
-
-    try {
-      await signupStore.login({ email: data.email, password: data.password });
-      await new Promise((r) => setTimeout(r, 100));
-      const s = useAuthStore.getState();
-      if (s.isAuthenticated && !s.error) {
-        router.push("/dashboard");
-      }
-    } catch {
-      /* handled by store */
-    }
+const onSignupSubmit = signupForm.handleSubmit(async (data: SignupInput) => {
+  const { data: authData, error } = await supabaseClient.auth.signUp({
+    email: data.email,
+    password: data.password,
+    options: { data: { full_name: data.fullName } },
   });
+  
+  if (error) {
+    useAuthStore.setState({ error: error.message, isLoading: false });
+    return;
+  }
 
+  // ✅ اگه user برگشت (بعضی وقتا Supabase auto-confirm میکنه)
+  if (authData?.user) {
+    const user: User = {
+      id: authData.user.id,
+      email: authData.user.email || data.email,
+      fullName: data.fullName,
+      businessName: data.companyName,
+      createdAt: authData.user.created_at || new Date().toISOString(),
+    };
+    useAuthStore.setState({ user, isAuthenticated: true, isDemo: false, isLoading: false });
+    router.push("/dashboard");
+    return;
+  }
+
+  // ⚠️ اگه user برنگشت — نیاز به email verification
+  useAuthStore.setState({ 
+    error: "لطفاً ایمیل خود را تأیید کنید. لینک تأیید به ایمیل شما ارسال شد.",
+    isLoading: false 
+  });
+});
   const translateError = (k?: string) => (k ? t(k, k) : undefined);
 
   const signupProps = {
