@@ -45,7 +45,15 @@
     "reports": "راپورها",
     "settings": "تنظیمات",
     "settings.description": "تنظیمات برنامه",
-    "profile": "پروفایل"
+    "profile": "پروفایل",
+    "hr": "منابع انسانی",
+"hr.description": "مدیریت کارمندان و حقوق",
+"projects": "پروژه‌ها",
+"projects.description": "مدیریت پروژه و تسک‌ها",
+"audit": "حسابرسی",
+"audit.description": "گزارشات و ردگیری تغییرات",
+"permissions": "دسترسی‌ها",
+"permissions.description": "مدیریت نقش‌ها و مجوزها"
   },
   "auth": {
     "signIn": "ورود",

@@ -6,10 +6,7 @@ import { cn } from "@/lib/utils";
 import type { ElementType } from "react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   DashboardSidebar & BottomNav v2 — Hisabche Design Language
-   Zero hardcoded colors — all tokens from design system
-   Zero inline styles — all Tailwind classes
-   Full RTL via logical CSS
+   DashboardSidebar v4 — Bold Logo + Premium Minimal
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface NavItem {
@@ -20,8 +17,6 @@ export interface NavItem {
   badge?: number;
 }
 
-// ─── Helpers ───────────────────────────────────────────────────────────────
-
 function isPathActive(currentPath: string, itemPath: string): boolean {
   if (currentPath === itemPath) return true;
   if (currentPath.startsWith(itemPath + "/")) return true;
@@ -29,7 +24,6 @@ function isPathActive(currentPath: string, itemPath: string): boolean {
   return false;
 }
 
-// SVG Icon path data
 const ICON_PATHS: Record<string, JSX.Element> = {
   dashboard: (
     <g>
@@ -82,10 +76,10 @@ function SidebarIcon({ id, active }: { id: string; active: boolean }) {
       strokeLinejoin="round"
       aria-hidden="true"
       className={cn(
-        "shrink-0",
+        "shrink-0 transition-colors duration-200",
         active
           ? "text-[hsl(var(--color-primary))]"
-          : "text-[hsl(var(--fg-tertiary))]",
+          : "text-[hsl(var(--fg-tertiary))] group-hover:text-[hsl(var(--fg-secondary))]",
       )}
     >
       {path}
@@ -110,36 +104,30 @@ export function DashboardSidebar({
     <aside
       className={cn(
         "hidden lg:flex lg:flex-col shrink-0",
-        "w-60 h-screen sticky top-0 overflow-y-auto",
+        "w-56 h-screen sticky top-0 overflow-y-auto",
         "border-e border-[hsl(var(--border-default))]",
         "bg-[hsl(var(--surface-base))]",
       )}
     >
-      {/* Brand */}
-      <div className="flex items-center gap-2.5 px-4 py-[11px] border-b border-[hsl(var(--border-default))]">
-        <div className="flex h-8 w-8 items-center justify-center shrink-0">
-  <img 
-    src="/logo-icon.png" 
-    alt="حسابچه" 
-    className="h-8 w-8 object-contain"
-  />
-</div>
-        <div className="min-w-0 leading-tight">
-          <p className="text-sm font-semibold truncate text-[hsl(var(--fg-primary))]">
-            حسابچه
-          </p>
-          <p className="text-[11px] text-[hsl(var(--fg-tertiary))]">
-            مدیریت کسب‌وکار
-          </p>
+      {/* Logo — Bold, centered, prominent */}
+      <div className="flex flex-col items-center gap-1 pt-6 pb-4">
+        <div className="transition-all duration-300 hover:scale-105 hover:filter hover:drop-shadow-[0_0_18px_rgba(18,200,160,0.25)]">
+          <img
+            src="/logo-icon.png"
+            alt="حسابچه"
+            className="h-16 w-16 object-contain"
+          />
         </div>
+        <span className="text-[11px] font-medium tracking-widest text-[hsl(var(--fg-tertiary))] uppercase">
+          hisabche
+        </span>
       </div>
 
-      {/* Navigation */}
-      <nav className="flex flex-col gap-0.5 p-2 flex-1">
-        <span className="px-2.5 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--fg-tertiary))]">
-          منو
-        </span>
+      {/* Divider */}
+      <div className="mx-4 h-px bg-[hsl(var(--border-default))] opacity-60" />
 
+      {/* Navigation */}
+      <nav className="flex flex-col gap-0.5 px-3 pt-3 flex-1">
         {items.map((item) => {
           const isActive = isPathActive(activeNav, item.path);
 
@@ -149,34 +137,36 @@ export function DashboardSidebar({
               type="button"
               onClick={() => onNavigate(item.id, item.path)}
               className={cn(
-                "relative flex items-center gap-2.5 h-9 px-2.5 rounded-lg",
+                "group relative flex items-center gap-2.5 h-10 px-3 rounded-xl",
                 "text-sm font-medium text-start w-full",
-                "transition-colors duration-150",
+                "transition-all duration-200",
                 "motion-reduce:transition-none",
                 isActive
-                  ? "bg-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))] font-semibold"
+                  ? "bg-[hsl(var(--color-primary)/0.10)] text-[hsl(var(--color-primary))] font-semibold shadow-[0_0_20px_rgba(18,200,160,0.06)]"
                   : "text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]",
               )}
               aria-current={isActive ? "page" : undefined}
             >
-              {/* Active indicator bar */}
+              {/* Active indicator — end side (left in RTL) */}
               {isActive && (
-                <span className="absolute start-0 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-full bg-[hsl(var(--color-primary))]" />
+                <span className="absolute end-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-full bg-[var(--gradient-brand)] shadow-[0_0_8px_rgba(18,200,160,0.3)]" />
               )}
 
               {/* Icon */}
-              {ICON_PATHS[item.id] ? (
-                <SidebarIcon id={item.id} active={isActive} />
-              ) : (
-                <item.icon
-                  className={cn(
-                    "size-[18px] shrink-0",
-                    isActive
-                      ? "text-[hsl(var(--color-primary))]"
-                      : "text-[hsl(var(--fg-tertiary))]",
-                  )}
-                />
-              )}
+              <span className={cn("transition-transform duration-200", isActive && "scale-110")}>
+                {ICON_PATHS[item.id] ? (
+                  <SidebarIcon id={item.id} active={isActive} />
+                ) : (
+                  <item.icon
+                    className={cn(
+                      "size-[18px] shrink-0 transition-colors duration-200",
+                      isActive
+                        ? "text-[hsl(var(--color-primary))]"
+                        : "text-[hsl(var(--fg-tertiary))] group-hover:text-[hsl(var(--fg-secondary))]",
+                    )}
+                  />
+                )}
+              </span>
 
               {/* Label */}
               <span className="flex-1 truncate">{t(item.label)}</span>
@@ -201,16 +191,17 @@ export function DashboardSidebar({
       </nav>
 
       {/* Footer */}
-      <div className="p-2 border-t border-[hsl(var(--border-default))]">
-        <p className="text-center text-[10px] text-[hsl(var(--fg-tertiary))]">
-          حسابچه © ۲۰۲۶
+      <div className="px-3 py-4">
+        <div className="h-px bg-[hsl(var(--border-default))] mb-3 opacity-50" />
+        <p className="text-center text-[10px] text-[hsl(var(--fg-tertiary))] tracking-wider">
+          v2.0
         </p>
       </div>
     </aside>
   );
 }
 
-// ─── BottomNav ─────────────────────────────────────────────────────────────
+// ─── BottomNav (unchanged) ─────────────────────────────────────────────────
 
 export function BottomNav({
   items,
@@ -255,7 +246,6 @@ export function BottomNav({
                 className="relative flex-shrink-0 h-full cursor-pointer"
                 style={{ width: 70, scrollSnapAlign: "center" }}
               >
-                {/* Active indicator bar */}
                 <div
                   className={cn(
                     "absolute start-1/2 -translate-x-1/2",
@@ -274,7 +264,6 @@ export function BottomNav({
                   aria-current={isActive ? "page" : undefined}
                   aria-label={t(item.label)}
                 >
-                  {/* Icon */}
                   <div
                     className={cn(
                       "flex items-center justify-center",
@@ -291,7 +280,6 @@ export function BottomNav({
                     )}
                   </div>
 
-                  {/* Label */}
                   <span
                     className={cn(
                       "whitespace-nowrap mt-0.5 transition-all duration-150",

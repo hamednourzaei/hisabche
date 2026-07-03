@@ -103,4 +103,20 @@ export { StatCard } from './components/ui/dashboard/dashboard-stats'
 export { DashboardInvoices } from './components/ui/dashboard/dashboard-invoices'
 export { useDashboard } from './hooks/dashboard/use-dashboard'
 
+// ---------- HR (فاز ۱۵) ----------
+export { HrContainer } from './components/ui/hr/containers/hr-container'
+export { HrView } from './components/ui/hr/hr-view'
+export { EmployeeDetailContainer } from './components/ui/hr/containers/employee-detail-container'
+export { EmployeeDetailView } from './components/ui/hr/employee-detail-view'
+// ---------- Projects (فاز ۱۶) ----------
+export { ProjectsContainer } from './components/ui/projects/containers/projects-container'
+export { ProjectsView } from './components/ui/projects/projects-view'
+export { ProjectDetailContainer } from './components/ui/projects/containers/project-detail-container'
+export { ProjectDetailView } from './components/ui/projects/project-detail-view'
+// ---------- Permissions (فاز ۱۸) ----------
+export { PermissionsContainer } from './components/ui/permissions/containers/permissions-container'
+export { PermissionsView } from './components/ui/permissions/permissions-view'
+// ---------- Audit (فاز ۱۹) ----------
+export { AuditContainer } from './components/ui/audit/containers/audit-container'
+export { AuditView } from './components/ui/audit/audit-view'
 export type SupportedLanguage = 'fa-AF' | 'fa-IR'

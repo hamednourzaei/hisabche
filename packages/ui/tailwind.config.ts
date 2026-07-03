@@ -36,16 +36,16 @@ const config: Config = {
         // ── Palette (Base colors) ─────────────────────────────
         purple: {
           DEFAULT: 'hsl(var(--color-purple))',
-          50: 'hsl(262 80% 95%)',
-          100: 'hsl(262 80% 90%)',
-          200: 'hsl(262 80% 80%)',
-          300: 'hsl(262 80% 70%)',
-          400: 'hsl(262 80% 68%)',
+          50: 'hsl(168 70% 95%)',
+          100: 'hsl(167 68% 87%)',
+          200: 'hsl(166 70% 75%)',
+          300: 'hsl(165 74% 63%)',
+          400: 'hsl(165 75% 57%)',
           500: 'hsl(var(--color-purple))',
-          600: 'hsl(262 80% 55%)',
-          700: 'hsl(262 80% 45%)',
-          800: 'hsl(262 80% 35%)',
-          900: 'hsl(262 80% 25%)',
+          600: 'hsl(164 74% 47%)',
+          700: 'hsl(174 79% 28%)',
+          800: 'hsl(179 82% 22%)',
+          900: 'hsl(178 76% 14%)',
         },
         cyan: {
           DEFAULT: 'hsl(var(--color-cyan))',
@@ -68,8 +68,8 @@ const config: Config = {
           500: 'hsl(210 90% 55%)',
         },
         teal: {
-          DEFAULT: 'hsl(180 80% 45%)',
-          500: 'hsl(180 80% 45%)',
+          DEFAULT: 'hsl(var(--color-secondary))',
+          500: 'hsl(var(--color-secondary))',
         },
         // ── Surfaces ───────────────────────────────────────────
         background: 'hsl(var(--hisab-background))',
@@ -90,15 +90,15 @@ const config: Config = {
           muted:    'hsl(var(--surface-muted))',
           elevated: 'hsl(var(--surface-elevated))',
         },
-        // ── Narrative Glow Colors ──────────────────────────────
+        // ── Narrative Glow Colors (intentionally multi-hue — do not brand-ify) ──
         narrative: {
-          frustration: 'rgba(168, 85, 247, 0.12)',
-          confusion:   'rgba(239, 68, 68, 0.10)',
-          clarity:     'rgba(16, 185, 129, 0.10)',
-          confidence:  'rgba(6, 182, 212, 0.10)',
-          trust:       'rgba(139, 92, 246, 0.14)',
-          action:      'rgba(236, 72, 153, 0.18)',
-        },
+  frustration: 'rgba(14, 110, 105, 0.10)',
+  confusion:   'rgba(239, 68, 68, 0.10)',
+  clarity:     'rgba(18, 200, 160, 0.10)',
+  confidence:  'rgba(99, 231, 200, 0.10)',
+  trust:       'rgba(14, 110, 105, 0.12)',
+  action:      'rgba(245, 158, 11, 0.15)',
+},
       },
 
       borderRadius: {
@@ -172,11 +172,11 @@ const config: Config = {
       },
 
       backdropBlur: {
-        xs:    '2px',
-        sm:    '4px',
-        md:    '8px',
-        glass: 'var(--glass-blur)',
-      },
+  xs:    '2px',
+  sm:    '4px',
+  md:    '8px',
+  glass: '18px',  // ← hardcode کن چون CSS variable تو backdropBlur کار نمیکنه
+},
 
       transitionTimingFunction: {
         'ease-out':      'var(--ease-out)',
@@ -225,8 +225,8 @@ const config: Config = {
           '50%':      { opacity: '0.6', transform: 'scale(1.08) translate(20px, 10px)' },
         },
         'fab-pulse': {
-          '0%, 100%': { boxShadow: '0 0 0 0 rgba(168, 85, 247, 0.4)' },
-          '50%':      { boxShadow: '0 0 0 12px rgba(168, 85, 247, 0)' },
+          '0%, 100%': { boxShadow: '0 0 0 0 rgba(36, 224, 176, 0.4)' },
+          '50%':      { boxShadow: '0 0 0 12px rgba(36, 224, 176, 0)' },
         },
         'draw-line': {
           from: { strokeDashoffset: '400' },
@@ -259,19 +259,19 @@ const config: Config = {
       },
 
       backgroundImage: {
-        'gradient-purple-cyan': 'linear-gradient(135deg, hsl(262 80% 60%), hsl(190 90% 50%))',
-        'gradient-emerald-cyan': 'linear-gradient(135deg, hsl(160 80% 45%), hsl(190 90% 50%))',
+        'gradient-purple-cyan': 'linear-gradient(135deg, hsl(165 75% 51%), hsl(168 78% 56%))',
+        'gradient-emerald-cyan': 'linear-gradient(135deg, hsl(165 75% 51%), hsl(168 78% 56%))',
         // Godam Stats card backgrounds
-        'godam-purple': 'linear-gradient(135deg, hsl(262 80% 65% / 0.1), hsl(262 80% 65% / 0.02))',
-        'godam-emerald': 'linear-gradient(135deg, hsl(160 80% 45% / 0.1), hsl(160 80% 45% / 0.02))',
+        'godam-purple': 'linear-gradient(135deg, hsl(165 75% 51% / 0.1), hsl(165 75% 51% / 0.02))',
+        'godam-emerald': 'linear-gradient(135deg, hsl(168 78% 56% / 0.1), hsl(168 78% 56% / 0.02))',
         'godam-amber': 'linear-gradient(135deg, hsl(38 92% 55% / 0.1), hsl(38 92% 55% / 0.02))',
         'godam-rose': 'linear-gradient(135deg, hsl(0 84% 60% / 0.1), hsl(0 84% 60% / 0.02))',
         'godam-blue': 'linear-gradient(135deg, hsl(210 90% 55% / 0.1), hsl(210 90% 55% / 0.02))',
-        'godam-teal': 'linear-gradient(135deg, hsl(180 80% 45% / 0.1), hsl(180 80% 45% / 0.02))',
+        'godam-teal': 'linear-gradient(135deg, hsl(174 79% 28% / 0.1), hsl(174 79% 28% / 0.02))',
         // Narrative backgrounds
         'narrative-frustration': 'radial-gradient(circle at 50% 0%, rgba(168, 85, 247, 0.12), transparent 70%)',
         'narrative-confusion':   'radial-gradient(circle at 50% 0%, rgba(239, 68, 68, 0.10), transparent 70%)',
-        'narrative-clarity':     'radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.10), transparent 70%)',
+        'narrative-clarity':     'radial-gradient(circle at 50% 0%, rgba(36, 224, 176, 0.10), transparent 70%)',
         'narrative-confidence':  'radial-gradient(circle at 50% 0%, rgba(6, 182, 212, 0.10), transparent 70%)',
         'narrative-trust':       'radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.14), transparent 70%)',
         'narrative-action':      'radial-gradient(circle at 50% 0%, rgba(236, 72, 153, 0.18), transparent 70%)',

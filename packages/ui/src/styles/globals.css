@@ -1,6 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   globals.css — Hisabche v2.0 Premium FinTech Design System
-   Dark-first, Teal/Emerald palette, Enterprise-grade, 10/10
+   globals.css — Hisabche v3.0 Premium FinTech Design System
+   Dark-first, Emerald/Turquoise logo palette, Enterprise-grade
+   Stripe / Linear / Vercel-tier token discipline
    ═══════════════════════════════════════════════════════════════════════════ */
 @import './cinematic-motion.css';
 @import './lite-mode.css';
@@ -21,7 +22,58 @@
   --motion-scale: 1;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
+/* ── Radius Semantic Aliases ── */
+--radius-none: 0;
+--radius-xxs: 4px;
+--radius-3xl: 32px;
+--radius-card: var(--radius-2xl);
+--radius-card-sm: var(--radius-xl);
+--radius-card-md: var(--radius-2xl);
+--radius-card-lg: var(--radius-3xl);
+--radius-button: var(--radius-full);
+--radius-modal: var(--radius-2xl);
+--radius-input: var(--radius-md);
+--radius-badge: var(--radius-full);
 
+/* ── Elevation ── */
+--elevation-0: none;
+--elevation-1: 0 1px 2px rgba(6, 20, 23, 0.04);
+--elevation-2: 0 1px 3px rgba(6, 20, 23, 0.06);
+--elevation-3: 0 4px 6px rgba(6, 20, 23, 0.08);
+--elevation-4: 0 10px 15px rgba(6, 20, 23, 0.10);
+--elevation-5: 0 20px 25px rgba(6, 20, 23, 0.12);
+--elevation-6: 0 25px 50px rgba(6, 20, 23, 0.15);
+--card-elevation-sm: var(--elevation-2);
+--card-elevation-md: var(--elevation-4);
+--card-elevation-lg: var(--elevation-6);
+
+/* ── Typography Tokens ── */
+--font-heading-1: var(--text-h1);
+--font-heading-2: var(--text-h2);
+--font-heading-3: var(--text-h3);
+--font-body: var(--text-body);
+--font-body-large: clamp(1rem, 2.5vw, 1.125rem);
+
+/* ── Duration ── */
+--duration-micro: 100ms;
+--duration-short: 150ms;
+--duration-medium: 300ms;
+--duration-long: 500ms;
+
+/* ── Easing ── */
+--ease-identity: cubic-bezier(0, 0, 1, 1);
+--hisab-ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+/* ── z-index extras ── */
+--z-fixed: 25;
+--z-modal-backdrop: 35;
+--z-popover: 45;
+--z-tooltip: 55;
+--z-cmdk: 60;
+--z-fab: 65;
+
+/* ── Font ── */
+--font-mono: 'JetBrains Mono', 'Fira Code', monospace;
   /* Type scale */
   --text-hero: clamp(2.25rem, 5vw, 4rem);
   --text-h1: clamp(1.75rem, 4vw, 2.5rem);
@@ -41,26 +93,27 @@
   --space-16: 4rem; --space-20: 5rem; --space-24: 6rem;
 
   /* ═══════════════════════════════════════════════════════════════════════════
-     BRAND COLORS (Hisabche Premium FinTech)
+     BRAND COLORS (Hisabche — logo-derived Emerald/Teal system)
      ═══════════════════════════════════════════════════════════════════════ */
-  --color-primary: 168 84% 43%;            /* #12C8A0 */
-  --color-primary-fg: 192 55% 6%;           /* #061417 — text on primary */
-  --color-primary-hover: 168 84% 38%;       /* #0FB28E */
-  --color-primary-light: 166 74% 65%;       /* #63E7C8 */
-  --color-secondary: 177 77% 24%;           /* #0E6E69 */
-  --color-accent: 167 70% 50%;              /* #27D7B4 */
-  --color-dark: 192 55% 6%;                 /* #061417 */
+  --color-primary: 165 75% 51%;             /* #24E0B0 — Emerald (logo primary) */
+  --color-primary-fg: 210 40% 8%;           /* #0B141A — text on primary */
+  --color-primary-hover: 164 74% 47%;       /* #1FD3A3 — Turquoise */
+  --color-primary-light: 166 76% 63%;       /* #55E9C6 — light tint for links/hover */
+  --color-secondary: 174 79% 28%;           /* #0F7F74 — Dark Green */
+  --color-accent: 168 78% 56%;              /* #37E6C3 — Mint */
+  --color-dark: 210 33% 9%;                 /* #101820 — Charcoal */
+  --color-black: 213 29% 6%;                /* #0B0F14 — Matte Black */
 
-  /* ── Full Teal Spectrum ── */
-  --color-teal-100: 160 70% 95%;            /* #DDFBF4 */
-  --color-teal-200: 163 70% 85%;            /* #B9F3E7 */
-  --color-teal-300: 165 65% 73%;            /* #8CEAD8 */
-  --color-teal-400: 167 68% 58%;            /* #4FDEC5 */
-  --color-teal-500: 168 84% 43%;            /* #12C8A0 */
-  --color-teal-600: 168 84% 38%;            /* #0FB28E */
-  --color-teal-700: 177 77% 24%;            /* #0E6E69 */
-  --color-teal-800: 180 70% 18%;            /* #0A5050 */
-  --color-teal-900: 192 55% 6%;             /* #061417 */
+  /* ── Full Teal Spectrum (logo-derived) ── */
+  --color-teal-100: 168 70% 95%;            /* #E1FBF4 */
+  --color-teal-200: 167 68% 87%;            /* #BEF3E1 */
+  --color-teal-300: 166 70% 75%;            /* #7EE8CC */
+  --color-teal-400: 165 74% 63%;            /* #55E9C6 */
+  --color-teal-500: 165 75% 51%;            /* #24E0B0 — Primary */
+  --color-teal-600: 164 74% 47%;            /* #1FD3A3 — Turquoise */
+  --color-teal-700: 174 79% 28%;            /* #0F7F74 — Dark Green */
+  --color-teal-800: 179 82% 22%;            /* #0A6664 — Deep Teal */
+  --color-teal-900: 178 76% 14%;            /* #0C5957-family — Forest Teal, near-black */
 
   /* ── Semantic Colors ── */
   --color-success: 142 72% 38%;             /* #16A34A */
@@ -75,19 +128,19 @@
   /* ═══════════════════════════════════════════════════════════════════════════
      DARK THEME SURFACES
      ═══════════════════════════════════════════════════════════════════════════ */
-  --surface-base: 192 55% 6%;               /* #061417 */
-  --surface-muted: 186 35% 12%;             /* #10272B */
-  --surface-elevated: 188 42% 10%;          /* #0C1F23 */
-  --surface-overlay: 188 42% 10%;
+  --surface-base: 210 33% 9%;               /* #101820 — Charcoal */
+  --surface-muted: 206 28% 15%;             /* #1B262E */
+  --surface-elevated: 207 30% 12%;          /* #141E24 */
+  --surface-overlay: 207 30% 12%;
 
   /* ── Dark Theme Text ── */
-  --fg-primary: 160 40% 98%;                /* #F6FCFB */
-  --fg-secondary: 165 18% 67%;              /* #9DB7B2 */
-  --fg-tertiary: 165 10% 55%;
+  --fg-primary: 165 35% 97%;                /* #F3FBF8 */
+  --fg-secondary: 168 15% 65%;              /* #9BB6AF */
+  --fg-tertiary: 168 10% 50%;
 
   /* ── Dark Theme Borders ── */
-  --border-default: 186 32% 18%;            /* #1E3A3F */
-  --border-strong: 186 32% 24%;
+  --border-default: 206 26% 19%;            /* #212F37 */
+  --border-strong: 206 26% 26%;
 
   /* ═══════════════════════════════════════════════════════════════════════════
      RADII
@@ -105,42 +158,42 @@
   /* ═══════════════════════════════════════════════════════════════════════════
      GRADIENTS
      ═══════════════════════════════════════════════════════════════════════════ */
-  --gradient-brand: linear-gradient(135deg, #0E6E69 0%, #12C8A0 55%, #63E7C8 100%);
-  --gradient-brand-hover: linear-gradient(135deg, #0B5F5A 0%, #0FB28E 55%, #4FDEC5 100%);
-  --gradient-success: linear-gradient(135deg, #0F7F74 0%, #1FD3A3 55%, #63E7C8 100%);
+  --gradient-brand: linear-gradient(135deg, #37E6C3 0%, #24E0B0 20%, #1FD3A3 45%, #0F7F74 70%, #0A6664 100%);
+  --gradient-brand-hover: linear-gradient(135deg, #55E9C6 0%, #37E6C3 20%, #24E0B0 45%, #12897C 70%, #0C5957 100%);
+  --gradient-success: linear-gradient(135deg, #37E6C3 0%, #1FD3A3 55%, #0F7F74 100%);
 
   /* ═══════════════════════════════════════════════════════════════════════════
      GLASS EFFECT (Dark)
      ═══════════════════════════════════════════════════════════════════════════ */
-  --glass-bg: rgba(12, 31, 35, 0.82);
-  --glass-border: rgba(18, 200, 160, 0.12);
+  --glass-bg: rgba(16, 24, 32, 0.80);
+  --glass-border: rgba(36, 224, 176, 0.14);
   --glass-blur: blur(18px);
 
   /* ═══════════════════════════════════════════════════════════════════════════
      FOCUS RING (Accessibility — 4px for 4K)
      ═══════════════════════════════════════════════════════════════════════════ */
-  --focus-ring: 0 0 0 4px rgba(18, 200, 160, 0.18);
+  --focus-ring: 0 0 0 4px rgba(36, 224, 176, 0.20);
 
   /* ═══════════════════════════════════════════════════════════════════════════
      SHADOW (Corporate — subtle glow)
      ═══════════════════════════════════════════════════════════════════════════ */
-  --shadow-premium: 0 10px 30px rgba(6, 20, 23, 0.18), 0 0 30px rgba(18, 200, 160, 0.08);
+  --shadow-premium: 0 10px 30px rgba(11, 15, 20, 0.20), 0 0 30px rgba(36, 224, 176, 0.10);
 
   /* ═══════════════════════════════════════════════════════════════════════════
      LOGO GLOW (Hover only — sharp by default)
      ═══════════════════════════════════════════════════════════════════════════ */
-  --logo-glow: drop-shadow(0 0 12px rgba(18, 200, 160, 0.18));
+  --logo-glow: drop-shadow(0 0 12px rgba(36, 224, 176, 0.22));
 
   /* ═══════════════════════════════════════════════════════════════════════════
      CHART COLORS
      ═══════════════════════════════════════════════════════════════════════════ */
-  --chart-1: #12C8A0;   /* Primary */
-  --chart-2: #0E6E69;   /* Secondary */
-  --chart-3: #63E7C8;   /* Highlight */
+  --chart-1: #24E0B0;   /* Primary — Emerald */
+  --chart-2: #0F7F74;   /* Secondary — Dark Green */
+  --chart-3: #37E6C3;   /* Accent — Mint */
   --chart-4: #F59E0B;   /* Warning */
   --chart-5: #EF4444;   /* Danger */
   --chart-6: #0EA5E9;   /* Info */
-  --chart-neutral: #9DB7B2;
+  --chart-neutral: #9BB6AF;
 
   /* ═══════════════════════════════════════════════════════════════════════════
      LEGACY ALIASES (shadcn/ui + tailwind)
@@ -161,52 +214,52 @@
   --hisab-border: var(--border-default);
   --hisab-ring: var(--color-primary);
   --color-purple: var(--color-primary);
-  --color-cyan: 167 70% 50%;
-  --color-emerald: 166 74% 65%;
+  --color-cyan: 168 78% 56%;
+  --color-emerald: 165 74% 63%;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    LIGHT THEME
    ═══════════════════════════════════════════════════════════════════════════ */
 :root[data-theme="light"], .light {
-  --surface-base: 160 20% 98%;              /* #F7FAF9 */
-  --surface-muted: 160 18% 95%;             /* #EDF6F4 */
+  --surface-base: 168 25% 98%;              /* #F5FBF9 */
+  --surface-muted: 166 22% 95%;             /* #E9F7F2 */
   --surface-elevated: 0 0% 100%;            /* #FFFFFF */
-  --surface-overlay: 160 18% 95%;
-  --fg-primary: 192 55% 6%;                 /* #061417 */
-  --fg-secondary: 170 12% 41%;              /* #5D7471 */
-  --fg-tertiary: 165 8% 55%;
-  --border-default: 160 18% 87%;            /* #D6E5E1 */
-  --border-strong: 160 18% 78%;
+  --surface-overlay: 166 22% 95%;
+  --fg-primary: 210 33% 9%;                 /* #101820 */
+  --fg-secondary: 174 15% 38%;              /* #4E6A66 */
+  --fg-tertiary: 168 8% 53%;
+  --border-default: 166 22% 87%;            /* #D3E8E1 */
+  --border-strong: 166 22% 77%;
   --glass-bg: rgba(255, 255, 255, 0.82);
-  --glass-border: rgba(14, 110, 105, 0.10);
-  --shadow-premium: 0 10px 30px rgba(6, 20, 23, 0.08), 0 0 30px rgba(14, 110, 105, 0.06);
+  --glass-border: rgba(15, 127, 116, 0.12);
+  --shadow-premium: 0 10px 30px rgba(16, 24, 32, 0.08), 0 0 30px rgba(15, 127, 116, 0.08);
   --hisab-ring: var(--color-primary);
   --color-purple: var(--color-primary);
-  --color-cyan: 167 70% 45%;
-  --color-emerald: 166 74% 60%;
+  --color-cyan: 168 70% 46%;
+  --color-emerald: 165 70% 55%;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    DARK CLASS OVERRIDE
    ═══════════════════════════════════════════════════════════════════════════ */
 .dark {
-  --surface-base: 192 55% 6%;
-  --surface-muted: 186 35% 12%;
-  --surface-elevated: 188 42% 10%;
-  --surface-overlay: 188 42% 10%;
-  --fg-primary: 160 40% 98%;
-  --fg-secondary: 165 18% 67%;
-  --fg-tertiary: 165 10% 55%;
-  --border-default: 186 32% 18%;
-  --border-strong: 186 32% 24%;
-  --glass-bg: rgba(12, 31, 35, 0.82);
-  --glass-border: rgba(18, 200, 160, 0.12);
-  --shadow-premium: 0 10px 30px rgba(6, 20, 23, 0.18), 0 0 30px rgba(18, 200, 160, 0.08);
+  --surface-base: 210 33% 9%;
+  --surface-muted: 206 28% 15%;
+  --surface-elevated: 207 30% 12%;
+  --surface-overlay: 207 30% 12%;
+  --fg-primary: 165 35% 97%;
+  --fg-secondary: 168 15% 65%;
+  --fg-tertiary: 168 10% 50%;
+  --border-default: 206 26% 19%;
+  --border-strong: 206 26% 26%;
+  --glass-bg: rgba(16, 24, 32, 0.80);
+  --glass-border: rgba(36, 224, 176, 0.14);
+  --shadow-premium: 0 10px 30px rgba(11, 15, 20, 0.20), 0 0 30px rgba(36, 224, 176, 0.10);
   --hisab-ring: var(--color-primary);
   --color-purple: var(--color-primary);
-  --color-cyan: 167 70% 50%;
-  --color-emerald: 166 74% 65%;
+  --color-cyan: 168 78% 56%;
+  --color-emerald: 165 74% 63%;
 }
 
 /* ───────────────────────────────────────────────────────────────────────────

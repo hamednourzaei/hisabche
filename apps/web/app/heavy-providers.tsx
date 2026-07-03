@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, lazy, Suspense } from "react"
+import React, { useEffect } from "react"
 import { useThemeStore, useAuthStore, useDeviceStore } from "@hisabche/store"
 import { syncLanguageFromStorage } from "@hisabche/i18n"
 

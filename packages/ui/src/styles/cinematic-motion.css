@@ -1,7 +1,7 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   HISABCHE v9 — CINEMATIC INVISIBLE MOTION SYSTEM
+   HISABCHE v10 — CINEMATIC INVISIBLE MOTION SYSTEM
    ── Stripe-level polish · FLIP-based · Scroll-driven · GPU-optimized ──
-   ── Living Ledger identity · Persian geometric grain · Zero decorative ──
+   ── Living Ledger identity, now synced to the Emerald/Turquoise logo ──
    ═══════════════════════════════════════════════════════════════════════════ */
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -32,8 +32,8 @@
   --fade-threshold: 0.3;
   --cinematic-reduced: 1;
   --cinematic-blur-max: 12px;
-  --ledger-constellation: 270 90% 65%;
-  --ledger-temporal: 190 90% 50%;
+  --ledger-constellation: 165 75% 51%;      /* synced to --color-primary */
+  --ledger-temporal: 168 78% 56%;           /* synced to --color-accent */
   --ledger-geometric-grain: 0.02;
   --stagger-base: 40ms;
   --stagger-multiplier: 1;

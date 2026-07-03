@@ -52,7 +52,7 @@ function Switch({
       onClick={() => onCheckedChange(!checked)}
       className={cn(
         "relative inline-flex shrink-0 items-center",
-        "h-5 w-9 sm:h-6 sm:w-11",
+        "h-6 w-11",
         "rounded-full",
         "transition-colors duration-200",
         "focus:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring-color)/0.5)] focus-visible:ring-offset-1",
@@ -66,12 +66,13 @@ function Switch({
       <span
         className={cn(
           "block rounded-full bg-white shadow-sm",
-          "size-4 sm:size-5",
+          "size-5",
           "transition-all duration-200",
           "motion-reduce:transition-none",
           "absolute top-1/2 -translate-y-1/2",
-          // RTL-safe: استفاده از inset-inline-start
-          checked ? "inset-inline-start-[calc(100%-1.125rem)] sm:inset-inline-start-[calc(100%-1.375rem)]" : "inset-inline-start-0.5",
+          checked
+            ? "inset-inline-end-0.5"    // ✅ RTL-safe: همیشه ۲px از انتها
+            : "inset-inline-start-0.5",  // ✅ RTL-safe: همیشه ۲px از ابتدا
         )}
       />
     </button>
