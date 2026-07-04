@@ -19,38 +19,79 @@ interface UseAuditLogsParams {
   search?: string;
 }
 
+export interface AuditLog {
+  id: string;
+  action: string;
+  entity_type: string;
+  entity_id?: string;
+  user_id: string;
+  created_at: string;
+  ip_address?: string;
+  user_name?: string;
+  details?: Record<string, any>;
+}
+
+export interface AuditResponse {
+  logs: AuditLog[];
+  total: number;
+  page?: number;
+  limit?: number;
+}
+
+// ✅ Helper to safely extract logs and total from any response
+function extractAuditData(response: any): AuditResponse {
+  // If response has data.logs structure
+  if (response?.data?.logs) {
+    return {
+      logs: response.data.logs,
+      total: response.data.total || response.data.logs.length,
+    };
+  }
+  
+  // If response has data.data structure (our API format)
+  if (response?.data?.data) {
+    return {
+      logs: response.data.data,
+      total: response.data.total || response.data.data.length,
+    };
+  }
+  
+  // If response itself is an array
+  if (Array.isArray(response?.data)) {
+    return {
+      logs: response.data,
+      total: response.data.length,
+    };
+  }
+  
+  // If response has logs directly
+  if (response?.logs) {
+    return {
+      logs: response.logs,
+      total: response.total || response.logs.length,
+    };
+  }
+  
+  // Fallback: empty response
+  return {
+    logs: [],
+    total: 0,
+  };
+}
+
 export function useAuditLogs(params: UseAuditLogsParams = {}) {
   const { page = 1, limit = 30, ...rest } = params;
 
   return useQuery({
     queryKey: auditKeys.list({ page, limit, ...rest }),
-    queryFn: async () => {
+    queryFn: async (): Promise<AuditResponse> => {
       const response = await apiClient.get("/audit/logs", { 
         params: { page, limit, ...rest } 
       });
       
-      // Handle different response structures
-      if (response.data?.data) {
-        return {
-          data: response.data.data,
-          total: response.data.total || 0,
-        };
-      }
-      
-      // If response is array directly
-      if (Array.isArray(response.data)) {
-        return {
-          data: response.data,
-          total: response.data.length,
-        };
-      }
-      
-      return {
-        data: response.data?.logs || response.data || [],
-        total: response.data?.total || 0,
-      };
+      return extractAuditData(response);
     },
-    staleTime: 30000, // 30 seconds
+    staleTime: 30000,
     retry: 2,
   });
 }

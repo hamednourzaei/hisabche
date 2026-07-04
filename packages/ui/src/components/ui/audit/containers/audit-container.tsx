@@ -3,7 +3,7 @@
 
 import { useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { useAuditLogs } from "@hisabche/api";
+import { useAuditLogs, type AuditLog, type AuditResponse } from "@hisabche/api";
 import { AuditView } from "../audit-view";
 
 export function AuditContainer() {
@@ -42,11 +42,15 @@ export function AuditContainer() {
     window.open(`/api/audit/export?${params.toString()}`, "_blank");
   }, [filters]);
 
+  // ✅ data is already AuditResponse type
+  const logs = data?.logs ?? [];
+  const total = data?.total ?? 0;
+
   return (
     <AuditView
       t={safeT}
-      logs={data?.data || data?.logs || []}
-      total={data?.total || 0}
+      logs={logs}
+      total={total}
       page={page}
       isLoading={isLoading}
       error={error?.message || null}

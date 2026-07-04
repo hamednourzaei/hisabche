@@ -9,7 +9,7 @@ import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
   createAuditLogSchema,
   auditFiltersSchema,
-  type AuditFilters,  // ✅ اضافه شود
+  type AuditFilters,  
 } from '@hisabche/validation'
 import { AuditService } from '../services/audit.service'
 import { authenticate } from '../middleware/auth.middleware'

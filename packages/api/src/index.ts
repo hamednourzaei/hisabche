@@ -39,10 +39,14 @@ export { useRealtime } from './hooks/useRealtime'
 export {
   useDashboardKPIs,
   useAIInsights,
+  useDashboardSales,
   dashboardKeys,
   type DashboardKPIs,
   type AIInsight,
+  type SalesDataPoint,
+  type SalesChartData,
 } from './hooks/dashboard'
+
 // ---------- Employees (فاز ۱۵) ----------
 export {
   useEmployees,
@@ -52,13 +56,14 @@ export {
   useDeleteEmployee,
   employeeKeys,
 } from './hooks/employees'
-// ---------- Projects (فاز ۱۶) ----------
 
+// ---------- Projects (فاز ۱۶) ----------
 export {
   useProjects, useProject, useCreateProject, useUpdateProject, useDeleteProject,
   useProjectTasks, useCreateProjectTask, useUpdateProjectTask, useDeleteProjectTask,
   projectKeys, projectTaskKeys,
 } from './hooks/projects'
+
 // ---------- Workspace (فاز ۱۷) ----------
 export {
   useWorkspaces,
@@ -68,7 +73,15 @@ export {
   useRemoveMember,
   workspaceKeys,
 } from './hooks/workspace'
+
 // ---------- Permissions (فاز ۱۸) ----------
 export { useRoles, usePermissions, useCreateRole, useDeleteRole, permissionKeys } from './hooks/permissions'
+
 // ---------- Audit (فاز ۱۹) ----------
-export { useAuditLogs, auditKeys } from './hooks/audit'
+export { 
+  useAuditLogs, 
+  auditKeys,
+  type AuditLog,
+  type AuditResponse,
+} from './hooks/audit'
+

@@ -16,6 +16,7 @@ import {
 export interface ChartDataPoint {
   label: string;
   value: number;
+  date: string; // ✅ required, not optional
 }
 
 interface SalesChartProps {
@@ -24,8 +25,6 @@ interface SalesChartProps {
   fmt: (v: number) => string;
   height?: number;
 }
-
-/* ─── Custom Tooltip ──────────────────────────────────────────────────────── */
 
 function CustomTooltip({
   active,
@@ -51,7 +50,6 @@ function CustomTooltip({
     </div>
   );
 }
-/* ─── Skeleton ────────────────────────────────────────────────────────────── */
 
 function ChartSkeleton({ height }: { height: number }) {
   return (
@@ -63,21 +61,30 @@ function ChartSkeleton({ height }: { height: number }) {
   );
 }
 
-/* ─── Sales Chart ─────────────────────────────────────────────────────────── */
-
 export function SalesChart({ data, isLoading, fmt, height = 200 }: SalesChartProps) {
   if (isLoading) {
     return <ChartSkeleton height={height} />;
   }
 
   if (!data || !data.length) {
-
     return (
       <div
         className="flex items-center justify-center text-sm text-[hsl(var(--fg-tertiary))]"
         style={{ height }}
       >
         داده‌ای برای نمایش نیست
+      </div>
+    );
+  }
+
+  const allZero = data.every(d => d.value === 0);
+  if (allZero) {
+    return (
+      <div
+        className="flex items-center justify-center text-sm text-[hsl(var(--fg-tertiary))]"
+        style={{ height }}
+      >
+        هنوز فروشی ثبت نشده است
       </div>
     );
   }
