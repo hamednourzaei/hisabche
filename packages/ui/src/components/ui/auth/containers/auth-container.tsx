@@ -9,8 +9,7 @@ import { z } from "zod";
 import { useAuthStore, type User } from "@hisabche/store";
 import { loginSchema, type LoginInput } from "@hisabche/validation";
 import { AuthShell } from "@hisabche/ui";
-import { supabaseClient } from "../../../../../../auth/src/supabase";
-
+import { supabaseClient } from "@hisabche/auth";
 /* ═══════════════════════════════════════════════════════════════════════════
    AuthContainer v2 — Fixed switch mode + signup submit
    ═══════════════════════════════════════════════════════════════════════════ */
@@ -40,17 +39,19 @@ export function AuthContainer({ initialMode = "login" }: { initialMode?: "login"
 
   // ─── Switch mode ──────────────────────────────
 const handleSwitch = useCallback(() => {
-  setFlipped((prev) => {
-    const newFlipped = !prev;
-    // URL رو با حالت جدید sync کن
-    if (newFlipped) {
+  // اول flip
+  setFlipped((prev) => !prev);
+  
+  // بعد از اتمام انیمیشن، URL رو عوض کن
+  setTimeout(() => {
+    const currentFlipped = !flipped; // flipped قبلی
+    if (currentFlipped) {
       router.replace("/signup", { scroll: false });
     } else {
       router.replace("/login", { scroll: false });
     }
-    return newFlipped;
-  });
-}, [router]);
+  }, 650); // هماهنگ با transition flip (0.65s)
+}, [flipped, router]);
 
   // ─── Login form ────────────────────────────────
   const loginForm = useForm<LoginInput>({

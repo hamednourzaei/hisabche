@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigation } from "../../../hooks/menu/use-navigation-state";
+import { useAuthStore } from "@hisabche/store";
 import { cn } from "@/lib/utils";
 
 export interface TopNavProps {
@@ -9,7 +11,6 @@ export interface TopNavProps {
   onNavigateLogin?: () => void;
   onNavigateCta?: () => void;
   onLogout?: () => void;
-  appName?: string;
   businessName?: string;
 }
 
@@ -18,14 +19,15 @@ export function TopNav({
   onNavigateLogin,
   onNavigateCta,
   onLogout,
-  appName = "حسابچه",
   businessName,
 }: TopNavProps) {
-  const { sections, setSection, activeSection, scrollProgress, narrativeState } =
-    useNavigation();
-  const indicatorRef = useRef<HTMLSpanElement>(null);
+  const { t } = useTranslation();
+  const { sections, setSection, activeSection, scrollProgress, narrativeState } = useNavigation();
+  const user = useAuthStore((s) => s.user);
   const navListRef = useRef<HTMLUListElement>(null);
-  const [indicatorStyle, setIndicatorStyle] = useState({ width: 0, left: 0 });
+  const [indicatorStyle, setIndicatorStyle] = useState({ width: 0, offset: 0 });
+
+  const displayName = businessName || user?.businessName || user?.fullName || "حسابچه";
 
   useEffect(() => {
     if (typeof document !== "undefined") {
@@ -33,44 +35,44 @@ export function TopNav({
     }
   }, [narrativeState]);
 
-  useEffect(() => {
-    const activeBtn = document.querySelector(
-      `.top-nav-btn[data-id="${activeSection}"]`,
-    ) as HTMLButtonElement;
-    if (!activeBtn || !indicatorRef.current || !navListRef.current) return;
+  // Update indicator position based on active section
+  const updateIndicator = useCallback(() => {
+    if (!navListRef.current) return;
+    const activeBtn = navListRef.current.querySelector(`[data-section-id="${activeSection}"]`) as HTMLElement;
+    if (!activeBtn) return;
 
     const listRect = navListRef.current.getBoundingClientRect();
     const btnRect = activeBtn.getBoundingClientRect();
 
     setIndicatorStyle({
       width: btnRect.width,
-      left: btnRect.left - listRect.left,
+      offset: btnRect.left - listRect.left,
     });
   }, [activeSection]);
 
-  const handleSetSection = useCallback(
-    (id: string) => setSection(id),
-    [setSection],
-  );
+  useEffect(() => {
+    updateIndicator();
+    window.addEventListener("resize", updateIndicator);
+    return () => window.removeEventListener("resize", updateIndicator);
+  }, [updateIndicator]);
+
+  const handleSetSection = useCallback((id: string) => setSection(id), [setSection]);
 
   return (
-<header
-  className={cn(
-    // Base (Desktop)
-    "sticky top-0 z-[var(--z-sticky)] w-full",
-    "bg-[hsl(var(--surface-base)/0.6)] backdrop-blur-md",
-    "border-b border-transparent",
-    "transition-all duration-300",
-    // Desktop pill
-    "lg:top-4 lg:w-[90%] lg:mx-auto lg:rounded-full lg:py-0.5",
-    "lg:bg-[hsl(var(--surface-base)/0.7)] lg:backdrop-blur-xl",
-    "lg:border-[hsl(var(--border-default))]",
-    // Mobile
-    "max-lg:py-3 max-lg:bg-[hsl(var(--surface-base))] max-lg:backdrop-blur-none",
-    "max-lg:border-b max-lg:border-[hsl(var(--border-default))]",
-  )}
-  dir="rtl"
->
+    <header
+      className={cn(
+        "sticky top-0 z-[var(--z-sticky)] w-full",
+        "bg-[hsl(var(--surface-base)/0.6)] backdrop-blur-md",
+        "border-b border-transparent",
+        "transition-all duration-300",
+        "lg:top-4 lg:w-[90%] lg:mx-auto lg:rounded-full lg:py-0.5",
+        "lg:bg-[hsl(var(--surface-base)/0.7)] lg:backdrop-blur-xl",
+        "lg:border-[hsl(var(--border-default))]",
+        "max-lg:py-3 max-lg:bg-[hsl(var(--surface-base))] max-lg:backdrop-blur-none",
+        "max-lg:border-b max-lg:border-[hsl(var(--border-default))]",
+      )}
+      dir="rtl"
+    >
       <div
         className={cn(
           "mx-auto flex items-center justify-between",
@@ -79,71 +81,71 @@ export function TopNav({
           "max-lg:h-14",
         )}
       >
-        {/* Logo */}
-        {/* Logo — hidden below lg (iPad) */}
-<button
-  type="button"
-  className="hidden lg:flex items-center gap-1 text-[hsl(var(--fg-primary))] font-bold text-lg shrink-0"
-  onClick={() => handleSetSection(sections[0]?.id || "")}
->
-  <span>{appName}</span>
-  <span className="text-[hsl(var(--color-primary))]">.</span>
-</button>
-
-      {/* Navigation menu */}
-<nav className="flex-1 flex justify-center px-2 overflow-hidden">
-  <ul
-    ref={navListRef}
-    className="relative flex items-center gap-1 list-none m-0 px-1 py-1 rounded-full bg-[hsl(var(--fg-primary)/0.04)] border border-[hsl(var(--fg-primary)/0.07)] max-w-full overflow-x-auto"
-  >
-    <span
-      ref={indicatorRef}
-      aria-hidden="true"
-      className="absolute top-1 h-[calc(100%-8px)] rounded-full bg-[hsl(var(--color-primary)/0.15)] transition-all duration-300 z-0"
-      style={{
-        width: indicatorStyle.width,
-        left: indicatorStyle.left,
-      }}
-    />
-    {sections.map(({ id, label }) => (
-      <li key={id} className="shrink-0">
+        {/* Logo — hidden below lg */}
         <button
           type="button"
-          data-id={id}
-          className={cn(
-            "relative z-10 px-2 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-colors",
-            activeSection === id
-              ? "text-[hsl(var(--fg-primary))] font-semibold"
-              : "text-[hsl(var(--fg-primary)/0.55)] hover:text-[hsl(var(--fg-primary)/0.85)]",
-          )}
-          onClick={() => handleSetSection(id)}
+          className="hidden lg:flex items-center gap-1 text-[hsl(var(--fg-primary))] font-bold text-lg shrink-0"
+          onClick={() => handleSetSection(sections[0]?.id || "")}
         >
-          {label}
+          <span>{displayName}</span>
+          <span className="text-[hsl(var(--color-primary))]">.</span>
         </button>
-      </li>
-    ))}
-  </ul>
-</nav>
 
-        {/* CTA button — Desktop only */}
+        {/* Navigation menu */}
+        <nav className="flex-1 flex justify-center px-2 overflow-hidden">
+          <ul
+            ref={navListRef}
+            className="relative flex items-center gap-1 list-none m-0 px-1 py-1 rounded-full bg-[hsl(var(--fg-primary)/0.04)] border border-[hsl(var(--fg-primary)/0.07)] max-w-full overflow-x-auto"
+          >
+            {/* Active indicator */}
+            <span
+              aria-hidden="true"
+              className="absolute top-1 h-[calc(100%-8px)] rounded-full bg-[hsl(var(--color-primary)/0.15)] transition-all duration-300 z-0"
+              style={{
+                width: indicatorStyle.width || 0,
+                left: indicatorStyle.offset || 0,
+              }}
+            />
+            {sections.map(({ id, label }) => (
+              <li key={id} className="shrink-0">
+                <button
+                  type="button"
+                  data-section-id={id}
+                  className={cn(
+                    "relative z-10 px-2 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-colors",
+                    activeSection === id
+                      ? "text-[hsl(var(--fg-primary))] font-semibold"
+                      : "text-[hsl(var(--fg-primary)/0.55)] hover:text-[hsl(var(--fg-primary)/0.85)]",
+                  )}
+                  onClick={() => handleSetSection(id)}
+                >
+                  {label}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        {/* CTA button — Desktop only (Landing) */}
         {variant === "landing" && (
           <button
             type="button"
             className="hidden lg:inline-flex items-center gap-1 rounded-full px-5 py-2 text-sm font-bold text-white bg-[var(--gradient-brand)] hover:brightness-110 transition-all shrink-0"
             onClick={onNavigateCta ?? onNavigateLogin}
           >
-            <span className="cta-text">شروع رایگان</span>
-            <span> ←</span>
+            <span className="cta-text">{t("landing.cta", "شروع رایگان")}</span>
+            <span>←</span>
           </button>
         )}
 
+        {/* Logout button — Desktop only (Dashboard) */}
         {variant === "dashboard" && (
           <button
             type="button"
             onClick={onLogout}
             className="hidden lg:inline-flex rounded-full px-4 py-1.5 text-xs font-medium text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors"
           >
-            خروج
+            {t("auth.signOut", "خروج")}
           </button>
         )}
       </div>

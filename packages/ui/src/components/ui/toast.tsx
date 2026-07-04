@@ -20,11 +20,11 @@ export type ToastVariant =
 
 export interface ToastProps {
   id: string
-  title?: string
-  description?: string
-  variant?: ToastVariant
-  duration?: number
-  onDismiss?: (id: string) => void
+  title: string | undefined
+  description: string | undefined
+  variant: ToastVariant | undefined
+  duration: number | undefined
+  onDismiss: ((id: string) => void) | undefined
 }
 
 // ═══ Icons ═══

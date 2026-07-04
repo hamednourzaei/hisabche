@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-
+import { NotificationBell } from "./notification-bell";
 /* ═══════════════════════════════════════════════════════════════════════════
    DashboardHeader v2 — Hisabche Design Language
    Zero hardcoded colors — all tokens from design system
@@ -277,6 +277,7 @@ export function DashboardHeader({
                 "motion-reduce:transition-none",
               )}
             >
+              {variant === "dashboard" && <NotificationBell />}
               {IconLogout}
               <span className="hidden text-[11px] lg:inline">
                 {signOutLabel}

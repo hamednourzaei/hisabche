@@ -13,6 +13,7 @@ import {
   DashboardSidebar,
   BottomNav,
   CommandPalette,
+  Breadcrumb,
 } from "@hisabche/ui";
 import {
   useEffect,
@@ -21,21 +22,10 @@ import {
   useMemo,
   useState,
 } from "react";
-import { NAV_ITEMS, COMMAND_ITEMS } from "./constants/nav-items";
+import { NAV_ITEMS, NAV_GROUPS, COMMAND_ITEMS } from "./constants/nav-items";
 import { cn } from "@/lib/utils";
 import "@hisabche/ui/globals.css";
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   DashboardLayout v3 — Fully i18n, Zero Hardcoded Strings
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-// خارج از component — هیچ‌وقت re-create نمی‌شه
-const NAV_MAPPED = NAV_ITEMS.map((item) => ({
-  id: item.id,
-  labelKey: item.labelKey, // ✅ به‌جای label از labelKey استفاده می‌کنیم
-  path: item.path,
-  icon: item.icon,
-}));
+import { LayoutDashboard } from "lucide-react";
 
 function usePrefetchRoutes() {
   const router = useRouter();
@@ -44,11 +34,7 @@ function usePrefetchRoutes() {
   }, [router]);
 }
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
+export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { t, i18n } = useTranslation();
   const router = useRouter();
   const pathname = usePathname();
@@ -65,9 +51,7 @@ export default function DashboardLayout({
   const [optimisticPath, setOptimisticPath] = useState<string | null>(null);
   const activeNav = optimisticPath ?? pathname;
 
-  useEffect(() => {
-    setOptimisticPath(null);
-  }, [pathname]);
+  useEffect(() => setOptimisticPath(null), [pathname]);
 
   useEffect(() => {
     if (!hasHydrated) return;
@@ -84,104 +68,90 @@ export default function DashboardLayout({
   const currentLang = i18n.language || "fa-AF";
 
   const toggleLang = useCallback(() => {
-    const nextLang = i18n.language === "fa-AF" ? "fa-IR" : "fa-AF";
-    i18n.changeLanguage(nextLang);
+    i18n.changeLanguage(i18n.language === "fa-AF" ? "fa-IR" : "fa-AF");
   }, [i18n]);
 
-  // ✅ کامندها با i18n کامل
-  const commands = useMemo(
-    () =>
-      COMMAND_ITEMS.map((cmd) => ({
-        id: cmd.id,
-        label: t(cmd.labelKey),
-        description: t(cmd.descriptionKey),
-        icon: cmd.icon,
-        ...(cmd.shortcut ? { shortcut: cmd.shortcut } : {}),
-        onSelect: () => {
-          setOptimisticPath(cmd.path);
-          router.push(cmd.path);
-        },
-      })),
-    [router, t],
-  );
+  // ✅ Sidebar groups
+const sidebarGroups = NAV_GROUPS.map((g) => ({
+  id: g.id,
+  label: t(g.labelKey, g.id),
+  icon: g.icon,  // ← پاس بده
+  items: g.items.map((item) => ({
+    id: item.id,
+    icon: item.icon,
+    label: t(item.labelKey, item.id),
+    path: item.path,
+  })),
+}));
+
+  // ✅ BottomNav items
+  const bottomItems = useMemo(() =>
+    NAV_ITEMS.map((item) => ({
+      id: item.id,
+      icon: item.icon,
+      label: t(item.labelKey, item.id),
+      path: item.path,
+    })),
+  [t]);
+
+  const commands = useMemo(() =>
+    COMMAND_ITEMS.map((cmd) => ({
+      id: cmd.id,
+      label: t(cmd.labelKey),
+      description: t(cmd.descriptionKey),
+      icon: cmd.icon,
+      ...(cmd.shortcut ? { shortcut: cmd.shortcut } : {}),
+      onSelect: () => { setOptimisticPath(cmd.path); router.push(cmd.path); },
+    })),
+  [router, t]);
 
   const handleLogout = useCallback(() => {
     useAuthStore.getState().logout();
     router.replace("/login");
   }, [router]);
 
-  const handleNavigate = useCallback(
-    (_id: string, path: string) => {
-      setOptimisticPath(path);
-      router.push(path);
-    },
-    [router],
-  );
-
-  const handleNavigateLogin = useCallback(() => {
-    router.push("/login");
+  const handleNavigate = useCallback((_id: string, path: string) => {
+    setOptimisticPath(path);
+    router.push(path);
   }, [router]);
 
-  if (hasHydrated && !isAuthenticated) {
-    return null;
-  }
+  const handleNavigateLogin = useCallback(() => router.push("/login"), [router]);
 
-  // ✅ RTL direction بر اساس زبان
+  if (hasHydrated && !isAuthenticated) return null;
+
   const isRtl = i18n.language === "fa-AF" || i18n.language === "fa-IR";
 
   return (
-    <div
-      dir={isRtl ? "rtl" : "ltr"}
-      className={cn(
-        "flex min-h-screen",
-        "bg-[hsl(var(--surface-base))]",
-        "text-[hsl(var(--fg-primary))]",
-      )}
-    >
+    <div dir={isRtl ? "rtl" : "ltr"} className={cn("flex min-h-screen", "bg-[hsl(var(--surface-base))]", "text-[hsl(var(--fg-primary))]")}>
       <CommandPalette commands={commands} />
-      
-      {/* ✅ Sidebar با i18n */}
-      <DashboardSidebar
-        items={NAV_MAPPED.map((item) => ({
-          ...item,
-          label: t(item.labelKey), // ✅ i18n در اینجا اعمال می‌شود
-        }))}
-        activeNav={activeNav}
-        onNavigate={handleNavigate}
-      />
-      
+
+      <DashboardSidebar groups={sidebarGroups} activeNav={activeNav} onNavigate={handleNavigate} />
+
       <div className="flex min-h-screen flex-1 flex-col">
-        {/* ✅ Header با i18n کامل */}
         <DashboardHeader
-          variant="dashboard"
-          appName={t("app.name")}
-          lastSyncedAt={lastSyncedAt.current}
-          isOnline={true}
-          isSyncing={false}
-          pendingCount={0}
-          currentLang={currentLang}
-          isDark={isDark}
-          signInLabel={t("auth.signIn")}
-          signOutLabel={t("auth.signOut")}
-          onToggleTheme={toggle}
-          onToggleLang={toggleLang}
-          onLogout={handleLogout}
+          variant="dashboard" appName={t("app.name")} lastSyncedAt={lastSyncedAt.current}
+          isOnline={true} isSyncing={false} pendingCount={0} currentLang={currentLang}
+          isDark={isDark} signInLabel={t("auth.signIn")} signOutLabel={t("auth.signOut")}
+          onToggleTheme={toggle} onToggleLang={toggleLang} onLogout={handleLogout}
           onNavigateLogin={handleNavigateLogin}
         />
-        
+
         <main className="flex-1 overflow-y-auto p-4 pb-20 lg:pb-4">
+          <Breadcrumb className="mb-4" />
           {children}
         </main>
-        
-        {/* ✅ BottomNav با i18n */}
-        <BottomNav
-          items={NAV_MAPPED.map((item) => ({
-            ...item,
-            label: t(item.labelKey), // ✅ i18n در اینجا اعمال می‌شود
-          }))}
-          activeNav={activeNav}
-          onNavigate={handleNavigate}
-        />
+
+        <BottomNav 
+  groups={sidebarGroups} 
+  dashboardItem={{
+    id: 'dashboard',
+    icon: LayoutDashboard,
+    label: t('nav.dashboard', 'داشبورد'),
+    path: '/dashboard',
+  }}
+  activeNav={activeNav} 
+  onNavigate={handleNavigate} 
+/>
       </div>
     </div>
   );

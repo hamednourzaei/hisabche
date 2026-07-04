@@ -10,11 +10,11 @@ import type { InvoicesResponse } from "../../lib/dashboard/dashboard-types"
 export function useDashboard() {
   const { t } = useTranslation()
 
-  // APIهای جدید (فاز ۲۲ + ۲۳)
+  // API جدید (فاز ۲۲ + ۲۳)
   const { data: kpis, isLoading: kpiLoading } = useDashboardKPIs()
   const { data: insights, isLoading: insightsLoading } = useAIInsights()
 
-  // APIهای قبلی
+  // APIهای قبلی — fallback
   const { data: invoicesData, isLoading: invLoading } = useInvoices({
     page: 1,
     limit: 5,
@@ -25,17 +25,34 @@ export function useDashboard() {
     page: 1,
     limit: 100,
     sortDirection: "desc",
-    lowStock: true,
   })
 
-  // مقادیر KPI (از API جدید، fallback به قدیم)
-  const todaySales = kpis?.todaySales ?? (invoicesData as any)?.summary?.todaySales ?? 0
-  const todayInvoices = kpis?.todayInvoices ?? 0
-  const monthlyRevenue = kpis?.monthlyRevenue ?? 0
+  // ✅ از داده‌های واقعی invoices/products به عنوان fallback استفاده کن
+  const todaySales = kpis?.todaySales 
+    ?? (invoicesData as any)?.summary?.todaySales 
+    ?? 0
+    
+  const todayInvoices = kpis?.todayInvoices 
+    ?? (invoicesData as any)?.summary?.todayCount 
+    ?? 0
+    
+  const monthlyRevenue = kpis?.monthlyRevenue 
+    ?? (invoicesData as any)?.summary?.monthlyRevenue 
+    ?? 0
+    
   const monthlyGrowth = kpis?.monthlyGrowth ?? 0
-  const pendingPayments = kpis?.pendingPayments ?? 0
-  const activeCustomers = kpis?.activeCustomers ?? 0
-  const lowStockAlerts = kpis?.lowStockAlerts ?? (invoicesData as any)?.summary?.lowStockCount ?? 0
+  const pendingPayments = kpis?.pendingPayments 
+    ?? (invoicesData as any)?.summary?.totalDebt 
+    ?? 0
+    
+  const activeCustomers = kpis?.activeCustomers 
+    ?? (invoicesData as any)?.summary?.customerCount 
+    ?? 0
+    
+  const lowStockAlerts = kpis?.lowStockAlerts 
+    ?? (productsData as any)?.summary?.lowStockCount 
+    ?? 0
+    
   const totalDebt = (invoicesData as any)?.summary?.totalDebt ?? 0
 
   const simpleT = (key: string): string => t(key)
@@ -46,7 +63,6 @@ export function useDashboard() {
   )
 
   return {
-    // KPIهای جدید (فاز ۲۲)
     todaySales,
     todayInvoices,
     monthlyRevenue,
@@ -54,12 +70,9 @@ export function useDashboard() {
     pendingPayments,
     activeCustomers,
     lowStockAlerts,
-    // قبلی
     totalDebt,
     recentInvoices,
-    // AI (فاز ۲۳)
     insights: insights ?? [],
-    // Loading states
     kpiLoading,
     insightsLoading,
     invLoading,

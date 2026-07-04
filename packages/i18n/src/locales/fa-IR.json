@@ -53,7 +53,13 @@
 "audit": "حسابرسی",
 "audit.description": "گزارشات و ردگیری تغییرات",
 "permissions": "دسترسی‌ها",
-"permissions.description": "مدیریت نقش‌ها و مجوزها"
+"permissions.description": "مدیریت نقش‌ها و مجوزها",
+"nav.groups": {
+  "main": "اصلی",
+  "sales": "فروش و موجودی",
+  "team": "تیم",
+  "system": "سیستم"
+}
   },
   "auth": {
     "signIn": "ورود",
