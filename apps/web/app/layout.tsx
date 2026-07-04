@@ -109,6 +109,8 @@ export default function RootLayout({
       lang="fa-AF"
       dir="rtl"
       suppressHydrationWarning
+        data-scroll-behavior="smooth"   // ✅ اینو اضافه کن
+
       className={cn(vazirmatn.variable)}
     >
       <head>

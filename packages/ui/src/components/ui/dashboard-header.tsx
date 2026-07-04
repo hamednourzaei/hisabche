@@ -262,7 +262,7 @@ export function DashboardHeader({
           >
             {isDark ? IconSun : IconMoon}
           </button>
-
+{variant === "dashboard" && <NotificationBell />}
           {/* Logout (dashboard) */}
           {variant === "dashboard" && (
             <button
@@ -277,7 +277,7 @@ export function DashboardHeader({
                 "motion-reduce:transition-none",
               )}
             >
-              {variant === "dashboard" && <NotificationBell />}
+              
               {IconLogout}
               <span className="hidden text-[11px] lg:inline">
                 {signOutLabel}

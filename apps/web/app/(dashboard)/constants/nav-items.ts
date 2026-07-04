@@ -1,7 +1,7 @@
 // apps/web/app/(dashboard)/constants/nav-items.ts
 import {
   LayoutDashboard, Package, Receipt, BookOpen, Settings,
-  Users, Kanban, Shield, Building2, Key,
+  Users, Kanban, Shield, Building2, Key, EllipsisVertical,
   type LucideIcon
 } from 'lucide-react'
 
@@ -11,17 +11,16 @@ export interface NavItem {
   labelKey: string
   descriptionKey: string
   path: string
-  group?: string  // 🆕 گروه‌بندی
+  group?: 'main' | 'sales' | 'team' | 'system'
 }
 
 export interface NavGroup {
   id: string;
   labelKey: string;
-  icon: LucideIcon;  // ← باید باشه
+  icon: LucideIcon;
   items: NavItem[];
 }
 
-// 🆕 گروه‌بندی آیتم‌ها
 export const NAV_ITEMS: NavItem[] = [
   // ── اصلی ──
   { id: 'dashboard', icon: LayoutDashboard, labelKey: 'nav.dashboard', descriptionKey: 'nav.dashboard.description', path: '/dashboard', group: 'main' },
@@ -42,13 +41,19 @@ export const NAV_ITEMS: NavItem[] = [
   { id: 'settings', icon: Settings, labelKey: 'nav.settings', descriptionKey: 'nav.settings.description', path: '/settings', group: 'system' },
 ] as const
 
-// 🆕 گروه‌های منو
-export const NAV_GROUPS: NavGroup[] = [
-  { id: 'main', labelKey: 'nav.groups.main', icon: LayoutDashboard, items: NAV_ITEMS.filter(i => i.group === 'main') },
-  { id: 'sales', labelKey: 'nav.groups.sales', icon: Receipt, items: NAV_ITEMS.filter(i => i.group === 'sales') },
-  { id: 'team', labelKey: 'nav.groups.team', icon: Users, items: NAV_ITEMS.filter(i => i.group === 'team') },
-  { id: 'system', labelKey: 'nav.groups.system', icon: Settings, items: NAV_ITEMS.filter(i => i.group === 'system') },
+// آیتم‌های اصلی (بدون گروه‌بندی — همیشه نمایش داده میشن)
+export const PRIMARY_ITEMS: NavItem[] = NAV_ITEMS.filter(
+  (i) => i.group === 'main' || i.group === 'sales'
+)
+
+// گروه‌های پنهان (فقط تو «بیشتر» نمایش داده میشن)
+export const MORE_GROUPS: NavGroup[] = [
+  { id: 'team', labelKey: 'nav.groups.team', icon: Users, items: NAV_ITEMS.filter((i) => i.group === 'team') },
+  { id: 'system', labelKey: 'nav.groups.system', icon: Settings, items: NAV_ITEMS.filter((i) => i.group === 'system') },
 ]
+
+// آیکون دکمه «بیشتر»
+export const MORE_ICON = EllipsisVertical
 
 export type NavId = NavItem['id']
 export const SYNC_INTERVAL_MS = 30_000

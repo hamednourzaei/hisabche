@@ -22,10 +22,9 @@ import {
   useMemo,
   useState,
 } from "react";
-import { NAV_ITEMS, NAV_GROUPS, COMMAND_ITEMS } from "./constants/nav-items";
+import { NAV_ITEMS, PRIMARY_ITEMS, MORE_GROUPS, MORE_ICON, COMMAND_ITEMS } from "./constants/nav-items";
 import { cn } from "@/lib/utils";
 import "@hisabche/ui/globals.css";
-import { LayoutDashboard } from "lucide-react";
 
 function usePrefetchRoutes() {
   const router = useRouter();
@@ -71,26 +70,28 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     i18n.changeLanguage(i18n.language === "fa-AF" ? "fa-IR" : "fa-AF");
   }, [i18n]);
 
-  // ✅ Sidebar groups
-const sidebarGroups = NAV_GROUPS.map((g) => ({
-  id: g.id,
-  label: t(g.labelKey, g.id),
-  icon: g.icon,  // ← پاس بده
-  items: g.items.map((item) => ({
-    id: item.id,
-    icon: item.icon,
-    label: t(item.labelKey, item.id),
-    path: item.path,
-  })),
-}));
-
-  // ✅ BottomNav items
-  const bottomItems = useMemo(() =>
-    NAV_ITEMS.map((item) => ({
+  // ✅ Sidebar & BottomNav: آیتم‌های اصلی (داشبورد، فاکتور، باقی‌داری، ګدام)
+  const primaryItems = useMemo(() =>
+    PRIMARY_ITEMS.map((item) => ({
       id: item.id,
       icon: item.icon,
       label: t(item.labelKey, item.id),
       path: item.path,
+    })),
+  [t]);
+
+  // ✅ Sidebar & BottomNav: گروه‌های پنهان (تیم، سیستم)
+  const moreGroups = useMemo(() =>
+    MORE_GROUPS.map((g) => ({
+      id: g.id,
+      label: t(g.labelKey, g.id),
+      icon: g.icon,
+      items: g.items.map((item) => ({
+        id: item.id,
+        icon: item.icon,
+        label: t(item.labelKey, item.id),
+        path: item.path,
+      })),
     })),
   [t]);
 
@@ -125,7 +126,14 @@ const sidebarGroups = NAV_GROUPS.map((g) => ({
     <div dir={isRtl ? "rtl" : "ltr"} className={cn("flex min-h-screen", "bg-[hsl(var(--surface-base))]", "text-[hsl(var(--fg-primary))]")}>
       <CommandPalette commands={commands} />
 
-      <DashboardSidebar groups={sidebarGroups} activeNav={activeNav} onNavigate={handleNavigate} />
+      {/* ✅ دسکتاپ: آیتم‌های اصلی + دکمه بیشتر */}
+      <DashboardSidebar 
+        primaryItems={primaryItems} 
+        moreGroups={moreGroups} 
+        moreIcon={MORE_ICON}
+        activeNav={activeNav} 
+        onNavigate={handleNavigate} 
+      />
 
       <div className="flex min-h-screen flex-1 flex-col">
         <DashboardHeader
@@ -141,17 +149,14 @@ const sidebarGroups = NAV_GROUPS.map((g) => ({
           {children}
         </main>
 
+        {/* ✅ موبایل: آیتم‌های اصلی + دکمه بیشتر */}
         <BottomNav 
-  groups={sidebarGroups} 
-  dashboardItem={{
-    id: 'dashboard',
-    icon: LayoutDashboard,
-    label: t('nav.dashboard', 'داشبورد'),
-    path: '/dashboard',
-  }}
-  activeNav={activeNav} 
-  onNavigate={handleNavigate} 
-/>
+          primaryItems={primaryItems}
+          moreGroups={moreGroups}
+          moreIcon={MORE_ICON}
+          activeNav={activeNav} 
+          onNavigate={handleNavigate} 
+        />
       </div>
     </div>
   );
