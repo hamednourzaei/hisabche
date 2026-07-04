@@ -24,7 +24,6 @@ const toJsonSchema = (schema: any) => {
 export async function workspaceRoutes(fastify: FastifyInstance) {
   const workspaceService = new WorkspaceService()
 
-  // ═══════════════════════════════════════════════════════════
   // WORKSPACES
   // ═══════════════════════════════════════════════════════════
 
