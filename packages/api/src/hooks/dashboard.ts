@@ -30,7 +30,7 @@ export interface AIInsight {
 export interface SalesDataPoint {
   label: string;
   value: number;
-  date: string; // ✅ required, not optional
+  date: string;
 }
 
 export interface SalesChartData {
@@ -72,12 +72,16 @@ export function useAIInsights() {
   });
 }
 
-// ─── Helper: Get today's date as string (safe, no undefined) ──────────────
 function getTodayDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-// ─── Helper: Map API response to typed array ──────────────────────────────
+function getWeekAgoDate(): string {
+  const date = new Date();
+  date.setDate(date.getDate() - 30);
+  return date.toISOString().slice(0, 10);
+}
+
 function mapToSalesDataPoint(item: { label: string; value: number; date?: string }): SalesDataPoint {
   return {
     label: item.label,
@@ -86,7 +90,6 @@ function mapToSalesDataPoint(item: { label: string; value: number; date?: string
   };
 }
 
-// ─── Hook ──────────────────────────────────────────────────────────────────
 interface DashboardSalesParams {
   days?: number;
   from?: string;
@@ -94,15 +97,21 @@ interface DashboardSalesParams {
 }
 
 export function useDashboardSales(params?: DashboardSalesParams) {
+  // ✅ Always provide startDate and endDate (Backend requires them)
+  const today = getTodayDate();
+  const weekAgo = getWeekAgoDate();
+  
   const queryParams: Record<string, string | number> = {
-    days: params?.days ?? 30
+    days: params?.days ?? 30,
+    startDate: params?.from ?? weekAgo,
+    endDate: params?.to ?? today,
   };
   
   if (params?.from) {
-    queryParams.from = params.from;
+    queryParams.startDate = params.from;
   }
   if (params?.to) {
-    queryParams.to = params.to;
+    queryParams.endDate = params.to;
   }
 
   return useQuery({
@@ -111,9 +120,9 @@ export function useDashboardSales(params?: DashboardSalesParams) {
       const response = await apiClient.get("/analytics/sales", {
         params: queryParams
       });
-      
+
       let data: SalesDataPoint[] = [];
-      
+
       if (response.data?.data && Array.isArray(response.data.data)) {
         data = response.data.data.map(mapToSalesDataPoint);
         const total = data.reduce((sum, d) => sum + d.value, 0);
@@ -123,7 +132,7 @@ export function useDashboardSales(params?: DashboardSalesParams) {
           average: response.data.average ?? (data.length > 0 ? total / data.length : 0),
         };
       }
-      
+
       if (Array.isArray(response.data)) {
         data = response.data.map(mapToSalesDataPoint);
         const total = data.reduce((sum, d) => sum + d.value, 0);
@@ -133,11 +142,11 @@ export function useDashboardSales(params?: DashboardSalesParams) {
           average: data.length > 0 ? total / data.length : 0,
         };
       }
-      
-      const today = getTodayDate();
+
+      const todayDate = getTodayDate();
       return {
         data: [
-          { label: 'امروز', value: 0, date: today }
+          { label: 'امروز', value: 0, date: todayDate }
         ],
         total: 0,
         average: 0,

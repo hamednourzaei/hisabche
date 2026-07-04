@@ -79,7 +79,7 @@ export function useAuditLogs(params: UseAuditLogsParams = {}) {
   return useQuery({
     queryKey: auditKeys.list({ page, limit, ...rest }),
     queryFn: async (): Promise<AuditResponse> => {
-      // ✅ FIX: Remove /api/ from path
+      // ✅ FIX: Remove /api/ from path (baseURL already has it)
       const response = await apiClient.get("/audit/logs", { 
         params: { page, limit, ...rest } 
       });

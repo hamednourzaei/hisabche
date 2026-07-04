@@ -16,6 +16,17 @@ interface RecentInvoice {
   date: string;
 }
 
+// Helper to get today and 30 days ago
+function getTodayDate(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function getDaysAgo(days: number): string {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  return date.toISOString().slice(0, 10);
+}
+
 export function DashboardContainer() {
   const { t } = useTranslation()
   const router = useRouter()
@@ -37,15 +48,16 @@ export function DashboardContainer() {
     isLoading: insightsLoading 
   } = useAIInsights();
 
-  const fromDate = dateRange.from ? dateRange.from.toISOString().slice(0, 10) : undefined;
-  const toDate = dateRange.to ? dateRange.to.toISOString().slice(0, 10) : undefined;
+  // ✅ Always provide dates, even if undefined (use fallbacks)
+  const fromDate = dateRange.from ? dateRange.from.toISOString().slice(0, 10) : getDaysAgo(30);
+  const toDate = dateRange.to ? dateRange.to.toISOString().slice(0, 10) : getTodayDate();
 
   const { 
     data: salesData, 
     isLoading: salesLoading 
   } = useDashboardSales({
-    ...(fromDate && { from: fromDate }),
-    ...(toDate && { to: toDate }),
+    from: fromDate,
+    to: toDate,
   });
 
   const handleDateRangeChange = useCallback((range: DateRange, _preset: PresetKey) => {

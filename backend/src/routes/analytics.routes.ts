@@ -18,7 +18,7 @@ const toJsonSchema = (schema: any) => {
 export async function analyticsRoutes(fastify: FastifyInstance) {
   const analyticsService = new AnalyticsService()
 
-  // ═══════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════
   // DASHBOARD KPIs
   // ═══════════════════════════════════════════════════════════
 
