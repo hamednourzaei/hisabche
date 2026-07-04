@@ -126,4 +126,11 @@ export { Toast, ToastContainer, type ToastProps, type ToastVariant } from './com
 export { ToastProvider, useToast } from './components/ui/toast-provider'
 export { Breadcrumb } from './components/ui/breadcrumb'
 export { NotificationBell } from './components/ui/notification-bell'
+// ---------- Utils ----------
+export { exportToCSV } from './lib/export'
+export { SalesChart } from './components/ui/dashboard/sales-chart'
+export { useCurrency } from './hooks/use-currency'
+export { JalaliDatePicker } from './components/ui/jalali-datepicker'
+export { toPersianNumbers, toArabicNumbers, usePersianNumbers } from './lib/persian-numbers'
+export { PhoneInput } from './components/ui/phone-input'
 export type SupportedLanguage = 'fa-AF' | 'fa-IR'

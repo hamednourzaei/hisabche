@@ -1,7 +1,10 @@
+// Fix: landing-page.tsx — پاس دادن t به CinematicHero
+
 "use client";
 
 import { useRouter } from "next/navigation";
 import { useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { NavigationProvider } from "../../../hooks/menu/use-navigation-state";
 import { TopNav } from "../navigation/top-nav";
 import { NavigationRegistry } from "../navigation/navigation-registry";
@@ -16,12 +19,6 @@ import FaqScene from "./faq-scene";
 import CTAScene from "./cta-scene";
 import StatsSection from "./stats-section";
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   LandingPage v3 — Hisabche Design Language
-   Zero hardcoded colors — all tokens from design system
-   Zero inline styles
-   ═══════════════════════════════════════════════════════════════════════════ */
-
 const NAVIGATION_SECTIONS = [
   { id: "hero",         label: "خانه",    narrative: "frustration" as const },
   { id: "pain",         label: "مشکل",    narrative: "confusion"   as const },
@@ -33,8 +30,14 @@ const NAVIGATION_SECTIONS = [
 
 export function LandingPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const navigateLogin = useCallback(() => router.push("/login"), [router]);
+// توی landing-page.tsx، یه safeT بساز:
 
+const safeT = (key: string, fallback?: string) => {
+  const result = t(key);
+  return result !== key ? result : (fallback ?? key);
+};
   return (
     <NavigationProvider sections={NAVIGATION_SECTIONS}>
       <div className="min-h-screen bg-[hsl(var(--surface-base))]">
@@ -42,33 +45,32 @@ export function LandingPage() {
 
         <main>
           <NavigationRegistry id="hero">
-            <CinematicHero onNavigateLogin={navigateLogin} />
+           <CinematicHero t={safeT} onNavigateLogin={navigateLogin} />
           </NavigationRegistry>
 
           <NavigationRegistry id="pain">
-            <StatsSection />
-            <PainScene />
+            <StatsSection t={safeT}/>
+            <PainScene t={safeT}/>
           </NavigationRegistry>
 
           <NavigationRegistry id="transform">
-            <TransformScene />
+            <TransformScene t={safeT}/>
           </NavigationRegistry>
 
           <NavigationRegistry id="features">
-            <FeaturesScene />
+            <FeaturesScene t={safeT} />
           </NavigationRegistry>
 
           <NavigationRegistry id="testimonials">
-            <SocialScene />
+            <SocialScene t={safeT}/>
           </NavigationRegistry>
 
-          <FaqScene />
+          <FaqScene t={safeT}/>
 
           <NavigationRegistry id="cta">
-            <CTAScene onNavigateLogin={navigateLogin} />
+            <CTAScene t={safeT} onNavigateLogin={navigateLogin} />
           </NavigationRegistry>
 
-          {/* Footer */}
           <footer
             className={cn(
               "px-4 py-12 text-center",

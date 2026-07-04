@@ -1,24 +1,26 @@
+// packages/ui/src/components/ui/landing/features-scene.tsx
 "use client";
 
 import { useSceneObserver } from "./use-scene-observer";
 import { cn } from "@/lib/utils";
+import { Receipt, Package, BookOpen, Smartphone, Wifi, Banknote } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   FeaturesScene v3 — Hisabche Design Language
-   Zero hardcoded colors — all tokens from design system
-   Redmi 9 optimized
+   FeaturesScene v4 — Premium Glass Cards
+   ✅ Lucide icons instead of emoji
+   ✅ Glass morphism
+   ✅ Hover glow + lift
+   ✅ i18n-ready
+   ✅ Design tokens only
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const features = [
-  { emoji: "🧾", title: "فاکتور در ۳۰ ثانیه", desc: "محصول از گدام، مشتری از دفتر تلفن." },
-  { emoji: "📦", title: "گدام خودکار", desc: "ورود و خروج با هر فاکتور." },
-  { emoji: "📒", title: "بدهی یادت بمونه", desc: "پرداخت در ۲ کلیک." },
-  { emoji: "📱", title: "تو جیب شماست", desc: "موبایل، تبلت، کامپیوتر." },
-  { emoji: "🔌", title: "آفلاین واقعی", desc: "اینترنت نیست؟ مشکلی نیست." },
-  { emoji: "💱", title: "افغانی · دلار · تومان", desc: "تبدیل خودکار." },
-];
+export interface FeaturesSceneProps {
+  t: (key: string, fallback?: string) => string;
+}
 
-export default function FeaturesScene() {
+const FEATURE_ICONS = [Receipt, Package, BookOpen, Smartphone, Wifi, Banknote];
+
+export default function FeaturesScene({ t }: FeaturesSceneProps) {
   const { ref, state } = useSceneObserver<HTMLDivElement>({
     threshold: 0.2,
     narrativeState: "confidence",
@@ -34,59 +36,77 @@ export default function FeaturesScene() {
       className="section-padding"
     >
       <div className="container-narrow">
-        {/* Header */}
+        {/* ── Header ── */}
         <div
           className={cn(
-            "text-center mb-16 transition-all duration-500",
+            "text-center mb-16 transition-all duration-700",
             "motion-reduce:transition-none",
             animated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5",
           )}
         >
-          <p className="text-sm uppercase tracking-[0.2em] mb-3 text-[hsl(var(--fg-tertiary))]">
-            ابزارها
+          <p className="text-sm uppercase tracking-[0.2em] mb-3 text-[hsl(var(--fg-tertiary))] font-semibold">
+            {t("landing.featuresLabel", "ابزارها")}
           </p>
-          <h2 className="h2 text-[hsl(var(--fg-primary))]">
-            همه چیزی که نیاز داری
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[hsl(var(--fg-primary))] tracking-tight">
+            {t("landing.featuresTitle", "همه ابزارها در یک جا")}
           </h2>
-          <p className="mt-4 text-lg text-[hsl(var(--fg-secondary))] leading-relaxed">
-            هیچ چیز اضافه، هیچ چیز کم
+          <p className="mt-4 text-base sm:text-lg text-[hsl(var(--fg-secondary))] leading-relaxed max-w-lg mx-auto">
+            {t("landing.featuresDesc", "بدون نیاز به چند برنامه مختلف")}
           </p>
         </div>
 
-        {/* Feature cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-          {features.map((f, i) => (
-            <div
-              key={i}
-              className={cn(
-                "p-6 text-center",
-                "rounded-[var(--radius-card-sm)]",
-                "border border-[hsl(var(--border-default))]",
-                "bg-[hsl(var(--surface-muted)/0.4)]",
-                "transition-all duration-500",
-                "motion-reduce:transition-none",
-                animated
-                  ? "opacity-100 translate-y-0 scale-100"
-                  : "opacity-0 translate-y-4 scale-[0.97]",
-              )}
-              style={{ transitionDelay: `${i * 60}ms` }}
-            >
-              {/* Icon */}
-              <div className="mx-auto mb-4 flex items-center justify-center w-12 h-12 rounded-2xl bg-[hsl(190_90%_50%/0.08)] text-2xl">
-                {f.emoji}
+        {/* ── Feature cards ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+          {FEATURE_ICONS.map((Icon, i) => {
+            const key = `feature${i + 1}`;
+            return (
+              <div
+                key={key}
+                className={cn(
+                  "group relative p-6 sm:p-8 text-center",
+                  "rounded-[var(--radius-card)]",
+                  "border border-[hsl(var(--border-default))]",
+                  "bg-[hsl(var(--surface-elevated)/0.6)]",
+                  "backdrop-blur-sm",
+                  "transition-all duration-500",
+                  "hover:border-[hsl(var(--color-primary)/0.3)]",
+                  "hover:-translate-y-1 hover:shadow-[var(--shadow-premium)]",
+                  "motion-reduce:hover:transform-none motion-reduce:hover:border-[hsl(var(--border-default))]",
+                  animated
+                    ? "opacity-100 translate-y-0 scale-100"
+                    : "opacity-0 translate-y-4 scale-[0.97]",
+                )}
+                style={{ transitionDelay: `${i * 80}ms` }}
+              >
+                {/* ── Top glow line (visible on hover) ── */}
+                <div
+                  className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[hsl(var(--color-primary)/0.3)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                  aria-hidden="true"
+                />
+
+                {/* ── Icon ── */}
+                <div className={cn(
+                  "mx-auto mb-5 flex items-center justify-center w-14 h-14 rounded-2xl",
+                  "bg-[hsl(var(--color-primary)/0.1)]",
+                  "text-[hsl(var(--color-primary))]",
+                  "transition-all duration-300",
+                  "group-hover:bg-[hsl(var(--color-primary)/0.15)] group-hover:scale-110",
+                )}>
+                  <Icon className="size-7" aria-hidden="true" />
+                </div>
+
+                {/* ── Title ── */}
+                <h3 className="font-bold text-base text-[hsl(var(--fg-primary))] mb-2">
+                  {t(`landing.${key}Title`, key)}
+                </h3>
+
+                {/* ── Description ── */}
+                <p className="text-sm text-[hsl(var(--fg-secondary))] leading-relaxed">
+                  {t(`landing.${key}Desc`, "")}
+                </p>
               </div>
-
-              {/* Title */}
-              <h3 className="font-semibold mb-2 text-sm text-[hsl(var(--fg-primary))]">
-                {f.title}
-              </h3>
-
-              {/* Description */}
-              <p className="text-xs text-[hsl(var(--fg-secondary))] leading-relaxed">
-                {f.desc}
-              </p>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

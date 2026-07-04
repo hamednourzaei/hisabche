@@ -2,13 +2,12 @@
 
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { PhoneInput } from "../phone-input";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   AuthShell v8 — Hisabche Design Language
+   AuthShell v9 — Hisabche Design Language
    ✅ Floating labels + animated icons on ALL inputs (Login & Signup)
-   ✅ Icons move UP & label floats UP on focus — no overlap with typed text
-   ✅ Placeholder hidden (placeholder:text-transparent) — no duplicate text
-   ✅ All animations via CSS peer-focus: and peer-[&:not(:placeholder-shown)]:
+   ✅ PhoneInput با پیش‌شماره +93 در فرم ثبت‌نام
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const AUTH_STYLES = `
@@ -69,9 +68,6 @@ const IconUser = ({ className }: { className?: string }) => (
 );
 const IconStore = ({ className }: { className?: string }) => (
   <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={className}><path d="M3 9l1-5h16l1 5M5 9v11h14V9M9 13h6" /></svg>
-);
-const IconPhone = ({ className }: { className?: string }) => (
-  <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={className}><path d="M22 16.92V21a1 1 0 0 1-1.11 1 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 3.18 4.11 1 1 0 0 1 4.18 3h4.09a1 1 0 0 1 1 .75 12.84 12.84 0 0 0 .7 2.81 1 1 0 0 1-.22 1.11L8 9a16 16 0 0 0 6 6l1.27-1.78a1 1 0 0 1 1.11-.22 12.84 12.84 0 0 0 2.81.7 1 1 0 0 1 .81 1z" /></svg>
 );
 const IconCheck = () => (
   <svg width={10} height={10} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12" /></svg>
@@ -149,48 +145,54 @@ function Field({ id, label, icon, error, children, rightSlot, hasRightSlot, tran
   return (
     <div className="space-y-1.5">
       <div className="relative">
-        {/* Icon: starts at top-4, moves to top-1.5 on focus/typing */}
-        <span
-          className="field-icon absolute start-3 top-4 peer-focus:top-1.5 peer-[&:not(:placeholder-shown)]:top-1.5 text-[hsl(var(--fg-tertiary))] peer-focus:text-[hsl(var(--color-primary))] peer-[&:not(:placeholder-shown)]:text-[hsl(var(--color-primary))] z-10 pointer-events-none"
-          aria-hidden="true"
-        >
-          {icon}
-        </span>
-
-        {/* Input */}
+        <span className="field-icon absolute start-3 top-4 peer-focus:top-1.5 peer-[&:not(:placeholder-shown)]:top-1.5 text-[hsl(var(--fg-tertiary))] peer-focus:text-[hsl(var(--color-primary))] peer-[&:not(:placeholder-shown)]:text-[hsl(var(--color-primary))] z-10 pointer-events-none" aria-hidden="true">{icon}</span>
         <div className={cn("", hasRightSlot && "[&>input]:pe-14")}>{children}</div>
-
-        {/* Label: starts at top-3.5, floats to top-1.5 on focus/typing */}
-        <label
-          htmlFor={id}
-          className={cn(
-            "float-label absolute z-10 start-10",
-            "top-3.5 text-sm text-[hsl(var(--fg-tertiary))]",
-            "peer-focus:top-1.5 peer-focus:text-[10px] peer-focus:text-[hsl(var(--color-primary))]",
-            "peer-[&:not(:placeholder-shown)]:top-1.5 peer-[&:not(:placeholder-shown)]:text-[10px] peer-[&:not(:placeholder-shown)]:text-[hsl(var(--color-primary))]",
-          )}
-        >
-          {label}
-        </label>
-
-        {/* Right slot (password toggle) */}
-        {rightSlot && (
-          <div className="absolute end-2 top-1/2 -translate-y-1/2 z-10">{rightSlot}</div>
-        )}
+        <label htmlFor={id} className={cn("float-label absolute z-10 start-10", "top-3.5 text-sm text-[hsl(var(--fg-tertiary))]", "peer-focus:top-1.5 peer-focus:text-[10px] peer-focus:text-[hsl(var(--color-primary))]", "peer-[&:not(:placeholder-shown)]:top-1.5 peer-[&:not(:placeholder-shown)]:text-[10px] peer-[&:not(:placeholder-shown)]:text-[hsl(var(--color-primary))]")}>{label}</label>
+        {rightSlot && <div className="absolute end-2 top-1/2 -translate-y-1/2 z-10">{rightSlot}</div>}
       </div>
-      {errMsg && (
-        <p className="text-xs text-[hsl(var(--color-destructive))] px-1" role="alert">{errMsg}</p>
-      )}
+      {errMsg && <p className="text-xs text-[hsl(var(--color-destructive))] px-1" role="alert">{errMsg}</p>}
     </div>
   );
 }
 
 function PasswordToggle({ show, onToggle }: { show: boolean; onToggle: () => void }) {
   return (
-    <button type="button" onClick={onToggle} tabIndex={-1} aria-label={show ? "مخفی کردن رمز" : "نمایش رمز"}
-      className="flex items-center gap-1 px-2 py-1 rounded-lg text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--fg-primary))] hover:bg-[hsl(var(--surface-muted))] transition-colors text-[11px] font-medium">
+    <button type="button" onClick={onToggle} tabIndex={-1} aria-label={show ? "مخفی کردن رمز" : "نمایش رمز"} className="flex items-center gap-1 px-2 py-1 rounded-lg text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--fg-primary))] hover:bg-[hsl(var(--surface-muted))] transition-colors text-[11px] font-medium">
       {show ? <IconEyeOff /> : <IconEye />}
     </button>
+  );
+}
+
+/* ─── PhoneInput wrapper for react-hook-form ────────────────── */
+function PhoneField({
+  value,
+  onChange,
+  placeholder,
+  disabled,
+  error,
+  translateError,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  placeholder: string;
+  disabled: boolean | undefined
+  error?: { message?: string } | undefined;
+  translateError?: (k?: string) => string | undefined;
+}) {
+  const errMsg = translateError ? translateError(error?.message) : error?.message;
+  return (
+    <div className="space-y-1.5">
+      <PhoneInput
+        value={value || ""}
+        onChange={onChange}
+        placeholder={placeholder}
+        disabled={disabled}
+        defaultCountry="+93"
+      />
+      {errMsg && (
+        <p className="text-xs text-[hsl(var(--color-destructive))] px-1" role="alert">{errMsg}</p>
+      )}
+    </div>
   );
 }
 
@@ -216,7 +218,7 @@ function WorkspacePreview({ st }: { st: SafeT }) {
         <div className="flex items-center gap-2 px-3 py-2 mb-3 rounded-xl bg-[hsl(var(--surface-muted)/0.5)] border border-[hsl(var(--border-default))]"><span className="text-[hsl(var(--fg-tertiary))]"><IconSearch /></span><div className="h-1.5 w-24 rounded-full bg-[hsl(var(--fg-tertiary)/0.2)]" /><div className="ms-auto text-[9px] px-1.5 py-0.5 rounded bg-[hsl(var(--surface-elevated))] border border-[hsl(var(--border-default))] text-[hsl(var(--fg-tertiary))] font-mono">⌘K</div></div>
         <div className="space-y-0.5">{rows.map((row, i) => { const s = statusMap[row.status]; return (<div key={row.id} className="stagger-row group flex items-center gap-3 py-2 px-2 -mx-2 rounded-xl hover:bg-[hsl(var(--surface-muted))] transition-colors" style={{ animationDelay: `${0.3 + i * 0.08}s` }}><div className="w-8 h-8 rounded-full shrink-0 ring-2 ring-[hsl(var(--surface-elevated))] shadow-sm relative overflow-hidden" style={{ background: `linear-gradient(135deg, hsl(${row.hueA} 75% 60%), hsl(${row.hueB} 75% 50%))` }}><div className="absolute inset-0 flex items-center justify-center text-white opacity-90"><IconUser /></div></div><div className="flex-1 min-w-0 space-y-1.5"><div className="h-2 rounded-full bg-[hsl(var(--fg-primary)/0.22)]" style={{ width: `${row.w}%` }} /><div className="h-1.5 rounded-full bg-[hsl(var(--fg-tertiary)/0.18)]" style={{ width: `${row.w * 0.55}%` }} /></div><div className={cn("flex items-center gap-1 text-[10px] font-semibold px-2 py-1 rounded-md border shrink-0", s.cls)}>{s.icon}<span>{s.label}</span></div></div>);})}</div>
       </div>
-      <div className="preview-card-2 relative bg-[hsl(var(--surface-elevated)/0.8)] border border-[hsl(var(--border-default))] rounded-2xl p-4 backdrop-blur-xl shadow-xl"><div className="flex items-center justify-between mb-3"><div className="text-[10px] text-[hsl(var(--fg-tertiary))] uppercase tracking-[0.12em] font-semibold">{st("preview.workflow", "گردش کار")}</div><div className="text-[10px] text-[hsl(var(--color-primary))] font-medium">{st("preview.workflowActive", "در مرحله: ارسال")}</div></div><div className="relative"><svg viewBox="0 0 280 28" className="w-full h-7" preserveAspectRatio="none"><defs><linearGradient id="pipe-progress" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="hsl(var(--color-primary))" /><stop offset="100%" stopColor="hsl(195 90% 50%)" /></linearGradient></defs><line x1="14" y1="14" x2="266" y2="14" stroke="hsl(var(--border-default))" strokeWidth="1.5" strokeDasharray="3 4" /><line x1="14" y1="14" x2="194" y2="14" stroke="url(#pipe-progress)" strokeWidth="2" />{[14, 74, 134, 194, 266].map((cx, i) => { const done = i <= 3; return (<g key={i}>{i === 3 && <circle cx={cx} cy={14} r="9" fill="hsl(195 90% 50%)" className="pipe-pulse" />}<circle cx={cx} cy={14} r="5" fill={done ? "url(#pipe-progress)" : "hsl(var(--surface-elevated))"} stroke={done ? "transparent" : "hsl(var(--border-default))"} strokeWidth="1.5" /></g>); })}</svg><div className="flex justify-between text-[10px] mt-1.5 px-0.5"><span className="text-[hsl(var(--fg-secondary))] font-medium">{st("preview.stage.created", "ثبت")}</span><span className="text-[hsl(var(--fg-secondary))] font-medium">{st("preview.stage.approved", "تأیید")}</span><span className="text-[hsl(var(--fg-secondary))] font-medium">{st("preview.stage.packed", "بسته‌بندی")}</span><span className="text-[hsl(var(--color-primary))] font-bold">{st("preview.stage.shipped", "ارسال")}</span><span className="text-[hsl(var(--fg-tertiary))]">{st("preview.stage.delivered", "تحویل")}</span></div></div></div>
+      <div className="preview-card-2 relative bg-[hsl(var(--surface-elevated)/0.8)] border border-[hsl(var(--border-default))] rounded-2xl p-4 backdrop-blur-xl shadow-xl"><div className="flex items-center justify-between mb-3"><div className="text-[10px] text-[hsl(var(--fg-tertiary))] uppercase tracking-[0.12em] font-semibold">{st("preview.workflow", "گردش کار")}</div><div className="text-[10px] text-[hsl(var(--color-primary))] font-medium">{st("preview.workflowActive", "در مرحله: ارسال")}</div></div><div className="relative"><svg viewBox="0 0 280 28" className="w-full h-7" preserveAspectRatio="none"><defs><linearGradient id="pipe-progress" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stopColor="hsl(var(--color-primary))" /><stop offset="100%" stopColor="hsl(195 90% 50%)" /></linearGradient></defs><line x1="14" y1="14" x2="266" y2="14" stroke="hsl(var(--border-default))" strokeWidth="1.5" strokeDasharray="3 4" /><line x1="14" y1="14" x2="194" y2="14" stroke="url(#pipe-progress)" strokeWidth="2" />{[14, 74, 134, 194, 266].map((cx, i) => { const done = i <= 3; return (<g key={i}>{i === 3 && <circle cx={cx} cy={14} r="9" fill="hsl(195 90% 50%)" className="pipe-pulse" />}<circle cx={cx} cy={14} r="5" fill={done ? "url(#pipe-progress)" : "hsl(var(--surface-elevated))"} stroke={done ? "transparent" : "hsl(var(--border-default))}"} strokeWidth="1.5" /></g>); })}</svg><div className="flex justify-between text-[10px] mt-1.5 px-0.5"><span className="text-[hsl(var(--fg-secondary))] font-medium">{st("preview.stage.created", "ثبت")}</span><span className="text-[hsl(var(--fg-secondary))] font-medium">{st("preview.stage.approved", "تأیید")}</span><span className="text-[hsl(var(--fg-secondary))] font-medium">{st("preview.stage.packed", "بسته‌بندی")}</span><span className="text-[hsl(var(--color-primary))] font-bold">{st("preview.stage.shipped", "ارسال")}</span><span className="text-[hsl(var(--fg-tertiary))]">{st("preview.stage.delivered", "تحویل")}</span></div></div></div>
       <div className="preview-chips flex flex-wrap gap-2 justify-center">{[{ label: st("preview.feature.inventory", "انبارداری"), hue: 280 }, { label: st("preview.feature.crm", "مدیریت مشتری"), hue: 195 }, { label: st("preview.feature.reports", "گزارش‌های زنده"), hue: 160 }, { label: st("preview.feature.invoice", "فاکتور هوشمند"), hue: 25 }].map((p) => (<span key={p.label} className="px-3 py-1.5 text-[11px] font-medium rounded-full bg-[hsl(var(--surface-elevated)/0.7)] border backdrop-blur" style={{ borderColor: `hsl(${p.hue} 70% 55% / 0.3)`, color: `hsl(${p.hue} 70% 60%)` }}>{p.label}</span>))}</div>
     </div>
   );
@@ -258,10 +260,10 @@ function SignupForm({ st, serverError, isLoading, errors, register, watch, showP
   const fields: SignupFieldOpts[] = [
     { name: "fullName", type: "text", label: st("signup.fullName", "نام و نام خانوادگی"), icon: <IconUser />, value: watch("fullName"), err: errors.fullName, dir: "rtl" },
     { name: "companyName", type: "text", label: st("signup.companyName", "نام شرکت / فروشگاه"), icon: <IconStore />, value: watch("companyName"), err: errors.companyName, dir: "rtl" },
-    { name: "phone", type: "tel", label: st("signup.phone", "شماره تماس (اختیاری)"), icon: <IconPhone />, value: watch("phone"), err: errors.phone },
     { name: "email", type: "email", label: st("auth.email", "ایمیل"), icon: <IconMail />, value: watch("email"), err: errors.email, autoComplete: "email" },
     { name: "password", type: showPassword ? "text" : "password", label: st("auth.password", "رمز عبور"), icon: <IconLock />, value: watch("password"), err: errors.password, autoComplete: "new-password", rightSlot: <PasswordToggle show={showPassword} onToggle={togglePassword} /> },
   ];
+  
   return (
     <div className="backdrop-blur-2xl bg-[hsl(var(--surface-elevated)/0.9)] border border-[hsl(var(--border-default))] rounded-3xl p-4 sm:p-5 pb-5 shadow-2xl">
       <div className="flex flex-col items-center mb-3"><BrandLogo size="sm" /><h1 className="text-[hsl(var(--fg-primary))] text-lg font-bold mt-2">{st("auth.createAccount", "ایجاد حساب جدید")}</h1><p className="text-[hsl(var(--fg-secondary))] text-xs mt-0.5">{st("signup.subtitle", "برای شروع کسب‌وکار خود ثبت‌نام کنید")}</p></div>
@@ -272,6 +274,20 @@ function SignupForm({ st, serverError, isLoading, errors, register, watch, showP
             <input {...register(f.name)} id={`signup-${f.name}`} type={f.type} autoComplete={f.autoComplete} disabled={isLoading} placeholder=" " dir={f.dir ?? "ltr"} className={cn(inputBase, inputFocus, inputHover, "ps-10", f.rightSlot && "pe-14", f.err && "border-[hsl(var(--color-destructive))] focus:shadow-[0_0_0_4px_hsl(var(--color-destructive)/0.1)]")} />
           </Field>
         ))}
+        
+        {/* 🆕 PhoneInput جداگانه */}
+        <PhoneField
+          value={watch("phone")}
+          onChange={(val) => {
+            const { ref, name, ...rest } = register("phone");
+            rest.onChange({ target: { value: val, name: "phone" } });
+          }}
+          placeholder={st("signup.phone", "شماره تماس ")}
+          disabled={isLoading}
+          error={errors.phone}
+          translateError={translateError}
+        />
+
         <div className="pt-2"><PrimaryButton isLoading={isLoading} label={st("auth.createAccount", "ایجاد حساب")} /></div>
       </form>
       <p className="text-center text-[11px] text-[hsl(var(--fg-secondary))] mt-4">{st("auth.haveAccount", "حساب دارید؟")} <button type="button" onClick={onSwitchMode} className="text-[hsl(var(--color-primary))] hover:underline font-semibold">{st("auth.signIn", "ورود")}</button></p>

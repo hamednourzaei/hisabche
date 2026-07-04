@@ -1,20 +1,32 @@
+// packages/ui/src/components/ui/landing/stats-section.tsx
 "use client";
 
 import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   StatsSection v3 — Hisabche Design Language
-   Zero hardcoded colors — all tokens from design system
-   Redmi 9 optimized
+   StatsSection v4 — Premium Animated Counters
+   ✅ Glass morphism
+   ✅ i18n-ready
    ═══════════════════════════════════════════════════════════════════════════ */
+
+export interface StatsSectionProps {
+  t: (key: string, fallback?: string) => string;
+}
 
 interface StatItem {
   end: number;
-  label: string;
+  labelKey: string;
+  fallback: string;
 }
 
-function AnimatedCounter({ end, label }: StatItem) {
+const STATS: StatItem[] = [
+  { end: 1250, labelKey: "landing.stat1", fallback: "فاکتور صادر شده" },
+  { end: 340, labelKey: "landing.stat2", fallback: "کسب‌وکار فعال" },
+  { end: 8, labelKey: "landing.stat3", fallback: "شهر افغانستان" },
+];
+
+function AnimatedCounter({ end, label }: { end: number; label: string }) {
   const [count, setCount] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
   const started = useRef(false);
@@ -28,9 +40,7 @@ function AnimatedCounter({ end, label }: StatItem) {
         if (entry?.isIntersecting && !started.current) {
           started.current = true;
 
-          const prefersReduced = window.matchMedia(
-            "(prefers-reduced-motion: reduce)",
-          ).matches;
+          const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
           if (prefersReduced) {
             setCount(end);
             return;
@@ -58,35 +68,40 @@ function AnimatedCounter({ end, label }: StatItem) {
 
   return (
     <div ref={ref} className="text-center">
-      <div className="text-3xl sm:text-4xl font-bold tabular-nums text-[hsl(var(--fg-primary))] mb-1">
-        {count.toLocaleString("fa-IR")}
+      <div className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tabular-nums text-[hsl(var(--fg-primary))] mb-2 tracking-tight">
+        {count.toLocaleString("fa-AF")}
         <span className="text-[hsl(var(--color-primary))]">+</span>
       </div>
-      <div className="text-xs sm:text-sm text-[hsl(var(--fg-secondary))]">
+      <div className="text-xs sm:text-sm text-[hsl(var(--fg-secondary))] font-medium">
         {label}
       </div>
     </div>
   );
 }
 
-const stats: StatItem[] = [
-  { end: 1250, label: "فاکتور صادر شده" },
-  { end: 340, label: "کسب‌وکار فعال" },
-  { end: 8, label: "شهر افغانستان" },
-];
-
-export default function StatsSection() {
+export default function StatsSection({ t }: StatsSectionProps) {
   return (
     <section
       className={cn(
+        "relative overflow-hidden",
         "border-y border-[hsl(var(--border-default))]",
-        "bg-[hsl(var(--surface-muted)/0.2)]",
-        "py-12 px-6",
+        "bg-[hsl(var(--surface-elevated)/0.4)]",
+        "backdrop-blur-sm",
+        "py-14 sm:py-16 px-6",
       )}
     >
-      <div className="max-w-3xl mx-auto grid grid-cols-3 gap-8">
-        {stats.map((s) => (
-          <AnimatedCounter key={s.label} {...s} />
+      {/* Subtle glow */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background: "radial-gradient(ellipse 60% 50% at 50% 50%, hsl(var(--color-primary)/0.06), transparent)",
+        }}
+        aria-hidden="true"
+      />
+
+      <div className="relative max-w-3xl mx-auto grid grid-cols-3 gap-6 sm:gap-10">
+        {STATS.map((s) => (
+          <AnimatedCounter key={s.labelKey} end={s.end} label={t(s.labelKey, s.fallback)} />
         ))}
       </div>
     </section>

@@ -1,21 +1,24 @@
+// packages/ui/src/components/ui/landing/social-scene.tsx
 "use client";
 
 import { useSceneObserver } from "./use-scene-observer";
 import { cn } from "@/lib/utils";
+import { Star } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   SocialScene v3 — Hisabche Design Language
-   Zero hardcoded colors — all tokens from design system
-   Redmi 9 optimized
+   SocialScene v4 — Premium Testimonials
+   ✅ Lucide icons
+   ✅ Glass morphism
+   ✅ i18n-ready
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const testimonials = [
-  { name: "احمد رحیمی", role: "سوپرمارکت کابل", text: "از وقتی حسابچه دارم، دیگه دفتر کاغذی ندارم. همه چیز دم دستمه." },
-  { name: "فاطمه نوری", role: "بوتیک مزار شریف", text: "بدهی مشتریام همیشه جلومه. دیگه پولم گم نمیشه." },
-  { name: "محمد عظیمی", role: "عمده‌فروش هرات", text: "۳ تا گدام دارم. با حسابچه همه رو یه‌جا می‌بینم." },
-];
+export interface SocialSceneProps {
+  t: (key: string, fallback?: string) => string;
+}
 
-export default function SocialScene() {
+const TESTIMONIAL_COUNT = 3;
+
+export default function SocialScene({ t }: SocialSceneProps) {
   const { ref, state } = useSceneObserver<HTMLDivElement>({
     threshold: 0.3,
     narrativeState: "trust",
@@ -31,10 +34,10 @@ export default function SocialScene() {
       className="section-padding border-y border-[hsl(var(--border-default))]"
     >
       <div className="container-narrow">
-        {/* Header */}
+        {/* ── Header ── */}
         <div
           className={cn(
-            "text-center mb-16 transition-all duration-500",
+            "text-center mb-16 transition-all duration-700",
             "motion-reduce:transition-none",
             animated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5",
           )}
@@ -49,75 +52,79 @@ export default function SocialScene() {
               "text-[hsl(var(--fg-secondary))]",
             )}
           >
-            <span className="text-[hsl(var(--color-warning))] text-sm leading-none">★</span>
-            ۴.۹ · ۳۴۰+ کسب‌وکار فعال
+            <span className="flex gap-0.5">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Star key={i} className="size-3.5 fill-[hsl(var(--color-warning))] text-[hsl(var(--color-warning))]" aria-hidden="true" />
+              ))}
+            </span>
+            {t("landing.rating", "۴.۹ · ۳۴۰+ کسب‌وکار فعال")}
           </div>
 
-          <h2 className="h2 text-[hsl(var(--fg-primary))]">
-            اعتماد واقعی
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[hsl(var(--fg-primary))] tracking-tight">
+            {t("landing.testimonialsTitle", "اعتماد واقعی")}
           </h2>
-          <p className="mt-4 text-lg text-[hsl(var(--fg-secondary))] leading-relaxed">
-            همونایی که مثل تو بودن
+          <p className="mt-4 text-base sm:text-lg text-[hsl(var(--fg-secondary))] leading-relaxed">
+            {t("landing.testimonialsDesc", "همونایی که مثل تو بودن")}
           </p>
         </div>
 
-        {/* Testimonial cards */}
-        <div className="grid md:grid-cols-3 gap-6">
-          {testimonials.map((t, i) => (
-            <div
-              key={i}
-              className={cn(
-                "rounded-[var(--radius-card-sm)] p-8",
-                "border border-[hsl(var(--border-default))]",
-                "bg-[hsl(var(--surface-muted)/0.6)]",
-                "transition-all duration-500",
-                "motion-reduce:transition-none",
-                "hover:border-[hsl(var(--color-primary)/0.35)] hover:-translate-y-1",
-                "motion-reduce:hover:translate-y-0 motion-reduce:hover:border-[hsl(var(--border-default))]",
-                animated
-                  ? "opacity-100 translate-y-0"
-                  : "opacity-0 translate-y-5",
-              )}
-              style={{ transitionDelay: `${i * 120}ms` }}
-            >
-              {/* Stars */}
-              <div className="flex gap-0.5 mb-4">
-                {Array.from({ length: 5 }).map((_, s) => (
-                  <svg
-                    key={s}
-                    viewBox="0 0 16 16"
-                    className="w-3.5 h-3.5 fill-[hsl(var(--color-warning))]"
-                    aria-hidden="true"
-                  >
-                    <path d="M8 1l1.9 3.9L14 5.8l-3 2.9.7 4.1L8 10.8l-3.7 2 .7-4.1-3-2.9 4.1-.9z" />
-                  </svg>
-                ))}
-              </div>
-
-              {/* Text */}
-              <p className="text-[hsl(var(--fg-primary))] text-[0.938rem] leading-relaxed mb-6">
-                «{t.text}»
-              </p>
-
-              {/* Author */}
-              <div className="flex items-center gap-3">
+        {/* ── Cards ── */}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {Array.from({ length: TESTIMONIAL_COUNT }).map((_, i) => {
+            const key = `testimonial${i + 1}`;
+            return (
+              <div
+                key={key}
+                className={cn(
+                  "group relative p-8",
+                  "rounded-[var(--radius-card)]",
+                  "border border-[hsl(var(--border-default))]",
+                  "bg-[hsl(var(--surface-elevated)/0.6)]",
+                  "backdrop-blur-sm",
+                  "transition-all duration-500",
+                  "hover:border-[hsl(var(--color-primary)/0.3)] hover:-translate-y-1 hover:shadow-[var(--shadow-premium)]",
+                  "motion-reduce:hover:transform-none",
+                  animated
+                    ? "opacity-100 translate-y-0"
+                    : "opacity-0 translate-y-5",
+                )}
+                style={{ transitionDelay: `${i * 120}ms` }}
+              >
+                {/* Top glow */}
                 <div
-                  className="flex items-center justify-center w-11 h-11 rounded-full bg-gradient-to-br from-[hsl(var(--color-primary)/0.25)] to-[hsl(190_90%_50%/0.15)] text-[hsl(var(--color-primary))] font-bold text-base border border-[hsl(var(--color-primary)/0.3)] shrink-0"
+                  className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[hsl(var(--color-primary)/0.2)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                   aria-hidden="true"
-                >
-                  {t.name.charAt(0)}
+                />
+
+                {/* Stars */}
+                <div className="flex gap-1 mb-4">
+                  {Array.from({ length: 5 }).map((_, s) => (
+                    <Star key={s} className="size-4 fill-[hsl(var(--color-warning))] text-[hsl(var(--color-warning))]" aria-hidden="true" />
+                  ))}
                 </div>
-                <div>
-                  <div className="font-semibold text-sm text-[hsl(var(--fg-primary))]">
-                    {t.name}
+
+                {/* Quote */}
+                <p className="text-[hsl(var(--fg-primary))] text-base leading-relaxed mb-6">
+                  «{t(`landing.${key}Text`, "")}»
+                </p>
+
+                {/* Author */}
+                <div className="flex items-center gap-3 pt-4 border-t border-[hsl(var(--border-default))]">
+                  <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))] font-bold text-sm border border-[hsl(var(--color-primary)/0.2)] shrink-0">
+                    {t(`landing.${key}Name`, "").charAt(0)}
                   </div>
-                  <div className="text-xs text-[hsl(var(--fg-secondary))]">
-                    {t.role}
+                  <div>
+                    <div className="font-semibold text-sm text-[hsl(var(--fg-primary))]">
+                      {t(`landing.${key}Name`, "")}
+                    </div>
+                    <div className="text-xs text-[hsl(var(--fg-secondary))]">
+                      {t(`landing.${key}Role`, "")}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

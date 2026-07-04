@@ -13,13 +13,13 @@ import {
   DialogTitle,
 } from "../dialog";
 import { ProductPicker } from "../product-picker";
+import { PhoneInput } from "../phone-input";
 import { useSyncStore, useBackupStore } from "@hisabche/store";
 import { cn } from "@/lib/utils";
 import {
   AlertTriangle,
   RefreshCw,
   User,
-  Phone,
   Package,
   DollarSign,
   Check,
@@ -27,11 +27,7 @@ import {
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   AddCustomerModal v3 — Hisabche Design Language
-   ✅ Light mode fixed — all backgrounds visible
-   ✅ Zero hardcoded colors — all tokens from design system
-   ✅ No external component dependencies
-   ✅ Phone validation matches backend (loose international format)
+   AddCustomerModal v4 — PhoneInput International
    ═══════════════════════════════════════════════════════════════════════════ */
 
 type ProductOption = NonNullable<
@@ -45,18 +41,9 @@ const toNum = (v: string): number => {
 
 const fmt = (v: number): string => v.toLocaleString("fa-AF");
 
-// ✅ هماهنگ با phoneSchema بک‌اند: + اختیاری، سپس ۸ تا ۱۵ رقم
-const PHONE_PATTERN = /^\+?\d{8,15}$/;
-
 const customerSchema = z.object({
   name: z.string().min(1, "customer.nameRequired"),
-  phone: z
-    .string()
-    .optional()
-    .refine(
-      (val) => !val || val === "" || PHONE_PATTERN.test(val),
-      { message: "validation.phone" }
-    ),
+  phone: z.string().optional().or(z.literal("")),
 });
 
 type CustomerFormValues = z.infer<typeof customerSchema>;
@@ -91,6 +78,7 @@ export function AddCustomerModal({
   const [unitPrice, setUnitPrice] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [showSaved, setShowSaved] = useState(false);
+  const [phoneValue, setPhoneValue] = useState("");
 
   const total = useMemo(
     () => toNum(unitPrice) * Math.max(1, toNum(qty)),
@@ -118,6 +106,7 @@ export function AddCustomerModal({
     setQty("1");
     setUnitPrice("");
     setError(null);
+    setPhoneValue("");
     onClose();
   }, [reset, onClose]);
 
@@ -126,13 +115,13 @@ export function AddCustomerModal({
     setSaveStatus("saving");
 
     try {
-const customer = await createCustomer.mutateAsync({
-  type: 'cash',  // ✅ اضافه شود
-  fullName: data.name,
-  phone: data.phone || undefined,
-  openingBalance: 0,
-  isActive: true,
-})
+      const customer = await createCustomer.mutateAsync({
+        type: 'cash',
+        fullName: data.name,
+        phone: phoneValue || undefined,
+        openingBalance: 0,
+        isActive: true,
+      });
 
       addAuditEntry({
         action: "create",
@@ -230,24 +219,14 @@ const customer = await createCustomer.mutateAsync({
             )}
           </div>
 
-          {/* Phone */}
+          {/* 🆕 Phone — International */}
           <div>
-            <div className="relative">
-              <Phone
-                className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))] pointer-events-none"
-                aria-hidden="true"
-              />
-              <input
-                {...register("phone")}
-                placeholder={t("baqidari.form.phonePlaceholder", "شماره تماس")}
-                className={cn(inputBase, errors.phone && "border-[hsl(var(--color-destructive))]")}
-              />
-            </div>
-            {errors.phone && (
-              <p className="mt-1 text-sm text-[hsl(var(--color-destructive))]" role="alert">
-                {t(errors.phone.message || "مقدار وارد شده معتبر نیست")}
-              </p>
-            )}
+            <PhoneInput
+              value={phoneValue}
+              onChange={setPhoneValue}
+              placeholder={t("baqidari.form.phonePlaceholder", "شماره تماس")}
+              defaultCountry="+98"
+            />
           </div>
 
           {/* Debt toggle */}

@@ -1,21 +1,23 @@
+// packages/ui/src/components/ui/landing/pain-scene.tsx
 "use client";
 
 import { useSceneObserver } from "./use-scene-observer";
 import { cn } from "@/lib/utils";
+import { FileText, Brain, TrendingDown } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   PainScene v3 — Hisabche Design Language
-   Zero hardcoded colors — all tokens from design system
-   Redmi 9 optimized
+   PainScene v4 — Premium Cards
+   ✅ Lucide icons
+   ✅ i18n-ready
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const pains = [
-  { emoji: "📋", text: "دفترها گم میشن", impact: "ساعت‌ها وقت تلف میشه" },
-  { emoji: "😰", text: "حساب‌ها فراموش میشن", impact: "بدهی‌ها از یاد میرن" },
-  { emoji: "📉", text: "سود واقعی معلوم نیست", impact: "تصمیمات اشتباه میگیری" },
-];
+export interface PainSceneProps {
+  t: (key: string, fallback?: string) => string;
+}
 
-export default function PainScene() {
+const ICONS = [FileText, Brain, TrendingDown];
+
+export default function PainScene({ t }: PainSceneProps) {
   const { ref, state } = useSceneObserver<HTMLDivElement>({
     threshold: 0.3,
     narrativeState: "confusion",
@@ -31,60 +33,70 @@ export default function PainScene() {
       className="section-padding"
     >
       <div className="container-narrow">
-        {/* Header */}
+        {/* ── Header ── */}
         <div
           className={cn(
-            "text-center mb-16 transition-all duration-500",
+            "text-center mb-16 transition-all duration-700",
             "motion-reduce:transition-none",
             animated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5",
           )}
         >
-          <p className="text-sm uppercase tracking-[0.2em] mb-3 text-[hsl(var(--fg-tertiary))]">
-            قبل از حسابچه
+          <p className="text-sm uppercase tracking-[0.2em] mb-3 text-[hsl(var(--fg-tertiary))] font-semibold">
+            {t("landing.painLabel", "قبل از حسابچه")}
           </p>
-          <h2 className="h2 text-[hsl(var(--fg-primary))]">
-            دنیای قدیم حسابداری
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[hsl(var(--fg-primary))] tracking-tight">
+            {t("landing.painTitle", "دنیای قدیم حسابداری")}
           </h2>
-          <p className="mt-4 mx-auto max-w-md text-lg text-[hsl(var(--fg-secondary))] leading-relaxed">
-            شاید این مشکلات رو هر روز تجربه میکنی
+          <p className="mt-4 mx-auto max-w-md text-base sm:text-lg text-[hsl(var(--fg-secondary))] leading-relaxed">
+            {t("landing.painDesc", "شاید این مشکلات رو هر روز تجربه می‌کنی")}
           </p>
         </div>
 
-        {/* Pain cards */}
-        <div className="grid md:grid-cols-3 gap-6">
-          {pains.map((pain, i) => (
-            <div
-              key={i}
-              className={cn(
-                "text-center p-8",
-                "rounded-[var(--radius-card)]",
-                "border border-[hsl(var(--color-destructive)/0.2)]",
-                "bg-[hsl(var(--color-destructive)/0.05)]",
-                "transition-all duration-500",
-                "motion-reduce:transition-none",
-                animated
-                  ? "opacity-100 translate-y-0"
-                  : "opacity-0 translate-y-6",
-              )}
-              style={{ transitionDelay: `${i * 120}ms` }}
-            >
-              {/* Emoji */}
-              <div className="mx-auto mb-5 flex items-center justify-center w-14 h-14 rounded-full bg-[hsl(var(--color-destructive)/0.1)] text-[1.75rem]">
-                {pain.emoji}
+        {/* ── Pain cards ── */}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {ICONS.map((Icon, i) => {
+            const key = `pain${i + 1}`;
+            return (
+              <div
+                key={key}
+                className={cn(
+                  "group relative text-center p-8",
+                  "rounded-[var(--radius-card)]",
+                  "border border-[hsl(var(--color-destructive)/0.15)]",
+                  "bg-[hsl(var(--color-destructive)/0.03)]",
+                  "transition-all duration-500",
+                  "hover:border-[hsl(var(--color-destructive)/0.3)] hover:-translate-y-1",
+                  "motion-reduce:hover:transform-none",
+                  animated
+                    ? "opacity-100 translate-y-0"
+                    : "opacity-0 translate-y-6",
+                )}
+                style={{ transitionDelay: `${i * 120}ms` }}
+              >
+                {/* Icon */}
+                <div className={cn(
+                  "mx-auto mb-5 flex items-center justify-center w-14 h-14 rounded-2xl",
+                  "bg-[hsl(var(--color-destructive)/0.1)] text-[hsl(var(--color-destructive))]",
+                  "transition-all duration-300 group-hover:scale-110",
+                )}>
+                  <Icon className="size-7" aria-hidden="true" />
+                </div>
+
+                {/* Title */}
+                <p className="text-lg font-bold mb-2 text-[hsl(var(--fg-primary))]">
+                  {t(`landing.${key}Title`, "")}
+                </p>
+
+                {/* Description */}
+                <p className="text-sm text-[hsl(var(--fg-secondary))] leading-relaxed">
+                  {t(`landing.${key}Desc`, "")}
+                </p>
+
+                {/* Bottom divider */}
+                <div className="mt-5 mx-auto h-0.5 w-10 rounded-full bg-[hsl(var(--color-destructive)/0.3)]" />
               </div>
-
-              {/* Text */}
-              <p className="text-lg font-semibold mb-2 text-[hsl(var(--fg-primary))]">
-                {pain.text}
-              </p>
-              <p className="text-sm text-[hsl(var(--fg-secondary))] leading-relaxed">
-                {pain.impact}
-              </p>
-
-              {/* Divider */}
-              <div className="mt-6 mx-auto h-0.5 w-10 rounded-full bg-[hsl(var(--color-destructive)/0.4)]" />
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

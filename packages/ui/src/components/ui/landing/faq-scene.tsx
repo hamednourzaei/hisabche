@@ -1,46 +1,41 @@
+// packages/ui/src/components/ui/landing/faq-scene.tsx
 "use client";
 
 import { useState, useRef, useEffect } from "react";
 import { cn } from "@/lib/utils";
+import { ChevronDown } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   FaqScene v3 — Hisabche Design Language
-   Zero hardcoded colors — all tokens from design system
-   Redmi 9 optimized
+   FaqScene v4 — Premium Accordion
+   ✅ Lucide icons
+   ✅ Glass morphism
+   ✅ i18n-ready
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const faqs = [
-  {
-    q: "واقعاً آفلاین کار می‌کنه؟",
-    a: "آره. بدون اینترنت فاکتور ثبت می‌کنی، موجودی رو آپدیت می‌کنی. هر وقت آنلاین شدی همه چیز sync میشه.",
-  },
-  {
-    q: "چقدر هزینه داره؟",
-    a: "نسخه پایه برای همیشه رایگانه. برای کسب‌وکارهای بزرگتر پلن‌های حرفه‌ای هم داریم.",
-  },
-  {
-    q: "روی گوشی قدیمی هم کار می‌کنه؟",
-    a: "آره. روی گوشی ۱ گیگ رم هم روانه. طراحیش برای شبکه ضعیف و دستگاه‌های قدیمی بهینه شده.",
-  },
-];
+export interface FaqSceneProps {
+  t: (key: string, fallback?: string) => string;
+}
 
-function FAQItem({ faq }: { faq: { q: string; a: string } }) {
+const FAQ_COUNT = 3;
+
+function FAQItem({ question, answer }: { question: string; answer: string }) {
   const [open, setOpen] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
   const [height, setHeight] = useState(0);
 
   useEffect(() => {
     if (contentRef.current) setHeight(contentRef.current.scrollHeight);
-  }, [faq.a]);
+  }, [answer]);
 
   return (
     <div
       className={cn(
-        "border border-[hsl(var(--border-default))] rounded-2xl overflow-hidden",
-        "bg-[hsl(var(--surface-muted)/0.6)]",
-        "transition-colors duration-300",
+        "group border rounded-2xl overflow-hidden",
+        "transition-all duration-300",
         "motion-reduce:transition-none",
-        open && "border-[hsl(var(--color-primary)/0.3)]",
+        open
+          ? "border-[hsl(var(--color-primary)/0.3)] bg-[hsl(var(--color-primary)/0.03)] shadow-[var(--shadow-premium)]"
+          : "border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated)/0.5)] hover:border-[hsl(var(--border-strong))]",
       )}
     >
       <button
@@ -56,21 +51,16 @@ function FAQItem({ faq }: { faq: { q: string; a: string } }) {
         )}
         aria-expanded={open}
       >
-        <span className="text-sm sm:text-base">{faq.q}</span>
-        <span
+        <span className="text-sm sm:text-base">{question}</span>
+        <ChevronDown
           className={cn(
-            "flex items-center justify-center shrink-0",
-            "w-7 h-7 rounded-full",
-            "border border-[hsl(var(--border-strong))]",
-            "text-[hsl(var(--fg-secondary))]",
+            "size-5 shrink-0 text-[hsl(var(--fg-tertiary))]",
             "transition-transform duration-300",
             "motion-reduce:transition-none",
-            open && "rotate-45",
+            open && "rotate-180",
           )}
           aria-hidden="true"
-        >
-          +
-        </span>
+        />
       </button>
       <div
         className="overflow-hidden transition-[height] duration-300 motion-reduce:transition-none"
@@ -81,32 +71,39 @@ function FAQItem({ faq }: { faq: { q: string; a: string } }) {
           ref={contentRef}
           className="px-6 pb-5 text-sm text-[hsl(var(--fg-secondary))] leading-relaxed"
         >
-          {faq.a}
+          {answer}
         </div>
       </div>
     </div>
   );
 }
 
-export default function FaqScene() {
+export default function FaqScene({ t }: FaqSceneProps) {
   return (
     <section id="faq" className="section-padding">
       <div className="container-narrow max-w-2xl">
-        {/* Header */}
+        {/* ── Header ── */}
         <div className="text-center mb-12">
-          <p className="text-sm uppercase tracking-[0.2em] mb-3 text-[hsl(var(--fg-tertiary))]">
-            پرسش‌های رایج
+          <p className="text-sm uppercase tracking-[0.2em] mb-3 text-[hsl(var(--fg-tertiary))] font-semibold">
+            {t("landing.faqLabel", "پرسش‌های رایج")}
           </p>
-          <h2 className="h2 text-[hsl(var(--fg-primary))]">
-            سوالات متداول
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[hsl(var(--fg-primary))] tracking-tight">
+            {t("landing.faqTitle", "سوالات متداول")}
           </h2>
         </div>
 
-        {/* FAQ List */}
+        {/* ── FAQ List ── */}
         <div className="space-y-3">
-          {faqs.map((faq, i) => (
-            <FAQItem key={i} faq={faq} />
-          ))}
+          {Array.from({ length: FAQ_COUNT }).map((_, i) => {
+            const key = `faq${i + 1}`;
+            return (
+              <FAQItem
+                key={key}
+                question={t(`landing.${key}Q`, "")}
+                answer={t(`landing.${key}A`, "")}
+              />
+            );
+          })}
         </div>
       </div>
     </section>
