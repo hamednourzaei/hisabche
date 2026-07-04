@@ -38,9 +38,7 @@ export interface AuditResponse {
   limit?: number;
 }
 
-// ✅ Helper to safely extract logs and total from any response
 function extractAuditData(response: any): AuditResponse {
-  // If response has data.logs structure
   if (response?.data?.logs) {
     return {
       logs: response.data.logs,
@@ -48,7 +46,6 @@ function extractAuditData(response: any): AuditResponse {
     };
   }
   
-  // If response has data.data structure (our API format)
   if (response?.data?.data) {
     return {
       logs: response.data.data,
@@ -56,7 +53,6 @@ function extractAuditData(response: any): AuditResponse {
     };
   }
   
-  // If response itself is an array
   if (Array.isArray(response?.data)) {
     return {
       logs: response.data,
@@ -64,7 +60,6 @@ function extractAuditData(response: any): AuditResponse {
     };
   }
   
-  // If response has logs directly
   if (response?.logs) {
     return {
       logs: response.logs,
@@ -72,7 +67,6 @@ function extractAuditData(response: any): AuditResponse {
     };
   }
   
-  // Fallback: empty response
   return {
     logs: [],
     total: 0,
@@ -85,6 +79,7 @@ export function useAuditLogs(params: UseAuditLogsParams = {}) {
   return useQuery({
     queryKey: auditKeys.list({ page, limit, ...rest }),
     queryFn: async (): Promise<AuditResponse> => {
+      // ✅ FIX: Remove /api/ from path
       const response = await apiClient.get("/audit/logs", { 
         params: { page, limit, ...rest } 
       });

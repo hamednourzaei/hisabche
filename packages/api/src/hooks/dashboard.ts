@@ -52,7 +52,7 @@ export function useDashboardKPIs() {
   return useQuery({
     queryKey: dashboardKeys.kpis(),
     queryFn: async (): Promise<DashboardKPIs> => {
-      const { data } = await apiClient.get("/api/analytics/dashboard");
+      const { data } = await apiClient.get("/analytics/dashboard");
       return data;
     },
     staleTime: 30_000,
@@ -64,7 +64,7 @@ export function useAIInsights() {
   return useQuery({
     queryKey: dashboardKeys.insights(),
     queryFn: async (): Promise<AIInsight[]> => {
-      const { data } = await apiClient.get("/api/ai/insights");
+      const { data } = await apiClient.get("/ai/insights");
       return data;
     },
     staleTime: 60_000,
@@ -108,7 +108,7 @@ export function useDashboardSales(params?: DashboardSalesParams) {
   return useQuery({
     queryKey: dashboardKeys.sales(queryParams),
     queryFn: async (): Promise<SalesChartData> => {
-      const response = await apiClient.get("/api/analytics/sales", {
+      const response = await apiClient.get("/analytics/sales", {
         params: queryParams
       });
       

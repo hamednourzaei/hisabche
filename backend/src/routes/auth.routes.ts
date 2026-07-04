@@ -30,7 +30,7 @@ const toJsonSchema = (schema: z.ZodTypeAny): JsonSchema7Type => {
 export async function authRoutes(fastify: FastifyInstance) {
   const authService = new AuthService()
 
-  // ─── POST /api/auth/login ──────────────────────────────
+  // ─── POST /api/auth/login ───────────────────
   fastify.post('/api/auth/login', {
     schema: {
       body: toJsonSchema(loginSchema),
