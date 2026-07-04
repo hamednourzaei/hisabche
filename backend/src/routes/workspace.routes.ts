@@ -27,7 +27,7 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
   // WORKSPACES
   // ═══════════════════════════════════════════════════════════
 
-  // ─── GET /api/workspaces ──────────────────────────────────
+  // ─── GET /api/workspaces ──────────────────────────
   fastify.get('/api/workspaces', {
     preHandler: [authenticate],
     schema: {
