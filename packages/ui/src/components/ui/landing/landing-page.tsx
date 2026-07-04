@@ -38,7 +38,7 @@ export function LandingPage() {
   return (
     <NavigationProvider sections={NAVIGATION_SECTIONS}>
       <div className="min-h-screen bg-[hsl(var(--surface-base))]">
-        <TopNav variant="landing" onNavigateLogin={navigateLogin} appName="حسابچه" />
+        <TopNav variant="landing" onNavigateLogin={navigateLogin} />
 
         <main>
           <NavigationRegistry id="hero">
