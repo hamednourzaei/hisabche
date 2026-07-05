@@ -59,7 +59,7 @@ const DateRangeSchema = z.object({
   endDate: z.string().optional(),
 })
 
-export async function analyticsRoutes(fastify: FastifyInstance) {
+export default async function analyticsRoutes(fastify: FastifyInstance) {
   const analyticsService = new AnalyticsService()
 
   // ══════════════════════════════════════════════════════

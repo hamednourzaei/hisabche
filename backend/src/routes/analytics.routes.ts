@@ -14,6 +14,51 @@ const toJsonSchema = (schema: any) => {
   return result
 }
 
+// ═══════════════════════════════════════════════════════════
+// ✅ Production Schema — با تایپ‌های دقیق
+// ═══════════════════════════════════════════════════════════
+
+const SalesSummarySchema = z.object({
+  totalRevenue: z.number(),
+  totalInvoices: z.number(),
+  averageInvoiceValue: z.number(),
+  totalPaid: z.number(),
+  totalUnpaid: z.number(),
+  byCurrency: z.record(z.number()),
+  byPeriod: z.array(
+    z.object({
+      period: z.string(),
+      revenue: z.number(),
+      count: z.number(),
+    })
+  ),
+  topProducts: z.array(z.any()),
+  topCustomers: z.array(z.any()),
+  chartData: z.array(
+    z.object({
+      label: z.string(),
+      value: z.number(),
+      date: z.string(),
+    })
+  ),
+})
+
+const DashboardKPIsSchema = z.object({
+  todaySales: z.number(),
+  todayInvoices: z.number(),
+  monthlyRevenue: z.number(),
+  monthlyGrowth: z.number(),
+  pendingPayments: z.number(),
+  activeCustomers: z.number(),
+  lowStockAlerts: z.number(),
+})
+
+const DateRangeSchema = z.object({
+  days: z.coerce.number().int().min(1).max(365).default(30),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+})
+
 export async function analyticsRoutes(fastify: FastifyInstance) {
   const analyticsService = new AnalyticsService()
 
@@ -24,33 +69,38 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
   fastify.get('/api/analytics/dashboard', {
     preHandler: [authenticate],
     schema: {
-      response: { 200: toJsonSchema(z.any()) },
+      response: {
+        200: toJsonSchema(DashboardKPIsSchema),
+      },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const kpis = await analyticsService.getDashboardKpis(request.userId)
-      return reply.send(kpis)
+      
+      // ✅ Validate before sending
+      const validated = DashboardKPIsSchema.parse(kpis)
+      return reply.send(validated)
     } catch (err) {
+      if (err instanceof z.ZodError) {
+        fastify.log.error({ err: err.errors }, 'Dashboard validation failed')
+        return reply.code(500).send({ error: 'Data validation failed' })
+      }
       fastify.log.error(err)
       return reply.code(500).send({ error: 'Failed to fetch dashboard KPIs' })
     }
   })
 
   // ═══════════════════════════════════════════════════════════
-  // SALES ANALYTICS
+  // SALES ANALYTICS — Production Ready
   // ═══════════════════════════════════════════════════════════
 
   fastify.get('/api/analytics/sales', {
     preHandler: [authenticate],
     schema: {
-      querystring: toJsonSchema(
-        z.object({
-          days: z.coerce.number().int().min(1).max(365).default(30),
-          startDate: z.string().optional(),
-          endDate: z.string().optional(),
-        })
-      ),
-      response: { 200: toJsonSchema(z.any()) },
+      querystring: toJsonSchema(DateRangeSchema),
+      response: {
+        200: toJsonSchema(SalesSummarySchema),
+      },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -71,11 +121,12 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
 
       const summary = await analyticsService.getSalesSummary(request.userId, dateRange)
 
-      // ✅ Ensure data is properly serialized (fixes empty response issue)
-      const cleanSummary = JSON.parse(JSON.stringify(summary))
-      return reply.send(cleanSummary)
+      // ✅ Validate before sending
+      const validated = SalesSummarySchema.parse(summary)
+      return reply.send(validated)
     } catch (err) {
       if (err instanceof z.ZodError) {
+        fastify.log.error({ err: err.errors }, 'Sales validation failed')
         return reply.code(400).send({ error: 'Validation failed', details: err.errors })
       }
       fastify.log.error(err)
