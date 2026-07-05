@@ -27,20 +27,10 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
       response: { 200: toJsonSchema(z.any()) },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    console.log('========================================')
-    console.log('🔍🔍🔍 /api/analytics/dashboard CALLED 🔍🔍🔍')
-    console.log('========================================')
-    console.log('📌 userId:', request.userId)
-    console.log('========================================')
-
     try {
       const kpis = await analyticsService.getDashboardKpis(request.userId)
-      console.log('✅ /api/analytics/dashboard SUCCESS!')
-      console.log('📊 KPIs keys:', Object.keys(kpis || {}))
-      console.log('========================================')
       return reply.send(kpis)
     } catch (err) {
-      console.error('❌ /api/analytics/dashboard ERROR:', err)
       fastify.log.error(err)
       return reply.code(500).send({ error: 'Failed to fetch dashboard KPIs' })
     }
@@ -52,27 +42,17 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
 
   fastify.get('/api/analytics/sales', {
     preHandler: [authenticate],
-    // ✅ Schema را موقتاً غیرفعال می‌کنیم تا مطمئن شویم دیتا فیلتر نمیشه
-    // schema: {
-    //   querystring: toJsonSchema(
-    //     z.object({
-    //       days: z.coerce.number().int().min(1).max(365).default(30),
-    //       startDate: z.string().optional(),
-    //       endDate: z.string().optional(),
-    //     })
-    //   ),
-    //   response: { 200: toJsonSchema(z.any()) },
-    // },
+    schema: {
+      querystring: toJsonSchema(
+        z.object({
+          days: z.coerce.number().int().min(1).max(365).default(30),
+          startDate: z.string().optional(),
+          endDate: z.string().optional(),
+        })
+      ),
+      response: { 200: toJsonSchema(z.any()) },
+    },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    console.log('========================================')
-    console.log('🔍🔍🔍 /api/analytics/sales CALLED 🔍🔍🔍')
-    console.log('========================================')
-    console.log('📌 userId:', request.userId)
-    console.log('📌 userId type:', typeof request.userId)
-    console.log('📌 userId length:', request.userId?.length)
-    console.log('📌 query params:', request.query)
-    console.log('========================================')
-
     try {
       const query = request.query as {
         days?: number
@@ -80,78 +60,21 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
         endDate?: string
       }
 
-      console.log('📌 Parsed query:', query)
-
       const today = new Date()
-      console.log('📌 today:', today.toISOString())
-
       const startDate = query.startDate || new Date(today.getTime() - (query.days || 30) * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
       const endDate = query.endDate || today.toISOString().split('T')[0]
-
-      console.log('📌 calculated startDate:', startDate)
-      console.log('📌 calculated endDate:', endDate)
 
       const dateRange: { startDate: string; endDate: string } = {
         startDate: startDate as string,
         endDate: endDate as string,
       }
 
-      console.log('📌 dateRange:', dateRange)
-      console.log('📌 Calling analyticsService.getSalesSummary...')
-      console.log('========================================')
-
       const summary = await analyticsService.getSalesSummary(request.userId, dateRange)
 
-      console.log('========================================')
-      console.log('✅ /api/analytics/sales getSalesSummary RETURNED!')
-      console.log('📌 summary type:', typeof summary)
-      console.log('📌 summary is null?', summary === null)
-      console.log('📌 summary is undefined?', summary === undefined)
-      console.log('📌 summary keys:', Object.keys(summary || {}))
-      console.log('📌 summary totalRevenue:', summary?.totalRevenue)
-      console.log('📌 summary totalInvoices:', summary?.totalInvoices)
-      console.log('📌 summary chartData length:', summary?.chartData?.length)
-      
-      // ✅ 1. لاگ کامل summary به صورت JSON
-      try {
-        const summaryString = JSON.stringify(summary)
-        console.log('📌 summary (full JSON):', summaryString.substring(0, 1000) + (summaryString.length > 1000 ? '...' : ''))
-        console.log('📌 summary JSON length:', summaryString.length)
-      } catch (stringifyError) {
-        console.error('❌ Failed to stringify summary:', stringifyError)
-      }
-      
-      console.log('========================================')
-
-      if (!summary || Object.keys(summary).length === 0) {
-        console.log('⚠️⚠️⚠️ summary is EMPTY! Returning fallback...')
-        return reply.send({ 
-          message: 'No data found for the selected period',
-          data: summary 
-        })
-      }
-
-      // ✅ 2. تست با آبجکت ساده اول
-      // console.log('🧪 TEST: Sending test object first...')
-      // return reply.send({ test: 'hello from analytics', received: true })
-
-      // ✅ 3. روش 1: JSON.parse(JSON.stringify())
-      console.log('✅ Sending summary using JSON.parse(JSON.stringify())...')
+      // ✅ Ensure data is properly serialized (fixes empty response issue)
       const cleanSummary = JSON.parse(JSON.stringify(summary))
-      console.log('📌 cleanSummary keys:', Object.keys(cleanSummary))
-      console.log('📌 cleanSummary totalRevenue:', cleanSummary.totalRevenue)
-      console.log('========================================')
       return reply.send(cleanSummary)
-      
     } catch (err) {
-      console.error('========================================')
-      console.error('❌❌❌ /api/analytics/sales ERROR ❌❌❌')
-      console.error('========================================')
-      console.error('Error type:', typeof err)
-      console.error('Error message:', err instanceof Error ? err.message : String(err))
-      console.error('Error stack:', err instanceof Error ? err.stack : 'No stack')
-      console.error('========================================')
-      
       if (err instanceof z.ZodError) {
         return reply.code(400).send({ error: 'Validation failed', details: err.errors })
       }
@@ -170,20 +93,10 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
       response: { 200: toJsonSchema(z.any()) },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    console.log('========================================')
-    console.log('🔍🔍🔍 /api/analytics/inventory CALLED 🔍🔍🔍')
-    console.log('========================================')
-    console.log('📌 userId:', request.userId)
-    console.log('========================================')
-
     try {
       const summary = await analyticsService.getInventorySummary(request.userId)
-      console.log('✅ /api/analytics/inventory SUCCESS!')
-      console.log('📊 summary keys:', Object.keys(summary || {}))
-      console.log('========================================')
       return reply.send(summary)
     } catch (err) {
-      console.error('❌ /api/analytics/inventory ERROR:', err)
       fastify.log.error(err)
       return reply.code(500).send({ error: 'Failed to fetch inventory analytics' })
     }
@@ -205,13 +118,6 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
       response: { 200: toJsonSchema(z.any()) },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
-    console.log('========================================')
-    console.log('🔍🔍🔍 /api/analytics/financial CALLED 🔍🔍🔍')
-    console.log('========================================')
-    console.log('📌 userId:', request.userId)
-    console.log('📌 query:', request.query)
-    console.log('========================================')
-
     try {
       const query = request.query as {
         startDate?: string
@@ -227,16 +133,9 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
         endDate: endDate as string,
       }
 
-      console.log('📌 dateRange:', dateRange)
-
       const summary = await analyticsService.getFinancialSummary(request.userId, dateRange)
-
-      console.log('✅ /api/analytics/financial SUCCESS!')
-      console.log('📊 summary keys:', Object.keys(summary || {}))
-      console.log('========================================')
       return reply.send(summary)
     } catch (err) {
-      console.error('❌ /api/analytics/financial ERROR:', err)
       if (err instanceof z.ZodError) {
         return reply.code(400).send({ error: 'Validation failed', details: err.errors })
       }
