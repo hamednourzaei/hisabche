@@ -22,7 +22,6 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
   // DASHBOARD KPIs
   // ═══════════════════════════════════════════════════════════
 
-  // ─── GET /api/analytics/dashboard ─────────────────────────
   fastify.get('/api/analytics/dashboard', {
     preHandler: [authenticate],
     schema: {
@@ -42,16 +41,33 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
   // SALES ANALYTICS
   // ═══════════════════════════════════════════════════════════
 
-  // ─── GET /api/analytics/sales ─────────────────────────────
   fastify.get('/api/analytics/sales', {
     preHandler: [authenticate],
     schema: {
-      querystring: toJsonSchema(dateRangeSchema),
+      querystring: toJsonSchema(
+        z.object({
+          days: z.coerce.number().int().min(1).max(365).default(30),
+          startDate: z.string().optional(),
+          endDate: z.string().optional(),
+        })
+      ),
       response: { 200: toJsonSchema(z.any()) },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const dateRange = dateRangeSchema.parse(request.query)
+      const query = request.query as {
+        days?: number
+        startDate?: string
+        endDate?: string
+      }
+      
+      // ✅ مقداردهی fallback برای startDate و endDate
+      const today = new Date()
+      const startDate = query.startDate || new Date(today.getTime() - (query.days || 30) * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      const endDate = query.endDate || today.toISOString().split('T')[0]
+      
+      // ✅ حالا مطمئنیم که هر دو string هستن
+      const dateRange = { startDate, endDate } as { startDate: string; endDate: string }
       const summary = await analyticsService.getSalesSummary(request.userId, dateRange)
       return reply.send(summary)
     } catch (err) {
@@ -67,7 +83,6 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
   // INVENTORY ANALYTICS
   // ═══════════════════════════════════════════════════════════
 
-  // ─── GET /api/analytics/inventory ─────────────────────────
   fastify.get('/api/analytics/inventory', {
     preHandler: [authenticate],
     schema: {
@@ -87,16 +102,30 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
   // FINANCIAL ANALYTICS
   // ═══════════════════════════════════════════════════════════
 
-  // ─── GET /api/analytics/financial ─────────────────────────
   fastify.get('/api/analytics/financial', {
     preHandler: [authenticate],
     schema: {
-      querystring: toJsonSchema(dateRangeSchema),
+      querystring: toJsonSchema(
+        z.object({
+          startDate: z.string().optional(),
+          endDate: z.string().optional(),
+        })
+      ),
       response: { 200: toJsonSchema(z.any()) },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const dateRange = dateRangeSchema.parse(request.query)
+      const query = request.query as {
+        startDate?: string
+        endDate?: string
+      }
+      
+      const today = new Date()
+      const startDate = query.startDate || new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+      const endDate = query.endDate || today.toISOString().split('T')[0]
+      
+      // ✅ حالا مطمئنیم که هر دو string هستن
+      const dateRange = { startDate, endDate } as { startDate: string; endDate: string }
       const summary = await analyticsService.getFinancialSummary(request.userId, dateRange)
       return reply.send(summary)
     } catch (err) {
