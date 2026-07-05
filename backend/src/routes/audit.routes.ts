@@ -27,7 +27,7 @@ export async function auditRoutes(fastify: FastifyInstance) {
   // WRITE LOG
   // ═══════════════════════════════════════════════════════════
 
-  // ─── POST /api/audit/log ──────────────────────────────────
+  // ─── POST /audit/log ──────────────────────────────────
   fastify.post('/audit/log', {
     preHandler: [authenticate],
     schema: {
@@ -56,7 +56,7 @@ export async function auditRoutes(fastify: FastifyInstance) {
   // READ LOGS
   // ═══════════════════════════════════════════════════════════
 
-  // ─── GET /api/audit/logs ──────────────────────────────────
+  // ─── GET /audit/logs ──────────────────────────────────
   fastify.get('/audit/logs', {
     preHandler: [authenticate],
     schema: {
@@ -77,7 +77,7 @@ export async function auditRoutes(fastify: FastifyInstance) {
     }
   })
 
-  // ─── GET /api/audit/entity/:type/:id ──────────────────────
+  // ─── GET /audit/entity/:type/:id ──────────────────────
   fastify.get('/audit/entity/:type/:id', {
     preHandler: [authenticate],
     schema: {
@@ -98,7 +98,7 @@ export async function auditRoutes(fastify: FastifyInstance) {
     }
   })
 
-  // ─── GET /api/audit/user/:userId ──────────────────────────
+  // ─── GET /audit/user/:userId ──────────────────────────
   fastify.get('/audit/user/:userId', {
     preHandler: [authenticate],
     schema: {
@@ -122,7 +122,7 @@ export async function auditRoutes(fastify: FastifyInstance) {
   // STATS
   // ═══════════════════════════════════════════════════════════
 
-  // ─── GET /api/audit/stats ─────────────────────────────────
+  // ─── GET /audit/stats ─────────────────────────────────
   fastify.get('/audit/stats', {
     preHandler: [authenticate],
     schema: {
@@ -147,7 +147,7 @@ export async function auditRoutes(fastify: FastifyInstance) {
   // EXPORT
   // ═══════════════════════════════════════════════════════════
 
-  // ─── GET /api/audit/export ────────────────────────────────
+  // ─── GET /audit/export ────────────────────────────────
   fastify.get('/audit/export', {
     preHandler: [authenticate],
     schema: {
@@ -172,7 +172,7 @@ export async function auditRoutes(fastify: FastifyInstance) {
   // MAINTENANCE
   // ═══════════════════════════════════════════════════════════
 
-  // ─── POST /api/audit/cleanup ──────────────────────────────
+  // ─── POST /audit/cleanup ──────────────────────────────
   fastify.post('/audit/cleanup', {
     preHandler: [authenticate],
     schema: {

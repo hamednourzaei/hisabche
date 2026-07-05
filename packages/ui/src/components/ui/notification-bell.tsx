@@ -56,7 +56,7 @@ export function NotificationBell() {
 
 const fetchNotifications = useCallback(async () => {
   try {
-    const { data } = await apiClient.get("/api/audit/logs", {
+    const { data } = await apiClient.get("/audit/logs", {
       params: { limit: 5 },
     });
     if (data?.data) {
