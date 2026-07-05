@@ -31,13 +31,12 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
     console.log('🔍🔍🔍 /api/analytics/dashboard CALLED 🔍🔍🔍')
     console.log('========================================')
     console.log('📌 userId:', request.userId)
-    console.log('📌 request.headers:', request.headers)
     console.log('========================================')
 
     try {
       const kpis = await analyticsService.getDashboardKpis(request.userId)
       console.log('✅ /api/analytics/dashboard SUCCESS!')
-      console.log('📊 KPIs:', JSON.stringify(kpis, null, 2))
+      console.log('📊 KPIs keys:', Object.keys(kpis || {}))
       console.log('========================================')
       return reply.send(kpis)
     } catch (err) {
@@ -53,16 +52,17 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
 
   fastify.get('/api/analytics/sales', {
     preHandler: [authenticate],
-    schema: {
-      querystring: toJsonSchema(
-        z.object({
-          days: z.coerce.number().int().min(1).max(365).default(30),
-          startDate: z.string().optional(),
-          endDate: z.string().optional(),
-        })
-      ),
-      response: { 200: toJsonSchema(z.any()) },
-    },
+    // ✅ Schema را موقتاً غیرفعال می‌کنیم تا مطمئن شویم دیتا فیلتر نمیشه
+    // schema: {
+    //   querystring: toJsonSchema(
+    //     z.object({
+    //       days: z.coerce.number().int().min(1).max(365).default(30),
+    //       startDate: z.string().optional(),
+    //       endDate: z.string().optional(),
+    //     })
+    //   ),
+    //   response: { 200: toJsonSchema(z.any()) },
+    // },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     console.log('========================================')
     console.log('🔍🔍🔍 /api/analytics/sales CALLED 🔍🔍🔍')
@@ -71,10 +71,6 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
     console.log('📌 userId type:', typeof request.userId)
     console.log('📌 userId length:', request.userId?.length)
     console.log('📌 query params:', request.query)
-    console.log('📌 headers:', {
-      'authorization': request.headers.authorization?.substring(0, 50) + '...',
-      'content-type': request.headers['content-type']
-    })
     console.log('========================================')
 
     try {
@@ -115,7 +111,16 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
       console.log('📌 summary totalRevenue:', summary?.totalRevenue)
       console.log('📌 summary totalInvoices:', summary?.totalInvoices)
       console.log('📌 summary chartData length:', summary?.chartData?.length)
-      console.log('📌 summary (first 500 chars):', JSON.stringify(summary, null, 2).substring(0, 500) + '...')
+      
+      // ✅ 1. لاگ کامل summary به صورت JSON
+      try {
+        const summaryString = JSON.stringify(summary)
+        console.log('📌 summary (full JSON):', summaryString.substring(0, 1000) + (summaryString.length > 1000 ? '...' : ''))
+        console.log('📌 summary JSON length:', summaryString.length)
+      } catch (stringifyError) {
+        console.error('❌ Failed to stringify summary:', stringifyError)
+      }
+      
       console.log('========================================')
 
       if (!summary || Object.keys(summary).length === 0) {
@@ -126,9 +131,18 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
         })
       }
 
-      console.log('✅ Sending summary back to client...')
+      // ✅ 2. تست با آبجکت ساده اول
+      // console.log('🧪 TEST: Sending test object first...')
+      // return reply.send({ test: 'hello from analytics', received: true })
+
+      // ✅ 3. روش 1: JSON.parse(JSON.stringify())
+      console.log('✅ Sending summary using JSON.parse(JSON.stringify())...')
+      const cleanSummary = JSON.parse(JSON.stringify(summary))
+      console.log('📌 cleanSummary keys:', Object.keys(cleanSummary))
+      console.log('📌 cleanSummary totalRevenue:', cleanSummary.totalRevenue)
       console.log('========================================')
-      return reply.send(summary)
+      return reply.send(cleanSummary)
+      
     } catch (err) {
       console.error('========================================')
       console.error('❌❌❌ /api/analytics/sales ERROR ❌❌❌')
@@ -137,6 +151,7 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
       console.error('Error message:', err instanceof Error ? err.message : String(err))
       console.error('Error stack:', err instanceof Error ? err.stack : 'No stack')
       console.error('========================================')
+      
       if (err instanceof z.ZodError) {
         return reply.code(400).send({ error: 'Validation failed', details: err.errors })
       }
@@ -164,7 +179,7 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
     try {
       const summary = await analyticsService.getInventorySummary(request.userId)
       console.log('✅ /api/analytics/inventory SUCCESS!')
-      console.log('📊 summary:', JSON.stringify(summary, null, 2))
+      console.log('📊 summary keys:', Object.keys(summary || {}))
       console.log('========================================')
       return reply.send(summary)
     } catch (err) {
