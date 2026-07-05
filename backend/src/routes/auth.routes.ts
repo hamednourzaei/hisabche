@@ -16,17 +16,15 @@ import { AuthService } from '../services/auth.service'
 import { AuthError } from '../errors/auth.error'
 import { authenticate } from '../middleware/auth.middleware'
 
-import type { JsonSchema7Type } from 'zod-to-json-schema'
 
-const toJsonSchema = (schema: z.ZodTypeAny): JsonSchema7Type => {
-  const result = zodToJsonSchema(schema, {
-    target: 'jsonSchema7',
-  }) as JsonSchema7Type
+ type JsonSchema = Record<string, unknown>
 
-  delete (result as any).$schema
-
+function toJsonSchema(schema: z.ZodTypeAny): JsonSchema {
+  const result = zodToJsonSchema(schema, { target: 'jsonSchema7' }) as JsonSchema
+  delete result.$schema
   return result
 }
+
 export async function authRoutes(fastify: FastifyInstance) {
   const authService = new AuthService()
 
