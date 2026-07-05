@@ -5,7 +5,6 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
-import { dateRangeSchema } from '@hisabche/validation'
 import { AnalyticsService } from '../services/analytics.service'
 import { authenticate } from '../middleware/auth.middleware'
 
@@ -60,14 +59,17 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
         startDate?: string
         endDate?: string
       }
-      
-      // ✅ مقداردهی fallback برای startDate و endDate
+
       const today = new Date()
       const startDate = query.startDate || new Date(today.getTime() - (query.days || 30) * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
       const endDate = query.endDate || today.toISOString().split('T')[0]
-      
-      // ✅ حالا مطمئنیم که هر دو string هستن
-      const dateRange = { startDate, endDate } as { startDate: string; endDate: string }
+
+      // ✅ Ensure both are strings (not undefined) before passing
+      const dateRange: { startDate: string; endDate: string } = {
+        startDate: startDate as string,
+        endDate: endDate as string,
+      }
+
       const summary = await analyticsService.getSalesSummary(request.userId, dateRange)
       return reply.send(summary)
     } catch (err) {
@@ -119,13 +121,17 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
         startDate?: string
         endDate?: string
       }
-      
+
       const today = new Date()
       const startDate = query.startDate || new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
       const endDate = query.endDate || today.toISOString().split('T')[0]
-      
-      // ✅ حالا مطمئنیم که هر دو string هستن
-      const dateRange = { startDate, endDate } as { startDate: string; endDate: string }
+
+      // ✅ Ensure both are strings (not undefined) before passing
+      const dateRange: { startDate: string; endDate: string } = {
+        startDate: startDate as string,
+        endDate: endDate as string,
+      }
+
       const summary = await analyticsService.getFinancialSummary(request.userId, dateRange)
       return reply.send(summary)
     } catch (err) {

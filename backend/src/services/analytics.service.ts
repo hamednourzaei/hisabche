@@ -14,7 +14,7 @@ export class AnalyticsService {
     const lastMonthFirst = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).toISOString()
     const lastMonthLast = new Date(new Date().getFullYear(), new Date().getMonth(), 0).toISOString()
 
-    // Today sales
+    // Today sales - only paid invoices
     const { data: todaySales } = await supabase
       .from('invoices')
       .select('total')
@@ -22,14 +22,14 @@ export class AnalyticsService {
       .gte('date', today)
       .eq('status', 'paid')
 
-    // Today invoices
+    // Today invoices - all invoices (not just paid)
     const { count: todayInvoices } = await supabase
       .from('invoices')
       .select('*', { count: 'exact', head: true })
       .eq('user_id', userId)
       .gte('date', today)
 
-    // Monthly revenue
+    // Monthly revenue - paid invoices only
     const { data: monthlySales } = await supabase
       .from('invoices')
       .select('total')
@@ -37,7 +37,7 @@ export class AnalyticsService {
       .gte('date', firstOfMonth)
       .eq('status', 'paid')
 
-    // Last month revenue
+    // Last month revenue - paid invoices only
     const { data: lastMonthSales } = await supabase
       .from('invoices')
       .select('total')
@@ -46,7 +46,7 @@ export class AnalyticsService {
       .lte('date', lastMonthLast)
       .eq('status', 'paid')
 
-    // Pending payments
+    // Pending payments - all invoices not paid
     const { data: pendingPayments } = await supabase
       .from('invoices')
       .select('total, paid_amount')
@@ -60,7 +60,7 @@ export class AnalyticsService {
       .eq('user_id', userId)
       .eq('is_active', true)
 
-    // Low stock — همه محصولات فعال را بگیر و در کد فیلتر کن
+    // Low stock
     const { data: allProducts } = await supabase
       .from('products')
       .select('quantity, min_stock_level')
@@ -95,12 +95,19 @@ export class AnalyticsService {
   async getSalesSummary(userId: string, dateRange: DateRange) {
     const { startDate, endDate } = dateRange
 
-    const { data: invoices } = await supabase
+    // ✅ Get ALL invoices (not just paid) for sales summary
+    const { data: invoices, error } = await supabase
       .from('invoices')
       .select('id, total, paid_amount, status, currency, date, customer_id')
       .eq('user_id', userId)
       .gte('date', startDate)
       .lte('date', endDate)
+      .order('date', { ascending: false })
+
+    if (error) {
+      console.error('Supabase error in getSalesSummary:', error)
+      return this.emptySalesSummary()
+    }
 
     if (!invoices || invoices.length === 0) {
       return this.emptySalesSummary()
@@ -124,25 +131,59 @@ export class AnalyticsService {
       byPeriodMap[month].count++
     }
 
-    // Top products
-    const { data: topProducts } = await supabase
-      .from('invoice_items')
-      .select('product_id, product_name, quantity, total_price')
-      .eq('user_id', userId)
-      .in('invoice_id', invoices.map((i: any) => i.id))
-      .order('total_price', { ascending: false })
-      .limit(10)
+    // Top products - get from invoice_items
+    const invoiceIds = invoices.map((i: any) => i.id)
+    let topProducts: any[] = []
+    if (invoiceIds.length > 0) {
+      const { data: items } = await supabase
+        .from('invoice_items')
+        .select('product_id, product_name, quantity, total_price')
+        .eq('user_id', userId)
+        .in('invoice_id', invoiceIds)
+        .order('total_price', { ascending: false })
+        .limit(10)
+      topProducts = items || []
+    }
 
-    // Top customers
+    // Top customers - get customer names from customers table
+    const customerIds = invoices.map((i: any) => i.customer_id).filter(Boolean)
+    let customerNames: Record<string, string> = {}
+    if (customerIds.length > 0) {
+      const { data: customers } = await supabase
+        .from('customers')
+        .select('id, full_name')
+        .in('id', customerIds)
+      if (customers) {
+        customerNames = customers.reduce((acc: Record<string, string>, c: any) => {
+          acc[c.id] = c.full_name
+          return acc
+        }, {})
+      }
+    }
+
     const customerMap: Record<string, { id: string; name: string; revenue: number; count: number }> = {}
     for (const inv of invoices) {
       const cid = (inv as any).customer_id
       if (cid) {
-        if (!customerMap[cid]) customerMap[cid] = { id: cid, name: '', revenue: 0, count: 0 }
+        if (!customerMap[cid]) {
+          customerMap[cid] = { id: cid, name: customerNames[cid] || '', revenue: 0, count: 0 }
+        }
         customerMap[cid].revenue += Number((inv as any).total)
         customerMap[cid].count++
       }
     }
+
+    // ✅ Build chart data for frontend (daily sales)
+    const chartData = invoices.reduce((acc: any[], inv: any) => {
+      const date = (inv.date as string).split('T')[0]
+      const existing = acc.find(d => d.label === date)
+      if (existing) {
+        existing.value += Number(inv.total)
+      } else {
+        acc.push({ label: date, value: Number(inv.total), date })
+      }
+      return acc
+    }, [])
 
     return {
       totalRevenue: Math.round(totalRevenue * 100) / 100,
@@ -156,7 +197,7 @@ export class AnalyticsService {
         revenue: Math.round(val.revenue * 100) / 100,
         count: val.count,
       })),
-      topProducts: (topProducts || []).map((p: any) => ({
+      topProducts: topProducts.map((p: any) => ({
         productId: p.product_id,
         productName: p.product_name || '',
         quantity: Number(p.quantity || 0),
@@ -171,6 +212,8 @@ export class AnalyticsService {
           revenue: Math.round(c.revenue * 100) / 100,
           invoiceCount: c.count,
         })),
+      // ✅ Add chart data
+      chartData,
     }
   }
 
@@ -271,23 +314,39 @@ export class AnalyticsService {
   // ─── Helpers ──────────────────────────────────────────────
   private emptySalesSummary() {
     return {
-      totalRevenue: 0, totalInvoices: 0, averageInvoiceValue: 0,
-      totalPaid: 0, totalUnpaid: 0, byCurrency: {}, byPeriod: [],
-      topProducts: [], topCustomers: [],
+      totalRevenue: 0,
+      totalInvoices: 0,
+      averageInvoiceValue: 0,
+      totalPaid: 0,
+      totalUnpaid: 0,
+      byCurrency: {},
+      byPeriod: [],
+      topProducts: [],
+      topCustomers: [],
+      chartData: [],
     }
   }
 
   private emptyInventorySummary() {
     return {
-      totalProducts: 0, totalStockValue: 0, lowStockProducts: 0,
-      outOfStockProducts: 0, byCategory: [], topMovements: [],
+      totalProducts: 0,
+      totalStockValue: 0,
+      lowStockProducts: 0,
+      outOfStockProducts: 0,
+      byCategory: [],
+      topMovements: [],
     }
   }
 
   private emptyFinancialSummary() {
     return {
-      totalRevenue: 0, totalExpenses: 0, netProfit: 0,
-      accountsReceivable: 0, accountsPayable: 0, cashFlow: [], byAccountType: {},
+      totalRevenue: 0,
+      totalExpenses: 0,
+      netProfit: 0,
+      accountsReceivable: 0,
+      accountsPayable: 0,
+      cashFlow: [],
+      byAccountType: {},
     }
   }
 }
