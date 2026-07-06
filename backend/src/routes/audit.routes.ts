@@ -1,5 +1,5 @@
 // ============================================
-// backend/src/routes/audit.routes.ts
+// backend/src/routesapi/audit.routes.ts
 // ============================================
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
@@ -26,8 +26,8 @@ export default async function auditRoutes(fastify: FastifyInstance) {
   // WRITE LOG
   // ═══════════════════════════════════════════════════════════
 
-  // ─── POST /audit/log ──────────────────────────────────
-  fastify.post('/audit/log', {
+  // ─── POST api/audit/log ──────────────────────────────────
+  fastify.post('api/audit/log', {
     preHandler: [authenticate],
     schema: {
       body: toJsonSchema(createAuditLogSchema),
@@ -55,8 +55,8 @@ export default async function auditRoutes(fastify: FastifyInstance) {
   // READ LOGS
   // ═══════════════════════════════════════════════════════════
 
-  // ─── GET /audit/logs ──────────────────────────────────
-  fastify.get('/audit/logs', {
+  // ─── GET api/audit/logs ──────────────────────────────────
+  fastify.get('api/audit/logs', {
     preHandler: [authenticate],
     schema: {
       querystring: toJsonSchema(auditFiltersSchema),
@@ -76,8 +76,8 @@ export default async function auditRoutes(fastify: FastifyInstance) {
     }
   })
 
-  // ─── GET /audit/entity/:type/:id ─────────────────────
-  fastify.get('/audit/entity/:type/:id', {
+  // ─── GET api/audit/entity/:type/:id ─────────────────────
+  fastify.get('api/audit/entity/:type/:id', {
     preHandler: [authenticate],
     schema: {
       params: toJsonSchema(z.object({
@@ -97,8 +97,8 @@ export default async function auditRoutes(fastify: FastifyInstance) {
     }
   })
 
-  // ─── GET /audit/user/:userId ─────────────────────────
-  fastify.get('/audit/user/:userId', {
+  // ─── GET api/audit/user/:userId ─────────────────────────
+  fastify.get('api/audit/user/:userId', {
     preHandler: [authenticate],
     schema: {
       params: toJsonSchema(z.object({ userId: z.string().uuid() })),
@@ -121,8 +121,8 @@ export default async function auditRoutes(fastify: FastifyInstance) {
   // STATS
   // ═══════════════════════════════════════════════════════════
 
-  // ─── GET /audit/stats ──────────────────────────────────
-  fastify.get('/audit/stats', {
+  // ─── GET api/audit/stats ──────────────────────────────────
+  fastify.get('api/audit/stats', {
     preHandler: [authenticate],
     schema: {
       querystring: toJsonSchema(z.object({
@@ -146,8 +146,8 @@ export default async function auditRoutes(fastify: FastifyInstance) {
   // EXPORT
   // ═══════════════════════════════════════════════════════════
 
-  // ─── GET /audit/export ──────────────────────────────────
-  fastify.get('/audit/export', {
+  // ─── GET api/audit/export ──────────────────────────────────
+  fastify.get('api/audit/export', {
     preHandler: [authenticate],
     schema: {
       querystring: toJsonSchema(auditFiltersSchema.omit({ page: true, limit: true })),
@@ -171,8 +171,8 @@ export default async function auditRoutes(fastify: FastifyInstance) {
   // MAINTENANCE
   // ═══════════════════════════════════════════════════════════
 
-  // ─── POST /audit/cleanup ────────────────────────────────
-  fastify.post('/audit/cleanup', {
+  // ─── POST api/audit/cleanup ────────────────────────────────
+  fastify.post('api/audit/cleanup', {
     preHandler: [authenticate],
     schema: {
       body: toJsonSchema(z.object({ daysToKeep: z.number().int().min(30).default(90) })),
