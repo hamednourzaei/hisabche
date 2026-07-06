@@ -15,7 +15,7 @@ const toJsonSchema = (schema: any) => {
 }
 
 // ═══════════════════════════════════════════════════════════
-// ✅ Production Schema — با تایپ‌های دقیق
+// ✅ Production Schemas
 // ═══════════════════════════════════════════════════════════
 
 const SalesSummarySchema = z.object({
@@ -59,14 +59,14 @@ const DateRangeSchema = z.object({
   endDate: z.string().optional(),
 })
 
-export async function analyticsRoutes(fastify: FastifyInstance) {
+export default async function analyticsRoutes(fastify: FastifyInstance) {
   const analyticsService = new AnalyticsService()
 
   // ══════════════════════════════════════════════════════
   // DASHBOARD KPIs
   // ═══════════════════════════════════════════════════════════
 
-  fastify.get('/api/analytics/dashboard', {
+  fastify.get('/analytics/dashboard', {
     preHandler: [authenticate],
     schema: {
       response: {
@@ -76,8 +76,6 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const kpis = await analyticsService.getDashboardKpis(request.userId)
-      
-      // ✅ Validate before sending
       const validated = DashboardKPIsSchema.parse(kpis)
       return reply.send(validated)
     } catch (err) {
@@ -91,10 +89,10 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
   })
 
   // ═══════════════════════════════════════════════════════════
-  // SALES ANALYTICS — Production Ready
+  // SALES ANALYTICS — Production Ready ✅
   // ═══════════════════════════════════════════════════════════
 
-  fastify.get('/api/analytics/sales', {
+  fastify.get('/analytics/sales', {
     preHandler: [authenticate],
     schema: {
       querystring: toJsonSchema(DateRangeSchema),
@@ -121,9 +119,10 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
 
       const summary = await analyticsService.getSalesSummary(request.userId, dateRange)
 
-      // ✅ Validate before sending
+      // ✅ Validate with Zod before sending
       const validated = SalesSummarySchema.parse(summary)
       return reply.send(validated)
+
     } catch (err) {
       if (err instanceof z.ZodError) {
         fastify.log.error({ err: err.errors }, 'Sales validation failed')
@@ -138,7 +137,7 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
   // INVENTORY ANALYTICS
   // ═══════════════════════════════════════════════════════════
 
-  fastify.get('/api/analytics/inventory', {
+  fastify.get('/analytics/inventory', {
     preHandler: [authenticate],
     schema: {
       response: { 200: toJsonSchema(z.any()) },
@@ -157,7 +156,7 @@ export async function analyticsRoutes(fastify: FastifyInstance) {
   // FINANCIAL ANALYTICS
   // ═══════════════════════════════════════════════════════════
 
-  fastify.get('/api/analytics/financial', {
+  fastify.get('/analytics/financial', {
     preHandler: [authenticate],
     schema: {
       querystring: toJsonSchema(

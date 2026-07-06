@@ -32,14 +32,14 @@ import { workspaceRoutes } from './routes/workspace.routes'
 // Routes — فاز ۱۸: Permissions
 import { permissionRoutes } from './routes/permission.routes'
 
-// Routes — فاز ۱۹: Audit - ✅ اصلاح import
+// Routes — فاز ۱۹: Audit
 import auditRoutes from './routes/audit.routes'
 
 // Routes — فاز ۲۱: Event System
 import { eventRoutes } from './routes/event.routes'
 
 // Routes — فاز ۲۲: Analytics
-import { analyticsRoutes } from './routes/analytics.routes'
+import analyticsRoutes from './routes/analytics.routes'
 
 // Routes — فاز ۲۳: AI Assistant
 import { aiRoutes } from './routes/ai.routes'
@@ -165,13 +165,9 @@ async function start(): Promise<void> {
     await server.register(permissionRoutes)
 
     // ----------------------------
-    // Routes — فاز ۱۹: Audit (✅ اصلاح شده)
+    // Routes — فاز ۱۹: Audit
     // ----------------------------
-    if (auditRoutes) {
-      await server.register(auditRoutes)
-    } else {
-      console.warn('⚠️ auditRoutes is undefined, skipping...')
-    }
+    await server.register(auditRoutes)
 
     // ----------------------------
     // Routes — فاز ۲۱: Event System
@@ -179,22 +175,14 @@ async function start(): Promise<void> {
     await server.register(eventRoutes)
 
     // ----------------------------
-    // Routes — فاز ۲۲: Analytics (✅ با prefix)
+    // Routes — فاز ۲۲: Analytics
     // ----------------------------
-    if (analyticsRoutes) {
-      await server.register(analyticsRoutes, { prefix: '/api' })
-    } else {
-      console.warn('⚠️ analyticsRoutes is undefined, skipping...')
-    }
+    await server.register(analyticsRoutes)
 
     // ----------------------------
     // Routes — فاز ۲۳: AI Assistant
     // ----------------------------
-    if (aiRoutes) {
-      await server.register(aiRoutes)
-    } else {
-      console.warn('⚠️ aiRoutes is undefined, skipping...')
-    }
+    await server.register(aiRoutes)
 
     // ----------------------------
     // 404
