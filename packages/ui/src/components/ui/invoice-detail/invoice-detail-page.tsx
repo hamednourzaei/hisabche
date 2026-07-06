@@ -14,12 +14,12 @@ import {
   User,
 } from "lucide-react";
 import InvoicePDFDownload from "./InvoicePDFDownload";
+import { ApprovalTimeline } from "../workflow/approval-timeline";
+import { ApprovalActions } from "../workflow/approval-actions";
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   InvoiceDetailPage v3 — Hisabche Design Language
-   Zero hardcoded colors — all tokens from design system
-   No external component dependencies
-   ═══════════════════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════
+   TYPES
+   ═══════════════════════════════════════════════════════════════ */
 
 interface InvoiceItem {
   id?: string;
@@ -30,6 +30,22 @@ interface InvoiceItem {
   unit_price?: number;
   totalPrice?: number;
   total_price?: number;
+}
+
+interface TimelineAction {
+  id: string;
+  action: "approved" | "rejected" | "forwarded" | "cancelled";
+  step_order: number;
+  actor_user_id: string;
+  actor_role?: string | null;
+  comment?: string | null;
+  created_at: string;
+}
+
+interface TimelineStep {
+  step_order: number;
+  approver_role: string;
+  is_final: boolean;
 }
 
 export interface InvoiceDetailDisplay {
@@ -61,6 +77,22 @@ export interface InvoiceDetailPageProps {
   statusVariant: (
     status: string,
   ) => "success" | "warning" | "destructive" | "secondary";
+  // ═══════════════════════════════════════════════════════
+  // ✅ v1.1 — Workflow props
+  // ═══════════════════════════════════════════════════════
+  workflowInstance?: {
+    id: string;
+    status: string;
+    current_step: number;
+    total_steps: number;
+  } | null;
+  workflowActions?: TimelineAction[];
+  workflowSteps?: TimelineStep[];
+  workflowPending?: boolean;
+  onWorkflowAction?: (
+    action: "approved" | "rejected" | "cancelled",
+    comment?: string,
+  ) => Promise<void>;
 }
 
 const statusBadgeStyles: Record<string, string> = {
@@ -90,6 +122,11 @@ export function InvoiceDetailPage({
   onTelegram,
   onEmail,
   statusVariant,
+  workflowInstance,
+  workflowActions = [],
+  workflowSteps = [],
+  workflowPending = false,
+  onWorkflowAction,
 }: InvoiceDetailPageProps) {
   // ── Loading ──
   if (isLoading) {
@@ -143,7 +180,9 @@ export function InvoiceDetailPage({
 
   return (
     <div className="space-y-6">
-      {/* ── Header + Actions ── */}
+      {/* ═══════════════════════════════════════════════════════
+         HEADER + ACTIONS
+         ═══════════════════════════════════════════════════════ */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between no-print">
         <div className="flex items-center gap-3">
           <button
@@ -192,7 +231,38 @@ export function InvoiceDetailPage({
         </div>
       </div>
 
-      {/* ── Invoice Paper ── */}
+      {/* ═══════════════════════════════════════════════════════
+         ✅ v1.1 — WORKFLOW APPROVAL SECTION
+         ═══════════════════════════════════════════════════════ */}
+      {workflowInstance && workflowSteps.length > 0 && (
+        <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-5 sm:p-6 space-y-4">
+          <h3 className="text-sm font-bold text-[hsl(var(--fg-primary))]">
+            {t("workflow.title", "فرآیند تأیید")}
+          </h3>
+
+          <ApprovalTimeline
+            actions={workflowActions}
+            steps={workflowSteps}
+            currentStep={workflowInstance.current_step}
+            status={workflowInstance.status}
+            t={t}
+          />
+
+          {onWorkflowAction && (
+            <ApprovalActions
+              instanceId={workflowInstance.id}
+              isPending={workflowPending}
+              onAction={onWorkflowAction}
+              t={t}
+              disabled={workflowInstance.status !== "in_progress"}
+            />
+          )}
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════
+         INVOICE PAPER
+         ═══════════════════════════════════════════════════════ */}
       <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
         <div className="p-6 sm:p-8">
           {/* Brand + Invoice Info */}
