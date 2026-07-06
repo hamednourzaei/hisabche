@@ -43,7 +43,7 @@
 
   /* ═══════════════════════════════════════════════════════════════════════════
      BRAND COLORS (Hisabche — logo-derived Emerald/Teal system)
-     ═══════════════════════════════════════════════════════════════════════ */
+     ═══════════════════════════════════════════════════════════════════════════ */
   --color-primary: 165 75% 51%;             /* #24E0B0 — Emerald (logo primary) */
   --color-primary-fg: 210 40% 8%;           /* #0B141A — text on primary */
   --color-primary-hover: 164 74% 47%;       /* #1FD3A3 — Turquoise */
@@ -520,14 +520,108 @@ p, .body { font-size: var(--text-body); line-height: var(--leading-relaxed); fon
   body { background: white !important; color: black !important; }
   .no-print, .top-nav, .fab-button { display: none !important; }
 }
-@keyframes fade-in-up {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   SKELETON SHIMMER — Hisabche Design System
+   GPU-accelerated, reduced-motion aware, dark/light adaptive
+   ═══════════════════════════════════════════════════════════════════════════ */
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+  background: hsl(var(--surface-muted));
+  will-change: transform;
 }
 
+.skeleton-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsl(var(--fg-primary) / 0.04) 20%,
+    hsl(var(--fg-primary) / 0.08) 40%,
+    hsl(var(--fg-primary) / 0.08) 60%,
+    hsl(var(--fg-primary) / 0.04) 80%,
+    transparent 100%
+  );
+  animation: skeleton-shimmer 1.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* Dark theme — brighter shimmer for contrast */
+.dark .skeleton-shimmer::after,
+:root .skeleton-shimmer::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsl(var(--fg-primary) / 0.05) 20%,
+    hsl(var(--fg-primary) / 0.10) 40%,
+    hsl(var(--fg-primary) / 0.10) 60%,
+    hsl(var(--fg-primary) / 0.05) 80%,
+    transparent 100%
+  );
+}
+
+/* Light theme — subtler shimmer */
+.light .skeleton-shimmer::after,
+[data-theme="light"] .skeleton-shimmer::after {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    hsl(var(--fg-primary) / 0.03) 20%,
+    hsl(var(--fg-primary) / 0.07) 40%,
+    hsl(var(--fg-primary) / 0.07) 60%,
+    hsl(var(--fg-primary) / 0.03) 80%,
+    transparent 100%
+  );
+}
+
+@keyframes skeleton-shimmer {
+  0% { transform: translateX(-100%); }
+  60% { transform: translateX(100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FADE-IN-UP UTILITY
+   ═══════════════════════════════════════════════════════════════════════════ */
+.animate-fade-in-up {
+  animation: fade-in-up 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   AURORA ANIMATION
+   ═══════════════════════════════════════════════════════════════════════════ */
 @keyframes aurora {
   0%, 100% { opacity: 0.6; transform: translate(-50%, 0) scale(1); }
   25% { opacity: 0.8; transform: translate(-48%, -5%) scale(1.05); }
   50% { opacity: 0.5; transform: translate(-52%, -10%) scale(0.95); }
   75% { opacity: 0.7; transform: translate(-49%, -3%) scale(1.02); }
+}
+
+/* ───────────────────────────────────────────────────────────────────────────
+   REDUCED MOTION — Respect user preference
+   ─────────────────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer::after {
+    animation: none;
+    display: none;
+  }
+  .animate-fade-in-up {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
 }
