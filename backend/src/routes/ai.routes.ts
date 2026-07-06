@@ -18,7 +18,7 @@ const toJsonSchema = (schema: any) => {
 export async function aiRoutes(fastify: FastifyInstance) {
   const aiService = new AIService()
 
-  // ─── POST /api/ai/query ───────────────────────────────────
+  // ─── POST /api/ai/query ───────────────────────────
   fastify.post('/api/ai/query', {
     preHandler: [authenticate],
     schema: {
