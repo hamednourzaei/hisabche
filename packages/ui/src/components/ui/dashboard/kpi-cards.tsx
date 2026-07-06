@@ -101,7 +101,21 @@ function KPICard({
 }
 
 export function KPICards({ data, isLoading, onNavigate }: KPICardsProps) {
-  const fmt = (v: number) => v.toLocaleString("fa-AF");
+  const fmt = (v: number) => {
+    if (v === undefined || v === null || isNaN(v)) return "۰";
+    return v.toLocaleString("fa-AF");
+  };
+
+  // ✅ Log for debugging
+  console.log('🔍 KPICards - data:', data);
+  console.log('🔍 KPICards - monthlyRevenue:', data.monthlyRevenue);
+  console.log('🔍 KPICards - monthlyGrowth:', data.monthlyGrowth);
+
+  // ✅ Ensure monthlyGrowth is a number
+  const growth = typeof data.monthlyGrowth === 'number' ? data.monthlyGrowth : 0;
+  const growthDisplay = growth >= 0 ? `+${growth.toFixed(1)}%` : `${growth.toFixed(1)}%`;
+  const growthIcon = growth >= 0 ? TrendingUp : TrendingDown;
+  const growthTone = growth >= 0 ? "success" : "danger";
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -117,9 +131,9 @@ export function KPICards({ data, isLoading, onNavigate }: KPICardsProps) {
       <KPICard
         label="درآمد ماهانه"
         value={`${fmt(data.monthlyRevenue)} AFN`}
-        sub={data.monthlyGrowth >= 0 ? `+${data.monthlyGrowth}٪` : `${data.monthlyGrowth}٪`}
-        icon={data.monthlyGrowth >= 0 ? TrendingUp : TrendingDown}
-        tone="success"
+        sub={growthDisplay}
+        icon={growthIcon}
+        tone={growthTone}
         isLoading={isLoading}
       />
       <KPICard
