@@ -16,7 +16,7 @@ export class AnalyticsService {
     console.log('🔍 getDashboardKpis - userId:', userId)
     console.log('🔍 getDashboardKpis - dates:', { today, firstOfMonth, lastMonthFirst, lastMonthLast })
 
-    // Today sales
+    // Today sales (paid only)
     const { data: todaySales } = await supabase
       .from('invoices')
       .select('total')
@@ -26,7 +26,7 @@ export class AnalyticsService {
 
     console.log('🔍 getDashboardKpis - todaySales count:', todaySales?.length || 0)
 
-    // Today invoices
+    // Today invoices (all)
     const { count: todayInvoices } = await supabase
       .from('invoices')
       .select('*', { count: 'exact', head: true })
@@ -35,24 +35,22 @@ export class AnalyticsService {
 
     console.log('🔍 getDashboardKpis - todayInvoices:', todayInvoices)
 
-    // Monthly revenue
+    // ✅ Monthly revenue — ALL invoices (not just paid)
     const { data: monthlySales } = await supabase
       .from('invoices')
       .select('total')
       .eq('user_id', userId)
       .gte('date', firstOfMonth)
-      .eq('status', 'paid')
 
     console.log('🔍 getDashboardKpis - monthlySales count:', monthlySales?.length || 0)
 
-    // Last month revenue
+    // ✅ Last month revenue — ALL invoices (not just paid)
     const { data: lastMonthSales } = await supabase
       .from('invoices')
       .select('total')
       .eq('user_id', userId)
       .gte('date', lastMonthFirst)
       .lte('date', lastMonthLast)
-      .eq('status', 'paid')
 
     console.log('🔍 getDashboardKpis - lastMonthSales count:', lastMonthSales?.length || 0)
 
@@ -122,13 +120,11 @@ export class AnalyticsService {
 
     const { startDate, endDate } = dateRange
 
-    // ✅ 1. چک کن userId خالی نباشه
     if (!userId) {
       console.error('❌ userId is empty or undefined!')
       return this.emptySalesSummary()
     }
 
-    // ✅ 2. چک کن dateRange درست باشه
     if (!startDate || !endDate) {
       console.error('❌ startDate or endDate is empty!')
       return this.emptySalesSummary()
@@ -159,7 +155,6 @@ export class AnalyticsService {
 
     if (!invoices || invoices.length === 0) {
       console.log('⚠️⚠️⚠️ NO invoices found for user:', userId)
-      console.log('⚠️ Check if user has invoices in Supabase')
       return this.emptySalesSummary()
     }
 
@@ -167,7 +162,6 @@ export class AnalyticsService {
     console.log('📋 First invoice:', JSON.stringify(invoices[0], null, 2))
     console.log('📋 All invoice IDs:', invoices.map((i: any) => i.id).join(', '))
 
-    // ... ادامه کد
     const totalRevenue = invoices.reduce((sum: number, i: any) => sum + Number(i.total), 0)
     const totalPaid = invoices.filter((i: any) => i.status === 'paid').reduce((sum: number, i: any) => sum + Number(i.total), 0)
     const totalUnpaid = totalRevenue - totalPaid
@@ -237,7 +231,7 @@ export class AnalyticsService {
       }
     }
 
-    // ✅ Build chart data for frontend (daily sales)
+    // ✅ Build chart data
     const chartData = invoices.reduce((acc: any[], inv: any) => {
       const date = (inv.date as string).split('T')[0]
       const existing = acc.find(d => d.label === date)
