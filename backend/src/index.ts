@@ -179,10 +179,10 @@ async function start(): Promise<void> {
     await server.register(eventRoutes)
 
     // ----------------------------
-    // Routes — فاز ۲۲: Analytics
+    // Routes — فاز ۲۲: Analytics (✅ با prefix)
     // ----------------------------
     if (analyticsRoutes) {
-      await server.register(analyticsRoutes)
+      await server.register(analyticsRoutes, { prefix: '/api' })
     } else {
       console.warn('⚠️ analyticsRoutes is undefined, skipping...')
     }
