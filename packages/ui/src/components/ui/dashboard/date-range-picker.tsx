@@ -232,66 +232,68 @@ export function DateRangePicker({
           {/* Separator */}
           <div className="h-px bg-[hsl(var(--border-default))]" />
 
-          {/* Custom Range - Responsive */}
-          <div className="p-3 space-y-2">
-            <p className="text-[10px] sm:text-[11px] font-semibold text-[hsl(var(--fg-tertiary))] tracking-wide">
-              {t("dateRange.custom", "محدوده سفارشی")}
-            </p>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-              <div className="flex-1 flex items-center gap-1.5">
-                <span className="text-[10px] text-[hsl(var(--fg-tertiary))] shrink-0">
-                  {t("dateRange.from", "از")}
-                </span>
-                <input
-                  type="date"
-                  value={customFrom}
-                  onChange={(e) => setCustomFrom(e.target.value)}
-                  className={cn(
-                    "flex-1 min-w-0 h-8 px-2 rounded-md border text-xs",
-                    "bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))]",
-                    "border-[hsl(var(--border-default))]",
-                    "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary)/0.18)]",
-                    "placeholder:text-[hsl(var(--fg-tertiary))]",
-                  )}
-                  dir="ltr"
-                  placeholder="۱۴۰۴/۰۱/۰۱"
-                />
-              </div>
-              <div className="flex-1 flex items-center gap-1.5">
-                <span className="text-[10px] text-[hsl(var(--fg-tertiary))] shrink-0">
-                  {t("dateRange.to", "تا")}
-                </span>
-                <input
-                  type="date"
-                  value={customTo}
-                  onChange={(e) => setCustomTo(e.target.value)}
-                  className={cn(
-                    "flex-1 min-w-0 h-8 px-2 rounded-md border text-xs",
-                    "bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))]",
-                    "border-[hsl(var(--border-default))]",
-                    "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary)/0.18)]",
-                    "placeholder:text-[hsl(var(--fg-tertiary))]",
-                  )}
-                  dir="ltr"
-                  placeholder="۱۴۰۴/۰۱/۰۱"
-                />
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={handleApplyCustom}
-              disabled={!customFrom || !customTo}
-              className={cn(
-                "w-full h-8 rounded-lg text-xs font-medium",
-                "transition-all duration-150",
-                customFrom && customTo
-                  ? "bg-[hsl(var(--color-primary))] text-white hover:opacity-90 active:opacity-80"
-                  : "bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-tertiary))] cursor-not-allowed",
-              )}
-            >
-              {t("dateRange.apply", "اعمال")}
-            </button>
-          </div>
+{/* Custom Range */}
+<div className="p-3 space-y-2">
+  <p className="text-[11px] font-semibold text-[hsl(var(--fg-tertiary))] tracking-wide">
+    {t("dateRange.custom", "محدوده سفارشی")}
+  </p>
+
+  {/* ✅ Grid با کنترل دقیق فضا */}
+  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-2">
+    <input
+      type="date"
+      value={customFrom}
+      onChange={(e) => setCustomFrom(e.target.value)}
+      className={cn(
+        "w-full min-w-0 h-8 px-2 rounded-md border text-[11px]",
+        "bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))]",
+        "border-[hsl(var(--border-default))]",
+        "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary)/0.18)]",
+        "placeholder:text-[hsl(var(--fg-tertiary))]",
+        "[&::-webkit-calendar-picker-indicator]:opacity-60",
+        "[&::-webkit-calendar-picker-indicator]:cursor-pointer",
+        "[&::-webkit-calendar-picker-indicator]:w-3 [&::-webkit-calendar-picker-indicator]:h-3"
+      )}
+      dir="ltr"
+      placeholder="۱۴۰۴/۰۱/۰۱"
+    />
+
+    <span className="text-xs text-[hsl(var(--fg-tertiary))] shrink-0">—</span>
+
+    <input
+      type="date"
+      value={customTo}
+      onChange={(e) => setCustomTo(e.target.value)}
+      className={cn(
+        "w-full min-w-0 h-8 px-2 rounded-md border text-[11px]",
+        "bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))]",
+        "border-[hsl(var(--border-default))]",
+        "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary)/0.18)]",
+        "placeholder:text-[hsl(var(--fg-tertiary))]",
+        "[&::-webkit-calendar-picker-indicator]:opacity-60",
+        "[&::-webkit-calendar-picker-indicator]:cursor-pointer",
+        "[&::-webkit-calendar-picker-indicator]:w-3 [&::-webkit-calendar-picker-indicator]:h-3"
+      )}
+      dir="ltr"
+      placeholder="۱۴۰۴/۰۱/۰۱"
+    />
+  </div>
+
+  <button
+    type="button"
+    onClick={handleApplyCustom}
+    disabled={!customFrom || !customTo}
+    className={cn(
+      "w-full h-8 rounded-lg text-xs font-medium",
+      "transition-all duration-150",
+      customFrom && customTo
+        ? "bg-[hsl(var(--color-primary))] text-white hover:opacity-90 active:opacity-80"
+        : "bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-tertiary))] cursor-not-allowed",
+    )}
+  >
+    {t("dateRange.apply", "اعمال")}
+  </button>
+</div>
         </div>
       )}
     </div>
