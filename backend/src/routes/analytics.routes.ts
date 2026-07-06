@@ -1,5 +1,5 @@
 // ============================================
-// backend/src/routesapi/analytics.routes.ts
+// backend/src/routes/api/analytics.routes.ts
 // ============================================
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
@@ -66,7 +66,7 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
   // DASHBOARD KPIs
   // ═══════════════════════════════════════════════════════════
 
-  fastify.get('api/analytics/dashboard', {
+  fastify.get('/api/analytics/dashboard', {
     preHandler: [authenticate],
     schema: {
       response: {
@@ -92,7 +92,7 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
   // SALES ANALYTICS — Production Ready ✅
   // ═══════════════════════════════════════════════════════════
 
-  fastify.get('api/analytics/sales', {
+  fastify.get('/api/analytics/sales', {
     preHandler: [authenticate],
     schema: {
       querystring: toJsonSchema(DateRangeSchema),
@@ -137,7 +137,7 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
   // INVENTORY ANALYTICS
   // ═══════════════════════════════════════════════════════════
 
-  fastify.get('api/analytics/inventory', {
+  fastify.get('/api/analytics/inventory', {
     preHandler: [authenticate],
     schema: {
       response: { 200: toJsonSchema(z.any()) },
@@ -156,7 +156,7 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
   // FINANCIAL ANALYTICS
   // ═══════════════════════════════════════════════════════════
 
-  fastify.get('api/analytics/financial', {
+  fastify.get('/api/analytics/financial', {
     preHandler: [authenticate],
     schema: {
       querystring: toJsonSchema(
