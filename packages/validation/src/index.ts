@@ -1,5 +1,5 @@
 // ============================================
-// Hisabche Validation — Barrel Exports
+// Hisabche Validation — Barrel Exports v1.1
 // ============================================
 
 // ---------- Common ----------
@@ -146,9 +146,7 @@ export {
   type UpdateOpportunity,
 } from './schemas/crm.schema'
 
-// ============================================
-// ✅ NEW — Purchasing (فاز ۱۳)
-// ============================================
+// ---------- Purchasing (فاز ۱۳) ----------
 export {
   purchaseOrderSchema,
   createPurchaseOrderSchema,
@@ -158,9 +156,7 @@ export {
   type UpdatePurchaseOrder,
 } from './schemas/purchasing.schema'
 
-// ============================================
-// ✅ NEW — Manufacturing (فاز ۱۴)
-// ============================================
+// ---------- Manufacturing (فاز ۱۴) ----------
 export {
   bomSchema,
   createBomSchema,
@@ -179,9 +175,8 @@ export {
   type ProductionPlan,
   type CreateProductionPlan,
 } from './schemas/manufacturing.schema'
-// ============================================
-// ✅ NEW — HR (فاز ۱۵)
-// ============================================
+
+// ---------- HR (فاز ۱۵) ----------
 export {
   departmentSchema,
   createDepartmentSchema,
@@ -214,11 +209,8 @@ export {
   type CreateLeave,
   type UpdateLeave,
 } from './schemas/hr.schema'
-// ============================================
 
-// ============================================
-// ✅ NEW — Projects (فاز ۱۶)
-// ============================================
+// ---------- Projects (فاز ۱۶) ----------
 export {
   projectSchema,
   createProjectSchema,
@@ -243,9 +235,8 @@ export {
   type CreateTimeEntry,
   type UpdateTimeEntry,
 } from './schemas/project.schema'
-// ============================================
-// ✅ NEW — Workspace (فاز ۱۷)
-// ============================================
+
+// ---------- Workspace (فاز ۱۷) ----------
 export {
   workspaceSchema,
   createWorkspaceSchema,
@@ -266,9 +257,8 @@ export {
   type CreateInvite,
   type AcceptInvite,
 } from './schemas/workspace.schema'
-// ============================================
-// ✅ NEW — Permissions (فاز ۱۸)
-// ============================================
+
+// ---------- Permissions (فاز ۱۸) ----------
 export {
   permissionSchema,
   createPermissionSchema,
@@ -289,9 +279,8 @@ export {
   type RemoveRole,
   type CheckPermission,
 } from './schemas/permission.schema'
-// ============================================
-// ✅ NEW — Audit (فاز ۱۹)
-// ============================================
+
+// ---------- Audit (فاز ۱۹) ----------
 export {
   auditLogSchema,
   createAuditLogSchema,
@@ -302,9 +291,8 @@ export {
   type AuditFilters,
   type AuditStats,
 } from './schemas/audit.schema'
-// ============================================
-// ✅ NEW — Sync (فاز ۲۰)
-// ============================================
+
+// ---------- Sync (فاز ۲۰) ----------
 export {
   syncQueueItemSchema,
   createSyncQueueItemSchema,
@@ -317,6 +305,7 @@ export {
   type SyncConfig,
   type NetworkStatus,
 } from './schemas/sync.schema'
+
 // ---------- Event (فاز ۲۱) ----------
 export {
   eventTypeSchema,
@@ -328,6 +317,7 @@ export {
   type CreateEventLog,
   type EventTypeCode,
 } from './schemas/event.schema'
+
 // ---------- Analytics (فاز ۲۲) ----------
 export {
   dateRangeSchema,
@@ -341,6 +331,7 @@ export {
   type FinancialSummary,
   type DashboardKpis,
 } from './schemas/analytics.schema'
+
 // ---------- AI (فاز ۲۳) ----------
 export {
   aiQuerySchema,
@@ -352,3 +343,36 @@ export {
   type AIInsight,
   type AIChatMessage,
 } from './schemas/ai.schema'
+
+// ═══════════════════════════════════════════════════════════════════
+// ✅ NEW — Workflow & Approval (v1.1 — ماژول ۱)
+// ═══════════════════════════════════════════════════════════════════
+export {
+  workflowStatusEnum,
+  workflowActionEnum,
+  entityTypeEnum,
+  approverRoleEnum,
+  workflowStepSchema,
+  createWorkflowSchema,
+  updateWorkflowSchema,
+  workflowSchema,
+  createWorkflowInstanceSchema,
+  workflowInstanceSchema,
+  createWorkflowActionSchema,
+  workflowActionSchema,
+  workflowFiltersSchema,
+  instanceFiltersSchema,
+  type WorkflowStatus,
+  type WorkflowAction,
+  type EntityType,
+  type ApproverRole,
+  type CreateWorkflowInput,
+  type UpdateWorkflowInput,
+  type Workflow,
+  type CreateWorkflowInstanceInput,
+  type WorkflowInstance,
+  type CreateWorkflowActionInput,
+  type WorkflowActionRecord,
+  type WorkflowFilters,
+  type InstanceFilters,
+} from './schemas/workflow.schema'

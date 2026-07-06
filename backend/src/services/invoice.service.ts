@@ -1,17 +1,32 @@
 // ============================================
 // backend/src/services/invoice.service.ts
+// Hisabche v1.1 — With Workflow auto-trigger
 // ============================================
 
-import { supabase } from '../db'
+import { supabase } from "../db";
+import { WorkflowService } from "./workflow.service";
 import {
   CreateInvoice,
   UpdateInvoice,
   InvoiceFilters,
   InvoiceItem,
-} from '@hisabche/validation'
-import { DatabaseError, NotFoundError } from '../errors/database.error'
+} from "@hisabche/validation";
+import { DatabaseError, NotFoundError } from "../errors/database.error";
+
+/* ═══════════════════════════════════════════════════════════════
+   CONSTANTS
+   ═══════════════════════════════════════════════════════════════ */
+
+/** Minimum total (AFN) to auto-trigger approval workflow */
+const WORKFLOW_THRESHOLD = 50000;
 
 export class InvoiceService {
+  private workflowService: WorkflowService;
+
+  constructor() {
+    this.workflowService = new WorkflowService();
+  }
+
   // ─── List ────────────────────────────────────────────────
   async list(userId: string, filters: InvoiceFilters) {
     const {
@@ -29,65 +44,64 @@ export class InvoiceService {
       limit,
       sortBy,
       sortDirection,
-    } = filters
-    const from = (page - 1) * limit
-    const to = from + limit - 1
+    } = filters;
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
 
     let query = supabase
-      .from('invoices')
-      .select('*, invoice_items(*)', { count: 'exact' })
-      .eq('user_id', userId)
-      .order(sortBy || 'created_at', { ascending: sortDirection === 'asc' })
-      .range(from, to)
+      .from("invoices")
+      .select("*, invoice_items(*)", { count: "exact" })
+      .eq("user_id", userId)
+      .order(sortBy || "created_at", { ascending: sortDirection === "asc" })
+      .range(from, to);
 
     if (search) {
-      query = query.ilike('invoice_number', `%${search}%`)
+      query = query.ilike("invoice_number", `%${search}%`);
     }
 
     if (type) {
-      query = query.eq('type', type)
+      query = query.eq("type", type);
     }
 
     if (status) {
-      query = query.eq('status', status)
+      query = query.eq("status", status);
     }
 
     if (customerId) {
-      query = query.eq('customer_id', customerId)
+      query = query.eq("customer_id", customerId);
     }
 
     if (supplierId) {
-      query = query.eq('supplier_id', supplierId)
+      query = query.eq("supplier_id", supplierId);
     }
 
     if (currency) {
-      query = query.eq('currency', currency)
+      query = query.eq("currency", currency);
     }
 
     if (dateFrom) {
-      query = query.gte('date', dateFrom)
+      query = query.gte("date", dateFrom);
     }
 
     if (dateTo) {
-      query = query.lte('date', dateTo)
+      query = query.lte("date", dateTo);
     }
 
     if (minTotal !== undefined) {
-      query = query.gte('total', minTotal)
+      query = query.gte("total", minTotal);
     }
 
     if (maxTotal !== undefined) {
-      query = query.lte('total', maxTotal)
+      query = query.lte("total", maxTotal);
     }
 
-    const { data, error, count } = await query
+    const { data, error, count } = await query;
 
     if (error) {
-      throw new DatabaseError('Failed to fetch invoices', error)
+      throw new DatabaseError("Failed to fetch invoices", error);
     }
 
-    // Get summary data
-    const summary = await this.getSummary(userId)
+    const summary = await this.getSummary(userId);
 
     return {
       invoices: data || [],
@@ -95,33 +109,33 @@ export class InvoiceService {
       page,
       limit,
       summary,
-    }
+    };
   }
 
   // ─── Get By ID ──────────────────────────────────────────
   async getById(id: string, userId: string) {
     const { data: invoice, error } = await supabase
-      .from('invoices')
-      .select('*, invoice_items(*)')
-      .eq('id', id)
-      .eq('user_id', userId)
-      .single()
+      .from("invoices")
+      .select("*, invoice_items(*)")
+      .eq("id", id)
+      .eq("user_id", userId)
+      .single();
 
     if (error || !invoice) {
-      throw new NotFoundError('Invoice')
+      throw new NotFoundError("Invoice");
     }
 
-    return invoice
+    return invoice;
   }
 
   // ─── Create ─────────────────────────────────────────────
   async create(userId: string, data: CreateInvoice) {
     // 1. Generate invoice number
-    const invoiceNumber = await this.generateInvoiceNumber(userId)
+    const invoiceNumber = await this.generateInvoiceNumber(userId);
 
     // 2. Insert invoice
     const { data: invoice, error: invoiceError } = await supabase
-      .from('invoices')
+      .from("invoices")
       .insert({
         invoice_number: invoiceNumber,
         type: data.type,
@@ -131,23 +145,23 @@ export class InvoiceService {
         supplier_id: data.supplierId || null,
         subtotal: data.subtotal || 0,
         discount_total: data.discountTotal || 0,
-        discount_type: data.discountType || 'fixed',
+        discount_type: data.discountType || "fixed",
         tax_rate: data.taxRate || 0,
         tax_total: data.taxTotal || 0,
         total: data.total || 0,
         paid_amount: data.paidAmount || 0,
-        payment_method: data.paymentMethod || 'cash',
-        currency: data.currency || 'AFN',
-        status: data.paidAmount >= data.total ? 'completed' : 'pending',
-        notes: data.notes || '',
-        reference: data.reference || '',
+        payment_method: data.paymentMethod || "cash",
+        currency: data.currency || "AFN",
+        status: data.paidAmount >= data.total ? "completed" : "pending",
+        notes: data.notes || "",
+        reference: data.reference || "",
         user_id: userId,
       })
       .select()
-      .single()
+      .single();
 
     if (invoiceError || !invoice) {
-      throw new DatabaseError('Failed to create invoice', invoiceError)
+      throw new DatabaseError("Failed to create invoice", invoiceError);
     }
 
     // 3. Insert items
@@ -160,211 +174,262 @@ export class InvoiceService {
         unit_price: item.unitPrice,
         discount: item.discount || 0,
         total_price: item.totalPrice,
-        notes: item.notes || '',
+        notes: item.notes || "",
         user_id: userId,
-      }))
+      }));
 
       const { error: itemsError } = await supabase
-        .from('invoice_items')
-        .insert(items)
+        .from("invoice_items")
+        .insert(items);
 
       if (itemsError) {
-        // Rollback invoice
-        await supabase.from('invoices').delete().eq('id', invoice.id)
-        throw new DatabaseError('Failed to create invoice items', itemsError)
+        await supabase.from("invoices").delete().eq("id", invoice.id);
+        throw new DatabaseError("Failed to create invoice items", itemsError);
       }
 
-      // 4. Update stock for sale invoices
-      if (data.type === 'sale') {
+      if (data.type === "sale") {
         for (const item of data.items) {
           if (item.productId) {
-            await this.updateStock(item.productId, item.quantity, userId)
+            await this.updateStock(item.productId, item.quantity, userId);
           }
         }
       }
     }
 
-    // 5. Create transaction for unpaid amount
+    // 4. Create transaction for unpaid amount
     if (data.customerId && data.paidAmount < data.total) {
-      const remaining = data.total - data.paidAmount
-      await supabase.from('transactions').insert({
+      const remaining = data.total - data.paidAmount;
+      await supabase.from("transactions").insert({
         customer_id: data.customerId,
-        type: 'sale',
+        type: "sale",
         amount: remaining,
-        currency: data.currency || 'AFN',
+        currency: data.currency || "AFN",
         description: `Invoice ${invoiceNumber}`,
         reference: invoice.id,
         date: new Date().toISOString(),
         user_id: userId,
-      })
+      });
     }
 
-    return this.getById(invoice.id, userId)
+    // ═══════════════════════════════════════════════════════
+    // ✅ NEW v1.1 — Auto-start workflow for high-value invoices
+    // ═══════════════════════════════════════════════════════
+    const invoiceTotal = Number(data.total || 0);
+
+    if (invoiceTotal >= WORKFLOW_THRESHOLD) {
+      await this.tryStartWorkflow(userId, invoice.id, invoiceTotal);
+    }
+
+    return this.getById(invoice.id, userId);
   }
 
   // ─── Update ─────────────────────────────────────────────
   async update(id: string, userId: string, data: UpdateInvoice) {
     const updates: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
-    }
+    };
 
-    if (data.status !== undefined) updates.status = data.status
-    if (data.paidAmount !== undefined) updates.paid_amount = data.paidAmount
-    if (data.total !== undefined) updates.total = data.total
-    if (data.notes !== undefined) updates.notes = data.notes
-    if (data.reference !== undefined) updates.reference = data.reference
+    if (data.status !== undefined) updates.status = data.status;
+    if (data.paidAmount !== undefined) updates.paid_amount = data.paidAmount;
+    if (data.total !== undefined) updates.total = data.total;
+    if (data.notes !== undefined) updates.notes = data.notes;
+    if (data.reference !== undefined) updates.reference = data.reference;
 
     const { data: invoice, error } = await supabase
-      .from('invoices')
+      .from("invoices")
       .update(updates)
-      .eq('id', id)
-      .eq('user_id', userId)
+      .eq("id", id)
+      .eq("user_id", userId)
       .select()
-      .single()
+      .single();
 
     if (error) {
-      throw new DatabaseError('Failed to update invoice', error)
+      throw new DatabaseError("Failed to update invoice", error);
     }
 
     if (!invoice) {
-      throw new NotFoundError('Invoice')
+      throw new NotFoundError("Invoice");
     }
 
-    return invoice
+    return invoice;
   }
 
   // ─── Delete ─────────────────────────────────────────────
   async delete(id: string, userId: string): Promise<void> {
-    // Delete items first
-    await supabase.from('invoice_items').delete().eq('invoice_id', id)
+    await supabase.from("invoice_items").delete().eq("invoice_id", id);
 
-    // Delete invoice
     const { error } = await supabase
-      .from('invoices')
+      .from("invoices")
       .delete()
-      .eq('id', id)
-      .eq('user_id', userId)
+      .eq("id", id)
+      .eq("user_id", userId);
 
     if (error) {
-      throw new DatabaseError('Failed to delete invoice', error)
+      throw new DatabaseError("Failed to delete invoice", error);
     }
   }
 
   // ─── Get Items ──────────────────────────────────────────
   async getItems(invoiceId: string, userId: string) {
     const { data, error } = await supabase
-      .from('invoice_items')
-      .select('*')
-      .eq('invoice_id', invoiceId)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: true })
+      .from("invoice_items")
+      .select("*")
+      .eq("invoice_id", invoiceId)
+      .eq("user_id", userId)
+      .order("created_at", { ascending: true });
 
     if (error) {
-      throw new DatabaseError('Failed to fetch invoice items', error)
+      throw new DatabaseError("Failed to fetch invoice items", error);
     }
 
-    return data || []
+    return data || [];
   }
 
   // ─── Get Summary ────────────────────────────────────────
   async getSummary(userId: string) {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
 
-    // Today's sales
     const { data: salesData } = await supabase
-      .from('invoices')
-      .select('total')
-      .eq('user_id', userId)
-      .gte('created_at', today.toISOString())
-      .lt('created_at', tomorrow.toISOString())
+      .from("invoices")
+      .select("total")
+      .eq("user_id", userId)
+      .gte("created_at", today.toISOString())
+      .lt("created_at", tomorrow.toISOString());
 
     const todaySales =
-      salesData?.reduce((sum, inv) => sum + (inv.total || 0), 0) || 0
+      salesData?.reduce((sum, inv) => sum + (inv.total || 0), 0) || 0;
 
-    // Total debt
     const { data: debtData } = await supabase
-      .from('invoices')
-      .select('total, paid_amount')
-      .eq('user_id', userId)
-      .neq('status', 'paid')
+      .from("invoices")
+      .select("total, paid_amount")
+      .eq("user_id", userId)
+      .neq("status", "paid");
 
     const totalDebt =
       debtData?.reduce((sum, inv) => {
-        const debt = (inv.total || 0) - (inv.paid_amount || 0)
-        return sum + Math.max(0, debt)
-      }, 0) || 0
+        const debt = (inv.total || 0) - (inv.paid_amount || 0);
+        return sum + Math.max(0, debt);
+      }, 0) || 0;
 
-    // Low stock count
     const { data: stockData } = await supabase
-      .from('products')
-      .select('quantity, min_stock_level')
-      .eq('user_id', userId)
+      .from("products")
+      .select("quantity, min_stock_level")
+      .eq("user_id", userId);
 
     const lowStockCount =
       stockData?.filter((product) => {
-        const qty = product.quantity || 0
-        const min = product.min_stock_level || 0
-        return min > 0 && qty <= min
-      }).length || 0
+        const qty = product.quantity || 0;
+        const min = product.min_stock_level || 0;
+        return min > 0 && qty <= min;
+      }).length || 0;
 
     return {
       todaySales,
       totalDebt,
       lowStockCount,
-    }
+    };
   }
 
-  // ─── Private Helpers ────────────────────────────────────
+  /* ═══════════════════════════════════════════════════════════════
+     PRIVATE HELPERS
+     ═══════════════════════════════════════════════════════════════ */
+
   private async generateInvoiceNumber(userId: string): Promise<string> {
     const { count } = await supabase
-      .from('invoices')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
+      .from("invoices")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId);
 
-    const nextNum = (count || 0) + 1
-    return `INV-${nextNum.toString().padStart(6, '0')}`
+    const nextNum = (count || 0) + 1;
+    return `INV-${nextNum.toString().padStart(6, "0")}`;
   }
 
-  // ✅ نسخه اصلاح‌شده updateStock (بدون استفاده از supabase.raw)
   private async updateStock(
     productId: string,
     quantity: number,
     userId: string
   ): Promise<void> {
-    // ابتدا محصول فعلی را دریافت کن
     const { data: product, error: fetchError } = await supabase
-      .from('products')
-      .select('quantity')
-      .eq('id', productId)
-      .single()
+      .from("products")
+      .select("quantity")
+      .eq("id", productId)
+      .single();
 
     if (fetchError || !product) {
-      throw new DatabaseError('Product not found for stock update', fetchError)
+      throw new DatabaseError("Product not found for stock update", fetchError);
     }
 
-    // مقدار جدید را محاسبه کن (نباید منفی شود)
-    const newQuantity = Math.max(0, product.quantity - quantity)
+    const newQuantity = Math.max(0, product.quantity - quantity);
 
-    // بروزرسانی کن
     const { error: updateError } = await supabase
-      .from('products')
+      .from("products")
       .update({ quantity: newQuantity })
-      .eq('id', productId)
+      .eq("id", productId);
 
     if (updateError) {
-      throw new DatabaseError('Failed to update stock', updateError)
+      throw new DatabaseError("Failed to update stock", updateError);
     }
 
-    // Record stock movement
-    await supabase.from('stock_movements').insert({
+    await supabase.from("stock_movements").insert({
       product_id: productId,
-      type: 'sale',
+      type: "sale",
       quantity: -quantity,
-      reference_type: 'invoice',
+      reference_type: "invoice",
       user_id: userId,
-    })
+    });
+  }
+
+  /**
+   * 🔥 v1.1 — Try to auto-start an approval workflow.
+   * Failure is silent — never blocks invoice creation.
+   */
+  private async tryStartWorkflow(
+    userId: string,
+    invoiceId: string,
+    total: number
+  ): Promise<void> {
+    try {
+      // Find active workflow template for invoices
+      const { data: workflows } = await supabase
+        .from("workflows")
+        .select("id")
+        .eq("entity_type", "invoice")
+        .eq("is_active", true)
+        .is("deleted_at", null)
+        .limit(1);
+
+      const workflow = workflows?.[0];
+      if (!workflow) return; // No workflow configured — skip
+
+      // Get workspace_id for this user
+      const { data: membership } = await supabase
+        .from("workspace_members")
+        .select("workspace_id")
+        .eq("user_id", userId)
+        .limit(1)
+        .single();
+
+      const workspaceId = membership?.workspace_id;
+      if (!workspaceId) return; // No workspace — skip
+
+      // Start the workflow
+      await this.workflowService.startWorkflow(workspaceId, {
+        workflow_id: workflow.id,
+        entity_type: "invoice",
+        entity_id: invoiceId,
+      });
+
+      console.log(
+        `✅ Workflow started for invoice ${invoiceId} (${total} AFN)`
+      );
+    } catch (err) {
+      // Never throw — workflow failure should not block invoice creation
+      console.error("⚠️ Failed to start workflow for invoice:", err);
+    }
   }
 }
+
+export default InvoiceService;

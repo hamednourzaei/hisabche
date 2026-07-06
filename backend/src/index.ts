@@ -1,5 +1,5 @@
 // ============================================
-// backend/src/index.ts — با همه ۲۳ فاز
+// backend/src/index.ts — با همه ۲۳ فاز + Workflow v1.1
 // ============================================
 
 import Fastify from 'fastify'
@@ -43,6 +43,11 @@ import analyticsRoutes from './routes/analytics.routes'
 
 // Routes — فاز ۲۳: AI Assistant
 import { aiRoutes } from './routes/ai.routes'
+
+// ═══════════════════════════════════════════════════════════════
+// ✅ NEW — v1.1: Workflow & Approval Engine (ماژول ۱)
+// ═══════════════════════════════════════════════════════════════
+import { workflowRoutes } from './routes/workflow.routes'
 
 if (process.env.NODE_ENV !== 'production') {
   dotenv.config()
@@ -115,7 +120,7 @@ async function start(): Promise<void> {
 
     server.get('/api', async () => ({
       name: 'Hisabche API',
-      version: '1.0.0',
+      version: '1.1.0',
       phases: 23,
       status: 'complete',
     }))
@@ -184,6 +189,11 @@ async function start(): Promise<void> {
     // ----------------------------
     await server.register(aiRoutes)
 
+    // ═══════════════════════════════════════════════════════════
+    // ✅ NEW — v1.1: Workflow & Approval Engine
+    // ═══════════════════════════════════════════════════════════
+    await server.register(workflowRoutes)
+
     // ----------------------------
     // 404
     // ----------------------------
@@ -208,7 +218,7 @@ async function start(): Promise<void> {
     })
 
     await server.listen({ port: PORT, host: HOST })
-    server.log.info(`🚀 Server running on ${HOST}:${PORT} — 23 phases loaded`)
+    server.log.info(`🚀 Server running on ${HOST}:${PORT} — 23 phases + Workflow loaded`)
   } catch (err) {
     server.log.error(err)
     process.exit(1)

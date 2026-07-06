@@ -6,7 +6,27 @@ import {
   numeric,
   boolean,
   timestamp,
+  pgEnum,
 } from 'drizzle-orm/pg-core'
+
+/* ═══════════════════════════════════════════════════════════════
+   ENUMS — Workflow v1.1
+   ═══════════════════════════════════════════════════════════════ */
+
+export const workflowStatusEnum = pgEnum('workflow_status', [
+  'pending',
+  'in_progress',
+  'approved',
+  'rejected',
+  'cancelled',
+])
+
+export const workflowActionEnum = pgEnum('workflow_action', [
+  'approved',
+  'rejected',
+  'forwarded',
+  'cancelled',
+])
 
 // ─── Products ─────────────────────────────────────────────
 export const products = pgTable('products', {
@@ -99,4 +119,60 @@ export const exchangeRates = pgTable('exchange_rates', {
   currencyCode: text('currency_code').notNull(),
   rate:         numeric('rate', { precision: 12, scale: 6 }).notNull(),
   updatedAt:    timestamp('updated_at').defaultNow(),
+})
+
+/* ═══════════════════════════════════════════════════════════════
+   WORKFLOW & APPROVAL ENGINE — v1.1 (ماژول ۱)
+   ═══════════════════════════════════════════════════════════════ */
+
+// ─── Workflows (Approval Templates) ───────────────────────
+export const workflows = pgTable('workflows', {
+  id:          uuid('id').defaultRandom().primaryKey(),
+  workspaceId: uuid('workspace_id').notNull(),
+  name:        text('name').notNull(),
+  description: text('description'),
+  entityType:  text('entity_type').notNull(), // 'invoice' | 'purchase_order' | 'expense'
+  isActive:    boolean('is_active').default(true).notNull(),
+  createdAt:   timestamp('created_at').defaultNow().notNull(),
+  updatedAt:   timestamp('updated_at').defaultNow().notNull(),
+  deletedAt:   timestamp('deleted_at'),
+})
+
+// ─── Workflow Steps (Template steps in order) ─────────────
+export const workflowSteps = pgTable('workflow_steps', {
+  id:             uuid('id').defaultRandom().primaryKey(),
+  workflowId:     uuid('workflow_id').notNull(),
+  stepOrder:      integer('step_order').notNull(),
+  approverRole:   text('approver_role').notNull(), // 'sales_manager' | 'finance_manager' | 'ceo' | 'admin'
+  approverUserId: uuid('approver_user_id'),
+  isFinal:        boolean('is_final').default(false).notNull(),
+  createdAt:      timestamp('created_at').defaultNow().notNull(),
+})
+
+// ─── Workflow Instances (Running approvals) ───────────────
+export const workflowInstances = pgTable('workflow_instances', {
+  id:           uuid('id').defaultRandom().primaryKey(),
+  workflowId:   uuid('workflow_id').notNull(),
+  workspaceId:  uuid('workspace_id').notNull(),
+  entityType:   text('entity_type').notNull(), // 'invoice'
+  entityId:     uuid('entity_id').notNull(),    // invoice.id
+  status:       workflowStatusEnum('status').default('in_progress').notNull(),
+  currentStep:  integer('current_step').default(1).notNull(),
+  totalSteps:   integer('total_steps').notNull(),
+  startedAt:    timestamp('started_at').defaultNow().notNull(),
+  completedAt:  timestamp('completed_at'),
+  createdAt:    timestamp('created_at').defaultNow().notNull(),
+  updatedAt:    timestamp('updated_at').defaultNow().notNull(),
+})
+
+// ─── Workflow Actions (Approval history) ──────────────────
+export const workflowActions = pgTable('workflow_actions', {
+  id:          uuid('id').defaultRandom().primaryKey(),
+  instanceId:  uuid('instance_id').notNull(),
+  stepOrder:   integer('step_order').notNull(),
+  action:      workflowActionEnum('action').notNull(),
+  actorUserId: uuid('actor_user_id').notNull(),
+  actorRole:   text('actor_role'),
+  comment:     text('comment'),
+  createdAt:   timestamp('created_at').defaultNow().notNull(),
 })
