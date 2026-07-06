@@ -1,4 +1,3 @@
-// packages/ui/src/components/ui/invoices/invoices-card.tsx
 "use client";
 
 import { cn } from "@/lib/utils";
@@ -6,9 +5,10 @@ import { Eye, Trash2, FileText } from "lucide-react";
 import type { Invoice } from "../../../lib/invoices/invoices-types";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   InvoiceCard v2 — Hisabche Design Language
+   InvoiceCard v2.1 — Mobile-First Hisabche Design Language
    Zero hardcoded colors — all tokens from design system
    No external component dependencies (Card, Button, Badge removed)
+   Improved touch targets for mobile (min 44px)
    ═══════════════════════════════════════════════════════════════════════════ */
 
 interface InvoiceCardProps {
@@ -45,33 +45,50 @@ export function InvoiceCard({
   return (
     <div
       onClick={() => onNavigate(inv.id)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onNavigate(inv.id);
+        }
+      }}
       className={cn(
-        "cursor-pointer rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]",
-        "transition-all duration-200 hover:shadow-lg hover:border-[hsl(var(--color-primary)/0.3)]",
+        "cursor-pointer rounded-2xl border border-[hsl(var(--border-default))]",
+        "bg-[hsl(var(--surface-elevated))]",
+        "transition-all duration-200",
+        "hover:shadow-lg hover:border-[hsl(var(--color-primary)/0.3)]",
+        "active:scale-[0.98] sm:active:scale-[0.99]",
+        "focus-visible:ring-4 focus-visible:ring-[rgba(18,200,160,0.18)] focus-visible:outline-none",
+        "motion-reduce:transition-none motion-reduce:active:scale-100",
       )}
     >
-      <div className="space-y-4 p-5">
+      <div className="space-y-3 p-4 sm:space-y-4 sm:p-5">
         {/* Header row */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-start gap-3 text-start min-w-0">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--color-primary)/0.1)]">
+        <div className="flex items-start justify-between gap-2 sm:gap-3">
+          <div className="flex items-start gap-2.5 sm:gap-3 text-start min-w-0 flex-1">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--color-primary)/0.1)] sm:h-11 sm:w-11">
               <FileText
-                className="size-5 text-[hsl(var(--color-primary))]"
+                className="size-4.5 sm:size-5 text-[hsl(var(--color-primary))]"
                 aria-hidden="true"
               />
             </div>
-            <div className="min-w-0">
-              <p className="truncate font-semibold text-[hsl(var(--fg-primary))]">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold sm:text-base text-[hsl(var(--fg-primary))]">
                 #{inv.invoiceNumber}
               </p>
-              <p className="text-xs text-[hsl(var(--fg-tertiary))]">{inv.date}</p>
+              <p className="text-[11px] sm:text-xs text-[hsl(var(--fg-tertiary))] mt-0.5">
+                {inv.date}
+              </p>
             </div>
           </div>
 
           {/* Status badge */}
           <span
             className={cn(
-              "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border shrink-0",
+              "inline-flex items-center rounded-full px-2 py-0.5 sm:px-2.5 sm:py-0.5",
+              "text-[11px] sm:text-xs font-semibold border shrink-0",
+              "leading-tight",
               badgeStyle,
             )}
           >
@@ -81,16 +98,19 @@ export function InvoiceCard({
 
         {/* Total */}
         <div>
-          <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+          <p className="text-[11px] sm:text-xs text-[hsl(var(--fg-tertiary))]">
             {t("faktoor.total", "مجموع")}
           </p>
-          <p className="text-2xl font-bold tabular-nums text-[hsl(var(--fg-primary))]">
-            {inv.total.toLocaleString()} {inv.currency}
+          <p className="text-xl font-bold sm:text-2xl tabular-nums text-[hsl(var(--fg-primary))]">
+            {inv.total.toLocaleString()}{" "}
+            <span className="text-sm sm:text-base font-medium text-[hsl(var(--fg-tertiary))]">
+              {inv.currency}
+            </span>
           </p>
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center justify-end gap-1">
+        {/* Actions — min 44px touch targets for mobile */}
+        <div className="flex items-center justify-end gap-1 sm:gap-1.5">
           <button
             type="button"
             onClick={(e) => {
@@ -99,14 +119,17 @@ export function InvoiceCard({
             }}
             aria-label={t("action.view", "مشاهده")}
             className={cn(
-              "inline-flex items-center justify-center rounded-full p-2",
+              "inline-flex items-center justify-center rounded-full",
+              "min-h-[44px] min-w-[44px] sm:min-h-[40px] sm:min-w-[40px]",
               "text-[hsl(var(--fg-secondary))]",
               "hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]",
+              "active:bg-[hsl(var(--surface-muted)/0.6)]",
               "transition-colors duration-150",
+              "focus-visible:ring-4 focus-visible:ring-[rgba(18,200,160,0.18)] focus-visible:outline-none",
               "motion-reduce:transition-none",
             )}
           >
-            <Eye className="size-4" aria-hidden="true" />
+            <Eye className="size-4 sm:size-[18px]" aria-hidden="true" />
           </button>
 
           <button
@@ -117,14 +140,17 @@ export function InvoiceCard({
             }}
             aria-label={t("action.delete", "حذف")}
             className={cn(
-              "inline-flex items-center justify-center rounded-full p-2",
+              "inline-flex items-center justify-center rounded-full",
+              "min-h-[44px] min-w-[44px] sm:min-h-[40px] sm:min-w-[40px]",
               "text-[hsl(var(--fg-secondary))]",
               "hover:bg-[hsl(var(--color-destructive)/0.1)] hover:text-[hsl(var(--color-destructive))]",
+              "active:bg-[hsl(var(--color-destructive)/0.15)]",
               "transition-colors duration-150",
+              "focus-visible:ring-4 focus-visible:ring-[rgba(18,200,160,0.18)] focus-visible:outline-none",
               "motion-reduce:transition-none",
             )}
           >
-            <Trash2 className="size-4" aria-hidden="true" />
+            <Trash2 className="size-4 sm:size-[18px]" aria-hidden="true" />
           </button>
         </div>
       </div>
