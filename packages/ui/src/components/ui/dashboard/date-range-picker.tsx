@@ -2,15 +2,25 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { useState, useRef, useEffect, useCallback } from "react";
-import { CalendarDays, ChevronDown } from "lucide-react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
+import { CalendarDays, ChevronDown, ChevronLeft, X } from "lucide-react";
+import { toJalaali } from "jalaali-js";
+
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../select";
+import { JalaliDatePicker } from "../jalali-datepicker";
 
 export interface DateRange {
   from: Date;
   to: Date;
 }
 
-export type PresetKey = "today" | "7days" | "30days" | "thisMonth" | "lastMonth" | "custom";
+export type PresetKey = 
+  | "today" | "yesterday" | "weekAgo" | "7days" | "14days" | "30days" 
+  | "60days" | "90days" | "thisMonth" | "lastMonth" | "last3Months" 
+  | "last6Months" | "thisYear" | "lastYear" | "custom";
+
+export type DateFormat = "gregorian" | "jalali";
 
 interface DateRangePickerProps {
   value: DateRange;
@@ -26,276 +36,435 @@ function getPresetRange(preset: PresetKey): DateRange {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
   switch (preset) {
-    case "today":
-      return { from: today, to: today };
-    case "7days": {
-      const from = new Date(today);
-      from.setDate(from.getDate() - 6);
-      return { from, to: today };
-    }
-    case "30days": {
-      const from = new Date(today);
-      from.setDate(from.getDate() - 29);
-      return { from, to: today };
-    }
-    case "thisMonth":
-      return { from: new Date(today.getFullYear(), today.getMonth(), 1), to: today };
-    case "lastMonth": {
-      const firstDay = new Date(today.getFullYear(), today.getMonth() - 1, 1);
-      const lastDay = new Date(today.getFullYear(), today.getMonth(), 0);
-      return { from: firstDay, to: lastDay };
-    }
-    case "custom":
-    default:
-      return { from: today, to: today };
+    case "today": return { from: today, to: today };
+    case "yesterday": { const d = new Date(today); d.setDate(d.getDate() - 1); return { from: d, to: d }; }
+    case "weekAgo": { const d = new Date(today); d.setDate(d.getDate() - 7); return { from: d, to: today }; }
+    case "7days": { const d = new Date(today); d.setDate(d.getDate() - 6); return { from: d, to: today }; }
+    case "14days": { const d = new Date(today); d.setDate(d.getDate() - 13); return { from: d, to: today }; }
+    case "30days": { const d = new Date(today); d.setDate(d.getDate() - 29); return { from: d, to: today }; }
+    case "60days": { const d = new Date(today); d.setDate(d.getDate() - 59); return { from: d, to: today }; }
+    case "90days": { const d = new Date(today); d.setDate(d.getDate() - 89); return { from: d, to: today }; }
+    case "thisMonth": return { from: new Date(today.getFullYear(), today.getMonth(), 1), to: today };
+    case "lastMonth": return { from: new Date(today.getFullYear(), today.getMonth() - 1, 1), to: new Date(today.getFullYear(), today.getMonth(), 0) };
+    case "last3Months": { const d = new Date(today); d.setMonth(d.getMonth() - 3); return { from: d, to: today }; }
+    case "last6Months": { const d = new Date(today); d.setMonth(d.getMonth() - 6); return { from: d, to: today }; }
+    case "thisYear": return { from: new Date(today.getFullYear(), 0, 1), to: today };
+    case "lastYear": return { from: new Date(today.getFullYear() - 1, 0, 1), to: new Date(today.getFullYear() - 1, 11, 31) };
+    default: return { from: today, to: today };
   }
 }
 
-const PRESETS: { key: PresetKey; labelKey: string }[] = [
-  { key: "today", labelKey: "dateRange.today" },
-  { key: "7days", labelKey: "dateRange.7days" },
-  { key: "30days", labelKey: "dateRange.30days" },
-  { key: "thisMonth", labelKey: "dateRange.thisMonth" },
-  { key: "lastMonth", labelKey: "dateRange.lastMonth" },
+/* ─── Date Formatting & Conversion ────────────────────────────────────────── */
+
+function formatDate(date: Date, format: DateFormat): string {
+  if (format === "jalali") {
+    const j = toJalaali(date);
+    return `${j.jy}/${String(j.jm).padStart(2, "0")}/${String(j.jd).padStart(2, "0")}`;
+  }
+  return new Intl.DateTimeFormat("fa-AF", { year: "numeric", month: "long", day: "numeric" }).format(date);
+}
+
+function dateToString(date: Date | undefined): string {
+  if (!date || isNaN(date.getTime())) return "";
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function stringToDate(dateStr: string): Date | undefined {
+  if (!dateStr) return undefined;
+  const d = new Date(dateStr);
+  return isNaN(d.getTime()) ? undefined : d;
+}
+
+/* ─── Presets Groups ───────────────────────────────────────────────────────── */
+
+const PRESET_GROUPS = [
+  { 
+    id: "today-yesterday",
+    label: "امروز و دیروز",
+    presets: [
+      { key: "today" as PresetKey, labelKey: "dateRange.today" },
+      { key: "yesterday" as PresetKey, labelKey: "dateRange.yesterday" }
+    ]
+  },
+  { 
+    id: "week-month",
+    label: "هفته و ماه",
+    presets: [
+      { key: "7days" as PresetKey, labelKey: "dateRange.7days" },
+      { key: "14days" as PresetKey, labelKey: "dateRange.14days" },
+      { key: "30days" as PresetKey, labelKey: "dateRange.30days" }
+    ]
+  },
+  { 
+    id: "longer",
+    label: "دوره‌های بلندتر",
+    presets: [
+      { key: "60days" as PresetKey, labelKey: "dateRange.60days" },
+      { key: "90days" as PresetKey, labelKey: "dateRange.90days" }
+    ]
+  },
+  { 
+    id: "month-year",
+    label: "ماه و سال",
+    presets: [
+      { key: "thisMonth" as PresetKey, labelKey: "dateRange.thisMonth" },
+      { key: "lastMonth" as PresetKey, labelKey: "dateRange.lastMonth" },
+      { key: "last3Months" as PresetKey, labelKey: "dateRange.last3Months" },
+      { key: "last6Months" as PresetKey, labelKey: "dateRange.last6Months" }
+    ]
+  },
+  { 
+    id: "yearly",
+    label: "سالانه",
+    presets: [
+      { key: "thisYear" as PresetKey, labelKey: "dateRange.thisYear" },
+      { key: "lastYear" as PresetKey, labelKey: "dateRange.lastYear" }
+    ]
+  },
 ];
 
-function formatDate(date: Date): string {
-  return new Intl.DateTimeFormat("fa-AF", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  }).format(date);
+/* ─── Accessibility: Focus Trap Hook ──────────────────────────────────────── */
+
+function useFocusTrap(isOpen: boolean, containerRef: React.RefObject<HTMLDivElement | null>) {
+  useEffect(() => {
+    if (!isOpen || !containerRef.current) return;
+    const container = containerRef.current;
+    const focusableElements = container.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    const firstEl = focusableElements[0];
+    const lastEl = focusableElements[focusableElements.length - 1];
+
+    setTimeout(() => firstEl?.focus(), 100);
+
+    function handleTab(e: KeyboardEvent) {
+      if (e.key !== "Tab") return;
+      if (e.shiftKey) {
+        if (document.activeElement === firstEl) { e.preventDefault(); lastEl?.focus(); }
+      } else {
+        if (document.activeElement === lastEl) { e.preventDefault(); firstEl?.focus(); }
+      }
+    }
+    container.addEventListener("keydown", handleTab);
+    return () => container.removeEventListener("keydown", handleTab);
+  }, [isOpen, containerRef]);
 }
 
 /* ─── Component ───────────────────────────────────────────────────────────── */
 
-export function DateRangePicker({
-  value,
-  onChange,
-  t,
-  disabled = false,
-}: DateRangePickerProps) {
+export function DateRangePicker({ value, onChange, t, disabled = false }: DateRangePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [activePreset, setActivePreset] = useState<PresetKey>("7days");
-  const [customFrom, setCustomFrom] = useState<string>("");
-  const [customTo, setCustomTo] = useState<string>("");
+  const [dateFormat, setDateFormat] = useState<DateFormat>("jalali");
+  const [customFrom, setCustomFrom] = useState<Date | undefined>(undefined);
+  const [customTo, setCustomTo] = useState<Date | undefined>(undefined);
+  const [focusedIndex, setFocusedIndex] = useState(-1);
+  
+  // ✅ فقط دو گروه اول باز باشن (امروز و دیروز + هفته و ماه)
+  const [openGroups, setOpenGroups] = useState<Record<number, boolean>>(() => ({
+    0: true,
+    1: true,
+    2: false,
+    3: false,
+    4: false,
+  }));
+  
   const panelRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
+  const selectRef = useRef<HTMLDivElement>(null);
+  
+  useFocusTrap(isOpen, panelRef);
 
-  const handleSelectPreset = useCallback(
-    (preset: PresetKey) => {
-      const range = getPresetRange(preset);
-      setActivePreset(preset);
-      onChange(range, preset);
-      setIsOpen(false);
-    },
-    [onChange],
-  );
+  const flatPresets = useMemo(() => PRESET_GROUPS.flatMap(g => g.presets), []);
+
+  const toggleGroup = useCallback((index: number) => {
+    setOpenGroups(prev => ({ ...prev, [index]: !prev[index] }));
+  }, []);
+
+  const handleSelectPreset = useCallback((preset: PresetKey) => {
+    const range = getPresetRange(preset);
+    setActivePreset(preset);
+    onChange(range, preset);
+    setIsOpen(false);
+  }, [onChange]);
 
   const handleApplyCustom = useCallback(() => {
     if (!customFrom || !customTo) return;
-    const from = new Date(customFrom);
-    const to = new Date(customTo);
-    if (isNaN(from.getTime()) || isNaN(to.getTime())) return;
+    
+    let finalFrom = customFrom;
+    let finalTo = customTo;
+    if (finalFrom > finalTo) {
+      [finalFrom, finalTo] = [finalTo, finalFrom];
+    }
 
     setActivePreset("custom");
-    onChange({ from, to }, "custom");
+    onChange({ from: finalFrom, to: finalTo }, "custom");
     setIsOpen(false);
   }, [customFrom, customTo, onChange]);
 
-  // بستن با کلیک بیرون
+  const handlePresetKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setFocusedIndex(prev => (prev + 1) % flatPresets.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setFocusedIndex(prev => (prev - 1 + flatPresets.length) % flatPresets.length);
+    } else if (e.key === "Enter" && focusedIndex >= 0) {
+      e.preventDefault();
+      const targetPreset = flatPresets[focusedIndex];
+      if (targetPreset) {
+        handleSelectPreset(targetPreset.key);
+      }
+    }
+  }, [flatPresets, focusedIndex, handleSelectPreset]);
+
+  // ✅ جلوگیری از بسته شدن کل مودال هنگام تعامل با Select
   useEffect(() => {
     if (!isOpen) return;
-    function handleClickOutside(e: MouseEvent) {
+    const handleClick = (e: MouseEvent) => {
       const target = e.target as Node;
-      if (
-        panelRef.current &&
-        !panelRef.current.contains(target) &&
-        btnRef.current &&
-        !btnRef.current.contains(target)
-      ) {
-        setIsOpen(false);
+      if (panelRef.current && panelRef.current.contains(target)) {
+        return;
       }
-    }
-    const timer = setTimeout(() => {
-      document.addEventListener("mousedown", handleClickOutside);
-    }, 10);
-    return () => {
-      clearTimeout(timer);
-      document.removeEventListener("mousedown", handleClickOutside);
+      if (selectRef.current && selectRef.current.contains(target)) {
+        return;
+      }
+      // ✅ اگر کلیک روی Select Content بود، بسته نشود
+      if ((target as HTMLElement).closest?.('[role="listbox"]')) {
+        return;
+      }
+      setIsOpen(false);
     };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
   }, [isOpen]);
 
-  // بستن با Escape
+  // ✅ جلوگیری از بسته شدن مودال با کلیک روی Select
+  const handleSelectOpenChange = useCallback((open: boolean) => {
+    // اگر Select باز میشه، مودال رو نبند
+    if (open) {
+      // کاری نکن
+    }
+  }, []);
+
   useEffect(() => {
     if (!isOpen) return;
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        setIsOpen(false);
-        btnRef.current?.focus();
-      }
-    }
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { setIsOpen(false); btnRef.current?.focus(); }
+    };
+    document.addEventListener("keydown", handleEsc);
+    return () => document.removeEventListener("keydown", handleEsc);
   }, [isOpen]);
 
-  const currentLabel =
-    activePreset === "custom"
-      ? `${formatDate(value.from)} — ${formatDate(value.to)}`
-      : t(`dateRange.${activePreset}`, activePreset);
+  const currentLabel = activePreset === "custom"
+    ? `${formatDate(value.from, dateFormat)} — ${formatDate(value.to, dateFormat)}`
+    : t(`dateRange.${activePreset}`, activePreset);
 
   return (
-    <div className="relative">
-      {/* Trigger Button */}
-      <button
-        ref={btnRef}
-        type="button"
-        onClick={() => !disabled && setIsOpen((p) => !p)}
-        disabled={disabled}
-        className={cn(
-          "flex items-center gap-1.5 sm:gap-2 h-8 sm:h-9 px-2 sm:px-3 rounded-lg border text-xs sm:text-sm",
-          "transition-all duration-150 motion-reduce:transition-none",
-          disabled
-            ? "opacity-50 cursor-not-allowed"
-            : "hover:bg-[hsl(var(--surface-muted))] active:bg-[hsl(var(--surface-elevated))]",
-          "border-[hsl(var(--border-default))]",
-          "text-[hsl(var(--fg-secondary))]",
-          isOpen && "bg-[hsl(var(--surface-muted))] border-[hsl(var(--color-primary)/0.3)]",
-        )}
-        aria-expanded={isOpen}
-        aria-haspopup="listbox"
-      >
-        <CalendarDays className="size-3.5 sm:size-4 shrink-0 text-[hsl(var(--fg-tertiary))]" aria-hidden="true" />
-        <span className="truncate max-w-[80px] sm:max-w-[140px] md:max-w-[180px]">{currentLabel}</span>
-        <ChevronDown
+    <>
+      <div className="relative">
+        <button
+          ref={btnRef}
+          type="button"
+          onClick={() => !disabled && setIsOpen(p => !p)}
+          disabled={disabled}
           className={cn(
-            "size-3 sm:size-3.5 shrink-0 text-[hsl(var(--fg-tertiary))] transition-transform duration-150",
-            isOpen && "rotate-180",
+            "flex items-center gap-1.5 sm:gap-2 h-8 sm:h-9 px-2 sm:px-3 rounded-lg border text-xs sm:text-sm transition-all duration-150",
+            disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-[hsl(var(--surface-muted))] active:bg-[hsl(var(--surface-elevated))]",
+            "border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))]",
+            isOpen && "bg-[hsl(var(--surface-muted))] border-[hsl(var(--color-primary)/0.3)]",
           )}
-          aria-hidden="true"
-        />
-      </button>
-
-      {/* Dropdown Panel - Responsive */}
-      {isOpen && (
-        <div
-          ref={panelRef}
-          role="listbox"
-          className={cn(
-            "absolute left-0 sm:left-auto sm:right-0 top-full mt-1 z-20",
-            "w-[calc(100vw-1rem)] sm:w-64 md:w-72",
-            "max-w-[calc(100vw-1rem)] sm:max-w-none",
-            "rounded-xl overflow-hidden border",
-            "bg-[hsl(var(--surface-elevated)/0.99)] backdrop-blur-xl",
-            "shadow-xl shadow-black/10",
-            "border-[hsl(var(--border-default))]",
-            "animate-in slide-in-from-top-1 fade-in-0 duration-150 motion-reduce:animate-none",
-          )}
+          aria-expanded={isOpen}
+          aria-haspopup="dialog"
         >
-          {/* Preset Options */}
-          <div className="py-1">
-            {PRESETS.map((preset) => (
-              <button
-                key={preset.key}
-                type="button"
-                role="option"
-                aria-selected={activePreset === preset.key}
-                onClick={() => handleSelectPreset(preset.key)}
-                className={cn(
-                  "w-full flex items-center gap-2 px-3 py-2 text-xs sm:text-sm text-start",
-                  "transition-colors duration-100",
-                  activePreset === preset.key
-                    ? "bg-[hsl(var(--color-primary)/0.10)] text-[hsl(var(--color-primary))] font-semibold"
-                    : "text-[hsl(var(--fg-primary))] hover:bg-[hsl(var(--surface-muted))]",
-                )}
+          <CalendarDays className="size-3.5 sm:size-4 shrink-0 text-[hsl(var(--fg-tertiary))]" aria-hidden="true" />
+          <span className="truncate max-w-[80px] sm:max-w-[140px] md:max-w-[180px]">{currentLabel}</span>
+          <ChevronDown className={cn("size-3 sm:size-3.5 shrink-0 text-[hsl(var(--fg-tertiary))] transition-transform duration-150", isOpen && "rotate-180")} aria-hidden="true" />
+        </button>
+      </div>
+
+      <div aria-live="polite" className="sr-only">{currentLabel}</div>
+
+      {isOpen && createPortal(
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center pb-4 sm:pb-0 p-3 sm:p-4 overflow-y-auto">
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm animate-in fade-in-0 duration-200" onClick={() => setIsOpen(false)} aria-hidden="true" />
+
+          <div
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("dateRange.selectPeriod", "انتخاب بازه زمانی")}
+            className={cn(
+              "relative z-10 w-full max-w-[440px] sm:max-w-[520px] rounded-2xl border p-3 sm:p-4 pt-10 sm:pt-12",
+              "bg-[hsl(var(--surface-elevated)/0.99)] backdrop-blur-xl shadow-2xl shadow-black/30 border-[hsl(var(--border-default))]",
+              "animate-in slide-in-from-bottom-4 sm:slide-in-from-top-2 duration-200 motion-reduce:animate-none",
+            )}
+          >
+            <button type="button" onClick={() => setIsOpen(false)} className="absolute top-2.5 right-2.5 p-1 rounded-lg hover:bg-[hsl(var(--surface-muted))] transition-colors z-10" aria-label={t("common.close", "بستن")}>
+              <X className="size-4 text-[hsl(var(--fg-tertiary))]" />
+            </button>
+
+            {/* ✅ Select با ref و stopPropagation */}
+            <div ref={selectRef} className="absolute top-2.5 left-2.5 z-10">
+              <Select 
+                value={dateFormat} 
+                dir="rtl" 
+                onValueChange={(val) => {
+                  setDateFormat(val as DateFormat);
+                }}
+                onOpenChange={handleSelectOpenChange}
               >
-                <span className="flex-1">{t(preset.labelKey, preset.key)}</span>
-                {activePreset === preset.key && (
-                  <svg
-                    width={14}
-                    height={14}
-                    viewBox="0 0 20 20"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth={2.5}
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="shrink-0"
-                  >
-                    <path d="M5 10l3.5 3.5L15 7" />
-                  </svg>
-                )}
-              </button>
-            ))}
+                <SelectTrigger 
+                  className="w-auto h-6 text-[9px] sm:text-[10px] font-medium border-[hsl(var(--border-default))] bg-transparent px-2"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent 
+                  onPointerDownOutside={(e) => {
+                    // جلوگیری از بسته شدن مودال وقتی روی Select Content کلیک میشه
+                    e.preventDefault();
+                  }}
+                  onEscapeKeyDown={(e) => {
+                    // جلوگیری از بسته شدن مودال با Escape وقتی Select بازه
+                    e.preventDefault();
+                  }}
+                >
+                  <SelectItem value="jalali">🇮🇷 شمسی</SelectItem>
+                  <SelectItem value="gregorian">🌍 میلادی</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <h3 className="text-center text-sm sm:text-base font-semibold text-[hsl(var(--fg-primary))] mb-3">
+              {t("dateRange.selectPeriod", "انتخاب بازه زمانی")}
+            </h3>
+
+            <div 
+              role="listbox" 
+              aria-label="پریست‌های زمانی"
+              onKeyDown={handlePresetKeyDown}
+              className="outline-none space-y-1.5 sm:space-y-2.5"
+            >
+              {PRESET_GROUPS.map((group, i) => {
+                const isGroupOpen = openGroups[i] !== false;
+                const hasActive = group.presets.some(p => p.key === activePreset);
+                
+                return (
+                  <div key={group.id} className={cn(
+                    "rounded-lg overflow-hidden transition-colors",
+                    !isGroupOpen && "mb-0.5 sm:mb-0"
+                  )}>
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(i)}
+                      className={cn(
+                        "w-full flex items-center justify-between px-2 py-1 text-[10px] sm:text-[11px] font-semibold",
+                        "text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--fg-secondary))] transition-colors",
+                        hasActive && "text-[hsl(var(--color-primary))]",
+                        "sm:cursor-default sm:mb-1"
+                      )}
+                    >
+                      <span>{group.label}</span>
+                      <ChevronLeft className={cn(
+                        "size-3.5 sm:hidden transition-transform duration-200",
+                        isGroupOpen ? "rotate-90" : "-rotate-90"
+                      )} />
+                    </button>
+                    
+                    {(isGroupOpen || typeof window !== 'undefined' && window.innerWidth >= 640) && (
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-1 sm:gap-1.5">
+                        {group.presets.map((preset) => {
+                          const globalIndex = flatPresets.findIndex(p => p.key === preset.key);
+                          return (
+                            <button
+                              key={preset.key}
+                              type="button"
+                              role="option"
+                              aria-selected={activePreset === preset.key}
+                              tabIndex={focusedIndex === globalIndex ? 0 : -1}
+                              onClick={() => handleSelectPreset(preset.key)}
+                              onFocus={() => setFocusedIndex(globalIndex)}
+                              className={cn(
+                                "w-full px-1.5 sm:px-2 py-1 sm:py-1.5 rounded-md sm:rounded-lg text-[10px] sm:text-[11px] font-medium transition-colors outline-none truncate",
+                                activePreset === preset.key
+                                  ? "bg-[hsl(var(--color-primary))] text-white"
+                                  : "bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted)/0.6)]",
+                                focusedIndex === globalIndex && "ring-2 ring-[hsl(var(--color-primary)/0.5)]"
+                              )}
+                            >
+                              {t(preset.labelKey, preset.key)}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="relative my-3 sm:my-4">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[hsl(var(--border-default))]" /></div>
+              <div className="relative flex justify-center text-[10px] sm:text-xs">
+                <span className="px-2 bg-[hsl(var(--surface-elevated))] text-[hsl(var(--fg-tertiary))]">{t("dateRange.custom", "محدوده سفارشی")}</span>
+              </div>
+            </div>
+
+            <div className="space-y-2.5 sm:space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+                <div>
+                  <label className="block text-[10px] sm:text-[11px] font-medium text-[hsl(var(--fg-tertiary))] mb-1">
+                    {t("dateRange.from", "از تاریخ")}
+                  </label>
+                  <JalaliDatePicker
+                    value={dateToString(customFrom)}
+                    onChange={(str) => setCustomFrom(stringToDate(str))}
+                    placeholder="انتخاب..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] sm:text-[11px] font-medium text-[hsl(var(--fg-tertiary))] mb-1">
+                    {t("dateRange.to", "تا تاریخ")}
+                  </label>
+                  <JalaliDatePicker
+                    value={dateToString(customTo)}
+                    onChange={(str) => setCustomTo(stringToDate(str))}
+                    placeholder="انتخاب..."
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-0.5">
+                <button
+                  type="button"
+                  onClick={handleApplyCustom}
+                  disabled={!customFrom || !customTo}
+                  className={cn(
+                    "flex-1 h-9 sm:h-10 rounded-lg sm:rounded-xl text-xs sm:text-sm font-medium transition-all duration-150",
+                    customFrom && customTo
+                      ? "bg-[hsl(var(--color-primary))] text-white hover:opacity-90 active:opacity-80"
+                      : "bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-tertiary))] cursor-not-allowed",
+                  )}
+                >
+                  {t("dateRange.apply", "اعمال محدوده")}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setCustomFrom(undefined); setCustomTo(undefined); }}
+                  className="px-3 sm:px-4 h-9 sm:h-10 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-medium border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] transition-colors"
+                >
+                  {t("common.clear", "پاک کردن")}
+                </button>
+              </div>
+            </div>
           </div>
-
-          {/* Separator */}
-          <div className="h-px bg-[hsl(var(--border-default))]" />
-
-{/* Custom Range */}
-<div className="p-3 space-y-2">
-  <p className="text-[11px] font-semibold text-[hsl(var(--fg-tertiary))] tracking-wide">
-    {t("dateRange.custom", "محدوده سفارشی")}
-  </p>
-
-  {/* ✅ Grid با کنترل دقیق فضا */}
-  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-x-2">
-    <input
-      type="date"
-      value={customFrom}
-      onChange={(e) => setCustomFrom(e.target.value)}
-      className={cn(
-        "w-full min-w-0 h-8 px-2 rounded-md border text-[11px]",
-        "bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))]",
-        "border-[hsl(var(--border-default))]",
-        "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary)/0.18)]",
-        "placeholder:text-[hsl(var(--fg-tertiary))]",
-        "[&::-webkit-calendar-picker-indicator]:opacity-60",
-        "[&::-webkit-calendar-picker-indicator]:cursor-pointer",
-        "[&::-webkit-calendar-picker-indicator]:w-3 [&::-webkit-calendar-picker-indicator]:h-3"
+        </div>,
+        document.body,
       )}
-      dir="ltr"
-      placeholder="۱۴۰۴/۰۱/۰۱"
-    />
-
-    <span className="text-xs text-[hsl(var(--fg-tertiary))] shrink-0">—</span>
-
-    <input
-      type="date"
-      value={customTo}
-      onChange={(e) => setCustomTo(e.target.value)}
-      className={cn(
-        "w-full min-w-0 h-8 px-2 rounded-md border text-[11px]",
-        "bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))]",
-        "border-[hsl(var(--border-default))]",
-        "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary)/0.18)]",
-        "placeholder:text-[hsl(var(--fg-tertiary))]",
-        "[&::-webkit-calendar-picker-indicator]:opacity-60",
-        "[&::-webkit-calendar-picker-indicator]:cursor-pointer",
-        "[&::-webkit-calendar-picker-indicator]:w-3 [&::-webkit-calendar-picker-indicator]:h-3"
-      )}
-      dir="ltr"
-      placeholder="۱۴۰۴/۰۱/۰۱"
-    />
-  </div>
-
-  <button
-    type="button"
-    onClick={handleApplyCustom}
-    disabled={!customFrom || !customTo}
-    className={cn(
-      "w-full h-8 rounded-lg text-xs font-medium",
-      "transition-all duration-150",
-      customFrom && customTo
-        ? "bg-[hsl(var(--color-primary))] text-white hover:opacity-90 active:opacity-80"
-        : "bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-tertiary))] cursor-not-allowed",
-    )}
-  >
-    {t("dateRange.apply", "اعمال")}
-  </button>
-</div>
-        </div>
-      )}
-    </div>
+    </>
   );
 }

@@ -28,6 +28,8 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
+    "date-fns-jalali": "^4.4.0-0",
+    "jalaali-js": "^1.2.8",
     "lucide-react": "^1.16.0",
     "moment-jalaali": "^0.10.4",
     "next-themes": "^0.4.6",
@@ -37,6 +39,8 @@
     "tailwind-merge": "^2.6.1"
   },
   "devDependencies": {
+    "@types/jalaali-js": "^1.2.0",
+    "@types/moment-jalaali": "^0.7.9",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.19",

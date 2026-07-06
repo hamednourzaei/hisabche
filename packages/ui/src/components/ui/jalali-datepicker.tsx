@@ -11,6 +11,8 @@ interface JalaliDatePickerProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
+    dropUp?: boolean; // ✅ این خط اضافه شود
+
 }
 
 const JALALI_MONTHS = [
@@ -76,6 +78,8 @@ export function JalaliDatePicker({
   placeholder = "انتخاب تاریخ",
   className,
   disabled = false,
+    dropUp = false, // ✅ این خط اضافه شود
+
 }: JalaliDatePickerProps) {
   const today = toJalali(new Date());
   const [isOpen, setIsOpen] = useState(false);
@@ -142,9 +146,17 @@ export function JalaliDatePicker({
       </button>
 
       {isOpen && (
-        <div ref={panelRef} className={cn("absolute end-0 top-full mt-1 z-20 w-64", "rounded-xl overflow-hidden border",
-          "bg-[hsl(var(--surface-elevated)/0.99)] backdrop-blur-xl", "shadow-xl shadow-black/10",
-          "border-[hsl(var(--border-default))]", "animate-in slide-in-from-top-1 fade-in-0 duration-150")}>
+        <div ref={panelRef} className={cn(
+            "jalali-datepicker-popup absolute end-0 z-20 w-64",
+            // ✅ اگر dropUp بود، در موبایل به سمت بالا باز شود
+            dropUp ? "bottom-full mb-1 sm:top-full sm:mt-1 sm:bottom-auto" : "top-full mt-1", 
+            "rounded-xl overflow-hidden border",
+            "bg-[hsl(var(--surface-elevated)/0.99)] backdrop-blur-xl", 
+            "shadow-xl shadow-black/10",
+            "border-[hsl(var(--border-default))]", 
+            "animate-in slide-in-from-top-1 fade-in-0 duration-150"
+          )}
+        >
           <div className="flex items-center justify-between px-3 py-2 border-b border-[hsl(var(--border-default))]">
             <button type="button" onClick={prevMonth} className="p-1 rounded-lg hover:bg-[hsl(var(--surface-muted))]"><ChevronRight className="size-4" /></button>
             <span className="text-sm font-semibold text-[hsl(var(--fg-primary))]">{JALALI_MONTHS[month - 1] || ""} {year}</span>
