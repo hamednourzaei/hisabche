@@ -153,7 +153,7 @@ export function DateRangePicker({
         onClick={() => !disabled && setIsOpen((p) => !p)}
         disabled={disabled}
         className={cn(
-          "flex items-center gap-2 h-9 px-3 rounded-lg border text-sm",
+          "flex items-center gap-1.5 sm:gap-2 h-8 sm:h-9 px-2 sm:px-3 rounded-lg border text-xs sm:text-sm",
           "transition-all duration-150 motion-reduce:transition-none",
           disabled
             ? "opacity-50 cursor-not-allowed"
@@ -165,24 +165,26 @@ export function DateRangePicker({
         aria-expanded={isOpen}
         aria-haspopup="listbox"
       >
-        <CalendarDays className="size-4 shrink-0 text-[hsl(var(--fg-tertiary))]" aria-hidden="true" />
-        <span className="truncate max-w-[160px]">{currentLabel}</span>
+        <CalendarDays className="size-3.5 sm:size-4 shrink-0 text-[hsl(var(--fg-tertiary))]" aria-hidden="true" />
+        <span className="truncate max-w-[80px] sm:max-w-[140px] md:max-w-[180px]">{currentLabel}</span>
         <ChevronDown
           className={cn(
-            "size-3.5 shrink-0 text-[hsl(var(--fg-tertiary))] transition-transform duration-150",
+            "size-3 sm:size-3.5 shrink-0 text-[hsl(var(--fg-tertiary))] transition-transform duration-150",
             isOpen && "rotate-180",
           )}
           aria-hidden="true"
         />
       </button>
 
-      {/* Dropdown Panel */}
+      {/* Dropdown Panel - Responsive */}
       {isOpen && (
         <div
           ref={panelRef}
           role="listbox"
           className={cn(
-            "absolute end-0 top-full mt-1 z-20 w-56",
+            "absolute left-0 sm:left-auto sm:right-0 top-full mt-1 z-20",
+            "w-[calc(100vw-1rem)] sm:w-64 md:w-72",
+            "max-w-[calc(100vw-1rem)] sm:max-w-none",
             "rounded-xl overflow-hidden border",
             "bg-[hsl(var(--surface-elevated)/0.99)] backdrop-blur-xl",
             "shadow-xl shadow-black/10",
@@ -200,7 +202,7 @@ export function DateRangePicker({
                 aria-selected={activePreset === preset.key}
                 onClick={() => handleSelectPreset(preset.key)}
                 className={cn(
-                  "w-full flex items-center gap-2 px-3 py-2 text-sm text-start",
+                  "w-full flex items-center gap-2 px-3 py-2 text-xs sm:text-sm text-start",
                   "transition-colors duration-100",
                   activePreset === preset.key
                     ? "bg-[hsl(var(--color-primary)/0.10)] text-[hsl(var(--color-primary))] font-semibold"
@@ -230,39 +232,50 @@ export function DateRangePicker({
           {/* Separator */}
           <div className="h-px bg-[hsl(var(--border-default))]" />
 
-          {/* Custom Range */}
+          {/* Custom Range - Responsive */}
           <div className="p-3 space-y-2">
-            <p className="text-[11px] font-semibold text-[hsl(var(--fg-tertiary))] tracking-wide">
+            <p className="text-[10px] sm:text-[11px] font-semibold text-[hsl(var(--fg-tertiary))] tracking-wide">
               {t("dateRange.custom", "محدوده سفارشی")}
             </p>
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
-                value={customFrom}
-                onChange={(e) => setCustomFrom(e.target.value)}
-                className={cn(
-                  "flex-1 h-8 px-2 rounded-md border text-xs",
-                  "bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))]",
-                  "border-[hsl(var(--border-default))]",
-                  "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary)/0.18)]",
-                  "placeholder:text-[hsl(var(--fg-tertiary))]",
-                )}
-                dir="ltr"
-              />
-              <span className="text-xs text-[hsl(var(--fg-tertiary))]">—</span>
-              <input
-                type="date"
-                value={customTo}
-                onChange={(e) => setCustomTo(e.target.value)}
-                className={cn(
-                  "flex-1 h-8 px-2 rounded-md border text-xs",
-                  "bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))]",
-                  "border-[hsl(var(--border-default))]",
-                  "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary)/0.18)]",
-                  "placeholder:text-[hsl(var(--fg-tertiary))]",
-                )}
-                dir="ltr"
-              />
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <div className="flex-1 flex items-center gap-1.5">
+                <span className="text-[10px] text-[hsl(var(--fg-tertiary))] shrink-0">
+                  {t("dateRange.from", "از")}
+                </span>
+                <input
+                  type="date"
+                  value={customFrom}
+                  onChange={(e) => setCustomFrom(e.target.value)}
+                  className={cn(
+                    "flex-1 min-w-0 h-8 px-2 rounded-md border text-xs",
+                    "bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))]",
+                    "border-[hsl(var(--border-default))]",
+                    "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary)/0.18)]",
+                    "placeholder:text-[hsl(var(--fg-tertiary))]",
+                  )}
+                  dir="ltr"
+                  placeholder="۱۴۰۴/۰۱/۰۱"
+                />
+              </div>
+              <div className="flex-1 flex items-center gap-1.5">
+                <span className="text-[10px] text-[hsl(var(--fg-tertiary))] shrink-0">
+                  {t("dateRange.to", "تا")}
+                </span>
+                <input
+                  type="date"
+                  value={customTo}
+                  onChange={(e) => setCustomTo(e.target.value)}
+                  className={cn(
+                    "flex-1 min-w-0 h-8 px-2 rounded-md border text-xs",
+                    "bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))]",
+                    "border-[hsl(var(--border-default))]",
+                    "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary)/0.18)]",
+                    "placeholder:text-[hsl(var(--fg-tertiary))]",
+                  )}
+                  dir="ltr"
+                  placeholder="۱۴۰۴/۰۱/۰۱"
+                />
+              </div>
             </div>
             <button
               type="button"
