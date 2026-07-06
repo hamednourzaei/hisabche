@@ -35,6 +35,7 @@ export interface SalesDataPoint {
 
 export interface SalesChartData {
   data: SalesDataPoint[];
+  chartData?: SalesDataPoint[]; // ✅ اضافه شد
   total: number;
   average: number;
 }
@@ -97,7 +98,6 @@ interface DashboardSalesParams {
 }
 
 export function useDashboardSales(params?: DashboardSalesParams) {
-  // ✅ Always provide startDate and endDate (Backend requires them)
   const today = getTodayDate();
   const weekAgo = getWeekAgoDate();
   
@@ -121,33 +121,61 @@ export function useDashboardSales(params?: DashboardSalesParams) {
         params: queryParams
       });
 
-      let data: SalesDataPoint[] = [];
+      console.log('🔍 useDashboardSales - raw response:', response.data);
 
+      let data: SalesDataPoint[] = [];
+      let total = 0;
+      let average = 0;
+
+      // ✅ حالت ۱: response.data.chartData (فرمت جدید Backend)
+      if (response.data?.chartData && Array.isArray(response.data.chartData)) {
+        data = response.data.chartData.map(mapToSalesDataPoint);
+        total = response.data.totalRevenue ?? data.reduce((sum, d) => sum + d.value, 0);
+        average = data.length > 0 ? total / data.length : 0;
+        console.log('✅ استفاده از chartData:', { dataLength: data.length, total });
+        return {
+          data,
+          chartData: data,
+          total,
+          average,
+        };
+      }
+
+      // ✅ حالت ۲: response.data.data (فرمت قبلی)
       if (response.data?.data && Array.isArray(response.data.data)) {
         data = response.data.data.map(mapToSalesDataPoint);
-        const total = data.reduce((sum, d) => sum + d.value, 0);
+        total = response.data.total ?? data.reduce((sum, d) => sum + d.value, 0);
+        average = response.data.average ?? (data.length > 0 ? total / data.length : 0);
+        console.log('✅ استفاده از data:', { dataLength: data.length, total });
         return {
           data,
-          total: response.data.total ?? total,
-          average: response.data.average ?? (data.length > 0 ? total / data.length : 0),
+          chartData: data,
+          total,
+          average,
         };
       }
 
+      // ✅ حالت ۳: response.data خودش آرایه است
       if (Array.isArray(response.data)) {
         data = response.data.map(mapToSalesDataPoint);
-        const total = data.reduce((sum, d) => sum + d.value, 0);
+        total = data.reduce((sum, d) => sum + d.value, 0);
+        average = data.length > 0 ? total / data.length : 0;
+        console.log('✅ response.data خودش آرایه است:', { dataLength: data.length, total });
         return {
           data,
+          chartData: data,
           total,
-          average: data.length > 0 ? total / data.length : 0,
+          average,
         };
       }
 
+      // ❌ حالت ۴: هیچ داده‌ای پیدا نشد
+      console.warn('⚠️ هیچ داده‌ای در response پیدا نشد:', response.data);
       const todayDate = getTodayDate();
+      const fallbackData = [{ label: 'امروز', value: 0, date: todayDate }];
       return {
-        data: [
-          { label: 'امروز', value: 0, date: todayDate }
-        ],
+        data: fallbackData,
+        chartData: fallbackData,
         total: 0,
         average: 0,
       };

@@ -73,11 +73,31 @@ export function DashboardContainer() {
     router.push(action)
   }
 
+  // ✅ Fix: Support both 'data' and 'chartData' formats from backend
   const salesChartData: SalesDataPoint[] = useMemo(() => {
-    if (salesData?.data && salesData.data.length > 0) {
+    // Log the raw data for debugging
+    console.log('🔍 salesData received:', salesData);
+    
+    // ✅ 1. Check for chartData (new format from backend)
+    if (salesData?.chartData && Array.isArray(salesData.chartData) && salesData.chartData.length > 0) {
+      console.log('✅ Using chartData:', salesData.chartData);
+      return salesData.chartData;
+    }
+    
+    // ✅ 2. Check for data (old format)
+    if (salesData?.data && Array.isArray(salesData.data) && salesData.data.length > 0) {
+      console.log('✅ Using data:', salesData.data);
       return salesData.data;
     }
     
+    // ✅ 3. If salesData itself is an array
+    if (Array.isArray(salesData)) {
+      console.log('✅ salesData is array:', salesData);
+      return salesData;
+    }
+
+    // ✅ 4. Fallback: empty data for last 7 days
+    console.log('⚠️ No data found, using fallback empty data');
     const days = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه'];
     const today = new Date();
     
