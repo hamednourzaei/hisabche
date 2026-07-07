@@ -51,8 +51,8 @@ const typeStyles: Record<string, string> = {
    CONSTANTS
    ═══════════════════════════════════════════════════════════════ */
 
-const DEFAULT_API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || "https://hisabche.onrender.com/api/v1";
+const DEFAULT_API_BASE = "https://hisabche.onrender.com/api/v1";
+
 
 const POLL_INTERVAL_MS = 15_000;
 
