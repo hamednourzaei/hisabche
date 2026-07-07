@@ -376,3 +376,15 @@ export {
   type WorkflowFilters,
   type InstanceFilters,
 } from './schemas/workflow.schema'
+// ---------- Notifications (v1.1 — ماژول ۲) ----------
+export {
+  notificationTypeEnum,
+  createNotificationSchema,
+  notificationSchema,
+  notificationFiltersSchema,
+  markReadSchema,
+  type NotificationType,
+  type CreateNotificationInput,
+  type Notification,
+  type NotificationFilters,
+} from './schemas/notification.schema'

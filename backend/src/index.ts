@@ -1,5 +1,5 @@
 // ============================================
-// backend/src/index.ts — با همه ۲۳ فاز + Workflow v1.1
+// backend/src/index.ts — با همه ۲۳ فاز + Workflow + Notifications
 // ============================================
 
 import Fastify from 'fastify'
@@ -45,9 +45,10 @@ import analyticsRoutes from './routes/analytics.routes'
 import { aiRoutes } from './routes/ai.routes'
 
 // ═══════════════════════════════════════════════════════════════
-// ✅ NEW — v1.1: Workflow & Approval Engine (ماژول ۱)
+// ✅ NEW — v1.1: Workflow & Notification Center
 // ═══════════════════════════════════════════════════════════════
 import { workflowRoutes } from './routes/workflow.routes'
+import { notificationRoutes } from './routes/notification.routes'
 
 if (process.env.NODE_ENV !== 'production') {
   dotenv.config()
@@ -190,9 +191,14 @@ async function start(): Promise<void> {
     await server.register(aiRoutes)
 
     // ═══════════════════════════════════════════════════════════
-    // ✅ NEW — v1.1: Workflow & Approval Engine
+    // ✅ NEW — v1.1: Workflow & Approval Engine (ماژول ۱)
     // ═══════════════════════════════════════════════════════════
     await server.register(workflowRoutes)
+
+    // ═══════════════════════════════════════════════════════════
+    // ✅ NEW — v1.1: Notification Center (ماژول ۲)
+    // ═══════════════════════════════════════════════════════════
+    await server.register(notificationRoutes)
 
     // ----------------------------
     // 404
@@ -218,7 +224,7 @@ async function start(): Promise<void> {
     })
 
     await server.listen({ port: PORT, host: HOST })
-    server.log.info(`🚀 Server running on ${HOST}:${PORT} — 23 phases + Workflow loaded`)
+    server.log.info(`🚀 Server running on ${HOST}:${PORT} — 23 phases + Workflow + Notifications loaded`)
   } catch (err) {
     server.log.error(err)
     process.exit(1)
