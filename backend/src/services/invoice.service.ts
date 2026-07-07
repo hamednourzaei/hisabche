@@ -9,7 +9,6 @@ import {
   CreateInvoice,
   UpdateInvoice,
   InvoiceFilters,
-  InvoiceItem,
 } from "@hisabche/validation";
 import { DatabaseError, NotFoundError } from "../errors/database.error";
 
@@ -30,20 +29,8 @@ export class InvoiceService {
   // ─── List ────────────────────────────────────────────────
   async list(userId: string, filters: InvoiceFilters) {
     const {
-      search,
-      type,
-      status,
-      customerId,
-      supplierId,
-      currency,
-      dateFrom,
-      dateTo,
-      minTotal,
-      maxTotal,
-      page,
-      limit,
-      sortBy,
-      sortDirection,
+      search, type, status, customerId, supplierId, currency,
+      dateFrom, dateTo, minTotal, maxTotal, page, limit, sortBy, sortDirection,
     } = filters;
     const from = (page - 1) * limit;
     const to = from + limit - 1;
@@ -55,61 +42,24 @@ export class InvoiceService {
       .order(sortBy || "created_at", { ascending: sortDirection === "asc" })
       .range(from, to);
 
-    if (search) {
-      query = query.ilike("invoice_number", `%${search}%`);
-    }
-
-    if (type) {
-      query = query.eq("type", type);
-    }
-
-    if (status) {
-      query = query.eq("status", status);
-    }
-
-    if (customerId) {
-      query = query.eq("customer_id", customerId);
-    }
-
-    if (supplierId) {
-      query = query.eq("supplier_id", supplierId);
-    }
-
-    if (currency) {
-      query = query.eq("currency", currency);
-    }
-
-    if (dateFrom) {
-      query = query.gte("date", dateFrom);
-    }
-
-    if (dateTo) {
-      query = query.lte("date", dateTo);
-    }
-
-    if (minTotal !== undefined) {
-      query = query.gte("total", minTotal);
-    }
-
-    if (maxTotal !== undefined) {
-      query = query.lte("total", maxTotal);
-    }
+    if (search) query = query.ilike("invoice_number", `%${search}%`);
+    if (type) query = query.eq("type", type);
+    if (status) query = query.eq("status", status);
+    if (customerId) query = query.eq("customer_id", customerId);
+    if (supplierId) query = query.eq("supplier_id", supplierId);
+    if (currency) query = query.eq("currency", currency);
+    if (dateFrom) query = query.gte("date", dateFrom);
+    if (dateTo) query = query.lte("date", dateTo);
+    if (minTotal !== undefined) query = query.gte("total", minTotal);
+    if (maxTotal !== undefined) query = query.lte("total", maxTotal);
 
     const { data, error, count } = await query;
 
-    if (error) {
-      throw new DatabaseError("Failed to fetch invoices", error);
-    }
+    if (error) throw new DatabaseError("Failed to fetch invoices", error);
 
     const summary = await this.getSummary(userId);
 
-    return {
-      invoices: data || [],
-      total: count || 0,
-      page,
-      limit,
-      summary,
-    };
+    return { invoices: data || [], total: count || 0, page, limit, summary };
   }
 
   // ─── Get By ID ──────────────────────────────────────────
@@ -121,16 +71,14 @@ export class InvoiceService {
       .eq("user_id", userId)
       .single();
 
-    if (error || !invoice) {
-      throw new NotFoundError("Invoice");
-    }
-
+    if (error || !invoice) throw new NotFoundError("Invoice");
     return invoice;
   }
 
   // ─── Create ─────────────────────────────────────────────
   async create(userId: string, data: CreateInvoice) {
-    console.log(` [INVOICE] create() CALLED — userId: ${userId}, total: ${data.total}`);
+    // ✅ Why: Bypasses Pino to guarantee appearance in Render logs
+    process.stdout.write(`[INVOICE-TEST] create() called with total=${data.total}\n`);
 
     // 1. Generate invoice number
     const invoiceNumber = await this.generateInvoiceNumber(userId);
@@ -162,11 +110,7 @@ export class InvoiceService {
       .select()
       .single();
 
-    if (invoiceError || !invoice) {
-      throw new DatabaseError("Failed to create invoice", invoiceError);
-    }
-
-    console.log(` [INVOICE] Invoice created: ${invoice.id}, number: ${invoiceNumber}`);
+    if (invoiceError || !invoice) throw new DatabaseError("Failed to create invoice", invoiceError);
 
     // 3. Insert items
     if (data.items && data.items.length > 0) {
@@ -182,9 +126,7 @@ export class InvoiceService {
         user_id: userId,
       }));
 
-      const { error: itemsError } = await supabase
-        .from("invoice_items")
-        .insert(items);
+      const { error: itemsError } = await supabase.from("invoice_items").insert(items);
 
       if (itemsError) {
         await supabase.from("invoices").delete().eq("id", invoice.id);
@@ -193,9 +135,7 @@ export class InvoiceService {
 
       if (data.type === "sale") {
         for (const item of data.items) {
-          if (item.productId) {
-            await this.updateStock(item.productId, item.quantity, userId);
-          }
+          if (item.productId) await this.updateStock(item.productId, item.quantity, userId);
         }
       }
     }
@@ -219,12 +159,12 @@ export class InvoiceService {
     //  NEW v1.1 — Auto-start workflow for high-value invoices
     // ═══════════════════════════════════════════════════════
     const invoiceTotal = Number(data.total || 0);
-    console.log(` [WORKFLOW] Check: ${invoiceTotal} >= ${WORKFLOW_THRESHOLD}? ${invoiceTotal >= WORKFLOW_THRESHOLD}`);
+    process.stdout.write(`[WORKFLOW-TEST] Check: ${invoiceTotal} >= ${WORKFLOW_THRESHOLD}? ${invoiceTotal >= WORKFLOW_THRESHOLD}\n`);
 
     if (invoiceTotal >= WORKFLOW_THRESHOLD) {
       await this.tryStartWorkflow(userId, invoice.id, invoiceTotal);
     } else {
-      console.log(` [WORKFLOW] Skipped — below threshold`);
+      process.stdout.write(`[WORKFLOW-TEST] Skipped — below threshold\n`);
     }
 
     return this.getById(invoice.id, userId);
@@ -232,10 +172,7 @@ export class InvoiceService {
 
   // ─── Update ─────────────────────────────────────────────
   async update(id: string, userId: string, data: UpdateInvoice) {
-    const updates: Record<string, unknown> = {
-      updated_at: new Date().toISOString(),
-    };
-
+    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
     if (data.status !== undefined) updates.status = data.status;
     if (data.paidAmount !== undefined) updates.paid_amount = data.paidAmount;
     if (data.total !== undefined) updates.total = data.total;
@@ -250,13 +187,8 @@ export class InvoiceService {
       .select()
       .single();
 
-    if (error) {
-      throw new DatabaseError("Failed to update invoice", error);
-    }
-
-    if (!invoice) {
-      throw new NotFoundError("Invoice");
-    }
+    if (error) throw new DatabaseError("Failed to update invoice", error);
+    if (!invoice) throw new NotFoundError("Invoice");
 
     return invoice;
   }
@@ -264,16 +196,8 @@ export class InvoiceService {
   // ─── Delete ─────────────────────────────────────────────
   async delete(id: string, userId: string): Promise<void> {
     await supabase.from("invoice_items").delete().eq("invoice_id", id);
-
-    const { error } = await supabase
-      .from("invoices")
-      .delete()
-      .eq("id", id)
-      .eq("user_id", userId);
-
-    if (error) {
-      throw new DatabaseError("Failed to delete invoice", error);
-    }
+    const { error } = await supabase.from("invoices").delete().eq("id", id).eq("user_id", userId);
+    if (error) throw new DatabaseError("Failed to delete invoice", error);
   }
 
   // ─── Get Items ──────────────────────────────────────────
@@ -285,10 +209,7 @@ export class InvoiceService {
       .eq("user_id", userId)
       .order("created_at", { ascending: true });
 
-    if (error) {
-      throw new DatabaseError("Failed to fetch invoice items", error);
-    }
-
+    if (error) throw new DatabaseError("Failed to fetch invoice items", error);
     return data || [];
   }
 
@@ -306,8 +227,7 @@ export class InvoiceService {
       .gte("created_at", today.toISOString())
       .lt("created_at", tomorrow.toISOString());
 
-    const todaySales =
-      salesData?.reduce((sum, inv) => sum + (inv.total || 0), 0) || 0;
+    const todaySales = salesData?.reduce((sum, inv) => sum + (inv.total || 0), 0) || 0;
 
     const { data: debtData } = await supabase
       .from("invoices")
@@ -315,29 +235,23 @@ export class InvoiceService {
       .eq("user_id", userId)
       .neq("status", "paid");
 
-    const totalDebt =
-      debtData?.reduce((sum, inv) => {
-        const debt = (inv.total || 0) - (inv.paid_amount || 0);
-        return sum + Math.max(0, debt);
-      }, 0) || 0;
+    const totalDebt = debtData?.reduce((sum, inv) => {
+      const debt = (inv.total || 0) - (inv.paid_amount || 0);
+      return sum + Math.max(0, debt);
+    }, 0) || 0;
 
     const { data: stockData } = await supabase
       .from("products")
       .select("quantity, min_stock_level")
       .eq("user_id", userId);
 
-    const lowStockCount =
-      stockData?.filter((product) => {
-        const qty = product.quantity || 0;
-        const min = product.min_stock_level || 0;
-        return min > 0 && qty <= min;
-      }).length || 0;
+    const lowStockCount = stockData?.filter((p) => {
+      const qty = p.quantity || 0;
+      const min = p.min_stock_level || 0;
+      return min > 0 && qty <= min;
+    }).length || 0;
 
-    return {
-      todaySales,
-      totalDebt,
-      lowStockCount,
-    };
+    return { todaySales, totalDebt, lowStockCount };
   }
 
   /* ═══════════════════════════════════════════════════════════════
@@ -354,20 +268,14 @@ export class InvoiceService {
     return `INV-${nextNum.toString().padStart(6, "0")}`;
   }
 
-  private async updateStock(
-    productId: string,
-    quantity: number,
-    userId: string
-  ): Promise<void> {
+  private async updateStock(productId: string, quantity: number, userId: string): Promise<void> {
     const { data: product, error: fetchError } = await supabase
       .from("products")
       .select("quantity")
       .eq("id", productId)
       .single();
 
-    if (fetchError || !product) {
-      throw new DatabaseError("Product not found for stock update", fetchError);
-    }
+    if (fetchError || !product) throw new DatabaseError("Product not found for stock update", fetchError);
 
     const newQuantity = Math.max(0, product.quantity - quantity);
 
@@ -376,9 +284,7 @@ export class InvoiceService {
       .update({ quantity: newQuantity })
       .eq("id", productId);
 
-    if (updateError) {
-      throw new DatabaseError("Failed to update stock", updateError);
-    }
+    if (updateError) throw new DatabaseError("Failed to update stock", updateError);
 
     await supabase.from("stock_movements").insert({
       product_id: productId,
@@ -393,19 +299,12 @@ export class InvoiceService {
    * 🔥 v1.1 — Try to auto-start an approval workflow.
    * Failure is silent — never blocks invoice creation.
    */
-  private async tryStartWorkflow(
-    userId: string,
-    invoiceId: string,
-    total: number
-  ): Promise<void> {
-    console.log(` [WORKFLOW] tryStartWorkflow() CALLED`);
-    console.log(`   userId: ${userId}`);
-    console.log(`   invoiceId: ${invoiceId}`);
-    console.log(`   total: ${total}`);
+  private async tryStartWorkflow(userId: string, invoiceId: string, total: number): Promise<void> {
+    // ✅ Why: Bypasses Pino to guarantee appearance in Render logs
+    process.stdout.write(`[WORKFLOW-TEST] tryStartWorkflow entered\n`);
     
     try {
-      // Find active workflow template for invoices
-      console.log(` [WORKFLOW] Querying workflows table...`);
+      process.stdout.write(`[WORKFLOW-TEST] Querying workflows table...\n`);
       const { data: workflows, error: wfError } = await supabase
         .from("workflows")
         .select("id")
@@ -414,18 +313,17 @@ export class InvoiceService {
         .is("deleted_at", null)
         .limit(1);
 
-      console.log(` [WORKFLOW] Workflows found: ${workflows?.length || 0}, error: ${wfError?.message || 'none'}`);
+      process.stdout.write(`[WORKFLOW-TEST] Workflows found: ${workflows?.length || 0}, error: ${wfError?.message || 'none'}\n`);
 
       const workflow = workflows?.[0];
       if (!workflow) {
-        console.log(`⏭ [WORKFLOW] No active workflow — skipping`);
+        process.stdout.write(`[WORKFLOW-TEST] No active workflow — skipping\n`);
         return;
       }
 
-      console.log(` [WORKFLOW] Found workflow: ${workflow.id}`);
-      console.log(` [WORKFLOW] Querying workspace_members for user ${userId}...`);
+      process.stdout.write(`[WORKFLOW-TEST] Found workflow: ${workflow.id}\n`);
+      process.stdout.write(`[WORKFLOW-TEST] Querying workspace_members for user ${userId}...\n`);
 
-      // Get workspace_id for this user
       const { data: membership, error: memError } = await supabase
         .from("workspace_members")
         .select("workspace_id")
@@ -433,31 +331,31 @@ export class InvoiceService {
         .limit(1)
         .single();
 
-      console.log(` [WORKFLOW] Membership found: ${!!membership}, error: ${memError?.message || 'none'}`);
+      process.stdout.write(`[WORKFLOW-TEST] Membership found: ${!!membership}, error: ${memError?.message || 'none'}\n`);
 
       const workspaceId = membership?.workspace_id;
       if (!workspaceId) {
-        console.log(`⏭ [WORKFLOW] No workspace membership — skipping`);
+        process.stdout.write(`[WORKFLOW-TEST] No workspace membership — skipping\n`);
         return;
       }
 
-      console.log(`[WORKFLOW] workspace_id: ${workspaceId}`);
-      console.log(` [WORKFLOW] Starting workflow instance...`);
+      process.stdout.write(`[WORKFLOW-TEST] workspace_id: ${workspaceId}\n`);
+      process.stdout.write(`[WORKFLOW-TEST] Starting workflow instance...\n`);
 
-      // Start the workflow
       const instance = await this.workflowService.startWorkflow(workspaceId, {
         workflow_id: workflow.id,
         entity_type: "invoice",
         entity_id: invoiceId,
       });
 
-      console.log(` [WORKFLOW] SUCCESS! Instance created: ${(instance as any)?.id || 'unknown'}`);
-      console.log(` [WORKFLOW] Workflow started for invoice ${invoiceId} (${total} AFN)`);
-    } catch (err: any) {
-      // Never throw — workflow failure should not block invoice creation
-      console.error(`[WORKFLOW] FAILED:`);
-      console.error(`   message: ${err?.message || err}`);
-      console.error(`   stack: ${err?.stack?.substring(0, 200)}`);
+      const instanceId = typeof instance === 'object' && instance !== null && 'id' in instance ? (instance as { id: string }).id : 'unknown';
+      process.stdout.write(`[WORKFLOW-TEST] SUCCESS! Instance created: ${instanceId}\n`);
+      process.stdout.write(`[WORKFLOW-TEST] Workflow started for invoice ${invoiceId} (${total} AFN)\n`);
+      
+    } catch (err: unknown) {
+      // ✅ Why: Manifest v14.0 forbids `catch (err: any)`. Safe type narrowing applied.
+      const errMsg = err instanceof Error ? err.message : JSON.stringify(err);
+      process.stderr.write(`[WORKFLOW-TEST] FAILED: ${errMsg}\n`);
     }
   }
 }
