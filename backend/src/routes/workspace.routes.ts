@@ -1,275 +1,58 @@
 // ============================================
 // backend/src/routes/workspace.routes.ts
 // ============================================
-
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
-import {
-  createWorkspaceSchema,
-  updateWorkspaceSchema,
-  updateMemberRoleSchema,
-  createInviteSchema,
-  acceptInviteSchema,
-} from '@hisabche/validation'
+import { createWorkspaceSchema, updateWorkspaceSchema, updateMemberRoleSchema, createInviteSchema, acceptInviteSchema } from '@hisabche/validation'
 import { WorkspaceService } from '../services/workspace.service'
 import { authenticate } from '../middleware/auth.middleware'
 
-const toJsonSchema = (schema: any) => {
-  const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
-  delete result.$schema
-  return result
-}
+const toJsonSchema = (schema: any) => { const r = zodToJsonSchema(schema, { target: 'jsonSchema7' }); delete r.$schema; return r }
 
 export async function workspaceRoutes(fastify: FastifyInstance) {
-  const workspaceService = new WorkspaceService()
+  const svc = new WorkspaceService()
 
-  // WORKSPACES
-  // ═══════════════════════════════════════════════════════════
-
-  // ─── GET /api/workspaces ──────────────────────────
-  fastify.get('/api/workspaces', {
-    preHandler: [authenticate],
-    schema: {
-      response: { 200: toJsonSchema(z.array(z.any())) },
-    },
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const workspaces = await workspaceService.getMyWorkspaces(request.userId)
-      return reply.send(workspaces)
-    } catch (err) {
-      fastify.log.error(err)
-      return reply.code(500).send({ error: 'Failed to fetch workspaces' })
-    }
+  fastify.get('/api/workspaces', { preHandler: [authenticate] }, async (req, reply) => {
+    try { return reply.send(await svc.getMyWorkspaces(req.userId)) } catch (e) { fastify.log.error(e); return reply.code(500).send({ error: 'Failed' }) }
   })
-
-  // ─── POST /api/workspaces ─────────────────────────────────
-  fastify.post('/api/workspaces', {
-    preHandler: [authenticate],
-    schema: {
-      body: toJsonSchema(createWorkspaceSchema),
-      response: { 201: toJsonSchema(z.any()) },
-    },
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const data = createWorkspaceSchema.parse(request.body)
-      const workspace = await workspaceService.createWorkspace(request.userId, data)
-      return reply.code(201).send(workspace)
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        return reply.code(400).send({ error: 'Validation failed', details: err.errors })
-      }
-      fastify.log.error(err)
-      return reply.code(500).send({ error: 'Failed to create workspace' })
-    }
+  fastify.post('/api/workspaces', { preHandler: [authenticate], schema: { body: toJsonSchema(createWorkspaceSchema) } }, async (req, reply) => {
+    try { return reply.code(201).send(await svc.createWorkspace(req.userId, createWorkspaceSchema.parse(req.body))) } catch (e) { if (e instanceof z.ZodError) return reply.code(400).send({ error: 'Validation', details: e.errors }); fastify.log.error(e); return reply.code(500).send({ error: 'Failed' }) }
   })
-
-  // ─── GET /api/workspaces/:id ──────────────────────────────
-  fastify.get('/api/workspaces/:id', {
-    preHandler: [authenticate],
-    schema: {
-      params: toJsonSchema(z.object({ id: z.string().uuid() })),
-      response: { 200: toJsonSchema(z.any()) },
-    },
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const { id } = request.params as { id: string }
-      const workspace = await workspaceService.getWorkspace(request.userId, id)
-      return reply.send(workspace)
-    } catch (err) {
-      fastify.log.error(err)
-      return reply.code(500).send({ error: 'Failed to fetch workspace' })
-    }
+  fastify.get('/api/workspaces/:id', { preHandler: [authenticate] }, async (req, reply) => {
+    try { return reply.send(await svc.getWorkspace(req.userId, (req.params as any).id)) } catch (e) { fastify.log.error(e); return reply.code(500).send({ error: 'Failed' }) }
   })
-
-  // ─── PATCH /api/workspaces/:id ────────────────────────────
-  fastify.patch('/api/workspaces/:id', {
-    preHandler: [authenticate],
-    schema: {
-      params: toJsonSchema(z.object({ id: z.string().uuid() })),
-      body: toJsonSchema(updateWorkspaceSchema),
-      response: { 200: toJsonSchema(z.any()) },
-    },
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const { id } = request.params as { id: string }
-      const data = updateWorkspaceSchema.parse(request.body)
-      const workspace = await workspaceService.updateWorkspace(request.userId, id, data)
-      return reply.send(workspace)
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        return reply.code(400).send({ error: 'Validation failed', details: err.errors })
-      }
-      fastify.log.error(err)
-      return reply.code(500).send({ error: 'Failed to update workspace' })
-    }
+  fastify.patch('/api/workspaces/:id', { preHandler: [authenticate], schema: { body: toJsonSchema(updateWorkspaceSchema) } }, async (req, reply) => {
+    try { return reply.send(await svc.updateWorkspace(req.userId, (req.params as any).id, updateWorkspaceSchema.parse(req.body))) } catch (e) { if (e instanceof z.ZodError) return reply.code(400).send({ error: 'Validation', details: e.errors }); fastify.log.error(e); return reply.code(500).send({ error: 'Failed' }) }
   })
-
-  // ═══════════════════════════════════════════════════════════
-  // MEMBERS
-  // ═══════════════════════════════════════════════════════════
-
-  // ─── GET /api/workspaces/:id/members ──────────────────────
-  fastify.get('/api/workspaces/:id/members', {
-    preHandler: [authenticate],
-    schema: {
-      params: toJsonSchema(z.object({ id: z.string().uuid() })),
-      response: { 200: toJsonSchema(z.array(z.any())) },
-    },
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const { id } = request.params as { id: string }
-      const members = await workspaceService.listMembers(request.userId, id)
-      return reply.send(members)
-    } catch (err) {
-      fastify.log.error(err)
-      return reply.code(500).send({ error: 'Failed to fetch members' })
-    }
+  fastify.get('/api/workspaces/:id/members', { preHandler: [authenticate] }, async (req, reply) => {
+    try { return reply.send(await svc.listMembers(req.userId, (req.params as any).id)) } catch (e) { fastify.log.error(e); return reply.code(500).send({ error: 'Failed' }) }
   })
-
-  // ─── PATCH /api/workspaces/:id/members/role ───────────────
-  fastify.patch('/api/workspaces/:id/members/role', {
-    preHandler: [authenticate],
-    schema: {
-      params: toJsonSchema(z.object({ id: z.string().uuid() })),
-      body: toJsonSchema(updateMemberRoleSchema),
-      response: { 200: toJsonSchema(z.any()) },
-    },
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const { id } = request.params as { id: string }
-      const data = updateMemberRoleSchema.parse(request.body)
-      const result = await workspaceService.updateMemberRole(request.userId, id, data)
-      return reply.send(result)
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        return reply.code(400).send({ error: 'Validation failed', details: err.errors })
-      }
-      fastify.log.error(err)
-      return reply.code(500).send({ error: 'Failed to update member role' })
-    }
+  fastify.patch('/api/workspaces/:id/members/role', { preHandler: [authenticate], schema: { body: toJsonSchema(updateMemberRoleSchema) } }, async (req, reply) => {
+    try { return reply.send(await svc.updateMemberRole(req.userId, (req.params as any).id, updateMemberRoleSchema.parse(req.body))) } catch (e) { if (e instanceof z.ZodError) return reply.code(400).send({ error: 'Validation', details: e.errors }); fastify.log.error(e); return reply.code(500).send({ error: 'Failed' }) }
   })
-
-  // ─── DELETE /api/workspaces/:id/members/:memberId ─────────
-  fastify.delete('/api/workspaces/:id/members/:memberId', {
-    preHandler: [authenticate],
-    schema: {
-      params: toJsonSchema(z.object({ id: z.string().uuid(), memberId: z.string().uuid() })),
-      response: { 200: toJsonSchema(z.any()) },
-    },
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const { id, memberId } = request.params as { id: string; memberId: string }
-      const result = await workspaceService.removeMember(request.userId, id, memberId)
-      return reply.send(result)
-    } catch (err) {
-      fastify.log.error(err)
-      return reply.code(500).send({ error: 'Failed to remove member' })
-    }
+  fastify.delete('/api/workspaces/:id/members/:memberId', { preHandler: [authenticate] }, async (req, reply) => {
+    try { const { id, memberId } = req.params as any; return reply.send(await svc.removeMember(req.userId, id, memberId)) } catch (e) { fastify.log.error(e); return reply.code(500).send({ error: 'Failed' }) }
   })
-
-  // ─── POST /api/workspaces/:id/leave ───────────────────────
-  fastify.post('/api/workspaces/:id/leave', {
-    preHandler: [authenticate],
-    schema: {
-      params: toJsonSchema(z.object({ id: z.string().uuid() })),
-      response: { 200: toJsonSchema(z.any()) },
-    },
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const { id } = request.params as { id: string }
-      const result = await workspaceService.leaveWorkspace(request.userId, id)
-      return reply.send(result)
-    } catch (err) {
-      fastify.log.error(err)
-      return reply.code(500).send({ error: 'Failed to leave workspace' })
-    }
+  fastify.post('/api/workspaces/:id/leave', { preHandler: [authenticate] }, async (req, reply) => {
+    try { return reply.send(await svc.leaveWorkspace(req.userId, (req.params as any).id)) } catch (e) { fastify.log.error(e); return reply.code(500).send({ error: 'Failed' }) }
   })
-
-  // ═══════════════════════════════════════════════════════════
-  // INVITES
-  // ═══════════════════════════════════════════════════════════
-
-  // ─── GET /api/workspaces/:id/invites ──────────────────────
-  fastify.get('/api/workspaces/:id/invites', {
-    preHandler: [authenticate],
-    schema: {
-      params: toJsonSchema(z.object({ id: z.string().uuid() })),
-      response: { 200: toJsonSchema(z.array(z.any())) },
-    },
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const { id } = request.params as { id: string }
-      const invites = await workspaceService.listInvites(request.userId, id)
-      return reply.send(invites)
-    } catch (err) {
-      fastify.log.error(err)
-      return reply.code(500).send({ error: 'Failed to fetch invites' })
-    }
+  fastify.get('/api/workspaces/:id/invites', { preHandler: [authenticate] }, async (req, reply) => {
+    try { return reply.send(await svc.listInvites(req.userId, (req.params as any).id)) } catch (e) { fastify.log.error(e); return reply.code(500).send({ error: 'Failed' }) }
   })
-
- // ─── POST /api/workspaces/:id/invites ─────────────────────
-fastify.post('/api/workspaces/:id/invites', {
-  preHandler: [authenticate],
-  schema: {
-    params: toJsonSchema(z.object({ id: z.string().uuid() })),
-    body: toJsonSchema(createInviteSchema.omit({ workspaceId: true })),
-    response: { 201: toJsonSchema(z.any()) },
-  },
-}, async (request: FastifyRequest, reply: FastifyReply) => {
-  try {
-    const { id } = request.params as { id: string };
-    const data = createInviteSchema.omit({ workspaceId: true }).parse(request.body);
-    const invite = await workspaceService.createInvite(request.userId, {
-      ...data,
-      workspaceId: id,
-    });
-    return reply.code(201).send(invite);
-  } catch (err) {
-    if (err instanceof z.ZodError) {
-      return reply.code(400).send({ error: 'Validation failed', details: err.errors })
-    }
-    fastify.log.error(err)
-    return reply.code(500).send({ error: 'Failed to create invite' })
-  }
-})
-
-  // ─── POST /api/workspaces/accept-invite ───────────────────
-  fastify.post('/api/workspaces/accept-invite', {
-    preHandler: [authenticate],
-    schema: {
-      body: toJsonSchema(acceptInviteSchema),
-      response: { 200: toJsonSchema(z.any()) },
-    },
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.post('/api/workspaces/:id/invites', { preHandler: [authenticate], schema: { body: toJsonSchema(createInviteSchema.omit({ workspaceId: true })) } }, async (req, reply) => {
     try {
-      const data = acceptInviteSchema.parse(request.body)
-const result = await workspaceService.acceptInvite(request.userId, request.user?.email || '', data)
-      return reply.send(result)
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        return reply.code(400).send({ error: 'Validation failed', details: err.errors })
-      }
-      fastify.log.error(err)
-      return reply.code(500).send({ error: 'Failed to accept invite' })
-    }
+      const { id } = req.params as any
+      const data = createInviteSchema.omit({ workspaceId: true }).parse(req.body)
+      const invite = await svc.createInvite(req.userId, { ...data, workspaceId: id })
+      console.log('[route] createInvite result:', invite)
+      return reply.code(201).send(invite)
+    } catch (e) { if (e instanceof z.ZodError) return reply.code(400).send({ error: 'Validation', details: e.errors }); fastify.log.error(e); return reply.code(500).send({ error: 'Failed to create invite' }) }
   })
-
-  // ─── DELETE /api/workspaces/:id/invites/:inviteId ─────────
-  fastify.delete('/api/workspaces/:id/invites/:inviteId', {
-    preHandler: [authenticate],
-    schema: {
-      params: toJsonSchema(z.object({ id: z.string().uuid(), inviteId: z.string().uuid() })),
-      response: { 200: toJsonSchema(z.any()) },
-    },
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const { id, inviteId } = request.params as { id: string; inviteId: string }
-      const result = await workspaceService.cancelInvite(request.userId, id, inviteId)
-      return reply.send(result)
-    } catch (err) {
-      fastify.log.error(err)
-      return reply.code(500).send({ error: 'Failed to cancel invite' })
-    }
+  fastify.post('/api/workspaces/accept-invite', { preHandler: [authenticate], schema: { body: toJsonSchema(acceptInviteSchema) } }, async (req, reply) => {
+    try { return reply.send(await svc.acceptInvite(req.userId, (req.user as any)?.email || '', acceptInviteSchema.parse(req.body))) } catch (e) { if (e instanceof z.ZodError) return reply.code(400).send({ error: 'Validation', details: e.errors }); fastify.log.error(e); return reply.code(500).send({ error: 'Failed' }) }
+  })
+  fastify.delete('/api/workspaces/:id/invites/:inviteId', { preHandler: [authenticate] }, async (req, reply) => {
+    try { const { id, inviteId } = req.params as any; return reply.send(await svc.cancelInvite(req.userId, id, inviteId)) } catch (e) { fastify.log.error(e); return reply.code(500).send({ error: 'Failed' }) }
   })
 }
