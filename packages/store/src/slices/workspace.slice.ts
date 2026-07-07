@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
+import { supabaseClient } from '@hisabche/auth'
 
-export type WorkspaceRole = 'owner' | 'admin' | 'employee'
+export type WorkspaceRole = 'owner' | 'admin' | 'member' | 'viewer'
 
 export interface WorkspaceMember {
   id: string
@@ -28,8 +29,11 @@ interface WorkspaceState {
   members: WorkspaceMember[]
   invites: WorkspaceInvite[]
   currentUserRole: WorkspaceRole
+  loading: boolean
 
+  // Actions
   setWorkspace: (id: string, name: string) => void
+  fetchWorkspace: (userId: string) => Promise<void>
   addMember: (member: WorkspaceMember) => void
   removeMember: (userId: string) => void
   updateMemberRole: (userId: string, role: WorkspaceRole) => void
@@ -41,6 +45,8 @@ interface WorkspaceState {
   canInvite: () => boolean
 }
 
+const ROLE_RANK: Record<string, number> = { owner: 4, admin: 3, member: 2, viewer: 1 }
+
 export const useWorkspaceStore = create<WorkspaceState>()(
   persist(
     (set, get) => ({
@@ -48,9 +54,58 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       workspaceName: '',
       members: [],
       invites: [],
-      currentUserRole: 'owner',
+      currentUserRole: 'member',
+      loading: false,
 
       setWorkspace: (id, name) => set({ workspaceId: id, workspaceName: name }),
+
+      // ✅ NEW — Fetch from real API
+      fetchWorkspace: async (userId: string) => {
+        set({ loading: true })
+        try {
+          const token = (await supabaseClient.auth.getSession()).data.session?.access_token
+          if (!token) return
+
+          const base = 'https://hisabche.onrender.com/api'
+
+          // 1. Get workspaces
+          const wsRes = await fetch(`${base}/workspaces`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          if (!wsRes.ok) return
+          const workspaces = await wsRes.json()
+          const ws = workspaces?.[0]
+          if (!ws) return
+
+          // 2. Get members
+          const memRes = await fetch(`${base}/workspaces/${ws.id}/members`, {
+            headers: { Authorization: `Bearer ${token}` },
+          })
+          if (!memRes.ok) return
+          const members = await memRes.json()
+
+          // Find current user's role
+          const me = members?.find((m: any) => m.user_id === userId)
+
+          set({
+            workspaceId: ws.id,
+            workspaceName: ws.name || '',
+            currentUserRole: me?.role || 'member',
+            members: (members || []).map((m: any) => ({
+              id: m.id,
+              userId: m.user_id,
+              fullName: m.user?.full_name || m.user?.email || 'Unknown',
+              email: m.user?.email || '',
+              role: m.role,
+              joinedAt: new Date(m.joined_at || m.created_at).getTime(),
+              isActive: true,
+            })),
+            loading: false,
+          })
+        } catch {
+          set({ loading: false })
+        }
+      },
 
       addMember: (member) =>
         set((s) => ({
@@ -79,20 +134,9 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
       setCurrentUserRole: (role) => set({ currentUserRole: role }),
 
-      canEdit: () => {
-        const { currentUserRole } = get()
-        return currentUserRole === 'owner' || currentUserRole === 'admin'
-      },
-
-      canDelete: () => {
-        const { currentUserRole } = get()
-        return currentUserRole === 'owner'
-      },
-
-      canInvite: () => {
-        const { currentUserRole } = get()
-        return currentUserRole === 'owner' || currentUserRole === 'admin'
-      },
+ canEdit: () => (ROLE_RANK[get().currentUserRole] ?? 0) >= (ROLE_RANK['admin'] ?? 0),
+canDelete: () => get().currentUserRole === 'owner',
+canInvite: () => (ROLE_RANK[get().currentUserRole] ?? 0) >= (ROLE_RANK['admin'] ?? 0),
     }),
     {
       name: 'hisabche-workspace',
