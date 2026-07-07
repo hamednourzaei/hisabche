@@ -31,7 +31,6 @@ interface WorkspaceState {
   currentUserRole: WorkspaceRole
   loading: boolean
 
-  // Actions
   setWorkspace: (id: string, name: string) => void
   fetchWorkspace: (userId: string) => Promise<void>
   addMember: (member: WorkspaceMember) => void
@@ -59,33 +58,49 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
       setWorkspace: (id, name) => set({ workspaceId: id, workspaceName: name }),
 
-      // ✅ NEW — Fetch from real API
       fetchWorkspace: async (userId: string) => {
         set({ loading: true })
         try {
           const token = (await supabaseClient.auth.getSession()).data.session?.access_token
-          if (!token) return
+          if (!token) {
+            console.log('[Workspace] No token — skip fetch')
+            return
+          }
 
           const base = 'https://hisabche.onrender.com/api'
 
-          // 1. Get workspaces
           const wsRes = await fetch(`${base}/workspaces`, {
             headers: { Authorization: `Bearer ${token}` },
           })
-          if (!wsRes.ok) return
+          if (!wsRes.ok) {
+            console.log('[Workspace] Workspaces API failed:', wsRes.status)
+            return
+          }
           const workspaces = await wsRes.json()
           const ws = workspaces?.[0]
-          if (!ws) return
+          if (!ws) {
+            console.log('[Workspace] No workspace found')
+            return
+          }
 
-          // 2. Get members
           const memRes = await fetch(`${base}/workspaces/${ws.id}/members`, {
             headers: { Authorization: `Bearer ${token}` },
           })
-          if (!memRes.ok) return
+          if (!memRes.ok) {
+            console.log('[Workspace] Members API failed:', memRes.status)
+            return
+          }
           const members = await memRes.json()
 
-          // Find current user's role
           const me = members?.find((m: any) => m.user_id === userId)
+
+          console.log('[Workspace] fetchWorkspace result:', {
+            userId,
+            workspaceId: ws.id,
+            workspaceName: ws.name,
+            myRole: me?.role,
+            membersCount: members?.length,
+          })
 
           set({
             workspaceId: ws.id,
@@ -102,7 +117,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
             })),
             loading: false,
           })
-        } catch {
+        } catch (err) {
+          console.error('[Workspace] fetchWorkspace error:', err)
           set({ loading: false })
         }
       },
@@ -134,9 +150,9 @@ export const useWorkspaceStore = create<WorkspaceState>()(
 
       setCurrentUserRole: (role) => set({ currentUserRole: role }),
 
- canEdit: () => (ROLE_RANK[get().currentUserRole] ?? 0) >= (ROLE_RANK['admin'] ?? 0),
-canDelete: () => get().currentUserRole === 'owner',
-canInvite: () => (ROLE_RANK[get().currentUserRole] ?? 0) >= (ROLE_RANK['admin'] ?? 0),
+      canEdit: () => (ROLE_RANK[get().currentUserRole] ?? 0) >= (ROLE_RANK['admin'] ?? 0),
+      canDelete: () => get().currentUserRole === 'owner',
+      canInvite: () => (ROLE_RANK[get().currentUserRole] ?? 0) >= (ROLE_RANK['admin'] ?? 0),
     }),
     {
       name: 'hisabche-workspace',
@@ -144,11 +160,11 @@ canInvite: () => (ROLE_RANK[get().currentUserRole] ?? 0) >= (ROLE_RANK['admin'] 
         if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') return localStorage
         return { getItem: () => null, setItem: () => {}, removeItem: () => {} }
       }),
+      // ✅ currentUserRole رو ذخیره نکن — همیشه بعد از fetch از API میاد
       partialize: (state) => ({
         workspaceId: state.workspaceId,
         workspaceName: state.workspaceName,
         members: state.members,
-        currentUserRole: state.currentUserRole,
       }),
     },
   ),
