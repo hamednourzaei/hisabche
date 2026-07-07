@@ -2,9 +2,12 @@
 // backend/src/services/workflow.service.ts
 // Hisabche v1.1 — Workflow & Approval Engine
 // Uses Supabase client (same pattern as all other services)
-// ============================================
+// ═══════════════════════════════════════════════════════════════
+// ✅ v1.1 — Auto-notification on approve/reject
+// ═══════════════════════════════════════════════════════════════
 
 import { supabase } from "../db";
+import { NotificationService } from "./notification.service";
 import type {
   CreateWorkflowInput,
   UpdateWorkflowInput,
@@ -19,6 +22,12 @@ import type {
 import { DatabaseError } from "../errors/database.error";
 
 export class WorkflowService {
+  private notificationService: NotificationService;
+
+  constructor() {
+    this.notificationService = new NotificationService();
+  }
+
   /* ── Create workflow template with steps ── */
   async createWorkflow(
     workspaceId: string,
@@ -332,10 +341,55 @@ export class WorkflowService {
       throw new DatabaseError("Failed to update instance", updateError);
     }
 
+    // ═══════════════════════════════════════════════════════
+    // ✅ v1.1 — Auto-send notification
+    // ═══════════════════════════════════════════════════════
+    await this.sendNotification(updated, action);
+
     return {
       instance: this.mapInstance(updated),
       action: this.mapAction(action),
     };
+  }
+
+  /* ═══════════════════════════════════════════════════════════════
+     NOTIFICATION HOOK (v1.1)
+     ═══════════════════════════════════════════════════════════════ */
+
+  private async sendNotification(
+    instance: Record<string, unknown>,
+    action: Record<string, unknown>
+  ): Promise<void> {
+    try {
+      const actionType = action.action as string;
+      const workspaceId = instance.workspace_id as string;
+      const entityType = instance.entity_type as string;
+      const entityId = instance.entity_id as string;
+
+      const config: Record<string, { title: string; type: "success" | "warning" }> = {
+        approved: { title: "درخواست تأیید شد", type: "success" },
+        rejected: { title: "درخواست رد شد", type: "warning" },
+      };
+
+      const cfg = config[actionType];
+      if (!cfg) return;
+
+      // Send to the workflow creator (or actor)
+      const shortId = entityId.substring(0, 8);
+
+      await this.notificationService.create(workspaceId, {
+        user_id: action.actor_user_id as string,
+        title: cfg.title,
+        body: `${entityType} #${shortId} ${actionType === "approved" ? "تأیید" : "رد"} شد.`,
+        type: cfg.type,
+        action_url: `/${entityType}s/${entityId}`,
+        entity_type: entityType,
+        entity_id: entityId,
+      });
+    } catch (err) {
+      // Silent — notification failure should never break workflow
+      console.error("[Workflow] Notification failed:", err);
+    }
   }
 
   /* ═══════════════════════════════════════════════════════════════
