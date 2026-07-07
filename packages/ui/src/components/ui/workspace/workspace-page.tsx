@@ -29,16 +29,18 @@ const badgeStyles: Record<string, string> = {
 
 export function WorkspacePage() {
   const { t } = useTranslation();
-  const { workspaceId, workspaceName, members, currentUserRole, fetchWorkspace } = useWorkspaceStore();
+  const { workspaceId, workspaceName, members, currentUserRole, loading, fetchWorkspace } = useWorkspaceStore();
   const userId = useAuthStore((s) => s.user?.id);
   const removeMember = useRemoveMember();
   const updateRole = useUpdateMemberRole();
   const [showInvite, setShowInvite] = useState(false);
 
-  // Fetch workspace on mount
+  // Fetch workspace on mount — only if store is empty
   useEffect(() => {
-    if (userId) fetchWorkspace(userId);
-  }, [userId, fetchWorkspace]);
+    if (userId && !workspaceId) {
+      fetchWorkspace(userId);
+    }
+  }, [userId, workspaceId, fetchWorkspace]);
 
   const roleLabel = (role: string) => {
     switch (role) {
@@ -69,6 +71,16 @@ export function WorkspacePage() {
       alert(t("workspace.roleChangeFailed", "تغییر نقش ناموفق بود"));
     }
   };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="space-y-6 animate-pulse">
+        <div className="h-8 w-48 bg-[hsl(var(--surface-muted))] rounded-lg" />
+        <div className="h-40 bg-[hsl(var(--surface-muted))] rounded-2xl" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -136,7 +148,6 @@ export function WorkspacePage() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                      {/* Role Select — only owner can change */}
                       {isOwner && member.role !== "owner" ? (
                         <select
                           value={member.role}
@@ -155,7 +166,6 @@ export function WorkspacePage() {
                         </span>
                       )}
 
-                      {/* Remove button — admin/owner, not self, not owner */}
                       {isAdmin && member.role !== "owner" && (
                         <button
                           onClick={() => handleRemove(member.id)}

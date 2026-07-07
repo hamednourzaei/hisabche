@@ -6,35 +6,14 @@ import { Bell, X, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabaseClient } from "@hisabche/auth";
 
-/* ═══════════════════════════════════════════════════════════════
-   TYPES
-   ═══════════════════════════════════════════════════════════════ */
-
 interface Notification {
-  id: string;
-  title: string;
-  body?: string | null;
+  id: string; title: string; body?: string | null;
   type: "info" | "success" | "warning" | "approval_required";
-  action_url?: string | null;
-  entity_type?: string | null;
-  entity_id?: string | null;
-  is_read: boolean;
-  created_at: string;
+  action_url?: string | null; entity_type?: string | null; entity_id?: string | null;
+  is_read: boolean; created_at: string;
 }
-
-interface NotificationGroup {
-  key: string;
-  entityLabel: string;
-  entityUrl: string;
-  items: Notification[];
-  hasUnread: boolean;
-}
-
+interface NotificationGroup { key: string; entityLabel: string; entityUrl: string; items: Notification[]; hasUnread: boolean; }
 interface NotificationBellProps { className?: string; }
-
-/* ═══════════════════════════════════════════════════════════════
-   HELPERS
-   ═══════════════════════════════════════════════════════════════ */
 
 function timeAgo(d: string): string {
   const m = Math.floor((Date.now() - new Date(d).getTime()) / 60000);
@@ -42,34 +21,24 @@ function timeAgo(d: string): string {
   const h = Math.floor(m / 60); if (h < 24) return `${h} ساعت پیش`;
   return `${Math.floor(h / 24)} روز پیش`;
 }
-
 function resolveEntityUrl(n: Notification): string {
   if (n.action_url) return n.action_url;
   if (n.entity_type === "invoice" && n.entity_id) return `/invoices/${n.entity_id}`;
   return "/dashboard";
 }
-
 function groupNotifications(list: Notification[]): NotificationGroup[] {
   const m = new Map<string, Notification[]>();
-  for (const n of list) {
-    const k = n.entity_type && n.entity_id ? `${n.entity_type}:${n.entity_id}` : n.id;
-    if (!m.has(k)) m.set(k, []); m.get(k)!.push(n);
-  }
-  return Array.from(m.entries()).map(([key, items]) => ({
-    key, entityLabel: items[0]!.title, entityUrl: resolveEntityUrl(items[0]!),
-    items, hasUnread: items.some(i => !i.is_read),
-  }));
+  for (const n of list) { const k = n.entity_type && n.entity_id ? `${n.entity_type}:${n.entity_id}` : n.id; if (!m.has(k)) m.set(k, []); m.get(k)!.push(n); }
+  return Array.from(m.entries()).map(([key, items]) => ({ key, entityLabel: items[0]!.title, entityUrl: resolveEntityUrl(items[0]!), items, hasUnread: items.some(i => !i.is_read) }));
 }
-
 const typeStyles: Record<string, string> = {
   info: "border-s-[hsl(var(--color-info))]", success: "border-s-[hsl(var(--color-success))]",
   warning: "border-s-[hsl(var(--color-warning))]", approval_required: "border-s-[hsl(var(--color-primary))]",
 };
 
 /* ═══════════════════════════════════════════════════════════════
-   HOOK — Supabase Direct + Realtime
+   HOOK — Polling only (no WebSocket Realtime)
    ═══════════════════════════════════════════════════════════════ */
-
 function useNotifications() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -90,10 +59,8 @@ function useNotifications() {
 
   useEffect(() => {
     isMounted.current = true; fetchNotifications();
-    const ch = supabaseClient.channel("nb").on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications" }, () => fetchNotifications())
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "notifications" }, () => fetchNotifications()).subscribe();
-    const iv = setInterval(fetchNotifications, 30_000);
-    return () => { isMounted.current = false; supabaseClient.removeChannel(ch); clearInterval(iv); };
+    const iv = setInterval(fetchNotifications, 15_000);
+    return () => { isMounted.current = false; clearInterval(iv); };
   }, [fetchNotifications]);
 
   return { notifications, unreadCount, markAsRead };
@@ -102,7 +69,6 @@ function useNotifications() {
 /* ═══════════════════════════════════════════════════════════════
    COMPONENT
    ═══════════════════════════════════════════════════════════════ */
-
 export function NotificationBell({ className }: NotificationBellProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
