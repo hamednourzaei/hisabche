@@ -106,7 +106,7 @@ function groupNotifications(list: Notification[]): NotificationGroup[] {
     return {
       key,
       entityLabel: resolveEntityLabel(first),
-      entityUrl: resolveEntityUrl(first), // ← فیکس: قبلاً به‌اشتباه resolveEntityLabel صدا زده می‌شد
+      entityUrl: resolveEntityUrl(first),
       items,
       hasUnread: items.some((i) => !i.is_read),
       latestType: pickGroupType(items),
@@ -127,9 +127,6 @@ const typeStyles: Record<string, string> = {
 
 const DEFAULT_API_BASE = "https://hisabche.onrender.com/api/v1";
 const POLL_INTERVAL_MS = 15_000;
-// چند تا نوتیف اخیر (چه خونده‌شده چه نشده) نگه داریم. قبلاً این عدد برای
-// «فقط unread» بود؛ حالا چون خونده‌شده‌ها هم می‌مونن (کم‌رنگ)، کمی
-// بزرگ‌ترش کردیم تا تاریخچه خالی به‌نظر نرسه.
 const NOTIFICATIONS_LIMIT = 10;
 
 /* ═══════════════════════════════════════════════════════════════
@@ -153,10 +150,8 @@ function useNotifications(apiBase: string) {
       const token = await getToken();
       if (!token) return;
 
-      // ⚠️ فیکس اصلی: قبلاً `?is_read=false` بود، یعنی همین که یه نوتیف
-      // read می‌شد، fetch بعدی دیگه اصلاً برش نمی‌گردوند و از پنل ناپدید
-      // می‌شد. حالا بدون فیلتر is_read، آخرین N نوتیف (چه خونده چه نخونده)
-      // میاد و خودِ UI با opacity فرقشون رو نشون می‌ده.
+      // بدون فیلتر is_read — همه notificationها (read + unread) برمی‌گردن
+      // UI خودش با opacity و رنگ فرقشون رو نشون میده
       const [notifRes, countRes] = await Promise.all([
         fetch(`${apiBase}/notifications?limit=${NOTIFICATIONS_LIMIT}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -171,18 +166,14 @@ function useNotifications(apiBase: string) {
       if (notifRes.ok) {
         const json = await notifRes.json();
         setNotifications(json.data || []);
-      } else if (process.env.NODE_ENV === "development") {
-        console.error("[NotificationBell] API error:", notifRes.status);
       }
 
       if (countRes.ok) {
         const json = await countRes.json();
         setUnreadCount(json.count ?? 0);
       }
-    } catch (err) {
-      if (process.env.NODE_ENV === "development") {
-        console.error("[NotificationBell] Fetch error:", err);
-      }
+    } catch {
+      // Production safe
     }
   }, [apiBase, getToken]);
 
@@ -193,8 +184,7 @@ function useNotifications(apiBase: string) {
         const token = await getToken();
         if (!token) return;
 
-        // به‌روزرسانی خوش‌بینانه: is_read=true می‌شه، ولی از لیست حذف
-        // نمی‌شه — همون آیتم می‌مونه، فقط استایلش کم‌رنگ می‌شه.
+        // Optimistic: is_read = true, ولی از لیست حذف نمیشه — فقط opacity کم میشه
         setNotifications((prev) =>
           prev.map((n) => (ids.includes(n.id) ? { ...n, is_read: true } : n)),
         );
@@ -208,6 +198,7 @@ function useNotifications(apiBase: string) {
           body: JSON.stringify({ ids }),
         });
 
+        // فقط شمارنده unread رفرش میشه
         const countRes = await fetch(`${apiBase}/notifications/unread-count`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -215,10 +206,8 @@ function useNotifications(apiBase: string) {
           const json = await countRes.json();
           if (isMounted.current) setUnreadCount(json.count ?? 0);
         }
-      } catch (err) {
-        if (process.env.NODE_ENV === "development") {
-          console.error("[NotificationBell] markAsRead error:", err);
-        }
+      } catch {
+        // Production safe
       }
     },
     [apiBase, getToken],
@@ -248,7 +237,7 @@ function useNotifications(apiBase: string) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   SUB-COMPONENT — یک گروه، با هدر کشویی
+   SUB-COMPONENT — NotificationGroupCard (کشویی)
    ═══════════════════════════════════════════════════════════════ */
 
 function NotificationGroupCard({
@@ -266,7 +255,7 @@ function NotificationGroupCard({
 
   return (
     <div className="rounded-xl overflow-hidden">
-      {/* هدر گروه — کل ردیف قابل‌کلیکه برای باز/بسته کردن */}
+      {/* Header — کلیک = باز/بسته */}
       <button
         type="button"
         onClick={onToggle}
@@ -291,18 +280,20 @@ function NotificationGroupCard({
           )}
           <ChevronDown
             className={cn(
-              "size-3.5 text-[hsl(var(--fg-tertiary))] transition-transform duration-200 motion-reduce:transition-none",
+              "size-3.5 text-[hsl(var(--fg-tertiary))] transition-transform duration-200",
               isOpen && "rotate-180",
             )}
           />
         </span>
       </button>
 
-      {/* بدنه‌ی کشویی — با تکنیک grid-template-rows، بدون نیاز به اندازه‌گیری JS */}
+      {/* Collapsible body — grid-template-rows animation */}
       <div
         id={panelId}
+        role="region"
+        aria-labelledby={panelId}
         className={cn(
-          "grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none",
+          "grid transition-[grid-template-rows] duration-200 ease-out",
           isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
         )}
       >
@@ -335,7 +326,9 @@ function NotificationGroupCard({
                     )}
                   </p>
                 )}
-                <p className="text-xs text-[hsl(var(--fg-tertiary))] mt-1">{timeAgo(n.created_at)}</p>
+                <p className="text-xs text-[hsl(var(--fg-tertiary))] mt-1">
+                  {timeAgo(n.created_at)}
+                </p>
               </button>
             ))}
           </div>
@@ -361,9 +354,7 @@ export function NotificationBell({
 
   const groups = useMemo(() => groupNotifications(notifications), [notifications]);
 
-  // باز/بسته‌بودن هر گروه: پیش‌فرض، گروه‌هایی که چیز نخونده دارن بازن،
-  // گروه‌های کاملاً خونده‌شده بسته‌ان — ولی کاربر می‌تونه دستی عوضش کنه
-  // و اون انتخاب دستی رو نگه می‌داریم.
+  // حالت باز/بسته هر گروه — پیش‌فرض: unread باز، read بسته
   const [manualToggle, setManualToggle] = useState<Record<string, boolean>>({});
 
   const isGroupOpen = useCallback(
@@ -371,10 +362,12 @@ export function NotificationBell({
     [manualToggle],
   );
 
-  const toggleGroup = useCallback((group: NotificationGroup) => {
-    setManualToggle((prev) => ({ ...prev, [group.key]: !isGroupOpen(group) }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isGroupOpen]);
+  const toggleGroup = useCallback(
+    (group: NotificationGroup) => {
+      setManualToggle((prev) => ({ ...prev, [group.key]: !isGroupOpen(group) }));
+    },
+    [isGroupOpen],
+  );
 
   const closePanel = useCallback(() => {
     setOpen(false);
@@ -386,6 +379,7 @@ export function NotificationBell({
     if (open) refetch();
   }, [open, refetch]);
 
+  // Click outside
   useEffect(() => {
     if (!open) return;
     const handleClickOutside = (e: MouseEvent) => {
@@ -401,6 +395,7 @@ export function NotificationBell({
     };
   }, [open, closePanel]);
 
+  // Escape key
   useEffect(() => {
     if (!open) return;
     const handleKey = (e: KeyboardEvent) => {
@@ -458,6 +453,7 @@ export function NotificationBell({
             "animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-150",
           )}
         >
+          {/* Header */}
           <div className="flex items-center justify-between px-3 py-2 mb-1 border-b border-[hsl(var(--border-default))]">
             <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">اعلان‌ها</h3>
             <div className="flex items-center gap-2">
@@ -477,6 +473,7 @@ export function NotificationBell({
             </div>
           </div>
 
+          {/* Groups */}
           {groups.length === 0 ? (
             <p className="px-3 py-8 text-center text-sm text-[hsl(var(--fg-tertiary))]">
               اعلانی وجود ندارد

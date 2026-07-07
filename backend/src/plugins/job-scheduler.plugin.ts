@@ -11,7 +11,7 @@ async function checkOverdueInvoices() {
 
   const { data: invoices } = await supabase
     .from("invoices")
-    .select("id, invoice_number, total, workspace_id, user_id, due_date")
+    .select("id, invoice_number, total, user_id, due_date")
     .lt("due_date", today)
     .eq("status", "pending")
     .limit(50);
@@ -20,7 +20,17 @@ async function checkOverdueInvoices() {
 
   for (const inv of invoices) {
     try {
-      await notificationService.create(inv.workspace_id, {
+      // Get workspace_id from workspace_members
+      const { data: members } = await supabase
+        .from("workspace_members")
+        .select("workspace_id")
+        .eq("user_id", inv.user_id)
+        .limit(1);
+
+      const workspaceId = members?.[0]?.workspace_id;
+      if (!workspaceId) continue;
+
+      await notificationService.create(workspaceId, {
         user_id: inv.user_id,
         title: "فاکتور سررسید شده",
         body: `فاکتور #${inv.invoice_number} به مبلغ ${inv.total} افغانی سررسید شده است.`,
@@ -30,7 +40,7 @@ async function checkOverdueInvoices() {
         entity_id: inv.id,
       });
     } catch {
-      // Continue to next invoice
+      // Continue
     }
   }
 }
