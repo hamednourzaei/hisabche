@@ -27,7 +27,7 @@ export const phoneSchema = z
   .string()
   .optional()
   .refine(
-    (val) => !val || val === '' || /^\+?\d{8,15}$/.test(val),
+    (val) => !val || val === '' || /^[\d\s\-\+\(\)]{5,20}$/.test(val),
     { message: 'validation.phone' }
   )
 
