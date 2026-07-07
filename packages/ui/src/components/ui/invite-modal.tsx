@@ -17,6 +17,7 @@ export function InviteModal({ open, onClose }: Props) {
   const { t } = useTranslation();
   const { workspaceId, canInvite } = useWorkspaceStore();
   const inviteMember = useInviteMember();
+  
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<WorkspaceRole>("member");
   const [sent, setSent] = useState(false);
@@ -24,25 +25,31 @@ export function InviteModal({ open, onClose }: Props) {
 
   if (!canInvite()) return null;
 
-  const handleInvite = async () => {
-    if (!email.trim() || !workspaceId) return;
-    setError("");
-    try {
-      await inviteMember.mutateAsync({
-        workspaceId,
-        email: email.trim(),
-        role,
-      });
-      setSent(true);
-      setTimeout(() => {
-        setSent(false);
-        setEmail("");
-        onClose();
-      }, 1500);
-    } catch (err: any) {
-      setError(err?.message || "خطا در ارسال دعوت");
-    }
-  };
+const handleInvite = async () => {
+  if (!email.trim() || !workspaceId) return;
+  setError("");
+  try {
+    const invite = await inviteMember.mutateAsync({
+      workspaceId,
+      email: email.trim(),
+      role,
+    });
+    
+    // ✅ Copy invite link
+    const inviteLink = `${window.location.origin}/accept-invite?token=${invite.token}`;
+    await navigator.clipboard.writeText(inviteLink);
+    alert(t("workspace.inviteLinkCopied", "لینک دعوت کپی شد!"));
+    
+    setSent(true);
+    setTimeout(() => {
+      setSent(false);
+      setEmail("");
+      onClose();
+    }, 1500);
+  } catch (err: any) {
+    setError(err?.message || "خطا در ارسال دعوت");
+  }
+};
 
   return (
     <Dialog.Root open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
