@@ -35,13 +35,12 @@ export function WorkspacePage() {
   const updateRole = useUpdateMemberRole();
   const [showInvite, setShowInvite] = useState(false);
 
-  // Fetch workspace on mount — only if store is empty
-  useEffect(() => {
-    if (userId) {
-      fetchWorkspace(userId);
-    }
-  }, [userId, workspaceId, fetchWorkspace]);
-
+// Fetch workspace on mount
+useEffect(() => {
+  if (userId) {
+    fetchWorkspace(userId);
+  }
+}, [userId]); // ✅ فقط userId — یکبار اجرا میشه
   const roleLabel = (role: string) => {
     switch (role) {
       case "owner": return t("workspace.owner", "مالک");
