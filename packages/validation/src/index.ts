@@ -388,3 +388,12 @@ export {
   type Notification,
   type NotificationFilters,
 } from './schemas/notification.schema'
+// ---------- Job Queue (v1.1 — ماژول ۳) ----------
+export {
+  jobStatusEnum,
+  createJobSchema,
+  jobSchema,
+  type JobStatus,
+  type CreateJobInput,
+  type Job,
+} from './schemas/job.schema'

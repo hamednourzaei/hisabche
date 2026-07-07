@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Bell, X } from "lucide-react";
+import { Bell, X, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabaseClient } from "@hisabche/auth";
 
@@ -98,16 +98,15 @@ function groupNotifications(list: Notification[]): NotificationGroup[] {
   }
 
   return order.map((key) => {
-    
     const items = map
       .get(key)!
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      const first = items[0]!;
+    const first = items[0]!;
 
     return {
       key,
       entityLabel: resolveEntityLabel(first),
-      entityUrl: resolveEntityLabel(first),
+      entityUrl: resolveEntityUrl(first), // ← فیکس: قبلاً به‌اشتباه resolveEntityLabel صدا زده می‌شد
       items,
       hasUnread: items.some((i) => !i.is_read),
       latestType: pickGroupType(items),
@@ -128,6 +127,10 @@ const typeStyles: Record<string, string> = {
 
 const DEFAULT_API_BASE = "https://hisabche.onrender.com/api/v1";
 const POLL_INTERVAL_MS = 15_000;
+// چند تا نوتیف اخیر (چه خونده‌شده چه نشده) نگه داریم. قبلاً این عدد برای
+// «فقط unread» بود؛ حالا چون خونده‌شده‌ها هم می‌مونن (کم‌رنگ)، کمی
+// بزرگ‌ترش کردیم تا تاریخچه خالی به‌نظر نرسه.
+const NOTIFICATIONS_LIMIT = 10;
 
 /* ═══════════════════════════════════════════════════════════════
    HOOK — useNotifications
@@ -150,8 +153,12 @@ function useNotifications(apiBase: string) {
       const token = await getToken();
       if (!token) return;
 
+      // ⚠️ فیکس اصلی: قبلاً `?is_read=false` بود، یعنی همین که یه نوتیف
+      // read می‌شد، fetch بعدی دیگه اصلاً برش نمی‌گردوند و از پنل ناپدید
+      // می‌شد. حالا بدون فیلتر is_read، آخرین N نوتیف (چه خونده چه نخونده)
+      // میاد و خودِ UI با opacity فرقشون رو نشون می‌ده.
       const [notifRes, countRes] = await Promise.all([
-        fetch(`${apiBase}/notifications?limit=5&is_read=false`, {
+        fetch(`${apiBase}/notifications?limit=${NOTIFICATIONS_LIMIT}`, {
           headers: { Authorization: `Bearer ${token}` },
         }),
         fetch(`${apiBase}/notifications/unread-count`, {
@@ -186,7 +193,8 @@ function useNotifications(apiBase: string) {
         const token = await getToken();
         if (!token) return;
 
-        // Optimistic UI update
+        // به‌روزرسانی خوش‌بینانه: is_read=true می‌شه، ولی از لیست حذف
+        // نمی‌شه — همون آیتم می‌مونه، فقط استایلش کم‌رنگ می‌شه.
         setNotifications((prev) =>
           prev.map((n) => (ids.includes(n.id) ? { ...n, is_read: true } : n)),
         );
@@ -200,7 +208,6 @@ function useNotifications(apiBase: string) {
           body: JSON.stringify({ ids }),
         });
 
-        // Only refresh unread count — avoids flickering notification list
         const countRes = await fetch(`${apiBase}/notifications/unread-count`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -241,6 +248,104 @@ function useNotifications(apiBase: string) {
 }
 
 /* ═══════════════════════════════════════════════════════════════
+   SUB-COMPONENT — یک گروه، با هدر کشویی
+   ═══════════════════════════════════════════════════════════════ */
+
+function NotificationGroupCard({
+  group,
+  isOpen,
+  onToggle,
+  onItemClick,
+}: {
+  group: NotificationGroup;
+  isOpen: boolean;
+  onToggle: () => void;
+  onItemClick: (n: Notification) => void;
+}) {
+  const panelId = `notif-group-${group.key}`;
+
+  return (
+    <div className="rounded-xl overflow-hidden">
+      {/* هدر گروه — کل ردیف قابل‌کلیکه برای باز/بسته کردن */}
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={isOpen}
+        aria-controls={panelId}
+        className={cn(
+          "w-full flex items-center justify-between px-3 py-1.5 rounded-lg",
+          "hover:bg-[hsl(var(--surface-muted))] transition-colors duration-100",
+        )}
+      >
+        <span className="flex items-center gap-1.5 text-xs font-semibold text-[hsl(var(--fg-secondary))]">
+          {group.hasUnread && (
+            <span className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--color-destructive))] shrink-0" />
+          )}
+          {group.entityLabel}
+        </span>
+        <span className="flex items-center gap-1.5">
+          {group.items.length > 1 && (
+            <span className="text-[10px] text-[hsl(var(--fg-tertiary))]">
+              {group.items.length} رویداد
+            </span>
+          )}
+          <ChevronDown
+            className={cn(
+              "size-3.5 text-[hsl(var(--fg-tertiary))] transition-transform duration-200 motion-reduce:transition-none",
+              isOpen && "rotate-180",
+            )}
+          />
+        </span>
+      </button>
+
+      {/* بدنه‌ی کشویی — با تکنیک grid-template-rows، بدون نیاز به اندازه‌گیری JS */}
+      <div
+        id={panelId}
+        className={cn(
+          "grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none",
+          isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+        )}
+      >
+        <div className="overflow-hidden">
+          <div className="space-y-0.5 pt-0.5">
+            {group.items.map((n) => (
+              <button
+                key={n.id}
+                onClick={() => onItemClick(n)}
+                className={cn(
+                  "w-full text-start px-3 py-2 rounded-lg border-s-2",
+                  "hover:bg-[hsl(var(--surface-muted))]",
+                  "transition-colors duration-100",
+                  n.is_read
+                    ? "border-s-transparent opacity-60"
+                    : typeStyles[n.type] ?? typeStyles.info,
+                )}
+              >
+                <p className="text-sm font-medium text-[hsl(var(--fg-primary))] line-clamp-1">
+                  {n.title}
+                </p>
+                {(n.body || n.actor_name) && (
+                  <p className="text-xs text-[hsl(var(--fg-secondary))] mt-0.5 line-clamp-2">
+                    {n.body}
+                    {n.actor_name && (
+                      <span className="text-[hsl(var(--fg-tertiary))]">
+                        {" — "}
+                        {n.actor_name}
+                      </span>
+                    )}
+                  </p>
+                )}
+                <p className="text-xs text-[hsl(var(--fg-tertiary))] mt-1">{timeAgo(n.created_at)}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════
    COMPONENT
    ═══════════════════════════════════════════════════════════════ */
 
@@ -255,6 +360,21 @@ export function NotificationBell({
   const { notifications, unreadCount, refetch, markAsRead } = useNotifications(apiBase);
 
   const groups = useMemo(() => groupNotifications(notifications), [notifications]);
+
+  // باز/بسته‌بودن هر گروه: پیش‌فرض، گروه‌هایی که چیز نخونده دارن بازن،
+  // گروه‌های کاملاً خونده‌شده بسته‌ان — ولی کاربر می‌تونه دستی عوضش کنه
+  // و اون انتخاب دستی رو نگه می‌داریم.
+  const [manualToggle, setManualToggle] = useState<Record<string, boolean>>({});
+
+  const isGroupOpen = useCallback(
+    (group: NotificationGroup) => manualToggle[group.key] ?? group.hasUnread,
+    [manualToggle],
+  );
+
+  const toggleGroup = useCallback((group: NotificationGroup) => {
+    setManualToggle((prev) => ({ ...prev, [group.key]: !isGroupOpen(group) }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isGroupOpen]);
 
   const closePanel = useCallback(() => {
     setOpen(false);
@@ -362,55 +482,15 @@ export function NotificationBell({
               اعلانی وجود ندارد
             </p>
           ) : (
-            <div className="space-y-2 mt-1">
+            <div className="space-y-1 mt-1">
               {groups.map((group) => (
-                <div key={group.key} className="rounded-xl overflow-hidden">
-                  <div className="flex items-center justify-between px-3 pt-1.5 pb-1">
-                    <span className="text-xs font-semibold text-[hsl(var(--fg-secondary))]">
-                      {group.entityLabel}
-                    </span>
-                    {group.items.length > 1 && (
-                      <span className="text-[10px] text-[hsl(var(--fg-tertiary))]">
-                        {group.items.length} رویداد
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="space-y-0.5">
-                    {group.items.map((n) => (
-                      <button
-                        key={n.id}
-                        onClick={() => handleGroupItemClick(n)}
-                        className={cn(
-                          "w-full text-start px-3 py-2 rounded-lg border-s-2",
-                          "hover:bg-[hsl(var(--surface-muted))]",
-                          "transition-colors duration-100",
-                          n.is_read
-                            ? "border-s-transparent opacity-60"
-                            : typeStyles[n.type] ?? typeStyles.info,
-                        )}
-                      >
-                        <p className="text-sm font-medium text-[hsl(var(--fg-primary))] line-clamp-1">
-                          {n.title}
-                        </p>
-                        {(n.body || n.actor_name) && (
-                          <p className="text-xs text-[hsl(var(--fg-secondary))] mt-0.5 line-clamp-2">
-                            {n.body}
-                            {n.actor_name && (
-                              <span className="text-[hsl(var(--fg-tertiary))]">
-                                {" — "}
-                                {n.actor_name}
-                              </span>
-                            )}
-                          </p>
-                        )}
-                        <p className="text-xs text-[hsl(var(--fg-tertiary))] mt-1">
-                          {timeAgo(n.created_at)}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+                <NotificationGroupCard
+                  key={group.key}
+                  group={group}
+                  isOpen={isGroupOpen(group)}
+                  onToggle={() => toggleGroup(group)}
+                  onItemClick={handleGroupItemClick}
+                />
               ))}
             </div>
           )}

@@ -43,7 +43,7 @@ import analyticsRoutes from './routes/analytics.routes'
 
 // Routes — فاز ۲۳: AI Assistant
 import { aiRoutes } from './routes/ai.routes'
-
+import { jobSchedulerPlugin } from "./plugins/job-scheduler.plugin";
 // ═══════════════════════════════════════════════════════════════
 // ✅ NEW — v1.1: Workflow & Notification Center
 // ═══════════════════════════════════════════════════════════════
@@ -199,6 +199,7 @@ async function start(): Promise<void> {
     // ✅ NEW — v1.1: Notification Center (ماژول ۲)
     // ═══════════════════════════════════════════════════════════
     await server.register(notificationRoutes)
+await server.register(jobSchedulerPlugin);
 
     // ----------------------------
     // 404
