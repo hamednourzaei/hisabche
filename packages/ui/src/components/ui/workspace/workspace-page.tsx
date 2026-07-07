@@ -31,7 +31,13 @@ export function WorkspacePage() {
   const { t } = useTranslation();
   const { workspaceName, members, currentUserRole } = useWorkspaceStore();
   const [showInvite, setShowInvite] = useState(false);
-
+console.log("WorkspacePage:", { 
+  workspaceId: useWorkspaceStore.getState().workspaceId, 
+  workspaceName: useWorkspaceStore.getState().workspaceName, 
+  members: useWorkspaceStore.getState().members, 
+  currentUserRole: useWorkspaceStore.getState().currentUserRole,
+  canInvite: useWorkspaceStore.getState().canInvite() 
+});
   const roleLabel = (role: string) => {
     switch (role) {
       case "owner":
