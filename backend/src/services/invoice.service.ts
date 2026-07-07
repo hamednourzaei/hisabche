@@ -130,7 +130,7 @@ export class InvoiceService {
 
   // ─── Create ─────────────────────────────────────────────
   async create(userId: string, data: CreateInvoice) {
-    console.log(`📝 [INVOICE] create() CALLED — userId: ${userId}, total: ${data.total}`);
+    console.log(` [INVOICE] create() CALLED — userId: ${userId}, total: ${data.total}`);
 
     // 1. Generate invoice number
     const invoiceNumber = await this.generateInvoiceNumber(userId);
@@ -166,7 +166,7 @@ export class InvoiceService {
       throw new DatabaseError("Failed to create invoice", invoiceError);
     }
 
-    console.log(`✅ [INVOICE] Invoice created: ${invoice.id}, number: ${invoiceNumber}`);
+    console.log(` [INVOICE] Invoice created: ${invoice.id}, number: ${invoiceNumber}`);
 
     // 3. Insert items
     if (data.items && data.items.length > 0) {
@@ -216,15 +216,15 @@ export class InvoiceService {
     }
 
     // ═══════════════════════════════════════════════════════
-    // ✅ NEW v1.1 — Auto-start workflow for high-value invoices
+    //  NEW v1.1 — Auto-start workflow for high-value invoices
     // ═══════════════════════════════════════════════════════
     const invoiceTotal = Number(data.total || 0);
-    console.log(`🔍 [WORKFLOW] Check: ${invoiceTotal} >= ${WORKFLOW_THRESHOLD}? ${invoiceTotal >= WORKFLOW_THRESHOLD}`);
+    console.log(` [WORKFLOW] Check: ${invoiceTotal} >= ${WORKFLOW_THRESHOLD}? ${invoiceTotal >= WORKFLOW_THRESHOLD}`);
 
     if (invoiceTotal >= WORKFLOW_THRESHOLD) {
       await this.tryStartWorkflow(userId, invoice.id, invoiceTotal);
     } else {
-      console.log(`⏭️ [WORKFLOW] Skipped — below threshold`);
+      console.log(` [WORKFLOW] Skipped — below threshold`);
     }
 
     return this.getById(invoice.id, userId);
@@ -398,14 +398,14 @@ export class InvoiceService {
     invoiceId: string,
     total: number
   ): Promise<void> {
-    console.log(`🔍 [WORKFLOW] tryStartWorkflow() CALLED`);
+    console.log(` [WORKFLOW] tryStartWorkflow() CALLED`);
     console.log(`   userId: ${userId}`);
     console.log(`   invoiceId: ${invoiceId}`);
     console.log(`   total: ${total}`);
     
     try {
       // Find active workflow template for invoices
-      console.log(`🔍 [WORKFLOW] Querying workflows table...`);
+      console.log(` [WORKFLOW] Querying workflows table...`);
       const { data: workflows, error: wfError } = await supabase
         .from("workflows")
         .select("id")
@@ -414,16 +414,16 @@ export class InvoiceService {
         .is("deleted_at", null)
         .limit(1);
 
-      console.log(`🔍 [WORKFLOW] Workflows found: ${workflows?.length || 0}, error: ${wfError?.message || 'none'}`);
+      console.log(` [WORKFLOW] Workflows found: ${workflows?.length || 0}, error: ${wfError?.message || 'none'}`);
 
       const workflow = workflows?.[0];
       if (!workflow) {
-        console.log(`⏭️ [WORKFLOW] No active workflow — skipping`);
+        console.log(`⏭ [WORKFLOW] No active workflow — skipping`);
         return;
       }
 
-      console.log(`🔍 [WORKFLOW] Found workflow: ${workflow.id}`);
-      console.log(`🔍 [WORKFLOW] Querying workspace_members for user ${userId}...`);
+      console.log(` [WORKFLOW] Found workflow: ${workflow.id}`);
+      console.log(` [WORKFLOW] Querying workspace_members for user ${userId}...`);
 
       // Get workspace_id for this user
       const { data: membership, error: memError } = await supabase
@@ -433,16 +433,16 @@ export class InvoiceService {
         .limit(1)
         .single();
 
-      console.log(`🔍 [WORKFLOW] Membership found: ${!!membership}, error: ${memError?.message || 'none'}`);
+      console.log(` [WORKFLOW] Membership found: ${!!membership}, error: ${memError?.message || 'none'}`);
 
       const workspaceId = membership?.workspace_id;
       if (!workspaceId) {
-        console.log(`⏭️ [WORKFLOW] No workspace membership — skipping`);
+        console.log(`⏭ [WORKFLOW] No workspace membership — skipping`);
         return;
       }
 
-      console.log(`🔍 [WORKFLOW] workspace_id: ${workspaceId}`);
-      console.log(`🔍 [WORKFLOW] Starting workflow instance...`);
+      console.log(`[WORKFLOW] workspace_id: ${workspaceId}`);
+      console.log(` [WORKFLOW] Starting workflow instance...`);
 
       // Start the workflow
       const instance = await this.workflowService.startWorkflow(workspaceId, {
@@ -451,11 +451,11 @@ export class InvoiceService {
         entity_id: invoiceId,
       });
 
-      console.log(`✅ [WORKFLOW] SUCCESS! Instance created: ${(instance as any)?.id || 'unknown'}`);
-      console.log(`✅ [WORKFLOW] Workflow started for invoice ${invoiceId} (${total} AFN)`);
+      console.log(` [WORKFLOW] SUCCESS! Instance created: ${(instance as any)?.id || 'unknown'}`);
+      console.log(` [WORKFLOW] Workflow started for invoice ${invoiceId} (${total} AFN)`);
     } catch (err: any) {
       // Never throw — workflow failure should not block invoice creation
-      console.error(`❌ [WORKFLOW] FAILED:`);
+      console.error(`[WORKFLOW] FAILED:`);
       console.error(`   message: ${err?.message || err}`);
       console.error(`   stack: ${err?.stack?.substring(0, 200)}`);
     }
