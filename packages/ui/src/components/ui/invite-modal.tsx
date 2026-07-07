@@ -1,3 +1,6 @@
+// ============================================
+// packages/ui/src/components/ui/invite-modal.tsx
+// ============================================
 "use client";
 
 import { useState } from "react";
@@ -28,8 +31,11 @@ export function InviteModal({ open, onClose, workspaceId }: Props) {
     if (!email.trim() || !workspaceId) return;
     setError("");
     try {
-      const invite = await inviteMember.mutateAsync({ workspaceId, email: email.trim(), role });
-      setInviteLink(`${window.location.origin}/accept-invite?token=${invite.token}`);
+      const response = await inviteMember.mutateAsync({ workspaceId, email: email.trim(), role });
+      console.log("[InviteModal] Full response:", response);
+      console.log("[InviteModal] Token:", response?.token);
+      const link = `${window.location.origin}/accept-invite?token=${response?.token ?? ""}`;
+      setInviteLink(link);
       setSent(true);
     } catch (err: any) {
       setError(err?.message || t("workspace.inviteError", "خطا در ارسال دعوت"));
