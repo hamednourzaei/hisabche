@@ -244,7 +244,7 @@ fastify.post('/api/workspaces/:id/invites', {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const data = acceptInviteSchema.parse(request.body)
-      const result = await workspaceService.acceptInvite(request.userId, data)
+const result = await workspaceService.acceptInvite(request.userId, request.user?.email || '', data)
       return reply.send(result)
     } catch (err) {
       if (err instanceof z.ZodError) {
