@@ -137,6 +137,9 @@ function useNotifications(apiBase: string) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const isMounted = useRef(true);
+  
+  // ✅ Why: Cache to prevent read notifications from disappearing during polling/pagination
+  const readCacheRef = useRef<Map<string, Notification>>(new Map());
 
   const getToken = useCallback(async (): Promise<string | null> => {
     const { data } = await supabaseClient.auth.getSession();
@@ -150,8 +153,6 @@ function useNotifications(apiBase: string) {
       const token = await getToken();
       if (!token) return;
 
-      // بدون فیلتر is_read — همه notificationها (read + unread) برمی‌گردن
-      // UI خودش با opacity و رنگ فرقشون رو نشون میده
       const [notifRes, countRes] = await Promise.all([
         fetch(`${apiBase}/notifications?limit=${NOTIFICATIONS_LIMIT}`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -164,13 +165,43 @@ function useNotifications(apiBase: string) {
       if (!isMounted.current) return;
 
       if (notifRes.ok) {
-        const json = await notifRes.json();
-        setNotifications(json.data || []);
+        const json = (await notifRes.json()) as { data?: Notification[] };
+        const fetchedItems = json.data || [];
+
+        // ✅ Why: Update cache with read items to survive the next pagination cycle
+        for (const item of fetchedItems) {
+          if (item.is_read) {
+            readCacheRef.current.set(item.id, item);
+          }
+        }
+
+        // ✅ Why: Defensive Merge to keep read notifications visible even if 
+        // backend pagination drops them from the latest 10 items.
+        const mergedMap = new Map<string, Notification>();
+        
+        // 1. API items take priority (latest state)
+        for (const item of fetchedItems) {
+          mergedMap.set(item.id, item);
+        }
+        
+        // 2. Restore read items from cache that fell out of API pagination
+        for (const [id, cachedItem] of readCacheRef.current.entries()) {
+          if (!mergedMap.has(id)) {
+            mergedMap.set(id, cachedItem);
+          }
+        }
+
+        // 3. Sort by date and apply limit
+        const finalList = Array.from(mergedMap.values())
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .slice(0, NOTIFICATIONS_LIMIT);
+
+        setNotifications(finalList);
       }
 
       if (countRes.ok) {
-        const json = await countRes.json();
-        setUnreadCount(json.count ?? 0);
+        const countJson = (await countRes.json()) as { count?: number };
+        if (isMounted.current) setUnreadCount(countJson.count ?? 0);
       }
     } catch {
       // Production safe
@@ -184,10 +215,15 @@ function useNotifications(apiBase: string) {
         const token = await getToken();
         if (!token) return;
 
-        // Optimistic: is_read = true, ولی از لیست حذف نمیشه — فقط opacity کم میشه
-        setNotifications((prev) =>
-          prev.map((n) => (ids.includes(n.id) ? { ...n, is_read: true } : n)),
-        );
+        // Optimistic: Mark as read locally and add to cache immediately
+        setNotifications((prev) => {
+          const updated = prev.map((n) => (ids.includes(n.id) ? { ...n, is_read: true } : n));
+          // ✅ Why: Sync cache so polling doesn't wipe them out
+          for (const n of updated) {
+            if (n.is_read) readCacheRef.current.set(n.id, n);
+          }
+          return updated;
+        });
 
         await fetch(`${apiBase}/notifications/mark-read`, {
           method: "PATCH",
@@ -198,12 +234,11 @@ function useNotifications(apiBase: string) {
           body: JSON.stringify({ ids }),
         });
 
-        // فقط شمارنده unread رفرش میشه
         const countRes = await fetch(`${apiBase}/notifications/unread-count`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         if (countRes.ok) {
-          const json = await countRes.json();
+          const json = (await countRes.json()) as { count?: number };
           if (isMounted.current) setUnreadCount(json.count ?? 0);
         }
       } catch {
@@ -255,7 +290,6 @@ function NotificationGroupCard({
 
   return (
     <div className="rounded-xl overflow-hidden">
-      {/* Header — کلیک = باز/بسته */}
       <button
         type="button"
         onClick={onToggle}
@@ -287,7 +321,6 @@ function NotificationGroupCard({
         </span>
       </button>
 
-      {/* Collapsible body — grid-template-rows animation */}
       <div
         id={panelId}
         role="region"
@@ -354,7 +387,6 @@ export function NotificationBell({
 
   const groups = useMemo(() => groupNotifications(notifications), [notifications]);
 
-  // حالت باز/بسته هر گروه — پیش‌فرض: unread باز، read بسته
   const [manualToggle, setManualToggle] = useState<Record<string, boolean>>({});
 
   const isGroupOpen = useCallback(
@@ -371,13 +403,14 @@ export function NotificationBell({
 
   const closePanel = useCallback(() => {
     setOpen(false);
-  }, []);
+    const unreadIds = notifications.filter((n) => !n.is_read).map((n) => n.id);
+    if (unreadIds.length > 0) markAsRead(unreadIds);
+  }, [notifications, markAsRead]);
 
   useEffect(() => {
     if (open) refetch();
   }, [open, refetch]);
 
-  // Click outside
   useEffect(() => {
     if (!open) return;
     const handleClickOutside = (e: MouseEvent) => {
@@ -393,7 +426,6 @@ export function NotificationBell({
     };
   }, [open, closePanel]);
 
-  // Escape key
   useEffect(() => {
     if (!open) return;
     const handleKey = (e: KeyboardEvent) => {
@@ -403,12 +435,12 @@ export function NotificationBell({
     return () => document.removeEventListener("keydown", handleKey);
   }, [open, closePanel]);
 
-const handleGroupItemClick = useCallback((n: Notification) => {
-  setOpen(false);
-  if (!n.is_read) markAsRead([n.id]);
-  const url = resolveEntityUrl(n);
-  router.push(url ?? "/dashboard");
-}, [markAsRead, router]);
+  const handleGroupItemClick = (n: Notification) => {
+    closePanel();
+    const url = resolveEntityUrl(n);
+    router.push(url ?? "/dashboard");
+  };
+
   return (
     <div className={cn("relative", className)}>
       <button
@@ -451,7 +483,6 @@ const handleGroupItemClick = useCallback((n: Notification) => {
             "animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-150",
           )}
         >
-          {/* Header */}
           <div className="flex items-center justify-between px-3 py-2 mb-1 border-b border-[hsl(var(--border-default))]">
             <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">اعلان‌ها</h3>
             <div className="flex items-center gap-2">
@@ -471,7 +502,6 @@ const handleGroupItemClick = useCallback((n: Notification) => {
             </div>
           </div>
 
-          {/* Groups */}
           {groups.length === 0 ? (
             <p className="px-3 py-8 text-center text-sm text-[hsl(var(--fg-tertiary))]">
               اعلانی وجود ندارد
