@@ -371,9 +371,7 @@ export function NotificationBell({
 
   const closePanel = useCallback(() => {
     setOpen(false);
-    const unreadIds = notifications.filter((n) => !n.is_read).map((n) => n.id);
-    if (unreadIds.length > 0) markAsRead(unreadIds);
-  }, [notifications, markAsRead]);
+  }, []);
 
   useEffect(() => {
     if (open) refetch();
@@ -405,12 +403,12 @@ export function NotificationBell({
     return () => document.removeEventListener("keydown", handleKey);
   }, [open, closePanel]);
 
-  const handleGroupItemClick = (n: Notification) => {
-    closePanel();
-    const url = resolveEntityUrl(n);
-    router.push(url ?? "/dashboard");
-  };
-
+const handleGroupItemClick = useCallback((n: Notification) => {
+  setOpen(false);
+  if (!n.is_read) markAsRead([n.id]);
+  const url = resolveEntityUrl(n);
+  router.push(url ?? "/dashboard");
+}, [markAsRead, router]);
   return (
     <div className={cn("relative", className)}>
       <button
