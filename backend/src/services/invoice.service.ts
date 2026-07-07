@@ -1,6 +1,6 @@
 // ============================================
 // backend/src/services/invoice.service.ts
-// Hisabche v1.1 — With Workflow auto-trigger
+// Hisabche v1.1 — With Workflow auto-trigger + Notification
 // ============================================
 
 import { supabase } from "../db";
@@ -68,7 +68,7 @@ export class InvoiceService {
       await supabase.from("transactions").insert({ customer_id: data.customerId, type: "sale", amount: data.total - data.paidAmount, currency: data.currency || "AFN", description: `Invoice ${invoiceNumber}`, reference: invoice.id, date: new Date().toISOString(), user_id: userId });
     }
 
-    // ✅ همیشه workflow + notification
+    // ✅ v1.1 — Workflow + Notification for every new invoice
     await this.tryStartWorkflow(userId, invoice.id, Number(data.total || 0));
 
     return this.getById(invoice.id, userId);
@@ -119,14 +119,29 @@ export class InvoiceService {
 
   private async tryStartWorkflow(userId: string, invoiceId: string, total: number): Promise<void> {
     try {
+      // 1. Start workflow
       const { data: workflows } = await supabase.from("workflows").select("id").eq("entity_type", "invoice").eq("is_active", true).is("deleted_at", null).limit(1);
       const workflow = workflows?.[0];
       if (!workflow) return;
+
       const { data: membership } = await supabase.from("workspace_members").select("workspace_id").eq("user_id", userId).limit(1).single();
       const workspaceId = membership?.workspace_id;
       if (!workspaceId) return;
+
       await this.workflowService.startWorkflow(workspaceId, { workflow_id: workflow.id, entity_type: "invoice", entity_id: invoiceId });
-    } catch { /* silent */ }
+
+      // 2. Send notification
+      await supabase.from("notifications").insert({
+        workspace_id: workspaceId,
+        user_id: userId,
+        title: "فاکتور جدید ثبت شد",
+        body: `فاکتور #${invoiceId.substring(0, 8)} به مبلغ ${total.toLocaleString()} افغانی ثبت شد و نیاز به تأیید دارد.`,
+        type: "approval_required",
+        action_url: `/invoices/${invoiceId}`,
+        entity_type: "invoice",
+        entity_id: invoiceId,
+      });
+    } catch { /* silent — never block invoice creation */ }
   }
 }
 
