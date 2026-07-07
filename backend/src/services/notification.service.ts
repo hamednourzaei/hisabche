@@ -25,6 +25,8 @@ export class NotificationService {
   }
 
   async list(userId: string, filters: NotificationFilters) {
+      console.log('[DEBUG] list() called with userId:', userId);
+
     let query = supabase
       .from("notifications")
       .select("*", { count: "exact" })
@@ -38,6 +40,8 @@ export class NotificationService {
     const to = from + filters.limit - 1;
 
     const { data, error, count } = await query.range(from, to);
+      console.log('[DEBUG] list() result:', data?.length, 'count:', count, 'error:', error);
+
     if (error) throw new DatabaseError("Failed to fetch notifications", error);
 
     return { data: data || [], total: count || 0 };
