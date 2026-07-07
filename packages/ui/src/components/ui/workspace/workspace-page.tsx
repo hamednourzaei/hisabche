@@ -37,7 +37,7 @@ export function WorkspacePage() {
 
   // Fetch workspace on mount — only if store is empty
   useEffect(() => {
-    if (userId && !workspaceId) {
+    if (userId) {
       fetchWorkspace(userId);
     }
   }, [userId, workspaceId, fetchWorkspace]);
