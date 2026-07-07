@@ -7,7 +7,7 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 
 // ============================================
 // Arcjet Client
-// ============================================
+// =======================================
 
 const aj = arcjet({
   key: process.env.ARCJET_KEY || 'aj_test_key',

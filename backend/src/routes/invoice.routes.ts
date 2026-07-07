@@ -78,7 +78,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
           taxRate: body.taxRate ?? 0,
           taxTotal: body.taxTotal ?? 0,
           total: body.total ?? 0,
-          paidAmount: body.paidAmount ?? 0,
+          paidAmount: 0,
           paymentMethod: body.paymentMethod ?? "cash",
           currency: body.currency ?? "AFN",
           notes: body.notes ?? "",
