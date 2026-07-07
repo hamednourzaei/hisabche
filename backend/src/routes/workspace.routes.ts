@@ -208,27 +208,31 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
     }
   })
 
-  // ─── POST /api/workspaces/:id/invites ─────────────────────
-  fastify.post('/api/workspaces/:id/invites', {
-    preHandler: [authenticate],
-    schema: {
-      params: toJsonSchema(z.object({ id: z.string().uuid() })),
-      body: toJsonSchema(createInviteSchema),
-      response: { 201: toJsonSchema(z.any()) },
-    },
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const data = createInviteSchema.parse(request.body)
-      const invite = await workspaceService.createInvite(request.userId, data)
-      return reply.code(201).send(invite)
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        return reply.code(400).send({ error: 'Validation failed', details: err.errors })
-      }
-      fastify.log.error(err)
-      return reply.code(500).send({ error: 'Failed to create invite' })
+ // ─── POST /api/workspaces/:id/invites ─────────────────────
+fastify.post('/api/workspaces/:id/invites', {
+  preHandler: [authenticate],
+  schema: {
+    params: toJsonSchema(z.object({ id: z.string().uuid() })),
+    body: toJsonSchema(createInviteSchema.omit({ workspaceId: true })),
+    response: { 201: toJsonSchema(z.any()) },
+  },
+}, async (request: FastifyRequest, reply: FastifyReply) => {
+  try {
+    const { id } = request.params as { id: string };
+    const data = createInviteSchema.omit({ workspaceId: true }).parse(request.body);
+    const invite = await workspaceService.createInvite(request.userId, {
+      ...data,
+      workspaceId: id,
+    });
+    return reply.code(201).send(invite);
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return reply.code(400).send({ error: 'Validation failed', details: err.errors })
     }
-  })
+    fastify.log.error(err)
+    return reply.code(500).send({ error: 'Failed to create invite' })
+  }
+})
 
   // ─── POST /api/workspaces/accept-invite ───────────────────
   fastify.post('/api/workspaces/accept-invite', {

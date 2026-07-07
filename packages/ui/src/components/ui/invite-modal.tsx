@@ -18,7 +18,7 @@ export function InviteModal({ open, onClose }: Props) {
   const { workspaceId, canInvite } = useWorkspaceStore();
   const inviteMember = useInviteMember();
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<WorkspaceRole>("employee");
+  const [role, setRole] = useState<WorkspaceRole>("member");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
 
@@ -31,7 +31,7 @@ export function InviteModal({ open, onClose }: Props) {
       await inviteMember.mutateAsync({
         workspaceId,
         email: email.trim(),
-        role: role === "employee" ? "member" : role,
+        role,
       });
       setSent(true);
       setTimeout(() => {
@@ -98,7 +98,8 @@ export function InviteModal({ open, onClose }: Props) {
                 className="w-full rounded-xl px-4 py-3 pe-10 text-sm appearance-none cursor-pointer border-2 border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))]"
               >
                 <option value="admin">{t("workspace.admin", "مدیر")}</option>
-                <option value="employee">{t("workspace.employee", "کارمند")}</option>
+                <option value="member">{t("workspace.employee", "کارمند")}</option>
+                <option value="viewer">{t("workspace.viewer", "ناظر")}</option>
               </select>
               <ChevronDown className="absolute end-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))] pointer-events-none" />
             </div>
