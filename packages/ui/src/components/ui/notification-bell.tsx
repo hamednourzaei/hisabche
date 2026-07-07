@@ -7,10 +7,6 @@ import { Bell } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { supabaseClient } from "@hisabche/auth";
 
-/* ═══════════════════════════════════════════════════════════════
-   TYPES
-   ═══════════════════════════════════════════════════════════════ */
-
 interface Notification {
   id: string;
   title: string;
@@ -22,10 +18,6 @@ interface Notification {
   is_read: boolean;
   created_at: string;
 }
-
-/* ═══════════════════════════════════════════════════════════════
-   HELPERS
-   ═══════════════════════════════════════════════════════════════ */
 
 function timeAgo(dateStr: string): string {
   const diffMin = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
@@ -43,10 +35,6 @@ const typeStyles: Record<string, string> = {
   approval_required: "border-s-[hsl(var(--color-primary))]",
 };
 
-/* ═══════════════════════════════════════════════════════════════
-   COMPONENT
-   ═══════════════════════════════════════════════════════════════ */
-
 export function NotificationBell() {
   const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -56,9 +44,14 @@ export function NotificationBell() {
   const fetchNotifications = useCallback(async () => {
     try {
       const token = (await supabaseClient.auth.getSession()).data.session?.access_token;
-      if (!token) return;
+      if (!token) {
+        console.log("[NotificationBell] No token, skipping");
+        return;
+      }
 
       const base = "https://hisabche.onrender.com/api/v1";
+
+      console.log("[NotificationBell] Fetching...");
 
       const [notifRes, countRes] = await Promise.all([
         fetch(`${base}/notifications?limit=5&is_read=false`, {
@@ -69,23 +62,31 @@ export function NotificationBell() {
         }),
       ]);
 
+      console.log("[NotificationBell] notifRes status:", notifRes.status);
+      console.log("[NotificationBell] countRes status:", countRes.status);
+
       if (notifRes.ok) {
-        const { data } = await notifRes.json();
-        setNotifications(data || []);
+        const json = await notifRes.json();
+        console.log("[NotificationBell] Notifications:", json);
+        setNotifications(json.data || []);
+      } else {
+        const errText = await notifRes.text();
+        console.error("[NotificationBell] API error:", notifRes.status, errText);
       }
 
       if (countRes.ok) {
-        const { count } = await countRes.json();
-        setUnreadCount(count ?? 0);
+        const json = await countRes.json();
+        console.log("[NotificationBell] Unread count:", json);
+        setUnreadCount(json.count ?? 0);
       }
-    } catch {
-      // Silent fail — notification bell is non-critical
+    } catch (err) {
+      console.error("[NotificationBell] Fetch error:", err);
     }
   }, []);
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000);
+    const interval = setInterval(fetchNotifications, 15000);
     return () => clearInterval(interval);
   }, [fetchNotifications]);
 
@@ -104,7 +105,10 @@ export function NotificationBell() {
     <div className="relative">
       <button
         type="button"
-        onClick={() => setOpen(!open)}
+        onClick={() => {
+          setOpen(!open);
+          if (!open) fetchNotifications();
+        }}
         className={cn(
           "relative p-2 rounded-xl",
           "text-[hsl(var(--fg-secondary))]",

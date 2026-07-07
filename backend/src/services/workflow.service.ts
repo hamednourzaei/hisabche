@@ -3,7 +3,7 @@
 // Hisabche v1.1 — Workflow & Approval Engine
 // Uses Supabase client (same pattern as all other services)
 // ═══════════════════════════════════════════════════════════════
-// ✅ v1.1 — Auto-notification on approve/reject
+// ✅ v1.1 — Auto-notification on create/approve/reject
 // ═══════════════════════════════════════════════════════════════
 
 import { supabase } from "../db";
@@ -190,6 +190,9 @@ export class WorkflowService {
       throw new DatabaseError("Failed to start workflow", error);
     }
 
+    // ✅ v1.1 — Notify on new workflow
+    await this.sendNotification(instance, { action: "pending" });
+
     return this.mapInstance(instance);
   }
 
@@ -341,9 +344,7 @@ export class WorkflowService {
       throw new DatabaseError("Failed to update instance", updateError);
     }
 
-    // ═══════════════════════════════════════════════════════
     // ✅ v1.1 — Auto-send notification
-    // ═══════════════════════════════════════════════════════
     await this.sendNotification(updated, action);
 
     return {
@@ -361,12 +362,14 @@ export class WorkflowService {
     action: Record<string, unknown>
   ): Promise<void> {
     try {
-      const actionType = action.action as string;
+      const actionType = (action.action as string) || "pending";
       const workspaceId = instance.workspace_id as string;
       const entityType = instance.entity_type as string;
       const entityId = instance.entity_id as string;
+      const shortId = entityId?.substring(0, 8) || "";
 
-      const config: Record<string, { title: string; type: "success" | "warning" }> = {
+      const config: Record<string, { title: string; type: "info" | "success" | "warning" }> = {
+        pending: { title: "درخواست تأیید جدید", type: "info" },
         approved: { title: "درخواست تأیید شد", type: "success" },
         rejected: { title: "درخواست رد شد", type: "warning" },
       };
@@ -374,20 +377,30 @@ export class WorkflowService {
       const cfg = config[actionType];
       if (!cfg) return;
 
-      // Send to the workflow creator (or actor)
-      const shortId = entityId.substring(0, 8);
+      // For pending (new workflow), get workspace owner
+      let targetUserId = action.actor_user_id as string;
+      if (!targetUserId) {
+        const { data: members } = await supabase
+          .from("workspace_members")
+          .select("user_id")
+          .eq("workspace_id", workspaceId)
+          .eq("role", "owner")
+          .limit(1);
+        targetUserId = (members?.[0]?.user_id as string) || "";
+      }
+
+      if (!targetUserId) return;
 
       await this.notificationService.create(workspaceId, {
-        user_id: action.actor_user_id as string,
+        user_id: targetUserId,
         title: cfg.title,
-        body: `${entityType} #${shortId} ${actionType === "approved" ? "تأیید" : "رد"} شد.`,
+        body: `${entityType} #${shortId} ${actionType === "pending" ? "نیاز به تأیید دارد" : actionType === "approved" ? "تأیید شد" : "رد شد"}.`,
         type: cfg.type,
         action_url: `/${entityType}s/${entityId}`,
         entity_type: entityType,
         entity_id: entityId,
       });
     } catch (err) {
-      // Silent — notification failure should never break workflow
       console.error("[Workflow] Notification failed:", err);
     }
   }
