@@ -1,7 +1,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
-import { notificationFiltersSchema, markReadSchema } from "@hisabche/validation";
+import { markReadSchema } from "@hisabche/validation";
 import { NotificationService } from "../services/notification.service";
 import { authenticate } from "../middleware/auth.middleware";
 
@@ -11,13 +11,21 @@ const toJsonSchema = (schema: any) => {
   return result;
 };
 
+const querySchema = z.object({
+  is_read: z.enum(["true", "false"]).optional().transform((v) => v === "true"),
+  type: z.enum(["info", "success", "warning", "approval_required"]).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+});
+
 export async function notificationRoutes(fastify: FastifyInstance) {
   const notificationService = new NotificationService();
 
   fastify.get("/api/v1/notifications", { preHandler: [authenticate] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const filters = notificationFiltersSchema.parse(request.query);
+        const raw = request.query as Record<string, string>;
+        const filters = querySchema.parse(raw);
         const result = await notificationService.list(request.userId, filters);
         return reply.send(result);
       } catch (err: any) {
