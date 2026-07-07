@@ -1,25 +1,13 @@
 // ============================================
 // backend/src/services/workspace.service.ts
 // Hisabche v1.1 — Enterprise Invite System
-// ✅ Token Hash (SHA256)
-// ✅ Email Match Check
-// ✅ Resend Invite
-// ✅ Duplicate Membership Check
-// ✅ Workspace Status Check
 // ============================================
 
 import { supabase } from '../db'
-import {
-  CreateWorkspace,
-  UpdateWorkspace,
-  UpdateMemberRole,
-  CreateInvite,
-  AcceptInvite,
-} from '@hisabche/validation'
+import { CreateWorkspace, UpdateWorkspace, UpdateMemberRole, CreateInvite, AcceptInvite } from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
 import crypto from 'crypto'
 
-// SHA256 hash for secure token storage
 function hashToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex')
 }
@@ -28,8 +16,7 @@ export class WorkspaceService {
   async createWorkspace(userId: string, data: CreateWorkspace) {
     const slug = data.slug || data.name.toLowerCase().replace(/\s+/g, '-')
     const { data: workspace, error } = await supabase.from('workspaces').insert({
-      name: data.name, slug, description: data.description || null,
-      logo_url: data.logoUrl || null, owner_id: userId,
+      name: data.name, slug, description: data.description || null, logo_url: data.logoUrl || null, owner_id: userId,
     }).select().single()
     if (error || !workspace) throw new DatabaseError('Failed to create workspace', error)
     await supabase.from('workspace_members').insert({ workspace_id: workspace.id, user_id: userId, role: 'owner' })
@@ -100,13 +87,12 @@ export class WorkspaceService {
   }
 
   // ═══════════════════════════════════════════════════════════
-  // INVITES — Enterprise Grade
+  // INVITES
   // ═══════════════════════════════════════════════════════════
 
   async createInvite(userId: string, data: CreateInvite) {
     await this.requireRole(userId, data.workspaceId, 'admin')
 
-    // Check workspace exists and is active
     const { data: ws } = await supabase.from('workspaces').select('is_active').eq('id', data.workspaceId).single()
     if (!ws?.is_active) throw new DatabaseError('Workspace is not active')
 
@@ -120,6 +106,7 @@ export class WorkspaceService {
       email: data.email,
       role: data.role,
       invited_by: userId,
+      token: tokenHash,
       token_hash: tokenHash,
       status: 'pending',
       expires_at: expiresAt.toISOString(),
@@ -127,7 +114,6 @@ export class WorkspaceService {
 
     if (error || !invite) throw new DatabaseError('Failed to create invite', error)
 
-    // Return raw token only once — frontend uses it in link
     return { ...invite, token: rawToken }
   }
 
@@ -140,37 +126,25 @@ export class WorkspaceService {
 
   async acceptInvite(userId: string, userEmail: string, data: AcceptInvite) {
     const tokenHash = hashToken(data.token)
-
-    // Find invite by token hash
     const { data: invite, error: inviteError } = await supabase.from('workspace_invites').select('*').eq('token_hash', tokenHash).eq('status', 'pending').single()
     if (inviteError || !invite) throw new DatabaseError('Invalid or expired invite')
 
-    // ✅ Email match check
-    if (invite.email.toLowerCase() !== userEmail.toLowerCase()) {
-      throw new DatabaseError('This invitation is for another email address')
-    }
-
-    // Check expiration
+    if (invite.email.toLowerCase() !== userEmail.toLowerCase()) throw new DatabaseError('This invitation is for another email address')
     if (new Date(invite.expires_at) < new Date()) {
       await supabase.from('workspace_invites').update({ status: 'expired' }).eq('id', invite.id)
       throw new DatabaseError('Invite has expired')
     }
 
-    // Check workspace status
     const { data: ws } = await supabase.from('workspaces').select('is_active').eq('id', invite.workspace_id).single()
     if (!ws?.is_active) throw new DatabaseError('Workspace is no longer active')
 
-    // Check duplicate membership
     const { data: existing } = await supabase.from('workspace_members').select('id').eq('workspace_id', invite.workspace_id).eq('user_id', userId).single()
     if (existing) throw new DatabaseError('Already a member')
 
-    // Add member
     const { error: memberError } = await supabase.from('workspace_members').insert({ workspace_id: invite.workspace_id, user_id: userId, role: invite.role })
     if (memberError) throw new DatabaseError('Failed to join workspace', memberError)
 
-    // Mark invite as accepted
     await supabase.from('workspace_invites').update({ status: 'accepted', accepted_at: new Date().toISOString(), accepted_by: userId }).eq('id', invite.id)
-
     return { success: true, workspaceId: invite.workspace_id }
   }
 
@@ -183,18 +157,15 @@ export class WorkspaceService {
 
   async resendInvite(userId: string, workspaceId: string, inviteId: string) {
     await this.requireRole(userId, workspaceId, 'admin')
-
     const { data: invite } = await supabase.from('workspace_invites').select('*').eq('id', inviteId).eq('workspace_id', workspaceId).single()
     if (!invite) throw new DatabaseError('Invite not found')
     if (!['pending', 'expired'].includes(invite.status)) throw new DatabaseError('Cannot resend this invite')
 
     const rawToken = crypto.randomBytes(32).toString('hex')
     const tokenHash = hashToken(rawToken)
-    const expiresAt = new Date()
-    expiresAt.setDate(expiresAt.getDate() + 7)
+    const expiresAt = new Date(); expiresAt.setDate(expiresAt.getDate() + 7)
 
-    await supabase.from('workspace_invites').update({ token_hash: tokenHash, status: 'pending', expires_at: expiresAt.toISOString() }).eq('id', inviteId)
-
+    await supabase.from('workspace_invites').update({ token: tokenHash, token_hash: tokenHash, status: 'pending', expires_at: expiresAt.toISOString() }).eq('id', inviteId)
     return { ...invite, token: rawToken, status: 'pending', expires_at: expiresAt.toISOString() }
   }
 
