@@ -65,3 +65,14 @@ export function useRemoveMember() {
     onSuccess: () => qc.invalidateQueries({ queryKey: workspaceKeys.all }),
   });
 }
+
+// ✅ NEW — Update member role
+export function useUpdateMemberRole() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ workspaceId, memberId, role }: { workspaceId: string; memberId: string; role: string }) => {
+      await apiClient.patch(`/workspaces/${workspaceId}/members/role`, { memberId, role });
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: workspaceKeys.all }),
+  });
+}

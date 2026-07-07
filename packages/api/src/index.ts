@@ -71,11 +71,18 @@ export {
   useCreateWorkspace,
   useInviteMember,
   useRemoveMember,
+  useUpdateMemberRole,
   workspaceKeys,
 } from './hooks/workspace'
 
 // ---------- Permissions (فاز ۱۸) ----------
-export { useRoles, usePermissions, useCreateRole, useDeleteRole, permissionKeys } from './hooks/permissions'
+export { 
+  useRoles, 
+  usePermissions, 
+  useCreateRole, 
+  useDeleteRole, 
+  permissionKeys,
+} from './hooks/permissions'
 
 // ---------- Audit (فاز ۱۹) ----------
 export { 
@@ -84,4 +91,3 @@ export {
   type AuditLog,
   type AuditResponse,
 } from './hooks/audit'
-
