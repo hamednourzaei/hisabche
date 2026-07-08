@@ -148,71 +148,63 @@ export class AccountingService {
   // Financial Reports
   // ──────────────────────────────────────────────
 
-  async getTrialBalance(userId: string, date: string) {
-    // ۱. دریافت خطوط ثبت با Join صحیح
-    const { data: lines, error } = await supabase
-      .from('journal_lines')
-      .select(`
-        debit,
-        credit,
-        account_id,
-        journal_entries!inner (
-          date
-        )
-      `)
-      .eq('user_id', userId)
-      .lte('journal_entries.date', date)
+async getTrialBalance(userId: string, date: string) {
+  // دریافت مستقیم داده‌ها بدون Join پیچیده
+  const { data: lines, error } = await supabase
+    .from('journal_lines')
+    .select('debit, credit, account_id')
+    .eq('user_id', userId)
 
-    if (error) {
-      console.error('Trial balance error:', error)
-      throw new DatabaseError('Failed to fetch trial balance', error)
-    }
-
-    if (!lines || lines.length === 0) {
-      return []
-    }
-
-    // ۲. دریافت اطلاعات حساب‌ها
-    const accountIds = [...new Set(lines.map(l => l.account_id))]
-    const { data: accounts, error: accountsError } = await supabase
-      .from('accounts')
-      .select('id, code, name, type')
-      .in('id', accountIds)
-      .eq('user_id', userId)
-
-    if (accountsError) {
-      console.error('Accounts fetch error:', accountsError)
-      throw new DatabaseError('Failed to fetch accounts', accountsError)
-    }
-
-    // ۳. گروه‌بندی و محاسبه
-    const accountMap = new Map()
-    for (const acc of accounts || []) {
-      accountMap.set(acc.id, {
-        accountId: acc.id,
-        accountCode: acc.code,
-        accountName: acc.name,
-        accountType: acc.type,
-        debit: 0,
-        credit: 0,
-      })
-    }
-
-    for (const line of lines) {
-      const entry = accountMap.get(line.account_id)
-      if (entry) {
-        entry.debit += Number(line.debit) || 0
-        entry.credit += Number(line.credit) || 0
-      }
-    }
-
-    const result = Array.from(accountMap.values())
-    return result.map(a => ({
-      ...a,
-      balance: a.debit - a.credit,
-    }))
+  if (error) {
+    console.error('Trial balance error:', error)
+    throw new DatabaseError('Failed to fetch trial balance', error)
   }
 
+  if (!lines || lines.length === 0) {
+    return []
+  }
+
+  // دریافت اطلاعات حساب‌ها
+  const accountIds = [...new Set(lines.map(l => l.account_id))]
+  const { data: accounts, error: accountsError } = await supabase
+    .from('accounts')
+    .select('id, code, name, type')
+    .in('id', accountIds)
+    .eq('user_id', userId)
+
+  if (accountsError) {
+    console.error('Accounts fetch error:', accountsError)
+    throw new DatabaseError('Failed to fetch accounts', accountsError)
+  }
+
+  // ساخت Map برای گروه‌بندی
+  const accountMap = new Map()
+  for (const acc of accounts || []) {
+    accountMap.set(acc.id, {
+      accountId: acc.id,
+      accountCode: acc.code,
+      accountName: acc.name,
+      accountType: acc.type,
+      debit: 0,
+      credit: 0,
+    })
+  }
+
+  // جمع‌آوری مقادیر
+  for (const line of lines) {
+    const entry = accountMap.get(line.account_id)
+    if (entry) {
+      entry.debit += Number(line.debit) || 0
+      entry.credit += Number(line.credit) || 0
+    }
+  }
+
+  const result = Array.from(accountMap.values())
+  return result.map(a => ({
+    ...a,
+    balance: a.debit - a.credit,
+  }))
+}
   async getBalanceSheet(userId: string, date: string) {
     const trialBalance = await this.getTrialBalance(userId, date)
 
