@@ -1,11 +1,13 @@
 // ============================================
 // backend/src/index.ts — Hisabche API Server
-// Complete: 23 Phases + v1.1 (Workflow + Notifications + Job Scheduler)
+// Complete: 23 Phases + v1.1 (Workflow + Notifications + Job Scheduler) + Swagger UI
 // ============================================
 
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import rateLimit from '@fastify/rate-limit'
+import swagger from '@fastify/swagger'
+import swaggerUi from '@fastify/swagger-ui'
 import dotenv from 'dotenv'
 
 // ──────────────────────────────────────────────
@@ -68,22 +70,22 @@ import { aiRoutes } from './routes/ai.routes'
 // ──────────────────────────────────────────────
 // Routes — Phase 23: Accounting
 // ──────────────────────────────────────────────
-import {accountingRoutes} from './routes/accounting.routes'
+import { accountingRoutes } from './routes/accounting.routes'
 
 // ──────────────────────────────────────────────
 // Routes — Phase 24: CRM
 // ──────────────────────────────────────────────
-import {crmRoutes} from './routes/crm.routes'
+import { crmRoutes } from './routes/crm.routes'
 
 // ──────────────────────────────────────────────
 // Routes — Phase 25: Manufacturing
 // ──────────────────────────────────────────────
-import {manufacturingRoutes} from './routes/manufacturing.routes'
+import { manufacturingRoutes } from './routes/manufacturing.routes'
 
 // ──────────────────────────────────────────────
 // Routes — Phase 26: Purchasing
 // ──────────────────────────────────────────────
-import {purchasingRoutes} from './routes/purchasing.routes'
+import { purchasingRoutes } from './routes/purchasing.routes'
 
 // ──────────────────────────────────────────────
 // Routes — v1.1: Workflow & Notification Center
@@ -160,6 +162,84 @@ async function start(): Promise<void> {
       credentials: true,
     })
 
+    // ═══════════════════════════════════════════════════════════════
+    // ✅ NEW — Swagger Documentation
+    // ═══════════════════════════════════════════════════════════════
+    await server.register(swagger, {
+      openapi: {
+        info: {
+          title: 'Hisabche API',
+          description: 'Complete ERP & Accounting API — 23 phases + v1.1',
+          version: '1.1.0',
+          contact: {
+            name: 'Hisabche Team',
+            email: 'support@hisabche.com',
+          },
+        },
+        servers: [
+          {
+            url: isProduction
+              ? 'https://hisabche.onrender.com'
+              : 'http://localhost:3001',
+            description: isProduction ? 'Production Server' : 'Development Server',
+          },
+        ],
+        components: {
+          securitySchemes: {
+            bearerAuth: {
+              type: 'http',
+              scheme: 'bearer',
+              bearerFormat: 'JWT',
+            },
+          },
+          schemas: {
+            Error: {
+              type: 'object',
+              properties: {
+                error: { type: 'string' },
+                message: { type: 'string' },
+                statusCode: { type: 'number' },
+              },
+            },
+          },
+        },
+        security: [{ bearerAuth: [] }],
+        tags: [
+          { name: 'Auth', description: 'Authentication endpoints' },
+          { name: 'Invoices', description: 'Invoice management' },
+          { name: 'Products', description: 'Product management' },
+          { name: 'Customers', description: 'Customer management' },
+          { name: 'Transactions', description: 'Transaction management' },
+          { name: 'Godam', description: 'Warehouse management' },
+          { name: 'Accounting', description: 'Accounting & financial reports' },
+          { name: 'HR', description: 'Human resources management' },
+          { name: 'Projects', description: 'Project management' },
+          { name: 'Workspace', description: 'Workspace & members' },
+          { name: 'Permissions', description: 'Roles & permissions' },
+          { name: 'Audit', description: 'Audit logs' },
+          { name: 'Analytics', description: 'Analytics & dashboards' },
+          { name: 'AI', description: 'AI assistant' },
+          { name: 'CRM', description: 'Customer relationship management' },
+          { name: 'Manufacturing', description: 'BOM & work orders' },
+          { name: 'Purchasing', description: 'Purchase orders' },
+          { name: 'Sync', description: 'Offline sync' },
+          { name: 'Notification', description: 'Notifications' },
+          { name: 'Workflow', description: 'Approval workflows' },
+        ],
+      },
+    })
+
+    // ─── Swagger UI ──────────────────────────
+    await server.register(swaggerUi, {
+      routePrefix: '/docs',
+      uiConfig: {
+        docExpansion: 'list',
+        deepLinking: false,
+        persistAuthorization: true,
+      },
+      staticCSP: true,
+    })
+
     // ─── Health Checks (Public) ─────────────
     server.get('/api/health', async () => ({
       status: 'ok',
@@ -173,6 +253,7 @@ async function start(): Promise<void> {
       version: '1.1.0',
       phases: 23,
       status: 'complete',
+      docs: '/docs',
     }))
 
     // ─── Auth Middleware ─────────────────────
@@ -180,7 +261,12 @@ async function start(): Promise<void> {
 
     server.addHook('preHandler', async (request, reply) => {
       const url = request.url
-      if (PUBLIC_PATHS.some((p) => url === p || url.startsWith(p + '?'))) return
+      // استثنا برای Swagger UI
+      if (url.startsWith('/docs')) return
+      if (url.startsWith('/api/health')) return
+      if (url === '/api') return
+      if (url.startsWith('/api/auth/login')) return
+      if (url.startsWith('/api/auth/signup')) return
       if (request.method === 'OPTIONS') return
       await authenticate(request, reply)
     })
@@ -266,6 +352,7 @@ async function start(): Promise<void> {
     // ─── Start Server ───────────────────────
     await server.listen({ port: PORT, host: HOST })
     server.log.info(`🚀 Server running on ${HOST}:${PORT} — 23 phases + v1.1 (Workflow + Notifications + Jobs) loaded`)
+    server.log.info(`📚 Swagger UI available at /docs`)
   } catch (err) {
     server.log.error(err)
     process.exit(1)
