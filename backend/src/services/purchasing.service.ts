@@ -11,14 +11,16 @@ import { DatabaseError } from '../errors/database.error'
 
 export class PurchasingService {
   
-  // ─── List Purchase Orders ────────────────────────────────
   async listPurchaseOrders(userId: string) {
     const { data, error } = await supabase
       .from('purchase_orders')
       .select(`
         *,
         supplier:suppliers(name, phone, email),
-        items:purchase_order_items(*)
+        items:purchase_order_items(
+          *,
+          product:products(name, unit)
+        )
       `)
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
@@ -27,27 +29,18 @@ export class PurchasingService {
     return data || []
   }
 
-  // ─── Create Purchase Order ───────────────────────────────
   async createPurchaseOrder(userId: string, data: CreatePurchaseOrder) {
-    // محاسبه جمع کل از آیتم‌ها
     const items = data.items || []
-    const subtotal = items.reduce((sum: number, item: any) => sum + (item.totalPrice || 0), 0)
-    const total = subtotal // در صورت عدم وجود تخفیف و مالیات
+    const subtotal = items.reduce((sum: number, item: any) => sum + (item.totalPrice || item.quantity * item.unitPrice), 0)
+    const total = subtotal
 
-    // ایجاد سفارش خرید
     const { data: order, error } = await supabase
       .from('purchase_orders')
       .insert({
         supplier_id: data.supplierId,
-        order_number: `PO-${Date.now()}`,
-        date: data.orderDate || new Date().toISOString(),
-        expected_delivery: data.expectedDeliveryDate || null,
+        order_date: data.orderDate || new Date().toISOString(),
+        expected_delivery_date: data.expectedDeliveryDate || null,
         status: data.status || 'pending',
-        subtotal: subtotal,
-        discount_total: 0,
-        tax_total: 0,
-        total: total,
-        currency: 'AFN',
         notes: data.notes || null,
         user_id: userId,
       })
@@ -58,7 +51,6 @@ export class PurchasingService {
       throw new DatabaseError('Failed to create purchase order', error)
     }
 
-    // ایجاد آیتم‌های سفارش
     if (items.length > 0) {
       const orderItems = items.map((item: any) => ({
         purchase_order_id: order.id,
@@ -66,7 +58,6 @@ export class PurchasingService {
         quantity: item.quantity,
         unit_price: item.unitPrice,
         total_price: item.totalPrice || (item.quantity * item.unitPrice),
-        notes: item.notes || null,
         user_id: userId,
       }))
 
@@ -75,11 +66,7 @@ export class PurchasingService {
         .insert(orderItems)
 
       if (itemsError) {
-        // برگرداندن سفارش
-        await supabase
-          .from('purchase_orders')
-          .delete()
-          .eq('id', order.id)
+        await supabase.from('purchase_orders').delete().eq('id', order.id)
         throw new DatabaseError('Failed to create purchase order items', itemsError)
       }
     }
@@ -87,7 +74,6 @@ export class PurchasingService {
     return this.getPurchaseOrder(order.id, userId)
   }
 
-  // ─── Get Single Purchase Order ──────────────────────────
   async getPurchaseOrder(id: string, userId: string) {
     const { data, error } = await supabase
       .from('purchase_orders')
@@ -109,16 +95,13 @@ export class PurchasingService {
     return data
   }
 
-  // ─── Update Purchase Order ───────────────────────────────
   async updatePurchaseOrder(userId: string, id: string, data: UpdatePurchaseOrder) {
-    const updates: Record<string, unknown> = {
-      updated_at: new Date().toISOString()
-    }
+    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
     
     if (data.supplierId !== undefined) updates.supplier_id = data.supplierId
     if (data.status !== undefined) updates.status = data.status
     if (data.expectedDeliveryDate !== undefined) {
-      updates.expected_delivery = data.expectedDeliveryDate
+      updates.expected_delivery_date = data.expectedDeliveryDate
     }
     if (data.notes !== undefined) updates.notes = data.notes
 
@@ -136,7 +119,6 @@ export class PurchasingService {
     return order
   }
 
-  // ─── Receive Goods ────────────────────────────────────────
   async receiveGoods(userId: string, id: string) {
     const { data: order, error } = await supabase
       .from('purchase_orders')
@@ -155,7 +137,6 @@ export class PurchasingService {
       throw new DatabaseError('Purchase order not found', error)
     }
 
-    // دریافت هر کالا و افزایش موجودی
     for (const item of order.items || []) {
       const { data: product } = await supabase
         .from('products')
@@ -174,7 +155,6 @@ export class PurchasingService {
       }
     }
 
-    // تغییر وضعیت سفارش به 'received'
     const { data: updated, error: updateError } = await supabase
       .from('purchase_orders')
       .update({

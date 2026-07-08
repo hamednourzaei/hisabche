@@ -22,11 +22,13 @@ const toJsonSchema = (schema: any) => {
 export async function crmRoutes(fastify: FastifyInstance) {
   const crmService = new CrmService()
 
-  // ─── GET /api/interactions ────────────────────────────────
+  // ─── GET /api/interactions ───────────────────────────────
   fastify.get('/api/interactions', {
     preHandler: [authenticate],
     schema: {
-      querystring: toJsonSchema(z.object({ customerId: z.string().uuid().optional() })),
+      querystring: toJsonSchema(z.object({
+        customerId: z.string().uuid().optional(),
+      })),
       response: {
         200: toJsonSchema(z.array(z.any())),
       },
@@ -69,7 +71,9 @@ export async function crmRoutes(fastify: FastifyInstance) {
   fastify.get('/api/opportunities', {
     preHandler: [authenticate],
     schema: {
-      querystring: toJsonSchema(z.object({ customerId: z.string().uuid().optional() })),
+      querystring: toJsonSchema(z.object({
+        customerId: z.string().uuid().optional(),
+      })),
       response: {
         200: toJsonSchema(z.array(z.any())),
       },
