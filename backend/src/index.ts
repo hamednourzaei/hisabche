@@ -1,5 +1,6 @@
 // ============================================
-// backend/src/index.ts — با همه ۲۳ فاز + Workflow + Notifications
+// backend/src/index.ts — Hisabche API Server
+// Complete: 23 Phases + v1.1 (Workflow + Notifications + Job Scheduler)
 // ============================================
 
 import Fastify from 'fastify'
@@ -7,49 +8,97 @@ import cors from '@fastify/cors'
 import rateLimit from '@fastify/rate-limit'
 import dotenv from 'dotenv'
 
-// Auth
+// ──────────────────────────────────────────────
+// Middleware
+// ──────────────────────────────────────────────
 import { authenticate } from './middleware/auth.middleware'
 
-// Routes — فازهای ۱-۹
+// ──────────────────────────────────────────────
+// Routes — Phase 1-9 (Core)
+// ──────────────────────────────────────────────
+import { authRoutes } from './routes/auth.routes'
 import { syncRoutes } from './routes/sync.routes'
 import { invoiceRoutes } from './routes/invoice.routes'
+import { invoicePdfRoutes } from './routes/invoice-pdf.routes'
 import { productRoutes } from './routes/product.routes'
 import { customerRoutes } from './routes/customer.routes'
-import { authRoutes } from './routes/auth.routes'
 import { transactionRoutes } from './routes/transaction.routes'
 import { godamRoutes } from './routes/godam.routes'
-import { invoicePdfRoutes } from './routes/invoice-pdf.routes'
 
-// Routes — فاز ۱۵: HR
+// ──────────────────────────────────────────────
+// Routes — Phase 15: HR
+// ──────────────────────────────────────────────
 import { hrRoutes } from './routes/hr.routes'
 
-// Routes — فاز ۱۶: Projects
+// ──────────────────────────────────────────────
+// Routes — Phase 16: Projects
+// ──────────────────────────────────────────────
 import { projectRoutes } from './routes/project.routes'
 
-// Routes — فاز ۱۷: Workspace
+// ──────────────────────────────────────────────
+// Routes — Phase 17: Workspace
+// ──────────────────────────────────────────────
 import { workspaceRoutes } from './routes/workspace.routes'
 
-// Routes — فاز ۱۸: Permissions
+// ──────────────────────────────────────────────
+// Routes — Phase 18: Permissions
+// ──────────────────────────────────────────────
 import { permissionRoutes } from './routes/permission.routes'
 
-// Routes — فاز ۱۹: Audit
+// ──────────────────────────────────────────────
+// Routes — Phase 19: Audit
+// ──────────────────────────────────────────────
 import auditRoutes from './routes/audit.routes'
 
-// Routes — فاز ۲۱: Event System
+// ──────────────────────────────────────────────
+// Routes — Phase 20: Event System
+// ──────────────────────────────────────────────
 import { eventRoutes } from './routes/event.routes'
 
-// Routes — فاز ۲۲: Analytics
+// ──────────────────────────────────────────────
+// Routes — Phase 21: Analytics
+// ──────────────────────────────────────────────
 import analyticsRoutes from './routes/analytics.routes'
 
-// Routes — فاز ۲۳: AI Assistant
+// ──────────────────────────────────────────────
+// Routes — Phase 22: AI Assistant
+// ──────────────────────────────────────────────
 import { aiRoutes } from './routes/ai.routes'
-import { jobSchedulerPlugin } from "./plugins/job-scheduler.plugin";
-// ═══════════════════════════════════════════════════════════════
-// ✅ NEW — v1.1: Workflow & Notification Center
-// ═══════════════════════════════════════════════════════════════
+
+// ──────────────────────────────────────────────
+// Routes — Phase 23: Accounting
+// ──────────────────────────────────────────────
+import {accountingRoutes} from './routes/accounting.routes'
+
+// ──────────────────────────────────────────────
+// Routes — Phase 24: CRM
+// ──────────────────────────────────────────────
+import {crmRoutes} from './routes/crm.routes'
+
+// ──────────────────────────────────────────────
+// Routes — Phase 25: Manufacturing
+// ──────────────────────────────────────────────
+import {manufacturingRoutes} from './routes/manufacturing.routes'
+
+// ──────────────────────────────────────────────
+// Routes — Phase 26: Purchasing
+// ──────────────────────────────────────────────
+import {purchasingRoutes} from './routes/purchasing.routes'
+
+// ──────────────────────────────────────────────
+// Routes — v1.1: Workflow & Notification Center
+// ──────────────────────────────────────────────
 import { workflowRoutes } from './routes/workflow.routes'
 import { notificationRoutes } from './routes/notification.routes'
 
+// ──────────────────────────────────────────────
+// Plugins — v1.1: Job Scheduler
+// ──────────────────────────────────────────────
+import { jobSchedulerPlugin } from './plugins/job-scheduler.plugin'
+
+// ──────────────────────────────────────────────
+// Environment
+// ──────────────────────────────────────────────
 if (process.env.NODE_ENV !== 'production') {
   dotenv.config()
 }
@@ -58,6 +107,9 @@ const PORT = Number(process.env.PORT || 3001)
 const HOST = '0.0.0.0'
 const isProduction = process.env.NODE_ENV === 'production'
 
+// ──────────────────────────────────────────────
+// Server Instance
+// ──────────────────────────────────────────────
 const server = Fastify({
   logger: {
     level: isProduction ? 'info' : 'debug',
@@ -75,11 +127,12 @@ const server = Fastify({
   },
 })
 
+// ──────────────────────────────────────────────
+// Start
+// ──────────────────────────────────────────────
 async function start(): Promise<void> {
   try {
-    // ----------------------------
-    // Rate Limit — Global
-    // ----------------------------
+    // ─── Rate Limit ──────────────────────────
     await server.register(rateLimit, {
       max: 200,
       timeWindow: '1 minute',
@@ -91,9 +144,7 @@ async function start(): Promise<void> {
       }),
     })
 
-    // ----------------------------
-    // CORS
-    // ----------------------------
+    // ─── CORS ────────────────────────────────
     await server.register(cors, {
       origin: isProduction
         ? [
@@ -109,9 +160,7 @@ async function start(): Promise<void> {
       credentials: true,
     })
 
-    // ----------------------------
-    // Health check (public)
-    // ----------------------------
+    // ─── Health Checks (Public) ─────────────
     server.get('/api/health', async () => ({
       status: 'ok',
       timestamp: new Date().toISOString(),
@@ -126,9 +175,7 @@ async function start(): Promise<void> {
       status: 'complete',
     }))
 
-    // ----------------------------
-    // Auth Middleware — All routes except public
-    // ----------------------------
+    // ─── Auth Middleware ─────────────────────
     const PUBLIC_PATHS = ['/api/health', '/api', '/api/auth/login', '/api/auth/signup']
 
     server.addHook('preHandler', async (request, reply) => {
@@ -138,9 +185,11 @@ async function start(): Promise<void> {
       await authenticate(request, reply)
     })
 
-    // ----------------------------
-    // Routes — فازهای ۱-۹
-    // ----------------------------
+    // ═══════════════════════════════════════════════════════════════
+    // REGISTER ALL ROUTES — 23 Phases + v1.1
+    // ═══════════════════════════════════════════════════════════════
+
+    // ─── Phase 1-9: Core ────────────────────
     await server.register(authRoutes)
     await server.register(syncRoutes)
     await server.register(invoiceRoutes)
@@ -150,60 +199,52 @@ async function start(): Promise<void> {
     await server.register(transactionRoutes)
     await server.register(godamRoutes)
 
-    // ----------------------------
-    // Routes — فاز ۱۵: HR
-    // ----------------------------
+    // ─── Phase 15: HR ──────────────────────
     await server.register(hrRoutes)
 
-    // ----------------------------
-    // Routes — فاز ۱۶: Projects
-    // ----------------------------
+    // ─── Phase 16: Projects ─────────────────
     await server.register(projectRoutes)
 
-    // ----------------------------
-    // Routes — فاز ۱۷: Workspace
-    // ----------------------------
+    // ─── Phase 17: Workspace ───────────────
     await server.register(workspaceRoutes)
 
-    // ----------------------------
-    // Routes — فاز ۱۸: Permissions
-    // ----------------------------
+    // ─── Phase 18: Permissions ─────────────
     await server.register(permissionRoutes)
 
-    // ----------------------------
-    // Routes — فاز ۱۹: Audit
-    // ----------------------------
+    // ─── Phase 19: Audit ────────────────────
     await server.register(auditRoutes)
 
-    // ----------------------------
-    // Routes — فاز ۲۱: Event System
-    // ----------------------------
+    // ─── Phase 20: Event System ─────────────
     await server.register(eventRoutes)
 
-    // ----------------------------
-    // Routes — فاز ۲۲: Analytics
-    // ----------------------------
+    // ─── Phase 21: Analytics ────────────────
     await server.register(analyticsRoutes)
 
-    // ----------------------------
-    // Routes — فاز ۲۳: AI Assistant
-    // ----------------------------
+    // ─── Phase 22: AI Assistant ─────────────
     await server.register(aiRoutes)
 
-    // ═══════════════════════════════════════════════════════════
-    // ✅ NEW — v1.1: Workflow & Approval Engine (ماژول ۱)
-    // ═══════════════════════════════════════════════════════════
+    // ─── Phase 23: Accounting ───────────────
+    await server.register(accountingRoutes)
+
+    // ─── Phase 24: CRM ──────────────────────
+    await server.register(crmRoutes)
+
+    // ─── Phase 25: Manufacturing ────────────
+    await server.register(manufacturingRoutes)
+
+    // ─── Phase 26: Purchasing ───────────────
+    await server.register(purchasingRoutes)
+
+    // ─── v1.1: Workflow ─────────────────────
     await server.register(workflowRoutes)
 
-    // ═══════════════════════════════════════════════════════════
-    // ✅ NEW — v1.1: Notification Center (ماژول ۲)
-    // ═══════════════════════════════════════════════════════════
+    // ─── v1.1: Notification ─────────────────
     await server.register(notificationRoutes)
-await server.register(jobSchedulerPlugin);
 
-    // ----------------------------
-    // 404
-    // ----------------------------
+    // ─── v1.1: Job Scheduler ────────────────
+    await server.register(jobSchedulerPlugin)
+
+    // ─── 404 Handler ────────────────────────
     server.setNotFoundHandler((_req, reply) => {
       reply.status(404).send({
         error: 'Not Found',
@@ -212,9 +253,7 @@ await server.register(jobSchedulerPlugin);
       })
     })
 
-    // ----------------------------
-    // Error handler
-    // ----------------------------
+    // ─── Error Handler ──────────────────────
     server.setErrorHandler((error, _req, reply) => {
       server.log.error(error)
       reply.status((error as any).statusCode || 500).send({
@@ -224,14 +263,18 @@ await server.register(jobSchedulerPlugin);
       })
     })
 
+    // ─── Start Server ───────────────────────
     await server.listen({ port: PORT, host: HOST })
-    server.log.info(`🚀 Server running on ${HOST}:${PORT} — 23 phases + Workflow + Notifications loaded`)
+    server.log.info(`🚀 Server running on ${HOST}:${PORT} — 23 phases + v1.1 (Workflow + Notifications + Jobs) loaded`)
   } catch (err) {
     server.log.error(err)
     process.exit(1)
   }
 }
 
+// ──────────────────────────────────────────────
+// Graceful Shutdown
+// ──────────────────────────────────────────────
 async function shutdown(signal: string) {
   try {
     server.log.info(`Received ${signal}, shutting down...`)
