@@ -1,6 +1,6 @@
 // ============================================
 // backend/src/services/invoice.service.ts
-// Hisabche v1.1 — With Workflow auto-trigger + Notification
+// Hisabche v1.1 — With Workflow auto-trigger + Notification + Accounting
 // ============================================
 
 import { supabase } from "../db";
@@ -42,6 +42,8 @@ export class InvoiceService {
 
   async create(userId: string, data: CreateInvoice) {
     const invoiceNumber = await this.generateInvoiceNumber(userId);
+    
+    // ─── ۱. ایجاد فاکتور ──────────────────────
     const { data: invoice, error: invoiceError } = await supabase.from("invoices").insert({
       invoice_number: invoiceNumber, type: data.type, date: data.date || new Date().toISOString(),
       due_date: data.dueDate || null, customer_id: data.customerId || null, supplier_id: data.supplierId || null,
@@ -51,24 +53,55 @@ export class InvoiceService {
       currency: data.currency || "AFN", status: data.paidAmount >= data.total ? "completed" : "pending",
       notes: data.notes || "", reference: data.reference || "", user_id: userId,
     }).select().single();
+    
     if (invoiceError || !invoice) throw new DatabaseError("Failed to create invoice", invoiceError);
 
+    // ─── ۲. ایجاد آیتم‌های فاکتور ─────────────
     if (data.items?.length) {
       const items = data.items.map((item) => ({
-        invoice_id: invoice.id, product_id: item.productId, product_name: item.productName,
+        invoice_id: invoice.id, product_id: item.productId, product_name: item.productName || "",
         quantity: item.quantity, unit_price: item.unitPrice, discount: item.discount || 0,
-        total_price: item.totalPrice, notes: item.notes || "", user_id: userId,
+        total_price: item.totalPrice || (item.quantity * item.unitPrice), notes: item.notes || "", user_id: userId,
       }));
       const { error: itemsError } = await supabase.from("invoice_items").insert(items);
-      if (itemsError) { await supabase.from("invoices").delete().eq("id", invoice.id); throw new DatabaseError("Failed to create invoice items", itemsError); }
-      if (data.type === "sale") for (const item of data.items) if (item.productId) await this.updateStock(item.productId, item.quantity, userId);
+      if (itemsError) { 
+        await supabase.from("invoices").delete().eq("id", invoice.id); 
+        throw new DatabaseError("Failed to create invoice items", itemsError); 
+      }
+      
+      // ─── ۳. به‌روزرسانی موجودی ──────────────
+      if (data.type === "sale") {
+        for (const item of data.items) {
+          if (item.productId) {
+            await this.updateStock(item.productId, item.quantity, userId);
+          }
+        }
+      }
     }
 
-    if (data.customerId && data.paidAmount < data.total) {
-      await supabase.from("transactions").insert({ customer_id: data.customerId, type: "sale", amount: data.total - data.paidAmount, currency: data.currency || "AFN", description: `Invoice ${invoiceNumber}`, reference: invoice.id, date: new Date().toISOString(), user_id: userId });
+    // ─── ۴. ثبت تراکنش مالی ──────────────────
+    if (data.customerId && (data.paidAmount || 0) < (data.total || 0)) {
+      await supabase.from("transactions").insert({ 
+        customer_id: data.customerId, type: "sale", 
+        amount: (data.total || 0) - (data.paidAmount || 0), 
+        currency: data.currency || "AFN", 
+        description: `Invoice ${invoiceNumber}`, 
+        reference: invoice.id, 
+        date: new Date().toISOString(), 
+        user_id: userId 
+      });
     }
 
-    // ✅ v1.1 — Workflow + Notification for every new invoice
+    // ═══════════════════════════════════════════════════════════════
+    // ✅ NEW — ۵. ثبت‌های حسابداری (Journal Entries)
+    // ═══════════════════════════════════════════════════════════════
+    await this.createAccountingEntries(userId, invoice.id, {
+      ...data,
+      invoiceNumber,
+      total: data.total || 0,
+    });
+
+    // ─── ۶. وورک‌فلو و اعلان ──────────────────
     await this.tryStartWorkflow(userId, invoice.id, Number(data.total || 0));
 
     return this.getById(invoice.id, userId);
@@ -88,7 +121,9 @@ export class InvoiceService {
   }
 
   async delete(id: string, userId: string): Promise<void> {
+    // حذف آیتم‌های فاکتور
     await supabase.from("invoice_items").delete().eq("invoice_id", id);
+    // حذف فاکتور
     const { error } = await supabase.from("invoices").delete().eq("id", id).eq("user_id", userId);
     if (error) throw new DatabaseError("Failed to delete invoice", error);
   }
@@ -105,16 +140,155 @@ export class InvoiceService {
     return { todaySales, totalDebt, lowStockCount };
   }
 
+  // ═══════════════════════════════════════════════════════════════
+  // ✅ NEW — متد ثبت‌های حسابداری
+  // ═══════════════════════════════════════════════════════════════
+  private async createAccountingEntries(
+    userId: string, 
+    invoiceId: string, 
+    data: { 
+      type: string; 
+      total: number; 
+      items?: any[]; 
+      invoiceNumber?: string; 
+      date?: string;
+    }
+  ): Promise<void> {
+    try {
+      // ۱. دریافت شناسه حساب‌ها
+      const { data: accounts } = await supabase
+        .from('accounts')
+        .select('id, code, type')
+        .in('code', ['1200', '4000', '5000', '1000'])
+        .eq('user_id', userId);
+
+      if (!accounts || accounts.length < 4) {
+        console.warn('⚠️ حساب‌های حسابداری کامل نیستند. لطفاً حساب‌های ۱۲۰۰، ۴۰۰۰، ۵۰۰۰ و ۱۰۰۰ را ایجاد کنید.');
+        return;
+      }
+
+      const accountMap: Record<string, string> = {};
+      for (const acc of accounts) {
+        accountMap[acc.code] = acc.id;
+      }
+
+      const receivableId = accountMap['1200']; // حساب دریافتنی
+      const revenueId = accountMap['4000'];    // حساب فروش
+      const cogsId = accountMap['5000'];       // هزینه کالای فروش رفته
+      const inventoryId = accountMap['1000'];   // موجودی کالا
+
+      if (!receivableId || !revenueId || !cogsId || !inventoryId) {
+        console.warn('⚠️ یکی از حساب‌های حسابداری یافت نشد.');
+        return;
+      }
+
+      // ۲. ایجاد سند حسابداری (Journal Entry)
+      const { data: journalEntry, error: journalError } = await supabase
+        .from('journal_entries')
+        .insert({
+          date: data.date ? data.date.split('T')[0] : new Date().toISOString().split('T')[0],
+          description: `فاکتور فروش ${data.invoiceNumber || invoiceId.substring(0, 8)}`,
+          reference: invoiceId,
+          user_id: userId,
+        })
+        .select()
+        .single();
+
+      if (journalError || !journalEntry) {
+        console.error('❌ Failed to create journal entry:', journalError);
+        return;
+      }
+
+      // ۳. ثبت خطوط حسابداری
+      const journalLines: any[] = [
+        // بدهکار: حساب دریافتنی
+        {
+          journal_id: journalEntry.id,
+          account_id: receivableId,
+          debit: data.total,
+          credit: 0,
+          user_id: userId,
+        },
+        // بستانکار: حساب فروش
+        {
+          journal_id: journalEntry.id,
+          account_id: revenueId,
+          debit: 0,
+          credit: data.total,
+          user_id: userId,
+        },
+      ];
+
+      // ۴. اگر نوع فروش باشد، ثبت هزینه کالای فروش رفته و کاهش موجودی
+      if (data.type === 'sale' && data.items?.length) {
+        let totalCogs = 0;
+        for (const item of data.items) {
+          // دریافت قیمت تمام شده محصول
+          const { data: product } = await supabase
+            .from('products')
+            .select('buy_price')
+            .eq('id', item.productId)
+            .single();
+
+          const costPrice = product?.buy_price || 0;
+          const itemCost = costPrice * item.quantity;
+          totalCogs += itemCost;
+
+          // ثبت هزینه کالای فروش رفته
+          journalLines.push({
+            journal_id: journalEntry.id,
+            account_id: cogsId,
+            debit: itemCost,
+            credit: 0,
+            user_id: userId,
+          });
+
+          // ثبت کاهش موجودی
+          journalLines.push({
+            journal_id: journalEntry.id,
+            account_id: inventoryId,
+            debit: 0,
+            credit: itemCost,
+            user_id: userId,
+          });
+        }
+      }
+
+      // ۵. درج خطوط حسابداری
+      const { error: linesError } = await supabase
+        .from('journal_lines')
+        .insert(journalLines);
+
+      if (linesError) {
+        // Rollback: حذف سند حسابداری
+        await supabase.from('journal_entries').delete().eq('id', journalEntry.id);
+        console.error('❌ Failed to create journal lines:', linesError);
+      } else {
+        console.log(`✅ Journal entries created for invoice ${invoiceId}`);
+      }
+
+    } catch (err) {
+      console.error('❌ Error in createAccountingEntries:', err);
+      // خطا را نادیده می‌گیریم تا ایجاد فاکتور متوقف نشود
+    }
+  }
+
   private async generateInvoiceNumber(userId: string): Promise<string> {
     const { count } = await supabase.from("invoices").select("*", { count: "exact", head: true }).eq("user_id", userId);
     return `INV-${((count || 0) + 1).toString().padStart(6, "0")}`;
   }
 
   private async updateStock(productId: string, quantity: number, userId: string): Promise<void> {
-    const { data: product, error } = await supabase.from("products").select("quantity").eq("id", productId).single();
+    const { data: product, error } = await supabase.from("products").select("quantity, buy_price").eq("id", productId).single();
     if (error || !product) throw new DatabaseError("Product not found", error);
     await supabase.from("products").update({ quantity: Math.max(0, product.quantity - quantity) }).eq("id", productId);
-    await supabase.from("stock_movements").insert({ product_id: productId, type: "sale", quantity: -quantity, reference_type: "invoice", user_id: userId });
+    await supabase.from("stock_movements").insert({ 
+      product_id: productId, 
+      type: "sale", 
+      quantity: -quantity, 
+      reference_type: "invoice", 
+      user_id: userId 
+    });
   }
 
   private async tryStartWorkflow(userId: string, invoiceId: string, total: number): Promise<void> {
@@ -128,7 +302,11 @@ export class InvoiceService {
       const workspaceId = membership?.workspace_id;
       if (!workspaceId) return;
 
-      await this.workflowService.startWorkflow(workspaceId, { workflow_id: workflow.id, entity_type: "invoice", entity_id: invoiceId });
+      await this.workflowService.startWorkflow(workspaceId, { 
+        workflow_id: workflow.id, 
+        entity_type: "invoice", 
+        entity_id: invoiceId 
+      });
 
       // 2. Send notification
       await supabase.from("notifications").insert({
@@ -141,7 +319,9 @@ export class InvoiceService {
         entity_type: "invoice",
         entity_id: invoiceId,
       });
-    } catch { /* silent — never block invoice creation */ }
+    } catch { 
+      /* silent — never block invoice creation */ 
+    }
   }
 }
 
