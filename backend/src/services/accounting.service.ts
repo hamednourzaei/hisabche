@@ -148,7 +148,6 @@ export class AccountingService {
   // ✅ NEW — Get Trial Balance
   // ──────────────────────────────────────────────
   async getTrialBalance(userId: string, date: string) {
-    // دریافت تمام خطوط ثبت تا تاریخ مشخص
     const { data: lines, error } = await supabase
       .from('journal_lines')
       .select(`
@@ -171,7 +170,6 @@ export class AccountingService {
       return []
     }
 
-    // دریافت اطلاعات حساب‌ها
     const accountIds = [...new Set(lines.map(l => l.account_id))]
     const { data: accounts, error: accountsError } = await supabase
       .from('accounts')
@@ -184,7 +182,6 @@ export class AccountingService {
       throw new DatabaseError('Failed to fetch accounts', accountsError)
     }
 
-    // گروه‌بندی بر اساس account
     const accountMap = new Map()
     for (const acc of accounts || []) {
       accountMap.set(acc.id, {
