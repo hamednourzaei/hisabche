@@ -9,7 +9,7 @@ import {
   createPurchaseOrderSchema,
   updatePurchaseOrderSchema,
 } from '@hisabche/validation'
-import { PurchasingService } from '../services/purchasing.service'
+import PurchasingService from '../services/purchasing.service'
 import { authenticate } from '../middleware/auth.middleware'
 
 const toJsonSchema = (schema: any) => {
