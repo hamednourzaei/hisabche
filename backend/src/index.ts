@@ -25,12 +25,12 @@ import { invoicePdfRoutes } from './routes/invoice-pdf.routes'
 import { productRoutes } from './routes/product.routes'
 import { customerRoutes } from './routes/customer.routes'
 import { transactionRoutes } from './routes/transaction.routes'
-import { godamRoutes } from './routes/godam.routes'
+import { warehouseRoutes } from './routes/warehouse.routes'
 
 // ──────────────────────────────────────────────
 // Routes — Phase 15: HR
 // ──────────────────────────────────────────────
-import { hrRoutes } from './routes/hr.routes'
+import { humanResourcesRoutes } from './routes/human-resources.routes'
 
 // ──────────────────────────────────────────────
 // Routes — Phase 16: Projects
@@ -210,7 +210,7 @@ async function start(): Promise<void> {
           { name: 'Products', description: 'Product management' },
           { name: 'Customers', description: 'Customer management' },
           { name: 'Transactions', description: 'Transaction management' },
-          { name: 'Godam', description: 'Warehouse management' },
+          { name: 'warehouse', description: 'Warehouse management' },
           { name: 'Accounting', description: 'Accounting & financial reports' },
           { name: 'HR', description: 'Human resources management' },
           { name: 'Projects', description: 'Project management' },
@@ -283,10 +283,10 @@ async function start(): Promise<void> {
     await server.register(productRoutes)
     await server.register(customerRoutes)
     await server.register(transactionRoutes)
-    await server.register(godamRoutes)
+    await server.register(warehouseRoutes)
 
     // ─── Phase 15: HR ──────────────────────
-    await server.register(hrRoutes)
+    await server.register(humanResourcesRoutes)
 
     // ─── Phase 16: Projects ─────────────────
     await server.register(projectRoutes)
@@ -341,11 +341,12 @@ async function start(): Promise<void> {
 
     // ─── Error Handler ──────────────────────
     server.setErrorHandler((error, _req, reply) => {
-      server.log.error(error)
-      reply.status((error as any).statusCode || 500).send({
-        error: (error as any).name || 'Internal Server Error',
-        message: error.message || 'Unexpected error',
-        statusCode: (error as any).statusCode || 500,
+      const err = error as any
+      server.log.error(err)
+      reply.status(err.statusCode || 500).send({
+        error: err.name || 'Internal Server Error',
+        message: err.message || 'Unexpected error',
+        statusCode: err.statusCode || 500,
       })
     })
 
@@ -354,7 +355,8 @@ async function start(): Promise<void> {
     server.log.info(`🚀 Server running on ${HOST}:${PORT} — 23 phases + v1.1 (Workflow + Notifications + Jobs) loaded`)
     server.log.info(`📚 Swagger UI available at /docs`)
   } catch (err) {
-    server.log.error(err)
+    const error = err as Error
+    server.log.error(error)
     process.exit(1)
   }
 }
@@ -368,7 +370,8 @@ async function shutdown(signal: string) {
     await server.close()
     process.exit(0)
   } catch (err) {
-    server.log.error(err)
+    const error = err as Error
+    server.log.error(error)
     process.exit(1)
   }
 }

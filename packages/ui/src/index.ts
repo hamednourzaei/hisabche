@@ -1,5 +1,5 @@
 // ============================================
-// Hisabche UI — Barrel Exports v7.1
+// Hisabche UI — Barrel Exports v7.4 (Internationalized)
 // ============================================
 
 import './styles/lite-mode.css'
@@ -23,7 +23,6 @@ export { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableC
 export { Toaster } from './components/ui/sonner'
 
 // ---------- Feedback ----------
-
 export { SaveIndicator, type SaveIndicatorProps } from './components/ui/save-indicator'
 export { Celebration, type CelebrationProps } from './components/ui/celebration'
 export { ErrorBoundary } from './components/ui/error-boundary'
@@ -39,7 +38,7 @@ export { TopNav } from './components/ui/navigation/top-nav'
 export { SideNav } from './components/ui/navigation/side-nav'
 export { NavigationRegistry } from './components/ui/navigation/navigation-registry'
 
-// ---------- Landing (نگه داشتیم — داخل dashboard-header استفاده میشه) ----------
+// ---------- Landing ----------
 export { GlassNavbar, AnimatedCounter, Section, FeatureCard, SectionHeading, GradientMesh, ShimmerCTA } from './components/ui/landing-section'
 export { LandingPreview } from './components/ui/landing-preview'
 export { LivingBackground } from './components/ui/living-background'
@@ -67,31 +66,37 @@ export { AuthContainer } from './components/ui/auth/containers/auth-container'
 // ---------- Modals ----------
 export { Modal } from './components/ui/Modal'
 export { AddProductModal } from './components/ui/add-product-modal'
-export { AddCustomerModal } from './components/ui/baqidari'
-export { PaymentModal } from './components/ui/baqidari'
+export { AddCustomerModal } from './components/ui/customers'
+export { PaymentModal } from './components/ui/customers'
 export { InviteModal } from './components/ui/invite-modal'
 
-// ---------- Pages ----------
-export { BaqidariView, BaqidariSkeleton } from './components/ui/baqidari'
-export { BaqidariContainer as BaqidariPage } from './components/ui/baqidari/containers/baqidari-container'
-export { GodamView } from './components/ui/godam/godam-view'
-export { GodamSkeleton } from './components/ui/godam/godam-skeleton'
-export { ProductDetailPage } from './components/ui/godam-detail'
+// ---------- Pages — Customers ----------
+export { customersView, customersSkeleton } from './components/ui/customers'
+export { customersContainer as customersPage } from './components/ui/customers/containers/customer-container'
+
+// ---------- Pages — Warehouse ----------
+export { warehouseView } from './components/ui/warehouse/warehouse-view'
+export { warehouseSkeleton } from './components/ui/warehouse/warehouse-skeleton'
+export { ProductDetailPage } from './components/ui/warehouse-detail'
+
+// ---------- Pages — Invoices ----------
 export { InvoicesContainer } from './components/ui/invoices/containers/invoices-container'
 export { InvoicesView } from './components/ui/invoices/invoices-view'
 export { InvoicesSkeleton } from './components/ui/invoices/invoices-skeleton'
 export { InvoiceDetailPage } from './components/ui/invoice-detail/invoice-detail-page'
+
+// ---------- Pages — Settings & Others ----------
 export { SettingsPage } from './components/ui/settings'
 export { QuickInvoicePage } from './components/ui/quick-invoice'
 export { SyncCenterPage } from './components/ui/sync-center'
 export { WorkspacePage } from './components/ui/workspace'
 export { OnboardingPage } from './components/ui/onboarding/onboarding-page'
-export { CustomerDetailView } from './components/ui/baqidari'
+export { CustomerDetailView } from './components/ui/customers'
 
 // ---------- Containers ----------
 export { DashboardContainer } from './components/ui/dashboard/containers/dashboard-container'
-export { GodamContainer } from './components/ui/godam/containers/godam-container'
-export { ProductDetailContainer } from './components/ui/godam-detail/containers/godam-detail-container'
+export { warehouseContainer } from './components/ui/warehouse/containers/Warehouse-container'
+export { ProductDetailContainer } from './components/ui/warehouse-detail/containers/warehouse-detail-container'
 export { InvoiceDetailContainer } from './components/ui/invoice-detail/containers/invoice-detail-container'
 export { QuickInvoiceContainer } from './components/ui/quick-invoice/containers/quick-invoice-container'
 export { SyncCenterContainer } from './components/ui/sync-center/containers/sync-center-container'
@@ -103,34 +108,44 @@ export { StatCard } from './components/ui/dashboard/dashboard-stats'
 export { DashboardInvoices } from './components/ui/dashboard/dashboard-invoices'
 export { useDashboard } from './hooks/dashboard/use-dashboard'
 
-// ---------- HR (فاز ۱۵) ----------
-export { HrContainer } from './components/ui/hr/containers/hr-container'
-export { HrView } from './components/ui/hr/hr-view'
-export { EmployeeDetailContainer } from './components/ui/hr/containers/employee-detail-container'
-export { EmployeeDetailView } from './components/ui/hr/employee-detail-view'
-// ---------- Projects (فاز ۱۶) ----------
+// ---------- Human Resources ----------
+export { HumanResourcesContainer } from './components/ui/human-resources/containers/hr-container'
+export { HumanResourcesView } from './components/ui/human-resources/hr-view'
+export { EmployeeDetailContainer } from './components/ui/human-resources/containers/employee-detail-container'
+export { EmployeeDetailView } from './components/ui/human-resources/employee-detail-view'
+
+// ---------- Projects ----------
 export { ProjectsContainer } from './components/ui/projects/containers/projects-container'
 export { ProjectsView } from './components/ui/projects/projects-view'
 export { ProjectDetailContainer } from './components/ui/projects/containers/project-detail-container'
 export { ProjectDetailView } from './components/ui/projects/project-detail-view'
-// ---------- Permissions (فاز ۱۸) ----------
+
+// ---------- Permissions ----------
 export { PermissionsContainer } from './components/ui/permissions/containers/permissions-container'
 export { PermissionsView } from './components/ui/permissions/permissions-view'
-// ---------- Audit (فاز ۱۹) ----------
+
+// ---------- Audit ----------
 export { AuditContainer } from './components/ui/audit/containers/audit-container'
 export { AuditView } from './components/ui/audit/audit-view'
-// جایگزین کن export قدیمی workspace-page رو با:
+
+// ---------- Workspace ----------
 export { WorkspaceContainer } from './components/ui/workspace/containers/workspace-container'
+
 // ---------- Toast ----------
 export { Toast, ToastContainer, type ToastProps, type ToastVariant } from './components/ui/toast'
 export { ToastProvider, useToast } from './components/ui/toast-provider'
+
+// ---------- Other Components ----------
 export { Breadcrumb } from './components/ui/breadcrumb'
 export { NotificationBell } from './components/ui/notification-bell'
-// ---------- Utils ----------
-export { exportToCSV } from './lib/export'
 export { SalesChart } from './components/ui/dashboard/sales-chart'
-export { useCurrency } from './hooks/use-currency'
 export { JalaliDatePicker } from './components/ui/jalali-datepicker'
-export { toPersianNumbers, toArabicNumbers, usePersianNumbers } from './lib/persian-numbers'
 export { PhoneInput } from './components/ui/phone-input'
+
+// ---------- Utils & Hooks ----------
+export { exportToCSV } from './lib/export'
+export { useCurrency } from './hooks/use-currency'
+export { toPersianNumbers, toArabicNumbers, usePersianNumbers } from './lib/persian-numbers'
+
+// ---------- Types ----------
 export type SupportedLanguage = 'fa-AF' | 'fa-IR'

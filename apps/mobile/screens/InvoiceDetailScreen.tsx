@@ -55,11 +55,11 @@ const handlePrint = useCallback(() => {
     if (!invoice) return
     const inv = invoice as any
     const text = [
-      `🧾 ${t('faktoor.title')}: #${inv.invoiceNumber ?? inv.invoice_number ?? ''}`,
+      `🧾 ${t('invoices.title')}: #${inv.invoiceNumber ?? inv.invoice_number ?? ''}`,
       `📅 ${fmtDate(inv.date ?? '')}`,
       inv.customerName || inv.customer_name ? `👤 ${inv.customerName ?? inv.customer_name}` : '',
       `💰 ${fmtAmount(inv.total ?? 0)} ${inv.currency ?? 'AFN'}`,
-      `📌 ${t(`faktoor.${inv.status ?? 'pending'}`)}`,
+      `📌 ${t(`invoices.${inv.status ?? 'pending'}`)}`,
     ].filter(Boolean).join('\n')
     try {
       await Share.share({ message: text })
@@ -70,7 +70,7 @@ const handlePrint = useCallback(() => {
   const handleWhatsApp = useCallback(() => {
     if (!invoice) return
     const inv = invoice as any
-    const text = `🧾 *${t('faktoor.title')}*: #${inv.invoiceNumber ?? inv.invoice_number}\n📅 ${fmtDate(inv.date ?? '')}\n💰 *${fmtAmount(inv.total ?? 0)} ${inv.currency ?? 'AFN'}*\n📌 ${t(`faktoor.${inv.status ?? 'pending'}`)}`
+    const text = `🧾 *${t('invoices.title')}*: #${inv.invoiceNumber ?? inv.invoice_number}\n📅 ${fmtDate(inv.date ?? '')}\n💰 *${fmtAmount(inv.total ?? 0)} ${inv.currency ?? 'AFN'}*\n📌 ${t(`invoices.${inv.status ?? 'pending'}`)}`
     const url = `whatsapp://send?text=${encodeURIComponent(text)}`
     Linking.canOpenURL(url).then(supported => {
       if (supported) Linking.openURL(url)
@@ -82,7 +82,7 @@ const handlePrint = useCallback(() => {
   const handleTelegram = useCallback(() => {
     if (!invoice) return
     const inv = invoice as any
-    const text = `🧾 *${t('faktoor.title')}*: #${inv.invoiceNumber ?? inv.invoice_number}\n📅 ${fmtDate(inv.date ?? '')}\n💰 *${fmtAmount(inv.total ?? 0)} ${inv.currency ?? 'AFN'}*\n📌 ${t(`faktoor.${inv.status ?? 'pending'}`)}`
+    const text = `🧾 *${t('invoices.title')}*: #${inv.invoiceNumber ?? inv.invoice_number}\n📅 ${fmtDate(inv.date ?? '')}\n💰 *${fmtAmount(inv.total ?? 0)} ${inv.currency ?? 'AFN'}*\n📌 ${t(`invoices.${inv.status ?? 'pending'}`)}`
     const url = `tg://msg?text=${encodeURIComponent(text)}`
     Linking.canOpenURL(url).then(supported => {
       if (supported) Linking.openURL(url)
@@ -94,8 +94,8 @@ const handlePrint = useCallback(() => {
   const handleEmail = useCallback(() => {
     if (!invoice) return
     const inv = invoice as any
-    const subject = `${t('faktoor.title')} #${inv.invoiceNumber ?? inv.invoice_number}`
-    const body = `${t('faktoor.title')}: #${inv.invoiceNumber ?? inv.invoice_number}\n${t('faktoor.date')}: ${fmtDate(inv.date ?? '')}\n${t('faktoor.total')}: ${fmtAmount(inv.total ?? 0)} ${inv.currency ?? 'AFN'}`
+    const subject = `${t('invoices.title')} #${inv.invoiceNumber ?? inv.invoice_number}`
+    const body = `${t('invoices.title')}: #${inv.invoiceNumber ?? inv.invoice_number}\n${t('invoices.date')}: ${fmtDate(inv.date ?? '')}\n${t('invoices.total')}: ${fmtAmount(inv.total ?? 0)} ${inv.currency ?? 'AFN'}`
     const url = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
     Linking.openURL(url).catch(() => Alert.alert('Error', 'Could not open email'))
   }, [invoice, t])
@@ -112,7 +112,7 @@ const handlePrint = useCallback(() => {
     return (
       <SafeAreaView style={[s.fill, s.center, { backgroundColor: tk.background }]}>
         <Text style={[s.emptyEmoji]}>🧾</Text>
-        <Text style={[s.emptyTitle, { color: tk.foreground }]}>{t('faktoor.notFound')}</Text>
+        <Text style={[s.emptyTitle, { color: tk.foreground }]}>{t('invoices.notFound')}</Text>
       </SafeAreaView>
     )
   }
@@ -141,7 +141,7 @@ const handlePrint = useCallback(() => {
               </Text>
             ) : null}
             <View style={[s.statusBadge, { backgroundColor: statusStyle.bg }]}>
-              <Text style={[s.statusText, { color: statusStyle.text }]}>{t(`faktoor.${status}`)}</Text>
+              <Text style={[s.statusText, { color: statusStyle.text }]}>{t(`invoices.${status}`)}</Text>
             </View>
           </View>
         </View>
@@ -150,10 +150,10 @@ const handlePrint = useCallback(() => {
         <View style={s.tableContainer}>
           <View style={[s.tableHeader, { borderBottomColor: tk.border }]}>
             <Text style={[s.thNum, { color: tk.mutedFg }]}>#</Text>
-            <Text style={[s.thName, { color: tk.mutedFg }]}>{t('godam.productName')}</Text>
-            <Text style={[s.thQty, { color: tk.mutedFg }]}>{t('faktoor.quantity')}</Text>
-            <Text style={[s.thPrice, { color: tk.mutedFg }]}>{t('faktoor.unitPrice')}</Text>
-            <Text style={[s.thTotal, { color: tk.mutedFg }]}>{t('faktoor.totalPrice')}</Text>
+            <Text style={[s.thName, { color: tk.mutedFg }]}>{t('warehouse.productName')}</Text>
+            <Text style={[s.thQty, { color: tk.mutedFg }]}>{t('invoices.quantity')}</Text>
+            <Text style={[s.thPrice, { color: tk.mutedFg }]}>{t('invoices.unitPrice')}</Text>
+            <Text style={[s.thTotal, { color: tk.mutedFg }]}>{t('invoices.totalPrice')}</Text>
           </View>
           {items.map((item: any, i: number) => (
             <View key={i} style={[s.tableRow, { borderBottomColor: tk.border }]}>
@@ -175,14 +175,14 @@ const handlePrint = useCallback(() => {
         {/* Totals */}
         <View style={[s.totals, { borderTopColor: tk.border }]}>
           <View style={s.totalRow}>
-            <Text style={[s.totalLabel, { color: tk.mutedFg }]}>{t('faktoor.subtotal')}</Text>
+            <Text style={[s.totalLabel, { color: tk.mutedFg }]}>{t('invoices.subtotal')}</Text>
             <Text style={[s.totalValue, { color: tk.foreground }]}>
               {fmtAmount(inv.subtotal || 0)} {inv.currency || 'AFN'}
             </Text>
           </View>
           {(inv.discountTotal || inv.discount_total || 0) > 0 && (
             <View style={s.totalRow}>
-              <Text style={[s.totalLabel, { color: tk.mutedFg }]}>{t('faktoor.discount')}</Text>
+              <Text style={[s.totalLabel, { color: tk.mutedFg }]}>{t('invoices.discount')}</Text>
               <Text style={[s.totalValue, { color: tk.destructive }]}>
                 -{fmtAmount(inv.discountTotal || inv.discount_total || 0)} {inv.currency || 'AFN'}
               </Text>
@@ -190,21 +190,21 @@ const handlePrint = useCallback(() => {
           )}
           {(inv.taxTotal || inv.tax_total || 0) > 0 && (
             <View style={s.totalRow}>
-              <Text style={[s.totalLabel, { color: tk.mutedFg }]}>{t('faktoor.tax')}</Text>
+              <Text style={[s.totalLabel, { color: tk.mutedFg }]}>{t('invoices.tax')}</Text>
               <Text style={[s.totalValue, { color: tk.foreground }]}>
                 {fmtAmount(inv.taxTotal || inv.tax_total || 0)} {inv.currency || 'AFN'}
               </Text>
             </View>
           )}
           <View style={[s.totalRow, { borderTopColor: tk.border, paddingTop: 12 }]}>
-            <Text style={[s.grandLabel, { color: tk.foreground }]}>{t('faktoor.total')}</Text>
+            <Text style={[s.grandLabel, { color: tk.foreground }]}>{t('invoices.total')}</Text>
             <Text style={[s.grandValue, { color: tk.primary }]}>
               {fmtAmount(inv.total || 0)} {inv.currency || 'AFN'}
             </Text>
           </View>
           {(inv.paidAmount || inv.paid_amount || 0) > 0 && (
             <View style={s.totalRow}>
-              <Text style={[s.totalLabel, { color: tk.success }]}>{t('faktoor.paid')}</Text>
+              <Text style={[s.totalLabel, { color: tk.success }]}>{t('invoices.paid')}</Text>
               <Text style={[s.totalValue, { color: tk.success }]}>
                 -{fmtAmount(inv.paidAmount || inv.paid_amount || 0)} {inv.currency || 'AFN'}
               </Text>
@@ -212,7 +212,7 @@ const handlePrint = useCallback(() => {
           )}
           {((inv.total || 0) - (inv.paidAmount || inv.paid_amount || 0)) > 0 && (
             <View style={s.totalRow}>
-              <Text style={[s.totalLabel, { color: tk.destructive }]}>{t('faktoor.remaining')}</Text>
+              <Text style={[s.totalLabel, { color: tk.destructive }]}>{t('invoices.remaining')}</Text>
               <Text style={[s.totalValue, { color: tk.destructive }]}>
                 {fmtAmount((inv.total || 0) - (inv.paidAmount || inv.paid_amount || 0))} {inv.currency || 'AFN'}
               </Text>
@@ -249,7 +249,7 @@ const handlePrint = useCallback(() => {
         {/* Footer */}
         <View style={[s.footer, { borderTopColor: tk.border }]}>
           <Text style={[s.footerText, { color: tk.mutedFg }]}>
-            {t('faktoor.generatedBy')} Hisabche — hisabche.com
+            {t('invoices.generatedBy')} Hisabche — hisabche.com
           </Text>
           <Text style={[s.footerDate, { color: tk.mutedFg }]}>
             {fmtDate(inv.createdAt || inv.created_at || inv.date || '')}{' '}

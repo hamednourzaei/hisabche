@@ -94,12 +94,12 @@ test.describe('Critical Paths', () => {
     await page.click('button[type="submit"]')
     await page.waitForURL('**/dashboard**', { timeout: 10000 })
 
-    // Dashboard → Godam
+    // Dashboard → warehouse
     await page.click('text=انبار')
-    await page.waitForURL('**/godam**')
-    await expect(page.locator('h1')).toContainText(['گدام', 'Godam'])
+    await page.waitForURL('**/warehouse**')
+    await expect(page.locator('h1')).toContainText(['گدام', 'warehouse'])
 
-    // Godam → Dashboard
+    // warehouse → Dashboard
     await page.click('text=داشبورد')
     await page.waitForURL('**/dashboard**')
 

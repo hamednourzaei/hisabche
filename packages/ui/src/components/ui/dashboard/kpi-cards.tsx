@@ -150,7 +150,7 @@ export function KPICards({ data, isLoading, onNavigate }: KPICardsProps) {
         icon={Users}
         tone="info"
         isLoading={isLoading}
-        onClick={() => onNavigate("/baqidari")}
+        onClick={() => onNavigate("/customers")}
       />
       <KPICard
         label="هشدار موجودی"
@@ -159,7 +159,7 @@ export function KPICards({ data, isLoading, onNavigate }: KPICardsProps) {
         icon={AlertTriangle}
         tone={data.lowStockAlerts > 0 ? "danger" : "success"}
         isLoading={isLoading}
-        onClick={() => onNavigate("/godam")}
+        onClick={() => onNavigate("/warehouse")}
       />
     </div>
   );

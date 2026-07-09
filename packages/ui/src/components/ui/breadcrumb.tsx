@@ -10,9 +10,9 @@ import Link from "next/link";
 // ─── Route label mapping (i18n keys) ────────────────────────
 const ROUTE_LABELS: Record<string, { key: string; fallback: string }> = {
   dashboard: { key: "nav.dashboard", fallback: "داشبورد" },
-  godam: { key: "nav.godam", fallback: "ګدام" },
-  invoices: { key: "nav.faktoor", fallback: "فاکتورها" },
-  baqidari: { key: "nav.baqidari", fallback: "باقی‌داری" },
+warehouse: { key: "nav.warehouse", fallback: "انبار" },
+invoices: { key: "nav.invoices", fallback: "فاکتورها" },
+  customers: { key: "nav.customers", fallback: "باقی‌داری" },
   hr: { key: "nav.hr", fallback: "منابع انسانی" },
   projects: { key: "nav.projects", fallback: "پروژه‌ها" },
   permissions: { key: "nav.permissions", fallback: "دسترسی‌ها" },

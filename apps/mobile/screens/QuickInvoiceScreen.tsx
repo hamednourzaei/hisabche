@@ -101,7 +101,7 @@ export default function QuickInvoiceScreen({ onComplete }: Props) {
   return (
     <SafeAreaView style={[styles.fill, { backgroundColor: tk.background }]}>
       <View style={[styles.header, { borderBottomColor: tk.border }]}>
-        <Text style={[styles.headerTitle, { color: tk.foreground }]}>{t('faktoor.newFaktoor')}</Text>
+        <Text style={[styles.headerTitle, { color: tk.foreground }]}>{t('invoices.newinvoices')}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
@@ -109,7 +109,7 @@ export default function QuickInvoiceScreen({ onComplete }: Props) {
         {step === 'product' && (
           <View style={styles.stepContent}>
             <Text style={styles.stepEmoji}>📦</Text>
-            <Text style={[styles.stepTitle, { color: tk.foreground }]}>{t('godam.productName')}</Text>
+            <Text style={[styles.stepTitle, { color: tk.foreground }]}>{t('warehouse.productName')}</Text>
 
             {selectedProduct ? (
               <View style={[styles.selectedBox, { backgroundColor: tk.primary + '15', borderColor: tk.primary }]}>
@@ -142,7 +142,7 @@ export default function QuickInvoiceScreen({ onComplete }: Props) {
         {step === 'customer' && (
           <View style={styles.stepContent}>
             <Text style={styles.stepEmoji}>👤</Text>
-            <Text style={[styles.stepTitle, { color: tk.foreground }]}>{t('faktoor.customer')}</Text>
+            <Text style={[styles.stepTitle, { color: tk.foreground }]}>{t('invoices.customer')}</Text>
 
             {selectedCustomer ? (
               <View style={[styles.selectedBox, { backgroundColor: tk.primary + '15', borderColor: tk.primary }]}>
@@ -174,7 +174,7 @@ export default function QuickInvoiceScreen({ onComplete }: Props) {
         {step === 'price' && (
           <View style={styles.stepContent}>
             <Text style={styles.stepEmoji}>💰</Text>
-            <Text style={[styles.stepTitle, { color: tk.foreground }]}>{t('faktoor.total')}</Text>
+            <Text style={[styles.stepTitle, { color: tk.foreground }]}>{t('invoices.total')}</Text>
 
             <View style={[styles.summaryMini, { backgroundColor: tk.card, borderColor: tk.border }]}>
               <Text style={[styles.summaryKey, { color: tk.mutedFg }]}>
@@ -182,7 +182,7 @@ export default function QuickInvoiceScreen({ onComplete }: Props) {
               </Text>
             </View>
 
-            <Text style={[styles.label, { color: tk.foreground }]}>{t('godam.quantity')}</Text>
+            <Text style={[styles.label, { color: tk.foreground }]}>{t('warehouse.quantity')}</Text>
             <View style={styles.quantityRow}>
               {['1', '2', '3', '5', '10'].map((q) => (
                 <TouchableOpacity key={q} style={[styles.qtyBtn, { borderColor: quantity === q ? tk.primary : tk.border, backgroundColor: quantity === q ? tk.primary + '15' : 'transparent' }]} onPress={() => setQuantity(q)}>
@@ -195,7 +195,7 @@ export default function QuickInvoiceScreen({ onComplete }: Props) {
 
             {price ? (
               <View style={[styles.totalBox, { backgroundColor: tk.primary + '10' }]}>
-                <Text style={[styles.totalLabel, { color: tk.mutedFg }]}>{t('faktoor.total')}</Text>
+                <Text style={[styles.totalLabel, { color: tk.mutedFg }]}>{t('invoices.total')}</Text>
                 <Text style={[styles.totalAmount, { color: tk.primary }]}>{total.toLocaleString('fa-AF')} AFN</Text>
               </View>
             ) : null}
@@ -205,7 +205,7 @@ export default function QuickInvoiceScreen({ onComplete }: Props) {
                 <Text style={[styles.secondaryBtnText, { color: tk.foreground }]}>{t('action.back')}</Text>
               </TouchableOpacity>
               <TouchableOpacity style={[styles.primaryBtnSmall, { backgroundColor: tk.primary, opacity: price && !isPending ? 1 : 0.5 }]} disabled={!price || safeParseFloat(price) <= 0 || isPending} onPress={handleCreateInvoice}>
-                <Text style={[styles.primaryBtnTextSmall, { color: tk.primaryFg }]}>{isPending ? '...' : t('faktoor.printFaktoor')}</Text>
+                <Text style={[styles.primaryBtnTextSmall, { color: tk.primaryFg }]}>{isPending ? '...' : t('invoices.printinvoices')}</Text>
               </TouchableOpacity>
             </View>
           </View>

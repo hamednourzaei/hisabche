@@ -61,9 +61,9 @@
     "./landing/landing-page": "./src/components/ui/landing/landing-page.tsx",
     "./settings/settings-page": "./src/components/ui/settings/settings-page.tsx",
     "./components/ui/dashboard/containers/dashboard-container": "./src/components/ui/dashboard/containers/dashboard-container.tsx",
-    "./components/ui/godam/containers/godam-container": "./src/components/ui/godam/containers/godam-container.tsx",
+    "./components/ui/warehouse/containers/warehouse-container": "./src/components/ui/warehouse/containers/warehouse-container.tsx",
     "./components/ui/invoices/containers/invoices-container": "./src/components/ui/invoices/containers/invoices-container.tsx",
-    "./components/ui/baqidari": "./src/components/ui/baqidari.tsx",
+    "./components/ui/customers": "./src/components/ui/customers.tsx",
     "./components/ui/quick-invoice/containers/quick-invoice-container": "./src/components/ui/quick-invoice/containers/quick-invoice-container.tsx"
   }
 }

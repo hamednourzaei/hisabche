@@ -151,7 +151,7 @@ export default function InvoicesScreen() {
   const getStatusProps = useCallback((status: InvoiceStatus, tk: ThemeTokens) => {
     const s = statusMap[status] || statusMap.pending
     return {
-      statusLabel: t(`faktoor.${status}`),
+      statusLabel: t(`invoices.${status}`),
       statusBg: tk[s.bg] + '20',
       statusBorder: tk[s.border],
       statusTextColor: tk[s.text],
@@ -212,8 +212,8 @@ const renderInvoice = useCallback(({ item }: { item: InvoiceDTO }) => {
           ListEmptyComponent={
             <View style={s.emptyContainer}>
               <Text style={s.emptyEmoji}>🧾</Text>
-              <Text style={[s.emptyTitle, { color: tk.foreground }]}>{t('faktoor.noFaktoors')}</Text>
-              <Text style={[s.emptyDesc, { color: tk.mutedFg }]}>{t('faktoor.createFirstFaktoor')}</Text>
+              <Text style={[s.emptyTitle, { color: tk.foreground }]}>{t('invoices.noinvoicess')}</Text>
+              <Text style={[s.emptyDesc, { color: tk.mutedFg }]}>{t('invoices.createFirstinvoices')}</Text>
             </View>
           }
         />

@@ -51,7 +51,7 @@ const ICON_PATHS: Record<string, ReactElement> = {
       <path d="M5 9.5V16h10V9.5" />
     </g>
   ),
-  godam: (
+  warehouse: (
     <g>
       <path d="M3 7 10 4l7 3v6l-7 3-7-3z" />
       <path d="M3 7l7 3 7-3M10 10v6" />
@@ -64,7 +64,7 @@ const ICON_PATHS: Record<string, ReactElement> = {
       <path d="M7.5 9h5M7.5 12h5M7.5 15h3" />
     </g>
   ),
-  baqidari: (
+  customers: (
     <g>
       <circle cx="8" cy="8" r="2.8" />
       <path d="M3.5 16c.6-2.4 2.4-3.6 4.5-3.6s3.9 1.2 4.5 3.6" />

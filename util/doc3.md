@@ -13,13 +13,13 @@ hisabche/
 ├── packages/
 │   ├── ui/           14 components (Button, Input, Card, Badge, Skeleton, Toast, SearchInput, FAB, SyncStatus, OfflineBanner, SaveIndicator, OfflineQueue, EmptyState, Celebration, ErrorBoundary)
 │   ├── i18n/         fa-AF + en (200+ keys)
-│   ├── store/        10 slices (auth, theme, currency, cart, onboarding, preferences, sync, device, godam, backup)
+│   ├── store/        10 slices (auth, theme, currency, cart, onboarding, preferences, sync, device, warehouse, backup)
 │   ├── validation/   6 schemas (common, auth, invoice, product, customer, transaction)
 │   ├── api/          TanStack hooks (invoices, products, customers, transactions, auth) + Axios client
 │   ├── analytics/    PostHog + Sentry
 │   ├── db/           WatermelonDB schema + models
 │   └── config/       env.ts (dev/staging/production)
-├── backend/          Fastify (routes: auth, sync, invoice, product, customer, transaction, godam)
+├── backend/          Fastify (routes: auth, sync, invoice, product, customer, transaction, warehouse)
 ├── scripts/          generate-icons.js
 ├── .env.local / .env.staging / .env.production
 ├── turbo.json
@@ -27,13 +27,13 @@ hisabche/
 ```
 
 ## Web Pages (12)
-`/` dashboard, `/onboarding` wizard, `/quick-invoice`, `/invoices`, `/godam`, `/baqidari`, `/sync-center`, `/settings`, `/sitemap.xml`, `/robots.txt`, `/login`, error/not-found/loading pages
+`/` dashboard, `/onboarding` wizard, `/quick-invoice`, `/invoices`, `/warehouse`, `/customers`, `/sync-center`, `/settings`, `/sitemap.xml`, `/robots.txt`, `/login`, error/not-found/loading pages
 
 ## Mobile Screens (8)
-App.tsx (shell + FAB + TrustBar), LoginScreen, OnboardingScreen, QuickInvoiceScreen, InvoicesScreen, GodamScreen, BaqidariScreen, SyncCenterScreen
+App.tsx (shell + FAB + TrustBar), LoginScreen, OnboardingScreen, QuickInvoiceScreen, InvoicesScreen, WarehouseScreen, CustomersScreen, SyncCenterScreen
 
 ## Backend Routes
-`/api/auth/*`, `/api/sync/*`, `/api/invoices`, `/api/products`, `/api/customers`, `/api/transactions`, `/api/godams`, `/api/health`
+`/api/auth/*`, `/api/sync/*`, `/api/invoices`, `/api/products`, `/api/customers`, `/api/transactions`, `/api/warehouses`, `/api/health`
 
 ## Key Features
 - RTL (Dari/Pashto) + English i18n

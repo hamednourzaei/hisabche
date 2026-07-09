@@ -84,7 +84,7 @@ function EmptyInvoices({
         className="shimmer-btn mt-2 inline-flex items-center gap-2 rounded-xl"
       >
         <PlusCircle className="size-4" aria-hidden />
-        {t("faktoor.newFaktoor", "فاکتور جدید")}
+        {t("invoices.newinvoices", "فاکتور جدید")}
       </Button>
     </div>
   )

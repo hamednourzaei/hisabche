@@ -36,14 +36,14 @@ hisabche/
 - **PDF** → Server-side `@react-pdf/renderer` + Vazirmatn font + Supabase Storage cache
 - **Celebration** → Overlay با click-to-dismiss + auto-redirect
 
-### Godam (Inventory)
+### warehouse (Inventory)
 - **AddProductModal** → نام · موجودی · قیمت خرید/فروش · واحد · حداقل هشدار
 - **Stats** → Multi-currency (AFN/USD/IRR) + ارزش کل موجودی
 - **Product Detail** → ویرایش · حذف · سود هر واحد · سود کل
 
 ### Multi-Currency
 - AFN (افغانی) · USD (دلار) · IRR (تومان)
-- Stats bar بالای صفحه Godam
+- Stats bar بالای صفحه warehouse
 
 ### Offline-First
 - WatermelonDB برای mobile
@@ -78,7 +78,7 @@ hisabche/
 | WhatsApp / Telegram / Email / Share | ✅ | ✅ |
 | Print | ✅ | ✅ |
 | PDF (server-side, RTL, Vazirmatn) | ✅ | ✅ |
-| Godam with AddProductModal | ✅ | ✅ |
+| warehouse with AddProductModal | ✅ | ✅ |
 | Product Detail + Edit + Delete | ✅ | ✅ |
 | Multi-currency Stats | ✅ | ✅ |
 | Celebration | ✅ | ✅ |
@@ -93,8 +93,8 @@ hisabche/
 | `apps/web/app/invoices/[id]/page.tsx` | Invoice detail |
 | `apps/web/app/invoices/[id]/InvoicePDFDownload.tsx` | PDF download button |
 | `apps/web/app/quick-invoice/page.tsx` | Quick invoice form |
-| `apps/web/app/godam/page.tsx` | Inventory list |
-| `apps/web/app/godam/[id]/page.tsx` | Product detail |
+| `apps/web/app/warehouse/page.tsx` | Inventory list |
+| `apps/web/app/warehouse/[id]/page.tsx` | Product detail |
 | `packages/ui/src/components/ui/product-picker.tsx` | ProductPicker |
 | `packages/ui/src/components/ui/customer-picker.tsx` | CustomerPicker |
 | `packages/ui/src/components/ui/add-product-modal.tsx` | Add product modal |
@@ -105,7 +105,7 @@ hisabche/
 | `backend/src/pdf/InvoicePDFDocument.tsx` | PDF document template |
 | `apps/mobile/App.tsx` | Mobile app shell |
 | `apps/mobile/screens/QuickInvoiceScreen.tsx` | Mobile quick invoice |
-| `apps/mobile/screens/GodamScreen.tsx` | Mobile inventory |
+| `apps/mobile/screens/WarehouseScreen.tsx` | Mobile inventory |
 | `apps/mobile/screens/ProductDetailScreen.tsx` | Mobile product detail |
 | `apps/mobile/screens/InvoiceDetailScreen.tsx` | Mobile invoice detail |
 | `apps/mobile/screens/InvoicesScreen.tsx` | Mobile invoice list |

@@ -502,9 +502,9 @@ jobs:
 {
   "nav": {
     "dashboard": "داشبورد",
-    "godam": "گدام",
-    "faktoor": "فاکتور",
-    "baqidari": "باقی‌داری"
+    "warehouse": "گدام",
+    "invoices": "فاکتور",
+    "customers": "باقی‌داری"
   },
   "action": {
     "save": "ذخیره",

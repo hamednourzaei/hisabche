@@ -111,16 +111,16 @@ export default function SyncCenterScreen({ onBack }: Props) {
     <SafeAreaView style={[s.fill, { backgroundColor: tk.background }]}>
       <View style={[s.header, { borderBottomColor: tk.border }]}>
         {onBack ? <TouchableOpacity onPress={onBack} accessibilityRole="button" accessibilityLabel={t('action.back')}><Text style={[s.backBtn, { color: tk.primary }]}>←</Text></TouchableOpacity> : <View style={{ width: 40 }} />}
-        <Text style={[s.title, { color: tk.foreground }]}>{t('baqidari.securityCenter', { defaultValue: 'مرکز امنیت' })}</Text>
+        <Text style={[s.title, { color: tk.foreground }]}>{t('customers.securityCenter', { defaultValue: 'مرکز امنیت' })}</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         <StatusCard tk={tk} isOnline={isOnline} lastSyncedAt={lastSyncedAt} pendingCount={pendingCount} />
         <ActionButtons tk={tk} onSync={handleSync} onBackup={handleBackup} />
-        <Text style={[s.sectionTitle, { color: tk.foreground }]}>{t('baqidari.backups', { defaultValue: 'بکاپ‌ها' })}</Text>
+        <Text style={[s.sectionTitle, { color: tk.foreground }]}>{t('customers.backups', { defaultValue: 'بکاپ‌ها' })}</Text>
         <BackupList tk={tk} backups={backups} />
-        <Text style={[s.sectionTitle, { color: tk.foreground, marginTop: 20 }]}>{t('baqidari.activityLog', { defaultValue: 'تاریخچه فعالیت‌ها' })}</Text>
+        <Text style={[s.sectionTitle, { color: tk.foreground, marginTop: 20 }]}>{t('customers.activityLog', { defaultValue: 'تاریخچه فعالیت‌ها' })}</Text>
         <AuditLog tk={tk} auditLog={auditLog} />
         <ConfidenceCard tk={tk} />
       </ScrollView>

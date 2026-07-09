@@ -12,14 +12,14 @@ import QuickInvoiceScreen from './screens/QuickInvoiceScreen'
 import InvoicesScreen from './screens/InvoicesScreen'
 import InvoiceDetailScreen from './screens/InvoiceDetailScreen'
 import ProductDetailScreen from './screens/ProductDetailScreen'
-import GodamScreen from './screens/GodamScreen'
-import BaqidariScreen from './screens/BaqidariScreen'
+import WarehouseScreen from './screens/WarehouseScreen'
+import CustomersScreen from './screens/CustomersScreen'
 import SettingsScreen from './screens/SettingsScreen'
 import SyncCenterScreen from './screens/SyncCenterScreen'
 import FAB from './src/components/FAB'
 import TrustBar from './src/components/TrustBar'
 
-type Screen = 'dashboard' | 'godam' | 'faktoor' | 'baqidari' | 'settings' | 'invoiceDetail' | 'productDetail'
+type Screen = 'dashboard' | 'warehouse' | 'invoices' | 'customers' | 'settings' | 'invoiceDetail' | 'productDetail'
 
 const color = {
   light: { background: '#ffffff', card: '#ffffff', cardBorder: '#e2e8f0', foreground: '#060d1f', mutedFg: '#64748b', primary: '#00b97a', primaryFg: '#ffffff', border: '#e2e8f0', headerBg: '#ffffff', navBg: '#ffffff', muted: '#f1f5f9', success: '#16a34a', successBg: '#dcfce7' },
@@ -32,9 +32,9 @@ const motion = { fast: { toValue: 0.94, useNativeDriver: true }, spring: { toVal
 
 const NAV_ITEMS: { id: Exclude<Screen, 'invoiceDetail' | 'productDetail'>; emoji: string; labelKey: string }[] = [
   { id: 'dashboard', emoji: '⊞', labelKey: 'nav.dashboard' },
-  { id: 'godam', emoji: '📦', labelKey: 'nav.godam' },
-  { id: 'faktoor', emoji: '🧾', labelKey: 'nav.faktoor' },
-  { id: 'baqidari', emoji: '📒', labelKey: 'nav.baqidari' },
+  { id: 'warehouse', emoji: '📦', labelKey: 'nav.warehouse' },
+  { id: 'invoices', emoji: '🧾', labelKey: 'nav.invoices' },
+  { id: 'customers', emoji: '📒', labelKey: 'nav.customers' },
   { id: 'settings', emoji: '⚙️', labelKey: 'nav.settings' },
 ]
 
@@ -95,7 +95,7 @@ function AppInner() {
   const toggleLanguage = useCallback(() => changeLanguage(i18n.language === 'fa-AF' ? 'fa-IR' : 'fa-AF'), [i18n.language])
 
   const handleNavigate = useCallback((id: string) => {
-    if (id === 'faktoor' || id === 'godam' || id === 'baqidari' || id === 'settings') {
+    if (id === 'invoices' || id === 'warehouse' || id === 'customers' || id === 'settings') {
       setScreen(id as Screen)
       setDetailInvoiceId(null)
       setDetailProductId(null)
@@ -118,7 +118,7 @@ function AppInner() {
         }
       },
       goBack: () => {
-        setScreen('faktoor')
+        setScreen('invoices')
         setDetailInvoiceId(null)
         setDetailProductId(null)
       },
@@ -143,7 +143,7 @@ function AppInner() {
     return (
       <SafeAreaView style={[s.fill, { backgroundColor: tk.background }]}>
         <View style={[s.header, { backgroundColor: tk.headerBg, borderBottomColor: tk.border, flexDirection: dir }]}>
-          <TouchableOpacity onPress={() => { setScreen('faktoor'); setDetailInvoiceId(null) }} style={s.iconBtn}>
+          <TouchableOpacity onPress={() => { setScreen('invoices'); setDetailInvoiceId(null) }} style={s.iconBtn}>
             <Text style={[s.iconBtnText, { color: tk.primary, fontSize: 18 }]}>←</Text>
           </TouchableOpacity>
           <Text style={[s.headerTitle, { color: tk.foreground }]}>جزئیات فاکتور</Text>
@@ -158,7 +158,7 @@ function AppInner() {
     return (
       <SafeAreaView style={[s.fill, { backgroundColor: tk.background }]}>
         <View style={[s.header, { backgroundColor: tk.headerBg, borderBottomColor: tk.border, flexDirection: dir }]}>
-          <TouchableOpacity onPress={() => { setScreen('godam'); setDetailProductId(null) }} style={s.iconBtn}>
+          <TouchableOpacity onPress={() => { setScreen('warehouse'); setDetailProductId(null) }} style={s.iconBtn}>
             <Text style={[s.iconBtnText, { color: tk.primary, fontSize: 18 }]}>←</Text>
           </TouchableOpacity>
           <Text style={[s.headerTitle, { color: tk.foreground }]}>جزئیات محصول</Text>
@@ -215,9 +215,9 @@ function AppInner() {
             </View>
           </>
         )}
-        {screen === 'godam' && <GodamScreen />}
-        {screen === 'faktoor' && <InvoicesScreen />}
-        {screen === 'baqidari' && <BaqidariScreen />}
+        {screen === 'warehouse' && <WarehouseScreen />}
+        {screen === 'invoices' && <InvoicesScreen />}
+        {screen === 'customers' && <CustomersScreen />}
         {screen === 'settings' && <SettingsScreen />}
       </ScrollView>
 
@@ -231,9 +231,9 @@ function AppInner() {
 
       {screen !== 'invoiceDetail' && screen !== 'productDetail' && (
         <FAB primaryColor={tk.primary} actions={[
-          { id: 'invoice', label: t('faktoor.newFaktoor'), emoji: '🧾', onPress: () => setShowQuickInvoice(true) },
-          { id: 'customer', label: t('nav.customers'), emoji: '👤', onPress: () => handleNavigate('baqidari') },
-          { id: 'product', label: t('godam.addProduct'), emoji: '📦', onPress: () => handleNavigate('godam') },
+          { id: 'invoice', label: t('invoices.newinvoices'), emoji: '🧾', onPress: () => setShowQuickInvoice(true) },
+          { id: 'customer', label: t('nav.customers'), emoji: '👤', onPress: () => handleNavigate('customers') },
+          { id: 'product', label: t('warehouse.addProduct'), emoji: '📦', onPress: () => handleNavigate('warehouse') },
         ]} />
       )}
     </SafeAreaView>

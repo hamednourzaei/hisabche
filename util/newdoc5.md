@@ -22,7 +22,7 @@
   - `field-sizing: content` برای textarea
   - `interpolate-size: allow-keywords` برای accordion
 - **i18n کامل** (دری + فارسی ایران) با ۲۰۰+ کلید ترجمه — هر دو نسخه localize شده
-- **Zustand stores** (Auth, Theme, Currency, Cart, Godam, Device)
+- **Zustand stores** (Auth, Theme, Currency, Cart, warehouse, Device)
 - **TanStack Query hooks** (Invoices, Products, Customers, Transactions)
 - **Zod validation schemas** (۲۰+ schema)
 - **WatermelonDB offline-first database** (۶ جدول + sync pull/push)

@@ -92,12 +92,12 @@
   "nav": {
     "dashboard": "داشبورد",
     "dashboard.description": "نمای کلی تجارت",
-    "godam": "ګدام",
-    "godam.description": "مدیریت ګدام و اجناس",
-    "faktoor": "فاکتور",
-    "faktoor.description": "مدیریت فاکتورها و فروشات",
-    "baqidari": "باقی‌داری",
-    "baqidari.description": "مدیریت باقی‌داری و حسابات",
+    "warehouse": "ګدام",
+    "warehouse.description": "مدیریت ګدام و اجناس",
+    "invoices": "فاکتور",
+    "invoices.description": "مدیریت فاکتورها و فروشات",
+    "customers": "باقی‌داری",
+    "customers.description": "مدیریت باقی‌داری و حسابات",
     "customers": "مشتریان",
     "suppliers": "عرضه‌کنندگان",
     "reports": "راپورها",
@@ -194,11 +194,11 @@
     "view": "مشاهده",
     "archive": "آرشیف"
   },
-  "faktoor": {
+  "invoices": {
     "title": "فاکتور",
-    "newFaktoor": "فاکتور جدید",
-    "faktoorNumber": "شماره فاکتور",
-    "faktoorDate": "تاریخ فاکتور",
+    "newinvoices": "فاکتور جدید",
+    "invoicesNumber": "شماره فاکتور",
+    "invoicesDate": "تاریخ فاکتور",
     "dueDate": "تاریخ سررسید",
     "customer": "مشتری",
     "supplier": "عرضه‌کننده",
@@ -217,9 +217,9 @@
     "mobileMoney": "پول موبایل",
     "reference": "مرجع",
     "notes": "ملاحظات",
-    "printFaktoor": "چاپ فاکتور",
-    "shareFaktoor": "اشتراک فاکتور",
-    "duplicateFaktoor": "کپی فاکتور",
+    "printinvoices": "چاپ فاکتور",
+    "shareinvoices": "اشتراک فاکتور",
+    "duplicateinvoices": "کپی فاکتور",
     "addItem": "اضافه کردن جنس",
     "removeItem": "حذف جنس",
     "itemDescription": "شرح جنس",
@@ -229,9 +229,9 @@
     "currency": "پول",
     "selectCustomer": "انتخاب مشتری",
     "selectProduct": "انتخاب جنس",
-    "faktoorList": "لیست فاکتورها",
-    "noFaktoors": "هیچ فاکتوری موجود نیست",
-    "createFirstFaktoor": "اولین فاکتور را بسازید",
+    "invoicesList": "لیست فاکتورها",
+    "noinvoicess": "هیچ فاکتوری موجود نیست",
+    "createFirstinvoices": "اولین فاکتور را بسازید",
     "created": "فاکتور با موفقیت ثبت شد",
     "clickToView": "کلیک کنید تا فاکتور را ببینید",
     "detail": "جزئیات فاکتور",
@@ -243,7 +243,7 @@
     "pending": "در انتظار",
     "cancelled": "لغو شده"
   },
-  "godam": {
+  "warehouse": {
     "title": "ګدام",
     "totalProducts": "مجموع اجناس",
     "lowStock": "کمبود موجودی",
@@ -292,7 +292,7 @@
       "pack": "پاکت"
     }
   },
-  "baqidari": {
+  "customers": {
     "title": "باقی‌داری",
     "subtitle": "مدیریت طلب و بدهی مشتریان",
     "creditInvoice": "فاکتور نسیه",

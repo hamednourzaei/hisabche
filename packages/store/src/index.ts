@@ -29,7 +29,7 @@ export {
   useCartStore,
   type CartItem,
 } from './slices/cart.slice'
-export { useGodamStore } from './slices/godam.slice'
+export { useWarehouseStore } from './slices/warehouse.slice'
 export { useOnboardingStore } from './slices/onboarding.slice'
 export type { BusinessType, StoreSize, OnboardingState } from './slices/onboarding.slice'
 export { usePreferencesStore } from './slices/preferences.slice'

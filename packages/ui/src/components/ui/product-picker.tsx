@@ -98,7 +98,7 @@ export const ProductPicker = forwardRef<HTMLButtonElement, ProductPickerProps>(
             <SelectValue
               placeholder={
                 placeholder ||
-                t("godam.pickProduct", "انتخاب محصول...")
+                t("warehouse.pickProduct", "انتخاب محصول...")
               }
             />
           </div>
@@ -141,7 +141,7 @@ export const ProductPicker = forwardRef<HTMLButtonElement, ProductPickerProps>(
             </div>
           ) : products.length === 0 ? (
             <p className="p-4 text-center text-sm text-[hsl(var(--fg-tertiary))]">
-              {t("godam.noProducts", "محصولی پیدا نشد")}
+              {t("warehouse.noProducts", "محصولی پیدا نشد")}
             </p>
           ) : (
             products.map((product) => (
@@ -155,7 +155,7 @@ export const ProductPicker = forwardRef<HTMLButtonElement, ProductPickerProps>(
                   </span>
                   <span className="text-xs text-[hsl(var(--fg-tertiary))]">
                     {(product.sellPrice ?? 0).toLocaleString()} AFN /{" "}
-                    {product.unit ?? t("godam.units.piece", "عدد")}
+                    {product.unit ?? t("warehouse.units.piece", "عدد")}
                   </span>
                 </div>
               </SelectItem>

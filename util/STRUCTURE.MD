@@ -11,8 +11,8 @@ hisabche/
 │   │   ├── metro.config.js
 │   │   ├── package.json
 │   │   ├── screens/
-│   │   │   ├── BaqidariScreen.tsx
-│   │   │   ├── GodamScreen.tsx
+│   │   │   ├── CustomersScreen.tsx
+│   │   │   ├── WarehouseScreen.tsx
 │   │   │   ├── InvoiceDetailScreen.tsx
 │   │   │   ├── InvoicesScreen.tsx
 │   │   │   ├── LoginScreen.tsx
@@ -33,11 +33,11 @@ hisabche/
 │       ├── app/
 │       │   ├── (dashboard)/
 │       │   │   ├── audit/
-│       │   │   ├── baqidari/
+│       │   │   ├── customers/
 │       │   │   ├── constants/
 │       │   │   ├── dashboard/
 │       │   │   ├── dashboard-layout.tsx
-│       │   │   ├── godam/
+│       │   │   ├── warehouse/
 │       │   │   ├── hr/
 │       │   │   ├── invoices/
 │       │   │   ├── layout.tsx
@@ -133,7 +133,7 @@ hisabche/
 │   │   │   ├── crm.routes.ts
 │   │   │   ├── customer.routes.ts
 │   │   │   ├── event.routes.ts
-│   │   │   ├── godam.routes.ts
+│   │   │   ├── warehouse.routes.ts
 │   │   │   ├── hr.routes.ts
 │   │   │   ├── invoice-pdf.routes.ts
 │   │   │   ├── invoice.routes.ts
@@ -154,7 +154,7 @@ hisabche/
 │   │   │   ├── crm.service.ts
 │   │   │   ├── customer.service.ts
 │   │   │   ├── event.service.ts
-│   │   │   ├── godam.service.ts
+│   │   │   ├── warehouse.service.ts
 │   │   │   ├── hr.service.ts
 │   │   │   ├── invoice.service.ts
 │   │   │   ├── manufacturing.service.ts
@@ -261,7 +261,7 @@ hisabche/
 │   │           ├── cart.slice.ts
 │   │           ├── currency.slice.ts
 │   │           ├── device.slice.ts
-│   │           ├── godam.slice.ts
+│   │           ├── warehouse.slice.ts
 │   │           ├── onboarding.slice.ts
 │   │           ├── preferences.slice.ts
 │   │           ├── sync.slice.ts
@@ -306,9 +306,9 @@ hisabche/
 │   │   │   │       └── ...
 │   │   │   ├── containers/
 │   │   │   ├── hooks/
-│   │   │   │   ├── baqidari/
+│   │   │   │   ├── customers/
 │   │   │   │   ├── dashboard/
-│   │   │   │   ├── godam/
+│   │   │   │   ├── warehouse/
 │   │   │   │   ├── invoices/
 │   │   │   │   ├── menu/
 │   │   │   │   ├── use-autosave.ts
@@ -316,10 +316,10 @@ hisabche/
 │   │   │   │   └── use-sort-filter.ts
 │   │   │   ├── index.ts
 │   │   │   ├── lib/
-│   │   │   │   ├── baqidari/
+│   │   │   │   ├── customers/
 │   │   │   │   ├── dashboard/
 │   │   │   │   ├── export.ts
-│   │   │   │   ├── godam/
+│   │   │   │   ├── warehouse/
 │   │   │   │   ├── invoices/
 │   │   │   │   ├── menu/
 │   │   │   │   ├── persian-numbers.ts
@@ -348,7 +348,7 @@ hisabche/
 │               ├── crm.schema.ts
 │               ├── customer.schema.ts
 │               ├── event.schema.ts
-│               ├── godam.schema.ts
+│               ├── warehouse.schema.ts
 │               ├── hr.schema.ts
 │               ├── invoice.schema.ts
 │               ├── manufacturing.schema.ts

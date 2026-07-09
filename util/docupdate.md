@@ -6,7 +6,7 @@
 - Monorepo (Turborepo + npm workspaces) با ۹ پکیج + ۲ اپ + بک‌اند
 - Design System کامل (Button, Input, Card, Badge, Skeleton, Toast) با RTL و dark/light
 - i18n کامل (دری + انگلیسی) با ۲۰۰+ کلید ترجمه
-- Zustand stores (Auth, Theme, Currency, Cart, Godam)
+- Zustand stores (Auth, Theme, Currency, Cart, warehouse)
 - TanStack Query hooks (Invoices, Products, Customers, Transactions)
 - Zod validation schemas (۲۰+ schema)
 - WatermelonDB offline-first database (۶ جدول + sync pull/push)

@@ -261,13 +261,13 @@ const config: Config = {
       backgroundImage: {
         'gradient-purple-cyan': 'linear-gradient(135deg, hsl(165 75% 51%), hsl(168 78% 56%))',
         'gradient-emerald-cyan': 'linear-gradient(135deg, hsl(165 75% 51%), hsl(168 78% 56%))',
-        // Godam Stats card backgrounds
-        'godam-purple': 'linear-gradient(135deg, hsl(165 75% 51% / 0.1), hsl(165 75% 51% / 0.02))',
-        'godam-emerald': 'linear-gradient(135deg, hsl(168 78% 56% / 0.1), hsl(168 78% 56% / 0.02))',
-        'godam-amber': 'linear-gradient(135deg, hsl(38 92% 55% / 0.1), hsl(38 92% 55% / 0.02))',
-        'godam-rose': 'linear-gradient(135deg, hsl(0 84% 60% / 0.1), hsl(0 84% 60% / 0.02))',
-        'godam-blue': 'linear-gradient(135deg, hsl(210 90% 55% / 0.1), hsl(210 90% 55% / 0.02))',
-        'godam-teal': 'linear-gradient(135deg, hsl(174 79% 28% / 0.1), hsl(174 79% 28% / 0.02))',
+        // warehouse Stats card backgrounds
+        'warehouse-purple': 'linear-gradient(135deg, hsl(165 75% 51% / 0.1), hsl(165 75% 51% / 0.02))',
+        'warehouse-emerald': 'linear-gradient(135deg, hsl(168 78% 56% / 0.1), hsl(168 78% 56% / 0.02))',
+        'warehouse-amber': 'linear-gradient(135deg, hsl(38 92% 55% / 0.1), hsl(38 92% 55% / 0.02))',
+        'warehouse-rose': 'linear-gradient(135deg, hsl(0 84% 60% / 0.1), hsl(0 84% 60% / 0.02))',
+        'warehouse-blue': 'linear-gradient(135deg, hsl(210 90% 55% / 0.1), hsl(210 90% 55% / 0.02))',
+        'warehouse-teal': 'linear-gradient(135deg, hsl(174 79% 28% / 0.1), hsl(174 79% 28% / 0.02))',
         // Narrative backgrounds
         'narrative-frustration': 'radial-gradient(circle at 50% 0%, rgba(168, 85, 247, 0.12), transparent 70%)',
         'narrative-confusion':   'radial-gradient(circle at 50% 0%, rgba(239, 68, 68, 0.10), transparent 70%)',

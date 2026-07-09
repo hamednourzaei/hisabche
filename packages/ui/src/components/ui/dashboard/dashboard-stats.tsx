@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { ArrowUpRight, type LucideIcon } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   DashboardStats v3 — GodamStats-style Compact Horizontal Design
+   DashboardStats v3 — warehouseStats-style Compact Horizontal Design
    Zero hardcoded colors — all tokens from design system
    ═══════════════════════════════════════════════════════════════════════════ */
 

@@ -108,9 +108,9 @@ hisabche/
 
 | # | صفحه | Server | Skeleton | loading.tsx | Pure UI | Container | i18n |
 |---|------|--------|----------|-------------|---------|-----------|------|
-| ۱ | `baqidari` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| ۲ | `godam` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| ۳ | `godam/[id]` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| ۱ | `customers` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| ۲ | `warehouse` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| ۳ | `warehouse/[id]` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | ۴ | `invoices` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | ۵ | `invoices/[id]` | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | ۶ | `settings` | ✅ | ✅ | ✅ | ✅ | N/A | ✅ |
@@ -209,9 +209,9 @@ hisabche/
 | **Layout** | Section, SectionHeading, FeatureCard, GradientMesh, LivingBackground, ShimmerCTA |
 | **Auth** | AuthShell, AuthGate, LoginScreen |
 | **Modals** | Modal, AddProductModal, AddCustomerModal, PaymentModal, InviteModal |
-| **Pages** | DashboardPage, GodamPage, InvoicesPage, InvoiceDetailPage, ProductDetailPage, BaqidariPage, SettingsPage, QuickInvoicePage, SyncCenterPage, WorkspacePage, LandingPage, OnboardingPage |
-| **Containers** | DashboardContainer, GodamContainer, InvoicesContainer, InvoiceDetailContainer, ProductDetailContainer, CustomerDetailContainer, QuickInvoiceContainer, SyncCenterContainer |
-| **Skeletons** | DashboardSkeleton, GodamSkeleton, InvoicesSkeleton, InvoiceDetailSkeleton, SettingsSkeleton, BaqidariSkeleton, QuickInvoiceSkeleton, SyncCenterSkeleton |
+| **Pages** | DashboardPage, WarehousePage, InvoicesPage, InvoiceDetailPage, ProductDetailPage, CustomersPage, SettingsPage, QuickInvoicePage, SyncCenterPage, WorkspacePage, LandingPage, OnboardingPage |
+| **Containers** | DashboardContainer, WarehouseContainer, InvoicesContainer, InvoiceDetailContainer, ProductDetailContainer, CustomerDetailContainer, QuickInvoiceContainer, SyncCenterContainer |
+| **Skeletons** | DashboardSkeleton, WarehouseSkeleton, InvoicesSkeleton, InvoiceDetailSkeleton, SettingsSkeleton, customersSkeleton, QuickInvoiceSkeleton, SyncCenterSkeleton |
 
 ---
 
@@ -224,11 +224,11 @@ hisabche/
 | ۳ | **State-from-props در PaymentModal** | `useEffect` sync با `open` |
 | ۴ | **Sticky header landing** | حذف wrapper اضافی، `overflow-x-hidden` جدا |
 | ۵ | **`duration-[var(--hisab-transition)]` Tailwind warning** | `var(--hisab-duration)` instead |
-| ۶ | **Vercel build fail (BaqidariPage export)** | `index.ts` barrel export |
+| ۶ | **Vercel build fail (CustomersPage export)** | `index.ts` barrel export |
 | ۷ | **`ssr: false` conflict in Server Components** | Client Wrapper pattern |
 | ۸ | **Template literal in Tailwind** | Static class replacement |
 | ۹ | **Lint: ۶۸ خطا** | All `any`, unused imports, type errors → ۰ |
-| ۱۰ | **`useRealtime` outside component (GodamPage)** | Moved inside component body |
+| ۱۰ | **`useRealtime` outside component (WarehousePage)** | Moved inside component body |
 | ۱۱ | **Dark mode not applying on Dashboard** | `classList.toggle("dark")` in ThemeInitializer |
 | ۱۲ | **i18n not switching in Dashboard** | `i18n.changeLanguage` + `languageChanged` event |
 | ۱۳ | **Sidebar active state not working** | `isPathActive` with `/` edge case + `NAV_ITEMS` path fix |
@@ -326,14 +326,14 @@ packages/ui/src/components/ui/
 │   ├── AddCustomerModal.tsx, PaymentModal.tsx
 │   └── InviteModal.tsx
 ├── pages/          ← Pure UI (props-driven)
-│   ├── DashboardPage.tsx, GodamPage.tsx
+│   ├── DashboardPage.tsx, WarehousePage.tsx
 │   ├── InvoicesPage.tsx, InvoiceDetailPage.tsx
-│   ├── ProductDetailPage.tsx, BaqidariPage.tsx
+│   ├── ProductDetailPage.tsx, CustomersPage.tsx
 │   ├── SettingsPage.tsx, QuickInvoicePage.tsx
 │   ├── SyncCenterPage.tsx, WorkspacePage.tsx
 │   ├── LandingPage.tsx, OnboardingPage.tsx
 │   └── containers/  ← All logic
-│       ├── DashboardContainer.tsx, GodamContainer.tsx
+│       ├── DashboardContainer.tsx, WarehouseContainer.tsx
 │       ├── InvoicesContainer.tsx, InvoiceDetailContainer.tsx
 │       ├── ProductDetailContainer.tsx, CustomerDetailContainer.tsx
 │       ├── QuickInvoiceContainer.tsx, SyncCenterContainer.tsx
@@ -344,9 +344,9 @@ packages/ui/src/components/ui/
 │   ├── TransformScene.tsx
 │   └── landing-page.tsx
 └── skeletons/
-    ├── DashboardSkeleton.tsx, GodamSkeleton.tsx
+    ├── DashboardSkeleton.tsx, WarehouseSkeleton.tsx
     ├── InvoicesSkeleton.tsx, InvoiceDetailSkeleton.tsx
-    ├── SettingsSkeleton.tsx, BaqidariSkeleton.tsx
+    ├── SettingsSkeleton.tsx, customersSkeleton.tsx
     ├── QuickInvoiceSkeleton.tsx, SyncCenterSkeleton.tsx
 ```
 

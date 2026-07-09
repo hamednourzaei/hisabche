@@ -57,10 +57,10 @@ export function InvoicesView({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <h1 className="text-xl font-bold sm:text-2xl lg:text-3xl text-[hsl(var(--fg-primary))]">
-            {t("faktoor.title", "فاکتورها")}
+            {t("invoices.title", "فاکتورها")}
           </h1>
           <p className="text-xs sm:text-sm text-[hsl(var(--fg-secondary))]">
-            {t("faktoor.description", "مدیریت و مشاهده فاکتورها")}
+            {t("invoices.description", "مدیریت و مشاهده فاکتورها")}
           </p>
         </div>
 
@@ -83,7 +83,7 @@ export function InvoicesView({
           )}
         >
           <Plus className="size-4 sm:size-[18px]" aria-hidden="true" />
-          {t("faktoor.newFaktoor", "فاکتور جدید")}
+          {t("invoices.newinvoices", "فاکتور جدید")}
         </button>
       </div>
 
@@ -144,13 +144,13 @@ export function InvoicesView({
       {invoices.length === 0 ? (
         <EmptyState
           icon="invoice"
-          title={t("faktoor.noFaktoors", "هیچ فاکتوری یافت نشد")}
+          title={t("invoices.noinvoicess", "هیچ فاکتوری یافت نشد")}
           description={t(
-            "faktoor.noFaktoorsDesc",
+            "invoices.noinvoicessDesc",
             "هنوز هیچ فاکتوری ثبت نشده است.",
           )}
           action={{
-            label: t("faktoor.newFaktoor", "فاکتور جدید"),
+            label: t("invoices.newinvoices", "فاکتور جدید"),
             onClick: onNewInvoice,
           }}
         />

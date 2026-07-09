@@ -92,14 +92,14 @@ export function InvoiceCard({
               badgeStyle,
             )}
           >
-            {t(`faktoor.${inv.status}`, inv.status)}
+            {t(`invoices.${inv.status}`, inv.status)}
           </span>
         </div>
 
         {/* Total */}
         <div>
           <p className="text-[11px] sm:text-xs text-[hsl(var(--fg-tertiary))]">
-            {t("faktoor.total", "مجموع")}
+            {t("invoices.total", "مجموع")}
           </p>
           <p className="text-xl font-bold sm:text-2xl tabular-nums text-[hsl(var(--fg-primary))]">
             {inv.total.toLocaleString()}{" "}

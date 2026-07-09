@@ -62,7 +62,7 @@ hisabche/
 | ۹ | `journal_entries` | ثبت‌های روزنامه |
 | ۱۰ | `journal_lines` | سطرهای روزنامه |
 | ۱۱ | `warehouses` | انبارها |
-| ۱۲ | `godams` | گدام‌ها |
+| ۱۲ | `warehouses` | گدام‌ها |
 | ۱۳ | `stock_movements` | حرکت کالا |
 | ۱۴ | `purchase_orders` | سفارشات خرید |
 | ۱۵ | `purchase_order_items` | اقلام سفارش خرید |
@@ -115,7 +115,7 @@ hisabche/
 - ✅ Products (CRUD + Stock)
 - ✅ Customers (CRUD)
 - ✅ Transactions
-- ✅ Godam (Inventory)
+- ✅ warehouse (Inventory)
 - ✅ Sync (Offline-first mobile)
 
 ### فاز ۱۰-۱۴: پیشرفته
@@ -154,7 +154,7 @@ hisabche/
 | Products | `product.routes.ts` | ۵ |
 | Customers | `customer.routes.ts` | ۵ |
 | Transactions | `transaction.routes.ts` | ۴ |
-| Godam | `godam.routes.ts` | ۶ |
+| warehouse | `warehouse.routes.ts` | ۶ |
 | Accounting | `accounting.routes.ts` | ۸ |
 | CRM | `crm.routes.ts` | ۴ |
 | Purchasing | `purchasing.routes.ts` | ۴ |
@@ -243,7 +243,7 @@ hisabche/
 | ۱۷ | `invoice.routes.ts` | ✏️ InvoiceService |
 | ۱۸ | `common.schema.ts` | ✏️ phone validation |
 | ۱۹ | `providers.tsx` | ✏️ WorkspaceLoader |
-| ۲۰ | `baqidari-customer-list.tsx` | ✏️ Design tokens |
+| ۲۰ | `customers-customer-list.tsx` | ✏️ Design tokens |
 
 ---
 

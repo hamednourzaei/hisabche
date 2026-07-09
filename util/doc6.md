@@ -99,9 +99,9 @@ hisabche/
 
 | # | صفحه | Skeleton | loading.tsx | Client | i18n | Dynamic Import |
 |---|------|----------|-------------|--------|------|-----------------|
-| ۱ | `baqidari` | ✅ | ✅ | ✅ | ✅ | ✅ |
-| ۲ | `godam` | ✅ | ✅ | ✅ | ✅ | ✅ |
-| ۳ | `godam/[id]` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| ۱ | `customers` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| ۲ | `warehouse` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| ۳ | `warehouse/[id]` | ✅ | ✅ | ✅ | ✅ | ✅ |
 | ۴ | `invoices` | ✅ | ✅ | ✅ | ✅ | ✅ |
 | ۵ | `invoices/[id]` | ✅ | ✅ | ✅ | ✅ | ✅ |
 | ۶ | `settings` | ✅ | ✅ | ✅ | ✅ | ✅ |
@@ -172,7 +172,7 @@ hisabche/
 | **State-from-props در PaymentModal** | `useEffect` sync با `open` |
 | **Sticky header landing** | حذف wrapper اضافی، `overflow-x-hidden` جدا |
 | **`duration-[var(--hisab-transition)]` warning** | تفکیک `--hisab-duration` + `--hisab-ease-default` |
-| **Vercel build fail** | `BaqidariPage` export به `index.ts` |
+| **Vercel build fail** | `CustomersPage` export به `index.ts` |
 | **`ssr: false` conflict** | `ssr: true` + حذف `export const dynamic` |
 | **Template literal در Tailwind** | جایگزینی با کلاس‌های ثابت |
 | **Lint: ۶۸ خطا** | همه `any`ها، unused imports، type errors → ۰ |
@@ -184,18 +184,18 @@ hisabche/
 ```
 packages/ui/src/components/ui/
 ├── Modal.tsx                    ← Reusable (focus-trap, portal, aria)
-├── baqidari/
+├── customers/
 │   ├── index.ts
-│   ├── BaqidariPage.tsx
+│   ├── CustomersPage.tsx
 │   ├── AddCustomerModal.tsx     ← Zod validation
 │   ├── PaymentModal.tsx         ← Zod + state sync
 │   └── CustomerDetailView.tsx
-├── godam/
+├── warehouse/
 │   ├── index.ts
-│   └── godam-page.tsx
-├── godam-detail/
+│   └── warehouse-page.tsx
+├── warehouse-detail/
 │   ├── index.ts
-│   └── godam-detail-page.tsx
+│   └── warehouse-detail-page.tsx
 ├── invoices/
 │   ├── index.ts
 │   └── invoices-page.tsx

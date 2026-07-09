@@ -43,7 +43,7 @@ Senior Full Stack Engineer (12+ years) + Premium SaaS Product Designer + SEO Arc
 8. ✅ Reports
 9. ✅ Dashboard
 10. ✅ Accounting Engine
-11. ✅ Inventory Advanced (Godam)
+11. ✅ Inventory Advanced (warehouse)
 12. ✅ CRM Advanced
 13. ✅ Purchasing
 14. ✅ Manufacturing

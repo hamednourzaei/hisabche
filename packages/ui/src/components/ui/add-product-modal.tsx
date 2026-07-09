@@ -49,11 +49,11 @@ interface AddProductModalProps {
 // ─── Constants ─────────────────────────────────────────────────────────────
 
 const UNIT_OPTIONS = [
-  { value: "piece", labelKey: "godam.units.piece", fallback: "عدد" },
-  { value: "kg", labelKey: "godam.units.kg", fallback: "کیلوگرم" },
-  { value: "liter", labelKey: "godam.units.liter", fallback: "لیتر" },
-  { value: "meter", labelKey: "godam.units.meter", fallback: "متر" },
-  { value: "box", labelKey: "godam.units.box", fallback: "کارتن" },
+  { value: "piece", labelKey: "warehouse.units.piece", fallback: "عدد" },
+  { value: "kg", labelKey: "warehouse.units.kg", fallback: "کیلوگرم" },
+  { value: "liter", labelKey: "warehouse.units.liter", fallback: "لیتر" },
+  { value: "meter", labelKey: "warehouse.units.meter", fallback: "متر" },
+  { value: "box", labelKey: "warehouse.units.box", fallback: "کارتن" },
 ] as const;
 
 // ─── Component ─────────────────────────────────────────────────────────────
@@ -143,10 +143,10 @@ export function AddProductModal({
 
         <DialogHeader>
           <DialogTitle className="text-[hsl(var(--fg-primary))]">
-            {t("godam.addProductModal", "محصول جدید")}
+            {t("warehouse.addProductModal", "محصول جدید")}
           </DialogTitle>
           <DialogDescription className="sr-only">
-            {t("godam.addProductDescription", "فرم ثبت محصول جدید")}
+            {t("warehouse.addProductDescription", "فرم ثبت محصول جدید")}
           </DialogDescription>
         </DialogHeader>
 
@@ -154,7 +154,7 @@ export function AddProductModal({
           {/* ── Name ── */}
           <div className="space-y-2">
             <Label htmlFor="product-name" className="text-[hsl(var(--fg-primary))]">
-              {t("godam.productName", "نام محصول")}
+              {t("warehouse.productName", "نام محصول")}
               <span aria-hidden="true" className="text-[hsl(var(--color-destructive))] ms-1">*</span>
             </Label>
             <div className="relative">
@@ -162,7 +162,7 @@ export function AddProductModal({
               <Input
                 id="product-name"
                 {...register("name")}
-                placeholder={t("godam.productNamePlaceholder", "نام محصول را وارد کنید")}
+                placeholder={t("warehouse.productNamePlaceholder", "نام محصول را وارد کنید")}
                 className="ps-9 bg-[hsl(var(--surface-base))] border-[hsl(var(--border-default))] text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))] focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]"
                 autoFocus
               />
@@ -178,7 +178,7 @@ export function AddProductModal({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="product-quantity" className="text-[hsl(var(--fg-primary))]">
-                {t("godam.initialStock", "موجودی اولیه")}
+                {t("warehouse.initialStock", "موجودی اولیه")}
               </Label>
               <Input
                 id="product-quantity"
@@ -196,7 +196,7 @@ export function AddProductModal({
             </div>
             <div className="space-y-2">
               <Label htmlFor="product-unit" className="text-[hsl(var(--fg-primary))]">
-                {t("godam.unit", "واحد")}
+                {t("warehouse.unit", "واحد")}
               </Label>
               <Controller
                 name="unit"
@@ -204,7 +204,7 @@ export function AddProductModal({
                 render={({ field }) => (
                   <Select value={field.value} onValueChange={field.onChange}>
                     <SelectTrigger id="product-unit" className="w-full">
-                      <SelectValue placeholder={t("godam.unit", "واحد")} />
+                      <SelectValue placeholder={t("warehouse.unit", "واحد")} />
                     </SelectTrigger>
                     <SelectContent>
                       {UNIT_OPTIONS.map((opt) => (
@@ -223,7 +223,7 @@ export function AddProductModal({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="product-buy-price" className="text-[hsl(var(--fg-primary))]">
-                {t("godam.buyPrice", "قیمت خرید (AFN)")}
+                {t("warehouse.buyPrice", "قیمت خرید (AFN)")}
               </Label>
               <div className="relative">
                 <DollarSign className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))] pointer-events-none" aria-hidden="true" />
@@ -245,7 +245,7 @@ export function AddProductModal({
             </div>
             <div className="space-y-2">
               <Label htmlFor="product-sell-price" className="text-[hsl(var(--fg-primary))]">
-                {t("godam.sellPrice", "قیمت فروش (AFN)")}
+                {t("warehouse.sellPrice", "قیمت فروش (AFN)")}
               </Label>
               <div className="relative">
                 <DollarSign className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))] pointer-events-none" aria-hidden="true" />
@@ -270,7 +270,7 @@ export function AddProductModal({
           {/* ── Min Stock ── */}
           <div className="space-y-2">
             <Label htmlFor="product-min-stock" className="text-[hsl(var(--fg-primary))]">
-              {t("godam.minStock", "حداقل موجودی هشدار")}
+              {t("warehouse.minStock", "حداقل موجودی هشدار")}
             </Label>
             <div className="relative">
               <AlertTriangle className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))] pointer-events-none" aria-hidden="true" />

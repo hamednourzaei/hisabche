@@ -188,7 +188,7 @@ export function InvoiceDetailContainer() {
 
   const buildMessage = useCallback(
     (inv: Record<string, unknown>) =>
-      `🧾 ${t("faktoor.title")}: #${getField(inv.invoiceNumber, inv.invoice_number)}\n📅 ${new Date(inv.date as string).toLocaleDateString("fa-AF")}\n${getField(inv.customerName, inv.customer_name) ? `👤 ${getField(inv.customerName, inv.customer_name)}\n` : ""}💰 *${((inv.total as number) ?? 0).toLocaleString()} ${(inv.currency as string) || "AFN"}*\n📌 ${t(`faktoor.${(inv.status as string) || "pending"}`)}`,
+      `🧾 ${t("invoices.title")}: #${getField(inv.invoiceNumber, inv.invoice_number)}\n📅 ${new Date(inv.date as string).toLocaleDateString("fa-AF")}\n${getField(inv.customerName, inv.customer_name) ? `👤 ${getField(inv.customerName, inv.customer_name)}\n` : ""}💰 *${((inv.total as number) ?? 0).toLocaleString()} ${(inv.currency as string) || "AFN"}*\n📌 ${t(`invoices.${(inv.status as string) || "pending"}`)}`,
     [t]
   );
 
@@ -229,7 +229,7 @@ export function InvoiceDetailContainer() {
       } catch {}
     } else {
       await navigator.clipboard.writeText(text);
-      alert(t("faktoor.copiedToClipboard"));
+      alert(t("invoices.copiedToClipboard"));
     }
   }, [invoice, buildMessage, t]);
 
@@ -253,7 +253,7 @@ export function InvoiceDetailContainer() {
     if (!invoice) return;
     const inv = invoice as Record<string, unknown>;
     window.open(
-      `mailto:?subject=${encodeURIComponent(`${t("faktoor.title")} #${getField(inv.invoiceNumber, inv.invoice_number)}`)}&body=${encodeURIComponent(`${t("faktoor.title")}: #${getField(inv.invoiceNumber, inv.invoice_number)}\n${t("faktoor.date")}: ${new Date(inv.date as string).toLocaleDateString("fa-AF")}\n${t("faktoor.total")}: ${((inv.total as number) ?? 0).toLocaleString()} ${(inv.currency as string) || "AFN"}`)}`,
+      `mailto:?subject=${encodeURIComponent(`${t("invoices.title")} #${getField(inv.invoiceNumber, inv.invoice_number)}`)}&body=${encodeURIComponent(`${t("invoices.title")}: #${getField(inv.invoiceNumber, inv.invoice_number)}\n${t("invoices.date")}: ${new Date(inv.date as string).toLocaleDateString("fa-AF")}\n${t("invoices.total")}: ${((inv.total as number) ?? 0).toLocaleString()} ${(inv.currency as string) || "AFN"}`)}`,
       "_blank"
     );
   }, [invoice, t]);

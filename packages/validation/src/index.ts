@@ -118,19 +118,19 @@ export {
   type IncomeStatement,
 } from './schemas/accounting.schema'
 
-// ---------- Godam (Inventory) ----------
+// ---------- warehouse (Inventory) ----------
 export {
-  godamSchema,
-  createGodamSchema,
-  updateGodamSchema,
+  warehouseSchema,
+  createwarehouseSchema,
+  updatewarehouseSchema,
   stockTransferSchema,      
   stockMovementSchema,
-  type Godam,
+  type warehouse,
   type CreateGodam,
   type UpdateGodam,
   type StockTransfer,       
   type StockMovement,
-} from './schemas/godam.schema'
+} from './schemas/warehouse.schema'
 
 // ---------- CRM ----------
 export {
@@ -208,7 +208,7 @@ export {
   type Leave,
   type CreateLeave,
   type UpdateLeave,
-} from './schemas/hr.schema'
+} from './schemas/human-resources.schema'
 
 // ---------- Projects (فاز ۱۶) ----------
 export {

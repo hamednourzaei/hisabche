@@ -34,12 +34,12 @@
   "nav": {
     "dashboard": "Dashboard",
     "dashboard.description": "Business overview",
-    "godam": "Inventory",
-    "godam.description": "Manage inventory & products",
-    "faktoor": "Invoices",
-    "faktoor.description": "Manage invoices & sales",
-    "baqidari": "Ledger",
-    "baqidari.description": "Track balances & ledger",
+    "warehouse": "Inventory",
+    "warehouse.description": "Manage inventory & products",
+    "invoices": "Invoices",
+    "invoices.description": "Manage invoices & sales",
+    "customers": "Ledger",
+    "customers.description": "Track balances & ledger",
     "hr": "HR",
     "hr.description": "Manage employees & payroll",
     "projects": "Projects",
@@ -136,11 +136,11 @@
     "view": "View",
     "archive": "Archive"
   },
-  "faktoor": {
+  "invoices": {
     "title": "Invoice",
-    "newFaktoor": "New Invoice",
-    "faktoorNumber": "Invoice Number",
-    "faktoorDate": "Invoice Date",
+    "newinvoices": "New Invoice",
+    "invoicesNumber": "Invoice Number",
+    "invoicesDate": "Invoice Date",
     "dueDate": "Due Date",
     "customer": "Customer",
     "supplier": "Supplier",
@@ -159,9 +159,9 @@
     "mobileMoney": "Mobile Money",
     "reference": "Reference",
     "notes": "Notes",
-    "printFaktoor": "Print Invoice",
-    "shareFaktoor": "Share Invoice",
-    "duplicateFaktoor": "Duplicate Invoice",
+    "printinvoices": "Print Invoice",
+    "shareinvoices": "Share Invoice",
+    "duplicateinvoices": "Duplicate Invoice",
     "addItem": "Add Item",
     "removeItem": "Remove Item",
     "itemDescription": "Description",
@@ -171,9 +171,9 @@
     "currency": "Currency",
     "selectCustomer": "Select customer",
     "selectProduct": "Select product",
-    "faktoorList": "Invoice List",
-    "noFaktoors": "No invoices yet",
-    "createFirstFaktoor": "Create your first invoice",
+    "invoicesList": "Invoice List",
+    "noinvoicess": "No invoices yet",
+    "createFirstinvoices": "Create your first invoice",
     "created": "Invoice created",
     "clickToView": "Click to view invoice",
     "detail": "Invoice details",
@@ -185,7 +185,7 @@
     "pending": "Pending",
     "cancelled": "Cancelled"
   },
-  "godam": {
+  "warehouse": {
     "title": "Inventory",
     "totalProducts": "Total Products",
     "lowStock": "Low Stock",
@@ -234,7 +234,7 @@
       "pack": "Pack"
     }
   },
-  "baqidari": {
+  "customers": {
     "title": "Ledger",
     "subtitle": "Customer debt & credit management",
     "creditInvoice": "Credit Invoice",

@@ -112,10 +112,10 @@ export function QuickInvoicePage({
       <div className="mb-4 animate-bounce text-6xl motion-reduce:animate-none">🧾</div>
       <div className="rounded-2xl px-8 py-6 border border-[hsl(var(--border-strong))] bg-[hsl(var(--surface-elevated))] shadow-xl">
         <p className="text-xl font-bold text-[hsl(var(--fg-primary))]">
-          🎉 {t("faktoor.created", "فاکتور با موفقیت ثبت شد")}
+          🎉 {t("invoices.created", "فاکتور با موفقیت ثبت شد")}
         </p>
         <p className="mt-2 text-sm text-[hsl(var(--fg-secondary))]">
-          {t("faktoor.clickToView", "کلیک کنید تا فاکتور را ببینید")}
+          {t("invoices.clickToView", "کلیک کنید تا فاکتور را ببینید")}
         </p>
       </div>
     </div>
@@ -163,7 +163,7 @@ export function QuickInvoicePage({
               <ProductPicker
                 value={selectedProduct}
                 onChange={onSelectProduct}
-                placeholder={t("godam.pickProduct", "انتخاب محصول از گدام...")}
+                placeholder={t("warehouse.pickProduct", "انتخاب محصول از گدام...")}
               />
 
               <button
@@ -196,7 +196,7 @@ export function QuickInvoicePage({
                   <User className="size-8 text-[hsl(var(--fg-secondary))]" aria-hidden="true" />
                 </div>
                 <h1 className="text-2xl font-bold text-[hsl(var(--fg-primary))]">
-                  {t("faktoor.customer", "مشتری")}
+                  {t("invoices.customer", "مشتری")}
                 </h1>
                 <p className="mt-2 text-sm text-[hsl(var(--fg-secondary))]">
                   {t("quickInvoice.toWhom", "نام مشتری را انتخاب کنید (اختیاری)")}
@@ -250,7 +250,7 @@ export function QuickInvoicePage({
                   <DollarSign className="size-8 text-[hsl(var(--color-success))]" aria-hidden="true" />
                 </div>
                 <h1 className="text-2xl font-bold text-[hsl(var(--fg-primary))]">
-                  {t("faktoor.total", "مبلغ فاکتور")}
+                  {t("invoices.total", "مبلغ فاکتور")}
                 </h1>
                 <p className="mt-2 text-sm text-[hsl(var(--fg-secondary))]">
                   {t("quickInvoice.howMuch", "مبلغ فروش را وارد کنید")}
@@ -259,12 +259,12 @@ export function QuickInvoicePage({
 
               <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] p-4 text-start">
                 <div className="mb-2 flex items-center justify-between">
-                  <span className="text-sm text-[hsl(var(--fg-secondary))]">{t("faktoor.items", "محصول")}</span>
+                  <span className="text-sm text-[hsl(var(--fg-secondary))]">{t("invoices.items", "محصول")}</span>
                   <span className="font-medium text-[hsl(var(--fg-primary))]">{productName}</span>
                 </div>
                 {selectedCustomer && (
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-[hsl(var(--fg-secondary))]">{t("faktoor.customer", "مشتری")}</span>
+                    <span className="text-sm text-[hsl(var(--fg-secondary))]">{t("invoices.customer", "مشتری")}</span>
                     <span className="font-medium text-[hsl(var(--fg-primary))]">{selectedCustomer.name}</span>
                   </div>
                 )}
@@ -284,7 +284,7 @@ export function QuickInvoicePage({
                     )}
                   >
                     {type === "cash" ? "💵 " : "📝 "}
-                    {type === "cash" ? t("faktoor.cash", "نقد") : t("faktoor.credit", "نسیه")}
+                    {type === "cash" ? t("invoices.cash", "نقد") : t("invoices.credit", "نسیه")}
                   </button>
                 ))}
               </div>
@@ -311,7 +311,7 @@ export function QuickInvoicePage({
 
               <div>
                 <label className="mb-2 block text-sm font-medium text-[hsl(var(--fg-primary))]">
-                  {t("faktoor.quantity", "تعداد")}
+                  {t("invoices.quantity", "تعداد")}
                 </label>
                 <div className="flex gap-2">
                   {QUANTITIES.map((q) => (
@@ -334,7 +334,7 @@ export function QuickInvoicePage({
 
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-[hsl(var(--fg-primary))]">
-                  {t("faktoor.unitPrice", "قیمت")} (AFN)
+                  {t("invoices.unitPrice", "قیمت")} (AFN)
                 </label>
                 <div className="relative">
                   <DollarSign className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))] pointer-events-none" aria-hidden="true" />
@@ -362,10 +362,10 @@ export function QuickInvoicePage({
                   <p className="text-4xl font-bold tabular-nums text-[hsl(var(--color-primary))]">{total.toLocaleString()}</p>
                   <p className="mt-1 text-sm text-[hsl(var(--fg-secondary))]">
                     {paymentType === "cash"
-                      ? t("faktoor.paid", "پرداخت کامل")
+                      ? t("invoices.paid", "پرداخت کامل")
                       : paidNow
-                        ? `${t("payment.record", "پیش‌پرداخت")}: ${parseFloat(paidNow).toLocaleString()} AFN — ${t("faktoor.remaining", "باقی‌مانده")}: ${(total - parseFloat(paidNow || "0")).toLocaleString()} AFN`
-                        : t("faktoor.credit", "نسیه کامل")}
+                        ? `${t("payment.record", "پیش‌پرداخت")}: ${parseFloat(paidNow).toLocaleString()} AFN — ${t("invoices.remaining", "باقی‌مانده")}: ${(total - parseFloat(paidNow || "0")).toLocaleString()} AFN`
+                        : t("invoices.credit", "نسیه کامل")}
                   </p>
                 </div>
               )}
@@ -416,7 +416,7 @@ export function QuickInvoicePage({
                   <Check className="size-12 text-[hsl(var(--color-success))]" aria-hidden="true" />
                 </div>
                 <h1 className="mb-3 text-3xl font-bold text-[hsl(var(--fg-primary))]">
-                  {t("faktoor.created", "فاکتور ثبت شد")} 🎉
+                  {t("invoices.created", "فاکتور ثبت شد")} 🎉
                 </h1>
                 <p className="text-[hsl(var(--fg-secondary))]">
                   {t("dashboard.ready", "فاکتور شما در")}{" "}
@@ -426,14 +426,14 @@ export function QuickInvoicePage({
               </div>
 
               <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] p-5 text-start">
-                <Row label={t("faktoor.items", "محصول")} value={productName} />
-                <Row label={t("faktoor.quantity", "تعداد")} value={quantity} />
-                <Row label={t("common.status", "نوع")} value={paymentType === "cash" ? `💵 ${t("faktoor.cash", "نقد")}` : `📝 ${t("faktoor.credit", "نسیه")}`} />
+                <Row label={t("invoices.items", "محصول")} value={productName} />
+                <Row label={t("invoices.quantity", "تعداد")} value={quantity} />
+                <Row label={t("common.status", "نوع")} value={paymentType === "cash" ? `💵 ${t("invoices.cash", "نقد")}` : `📝 ${t("invoices.credit", "نسیه")}`} />
                 <Row label={t("common.total", "مبلغ کل")} value={`${total.toLocaleString()} AFN`} valueClass="font-bold tabular-nums text-[hsl(var(--color-primary))]" />
                 {paymentType === "credit" && (
                   <>
-                    <Row label={t("faktoor.paid", "پرداخت شده")} value={`${paidAmount.toLocaleString()} AFN`} valueClass="font-bold tabular-nums text-[hsl(var(--color-success))]" />
-                    <Row label={t("faktoor.remaining", "باقی‌مانده")} value={`${(total - paidAmount).toLocaleString()} AFN`} valueClass="font-bold tabular-nums text-[hsl(var(--color-destructive))]" />
+                    <Row label={t("invoices.paid", "پرداخت شده")} value={`${paidAmount.toLocaleString()} AFN`} valueClass="font-bold tabular-nums text-[hsl(var(--color-success))]" />
+                    <Row label={t("invoices.remaining", "باقی‌مانده")} value={`${(total - paidAmount).toLocaleString()} AFN`} valueClass="font-bold tabular-nums text-[hsl(var(--color-destructive))]" />
                   </>
                 )}
               </div>

@@ -135,8 +135,8 @@ export function DashboardContainer() {
       prodLoading={false}
       recentInvoices={recentInvoices}
       onNavigate={(route) => router.push(route)}
-      onNavigateGodam={() => router.push("/godam")}
-      onNavigateBaqidari={() => router.push("/baqidari")}
+      onNavigatewarehouse={() => router.push("/warehouse")}
+      onNavigatecustomers={() => router.push("/customers")}
       onNavigateQuickInvoice={() => router.push("/quick-invoice")}
       onNavigateInvoice={(id) => router.push(`/invoices/${id}`)}
       onViewAllInvoices={() => router.push("/invoices")}

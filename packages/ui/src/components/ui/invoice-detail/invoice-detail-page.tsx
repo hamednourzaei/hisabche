@@ -67,7 +67,7 @@ export function InvoiceDetailPage({
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
         <FileText className="size-16 text-[hsl(var(--fg-tertiary))]" />
-        <p className="text-lg text-[hsl(var(--fg-secondary))]">{t("faktoor.notFound", "فاکتور پیدا نشد")}</p>
+        <p className="text-lg text-[hsl(var(--fg-secondary))]">{t("invoices.notFound", "فاکتور پیدا نشد")}</p>
         <button type="button" onClick={onBack} className={outlineBtn}>{t("action.back", "بازگشت")}</button>
       </div>
     );
@@ -83,8 +83,8 @@ export function InvoiceDetailPage({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between no-print">
         <div className="flex items-center gap-3">
           <button type="button" onClick={onBack} className={ghostBtn}><ArrowRight className="size-5" /></button>
-          <h1 className="text-2xl font-bold text-[hsl(var(--fg-primary))]">{t("faktoor.detail", "جزئیات فاکتور")} #{invoiceNumber}</h1>
-          <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border shrink-0", badgeStyle)}>{t(`faktoor.${status}`, status)}</span>
+          <h1 className="text-2xl font-bold text-[hsl(var(--fg-primary))]">{t("invoices.detail", "جزئیات فاکتور")} #{invoiceNumber}</h1>
+          <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border shrink-0", badgeStyle)}>{t(`invoices.${status}`, status)}</span>
         </div>
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={onWhatsApp} className={outlineBtn}><MessageCircle className="size-4" /><span className="hidden sm:inline">WhatsApp</span></button>
@@ -126,7 +126,7 @@ export function InvoiceDetailPage({
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead><tr className="border-b border-[hsl(var(--border-default))]"><th className="px-2 py-3 text-start font-medium text-[hsl(var(--fg-secondary))]">#</th><th className="px-2 py-3 text-start font-medium text-[hsl(var(--fg-secondary))]">{t("godam.productName", "نام محصول")}</th><th className="px-2 py-3 text-center font-medium text-[hsl(var(--fg-secondary))]">{t("faktoor.quantity", "تعداد")}</th><th className="px-2 py-3 text-end font-medium text-[hsl(var(--fg-secondary))]">{t("faktoor.unitPrice", "قیمت واحد")}</th><th className="px-2 py-3 text-end font-medium text-[hsl(var(--fg-secondary))]">{t("faktoor.totalPrice", "قیمت کل")}</th></tr></thead>
+              <thead><tr className="border-b border-[hsl(var(--border-default))]"><th className="px-2 py-3 text-start font-medium text-[hsl(var(--fg-secondary))]">#</th><th className="px-2 py-3 text-start font-medium text-[hsl(var(--fg-secondary))]">{t("warehouse.productName", "نام محصول")}</th><th className="px-2 py-3 text-center font-medium text-[hsl(var(--fg-secondary))]">{t("invoices.quantity", "تعداد")}</th><th className="px-2 py-3 text-end font-medium text-[hsl(var(--fg-secondary))]">{t("invoices.unitPrice", "قیمت واحد")}</th><th className="px-2 py-3 text-end font-medium text-[hsl(var(--fg-secondary))]">{t("invoices.totalPrice", "قیمت کل")}</th></tr></thead>
               <tbody>
                 {items.map((item, i) => (
                   <tr key={item.id || i} className="border-b border-[hsl(var(--border-default))]">
@@ -139,17 +139,17 @@ export function InvoiceDetailPage({
                 ))}
               </tbody>
               <tfoot>
-                <tr><td colSpan={4} className="px-2 py-3 text-end font-medium text-[hsl(var(--fg-primary))]">{t("faktoor.subtotal", "جمع")}</td><td className="px-2 py-3 text-end font-medium tabular-nums text-[hsl(var(--fg-primary))]">{subtotal.toLocaleString()} {currency}</td></tr>
-                {discountTotal > 0 && <tr><td colSpan={4} className="px-2 py-2 text-end text-[hsl(var(--fg-secondary))]">{t("faktoor.discount", "تخفیف")}</td><td className="px-2 py-2 text-end text-[hsl(var(--color-destructive))] tabular-nums">-{discountTotal.toLocaleString()} {currency}</td></tr>}
-                {taxTotal > 0 && <tr><td colSpan={4} className="px-2 py-2 text-end text-[hsl(var(--fg-secondary))]">{t("faktoor.tax", "مالیات")}</td><td className="px-2 py-2 text-end tabular-nums text-[hsl(var(--fg-primary))]">{taxTotal.toLocaleString()} {currency}</td></tr>}
-                <tr className="border-t-2 border-[hsl(var(--border-default))]"><td colSpan={4} className="px-2 py-3 text-end text-lg font-bold text-[hsl(var(--fg-primary))]">{t("faktoor.total", "مجموع")}</td><td className="px-2 py-3 text-end text-lg font-bold text-[hsl(var(--color-primary))] tabular-nums">{total.toLocaleString()} {currency}</td></tr>
-                {paidAmount > 0 && <tr><td colSpan={4} className="px-2 py-2 text-end text-[hsl(var(--fg-secondary))]">{t("faktoor.paid", "پرداخت شده")}</td><td className="px-2 py-2 text-end text-[hsl(var(--color-success))] tabular-nums">-{paidAmount.toLocaleString()} {currency}</td></tr>}
-                {remaining > 0 && <tr><td colSpan={4} className="px-2 py-2 text-end font-medium text-[hsl(var(--color-destructive))]">{t("faktoor.remaining", "باقیمانده")}</td><td className="px-2 py-2 text-end font-medium text-[hsl(var(--color-destructive))] tabular-nums">{remaining.toLocaleString()} {currency}</td></tr>}
+                <tr><td colSpan={4} className="px-2 py-3 text-end font-medium text-[hsl(var(--fg-primary))]">{t("invoices.subtotal", "جمع")}</td><td className="px-2 py-3 text-end font-medium tabular-nums text-[hsl(var(--fg-primary))]">{subtotal.toLocaleString()} {currency}</td></tr>
+                {discountTotal > 0 && <tr><td colSpan={4} className="px-2 py-2 text-end text-[hsl(var(--fg-secondary))]">{t("invoices.discount", "تخفیف")}</td><td className="px-2 py-2 text-end text-[hsl(var(--color-destructive))] tabular-nums">-{discountTotal.toLocaleString()} {currency}</td></tr>}
+                {taxTotal > 0 && <tr><td colSpan={4} className="px-2 py-2 text-end text-[hsl(var(--fg-secondary))]">{t("invoices.tax", "مالیات")}</td><td className="px-2 py-2 text-end tabular-nums text-[hsl(var(--fg-primary))]">{taxTotal.toLocaleString()} {currency}</td></tr>}
+                <tr className="border-t-2 border-[hsl(var(--border-default))]"><td colSpan={4} className="px-2 py-3 text-end text-lg font-bold text-[hsl(var(--fg-primary))]">{t("invoices.total", "مجموع")}</td><td className="px-2 py-3 text-end text-lg font-bold text-[hsl(var(--color-primary))] tabular-nums">{total.toLocaleString()} {currency}</td></tr>
+                {paidAmount > 0 && <tr><td colSpan={4} className="px-2 py-2 text-end text-[hsl(var(--fg-secondary))]">{t("invoices.paid", "پرداخت شده")}</td><td className="px-2 py-2 text-end text-[hsl(var(--color-success))] tabular-nums">-{paidAmount.toLocaleString()} {currency}</td></tr>}
+                {remaining > 0 && <tr><td colSpan={4} className="px-2 py-2 text-end font-medium text-[hsl(var(--color-destructive))]">{t("invoices.remaining", "باقیمانده")}</td><td className="px-2 py-2 text-end font-medium text-[hsl(var(--color-destructive))] tabular-nums">{remaining.toLocaleString()} {currency}</td></tr>}
               </tfoot>
             </table>
           </div>
           <div className="mt-8 border-t border-[hsl(var(--border-default))] pt-4 text-center text-sm text-[hsl(var(--fg-secondary))]">
-            <p>{t("faktoor.generatedBy", "ایجاد شده توسط")} Hisabche — hisabche.com</p>
+            <p>{t("invoices.generatedBy", "ایجاد شده توسط")} Hisabche — hisabche.com</p>
             <p className="mt-1">{new Date(createdAt).toLocaleDateString("fa-AF")} {new Date(createdAt).toLocaleTimeString("fa-AF")}</p>
           </div>
         </div>

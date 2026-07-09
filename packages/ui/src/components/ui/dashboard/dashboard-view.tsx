@@ -42,8 +42,8 @@ interface DashboardViewProps {
   }>;
   // Navigation
   onNavigate: (route: string) => void;
-  onNavigateGodam: () => void;
-  onNavigateBaqidari: () => void;
+  onNavigatewarehouse: () => void;
+  onNavigatecustomers: () => void;
   onNavigateQuickInvoice: () => void;
   onNavigateInvoice: (id: string) => void;
   onViewAllInvoices: () => void;
@@ -100,8 +100,8 @@ export function DashboardView(props: DashboardViewProps) {
     prodLoading,
     recentInvoices,
     onNavigate,
-    onNavigateGodam,
-    onNavigateBaqidari,
+    onNavigatewarehouse,
+    onNavigatecustomers,
     onNavigateQuickInvoice,
     onNavigateInvoice,
     onViewAllInvoices,

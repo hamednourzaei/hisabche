@@ -202,7 +202,7 @@ export class AIService {
           type: 'warning',
           title: 'هشدار کمبود موجودی',
           description: `${lowStock.length} محصول به حداقل موجودی رسیده‌اند.`,
-          action: '/godam',
+          action: '/warehouse',
           actionLabel: 'مشاهده موجودی',
           metric: lowStock.length,
           metricLabel: 'محصول',
