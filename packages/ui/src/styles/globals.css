@@ -918,3 +918,38 @@ p, .body { font-size: var(--text-body); line-height: var(--leading-relaxed); fon
 /* ═══════════════════════════════════════════════════════════════════════════
    END OF HISABCHE v9 CINEMATIC MOTION SYSTEM
    ═══════════════════════════════════════════════════════════════════════════ */
+     .grid-drift{background-image:linear-gradient(hsl(var(--border-default)/.5) 1px,transparent 1px),linear-gradient(90deg,hsl(var(--border-default)/.5) 1px,transparent 1px);background-size:40px 40px;animation:drift 20s linear infinite;opacity:.4}
+  @keyframes drift{0%{background-position:0 0}100%{background-position:40px 40px}}
+  .flip-perspective{perspective:1200px}
+  .flip-inner{position:relative;transform-style:preserve-3d;transition:transform .65s cubic-bezier(.4,0,.2,1);will-change:transform}
+  .flip-inner.is-flipped{transform:rotateY(180deg)}
+  .flip-face{backface-visibility:hidden;-webkit-backface-visibility:hidden}
+  .flip-front{position:relative}
+  .flip-back{position:absolute;inset:0;transform:rotateY(180deg)}
+  .pipe-pulse{animation:pipePulse 2s ease-in-out infinite;opacity:0}
+  @keyframes pipePulse{0%,100%{r:9;opacity:0}50%{r:13;opacity:.2}}
+  @keyframes fadeSlideUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  .stagger-row{opacity:0;animation:fadeSlideUp .45s ease forwards}
+  @keyframes fadeScaleIn{from{opacity:0;transform:scale(.97) translateY(12px)}to{opacity:1;transform:scale(1) translateY(0)}}
+  .preview-card-1{animation:fadeScaleIn .5s ease .1s forwards;opacity:0}
+  .preview-card-2{animation:fadeScaleIn .5s ease .25s forwards;opacity:0}
+  .preview-chips{animation:fadeScaleIn .5s ease .4s forwards;opacity:0}
+  .btn-primary{position:relative;overflow:hidden}
+  .btn-primary::after{content:'';position:absolute;inset:0;background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.2) 50%,transparent 60%);transform:translateX(-100%);transition:none}
+  .btn-primary:hover::after{transform:translateX(100%);transition:transform .5s ease}
+
+  /* ⭐ Simple placeholder — visible only when empty + not focused */
+  .auth-input{text-indent:14px}
+  .auth-input::placeholder{color:hsl(var(--fg-tertiary));opacity:1;transition:opacity .15s ease}
+  .auth-input:focus::placeholder{opacity:0}
+  .auth-input.has-value::placeholder{opacity:0}
+
+  @media(prefers-reduced-motion:reduce){
+    .grid-drift,.pipe-pulse,.stagger-row,.preview-card-1,.preview-card-2,.preview-chips,.flip-inner{animation:none!important;transition:none!important}
+    .stagger-row,.preview-card-1,.preview-card-2,.preview-chips{opacity:1!important}
+    .flip-back{transform:rotateY(180deg)}
+    .auth-input{text-indent:14px}
+    .auth-input::placeholder{color:hsl(var(--fg-tertiary));opacity:1;transition:opacity .15s ease}
+    .auth-input:focus::placeholder{opacity:0}
+    .auth-input.has-value::placeholder{opacity:0}
+  }
