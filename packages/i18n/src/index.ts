@@ -5,6 +5,7 @@
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 
+import en from './locales/en.json'
 import faAF from './locales/fa-AF.json'
 import faIR from './locales/fa-IR.json'
 
@@ -12,7 +13,7 @@ import faIR from './locales/fa-IR.json'
 // Types
 // ============================================
 
-export type SupportedLanguage = 'fa-AF' | 'fa-IR'
+export type SupportedLanguage = 'fa-IR' | 'fa-AF' | 'en'
 
 export interface LanguageOption {
   code: SupportedLanguage
@@ -23,16 +24,22 @@ export interface LanguageOption {
 
 export const supportedLanguages: LanguageOption[] = [
   {
+    code: 'fa-IR',
+    name: 'Persian',
+    nativeName: 'فارسی',
+    direction: 'rtl',
+  },
+  {
     code: 'fa-AF',
     name: 'Dari',
     nativeName: 'دری',
     direction: 'rtl',
   },
   {
-    code: 'fa-IR',
-    name: 'Persian',
-    nativeName: 'فارسی',
-    direction: 'rtl',
+    code: 'en',
+    name: 'English',
+    nativeName: 'English',
+    direction: 'ltr',
   },
 ]
 
@@ -42,7 +49,7 @@ export const supportedLanguages: LanguageOption[] = [
 
 function getStoredLanguage(): SupportedLanguage {
   if (typeof window === 'undefined') {
-    return 'fa-AF'
+    return 'fa-IR'
   }
 
   try {
@@ -54,7 +61,7 @@ function getStoredLanguage(): SupportedLanguage {
     // ignore
   }
 
-  return 'fa-AF'
+  return 'fa-IR'
 }
 
 function getDirection(lang: SupportedLanguage): 'rtl' | 'ltr' {
@@ -65,18 +72,21 @@ function getDirection(lang: SupportedLanguage): 'rtl' | 'ltr' {
 // DEFAULTS
 // ============================================
 
-const DEFAULT_LANG: SupportedLanguage = 'fa-AF'
+const DEFAULT_LANG: SupportedLanguage = 'fa-IR'
 
 // ============================================
 // RESOURCES
 // ============================================
 
 const resources = {
+  'fa-IR': {
+    translation: faIR,
+  },
   'fa-AF': {
     translation: faAF,
   },
-  'fa-IR': {
-    translation: faIR,
+  'en': {
+    translation: en,
   },
 }
 
@@ -88,7 +98,7 @@ if (!i18n.isInitialized) {
   i18n.use(initReactI18next).init({
     resources,
     lng: DEFAULT_LANG,
-    fallbackLng: 'fa-AF',
+    fallbackLng: 'fa-IR',
     interpolation: {
       escapeValue: false,
     },
@@ -119,10 +129,6 @@ export function changeLanguage(lang: SupportedLanguage): void {
   }
 }
 
-/**
- * فقط بعد mount اجرا شود
- * برای جلوگیری از hydration mismatch
- */
 export function syncLanguageFromStorage(): void {
   const lang = getStoredLanguage()
   if (lang !== i18n.language) {

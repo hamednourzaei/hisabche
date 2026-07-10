@@ -2,9 +2,14 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
+import { usePathname } from "next/navigation";
 import { useNavigation } from "../../../hooks/menu/use-navigation-state";
 import { useAuthStore } from "@hisabche/store";
 import { cn } from "@/lib/utils";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   TopNav — i18n-ready with dynamic RTL/LTR support
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface TopNavProps {
   variant?: "landing" | "dashboard";
@@ -12,6 +17,11 @@ export interface TopNavProps {
   onNavigateCta?: () => void;
   onLogout?: () => void;
   businessName?: string;
+}
+
+function getLocaleFromPathname(pathname: string): string {
+  const match = pathname.match(/^\/(fa-IR|fa-AF|en)/);
+  return match?.[1] ?? "fa-IR";
 }
 
 export function TopNav({
@@ -22,12 +32,16 @@ export function TopNav({
   businessName,
 }: TopNavProps) {
   const { t } = useTranslation();
+  const pathname = usePathname();
   const { sections, setSection, activeSection, scrollProgress, narrativeState } = useNavigation();
   const user = useAuthStore((s) => s.user);
   const navListRef = useRef<HTMLUListElement>(null);
   const [indicatorStyle, setIndicatorStyle] = useState({ width: 0, offset: 0 });
 
-  const displayName = businessName || user?.businessName || user?.fullName || "حسابچه";
+  const locale = getLocaleFromPathname(pathname);
+  const isRTL = locale === "fa-IR" || locale === "fa-AF";
+
+  const displayName = businessName || user?.businessName || user?.fullName || t("app.name", "Hisabche");
 
   useEffect(() => {
     if (typeof document !== "undefined") {
@@ -35,10 +49,11 @@ export function TopNav({
     }
   }, [narrativeState]);
 
-  // Update indicator position based on active section
   const updateIndicator = useCallback(() => {
     if (!navListRef.current) return;
-    const activeBtn = navListRef.current.querySelector(`[data-section-id="${activeSection}"]`) as HTMLElement;
+    const activeBtn = navListRef.current.querySelector(
+      `[data-section-id="${activeSection}"]`
+    ) as HTMLElement;
     if (!activeBtn) return;
 
     const listRect = navListRef.current.getBoundingClientRect();
@@ -69,19 +84,19 @@ export function TopNav({
         "lg:bg-[hsl(var(--surface-base)/0.7)] lg:backdrop-blur-xl",
         "lg:border-[hsl(var(--border-default))]",
         "max-lg:py-3 max-lg:bg-[hsl(var(--surface-base))] max-lg:backdrop-blur-none",
-        "max-lg:border-b max-lg:border-[hsl(var(--border-default))]",
+        "max-lg:border-b max-lg:border-[hsl(var(--border-default))]"
       )}
-      dir="rtl"
+      dir={isRTL ? "rtl" : "ltr"}
     >
       <div
         className={cn(
           "mx-auto flex items-center justify-between",
           "h-14 px-4",
           "lg:h-[52px] lg:px-0 lg:w-[90%]",
-          "max-lg:h-14",
+          "max-lg:h-14"
         )}
       >
-        {/* Logo — hidden below lg */}
+        {/* Logo */}
         <button
           type="button"
           className="hidden lg:flex items-center gap-1 text-[hsl(var(--fg-primary))] font-bold text-lg shrink-0"
@@ -115,7 +130,7 @@ export function TopNav({
                     "relative z-10 px-2 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-colors",
                     activeSection === id
                       ? "text-[hsl(var(--fg-primary))] font-semibold"
-                      : "text-[hsl(var(--fg-primary)/0.55)] hover:text-[hsl(var(--fg-primary)/0.85)]",
+                      : "text-[hsl(var(--fg-primary)/0.55)] hover:text-[hsl(var(--fg-primary)/0.85)]"
                   )}
                   onClick={() => handleSetSection(id)}
                 >
@@ -126,26 +141,28 @@ export function TopNav({
           </ul>
         </nav>
 
-        {/* CTA button — Desktop only (Landing) */}
+        {/* CTA button — Desktop (Landing) */}
         {variant === "landing" && (
           <button
             type="button"
             className="hidden lg:inline-flex items-center gap-1 rounded-full px-5 py-2 text-sm font-bold text-white bg-[var(--gradient-brand)] hover:brightness-110 transition-all shrink-0"
             onClick={onNavigateCta ?? onNavigateLogin}
           >
-            <span className="cta-text">{t("landing.cta", "شروع رایگان")}</span>
-            <span>←</span>
+            <span className="cta-text">
+              {t("landing.cta", locale === "en" ? "Start Free" : "شروع رایگان")}
+            </span>
+            <span>{isRTL ? "←" : "→"}</span>
           </button>
         )}
 
-        {/* Logout button — Desktop only (Dashboard) */}
+        {/* Logout button — Desktop (Dashboard) */}
         {variant === "dashboard" && (
           <button
             type="button"
             onClick={onLogout}
             className="hidden lg:inline-flex rounded-full px-4 py-1.5 text-xs font-medium text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors"
           >
-            {t("auth.signOut", "خروج")}
+            {t("auth.signOut", locale === "en" ? "Sign Out" : "خروج")}
           </button>
         )}
       </div>

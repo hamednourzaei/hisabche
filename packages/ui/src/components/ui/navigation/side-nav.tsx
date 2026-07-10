@@ -1,13 +1,12 @@
-// packages/ui/src/components/navigation/side-nav.tsx
+// packages/ui/src/components/ui/navigation/side-nav.tsx
 "use client";
 
 import { useNavigation } from "../../../hooks/menu/use-navigation-state";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   SideNav v2 — Hisabche Design Language
-   Zero hardcoded colors — all tokens from design system
-   No CSS module dependency
+   SideNav v3 — i18n-ready
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface SideNavItem {
@@ -22,6 +21,7 @@ export interface SideNavProps {
 
 export function SideNav({ items }: SideNavProps) {
   const { activeSection, setSection } = useNavigation();
+  const { t } = useTranslation();
 
   return (
     <aside
@@ -29,20 +29,20 @@ export function SideNav({ items }: SideNavProps) {
         "hidden lg:flex lg:flex-col shrink-0",
         "w-60 h-screen sticky top-0 overflow-y-auto",
         "border-e border-[hsl(var(--border-default))]",
-        "bg-[hsl(var(--surface-base))]",
+        "bg-[hsl(var(--surface-base))]"
       )}
     >
       {/* Header */}
       <div className="flex items-center gap-2.5 px-4 py-[11px] border-b border-[hsl(var(--border-default))]">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--gradient-brand)] text-white text-sm font-bold shrink-0">
-          ح
+          {t("app.name", "حسابچه").charAt(0)}
         </div>
         <div className="min-w-0 leading-tight">
           <p className="text-sm font-semibold truncate text-[hsl(var(--fg-primary))]">
-            حسابچه
+            {t("app.name", "حسابچه")}
           </p>
           <p className="text-[11px] text-[hsl(var(--fg-tertiary))]">
-            مدیریت کسب‌وکار
+            {t("app.tagline", "مدیریت کسب‌وکار")}
           </p>
         </div>
       </div>
@@ -64,7 +64,7 @@ export function SideNav({ items }: SideNavProps) {
                 "motion-reduce:transition-none",
                 isActive
                   ? "bg-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))] font-semibold"
-                  : "text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]",
+                  : "text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]"
               )}
               aria-current={isActive ? "page" : undefined}
             >
@@ -79,7 +79,7 @@ export function SideNav({ items }: SideNavProps) {
                   "inline-flex shrink-0",
                   isActive
                     ? "text-[hsl(var(--color-primary))]"
-                    : "text-[hsl(var(--fg-tertiary))]",
+                    : "text-[hsl(var(--fg-tertiary))]"
                 )}
               >
                 {icon}

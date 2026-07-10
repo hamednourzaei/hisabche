@@ -1,9 +1,7 @@
-// Fix: landing-page.tsx — پاس دادن t به CinematicHero
-
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useCallback } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { NavigationProvider } from "../../../hooks/menu/use-navigation-state";
 import { TopNav } from "../navigation/top-nav";
@@ -19,25 +17,95 @@ import FaqScene from "./faq-scene";
 import CTAScene from "./cta-scene";
 import StatsSection from "./stats-section";
 
-const NAVIGATION_SECTIONS = [
-  { id: "hero",         label: "خانه",    narrative: "frustration" as const },
-  { id: "pain",         label: "مشکل",    narrative: "confusion"   as const },
-  { id: "transform",    label: "راه‌حل",  narrative: "clarity"     as const },
-  { id: "features",     label: "امکانات", narrative: "confidence"  as const },
-  { id: "testimonials", label: "اعتماد",  narrative: "trust"       as const },
-  { id: "cta",          label: "شروع",    narrative: "action"      as const },
-];
+const sectionKeys: Record<string, string> = {
+  hero: "landing.navHero",
+  pain: "landing.navPain",
+  transform: "landing.navTransform",
+  features: "landing.navFeatures",
+  testimonials: "landing.navTestimonials",
+  cta: "landing.navCTA",
+};
+
+const sectionFallbacks: Record<string, Record<string, string>> = {
+  en: {
+    hero: "Home",
+    pain: "Problem",
+    transform: "Solution",
+    features: "Features",
+    testimonials: "Trust",
+    cta: "Start",
+  },
+  "fa-IR": {
+    hero: "خانه",
+    pain: "مشکل",
+    transform: "راه‌حل",
+    features: "امکانات",
+    testimonials: "اعتماد",
+    cta: "شروع",
+  },
+  "fa-AF": {
+    hero: "خانه",
+    pain: "مشکل",
+    transform: "راه حل",
+    features: "امکانات",
+    testimonials: "اعتماد",
+    cta: "شروع",
+  },
+};
+
+function getLocaleFromPathname(pathname: string): string {
+  const match = pathname.match(/^\/(fa-IR|fa-AF|en)/);
+  return match?.[1] ?? "fa-IR";
+}
 
 export function LandingPage() {
   const router = useRouter();
-  const { t } = useTranslation();
+  const pathname = usePathname();
+  const { t, i18n } = useTranslation();
   const navigateLogin = useCallback(() => router.push("/login"), [router]);
-// توی landing-page.tsx، یه safeT بساز:
+  const [ready, setReady] = useState(false);
 
-const safeT = (key: string, fallback?: string) => {
-  const result = t(key);
-  return result !== key ? result : (fallback ?? key);
-};
+  const currentLocale = getLocaleFromPathname(pathname);
+  const fallbacks = sectionFallbacks[currentLocale] || sectionFallbacks["fa-IR"];
+
+const NAVIGATION_SECTIONS = useMemo(
+  () => [
+    { id: "hero",         label: t("landing.navHero", fallbacks?.hero ?? "Home"),               narrative: "frustration" as const },
+    { id: "pain",         label: t("landing.navPain", fallbacks?.pain ?? "Problem"),             narrative: "confusion"   as const },
+    { id: "transform",    label: t("landing.navTransform", fallbacks?.transform ?? "Solution"),  narrative: "clarity"     as const },
+    { id: "features",     label: t("landing.navFeatures", fallbacks?.features ?? "Features"),    narrative: "confidence"  as const },
+    { id: "testimonials", label: t("landing.navTestimonials", fallbacks?.testimonials ?? "Trust"), narrative: "trust"    as const },
+    { id: "cta",          label: t("landing.navCTA", fallbacks?.cta ?? "Start"),                narrative: "action"      as const },
+  ],
+  [t, fallbacks]
+);
+  useEffect(() => {
+    if (i18n.language !== currentLocale) {
+      i18n.changeLanguage(currentLocale).then(() => {
+        localStorage.setItem("hisabche-lang", currentLocale);
+        setReady(true);
+      });
+    } else {
+      setReady(true);
+    }
+  }, [currentLocale, i18n]);
+
+  const safeT = useCallback(
+    (key: string, fallback?: string) => {
+      const result = t(key);
+      return result && result !== key ? result : (fallback ?? key);
+    },
+    [t]
+  );
+
+  if (!ready) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[hsl(var(--surface-base))]">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[hsl(var(--color-primary))] border-t-transparent" />
+      </div>
+    );
+  }
+
   return (
     <NavigationProvider sections={NAVIGATION_SECTIONS}>
       <div className="min-h-screen bg-[hsl(var(--surface-base))]">
@@ -45,16 +113,16 @@ const safeT = (key: string, fallback?: string) => {
 
         <main>
           <NavigationRegistry id="hero">
-           <CinematicHero t={safeT} onNavigateLogin={navigateLogin} />
+            <CinematicHero t={safeT} onNavigateLogin={navigateLogin} />
           </NavigationRegistry>
 
           <NavigationRegistry id="pain">
-            <StatsSection t={safeT}/>
-            <PainScene t={safeT}/>
+            <StatsSection t={safeT} />
+            <PainScene t={safeT} />
           </NavigationRegistry>
 
           <NavigationRegistry id="transform">
-            <TransformScene t={safeT}/>
+            <TransformScene t={safeT} />
           </NavigationRegistry>
 
           <NavigationRegistry id="features">
@@ -62,10 +130,10 @@ const safeT = (key: string, fallback?: string) => {
           </NavigationRegistry>
 
           <NavigationRegistry id="testimonials">
-            <SocialScene t={safeT}/>
+            <SocialScene t={safeT} />
           </NavigationRegistry>
 
-          <FaqScene t={safeT}/>
+          <FaqScene t={safeT} />
 
           <NavigationRegistry id="cta">
             <CTAScene t={safeT} onNavigateLogin={navigateLogin} />
@@ -74,15 +142,15 @@ const safeT = (key: string, fallback?: string) => {
           <footer
             className={cn(
               "px-4 py-12 text-center",
-              "border-t border-[hsl(var(--border-default))]",
+              "border-t border-[hsl(var(--border-default))]"
             )}
           >
             <div className="mb-2 text-lg font-bold text-[hsl(var(--fg-primary))]">
-              حسابچه
+              {safeT("app.name", "حسابچه")}
               <span className="text-[hsl(var(--color-primary))]">.</span>
             </div>
             <p className="text-[length:var(--text-caption)] text-[hsl(var(--fg-tertiary))]">
-              حافظه‌ی زنده‌ی کسب‌وکار تو · © ۱۴۰۵
+              {safeT("landing.footer", "سیستم مدیریت کسب‌وکار")}
             </p>
           </footer>
         </main>
