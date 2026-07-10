@@ -42,6 +42,7 @@
     "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.2",
     "framer-motion": "^12.39.0",
+    "nextjs-google-analytics": "^2.3.7",
     "pg": "^8.20.0",
     "postgres": "^3.4.9",
     "posthog-js": "^1.374.0",
