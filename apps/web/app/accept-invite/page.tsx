@@ -1,3 +1,4 @@
+// apps/web/app/accept-invite/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -5,6 +6,16 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { apiClient } from "@hisabche/api";
 import { supabaseClient } from "@hisabche/auth";
+
+// ✅ تعریف type برای خطا
+interface ApiError {
+  response?: {
+    data?: {
+      error?: string;
+    };
+  };
+  message?: string;
+}
 
 export default function AcceptInvitePage() {
   const { t } = useTranslation();
@@ -34,9 +45,10 @@ export default function AcceptInvitePage() {
         setStatus("success");
         setMessage(t("workspace.inviteAccepted", "دعوت با موفقیت پذیرفته شد! در حال انتقال به ورک‌اسپیس..."));
         setTimeout(() => router.push("/workspace"), 2000);
-      } catch (err: any) {
+      } catch (err) {
+        const error = err as ApiError;
         setStatus("error");
-        setMessage(err?.response?.data?.error || t("workspace.inviteExpired", "لینک دعوت منقضی شده یا نامعتبر است."));
+        setMessage(error?.response?.data?.error || t("workspace.inviteExpired", "لینک دعوت منقضی شده یا نامعتبر است."));
       }
     };
 

@@ -9,6 +9,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 import Script from "next/script";
 import { AnalyticsPageview } from "./analytics-pageview";
+import { Suspense } from "react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    RootLayout v4 — Hisabche Brand Refresh
@@ -212,8 +213,10 @@ export default function RootLayout({
           <Providers>{children}</Providers>
         </ClientErrorBoundary>
 
-        {/* ✅ Pageview tracking for client-side navigation */}
-        <AnalyticsPageview />
+        {/* ✅ Pageview tracking for client-side navigation — با Suspense */}
+        <Suspense fallback={null}>
+          <AnalyticsPageview />
+        </Suspense>
 
         <SpeedInsights />
         <Analytics />

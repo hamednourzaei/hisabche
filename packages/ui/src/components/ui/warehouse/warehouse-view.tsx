@@ -102,15 +102,15 @@ export function warehouseView({
         </button>
       </div>
 
-      {/* Stats */}
-      <warehouseStats
-        t={t}
-        fmt={fmt}
-        total={total}
-        lowStock={lowStock}
-        outOfStock={outOfStock}
-        totalValue={totalValue}
-      />
+      {/* Stats — ✅ اصلاح: صدا زدن به عنوان تابع */}
+      {warehouseStats({
+        t,
+        fmt,
+        total,
+        lowStock,
+        outOfStock,
+        totalValue,
+      })}
 
       {/* Currency chips */}
       <div className="flex flex-wrap gap-2 text-xs text-[hsl(var(--fg-secondary))]">
@@ -169,16 +169,16 @@ export function warehouseView({
           }}
         />
       ) : (
-        <warehouseProductList
-          t={t}
-          fmt={fmt}
-          products={products}
-          stockStatus={stockStatus}
-          stockLabel={stockLabel}
-          onNavigate={onNavigate}
-          onDelete={onDelete}
-          deletingId={deletingId}
-        />
+        warehouseProductList({
+          t,
+          fmt,
+          products,
+          stockStatus,
+          stockLabel,
+          onNavigate,
+          onDelete,
+          deletingId,
+        })
       )}
     </div>
   );
