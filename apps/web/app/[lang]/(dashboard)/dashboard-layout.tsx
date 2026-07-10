@@ -33,6 +33,11 @@ function usePrefetchRoutes() {
   }, [router]);
 }
 
+function getLocaleFromPathname(pathname: string): string {
+  const match = pathname.match(/^\/(fa-IR|fa-AF|en)/);
+  return match?.[1] ?? "fa-IR";
+}
+
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const { t, i18n } = useTranslation();
   const router = useRouter();
@@ -52,13 +57,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   useEffect(() => setOptimisticPath(null), [pathname]);
 
-  // ✅ اصلاح: به‌روزرسانی currentLang با useEffect
-  const [currentLang, setCurrentLang] = useState(i18n.language || "fa-AF");
+  const currentLang = getLocaleFromPathname(pathname);
 
   useEffect(() => {
-    // ✅ هر بار که i18n.language تغییر کند، currentLang را به‌روز کن
-    setCurrentLang(i18n.language || "fa-AF");
-  }, [i18n.language]);
+    if (i18n.language !== currentLang) {
+      i18n.changeLanguage(currentLang);
+      localStorage.setItem('hisabche-lang', currentLang);
+    }
+  }, [currentLang, i18n]);
 
   useEffect(() => {
     if (!hasHydrated) return;
@@ -72,12 +78,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     }
   }, [hasHydrated, isAuthenticated, isOnboardingComplete, router]);
 
-const toggleLang = useCallback((lang: string) => {
-  i18n.changeLanguage(lang);
-  localStorage.setItem('hisabche-lang', lang);
-}, [i18n]);
+  const toggleLang = useCallback((lang: string) => {
+    const pathWithoutLocale = pathname.replace(/^\/(fa-IR|fa-AF|en)/, "") || "/";
+    const newPath = lang === "fa-IR" ? pathWithoutLocale : `/${lang}${pathWithoutLocale}`;
+    window.location.href = newPath;
+  }, [pathname]);
 
-  // ✅ Sidebar & BottomNav: آیتم‌های اصلی (داشبورد، فاکتور، باقی‌داری، ګدام)
   const primaryItems = useMemo(() =>
     PRIMARY_ITEMS.map((item) => ({
       id: item.id,
@@ -87,7 +93,6 @@ const toggleLang = useCallback((lang: string) => {
     })),
   [t]);
 
-  // ✅ Sidebar & BottomNav: گروه‌های پنهان (تیم، سیستم)
   const moreGroups = useMemo(() =>
     MORE_GROUPS.map((g) => ({
       id: g.id,
@@ -127,13 +132,12 @@ const toggleLang = useCallback((lang: string) => {
 
   if (hasHydrated && !isAuthenticated) return null;
 
-  const isRtl = i18n.language === "fa-AF" || i18n.language === "fa-IR";
+  const isRtl = currentLang === "fa-AF" || currentLang === "fa-IR";
 
   return (
     <div dir={isRtl ? "rtl" : "ltr"} className={cn("flex min-h-screen", "bg-[hsl(var(--surface-base))]", "text-[hsl(var(--fg-primary))]")}>
       <CommandPalette commands={commands} />
 
-      {/* ✅ دسکتاپ: آیتم‌های اصلی + دکمه بیشتر */}
       <DashboardSidebar 
         primaryItems={primaryItems} 
         moreGroups={moreGroups} 
@@ -144,11 +148,19 @@ const toggleLang = useCallback((lang: string) => {
 
       <div className="flex min-h-screen flex-1 flex-col">
         <DashboardHeader
-          variant="dashboard" appName={t("app.name")} lastSyncedAt={lastSyncedAt.current}
-          isOnline={true} isSyncing={false} pendingCount={0} currentLang={currentLang}
-          isDark={isDark} signInLabel={t("auth.signIn")} signOutLabel={t("auth.signOut")}
-          onToggleTheme={toggle}   onToggleLang={toggleLang} // ✅ به جای onToggleLang قدیمی
- onLogout={handleLogout}
+          variant="dashboard"
+          appName={t("app.name")}
+          lastSyncedAt={lastSyncedAt.current}
+          isOnline={true}
+          isSyncing={false}
+          pendingCount={0}
+          currentLang={currentLang}
+          isDark={isDark}
+          signInLabel={t("auth.signIn")}
+          signOutLabel={t("auth.signOut")}
+          onToggleTheme={toggle}
+          onToggleLang={toggleLang}
+          onLogout={handleLogout}
           onNavigateLogin={handleNavigateLogin}
         />
 
@@ -157,7 +169,6 @@ const toggleLang = useCallback((lang: string) => {
           {children}
         </main>
 
-        {/* ✅ موبایل: آیتم‌های اصلی + دکمه بیشتر */}
         <BottomNav 
           primaryItems={primaryItems}
           moreGroups={moreGroups}

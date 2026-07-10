@@ -12,5 +12,7 @@ const intlMiddleware = createMiddleware({
 export default intlMiddleware;
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|assets|favicon.ico|sw.js|manifest.json|robots.txt|sitemap.xml).*)'],
+  matcher: [
+    '/((?!api|_next/static|_next/image|assets|favicon|android-chrome|apple-touch-icon|site.webmanifest|manifest.json|logo-icon|og-image|robots.txt|sitemap.xml).*)',
+  ],
 };
