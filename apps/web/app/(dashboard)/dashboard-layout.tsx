@@ -52,6 +52,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
 
   useEffect(() => setOptimisticPath(null), [pathname]);
 
+  // ✅ اصلاح: به‌روزرسانی currentLang با useEffect
+  const [currentLang, setCurrentLang] = useState(i18n.language || "fa-AF");
+
+  useEffect(() => {
+    // ✅ هر بار که i18n.language تغییر کند، currentLang را به‌روز کن
+    setCurrentLang(i18n.language || "fa-AF");
+  }, [i18n.language]);
+
   useEffect(() => {
     if (!hasHydrated) return;
     if (!isAuthenticated && !redirected.current) {
@@ -64,11 +72,10 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     }
   }, [hasHydrated, isAuthenticated, isOnboardingComplete, router]);
 
-  const currentLang = i18n.language || "fa-AF";
-
-  const toggleLang = useCallback(() => {
-    i18n.changeLanguage(i18n.language === "fa-AF" ? "fa-IR" : "fa-AF");
-  }, [i18n]);
+const toggleLang = useCallback((lang: string) => {
+  i18n.changeLanguage(lang);
+  localStorage.setItem('hisabche-lang', lang);
+}, [i18n]);
 
   // ✅ Sidebar & BottomNav: آیتم‌های اصلی (داشبورد، فاکتور، باقی‌داری، ګدام)
   const primaryItems = useMemo(() =>
@@ -140,7 +147,8 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
           variant="dashboard" appName={t("app.name")} lastSyncedAt={lastSyncedAt.current}
           isOnline={true} isSyncing={false} pendingCount={0} currentLang={currentLang}
           isDark={isDark} signInLabel={t("auth.signIn")} signOutLabel={t("auth.signOut")}
-          onToggleTheme={toggle} onToggleLang={toggleLang} onLogout={handleLogout}
+          onToggleTheme={toggle}   onToggleLang={toggleLang} // ✅ به جای onToggleLang قدیمی
+ onLogout={handleLogout}
           onNavigateLogin={handleNavigateLogin}
         />
 

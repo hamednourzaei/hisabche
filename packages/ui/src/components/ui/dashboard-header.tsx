@@ -2,10 +2,10 @@
 
 import { cn } from "@/lib/utils";
 import { NotificationBell } from "./notification-bell";
+import { useState, useEffect, useRef } from "react";
+
 /* ═══════════════════════════════════════════════════════════════════════════
-   DashboardHeader v2 — Hisabche Design Language
-   Zero hardcoded colors — all tokens from design system
-   Zero inline styles — all Tailwind classes
+   DashboardHeader v3 — Hisabche Design Language
    ═══════════════════════════════════════════════════════════════════════════ */
 
 // ─── SVG Icons ─────────────────────────────────────────────────────────────
@@ -144,6 +144,116 @@ function SyncPill({
   return null;
 }
 
+// ─── Language Select (نسخه زیبا با Dropdown) ─────────────────────────────
+
+const LANGUAGES = [
+  { code: "fa-AF", label: "دری", nativeLabel: "دری", flag: "🇦🇫" },
+  { code: "fa-IR", label: "فارسی", nativeLabel: "فارسی", flag: "🇮🇷" },
+  { code: "en", label: "English", nativeLabel: "English", flag: "🇬🇧" },
+];
+
+function LanguageSelect({
+  currentLang,
+  onChange,
+}: {
+  currentLang: string;
+  onChange: (lang: string) => void;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const selected = LANGUAGES.find((l) => l.code === currentLang) ?? LANGUAGES[0];
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        aria-label="تغییر زبان"
+        className={cn(
+          "inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5",
+          "text-[11px] font-medium",
+          "bg-[hsl(var(--surface-muted)/0.5)]",
+          "text-[hsl(var(--fg-secondary))]",
+          "border border-[hsl(var(--border-default))]",
+          "hover:border-[hsl(var(--color-primary)/0.3)]",
+          "hover:bg-[hsl(var(--surface-muted))]",
+          "transition-all duration-150",
+          "motion-reduce:transition-none",
+        )}
+      >
+        <span className="text-sm">{selected?.flag ?? "🌐"}</span>
+        <span className="hidden sm:inline">{selected?.nativeLabel ?? "زبان"}</span>
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 12 12"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={cn(
+            "transition-transform duration-150",
+            isOpen && "rotate-180",
+          )}
+        >
+          <path d="M2.5 4.5L6 8L9.5 4.5" />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <div
+          className={cn(
+            "absolute left-0 top-full z-50 mt-1.5 min-w-[140px] overflow-hidden",
+            "rounded-xl border border-[hsl(var(--border-default))]",
+            "bg-[hsl(var(--surface-elevated))]",
+            "shadow-lg shadow-[hsl(var(--surface-base)/0.3)]",
+            "animate-fade-in-up",
+          )}
+        >
+          {LANGUAGES.map((lang) => (
+            <button
+              key={lang.code}
+              type="button"
+              onClick={() => {
+                onChange(lang.code);
+                setIsOpen(false);
+              }}
+              className={cn(
+                "flex w-full items-center gap-3 px-3.5 py-2.5 text-xs",
+                "transition-colors duration-100",
+                "hover:bg-[hsl(var(--surface-muted))]",
+                lang.code === currentLang && "bg-[hsl(var(--color-primary)/0.08)]",
+                "text-[hsl(var(--fg-primary))]",
+              )}
+            >
+              <span className="text-base">{lang.flag}</span>
+              <span>{lang.nativeLabel}</span>
+              {lang.code === currentLang && (
+                <span className="mr-auto text-[hsl(var(--color-primary))]">
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 8 6.5 11.5 13 5" />
+                  </svg>
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Header ────────────────────────────────────────────────────────────────
 
 interface HeaderProps {
@@ -159,7 +269,7 @@ interface HeaderProps {
   signInLabel: string;
   signOutLabel: string;
   onToggleTheme: () => void;
-  onToggleLang: () => void;
+  onToggleLang: (lang: string) => void;
   onLogout?: () => void;
   onNavigateLogin: () => void;
 }
@@ -226,24 +336,11 @@ export function DashboardHeader({
 
         {/* End: Actions */}
         <div className="flex items-center gap-1 sm:gap-2">
-          {/* Language Toggle */}
-          <button
-            type="button"
-            onClick={onToggleLang}
-            aria-label="تغییر زبان"
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5",
-              "text-[hsl(var(--fg-secondary))]",
-              "hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]",
-              "transition-colors duration-150",
-              "motion-reduce:transition-none",
-            )}
-          >
-            {IconGlobe}
-            <span className="hidden sm:inline text-[11px] font-medium">
-              {currentLang === "fa-AF" ? "FA" : "IR"}
-            </span>
-          </button>
+          {/* ✅ Language Select (نسخه زیبا) */}
+          <LanguageSelect
+            currentLang={currentLang}
+            onChange={onToggleLang}
+          />
 
           {/* Theme Toggle */}
           <button
@@ -262,7 +359,9 @@ export function DashboardHeader({
           >
             {isDark ? IconSun : IconMoon}
           </button>
-{variant === "dashboard" && <NotificationBell />}
+
+          {variant === "dashboard" && <NotificationBell />}
+
           {/* Logout (dashboard) */}
           {variant === "dashboard" && (
             <button
@@ -277,7 +376,6 @@ export function DashboardHeader({
                 "motion-reduce:transition-none",
               )}
             >
-              
               {IconLogout}
               <span className="hidden text-[11px] lg:inline">
                 {signOutLabel}
