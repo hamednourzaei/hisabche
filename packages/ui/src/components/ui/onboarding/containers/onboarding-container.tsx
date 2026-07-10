@@ -22,6 +22,8 @@ const storeSizes = [
 export function OnboardingContainer() {
   const { i18n } = useTranslation()
   const router = useRouter()
+  const t = useTranslation().t;
+const safeT = (key: string, fallback?: string) => t(key, fallback || key);
   const {
     step,
     businessType,
@@ -42,7 +44,7 @@ export function OnboardingContainer() {
       businessType={businessType}
       storeSize={storeSize}
       defaultCurrency={defaultCurrency}
-      isLangFa={isLangFa}
+      t={safeT}
       businessTypeLabel={businessTypes.find((b) => b.id === businessType)?.labelFa || ""}
       storeSizeLabel={storeSizes.find((s) => s.id === storeSize)?.labelFa || ""}
       currencyLabel={defaultCurrency}
