@@ -1,18 +1,16 @@
-import { WarehouseContainer, WarehouseSkeleton } from "@hisabche/ui"
+// apps/web/app/(dashboard)/warehouse/page.tsx
+import { warehouseContainer, warehouseSkeleton } from "@hisabche/ui"
 import { Suspense } from "react"
 
 export const metadata = {
-  title: "گدام | حسابچه",
-  description: "مدیریت محصولات و موجودی انبار",
-  robots: { index: false, follow: false },
+  title: "انبار | حسابچه",
+  description: "مدیریت انبار و موجودی کالا",
 }
 
 export default function WarehousePage() {
   return (
-    <main className="section">
-      <Suspense fallback={<WarehouseSkeleton />}>
-        <WarehouseContainer />
-      </Suspense>
-    </main>
+    <Suspense fallback={warehouseSkeleton()}>
+      {warehouseContainer()}
+    </Suspense>
   )
 }
