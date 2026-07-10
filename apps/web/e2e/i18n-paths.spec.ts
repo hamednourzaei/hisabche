@@ -10,7 +10,7 @@ function path(locale: string, route: string) {
   return locale === 'fa-IR' ? route : `/${locale}${route}`;
 }
 
-async function login(page: any, locale: string) {
+async function login(page: import('@playwright/test').Page, locale: string) {
   const prefix = locale === 'fa-IR' ? '' : `/${locale}`;
   await page.goto(`${prefix}/login`);
   await page.locator('#login-email').waitFor({ state: 'visible' });
