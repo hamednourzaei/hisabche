@@ -19,12 +19,12 @@ import { Suspense } from "react";
 const vazirmatn = localFont({
   src: [
     {
-      path: "../public/fonts/Vazirmatn-Regular.ttf",
+      path: "../../public/fonts/Vazirmatn-Regular.ttf",
       weight: "400",
       style: "normal",
     },
     {
-      path: "../public/fonts/Vazirmatn-Bold.ttf",
+      path: "../../public/fonts/Vazirmatn-Bold.ttf",
       weight: "700",
       style: "normal",
     },
