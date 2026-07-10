@@ -1,5 +1,5 @@
 // ============================================
-// Hisabche UI — Barrel Exports v7.4 (Internationalized)
+// Hisabche UI — Barrel Exports v7.5 (Internationalized)
 // ============================================
 
 import './styles/lite-mode.css'

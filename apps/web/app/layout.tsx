@@ -8,6 +8,7 @@ import { cn } from "@hisabche/ui";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 import Script from "next/script";
+import { AnalyticsPageview } from "./analytics-pageview";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    RootLayout v4 — Hisabche Brand Refresh
@@ -179,8 +180,17 @@ export default function RootLayout({
         <meta name="color-scheme" content="dark light" />
         <link rel="dns-prefetch" href="https://api.hisabche.com" />
         <link rel="preconnect" href="https://api.hisabche.com" crossOrigin="anonymous" />
+      </head>
 
-        {/* ✅ Google Analytics 4 — با Script برای بهینه‌سازی */}
+      <body
+        className={cn(
+          "min-h-screen antialiased font-sans",
+          "bg-[hsl(var(--surface-base))]",
+          "text-[hsl(var(--fg-primary))]",
+          vazirmatn.variable,
+        )}
+      >
+        {/* ✅ Google Analytics 4 — با next/script */}
         <Script
           strategy="afterInteractive"
           src="https://www.googletagmanager.com/gtag/js?id=G-T5XG907W4R"
@@ -197,19 +207,14 @@ export default function RootLayout({
             `,
           }}
         />
-      </head>
 
-      <body
-        className={cn(
-          "min-h-screen antialiased font-sans",
-          "bg-[hsl(var(--surface-base))]",
-          "text-[hsl(var(--fg-primary))]",
-          vazirmatn.variable,
-        )}
-      >
         <ClientErrorBoundary>
           <Providers>{children}</Providers>
         </ClientErrorBoundary>
+
+        {/* ✅ Pageview tracking for client-side navigation */}
+        <AnalyticsPageview />
+
         <SpeedInsights />
         <Analytics />
       </body>
