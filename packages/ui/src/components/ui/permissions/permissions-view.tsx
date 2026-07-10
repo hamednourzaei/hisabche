@@ -142,7 +142,7 @@ export function PermissionsView({ t, roles, permissions, isLoading, onCreateRole
               <div className="space-y-4">
                 {Object.entries(groupedPerms).map(([resource, perms]) => (
                   <div key={resource}>
-                    <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))] mb-2 uppercase">{resource}</h3>
+                    <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))] mb-2 uppercase">{t(`permissions.resource.${resource}`, resource)}</h3>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                       {perms.map((perm) => {
                         const hasPerm = selectedRole.permissions?.some((p) => p.permission_id === perm.id);

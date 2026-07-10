@@ -115,8 +115,7 @@ export function InvoiceDetailPage({
       <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
         <div className="p-6 sm:p-8">
           <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div><h2 className="text-3xl font-bold text-[hsl(var(--color-primary))]">Hisabche</h2><p className="mt-1 text-sm text-[hsl(var(--fg-secondary))]">hisabche.com</p></div>
-            <div className="text-end">
+<h2 className="text-3xl font-bold text-[hsl(var(--color-primary))]">{t("app.name", "Hisabche")}</h2>            <div className="text-end">
               <p className="text-2xl font-bold text-[hsl(var(--fg-primary))]">#{invoiceNumber}</p>
               <div className="mt-2 space-y-1 text-sm text-[hsl(var(--fg-secondary))]">
                 <div className="flex items-center justify-end gap-2"><Calendar className="size-3.5" />{new Date(date).toLocaleDateString("fa-AF")}</div>

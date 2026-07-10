@@ -14,7 +14,7 @@ import { JalaliDatePicker } from "../../ui/jalali-datepicker";
 import { PhoneInput } from "../../ui/phone-input";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   HumanResourcesView v8 — PhoneInput + Jalali DatePicker + Autosave + Sort + Filter + Export
+   HumanResourcesView v9 — fully i18n-ready
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const employeeSchema = z.object({
@@ -77,19 +77,54 @@ export function HumanResourcesView({ t, employees, total, page, isLoading, onPag
 
   useAutosave(formValues, async (data) => {
     if (!showForm) return; if (!data.firstName && !data.lastName) return;
-    await onCreate({ firstName: data.firstName || "پیش‌نویس", lastName: data.lastName || "پیش‌نویس", fatherName: data.fatherName || undefined, employeeCode: data.employeeCode || `DRAFT-${Date.now()}`, nationalId: data.nationalId || undefined, dateOfBirth: data.dateOfBirth || undefined, gender: data.gender || undefined, phone: phoneValue || undefined, email: data.email || undefined, address: data.address || undefined, position: data.position || undefined, hireDate: data.hireDate ? `${data.hireDate}T00:00:00Z` : new Date().toISOString(), salary: data.salary ? Number(data.salary) : 0, employmentType: "full_time", salaryCurrency: "AFN", status: "draft" });
+    await onCreate({
+      firstName: data.firstName || t("hr.draft", "پیش‌نویس"),
+      lastName: data.lastName || t("hr.draft", "پیش‌نویس"),
+      fatherName: data.fatherName || undefined,
+      employeeCode: data.employeeCode || `DRAFT-${Date.now()}`,
+      nationalId: data.nationalId || undefined,
+      dateOfBirth: data.dateOfBirth || undefined,
+      gender: data.gender || undefined,
+      phone: phoneValue || undefined,
+      email: data.email || undefined,
+      address: data.address || undefined,
+      position: data.position || undefined,
+      hireDate: data.hireDate ? `${data.hireDate}T00:00:00Z` : new Date().toISOString(),
+      salary: data.salary ? Number(data.salary) : 0,
+      employmentType: "full_time", salaryCurrency: "AFN", status: "draft"
+    });
     setDraftSaved(true); setDraftTime(new Date().toLocaleTimeString("fa-AF", { hour: "2-digit", minute: "2-digit" })); setTimeout(() => setDraftSaved(false), 3000);
   }, { interval: 5000, enabled: showForm && isDirty });
 
   const onSubmit = async (data: EmployeeForm) => {
-    await onCreate({ firstName: data.firstName, lastName: data.lastName, fatherName: data.fatherName || undefined, employeeCode: data.employeeCode, nationalId: data.nationalId || undefined, dateOfBirth: data.dateOfBirth || undefined, gender: data.gender || undefined, phone: phoneValue || undefined, email: data.email || undefined, address: data.address || undefined, position: data.position || undefined, hireDate: data.hireDate ? `${data.hireDate}T00:00:00Z` : new Date().toISOString(), salary: data.salary ? Number(data.salary) : 0, employmentType: "full_time", salaryCurrency: "AFN" });
+    await onCreate({
+      firstName: data.firstName, lastName: data.lastName, fatherName: data.fatherName || undefined,
+      employeeCode: data.employeeCode, nationalId: data.nationalId || undefined,
+      dateOfBirth: data.dateOfBirth || undefined, gender: data.gender || undefined,
+      phone: phoneValue || undefined, email: data.email || undefined,
+      address: data.address || undefined, position: data.position || undefined,
+      hireDate: data.hireDate ? `${data.hireDate}T00:00:00Z` : new Date().toISOString(),
+      salary: data.salary ? Number(data.salary) : 0, employmentType: "full_time", salaryCurrency: "AFN"
+    });
     setShowForm(false); setDraftSaved(false); setPhoneValue(""); reset();
   };
 
-  const statusBadge = (status: string) => { const m: Record<string, string> = { active: "bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))]", inactive: "bg-[hsl(var(--fg-tertiary)/0.12)] text-[hsl(var(--fg-tertiary))]", terminated: "bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))]", on_leave: "bg-[hsl(var(--color-warning)/0.12)] text-[hsl(var(--color-warning))]" }; return <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", m[status] || m.active)}>{t(`hr.${status}`, status)}</span>; };
+  const statusBadge = (status: string) => {
+    const m: Record<string, string> = {
+      active: "bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))]",
+      inactive: "bg-[hsl(var(--fg-tertiary)/0.12)] text-[hsl(var(--fg-tertiary))]",
+      terminated: "bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))]",
+      on_leave: "bg-[hsl(var(--color-warning)/0.12)] text-[hsl(var(--color-warning))]"
+    };
+    return <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", m[status] || m.active)}>{t(`hr.${status}`, status)}</span>;
+  };
+
   const inputClass = "rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-4 py-2.5 text-sm focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] transition-colors duration-150";
   const errorClass = "border-[hsl(var(--color-destructive))] focus:border-[hsl(var(--color-destructive))]";
-  const Field = ({ name, label, type = "text" }: { name: keyof EmployeeForm; label: string; type?: string }) => { const err = errors[name]; return (<div><input {...register(name)} type={type} placeholder={label} className={cn(inputClass, "w-full", err && errorClass)} />{err && <p className="text-xs text-[hsl(var(--color-destructive))] mt-1 px-1">{err.message}</p>}</div>); };
+  const Field = ({ name, label, type = "text" }: { name: keyof EmployeeForm; label: string; type?: string }) => {
+    const err = errors[name];
+    return (<div><input {...register(name)} type={type} placeholder={label} className={cn(inputClass, "w-full", err && errorClass)} />{err && <p className="text-xs text-[hsl(var(--color-destructive))] mt-1 px-1">{err.message}</p>}</div>);
+  };
   const handleExport = () => exportToCSV(sortedEmployees, CSV_COLUMNS, `employees-${new Date().toISOString().split("T")[0]}`);
 
   return (
@@ -97,14 +132,24 @@ export function HumanResourcesView({ t, employees, total, page, isLoading, onPag
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2"><Users className="size-6 text-[hsl(var(--color-primary))]" /><h1 className="text-2xl font-bold text-[hsl(var(--fg-primary))]">{t("hr.title", "منابع انسانی")}</h1></div>
         <div className="flex items-center gap-2">
-          {sortedEmployees.length > 0 && (<button type="button" onClick={handleExport} className={cn("inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium", "border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))]", "hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors")}><Download className="size-4" /><span className="hidden sm:inline">{t("action.export", "خروجی")}</span></button>)}
-          <button onClick={() => { setShowForm(!showForm); setDraftSaved(false); }} className={cn("inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold", "bg-[hsl(var(--color-primary))] text-[hsl(var(--color-primary-fg))]", "hover:brightness-110 transition")}><Plus className="size-4" />{t("hr.addEmployee", "کارمند جدید")}</button>
+          {sortedEmployees.length > 0 && (
+            <button type="button" onClick={handleExport} className={cn("inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium", "border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))]", "hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors")}>
+              <Download className="size-4" /><span className="hidden sm:inline">{t("action.export", "خروجی")}</span>
+            </button>
+          )}
+          <button onClick={() => { setShowForm(!showForm); setDraftSaved(false); }} className={cn("inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold", "bg-[hsl(var(--color-primary))] text-[hsl(var(--color-primary-fg))]", "hover:brightness-110 transition")}>
+            <Plus className="size-4" />{t("hr.addEmployee", "کارمند جدید")}
+          </button>
         </div>
       </div>
 
       {showForm && (
         <form onSubmit={handleSubmit(onSubmit)} className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-6 space-y-4">
-          {draftSaved && (<div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[hsl(var(--color-success)/0.08)] border border-[hsl(var(--color-success)/0.15)] text-xs text-[hsl(var(--color-success))]"><Save className="size-3.5" /><span>پیش‌نویس ذخیره شد{draftTime ? ` — ${draftTime}` : ""}</span></div>)}
+          {draftSaved && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[hsl(var(--color-success)/0.08)] border border-[hsl(var(--color-success)/0.15)] text-xs text-[hsl(var(--color-success))]">
+              <Save className="size-3.5" /><span>{t("hr.draftSaved", "پیش‌نویس ذخیره شد")}{draftTime ? ` — ${draftTime}` : ""}</span>
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <Field name="firstName" label={t("hr.firstName", "نام *")} />
             <Field name="lastName" label={t("hr.lastName", "تخلص *")} />
@@ -129,15 +174,24 @@ export function HumanResourcesView({ t, employees, total, page, isLoading, onPag
 
       {employees.length > 0 && (
         <div className="flex items-center gap-3">
-          <div className="relative flex-1 max-w-sm"><Search className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))]" /><input type="text" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="جستجو..." className={cn(inputClass, "w-full ps-9")} /></div>
+          <div className="relative flex-1 max-w-sm"><Search className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))]" /><input type="text" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder={t("action.search", "جستجو...")} className={cn(inputClass, "w-full ps-9")} /></div>
           <div className="flex gap-1">{SORTABLE_COLUMNS.map((col) => (<button key={col.key as string} type="button" onClick={() => toggleSort(col.key)} className={cn("inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium border transition-colors", sort.key === col.key ? "border-[hsl(var(--color-primary)/0.3)] bg-[hsl(var(--color-primary)/0.08)] text-[hsl(var(--color-primary))]" : "border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]")}>{col.label}<ArrowUpDown className="size-3" /></button>))}</div>
         </div>
       )}
 
       <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] overflow-hidden">
         {isLoading ? (<div className="p-8 space-y-3">{[1,2,3,4,5].map((i) => (<div key={i} className="h-12 rounded-xl bg-[hsl(var(--surface-muted))] animate-pulse" />))}</div>) : sortedEmployees.length === 0 ? (<div className="p-12 text-center"><Users className="size-12 mx-auto mb-3 text-[hsl(var(--fg-tertiary))]" /><p className="text-[hsl(var(--fg-secondary))]">{t("hr.noEmployees", "هیچ کارمندی ثبت نشده")}</p></div>) : (
-          <table className="w-full text-sm"><thead><tr className="border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))]"><th className="px-4 py-3 text-start font-medium">{t("hr.employeeCode", "کد")}</th><th className="px-4 py-3 text-start font-medium">{t("hr.firstName", "نام")}</th><th className="px-4 py-3 text-start font-medium hidden sm:table-cell">{t("hr.nationalId", "تذکره")}</th><th className="px-4 py-3 text-start font-medium">{t("hr.phone", "تلفن")}</th><th className="px-4 py-3 text-start font-medium">{t("hr.status", "وضعیت")}</th><th className="px-4 py-3 text-center font-medium w-20">...</th></tr></thead>
-            <tbody>{sortedEmployees.map((emp) => (<tr key={emp.id} className="border-b border-[hsl(var(--border-default))] hover:bg-[hsl(var(--surface-muted)/0.5)] transition-colors"><td className="px-4 py-3 font-mono text-xs">{emp.employee_code}</td><td className="px-4 py-3 font-medium">{emp.first_name} {emp.last_name}</td><td className="px-4 py-3 text-xs text-[hsl(var(--fg-secondary))] hidden sm:table-cell">{emp.national_id || "-"}</td><td className="px-4 py-3 text-xs text-[hsl(var(--fg-secondary))]">{emp.phone || "-"}</td><td className="px-4 py-3">{statusBadge(emp.status)}</td><td className="px-4 py-3"><div className="flex items-center justify-center gap-1"><button onClick={() => onView(emp.id)} className="p-1.5 rounded-lg hover:bg-[hsl(var(--surface-muted))]"><Eye className="size-4" /></button><button onClick={() => onDelete(emp.id)} className="p-1.5 rounded-lg hover:bg-[hsl(var(--color-destructive)/0.1)] text-[hsl(var(--color-destructive))]"><Trash2 className="size-4" /></button></div></td></tr>))}</tbody></table>
+          <table className="w-full text-sm">
+            <thead><tr className="border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))]">
+              <th className="px-4 py-3 text-start font-medium">{t("hr.employeeCode", "کد")}</th>
+              <th className="px-4 py-3 text-start font-medium">{t("hr.firstName", "نام")}</th>
+              <th className="px-4 py-3 text-start font-medium hidden sm:table-cell">{t("hr.nationalId", "تذکره")}</th>
+              <th className="px-4 py-3 text-start font-medium">{t("hr.phone", "تلفن")}</th>
+              <th className="px-4 py-3 text-start font-medium">{t("hr.status", "وضعیت")}</th>
+              <th className="px-4 py-3 text-center font-medium w-20">{t("action.actions", "...")}</th>
+            </tr></thead>
+            <tbody>{sortedEmployees.map((emp) => (<tr key={emp.id} className="border-b border-[hsl(var(--border-default))] hover:bg-[hsl(var(--surface-muted)/0.5)] transition-colors"><td className="px-4 py-3 font-mono text-xs">{emp.employee_code}</td><td className="px-4 py-3 font-medium">{emp.first_name} {emp.last_name}</td><td className="px-4 py-3 text-xs text-[hsl(var(--fg-secondary))] hidden sm:table-cell">{emp.national_id || "-"}</td><td className="px-4 py-3 text-xs text-[hsl(var(--fg-secondary))]">{emp.phone || "-"}</td><td className="px-4 py-3">{statusBadge(emp.status)}</td><td className="px-4 py-3"><div className="flex items-center justify-center gap-1"><button onClick={() => onView(emp.id)} className="p-1.5 rounded-lg hover:bg-[hsl(var(--surface-muted))]"><Eye className="size-4" /></button><button onClick={() => onDelete(emp.id)} className="p-1.5 rounded-lg hover:bg-[hsl(var(--color-destructive)/0.1)] text-[hsl(var(--color-destructive))]"><Trash2 className="size-4" /></button></div></td></tr>))}</tbody>
+          </table>
         )}
       </div>
       {total > 20 && (<div className="flex items-center justify-center gap-2"><button onClick={() => onPageChange(page - 1)} disabled={page === 1} className="rounded-full px-4 py-2 text-sm border border-[hsl(var(--border-default))] disabled:opacity-40">{t("action.previous", "قبلی")}</button><span className="text-sm text-[hsl(var(--fg-secondary))]">{page} / {Math.ceil(total / 20)}</span><button onClick={() => onPageChange(page + 1)} disabled={page >= Math.ceil(total / 20)} className="rounded-full px-4 py-2 text-sm border border-[hsl(var(--border-default))] disabled:opacity-40">{t("action.next", "بعدی")}</button></div>)}

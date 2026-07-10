@@ -75,15 +75,15 @@ export function AuditView({
       export: "bg-[hsl(var(--color-warning)/0.12)] text-[hsl(var(--color-warning))]",
       view: "bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))]",
     };
-    const actionLabels: Record<string, string> = {
-      create: "ایجاد",
-      update: "ویرایش",
-      delete: "حذف",
-      login: "ورود",
-      logout: "خروج",
-      export: "خروجی",
-      view: "مشاهده",
-    };
+const actionLabels: Record<string, string> = {
+  create: t("audit.created", "ایجاد"),
+  update: t("audit.updated", "ویرایش"),
+  delete: t("audit.deleted", "حذف"),
+  login: t("audit.login", "ورود"),
+  logout: t("audit.logout", "خروج"),
+  export: t("audit.export", "خروجی"),
+  view: t("audit.view", "مشاهده"),
+};
     return (
       <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", map[action] || map.view)}>
         {actionLabels[action] || action}

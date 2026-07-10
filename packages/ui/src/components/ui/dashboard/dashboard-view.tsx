@@ -54,22 +54,14 @@ interface DashboardViewProps {
 
 function Greeting({ t }: { t: (key: string, fallback?: string) => string }) {
   const h = new Date().getHours();
-  const k =
-    h < 12 ? "morning" : h < 17 ? "afternoon" : h < 21 ? "evening" : "night";
-  const greetings: Record<string, string> = {
-    morning: "صبح بخیر",
-    afternoon: "ظهر بخیر",
-    evening: "عصر بخیر",
-    night: "شب بخیر",
-  };
+  const k = h < 12 ? "morning" : h < 17 ? "afternoon" : h < 21 ? "evening" : "night";
   return (
     <div className="space-y-1.5">
       <h1 className="flex items-center gap-2 text-2xl font-bold sm:text-3xl text-[hsl(var(--fg-primary))]">
-        {t(`dashboard.greeting.${k}`, greetings[k])}
-        <Sparkles
-          className="size-5 text-[hsl(var(--color-primary))]"
-          aria-hidden="true"
-        />
+        {t(`dashboard.greeting.${k}`, 
+          k === "morning" ? "صبح بخیر" : k === "afternoon" ? "ظهر بخیر" : k === "evening" ? "عصر بخیر" : "شب بخیر"
+        )}
+        <Sparkles className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
       </h1>
       <p className="text-sm text-[hsl(var(--fg-secondary))]">
         {t("dashboard.subtitle", "آمار چه خبر از کسب‌وکارت؟")}

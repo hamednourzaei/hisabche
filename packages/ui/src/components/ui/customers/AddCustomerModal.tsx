@@ -127,7 +127,7 @@ export function AddCustomerModal({
         action: "create",
         entity: "customer",
         entityId: customer.id || "",
-        details: `مشتری جدید: ${data.name}`,
+        details: `${t("customers.newCustomerDetails", "مشتری جدید")}: ${data.name}`,
       });
 
       if (withDebt && product && total > 0) {

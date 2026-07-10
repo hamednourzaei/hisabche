@@ -122,7 +122,7 @@ export function PaymentModal({ open, onClose, onPaid, customer, openInvoices }: 
         action: "payment",
         entity: "transaction",
         entityId: customer.id,
-        details: `پرداخت ${fmt(parsed.data.amount)} AFN از ${customer.fullName || customer.name} — فاکتور #${targetInvoice}`,
+        details: t("customers.paymentDetails", `پرداخت ${fmt(parsed.data.amount)} AFN از ${customer.fullName || customer.name} — فاکتور #${targetInvoice}`),
       })
 
       setSaveStatus("saved")
