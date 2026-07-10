@@ -1,9 +1,7 @@
-import type { Metadata } from "next"
-import { DashboardContainer } from "@hisabche/ui"
+import { DashboardContainer } from "@hisabche/ui";
 
-// ✅ No animation on skeleton — zero main-thread cost
-const STAT_ITEMS = [1, 2, 3] as const
-const ROW_ITEMS = [1, 2, 3] as const
+const STAT_ITEMS = [1, 2, 3] as const;
+const ROW_ITEMS = [1, 2, 3] as const;
 
 export function DashboardSkeleton() {
   return (
@@ -42,13 +40,35 @@ export function DashboardSkeleton() {
         </div>
       </div>
     </div>
-  )
+  );
 }
 
-export const metadata: Metadata = {
-  title: "داشبورد | حسابچه",
-  description: "نمای کلی کسب‌وکار",
-  robots: { index: false, follow: false },
+const titles: Record<string, string> = {
+  "fa-IR": "داشبورد",
+  "fa-AF": "داشبورد",
+  "en": "Dashboard",
+};
+
+const descriptions: Record<string, string> = {
+  "fa-IR": "نمای کلی کسب‌وکار",
+  "fa-AF": "نمای کلی تجارت",
+  "en": "Business overview",
+};
+
+const keywords: Record<string, string[]> = {
+  "fa-IR": ["داشبورد", "فروش", "انبار", "بدهی", "گزارش", "کسب‌وکار"],
+  "fa-AF": ["داشبورد", "فروش", "گدام", "قرض", "گزارش", "تجارت"],
+  "en": ["dashboard", "sales", "inventory", "debt", "reports", "business"],
+};
+
+export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }) {
+  const { lang } = await params;
+  return {
+    title: titles[lang] || titles["fa-IR"],
+    description: descriptions[lang] || descriptions["fa-IR"],
+    keywords: keywords[lang] || keywords["fa-IR"],
+    robots: { index: false, follow: false },
+  };
 }
 
 export default function Page() {
@@ -56,5 +76,5 @@ export default function Page() {
     <main className="section">
       <DashboardContainer />
     </main>
-  )
+  );
 }

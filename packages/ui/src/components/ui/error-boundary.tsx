@@ -1,13 +1,12 @@
 "use client";
 
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   ErrorBoundary v2 — Hisabche Design Language
-   Zero hardcoded colors — all tokens from design system
-   No external component dependencies
+   ErrorBoundary v3 — i18n-ready (fixed)
    ═══════════════════════════════════════════════════════════════════════════ */
 
 interface Props {
@@ -21,6 +20,32 @@ interface State {
   error: Error | null;
 }
 
+// ─── Simple functional fallback with hooks ─────────────────────────────────
+function ErrorFallback({ onReset }: { onReset: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex min-h-[400px] items-center justify-center p-8">
+      <div className="max-w-md text-center">
+        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[hsl(var(--color-destructive)/0.1)]">
+          <AlertTriangle className="size-8 text-[hsl(var(--color-destructive))]" aria-hidden="true" />
+        </div>
+        <h2 className="mb-2 text-xl font-bold text-[hsl(var(--fg-primary))]">
+          {t("error.title", "مشکلی پیش آمد")}
+        </h2>
+        <p className="mb-6 text-sm text-[hsl(var(--fg-secondary))]">
+          {t("error.description", "اطلاعات شما از بین نرفته است. لطفاً دوباره تلاش کنید.")}
+        </p>
+        <button type="button" onClick={onReset}
+          className={cn("inline-flex items-center gap-2 rounded-full px-4 py-2.5", "text-sm font-medium", "border border-[hsl(var(--border-default))]", "text-[hsl(var(--fg-secondary))]", "hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]", "transition-colors duration-150", "motion-reduce:transition-none")}>
+          <RefreshCw className="size-4" aria-hidden="true" />
+          {t("action.retry", "تلاش دوباره")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Class component ───────────────────────────────────────────────────────
 class ErrorBoundary extends React.Component<Props, State> {
   constructor(props: Props) {
     super(props);
@@ -42,50 +67,8 @@ class ErrorBoundary extends React.Component<Props, State> {
   render() {
     if (this.state.hasError) {
       if (this.props.fallback) return this.props.fallback;
-
-      return (
-        <div className="flex min-h-[400px] items-center justify-center p-8">
-          <div className="max-w-md text-center">
-            {/* Icon */}
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-[hsl(var(--color-destructive)/0.1)]">
-              <AlertTriangle
-                className="size-8 text-[hsl(var(--color-destructive))]"
-                aria-hidden="true"
-              />
-            </div>
-
-            {/* Title */}
-            <h2 className="mb-2 text-xl font-bold text-[hsl(var(--fg-primary))]">
-              مشکلی پیش آمد
-            </h2>
-
-            {/* Description */}
-            <p className="mb-6 text-sm text-[hsl(var(--fg-secondary))]">
-              اطلاعات شما از بین نرفته است. لطفاً دوباره تلاش کنید.
-            </p>
-
-            {/* Retry button */}
-            <button
-              type="button"
-              onClick={this.handleReset}
-              className={cn(
-                "inline-flex items-center gap-2 rounded-full px-4 py-2.5",
-                "text-sm font-medium",
-                "border border-[hsl(var(--border-default))]",
-                "text-[hsl(var(--fg-secondary))]",
-                "hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]",
-                "transition-colors duration-150",
-                "motion-reduce:transition-none",
-              )}
-            >
-              <RefreshCw className="size-4" aria-hidden="true" />
-              تلاش دوباره
-            </button>
-          </div>
-        </div>
-      );
+      return <ErrorFallback onReset={this.handleReset} />;
     }
-
     return this.props.children;
   }
 }

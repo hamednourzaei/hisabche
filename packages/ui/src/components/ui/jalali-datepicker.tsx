@@ -3,6 +3,7 @@
 
 import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface JalaliDatePickerProps {
@@ -11,16 +12,26 @@ interface JalaliDatePickerProps {
   placeholder?: string;
   className?: string;
   disabled?: boolean;
-    dropUp?: boolean; // ✅ این خط اضافه شود
-
+  dropUp?: boolean;
 }
 
-const JALALI_MONTHS = [
+const monthKeys = [
+  "months.farvardin", "months.ordibehesht", "months.khordad", "months.tir",
+  "months.mordad", "months.shahrivar", "months.mehr", "months.aban",
+  "months.azar", "months.dey", "months.bahman", "months.esfand",
+] as const;
+
+const monthDefaults = [
   "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
   "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند",
 ];
 
-const JALALI_WEEKDAYS = ["ش", "ی", "د", "س", "چ", "پ", "ج"];
+const weekdayKeys = [
+  "weekdays.sat", "weekdays.sun", "weekdays.mon", "weekdays.tue",
+  "weekdays.wed", "weekdays.thu", "weekdays.fri",
+] as const;
+
+const weekdayDefaults = ["ش", "ی", "د", "س", "چ", "پ", "ج"];
 
 function toJalali(date: Date): { year: number; month: number; day: number } {
   const gy = date.getFullYear();
@@ -47,9 +58,7 @@ function toGregorian(year: number, month: number, day: number): Date {
     nowruz.setDate(nowruz.getDate() + 1);
     if (nowruz.getDate() === 1 && nowruz.getMonth() === 3) break;
   }
-  for (let m = 1; m < month; m++) {
-    nowruz.setDate(nowruz.getDate() + (m <= 6 ? 31 : 30));
-  }
+  for (let m = 1; m < month; m++) nowruz.setDate(nowruz.getDate() + (m <= 6 ? 31 : 30));
   nowruz.setDate(nowruz.getDate() + day - 1);
   return nowruz;
 }
@@ -66,21 +75,12 @@ function formatJalaliDate(year: number, month: number, day: number): string {
 
 function jalaliToGregorianString(jalaliDate: string): string {
   const parts = jalaliDate.split("-").map(Number);
-  const y = parts[0] || 1400;
-  const m = parts[1] || 1;
-  const d = parts[2] || 1;
+  const y = parts[0] || 1400; const m = parts[1] || 1; const d = parts[2] || 1;
   return toGregorian(y, m, d).toISOString().split("T")[0] as string;
 }
 
-export function JalaliDatePicker({
-  value,
-  onChange,
-  placeholder = "انتخاب تاریخ",
-  className,
-  disabled = false,
-    dropUp = false, // ✅ این خط اضافه شود
-
-}: JalaliDatePickerProps) {
+export function JalaliDatePicker({ value, onChange, placeholder, className, disabled = false, dropUp = false }: JalaliDatePickerProps) {
+  const { t } = useTranslation();
   const today = toJalali(new Date());
   const [isOpen, setIsOpen] = useState(false);
   const [year, setYear] = useState(today.year);
@@ -89,12 +89,13 @@ export function JalaliDatePicker({
   const panelRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
 
+  const months = monthKeys.map((k, i) => t(k, monthDefaults[i] ?? ""));
+  const weekdays = weekdayKeys.map((k, i) => t(k, weekdayDefaults[i] ?? ""));
+
   useEffect(() => {
     if (value) {
       const parts = value.split("-").map(Number);
-      const y = parts[0];
-      const m = parts[1];
-      const d = parts[2];
+      const y = parts[0], m = parts[1], d = parts[2];
       if (y && m && d) { setYear(y); setMonth(m); setSelectedDay(d); }
     }
   }, [value]);
@@ -103,9 +104,7 @@ export function JalaliDatePicker({
     if (!isOpen) return;
     function handleClick(e: MouseEvent) {
       const target = e.target as Node;
-      if (panelRef.current && !panelRef.current.contains(target) && btnRef.current && !btnRef.current.contains(target)) {
-        setIsOpen(false);
-      }
+      if (panelRef.current && !panelRef.current.contains(target) && btnRef.current && !btnRef.current.contains(target)) setIsOpen(false);
     }
     const timer = setTimeout(() => document.addEventListener("mousedown", handleClick), 10);
     return () => { clearTimeout(timer); document.removeEventListener("mousedown", handleClick); };
@@ -123,14 +122,8 @@ export function JalaliDatePicker({
     setIsOpen(false);
   }, [year, month, onChange]);
 
-  const prevMonth = () => {
-    if (month === 1) { setYear(y => y - 1); setMonth(12); }
-    else setMonth(m => m - 1);
-  };
-  const nextMonth = () => {
-    if (month === 12) { setYear(y => y + 1); setMonth(1); }
-    else setMonth(m => m + 1);
-  };
+  const prevMonth = () => { if (month === 1) { setYear(y => y - 1); setMonth(12); } else setMonth(m => m - 1); };
+  const nextMonth = () => { if (month === 12) { setYear(y => y + 1); setMonth(1); } else setMonth(m => m + 1); };
 
   const displayValue = selectedDay ? formatJalaliDate(year, month, selectedDay) : "";
 
@@ -142,30 +135,20 @@ export function JalaliDatePicker({
           "border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))]", "text-[hsl(var(--fg-primary))]",
           isOpen && "border-[hsl(var(--color-primary)/0.3)]")}>
         <CalendarDays className="size-4 shrink-0 text-[hsl(var(--fg-tertiary))]" />
-        <span className={cn(!displayValue && "text-[hsl(var(--fg-tertiary))]")}>{displayValue || placeholder}</span>
+        <span className={cn(!displayValue && "text-[hsl(var(--fg-tertiary))]")}>{displayValue || placeholder || t("dateRange.pickDate", "انتخاب تاریخ")}</span>
       </button>
-
       {isOpen && (
-        <div ref={panelRef} className={cn(
-            "jalali-datepicker-popup absolute end-0 z-20 w-64",
-            // ✅ اگر dropUp بود، در موبایل به سمت بالا باز شود
-            dropUp ? "bottom-full mb-1 sm:top-full sm:mt-1 sm:bottom-auto" : "top-full mt-1", 
-            "rounded-xl overflow-hidden border",
-            "bg-[hsl(var(--surface-elevated)/0.99)] backdrop-blur-xl", 
-            "shadow-xl shadow-black/10",
-            "border-[hsl(var(--border-default))]", 
-            "animate-in slide-in-from-top-1 fade-in-0 duration-150"
-          )}
-        >
+        <div ref={panelRef} className={cn("jalali-datepicker-popup absolute end-0 z-20 w-64",
+          dropUp ? "bottom-full mb-1 sm:top-full sm:mt-1 sm:bottom-auto" : "top-full mt-1",
+          "rounded-xl overflow-hidden border", "bg-[hsl(var(--surface-elevated)/0.99)] backdrop-blur-xl",
+          "shadow-xl shadow-black/10", "border-[hsl(var(--border-default))]", "animate-in slide-in-from-top-1 fade-in-0 duration-150")}>
           <div className="flex items-center justify-between px-3 py-2 border-b border-[hsl(var(--border-default))]">
             <button type="button" onClick={prevMonth} className="p-1 rounded-lg hover:bg-[hsl(var(--surface-muted))]"><ChevronRight className="size-4" /></button>
-            <span className="text-sm font-semibold text-[hsl(var(--fg-primary))]">{JALALI_MONTHS[month - 1] || ""} {year}</span>
+            <span className="text-sm font-semibold text-[hsl(var(--fg-primary))]">{months[month - 1] ?? ""} {year}</span>
             <button type="button" onClick={nextMonth} className="p-1 rounded-lg hover:bg-[hsl(var(--surface-muted))]"><ChevronLeft className="size-4" /></button>
           </div>
           <div className="grid grid-cols-7 gap-0.5 px-2 pt-2 pb-1">
-            {JALALI_WEEKDAYS.map((day, i) => (
-              <span key={i} className={cn("text-center text-[10px] font-medium py-1", i === 6 ? "text-[hsl(var(--color-destructive))]" : "text-[hsl(var(--fg-tertiary))]")}>{day}</span>
-            ))}
+            {weekdays.map((day, i) => (<span key={i} className={cn("text-center text-[10px] font-medium py-1", i === 6 ? "text-[hsl(var(--color-destructive))]" : "text-[hsl(var(--fg-tertiary))]")}>{day}</span>))}
           </div>
           <div className="grid grid-cols-7 gap-0.5 px-2 pb-3">
             {Array.from({ length: weekdayOffset }).map((_, i) => (<div key={`empty-${i}`} />))}
@@ -178,9 +161,7 @@ export function JalaliDatePicker({
                   className={cn("h-8 rounded-lg text-sm font-medium transition-colors duration-100", "hover:bg-[hsl(var(--surface-muted))]",
                     isSelected && "bg-[hsl(var(--color-primary))] text-white hover:bg-[hsl(var(--color-primary))]",
                     isToday && !isSelected && "border border-[hsl(var(--color-primary)/0.3)] text-[hsl(var(--color-primary))]",
-                    !isSelected && !isToday && "text-[hsl(var(--fg-primary))]")}>
-                  {day}
-                </button>
+                    !isSelected && !isToday && "text-[hsl(var(--fg-primary))]")}>{day}</button>
               );
             })}
           </div>
