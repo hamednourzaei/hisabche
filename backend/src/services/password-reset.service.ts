@@ -70,13 +70,13 @@ export const passwordResetService = {
 
       console.log('[PWD-RESET] Logging audit...');
       await auditService.log({
-        userId: user.id,
-        action: 'update',
-        entityType: 'user',
-        entityId: user.id,
-        ipAddress: ip,
-        userAgent: userAgent,
-      });
+    userId: user.id,
+    action: 'update',
+    entityType: 'user',
+    entityId: user.id,
+    ipAddress: ip,
+    userAgent: userAgent,
+  });
 
       console.log('[PWD-RESET] Done!');
       return { success: true, message: genericMessage };

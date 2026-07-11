@@ -47,16 +47,13 @@ export const forgotPasswordSchema = z.object({
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>
 
 // ============================================
-// Reset Password
+// Reset Password — confirmPassword optional
 // ============================================
 
 export const resetPasswordSchema = z.object({
   token: z.string().min(1),
   password: z.string().min(8, 'validation.minLength'),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: 'Passwords do not match',
-  path: ['confirmPassword'],
+  confirmPassword: z.string().optional(),
 })
 
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>
