@@ -13,7 +13,7 @@ import { AnalyticsPageview } from "./analytics-pageview";
 import { Suspense } from "react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   RootLayout v7 — Full SEO keywords per locale
+   RootLayout v8 — Fixed Favicons + PWA manifest
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const vazirmatn = localFont({
@@ -26,10 +26,6 @@ const vazirmatn = localFont({
   fallback: ["system-ui", "Tahoma"],
   preload: true,
 });
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   Dynamic Metadata — per locale with high-volume keywords
-   ═══════════════════════════════════════════════════════════════════════════ */
 
 const siteConfig = {
   "fa-IR": {
@@ -131,6 +127,11 @@ export default async function RootLayout({ children, params }: { children: React
     <html lang={lang} dir={isRTL ? "rtl" : "ltr"} suppressHydrationWarning data-scroll-behavior="smooth" className={cn(vazirmatn.variable)}>
       <head>
         <base href="/" />
+        
+        {/* ⭐ SVG favicon — sharp at any size */}
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        
+        {/* PNG favicons — fallback for older browsers */}
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png" />
@@ -138,14 +139,26 @@ export default async function RootLayout({ children, params }: { children: React
         <link rel="icon" type="image/png" sizes="128x128" href="/favicon-128x128.png" />
         <link rel="icon" type="image/png" sizes="192x192" href="/android-chrome-192x192.png" />
         <link rel="icon" type="image/png" sizes="512x512" href="/android-chrome-512x512.png" />
+        
+        {/* Legacy .ico */}
         <link rel="shortcut icon" href="/favicon.ico" />
+        
+        {/* Apple touch icon — 180x180 for iOS */}
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        
+        {/* PWA manifest */}
         <link rel="manifest" href="/site.webmanifest" />
+        
+        {/* Critical CSS */}
         <style>{`html{scroll-behavior:smooth}body{font-family:var(--font-sans,system-ui);background-color:hsl(var(--surface-base,192 55% 6%));color:hsl(var(--fg-primary,160 40% 98%));margin:0;padding:0;line-height:1.55;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}*{box-sizing:border-box;margin:0;padding:0}h1,.h1{font-size:clamp(2.25rem,5vw,4rem);line-height:1.2;font-weight:700}h2,.h2{font-size:clamp(1.75rem,4vw,2.5rem);line-height:1.2;font-weight:600}p,.body{font-size:clamp(.875rem,2vw,1rem);line-height:1.65}button,[role=button]{cursor:pointer;font-family:inherit}img{max-width:100%;height:auto;display:block}html{overflow-y:scroll}:focus-visible{outline:2px solid hsl(var(--color-primary,168 84% 43%) / .5);outline-offset:2px;border-radius:6px}`}</style>
+        
+        {/* hreflang SEO */}
         <link rel="alternate" hrefLang="en" href="https://hisabche.com/en" />
         <link rel="alternate" hrefLang="fa-IR" href="https://hisabche.com/fa-IR" />
         <link rel="alternate" hrefLang="fa-AF" href="https://hisabche.com/fa-AF" />
         <link rel="alternate" hrefLang="x-default" href="https://hisabche.com" />
+        
+        {/* Performance hints */}
         <meta name="theme-color" content="#061417" />
         <meta name="color-scheme" content="dark light" />
         <link rel="dns-prefetch" href="https://api.hisabche.com" />

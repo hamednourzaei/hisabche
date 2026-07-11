@@ -1,1 +1,59 @@
-{"name":"","short_name":"","icons":[{"src":"/android-chrome-192x192.png","sizes":"192x192","type":"image/png"},{"src":"/android-chrome-512x512.png","sizes":"512x512","type":"image/png"}],"theme_color":"#ffffff","background_color":"#ffffff","display":"standalone"}
+{
+  "name": "حساب‌چه - Hisabche",
+  "short_name": "حساب‌چه",
+  "description": "سیستم مدیریت کسب‌وکار برای بازار افغانستان",
+  "lang": "fa-AF",
+  "dir": "rtl",
+
+  "id": "/",
+  "scope": "/",
+  "start_url": "/",
+
+  "display": "standalone",
+  "display_override": [
+    "window-controls-overlay",
+    "standalone"
+  ],
+
+  "orientation": "portrait-primary",
+
+  "background_color": "#061417",
+  "theme_color": "#12C8A0",
+
+  "categories": [
+    "business",
+    "finance",
+    "productivity"
+  ],
+
+  "prefer_related_applications": false,
+
+  "icons": [
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+
+
+}
