@@ -26,9 +26,12 @@ export interface NavGroup {
 }
 
 function isPathActive(currentPath: string, itemPath: string): boolean {
-  if (currentPath === itemPath) return true;
-  if (currentPath.startsWith(itemPath + "/")) return true;
-  if (currentPath.startsWith(itemPath + "?")) return true;
+  // Strip locale prefix from current path
+  const normalized = currentPath.replace(/^\/(fa-IR|fa-AF|en)/, '') || '/';
+  
+  if (normalized === itemPath) return true;
+  if (normalized.startsWith(itemPath + '/')) return true;
+  if (normalized.startsWith(itemPath + '?')) return true;
   return false;
 }
 
