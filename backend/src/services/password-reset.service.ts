@@ -12,38 +12,44 @@ export const passwordResetService = {
     const genericMessage = 'If an account exists with this email, a reset link has been sent.';
 
     try {
-      // 🔍 DEBUG
-      console.log('[PWD-RESET] Step 1: Looking up user:', email);
+      console.log('[PWD-RESET] Looking up user:', email);
 
-      const { data: users, error: userError } = await supabase
-        .from('users')
-        .select('id, workspace_id, email')
-        .eq('email', email.toLowerCase().trim())
-        .is('deleted_at', null)
-        .limit(1);
+      // ✅ Use auth.users (Supabase built-in)
+      const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
 
       if (userError) {
-        console.log('[PWD-RESET] DB error:', userError);
+        console.log('[PWD-RESET] Auth error:', userError);
+        return { success: true, message: genericMessage };
       }
 
-      if (!users?.length) {
+      const user = userData?.users?.find(u => u.email === email.toLowerCase().trim());
+
+      if (!user) {
         console.log('[PWD-RESET] User not found:', email);
         return { success: true, message: genericMessage };
       }
 
-      const user = users[0]!;
-      console.log('[PWD-RESET] Step 2: User found:', user.id);
+      console.log('[PWD-RESET] User found:', user.id);
 
       const token = randomBytes(32).toString('hex');
       const tokenHash = createHash('sha256').update(token).digest('hex');
 
-      console.log('[PWD-RESET] Step 3: Storing token hash...');
+      // Get workspace_id from workspace_members
+      const { data: member } = await supabase
+        .from('workspace_members')
+        .select('workspace_id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .single();
 
+      const workspaceId = member?.workspace_id || '00000000-0000-0000-0000-000000000000';
+
+      console.log('[PWD-RESET] Storing token...');
       const { error: insertError } = await supabase
         .from('password_reset_tokens')
         .insert({
           user_id: user.id,
-          workspace_id: user.workspace_id,
+          workspace_id: workspaceId,
           token_hash: tokenHash,
           expires_at: new Date(Date.now() + TOKEN_EXPIRY_MS).toISOString(),
           requested_ip: ip,
@@ -55,17 +61,14 @@ export const passwordResetService = {
         return { success: false, message: 'Failed to process request' };
       }
 
-      console.log('[PWD-RESET] Step 4: Token stored. Sending email...');
+      console.log('[PWD-RESET] Sending email...');
       console.log('[PWD-RESET] API_KEY exists:', !!process.env.RESEND_API_KEY);
-      console.log('[PWD-RESET] API_KEY prefix:', (process.env.RESEND_API_KEY || '').substring(0, 5));
 
       const resetLink = `${process.env.FRONTEND_URL || 'https://hisabche.com'}/reset-password?token=${token}`;
-      console.log('[PWD-RESET] Reset link:', resetLink);
-
       const emailResult = await emailService.sendResetPassword(email, resetLink, lang);
       console.log('[PWD-RESET] Email result:', JSON.stringify(emailResult));
 
-      console.log('[PWD-RESET] Step 5: Logging audit...');
+      console.log('[PWD-RESET] Logging audit...');
       await auditService.log({
         userId: user.id,
         action: 'update',
@@ -106,21 +109,34 @@ export const passwordResetService = {
     }
 
     try {
-      const { error: updateError } = await supabase.rpc('reset_user_password', {
-        p_user_id: resetToken.user_id,
-        p_password_hash: createHash('sha256').update(newPassword).digest('hex'),
-        p_token_id: resetToken.id,
-        p_ip: ip,
-      });
+      // Update password via Supabase Auth Admin
+      const { error: updateError } = await supabase.auth.admin.updateUserById(
+        resetToken.user_id,
+        { password: newPassword }
+      );
 
       if (updateError) {
-        console.error('[PasswordReset] Update error:', updateError);
+        console.error('[PWD-RESET] Update error:', updateError);
         return { success: false, message: 'Failed to reset password' };
       }
 
+      // Mark token as used
+      await supabase
+        .from('password_reset_tokens')
+        .update({ used_at: new Date().toISOString() })
+        .eq('id', resetToken.id);
+
+      // Revoke other tokens
+      await supabase
+        .from('password_reset_tokens')
+        .update({ revoked_at: new Date().toISOString() })
+        .eq('user_id', resetToken.user_id)
+        .neq('id', resetToken.id)
+        .is('revoked_at', null);
+
       return { success: true, message: 'Password reset successful' };
     } catch (err) {
-      console.error('[PasswordReset] Exception:', err);
+      console.error('[PWD-RESET] Exception:', err);
       return { success: false, message: 'Failed to reset password' };
     }
   },
