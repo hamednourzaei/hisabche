@@ -257,7 +257,14 @@ async function start(): Promise<void> {
     }))
 
     // ─── Auth Middleware ─────────────────────
-    const PUBLIC_PATHS = ['/api/health', '/api', '/api/auth/login', '/api/auth/signup']
+const PUBLIC_PATHS = [
+  '/api/health', 
+  '/api', 
+  '/api/auth/login', 
+  '/api/auth/signup',
+  '/api/auth/forgot-password',  // 🆕
+  '/api/auth/reset-password',   // 🆕
+]
 
     server.addHook('preHandler', async (request, reply) => {
       const url = request.url
@@ -267,6 +274,8 @@ async function start(): Promise<void> {
       if (url === '/api') return
       if (url.startsWith('/api/auth/login')) return
       if (url.startsWith('/api/auth/signup')) return
+      if (url.startsWith('/api/auth/forgot-password')) return  // 🆕
+if (url.startsWith('/api/auth/reset-password')) return   // 🆕
       if (request.method === 'OPTIONS') return
       await authenticate(request, reply)
     })
