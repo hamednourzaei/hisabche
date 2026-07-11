@@ -1,6 +1,11 @@
 // backend/src/services/email.service.ts
 import { Resend } from 'resend';
 
+console.log('[EMAIL] Initializing Resend...');
+console.log('[EMAIL] API_KEY exists:', !!process.env.RESEND_API_KEY);
+console.log('[EMAIL] API_KEY prefix:', (process.env.RESEND_API_KEY || 'NONE').substring(0, 5));
+console.log('[EMAIL] API_KEY length:', (process.env.RESEND_API_KEY || '').length);
+
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 const FROM_EMAIL = 'noreply@hisabche.com';
@@ -20,6 +25,12 @@ interface SendEmailParams {
 
 export const emailService = {
   async send({ to, subject, html }: SendEmailParams) {
+    console.log('[EMAIL] ====== SEND START ======');
+    console.log('[EMAIL] To:', to);
+    console.log('[EMAIL] From:', `${FROM_NAME} <${FROM_EMAIL}>`);
+    console.log('[EMAIL] Subject:', subject);
+    console.log('[EMAIL] HTML length:', html.length);
+
     try {
       const { data, error } = await resend.emails.send({
         from: `${FROM_NAME} <${FROM_EMAIL}>`,
@@ -29,27 +40,32 @@ export const emailService = {
       });
 
       if (error) {
-        console.error('[EmailService] Failed to send:', error);
+        console.error('[EMAIL] ❌ Resend error:', JSON.stringify(error, null, 2));
+        console.error('[EMAIL] Error name:', error.name);
+        console.error('[EMAIL] Error message:', error.message);
         return { success: false, error };
       }
 
-      console.log('[EmailService] Sent successfully:', data?.id);
+      console.log('[EMAIL] ✅ Sent! ID:', data?.id);
+      console.log('[EMAIL] ====== SEND END ======');
       return { success: true, id: data?.id };
-    } catch (err) {
-      console.error('[EmailService] Exception:', err);
+    } catch (err: any) {
+      console.error('[EMAIL] ❌ Exception:', err?.message || err);
+      console.error('[EMAIL] Stack:', err?.stack);
       return { success: false, error: err };
     }
   },
 
   async sendResetPassword(to: string, resetLink: string, lang: string = 'fa-IR') {
+    console.log('[EMAIL] sendResetPassword called');
+    console.log('[EMAIL] To:', to);
+    console.log('[EMAIL] Reset link:', resetLink);
+    console.log('[EMAIL] Lang:', lang);
+
     const html = getResetPasswordTemplate(resetLink, lang);
     const subject = titles[lang] ?? titles['en']!;
 
-    return this.send({
-      to,
-      subject,
-      html,
-    });
+    return this.send({ to, subject, html });
   },
 };
 
