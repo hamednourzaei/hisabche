@@ -14,7 +14,6 @@ export const passwordResetService = {
     try {
       console.log('[PWD-RESET] Looking up user:', email);
 
-      // ✅ Use auth.users (Supabase built-in)
       const { data: userData, error: userError } = await supabase.auth.admin.listUsers();
 
       if (userError) {
@@ -62,21 +61,23 @@ export const passwordResetService = {
       }
 
       console.log('[PWD-RESET] Sending email...');
-      console.log('[PWD-RESET] API_KEY exists:', !!process.env.RESEND_API_KEY);
-
       const resetLink = `${process.env.FRONTEND_URL || 'https://hisabche.com'}/reset-password?token=${token}`;
       const emailResult = await emailService.sendResetPassword(email, resetLink, lang);
       console.log('[PWD-RESET] Email result:', JSON.stringify(emailResult));
 
-      console.log('[PWD-RESET] Logging audit...');
-      await auditService.log({
-    userId: user.id,
-    action: 'update',
-    entityType: 'user',
-    entityId: user.id,
-    ipAddress: ip,
-    userAgent: userAgent,
-  });
+      // Audit log — non-critical
+      try {
+        await auditService.log({
+          userId: user.id,
+          action: 'update',
+          entityType: 'user',
+          entityId: user.id,
+          ipAddress: ip,
+          userAgent: userAgent,
+        });
+      } catch {
+        console.log('[PWD-RESET] Audit log skipped');
+      }
 
       console.log('[PWD-RESET] Done!');
       return { success: true, message: genericMessage };
@@ -88,6 +89,7 @@ export const passwordResetService = {
 
   async resetPassword(token: string, newPassword: string, ip: string) {
     const tokenHash = createHash('sha256').update(token).digest('hex');
+    console.log('[PWD-RESET] Reset - Token hash:', tokenHash);
 
     const { data: tokens, error: tokenError } = await supabase
       .from('password_reset_tokens')
@@ -99,24 +101,45 @@ export const passwordResetService = {
       .limit(1);
 
     if (tokenError || !tokens?.length) {
+      console.log('[PWD-RESET] Reset - Token not found');
       return { success: false, message: 'Invalid or expired token' };
     }
 
     const resetToken = tokens[0]!;
 
     if (new Date(resetToken.expires_at) < new Date()) {
+      console.log('[PWD-RESET] Reset - Token expired');
       return { success: false, message: 'Token has expired' };
     }
 
     try {
-      // Update password via Supabase Auth Admin
-      const { error: updateError } = await supabase.auth.admin.updateUserById(
-        resetToken.user_id,
-        { password: newPassword }
+      console.log('[PWD-RESET] Reset - Updating password for user:', resetToken.user_id);
+
+      // ✅ Use Supabase Auth Admin API directly with fetch
+      const supabaseUrl = process.env.SUPABASE_URL!;
+      const serviceKey = process.env.SUPABASE_SERVICE_KEY!;
+
+      const response = await fetch(
+        `${supabaseUrl}/auth/v1/admin/users/${resetToken.user_id}`,
+        {
+          method: 'PUT',
+          headers: {
+            'Authorization': `Bearer ${serviceKey}`,
+            'Content-Type': 'application/json',
+            'apikey': serviceKey,
+          },
+          body: JSON.stringify({
+            password: newPassword,
+            email_confirm: true,
+          }),
+        }
       );
 
-      if (updateError) {
-        console.error('[PWD-RESET] Update error:', updateError);
+      const responseData = await response.json().catch(() => ({}));
+      console.log('[PWD-RESET] Reset - Supabase response:', { status: response.status, data: responseData });
+
+      if (!response.ok) {
+        console.error('[PWD-RESET] Reset - Supabase error:', responseData);
         return { success: false, message: 'Failed to reset password' };
       }
 
@@ -134,9 +157,10 @@ export const passwordResetService = {
         .neq('id', resetToken.id)
         .is('revoked_at', null);
 
+      console.log('[PWD-RESET] Reset - Success!');
       return { success: true, message: 'Password reset successful' };
     } catch (err) {
-      console.error('[PWD-RESET] Exception:', err);
+      console.error('[PWD-RESET] Reset - Exception:', err);
       return { success: false, message: 'Failed to reset password' };
     }
   },
