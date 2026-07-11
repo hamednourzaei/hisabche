@@ -6,7 +6,6 @@ const nextConfig = {
   compress: true,
   productionBrowserSourceMaps: false,
 
-  // ✅ Turbopack
   turbopack: {},
 
   transpilePackages: [
@@ -34,16 +33,12 @@ const nextConfig = {
     optimizePackageImports: [
       '@hisabche/ui',
       'lucide-react',
-      'framer-motion',
       '@tanstack/react-query',
       'react-i18next',
       '@radix-ui/react-dialog',
       '@radix-ui/react-dropdown-menu',
       '@radix-ui/react-select',
       '@radix-ui/react-popover',
-      '@radix-ui/react-accordion',
-      '@radix-ui/react-switch',
-      '@radix-ui/react-slot',
       'react-hook-form',
       'zod',
     ],
@@ -53,43 +48,39 @@ const nextConfig = {
 
   async redirects() {
     return [
-      // ✅ فقط از hisabche.com (بدون www) به www.hisabche.com ریدایرکت کن
-      // ❌ rule دوم قبلی حذف شد چون باعث infinite redirect loop می‌شد
-      //    (www.hisabche.com به خودش ریدایرکت می‌شد)
       {
         source: '/:path*',
-        has: [
-          {
-            type: 'host',
-            value: 'hisabche.com',
-          },
-        ],
+        has: [{ type: 'host', value: 'hisabche.com' }],
         destination: 'https://www.hisabche.com/:path*',
         permanent: true,
       },
-    ]
+    ];
   },
 
   async headers() {
     return [
+      // ─── Static Assets (long cache) ───
       {
         source: '/fonts/:path*',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-        ],
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
       },
       {
         source: '/images/:path*',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' },
-        ],
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' }],
       },
       {
         source: '/_next/static/:path*',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-        ],
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
       },
+      {
+        source: '/favicon.svg',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=86400' }],
+      },
+      {
+        source: '/site.webmanifest',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=86400' }],
+      },
+      // ─── All Routes — Security ───
       {
         source: '/:path*',
         headers: [
@@ -97,10 +88,19 @@ const nextConfig = {
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+          // 🆕 Security Headers
+          { 
+            key: 'Strict-Transport-Security', 
+            value: 'max-age=63072000; includeSubDomains; preload' 
+          },
+          { 
+            key: 'Content-Security-Policy', 
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://api.hisabche.com https://*.supabase.co https://www.google-analytics.com; frame-src 'self';" 
+          },
         ],
       },
-    ]
+    ];
   },
-}
+};
 
-module.exports = nextConfig
+module.exports = nextConfig;
