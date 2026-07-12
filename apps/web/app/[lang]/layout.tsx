@@ -11,10 +11,9 @@ import { Analytics } from "@vercel/analytics/next";
 import Script from "next/script";
 import { AnalyticsPageview } from "./analytics-pageview";
 import { Suspense } from "react";
-import { ChakraProvider, defaultSystem } from "@chakra-ui/react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   RootLayout v9 — ChakraProvider added
+   RootLayout v8 — Fixed Favicons + PWA manifest
    ═══════════════════════════════════════════════════════════════════════════ */
 
 const vazirmatn = localFont({
@@ -150,15 +149,13 @@ export default async function RootLayout({ children, params }: { children: React
         <link rel="preconnect" href="https://api.hisabche.com" crossOrigin="anonymous" />
       </head>
       <body className={cn("min-h-screen antialiased font-sans", "bg-[hsl(var(--surface-base))]", "text-[hsl(var(--fg-primary))]", vazirmatn.variable)}>
-        <ChakraProvider value={defaultSystem}>
-          <Script id="theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: `(function(){try{var theme=localStorage.getItem('hisab-theme');var prefersDark=window.matchMedia('(prefers-color-scheme:dark)').matches;if(theme==='dark'||(!theme&&prefersDark)){document.documentElement.classList.add('dark');document.documentElement.style.colorScheme='dark'}else{document.documentElement.classList.remove('dark');document.documentElement.style.colorScheme='light'}}catch(e){}})();` }} />
-          <Script id="schema-jsonld" type="application/ld+json" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "SoftwareApplication", name: lang === "fa-IR" ? "حسابچه" : lang === "fa-AF" ? "حسابچه" : "Hisabche", description: lang === "fa-IR" ? "نرم‌افزار حسابداری و مدیریت موجودی" : lang === "fa-AF" ? "نرم‌افزار حسابداری و مدیریت جنس" : "Accounting and inventory management software", url: "https://hisabche.com", applicationCategory: "BusinessApplication", operatingSystem: "Web", inLanguage: lang, offers: { "@type": "Offer", price: "0", priceCurrency: "USD" } }) }} />
-          <Script strategy="afterInteractive" src="https://www.googletagmanager.com/gtag/js?id=G-T5XG907W4R" />
-          <Script id="google-analytics" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-T5XG907W4R');` }} />
-          <ClientErrorBoundary><Providers>{children}</Providers></ClientErrorBoundary>
-          <Suspense fallback={null}><AnalyticsPageview /></Suspense>
-          <SpeedInsights /><Analytics />
-        </ChakraProvider>
+        <Script id="theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: `(function(){try{var theme=localStorage.getItem('hisab-theme');var prefersDark=window.matchMedia('(prefers-color-scheme:dark)').matches;if(theme==='dark'||(!theme&&prefersDark)){document.documentElement.classList.add('dark');document.documentElement.style.colorScheme='dark'}else{document.documentElement.classList.remove('dark');document.documentElement.style.colorScheme='light'}}catch(e){}})();` }} />
+        <Script id="schema-jsonld" type="application/ld+json" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "SoftwareApplication", name: lang === "fa-IR" ? "حسابچه" : lang === "fa-AF" ? "حسابچه" : "Hisabche", description: lang === "fa-IR" ? "نرم‌افزار حسابداری و مدیریت موجودی" : lang === "fa-AF" ? "نرم‌افزار حسابداری و مدیریت جنس" : "Accounting and inventory management software", url: "https://hisabche.com", applicationCategory: "BusinessApplication", operatingSystem: "Web", inLanguage: lang, offers: { "@type": "Offer", price: "0", priceCurrency: "USD" } }) }} />
+        <Script strategy="afterInteractive" src="https://www.googletagmanager.com/gtag/js?id=G-T5XG907W4R" />
+        <Script id="google-analytics" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-T5XG907W4R');` }} />
+        <ClientErrorBoundary><Providers>{children}</Providers></ClientErrorBoundary>
+        <Suspense fallback={null}><AnalyticsPageview /></Suspense>
+        <SpeedInsights /><Analytics />
       </body>
     </html>
   );

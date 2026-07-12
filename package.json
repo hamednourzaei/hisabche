@@ -32,9 +32,6 @@
     "react-dom": "19.2.6"
   },
   "dependencies": {
-    "@chakra-ui/react": "^3.36.0",
-    "@emotion/react": "^11.14.0",
-    "@emotion/styled": "^11.14.1",
     "@sentry/nextjs": "^10.53.1",
     "@supabase/supabase-js": "^2.106.0",
     "@vercel/analytics": "^2.0.1",

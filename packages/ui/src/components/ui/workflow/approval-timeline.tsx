@@ -1,10 +1,14 @@
+// ============================================
 // packages/ui/src/components/ui/workflow/approval-card.tsx
+// Hisabche v1.1 — Unified Approval Card (Timeline + Actions)
+// Responsive: side-by-side on desktop, stacked on mobile
+// ============================================
+
 "use client";
 
 import { useState, useCallback } from "react";
-import { Steps, Button, ButtonGroup, Textarea } from "@chakra-ui/react";
-import { Check, X, Loader2, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Check, X, Forward, Clock, User, Loader2 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════
    TYPES
@@ -44,6 +48,24 @@ interface ApprovalCardProps {
    HELPERS
    ═══════════════════════════════════════════════════════════════ */
 
+const actionIcons: Record<string, typeof Check> = {
+  approved: Check, rejected: X, forwarded: Forward, cancelled: X,
+};
+
+const actionBadgeColors: Record<string, string> = {
+  approved: "bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))] border-[hsl(var(--color-success)/0.2)]",
+  rejected: "bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))] border-[hsl(var(--color-destructive)/0.2)]",
+  forwarded: "bg-[hsl(var(--color-info)/0.12)] text-[hsl(var(--color-info))] border-[hsl(var(--color-info)/0.2)]",
+  cancelled: "bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-tertiary))] border-[hsl(var(--border-default))]",
+};
+
+const actionLabels: Record<string, string> = {
+  approved: "workflow.approved",
+  rejected: "workflow.rejected",
+  forwarded: "workflow.forwarded",
+  cancelled: "workflow.cancelled",
+};
+
 function formatDateTime(isoString: string): string {
   const date = new Date(isoString);
   return date.toLocaleDateString("fa-IR", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -59,6 +81,7 @@ function RejectModal({
   open: boolean; onClose: () => void; onConfirm: (comment: string) => void; loading: boolean; t: (key: string, fallback?: string) => string;
 }) {
   const [comment, setComment] = useState("");
+
   if (!open) return null;
 
   return (
@@ -67,17 +90,22 @@ function RejectModal({
       <div className="relative w-full max-w-md rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] shadow-2xl p-6 space-y-4">
         <h3 className="text-lg font-bold text-[hsl(var(--fg-primary))]">{t("workflow.rejectReason", "دلیل رد درخواست")}</h3>
         <p className="text-sm text-[hsl(var(--fg-secondary))]">{t("workflow.rejectDescription", "لطفاً دلیل رد را توضیح دهید.")}</p>
-        <Textarea
+        <textarea
           value={comment} onChange={(e) => setComment(e.target.value)}
           placeholder={t("workflow.rejectPlaceholder", "مثلاً: مبلغ فاکتور با قرارداد مطابقت ندارد...")}
           rows={3} autoFocus
+          className="w-full rounded-xl p-3 text-sm resize-none border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))] focus:outline-none focus:border-[hsl(var(--color-destructive)/0.5)]"
         />
         <div className="flex justify-end gap-2 pt-2">
-          <Button variant="outline" onClick={onClose}>{t("action.cancel", "انصراف")}</Button>
-          <Button colorPalette="red" disabled={!comment.trim() || loading} onClick={() => onConfirm(comment)}>
+          <button onClick={onClose} className="px-4 h-10 text-sm font-medium text-[hsl(var(--fg-secondary))] hover:text-[hsl(var(--fg-primary))]">{t("action.cancel", "انصراف")}</button>
+          <button
+            disabled={!comment.trim() || loading}
+            onClick={() => onConfirm(comment)}
+            className="inline-flex items-center gap-2 px-5 h-10 text-sm font-bold text-white bg-[hsl(var(--color-destructive))] rounded-lg hover:brightness-110 disabled:opacity-40"
+          >
             {loading ? <Loader2 className="size-4 animate-spin" /> : <X className="size-4" />}
             {t("workflow.confirmReject", "تأیید رد")}
-          </Button>
+          </button>
         </div>
       </div>
     </div>
@@ -89,13 +117,15 @@ function RejectModal({
    ═══════════════════════════════════════════════════════════════ */
 
 export function ApprovalCard({
-  actions, steps, currentStep, status, isPending, onAction, t, disabled = false,
+  actions, steps, currentStep, status, instanceId, isPending, onAction, t, disabled = false,
 }: ApprovalCardProps) {
   const [showReject, setShowReject] = useState(false);
   const [loading, setLoading] = useState<WorkflowAction | null>(null);
 
-  const completedStep = actions.some(a => a.action === "approved") ? currentStep - 1 : currentStep;
-  const isDisabled = disabled || !isPending || loading !== null;
+  const stepsWithActions = steps.map((step) => {
+    const action = actions.find((a) => a.step_order === step.step_order);
+    return { ...step, action };
+  });
 
   const handleAction = useCallback(async (action: WorkflowAction, comment?: string) => {
     setLoading(action);
@@ -103,99 +133,118 @@ export function ApprovalCard({
     finally { setLoading(null); setShowReject(false); }
   }, [onAction]);
 
+  const isDisabled = disabled || !isPending || loading !== null;
+
   return (
     <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-4 sm:p-5 space-y-4">
+      {/* Header */}
       <h4 className="text-sm font-bold text-[hsl(var(--fg-primary))]">
         {t("workflow.title", "فرآیند تأیید")}
       </h4>
 
-      <Steps.Root defaultStep={completedStep} count={steps.length} colorPalette="green">
-        <Steps.List>
-          {steps.map((step, index) => {
-            const action = actions.find((a) => a.step_order === step.step_order);
-            const isCompleted = action?.action === "approved";
-            const isRejected = action?.action === "rejected";
-            const isCurrent = step.step_order === currentStep && status === "in_progress";
+      <div className="flex flex-col lg:flex-row gap-5">
+        {/* Left: Timeline */}
+        <div className="flex-1 min-w-0">
+          <div className="space-y-0.5">
+            {stepsWithActions.map((step, index) => {
+              const isActive = step.step_order === currentStep && status === "in_progress";
+              const isCompleted = !!step.action?.action && step.action.action !== "rejected";
+              const isRejected = step.action?.action === "rejected";
+              const isPendingSt = !step.action && !isActive;
+              const isLast = index === stepsWithActions.length - 1;
+              const Icon = step.action ? (actionIcons[step.action.action] ?? Clock) : isActive ? Clock : User;
 
-            return (
-              <Steps.Item
-                key={step.step_order}
-                index={index}
-                title={t(`roles.${step.approver_role}`, step.approver_role)}
-                className={cn(
-                  isCompleted && "text-[hsl(var(--color-success))]",
-                  isRejected && "text-[hsl(var(--color-destructive))]",
-                  isCurrent && "text-[hsl(var(--color-warning))]",
-                )}
-              >
-                <Steps.Indicator>
-                  {isCompleted ? <Check className="size-4" /> : isRejected ? <X className="size-4" /> : isCurrent ? <Clock className="size-4" /> : null}
-                </Steps.Indicator>
-                <Steps.Title>{t(`roles.${step.approver_role}`, step.approver_role)}</Steps.Title>
-                {step.is_final && (
-                  <span className="inline-flex items-center rounded-full bg-[hsl(var(--color-primary)/0.1)] px-2 py-0.5 text-[10px] font-bold text-[hsl(var(--color-primary))] ms-2">
-                    {t("workflow.final", "نهایی")}
-                  </span>
-                )}
-                <Steps.Separator />
-              </Steps.Item>
-            );
-          })}
-        </Steps.List>
-
-        {/* Action details per step */}
-        {steps.map((step, index) => {
-          const action = actions.find((a) => a.step_order === step.step_order);
-          return (
-            <Steps.Content key={step.step_order} index={index}>
-              {action ? (
-                <div className="mt-2 space-y-1">
-                  <p className="text-sm text-[hsl(var(--fg-secondary))]">
-                    {t(`workflow.${action.action}`, action.action)} — {formatDateTime(action.created_at)}
-                  </p>
-                  {action.comment && (
-                    <p className="text-xs text-[hsl(var(--fg-tertiary))] italic">«{action.comment}»</p>
+              return (
+                <div key={step.step_order} className="relative flex gap-3">
+                  {!isLast && (
+                    <div className={cn("absolute top-9 bottom-0 w-0.5", isCompleted ? "bg-[hsl(var(--color-primary)/0.5)]" : "bg-[hsl(var(--border-default))]")}
+                      style={{ insetInlineStart: 19 }} />
                   )}
+                  <div className={cn(
+                    "relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2",
+                    isCompleted && "border-[hsl(var(--color-primary))] bg-[hsl(var(--color-primary)/0.12)]",
+                    isActive && "border-[hsl(var(--color-warning))] bg-[hsl(var(--color-warning)/0.12)] animate-pulse",
+                    isRejected && "border-[hsl(var(--color-destructive))] bg-[hsl(var(--color-destructive)/0.12)]",
+                    isPendingSt && "border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))]",
+                  )}>
+                    <Icon className={cn("size-4",
+                      isCompleted && "text-[hsl(var(--color-success))]",
+                      isActive && "text-[hsl(var(--color-warning))]",
+                      isRejected && "text-[hsl(var(--color-destructive))]",
+                      isPendingSt && "text-[hsl(var(--fg-tertiary))]",
+                    )} />
+                  </div>
+                  <div className="flex-1 min-w-0 pb-4">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={cn("text-sm font-semibold",
+                        isCompleted && "text-[hsl(var(--color-success))]",
+                        isActive && "text-[hsl(var(--color-warning))]",
+                        isRejected && "text-[hsl(var(--color-destructive))]",
+                        isPendingSt && "text-[hsl(var(--fg-tertiary))]",
+                      )}>
+                        {t(`roles.${step.approver_role}`, step.approver_role)}
+                      </span>
+                      {step.is_final && (
+                        <span className="inline-flex items-center rounded-full bg-[hsl(var(--color-primary)/0.1)] px-2 py-0.5 text-[10px] font-bold text-[hsl(var(--color-primary))]">
+                          {t("workflow.final", "نهایی")}
+                        </span>
+                      )}
+                    </div>
+                    {step.action && (
+                      <div className="mt-1.5">
+                        <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium border", actionBadgeColors[step.action.action] ?? actionBadgeColors.cancelled)}>
+                          {t(actionLabels[step.action.action] ?? "workflow.unknown", step.action.action)}
+                        </span>
+                        <span className="ms-2 text-[11px] text-[hsl(var(--fg-tertiary))]">{formatDateTime(step.action.created_at)}</span>
+                      </div>
+                    )}
+                    {step.action?.comment && <p className="mt-1 text-xs text-[hsl(var(--fg-secondary))] italic">«{step.action.comment}»</p>}
+                    {isPendingSt && !isActive && <p className="mt-1 text-xs text-[hsl(var(--fg-tertiary))]">{t("workflow.pending", "در انتظار")}</p>}
+                    {isActive && <p className="mt-1 text-xs text-[hsl(var(--color-warning))] font-medium">{t("workflow.inProgress", "در حال بررسی")}</p>}
+                  </div>
                 </div>
-              ) : (
-                <p className="mt-2 text-sm text-[hsl(var(--fg-tertiary))]">
-                  {step.step_order === currentStep ? t("workflow.inProgress", "در حال بررسی") : t("workflow.pending", "در انتظار")}
-                </p>
-              )}
-            </Steps.Content>
-          );
-        })}
+              );
+            })}
+          </div>
+        </div>
 
-        <Steps.CompletedContent>
-          <p className="text-sm text-[hsl(var(--color-success))] font-medium">{t("workflow.completed", "همه مراحل تکمیل شد")}</p>
-        </Steps.CompletedContent>
-      </Steps.Root>
+        {/* Right: Actions */}
+        <div className="lg:w-44 shrink-0 lg:border-s lg:border-[hsl(var(--border-default))] lg:ps-5 flex flex-col gap-2">
+          <span className="text-xs font-semibold text-[hsl(var(--fg-tertiary))]">
+            {t("workflow.action", "عملیات")}
+          </span>
 
-      {/* Action Buttons */}
-      {isPending && (
-        <div className="flex gap-2 pt-2">
-          <Button
-            colorPalette="green"
-            disabled={isDisabled}
+          <button
+            type="button" disabled={isDisabled}
             onClick={() => handleAction("approved")}
-            className="flex-1"
+            className={cn(
+              "inline-flex items-center justify-center gap-1.5 rounded-lg px-4 h-10 text-sm font-bold text-white",
+              "bg-[hsl(var(--color-success))] shadow-sm shadow-[hsl(var(--color-success)/0.2)]",
+              "hover:brightness-110 active:scale-[0.98] transition-all duration-200",
+              "disabled:opacity-40 disabled:cursor-not-allowed",
+            )}
           >
             {loading === "approved" ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
             {t("workflow.approve", "تأیید")}
-          </Button>
-          <Button
-            colorPalette="red"
-            variant="outline"
-            disabled={isDisabled}
+          </button>
+
+          <button
+            type="button" disabled={isDisabled}
             onClick={() => setShowReject(true)}
-            className="flex-1"
+            className={cn(
+              "inline-flex items-center justify-center gap-1.5 rounded-lg px-4 h-10 text-sm font-bold",
+              "border border-[hsl(var(--color-destructive)/0.3)] text-[hsl(var(--color-destructive))]",
+              "hover:bg-[hsl(var(--color-destructive)/0.08)] active:bg-[hsl(var(--color-destructive)/0.12)] transition-colors",
+              "disabled:opacity-40 disabled:cursor-not-allowed",
+            )}
           >
             <X className="size-4" />
             {t("workflow.reject", "رد")}
-          </Button>
+          </button>
         </div>
-      )}
+      </div>
 
+      {/* Reject Modal */}
       <RejectModal
         open={showReject}
         onClose={() => setShowReject(false)}
