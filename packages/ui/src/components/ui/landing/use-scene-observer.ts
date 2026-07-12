@@ -14,20 +14,15 @@ import {
 export type SceneState = "hidden" | "visible" | "animated";
 
 interface UseSceneObserverOptions {
-  /** Fraction of element that must be visible to trigger. Default: 0.25 */
   threshold?: number;
-  /** IntersectionObserver rootMargin. Default: "0px 0px -60px 0px" */
   rootMargin?: string;
-  /** Narrative state written as a data-attribute for CSS targeting. */
   narrativeState?: NarrativeState;
-  /** Minimum ms between repeated triggers for the same section. Default: 500 */
   cooldownMs?: number;
-  /** Delay before initial "visible" state, in ms. Default: 80 */
   mountDelayMs?: number;
 }
 
 interface UseSceneObserverReturn<T extends HTMLElement> {
-  ref:   React.RefObject<T>;
+  ref: React.RefObject<T>;
   state: SceneState;
 }
 
@@ -50,18 +45,16 @@ export function useSceneObserver<T extends HTMLElement = HTMLDivElement>(
   options: UseSceneObserverOptions = {}
 ): UseSceneObserverReturn<T> {
   const {
-    threshold    = 0.25,
-    rootMargin   = "0px 0px -60px 0px",
+    threshold = 0.25,
+    rootMargin = "0px 0px -60px 0px",
     narrativeState,
-    cooldownMs   = 500,
+    cooldownMs = 500,
     mountDelayMs = 80,
   } = options;
 
-  const ref   = useRef<T>(null);
+  const ref = useRef<T>(null);
   const [state, setState] = useState<SceneState>("hidden");
 
-  // Keep options in refs so the effect doesn't need to re-run when they change.
-  // This prevents IntersectionObserver recreation on every render.
   const optsRef = useRef({ threshold, rootMargin, narrativeState, cooldownMs, mountDelayMs });
   optsRef.current = { threshold, rootMargin, narrativeState, cooldownMs, mountDelayMs };
 
@@ -71,37 +64,40 @@ export function useSceneObserver<T extends HTMLElement = HTMLDivElement>(
 
     const { threshold, rootMargin, narrativeState, cooldownMs, mountDelayMs } = optsRef.current;
 
-    // ── Resolve & validate section id ───────────────────────────────────────
     const rawId = element.id;
 
     if (!rawId) {
       if (process.env.NODE_ENV !== "production") {
-        console.warn("[useSceneObserver] Element is missing an id. Observer skipped.", element);
+        console.warn("[useSceneObserver] Element is missing an id.", element);
       }
       return;
     }
 
     if (!isSectionId(rawId)) {
       if (process.env.NODE_ENV !== "production") {
-        console.warn(`[useSceneObserver] Unknown section id "${rawId}". Observer skipped.`);
+        console.warn(`[useSceneObserver] Unknown section id "${rawId}".`);
       }
       return;
     }
 
     const sectionId: SectionId = rawId;
 
-    // ── Data-attribute for CSS targeting ────────────────────────────────────
     if (narrativeState) {
       element.setAttribute("data-narrative", narrativeState);
     }
 
-    // ── Initial visibility animation ────────────────────────────────────────
+    // Reserve space immediately — prevent CLS from conditional animations
+    element.style.opacity = "0";
+    element.style.willChange = "opacity, transform";
+
     const mountTimer = setTimeout(() => {
       setState("visible");
       requestAnimationFrame(() => setState("animated"));
+      // Restore opacity — now controlled by Tailwind classes
+      element.style.opacity = "";
+      element.style.willChange = "";
     }, mountDelayMs);
 
-    // ── IntersectionObserver ─────────────────────────────────────────────────
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
@@ -109,10 +105,7 @@ export function useSceneObserver<T extends HTMLElement = HTMLDivElement>(
 
         const { isIntersecting, intersectionRatio } = entry;
 
-        element.setAttribute(
-          "data-scroll-active",
-          isIntersecting ? "true" : "false"
-        );
+        element.setAttribute("data-scroll-active", isIntersecting ? "true" : "false");
 
         if (isIntersecting && intersectionRatio >= threshold) {
           if (canTrigger(sectionId, cooldownMs)) {
@@ -129,9 +122,12 @@ export function useSceneObserver<T extends HTMLElement = HTMLDivElement>(
     return () => {
       clearTimeout(mountTimer);
       observer.disconnect();
+      // Cleanup inline styles
+      element.style.opacity = "";
+      element.style.willChange = "";
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // stable reference – observer is tied to element, options via ref
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return { ref, state };
 }

@@ -2,9 +2,8 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   Card v2 — Hisabche Design Language
-   Zero hardcoded colors — all tokens from design system
-   No class-variance-authority dependency
+   Card v3 — Optimized · GPU-safe
+   ✅ Zero layout shift · motion-reduce aware
    ═══════════════════════════════════════════════════════════════════════════ */
 
 // ─── Card ──────────────────────────────────────────────────────────────────
@@ -23,9 +22,7 @@ const Card = React.forwardRef<HTMLDivElement, CardProps>(
         "bg-[hsl(var(--surface-elevated))]",
         "text-[hsl(var(--fg-primary))]",
         "shadow-sm",
-        "transition-all duration-200",
-        "motion-reduce:transition-none",
-        interactive && "hover:shadow-lg hover:border-[hsl(var(--color-primary)/0.2)] cursor-pointer",
+        interactive && "cursor-pointer",
         className,
       )}
       {...props}

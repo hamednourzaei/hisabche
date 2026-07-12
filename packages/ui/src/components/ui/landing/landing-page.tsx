@@ -8,15 +8,16 @@ import { TopNav } from "../navigation/top-nav";
 import { NavigationRegistry } from "../navigation/navigation-registry";
 import { cn } from "@/lib/utils";
 
-import CinematicHero from "./cinematic-hero";
-import PainScene from "./pain-scene";
-import TransformScene from "./transform-scene";
-import FeaturesScene from "./features-scene";
-import SocialScene from "./social-scene";
-import FaqScene from "./faq-scene";
-import CTAScene from "./cta-scene";
-import StatsSection from "./stats-section";
+import dynamic from 'next/dynamic';
 
+const CinematicHero = dynamic(() => import('./cinematic-hero'), { ssr: true });
+const PainScene = dynamic(() => import('./pain-scene'));
+const TransformScene = dynamic(() => import('./transform-scene'));
+const FeaturesScene = dynamic(() => import('./features-scene'));
+const SocialScene = dynamic(() => import('./social-scene'));
+const FaqScene = dynamic(() => import('./faq-scene'));
+const CTAScene = dynamic(() => import('./cta-scene'));
+const StatsSection = dynamic(() => import('./stats-section'));
 const sectionKeys: Record<string, string> = {
   hero: "landing.navHero",
   pain: "landing.navPain",

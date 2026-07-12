@@ -14,7 +14,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "./dialog";
 import {
   Select,
@@ -130,10 +129,15 @@ export function AddProductModal({
 
   const isPending = isSubmitting || createProduct.isPending;
 
+  // Shared input class — DRY
+  const inputClass =
+    "bg-[hsl(var(--surface-base))] border-[hsl(var(--border-default))] text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))] focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)] min-h-[44px]";
+
+  if (!open) return null;
+
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
-      <DialogContent className="max-w-md !bg-[hsl(var(--surface-elevated))] !bg-opacity-90 !backdrop-blur-none border-[hsl(var(--border-default))]">
-        {/* ── Save indicator ── */}
+      <DialogContent className="max-w-md">
         {isPending && (
           <div className="absolute top-3 end-3 flex items-center gap-2 text-sm text-[hsl(var(--fg-secondary))]">
             <Loader2 className="size-4 animate-spin" aria-hidden="true" />
@@ -142,18 +146,15 @@ export function AddProductModal({
         )}
 
         <DialogHeader>
-          <DialogTitle className="text-[hsl(var(--fg-primary))]">
+          <DialogTitle>
             {t("warehouse.addProductModal", "محصول جدید")}
           </DialogTitle>
-          <DialogDescription className="sr-only">
-            {t("warehouse.addProductDescription", "فرم ثبت محصول جدید")}
-          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* ── Name ── */}
           <div className="space-y-2">
-            <Label htmlFor="product-name" className="text-[hsl(var(--fg-primary))]">
+            <Label htmlFor="product-name">
               {t("warehouse.productName", "نام محصول")}
               <span aria-hidden="true" className="text-[hsl(var(--color-destructive))] ms-1">*</span>
             </Label>
@@ -163,7 +164,7 @@ export function AddProductModal({
                 id="product-name"
                 {...register("name")}
                 placeholder={t("warehouse.productNamePlaceholder", "نام محصول را وارد کنید")}
-                className="ps-9 bg-[hsl(var(--surface-base))] border-[hsl(var(--border-default))] text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))] focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]"
+                className={inputClass}
                 autoFocus
               />
             </div>
@@ -177,7 +178,7 @@ export function AddProductModal({
           {/* ── Quantity + Unit ── */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="product-quantity" className="text-[hsl(var(--fg-primary))]">
+              <Label htmlFor="product-quantity">
                 {t("warehouse.initialStock", "موجودی اولیه")}
               </Label>
               <Input
@@ -186,7 +187,7 @@ export function AddProductModal({
                 type="number"
                 min={0}
                 placeholder="0"
-                className="bg-[hsl(var(--surface-base))] border-[hsl(var(--border-default))] text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))] focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]"
+                className={inputClass}
               />
               {errors.quantity && (
                 <p className="text-sm text-[hsl(var(--color-destructive))]" role="alert">
@@ -195,7 +196,7 @@ export function AddProductModal({
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="product-unit" className="text-[hsl(var(--fg-primary))]">
+              <Label htmlFor="product-unit">
                 {t("warehouse.unit", "واحد")}
               </Label>
               <Controller
@@ -203,7 +204,7 @@ export function AddProductModal({
                 control={control}
                 render={({ field }) => (
                   <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger id="product-unit" className="w-full">
+                    <SelectTrigger id="product-unit" className="w-full min-h-[44px]">
                       <SelectValue placeholder={t("warehouse.unit", "واحد")} />
                     </SelectTrigger>
                     <SelectContent>
@@ -222,7 +223,7 @@ export function AddProductModal({
           {/* ── Buy Price + Sell Price ── */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="product-buy-price" className="text-[hsl(var(--fg-primary))]">
+              <Label htmlFor="product-buy-price">
                 {t("warehouse.buyPrice", "قیمت خرید (AFN)")}
               </Label>
               <div className="relative">
@@ -234,7 +235,7 @@ export function AddProductModal({
                   step="0.01"
                   min={0}
                   placeholder="0.00"
-                  className="ps-9 bg-[hsl(var(--surface-base))] border-[hsl(var(--border-default))] text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))] focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]"
+                  className={inputClass}
                 />
               </div>
               {errors.buyPrice && (
@@ -244,7 +245,7 @@ export function AddProductModal({
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="product-sell-price" className="text-[hsl(var(--fg-primary))]">
+              <Label htmlFor="product-sell-price">
                 {t("warehouse.sellPrice", "قیمت فروش (AFN)")}
               </Label>
               <div className="relative">
@@ -256,7 +257,7 @@ export function AddProductModal({
                   step="0.01"
                   min={0}
                   placeholder="0.00"
-                  className="ps-9 bg-[hsl(var(--surface-base))] border-[hsl(var(--border-default))] text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))] focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]"
+                  className={inputClass}
                 />
               </div>
               {errors.sellPrice && (
@@ -269,7 +270,7 @@ export function AddProductModal({
 
           {/* ── Min Stock ── */}
           <div className="space-y-2">
-            <Label htmlFor="product-min-stock" className="text-[hsl(var(--fg-primary))]">
+            <Label htmlFor="product-min-stock">
               {t("warehouse.minStock", "حداقل موجودی هشدار")}
             </Label>
             <div className="relative">
@@ -280,7 +281,7 @@ export function AddProductModal({
                 type="number"
                 min={0}
                 placeholder="5"
-                className="ps-9 bg-[hsl(var(--surface-base))] border-[hsl(var(--border-default))] text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))] focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]"
+                className={inputClass}
               />
             </div>
             {errors.minStock && (
@@ -295,7 +296,7 @@ export function AddProductModal({
             <Button
               type="button"
               variant="outline"
-              className="w-full"
+              className="w-full min-h-[44px]"
               onClick={handleClose}
               disabled={isPending}
             >
@@ -303,7 +304,7 @@ export function AddProductModal({
             </Button>
             <Button
               type="submit"
-              className="w-full"
+              className="w-full min-h-[44px]"
               disabled={isPending}
             >
               {isPending && (

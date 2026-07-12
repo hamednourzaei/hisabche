@@ -1,3 +1,4 @@
+// packages/ui/src/components/ui/fab.tsx
 "use client";
 
 import * as React from "react";
@@ -7,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { Plus } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   Fab v3 — i18n-ready
+   Fab v4 — GPU-safe · CLS-free · i18n-ready
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface FabAction {
@@ -40,28 +41,55 @@ const Fab = React.forwardRef<HTMLDivElement, FabProps>(
       setOpen(false);
     }, []);
 
+    if (!actions.length) return null;
+
     return (
       <div ref={ref} className={cn("fixed z-50", positionStyles[position], className)}>
         <DropdownMenu.Root open={open} onOpenChange={setOpen}>
           <DropdownMenu.Trigger asChild>
-            <button type="button"
+            <button
+              type="button"
               aria-label={open ? t("action.close", "بستن منو") : t("action.open", "باز کردن منو")}
-              className={cn("flex h-14 w-14 items-center justify-center rounded-full", "shadow-lg", "transition-all duration-200", "hover:scale-110 active:scale-95", "motion-reduce:transition-none motion-reduce:hover:scale-100",
-                open ? "bg-[hsl(var(--color-destructive))] rotate-45" : "bg-[var(--gradient-brand)] rotate-0")}>
-              <Plus className="size-6 text-white transition-transform duration-200" aria-hidden="true" />
+              className={cn(
+                "flex h-14 w-14 items-center justify-center rounded-full shadow-lg",
+                "transition-transform duration-200 motion-reduce:transition-none",
+                "active:scale-95",
+                open
+                  ? "bg-[hsl(var(--color-destructive))] rotate-45"
+                  : "bg-[var(--gradient-brand)] rotate-0 hover:scale-110 motion-reduce:hover:scale-100",
+              )}
+            >
+              <Plus className="size-6 text-white" aria-hidden="true" />
             </button>
           </DropdownMenu.Trigger>
           <DropdownMenu.Portal>
-            <DropdownMenu.Content side="top" sideOffset={12} align="end"
-              className={cn("z-50 min-w-[160px] overflow-hidden rounded-2xl", "border border-[hsl(var(--border-strong))]", "bg-[hsl(var(--surface-elevated))]", "p-1.5 shadow-lg",
-                "data-[state=open]:animate-in data-[state=closed]:animate-out", "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-                "data-[state=closed]:slide-out-to-bottom-2 data-[state=open]:slide-in-from-bottom-2", "motion-reduce:animate-none")}>
+            <DropdownMenu.Content
+              side="top"
+              sideOffset={12}
+              align="end"
+              className={cn(
+                "z-50 min-w-[160px] overflow-hidden rounded-2xl",
+                "border border-[hsl(var(--border-strong))]",
+                "bg-[hsl(var(--surface-elevated))]",
+                "p-1.5 shadow-lg",
+                "data-[state=open]:animate-in data-[state=closed]:animate-out",
+                "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+                "data-[state=closed]:slide-out-to-bottom-2 data-[state=open]:slide-in-from-bottom-2",
+                "motion-reduce:animate-none",
+              )}
+            >
               {actions.map((action) => (
-                <DropdownMenu.Item key={action.id} onClick={() => handleAction(action)}
-                  className={cn("flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium outline-none", "transition-colors duration-150", "motion-reduce:transition-none", "min-h-[44px]",
-                    action.variant === undefined || action.variant === "default" ? "text-[hsl(var(--fg-primary))] data-[highlighted]:bg-[hsl(var(--color-primary)/0.08)]" : "",
-                    action.variant === "primary" ? "bg-[var(--gradient-brand)] text-white data-[highlighted]:brightness-110" : "",
-                    action.variant === "destructive" ? "text-[hsl(var(--color-destructive))] data-[highlighted]:bg-[hsl(var(--color-destructive)/0.1)]" : "")}>
+                <DropdownMenu.Item
+                  key={action.id}
+                  onClick={() => handleAction(action)}
+                  className={cn(
+                    "flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium outline-none min-h-[44px]",
+                    "transition-colors duration-150 motion-reduce:transition-none",
+                    action.variant === "primary" && "bg-[var(--gradient-brand)] text-white data-[highlighted]:brightness-110",
+                    action.variant === "destructive" && "text-[hsl(var(--color-destructive))] data-[highlighted]:bg-[hsl(var(--color-destructive)/0.1)]",
+                    (!action.variant || action.variant === "default") && "text-[hsl(var(--fg-primary))] data-[highlighted]:bg-[hsl(var(--color-primary)/0.08)]",
+                  )}
+                >
                   <span className="shrink-0">{action.icon}</span>
                   <span>{action.label}</span>
                 </DropdownMenu.Item>

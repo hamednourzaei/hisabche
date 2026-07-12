@@ -6,12 +6,8 @@ import { cn } from "@/lib/utils";
 import { Receipt, Package, BookOpen, Smartphone, Wifi, Banknote } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   FeaturesScene v4 — Premium Glass Cards
-   ✅ Lucide icons instead of emoji
-   ✅ Glass morphism
-   ✅ Hover glow + lift
-   ✅ i18n-ready
-   ✅ Design tokens only
+   FeaturesScene v5 — CLS Fixed · GPU-safe
+   ✅ Reserved space · will-change · i18n-ready
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface FeaturesSceneProps {
@@ -39,8 +35,8 @@ export default function FeaturesScene({ t }: FeaturesSceneProps) {
         {/* ── Header ── */}
         <div
           className={cn(
-            "text-center mb-16 transition-all duration-700",
-            "motion-reduce:transition-none",
+            "text-center mb-16 min-h-[120px]",
+            "transition-all duration-700 motion-reduce:transition-none",
             animated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5",
           )}
         >
@@ -63,45 +59,37 @@ export default function FeaturesScene({ t }: FeaturesSceneProps) {
               <div
                 key={key}
                 className={cn(
-                  "group relative p-6 sm:p-8 text-center",
+                  "group relative p-6 sm:p-8 text-center min-h-[220px]",
                   "rounded-[var(--radius-card)]",
                   "border border-[hsl(var(--border-default))]",
                   "bg-[hsl(var(--surface-elevated)/0.6)]",
                   "backdrop-blur-sm",
-                  "transition-all duration-500",
-                  "hover:border-[hsl(var(--color-primary)/0.3)]",
-                  "hover:-translate-y-1 hover:shadow-[var(--shadow-premium)]",
-                  "motion-reduce:hover:transform-none motion-reduce:hover:border-[hsl(var(--border-default))]",
-                  animated
-                    ? "opacity-100 translate-y-0 scale-100"
-                    : "opacity-0 translate-y-4 scale-[0.97]",
+                  "will-change-transform opacity-0",
+                  "transition-all duration-500 motion-reduce:transition-none",
+                  "hover:border-[hsl(var(--color-primary)/0.3)] hover:-translate-y-1 hover:shadow-[var(--shadow-premium)]",
+                  animated && "opacity-100 translate-y-0 scale-100",
                 )}
                 style={{ transitionDelay: `${i * 80}ms` }}
               >
-                {/* ── Top glow line (visible on hover) ── */}
                 <div
                   className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[hsl(var(--color-primary)/0.3)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"
                   aria-hidden="true"
                 />
 
-                {/* ── Icon ── */}
                 <div className={cn(
                   "mx-auto mb-5 flex items-center justify-center w-14 h-14 rounded-2xl",
                   "bg-[hsl(var(--color-primary)/0.1)]",
                   "text-[hsl(var(--color-primary))]",
-                  "transition-all duration-300",
-                  "group-hover:bg-[hsl(var(--color-primary)/0.15)] group-hover:scale-110",
+                  "transition-transform duration-300 group-hover:scale-110 motion-reduce:group-hover:scale-100",
                 )}>
                   <Icon className="size-7" aria-hidden="true" />
                 </div>
 
-                {/* ── Title ── */}
-                <h3 className="font-bold text-base text-[hsl(var(--fg-primary))] mb-2">
+                <h3 className="font-bold text-base text-[hsl(var(--fg-primary))] mb-2 min-h-[1.5rem]">
                   {t(`landing.${key}Title`, key)}
                 </h3>
 
-                {/* ── Description ── */}
-                <p className="text-sm text-[hsl(var(--fg-secondary))] leading-relaxed">
+                <p className="text-sm text-[hsl(var(--fg-secondary))] leading-relaxed min-h-[2.5rem]">
                   {t(`landing.${key}Desc`, "")}
                 </p>
               </div>

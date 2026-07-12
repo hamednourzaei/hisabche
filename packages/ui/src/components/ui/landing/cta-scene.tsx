@@ -2,16 +2,11 @@
 "use client";
 
 import { useSceneObserver } from "./use-scene-observer";
-import { useScrollNarrative } from "./use-scroll-narrative-store";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   CTAScene v4 — Premium Glass CTA
-   ✅ Glass morphism
-   ✅ Animated gradient background
-   ✅ Magnetic button
-   ✅ i18n-ready
-   ✅ Design tokens only
+   CTAScene v5 — CLS Fixed · GPU-safe
+   ✅ Reserved space · will-change · i18n-ready
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface CTASceneProps {
@@ -25,7 +20,6 @@ export default function CTAScene({ t, onNavigateLogin }: CTASceneProps) {
     narrativeState: "action",
   });
 
-  const { narrativeState } = useScrollNarrative();
   const animated = state === "animated";
 
   return (
@@ -36,18 +30,17 @@ export default function CTAScene({ t, onNavigateLogin }: CTASceneProps) {
       className="relative section-padding overflow-hidden"
     >
       {/* ── Animated gradient background ── */}
-      <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+      <div className="pointer-events-none absolute inset-0 contain-layout contain-paint" aria-hidden="true">
         <div
-          className="absolute w-[700px] h-[700px] rounded-full blur-[150px] animate-[aurora_10s_ease-in-out_infinite]"
+          className="absolute w-[700px] h-[700px] rounded-full blur-[150px] animate-[aurora_10s_ease-in-out_infinite] will-change-transform"
           style={{
             background: `radial-gradient(circle, hsl(var(--color-primary)/0.15), transparent 70%)`,
             top: "-30%",
             insetInlineStart: "50%",
-            transform: "translateX(-50%)",
           }}
         />
         <div
-          className="absolute w-[500px] h-[500px] rounded-full blur-[120px] animate-[aurora_10s_ease-in-out_infinite_5s]"
+          className="absolute w-[500px] h-[500px] rounded-full blur-[120px] animate-[aurora_10s_ease-in-out_infinite_5s] will-change-transform"
           style={{
             background: `radial-gradient(circle, hsl(var(--color-success)/0.1), transparent 70%)`,
             bottom: "-20%",
@@ -59,27 +52,23 @@ export default function CTAScene({ t, onNavigateLogin }: CTASceneProps) {
       <div className="container-narrow max-w-2xl relative z-10">
         <div
           className={cn(
-            "relative overflow-hidden text-center",
+            "relative overflow-hidden text-center min-h-[380px]",
             "rounded-[var(--radius-card)]",
             "border border-[hsl(var(--color-primary)/0.15)]",
             "bg-[var(--glass-bg)]",
             "backdrop-blur-[var(--glass-blur)]",
             "shadow-[var(--shadow-premium)]",
             "p-[clamp(2.5rem,6vw,4rem)]",
-            "transition-all duration-700",
-            "motion-reduce:transition-none",
-            animated
-              ? "opacity-100 scale-100 translate-y-0"
-              : "opacity-0 scale-[0.97] translate-y-4",
+            "will-change-transform opacity-0",
+            "transition-all duration-700 motion-reduce:transition-none",
+            animated && "opacity-100 scale-100 translate-y-0",
           )}
         >
-          {/* ── Top glow line ── */}
           <div
             className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[hsl(var(--color-primary)/0.4)] to-transparent"
             aria-hidden="true"
           />
 
-          {/* ── Corner glows ── */}
           <div
             className="pointer-events-none absolute -end-20 -top-20 w-48 h-48 rounded-full blur-3xl bg-[hsl(var(--color-primary)/0.08)]"
             aria-hidden="true"
@@ -89,13 +78,12 @@ export default function CTAScene({ t, onNavigateLogin }: CTASceneProps) {
             aria-hidden="true"
           />
 
-          {/* ── Content ── */}
           <div className="relative space-y-6">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[hsl(var(--fg-primary))] tracking-tight">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[hsl(var(--fg-primary))] tracking-tight min-h-[3rem]">
               {t("landing.finalCTATitle", "همین امروز شروع کنید")}
             </h2>
 
-            <p className="text-base sm:text-lg text-[hsl(var(--fg-secondary))] leading-relaxed max-w-md mx-auto">
+            <p className="text-base sm:text-lg text-[hsl(var(--fg-secondary))] leading-relaxed max-w-md mx-auto min-h-[2rem]">
               {t("landing.finalCTADesc", "رایگان. بدون کارت بانکی. کمتر از ۱ دقیقه.")}
             </p>
 
@@ -122,7 +110,6 @@ export default function CTAScene({ t, onNavigateLogin }: CTASceneProps) {
                     ←
                   </span>
                 </span>
-                {/* Shimmer */}
                 <span
                   className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 motion-reduce:transition-none"
                   style={{
@@ -133,7 +120,7 @@ export default function CTAScene({ t, onNavigateLogin }: CTASceneProps) {
               </button>
             </div>
 
-            <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+            <p className="text-xs text-[hsl(var(--fg-tertiary))] min-h-[1rem]">
               {t("landing.trustText", "بدون نیاز به کارت بانکی · لغو آسان")}
             </p>
           </div>

@@ -68,8 +68,15 @@ export function isSectionId(value: string): value is SectionId {
 // ─── Singleton Store ──────────────────────────────────────────────────────────
 
 let scrollState: ScrollState = INITIAL_STATE;
+let rafId: number | null = null;
+let lastProgress = -1;
+let frameCount = 0;
 
-const sectionListeners  = new Set<(state: ScrollState) => void>();
+const PROGRESS_FRAME_SKIP = 3;
+const PROGRESS_MIN_DELTA = 0.002;
+const SECTION_COOLDOWN_MS = 150;
+
+const sectionListeners = new Set<(state: ScrollState) => void>();
 const progressListeners = new Set<(progress: number) => void>();
 
 function notifySection(): void {
@@ -99,20 +106,20 @@ function applySection(section: SectionId): void {
   notifySection();
 }
 
-// ─── Queue (RAF-aligned, no setTimeout) ──────────────────────────────────────
+// ─── Queue (RAF-aligned) ─────────────────────────────────────────────────────
 
 interface QueueState {
-  pending:     SectionId | null;
+  pending: SectionId | null;
   isScheduled: boolean;
   lastSection: SectionId | null;
-  lastTime:    number;
+  lastTime: number;
 }
 
 const queue: QueueState = {
-  pending:     null,
+  pending: null,
   isScheduled: false,
   lastSection: null,
-  lastTime:    0,
+  lastTime: 0,
 };
 
 function scheduleFlush(): void {
@@ -125,15 +132,13 @@ function scheduleFlush(): void {
     const target = queue.pending;
     if (target === null) return;
 
-    queue.pending     = null;
+    queue.pending = null;
     queue.lastSection = target;
-    queue.lastTime    = Date.now();
+    queue.lastTime = Date.now();
 
     applySection(target);
   });
 }
-
-const SECTION_COOLDOWN_MS = 150;
 
 export function queueSetActiveSection(section: SectionId): void {
   if (
@@ -148,31 +153,24 @@ export function queueSetActiveSection(section: SectionId): void {
 }
 
 export function setActiveSection(section: SectionId): void {
-  queue.pending     = null;
+  queue.pending = null;
   queue.isScheduled = false;
   applySection(section);
 }
 
-// ─── RAF scroll-progress loop (unchanged core logic) ─────────────────────────
-
-let rafId:          number | null = null;
-let lastProgress:   number        = -1;
-let frameCount:     number        = 0;
-
-const PROGRESS_FRAME_SKIP = 3;
-const PROGRESS_MIN_DELTA  = 0.002;
+// ─── RAF scroll-progress loop (passive) ──────────────────────────────────────
 
 function scrollLoop(): void {
   frameCount++;
 
   if (frameCount % PROGRESS_FRAME_SKIP === 0) {
     const maxScroll = document.body.scrollHeight - window.innerHeight;
-    const raw       = maxScroll > 0 ? window.scrollY / maxScroll : 0;
-    const progress  = Math.min(1, Math.max(0, raw));
+    const raw = maxScroll > 0 ? window.scrollY / maxScroll : 0;
+    const progress = Math.min(1, Math.max(0, raw));
 
     if (Math.abs(progress - lastProgress) > PROGRESS_MIN_DELTA) {
       lastProgress = progress;
-      scrollState  = { ...scrollState, progress };
+      scrollState = { ...scrollState, progress };
       notifyProgress(progress);
     }
   }
@@ -192,97 +190,81 @@ function stopScrollLoop(): void {
   rafId = null;
 }
 
-// ─── Custom useDebounce hook (local, zero dependencies) ──────────────────────
+// ─── Passive scroll listener (no RAF loop when idle) ────────────────────────
 
-function useDebounce<T>(value: T, delay: number): T {
-  const [debouncedValue, setDebouncedValue] = useState(value);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+let passiveScrollActive = false;
+let passiveScrollTimer: ReturnType<typeof setTimeout> | null = null;
 
-  useEffect(() => {
-    timeoutRef.current = setTimeout(() => {
-      setDebouncedValue(value);
-    }, delay);
+function onPassiveScroll(): void {
+  if (!passiveScrollActive) {
+    passiveScrollActive = true;
+    startScrollLoop();
+  }
 
-    return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    };
-  }, [value, delay]);
-
-  return debouncedValue;
+  // Stop RAF loop after 2s of no scroll activity
+  if (passiveScrollTimer) clearTimeout(passiveScrollTimer);
+  passiveScrollTimer = setTimeout(() => {
+    passiveScrollActive = false;
+    stopScrollLoop();
+  }, 2000);
 }
 
 // ─── React Hooks ──────────────────────────────────────────────────────────────
 
-/**
- * Full scroll state — activeSection + narrativeState + debounced progress.
- * Progress is debounced by 100ms to prevent excessive renders during scroll.
- */
-export function useScrollNarrative(debounceProgressMs = 100): ScrollState {
+export function useScrollNarrative(): ScrollState {
   const [state, setState] = useState<ScrollState>(scrollState);
-  const rawProgressRef = useRef(scrollState.progress);
 
   useEffect(() => {
     setState(scrollState);
 
-    const onSection = (s: ScrollState) => {
-      setState(s);
-    };
-
+    const onSection = (s: ScrollState) => setState(s);
     const onProgress = (p: number) => {
-      rawProgressRef.current = p;
+      setState((prev) => ({ ...prev, progress: p }));
     };
 
     sectionListeners.add(onSection);
     progressListeners.add(onProgress);
+
+    // Use passive scroll listener instead of always-running RAF
+    window.addEventListener("scroll", onPassiveScroll, { passive: true });
     startScrollLoop();
 
     return () => {
       sectionListeners.delete(onSection);
       progressListeners.delete(onProgress);
+      window.removeEventListener("scroll", onPassiveScroll);
+
+      if (passiveScrollTimer) clearTimeout(passiveScrollTimer);
+
       if (sectionListeners.size === 0 && progressListeners.size === 0) {
         stopScrollLoop();
       }
     };
   }, []);
 
-  // Debounced progress derived from the raw value stored in ref
-  const debouncedProgress = useDebounce(rawProgressRef.current, debounceProgressMs);
-
-  // Merge debounced progress into state, but only when debounced value changes
-  // to avoid creating a new object on every render.
-  const stableState: ScrollState = {
-    ...state,
-    progress: debouncedProgress,
-  };
-
-  return stableState;
+  return state;
 }
 
-/**
- * Section-only state — does NOT re-render on scroll progress.
- */
 export function useActiveSection(): Pick<ScrollState, "activeSection" | "narrativeState"> {
-  const [section,  setSection]  = useState(scrollState.activeSection);
+  const [section, setSection] = useState(scrollState.activeSection);
   const [narrative, setNarrative] = useState(scrollState.narrativeState);
-
-  const sectionRef  = useRef(section);
-  const narrativeRef = useRef(narrative);
 
   useEffect(() => {
     const onSection = (s: ScrollState) => {
-      if (s.activeSection !== sectionRef.current) {
-        sectionRef.current  = s.activeSection;
-        narrativeRef.current = s.narrativeState;
-        setSection(s.activeSection);
-        setNarrative(s.narrativeState);
-      }
+      setSection(s.activeSection);
+      setNarrative(s.narrativeState);
     };
 
     sectionListeners.add(onSection);
+    window.addEventListener("scroll", onPassiveScroll, { passive: true });
     startScrollLoop();
 
     return () => {
       sectionListeners.delete(onSection);
+      window.removeEventListener("scroll", onPassiveScroll);
+
+      if (passiveScrollTimer) clearTimeout(passiveScrollTimer);
+
       if (sectionListeners.size === 0 && progressListeners.size === 0) {
         stopScrollLoop();
       }
@@ -291,8 +273,6 @@ export function useActiveSection(): Pick<ScrollState, "activeSection" | "narrati
 
   return { activeSection: section, narrativeState: narrative };
 }
-
-// ─── Utilities ────────────────────────────────────────────────────────────────
 
 export function getActiveNodeColor(state: NarrativeState): string {
   return NARRATIVE_COLORS[state];

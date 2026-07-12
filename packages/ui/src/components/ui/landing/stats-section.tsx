@@ -1,13 +1,12 @@
 // packages/ui/src/components/ui/landing/stats-section.tsx
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   StatsSection v4 — Premium Animated Counters
-   ✅ Glass morphism
-   ✅ i18n-ready
+   StatsSection v5 — Optimized Animated Counters
+   ✅ RAF throttled · GPU-safe · CLS-free · i18n-ready
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface StatsSectionProps {
@@ -28,8 +27,15 @@ const STATS: StatItem[] = [
 
 function AnimatedCounter({ end, label }: { end: number; label: string }) {
   const [count, setCount] = useState(0);
+  const [hydrated, setHydrated] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const started = useRef(false);
+  const rafRef = useRef<number>(0);
+
+  // Prevent hydration mismatch — render final value after mount
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   useEffect(() => {
     const el = ref.current;
@@ -40,39 +46,58 @@ function AnimatedCounter({ end, label }: { end: number; label: string }) {
         if (entry?.isIntersecting && !started.current) {
           started.current = true;
 
-          const prefersReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-          if (prefersReduced) {
+          if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
             setCount(end);
             return;
           }
 
           const duration = 1400;
           const startTime = performance.now();
+          let lastValue = 0;
 
           const tick = (now: number) => {
             const progress = Math.min((now - startTime) / duration, 1);
             const eased = 1 - Math.pow(1 - progress, 3);
-            setCount(Math.round(eased * end));
-            if (progress < 1) requestAnimationFrame(tick);
+            const newValue = Math.round(eased * end);
+
+            // Only setState when value actually changes
+            if (newValue !== lastValue) {
+              lastValue = newValue;
+              setCount(newValue);
+            }
+
+            if (progress < 1) {
+              rafRef.current = requestAnimationFrame(tick);
+            }
           };
 
-          requestAnimationFrame(tick);
+          rafRef.current = requestAnimationFrame(tick);
         }
       },
       { threshold: 0.5 },
     );
 
     observer.observe(el);
-    return () => observer.disconnect();
+
+    return () => {
+      observer.disconnect();
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    };
   }, [end]);
 
+  // Show placeholder with reserved space before hydration
+  const displayValue = hydrated ? count.toLocaleString("fa-AF") : end.toLocaleString("fa-AF");
+
   return (
-    <div ref={ref} className="text-center">
-      <div className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tabular-nums text-[hsl(var(--fg-primary))] mb-2 tracking-tight">
-        {count.toLocaleString("fa-AF")}
+    <div ref={ref} className="text-center min-w-[80px]">
+      <div
+        className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tabular-nums text-[hsl(var(--fg-primary))] mb-2 tracking-tight min-h-[3rem]"
+        aria-label={`${label}: ${displayValue}+`}
+      >
+        {displayValue}
         <span className="text-[hsl(var(--color-primary))]">+</span>
       </div>
-      <div className="text-xs sm:text-sm text-[hsl(var(--fg-secondary))] font-medium">
+      <div className="text-xs sm:text-sm text-[hsl(var(--fg-secondary))] font-medium min-h-[1.25rem]">
         {label}
       </div>
     </div>
@@ -86,11 +111,9 @@ export default function StatsSection({ t }: StatsSectionProps) {
         "relative overflow-hidden",
         "border-y border-[hsl(var(--border-default))]",
         "bg-[hsl(var(--surface-elevated)/0.4)]",
-        "backdrop-blur-sm",
         "py-14 sm:py-16 px-6",
       )}
     >
-      {/* Subtle glow */}
       <div
         className="pointer-events-none absolute inset-0"
         style={{

@@ -6,9 +6,8 @@ import { cn } from "@/lib/utils";
 import { FileText, Brain, TrendingDown } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   PainScene v4 — Premium Cards
-   ✅ Lucide icons
-   ✅ i18n-ready
+   PainScene v5 — CLS Fixed · GPU-safe
+   ✅ Reserved space · will-change · i18n-ready
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface PainSceneProps {
@@ -36,8 +35,8 @@ export default function PainScene({ t }: PainSceneProps) {
         {/* ── Header ── */}
         <div
           className={cn(
-            "text-center mb-16 transition-all duration-700",
-            "motion-reduce:transition-none",
+            "text-center mb-16 min-h-[130px]",
+            "transition-all duration-700 motion-reduce:transition-none",
             animated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5",
           )}
         >
@@ -60,39 +59,33 @@ export default function PainScene({ t }: PainSceneProps) {
               <div
                 key={key}
                 className={cn(
-                  "group relative text-center p-8",
+                  "group relative text-center p-8 min-h-[240px]",
                   "rounded-[var(--radius-card)]",
                   "border border-[hsl(var(--color-destructive)/0.15)]",
                   "bg-[hsl(var(--color-destructive)/0.03)]",
-                  "transition-all duration-500",
+                  "will-change-transform opacity-0",
+                  "transition-all duration-500 motion-reduce:transition-none",
                   "hover:border-[hsl(var(--color-destructive)/0.3)] hover:-translate-y-1",
-                  "motion-reduce:hover:transform-none",
-                  animated
-                    ? "opacity-100 translate-y-0"
-                    : "opacity-0 translate-y-6",
+                  animated && "opacity-100 translate-y-0",
                 )}
                 style={{ transitionDelay: `${i * 120}ms` }}
               >
-                {/* Icon */}
                 <div className={cn(
                   "mx-auto mb-5 flex items-center justify-center w-14 h-14 rounded-2xl",
                   "bg-[hsl(var(--color-destructive)/0.1)] text-[hsl(var(--color-destructive))]",
-                  "transition-all duration-300 group-hover:scale-110",
+                  "transition-transform duration-300 group-hover:scale-110 motion-reduce:group-hover:scale-100",
                 )}>
                   <Icon className="size-7" aria-hidden="true" />
                 </div>
 
-                {/* Title */}
-                <p className="text-lg font-bold mb-2 text-[hsl(var(--fg-primary))]">
+                <p className="text-lg font-bold mb-2 text-[hsl(var(--fg-primary))] min-h-[1.75rem]">
                   {t(`landing.${key}Title`, "")}
                 </p>
 
-                {/* Description */}
-                <p className="text-sm text-[hsl(var(--fg-secondary))] leading-relaxed">
+                <p className="text-sm text-[hsl(var(--fg-secondary))] leading-relaxed min-h-[2.5rem]">
                   {t(`landing.${key}Desc`, "")}
                 </p>
 
-                {/* Bottom divider */}
                 <div className="mt-5 mx-auto h-0.5 w-10 rounded-full bg-[hsl(var(--color-destructive)/0.3)]" />
               </div>
             );
