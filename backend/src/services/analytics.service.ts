@@ -1,5 +1,5 @@
 // ============================================
-// backend/src/services/analytics.service.ts — Optimized v2.0 + Cache
+// backend/src/services/analytics.service.ts — Optimized v2.0 + Cache + Reduced Response
 // ============================================
 
 import { supabase } from '../db'
@@ -57,7 +57,7 @@ export class AnalyticsService {
     })
   }
 
-  // ─── Sales Summary — با Cache ───
+  // ─── Sales Summary — با Cache + Reduced Response Size ───
   async getSalesSummary(userId: string, dateRange: DateRange) {
     const { startDate, endDate } = dateRange
     if (!userId || !startDate || !endDate) return this.emptySalesSummary()
@@ -113,19 +113,20 @@ export class AnalyticsService {
         }
       }
 
-    // ✅ Chart data — فقط ۳۰ روز آخر برای کاهش response size
-    const thirtyDaysAgo = new Date()
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-    
-    const chartData = invoices
-      .filter((inv: any) => new Date(inv.date) >= thirtyDaysAgo)
-      .reduce((acc: any[], inv: any) => {
-        const date = (inv.date as string).split('T')[0]
-        const existing = acc.find(d => d.label === date)
-        if (existing) { existing.value += Number(inv.total) }
-        else { acc.push({ label: date, value: Number(inv.total), date }) }
-        return acc
-      }, [])
+      // ✅ FIX: فقط ۱۴ روز آخر برای کاهش response size (۳۰ → ۱۴)
+      const fourteenDaysAgo = new Date()
+      fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14)
+      
+      const chartData = invoices
+        .filter((inv: any) => new Date(inv.date) >= fourteenDaysAgo)
+        .reduce((acc: any[], inv: any) => {
+          const date = (inv.date as string).split('T')[0]
+          const existing = acc.find(d => d.label === date)
+          if (existing) { existing.value += Number(inv.total) }
+          else { acc.push({ label: date, value: Number(inv.total), date }) }
+          return acc
+        }, [])
+
       return {
         totalRevenue: Math.round(totalRevenue * 100) / 100, totalInvoices: invoices.length,
         averageInvoiceValue: Math.round((totalRevenue / invoices.length) * 100) / 100,
@@ -170,8 +171,8 @@ export class AnalyticsService {
     const { startDate, endDate } = dateRange
     if (!userId || !startDate || !endDate) return this.emptyFinancialSummary()
     const { data: entries } = await supabase
-  .from('ledger_entries_view')
-  .select('debit, credit, account_id, entry_date')
+      .from('ledger_entries_view')
+      .select('debit, credit, account_id, entry_date')
       .eq('user_id', userId).gte('entry_date', startDate).lte('entry_date', endDate)
     if (!entries || entries.length === 0) return this.emptyFinancialSummary()
     const totalRevenue = entries.reduce((sum: number, e: any) => sum + Number(e.credit), 0)

@@ -1,6 +1,6 @@
 // ============================================
 // backend/src/services/workflow.service.ts — Optimized v2.0
-// Hisabche v1.1 — Workflow & Approval Engine + FK Tracking
+// Hisabche v1.1 — Workflow & Approval Engine + FK Tracking + Async Notifications
 // ============================================
 
 import { supabase } from "../db";
@@ -139,8 +139,10 @@ export class WorkflowService {
 
     if (error || !instance) throw new DatabaseError("Failed to start workflow", error);
 
-    // ✅ Send notification WITH workflow_instance_id
-    await this.sendNotification(instance, { action: "pending" });
+    // ✅ FIX: Async notification — non-blocking
+    this.sendNotification(instance, { action: "pending" }).catch(err =>
+      console.error('Notification failed:', err)
+    );
     return this.mapInstance(instance);
   }
 
@@ -282,10 +284,11 @@ export class WorkflowService {
       throw new DatabaseError("Failed to update instance", updateError);
     }
 
-    // ✅ Send notification WITH workflow_instance_id
- this.sendNotification(updated, action).catch(err => 
-  console.error('Notification failed:', err)
-)
+    // ✅ FIX: Async notification — non-blocking (۳.۵s → ~۱s)
+    this.sendNotification(updated, action).catch(err =>
+      console.error('Notification failed:', err)
+    );
+
     return {
       instance: this.mapInstance(updated),
       action: this.mapAction(action),
@@ -324,19 +327,16 @@ export class WorkflowService {
 
       if (!targetUserId) return;
 
-      // ✅ Include workflow_instance_id for FK tracking
-await this.notificationService.create(workspaceId, {
-  user_id: targetUserId,
-  title: cfg.title,
-  body: `${entityType} #${shortId} ${actionType === "pending" ? "نیاز به تأیید دارد" : actionType === "approved" ? "تأیید شد" : "رد شد"}.`,
-  type: cfg.type,
-  action_url: `/${entityType}s/${entityId}`,
-  entity_type: entityType,
-  entity_id: entityId,
-  metadata: {
-    workflow_instance_id: instanceId,
-  },
-})
+      await this.notificationService.create(workspaceId, {
+        user_id: targetUserId,
+        title: cfg.title,
+        body: `${entityType} #${shortId} ${actionType === "pending" ? "نیاز به تأیید دارد" : actionType === "approved" ? "تأیید شد" : "رد شد"}.`,
+        type: cfg.type,
+        action_url: `/${entityType}s/${entityId}`,
+        entity_type: entityType,
+        entity_id: entityId,
+        metadata: { workflow_instance_id: instanceId },
+      });
     } catch (err) {
       console.error("[Workflow] Notification failed:", err);
     }
