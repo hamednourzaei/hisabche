@@ -1,17 +1,27 @@
-// packages/ui/src/containers/customers-container.tsx
+// packages/ui/src/components/ui/customers/containers/customer-container.tsx
 "use client"
 
 import { useState, useCallback, useMemo } from "react"
 import { useTranslation } from "react-i18next"
-import { useCustomers } from "../../../..//hooks/customers/use-customers"
+import { useCustomers } from "../../../../hooks/customers/use-customers"
 import { customersView } from "../customer-view"
 import { fmt } from "../../../../lib/customers/customers-format"
 import type { CustomerWithDebt } from "../../../../lib/customers/customers-types"
+
+// ✅ Lazy load workspace container
+let CustomerWorkspaceContainer: any = null
+async function loadWorkspace() {
+  if (CustomerWorkspaceContainer) return CustomerWorkspaceContainer
+  const mod = await import("./customer-workspace-container")
+  CustomerWorkspaceContainer = mod.CustomerWorkspaceContainer
+  return CustomerWorkspaceContainer
+}
 
 export function customersContainer() {
   const { t } = useTranslation()
   const [search, setSearch] = useState("")
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null)
+  const [workspaceLoaded, setWorkspaceLoaded] = useState(false)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [paymentCustomer, setPaymentCustomer] = useState<CustomerWithDebt | null>(null)
@@ -33,17 +43,22 @@ export function customersContainer() {
     if (!search.trim()) return customersWithDebt
     const term = search.toLowerCase()
     return customersWithDebt.filter(
-      (c) =>
+      (c: any) =>
         (c.fullName?.toLowerCase().includes(term)) ||
         (c.name?.toLowerCase().includes(term)) ||
         (c.phone?.toLowerCase().includes(term))
     )
   }, [customersWithDebt, search])
 
+  const selectedCustomer = useMemo(() => {
+    if (!selectedCustomerId) return null
+    return customersWithDebt.find((c: any) => c.id === selectedCustomerId) || null
+  }, [selectedCustomerId, customersWithDebt])
+
   const paymentInvoicesForModal = useMemo(() => {
     if (!paymentCustomer) return []
     const openInvoices = getOpenInvoicesForCustomer(paymentCustomer.id)
-    return openInvoices.map((inv) => ({
+    return openInvoices.map((inv: any) => ({
       id: inv.id,
       invoiceNumber: inv.invoiceNumber,
       total: inv.total,
@@ -71,10 +86,12 @@ export function customersContainer() {
 
   const handleSelectCustomer = useCallback((id: string) => {
     setSelectedCustomerId(id)
+    loadWorkspace().then(() => setWorkspaceLoaded(true))
   }, [])
 
   const handleClearSelection = useCallback(() => {
     setSelectedCustomerId(null)
+    setWorkspaceLoaded(false)
   }, [])
 
   const safeT = useCallback(
@@ -85,7 +102,17 @@ export function customersContainer() {
     [t]
   )
 
-  // ✅ اصلاح: صدا زدن customersView به عنوان تابع
+  // ✅ اگر مشتری انتخاب شده و workspace لود شده
+  if (selectedCustomerId && selectedCustomer && workspaceLoaded && CustomerWorkspaceContainer) {
+    return (
+      <CustomerWorkspaceContainer
+        customerId={selectedCustomerId}
+        customerBase={selectedCustomer}
+        onBack={handleClearSelection}
+      />
+    )
+  }
+
   return customersView({
     t: safeT,
     fmt,

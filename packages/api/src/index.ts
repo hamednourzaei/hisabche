@@ -1,5 +1,5 @@
 // ============================================
-// Hisabche API — Barrel Exports
+// Hisabche API — Barrel Exports (Complete)
 // ============================================
 
 export { apiClient, type ApiResponse, type ApiError } from './lib/client'
@@ -35,7 +35,7 @@ export {
 export { useTransactions, useCreateTransaction, useLedger, transactionKeys } from './hooks/transactions'
 export { useRealtime } from './hooks/useRealtime'
 
-// ✅ Dashboard (فاز ۲۲ + ۲۳)
+// ✅ Dashboard
 export {
   useDashboardKPIs,
   useAIInsights,
@@ -47,7 +47,7 @@ export {
   type SalesChartData,
 } from './hooks/dashboard'
 
-// ---------- Employees (فاز ۱۵) ----------
+// ---------- Employees ----------
 export {
   useEmployees,
   useEmployee,
@@ -57,14 +57,14 @@ export {
   employeeKeys,
 } from './hooks/employees'
 
-// ---------- Projects (فاز ۱۶) ----------
+// ---------- Projects ----------
 export {
   useProjects, useProject, useCreateProject, useUpdateProject, useDeleteProject,
   useProjectTasks, useCreateProjectTask, useUpdateProjectTask, useDeleteProjectTask,
   projectKeys, projectTaskKeys,
 } from './hooks/projects'
 
-// ---------- Workspace (فاز ۱۷) ----------
+// ---------- Workspace ----------
 export {
   useWorkspaces,
   useWorkspaceMembers,
@@ -75,7 +75,7 @@ export {
   workspaceKeys,
 } from './hooks/workspace'
 
-// ---------- Permissions (فاز ۱۸) ----------
+// ---------- Permissions ----------
 export { 
   useRoles, 
   usePermissions, 
@@ -84,10 +84,64 @@ export {
   permissionKeys,
 } from './hooks/permissions'
 
-// ---------- Audit (فاز ۱۹) ----------
+// ---------- Audit ----------
 export { 
   useAuditLogs, 
   auditKeys,
   type AuditLog,
   type AuditResponse,
 } from './hooks/audit'
+
+// ---------- Accounting (NEW) ----------
+export {
+  useAccounts,
+  useCreateAccount,
+  useJournalEntries,
+  useCreateJournalEntry,
+  useTrialBalance,
+  useBalanceSheet,
+  useIncomeStatement,
+  accountingKeys,
+  type Account,
+  type JournalEntry,
+  type JournalLine,
+  type TrialBalance,
+  type BalanceSheet,
+  type IncomeStatement,
+} from './hooks/accounting'
+
+// ---------- CRM (NEW) ----------
+export {
+  useInteractions,
+  useCreateInteraction,
+  useOpportunities,
+  useCreateOpportunity,
+  useUpdateOpportunity,
+  crmKeys,
+  type Interaction,
+  type Opportunity,
+} from './hooks/crm'
+
+// ---------- Manufacturing (NEW) ----------
+export {
+  useBOMs,
+  useCreateBOM,
+  useWorkOrders,
+  useCreateWorkOrder,
+  useCompleteWorkOrder,
+  manufacturingKeys,
+  type BOM,
+  type BOMItem,
+  type WorkOrder,
+} from './hooks/manufacturing'
+
+// ---------- Purchasing (NEW) ----------
+export {
+  usePurchaseOrders,
+  usePurchaseOrder,
+  useCreatePurchaseOrder,
+  useReceiveGoods,
+  purchasingKeys,
+  type PurchaseOrder,
+  type PurchaseOrderItem,
+} from './hooks/purchasing'
