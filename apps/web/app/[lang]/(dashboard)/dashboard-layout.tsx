@@ -28,9 +28,14 @@ import "@hisabche/ui/globals.css";
 
 function usePrefetchRoutes() {
   const router = useRouter();
+  const pathname = usePathname();
   useEffect(() => {
-    NAV_ITEMS.forEach((item) => router.prefetch(item.path));
-  }, [router]);
+    // فقط صفحه فعلی prefetch شود
+    const currentItem = NAV_ITEMS.find(item => pathname.startsWith(item.path));
+    if (currentItem) {
+      router.prefetch(currentItem.path);
+    }
+  }, [router, pathname]);
 }
 
 function getLocaleFromPathname(pathname: string): string {

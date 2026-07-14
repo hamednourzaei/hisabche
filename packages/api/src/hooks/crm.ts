@@ -1,5 +1,5 @@
 // ============================================
-// CRM Hooks — TanStack Query
+// CRM Hooks — TanStack Query (Fixed Paths)
 // ============================================
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -29,7 +29,8 @@ export function useInteractions(customerId?: string) {
   return useQuery({
     queryKey: crmKeys.interactions(customerId),
     queryFn: async (): Promise<Interaction[]> => {
-      const { data } = await apiClient.get('/crm/interactions', {
+      // ✅ Fix: /api/interactions (نه /api/crm/interactions)
+      const { data } = await apiClient.get('/interactions', {
         params: customerId ? { customerId } : {},
       })
       return data
@@ -42,7 +43,8 @@ export function useCreateInteraction() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (input: any) => {
-      const { data } = await apiClient.post('/crm/interactions', input)
+      // ✅ Fix
+      const { data } = await apiClient.post('/interactions', input)
       return data
     },
     onSuccess: () => {
@@ -55,7 +57,8 @@ export function useOpportunities(customerId?: string) {
   return useQuery({
     queryKey: crmKeys.opportunities(customerId),
     queryFn: async (): Promise<Opportunity[]> => {
-      const { data } = await apiClient.get('/crm/opportunities', {
+      // ✅ Fix: /api/opportunities (نه /api/crm/opportunities)
+      const { data } = await apiClient.get('/opportunities', {
         params: customerId ? { customerId } : {},
       })
       return data
@@ -68,7 +71,8 @@ export function useCreateOpportunity() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (input: any) => {
-      const { data } = await apiClient.post('/crm/opportunities', input)
+      // ✅ Fix
+      const { data } = await apiClient.post('/opportunities', input)
       return data
     },
     onSuccess: () => {
@@ -81,7 +85,8 @@ export function useUpdateOpportunity() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, ...input }: any) => {
-      const { data } = await apiClient.patch(`/crm/opportunities/${id}`, input)
+      // ✅ Fix
+      const { data } = await apiClient.patch(`/opportunities/${id}`, input)
       return data
     },
     onSuccess: () => {
