@@ -1,12 +1,13 @@
 // ============================================
 // backend/src/services/invoice.service.ts
-// Hisabche v2.0 — Performance Optimized + Async Non-blocking
+// Hisabche v2.0 — Performance Optimized + Cache Invalidation
 // ============================================
 
 import { supabase } from "../db";
 import { WorkflowService } from "./workflow.service";
 import { CreateInvoice, UpdateInvoice, InvoiceFilters } from "@hisabche/validation";
 import { DatabaseError, NotFoundError } from "../errors/database.error";
+import { memoryCache } from "../utils/pagination";
 
 // ============================================
 // ✅ Column Selection Constants — SaaS Performance
@@ -60,7 +61,6 @@ export class InvoiceService {
     const { data, error, count } = await query;
     if (error) throw new DatabaseError("Failed to fetch invoices", error);
 
-    // ✅ FIX: حذف summary blocking — ۳ کوئری کمتر، پاسخ سریع‌تر
     return { invoices: data || [], total: count || 0, page, limit };
   }
 
@@ -72,7 +72,7 @@ export class InvoiceService {
     return data;
   }
 
-  // ─── Create Invoice — Async non-blocking workflow/accounting ───
+  // ─── Create Invoice — Async non-blocking + Cache Invalidation ───
   async create(userId: string, data: CreateInvoice) {
     const invoiceNumber = await this.generateInvoiceNumber(userId);
 
@@ -125,7 +125,10 @@ export class InvoiceService {
       });
     }
 
-    // ✅ FIX: Fire-and-forget — async non-blocking (۸.۳s → ~۱s)
+    // ✅ Cache Invalidation — بعد از write موفق
+    this.invalidateUserCache(userId)
+
+    // ✅ Fire-and-forget — async non-blocking
     this.createAccountingEntries(userId, invoice.id, { ...data, invoiceNumber, total: data.total || 0 })
       .catch(err => console.error('Accounting entry failed:', err));
 
@@ -135,7 +138,7 @@ export class InvoiceService {
     return this.getById(invoice.id, userId);
   }
 
-  // ─── Update Invoice ───
+  // ─── Update Invoice — با Cache Invalidation ───
   async update(id: string, userId: string, data: UpdateInvoice) {
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
     if (data.status !== undefined) updates.status = data.status;
@@ -150,14 +153,31 @@ export class InvoiceService {
 
     if (error) throw new DatabaseError("Failed to update invoice", error);
     if (!invoice) throw new NotFoundError("Invoice");
+
+    // ✅ Cache Invalidation
+    this.invalidateUserCache(userId)
+
     return invoice;
   }
 
-  // ─── Delete Invoice ───
+  // ─── Delete Invoice — با Cache Invalidation ───
   async delete(id: string, userId: string): Promise<void> {
     await supabase.from("invoice_items").delete().eq("invoice_id", id);
     const { error } = await supabase.from("invoices").delete().eq("id", id).eq("user_id", userId);
     if (error) throw new DatabaseError("Failed to delete invoice", error);
+
+    // ✅ Cache Invalidation
+    this.invalidateUserCache(userId)
+  }
+
+  // ─── Cache Invalidation Helper ───
+  private invalidateUserCache(userId: string) {
+    memoryCache.invalidate(`dashboard:${userId}`)
+    memoryCache.invalidate(`sales:${userId}`)
+    memoryCache.invalidate(`insights:${userId}`)
+    memoryCache.invalidate(`invoices:${userId}`)
+    memoryCache.invalidate(`customers:${userId}`)
+    memoryCache.invalidate(`products:${userId}`)
   }
 
   // ─── Get Summary (still available as standalone endpoint) ───

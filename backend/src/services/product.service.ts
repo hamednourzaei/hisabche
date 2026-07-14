@@ -1,11 +1,12 @@
 // ============================================
-// backend/src/services/product.service.ts — Optimized v2.0
+// backend/src/services/product.service.ts — Optimized v2.0 + Cache Invalidation
 // ============================================
 
 import { supabase } from '../db'
 import { CreateProduct, UpdateProduct, ProductFilters } from '@hisabche/validation'
 import { DatabaseError, NotFoundError } from '../errors/database.error'
 import { mapProduct } from '../utils/product.mapper'
+import { memoryCache } from '../utils/pagination'
 
 // ✅ Column Selection Constants
 const PRODUCT_LIST_COLUMNS = `
@@ -15,32 +16,20 @@ const PRODUCT_LIST_COLUMNS = `
 `
 
 const SORT_BY_MAP: Record<string, string> = {
-  createdAt: 'created_at',
-  updatedAt: 'updated_at',
-  sellPrice: 'sell_price',
-  buyPrice: 'buy_price',
-  minStockLevel: 'min_stock_level',
+  createdAt: 'created_at', updatedAt: 'updated_at',
+  sellPrice: 'sell_price', buyPrice: 'buy_price', minStockLevel: 'min_stock_level',
 }
 
 export class ProductService {
-  // ─── List ─── بهینه‌شده
+  // ─── List ───
   async list(userId: string, filters: ProductFilters) {
-    const {
-      search, category, isActive, lowStock,
-      minPrice, maxPrice, barcode,
-      page, limit, sortBy, sortDirection
-    } = filters
-
-    const from = (page - 1) * limit
-    const to = from + limit - 1
+    const { search, category, isActive, lowStock, minPrice, maxPrice, barcode, page, limit, sortBy, sortDirection } = filters
+    const from = (page - 1) * limit; const to = from + limit - 1
     const dbSortBy = SORT_BY_MAP[sortBy ?? ''] ?? sortBy ?? 'created_at'
 
     let query = supabase
-      .from('products')
-      .select(PRODUCT_LIST_COLUMNS, { count: 'exact' })
-      .eq('user_id', userId)
-      .order(dbSortBy, { ascending: sortDirection === 'asc' })
-      .range(from, to)
+      .from('products').select(PRODUCT_LIST_COLUMNS, { count: 'exact' })
+      .eq('user_id', userId).order(dbSortBy, { ascending: sortDirection === 'asc' }).range(from, to)
 
     if (search) query = query.ilike('name', `%${search}%`)
     if (category) query = query.eq('category', category)
@@ -50,30 +39,21 @@ export class ProductService {
     if (maxPrice !== undefined) query = query.lte('sell_price', maxPrice)
 
     const { data, error, count } = await query
-
     if (error) throw new DatabaseError('Failed to fetch products', error)
 
-    // ✅ Type-safe filter
     let products = (data || []).map(mapProduct)
-
     if (lowStock !== undefined) {
       products = lowStock
         ? products.filter((product: any) => product.quantity <= product.minStockLevel)
         : products.filter((product: any) => product.quantity > product.minStockLevel)
     }
-
     return { products, total: count || 0, page, limit }
   }
 
   // ─── Get By ID ───
   async getById(id: string, userId: string) {
     const { data: product, error } = await supabase
-      .from('products')
-      .select(PRODUCT_LIST_COLUMNS)
-      .eq('id', id)
-      .eq('user_id', userId)
-      .single()
-
+      .from('products').select(PRODUCT_LIST_COLUMNS).eq('id', id).eq('user_id', userId).single()
     if (error || !product) throw new NotFoundError('Product')
     return mapProduct(product)
   }
@@ -81,36 +61,28 @@ export class ProductService {
   // ─── Create ───
   async create(userId: string, data: CreateProduct) {
     const { data: product, error } = await supabase
-      .from('products')
-      .insert({
-        name: data.name,
-        barcode: data.barcode || '',
-        sku: data.sku || '',
-        category: data.category || 'general',
-        description: data.description || '',
-        image_url: data.imageUrl || '',
-        quantity: data.quantity || 0,
-        unit: data.unit || 'piece',
-        min_stock_level: data.minStockLevel || 5,
-        buy_price: data.buyPrice || 0,
-        sell_price: data.sellPrice || 0,
-        wholesale_price: data.wholesalePrice || null,
-        is_active: data.isActive !== false,
-        user_id: userId,
+      .from('products').insert({
+        name: data.name, barcode: data.barcode || '', sku: data.sku || '',
+        category: data.category || 'general', description: data.description || '',
+        image_url: data.imageUrl || '', quantity: data.quantity || 0,
+        unit: data.unit || 'piece', min_stock_level: data.minStockLevel || 5,
+        buy_price: data.buyPrice || 0, sell_price: data.sellPrice || 0,
+        wholesale_price: data.wholesalePrice || null, is_active: data.isActive !== false, user_id: userId,
       })
-      .select(PRODUCT_LIST_COLUMNS)
-      .single()
+      .select(PRODUCT_LIST_COLUMNS).single()
 
     if (error) throw new DatabaseError('Failed to create product', error)
+
+    // ✅ Cache Invalidation
+    memoryCache.invalidate(`products:${userId}`)
+    memoryCache.invalidate(`dashboard:${userId}`)
+
     return mapProduct(product)
   }
 
   // ─── Update ───
   async update(id: string, userId: string, data: UpdateProduct) {
-    const updates: Record<string, unknown> = {
-      updated_at: new Date().toISOString(),
-    }
-
+    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (data.name !== undefined) updates.name = data.name
     if (data.barcode !== undefined) updates.barcode = data.barcode
     if (data.sku !== undefined) updates.sku = data.sku
@@ -126,61 +98,42 @@ export class ProductService {
     if (data.isActive !== undefined) updates.is_active = data.isActive
 
     const { data: product, error } = await supabase
-      .from('products')
-      .update(updates)
-      .eq('id', id)
-      .eq('user_id', userId)
-      .select(PRODUCT_LIST_COLUMNS)
-      .single()
+      .from('products').update(updates).eq('id', id).eq('user_id', userId)
+      .select(PRODUCT_LIST_COLUMNS).single()
 
     if (error) throw new DatabaseError('Failed to update product', error)
     if (!product) throw new NotFoundError('Product')
+
+    // ✅ Cache Invalidation
+    memoryCache.invalidate(`products:${userId}`)
+    memoryCache.invalidate(`dashboard:${userId}`)
+
     return mapProduct(product)
   }
 
   // ─── Delete ───
   async delete(id: string, userId: string): Promise<void> {
-    const { count } = await supabase
-      .from('invoice_items')
-      .select('id', { count: 'exact', head: true })
-      .eq('product_id', id)
+    const { count } = await supabase.from('invoice_items').select('id', { count: 'exact', head: true }).eq('product_id', id)
+    if (count && count > 0) throw new DatabaseError('Product has invoice items, cannot delete')
 
-    if (count && count > 0) {
-      throw new DatabaseError('Product has invoice items, cannot delete')
-    }
+    const { count: stockCount } = await supabase.from('stock_movements').select('id', { count: 'exact', head: true }).eq('product_id', id)
+    if (stockCount && stockCount > 0) throw new DatabaseError('Product has stock movements, cannot delete')
 
-    const { count: stockCount } = await supabase
-      .from('stock_movements')
-      .select('id', { count: 'exact', head: true })
-      .eq('product_id', id)
-
-    if (stockCount && stockCount > 0) {
-      throw new DatabaseError('Product has stock movements, cannot delete')
-    }
-
-    const { error } = await supabase
-      .from('products')
-      .delete()
-      .eq('id', id)
-      .eq('user_id', userId)
-
+    const { error } = await supabase.from('products').delete().eq('id', id).eq('user_id', userId)
     if (error) throw new DatabaseError('Failed to delete product', error)
+
+    // ✅ Cache Invalidation
+    memoryCache.invalidate(`products:${userId}`)
+    memoryCache.invalidate(`dashboard:${userId}`)
   }
 
   // ─── Get Low Stock ───
   async getLowStock(userId: string) {
     const { data, error } = await supabase
-      .from('products')
-      .select('id, name, quantity, min_stock_level, unit, sell_price')
-      .eq('user_id', userId)
-      .eq('is_active', true)
-      .order('quantity', { ascending: true })
+      .from('products').select('id, name, quantity, min_stock_level, unit, sell_price')
+      .eq('user_id', userId).eq('is_active', true).order('quantity', { ascending: true })
 
     if (error) throw new DatabaseError('Failed to fetch low stock products', error)
-
-    // ✅ فیلتر در سمت سرور بهتر است اما اینجا در JS انجام می‌شود
-    return (data || [])
-      .map(mapProduct)
-      .filter((product: any) => product.quantity <= product.minStockLevel)
+    return (data || []).map(mapProduct).filter((product: any) => product.quantity <= product.minStockLevel)
   }
 }

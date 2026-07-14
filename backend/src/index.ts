@@ -145,17 +145,35 @@ async function start(): Promise<void> {
     })
 
     // ─── Rate Limit ──────────────────────────
-    await server.register(rateLimit, {
-      max: 200,
-      timeWindow: '1 minute',
-      keyGenerator: (request) => request.ip,
-      errorResponseBuilder: (_request: any, context: any) => ({
-        success: false,
-        error: 'Too many requests',
-        retryAfter: Math.ceil(context.after / 1000),
-      }),
-    })
+await server.register(rateLimit, {
+  max: 100,  // کاهش از ۲۰۰ به ۱۰۰
+  timeWindow: '1 minute',
+  keyGenerator: (request) => {
+    // Per-user rate limiting (اگر authenticated)
+    return (request as any).userId || request.ip
+  },
+  errorResponseBuilder: (_request: any, context: any) => ({
+    success: false,
+    error: 'Too many requests',
+    retryAfter: Math.ceil(context.after / 1000),
+    limit: context.max,
+    remaining: context.remaining,
+  }),
+})
 
+
+// در index.ts اضافه کنید:
+server.get('/api/slo', async () => ({
+  service: 'Hisabche API',
+  version: '2.0.0',
+  slo: {
+    availability: '99.9%',
+    p95Latency: '< 300ms',
+    p99Latency: '< 800ms',
+    errorRate: '< 0.1%',
+  },
+  timestamp: new Date().toISOString(),
+}))
     // ─── CORS ────────────────────────────────
     await server.register(cors, {
       origin: isProduction
