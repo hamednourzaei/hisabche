@@ -1,4 +1,3 @@
-// ============================================
 // backend/src/services/customer.service.ts
 // ============================================
 
@@ -6,7 +5,6 @@ import { supabase } from '../db'
 import { CreateCustomer, UpdateCustomer, CustomerFilters } from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
 
-// ✅ مپ کردن snake_case به camelCase
 function mapCustomer(raw: Record<string, any>) {
   return {
     id: raw.id,
@@ -17,14 +15,19 @@ function mapCustomer(raw: Record<string, any>) {
     notes: raw.notes,
     openingBalance: raw.opening_balance,
     isActive: raw.is_active,
-    type: raw.type, // ✅ جدید
+    type: raw.type,
     createdAt: raw.created_at,
     updatedAt: raw.updated_at,
   }
 }
 
+// ✅ ستون‌های ضروری برای لیست (بدون notes, address که حجم زیادی دارند)
+const LIST_COLUMNS = 'id, full_name, phone, email, opening_balance, is_active, type, created_at'
+// ✅ ستون‌های کامل برای جزئیات
+const DETAIL_COLUMNS = 'id, full_name, phone, email, address, notes, opening_balance, is_active, type, created_at, updated_at'
+
 export class CustomerService {
-  // ─── List ────────────────────────────────────────────────
+  // ─── List ─── بهینه‌شده
   async list(userId: string, filters: CustomerFilters) {
     const { search, isActive, hasBalance, type, page, limit, sortBy, sortDirection } = filters
     const from = (page - 1) * limit
@@ -32,7 +35,7 @@ export class CustomerService {
 
     let query = supabase
       .from('customers')
-      .select('*', { count: 'exact' })
+      .select(LIST_COLUMNS, { count: 'exact' }) // ✅ فقط ۸ ستون ضروری
       .eq('user_id', userId)
       .order(sortBy || 'created_at', { ascending: sortDirection === 'asc' })
       .range(from, to)
@@ -54,7 +57,7 @@ export class CustomerService {
     }
 
     if (type !== undefined) {
-      query = query.eq('type', type) // ✅ جدید
+      query = query.eq('type', type)
     }
 
     const { data, error, count } = await query
@@ -71,11 +74,11 @@ export class CustomerService {
     }
   }
 
-  // ─── Get By ID ──────────────────────────────────────────
+  // ─── Get By ID ─── ستون‌های کامل برای جزئیات
   async getById(id: string, userId: string) {
     const { data: customer, error } = await supabase
       .from('customers')
-      .select('*')
+      .select(DETAIL_COLUMNS) // ✅ ستون‌های کامل
       .eq('id', id)
       .eq('user_id', userId)
       .single()
@@ -84,7 +87,6 @@ export class CustomerService {
       throw new DatabaseError('Customer not found', error)
     }
 
-    // Get balance from transactions
     const balance = await this.getBalance(id, userId)
 
     return {
@@ -93,9 +95,8 @@ export class CustomerService {
     }
   }
 
-  // ─── Create ─────────────────────────────────────────────
+  // ─── Create ───
   async create(userId: string, data: CreateCustomer) {
-    // ✅ Transaction اتمیک با استفاده از Supabase RPC
     const { data: customer, error } = await supabase
       .from('customers')
       .insert({
@@ -106,31 +107,29 @@ export class CustomerService {
         notes: data.notes || '',
         opening_balance: data.openingBalance || 0,
         is_active: data.isActive !== false,
-        type: data.type || 'cash', // ✅ جدید
+        type: data.type || 'cash',
         user_id: userId,
       })
-      .select()
+      .select(DETAIL_COLUMNS) // ✅
       .single()
 
     if (error) {
       throw new DatabaseError('Failed to create customer', error)
     }
 
-    // ✅ اگر نوع مشتری credit باشد، یک تراکنش بدهی ایجاد کن
     if (data.type === 'credit') {
       const { error: txError } = await supabase
         .from('transactions')
         .insert({
           customer_id: customer.id,
           type: 'sale',
-          amount: data.openingBalance || 0, // اگر openingBalance نداشته باشد، ۰
+          amount: data.openingBalance || 0,
           currency: 'AFN',
           description: 'Credit sale - opening balance',
           user_id: userId,
         })
 
       if (txError) {
-        // ❌ اگر تراکنش fail شد، مشتری را حذف کن (اتمیک بودن)
         await supabase.from('customers').delete().eq('id', customer.id)
         throw new DatabaseError('Failed to create credit transaction', txError)
       }
@@ -139,24 +138,24 @@ export class CustomerService {
     return mapCustomer(customer)
   }
 
-  // ─── Update ─────────────────────────────────────────────
+  // ─── Update ───
   async update(id: string, userId: string, data: UpdateCustomer) {
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
-    
+
     if (data.fullName !== undefined) updates.full_name = data.fullName
     if (data.phone !== undefined) updates.phone = data.phone
     if (data.email !== undefined) updates.email = data.email
     if (data.address !== undefined) updates.address = data.address
     if (data.notes !== undefined) updates.notes = data.notes
     if (data.isActive !== undefined) updates.is_active = data.isActive
-    if (data.type !== undefined) updates.type = data.type // ✅ جدید
+    if (data.type !== undefined) updates.type = data.type
 
     const { data: customer, error } = await supabase
       .from('customers')
       .update(updates)
       .eq('id', id)
       .eq('user_id', userId)
-      .select()
+      .select(DETAIL_COLUMNS) // ✅
       .single()
 
     if (error) {
@@ -170,12 +169,11 @@ export class CustomerService {
     return mapCustomer(customer)
   }
 
-  // ─── Delete ─────────────────────────────────────────────
+  // ─── Delete ─── بدون تغییر
   async delete(id: string, userId: string): Promise<void> {
-    // Check if customer has transactions
     const { count } = await supabase
       .from('transactions')
-      .select('*', { count: 'exact', head: true })
+      .select('id', { count: 'exact', head: true }) // ✅ فقط id برای count
       .eq('customer_id', id)
 
     if (count && count > 0) {
@@ -193,11 +191,11 @@ export class CustomerService {
     }
   }
 
-  // ─── Get Balance ────────────────────────────────────────
+  // ─── Get Balance ─── از قبل بهینه بود ✅
   async getBalance(customerId: string, userId: string) {
     const { data: transactions, error } = await supabase
       .from('transactions')
-      .select('type, amount')
+      .select('type, amount') // ✅ فقط type و amount
       .eq('customer_id', customerId)
       .eq('user_id', userId)
 
