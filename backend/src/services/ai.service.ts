@@ -5,7 +5,7 @@
 import { supabase } from '../db'
 import { AIQuery, AIInsight } from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
-
+import { CacheKeys, withCacheKey } from '../utils/cache'
 export class AIService {
   // ─── Process Query ───
   async processQuery(userId: string, query: AIQuery) {
@@ -176,52 +176,42 @@ export class AIService {
 
   // ─── Get Insights — بهینه‌شده با Promise.all ───
   async getInsights(userId: string): Promise<AIInsight[]> {
-    // ✅ سه کوئری همزمان
-    const [productsResult, unpaidResult] = await Promise.all([
-      supabase.from('products').select('name, quantity, min_stock_level').eq('user_id', userId).eq('is_active', true),
-      supabase.from('invoices').select('id', { count: 'exact', head: true }).eq('user_id', userId).neq('status', 'paid').neq('status', 'cancelled'),
-    ])
+    return withCacheKey(CacheKeys.insights(userId), 120_000, async () => {
+      const [productsResult, unpaidResult] = await Promise.all([
+        supabase.from('products').select('name, quantity, min_stock_level').eq('user_id', userId).eq('is_active', true),
+        supabase.from('invoices').select('id', { count: 'exact', head: true }).eq('user_id', userId).neq('status', 'paid').neq('status', 'cancelled'),
+      ])
 
-    const insights: AIInsight[] = []
+      const insights: AIInsight[] = []
 
-    // بررسی موجودی کم
-    const products = productsResult.data || []
-    const lowStock = products.filter((p: any) => Number(p.quantity) <= Number(p.min_stock_level))
-    if (lowStock.length > 0) {
+      const products = productsResult.data || []
+      const lowStock = products.filter((p: any) => Number(p.quantity) <= Number(p.min_stock_level))
+      if (lowStock.length > 0) {
+        insights.push({
+          type: 'warning', title: 'هشدار کمبود موجودی',
+          description: `${lowStock.length} محصول به حداقل موجودی رسیده‌اند.`,
+          action: '/warehouse', actionLabel: 'مشاهده موجودی',
+          metric: lowStock.length, metricLabel: 'محصول',
+        })
+      }
+
+      const unpaidCount = unpaidResult.count || 0
+      if (unpaidCount > 0) {
+        insights.push({
+          type: 'info', title: 'فاکتورهای در انتظار پرداخت',
+          description: `${unpaidCount} فاکتور هنوز پرداخت نشده‌اند.`,
+          action: '/invoices', actionLabel: 'مشاهده فاکتورها',
+          metric: unpaidCount, metricLabel: 'فاکتور',
+        })
+      }
+
       insights.push({
-        type: 'warning',
-        title: 'هشدار کمبود موجودی',
-        description: `${lowStock.length} محصول به حداقل موجودی رسیده‌اند.`,
-        action: '/warehouse',
-        actionLabel: 'مشاهده موجودی',
-        metric: lowStock.length,
-        metricLabel: 'محصول',
+        type: 'tip', title: 'نکته روز',
+        description: 'می‌توانید با ثبت هزینه‌ها در بخش حسابداری، گزارش سود و زیان دقیق‌تری داشته باشید.',
+        action: '/accounting', actionLabel: 'رفتن به حسابداری',
       })
-    }
 
-    // بررسی فاکتورهای پرداخت‌نشده
-    const unpaidCount = unpaidResult.count || 0
-    if (unpaidCount > 0) {
-      insights.push({
-        type: 'info',
-        title: 'فاکتورهای در انتظار پرداخت',
-        description: `${unpaidCount} فاکتور هنوز پرداخت نشده‌اند.`,
-        action: '/invoices',
-        actionLabel: 'مشاهده فاکتورها',
-        metric: unpaidCount,
-        metricLabel: 'فاکتور',
-      })
-    }
-
-    // Tip روز
-    insights.push({
-      type: 'tip',
-      title: 'نکته روز',
-      description: 'می‌توانید با ثبت هزینه‌ها در بخش حسابداری، گزارش سود و زیان دقیق‌تری داشته باشید.',
-      action: '/accounting',
-      actionLabel: 'رفتن به حسابداری',
+      return insights
     })
-
-    return insights
   }
 }
