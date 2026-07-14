@@ -8,20 +8,10 @@ import { customersView } from "../customer-view"
 import { fmt } from "../../../../lib/customers/customers-format"
 import type { CustomerWithDebt } from "../../../../lib/customers/customers-types"
 
-// ✅ Lazy load workspace container
-let CustomerWorkspaceContainer: any = null
-async function loadWorkspace() {
-  if (CustomerWorkspaceContainer) return CustomerWorkspaceContainer
-  const mod = await import("./customer-workspace-container")
-  CustomerWorkspaceContainer = mod.CustomerWorkspaceContainer
-  return CustomerWorkspaceContainer
-}
-
 export function customersContainer() {
   const { t } = useTranslation()
   const [search, setSearch] = useState("")
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null)
-  const [workspaceLoaded, setWorkspaceLoaded] = useState(false)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [paymentCustomer, setPaymentCustomer] = useState<CustomerWithDebt | null>(null)
@@ -50,10 +40,11 @@ export function customersContainer() {
     )
   }, [customersWithDebt, search])
 
-  const selectedCustomer = useMemo(() => {
-    if (!selectedCustomerId) return null
-    return customersWithDebt.find((c: any) => c.id === selectedCustomerId) || null
-  }, [selectedCustomerId, customersWithDebt])
+  // ✅ Computed values for sticky summary
+  const totalCustomers = customersWithDebt.length
+  const overdueCount = customersWithDebt.filter((c: any) => c.isOverdue).length
+  const vipCount = customersWithDebt.filter((c: any) => c.tags?.includes('vip')).length
+  const todaySales = 0 // از API جداگانه یا useDashboardKPIs
 
   const paymentInvoicesForModal = useMemo(() => {
     if (!paymentCustomer) return []
@@ -86,12 +77,10 @@ export function customersContainer() {
 
   const handleSelectCustomer = useCallback((id: string) => {
     setSelectedCustomerId(id)
-    loadWorkspace().then(() => setWorkspaceLoaded(true))
   }, [])
 
   const handleClearSelection = useCallback(() => {
     setSelectedCustomerId(null)
-    setWorkspaceLoaded(false)
   }, [])
 
   const safeT = useCallback(
@@ -102,25 +91,18 @@ export function customersContainer() {
     [t]
   )
 
-  // ✅ اگر مشتری انتخاب شده و workspace لود شده
-  if (selectedCustomerId && selectedCustomer && workspaceLoaded && CustomerWorkspaceContainer) {
-    return (
-      <CustomerWorkspaceContainer
-        customerId={selectedCustomerId}
-        customerBase={selectedCustomer}
-        onBack={handleClearSelection}
-      />
-    )
-  }
-
   return customersView({
     t: safeT,
     fmt,
     search,
     onSearchChange: setSearch,
     customersWithDebt: filteredCustomers,
+    totalCustomers,
     debtorCount,
     totalDebt,
+    overdueCount,
+    vipCount,
+    todaySales,
     openDealsCount,
     isLoading,
     selectedCustomerId,
@@ -136,5 +118,6 @@ export function customersContainer() {
     onClosePayment: handleClosePayment,
     onPaymentSuccess: handlePaymentSuccess,
     onNewCreditInvoice: () => {},
+    currency: "AFN",
   })
 }

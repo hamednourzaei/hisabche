@@ -169,7 +169,7 @@ export function customerWorkspace(props: CustomerWorkspaceProps) {
               t={t}
               columns={getInvoiceColumns(t)}
               data={invoiceRows}
-              searchable
+              
               onRowClick={(row) => openDrawer(
                 `#${row.invoiceNumber}`,
                 <div className="space-y-3">
@@ -193,7 +193,7 @@ export function customerWorkspace(props: CustomerWorkspaceProps) {
                   t={t}
                   columns={getInteractionColumns(t)}
                   data={interactionRows}
-                  searchable
+                  
                   emptyMessage={t("customers.noInteractions", "تعاملی یافت نشد")}
                 />
               </div>
@@ -205,7 +205,7 @@ export function customerWorkspace(props: CustomerWorkspaceProps) {
                   t={t}
                   columns={getOpportunityColumns(t)}
                   data={opportunityRows}
-                  searchable
+                  
                   onRowClick={(row) => openDrawer(
                     row.title,
                     <div className="space-y-3">

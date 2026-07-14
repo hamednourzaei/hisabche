@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useCallback, useRef } from "react"
 import { useVirtualizer } from "@tanstack/react-virtual"
-import { ChevronUp, ChevronDown, Search } from "lucide-react"
+import { ChevronUp, ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 // ═══ Types ═══
@@ -30,18 +30,19 @@ interface DataGridProps<T extends { id: string }> {
   columns: ColumnDef<T>[]
   data: T[]
   isLoading?: boolean
-  searchable?: boolean
   onRowClick?: (row: T) => void
   bulkActions?: BulkAction[]
   emptyMessage?: string
 }
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('fa-IR').format(value)
+function formatCurrency(value: number, currency?: string): string {
+  return `${new Intl.NumberFormat('fa-IR').format(value)} ${currency || 'AFN'}`
 }
 
 function formatDate(value: string): string {
-  return new Date(value).toLocaleDateString('fa-IR')
+  try {
+    return new Date(value).toLocaleDateString('fa-IR')
+  } catch { return value || '-' }
 }
 
 function getBadgeClass(status: string): string {
@@ -51,37 +52,42 @@ function getBadgeClass(status: string): string {
     overdue: "bg-[hsl(var(--color-destructive)/0.1)] text-[hsl(var(--color-destructive))]",
     completed: "bg-[hsl(var(--color-success)/0.1)] text-[hsl(var(--color-success))]",
     active: "bg-[hsl(var(--color-success)/0.1)] text-[hsl(var(--color-success))]",
+    debtor: "bg-[hsl(var(--color-destructive)/0.1)] text-[hsl(var(--color-destructive))]",
+    settled: "bg-[hsl(var(--color-success)/0.1)] text-[hsl(var(--color-success))]",
   }
   return map[status] || "bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))]"
 }
 
-function renderCell<T>(column: ColumnDef<T>, row: T): React.ReactNode {
+function renderCell<T>(column: ColumnDef<T>, row: T, currency?: string): React.ReactNode {
   const value = column.accessor(row)
   if (column.render) return column.render(value, row)
   
   switch (column.type) {
     case 'currency':
-      return <span className="tabular-nums font-medium">{formatCurrency(Number(value) || 0)} AFN</span>
+      return (
+        <span className="tabular-nums font-medium">
+          {formatCurrency(Number(value) || 0, currency)}
+        </span>
+      )
     case 'date':
       return <span className="text-sm">{value ? formatDate(String(value)) : '-'}</span>
     case 'badge':
       return (
         <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium", getBadgeClass(String(value)))}>
-          {value}
+          {String(value || '-')}
         </span>
       )
     default:
-      return <span className="text-sm">{value || '-'}</span>
+      return <span className="text-sm">{value ?? '-'}</span>
   }
 }
 
 export function DataGrid<T extends { id: string }>(props: DataGridProps<T>) {
   const {
-    t, columns, data, isLoading, searchable, onRowClick,
+    t, columns, data, isLoading, onRowClick,
     bulkActions, emptyMessage,
   } = props
 
-  const [search, setSearch] = useState("")
   const [sortKey, setSortKey] = useState<string | null>(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -89,7 +95,7 @@ export function DataGrid<T extends { id: string }>(props: DataGridProps<T>) {
   const parentRef = useRef<HTMLDivElement>(null)
 
   const sortedData = useMemo(() => {
-    if (!sortKey) return data
+    if (!sortKey || !data.length) return data
     const col = columns.find(c => c.id === sortKey)
     if (!col) return data
     return [...data].sort((a, b) => {
@@ -101,22 +107,8 @@ export function DataGrid<T extends { id: string }>(props: DataGridProps<T>) {
     })
   }, [data, sortKey, sortDir, columns])
 
-  const filteredData = useMemo(() => {
-    let result = sortedData
-    if (search) {
-      const term = search.toLowerCase()
-      result = result.filter(row =>
-        columns.some(col => {
-          const val = col.accessor(row)
-          return String(val || '').toLowerCase().includes(term)
-        })
-      )
-    }
-    return result
-  }, [sortedData, search, columns])
-
   const virtualizer = useVirtualizer({
-    count: filteredData.length,
+    count: sortedData.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => 48,
     overscan: 10,
@@ -132,12 +124,12 @@ export function DataGrid<T extends { id: string }>(props: DataGridProps<T>) {
   }, [sortKey])
 
   const toggleSelectAll = useCallback(() => {
-    if (selectedIds.size === filteredData.length) {
+    if (selectedIds.size === sortedData.length) {
       setSelectedIds(new Set())
     } else {
-      setSelectedIds(new Set(filteredData.map(r => r.id)))
+      setSelectedIds(new Set(sortedData.map(r => r.id)))
     }
-  }, [filteredData, selectedIds])
+  }, [sortedData, selectedIds])
 
   const toggleSelect = useCallback((id: string) => {
     const next = new Set(selectedIds)
@@ -158,47 +150,26 @@ export function DataGrid<T extends { id: string }>(props: DataGridProps<T>) {
 
   return (
     <div className="space-y-3">
-      {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-2">
-        {searchable && (
-          <div className="relative flex-1 min-w-[200px] max-w-sm">
-            <Search className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))]" aria-hidden="true" />
-            <input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder={t("common.search", "جستجو...")}
-              className={cn(
-                "w-full rounded-xl ps-9 pe-4 py-2 text-sm",
-                "border border-[hsl(var(--border-default))]",
-                "bg-[hsl(var(--surface-base))]",
-                "text-[hsl(var(--fg-primary))]",
-                "placeholder:text-[hsl(var(--fg-tertiary))]",
-                "focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)]",
-              )}
-            />
-          </div>
-        )}
-        
-        {bulkActions && selectedIds.size > 0 && (
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-[hsl(var(--fg-secondary))]">
-              {selectedIds.size} {t("common.selected", "انتخاب شده")}
-            </span>
-            {bulkActions.map(action => (
-              <button
-                key={action.id}
-                type="button"
-                onClick={() => action.onClick(Array.from(selectedIds))}
-                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]"
-              >
-                <action.icon className="size-3.5" />
-                {action.label}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Bulk Actions Bar */}
+      {bulkActions && selectedIds.size > 0 && (
+        <div className="flex items-center gap-2 rounded-xl border border-[hsl(var(--color-primary)/0.3)] bg-[hsl(var(--color-primary)/0.05)] px-4 py-2">
+          <span className="text-sm font-medium text-[hsl(var(--color-primary))]">
+            {selectedIds.size} {t("common.selected", "انتخاب شده")}
+          </span>
+          <div className="flex-1" />
+          {bulkActions.map(action => (
+            <button
+              key={action.id}
+              type="button"
+              onClick={() => action.onClick(Array.from(selectedIds))}
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border border-[hsl(var(--color-primary)/0.2)] text-[hsl(var(--color-primary))] hover:bg-[hsl(var(--color-primary)/0.1)] transition-colors"
+            >
+              <action.icon className="size-3.5" />
+              {action.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Table */}
       <div className="rounded-xl border border-[hsl(var(--border-default))] overflow-hidden">
@@ -207,16 +178,17 @@ export function DataGrid<T extends { id: string }>(props: DataGridProps<T>) {
           {bulkActions && (
             <input
               type="checkbox"
-              checked={selectedIds.size === filteredData.length && filteredData.length > 0}
+              checked={selectedIds.size === sortedData.length && sortedData.length > 0}
               onChange={toggleSelectAll}
-              className="mr-2 size-4"
+              className="mr-2 size-4 accent-[hsl(var(--color-primary))]"
             />
           )}
           {columns.map(col => (
             <div
               key={col.id}
               className={cn(
-                "flex items-center gap-1 px-3 py-2 text-xs font-medium text-[hsl(var(--fg-secondary))] cursor-pointer select-none",
+                "flex items-center gap-1 px-3 py-2 text-xs font-medium text-[hsl(var(--fg-secondary))] select-none",
+                col.sortable !== false && "cursor-pointer hover:text-[hsl(var(--fg-primary))]",
                 col.width ? `w-[${col.width}px]` : "flex-1",
                 col.align === 'right' && "justify-end",
                 col.align === 'center' && "justify-center",
@@ -225,7 +197,9 @@ export function DataGrid<T extends { id: string }>(props: DataGridProps<T>) {
             >
               {col.header}
               {sortKey === col.id && (
-                sortDir === 'asc' ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />
+                sortDir === 'asc'
+                  ? <ChevronUp className="size-3 text-[hsl(var(--color-primary))]" />
+                  : <ChevronDown className="size-3 text-[hsl(var(--color-primary))]" />
               )}
             </div>
           ))}
@@ -233,15 +207,15 @@ export function DataGrid<T extends { id: string }>(props: DataGridProps<T>) {
 
         {/* Body */}
         <div ref={parentRef} className="max-h-[500px] overflow-auto">
-          {filteredData.length === 0 ? (
+          {sortedData.length === 0 ? (
             <div className="flex items-center justify-center py-12 text-sm text-[hsl(var(--fg-tertiary))]">
               {emptyMessage || t("common.noData", "داده‌ای یافت نشد")}
             </div>
           ) : (
             <div style={{ height: `${virtualizer.getTotalSize()}px`, position: 'relative' }}>
               {virtualizer.getVirtualItems().map(virtualRow => {
-                const row = filteredData[virtualRow.index]
-                if (!row) return null // ✅ Fix: row is possibly undefined
+                const row = sortedData[virtualRow.index]
+                if (!row) return null
                 const isSelected = selectedIds.has(row.id)
                 return (
                   <div
@@ -260,7 +234,7 @@ export function DataGrid<T extends { id: string }>(props: DataGridProps<T>) {
                         type="checkbox"
                         checked={isSelected}
                         onChange={(e) => { e.stopPropagation(); toggleSelect(row.id) }}
-                        className="ml-4 mr-2 size-4"
+                        className="ml-4 mr-2 size-4 accent-[hsl(var(--color-primary))]"
                       />
                     )}
                     {columns.map(col => (
@@ -286,7 +260,7 @@ export function DataGrid<T extends { id: string }>(props: DataGridProps<T>) {
 
       {/* Footer */}
       <div className="flex items-center justify-between text-xs text-[hsl(var(--fg-tertiary))]">
-        <span>{filteredData.length} {t("common.records", "رکورد")}</span>
+        <span>{sortedData.length} {t("common.records", "رکورد")}</span>
       </div>
     </div>
   )
