@@ -1,11 +1,12 @@
 // ============================================
-// backend/src/index.ts — Hisabche API Server
-// Complete: 23 Phases + v1.1 (Workflow + Notifications + Job Scheduler) + Swagger UI
+// backend/src/index.ts — Hisabche API Server v2.0
+// Complete: 23 Phases + v1.1 + Performance Middleware
 // ============================================
 
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import rateLimit from '@fastify/rate-limit'
+import compress from '@fastify/compress'
 import swagger from '@fastify/swagger'
 import swaggerUi from '@fastify/swagger-ui'
 import dotenv from 'dotenv'
@@ -134,6 +135,14 @@ const server = Fastify({
 // ──────────────────────────────────────────────
 async function start(): Promise<void> {
   try {
+    // ═══════════════════════════════════════════
+    // ✅ Compression — Gzip/Brotli (NEW v2.0)
+    // ═══════════════════════════════════════════
+    await server.register(compress, {
+      global: true,
+      threshold: 1024,
+    })
+
     // ─── Rate Limit ──────────────────────────
     await server.register(rateLimit, {
       max: 200,
@@ -162,15 +171,34 @@ async function start(): Promise<void> {
       credentials: true,
     })
 
-    // ═══════════════════════════════════════════════════════════════
-    // ✅ NEW — Swagger Documentation
-    // ═══════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════
+    // ✅ Performance Monitoring Middleware v2.0
+    // ═══════════════════════════════════════════
+    server.addHook('onRequest', async (request) => {
+      ;(request as any).startTime = Date.now()
+    })
+
+    server.addHook('onSend', async (request, reply, payload) => {
+      const duration = Date.now() - ((request as any).startTime || Date.now())
+      
+      reply.header('X-Response-Time-MS', duration.toString())
+      
+      if (duration > 500) {
+        request.log.warn(`⚠️ SLOW: ${request.method} ${request.url} - ${duration}ms`)
+      }
+      
+      return payload
+    })
+
+    // ═══════════════════════════════════════════
+    // Swagger Documentation
+    // ═══════════════════════════════════════════
     await server.register(swagger, {
       openapi: {
         info: {
           title: 'Hisabche API',
           description: 'Complete ERP & Accounting API — 23 phases + v1.1',
-          version: '1.1.0',
+          version: '2.0.0',
           contact: {
             name: 'Hisabche Team',
             email: 'support@hisabche.com',
@@ -246,45 +274,35 @@ async function start(): Promise<void> {
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       env: process.env.NODE_ENV,
+      version: '2.0.0',
     }))
 
     server.get('/api', async () => ({
       name: 'Hisabche API',
-      version: '1.1.0',
+      version: '2.0.0',
       phases: 23,
       status: 'complete',
       docs: '/docs',
     }))
 
     // ─── Auth Middleware ─────────────────────
-const PUBLIC_PATHS = [
-  '/api/health', 
-  '/api', 
-  '/api/auth/login', 
-  '/api/auth/signup',
-  '/api/auth/forgot-password',  // 🆕
-  '/api/auth/reset-password',   // 🆕
-]
-
     server.addHook('preHandler', async (request, reply) => {
       const url = request.url
-      // استثنا برای Swagger UI
       if (url.startsWith('/docs')) return
       if (url.startsWith('/api/health')) return
       if (url === '/api') return
       if (url.startsWith('/api/auth/login')) return
       if (url.startsWith('/api/auth/signup')) return
-      if (url.startsWith('/api/auth/forgot-password')) return  // 🆕
-if (url.startsWith('/api/auth/reset-password')) return   // 🆕
+      if (url.startsWith('/api/auth/forgot-password')) return
+      if (url.startsWith('/api/auth/reset-password')) return
       if (request.method === 'OPTIONS') return
       await authenticate(request, reply)
     })
 
-    // ═══════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════
     // REGISTER ALL ROUTES — 23 Phases + v1.1
-    // ═══════════════════════════════════════════════════════════════
+    // ═══════════════════════════════════════════
 
-    // ─── Phase 1-9: Core ────────────────────
     await server.register(authRoutes)
     await server.register(syncRoutes)
     await server.register(invoiceRoutes)
@@ -293,50 +311,20 @@ if (url.startsWith('/api/auth/reset-password')) return   // 🆕
     await server.register(customerRoutes)
     await server.register(transactionRoutes)
     await server.register(warehouseRoutes)
-
-    // ─── Phase 15: HR ──────────────────────
     await server.register(humanResourcesRoutes)
-
-    // ─── Phase 16: Projects ─────────────────
     await server.register(projectRoutes)
-
-    // ─── Phase 17: Workspace ───────────────
     await server.register(workspaceRoutes)
-
-    // ─── Phase 18: Permissions ─────────────
     await server.register(permissionRoutes)
-
-    // ─── Phase 19: Audit ────────────────────
     await server.register(auditRoutes)
-
-    // ─── Phase 20: Event System ─────────────
     await server.register(eventRoutes)
-
-    // ─── Phase 21: Analytics ────────────────
     await server.register(analyticsRoutes)
-
-    // ─── Phase 22: AI Assistant ─────────────
     await server.register(aiRoutes)
-
-    // ─── Phase 23: Accounting ───────────────
     await server.register(accountingRoutes)
-
-    // ─── Phase 24: CRM ──────────────────────
     await server.register(crmRoutes)
-
-    // ─── Phase 25: Manufacturing ────────────
     await server.register(manufacturingRoutes)
-
-    // ─── Phase 26: Purchasing ───────────────
     await server.register(purchasingRoutes)
-
-    // ─── v1.1: Workflow ─────────────────────
     await server.register(workflowRoutes)
-
-    // ─── v1.1: Notification ─────────────────
     await server.register(notificationRoutes)
-
-    // ─── v1.1: Job Scheduler ────────────────
     await server.register(jobSchedulerPlugin)
 
     // ─── 404 Handler ────────────────────────
@@ -361,7 +349,7 @@ if (url.startsWith('/api/auth/reset-password')) return   // 🆕
 
     // ─── Start Server ───────────────────────
     await server.listen({ port: PORT, host: HOST })
-    server.log.info(`🚀 Server running on ${HOST}:${PORT} — 23 phases + v1.1 (Workflow + Notifications + Jobs) loaded`)
+    server.log.info(`🚀 Server running on ${HOST}:${PORT} — v2.0 Performance Optimized`)
     server.log.info(`📚 Swagger UI available at /docs`)
   } catch (err) {
     const error = err as Error

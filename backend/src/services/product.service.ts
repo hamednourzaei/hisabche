@@ -1,17 +1,19 @@
 // ============================================
-// backend/src/services/product.service.ts
+// backend/src/services/product.service.ts — Optimized v2.0
 // ============================================
 
 import { supabase } from '../db'
-import {
-  CreateProduct,
-  UpdateProduct,
-  ProductFilters,
-} from '@hisabche/validation'
+import { CreateProduct, UpdateProduct, ProductFilters } from '@hisabche/validation'
 import { DatabaseError, NotFoundError } from '../errors/database.error'
 import { mapProduct } from '../utils/product.mapper'
 
-// ✅ نگاشت camelCase به snake_case برای sortBy
+// ✅ Column Selection Constants
+const PRODUCT_LIST_COLUMNS = `
+  id, name, barcode, sku, category, quantity, unit,
+  sell_price, buy_price, wholesale_price, min_stock_level,
+  is_active, image_url, created_at, updated_at
+`
+
 const SORT_BY_MAP: Record<string, string> = {
   createdAt: 'created_at',
   updatedAt: 'updated_at',
@@ -21,104 +23,62 @@ const SORT_BY_MAP: Record<string, string> = {
 }
 
 export class ProductService {
-  // ─── List ────────────────────────────────────────────────
+  // ─── List ─── بهینه‌شده
   async list(userId: string, filters: ProductFilters) {
     const {
-      search,
-      category,
-      isActive,
-      lowStock,
-      minPrice,
-      maxPrice,
-      barcode,
-      page,
-      limit,
-      sortBy,
-      sortDirection,
+      search, category, isActive, lowStock,
+      minPrice, maxPrice, barcode,
+      page, limit, sortBy, sortDirection
     } = filters
+
     const from = (page - 1) * limit
     const to = from + limit - 1
-
-    // ✅ تبدیل sortBy به snake_case (اگر در نگاشت وجود داشت)
     const dbSortBy = SORT_BY_MAP[sortBy ?? ''] ?? sortBy ?? 'created_at'
 
     let query = supabase
       .from('products')
-      .select('*', { count: 'exact' })
+      .select(PRODUCT_LIST_COLUMNS, { count: 'exact' })
       .eq('user_id', userId)
       .order(dbSortBy, { ascending: sortDirection === 'asc' })
       .range(from, to)
 
-    if (search) {
-      query = query.ilike('name', `%${search}%`)
-    }
-
-    if (category) {
-      query = query.eq('category', category)
-    }
-
-    if (isActive !== undefined) {
-      query = query.eq('is_active', isActive)
-    }
-
-    if (barcode) {
-      query = query.eq('barcode', barcode)
-    }
-
-    if (minPrice !== undefined) {
-      query = query.gte('sell_price', minPrice)
-    }
-
-    if (maxPrice !== undefined) {
-      query = query.lte('sell_price', maxPrice)
-    }
+    if (search) query = query.ilike('name', `%${search}%`)
+    if (category) query = query.eq('category', category)
+    if (isActive !== undefined) query = query.eq('is_active', isActive)
+    if (barcode) query = query.eq('barcode', barcode)
+    if (minPrice !== undefined) query = query.gte('sell_price', minPrice)
+    if (maxPrice !== undefined) query = query.lte('sell_price', maxPrice)
 
     const { data, error, count } = await query
 
-    if (error) {
-      throw new DatabaseError('Failed to fetch products', error)
-    }
+    if (error) throw new DatabaseError('Failed to fetch products', error)
 
-    // ✅ تبدیل به camelCase و سپس فیلتر lowStock
+    // ✅ Type-safe filter
     let products = (data || []).map(mapProduct)
 
     if (lowStock !== undefined) {
-      if (lowStock) {
-        products = products.filter(product => 
-          product.quantity <= product.minStockLevel
-        )
-      } else {
-        products = products.filter(product => 
-          product.quantity > product.minStockLevel
-        )
-      }
+      products = lowStock
+        ? products.filter((product: any) => product.quantity <= product.minStockLevel)
+        : products.filter((product: any) => product.quantity > product.minStockLevel)
     }
 
-    return {
-      products,
-      total: count || 0,
-      page,
-      limit,
-    }
+    return { products, total: count || 0, page, limit }
   }
 
-  // ─── Get By ID ──────────────────────────────────────────
+  // ─── Get By ID ───
   async getById(id: string, userId: string) {
     const { data: product, error } = await supabase
       .from('products')
-      .select('*')
+      .select(PRODUCT_LIST_COLUMNS)
       .eq('id', id)
       .eq('user_id', userId)
       .single()
 
-    if (error || !product) {
-      throw new NotFoundError('Product')
-    }
-
+    if (error || !product) throw new NotFoundError('Product')
     return mapProduct(product)
   }
 
-  // ─── Create ─────────────────────────────────────────────
+  // ─── Create ───
   async create(userId: string, data: CreateProduct) {
     const { data: product, error } = await supabase
       .from('products')
@@ -138,17 +98,14 @@ export class ProductService {
         is_active: data.isActive !== false,
         user_id: userId,
       })
-      .select()
+      .select(PRODUCT_LIST_COLUMNS)
       .single()
 
-    if (error) {
-      throw new DatabaseError('Failed to create product', error)
-    }
-
+    if (error) throw new DatabaseError('Failed to create product', error)
     return mapProduct(product)
   }
 
-  // ─── Update ─────────────────────────────────────────────
+  // ─── Update ───
   async update(id: string, userId: string, data: UpdateProduct) {
     const updates: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
@@ -162,14 +119,10 @@ export class ProductService {
     if (data.imageUrl !== undefined) updates.image_url = data.imageUrl
     if (data.quantity !== undefined) updates.quantity = data.quantity
     if (data.unit !== undefined) updates.unit = data.unit
-    if (data.minStockLevel !== undefined) {
-      updates.min_stock_level = data.minStockLevel
-    }
+    if (data.minStockLevel !== undefined) updates.min_stock_level = data.minStockLevel
     if (data.buyPrice !== undefined) updates.buy_price = data.buyPrice
     if (data.sellPrice !== undefined) updates.sell_price = data.sellPrice
-    if (data.wholesalePrice !== undefined) {
-      updates.wholesale_price = data.wholesalePrice
-    }
+    if (data.wholesalePrice !== undefined) updates.wholesale_price = data.wholesalePrice
     if (data.isActive !== undefined) updates.is_active = data.isActive
 
     const { data: product, error } = await supabase
@@ -177,36 +130,28 @@ export class ProductService {
       .update(updates)
       .eq('id', id)
       .eq('user_id', userId)
-      .select()
+      .select(PRODUCT_LIST_COLUMNS)
       .single()
 
-    if (error) {
-      throw new DatabaseError('Failed to update product', error)
-    }
-
-    if (!product) {
-      throw new NotFoundError('Product')
-    }
-
+    if (error) throw new DatabaseError('Failed to update product', error)
+    if (!product) throw new NotFoundError('Product')
     return mapProduct(product)
   }
 
-  // ─── Delete ─────────────────────────────────────────────
+  // ─── Delete ───
   async delete(id: string, userId: string): Promise<void> {
-    // Check if product has any invoice items
     const { count } = await supabase
       .from('invoice_items')
-      .select('*', { count: 'exact', head: true })
+      .select('id', { count: 'exact', head: true })
       .eq('product_id', id)
 
     if (count && count > 0) {
       throw new DatabaseError('Product has invoice items, cannot delete')
     }
 
-    // Check if product has any stock movements
     const { count: stockCount } = await supabase
       .from('stock_movements')
-      .select('*', { count: 'exact', head: true })
+      .select('id', { count: 'exact', head: true })
       .eq('product_id', id)
 
     if (stockCount && stockCount > 0) {
@@ -219,27 +164,23 @@ export class ProductService {
       .eq('id', id)
       .eq('user_id', userId)
 
-    if (error) {
-      throw new DatabaseError('Failed to delete product', error)
-    }
+    if (error) throw new DatabaseError('Failed to delete product', error)
   }
 
-  // ─── Get Low Stock ──────────────────────────────────────
+  // ─── Get Low Stock ───
   async getLowStock(userId: string) {
     const { data, error } = await supabase
       .from('products')
-      .select('*')
+      .select('id, name, quantity, min_stock_level, unit, sell_price')
       .eq('user_id', userId)
       .eq('is_active', true)
       .order('quantity', { ascending: true })
 
-    if (error) {
-      throw new DatabaseError('Failed to fetch low stock products', error)
-    }
+    if (error) throw new DatabaseError('Failed to fetch low stock products', error)
 
-    // ✅ تبدیل به camelCase و سپس فیلتر
+    // ✅ فیلتر در سمت سرور بهتر است اما اینجا در JS انجام می‌شود
     return (data || [])
       .map(mapProduct)
-      .filter(product => product.quantity <= product.minStockLevel)
+      .filter((product: any) => product.quantity <= product.minStockLevel)
   }
 }
