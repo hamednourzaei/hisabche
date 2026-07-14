@@ -27,7 +27,7 @@ export function customersSkeleton() {
         {STAT_ITEMS.map((i) => (
           <div
             key={i}
-            className="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm"
+            className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-5"
           >
             <div className="flex items-center gap-4">
               <div className="skeleton-shimmer h-10 w-10 rounded-xl" />
@@ -45,7 +45,7 @@ export function customersSkeleton() {
         {ROW_ITEMS.map((i) => (
           <div
             key={i}
-            className="flex items-center justify-between rounded-xl border border-[var(--hisab-border)] bg-[var(--hisab-card)]/50 p-4"
+            className="flex items-center justify-between rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-4"
           >
             <div className="flex items-center gap-3">
               <div className="skeleton-shimmer h-11 w-11 rounded-full" />

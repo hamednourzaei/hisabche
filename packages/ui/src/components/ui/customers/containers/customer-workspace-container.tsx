@@ -8,6 +8,7 @@ import { customerWorkspace } from "../customer-workspace"
 import { fmt } from "../../../../lib/customers/customers-format"
 import type { CustomerWithDebt } from "../../../../lib/customers/customers-types"
 
+
 interface CustomerWorkspaceContainerProps {
   customerId: string
   customerBase: CustomerWithDebt | null
@@ -16,13 +17,13 @@ interface CustomerWorkspaceContainerProps {
 
 export function CustomerWorkspaceContainer({ customerId, customerBase, onBack }: CustomerWorkspaceContainerProps) {
   const { t } = useTranslation()
-  const [activeTab, setActiveTab] = useState<string>("timeline")
+  const [activeTab, setActiveTab] = useState<string>("invoices")
   const [payOpen, setPayOpen] = useState(false)
 
   const { data: customer } = useCustomer(customerId)
   const showCrmTabs = customer?.type === 'credit'
 
-  const { data: invoicesData } = useInvoices({ customerId, limit: 50, page: 1, sortDirection: 'desc' } as any)
+  const { data: invoicesData } = useInvoices({ customerId, limit: 200, page: 1, sortDirection: 'desc' } as any)
   const { data: interactions } = useInteractions(showCrmTabs ? customerId : undefined)
   const { data: opportunities } = useOpportunities(showCrmTabs ? customerId : undefined)
 
