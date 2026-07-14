@@ -24,6 +24,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
   };
 }
 
+
 export default async function Layout({ children }: { children: React.ReactNode }) {
   return <DashboardLayout>{children}</DashboardLayout>;
 }
