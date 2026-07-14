@@ -111,7 +111,7 @@ export async function invoicePdfRoutes(fastify: FastifyInstance) {
 
     const cachedUrl = await getCachedSignedUrl(cachePath)
     if (cachedUrl) {
-      return reply.redirect(302, cachedUrl)
+      return reply.redirect(cachedUrl, 302)
     }
 
     try {

@@ -1,33 +1,32 @@
 // ============================================
-// backend/src/services/project.service.ts
+// backend/src/services/project.service.ts — Optimized v2.0
 // ============================================
 
 import { supabase } from '../db'
 import {
-  CreateProject,
-  UpdateProject,
-  CreateProjectTask,
-  UpdateProjectTask,
-  CreateProjectMember,
-  CreateTimeEntry,
-  UpdateTimeEntry,
+  CreateProject, UpdateProject,
+  CreateProjectTask, UpdateProjectTask,
+  CreateProjectMember, CreateTimeEntry, UpdateTimeEntry,
 } from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
+
+// ✅ Column Selection Constants
+const PROJECT_LIST_COLUMNS = 'id, name, description, client_id, start_date, end_date, budget, currency, status, priority, progress, tags, created_at, updated_at'
+const TASK_LIST_COLUMNS = 'id, project_id, title, description, assignee_id, parent_task_id, status, priority, estimated_hours, actual_hours, due_date, completed_at, order_index, tags, created_at, updated_at'
+const MEMBER_COLUMNS = 'id, project_id, employee_id, user_id, role, joined_at'
+const TIME_ENTRY_COLUMNS = 'id, project_id, task_id, employee_id, date, hours, description, billable, hourly_rate, created_at, updated_at'
 
 export class ProjectService {
   // ─── Projects ─────────────────────────────────────────────
   async listProjects(userId: string, status?: string) {
     let query = supabase
       .from('projects')
-      .select('*')
+      .select(PROJECT_LIST_COLUMNS)
       .eq('user_id', userId)
 
-    if (status) {
-      query = query.eq('status', status)
-    }
+    if (status) query = query.eq('status', status)
 
     const { data, error } = await query.order('created_at', { ascending: false })
-
     if (error) throw new DatabaseError('Failed to fetch projects', error)
     return data || []
   }
@@ -36,29 +35,18 @@ export class ProjectService {
     const { data: project, error } = await supabase
       .from('projects')
       .insert({
-        name: data.name,
-        description: data.description || null,
-        client_id: data.clientId || null,
-        start_date: data.startDate || null,
-        end_date: data.endDate || null,
-        budget: data.budget,
-        currency: data.currency,
-        status: data.status,
-        priority: data.priority,
-        tags: data.tags || [],
-        user_id: userId,
+        name: data.name, description: data.description || null,
+        client_id: data.clientId || null, start_date: data.startDate || null,
+        end_date: data.endDate || null, budget: data.budget, currency: data.currency,
+        status: data.status, priority: data.priority, tags: data.tags || [], user_id: userId,
       })
-      .select()
+      .select(PROJECT_LIST_COLUMNS)
       .single()
 
     if (error || !project) throw new DatabaseError('Failed to create project', error)
 
-    // اضافه کردن creator به عنوان manager
     await supabase.from('project_members').insert({
-      project_id: project.id,
-      user_id: userId,
-      role: 'manager',
-      user_id_owner: userId,
+      project_id: project.id, user_id: userId, role: 'manager', user_id_owner: userId,
     })
 
     return project
@@ -67,9 +55,8 @@ export class ProjectService {
   async getProject(id: string, userId: string) {
     const { data, error } = await supabase
       .from('projects')
-      .select('*')
-      .eq('id', id)
-      .eq('user_id', userId)
+      .select(PROJECT_LIST_COLUMNS)
+      .eq('id', id).eq('user_id', userId)
       .single()
 
     if (error || !data) throw new DatabaseError('Project not found', error)
@@ -89,11 +76,8 @@ export class ProjectService {
     if (data.tags !== undefined) updates.tags = data.tags
 
     const { data: project, error } = await supabase
-      .from('projects')
-      .update(updates)
-      .eq('id', id)
-      .eq('user_id', userId)
-      .select()
+      .from('projects').update(updates).eq('id', id).eq('user_id', userId)
+      .select(PROJECT_LIST_COLUMNS)
       .single()
 
     if (error || !project) throw new DatabaseError('Failed to update project', error)
@@ -102,10 +86,7 @@ export class ProjectService {
 
   async deleteProject(userId: string, id: string) {
     const { error } = await supabase
-      .from('projects')
-      .delete()
-      .eq('id', id)
-      .eq('user_id', userId)
+      .from('projects').delete().eq('id', id).eq('user_id', userId)
 
     if (error) throw new DatabaseError('Failed to delete project', error)
     return { success: true }
@@ -115,16 +96,12 @@ export class ProjectService {
   async listTasks(userId: string, projectId: string, status?: string) {
     let query = supabase
       .from('project_tasks')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('project_id', projectId)
+      .select(TASK_LIST_COLUMNS)
+      .eq('user_id', userId).eq('project_id', projectId)
 
-    if (status) {
-      query = query.eq('status', status)
-    }
+    if (status) query = query.eq('status', status)
 
     const { data, error } = await query.order('order_index')
-
     if (error) throw new DatabaseError('Failed to fetch tasks', error)
     return data || []
   }
@@ -133,35 +110,28 @@ export class ProjectService {
     const { data: lastTask } = await supabase
       .from('project_tasks')
       .select('order_index')
-      .eq('project_id', data.projectId)
-      .eq('user_id', userId)
-      .order('order_index', { ascending: false })
-      .limit(1)
+      .eq('project_id', data.projectId).eq('user_id', userId)
+      .order('order_index', { ascending: false }).limit(1)
 
     const orderIndex = (lastTask?.[0]?.order_index ?? 0) + 1
 
     const { data: task, error } = await supabase
       .from('project_tasks')
       .insert({
-        project_id: data.projectId,
-        title: data.title,
-        description: data.description || null,
-        assignee_id: data.assigneeId || null,
-        parent_task_id: data.parentTaskId || null,
-        status: data.status,
-        priority: data.priority,
-        estimated_hours: data.estimatedHours || null,
-        due_date: data.dueDate || null,
-        order_index: orderIndex,
-        tags: data.tags || [],
-        user_id: userId,
+        project_id: data.projectId, title: data.title,
+        description: data.description || null, assignee_id: data.assigneeId || null,
+        parent_task_id: data.parentTaskId || null, status: data.status,
+        priority: data.priority, estimated_hours: data.estimatedHours || null,
+        due_date: data.dueDate || null, order_index: orderIndex,
+        tags: data.tags || [], user_id: userId,
       })
-      .select()
+      .select(TASK_LIST_COLUMNS)
       .single()
 
     if (error || !task) throw new DatabaseError('Failed to create task', error)
     return task
   }
+
   async updateTask(userId: string, id: string, data: UpdateProjectTask) {
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (data.title !== undefined) updates.title = data.title
@@ -169,9 +139,7 @@ export class ProjectService {
     if (data.assigneeId !== undefined) updates.assignee_id = data.assigneeId
     if (data.status !== undefined) {
       updates.status = data.status
-      if (data.status === 'done') {
-        updates.completed_at = new Date().toISOString()
-      }
+      if (data.status === 'done') updates.completed_at = new Date().toISOString()
     }
     if (data.priority !== undefined) updates.priority = data.priority
     if (data.dueDate !== undefined) updates.due_date = data.dueDate
@@ -179,11 +147,8 @@ export class ProjectService {
     if (data.tags !== undefined) updates.tags = data.tags
 
     const { data: task, error } = await supabase
-      .from('project_tasks')
-      .update(updates)
-      .eq('id', id)
-      .eq('user_id', userId)
-      .select()
+      .from('project_tasks').update(updates).eq('id', id).eq('user_id', userId)
+      .select(TASK_LIST_COLUMNS)
       .single()
 
     if (error || !task) throw new DatabaseError('Failed to update task', error)
@@ -194,24 +159,13 @@ export class ProjectService {
 
   async deleteTask(userId: string, id: string) {
     const { data: task } = await supabase
-      .from('project_tasks')
-      .select('project_id')
-      .eq('id', id)
-      .eq('user_id', userId)
-      .single()
+      .from('project_tasks').select('project_id').eq('id', id).eq('user_id', userId).single()
 
     const { error } = await supabase
-      .from('project_tasks')
-      .delete()
-      .eq('id', id)
-      .eq('user_id', userId)
+      .from('project_tasks').delete().eq('id', id).eq('user_id', userId)
 
     if (error) throw new DatabaseError('Failed to delete task', error)
-
-    if (task) {
-      await this.recalculateProjectProgress(userId, task.project_id)
-    }
-
+    if (task) await this.recalculateProjectProgress(userId, task.project_id)
     return { success: true }
   }
 
@@ -219,9 +173,8 @@ export class ProjectService {
   async listMembers(userId: string, projectId: string) {
     const { data, error } = await supabase
       .from('project_members')
-      .select('*, employee:employees(first_name, last_name)')
-      .eq('project_id', projectId)
-      .eq('user_id_owner', userId)
+      .select(`${MEMBER_COLUMNS}, employee:employees(first_name, last_name)`)
+      .eq('project_id', projectId).eq('user_id_owner', userId)
 
     if (error) throw new DatabaseError('Failed to fetch members', error)
     return data || []
@@ -231,13 +184,10 @@ export class ProjectService {
     const { data: member, error } = await supabase
       .from('project_members')
       .insert({
-        project_id: data.projectId,
-        employee_id: data.employeeId || null,
-        user_id: data.userId || null,
-        role: data.role,
-        user_id_owner: userId,
+        project_id: data.projectId, employee_id: data.employeeId || null,
+        user_id: data.userId || null, role: data.role, user_id_owner: userId,
       })
-      .select()
+      .select(MEMBER_COLUMNS)
       .single()
 
     if (error || !member) throw new DatabaseError('Failed to add member', error)
@@ -246,11 +196,7 @@ export class ProjectService {
 
   async removeMember(userId: string, projectId: string, memberId: string) {
     const { error } = await supabase
-      .from('project_members')
-      .delete()
-      .eq('project_id', projectId)
-      .eq('id', memberId)
-      .eq('user_id_owner', userId)
+      .from('project_members').delete().eq('project_id', projectId).eq('id', memberId).eq('user_id_owner', userId)
 
     if (error) throw new DatabaseError('Failed to remove member', error)
     return { success: true }
@@ -260,9 +206,8 @@ export class ProjectService {
   async listTimeEntries(userId: string, projectId: string) {
     const { data, error } = await supabase
       .from('project_time_entries')
-      .select('*')
-      .eq('project_id', projectId)
-      .eq('user_id', userId)
+      .select(TIME_ENTRY_COLUMNS)
+      .eq('project_id', projectId).eq('user_id', userId)
       .order('date', { ascending: false })
 
     if (error) throw new DatabaseError('Failed to fetch time entries', error)
@@ -273,17 +218,12 @@ export class ProjectService {
     const { data: entry, error } = await supabase
       .from('project_time_entries')
       .insert({
-        project_id: data.projectId,
-        task_id: data.taskId || null,
-        employee_id: data.employeeId,
-        date: data.date,
-        hours: data.hours,
-        description: data.description || null,
-        billable: data.billable,
-        hourly_rate: data.hourlyRate,
-        user_id: userId,
+        project_id: data.projectId, task_id: data.taskId || null,
+        employee_id: data.employeeId, date: data.date, hours: data.hours,
+        description: data.description || null, billable: data.billable,
+        hourly_rate: data.hourlyRate, user_id: userId,
       })
-      .select()
+      .select(TIME_ENTRY_COLUMNS)
       .single()
 
     if (error || !entry) throw new DatabaseError('Failed to create time entry', error)
@@ -298,11 +238,8 @@ export class ProjectService {
     if (data.hourlyRate !== undefined) updates.hourly_rate = data.hourlyRate
 
     const { data: entry, error } = await supabase
-      .from('project_time_entries')
-      .update(updates)
-      .eq('id', id)
-      .eq('user_id', userId)
-      .select()
+      .from('project_time_entries').update(updates).eq('id', id).eq('user_id', userId)
+      .select(TIME_ENTRY_COLUMNS)
       .single()
 
     if (error || !entry) throw new DatabaseError('Failed to update time entry', error)
@@ -311,10 +248,7 @@ export class ProjectService {
 
   async deleteTimeEntry(userId: string, id: string) {
     const { error } = await supabase
-      .from('project_time_entries')
-      .delete()
-      .eq('id', id)
-      .eq('user_id', userId)
+      .from('project_time_entries').delete().eq('id', id).eq('user_id', userId)
 
     if (error) throw new DatabaseError('Failed to delete time entry', error)
     return { success: true }
@@ -322,29 +256,21 @@ export class ProjectService {
 
   // ─── Helper ───────────────────────────────────────────────
   private async recalculateProjectProgress(userId: string, projectId: string) {
+    // ✅ فقط status را انتخاب کن
     const { data: tasks } = await supabase
       .from('project_tasks')
       .select('status')
-      .eq('project_id', projectId)
-      .eq('user_id', userId)
+      .eq('project_id', projectId).eq('user_id', userId)
 
     if (!tasks || tasks.length === 0) {
-      await supabase
-        .from('projects')
-        .update({ progress: 0 })
-        .eq('id', projectId)
-        .eq('user_id', userId)
+      await supabase.from('projects').update({ progress: 0 }).eq('id', projectId).eq('user_id', userId)
       return
     }
 
-    const doneCount = tasks.filter((t: { status: string }) => t.status === 'done').length
+    const doneCount = tasks.filter((t: any) => t.status === 'done').length
     const progress = Math.round((doneCount / tasks.length) * 100)
 
-    await supabase
-      .from('projects')
-      .update({ progress })
-      .eq('id', projectId)
-      .eq('user_id', userId)
+    await supabase.from('projects').update({ progress }).eq('id', projectId).eq('user_id', userId)
   }
 }
 

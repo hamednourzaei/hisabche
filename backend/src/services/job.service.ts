@@ -1,5 +1,12 @@
+// ============================================
+// backend/src/services/job.service.ts — Optimized v2.0
+// ============================================
+
 import { supabase } from "../db";
 import type { CreateJobInput } from "@hisabche/validation";
+
+// ✅ Column Selection Constants
+const JOB_COLUMNS = 'id, job_type, status, payload, scheduled_at, max_retries, retry_count, last_error, started_at, completed_at, created_at'
 
 export class JobService {
   async create(input: CreateJobInput) {
@@ -11,7 +18,7 @@ export class JobService {
         scheduled_at: input.scheduled_at ?? new Date().toISOString(),
         max_retries: input.max_retries ?? 3,
       })
-      .select()
+      .select(JOB_COLUMNS)
       .single();
 
     if (error) throw error;
@@ -22,7 +29,7 @@ export class JobService {
     const now = new Date().toISOString();
     const { data } = await supabase
       .from("background_jobs")
-      .select("*")
+      .select(JOB_COLUMNS)
       .eq("status", "pending")
       .lte("scheduled_at", now)
       .order("scheduled_at")

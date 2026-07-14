@@ -20,6 +20,7 @@ import { passwordResetService } from '../services/password-reset.service'
 type JsonSchema = Record<string, unknown>
 
 function toJsonSchema(schema: z.ZodTypeAny): JsonSchema {
+  // @ts-expect-error TS2589 - zodToJsonSchema deep type instantiation
   const result = zodToJsonSchema(schema, { target: 'jsonSchema7' }) as any as JsonSchema;
   delete result.$schema;
   return result;

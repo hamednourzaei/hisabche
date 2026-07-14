@@ -1,25 +1,23 @@
 // ============================================
-// backend/src/services/workflow.service.ts
+// backend/src/services/workflow.service.ts — Optimized v2.0
 // Hisabche v1.1 — Workflow & Approval Engine
-// Uses Supabase client (same pattern as all other services)
-// ═══════════════════════════════════════════════════════════════
-// ✅ v1.1 — Auto-notification on create/approve/reject
-// ═══════════════════════════════════════════════════════════════
+// ============================================
 
 import { supabase } from "../db";
 import { NotificationService } from "./notification.service";
 import type {
-  CreateWorkflowInput,
-  UpdateWorkflowInput,
-  CreateWorkflowInstanceInput,
-  CreateWorkflowActionInput,
-  Workflow,
-  WorkflowInstance,
-  WorkflowActionRecord,
-  WorkflowFilters,
-  InstanceFilters,
+  CreateWorkflowInput, UpdateWorkflowInput,
+  CreateWorkflowInstanceInput, CreateWorkflowActionInput,
+  Workflow, WorkflowInstance, WorkflowActionRecord,
+  WorkflowFilters, InstanceFilters,
 } from "@hisabche/validation";
 import { DatabaseError } from "../errors/database.error";
+
+// ✅ Column Selection Constants
+const WORKFLOW_COLUMNS = 'id, workspace_id, name, description, entity_type, is_active, created_at, updated_at, deleted_at'
+const WORKFLOW_STEP_COLUMNS = 'id, workflow_id, step_order, approver_role, approver_user_id, is_final, created_at'
+const INSTANCE_COLUMNS = 'id, workflow_id, workspace_id, entity_type, entity_id, status, current_step, total_steps, started_at, completed_at, created_at, updated_at'
+const ACTION_COLUMNS = 'id, instance_id, step_order, action, actor_user_id, actor_role, comment, created_at'
 
 export class WorkflowService {
   private notificationService: NotificationService;
@@ -28,94 +26,62 @@ export class WorkflowService {
     this.notificationService = new NotificationService();
   }
 
-  /* ── Create workflow template with steps ── */
-  async createWorkflow(
-    workspaceId: string,
-    input: CreateWorkflowInput
-  ): Promise<Workflow> {
+  /* ─── Create workflow template with steps ─── */
+  async createWorkflow(workspaceId: string, input: CreateWorkflowInput): Promise<Workflow> {
     const { data: workflow, error: wfError } = await supabase
       .from("workflows")
       .insert({
-        workspace_id: workspaceId,
-        name: input.name,
-        description: input.description ?? null,
-        entity_type: input.entity_type,
+        workspace_id: workspaceId, name: input.name,
+        description: input.description ?? null, entity_type: input.entity_type,
       })
-      .select()
+      .select(WORKFLOW_COLUMNS)
       .single();
 
-    if (wfError || !workflow) {
-      throw new DatabaseError("Failed to create workflow", wfError);
-    }
+    if (wfError || !workflow) throw new DatabaseError("Failed to create workflow", wfError);
 
     const { error: stepsError } = await supabase.from("workflow_steps").insert(
       input.steps.map((step) => ({
-        workflow_id: workflow.id,
-        step_order: step.step_order,
-        approver_role: step.approver_role,
-        approver_user_id: step.approver_user_id ?? null,
+        workflow_id: workflow.id, step_order: step.step_order,
+        approver_role: step.approver_role, approver_user_id: step.approver_user_id ?? null,
         is_final: step.is_final,
       }))
     );
 
-    if (stepsError) {
-      throw new DatabaseError("Failed to create workflow steps", stepsError);
-    }
-
+    if (stepsError) throw new DatabaseError("Failed to create workflow steps", stepsError);
     return this.mapWorkflow(workflow);
   }
 
-  /* ── List workflow templates ── */
-  async listWorkflows(
-    workspaceId: string,
-    filters: WorkflowFilters
-  ): Promise<{ data: Workflow[]; total: number }> {
+  /* ─── List workflow templates ─── */
+  async listWorkflows(workspaceId: string, filters: WorkflowFilters): Promise<{ data: Workflow[]; total: number }> {
     let query = supabase
       .from("workflows")
-      .select("*", { count: "exact" })
-      .eq("workspace_id", workspaceId)
-      .is("deleted_at", null);
+      .select(WORKFLOW_COLUMNS, { count: "exact" })
+      .eq("workspace_id", workspaceId).is("deleted_at", null);
 
-    if (filters.entity_type) {
-      query = query.eq("entity_type", filters.entity_type);
-    }
-    if (filters.is_active !== undefined) {
-      query = query.eq("is_active", filters.is_active);
-    }
+    if (filters.entity_type) query = query.eq("entity_type", filters.entity_type);
+    if (filters.is_active !== undefined) query = query.eq("is_active", filters.is_active);
 
     const from = (filters.page - 1) * filters.limit;
     const to = from + filters.limit - 1;
 
-    const { data, error, count } = await query
-      .order("created_at", { ascending: false })
-      .range(from, to);
-
+    const { data, error, count } = await query.order("created_at", { ascending: false }).range(from, to);
     if (error) throw new DatabaseError("Failed to list workflows", error);
 
-    return {
-      data: (data || []).map((row) => this.mapWorkflow(row)),
-      total: count || 0,
-    };
+    return { data: (data || []).map((row) => this.mapWorkflow(row)), total: count || 0 };
   }
 
-  /* ── Get single workflow ── */
+  /* ─── Get single workflow ─── */
   async getWorkflow(workflowId: string): Promise<Workflow> {
     const { data, error } = await supabase
-      .from("workflows")
-      .select("*")
-      .eq("id", workflowId)
-      .is("deleted_at", null)
-      .single();
+      .from("workflows").select(WORKFLOW_COLUMNS)
+      .eq("id", workflowId).is("deleted_at", null).single();
 
     if (error || !data) throw new DatabaseError("Workflow not found", error);
     return this.mapWorkflow(data);
   }
 
-  /* ── Update workflow ── */
-  async updateWorkflow(
-    workflowId: string,
-    input: UpdateWorkflowInput
-  ): Promise<Workflow> {
+  /* ─── Update workflow ─── */
+  async updateWorkflow(workflowId: string, input: UpdateWorkflowInput): Promise<Workflow> {
     const updates: Record<string, unknown> = {};
     if (input.name !== undefined) updates.name = input.name;
     if (input.description !== undefined) updates.description = input.description;
@@ -123,10 +89,7 @@ export class WorkflowService {
     if (input.is_active !== undefined) updates.is_active = input.is_active;
 
     if (Object.keys(updates).length > 0) {
-      const { error } = await supabase
-        .from("workflows")
-        .update(updates)
-        .eq("id", workflowId);
+      const { error } = await supabase.from("workflows").update(updates).eq("id", workflowId);
       if (error) throw new DatabaseError("Failed to update workflow", error);
     }
 
@@ -134,10 +97,8 @@ export class WorkflowService {
       await supabase.from("workflow_steps").delete().eq("workflow_id", workflowId);
       const { error: stepsError } = await supabase.from("workflow_steps").insert(
         input.steps.map((step) => ({
-          workflow_id: workflowId,
-          step_order: step.step_order,
-          approver_role: step.approver_role,
-          approver_user_id: step.approver_user_id ?? null,
+          workflow_id: workflowId, step_order: step.step_order,
+          approver_role: step.approver_role, approver_user_id: step.approver_user_id ?? null,
           is_final: step.is_final,
         }))
       );
@@ -147,26 +108,18 @@ export class WorkflowService {
     return this.getWorkflow(workflowId);
   }
 
-  /* ── Soft delete workflow ── */
+  /* ─── Soft delete workflow ─── */
   async deleteWorkflow(workflowId: string): Promise<void> {
     const { error } = await supabase
-      .from("workflows")
-      .update({ deleted_at: new Date().toISOString() })
-      .eq("id", workflowId);
-
+      .from("workflows").update({ deleted_at: new Date().toISOString() }).eq("id", workflowId);
     if (error) throw new DatabaseError("Failed to delete workflow", error);
   }
 
-  /* ── Start a new approval process ── */
-  async startWorkflow(
-    workspaceId: string,
-    input: CreateWorkflowInstanceInput
-  ): Promise<WorkflowInstance> {
+  /* ─── Start a new approval process ─── */
+  async startWorkflow(workspaceId: string, input: CreateWorkflowInstanceInput): Promise<WorkflowInstance> {
     const { data: templateSteps, error: stepsError } = await supabase
-      .from("workflow_steps")
-      .select("*")
-      .eq("workflow_id", input.workflow_id)
-      .order("step_order");
+      .from("workflow_steps").select(WORKFLOW_STEP_COLUMNS)
+      .eq("workflow_id", input.workflow_id).order("step_order");
 
     if (stepsError || !templateSteps || templateSteps.length === 0) {
       throw new DatabaseError("Workflow has no steps defined", stepsError);
@@ -175,35 +128,24 @@ export class WorkflowService {
     const { data: instance, error } = await supabase
       .from("workflow_instances")
       .insert({
-        workflow_id: input.workflow_id,
-        workspace_id: workspaceId,
-        entity_type: input.entity_type,
-        entity_id: input.entity_id,
-        status: "in_progress",
-        current_step: 1,
-        total_steps: templateSteps.length,
+        workflow_id: input.workflow_id, workspace_id: workspaceId,
+        entity_type: input.entity_type, entity_id: input.entity_id,
+        status: "in_progress", current_step: 1, total_steps: templateSteps.length,
       })
-      .select()
+      .select(INSTANCE_COLUMNS)
       .single();
 
-    if (error || !instance) {
-      throw new DatabaseError("Failed to start workflow", error);
-    }
+    if (error || !instance) throw new DatabaseError("Failed to start workflow", error);
 
-    // ✅ v1.1 — Notify on new workflow
     await this.sendNotification(instance, { action: "pending" });
-
     return this.mapInstance(instance);
   }
 
-  /* ── List pending approvals ── */
-  async listInstances(
-    workspaceId: string,
-    filters: InstanceFilters
-  ): Promise<{ data: WorkflowInstance[]; total: number }> {
+  /* ─── List pending approvals ─── */
+  async listInstances(workspaceId: string, filters: InstanceFilters): Promise<{ data: WorkflowInstance[]; total: number }> {
     let query = supabase
       .from("workflow_instances")
-      .select("*", { count: "exact" })
+      .select(INSTANCE_COLUMNS, { count: "exact" })
       .eq("workspace_id", workspaceId);
 
     if (filters.entity_type) query = query.eq("entity_type", filters.entity_type);
@@ -213,154 +155,147 @@ export class WorkflowService {
     const from = (filters.page - 1) * filters.limit;
     const to = from + filters.limit - 1;
 
-    const { data, error, count } = await query
-      .order("created_at", { ascending: false })
-      .range(from, to);
-
+    const { data, error, count } = await query.order("created_at", { ascending: false }).range(from, to);
     if (error) throw new DatabaseError("Failed to list instances", error);
 
+    return { data: (data || []).map((row) => this.mapInstance(row)), total: count || 0 };
+  }
+
+  /* ─── Get single instance with full history ─── */
+  async getInstance(instanceId: string): Promise<{ instance: WorkflowInstance; actions: WorkflowActionRecord[] }> {
+    // ✅ دو کوئری همزمان
+    const [instanceResult, actionsResult] = await Promise.all([
+      supabase.from("workflow_instances").select(INSTANCE_COLUMNS).eq("id", instanceId).single(),
+      supabase.from("workflow_actions").select(ACTION_COLUMNS).eq("instance_id", instanceId).order("created_at", { ascending: false }),
+    ]);
+
+    if (instanceResult.error || !instanceResult.data) {
+      throw new DatabaseError("Workflow instance not found", instanceResult.error);
+    }
+
     return {
-      data: (data || []).map((row) => this.mapInstance(row)),
-      total: count || 0,
+      instance: this.mapInstance(instanceResult.data),
+      actions: (actionsResult.data || []).map((row) => this.mapAction(row)),
     };
   }
 
-  /* ── Get single instance with full history ── */
-  async getInstance(instanceId: string): Promise<{
-    instance: WorkflowInstance;
-    actions: WorkflowActionRecord[];
-  }> {
-    const { data: instance, error } = await supabase
-      .from("workflow_instances")
-      .select("*")
-      .eq("id", instanceId)
-      .single();
+/* ─── Approve or reject a step ─── */
+async performAction(userId: string, userRole: string, input: CreateWorkflowActionInput): Promise<{ instance: WorkflowInstance; action: WorkflowActionRecord }> {
+  const { data: instance, error: instanceError } = await supabase
+    .from("workflow_instances")
+    .select(INSTANCE_COLUMNS)
+    .eq("id", input.instance_id)
+    .single();
 
-    if (error || !instance) {
-      throw new DatabaseError("Workflow instance not found", error);
-    }
-
-    const { data: actions } = await supabase
-      .from("workflow_actions")
-      .select("*")
-      .eq("instance_id", instanceId)
-      .order("created_at", { ascending: false });
-
-    return {
-      instance: this.mapInstance(instance),
-      actions: (actions || []).map((row) => this.mapAction(row)),
-    };
+  if (instanceError || !instance) {
+    throw new DatabaseError("Workflow instance not found", instanceError);
   }
 
-  /* ── Approve or reject a step ── */
-  async performAction(
-    userId: string,
-    userRole: string,
-    input: CreateWorkflowActionInput
-  ): Promise<{
-    instance: WorkflowInstance;
-    action: WorkflowActionRecord;
-  }> {
-    const { data: instance, error: instanceError } = await supabase
-      .from("workflow_instances")
-      .select("*")
-      .eq("id", input.instance_id)
-      .single();
+  if (instance.status !== "in_progress") {
+    throw new DatabaseError("Workflow is not in progress");
+  }
 
-    if (instanceError || !instance) {
-      throw new DatabaseError("Workflow instance not found", instanceError);
-    }
-    if (instance.status !== "in_progress") {
-      throw new DatabaseError("Workflow is not in progress");
-    }
+  // ✅ Fix 1: Type guard for current_step
+  const currentStepNumber = instance.current_step as number;
+  if (!currentStepNumber || currentStepNumber < 1) {
+    throw new DatabaseError("Invalid current step");
+  }
 
-    const { data: steps, error: stepError } = await supabase
-      .from("workflow_steps")
-      .select("*")
-      .eq("workflow_id", instance.workflow_id)
-      .eq("step_order", instance.current_step);
+  // ✅ Fix 2: Type guard for workflow_id
+  const workflowId = instance.workflow_id as string;
+  if (!workflowId) {
+    throw new DatabaseError("Invalid workflow reference");
+  }
 
-    if (stepError || !steps || steps.length === 0) {
-      throw new DatabaseError("Current step not found", stepError);
-    }
+  const { data: steps, error: stepError } = await supabase
+    .from("workflow_steps")
+    .select(WORKFLOW_STEP_COLUMNS)
+    .eq("workflow_id", workflowId)
+    .eq("step_order", currentStepNumber);
 
-    const currentStep = steps[0];
+  if (stepError || !steps || steps.length === 0) {
+    throw new DatabaseError("Current step not found", stepError);
+  }
 
-    const { data: action, error: actionError } = await supabase
-      .from("workflow_actions")
-      .insert({
-        instance_id: input.instance_id,
-        step_order: instance.current_step,
-        action: input.action,
-        actor_user_id: userId,
-        actor_role: userRole,
-        comment: input.comment ?? null,
-      })
-      .select()
-      .single();
+  // ✅ Fix 3: Type guard for currentStep
+  const currentStep = steps[0];
+  if (!currentStep) {
+    throw new DatabaseError("Current step data is missing");
+  }
 
-    if (actionError || !action) {
-      throw new DatabaseError("Failed to record action", actionError);
-    }
+  // ثبت action
+  const { data: action, error: actionError } = await supabase
+    .from("workflow_actions")
+    .insert({
+      instance_id: input.instance_id,
+      step_order: currentStepNumber,
+      action: input.action,
+      actor_user_id: userId,
+      actor_role: userRole,
+      comment: input.comment ?? null,
+    })
+    .select(ACTION_COLUMNS)
+    .single();
 
-    let newStatus: string;
-    let newStep: number;
-    let completedAt: string | null = null;
+  if (actionError || !action) {
+    throw new DatabaseError("Failed to record action", actionError);
+  }
 
-    if (input.action === "approved") {
-      if (currentStep.is_final) {
-        newStatus = "approved";
-        newStep = instance.current_step;
-        completedAt = new Date().toISOString();
-      } else {
-        newStatus = "in_progress";
-        newStep = instance.current_step + 1;
-      }
-    } else if (input.action === "rejected") {
-      newStatus = "rejected";
-      newStep = instance.current_step;
-      completedAt = new Date().toISOString();
-    } else if (input.action === "cancelled") {
-      newStatus = "cancelled";
-      newStep = instance.current_step;
+  let newStatus: string;
+  let newStep: number;
+  let completedAt: string | null = null;
+
+  // ✅ Fix 4: is_final با type guard
+  const isFinal = currentStep.is_final as boolean;
+
+  if (input.action === "approved") {
+    if (isFinal) {
+      newStatus = "approved";
+      newStep = currentStepNumber;
       completedAt = new Date().toISOString();
     } else {
       newStatus = "in_progress";
-      newStep = instance.current_step;
+      newStep = currentStepNumber + 1;
     }
-
-    const { data: updated, error: updateError } = await supabase
-      .from("workflow_instances")
-      .update({
-        status: newStatus,
-        current_step: newStep,
-        completed_at: completedAt,
-      })
-      .eq("id", input.instance_id)
-      .select()
-      .single();
-
-    if (updateError || !updated) {
-      throw new DatabaseError("Failed to update instance", updateError);
-    }
-
-    // ✅ v1.1 — Auto-send notification
-    await this.sendNotification(updated, action);
-
-    return {
-      instance: this.mapInstance(updated),
-      action: this.mapAction(action),
-    };
+  } else if (input.action === "rejected") {
+    newStatus = "rejected";
+    newStep = currentStepNumber;
+    completedAt = new Date().toISOString();
+  } else if (input.action === "cancelled") {
+    newStatus = "cancelled";
+    newStep = currentStepNumber;
+    completedAt = new Date().toISOString();
+  } else {
+    newStatus = "in_progress";
+    newStep = currentStepNumber;
   }
 
-  /* ═══════════════════════════════════════════════════════════════
-     NOTIFICATION HOOK (v1.1)
-     ═══════════════════════════════════════════════════════════════ */
+  const { data: updated, error: updateError } = await supabase
+    .from("workflow_instances")
+    .update({
+      status: newStatus,
+      current_step: newStep,
+      completed_at: completedAt,
+    })
+    .eq("id", input.instance_id)
+    .select(INSTANCE_COLUMNS)
+    .single();
 
-  private async sendNotification(
-    instance: Record<string, unknown>,
-    action: Record<string, unknown>
-  ): Promise<void> {
+  if (updateError || !updated) {
+    throw new DatabaseError("Failed to update instance", updateError);
+  }
+
+  await this.sendNotification(updated, action);
+
+  return {
+    instance: this.mapInstance(updated),
+    action: this.mapAction(action),
+  };
+}
+  /* ═══════════════════════════════════════════
+     NOTIFICATION HOOK (v1.1)
+     ═══════════════════════════════════════════ */
+  private async sendNotification(instance: Record<string, unknown>, action: Record<string, unknown>): Promise<void> {
     try {
       const actionType = (action.action as string) || "pending";
       const workspaceId = instance.workspace_id as string;
@@ -377,80 +312,64 @@ export class WorkflowService {
       const cfg = config[actionType];
       if (!cfg) return;
 
-      // For pending (new workflow), get workspace owner
       let targetUserId = action.actor_user_id as string;
       if (!targetUserId) {
+        // ✅ فقط user_id را انتخاب کن
         const { data: members } = await supabase
           .from("workspace_members")
           .select("user_id")
-          .eq("workspace_id", workspaceId)
-          .eq("role", "owner")
-          .limit(1);
+          .eq("workspace_id", workspaceId).eq("role", "owner").limit(1);
         targetUserId = (members?.[0]?.user_id as string) || "";
       }
 
       if (!targetUserId) return;
 
       await this.notificationService.create(workspaceId, {
-        user_id: targetUserId,
-        title: cfg.title,
+        user_id: targetUserId, title: cfg.title,
         body: `${entityType} #${shortId} ${actionType === "pending" ? "نیاز به تأیید دارد" : actionType === "approved" ? "تأیید شد" : "رد شد"}.`,
         type: cfg.type,
         action_url: `/${entityType}s/${entityId}`,
-        entity_type: entityType,
-        entity_id: entityId,
+        entity_type: entityType, entity_id: entityId,
       });
     } catch (err) {
       console.error("[Workflow] Notification failed:", err);
     }
   }
 
-  /* ═══════════════════════════════════════════════════════════════
-     MAPPERS — snake_case (DB) → camelCase (API)
-     ═══════════════════════════════════════════════════════════════ */
-
+  /* ═══════════════════════════════════════════
+     MAPPERS
+     ═══════════════════════════════════════════ */
   private mapWorkflow(row: Record<string, unknown>): Workflow {
     return {
-      id: row.id as string,
-      workspace_id: row.workspace_id as string,
-      name: row.name as string,
-      description: (row.description as string) ?? undefined,
+      id: row.id as string, workspace_id: row.workspace_id as string,
+      name: row.name as string, description: (row.description as string) ?? undefined,
       entity_type: row.entity_type as Workflow["entity_type"],
-      is_active: (row.is_active as boolean) ?? true,
-      steps: [],
-      created_at: row.created_at as string,
-      updated_at: row.updated_at as string,
+      is_active: (row.is_active as boolean) ?? true, steps: [],
+      created_at: row.created_at as string, updated_at: row.updated_at as string,
       deleted_at: (row.deleted_at as string) ?? null,
     };
   }
 
   private mapInstance(row: Record<string, unknown>): WorkflowInstance {
     return {
-      id: row.id as string,
-      workflow_id: row.workflow_id as string,
+      id: row.id as string, workflow_id: row.workflow_id as string,
       workspace_id: row.workspace_id as string,
       entity_type: row.entity_type as WorkflowInstance["entity_type"],
       entity_id: row.entity_id as string,
       status: row.status as WorkflowInstance["status"],
-      current_step: row.current_step as number,
-      total_steps: row.total_steps as number,
-      started_at: row.started_at as string,
-      completed_at: (row.completed_at as string) ?? null,
-      created_at: row.created_at as string,
-      updated_at: row.updated_at as string,
+      current_step: row.current_step as number, total_steps: row.total_steps as number,
+      started_at: row.started_at as string, completed_at: (row.completed_at as string) ?? null,
+      created_at: row.created_at as string, updated_at: row.updated_at as string,
     };
   }
 
   private mapAction(row: Record<string, unknown>): WorkflowActionRecord {
     return {
-      id: row.id as string,
-      instance_id: row.instance_id as string,
+      id: row.id as string, instance_id: row.instance_id as string,
       action: row.action as WorkflowActionRecord["action"],
-      step_order: row.step_order as number,
-      actor_user_id: row.actor_user_id as string,
+      step_order: row.step_order as number, actor_user_id: row.actor_user_id as string,
       actor_role: (row.actor_role as string) ?? null,
-      comment: (row.comment as string) ?? undefined,
-      created_at: row.created_at as string,
+      comment: (row.comment as string) ?? undefined, created_at: row.created_at as string,
     };
   }
 }
