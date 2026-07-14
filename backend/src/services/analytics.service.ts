@@ -113,14 +113,19 @@ export class AnalyticsService {
         }
       }
 
-      const chartData = invoices.reduce((acc: any[], inv: any) => {
+    // ✅ Chart data — فقط ۳۰ روز آخر برای کاهش response size
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+    
+    const chartData = invoices
+      .filter((inv: any) => new Date(inv.date) >= thirtyDaysAgo)
+      .reduce((acc: any[], inv: any) => {
         const date = (inv.date as string).split('T')[0]
         const existing = acc.find(d => d.label === date)
         if (existing) { existing.value += Number(inv.total) }
         else { acc.push({ label: date, value: Number(inv.total), date }) }
         return acc
       }, [])
-
       return {
         totalRevenue: Math.round(totalRevenue * 100) / 100, totalInvoices: invoices.length,
         averageInvoiceValue: Math.round((totalRevenue / invoices.length) * 100) / 100,

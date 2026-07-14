@@ -51,20 +51,13 @@ const nextConfig = {
     serverActions: { bodySizeLimit: '2mb' },
   },
 
+  // ✅ FIX 1: حذف redirect زنجیره‌ای — مستقیم به /en
   async redirects() {
     return [
-      // ✅ فقط از hisabche.com (بدون www) به www.hisabche.com ریدایرکت کن
-      // ❌ rule دوم قبلی حذف شد چون باعث infinite redirect loop می‌شد
-      //    (www.hisabche.com به خودش ریدایرکت می‌شد)
       {
         source: '/:path*',
-        has: [
-          {
-            type: 'host',
-            value: 'hisabche.com',
-          },
-        ],
-        destination: 'https://www.hisabche.com/:path*',
+        has: [{ type: 'host', value: 'hisabche.com' }],
+        destination: 'https://www.hisabche.com/en/:path*',
         permanent: true,
       },
     ]
@@ -90,6 +83,19 @@ const nextConfig = {
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
       },
+      // ✅ FIX 2: Cache-Control برای landing page
+      {
+        source: '/en',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=3600, stale-while-revalidate=86400' },
+        ],
+      },
+      {
+        source: '/',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=3600, stale-while-revalidate=86400' },
+        ],
+      },
       {
         source: '/:path*',
         headers: [
@@ -97,6 +103,11 @@ const nextConfig = {
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
+          // ✅ FIX 3: CSP Header
+          {
+            key: 'Content-Security-Policy',
+            value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://*.supabase.co https://hisabche.onrender.com https://*.vercel.app;",
+          },
         ],
       },
     ]
