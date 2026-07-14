@@ -283,8 +283,9 @@ export class WorkflowService {
     }
 
     // ✅ Send notification WITH workflow_instance_id
-    await this.sendNotification(updated, action);
-
+ this.sendNotification(updated, action).catch(err => 
+  console.error('Notification failed:', err)
+)
     return {
       instance: this.mapInstance(updated),
       action: this.mapAction(action),

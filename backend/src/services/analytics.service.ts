@@ -82,7 +82,7 @@ export class AnalyticsService {
 
       const [itemsResult, customersResult] = await Promise.all([
         invoiceIds.length > 0
-          ? supabase.from('invoice_items').select('product_id, product_name, quantity, total_price').in('invoice_id', invoiceIds).order('total_price', { ascending: false }).limit(10)
+          ? supabase.from('invoice_items').select('product_id, product_name, total_price').in('invoice_id', invoiceIds).order('total_price', { ascending: false }).limit(10)
           : Promise.resolve({ data: [] }),
         customerIds.length > 0
           ? supabase.from('customers').select('id, full_name').in('id', customerIds as string[])
