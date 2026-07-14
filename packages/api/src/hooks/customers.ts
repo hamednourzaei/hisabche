@@ -36,7 +36,8 @@ export function useCustomers(filters: CustomerFilters = { page: 1, limit: 20, so
       })
       return data
     },
-    staleTime: 0,
+    staleTime: 60_000,
+    placeholderData: (previousData: any) => previousData,
   })
 }
 
@@ -48,6 +49,7 @@ export function useCustomer(id: string | undefined) {
       return data
     },
     enabled: !!id,
+    staleTime: 60_000,
   })
 }
 

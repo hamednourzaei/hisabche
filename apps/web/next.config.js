@@ -51,7 +51,6 @@ const nextConfig = {
     serverActions: { bodySizeLimit: '2mb' },
   },
 
-  // ✅ FIX 1: حذف redirect زنجیره‌ای — مستقیم به /en
   async redirects() {
     return [
       {
@@ -83,7 +82,6 @@ const nextConfig = {
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
       },
-      // ✅ FIX 2: Cache-Control برای landing page
       {
         source: '/en',
         headers: [
@@ -103,11 +101,28 @@ const nextConfig = {
           { key: 'X-Frame-Options', value: 'DENY' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
-          // ✅ FIX 3: CSP Header
-          { 
-  key: 'Content-Security-Policy', 
-  value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://*.supabase.co https://hisabche.onrender.com https://*.vercel.app https://www.google-analytics.com;" 
-},
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+              "https://www.googletagmanager.com",
+              "https://www.google-analytics.com",
+              "https://static.cloudflareinsights.com",
+              "https://us-assets.i.posthog.com",
+              "https://us.i.posthog.com",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: https:",
+              "font-src 'self'",
+              "connect-src 'self'",
+              "https://*.supabase.co",
+              "https://hisabche.onrender.com",
+              "https://*.vercel.app",
+              "https://www.google-analytics.com",
+              "https://us.i.posthog.com",
+              "https://us-assets.i.posthog.com",
+            ].join('; '),
+          },
         ],
       },
     ]
