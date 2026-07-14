@@ -1,6 +1,6 @@
 // ============================================
 // backend/src/index.ts — Hisabche API Server v2.0
-// Complete: 23 Phases + v1.1 + Performance Middleware
+// Complete: 23 Phases + v1.1 + Performance Middleware + Health Checks + Security
 // ============================================
 
 import Fastify from 'fastify'
@@ -15,6 +15,7 @@ import dotenv from 'dotenv'
 // Middleware
 // ──────────────────────────────────────────────
 import { authenticate } from './middleware/auth.middleware'
+import { supabase } from './db'
 
 // ──────────────────────────────────────────────
 // Routes — Phase 1-9 (Core)
@@ -183,6 +184,14 @@ async function start(): Promise<void> {
       
       reply.header('X-Response-Time-MS', duration.toString())
       
+      // ═══════════════════════════════════════════
+      // ✅ Security Headers
+      // ═══════════════════════════════════════════
+      reply.header('X-Frame-Options', 'DENY')
+      reply.header('X-Content-Type-Options', 'nosniff')
+      reply.header('X-XSS-Protection', '1; mode=block')
+      reply.header('Referrer-Policy', 'strict-origin-when-cross-origin')
+      
       if (duration > 500) {
         request.log.warn(`⚠️ SLOW: ${request.method} ${request.url} - ${duration}ms`)
       }
@@ -268,27 +277,63 @@ async function start(): Promise<void> {
       staticCSP: true,
     })
 
-    // ─── Health Checks (Public) ─────────────
+    // ═══════════════════════════════════════════
+    // ✅ Health Checks v2.0
+    // ═══════════════════════════════════════════
+
+    // Liveness probe — server is running
+    server.get('/live', async () => ({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+    }))
+
+    // Readiness probe — server + database ready
+    server.get('/ready', async () => {
+      try {
+        const { error } = await supabase.from('products').select('id').limit(1)
+        return {
+          status: error ? 'error' : 'ok',
+          database: error ? 'disconnected' : 'connected',
+          timestamp: new Date().toISOString(),
+        }
+      } catch {
+        return {
+          status: 'error',
+          database: 'disconnected',
+          timestamp: new Date().toISOString(),
+        }
+      }
+    })
+
+    // Deep health check (public)
     server.get('/api/health', async () => ({
       status: 'ok',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       env: process.env.NODE_ENV,
       version: '2.0.0',
+      compression: true,
+      security: true,
     }))
 
+    // API info (public)
     server.get('/api', async () => ({
       name: 'Hisabche API',
       version: '2.0.0',
       phases: 23,
       status: 'complete',
       docs: '/docs',
+      health: '/api/health',
+      live: '/live',
+      ready: '/ready',
     }))
 
     // ─── Auth Middleware ─────────────────────
     server.addHook('preHandler', async (request, reply) => {
       const url = request.url
       if (url.startsWith('/docs')) return
+      if (url === '/live') return
+      if (url === '/ready') return
       if (url.startsWith('/api/health')) return
       if (url === '/api') return
       if (url.startsWith('/api/auth/login')) return
@@ -351,6 +396,7 @@ async function start(): Promise<void> {
     await server.listen({ port: PORT, host: HOST })
     server.log.info(`🚀 Server running on ${HOST}:${PORT} — v2.0 Performance Optimized`)
     server.log.info(`📚 Swagger UI available at /docs`)
+    server.log.info(`💚 Health: /live | /ready | /api/health`)
   } catch (err) {
     const error = err as Error
     server.log.error(error)
