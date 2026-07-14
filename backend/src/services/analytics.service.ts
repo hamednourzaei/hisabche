@@ -101,12 +101,10 @@ export class AnalyticsService {
       for (const inv of invoices) {
         const currency = (inv as any).currency || 'AFN'
         byCurrency[currency] = (byCurrency[currency] || 0) + Number((inv as any).total)
-
         const month = ((inv as any).date as string).slice(0, 7)
         if (!byPeriodMap[month]) byPeriodMap[month] = { revenue: 0, count: 0 }
         byPeriodMap[month].revenue += Number((inv as any).total)
         byPeriodMap[month].count++
-
         const cid = (inv as any).customer_id
         if (cid) {
           if (!customerMap[cid]) customerMap[cid] = { id: cid, name: customerNames[cid] || '', revenue: 0, count: 0 }
@@ -124,11 +122,9 @@ export class AnalyticsService {
       }, [])
 
       return {
-        totalRevenue: Math.round(totalRevenue * 100) / 100,
-        totalInvoices: invoices.length,
+        totalRevenue: Math.round(totalRevenue * 100) / 100, totalInvoices: invoices.length,
         averageInvoiceValue: Math.round((totalRevenue / invoices.length) * 100) / 100,
-        totalPaid: Math.round(totalPaid * 100) / 100,
-        totalUnpaid: Math.round(totalUnpaid * 100) / 100,
+        totalPaid: Math.round(totalPaid * 100) / 100, totalUnpaid: Math.round(totalUnpaid * 100) / 100,
         byCurrency,
         byPeriod: Object.entries(byPeriodMap).map(([period, val]) => ({ period, revenue: Math.round(val.revenue * 100) / 100, count: val.count })),
         topProducts: topProducts.map((p: any) => ({ productId: p.product_id, productName: p.product_name || '', quantity: Number(p.quantity || 0), revenue: Math.round(Number(p.total_price || 0) * 100) / 100 })),
@@ -138,93 +134,65 @@ export class AnalyticsService {
     })
   }
 
-  // ─── Inventory Summary ───
   async getInventorySummary(userId: string) {
     return withCacheKey(CacheKeys.products(userId), 120_000, async () => {
       const { data: products } = await supabase
         .from('products').select('id, name, quantity, buy_price, min_stock_level, category')
         .eq('user_id', userId).eq('is_active', true)
-
       if (!products || products.length === 0) return this.emptyInventorySummary()
-
       const totalStockValue = products.reduce((sum: number, p: any) => sum + Number(p.quantity) * Number(p.buy_price), 0)
       const lowStockProducts = products.filter((p: any) => Number(p.quantity) <= Number(p.min_stock_level)).length
       const outOfStockProducts = products.filter((p: any) => Number(p.quantity) === 0).length
-
       const byCategoryMap: Record<string, { count: number; totalValue: number }> = {}
       for (const p of products) {
         const cat = (p as any).category || 'general'
         if (!byCategoryMap[cat]) byCategoryMap[cat] = { count: 0, totalValue: 0 }
-        byCategoryMap[cat].count++
-        byCategoryMap[cat].totalValue += Number((p as any).quantity) * Number((p as any).buy_price)
+        byCategoryMap[cat].count++; byCategoryMap[cat].totalValue += Number((p as any).quantity) * Number((p as any).buy_price)
       }
-
       const { data: topMovements } = await supabase
         .from('stock_movements').select('product_id, type, quantity, created_at')
         .eq('user_id', userId).order('created_at', { ascending: false }).limit(10)
-
       return {
-        totalProducts: products.length,
-        totalStockValue: Math.round(totalStockValue * 100) / 100,
-        lowStockProducts,
-        outOfStockProducts,
+        totalProducts: products.length, totalStockValue: Math.round(totalStockValue * 100) / 100,
+        lowStockProducts, outOfStockProducts,
         byCategory: Object.entries(byCategoryMap).map(([category, val]) => ({ category, count: val.count, totalValue: Math.round(val.totalValue * 100) / 100 })),
         topMovements: (topMovements || []).map((m: any) => ({ productId: m.product_id, productName: '', movementType: m.type, quantity: Number(m.quantity), date: m.created_at as string })),
       }
     })
   }
 
-  // ─── Financial Summary ───
   async getFinancialSummary(userId: string, dateRange: DateRange) {
     const { startDate, endDate } = dateRange
     if (!userId || !startDate || !endDate) return this.emptyFinancialSummary()
-
     const { data: entries } = await supabase
       .from('ledger_entries').select('debit, credit, account_id, entry_date')
       .eq('user_id', userId).gte('entry_date', startDate).lte('entry_date', endDate)
-
     if (!entries || entries.length === 0) return this.emptyFinancialSummary()
-
     const totalRevenue = entries.reduce((sum: number, e: any) => sum + Number(e.credit), 0)
     const totalExpenses = entries.reduce((sum: number, e: any) => sum + Number(e.debit), 0)
     const netProfit = totalRevenue - totalExpenses
-
     const byMonthMap: Record<string, { inflow: number; outflow: number }> = {}
     for (const e of entries) {
       const month = ((e as any).entry_date as string).slice(0, 7)
       if (!byMonthMap[month]) byMonthMap[month] = { inflow: 0, outflow: 0 }
-      byMonthMap[month].inflow += Number((e as any).credit)
-      byMonthMap[month].outflow += Number((e as any).debit)
+      byMonthMap[month].inflow += Number((e as any).credit); byMonthMap[month].outflow += Number((e as any).debit)
     }
-
     return {
-      totalRevenue: Math.round(totalRevenue * 100) / 100,
-      totalExpenses: Math.round(totalExpenses * 100) / 100,
-      netProfit: Math.round(netProfit * 100) / 100,
-      accountsReceivable: 0, accountsPayable: 0,
+      totalRevenue: Math.round(totalRevenue * 100) / 100, totalExpenses: Math.round(totalExpenses * 100) / 100,
+      netProfit: Math.round(netProfit * 100) / 100, accountsReceivable: 0, accountsPayable: 0,
       cashFlow: Object.entries(byMonthMap).map(([period, val]) => ({ period, inflow: Math.round(val.inflow * 100) / 100, outflow: Math.round(val.outflow * 100) / 100, net: Math.round((val.inflow - val.outflow) * 100) / 100 })),
       byAccountType: {},
     }
   }
 
-  // ─── Cache Invalidation ───
   invalidateCache(userId: string) {
     memoryCache.invalidate(`dashboard:${userId}`)
     memoryCache.invalidate(`sales:${userId}`)
-    memoryCache.invalidate(`invoices:${userId}`)
-    memoryCache.invalidate(`customers:${userId}`)
     memoryCache.invalidate(`products:${userId}`)
     memoryCache.invalidate(`insights:${userId}`)
   }
 
-  // ─── Helpers ───
-  private emptySalesSummary() {
-    return { totalRevenue: 0, totalInvoices: 0, averageInvoiceValue: 0, totalPaid: 0, totalUnpaid: 0, byCurrency: {}, byPeriod: [], topProducts: [], topCustomers: [], chartData: [] }
-  }
-  private emptyInventorySummary() {
-    return { totalProducts: 0, totalStockValue: 0, lowStockProducts: 0, outOfStockProducts: 0, byCategory: [], topMovements: [] }
-  }
-  private emptyFinancialSummary() {
-    return { totalRevenue: 0, totalExpenses: 0, netProfit: 0, accountsReceivable: 0, accountsPayable: 0, cashFlow: [], byAccountType: {} }
-  }
+  private emptySalesSummary() { return { totalRevenue: 0, totalInvoices: 0, averageInvoiceValue: 0, totalPaid: 0, totalUnpaid: 0, byCurrency: {}, byPeriod: [], topProducts: [], topCustomers: [], chartData: [] } }
+  private emptyInventorySummary() { return { totalProducts: 0, totalStockValue: 0, lowStockProducts: 0, outOfStockProducts: 0, byCategory: [], topMovements: [] } }
+  private emptyFinancialSummary() { return { totalRevenue: 0, totalExpenses: 0, netProfit: 0, accountsReceivable: 0, accountsPayable: 0, cashFlow: [], byAccountType: {} } }
 }
