@@ -1,0 +1,13 @@
+برای رسیدن به سطح شرکت‌های بزرگ
+
+اگر هدفت این است که Hisabche از نظر معماری و کیفیت در حد محصولاتی مثل Stripe، Linear، Notion، Vercel، Shopify یا GitHub باشد، این موارد را هم به برنامه اضافه کن:
+
+Performance Budget در CI (رد شدن Build اگر Bundle یا LCP از حد تعیین‌شده بیشتر شود)
+OpenTelemetry + Distributed Tracing بین Next.js، Fastify و PostgreSQL
+Canary Deployments و Feature Flags برای انتشار تدریجی
+Chaos Testing (شبیه‌سازی قطع Redis، Database یا Queue)
+SLO/SLI و Error Budget برای اندازه‌گیری کیفیت سرویس
+Benchmark خودکار در CI برای جلوگیری از افت عملکرد
+وابستگی به اعداد واقعی (Lighthouse CI، k6، pg_stat_statements، EXPLAIN ANALYZE) به جای برآوردهای تئوری
+
+اگر این بخش‌ها هم اضافه و با داده‌های واقعی تأیید شوند، معماری پروژه واقعاً در سطح یک ERP Enterprise مدرن قرار می‌گیرد، نه فقط از نظر طراحی بلکه از نظر عملکرد و پایداری نیز.

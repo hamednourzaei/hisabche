@@ -1,6 +1,6 @@
 // ============================================
 // backend/src/services/invoice.service.ts
-// Hisabche v2.0 — Performance Optimized + Cache Invalidation
+// Hisabche v2.0 — Unified Financial Data + No Duplicate Notifications
 // ============================================
 
 import { supabase } from "../db";
@@ -34,7 +34,7 @@ export class InvoiceService {
     this.workflowService = new WorkflowService();
   }
 
-  // ─── List Invoices — بهینه‌شده (بدون summary blocking) ───
+  // ─── List Invoices ───
   async list(userId: string, filters: InvoiceFilters) {
     const { search, type, status, customerId, supplierId, currency, dateFrom, dateTo, minTotal, maxTotal, page, limit, sortBy, sortDirection } = filters;
     const from = (page - 1) * limit;
@@ -72,7 +72,7 @@ export class InvoiceService {
     return data;
   }
 
-  // ─── Create Invoice — Async non-blocking + Cache Invalidation ───
+  // ─── Create Invoice — Unified: فقط journal_entries (نه transactions جدا) ───
   async create(userId: string, data: CreateInvoice) {
     const invoiceNumber = await this.generateInvoiceNumber(userId);
 
@@ -116,29 +116,24 @@ export class InvoiceService {
       }
     }
 
-    if (data.customerId && (data.paidAmount || 0) < (data.total || 0)) {
-      await supabase.from("transactions").insert({
-        customer_id: data.customerId, type: "sale",
-        amount: (data.total || 0) - (data.paidAmount || 0),
-        currency: data.currency || "AFN", description: `Invoice ${invoiceNumber}`,
-        reference: invoice.id, date: new Date().toISOString(), user_id: userId,
-      });
-    }
+    // ✅ REMOVED: transactions.insert — journal_entries جایگزین آن است
+    // داده‌های مالی فقط از journal_lines/transactions_view خوانده می‌شوند
 
-    // ✅ Cache Invalidation — بعد از write موفق
+    // ✅ Cache Invalidation
     this.invalidateUserCache(userId)
 
-    // ✅ Fire-and-forget — async non-blocking
+    // ✅ ایجاد ثبت حسابداری (تنها منبع حقیقت مالی)
     this.createAccountingEntries(userId, invoice.id, { ...data, invoiceNumber, total: data.total || 0 })
       .catch(err => console.error('Accounting entry failed:', err));
 
+    // ✅ فقط workflow را start کن — notification تکراری حذف شد
     this.tryStartWorkflow(userId, invoice.id, Number(data.total || 0))
       .catch(err => console.error('Workflow failed:', err));
 
     return this.getById(invoice.id, userId);
   }
 
-  // ─── Update Invoice — با Cache Invalidation ───
+  // ─── Update Invoice ───
   async update(id: string, userId: string, data: UpdateInvoice) {
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
     if (data.status !== undefined) updates.status = data.status;
@@ -154,23 +149,20 @@ export class InvoiceService {
     if (error) throw new DatabaseError("Failed to update invoice", error);
     if (!invoice) throw new NotFoundError("Invoice");
 
-    // ✅ Cache Invalidation
     this.invalidateUserCache(userId)
-
     return invoice;
   }
 
-  // ─── Delete Invoice — با Cache Invalidation ───
+  // ─── Delete Invoice ───
   async delete(id: string, userId: string): Promise<void> {
     await supabase.from("invoice_items").delete().eq("invoice_id", id);
     const { error } = await supabase.from("invoices").delete().eq("id", id).eq("user_id", userId);
     if (error) throw new DatabaseError("Failed to delete invoice", error);
 
-    // ✅ Cache Invalidation
     this.invalidateUserCache(userId)
   }
 
-  // ─── Cache Invalidation Helper ───
+  // ─── Cache Invalidation ───
   private invalidateUserCache(userId: string) {
     memoryCache.invalidate(`dashboard:${userId}`)
     memoryCache.invalidate(`sales:${userId}`)
@@ -180,7 +172,7 @@ export class InvoiceService {
     memoryCache.invalidate(`products:${userId}`)
   }
 
-  // ─── Get Summary (still available as standalone endpoint) ───
+  // ─── Get Summary ───
   async getSummary(userId: string) {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
@@ -198,7 +190,7 @@ export class InvoiceService {
     return { todaySales, totalDebt, lowStockCount };
   }
 
-  // ─── Private: Accounting Entries ───
+  // ─── Private: Accounting Entries (تنها منبع حقیقت مالی) ───
   private async createAccountingEntries(userId: string, invoiceId: string, data: { type: string; total: number; items?: any[]; invoiceNumber?: string; date?: string }): Promise<void> {
     try {
       const { data: accounts } = await supabase.from("accounts").select("id, code, type").in("code", ["1200", "4000", "5000", "1000"]).eq("user_id", userId);
@@ -255,26 +247,27 @@ export class InvoiceService {
     await supabase.from("stock_movements").insert({ product_id: productId, type: "sale", quantity: -quantity, reference_type: "invoice", user_id: userId });
   }
 
-  // ─── Private: Start Workflow & Notification ───
+  // ─── Private: Start Workflow (بدون notification تکراری) ───
   private async tryStartWorkflow(userId: string, invoiceId: string, total: number): Promise<void> {
     try {
-      const { data: workflows } = await supabase.from("workflows").select("id").eq("entity_type", "invoice").eq("is_active", true).is("deleted_at", null).limit(1);
+      const { data: workflows } = await supabase.from("workflows").select("id")
+        .eq("entity_type", "invoice").eq("is_active", true).is("deleted_at", null).limit(1);
       const workflow = workflows?.[0];
       if (!workflow) return;
 
-      const { data: membership } = await supabase.from("workspace_members").select("workspace_id").eq("user_id", userId).limit(1).single();
+      const { data: membership } = await supabase.from("workspace_members")
+        .select("workspace_id").eq("user_id", userId).limit(1).single();
       const workspaceId = membership?.workspace_id;
       if (!workspaceId) return;
 
-      await this.workflowService.startWorkflow(workspaceId, { workflow_id: workflow.id, entity_type: "invoice", entity_id: invoiceId });
-
-      await supabase.from("notifications").insert({
-        workspace_id: workspaceId, user_id: userId,
-        title: "فاکتور جدید ثبت شد",
-        body: `فاکتور #${invoiceId.substring(0, 8)} به مبلغ ${total.toLocaleString()} افغانی ثبت شد و نیاز به تأیید دارد.`,
-        type: "approval_required", action_url: `/invoices/${invoiceId}`, entity_type: "invoice", entity_id: invoiceId,
+      await this.workflowService.startWorkflow(workspaceId, {
+        workflow_id: workflow.id,
+        entity_type: "invoice",
+        entity_id: invoiceId,
       });
-    } catch { /* silent */ }
+    } catch {
+      /* silent — never block invoice creation */
+    }
   }
 }
 

@@ -121,16 +121,30 @@ export class CustomerService {
   // ─── Get Balance ───
   async getBalance(customerId: string, userId: string) {
     const { data: transactions, error } = await supabase
-      .from('transactions').select('type, amount').eq('customer_id', customerId).eq('user_id', userId)
-    if (error) throw new DatabaseError('Failed to fetch transactions', error)
+      .from('transactions_view')
+      .select('type, amount')
+      .eq('customer_id', customerId)
+      .eq('user_id', userId)
+
+    if (error) {
+      throw new DatabaseError('Failed to fetch transactions', error)
+    }
 
     const balance = (transactions || []).reduce((acc, tx) => {
       const amount = Number(tx.amount)
-      if (tx.type === 'sale' || tx.type === 'receipt') return acc + amount
-      if (tx.type === 'payment' || tx.type === 'return') return acc - amount
+      if (tx.type === 'sale' || tx.type === 'receipt') {
+        return acc + amount
+      }
+      if (tx.type === 'payment' || tx.type === 'return') {
+        return acc - amount
+      }
       return acc
     }, 0)
 
-    return { customerId, balance, isDebtor: balance > 0 }
+    return {
+      customerId,
+      balance,
+      isDebtor: balance > 0,
+    }
   }
 }

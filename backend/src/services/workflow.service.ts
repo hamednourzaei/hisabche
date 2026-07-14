@@ -1,6 +1,6 @@
 // ============================================
 // backend/src/services/workflow.service.ts — Optimized v2.0
-// Hisabche v1.1 — Workflow & Approval Engine
+// Hisabche v1.1 — Workflow & Approval Engine + FK Tracking
 // ============================================
 
 import { supabase } from "../db";
@@ -41,8 +41,10 @@ export class WorkflowService {
 
     const { error: stepsError } = await supabase.from("workflow_steps").insert(
       input.steps.map((step) => ({
-        workflow_id: workflow.id, step_order: step.step_order,
-        approver_role: step.approver_role, approver_user_id: step.approver_user_id ?? null,
+        workflow_id: workflow.id,
+        step_order: step.step_order,
+        approver_role: step.approver_role,
+        approver_user_id: step.approver_user_id ?? null,
         is_final: step.is_final,
       }))
     );
@@ -137,6 +139,7 @@ export class WorkflowService {
 
     if (error || !instance) throw new DatabaseError("Failed to start workflow", error);
 
+    // ✅ Send notification WITH workflow_instance_id
     await this.sendNotification(instance, { action: "pending" });
     return this.mapInstance(instance);
   }
@@ -163,7 +166,6 @@ export class WorkflowService {
 
   /* ─── Get single instance with full history ─── */
   async getInstance(instanceId: string): Promise<{ instance: WorkflowInstance; actions: WorkflowActionRecord[] }> {
-    // ✅ دو کوئری همزمان
     const [instanceResult, actionsResult] = await Promise.all([
       supabase.from("workflow_instances").select(INSTANCE_COLUMNS).eq("id", instanceId).single(),
       supabase.from("workflow_actions").select(ACTION_COLUMNS).eq("instance_id", instanceId).order("created_at", { ascending: false }),
@@ -179,121 +181,118 @@ export class WorkflowService {
     };
   }
 
-/* ─── Approve or reject a step ─── */
-async performAction(userId: string, userRole: string, input: CreateWorkflowActionInput): Promise<{ instance: WorkflowInstance; action: WorkflowActionRecord }> {
-  const { data: instance, error: instanceError } = await supabase
-    .from("workflow_instances")
-    .select(INSTANCE_COLUMNS)
-    .eq("id", input.instance_id)
-    .single();
+  /* ─── Approve or reject a step ─── */
+  async performAction(userId: string, userRole: string, input: CreateWorkflowActionInput): Promise<{ instance: WorkflowInstance; action: WorkflowActionRecord }> {
+    const { data: instance, error: instanceError } = await supabase
+      .from("workflow_instances")
+      .select(INSTANCE_COLUMNS)
+      .eq("id", input.instance_id)
+      .single();
 
-  if (instanceError || !instance) {
-    throw new DatabaseError("Workflow instance not found", instanceError);
-  }
+    if (instanceError || !instance) {
+      throw new DatabaseError("Workflow instance not found", instanceError);
+    }
 
-  if (instance.status !== "in_progress") {
-    throw new DatabaseError("Workflow is not in progress");
-  }
+    if (instance.status !== "in_progress") {
+      throw new DatabaseError("Workflow is not in progress");
+    }
 
-  // ✅ Fix 1: Type guard for current_step
-  const currentStepNumber = instance.current_step as number;
-  if (!currentStepNumber || currentStepNumber < 1) {
-    throw new DatabaseError("Invalid current step");
-  }
+    const currentStepNumber = instance.current_step as number;
+    if (!currentStepNumber || currentStepNumber < 1) {
+      throw new DatabaseError("Invalid current step");
+    }
 
-  // ✅ Fix 2: Type guard for workflow_id
-  const workflowId = instance.workflow_id as string;
-  if (!workflowId) {
-    throw new DatabaseError("Invalid workflow reference");
-  }
+    const workflowId = instance.workflow_id as string;
+    if (!workflowId) {
+      throw new DatabaseError("Invalid workflow reference");
+    }
 
-  const { data: steps, error: stepError } = await supabase
-    .from("workflow_steps")
-    .select(WORKFLOW_STEP_COLUMNS)
-    .eq("workflow_id", workflowId)
-    .eq("step_order", currentStepNumber);
+    const { data: steps, error: stepError } = await supabase
+      .from("workflow_steps")
+      .select(WORKFLOW_STEP_COLUMNS)
+      .eq("workflow_id", workflowId)
+      .eq("step_order", currentStepNumber);
 
-  if (stepError || !steps || steps.length === 0) {
-    throw new DatabaseError("Current step not found", stepError);
-  }
+    if (stepError || !steps || steps.length === 0) {
+      throw new DatabaseError("Current step not found", stepError);
+    }
 
-  // ✅ Fix 3: Type guard for currentStep
-  const currentStep = steps[0];
-  if (!currentStep) {
-    throw new DatabaseError("Current step data is missing");
-  }
+    const currentStep = steps[0];
+    if (!currentStep) {
+      throw new DatabaseError("Current step data is missing");
+    }
 
-  // ثبت action
-  const { data: action, error: actionError } = await supabase
-    .from("workflow_actions")
-    .insert({
-      instance_id: input.instance_id,
-      step_order: currentStepNumber,
-      action: input.action,
-      actor_user_id: userId,
-      actor_role: userRole,
-      comment: input.comment ?? null,
-    })
-    .select(ACTION_COLUMNS)
-    .single();
+    const { data: action, error: actionError } = await supabase
+      .from("workflow_actions")
+      .insert({
+        instance_id: input.instance_id,
+        step_order: currentStepNumber,
+        action: input.action,
+        actor_user_id: userId,
+        actor_role: userRole,
+        comment: input.comment ?? null,
+      })
+      .select(ACTION_COLUMNS)
+      .single();
 
-  if (actionError || !action) {
-    throw new DatabaseError("Failed to record action", actionError);
-  }
+    if (actionError || !action) {
+      throw new DatabaseError("Failed to record action", actionError);
+    }
 
-  let newStatus: string;
-  let newStep: number;
-  let completedAt: string | null = null;
+    let newStatus: string;
+    let newStep: number;
+    let completedAt: string | null = null;
 
-  // ✅ Fix 4: is_final با type guard
-  const isFinal = currentStep.is_final as boolean;
+    const isFinal = currentStep.is_final as boolean;
 
-  if (input.action === "approved") {
-    if (isFinal) {
-      newStatus = "approved";
+    if (input.action === "approved") {
+      if (isFinal) {
+        newStatus = "approved";
+        newStep = currentStepNumber;
+        completedAt = new Date().toISOString();
+      } else {
+        newStatus = "in_progress";
+        newStep = currentStepNumber + 1;
+      }
+    } else if (input.action === "rejected") {
+      newStatus = "rejected";
+      newStep = currentStepNumber;
+      completedAt = new Date().toISOString();
+    } else if (input.action === "cancelled") {
+      newStatus = "cancelled";
       newStep = currentStepNumber;
       completedAt = new Date().toISOString();
     } else {
       newStatus = "in_progress";
-      newStep = currentStepNumber + 1;
+      newStep = currentStepNumber;
     }
-  } else if (input.action === "rejected") {
-    newStatus = "rejected";
-    newStep = currentStepNumber;
-    completedAt = new Date().toISOString();
-  } else if (input.action === "cancelled") {
-    newStatus = "cancelled";
-    newStep = currentStepNumber;
-    completedAt = new Date().toISOString();
-  } else {
-    newStatus = "in_progress";
-    newStep = currentStepNumber;
+
+    const { data: updated, error: updateError } = await supabase
+      .from("workflow_instances")
+      .update({
+        status: newStatus,
+        current_step: newStep,
+        completed_at: completedAt,
+      })
+      .eq("id", input.instance_id)
+      .select(INSTANCE_COLUMNS)
+      .single();
+
+    if (updateError || !updated) {
+      throw new DatabaseError("Failed to update instance", updateError);
+    }
+
+    // ✅ Send notification WITH workflow_instance_id
+    await this.sendNotification(updated, action);
+
+    return {
+      instance: this.mapInstance(updated),
+      action: this.mapAction(action),
+    };
   }
 
-  const { data: updated, error: updateError } = await supabase
-    .from("workflow_instances")
-    .update({
-      status: newStatus,
-      current_step: newStep,
-      completed_at: completedAt,
-    })
-    .eq("id", input.instance_id)
-    .select(INSTANCE_COLUMNS)
-    .single();
-
-  if (updateError || !updated) {
-    throw new DatabaseError("Failed to update instance", updateError);
-  }
-
-  await this.sendNotification(updated, action);
-
-  return {
-    instance: this.mapInstance(updated),
-    action: this.mapAction(action),
-  };
-}
   /* ═══════════════════════════════════════════
-     NOTIFICATION HOOK (v1.1)
+     NOTIFICATION HOOK (v1.1) — با FK tracking
      ═══════════════════════════════════════════ */
   private async sendNotification(instance: Record<string, unknown>, action: Record<string, unknown>): Promise<void> {
     try {
@@ -301,6 +300,7 @@ async performAction(userId: string, userRole: string, input: CreateWorkflowActio
       const workspaceId = instance.workspace_id as string;
       const entityType = instance.entity_type as string;
       const entityId = instance.entity_id as string;
+      const instanceId = instance.id as string;
       const shortId = entityId?.substring(0, 8) || "";
 
       const config: Record<string, { title: string; type: "info" | "success" | "warning" }> = {
@@ -314,7 +314,6 @@ async performAction(userId: string, userRole: string, input: CreateWorkflowActio
 
       let targetUserId = action.actor_user_id as string;
       if (!targetUserId) {
-        // ✅ فقط user_id را انتخاب کن
         const { data: members } = await supabase
           .from("workspace_members")
           .select("user_id")
@@ -324,13 +323,19 @@ async performAction(userId: string, userRole: string, input: CreateWorkflowActio
 
       if (!targetUserId) return;
 
-      await this.notificationService.create(workspaceId, {
-        user_id: targetUserId, title: cfg.title,
-        body: `${entityType} #${shortId} ${actionType === "pending" ? "نیاز به تأیید دارد" : actionType === "approved" ? "تأیید شد" : "رد شد"}.`,
-        type: cfg.type,
-        action_url: `/${entityType}s/${entityId}`,
-        entity_type: entityType, entity_id: entityId,
-      });
+      // ✅ Include workflow_instance_id for FK tracking
+await this.notificationService.create(workspaceId, {
+  user_id: targetUserId,
+  title: cfg.title,
+  body: `${entityType} #${shortId} ${actionType === "pending" ? "نیاز به تأیید دارد" : actionType === "approved" ? "تأیید شد" : "رد شد"}.`,
+  type: cfg.type,
+  action_url: `/${entityType}s/${entityId}`,
+  entity_type: entityType,
+  entity_id: entityId,
+  metadata: {
+    workflow_instance_id: instanceId,
+  },
+})
     } catch (err) {
       console.error("[Workflow] Notification failed:", err);
     }

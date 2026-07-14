@@ -170,7 +170,8 @@ export class AnalyticsService {
     const { startDate, endDate } = dateRange
     if (!userId || !startDate || !endDate) return this.emptyFinancialSummary()
     const { data: entries } = await supabase
-      .from('ledger_entries').select('debit, credit, account_id, entry_date')
+  .from('ledger_entries_view')
+  .select('debit, credit, account_id, entry_date')
       .eq('user_id', userId).gte('entry_date', startDate).lte('entry_date', endDate)
     if (!entries || entries.length === 0) return this.emptyFinancialSummary()
     const totalRevenue = entries.reduce((sum: number, e: any) => sum + Number(e.credit), 0)
