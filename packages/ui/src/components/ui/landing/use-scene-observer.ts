@@ -45,15 +45,16 @@ export function useSceneObserver<T extends HTMLElement = HTMLDivElement>(
   options: UseSceneObserverOptions = {}
 ): UseSceneObserverReturn<T> {
   const {
-    threshold = 0.25,
-    rootMargin = "0px 0px -60px 0px",
+    threshold = 0.2, // ✅ کاهش از 0.25 به 0.2 برای تشخیص بهتر در موبایل
+    rootMargin = "0px 0px -40px 0px", // ✅ کاهش از -60px به -40px
     narrativeState,
-    cooldownMs = 500,
-    mountDelayMs = 80,
+    cooldownMs = 300, // ✅ کاهش از 500 به 300
+    mountDelayMs = 120, // ✅ افزایش از 80 به 120 برای موبایل
   } = options;
 
   const ref = useRef<T>(null);
   const [state, setState] = useState<SceneState>("hidden");
+  const mounted = useRef(false);
 
   const optsRef = useRef({ threshold, rootMargin, narrativeState, cooldownMs, mountDelayMs });
   optsRef.current = { threshold, rootMargin, narrativeState, cooldownMs, mountDelayMs };
@@ -61,6 +62,10 @@ export function useSceneObserver<T extends HTMLElement = HTMLDivElement>(
   useEffect(() => {
     const element = ref.current;
     if (!element) return;
+
+    // جلوگیری از اجرای دوباره
+    if (mounted.current) return;
+    mounted.current = true;
 
     const { threshold, rootMargin, narrativeState, cooldownMs, mountDelayMs } = optsRef.current;
 
@@ -92,12 +97,15 @@ export function useSceneObserver<T extends HTMLElement = HTMLDivElement>(
 
     const mountTimer = setTimeout(() => {
       setState("visible");
-      requestAnimationFrame(() => setState("animated"));
-      // Restore opacity — now controlled by Tailwind classes
-      element.style.opacity = "";
-      element.style.willChange = "";
+      requestAnimationFrame(() => {
+        setState("animated");
+        // Restore opacity — now controlled by Tailwind classes
+        element.style.opacity = "";
+        element.style.willChange = "";
+      });
     }, mountDelayMs);
 
+    // ✅ استفاده از IntersectionObserver با rootMargin بهبودیافته
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
@@ -107,6 +115,7 @@ export function useSceneObserver<T extends HTMLElement = HTMLDivElement>(
 
         element.setAttribute("data-scroll-active", isIntersecting ? "true" : "false");
 
+        // ✅ فقط زمانی که کاملاً قابل مشاهده است (با margin منفی کمتر)
         if (isIntersecting && intersectionRatio >= threshold) {
           if (canTrigger(sectionId, cooldownMs)) {
             recordTrigger(sectionId);
@@ -114,7 +123,10 @@ export function useSceneObserver<T extends HTMLElement = HTMLDivElement>(
           }
         }
       },
-      { threshold, rootMargin }
+      { 
+        threshold: typeof threshold === 'number' ? threshold : 0.2,
+        rootMargin: rootMargin || "0px 0px -40px 0px",
+      }
     );
 
     observer.observe(element);
@@ -125,6 +137,7 @@ export function useSceneObserver<T extends HTMLElement = HTMLDivElement>(
       // Cleanup inline styles
       element.style.opacity = "";
       element.style.willChange = "";
+      mounted.current = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

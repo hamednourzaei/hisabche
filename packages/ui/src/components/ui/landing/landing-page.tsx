@@ -10,14 +10,16 @@ import { cn } from "@/lib/utils";
 
 import dynamic from 'next/dynamic';
 
+// ✅ همه کامپوننت‌ها با SSR=true برای جلوگیری از flash
 const CinematicHero = dynamic(() => import('./cinematic-hero'), { ssr: true });
-const PainScene = dynamic(() => import('./pain-scene'));
-const TransformScene = dynamic(() => import('./transform-scene'));
-const FeaturesScene = dynamic(() => import('./features-scene'));
-const SocialScene = dynamic(() => import('./social-scene'));
-const FaqScene = dynamic(() => import('./faq-scene'));
-const CTAScene = dynamic(() => import('./cta-scene'));
-const StatsSection = dynamic(() => import('./stats-section'));
+const PainScene = dynamic(() => import('./pain-scene'), { ssr: true });
+const TransformScene = dynamic(() => import('./transform-scene'), { ssr: true });
+const FeaturesScene = dynamic(() => import('./features-scene'), { ssr: true });
+const SocialScene = dynamic(() => import('./social-scene'), { ssr: true });
+const FaqScene = dynamic(() => import('./faq-scene'), { ssr: true });
+const CTAScene = dynamic(() => import('./cta-scene'), { ssr: true });
+const StatsSection = dynamic(() => import('./stats-section'), { ssr: true });
+
 const sectionKeys: Record<string, string> = {
   hero: "landing.navHero",
   pain: "landing.navPain",
@@ -69,17 +71,18 @@ export function LandingPage() {
   const currentLocale = getLocaleFromPathname(pathname);
   const fallbacks = sectionFallbacks[currentLocale] || sectionFallbacks["fa-IR"];
 
-const NAVIGATION_SECTIONS = useMemo(
-  () => [
-    { id: "hero",         label: t("landing.navHero", fallbacks?.hero ?? "Home"),               narrative: "frustration" as const },
-    { id: "pain",         label: t("landing.navPain", fallbacks?.pain ?? "Problem"),             narrative: "confusion"   as const },
-    { id: "transform",    label: t("landing.navTransform", fallbacks?.transform ?? "Solution"),  narrative: "clarity"     as const },
-    { id: "features",     label: t("landing.navFeatures", fallbacks?.features ?? "Features"),    narrative: "confidence"  as const },
-    { id: "testimonials", label: t("landing.navTestimonials", fallbacks?.testimonials ?? "Trust"), narrative: "trust"    as const },
-    { id: "cta",          label: t("landing.navCTA", fallbacks?.cta ?? "Start"),                narrative: "action"      as const },
-  ],
-  [t, fallbacks]
-);
+  const NAVIGATION_SECTIONS = useMemo(
+    () => [
+      { id: "hero" as const, label: t("landing.navHero", fallbacks?.hero ?? "Home"), narrative: "frustration" as const },
+      { id: "pain" as const, label: t("landing.navPain", fallbacks?.pain ?? "Problem"), narrative: "confusion" as const },
+      { id: "transform" as const, label: t("landing.navTransform", fallbacks?.transform ?? "Solution"), narrative: "clarity" as const },
+      { id: "features" as const, label: t("landing.navFeatures", fallbacks?.features ?? "Features"), narrative: "confidence" as const },
+      { id: "testimonials" as const, label: t("landing.navTestimonials", fallbacks?.testimonials ?? "Trust"), narrative: "trust" as const },
+      { id: "cta" as const, label: t("landing.navCTA", fallbacks?.cta ?? "Start"), narrative: "action" as const },
+    ],
+    [t, fallbacks]
+  );
+
   useEffect(() => {
     if (i18n.language !== currentLocale) {
       i18n.changeLanguage(currentLocale).then(() => {
@@ -142,15 +145,15 @@ const NAVIGATION_SECTIONS = useMemo(
 
           <footer
             className={cn(
-              "px-4 py-12 text-center",
+              "px-4 py-8 sm:py-12 text-center",
               "border-t border-[hsl(var(--border-default))]"
             )}
           >
-            <div className="mb-2 text-lg font-bold text-[hsl(var(--fg-primary))]">
+            <div className="mb-2 text-base sm:text-lg font-bold text-[hsl(var(--fg-primary))]">
               {safeT("app.name", "حسابچه")}
               <span className="text-[hsl(var(--color-primary))]">.</span>
             </div>
-            <p className="text-[length:var(--text-caption)] text-[hsl(var(--fg-tertiary))]">
+            <p className="text-xs sm:text-[length:var(--text-caption)] text-[hsl(var(--fg-tertiary))]">
               {safeT("landing.footer", "سیستم مدیریت کسب‌وکار")}
             </p>
           </footer>

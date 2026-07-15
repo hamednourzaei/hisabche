@@ -5,8 +5,8 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   StatsSection v5 — Optimized Animated Counters
-   ✅ RAF throttled · GPU-safe · CLS-free · i18n-ready
+   StatsSection v6 — Optimized Animated Counters · Responsive
+   ✅ RAF throttled · GPU-safe · CLS-free · i18n-ready · Mobile-first
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface StatsSectionProps {
@@ -32,7 +32,6 @@ function AnimatedCounter({ end, label }: { end: number; label: string }) {
   const started = useRef(false);
   const rafRef = useRef<number>(0);
 
-  // Prevent hydration mismatch — render final value after mount
   useEffect(() => {
     setHydrated(true);
   }, []);
@@ -60,7 +59,6 @@ function AnimatedCounter({ end, label }: { end: number; label: string }) {
             const eased = 1 - Math.pow(1 - progress, 3);
             const newValue = Math.round(eased * end);
 
-            // Only setState when value actually changes
             if (newValue !== lastValue) {
               lastValue = newValue;
               setCount(newValue);
@@ -74,7 +72,7 @@ function AnimatedCounter({ end, label }: { end: number; label: string }) {
           rafRef.current = requestAnimationFrame(tick);
         }
       },
-      { threshold: 0.5 },
+      { threshold: 0.3, rootMargin: "0px 0px -40px 0px" }, // ✅ بهبود تشخیص در موبایل
     );
 
     observer.observe(el);
@@ -85,19 +83,18 @@ function AnimatedCounter({ end, label }: { end: number; label: string }) {
     };
   }, [end]);
 
-  // Show placeholder with reserved space before hydration
   const displayValue = hydrated ? count.toLocaleString("fa-AF") : end.toLocaleString("fa-AF");
 
   return (
-    <div ref={ref} className="text-center min-w-[80px]">
+    <div ref={ref} className="text-center min-w-[60px] sm:min-w-[80px]">
       <div
-        className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tabular-nums text-[hsl(var(--fg-primary))] mb-2 tracking-tight min-h-[3rem]"
+        className="text-2xl sm:text-4xl lg:text-5xl font-extrabold tabular-nums text-[hsl(var(--fg-primary))] mb-1 sm:mb-2 tracking-tight min-h-[2.5rem] sm:min-h-[3rem]"
         aria-label={`${label}: ${displayValue}+`}
       >
         {displayValue}
         <span className="text-[hsl(var(--color-primary))]">+</span>
       </div>
-      <div className="text-xs sm:text-sm text-[hsl(var(--fg-secondary))] font-medium min-h-[1.25rem]">
+      <div className="text-[10px] sm:text-sm text-[hsl(var(--fg-secondary))] font-medium min-h-[1rem] sm:min-h-[1.25rem]">
         {label}
       </div>
     </div>
@@ -111,18 +108,18 @@ export default function StatsSection({ t }: StatsSectionProps) {
         "relative overflow-hidden",
         "border-y border-[hsl(var(--border-default))]",
         "bg-[hsl(var(--surface-elevated)/0.4)]",
-        "py-14 sm:py-16 px-6",
+        "py-10 sm:py-16 px-4 sm:px-6",
       )}
     >
       <div
-        className="pointer-events-none absolute inset-0"
+        className="pointer-events-none absolute inset-0 max-sm:hidden"
         style={{
           background: "radial-gradient(ellipse 60% 50% at 50% 50%, hsl(var(--color-primary)/0.06), transparent)",
         }}
         aria-hidden="true"
       />
 
-      <div className="relative max-w-3xl mx-auto grid grid-cols-3 gap-6 sm:gap-10">
+      <div className="relative max-w-3xl mx-auto grid grid-cols-3 gap-3 sm:gap-10">
         {STATS.map((s) => (
           <AnimatedCounter key={s.labelKey} end={s.end} label={t(s.labelKey, s.fallback)} />
         ))}

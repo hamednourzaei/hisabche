@@ -1,13 +1,13 @@
 // packages/ui/src/components/ui/landing/faq-scene.tsx
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { ChevronDown } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   FaqScene v5 — CLS Fixed · GPU-safe
-   ✅ Reserved height · will-change · i18n-ready
+   FaqScene v6 — CLS Fixed · GPU-safe
+   ✅ No estimated height · grid-rows for smooth animation
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface FaqSceneProps {
@@ -18,23 +18,6 @@ const FAQ_COUNT = 3;
 
 function FAQItem({ question, answer }: { question: string; answer: string }) {
   const [open, setOpen] = useState(false);
-  const contentRef = useRef<HTMLDivElement>(null);
-  const [contentHeight, setContentHeight] = useState(0);
-
-  const measureHeight = useCallback(() => {
-    if (contentRef.current) {
-      setContentHeight(contentRef.current.scrollHeight);
-    }
-  }, []);
-
-  useEffect(() => {
-    measureHeight();
-    window.addEventListener("resize", measureHeight);
-    return () => window.removeEventListener("resize", measureHeight);
-  }, [measureHeight, answer]);
-
-  // Reserve space for the answer to prevent CLS
-  const reservedHeight = 80; // approximate max answer height
 
   return (
     <div
@@ -68,13 +51,16 @@ function FAQItem({ question, answer }: { question: string; answer: string }) {
           aria-hidden="true"
         />
       </button>
-      <div
-        className="overflow-hidden transition-[height] duration-300 motion-reduce:transition-none"
-        style={{ height: open ? contentHeight : 0 }}
-        aria-hidden={!open}
-      >
-        <div ref={contentRef} className="px-6 pb-5 text-sm text-[hsl(var(--fg-secondary))] leading-relaxed">
-          {answer}
+
+      {/* ✅ grid-rows برای انتقال بدون CLS */}
+      <div className={cn(
+        "grid transition-[grid-template-rows] duration-300 motion-reduce:transition-none",
+        open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+      )}>
+        <div className="overflow-hidden">
+          <div className="px-6 pb-5 text-sm text-[hsl(var(--fg-secondary))] leading-relaxed">
+            {answer}
+          </div>
         </div>
       </div>
     </div>

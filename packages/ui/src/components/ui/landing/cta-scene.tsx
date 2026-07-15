@@ -5,8 +5,8 @@ import { useSceneObserver } from "./use-scene-observer";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   CTAScene v5 — CLS Fixed · GPU-safe
-   ✅ Reserved space · will-change · i18n-ready
+   CTAScene v6 — CLS Fixed · GPU-safe · Responsive
+   ✅ Reserved space · will-change · i18n-ready · Mobile-first
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface CTASceneProps {
@@ -32,19 +32,23 @@ export default function CTAScene({ t, onNavigateLogin }: CTASceneProps) {
       {/* ── Animated gradient background ── */}
       <div className="pointer-events-none absolute inset-0 contain-layout contain-paint" aria-hidden="true">
         <div
-          className="absolute w-[700px] h-[700px] rounded-full blur-[150px] animate-[aurora_10s_ease-in-out_infinite] will-change-transform"
+          className="absolute rounded-full blur-[150px] animate-[aurora_10s_ease-in-out_infinite] will-change-transform"
           style={{
             background: `radial-gradient(circle, hsl(var(--color-primary)/0.15), transparent 70%)`,
             top: "-30%",
             insetInlineStart: "50%",
+            width: "min(700px, 150vw)",
+            height: "min(700px, 150vw)",
           }}
         />
         <div
-          className="absolute w-[500px] h-[500px] rounded-full blur-[120px] animate-[aurora_10s_ease-in-out_infinite_5s] will-change-transform"
+          className="absolute rounded-full blur-[120px] animate-[aurora_10s_ease-in-out_infinite_5s] will-change-transform"
           style={{
             background: `radial-gradient(circle, hsl(var(--color-success)/0.1), transparent 70%)`,
             bottom: "-20%",
             insetInlineEnd: "-10%",
+            width: "min(500px, 120vw)",
+            height: "min(500px, 120vw)",
           }}
         />
       </div>
@@ -52,13 +56,13 @@ export default function CTAScene({ t, onNavigateLogin }: CTASceneProps) {
       <div className="container-narrow max-w-2xl relative z-10">
         <div
           className={cn(
-            "relative overflow-hidden text-center min-h-[380px]",
+            "relative overflow-hidden text-center",
             "rounded-[var(--radius-card)]",
             "border border-[hsl(var(--color-primary)/0.15)]",
             "bg-[var(--glass-bg)]",
             "backdrop-blur-[var(--glass-blur)]",
             "shadow-[var(--shadow-premium)]",
-            "p-[clamp(2.5rem,6vw,4rem)]",
+            "p-6 sm:p-[clamp(2.5rem,6vw,4rem)]",
             "will-change-transform opacity-0",
             "transition-all duration-700 motion-reduce:transition-none",
             animated && "opacity-100 scale-100 translate-y-0",
@@ -70,38 +74,40 @@ export default function CTAScene({ t, onNavigateLogin }: CTASceneProps) {
           />
 
           <div
-            className="pointer-events-none absolute -end-20 -top-20 w-48 h-48 rounded-full blur-3xl bg-[hsl(var(--color-primary)/0.08)]"
+            className="pointer-events-none absolute -end-20 -top-20 w-48 h-48 rounded-full blur-3xl bg-[hsl(var(--color-primary)/0.08)] max-sm:hidden"
             aria-hidden="true"
           />
           <div
-            className="pointer-events-none absolute -start-20 -bottom-20 w-40 h-40 rounded-full blur-3xl bg-[hsl(var(--color-success)/0.06)]"
+            className="pointer-events-none absolute -start-20 -bottom-20 w-40 h-40 rounded-full blur-3xl bg-[hsl(var(--color-success)/0.06)] max-sm:hidden"
             aria-hidden="true"
           />
 
-          <div className="relative space-y-6">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[hsl(var(--fg-primary))] tracking-tight min-h-[3rem]">
+          <div className="relative space-y-4 sm:space-y-6">
+            <h2 className="text-xl sm:text-3xl lg:text-4xl font-extrabold text-[hsl(var(--fg-primary))] tracking-tight min-h-[2rem] sm:min-h-[3rem]">
               {t("landing.finalCTATitle", "همین امروز شروع کنید")}
             </h2>
 
-            <p className="text-base sm:text-lg text-[hsl(var(--fg-secondary))] leading-relaxed max-w-md mx-auto min-h-[2rem]">
+            <p className="text-sm sm:text-lg text-[hsl(var(--fg-secondary))] leading-relaxed max-w-md mx-auto min-h-[1.5rem] sm:min-h-[2rem]">
               {t("landing.finalCTADesc", "رایگان. بدون کارت بانکی. کمتر از ۱ دقیقه.")}
             </p>
 
-            <div className="pt-4">
+            <div className="pt-2 sm:pt-4">
               <button
                 type="button"
                 onClick={onNavigateLogin}
                 className={cn(
                   "group relative overflow-hidden",
                   "inline-flex items-center justify-center",
-                  "rounded-full px-10 py-4",
-                  "text-lg font-bold text-white",
+                  "rounded-full px-6 sm:px-10 py-3 sm:py-4",
+                  "text-sm sm:text-lg font-bold text-white",
                   "bg-[var(--gradient-brand)]",
                   "shadow-[var(--shadow-premium)]",
                   "transition-all duration-300",
                   "hover:scale-[1.04] hover:shadow-xl",
                   "active:scale-[0.98]",
                   "motion-reduce:transform-none",
+                  "min-h-[44px] sm:min-h-[56px]",
+                  "w-full sm:w-auto",
                 )}
               >
                 <span className="relative z-10 flex items-center gap-2">

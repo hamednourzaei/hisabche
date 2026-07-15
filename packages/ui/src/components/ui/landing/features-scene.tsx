@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils";
 import { Receipt, Package, BookOpen, Smartphone, Wifi, Banknote } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   FeaturesScene v5 — CLS Fixed · GPU-safe
-   ✅ Reserved space · will-change · i18n-ready
+   FeaturesScene v6 — CLS Fixed · GPU-safe · Responsive
+   ✅ Reserved space · will-change · i18n-ready · Mobile-first
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface FeaturesSceneProps {
@@ -35,35 +35,35 @@ export default function FeaturesScene({ t }: FeaturesSceneProps) {
         {/* ── Header ── */}
         <div
           className={cn(
-            "text-center mb-16 min-h-[120px]",
+            "text-center mb-10 sm:mb-16 min-h-[100px] sm:min-h-[120px]",
             "transition-all duration-700 motion-reduce:transition-none",
             animated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5",
           )}
         >
-          <p className="text-sm uppercase tracking-[0.2em] mb-3 text-[hsl(var(--fg-tertiary))] font-semibold">
+          <p className="text-xs sm:text-sm uppercase tracking-[0.2em] mb-2 sm:mb-3 text-[hsl(var(--fg-tertiary))] font-semibold">
             {t("landing.featuresLabel", "ابزارها")}
           </p>
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[hsl(var(--fg-primary))] tracking-tight">
+          <h2 className="text-xl sm:text-3xl lg:text-4xl font-extrabold text-[hsl(var(--fg-primary))] tracking-tight">
             {t("landing.featuresTitle", "همه ابزارها در یک جا")}
           </h2>
-          <p className="mt-4 text-base sm:text-lg text-[hsl(var(--fg-secondary))] leading-relaxed max-w-lg mx-auto">
+          <p className="mt-3 sm:mt-4 text-sm sm:text-lg text-[hsl(var(--fg-secondary))] leading-relaxed max-w-lg mx-auto">
             {t("landing.featuresDesc", "بدون نیاز به چند برنامه مختلف")}
           </p>
         </div>
 
         {/* ── Feature cards ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
           {FEATURE_ICONS.map((Icon, i) => {
             const key = `feature${i + 1}`;
             return (
               <div
                 key={key}
                 className={cn(
-                  "group relative p-6 sm:p-8 text-center min-h-[220px]",
+                  "group relative p-4 sm:p-8 text-center min-h-[180px] sm:min-h-[220px]",
                   "rounded-[var(--radius-card)]",
                   "border border-[hsl(var(--border-default))]",
                   "bg-[hsl(var(--surface-elevated)/0.6)]",
-                  "backdrop-blur-sm",
+                  "max-sm:backdrop-blur-none sm:backdrop-blur-sm",
                   "will-change-transform opacity-0",
                   "transition-all duration-500 motion-reduce:transition-none",
                   "hover:border-[hsl(var(--color-primary)/0.3)] hover:-translate-y-1 hover:shadow-[var(--shadow-premium)]",
@@ -77,19 +77,19 @@ export default function FeaturesScene({ t }: FeaturesSceneProps) {
                 />
 
                 <div className={cn(
-                  "mx-auto mb-5 flex items-center justify-center w-14 h-14 rounded-2xl",
+                  "mx-auto mb-3 sm:mb-5 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl",
                   "bg-[hsl(var(--color-primary)/0.1)]",
                   "text-[hsl(var(--color-primary))]",
                   "transition-transform duration-300 group-hover:scale-110 motion-reduce:group-hover:scale-100",
                 )}>
-                  <Icon className="size-7" aria-hidden="true" />
+                  <Icon className="size-5 sm:size-7" aria-hidden="true" />
                 </div>
 
-                <h3 className="font-bold text-base text-[hsl(var(--fg-primary))] mb-2 min-h-[1.5rem]">
+                <h3 className="font-bold text-sm sm:text-base text-[hsl(var(--fg-primary))] mb-1 sm:mb-2 min-h-[1.25rem] sm:min-h-[1.5rem]">
                   {t(`landing.${key}Title`, key)}
                 </h3>
 
-                <p className="text-sm text-[hsl(var(--fg-secondary))] leading-relaxed min-h-[2.5rem]">
+                <p className="text-xs sm:text-sm text-[hsl(var(--fg-secondary))] leading-relaxed min-h-[2rem] sm:min-h-[2.5rem]">
                   {t(`landing.${key}Desc`, "")}
                 </p>
               </div>

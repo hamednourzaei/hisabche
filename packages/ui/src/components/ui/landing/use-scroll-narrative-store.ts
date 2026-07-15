@@ -72,9 +72,10 @@ let rafId: number | null = null;
 let lastProgress = -1;
 let frameCount = 0;
 
-const PROGRESS_FRAME_SKIP = 3;
-const PROGRESS_MIN_DELTA = 0.002;
-const SECTION_COOLDOWN_MS = 150;
+// ✅ بهبود: افزایش skip برای کاهش مصرف CPU
+const PROGRESS_FRAME_SKIP = 4; // افزایش از 3 به 4
+const PROGRESS_MIN_DELTA = 0.003; // افزایش از 0.002 به 0.003
+const SECTION_COOLDOWN_MS = 200; // افزایش از 150 به 200
 
 const sectionListeners = new Set<(state: ScrollState) => void>();
 const progressListeners = new Set<(progress: number) => void>();
@@ -195,18 +196,20 @@ function stopScrollLoop(): void {
 let passiveScrollActive = false;
 let passiveScrollTimer: ReturnType<typeof setTimeout> | null = null;
 
+// ✅ بهبود: کاهش زمان idle برای صرفه‌جویی در باتری
+const IDLE_TIMEOUT_MS = 1500; // کاهش از 2000 به 1500
+
 function onPassiveScroll(): void {
   if (!passiveScrollActive) {
     passiveScrollActive = true;
     startScrollLoop();
   }
 
-  // Stop RAF loop after 2s of no scroll activity
   if (passiveScrollTimer) clearTimeout(passiveScrollTimer);
   passiveScrollTimer = setTimeout(() => {
     passiveScrollActive = false;
     stopScrollLoop();
-  }, 2000);
+  }, IDLE_TIMEOUT_MS);
 }
 
 // ─── React Hooks ──────────────────────────────────────────────────────────────
@@ -225,7 +228,6 @@ export function useScrollNarrative(): ScrollState {
     sectionListeners.add(onSection);
     progressListeners.add(onProgress);
 
-    // Use passive scroll listener instead of always-running RAF
     window.addEventListener("scroll", onPassiveScroll, { passive: true });
     startScrollLoop();
 

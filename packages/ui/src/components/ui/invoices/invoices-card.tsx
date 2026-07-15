@@ -1,14 +1,13 @@
 "use client";
 
+import { memo, useCallback, useMemo } from "react";  // ✅ اضافه شد
 import { cn } from "@/lib/utils";
 import { Eye, Trash2, FileText } from "lucide-react";
 import type { Invoice } from "../../../lib/invoices/invoices-types";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   InvoiceCard v2.1 — Mobile-First Hisabche Design Language
-   Zero hardcoded colors — all tokens from design system
-   No external component dependencies (Card, Button, Badge removed)
-   Improved touch targets for mobile (min 44px)
+   InvoiceCard v2.2 — Mobile-First · Memoized for Performance
+   ✅ memo · useMemo for badge style · min 44px touch targets
    ═══════════════════════════════════════════════════════════════════════════ */
 
 interface InvoiceCardProps {
@@ -32,19 +31,33 @@ const statusBadgeStyles: Record<string, string> = {
     "bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))] border-[hsl(var(--border-default))]",
 };
 
-export function InvoiceCard({
+// ✅ memo: فقط زمانی رندر می‌شود که props تغییر کنند
+export const InvoiceCard = memo(function InvoiceCard({
   inv,
   t,
   onNavigate,
   onDelete,
   statusVariant,
 }: InvoiceCardProps) {
-  const badgeStyle =
-    statusBadgeStyles[statusVariant(inv.status)] ?? statusBadgeStyles.secondary;
+  // ✅ useMemo: فقط زمانی محاسبه می‌شود که status یا statusVariant تغییر کند
+  const badgeStyle = useMemo(
+    () => statusBadgeStyles[statusVariant(inv.status)] ?? statusBadgeStyles.secondary,
+    [inv.status, statusVariant]
+  );
+
+  // ✅ useCallback برای توابع داخلی (اگر needed باشند)
+  const handleNavigate = useCallback(() => {
+    onNavigate(inv.id);
+  }, [onNavigate, inv.id]);
+
+  const handleDelete = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDelete(inv.id);
+  }, [onDelete, inv.id]);
 
   return (
     <div
-      onClick={() => onNavigate(inv.id)}
+      onClick={handleNavigate}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => {
@@ -109,14 +122,11 @@ export function InvoiceCard({
           </p>
         </div>
 
-        {/* Actions — min 44px touch targets for mobile */}
+        {/* Actions — min 44px touch targets */}
         <div className="flex items-center justify-end gap-1 sm:gap-1.5">
           <button
             type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onNavigate(inv.id);
-            }}
+            onClick={handleNavigate}
             aria-label={t("action.view", "مشاهده")}
             className={cn(
               "inline-flex items-center justify-center rounded-full",
@@ -134,10 +144,7 @@ export function InvoiceCard({
 
           <button
             type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDelete(inv.id);
-            }}
+            onClick={handleDelete}
             aria-label={t("action.delete", "حذف")}
             className={cn(
               "inline-flex items-center justify-center rounded-full",
@@ -156,4 +163,7 @@ export function InvoiceCard({
       </div>
     </div>
   );
-}
+});
+
+// ✅ displayName برای debugging
+InvoiceCard.displayName = "InvoiceCard";

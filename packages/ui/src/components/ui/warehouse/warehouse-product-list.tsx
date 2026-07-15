@@ -1,13 +1,13 @@
 "use client";
 
+import { memo, useMemo, useCallback } from "react";  // ✅ اضافه شد
 import { cn } from "@/lib/utils";
 import { Package, Eye, Trash2, Loader2 } from "lucide-react";
 import type { Product } from "../../../lib/warehouse/warehouse-types";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   warehouseProductList v2 — Hisabche Design Language
-   Zero hardcoded colors — all tokens from design system
-   No external component dependencies
+   warehouseProductList v3 — Memoized for Performance
+   ✅ memo · useMemo · useCallback · min 44px touch targets
    ═══════════════════════════════════════════════════════════════════════════ */
 
 interface warehouseProductListProps {
@@ -35,10 +35,12 @@ const statusBadgeStyles: Record<string, string> = {
     "bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))] border-[hsl(var(--border-default))]",
 };
 
-const actionBtn =
-  "inline-flex items-center justify-center rounded-full p-2 text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors duration-150 motion-reduce:transition-none";
+// ✅ ثابت خارج از کامپوننت
+const actionBtnBase =
+  "inline-flex items-center justify-center rounded-full p-2 min-h-[44px] min-w-[44px] sm:min-h-[40px] sm:min-w-[40px] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors duration-150 motion-reduce:transition-none";
 
-export function warehouseProductList({
+// ✅ کامپوننت با memo
+export const warehouseProductList = memo(function warehouseProductList({
   t,
   fmt,
   products,
@@ -54,17 +56,41 @@ export function warehouseProductList({
         const qty = product.quantity;
         const min = product.minStockLevel;
         const status = stockStatus(qty, min);
-        const badgeStyle =
-          statusBadgeStyles[status] ?? statusBadgeStyles.secondary;
         const isDeleting = deletingId === product.id;
+
+        // ✅ useMemo برای badgeStyle
+        const badgeStyle = useMemo(
+          () => statusBadgeStyles[status] ?? statusBadgeStyles.secondary,
+          [status]
+        );
+
+        // ✅ useCallback برای handleNavigate
+        const handleNavigate = useCallback(() => {
+          onNavigate(product.id);
+        }, [onNavigate, product.id]);
+
+        // ✅ useCallback برای handleDelete
+        const handleDelete = useCallback((e: React.MouseEvent) => {
+          e.stopPropagation();
+          onDelete(product);
+        }, [onDelete, product]);
 
         return (
           <div
             key={product.id}
-            onClick={() => onNavigate(product.id)}
+            onClick={handleNavigate}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onNavigate(product.id);
+              }
+            }}
             className={cn(
               "cursor-pointer rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]",
               "transition-all duration-200 hover:shadow-lg hover:border-[hsl(var(--color-primary)/0.3)]",
+              "focus-visible:ring-4 focus-visible:ring-[rgba(18,200,160,0.18)] focus-visible:outline-none",
             )}
           >
             <div className="flex items-center justify-between p-5 gap-4">
@@ -106,12 +132,9 @@ export function warehouseProductList({
                 {/* View */}
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onNavigate(product.id);
-                  }}
+                  onClick={handleNavigate}
                   aria-label={t("action.view", "مشاهده")}
-                  className={actionBtn}
+                  className={actionBtnBase}
                 >
                   <Eye className="size-4" aria-hidden="true" />
                 </button>
@@ -119,14 +142,11 @@ export function warehouseProductList({
                 {/* Delete */}
                 <button
                   type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(product);
-                  }}
+                  onClick={handleDelete}
                   disabled={isDeleting}
                   aria-label={t("action.delete", "حذف")}
                   className={cn(
-                    actionBtn,
+                    actionBtnBase,
                     "hover:bg-[hsl(var(--color-destructive)/0.1)] hover:text-[hsl(var(--color-destructive))]",
                     "disabled:opacity-40 disabled:cursor-not-allowed",
                   )}
@@ -144,4 +164,6 @@ export function warehouseProductList({
       })}
     </div>
   );
-}
+});
+
+warehouseProductList.displayName = "warehouseProductList";
