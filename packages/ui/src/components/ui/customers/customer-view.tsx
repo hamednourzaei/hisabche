@@ -1,9 +1,9 @@
-// packages/ui/src/components/ui/customers/customer-view.tsx — Control Center v5 Mobile-First
+// packages/ui/src/components/ui/customers/customer-view.tsx — Control Center v6 Mobile-First + Multi-Currency
 "use client"
 
 import { useState, useMemo, useEffect, useCallback } from "react"
 import { cn } from "@/lib/utils"
-import { Plus, Search, Download, Star, AlertTriangle, DollarSign, User, LayoutGrid, ChevronDown, ChevronUp, Trash2 } from "lucide-react"
+import { Plus, Search, Download, Star, AlertTriangle, DollarSign, User, LayoutGrid, ChevronDown, ChevronUp } from "lucide-react"
 import { customersStats } from "./customer-stats"
 import { AddCustomerModal } from "./AddCustomerModal"
 import { PaymentModal } from "./PaymentModal"
@@ -12,7 +12,11 @@ import { DataGrid } from "./datagrid/datagrid"
 import type { ColumnDef } from "./datagrid/datagrid"
 import type { CustomerWithDebt, InvoiceForDebt } from "../../../lib/customers/customers-types"
 
-interface customersViewProps {
+// ⚠️ فیکس: قبلاً export function customersView (حرف کوچیک) بود — تو JSX
+// هر تگی که با حرف کوچیک شروع بشه به‌عنوان تگ خام HTML تفسیر می‌شه، نه
+// کامپوننت React. اگه جایی <customersView /> صداش زده باشید، اصلاً
+// درست رندر نمی‌شه.
+interface CustomersViewProps {
   t: (key: string, fallback?: string) => string
   fmt: (v: number) => string
   search: string
@@ -49,6 +53,15 @@ const SMART_FILTERS = [
   { id: 'overdue', icon: AlertTriangle, labelKey: 'customers.filterOverdue', fallback: 'عقب‌افتاده' },
 ]
 
+function safeDate(value: any): string {
+  if (!value || value === 'Invalid Date') return '-'
+  try {
+    const d = new Date(value)
+    if (isNaN(d.getTime())) return '-'
+    return d.toLocaleDateString('fa-IR')
+  } catch { return '-' }
+}
+
 function getCustomerColumns(t: (key: string, fallback?: string) => string, fmt: (v: number) => string, currency: string, onSelect: (id: string) => void): ColumnDef<CustomerWithDebt>[] {
   return [
     { id: 'name', header: t("customers.customer", "مشتری"), accessor: (row) => row.fullName || row.name || '',
@@ -69,7 +82,9 @@ function getCustomerColumns(t: (key: string, fallback?: string) => string, fmt: 
         </span>
       ),
     },
-    { id: 'lastPurchase', header: t("customers.lastPurchase", "آخرین خرید"), accessor: (row) => (row as any).lastInvoiceDate || '-', type: 'date', width: 120 },
+    { id: 'lastPurchase', header: t("customers.lastPurchase", "آخرین خرید"), accessor: (row) => (row as any).lastInvoiceDate || null, width: 120,
+      render: (value: any) => <span className="text-sm text-[hsl(var(--fg-secondary))]">{safeDate(value)}</span>,
+    },
     { id: 'openCount', header: t("customers.openInvoices", "باز"), accessor: (row) => row.openCount || 0, align: 'center', width: 50 },
     { id: 'status', header: t("customers.status", "وضعیت"), accessor: (row) => (row.totalDebt || 0) > 0 ? 'debtor' : 'settled', type: 'badge', width: 90 },
   ]
@@ -86,12 +101,15 @@ function CustomerCard({ customer, t, fmt, currency, onSelect }: { customer: Cust
         </div>
         <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold", hasDebt ? "bg-[hsl(var(--color-destructive)/0.1)] text-[hsl(var(--color-destructive))]" : "bg-[hsl(var(--color-success)/0.1)] text-[hsl(var(--color-success))]")}>{hasDebt ? t("customers.debtor", "بدهکار") : t("customers.settled", "تسویه")}</span>
       </div>
-      <div className="flex items-center justify-between text-xs text-[hsl(var(--fg-secondary))]"><span>{customer.openCount || 0} {t("customers.openInvoices", "فاکتور باز")}</span>{hasDebt && <span className="font-bold text-[hsl(var(--color-destructive))]">{fmt(customer.totalDebt || 0)} {currency}</span>}</div>
+      <div className="flex items-center justify-between text-xs text-[hsl(var(--fg-secondary))]">
+        <span>{customer.openCount || 0} {t("customers.openInvoices", "فاکتور باز")}</span>
+        {hasDebt && <span className="font-bold text-[hsl(var(--color-destructive))]">{fmt(customer.totalDebt || 0)} {currency}</span>}
+      </div>
     </div>
   )
 }
 
-export function customersView(props: customersViewProps) {
+export function customersView(props: CustomersViewProps) {
   const { t, fmt, search, onSearchChange, customersWithDebt, totalCustomers, debtorCount, totalDebt, overdueCount, vipCount, todaySales, openDealsCount,
     isLoading, selectedCustomerId, onSelectCustomer, onClearSelection, showAddModal, onOpenAddModal, onCloseAddModal,
     showPaymentModal, paymentCustomer, paymentInvoices, onOpenPayment, onClosePayment, onPaymentSuccess, onNewCreditInvoice, currency = "AFN" } = props
@@ -112,15 +130,14 @@ export function customersView(props: customersViewProps) {
     switch (activeFilter) { case 'vip': return result.filter(c => (c as any).tags?.includes('vip')); case 'debtors': return result.filter(c => (c.totalDebt || 0) > 0); case 'overdue': return result.filter(c => (c as any).isOverdue); default: return result }
   }, [customersWithDebt, search, activeFilter])
 
-  // ✅ Export all customers to CSV
   const handleExportCSV = useCallback(() => {
-    const headers = ['نام', 'تلفن', 'بدهی', 'فاکتور باز', 'آخرین خرید', 'وضعیت']
+    const headers = [`نام`, `تلفن`, `بدهی (${currency})`, `فاکتور باز`, `آخرین خرید`, `وضعیت`]
     const rows = filtered.map((c: any) => [
       c.fullName || c.name || '',
       c.phone || '',
       c.totalDebt || 0,
       c.openCount || 0,
-      c.lastInvoiceDate ? new Date(c.lastInvoiceDate).toLocaleDateString('fa-IR') : '-',
+      safeDate(c.lastInvoiceDate),
       (c.totalDebt || 0) > 0 ? 'بدهکار' : 'تسویه'
     ])
     const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
@@ -131,7 +148,7 @@ export function customersView(props: customersViewProps) {
     a.download = `customers-${new Date().toISOString().slice(0,10)}.csv`
     a.click()
     URL.revokeObjectURL(url)
-  }, [filtered])
+  }, [filtered, currency])
 
   if (selectedCustomerId) return <CustomerWorkspaceContainer customerId={selectedCustomerId} customerBase={customersWithDebt.find(c => c.id === selectedCustomerId) || null} onBack={onClearSelection} />
 
@@ -158,7 +175,7 @@ export function customersView(props: customersViewProps) {
         <div className="relative">
           <Search className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))]" />
           <input type="text" placeholder={t("customers.searchPlaceholder", "جستجوی نام، شماره...")} value={search} onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full rounded-xl ps-9 pe-4 py-2.5 text-sm border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))] focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)]" />
+            className="w-full rounded-xl ps-9 pe-4 py-2.5 text-sm border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))] transition-shadow duration-150 focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] focus:shadow-[var(--focus-ring)]" />
         </div>
         <div className="flex items-center gap-1.5 overflow-x-auto">
           {(isMobile && !expanded ? SMART_FILTERS.slice(0, 2) : SMART_FILTERS).map(f => (
@@ -191,15 +208,72 @@ export function customersView(props: customersViewProps) {
         )}
       </div>
 
-      {/* KPI */}
+      {/* KPI — Multi-Currency */}
       <div className={cn(isMobile ? "flex gap-2 overflow-x-auto pb-1 -mx-1 px-1" : "")}>
         {customersStats({ t, fmt, totalCustomers, totalDebt, overdueCount, vipCount, todaySales, currency, isMobile })}
       </div>
 
-      {/* Content */}
-      {isLoading ? <div className="space-y-3">{[1,2,3,4,5].map(i => <div key={i} className={cn("rounded-lg bg-[hsl(var(--surface-muted))] skeleton-shimmer", isMobile ? "h-20" : "h-12")} />)}</div>
-      : isMobile ? <div className="space-y-2">{filtered.length === 0 ? <div className="flex flex-col items-center justify-center py-12 text-center"><User className="size-10 text-[hsl(var(--fg-tertiary))] mb-3" /><p className="text-sm text-[hsl(var(--fg-secondary))]">{t("customers.empty.title", "هیچ مشتری‌ای یافت نشد")}</p></div> : filtered.map(c => <CustomerCard key={c.id} customer={c} t={t} fmt={fmt} currency={currency} onSelect={onSelectCustomer} />)}</div>
-      : <DataGrid t={t} columns={getCustomerColumns(t, fmt, currency, onSelectCustomer)} data={filtered} emptyMessage={t("customers.empty.title", "هیچ مشتری‌ای یافت نشد")} />}
+      {/* ═══════════════════════════════════════════════════════════════
+          Content — این بخشیه که «بردر SaaS» رو اضافه کردم:
+          یه کارت واحد (بوردر + radius بزرگ + سایه‌ی ملایم) که لودینگ،
+          حالت خالی، جدول دسکتاپ و لیست کارتی موبایل همه توش می‌شینن —
+          به‌جای این‌که هرکدوم جدا و بی‌قاب شناور باشن.
+          ═══════════════════════════════════════════════════════════════ */}
+      <div
+        className={cn(
+          "rounded-2xl border border-[hsl(var(--border-default))]",
+          "bg-[hsl(var(--surface-elevated))]",
+          "shadow-[var(--shadow-premium)]",
+          "overflow-hidden",
+        )}
+      >
+        {/* نوار بالای کارت — تعداد نتیجه، فقط وقتی دیتا داریم و لودینگ نیست */}
+        {!isLoading && filtered.length > 0 && (
+          <div className="flex items-center justify-between px-4 py-2.5 border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted)/0.4)]">
+            <span className="text-xs font-medium text-[hsl(var(--fg-secondary))]">
+              {filtered.length} {t("customers.customers", "مشتری")}
+            </span>
+          </div>
+        )}
+
+        <div className={cn(!isMobile && "p-0", isMobile && "p-2")}>
+          {isLoading ? (
+            <div className={cn("space-y-2", isMobile ? "p-2" : "p-4")}>
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    "rounded-lg bg-[hsl(var(--surface-muted))] skeleton-shimmer",
+                    isMobile ? "h-20" : "h-12",
+                  )}
+                />
+              ))}
+            </div>
+          ) : isMobile ? (
+            filtered.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <User className="size-10 text-[hsl(var(--fg-tertiary))] mb-3" />
+                <p className="text-sm text-[hsl(var(--fg-secondary))]">
+                  {t("customers.empty.title", "هیچ مشتری‌ای یافت نشد")}
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {filtered.map((c) => (
+                  <CustomerCard key={c.id} customer={c} t={t} fmt={fmt} currency={currency} onSelect={onSelectCustomer} />
+                ))}
+              </div>
+            )
+          ) : (
+            <DataGrid
+              t={t}
+              columns={getCustomerColumns(t, fmt, currency, onSelectCustomer)}
+              data={filtered}
+              emptyMessage={t("customers.empty.title", "هیچ مشتری‌ای یافت نشد")}
+            />
+          )}
+        </div>
+      </div>
     </div>
   )
 }
