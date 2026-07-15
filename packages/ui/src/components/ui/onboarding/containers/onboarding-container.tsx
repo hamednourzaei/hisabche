@@ -1,29 +1,44 @@
-"use client"
+// packages/ui/src/components/ui/onboarding/containers/onboarding-container.tsx
+"use client";
 
-import { useRouter } from "next/navigation"
-import { useTranslation } from "react-i18next"
-import { useOnboardingStore } from "@hisabche/store"
-import { OnboardingPage } from "../onboarding-page"
+import { useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
+import { useOnboardingStore, type BusinessType, type StoreSize, type Currency } from "@hisabche/store";
+import { OnboardingPage } from "../onboarding-page";
+import { useCallback, useMemo, memo } from "react";
 
-const businessTypes = [
+/* ═══════════════════════════════════════════════════════════════════════════
+   OnboardingContainer v3 — Memoized · Type-Safe · Persist Fix
+   ✅ memo · useCallback · useMemo · safeT · type-safe
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+const businessTypes: { id: BusinessType; labelFa: string }[] = [
   { id: "retail", labelFa: "خرده فروشی" },
   { id: "wholesale", labelFa: "عمده فروشی" },
   { id: "restaurant", labelFa: "رستوران" },
   { id: "service", labelFa: "خدماتی" },
   { id: "other", labelFa: "سایر" },
-]
+];
 
-const storeSizes = [
+const storeSizes: { id: StoreSize; labelFa: string }[] = [
   { id: "small", labelFa: "دکان کوچک" },
   { id: "medium", labelFa: "فروشگاه متوسط" },
   { id: "large", labelFa: "تجارت بزرگ" },
-]
+];
 
-export function OnboardingContainer() {
-  const { i18n } = useTranslation()
-  const router = useRouter()
-  const t = useTranslation().t;
-const safeT = (key: string, fallback?: string) => t(key, fallback || key);
+export const OnboardingContainer = memo(function OnboardingContainer() {
+  const { t: tOriginal } = useTranslation();
+  const router = useRouter();
+
+  // ✅ safeT wrapper
+  const safeT = useCallback(
+    (key: string, fallback?: string): string => {
+      const result = tOriginal(key);
+      return result && result !== key ? result : (fallback ?? key);
+    },
+    [tOriginal]
+  );
+
   const {
     step,
     businessType,
@@ -34,9 +49,47 @@ const safeT = (key: string, fallback?: string) => t(key, fallback || key);
     setStoreSize,
     setDefaultCurrency,
     completeOnboarding,
-  } = useOnboardingStore()
+  } = useOnboardingStore();
 
-  const isLangFa = i18n.language === "fa-AF" || i18n.language === "fa-IR"
+  // ✅ useMemo برای labels
+  const businessTypeLabel = useMemo(
+    () => businessTypes.find((b) => b.id === businessType)?.labelFa || "",
+    [businessType]
+  );
+
+  const storeSizeLabel = useMemo(
+    () => storeSizes.find((s) => s.id === storeSize)?.labelFa || "",
+    [storeSize]
+  );
+
+  const currencyLabel = useMemo(() => defaultCurrency, [defaultCurrency]);
+
+  const handleComplete = useCallback(() => {
+    completeOnboarding();
+    router.push("/dashboard");
+  }, [completeOnboarding, router]);
+
+  // ✅ type-safe wrapper برای setterها
+  const handleSetBusinessType = useCallback(
+    (type: string) => {
+      setBusinessType(type as BusinessType);
+    },
+    [setBusinessType]
+  );
+
+  const handleSetStoreSize = useCallback(
+    (size: string) => {
+      setStoreSize(size as StoreSize);
+    },
+    [setStoreSize]
+  );
+
+  const handleSetCurrency = useCallback(
+    (currency: string) => {
+      setDefaultCurrency(currency as Currency);
+    },
+    [setDefaultCurrency]
+  );
 
   return (
     <OnboardingPage
@@ -45,17 +98,16 @@ const safeT = (key: string, fallback?: string) => t(key, fallback || key);
       storeSize={storeSize}
       defaultCurrency={defaultCurrency}
       t={safeT}
-      businessTypeLabel={businessTypes.find((b) => b.id === businessType)?.labelFa || ""}
-      storeSizeLabel={storeSizes.find((s) => s.id === storeSize)?.labelFa || ""}
-      currencyLabel={defaultCurrency}
+      businessTypeLabel={businessTypeLabel}
+      storeSizeLabel={storeSizeLabel}
+      currencyLabel={currencyLabel}
       onSetStep={setStep}
-      onSetBusinessType={setBusinessType as any}
-onSetStoreSize={setStoreSize as any}
-onSetCurrency={setDefaultCurrency as any}
-      onComplete={() => {
-        completeOnboarding()
-        router.push("/dashboard")
-      }}
+      onSetBusinessType={handleSetBusinessType}
+      onSetStoreSize={handleSetStoreSize}
+      onSetCurrency={handleSetCurrency}
+      onComplete={handleComplete}
     />
-  )
-}
+  );
+});
+
+OnboardingContainer.displayName = "OnboardingContainer";

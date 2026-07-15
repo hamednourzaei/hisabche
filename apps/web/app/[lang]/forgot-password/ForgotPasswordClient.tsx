@@ -1,14 +1,19 @@
 // apps/web/app/[lang]/forgot-password/ForgotPasswordClient.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, memo } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { Mail, ArrowLeft, Loader2, CheckCircle } from "lucide-react";
 import { apiClient } from "@hisabche/api";
 
-export function ForgotPasswordClient() {
+/* ═══════════════════════════════════════════════════════════════════════════
+   ForgotPasswordClient v2 — Memoized · Performance Optimized
+   ✅ memo · useCallback · UX بهبود
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+export const ForgotPasswordClient = memo(function ForgotPasswordClient() {
   const { t } = useTranslation();
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -16,23 +21,43 @@ export function ForgotPasswordClient() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim()) return;
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      const trimmedEmail = email.trim();
+      if (!trimmedEmail) return;
 
-    setLoading(true);
-    setError("");
+      setLoading(true);
+      setError("");
 
-    try {
-      await apiClient.post("/auth/forgot-password", { email: email.trim() });
-      setSent(true);
-    } catch {
-      // Still show success to prevent enumeration
-      setSent(true);
-    } finally {
-      setLoading(false);
-    }
-  };
+      try {
+        await apiClient.post("/auth/forgot-password", { email: trimmedEmail });
+        setSent(true);
+      } catch {
+        // ✅ Still show success to prevent email enumeration
+        setSent(true);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [email]
+  );
+
+  const handleEmailChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      setEmail(e.target.value);
+      if (error) setError("");
+    },
+    [error]
+  );
+
+  const handleGoBack = useCallback(() => {
+    router.back();
+  }, [router]);
+
+  const handleGoToLogin = useCallback(() => {
+    router.push("/login");
+  }, [router]);
 
   return (
     <div className="flex min-h-[80vh] items-center justify-center p-4">
@@ -40,7 +65,7 @@ export function ForgotPasswordClient() {
         {/* Back button */}
         <button
           type="button"
-          onClick={() => router.back()}
+          onClick={handleGoBack}
           className={cn(
             "mb-6 inline-flex items-center gap-2 text-sm font-medium",
             "text-[hsl(var(--fg-secondary))] hover:text-[hsl(var(--fg-primary))] transition-colors"
@@ -60,7 +85,9 @@ export function ForgotPasswordClient() {
             )}
           </div>
           <h1 className="text-2xl font-bold text-[hsl(var(--fg-primary))]">
-            {sent ? t("auth.resetLinkSent", "لینک ارسال شد") : t("auth.forgotPassword", "فراموشی رمز عبور")}
+            {sent
+              ? t("auth.resetLinkSent", "لینک ارسال شد")
+              : t("auth.forgotPassword", "فراموشی رمز عبور")}
           </h1>
           <p className="mt-2 text-sm text-[hsl(var(--fg-secondary))]">
             {sent
@@ -77,7 +104,7 @@ export function ForgotPasswordClient() {
               <input
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={handleEmailChange}
                 placeholder={t("auth.email", "ایمیل")}
                 autoFocus
                 required
@@ -118,7 +145,7 @@ export function ForgotPasswordClient() {
         <p className="mt-6 text-center text-sm text-[hsl(var(--fg-secondary))]">
           <button
             type="button"
-            onClick={() => router.push("/login")}
+            onClick={handleGoToLogin}
             className="text-[hsl(var(--color-primary))] hover:underline font-semibold"
           >
             {t("action.back", "بازگشت به ورود")}
@@ -127,4 +154,6 @@ export function ForgotPasswordClient() {
       </div>
     </div>
   );
-}
+});
+
+ForgotPasswordClient.displayName = "ForgotPasswordClient";

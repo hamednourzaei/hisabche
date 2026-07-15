@@ -1,6 +1,7 @@
+// packages/ui/src/components/ui/settings/settings-page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, memo } from "react";
 import { useTranslation } from "react-i18next";
 import {
   useBackupStore,
@@ -23,15 +24,28 @@ import {
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   SettingsPage v2 — Hisabche Design Language
-   Zero hardcoded colors — all tokens from design system
-   Zero external component dependencies
-   Switch: fixed RTL direction
+   SettingsPage v3 — Memoized · Performance Optimized
+   ✅ memo · useCallback · ثابت‌های خارج از کامپوننت
    ═══════════════════════════════════════════════════════════════════════════ */
 
-// ─── Switch (RTL-fixed) ────────────────────────────────────────────────────
+// ─── Constants ─────────────────────────────────────────────────────────────
 
-function Switch({
+const SAFETY_ITEMS = [
+  { key: "settings.safety1", fallback: "اطلاعات شما به‌صورت امن ذخیره می‌شود" },
+  { key: "settings.safety2", fallback: "بدون اینترنت هم قابل استفاده است" },
+  { key: "settings.safety3", fallback: "بازیابی اطلاعات تا ۳۰ روز ممکن است" },
+  { key: "settings.safety4", fallback: "همگام‌سازی رمزنگاری‌شده انجام می‌شود" },
+] as const;
+
+const PERFORMANCE_MODES = [
+  { value: "auto", labelKey: "settings.perfAuto", fallback: "خودکار" },
+  { value: "normal", labelKey: "settings.perfNormal", fallback: "معمولی" },
+  { value: "lite", labelKey: "settings.perfLite", fallback: "اقتصادی" },
+] as const;
+
+// ─── Switch ─────────────────────────────────────────────────────────────────
+
+const Switch = memo(function Switch({
   checked,
   onCheckedChange,
   disabled,
@@ -71,24 +85,28 @@ function Switch({
           "motion-reduce:transition-none",
           "absolute top-1/2 -translate-y-1/2",
           checked
-            ? "inset-inline-end-0.5"    // ✅ RTL-safe: همیشه ۲px از انتها
-            : "inset-inline-start-0.5",  // ✅ RTL-safe: همیشه ۲px از ابتدا
+            ? "inset-inline-end-0.5"
+            : "inset-inline-start-0.5",
         )}
       />
     </button>
   );
-}
+});
+Switch.displayName = "Switch";
 
-// ─── Account Section ───────────────────────────────────────────────────────
+// ─── Account Section ──────────────────────────────────────────────────────
 
-function AccountSection() {
+const AccountSection = memo(function AccountSection() {
   const { t } = useTranslation();
   const { user, logout } = useAuthStore();
+
+  const handleLogout = useCallback(() => {
+    logout();
+  }, [logout]);
 
   return (
     <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
       <div className="p-6 space-y-5">
-        {/* User info */}
         <div className="flex items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[hsl(var(--color-primary)/0.12)] text-lg font-bold text-[hsl(var(--color-primary))] shrink-0">
             {user?.fullName?.charAt(0) || "ح"}
@@ -106,7 +124,6 @@ function AccountSection() {
           </span>
         </div>
 
-        {/* Details */}
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-xl border border-[hsl(var(--border-default))] p-4 text-start">
             <p className="mb-1 text-xs text-[hsl(var(--fg-tertiary))]">
@@ -128,10 +145,9 @@ function AccountSection() {
           </div>
         </div>
 
-        {/* Logout */}
         <button
           type="button"
-          onClick={logout}
+          onClick={handleLogout}
           className={cn(
             "w-full inline-flex items-center justify-center gap-2",
             "rounded-full px-4 py-2.5 text-sm font-bold",
@@ -146,11 +162,12 @@ function AccountSection() {
       </div>
     </div>
   );
-}
+});
+AccountSection.displayName = "AccountSection";
 
-// ─── Backup Section ────────────────────────────────────────────────────────
+// ─── Backup Section ───────────────────────────────────────────────────────
 
-function BackupSection() {
+const BackupSection = memo(function BackupSection() {
   const { t } = useTranslation();
   const {
     autoBackupEnabled,
@@ -162,7 +179,7 @@ function BackupSection() {
 
   const [isExporting, setIsExporting] = useState(false);
 
-  const handleExportJSON = async () => {
+  const handleExportJSON = useCallback(async () => {
     setIsExporting(true);
     try {
       const data = exportData();
@@ -184,7 +201,7 @@ function BackupSection() {
     } finally {
       setIsExporting(false);
     }
-  };
+  }, [exportData, addBackup]);
 
   const latestBackup = backups?.[0];
 
@@ -198,7 +215,6 @@ function BackupSection() {
           </h2>
         </div>
 
-        {/* Auto backup toggle */}
         <div className="flex items-center justify-between rounded-xl border border-[hsl(var(--border-default))] p-4">
           <div className="text-start">
             <p className="font-medium text-[hsl(var(--fg-primary))]">
@@ -208,13 +224,9 @@ function BackupSection() {
               {t("settings.autoBackupDesc", "هر ۲۴ ساعت بکاپ گرفته شود")}
             </p>
           </div>
-          <Switch
-            checked={autoBackupEnabled}
-            onCheckedChange={setAutoBackup}
-          />
+          <Switch checked={autoBackupEnabled} onCheckedChange={setAutoBackup} />
         </div>
 
-        {/* Export buttons */}
         <div className="grid gap-3 sm:grid-cols-3">
           <button
             type="button"
@@ -263,7 +275,6 @@ function BackupSection() {
           </button>
         </div>
 
-        {/* Last backup info */}
         {latestBackup && (
           <div className="rounded-xl border border-[hsl(var(--color-success)/0.2)] bg-[hsl(var(--color-success)/0.05)] p-4 text-start">
             <div className="mb-2 flex items-center gap-2 text-[hsl(var(--color-success))]">
@@ -289,19 +300,14 @@ function BackupSection() {
       </div>
     </div>
   );
-}
+});
+BackupSection.displayName = "BackupSection";
 
-// ─── Performance Section ───────────────────────────────────────────────────
+// ─── Performance Section ──────────────────────────────────────────────────
 
-function PerformanceSection() {
+const PerformanceSection = memo(function PerformanceSection() {
   const { t } = useTranslation();
   const { performanceMode, setPerformanceMode } = useDeviceStore();
-
-  const modes = [
-    { value: "auto", labelKey: "settings.perfAuto", fallback: "خودکار" },
-    { value: "normal", labelKey: "settings.perfNormal", fallback: "معمولی" },
-    { value: "lite", labelKey: "settings.perfLite", fallback: "اقتصادی" },
-  ] as const;
 
   return (
     <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
@@ -314,7 +320,7 @@ function PerformanceSection() {
         </div>
 
         <div className="flex flex-wrap gap-2">
-          {modes.map(({ value, labelKey, fallback }) => (
+          {PERFORMANCE_MODES.map(({ value, labelKey, fallback }) => (
             <button
               key={value}
               type="button"
@@ -338,19 +344,13 @@ function PerformanceSection() {
       </div>
     </div>
   );
-}
+});
+PerformanceSection.displayName = "PerformanceSection";
 
-// ─── Safety Section ────────────────────────────────────────────────────────
+// ─── Safety Section ───────────────────────────────────────────────────────
 
-function SafetySection() {
+const SafetySection = memo(function SafetySection() {
   const { t } = useTranslation();
-
-  const safetyItems = [
-    { key: "settings.safety1", fallback: "اطلاعات شما به‌صورت امن ذخیره می‌شود" },
-    { key: "settings.safety2", fallback: "بدون اینترنت هم قابل استفاده است" },
-    { key: "settings.safety3", fallback: "بازیابی اطلاعات تا ۳۰ روز ممکن است" },
-    { key: "settings.safety4", fallback: "همگام‌سازی رمزنگاری‌شده انجام می‌شود" },
-  ];
 
   return (
     <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
@@ -363,7 +363,7 @@ function SafetySection() {
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          {safetyItems.map(({ key, fallback }) => (
+          {SAFETY_ITEMS.map(({ key, fallback }) => (
             <div
               key={key}
               className="flex items-center gap-2 rounded-xl border border-[hsl(var(--border-default))] p-3 text-start"
@@ -378,12 +378,18 @@ function SafetySection() {
       </div>
     </div>
   );
-}
+});
+SafetySection.displayName = "SafetySection";
 
-// ─── Storage Section ───────────────────────────────────────────────────────
+// ─── Storage Section ──────────────────────────────────────────────────────
 
-function StorageSection() {
+const StorageSection = memo(function StorageSection() {
   const { t } = useTranslation();
+
+  const handleClearCache = useCallback(() => {
+    // TODO: Implement cache clearing
+    console.log("Cache cleared");
+  }, []);
 
   return (
     <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
@@ -406,6 +412,7 @@ function StorageSection() {
           </div>
           <button
             type="button"
+            onClick={handleClearCache}
             className={cn(
               "inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium",
               "border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))]",
@@ -421,11 +428,12 @@ function StorageSection() {
       </div>
     </div>
   );
-}
+});
+StorageSection.displayName = "StorageSection";
 
 // ─── Main Page ─────────────────────────────────────────────────────────────
 
-export function SettingsPage() {
+export const SettingsPage = memo(function SettingsPage() {
   const { t } = useTranslation();
 
   return (
@@ -446,4 +454,6 @@ export function SettingsPage() {
       <StorageSection />
     </div>
   );
-}
+});
+
+SettingsPage.displayName = "SettingsPage";

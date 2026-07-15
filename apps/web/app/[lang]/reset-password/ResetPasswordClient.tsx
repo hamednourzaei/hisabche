@@ -1,14 +1,19 @@
 // apps/web/app/[lang]/reset-password/ResetPasswordClient.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, memo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
-import { Lock, ArrowLeft, Loader2, CheckCircle, XCircle } from "lucide-react";
+import { Lock, ArrowLeft, Loader2, CheckCircle, XCircle, Eye, EyeOff } from "lucide-react";
 import { apiClient } from "@hisabche/api";
 
-export function ResetPasswordClient() {
+/* ═══════════════════════════════════════════════════════════════════════════
+   ResetPasswordClient v2 — Memoized · Password Toggle
+   ✅ memo · useCallback · نمایش/مخفی کردن رمز عبور
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+export const ResetPasswordClient = memo(function ResetPasswordClient() {
   const { t } = useTranslation();
   const router = useRouter();
   const params = useSearchParams();
@@ -19,6 +24,8 @@ export function ResetPasswordClient() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
     if (!token) {
@@ -26,41 +33,115 @@ export function ResetPasswordClient() {
     }
   }, [token, t]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!password || !token) return;
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!password || !token) return;
 
-    if (password !== confirmPassword) {
-      setError(t("auth.passwordMismatch", "رمز عبور با تکرارش مطابقت ندارد"));
-      return;
-    }
-
-    if (password.length < 8) {
-      setError(t("auth.passwordMinLength", "رمز عبور حداقل ۸ حرف باشد"));
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-
-    try {
-      const { data } = await apiClient.post("/auth/reset-password", {
-        token,
-        password,
-      });
-
-      if (data?.message) {
-        setSuccess(true);
-        setTimeout(() => {
-          router.push("/login");
-        }, 3000);
+      if (password !== confirmPassword) {
+        setError(t("auth.passwordMismatch", "رمز عبور با تکرارش مطابقت ندارد"));
+        return;
       }
-    } catch (err: any) {
-      setError(err?.response?.data?.message || t("auth.invalidToken", "لینک نامعتبر یا منقضی شده است"));
-    } finally {
-      setLoading(false);
-    }
-  };
+
+      if (password.length < 8) {
+        setError(t("auth.passwordMinLength", "رمز عبور حداقل ۸ حرف باشد"));
+        return;
+      }
+
+      setLoading(true);
+      setError("");
+
+      try {
+        const { data } = await apiClient.post("/auth/reset-password", {
+          token,
+          password,
+        });
+
+        if (data?.message) {
+          setSuccess(true);
+          setTimeout(() => {
+            router.push("/login");
+          }, 3000);
+        }
+      } catch (err: any) {
+        setError(
+          err?.response?.data?.message ||
+            t("auth.invalidToken", "لینک نامعتبر یا منقضی شده است")
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [password, confirmPassword, token, router, t]
+  );
+
+  const toggleShowPassword = useCallback(() => {
+    setShowPassword((prev) => !prev);
+  }, []);
+
+  const toggleShowConfirmPassword = useCallback(() => {
+    setShowConfirmPassword((prev) => !prev);
+  }, []);
+
+  const handleBackToLogin = useCallback(() => {
+    router.push("/login");
+  }, [router]);
+
+  // ─── Password Field ──────────────────────────────────────────────────────
+
+  const PasswordField = ({
+    value,
+    onChange,
+    placeholder,
+    show,
+    onToggle,
+    autoFocus = false,
+  }: {
+    value: string;
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    placeholder: string;
+    show: boolean;
+    onToggle: () => void;
+    autoFocus?: boolean;
+  }) => (
+    <div className="relative">
+      <Lock className="absolute start-3 top-1/2 -translate-y-1/2 size-5 text-[hsl(var(--fg-tertiary))] pointer-events-none" />
+      <input
+        type={show ? "text" : "password"}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        autoFocus={autoFocus}
+        required
+        className={cn(
+          "w-full rounded-xl ps-10 pe-12 py-3 text-sm",
+          "border-2 border-[hsl(var(--border-default))]",
+          "bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))]",
+          "placeholder:text-[hsl(var(--fg-tertiary))]",
+          "focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)]",
+          "transition-colors duration-200"
+        )}
+      />
+      <button
+        type="button"
+        onClick={onToggle}
+        className={cn(
+          "absolute end-3 top-1/2 -translate-y-1/2",
+          "p-1.5 rounded-lg",
+          "text-[hsl(var(--fg-tertiary))]",
+          "hover:text-[hsl(var(--fg-primary))] hover:bg-[hsl(var(--surface-muted))]",
+          "transition-colors duration-150"
+        )}
+        aria-label={show ? t("auth.hidePassword", "مخفی کردن رمز") : t("auth.showPassword", "نمایش رمز")}
+      >
+        {show ? (
+          <EyeOff className="size-5" aria-hidden="true" />
+        ) : (
+          <Eye className="size-5" aria-hidden="true" />
+        )}
+      </button>
+    </div>
+  );
 
   return (
     <div className="flex min-h-[80vh] items-center justify-center p-4">
@@ -68,7 +149,7 @@ export function ResetPasswordClient() {
         {/* Back button */}
         <button
           type="button"
-          onClick={() => router.push("/login")}
+          onClick={handleBackToLogin}
           className={cn(
             "mb-6 inline-flex items-center gap-2 text-sm font-medium",
             "text-[hsl(var(--fg-secondary))] hover:text-[hsl(var(--fg-primary))] transition-colors"
@@ -108,44 +189,22 @@ export function ResetPasswordClient() {
         {/* Form */}
         {token && !success && (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="relative">
-              <Lock className="absolute start-3 top-1/2 -translate-y-1/2 size-5 text-[hsl(var(--fg-tertiary))] pointer-events-none" />
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder={t("auth.newPassword", "رمز عبور جدید")}
-                autoFocus
-                required
-                className={cn(
-                  "w-full rounded-xl ps-10 pe-4 py-3 text-sm",
-                  "border-2 border-[hsl(var(--border-default))]",
-                  "bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))]",
-                  "placeholder:text-[hsl(var(--fg-tertiary))]",
-                  "focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)]",
-                  "transition-colors duration-200"
-                )}
-              />
-            </div>
+            <PasswordField
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder={t("auth.newPassword", "رمز عبور جدید")}
+              show={showPassword}
+              onToggle={toggleShowPassword}
+              autoFocus
+            />
 
-            <div className="relative">
-              <Lock className="absolute start-3 top-1/2 -translate-y-1/2 size-5 text-[hsl(var(--fg-tertiary))] pointer-events-none" />
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder={t("auth.confirmPassword", "تکرار رمز عبور")}
-                required
-                className={cn(
-                  "w-full rounded-xl ps-10 pe-4 py-3 text-sm",
-                  "border-2 border-[hsl(var(--border-default))]",
-                  "bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))]",
-                  "placeholder:text-[hsl(var(--fg-tertiary))]",
-                  "focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)]",
-                  "transition-colors duration-200"
-                )}
-              />
-            </div>
+            <PasswordField
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder={t("auth.confirmPassword", "تکرار رمز عبور")}
+              show={showConfirmPassword}
+              onToggle={toggleShowConfirmPassword}
+            />
 
             {error && (
               <p className="text-sm text-[hsl(var(--color-destructive))]">{error}</p>
@@ -174,7 +233,7 @@ export function ResetPasswordClient() {
           <div className="text-center">
             <button
               type="button"
-              onClick={() => router.push("/login")}
+              onClick={handleBackToLogin}
               className={cn(
                 "inline-flex items-center justify-center gap-2 rounded-full px-6 py-3",
                 "text-sm font-bold text-white",
@@ -190,4 +249,6 @@ export function ResetPasswordClient() {
       </div>
     </div>
   );
-}
+});
+
+ResetPasswordClient.displayName = "ResetPasswordClient";

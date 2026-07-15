@@ -5,10 +5,32 @@ import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { useProject, useUpdateProject, useProjectTasks, useCreateProjectTask, useUpdateProjectTask, useDeleteProjectTask } from "@hisabche/api";
 import { ProjectDetailView } from "../project-detail-view";
+import { useCallback, memo } from "react";
 
-export function ProjectDetailContainer({ id }: { id: string }) {
-  const { t } = useTranslation();
+/* ═══════════════════════════════════════════════════════════════════════════
+   ProjectDetailContainer v2 — Memoized · Performance Optimized
+   ✅ memo · useCallback · safeT
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+interface ProjectDetailContainerProps {
+  id: string;
+}
+
+export const ProjectDetailContainer = memo(function ProjectDetailContainer({
+  id,
+}: ProjectDetailContainerProps) {
+  const { t: tOriginal } = useTranslation();
   const router = useRouter();
+
+  // ✅ safeT wrapper
+  const safeT = useCallback(
+    (key: string, fallback?: string): string => {
+      const result = tOriginal(key);
+      return result && result !== key ? result : (fallback ?? key);
+    },
+    [tOriginal]
+  );
+
   const { data: project, isLoading } = useProject(id);
   const { data: tasks, isLoading: tasksLoading } = useProjectTasks(id);
   const updateProject = useUpdateProject();
@@ -16,10 +38,28 @@ export function ProjectDetailContainer({ id }: { id: string }) {
   const updateTask = useUpdateProjectTask();
   const deleteTask = useDeleteProjectTask();
 
-  const safeT = (key: string, fallback?: string) => {
-    const result = t(key);
-    return result !== key ? result : (fallback ?? key);
-  };
+  const handleUpdateProject = useCallback(
+    (values: Record<string, unknown>) => updateProject.mutateAsync({ id, ...values }),
+    [id, updateProject]
+  );
+
+  const handleCreateTask = useCallback(
+    (values: Record<string, unknown>) => createTask.mutateAsync({ ...values, projectId: id }),
+    [id, createTask]
+  );
+
+  const handleUpdateTask = useCallback(
+    (taskId: string, values: Record<string, unknown>) =>
+      updateTask.mutateAsync({ id: taskId, ...values }),
+    [updateTask]
+  );
+
+  const handleDeleteTask = useCallback(
+    (taskId: string) => deleteTask.mutateAsync(taskId),
+    [deleteTask]
+  );
+
+  const handleBack = useCallback(() => router.push("/projects"), [router]);
 
   return (
     <ProjectDetailView
@@ -28,11 +68,13 @@ export function ProjectDetailContainer({ id }: { id: string }) {
       isLoading={isLoading}
       tasks={tasks ?? []}
       tasksLoading={tasksLoading}
-      onUpdateProject={(values) => updateProject.mutateAsync({ id, ...values })}
-      onCreateTask={(values) => createTask.mutateAsync({ ...values, projectId: id })}
-      onUpdateTask={(taskId, values) => updateTask.mutateAsync({ id: taskId, ...values })}
-      onDeleteTask={(taskId) => deleteTask.mutateAsync(taskId)}
-      onBack={() => router.push("/projects")}
+      onUpdateProject={handleUpdateProject}
+      onCreateTask={handleCreateTask}
+      onUpdateTask={handleUpdateTask}
+      onDeleteTask={handleDeleteTask}
+      onBack={handleBack}
     />
   );
-}
+});
+
+ProjectDetailContainer.displayName = "ProjectDetailContainer";

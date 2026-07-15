@@ -30,8 +30,14 @@ export {
   type CartItem,
 } from './slices/cart.slice'
 export { useWarehouseStore } from './slices/warehouse.slice'
-export { useOnboardingStore } from './slices/onboarding.slice'
-export type { BusinessType, StoreSize, OnboardingState } from './slices/onboarding.slice'
+// packages/store/src/index.ts
+export * from './slices/onboarding.slice'
+export type { 
+  BusinessType, 
+  StoreSize, 
+  Currency, 
+  Language 
+} from './slices/onboarding.slice'
 export { usePreferencesStore } from './slices/preferences.slice'
 export { useSyncStore } from './slices/sync.slice'
 export { useDeviceStore } from './slices/device.slice'

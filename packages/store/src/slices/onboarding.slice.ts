@@ -1,16 +1,19 @@
+// packages/store/src/slices/onboarding.slice.ts
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 
 export type BusinessType = 'retail' | 'wholesale' | 'service' | 'restaurant' | 'other'
 export type StoreSize = 'small' | 'medium' | 'large'
+export type Currency = 'AFN' | 'USD' | 'PKR' | 'IRR'
+export type Language = 'fa-AF' | 'en'
 
 export interface OnboardingState {
   isCompleted: boolean
   step: number
   businessType: BusinessType | null
   storeSize: StoreSize | null
-  defaultCurrency: 'AFN' | 'USD' | 'PKR' | 'IRR'
-  language: 'fa-AF' | 'en'
+  defaultCurrency: Currency
+  language: Language
   hasAddedProduct: boolean
   hasAddedCustomer: boolean
   hasCreatedInvoice: boolean
@@ -18,8 +21,8 @@ export interface OnboardingState {
   setStep: (step: number) => void
   setBusinessType: (type: BusinessType) => void
   setStoreSize: (size: StoreSize) => void
-  setDefaultCurrency: (currency: 'AFN' | 'USD' | 'PKR' | 'IRR') => void
-  setLanguage: (lang: 'fa-AF' | 'en') => void
+  setDefaultCurrency: (currency: Currency) => void
+  setLanguage: (lang: Language) => void
   completeOnboarding: () => void
   markProductAdded: () => void
   markCustomerAdded: () => void
@@ -27,13 +30,24 @@ export interface OnboardingState {
   reset: () => void
 }
 
-const initialState = {
+const initialState: Omit<OnboardingState, keyof {
+  setStep: any
+  setBusinessType: any
+  setStoreSize: any
+  setDefaultCurrency: any
+  setLanguage: any
+  completeOnboarding: any
+  markProductAdded: any
+  markCustomerAdded: any
+  markInvoiceCreated: any
+  reset: any
+}> = {
   isCompleted: false,
   step: 0,
-  businessType: null as BusinessType | null,
-  storeSize: null as StoreSize | null,
-  defaultCurrency: 'AFN' as const,
-  language: 'fa-AF' as const,
+  businessType: null,
+  storeSize: null,
+  defaultCurrency: 'AFN',
+  language: 'fa-AF',
   hasAddedProduct: false,
   hasAddedCustomer: false,
   hasCreatedInvoice: false,

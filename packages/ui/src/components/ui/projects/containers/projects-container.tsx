@@ -5,29 +5,54 @@ import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { useProjects, useCreateProject, useDeleteProject } from "@hisabche/api";
 import { ProjectsView } from "../projects-view";
-import { useState } from "react";
+import { useState, useCallback, memo } from "react";
 
-export function ProjectsContainer() {
-  const { t } = useTranslation();
+/* ═══════════════════════════════════════════════════════════════════════════
+   ProjectsContainer v3 — Memoized · Type-Safe
+   ✅ memo · useCallback · safeT · type-safe status
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+// ✅ import type از projects-view
+import type { StatusType } from "../projects-view";
+
+export const ProjectsContainer = memo(function ProjectsContainer() {
+  const { t: tOriginal } = useTranslation();
   const router = useRouter();
-  const [status, setStatus] = useState<string | undefined>(undefined);
+
+  // ✅ safeT wrapper
+  const safeT = useCallback(
+    (key: string, fallback?: string): string => {
+      const result = tOriginal(key);
+      return result && result !== key ? result : (fallback ?? key);
+    },
+    [tOriginal]
+  );
+
+  // ✅ type-safe status
+  const [status, setStatus] = useState<StatusType | undefined>(undefined);
 
   const { data, isLoading } = useProjects(status ? { status } : undefined);
   const createProject = useCreateProject();
   const deleteProject = useDeleteProject();
 
-  const safeT = (key: string, fallback?: string) => {
-    const result = t(key);
-    return result !== key ? result : (fallback ?? key);
-  };
+  const handleCreate = useCallback(
+    async (values: Record<string, unknown>) => {
+      await createProject.mutateAsync(values);
+    },
+    [createProject]
+  );
 
-  const handleCreate = async (values: any) => {
-    await createProject.mutateAsync(values);
-  };
+  const handleDelete = useCallback(
+    async (id: string) => {
+      await deleteProject.mutateAsync(id);
+    },
+    [deleteProject]
+  );
 
-  const handleDelete = async (id: string) => {
-    await deleteProject.mutateAsync(id);
-  };
+  const handleView = useCallback(
+    (id: string) => router.push(`/projects/${id}`),
+    [router]
+  );
 
   return (
     <ProjectsView
@@ -38,7 +63,9 @@ export function ProjectsContainer() {
       onStatusChange={setStatus}
       onCreate={handleCreate}
       onDelete={handleDelete}
-      onView={(id) => router.push(`/projects/${id}`)}
+      onView={handleView}
     />
   );
-}
+});
+
+ProjectsContainer.displayName = "ProjectsContainer";

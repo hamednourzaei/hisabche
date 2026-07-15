@@ -1,12 +1,16 @@
+// packages/ui/tailwind.config.ts
 import type { Config } from 'tailwindcss'
 
 const config: Config = {
   darkMode: 'class',
   content: [
+    // ✅ اصلاح مسیرها برای ساختار واقعی پروژه
     './src/**/*.{js,ts,jsx,tsx,mdx}',
-    '../../apps/web/src/**/*.{js,ts,jsx,tsx,mdx}',
-    '../../apps/web/app/**/*.{js,ts,jsx,tsx,mdx}',
-    '../../apps/mobile/src/**/*.{js,ts,jsx,tsx,mdx}',
+    '../../apps/web/app/**/*.{js,ts,jsx,tsx,mdx}',      // ✅ Next.js App Router
+    '../../apps/web/components/**/*.{js,ts,jsx,tsx,mdx}',
+    '../../apps/mobile/**/*.{js,ts,jsx,tsx,mdx}',       // ✅ Expo
+    '../../packages/ui/src/**/*.{js,ts,jsx,tsx,mdx}',   // ✅ UI package
+    '../../packages/**/src/**/*.{js,ts,jsx,tsx,mdx}',   // ✅ سایر packages
   ],
   theme: {
     container: {
@@ -16,7 +20,6 @@ const config: Config = {
     },
     extend: {
       colors: {
-        // ── Brand ──────────────────────────────────────────────
         primary: {
           DEFAULT: 'hsl(var(--hisab-primary))',
           fg:      'hsl(var(--hisab-primary-fg))',
@@ -33,7 +36,6 @@ const config: Config = {
           DEFAULT: 'hsl(var(--hisab-warning))',
           fg:      'hsl(var(--hisab-warning-fg))',
         },
-        // ── Palette (Base colors) ─────────────────────────────
         purple: {
           DEFAULT: 'hsl(var(--color-purple))',
           50: 'hsl(168 70% 95%)',
@@ -71,7 +73,6 @@ const config: Config = {
           DEFAULT: 'hsl(var(--color-secondary))',
           500: 'hsl(var(--color-secondary))',
         },
-        // ── Surfaces ───────────────────────────────────────────
         background: 'hsl(var(--hisab-background))',
         foreground: 'hsl(var(--hisab-foreground))',
         card: {
@@ -84,21 +85,19 @@ const config: Config = {
         },
         border: 'hsl(var(--hisab-border))',
         ring:   'hsl(var(--hisab-ring))',
-        // ── Surface base ───────────────────────────────────────
         surface: {
           base:     'hsl(var(--surface-base))',
           muted:    'hsl(var(--surface-muted))',
           elevated: 'hsl(var(--surface-elevated))',
         },
-        // ── Narrative Glow Colors (intentionally multi-hue — do not brand-ify) ──
         narrative: {
-  frustration: 'rgba(14, 110, 105, 0.10)',
-  confusion:   'rgba(239, 68, 68, 0.10)',
-  clarity:     'rgba(18, 200, 160, 0.10)',
-  confidence:  'rgba(99, 231, 200, 0.10)',
-  trust:       'rgba(14, 110, 105, 0.12)',
-  action:      'rgba(245, 158, 11, 0.15)',
-},
+          frustration: 'rgba(14, 110, 105, 0.10)',
+          confusion:   'rgba(239, 68, 68, 0.10)',
+          clarity:     'rgba(18, 200, 160, 0.10)',
+          confidence:  'rgba(99, 231, 200, 0.10)',
+          trust:       'rgba(14, 110, 105, 0.12)',
+          action:      'rgba(245, 158, 11, 0.15)',
+        },
       },
 
       borderRadius: {
@@ -113,7 +112,6 @@ const config: Config = {
         '2xl':   'var(--radius-2xl)',
         '3xl':   'var(--radius-3xl)',
         full:    'var(--radius-full)',
-        // Semantic aliases
         card:    'var(--radius-card)',
         'card-sm': 'var(--radius-card-sm)',
         'card-md': 'var(--radius-card-md)',
@@ -172,11 +170,11 @@ const config: Config = {
       },
 
       backdropBlur: {
-  xs:    '2px',
-  sm:    '4px',
-  md:    '8px',
-  glass: '18px',  // ← hardcode کن چون CSS variable تو backdropBlur کار نمیکنه
-},
+        xs:    '2px',
+        sm:    '4px',
+        md:    '8px',
+        glass: '18px',
+      },
 
       transitionTimingFunction: {
         'ease-out':      'var(--ease-out)',
@@ -261,14 +259,12 @@ const config: Config = {
       backgroundImage: {
         'gradient-purple-cyan': 'linear-gradient(135deg, hsl(165 75% 51%), hsl(168 78% 56%))',
         'gradient-emerald-cyan': 'linear-gradient(135deg, hsl(165 75% 51%), hsl(168 78% 56%))',
-        // warehouse Stats card backgrounds
         'warehouse-purple': 'linear-gradient(135deg, hsl(165 75% 51% / 0.1), hsl(165 75% 51% / 0.02))',
         'warehouse-emerald': 'linear-gradient(135deg, hsl(168 78% 56% / 0.1), hsl(168 78% 56% / 0.02))',
         'warehouse-amber': 'linear-gradient(135deg, hsl(38 92% 55% / 0.1), hsl(38 92% 55% / 0.02))',
         'warehouse-rose': 'linear-gradient(135deg, hsl(0 84% 60% / 0.1), hsl(0 84% 60% / 0.02))',
         'warehouse-blue': 'linear-gradient(135deg, hsl(210 90% 55% / 0.1), hsl(210 90% 55% / 0.02))',
         'warehouse-teal': 'linear-gradient(135deg, hsl(174 79% 28% / 0.1), hsl(174 79% 28% / 0.02))',
-        // Narrative backgrounds
         'narrative-frustration': 'radial-gradient(circle at 50% 0%, rgba(168, 85, 247, 0.12), transparent 70%)',
         'narrative-confusion':   'radial-gradient(circle at 50% 0%, rgba(239, 68, 68, 0.10), transparent 70%)',
         'narrative-clarity':     'radial-gradient(circle at 50% 0%, rgba(36, 224, 176, 0.10), transparent 70%)',
