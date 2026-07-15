@@ -3,7 +3,7 @@
 
 import { useState, useCallback, useMemo } from "react"
 import { useTranslation } from "react-i18next"
-import { useCustomers } from "../../../../hooks/customers/use-customers"
+import { useCustomers, useInvoices } from "@hisabche/api"
 import { customersView } from "../customer-view"
 import { fmt } from "../../../../lib/customers/customers-format"
 import type { CustomerWithDebt } from "../../../../lib/customers/customers-types"
@@ -16,49 +16,73 @@ export function customersContainer() {
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [paymentCustomer, setPaymentCustomer] = useState<CustomerWithDebt | null>(null)
 
-  const {
-    customersWithDebt,
-    debtorCount,
-    totalDebt,
-    openDealsCount,
-    customersLoading,
-    invoicesLoading,
-    refetchInvoices,
-    getOpenInvoicesForCustomer,
-  } = useCustomers()
+  const { data: customersData, isLoading: customersLoading } = useCustomers({ page: 1, limit: 200, sortDirection: 'desc' })
+  const { data: invoicesData, isLoading: invoicesLoading } = useInvoices({ page: 1, limit: 200, sortDirection: 'desc' } as any)
 
   const isLoading = customersLoading || invoicesLoading
+
+  // ✅ محاسبه KPIها از داده‌های واقعی
+  const customersWithDebt = useMemo(() => {
+    const customers = (customersData as any)?.customers || []
+    const invoices = (invoicesData as any)?.invoices || []
+    
+    return customers.map((c: any) => {
+      const customerInvoices = invoices.filter((inv: any) => inv.customerId === c.id)
+      const openInvoices = customerInvoices.filter((inv: any) => inv.status !== 'paid')
+      const totalDebt = openInvoices.reduce((sum: number, inv: any) => sum + ((inv.total || 0) - (inv.paidAmount || 0)), 0)
+      const totalPurchases = customerInvoices.reduce((sum: number, inv: any) => sum + (inv.total || 0), 0)
+      const lastInvoice = customerInvoices.sort((a: any, b: any) => new Date(b.date || b.created_at).getTime() - new Date(a.date || a.created_at).getTime())[0]
+      
+      return {
+        ...c,
+        id: c.id,
+        fullName: c.fullName || c.full_name,
+        name: c.fullName || c.full_name,
+        phone: c.phone,
+        totalDebt,
+        openCount: openInvoices.length,
+        totalPurchases,
+        lastInvoiceDate: lastInvoice?.date || lastInvoice?.created_at || null,
+        isOverdue: openInvoices.some((inv: any) => new Date(inv.dueDate || inv.due_date) < new Date()),
+        tags: c.tags || (totalPurchases > 100000 ? ['vip'] : []),
+      }
+    })
+  }, [customersData, invoicesData])
 
   const filteredCustomers = useMemo(() => {
     if (!search.trim()) return customersWithDebt
     const term = search.toLowerCase()
     return customersWithDebt.filter(
       (c: any) =>
-        (c.fullName?.toLowerCase().includes(term)) ||
-        (c.name?.toLowerCase().includes(term)) ||
-        (c.phone?.toLowerCase().includes(term))
+        (c.fullName || c.name || '').toLowerCase().includes(term) ||
+        (c.phone || '').toLowerCase().includes(term)
     )
   }, [customersWithDebt, search])
 
-  // ✅ Computed values for sticky summary
+  // ✅ KPIهای واقعی
   const totalCustomers = customersWithDebt.length
+  const totalDebt = customersWithDebt.reduce((sum: number, c: any) => sum + (c.totalDebt || 0), 0)
+  const debtorCount = customersWithDebt.filter((c: any) => (c.totalDebt || 0) > 0).length
+  const openDealsCount = customersWithDebt.reduce((sum: number, c: any) => sum + (c.openCount || 0), 0)
   const overdueCount = customersWithDebt.filter((c: any) => c.isOverdue).length
   const vipCount = customersWithDebt.filter((c: any) => c.tags?.includes('vip')).length
-  const todaySales = 0 // از API جداگانه یا useDashboardKPIs
+  const todaySales = 0
 
   const paymentInvoicesForModal = useMemo(() => {
     if (!paymentCustomer) return []
-    const openInvoices = getOpenInvoicesForCustomer(paymentCustomer.id)
-    return openInvoices.map((inv: any) => ({
-      id: inv.id,
-      invoiceNumber: inv.invoiceNumber,
-      total: inv.total,
-      paidAmount: inv.paidAmount,
-      date: inv.date,
-      status: inv.status,
-      customerId: paymentCustomer.id,
-    }))
-  }, [paymentCustomer, getOpenInvoicesForCustomer])
+    const invoices = (invoicesData as any)?.invoices || []
+    return invoices
+      .filter((inv: any) => inv.customerId === paymentCustomer.id && inv.status !== 'paid')
+      .map((inv: any) => ({
+        id: inv.id,
+        invoiceNumber: inv.invoiceNumber || inv.invoice_number,
+        total: inv.total || 0,
+        paidAmount: inv.paidAmount || inv.paid_amount || 0,
+        date: inv.date || inv.created_at,
+        status: inv.status,
+        customerId: paymentCustomer.id,
+      }))
+  }, [paymentCustomer, invoicesData])
 
   const handleOpenPayment = useCallback((customer: CustomerWithDebt) => {
     setPaymentCustomer(customer)
@@ -71,9 +95,8 @@ export function customersContainer() {
   }, [])
 
   const handlePaymentSuccess = useCallback(() => {
-    refetchInvoices()
     handleClosePayment()
-  }, [refetchInvoices, handleClosePayment])
+  }, [handleClosePayment])
 
   const handleSelectCustomer = useCallback((id: string) => {
     setSelectedCustomerId(id)
