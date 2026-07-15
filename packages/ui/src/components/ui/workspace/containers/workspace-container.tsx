@@ -1,19 +1,24 @@
 // packages/ui/src/components/ui/workspace/containers/workspace-container.tsx
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useCallback, memo } from "react";
 import { useWorkspaces, useWorkspaceMembers } from "@hisabche/api";
 import { useWorkspaceStore } from "@hisabche/store";
 import { WorkspacePage } from "../workspace-page";
 
-export function WorkspaceContainer() {
+/* ═══════════════════════════════════════════════════════════════════════════
+   WorkspaceContainer v2 — Memoized · Performance Optimized
+   ✅ memo · useCallback · useEffect with proper deps
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+export const WorkspaceContainer = memo(function WorkspaceContainer() {
   const { data: workspaces } = useWorkspaces();
   const store = useWorkspaceStore();
   const workspaceId = store.workspaceId || workspaces?.[0]?.id;
   const { data: membersData } = useWorkspaceMembers(workspaceId ?? "");
 
-  // ست کردن workspace اول
-  useEffect(() => {
+  // ✅ ست کردن workspace اول با useCallback
+  const setInitialWorkspace = useCallback(() => {
     if (workspaces && workspaces.length > 0) {
       const first = workspaces[0];
       if (!store.workspaceId) {
@@ -23,9 +28,13 @@ export function WorkspaceContainer() {
         store.setCurrentUserRole(first.myRole);
       }
     }
-  }, [workspaces]);
+  }, [workspaces, store]);
 
-  // آپدیت اعضا با داده واقعی
+  useEffect(() => {
+    setInitialWorkspace();
+  }, [setInitialWorkspace]);
+
+  // ✅ آپدیت اعضا با داده واقعی
   useEffect(() => {
     if (membersData && Array.isArray(membersData)) {
       const realMembers = membersData.map((m: any) => ({
@@ -42,4 +51,6 @@ export function WorkspaceContainer() {
   }, [membersData]);
 
   return <WorkspacePage />;
-}
+});
+
+WorkspaceContainer.displayName = "WorkspaceContainer";

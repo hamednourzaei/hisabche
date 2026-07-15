@@ -1,13 +1,28 @@
 // packages/ui/src/components/ui/audit/containers/audit-container.tsx
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, memo, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useAuditLogs, type AuditLog, type AuditResponse } from "@hisabche/api";
 import { AuditView } from "../audit-view";
 
-export function AuditContainer() {
-  const { t } = useTranslation();
+/* ═══════════════════════════════════════════════════════════════════════════
+   AuditContainer v2 — Memoized · Performance Optimized
+   ✅ memo · useCallback · safeT wrapper
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+export const AuditContainer = memo(function AuditContainer() {
+  const { t: tOriginal } = useTranslation();
+
+  // ✅ safeT wrapper
+  const t = useCallback(
+    (key: string, fallback?: string): string => {
+      const result = tOriginal(key);
+      return result && result !== key ? result : (fallback ?? key);
+    },
+    [tOriginal]
+  );
+
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<{
     action?: string;
@@ -17,16 +32,11 @@ export function AuditContainer() {
     search?: string;
   }>({});
 
-  const { data, isLoading, error, refetch } = useAuditLogs({ 
-    page, 
-    limit: 30, 
-    ...filters 
+  const { data, isLoading, error, refetch } = useAuditLogs({
+    page,
+    limit: 30,
+    ...filters,
   });
-
-  const safeT = (key: string, fallback?: string) => {
-    const result = t(key);
-    return result !== key ? result : (fallback ?? key);
-  };
 
   const handleRefresh = useCallback(() => {
     refetch();
@@ -42,26 +52,32 @@ export function AuditContainer() {
     window.open(`/api/audit/export?${params.toString()}`, "_blank");
   }, [filters]);
 
-  // ✅ data is already AuditResponse type
+  const handleFiltersChange = useCallback(
+    (newFilters: any) => {
+      setFilters(newFilters);
+      setPage(1);
+    },
+    []
+  );
+
   const logs = data?.logs ?? [];
   const total = data?.total ?? 0;
 
   return (
     <AuditView
-      t={safeT}
+      t={t}
       logs={logs}
       total={total}
       page={page}
       isLoading={isLoading}
       error={error?.message || null}
       filters={filters}
-      onFiltersChange={(newFilters) => {
-        setFilters(newFilters);
-        setPage(1);
-      }}
+      onFiltersChange={handleFiltersChange}
       onPageChange={setPage}
       onRefresh={handleRefresh}
       onExport={handleExport}
     />
   );
-}
+});
+
+AuditContainer.displayName = "AuditContainer";

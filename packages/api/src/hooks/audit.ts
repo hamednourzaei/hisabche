@@ -28,7 +28,7 @@ export interface AuditLog {
   created_at: string;
   ip_address?: string;
   user_name?: string;
-  details?: Record<string, any>;
+  details?: Record<string, unknown>;
 }
 
 export interface AuditResponse {
@@ -38,35 +38,37 @@ export interface AuditResponse {
   limit?: number;
 }
 
-function extractAuditData(response: any): AuditResponse {
-  if (response?.data?.logs) {
+function extractAuditData(response: unknown): AuditResponse {
+  const data = response as Record<string, unknown>;
+
+  // ✅ 1. Check for response.data.logs
+  if (data?.data && typeof data.data === 'object') {
+    const nested = data.data as Record<string, unknown>;
+    if (nested?.logs && Array.isArray(nested.logs)) {
+      return {
+        logs: nested.logs as AuditLog[],
+        total: (nested.total as number) || nested.logs.length,
+      };
+    }
+  }
+
+  // ✅ 2. Check for response.logs directly
+  if (data?.logs && Array.isArray(data.logs)) {
     return {
-      logs: response.data.logs,
-      total: response.data.total || response.data.logs.length,
+      logs: data.logs as AuditLog[],
+      total: (data.total as number) || data.logs.length,
     };
   }
-  
-  if (response?.data?.data) {
+
+  // ✅ 3. Check for response.data as array
+  if (data?.data && Array.isArray(data.data)) {
     return {
-      logs: response.data.data,
-      total: response.data.total || response.data.data.length,
+      logs: data.data as AuditLog[],
+      total: (data.total as number) || data.data.length,
     };
   }
-  
-  if (Array.isArray(response?.data)) {
-    return {
-      logs: response.data,
-      total: response.data.length,
-    };
-  }
-  
-  if (response?.logs) {
-    return {
-      logs: response.logs,
-      total: response.total || response.logs.length,
-    };
-  }
-  
+
+  // ✅ 4. Fallback: empty
   return {
     logs: [],
     total: 0,
@@ -79,11 +81,10 @@ export function useAuditLogs(params: UseAuditLogsParams = {}) {
   return useQuery({
     queryKey: auditKeys.list({ page, limit, ...rest }),
     queryFn: async (): Promise<AuditResponse> => {
-      // ✅ FIX: Remove /api/ from path (baseURL already has it)
-      const response = await apiClient.get("/audit/logs", { 
-        params: { page, limit, ...rest } 
+      const response = await apiClient.get("/audit/logs", {
+        params: { page, limit, ...rest },
       });
-      
+
       return extractAuditData(response);
     },
     staleTime: 30000,

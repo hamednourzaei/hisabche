@@ -1,15 +1,23 @@
 // packages/ui/src/components/ui/navigation/navigation-registry.tsx
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, memo } from "react";
 import { registerSectionRef } from "../../../lib/menu/navigation-core";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   NavigationRegistry v2 — Memoized
+   ✅ memo
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface NavigationRegistryProps {
   id: string;
   children: React.ReactNode;
 }
 
-export function NavigationRegistry({ id, children }: NavigationRegistryProps) {
+export const NavigationRegistry = memo(function NavigationRegistry({
+  id,
+  children,
+}: NavigationRegistryProps) {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -26,4 +34,6 @@ export function NavigationRegistry({ id, children }: NavigationRegistryProps) {
       {children}
     </div>
   );
-}
+});
+
+NavigationRegistry.displayName = "NavigationRegistry";

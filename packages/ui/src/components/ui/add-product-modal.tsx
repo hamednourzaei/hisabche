@@ -1,5 +1,6 @@
 "use client";
 
+import { memo, useCallback, useMemo } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -23,6 +24,11 @@ import {
   SelectValue,
 } from "./select";
 import { useSyncStore, useBackupStore } from "@hisabche/store";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   AddProductModal v2 — Memoized · Performance Optimized
+   ✅ memo · useCallback · useMemo
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 // ─── Schema ────────────────────────────────────────────────────────────────
 
@@ -55,14 +61,28 @@ const UNIT_OPTIONS = [
   { value: "box", labelKey: "warehouse.units.box", fallback: "کارتن" },
 ] as const;
 
+// ✅ inputClass خارج از کامپوننت
+const inputClass =
+  "bg-[hsl(var(--surface-base))] border-[hsl(var(--border-default))] text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))] focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)] min-h-[44px]";
+
 // ─── Component ─────────────────────────────────────────────────────────────
 
-export function AddProductModal({
+export const AddProductModal = memo(function AddProductModal({
   open,
   onClose,
   onCreated,
 }: AddProductModalProps) {
-  const { t } = useTranslation();
+  const { t: tOriginal } = useTranslation();
+
+  // ✅ safeT wrapper برای exactOptionalPropertyTypes
+  const t = useCallback(
+    (key: string, fallback?: string): string => {
+      const result = tOriginal(key);
+      return result && result !== key ? result : (fallback ?? key);
+    },
+    [tOriginal]
+  );
+
   const createProduct = useCreateProduct();
   const { setSaveStatus } = useSyncStore();
   const { addAuditEntry } = useBackupStore();
@@ -85,53 +105,68 @@ export function AddProductModal({
     },
   });
 
-  const onSubmit = async (data: ProductFormValues) => {
-    setSaveStatus("saving");
-    try {
-      const product = await createProduct.mutateAsync({
-        name: data.name.trim(),
-        quantity: data.quantity,
-        buyPrice: data.buyPrice,
-        sellPrice: data.sellPrice,
-        unit: data.unit,
-        minStockLevel: data.minStock,
-        category: "general",
-        isActive: true,
-      });
-      addAuditEntry({
-        action: "create",
-        entity: "product",
-        entityId: product.id || "",
-        details: `محصول جدید: ${data.name.trim()}`,
-      });
-      setSaveStatus("saved");
-      setTimeout(() => setSaveStatus("idle"), 2000);
-      reset();
-      onCreated?.();
-      onClose();
-    } catch (error) {
-      setSaveStatus("idle");
-      console.error("Failed to create product:", error);
-    }
-  };
+  const onSubmit = useCallback(
+    async (data: ProductFormValues) => {
+      setSaveStatus("saving");
+      try {
+        const product = await createProduct.mutateAsync({
+          name: data.name.trim(),
+          quantity: data.quantity,
+          buyPrice: data.buyPrice,
+          sellPrice: data.sellPrice,
+          unit: data.unit,
+          minStockLevel: data.minStock,
+          category: "general",
+          isActive: true,
+        });
+        addAuditEntry({
+          action: "create",
+          entity: "product",
+          entityId: product.id || "",
+          details: `محصول جدید: ${data.name.trim()}`,
+        });
+        setSaveStatus("saved");
+        setTimeout(() => setSaveStatus("idle"), 2000);
+        reset();
+        onCreated?.();
+        onClose();
+      } catch (error) {
+        setSaveStatus("idle");
+        console.error("Failed to create product:", error);
+      }
+    },
+    [createProduct, setSaveStatus, addAuditEntry, reset, onCreated, onClose]
+  );
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     reset();
     onClose();
-  };
+  }, [reset, onClose]);
 
-  const getErrorMessage = (error: unknown): string | undefined => {
-    if (error && typeof error === "object" && "message" in error) {
-      return t((error as { message: string }).message);
-    }
-    return undefined;
-  };
+  const getErrorMessage = useCallback(
+    (error: unknown): string | undefined => {
+      if (error && typeof error === "object" && "message" in error) {
+        return t((error as { message: string }).message);
+      }
+      return undefined;
+    },
+    [t]
+  );
 
   const isPending = isSubmitting || createProduct.isPending;
 
-  // Shared input class — DRY
-  const inputClass =
-    "bg-[hsl(var(--surface-base))] border-[hsl(var(--border-default))] text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))] focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)] min-h-[44px]";
+  // ✅ useMemo برای form default values
+  const defaultValues = useMemo(
+    () => ({
+      name: "",
+      quantity: 0,
+      buyPrice: 0,
+      sellPrice: 0,
+      unit: "piece" as const,
+      minStock: 5,
+    }),
+    []
+  );
 
   if (!open) return null;
 
@@ -317,4 +352,6 @@ export function AddProductModal({
       </DialogContent>
     </Dialog>
   );
-}
+});
+
+AddProductModal.displayName = "AddProductModal";

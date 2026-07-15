@@ -10,5 +10,5 @@ export function LivingBackground() {
       <div className="bg-glow-2 motion-reduce:hidden" />
       <div className="bg-glow-3 motion-reduce:hidden" />
     </div>
-  )
+  );
 }

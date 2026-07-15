@@ -1,12 +1,14 @@
 // packages/ui/src/components/ui/navigation/side-nav.tsx
 "use client";
 
+import { memo, useCallback } from "react";
 import { useNavigation } from "../../../hooks/menu/use-navigation-state";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   SideNav v3 — i18n-ready
+   SideNav v4 — Memoized · Performance Optimized
+   ✅ memo · useCallback
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface SideNavItem {
@@ -19,9 +21,69 @@ export interface SideNavProps {
   items: SideNavItem[];
 }
 
-export function SideNav({ items }: SideNavProps) {
+// ─── NavItem Component ─────────────────────────────────────────────────────
+
+const NavItem = memo(function NavItem({
+  id,
+  icon,
+  label,
+  isActive,
+  onClick,
+}: {
+  id: string;
+  icon: React.ReactNode;
+  label: string;
+  isActive: boolean;
+  onClick: (id: string) => void;
+}) {
+  const handleClick = useCallback(() => onClick(id), [id, onClick]);
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      className={cn(
+        "relative flex items-center gap-2.5 h-9 px-2.5 rounded-lg",
+        "text-sm font-medium text-start w-full",
+        "transition-colors duration-150",
+        "motion-reduce:transition-none",
+        isActive
+          ? "bg-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))] font-semibold"
+          : "text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]"
+      )}
+      aria-current={isActive ? "page" : undefined}
+    >
+      {isActive && (
+        <span className="absolute start-0 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-full bg-[hsl(var(--color-primary))]" />
+      )}
+
+      <span
+        className={cn(
+          "inline-flex shrink-0",
+          isActive
+            ? "text-[hsl(var(--color-primary))]"
+            : "text-[hsl(var(--fg-tertiary))]"
+        )}
+      >
+        {icon}
+      </span>
+
+      <span className="flex-1 truncate">{label}</span>
+    </button>
+  );
+});
+NavItem.displayName = "NavItem";
+
+// ─── Main Component ─────────────────────────────────────────────────────────
+
+export const SideNav = memo(function SideNav({ items }: SideNavProps) {
   const { activeSection, setSection } = useNavigation();
   const { t } = useTranslation();
+
+  const handleSetSection = useCallback(
+    (id: string) => setSection(id),
+    [setSection]
+  );
 
   return (
     <aside
@@ -49,48 +111,19 @@ export function SideNav({ items }: SideNavProps) {
 
       {/* Navigation */}
       <nav className="flex flex-col gap-0.5 p-2 flex-1">
-        {items.map(({ id, icon, label }) => {
-          const isActive = activeSection === id;
-
-          return (
-            <button
-              key={id}
-              type="button"
-              onClick={() => setSection(id)}
-              className={cn(
-                "relative flex items-center gap-2.5 h-9 px-2.5 rounded-lg",
-                "text-sm font-medium text-start w-full",
-                "transition-colors duration-150",
-                "motion-reduce:transition-none",
-                isActive
-                  ? "bg-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))] font-semibold"
-                  : "text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]"
-              )}
-              aria-current={isActive ? "page" : undefined}
-            >
-              {/* Active indicator bar */}
-              {isActive && (
-                <span className="absolute start-0 top-1/2 -translate-y-1/2 w-0.5 h-4 rounded-full bg-[hsl(var(--color-primary))]" />
-              )}
-
-              {/* Icon */}
-              <span
-                className={cn(
-                  "inline-flex shrink-0",
-                  isActive
-                    ? "text-[hsl(var(--color-primary))]"
-                    : "text-[hsl(var(--fg-tertiary))]"
-                )}
-              >
-                {icon}
-              </span>
-
-              {/* Label */}
-              <span className="flex-1 truncate">{label}</span>
-            </button>
-          );
-        })}
+        {items.map((item) => (
+          <NavItem
+            key={item.id}
+            id={item.id}
+            icon={item.icon}
+            label={item.label}
+            isActive={activeSection === item.id}
+            onClick={handleSetSection}
+          />
+        ))}
       </nav>
     </aside>
   );
-}
+});
+
+SideNav.displayName = "SideNav";

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, memo } from "react";
 import { useTranslation } from "react-i18next";
 import { usePathname } from "next/navigation";
 import { useNavigation } from "../../../hooks/menu/use-navigation-state";
@@ -8,7 +8,8 @@ import { useAuthStore } from "@hisabche/store";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   TopNav — i18n-ready with dynamic RTL/LTR support
+   TopNav v4 — Memoized · Performance Optimized
+   ✅ memo · useCallback · useMemo
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface TopNavProps {
@@ -24,7 +25,44 @@ function getLocaleFromPathname(pathname: string): string {
   return match?.[1] ?? "fa-IR";
 }
 
-export function TopNav({
+// ─── NavItem Component ─────────────────────────────────────────────────────
+
+const NavItem = memo(function NavItem({
+  id,
+  label,
+  isActive,
+  onClick,
+}: {
+  id: string;
+  label: string;
+  isActive: boolean;
+  onClick: (id: string) => void;
+}) {
+  const handleClick = useCallback(() => onClick(id), [id, onClick]);
+
+  return (
+    <li className="shrink-0">
+      <button
+        type="button"
+        data-section-id={id}
+        className={cn(
+          "relative z-10 px-2 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-colors",
+          isActive
+            ? "text-[hsl(var(--fg-primary))] font-semibold"
+            : "text-[hsl(var(--fg-primary)/0.55)] hover:text-[hsl(var(--fg-primary)/0.85)]"
+        )}
+        onClick={handleClick}
+      >
+        {label}
+      </button>
+    </li>
+  );
+});
+NavItem.displayName = "NavItem";
+
+// ─── Main Component ─────────────────────────────────────────────────────────
+
+export const TopNav = memo(function TopNav({
   variant = "landing",
   onNavigateLogin,
   onNavigateCta,
@@ -71,7 +109,19 @@ export function TopNav({
     return () => window.removeEventListener("resize", updateIndicator);
   }, [updateIndicator]);
 
-  const handleSetSection = useCallback((id: string) => setSection(id), [setSection]);
+  const handleSetSection = useCallback(
+    (id: string) => setSection(id),
+    [setSection]
+  );
+
+  const firstSectionId = sections[0]?.id || "";
+
+  const handleLogoClick = useCallback(() => {
+    handleSetSection(firstSectionId);
+  }, [handleSetSection, firstSectionId]);
+
+  const ctaText = t("landing.cta", locale === "en" ? "Start Free" : "شروع رایگان");
+  const signOutText = t("auth.signOut", locale === "en" ? "Sign Out" : "خروج");
 
   return (
     <header
@@ -100,7 +150,7 @@ export function TopNav({
         <button
           type="button"
           className="hidden lg:flex items-center gap-1 text-[hsl(var(--fg-primary))] font-bold text-lg shrink-0"
-          onClick={() => handleSetSection(sections[0]?.id || "")}
+          onClick={handleLogoClick}
         >
           <span>{displayName}</span>
           <span className="text-[hsl(var(--color-primary))]">.</span>
@@ -122,21 +172,13 @@ export function TopNav({
               }}
             />
             {sections.map(({ id, label }) => (
-              <li key={id} className="shrink-0">
-                <button
-                  type="button"
-                  data-section-id={id}
-                  className={cn(
-                    "relative z-10 px-2 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-colors",
-                    activeSection === id
-                      ? "text-[hsl(var(--fg-primary))] font-semibold"
-                      : "text-[hsl(var(--fg-primary)/0.55)] hover:text-[hsl(var(--fg-primary)/0.85)]"
-                  )}
-                  onClick={() => handleSetSection(id)}
-                >
-                  {label}
-                </button>
-              </li>
+              <NavItem
+                key={id}
+                id={id}
+                label={label}
+                isActive={activeSection === id}
+                onClick={handleSetSection}
+              />
             ))}
           </ul>
         </nav>
@@ -148,9 +190,7 @@ export function TopNav({
             className="hidden lg:inline-flex items-center gap-1 rounded-full px-5 py-2 text-sm font-bold text-white bg-[var(--gradient-brand)] hover:brightness-110 transition-all shrink-0"
             onClick={onNavigateCta ?? onNavigateLogin}
           >
-            <span className="cta-text">
-              {t("landing.cta", locale === "en" ? "Start Free" : "شروع رایگان")}
-            </span>
+            <span className="cta-text">{ctaText}</span>
             <span>{isRTL ? "←" : "→"}</span>
           </button>
         )}
@@ -162,7 +202,7 @@ export function TopNav({
             onClick={onLogout}
             className="hidden lg:inline-flex rounded-full px-4 py-1.5 text-xs font-medium text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors"
           >
-            {t("auth.signOut", locale === "en" ? "Sign Out" : "خروج")}
+            {signOutText}
           </button>
         )}
       </div>
@@ -176,4 +216,6 @@ export function TopNav({
       </div>
     </header>
   );
-}
+});
+
+TopNav.displayName = "TopNav";
