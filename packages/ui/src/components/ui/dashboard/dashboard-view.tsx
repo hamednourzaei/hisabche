@@ -1,6 +1,7 @@
 // packages/ui/src/components/ui/dashboard/dashboard-view.tsx
 "use client";
 
+import { memo, useMemo } from "react";  // ✅ اضافه شد
 import { cn } from "@/lib/utils";
 import { Sparkles, Receipt, TrendingUp } from "lucide-react";
 import { StatCard } from "./dashboard-stats";
@@ -11,10 +12,14 @@ import { SalesChart, type ChartDataPoint } from "./sales-chart";
 import { DateRangePicker, type DateRange, type PresetKey } from "./date-range-picker";
 import type { AIInsight } from "@hisabche/api";
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   DashboardView v2 — Memoized · Performance Optimized
+   ✅ memo · useMemo · Greeting جدا شده
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 interface DashboardViewProps {
   t: (key: string, fallback?: string) => string;
   fmt: (v: number) => string;
-  // KPI
   todaySales: number;
   todayInvoices: number;
   monthlyRevenue: number;
@@ -23,14 +28,11 @@ interface DashboardViewProps {
   activeCustomers: number;
   lowStockAlerts: number;
   kpiLoading: boolean;
-  // AI Insights
   insights: AIInsight[];
   insightsLoading: boolean;
-  // Chart
   salesChartData: ChartDataPoint[];
   chartLoading: boolean;
   dateRange: DateRange;
-  // Debt/Invoices
   totalDebt: number;
   invLoading: boolean;
   prodLoading: boolean;
@@ -40,7 +42,6 @@ interface DashboardViewProps {
     total: number;
     date: string;
   }>;
-  // Navigation
   onNavigate: (route: string) => void;
   onNavigatewarehouse: () => void;
   onNavigatecustomers: () => void;
@@ -48,19 +49,31 @@ interface DashboardViewProps {
   onNavigateInvoice: (id: string) => void;
   onViewAllInvoices: () => void;
   onInsightAction: (action: string) => void;
-  // Date Range
   onDateRangeChange: (range: DateRange, preset: PresetKey) => void;
 }
 
-function Greeting({ t }: { t: (key: string, fallback?: string) => string }) {
+// ─── Greeting (جدا شده با memo) ──────────────────────────────────────────
+
+const Greeting = memo(function Greeting({
+  t,
+}: {
+  t: (key: string, fallback?: string) => string;
+}) {
   const h = new Date().getHours();
   const k = h < 12 ? "morning" : h < 17 ? "afternoon" : h < 21 ? "evening" : "night";
+  const label =
+    k === "morning"
+      ? "صبح بخیر"
+      : k === "afternoon"
+      ? "ظهر بخیر"
+      : k === "evening"
+      ? "عصر بخیر"
+      : "شب بخیر";
+
   return (
     <div className="space-y-1.5">
       <h1 className="flex items-center gap-2 text-2xl font-bold sm:text-3xl text-[hsl(var(--fg-primary))]">
-        {t(`dashboard.greeting.${k}`, 
-          k === "morning" ? "صبح بخیر" : k === "afternoon" ? "ظهر بخیر" : k === "evening" ? "عصر بخیر" : "شب بخیر"
-        )}
+        {t(`dashboard.greeting.${k}`, label)}
         <Sparkles className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
       </h1>
       <p className="text-sm text-[hsl(var(--fg-secondary))]">
@@ -68,9 +81,12 @@ function Greeting({ t }: { t: (key: string, fallback?: string) => string }) {
       </p>
     </div>
   );
-}
+});
+Greeting.displayName = "Greeting";
 
-export function DashboardView(props: DashboardViewProps) {
+// ─── Main Component ────────────────────────────────────────────────────────
+
+export const DashboardView = memo(function DashboardView(props: DashboardViewProps) {
   const {
     t,
     fmt,
@@ -101,21 +117,26 @@ export function DashboardView(props: DashboardViewProps) {
     onDateRangeChange,
   } = props;
 
+  // ✅ useMemo برای KPI data
+  const kpiData = useMemo(
+    () => ({
+      todaySales,
+      todayInvoices,
+      monthlyRevenue,
+      monthlyGrowth,
+      pendingPayments,
+      activeCustomers,
+      lowStockAlerts,
+    }),
+    [todaySales, todayInvoices, monthlyRevenue, monthlyGrowth, pendingPayments, activeCustomers, lowStockAlerts]
+  );
+
   return (
     <div className="space-y-6">
       <Greeting t={t} />
 
-      {/* KPI Cards */}
       <KPICards
-        data={{
-          todaySales,
-          todayInvoices,
-          monthlyRevenue,
-          monthlyGrowth,
-          pendingPayments,
-          activeCustomers,
-          lowStockAlerts,
-        }}
+        data={kpiData}
         isLoading={kpiLoading}
         onNavigate={onNavigate}
       />
@@ -125,7 +146,7 @@ export function DashboardView(props: DashboardViewProps) {
         className={cn(
           "rounded-2xl border border-[hsl(var(--border-default))]",
           "bg-[hsl(var(--surface-elevated))]",
-          "p-5",
+          "p-5"
         )}
       >
         <div className="flex items-center justify-between gap-4 mb-4">
@@ -139,7 +160,6 @@ export function DashboardView(props: DashboardViewProps) {
             </h2>
           </div>
 
-          {/* ✅ Date Range Picker */}
           <DateRangePicker
             value={dateRange}
             onChange={onDateRangeChange}
@@ -163,7 +183,7 @@ export function DashboardView(props: DashboardViewProps) {
             className={cn(
               "rounded-2xl border border-[hsl(var(--border-default))]",
               "bg-[hsl(var(--surface-elevated))]",
-              "overflow-hidden",
+              "overflow-hidden"
             )}
           >
             <div className="flex items-center gap-2 px-6 pt-5 pb-3">
@@ -199,4 +219,6 @@ export function DashboardView(props: DashboardViewProps) {
       </div>
     </div>
   );
-}
+});
+
+DashboardView.displayName = "DashboardView";

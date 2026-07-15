@@ -1,16 +1,18 @@
 // packages/ui/src/components/ui/warehouse/warehouse-stats.tsx
 "use client";
 
+import { memo, useMemo } from "react";  // ✅ اضافه شد
 import { cn } from "@/lib/utils";
 import { Package, AlertTriangle, DollarSign } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   warehouseStats v3 — Compact Horizontal Design
-   Zero hardcoded colors — all tokens from design system
+   warehouseStats v4 — Memoized · Performance Optimized
+   ✅ memo · useMemo · ثابت‌های خارج از کامپوننت
    ═══════════════════════════════════════════════════════════════════════════ */
 
 type Tone = "emerald" | "amber" | "rose" | "purple";
 
+// ✅ ثابت‌های خارج از کامپوننت (بدون بازتعریف در هر رندر)
 const TONE_BG: Record<Tone, string> = {
   emerald: "from-[hsl(var(--color-success)/0.1)] to-[hsl(var(--color-success)/0.02)]",
   amber: "from-[hsl(var(--color-warning)/0.1)] to-[hsl(var(--color-warning)/0.02)]",
@@ -34,7 +36,15 @@ interface StatCardProps {
   isLoading?: boolean;
 }
 
-function StatCard({ label, value, hint, icon: Icon, tone, isLoading = false }: StatCardProps) {
+// ✅ StatCard با memo
+const StatCard = memo(function StatCard({
+  label,
+  value,
+  hint,
+  icon: Icon,
+  tone,
+  isLoading = false,
+}: StatCardProps) {
   return (
     <div
       className={cn(
@@ -67,7 +77,8 @@ function StatCard({ label, value, hint, icon: Icon, tone, isLoading = false }: S
       </div>
     </div>
   );
-}
+});
+StatCard.displayName = "StatCard";
 
 interface warehouseStatsProps {
   t: (key: string, fallback?: string) => string;
@@ -79,7 +90,30 @@ interface warehouseStatsProps {
   isLoading?: boolean;
 }
 
-export function warehouseStats({
+// ✅ توابع محاسبه‌ی tone (خارج از کامپوننت)
+function getLowStockTone(value: number): Tone {
+  if (value === 0) return "emerald";
+  if (value < 5) return "rose";
+  if (value < 15) return "amber";
+  return "purple";
+}
+
+function getOutOfStockTone(value: number): Tone {
+  if (value === 0) return "emerald";
+  if (value > 20) return "rose";
+  if (value > 10) return "amber";
+  return "purple";
+}
+
+function getTotalValueTone(value: number): Tone {
+  if (value > 1_000_000) return "emerald";
+  if (value > 500_000) return "purple";
+  if (value > 100_000) return "amber";
+  return "rose";
+}
+
+// ✅ کامپوننت اصلی با memo
+export const warehouseStats = memo(function warehouseStats({
   t,
   fmt,
   total,
@@ -88,26 +122,24 @@ export function warehouseStats({
   totalValue,
   isLoading = false,
 }: warehouseStatsProps) {
-  const getLowStockTone = (value: number): Tone => {
-    if (value === 0) return "emerald";
-    if (value < 5) return "rose";
-    if (value < 15) return "amber";
-    return "purple";
-  };
+  // ✅ useMemo برای محاسبه‌ی tones (فقط زمانی که داده‌ها تغییر کنند)
+  const tones = useMemo(
+    () => ({
+      lowStock: getLowStockTone(lowStock),
+      outOfStock: getOutOfStockTone(outOfStock),
+      totalValue: getTotalValueTone(totalValue),
+    }),
+    [lowStock, outOfStock, totalValue]
+  );
 
-  const getOutOfStockTone = (value: number): Tone => {
-    if (value === 0) return "emerald";
-    if (value > 20) return "rose";
-    if (value > 10) return "amber";
-    return "purple";
-  };
-
-  const getTotalValueTone = (value: number): Tone => {
-    if (value > 1_000_000) return "emerald";
-    if (value > 500_000) return "purple";
-    if (value > 100_000) return "amber";
-    return "rose";
-  };
+  // ✅ useMemo برای hints (فقط زمانی که داده‌ها تغییر کنند)
+  const hints = useMemo(
+    () => ({
+      lowStock: lowStock === 0 ? t("warehouse.noLowStock", "هیچ محصولی با موجودی کم نیست") : undefined,
+      outOfStock: outOfStock === 0 ? t("warehouse.noOutOfStock", "هیچ محصول ناموجودی نیست") : undefined,
+    }),
+    [lowStock, outOfStock, t]
+  );
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -123,8 +155,8 @@ export function warehouseStats({
         label={t("warehouse.lowStock", "موجودی کم")}
         value={lowStock}
         icon={AlertTriangle}
-        tone={getLowStockTone(lowStock)}
-        hint={lowStock === 0 ? t("warehouse.noLowStock", "هیچ محصولی با موجودی کم نیست") : undefined}
+        tone={tones.lowStock}
+        hint={hints.lowStock}
         isLoading={isLoading}
       />
 
@@ -132,8 +164,8 @@ export function warehouseStats({
         label={t("warehouse.outOfStock", "ناموجود")}
         value={outOfStock}
         icon={AlertTriangle}
-        tone={getOutOfStockTone(outOfStock)}
-        hint={outOfStock === 0 ? t("warehouse.noOutOfStock", "هیچ محصول ناموجودی نیست") : undefined}
+        tone={tones.outOfStock}
+        hint={hints.outOfStock}
         isLoading={isLoading}
       />
 
@@ -141,9 +173,11 @@ export function warehouseStats({
         label={t("warehouse.totalValue", "ارزش کل (AFN)")}
         value={fmt(totalValue)}
         icon={DollarSign}
-        tone={getTotalValueTone(totalValue)}
+        tone={tones.totalValue}
         isLoading={isLoading}
       />
     </div>
   );
-}
+});
+
+warehouseStats.displayName = "warehouseStats";

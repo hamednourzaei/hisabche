@@ -1,12 +1,13 @@
 // packages/ui/src/components/ui/dashboard/dashboard-stats.tsx
 "use client";
 
+import { memo } from "react";
 import { cn } from "@/lib/utils";
 import { ArrowUpRight, type LucideIcon } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   DashboardStats v3 — warehouseStats-style Compact Horizontal Design
-   Zero hardcoded colors — all tokens from design system
+   DashboardStats v2 — Memoized · Performance Optimized
+   ✅ memo · ثابت‌های خارج از کامپوننت · رفع group
    ═══════════════════════════════════════════════════════════════════════════ */
 
 type Tone = "emerald" | "amber" | "rose" | "purple";
@@ -35,7 +36,8 @@ interface StatCardProps {
   isLoading?: boolean;
 }
 
-export function StatCard({
+// ✅ StatCard با memo + رفع group برای ArrowUpRight
+export const StatCard = memo(function StatCard({
   label,
   value,
   hint,
@@ -50,15 +52,21 @@ export function StatCard({
     <Wrap
       {...(onClick ? { type: "button" as const, onClick } : {})}
       className={cn(
-        "flex items-center gap-3 p-4 rounded-2xl text-start",
+        "group flex items-center gap-3 p-4 rounded-2xl text-start w-full",
         "border border-[hsl(var(--border-default))]",
         "bg-gradient-to-br",
         TONE_BG[tone],
         onClick && "cursor-pointer motion-safe:hover:-translate-y-0.5 motion-safe:transition-all",
+        "focus-visible:ring-4 focus-visible:ring-[rgba(18,200,160,0.18)] focus-visible:outline-none"
       )}
     >
       {/* Icon */}
-      <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl shrink-0", TONE_ICON[tone])}>
+      <div
+        className={cn(
+          "flex h-10 w-10 items-center justify-center rounded-xl shrink-0",
+          TONE_ICON[tone]
+        )}
+      >
         <Icon className="size-5" aria-hidden="true" />
       </div>
 
@@ -82,13 +90,15 @@ export function StatCard({
         )}
       </div>
 
-      {/* Arrow indicator (clickable only) */}
+      {/* Arrow indicator (clickable only) — ✅ group اضافه شد */}
       {onClick && (
         <ArrowUpRight
-          className="size-4 shrink-0 text-[hsl(var(--fg-tertiary))] opacity-0 transition-opacity group-hover:opacity-100"
+          className="size-4 shrink-0 text-[hsl(var(--fg-tertiary))] opacity-0 transition-opacity duration-200 group-hover:opacity-100"
           aria-hidden="true"
         />
       )}
     </Wrap>
   );
-}
+});
+
+StatCard.displayName = "StatCard";

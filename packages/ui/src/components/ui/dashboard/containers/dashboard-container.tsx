@@ -1,13 +1,13 @@
 // packages/ui/src/components/ui/dashboard/containers/dashboard-container.tsx
-"use client"
+"use client";
 
-import { useRouter } from "next/navigation"
-import { useTranslation } from "react-i18next"
-import { useDashboardKPIs, useAIInsights, useDashboardSales, type SalesDataPoint } from "@hisabche/api"
-import { DashboardView } from "../dashboard-view"
-import { fmt } from "../../../../lib/dashboard/dashboard-format"
-import { useState, useCallback, useMemo } from "react"
-import type { DateRange, PresetKey } from "../date-range-picker"
+import { useRouter } from "next/navigation";
+import { useTranslation } from "react-i18next";
+import { useDashboardKPIs, useAIInsights, useDashboardSales, useInvoices } from "@hisabche/api";
+import { DashboardView } from "../dashboard-view";
+import { fmt } from "../../../../lib/dashboard/dashboard-format";
+import { useState, useCallback, useMemo, useEffect } from "react";
+import type { DateRange, PresetKey } from "../date-range-picker";
 
 interface RecentInvoice {
   id: string;
@@ -16,7 +16,6 @@ interface RecentInvoice {
   date: string;
 }
 
-// Helper to get today and 30 days ago
 function getTodayDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -27,9 +26,25 @@ function getDaysAgo(days: number): string {
   return date.toISOString().slice(0, 10);
 }
 
+// ✅ هوک wrapper برای اضافه کردن refetchInterval
+function usePollingQuery<T>(hook: () => { data: T; isLoading: boolean; refetch: () => void }, interval: number) {
+  const result = hook();
+  const { refetch } = result;
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      refetch();
+    }, interval);
+
+    return () => clearInterval(timer);
+  }, [refetch, interval]);
+
+  return result;
+}
+
 export function DashboardContainer() {
-  const { t } = useTranslation()
-  const router = useRouter()
+  const { t } = useTranslation();
+  const router = useRouter();
 
   const [dateRange, setDateRange] = useState<DateRange>(() => {
     const today = new Date();
@@ -38,69 +53,89 @@ export function DashboardContainer() {
     return { from: weekAgo, to: today };
   });
 
-  const { 
-    data: kpis, 
-    isLoading: kpiLoading 
-  } = useDashboardKPIs();
+  // ✅ KPI با آپدیت هر ۳۰ ثانیه
+  const kpiResult = useDashboardKPIs();
+  const { data: kpis, isLoading: kpiLoading, refetch: refetchKpis } = kpiResult;
 
-  const { 
-    data: insights, 
-    isLoading: insightsLoading 
-  } = useAIInsights();
+  // ✅ AI Insights با آپدیت هر ۶۰ ثانیه
+  const insightsResult = useAIInsights();
+  const { data: insights, isLoading: insightsLoading, refetch: refetchInsights } = insightsResult;
 
-  // ✅ Always provide dates, even if undefined (use fallbacks)
   const fromDate = dateRange.from ? dateRange.from.toISOString().slice(0, 10) : getDaysAgo(30);
   const toDate = dateRange.to ? dateRange.to.toISOString().slice(0, 10) : getTodayDate();
 
-  const { 
-    data: salesData, 
-    isLoading: salesLoading 
-  } = useDashboardSales({
+  // ✅ Sales Chart با آپدیت هر ۳۰ ثانیه
+  const salesResult = useDashboardSales({
     from: fromDate,
     to: toDate,
   });
+  const { data: salesData, isLoading: salesLoading, refetch: refetchSales } = salesResult;
+
+  // ✅ دریافت فاکتورهای اخیر با آپدیت هر ۳۰ ثانیه
+  const invoicesResult = useInvoices({
+    page: 1,
+    limit: 5,
+    sortDirection: "desc",
+  });
+  const { data: invoicesData, isLoading: invoicesLoading, refetch: refetchInvoices } = invoicesResult;
+
+  // ✅ Polling با setInterval
+  useEffect(() => {
+    const interval1 = setInterval(() => refetchKpis(), 30000);
+    const interval2 = setInterval(() => refetchInsights(), 60000);
+    const interval3 = setInterval(() => refetchSales(), 30000);
+    const interval4 = setInterval(() => refetchInvoices(), 30000);
+
+    return () => {
+      clearInterval(interval1);
+      clearInterval(interval2);
+      clearInterval(interval3);
+      clearInterval(interval4);
+    };
+  }, [refetchKpis, refetchInsights, refetchSales, refetchInvoices]);
 
   const handleDateRangeChange = useCallback((range: DateRange, _preset: PresetKey) => {
     setDateRange(range);
   }, []);
 
-  const safeT = (key: string, fallback?: string) => {
-    const v = t(key)
-    return v !== key ? v : (fallback ?? key)
-  }
+  const safeT = useCallback(
+    (key: string, fallback?: string) => {
+      const v = t(key);
+      return v !== key ? v : (fallback ?? key);
+    },
+    [t]
+  );
 
-  const handleAction = (action: string) => {
-    router.push(action)
-  }
+  const handleAction = useCallback(
+    (action: string) => {
+      router.push(action);
+    },
+    [router]
+  );
 
-  // ✅ Fix: Support both 'data' and 'chartData' formats from backend
-  const salesChartData: SalesDataPoint[] = useMemo(() => {
-    // Log the raw data for debugging
-    console.log('🔍 salesData received:', salesData);
-    
-    // ✅ 1. Check for chartData (new format from backend)
+  const recentInvoices: RecentInvoice[] = useMemo(() => {
+    const invoices = invoicesData?.invoices || [];
+    return invoices.slice(0, 5).map((inv: any) => ({
+      id: inv.id,
+      customer: inv.customerName || inv.customer?.name || "مشتری",
+      total: inv.total || 0,
+      date: inv.date ? new Date(inv.date).toLocaleDateString("fa-IR") : "-",
+    }));
+  }, [invoicesData]);
+
+  const salesChartData = useMemo(() => {
     if (salesData?.chartData && Array.isArray(salesData.chartData) && salesData.chartData.length > 0) {
-      console.log('✅ Using chartData:', salesData.chartData);
       return salesData.chartData;
     }
-    
-    // ✅ 2. Check for data (old format)
     if (salesData?.data && Array.isArray(salesData.data) && salesData.data.length > 0) {
-      console.log('✅ Using data:', salesData.data);
       return salesData.data;
     }
-    
-    // ✅ 3. If salesData itself is an array
     if (Array.isArray(salesData)) {
-      console.log('✅ salesData is array:', salesData);
       return salesData;
     }
 
-    // ✅ 4. Fallback: empty data for last 7 days
-    console.log('⚠️ No data found, using fallback empty data');
-    const days = ['شنبه', 'یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه'];
+    const days = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه"];
     const today = new Date();
-    
     return days.map((label, i) => {
       const d = new Date(today.getTime() - (6 - i) * 24 * 60 * 60 * 1000);
       return {
@@ -110,8 +145,6 @@ export function DashboardContainer() {
       };
     });
   }, [salesData]);
-
-  const recentInvoices: RecentInvoice[] = [];
 
   return (
     <DashboardView
@@ -131,7 +164,7 @@ export function DashboardContainer() {
       chartLoading={salesLoading}
       dateRange={dateRange}
       totalDebt={kpis?.pendingPayments ?? 0}
-      invLoading={false}
+      invLoading={invoicesLoading}
       prodLoading={false}
       recentInvoices={recentInvoices}
       onNavigate={(route) => router.push(route)}
@@ -143,5 +176,5 @@ export function DashboardContainer() {
       onInsightAction={handleAction}
       onDateRangeChange={handleDateRangeChange}
     />
-  )
+  );
 }
