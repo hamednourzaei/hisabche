@@ -1,16 +1,17 @@
+// packages/ui/src/components/ui/warehouse/warehouse-product-list.tsx
 "use client";
 
-import { memo, useMemo, useCallback } from "react";  // ✅ اضافه شد
+import { memo, useMemo, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { Package, Eye, Trash2, Loader2 } from "lucide-react";
 import type { Product } from "../../../lib/warehouse/warehouse-types";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   warehouseProductList v3 — Memoized for Performance
-   ✅ memo · useMemo · useCallback · min 44px touch targets
+   WarehouseProductList v4 — Memoized · PascalCase
+   ✅ memo · useMemo · useCallback · PascalCase
    ═══════════════════════════════════════════════════════════════════════════ */
 
-interface warehouseProductListProps {
+interface WarehouseProductListProps {
   t: (key: string, fallback?: string) => string;
   fmt: (v: number) => string;
   products: Product[];
@@ -35,12 +36,10 @@ const statusBadgeStyles: Record<string, string> = {
     "bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))] border-[hsl(var(--border-default))]",
 };
 
-// ✅ ثابت خارج از کامپوننت
 const actionBtnBase =
   "inline-flex items-center justify-center rounded-full p-2 min-h-[44px] min-w-[44px] sm:min-h-[40px] sm:min-w-[40px] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors duration-150 motion-reduce:transition-none";
 
-// ✅ کامپوننت با memo
-export const warehouseProductList = memo(function warehouseProductList({
+export const WarehouseProductList = memo(function WarehouseProductList({
   t,
   fmt,
   products,
@@ -49,7 +48,7 @@ export const warehouseProductList = memo(function warehouseProductList({
   onNavigate,
   onDelete,
   deletingId,
-}: warehouseProductListProps) {
+}: WarehouseProductListProps) {
   return (
     <div className="space-y-3">
       {products.map((product) => {
@@ -58,18 +57,15 @@ export const warehouseProductList = memo(function warehouseProductList({
         const status = stockStatus(qty, min);
         const isDeleting = deletingId === product.id;
 
-        // ✅ useMemo برای badgeStyle
         const badgeStyle = useMemo(
           () => statusBadgeStyles[status] ?? statusBadgeStyles.secondary,
           [status]
         );
 
-        // ✅ useCallback برای handleNavigate
         const handleNavigate = useCallback(() => {
           onNavigate(product.id);
         }, [onNavigate, product.id]);
 
-        // ✅ useCallback برای handleDelete
         const handleDelete = useCallback((e: React.MouseEvent) => {
           e.stopPropagation();
           onDelete(product);
@@ -94,7 +90,6 @@ export const warehouseProductList = memo(function warehouseProductList({
             )}
           >
             <div className="flex items-center justify-between p-5 gap-4">
-              {/* Product info */}
               <div className="flex min-w-0 flex-1 items-center gap-4 text-start">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--surface-muted))]">
                   <Package
@@ -113,7 +108,6 @@ export const warehouseProductList = memo(function warehouseProductList({
                 </div>
               </div>
 
-              {/* Price + Status + Actions */}
               <div className="flex shrink-0 items-center gap-4">
                 <div className="text-end">
                   <p className="font-bold tabular-nums text-[hsl(var(--fg-primary))]">
@@ -129,7 +123,6 @@ export const warehouseProductList = memo(function warehouseProductList({
                   </span>
                 </div>
 
-                {/* View */}
                 <button
                   type="button"
                   onClick={handleNavigate}
@@ -139,7 +132,6 @@ export const warehouseProductList = memo(function warehouseProductList({
                   <Eye className="size-4" aria-hidden="true" />
                 </button>
 
-                {/* Delete */}
                 <button
                   type="button"
                   onClick={handleDelete}
@@ -166,4 +158,4 @@ export const warehouseProductList = memo(function warehouseProductList({
   );
 });
 
-warehouseProductList.displayName = "warehouseProductList";
+WarehouseProductList.displayName = "WarehouseProductList";

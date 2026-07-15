@@ -1,13 +1,12 @@
 // packages/ui/src/components/ui/warehouse/warehouse-skeleton.tsx
-"use client"
+"use client";
 
-const STAT_ITEMS = [1, 2, 3, 4] as const
-const LIST_ITEMS = [1, 2, 3, 4, 5] as const
+const STAT_ITEMS = [1, 2, 3, 4] as const;
+const LIST_ITEMS = [1, 2, 3, 4, 5] as const;
 
 export function warehouseSkeleton() {
   return (
     <div className="space-y-6 animate-fade-in-up">
-      {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-2">
           <div className="skeleton-shimmer h-8 w-32 rounded-lg" />
@@ -16,7 +15,6 @@ export function warehouseSkeleton() {
         <div className="skeleton-shimmer h-10 w-32 rounded-xl" />
       </div>
 
-      {/* Stat cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {STAT_ITEMS.map((i) => (
           <div
@@ -32,22 +30,19 @@ export function warehouseSkeleton() {
         ))}
       </div>
 
-      {/* Currency chips */}
       <div className="flex gap-2">
         <div className="skeleton-shimmer h-6 w-20 rounded-lg" />
         <div className="skeleton-shimmer h-6 w-20 rounded-lg" />
         <div className="skeleton-shimmer h-6 w-20 rounded-lg" />
       </div>
 
-      {/* Search bar */}
       <div className="skeleton-shimmer h-10 w-full max-w-sm rounded-lg" />
 
-      {/* Product list */}
       <div className="space-y-3">
         {LIST_ITEMS.map((i) => (
           <div key={i} className="skeleton-shimmer h-[72px] rounded-2xl" />
         ))}
       </div>
     </div>
-  )
+  );
 }

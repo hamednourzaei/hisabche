@@ -1,20 +1,20 @@
 // packages/ui/src/components/ui/warehouse/warehouse-view.tsx
 "use client";
 
-import { memo, useMemo, useCallback } from "react";  // ✅ اضافه شد
+import { memo, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "../empty-state";
-import { warehouseStats } from "./warehouse-stats";
-import { warehouseProductList } from "./warehouse-product-list";
+import { WarehouseStats } from "./warehouse-stats";
+import { WarehouseProductList } from "./warehouse-product-list";
 import { Plus, Search, Check } from "lucide-react";
 import type { Product, Currency } from "../../../lib/warehouse/warehouse-types";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   warehouseView v3 — Memoized · Component Separation
-   ✅ memo · useMemo · useCallback · جدا شده به کامپوننت‌های کوچک
+   WarehouseView v4 — Memoized · Component Separation · PascalCase
+   ✅ memo · useMemo · PascalCase components
    ═══════════════════════════════════════════════════════════════════════════ */
 
-interface warehouseViewProps {
+interface WarehouseViewProps {
   t: (key: string, fallback?: string) => string;
   fmt: (v: number) => string;
   search: string;
@@ -190,7 +190,7 @@ LoadingSkeleton.displayName = "LoadingSkeleton";
 
 // ─── Main Component ────────────────────────────────────────────────────────
 
-export const warehouseView = memo(function warehouseView({
+export const WarehouseView = memo(function WarehouseView({
   t,
   fmt,
   search,
@@ -208,8 +208,7 @@ export const warehouseView = memo(function warehouseView({
   onDelete,
   stockStatus,
   stockLabel,
-}: warehouseViewProps) {
-  // ✅ useMemo: فقط زمانی محاسبه می‌شود که داده‌ها تغییر کنند
+}: WarehouseViewProps) {
   const statsProps = useMemo(
     () => ({
       t,
@@ -230,14 +229,13 @@ export const warehouseView = memo(function warehouseView({
       <SaveIndicator t={t} deletingId={deletingId} />
       <WarehouseHeader t={t} onOpenAddModal={onOpenAddModal} />
 
-      {/* Stats — ✅ صدا زدن به عنوان تابع */}
-      {warehouseStats(statsProps)}
+      {/* ✅ استفاده از JSX با PascalCase */}
+      <WarehouseStats {...statsProps} />
 
       <CurrencyChips fmt={fmt} currencies={currencies} totalValue={totalValue} />
 
       <WarehouseSearch t={t} search={search} onSearchChange={onSearchChange} />
 
-      {/* Content */}
       {isLoading ? (
         <LoadingSkeleton />
       ) : showEmptyState ? (
@@ -251,19 +249,19 @@ export const warehouseView = memo(function warehouseView({
           }}
         />
       ) : (
-        warehouseProductList({
-          t,
-          fmt,
-          products,
-          stockStatus,
-          stockLabel,
-          onNavigate,
-          onDelete,
-          deletingId,
-        })
+        <WarehouseProductList
+          t={t}
+          fmt={fmt}
+          products={products}
+          stockStatus={stockStatus}
+          stockLabel={stockLabel}
+          onNavigate={onNavigate}
+          onDelete={onDelete}
+          deletingId={deletingId}
+        />
       )}
     </div>
   );
 });
 
-warehouseView.displayName = "warehouseView";
+WarehouseView.displayName = "WarehouseView";

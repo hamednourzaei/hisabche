@@ -75,7 +75,7 @@ export { customersView, customersSkeleton } from './components/ui/customers'
 export { customersContainer as customersPage } from './components/ui/customers/containers/customer-container'
 
 // ---------- Pages — Warehouse ----------
-export { warehouseView } from './components/ui/warehouse/warehouse-view'
+export {  WarehouseView } from './components/ui/warehouse/warehouse-view'
 export { warehouseSkeleton } from './components/ui/warehouse/warehouse-skeleton'
 export { ProductDetailPage } from './components/ui/warehouse-detail'
 

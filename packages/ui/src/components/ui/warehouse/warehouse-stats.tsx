@@ -1,18 +1,17 @@
 // packages/ui/src/components/ui/warehouse/warehouse-stats.tsx
 "use client";
 
-import { memo, useMemo } from "react";  // ✅ اضافه شد
+import { memo, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { Package, AlertTriangle, DollarSign } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   warehouseStats v4 — Memoized · Performance Optimized
-   ✅ memo · useMemo · ثابت‌های خارج از کامپوننت
+   WarehouseStats v5 — Memoized · Performance Optimized · PascalCase
+   ✅ memo · useMemo · PascalCase
    ═══════════════════════════════════════════════════════════════════════════ */
 
 type Tone = "emerald" | "amber" | "rose" | "purple";
 
-// ✅ ثابت‌های خارج از کامپوننت (بدون بازتعریف در هر رندر)
 const TONE_BG: Record<Tone, string> = {
   emerald: "from-[hsl(var(--color-success)/0.1)] to-[hsl(var(--color-success)/0.02)]",
   amber: "from-[hsl(var(--color-warning)/0.1)] to-[hsl(var(--color-warning)/0.02)]",
@@ -36,7 +35,6 @@ interface StatCardProps {
   isLoading?: boolean;
 }
 
-// ✅ StatCard با memo
 const StatCard = memo(function StatCard({
   label,
   value,
@@ -80,7 +78,7 @@ const StatCard = memo(function StatCard({
 });
 StatCard.displayName = "StatCard";
 
-interface warehouseStatsProps {
+interface WarehouseStatsProps {
   t: (key: string, fallback?: string) => string;
   fmt: (v: number) => string;
   total: number;
@@ -90,7 +88,6 @@ interface warehouseStatsProps {
   isLoading?: boolean;
 }
 
-// ✅ توابع محاسبه‌ی tone (خارج از کامپوننت)
 function getLowStockTone(value: number): Tone {
   if (value === 0) return "emerald";
   if (value < 5) return "rose";
@@ -112,8 +109,7 @@ function getTotalValueTone(value: number): Tone {
   return "rose";
 }
 
-// ✅ کامپوننت اصلی با memo
-export const warehouseStats = memo(function warehouseStats({
+export const WarehouseStats = memo(function WarehouseStats({
   t,
   fmt,
   total,
@@ -121,8 +117,7 @@ export const warehouseStats = memo(function warehouseStats({
   outOfStock,
   totalValue,
   isLoading = false,
-}: warehouseStatsProps) {
-  // ✅ useMemo برای محاسبه‌ی tones (فقط زمانی که داده‌ها تغییر کنند)
+}: WarehouseStatsProps) {
   const tones = useMemo(
     () => ({
       lowStock: getLowStockTone(lowStock),
@@ -132,7 +127,6 @@ export const warehouseStats = memo(function warehouseStats({
     [lowStock, outOfStock, totalValue]
   );
 
-  // ✅ useMemo برای hints (فقط زمانی که داده‌ها تغییر کنند)
   const hints = useMemo(
     () => ({
       lowStock: lowStock === 0 ? t("warehouse.noLowStock", "هیچ محصولی با موجودی کم نیست") : undefined,
@@ -180,4 +174,4 @@ export const warehouseStats = memo(function warehouseStats({
   );
 });
 
-warehouseStats.displayName = "warehouseStats";
+WarehouseStats.displayName = "WarehouseStats";
