@@ -5,9 +5,9 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
-import { 
-  loginSchema, 
-  signUpSchema, 
+import {
+  loginSchema,
+  signUpSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
   updateProfileSchema
@@ -19,16 +19,18 @@ import { passwordResetService } from '../services/password-reset.service'
 
 type JsonSchema = Record<string, unknown>
 
-function toJsonSchema(schema: z.ZodTypeAny): JsonSchema {
+// ✅ اصلاح شده: پذیرش هر نوع ZodSchema
+function toJsonSchema<T extends z.ZodTypeAny>(schema: T): JsonSchema {
   // @ts-expect-error TS2589 - zodToJsonSchema deep type instantiation
   const result = zodToJsonSchema(schema, { target: 'jsonSchema7' }) as any as JsonSchema;
   delete result.$schema;
   return result;
 }
+
 export async function authRoutes(fastify: FastifyInstance) {
   const authService = new AuthService()
 
-  // ─── POST /api/auth/login ───────────────────
+  // ─── POST /api/auth/login ──────────────────────────────
   fastify.post('/api/auth/login', {
     schema: {
       body: toJsonSchema(loginSchema),
@@ -147,7 +149,7 @@ export async function authRoutes(fastify: FastifyInstance) {
     }
   })
 
-  // ─── POST /api/auth/forgot-password (NEW) ──────────────
+  // ─── POST /api/auth/forgot-password ────────────────────
   fastify.post('/api/auth/forgot-password', {
     schema: {
       body: toJsonSchema(forgotPasswordSchema),
@@ -163,7 +165,7 @@ export async function authRoutes(fastify: FastifyInstance) {
     return reply.send({ message: result.message })
   })
 
-  // ─── POST /api/auth/reset-password (NEW) ───────────────
+  // ─── POST /api/auth/reset-password ─────────────────────
   fastify.post('/api/auth/reset-password', {
     schema: {
       body: toJsonSchema(resetPasswordSchema),
@@ -193,7 +195,7 @@ export async function authRoutes(fastify: FastifyInstance) {
     }
   })
 
-  // ─── PATCH /api/auth/profile ────────────────────────────
+  // ─── PATCH /api/auth/profile ───────────────────────────
   fastify.patch('/api/auth/profile', {
     preHandler: [authenticate],
     schema: {

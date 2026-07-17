@@ -1,1 +1,19 @@
-export default [{ ignores: ["node_modules", "dist", ".turbo"] }, { files: ["**/*.ts", "**/*.tsx"], rules: { "no-unused-vars": "warn", "no-console": "warn" } }];  
+// .eslintrc.js
+module.exports = {
+  root: true,
+  parser: '@typescript-eslint/parser',
+  parserOptions: {
+    ecmaVersion: 2022,
+    sourceType: 'module',
+  },
+  plugins: ['@typescript-eslint'],
+  extends: [
+    'eslint:recommended',
+    'plugin:@typescript-eslint/recommended',
+  ],
+  rules: {
+    '@typescript-eslint/no-explicit-any': 'warn',
+    '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+  },
+  ignorePatterns: ['node_modules', '.next', 'dist', 'build', '*.config.js'],
+}

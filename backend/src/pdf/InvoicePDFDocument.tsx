@@ -7,7 +7,7 @@ import React from 'react'
 import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer'
 import path from 'path'
 
-// ─── Register Font ────────────────────────────────────
+// ─── Register Font ──────────────────────────────────────────
 const fontPath = path.resolve(__dirname, '../fonts')
 Font.register({
   family: 'Vazirmatn',
@@ -17,7 +17,7 @@ Font.register({
   ],
 })
 
-// ─── Styles ───────────────────────────────────────────
+// ─── Styles ────────────────────────────────────────────────
 const s = StyleSheet.create({
   page: { fontFamily: 'Vazirmatn', direction: 'rtl', padding: 30, backgroundColor: '#ffffff', fontSize: 11 },
   header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 24 },
@@ -61,7 +61,7 @@ const DEFAULT_STATUS = STATUS_STYLE.pending!
 const fmt = (n: number) => (n ?? 0).toLocaleString('fa-AF')
 const fmtDate = (d: string) => { try { return new Date(d).toLocaleDateString('fa-AF') } catch { return d } }
 
-// ─── PDF Document ─────────────────────────────────────
+// ─── PDF Document ──────────────────────────────────────────
 export function InvoicePDFDocument({ invoice }: { invoice: any }) {
   const inv = invoice as any
   const items = inv.invoice_items ?? inv.items ?? []
