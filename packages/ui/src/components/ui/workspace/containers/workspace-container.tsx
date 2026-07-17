@@ -1,14 +1,14 @@
 // packages/ui/src/components/ui/workspace/containers/workspace-container.tsx
 "use client";
 
-import { useEffect, useCallback, memo } from "react";
+import { useEffect, useCallback, memo, useRef } from "react";
 import { useWorkspaces, useWorkspaceMembers } from "@hisabche/api";
 import { useWorkspaceStore } from "@hisabche/store";
 import { WorkspacePage } from "../workspace-page";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   WorkspaceContainer v2 — Memoized · Performance Optimized
-   ✅ memo · useCallback · useEffect with proper deps
+   WorkspaceContainer v3 — Fixed Infinite Loop
+   ✅ memo · useCallback · useRef for preventing re-render loops
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export const WorkspaceContainer = memo(function WorkspaceContainer() {
@@ -16,9 +16,14 @@ export const WorkspaceContainer = memo(function WorkspaceContainer() {
   const store = useWorkspaceStore();
   const workspaceId = store.workspaceId || workspaces?.[0]?.id;
   const { data: membersData } = useWorkspaceMembers(workspaceId ?? "");
+  
+  // ✅ جلوگیری از به‌روزرسانی مکرر با useRef
+  const isInitialized = useRef(false);
+  const isMembersUpdated = useRef(false);
 
-  // ✅ ست کردن workspace اول با useCallback
+  // ✅ ست کردن workspace اول (فقط یک بار)
   const setInitialWorkspace = useCallback(() => {
+    if (isInitialized.current) return;
     if (workspaces && workspaces.length > 0) {
       const first = workspaces[0];
       if (!store.workspaceId) {
@@ -27,6 +32,7 @@ export const WorkspaceContainer = memo(function WorkspaceContainer() {
       if (first.myRole) {
         store.setCurrentUserRole(first.myRole);
       }
+      isInitialized.current = true;
     }
   }, [workspaces, store]);
 
@@ -34,9 +40,10 @@ export const WorkspaceContainer = memo(function WorkspaceContainer() {
     setInitialWorkspace();
   }, [setInitialWorkspace]);
 
-  // ✅ آپدیت اعضا با داده واقعی
+  // ✅ آپدیت اعضا (فقط یک بار و با شرط تغییر)
   useEffect(() => {
-    if (membersData && Array.isArray(membersData)) {
+    if (isMembersUpdated.current) return;
+    if (membersData && Array.isArray(membersData) && membersData.length > 0) {
       const realMembers = membersData.map((m: any) => ({
         id: m.id,
         userId: m.user_id,
@@ -46,7 +53,13 @@ export const WorkspaceContainer = memo(function WorkspaceContainer() {
         joinedAt: m.joined_at ? new Date(m.joined_at).getTime() : Date.now(),
         isActive: true,
       }));
-      useWorkspaceStore.setState({ members: realMembers });
+      
+      // ✅ فقط اگر members تغییر کرده باشد، به‌روزرسانی کن
+      const currentMembers = useWorkspaceStore.getState().members;
+      if (JSON.stringify(currentMembers) !== JSON.stringify(realMembers)) {
+        useWorkspaceStore.setState({ members: realMembers });
+      }
+      isMembersUpdated.current = true;
     }
   }, [membersData]);
 
