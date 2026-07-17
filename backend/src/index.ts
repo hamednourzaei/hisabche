@@ -28,6 +28,7 @@ import { productRoutes } from './routes/product.routes'
 import { customerRoutes } from './routes/customer.routes'
 import { transactionRoutes } from './routes/transaction.routes'
 import { warehouseRoutes } from './routes/warehouse.routes'
+import { billingRoutes } from './routes/billing.routes'
 
 // ──────────────────────────────────────────────
 // Routes — Phase 15: HR
@@ -389,6 +390,7 @@ server.get('/api/slo', async () => ({
     await server.register(workflowRoutes)
     await server.register(notificationRoutes)
     await server.register(jobSchedulerPlugin)
+await server.register(billingRoutes)
 
     // ─── 404 Handler ────────────────────────
     server.setNotFoundHandler((_req, reply) => {

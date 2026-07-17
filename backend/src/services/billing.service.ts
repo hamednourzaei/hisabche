@@ -79,21 +79,50 @@ export class BillingService {
   }
 
   // ─── Check if User Can Access Feature ──────────────────────
-  async checkUsageLimit(userId: string, feature: keyof UsageLimits): Promise<boolean> {
-    const subscription = await this.getCurrentSubscription(userId)
-    const plan = PLANS[subscription.plan as Plan]
-    const limit = plan.limits[feature]
+async checkUsageLimit(userId: string, feature: keyof UsageLimits): Promise<boolean> {
+  const subscription = await this.getCurrentSubscription(userId)
+  const plan = PLANS[subscription.plan as Plan]
+  const limit = plan.limits[feature]
 
-    if (limit === null) return true
+  if (limit === null) return true
 
-    const { count } = await supabase
-      .from('invoices')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-
-    return (count || 0) < limit
+  // ✅ اصلاح: استفاده از switch برای featureهای مختلف
+  let count = 0
+  switch(feature) {
+    case 'invoices':
+      const { count: invoiceCount } = await supabase
+        .from('invoices')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+      count = invoiceCount || 0
+      break
+    case 'users':
+      const { count: userCount } = await supabase
+        .from('workspace_members')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+      count = userCount || 0
+      break
+    case 'workspaces':
+      const { count: workspaceCount } = await supabase
+        .from('workspaces')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+      count = workspaceCount || 0
+      break
+    case 'transactions':
+      const { count: transactionCount } = await supabase
+        .from('transactions')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+      count = transactionCount || 0
+      break
+    default:
+      return true
   }
 
+  return count < limit
+}
   // ─── Upgrade Subscription ────────────────────────────────────
   async upgrade(userId: string, plan: Plan, interval: 'month' | 'year'): Promise<Subscription> {
     const now = new Date()
