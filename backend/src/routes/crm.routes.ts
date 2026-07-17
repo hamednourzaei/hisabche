@@ -12,6 +12,7 @@ import {
 } from '@hisabche/validation'
 import { CrmService } from '../services/crm.service'
 import { authenticate } from '../middleware/auth.middleware'
+import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 
 const toJsonSchema = (schema: any) => {
   const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
@@ -24,7 +25,7 @@ export async function crmRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/interactions ───────────────────────────────
   fastify.get('/api/interactions', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'interactions' })],
     schema: {
       querystring: toJsonSchema(z.object({
         customerId: z.string().uuid().optional(),
@@ -57,6 +58,7 @@ export async function crmRoutes(fastify: FastifyInstance) {
     try {
       const data = createInteractionSchema.parse(request.body)
       const interaction = await crmService.createInteraction(request.userId, data)
+      await clearCache('interactions:*')
       return reply.code(201).send(interaction)
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -69,7 +71,7 @@ export async function crmRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/opportunities ──────────────────────────────
   fastify.get('/api/opportunities', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'opportunities' })],
     schema: {
       querystring: toJsonSchema(z.object({
         customerId: z.string().uuid().optional(),
@@ -102,6 +104,7 @@ export async function crmRoutes(fastify: FastifyInstance) {
     try {
       const data = createOpportunitySchema.parse(request.body)
       const opportunity = await crmService.createOpportunity(request.userId, data)
+      await clearCache('opportunities:*')
       return reply.code(201).send(opportunity)
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -127,6 +130,7 @@ export async function crmRoutes(fastify: FastifyInstance) {
       const { id } = request.params as { id: string }
       const data = updateOpportunitySchema.parse(request.body)
       const opportunity = await crmService.updateOpportunity(request.userId, id, data)
+      await clearCache('opportunities:*')
       return reply.send(opportunity)
     } catch (err) {
       if (err instanceof z.ZodError) {

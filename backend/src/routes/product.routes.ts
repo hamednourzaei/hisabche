@@ -13,6 +13,7 @@ import {
 import { ProductService } from '../services/product.service'
 import { authenticate } from '../middleware/auth.middleware'
 import { NotFoundError } from '../errors/database.error'
+import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 
 // ✅ تنظیمات برای حذف $schema از خروجی (با استفاده از any برای جلوگیری از خطای عمق تایپ)
 const toJsonSchema = (schema: any) => {
@@ -26,12 +27,12 @@ export async function productRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/products ──────────────────────────────────
   fastify.get('/api/products', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'products' })],
     schema: {
       querystring: toJsonSchema(productFiltersSchema),
       response: {
         200: toJsonSchema(z.object({
-          products: z.array(z.unknown()), // ✅ جایگزینی z.any() با z.unknown()
+          products: z.array(z.unknown()),
           total: z.number(),
           page: z.number(),
           limit: z.number(),
@@ -59,7 +60,7 @@ export async function productRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/products/:id ─────────────────────────────
   fastify.get('/api/products/:id', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 120, keyPrefix: 'product' })],
     schema: {
       params: toJsonSchema(z.object({ id: z.string().uuid() })),
       response: {
@@ -131,6 +132,8 @@ export async function productRoutes(fastify: FastifyInstance) {
       const body = createProductSchema.parse(request.body)
       const userId = (request as any).userId
       const product = await productService.create(userId, body)
+      await clearCache('products:*')
+      await clearCache('low-stock:*')
       return reply.code(201).send(product)
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -179,6 +182,9 @@ export async function productRoutes(fastify: FastifyInstance) {
       const body = updateProductSchema.parse(request.body)
       const userId = (request as any).userId
       const product = await productService.update(id, userId, body)
+      await clearCache(`product:${id}`)
+      await clearCache('products:*')
+      await clearCache('low-stock:*')
       return reply.send(product)
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -200,13 +206,15 @@ export async function productRoutes(fastify: FastifyInstance) {
     preHandler: [authenticate],
     schema: {
       params: toJsonSchema(z.object({ id: z.string().uuid() })),
-      // حذف response برای 204
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const { id } = request.params as { id: string }
       const userId = (request as any).userId
       await productService.delete(id, userId)
+      await clearCache(`product:${id}`)
+      await clearCache('products:*')
+      await clearCache('low-stock:*')
       return reply.code(204).send()
     } catch (err) {
       if (err instanceof NotFoundError) {
@@ -219,10 +227,10 @@ export async function productRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/products/low-stock ────────────────────────
   fastify.get('/api/products/low-stock', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'low-stock' })],
     schema: {
       response: {
-        200: toJsonSchema(z.array(z.unknown())), // ✅ جایگزینی z.any() با z.unknown()
+        200: toJsonSchema(z.array(z.unknown())),
       },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {

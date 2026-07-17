@@ -7,6 +7,7 @@ import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import { AnalyticsService } from '../services/analytics.service'
 import { authenticate } from '../middleware/auth.middleware'
+import { cacheMiddleware } from '../middleware/cache.middleware'
 
 const toJsonSchema = (schema: any) => {
   const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
@@ -67,7 +68,7 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
   // ═══════════════════════════════════════════════════════════
 
   fastify.get('/api/analytics/dashboard', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 300, keyPrefix: 'dashboard' })],
     schema: {
       response: {
         200: toJsonSchema(DashboardKPIsSchema),
@@ -93,7 +94,7 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
   // ═══════════════════════════════════════════════════════════
 
   fastify.get('/api/analytics/sales', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 120, keyPrefix: 'sales' })],
     schema: {
       querystring: toJsonSchema(DateRangeSchema),
       response: {
@@ -138,7 +139,7 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
   // ═══════════════════════════════════════════════════════════
 
   fastify.get('/api/analytics/inventory', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 120, keyPrefix: 'inventory' })],
     schema: {
       response: { 200: toJsonSchema(z.any()) },
     },
@@ -157,7 +158,7 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
   // ═══════════════════════════════════════════════════════════
 
   fastify.get('/api/analytics/financial', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 120, keyPrefix: 'financial' })],
     schema: {
       querystring: toJsonSchema(
         z.object({

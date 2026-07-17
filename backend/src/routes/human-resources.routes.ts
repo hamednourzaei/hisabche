@@ -17,9 +17,9 @@ import {
   createLeaveSchema,
   updateLeaveSchema,
 } from '@hisabche/validation'
-// ✅ اصلاح: import کلاس (با حرف بزرگ)
 import { HumanResourcesService } from '../services/human-resources.service'
 import { authenticate } from '../middleware/auth.middleware'
+import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 
 const toJsonSchema = (schema: any) => {
   const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
@@ -28,7 +28,6 @@ const toJsonSchema = (schema: any) => {
 }
 
 export async function humanResourcesRoutes(fastify: FastifyInstance) {
-  // ✅ اصلاح: نمونه از کلاس (با حرف کوچک)
   const humanResourcesService = new HumanResourcesService()
 
   // ═══════════════════════════════════════════════════════════
@@ -37,7 +36,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/departments ─────────────────────────────────
   fastify.get('/api/departments', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 120, keyPrefix: 'departments' })],
     schema: {
       response: { 200: toJsonSchema(z.array(z.any())) },
     },
@@ -62,6 +61,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
     try {
       const data = createDepartmentSchema.parse(request.body)
       const dept = await humanResourcesService.createDepartment(request.userId, data)
+      await clearCache('departments:*')
       return reply.code(201).send(dept)
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -85,6 +85,8 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
       const { id } = request.params as { id: string }
       const data = updateDepartmentSchema.parse(request.body)
       const dept = await humanResourcesService.updateDepartment(request.userId, id, data)
+      await clearCache(`department:${id}`)
+      await clearCache('departments:*')
       return reply.send(dept)
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -101,7 +103,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/employees ───────────────────────────────────
   fastify.get('/api/employees', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'employees' })],
     schema: {
       querystring: toJsonSchema(z.object({ departmentId: z.string().uuid().optional() })),
       response: { 200: toJsonSchema(z.array(z.any())) },
@@ -128,6 +130,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
     try {
       const data = createEmployeeSchema.parse(request.body)
       const emp = await humanResourcesService.createEmployee(request.userId, data)
+      await clearCache('employees:*')
       return reply.code(201).send(emp)
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -140,7 +143,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/employees/:id ───────────────────────────────
   fastify.get('/api/employees/:id', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 120, keyPrefix: 'employee' })],
     schema: {
       params: toJsonSchema(z.object({ id: z.string().uuid() })),
       response: { 200: toJsonSchema(z.any()) },
@@ -169,6 +172,8 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
       const { id } = request.params as { id: string }
       const data = updateEmployeeSchema.parse(request.body)
       const emp = await humanResourcesService.updateEmployee(request.userId, id, data)
+      await clearCache(`employee:${id}`)
+      await clearCache('employees:*')
       return reply.send(emp)
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -185,7 +190,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/attendance/:employeeId ──────────────────────
   fastify.get('/api/attendance/:employeeId', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'attendance' })],
     schema: {
       params: toJsonSchema(z.object({ employeeId: z.string().uuid() })),
       querystring: toJsonSchema(z.object({ month: z.string().optional() })),
@@ -214,6 +219,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
     try {
       const data = createAttendanceSchema.parse(request.body)
       const att = await humanResourcesService.createAttendance(request.userId, data)
+      await clearCache('attendance:*')
       return reply.code(201).send(att)
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -237,6 +243,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
       const { id } = request.params as { id: string }
       const data = updateAttendanceSchema.parse(request.body)
       const att = await humanResourcesService.updateAttendance(request.userId, id, data)
+      await clearCache('attendance:*')
       return reply.send(att)
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -253,7 +260,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/payrolls ────────────────────────────────────
   fastify.get('/api/payrolls', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'payrolls' })],
     schema: {
       querystring: toJsonSchema(z.object({ employeeId: z.string().uuid().optional() })),
       response: { 200: toJsonSchema(z.array(z.any())) },
@@ -280,6 +287,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
     try {
       const data = createPayrollSchema.parse(request.body)
       const payroll = await humanResourcesService.createPayroll(request.userId, data)
+      await clearCache('payrolls:*')
       return reply.code(201).send(payroll)
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -303,6 +311,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
       const { id } = request.params as { id: string }
       const data = updatePayrollSchema.parse(request.body)
       const payroll = await humanResourcesService.updatePayrollStatus(request.userId, id, data)
+      await clearCache('payrolls:*')
       return reply.send(payroll)
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -319,7 +328,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/leaves ──────────────────────────────────────
   fastify.get('/api/leaves', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'leaves' })],
     schema: {
       querystring: toJsonSchema(z.object({ employeeId: z.string().uuid().optional() })),
       response: { 200: toJsonSchema(z.array(z.any())) },
@@ -346,6 +355,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
     try {
       const data = createLeaveSchema.parse(request.body)
       const leave = await humanResourcesService.createLeave(request.userId, data)
+      await clearCache('leaves:*')
       return reply.code(201).send(leave)
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -369,6 +379,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
       const { id } = request.params as { id: string }
       const data = updateLeaveSchema.parse(request.body)
       const leave = await humanResourcesService.updateLeaveStatus(request.userId, id, data)
+      await clearCache('leaves:*')
       return reply.send(leave)
     } catch (err) {
       if (err instanceof z.ZodError) {

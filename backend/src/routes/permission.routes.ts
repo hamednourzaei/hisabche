@@ -13,6 +13,7 @@ import {
 } from '@hisabche/validation'
 import { PermissionService } from '../services/permission.service'
 import { authenticate } from '../middleware/auth.middleware'
+import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 
 const toJsonSchema = (schema: any) => {
   const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
@@ -29,7 +30,7 @@ export async function permissionRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/permissions ─────────────────────────────────
   fastify.get('/api/permissions', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 300, keyPrefix: 'permissions' })],
     schema: {
       response: { 200: toJsonSchema(z.array(z.any())) },
     },
@@ -52,6 +53,7 @@ export async function permissionRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       await permissionService.seedDefaultPermissions()
+      await clearCache('permissions:*')
       return reply.send({ success: true })
     } catch (err) {
       fastify.log.error(err)
@@ -65,7 +67,7 @@ export async function permissionRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/roles ───────────────────────────────────────
   fastify.get('/api/roles', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 120, keyPrefix: 'roles' })],
     schema: {
       response: { 200: toJsonSchema(z.array(z.any())) },
     },
@@ -90,6 +92,7 @@ export async function permissionRoutes(fastify: FastifyInstance) {
     try {
       const data = createRoleSchema.parse(request.body)
       const role = await permissionService.createRole(data)
+      await clearCache('roles:*')
       return reply.code(201).send(role)
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -102,7 +105,7 @@ export async function permissionRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/roles/:id ───────────────────────────────────
   fastify.get('/api/roles/:id', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 120, keyPrefix: 'role' })],
     schema: {
       params: toJsonSchema(z.object({ id: z.string().uuid() })),
       response: { 200: toJsonSchema(z.any()) },
@@ -131,6 +134,8 @@ export async function permissionRoutes(fastify: FastifyInstance) {
       const { id } = request.params as { id: string }
       const data = updateRoleSchema.parse(request.body)
       const role = await permissionService.updateRole(id, data)
+      await clearCache(`role:${id}`)
+      await clearCache('roles:*')
       return reply.send(role)
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -152,6 +157,8 @@ export async function permissionRoutes(fastify: FastifyInstance) {
     try {
       const { id } = request.params as { id: string }
       const result = await permissionService.deleteRole(id)
+      await clearCache(`role:${id}`)
+      await clearCache('roles:*')
       return reply.send(result)
     } catch (err) {
       fastify.log.error(err)
@@ -165,7 +172,7 @@ export async function permissionRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/users/:userId/roles ─────────────────────────
   fastify.get('/api/users/:userId/roles', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'user-roles' })],
     schema: {
       params: toJsonSchema(z.object({ userId: z.string().uuid() })),
       response: { 200: toJsonSchema(z.array(z.any())) },
@@ -193,6 +200,8 @@ export async function permissionRoutes(fastify: FastifyInstance) {
     try {
       const data = assignRoleSchema.parse(request.body)
       const result = await permissionService.assignRole(data)
+      await clearCache(`user-roles:${data.userId}:*`)
+      await clearCache(`user-permissions:${data.userId}:*`)
       return reply.code(201).send(result)
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -214,6 +223,8 @@ export async function permissionRoutes(fastify: FastifyInstance) {
     try {
       const { userId, roleId } = request.params as { userId: string; roleId: string }
       const result = await permissionService.removeRole({ userId, roleId })
+      await clearCache(`user-roles:${userId}:*`)
+      await clearCache(`user-permissions:${userId}:*`)
       return reply.send(result)
     } catch (err) {
       fastify.log.error(err)
@@ -223,7 +234,7 @@ export async function permissionRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/users/:userId/permissions ───────────────────
   fastify.get('/api/users/:userId/permissions', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'user-permissions' })],
     schema: {
       params: toJsonSchema(z.object({ userId: z.string().uuid() })),
       response: { 200: toJsonSchema(z.array(z.any())) },
@@ -241,7 +252,7 @@ export async function permissionRoutes(fastify: FastifyInstance) {
 
   // ─── POST /api/permissions/check ──────────────────────────
   fastify.post('/api/permissions/check', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 30, keyPrefix: 'permission-check' })],
     schema: {
       body: toJsonSchema(z.object({
         userId: z.string().uuid(),

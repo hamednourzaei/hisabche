@@ -12,6 +12,7 @@ import {
 } from '@hisabche/validation'
 import { WarehouseService } from '../services/warehouse.service'
 import { authenticate } from '../middleware/auth.middleware'
+import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 
 const toJsonSchema = (schema: any) => {
   const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
@@ -24,7 +25,7 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/warehouses ──────────────────────────────────────
   fastify.get('/api/warehouses', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 120, keyPrefix: 'warehouses' })],
     schema: {
       response: {
         200: toJsonSchema(z.array(z.any())),
@@ -32,7 +33,6 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      // ✅ اصلاح: listwarehouses (کوچک)
       const warehouses = await warehouseService.listwarehouses(request.userId)
       return reply.send(warehouses)
     } catch (err) {
@@ -53,8 +53,8 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const data = createwarehouseSchema.parse(request.body)
-      // ✅ اصلاح: createWarehouse (با حرف بزرگ)
       const warehouse = await warehouseService.createWarehouse(request.userId, data)
+      await clearCache('warehouses:*')
       return reply.code(201).send(warehouse)
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -79,8 +79,9 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
     try {
       const { id } = request.params as { id: string }
       const data = updatewarehouseSchema.parse(request.body)
-      // ✅ اصلاح: updateWarehouse (با حرف بزرگ)
       const warehouse = await warehouseService.updateWarehouse(request.userId, id, data)
+      await clearCache(`warehouse:${id}`)
+      await clearCache('warehouses:*')
       return reply.send(warehouse)
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -100,8 +101,9 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const { id } = request.params as { id: string }
-      // ✅ اصلاح: deleteWarehouse (با حرف بزرگ)
       await warehouseService.deleteWarehouse(request.userId, id)
+      await clearCache(`warehouse:${id}`)
+      await clearCache('warehouses:*')
       return reply.code(204).send()
     } catch (err) {
       fastify.log.error(err)
@@ -121,8 +123,9 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const data = stockTransferSchema.parse(request.body)
-      // ✅ اصلاح: transferStock (با حرف بزرگ)
       const result = await warehouseService.transferStock(request.userId, data)
+      await clearCache('warehouses:*')
+      await clearCache('stock:*')
       return reply.send(result)
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -135,7 +138,7 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/warehouses/:id/stock ───────────────────────────
   fastify.get('/api/warehouses/:id/stock', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'warehouse-stock' })],
     schema: {
       params: toJsonSchema(z.object({ id: z.string().uuid() })),
       response: {
@@ -145,7 +148,6 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const { id } = request.params as { id: string }
-      // ✅ اصلاح: getStockByWarehouse (با حرف بزرگ)
       const stock = await warehouseService.getStockByWarehouse(request.userId, id)
       return reply.send(stock)
     } catch (err) {

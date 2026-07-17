@@ -11,6 +11,7 @@ import {
 } from '@hisabche/validation'
 import PurchasingService from '../services/purchasing.service'
 import { authenticate } from '../middleware/auth.middleware'
+import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 
 const toJsonSchema = (schema: any) => {
   const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
@@ -23,7 +24,7 @@ export async function purchasingRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/purchase-orders ────────────────────────────
   fastify.get('/api/purchase-orders', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'purchase-orders' })],
     schema: {
       response: {
         200: toJsonSchema(z.array(z.any())),
@@ -52,6 +53,7 @@ export async function purchasingRoutes(fastify: FastifyInstance) {
     try {
       const data = createPurchaseOrderSchema.parse(request.body)
       const order = await purchasingService.createPurchaseOrder(request.userId, data)
+      await clearCache('purchase-orders:*')
       return reply.code(201).send(order)
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -77,6 +79,8 @@ export async function purchasingRoutes(fastify: FastifyInstance) {
       const { id } = request.params as { id: string }
       const data = updatePurchaseOrderSchema.parse(request.body)
       const order = await purchasingService.updatePurchaseOrder(request.userId, id, data)
+      await clearCache(`purchase-order:${id}`)
+      await clearCache('purchase-orders:*')
       return reply.send(order)
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -100,6 +104,8 @@ export async function purchasingRoutes(fastify: FastifyInstance) {
     try {
       const { id } = request.params as { id: string }
       const result = await purchasingService.receiveGoods(request.userId, id)
+      await clearCache(`purchase-order:${id}`)
+      await clearCache('purchase-orders:*')
       return reply.send(result)
     } catch (err) {
       fastify.log.error(err)

@@ -8,6 +8,7 @@ import { zodToJsonSchema } from 'zod-to-json-schema'
 import { aiQuerySchema } from '@hisabche/validation'
 import { AIService } from '../services/ai.service'
 import { authenticate } from '../middleware/auth.middleware'
+import { cacheMiddleware } from '../middleware/cache.middleware'
 
 const toJsonSchema = (schema: any) => {
   const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
@@ -41,7 +42,7 @@ export async function aiRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/ai/insights ─────────────────────────────────
   fastify.get('/api/ai/insights', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 300, keyPrefix: 'insights' })],
     schema: {
       response: { 200: toJsonSchema(z.array(z.any())) },
     },

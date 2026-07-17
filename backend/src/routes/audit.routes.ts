@@ -12,6 +12,7 @@ import {
 } from '@hisabche/validation'
 import { AuditService } from '../services/audit.service'
 import { authenticate } from '../middleware/auth.middleware'
+import { cacheMiddleware } from '../middleware/cache.middleware'
 
 const toJsonSchema = (schema: any) => {
   const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
@@ -57,7 +58,7 @@ export default async function auditRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/audit/logs ──────────────────────────────────────────────────
   fastify.get('/api/audit/logs', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'audit-logs' })],
     schema: {
       querystring: toJsonSchema(auditFiltersSchema),
       response: { 200: toJsonSchema(z.any()) },
@@ -78,7 +79,7 @@ export default async function auditRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/audit/entity/:type/:id ─────────────────────────────────────
   fastify.get('/api/audit/entity/:type/:id', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'audit-entity' })],
     schema: {
       params: toJsonSchema(z.object({
         type: z.string().min(1),
@@ -99,7 +100,7 @@ export default async function auditRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/audit/user/:userId ─────────────────────────────────────────
   fastify.get('/api/audit/user/:userId', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'audit-user' })],
     schema: {
       params: toJsonSchema(z.object({ userId: z.string().uuid() })),
       querystring: toJsonSchema(z.object({ limit: z.coerce.number().int().min(1).max(100).default(50) })),
@@ -123,7 +124,7 @@ export default async function auditRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/audit/stats ─────────────────────────────────────────────────
   fastify.get('/api/audit/stats', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 300, keyPrefix: 'audit-stats' })],
     schema: {
       querystring: toJsonSchema(z.object({
         startDate: z.string().min(1),

@@ -17,6 +17,7 @@ import {
 } from "@hisabche/validation";
 import { WorkflowService } from "../services/workflow.service";
 import { authenticate } from "../middleware/auth.middleware";
+import { cacheMiddleware, clearCache } from "../middleware/cache.middleware";
 
 // ✅ Same pattern as analytics.routes.ts — use `any` to avoid deep instantiation
 const toJsonSchema = (schema: any) => {
@@ -49,6 +50,7 @@ export async function workflowRoutes(fastify: FastifyInstance) {
           request.workspaceId,
           data
         );
+        await clearCache('workflows:*');
         return reply.code(201).send(workflow);
       } catch (err) {
         if (err instanceof z.ZodError) {
@@ -66,7 +68,7 @@ export async function workflowRoutes(fastify: FastifyInstance) {
   fastify.get(
     "/api/v1/workflows",
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, cacheMiddleware({ ttl: 120, keyPrefix: 'workflows' })],
       schema: {
         querystring: toJsonSchema(workflowFiltersSchema),
         response: { 200: toJsonSchema(z.any()) },
@@ -96,7 +98,7 @@ export async function workflowRoutes(fastify: FastifyInstance) {
   fastify.get(
     "/api/v1/workflows/:id",
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, cacheMiddleware({ ttl: 120, keyPrefix: 'workflow' })],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         response: { 200: toJsonSchema(z.any()) },
@@ -130,6 +132,8 @@ export async function workflowRoutes(fastify: FastifyInstance) {
         const { id } = request.params as { id: string };
         const data = updateWorkflowSchema.parse(request.body);
         const workflow = await workflowService.updateWorkflow(id, data);
+        await clearCache(`workflow:${id}`);
+        await clearCache('workflows:*');
         return reply.send(workflow);
       } catch (err) {
         if (err instanceof z.ZodError) {
@@ -157,6 +161,8 @@ export async function workflowRoutes(fastify: FastifyInstance) {
       try {
         const { id } = request.params as { id: string };
         await workflowService.deleteWorkflow(id);
+        await clearCache(`workflow:${id}`);
+        await clearCache('workflows:*');
         return reply.send({ success: true });
       } catch (err) {
         fastify.log.error(err);
@@ -186,6 +192,7 @@ export async function workflowRoutes(fastify: FastifyInstance) {
           request.workspaceId,
           data
         );
+        await clearCache('workflow-instances:*');
         return reply.code(201).send(instance);
       } catch (err) {
         if (err instanceof z.ZodError) {
@@ -203,7 +210,7 @@ export async function workflowRoutes(fastify: FastifyInstance) {
   fastify.get(
     "/api/v1/workflows/instances",
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'workflow-instances' })],
       schema: {
         querystring: toJsonSchema(instanceFiltersSchema),
         response: { 200: toJsonSchema(z.any()) },
@@ -233,7 +240,7 @@ export async function workflowRoutes(fastify: FastifyInstance) {
   fastify.get(
     "/api/v1/workflows/instances/:id",
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'workflow-instance' })],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         response: { 200: toJsonSchema(z.any()) },
@@ -283,6 +290,8 @@ export async function workflowRoutes(fastify: FastifyInstance) {
           { ...body, instance_id: id }
         );
 
+        await clearCache(`workflow-instance:${id}`);
+        await clearCache('workflow-instances:*');
         return reply.send(result);
       } catch (err) {
         if (err instanceof z.ZodError) {

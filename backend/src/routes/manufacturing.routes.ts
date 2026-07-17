@@ -13,6 +13,7 @@ import {
 } from '@hisabche/validation'
 import { ManufacturingService } from '../services/manufacturing.service'
 import { authenticate } from '../middleware/auth.middleware'
+import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 
 const toJsonSchema = (schema: any) => {
   const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
@@ -25,7 +26,7 @@ export async function manufacturingRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/boms ────────────────────────────────────────
   fastify.get('/api/boms', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 120, keyPrefix: 'boms' })],
     schema: {
       querystring: toJsonSchema(z.object({ productId: z.string().uuid().optional() })),
       response: {
@@ -56,6 +57,7 @@ export async function manufacturingRoutes(fastify: FastifyInstance) {
     try {
       const data = createBomSchema.parse(request.body)
       const bom = await manufacturingService.createBom(request.userId, data)
+      await clearCache('boms:*')
       return reply.code(201).send(bom)
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -81,6 +83,8 @@ export async function manufacturingRoutes(fastify: FastifyInstance) {
       const { id } = request.params as { id: string }
       const data = updateBomSchema.parse(request.body)
       const bom = await manufacturingService.updateBom(request.userId, id, data)
+      await clearCache(`bom:${id}`)
+      await clearCache('boms:*')
       return reply.send(bom)
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -93,7 +97,7 @@ export async function manufacturingRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/work-orders ─────────────────────────────────
   fastify.get('/api/work-orders', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'work-orders' })],
     schema: {
       querystring: toJsonSchema(z.object({ status: z.enum(['planned', 'in_progress', 'completed', 'cancelled']).optional() })),
       response: {
@@ -124,6 +128,7 @@ export async function manufacturingRoutes(fastify: FastifyInstance) {
     try {
       const data = createWorkOrderSchema.parse(request.body)
       const workOrder = await manufacturingService.createWorkOrder(request.userId, data)
+      await clearCache('work-orders:*')
       return reply.code(201).send(workOrder)
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -149,6 +154,8 @@ export async function manufacturingRoutes(fastify: FastifyInstance) {
       const { id } = request.params as { id: string }
       const data = updateWorkOrderSchema.parse(request.body)
       const workOrder = await manufacturingService.updateWorkOrder(request.userId, id, data)
+      await clearCache(`work-order:${id}`)
+      await clearCache('work-orders:*')
       return reply.send(workOrder)
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -172,6 +179,8 @@ export async function manufacturingRoutes(fastify: FastifyInstance) {
     try {
       const { id } = request.params as { id: string }
       const result = await manufacturingService.completeWorkOrder(request.userId, id)
+      await clearCache(`work-order:${id}`)
+      await clearCache('work-orders:*')
       return reply.send(result)
     } catch (err) {
       fastify.log.error(err)

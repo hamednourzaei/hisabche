@@ -8,6 +8,8 @@ import { renderToStream } from '@react-pdf/renderer'
 import { createClient } from '@supabase/supabase-js'
 import { supabase } from '../db'
 import InvoicePDFDocument from '../pdf/InvoicePDFDocument'
+import { authenticate } from '../middleware/auth.middleware'
+import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 
 // NOTE: dotenv.config() should run once at the app entrypoint (server.ts),
 // not inside individual route files — loading it here again is fragile
@@ -68,6 +70,7 @@ async function uploadPdf(path: string, buffer: Buffer): Promise<void> {
 export async function invoicePdfRoutes(fastify: FastifyInstance) {
 
   fastify.get<{ Params: { id: string } }>('/api/invoices/:id/pdf', {
+    preHandler: [authenticate],
     config: {
       rateLimit: { max: 10, timeWindow: '1 minute' },
     },

@@ -1,5 +1,11 @@
+// ============================================
+// backend/src/routes/sync.routes.ts
+// ============================================
+
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { supabase } from '../db'
+import { authenticate } from '../middleware/auth.middleware'
+import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 
 interface SyncPullBody {
   lastPulledAt: number
@@ -13,7 +19,9 @@ interface SyncPushBody {
 export async function syncRoutes(fastify: FastifyInstance) {
   
   // GET /api/sync/pull
-  fastify.get('/api/sync/pull', async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.get('/api/sync/pull', {
+    preHandler: [authenticate]
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
     const { last_pulled_at } = request.query as { last_pulled_at?: string }
     const userId = (request as any).userId
     const timestamp = Date.now()
@@ -56,7 +64,9 @@ export async function syncRoutes(fastify: FastifyInstance) {
   })
 
   // POST /api/sync/push
-  fastify.post('/api/sync/push', async (request: FastifyRequest, reply: FastifyReply) => {
+  fastify.post('/api/sync/push', {
+    preHandler: [authenticate]
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
     const { changes, lastPulledAt } = request.body as SyncPushBody
     const userId = (request as any).userId
 
@@ -87,6 +97,9 @@ export async function syncRoutes(fastify: FastifyInstance) {
           }
         }
       }
+      
+      // Clear all caches after successful sync
+      await clearCache('*')
     }
 
     return { success: true }

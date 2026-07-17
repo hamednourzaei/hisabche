@@ -5,6 +5,8 @@
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { InvoiceService } from "../services/invoice.service";
+import { authenticate } from "../middleware/auth.middleware";
+import { cacheMiddleware, clearCache } from "../middleware/cache.middleware";
 
 const invoiceService = new InvoiceService();
 
@@ -12,6 +14,9 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
   // GET /api/invoices
   fastify.get(
     "/api/invoices",
+    {
+      preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'invoices' })]
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const q = request.query as Record<string, string>;
@@ -45,6 +50,9 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
   // GET /api/invoices/:id
   fastify.get(
     "/api/invoices/:id",
+    {
+      preHandler: [authenticate, cacheMiddleware({ ttl: 120, keyPrefix: 'invoice' })]
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string };
@@ -61,6 +69,9 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
   // POST /api/invoices
   fastify.post(
     "/api/invoices",
+    {
+      preHandler: [authenticate]
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const body = request.body as any;
@@ -96,6 +107,9 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
         };
 
         const invoice = await invoiceService.create(userId, data);
+        await clearCache('invoices:*');
+        await clearCache('dashboard:*');
+        await clearCache('sales:*');
         return reply.code(201).send(invoice);
       } catch (err: any) {
         fastify.log.error(err);
@@ -107,12 +121,19 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
   // PATCH /api/invoices/:id
   fastify.patch(
     "/api/invoices/:id",
+    {
+      preHandler: [authenticate]
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string };
         const body = request.body as any;
         const userId = (request as any).userId;
         const invoice = await invoiceService.update(id, userId, body);
+        await clearCache(`invoice:${id}`);
+        await clearCache('invoices:*');
+        await clearCache('dashboard:*');
+        await clearCache('sales:*');
         return reply.send(invoice);
       } catch (err: any) {
         fastify.log.error(err);
@@ -124,11 +145,18 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
   // DELETE /api/invoices/:id
   fastify.delete(
     "/api/invoices/:id",
+    {
+      preHandler: [authenticate]
+    },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string };
         const userId = (request as any).userId;
         await invoiceService.delete(id, userId);
+        await clearCache(`invoice:${id}`);
+        await clearCache('invoices:*');
+        await clearCache('dashboard:*');
+        await clearCache('sales:*');
         return reply.code(204).send();
       } catch (err: any) {
         fastify.log.error(err);

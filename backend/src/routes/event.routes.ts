@@ -8,6 +8,7 @@ import { zodToJsonSchema } from 'zod-to-json-schema'
 import { createEventLogSchema } from '@hisabche/validation'
 import { eventService } from '../services/event.service'
 import { authenticate } from '../middleware/auth.middleware'
+import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 
 const toJsonSchema = (schema: any) => {
   const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
@@ -31,6 +32,8 @@ export async function eventRoutes(fastify: FastifyInstance) {
     try {
       const data = createEventLogSchema.parse(request.body)
       const eventId = await eventService.emit(data)
+      await clearCache('events:*')
+      await clearCache('event-stats:*')
       return reply.code(201).send({ id: eventId })
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -54,6 +57,8 @@ export async function eventRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const result = await eventService.processPending()
+      await clearCache('events:*')
+      await clearCache('event-stats:*')
       return reply.send(result)
     } catch (err) {
       fastify.log.error(err)
@@ -74,6 +79,7 @@ export async function eventRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       await eventService.seedEventTypes()
+      await clearCache('events:*')
       return reply.send({ success: true })
     } catch (err) {
       fastify.log.error(err)
@@ -87,7 +93,7 @@ export async function eventRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/events/stats ────────────────────────────────
   fastify.get('/api/events/stats', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 120, keyPrefix: 'event-stats' })],
     schema: {
       response: { 200: toJsonSchema(z.any()) },
     },
@@ -116,6 +122,7 @@ export async function eventRoutes(fastify: FastifyInstance) {
     try {
       const { daysToKeep } = request.body as { daysToKeep: number }
       const result = await eventService.cleanupProcessed(daysToKeep)
+      await clearCache('event-stats:*')
       return reply.send(result)
     } catch (err) {
       fastify.log.error(err)

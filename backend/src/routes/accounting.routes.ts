@@ -12,6 +12,7 @@ import {
 } from '@hisabche/validation'
 import { AccountingService } from '../services/accounting.service'
 import { authenticate } from '../middleware/auth.middleware'
+import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 
 const toJsonSchema = (schema: any) => {
   const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
@@ -24,7 +25,7 @@ export async function accountingRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/accounts ──────────────────────────────────
   fastify.get('/api/accounts', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 120, keyPrefix: 'accounts' })],
     schema: {
       response: {
         200: toJsonSchema(z.array(z.any())),
@@ -53,6 +54,7 @@ export async function accountingRoutes(fastify: FastifyInstance) {
     try {
       const data = createAccountSchema.parse(request.body)
       const account = await accountingService.createAccount(request.userId, data)
+      await clearCache('accounts:*')
       return reply.code(201).send(account)
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -65,7 +67,7 @@ export async function accountingRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/journal ───────────────────────────────────
   fastify.get('/api/journal', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'journal' })],
     schema: {
       response: {
         200: toJsonSchema(z.array(z.any())),
@@ -94,6 +96,7 @@ export async function accountingRoutes(fastify: FastifyInstance) {
     try {
       const data = createJournalEntrySchema.parse(request.body)
       const entry = await accountingService.createJournalEntry(request.userId, data)
+      await clearCache('journal:*')
       return reply.code(201).send(entry)
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -106,7 +109,7 @@ export async function accountingRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/trial-balance ─────────────────────────────
   fastify.get('/api/trial-balance', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 300, keyPrefix: 'trial-balance' })],
     schema: {
       querystring: toJsonSchema(z.object({ date: z.string().datetime().default(new Date().toISOString()) })),
       response: {
@@ -126,7 +129,7 @@ export async function accountingRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/balance-sheet ─────────────────────────────
   fastify.get('/api/balance-sheet', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 300, keyPrefix: 'balance-sheet' })],
     schema: {
       querystring: toJsonSchema(z.object({ date: z.string().datetime().default(new Date().toISOString()) })),
       response: {
@@ -146,7 +149,7 @@ export async function accountingRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/income-statement ──────────────────────────
   fastify.get('/api/income-statement', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 300, keyPrefix: 'income-statement' })],
     schema: {
       querystring: toJsonSchema(z.object({
         fromDate: z.string().datetime(),

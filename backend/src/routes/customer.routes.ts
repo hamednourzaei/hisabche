@@ -12,6 +12,7 @@ import {
 } from '@hisabche/validation'
 import { CustomerService } from '../services/customer.service'
 import { authenticate } from '../middleware/auth.middleware'
+import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 
 // ✅ تنظیمات برای حذف $schema از خروجی
 const toJsonSchema = (schema: any) => {
@@ -25,7 +26,7 @@ export async function customerRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/customers ─────────────────────────────────
   fastify.get('/api/customers', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'customers' })],
     schema: {
       querystring: toJsonSchema(customerFiltersSchema),
       response: {
@@ -58,7 +59,7 @@ export async function customerRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/customers/:id ─────────────────────────────
   fastify.get('/api/customers/:id', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 120, keyPrefix: 'customer' })],
     schema: {
       params: toJsonSchema(z.object({ id: z.string().uuid() })),
       response: {
@@ -116,6 +117,8 @@ export async function customerRoutes(fastify: FastifyInstance) {
       const body = createCustomerSchema.parse(request.body)
       const userId = request.userId // ✅ بدون any
       const customer = await customerService.create(userId, body)
+      await clearCache('customers:*')
+      await clearCache('customer:*')
       return reply.code(201).send(customer)
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -161,6 +164,8 @@ export async function customerRoutes(fastify: FastifyInstance) {
       const body = updateCustomerSchema.parse(request.body)
       const userId = request.userId // ✅ بدون any
       const customer = await customerService.update(id, userId, body)
+      await clearCache(`customer:${id}`)
+      await clearCache('customers:*')
       return reply.send(customer)
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -185,6 +190,8 @@ export async function customerRoutes(fastify: FastifyInstance) {
       const { id } = request.params as { id: string }
       const userId = request.userId // ✅ بدون any
       await customerService.delete(id, userId)
+      await clearCache(`customer:${id}`)
+      await clearCache('customers:*')
       return reply.code(204).send()
     } catch (err) {
       fastify.log.error({ err, userId: request.userId, route: 'DELETE /api/customers/:id' })
@@ -194,7 +201,7 @@ export async function customerRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/customers/:id/balance ────────────────────
   fastify.get('/api/customers/:id/balance', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'customer-balance' })],
     schema: {
       params: toJsonSchema(z.object({ id: z.string().uuid() })),
       response: {

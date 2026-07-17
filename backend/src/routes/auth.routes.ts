@@ -16,6 +16,7 @@ import { AuthService } from '../services/auth.service'
 import { AuthError } from '../errors/auth.error'
 import { authenticate } from '../middleware/auth.middleware'
 import { passwordResetService } from '../services/password-reset.service'
+import { cacheMiddleware } from '../middleware/cache.middleware'
 
 type JsonSchema = Record<string, unknown>
 
@@ -134,7 +135,7 @@ export async function authRoutes(fastify: FastifyInstance) {
 
   // ─── GET /api/auth/me ──────────────────────────────────
   fastify.get('/api/auth/me', {
-    preHandler: [authenticate],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'auth-me' })],
     schema: {
       response: {
         200: toJsonSchema(z.object({
