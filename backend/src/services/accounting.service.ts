@@ -1,5 +1,5 @@
 // ============================================
-// backend/src/services/accounting.service.ts — Optimized v2.0
+// backend/src/services/accounting.service.ts — Optimized v2.1
 // ============================================
 
 import { supabase } from '../db'
@@ -22,7 +22,7 @@ export class AccountingService {
   async listAccounts(userId: string) {
     const { data, error } = await supabase
       .from('accounts')
-      .select(ACCOUNT_LIST_COLUMNS) // ✅ فقط ۷ ستون
+      .select(ACCOUNT_LIST_COLUMNS)
       .eq('user_id', userId)
       .is('deleted_at', null)
       .order('code')
@@ -42,7 +42,7 @@ export class AccountingService {
         is_active: data.isActive !== false,
         user_id: userId,
       })
-      .select(ACCOUNT_LIST_COLUMNS) // ✅
+      .select(ACCOUNT_LIST_COLUMNS)
       .single()
 
     if (error) throw new DatabaseError('Failed to create account', error)
@@ -62,7 +62,7 @@ export class AccountingService {
       .update(updates)
       .eq('id', id)
       .eq('user_id', userId)
-      .select(ACCOUNT_LIST_COLUMNS) // ✅
+      .select(ACCOUNT_LIST_COLUMNS)
       .single()
 
     if (error) throw new DatabaseError('Failed to update account', error)
@@ -71,7 +71,6 @@ export class AccountingService {
 
   // ─── Journal Entries ─────────────────────────────────────
   async listJournalEntries(userId: string) {
-    // ✅ فقط ستون‌های ضروری
     const { data, error } = await supabase
       .from('journal_entries')
       .select(`
@@ -81,7 +80,7 @@ export class AccountingService {
       .eq('user_id', userId)
       .is('deleted_at', null)
       .order('date', { ascending: false })
-      .limit(50) // ✅ limit برای لیست
+      .limit(50)
 
     if (error) throw new DatabaseError('Failed to fetch journal entries', error)
     return data || []
@@ -129,7 +128,6 @@ export class AccountingService {
   }
 
   async getJournalEntry(id: string, userId: string) {
-    // ✅ فقط ستون‌های ضروری با رابطه حساب
     const { data, error } = await supabase
       .from('journal_entries')
       .select(`
@@ -150,11 +148,10 @@ export class AccountingService {
   }
 
   // ──────────────────────────────────────────────
-  // Financial Reports — بهینه‌شده
+  // Financial Reports
   // ──────────────────────────────────────────────
 
   async getTrialBalance(userId: string, date: string) {
-    // ✅ یک کوئری با JOIN به جای دو کوئری جداگانه
     const { data, error } = await supabase
       .from('journal_lines')
       .select(`
@@ -171,7 +168,6 @@ export class AccountingService {
 
     if (!data || data.length === 0) return []
 
-    // گروه‌بندی با Map
     const accountMap = new Map<string, {
       accountId: string
       accountCode: string
@@ -211,7 +207,6 @@ export class AccountingService {
   async getBalanceSheet(userId: string, date: string) {
     const trialBalance = await this.getTrialBalance(userId, date)
 
-    // ✅ یکبار iterate به جای ۵ بار filter + reduce
     let assetsTotal = 0, liabilitiesTotal = 0, equityTotal = 0, revenueTotal = 0, expensesTotal = 0
     const assets: any[] = [], liabilities: any[] = [], equity: any[] = [], revenue: any[] = [], expenses: any[] = []
 
@@ -272,11 +267,118 @@ export class AccountingService {
     }
 
     return {
-      revenue,
-      expenses,
-      totalRevenue: revenue,
-      totalExpenses: expenses,
-      netIncome: revenue - expenses,
+      revenue: Math.round(revenue * 100) / 100,
+      expenses: Math.round(expenses * 100) / 100,
+      totalRevenue: Math.round(revenue * 100) / 100,
+      totalExpenses: Math.round(expenses * 100) / 100,
+      netIncome: Math.round((revenue - expenses) * 100) / 100,
     }
   }
+
+  // ─── NEW: Cash Flow Report ────────────────────────────────
+  async getCashFlow(userId: string, startDate: string, endDate: string) {
+    const { data: transactions, error } = await supabase
+      .from('transactions')
+      .select('type, amount, description, date')
+      .eq('user_id', userId)
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date', { ascending: true })
+
+    if (error) throw new DatabaseError('Failed to fetch cash flow', error)
+
+    const operating = { inflow: 0, outflow: 0, items: [] as any[] }
+    const investing = { inflow: 0, outflow: 0, items: [] as any[] }
+    const financing = { inflow: 0, outflow: 0, items: [] as any[] }
+
+    for (const tx of transactions || []) {
+      const amount = Number(tx.amount)
+      const type = tx.type
+      const item = { description: tx.description || type, amount, date: tx.date }
+
+      if (['sale', 'receipt'].includes(type)) {
+        operating.inflow += amount
+        operating.items.push({ ...item, type: 'inflow' })
+      } else if (['purchase', 'payment'].includes(type)) {
+        operating.outflow += amount
+        operating.items.push({ ...item, type: 'outflow' })
+      }
+    }
+
+    const netChange = operating.inflow - operating.outflow +
+                      investing.inflow - investing.outflow +
+                      financing.inflow - financing.outflow
+
+    return {
+      operating: {
+        inflow: Math.round(operating.inflow * 100) / 100,
+        outflow: Math.round(operating.outflow * 100) / 100,
+        net: Math.round((operating.inflow - operating.outflow) * 100) / 100,
+        items: operating.items,
+      },
+      investing: {
+        inflow: Math.round(investing.inflow * 100) / 100,
+        outflow: Math.round(investing.outflow * 100) / 100,
+        net: Math.round((investing.inflow - investing.outflow) * 100) / 100,
+        items: investing.items,
+      },
+      financing: {
+        inflow: Math.round(financing.inflow * 100) / 100,
+        outflow: Math.round(financing.outflow * 100) / 100,
+        net: Math.round((financing.inflow - financing.outflow) * 100) / 100,
+        items: financing.items,
+      },
+      netChange: Math.round(netChange * 100) / 100,
+      period: { startDate, endDate },
+    }
+  }
+
+// ─── Customer Debt Report ──────────────────────────────────
+async getCustomerDebtReport(userId: string) {
+  const { data: customers } = await supabase
+    .from('customers')
+    .select('id, full_name, opening_balance')
+    .eq('user_id', userId)
+    .eq('is_active', true)
+
+  const { data: invoices } = await supabase
+    .from('invoices')
+    .select('customer_id, total, paid_amount')
+    .eq('user_id', userId)
+    .neq('status', 'paid')
+
+  const debtMap: Record<string, { name: string; balance: number; totalInvoices: number }> = {}
+  
+  for (const c of customers || []) {
+    debtMap[c.id] = {
+      name: c.full_name,
+      balance: Number(c.opening_balance) || 0,
+      totalInvoices: 0,
+    }
+  }
+
+  // ✅ اصلاح شده با Type Guard
+  for (const inv of invoices || []) {
+    const customerId = inv.customer_id
+    if (customerId && debtMap[customerId]) {
+      debtMap[customerId].balance += Number(inv.total) - Number(inv.paid_amount)
+      debtMap[customerId].totalInvoices++
+    }
+  }
+
+  const debtors = Object.values(debtMap)
+    .filter(d => d.balance > 0)
+    .sort((a, b) => b.balance - a.balance)
+
+  const creditors = Object.values(debtMap)
+    .filter(d => d.balance < 0)
+    .sort((a, b) => a.balance - b.balance)
+
+  return {
+    debtors,
+    creditors,
+    totalDebt: Math.round(debtors.reduce((s, d) => s + d.balance, 0) * 100) / 100,
+    totalCredit: Math.round(Math.abs(creditors.reduce((s, d) => s + d.balance, 0)) * 100) / 100,
+  }
+}
 }

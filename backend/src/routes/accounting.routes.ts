@@ -20,6 +20,11 @@ const toJsonSchema = (schema: any) => {
   return result
 }
 
+const dateRangeSchema = z.object({
+  startDate: z.string().min(1),
+  endDate: z.string().min(1),
+})
+
 export async function accountingRoutes(fastify: FastifyInstance) {
   const accountingService = new AccountingService()
 
@@ -27,9 +32,7 @@ export async function accountingRoutes(fastify: FastifyInstance) {
   fastify.get('/api/accounts', {
     preHandler: [authenticate, cacheMiddleware({ ttl: 120, keyPrefix: 'accounts' })],
     schema: {
-      response: {
-        200: toJsonSchema(z.array(z.any())),
-      },
+      response: { 200: toJsonSchema(z.array(z.any())) },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -46,9 +49,7 @@ export async function accountingRoutes(fastify: FastifyInstance) {
     preHandler: [authenticate],
     schema: {
       body: toJsonSchema(createAccountSchema),
-      response: {
-        201: toJsonSchema(z.any()),
-      },
+      response: { 201: toJsonSchema(z.any()) },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -69,9 +70,7 @@ export async function accountingRoutes(fastify: FastifyInstance) {
   fastify.get('/api/journal', {
     preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'journal' })],
     schema: {
-      response: {
-        200: toJsonSchema(z.array(z.any())),
-      },
+      response: { 200: toJsonSchema(z.array(z.any())) },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -88,9 +87,7 @@ export async function accountingRoutes(fastify: FastifyInstance) {
     preHandler: [authenticate],
     schema: {
       body: toJsonSchema(createJournalEntrySchema),
-      response: {
-        201: toJsonSchema(z.any()),
-      },
+      response: { 201: toJsonSchema(z.any()) },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -112,9 +109,7 @@ export async function accountingRoutes(fastify: FastifyInstance) {
     preHandler: [authenticate, cacheMiddleware({ ttl: 300, keyPrefix: 'trial-balance' })],
     schema: {
       querystring: toJsonSchema(z.object({ date: z.string().datetime().default(new Date().toISOString()) })),
-      response: {
-        200: toJsonSchema(z.array(z.any())),
-      },
+      response: { 200: toJsonSchema(z.array(z.any())) },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -132,9 +127,7 @@ export async function accountingRoutes(fastify: FastifyInstance) {
     preHandler: [authenticate, cacheMiddleware({ ttl: 300, keyPrefix: 'balance-sheet' })],
     schema: {
       querystring: toJsonSchema(z.object({ date: z.string().datetime().default(new Date().toISOString()) })),
-      response: {
-        200: toJsonSchema(z.any()),
-      },
+      response: { 200: toJsonSchema(z.any()) },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -155,9 +148,7 @@ export async function accountingRoutes(fastify: FastifyInstance) {
         fromDate: z.string().datetime(),
         toDate: z.string().datetime(),
       })),
-      response: {
-        200: toJsonSchema(z.any()),
-      },
+      response: { 200: toJsonSchema(z.any()) },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
@@ -167,6 +158,40 @@ export async function accountingRoutes(fastify: FastifyInstance) {
     } catch (err) {
       fastify.log.error(err)
       return reply.code(500).send({ error: 'Failed to fetch income statement' })
+    }
+  })
+
+  // ─── NEW: GET /api/cash-flow ────────────────────────────
+  fastify.get('/api/cash-flow', {
+    preHandler: [authenticate, cacheMiddleware({ ttl: 120, keyPrefix: 'cash-flow' })],
+    schema: {
+      querystring: toJsonSchema(dateRangeSchema),
+      response: { 200: toJsonSchema(z.any()) },
+    },
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const { startDate, endDate } = request.query as { startDate: string; endDate: string }
+      const result = await accountingService.getCashFlow(request.userId, startDate, endDate)
+      return reply.send(result)
+    } catch (err) {
+      fastify.log.error(err)
+      return reply.code(500).send({ error: 'Failed to fetch cash flow' })
+    }
+  })
+
+  // ─── NEW: GET /api/customer-debt ────────────────────────
+  fastify.get('/api/customer-debt', {
+    preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'customer-debt' })],
+    schema: {
+      response: { 200: toJsonSchema(z.any()) },
+    },
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const result = await accountingService.getCustomerDebtReport(request.userId)
+      return reply.send(result)
+    } catch (err) {
+      fastify.log.error(err)
+      return reply.code(500).send({ error: 'Failed to fetch customer debt report' })
     }
   })
 }
