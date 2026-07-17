@@ -1,5 +1,5 @@
 // ============================================
-// Hisabche Validation — Barrel Exports v1.1
+// Hisabche Validation — Barrel Exports v2.0
 // ============================================
 
 // ---------- Common ----------
@@ -85,6 +85,7 @@ export {
   type CustomerFilters,
 } from './schemas/customer.schema'
 
+// ---------- Transaction ----------
 export {
   transactionSchema,
   createTransactionSchema,
@@ -118,17 +119,17 @@ export {
   type IncomeStatement,
 } from './schemas/accounting.schema'
 
-// ---------- warehouse (Inventory) ----------
+// ---------- Warehouse ----------
 export {
   warehouseSchema,
   createwarehouseSchema,
   updatewarehouseSchema,
-  stockTransferSchema,      
+  stockTransferSchema,
   stockMovementSchema,
   type warehouse,
   type CreateGodam,
   type UpdateGodam,
-  type StockTransfer,       
+  type StockTransfer,
   type StockMovement,
 } from './schemas/warehouse.schema'
 
@@ -146,7 +147,7 @@ export {
   type UpdateOpportunity,
 } from './schemas/crm.schema'
 
-// ---------- Purchasing (فاز ۱۳) ----------
+// ---------- Purchasing ----------
 export {
   purchaseOrderSchema,
   createPurchaseOrderSchema,
@@ -156,7 +157,7 @@ export {
   type UpdatePurchaseOrder,
 } from './schemas/purchasing.schema'
 
-// ---------- Manufacturing (فاز ۱۴) ----------
+// ---------- Manufacturing ----------
 export {
   bomSchema,
   createBomSchema,
@@ -176,7 +177,7 @@ export {
   type CreateProductionPlan,
 } from './schemas/manufacturing.schema'
 
-// ---------- HR (فاز ۱۵) ----------
+// ---------- HR ----------
 export {
   departmentSchema,
   createDepartmentSchema,
@@ -210,7 +211,7 @@ export {
   type UpdateLeave,
 } from './schemas/human-resources.schema'
 
-// ---------- Projects (فاز ۱۶) ----------
+// ---------- Projects ----------
 export {
   projectSchema,
   createProjectSchema,
@@ -236,7 +237,7 @@ export {
   type UpdateTimeEntry,
 } from './schemas/project.schema'
 
-// ---------- Workspace (فاز ۱۷) ----------
+// ---------- Workspace ----------
 export {
   workspaceSchema,
   createWorkspaceSchema,
@@ -258,7 +259,7 @@ export {
   type AcceptInvite,
 } from './schemas/workspace.schema'
 
-// ---------- Permissions (فاز ۱۸) ----------
+// ---------- Permissions ----------
 export {
   permissionSchema,
   createPermissionSchema,
@@ -280,7 +281,7 @@ export {
   type CheckPermission,
 } from './schemas/permission.schema'
 
-// ---------- Audit (فاز ۱۹) ----------
+// ---------- Audit ----------
 export {
   auditLogSchema,
   createAuditLogSchema,
@@ -292,7 +293,7 @@ export {
   type AuditStats,
 } from './schemas/audit.schema'
 
-// ---------- Sync (فاز ۲۰) ----------
+// ---------- Sync ----------
 export {
   syncQueueItemSchema,
   createSyncQueueItemSchema,
@@ -306,7 +307,7 @@ export {
   type NetworkStatus,
 } from './schemas/sync.schema'
 
-// ---------- Event (فاز ۲۱) ----------
+// ---------- Event ----------
 export {
   eventTypeSchema,
   eventLogSchema,
@@ -318,7 +319,7 @@ export {
   type EventTypeCode,
 } from './schemas/event.schema'
 
-// ---------- Analytics (فاز ۲۲) ----------
+// ---------- Analytics ----------
 export {
   dateRangeSchema,
   salesSummarySchema,
@@ -332,7 +333,7 @@ export {
   type DashboardKpis,
 } from './schemas/analytics.schema'
 
-// ---------- AI (فاز ۲۳) ----------
+// ---------- AI ----------
 export {
   aiQuerySchema,
   aiResponseSchema,
@@ -345,7 +346,7 @@ export {
 } from './schemas/ai.schema'
 
 // ═══════════════════════════════════════════════════════════════════
-// ✅ NEW — Workflow & Approval (v1.1 — ماژول ۱)
+// Workflow & Approval (v1.1)
 // ═══════════════════════════════════════════════════════════════════
 export {
   workflowStatusEnum,
@@ -376,7 +377,8 @@ export {
   type WorkflowFilters,
   type InstanceFilters,
 } from './schemas/workflow.schema'
-// ---------- Notifications (v1.1 — ماژول ۲) ----------
+
+// ---------- Notifications ----------
 export {
   notificationTypeEnum,
   createNotificationSchema,
@@ -388,7 +390,8 @@ export {
   type Notification,
   type NotificationFilters,
 } from './schemas/notification.schema'
-// ---------- Job Queue (v1.1 — ماژول ۳) ----------
+
+// ---------- Job Queue ----------
 export {
   jobStatusEnum,
   createJobSchema,
@@ -397,3 +400,23 @@ export {
   type CreateJobInput,
   type Job,
 } from './schemas/job.schema'
+
+// ═══════════════════════════════════════════════════════════════════
+// ✅ NEW — Billing & Subscription (فاز ۵)
+// ═══════════════════════════════════════════════════════════════════
+export {
+  planEnum,
+  subscriptionStatusEnum,
+  subscriptionSchema,
+  usageLimitsSchema,
+  planFeaturesSchema,
+  checkoutSchema,
+  stripeWebhookSchema,
+  type Plan,
+  type SubscriptionStatus,
+  type Subscription,
+  type UsageLimits,
+  type PlanFeatures,
+  type CheckoutInput,
+  type StripeWebhook,
+} from './schemas/billing.schema'
