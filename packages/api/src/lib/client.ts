@@ -1,7 +1,4 @@
-// ============================================
 // packages/api/src/lib/client.ts
-// ============================================
-
 import axios, { AxiosInstance, AxiosError } from 'axios'
 import { supabaseClient } from '@hisabche/auth'
 
@@ -27,9 +24,6 @@ export interface ApiError {
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://hisabche.onrender.com/api'
 const isDev = process.env.NODE_ENV !== 'production'
 
-// Dev-only logger — never prints tokens/headers in production, where
-// anyone with devtools open (or a screenshot) could otherwise read a
-// live Bearer token straight out of the console.
 const devLog = (...args: unknown[]) => {
   if (isDev) console.log(...args)
 }
@@ -40,6 +34,10 @@ export const apiClient: AxiosInstance = axios.create({
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
+  },
+  // ✅ اضافه شد: limit پیش‌فرض برای همه درخواست‌ها
+  params: {
+    limit: 50, // کاهش از ۵۰۰ به ۵۰
   },
 })
 
@@ -79,7 +77,6 @@ apiClient.interceptors.request.use(
         devLog('[API Client] no token found — request sent unauthenticated')
       }
     } catch (err) {
-      // خطای getSession نباید کل request رو بلاک کنه — به fallback برمی‌گردیم.
       if (isDev) console.error('[API Client] getSession error:', err)
       if (isBrowser()) {
         const fallbackToken = localStorage.getItem('hisabche-token')
@@ -94,9 +91,6 @@ apiClient.interceptors.request.use(
       : 'fa-AF'
     config.headers['Accept-Language'] = lang
 
-    // توجه: هرگز کل config.headers رو لاگ نکن — حتی در dev، چون شامل
-    // Authorization می‌شه. اگه نیاز به دیباگ headers داری، فقط کلیدها رو
-    // چاپ کن، نه مقادیر:
     devLog('[API Client] request:', config.method?.toUpperCase(), config.url)
 
     return config
