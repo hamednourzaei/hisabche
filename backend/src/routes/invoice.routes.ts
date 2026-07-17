@@ -1,298 +1,167 @@
 // ============================================
-// backend/src/services/invoice.service.ts
-// Hisabche v2.1 — Cursor-based Pagination
+// backend/src/routes/invoice.routes.ts
+// Hisabche v1.1 — Uses InvoiceService (with workflow + accounting)
 // ============================================
 
-import { supabase } from "../db";
-import { WorkflowService } from "../services/workflow.service";
-import { CreateInvoice, UpdateInvoice, InvoiceFilters } from "@hisabche/validation";
-import { DatabaseError, NotFoundError } from "../errors/database.error";
-import { memoryCache } from "../utils/pagination";
+import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
+import { InvoiceService } from "../services/invoice.service";
+import { authenticate } from "../middleware/auth.middleware";
+import { cacheMiddleware, clearCache } from "../middleware/cache.middleware";
 
-// ============================================
-// ✅ Column Selection Constants
-// ============================================
+const invoiceService = new InvoiceService();
 
-const INVOICE_LIST_COLUMNS = `
-  id, invoice_number, type, customer_id, supplier_id,
-  date, due_date, subtotal, discount_total, tax_total,
-  total, paid_amount, currency, payment_method, status, created_at
-`
+export async function invoiceRoutes(fastify: FastifyInstance) {
+  // GET /api/invoices
+  fastify.get(
+    "/api/invoices",
+    {
+      preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'invoices' })]
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const q = request.query as Record<string, string>;
+        const filters = {
+          search: q.search ?? "",
+          type: (q.type as "sale" | "purchase") || undefined,
+          status: q.status || undefined,
+          customerId: q.customerId || undefined,
+          supplierId: q.supplierId || undefined,
+          currency: (q.currency as "AFN" | "USD" | "PKR" | "IRR") || undefined,
+          dateFrom: q.dateFrom || undefined,
+          dateTo: q.dateTo || undefined,
+          minTotal: q.minTotal ? Number(q.minTotal) : undefined,
+          maxTotal: q.maxTotal ? Number(q.maxTotal) : undefined,
+          page: Math.max(1, parseInt(q.page ?? "1")),
+          limit: Math.min(100, parseInt(q.limit ?? "20")),
+          sortBy: q.sortBy ?? "created_at",
+          sortDirection: (q.sortDirection as "asc" | "desc") ?? "desc",
+        };
 
-const INVOICE_ITEMS_LIST_COLUMNS = `
-  id, product_id, product_name, quantity, unit_price, discount, total_price
-`
-
-const INVOICE_DETAIL_COLUMNS = `*, invoice_items(*)`
-
-// ============================================
-
-export class InvoiceService {
-  private workflowService: WorkflowService;
-
-  constructor() {
-    this.workflowService = new WorkflowService();
-  }
-
-  // ─── List Invoices — Cursor-based Pagination ───
-  async list(userId: string, filters: InvoiceFilters) {
-    const {
-      search, type, status, customerId, supplierId,
-      currency, dateFrom, dateTo, minTotal, maxTotal,
-      limit = 20, cursor, sortBy = "created_at", sortDirection = "desc"
-    } = filters;
-
-    const maxLimit = Math.min(limit, 100);
-    const fetchLimit = maxLimit + 1; // +1 برای تشخیص hasMore
-
-    let query = supabase
-      .from("invoices")
-      .select(`${INVOICE_LIST_COLUMNS}, invoice_items(${INVOICE_ITEMS_LIST_COLUMNS})`)
-      .eq("user_id", userId)
-      .order(sortBy, { ascending: sortDirection === "asc" })
-      .limit(fetchLimit);
-
-    // فیلترها
-    if (search) query = query.ilike("invoice_number", `%${search}%`);
-    if (type) query = query.eq("type", type);
-    if (status) query = query.eq("status", status);
-    if (customerId) query = query.eq("customer_id", customerId);
-    if (supplierId) query = query.eq("supplier_id", supplierId);
-    if (currency) query = query.eq("currency", currency);
-    if (dateFrom) query = query.gte("date", dateFrom);
-    if (dateTo) query = query.lte("date", dateTo);
-    if (minTotal !== undefined) query = query.gte("total", minTotal);
-    if (maxTotal !== undefined) query = query.lte("total", maxTotal);
-
-    // ✅ Cursor-based (بجای .range)
-    if (cursor) {
-      if (sortDirection === "desc") {
-        query = query.lt(sortBy, cursor);
-      } else {
-        query = query.gt(sortBy, cursor);
+        const userId = (request as any).userId;
+        const result = await invoiceService.list(userId, filters as any);
+        return reply.send(result);
+      } catch (err: any) {
+        fastify.log.error(err);
+        return reply.code(500).send({ error: err.message });
       }
     }
+  );
 
-    const { data, error } = await query;
-    if (error) throw new DatabaseError("Failed to fetch invoices", error);
-
-    const hasMore = (data?.length || 0) > maxLimit;
-    const items = hasMore ? data.slice(0, maxLimit) : data;
-    const nextCursor = hasMore && items.length > 0 ? items[items.length - 1]?.id : null;
-
-    // Count total (اختیاری - برای نمایش تعداد کل)
-    const { count } = await supabase
-      .from("invoices")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", userId);
-
-    return {
-      invoices: items || [],
-      nextCursor,
-      hasMore,
-      total: count || 0,
-      limit: maxLimit,
-    };
-  }
-
-  // ─── Get Invoice By ID ───
-  async getById(id: string, userId: string) {
-    const { data, error } = await supabase
-      .from("invoices").select(INVOICE_DETAIL_COLUMNS).eq("id", id).eq("user_id", userId).single();
-    if (error || !data) throw new NotFoundError("Invoice");
-    return data;
-  }
-
-  // ─── Create Invoice ───
-  async create(userId: string, data: CreateInvoice) {
-    const invoiceNumber = await this.generateInvoiceNumber(userId);
-
-    const { data: invoice, error: invoiceError } = await supabase
-      .from("invoices")
-      .insert({
-        invoice_number: invoiceNumber, type: data.type,
-        date: data.date || new Date().toISOString(), due_date: data.dueDate || null,
-        customer_id: data.customerId || null, supplier_id: data.supplierId || null,
-        subtotal: data.subtotal || 0, discount_total: data.discountTotal || 0,
-        discount_type: data.discountType || "fixed", tax_rate: data.taxRate || 0,
-        tax_total: data.taxTotal || 0, total: data.total || 0,
-        paid_amount: data.paidAmount || 0, payment_method: data.paymentMethod || "cash",
-        currency: data.currency || "AFN",
-        status: data.paidAmount && data.total && data.paidAmount >= data.total ? "completed" : "pending",
-        notes: data.notes || "", reference: data.reference || "", user_id: userId,
-      })
-      .select(INVOICE_LIST_COLUMNS).single();
-
-    if (invoiceError || !invoice) throw new DatabaseError("Failed to create invoice", invoiceError);
-
-    if (data.items?.length) {
-      const items = data.items.map((item) => ({
-        invoice_id: invoice.id, product_id: item.productId,
-        product_name: item.productName || "", quantity: item.quantity,
-        unit_price: item.unitPrice, discount: item.discount || 0,
-        total_price: item.totalPrice || item.quantity * item.unitPrice,
-        notes: item.notes || "", user_id: userId,
-      }));
-
-      const { error: itemsError } = await supabase.from("invoice_items").insert(items);
-      if (itemsError) {
-        await supabase.from("invoices").delete().eq("id", invoice.id);
-        throw new DatabaseError("Failed to create invoice items", itemsError);
-      }
-
-      if (data.type === "sale") {
-        for (const item of data.items) {
-          if (item.productId) await this.updateStock(item.productId, item.quantity, userId);
-        }
+  // GET /api/invoices/:id
+  fastify.get(
+    "/api/invoices/:id",
+    {
+      preHandler: [authenticate, cacheMiddleware({ ttl: 120, keyPrefix: 'invoice' })]
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string };
+        const userId = (request as any).userId;
+        const invoice = await invoiceService.getById(id, userId);
+        return reply.send(invoice);
+      } catch (err: any) {
+        fastify.log.error(err);
+        return reply.code(404).send({ error: err.message });
       }
     }
+  );
 
-    this.invalidateUserCache(userId);
+  // POST /api/invoices
+  fastify.post(
+    "/api/invoices",
+    {
+      preHandler: [authenticate]
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = request.body as any;
+        const userId = (request as any).userId;
 
-    this.createAccountingEntries(userId, invoice.id, { ...data, invoiceNumber, total: data.total || 0 })
-      .catch(err => console.error('Accounting entry failed:', err));
+        const data = {
+          type: body.type ?? "sale",
+          customerId: body.customerId,
+          supplierId: body.supplierId,
+          date: body.date,
+          dueDate: body.dueDate,
+          subtotal: body.subtotal ?? 0,
+          discountTotal: body.discountTotal ?? 0,
+          discountType: body.discountType ?? "fixed",
+          taxRate: body.taxRate ?? 0,
+          taxTotal: body.taxTotal ?? 0,
+          total: body.total ?? 0,
+          paidAmount: body.paidAmount ?? 0,
+          paymentMethod: body.paymentMethod ?? "cash",
+          currency: body.currency ?? "AFN",
+          notes: body.notes ?? "",
+          reference: body.reference ?? "",
+          invoiceNumber: body.invoiceNumber,
+          items:
+            body.items?.map((item: any) => ({
+              productId: item.productId ?? item.product_id,
+              productName: item.productName ?? item.product_name ?? "",
+              quantity: item.quantity ?? 1,
+              unitPrice: item.unitPrice ?? item.unit_price ?? 0,
+              discount: item.discount ?? 0,
+              totalPrice: item.totalPrice ?? item.total_price ?? 0,
+            })) ?? [],
+        };
 
-    this.tryStartWorkflow(userId, invoice.id, Number(data.total || 0))
-      .catch(err => console.error('Workflow failed:', err));
-
-    return this.getById(invoice.id, userId);
-  }
-
-  // ─── Update Invoice ───
-  async update(id: string, userId: string, data: UpdateInvoice) {
-    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
-    if (data.status !== undefined) updates.status = data.status;
-    if (data.paidAmount !== undefined) updates.paid_amount = data.paidAmount;
-    if (data.total !== undefined) updates.total = data.total;
-    if (data.notes !== undefined) updates.notes = data.notes;
-    if (data.reference !== undefined) updates.reference = data.reference;
-
-    const { data: invoice, error } = await supabase
-      .from("invoices").update(updates).eq("id", id).eq("user_id", userId)
-      .select(INVOICE_LIST_COLUMNS).single();
-
-    if (error) throw new DatabaseError("Failed to update invoice", error);
-    if (!invoice) throw new NotFoundError("Invoice");
-
-    this.invalidateUserCache(userId);
-    return invoice;
-  }
-
-  // ─── Delete Invoice ───
-  async delete(id: string, userId: string): Promise<void> {
-    await supabase.from("invoice_items").delete().eq("invoice_id", id);
-    const { error } = await supabase.from("invoices").delete().eq("id", id).eq("user_id", userId);
-    if (error) throw new DatabaseError("Failed to delete invoice", error);
-    this.invalidateUserCache(userId);
-  }
-
-  // ─── Cache Invalidation ───
-  private invalidateUserCache(userId: string) {
-    memoryCache.invalidate(`dashboard:${userId}`);
-    memoryCache.invalidate(`sales:${userId}`);
-    memoryCache.invalidate(`insights:${userId}`);
-    memoryCache.invalidate(`invoices:${userId}`);
-    memoryCache.invalidate(`customers:${userId}`);
-    memoryCache.invalidate(`products:${userId}`);
-  }
-
-  // ─── Get Summary ───
-  async getSummary(userId: string) {
-    const today = new Date(); today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
-
-    const [salesResult, debtResult, stockResult] = await Promise.all([
-      supabase.from("invoices").select("total").eq("user_id", userId).gte("created_at", today.toISOString()).lt("created_at", tomorrow.toISOString()),
-      supabase.from("invoices").select("total, paid_amount").eq("user_id", userId).neq("status", "paid"),
-      supabase.from("products").select("quantity, min_stock_level").eq("user_id", userId),
-    ]);
-
-    const todaySales = (salesResult.data || []).reduce((s: number, i: any) => s + (i.total || 0), 0);
-    const totalDebt = (debtResult.data || []).reduce((s: number, i: any) => s + Math.max(0, (i.total || 0) - (i.paid_amount || 0)), 0);
-    const lowStockCount = (stockResult.data || []).filter((p: any) => (p.min_stock_level || 0) > 0 && (p.quantity || 0) <= (p.min_stock_level || 0)).length;
-
-    return { todaySales, totalDebt, lowStockCount };
-  }
-
-  // ─── Private: Accounting Entries ───
-  private async createAccountingEntries(userId: string, invoiceId: string, data: { type: string; total: number; items?: any[]; invoiceNumber?: string; date?: string }): Promise<void> {
-    try {
-      const { data: accounts } = await supabase.from("accounts").select("id, code, type").in("code", ["1200", "4000", "5000", "1000"]).eq("user_id", userId);
-      if (!accounts || accounts.length < 4) return;
-
-      const accountMap: Record<string, string> = {};
-      for (const acc of accounts) accountMap[acc.code] = acc.id;
-
-      const receivableId = accountMap["1200"], revenueId = accountMap["4000"], cogsId = accountMap["5000"], inventoryId = accountMap["1000"];
-      if (!receivableId || !revenueId || !cogsId || !inventoryId) return;
-
-      const { data: journalEntry, error: journalError } = await supabase.from("journal_entries").insert({
-        date: data.date ? data.date.split("T")[0] : new Date().toISOString().split("T")[0],
-        description: `فاکتور فروش ${data.invoiceNumber || invoiceId.substring(0, 8)}`,
-        reference: invoiceId, user_id: userId,
-      }).select().single();
-
-      if (journalError || !journalEntry) return;
-
-      const journalLines: any[] = [
-        { journal_id: journalEntry.id, account_id: receivableId, debit: data.total, credit: 0, user_id: userId },
-        { journal_id: journalEntry.id, account_id: revenueId, debit: 0, credit: data.total, user_id: userId },
-      ];
-
-      if (data.type === "sale" && data.items?.length) {
-        for (const item of data.items) {
-          const { data: product } = await supabase.from("products").select("buy_price").eq("id", item.productId).single();
-          const itemCost = (product?.buy_price || 0) * item.quantity;
-          journalLines.push({ journal_id: journalEntry.id, account_id: cogsId, debit: itemCost, credit: 0, user_id: userId });
-          journalLines.push({ journal_id: journalEntry.id, account_id: inventoryId, debit: 0, credit: itemCost, user_id: userId });
-        }
+        const invoice = await invoiceService.create(userId, data);
+        await clearCache('invoices:*');
+        await clearCache('dashboard:*');
+        await clearCache('sales:*');
+        return reply.code(201).send(invoice);
+      } catch (err: any) {
+        fastify.log.error(err);
+        return reply.code(500).send({ error: err.message });
       }
+    }
+  );
 
-      const { error: linesError } = await supabase.from("journal_lines").insert(journalLines);
-      if (linesError) {
-        await supabase.from("journal_entries").delete().eq("id", journalEntry.id);
+  // PATCH /api/invoices/:id
+  fastify.patch(
+    "/api/invoices/:id",
+    {
+      preHandler: [authenticate]
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string };
+        const body = request.body as any;
+        const userId = (request as any).userId;
+        const invoice = await invoiceService.update(id, userId, body);
+        await clearCache(`invoice:${id}`);
+        await clearCache('invoices:*');
+        await clearCache('dashboard:*');
+        await clearCache('sales:*');
+        return reply.send(invoice);
+      } catch (err: any) {
+        fastify.log.error(err);
+        return reply.code(500).send({ error: err.message });
       }
-    } catch (err) {
-      console.error("❌ Error in createAccountingEntries:", err);
     }
-  }
+  );
 
-  // ─── Private: Generate Invoice Number ───
-  private async generateInvoiceNumber(userId: string): Promise<string> {
-    const { count } = await supabase.from("invoices").select("id", { count: "exact", head: true }).eq("user_id", userId);
-    return `INV-${((count || 0) + 1).toString().padStart(6, "0")}`;
-  }
-
-  // ─── Private: Update Stock ───
-  private async updateStock(productId: string, quantity: number, userId: string): Promise<void> {
-    const { data: product, error } = await supabase.from("products").select("quantity").eq("id", productId).single();
-    if (error || !product) throw new DatabaseError("Product not found", error);
-    await supabase.from("products").update({ quantity: Math.max(0, product.quantity - quantity) }).eq("id", productId);
-    await supabase.from("stock_movements").insert({ product_id: productId, type: "sale", quantity: -quantity, reference_type: "invoice", user_id: userId });
-  }
-
-  // ─── Private: Start Workflow ───
-  private async tryStartWorkflow(userId: string, invoiceId: string, total: number): Promise<void> {
-    try {
-      const { data: workflows } = await supabase.from("workflows").select("id")
-        .eq("entity_type", "invoice").eq("is_active", true).is("deleted_at", null).limit(1);
-      const workflow = workflows?.[0];
-      if (!workflow) return;
-
-      const { data: membership } = await supabase.from("workspace_members")
-        .select("workspace_id").eq("user_id", userId).limit(1).single();
-      const workspaceId = membership?.workspace_id;
-      if (!workspaceId) return;
-
-      await this.workflowService.startWorkflow(workspaceId, {
-        workflow_id: workflow.id,
-        entity_type: "invoice",
-        entity_id: invoiceId,
-      });
-    } catch {
-      /* silent — never block invoice creation */
+  // DELETE /api/invoices/:id
+  fastify.delete(
+    "/api/invoices/:id",
+    {
+      preHandler: [authenticate]
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string };
+        const userId = (request as any).userId;
+        await invoiceService.delete(id, userId);
+        await clearCache(`invoice:${id}`);
+        await clearCache('invoices:*');
+        await clearCache('dashboard:*');
+        await clearCache('sales:*');
+        return reply.code(204).send();
+      } catch (err: any) {
+        fastify.log.error(err);
+        return reply.code(500).send({ error: err.message });
+      }
     }
-  }
+  );
 }
-
-export default InvoiceService;

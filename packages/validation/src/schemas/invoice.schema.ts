@@ -101,11 +101,7 @@ export const updateInvoiceSchema = invoiceSchema.partial().extend({
 export type UpdateInvoice = z.infer<typeof updateInvoiceSchema>
 
 // ============================================
-// Invoice Filters (اصلاح‌شده با تبدیل خودکار Query String)
-// ============================================
-
-// ============================================
-// Invoice Filters — اضافه کردن cursor
+// Invoice Filters — اضافه کردن page و cursor
 // ============================================
 
 export const invoiceFiltersSchema = z.object({
@@ -128,16 +124,14 @@ export const invoiceFiltersSchema = z.object({
   page: z
     .union([z.number(), z.string()])
     .transform((val) => (typeof val === 'string' ? parseInt(val, 10) : val))
-    .optional(), // ← optional شد
+    .optional(),
   limit: z
     .union([z.number(), z.string()])
     .transform((val) => (typeof val === 'string' ? parseInt(val, 10) : val))
     .default(20),
   sortBy: z.string().optional(),
   sortDirection: z.enum(['asc', 'desc']).optional().default('desc'),
-  // ✅ اضافه شد
   cursor: z.string().optional(),
 })
-
 
 export type InvoiceFilters = z.infer<typeof invoiceFiltersSchema>

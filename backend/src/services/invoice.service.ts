@@ -1,16 +1,16 @@
 // ============================================
 // backend/src/services/invoice.service.ts
-// Hisabche v2.0 — Unified Financial Data + No Duplicate Notifications
+// Hisabche v2.1 — Cursor-based Pagination
 // ============================================
 
 import { supabase } from "../db";
-import { WorkflowService } from "./workflow.service";
+import { WorkflowService } from "../services/workflow.service";
 import { CreateInvoice, UpdateInvoice, InvoiceFilters } from "@hisabche/validation";
 import { DatabaseError, NotFoundError } from "../errors/database.error";
 import { memoryCache } from "../utils/pagination";
 
 // ============================================
-// ✅ Column Selection Constants — SaaS Performance
+// ✅ Column Selection Constants
 // ============================================
 
 const INVOICE_LIST_COLUMNS = `
@@ -34,18 +34,23 @@ export class InvoiceService {
     this.workflowService = new WorkflowService();
   }
 
-  // ─── List Invoices ───
+  // ─── List Invoices — Cursor-based Pagination ───
   async list(userId: string, filters: InvoiceFilters) {
-    const { search, type, status, customerId, supplierId, currency, dateFrom, dateTo, minTotal, maxTotal, page, limit, sortBy, sortDirection } = filters;
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
+    const {
+      search, type, status, customerId, supplierId,
+      currency, dateFrom, dateTo, minTotal, maxTotal,
+      limit = 20, cursor, sortBy = "created_at", sortDirection = "desc"
+    } = filters;
+
+    const maxLimit = Math.min(limit, 100);
+    const fetchLimit = maxLimit + 1;
 
     let query = supabase
       .from("invoices")
-      .select(`${INVOICE_LIST_COLUMNS}, invoice_items(${INVOICE_ITEMS_LIST_COLUMNS})`, { count: "exact" })
+      .select(`${INVOICE_LIST_COLUMNS}, invoice_items(${INVOICE_ITEMS_LIST_COLUMNS})`)
       .eq("user_id", userId)
-      .order(sortBy || "created_at", { ascending: sortDirection === "asc" })
-      .range(from, to);
+      .order(sortBy, { ascending: sortDirection === "asc" })
+      .limit(fetchLimit);
 
     if (search) query = query.ilike("invoice_number", `%${search}%`);
     if (type) query = query.eq("type", type);
@@ -58,10 +63,33 @@ export class InvoiceService {
     if (minTotal !== undefined) query = query.gte("total", minTotal);
     if (maxTotal !== undefined) query = query.lte("total", maxTotal);
 
-    const { data, error, count } = await query;
+    if (cursor) {
+      if (sortDirection === "desc") {
+        query = query.lt(sortBy, cursor);
+      } else {
+        query = query.gt(sortBy, cursor);
+      }
+    }
+
+    const { data, error } = await query;
     if (error) throw new DatabaseError("Failed to fetch invoices", error);
 
-    return { invoices: data || [], total: count || 0, page, limit };
+    const hasMore = (data?.length || 0) > maxLimit;
+    const items = hasMore ? data.slice(0, maxLimit) : data;
+    const nextCursor = hasMore && items.length > 0 ? items[items.length - 1]?.id : null;
+
+    const { count } = await supabase
+      .from("invoices")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", userId);
+
+    return {
+      invoices: items || [],
+      nextCursor,
+      hasMore,
+      total: count || 0,
+      limit: maxLimit,
+    };
   }
 
   // ─── Get Invoice By ID ───
@@ -72,7 +100,7 @@ export class InvoiceService {
     return data;
   }
 
-  // ─── Create Invoice — Unified: فقط journal_entries (نه transactions جدا) ───
+  // ─── Create Invoice ───
   async create(userId: string, data: CreateInvoice) {
     const invoiceNumber = await this.generateInvoiceNumber(userId);
 
@@ -116,17 +144,11 @@ export class InvoiceService {
       }
     }
 
-    // ✅ REMOVED: transactions.insert — journal_entries جایگزین آن است
-    // داده‌های مالی فقط از journal_lines/transactions_view خوانده می‌شوند
+    this.invalidateUserCache(userId);
 
-    // ✅ Cache Invalidation
-    this.invalidateUserCache(userId)
-
-    // ✅ ایجاد ثبت حسابداری (تنها منبع حقیقت مالی)
     this.createAccountingEntries(userId, invoice.id, { ...data, invoiceNumber, total: data.total || 0 })
       .catch(err => console.error('Accounting entry failed:', err));
 
-    // ✅ فقط workflow را start کن — notification تکراری حذف شد
     this.tryStartWorkflow(userId, invoice.id, Number(data.total || 0))
       .catch(err => console.error('Workflow failed:', err));
 
@@ -149,7 +171,7 @@ export class InvoiceService {
     if (error) throw new DatabaseError("Failed to update invoice", error);
     if (!invoice) throw new NotFoundError("Invoice");
 
-    this.invalidateUserCache(userId)
+    this.invalidateUserCache(userId);
     return invoice;
   }
 
@@ -158,18 +180,17 @@ export class InvoiceService {
     await supabase.from("invoice_items").delete().eq("invoice_id", id);
     const { error } = await supabase.from("invoices").delete().eq("id", id).eq("user_id", userId);
     if (error) throw new DatabaseError("Failed to delete invoice", error);
-
-    this.invalidateUserCache(userId)
+    this.invalidateUserCache(userId);
   }
 
   // ─── Cache Invalidation ───
   private invalidateUserCache(userId: string) {
-    memoryCache.invalidate(`dashboard:${userId}`)
-    memoryCache.invalidate(`sales:${userId}`)
-    memoryCache.invalidate(`insights:${userId}`)
-    memoryCache.invalidate(`invoices:${userId}`)
-    memoryCache.invalidate(`customers:${userId}`)
-    memoryCache.invalidate(`products:${userId}`)
+    memoryCache.invalidate(`dashboard:${userId}`);
+    memoryCache.invalidate(`sales:${userId}`);
+    memoryCache.invalidate(`insights:${userId}`);
+    memoryCache.invalidate(`invoices:${userId}`);
+    memoryCache.invalidate(`customers:${userId}`);
+    memoryCache.invalidate(`products:${userId}`);
   }
 
   // ─── Get Summary ───
@@ -190,7 +211,7 @@ export class InvoiceService {
     return { todaySales, totalDebt, lowStockCount };
   }
 
-  // ─── Private: Accounting Entries (تنها منبع حقیقت مالی) ───
+  // ─── Private: Accounting Entries ───
   private async createAccountingEntries(userId: string, invoiceId: string, data: { type: string; total: number; items?: any[]; invoiceNumber?: string; date?: string }): Promise<void> {
     try {
       const { data: accounts } = await supabase.from("accounts").select("id, code, type").in("code", ["1200", "4000", "5000", "1000"]).eq("user_id", userId);
@@ -247,7 +268,7 @@ export class InvoiceService {
     await supabase.from("stock_movements").insert({ product_id: productId, type: "sale", quantity: -quantity, reference_type: "invoice", user_id: userId });
   }
 
-  // ─── Private: Start Workflow (بدون notification تکراری) ───
+  // ─── Private: Start Workflow ───
   private async tryStartWorkflow(userId: string, invoiceId: string, total: number): Promise<void> {
     try {
       const { data: workflows } = await supabase.from("workflows").select("id")
