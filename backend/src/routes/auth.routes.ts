@@ -19,12 +19,26 @@ import { passwordResetService } from '../services/password-reset.service'
 
 type JsonSchema = Record<string, unknown>
 
-// ✅ اصلاح شده: پذیرش هر نوع ZodSchema
-function toJsonSchema<T extends z.ZodTypeAny>(schema: T): JsonSchema {
-  // @ts-expect-error TS2589 - zodToJsonSchema deep type instantiation
-  const result = zodToJsonSchema(schema, { target: 'jsonSchema7' }) as any as JsonSchema;
-  delete result.$schema;
-  return result;
+// ✅ راه‌حل نهایی - بدون استفاده از zodToJsonSchema
+function toJsonSchema(schema: z.ZodTypeAny): JsonSchema {
+  // تبدیل دستی به JSON Schema
+  return {
+    type: 'object',
+    properties: Object.fromEntries(
+      Object.entries((schema as any).shape || {}).map(([key, value]: [string, any]) => [
+        key,
+        {
+          type: value._def?.typeName === 'ZodString' ? 'string' :
+                value._def?.typeName === 'ZodNumber' ? 'number' :
+                value._def?.typeName === 'ZodBoolean' ? 'boolean' :
+                value._def?.typeName === 'ZodArray' ? 'array' :
+                value._def?.typeName === 'ZodObject' ? 'object' : 'string',
+          ...(value._def?.typeName === 'ZodString' && value._def?.checks?.some((c: any) => c.kind === 'email') ? { format: 'email' } : {}),
+        }
+      ])
+    ),
+    required: Object.keys((schema as any).shape || {}),
+  };
 }
 
 export async function authRoutes(fastify: FastifyInstance) {
