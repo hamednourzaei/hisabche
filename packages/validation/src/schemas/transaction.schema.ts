@@ -32,8 +32,9 @@ export const createTransactionSchema = transactionSchema.omit({
 
 export type CreateTransaction = z.infer<typeof createTransactionSchema>
 
+
 // ============================================
-// Transaction Filters (اصلاح‌شده با تبدیل خودکار Query String)
+// Transaction Filters — اضافه کردن cursor
 // ============================================
 
 export const transactionFiltersSchema = z.object({
@@ -47,17 +48,18 @@ export const transactionFiltersSchema = z.object({
   page: z
     .union([z.number(), z.string()])
     .transform((val) => (typeof val === 'string' ? parseInt(val, 10) : val))
-    .default(1),
+    .optional(),
   limit: z
     .union([z.number(), z.string()])
     .transform((val) => (typeof val === 'string' ? parseInt(val, 10) : val))
     .default(20),
   sortBy: z.string().optional(),
   sortDirection: z.enum(['asc', 'desc']).optional().default('desc'),
+  // ✅ اضافه شد
+  cursor: z.string().optional(),
 })
 
 export type TransactionFilters = z.infer<typeof transactionFiltersSchema>
-
 export const ledgerSummarySchema = z.object({
   customerId: uuidSchema.optional(),
   supplierId: uuidSchema.optional(),

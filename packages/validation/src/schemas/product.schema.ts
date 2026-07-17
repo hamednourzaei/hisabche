@@ -66,8 +66,9 @@ export const updateProductSchema = productSchema.partial().extend({
 
 export type UpdateProduct = z.infer<typeof updateProductSchema>
 
+
 // ============================================
-// Product Filters (اصلاح‌شده با تبدیل خودکار Query String)
+// Product Filters — اضافه کردن cursor
 // ============================================
 
 export const productFiltersSchema = z.object({
@@ -93,14 +94,17 @@ export const productFiltersSchema = z.object({
   page: z
     .union([z.number(), z.string()])
     .transform((val) => (typeof val === 'string' ? parseInt(val, 10) : val))
-    .default(1),
+    .optional(),
   limit: z
     .union([z.number(), z.string()])
     .transform((val) => (typeof val === 'string' ? parseInt(val, 10) : val))
     .default(20),
   sortBy: z.string().optional(),
   sortDirection: z.enum(['asc', 'desc']).optional().default('desc'),
+  // ✅ اضافه شد
+  cursor: z.string().optional(),
 })
+
 
 export type ProductFilters = z.infer<typeof productFiltersSchema>
 

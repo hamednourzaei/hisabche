@@ -1,4 +1,5 @@
-// backend/src/services/customer.service.ts — v2.0 + Cache Invalidation
+// ============================================
+// backend/src/services/customer.service.ts — v2.1 + Cursor Pagination
 // ============================================
 
 import { supabase } from '../db'
@@ -18,25 +19,57 @@ const LIST_COLUMNS = 'id, full_name, phone, email, opening_balance, is_active, t
 const DETAIL_COLUMNS = 'id, full_name, phone, email, address, notes, opening_balance, is_active, type, created_at, updated_at'
 
 export class CustomerService {
-  // ─── List ───
+  // ─── List — Cursor-based Pagination ───
   async list(userId: string, filters: CustomerFilters) {
-    const { search, isActive, hasBalance, type, page, limit, sortBy, sortDirection } = filters
-    const from = (page - 1) * limit; const to = from + limit - 1
+    const {
+      search, isActive, hasBalance, type,
+      limit = 20, cursor, sortBy = 'created_at', sortDirection = 'desc'
+    } = filters
+
+    const maxLimit = Math.min(limit, 100)
+    const fetchLimit = maxLimit + 1
 
     let query = supabase
-      .from('customers').select(LIST_COLUMNS, { count: 'exact' })
+      .from('customers')
+      .select(LIST_COLUMNS)
       .eq('user_id', userId)
-      .order(sortBy || 'created_at', { ascending: sortDirection === 'asc' })
-      .range(from, to)
+      .order(sortBy, { ascending: sortDirection === 'asc' })
+      .limit(fetchLimit)
 
     if (search) query = query.ilike('full_name', `%${search}%`)
     if (isActive !== undefined) query = query.eq('is_active', isActive)
     if (hasBalance !== undefined) query = hasBalance ? query.gt('opening_balance', 0) : query.eq('opening_balance', 0)
     if (type !== undefined) query = query.eq('type', type)
 
-    const { data, error, count } = await query
+    // ✅ Cursor-based
+    if (cursor) {
+      if (sortDirection === 'desc') {
+        query = query.lt(sortBy, cursor)
+      } else {
+        query = query.gt(sortBy, cursor)
+      }
+    }
+
+    const { data, error } = await query
     if (error) throw new DatabaseError('Failed to fetch customers', error)
-    return { customers: (data || []).map(mapCustomer), total: count || 0, page, limit }
+
+    const hasMore = (data?.length || 0) > maxLimit
+    const items = hasMore ? data.slice(0, maxLimit) : data
+    const nextCursor = hasMore && items.length > 0 ? items[items.length - 1]?.id : null
+
+    // Count total
+    const { count } = await supabase
+      .from('customers')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+
+    return {
+      customers: (items || []).map(mapCustomer),
+      nextCursor,
+      hasMore,
+      total: count || 0,
+      limit: maxLimit,
+    }
   }
 
   // ─── Get By ID ───
@@ -72,7 +105,6 @@ export class CustomerService {
       }
     }
 
-    // ✅ Cache Invalidation
     memoryCache.invalidate(`customers:${userId}`)
     memoryCache.invalidate(`dashboard:${userId}`)
 
@@ -97,7 +129,6 @@ export class CustomerService {
     if (error) throw new DatabaseError('Failed to update customer', error)
     if (!customer) throw new DatabaseError('Customer not found')
 
-    // ✅ Cache Invalidation
     memoryCache.invalidate(`customers:${userId}`)
     memoryCache.invalidate(`dashboard:${userId}`)
 
@@ -113,7 +144,6 @@ export class CustomerService {
     const { error } = await supabase.from('customers').delete().eq('id', id).eq('user_id', userId)
     if (error) throw new DatabaseError('Failed to delete customer', error)
 
-    // ✅ Cache Invalidation
     memoryCache.invalidate(`customers:${userId}`)
     memoryCache.invalidate(`dashboard:${userId}`)
   }

@@ -74,6 +74,10 @@ export type UpdateSupplier = z.infer<typeof updateSupplierSchema>
 // Customer Filters
 // ============================================
 
+// ============================================
+// Customer Filters — اضافه کردن cursor
+// ============================================
+
 export const customerFiltersSchema = z.object({
   search: z.string().optional(),
   isActive: z
@@ -84,17 +88,20 @@ export const customerFiltersSchema = z.object({
     .union([z.boolean(), z.string()])
     .transform((val) => (typeof val === 'string' ? val === 'true' : val))
     .optional(),
-  type: z.enum(['cash', 'credit']).optional(), // ✅ جدید
+  type: z.enum(['cash', 'credit']).optional(),
   page: z
     .union([z.number(), z.string()])
     .transform((val) => (typeof val === 'string' ? parseInt(val, 10) : val))
-    .default(1),
+    .optional(),
   limit: z
     .union([z.number(), z.string()])
     .transform((val) => (typeof val === 'string' ? parseInt(val, 10) : val))
     .default(20),
   sortBy: z.string().optional(),
   sortDirection: z.enum(['asc', 'desc']).optional().default('desc'),
+  // ✅ اضافه شد
+  cursor: z.string().optional(),
 })
+
 
 export type CustomerFilters = z.infer<typeof customerFiltersSchema>

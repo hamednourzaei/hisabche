@@ -1,5 +1,5 @@
 // ============================================
-// backend/src/services/product.service.ts — Optimized v2.0 + Cache Invalidation
+// backend/src/services/product.service.ts — Optimized v2.1 + Cursor Pagination
 // ============================================
 
 import { supabase } from '../db'
@@ -21,15 +21,23 @@ const SORT_BY_MAP: Record<string, string> = {
 }
 
 export class ProductService {
-  // ─── List ───
+  // ─── List — Cursor-based Pagination ───
   async list(userId: string, filters: ProductFilters) {
-    const { search, category, isActive, lowStock, minPrice, maxPrice, barcode, page, limit, sortBy, sortDirection } = filters
-    const from = (page - 1) * limit; const to = from + limit - 1
-    const dbSortBy = SORT_BY_MAP[sortBy ?? ''] ?? sortBy ?? 'created_at'
+    const {
+      search, category, isActive, lowStock, minPrice, maxPrice, barcode,
+      limit = 20, cursor, sortBy = 'created_at', sortDirection = 'desc'
+    } = filters
+
+    const maxLimit = Math.min(limit, 100)
+    const fetchLimit = maxLimit + 1
+    const dbSortBy = SORT_BY_MAP[sortBy] ?? sortBy ?? 'created_at'
 
     let query = supabase
-      .from('products').select(PRODUCT_LIST_COLUMNS, { count: 'exact' })
-      .eq('user_id', userId).order(dbSortBy, { ascending: sortDirection === 'asc' }).range(from, to)
+      .from('products')
+      .select(PRODUCT_LIST_COLUMNS)
+      .eq('user_id', userId)
+      .order(dbSortBy, { ascending: sortDirection === 'asc' })
+      .limit(fetchLimit)
 
     if (search) query = query.ilike('name', `%${search}%`)
     if (category) query = query.eq('category', category)
@@ -38,16 +46,43 @@ export class ProductService {
     if (minPrice !== undefined) query = query.gte('sell_price', minPrice)
     if (maxPrice !== undefined) query = query.lte('sell_price', maxPrice)
 
-    const { data, error, count } = await query
+    // ✅ Cursor-based
+    if (cursor) {
+      if (sortDirection === 'desc') {
+        query = query.lt(dbSortBy, cursor)
+      } else {
+        query = query.gt(dbSortBy, cursor)
+      }
+    }
+
+    const { data, error } = await query
     if (error) throw new DatabaseError('Failed to fetch products', error)
 
-    let products = (data || []).map(mapProduct)
+    const hasMore = (data?.length || 0) > maxLimit
+    const items = hasMore ? data.slice(0, maxLimit) : data
+    const nextCursor = hasMore && items.length > 0 ? items[items.length - 1]?.id : null
+
+    // Apply lowStock filter in memory
+    let products = (items || []).map(mapProduct)
     if (lowStock !== undefined) {
       products = lowStock
         ? products.filter((product: any) => product.quantity <= product.minStockLevel)
         : products.filter((product: any) => product.quantity > product.minStockLevel)
     }
-    return { products, total: count || 0, page, limit }
+
+    // Count total (اختیاری)
+    const { count } = await supabase
+      .from('products')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId)
+
+    return {
+      products,
+      nextCursor,
+      hasMore,
+      total: count || 0,
+      limit: maxLimit,
+    }
   }
 
   // ─── Get By ID ───
@@ -73,7 +108,6 @@ export class ProductService {
 
     if (error) throw new DatabaseError('Failed to create product', error)
 
-    // ✅ Cache Invalidation
     memoryCache.invalidate(`products:${userId}`)
     memoryCache.invalidate(`dashboard:${userId}`)
 
@@ -104,7 +138,6 @@ export class ProductService {
     if (error) throw new DatabaseError('Failed to update product', error)
     if (!product) throw new NotFoundError('Product')
 
-    // ✅ Cache Invalidation
     memoryCache.invalidate(`products:${userId}`)
     memoryCache.invalidate(`dashboard:${userId}`)
 
@@ -122,7 +155,6 @@ export class ProductService {
     const { error } = await supabase.from('products').delete().eq('id', id).eq('user_id', userId)
     if (error) throw new DatabaseError('Failed to delete product', error)
 
-    // ✅ Cache Invalidation
     memoryCache.invalidate(`products:${userId}`)
     memoryCache.invalidate(`dashboard:${userId}`)
   }

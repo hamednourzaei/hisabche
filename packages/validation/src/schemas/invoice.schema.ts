@@ -104,6 +104,10 @@ export type UpdateInvoice = z.infer<typeof updateInvoiceSchema>
 // Invoice Filters (اصلاح‌شده با تبدیل خودکار Query String)
 // ============================================
 
+// ============================================
+// Invoice Filters — اضافه کردن cursor
+// ============================================
+
 export const invoiceFiltersSchema = z.object({
   search: z.string().optional(),
   type: z.enum(['sale', 'purchase']).optional(),
@@ -124,13 +128,16 @@ export const invoiceFiltersSchema = z.object({
   page: z
     .union([z.number(), z.string()])
     .transform((val) => (typeof val === 'string' ? parseInt(val, 10) : val))
-    .default(1),
+    .optional(), // ← optional شد
   limit: z
     .union([z.number(), z.string()])
     .transform((val) => (typeof val === 'string' ? parseInt(val, 10) : val))
     .default(20),
   sortBy: z.string().optional(),
   sortDirection: z.enum(['asc', 'desc']).optional().default('desc'),
+  // ✅ اضافه شد
+  cursor: z.string().optional(),
 })
+
 
 export type InvoiceFilters = z.infer<typeof invoiceFiltersSchema>
