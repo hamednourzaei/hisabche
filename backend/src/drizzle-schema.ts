@@ -1,4 +1,7 @@
+// ============================================
 // backend/src/drizzle-schema.ts
+// ============================================
+
 import {
   pgTable,
   uuid,
@@ -62,14 +65,16 @@ export const products = pgTable(
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
     syncedAt: timestamp('synced_at'),
+    userId: uuid('user_id'), // ✅ اضافه شد برای RLS و فیلتر
   },
   (table) => ({
+    // ✅ Indexهای جدید
     workspaceIdx: index('products_workspace_idx').on(table.workspaceId),
+    userIdIdx: index('products_user_id_idx').on(table.userId),
     createdAtIdx: index('products_created_at_idx').on(table.createdAt),
     categoryIdx: index('products_category_idx').on(table.category),
     skuIdx: index('products_sku_idx').on(table.sku),
     barcodeIdx: index('products_barcode_idx').on(table.barcode),
-    // ✅ اصلاح شد: حذف تابع
     workspaceFk: foreignKey({
       columns: [table.workspaceId],
       foreignColumns: [workspaces.id],
@@ -92,12 +97,13 @@ export const customers = pgTable(
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
     syncedAt: timestamp('synced_at'),
+    userId: uuid('user_id'), // ✅ اضافه شد
   },
   (table) => ({
     workspaceIdx: index('customers_workspace_idx').on(table.workspaceId),
+    userIdIdx: index('customers_user_id_idx').on(table.userId),
     createdAtIdx: index('customers_created_at_idx').on(table.createdAt),
     phoneIdx: index('customers_phone_idx').on(table.phone),
-    // ✅ اصلاح شد: حذف تابع
     workspaceFk: foreignKey({
       columns: [table.workspaceId],
       foreignColumns: [workspaces.id],
@@ -129,14 +135,21 @@ export const invoices = pgTable(
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
     syncedAt: timestamp('synced_at'),
+    userId: uuid('user_id'), // ✅ اضافه شد
   },
   (table) => ({
+    // ✅ Indexهای کلیدی برای Performance
     workspaceIdx: index('invoices_workspace_idx').on(table.workspaceId),
+    userIdIdx: index('invoices_user_id_idx').on(table.userId),
     customerIdx: index('invoices_customer_idx').on(table.customerId),
     createdAtIdx: index('invoices_created_at_idx').on(table.createdAt),
+    updatedAtIdx: index('invoices_updated_at_idx').on(table.updatedAt),
     statusIdx: index('invoices_status_idx').on(table.status),
     invoiceNumberIdx: index('invoices_number_idx').on(table.invoiceNumber),
-    // ✅ اصلاح شد: حذف تابع
+    dateIdx: index('invoices_date_idx').on(table.date),
+    // ✅ Index ترکیبی برای فیلترهای رایج
+    userStatusIdx: index('invoices_user_status_idx').on(table.userId, table.status),
+    userCreatedIdx: index('invoices_user_created_idx').on(table.userId, table.createdAt),
     workspaceFk: foreignKey({
       columns: [table.workspaceId],
       foreignColumns: [workspaces.id],
@@ -180,12 +193,15 @@ export const transactions = pgTable(
     date: timestamp('date').defaultNow(),
     createdAt: timestamp('created_at').defaultNow(),
     syncedAt: timestamp('synced_at'),
+    userId: uuid('user_id'), // ✅ اضافه شد
   },
   (table) => ({
     workspaceIdx: index('transactions_workspace_idx').on(table.workspaceId),
+    userIdIdx: index('transactions_user_id_idx').on(table.userId),
     customerIdx: index('transactions_customer_idx').on(table.customerId),
     createdAtIdx: index('transactions_created_at_idx').on(table.createdAt),
-    // ✅ اصلاح شد: حذف تابع
+    dateIdx: index('transactions_date_idx').on(table.date),
+    typeIdx: index('transactions_type_idx').on(table.type),
     workspaceFk: foreignKey({
       columns: [table.workspaceId],
       foreignColumns: [workspaces.id],
@@ -204,6 +220,7 @@ export const exchangeRates = pgTable(
   },
   (table) => ({
     currencyIdx: index('exchange_rates_currency_idx').on(table.currencyCode),
+    updatedAtIdx: index('exchange_rates_updated_at_idx').on(table.updatedAt),
   })
 )
 
@@ -228,7 +245,7 @@ export const workflows = pgTable(
   (table) => ({
     workspaceIdx: index('workflows_workspace_idx').on(table.workspaceId),
     entityTypeIdx: index('workflows_entity_type_idx').on(table.entityType),
-    // ✅ اصلاح شد: حذف تابع
+    isActiveIdx: index('workflows_is_active_idx').on(table.isActive),
     workspaceFk: foreignKey({
       columns: [table.workspaceId],
       foreignColumns: [workspaces.id],
@@ -250,6 +267,7 @@ export const workflowSteps = pgTable(
   },
   (table) => ({
     workflowIdx: index('workflow_steps_workflow_idx').on(table.workflowId),
+    approverIdx: index('workflow_steps_approver_idx').on(table.approverUserId),
   })
 )
 
@@ -275,7 +293,7 @@ export const workflowInstances = pgTable(
     workspaceIdx: index('workflow_instances_workspace_idx').on(table.workspaceId),
     statusIdx: index('workflow_instances_status_idx').on(table.status),
     entityIdx: index('workflow_instances_entity_idx').on(table.entityId),
-    // ✅ اصلاح شد: حذف تابع
+    createdIdx: index('workflow_instances_created_idx').on(table.createdAt),
     workspaceFk: foreignKey({
       columns: [table.workspaceId],
       foreignColumns: [workspaces.id],
@@ -298,6 +316,8 @@ export const workflowActions = pgTable(
   },
   (table) => ({
     instanceIdx: index('workflow_actions_instance_idx').on(table.instanceId),
+    actorIdx: index('workflow_actions_actor_idx').on(table.actorUserId),
+    createdIdx: index('workflow_actions_created_idx').on(table.createdAt),
   })
 )
 
