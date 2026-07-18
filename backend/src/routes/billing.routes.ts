@@ -27,12 +27,12 @@ export async function billingRoutes(fastify: FastifyInstance) {
         200: toJsonSchema(
           z.array(
             z.object({
-              plan: z.enum(['trial', 'pro', 'enterprise']),
+              plan: z.enum(['free', 'pro', 'enterprise']), // ✅ اصلاح: اضافه کردن free
               name: z.string(),
               priceMonthly: z.number().nullable(),
               priceYearly: z.number().nullable(),
               limits: z.any(),
-              features: z.array(z.string()),
+              featureKeys: z.array(z.string()), // ✅ تغییر: features → featureKeys
             })
           )
         ),
@@ -45,7 +45,7 @@ export async function billingRoutes(fastify: FastifyInstance) {
       priceMonthly: key === 'pro' ? 12 : key === 'enterprise' ? null : null,
       priceYearly: key === 'pro' ? 99 : key === 'enterprise' ? null : null,
       limits: value.limits,
-      features: value.features,
+      featureKeys: value.featureKeys, // ✅ تغییر: features → featureKeys
     }))
     return reply.send(plans)
   })
@@ -92,7 +92,6 @@ export async function billingRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     const usage = await billingService.getUsageReport(request.userId)
     const subscription = await billingService.getCurrentSubscription(request.userId)
-    // ✅ اصلاح شده: استفاده از Type Guard
     const plan = PLANS[subscription.plan as Plan]
     return reply.send({ usage, limits: plan.limits })
   })

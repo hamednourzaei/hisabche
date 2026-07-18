@@ -1,6 +1,6 @@
 // ============================================
 // backend/src/services/billing.service.ts
-// Billing & Subscription Service
+// Billing & Subscription Service — Refactored v2.0
 // ============================================
 
 import { supabase } from '../db'
@@ -9,25 +9,30 @@ import { DatabaseError } from '../errors/database.error'
 
 // ─── Plan Configuration ────────────────────────────────────────
 
-export const PLANS: Record<Plan, { name: string; limits: UsageLimits; features: string[] }> = {
-  trial: {
-    name: 'Trial',
-    limits: { invoices: null, users: null, businesses: null, reports: null, transactions: null, teamMembers: null, workspaces: null },
-    features: ['همه امکانات Pro به مدت ۷ روز'],
+export const PLANS: Record<Plan, { 
+  name: string; 
+  limits: UsageLimits; 
+  featureKeys: string[]  // ✅ کلیدهای i18n برای ترجمه
+}> = {
+  free: {
+    name: 'Free',
+    limits: { invoices: 10, users: 1, businesses: 1, reports: 0, transactions: 20, teamMembers: 0, workspaces: 1 },
+    featureKeys: ['billing.free.feature.invoices_10', 'billing.free.feature.user_1', 'billing.free.feature.business_1', 'billing.free.feature.basic_reports'],
   },
   pro: {
     name: 'Pro',
     limits: { invoices: null, users: null, businesses: null, reports: null, transactions: null, teamMembers: 10, workspaces: 5 },
-    features: ['فاکتور نامحدود', 'گزارش پیشرفته', '۱۰ کاربر', '۵ کسب‌وکار', 'پشتیبانی اولویت‌دار'],
+    featureKeys: ['billing.pro.feature.unlimited_invoices', 'billing.pro.feature.advanced_reports', 'billing.pro.feature.users_10', 'billing.pro.feature.businesses_5', 'billing.pro.feature.priority_support'],
   },
   enterprise: {
     name: 'Enterprise',
     limits: { invoices: null, users: null, businesses: null, reports: null, transactions: null, teamMembers: null, workspaces: null },
-    features: ['همه امکانات', 'SSO', 'تیم نامحدود', 'پشتیبانی اختصاصی', 'SLA'],
+    featureKeys: ['billing.enterprise.feature.all_features', 'billing.enterprise.feature.sso', 'billing.enterprise.feature.unlimited_teams', 'billing.enterprise.feature.dedicated_support', 'billing.enterprise.feature.sla'],
   },
 }
 
 const TRIAL_DAYS = 7
+const GRACE_PERIOD_DAYS = 7
 
 export class BillingService {
   // ─── Get or Create Subscription ─────────────────────────────
@@ -38,7 +43,7 @@ export class BillingService {
       .eq('user_id', userId)
       .single()
 
-    if (existing) return existing
+    if (existing) return this.mapSubscription(existing)
 
     const now = new Date()
     const trialEndsAt = new Date(now)
@@ -48,8 +53,9 @@ export class BillingService {
       .from('subscriptions')
       .insert({
         user_id: userId,
-        plan: 'trial',
-        status: 'trial',
+        plan: 'pro',
+        status: 'active',
+        is_trial: true,
         trial_started_at: now.toISOString(),
         trial_ends_at: trialEndsAt.toISOString(),
         period_start: now.toISOString(),
@@ -59,8 +65,6 @@ export class BillingService {
       .single()
 
     if (error) throw new DatabaseError('Failed to create subscription', error)
-    
-    // ✅ تبدیل snake_case به camelCase برای خروجی
     return this.mapSubscription(subscription)
   }
 
@@ -73,56 +77,59 @@ export class BillingService {
       .single()
 
     if (error) throw new DatabaseError('Failed to fetch subscription', error)
-    
-    // ✅ تبدیل snake_case به camelCase برای خروجی
     return this.mapSubscription(data)
   }
 
-  // ─── Check if User Can Access Feature ──────────────────────
-async checkUsageLimit(userId: string, feature: keyof UsageLimits): Promise<boolean> {
-  const subscription = await this.getCurrentSubscription(userId)
-  const plan = PLANS[subscription.plan as Plan]
-  const limit = plan.limits[feature]
+  // ─── Check Usage Limit ──────────────────────────────────────
+  async checkUsageLimit(userId: string, feature: keyof UsageLimits): Promise<boolean> {
+    const subscription = await this.getCurrentSubscription(userId)
+    const plan = PLANS[subscription.plan as Plan]
+    const limit = plan.limits[feature]
 
-  if (limit === null) return true
+    if (subscription.isTrial) return true
+    if (limit === null) return true
 
-  // ✅ اصلاح: استفاده از switch برای featureهای مختلف
-  let count = 0
-  switch(feature) {
-    case 'invoices':
-      const { count: invoiceCount } = await supabase
-        .from('invoices')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-      count = invoiceCount || 0
-      break
-    case 'users':
-      const { count: userCount } = await supabase
-        .from('workspace_members')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-      count = userCount || 0
-      break
-    case 'workspaces':
-      const { count: workspaceCount } = await supabase
-        .from('workspaces')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-      count = workspaceCount || 0
-      break
-    case 'transactions':
-      const { count: transactionCount } = await supabase
-        .from('transactions')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-      count = transactionCount || 0
-      break
-    default:
-      return true
+    let count = 0
+    switch(feature) {
+      case 'invoices': {
+        const { count: c } = await supabase
+          .from('invoices')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId)
+        count = c || 0
+        break
+      }
+      case 'users': {
+        const { count: c } = await supabase
+          .from('workspace_members')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId)
+        count = c || 0
+        break
+      }
+      case 'workspaces': {
+        const { count: c } = await supabase
+          .from('workspaces')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId)
+        count = c || 0
+        break
+      }
+      case 'transactions': {
+        const { count: c } = await supabase
+          .from('transactions')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', userId)
+        count = c || 0
+        break
+      }
+      default:
+        return true
+    }
+
+    return count < limit
   }
 
-  return count < limit
-}
   // ─── Upgrade Subscription ────────────────────────────────────
   async upgrade(userId: string, plan: Plan, interval: 'month' | 'year'): Promise<Subscription> {
     const now = new Date()
@@ -134,6 +141,8 @@ async checkUsageLimit(userId: string, feature: keyof UsageLimits): Promise<boole
       .update({
         plan,
         status: 'active',
+        is_trial: false,
+        trial_used: true,
         period_start: now.toISOString(),
         period_end: periodEnd.toISOString(),
         updated_at: now.toISOString(),
@@ -143,7 +152,6 @@ async checkUsageLimit(userId: string, feature: keyof UsageLimits): Promise<boole
       .single()
 
     if (error) throw new DatabaseError('Failed to upgrade subscription', error)
-    
     return this.mapSubscription(subscription)
   }
 
@@ -160,28 +168,73 @@ async checkUsageLimit(userId: string, feature: keyof UsageLimits): Promise<boole
       .single()
 
     if (error) throw new DatabaseError('Failed to cancel subscription', error)
-    
     return this.mapSubscription(subscription)
   }
 
   // ─── Check Trial Status ──────────────────────────────────────
-  async checkTrialStatus(userId: string): Promise<{ isTrial: boolean; daysLeft: number; ended: boolean }> {
+  async checkTrialStatus(userId: string): Promise<{ 
+    isTrial: boolean
+    daysLeft: number
+    ended: boolean
+    graceDaysLeft: number
+    isInGracePeriod: boolean
+  }> {
     const subscription = await this.getCurrentSubscription(userId)
 
-    if (subscription.plan !== 'trial' || subscription.status === 'expired') {
-      return { isTrial: false, daysLeft: 0, ended: true }
+    if (!subscription.isTrial || subscription.trialUsed) {
+      return { isTrial: false, daysLeft: 0, ended: true, graceDaysLeft: 0, isInGracePeriod: false }
     }
 
     const now = new Date()
-    // ✅ اصلاح: استفاده از camelCase
     const trialEnd = new Date(subscription.trialEndsAt)
     const daysLeft = Math.max(0, Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
 
-    return {
-      isTrial: daysLeft > 0 && subscription.status === 'trial',
-      daysLeft,
-      ended: daysLeft === 0,
+    if (daysLeft === 0) {
+      const graceEnd = new Date(trialEnd)
+      graceEnd.setDate(graceEnd.getDate() + GRACE_PERIOD_DAYS)
+      const graceDaysLeft = Math.max(0, Math.ceil((graceEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
+
+      if (graceDaysLeft > 0) {
+        return {
+          isTrial: false,
+          daysLeft: 0,
+          ended: false,
+          graceDaysLeft,
+          isInGracePeriod: true,
+        }
+      }
+
+      await this.expireTrial(userId)
+      return {
+        isTrial: false,
+        daysLeft: 0,
+        ended: true,
+        graceDaysLeft: 0,
+        isInGracePeriod: false,
+      }
     }
+
+    return {
+      isTrial: true,
+      daysLeft,
+      ended: false,
+      graceDaysLeft: 0,
+      isInGracePeriod: false,
+    }
+  }
+
+  // ─── Expire Trial ────────────────────────────────────────────
+  async expireTrial(userId: string): Promise<void> {
+    await supabase
+      .from('subscriptions')
+      .update({
+        is_trial: false,
+        trial_used: true,
+        plan: 'free',
+        status: 'active',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', userId)
   }
 
   // ─── Get Plan Features ──────────────────────────────────────
@@ -191,11 +244,11 @@ async checkUsageLimit(userId: string, feature: keyof UsageLimits): Promise<boole
       plan,
       name: config.name,
       limits: config.limits,
-      features: config.features,
+      featureKeys: config.featureKeys, // ✅ کلیدهای i18n
     }
   }
 
-  // ─── Usage Report (برای Dashboard) ──────────────────────────
+  // ─── Usage Report ──────────────────────────────────────────
   async getUsageReport(userId: string) {
     const [invoiceCount, userCount, workspaceCount, transactionCount] = await Promise.all([
       supabase.from('invoices').select('*', { count: 'exact', head: true }).eq('user_id', userId),
@@ -204,11 +257,19 @@ async checkUsageLimit(userId: string, feature: keyof UsageLimits): Promise<boole
       supabase.from('transactions').select('*', { count: 'exact', head: true }).eq('user_id', userId),
     ])
 
+    const subscription = await this.getCurrentSubscription(userId)
+    const plan = PLANS[subscription.plan as Plan]
+
     return {
-      invoices: invoiceCount.count || 0,
-      users: userCount.count || 0,
-      workspaces: workspaceCount.count || 0,
-      transactions: transactionCount.count || 0,
+      usage: {
+        invoices: invoiceCount.count || 0,
+        users: userCount.count || 0,
+        workspaces: workspaceCount.count || 0,
+        transactions: transactionCount.count || 0,
+      },
+      limits: plan.limits,
+      plan: subscription.plan,
+      isTrial: subscription.isTrial,
     }
   }
 
@@ -219,6 +280,8 @@ async checkUsageLimit(userId: string, feature: keyof UsageLimits): Promise<boole
       userId: raw.user_id,
       plan: raw.plan,
       status: raw.status,
+      isTrial: raw.is_trial ?? false,
+      trialUsed: raw.trial_used ?? false,
       trialStartedAt: raw.trial_started_at,
       trialEndsAt: raw.trial_ends_at,
       periodStart: raw.period_start,

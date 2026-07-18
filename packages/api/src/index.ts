@@ -92,7 +92,7 @@ export {
   type AuditResponse,
 } from './hooks/audit'
 
-// ---------- Accounting (NEW) ----------
+// ---------- Accounting ----------
 export {
   useAccounts,
   useCreateAccount,
@@ -110,7 +110,7 @@ export {
   type IncomeStatement,
 } from './hooks/accounting'
 
-// ---------- CRM (NEW) ----------
+// ---------- CRM ----------
 export {
   useInteractions,
   useCreateInteraction,
@@ -122,7 +122,7 @@ export {
   type Opportunity,
 } from './hooks/crm'
 
-// ---------- Manufacturing (NEW) ----------
+// ---------- Manufacturing ----------
 export {
   useBOMs,
   useCreateBOM,
@@ -135,7 +135,7 @@ export {
   type WorkOrder,
 } from './hooks/manufacturing'
 
-// ---------- Purchasing (NEW) ----------
+// ---------- Purchasing ----------
 export {
   usePurchaseOrders,
   usePurchaseOrder,
@@ -145,3 +145,19 @@ export {
   type PurchaseOrder,
   type PurchaseOrderItem,
 } from './hooks/purchasing'
+
+// ═══════════════════════════════════════════════════════════════════
+// ✅ NEW — Billing & Subscription
+// ═══════════════════════════════════════════════════════════════════
+export {
+  usePlans,
+  useSubscription,
+  useTrialStatus,
+  useUsage,
+  useUpgrade,
+  useCancelSubscription,
+  billingKeys,
+  type BillingPlan,
+  type UsageReport,
+  type TrialStatus,
+} from './hooks/billing'

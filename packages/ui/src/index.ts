@@ -148,4 +148,10 @@ export { useCurrency } from './hooks/use-currency'
 export { toPersianNumbers, toArabicNumbers, usePersianNumbers } from './lib/persian-numbers'
 
 // ---------- Types ----------
+export {
+  // ... existing exports
+  PricingContainer,
+  BillingContainer,
+  BillingStatusContainer,
+} from './components/ui/billing'
 export type SupportedLanguage = 'fa-AF' | 'fa-IR'

@@ -28,7 +28,6 @@ import { productRoutes } from './routes/product.routes'
 import { customerRoutes } from './routes/customer.routes'
 import { transactionRoutes } from './routes/transaction.routes'
 import { warehouseRoutes } from './routes/warehouse.routes'
-import { billingRoutes } from './routes/billing.routes'
 
 // ──────────────────────────────────────────────
 // Routes — Phase 15: HR
@@ -91,6 +90,11 @@ import { manufacturingRoutes } from './routes/manufacturing.routes'
 import { purchasingRoutes } from './routes/purchasing.routes'
 
 // ──────────────────────────────────────────────
+// Routes — Phase 27: Billing & Subscription
+// ──────────────────────────────────────────────
+import { billingRoutes } from './routes/billing.routes'
+
+// ──────────────────────────────────────────────
 // Routes — v1.1: Workflow & Notification Center
 // ──────────────────────────────────────────────
 import { workflowRoutes } from './routes/workflow.routes'
@@ -146,35 +150,34 @@ async function start(): Promise<void> {
     })
 
     // ─── Rate Limit ──────────────────────────
-await server.register(rateLimit, {
-  max: 100,  // کاهش از ۲۰۰ به ۱۰۰
-  timeWindow: '1 minute',
-  keyGenerator: (request) => {
-    // Per-user rate limiting (اگر authenticated)
-    return (request as any).userId || request.ip
-  },
-  errorResponseBuilder: (_request: any, context: any) => ({
-    success: false,
-    error: 'Too many requests',
-    retryAfter: Math.ceil(context.after / 1000),
-    limit: context.max,
-    remaining: context.remaining,
-  }),
-})
+    await server.register(rateLimit, {
+      max: 100,
+      timeWindow: '1 minute',
+      keyGenerator: (request) => {
+        return (request as any).userId || request.ip
+      },
+      errorResponseBuilder: (_request: any, context: any) => ({
+        success: false,
+        error: 'Too many requests',
+        retryAfter: Math.ceil(context.after / 1000),
+        limit: context.max,
+        remaining: context.remaining,
+      }),
+    })
 
+    // ─── SLO endpoint ────────────────────────
+    server.get('/api/slo', async () => ({
+      service: 'Hisabche API',
+      version: '2.0.0',
+      slo: {
+        availability: '99.9%',
+        p95Latency: '< 300ms',
+        p99Latency: '< 800ms',
+        errorRate: '< 0.1%',
+      },
+      timestamp: new Date().toISOString(),
+    }))
 
-// در index.ts اضافه کنید:
-server.get('/api/slo', async () => ({
-  service: 'Hisabche API',
-  version: '2.0.0',
-  slo: {
-    availability: '99.9%',
-    p95Latency: '< 300ms',
-    p99Latency: '< 800ms',
-    errorRate: '< 0.1%',
-  },
-  timestamp: new Date().toISOString(),
-}))
     // ─── CORS ────────────────────────────────
     await server.register(cors, {
       origin: isProduction
@@ -281,6 +284,7 @@ server.get('/api/slo', async () => ({
           { name: 'Sync', description: 'Offline sync' },
           { name: 'Notification', description: 'Notifications' },
           { name: 'Workflow', description: 'Approval workflows' },
+          { name: 'Billing', description: 'Billing & Subscription' },
         ],
       },
     })
@@ -364,7 +368,7 @@ server.get('/api/slo', async () => ({
     })
 
     // ═══════════════════════════════════════════
-    // REGISTER ALL ROUTES — 23 Phases + v1.1
+    // REGISTER ALL ROUTES — 23 Phases + v1.1 + Billing
     // ═══════════════════════════════════════════
 
     await server.register(authRoutes)
@@ -390,7 +394,7 @@ server.get('/api/slo', async () => ({
     await server.register(workflowRoutes)
     await server.register(notificationRoutes)
     await server.register(jobSchedulerPlugin)
-await server.register(billingRoutes)
+    await server.register(billingRoutes)  // ✅ اضافه شد
 
     // ─── 404 Handler ────────────────────────
     server.setNotFoundHandler((_req, reply) => {

@@ -1,12 +1,13 @@
 // ============================================
 // packages/validation/src/schemas/billing.schema.ts
-// Billing & Subscription Schemas
+// Billing & Subscription Schemas — v2.0
 // ============================================
 
 import { z } from 'zod'
 import { uuidSchema, isoDateSchema } from './common.schema'
 
-export const planEnum = z.enum(['trial', 'pro', 'enterprise'])
+// ✅ اصلاح: اضافه کردن 'free' به Plan
+export const planEnum = z.enum(['free', 'pro', 'enterprise'])
 export type Plan = z.infer<typeof planEnum>
 
 export const subscriptionStatusEnum = z.enum([
@@ -22,7 +23,10 @@ export const subscriptionSchema = z.object({
   id: uuidSchema.optional(),
   userId: uuidSchema,
   plan: planEnum,
-  status: subscriptionStatusEnum.default('trial'),
+  status: subscriptionStatusEnum.default('active'),
+  // ✅ اضافه شد
+  isTrial: z.boolean().default(true),
+  trialUsed: z.boolean().default(false),
   trialStartedAt: isoDateSchema,
   trialEndsAt: isoDateSchema,
   periodStart: isoDateSchema,
@@ -36,7 +40,7 @@ export const subscriptionSchema = z.object({
 
 export type Subscription = z.infer<typeof subscriptionSchema>
 
-// ─── Usage Limits ─────────────────────────────────────────────
+// ─── Usage Limits ──────────────────────────────────────────────
 
 export const usageLimitsSchema = z.object({
   invoices: z.number().int().nullable(),
@@ -50,7 +54,7 @@ export const usageLimitsSchema = z.object({
 
 export type UsageLimits = z.infer<typeof usageLimitsSchema>
 
-// ─── Plan Features ────────────────────────────────────────────
+// ─── Plan Features ──────────────────────────────────────────────
 
 export const planFeaturesSchema = z.object({
   plan: planEnum,
@@ -58,7 +62,7 @@ export const planFeaturesSchema = z.object({
   priceMonthly: z.number().nullable(),
   priceYearly: z.number().nullable(),
   limits: usageLimitsSchema,
-  features: z.array(z.string()),
+  featureKeys: z.array(z.string()), // ✅ تغییر: features → featureKeys
 })
 
 export type PlanFeatures = z.infer<typeof planFeaturesSchema>
@@ -74,7 +78,7 @@ export const checkoutSchema = z.object({
 
 export type CheckoutInput = z.infer<typeof checkoutSchema>
 
-// ─── Webhook ───────────────────────────────────────────────────
+// ─── Webhook ──────────────────────────────────────────────────
 
 export const stripeWebhookSchema = z.object({
   id: z.string(),
