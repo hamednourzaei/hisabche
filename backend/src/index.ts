@@ -106,6 +106,11 @@ import { notificationRoutes } from './routes/notification.routes'
 import { jobSchedulerPlugin } from './plugins/job-scheduler.plugin'
 
 // ──────────────────────────────────────────────
+// Scheduler — Trial Expiration Worker
+// ──────────────────────────────────────────────
+import { startScheduler } from './scheduler'
+
+// ──────────────────────────────────────────────
 // Environment
 // ──────────────────────────────────────────────
 if (process.env.NODE_ENV !== 'production') {
@@ -394,7 +399,7 @@ async function start(): Promise<void> {
     await server.register(workflowRoutes)
     await server.register(notificationRoutes)
     await server.register(jobSchedulerPlugin)
-    await server.register(billingRoutes)  // ✅ اضافه شد
+    await server.register(billingRoutes)
 
     // ─── 404 Handler ────────────────────────
     server.setNotFoundHandler((_req, reply) => {
@@ -421,6 +426,11 @@ async function start(): Promise<void> {
     server.log.info(`🚀 Server running on ${HOST}:${PORT} — v2.0 Performance Optimized`)
     server.log.info(`📚 Swagger UI available at /docs`)
     server.log.info(`💚 Health: /live | /ready | /api/health`)
+
+    // ─── Start Scheduler ─────────────────────
+    // ✅ بعد از start server اجرا می‌شود
+    startScheduler()
+
   } catch (err) {
     const error = err as Error
     server.log.error(error)
@@ -446,4 +456,5 @@ async function shutdown(signal: string) {
 process.on('SIGTERM', () => shutdown('SIGTERM'))
 process.on('SIGINT', () => shutdown('SIGINT'))
 
+// ─── Start the server ────────────────────────
 start()
