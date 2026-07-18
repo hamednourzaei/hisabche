@@ -213,6 +213,74 @@
     "forRole": "Permissions for", "selectRole": "Select a role", "selectRoleHint": "Select a role to view its permissions"
   },
   "audit": { "title": "Audit", "logs": "Logs", "entity": "Entity", "action": "Action", "user": "User", "date": "Date", "details": "Details", "export": "Export", "noLogs": "No logs found", "created": "Created", "updated": "Updated", "deleted": "Deleted", "login": "Login", "logout": "Logout" },
+  
+  "billing": {
+    "loading": "Loading...",
+    "title": "Billing & Subscription",
+    "subtitle": "Manage your plan and subscription",
+    "currentPlan": "Current Plan",
+    "trial": "Trial",
+    "free": "Free",
+    "month": "month",
+    "perMonth": "/month",
+    "popular": "Most Popular",
+    "upgrade": "Upgrade",
+    "upgradeNow": "Upgrade to Pro",
+    "days": "days",
+    "daysLeft": "{{days}} days left",
+    "gracePeriod": "Grace Period",
+    "startFree": "Start Free",
+    "startPro": "Start with Pro",
+    "cancelSubscription": "Cancel Subscription",
+    "cancelScheduled": "Cancellation scheduled at end of period",
+    "trialDescription": "You are on a 7-day trial",
+    "activePlan": "Your active plan",
+    "plans": {
+      "free": "Free",
+      "pro": "Pro",
+      "enterprise": "Enterprise",
+      "free": {
+        "features": {
+          "invoices_10": "Up to 10 invoices",
+          "user_1": "1 user",
+          "business_1": "1 business",
+          "basic_reports": "Basic reports"
+        }
+      },
+      "pro": {
+        "features": {
+          "unlimited_invoices": "Unlimited invoices",
+          "advanced_reports": "Advanced reports",
+          "users_10": "10 users",
+          "businesses_5": "5 businesses",
+          "priority_support": "Priority support"
+        }
+      },
+      "enterprise": {
+        "features": {
+          "all_features": "All features",
+          "sso": "SSO",
+          "unlimited_teams": "Unlimited teams",
+          "dedicated_support": "Dedicated support",
+          "sla": "SLA"
+        }
+      }
+    },
+    "usage": {
+      "title": "Your Usage",
+      "freeWarning": "Free plan has limits. Upgrade to use more.",
+      "invoices": "Invoices",
+      "users": "Users",
+      "workspaces": "Businesses",
+      "transactions": "Transactions",
+      "teams": "Teams"
+    },
+    "pricing": {
+      "title": "Choose the right plan",
+      "subtitle": "Manage your accounting in one place from today"
+    }
+  },
+  
   "pricing": {
     "title": "Simple & Transparent Pricing", "subtitle": "Start with any plan — upgrade anytime", "popular": "Most Popular", "faq": "Have a question?",
     "free": { "name": "Free", "price": "0", "period": "/month", "feature1": "1 Business", "feature2": "Unlimited Invoices", "feature3": "100 Products", "feature4": "Basic Accounting", "feature5": "Community Support", "cta": "Start Free" },

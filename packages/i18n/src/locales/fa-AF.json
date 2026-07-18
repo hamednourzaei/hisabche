@@ -872,6 +872,74 @@
     "login": "ورود",
     "logout": "خروج"
   },
+  
+  "billing": {
+    "loading": "در حال بارگذاری...",
+    "title": "صورتحساب و اشتراک",
+    "subtitle": "مدیریت پلن و اشتراک شما",
+    "currentPlan": "پلن فعلی",
+    "trial": "دوره آزمایشی",
+    "free": "رایگان",
+    "month": "ماه",
+    "perMonth": "/ماه",
+    "popular": "محبوب‌ترین",
+    "upgrade": "ارتقا",
+    "upgradeNow": "ارتقا به Pro",
+    "days": "روز",
+    "daysLeft": "{{days}} روز باقی مانده",
+    "gracePeriod": "دوره مهلت",
+    "startFree": "شروع رایگان",
+    "startPro": "شروع با Pro",
+    "cancelSubscription": "لغو اشتراک",
+    "cancelScheduled": "لغو در پایان دوره پلان شده است",
+    "trialDescription": "شما در دوره آزمایشی ۷ روزه هستید",
+    "activePlan": "پلن فعال شما",
+    "plans": {
+      "free": "رایگان",
+      "pro": "حرفه‌ای",
+      "enterprise": "سازمانی",
+      "free": {
+        "features": {
+          "invoices_10": "فاکتور تا ۱۰ عدد",
+          "user_1": "۱ کاربر",
+          "business_1": "۱ کسب‌وکار",
+          "basic_reports": "راپور پایه"
+        }
+      },
+      "pro": {
+        "features": {
+          "unlimited_invoices": "فاکتور نامحدود",
+          "advanced_reports": "راپور پیشرفته",
+          "users_10": "۱۰ کاربر",
+          "businesses_5": "۵ کسب‌وکار",
+          "priority_support": "پشتیبانی اولویت‌دار"
+        }
+      },
+      "enterprise": {
+        "features": {
+          "all_features": "همه امکانات",
+          "sso": "SSO",
+          "unlimited_teams": "تیم نامحدود",
+          "dedicated_support": "پشتیبانی اختصاصی",
+          "sla": "SLA"
+        }
+      }
+    },
+    "usage": {
+      "title": "مصرف شما",
+      "freeWarning": "پلن رایگان محدودیت دارد. برای استفاده بیشتر ارتقا دهید.",
+      "invoices": "فاکتورها",
+      "users": "کاربران",
+      "workspaces": "کسب‌وکارها",
+      "transactions": "تراکنش‌ها",
+      "teams": "تیم‌ها"
+    },
+    "pricing": {
+      "title": "انتخاب پلن مناسب",
+      "subtitle": "از امروز حساب‌وکتابت را یک‌جا مدیریت کن"
+    }
+  },
+  
   "pricing": {
     "title": "قیمت‌های ساده و شفاف",
     "subtitle": "با هر پلنی شروع کن — هر وقت خواستی ارتقا بده",
