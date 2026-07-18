@@ -1,110 +1,283 @@
+// ============================================
 // backend/src/services/email.service.ts
-import { Resend } from 'resend';
+// Email Service — Resend + i18n Templates
+// ============================================
 
-console.log('[EMAIL] Initializing Resend...');
-console.log('[EMAIL] API_KEY exists:', !!process.env.RESEND_API_KEY);
-console.log('[EMAIL] API_KEY prefix:', (process.env.RESEND_API_KEY || 'NONE').substring(0, 5));
-console.log('[EMAIL] API_KEY length:', (process.env.RESEND_API_KEY || '').length);
+import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// ─── Initialize Resend ──────────────────────────────────────────
+console.log('[EMAIL] Initializing Resend...')
+console.log('[EMAIL] API_KEY exists:', !!process.env.RESEND_API_KEY)
+console.log('[EMAIL] API_KEY prefix:', (process.env.RESEND_API_KEY || 'NONE').substring(0, 5))
+console.log('[EMAIL] API_KEY length:', (process.env.RESEND_API_KEY || '').length)
 
-const FROM_EMAIL = 'noreply@hisabche.com';
-const FROM_NAME = 'Hisabche';
+const RESEND_API_KEY = process.env.RESEND_API_KEY
+const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@hisabche.com'
+const FROM_NAME = process.env.FROM_NAME || 'Hisabche'
 
-const titles: Record<string, string> = {
-  'fa-IR': 'بازنشانی رمز عبور - حسابچه',
-  'fa-AF': 'بازنشانی پسورد - حسابچه',
-  'en': 'Reset Your Password - Hisabche',
-};
+const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null
 
-interface SendEmailParams {
-  to: string;
-  subject: string;
-  html: string;
+// ─── Types ──────────────────────────────────────────────────────
+
+export interface SendEmailParams {
+  to: string
+  subject: string
+  html: string
 }
 
-export const emailService = {
-  async send({ to, subject, html }: SendEmailParams) {
-    console.log('[EMAIL] ====== SEND START ======');
-    console.log('[EMAIL] To:', to);
-    console.log('[EMAIL] From:', `${FROM_NAME} <${FROM_EMAIL}>`);
-    console.log('[EMAIL] Subject:', subject);
-    console.log('[EMAIL] HTML length:', html.length);
+export interface EmailData {
+  name: string
+  daysLeft?: number
+  trialEndsAt?: string
+  plan?: string
+  amount?: number
+  currency?: string
+  invoiceUrl?: string
+  resetLink?: string
+}
 
-    try {
-      const { data, error } = await resend.emails.send({
-        from: `${FROM_NAME} <${FROM_EMAIL}>`,
-        to,
-        subject,
-        html,
-      });
+// ─── i18n Email Templates ──────────────────────────────────────
 
-      if (error) {
-        console.error('[EMAIL] ❌ Resend error:', JSON.stringify(error, null, 2));
-        console.error('[EMAIL] Error name:', error.name);
-        console.error('[EMAIL] Error message:', error.message);
-        return { success: false, error };
-      }
+export type Language = 'fa-IR' | 'fa-AF' | 'en'
 
-      console.log('[EMAIL] ✅ Sent! ID:', data?.id);
-      console.log('[EMAIL] ====== SEND END ======');
-      return { success: true, id: data?.id };
-    } catch (err: any) {
-      console.error('[EMAIL] ❌ Exception:', err?.message || err);
-      console.error('[EMAIL] Stack:', err?.stack);
-      return { success: false, error: err };
-    }
-  },
+const LANGUAGES: Language[] = ['fa-IR', 'fa-AF', 'en']
 
-  async sendResetPassword(to: string, resetLink: string, lang: string = 'fa-IR') {
-    console.log('[EMAIL] sendResetPassword called');
-    console.log('[EMAIL] To:', to);
-    console.log('[EMAIL] Reset link:', resetLink);
-    console.log('[EMAIL] Lang:', lang);
+// ─── Translations ──────────────────────────────────────────────
 
-    const html = getResetPasswordTemplate(resetLink, lang);
-    const subject = titles[lang] ?? titles['en']!;
+const translations = {
+  'fa-IR': {
+    brand: 'حسابچه',
+    brandFooter: 'سیستم مدیریت کسب‌وکار',
+    direction: 'rtl',
+    font: 'Vazirmatn, Tahoma, sans-serif',
 
-    return this.send({ to, subject, html });
-  },
-};
-
-function getResetPasswordTemplate(resetLink: string, lang: string): string {
-  const isEnglish = lang === 'en';
-  const dir = isEnglish ? 'ltr' : 'rtl';
-  const font = isEnglish ? 'Inter, Arial, sans-serif' : 'Vazirmatn, Tahoma, sans-serif';
-
-  const texts: Record<string, any> = {
-    'fa-IR': {
+    reset: {
       title: 'بازنشانی رمز عبور',
       hello: 'سلام،',
       message: 'درخواست بازنشانی رمز عبور برای حساب شما ثبت شده است. برای تغییر رمز روی دکمه زیر کلیک کنید:',
       button: 'بازنشانی رمز عبور',
       expire: 'این لینک تا ۱ ساعت معتبر است.',
       ignore: 'اگر شما این درخواست را نداده‌اید، این ایمیل را نادیده بگیرید.',
-      footer: 'حسابچه — سیستم مدیریت کسب‌وکار',
     },
-    'fa-AF': {
+
+    trial: {
+      started: {
+        title: '🎉 دوره آزمایشی شما شروع شد!',
+        body: 'دوره آزمایشی ۷ روزه شما در حسابچه آغاز شد.',
+        proNote: 'شما به همه امکانات <strong>Pro</strong> دسترسی دارید.',
+        features: ['فاکتور نامحدود', 'گزارشات پیشرفته', 'هوش مصنوعی', 'تیم تا ۱۰ نفر'],
+        button: '🚀 ورود به داشبورد',
+        subject: '🎉 دوره آزمایشی شما در حسابچه شروع شد',
+      },
+      ending: {
+        title: (days: number) => days === 1 ? '⏰ فردا دوره آزمایشی شما تمام می‌شود!' : `📅 ${days} روز تا پایان دوره آزمایشی شما باقی مانده است.`,
+        body: (days: number) => days === 1 
+          ? 'فردا دوره آزمایشی شما تمام می‌شود!' 
+          : `${days} روز تا پایان دوره آزمایشی شما باقی مانده است.`,
+        message: 'برای ادامه استفاده از امکانات Pro، اشتراک خود را ارتقا دهید.',
+        button: '🔥 مشاهده پلن‌ها',
+        warning: (days: number) => `⏳ ${days} روز دیگر دوره آزمایشی شما به پایان می‌رسد.`,
+        subject: (days: number) => `⏰ ${days} روز تا پایان دوره آزمایشی`,
+      },
+      expired: {
+        title: '⛔ دوره آزمایشی شما به پایان رسید',
+        body: 'دوره آزمایشی ۷ روزه شما به پایان رسید.',
+        message: 'برای ادامه استفاده از امکانات Pro، لطفاً اشتراک خود را ارتقا دهید.',
+        button: '🔄 ارتقا به Pro',
+        features: ['گزارشات پیشرفته غیرفعال شد', 'هوش مصنوعی غیرفعال شد', 'تیم به ۱ کاربر محدود شد'],
+        subject: '⛔ دوره آزمایشی شما به پایان رسید',
+      },
+    },
+
+    payment: {
+      success: {
+        title: '✅ پرداخت شما با موفقیت انجام شد',
+        body: (plan: string) => `پرداخت شما برای پلن <strong>${plan}</strong> با موفقیت انجام شد.`,
+        button: '🚀 ورود به داشبورد',
+        subject: (plan: string) => `✅ پرداخت ${plan} با موفقیت انجام شد`,
+      },
+      failed: {
+        title: '❌ پرداخت ناموفق',
+        body: (plan: string) => `پرداخت شما برای پلن <strong>${plan}</strong> با مشکل مواجه شد.`,
+        message: 'لطفاً اطلاعات پرداخت خود را بررسی و دوباره تلاش کنید.',
+        button: '🔄 تلاش مجدد',
+        subject: (plan: string) => `❌ پرداخت ${plan} ناموفق بود`,
+      },
+    },
+
+    common: {
+      support: 'سوالی دارید؟',
+      supportEmail: 'support@hisabche.com',
+      footer: 'hisabche.com',
+    },
+  },
+
+  'fa-AF': {
+    brand: 'حسابچه',
+    brandFooter: 'سیستم مدیریت تجارت',
+    direction: 'rtl',
+    font: 'Vazirmatn, Tahoma, sans-serif',
+
+    reset: {
       title: 'بازنشانی پسورد',
       hello: 'سلام،',
       message: 'درخواست بازنشانی پسورد برای حساب شما ثبت شده است. برای تغییر پسورد روی دکمه زیر کلیک کنید:',
       button: 'بازنشانی پسورد',
       expire: 'این لینک تا ۱ ساعت معتبر است.',
       ignore: 'اگر شما این درخواست را نداده‌اید، این ایمیل را نادیده بگیرید.',
-      footer: 'حسابچه — سیستم مدیریت تجارت',
     },
-    'en': {
+
+    trial: {
+      started: {
+        title: '🎉 دوره آزمایشی شما شروع شد!',
+        body: 'دوره آزمایشی ۷ روزه شما در حسابچه آغاز شد.',
+        proNote: 'شما به همه امکانات <strong>Pro</strong> دسترسی دارید.',
+        features: ['فاکتور نامحدود', 'راپورهای پیشرفته', 'هوش مصنوعی', 'تیم تا ۱۰ نفر'],
+        button: '🚀 ورود به داشبورد',
+        subject: '🎉 دوره آزمایشی شما در حسابچه شروع شد',
+      },
+      ending: {
+        title: (days: number) => days === 1 ? '⏰ فردا دوره آزمایشی شما تمام می‌شود!' : `📅 ${days} روز تا پایان دوره آزمایشی شما باقی مانده است.`,
+        body: (days: number) => days === 1 
+          ? 'فردا دوره آزمایشی شما تمام می‌شود!' 
+          : `${days} روز تا پایان دوره آزمایشی شما باقی مانده است.`,
+        message: 'برای ادامه استفاده از امکانات Pro، اشتراک خود را ارتقا دهید.',
+        button: '🔥 مشاهده پلن‌ها',
+        warning: (days: number) => `⏳ ${days} روز دیگر دوره آزمایشی شما به پایان می‌رسد.`,
+        subject: (days: number) => `⏰ ${days} روز تا پایان دوره آزمایشی`,
+      },
+      expired: {
+        title: '⛔ دوره آزمایشی شما به پایان رسید',
+        body: 'دوره آزمایشی ۷ روزه شما به پایان رسید.',
+        message: 'برای ادامه استفاده از امکانات Pro، لطفاً اشتراک خود را ارتقا دهید.',
+        button: '🔄 ارتقا به Pro',
+        features: ['راپورهای پیشرفته غیرفعال شد', 'هوش مصنوعی غیرفعال شد', 'تیم به ۱ کاربر محدود شد'],
+        subject: '⛔ دوره آزمایشی شما به پایان رسید',
+      },
+    },
+
+    payment: {
+      success: {
+        title: '✅ پرداخت شما با موفقیت انجام شد',
+        body: (plan: string) => `پرداخت شما برای پلن <strong>${plan}</strong> با موفقیت انجام شد.`,
+        button: '🚀 ورود به داشبورد',
+        subject: (plan: string) => `✅ پرداخت ${plan} با موفقیت انجام شد`,
+      },
+      failed: {
+        title: '❌ پرداخت ناموفق',
+        body: (plan: string) => `پرداخت شما برای پلن <strong>${plan}</strong> با مشکل مواجه شد.`,
+        message: 'لطفاً اطلاعات پرداخت خود را بررسی و دوباره تلاش کنید.',
+        button: '🔄 تلاش مجدد',
+        subject: (plan: string) => `❌ پرداخت ${plan} ناموفق بود`,
+      },
+    },
+
+    common: {
+      support: 'سوالی دارید؟',
+      supportEmail: 'support@hisabche.com',
+      footer: 'hisabche.com',
+    },
+  },
+
+  'en': {
+    brand: 'Hisabche',
+    brandFooter: 'Business Management System',
+    direction: 'ltr',
+    font: 'Inter, Arial, sans-serif',
+
+    reset: {
       title: 'Reset Your Password',
       hello: 'Hello,',
       message: 'A password reset request has been made for your account. Click the button below to reset your password:',
       button: 'Reset Password',
       expire: 'This link is valid for 1 hour.',
       ignore: 'If you did not request this, please ignore this email.',
-      footer: 'Hisabche — Business Management System',
     },
-  };
 
-  const t = texts[lang] || texts['en'];
+    trial: {
+      started: {
+        title: '🎉 Your Trial Has Started!',
+        body: 'Your 7-day trial of Hisabche has begun.',
+        proNote: 'You have access to all <strong>Pro</strong> features.',
+        features: ['Unlimited Invoices', 'Advanced Reports', 'AI Assistant', 'Team up to 10 members'],
+        button: '🚀 Go to Dashboard',
+        subject: '🎉 Your Trial Has Started',
+      },
+      ending: {
+        title: (days: number) => days === 1 ? '⏰ Your trial ends tomorrow!' : `📅 ${days} days left in your trial`,
+        body: (days: number) => days === 1 
+          ? 'Your trial ends tomorrow!' 
+          : `${days} days left in your trial.`,
+        message: 'Upgrade to Pro to keep using all features.',
+        button: '🔥 View Plans',
+        warning: (days: number) => `⏳ ${days} days left in your trial.`,
+        subject: (days: number) => `⏰ ${days} days left in your trial`,
+      },
+      expired: {
+        title: '⛔ Your Trial Has Expired',
+        body: 'Your 7-day trial has ended.',
+        message: 'Upgrade to Pro to continue using all features.',
+        button: '🔄 Upgrade to Pro',
+        features: ['Advanced Reports disabled', 'AI Assistant disabled', 'Team limited to 1 user'],
+        subject: '⛔ Your Trial Has Expired',
+      },
+    },
+
+    payment: {
+      success: {
+        title: '✅ Payment Successful',
+        body: (plan: string) => `Your payment for <strong>${plan}</strong> was successful.`,
+        button: '🚀 Go to Dashboard',
+        subject: (plan: string) => `✅ ${plan} Payment Successful`,
+      },
+      failed: {
+        title: '❌ Payment Failed',
+        body: (plan: string) => `Your payment for <strong>${plan}</strong> failed.`,
+        message: 'Please check your payment details and try again.',
+        button: '🔄 Try Again',
+        subject: (plan: string) => `❌ ${plan} Payment Failed`,
+      },
+    },
+
+    common: {
+      support: 'Have a question?',
+      supportEmail: 'support@hisabche.com',
+      footer: 'hisabche.com',
+    },
+  },
+}
+
+// ─── Helper: Get User Language ────────────────────────────────
+
+async function getUserLanguage(userId: string): Promise<Language> {
+  try {
+    const { data: user } = await supabase
+      .from('users')
+      .select('preferred_language')
+      .eq('id', userId)
+      .single()
+
+    const lang = user?.preferred_language || 'fa-IR'
+    return LANGUAGES.includes(lang) ? lang : 'fa-IR'
+  } catch {
+    return 'fa-IR'
+  }
+}
+
+// ─── Templates ──────────────────────────────────────────────────
+
+function buildEmailHtml(
+  lang: Language,
+  title: string,
+  body: string,
+  buttonText?: string,
+  buttonUrl?: string,
+  extraContent?: string,
+  warningText?: string,
+): string {
+  const t = translations[lang]
+  const dir = t.direction
+  const font = t.font
 
   return `
 <!DOCTYPE html>
@@ -118,31 +291,227 @@ function getResetPasswordTemplate(resetLink: string, lang: string): string {
     .header { background: linear-gradient(135deg, #12C8A0, #0EA5E9); padding: 32px 24px; text-align: center; }
     .header h1 { color: #ffffff; margin: 0; font-size: 22px; font-weight: 700; }
     .body { padding: 32px 24px; color: #1a1a2e; font-size: 14px; line-height: 1.8; }
-    .button { display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #12C8A0, #0EA5E9); color: #ffffff; text-decoration: none; border-radius: 50px; font-weight: 700; font-size: 14px; margin: 20px 0; }
+    .button { display: inline-block; padding: 14px 32px; background: linear-gradient(135deg, #12C8A0, #0EA5E9); color: #ffffff; text-decoration: none; border-radius: 50px; font-weight: 700; font-size: 14px; margin: 16px 0; }
+    .features { background: #f8fafc; padding: 16px 20px; border-radius: 8px; margin: 12px 0; }
+    .features li { margin: 4px 0; }
+    .warning { background: #fef3c7; padding: 12px 16px; border-radius: 8px; border-right: 4px solid #f59e0b; margin: 12px 0; }
     .expire { font-size: 12px; color: #888; margin-top: 16px; }
     .footer { padding: 20px 24px; background: #fafafa; text-align: center; font-size: 11px; color: #999; border-top: 1px solid #eee; }
     a { color: #12C8A0; }
+    .details { background: #f8fafc; padding: 16px 20px; border-radius: 8px; margin: 12px 0; }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1>${t.title}</h1>
+      <h1>${title}</h1>
     </div>
     <div class="body">
-      <p>${t.hello}</p>
-      <p>${t.message}</p>
-      <div style="text-align: center;">
-        <a href="${resetLink}" class="button">${t.button}</a>
-      </div>
-      <p class="expire">⏰ ${t.expire}</p>
-      <p style="font-size: 12px; color: #888;">${t.ignore}</p>
+      ${warningText ? `<div class="warning">${warningText}</div>` : ''}
+      <p>${body}</p>
+      ${extraContent ? extraContent : ''}
+      ${buttonText && buttonUrl ? `<div style="text-align: center;"><a href="${buttonUrl}" class="button">${buttonText}</a></div>` : ''}
+      <p style="font-size: 12px; color: #888;">${t.common.support} <a href="mailto:${t.common.supportEmail}">${t.common.supportEmail}</a></p>
     </div>
     <div class="footer">
-      <p>${t.footer}</p>
-      <p>hisabche.com</p>
+      <p>${t.brand} — ${t.brandFooter}</p>
+      <p>${t.common.footer}</p>
     </div>
   </div>
 </body>
-</html>`;
+</html>`
 }
+
+// ─── Email Service ─────────────────────────────────────────────
+
+export const emailService = {
+  // ─── Send email ──────────────────────────────────────────────
+  async send({ to, subject, html }: SendEmailParams) {
+    console.log('[EMAIL] ====== SEND START ======')
+    console.log('[EMAIL] To:', to)
+    console.log('[EMAIL] From:', `${FROM_NAME} <${FROM_EMAIL}>`)
+    console.log('[EMAIL] Subject:', subject)
+    console.log('[EMAIL] HTML length:', html.length)
+
+    if (!resend) {
+      console.warn('[EMAIL] ⚠️ Resend not configured. Email not sent.')
+      return { success: false, error: 'Resend not configured' }
+    }
+
+    try {
+      const { data, error } = await resend.emails.send({
+        from: `${FROM_NAME} <${FROM_EMAIL}>`,
+        to,
+        subject,
+        html,
+      })
+
+      if (error) {
+        console.error('[EMAIL] ❌ Resend error:', JSON.stringify(error, null, 2))
+        return { success: false, error }
+      }
+
+      console.log('[EMAIL] ✅ Sent! ID:', data?.id)
+      console.log('[EMAIL] ====== SEND END ======')
+      return { success: true, id: data?.id }
+    } catch (err: any) {
+      console.error('[EMAIL] ❌ Exception:', err?.message || err)
+      return { success: false, error: err }
+    }
+  },
+
+  // ─── Helper: Get user language ──────────────────────────────
+  async getUserLanguage(userId: string): Promise<Language> {
+    return getUserLanguage(userId)
+  },
+
+  // ─── Reset Password ──────────────────────────────────────────
+  async sendResetPassword(to: string, resetLink: string, lang: Language = 'fa-IR') {
+    const t = translations[lang]
+    const html = buildEmailHtml(
+      lang,
+      t.reset.title,
+      `${t.reset.hello} ${t.reset.message}`,
+      t.reset.button,
+      resetLink,
+      `<p class="expire">⏰ ${t.reset.expire}</p><p style="font-size: 12px; color: #888;">${t.reset.ignore}</p>`,
+    )
+    return this.send({ to, subject: `${t.reset.title} - ${t.brand}`, html })
+  },
+
+  // ─── Trial Started ───────────────────────────────────────────
+  async sendTrialStarted(to: string, name: string, lang: Language = 'fa-IR') {
+    const t = translations[lang]
+    const featuresHtml = t.trial.started.features.map(f => `<li>✅ ${f}</li>`).join('')
+    const extraContent = `
+      <p>${t.trial.started.proNote}</p>
+      <div class="features"><ul>${featuresHtml}</ul></div>
+    `
+    const html = buildEmailHtml(
+      lang,
+      t.trial.started.title,
+      `${t.trial.started.body}`,
+      t.trial.started.button,
+      'https://hisabche.com/dashboard',
+      extraContent,
+    )
+    return this.send({ to, subject: t.trial.started.subject, html })
+  },
+
+  // ─── Trial Ending Soon ──────────────────────────────────────
+  async sendTrialEndingSoon(to: string, name: string, daysLeft: number, lang: Language = 'fa-IR') {
+    const t = translations[lang]
+    const html = buildEmailHtml(
+      lang,
+      t.trial.ending.title(daysLeft),
+      `${t.trial.ending.body(daysLeft)} ${t.trial.ending.message}`,
+      t.trial.ending.button,
+      'https://hisabche.com/pricing',
+      '',
+      t.trial.ending.warning(daysLeft),
+    )
+    return this.send({ to, subject: t.trial.ending.subject(daysLeft), html })
+  },
+
+  // ─── Trial Expired ──────────────────────────────────────────
+  async sendTrialExpired(to: string, name: string, lang: Language = 'fa-IR') {
+    const t = translations[lang]
+    const featuresHtml = t.trial.expired.features.map(f => `<li>📊 ${f}</li>`).join('')
+    const extraContent = `
+      <p>${t.trial.expired.message}</p>
+      <div class="features"><ul>${featuresHtml}</ul></div>
+    `
+    const html = buildEmailHtml(
+      lang,
+      t.trial.expired.title,
+      t.trial.expired.body,
+      t.trial.expired.button,
+      'https://hisabche.com/pricing',
+      extraContent,
+    )
+    return this.send({ to, subject: t.trial.expired.subject, html })
+  },
+
+  // ─── Payment Success ─────────────────────────────────────────
+  async sendPaymentSuccess(to: string, data: EmailData, lang: Language = 'fa-IR') {
+    const t = translations[lang]
+    const planName = data.plan || 'Pro'
+    const extraContent = `
+      <div class="details">
+        <ul>
+          <li>💰 ${data.amount ? `${data.amount.toLocaleString()} ${data.currency || 'USD'}` : ''}</li>
+          <li>📋 ${planName}</li>
+        </ul>
+      </div>
+    `
+    const html = buildEmailHtml(
+      lang,
+      t.payment.success.title,
+      t.payment.success.body(planName),
+      t.payment.success.button,
+      'https://hisabche.com/dashboard',
+      extraContent,
+    )
+    return this.send({ to, subject: t.payment.success.subject(planName), html })
+  },
+
+  // ─── Payment Failed ──────────────────────────────────────────
+  async sendPaymentFailed(to: string, data: EmailData, lang: Language = 'fa-IR') {
+    const t = translations[lang]
+    const planName = data.plan || 'Pro'
+    const extraContent = `
+      <div class="details">
+        <ul>
+          <li>💰 ${data.amount ? `${data.amount.toLocaleString()} ${data.currency || 'USD'}` : ''}</li>
+          <li>📋 ${planName}</li>
+        </ul>
+      </div>
+      <p>${t.payment.failed.message}</p>
+    `
+    const html = buildEmailHtml(
+      lang,
+      t.payment.failed.title,
+      t.payment.failed.body(planName),
+      t.payment.failed.button,
+      'https://hisabche.com/billing',
+      extraContent,
+    )
+    return this.send({ to, subject: t.payment.failed.subject(planName), html })
+  },
+
+  // ─── Generic send with language detection ──────────────────
+  async sendWithLanguage(to: string, template: 'trialStarted' | 'trialEndingSoon' | 'trialExpired' | 'paymentSuccess' | 'paymentFailed', data: EmailData) {
+    // Try to detect language from user
+    let lang: Language = 'fa-IR'
+    try {
+      const { data: user } = await supabase
+        .from('users')
+        .select('preferred_language')
+        .eq('email', to)
+        .single()
+      if (user?.preferred_language && LANGUAGES.includes(user.preferred_language)) {
+        lang = user.preferred_language
+      }
+    } catch {
+      // fallback
+    }
+
+    switch (template) {
+      case 'trialStarted':
+        return this.sendTrialStarted(to, data.name, lang)
+      case 'trialEndingSoon':
+        return this.sendTrialEndingSoon(to, data.name, data.daysLeft || 0, lang)
+      case 'trialExpired':
+        return this.sendTrialExpired(to, data.name, lang)
+      case 'paymentSuccess':
+        return this.sendPaymentSuccess(to, data, lang)
+      case 'paymentFailed':
+        return this.sendPaymentFailed(to, data, lang)
+      default:
+        return { success: false, error: 'Unknown template' }
+    }
+  },
+}
+
+// ─── Import supabase for language detection ───────────────────
+import { supabase } from '../db'
