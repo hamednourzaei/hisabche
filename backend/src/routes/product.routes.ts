@@ -1,5 +1,6 @@
 // ============================================
 // backend/src/routes/product.routes.ts
+// FIXED: page parameter validation
 // ============================================
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
@@ -15,12 +16,21 @@ import { authenticate } from '../middleware/auth.middleware'
 import { NotFoundError } from '../errors/database.error'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 
-// ✅ تنظیمات برای حذف $schema از خروجی (با استفاده از any برای جلوگیری از خطای عمق تایپ)
+// ✅ تنظیمات برای حذف $schema از خروجی
 const toJsonSchema = (schema: any) => {
   const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
   delete result.$schema
   return result
 }
+
+// ✅ FIX: ایجاد یک Schema جدید با default values برای page و limit
+const productFiltersSchemaWithDefaults = productFiltersSchema.extend({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  search: z.string().optional().default(''),
+  sortBy: z.string().optional().default('created_at'),
+  sortDirection: z.enum(['asc', 'desc']).optional().default('desc'),
+})
 
 export async function productRoutes(fastify: FastifyInstance) {
   const productService = new ProductService()
@@ -29,22 +39,36 @@ export async function productRoutes(fastify: FastifyInstance) {
   fastify.get('/api/products', {
     preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'products' })],
     schema: {
-      querystring: toJsonSchema(productFiltersSchema),
+      querystring: toJsonSchema(productFiltersSchemaWithDefaults),
       response: {
         200: toJsonSchema(z.object({
           products: z.array(z.unknown()),
           total: z.number(),
           page: z.number(),
           limit: z.number(),
+          totalPages: z.number().optional(),
         })),
         400: toJsonSchema(z.object({ error: z.string(), details: z.unknown().optional() })),
       },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const query = productFiltersSchema.parse(request.query)
+      // ✅ parse با default values
+      const query = productFiltersSchemaWithDefaults.parse(request.query)
       const userId = (request as any).userId
-      const result = await productService.list(userId, query)
+      
+      const result = await productService.list(userId, {
+        page: query.page,
+        limit: query.limit,
+        search: query.search || '',
+        sortBy: query.sortBy || 'created_at',
+        sortDirection: query.sortDirection || 'desc',
+        category: query.category,
+        minPrice: query.minPrice,
+        maxPrice: query.maxPrice,
+        isActive: query.isActive,
+      })
+      
       return reply.send(result)
     } catch (err) {
       if (err instanceof z.ZodError) {
@@ -244,3 +268,5 @@ export async function productRoutes(fastify: FastifyInstance) {
     }
   })
 }
+
+export default productRoutes

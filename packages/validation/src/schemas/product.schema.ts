@@ -66,46 +66,66 @@ export const updateProductSchema = productSchema.partial().extend({
 
 export type UpdateProduct = z.infer<typeof updateProductSchema>
 
-
 // ============================================
-// Product Filters — اضافه کردن cursor
+// Product Filters — FIXED with defaults
 // ============================================
 
 export const productFiltersSchema = z.object({
-  search: z.string().optional(),
+  // ✅ FIX: استفاده از coerce برای تبدیل خودکار
+  search: z.string().optional().default(''),
+  
   category: productCategorySchema.optional(),
+  
   isActive: z
     .union([z.boolean(), z.string()])
     .transform((val) => (typeof val === 'string' ? val === 'true' : val))
     .optional(),
+  
   lowStock: z
     .union([z.boolean(), z.string()])
     .transform((val) => (typeof val === 'string' ? val === 'true' : val))
     .optional(),
+  
   minPrice: z
     .union([z.number(), z.string()])
     .transform((val) => (typeof val === 'string' ? parseFloat(val) : val))
     .optional(),
+  
   maxPrice: z
     .union([z.number(), z.string()])
     .transform((val) => (typeof val === 'string' ? parseFloat(val) : val))
     .optional(),
+  
   barcode: z.string().optional(),
+  
+  // ✅ FIX: page با default و coerce
   page: z
     .union([z.number(), z.string()])
-    .transform((val) => (typeof val === 'string' ? parseInt(val, 10) : val))
+    .transform((val) => {
+      const num = typeof val === 'string' ? parseInt(val, 10) : val
+      return isNaN(num) ? 1 : num
+    })
+    .default(1)
     .optional(),
+  
+  // ✅ FIX: limit با default و coerce
   limit: z
     .union([z.number(), z.string()])
-    .transform((val) => (typeof val === 'string' ? parseInt(val, 10) : val))
-    .default(20),
-  sortBy: z.string().optional(),
+    .transform((val) => {
+      const num = typeof val === 'string' ? parseInt(val, 10) : val
+      return isNaN(num) ? 20 : num
+    })
+    .default(20)
+    .optional(),
+  
+  sortBy: z.string().optional().default('created_at'),
+  
   sortDirection: z.enum(['asc', 'desc']).optional().default('desc'),
-  // ✅ اضافه شد
+  
   cursor: z.string().optional(),
 })
 
-
+// ✅ اضافه کردن نوع با فیلدهای اجباری برای استفاده در کد
 export type ProductFilters = z.infer<typeof productFiltersSchema>
 
 // ============================================

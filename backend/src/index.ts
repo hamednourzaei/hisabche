@@ -1,6 +1,6 @@
 // ============================================
-// backend/src/index.ts — Hisabche API Server v2.0
-// Complete: 23 Phases + v1.1 + Performance Middleware + Health Checks + Security
+// backend/src/index.ts — Hisabche API Server v2.3
+// COMPLETE FIX: TypeScript Errors Resolved
 // ============================================
 
 import Fastify from 'fastify'
@@ -16,9 +16,10 @@ import dotenv from 'dotenv'
 // ──────────────────────────────────────────────
 import { authenticate } from './middleware/auth.middleware'
 import { supabase } from './db'
+import { memoryCache } from './utils/pagination'
 
 // ──────────────────────────────────────────────
-// Routes — Phase 1-9 (Core)
+// Routes
 // ──────────────────────────────────────────────
 import { authRoutes } from './routes/auth.routes'
 import { syncRoutes } from './routes/sync.routes'
@@ -28,86 +29,26 @@ import { productRoutes } from './routes/product.routes'
 import { customerRoutes } from './routes/customer.routes'
 import { transactionRoutes } from './routes/transaction.routes'
 import { warehouseRoutes } from './routes/warehouse.routes'
-
-// ──────────────────────────────────────────────
-// Routes — Phase 15: HR
-// ──────────────────────────────────────────────
 import { humanResourcesRoutes } from './routes/human-resources.routes'
-
-// ──────────────────────────────────────────────
-// Routes — Phase 16: Projects
-// ──────────────────────────────────────────────
 import { projectRoutes } from './routes/project.routes'
-
-// ──────────────────────────────────────────────
-// Routes — Phase 17: Workspace
-// ──────────────────────────────────────────────
 import { workspaceRoutes } from './routes/workspace.routes'
-
-// ──────────────────────────────────────────────
-// Routes — Phase 18: Permissions
-// ──────────────────────────────────────────────
 import { permissionRoutes } from './routes/permission.routes'
-
-// ──────────────────────────────────────────────
-// Routes — Phase 19: Audit
-// ──────────────────────────────────────────────
 import auditRoutes from './routes/audit.routes'
-
-// ──────────────────────────────────────────────
-// Routes — Phase 20: Event System
-// ──────────────────────────────────────────────
 import { eventRoutes } from './routes/event.routes'
-
-// ──────────────────────────────────────────────
-// Routes — Phase 21: Analytics
-// ──────────────────────────────────────────────
 import analyticsRoutes from './routes/analytics.routes'
-
-// ──────────────────────────────────────────────
-// Routes — Phase 22: AI Assistant
-// ──────────────────────────────────────────────
 import { aiRoutes } from './routes/ai.routes'
-
-// ──────────────────────────────────────────────
-// Routes — Phase 23: Accounting
-// ──────────────────────────────────────────────
 import { accountingRoutes } from './routes/accounting.routes'
-
-// ──────────────────────────────────────────────
-// Routes — Phase 24: CRM
-// ──────────────────────────────────────────────
 import { crmRoutes } from './routes/crm.routes'
-
-// ──────────────────────────────────────────────
-// Routes — Phase 25: Manufacturing
-// ──────────────────────────────────────────────
 import { manufacturingRoutes } from './routes/manufacturing.routes'
-
-// ──────────────────────────────────────────────
-// Routes — Phase 26: Purchasing
-// ──────────────────────────────────────────────
 import { purchasingRoutes } from './routes/purchasing.routes'
-
-// ──────────────────────────────────────────────
-// Routes — Phase 27: Billing & Subscription
-// ──────────────────────────────────────────────
 import { billingRoutes } from './routes/billing.routes'
-
-// ──────────────────────────────────────────────
-// Routes — v1.1: Workflow & Notification Center
-// ──────────────────────────────────────────────
 import { workflowRoutes } from './routes/workflow.routes'
 import { notificationRoutes } from './routes/notification.routes'
 
 // ──────────────────────────────────────────────
-// Plugins — v1.1: Job Scheduler
+// Plugins & Scheduler
 // ──────────────────────────────────────────────
 import { jobSchedulerPlugin } from './plugins/job-scheduler.plugin'
-
-// ──────────────────────────────────────────────
-// Scheduler — Trial Expiration Worker
-// ──────────────────────────────────────────────
 import { startScheduler } from './scheduler'
 
 // ──────────────────────────────────────────────
@@ -117,7 +58,7 @@ if (process.env.NODE_ENV !== 'production') {
   dotenv.config()
 }
 
-const PORT = Number(process.env.PORT || 3001)
+const PORT = Number(process.env.PORT || 10000)
 const HOST = '0.0.0.0'
 const isProduction = process.env.NODE_ENV === 'production'
 
@@ -139,298 +80,343 @@ const server = Fastify({
           },
         }),
   },
+  connectionTimeout: 30000,
 })
 
 // ──────────────────────────────────────────────
-// Start
+// 1. STARTUP LOGGING
 // ──────────────────────────────────────────────
-async function start(): Promise<void> {
+server.log.info(`🚀 Starting Hisabche API v2.3...`)
+server.log.info(`📦 Environment: ${process.env.NODE_ENV || 'development'}`)
+
+// ──────────────────────────────────────────────
+// 2. COMPRESSION
+// ──────────────────────────────────────────────
+await server.register(compress, {
+  global: true,
+  threshold: 1024,
+  encodings: ['gzip', 'deflate'],
+})
+
+// ──────────────────────────────────────────────
+// 3. CORS
+// ──────────────────────────────────────────────
+await server.register(cors, {
+  origin: isProduction
+    ? [
+        'https://hisabche.com',
+        'https://www.hisabche.com',
+        'https://app.hisabche.com',
+        process.env.FRONTEND_URL || 'https://project-ro4vn-hisabche-s-projects.vercel.app',
+      ].filter(Boolean)
+    : [
+        'https://project-ro4vn-hisabche-s-projects.vercel.app',
+        'https://project-ro4vn.vercel.app',
+        'http://localhost:3000',
+        'http://localhost:3001',
+        'https://hisabche.com',
+        'https://www.hisabche.com',
+      ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-client-id', 'Accept'],
+})
+
+// ──────────────────────────────────────────────
+// 4. PERFORMANCE MONITORING MIDDLEWARE
+// ──────────────────────────────────────────────
+server.addHook('onRequest', async (request) => {
+  ;(request as any).startTime = Date.now()
+})
+
+server.addHook('onSend', async (request, reply, payload) => {
+  const duration = Date.now() - ((request as any).startTime || Date.now())
+  
+  reply.header('X-Response-Time-MS', duration.toString())
+  reply.header('X-Content-Type-Options', 'nosniff')
+  reply.header('X-Frame-Options', 'DENY')
+  reply.header('X-XSS-Protection', '1; mode=block')
+  
+  if (duration > 500) {
+    request.log.warn(`⚠️ SLOW: ${request.method} ${request.url} - ${duration}ms`)
+  }
+  
+  return payload
+})
+
+// ──────────────────────────────────────────────
+// 5. CACHE MIDDLEWARE
+// ──────────────────────────────────────────────
+server.addHook('onRequest', async (request, reply) => {
+  if (request.method !== 'GET') return
+
+  const skipPaths = ['/api/health', '/api/live', '/api/ready', '/docs', '/api', '/api/slo']
+  if (skipPaths.some(p => request.url.startsWith(p))) return
+  if (request.url.includes('auth')) return
+
+  const cacheKey = `http:${request.url}`
+  
   try {
-    // ═══════════════════════════════════════════
-    // ✅ Compression — Gzip/Brotli (NEW v2.0)
-    // ═══════════════════════════════════════════
-    await server.register(compress, {
-      global: true,
-      threshold: 1024,
-    })
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) {
+      reply.header('x-cache', 'HIT')
+      reply.header('Cache-Control', 'private, max-age=30')
+      return reply.send(cached)
+    }
+    reply.header('x-cache', 'MISS')
+  } catch (err) {
+    // ✅ FIX: تبدیل err به string برای log
+    const errorMessage = err instanceof Error ? err.message : String(err)
+    request.log.error(`Cache error: ${errorMessage}`)
+  }
+})
 
-    // ─── Rate Limit ──────────────────────────
-    await server.register(rateLimit, {
-      max: 100,
-      timeWindow: '1 minute',
-      keyGenerator: (request) => {
-        return (request as any).userId || request.ip
-      },
-      errorResponseBuilder: (_request: any, context: any) => ({
-        success: false,
-        error: 'Too many requests',
-        retryAfter: Math.ceil(context.after / 1000),
-        limit: context.max,
-        remaining: context.remaining,
-      }),
-    })
-
-    // ─── SLO endpoint ────────────────────────
-    server.get('/api/slo', async () => ({
-      service: 'Hisabche API',
-      version: '2.0.0',
-      slo: {
-        availability: '99.9%',
-        p95Latency: '< 300ms',
-        p99Latency: '< 800ms',
-        errorRate: '< 0.1%',
-      },
-      timestamp: new Date().toISOString(),
-    }))
-
-    // ─── CORS ────────────────────────────────
-    await server.register(cors, {
-      origin: isProduction
-        ? [
-            process.env.FRONTEND_URL || 'https://project-ro4vn-hisabche-s-projects.vercel.app',
-          ]
-        : [
-            'https://project-ro4vn-hisabche-s-projects.vercel.app',
-            'https://project-ro4vn.vercel.app',
-            'http://localhost:3000',
-            'https://hisabche.com',
-            'https://www.hisabche.com',
-          ],
-      credentials: true,
-    })
-
-    // ═══════════════════════════════════════════
-    // ✅ Performance Monitoring Middleware v2.0
-    // ═══════════════════════════════════════════
-    server.addHook('onRequest', async (request) => {
-      ;(request as any).startTime = Date.now()
-    })
-
-    server.addHook('onSend', async (request, reply, payload) => {
-      const duration = Date.now() - ((request as any).startTime || Date.now())
-      
-      reply.header('X-Response-Time-MS', duration.toString())
-      
-      // ═══════════════════════════════════════════
-      // ✅ Security Headers
-      // ═══════════════════════════════════════════
-      reply.header('X-Frame-Options', 'DENY')
-      reply.header('X-Content-Type-Options', 'nosniff')
-      reply.header('X-XSS-Protection', '1; mode=block')
-      reply.header('Referrer-Policy', 'strict-origin-when-cross-origin')
-      
-      if (duration > 500) {
-        request.log.warn(`⚠️ SLOW: ${request.method} ${request.url} - ${duration}ms`)
-      }
-      
-      return payload
-    })
-
-    // ═══════════════════════════════════════════
-    // Swagger Documentation
-    // ═══════════════════════════════════════════
-    await server.register(swagger, {
-      openapi: {
-        info: {
-          title: 'Hisabche API',
-          description: 'Complete ERP & Accounting API — 23 phases + v1.1',
-          version: '2.0.0',
-          contact: {
-            name: 'Hisabche Team',
-            email: 'support@hisabche.com',
-          },
-        },
-        servers: [
-          {
-            url: isProduction
-              ? 'https://api.hisabche.com/api'
-              : 'http://localhost:3001',
-            description: isProduction ? 'Production Server' : 'Development Server',
-          },
-        ],
-        components: {
-          securitySchemes: {
-            bearerAuth: {
-              type: 'http',
-              scheme: 'bearer',
-              bearerFormat: 'JWT',
-            },
-          },
-          schemas: {
-            Error: {
-              type: 'object',
-              properties: {
-                error: { type: 'string' },
-                message: { type: 'string' },
-                statusCode: { type: 'number' },
-              },
-            },
-          },
-        },
-        security: [{ bearerAuth: [] }],
-        tags: [
-          { name: 'Auth', description: 'Authentication endpoints' },
-          { name: 'Invoices', description: 'Invoice management' },
-          { name: 'Products', description: 'Product management' },
-          { name: 'Customers', description: 'Customer management' },
-          { name: 'Transactions', description: 'Transaction management' },
-          { name: 'warehouse', description: 'Warehouse management' },
-          { name: 'Accounting', description: 'Accounting & financial reports' },
-          { name: 'HR', description: 'Human resources management' },
-          { name: 'Projects', description: 'Project management' },
-          { name: 'Workspace', description: 'Workspace & members' },
-          { name: 'Permissions', description: 'Roles & permissions' },
-          { name: 'Audit', description: 'Audit logs' },
-          { name: 'Analytics', description: 'Analytics & dashboards' },
-          { name: 'AI', description: 'AI assistant' },
-          { name: 'CRM', description: 'Customer relationship management' },
-          { name: 'Manufacturing', description: 'BOM & work orders' },
-          { name: 'Purchasing', description: 'Purchase orders' },
-          { name: 'Sync', description: 'Offline sync' },
-          { name: 'Notification', description: 'Notifications' },
-          { name: 'Workflow', description: 'Approval workflows' },
-          { name: 'Billing', description: 'Billing & Subscription' },
-        ],
-      },
-    })
-
-    // ─── Swagger UI ──────────────────────────
-    await server.register(swaggerUi, {
-      routePrefix: '/docs',
-      uiConfig: {
-        docExpansion: 'list',
-        deepLinking: false,
-        persistAuthorization: true,
-      },
-      staticCSP: true,
-    })
-
-    // ═══════════════════════════════════════════
-    // ✅ Health Checks v2.0
-    // ═══════════════════════════════════════════
-
-    // Liveness probe — server is running
-    server.get('/live', async () => ({
-      status: 'ok',
-      timestamp: new Date().toISOString(),
-    }))
-
-    // Readiness probe — server + database ready
-    server.get('/ready', async () => {
+server.addHook('onSend', async (request, reply, payload) => {
+  if (request.method === 'GET' && reply.statusCode === 200) {
+    const skipPaths = ['/api/health', '/api/live', '/api/ready', '/docs', '/api', '/api/slo']
+    if (!skipPaths.some(p => request.url.startsWith(p)) && !request.url.includes('auth')) {
+      const cacheKey = `http:${request.url}`
       try {
-        const { error } = await supabase.from('products').select('id').limit(1)
-        return {
-          status: error ? 'error' : 'ok',
-          database: error ? 'disconnected' : 'connected',
-          timestamp: new Date().toISOString(),
-        }
-      } catch {
-        return {
-          status: 'error',
-          database: 'disconnected',
-          timestamp: new Date().toISOString(),
-        }
+        await memoryCache.set(cacheKey, payload, 30)
+      } catch (err) {
+        // ✅ FIX: تبدیل err به string برای log
+        const errorMessage = err instanceof Error ? err.message : String(err)
+        request.log.error(`Cache set error: ${errorMessage}`)
       }
-    })
+    }
+  }
+  return payload
+})
 
-    // Deep health check (public)
-    server.get('/api/health', async () => ({
-      status: 'ok',
+// ──────────────────────────────────────────────
+// 6. SWAGGER
+// ──────────────────────────────────────────────
+await server.register(swagger, {
+  openapi: {
+    info: {
+      title: 'Hisabche API',
+      description: 'Business Operating System API v2.3',
+      version: '2.3.0',
+      contact: {
+        name: 'Hisabche Team',
+        email: 'support@hisabche.com',
+      },
+    },
+    servers: [
+      {
+        url: isProduction ? 'https://api.hisabche.com' : 'http://localhost:10000',
+        description: isProduction ? 'Production Server' : 'Development Server',
+      },
+    ],
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
+    },
+    security: [{ bearerAuth: [] }],
+  },
+})
+
+await server.register(swaggerUi, {
+  routePrefix: '/docs',
+  uiConfig: {
+    docExpansion: 'list',
+    deepLinking: false,
+    persistAuthorization: true,
+  },
+  staticCSP: true,
+})
+
+// ──────────────────────────────────────────────
+// 7. RATE LIMIT — FIXED
+// ──────────────────────────────────────────────
+await server.register(rateLimit, {
+  max: 100,
+  timeWindow: '1 minute',
+  keyGenerator: (request) => {
+    const userId = (request as any).userId
+    return userId || request.ip || 'anonymous'
+  },
+  // ✅ FIX: context.after را به number تبدیل کن و remaining را حذف کن
+  errorResponseBuilder: (_request, context) => {
+    const afterMs = typeof context.after === 'number' ? context.after : parseInt(String(context.after), 10) || 60000
+    return {
+      success: false,
+      error: 'Too many requests',
+      retryAfter: Math.ceil(afterMs / 1000),
+      limit: context.max,
+    }
+  },
+})
+
+// ──────────────────────────────────────────────
+// 8. HEALTH CHECKS
+// ──────────────────────────────────────────────
+server.get('/api/health', async () => ({
+  status: 'ok',
+  timestamp: new Date().toISOString(),
+  uptime: process.uptime(),
+  env: process.env.NODE_ENV,
+  version: '2.3.0',
+  cache: process.env.REDIS_URL ? 'redis' : 'memory',
+}))
+
+server.get('/live', async () => ({
+  status: 'ok',
+  timestamp: new Date().toISOString(),
+}))
+
+server.get('/ready', async () => {
+  try {
+    const { error } = await supabase.from('products').select('id').limit(1)
+    return {
+      status: error ? 'error' : 'ok',
+      database: error ? 'disconnected' : 'connected',
       timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      env: process.env.NODE_ENV,
-      version: '2.0.0',
-      compression: true,
-      security: true,
-    }))
+    }
+  } catch {
+    return {
+      status: 'error',
+      database: 'disconnected',
+      timestamp: new Date().toISOString(),
+    }
+  }
+})
 
-    // API info (public)
-    server.get('/api', async () => ({
-      name: 'Hisabche API',
-      version: '2.0.0',
-      phases: 23,
-      status: 'complete',
-      docs: '/docs',
-      health: '/api/health',
-      live: '/live',
-      ready: '/ready',
-    }))
+server.get('/api', async () => ({
+  name: 'Hisabche API',
+  version: '2.3.0',
+  status: 'complete',
+  docs: '/docs',
+  health: '/api/health',
+  live: '/live',
+  ready: '/ready',
+}))
 
-    // ─── Auth Middleware ─────────────────────
-    server.addHook('preHandler', async (request, reply) => {
-      const url = request.url
-      if (url.startsWith('/docs')) return
-      if (url === '/live') return
-      if (url === '/ready') return
-      if (url.startsWith('/api/health')) return
-      if (url === '/api') return
-      if (url.startsWith('/api/auth/login')) return
-      if (url.startsWith('/api/auth/signup')) return
-      if (url.startsWith('/api/auth/forgot-password')) return
-      if (url.startsWith('/api/auth/reset-password')) return
-      if (request.method === 'OPTIONS') return
-      await authenticate(request, reply)
-    })
+server.get('/api/slo', async () => ({
+  service: 'Hisabche API',
+  version: '2.3.0',
+  slo: {
+    availability: '99.9%',
+    p95Latency: '< 200ms',
+    p99Latency: '< 500ms',
+    errorRate: '< 0.1%',
+  },
+  timestamp: new Date().toISOString(),
+}))
 
-    // ═══════════════════════════════════════════
-    // REGISTER ALL ROUTES — 23 Phases + v1.1 + Billing
-    // ═══════════════════════════════════════════
+// ──────────────────────────────────────────────
+// 9. AUTH MIDDLEWARE
+// ──────────────────────────────────────────────
+server.addHook('preHandler', async (request, reply) => {
+  const url = request.url
+  
+  const publicPaths = [
+    '/docs', '/live', '/ready', '/api', '/api/health', '/api/slo',
+    '/api/auth/login', '/api/auth/signup', '/api/auth/forgot-password',
+    '/api/auth/reset-password', '/api/auth/verify-email',
+  ]
+  
+  if (publicPaths.some(p => url.startsWith(p))) return
+  if (request.method === 'OPTIONS') return
+  
+  await authenticate(request, reply)
+})
 
-    await server.register(authRoutes)
-    await server.register(syncRoutes)
-    await server.register(invoiceRoutes)
-    await server.register(invoicePdfRoutes)
-    await server.register(productRoutes)
-    await server.register(customerRoutes)
-    await server.register(transactionRoutes)
-    await server.register(warehouseRoutes)
-    await server.register(humanResourcesRoutes)
-    await server.register(projectRoutes)
-    await server.register(workspaceRoutes)
-    await server.register(permissionRoutes)
-    await server.register(auditRoutes)
-    await server.register(eventRoutes)
-    await server.register(analyticsRoutes)
-    await server.register(aiRoutes)
-    await server.register(accountingRoutes)
-    await server.register(crmRoutes)
-    await server.register(manufacturingRoutes)
-    await server.register(purchasingRoutes)
-    await server.register(workflowRoutes)
-    await server.register(notificationRoutes)
-    await server.register(jobSchedulerPlugin)
-    await server.register(billingRoutes)
+// ──────────────────────────────────────────────
+// 10. REGISTER ALL ROUTES
+// ──────────────────────────────────────────────
+server.log.info('📦 Registering routes...')
 
-    // ─── 404 Handler ────────────────────────
-    server.setNotFoundHandler((_req, reply) => {
-      reply.status(404).send({
-        error: 'Not Found',
-        message: 'Route does not exist',
-        statusCode: 404,
-      })
-    })
+const routePrefix = '/api'
 
-    // ─── Error Handler ──────────────────────
-    server.setErrorHandler((error, _req, reply) => {
-      const err = error as any
-      server.log.error(err)
-      reply.status(err.statusCode || 500).send({
-        error: err.name || 'Internal Server Error',
-        message: err.message || 'Unexpected error',
-        statusCode: err.statusCode || 500,
-      })
-    })
+await server.register(authRoutes, { prefix: routePrefix })
+await server.register(syncRoutes, { prefix: routePrefix })
+await server.register(invoiceRoutes, { prefix: routePrefix })
+await server.register(invoicePdfRoutes, { prefix: routePrefix })
+await server.register(productRoutes, { prefix: routePrefix })
+await server.register(customerRoutes, { prefix: routePrefix })
+await server.register(transactionRoutes, { prefix: routePrefix })
+await server.register(warehouseRoutes, { prefix: routePrefix })
+await server.register(humanResourcesRoutes, { prefix: routePrefix })
+await server.register(projectRoutes, { prefix: routePrefix })
+await server.register(workspaceRoutes, { prefix: routePrefix })
+await server.register(permissionRoutes, { prefix: routePrefix })
+await server.register(auditRoutes, { prefix: routePrefix })
+await server.register(eventRoutes, { prefix: routePrefix })
+await server.register(analyticsRoutes, { prefix: routePrefix })
+await server.register(aiRoutes, { prefix: routePrefix })
+await server.register(accountingRoutes, { prefix: routePrefix })
+await server.register(crmRoutes, { prefix: routePrefix })
+await server.register(manufacturingRoutes, { prefix: routePrefix })
+await server.register(purchasingRoutes, { prefix: routePrefix })
+await server.register(workflowRoutes, { prefix: routePrefix })
+await server.register(notificationRoutes, { prefix: routePrefix })
+await server.register(jobSchedulerPlugin, { prefix: routePrefix })
+await server.register(billingRoutes, { prefix: routePrefix })
 
-    // ─── Start Server ───────────────────────
+server.log.info('✅ All routes registered successfully')
+
+// ──────────────────────────────────────────────
+// 11. 404 HANDLER
+// ──────────────────────────────────────────────
+server.setNotFoundHandler((request, reply) => {
+  reply.status(404).send({
+    statusCode: 404,
+    error: 'Not Found',
+    message: `Route ${request.method} ${request.url} not found`,
+    path: request.url,
+    method: request.method,
+  })
+})
+
+// ──────────────────────────────────────────────
+// 12. ERROR HANDLER — FIXED
+// ──────────────────────────────────────────────
+server.setErrorHandler((error, request, reply) => {
+  // ✅ FIX: تبدیل error به string برای log
+  const errorMessage = error instanceof Error ? error.message : String(error)
+  const errorStack = error instanceof Error ? error.stack : undefined
+  
+  request.log.error({
+    message: errorMessage,
+    stack: errorStack,
+    url: request.url,
+    method: request.method,
+  })
+  
+  const err = error as any
+  const status = err.statusCode || 500
+  const message = err.message || 'Internal Server Error'
+  
+  reply.status(status).send({
+    statusCode: status,
+    error: err.name || 'Error',
+    message,
+    path: request.url,
+    method: request.method,
+  })
+})
+
+// ──────────────────────────────────────────────
+// 13. START SERVER
+// ──────────────────────────────────────────────
+async function start() {
+  try {
     await server.listen({ port: PORT, host: HOST })
-    server.log.info(`🚀 Server running on ${HOST}:${PORT} — v2.0 Performance Optimized`)
-    server.log.info(`📚 Swagger UI available at /docs`)
-    server.log.info(`💚 Health: /live | /ready | /api/health`)
+    
+    console.log(`\n🚀 Server running on ${HOST}:${PORT} — v2.3 Fully Optimized`)
+    console.log(`📚 Swagger UI: /docs`)
+    console.log(`💚 Health: /api/health | /live | /ready`)
+    console.log(`🔍 Cache: ${process.env.REDIS_URL ? '✅ Redis enabled' : '📦 Memory cache'}`)
+    console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}\n`)
 
-    // ─── Start Scheduler ─────────────────────
-    // ✅ بعد از start server اجرا می‌شود
     startScheduler()
-
+    
   } catch (err) {
     const error = err as Error
     server.log.error(error)
@@ -439,7 +425,7 @@ async function start(): Promise<void> {
 }
 
 // ──────────────────────────────────────────────
-// Graceful Shutdown
+// 14. GRACEFUL SHUTDOWN
 // ──────────────────────────────────────────────
 async function shutdown(signal: string) {
   try {
@@ -456,5 +442,7 @@ async function shutdown(signal: string) {
 process.on('SIGTERM', () => shutdown('SIGTERM'))
 process.on('SIGINT', () => shutdown('SIGINT'))
 
-// ─── Start the server ────────────────────────
+// ─── Start ────────────────────────────────────
 start()
+
+export default server
