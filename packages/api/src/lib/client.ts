@@ -21,7 +21,7 @@ export interface ApiError {
 // ============================================
 // Client Setup
 // ============================================
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://hisabche.onrender.com/api'
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.hisabche.com/api'
 const isDev = process.env.NODE_ENV !== 'production'
 
 const devLog = (...args: unknown[]) => {

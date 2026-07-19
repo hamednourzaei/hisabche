@@ -243,7 +243,7 @@ async function start(): Promise<void> {
         servers: [
           {
             url: isProduction
-              ? 'https://hisabche.onrender.com'
+              ? 'https://api.hisabche.com/api'
               : 'http://localhost:3001',
             description: isProduction ? 'Production Server' : 'Development Server',
           },
