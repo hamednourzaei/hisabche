@@ -1,6 +1,6 @@
 // ============================================
 // backend/src/services/invoice.service.ts
-// Hisabche v2.6 — FIXED: customer relation type
+// Hisabche v2.9 — FINAL FIXED: TypeScript type issue
 // ============================================
 
 import { supabase } from "../db";
@@ -53,7 +53,7 @@ export class InvoiceService {
     this.workflowService = new WorkflowService();
   }
 
-  // ─── List Invoices — OPTIMIZED with Customer JOIN ───
+  // ─── List Invoices — OPTIMIZED with Customer LEFT JOIN ───
   async list(userId: string, filters: InvoiceFilters) {
     const {
       search, type, status, customerId, supplierId,
@@ -61,7 +61,6 @@ export class InvoiceService {
       limit = 20, cursor, sortBy = "created_at", sortDirection = "desc"
     } = filters;
 
-    // ✅ کش با userId
     const cacheKey = `invoices:${userId}:${JSON.stringify(filters)}`;
     const cached = await memoryCache.get(cacheKey);
     if (cached) return cached;
@@ -69,7 +68,6 @@ export class InvoiceService {
     const maxLimit = Math.min(limit, 100);
     const fetchLimit = maxLimit + 1;
 
-    // ✅ FIX: استفاده از !inner برای تبدیل به object
     let query = supabase
       .from("invoices")
       .select(`
@@ -90,7 +88,7 @@ export class InvoiceService {
         status,
         created_at,
         updated_at,
-        customer:customers!inner (
+        customer:customers!left (
           id,
           full_name,
           phone,
@@ -120,7 +118,6 @@ export class InvoiceService {
       }
     }
 
-    // ✅ دو کوئری موازی + count: "estimated"
     const [queryResult, countResult] = await Promise.all([
       query,
       supabase
@@ -130,18 +127,24 @@ export class InvoiceService {
     ]);
 
     const { data, error } = queryResult;
-    if (error) throw new DatabaseError("Failed to fetch invoices", error);
+    if (error) {
+      console.error("Invoice list error:", error);
+      throw new DatabaseError("Failed to fetch invoices", error);
+    }
 
     const hasMore = (data?.length || 0) > maxLimit;
     const items = hasMore ? data.slice(0, maxLimit) : data;
     const nextCursor = hasMore && items.length > 0 ? items[items.length - 1]?.id : null;
 
-    // ✅ FIX: customer حالا object است (به دلیل !inner)
-    const invoices = (items || []).map((inv: any) => ({
-      ...inv,
-      customerName: inv.customer?.full_name || null,
-      customer: inv.customer || null,
-    }));
+    // ✅ FINAL FIX: استفاده از as any برای رفع خطای TypeScript
+    const invoices = (items || []).map((inv: any) => {
+      const customer = (inv.customer as any) || null;
+      return {
+        ...inv,
+        customerName: customer?.full_name || null,
+        customer: customer,
+      };
+    });
 
     const result = {
       invoices,
@@ -157,7 +160,6 @@ export class InvoiceService {
 
   // ─── Get Invoice By ID ───
   async getById(id: string, userId: string) {
-    // ✅ FIX: استفاده از !inner برای تبدیل به object
     const { data, error } = await supabase
       .from("invoices")
       .select(`
@@ -181,7 +183,7 @@ export class InvoiceService {
         user_id,
         created_at,
         updated_at,
-        customer:customers!inner (
+        customer:customers!left (
           id,
           full_name,
           phone,
@@ -208,10 +210,13 @@ export class InvoiceService {
       throw new NotFoundError("Invoice");
     }
 
-    // ✅ FIX: customer حالا object است
+    // ✅ FINAL FIX: استفاده از as any
+    const customer = (data.customer as any) || null;
     return {
       ...data,
-customerName: (data.customer as any)?.full_name || null,    };
+      customerName: customer?.full_name || null,
+      customer: customer,
+    };
   }
 
   // ─── Create Invoice ───
