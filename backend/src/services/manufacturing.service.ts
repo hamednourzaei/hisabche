@@ -1,23 +1,50 @@
 // ============================================
-// backend/src/services/manufacturing.service.ts — Optimized v2.0
+// backend/src/services/manufacturing.service.ts — Optimized v2.2
+// FIXED: Supabase raw() error
 // ============================================
 
 import { supabase } from '../db'
 import { DatabaseError } from '../errors/database.error'
+import { memoryCache } from '../utils/pagination'
 
 // ✅ Column Selection Constants
 const BOM_LIST_COLUMNS = 'id, product_id, version, is_active, created_at, updated_at'
 const BOM_ITEM_COLUMNS = 'id, bom_id, raw_material_id, quantity, unit_cost'
+const BOM_MINIMAL = 'id, product_id, version, is_active'
+
 const WORK_ORDER_COLUMNS = 'id, product_id, quantity, bom_id, status, start_date, end_date, created_at, updated_at'
+const WORK_ORDER_MINIMAL = 'id, product_id, quantity, status, created_at'
 
 export class ManufacturingService {
 
-  // ─── BOMs ─────────────────────────────────────────────────
+  // ─── Cache Keys ──────────────────────────────────────────────
+  private getBomsCacheKey(userId: string, productId?: string) {
+    return `manufacturing:boms:${userId}:${productId || 'all'}`
+  }
+
+  private getWorkOrdersCacheKey(userId: string, status?: string) {
+    return `manufacturing:workorders:${userId}:${status || 'all'}`
+  }
+
+  private getBomCacheKey(userId: string, id: string) {
+    return `manufacturing:bom:${userId}:${id}`
+  }
+
+  private getWorkOrderCacheKey(userId: string, id: string) {
+    return `manufacturing:workorder:${userId}:${id}`
+  }
+
+  // ─── BOMs ─────────────────────────────────────────────────────
   async listBoms(userId: string, productId?: string) {
+    const cacheKey = this.getBomsCacheKey(userId, productId)
+    
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
+
     let query = supabase
       .from('boms')
       .select(`
-        ${BOM_LIST_COLUMNS},
+        ${BOM_MINIMAL},
         product:products(id, name),
         items:bom_items(${BOM_ITEM_COLUMNS}, raw_material:products(id, name, unit))
       `)
@@ -30,7 +57,10 @@ export class ManufacturingService {
 
     const { data, error } = await query
     if (error) throw new DatabaseError('Failed to fetch BOMs', error)
-    return data || []
+    
+    const result = data || []
+    await memoryCache.set(cacheKey, result, 120)
+    return result
   }
 
   async createBom(userId: string, data: any) {
@@ -47,7 +77,6 @@ export class ManufacturingService {
 
     if (error) throw new DatabaseError('Failed to create BOM', error)
 
-    // Insert BOM items if provided
     if (data.items?.length) {
       const items = data.items.map((item: any) => ({
         bom_id: bom.id,
@@ -56,6 +85,7 @@ export class ManufacturingService {
         unit_cost: item.unitCost || 0,
         user_id: userId,
       }))
+      
       const { error: itemsError } = await supabase.from('bom_items').insert(items)
       if (itemsError) {
         await supabase.from('boms').delete().eq('id', bom.id)
@@ -63,6 +93,7 @@ export class ManufacturingService {
       }
     }
 
+    await this.invalidateBomCache(userId)
     return bom
   }
 
@@ -81,7 +112,6 @@ export class ManufacturingService {
 
     if (error) throw new DatabaseError('Failed to update BOM', error)
 
-    // Update items if provided
     if (data.items) {
       await supabase.from('bom_items').delete().eq('bom_id', id)
       const items = data.items.map((item: any) => ({
@@ -94,15 +124,45 @@ export class ManufacturingService {
       await supabase.from('bom_items').insert(items)
     }
 
+    await this.invalidateBomCache(userId, id)
     return bom
   }
 
-  // ─── Work Orders ──────────────────────────────────────────
+  // ─── Get BOM by ID ───────────────────────────────────────────
+  async getBom(userId: string, id: string) {
+    const cacheKey = this.getBomCacheKey(userId, id)
+    
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
+
+    const { data, error } = await supabase
+      .from('boms')
+      .select(`
+        ${BOM_LIST_COLUMNS},
+        product:products(id, name, unit),
+        items:bom_items(${BOM_ITEM_COLUMNS}, raw_material:products(id, name, unit, buy_price))
+      `)
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single()
+
+    if (error || !data) throw new DatabaseError('BOM not found', error)
+    
+    await memoryCache.set(cacheKey, data, 300)
+    return data
+  }
+
+  // ─── Work Orders ─────────────────────────────────────────────
   async listWorkOrders(userId: string, status?: string) {
+    const cacheKey = this.getWorkOrdersCacheKey(userId, status)
+    
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
+
     let query = supabase
       .from('work_orders')
       .select(`
-        ${WORK_ORDER_COLUMNS},
+        ${WORK_ORDER_MINIMAL},
         product:products(id, name),
         bom:boms(id, version)
       `)
@@ -115,7 +175,10 @@ export class ManufacturingService {
 
     const { data, error } = await query
     if (error) throw new DatabaseError('Failed to fetch work orders', error)
-    return data || []
+    
+    const result = data || []
+    await memoryCache.set(cacheKey, result, 60)
+    return result
   }
 
   async createWorkOrder(userId: string, data: any) {
@@ -134,6 +197,8 @@ export class ManufacturingService {
       .single()
 
     if (error) throw new DatabaseError('Failed to create work order', error)
+    
+    await this.invalidateWorkOrderCache(userId)
     return workOrder
   }
 
@@ -153,11 +218,39 @@ export class ManufacturingService {
       .single()
 
     if (error) throw new DatabaseError('Failed to update work order', error)
+    
+    await this.invalidateWorkOrderCache(userId, id)
     return workOrder
   }
 
+  // ─── Get Work Order by ID ────────────────────────────────────
+  async getWorkOrder(userId: string, id: string) {
+    const cacheKey = this.getWorkOrderCacheKey(userId, id)
+    
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
+
+    const { data, error } = await supabase
+      .from('work_orders')
+      .select(`
+        ${WORK_ORDER_COLUMNS},
+        product:products(id, name, unit),
+        bom:boms(id, version),
+        items:bom_items(*)
+      `)
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single()
+
+    if (error || !data) throw new DatabaseError('Work order not found', error)
+    
+    await memoryCache.set(cacheKey, data, 300)
+    return data
+  }
+
+  // ─── Complete Work Order — FIXED ────────────────────────────
   async completeWorkOrder(userId: string, id: string) {
-    // Get work order details
+    // ۱. گرفتن work order
     const { data: workOrder, error } = await supabase
       .from('work_orders')
       .select('id, product_id, quantity, status')
@@ -166,34 +259,100 @@ export class ManufacturingService {
       .single()
 
     if (error || !workOrder) throw new DatabaseError('Work order not found', error)
-    if (workOrder.status === 'completed') throw new DatabaseError('Work order already completed')
+    if (workOrder.status === 'completed') {
+      throw new DatabaseError('Work order already completed')
+    }
 
-    // Update work order status
+    // ✅ FIX: به‌روزرسانی work order
     const { error: updateError } = await supabase
       .from('work_orders')
-      .update({ status: 'completed', end_date: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .update({ 
+        status: 'completed', 
+        end_date: new Date().toISOString(), 
+        updated_at: new Date().toISOString() 
+      })
       .eq('id', id)
       .eq('user_id', userId)
 
-    if (updateError) throw new DatabaseError('Failed to complete work order', updateError)
+    if (updateError) {
+      throw new DatabaseError('Failed to update work order', updateError)
+    }
 
-    // Update product quantity (add manufactured items to inventory)
+    // ✅ FIX: به‌روزرسانی product quantity (با دو کوئری مجزا)
     if (workOrder.product_id && workOrder.quantity) {
-      const { data: product } = await supabase
+      // ۱. گرفتن product فعلی
+      const { data: product, error: productError } = await supabase
         .from('products')
         .select('quantity')
         .eq('id', workOrder.product_id)
         .single()
 
-      if (product) {
-        await supabase
+      if (productError) {
+        console.error('Failed to fetch product:', productError)
+        // ❗ ادامه می‌دهیم چون work order قبلاً completed شده
+      } else if (product) {
+        // ۲. به‌روزرسانی با مقدار جدید
+        const newQuantity = (product.quantity || 0) + workOrder.quantity
+        const { error: updateProductError } = await supabase
           .from('products')
-          .update({ quantity: product.quantity + workOrder.quantity })
+          .update({ quantity: newQuantity })
           .eq('id', workOrder.product_id)
+
+        if (updateProductError) {
+          console.error('Failed to update product quantity:', updateProductError)
+          // ❗ ادامه می‌دهیم چون work order قبلاً completed شده
+        }
       }
     }
 
+    // ✅ Invalidate cache
+    await this.invalidateWorkOrderCache(userId, id)
+    await memoryCache.invalidate(`manufacturing:workorder:${userId}:${id}`)
+
     return { success: true, workOrderId: id }
+  }
+
+  // ─── Get Work Order Statistics ───────────────────────────────
+  async getWorkOrderStats(userId: string) {
+    const cacheKey = `manufacturing:workorder:stats:${userId}`
+    
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
+
+    const [plannedResult, inProgressResult, completedResult, cancelledResult] = await Promise.all([
+      supabase.from('work_orders').select('id', { count: 'estimated', head: true }).eq('user_id', userId).eq('status', 'planned'),
+      supabase.from('work_orders').select('id', { count: 'estimated', head: true }).eq('user_id', userId).eq('status', 'in_progress'),
+      supabase.from('work_orders').select('id', { count: 'estimated', head: true }).eq('user_id', userId).eq('status', 'completed'),
+      supabase.from('work_orders').select('id', { count: 'estimated', head: true }).eq('user_id', userId).eq('status', 'cancelled'),
+    ])
+
+    const result = {
+      planned: plannedResult.count || 0,
+      inProgress: inProgressResult.count || 0,
+      completed: completedResult.count || 0,
+      cancelled: cancelledResult.count || 0,
+      total: (plannedResult.count || 0) + (inProgressResult.count || 0) + 
+             (completedResult.count || 0) + (cancelledResult.count || 0),
+    }
+
+    await memoryCache.set(cacheKey, result, 60)
+    return result
+  }
+
+  // ─── Invalidate Cache ────────────────────────────────────────
+  private async invalidateBomCache(userId: string, bomId?: string) {
+    await memoryCache.invalidate(this.getBomsCacheKey(userId))
+    if (bomId) {
+      await memoryCache.invalidate(this.getBomCacheKey(userId, bomId))
+    }
+  }
+
+  private async invalidateWorkOrderCache(userId: string, workOrderId?: string) {
+    await memoryCache.invalidate(this.getWorkOrdersCacheKey(userId))
+    await memoryCache.invalidate(`manufacturing:workorder:stats:${userId}`)
+    if (workOrderId) {
+      await memoryCache.invalidate(this.getWorkOrderCacheKey(userId, workOrderId))
+    }
   }
 }
 

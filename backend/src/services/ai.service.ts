@@ -1,83 +1,148 @@
 // ============================================
-// backend/src/services/ai.service.ts — Optimized v2.0
+// backend/src/services/ai.service.ts — Optimized v2.1
+// FIXED: Count: estimated, Better query handling, Error fallback
 // ============================================
 
 import { supabase } from '../db'
 import { AIQuery, AIInsight } from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
 import { CacheKeys, withCacheKey } from '../utils/cache'
+
+// ✅ Type for response
+interface AIResponse {
+  answer: string
+  confidence: number
+  sources: { type: string; description: string }[]
+  suggestions: string[]
+  data: Record<string, any>
+}
+
 export class AIService {
-  // ─── Process Query ───
-  async processQuery(userId: string, query: AIQuery) {
+  // ─── Process Query ──────────────────────────────────────
+  async processQuery(userId: string, query: AIQuery): Promise<AIResponse> {
     const { question } = query
     const lowerQuestion = question.toLowerCase()
 
-    if (lowerQuestion.includes('فروش') || lowerQuestion.includes('sale') || lowerQuestion.includes('درآمد')) {
-      return this.handleSalesQuery(userId)
-    }
-    if (lowerQuestion.includes('موجودی') || lowerQuestion.includes('stock') || lowerQuestion.includes('کمبود')) {
-      return this.handleInventoryQuery(userId)
-    }
-    if (lowerQuestion.includes('مشتری') || lowerQuestion.includes('customer') || lowerQuestion.includes('بدهکار')) {
-      return this.handleCustomerQuery(userId)
-    }
-    if (lowerQuestion.includes('سود') || lowerQuestion.includes('profit') || lowerQuestion.includes('زیان')) {
-      return this.handleFinancialQuery(userId)
-    }
+    try {
+      // ✅ بهتر: تشخیص با کلمات کلیدی
+      if (this.hasKeywords(lowerQuestion, ['فروش', 'sale', 'درآمد', 'revenue', 'فروخته'])) {
+        return await this.handleSalesQuery(userId)
+      }
+      if (this.hasKeywords(lowerQuestion, ['موجودی', 'stock', 'کمبود', 'انبار', 'warehouse', 'محصول'])) {
+        return await this.handleInventoryQuery(userId)
+      }
+      if (this.hasKeywords(lowerQuestion, ['مشتری', 'customer', 'بدهکار', 'debtor', 'حساب'])) {
+        return await this.handleCustomerQuery(userId)
+      }
+      if (this.hasKeywords(lowerQuestion, ['سود', 'profit', 'زیان', 'loss', 'مالی', 'financial'])) {
+        return await this.handleFinancialQuery(userId)
+      }
+      if (this.hasKeywords(lowerQuestion, ['هزینه', 'cost', 'expense', 'خرج'])) {
+        return await this.handleExpenseQuery(userId)
+      }
 
-    return this.handleGeneralQuery(userId, question)
+      return this.handleGeneralQuery(userId, question)
+    } catch (error) {
+      console.error('AI query error:', error)
+      return {
+        answer: 'متاسفانه در پردازش سوال شما خطایی رخ داد. لطفاً دوباره تلاش کنید.',
+        confidence: 0,
+        sources: [],
+        suggestions: ['سوال خود را ساده‌تر بپرسید', 'از منوی راهنما استفاده کنید'],
+        data: { error: true },
+      }
+    }
   }
 
-  // ─── Sales Query — بهینه‌شده با Promise.all ───
-  private async handleSalesQuery(userId: string) {
+  // ─── Helper: Check keywords ──────────────────────────────
+  private hasKeywords(text: string, keywords: string[]): boolean {
+    return keywords.some(keyword => text.includes(keyword))
+  }
+
+  // ─── Sales Query ──────────────────────────────────────────
+  private async handleSalesQuery(userId: string): Promise<AIResponse> {
     const today = new Date().toISOString().split('T')[0]
     const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
+    const firstOfLastMonth = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).toISOString()
 
-    // ✅ دو کوئری همزمان
-    const [todayResult, monthResult] = await Promise.all([
-      supabase.from('invoices').select('total, status').eq('user_id', userId).gte('date', today),
-      supabase.from('invoices').select('total').eq('user_id', userId).gte('date', firstOfMonth).eq('status', 'paid'),
+    // ✅ سه کوئری موازی
+    const [todayResult, monthResult, lastMonthResult] = await Promise.all([
+      supabase
+        .from('invoices')
+        .select('total, status')
+        .eq('user_id', userId)
+        .gte('date', today),
+      supabase
+        .from('invoices')
+        .select('total')
+        .eq('user_id', userId)
+        .gte('date', firstOfMonth)
+        .eq('status', 'paid'),
+      supabase
+        .from('invoices')
+        .select('total')
+        .eq('user_id', userId)
+        .gte('date', firstOfLastMonth)
+        .lt('date', firstOfMonth)
+        .eq('status', 'paid'),
     ])
 
     const todayInvoices = todayResult.data || []
     const monthInvoices = monthResult.data || []
+    const lastMonthInvoices = lastMonthResult.data || []
 
     const todayTotal = todayInvoices.reduce((s: number, i: any) => s + Number(i.total), 0)
     const todayPaid = todayInvoices.filter((i: any) => i.status === 'paid').reduce((s: number, i: any) => s + Number(i.total), 0)
     const monthTotal = monthInvoices.reduce((s: number, i: any) => s + Number(i.total), 0)
+    const lastMonthTotal = lastMonthInvoices.reduce((s: number, i: any) => s + Number(i.total), 0)
+
+    // ✅ محاسبه رشد
+    const growth = lastMonthTotal > 0 ? ((monthTotal - lastMonthTotal) / lastMonthTotal) * 100 : 0
+    const growthText = growth > 0 ? `⬆️ ${growth.toFixed(1)}% رشد` : growth < 0 ? `⬇️ ${Math.abs(growth).toFixed(1)}% کاهش` : 'بدون تغییر'
+
+    let answer = `فروش امروز: ${todayTotal.toLocaleString()} افغانی (${todayPaid.toLocaleString()} پرداخت شده). `
+    answer += `فروش این ماه: ${monthTotal.toLocaleString()} افغانی. `
+    answer += `نسبت به ماه قبل: ${growthText}.`
 
     return {
-      answer: `فروش امروز: ${todayTotal.toLocaleString()} افغانی (${todayPaid.toLocaleString()} پرداخت شده). فروش این ماه: ${monthTotal.toLocaleString()} افغانی.`,
+      answer,
       confidence: 0.95,
       sources: [{ type: 'invoices', description: 'فاکتورهای امروز و ماه جاری' }],
-      suggestions: ['مشاهده گزارش فروش کامل', 'مقایسه با ماه گذشته', 'بهترین محصولات فروش'],
-      data: { todayTotal, todayPaid, monthTotal, todayInvoicesCount: todayInvoices.length },
+      suggestions: [
+        'مشاهده گزارش فروش کامل',
+        'مقایسه با ماه گذشته',
+        'بهترین محصولات فروش',
+      ],
+      data: { todayTotal, todayPaid, monthTotal, lastMonthTotal, growth },
     }
   }
 
-  // ─── Inventory Query ───
-  private async handleInventoryQuery(userId: string) {
+  // ─── Inventory Query ──────────────────────────────────────
+  private async handleInventoryQuery(userId: string): Promise<AIResponse> {
     // ✅ فقط ستون‌های ضروری
-    const { data: products } = await supabase
+    const { data: products, error } = await supabase
       .from('products')
-      .select('name, quantity, min_stock_level')
+      .select('name, quantity, min_stock_level, category') // ✅ اضافه کردن category
       .eq('user_id', userId)
       .eq('is_active', true)
 
-    if (!products || products.length === 0) {
+    if (error || !products || products.length === 0) {
       return {
         answer: 'هیچ محصول فعالی یافت نشد.',
         confidence: 1,
         sources: [],
-        suggestions: ['افزودن محصول جدید'],
+        suggestions: ['افزودن محصول جدید', 'وارد کردن موجودی'],
         data: { totalProducts: 0 },
       }
     }
 
     const lowStock = products.filter((p: any) => Number(p.quantity) <= Number(p.min_stock_level))
     const outOfStock = products.filter((p: any) => Number(p.quantity) === 0)
+    const totalQuantity = products.reduce((s: number, p: any) => s + Number(p.quantity), 0)
 
     let answer = `تعداد کل محصولات: ${products.length}. `
+    answer += `مجموع موجودی: ${totalQuantity.toLocaleString()} عدد. `
+
     if (lowStock.length > 0) {
       const names = lowStock.map((p: any) => p.name).join('، ')
       answer += `⚠️ ${lowStock.length} محصول با موجودی کم: ${names}. `
@@ -94,28 +159,58 @@ export class AIService {
       answer,
       confidence: 0.9,
       sources: [{ type: 'products', description: 'لیست محصولات فعال' }],
-      suggestions: lowStock.length > 0 ? ['ثبت سفارش خرید', 'مشاهده گزارش موجودی'] : ['مشاهده گزارش موجودی'],
-      data: { totalProducts: products.length, lowStockCount: lowStock.length, outOfStockCount: outOfStock.length },
+      suggestions: lowStock.length > 0 
+        ? ['ثبت سفارش خرید', 'مشاهده گزارش موجودی'] 
+        : ['مشاهده گزارش موجودی', 'بررسی محصولات جدید'],
+      data: { 
+        totalProducts: products.length, 
+        totalQuantity,
+        lowStockCount: lowStock.length, 
+        outOfStockCount: outOfStock.length 
+      },
     }
   }
 
-  // ─── Customer Query — بهینه‌شده با Promise.all ───
-  private async handleCustomerQuery(userId: string) {
+  // ─── Customer Query ──────────────────────────────────────
+  private async handleCustomerQuery(userId: string): Promise<AIResponse> {
     // ✅ دو کوئری همزمان
     const [customersResult, unpaidResult] = await Promise.all([
-      supabase.from('customers').select('full_name, opening_balance').eq('user_id', userId).eq('is_active', true),
-      supabase.from('invoices').select('total, paid_amount').eq('user_id', userId).neq('status', 'paid'),
+      supabase
+        .from('customers')
+        .select('id, full_name, opening_balance, phone')
+        .eq('user_id', userId)
+        .eq('is_active', true),
+      supabase
+        .from('invoices')
+        .select('customer_id, total, paid_amount')
+        .eq('user_id', userId)
+        .neq('status', 'paid'),
     ])
 
     const customers = customersResult.data || []
     const unpaidInvoices = unpaidResult.data || []
 
     const totalCustomers = customers.length
-    const totalUnpaid = unpaidInvoices.reduce((s: number, i: any) => s + Number(i.total) - Number(i.paid_amount), 0)
+    
+    // ✅ محاسبه دقیق بدهی هر مشتری
+    const debtMap: Record<string, number> = {}
+    for (const inv of unpaidInvoices) {
+      const customerId = inv.customer_id
+      if (customerId) {
+        debtMap[customerId] = (debtMap[customerId] || 0) + Number(inv.total) - Number(inv.paid_amount)
+      }
+    }
+
+    const totalUnpaid = Object.values(debtMap).reduce((s, v) => s + v, 0)
 
     const topDebtors = customers
-      .filter((c: any) => Number(c.opening_balance) > 0)
-      .sort((a: any, b: any) => Number(b.opening_balance) - Number(a.opening_balance))
+      .map((c: any) => ({
+        ...c,
+        totalDebt: debtMap[c.id] || 0,
+        openingBalance: Number(c.opening_balance) || 0,
+      }))
+      .filter((c: any) => c.totalDebt > 0 || c.openingBalance > 0)
+      .sort((a: any, b: any) => (b.totalDebt + b.openingBalance) - (a.totalDebt + a.openingBalance))
       .slice(0, 5)
 
     let answer = `تعداد مشتریان فعال: ${totalCustomers}. `
@@ -123,95 +218,209 @@ export class AIService {
       answer += `مجموع مطالبات پرداخت‌نشده: ${totalUnpaid.toLocaleString()} افغانی. `
     }
     if (topDebtors.length > 0) {
-      const names = topDebtors.map((c: any) => `${c.full_name} (${Number(c.opening_balance).toLocaleString()})`).join('، ')
+      const names = topDebtors.map((c: any) => 
+        `${c.full_name} (${(c.totalDebt + c.openingBalance).toLocaleString()})`
+      ).join('، ')
       answer += `بیشترین بدهکاران: ${names}.`
+    } else {
+      answer += '✅ هیچ مشتری بدهکاری وجود ندارد.'
     }
 
     return {
       answer,
       confidence: 0.9,
       sources: [{ type: 'customers', description: 'مشتریان و فاکتورهای باز' }],
-      suggestions: ['مشاهده لیست بدهکاران', 'ارسال یادآوری پرداخت'],
+      suggestions: ['مشاهده لیست بدهکاران', 'ارسال یادآوری پرداخت', 'گزارش مشتریان'],
       data: { totalCustomers, totalUnpaid, topDebtorsCount: topDebtors.length },
     }
   }
 
-  // ─── Financial Query ───
-  private async handleFinancialQuery(userId: string) {
+  // ─── Financial Query ──────────────────────────────────────
+  private async handleFinancialQuery(userId: string): Promise<AIResponse> {
     const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
+    const today = new Date().toISOString().split('T')[0]
 
-    // ✅ فقط debit و credit
-    const { data: entries } = await supabase
-      .from('ledger_entries')
-      .select('debit, credit')
-      .eq('user_id', userId)
-      .gte('entry_date', firstOfMonth)
+    // ✅ دو کوئری موازی: ماه جاری و امروز
+    const [monthResult, todayResult] = await Promise.all([
+      supabase
+        .from('ledger_entries')
+        .select('debit, credit, entry_date')
+        .eq('user_id', userId)
+        .gte('entry_date', firstOfMonth),
+      supabase
+        .from('ledger_entries')
+        .select('debit, credit')
+        .eq('user_id', userId)
+        .gte('entry_date', today),
+    ])
 
-    const totalRevenue = entries?.reduce((s: number, e: any) => s + Number(e.credit), 0) || 0
-    const totalExpenses = entries?.reduce((s: number, e: any) => s + Number(e.debit), 0) || 0
+    const monthEntries = monthResult.data || []
+    const todayEntries = todayResult.data || []
+
+    const totalRevenue = monthEntries.reduce((s: number, e: any) => s + Number(e.credit), 0)
+    const totalExpenses = monthEntries.reduce((s: number, e: any) => s + Number(e.debit), 0)
     const netProfit = totalRevenue - totalExpenses
+
+    const todayRevenue = todayEntries.reduce((s: number, e: any) => s + Number(e.credit), 0)
+    const todayExpenses = todayEntries.reduce((s: number, e: any) => s + Number(e.debit), 0)
 
     const statusEmoji = netProfit >= 0 ? '🟢' : '🔴'
     const statusText = netProfit >= 0 ? 'سود' : 'زیان'
 
+    let answer = `${statusEmoji} ${statusText} این ماه: ${Math.abs(netProfit).toLocaleString()} افغانی. `
+    answer += `درآمد: ${totalRevenue.toLocaleString()}، هزینه: ${totalExpenses.toLocaleString()}. `
+    answer += `درآمد امروز: ${todayRevenue.toLocaleString()}، هزینه امروز: ${todayExpenses.toLocaleString()}.`
+
     return {
-      answer: `${statusEmoji} ${statusText} این ماه: ${Math.abs(netProfit).toLocaleString()} افغانی. درآمد: ${totalRevenue.toLocaleString()}، هزینه: ${totalExpenses.toLocaleString()}.`,
+      answer,
       confidence: 0.85,
       sources: [{ type: 'ledger_entries', description: 'ثبت‌های حسابداری ماه جاری' }],
-      suggestions: ['مشاهده صورت سود و زیان', 'مشاهده ترازنامه', 'گزارش گردش نقدی'],
-      data: { totalRevenue, totalExpenses, netProfit },
+      suggestions: [
+        'مشاهده صورت سود و زیان',
+        'مشاهده ترازنامه',
+        'گزارش گردش نقدی',
+        'مشاهده هزینه‌ها',
+      ],
+      data: { totalRevenue, totalExpenses, netProfit, todayRevenue, todayExpenses },
     }
   }
 
-  // ─── General Query ───
-  private async handleGeneralQuery(userId: string, question: string) {
+  // ─── Expense Query ──────────────────────────────────────
+  private async handleExpenseQuery(userId: string): Promise<AIResponse> {
+    const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
+
+    const { data: expenses } = await supabase
+      .from('ledger_entries')
+      .select('debit, description, entry_date')
+      .eq('user_id', userId)
+      .gte('entry_date', firstOfMonth)
+      .order('debit', { ascending: false })
+      .limit(10)
+
+    const totalExpenses = expenses?.reduce((s: number, e: any) => s + Number(e.debit), 0) || 0
+
+    let answer = `مجموع هزینه‌های این ماه: ${totalExpenses.toLocaleString()} افغانی. `
+    if (expenses && expenses.length > 0) {
+      const topExpenses = expenses.slice(0, 5)
+        .map((e: any) => `${e.description || 'بدون توضیح'}: ${Number(e.debit).toLocaleString()}`)
+        .join('، ')
+      answer += `بزرگترین هزینه‌ها: ${topExpenses}.`
+    }
+
     return {
-      answer: `من می‌توانم درباره فروش، موجودی، مشتریان و وضعیت مالی کمک کنم. لطفاً سوال خود را دقیق‌تر بپرسید.`,
+      answer,
+      confidence: 0.85,
+      sources: [{ type: 'ledger_entries', description: 'هزینه‌های ماه جاری' }],
+      suggestions: ['مشاهده همه هزینه‌ها', 'دسته‌بندی هزینه‌ها', 'گزارش هزینه'],
+      data: { totalExpenses, topExpenses: expenses?.slice(0, 5) || [] },
+    }
+  }
+
+  // ─── General Query ──────────────────────────────────────
+  private handleGeneralQuery(userId: string, question: string): AIResponse {
+    return {
+      answer: `من می‌توانم درباره فروش، موجودی، مشتریان، هزینه‌ها و وضعیت مالی کمک کنم. لطفاً سوال خود را دقیق‌تر بپرسید.
+
+سوالات پیشنهادی:
+• فروش امروز چقدر بود؟
+• چه محصولاتی موجودی کم دارند؟
+• وضعیت سود این ماه چگونه است؟
+• بدهکاران اصلی چه کسانی هستند؟
+• هزینه‌های این ماه چقدر است؟`,
       confidence: 0.5,
       sources: [],
-      suggestions: ['فروش امروز چقدر بود؟', 'چه محصولاتی موجودی کم دارند؟', 'وضعیت سود این ماه'],
+      suggestions: [
+        'فروش امروز چقدر بود؟',
+        'چه محصولاتی موجودی کم دارند؟',
+        'وضعیت سود این ماه',
+        'مشتریان بدهکار',
+        'هزینه‌های این ماه',
+      ],
       data: {},
     }
   }
 
-  // ─── Get Insights — بهینه‌شده با Promise.all ───
+  // ─── Get Insights ──────────────────────────────────────
   async getInsights(userId: string): Promise<AIInsight[]> {
     return withCacheKey(CacheKeys.insights(userId), 120_000, async () => {
-      const [productsResult, unpaidResult] = await Promise.all([
-        supabase.from('products').select('name, quantity, min_stock_level').eq('user_id', userId).eq('is_active', true),
-        supabase.from('invoices').select('id', { count: 'exact', head: true }).eq('user_id', userId).neq('status', 'paid').neq('status', 'cancelled'),
+      // ✅ count: "estimated" به جای "exact"
+      const [productsResult, unpaidResult, weekResult] = await Promise.all([
+        supabase
+          .from('products')
+          .select('name, quantity, min_stock_level')
+          .eq('user_id', userId)
+          .eq('is_active', true),
+        supabase
+          .from('invoices')
+          .select('id', { count: 'estimated', head: true })
+          .eq('user_id', userId)
+          .neq('status', 'paid')
+          .neq('status', 'cancelled'),
+        supabase
+          .from('invoices')
+          .select('total')
+          .eq('user_id', userId)
+          .eq('status', 'paid')
+          .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()),
       ])
 
       const insights: AIInsight[] = []
 
+      // ✅ هشدار کمبود موجودی
       const products = productsResult.data || []
       const lowStock = products.filter((p: any) => Number(p.quantity) <= Number(p.min_stock_level))
       if (lowStock.length > 0) {
         insights.push({
-          type: 'warning', title: 'هشدار کمبود موجودی',
+          type: 'warning',
+          title: 'هشدار کمبود موجودی',
           description: `${lowStock.length} محصول به حداقل موجودی رسیده‌اند.`,
-          action: '/warehouse', actionLabel: 'مشاهده موجودی',
-          metric: lowStock.length, metricLabel: 'محصول',
+          action: '/warehouse',
+          actionLabel: 'مشاهده موجودی',
+          metric: lowStock.length,
+          metricLabel: 'محصول',
         })
       }
 
+      // ✅ فاکتورهای پرداخت‌نشده
       const unpaidCount = unpaidResult.count || 0
       if (unpaidCount > 0) {
         insights.push({
-          type: 'info', title: 'فاکتورهای در انتظار پرداخت',
+          type: 'info',
+          title: 'فاکتورهای در انتظار پرداخت',
           description: `${unpaidCount} فاکتور هنوز پرداخت نشده‌اند.`,
-          action: '/invoices', actionLabel: 'مشاهده فاکتورها',
-          metric: unpaidCount, metricLabel: 'فاکتور',
+          action: '/invoices',
+          actionLabel: 'مشاهده فاکتورها',
+          metric: unpaidCount,
+          metricLabel: 'فاکتور',
         })
       }
 
+      // ✅ فروش هفته گذشته
+      const weekSales = (weekResult.data || []).reduce((s: number, i: any) => s + Number(i.total), 0)
+      if (weekSales > 0) {
+        insights.push({
+          type: 'tip',
+          title: 'فروش هفته گذشته',
+          description: `فروش هفته گذشته: ${weekSales.toLocaleString()} افغانی.`,
+          action: '/dashboard',
+          actionLabel: 'مشاهده داشبورد',
+          metric: weekSales,
+          metricLabel: 'افغانی',
+        })
+      }
+
+      // ✅ نکته روز (همیشه آخرین باشد)
       insights.push({
-        type: 'tip', title: 'نکته روز',
+        type: 'tip',
+        title: '💡 نکته روز',
         description: 'می‌توانید با ثبت هزینه‌ها در بخش حسابداری، گزارش سود و زیان دقیق‌تری داشته باشید.',
-        action: '/accounting', actionLabel: 'رفتن به حسابداری',
+        action: '/accounting',
+        actionLabel: 'رفتن به حسابداری',
       })
 
       return insights
     })
   }
 }
+
+export default AIService

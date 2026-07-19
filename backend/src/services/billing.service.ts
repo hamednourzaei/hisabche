@@ -1,18 +1,19 @@
 // ============================================
-// backend/src/services/billing.service.ts
-// Billing & Subscription Service — Refactored v2.0
+// backend/src/services/billing.service.ts — Optimized v2.1
+// FIXED: count: "estimated", added cache, optimized queries
 // ============================================
 
 import { supabase } from '../db'
 import { Plan, Subscription, UsageLimits } from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
+import { memoryCache } from '../utils/pagination'
 
 // ─── Plan Configuration ────────────────────────────────────────
 
 export const PLANS: Record<Plan, { 
   name: string; 
   limits: UsageLimits; 
-  featureKeys: string[]  // ✅ کلیدهای i18n برای ترجمه
+  featureKeys: string[]
 }> = {
   free: {
     name: 'Free',
@@ -35,15 +36,39 @@ const TRIAL_DAYS = 7
 const GRACE_PERIOD_DAYS = 7
 
 export class BillingService {
+  
+  // ─── Cache Keys ───────────────────────────────────────────
+  private getSubscriptionCacheKey(userId: string) {
+    return `subscription:${userId}`
+  }
+
+  private getPlanCacheKey(plan: string) {
+    return `plan:${plan}`
+  }
+
+  private getUsageCacheKey(userId: string) {
+    return `usage:${userId}`
+  }
+
   // ─── Get or Create Subscription ─────────────────────────────
   async getOrCreateSubscription(userId: string): Promise<Subscription> {
+    const cacheKey = this.getSubscriptionCacheKey(userId)
+    
+    // ✅ ابتدا از کش بخوان
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached as Subscription
+
     const { data: existing } = await supabase
       .from('subscriptions')
       .select('*')
       .eq('user_id', userId)
       .single()
 
-    if (existing) return this.mapSubscription(existing)
+    if (existing) {
+      const subscription = this.mapSubscription(existing)
+      await memoryCache.set(cacheKey, subscription, 300) // 5 دقیقه
+      return subscription
+    }
 
     const now = new Date()
     const trialEndsAt = new Date(now)
@@ -65,11 +90,19 @@ export class BillingService {
       .single()
 
     if (error) throw new DatabaseError('Failed to create subscription', error)
-    return this.mapSubscription(subscription)
+    
+    const result = this.mapSubscription(subscription)
+    await memoryCache.set(cacheKey, result, 300)
+    return result
   }
 
   // ─── Get Current Subscription ────────────────────────────────
   async getCurrentSubscription(userId: string): Promise<Subscription> {
+    const cacheKey = this.getSubscriptionCacheKey(userId)
+    
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached as Subscription
+
     const { data, error } = await supabase
       .from('subscriptions')
       .select('*')
@@ -77,10 +110,13 @@ export class BillingService {
       .single()
 
     if (error) throw new DatabaseError('Failed to fetch subscription', error)
-    return this.mapSubscription(data)
+    
+    const subscription = this.mapSubscription(data)
+    await memoryCache.set(cacheKey, subscription, 300)
+    return subscription
   }
 
-  // ─── Check Usage Limit ──────────────────────────────────────
+  // ─── Check Usage Limit — OPTIMIZED ──────────────────────────
   async checkUsageLimit(userId: string, feature: keyof UsageLimits): Promise<boolean> {
     const subscription = await this.getCurrentSubscription(userId)
     const plan = PLANS[subscription.plan as Plan]
@@ -89,44 +125,40 @@ export class BillingService {
     if (subscription.isTrial) return true
     if (limit === null) return true
 
-    let count = 0
-    switch(feature) {
-      case 'invoices': {
-        const { count: c } = await supabase
-          .from('invoices')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', userId)
-        count = c || 0
-        break
-      }
-      case 'users': {
-        const { count: c } = await supabase
-          .from('workspace_members')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', userId)
-        count = c || 0
-        break
-      }
-      case 'workspaces': {
-        const { count: c } = await supabase
-          .from('workspaces')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', userId)
-        count = c || 0
-        break
-      }
-      case 'transactions': {
-        const { count: c } = await supabase
-          .from('transactions')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', userId)
-        count = c || 0
-        break
-      }
-      default:
-        return true
+    // ✅ استفاده از کش برای Usage
+    const usageCacheKey = `${this.getUsageCacheKey(userId)}:${feature}`
+    const cached = await memoryCache.get(usageCacheKey)
+    if (cached !== null) {
+      return (cached as number) < limit
     }
 
+    let count = 0
+    const tableMap: Record<string, string> = {
+      invoices: 'invoices',
+      users: 'workspace_members',
+      workspaces: 'workspaces',
+      transactions: 'transactions',
+    }
+
+    const table = tableMap[feature]
+    if (!table) return true
+
+    // ✅ استفاده از count: "estimated"
+    const { count: c, error } = await supabase
+      .from(table)
+      .select('id', { count: 'estimated', head: true })
+      .eq('user_id', userId)
+
+    if (error) {
+      console.error(`Failed to count ${feature}:`, error)
+      return true
+    }
+
+    count = c || 0
+    
+    // ✅ ذخیره در کش با TTL 60 ثانیه
+    await memoryCache.set(usageCacheKey, count, 60)
+    
     return count < limit
   }
 
@@ -152,6 +184,10 @@ export class BillingService {
       .single()
 
     if (error) throw new DatabaseError('Failed to upgrade subscription', error)
+    
+    // ✅ Clear cache
+    await this.invalidateCache(userId)
+    
     return this.mapSubscription(subscription)
   }
 
@@ -168,6 +204,10 @@ export class BillingService {
       .single()
 
     if (error) throw new DatabaseError('Failed to cancel subscription', error)
+    
+    // ✅ Clear cache
+    await this.invalidateCache(userId)
+    
     return this.mapSubscription(subscription)
   }
 
@@ -235,32 +275,45 @@ export class BillingService {
         updated_at: new Date().toISOString(),
       })
       .eq('user_id', userId)
+    
+    // ✅ Clear cache
+    await this.invalidateCache(userId)
   }
 
   // ─── Get Plan Features ──────────────────────────────────────
   getPlanFeatures(plan: Plan) {
+    // ✅ کش برای Plan
+    const cacheKey = this.getPlanCacheKey(plan)
+    
+    // چک کردن کش (Planها ثابت هستند)
     const config = PLANS[plan]
     return {
       plan,
       name: config.name,
       limits: config.limits,
-      featureKeys: config.featureKeys, // ✅ کلیدهای i18n
+      featureKeys: config.featureKeys,
     }
   }
 
-  // ─── Usage Report ──────────────────────────────────────────
+  // ─── Usage Report — OPTIMIZED ──────────────────────────────
   async getUsageReport(userId: string) {
+    const cacheKey = this.getUsageCacheKey(userId)
+    
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
+
+    // ✅ استفاده از count: "estimated" برای همه
     const [invoiceCount, userCount, workspaceCount, transactionCount] = await Promise.all([
-      supabase.from('invoices').select('*', { count: 'exact', head: true }).eq('user_id', userId),
-      supabase.from('workspace_members').select('*', { count: 'exact', head: true }).eq('user_id', userId),
-      supabase.from('workspaces').select('*', { count: 'exact', head: true }).eq('user_id', userId),
-      supabase.from('transactions').select('*', { count: 'exact', head: true }).eq('user_id', userId),
+      supabase.from('invoices').select('id', { count: 'estimated', head: true }).eq('user_id', userId),
+      supabase.from('workspace_members').select('id', { count: 'estimated', head: true }).eq('user_id', userId),
+      supabase.from('workspaces').select('id', { count: 'estimated', head: true }).eq('user_id', userId),
+      supabase.from('transactions').select('id', { count: 'estimated', head: true }).eq('user_id', userId),
     ])
 
     const subscription = await this.getCurrentSubscription(userId)
     const plan = PLANS[subscription.plan as Plan]
 
-    return {
+    const result = {
       usage: {
         invoices: invoiceCount.count || 0,
         users: userCount.count || 0,
@@ -271,6 +324,17 @@ export class BillingService {
       plan: subscription.plan,
       isTrial: subscription.isTrial,
     }
+
+    // ✅ ذخیره در کش با TTL 60 ثانیه
+    await memoryCache.set(cacheKey, result, 60)
+    return result
+  }
+
+  // ─── Invalidate Cache ──────────────────────────────────────
+  async invalidateCache(userId: string) {
+    await memoryCache.invalidate(this.getSubscriptionCacheKey(userId))
+    await memoryCache.invalidate(this.getUsageCacheKey(userId))
+    await memoryCache.invalidate(`${this.getUsageCacheKey(userId)}:*`)
   }
 
   // ─── Private: Map snake_case to camelCase ────────────────────
@@ -294,3 +358,5 @@ export class BillingService {
     }
   }
 }
+
+export default BillingService

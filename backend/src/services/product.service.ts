@@ -1,6 +1,6 @@
 // ============================================
-// backend/src/services/product.service.ts
-// FIXED v2.2 — Parallel queries + estimated count
+// backend/src/services/product.service.ts — Optimized v2.4
+// FIXED: Removed supabase.raw(), use JavaScript filter
 // ============================================
 
 import { supabase } from '../db'
@@ -16,22 +16,39 @@ const PRODUCT_LIST_COLUMNS = `
   is_active, image_url, created_at, updated_at
 `
 
+const PRODUCT_MINIMAL = `
+  id, name, quantity, min_stock_level, unit, sell_price
+`
+
 const SORT_BY_MAP: Record<string, string> = {
   createdAt: 'created_at', updatedAt: 'updated_at',
   sellPrice: 'sell_price', buyPrice: 'buy_price', minStockLevel: 'min_stock_level',
 }
 
 export class ProductService {
-  // ─── List — Cursor-based Pagination ───
+
+  // ─── Cache Keys ──────────────────────────────────────────────
+  private getListCacheKey(userId: string, filters: ProductFilters) {
+    return `products:${userId}:${JSON.stringify(filters)}`
+  }
+
+  private getProductCacheKey(userId: string, id: string) {
+    return `product:${userId}:${id}`
+  }
+
+  private getLowStockCacheKey(userId: string) {
+    return `products:low_stock:${userId}`
+  }
+
+  // ─── List ────────────────────────────────────────────────────
   async list(userId: string, filters: ProductFilters) {
     const {
       search, category, isActive, lowStock, minPrice, maxPrice, barcode,
       limit = 20, cursor, sortBy = 'created_at', sortDirection = 'desc'
     } = filters
 
-    // ✅ کش کردن نتیجه (مشابه invoice.service.ts)
-    const cacheKey = `products:${userId}:${JSON.stringify(filters)}`
-    const cached = memoryCache.get(cacheKey)
+    const cacheKey = this.getListCacheKey(userId, filters)
+    const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
     const maxLimit = Math.min(limit, 100)
@@ -52,7 +69,6 @@ export class ProductService {
     if (minPrice !== undefined) query = query.gte('sell_price', minPrice)
     if (maxPrice !== undefined) query = query.lte('sell_price', maxPrice)
 
-    // ✅ Cursor-based
     if (cursor) {
       if (sortDirection === 'desc') {
         query = query.lt(dbSortBy, cursor)
@@ -61,7 +77,6 @@ export class ProductService {
       }
     }
 
-    // ✅ FIX: دو کوئری موازی (نه سریالی) + count: "estimated" (نه "exact")
     const [{ data, error }, { count }] = await Promise.all([
       query,
       supabase
@@ -76,7 +91,6 @@ export class ProductService {
     const items = hasMore ? data.slice(0, maxLimit) : data
     const nextCursor = hasMore && items.length > 0 ? items[items.length - 1]?.id : null
 
-    // Apply lowStock filter in memory
     let products = (items || []).map(mapProduct)
     if (lowStock !== undefined) {
       products = lowStock
@@ -92,41 +106,61 @@ export class ProductService {
       limit: maxLimit,
     }
 
-    // ✅ کش ۳۰ ثانیه‌ای
-    memoryCache.set(cacheKey, result, 30_000)
-
+    await memoryCache.set(cacheKey, result, 30)
     return result
   }
 
-  // ─── Get By ID ───
+  // ─── Get By ID ──────────────────────────────────────────────
   async getById(id: string, userId: string) {
+    const cacheKey = this.getProductCacheKey(userId, id)
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
+
     const { data: product, error } = await supabase
-      .from('products').select(PRODUCT_LIST_COLUMNS).eq('id', id).eq('user_id', userId).single()
+      .from('products')
+      .select(PRODUCT_LIST_COLUMNS)
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single()
+
     if (error || !product) throw new NotFoundError('Product')
-    return mapProduct(product)
+
+    const result = mapProduct(product)
+    await memoryCache.set(cacheKey, result, 300)
+    return result
   }
 
-  // ─── Create ───
+  // ─── Create ──────────────────────────────────────────────────
   async create(userId: string, data: CreateProduct) {
     const { data: product, error } = await supabase
-      .from('products').insert({
-        name: data.name, barcode: data.barcode || '', sku: data.sku || '',
-        category: data.category || 'general', description: data.description || '',
-        image_url: data.imageUrl || '', quantity: data.quantity || 0,
-        unit: data.unit || 'piece', min_stock_level: data.minStockLevel || 5,
-        buy_price: data.buyPrice || 0, sell_price: data.sellPrice || 0,
-        wholesale_price: data.wholesalePrice || null, is_active: data.isActive !== false, user_id: userId,
+      .from('products')
+      .insert({
+        name: data.name,
+        barcode: data.barcode || '',
+        sku: data.sku || '',
+        category: data.category || 'general',
+        description: data.description || '',
+        image_url: data.imageUrl || '',
+        quantity: data.quantity || 0,
+        unit: data.unit || 'piece',
+        min_stock_level: data.minStockLevel || 5,
+        buy_price: data.buyPrice || 0,
+        sell_price: data.sellPrice || 0,
+        wholesale_price: data.wholesalePrice || null,
+        is_active: data.isActive !== false,
+        user_id: userId,
       })
-      .select(PRODUCT_LIST_COLUMNS).single()
+      .select(PRODUCT_LIST_COLUMNS)
+      .single()
 
     if (error) throw new DatabaseError('Failed to create product', error)
 
-    this.invalidateUserCache(userId)
+    await this.invalidateUserCache(userId)
 
     return mapProduct(product)
   }
 
-  // ─── Update ───
+  // ─── Update ──────────────────────────────────────────────────
   async update(id: string, userId: string, data: UpdateProduct) {
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (data.name !== undefined) updates.name = data.name
@@ -144,47 +178,165 @@ export class ProductService {
     if (data.isActive !== undefined) updates.is_active = data.isActive
 
     const { data: product, error } = await supabase
-      .from('products').update(updates).eq('id', id).eq('user_id', userId)
-      .select(PRODUCT_LIST_COLUMNS).single()
+      .from('products')
+      .update(updates)
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select(PRODUCT_LIST_COLUMNS)
+      .single()
 
     if (error) throw new DatabaseError('Failed to update product', error)
     if (!product) throw new NotFoundError('Product')
 
-    this.invalidateUserCache(userId)
+    await this.invalidateUserCache(userId)
 
     return mapProduct(product)
   }
 
-  // ─── Delete ───
+  // ─── Delete ──────────────────────────────────────────────────
   async delete(id: string, userId: string): Promise<void> {
-    // ✅ FIX: دو چک موازی به‌جای سریالی
     const [{ count }, { count: stockCount }] = await Promise.all([
-      supabase.from('invoice_items').select('id', { count: 'estimated', head: true }).eq('product_id', id),
-      supabase.from('stock_movements').select('id', { count: 'estimated', head: true }).eq('product_id', id),
+      supabase
+        .from('invoice_items')
+        .select('id', { count: 'estimated', head: true })
+        .eq('product_id', id),
+      supabase
+        .from('stock_movements')
+        .select('id', { count: 'estimated', head: true })
+        .eq('product_id', id),
     ])
 
-    if (count && count > 0) throw new DatabaseError('Product has invoice items, cannot delete')
-    if (stockCount && stockCount > 0) throw new DatabaseError('Product has stock movements, cannot delete')
+    if (count && count > 0) {
+      throw new DatabaseError('Product has invoice items, cannot delete')
+    }
+    if (stockCount && stockCount > 0) {
+      throw new DatabaseError('Product has stock movements, cannot delete')
+    }
 
-    const { error } = await supabase.from('products').delete().eq('id', id).eq('user_id', userId)
+    const { error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId)
+
     if (error) throw new DatabaseError('Failed to delete product', error)
 
-    this.invalidateUserCache(userId)
+    await this.invalidateUserCache(userId)
   }
 
-  // ─── Get Low Stock ───
+  // ─── Get Low Stock ───────────────────────────────────────────
   async getLowStock(userId: string) {
+    const cacheKey = this.getLowStockCacheKey(userId)
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
+
     const { data, error } = await supabase
-      .from('products').select('id, name, quantity, min_stock_level, unit, sell_price')
-      .eq('user_id', userId).eq('is_active', true).order('quantity', { ascending: true })
+      .from('products')
+      .select(PRODUCT_MINIMAL)
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .order('quantity', { ascending: true })
 
     if (error) throw new DatabaseError('Failed to fetch low stock products', error)
-    return (data || []).map(mapProduct).filter((product: any) => product.quantity <= product.minStockLevel)
+
+    const products = (data || [])
+      .map(mapProduct)
+      .filter((product: any) => product.quantity <= product.minStockLevel)
+
+    await memoryCache.set(cacheKey, products, 60)
+    return products
   }
 
-  // ─── Cache Invalidation ───
-  private invalidateUserCache(userId: string) {
-    memoryCache.invalidate(`products:${userId}`)
-    memoryCache.invalidate(`dashboard:${userId}`)
+  // ─── Get Product by Barcode ──────────────────────────────────
+  async getByBarcode(userId: string, barcode: string) {
+    const cacheKey = `product:barcode:${userId}:${barcode}`
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
+
+    const { data, error } = await supabase
+      .from('products')
+      .select(PRODUCT_LIST_COLUMNS)
+      .eq('user_id', userId)
+      .eq('barcode', barcode)
+      .single()
+
+    if (error || !data) return null
+
+    const result = mapProduct(data)
+    await memoryCache.set(cacheKey, result, 300)
+    return result
+  }
+
+  // ─── Get Products by Category ────────────────────────────────
+  async getByCategory(userId: string, category: string) {
+    const cacheKey = `products:category:${userId}:${category}`
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
+
+    const { data, error } = await supabase
+      .from('products')
+      .select(PRODUCT_MINIMAL)
+      .eq('user_id', userId)
+      .eq('category', category)
+      .eq('is_active', true)
+      .order('name')
+
+    if (error) throw new DatabaseError('Failed to fetch products by category', error)
+
+    const result = (data || []).map(mapProduct)
+    await memoryCache.set(cacheKey, result, 120)
+    return result
+  }
+
+  // ─── Get Product Stats — FIXED ──────────────────────────────
+  async getStats(userId: string) {
+    const cacheKey = `products:stats:${userId}`
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
+
+    // ✅ FIX: سه کوئری موازی
+    const [totalResult, activeResult, productsResult] = await Promise.all([
+      supabase
+        .from('products')
+        .select('id', { count: 'estimated', head: true })
+        .eq('user_id', userId),
+      supabase
+        .from('products')
+        .select('id', { count: 'estimated', head: true })
+        .eq('user_id', userId)
+        .eq('is_active', true),
+      supabase
+        .from('products')
+        .select('quantity, min_stock_level')
+        .eq('user_id', userId)
+        .eq('is_active', true),
+    ])
+
+    // ✅ محاسبه lowStock در JavaScript
+    const lowStockCount = (productsResult.data || [])
+      .filter((p: any) => Number(p.quantity) < Number(p.min_stock_level))
+      .length
+
+    const result = {
+      total: totalResult.count || 0,
+      active: activeResult.count || 0,
+      lowStock: lowStockCount,
+    }
+
+    await memoryCache.set(cacheKey, result, 60)
+    return result
+  }
+
+  // ─── Invalidate Cache ────────────────────────────────────────
+  private async invalidateUserCache(userId: string) {
+    await memoryCache.invalidate(`products:${userId}:*`)
+    await memoryCache.invalidate(this.getLowStockCacheKey(userId))
+    await memoryCache.invalidate(`products:category:${userId}:*`)
+    await memoryCache.invalidate(`products:stats:${userId}`)
+    await memoryCache.invalidate(`product:${userId}:*`)
+    await memoryCache.invalidate(`product:barcode:${userId}:*`)
+    await memoryCache.invalidate(`dashboard:${userId}`)
   }
 }
+
+export default ProductService

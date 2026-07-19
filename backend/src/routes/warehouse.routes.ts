@@ -1,5 +1,6 @@
 ﻿// ============================================
 // backend/src/routes/warehouse.routes.ts
+// FIXED: listwarehouses → listWarehouses
 // ============================================
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
@@ -33,7 +34,8 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const warehouses = await warehouseService.listwarehouses(request.userId)
+      // ✅ FIX: listwarehouses → listWarehouses
+      const warehouses = await warehouseService.listWarehouses(request.userId)
       return reply.send(warehouses)
     } catch (err) {
       fastify.log.error(err)
@@ -156,3 +158,5 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
     }
   })
 }
+
+export default warehouseRoutes

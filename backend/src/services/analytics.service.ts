@@ -1,7 +1,6 @@
 // ============================================
 // backend/src/services/analytics.service.ts
-// Hisabche v2.4 — FULLY OPTIMIZED
-// FIXED: RPC for dashboard + Promise.all for parallel queries
+// Hisabche v2.5 — FULLY OPTIMIZED with RPC + Fallback
 // ============================================
 
 import { supabase } from '../db';
@@ -10,40 +9,48 @@ import { CacheKeys, withCacheKey } from '../utils/cache';
 import { memoryCache } from '../utils/pagination';
 
 export class AnalyticsService {
-  // ─── Dashboard KPIs — OPTIMIZED with RPC ───
+  // ─── Dashboard KPIs — OPTIMIZED with RPC + Parallel Queries ───
   async getDashboardKpis(userId: string) {
     const cacheKey = `dashboard:v2:${userId}`;
 
-    return withCacheKey(cacheKey, 30_000, async () => {
-      try {
-        // ✅ تلاش برای استفاده از RPC
-        const { data, error } = await supabase
-          .rpc('get_dashboard_kpis', { p_user_id: userId });
+    return withCacheKey(cacheKey, 60_000, async () => {
+      // ✅ RPC (فاکتورها) و products (برای lowStock) موازی
+      const [kpiResult, productsResult] = await Promise.all([
+        supabase.rpc('get_dashboard_kpis', { p_user_id: userId }),
+        supabase
+          .from('products')
+          .select('quantity, min_stock_level')
+          .eq('user_id', userId)
+          .eq('is_active', true),
+      ]);
 
-        if (!error && data && data.length > 0) {
-          const result = data[0];
-          return {
-            todaySales: Number(result.today_sales) || 0,
-            todayInvoices: Number(result.today_invoices) || 0,
-            monthlyRevenue: Number(result.monthly_revenue) || 0,
-            monthlyGrowth: Number(result.monthly_growth) || 0,
-            pendingPayments: Number(result.pending_total) || 0,
-            activeCustomers: Number(result.active_customers) || 0,
-            lowStockAlerts: Number(result.low_stock) || 0,
-          };
-        }
-      } catch (err) {
-        console.error('RPC error, falling back to query:', err);
+      // محاسبه lowStockAlerts از productsResult
+      const lowStockAlerts = (productsResult.data || [])
+        .filter(p => Number(p.quantity) <= Number(p.min_stock_level))
+        .length;
+
+      // ✅ اگر RPC موفق بود، از آن استفاده کن
+      if (!kpiResult.error && kpiResult.data && kpiResult.data.length > 0) {
+        const r = kpiResult.data[0];
+        return {
+          todaySales: Number(r.today_sales) || 0,
+          todayInvoices: Number(r.today_invoices) || 0,
+          monthlyRevenue: Number(r.monthly_revenue) || 0,
+          monthlyGrowth: 0, // TODO: محاسبه رشد ماهانه نیاز به مقایسه با ماه قبل دارد
+          pendingPayments: Number(r.pending_total) || 0,
+          activeCustomers: Number(r.active_customers) || 0,
+          lowStockAlerts,
+        };
       }
 
-      // ✅ Fallback: اگر RPC موجود نبود، از کوئری استفاده کن
-      return this.getDashboardKpisFallback(userId);
+      // ✅ Fallback: اگر RPC خطا داد، از کوئری معمولی استفاده کن
+      console.error('RPC error, falling back to query:', kpiResult.error);
+      return this.getDashboardKpisFallback(userId, lowStockAlerts);
     });
   }
 
-  // ─── Dashboard KPIs — Fallback ───
-  private async getDashboardKpisFallback(userId: string) {
-    // ✅ یک کوئری با همه داده‌ها
+  // ─── Dashboard KPIs — Fallback (زمانی که RPC موجود نیست) ───
+  private async getDashboardKpisFallback(userId: string, lowStockAlerts: number) {
     const { data: allData, error } = await supabase
       .from('invoices')
       .select(`
@@ -93,17 +100,6 @@ export class AnalyticsService {
       }
     }
 
-    // ✅ یک کوئری برای low stock (موازی)
-    const { data: products } = await supabase
-      .from('products')
-      .select('quantity, min_stock_level')
-      .eq('user_id', userId)
-      .eq('is_active', true);
-
-    const lowStock = (products || [])
-      .filter(p => Number(p.quantity) <= Number(p.min_stock_level))
-      .length;
-
     return {
       todaySales: Math.round(todaySales * 100) / 100,
       todayInvoices,
@@ -111,7 +107,7 @@ export class AnalyticsService {
       monthlyGrowth: 0,
       pendingPayments: Math.round(pendingTotal * 100) / 100,
       activeCustomers: uniqueCustomers.size,
-      lowStockAlerts: lowStock,
+      lowStockAlerts,
     };
   }
 

@@ -1,18 +1,37 @@
 // ============================================
-// backend/src/services/audit.service.ts — Optimized v2.0
+// backend/src/services/audit.service.ts — Optimized v2.1
+// FIXED: Added cache, count: estimated, projection
 // ============================================
 
 import { supabase } from '../db'
 import { CreateAuditLog, AuditFilters } from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
+import { memoryCache } from '../utils/pagination'
 
-// ✅ Column Selection Constants
+// ✅ Column Selection Constants (بهینه‌شده)
 const AUDIT_LOG_COLUMNS = 'id, user_id, action, entity_type, entity_id, old_data, new_data, ip_address, user_agent, created_at'
 const AUDIT_LIST_COLUMNS = 'id, user_id, action, entity_type, entity_id, ip_address, created_at'
 const AUDIT_STATS_COLUMNS = 'action, entity_type, user_id'
 
+// ✅ Minimal columns for listing (فقط ستون‌های ضروری)
+const AUDIT_MINIMAL_COLUMNS = 'id, action, entity_type, entity_id, created_at'
+
 export class AuditService {
-  // ─── Write Audit Log ──────────────────────────────────────────────────────
+  
+  // ─── Cache Keys ───────────────────────────────────────────
+  private getStatsCacheKey(startDate: string, endDate: string) {
+    return `audit_stats:${startDate}:${endDate}`
+  }
+
+  private getEntityHistoryCacheKey(entityType: string, entityId: string) {
+    return `audit_history:${entityType}:${entityId}`
+  }
+
+  private getUserActivityCacheKey(userId: string, limit: number) {
+    return `audit_user:${userId}:${limit}`
+  }
+
+  // ─── Write Audit Log ──────────────────────────────────────
   async log(data: CreateAuditLog) {
     const { error } = await supabase.from('audit_logs').insert({
       user_id: data.userId,
@@ -25,13 +44,27 @@ export class AuditService {
       user_agent: data.userAgent || null,
     })
     if (error) throw new DatabaseError('Failed to write audit log', error)
+    
+    // ✅ Invalidate cache after new log
+    await memoryCache.invalidate(`audit_stats:*`)
+    await memoryCache.invalidate(`audit_user:${data.userId}:*`)
+    if (data.entityId) {
+      await memoryCache.invalidate(`audit_history:${data.entityType}:${data.entityId}`)
+    }
   }
 
-  // ─── Read Audit Logs ─────────────────────────────────────────────────────
+  // ─── Read Audit Logs ──────────────────────────────────────
   async list(filters: AuditFilters) {
+    // ✅ ایجاد کلید کش بر اساس فیلترها
+    const cacheKey = `audit_list:${JSON.stringify(filters)}`
+    
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
+
     let query = supabase
       .from('audit_logs')
-      .select(AUDIT_LIST_COLUMNS, { count: 'exact' })
+      // ✅ فقط ستون‌های مورد نیاز
+      .select(AUDIT_MINIMAL_COLUMNS, { count: 'estimated' }) // ✅ count: 'estimated'
 
     if (filters.userId) query = query.eq('user_id', filters.userId)
     if (filters.action) query = query.eq('action', filters.action)
@@ -49,44 +82,72 @@ export class AuditService {
 
     if (error) throw new DatabaseError('Failed to fetch audit logs', error)
 
-    return {
+    const result = {
       data: data || [],
       total: count || 0,
       page: filters.page,
       limit: filters.limit,
       totalPages: count ? Math.ceil(count / filters.limit) : 0,
     }
+
+    // ✅ ذخیره در کش با TTL 30 ثانیه (چون داده‌های لحظه‌ای است)
+    await memoryCache.set(cacheKey, result, 30)
+    return result
   }
 
-  // ─── Get Entity History ──────────────────────────────────────────────────
+  // ─── Get Entity History ──────────────────────────────────
   async getEntityHistory(entityType: string, entityId: string) {
+    const cacheKey = this.getEntityHistoryCacheKey(entityType, entityId)
+    
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
+
+    // ✅ فقط ستون‌های ضروری
     const { data, error } = await supabase
       .from('audit_logs')
-      .select(AUDIT_LOG_COLUMNS)
+      .select(AUDIT_MINIMAL_COLUMNS)
       .eq('entity_type', entityType)
       .eq('entity_id', entityId)
       .order('created_at', { ascending: false })
       .limit(100)
 
     if (error) throw new DatabaseError('Failed to fetch entity history', error)
-    return data || []
+    
+    const result = data || []
+    await memoryCache.set(cacheKey, result, 300) // 5 دقیقه
+    return result
   }
 
-  // ─── Get User Activity ───────────────────────────────────────────────────
+  // ─── Get User Activity ──────────────────────────────────
   async getUserActivity(userId: string, limit = 50) {
+    const cacheKey = this.getUserActivityCacheKey(userId, limit)
+    
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
+
+    // ✅ فقط ستون‌های ضروری
     const { data, error } = await supabase
       .from('audit_logs')
-      .select(AUDIT_LIST_COLUMNS)
+      .select(AUDIT_MINIMAL_COLUMNS)
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(limit)
 
     if (error) throw new DatabaseError('Failed to fetch user activity', error)
-    return data || []
+    
+    const result = data || []
+    await memoryCache.set(cacheKey, result, 120) // 2 دقیقه
+    return result
   }
 
-  // ─── Get Stats ──────────────────────────────────────────────────────────
+  // ─── Get Stats ──────────────────────────────────────────
   async getStats(startDate: string, endDate: string) {
+    const cacheKey = this.getStatsCacheKey(startDate, endDate)
+    
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
+
+    // ✅ فقط ستون‌های ضروری
     const { data, error } = await supabase
       .from('audit_logs')
       .select(AUDIT_STATS_COLUMNS)
@@ -96,13 +157,15 @@ export class AuditService {
     if (error) throw new DatabaseError('Failed to fetch audit stats', error)
 
     if (!data || data.length === 0) {
-      return {
+      const emptyResult = {
         totalActions: 0,
         byAction: {},
         byEntity: {},
         byUser: {},
         period: { start: startDate, end: endDate },
       }
+      await memoryCache.set(cacheKey, emptyResult, 60)
+      return emptyResult
     }
 
     const byAction: Record<string, number> = {}
@@ -115,16 +178,19 @@ export class AuditService {
       byUser[log.user_id] = (byUser[log.user_id] || 0) + 1
     }
 
-    return {
+    const result = {
       totalActions: data.length,
       byAction,
       byEntity,
       byUser,
       period: { start: startDate, end: endDate },
     }
+
+    await memoryCache.set(cacheKey, result, 300) // 5 دقیقه
+    return result
   }
 
-  // ─── Cleanup Old Logs ────────────────────────────────────────────────────
+  // ─── Cleanup Old Logs ──────────────────────────────────
   async cleanup(daysToKeep: number) {
     const cutoffDate = new Date()
     cutoffDate.setDate(cutoffDate.getDate() - daysToKeep)
@@ -135,12 +201,22 @@ export class AuditService {
       .lt('created_at', cutoffDate.toISOString())
 
     if (error) throw new DatabaseError('Failed to cleanup audit logs', error)
+    
+    // ✅ Clear all cache after cleanup
+    await memoryCache.invalidate('audit_list:*')
+    await memoryCache.invalidate('audit_stats:*')
+    await memoryCache.invalidate('audit_history:*')
+    await memoryCache.invalidate('audit_user:*')
+    
     return { success: true, deletedBefore: cutoffDate.toISOString() }
   }
 
-  // ─── Export Logs ─────────────────────────────────────────────────────────
+  // ─── Export Logs ────────────────────────────────────────
   async exportLogs(filters: AuditFilters) {
-    let query = supabase.from('audit_logs').select(AUDIT_LOG_COLUMNS)
+    // ✅ بدون کش برای Export (چون داده‌های کامل نیاز است)
+    let query = supabase
+      .from('audit_logs')
+      .select(AUDIT_LIST_COLUMNS) // ✅ فقط ستون‌های ضروری
 
     if (filters.userId) query = query.eq('user_id', filters.userId)
     if (filters.action) query = query.eq('action', filters.action)
@@ -155,4 +231,18 @@ export class AuditService {
     if (error) throw new DatabaseError('Failed to export audit logs', error)
     return data || []
   }
+
+  // ─── Invalidate Cache ────────────────────────────────────
+  async invalidateCache(userId?: string) {
+    await memoryCache.invalidate('audit_list:*')
+    await memoryCache.invalidate('audit_stats:*')
+    await memoryCache.invalidate('audit_history:*')
+    if (userId) {
+      await memoryCache.invalidate(`audit_user:${userId}:*`)
+    } else {
+      await memoryCache.invalidate('audit_user:*')
+    }
+  }
 }
+
+export default AuditService

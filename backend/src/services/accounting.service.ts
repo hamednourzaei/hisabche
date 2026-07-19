@@ -1,5 +1,6 @@
 // ============================================
-// backend/src/services/accounting.service.ts — Optimized v2.1
+// backend/src/services/accounting.service.ts — Optimized v2.3
+// FIXED: TypeScript iterable error, type safety
 // ============================================
 
 import { supabase } from '../db'
@@ -9,6 +10,7 @@ import {
   CreateJournalEntry,
 } from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
+import { memoryCache } from '../utils/pagination'
 
 // ✅ Column Selection Constants
 const ACCOUNT_LIST_COLUMNS = 'id, code, name, type, parent_id, is_active, created_at'
@@ -17,9 +19,43 @@ const ACCOUNT_MINIMAL_COLUMNS = 'id, code, name, type'
 const JOURNAL_ENTRY_LIST_COLUMNS = 'id, date, description, reference, created_at'
 const JOURNAL_LINE_LIST_COLUMNS = 'id, account_id, debit, credit'
 
+// ✅ Types
+interface TrialBalanceAccount {
+  accountId: string
+  accountCode: string
+  accountName: string
+  accountType: string
+  debit: number
+  credit: number
+  balance: number
+}
+
 export class AccountingService {
+  
+  // ─── Cache Keys ───────────────────────────────────────────
+  private getAccountsCacheKey(userId: string) {
+    return `accounts:${userId}`
+  }
+
+  private getTrialBalanceCacheKey(userId: string, date: string) {
+    return `trial_balance:${userId}:${date}`
+  }
+
+  private getBalanceSheetCacheKey(userId: string, date: string) {
+    return `balance_sheet:${userId}:${date}`
+  }
+
+  private getIncomeStatementCacheKey(userId: string, fromDate: string, toDate: string) {
+    return `income_statement:${userId}:${fromDate}:${toDate}`
+  }
+
   // ─── Account Management ──────────────────────────────────
   async listAccounts(userId: string) {
+    const cacheKey = this.getAccountsCacheKey(userId)
+    
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
+
     const { data, error } = await supabase
       .from('accounts')
       .select(ACCOUNT_LIST_COLUMNS)
@@ -28,7 +64,10 @@ export class AccountingService {
       .order('code')
 
     if (error) throw new DatabaseError('Failed to fetch accounts', error)
-    return data || []
+    
+    const result = data || []
+    await memoryCache.set(cacheKey, result, 300) // 5 دقیقه
+    return result
   }
 
   async createAccount(userId: string, data: CreateAccount) {
@@ -46,6 +85,9 @@ export class AccountingService {
       .single()
 
     if (error) throw new DatabaseError('Failed to create account', error)
+    
+    await memoryCache.invalidate(this.getAccountsCacheKey(userId))
+    
     return account
   }
 
@@ -66,11 +108,19 @@ export class AccountingService {
       .single()
 
     if (error) throw new DatabaseError('Failed to update account', error)
+    
+    await memoryCache.invalidate(this.getAccountsCacheKey(userId))
+    
     return account
   }
 
   // ─── Journal Entries ─────────────────────────────────────
   async listJournalEntries(userId: string) {
+    const cacheKey = `journal_entries:${userId}`
+    
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
+
     const { data, error } = await supabase
       .from('journal_entries')
       .select(`
@@ -83,7 +133,10 @@ export class AccountingService {
       .limit(50)
 
     if (error) throw new DatabaseError('Failed to fetch journal entries', error)
-    return data || []
+    
+    const result = data || []
+    await memoryCache.set(cacheKey, result, 60) // 1 دقیقه
+    return result
   }
 
   async createJournalEntry(userId: string, data: CreateJournalEntry) {
@@ -124,10 +177,18 @@ export class AccountingService {
       throw new DatabaseError('Failed to create journal lines', linesError)
     }
 
+    await memoryCache.invalidate(`journal_entries:${userId}`)
+    await memoryCache.invalidate(`trial_balance:${userId}`)
+
     return this.getJournalEntry(entry.id, userId)
   }
 
   async getJournalEntry(id: string, userId: string) {
+    const cacheKey = `journal_entry:${userId}:${id}`
+    
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
+
     const { data, error } = await supabase
       .from('journal_entries')
       .select(`
@@ -144,14 +205,19 @@ export class AccountingService {
     if (error || !data) {
       throw new DatabaseError('Journal entry not found', error)
     }
+    
+    await memoryCache.set(cacheKey, data, 300) // 5 دقیقه
     return data
   }
 
-  // ──────────────────────────────────────────────
-  // Financial Reports
-  // ──────────────────────────────────────────────
+  // ─── Financial Reports ────────────────────────────────────
 
-  async getTrialBalance(userId: string, date: string) {
+  async getTrialBalance(userId: string, date: string): Promise<TrialBalanceAccount[]> {
+    const cacheKey = this.getTrialBalanceCacheKey(userId, date)
+    
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached as TrialBalanceAccount[]
+
     const { data, error } = await supabase
       .from('journal_lines')
       .select(`
@@ -160,22 +226,21 @@ export class AccountingService {
       `)
       .eq('user_id', userId)
       .eq('account.user_id', userId)
+      .lte('created_at', date)
 
     if (error) {
       console.error('Trial balance error:', error)
       throw new DatabaseError('Failed to fetch trial balance', error)
     }
 
-    if (!data || data.length === 0) return []
+    // ✅ FIX: همیشه یک آرایه برگردان
+    if (!data || data.length === 0) {
+      const emptyResult: TrialBalanceAccount[] = []
+      await memoryCache.set(cacheKey, emptyResult, 60)
+      return emptyResult
+    }
 
-    const accountMap = new Map<string, {
-      accountId: string
-      accountCode: string
-      accountName: string
-      accountType: string
-      debit: number
-      credit: number
-    }>()
+    const accountMap = new Map<string, TrialBalanceAccount>()
 
     for (const line of data) {
       const acc = (line as any).account
@@ -190,6 +255,7 @@ export class AccountingService {
           accountType: acc.type,
           debit: 0,
           credit: 0,
+          balance: 0,
         })
       }
 
@@ -198,19 +264,29 @@ export class AccountingService {
       entry.credit += Number(line.credit) || 0
     }
 
-    return Array.from(accountMap.values()).map(a => ({
+    const result: TrialBalanceAccount[] = Array.from(accountMap.values()).map(a => ({
       ...a,
       balance: a.debit - a.credit,
     }))
+
+    await memoryCache.set(cacheKey, result, 120) // 2 دقیقه
+    return result
   }
 
   async getBalanceSheet(userId: string, date: string) {
+    const cacheKey = this.getBalanceSheetCacheKey(userId, date)
+    
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
+
+    // ✅ FIX: اطمینان از اینکه trialBalance یک آرایه است
     const trialBalance = await this.getTrialBalance(userId, date)
+    const accounts = Array.isArray(trialBalance) ? trialBalance : []
 
     let assetsTotal = 0, liabilitiesTotal = 0, equityTotal = 0, revenueTotal = 0, expensesTotal = 0
     const assets: any[] = [], liabilities: any[] = [], equity: any[] = [], revenue: any[] = [], expenses: any[] = []
 
-    for (const account of trialBalance) {
+    for (const account of accounts) {
       switch (account.accountType) {
         case 'asset':
           if (account.balance > 0) {
@@ -245,20 +321,30 @@ export class AccountingService {
       }
     }
 
-    return {
+    const result = {
       assets: { total: assetsTotal, details: assets },
       liabilities: { total: liabilitiesTotal, details: liabilities },
       equity: { total: equityTotal, details: equity },
       revenue: { total: revenueTotal, details: revenue },
       expenses: { total: expensesTotal, details: expenses },
     }
+
+    await memoryCache.set(cacheKey, result, 120) // 2 دقیقه
+    return result
   }
 
   async getIncomeStatement(userId: string, fromDate: string, toDate: string) {
+    const cacheKey = this.getIncomeStatementCacheKey(userId, fromDate, toDate)
+    
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
+
+    // ✅ FIX: اطمینان از اینکه trialBalance یک آرایه است
     const trialBalance = await this.getTrialBalance(userId, toDate)
+    const accounts = Array.isArray(trialBalance) ? trialBalance : []
 
     let revenue = 0, expenses = 0
-    for (const account of trialBalance) {
+    for (const account of accounts) {
       if (account.accountType === 'revenue') {
         revenue += Math.abs(account.balance)
       } else if (account.accountType === 'expense') {
@@ -266,17 +352,25 @@ export class AccountingService {
       }
     }
 
-    return {
+    const result = {
       revenue: Math.round(revenue * 100) / 100,
       expenses: Math.round(expenses * 100) / 100,
       totalRevenue: Math.round(revenue * 100) / 100,
       totalExpenses: Math.round(expenses * 100) / 100,
       netIncome: Math.round((revenue - expenses) * 100) / 100,
     }
+
+    await memoryCache.set(cacheKey, result, 120) // 2 دقیقه
+    return result
   }
 
-  // ─── NEW: Cash Flow Report ────────────────────────────────
+  // ─── Cash Flow Report ────────────────────────────────────
   async getCashFlow(userId: string, startDate: string, endDate: string) {
+    const cacheKey = `cash_flow:${userId}:${startDate}:${endDate}`
+    
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
+
     const { data: transactions, error } = await supabase
       .from('transactions')
       .select('type, amount, description, date')
@@ -309,7 +403,7 @@ export class AccountingService {
                       investing.inflow - investing.outflow +
                       financing.inflow - financing.outflow
 
-    return {
+    const result = {
       operating: {
         inflow: Math.round(operating.inflow * 100) / 100,
         outflow: Math.round(operating.outflow * 100) / 100,
@@ -331,54 +425,81 @@ export class AccountingService {
       netChange: Math.round(netChange * 100) / 100,
       period: { startDate, endDate },
     }
+
+    await memoryCache.set(cacheKey, result, 300) // 5 دقیقه
+    return result
   }
 
-// ─── Customer Debt Report ──────────────────────────────────
-async getCustomerDebtReport(userId: string) {
-  const { data: customers } = await supabase
-    .from('customers')
-    .select('id, full_name, opening_balance')
-    .eq('user_id', userId)
-    .eq('is_active', true)
+  // ─── Customer Debt Report ──────────────────────────────────
+  async getCustomerDebtReport(userId: string) {
+    const cacheKey = `customer_debt:${userId}`
+    
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
 
-  const { data: invoices } = await supabase
-    .from('invoices')
-    .select('customer_id, total, paid_amount')
-    .eq('user_id', userId)
-    .neq('status', 'paid')
+    const [customersResult, invoicesResult] = await Promise.all([
+      supabase
+        .from('customers')
+        .select('id, full_name, opening_balance')
+        .eq('user_id', userId)
+        .eq('is_active', true),
+      supabase
+        .from('invoices')
+        .select('customer_id, total, paid_amount')
+        .eq('user_id', userId)
+        .neq('status', 'paid')
+    ])
 
-  const debtMap: Record<string, { name: string; balance: number; totalInvoices: number }> = {}
-  
-  for (const c of customers || []) {
-    debtMap[c.id] = {
-      name: c.full_name,
-      balance: Number(c.opening_balance) || 0,
-      totalInvoices: 0,
+    const customers = customersResult.data || []
+    const invoices = invoicesResult.data || []
+
+    const debtMap: Record<string, { name: string; balance: number; totalInvoices: number }> = {}
+    
+    for (const c of customers) {
+      debtMap[c.id] = {
+        name: c.full_name,
+        balance: Number(c.opening_balance) || 0,
+        totalInvoices: 0,
+      }
     }
-  }
 
-  // ✅ اصلاح شده با Type Guard
-  for (const inv of invoices || []) {
-    const customerId = inv.customer_id
-    if (customerId && debtMap[customerId]) {
-      debtMap[customerId].balance += Number(inv.total) - Number(inv.paid_amount)
-      debtMap[customerId].totalInvoices++
+    for (const inv of invoices) {
+      const customerId = inv.customer_id
+      if (customerId && debtMap[customerId]) {
+        debtMap[customerId].balance += Number(inv.total) - Number(inv.paid_amount)
+        debtMap[customerId].totalInvoices++
+      }
     }
+
+    const debtors = Object.values(debtMap)
+      .filter(d => d.balance > 0)
+      .sort((a, b) => b.balance - a.balance)
+
+    const creditors = Object.values(debtMap)
+      .filter(d => d.balance < 0)
+      .sort((a, b) => a.balance - b.balance)
+
+    const result = {
+      debtors,
+      creditors,
+      totalDebt: Math.round(debtors.reduce((s, d) => s + d.balance, 0) * 100) / 100,
+      totalCredit: Math.round(Math.abs(creditors.reduce((s, d) => s + d.balance, 0)) * 100) / 100,
+    }
+
+    await memoryCache.set(cacheKey, result, 120) // 2 دقیقه
+    return result
   }
 
-  const debtors = Object.values(debtMap)
-    .filter(d => d.balance > 0)
-    .sort((a, b) => b.balance - a.balance)
-
-  const creditors = Object.values(debtMap)
-    .filter(d => d.balance < 0)
-    .sort((a, b) => a.balance - b.balance)
-
-  return {
-    debtors,
-    creditors,
-    totalDebt: Math.round(debtors.reduce((s, d) => s + d.balance, 0) * 100) / 100,
-    totalCredit: Math.round(Math.abs(creditors.reduce((s, d) => s + d.balance, 0)) * 100) / 100,
+  // ─── Invalidate Cache ─────────────────────────────────────
+  async invalidateCache(userId: string) {
+    await memoryCache.invalidate(this.getAccountsCacheKey(userId))
+    await memoryCache.invalidate(`journal_entries:${userId}`)
+    await memoryCache.invalidate(`trial_balance:${userId}`)
+    await memoryCache.invalidate(`balance_sheet:${userId}`)
+    await memoryCache.invalidate(`income_statement:${userId}`)
+    await memoryCache.invalidate(`cash_flow:${userId}`)
+    await memoryCache.invalidate(`customer_debt:${userId}`)
   }
 }
-}
+
+export default AccountingService

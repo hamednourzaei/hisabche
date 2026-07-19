@@ -170,7 +170,7 @@ server.addHook('onSend', async (request, reply, payload) => {
       const userId = (request as any).userId || 'anonymous'
       const cacheKey = `http:${userId}:${request.url}`
       try {
-        await memoryCache.set(cacheKey, payload, 30)
+        await memoryCache.set(cacheKey, payload, 60)
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : String(err)
         request.log.error(`Cache set error: ${errorMessage}`)

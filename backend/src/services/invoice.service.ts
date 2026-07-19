@@ -138,7 +138,7 @@ export class InvoiceService {
       limit: maxLimit,
     };
 
-    await memoryCache.set(cacheKey, result, 30);
+    await memoryCache.set(cacheKey, result, 60);
     return result;
   }
 

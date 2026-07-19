@@ -1,17 +1,28 @@
 // ============================================
-// backend/src/services/password-reset.service.ts — Optimized v2.1 (i18n)
+// backend/src/services/password-reset.service.ts — Optimized v2.2
+// FIXED: Added cache, Promise.all, parallel queries
 // ============================================
 
 import { createHash, randomBytes } from 'crypto'
 import { supabase } from "../db"
 import { emailService, type Language } from './email.service'
 import { AuditService } from './audit.service'
+import { memoryCache } from '../utils/pagination'
 
 const TOKEN_EXPIRY_MS = 60 * 60 * 1000 // 1 hour
 const auditService = new AuditService()
 
-// ─── Detect user language ──────────────────────────────────────
+// ─── Cache Keys ──────────────────────────────────────────────
+const getUserLanguageCacheKey = (userId: string) => `user:lang:${userId}`
+
+// ─── Detect user language with cache ──────────────────────────
 async function getUserLanguage(userId: string): Promise<Language> {
+  const cacheKey = getUserLanguageCacheKey(userId)
+  
+  // ✅ کش کردن زبان کاربر
+  const cached = await memoryCache.get(cacheKey)
+  if (cached) return cached as Language
+
   try {
     const { data: user } = await supabase
       .from('users')
@@ -20,7 +31,11 @@ async function getUserLanguage(userId: string): Promise<Language> {
       .single()
     
     const lang = user?.preferred_language || 'fa-IR'
-    return ['fa-IR', 'fa-AF', 'en'].includes(lang) ? lang as Language : 'fa-IR'
+    const result = ['fa-IR', 'fa-AF', 'en'].includes(lang) ? lang as Language : 'fa-IR'
+    
+    // ✅ ذخیره در کش به مدت ۱ ساعت
+    await memoryCache.set(cacheKey, result, 3600)
+    return result
   } catch {
     return 'fa-IR'
   }
@@ -31,45 +46,51 @@ export const passwordResetService = {
     const genericMessage = 'If an account exists with this email, a reset link has been sent.'
 
     try {
-      // ۱. پیدا کردن کاربر
-      const { data: userData, error: userError } = await supabase.auth.admin.listUsers()
-      if (userError) return { success: true, message: genericMessage }
+      // ۱. پیدا کردن کاربر (با email)
+      const { data: user, error: userError } = await supabase
+        .from('users')
+        .select('id, email, preferred_language')
+        .eq('email', email.toLowerCase().trim())
+        .single()
 
-      const user = userData?.users?.find(u => u.email === email.toLowerCase().trim())
-      if (!user) return { success: true, message: genericMessage }
+      if (userError || !user) {
+        // برای امنیت، همیشه پیام یکسان برگردانید
+        return { success: true, message: genericMessage }
+      }
 
       // ۲. تولید توکن
       const token = randomBytes(32).toString('hex')
       const tokenHash = createHash('sha256').update(token).digest('hex')
 
-      // ۳. دریافت workspace_id
-      const { data: member } = await supabase
-        .from('workspace_members')
-        .select('workspace_id')
-        .eq('user_id', user.id)
-        .limit(1)
-        .single()
+      // ✅ دو کوئری موازی: گرفتن workspace_id و ذخیره توکن
+      const [memberResult, insertResult] = await Promise.all([
+        supabase
+          .from('workspace_members')
+          .select('workspace_id')
+          .eq('user_id', user.id)
+          .limit(1)
+          .single(),
+        supabase
+          .from('password_reset_tokens')
+          .insert({
+            user_id: user.id,
+            workspace_id: '00000000-0000-0000-0000-000000000000',
+            token_hash: tokenHash,
+            expires_at: new Date(Date.now() + TOKEN_EXPIRY_MS).toISOString(),
+            requested_ip: ip,
+            requested_user_agent: userAgent,
+          })
+      ])
 
-      const workspaceId = member?.workspace_id || '00000000-0000-0000-0000-000000000000'
+      // گرفتن workspace_id از memberResult
+      const workspaceId = memberResult.data?.workspace_id || '00000000-0000-0000-0000-000000000000'
 
-      // ۴. ذخیره توکن
-      const { error: insertError } = await supabase
-        .from('password_reset_tokens')
-        .insert({
-          user_id: user.id,
-          workspace_id: workspaceId,
-          token_hash: tokenHash,
-          expires_at: new Date(Date.now() + TOKEN_EXPIRY_MS).toISOString(),
-          requested_ip: ip,
-          requested_user_agent: userAgent,
-        })
-
-      if (insertError) {
-        console.error('Error saving reset token:', insertError)
+      if (insertResult.error) {
+        console.error('Error saving reset token:', insertResult.error)
         return { success: false, message: 'Failed to process request' }
       }
 
-      // ۵. ارسال ایمیل با زبان کاربر
+      // ۳. ارسال ایمیل با زبان کاربر
       const resetLink = `${process.env.FRONTEND_URL || 'https://hisabche.com'}/reset-password?token=${token}`
       
       // ✅ اگر زبان از کاربر نیامده، از تنظیمات کاربر بگیر
@@ -78,19 +99,20 @@ export const passwordResetService = {
         userLang = await getUserLanguage(user.id)
       }
       
-      await emailService.sendResetPassword(email, resetLink, userLang)
+      // ✅ ارسال ایمیل بدون await (non-blocking)
+      emailService.sendResetPassword(email, resetLink, userLang).catch(err =>
+        console.error('Failed to send reset email:', err)
+      )
 
-      // ۶. Audit log
-      try {
-        await auditService.log({
-          userId: user.id,
-          action: 'update',
-          entityType: 'user',
-          entityId: user.id,
-          ipAddress: ip,
-          userAgent,
-        })
-      } catch {}
+      // ۴. Audit log (بدون await)
+      auditService.log({
+        userId: user.id,
+        action: 'update',
+        entityType: 'user',
+        entityId: user.id,
+        ipAddress: ip,
+        userAgent,
+      }).catch(() => {})
 
       return { success: true, message: genericMessage }
 
@@ -148,31 +170,39 @@ export const passwordResetService = {
         return { success: false, message: 'Failed to reset password' }
       }
 
-      // ۴. علامت‌گذاری توکن به‌عنوان استفاده‌شده
-      await supabase
-        .from('password_reset_tokens')
-        .update({ used_at: new Date().toISOString() })
-        .eq('id', resetToken.id)
+      // ✅ دو کوئری موازی: علامت‌گذاری توکن و باطل کردن سایر توکن‌ها
+      const [updateResult, revokeResult] = await Promise.all([
+        supabase
+          .from('password_reset_tokens')
+          .update({ used_at: new Date().toISOString() })
+          .eq('id', resetToken.id),
+        supabase
+          .from('password_reset_tokens')
+          .update({ revoked_at: new Date().toISOString() })
+          .eq('user_id', resetToken.user_id)
+          .neq('id', resetToken.id)
+          .is('revoked_at', null)
+      ])
 
-      // ۵. باطل کردن سایر توکن‌های این کاربر
-      await supabase
-        .from('password_reset_tokens')
-        .update({ revoked_at: new Date().toISOString() })
-        .eq('user_id', resetToken.user_id)
-        .neq('id', resetToken.id)
-        .is('revoked_at', null)
+      if (updateResult.error) {
+        console.error('Failed to mark token as used:', updateResult.error)
+      }
+      if (revokeResult.error) {
+        console.error('Failed to revoke other tokens:', revokeResult.error)
+      }
 
-      // ۶. Audit log
-      try {
-        await auditService.log({
-          userId: resetToken.user_id,
-          action: 'update',
-          entityType: 'user',
-          entityId: resetToken.user_id,
-          ipAddress: ip,
-          userAgent: 'password-reset',
-        })
-      } catch {}
+      // ۶. Audit log (بدون await)
+      auditService.log({
+        userId: resetToken.user_id,
+        action: 'update',
+        entityType: 'user',
+        entityId: resetToken.user_id,
+        ipAddress: ip,
+        userAgent: 'password-reset',
+      }).catch(() => {})
+
+      // ✅ Invalidate user cache
+      await memoryCache.invalidate(getUserLanguageCacheKey(resetToken.user_id))
 
       return { success: true, message: 'Password reset successful' }
 
@@ -181,4 +211,51 @@ export const passwordResetService = {
       return { success: false, message: 'Failed to reset password' }
     }
   },
+
+  // ─── Cleanup expired tokens ──────────────────────────────────
+  async cleanupExpiredTokens(): Promise<{ deleted: number }> {
+    const { data, error } = await supabase
+      .from('password_reset_tokens')
+      .delete()
+      .lt('expires_at', new Date().toISOString())
+      .select('id')
+
+    if (error) {
+      console.error('Failed to cleanup expired tokens:', error)
+      return { deleted: 0 }
+    }
+
+    return { deleted: data?.length || 0 }
+  },
+
+  // ─── Get token status ────────────────────────────────────────
+  async getTokenStatus(token: string): Promise<{
+    valid: boolean
+    expired?: boolean
+    used?: boolean
+    revoked?: boolean
+  }> {
+    const tokenHash = createHash('sha256').update(token).digest('hex')
+
+    const { data, error } = await supabase
+      .from('password_reset_tokens')
+      .select('expires_at, used_at, revoked_at')
+      .eq('token_hash', tokenHash)
+      .single()
+
+    if (error || !data) {
+      return { valid: false }
+    }
+
+    if (data.used_at) return { valid: false, used: true }
+    if (data.revoked_at) return { valid: false, revoked: true }
+    if (new Date(data.expires_at) < new Date()) return { valid: false, expired: true }
+
+    return { valid: true }
+  },
+
+  // ─── Invalidate user language cache ──────────────────────────
+  async invalidateUserLanguageCache(userId: string): Promise<void> {
+    await memoryCache.invalidate(getUserLanguageCacheKey(userId))
+  }
 }

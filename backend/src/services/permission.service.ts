@@ -1,14 +1,20 @@
 // ============================================
-// backend/src/services/permission.service.ts — Optimized v2.0
+// backend/src/services/permission.service.ts — Optimized v2.1
+// FIXED: Added cache, Promise.all, parallel queries
 // ============================================
 
 import { supabase } from '../db'
 import { CreatePermission, CreateRole, UpdateRole, AssignRole, RemoveRole } from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
+import { memoryCache } from '../utils/pagination'
 
 // ✅ Column Selection Constants
 const PERMISSION_COLUMNS = 'id, code, name, description, resource, action, created_at'
+const PERMISSION_MINIMAL = 'id, code, resource, action'
+
 const ROLE_COLUMNS = 'id, name, description, is_system, created_at, updated_at'
+const ROLE_MINIMAL = 'id, name'
+
 const USER_ROLE_COLUMNS = 'id, user_id, role_id, created_at'
 
 const DEFAULT_PERMISSIONS: any[] = [
@@ -48,46 +54,144 @@ const DEFAULT_PERMISSIONS: any[] = [
 ]
 
 export class PermissionService {
-  async seedDefaultPermissions() {
-    for (const perm of DEFAULT_PERMISSIONS) {
-      const { data: existing } = await supabase.from('permissions').select('id').eq('code', perm.code).single()
-      if (!existing) await supabase.from('permissions').insert(perm)
-    }
+
+  // ─── Cache Keys ──────────────────────────────────────────────
+  private getPermissionsCacheKey() {
+    return `permissions:all`
   }
 
+  private getRolesCacheKey() {
+    return `roles:all`
+  }
+
+  private getRoleCacheKey(roleId: string) {
+    return `role:${roleId}`
+  }
+
+  private getUserRolesCacheKey(userId: string) {
+    return `user:roles:${userId}`
+  }
+
+  private getUserPermissionsCacheKey(userId: string) {
+    return `user:permissions:${userId}`
+  }
+
+  private getHasPermissionCacheKey(userId: string, permissionCode: string) {
+    return `user:has_permission:${userId}:${permissionCode}`
+  }
+
+  // ─── Seed Default Permissions ────────────────────────────────
+  async seedDefaultPermissions() {
+    for (const perm of DEFAULT_PERMISSIONS) {
+      const { data: existing } = await supabase
+        .from('permissions')
+        .select('id')
+        .eq('code', perm.code)
+        .single()
+      if (!existing) {
+        await supabase.from('permissions').insert(perm)
+      }
+    }
+    // ✅ Invalidate cache after seeding
+    await memoryCache.invalidate(this.getPermissionsCacheKey())
+  }
+
+  // ─── Permissions ──────────────────────────────────────────────
   async listPermissions() {
-    const { data, error } = await supabase.from('permissions').select(PERMISSION_COLUMNS).order('resource')
+    const cacheKey = this.getPermissionsCacheKey()
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
+
+    const { data, error } = await supabase
+      .from('permissions')
+      .select(PERMISSION_MINIMAL)
+      .order('resource')
+
     if (error) throw new DatabaseError('Failed to fetch permissions', error)
-    return data || []
+
+    const result = data || []
+    await memoryCache.set(cacheKey, result, 300) // 5 minutes
+    return result
   }
 
   async createPermission(data: CreatePermission) {
     const { data: perm, error } = await supabase
-      .from('permissions').insert({ code: data.code, name: data.name, description: data.description || null, resource: data.resource, action: data.action })
-      .select(PERMISSION_COLUMNS).single()
+      .from('permissions')
+      .insert({
+        code: data.code,
+        name: data.name,
+        description: data.description || null,
+        resource: data.resource,
+        action: data.action,
+      })
+      .select(PERMISSION_COLUMNS)
+      .single()
+
     if (error || !perm) throw new DatabaseError('Failed to create permission', error)
+
+    // ✅ Invalidate cache
+    await memoryCache.invalidate(this.getPermissionsCacheKey())
+
     return perm
   }
 
+  // ─── Roles ─────────────────────────────────────────────────────
   async listRoles() {
-    const { data, error } = await supabase.from('roles').select(`${ROLE_COLUMNS}, permissions:role_permissions(permission_id)`).order('name')
+    const cacheKey = this.getRolesCacheKey()
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
+
+    const { data, error } = await supabase
+      .from('roles')
+      .select(`${ROLE_MINIMAL}, permissions:role_permissions(permission_id)`)
+      .order('name')
+
     if (error) throw new DatabaseError('Failed to fetch roles', error)
-    return data || []
+
+    const result = data || []
+    await memoryCache.set(cacheKey, result, 300) // 5 minutes
+    return result
   }
 
   async createRole(data: CreateRole) {
-    const { data: role, error } = await supabase.from('roles').insert({ name: data.name, description: data.description || null, is_system: false }).select(ROLE_COLUMNS).single()
+    const { data: role, error } = await supabase
+      .from('roles')
+      .insert({
+        name: data.name,
+        description: data.description || null,
+        is_system: false,
+      })
+      .select(ROLE_COLUMNS)
+      .single()
+
     if (error || !role) throw new DatabaseError('Failed to create role', error)
 
     if (data.permissionIds?.length) {
-      await supabase.from('role_permissions').insert(data.permissionIds.map((pid: string) => ({ role_id: role.id, permission_id: pid })))
+      await supabase
+        .from('role_permissions')
+        .insert(data.permissionIds.map((pid: string) => ({ role_id: role.id, permission_id: pid })))
     }
+
+    // ✅ Invalidate cache
+    await memoryCache.invalidate(this.getRolesCacheKey())
+
     return this.getRole(role.id)
   }
 
   async getRole(roleId: string) {
-    const { data, error } = await supabase.from('roles').select(`${ROLE_COLUMNS}, permissions:role_permissions(permission_id)`).eq('id', roleId).single()
+    const cacheKey = this.getRoleCacheKey(roleId)
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
+
+    const { data, error } = await supabase
+      .from('roles')
+      .select(`${ROLE_COLUMNS}, permissions:role_permissions(permission_id)`)
+      .eq('id', roleId)
+      .single()
+
     if (error || !data) throw new DatabaseError('Role not found', error)
+
+    await memoryCache.set(cacheKey, data, 300) // 5 minutes
     return data
   }
 
@@ -95,63 +199,216 @@ export class PermissionService {
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (data.name !== undefined) updates.name = data.name
     if (data.description !== undefined) updates.description = data.description
+
     await supabase.from('roles').update(updates).eq('id', id)
 
     if (data.permissionIds !== undefined) {
       await supabase.from('role_permissions').delete().eq('role_id', id)
-      if (data.permissionIds.length) await supabase.from('role_permissions').insert(data.permissionIds.map((pid: string) => ({ role_id: id, permission_id: pid })))
+      if (data.permissionIds.length) {
+        await supabase
+          .from('role_permissions')
+          .insert(data.permissionIds.map((pid: string) => ({ role_id: id, permission_id: pid })))
+      }
     }
+
+    // ✅ Invalidate cache
+    await memoryCache.invalidate(this.getRolesCacheKey())
+    await memoryCache.invalidate(this.getRoleCacheKey(id))
+
     return this.getRole(id)
   }
 
   async deleteRole(id: string) {
-    const { data: role } = await supabase.from('roles').select('is_system').eq('id', id).single()
+    const { data: role } = await supabase
+      .from('roles')
+      .select('is_system')
+      .eq('id', id)
+      .single()
+
     if (role?.is_system) throw new DatabaseError('Cannot delete system role')
-    const { error } = await supabase.from('roles').delete().eq('id', id)
+
+    const { error } = await supabase
+      .from('roles')
+      .delete()
+      .eq('id', id)
+
     if (error) throw new DatabaseError('Failed to delete role', error)
+
+    // ✅ Invalidate cache
+    await memoryCache.invalidate(this.getRolesCacheKey())
+    await memoryCache.invalidate(this.getRoleCacheKey(id))
+
     return { success: true }
   }
 
+  // ─── User Roles ───────────────────────────────────────────────
   async getUserRoles(userId: string) {
-    const { data, error } = await supabase.from('user_roles').select(`${USER_ROLE_COLUMNS}, role:roles(${ROLE_COLUMNS})`).eq('user_id', userId)
+    const cacheKey = this.getUserRolesCacheKey(userId)
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
+
+    const { data, error } = await supabase
+      .from('user_roles')
+      .select(`${USER_ROLE_COLUMNS}, role:roles(${ROLE_MINIMAL})`)
+      .eq('user_id', userId)
+
     if (error) throw new DatabaseError('Failed to fetch user roles', error)
-    return data || []
+
+    const result = data || []
+    await memoryCache.set(cacheKey, result, 120) // 2 minutes
+    return result
   }
 
   async assignRole(data: AssignRole) {
-    const { data: existing } = await supabase.from('user_roles').select('id').eq('user_id', data.userId).eq('role_id', data.roleId).single()
+    const { data: existing } = await supabase
+      .from('user_roles')
+      .select('id')
+      .eq('user_id', data.userId)
+      .eq('role_id', data.roleId)
+      .single()
+
     if (existing) throw new DatabaseError('User already has this role')
 
-    const { data: userRole, error } = await supabase.from('user_roles').insert({ user_id: data.userId, role_id: data.roleId }).select(USER_ROLE_COLUMNS).single()
+    const { data: userRole, error } = await supabase
+      .from('user_roles')
+      .insert({ user_id: data.userId, role_id: data.roleId })
+      .select(USER_ROLE_COLUMNS)
+      .single()
+
     if (error || !userRole) throw new DatabaseError('Failed to assign role', error)
+
+    // ✅ Invalidate cache
+    await this.invalidateUserCache(data.userId)
+
     return userRole
   }
 
   async removeRole(data: RemoveRole) {
-    const { error } = await supabase.from('user_roles').delete().eq('user_id', data.userId).eq('role_id', data.roleId)
+    const { error } = await supabase
+      .from('user_roles')
+      .delete()
+      .eq('user_id', data.userId)
+      .eq('role_id', data.roleId)
+
     if (error) throw new DatabaseError('Failed to remove role', error)
+
+    // ✅ Invalidate cache
+    await this.invalidateUserCache(data.userId)
+
     return { success: true }
   }
 
+  // ─── Permissions Check — OPTIMIZED ────────────────────────────
   async hasPermission(userId: string, permissionCode: string): Promise<boolean> {
-    const { data } = await supabase.from('user_roles').select('role_id').eq('user_id', userId)
-    if (!data?.length) return false
+    const cacheKey = this.getHasPermissionCacheKey(userId, permissionCode)
+    const cached = await memoryCache.get(cacheKey)
+    if (cached !== null) return cached as boolean
 
-    const { data: perms } = await supabase.from('role_permissions').select('permission_id').in('role_id', data.map((r: any) => r.role_id))
-    if (!perms?.length) return false
+    // ✅ یک کوئری با JOIN به جای ۳ کوئری
+    const { data, error } = await supabase
+      .from('user_roles')
+      .select(`
+        role_id,
+        role_permissions!inner (
+          permission_id,
+          permissions!inner (
+            code
+          )
+        )
+      `)
+      .eq('user_id', userId)
 
-    const { data: matched } = await supabase.from('permissions').select('id').in('id', perms.map((p: any) => p.permission_id)).eq('code', permissionCode).single()
-    return !!matched
+    if (error || !data || data.length === 0) {
+      await memoryCache.set(cacheKey, false, 60)
+      return false
+    }
+
+    // ✅ بررسی وجود permission در داده‌های برگشتی
+    let hasPermission = false
+    for (const item of data) {
+      const rolePerms = (item as any).role_permissions || []
+      for (const rp of rolePerms) {
+        const perm = rp.permissions || {}
+        if (perm.code === permissionCode) {
+          hasPermission = true
+          break
+        }
+      }
+      if (hasPermission) break
+    }
+
+    await memoryCache.set(cacheKey, hasPermission, 60) // 1 minute
+    return hasPermission
   }
 
   async getUserPermissions(userId: string) {
-    const { data: userRoles } = await supabase.from('user_roles').select('role_id').eq('user_id', userId)
-    if (!userRoles?.length) return []
+    const cacheKey = this.getUserPermissionsCacheKey(userId)
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
 
-    const { data: rolePerms } = await supabase.from('role_permissions').select('permission_id').in('role_id', userRoles.map((r: any) => r.role_id))
-    if (!rolePerms?.length) return []
+    // ✅ یک کوئری با JOIN به جای ۳ کوئری
+    const { data, error } = await supabase
+      .from('user_roles')
+      .select(`
+        role_id,
+        role_permissions!inner (
+          permission_id,
+          permissions!inner (
+            ${PERMISSION_COLUMNS}
+          )
+        )
+      `)
+      .eq('user_id', userId)
 
-    const { data: permissions } = await supabase.from('permissions').select(PERMISSION_COLUMNS).in('id', [...new Set(rolePerms.map((p: any) => p.permission_id))]).order('resource')
-    return permissions || []
+    if (error || !data) {
+      await memoryCache.set(cacheKey, [], 60)
+      return []
+    }
+
+    // ✅ استخراج permissions از داده‌های برگشتی
+    const permissionMap = new Map<string, any>()
+    for (const item of data) {
+      const rolePerms = (item as any).role_permissions || []
+      for (const rp of rolePerms) {
+        const perm = rp.permissions || {}
+        if (perm.id && !permissionMap.has(perm.id)) {
+          permissionMap.set(perm.id, perm)
+        }
+      }
+    }
+
+    const result = Array.from(permissionMap.values())
+      .sort((a, b) => (a.resource || '').localeCompare(b.resource || ''))
+
+    await memoryCache.set(cacheKey, result, 120) // 2 minutes
+    return result
+  }
+
+  // ─── Get User Role IDs ────────────────────────────────────────
+  async getUserRoleIds(userId: string): Promise<string[]> {
+    const cacheKey = `user:role_ids:${userId}`
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached as string[]
+
+    const { data, error } = await supabase
+      .from('user_roles')
+      .select('role_id')
+      .eq('user_id', userId)
+
+    if (error || !data) return []
+
+    const result = data.map((r: any) => r.role_id)
+    await memoryCache.set(cacheKey, result, 120)
+    return result
+  }
+
+  // ─── Invalidate Cache ─────────────────────────────────────────
+  private async invalidateUserCache(userId: string) {
+    await memoryCache.invalidate(this.getUserRolesCacheKey(userId))
+    await memoryCache.invalidate(this.getUserPermissionsCacheKey(userId))
+    await memoryCache.invalidate(`user:role_ids:${userId}`)
+    await memoryCache.invalidate(`user:has_permission:${userId}:*`)
   }
 }
+
+export default PermissionService

@@ -1,5 +1,6 @@
 // ============================================
-// backend/src/services/customer.service.ts — v2.1 + Cursor Pagination
+// backend/src/services/customer.service.ts — v2.3
+// FIXED: TypeScript type for getBalance return
 // ============================================
 
 import { supabase } from '../db'
@@ -7,11 +8,45 @@ import { CreateCustomer, UpdateCustomer, CustomerFilters } from '@hisabche/valid
 import { DatabaseError } from '../errors/database.error'
 import { memoryCache } from '../utils/pagination'
 
-function mapCustomer(raw: Record<string, any>) {
+// ✅ Types
+interface Customer {
+  id: string
+  fullName: string
+  phone: string
+  email: string
+  address: string | null
+  notes: string
+  openingBalance: number
+  isActive: boolean
+  type: string
+  createdAt: string
+  updatedAt: string
+}
+
+interface CustomerWithBalance extends Customer {
+  balance: number
+}
+
+interface BalanceResult {
+  customerId: string
+  balance: number
+  isDebtor: boolean
+}
+
+// ✅ Mapper
+function mapCustomer(raw: Record<string, any>): Customer {
   return {
-    id: raw.id, fullName: raw.full_name, phone: raw.phone, email: raw.email,
-    address: raw.address, notes: raw.notes, openingBalance: raw.opening_balance,
-    isActive: raw.is_active, type: raw.type, createdAt: raw.created_at, updatedAt: raw.updated_at,
+    id: raw.id,
+    fullName: raw.full_name,
+    phone: raw.phone,
+    email: raw.email,
+    address: raw.address,
+    notes: raw.notes,
+    openingBalance: raw.opening_balance,
+    isActive: raw.is_active,
+    type: raw.type,
+    createdAt: raw.created_at,
+    updatedAt: raw.updated_at,
   }
 }
 
@@ -19,12 +54,31 @@ const LIST_COLUMNS = 'id, full_name, phone, email, opening_balance, is_active, t
 const DETAIL_COLUMNS = 'id, full_name, phone, email, address, notes, opening_balance, is_active, type, created_at, updated_at'
 
 export class CustomerService {
-  // ─── List — Cursor-based Pagination ───
+
+  // ─── Cache Keys ────────────────────────────────────────────
+  private getListCacheKey(userId: string, filters: CustomerFilters) {
+    return `customers:${userId}:${JSON.stringify(filters)}`
+  }
+
+  private getDetailCacheKey(userId: string, id: string) {
+    return `customer:${userId}:${id}`
+  }
+
+  private getBalanceCacheKey(userId: string, customerId: string) {
+    return `customer:balance:${userId}:${customerId}`
+  }
+
+  // ─── List — Cursor-based Pagination ──────────────────────
   async list(userId: string, filters: CustomerFilters) {
     const {
       search, isActive, hasBalance, type,
       limit = 20, cursor, sortBy = 'created_at', sortDirection = 'desc'
     } = filters
+
+    // ✅ کش کردن
+    const cacheKey = this.getListCacheKey(userId, filters)
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
 
     const maxLimit = Math.min(limit, 100)
     const fetchLimit = maxLimit + 1
@@ -38,10 +92,11 @@ export class CustomerService {
 
     if (search) query = query.ilike('full_name', `%${search}%`)
     if (isActive !== undefined) query = query.eq('is_active', isActive)
-    if (hasBalance !== undefined) query = hasBalance ? query.gt('opening_balance', 0) : query.eq('opening_balance', 0)
+    if (hasBalance !== undefined) {
+      query = hasBalance ? query.gt('opening_balance', 0) : query.eq('opening_balance', 0)
+    }
     if (type !== undefined) query = query.eq('type', type)
 
-    // ✅ Cursor-based
     if (cursor) {
       if (sortDirection === 'desc') {
         query = query.lt(sortBy, cursor)
@@ -50,54 +105,93 @@ export class CustomerService {
       }
     }
 
-    const { data, error } = await query
+    // ✅ موازی‌سازی: کوئری اصلی + count
+    const [queryResult, countResult] = await Promise.all([
+      query,
+      supabase
+        .from('customers')
+        .select('id', { count: 'estimated', head: true })
+        .eq('user_id', userId),
+    ])
+
+    const { data, error } = queryResult
     if (error) throw new DatabaseError('Failed to fetch customers', error)
 
     const hasMore = (data?.length || 0) > maxLimit
     const items = hasMore ? data.slice(0, maxLimit) : data
     const nextCursor = hasMore && items.length > 0 ? items[items.length - 1]?.id : null
 
-    // Count total
-    const { count } = await supabase
-      .from('customers')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-
-    return {
+    const result = {
       customers: (items || []).map(mapCustomer),
       nextCursor,
       hasMore,
-      total: count || 0,
+      total: countResult.count || 0,
       limit: maxLimit,
     }
+
+    // ✅ ذخیره در کش
+    await memoryCache.set(cacheKey, result, 30)
+    return result
   }
 
-  // ─── Get By ID ───
-  async getById(id: string, userId: string) {
-    const { data: customer, error } = await supabase
-      .from('customers').select(DETAIL_COLUMNS).eq('id', id).eq('user_id', userId).single()
+  // ─── Get By ID ──────────────────────────────────────────
+  async getById(id: string, userId: string): Promise<CustomerWithBalance> {
+    const cacheKey = this.getDetailCacheKey(userId, id)
+    
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached as CustomerWithBalance
+
+    // ✅ موازی‌سازی: گرفتن customer + balance
+    const [customerResult, balanceResult] = await Promise.all([
+      supabase
+        .from('customers')
+        .select(DETAIL_COLUMNS)
+        .eq('id', id)
+        .eq('user_id', userId)
+        .single(),
+      this.getBalance(id, userId),
+    ])
+
+    const { data: customer, error } = customerResult
     if (error || !customer) throw new DatabaseError('Customer not found', error)
-    const balance = await this.getBalance(id, userId)
-    return { ...mapCustomer(customer), balance: balance.balance }
+
+    const result: CustomerWithBalance = {
+      ...mapCustomer(customer),
+      balance: balanceResult.balance, // ✅ حالا TypeScript می‌داند balance وجود دارد
+    }
+
+    await memoryCache.set(cacheKey, result, 300)
+    return result
   }
 
-  // ─── Create ───
-  async create(userId: string, data: CreateCustomer) {
+  // ─── Create ──────────────────────────────────────────────
+  async create(userId: string, data: CreateCustomer): Promise<Customer> {
     const { data: customer, error } = await supabase
-      .from('customers').insert({
-        full_name: data.fullName, phone: data.phone || '', email: data.email || '',
-        address: data.address || null, notes: data.notes || '',
-        opening_balance: data.openingBalance || 0, is_active: data.isActive !== false,
-        type: data.type || 'cash', user_id: userId,
+      .from('customers')
+      .insert({
+        full_name: data.fullName,
+        phone: data.phone || '',
+        email: data.email || '',
+        address: data.address || null,
+        notes: data.notes || '',
+        opening_balance: data.openingBalance || 0,
+        is_active: data.isActive !== false,
+        type: data.type || 'cash',
+        user_id: userId,
       })
-      .select(DETAIL_COLUMNS).single()
+      .select(DETAIL_COLUMNS)
+      .single()
 
     if (error) throw new DatabaseError('Failed to create customer', error)
 
     if (data.type === 'credit') {
       const { error: txError } = await supabase.from('transactions').insert({
-        customer_id: customer.id, type: 'sale', amount: data.openingBalance || 0,
-        currency: 'AFN', description: 'Credit sale - opening balance', user_id: userId,
+        customer_id: customer.id,
+        type: 'sale',
+        amount: data.openingBalance || 0,
+        currency: 'AFN',
+        description: 'Credit sale - opening balance',
+        user_id: userId,
       })
       if (txError) {
         await supabase.from('customers').delete().eq('id', customer.id)
@@ -105,14 +199,14 @@ export class CustomerService {
       }
     }
 
-    memoryCache.invalidate(`customers:${userId}`)
-    memoryCache.invalidate(`dashboard:${userId}`)
+    // ✅ Clear cache
+    await this.invalidateCache(userId, customer.id)
 
     return mapCustomer(customer)
   }
 
-  // ─── Update ───
-  async update(id: string, userId: string, data: UpdateCustomer) {
+  // ─── Update ──────────────────────────────────────────────
+  async update(id: string, userId: string, data: UpdateCustomer): Promise<Customer> {
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (data.fullName !== undefined) updates.full_name = data.fullName
     if (data.phone !== undefined) updates.phone = data.phone
@@ -123,38 +217,60 @@ export class CustomerService {
     if (data.type !== undefined) updates.type = data.type
 
     const { data: customer, error } = await supabase
-      .from('customers').update(updates).eq('id', id).eq('user_id', userId)
-      .select(DETAIL_COLUMNS).single()
+      .from('customers')
+      .update(updates)
+      .eq('id', id)
+      .eq('user_id', userId)
+      .select(DETAIL_COLUMNS)
+      .single()
 
     if (error) throw new DatabaseError('Failed to update customer', error)
     if (!customer) throw new DatabaseError('Customer not found')
 
-    memoryCache.invalidate(`customers:${userId}`)
-    memoryCache.invalidate(`dashboard:${userId}`)
+    // ✅ Clear cache
+    await this.invalidateCache(userId, id)
 
     return mapCustomer(customer)
   }
 
-  // ─── Delete ───
+  // ─── Delete ──────────────────────────────────────────────
   async delete(id: string, userId: string): Promise<void> {
+    // ✅ count: estimated
     const { count } = await supabase
-      .from('transactions').select('id', { count: 'exact', head: true }).eq('customer_id', id)
-    if (count && count > 0) throw new DatabaseError('Customer has transactions, cannot delete')
+      .from('transactions')
+      .select('id', { count: 'estimated', head: true })
+      .eq('customer_id', id)
 
-    const { error } = await supabase.from('customers').delete().eq('id', id).eq('user_id', userId)
+    if (count && count > 0) {
+      throw new DatabaseError('Customer has transactions, cannot delete')
+    }
+
+    const { error } = await supabase
+      .from('customers')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId)
+
     if (error) throw new DatabaseError('Failed to delete customer', error)
 
-    memoryCache.invalidate(`customers:${userId}`)
-    memoryCache.invalidate(`dashboard:${userId}`)
+    // ✅ Clear cache
+    await this.invalidateCache(userId, id)
   }
 
-  // ─── Get Balance ───
-  async getBalance(customerId: string, userId: string) {
+  // ─── Get Balance ─────────────────────────────────────────
+  async getBalance(customerId: string, userId: string): Promise<BalanceResult> {
+    const cacheKey = this.getBalanceCacheKey(userId, customerId)
+    
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached as BalanceResult
+
+    // ✅ فقط ستون‌های مورد نیاز + limit
     const { data: transactions, error } = await supabase
       .from('transactions_view')
       .select('type, amount')
       .eq('customer_id', customerId)
       .eq('user_id', userId)
+      .limit(10000)
 
     if (error) {
       throw new DatabaseError('Failed to fetch transactions', error)
@@ -171,10 +287,25 @@ export class CustomerService {
       return acc
     }, 0)
 
-    return {
+    const result: BalanceResult = {
       customerId,
       balance,
       isDebtor: balance > 0,
     }
+
+    await memoryCache.set(cacheKey, result, 120)
+    return result
+  }
+
+  // ─── Invalidate Cache ─────────────────────────────────────
+  private async invalidateCache(userId: string, customerId?: string) {
+    await memoryCache.invalidate(`customers:${userId}:*`)
+    await memoryCache.invalidate(`dashboard:${userId}`)
+    if (customerId) {
+      await memoryCache.invalidate(`customer:${userId}:${customerId}`)
+      await memoryCache.invalidate(`customer:balance:${userId}:${customerId}`)
+    }
   }
 }
+
+export default CustomerService

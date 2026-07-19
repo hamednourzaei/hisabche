@@ -1,9 +1,11 @@
 // ============================================
-// backend/src/services/email.service.ts
-// Email Service — Resend + i18n Templates
+// backend/src/services/email.service.ts — Optimized v2.1
+// FIXED: Import order, added cache, better error handling
 // ============================================
 
 import { Resend } from 'resend'
+import { supabase } from '../db'
+import { memoryCache } from '../utils/pagination'
 
 // ─── Initialize Resend ──────────────────────────────────────────
 console.log('[EMAIL] Initializing Resend...')
@@ -247,9 +249,15 @@ const translations = {
   },
 }
 
-// ─── Helper: Get User Language ────────────────────────────────
+// ─── Helper: Get User Language with Cache ─────────────────────
 
 async function getUserLanguage(userId: string): Promise<Language> {
+  const cacheKey = `user:lang:${userId}`
+  
+  // ✅ کش کردن زبان کاربر
+  const cached = await memoryCache.get(cacheKey)
+  if (cached) return cached as Language
+
   try {
     const { data: user } = await supabase
       .from('users')
@@ -258,7 +266,11 @@ async function getUserLanguage(userId: string): Promise<Language> {
       .single()
 
     const lang = user?.preferred_language || 'fa-IR'
-    return LANGUAGES.includes(lang) ? lang : 'fa-IR'
+    const result = LANGUAGES.includes(lang) ? lang : 'fa-IR'
+    
+    // ✅ ذخیره در کش به مدت ۱ ساعت
+    await memoryCache.set(cacheKey, result, 3600)
+    return result
   } catch {
     return 'fa-IR'
   }
@@ -322,11 +334,39 @@ function buildEmailHtml(
 </html>`
 }
 
+// ─── Email Queue (برای جلوگیری از ارسال همزمان) ──────────────
+
+let emailQueue: { to: string; subject: string; html: string; resolve: (value: any) => void; reject: (error: any) => void }[] = []
+let isProcessingQueue = false
+
+async function processEmailQueue() {
+  if (isProcessingQueue || emailQueue.length === 0) return
+  
+  isProcessingQueue = true
+  
+  while (emailQueue.length > 0) {
+    const item = emailQueue.shift()
+    if (!item) continue
+    
+    try {
+      const result = await emailService._send(item.to, item.subject, item.html)
+      item.resolve(result)
+    } catch (error) {
+      item.reject(error)
+    }
+    
+    // ✅ فاصله بین ایمیل‌ها (برای جلوگیری از Rate Limit)
+    await new Promise(resolve => setTimeout(resolve, 200))
+  }
+  
+  isProcessingQueue = false
+}
+
 // ─── Email Service ─────────────────────────────────────────────
 
 export const emailService = {
-  // ─── Send email ──────────────────────────────────────────────
-  async send({ to, subject, html }: SendEmailParams) {
+  // ─── Internal send ──────────────────────────────────────────
+  async _send(to: string, subject: string, html: string) {
     console.log('[EMAIL] ====== SEND START ======')
     console.log('[EMAIL] To:', to)
     console.log('[EMAIL] From:', `${FROM_NAME} <${FROM_EMAIL}>`)
@@ -358,6 +398,14 @@ export const emailService = {
       console.error('[EMAIL] ❌ Exception:', err?.message || err)
       return { success: false, error: err }
     }
+  },
+
+  // ─── Send email (با Queue) ──────────────────────────────────
+  async send({ to, subject, html }: SendEmailParams) {
+    return new Promise((resolve, reject) => {
+      emailQueue.push({ to, subject, html, resolve, reject })
+      processEmailQueue()
+    })
   },
 
   // ─── Helper: Get user language ──────────────────────────────
@@ -481,7 +529,6 @@ export const emailService = {
 
   // ─── Generic send with language detection ──────────────────
   async sendWithLanguage(to: string, template: 'trialStarted' | 'trialEndingSoon' | 'trialExpired' | 'paymentSuccess' | 'paymentFailed', data: EmailData) {
-    // Try to detect language from user
     let lang: Language = 'fa-IR'
     try {
       const { data: user } = await supabase
@@ -511,7 +558,11 @@ export const emailService = {
         return { success: false, error: 'Unknown template' }
     }
   },
+
+  // ─── Check Resend Status ────────────────────────────────────
+  isConfigured(): boolean {
+    return !!resend
+  },
 }
 
-// ─── Import supabase for language detection ───────────────────
-import { supabase } from '../db'
+export default emailService

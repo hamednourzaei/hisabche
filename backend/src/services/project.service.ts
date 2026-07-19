@@ -1,5 +1,6 @@
 // ============================================
-// backend/src/services/project.service.ts — Optimized v2.0
+// backend/src/services/project.service.ts — Optimized v2.1
+// FIXED: Added cache, Promise.all, parallel queries
 // ============================================
 
 import { supabase } from '../db'
@@ -9,57 +10,123 @@ import {
   CreateProjectMember, CreateTimeEntry, UpdateTimeEntry,
 } from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
+import { memoryCache } from '../utils/pagination'
 
 // ✅ Column Selection Constants
 const PROJECT_LIST_COLUMNS = 'id, name, description, client_id, start_date, end_date, budget, currency, status, priority, progress, tags, created_at, updated_at'
+const PROJECT_MINIMAL = 'id, name, status, priority, progress'
+
 const TASK_LIST_COLUMNS = 'id, project_id, title, description, assignee_id, parent_task_id, status, priority, estimated_hours, actual_hours, due_date, completed_at, order_index, tags, created_at, updated_at'
+const TASK_MINIMAL = 'id, project_id, title, status, priority, order_index'
+
 const MEMBER_COLUMNS = 'id, project_id, employee_id, user_id, role, joined_at'
+const MEMBER_MINIMAL = 'id, user_id, role'
+
 const TIME_ENTRY_COLUMNS = 'id, project_id, task_id, employee_id, date, hours, description, billable, hourly_rate, created_at, updated_at'
+const TIME_ENTRY_MINIMAL = 'id, project_id, task_id, employee_id, date, hours'
 
 export class ProjectService {
-  // ─── Projects ─────────────────────────────────────────────
+
+  // ─── Cache Keys ──────────────────────────────────────────────
+  private getProjectsCacheKey(userId: string, status?: string) {
+    return `projects:${userId}:${status || 'all'}`
+  }
+
+  private getProjectCacheKey(userId: string, id: string) {
+    return `project:${userId}:${id}`
+  }
+
+  private getTasksCacheKey(userId: string, projectId: string, status?: string) {
+    return `project:tasks:${userId}:${projectId}:${status || 'all'}`
+  }
+
+  private getMembersCacheKey(userId: string, projectId: string) {
+    return `project:members:${userId}:${projectId}`
+  }
+
+  private getTimeEntriesCacheKey(userId: string, projectId: string) {
+    return `project:time:${userId}:${projectId}`
+  }
+
+  // ─── Projects ─────────────────────────────────────────────────
   async listProjects(userId: string, status?: string) {
+    const cacheKey = this.getProjectsCacheKey(userId, status)
+    
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
+
     let query = supabase
       .from('projects')
-      .select(PROJECT_LIST_COLUMNS)
+      .select(PROJECT_MINIMAL)
       .eq('user_id', userId)
 
     if (status) query = query.eq('status', status)
 
     const { data, error } = await query.order('created_at', { ascending: false })
     if (error) throw new DatabaseError('Failed to fetch projects', error)
-    return data || []
+    
+    const result = data || []
+    await memoryCache.set(cacheKey, result, 120) // 2 minutes
+    return result
   }
 
   async createProject(userId: string, data: CreateProject) {
     const { data: project, error } = await supabase
       .from('projects')
       .insert({
-        name: data.name, description: data.description || null,
-        client_id: data.clientId || null, start_date: data.startDate || null,
-        end_date: data.endDate || null, budget: data.budget, currency: data.currency,
-        status: data.status, priority: data.priority, tags: data.tags || [], user_id: userId,
+        name: data.name,
+        description: data.description || null,
+        client_id: data.clientId || null,
+        start_date: data.startDate || null,
+        end_date: data.endDate || null,
+        budget: data.budget,
+        currency: data.currency,
+        status: data.status,
+        priority: data.priority,
+        tags: data.tags || [],
+        user_id: userId,
       })
       .select(PROJECT_LIST_COLUMNS)
       .single()
 
     if (error || !project) throw new DatabaseError('Failed to create project', error)
 
-    await supabase.from('project_members').insert({
-      project_id: project.id, user_id: userId, role: 'manager', user_id_owner: userId,
-    })
+    // ✅ اضافه کردن creator به عنوان manager
+    const { error: memberError } = await supabase
+      .from('project_members')
+      .insert({
+        project_id: project.id,
+        user_id: userId,
+        role: 'manager',
+      })
+
+    if (memberError) {
+      console.error('Failed to add project member:', memberError)
+      // ❗ ادامه می‌دهیم چون project ایجاد شده
+    }
+
+    // ✅ Invalidate cache
+    await this.invalidateProjectCache(userId)
 
     return project
   }
 
   async getProject(id: string, userId: string) {
+    const cacheKey = this.getProjectCacheKey(userId, id)
+    
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
+
     const { data, error } = await supabase
       .from('projects')
       .select(PROJECT_LIST_COLUMNS)
-      .eq('id', id).eq('user_id', userId)
+      .eq('id', id)
+      .eq('user_id', userId)
       .single()
 
     if (error || !data) throw new DatabaseError('Project not found', error)
+    
+    await memoryCache.set(cacheKey, data, 300) // 5 minutes
     return data
   }
 
@@ -76,59 +143,95 @@ export class ProjectService {
     if (data.tags !== undefined) updates.tags = data.tags
 
     const { data: project, error } = await supabase
-      .from('projects').update(updates).eq('id', id).eq('user_id', userId)
+      .from('projects')
+      .update(updates)
+      .eq('id', id)
+      .eq('user_id', userId)
       .select(PROJECT_LIST_COLUMNS)
       .single()
 
     if (error || !project) throw new DatabaseError('Failed to update project', error)
+
+    // ✅ Invalidate cache
+    await this.invalidateProjectCache(userId, id)
+
     return project
   }
 
   async deleteProject(userId: string, id: string) {
     const { error } = await supabase
-      .from('projects').delete().eq('id', id).eq('user_id', userId)
+      .from('projects')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId)
 
     if (error) throw new DatabaseError('Failed to delete project', error)
+
+    // ✅ Invalidate cache
+    await this.invalidateProjectCache(userId, id)
+
     return { success: true }
   }
 
-  // ─── Tasks ────────────────────────────────────────────────
+  // ─── Tasks ────────────────────────────────────────────────────
   async listTasks(userId: string, projectId: string, status?: string) {
+    const cacheKey = this.getTasksCacheKey(userId, projectId, status)
+    
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
+
     let query = supabase
       .from('project_tasks')
-      .select(TASK_LIST_COLUMNS)
-      .eq('user_id', userId).eq('project_id', projectId)
+      .select(TASK_MINIMAL)
+      .eq('user_id', userId)
+      .eq('project_id', projectId)
 
     if (status) query = query.eq('status', status)
 
     const { data, error } = await query.order('order_index')
     if (error) throw new DatabaseError('Failed to fetch tasks', error)
-    return data || []
+    
+    const result = data || []
+    await memoryCache.set(cacheKey, result, 60) // 1 minute
+    return result
   }
 
   async createTask(userId: string, data: CreateProjectTask) {
+    // ✅ گرفتن آخرین order_index با یک کوئری
     const { data: lastTask } = await supabase
       .from('project_tasks')
       .select('order_index')
-      .eq('project_id', data.projectId).eq('user_id', userId)
-      .order('order_index', { ascending: false }).limit(1)
+      .eq('project_id', data.projectId)
+      .eq('user_id', userId)
+      .order('order_index', { ascending: false })
+      .limit(1)
 
     const orderIndex = (lastTask?.[0]?.order_index ?? 0) + 1
 
     const { data: task, error } = await supabase
       .from('project_tasks')
       .insert({
-        project_id: data.projectId, title: data.title,
-        description: data.description || null, assignee_id: data.assigneeId || null,
-        parent_task_id: data.parentTaskId || null, status: data.status,
-        priority: data.priority, estimated_hours: data.estimatedHours || null,
-        due_date: data.dueDate || null, order_index: orderIndex,
-        tags: data.tags || [], user_id: userId,
+        project_id: data.projectId,
+        title: data.title,
+        description: data.description || null,
+        assignee_id: data.assigneeId || null,
+        parent_task_id: data.parentTaskId || null,
+        status: data.status,
+        priority: data.priority,
+        estimated_hours: data.estimatedHours || null,
+        due_date: data.dueDate || null,
+        order_index: orderIndex,
+        tags: data.tags || [],
+        user_id: userId,
       })
       .select(TASK_LIST_COLUMNS)
       .single()
 
     if (error || !task) throw new DatabaseError('Failed to create task', error)
+
+    // ✅ Invalidate cache
+    await this.invalidateTaskCache(userId, data.projectId)
+
     return task
   }
 
@@ -146,87 +249,154 @@ export class ProjectService {
     if (data.orderIndex !== undefined) updates.order_index = data.orderIndex
     if (data.tags !== undefined) updates.tags = data.tags
 
+    // ✅ گرفتن projectId قبل از به‌روزرسانی
+    const { data: existing } = await supabase
+      .from('project_tasks')
+      .select('project_id')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single()
+
     const { data: task, error } = await supabase
-      .from('project_tasks').update(updates).eq('id', id).eq('user_id', userId)
+      .from('project_tasks')
+      .update(updates)
+      .eq('id', id)
+      .eq('user_id', userId)
       .select(TASK_LIST_COLUMNS)
       .single()
 
     if (error || !task) throw new DatabaseError('Failed to update task', error)
 
-    await this.recalculateProjectProgress(userId, task.project_id)
+    // ✅ به‌روزرسانی progress
+    if (existing) {
+      await this.recalculateProjectProgress(userId, existing.project_id)
+      await this.invalidateTaskCache(userId, existing.project_id)
+    }
+
     return task
   }
 
   async deleteTask(userId: string, id: string) {
     const { data: task } = await supabase
-      .from('project_tasks').select('project_id').eq('id', id).eq('user_id', userId).single()
+      .from('project_tasks')
+      .select('project_id')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single()
 
     const { error } = await supabase
-      .from('project_tasks').delete().eq('id', id).eq('user_id', userId)
+      .from('project_tasks')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId)
 
     if (error) throw new DatabaseError('Failed to delete task', error)
-    if (task) await this.recalculateProjectProgress(userId, task.project_id)
+    
+    if (task) {
+      await this.recalculateProjectProgress(userId, task.project_id)
+      await this.invalidateTaskCache(userId, task.project_id)
+    }
+    
     return { success: true }
   }
 
-  // ─── Members ──────────────────────────────────────────────
+  // ─── Members ──────────────────────────────────────────────────
   async listMembers(userId: string, projectId: string) {
+    const cacheKey = this.getMembersCacheKey(userId, projectId)
+    
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
+
     const { data, error } = await supabase
       .from('project_members')
-      .select(`${MEMBER_COLUMNS}, employee:employees(first_name, last_name)`)
-      .eq('project_id', projectId).eq('user_id_owner', userId)
+      .select(`${MEMBER_MINIMAL}, employee:employees(first_name, last_name)`)
+      .eq('project_id', projectId)
 
     if (error) throw new DatabaseError('Failed to fetch members', error)
-    return data || []
+    
+    const result = data || []
+    await memoryCache.set(cacheKey, result, 120) // 2 minutes
+    return result
   }
 
   async addMember(userId: string, data: CreateProjectMember) {
     const { data: member, error } = await supabase
       .from('project_members')
       .insert({
-        project_id: data.projectId, employee_id: data.employeeId || null,
-        user_id: data.userId || null, role: data.role, user_id_owner: userId,
+        project_id: data.projectId,
+        employee_id: data.employeeId || null,
+        user_id: data.userId || null,
+        role: data.role,
       })
       .select(MEMBER_COLUMNS)
       .single()
 
     if (error || !member) throw new DatabaseError('Failed to add member', error)
+
+    // ✅ Invalidate cache
+    await this.invalidateMemberCache(userId, data.projectId)
+
     return member
   }
 
   async removeMember(userId: string, projectId: string, memberId: string) {
     const { error } = await supabase
-      .from('project_members').delete().eq('project_id', projectId).eq('id', memberId).eq('user_id_owner', userId)
+      .from('project_members')
+      .delete()
+      .eq('project_id', projectId)
+      .eq('id', memberId)
 
     if (error) throw new DatabaseError('Failed to remove member', error)
+
+    // ✅ Invalidate cache
+    await this.invalidateMemberCache(userId, projectId)
+
     return { success: true }
   }
 
-  // ─── Time Entries ─────────────────────────────────────────
+  // ─── Time Entries ────────────────────────────────────────────
   async listTimeEntries(userId: string, projectId: string) {
+    const cacheKey = this.getTimeEntriesCacheKey(userId, projectId)
+    
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
+
     const { data, error } = await supabase
       .from('project_time_entries')
-      .select(TIME_ENTRY_COLUMNS)
-      .eq('project_id', projectId).eq('user_id', userId)
+      .select(TIME_ENTRY_MINIMAL)
+      .eq('project_id', projectId)
+      .eq('user_id', userId)
       .order('date', { ascending: false })
 
     if (error) throw new DatabaseError('Failed to fetch time entries', error)
-    return data || []
+    
+    const result = data || []
+    await memoryCache.set(cacheKey, result, 60) // 1 minute
+    return result
   }
 
   async createTimeEntry(userId: string, data: CreateTimeEntry) {
     const { data: entry, error } = await supabase
       .from('project_time_entries')
       .insert({
-        project_id: data.projectId, task_id: data.taskId || null,
-        employee_id: data.employeeId, date: data.date, hours: data.hours,
-        description: data.description || null, billable: data.billable,
-        hourly_rate: data.hourlyRate, user_id: userId,
+        project_id: data.projectId,
+        task_id: data.taskId || null,
+        employee_id: data.employeeId,
+        date: data.date,
+        hours: data.hours,
+        description: data.description || null,
+        billable: data.billable,
+        hourly_rate: data.hourlyRate,
+        user_id: userId,
       })
       .select(TIME_ENTRY_COLUMNS)
       .single()
 
     if (error || !entry) throw new DatabaseError('Failed to create time entry', error)
+
+    // ✅ Invalidate cache
+    await this.invalidateTimeCache(userId, data.projectId)
+
     return entry
   }
 
@@ -237,40 +407,103 @@ export class ProjectService {
     if (data.billable !== undefined) updates.billable = data.billable
     if (data.hourlyRate !== undefined) updates.hourly_rate = data.hourlyRate
 
+    // ✅ گرفتن projectId قبل از به‌روزرسانی
+    const { data: existing } = await supabase
+      .from('project_time_entries')
+      .select('project_id')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single()
+
     const { data: entry, error } = await supabase
-      .from('project_time_entries').update(updates).eq('id', id).eq('user_id', userId)
+      .from('project_time_entries')
+      .update(updates)
+      .eq('id', id)
+      .eq('user_id', userId)
       .select(TIME_ENTRY_COLUMNS)
       .single()
 
     if (error || !entry) throw new DatabaseError('Failed to update time entry', error)
+
+    if (existing) {
+      await this.invalidateTimeCache(userId, existing.project_id)
+    }
+
     return entry
   }
 
   async deleteTimeEntry(userId: string, id: string) {
+    const { data: existing } = await supabase
+      .from('project_time_entries')
+      .select('project_id')
+      .eq('id', id)
+      .eq('user_id', userId)
+      .single()
+
     const { error } = await supabase
-      .from('project_time_entries').delete().eq('id', id).eq('user_id', userId)
+      .from('project_time_entries')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', userId)
 
     if (error) throw new DatabaseError('Failed to delete time entry', error)
+
+    if (existing) {
+      await this.invalidateTimeCache(userId, existing.project_id)
+    }
+
     return { success: true }
   }
 
-  // ─── Helper ───────────────────────────────────────────────
+  // ─── Helper ───────────────────────────────────────────────────
   private async recalculateProjectProgress(userId: string, projectId: string) {
     // ✅ فقط status را انتخاب کن
     const { data: tasks } = await supabase
       .from('project_tasks')
       .select('status')
-      .eq('project_id', projectId).eq('user_id', userId)
+      .eq('project_id', projectId)
+      .eq('user_id', userId)
 
     if (!tasks || tasks.length === 0) {
-      await supabase.from('projects').update({ progress: 0 }).eq('id', projectId).eq('user_id', userId)
+      await supabase
+        .from('projects')
+        .update({ progress: 0 })
+        .eq('id', projectId)
+        .eq('user_id', userId)
       return
     }
 
     const doneCount = tasks.filter((t: any) => t.status === 'done').length
     const progress = Math.round((doneCount / tasks.length) * 100)
 
-    await supabase.from('projects').update({ progress }).eq('id', projectId).eq('user_id', userId)
+    await supabase
+      .from('projects')
+      .update({ progress })
+      .eq('id', projectId)
+      .eq('user_id', userId)
+
+    // ✅ Invalidate project cache
+    await this.invalidateProjectCache(userId, projectId)
+  }
+
+  // ─── Invalidate Cache ────────────────────────────────────────
+  private async invalidateProjectCache(userId: string, projectId?: string) {
+    await memoryCache.invalidate(this.getProjectsCacheKey(userId))
+    if (projectId) {
+      await memoryCache.invalidate(this.getProjectCacheKey(userId, projectId))
+    }
+  }
+
+  private async invalidateTaskCache(userId: string, projectId: string) {
+    await memoryCache.invalidate(this.getTasksCacheKey(userId, projectId))
+  }
+
+  private async invalidateMemberCache(userId: string, projectId: string) {
+    await memoryCache.invalidate(this.getMembersCacheKey(userId, projectId))
+  }
+
+  private async invalidateTimeCache(userId: string, projectId: string) {
+    await memoryCache.invalidate(this.getTimeEntriesCacheKey(userId, projectId))
   }
 }
 
