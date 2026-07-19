@@ -18,7 +18,6 @@ let clientOptions: SupabaseClientOptions<'public'> = {
   },
 }
 
-// ✅ تنظیمات Proxy برای محیط محلی (در صورت نیاز)
 if (isLocal) {
   try {
     const { ProxyAgent, fetch: undiciFetch } = require('undici')
@@ -28,19 +27,16 @@ if (isLocal) {
       fetch: (input: any, init?: any) => undiciFetch(input, { ...init, dispatcher: proxyAgent }),
     }
   } catch {
-    // اگر undici نصب نیست، ignore کن
     console.log('ℹ️ undici not installed, skipping proxy setup')
   }
 }
 
-// ✅ ایجاد کلاینت Supabase
 export const supabase = createClient(
   process.env.SUPABASE_URL || 'https://quxpxatopmquheoazzlj.supabase.co',
   process.env.SUPABASE_SERVICE_KEY || 'sb_secret_OPjGqLO0yOI5tROyEQxGxw_xRax46Kh',
   clientOptions
 )
 
-// ✅ Health check
 export async function checkDatabaseConnection(): Promise<boolean> {
   try {
     const { data, error } = await supabase.from('products').select('id').limit(1)
@@ -50,7 +46,7 @@ export async function checkDatabaseConnection(): Promise<boolean> {
   }
 }
 
-// ✅ مانیتورینگ Connection (جدید)
+// ✅ Connection Monitoring
 let connectionCount = 0
 let totalQueries = 0
 let slowQueries = 0
@@ -70,7 +66,6 @@ export const dbStats = {
   },
 }
 
-// ✅ Wrapper برای tracking connections و query performance
 export const withConnection = async <T>(
   fn: () => Promise<T>,
   queryName?: string
@@ -83,7 +78,6 @@ export const withConnection = async <T>(
     const result = await fn()
     const duration = Date.now() - startTime
     
-    // اگر کوئری بیشتر از 500ms طول کشید، به عنوان Slow Query ثبت کن
     if (duration > 500) {
       dbStats.incrementSlowQueries()
       console.warn(`⚠️ Slow query: ${queryName || 'unnamed'} - ${duration}ms`)
@@ -95,12 +89,4 @@ export const withConnection = async <T>(
   }
 }
 
-// ✅ تابع کمکی برای لاگ کردن کوئری‌ها (اختیاری)
-export const logQuery = (query: string, params?: any[]) => {
-  if (process.env.NODE_ENV === 'development') {
-    console.log('🔍 SQL:', query)
-    if (params) console.log('📦 Params:', params)
-  }
-}
-
-export default supabase
+export default supabase;

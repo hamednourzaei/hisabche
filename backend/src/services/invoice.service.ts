@@ -1,6 +1,6 @@
 // ============================================
 // backend/src/services/invoice.service.ts
-// Hisabche v2.2 — OPTIMIZED PERFORMANCE
+// Hisabche v2.3 — FULLY OPTIMIZED
 // ============================================
 
 import { supabase } from "../db";
@@ -10,7 +10,7 @@ import { DatabaseError, NotFoundError } from "../errors/database.error";
 import { memoryCache } from "../utils/pagination";
 
 // ============================================
-// ✅ OPTIMIZED: فقط ستون‌های مورد نیاز (بدون SELECT *)
+// ✅ OPTIMIZED: فقط ستون‌های مورد نیاز
 // ============================================
 
 const INVOICE_LIST_COLUMNS = `
@@ -44,30 +44,6 @@ const INVOICE_ITEMS_LIST_COLUMNS = `
   total_price
 `
 
-// ✅ اصلاح: حذف SELECT * و استفاده از ستون‌های مشخص
-const INVOICE_DETAIL_COLUMNS = `
-  id, 
-  invoice_number, 
-  type, 
-  customer_id, 
-  supplier_id,
-  date, 
-  due_date, 
-  subtotal, 
-  discount_total, 
-  tax_total,
-  total, 
-  paid_amount, 
-  currency, 
-  payment_method, 
-  status, 
-  notes, 
-  reference, 
-  user_id, 
-  created_at, 
-  updated_at
-`
-
 // ============================================
 
 export class InvoiceService {
@@ -77,7 +53,7 @@ export class InvoiceService {
     this.workflowService = new WorkflowService();
   }
 
-  // ─── List Invoices — Cursor-based Pagination ───
+  // ─── List Invoices — با کش ───
   async list(userId: string, filters: InvoiceFilters) {
     const {
       search, type, status, customerId, supplierId,
@@ -85,17 +61,37 @@ export class InvoiceService {
       limit = 20, cursor, sortBy = "created_at", sortDirection = "desc"
     } = filters;
 
+    // ✅ کش کردن
+    const cacheKey = `invoices:${userId}:${JSON.stringify(filters)}`;
+    const cached = await memoryCache.get(cacheKey);
+    
+    if (cached) {
+      return cached;
+    }
+
     const maxLimit = Math.min(limit, 100);
     const fetchLimit = maxLimit + 1;
 
-    // ✅ اصلاح: فقط ستون‌های مورد نیاز
     let query = supabase
       .from("invoices")
       .select(`
-        ${INVOICE_LIST_COLUMNS},
-        invoice_items(
-          ${INVOICE_ITEMS_LIST_COLUMNS}
-        )
+        id,
+        invoice_number,
+        type,
+        customer_id,
+        supplier_id,
+        date,
+        due_date,
+        subtotal,
+        discount_total,
+        tax_total,
+        total,
+        paid_amount,
+        currency,
+        payment_method,
+        status,
+        created_at,
+        updated_at
       `)
       .eq("user_id", userId)
       .order(sortBy, { ascending: sortDirection === "asc" })
@@ -127,45 +123,72 @@ export class InvoiceService {
     const items = hasMore ? data.slice(0, maxLimit) : data;
     const nextCursor = hasMore && items.length > 0 ? items[items.length - 1]?.id : null;
 
-    // ✅ اصلاح: فقط count بگیرید نه همه داده‌ها
     const { count } = await supabase
       .from("invoices")
       .select("id", { count: "exact", head: true })
       .eq("user_id", userId);
 
-    return {
+    const result = {
       invoices: items || [],
       nextCursor,
       hasMore,
       total: count || 0,
       limit: maxLimit,
     };
+
+    // ✅ ذخیره در کش با TTL 30 ثانیه
+    await memoryCache.set(cacheKey, result, 30);
+
+    return result;
   }
 
-  // ─── Get Invoice By ID ───
+  // ─── Get Invoice By ID — با JOIN ───
   async getById(id: string, userId: string) {
-    // ✅ اصلاح: دو کوئری مجزا به جای SELECT * با JOIN
-    const { data: invoice, error: invoiceError } = await supabase
+    // ✅ اصلاح: یک کوئری با JOIN
+    const { data, error } = await supabase
       .from("invoices")
-      .select(INVOICE_DETAIL_COLUMNS)
+      .select(`
+        id,
+        invoice_number,
+        type,
+        customer_id,
+        supplier_id,
+        date,
+        due_date,
+        subtotal,
+        discount_total,
+        tax_total,
+        total,
+        paid_amount,
+        currency,
+        payment_method,
+        status,
+        notes,
+        reference,
+        user_id,
+        created_at,
+        updated_at,
+        invoice_items (
+          id,
+          invoice_id,
+          product_id,
+          product_name,
+          quantity,
+          unit_price,
+          discount,
+          total_price,
+          notes
+        )
+      `)
       .eq("id", id)
       .eq("user_id", userId)
       .single();
 
-    if (invoiceError || !invoice) throw new NotFoundError("Invoice");
+    if (error || !data) {
+      throw new NotFoundError("Invoice");
+    }
 
-    // گرفتن آیتم‌های فاکتور
-    const { data: items, error: itemsError } = await supabase
-      .from("invoice_items")
-      .select(INVOICE_ITEMS_LIST_COLUMNS)
-      .eq("invoice_id", id);
-
-    if (itemsError) throw new DatabaseError("Failed to fetch invoice items", itemsError);
-
-    return {
-      ...invoice,
-      invoice_items: items || [],
-    };
+    return data;
   }
 
   // ─── Create Invoice ───
@@ -219,7 +242,6 @@ export class InvoiceService {
         throw new DatabaseError("Failed to create invoice items", itemsError);
       }
 
-      // ✅ اصلاح: Batch Update به جای حلقه
       if (data.type === "sale") {
         await this.batchUpdateStock(data.items, userId);
       }
@@ -227,7 +249,6 @@ export class InvoiceService {
 
     this.invalidateUserCache(userId);
 
-    // اجرای غیرهمزمان (بدون await برای عدم blocking)
     this.createAccountingEntries(userId, invoice.id, { ...data, invoiceNumber, total: data.total || 0 })
       .catch(err => console.error('Accounting entry failed:', err));
 
@@ -286,7 +307,6 @@ export class InvoiceService {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
 
-    // ✅ اصلاح: یک کوئری برای همه داده‌ها
     const { data: invoices } = await supabase
       .from("invoices")
       .select("total, paid_amount, status, created_at")
@@ -316,14 +336,12 @@ export class InvoiceService {
   private async batchUpdateStock(items: any[], userId: string) {
     if (!items || items.length === 0) return;
 
-    // 1. گرفتن همه productIdها
     const productIds = items
       .filter(item => item.productId)
       .map(item => item.productId);
 
     if (productIds.length === 0) return;
 
-    // 2. یک کوئری برای گرفتن همه محصولات
     const { data: products, error: productsError } = await supabase
       .from('products')
       .select('id, quantity')
@@ -333,13 +351,11 @@ export class InvoiceService {
       throw new DatabaseError("Failed to fetch products for stock update", productsError);
     }
 
-    // 3. ساخت Map
     const productMap = new Map();
     for (const product of products) {
       productMap.set(product.id, product.quantity);
     }
 
-    // 4. به‌روزرسانی یک‌باره (با Promise.all)
     const updatePromises = items
       .filter(item => item.productId && productMap.has(item.productId))
       .map(async (item) => {
@@ -353,7 +369,6 @@ export class InvoiceService {
 
     await Promise.all(updatePromises);
 
-    // 5. Batch insert برای stock_movements
     const movements = items
       .filter(item => item.productId)
       .map(item => ({
@@ -409,7 +424,6 @@ export class InvoiceService {
       ];
 
       if (data.type === "sale" && data.items?.length) {
-        // ✅ اصلاح: Batch get products
         const productIds = data.items.map(item => item.productId);
         const { data: products } = await supabase
           .from("products")
