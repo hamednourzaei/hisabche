@@ -1,6 +1,6 @@
 // ============================================
 // backend/src/index.ts — Hisabche API Server v2.3
-// COMPLETE FIX: TypeScript Errors Resolved
+// FIXED: No top-level await
 // ============================================
 
 import Fastify from 'fastify'
@@ -84,46 +84,13 @@ const server = Fastify({
 })
 
 // ──────────────────────────────────────────────
-// 1. STARTUP LOGGING
+// STARTUP LOGGING
 // ──────────────────────────────────────────────
 server.log.info(`🚀 Starting Hisabche API v2.3...`)
 server.log.info(`📦 Environment: ${process.env.NODE_ENV || 'development'}`)
 
 // ──────────────────────────────────────────────
-// 2. COMPRESSION
-// ──────────────────────────────────────────────
-await server.register(compress, {
-  global: true,
-  threshold: 1024,
-  encodings: ['gzip', 'deflate'],
-})
-
-// ──────────────────────────────────────────────
-// 3. CORS
-// ──────────────────────────────────────────────
-await server.register(cors, {
-  origin: isProduction
-    ? [
-        'https://hisabche.com',
-        'https://www.hisabche.com',
-        'https://app.hisabche.com',
-        process.env.FRONTEND_URL || 'https://project-ro4vn-hisabche-s-projects.vercel.app',
-      ].filter(Boolean)
-    : [
-        'https://project-ro4vn-hisabche-s-projects.vercel.app',
-        'https://project-ro4vn.vercel.app',
-        'http://localhost:3000',
-        'http://localhost:3001',
-        'https://hisabche.com',
-        'https://www.hisabche.com',
-      ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-client-id', 'Accept'],
-})
-
-// ──────────────────────────────────────────────
-// 4. PERFORMANCE MONITORING MIDDLEWARE
+// 1. PERFORMANCE MONITORING MIDDLEWARE
 // ──────────────────────────────────────────────
 server.addHook('onRequest', async (request) => {
   ;(request as any).startTime = Date.now()
@@ -145,7 +112,7 @@ server.addHook('onSend', async (request, reply, payload) => {
 })
 
 // ──────────────────────────────────────────────
-// 5. CACHE MIDDLEWARE
+// 2. CACHE MIDDLEWARE
 // ──────────────────────────────────────────────
 server.addHook('onRequest', async (request, reply) => {
   if (request.method !== 'GET') return
@@ -165,7 +132,6 @@ server.addHook('onRequest', async (request, reply) => {
     }
     reply.header('x-cache', 'MISS')
   } catch (err) {
-    // ✅ FIX: تبدیل err به string برای log
     const errorMessage = err instanceof Error ? err.message : String(err)
     request.log.error(`Cache error: ${errorMessage}`)
   }
@@ -179,7 +145,6 @@ server.addHook('onSend', async (request, reply, payload) => {
       try {
         await memoryCache.set(cacheKey, payload, 30)
       } catch (err) {
-        // ✅ FIX: تبدیل err به string برای log
         const errorMessage = err instanceof Error ? err.message : String(err)
         request.log.error(`Cache set error: ${errorMessage}`)
       }
@@ -189,72 +154,7 @@ server.addHook('onSend', async (request, reply, payload) => {
 })
 
 // ──────────────────────────────────────────────
-// 6. SWAGGER
-// ──────────────────────────────────────────────
-await server.register(swagger, {
-  openapi: {
-    info: {
-      title: 'Hisabche API',
-      description: 'Business Operating System API v2.3',
-      version: '2.3.0',
-      contact: {
-        name: 'Hisabche Team',
-        email: 'support@hisabche.com',
-      },
-    },
-    servers: [
-      {
-        url: isProduction ? 'https://api.hisabche.com' : 'http://localhost:10000',
-        description: isProduction ? 'Production Server' : 'Development Server',
-      },
-    ],
-    components: {
-      securitySchemes: {
-        bearerAuth: {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT',
-        },
-      },
-    },
-    security: [{ bearerAuth: [] }],
-  },
-})
-
-await server.register(swaggerUi, {
-  routePrefix: '/docs',
-  uiConfig: {
-    docExpansion: 'list',
-    deepLinking: false,
-    persistAuthorization: true,
-  },
-  staticCSP: true,
-})
-
-// ──────────────────────────────────────────────
-// 7. RATE LIMIT — FIXED
-// ──────────────────────────────────────────────
-await server.register(rateLimit, {
-  max: 100,
-  timeWindow: '1 minute',
-  keyGenerator: (request) => {
-    const userId = (request as any).userId
-    return userId || request.ip || 'anonymous'
-  },
-  // ✅ FIX: context.after را به number تبدیل کن و remaining را حذف کن
-  errorResponseBuilder: (_request, context) => {
-    const afterMs = typeof context.after === 'number' ? context.after : parseInt(String(context.after), 10) || 60000
-    return {
-      success: false,
-      error: 'Too many requests',
-      retryAfter: Math.ceil(afterMs / 1000),
-      limit: context.max,
-    }
-  },
-})
-
-// ──────────────────────────────────────────────
-// 8. HEALTH CHECKS
+// 3. HEALTH CHECKS (عمومی - بدون احراز هویت)
 // ──────────────────────────────────────────────
 server.get('/api/health', async () => ({
   status: 'ok',
@@ -310,7 +210,7 @@ server.get('/api/slo', async () => ({
 }))
 
 // ──────────────────────────────────────────────
-// 9. AUTH MIDDLEWARE
+// 4. AUTH MIDDLEWARE
 // ──────────────────────────────────────────────
 server.addHook('preHandler', async (request, reply) => {
   const url = request.url
@@ -328,41 +228,7 @@ server.addHook('preHandler', async (request, reply) => {
 })
 
 // ──────────────────────────────────────────────
-// 10. REGISTER ALL ROUTES
-// ──────────────────────────────────────────────
-server.log.info('📦 Registering routes...')
-
-const routePrefix = '/api'
-
-await server.register(authRoutes, { prefix: routePrefix })
-await server.register(syncRoutes, { prefix: routePrefix })
-await server.register(invoiceRoutes, { prefix: routePrefix })
-await server.register(invoicePdfRoutes, { prefix: routePrefix })
-await server.register(productRoutes, { prefix: routePrefix })
-await server.register(customerRoutes, { prefix: routePrefix })
-await server.register(transactionRoutes, { prefix: routePrefix })
-await server.register(warehouseRoutes, { prefix: routePrefix })
-await server.register(humanResourcesRoutes, { prefix: routePrefix })
-await server.register(projectRoutes, { prefix: routePrefix })
-await server.register(workspaceRoutes, { prefix: routePrefix })
-await server.register(permissionRoutes, { prefix: routePrefix })
-await server.register(auditRoutes, { prefix: routePrefix })
-await server.register(eventRoutes, { prefix: routePrefix })
-await server.register(analyticsRoutes, { prefix: routePrefix })
-await server.register(aiRoutes, { prefix: routePrefix })
-await server.register(accountingRoutes, { prefix: routePrefix })
-await server.register(crmRoutes, { prefix: routePrefix })
-await server.register(manufacturingRoutes, { prefix: routePrefix })
-await server.register(purchasingRoutes, { prefix: routePrefix })
-await server.register(workflowRoutes, { prefix: routePrefix })
-await server.register(notificationRoutes, { prefix: routePrefix })
-await server.register(jobSchedulerPlugin, { prefix: routePrefix })
-await server.register(billingRoutes, { prefix: routePrefix })
-
-server.log.info('✅ All routes registered successfully')
-
-// ──────────────────────────────────────────────
-// 11. 404 HANDLER
+// 5. 404 HANDLER
 // ──────────────────────────────────────────────
 server.setNotFoundHandler((request, reply) => {
   reply.status(404).send({
@@ -375,10 +241,9 @@ server.setNotFoundHandler((request, reply) => {
 })
 
 // ──────────────────────────────────────────────
-// 12. ERROR HANDLER — FIXED
+// 6. ERROR HANDLER
 // ──────────────────────────────────────────────
 server.setErrorHandler((error, request, reply) => {
-  // ✅ FIX: تبدیل error به string برای log
   const errorMessage = error instanceof Error ? error.message : String(error)
   const errorStack = error instanceof Error ? error.stack : undefined
   
@@ -403,10 +268,132 @@ server.setErrorHandler((error, request, reply) => {
 })
 
 // ──────────────────────────────────────────────
-// 13. START SERVER
+// 7. START SERVER (همه چیز داخل این تابع)
 // ──────────────────────────────────────────────
 async function start() {
   try {
+    // ─── 7.1 COMPRESSION ──────────────────────
+    await server.register(compress, {
+      global: true,
+      threshold: 1024,
+      encodings: ['gzip', 'deflate'],
+    })
+
+    // ─── 7.2 CORS ─────────────────────────────
+    await server.register(cors, {
+      origin: isProduction
+        ? [
+            'https://hisabche.com',
+            'https://www.hisabche.com',
+            'https://app.hisabche.com',
+            process.env.FRONTEND_URL || 'https://project-ro4vn-hisabche-s-projects.vercel.app',
+          ].filter(Boolean)
+        : [
+            'https://project-ro4vn-hisabche-s-projects.vercel.app',
+            'https://project-ro4vn.vercel.app',
+            'http://localhost:3000',
+            'http://localhost:3001',
+            'https://hisabche.com',
+            'https://www.hisabche.com',
+          ],
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'x-client-id', 'Accept'],
+    })
+
+    // ─── 7.3 SWAGGER ──────────────────────────
+    await server.register(swagger, {
+      openapi: {
+        info: {
+          title: 'Hisabche API',
+          description: 'Business Operating System API v2.3',
+          version: '2.3.0',
+          contact: {
+            name: 'Hisabche Team',
+            email: 'support@hisabche.com',
+          },
+        },
+        servers: [
+          {
+            url: isProduction ? 'https://api.hisabche.com' : 'http://localhost:10000',
+            description: isProduction ? 'Production Server' : 'Development Server',
+          },
+        ],
+        components: {
+          securitySchemes: {
+            bearerAuth: {
+              type: 'http',
+              scheme: 'bearer',
+              bearerFormat: 'JWT',
+            },
+          },
+        },
+        security: [{ bearerAuth: [] }],
+      },
+    })
+
+    await server.register(swaggerUi, {
+      routePrefix: '/docs',
+      uiConfig: {
+        docExpansion: 'list',
+        deepLinking: false,
+        persistAuthorization: true,
+      },
+      staticCSP: true,
+    })
+
+    // ─── 7.4 RATE LIMIT ────────────────────────
+    await server.register(rateLimit, {
+      max: 100,
+      timeWindow: '1 minute',
+      keyGenerator: (request) => {
+        const userId = (request as any).userId
+        return userId || request.ip || 'anonymous'
+      },
+      errorResponseBuilder: (_request, context) => {
+        const afterMs = typeof context.after === 'number' ? context.after : parseInt(String(context.after), 10) || 60000
+        return {
+          success: false,
+          error: 'Too many requests',
+          retryAfter: Math.ceil(afterMs / 1000),
+          limit: context.max,
+        }
+      },
+    })
+
+    // ─── 7.5 REGISTER ROUTES ──────────────────
+    server.log.info('📦 Registering routes...')
+
+    const routePrefix = '/api'
+
+    await server.register(authRoutes, { prefix: routePrefix })
+    await server.register(syncRoutes, { prefix: routePrefix })
+    await server.register(invoiceRoutes, { prefix: routePrefix })
+    await server.register(invoicePdfRoutes, { prefix: routePrefix })
+    await server.register(productRoutes, { prefix: routePrefix })
+    await server.register(customerRoutes, { prefix: routePrefix })
+    await server.register(transactionRoutes, { prefix: routePrefix })
+    await server.register(warehouseRoutes, { prefix: routePrefix })
+    await server.register(humanResourcesRoutes, { prefix: routePrefix })
+    await server.register(projectRoutes, { prefix: routePrefix })
+    await server.register(workspaceRoutes, { prefix: routePrefix })
+    await server.register(permissionRoutes, { prefix: routePrefix })
+    await server.register(auditRoutes, { prefix: routePrefix })
+    await server.register(eventRoutes, { prefix: routePrefix })
+    await server.register(analyticsRoutes, { prefix: routePrefix })
+    await server.register(aiRoutes, { prefix: routePrefix })
+    await server.register(accountingRoutes, { prefix: routePrefix })
+    await server.register(crmRoutes, { prefix: routePrefix })
+    await server.register(manufacturingRoutes, { prefix: routePrefix })
+    await server.register(purchasingRoutes, { prefix: routePrefix })
+    await server.register(workflowRoutes, { prefix: routePrefix })
+    await server.register(notificationRoutes, { prefix: routePrefix })
+    await server.register(jobSchedulerPlugin, { prefix: routePrefix })
+    await server.register(billingRoutes, { prefix: routePrefix })
+
+    server.log.info('✅ All routes registered successfully')
+
+    // ─── 7.6 START LISTENING ──────────────────
     await server.listen({ port: PORT, host: HOST })
     
     console.log(`\n🚀 Server running on ${HOST}:${PORT} — v2.3 Fully Optimized`)
@@ -415,6 +402,7 @@ async function start() {
     console.log(`🔍 Cache: ${process.env.REDIS_URL ? '✅ Redis enabled' : '📦 Memory cache'}`)
     console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}\n`)
 
+    // ─── 7.7 START SCHEDULER ──────────────────
     startScheduler()
     
   } catch (err) {
@@ -425,7 +413,7 @@ async function start() {
 }
 
 // ──────────────────────────────────────────────
-// 14. GRACEFUL SHUTDOWN
+// 8. GRACEFUL SHUTDOWN
 // ──────────────────────────────────────────────
 async function shutdown(signal: string) {
   try {
