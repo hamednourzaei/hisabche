@@ -25,12 +25,26 @@ export const productKeys = {
 // ============================================
 // Hooks
 // ============================================
-export function useProducts(filters: ProductFilters = { page: 1, limit: 20, sortDirection: 'desc' }) {
+
+// ✅ FIX: استفاده از Partial<ProductFilters> برای پذیرش {} 
+// packages/api/src/hooks/products.ts
+
+export function useProducts(filters: Partial<ProductFilters> = {}) {
+  // ✅ اطمینان از وجود همه فیلدها
+  const mergedFilters: ProductFilters = {
+    page: 1,
+    limit: 20,
+    sortDirection: 'desc',
+    search: '',
+    sortBy: 'created_at',
+    ...filters,
+  }
+
   return useQuery({
-    queryKey: productKeys.list(filters),
+    queryKey: productKeys.list(mergedFilters),
     queryFn: async () => {
       const { data } = await apiClient.get<{ products: Product[]; total: number }>('/products', {
-        params: filters,
+        params: mergedFilters,
       })
       return data
     },

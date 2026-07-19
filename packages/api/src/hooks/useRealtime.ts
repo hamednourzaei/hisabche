@@ -15,20 +15,29 @@ export function useRealtime({ table, queryKey }: RealtimeOptions) {
   useEffect(() => {
     if (typeof window === 'undefined') return
 
-    // اگه channel قبلی هنوز زنده‌ست، اول unsubscribe کن
+    // Cleanup previous channel
     channelRef.current?.unsubscribe()
 
-    import('../supabase/realtime').then(({ subscribeToChannel }) => {
-      subscribeToChannel(table, () => {
-        queryClient.invalidateQueries({ queryKey })
-      }).then((ch: { unsubscribe: () => void }) => {
-        channelRef.current = ch
+    // ✅ Dynamically import with error handling
+    import('../supabase/realtime')
+      .then(({ subscribeToChannel }) => {
+        subscribeToChannel(table, () => {
+          queryClient.invalidateQueries({ queryKey })
+        })
+        .then((ch: { unsubscribe: () => void }) => {
+          channelRef.current = ch
+        })
+        .catch((err) => {
+          console.warn(`[useRealtime] Failed to subscribe to ${table}:`, err.message)
+        })
       })
-    })
+      .catch((err) => {
+        console.warn(`[useRealtime] Failed to import realtime module:`, err.message)
+      })
 
     return () => {
       channelRef.current?.unsubscribe()
       channelRef.current = null
     }
-  }, [table]) // ← فقط table، نه queryKey و queryClient
+  }, [table]) // ← فقط table
 }

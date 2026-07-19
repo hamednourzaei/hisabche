@@ -20,8 +20,7 @@ import {
 } from "./select";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   ProductPicker v2 — Hisabche Design Language
-   Zero hardcoded colors — all tokens from design system
+   ProductPicker v3 — FIXED: search parameter type
    ═══════════════════════════════════════════════════════════════════════════ */
 
 interface ProductOption {
@@ -54,11 +53,12 @@ export const ProductPicker = forwardRef<HTMLButtonElement, ProductPickerProps>(
       return () => clearTimeout(timer);
     }, [search]);
 
+    // ✅ FIX: ارسال search به عنوان string خالی
     const { data, isLoading } = useProducts({
       page: 1,
       limit: 25,
       sortDirection: "desc",
-      search: debouncedSearch || undefined,
+      search: debouncedSearch || "", // ← به جای undefined
     });
 
     const products = useMemo(() => data?.products ?? [], [data]);

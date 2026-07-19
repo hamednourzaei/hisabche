@@ -10,7 +10,8 @@
     "clean": "rm -rf node_modules"
   },
   "dependencies": {
-    "@hisabche/auth": "^0.0.1",
+    "@hisabche/api": "^0.0.1",
+    "@hisabche/store": "^0.0.1",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-avatar": "^1.1.11",
     "@radix-ui/react-checkbox": "^1.3.3",
@@ -37,7 +38,9 @@
     "react-phone-number-input": "^3.4.17",
     "recharts": "^2.15.4",
     "sonner": "^2.0.7",
-    "tailwind-merge": "^2.6.1"
+    "tailwind-merge": "^2.6.1",
+    "react-hook-form": "^7.51.0",
+    "@hookform/resolvers": "^3.3.4"
   },
   "devDependencies": {
     "@types/jalaali-js": "^1.2.0",
