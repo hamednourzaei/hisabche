@@ -1,9 +1,12 @@
 // ============================================
 // backend/src/middleware/auth.middleware.ts
+// FIXED: کش کردن نتیجه auth برای حذف کوئری تکراری
+// روی هر درخواست (که سریالی و بدون ایندکس بود)
 // ============================================
 
 import { FastifyRequest, FastifyReply } from 'fastify'
 import { supabase } from '../db'
+import { memoryCache } from '../utils/pagination'
 
 // ✅ Declaration merging برای تایپ‌دهی صحیح
 declare module 'fastify' {
@@ -15,6 +18,16 @@ declare module 'fastify' {
   }
 }
 
+interface CachedAuth {
+  user: any
+  workspaceId: string
+  role: string
+}
+
+// ✅ TTL کش auth — کوتاه نگه داشته شده برای تعادل بین سرعت و امنیت
+// (اگه نیاز به revoke فوری‌تر توکن/نقش داری، این عدد رو کمتر کن)
+const AUTH_CACHE_TTL_MS = 30_000
+
 export async function authenticate(request: FastifyRequest, reply: FastifyReply) {
   const authHeader = request.headers.authorization
   if (!authHeader) {
@@ -23,17 +36,27 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
 
   const token = authHeader.replace('Bearer ', '')
 
+  // ✅ FIX: چک کش قبل از هر کوئری
+  const cacheKey = `auth:${token}`
+  const cached = memoryCache.get<CachedAuth>(cacheKey)
+
+  if (cached) {
+    request.user = cached.user
+    request.userId = cached.user.id
+    request.workspaceId = cached.workspaceId
+    request.userRole = cached.role
+    return
+  }
+
+  // ✅ کوئری ۱: verify توکن
   const { data: { user }, error } = await supabase.auth.getUser(token)
 
   if (error || !user) {
     return reply.status(401).send({ error: 'Invalid or expired token' })
   }
 
-  // ✅ Set user info on request
-  request.user = user
-  request.userId = user.id
-
-  // ✅ Get workspace_id from user_workspaces or default
+  // ✅ کوئری ۲: گرفتن workspace/role
+  // نکته: این کوئری با ایندکس idx_workspace_members_user_id سریع میشه
   const { data: membership } = await supabase
     .from('workspace_members')
     .select('workspace_id, role')
@@ -41,8 +64,19 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
     .limit(1)
     .single()
 
-  request.workspaceId = membership?.workspace_id || ''
-  request.userRole = membership?.role || 'admin'
+  const result: CachedAuth = {
+    user,
+    workspaceId: membership?.workspace_id || '',
+    role: membership?.role || 'admin',
+  }
+
+  // ✅ FIX: ذخیره در کش برای درخواست‌های بعدی همین کاربر
+  memoryCache.set(cacheKey, result, AUTH_CACHE_TTL_MS)
+
+  request.user = user
+  request.userId = user.id
+  request.workspaceId = result.workspaceId
+  request.userRole = result.role
 }
 
 export const authPreHandler = authenticate

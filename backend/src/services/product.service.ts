@@ -1,5 +1,6 @@
 // ============================================
-// backend/src/services/product.service.ts — Optimized v2.1 + Cursor Pagination
+// backend/src/services/product.service.ts
+// FIXED v2.2 — Parallel queries + estimated count
 // ============================================
 
 import { supabase } from '../db'
@@ -28,6 +29,11 @@ export class ProductService {
       limit = 20, cursor, sortBy = 'created_at', sortDirection = 'desc'
     } = filters
 
+    // ✅ کش کردن نتیجه (مشابه invoice.service.ts)
+    const cacheKey = `products:${userId}:${JSON.stringify(filters)}`
+    const cached = memoryCache.get(cacheKey)
+    if (cached) return cached
+
     const maxLimit = Math.min(limit, 100)
     const fetchLimit = maxLimit + 1
     const dbSortBy = SORT_BY_MAP[sortBy] ?? sortBy ?? 'created_at'
@@ -55,7 +61,15 @@ export class ProductService {
       }
     }
 
-    const { data, error } = await query
+    // ✅ FIX: دو کوئری موازی (نه سریالی) + count: "estimated" (نه "exact")
+    const [{ data, error }, { count }] = await Promise.all([
+      query,
+      supabase
+        .from('products')
+        .select('id', { count: 'estimated', head: true })
+        .eq('user_id', userId),
+    ])
+
     if (error) throw new DatabaseError('Failed to fetch products', error)
 
     const hasMore = (data?.length || 0) > maxLimit
@@ -70,19 +84,18 @@ export class ProductService {
         : products.filter((product: any) => product.quantity > product.minStockLevel)
     }
 
-    // Count total (اختیاری)
-    const { count } = await supabase
-      .from('products')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', userId)
-
-    return {
+    const result = {
       products,
       nextCursor,
       hasMore,
       total: count || 0,
       limit: maxLimit,
     }
+
+    // ✅ کش ۳۰ ثانیه‌ای
+    memoryCache.set(cacheKey, result, 30_000)
+
+    return result
   }
 
   // ─── Get By ID ───
@@ -108,8 +121,7 @@ export class ProductService {
 
     if (error) throw new DatabaseError('Failed to create product', error)
 
-    memoryCache.invalidate(`products:${userId}`)
-    memoryCache.invalidate(`dashboard:${userId}`)
+    this.invalidateUserCache(userId)
 
     return mapProduct(product)
   }
@@ -138,25 +150,26 @@ export class ProductService {
     if (error) throw new DatabaseError('Failed to update product', error)
     if (!product) throw new NotFoundError('Product')
 
-    memoryCache.invalidate(`products:${userId}`)
-    memoryCache.invalidate(`dashboard:${userId}`)
+    this.invalidateUserCache(userId)
 
     return mapProduct(product)
   }
 
   // ─── Delete ───
   async delete(id: string, userId: string): Promise<void> {
-    const { count } = await supabase.from('invoice_items').select('id', { count: 'exact', head: true }).eq('product_id', id)
-    if (count && count > 0) throw new DatabaseError('Product has invoice items, cannot delete')
+    // ✅ FIX: دو چک موازی به‌جای سریالی
+    const [{ count }, { count: stockCount }] = await Promise.all([
+      supabase.from('invoice_items').select('id', { count: 'estimated', head: true }).eq('product_id', id),
+      supabase.from('stock_movements').select('id', { count: 'estimated', head: true }).eq('product_id', id),
+    ])
 
-    const { count: stockCount } = await supabase.from('stock_movements').select('id', { count: 'exact', head: true }).eq('product_id', id)
+    if (count && count > 0) throw new DatabaseError('Product has invoice items, cannot delete')
     if (stockCount && stockCount > 0) throw new DatabaseError('Product has stock movements, cannot delete')
 
     const { error } = await supabase.from('products').delete().eq('id', id).eq('user_id', userId)
     if (error) throw new DatabaseError('Failed to delete product', error)
 
-    memoryCache.invalidate(`products:${userId}`)
-    memoryCache.invalidate(`dashboard:${userId}`)
+    this.invalidateUserCache(userId)
   }
 
   // ─── Get Low Stock ───
@@ -167,5 +180,11 @@ export class ProductService {
 
     if (error) throw new DatabaseError('Failed to fetch low stock products', error)
     return (data || []).map(mapProduct).filter((product: any) => product.quantity <= product.minStockLevel)
+  }
+
+  // ─── Cache Invalidation ───
+  private invalidateUserCache(userId: string) {
+    memoryCache.invalidate(`products:${userId}`)
+    memoryCache.invalidate(`dashboard:${userId}`)
   }
 }
