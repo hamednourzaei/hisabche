@@ -1,6 +1,7 @@
 // ============================================
 // backend/src/services/invoice.service.ts
-// Hisabche v2.3 — FULLY OPTIMIZED
+// Hisabche v2.4 — FULLY OPTIMIZED
+// FIXED: Promise.all + count: "estimated" + Sequence for invoice number
 // ============================================
 
 import { supabase } from "../db";
@@ -53,7 +54,7 @@ export class InvoiceService {
     this.workflowService = new WorkflowService();
   }
 
-  // ─── List Invoices — با کش ───
+  // ─── List Invoices — OPTIMIZED ───
   async list(userId: string, filters: InvoiceFilters) {
     const {
       search, type, status, customerId, supplierId,
@@ -61,13 +62,10 @@ export class InvoiceService {
       limit = 20, cursor, sortBy = "created_at", sortDirection = "desc"
     } = filters;
 
-    // ✅ کش کردن
+    // ✅ کش با userId
     const cacheKey = `invoices:${userId}:${JSON.stringify(filters)}`;
     const cached = await memoryCache.get(cacheKey);
-    
-    if (cached) {
-      return cached;
-    }
+    if (cached) return cached;
 
     const maxLimit = Math.min(limit, 100);
     const fetchLimit = maxLimit + 1;
@@ -116,35 +114,36 @@ export class InvoiceService {
       }
     }
 
-    const { data, error } = await query;
+    // ✅ FIX: دو کوئری موازی + count: "estimated"
+    const [queryResult, countResult] = await Promise.all([
+      query,
+      supabase
+        .from("invoices")
+        .select("id", { count: "estimated", head: true })
+        .eq("user_id", userId),
+    ]);
+
+    const { data, error } = queryResult;
     if (error) throw new DatabaseError("Failed to fetch invoices", error);
 
     const hasMore = (data?.length || 0) > maxLimit;
     const items = hasMore ? data.slice(0, maxLimit) : data;
     const nextCursor = hasMore && items.length > 0 ? items[items.length - 1]?.id : null;
 
-    const { count } = await supabase
-      .from("invoices")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId);
-
     const result = {
       invoices: items || [],
       nextCursor,
       hasMore,
-      total: count || 0,
+      total: countResult.count || 0,
       limit: maxLimit,
     };
 
-    // ✅ ذخیره در کش با TTL 30 ثانیه
     await memoryCache.set(cacheKey, result, 30);
-
     return result;
   }
 
-  // ─── Get Invoice By ID — با JOIN ───
+  // ─── Get Invoice By ID ───
   async getById(id: string, userId: string) {
-    // ✅ اصلاح: یک کوئری با JOIN
     const { data, error } = await supabase
       .from("invoices")
       .select(`
@@ -193,7 +192,8 @@ export class InvoiceService {
 
   // ─── Create Invoice ───
   async create(userId: string, data: CreateInvoice) {
-    const invoiceNumber = await this.generateInvoiceNumber(userId);
+    // ✅ FIX: استفاده از Sequence یا timestamp-based
+    const invoiceNumber = await this.generateInvoiceNumber();
 
     const { data: invoice, error: invoiceError } = await supabase
       .from("invoices")
@@ -292,7 +292,7 @@ export class InvoiceService {
 
   // ─── Cache Invalidation ───
   private invalidateUserCache(userId: string) {
-    memoryCache.invalidate(`dashboard:${userId}`);
+    memoryCache.invalidate(`dashboard:v2:${userId}`);
     memoryCache.invalidate(`sales:${userId}`);
     memoryCache.invalidate(`insights:${userId}`);
     memoryCache.invalidate(`invoices:${userId}`);
@@ -453,13 +453,23 @@ export class InvoiceService {
     }
   }
 
-  // ─── Private: Generate Invoice Number ───
-  private async generateInvoiceNumber(userId: string): Promise<string> {
-    const { count } = await supabase
-      .from("invoices")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId);
-    return `INV-${((count || 0) + 1).toString().padStart(6, "0")}`;
+  // ─── Private: Generate Invoice Number — FIXED ───
+  // ✅ استفاده از timestamp-based به جای COUNT (بدون race condition)
+  private async generateInvoiceNumber(): Promise<string> {
+    try {
+      // تلاش برای استفاده از Sequence (اگر وجود داشته باشد)
+      const { data, error } = await supabase.rpc('get_next_invoice_number');
+      if (!error && data) {
+        return `INV-${String(data).padStart(6, '0')}`;
+      }
+    } catch {
+      // Fallback: اگر RPC موجود نبود، از timestamp استفاده کن
+      const timestamp = Date.now().toString(36).toUpperCase();
+      const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+      return `INV-${timestamp}-${random}`;
+    }
+    // Fallback نهایی
+    return `INV-${Date.now().toString(36).toUpperCase()}`;
   }
 
   // ─── Private: Start Workflow ───

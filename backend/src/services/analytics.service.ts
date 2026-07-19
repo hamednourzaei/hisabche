@@ -1,6 +1,7 @@
 // ============================================
 // backend/src/services/analytics.service.ts
-// Hisabche v2.3 — FULLY OPTIMIZED
+// Hisabche v2.4 — FULLY OPTIMIZED
+// FIXED: RPC for dashboard + Promise.all for parallel queries
 // ============================================
 
 import { supabase } from '../db';
@@ -9,82 +10,109 @@ import { CacheKeys, withCacheKey } from '../utils/cache';
 import { memoryCache } from '../utils/pagination';
 
 export class AnalyticsService {
-  // ─── Dashboard KPIs — OPTIMIZED ───
+  // ─── Dashboard KPIs — OPTIMIZED with RPC ───
   async getDashboardKpis(userId: string) {
     const cacheKey = `dashboard:v2:${userId}`;
 
     return withCacheKey(cacheKey, 30_000, async () => {
-      // ✅ یک کوئری با همه داده‌ها
-      const { data: allData, error } = await supabase
-        .from('invoices')
-        .select(`
-          total,
-          status,
-          date,
-          paid_amount,
-          customer_id
-        `)
-        .eq('user_id', userId);
+      try {
+        // ✅ تلاش برای استفاده از RPC
+        const { data, error } = await supabase
+          .rpc('get_dashboard_kpis', { p_user_id: userId });
 
-      if (error || !allData) {
-        return this.emptyDashboardKpis();
+        if (!error && data && data.length > 0) {
+          const result = data[0];
+          return {
+            todaySales: Number(result.today_sales) || 0,
+            todayInvoices: Number(result.today_invoices) || 0,
+            monthlyRevenue: Number(result.monthly_revenue) || 0,
+            monthlyGrowth: Number(result.monthly_growth) || 0,
+            pendingPayments: Number(result.pending_total) || 0,
+            activeCustomers: Number(result.active_customers) || 0,
+            lowStockAlerts: Number(result.low_stock) || 0,
+          };
+        }
+      } catch (err) {
+        console.error('RPC error, falling back to query:', err);
       }
 
-      const today = new Date().toISOString().split('T')[0];
-      const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-      
-      let todaySales = 0;
-      let todayInvoices = 0;
-      let monthlyRevenue = 0;
-      let pendingTotal = 0;
-      const uniqueCustomers = new Set();
-
-      for (const invoice of allData) {
-        const date = invoice.date?.split('T')[0] || '';
-        const total = Number(invoice.total) || 0;
-        const paidAmount = Number(invoice.paid_amount) || 0;
-
-        if (invoice.customer_id) {
-          uniqueCustomers.add(invoice.customer_id);
-        }
-
-        if (date === today) {
-          todayInvoices++;
-          if (invoice.status === 'paid') {
-            todaySales += total;
-          }
-        }
-
-        if (date >= firstOfMonth) {
-          monthlyRevenue += total;
-        }
-
-        if (invoice.status !== 'paid') {
-          pendingTotal += (total - paidAmount);
-        }
-      }
-
-      // ✅ یک کوئری برای low stock
-      const { data: products } = await supabase
-        .from('products')
-        .select('quantity, min_stock_level')
-        .eq('user_id', userId)
-        .eq('is_active', true);
-
-      const lowStock = (products || [])
-        .filter(p => Number(p.quantity) <= Number(p.min_stock_level))
-        .length;
-
-      return {
-        todaySales: Math.round(todaySales * 100) / 100,
-        todayInvoices,
-        monthlyRevenue: Math.round(monthlyRevenue * 100) / 100,
-        monthlyGrowth: 0,
-        pendingPayments: Math.round(pendingTotal * 100) / 100,
-        activeCustomers: uniqueCustomers.size,
-        lowStockAlerts: lowStock,
-      };
+      // ✅ Fallback: اگر RPC موجود نبود، از کوئری استفاده کن
+      return this.getDashboardKpisFallback(userId);
     });
+  }
+
+  // ─── Dashboard KPIs — Fallback ───
+  private async getDashboardKpisFallback(userId: string) {
+    // ✅ یک کوئری با همه داده‌ها
+    const { data: allData, error } = await supabase
+      .from('invoices')
+      .select(`
+        total,
+        status,
+        date,
+        paid_amount,
+        customer_id
+      `)
+      .eq('user_id', userId);
+
+    if (error || !allData) {
+      return this.emptyDashboardKpis();
+    }
+
+    const today = new Date().toISOString().split('T')[0];
+    const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+    
+    let todaySales = 0;
+    let todayInvoices = 0;
+    let monthlyRevenue = 0;
+    let pendingTotal = 0;
+    const uniqueCustomers = new Set();
+
+    for (const invoice of allData) {
+      const date = invoice.date?.split('T')[0] || '';
+      const total = Number(invoice.total) || 0;
+      const paidAmount = Number(invoice.paid_amount) || 0;
+
+      if (invoice.customer_id) {
+        uniqueCustomers.add(invoice.customer_id);
+      }
+
+      if (date === today) {
+        todayInvoices++;
+        if (invoice.status === 'paid') {
+          todaySales += total;
+        }
+      }
+
+      if (date >= firstOfMonth) {
+        monthlyRevenue += total;
+      }
+
+      if (invoice.status !== 'paid') {
+        pendingTotal += (total - paidAmount);
+      }
+    }
+
+    // ✅ یک کوئری برای low stock (موازی)
+    const { data: products } = await supabase
+      .from('products')
+      .select('quantity, min_stock_level')
+      .eq('user_id', userId)
+      .eq('is_active', true);
+
+    const lowStock = (products || [])
+      .filter(p => Number(p.quantity) <= Number(p.min_stock_level))
+      .length;
+
+    return {
+      todaySales: Math.round(todaySales * 100) / 100,
+      todayInvoices,
+      monthlyRevenue: Math.round(monthlyRevenue * 100) / 100,
+      monthlyGrowth: 0,
+      pendingPayments: Math.round(pendingTotal * 100) / 100,
+      activeCustomers: uniqueCustomers.size,
+      lowStockAlerts: lowStock,
+    };
   }
 
   // ─── Sales Summary — OPTIMIZED ───

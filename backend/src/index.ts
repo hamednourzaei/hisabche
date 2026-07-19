@@ -1,6 +1,6 @@
 // ============================================
-// backend/src/index.ts — Hisabche API Server v2.3
-// FIXED: Remove duplicate /api prefix
+// backend/src/index.ts — Hisabche API Server v2.4
+// FIXED: Cache security + Performance + userId in cache
 // ============================================
 
 import Fastify from 'fastify'
@@ -86,7 +86,7 @@ const server = Fastify({
 // ──────────────────────────────────────────────
 // STARTUP LOGGING
 // ──────────────────────────────────────────────
-server.log.info(`🚀 Starting Hisabche API v2.3...`)
+server.log.info(`🚀 Starting Hisabche API v2.4...`)
 server.log.info(`📦 Environment: ${process.env.NODE_ENV || 'development'}`)
 
 // ──────────────────────────────────────────────
@@ -112,36 +112,63 @@ server.addHook('onSend', async (request, reply, payload) => {
 })
 
 // ──────────────────────────────────────────────
-// 2. CACHE MIDDLEWARE
+// 2. AUTH MIDDLEWARE (قبل از کش)
 // ──────────────────────────────────────────────
-server.addHook('onRequest', async (request, reply) => {
+server.addHook('preHandler', async (request, reply) => {
+  const url = request.url
+  
+  const publicPaths = [
+    '/docs', '/live', '/ready', '/api', '/api/health', '/api/slo',
+    '/api/auth/login', '/api/auth/signup', '/api/auth/forgot-password',
+    '/api/auth/reset-password', '/api/auth/verify-email',
+  ]
+  
+  if (publicPaths.some(p => url.startsWith(p))) return
+  if (request.method === 'OPTIONS') return
+  
+  await authenticate(request, reply)
+})
+
+// ──────────────────────────────────────────────
+// 3. CACHE MIDDLEWARE (بعد از Auth — با userId)
+// ──────────────────────────────────────────────
+server.addHook('preHandler', async (request, reply) => {
+  // فقط GET درخواست‌ها
   if (request.method !== 'GET') return
 
   const skipPaths = ['/api/health', '/api/live', '/api/ready', '/docs', '/api', '/api/slo']
   if (skipPaths.some(p => request.url.startsWith(p))) return
   if (request.url.includes('auth')) return
 
-  const cacheKey = `http:${request.url}`
+  // ✅ FIX: userId را از request بگیر (بعد از auth)
+  const userId = (request as any).userId || 'anonymous'
+  
+  // ✅ FIX: کلید کش شامل userId
+  const cacheKey = `http:${userId}:${request.url}`
   
   try {
     const cached = await memoryCache.get(cacheKey)
     if (cached) {
       reply.header('x-cache', 'HIT')
+      reply.header('x-user-id', userId.substring(0, 8))
       reply.header('Cache-Control', 'private, max-age=30')
       return reply.send(cached)
     }
     reply.header('x-cache', 'MISS')
+    reply.header('x-user-id', userId.substring(0, 8))
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : String(err)
     request.log.error(`Cache error: ${errorMessage}`)
   }
 })
 
+// ذخیره پاسخ در کش (بعد از auth)
 server.addHook('onSend', async (request, reply, payload) => {
   if (request.method === 'GET' && reply.statusCode === 200) {
     const skipPaths = ['/api/health', '/api/live', '/api/ready', '/docs', '/api', '/api/slo']
     if (!skipPaths.some(p => request.url.startsWith(p)) && !request.url.includes('auth')) {
-      const cacheKey = `http:${request.url}`
+      const userId = (request as any).userId || 'anonymous'
+      const cacheKey = `http:${userId}:${request.url}`
       try {
         await memoryCache.set(cacheKey, payload, 30)
       } catch (err) {
@@ -154,14 +181,14 @@ server.addHook('onSend', async (request, reply, payload) => {
 })
 
 // ──────────────────────────────────────────────
-// 3. HEALTH CHECKS
+// 4. HEALTH CHECKS
 // ──────────────────────────────────────────────
 server.get('/api/health', async () => ({
   status: 'ok',
   timestamp: new Date().toISOString(),
   uptime: process.uptime(),
   env: process.env.NODE_ENV,
-  version: '2.3.0',
+  version: '2.4.0',
   cache: process.env.REDIS_URL ? 'redis' : 'memory',
 }))
 
@@ -189,7 +216,7 @@ server.get('/ready', async () => {
 
 server.get('/api', async () => ({
   name: 'Hisabche API',
-  version: '2.3.0',
+  version: '2.4.0',
   status: 'complete',
   docs: '/docs',
   health: '/api/health',
@@ -199,7 +226,7 @@ server.get('/api', async () => ({
 
 server.get('/api/slo', async () => ({
   service: 'Hisabche API',
-  version: '2.3.0',
+  version: '2.4.0',
   slo: {
     availability: '99.9%',
     p95Latency: '< 200ms',
@@ -208,24 +235,6 @@ server.get('/api/slo', async () => ({
   },
   timestamp: new Date().toISOString(),
 }))
-
-// ──────────────────────────────────────────────
-// 4. AUTH MIDDLEWARE
-// ──────────────────────────────────────────────
-server.addHook('preHandler', async (request, reply) => {
-  const url = request.url
-  
-  const publicPaths = [
-    '/docs', '/live', '/ready', '/api', '/api/health', '/api/slo',
-    '/api/auth/login', '/api/auth/signup', '/api/auth/forgot-password',
-    '/api/auth/reset-password', '/api/auth/verify-email',
-  ]
-  
-  if (publicPaths.some(p => url.startsWith(p))) return
-  if (request.method === 'OPTIONS') return
-  
-  await authenticate(request, reply)
-})
 
 // ──────────────────────────────────────────────
 // 5. 404 HANDLER
@@ -306,8 +315,8 @@ async function start() {
       openapi: {
         info: {
           title: 'Hisabche API',
-          description: 'Business Operating System API v2.3',
-          version: '2.3.0',
+          description: 'Business Operating System API v2.4',
+          version: '2.4.0',
           contact: {
             name: 'Hisabche Team',
             email: 'support@hisabche.com',
@@ -362,7 +371,6 @@ async function start() {
     })
 
     // ─── 7.5 REGISTER ROUTES ──────────────────
-    // ✅ FIX: بدون پیشوند /api (Routeها خودشان /api دارند)
     server.log.info('📦 Registering routes...')
 
     await server.register(authRoutes)
@@ -395,10 +403,11 @@ async function start() {
     // ─── 7.6 START LISTENING ──────────────────
     await server.listen({ port: PORT, host: HOST })
     
-    console.log(`\n🚀 Server running on ${HOST}:${PORT} — v2.3 Fully Optimized`)
+    console.log(`\n🚀 Server running on ${HOST}:${PORT} — v2.4 Fully Optimized`)
     console.log(`📚 Swagger UI: /docs`)
     console.log(`💚 Health: /api/health | /live | /ready`)
     console.log(`🔍 Cache: ${process.env.REDIS_URL ? '✅ Redis enabled' : '📦 Memory cache'}`)
+    console.log(`🔒 Cache: User-specific (userId in cache key)`)
     console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}\n`)
 
     // ─── 7.7 START SCHEDULER ──────────────────
