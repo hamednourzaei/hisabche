@@ -1,6 +1,6 @@
 // ============================================
 // backend/src/index.ts — Hisabche API Server v2.3
-// FIXED: No top-level await
+// FIXED: Remove duplicate /api prefix
 // ============================================
 
 import Fastify from 'fastify'
@@ -154,7 +154,7 @@ server.addHook('onSend', async (request, reply, payload) => {
 })
 
 // ──────────────────────────────────────────────
-// 3. HEALTH CHECKS (عمومی - بدون احراز هویت)
+// 3. HEALTH CHECKS
 // ──────────────────────────────────────────────
 server.get('/api/health', async () => ({
   status: 'ok',
@@ -268,7 +268,7 @@ server.setErrorHandler((error, request, reply) => {
 })
 
 // ──────────────────────────────────────────────
-// 7. START SERVER (همه چیز داخل این تابع)
+// 7. START SERVER
 // ──────────────────────────────────────────────
 async function start() {
   try {
@@ -362,34 +362,33 @@ async function start() {
     })
 
     // ─── 7.5 REGISTER ROUTES ──────────────────
+    // ✅ FIX: بدون پیشوند /api (Routeها خودشان /api دارند)
     server.log.info('📦 Registering routes...')
 
-    const routePrefix = '/api'
-
-    await server.register(authRoutes, { prefix: routePrefix })
-    await server.register(syncRoutes, { prefix: routePrefix })
-    await server.register(invoiceRoutes, { prefix: routePrefix })
-    await server.register(invoicePdfRoutes, { prefix: routePrefix })
-    await server.register(productRoutes, { prefix: routePrefix })
-    await server.register(customerRoutes, { prefix: routePrefix })
-    await server.register(transactionRoutes, { prefix: routePrefix })
-    await server.register(warehouseRoutes, { prefix: routePrefix })
-    await server.register(humanResourcesRoutes, { prefix: routePrefix })
-    await server.register(projectRoutes, { prefix: routePrefix })
-    await server.register(workspaceRoutes, { prefix: routePrefix })
-    await server.register(permissionRoutes, { prefix: routePrefix })
-    await server.register(auditRoutes, { prefix: routePrefix })
-    await server.register(eventRoutes, { prefix: routePrefix })
-    await server.register(analyticsRoutes, { prefix: routePrefix })
-    await server.register(aiRoutes, { prefix: routePrefix })
-    await server.register(accountingRoutes, { prefix: routePrefix })
-    await server.register(crmRoutes, { prefix: routePrefix })
-    await server.register(manufacturingRoutes, { prefix: routePrefix })
-    await server.register(purchasingRoutes, { prefix: routePrefix })
-    await server.register(workflowRoutes, { prefix: routePrefix })
-    await server.register(notificationRoutes, { prefix: routePrefix })
-    await server.register(jobSchedulerPlugin, { prefix: routePrefix })
-    await server.register(billingRoutes, { prefix: routePrefix })
+    await server.register(authRoutes)
+    await server.register(syncRoutes)
+    await server.register(invoiceRoutes)
+    await server.register(invoicePdfRoutes)
+    await server.register(productRoutes)
+    await server.register(customerRoutes)
+    await server.register(transactionRoutes)
+    await server.register(warehouseRoutes)
+    await server.register(humanResourcesRoutes)
+    await server.register(projectRoutes)
+    await server.register(workspaceRoutes)
+    await server.register(permissionRoutes)
+    await server.register(auditRoutes)
+    await server.register(eventRoutes)
+    await server.register(analyticsRoutes)
+    await server.register(aiRoutes)
+    await server.register(accountingRoutes)
+    await server.register(crmRoutes)
+    await server.register(manufacturingRoutes)
+    await server.register(purchasingRoutes)
+    await server.register(workflowRoutes)
+    await server.register(notificationRoutes)
+    await server.register(jobSchedulerPlugin)
+    await server.register(billingRoutes)
 
     server.log.info('✅ All routes registered successfully')
 
