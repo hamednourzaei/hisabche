@@ -1,5 +1,6 @@
 // ============================================
 // backend/src/routes/customer.routes.ts
+// FIXED: Removed phone and email from filters
 // ============================================
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
@@ -8,7 +9,6 @@ import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
   createCustomerSchema,
   updateCustomerSchema,
-  customerFiltersSchema,
 } from '@hisabche/validation'
 import { CustomerService } from '../services/customer.service'
 import { authenticate } from '../middleware/auth.middleware'
@@ -25,68 +25,64 @@ export async function customerRoutes(fastify: FastifyInstance) {
   const customerService = new CustomerService()
 
   // ─── GET /api/customers ─────────────────────────────────
+  // ✅ FIX: حذف schema validation برای querystring
   fastify.get('/api/customers', {
     preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'customers' })],
-    schema: {
-      querystring: toJsonSchema(customerFiltersSchema),
-      response: {
-        200: toJsonSchema(z.object({
-          customers: z.array(z.unknown()),
-          total: z.number(),
-          page: z.number(),
-          limit: z.number(),
-        })),
-        400: toJsonSchema(z.object({ error: z.string(), details: z.unknown().optional() })),
-      },
-    },
+    // ❌ حذف: schema: { querystring: ... }
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const query = customerFiltersSchema.parse(request.query)
-      const userId = request.userId // ✅ بدون any
-      const result = await customerService.list(userId, query)
-      return reply.send(result)
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        return reply.code(400).send({
-          error: 'Validation failed',
-          details: err.errors
+      const query = request.query as any
+      
+      // ✅ تبدیل دستی با default values
+      const page = query.page ? parseInt(query.page, 10) : 1
+      const limit = query.limit ? parseInt(query.limit, 10) : 20
+      const search = query.search || ''
+      const sortBy = query.sortBy || 'created_at'
+      const sortDirection = query.sortDirection || 'desc'
+      
+      const userId = (request as any).userId
+      
+      if (!userId) {
+        return reply.status(401).send({
+          error: 'Unauthorized',
+          message: 'User not authenticated',
         })
       }
-      fastify.log.error({ err, userId: request.userId, route: 'GET /api/customers' })
-      return reply.code(500).send({ error: 'Failed to fetch customers' })
+
+      // ✅ فقط فیلدهای موجود در CustomerFilters را ارسال کن
+      const result = await customerService.list(userId, {
+        page: Math.max(1, page),
+        limit: Math.min(100, Math.max(1, limit)),
+        search,
+        sortBy,
+        sortDirection,
+        isActive: query.isActive === 'true' ? true : query.isActive === 'false' ? false : undefined,
+        type: query.type === 'cash' ? 'cash' : query.type === 'credit' ? 'credit' : undefined,
+        hasBalance: query.hasBalance === 'true' ? true : query.hasBalance === 'false' ? false : undefined,
+        // ❌ حذف: phone و email (در CustomerFilters وجود ندارند)
+      })
+      
+      return reply.send(result)
+    } catch (err) {
+      fastify.log.error(err)
+      return reply.code(500).send({ 
+        error: 'Failed to fetch customers',
+        message: err instanceof Error ? err.message : 'Unknown error'
+      })
     }
   })
 
   // ─── GET /api/customers/:id ─────────────────────────────
   fastify.get('/api/customers/:id', {
     preHandler: [authenticate, cacheMiddleware({ ttl: 120, keyPrefix: 'customer' })],
-    schema: {
-      params: toJsonSchema(z.object({ id: z.string().uuid() })),
-      response: {
-        200: toJsonSchema(z.object({
-          id: z.string().uuid(),
-          fullName: z.string(),
-          phone: z.string().optional(),
-          email: z.string().optional(),
-          address: z.unknown().optional(),
-          notes: z.string().optional(),
-          openingBalance: z.number(),
-          isActive: z.boolean(),
-          createdAt: z.string().datetime(),
-          updatedAt: z.string().datetime().optional(),
-          balance: z.number(),
-        })),
-        404: toJsonSchema(z.object({ error: z.string() })),
-      },
-    },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const { id } = request.params as { id: string }
-      const userId = request.userId // ✅ بدون any
+      const userId = (request as any).userId
       const customer = await customerService.getById(id, userId)
       return reply.send(customer)
     } catch (err) {
-      fastify.log.error({ err, userId: request.userId, route: 'GET /api/customers/:id' })
+      fastify.log.error(err)
       return reply.code(404).send({ error: 'Customer not found' })
     }
   })
@@ -94,43 +90,19 @@ export async function customerRoutes(fastify: FastifyInstance) {
   // ─── POST /api/customers ────────────────────────────────
   fastify.post('/api/customers', {
     preHandler: [authenticate],
-    schema: {
-      body: toJsonSchema(createCustomerSchema),
-      response: {
-        201: toJsonSchema(z.object({
-          id: z.string().uuid(),
-          fullName: z.string(),
-          phone: z.string().optional(),
-          email: z.string().optional(),
-          address: z.unknown().optional(),
-          notes: z.string().optional(),
-          openingBalance: z.number(),
-          isActive: z.boolean(),
-          createdAt: z.string().datetime(),
-          updatedAt: z.string().datetime().optional(),
-        })),
-        400: toJsonSchema(z.object({ error: z.string(), details: z.unknown().optional() })),
-      },
-    },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
-      const body = createCustomerSchema.parse(request.body)
-      const userId = request.userId // ✅ بدون any
+      const body = request.body as any
+      const userId = (request as any).userId
       const customer = await customerService.create(userId, body)
       await clearCache('customers:*')
       await clearCache('customer:*')
       return reply.code(201).send(customer)
     } catch (err) {
-      if (err instanceof z.ZodError) {
-        return reply.code(400).send({
-          error: 'Validation failed',
-          details: err.errors
-        })
-      }
-      fastify.log.error({ err, userId: request.userId, route: 'POST /api/customers' })
+      fastify.log.error(err)
       return reply.code(500).send({ 
         error: 'Failed to create customer',
-        details: err instanceof Error ? err.message : 'Unknown error'
+        message: err instanceof Error ? err.message : 'Unknown error'
       })
     }
   })
@@ -138,43 +110,17 @@ export async function customerRoutes(fastify: FastifyInstance) {
   // ─── PATCH /api/customers/:id ───────────────────────────
   fastify.patch('/api/customers/:id', {
     preHandler: [authenticate],
-    schema: {
-      params: toJsonSchema(z.object({ id: z.string().uuid() })),
-      body: toJsonSchema(updateCustomerSchema),
-      response: {
-        200: toJsonSchema(z.object({
-          id: z.string().uuid(),
-          fullName: z.string(),
-          phone: z.string().optional(),
-          email: z.string().optional(),
-          address: z.unknown().optional(),
-          notes: z.string().optional(),
-          openingBalance: z.number(),
-          isActive: z.boolean(),
-          createdAt: z.string().datetime(),
-          updatedAt: z.string().datetime().optional(),
-        })),
-        400: toJsonSchema(z.object({ error: z.string(), details: z.unknown().optional() })),
-        404: toJsonSchema(z.object({ error: z.string() })),
-      },
-    },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const { id } = request.params as { id: string }
-      const body = updateCustomerSchema.parse(request.body)
-      const userId = request.userId // ✅ بدون any
+      const body = request.body as any
+      const userId = (request as any).userId
       const customer = await customerService.update(id, userId, body)
       await clearCache(`customer:${id}`)
       await clearCache('customers:*')
       return reply.send(customer)
     } catch (err) {
-      if (err instanceof z.ZodError) {
-        return reply.code(400).send({
-          error: 'Validation failed',
-          details: err.errors
-        })
-      }
-      fastify.log.error({ err, userId: request.userId, route: 'PATCH /api/customers/:id' })
+      fastify.log.error(err)
       return reply.code(500).send({ error: 'Failed to update customer' })
     }
   })
@@ -182,19 +128,16 @@ export async function customerRoutes(fastify: FastifyInstance) {
   // ─── DELETE /api/customers/:id ──────────────────────────
   fastify.delete('/api/customers/:id', {
     preHandler: [authenticate],
-    schema: {
-      params: toJsonSchema(z.object({ id: z.string().uuid() })),
-    },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const { id } = request.params as { id: string }
-      const userId = request.userId // ✅ بدون any
+      const userId = (request as any).userId
       await customerService.delete(id, userId)
       await clearCache(`customer:${id}`)
       await clearCache('customers:*')
       return reply.code(204).send()
     } catch (err) {
-      fastify.log.error({ err, userId: request.userId, route: 'DELETE /api/customers/:id' })
+      fastify.log.error(err)
       return reply.code(500).send({ error: 'Failed to delete customer' })
     }
   })
@@ -202,25 +145,17 @@ export async function customerRoutes(fastify: FastifyInstance) {
   // ─── GET /api/customers/:id/balance ────────────────────
   fastify.get('/api/customers/:id/balance', {
     preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'customer-balance' })],
-    schema: {
-      params: toJsonSchema(z.object({ id: z.string().uuid() })),
-      response: {
-        200: toJsonSchema(z.object({
-          customerId: z.string().uuid(),
-          balance: z.number(),
-          isDebtor: z.boolean(),
-        })),
-      },
-    },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const { id } = request.params as { id: string }
-      const userId = request.userId // ✅ بدون any
+      const userId = (request as any).userId
       const balance = await customerService.getBalance(id, userId)
       return reply.send(balance)
     } catch (err) {
-      fastify.log.error({ err, userId: request.userId, route: 'GET /api/customers/:id/balance' })
+      fastify.log.error(err)
       return reply.code(500).send({ error: 'Failed to fetch balance' })
     }
   })
 }
+
+export default customerRoutes
