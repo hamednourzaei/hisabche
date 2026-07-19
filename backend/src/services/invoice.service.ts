@@ -1,7 +1,6 @@
 // ============================================
 // backend/src/services/invoice.service.ts
-// Hisabche v2.4 — FULLY OPTIMIZED
-// FIXED: Promise.all + count: "estimated" + Sequence for invoice number
+// Hisabche v2.6 — FIXED: customer relation type
 // ============================================
 
 import { supabase } from "../db";
@@ -54,7 +53,7 @@ export class InvoiceService {
     this.workflowService = new WorkflowService();
   }
 
-  // ─── List Invoices — OPTIMIZED ───
+  // ─── List Invoices — OPTIMIZED with Customer JOIN ───
   async list(userId: string, filters: InvoiceFilters) {
     const {
       search, type, status, customerId, supplierId,
@@ -70,6 +69,7 @@ export class InvoiceService {
     const maxLimit = Math.min(limit, 100);
     const fetchLimit = maxLimit + 1;
 
+    // ✅ FIX: استفاده از !inner برای تبدیل به object
     let query = supabase
       .from("invoices")
       .select(`
@@ -89,7 +89,13 @@ export class InvoiceService {
         payment_method,
         status,
         created_at,
-        updated_at
+        updated_at,
+        customer:customers!inner (
+          id,
+          full_name,
+          phone,
+          email
+        )
       `)
       .eq("user_id", userId)
       .order(sortBy, { ascending: sortDirection === "asc" })
@@ -114,7 +120,7 @@ export class InvoiceService {
       }
     }
 
-    // ✅ FIX: دو کوئری موازی + count: "estimated"
+    // ✅ دو کوئری موازی + count: "estimated"
     const [queryResult, countResult] = await Promise.all([
       query,
       supabase
@@ -130,8 +136,15 @@ export class InvoiceService {
     const items = hasMore ? data.slice(0, maxLimit) : data;
     const nextCursor = hasMore && items.length > 0 ? items[items.length - 1]?.id : null;
 
+    // ✅ FIX: customer حالا object است (به دلیل !inner)
+    const invoices = (items || []).map((inv: any) => ({
+      ...inv,
+      customerName: inv.customer?.full_name || null,
+      customer: inv.customer || null,
+    }));
+
     const result = {
-      invoices: items || [],
+      invoices,
       nextCursor,
       hasMore,
       total: countResult.count || 0,
@@ -144,6 +157,7 @@ export class InvoiceService {
 
   // ─── Get Invoice By ID ───
   async getById(id: string, userId: string) {
+    // ✅ FIX: استفاده از !inner برای تبدیل به object
     const { data, error } = await supabase
       .from("invoices")
       .select(`
@@ -167,6 +181,13 @@ export class InvoiceService {
         user_id,
         created_at,
         updated_at,
+        customer:customers!inner (
+          id,
+          full_name,
+          phone,
+          email,
+          address
+        ),
         invoice_items (
           id,
           invoice_id,
@@ -187,12 +208,14 @@ export class InvoiceService {
       throw new NotFoundError("Invoice");
     }
 
-    return data;
+    // ✅ FIX: customer حالا object است
+    return {
+      ...data,
+customerName: (data.customer as any)?.full_name || null,    };
   }
 
   // ─── Create Invoice ───
   async create(userId: string, data: CreateInvoice) {
-    // ✅ FIX: استفاده از Sequence یا timestamp-based
     const invoiceNumber = await this.generateInvoiceNumber();
 
     const { data: invoice, error: invoiceError } = await supabase
@@ -453,22 +476,18 @@ export class InvoiceService {
     }
   }
 
-  // ─── Private: Generate Invoice Number — FIXED ───
-  // ✅ استفاده از timestamp-based به جای COUNT (بدون race condition)
+  // ─── Private: Generate Invoice Number ───
   private async generateInvoiceNumber(): Promise<string> {
     try {
-      // تلاش برای استفاده از Sequence (اگر وجود داشته باشد)
       const { data, error } = await supabase.rpc('get_next_invoice_number');
       if (!error && data) {
         return `INV-${String(data).padStart(6, '0')}`;
       }
     } catch {
-      // Fallback: اگر RPC موجود نبود، از timestamp استفاده کن
       const timestamp = Date.now().toString(36).toUpperCase();
       const random = Math.random().toString(36).substring(2, 6).toUpperCase();
       return `INV-${timestamp}-${random}`;
     }
-    // Fallback نهایی
     return `INV-${Date.now().toString(36).toUpperCase()}`;
   }
 

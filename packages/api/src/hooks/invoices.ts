@@ -12,6 +12,19 @@ import type {
 } from '@hisabche/validation'
 
 // ============================================
+// Types
+// ============================================
+export interface InvoiceWithCustomer extends Invoice {
+  customerName?: string | null;
+  customer?: {
+    id: string;
+    full_name: string;
+    phone?: string;
+    email?: string;
+  } | null;
+}
+
+// ============================================
 // Query Keys
 // ============================================
 export const invoiceKeys = {
@@ -29,7 +42,13 @@ export function useInvoices(filters: InvoiceFilters = { page: 1, limit: 20, sort
   return useQuery({
     queryKey: invoiceKeys.list(filters),
     queryFn: async () => {
-      const { data } = await apiClient.get<{ invoices: Invoice[]; total: number }>('/invoices', {
+      const { data } = await apiClient.get<{ 
+        invoices: InvoiceWithCustomer[]; 
+        total: number;
+        hasMore: boolean;
+        nextCursor: string | null;
+        limit: number;
+      }>('/invoices', {
         params: filters,
       })
       return data
@@ -43,7 +62,7 @@ export function useInvoice(id: string | undefined) {
   return useQuery({
     queryKey: invoiceKeys.detail(id!),
     queryFn: async () => {
-      const { data } = await apiClient.get<Invoice>(`/invoices/${id}`)
+      const { data } = await apiClient.get<InvoiceWithCustomer>(`/invoices/${id}`)
       return data
     },
     enabled: !!id,
