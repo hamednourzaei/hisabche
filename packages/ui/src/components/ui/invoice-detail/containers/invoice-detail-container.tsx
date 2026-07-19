@@ -139,9 +139,10 @@ export function InvoiceDetailContainer() {
     },
   });
 
+  // ✅ FIX: استفاده از unknown به عنوان واسط
   const display: InvoiceDetailDisplay | null = useMemo(() => {
     if (!invoice) return null;
-    const inv = invoice as Record<string, unknown>;
+    const inv = invoice as unknown as Record<string, unknown>;
     return {
       id: inv.id as string,
       invoiceNumber:
@@ -216,14 +217,15 @@ export function InvoiceDetailContainer() {
 
   const handleSharePDF = useCallback(async () => {
     if (!invoice) return;
-    const text = buildMessage(invoice as Record<string, unknown>).replace(
+    const inv = invoice as unknown as Record<string, unknown>;
+    const text = buildMessage(inv).replace(
       /\*/g,
       ""
     );
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `Invoice #${(invoice as Record<string, unknown>).invoiceNumber}`,
+          title: `Invoice #${(inv).invoiceNumber}`,
           text,
         });
       } catch {}
@@ -235,23 +237,25 @@ export function InvoiceDetailContainer() {
 
   const handleWhatsApp = useCallback(() => {
     if (!invoice) return;
+    const inv = invoice as unknown as Record<string, unknown>;
     window.open(
-      `https://wa.me/?text=${encodeURIComponent(buildMessage(invoice as Record<string, unknown>))}`,
+      `https://wa.me/?text=${encodeURIComponent(buildMessage(inv))}`,
       "_blank"
     );
   }, [invoice, buildMessage]);
 
   const handleTelegram = useCallback(() => {
     if (!invoice) return;
+    const inv = invoice as unknown as Record<string, unknown>;
     window.open(
-      `https://t.me/share/url?url=&text=${encodeURIComponent(buildMessage(invoice as Record<string, unknown>))}`,
+      `https://t.me/share/url?url=&text=${encodeURIComponent(buildMessage(inv))}`,
       "_blank"
     );
   }, [invoice, buildMessage]);
 
   const handleEmail = useCallback(() => {
     if (!invoice) return;
-    const inv = invoice as Record<string, unknown>;
+    const inv = invoice as unknown as Record<string, unknown>;
     window.open(
       `mailto:?subject=${encodeURIComponent(`${t("invoices.title")} #${getField(inv.invoiceNumber, inv.invoice_number)}`)}&body=${encodeURIComponent(`${t("invoices.title")}: #${getField(inv.invoiceNumber, inv.invoice_number)}\n${t("invoices.date")}: ${new Date(inv.date as string).toLocaleDateString("fa-AF")}\n${t("invoices.total")}: ${((inv.total as number) ?? 0).toLocaleString()} ${(inv.currency as string) || "AFN"}`)}`,
       "_blank"
