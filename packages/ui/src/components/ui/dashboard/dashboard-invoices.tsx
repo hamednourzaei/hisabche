@@ -4,12 +4,7 @@
 import { memo, useMemo } from "react";
 import { Button } from "../button";
 import { Skeleton } from "../skeleton";
-import { Receipt, PlusCircle } from "lucide-react";
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   DashboardInvoices v2 — Memoized · Performance Optimized
-   ✅ memo · useMemo · جداسازی کامپوننت‌ها
-   ═══════════════════════════════════════════════════════════════════════════ */
+import { Receipt, PlusCircle, User } from "lucide-react";
 
 interface RecentInvoice {
   id: string;
@@ -17,8 +12,6 @@ interface RecentInvoice {
   total: number;
   date: string;
 }
-
-// ─── Skeleton ────────────────────────────────────────────────────────────────
 
 const InvoiceRowSkeleton = memo(function InvoiceRowSkeleton() {
   return (
@@ -33,8 +26,6 @@ const InvoiceRowSkeleton = memo(function InvoiceRowSkeleton() {
 });
 InvoiceRowSkeleton.displayName = "InvoiceRowSkeleton";
 
-// ─── Row ────────────────────────────────────────────────────────────────────
-
 const RecentInvoiceRow = memo(function RecentInvoiceRow({
   inv,
   onClick,
@@ -42,6 +33,11 @@ const RecentInvoiceRow = memo(function RecentInvoiceRow({
   inv: RecentInvoice;
   onClick: () => void;
 }) {
+  // ✅ نمایش "بدون مشتری" اگر customer خالی باشد
+  const displayName = inv.customer && inv.customer.trim() !== "" && inv.customer !== "مشتری"
+    ? inv.customer
+    : "بدون مشتری";
+
   return (
     <button
       type="button"
@@ -50,11 +46,11 @@ const RecentInvoiceRow = memo(function RecentInvoiceRow({
     >
       <div className="flex min-w-0 flex-1 items-center gap-3">
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[hsl(var(--color-primary)/0.15)] to-[hsl(var(--color-info)/0.15)] text-[hsl(var(--color-primary))]">
-          <Receipt className="size-4" aria-hidden="true" />
+          <User className="size-4" aria-hidden="true" />
         </div>
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold text-[hsl(var(--fg-primary))]">
-            {inv.customer}
+            {displayName}
           </p>
           <p className="text-xs text-[hsl(var(--fg-secondary))]">{inv.date}</p>
         </div>
@@ -67,8 +63,6 @@ const RecentInvoiceRow = memo(function RecentInvoiceRow({
   );
 });
 RecentInvoiceRow.displayName = "RecentInvoiceRow";
-
-// ─── Empty State ────────────────────────────────────────────────────────────
 
 const EmptyInvoices = memo(function EmptyInvoices({
   onCreate,
@@ -105,8 +99,6 @@ const EmptyInvoices = memo(function EmptyInvoices({
 });
 EmptyInvoices.displayName = "EmptyInvoices";
 
-// ─── Main Component ─────────────────────────────────────────────────────────
-
 interface DashboardInvoicesProps {
   t: (key: string, fallback?: string) => string;
   invLoading: boolean;
@@ -124,7 +116,6 @@ export const DashboardInvoices = memo(function DashboardInvoices({
   onNavigateQuickInvoice,
   onViewAllInvoices,
 }: DashboardInvoicesProps) {
-  // ✅ useMemo برای رندر کردن آیتم‌ها (فقط زمانی که recentInvoices تغییر کند)
   const invoiceRows = useMemo(
     () =>
       recentInvoices.map((inv) => (

@@ -26,22 +26,6 @@ function getDaysAgo(days: number): string {
   return date.toISOString().slice(0, 10);
 }
 
-// ✅ هوک wrapper برای اضافه کردن refetchInterval
-function usePollingQuery<T>(hook: () => { data: T; isLoading: boolean; refetch: () => void }, interval: number) {
-  const result = hook();
-  const { refetch } = result;
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      refetch();
-    }, interval);
-
-    return () => clearInterval(timer);
-  }, [refetch, interval]);
-
-  return result;
-}
-
 export function DashboardContainer() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -53,25 +37,21 @@ export function DashboardContainer() {
     return { from: weekAgo, to: today };
   });
 
-  // ✅ KPI با آپدیت هر ۳۰ ثانیه
   const kpiResult = useDashboardKPIs();
   const { data: kpis, isLoading: kpiLoading, refetch: refetchKpis } = kpiResult;
 
-  // ✅ AI Insights با آپدیت هر ۶۰ ثانیه
   const insightsResult = useAIInsights();
   const { data: insights, isLoading: insightsLoading, refetch: refetchInsights } = insightsResult;
 
   const fromDate = dateRange.from ? dateRange.from.toISOString().slice(0, 10) : getDaysAgo(30);
   const toDate = dateRange.to ? dateRange.to.toISOString().slice(0, 10) : getTodayDate();
 
-  // ✅ Sales Chart با آپدیت هر ۳۰ ثانیه
   const salesResult = useDashboardSales({
     from: fromDate,
     to: toDate,
   });
   const { data: salesData, isLoading: salesLoading, refetch: refetchSales } = salesResult;
 
-  // ✅ دریافت فاکتورهای اخیر با آپدیت هر ۳۰ ثانیه
   const invoicesResult = useInvoices({
     page: 1,
     limit: 5,
@@ -79,7 +59,11 @@ export function DashboardContainer() {
   });
   const { data: invoicesData, isLoading: invoicesLoading, refetch: refetchInvoices } = invoicesResult;
 
-  // ✅ Polling با setInterval
+  // ✅ دیباگ: لاگ کردن داده‌ها
+  console.log('📊 DashboardContainer - salesData:', salesData);
+  console.log('📊 DashboardContainer - invoicesData:', invoicesData);
+
+  // ✅ Polling
   useEffect(() => {
     const interval1 = setInterval(() => refetchKpis(), 30000);
     const interval2 = setInterval(() => refetchInsights(), 60000);
@@ -113,17 +97,38 @@ export function DashboardContainer() {
     [router]
   );
 
+  // ✅ FIX: اصلاح mapping invoices برای نمایش صحیح نام مشتری
   const recentInvoices: RecentInvoice[] = useMemo(() => {
     const invoices = invoicesData?.invoices || [];
-    return invoices.slice(0, 5).map((inv: any) => ({
-      id: inv.id,
-      customer: inv.customerName || inv.customer?.name || "مشتری",
-      total: inv.total || 0,
-      date: inv.date ? new Date(inv.date).toLocaleDateString("fa-IR") : "-",
-    }));
+    console.log('📊 invoices data structure:', invoices[0]); // دیباگ
+    
+    return invoices.slice(0, 5).map((inv: any) => {
+      // ✅ تلاش برای پیدا کردن نام مشتری از ساختارهای مختلف
+      let customerName = "مشتری";
+      
+      if (inv.customerName) {
+        customerName = inv.customerName;
+      } else if (inv.customer?.name) {
+        customerName = inv.customer.name;
+      } else if (inv.customer_id && inv.customers) {
+        // اگر customers در response باشد
+        customerName = inv.customers?.name || inv.customers?.full_name || "مشتری";
+      } else if (inv.customer?.full_name) {
+        customerName = inv.customer.full_name;
+      }
+      
+      return {
+        id: inv.id,
+        customer: customerName,
+        total: inv.total || 0,
+        date: inv.date ? new Date(inv.date).toLocaleDateString("fa-IR") : "-",
+      };
+    });
   }, [invoicesData]);
 
+  // ✅ FIX: اصلاح salesChartData برای نمایش بهتر
   const salesChartData = useMemo(() => {
+    // اگر داده وجود دارد، از آن استفاده کن
     if (salesData?.chartData && Array.isArray(salesData.chartData) && salesData.chartData.length > 0) {
       return salesData.chartData;
     }
@@ -134,16 +139,9 @@ export function DashboardContainer() {
       return salesData;
     }
 
-    const days = ["شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه"];
-    const today = new Date();
-    return days.map((label, i) => {
-      const d = new Date(today.getTime() - (6 - i) * 24 * 60 * 60 * 1000);
-      return {
-        label,
-        value: 0,
-        date: d.toISOString().slice(0, 10),
-      };
-    });
+    // ✅ اگر داده‌ای وجود ندارد، یک آرایه خالی برگردان (نه با مقدار 0)
+    // این باعث می‌شود که پیام "هنوز فروشی ثبت نشده است" نمایش داده شود
+    return [];
   }, [salesData]);
 
   return (

@@ -1,7 +1,7 @@
 // packages/ui/src/components/ui/dashboard/sales-chart.tsx
 "use client";
 
-import { memo } from "react";  // ✅ اضافه شد
+import { memo } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, type TooltipProps } from "recharts";
@@ -10,7 +10,6 @@ export interface ChartDataPoint { label: string; value: number; date: string; }
 
 interface SalesChartProps { data: ChartDataPoint[]; isLoading: boolean; fmt: (v: number) => string; height?: number; }
 
-// ✅ CustomTooltip با memo
 const CustomTooltip = memo(function CustomTooltip({
   active,
   payload,
@@ -36,7 +35,6 @@ const CustomTooltip = memo(function CustomTooltip({
 });
 CustomTooltip.displayName = "CustomTooltip";
 
-// ✅ ChartSkeleton با memo
 const ChartSkeleton = memo(function ChartSkeleton({ height }: { height: number }) {
   return (
     <div
@@ -48,7 +46,6 @@ const ChartSkeleton = memo(function ChartSkeleton({ height }: { height: number }
 });
 ChartSkeleton.displayName = "ChartSkeleton";
 
-// ✅ SalesChart با memo
 export const SalesChart = memo(function SalesChart({
   data,
   isLoading,
@@ -59,6 +56,7 @@ export const SalesChart = memo(function SalesChart({
 
   if (isLoading) return <ChartSkeleton height={height} />;
 
+  // ✅ اگر داده وجود ندارد یا خالی است
   if (!data || !data.length) {
     return (
       <div
@@ -70,14 +68,20 @@ export const SalesChart = memo(function SalesChart({
     );
   }
 
-  const allZero = data.every((d) => d.value === 0);
+  // ✅ بررسی اینکه آیا همه مقادیر صفر هستند
+  const allZero = data.every((d) => d.value === 0 || d.value === null || d.value === undefined);
+  
+  // ✅ اگر همه مقادیر صفر هستند، اما داده وجود دارد، پیام مناسب نشان بده
   if (allZero) {
     return (
       <div
-        className="flex items-center justify-center text-sm text-[hsl(var(--fg-tertiary))]"
+        className="flex flex-col items-center justify-center text-sm text-[hsl(var(--fg-tertiary))] gap-2"
         style={{ height }}
       >
-        {t("dashboard.noSalesYet", "هنوز فروشی ثبت نشده است")}
+        <span>{t("dashboard.noSalesYet", "هنوز فروشی ثبت نشده است")}</span>
+        <span className="text-xs text-[hsl(var(--fg-tertiary)/0.7)]">
+          {t("dashboard.startSelling", "اولین فاکتور را ثبت کنید")}
+        </span>
       </div>
     );
   }
