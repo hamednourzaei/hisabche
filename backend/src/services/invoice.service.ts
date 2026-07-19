@@ -1,6 +1,6 @@
 // ============================================
 // backend/src/services/invoice.service.ts
-// Hisabche v2.9 — FINAL FIXED: TypeScript type issue
+// Hisabche v3.0 — با JOIN customers (حالا کار می‌کند)
 // ============================================
 
 import { supabase } from "../db";
@@ -53,7 +53,7 @@ export class InvoiceService {
     this.workflowService = new WorkflowService();
   }
 
-  // ─── List Invoices — OPTIMIZED with Customer LEFT JOIN ───
+  // ─── List Invoices — با JOIN customers ───
   async list(userId: string, filters: InvoiceFilters) {
     const {
       search, type, status, customerId, supplierId,
@@ -68,6 +68,7 @@ export class InvoiceService {
     const maxLimit = Math.min(limit, 100);
     const fetchLimit = maxLimit + 1;
 
+    // ✅ حالا JOIN با customers کار می‌کند
     let query = supabase
       .from("invoices")
       .select(`
@@ -88,7 +89,7 @@ export class InvoiceService {
         status,
         created_at,
         updated_at,
-        customer:customers!left (
+        customer:customers!fk_invoices_customer (
           id,
           full_name,
           phone,
@@ -136,15 +137,12 @@ export class InvoiceService {
     const items = hasMore ? data.slice(0, maxLimit) : data;
     const nextCursor = hasMore && items.length > 0 ? items[items.length - 1]?.id : null;
 
-    // ✅ FINAL FIX: استفاده از as any برای رفع خطای TypeScript
-    const invoices = (items || []).map((inv: any) => {
-      const customer = (inv.customer as any) || null;
-      return {
-        ...inv,
-        customerName: customer?.full_name || null,
-        customer: customer,
-      };
-    });
+    // ✅ استخراج customerName از JOIN
+    const invoices = (items || []).map((inv: any) => ({
+      ...inv,
+      customerName: (inv.customer as any)?.full_name || null,
+      customer: (inv.customer as any) || null,
+    }));
 
     const result = {
       invoices,
@@ -183,7 +181,7 @@ export class InvoiceService {
         user_id,
         created_at,
         updated_at,
-        customer:customers!left (
+        customer:customers!fk_invoices_customer (
           id,
           full_name,
           phone,
@@ -210,12 +208,10 @@ export class InvoiceService {
       throw new NotFoundError("Invoice");
     }
 
-    // ✅ FINAL FIX: استفاده از as any
-    const customer = (data.customer as any) || null;
     return {
       ...data,
-      customerName: customer?.full_name || null,
-      customer: customer,
+      customerName: (data.customer as any)?.full_name || null,
+      customer: (data.customer as any) || null,
     };
   }
 
@@ -286,7 +282,7 @@ export class InvoiceService {
     return this.getById(invoice.id, userId);
   }
 
-  // ─── Update Invoice ───
+  // ─── بقیه متدها ───
   async update(id: string, userId: string, data: UpdateInvoice) {
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
     if (data.status !== undefined) updates.status = data.status;
@@ -310,7 +306,6 @@ export class InvoiceService {
     return invoice;
   }
 
-  // ─── Delete Invoice ───
   async delete(id: string, userId: string): Promise<void> {
     await supabase.from("invoice_items").delete().eq("invoice_id", id);
     const { error } = await supabase.from("invoices").delete().eq("id", id).eq("user_id", userId);
@@ -318,7 +313,6 @@ export class InvoiceService {
     this.invalidateUserCache(userId);
   }
 
-  // ─── Cache Invalidation ───
   private invalidateUserCache(userId: string) {
     memoryCache.invalidate(`dashboard:v2:${userId}`);
     memoryCache.invalidate(`sales:${userId}`);
@@ -328,7 +322,6 @@ export class InvoiceService {
     memoryCache.invalidate(`products:${userId}`);
   }
 
-  // ─── Get Summary ───
   async getSummary(userId: string) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -360,7 +353,6 @@ export class InvoiceService {
     return { todaySales, totalDebt, lowStockCount };
   }
 
-  // ─── Private: Batch Update Stock ───
   private async batchUpdateStock(items: any[], userId: string) {
     if (!items || items.length === 0) return;
 
@@ -412,7 +404,6 @@ export class InvoiceService {
     }
   }
 
-  // ─── Private: Accounting Entries ───
   private async createAccountingEntries(userId: string, invoiceId: string, data: { type: string; total: number; items?: any[]; invoiceNumber?: string; date?: string }): Promise<void> {
     try {
       const { data: accounts } = await supabase
@@ -481,7 +472,6 @@ export class InvoiceService {
     }
   }
 
-  // ─── Private: Generate Invoice Number ───
   private async generateInvoiceNumber(): Promise<string> {
     try {
       const { data, error } = await supabase.rpc('get_next_invoice_number');
@@ -496,7 +486,6 @@ export class InvoiceService {
     return `INV-${Date.now().toString(36).toUpperCase()}`;
   }
 
-  // ─── Private: Start Workflow ───
   private async tryStartWorkflow(userId: string, invoiceId: string, total: number): Promise<void> {
     try {
       const { data: workflows } = await supabase
