@@ -1,6 +1,6 @@
 // ============================================
 // backend/src/routes/product.routes.ts
-// FIXED: Removed schema validation, using manual parsing
+// FIXED: Cache invalidation with userId
 // ============================================
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
@@ -26,15 +26,12 @@ export async function productRoutes(fastify: FastifyInstance) {
   const productService = new ProductService()
 
   // ─── GET /api/products ──────────────────────────────────
-  // ✅ FIX: حذف schema validation برای querystring
   fastify.get('/api/products', {
     preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'products' })],
-    // ❌ حذف: schema: { querystring: ... }
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const query = request.query as any
       
-      // ✅ تبدیل دستی با default values
       const page = query.page ? parseInt(query.page, 10) : 1
       const limit = query.limit ? parseInt(query.limit, 10) : 20
       const search = query.search || ''
@@ -100,8 +97,11 @@ export async function productRoutes(fastify: FastifyInstance) {
       const body = request.body as any
       const userId = (request as any).userId
       const product = await productService.create(userId, body)
-      await clearCache('products:*')
-      await clearCache('low-stock:*')
+      
+      // ✅ FIX: پاک کردن کش با userId
+      await clearCache(`products:${userId}:*`)
+      await clearCache(`low-stock:${userId}:*`)
+      
       return reply.code(201).send(product)
     } catch (err) {
       fastify.log.error(err)
@@ -118,9 +118,12 @@ export async function productRoutes(fastify: FastifyInstance) {
       const body = request.body as any
       const userId = (request as any).userId
       const product = await productService.update(id, userId, body)
-      await clearCache(`product:${id}`)
-      await clearCache('products:*')
-      await clearCache('low-stock:*')
+      
+      // ✅ FIX: پاک کردن کش با userId
+      await clearCache(`product:${userId}:${id}`)
+      await clearCache(`products:${userId}:*`)
+      await clearCache(`low-stock:${userId}:*`)
+      
       return reply.send(product)
     } catch (err) {
       if (err instanceof NotFoundError) {
@@ -139,9 +142,12 @@ export async function productRoutes(fastify: FastifyInstance) {
       const { id } = request.params as { id: string }
       const userId = (request as any).userId
       await productService.delete(id, userId)
-      await clearCache(`product:${id}`)
-      await clearCache('products:*')
-      await clearCache('low-stock:*')
+      
+      // ✅ FIX: پاک کردن کش با userId
+      await clearCache(`product:${userId}:${id}`)
+      await clearCache(`products:${userId}:*`)
+      await clearCache(`low-stock:${userId}:*`)
+      
       return reply.code(204).send()
     } catch (err) {
       if (err instanceof NotFoundError) {
