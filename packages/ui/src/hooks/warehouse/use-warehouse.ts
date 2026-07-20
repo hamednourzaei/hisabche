@@ -13,7 +13,7 @@ export function useWarehouse(search: string) {
   const { t } = useTranslation()
   const { data, isLoading, refetch } = useProducts({
     page: 1,
-    limit: 50,
+    limit: 100,
     sortDirection: "desc",
     search,
   })

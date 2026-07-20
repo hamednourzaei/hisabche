@@ -26,18 +26,21 @@ export const productKeys = {
 // Hooks
 // ============================================
 
-// ✅ FIX: استفاده از Partial<ProductFilters> برای پذیرش {} 
-// packages/api/src/hooks/products.ts
-
 export function useProducts(filters: Partial<ProductFilters> = {}) {
-  // ✅ اطمینان از وجود همه فیلدها
+  // ✅ FIX: فقط فیلدهایی که ارسال نشده‌اند را با default پر کن
   const mergedFilters: ProductFilters = {
-    page: 1,
-    limit: 20,
-    sortDirection: 'desc',
-    search: '',
-    sortBy: 'created_at',
-    ...filters,
+    page: filters.page ?? 1,
+    limit: filters.limit ?? 20,  // ✅ اگر limit ارسال شده باشد، همان را نگه دار
+    sortDirection: filters.sortDirection ?? 'desc',
+    search: filters.search ?? '',
+    sortBy: filters.sortBy ?? 'created_at',
+    isActive: filters.isActive,
+    category: filters.category,
+    barcode: filters.barcode,
+    lowStock: filters.lowStock,
+    minPrice: filters.minPrice,
+    maxPrice: filters.maxPrice,
+    cursor: filters.cursor,
   }
 
   return useQuery({
