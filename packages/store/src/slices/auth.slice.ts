@@ -1,9 +1,11 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import CryptoJS from 'crypto-js'
+import { registerTokenGetter } from '@hisabche/api'
+import { setOnUnauthorized } from '@hisabche/api'
 
 // ============================================
-// ENCRYPTION (بدون تغییر)
+// ENCRYPTION
 // ============================================
 const ENCRYPTION_KEY =
   process.env.NEXT_PUBLIC_ENCRYPTION_KEY || 'hisabche-dev-key-32-chars!!'
@@ -33,17 +35,12 @@ const encryptedStorage = {
 }
 
 // ============================================
-// ✅ FIX: پاک کردن تمام stateهای persist شده
+// Clear auth storage
 // ============================================
-function clearAllPersistedState() {
+function clearAuthStorage() {
   if (typeof window === 'undefined') return
   try {
-    const allKeys = Object.keys(localStorage)
-    for (const key of allKeys) {
-      if (key.startsWith('hisabche-') || key.includes('zustand')) {
-        localStorage.removeItem(key)
-      }
-    }
+    localStorage.removeItem('hisabche-auth')
   } catch {}
 }
 
@@ -68,7 +65,6 @@ export interface AuthState {
   hasHydrated: boolean
   error: string | null
 
-  // Actions
   login: (credentials: { email: string; password: string }) => Promise<void>
   signup: (data: {
     email: string
@@ -88,7 +84,7 @@ const API_BASE =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000'
 
 // ============================================
-// HELPERS: API calls (جایگزین supabase مستقیم)
+// API calls
 // ============================================
 async function apiLogin(email: string, password: string) {
   const res = await fetch(`${API_BASE}/auth/login`, {
@@ -149,9 +145,6 @@ export const useAuthStore = create<AuthState>()(
       hasHydrated: false,
       error: null,
 
-      // =====================================
-      // INIT AUTH
-      // =====================================
       initAuth: () => {
         const state = get()
         set({
@@ -160,19 +153,12 @@ export const useAuthStore = create<AuthState>()(
         })
       },
 
-      // =====================================
-      // CLEAR ERROR
-      // =====================================
       clearError: () => set({ error: null }),
 
-      // =====================================
-      // LOGIN
-      // =====================================
       login: async (credentials) => {
         set({ isLoading: true, error: null })
 
         try {
-          // Demo login — بدون تغییر
           if (
             credentials.email.trim() === 'demo@hisabche.com' &&
             credentials.password === 'Demo1234'
@@ -222,17 +208,15 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      // =====================================
-      // SIGNUP (جدید)
-      // =====================================
+      // ✅ signup: فقط بعد از success پاک می‌کنیم
       signup: async (data) => {
         set({ isLoading: true, error: null })
 
         try {
           const result = await apiSignup(data)
 
-          // ✅ FIX: پاک کردن state قبلی قبل از ذخیره جدید
-          clearAllPersistedState()
+          // ✅ اول success، بعد clear
+          clearAuthStorage()
 
           set({
             user: result.user,
@@ -256,9 +240,6 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      // =====================================
-      // LOGOUT
-      // =====================================
       logout: async () => {
         try {
           const state = get()
@@ -268,8 +249,7 @@ export const useAuthStore = create<AuthState>()(
         } catch (err) {
           console.error('LOGOUT ERROR:', err)
         } finally {
-          // ✅ FIX: پاک کردن تمام stateها
-          clearAllPersistedState()
+          clearAuthStorage()
 
           set({
             user: null,
@@ -301,3 +281,23 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 )
+
+// ============================================
+// ✅ Register token getter + onUnauthorized
+//    فقط یک بار، هنگام import ماژول
+// ============================================
+if (typeof window !== 'undefined') {
+  registerTokenGetter(() => useAuthStore.getState().token)
+
+  setOnUnauthorized(() => {
+    // ✅ فقط state رو پاک می‌کنیم، logout API call نمی‌کنیم
+    clearAuthStorage()
+    useAuthStore.setState({
+      user: null,
+      token: null,
+      isAuthenticated: false,
+      isDemo: false,
+      error: null,
+    })
+  })
+}

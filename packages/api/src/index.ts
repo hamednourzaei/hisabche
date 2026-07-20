@@ -2,10 +2,27 @@
 // Hisabche API — Barrel Exports (Complete)
 // ============================================
 
-export { apiClient, type ApiResponse, type ApiError } from './lib/client'
+// ─── Core Client ──────────────────────────────────────────
+export { apiClient } from './lib/client'
+export type { ApiResponse, ApiError } from './lib/client'
 
-export { useLogin, useSignUp, useLogout, useCurrentUser } from './hooks/auth'
+// ✅ Token Provider + onUnauthorized
+export {
+  registerTokenGetter,
+  getToken,
+  hasToken,
+} from './lib/tokenProvider'
+export { setOnUnauthorized } from './lib/client'
 
+// ─── Auth Hooks ───────────────────────────────────────────
+export {
+  useLogin,
+  useSignUp,
+  useLogout,
+  useCurrentUser,
+} from './hooks/auth'
+
+// ─── Invoices ─────────────────────────────────────────────
 export {
   useInvoices,
   useInvoice,
@@ -15,6 +32,7 @@ export {
   invoiceKeys,
 } from './hooks/invoices'
 
+// ─── Products ─────────────────────────────────────────────
 export {
   useProducts,
   useProduct,
@@ -24,6 +42,7 @@ export {
   productKeys,
 } from './hooks/products'
 
+// ─── Customers ────────────────────────────────────────────
 export {
   useCustomers,
   useCustomer,
@@ -32,10 +51,16 @@ export {
   customerKeys,
 } from './hooks/customers'
 
-export { useTransactions, useCreateTransaction, useLedger, transactionKeys } from './hooks/transactions'
+// ─── Transactions ─────────────────────────────────────────
+export {
+  useTransactions,
+  useCreateTransaction,
+  useLedger,
+  transactionKeys,
+} from './hooks/transactions'
 export { useRealtime } from './hooks/useRealtime'
 
-// ✅ Dashboard
+// ─── Dashboard ────────────────────────────────────────────
 export {
   useDashboardKPIs,
   useAIInsights,
@@ -47,7 +72,7 @@ export {
   type SalesChartData,
 } from './hooks/dashboard'
 
-// ---------- Employees ----------
+// ─── Employees ────────────────────────────────────────────
 export {
   useEmployees,
   useEmployee,
@@ -57,14 +82,22 @@ export {
   employeeKeys,
 } from './hooks/employees'
 
-// ---------- Projects ----------
+// ─── Projects ─────────────────────────────────────────────
 export {
-  useProjects, useProject, useCreateProject, useUpdateProject, useDeleteProject,
-  useProjectTasks, useCreateProjectTask, useUpdateProjectTask, useDeleteProjectTask,
-  projectKeys, projectTaskKeys,
+  useProjects,
+  useProject,
+  useCreateProject,
+  useUpdateProject,
+  useDeleteProject,
+  useProjectTasks,
+  useCreateProjectTask,
+  useUpdateProjectTask,
+  useDeleteProjectTask,
+  projectKeys,
+  projectTaskKeys,
 } from './hooks/projects'
 
-// ---------- Workspace ----------
+// ─── Workspace ────────────────────────────────────────────
 export {
   useWorkspaces,
   useWorkspaceMembers,
@@ -75,24 +108,24 @@ export {
   workspaceKeys,
 } from './hooks/workspace'
 
-// ---------- Permissions ----------
-export { 
-  useRoles, 
-  usePermissions, 
-  useCreateRole, 
-  useDeleteRole, 
+// ─── Permissions ──────────────────────────────────────────
+export {
+  useRoles,
+  usePermissions,
+  useCreateRole,
+  useDeleteRole,
   permissionKeys,
 } from './hooks/permissions'
 
-// ---------- Audit ----------
-export { 
-  useAuditLogs, 
+// ─── Audit ────────────────────────────────────────────────
+export {
+  useAuditLogs,
   auditKeys,
   type AuditLog,
   type AuditResponse,
 } from './hooks/audit'
 
-// ---------- Accounting ----------
+// ─── Accounting ───────────────────────────────────────────
 export {
   useAccounts,
   useCreateAccount,
@@ -110,7 +143,7 @@ export {
   type IncomeStatement,
 } from './hooks/accounting'
 
-// ---------- CRM ----------
+// ─── CRM ──────────────────────────────────────────────────
 export {
   useInteractions,
   useCreateInteraction,
@@ -122,7 +155,7 @@ export {
   type Opportunity,
 } from './hooks/crm'
 
-// ---------- Manufacturing ----------
+// ─── Manufacturing ────────────────────────────────────────
 export {
   useBOMs,
   useCreateBOM,
@@ -135,7 +168,7 @@ export {
   type WorkOrder,
 } from './hooks/manufacturing'
 
-// ---------- Purchasing ----------
+// ─── Purchasing ───────────────────────────────────────────
 export {
   usePurchaseOrders,
   usePurchaseOrder,
@@ -146,9 +179,7 @@ export {
   type PurchaseOrderItem,
 } from './hooks/purchasing'
 
-// ═══════════════════════════════════════════════════════════════════
-// ✅ NEW — Billing & Subscription
-// ═══════════════════════════════════════════════════════════════════
+// ─── Billing & Subscription ───────────────────────────────
 export {
   usePlans,
   useSubscription,

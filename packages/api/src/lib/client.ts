@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosError } from 'axios'
+import { getToken } from './tokenProvider'
 
 // ============================================
 // Types
@@ -14,19 +15,6 @@ export interface ApiError {
   code: string
   status: number
   details?: Record<string, string[]>
-}
-
-// ============================================
-// ✅ Token Manager (جایگزین supabase session)
-// ============================================
-let authToken: string | null = null
-
-export function setApiToken(token: string | null) {
-  authToken = token
-}
-
-export function getApiToken(): string | null {
-  return authToken
 }
 
 // ============================================
@@ -55,36 +43,26 @@ export const apiClient: AxiosInstance = axios.create({
 // ============================================
 // Helpers
 // ============================================
-const isBrowser = (): boolean =>
-  typeof window !== 'undefined' && typeof localStorage !== 'undefined'
+const isBrowser = (): boolean => typeof window !== 'undefined'
+
+// ✅ callback برای ۴۰۱ — بدون import از Store
+let onUnauthorized: (() => void) | null = null
+
+export function setOnUnauthorized(callback: () => void): void {
+  onUnauthorized = callback
+}
 
 // ============================================
-// Request Interceptor — ✅ فقط از authToken
+// Request Interceptor
 // ============================================
 apiClient.interceptors.request.use(
   async (config) => {
-    // ✅ اولویت ۱: authToken (از Zustand store set می‌شه)
-    if (authToken) {
-      config.headers.Authorization = `Bearer ${authToken}`
-      devLog('[API Client] token source: authToken')
-    }
-    // ✅ اولویت ۲: localStorage fallback (برای hydration)
-    else if (isBrowser()) {
-      try {
-        const stored = localStorage.getItem('hisabche-auth')
-        if (stored) {
-          const parsed = JSON.parse(stored)
-          const token = parsed?.state?.token
-          if (token) {
-            authToken = token
-            config.headers.Authorization = `Bearer ${token}`
-            devLog('[API Client] token source: localStorage hisabche-auth')
-          }
-        }
-      } catch {}
-    }
+    // ✅ فقط از Token Provider می‌خوانیم
+    const token = getToken()
 
-    if (!authToken) {
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`
+    } else {
       devLog('[API Client] no token — unauthenticated request')
     }
 
@@ -92,8 +70,6 @@ apiClient.interceptors.request.use(
       ? localStorage.getItem('hisabche-lang') || 'fa-AF'
       : 'fa-AF'
     config.headers['Accept-Language'] = lang
-
-    devLog('[API Client] request:', config.method?.toUpperCase(), config.url)
 
     return config
   },
@@ -124,10 +100,10 @@ apiClient.interceptors.response.use(
       details: responseData?.details,
     }
 
+    // ✅ ۴۰۱ → فقط callback صدا می‌شود (بدون logout، بدون loop)
     if (apiError.status === 401 && isBrowser()) {
-      devLog('[API Client] 401 — clearing token')
-      authToken = null
-      localStorage.removeItem('hisabche-auth')
+      devLog('[API Client] 401 — triggering onUnauthorized callback')
+      onUnauthorized?.()
     }
 
     return Promise.reject(apiError)
