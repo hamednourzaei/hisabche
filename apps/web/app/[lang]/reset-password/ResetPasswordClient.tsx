@@ -5,105 +5,42 @@ import { useState, useEffect, useCallback, memo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
-import { Lock, ArrowLeft, Loader2, CheckCircle, XCircle, Eye, EyeOff } from "lucide-react";
+import {
+  Lock,
+  ArrowLeft,
+  Loader2,
+  CheckCircle,
+  XCircle,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import { apiClient } from "@hisabche/api";
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   ResetPasswordClient v2 — Memoized · Password Toggle
-   ✅ memo · useCallback · نمایش/مخفی کردن رمز عبور
-   ═══════════════════════════════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════════════
+   ResetPasswordClient v3 — Fixed: confirmPassword + focus
+   ✅ confirmPassword به backend فرستاده می‌شود
+   ✅ PasswordField از کامپوننت خارج شده (رفع مشکل focus)
+   ═══════════════════════════════════════════════════════════ */
 
-export const ResetPasswordClient = memo(function ResetPasswordClient() {
-  const { t } = useTranslation();
-  const router = useRouter();
-  const params = useSearchParams();
-  const token = params.get("token");
+// ─── Password Field (خارج از کامپوننت — ثابت بودن identity) ──
+interface PasswordFieldProps {
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  placeholder: string;
+  show: boolean;
+  onToggle: () => void;
+  autoFocus?: boolean;
+}
 
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  useEffect(() => {
-    if (!token) {
-      setError(t("auth.invalidToken", "لینک نامعتبر یا منقضی شده است"));
-    }
-  }, [token, t]);
-
-  const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!password || !token) return;
-
-      if (password !== confirmPassword) {
-        setError(t("auth.passwordMismatch", "رمز عبور با تکرارش مطابقت ندارد"));
-        return;
-      }
-
-      if (password.length < 8) {
-        setError(t("auth.passwordMinLength", "رمز عبور حداقل ۸ حرف باشد"));
-        return;
-      }
-
-      setLoading(true);
-      setError("");
-
-      try {
-        const { data } = await apiClient.post("/auth/reset-password", {
-          token,
-          password,
-        });
-
-        if (data?.message) {
-          setSuccess(true);
-          setTimeout(() => {
-            router.push("/login");
-          }, 3000);
-        }
-      } catch (err: any) {
-        setError(
-          err?.response?.data?.message ||
-            t("auth.invalidToken", "لینک نامعتبر یا منقضی شده است")
-        );
-      } finally {
-        setLoading(false);
-      }
-    },
-    [password, confirmPassword, token, router, t]
-  );
-
-  const toggleShowPassword = useCallback(() => {
-    setShowPassword((prev) => !prev);
-  }, []);
-
-  const toggleShowConfirmPassword = useCallback(() => {
-    setShowConfirmPassword((prev) => !prev);
-  }, []);
-
-  const handleBackToLogin = useCallback(() => {
-    router.push("/login");
-  }, [router]);
-
-  // ─── Password Field ──────────────────────────────────────────────────────
-
-  const PasswordField = ({
-    value,
-    onChange,
-    placeholder,
-    show,
-    onToggle,
-    autoFocus = false,
-  }: {
-    value: string;
-    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-    placeholder: string;
-    show: boolean;
-    onToggle: () => void;
-    autoFocus?: boolean;
-  }) => (
+const PasswordField = memo(function PasswordField({
+  value,
+  onChange,
+  placeholder,
+  show,
+  onToggle,
+  autoFocus = false,
+}: PasswordFieldProps) {
+  return (
     <div className="relative">
       <Lock className="absolute start-3 top-1/2 -translate-y-1/2 size-5 text-[hsl(var(--fg-tertiary))] pointer-events-none" />
       <input
@@ -132,7 +69,7 @@ export const ResetPasswordClient = memo(function ResetPasswordClient() {
           "hover:text-[hsl(var(--fg-primary))] hover:bg-[hsl(var(--surface-muted))]",
           "transition-colors duration-150"
         )}
-        aria-label={show ? t("auth.hidePassword", "مخفی کردن رمز") : t("auth.showPassword", "نمایش رمز")}
+        aria-label={show ? "مخفی کردن رمز" : "نمایش رمز"}
       >
         {show ? (
           <EyeOff className="size-5" aria-hidden="true" />
@@ -142,6 +79,80 @@ export const ResetPasswordClient = memo(function ResetPasswordClient() {
       </button>
     </div>
   );
+});
+
+// ─── Main Component ─────────────────────────────────────
+export const ResetPasswordClient = memo(function ResetPasswordClient() {
+  const { t } = useTranslation();
+  const router = useRouter();
+  const params = useSearchParams();
+  const token = params.get("token");
+
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  useEffect(() => {
+    if (!token) {
+      setError(t("auth.invalidToken", "لینک نامعتبر یا منقضی شده است"));
+    }
+  }, [token, t]);
+
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!password || !token) return;
+
+      if (password !== confirmPassword) {
+        setError(
+          t("auth.passwordMismatch", "رمز عبور با تکرارش مطابقت ندارد")
+        );
+        return;
+      }
+
+      if (password.length < 8) {
+        setError(
+          t("auth.passwordMinLength", "رمز عبور حداقل ۸ حرف باشد")
+        );
+        return;
+      }
+
+      setLoading(true);
+      setError("");
+
+      try {
+        // ✅ FIX: confirmPassword هم فرستاده می‌شود
+        const { data } = await apiClient.post("/auth/reset-password", {
+          token,
+          password,
+          confirmPassword,
+        });
+
+        if (data?.message) {
+          setSuccess(true);
+          setTimeout(() => {
+            router.push("/login");
+          }, 3000);
+        }
+      } catch (err: any) {
+        setError(
+          err?.response?.data?.message ||
+            t("auth.invalidToken", "لینک نامعتبر یا منقضی شده است")
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [password, confirmPassword, token, router, t]
+  );
+
+  const handleBackToLogin = useCallback(() => {
+    router.push("/login");
+  }, [router]);
 
   return (
     <div className="flex min-h-[80vh] items-center justify-center p-4">
@@ -182,7 +193,10 @@ export const ResetPasswordClient = memo(function ResetPasswordClient() {
               ? t("auth.redirectingToLogin", "در حال انتقال به صفحه ورود...")
               : token
                 ? t("auth.enterNewPassword", "رمز عبور جدید خود را وارد کنید")
-                : t("auth.tokenExpired", "این لینک منقضی شده یا قبلاً استفاده شده است")}
+                : t(
+                    "auth.tokenExpired",
+                    "این لینک منقضی شده یا قبلاً استفاده شده است"
+                  )}
           </p>
         </div>
 
@@ -194,7 +208,7 @@ export const ResetPasswordClient = memo(function ResetPasswordClient() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder={t("auth.newPassword", "رمز عبور جدید")}
               show={showPassword}
-              onToggle={toggleShowPassword}
+              onToggle={() => setShowPassword((p) => !p)}
               autoFocus
             />
 
@@ -203,11 +217,13 @@ export const ResetPasswordClient = memo(function ResetPasswordClient() {
               onChange={(e) => setConfirmPassword(e.target.value)}
               placeholder={t("auth.confirmPassword", "تکرار رمز عبور")}
               show={showConfirmPassword}
-              onToggle={toggleShowConfirmPassword}
+              onToggle={() => setShowConfirmPassword((p) => !p)}
             />
 
             {error && (
-              <p className="text-sm text-[hsl(var(--color-destructive))]">{error}</p>
+              <p className="text-sm text-[hsl(var(--color-destructive))]">
+                {error}
+              </p>
             )}
 
             <button
