@@ -128,6 +128,7 @@ async function apiLogout(token: string) {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
+    body: '{}',  // ✅ بدنه خالی ولی معتبر
   }).catch(() => {})
 }
 
