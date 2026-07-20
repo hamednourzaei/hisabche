@@ -1,6 +1,8 @@
 // ============================================
-// backend/src/services/password-reset.service.ts — v2.4
-// FIXED: TypeScript errors — listUsers + undefined check
+// backend/src/services/password-reset.service.ts — v3.0
+// ✅ Admin SDK (بدون fetch دستی)
+// ✅ email_confirm حذف شد (Password Reset ≠ Email Verify)
+// ✅ getUserById قبل از update
 // ============================================
 
 import { createHash, randomBytes } from 'crypto'
@@ -26,7 +28,6 @@ async function getUserLanguage(userId: string): Promise<Language> {
   try {
     const { data } = await supabase.auth.admin.getUserById(userId)
 
-    // ✅ FIX: چک کردن undefined بودن user
     const lang = data?.user?.user_metadata?.preferred_language
     const result: Language =
       lang && ['fa-IR', 'fa-AF', 'en'].includes(String(lang))
@@ -47,11 +48,9 @@ async function getUserByEmail(email: string): Promise<{
   preferred_language?: string
 } | null> {
   try {
-    // ✅ FIX: listUsers پارامتر filter رو قبول نمی‌کنه
-    // همه کاربران رو می‌گیریم و خودمون فیلتر می‌کنیم
     const { data } = await supabase.auth.admin.listUsers({
       page: 1,
-      perPage: 100, // بیشتر از تعداد کاربران فعلی
+      perPage: 100,
     })
 
     if (!data?.users?.length) return null
@@ -63,7 +62,6 @@ async function getUserByEmail(email: string): Promise<{
 
     if (!user) return null
 
-    // ✅ FIX: user.email و user.user_metadata.preferred_language ممکنه undefined باشن
     return {
       id: user.id,
       email: user.email || email,
@@ -173,6 +171,7 @@ export const passwordResetService = {
       .digest('hex')
 
     try {
+      // ۱. پیدا کردن توکن معتبر
       const { data: tokens, error: tokenError } = await supabase
         .from('password_reset_tokens')
         .select('id, user_id, workspace_id, expires_at')
@@ -191,38 +190,42 @@ export const passwordResetService = {
 
       const resetToken = tokens[0]!
 
+      // ۲. بررسی انقضا
       if (new Date(resetToken.expires_at) < new Date()) {
         return { success: false, message: 'Token has expired' }
       }
 
-      const supabaseUrl = process.env.SUPABASE_URL!
-      const serviceKey = process.env.SUPABASE_SERVICE_KEY!
+      // ۳. ✅ دریافت اطلاعات کاربر (قبل از update)
+      const { data: userData, error: userError } =
+        await supabase.auth.admin.getUserById(resetToken.user_id)
 
-      const response = await fetch(
-        `${supabaseUrl}/auth/v1/admin/users/${resetToken.user_id}`,
-        {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${serviceKey}`,
-            'Content-Type': 'application/json',
-            apikey: serviceKey,
-          },
-          body: JSON.stringify({
-            password: newPassword,
-            email_confirm: true,
-          }),
+      if (userError || !userData?.user) {
+        console.error('User not found:', userError)
+        return {
+          success: false,
+          message: 'User not found',
         }
-      )
+      }
 
-      if (!response.ok) {
-        const errorData = await response.json()
-        console.error('Supabase admin API error:', errorData)
+      // ۴. ✅ تغییر رمز از طریق Admin SDK (نه fetch دستی)
+      //    بدون email_confirm — Password Reset ≠ Email Verify
+      const { error: updateError } =
+        await supabase.auth.admin.updateUserById(
+          resetToken.user_id,
+          {
+            password: newPassword,
+          }
+        )
+
+      if (updateError) {
+        console.error('Supabase admin update error:', updateError)
         return {
           success: false,
           message: 'Failed to reset password',
         }
       }
 
+      // ۵. ✅ علامت‌گذاری توکن و باطل کردن سایر توکن‌ها
       const [updateResult, revokeResult] = await Promise.all([
         supabase
           .from('password_reset_tokens')
@@ -249,6 +252,7 @@ export const passwordResetService = {
         )
       }
 
+      // ۶. Audit log
       auditService
         .log({
           userId: resetToken.user_id,
@@ -260,6 +264,7 @@ export const passwordResetService = {
         })
         .catch(() => {})
 
+      // ۷. Invalidate cache
       await memoryCache.invalidate(
         getUserLanguageCacheKey(resetToken.user_id)
       )
