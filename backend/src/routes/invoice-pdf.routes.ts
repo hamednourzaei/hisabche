@@ -1,156 +1,240 @@
 // ============================================
 // backend/src/routes/invoice-pdf.routes.ts
+// FIXED: Consistent hash + private bucket enforcement
 // ============================================
 
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
-import { createHash } from 'crypto'
-import { renderToStream } from '@react-pdf/renderer'
-import { createClient } from '@supabase/supabase-js'
-import { supabase } from '../db'
-import InvoicePDFDocument from '../pdf/InvoicePDFDocument'
-import { authenticate } from '../middleware/auth.middleware'
-import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
+import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
+import { createHash } from "crypto";
+import { renderToStream } from "@react-pdf/renderer";
+import { createClient } from "@supabase/supabase-js";
+import { supabase } from "../db";
+import InvoicePDFDocument from "../pdf/InvoicePDFDocument";
+import { authenticate } from "../middleware/auth.middleware";
 
-// NOTE: dotenv.config() should run once at the app entrypoint (server.ts),
-// not inside individual route files — loading it here again is fragile
-// (relative path depends on where the process was started from) and can
-// silently no-op if env vars are already loaded elsewhere.
+// ─── Supabase Storage Client (service role — storage admin only) ──
+const supabaseUrl = process.env.SUPABASE_URL || "";
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY || "";
 
-// ─── Supabase Storage Client (service role — storage admin only) ───────────
-const supabaseUrl = process.env.SUPABASE_URL || ''
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY || ''
+const storageClient =
+  supabaseUrl && supabaseKey
+    ? createClient(supabaseUrl, supabaseKey)
+    : null;
 
-const storageClient = supabaseUrl && supabaseKey
-  ? createClient(supabaseUrl, supabaseKey)
-  : null
+const BUCKET_NAME = "pdf-cache";
+const SIGNED_URL_TTL_SECONDS = 3600;
 
-const BUCKET_NAME = 'pdf-cache'
-const SIGNED_URL_TTL_SECONDS = 3600
+// ─── Ensure bucket exists & is PRIVATE ────────────────
+// ✅ FIX 1: هماهنگ با pdf-queue.ts
+async function ensureBucket(): Promise<void> {
+  if (!storageClient) return;
 
-// The bucket MUST be private. Invoices are financial documents — a public
-// bucket means anyone with the URL (no login required) can read them,
-// which also makes the createSignedUrl() call below pointless.
-if (storageClient) {
-  storageClient.storage.getBucket(BUCKET_NAME).catch(() => {
-    storageClient.storage.createBucket(BUCKET_NAME, { public: false })
-  })
+  const { data: buckets, error } =
+    await storageClient.storage.listBuckets();
+
+  if (error) {
+    console.error("❌ Failed to list buckets:", error.message);
+    return;
+  }
+
+  const exists = buckets?.some((b) => b.name === BUCKET_NAME);
+
+  if (!exists) {
+    console.log(`📦 Creating bucket: ${BUCKET_NAME} (private)`);
+    const { error: createError } =
+      await storageClient.storage.createBucket(BUCKET_NAME, {
+        public: false,
+      });
+
+    if (createError) {
+      console.error(
+        `❌ Failed to create bucket: ${BUCKET_NAME}`,
+        createError.message
+      );
+    } else {
+      console.log(`✅ Bucket created: ${BUCKET_NAME} (private)`);
+    }
+    return;
+  }
+
+  // ✅ اگر باکت از قبل وجود داشت، اطمینان از private بودن
+  const bucket = buckets?.find((b) => b.name === BUCKET_NAME);
+  if (bucket?.public) {
+    console.warn(
+      `⚠️  Bucket ${BUCKET_NAME} is PUBLIC — updating to PRIVATE...`
+    );
+    const { error: updateError } =
+      await storageClient.storage.updateBucket(BUCKET_NAME, {
+        public: false,
+      });
+    if (updateError) {
+      console.error(
+        `❌ Failed to update bucket visibility:`,
+        updateError.message
+      );
+    } else {
+      console.log(`✅ Bucket ${BUCKET_NAME} is now PRIVATE`);
+    }
+  }
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+// ─── اجرای ensureBucket در startup ──────────────────
+ensureBucket().catch((err) =>
+  console.error("ensureBucket failed:", err)
+);
 
-// ─── Helpers ─────────────────────────────────────────────────────────────
-// Cache path includes a content-version (updated_at) so an edited invoice
-// gets a new path automatically instead of serving a stale PDF for 24h.
-function getCachePath(invoiceId: string, versionKey: string): string {
-  const hash = createHash('sha256').update(`${invoiceId}:${versionKey}`).digest('hex')
-  return `invoices/${hash}.pdf`
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// ─── Helpers ───────────────────────────────────────
+// ✅ FIX 2: هماهنگ با pdf-queue.ts — هر دو SHA-256
+function getCachePath(
+  invoiceId: string,
+  versionKey: string
+): string {
+  const hash = createHash("sha256")
+    .update(`${invoiceId}:${versionKey}`)
+    .digest("hex");
+  return `invoices/${hash}.pdf`;
 }
 
-async function getCachedSignedUrl(path: string): Promise<string | null> {
-  if (!storageClient) return null
+async function getCachedSignedUrl(
+  path: string
+): Promise<string | null> {
+  if (!storageClient) return null;
   const { data } = await storageClient.storage
     .from(BUCKET_NAME)
-    .createSignedUrl(path, SIGNED_URL_TTL_SECONDS)
-  return data?.signedUrl ?? null
+    .createSignedUrl(path, SIGNED_URL_TTL_SECONDS);
+  return data?.signedUrl ?? null;
 }
 
-async function uploadPdf(path: string, buffer: Buffer): Promise<void> {
-  if (!storageClient) return
+async function uploadPdf(
+  path: string,
+  buffer: Buffer
+): Promise<void> {
+  if (!storageClient) return;
   const { error } = await storageClient.storage
     .from(BUCKET_NAME)
     .upload(path, buffer, {
-      contentType: 'application/pdf',
+      contentType: "application/pdf",
       upsert: true,
-      cacheControl: '86400',
-    })
-  if (error) throw error
+      cacheControl: "86400",
+    });
+  if (error) throw error;
 }
 
-// ─── Routes ──────────────────────────────────────────────────────────────
-export async function invoicePdfRoutes(fastify: FastifyInstance) {
-
-  fastify.get<{ Params: { id: string } }>('/api/invoices/:id/pdf', {
-    preHandler: [authenticate],
-    config: {
-      rateLimit: { max: 10, timeWindow: '1 minute' },
-    },
-    schema: {
-      params: {
-        type: 'object',
-        required: ['id'],
-        properties: { id: { type: 'string' } },
+// ─── Routes ────────────────────────────────────────
+export async function invoicePdfRoutes(
+  fastify: FastifyInstance
+) {
+  fastify.get<{ Params: { id: string } }>(
+    "/api/invoices/:id/pdf",
+    {
+      preHandler: [authenticate],
+      config: {
+        rateLimit: { max: 10, timeWindow: "1 minute" },
+      },
+      schema: {
+        params: {
+          type: "object",
+          required: ["id"],
+          properties: { id: { type: "string" } },
+        },
       },
     },
-  }, async (request: FastifyRequest<{ Params: { id: string } }>, reply: FastifyReply) => {
-    const { id } = request.params
-    const userId = (request as any).userId
+    async (
+      request: FastifyRequest<{ Params: { id: string } }>,
+      reply: FastifyReply
+    ) => {
+      const { id } = request.params;
+      const userId = (request as any).userId;
 
-    if (!userId) {
-      return reply.code(401).send({ error: 'Unauthorized' })
+      if (!userId) {
+        return reply.code(401).send({ error: "Unauthorized" });
+      }
+      if (!UUID_RE.test(id)) {
+        return reply
+          .code(400)
+          .send({ error: "Invalid invoice id" });
+      }
+
+      // 1. Fetch invoice with ownership check
+      const { data: invoice, error } = await supabase
+        .from("invoices")
+        .select("*, invoice_items(*)")
+        .eq("id", id)
+        .eq("user_id", userId)
+        .single();
+
+      if (error || !invoice) {
+        return reply
+          .code(404)
+          .send({ error: "Invoice not found" });
+      }
+
+      // 2. Cache lookup — SHA-256 hash (✅ هماهنگ با pdf-queue.ts)
+      const versionKey =
+        (invoice as any).updated_at ||
+        (invoice as any).created_at ||
+        "v1";
+      const cachePath = getCachePath(id, versionKey);
+
+      const cachedUrl = await getCachedSignedUrl(cachePath);
+      if (cachedUrl) {
+        return reply.redirect(cachedUrl, 302);
+      }
+
+      // 3. Generate PDF + Upload (fire-and-forget)
+      try {
+        const stream = await renderToStream(
+          InvoicePDFDocument({ invoice: invoice as any })
+        );
+
+        const chunks: Buffer[] = [];
+        stream.on("data", (chunk: Buffer) =>
+          chunks.push(chunk)
+        );
+        stream.on("error", (err: Error) => {
+          fastify.log.error(
+            { err, invoiceId: id },
+            "PDF stream failed"
+          );
+        });
+        stream.on("end", async () => {
+          try {
+            await uploadPdf(
+              cachePath,
+              Buffer.concat(chunks)
+            );
+          } catch (err) {
+            fastify.log.error(
+              { err, invoiceId: id },
+              "PDF cache upload failed"
+            );
+          }
+        });
+
+        reply.header("Content-Type", "application/pdf");
+        reply.header(
+          "Content-Disposition",
+          `attachment; filename="Invoice-${
+            (invoice as any).invoice_number || id
+          }.pdf"`
+        );
+        reply.header(
+          "Cache-Control",
+          "private, max-age=3600"
+        );
+
+        return reply.send(stream);
+      } catch (err) {
+        fastify.log.error(
+          { err, invoiceId: id },
+          "PDF generation failed"
+        );
+        return reply
+          .code(500)
+          .send({ error: "PDF generation failed" });
+      }
     }
-    if (!UUID_RE.test(id)) {
-      return reply.code(400).send({ error: 'Invalid invoice id' })
-    }
-
-    // 1. Fetch invoice AND explicitly verify ownership.
-    //    Do not rely on RLS alone — verify in application code too, since
-    //    a shared/service-scoped client will not automatically filter by
-    //    the requesting user.
-    const { data: invoice, error } = await supabase
-      .from('invoices')
-      .select('*, invoice_items(*)')
-      .eq('id', id)
-      .eq('user_id', userId) // ← ownership check (was missing)
-      .single()
-
-    if (error || !invoice) {
-      return reply.code(404).send({ error: 'Invoice not found' })
-    }
-
-    // 2. Cache lookup — path is versioned by updated_at so edits invalidate
-    //    the cache automatically.
-    const versionKey = (invoice as any).updated_at || (invoice as any).created_at || 'v1'
-    const cachePath = getCachePath(id, versionKey)
-
-    const cachedUrl = await getCachedSignedUrl(cachePath)
-    if (cachedUrl) {
-      return reply.redirect(cachedUrl, 302)
-    }
-
-    try {
-      // 3. Generate PDF
-      const stream = await renderToStream(
-        InvoicePDFDocument({ invoice: invoice as any })
-      )
-
-      const chunks: Buffer[] = []
-      stream.on('data', (chunk: Buffer) => chunks.push(chunk))
-      stream.on('error', (err: Error) => {
-        fastify.log.error({ err, invoiceId: id }, 'PDF stream failed')
-      })
-      stream.on('end', async () => {
-        try {
-          await uploadPdf(cachePath, Buffer.concat(chunks))
-        } catch (err) {
-          fastify.log.error({ err, invoiceId: id }, 'PDF cache upload failed')
-        }
-      })
-
-      reply.header('Content-Type', 'application/pdf')
-      reply.header(
-        'Content-Disposition',
-        `attachment; filename="Invoice-${(invoice as any).invoice_number || id}.pdf"`
-      )
-      // Private financial document — do not let shared/CDN caches store it.
-      reply.header('Cache-Control', 'private, max-age=3600')
-
-      // Recommended: audit trail for financial-document access.
-      // await logAuditEvent({ action: 'invoice_pdf_downloaded', invoiceId: id, userId })
-
-      return reply.send(stream)
-    } catch (err) {
-      fastify.log.error({ err, invoiceId: id }, 'PDF generation failed')
-      return reply.code(500).send({ error: 'PDF generation failed' })
-    }
-  })
+  );
 }
