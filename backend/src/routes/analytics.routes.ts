@@ -1,5 +1,6 @@
 // ============================================
 // backend/src/routes/api/analytics.routes.ts
+// FIXED: Reduced cache TTL for real-time updates
 // ============================================
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
@@ -67,8 +68,9 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
   // DASHBOARD KPIs
   // ═══════════════════════════════════════════════════════════
 
+  // ✅ FIX: کاهش TTL از 300 به 30 ثانیه
   fastify.get('/api/analytics/dashboard', {
-    preHandler: [authenticate, cacheMiddleware({ ttl: 300, keyPrefix: 'dashboard' })],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 30, keyPrefix: 'dashboard' })],
     schema: {
       response: {
         200: toJsonSchema(DashboardKPIsSchema),
@@ -90,11 +92,12 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
   })
 
   // ═══════════════════════════════════════════════════════════
-  // SALES ANALYTICS — Production Ready ✅
+  // SALES ANALYTICS
   // ═══════════════════════════════════════════════════════════
 
+  // ✅ FIX: کاهش TTL از 120 به 30 ثانیه
   fastify.get('/api/analytics/sales', {
-    preHandler: [authenticate, cacheMiddleware({ ttl: 120, keyPrefix: 'sales' })],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 30, keyPrefix: 'sales' })],
     schema: {
       querystring: toJsonSchema(DateRangeSchema),
       response: {
@@ -119,8 +122,6 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
       }
 
       const summary = await analyticsService.getSalesSummary(request.userId, dateRange)
-
-      // ✅ Validate with Zod before sending
       const validated = SalesSummarySchema.parse(summary)
       return reply.send(validated)
 
@@ -139,7 +140,7 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
   // ═══════════════════════════════════════════════════════════
 
   fastify.get('/api/analytics/inventory', {
-    preHandler: [authenticate, cacheMiddleware({ ttl: 120, keyPrefix: 'inventory' })],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'inventory' })],
     schema: {
       response: { 200: toJsonSchema(z.any()) },
     },
@@ -158,7 +159,7 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
   // ═══════════════════════════════════════════════════════════
 
   fastify.get('/api/analytics/financial', {
-    preHandler: [authenticate, cacheMiddleware({ ttl: 120, keyPrefix: 'financial' })],
+    preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'financial' })],
     schema: {
       querystring: toJsonSchema(
         z.object({

@@ -3,10 +3,11 @@
 
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
-import { useDashboardKPIs, useAIInsights, useDashboardSales, useInvoices } from "@hisabche/api";
+import { useDashboardKPIs, useAIInsights, useDashboardSales, useInvoices, useRealtime } from "@hisabche/api";
 import { DashboardView } from "../dashboard-view";
 import { fmt } from "../../../../lib/dashboard/dashboard-format";
 import { useState, useCallback, useMemo, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import type { DateRange, PresetKey } from "../date-range-picker";
 
 interface RecentInvoice {
@@ -29,6 +30,7 @@ function getDaysAgo(days: number): string {
 export function DashboardContainer() {
   const { t } = useTranslation();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const [dateRange, setDateRange] = useState<DateRange>(() => {
     const today = new Date();
@@ -59,16 +61,24 @@ export function DashboardContainer() {
   });
   const { data: invoicesData, isLoading: invoicesLoading, refetch: refetchInvoices } = invoicesResult;
 
-  // ✅ دیباگ: لاگ کردن داده‌ها
-  console.log('📊 DashboardContainer - salesData:', salesData);
-  console.log('📊 DashboardContainer - invoicesData:', invoicesData);
+  // ✅ Real-time subscription for invoices
+  useRealtime({ 
+    table: "invoices", 
+    queryKey: ["invoices"] 
+  });
 
-  // ✅ Polling
+  // ✅ Real-time subscription for dashboard data
+  useRealtime({ 
+    table: "invoices", 
+    queryKey: ["dashboard"] 
+  });
+
+  // ✅ Polling with shorter intervals
   useEffect(() => {
-    const interval1 = setInterval(() => refetchKpis(), 30000);
-    const interval2 = setInterval(() => refetchInsights(), 60000);
-    const interval3 = setInterval(() => refetchSales(), 30000);
-    const interval4 = setInterval(() => refetchInvoices(), 30000);
+    const interval1 = setInterval(() => refetchKpis(), 10000); // 10 seconds
+    const interval2 = setInterval(() => refetchInsights(), 30000); // 30 seconds
+    const interval3 = setInterval(() => refetchSales(), 10000); // 10 seconds
+    const interval4 = setInterval(() => refetchInvoices(), 10000); // 10 seconds
 
     return () => {
       clearInterval(interval1);
@@ -97,13 +107,10 @@ export function DashboardContainer() {
     [router]
   );
 
-  // ✅ FIX: اصلاح mapping invoices برای نمایش صحیح نام مشتری
   const recentInvoices: RecentInvoice[] = useMemo(() => {
     const invoices = invoicesData?.invoices || [];
-    console.log('📊 invoices data structure:', invoices[0]); // دیباگ
     
     return invoices.slice(0, 5).map((inv: any) => {
-      // ✅ تلاش برای پیدا کردن نام مشتری از ساختارهای مختلف
       let customerName = "مشتری";
       
       if (inv.customerName) {
@@ -111,7 +118,6 @@ export function DashboardContainer() {
       } else if (inv.customer?.name) {
         customerName = inv.customer.name;
       } else if (inv.customer_id && inv.customers) {
-        // اگر customers در response باشد
         customerName = inv.customers?.name || inv.customers?.full_name || "مشتری";
       } else if (inv.customer?.full_name) {
         customerName = inv.customer.full_name;
@@ -126,9 +132,7 @@ export function DashboardContainer() {
     });
   }, [invoicesData]);
 
-  // ✅ FIX: اصلاح salesChartData برای نمایش بهتر
   const salesChartData = useMemo(() => {
-    // اگر داده وجود دارد، از آن استفاده کن
     if (salesData?.chartData && Array.isArray(salesData.chartData) && salesData.chartData.length > 0) {
       return salesData.chartData;
     }
@@ -138,9 +142,6 @@ export function DashboardContainer() {
     if (Array.isArray(salesData)) {
       return salesData;
     }
-
-    // ✅ اگر داده‌ای وجود ندارد، یک آرایه خالی برگردان (نه با مقدار 0)
-    // این باعث می‌شود که پیام "هنوز فروشی ثبت نشده است" نمایش داده شود
     return [];
   }, [salesData]);
 

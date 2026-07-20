@@ -29,7 +29,6 @@ type AddProductModalProps = {
   onCreated?: () => void;
 };
 
-// ✅ FIX: تعریف نوع Unit
 type UnitType = "piece" | "kg" | "liter" | "meter" | "box";
 
 type FormData = {
@@ -117,7 +116,7 @@ export const AddProductModal = memo(function AddProductModal({
         quantity: formData.quantity,
         buyPrice: formData.buyPrice,
         sellPrice: formData.sellPrice,
-        unit: formData.unit, // ✅ حالا درست است
+        unit: formData.unit,
         minStockLevel: formData.minStock,
         category: "general",
         isActive: true,
@@ -142,6 +141,8 @@ export const AddProductModal = memo(function AddProductModal({
         minStock: 5,
       });
       setErrors({});
+      
+      // ✅ FIX: این خط باعث می‌شود که کش در container پاک شود
       onCreated?.();
       onClose();
     } catch (error) {

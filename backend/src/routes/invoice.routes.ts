@@ -1,6 +1,6 @@
 // ============================================
 // backend/src/routes/invoice.routes.ts
-// Hisabche v1.1 — Uses InvoiceService (with workflow + accounting)
+// FIXED: Invalidate analytics cache after invoice operations
 // ============================================
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
@@ -66,7 +66,8 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
     }
   );
 
-  // POST /api/invoices
+  // ─── POST /api/invoices ─────────────────────────────────
+  // ✅ FIX: Invalidate analytics cache
   fastify.post(
     "/api/invoices",
     {
@@ -107,9 +108,13 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
         };
 
         const invoice = await invoiceService.create(userId, data);
-        await clearCache('invoices:*');
-        await clearCache('dashboard:*');
-        await clearCache('sales:*');
+        
+        // ✅ FIX: Invalidate all related caches
+        await clearCache(`invoices:${userId}:*`);
+        await clearCache(`dashboard:v2:${userId}`);
+        await clearCache(`sales:${userId}:*`);
+        await clearCache(`insights:${userId}`);
+        
         return reply.code(201).send(invoice);
       } catch (err: any) {
         fastify.log.error(err);
@@ -118,7 +123,8 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
     }
   );
 
-  // PATCH /api/invoices/:id
+  // ─── PATCH /api/invoices/:id ────────────────────────────
+  // ✅ FIX: Invalidate analytics cache
   fastify.patch(
     "/api/invoices/:id",
     {
@@ -130,10 +136,14 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
         const body = request.body as any;
         const userId = (request as any).userId;
         const invoice = await invoiceService.update(id, userId, body);
-        await clearCache(`invoice:${id}`);
-        await clearCache('invoices:*');
-        await clearCache('dashboard:*');
-        await clearCache('sales:*');
+        
+        // ✅ FIX: Invalidate all related caches
+        await clearCache(`invoice:${userId}:${id}`);
+        await clearCache(`invoices:${userId}:*`);
+        await clearCache(`dashboard:v2:${userId}`);
+        await clearCache(`sales:${userId}:*`);
+        await clearCache(`insights:${userId}`);
+        
         return reply.send(invoice);
       } catch (err: any) {
         fastify.log.error(err);
@@ -142,7 +152,8 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
     }
   );
 
-  // DELETE /api/invoices/:id
+  // ─── DELETE /api/invoices/:id ───────────────────────────
+  // ✅ FIX: Invalidate analytics cache
   fastify.delete(
     "/api/invoices/:id",
     {
@@ -153,10 +164,14 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
         const { id } = request.params as { id: string };
         const userId = (request as any).userId;
         await invoiceService.delete(id, userId);
-        await clearCache(`invoice:${id}`);
-        await clearCache('invoices:*');
-        await clearCache('dashboard:*');
-        await clearCache('sales:*');
+        
+        // ✅ FIX: Invalidate all related caches
+        await clearCache(`invoice:${userId}:${id}`);
+        await clearCache(`invoices:${userId}:*`);
+        await clearCache(`dashboard:v2:${userId}`);
+        await clearCache(`sales:${userId}:*`);
+        await clearCache(`insights:${userId}`);
+        
         return reply.code(204).send();
       } catch (err: any) {
         fastify.log.error(err);

@@ -1,27 +1,36 @@
+
 // packages/ui/src/hooks/warehouse/use-warehouse.ts
 "use client"
 
-import { useMemo, useCallback } from "react"
+import { useMemo, useCallback, useEffect } from "react"
 import { useTranslation } from "react-i18next"
 import { useProducts, useDeleteProduct, useRealtime } from "@hisabche/api"
 import { useSyncStore, useBackupStore } from "@hisabche/store"
 import { mapProducts, calculateTotals } from "../../lib/warehouse/warehouse-mappers"
 import type { RawProduct } from "../../lib/warehouse/warehouse-types"
 
-// ✅ اصلاح: useWarehouse (با حرف بزرگ)
 export function useWarehouse(search: string) {
   const { t } = useTranslation()
+
   const { data, isLoading, refetch } = useProducts({
     page: 1,
     limit: 100,
     sortDirection: "desc",
     search,
   })
+
   const deleteProduct = useDeleteProduct()
   const { setSaveStatus } = useSyncStore()
   const { moveToTrash } = useBackupStore()
 
+  // ✅ Real-time subscription for products
   useRealtime({ table: "products", queryKey: ["products"] })
+
+  // ✅ دیباگ: لاگ کردن داده‌ها
+  useEffect(() => {
+    console.log('📊 useWarehouse - products count:', data?.products?.length)
+    console.log('📊 useWarehouse - total:', data?.total)
+  }, [data])
 
   const products = useMemo(
     () => mapProducts(data?.products as RawProduct[] | undefined, (key: string) => t(key)),

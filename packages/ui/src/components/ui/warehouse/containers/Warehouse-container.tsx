@@ -8,6 +8,8 @@ import { useWarehouse } from "../../../../hooks/warehouse/use-warehouse";
 import { WarehouseView } from "../warehouse-view";
 import { AddProductModal } from "../../add-product-modal";
 import { fmt } from "../../../../lib/warehouse/warehouse-format";
+import { useQueryClient } from "@tanstack/react-query";
+import { productKeys } from "@hisabche/api";
 
 const CURRENCIES = [
   { code: "AFN", label: "افغانی", rate: 1 },
@@ -18,6 +20,7 @@ const CURRENCIES = [
 export function warehouseContainer() {
   const { t } = useTranslation();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -32,6 +35,7 @@ export function warehouseContainer() {
     stockStatus,
     stockLabel,
     handleDelete,
+    refetch,
   } = useWarehouse(search);
 
   const onDelete = useCallback(
@@ -57,7 +61,21 @@ export function warehouseContainer() {
   );
 
   const handleOpenAddModal = useCallback(() => setShowAddModal(true), []);
-  const handleCloseAddModal = useCallback(() => setShowAddModal(false), []);
+
+  // ✅ FIX: بعد از بستن مودال و ایجاد محصول، کش را پاک کن
+  const handleCloseAddModal = useCallback(() => {
+    setShowAddModal(false);
+    // ✅ پاک کردن کش محصولات
+    queryClient.invalidateQueries({ queryKey: productKeys.lists() });
+    // ✅ رفرش کردن داده‌ها
+    refetch();
+  }, [queryClient, refetch]);
+
+  // ✅ FIX: وقتی محصول جدید ایجاد شد، کش را پاک کن
+  const handleProductCreated = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: productKeys.lists() });
+    refetch();
+  }, [queryClient, refetch]);
 
   const viewProps = {
     t: safeT,
@@ -84,7 +102,7 @@ export function warehouseContainer() {
       <AddProductModal
         open={showAddModal}
         onClose={handleCloseAddModal}
-        onCreated={() => {}}
+        onCreated={handleProductCreated}
       />
       <WarehouseView {...viewProps} />
     </>
