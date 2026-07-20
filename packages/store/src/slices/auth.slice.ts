@@ -33,6 +33,21 @@ const encryptedStorage = {
 }
 
 // ============================================
+// ✅ FIX: پاک کردن تمام stateهای persist شده
+// ============================================
+function clearAllPersistedState() {
+  if (typeof window === 'undefined') return
+  try {
+    const allKeys = Object.keys(localStorage)
+    for (const key of allKeys) {
+      if (key.startsWith('hisabche-') || key.includes('zustand')) {
+        localStorage.removeItem(key)
+      }
+    }
+  } catch {}
+}
+
+// ============================================
 // TYPES
 // ============================================
 export interface User {
@@ -180,7 +195,6 @@ export const useAuthStore = create<AuthState>()(
             return
           }
 
-          // ✅ FIX: API call به بک‌اند به جای supabase مستقیم
           const result = await apiLogin(
             credentials.email.trim(),
             credentials.password
@@ -215,8 +229,10 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true, error: null })
 
         try {
-          // ✅ FIX: API call به بک‌اند به جای supabase.auth.signUp مستقیم
           const result = await apiSignup(data)
+
+          // ✅ FIX: پاک کردن state قبلی قبل از ذخیره جدید
+          clearAllPersistedState()
 
           set({
             user: result.user,
@@ -247,12 +263,14 @@ export const useAuthStore = create<AuthState>()(
         try {
           const state = get()
           if (!state.isDemo && state.token) {
-            // ✅ FIX: API call به بک‌اند به جای supabase.auth.signOut
             await apiLogout(state.token)
           }
         } catch (err) {
           console.error('LOGOUT ERROR:', err)
         } finally {
+          // ✅ FIX: پاک کردن تمام stateها
+          clearAllPersistedState()
+
           set({
             user: null,
             token: null,
