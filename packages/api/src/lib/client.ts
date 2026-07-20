@@ -1,6 +1,4 @@
-// packages/api/src/lib/client.ts
 import axios, { AxiosInstance, AxiosError } from 'axios'
-import { supabaseClient } from '@hisabche/auth'
 
 // ============================================
 // Types
@@ -19,9 +17,23 @@ export interface ApiError {
 }
 
 // ============================================
+// ✅ Token Manager (جایگزین supabase session)
+// ============================================
+let authToken: string | null = null
+
+export function setApiToken(token: string | null) {
+  authToken = token
+}
+
+export function getApiToken(): string | null {
+  return authToken
+}
+
+// ============================================
 // Client Setup
 // ============================================
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.hisabche.com/api'
+const BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || 'https://api.hisabche.com/api'
 const isDev = process.env.NODE_ENV !== 'production'
 
 const devLog = (...args: unknown[]) => {
@@ -35,9 +47,8 @@ export const apiClient: AxiosInstance = axios.create({
     'Content-Type': 'application/json',
     Accept: 'application/json',
   },
-  // ✅ اضافه شد: limit پیش‌فرض برای همه درخواست‌ها
   params: {
-    limit: 50, // کاهش از ۵۰۰ به ۵۰
+    limit: 50,
   },
 })
 
@@ -48,42 +59,33 @@ const isBrowser = (): boolean =>
   typeof window !== 'undefined' && typeof localStorage !== 'undefined'
 
 // ============================================
-// Request Interceptor — Shared Supabase JWT
+// Request Interceptor — ✅ فقط از authToken
 // ============================================
 apiClient.interceptors.request.use(
   async (config) => {
-    try {
-      let token: string | null = null
-
-      // اولویت ۱: Supabase session
-      const { data: { session } } = await supabaseClient.auth.getSession()
-      if (session?.access_token) {
-        token = session.access_token
-        devLog('[API Client] token source: supabase session')
-      }
-
-      // اولویت ۲: localStorage (fallback)
-      if (!token && isBrowser()) {
-        const storedToken = localStorage.getItem('hisabche-token')
-        if (storedToken) {
-          token = storedToken
-          devLog('[API Client] token source: localStorage fallback')
+    // ✅ اولویت ۱: authToken (از Zustand store set می‌شه)
+    if (authToken) {
+      config.headers.Authorization = `Bearer ${authToken}`
+      devLog('[API Client] token source: authToken')
+    }
+    // ✅ اولویت ۲: localStorage fallback (برای hydration)
+    else if (isBrowser()) {
+      try {
+        const stored = localStorage.getItem('hisabche-auth')
+        if (stored) {
+          const parsed = JSON.parse(stored)
+          const token = parsed?.state?.token
+          if (token) {
+            authToken = token
+            config.headers.Authorization = `Bearer ${token}`
+            devLog('[API Client] token source: localStorage hisabche-auth')
+          }
         }
-      }
+      } catch {}
+    }
 
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`
-      } else {
-        devLog('[API Client] no token found — request sent unauthenticated')
-      }
-    } catch (err) {
-      if (isDev) console.error('[API Client] getSession error:', err)
-      if (isBrowser()) {
-        const fallbackToken = localStorage.getItem('hisabche-token')
-        if (fallbackToken) {
-          config.headers.Authorization = `Bearer ${fallbackToken}`
-        }
-      }
+    if (!authToken) {
+      devLog('[API Client] no token — unauthenticated request')
     }
 
     const lang = isBrowser()
@@ -95,7 +97,7 @@ apiClient.interceptors.request.use(
 
     return config
   },
-  (error) => Promise.reject(error),
+  (error) => Promise.reject(error)
 )
 
 // ============================================
@@ -103,23 +105,33 @@ apiClient.interceptors.request.use(
 // ============================================
 apiClient.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<{ message?: string; code?: string; details?: Record<string, string[]> }>) => {
+  (
+    error: AxiosError<{
+      message?: string
+      code?: string
+      details?: Record<string, string[]>
+    }>
+  ) => {
     const responseData = error.response?.data as any
 
     const apiError: ApiError = {
-      message: responseData?.message || error.message || 'An unexpected error occurred',
+      message:
+        responseData?.message ||
+        error.message ||
+        'An unexpected error occurred',
       code: responseData?.code || 'UNKNOWN_ERROR',
       status: error.response?.status || 500,
       details: responseData?.details,
     }
 
     if (apiError.status === 401 && isBrowser()) {
-      devLog('[API Client] 401 received — clearing stored token')
-      localStorage.removeItem('hisabche-token')
+      devLog('[API Client] 401 — clearing token')
+      authToken = null
+      localStorage.removeItem('hisabche-auth')
     }
 
     return Promise.reject(apiError)
-  },
+  }
 )
 
 export default apiClient
