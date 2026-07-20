@@ -679,12 +679,12 @@ function SignupForm({
       dir: "rtl",
     },
     {
-      name: "companyName",
+      name: "businessName",
       type: "text",
-      label: st("signup.companyName", "نام شرکت / فروشگاه"),
+      label: st("signup.businessName", "نام شرکت / فروشگاه"),
       icon: <IconStore />,
-      value: watch("companyName"),
-      err: errors.companyName,
+      value: watch("businessName"),
+      err: errors.businessName,
       dir: "rtl",
     },
     {
