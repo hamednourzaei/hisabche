@@ -9,16 +9,21 @@ import { z } from "zod";
 import { useAuthStore, type User } from "@hisabche/store";
 import { loginSchema, type LoginInput } from "@hisabche/validation";
 import { AuthShell } from "@hisabche/ui";
-import { supabaseClient } from "@hisabche/auth";
-/* ═══════════════════════════════════════════════════════════════════════════
-   AuthContainer v2 — Fixed switch mode + signup submit
-   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ═══════════════════════════════════════════════════════════
+   AuthContainer v3 — Full backend-auth migration
+   ✅ Removed direct supabaseClient.auth calls
+   ✅ Using useAuthStore().login() + useAuthStore().signup()
+   ═══════════════════════════════════════════════════════════ */
 
 const signupSchema = z.object({
   fullName: z.string().min(2, "signup.errors.fullName"),
-  companyName: z.string().min(2, "signup.errors.companyName"),
+  businessName: z.string().min(2, "signup.errors.businessName"),
   phone: z.string().optional().or(z.literal("")),
-  email: z.string().min(1, "signup.errors.emailRequired").email("signup.errors.emailInvalid"),
+  email: z
+    .string()
+    .min(1, "signup.errors.emailRequired")
+    .email("signup.errors.emailInvalid"),
   password: z.string().min(8, "signup.errors.passwordMin"),
 });
 type SignupInput = z.infer<typeof signupSchema>;
@@ -31,27 +36,28 @@ function useSafeT() {
   };
 }
 
-export function AuthContainer({ initialMode = "login" }: { initialMode?: "login" | "signup" }) {
+export function AuthContainer({
+  initialMode = "login",
+}: {
+  initialMode?: "login" | "signup";
+}) {
   const router = useRouter();
   const { t } = useTranslation();
   const st = useSafeT();
   const [flipped, setFlipped] = useState(initialMode === "signup");
 
   // ─── Switch mode ──────────────────────────────
-const handleSwitch = useCallback(() => {
-  // اول flip
-  setFlipped((prev) => !prev);
-  
-  // بعد از اتمام انیمیشن، URL رو عوض کن
-  setTimeout(() => {
-    const currentFlipped = !flipped; // flipped قبلی
-    if (currentFlipped) {
-      router.replace("/signup", { scroll: false });
-    } else {
-      router.replace("/login", { scroll: false });
-    }
-  }, 650); // هماهنگ با transition flip (0.65s)
-}, [flipped, router]);
+  const handleSwitch = useCallback(() => {
+    setFlipped((prev) => !prev);
+    setTimeout(() => {
+      const currentFlipped = !flipped;
+      if (currentFlipped) {
+        router.replace("/signup", { scroll: false });
+      } else {
+        router.replace("/login", { scroll: false });
+      }
+    }, 650);
+  }, [flipped, router]);
 
   // ─── Login form ────────────────────────────────
   const loginForm = useForm<LoginInput>({
@@ -62,16 +68,9 @@ const handleSwitch = useCallback(() => {
   const loginStore = useAuthStore();
 
   const onLoginSubmit = loginForm.handleSubmit(async (data: LoginInput) => {
-    const { error } = await supabaseClient.auth.signInWithPassword({
-      email: data.email,
-      password: data.password,
-    });
-    if (error) {
-      useAuthStore.setState({ error: error.message, isLoading: false });
-      return;
-    }
-
+    // ✅ FIX: استفاده از useAuthStore().login() به جای supabaseClient مستقیم
     await loginStore.login(data);
+
     const s = useAuthStore.getState();
     if (s.isAuthenticated && !s.error) {
       router.push("/dashboard");
@@ -79,7 +78,10 @@ const handleSwitch = useCallback(() => {
   });
 
   const onDemoLogin = useCallback(async () => {
-    await loginStore.login({ email: "demo@hisabche.com", password: "Demo1234" });
+    await loginStore.login({
+      email: "demo@hisabche.com",
+      password: "Demo1234",
+    });
     const s = useAuthStore.getState();
     if (s.isAuthenticated && !s.error) {
       router.push("/dashboard");
@@ -90,7 +92,10 @@ const handleSwitch = useCallback(() => {
     st,
     serverError: loginStore.error,
     isLoading: loginStore.isLoading,
-    errors: loginForm.formState.errors as Record<string, { message?: string } | undefined>,
+    errors: loginForm.formState.errors as Record<
+      string,
+      { message?: string } | undefined
+    >,
     register: loginForm.register as any,
     watch: loginForm.watch as any,
     handleSubmit: loginForm.handleSubmit as any,
@@ -104,50 +109,44 @@ const handleSwitch = useCallback(() => {
   // ─── Signup form ───────────────────────────────
   const signupForm = useForm<SignupInput>({
     resolver: zodResolver(signupSchema),
-    defaultValues: { fullName: "", companyName: "", phone: "", email: "", password: "" },
+    defaultValues: {
+      fullName: "",
+      businessName: "",
+      phone: "",
+      email: "",
+      password: "",
+    },
   });
   const [signupShowPassword, setSignupShowPassword] = useState(false);
   const signupStore = useAuthStore();
 
-const onSignupSubmit = signupForm.handleSubmit(async (data: SignupInput) => {
-  const { data: authData, error } = await supabaseClient.auth.signUp({
-    email: data.email,
-    password: data.password,
-    options: { data: { full_name: data.fullName } },
-  });
-  
-  if (error) {
-    useAuthStore.setState({ error: error.message, isLoading: false });
-    return;
-  }
+  const onSignupSubmit = signupForm.handleSubmit(
+    async (data: SignupInput) => {
+      // ✅ FIX: استفاده از useAuthStore().signup() به جای supabaseClient.auth.signUp()
+      await signupStore.signup({
+        email: data.email,
+        password: data.password,
+        fullName: data.fullName,
+        businessName: data.businessName,
+      });
 
-  // ✅ اگه user برگشت (بعضی وقتا Supabase auto-confirm میکنه)
-  if (authData?.user) {
-    const user: User = {
-      id: authData.user.id,
-      email: authData.user.email || data.email,
-      fullName: data.fullName,
-      businessName: data.companyName,
-      createdAt: authData.user.created_at || new Date().toISOString(),
-    };
-    useAuthStore.setState({ user, isAuthenticated: true, isDemo: false, isLoading: false });
-    router.push("/dashboard");
-    return;
-  }
+      const s = useAuthStore.getState();
+      if (s.isAuthenticated && !s.error) {
+        router.push("/dashboard");
+      }
+    }
+  );
 
-  // ⚠️ اگه user برنگشت — نیاز به email verification
-  useAuthStore.setState({ 
-    error: "لطفاً ایمیل خود را تأیید کنید. لینک تأیید به ایمیل شما ارسال شد.",
-    isLoading: false 
-  });
-});
   const translateError = (k?: string) => (k ? t(k, k) : undefined);
 
   const signupProps = {
     st,
     serverError: signupStore.error,
     isLoading: signupStore.isLoading,
-    errors: signupForm.formState.errors as Record<string, { message?: string } | undefined>,
+    errors: signupForm.formState.errors as Record<
+      string,
+      { message?: string } | undefined
+    >,
     register: signupForm.register as any,
     watch: signupForm.watch as any,
     handleSubmit: signupForm.handleSubmit as any,
