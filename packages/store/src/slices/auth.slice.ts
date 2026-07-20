@@ -76,7 +76,7 @@ const API_BASE =
 // HELPERS: API calls (جایگزین supabase مستقیم)
 // ============================================
 async function apiLogin(email: string, password: string) {
-  const res = await fetch(`${API_BASE}/api/auth/login`, {
+  const res = await fetch(`${API_BASE}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
@@ -96,7 +96,7 @@ async function apiSignup(data: {
   fullName: string
   businessName?: string
 }) {
-  const res = await fetch(`${API_BASE}/api/auth/signup`, {
+  const res = await fetch(`${API_BASE}/auth/signup`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
@@ -111,7 +111,7 @@ async function apiSignup(data: {
 }
 
 async function apiLogout(token: string) {
-  await fetch(`${API_BASE}/api/auth/logout`, {
+  await fetch(`${API_BASE}/auth/logout`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
