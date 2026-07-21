@@ -37,3 +37,34 @@ export const mapLowStockItems = (
       quantity: p.quantity,
     }));
 };
+
+// ✅ تابع جدید برای تبدیل داده‌های فروش به فرمت نمودار
+export const mapSalesToChartData = (
+  salesData: Array<{ date: string; total: number }> | undefined,
+  locale: string = "fa-AF"
+) => {
+  if (!salesData || !Array.isArray(salesData) || salesData.length === 0) {
+    return [];
+  }
+
+  return salesData.map((item) => {
+    try {
+      const date = new Date(item.date);
+      const label = new Intl.DateTimeFormat(locale, {
+        month: "short",
+        day: "numeric",
+      }).format(date);
+      return {
+        label,
+        value: item.total,
+        date: item.date,
+      };
+    } catch {
+      return {
+        label: item.date,
+        value: item.total,
+        date: item.date,
+      };
+    }
+  });
+};

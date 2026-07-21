@@ -32,63 +32,50 @@ export function useDashboardData(dateRange: DateRange) {
 
   // ─── Data Fetching ──────────────────────────────────────────────────────
 
-  // ✅ حذف refetchInterval از آرگومان (API آرگومان نمی‌گیرد)
   const {
     data: kpis,
     isLoading: kpiLoading,
     refetch: refetchKpis,
   } = useDashboardKPIs();
 
-  // ✅ حذف refetchInterval از آرگومان (API آرگومان نمی‌گیرد)
   const {
     data: insights,
     isLoading: insightsLoading,
     refetch: refetchInsights,
   } = useAIInsights();
 
+  // ✅ اصلاح: استفاده از تاریخ محلی
   const fromDate = dateRange.from ? dateRange.from.toISOString().slice(0, 10) : getDaysAgo(30);
   const toDate = dateRange.to ? dateRange.to.toISOString().slice(0, 10) : getTodayDate();
 
-  // ✅ اصلاح تایپ‌ها برای پذیرش آرگومان دوم
   const {
     data: salesData,
     isLoading: salesLoading,
     refetch: refetchSales,
-  } = useDashboardSales(
-    {
-      from: fromDate,
-      to: toDate,
-    }
-    // refetchInterval در اینجا پشتیبانی نمی‌شود
-  );
+  } = useDashboardSales({
+    from: fromDate,
+    to: toDate,
+  });
 
-  // ✅ اصلاح تایپ‌ها برای پذیرش آرگومان دوم
   const {
     data: invoicesData,
     isLoading: invoicesLoading,
     refetch: refetchInvoices,
-  } = useInvoices(
-    {
-      page: 1,
-      limit: 5,
-      sortDirection: "desc",
-    }
-    // refetchInterval در اینجا پشتیبانی نمی‌شود
-  );
+  } = useInvoices({
+    page: 1,
+    limit: 5,
+    sortDirection: "desc",
+  });
 
-  // ✅ اصلاح تایپ‌ها برای پذیرش آرگومان دوم
   const {
     data: productsData,
     isLoading: productsLoading,
     refetch: refetchProducts,
-  } = useProducts(
-    {
-      page: 1,
-      limit: 100,
-      sortDirection: "desc",
-    }
-    // refetchInterval در اینجا پشتیبانی نمی‌شود
-  );
+  } = useProducts({
+    page: 1,
+    limit: 100,
+    sortDirection: "desc",
+  });
 
   // ─── Realtime Subscriptions ─────────────────────────────────────────────
 
@@ -104,13 +91,11 @@ export function useDashboardData(dateRange: DateRange) {
 
   // ─── Data Transformations ──────────────────────────────────────────────
 
-  // ✅ Recent Invoices: تبدیل تایپ از InvoiceWithCustomer به RawInvoice
   const recentInvoices: RecentInvoice[] = useMemo(() => {
     const invoices = (invoicesData?.invoices || []) as unknown as RawInvoice[];
     return mapRecentInvoices(invoices, (key) => t(key));
   }, [invoicesData, t]);
 
-  // ✅ Sales Chart Data
   const salesChartData = useMemo(() => {
     if (salesData?.chartData && Array.isArray(salesData.chartData) && salesData.chartData.length > 0) {
       return salesData.chartData;
@@ -124,13 +109,11 @@ export function useDashboardData(dateRange: DateRange) {
     return [];
   }, [salesData]);
 
-  // ✅ Low Stock Items
   const lowStockItems = useMemo(() => {
     const products = (productsData as ProductsResponse)?.products;
     return mapLowStockItems(products);
   }, [productsData]);
 
-  // ✅ Derived Metrics
   const pendingPaymentsCount = useMemo(() => {
     return kpis?.pendingPaymentsCount ?? 0;
   }, [kpis]);

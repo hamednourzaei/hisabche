@@ -6,7 +6,11 @@ import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
 import { ArrowUp, ArrowDown, FileText } from "lucide-react";
-import { useMediaQuery, useIsMobile, useIsReducedMotion } from "../../../hooks/dashboard/use-media-query"; // ✅ مسیر اصلاح شد
+import {
+  useMediaQuery,
+  useIsMobile,
+  useIsReducedMotion,
+} from "../../../hooks/dashboard/use-media-query";
 
 // Types
 export interface ChartDataPoint {
@@ -26,13 +30,10 @@ interface SalesChartProps {
 }
 
 // Lazy-load Recharts (بدون suspense)
-const DynamicAreaChart = dynamic(
-  () => import("./sales-chart-internal"),
-  {
-    ssr: false,
-    loading: () => <ChartSkeleton height={200} />,
-  }
-);
+const DynamicAreaChart = dynamic(() => import("./sales-chart-internal"), {
+  ssr: false,
+  loading: () => <ChartSkeleton height={200} />,
+});
 
 // ============= Skeleton =============
 const ChartSkeleton = memo(function ChartSkeleton({ height }: { height: number }) {
@@ -58,25 +59,25 @@ export const SalesChart = memo(function SalesChart({
 }: SalesChartProps) {
   const { t } = useTranslation();
   const descriptionId = useId();
-  const isMobile = useIsMobile(); // ✅ استفاده از هوک موجود
-  const isReducedMotion = useIsReducedMotion(); // ✅ استفاده از هوک موجود
+  const isMobile = useIsMobile();
+  const isReducedMotion = useIsReducedMotion();
 
   // Calculate insights with safe percentage
   const { percentageChange, isPositive, allZero, hasData } = useMemo(() => {
     const hasData = data && data.length > 0;
-    const allZero = hasData && data.every((d) => d.value === 0 || d.value === null || d.value === undefined);
-    
+    const allZero =
+      hasData && data.every((d) => d.value === 0 || d.value === null || d.value === undefined);
+
     let percentageChange = 0;
     let isPositive = false;
-    
+
     if (previousPeriodTotal > 0) {
       percentageChange = ((currentPeriodTotal - previousPeriodTotal) / previousPeriodTotal) * 100;
       isPositive = percentageChange >= 0;
     }
-    
-    // ✅ safe number
+
     percentageChange = Number.isFinite(percentageChange) ? percentageChange : 0;
-    
+
     return { percentageChange, isPositive, allZero, hasData };
   }, [data, currentPeriodTotal, previousPeriodTotal]);
 
@@ -116,19 +117,20 @@ export const SalesChart = memo(function SalesChart({
   }
 
   // Determine animation duration based on device and preference
-  const animationDuration = isMobile ? 0 : (isReducedMotion ? 0 : 200);
+  const animationDuration = isMobile ? 0 : isReducedMotion ? 0 : 200;
+
+  // ✅ اصلاح: استفاده از کلیدهای ترجمه‌ی صحیح
+  const ariaLabel = t("dashboard.salesChart.ariaLabel", "نمودار فروش");
+  const description = t("dashboard.salesChart.description", "نمودار فروش در بازه‌ی انتخاب‌شده");
 
   return (
     <section
       className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-4"
-      aria-label={t("dashboard.salesChart.ariaLabel")}
+      aria-label={ariaLabel}
     >
       {/* Hidden description for screen readers */}
       <div id={descriptionId} className="sr-only">
-        {t("dashboard.salesChart.description", {
-          total: fmt(currentPeriodTotal),
-          change: isPositive ? t("common.increase") : t("common.decrease")
-        })}
+        {description}
       </div>
 
       <div className="flex flex-col gap-3">
@@ -183,9 +185,7 @@ export const SalesChart = memo(function SalesChart({
 
         {/* Contextual footer */}
         <div className="flex items-center justify-between text-xs text-[hsl(var(--fg-tertiary))] pt-1 border-t border-[hsl(var(--border-default)/0.5)]">
-          <span>
-            {t("dashboard.dataRange", { count: data.length })}
-          </span>
+          <span>{t("dashboard.dataRange", { count: data.length })}</span>
           <span className="flex items-center gap-1">
             <span className="inline-block h-2 w-2 rounded-full bg-[hsl(var(--status-info))]" />
             {t("dashboard.salesTrend")}

@@ -1,130 +1,160 @@
 // packages/ui/src/hooks/dashboard/use-dashboard.ts
-"use client"
+"use client";
 
-import { useMemo } from "react"
-import { useTranslation } from "react-i18next"
-import { useInvoices, useProducts, useDashboardKPIs, useAIInsights } from "@hisabche/api"
-import { mapRecentInvoices } from "../../lib/dashboard/dashboard-mappers"
-import { useCurrency } from "./use-currency" // ✅ حذف type CurrencyCode
-import type { InvoicesResponse } from "../../lib/dashboard/dashboard-types"
+import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import {
+  useInvoices,
+  useProducts,
+  useDashboardKPIs,
+  useAIInsights,
+  useDashboardSales, // ✅ اضافه شد
+} from "@hisabche/api";
+import { mapRecentInvoices } from "../../lib/dashboard/dashboard-mappers";
+import { useCurrency } from "./use-currency";
+import { getDaysAgo, getTodayDate } from "../../lib/dashboard/dashboard-utils";
+import type { InvoicesResponse } from "../../lib/dashboard/dashboard-types";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
 interface InvoicesSummary {
-  todaySales?: number
-  todayCount?: number
-  monthlyRevenue?: number
-  totalDebt?: number
-  customerCount?: number
-  pendingCount?: number
+  todaySales?: number;
+  todayCount?: number;
+  monthlyRevenue?: number;
+  totalDebt?: number;
+  customerCount?: number;
+  pendingCount?: number;
 }
 
 interface ProductsSummary {
-  lowStockCount?: number
+  lowStockCount?: number;
   lowStockItems?: Array<{
-    id: string
-    name: string
-    quantity: number
-    reorderPoint: number
-  }>
+    id: string;
+    name: string;
+    quantity: number;
+    reorderPoint: number;
+  }>;
 }
 
-// ✅ تعریف تایپ صحیح برای ProductsResponse
 interface ProductsResponse {
   products?: Array<{
-    id: string
-    name: string
-    quantity: number
-    reorderPoint: number
-  }>
-  summary?: ProductsSummary
+    id: string;
+    name: string;
+    quantity: number;
+    reorderPoint: number;
+  }>;
+  summary?: ProductsSummary;
 }
 
-type InvoicesResponseWithSummary = InvoicesResponse & { summary?: InvoicesSummary }
-type ProductsResponseWithSummary = ProductsResponse & { summary?: ProductsSummary }
+type InvoicesResponseWithSummary = InvoicesResponse & { summary?: InvoicesSummary };
+type ProductsResponseWithSummary = ProductsResponse & { summary?: ProductsSummary };
 
 // ─── Main Hook ─────────────────────────────────────────────────────────────
 
 export function useDashboard() {
-  const { t } = useTranslation()
-  const currency = useCurrency() // ✅ بدون آرگومان
+  const { t } = useTranslation();
+  const currency = useCurrency();
 
-  // 1. Fetch KPI data
+  // ─── 1. Fetch KPI data ──────────────────────────────────────────────────
   const {
     data: kpis,
     isLoading: kpiLoading,
     isError: kpiError,
-  } = useDashboardKPIs()
+  } = useDashboardKPIs();
 
-  // 2. Fetch AI Insights
-  const { 
-    data: insights, 
-    isLoading: insightsLoading 
-  } = useAIInsights()
+  // ─── 2. Fetch Sales data for chart (last 7 days) ──────────────────────
+  // ✅ اصلاح: استفاده از تاریخ محلی به جای UTC
+  const fromDate = getDaysAgo(7);
+  const toDate = getTodayDate();
 
-  // 3. Fetch Invoices (limited to 5 recent)
+  const {
+    data: salesData,
+    isLoading: salesLoading,
+    isError: salesError,
+  } = useDashboardSales({
+    from: fromDate,
+    to: toDate,
+  });
+
+  // ─── 3. Fetch AI Insights ──────────────────────────────────────────────
+  const { data: insights, isLoading: insightsLoading } = useAIInsights();
+
+  // ─── 4. Fetch Invoices (limited to 5 recent) ──────────────────────────
   const {
     data: invoicesData,
     isLoading: invLoading,
     isError: invError,
   } = useInvoices(
     { page: 1, limit: 5, sortDirection: "desc" }
-  ) as { data: InvoicesResponseWithSummary | undefined; isLoading: boolean; isError: boolean }
+  ) as { data: InvoicesResponseWithSummary | undefined; isLoading: boolean; isError: boolean };
 
-  // 4. Fetch Products (for low stock alerts)
+  // ─── 5. Fetch Products (for low stock alerts) ─────────────────────────
   const {
     data: productsData,
     isLoading: prodLoading,
     isError: prodError,
   } = useProducts(
     { page: 1, limit: 100, sortDirection: "desc" }
-  ) as { data: ProductsResponseWithSummary | undefined; isLoading: boolean; isError: boolean }
+  ) as { data: ProductsResponseWithSummary | undefined; isLoading: boolean; isError: boolean };
 
-  // 5. Determine if we need to use fallback data
-  const needsFallback = kpiError || (!kpiLoading && !kpis)
-  const usingFallbackData = needsFallback && (!!invoicesData || !!productsData)
-  const hasAnyError = kpiError || invError || prodError
+  // ─── 6. Determine fallback status ──────────────────────────────────────
+  const needsFallback = kpiError || (!kpiLoading && !kpis);
+  const usingFallbackData = needsFallback && (!!invoicesData || !!productsData);
+  const hasAnyError = kpiError || invError || prodError || salesError;
 
-  // 6. Compute derived values with fallbacks
-  const todaySales = kpis?.todaySales ?? invoicesData?.summary?.todaySales ?? 0
-  const todayInvoices = kpis?.todayInvoices ?? invoicesData?.summary?.todayCount ?? 0
-  const monthlyRevenue = kpis?.monthlyRevenue ?? invoicesData?.summary?.monthlyRevenue ?? 0
-  const monthlyGrowth = kpis?.monthlyGrowth ?? 0
-  const pendingPayments = kpis?.pendingPayments ?? invoicesData?.summary?.totalDebt ?? 0
-  const pendingPaymentsCount = kpis?.pendingPaymentsCount ?? invoicesData?.summary?.pendingCount ?? 0
-  const activeCustomers = kpis?.activeCustomers ?? invoicesData?.summary?.customerCount ?? 0
-  const customerGrowth = kpis?.customerGrowth ?? 0
-  const lowStockAlerts = kpis?.lowStockAlerts ?? productsData?.summary?.lowStockCount ?? 0
-  const totalDebt = invoicesData?.summary?.totalDebt ?? 0
+  // ─── 7. Compute derived values with fallbacks ─────────────────────────
+  const todaySales = kpis?.todaySales ?? invoicesData?.summary?.todaySales ?? 0;
+  const todayInvoices = kpis?.todayInvoices ?? invoicesData?.summary?.todayCount ?? 0;
+  const monthlyRevenue = kpis?.monthlyRevenue ?? invoicesData?.summary?.monthlyRevenue ?? 0;
+  const monthlyGrowth = kpis?.monthlyGrowth ?? 0;
+  const pendingPayments = kpis?.pendingPayments ?? invoicesData?.summary?.totalDebt ?? 0;
+  const pendingPaymentsCount = kpis?.pendingPaymentsCount ?? invoicesData?.summary?.pendingCount ?? 0;
+  const activeCustomers = kpis?.activeCustomers ?? invoicesData?.summary?.customerCount ?? 0;
+  const customerGrowth = kpis?.customerGrowth ?? 0;
+  const lowStockAlerts = kpis?.lowStockAlerts ?? productsData?.summary?.lowStockCount ?? 0;
+  const totalDebt = invoicesData?.summary?.totalDebt ?? 0;
 
-  // 7. Compute low stock items from products data
+  // ─── 8. Compute low stock items ────────────────────────────────────────
   const lowStockItems = useMemo(() => {
-    // ✅ ابتدا از summary استفاده می‌کنیم
     if (productsData?.summary?.lowStockItems) {
-      return productsData.summary.lowStockItems
+      return productsData.summary.lowStockItems;
     }
-    
-    // ✅ سپس از products array
-    if (!productsData?.products) return []
-    
-    return productsData.products
-      .filter(p => p.quantity <= p.reorderPoint)
-      .slice(0, 5)
-      .map(p => ({
-        name: p.name,
-        quantity: p.quantity
-      }))
-  }, [productsData])
 
-  // 8. Map recent invoices
-  const simpleT = (key: string): string => t(key)
-  
+    if (!productsData?.products) return [];
+
+    return productsData.products
+      .filter((p) => p.quantity <= p.reorderPoint)
+      .slice(0, 5)
+      .map((p) => ({
+        name: p.name,
+        quantity: p.quantity,
+      }));
+  }, [productsData]);
+
+  // ─── 9. Map recent invoices ────────────────────────────────────────────
+  const simpleT = (key: string): string => t(key);
+
   const recentInvoices = useMemo(
     () => mapRecentInvoices(invoicesData?.invoices, simpleT),
-    [invoicesData, t],
-  )
+    [invoicesData, t]
+  );
 
-  // 9. Return unified dashboard data
+  // ─── 10. Sales chart data ──────────────────────────────────────────────
+  // ✅ اصلاح: استفاده از داده‌های salesData برای نمودار
+  const salesChartData = useMemo(() => {
+    if (salesData?.chartData && Array.isArray(salesData.chartData) && salesData.chartData.length > 0) {
+      return salesData.chartData;
+    }
+    if (salesData?.data && Array.isArray(salesData.data) && salesData.data.length > 0) {
+      return salesData.data;
+    }
+    if (Array.isArray(salesData)) {
+      return salesData;
+    }
+    return [];
+  }, [salesData]);
+
+  // ─── 11. Return unified dashboard data ────────────────────────────────
   return {
     // KPI Data
     todaySales,
@@ -138,28 +168,32 @@ export function useDashboard() {
     lowStockAlerts,
     lowStockItems,
     totalDebt,
-    
+
     // Recent Invoices
     recentInvoices,
-    
+
     // AI Insights
     insights: insights ?? [],
-    
+
+    // Sales Chart Data ✅ اضافه شد
+    salesChartData,
+    salesLoading,
+
     // Loading States
-    isLoading: kpiLoading || (needsFallback && (invLoading || prodLoading)),
+    isLoading: kpiLoading || salesLoading || (needsFallback && (invLoading || prodLoading)),
     kpiLoading,
     insightsLoading,
     invLoading,
     prodLoading,
-    
+
     // Status
     isError: hasAnyError,
     usingFallbackData,
     needsFallback,
-    
+
     // Utility functions
-    fmt: currency.format, // ✅ از currency.format استفاده می‌کند
+    fmt: currency.format,
     getSymbol: currency.getSymbol,
     t,
-  }
+  };
 }
