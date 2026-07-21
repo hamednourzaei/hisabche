@@ -7,8 +7,8 @@ import { cn } from "@/lib/utils";
 import { Sparkles, AlertTriangle, Info, Lightbulb, TrendingUp } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   AIInsights v2 — Memoized · Performance Optimized
-   ✅ memo · useMemo · ثابت‌های خارج از کامپوننت
+   AIInsights v3 — Memoized · Performance Optimized
+   ✅ استفاده از Design Tokens · بدون hardcoded strings
    ═══════════════════════════════════════════════════════════════════════════ */
 
 interface Insight {
@@ -37,19 +37,19 @@ const iconMap = {
 
 const toneStyles = {
   warning: {
-    border: "border-[hsl(var(--color-warning)/0.3)]",
-    bg: "bg-[hsl(var(--color-warning)/0.05)]",
-    icon: "text-[hsl(var(--color-warning))]",
+    border: "border-[hsl(var(--status-warning)/0.3)]",
+    bg: "bg-[hsl(var(--status-warning)/0.05)]",
+    icon: "text-[hsl(var(--status-warning))]",
   },
   info: {
-    border: "border-[hsl(var(--color-info)/0.3)]",
-    bg: "bg-[hsl(var(--color-info)/0.05)]",
-    icon: "text-[hsl(var(--color-info))]",
+    border: "border-[hsl(var(--status-info)/0.3)]",
+    bg: "bg-[hsl(var(--status-info)/0.05)]",
+    icon: "text-[hsl(var(--status-info))]",
   },
   success: {
-    border: "border-[hsl(var(--color-success)/0.3)]",
-    bg: "bg-[hsl(var(--color-success)/0.05)]",
-    icon: "text-[hsl(var(--color-success))]",
+    border: "border-[hsl(var(--status-positive)/0.3)]",
+    bg: "bg-[hsl(var(--status-positive)/0.05)]",
+    icon: "text-[hsl(var(--status-positive))]",
   },
   tip: {
     border: "border-[hsl(var(--color-primary)/0.3)]",
@@ -87,7 +87,7 @@ const InsightsEmpty = memo(function InsightsEmpty() {
     <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-6 text-center">
       <Sparkles className="size-8 mx-auto mb-2 text-[hsl(var(--fg-tertiary))]" />
       <p className="text-sm text-[hsl(var(--fg-secondary))]">
-        {t("dashboard.noInsights", "بینش هوشمند در دسترس نیست")}
+        {t("dashboard.noInsights")}
       </p>
     </div>
   );
@@ -96,13 +96,12 @@ InsightsEmpty.displayName = "InsightsEmpty";
 
 // ─── Insight Item ──────────────────────────────────────────────────────────
 
-// ✅ onAction اجباری شد (با fallback در parent)
 const InsightItem = memo(function InsightItem({
   insight,
   onAction,
 }: {
   insight: Insight;
-  onAction: (action: string) => void;  // ✅ اجباری
+  onAction: (action: string) => void;
 }) {
   const Icon = iconMap[insight.type as InsightType];
   const tone = toneStyles[insight.type as InsightType];
@@ -157,14 +156,13 @@ export const AIInsights = memo(function AIInsights({
 }: AIInsightsProps) {
   const { t } = useTranslation();
 
-  // ✅ useMemo با fallback برای onAction
   const insightItems = useMemo(
     () =>
       insights.map((insight, i) => (
         <InsightItem
           key={i}
           insight={insight}
-          onAction={onAction || (() => {})}  // ✅ fallback برای رفع exactOptionalPropertyTypes
+          onAction={onAction || (() => {})}
         />
       )),
     [insights, onAction]
@@ -183,7 +181,7 @@ export const AIInsights = memo(function AIInsights({
       <div className="flex items-center gap-2 mb-4">
         <Sparkles className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
         <h2 className="text-base font-semibold text-[hsl(var(--fg-primary))]">
-          {t("dashboard.smartInsights", "بینش هوشمند")}
+          {t("dashboard.smartInsights")}
         </h2>
       </div>
       <div className="space-y-3">{insightItems}</div>

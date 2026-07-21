@@ -104,7 +104,7 @@ export { OnboardingContainer } from './components/ui/onboarding/containers/onboa
 
 // ---------- Dashboard ----------
 export { DashboardView } from './components/ui/dashboard/dashboard-view'
-export { StatCard } from './components/ui/dashboard/dashboard-stats'
+export { InsightCard } from './components/ui/dashboard/dashboard-stats'  // ✅ StatCard → InsightCard تغییر یافت
 export { DashboardInvoices } from './components/ui/dashboard/dashboard-invoices'
 export { useDashboard } from './hooks/dashboard/use-dashboard'
 

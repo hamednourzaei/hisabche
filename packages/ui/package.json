@@ -12,6 +12,7 @@
   "dependencies": {
     "@hisabche/api": "^0.0.1",
     "@hisabche/store": "^0.0.1",
+    "@hookform/resolvers": "^3.3.4",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-avatar": "^1.1.11",
     "@radix-ui/react-checkbox": "^1.3.3",
@@ -28,19 +29,19 @@
     "@radix-ui/react-tooltip": "^1.2.8",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "zod": "^3.25.76",
     "cmdk": "^1.1.1",
+    "date-fns": "^4.4.0",
     "date-fns-jalali": "^4.4.0-0",
     "jalaali-js": "^1.2.8",
     "lucide-react": "^1.16.0",
     "moment-jalaali": "^0.10.4",
     "next-themes": "^0.4.6",
+    "react-hook-form": "^7.51.0",
     "react-phone-number-input": "^3.4.17",
     "recharts": "^2.15.4",
     "sonner": "^2.0.7",
     "tailwind-merge": "^2.6.1",
-    "react-hook-form": "^7.51.0",
-    "@hookform/resolvers": "^3.3.4"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/jalaali-js": "^1.2.0",

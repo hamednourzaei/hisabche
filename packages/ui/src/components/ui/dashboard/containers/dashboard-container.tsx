@@ -3,34 +3,24 @@
 
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
-import { useDashboardKPIs, useAIInsights, useDashboardSales, useInvoices, useRealtime } from "@hisabche/api";
+import { useCallback, useState } from "react";
+
 import { DashboardView } from "../dashboard-view";
+import { DateRangePicker, type DateRange, type PresetKey } from "../date-range-picker";
+import { useDashboardData } from "../../../../hooks/dashboard/use-dashboard-data";
 import { fmt } from "../../../../lib/dashboard/dashboard-format";
-import { useState, useCallback, useMemo, useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import type { DateRange, PresetKey } from "../date-range-picker";
 
-interface RecentInvoice {
-  id: string;
-  customer: string;
-  total: number;
-  date: string;
-}
+// ─── Types ─────────────────────────────────────────────────────────────────
 
-function getTodayDate(): string {
-  return new Date().toISOString().slice(0, 10);
-}
+type Translate = (key: string, fallback?: string) => string;
 
-function getDaysAgo(days: number): string {
-  const date = new Date();
-  date.setDate(date.getDate() - days);
-  return date.toISOString().slice(0, 10);
-}
+// ─── Main Container ──────────────────────────────────────────────────────
 
 export function DashboardContainer() {
-  const { t } = useTranslation();
+  const { t: tOriginal } = useTranslation();
   const router = useRouter();
-  const queryClient = useQueryClient();
+
+  // ─── State ──────────────────────────────────────────────────────────────
 
   const [dateRange, setDateRange] = useState<DateRange>(() => {
     const today = new Date();
@@ -39,66 +29,37 @@ export function DashboardContainer() {
     return { from: weekAgo, to: today };
   });
 
-  const kpiResult = useDashboardKPIs();
-  const { data: kpis, isLoading: kpiLoading, refetch: refetchKpis } = kpiResult;
+  // ✅ Wrapper برای تطابق signature
+  const t = useCallback<Translate>(
+    (key: string, fallback?: string) => {
+      const result = tOriginal(key);
+      return result === key ? (fallback ?? key) : result;
+    },
+    [tOriginal]
+  );
 
-  const insightsResult = useAIInsights();
-  const { data: insights, isLoading: insightsLoading, refetch: refetchInsights } = insightsResult;
+  // ─── Data ──────────────────────────────────────────────────────────────
 
-  const fromDate = dateRange.from ? dateRange.from.toISOString().slice(0, 10) : getDaysAgo(30);
-  const toDate = dateRange.to ? dateRange.to.toISOString().slice(0, 10) : getTodayDate();
+  const {
+    kpis,
+    insights,
+    salesChartData,
+    recentInvoices,
+    lowStockItems,
+    pendingPaymentsCount,
+    customerGrowth,
+    lowStockAlerts,
+    kpiLoading,
+    insightsLoading,
+    chartLoading,
+    invLoading,
+  } = useDashboardData(dateRange);
 
-  const salesResult = useDashboardSales({
-    from: fromDate,
-    to: toDate,
-  });
-  const { data: salesData, isLoading: salesLoading, refetch: refetchSales } = salesResult;
-
-  const invoicesResult = useInvoices({
-    page: 1,
-    limit: 5,
-    sortDirection: "desc",
-  });
-  const { data: invoicesData, isLoading: invoicesLoading, refetch: refetchInvoices } = invoicesResult;
-
-  // ✅ Real-time subscription for invoices
-  useRealtime({ 
-    table: "invoices", 
-    queryKey: ["invoices"] 
-  });
-
-  // ✅ Real-time subscription for dashboard data
-  useRealtime({ 
-    table: "invoices", 
-    queryKey: ["dashboard"] 
-  });
-
-  // ✅ Polling with shorter intervals
-  useEffect(() => {
-    const interval1 = setInterval(() => refetchKpis(), 10000); // 10 seconds
-    const interval2 = setInterval(() => refetchInsights(), 30000); // 30 seconds
-    const interval3 = setInterval(() => refetchSales(), 10000); // 10 seconds
-    const interval4 = setInterval(() => refetchInvoices(), 10000); // 10 seconds
-
-    return () => {
-      clearInterval(interval1);
-      clearInterval(interval2);
-      clearInterval(interval3);
-      clearInterval(interval4);
-    };
-  }, [refetchKpis, refetchInsights, refetchSales, refetchInvoices]);
+  // ─── Callbacks ──────────────────────────────────────────────────────────
 
   const handleDateRangeChange = useCallback((range: DateRange, _preset: PresetKey) => {
     setDateRange(range);
   }, []);
-
-  const safeT = useCallback(
-    (key: string, fallback?: string) => {
-      const v = t(key);
-      return v !== key ? v : (fallback ?? key);
-    },
-    [t]
-  );
 
   const handleAction = useCallback(
     (action: string) => {
@@ -107,68 +68,33 @@ export function DashboardContainer() {
     [router]
   );
 
-  const recentInvoices: RecentInvoice[] = useMemo(() => {
-    const invoices = invoicesData?.invoices || [];
-    
-    return invoices.slice(0, 5).map((inv: any) => {
-      let customerName = "مشتری";
-      
-      if (inv.customerName) {
-        customerName = inv.customerName;
-      } else if (inv.customer?.name) {
-        customerName = inv.customer.name;
-      } else if (inv.customer_id && inv.customers) {
-        customerName = inv.customers?.name || inv.customers?.full_name || "مشتری";
-      } else if (inv.customer?.full_name) {
-        customerName = inv.customer.full_name;
-      }
-      
-      return {
-        id: inv.id,
-        customer: customerName,
-        total: inv.total || 0,
-        date: inv.date ? new Date(inv.date).toLocaleDateString("fa-IR") : "-",
-      };
-    });
-  }, [invoicesData]);
-
-  const salesChartData = useMemo(() => {
-    if (salesData?.chartData && Array.isArray(salesData.chartData) && salesData.chartData.length > 0) {
-      return salesData.chartData;
-    }
-    if (salesData?.data && Array.isArray(salesData.data) && salesData.data.length > 0) {
-      return salesData.data;
-    }
-    if (Array.isArray(salesData)) {
-      return salesData;
-    }
-    return [];
-  }, [salesData]);
+  // ─── Render ─────────────────────────────────────────────────────────────
 
   return (
     <DashboardView
-      t={safeT}
+      t={t}
       fmt={fmt}
       todaySales={kpis?.todaySales ?? 0}
       todayInvoices={kpis?.todayInvoices ?? 0}
       monthlyRevenue={kpis?.monthlyRevenue ?? 0}
       monthlyGrowth={kpis?.monthlyGrowth ?? 0}
       pendingPayments={kpis?.pendingPayments ?? 0}
+      pendingPaymentsCount={pendingPaymentsCount}
       activeCustomers={kpis?.activeCustomers ?? 0}
-      lowStockAlerts={kpis?.lowStockAlerts ?? 0}
+      customerGrowth={customerGrowth}
+      lowStockAlerts={lowStockAlerts}
+      lowStockItems={lowStockItems}
+      kpiLoading={kpiLoading}
       insights={insights ?? []}
       insightsLoading={insightsLoading}
-      kpiLoading={kpiLoading}
       salesChartData={salesChartData}
-      chartLoading={salesLoading}
+      chartLoading={chartLoading}
       dateRange={dateRange}
-      totalDebt={kpis?.pendingPayments ?? 0}
-      invLoading={invoicesLoading}
-      prodLoading={false}
+      invLoading={invLoading}
       recentInvoices={recentInvoices}
       onNavigate={(route) => router.push(route)}
-      onNavigatewarehouse={() => router.push("/warehouse")}
-      onNavigatecustomers={() => router.push("/customers")}
+      onNavigateWarehouse={() => router.push("/warehouse")}
+      onNavigateCustomers={() => router.push("/customers")}
       onNavigateQuickInvoice={() => router.push("/quick-invoice")}
       onNavigateInvoice={(id) => router.push(`/invoices/${id}`)}
       onViewAllInvoices={() => router.push("/invoices")}

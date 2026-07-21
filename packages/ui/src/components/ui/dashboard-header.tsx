@@ -98,8 +98,8 @@ const SyncPill = memo(function SyncPill({
 SyncPill.displayName = "SyncPill";
 
 const LANGUAGES = [
-  { code: "fa-AF", label: "دری", nativeLabel: "دری", flag: "🇦🇫" },
-  { code: "fa-IR", label: "فارسی", nativeLabel: "فارسی", flag: "🇮🇷" },
+  { code: "af", label: "دری", nativeLabel: "دری", flag: "🇦🇫" },
+  { code: "fa", label: "فارسی", nativeLabel: "فارسی", flag: "🇮🇷" },
   { code: "en", label: "English", nativeLabel: "English", flag: "🇬🇧" },
 ];
 
@@ -231,7 +231,7 @@ export const DashboardHeader = memo(function DashboardHeader({
   isOnline = true,
   isSyncing = false,
   pendingCount = 0,
-  currentLang = "fa-AF",
+  currentLang = "AF",
   isDark = false,
   signInLabel,
   signOutLabel,

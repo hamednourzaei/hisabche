@@ -1,50 +1,66 @@
 // packages/ui/src/components/ui/dashboard/dashboard-view.tsx
 "use client";
 
-import { memo, useMemo } from "react";  // ✅ اضافه شد
+import { memo, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
-import { Sparkles, Receipt, TrendingUp } from "lucide-react";
-import { StatCard } from "./dashboard-stats";
-import { KPICards } from "./kpi-cards";
-import { AIInsights } from "./ai-insights";
-import { DashboardInvoices } from "./dashboard-invoices";
+import { 
+  Sparkles, 
+  TrendingUp, 
+  Receipt, 
+} from "lucide-react";
 import { SalesChart, type ChartDataPoint } from "./sales-chart";
 import { DateRangePicker, type DateRange, type PresetKey } from "./date-range-picker";
 import type { AIInsight } from "@hisabche/api";
+import dynamic from "next/dynamic";
+import { BusinessHealthPanel } from "./business-health-panel";
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   DashboardView v2 — Memoized · Performance Optimized
-   ✅ memo · useMemo · Greeting جدا شده
-   ═══════════════════════════════════════════════════════════════════════════ */
+// ─── Types ────────────────────────────────────────────────────────────────
+
+// ✅ تعریف تایپ ساده به جای TFunction
+type Translate = (key: string, fallback?: string) => string;
 
 interface DashboardViewProps {
-  t: (key: string, fallback?: string) => string;
+  t: Translate; // ✅ به جای TFunction
   fmt: (v: number) => string;
+  
+  // KPI Data
   todaySales: number;
   todayInvoices: number;
   monthlyRevenue: number;
   monthlyGrowth: number;
   pendingPayments: number;
+  pendingPaymentsCount: number;
   activeCustomers: number;
+  customerGrowth: number;
   lowStockAlerts: number;
+  lowStockItems: Array<{ name: string; quantity: number }>;
+  
+  // Loading States
   kpiLoading: boolean;
-  insights: AIInsight[];
   insightsLoading: boolean;
-  salesChartData: ChartDataPoint[];
   chartLoading: boolean;
-  dateRange: DateRange;
-  totalDebt: number;
   invLoading: boolean;
-  prodLoading: boolean;
+  
+  // AI Insights
+  insights: AIInsight[];
+  
+  // Chart Data
+  salesChartData: ChartDataPoint[];
+  dateRange: DateRange;
+  
+  // Invoices
   recentInvoices: Array<{
     id: string;
     customer: string;
     total: number;
     date: string;
   }>;
+  
+  // Actions
   onNavigate: (route: string) => void;
-  onNavigatewarehouse: () => void;
-  onNavigatecustomers: () => void;
+  onNavigateWarehouse: () => void;
+  onNavigateCustomers: () => void;
   onNavigateQuickInvoice: () => void;
   onNavigateInvoice: (id: string) => void;
   onViewAllInvoices: () => void;
@@ -52,39 +68,108 @@ interface DashboardViewProps {
   onDateRangeChange: (range: DateRange, preset: PresetKey) => void;
 }
 
-// ─── Greeting (جدا شده با memo) ──────────────────────────────────────────
+// ─── Lazy Load Components ─────────────────────────────────────────────────
+
+const LazySalesChart = dynamic(
+  () => import("./sales-chart").then(mod => mod.SalesChart),
+  {
+    ssr: false,
+    loading: () => <div className="h-[200px] rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
+  }
+);
+
+const LazyDashboardInvoices = dynamic(
+  () => import("./dashboard-invoices").then(mod => mod.DashboardInvoices),
+  {
+    ssr: false,
+    loading: () => <div className="h-[200px] rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
+  }
+);
+
+// ─── Greeting ──────────────────────────────────────────────────────────────
 
 const Greeting = memo(function Greeting({
   t,
 }: {
-  t: (key: string, fallback?: string) => string;
+  t: Translate; // ✅ به جای TFunction
 }) {
   const h = new Date().getHours();
   const k = h < 12 ? "morning" : h < 17 ? "afternoon" : h < 21 ? "evening" : "night";
-  const label =
-    k === "morning"
-      ? "صبح بخیر"
-      : k === "afternoon"
-      ? "ظهر بخیر"
-      : k === "evening"
-      ? "عصر بخیر"
-      : "شب بخیر";
+  const label = k === "morning" ? "صبح بخیر" : k === "afternoon" ? "ظهر بخیر" : k === "evening" ? "عصر بخیر" : "شب بخیر";
 
   return (
-    <div className="space-y-1.5">
+    <header className="space-y-1.5">
       <h1 className="flex items-center gap-2 text-2xl font-bold sm:text-3xl text-[hsl(var(--fg-primary))]">
         {t(`dashboard.greeting.${k}`, label)}
         <Sparkles className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
       </h1>
       <p className="text-sm text-[hsl(var(--fg-secondary))]">
-        {t("dashboard.subtitle", "آمار چه خبر از کسب‌وکارت؟")}
+        {t("dashboard.subtitle")}
       </p>
-    </div>
+    </header>
   );
 });
 Greeting.displayName = "Greeting";
 
-// ─── Main Component ────────────────────────────────────────────────────────
+// ─── AI Insight ────────────────────────────────────────────────────────────
+
+const AIInsightBanner = memo(function AIInsightBanner({
+  insights,
+  isLoading,
+  onAction,
+}: {
+  insights: AIInsight[];
+  isLoading: boolean;
+  onAction: (action: string) => void;
+}) {
+  const { t } = useTranslation();
+  
+  if (isLoading) {
+    return (
+      <div className="h-16 rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
+    );
+  }
+  
+  if (!insights || insights.length === 0) {
+    return null;
+  }
+  
+  const insight = insights[0]!;
+  
+  return (
+    <section
+      className="rounded-2xl border border-[hsl(var(--color-primary)/0.2)] bg-[hsl(var(--color-primary)/0.05)] p-4"
+      aria-label={t("dashboard.aiInsight.aria")}
+      role="status"
+      aria-live="polite"
+    >
+      <div className="flex items-start gap-3">
+        <div className="rounded-full bg-[hsl(var(--color-primary)/0.1)] p-2">
+          <Sparkles className="h-5 w-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+        </div>
+        <div className="flex-1">
+          <p className="text-sm font-medium text-[hsl(var(--fg-primary))]">
+            {insight.title}
+          </p>
+          <p className="text-sm text-[hsl(var(--fg-secondary))]">
+            {insight.description}
+          </p>
+          {insight.action && (
+            <button
+              onClick={() => onAction(insight.action!)}
+              className="mt-2 text-sm font-medium text-[hsl(var(--color-primary))] hover:underline focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))] rounded-md px-2 py-1"
+            >
+              {insight.actionLabel || t("dashboard.aiInsight.action")}
+            </button>
+          )}
+        </div>
+      </div>
+    </section>
+  );
+});
+AIInsightBanner.displayName = "AIInsightBanner";
+
+// ─── Main Component ───────────────────────────────────────────────────────
 
 export const DashboardView = memo(function DashboardView(props: DashboardViewProps) {
   const {
@@ -95,21 +180,22 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
     monthlyRevenue,
     monthlyGrowth,
     pendingPayments,
+    pendingPaymentsCount,
     activeCustomers,
+    customerGrowth,
     lowStockAlerts,
+    lowStockItems,
     kpiLoading,
     insights,
     insightsLoading,
     salesChartData,
     chartLoading,
     dateRange,
-    totalDebt,
     invLoading,
-    prodLoading,
     recentInvoices,
     onNavigate,
-    onNavigatewarehouse,
-    onNavigatecustomers,
+    onNavigateWarehouse,
+    onNavigateCustomers,
     onNavigateQuickInvoice,
     onNavigateInvoice,
     onViewAllInvoices,
@@ -117,86 +203,104 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
     onDateRangeChange,
   } = props;
 
-  // ✅ useMemo برای KPI data
-  const kpiData = useMemo(
-    () => ({
-      todaySales,
-      todayInvoices,
-      monthlyRevenue,
-      monthlyGrowth,
-      pendingPayments,
-      activeCustomers,
-      lowStockAlerts,
-    }),
-    [todaySales, todayInvoices, monthlyRevenue, monthlyGrowth, pendingPayments, activeCustomers, lowStockAlerts]
-  );
+  // Handle all actions from BusinessHealthPanel
+  const handleHealthAction = (action: "invoice" | "payments" | "warehouse" | "customers") => {
+    switch (action) {
+      case "invoice":
+        onNavigateQuickInvoice();
+        break;
+      case "payments":
+        onNavigate("/invoices?filter=pending");
+        break;
+      case "warehouse":
+        onNavigateWarehouse();
+        break;
+      case "customers":
+        onNavigateCustomers();
+        break;
+    }
+  };
 
   return (
     <div className="space-y-6">
+      {/* Level 1: Context */}
       <Greeting t={t} />
-
-      <KPICards
-        data={kpiData}
-        isLoading={kpiLoading}
-        onNavigate={onNavigate}
+      
+      {/* Level 2: What's important */}
+      <AIInsightBanner
+        insights={insights}
+        isLoading={insightsLoading}
+        onAction={onInsightAction}
       />
 
-      {/* Sales Chart + Date Range */}
-      <div
-        className={cn(
-          "rounded-2xl border border-[hsl(var(--border-default))]",
-          "bg-[hsl(var(--surface-elevated))]",
-          "p-5"
-        )}
-      >
-        <div className="flex items-center justify-between gap-4 mb-4">
-          <div className="flex items-center gap-2">
-            <TrendingUp
-              className="size-5 text-[hsl(var(--color-primary))]"
-              aria-hidden="true"
-            />
-            <h2 className="text-base font-semibold text-[hsl(var(--fg-primary))]">
-              {t("dashboard.salesChart", "نمودار فروش")}
-            </h2>
-          </div>
+      {/* Level 3: Business Health Panel */}
+      <BusinessHealthPanel
+        data={{
+          todaySales,
+          todayInvoices,
+          monthlyRevenue,
+          monthlyGrowth,
+          pendingPayments,
+          pendingPaymentsCount,
+          activeCustomers,
+          customerGrowth,
+          lowStockAlerts,
+          lowStockItems,
+        }}
+        isLoading={kpiLoading}
+        onAction={handleHealthAction}
+      />
 
-          <DateRangePicker
-            value={dateRange}
-            onChange={onDateRangeChange}
-            t={t}
-            disabled={chartLoading}
-          />
+      {/* Level 4: Deep Dive */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Chart - 2 columns */}
+        <div className="lg:col-span-2">
+          <div className={cn(
+            "rounded-2xl border border-[hsl(var(--border-default))]",
+            "bg-[hsl(var(--surface-elevated))]",
+            "p-5"
+          )}>
+            <div className="flex items-center justify-between gap-4 mb-4">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+                <h2 className="text-base font-semibold text-[hsl(var(--fg-primary))]">
+                  {t("dashboard.salesChart")}
+                </h2>
+              </div>
+              <DateRangePicker
+                value={dateRange}
+                onChange={onDateRangeChange}
+                t={t}
+                disabled={chartLoading}
+              />
+            </div>
+            <LazySalesChart
+              data={salesChartData}
+              isLoading={chartLoading}
+              fmt={fmt}
+              height={220}
+              previousPeriodTotal={monthlyRevenue}
+              currentPeriodTotal={todaySales}
+              onViewFullReport={() => onNavigate("/reports")}
+            />
+          </div>
         </div>
 
-        <SalesChart
-          data={salesChartData}
-          isLoading={chartLoading}
-          fmt={fmt}
-          height={220}
-        />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent invoices */}
-        <div className="lg:col-span-2 space-y-6">
-          <div
-            className={cn(
-              "rounded-2xl border border-[hsl(var(--border-default))]",
-              "bg-[hsl(var(--surface-elevated))]",
-              "overflow-hidden"
-            )}
-          >
+        {/* Recent Invoices - 1 column */}
+        <div className="lg:col-span-1">
+          <div className={cn(
+            "rounded-2xl border border-[hsl(var(--border-default))]",
+            "bg-[hsl(var(--surface-elevated))]",
+            "overflow-hidden"
+          )}>
             <div className="flex items-center gap-2 px-6 pt-5 pb-3">
-              <Receipt
-                className="size-5 text-[hsl(var(--color-primary))]"
-                aria-hidden="true"
-              />
+              <Receipt className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
               <h2 className="text-base font-semibold text-[hsl(var(--fg-primary))]">
-                {t("dashboard.recentInvoices", "آخرین فاکتورها")}
+                {t("dashboard.recentInvoices")}
               </h2>
             </div>
             <div className="px-6 pb-5">
-              <DashboardInvoices
+              <LazyDashboardInvoices
                 t={t}
                 invLoading={invLoading}
                 recentInvoices={recentInvoices}
@@ -206,15 +310,6 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
               />
             </div>
           </div>
-        </div>
-
-        {/* AI Insights Panel */}
-        <div className="lg:col-span-1">
-          <AIInsights
-            insights={insights}
-            isLoading={insightsLoading}
-            onAction={onInsightAction}
-          />
         </div>
       </div>
     </div>

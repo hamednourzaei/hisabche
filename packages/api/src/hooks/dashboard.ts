@@ -184,3 +184,35 @@ export function useDashboardSales(params?: DashboardSalesParams) {
     refetchInterval: 120_000,
   });
 }
+// packages/api/src/types/dashboard.ts
+
+export interface DashboardKPIs {
+  todaySales: number
+  todayInvoices: number
+  monthlyRevenue: number
+  monthlyGrowth: number
+  pendingPayments: number
+  pendingPaymentsCount: number
+  activeCustomers: number
+  customerGrowth: number
+  lowStockAlerts: number
+}
+
+export interface InvoicesSummary {
+  todaySales?: number
+  todayCount?: number
+  monthlyRevenue?: number
+  totalDebt?: number
+  customerCount?: number
+  pendingCount?: number
+}
+
+export interface ProductsSummary {
+  lowStockCount?: number
+  lowStockItems?: Array<{
+    id: string
+    name: string
+    quantity: number
+    reorderPoint: number
+  }>
+}
