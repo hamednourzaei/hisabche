@@ -1,6 +1,7 @@
 // ============================================
 // backend/src/index.ts — Hisabche API Server v2.4
 // FIXED: workspaceRoutes import — use default import
+// FIXED: notificationRoutes — properly registered
 // ============================================
 
 import Fastify from 'fastify'
@@ -32,7 +33,7 @@ import { warehouseRoutes } from './routes/warehouse.routes'
 import { humanResourcesRoutes } from './routes/human-resources.routes'
 import { projectRoutes } from './routes/project.routes'
 // ✅ FIX: workspaceRoutes را از فایل routes import کن (نه از services)
-import {workspaceRoutes} from './routes/workspace.routes'
+import { workspaceRoutes } from './routes/workspace.routes'
 import { permissionRoutes } from './routes/permission.routes'
 import auditRoutes from './routes/audit.routes'
 import { eventRoutes } from './routes/event.routes'
@@ -384,7 +385,6 @@ async function start() {
     await server.register(warehouseRoutes)
     await server.register(humanResourcesRoutes)
     await server.register(projectRoutes)
-    // ✅ FIX: workspaceRoutes را از فایل routes ثبت کن
     await server.register(workspaceRoutes)
     await server.register(permissionRoutes)
     await server.register(auditRoutes)
@@ -396,7 +396,10 @@ async function start() {
     await server.register(manufacturingRoutes)
     await server.register(purchasingRoutes)
     await server.register(workflowRoutes)
+    
+    // ✅ FIX: Notification Routes — به‌درستی ثبت شد
     await server.register(notificationRoutes)
+    
     await server.register(jobSchedulerPlugin)
     await server.register(billingRoutes)
 
