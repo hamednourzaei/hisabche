@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   SecurityScene v2 — Trust Center · 6 pillars · Bullet scanning
+   SecurityScene v3 — Trust Center · 6 pillars · Bullet scanning
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface SecuritySceneProps {
@@ -123,23 +123,23 @@ export default function SecurityScene({ t }: SecuritySceneProps) {
       id="security"
       ref={ref}
       data-narrative="trust"
-      className="section-padding bg-[hsl(var(--surface-muted)/0.2)]"
+      className="py-12 sm:py-16 lg:py-20 bg-[hsl(var(--surface-muted)/0.2)]"
     >
-      <div className="container-narrow max-w-6xl">
+      <div className="container-narrow max-w-6xl px-4 sm:px-6">
         <div
           className={cn(
-            "text-center mb-12 sm:mb-16",
+            "text-center mb-10 sm:mb-12 lg:mb-16",
             "transition-all duration-700 motion-reduce:transition-none",
             animated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5",
           )}
         >
-          <p className="text-xs sm:text-sm uppercase tracking-[0.2em] mb-2 sm:mb-3 text-[hsl(var(--fg-tertiary))] font-semibold">
+          <p className="text-[10px] sm:text-xs lg:text-sm uppercase tracking-[0.2em] mb-2 sm:mb-3 text-[hsl(var(--fg-tertiary))] font-semibold">
             {t("landing.securityLabel", "امنیت داده")}
           </p>
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[hsl(var(--fg-primary))] tracking-tight mb-3 sm:mb-4">
+          <h2 className="text-xl sm:text-2xl lg:text-4xl font-bold text-[hsl(var(--fg-primary))] tracking-tight mb-2 sm:mb-3 lg:mb-4 px-4 sm:px-0">
             {t("landing.securityTitle", "اطلاعات کسب‌وکارت همیشه امن است")}
           </h2>
-          <p className="mx-auto max-w-2xl text-sm sm:text-base text-[hsl(var(--fg-secondary))] leading-relaxed">
+          <p className="mx-auto max-w-2xl text-sm sm:text-base text-[hsl(var(--fg-secondary))] leading-relaxed px-4 sm:px-0">
             {t(
               "landing.securityDesc",
               "چه اینترنت داشته باشی چه نداشته باشی، اطلاعاتت ذخیره می‌شود، همگام‌سازی می‌شود، نسخه پشتیبان دارد و فقط افراد مجاز به آن دسترسی خواهند داشت.",
@@ -147,12 +147,12 @@ export default function SecurityScene({ t }: SecuritySceneProps) {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-5">
           {PILLARS.map(({ icon: Icon, key, title, bullets }, i) => (
             <div
               key={key}
               className={cn(
-                "group relative p-5 sm:p-6 rounded-[var(--radius-xl)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]",
+                "group relative p-3.5 sm:p-4 lg:p-6 rounded-[var(--radius-xl)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]",
                 "transition-all duration-500 motion-reduce:transition-none",
                 "hover:border-[hsl(var(--color-primary)/0.3)] hover:shadow-lg hover:-translate-y-1",
                 "motion-reduce:hover:translate-y-0",
@@ -160,25 +160,25 @@ export default function SecurityScene({ t }: SecuritySceneProps) {
               )}
               style={{ transitionDelay: `${i * 80}ms` }}
             >
-              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-[hsl(var(--color-primary)/0.1)] text-[hsl(var(--color-primary))] mb-4 group-hover:scale-105 transition-transform">
-                <Icon className="size-5" aria-hidden="true" />
+              <div className="flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 rounded-lg sm:rounded-xl bg-[hsl(var(--color-primary)/0.1)] text-[hsl(var(--color-primary))] mb-2.5 sm:mb-3 lg:mb-4 group-hover:scale-105 transition-transform">
+                <Icon className="size-4 sm:size-4.5 lg:size-5" aria-hidden="true" />
               </div>
 
-              <h3 className="font-semibold text-sm sm:text-base text-[hsl(var(--fg-primary))] mb-3">
+              <h3 className="font-semibold text-xs sm:text-sm lg:text-base text-[hsl(var(--fg-primary))] mb-2 sm:mb-2.5 lg:mb-3 leading-snug">
                 {t(`landing.security.${key}.title`, title)}
               </h3>
 
-              <ul className="space-y-2">
+              <ul className="space-y-1.5 sm:space-y-2">
                 {bullets.map((bullet, j) => (
                   <li
                     key={j}
-                    className="flex items-start gap-2 text-xs sm:text-sm text-[hsl(var(--fg-secondary))]"
+                    className="flex items-start gap-1.5 sm:gap-2 text-[10px] sm:text-xs lg:text-sm text-[hsl(var(--fg-secondary))]"
                   >
                     <CheckCircle2
-                      className="size-3.5 mt-0.5 shrink-0 text-[hsl(var(--color-success))]"
+                      className="size-3 sm:size-3.5 mt-0.5 shrink-0 text-[hsl(var(--color-success))]"
                       aria-hidden="true"
                     />
-                    <span>{t(`landing.security.${key}.bullet${j + 1}`, bullet)}</span>
+                    <span className="leading-relaxed">{t(`landing.security.${key}.bullet${j + 1}`, bullet)}</span>
                   </li>
                 ))}
               </ul>
@@ -188,7 +188,7 @@ export default function SecurityScene({ t }: SecuritySceneProps) {
 
         <div
           className={cn(
-            "mt-10 sm:mt-12 flex flex-wrap items-center justify-center gap-3 sm:gap-4",
+            "mt-8 sm:mt-10 lg:mt-12 flex flex-wrap items-center justify-center gap-2 sm:gap-3 lg:gap-4",
             "transition-all duration-700 delay-200 motion-reduce:transition-none",
             animated ? "opacity-100" : "opacity-0",
           )}
@@ -196,7 +196,7 @@ export default function SecurityScene({ t }: SecuritySceneProps) {
           {TRUST_BADGES.map((badge) => (
             <span
               key={badge}
-              className="inline-flex items-center px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] text-[hsl(var(--fg-secondary))]"
+              className="inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-[9px] sm:text-xs lg:text-sm font-medium border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] text-[hsl(var(--fg-secondary))]"
             >
               {t(`landing.security.badge.${badge}`, badge)}
             </span>

@@ -1,3 +1,4 @@
+// packages/ui/src/components/ui/landing/landing-page.tsx
 "use client";
 
 import { useRouter, usePathname } from "next/navigation";
@@ -9,7 +10,8 @@ import { NavigationRegistry } from "../navigation/navigation-registry";
 
 import dynamic from 'next/dynamic';
 
-// ✅ همه کامپوننت‌ها با SSR=true برای جلوگیری از flash
+// ─── Components ──────────────────────────────────────────────────────────────
+
 const CinematicHero = dynamic(() => import('./cinematic-hero'), { ssr: true });
 const PainScene = dynamic(() => import('./pain-scene'), { ssr: true });
 const TransformScene = dynamic(() => import('./transform-scene'), { ssr: true });
@@ -22,15 +24,6 @@ const SecurityScene = dynamic(() => import('./security-scene'), { ssr: true });
 const PricingScene = dynamic(() => import('./pricing-scene'), { ssr: true });
 const SiteFooter = dynamic(() => import('./site-footer'), { ssr: true });
 const DashboardShowcaseScene = dynamic(() => import('./dashboard-showcase-scene'), { ssr: true });
-
-const sectionKeys: Record<string, string> = {
-  hero: "landing.navHero",
-  pain: "landing.navPain",
-  transform: "landing.navTransform",
-  features: "landing.navFeatures",
-  testimonials: "landing.navTestimonials",
-  cta: "landing.navCTA",
-};
 
 const sectionFallbacks: Record<string, Record<string, string>> = {
   en: {
@@ -64,7 +57,11 @@ function getLocaleFromPathname(pathname: string): string {
   return match?.[1] ?? "fa-IR";
 }
 
+// ─── Main LandingPage ──────────────────────────────────────────────────────
+
 export function LandingPage() {
+  console.log("🔥🔥🔥 LandingPage RENDERING 🔥🔥🔥");
+  
   const router = useRouter();
   const pathname = usePathname();
   const { t, i18n } = useTranslation();
@@ -73,6 +70,16 @@ export function LandingPage() {
 
   const currentLocale = getLocaleFromPathname(pathname);
   const fallbacks = sectionFallbacks[currentLocale] || sectionFallbacks["fa-IR"];
+
+  // ── Log page load ──
+  useEffect(() => {
+    console.log("🚀 LandingPage mounted", {
+      pathname,
+      locale: currentLocale,
+      width: typeof window !== 'undefined' ? window.innerWidth : 'unknown',
+      height: typeof window !== 'undefined' ? window.innerHeight : 'unknown',
+    });
+  }, []);
 
   const NAVIGATION_SECTIONS = useMemo(
     () => [
@@ -87,14 +94,22 @@ export function LandingPage() {
   );
 
   useEffect(() => {
+    let isMounted = true;
+    
     if (i18n.language !== currentLocale) {
       i18n.changeLanguage(currentLocale).then(() => {
-        localStorage.setItem("hisabche-lang", currentLocale);
-        setReady(true);
+        if (isMounted) {
+          localStorage.setItem("hisabche-lang", currentLocale);
+          setReady(true);
+        }
       });
     } else {
       setReady(true);
     }
+    
+    return () => {
+      isMounted = false;
+    };
   }, [currentLocale, i18n]);
 
   const safeT = useCallback(
@@ -125,13 +140,11 @@ export function LandingPage() {
 
           <TrustBarScene t={safeT} />
 
-
           <NavigationRegistry id="pain">
             <PainScene t={safeT} />
           </NavigationRegistry>
 
           <DashboardShowcaseScene t={safeT} />
-
 
           <NavigationRegistry id="transform">
             <TransformScene t={safeT} />
@@ -142,7 +155,6 @@ export function LandingPage() {
           </NavigationRegistry>
 
           <SecurityScene t={safeT} />
-
 
           <NavigationRegistry id="testimonials">
             <SocialScene t={safeT} />

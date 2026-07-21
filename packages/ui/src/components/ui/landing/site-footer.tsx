@@ -7,7 +7,7 @@ import { Send } from "lucide-react";
 import { FaInstagram, FaFacebook } from "react-icons/fa6";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   SiteFooter v1 — Large SEO footer.
+   SiteFooter v2 — Large SEO footer.
    Columns map to real search intent (product, features, industries, learning)
    rather than generic "Company / Legal" filler — every link is something a
    prospective user would plausibly search for.
@@ -96,18 +96,18 @@ export default function SiteFooter({ t }: SiteFooterProps) {
         "bg-[hsl(var(--surface-muted)/0.3)]",
       )}
     >
-      <div className="container-narrow py-10 sm:py-16">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-8 sm:gap-6">
+      <div className="container-narrow px-4 sm:px-6 py-8 sm:py-10 lg:py-16">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6 sm:gap-6 lg:gap-8">
           {/* ── Brand block ── */}
           <div className="col-span-2 sm:col-span-3 lg:col-span-1 mb-2 sm:mb-0">
-            <div className="mb-3 text-lg font-bold text-[hsl(var(--fg-primary))]">
+            <div className="mb-2 sm:mb-3 text-base sm:text-lg font-bold text-[hsl(var(--fg-primary))]">
               {t("app.name", "حسابچه")}
               <span className="text-[hsl(var(--color-primary))]">.</span>
             </div>
-            <p className="text-xs sm:text-sm text-[hsl(var(--fg-tertiary))] leading-relaxed max-w-[220px]">
+            <p className="text-[10px] sm:text-xs lg:text-sm text-[hsl(var(--fg-tertiary))] leading-relaxed max-w-[200px] sm:max-w-[220px]">
               {t("landing.footerTagline", "حافظه‌ی زنده‌ی کسب‌وکار تو — آفلاین، امن، همیشه در دسترس.")}
             </p>
-            <div className="flex items-center gap-3 mt-4">
+            <div className="flex items-center gap-2 sm:gap-3 mt-3 sm:mt-4">
               {SOCIALS.map(({ icon: Icon, label, href }) => (
                 <a
                   key={label}
@@ -116,13 +116,13 @@ export default function SiteFooter({ t }: SiteFooterProps) {
                   rel="noopener noreferrer"
                   aria-label={label}
                   className={cn(
-                    "flex items-center justify-center w-8 h-8 rounded-full",
+                    "flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full",
                     "border border-[hsl(var(--border-default))] text-[hsl(var(--fg-tertiary))]",
                     "hover:text-[hsl(var(--color-primary))] hover:border-[hsl(var(--color-primary)/0.3)]",
                     "transition-colors duration-200",
                   )}
                 >
-                  <Icon className="size-4" aria-hidden="true" />
+                  <Icon className="size-3.5 sm:size-4" aria-hidden="true" />
                 </a>
               ))}
             </div>
@@ -131,15 +131,15 @@ export default function SiteFooter({ t }: SiteFooterProps) {
           {/* ── Link columns ── */}
           {COLUMNS.map((col) => (
             <nav key={col.titleKey} aria-label={t(col.titleKey, col.titleFallback)}>
-              <h3 className="text-xs sm:text-sm font-semibold text-[hsl(var(--fg-primary))] mb-3 sm:mb-4">
+              <h3 className="text-[10px] sm:text-xs lg:text-sm font-semibold text-[hsl(var(--fg-primary))] mb-2 sm:mb-3 lg:mb-4">
                 {t(col.titleKey, col.titleFallback)}
               </h3>
-              <ul className="space-y-2 sm:space-y-2.5">
+              <ul className="space-y-1.5 sm:space-y-2 lg:space-y-2.5">
                 {col.links.map((link) => (
                   <li key={link.key}>
                     <Link
                       href={link.href}
-                      className="text-xs sm:text-sm text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--fg-primary))] transition-colors duration-200"
+                      className="text-[10px] sm:text-xs lg:text-sm text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--fg-primary))] transition-colors duration-200"
                     >
                       {t(`landing.footerLink.${link.key}`, link.fallback)}
                     </Link>
@@ -153,14 +153,14 @@ export default function SiteFooter({ t }: SiteFooterProps) {
         {/* ── Bottom bar ── */}
         <div
           className={cn(
-            "mt-10 sm:mt-14 pt-6 sm:pt-8 border-t border-[hsl(var(--border-default))]",
-            "flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4",
+            "mt-8 sm:mt-10 lg:mt-14 pt-5 sm:pt-6 lg:pt-8 border-t border-[hsl(var(--border-default))]",
+            "flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-3 lg:gap-4",
           )}
         >
-          <p className="text-[10px] sm:text-xs text-[hsl(var(--fg-tertiary))] order-2 sm:order-1">
+          <p className="text-[9px] sm:text-[10px] lg:text-xs text-[hsl(var(--fg-tertiary))] order-2 sm:order-1">
             {t("landing.footerCopyright", `© ${year} حسابچه. تمامی حقوق محفوظ است.`)}
           </p>
-          <p className="text-[10px] sm:text-xs text-[hsl(var(--fg-tertiary))] order-1 sm:order-2">
+          <p className="text-[9px] sm:text-[10px] lg:text-xs text-[hsl(var(--fg-tertiary))] order-1 sm:order-2">
             {t("landing.footer", "سیستم مدیریت کسب‌وکار")}
           </p>
         </div>

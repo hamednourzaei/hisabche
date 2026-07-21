@@ -7,7 +7,7 @@ import Image from "next/image";
 import { TrendingUp, Bell } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   DashboardShowcaseScene v7 — Unoptimized images for large PNGs
+   DashboardShowcaseScene v8 — Unoptimized images for large PNGs
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface DashboardShowcaseSceneProps {
@@ -38,7 +38,7 @@ export default function DashboardShowcaseScene(props: DashboardShowcaseSceneProp
           observer.disconnect();
         }
       },
-      { threshold: 0.15, rootMargin: "0px 0px -60px 0px" },
+      { threshold: 0.15, rootMargin: "0px 0px -40px 0px" },
     );
     observer.observe(el);
     return () => observer.disconnect();
@@ -56,22 +56,22 @@ export default function DashboardShowcaseScene(props: DashboardShowcaseSceneProp
   const resetTilt = () => setTilt({ x: 0, y: 0 });
 
   return (
-    <section id="dashboard-showcase" ref={ref} className="section-padding overflow-hidden">
-      <div className="container-narrow">
+    <section id="dashboard-showcase" ref={ref} className="py-12 sm:py-16 lg:py-20 overflow-hidden">
+      <div className="container-narrow px-4 sm:px-6">
         <div
           className={cn(
-            "text-center mb-10 sm:mb-16",
+            "text-center mb-8 sm:mb-12 lg:mb-16",
             "transition-all duration-700 motion-reduce:transition-none",
             animated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5",
           )}
         >
-          <p className="text-xs sm:text-sm uppercase tracking-[0.2em] mb-2 sm:mb-3 text-[hsl(var(--fg-tertiary))] font-semibold">
+          <p className="text-[10px] sm:text-xs lg:text-sm uppercase tracking-[0.2em] mb-2 sm:mb-3 text-[hsl(var(--fg-tertiary))] font-semibold">
             {st("landing.dashboardLabel", "محصول")}
           </p>
-          <h2 className="text-xl sm:text-3xl lg:text-4xl font-extrabold text-[hsl(var(--fg-primary))] tracking-tight mb-3 sm:mb-4">
+          <h2 className="text-lg sm:text-2xl lg:text-4xl font-extrabold text-[hsl(var(--fg-primary))] tracking-tight mb-2 sm:mb-3 lg:mb-4">
             {st("landing.dashboardTitle", "این چیزیه که هر روز می‌بینی")}
           </h2>
-          <p className="mx-auto max-w-xl text-sm sm:text-lg text-[hsl(var(--fg-secondary))] leading-relaxed">
+          <p className="mx-auto max-w-xl text-sm sm:text-base lg:text-lg text-[hsl(var(--fg-secondary))] leading-relaxed px-4 sm:px-0">
             {st("landing.dashboardDesc", "یک نگاه، همه چیز روشن — فروش امروز، موجودی گدام، بدهی مشتری‌ها.")}
           </p>
         </div>
@@ -106,12 +106,12 @@ export default function DashboardShowcaseScene(props: DashboardShowcaseSceneProp
               transform: `perspective(1400px) rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
             }}
           >
-            <div className="flex items-center gap-2 px-4 py-2.5 sm:py-3 bg-[hsl(var(--surface-muted))] border-b border-[hsl(var(--border-default))]">
-              <span className="w-2.5 h-2.5 rounded-full bg-[hsl(var(--color-destructive)/0.5)]" />
-              <span className="w-2.5 h-2.5 rounded-full bg-[hsl(var(--color-warning)/0.5)]" />
-              <span className="w-2.5 h-2.5 rounded-full bg-[hsl(var(--color-success)/0.5)]" />
+            <div className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 lg:py-3 bg-[hsl(var(--surface-muted))] border-b border-[hsl(var(--border-default))]">
+              <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-[hsl(var(--color-destructive)/0.5)]" />
+              <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-[hsl(var(--color-warning)/0.5)]" />
+              <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-[hsl(var(--color-success)/0.5)]" />
               <div className="flex-1 flex justify-center">
-                <span className="px-3 py-0.5 rounded-full text-[10px] sm:text-xs text-[hsl(var(--fg-tertiary))] bg-[hsl(var(--surface-base))] border border-[hsl(var(--border-default))]">
+                <span className="px-2 sm:px-3 py-0.5 rounded-full text-[8px] sm:text-[10px] lg:text-xs text-[hsl(var(--fg-tertiary))] bg-[hsl(var(--surface-base))] border border-[hsl(var(--border-default))]">
                   app.hisabche.af
                 </span>
               </div>
@@ -132,9 +132,9 @@ export default function DashboardShowcaseScene(props: DashboardShowcaseSceneProp
           {/* Phone frame */}
           <div
             className={cn(
-              "absolute -bottom-8 sm:-bottom-12 start-2 sm:start-[-40px]",
-              "w-[100px] sm:w-[150px] rounded-[1.4rem] sm:rounded-[2rem] overflow-hidden",
-              "border-4 sm:border-[6px] border-[hsl(var(--surface-base))]",
+              "absolute -bottom-6 sm:-bottom-8 lg:-bottom-12 start-1 sm:start-[-20px] lg:start-[-40px]",
+              "w-[80px] sm:w-[100px] lg:w-[150px] rounded-[1.2rem] sm:rounded-[1.4rem] lg:rounded-[2rem] overflow-hidden",
+              "border-[3px] sm:border-4 lg:border-[6px] border-[hsl(var(--surface-base))]",
               "shadow-[var(--shadow-premium)] ring-1 ring-[hsl(var(--border-default))]",
               "transition-all duration-700 delay-200 motion-reduce:transition-none",
               animated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6",

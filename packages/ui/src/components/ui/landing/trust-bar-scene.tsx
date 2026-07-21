@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { Marquee } from "../marquee";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   TrustBarScene v6 — Infinite marquee · 50 business categories
+   TrustBarScene v7 — Infinite marquee · 50 business categories
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface TrustBarSceneProps {
@@ -71,7 +71,7 @@ function IndustryChip({
   label: string;
 }) {
   return (
-    <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium text-[hsl(var(--fg-secondary))] bg-[hsl(var(--surface-muted))] border border-[hsl(var(--border-default))] whitespace-nowrap hover:border-[hsl(var(--color-primary)/0.3)] hover:text-[hsl(var(--fg-primary))] transition-colors duration-200">
+    <span className="inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-[9px] sm:text-xs lg:text-sm font-medium text-[hsl(var(--fg-secondary))] bg-[hsl(var(--surface-muted))] border border-[hsl(var(--border-default))] whitespace-nowrap hover:border-[hsl(var(--color-primary)/0.3)] hover:text-[hsl(var(--fg-primary))] transition-colors duration-200">
       {label}
     </span>
   );
@@ -105,19 +105,18 @@ export default function TrustBarScene({ t }: TrustBarSceneProps) {
       id="trust-bar"
       ref={ref}
       className={cn(
-        "relative py-8 sm:py-10 border-b border-[hsl(var(--border-default))] overflow-hidden",
+        "relative py-5 sm:py-6 lg:py-10 border-b border-[hsl(var(--border-default))] overflow-hidden",
         "transition-opacity duration-700",
         animated ? "opacity-100" : "opacity-0",
       )}
     >
-      <div className="container-narrow mb-6 sm:mb-8">
-        <p className="text-center text-xs sm:text-sm font-semibold uppercase tracking-[0.2em] text-[hsl(var(--fg-tertiary))]">
+      <div className="container-narrow mb-4 sm:mb-5 lg:mb-8 px-4 sm:px-6">
+        <p className="text-center text-[9px] sm:text-[10px] lg:text-sm font-semibold uppercase tracking-[0.2em] text-[hsl(var(--fg-tertiary))]">
           {t("landing.trustBarLabel", "Trusted by every type of business")}
         </p>
       </div>
 
-      {/* Row 1 — forward */}
-      <Marquee pauseOnHover repeat={4} className="[--duration:100s] py-1">
+      <Marquee pauseOnHover repeat={4} className="[--duration:100s] py-0.5 sm:py-1">
         {firstHalf.map(({ key, fallback }) => (
           <IndustryChip
             key={key}
@@ -126,8 +125,7 @@ export default function TrustBarScene({ t }: TrustBarSceneProps) {
         ))}
       </Marquee>
 
-      {/* Row 2 — reverse, slightly faster */}
-      <Marquee pauseOnHover repeat={4} reverse className="[--duration:90s] py-1">
+      <Marquee pauseOnHover repeat={4} reverse className="[--duration:90s] py-0.5 sm:py-1">
         {secondHalf.map(({ key, fallback }) => (
           <IndustryChip
             key={key}
@@ -136,9 +134,8 @@ export default function TrustBarScene({ t }: TrustBarSceneProps) {
         ))}
       </Marquee>
 
-      {/* Fade edges */}
-      <div className="pointer-events-none absolute inset-y-0 left-0 w-16 sm:w-24 bg-gradient-to-r from-[hsl(var(--surface-base))] to-transparent z-10" aria-hidden="true" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 w-16 sm:w-24 bg-gradient-to-l from-[hsl(var(--surface-base))] to-transparent z-10" aria-hidden="true" />
+      <div className="pointer-events-none absolute inset-y-0 left-0 w-10 sm:w-12 lg:w-24 bg-gradient-to-r from-[hsl(var(--surface-base))] to-transparent z-10" aria-hidden="true" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-10 sm:w-12 lg:w-24 bg-gradient-to-l from-[hsl(var(--surface-base))] to-transparent z-10" aria-hidden="true" />
     </section>
   );
 }

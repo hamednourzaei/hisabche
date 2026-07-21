@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   FeaturesScene v12 — Clean grid of Hisabche features (from master roadmap)
+   FeaturesScene v13 — Clean grid of Hisabche features (from master roadmap)
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface FeaturesSceneProps {
@@ -32,7 +32,7 @@ interface FeatureItem {
   key: string;
   title: string;
   description: string;
-  status?: "active" | "soon" | undefined;
+  status?: "active" | "active" | undefined;
 }
 
 const FEATURES: FeatureItem[] = [
@@ -62,14 +62,14 @@ const FEATURES: FeatureItem[] = [
     key: "accounting",
     title: "حسابداری و مالی",
     description: "دفتر کل، سود و زیان، ترازنامه",
-    status: "soon",
+    status: "active",
   },
   {
     icon: Users2,
     key: "hr",
     title: "منابع انسانی",
     description: "کارمندان، حقوق، حضور و غیاب",
-    status: "soon",
+    status: "active",
   },
   {
     icon: BarChart3,
@@ -104,7 +104,7 @@ const FEATURES: FeatureItem[] = [
     key: "integrations",
     title: "اتصالات و API",
     description: "اتصال به درگاه‌ها، وب‌هوک، اتصال‌دهنده‌ها",
-    status: "soon",
+    status: "active",
   },
   {
     icon: Shield,
@@ -134,49 +134,49 @@ export default function FeaturesScene({ t }: FeaturesSceneProps) {
       id="features"
       ref={ref}
       data-narrative="confidence"
-      className="section-padding"
+      className="py-12 sm:py-16 lg:py-20"
     >
-      <div className="container-narrow max-w-6xl">
+      <div className="container-narrow max-w-6xl px-4 sm:px-6">
         <div
           className={cn(
-            "text-center mb-12 sm:mb-16",
+            "text-center mb-10 sm:mb-12 lg:mb-16",
             "transition-all duration-700 motion-reduce:transition-none",
             animated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5",
           )}
         >
-          <p className="text-xs sm:text-sm uppercase tracking-[0.2em] mb-2 sm:mb-3 text-[hsl(var(--fg-tertiary))] font-semibold">
+          <p className="text-[10px] sm:text-xs lg:text-sm uppercase tracking-[0.2em] mb-2 sm:mb-3 text-[hsl(var(--fg-tertiary))] font-semibold">
             {t("landing.featuresLabel", "امکانات")}
           </p>
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[hsl(var(--fg-primary))] tracking-tight">
+          <h2 className="text-xl sm:text-2xl lg:text-4xl font-bold text-[hsl(var(--fg-primary))] tracking-tight">
             {t("landing.featuresTitle", "همه ابزارهای کسب‌وکار، یکجا")}
           </h2>
-          <p className="mt-3 sm:mt-4 text-sm sm:text-base text-[hsl(var(--fg-secondary))] leading-relaxed max-w-lg mx-auto">
+          <p className="mt-2 sm:mt-3 lg:mt-4 text-sm sm:text-base text-[hsl(var(--fg-secondary))] leading-relaxed max-w-lg mx-auto px-4 sm:px-0">
             {t("landing.featuresDesc", "از فروش و انبار تا حسابداری و هوش مصنوعی.")}
           </p>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-5">
           {FEATURES.map((feature, i) => {
             const Icon = feature.icon;
             return (
               <div
                 key={feature.key}
                 className={cn(
-                  "group relative overflow-hidden rounded-[var(--radius-xl)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-5 sm:p-6 transition-all duration-500",
+                  "group relative overflow-hidden rounded-[var(--radius-xl)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-3.5 sm:p-4 lg:p-6 transition-all duration-500",
                   "hover:border-[hsl(var(--color-primary)/0.3)] hover:shadow-lg hover:-translate-y-1",
                   "motion-reduce:hover:translate-y-0",
                   animated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4",
                 )}
                 style={{ transitionDelay: `${i * 80}ms` }}
               >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="w-10 h-10 rounded-xl bg-[hsl(var(--color-primary)/0.1)] flex items-center justify-center text-[hsl(var(--color-primary))]">
-                    <Icon className="size-5" />
+                <div className="flex items-center justify-between mb-2.5 sm:mb-3">
+                  <div className="w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 rounded-lg sm:rounded-xl bg-[hsl(var(--color-primary)/0.1)] flex items-center justify-center text-[hsl(var(--color-primary))]">
+                    <Icon className="size-4 sm:size-4.5 lg:size-5" />
                   </div>
                   {feature.status !== undefined && (
                     <span
                       className={cn(
-                        "text-xs px-2 py-0.5 rounded-full font-medium",
+                        "text-[8px] sm:text-[10px] lg:text-xs px-1.5 sm:px-2 py-0.5 rounded-full font-medium",
                         feature.status === "active"
                           ? "bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))]"
                           : "bg-[hsl(var(--color-warning)/0.12)] text-[hsl(var(--color-warning))]",
@@ -187,10 +187,10 @@ export default function FeaturesScene({ t }: FeaturesSceneProps) {
                   )}
                 </div>
 
-                <h3 className="font-semibold text-sm mb-1 text-[hsl(var(--fg-primary))]">
+                <h3 className="font-semibold text-xs sm:text-sm lg:text-base leading-snug mb-0.5 sm:mb-1 text-[hsl(var(--fg-primary))] line-clamp-1 sm:line-clamp-2">
                   {t(`landing.feature.${feature.key}Title`, feature.title)}
                 </h3>
-                <p className="text-xs text-[hsl(var(--fg-secondary))] leading-relaxed">
+                <p className="text-[10px] sm:text-xs lg:text-sm text-[hsl(var(--fg-secondary))] leading-relaxed line-clamp-2">
                   {t(`landing.feature.${feature.key}Desc`, feature.description)}
                 </p>
               </div>

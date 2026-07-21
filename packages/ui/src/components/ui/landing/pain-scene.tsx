@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { ArrowLeft, Clock } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   PainScene v11 — Timeline preserved on mobile · Scaled, not redesigned
+   PainScene v12 — Timeline preserved on mobile · Scaled, not redesigned
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface PainSceneProps {
@@ -154,21 +154,21 @@ export default function PainScene({ t }: PainSceneProps) {
       id="pain"
       ref={ref}
       data-narrative="confusion"
-      className="section-padding relative"
+      className="py-12 sm:py-16 lg:py-20 relative"
     >
-      <div className="container-narrow max-w-5xl">
+      <div className="container-narrow max-w-5xl px-4 sm:px-6">
         {/* ── Header ── */}
         <div
           className={cn(
-            "text-center mb-12 sm:mb-24",
+            "text-center mb-10 sm:mb-16 lg:mb-24",
             "transition-all duration-700 motion-reduce:transition-none",
             animated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6",
           )}
         >
-          <p className="text-xs sm:text-sm uppercase tracking-[0.25em] mb-3 text-[hsl(var(--fg-tertiary))] font-semibold">
+          <p className="text-[10px] sm:text-xs lg:text-sm uppercase tracking-[0.25em] mb-2 sm:mb-3 text-[hsl(var(--fg-tertiary))] font-semibold">
             {t("landing.painLabel", "دنیای بدون حسابچه")}
           </p>
-          <h2 className="text-xl sm:text-3xl lg:text-4xl font-bold text-[hsl(var(--fg-primary))] tracking-tight">
+          <h2 className="text-lg sm:text-2xl lg:text-4xl font-bold text-[hsl(var(--fg-primary))] tracking-tight px-4 sm:px-0">
             {t("landing.painTitle", "هر روز که می‌گذرد، کنترل کمتری داری")}
           </h2>
         </div>
@@ -177,7 +177,7 @@ export default function PainScene({ t }: PainSceneProps) {
         <div className="relative">
           {/* Central line: always visible, shifts on mobile */}
           <div
-            className="absolute left-5 sm:left-1/2 sm:-translate-x-1/2 top-0 bottom-0 w-px"
+            className="absolute left-4 sm:left-1/2 sm:-translate-x-1/2 top-0 bottom-0 w-px"
             style={{
               background:
                 "linear-gradient(to bottom, hsl(var(--color-destructive)/0.15), hsl(var(--color-destructive)/0.25) 70%, hsl(var(--color-primary)/0.3))",
@@ -185,7 +185,7 @@ export default function PainScene({ t }: PainSceneProps) {
             aria-hidden="true"
           />
 
-          <div className="space-y-6 sm:space-y-12 lg:space-y-14">
+          <div className="space-y-4 sm:space-y-8 lg:space-y-14">
             {PAIN_POINTS.map((item, i) => {
               const isLeft = i % 2 === 1;
               const styles = intensityStyles(item.intensity);
@@ -206,13 +206,13 @@ export default function PainScene({ t }: PainSceneProps) {
                   }}
                 >
                   {/* Node: left-aligned on mobile, centred on desktop */}
-                  <div className="absolute left-5 sm:left-1/2 sm:-translate-x-1/2 z-10 flex flex-col items-center gap-1">
-                    <span className="hidden sm:block text-[10px] font-semibold uppercase tracking-[0.15em] text-[hsl(var(--fg-tertiary))] whitespace-nowrap leading-none">
+                  <div className="absolute left-4 sm:left-1/2 sm:-translate-x-1/2 z-10 flex flex-col items-center gap-0.5 sm:gap-1">
+                    <span className="hidden sm:block text-[8px] sm:text-[10px] font-semibold uppercase tracking-[0.15em] text-[hsl(var(--fg-tertiary))] whitespace-nowrap leading-none">
                       {item.timelineLabel}
                     </span>
                     <div
                       className={cn(
-                        "w-7 h-7 sm:w-12 sm:h-12 rounded-full flex items-center justify-center text-[10px] sm:text-sm font-bold border-2 transition-all duration-300",
+                        "w-6 h-6 sm:w-10 sm:h-10 lg:w-12 lg:h-12 rounded-full flex items-center justify-center text-[8px] sm:text-[10px] lg:text-sm font-bold border-2 transition-all duration-300",
                         styles.node,
                         "group-hover:scale-110 group-hover:shadow-[0_0_16px_hsl(var(--color-primary)/0.3)]",
                         "motion-reduce:group-hover:scale-100",
@@ -225,19 +225,19 @@ export default function PainScene({ t }: PainSceneProps) {
                   {/* Content card */}
                   <div
                     className={cn(
-                      "w-full sm:w-[calc(50%-2.5rem)] relative ml-12 sm:ml-0 p-3.5 sm:p-6 lg:p-7 rounded-xl sm:rounded-[var(--radius-lg)] transition-all duration-300",
+                      "w-full sm:w-[calc(50%-2.5rem)] relative ml-10 sm:ml-0 p-3 sm:p-4 lg:p-7 rounded-lg sm:rounded-xl lg:rounded-[var(--radius-lg)] transition-all duration-300",
                       styles.border,
                       styles.bg,
                       "group-hover:-translate-y-1 group-hover:shadow-[0_8px_24px_rgba(0,0,0,0.08)]",
                       "motion-reduce:group-hover:translate-y-0",
-                      item.climax && "sm:p-7 lg:p-8 border-[hsl(var(--color-primary)/0.4)]",
+                      item.climax && "sm:p-5 lg:p-8 border-[hsl(var(--color-primary)/0.4)]",
                     )}
                   >
                     {/* Mobile timeline label */}
-                    <div className="flex sm:hidden items-center gap-2 mb-2">
+                    <div className="flex sm:hidden items-center gap-1.5 mb-1.5">
                       <span
                         className={cn(
-                          "px-2 py-0.5 rounded-full text-[10px] font-bold",
+                          "px-1.5 py-0.5 rounded-full text-[8px] font-bold",
                           item.intensity < 5
                             ? "bg-[hsl(var(--color-destructive)/0.1)] text-[hsl(var(--color-destructive))]"
                             : "bg-[hsl(var(--color-primary)/0.15)] text-[hsl(var(--color-primary))]",
@@ -245,27 +245,27 @@ export default function PainScene({ t }: PainSceneProps) {
                       >
                         {item.number}
                       </span>
-                      <span className="text-[11px] font-medium text-[hsl(var(--fg-tertiary))] uppercase tracking-wider">
+                      <span className="text-[9px] font-medium text-[hsl(var(--fg-tertiary))] uppercase tracking-wider">
                         {item.timelineLabel}
                       </span>
                     </div>
 
                     <h3
                       className={cn(
-                        "text-sm sm:text-lg lg:text-xl font-bold mb-1.5 sm:mb-2",
+                        "text-xs sm:text-base lg:text-xl font-bold mb-1 sm:mb-1.5 lg:mb-2",
                         item.intensity >= 4 ? "text-[hsl(var(--color-primary))]" : "text-[hsl(var(--fg-primary))]",
                       )}
                     >
                       {t(item.headlineKey, item.headlineFallback)}
                     </h3>
-                    <p className="text-[13px] sm:text-sm lg:text-base text-[hsl(var(--fg-secondary))] leading-relaxed">
+                    <p className="text-[11px] sm:text-xs lg:text-base text-[hsl(var(--fg-secondary))] leading-relaxed line-clamp-3 sm:line-clamp-none">
                       {t(item.descriptionKey, item.descriptionFallback)}
                     </p>
 
                     {/* Stat highlight for pain 07 */}
                     {item.number === "۰۷" && (
-                      <div className="mt-3 sm:mt-4 flex items-center gap-2 text-[11px] sm:text-sm text-[hsl(var(--fg-tertiary))]">
-                        <Clock className="size-3 sm:size-3.5" />
+                      <div className="mt-2 sm:mt-3 lg:mt-4 flex items-center gap-1.5 sm:gap-2 text-[10px] sm:text-[11px] lg:text-sm text-[hsl(var(--fg-tertiary))]">
+                        <Clock className="size-2.5 sm:size-3 lg:size-3.5" />
                         <span>
                           {t("landing.pain7Stat", "۲ ساعت در روز · ۷۳۰ ساعت در سال")}
                         </span>
@@ -275,7 +275,7 @@ export default function PainScene({ t }: PainSceneProps) {
                     {/* Connector line to centre (desktop only) */}
                     <div
                       className={cn(
-                        "hidden sm:block absolute top-1/2 w-8 h-px transition-colors duration-300",
+                        "hidden sm:block absolute top-1/2 w-6 sm:w-8 h-px transition-colors duration-300",
                         item.intensity < 5
                           ? "bg-[hsl(var(--color-destructive)/0.18)] group-hover:bg-[hsl(var(--color-destructive)/0.35)]"
                           : "bg-[hsl(var(--color-primary)/0.3)] group-hover:bg-[hsl(var(--color-primary)/0.5)]",
@@ -293,22 +293,22 @@ export default function PainScene({ t }: PainSceneProps) {
         {/* ── Emotional climax + transition to solution ── */}
         <div
           className={cn(
-            "mt-16 sm:mt-28 text-center relative",
+            "mt-12 sm:mt-20 lg:mt-28 text-center relative",
             "transition-all duration-700 delay-500 motion-reduce:transition-none",
             animated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6",
           )}
         >
           {/* Bridge node */}
-          <div className="flex justify-center mb-5 sm:mb-6">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[hsl(var(--color-primary)/0.1)] border-2 border-[hsl(var(--color-primary)/0.4)] flex items-center justify-center animate-pulse [animation-duration:2.5s]">
+          <div className="flex justify-center mb-4 sm:mb-5 lg:mb-6">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-full bg-[hsl(var(--color-primary)/0.1)] border-2 border-[hsl(var(--color-primary)/0.4)] flex items-center justify-center animate-pulse [animation-duration:2.5s]">
               <span className="text-base sm:text-lg">⚡</span>
             </div>
           </div>
 
-          <p className="text-base sm:text-xl lg:text-2xl font-bold text-[hsl(var(--fg-primary))] mb-2 sm:mb-3">
+          <p className="text-base sm:text-lg lg:text-2xl font-bold text-[hsl(var(--fg-primary))] mb-2 sm:mb-3">
             {t("landing.painClimaxTitle", "دیگر ادامه دادن این روش اشتباه است")}
           </p>
-          <p className="text-[13px] sm:text-base text-[hsl(var(--fg-secondary))] max-w-md mx-auto leading-relaxed mb-6 sm:mb-8">
+          <p className="text-xs sm:text-sm lg:text-base text-[hsl(var(--fg-secondary))] max-w-md mx-auto leading-relaxed mb-4 sm:mb-6 lg:mb-8 px-4 sm:px-0">
             {t(
               "landing.painClimaxDesc",
               "تو هر روز بیشتر کار می‌کنی، اما هر روز کنترل کمتری روی کسب‌وکارت داری. وقت تغییر است.",
@@ -319,14 +319,14 @@ export default function PainScene({ t }: PainSceneProps) {
             type="button"
             onClick={scrollToSolution}
             className={cn(
-              "inline-flex items-center gap-2 px-5 py-2.5 sm:px-6 sm:py-3 rounded-full",
-              "bg-[hsl(var(--color-primary))] text-[hsl(var(--color-primary-fg))] font-semibold text-sm sm:text-base",
+              "inline-flex items-center gap-1.5 sm:gap-2 px-4 sm:px-5 lg:px-6 py-2 sm:py-2.5 lg:py-3 rounded-full",
+              "bg-[hsl(var(--color-primary))] text-[hsl(var(--color-primary-fg))] font-semibold text-xs sm:text-sm lg:text-base",
               "hover:bg-[hsl(var(--color-primary-hover))] transition-colors duration-200",
               "shadow-[0_4px_20px_hsl(var(--color-primary)/0.25)]",
             )}
           >
             {t("landing.painSeeSolution", "حسابچه چطور کمک می‌کند")}
-            <ArrowLeft className="size-3.5 sm:size-4 rtl:rotate-180" />
+            <ArrowLeft className="size-3 sm:size-3.5 lg:size-4 rtl:rotate-180" />
           </button>
         </div>
       </div>

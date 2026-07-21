@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { ChevronDown, ExternalLink } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   FaqScene v7 — SEO-optimised · 16 questions · categories · internal links
+   FaqScene v8 — SEO-optimised · 16 questions · categories · internal links
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface FaqSceneProps {
@@ -228,7 +228,7 @@ function FaqAccordionItem({
   return (
     <div
       className={cn(
-        "group border rounded-2xl overflow-hidden transition-all duration-300",
+        "group border rounded-xl sm:rounded-2xl overflow-hidden transition-all duration-300",
         isOpen
           ? "border-[hsl(var(--color-primary)/0.3)] bg-[hsl(var(--color-primary)/0.03)] shadow-[var(--shadow-premium)]"
           : "border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated)/0.5)] hover:border-[hsl(var(--border-strong))]",
@@ -237,13 +237,15 @@ function FaqAccordionItem({
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center justify-between gap-4 px-5 py-4 text-start font-semibold text-[hsl(var(--fg-primary))] min-h-[44px]"
+        className="flex w-full items-center justify-between gap-3 sm:gap-4 px-4 sm:px-5 py-3 sm:py-4 text-start font-semibold text-[hsl(var(--fg-primary))] min-h-[40px] sm:min-h-[44px]"
         aria-expanded={isOpen}
       >
-        <span className="text-sm sm:text-base">{item.fallbackQuestion}</span>
+        <span className="text-xs sm:text-sm lg:text-base leading-snug sm:leading-normal">
+          {item.fallbackQuestion}
+        </span>
         <ChevronDown
           className={cn(
-            "size-5 shrink-0 text-[hsl(var(--fg-tertiary))] transition-transform duration-300",
+            "size-4 sm:size-5 shrink-0 text-[hsl(var(--fg-tertiary))] transition-transform duration-300",
             isOpen && "rotate-180",
           )}
           aria-hidden="true"
@@ -257,15 +259,15 @@ function FaqAccordionItem({
         )}
       >
         <div className="overflow-hidden">
-          <div className="px-5 pb-4 text-sm text-[hsl(var(--fg-secondary))] leading-relaxed">
+          <div className="px-4 sm:px-5 pb-3 sm:pb-4 text-xs sm:text-sm text-[hsl(var(--fg-secondary))] leading-relaxed">
             {item.fallbackAnswer}
             {item.relatedLink && (
               <a
                 href={item.relatedLink}
-                className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-[hsl(var(--color-primary))] hover:underline"
+                className="mt-2 inline-flex items-center gap-1 text-[10px] sm:text-xs font-medium text-[hsl(var(--color-primary))] hover:underline"
               >
                 {item.relatedFallback ?? "بیشتر بدانید"}
-                <ExternalLink className="size-3" />
+                <ExternalLink className="size-2.5 sm:size-3" />
               </a>
             )}
           </div>
@@ -320,18 +322,18 @@ export default function FaqScene({ t }: FaqSceneProps) {
     : null;
 
   return (
-    <section id="faq" className="section-padding">
+    <section id="faq" className="py-12 sm:py-16 lg:py-20">
       <FaqJsonLd />
 
-      <div className="container-narrow max-w-3xl">
-        <div className="text-center mb-12 sm:mb-14">
-          <p className="text-xs sm:text-sm uppercase tracking-[0.2em] mb-3 text-[hsl(var(--fg-tertiary))] font-semibold">
+      <div className="container-narrow max-w-3xl px-4 sm:px-6">
+        <div className="text-center mb-10 sm:mb-12 lg:mb-14">
+          <p className="text-[10px] sm:text-xs lg:text-sm uppercase tracking-[0.2em] mb-2 sm:mb-3 text-[hsl(var(--fg-tertiary))] font-semibold">
             {t("landing.faqLabel", "پرسش‌های رایج")}
           </p>
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[hsl(var(--fg-primary))] tracking-tight mb-3">
+          <h2 className="text-xl sm:text-2xl lg:text-4xl font-bold text-[hsl(var(--fg-primary))] tracking-tight mb-2 sm:mb-3">
             {t("landing.faqTitle", "هر سوالی داری، اینجا جوابش هست")}
           </h2>
-          <p className="mx-auto max-w-xl text-sm sm:text-base text-[hsl(var(--fg-secondary))] leading-relaxed">
+          <p className="mx-auto max-w-xl text-sm sm:text-base text-[hsl(var(--fg-secondary))] leading-relaxed px-4 sm:px-0">
             {t(
               "landing.faqDesc",
               "اگر پاسخت را پیدا نکردی، پشتیبانی حسابچه همیشه آماده کمک است.",
@@ -339,7 +341,7 @@ export default function FaqScene({ t }: FaqSceneProps) {
           </p>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-2 sm:space-y-3">
           {!showAll &&
             visibleItems.map((item) => (
               <FaqAccordionItem
@@ -359,11 +361,11 @@ export default function FaqScene({ t }: FaqSceneProps) {
 
           {showAll &&
             categorizedView!.map((category) => (
-              <div key={category.id} className="mb-8">
-                <h3 className="text-sm font-semibold text-[hsl(var(--fg-secondary))] uppercase tracking-[0.15em] mb-3 px-1">
+              <div key={category.id} className="mb-6 sm:mb-8">
+                <h3 className="text-xs sm:text-sm font-semibold text-[hsl(var(--fg-secondary))] uppercase tracking-[0.15em] mb-2 sm:mb-3 px-1">
                   {t(category.titleKey, category.fallbackTitle)}
                 </h3>
-                <div className="space-y-3">
+                <div className="space-y-2 sm:space-y-3">
                   {category.items.map((item) => (
                     <FaqAccordionItem
                       key={item.id}
@@ -385,19 +387,19 @@ export default function FaqScene({ t }: FaqSceneProps) {
         </div>
 
         {!showAll && ALL_ITEMS.length > INITIAL_COUNT && (
-          <div className="mt-8 text-center">
+          <div className="mt-6 sm:mt-8 text-center">
             <button
               onClick={() => setShowAll(true)}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-full border border-[hsl(var(--border-default))] text-sm font-medium text-[hsl(var(--fg-secondary))] hover:border-[hsl(var(--color-primary)/0.4)] hover:text-[hsl(var(--fg-primary))] transition-colors"
+              className="inline-flex items-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 rounded-full border border-[hsl(var(--border-default))] text-xs sm:text-sm font-medium text-[hsl(var(--fg-secondary))] hover:border-[hsl(var(--color-primary)/0.4)] hover:text-[hsl(var(--fg-primary))] transition-colors"
             >
               {t("faq.showMore", "مشاهده همه سوالات")}
-              <ChevronDown className="size-4" />
+              <ChevronDown className="size-3.5 sm:size-4" />
             </button>
           </div>
         )}
 
-        <div className="mt-10 text-center">
-          <p className="text-sm text-[hsl(var(--fg-secondary))]">
+        <div className="mt-8 sm:mt-10 text-center">
+          <p className="text-xs sm:text-sm text-[hsl(var(--fg-secondary))]">
             {t("faq.supportText", "پاسخت را پیدا نکردی؟")}{" "}
             <a href="mailto:support@hisabche.af" className="text-[hsl(var(--color-primary))] font-medium underline">
               {t("faq.supportLink", "با پشتیبانی تماس بگیر")}
