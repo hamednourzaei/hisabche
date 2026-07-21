@@ -28,7 +28,7 @@ const vazirmatn = localFont({
 });
 
 const siteConfig = {
-  "FA": {
+  "fa": {
     title: "حسابچه — نرم‌افزار حسابداری و مدیریت کسب‌وکار",
     description: "نرم‌افزار حسابداری، فاکتور، مدیریت انبار، بدهی مشتریان و تحلیل مالی برای کسب‌وکارهای کوچک و متوسط. رایگان شروع کنید.",
     keywords: [
@@ -40,9 +40,9 @@ const siteConfig = {
     ogTitle: "حسابچه — نرم‌افزار حسابداری و مدیریت کسب‌وکار",
     ogDescription: "حسابداری، فاکتور، انبار و مدیریت بدهی در یک اپ. بدون اینترنت، رایگان.",
     siteName: "حسابچه",
-    locale: "FA",
+    locale: "fa",
   },
-  "AF": {
+  "af": {
     title: "حسابچه — نرم‌افزار حسابداری و مدیریت تجارت",
     description: "نرم‌افزار حسابداری، فاکتور، مدیریت گدام، قرض مشتریان و تحلیل مالی برای تجارت‌های کوچک و متوسط. رایگان شروع کنید.",
     keywords: [
@@ -54,7 +54,7 @@ const siteConfig = {
     ogTitle: "حسابچه — نرم‌افزار حسابداری و مدیریت تجارت",
     ogDescription: "حسابداری، فاکتور، گدام و مدیریت قرض در یک اپ. بدون انترنت، رایگان.",
     siteName: "حسابچه",
-    locale: "FA",
+    locale: "fa",
   },
   "en": {
     title: "Hisabche — Free Accounting & Business Management Software",
@@ -82,7 +82,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
     keywords: config.keywords,
     openGraph: {
       type: "website",
-      url: `https://hisabche.com/${lang === "FA" ? "" : lang}`,
+      url: `https://hisabche.com/${lang === "fa" ? "" : lang}`,
       title: config.ogTitle,
       description: config.ogDescription,
       siteName: config.siteName,
