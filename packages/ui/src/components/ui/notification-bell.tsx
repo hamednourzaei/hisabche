@@ -10,9 +10,8 @@ import {
   useNotifications,
   useUnreadCount,
   useMarkAsRead,
-  type Notification,
-} from "@hisabche/api"; // ✅ از API استفاده می‌کنیم
-
+  Notification,
+} from "@hisabche/api";
 // ✅ دیگر نیازی به supabaseClient نیست
 
 interface NotificationGroup {
