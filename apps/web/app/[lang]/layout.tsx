@@ -28,7 +28,7 @@ const vazirmatn = localFont({
 });
 
 const siteConfig = {
-  "fa": {
+  "FA": {
     title: "حسابچه — نرم‌افزار حسابداری و مدیریت کسب‌وکار",
     description: "نرم‌افزار حسابداری، فاکتور، مدیریت انبار، بدهی مشتریان و تحلیل مالی برای کسب‌وکارهای کوچک و متوسط. رایگان شروع کنید.",
     keywords: [
@@ -40,7 +40,7 @@ const siteConfig = {
     ogTitle: "حسابچه — نرم‌افزار حسابداری و مدیریت کسب‌وکار",
     ogDescription: "حسابداری، فاکتور، انبار و مدیریت بدهی در یک اپ. بدون اینترنت، رایگان.",
     siteName: "حسابچه",
-    locale: "fa",
+    locale: "FA",
   },
   "AF": {
     title: "حسابچه — نرم‌افزار حسابداری و مدیریت تجارت",
@@ -54,7 +54,7 @@ const siteConfig = {
     ogTitle: "حسابچه — نرم‌افزار حسابداری و مدیریت تجارت",
     ogDescription: "حسابداری، فاکتور، گدام و مدیریت قرض در یک اپ. بدون انترنت، رایگان.",
     siteName: "حسابچه",
-    locale: "fa",
+    locale: "FA",
   },
   "en": {
     title: "Hisabche — Free Accounting & Business Management Software",
@@ -82,7 +82,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
     keywords: config.keywords,
     openGraph: {
       type: "website",
-      url: `https://hisabche.com/${lang === "fa" ? "" : lang}`,
+      url: `https://hisabche.com/${lang === "FA" ? "" : lang}`,
       title: config.ogTitle,
       description: config.ogDescription,
       siteName: config.siteName,
@@ -108,8 +108,8 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
     },
     metadataBase: new URL("https://www.hisabche.com"),
     alternates: {
-      canonical: lang === "fa" ? "/" : `/${lang}`,
-      languages: { "en": "/en", "fa": "/fa", "fa-AF": "/fa-AF" },
+      canonical: lang === "FA" ? "/" : `/${lang}`,
+      languages: { "en": "/en", "FA": "/FA", "AF": "/AF" },
     },
   };
 }
