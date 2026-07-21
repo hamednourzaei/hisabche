@@ -2,6 +2,7 @@
 // backend/src/index.ts — Hisabche API Server v2.4
 // FIXED: workspaceRoutes import — use default import
 // FIXED: notificationRoutes — properly registered
+// FIXED: debugRoutes — properly registered
 // ============================================
 
 import Fastify from 'fastify'
@@ -32,7 +33,6 @@ import { transactionRoutes } from './routes/transaction.routes'
 import { warehouseRoutes } from './routes/warehouse.routes'
 import { humanResourcesRoutes } from './routes/human-resources.routes'
 import { projectRoutes } from './routes/project.routes'
-// ✅ FIX: workspaceRoutes را از فایل routes import کن (نه از services)
 import { workspaceRoutes } from './routes/workspace.routes'
 import { permissionRoutes } from './routes/permission.routes'
 import auditRoutes from './routes/audit.routes'
@@ -46,6 +46,7 @@ import { purchasingRoutes } from './routes/purchasing.routes'
 import { billingRoutes } from './routes/billing.routes'
 import { workflowRoutes } from './routes/workflow.routes'
 import { notificationRoutes } from './routes/notification.routes'
+import { debugRoutes } from './routes/debug.routes'
 
 // ──────────────────────────────────────────────
 // Plugins & Scheduler
@@ -142,10 +143,7 @@ server.addHook('preHandler', async (request, reply) => {
   if (skipPaths.some(p => request.url.startsWith(p))) return
   if (request.url.includes('auth')) return
 
-  // ✅ FIX: userId را از request بگیر (بعد از auth)
   const userId = (request as any).userId || 'anonymous'
-  
-  // ✅ FIX: کلید کش شامل userId
   const cacheKey = `http:${userId}:${request.url}`
   
   try {
@@ -397,7 +395,10 @@ async function start() {
     await server.register(purchasingRoutes)
     await server.register(workflowRoutes)
     
-    // ✅ FIX: Notification Routes — به‌درستی ثبت شد
+    // ✅ ثبت Route‌های دیباگ (فقط برای دیباگ)
+    await server.register(debugRoutes)
+    
+    // ✅ ثبت Route‌های Notification
     await server.register(notificationRoutes)
     
     await server.register(jobSchedulerPlugin)
