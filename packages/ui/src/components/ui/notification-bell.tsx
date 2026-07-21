@@ -1,3 +1,4 @@
+// packages/ui/src/components/ui/notification-bell.tsx
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo, memo } from "react";
@@ -5,19 +6,14 @@ import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { Bell, X, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { supabaseClient } from "@hisabche/auth";
+import {
+  useNotifications,
+  useUnreadCount,
+  useMarkAsRead,
+  type Notification,
+} from "@hisabche/api"; // ✅ از API استفاده می‌کنیم
 
-interface Notification {
-  id: string;
-  title: string;
-  body?: string | null;
-  type: "info" | "success" | "warning" | "approval_required";
-  action_url?: string | null;
-  entity_type?: string | null;
-  entity_id?: string | null;
-  is_read: boolean;
-  created_at: string;
-}
+// ✅ دیگر نیازی به supabaseClient نیست
 
 interface NotificationGroup {
   key: string;
@@ -69,68 +65,7 @@ function groupNotifications(list: Notification[]): NotificationGroup[] {
   }));
 }
 
-// ─── Hook ────────────────────────────────────────────────────────────────────
-
-function useNotifications() {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const isMounted = useRef(true);
-
-  const fetchNotifications = useCallback(async () => {
-    const { data } = await supabaseClient
-      .from("notifications")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(10);
-
-    if (isMounted.current && data) {
-      setNotifications(data as Notification[]);
-    }
-
-    const { count } = await supabaseClient
-      .from("notifications")
-      .select("*", { count: "exact", head: true })
-      .eq("is_read", false);
-
-    if (isMounted.current) {
-      setUnreadCount(count ?? 0);
-    }
-  }, []);
-
-  const markAsRead = useCallback(async (ids: string[]) => {
-    await supabaseClient
-      .from("notifications")
-      .update({ is_read: true })
-      .in("id", ids);
-
-    setNotifications((p) =>
-      p.map((n) => (ids.includes(n.id) ? { ...n, is_read: true } : n))
-    );
-    setUnreadCount((c) => Math.max(0, c - ids.length));
-  }, []);
-
-  useEffect(() => {
-    isMounted.current = true;
-    fetchNotifications();
-
-    const iv = setInterval(fetchNotifications, 15000);
-    return () => {
-      isMounted.current = false;
-      clearInterval(iv);
-    };
-  }, [fetchNotifications]);
-
-  // ✅ useMemo برای notifications (جلوگیری از تغییر مرجع)
-  const memoizedNotifications = useMemo(() => notifications, [notifications]);
-
-  return {
-    notifications: memoizedNotifications,
-    unreadCount,
-    markAsRead,
-  };
-}
-
-// ─── GroupCard (با memo) ────────────────────────────────────────────────────
+// ─── GroupCard ──────────────────────────────────────────────────────────────
 
 const GroupCard = memo(function GroupCard({
   group,
@@ -216,10 +151,16 @@ export const NotificationBell = memo(function NotificationBell({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
-  const { notifications, unreadCount, markAsRead } = useNotifications();
 
-  // ✅ useMemo برای groups
-  const groups = useMemo(() => groupNotifications(notifications), [notifications]);
+  // ✅ استفاده از API به جای supabaseClient
+  const { data: notifications = [], isLoading } = useNotifications();
+  const { data: unreadCount = 0 } = useUnreadCount();
+  const { mutate: markAsRead } = useMarkAsRead();
+
+  const groups = useMemo(
+    () => groupNotifications(notifications),
+    [notifications]
+  );
 
   const [tog, setTog] = useState<Record<string, boolean>>({});
 
@@ -258,7 +199,9 @@ export const NotificationBell = memo(function NotificationBell({
 
   const click = useCallback(
     (n: Notification) => {
-      if (!n.is_read) markAsRead([n.id]);
+      if (!n.is_read) {
+        markAsRead([n.id]);
+      }
       setOpen(false);
       router.push(resolveEntityUrl(n));
     },
@@ -300,7 +243,11 @@ export const NotificationBell = memo(function NotificationBell({
             </button>
           </div>
 
-          {groups.length === 0 ? (
+          {isLoading ? (
+            <div className="px-3 py-8 text-center">
+              <div className="inline-block h-6 w-6 animate-spin rounded-full border-2 border-[hsl(var(--color-primary))] border-t-transparent" />
+            </div>
+          ) : groups.length === 0 ? (
             <p className="px-3 py-8 text-center text-sm text-[hsl(var(--fg-tertiary))]">
               {t("notifications.empty", "اعلانی وجود ندارد")}
             </p>

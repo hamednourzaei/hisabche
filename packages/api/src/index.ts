@@ -11,6 +11,8 @@ export {
   registerTokenGetter,
   getToken,
   hasToken,
+  isTokenProviderReady,
+  tokenReady,
 } from './lib/tokenProvider'
 export { setOnUnauthorized } from './lib/client'
 
@@ -58,6 +60,8 @@ export {
   useLedger,
   transactionKeys,
 } from './hooks/transactions'
+
+// ─── Realtime ─────────────────────────────────────────────
 export { useRealtime } from './hooks/useRealtime'
 
 // ─── Dashboard ────────────────────────────────────────────
@@ -192,3 +196,12 @@ export {
   type UsageReport,
   type TrialStatus,
 } from './hooks/billing'
+
+// ─── Notifications ─────────────────────────────────────────
+export {
+  useNotifications,
+  useUnreadCount,
+  useMarkAsRead,
+  notificationKeys,
+  type Notification,
+} from './hooks/notifications'
