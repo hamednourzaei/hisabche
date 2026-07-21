@@ -4,6 +4,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
+import { useAuthReady } from './useAuthReady'
 
 // ═══ Types ═══
 export interface Interaction {
@@ -26,6 +27,8 @@ export const crmKeys = {
 
 // ═══ Hooks ═══
 export function useInteractions(customerId?: string) {
+  const authReady = useAuthReady()
+
   return useQuery({
     queryKey: crmKeys.interactions(customerId),
     queryFn: async (): Promise<Interaction[]> => {
@@ -35,6 +38,7 @@ export function useInteractions(customerId?: string) {
       })
       return data
     },
+    enabled: authReady,
     staleTime: 60_000,
   })
 }
@@ -43,7 +47,6 @@ export function useCreateInteraction() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (input: any) => {
-      // ✅ Fix
       const { data } = await apiClient.post('/interactions', input)
       return data
     },
@@ -54,6 +57,8 @@ export function useCreateInteraction() {
 }
 
 export function useOpportunities(customerId?: string) {
+  const authReady = useAuthReady()
+
   return useQuery({
     queryKey: crmKeys.opportunities(customerId),
     queryFn: async (): Promise<Opportunity[]> => {
@@ -63,6 +68,7 @@ export function useOpportunities(customerId?: string) {
       })
       return data
     },
+    enabled: authReady,
     staleTime: 60_000,
   })
 }
@@ -71,7 +77,6 @@ export function useCreateOpportunity() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (input: any) => {
-      // ✅ Fix
       const { data } = await apiClient.post('/opportunities', input)
       return data
     },
@@ -85,7 +90,6 @@ export function useUpdateOpportunity() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, ...input }: any) => {
-      // ✅ Fix
       const { data } = await apiClient.patch(`/opportunities/${id}`, input)
       return data
     },

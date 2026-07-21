@@ -5,6 +5,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../lib/client";
+import { useAuthReady } from "./useAuthReady";
 
 export const workspaceKeys = {
   all: ["workspaces"] as const,
@@ -14,23 +15,28 @@ export const workspaceKeys = {
 };
 
 export function useWorkspaces() {
+  const authReady = useAuthReady();
+
   return useQuery({
     queryKey: workspaceKeys.list(),
     queryFn: async () => {
       const { data } = await apiClient.get("/workspaces");
       return data;
     },
+    enabled: authReady,
   });
 }
 
 export function useWorkspaceMembers(workspaceId: string) {
+  const authReady = useAuthReady();
+
   return useQuery({
     queryKey: workspaceKeys.members(workspaceId),
     queryFn: async () => {
       const { data } = await apiClient.get(`/workspaces/${workspaceId}/members`);
       return data;
     },
-    enabled: !!workspaceId,
+    enabled: authReady && !!workspaceId,
   });
 }
 
@@ -66,7 +72,7 @@ export function useRemoveMember() {
   });
 }
 
-// ✅ NEW — Update member role
+// ✅ Update member role
 export function useUpdateMemberRole() {
   const qc = useQueryClient();
   return useMutation({

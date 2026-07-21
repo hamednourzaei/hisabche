@@ -4,6 +4,7 @@
 
 import { useMutation, useQuery } from '@tanstack/react-query'
 import apiClient from '../lib/client'
+import { useAuthReady } from './useAuthReady'
 import type { LoginInput, SignUpInput } from '@hisabche/validation'
 
 interface AuthResponse {
@@ -56,7 +57,10 @@ export function useLogout() {
   })
 }
 
+// ✅ گیت شده با authReady تا قبل از hydrate شدن session، بدون توکن fire نشود
 export function useCurrentUser() {
+  const authReady = useAuthReady()
+
   return useQuery({
     queryKey: ['auth', 'me'],
     queryFn: async () => {
@@ -64,6 +68,7 @@ export function useCurrentUser() {
       const data = (response as any).data || response
       return data.user
     },
+    enabled: authReady,
     staleTime: 1000 * 60 * 10,
     retry: false,
   })

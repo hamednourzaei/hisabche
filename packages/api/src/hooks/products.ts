@@ -4,6 +4,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
+import { useAuthReady } from './useAuthReady'
 import type {
   Product,
   CreateProduct,
@@ -26,11 +27,14 @@ export const productKeys = {
 // Hooks
 // ============================================
 
+// ✅ گیت شده با authReady
 export function useProducts(filters: Partial<ProductFilters> = {}) {
-  // ✅ FIX: فقط فیلدهایی که ارسال نشده‌اند را با default پر کن
+  const authReady = useAuthReady()
+
+  // ✅ فقط فیلدهایی که ارسال نشده‌اند را با default پر کن
   const mergedFilters: ProductFilters = {
     page: filters.page ?? 1,
-    limit: filters.limit ?? 20,  // ✅ اگر limit ارسال شده باشد، همان را نگه دار
+    limit: filters.limit ?? 20,
     sortDirection: filters.sortDirection ?? 'desc',
     search: filters.search ?? '',
     sortBy: filters.sortBy ?? 'created_at',
@@ -51,18 +55,21 @@ export function useProducts(filters: Partial<ProductFilters> = {}) {
       })
       return data
     },
+    enabled: authReady,
     staleTime: 1000 * 60 * 2,
   })
 }
 
 export function useProduct(id: string | undefined) {
+  const authReady = useAuthReady()
+
   return useQuery({
     queryKey: productKeys.detail(id!),
     queryFn: async () => {
       const { data } = await apiClient.get<Product>(`/products/${id}`)
       return data
     },
-    enabled: !!id,
+    enabled: authReady && !!id,
   })
 }
 

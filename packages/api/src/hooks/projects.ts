@@ -5,6 +5,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../lib/client";
+import { useAuthReady } from "./useAuthReady";
 
 export const projectKeys = {
   all: ["projects"] as const,
@@ -13,12 +14,15 @@ export const projectKeys = {
 };
 
 export function useProjects(params?: { status?: string } | undefined) {
+  const authReady = useAuthReady();
+
   return useQuery({
     queryKey: projectKeys.list(params),
     queryFn: async () => {
       const { data } = await apiClient.get("/projects", { params: params ?? undefined });
       return data;
     },
+    enabled: authReady,
     staleTime: 30_000,
   });
 }
@@ -43,7 +47,6 @@ export function useDeleteProject() {
     onSuccess: () => qc.invalidateQueries({ queryKey: projectKeys.all }),
   });
 }
-// ... بعد از useDeleteProject
 
 // ─── Tasks ──────────────────────────────────────────────────
 export const projectTaskKeys = {
@@ -52,13 +55,15 @@ export const projectTaskKeys = {
 };
 
 export function useProjectTasks(projectId: string) {
+  const authReady = useAuthReady();
+
   return useQuery({
     queryKey: projectTaskKeys.list(projectId),
     queryFn: async () => {
       const { data } = await apiClient.get(`/projects/${projectId}/tasks`);
       return data;
     },
-    enabled: !!projectId,
+    enabled: authReady && !!projectId,
   });
 }
 
@@ -94,15 +99,18 @@ export function useDeleteProjectTask() {
     onSuccess: () => qc.invalidateQueries({ queryKey: projectTaskKeys.all }),
   });
 }
+
 // ─── Single Project ─────────────────────────────────────────
 export function useProject(id: string) {
+  const authReady = useAuthReady();
+
   return useQuery({
     queryKey: projectKeys.detail(id),
     queryFn: async () => {
       const { data } = await apiClient.get(`/projects/${id}`);
       return data;
     },
-    enabled: !!id,
+    enabled: authReady && !!id,
   });
 }
 

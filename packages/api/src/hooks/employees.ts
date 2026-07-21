@@ -5,6 +5,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../lib/client";
+import { useAuthReady } from "./useAuthReady";
 
 // ─── Keys ───────────────────────────────────────────────────
 export const employeeKeys = {
@@ -15,25 +16,29 @@ export const employeeKeys = {
 
 // ─── Hooks ──────────────────────────────────────────────────
 export function useEmployees(params: { page?: number; limit?: number } = {}) {
+  const authReady = useAuthReady();
+
   return useQuery({
     queryKey: employeeKeys.list(params),
     queryFn: async () => {
-      // baseURL = .../api → فقط /employees
       const { data } = await apiClient.get("/employees", { params });
       return data;
     },
+    enabled: authReady,
     staleTime: 30_000,
   });
 }
 
 export function useEmployee(id: string) {
+  const authReady = useAuthReady();
+
   return useQuery({
     queryKey: employeeKeys.detail(id),
     queryFn: async () => {
       const { data } = await apiClient.get(`/employees/${id}`);
       return data;
     },
-    enabled: !!id,
+    enabled: authReady && !!id,
   });
 }
 

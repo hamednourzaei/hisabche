@@ -4,6 +4,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
+import { useAuthReady } from './useAuthReady'
 
 // ═══ Types ═══
 export interface PurchaseOrder {
@@ -28,24 +29,29 @@ export const purchasingKeys = {
 
 // ═══ Hooks ═══
 export function usePurchaseOrders() {
+  const authReady = useAuthReady()
+
   return useQuery({
     queryKey: purchasingKeys.orders(),
     queryFn: async (): Promise<PurchaseOrder[]> => {
       const { data } = await apiClient.get('/purchasing/orders')
       return data
     },
+    enabled: authReady,
     staleTime: 60_000,
   })
 }
 
 export function usePurchaseOrder(id: string) {
+  const authReady = useAuthReady()
+
   return useQuery({
     queryKey: purchasingKeys.order(id),
     queryFn: async (): Promise<PurchaseOrder> => {
       const { data } = await apiClient.get(`/purchasing/orders/${id}`)
       return data
     },
-    enabled: !!id,
+    enabled: authReady && !!id,
     staleTime: 60_000,
   })
 }

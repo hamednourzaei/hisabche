@@ -3,6 +3,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "../lib/client";
+import { useAuthReady } from "./useAuthReady";
 
 export const auditKeys = {
   all: ["audit"] as const,
@@ -42,7 +43,7 @@ function extractAuditData(response: unknown): AuditResponse {
   const data = response as Record<string, unknown>;
 
   // ✅ 1. Check for response.data.logs
-  if (data?.data && typeof data.data === 'object') {
+  if (data?.data && typeof data.data === "object") {
     const nested = data.data as Record<string, unknown>;
     if (nested?.logs && Array.isArray(nested.logs)) {
       return {
@@ -75,7 +76,9 @@ function extractAuditData(response: unknown): AuditResponse {
   };
 }
 
+// ✅ گیت شده با authReady
 export function useAuditLogs(params: UseAuditLogsParams = {}) {
+  const authReady = useAuthReady();
   const { page = 1, limit = 30, ...rest } = params;
 
   return useQuery({
@@ -87,6 +90,7 @@ export function useAuditLogs(params: UseAuditLogsParams = {}) {
 
       return extractAuditData(response);
     },
+    enabled: authReady,
     staleTime: 30000,
     retry: 2,
   });

@@ -4,6 +4,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
+import { useAuthReady } from './useAuthReady'
 import type {
   Customer,
   CreateCustomer,
@@ -28,6 +29,8 @@ export const customerKeys = {
 // ============================================
 
 export function useCustomers(filters: CustomerFilters = { page: 1, limit: 20, sortDirection: 'desc' }) {
+  const authReady = useAuthReady()
+
   return useQuery({
     queryKey: customerKeys.list(filters),
     queryFn: async () => {
@@ -36,19 +39,22 @@ export function useCustomers(filters: CustomerFilters = { page: 1, limit: 20, so
       })
       return data
     },
+    enabled: authReady,
     staleTime: 60_000,
     placeholderData: (previousData: any) => previousData,
   })
 }
 
 export function useCustomer(id: string | undefined) {
+  const authReady = useAuthReady()
+
   return useQuery({
     queryKey: customerKeys.detail(id!),
     queryFn: async () => {
       const { data } = await apiClient.get<Customer>(`/customers/${id}`)
       return data
     },
-    enabled: !!id,
+    enabled: authReady && !!id,
     staleTime: 60_000,
   })
 }

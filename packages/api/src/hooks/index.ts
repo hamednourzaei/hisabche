@@ -7,3 +7,4 @@ export * from "./workspace";
 export * from "./invoices";
 export * from "./products";
 export * from "./customers";
+export * from "./useAuthReady";

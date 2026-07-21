@@ -4,6 +4,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
+import { useAuthReady } from './useAuthReady'
 
 // ═══ Types ═══
 export interface Account {
@@ -47,12 +48,15 @@ export const accountingKeys = {
 
 // ═══ Hooks ═══
 export function useAccounts() {
+  const authReady = useAuthReady()
+
   return useQuery({
     queryKey: accountingKeys.accounts(),
     queryFn: async (): Promise<Account[]> => {
       const { data } = await apiClient.get('/accounting/accounts')
       return data
     },
+    enabled: authReady,
     staleTime: 5 * 60_000,
   })
 }
@@ -71,12 +75,15 @@ export function useCreateAccount() {
 }
 
 export function useJournalEntries() {
+  const authReady = useAuthReady()
+
   return useQuery({
     queryKey: accountingKeys.journalEntries(),
     queryFn: async (): Promise<JournalEntry[]> => {
       const { data } = await apiClient.get('/accounting/journal')
       return data
     },
+    enabled: authReady,
     staleTime: 2 * 60_000,
   })
 }
@@ -96,37 +103,43 @@ export function useCreateJournalEntry() {
 }
 
 export function useTrialBalance(date: string) {
+  const authReady = useAuthReady()
+
   return useQuery({
     queryKey: accountingKeys.trialBalance(date),
     queryFn: async (): Promise<TrialBalance[]> => {
       const { data } = await apiClient.get('/accounting/trial-balance', { params: { date } })
       return data
     },
+    enabled: authReady && !!date,
     staleTime: 60_000,
-    enabled: !!date,
   })
 }
 
 export function useBalanceSheet(date: string) {
+  const authReady = useAuthReady()
+
   return useQuery({
     queryKey: accountingKeys.balanceSheet(date),
     queryFn: async (): Promise<BalanceSheet> => {
       const { data } = await apiClient.get('/accounting/balance-sheet', { params: { date } })
       return data
     },
+    enabled: authReady && !!date,
     staleTime: 60_000,
-    enabled: !!date,
   })
 }
 
 export function useIncomeStatement(from: string, to: string) {
+  const authReady = useAuthReady()
+
   return useQuery({
     queryKey: accountingKeys.incomeStatement(from, to),
     queryFn: async (): Promise<IncomeStatement> => {
       const { data } = await apiClient.get('/accounting/income-statement', { params: { from, to } })
       return data
     },
+    enabled: authReady && !!from && !!to,
     staleTime: 60_000,
-    enabled: !!from && !!to,
   })
 }

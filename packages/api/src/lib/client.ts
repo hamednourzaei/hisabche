@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosError } from 'axios'
-import { getToken } from './tokenProvider'
+import { getToken, tokenReady } from './tokenProvider'
 
 // ============================================
 // Types
@@ -23,6 +23,9 @@ export interface ApiError {
 const BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || 'https://api.hisabche.com/api'
 const isDev = process.env.NODE_ENV !== 'production'
+
+// حداکثر زمانی که یک درخواست منتظر آماده شدن Auth Store می‌ماند (میلی‌ثانیه)
+const TOKEN_READY_TIMEOUT_MS = 2000
 
 const devLog = (...args: unknown[]) => {
   if (isDev) console.log(...args)
@@ -52,11 +55,24 @@ export function setOnUnauthorized(callback: () => void): void {
   onUnauthorized = callback
 }
 
+// ✅ صبر با سقف زمانی؛ اگر Store هیچ‌وقت آماده نشد (مثلاً کاربر مهمان)،
+// درخواست بعد از timeout بدون توکن ارسال می‌شود (نه اینکه برای همیشه بلاک بماند)
+function waitForTokenReady(): Promise<void> {
+  return Promise.race([
+    tokenReady,
+    new Promise<void>((resolve) => setTimeout(resolve, TOKEN_READY_TIMEOUT_MS)),
+  ])
+}
+
 // ============================================
 // Request Interceptor
 // ============================================
 apiClient.interceptors.request.use(
   async (config) => {
+    // ✅ صبر می‌کنیم تا Store توکن‌گیر را ثبت کند (یا سقف زمانی برسد)
+    // این کار جلوی 401 کاذب ناشی از race بین mount شدن صفحه و hydrate شدن session را می‌گیرد
+    await waitForTokenReady()
+
     // ✅ فقط از Token Provider می‌خوانیم
     const token = getToken()
 

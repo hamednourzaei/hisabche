@@ -7,6 +7,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
+import { useAuthReady } from './useAuthReady'
 import type { Plan, Subscription } from '@hisabche/validation'
 
 // ─── Types ──────────────────────────────────────────────────────
@@ -52,7 +53,7 @@ export const billingKeys = {
 
 // ─── Hooks ──────────────────────────────────────────────────────
 
-// ۱. دریافت لیست پلن‌ها
+// ۱. دریافت لیست پلن‌ها — این یکی عمومی است (بدون login هم قابل مشاهده)، پس گیت نشده
 export function usePlans() {
   return useQuery({
     queryKey: billingKeys.plans(),
@@ -64,38 +65,47 @@ export function usePlans() {
   })
 }
 
-// ۲. دریافت اشتراک فعلی
+// ۲. دریافت اشتراک فعلی — نیازمند احراز هویت
 export function useSubscription() {
+  const authReady = useAuthReady()
+
   return useQuery({
     queryKey: billingKeys.subscription(),
     queryFn: async (): Promise<Subscription> => {
       const { data } = await apiClient.get('/billing/subscription')
       return data
     },
+    enabled: authReady,
     staleTime: 60 * 1000, // ۱ دقیقه
   })
 }
 
-// ۳. دریافت وضعیت Trial
+// ۳. دریافت وضعیت Trial — نیازمند احراز هویت
 export function useTrialStatus() {
+  const authReady = useAuthReady()
+
   return useQuery({
     queryKey: billingKeys.trialStatus(),
     queryFn: async (): Promise<TrialStatus> => {
       const { data } = await apiClient.get('/billing/trial-status')
       return data
     },
+    enabled: authReady,
     staleTime: 60 * 1000, // ۱ دقیقه
   })
 }
 
-// ۴. دریافت گزارش مصرف
+// ۴. دریافت گزارش مصرف — نیازمند احراز هویت
 export function useUsage() {
+  const authReady = useAuthReady()
+
   return useQuery({
     queryKey: billingKeys.usage(),
     queryFn: async (): Promise<UsageReport> => {
       const { data } = await apiClient.get('/billing/usage')
       return data
     },
+    enabled: authReady,
     staleTime: 2 * 60 * 1000, // ۲ دقیقه
   })
 }
@@ -103,7 +113,7 @@ export function useUsage() {
 // ۵. ارتقا به پلن جدید
 export function useUpgrade() {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
     mutationFn: async ({ plan, interval }: { plan: Plan; interval: 'month' | 'year' }) => {
       const { data } = await apiClient.post('/billing/upgrade', { plan, interval })
@@ -120,7 +130,7 @@ export function useUpgrade() {
 // ۶. لغو اشتراک
 export function useCancelSubscription() {
   const queryClient = useQueryClient()
-  
+
   return useMutation({
     mutationFn: async () => {
       const { data } = await apiClient.post('/billing/cancel')

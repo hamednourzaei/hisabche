@@ -4,6 +4,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
+import { useAuthReady } from './useAuthReady'
 import type {
   Invoice,
   CreateInvoice,
@@ -38,12 +39,16 @@ export const invoiceKeys = {
 // ============================================
 // Hooks
 // ============================================
+
+// ✅ گیت شده با authReady: تا session hydrate نشود، fire نمی‌شود (رفع 401 استورم اولیه)
 export function useInvoices(filters: InvoiceFilters = { page: 1, limit: 20, sortDirection: 'desc' }) {
+  const authReady = useAuthReady()
+
   return useQuery({
     queryKey: invoiceKeys.list(filters),
     queryFn: async () => {
-      const { data } = await apiClient.get<{ 
-        invoices: InvoiceWithCustomer[]; 
+      const { data } = await apiClient.get<{
+        invoices: InvoiceWithCustomer[];
         total: number;
         hasMore: boolean;
         nextCursor: string | null;
@@ -53,19 +58,22 @@ export function useInvoices(filters: InvoiceFilters = { page: 1, limit: 20, sort
       })
       return data
     },
+    enabled: authReady,
     staleTime: 1000 * 60 * 2,
     placeholderData: (previousData) => previousData,
   })
 }
 
 export function useInvoice(id: string | undefined) {
+  const authReady = useAuthReady()
+
   return useQuery({
     queryKey: invoiceKeys.detail(id!),
     queryFn: async () => {
       const { data } = await apiClient.get<InvoiceWithCustomer>(`/invoices/${id}`)
       return data
     },
-    enabled: !!id,
+    enabled: authReady && !!id,
     staleTime: 1000 * 60 * 5,
   })
 }

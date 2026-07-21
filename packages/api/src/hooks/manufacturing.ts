@@ -4,6 +4,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
+import { useAuthReady } from './useAuthReady'
 
 // ═══ Types ═══
 export interface BOM {
@@ -31,6 +32,8 @@ export const manufacturingKeys = {
 
 // ═══ Hooks ═══
 export function useBOMs(productId?: string) {
+  const authReady = useAuthReady()
+
   return useQuery({
     queryKey: manufacturingKeys.boms(productId),
     queryFn: async (): Promise<BOM[]> => {
@@ -39,6 +42,7 @@ export function useBOMs(productId?: string) {
       })
       return data
     },
+    enabled: authReady,
     staleTime: 2 * 60_000,
   })
 }
@@ -57,6 +61,8 @@ export function useCreateBOM() {
 }
 
 export function useWorkOrders(status?: string) {
+  const authReady = useAuthReady()
+
   return useQuery({
     queryKey: manufacturingKeys.workOrders(status),
     queryFn: async (): Promise<WorkOrder[]> => {
@@ -65,6 +71,7 @@ export function useWorkOrders(status?: string) {
       })
       return data
     },
+    enabled: authReady,
     staleTime: 30_000,
   })
 }
