@@ -1,7 +1,7 @@
 // packages/ui/src/components/ui/dashboard/business-health-panel.tsx
 "use client";
 
-import { memo, useMemo, useId } from "react"; // ✅ useId اضافه شد
+import { memo, useMemo, useId } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { 
@@ -16,7 +16,7 @@ import {
   Clock,
   FileText
 } from "lucide-react";
-import { useCurrency } from "../../../hooks/dashboard/use-currency"; // ✅ استفاده از currency service
+import { useCurrency } from "../../../hooks/dashboard/use-currency";
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -43,15 +43,15 @@ interface BusinessHealthPanelProps {
 
 const BusinessHealthSkeleton = memo(function BusinessHealthSkeleton() {
   return (
-    <div className="space-y-4">
-      <div className="h-32 rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
-      <div className="grid grid-cols-2 gap-4">
-        <div className="h-24 rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
-        <div className="h-24 rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
+    <div className="space-y-3 sm:space-y-4">
+      <div className="h-28 sm:h-32 rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        <div className="h-20 sm:h-24 rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
+        <div className="h-20 sm:h-24 rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
       </div>
-      <div className="grid grid-cols-2 gap-4">
-        <div className="h-20 rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
-        <div className="h-20 rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        <div className="h-16 sm:h-20 rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
+        <div className="h-16 sm:h-20 rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
       </div>
     </div>
   );
@@ -63,7 +63,6 @@ BusinessHealthSkeleton.displayName = "BusinessHealthSkeleton";
 const StatusBadge = memo(function StatusBadge({ status }: { status: "excellent" | "good" | "neutral" | "attention" }) {
   const { t } = useTranslation();
   
-  // ✅ useMemo برای جلوگیری از rebuild در هر render
   const statusMap = useMemo(() => ({
     excellent: {
       icon: CheckCircle,
@@ -91,11 +90,11 @@ const StatusBadge = memo(function StatusBadge({ status }: { status: "excellent" 
 
   return (
     <span className={cn(
-      "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium border",
+      "inline-flex items-center gap-1 rounded-full px-1.5 sm:px-3 py-0.5 sm:py-1 text-[9px] sm:text-xs font-medium border",
       className
     )}>
-      <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-      {label}
+      <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" aria-hidden="true" />
+      <span className="hidden sm:inline">{label}</span>
     </span>
   );
 });
@@ -109,7 +108,7 @@ const BusinessHealthHero = memo(function BusinessHealthHero({
   monthlyGrowth,
   isLoading,
   onAction,
-  formatCurrency, // ✅ از parent دریافت می‌شود
+  formatCurrency,
 }: {
   todaySales: number;
   todayInvoices: number;
@@ -119,7 +118,7 @@ const BusinessHealthHero = memo(function BusinessHealthHero({
   formatCurrency: (v: number) => string;
 }) {
   const { t } = useTranslation();
-  const descriptionId = useId(); // ✅ استفاده از useId برای جلوگیری از duplicate
+  const descriptionId = useId();
   
   const { status, statusText, interpretation } = useMemo(() => {
     if (monthlyGrowth >= 15) {
@@ -150,20 +149,20 @@ const BusinessHealthHero = memo(function BusinessHealthHero({
   }, [monthlyGrowth, t]);
 
   if (isLoading) {
-    return <div className="h-32 rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />;
+    return <div className="h-28 sm:h-32 rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />;
   }
 
   return (
     <button
       onClick={onAction}
       className={cn(
-        "relative w-full rounded-2xl p-6 text-start transition-all duration-200",
+        "relative w-full rounded-2xl p-4 sm:p-6 text-start transition-all duration-200",
         "border-2 border-[hsl(var(--border-default))]",
         "bg-gradient-to-br from-[hsl(var(--surface-elevated))] to-[hsl(var(--surface-muted))]",
-        "motion-safe:hover:scale-[1.01] hover:shadow-lg", // ✅ motion-safe اضافه شد
+        "motion-safe:hover:scale-[1.01] hover:shadow-lg",
         "focus-visible:ring-4 focus-visible:ring-[hsl(var(--color-primary)/0.3)] focus-visible:outline-none"
       )}
-      aria-describedby={descriptionId} // ✅ استفاده از useId
+      aria-describedby={descriptionId}
     >
       <div id={descriptionId} className="sr-only">
         {statusText}. {interpretation}. {t("health.salesSummary", {
@@ -172,45 +171,45 @@ const BusinessHealthHero = memo(function BusinessHealthHero({
         })}
       </div>
 
-      <div className="flex items-start justify-between">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold text-[hsl(var(--fg-primary))]">
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 sm:gap-0">
+        <div className="space-y-1.5 sm:space-y-2">
+          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+            <h2 className="text-sm sm:text-lg font-semibold text-[hsl(var(--fg-primary))]">
               {t("health.title")}
             </h2>
             <StatusBadge status={status} />
           </div>
-          <p className="text-xl font-bold text-[hsl(var(--fg-primary))]">
+          <p className="text-base sm:text-xl font-bold text-[hsl(var(--fg-primary))]">
             {statusText}
           </p>
-          <p className="text-sm text-[hsl(var(--fg-tertiary))]">
+          <p className="text-xs sm:text-sm text-[hsl(var(--fg-tertiary))] line-clamp-2 sm:line-clamp-none">
             {interpretation}
           </p>
-          <div className="flex items-center gap-4 pt-2">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4 pt-1 sm:pt-2">
             <div>
-              <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+              <p className="text-[9px] sm:text-xs text-[hsl(var(--fg-tertiary))]">
                 {t("health.todaySales")}
               </p>
-              <p className="text-xl font-bold text-[hsl(var(--fg-primary))]">
+              <p className="text-base sm:text-xl font-bold text-[hsl(var(--fg-primary))]">
                 {formatCurrency(todaySales)}
               </p>
             </div>
-            <div className="h-8 w-px bg-[hsl(var(--border-default))]" />
+            <div className="h-6 sm:h-8 w-px bg-[hsl(var(--border-default))]" />
             <div>
-              <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+              <p className="text-[9px] sm:text-xs text-[hsl(var(--fg-tertiary))]">
                 {t("health.todayInvoices")}
               </p>
-              <p className="text-lg font-bold text-[hsl(var(--fg-primary))]">
+              <p className="text-base sm:text-lg font-bold text-[hsl(var(--fg-primary))]">
                 {todayInvoices}
               </p>
             </div>
-            <div className="h-8 w-px bg-[hsl(var(--border-default))]" />
+            <div className="h-6 sm:h-8 w-px bg-[hsl(var(--border-default))]" />
             <div>
-              <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+              <p className="text-[9px] sm:text-xs text-[hsl(var(--fg-tertiary))]">
                 {t("health.growth")}
               </p>
               <p className={cn(
-                "text-lg font-bold",
+                "text-base sm:text-lg font-bold",
                 monthlyGrowth >= 0 ? "text-[hsl(var(--status-positive))]" : "text-[hsl(var(--status-negative))]"
               )}>
                 {monthlyGrowth >= 0 ? "+" : ""}{monthlyGrowth.toFixed(1)}%
@@ -218,7 +217,7 @@ const BusinessHealthHero = memo(function BusinessHealthHero({
             </div>
           </div>
         </div>
-        <ArrowRight className="h-6 w-6 text-[hsl(var(--fg-tertiary))] rtl:rotate-180 group-hover:text-[hsl(var(--fg-primary))]" /> {/* ✅ rtl:rotate-180 */}
+        <ArrowRight className="h-5 w-5 sm:h-6 sm:w-6 text-[hsl(var(--fg-tertiary))] rtl:rotate-180 shrink-0 self-end sm:self-center" />
       </div>
     </button>
   );
@@ -229,14 +228,14 @@ BusinessHealthHero.displayName = "BusinessHealthHero";
 
 const PerformanceSnapshot = memo(function PerformanceSnapshot({
   monthlyRevenue,
-  monthlyGrowth, // ✅ monthlyGrowth اضافه شد
+  monthlyGrowth,
   activeCustomers,
   customerGrowth,
   isLoading,
   formatCurrency,
 }: {
   monthlyRevenue: number;
-  monthlyGrowth: number; // ✅ اضافه شد
+  monthlyGrowth: number;
   activeCustomers: number;
   customerGrowth: number;
   isLoading: boolean;
@@ -246,40 +245,40 @@ const PerformanceSnapshot = memo(function PerformanceSnapshot({
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 gap-4">
-        <div className="h-24 rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
-        <div className="h-24 rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        <div className="h-20 sm:h-24 rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
+        <div className="h-20 sm:h-24 rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-2 gap-4">
-      <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-4">
-        <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+    <div className="grid grid-cols-2 gap-3 sm:gap-4">
+      <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-3 sm:p-4">
+        <p className="text-[9px] sm:text-xs text-[hsl(var(--fg-tertiary))]">
           {t("performance.monthlyRevenue")}
         </p>
-        <p className="text-xl font-bold text-[hsl(var(--fg-primary))]">
+        <p className="text-base sm:text-xl font-bold text-[hsl(var(--fg-primary))]">
           {formatCurrency(monthlyRevenue)}
         </p>
-        <div className="flex items-center gap-1 mt-1">
-          <TrendingUp className="h-3 w-3 text-[hsl(var(--status-positive))]" />
-          <span className="text-xs text-[hsl(var(--status-positive))]">
-            +{monthlyGrowth.toFixed(1)}% {t("performance.growthLabel")} {/* ✅ hardcode حذف شد */}
+        <div className="flex items-center gap-0.5 sm:gap-1 mt-0.5 sm:mt-1">
+          <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-[hsl(var(--status-positive))]" />
+          <span className="text-[9px] sm:text-xs text-[hsl(var(--status-positive))]">
+            +{monthlyGrowth.toFixed(1)}% {t("performance.growthLabel")}
           </span>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-4">
-        <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+      <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-3 sm:p-4">
+        <p className="text-[9px] sm:text-xs text-[hsl(var(--fg-tertiary))]">
           {t("performance.activeCustomers")}
         </p>
-        <p className="text-xl font-bold text-[hsl(var(--fg-primary))]">
+        <p className="text-base sm:text-xl font-bold text-[hsl(var(--fg-primary))]">
           {activeCustomers}
         </p>
-        <div className="flex items-center gap-1 mt-1">
-          <Users className="h-3 w-3 text-[hsl(var(--status-info))]" />
-          <span className="text-xs text-[hsl(var(--status-info))]">
+        <div className="flex items-center gap-0.5 sm:gap-1 mt-0.5 sm:mt-1">
+          <Users className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-[hsl(var(--status-info))]" />
+          <span className="text-[9px] sm:text-xs text-[hsl(var(--status-info))]">
             +{customerGrowth.toFixed(1)}% {t("performance.thisMonth")}
           </span>
         </div>
@@ -298,7 +297,7 @@ const AttentionPanel = memo(function AttentionPanel({
   lowStockItems,
   isLoading,
   onAction,
-  formatCurrency, // ✅ از parent دریافت می‌شود
+  formatCurrency,
 }: {
   pendingPayments: number;
   pendingPaymentsCount: number;
@@ -312,9 +311,9 @@ const AttentionPanel = memo(function AttentionPanel({
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-2 gap-4">
-        <div className="h-20 rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
-        <div className="h-20 rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
+        <div className="h-16 sm:h-20 rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
+        <div className="h-16 sm:h-20 rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
       </div>
     );
   }
@@ -323,9 +322,9 @@ const AttentionPanel = memo(function AttentionPanel({
 
   if (!hasAlerts) {
     return (
-      <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-4 text-center">
-        <CheckCircle className="h-6 w-6 text-[hsl(var(--status-positive))] mx-auto mb-2" />
-        <p className="text-sm text-[hsl(var(--fg-secondary))]">
+      <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-3 sm:p-4 text-center">
+        <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 text-[hsl(var(--status-positive))] mx-auto mb-1.5 sm:mb-2" />
+        <p className="text-xs sm:text-sm text-[hsl(var(--fg-secondary))]">
           {t("attention.allGood")}
         </p>
       </div>
@@ -333,20 +332,20 @@ const AttentionPanel = memo(function AttentionPanel({
   }
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <AlertTriangle className="h-4 w-4 text-[hsl(var(--status-negative))]" aria-hidden="true" />
-        <h3 className="text-sm font-medium text-[hsl(var(--fg-primary))]">
+    <div className="space-y-1.5 sm:space-y-2">
+      <div className="flex items-center gap-1.5 sm:gap-2">
+        <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[hsl(var(--status-negative))]" aria-hidden="true" />
+        <h3 className="text-xs sm:text-sm font-medium text-[hsl(var(--fg-primary))]">
           {t("attention.needAttention")}
         </h3>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         {pendingPaymentsCount > 0 && (
           <button
             onClick={() => onAction("payments")}
             className={cn(
-              "relative rounded-2xl p-3 text-start transition-all duration-200",
+              "relative rounded-2xl p-2.5 sm:p-3 text-start transition-all duration-200",
               "border border-[hsl(var(--status-negative)/0.3)] bg-[hsl(var(--status-negative)/0.05)]",
               "hover:border-[hsl(var(--status-negative)/0.6)] hover:shadow-md",
               "focus-visible:ring-4 focus-visible:ring-[hsl(var(--status-negative)/0.3)] focus-visible:outline-none"
@@ -356,13 +355,13 @@ const AttentionPanel = memo(function AttentionPanel({
               amount: formatCurrency(pendingPayments)
             })}
           >
-            <div className="flex items-center gap-2">
-              <Receipt className="h-4 w-4 text-[hsl(var(--status-negative))]" aria-hidden="true" />
-              <div>
-                <p className="text-sm font-medium text-[hsl(var(--status-negative))]">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <Receipt className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[hsl(var(--status-negative))]" aria-hidden="true" />
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-[hsl(var(--status-negative))] truncate">
                   {t("attention.pendingPayments")}
                 </p>
-                <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+                <p className="text-[9px] sm:text-xs text-[hsl(var(--fg-tertiary))] line-clamp-1">
                   {t("attention.paymentsDetail", {
                     count: pendingPaymentsCount,
                     amount: formatCurrency(pendingPayments)
@@ -377,20 +376,20 @@ const AttentionPanel = memo(function AttentionPanel({
           <button
             onClick={() => onAction("warehouse")}
             className={cn(
-              "relative rounded-2xl p-3 text-start transition-all duration-200",
+              "relative rounded-2xl p-2.5 sm:p-3 text-start transition-all duration-200",
               "border border-[hsl(var(--status-warning)/0.3)] bg-[hsl(var(--status-warning)/0.05)]",
               "hover:border-[hsl(var(--status-warning)/0.6)] hover:shadow-md",
               "focus-visible:ring-4 focus-visible:ring-[hsl(var(--status-warning)/0.3)] focus-visible:outline-none"
             )}
             aria-label={t("attention.stockAria", { count: lowStockAlerts })}
           >
-            <div className="flex items-center gap-2">
-              <Package className="h-4 w-4 text-[hsl(var(--status-warning))]" aria-hidden="true" />
-              <div>
-                <p className="text-sm font-medium text-[hsl(var(--status-warning))]">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[hsl(var(--status-warning))]" aria-hidden="true" />
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-[hsl(var(--status-warning))] truncate">
                   {t("attention.lowStock")}
                 </p>
-                <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+                <p className="text-[9px] sm:text-xs text-[hsl(var(--fg-tertiary))] line-clamp-1">
                   {lowStockItems.slice(0, 2).map(item => item.name).join("، ")}
                   {lowStockItems.length > 2 && ` +${lowStockItems.length - 2} ${t("common.moreItems")}`}
                 </p>
@@ -438,34 +437,34 @@ const QuickActions = memo(function QuickActions({
   ], [t]);
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        <ArrowRight className="h-4 w-4 text-[hsl(var(--fg-tertiary))] rtl:rotate-180" aria-hidden="true" /> {/* ✅ rtl:rotate-180 */}
-        <h3 className="text-sm font-medium text-[hsl(var(--fg-secondary))]">
+    <div className="space-y-1.5 sm:space-y-2">
+      <div className="flex items-center gap-1.5 sm:gap-2">
+        <ArrowRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[hsl(var(--fg-tertiary))] rtl:rotate-180" aria-hidden="true" />
+        <h3 className="text-xs sm:text-sm font-medium text-[hsl(var(--fg-secondary))]">
           {t("actions.quickActions")}
         </h3>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
         {actions.map(({ id, label, icon: Icon, description, color }) => (
           <button
             key={id}
             onClick={() => onAction(id)}
             className={cn(
-              "flex items-center gap-3 rounded-2xl p-4 text-start transition-all duration-200",
+              "flex items-center gap-2.5 sm:gap-3 rounded-2xl p-3 sm:p-4 text-start transition-all duration-200",
               "border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]",
-              "motion-safe:hover:border-[hsl(var(--color-primary)/0.3)] motion-safe:hover:shadow-md motion-safe:hover:scale-[1.01]", // ✅ motion-safe
+              "motion-safe:hover:border-[hsl(var(--color-primary)/0.3)] motion-safe:hover:shadow-md motion-safe:hover:scale-[1.01]",
               "focus-visible:ring-4 focus-visible:ring-[hsl(var(--color-primary)/0.3)] focus-visible:outline-none"
             )}
           >
-            <div className={cn("rounded-lg p-2", color)}>
-              <Icon className="h-5 w-5" aria-hidden="true" />
+            <div className={cn("rounded-lg p-1.5 sm:p-2 shrink-0", color)}>
+              <Icon className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
             </div>
-            <div>
-              <p className="text-sm font-medium text-[hsl(var(--fg-primary))]">
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm font-medium text-[hsl(var(--fg-primary))] truncate">
                 {label}
               </p>
-              <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+              <p className="text-[9px] sm:text-xs text-[hsl(var(--fg-tertiary))] line-clamp-1">
                 {description}
               </p>
             </div>
@@ -485,7 +484,7 @@ export const BusinessHealthPanel = memo(function BusinessHealthPanel({
   onAction,
 }: BusinessHealthPanelProps) {
   const { t } = useTranslation();
-  const { format } = useCurrency(); // ✅ یک بار در parent
+  const { format } = useCurrency();
 
   if (isLoading) {
     return <BusinessHealthSkeleton />;
@@ -493,7 +492,7 @@ export const BusinessHealthPanel = memo(function BusinessHealthPanel({
 
   return (
     <section
-      className="space-y-4"
+      className="space-y-3 sm:space-y-4"
       aria-label={t("panel.ariaLabel")}
     >
       <BusinessHealthHero
@@ -502,16 +501,16 @@ export const BusinessHealthPanel = memo(function BusinessHealthPanel({
         monthlyGrowth={data.monthlyGrowth}
         isLoading={isLoading}
         onAction={() => onAction("invoice")}
-        formatCurrency={format} // ✅ پاس‌دادن به child
+        formatCurrency={format}
       />
 
       <PerformanceSnapshot
         monthlyRevenue={data.monthlyRevenue}
-        monthlyGrowth={data.monthlyGrowth} // ✅ پاس‌دادن monthlyGrowth
+        monthlyGrowth={data.monthlyGrowth}
         activeCustomers={data.activeCustomers}
         customerGrowth={data.customerGrowth}
         isLoading={isLoading}
-        formatCurrency={format} // ✅ پاس‌دادن به child
+        formatCurrency={format}
       />
 
       <AttentionPanel
@@ -521,7 +520,7 @@ export const BusinessHealthPanel = memo(function BusinessHealthPanel({
         lowStockItems={data.lowStockItems}
         isLoading={isLoading}
         onAction={onAction}
-        formatCurrency={format} // ✅ پاس‌دادن به child
+        formatCurrency={format}
       />
 
       <QuickActions onAction={onAction} />

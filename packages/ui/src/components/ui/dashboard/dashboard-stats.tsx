@@ -13,20 +13,16 @@ import {
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   InsightCard v3 — Business Insight Component
-   ✅ Contextual · Emotional · Action-Oriented
+   InsightCard v4 — Mobile-optimized · Desktop pixel-perfect
    ═══════════════════════════════════════════════════════════════════════════ */
 
 type Status = "success" | "warning" | "danger" | "info";
 
 interface InsightCardProps {
-  // Core
   label: string;
   value: string | number;
   icon: LucideIcon;
   status: Status;
-  
-  // Context
   comparison?: {
     value: number;
     label: string;
@@ -41,8 +37,6 @@ interface InsightCardProps {
     count: number;
     severity: "low" | "medium" | "high";
   };
-  
-  // Metadata
   hint?: string;
   actionLabel?: string;
   onClick?: () => void;
@@ -82,19 +76,25 @@ const STATUS_STYLES = {
 
 const SIZE_STYLES = {
   small: {
-    container: "p-3",
-    value: "text-lg",
-    label: "text-xs",
+    container: "p-2.5 sm:p-3",
+    value: "text-base sm:text-lg",
+    label: "text-[9px] sm:text-xs",
+    icon: "h-6 w-6 sm:h-8 sm:w-8",
+    iconSize: "h-3.5 w-3.5 sm:h-4 sm:w-4",
   },
   medium: {
-    container: "p-4",
-    value: "text-2xl",
-    label: "text-sm",
+    container: "p-3 sm:p-4",
+    value: "text-xl sm:text-2xl",
+    label: "text-[10px] sm:text-sm",
+    icon: "h-7 w-7 sm:h-8 sm:w-8",
+    iconSize: "h-4 w-4 sm:h-4 sm:w-4",
   },
   large: {
-    container: "p-6",
-    value: "text-4xl",
-    label: "text-base",
+    container: "p-4 sm:p-6",
+    value: "text-2xl sm:text-4xl",
+    label: "text-xs sm:text-base",
+    icon: "h-8 w-8 sm:h-10 sm:w-10",
+    iconSize: "h-4.5 w-4.5 sm:h-5 sm:w-5",
   },
 } as const;
 
@@ -112,14 +112,14 @@ const ProgressBar = memo(function ProgressBar({
   const percentage = Math.min((current / target) * 100, 100);
   
   return (
-    <div className="mt-2 space-y-1">
-      <div className="flex justify-between text-xs">
-        <span className="text-[hsl(var(--fg-tertiary))]">{label}</span>
+    <div className="mt-1.5 sm:mt-2 space-y-0.5 sm:space-y-1">
+      <div className="flex justify-between text-[9px] sm:text-xs">
+        <span className="text-[hsl(var(--fg-tertiary))] truncate">{label}</span>
         <span className="font-medium text-[hsl(var(--fg-secondary))]">
           {percentage.toFixed(0)}%
         </span>
       </div>
-      <div className="h-1.5 w-full rounded-full bg-[hsl(var(--surface-muted))]">
+      <div className="h-1 sm:h-1.5 w-full rounded-full bg-[hsl(var(--surface-muted))]">
         <div
           className="h-full rounded-full bg-[hsl(var(--status-info))] transition-all duration-500"
           style={{ width: `${percentage}%` }}
@@ -147,11 +147,11 @@ const AlertBadge = memo(function AlertBadge({
 
   return (
     <span className={cn(
-      "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium",
+      "inline-flex items-center gap-0.5 sm:gap-1 rounded-full px-1.5 sm:px-2 py-0.5 text-[8px] sm:text-[10px] font-medium",
       severityStyles[severity]
     )}>
-      <AlertTriangle className="h-3 w-3" />
-      {count} {count === 1 ? "هشدار" : "هشدار"}
+      <AlertTriangle className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+      {count}
     </span>
   );
 });
@@ -194,7 +194,7 @@ export const InsightCard = memo(function InsightCard({
     <Wrap
       {...(onClick ? { type: "button" as const, onClick } : {})}
       className={cn(
-        "relative flex flex-col gap-3 rounded-2xl text-start w-full transition-all duration-200",
+        "relative flex flex-col gap-2 sm:gap-3 rounded-2xl text-start w-full transition-all duration-200",
         "border",
         styles.border,
         "bg-gradient-to-br",
@@ -210,16 +210,17 @@ export const InsightCard = memo(function InsightCard({
       aria-label={`${label}: ${value}`}
     >
       {/* Header: Icon + Label + Status */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
           <div className={cn(
-            "flex h-8 w-8 items-center justify-center rounded-lg",
+            "flex items-center justify-center rounded-lg shrink-0",
+            sizeStyles.icon,
             styles.icon
           )}>
-            <Icon className="h-4 w-4" aria-hidden="true" />
+            <Icon className={sizeStyles.iconSize} aria-hidden="true" />
           </div>
           <span className={cn(
-            "font-medium",
+            "font-medium truncate",
             sizeStyles.label,
             "text-[hsl(var(--fg-secondary))]"
           )}>
@@ -234,7 +235,7 @@ export const InsightCard = memo(function InsightCard({
       </div>
 
       {/* Value */}
-      <div className="space-y-1">
+      <div className="space-y-0.5 sm:space-y-1">
         <p className={cn(
           "font-bold tabular-nums text-[hsl(var(--fg-primary))]",
           sizeStyles.value
@@ -244,19 +245,19 @@ export const InsightCard = memo(function InsightCard({
 
         {/* Comparison */}
         {comparison && (
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
             <span className={cn(
-              "flex items-center gap-0.5 text-xs font-medium",
+              "flex items-center gap-0.5 text-[9px] sm:text-xs font-medium",
               comparison.isPositive ? "text-[hsl(var(--status-positive))]" : "text-[hsl(var(--status-negative))]"
             )}>
               {comparison.isPositive ? (
-                <TrendingUp className="h-3 w-3" />
+                <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
               ) : (
-                <TrendingDown className="h-3 w-3" />
+                <TrendingDown className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
               )}
               {comparison.isPositive ? "+" : ""}{comparison.value}%
             </span>
-            <span className="text-xs text-[hsl(var(--fg-tertiary))]">
+            <span className="text-[9px] sm:text-xs text-[hsl(var(--fg-tertiary))] truncate">
               {comparison.label}
             </span>
           </div>
@@ -273,7 +274,7 @@ export const InsightCard = memo(function InsightCard({
 
         {/* Hint */}
         {hint && (
-          <p className="text-xs text-[hsl(var(--fg-tertiary))]">
+          <p className="text-[9px] sm:text-xs text-[hsl(var(--fg-tertiary))] line-clamp-2">
             {hint}
           </p>
         )}
@@ -281,10 +282,10 @@ export const InsightCard = memo(function InsightCard({
 
       {/* Action Footer */}
       {onClick && (
-        <div className="flex items-center justify-end pt-1 border-t border-[hsl(var(--border-default)/0.5)]">
-          <span className="flex items-center gap-1 text-xs font-medium text-[hsl(var(--status-info))]">
+        <div className="flex items-center justify-end pt-1 sm:pt-1.5 border-t border-[hsl(var(--border-default)/0.5)]">
+          <span className="flex items-center gap-0.5 sm:gap-1 text-[9px] sm:text-xs font-medium text-[hsl(var(--status-info))]">
             {actionLabel}
-            <ArrowUpRight className="h-3 w-3" />
+            <ArrowUpRight className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
           </span>
         </div>
       )}

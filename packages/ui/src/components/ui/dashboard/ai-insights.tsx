@@ -7,8 +7,7 @@ import { cn } from "@/lib/utils";
 import { Sparkles, AlertTriangle, Info, Lightbulb, TrendingUp } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   AIInsights v3 — Memoized · Performance Optimized
-   ✅ استفاده از Design Tokens · بدون hardcoded strings
+   AIInsights v4 — Mobile-optimized · Desktop pixel-perfect
    ═══════════════════════════════════════════════════════════════════════════ */
 
 interface Insight {
@@ -27,7 +26,6 @@ interface AIInsightsProps {
   onAction?: (action: string) => void;
 }
 
-// ✅ ثابت‌های خارج از کامپوننت
 const iconMap = {
   warning: AlertTriangle,
   info: Info,
@@ -64,14 +62,14 @@ type InsightType = keyof typeof toneStyles;
 
 const InsightsSkeleton = memo(function InsightsSkeleton() {
   return (
-    <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-6">
-      <div className="flex items-center gap-2 mb-4">
-        <div className="h-5 w-5 rounded bg-[hsl(var(--surface-muted))] animate-pulse" />
-        <div className="h-5 w-32 rounded bg-[hsl(var(--surface-muted))] animate-pulse" />
+    <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-4 sm:p-6">
+      <div className="flex items-center gap-2 mb-3 sm:mb-4">
+        <div className="h-4 sm:h-5 w-4 sm:w-5 rounded bg-[hsl(var(--surface-muted))] animate-pulse" />
+        <div className="h-4 sm:h-5 w-24 sm:w-32 rounded bg-[hsl(var(--surface-muted))] animate-pulse" />
       </div>
-      <div className="space-y-3">
+      <div className="space-y-2 sm:space-y-3">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-16 rounded-xl bg-[hsl(var(--surface-muted))] animate-pulse" />
+          <div key={i} className="h-14 sm:h-16 rounded-xl bg-[hsl(var(--surface-muted))] animate-pulse" />
         ))}
       </div>
     </div>
@@ -84,9 +82,9 @@ InsightsSkeleton.displayName = "InsightsSkeleton";
 const InsightsEmpty = memo(function InsightsEmpty() {
   const { t } = useTranslation();
   return (
-    <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-6 text-center">
-      <Sparkles className="size-8 mx-auto mb-2 text-[hsl(var(--fg-tertiary))]" />
-      <p className="text-sm text-[hsl(var(--fg-secondary))]">
+    <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-4 sm:p-6 text-center">
+      <Sparkles className="size-6 sm:size-8 mx-auto mb-1.5 sm:mb-2 text-[hsl(var(--fg-tertiary))]" />
+      <p className="text-xs sm:text-sm text-[hsl(var(--fg-secondary))]">
         {t("dashboard.noInsights")}
       </p>
     </div>
@@ -109,20 +107,20 @@ const InsightItem = memo(function InsightItem({
   return (
     <div
       className={cn(
-        "flex items-start gap-3 p-4 rounded-xl border",
+        "flex items-start gap-2.5 sm:gap-3 p-3 sm:p-4 rounded-xl border",
         tone.border,
         tone.bg
       )}
     >
       <div className={cn("shrink-0 mt-0.5", tone.icon)}>
-        <Icon className="size-5" aria-hidden="true" />
+        <Icon className="size-4 sm:size-5" aria-hidden="true" />
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-[hsl(var(--fg-primary))]">
+        <p className="text-xs sm:text-sm font-semibold text-[hsl(var(--fg-primary))] line-clamp-1">
           {insight.title}
         </p>
-        <p className="text-xs text-[hsl(var(--fg-secondary))] mt-0.5">
+        <p className="text-[10px] sm:text-xs text-[hsl(var(--fg-secondary))] mt-0.5 line-clamp-2">
           {insight.description}
         </p>
 
@@ -130,7 +128,7 @@ const InsightItem = memo(function InsightItem({
           <button
             type="button"
             onClick={() => onAction(insight.action!)}
-            className="text-xs font-medium text-[hsl(var(--color-primary))] hover:underline mt-1.5"
+            className="text-[10px] sm:text-xs font-medium text-[hsl(var(--color-primary))] hover:underline mt-1"
           >
             {insight.actionLabel}
           </button>
@@ -138,7 +136,7 @@ const InsightItem = memo(function InsightItem({
       </div>
 
       {insight.metric != null && (
-        <span className="text-lg font-bold tabular-nums text-[hsl(var(--fg-primary))] shrink-0">
+        <span className="text-base sm:text-lg font-bold tabular-nums text-[hsl(var(--fg-primary))] shrink-0">
           {insight.metric}
         </span>
       )}
@@ -177,14 +175,14 @@ export const AIInsights = memo(function AIInsights({
   }
 
   return (
-    <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-6">
-      <div className="flex items-center gap-2 mb-4">
-        <Sparkles className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
-        <h2 className="text-base font-semibold text-[hsl(var(--fg-primary))]">
+    <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-4 sm:p-6">
+      <div className="flex items-center gap-1.5 sm:gap-2 mb-3 sm:mb-4">
+        <Sparkles className="size-4 sm:size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+        <h2 className="text-sm sm:text-base font-semibold text-[hsl(var(--fg-primary))]">
           {t("dashboard.smartInsights")}
         </h2>
       </div>
-      <div className="space-y-3">{insightItems}</div>
+      <div className="space-y-2 sm:space-y-3">{insightItems}</div>
     </div>
   );
 });

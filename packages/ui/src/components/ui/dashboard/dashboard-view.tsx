@@ -17,11 +17,10 @@ import { BusinessHealthPanel } from "./business-health-panel";
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
-// ✅ تعریف تایپ ساده به جای TFunction
 type Translate = (key: string, fallback?: string) => string;
 
 interface DashboardViewProps {
-  t: Translate; // ✅ به جای TFunction
+  t: Translate;
   fmt: (v: number) => string;
   
   // KPI Data
@@ -74,7 +73,7 @@ const LazySalesChart = dynamic(
   () => import("./sales-chart").then(mod => mod.SalesChart),
   {
     ssr: false,
-    loading: () => <div className="h-[200px] rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
+    loading: () => <div className="h-[180px] sm:h-[200px] rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
   }
 );
 
@@ -82,7 +81,7 @@ const LazyDashboardInvoices = dynamic(
   () => import("./dashboard-invoices").then(mod => mod.DashboardInvoices),
   {
     ssr: false,
-    loading: () => <div className="h-[200px] rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
+    loading: () => <div className="h-[180px] sm:h-[200px] rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
   }
 );
 
@@ -91,19 +90,19 @@ const LazyDashboardInvoices = dynamic(
 const Greeting = memo(function Greeting({
   t,
 }: {
-  t: Translate; // ✅ به جای TFunction
+  t: Translate;
 }) {
   const h = new Date().getHours();
   const k = h < 12 ? "morning" : h < 17 ? "afternoon" : h < 21 ? "evening" : "night";
   const label = k === "morning" ? "صبح بخیر" : k === "afternoon" ? "ظهر بخیر" : k === "evening" ? "عصر بخیر" : "شب بخیر";
 
   return (
-    <header className="space-y-1.5">
-      <h1 className="flex items-center gap-2 text-2xl font-bold sm:text-3xl text-[hsl(var(--fg-primary))]">
+    <header className="space-y-1 sm:space-y-1.5">
+      <h1 className="flex items-center gap-1.5 sm:gap-2 text-xl sm:text-2xl md:text-3xl font-bold text-[hsl(var(--fg-primary))]">
         {t(`dashboard.greeting.${k}`, label)}
-        <Sparkles className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+        <Sparkles className="size-4 sm:size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
       </h1>
-      <p className="text-sm text-[hsl(var(--fg-secondary))]">
+      <p className="text-xs sm:text-sm text-[hsl(var(--fg-secondary))]">
         {t("dashboard.subtitle")}
       </p>
     </header>
@@ -126,7 +125,7 @@ const AIInsightBanner = memo(function AIInsightBanner({
   
   if (isLoading) {
     return (
-      <div className="h-16 rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
+      <div className="h-14 sm:h-16 rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
     );
   }
   
@@ -138,26 +137,26 @@ const AIInsightBanner = memo(function AIInsightBanner({
   
   return (
     <section
-      className="rounded-2xl border border-[hsl(var(--color-primary)/0.2)] bg-[hsl(var(--color-primary)/0.05)] p-4"
+      className="rounded-2xl border border-[hsl(var(--color-primary)/0.2)] bg-[hsl(var(--color-primary)/0.05)] p-3 sm:p-4"
       aria-label={t("dashboard.aiInsight.aria")}
       role="status"
       aria-live="polite"
     >
-      <div className="flex items-start gap-3">
-        <div className="rounded-full bg-[hsl(var(--color-primary)/0.1)] p-2">
-          <Sparkles className="h-5 w-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+      <div className="flex items-start gap-2.5 sm:gap-3">
+        <div className="rounded-full bg-[hsl(var(--color-primary)/0.1)] p-1.5 sm:p-2 shrink-0">
+          <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
         </div>
-        <div className="flex-1">
-          <p className="text-sm font-medium text-[hsl(var(--fg-primary))]">
+        <div className="flex-1 min-w-0">
+          <p className="text-xs sm:text-sm font-medium text-[hsl(var(--fg-primary))] line-clamp-1">
             {insight.title}
           </p>
-          <p className="text-sm text-[hsl(var(--fg-secondary))]">
+          <p className="text-[10px] sm:text-sm text-[hsl(var(--fg-secondary))] line-clamp-2">
             {insight.description}
           </p>
           {insight.action && (
             <button
               onClick={() => onAction(insight.action!)}
-              className="mt-2 text-sm font-medium text-[hsl(var(--color-primary))] hover:underline focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))] rounded-md px-2 py-1"
+              className="mt-1 sm:mt-2 text-[10px] sm:text-sm font-medium text-[hsl(var(--color-primary))] hover:underline focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))] rounded-md px-1.5 sm:px-2 py-0.5"
             >
               {insight.actionLabel || t("dashboard.aiInsight.action")}
             </button>
@@ -203,7 +202,6 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
     onDateRangeChange,
   } = props;
 
-  // Handle all actions from BusinessHealthPanel
   const handleHealthAction = (action: "invoice" | "payments" | "warehouse" | "customers") => {
     switch (action) {
       case "invoice":
@@ -222,7 +220,7 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Level 1: Context */}
       <Greeting t={t} />
       
@@ -252,18 +250,18 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
       />
 
       {/* Level 4: Deep Dive */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         {/* Chart - 2 columns */}
         <div className="lg:col-span-2">
           <div className={cn(
             "rounded-2xl border border-[hsl(var(--border-default))]",
             "bg-[hsl(var(--surface-elevated))]",
-            "p-5"
+            "p-4 sm:p-5"
           )}>
-            <div className="flex items-center justify-between gap-4 mb-4">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
-                <h2 className="text-base font-semibold text-[hsl(var(--fg-primary))]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 mb-3 sm:mb-4">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <TrendingUp className="size-4 sm:size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+                <h2 className="text-sm sm:text-base font-semibold text-[hsl(var(--fg-primary))]">
                   {t("dashboard.salesChart")}
                 </h2>
               </div>
@@ -278,7 +276,7 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
               data={salesChartData}
               isLoading={chartLoading}
               fmt={fmt}
-              height={220}
+              height={180}
               previousPeriodTotal={monthlyRevenue}
               currentPeriodTotal={todaySales}
               onViewFullReport={() => onNavigate("/reports")}
@@ -293,13 +291,13 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
             "bg-[hsl(var(--surface-elevated))]",
             "overflow-hidden"
           )}>
-            <div className="flex items-center gap-2 px-6 pt-5 pb-3">
-              <Receipt className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
-              <h2 className="text-base font-semibold text-[hsl(var(--fg-primary))]">
+            <div className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 pt-4 sm:pt-5 pb-2 sm:pb-3">
+              <Receipt className="size-4 sm:size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+              <h2 className="text-sm sm:text-base font-semibold text-[hsl(var(--fg-primary))]">
                 {t("dashboard.recentInvoices")}
               </h2>
             </div>
-            <div className="px-6 pb-5">
+            <div className="px-4 sm:px-6 pb-4 sm:pb-5">
               <LazyDashboardInvoices
                 t={t}
                 invLoading={invLoading}
