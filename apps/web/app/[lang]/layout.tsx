@@ -28,7 +28,7 @@ const vazirmatn = localFont({
 });
 
 const siteConfig = {
-  "fa-IR": {
+  "fa": {
     title: "حسابچه — نرم‌افزار حسابداری و مدیریت کسب‌وکار",
     description: "نرم‌افزار حسابداری، فاکتور، مدیریت انبار، بدهی مشتریان و تحلیل مالی برای کسب‌وکارهای کوچک و متوسط. رایگان شروع کنید.",
     keywords: [
@@ -40,9 +40,9 @@ const siteConfig = {
     ogTitle: "حسابچه — نرم‌افزار حسابداری و مدیریت کسب‌وکار",
     ogDescription: "حسابداری، فاکتور، انبار و مدیریت بدهی در یک اپ. بدون اینترنت، رایگان.",
     siteName: "حسابچه",
-    locale: "fa_IR",
+    locale: "fa",
   },
-  "fa-AF": {
+  "AF": {
     title: "حسابچه — نرم‌افزار حسابداری و مدیریت تجارت",
     description: "نرم‌افزار حسابداری، فاکتور، مدیریت گدام، قرض مشتریان و تحلیل مالی برای تجارت‌های کوچک و متوسط. رایگان شروع کنید.",
     keywords: [
@@ -54,7 +54,7 @@ const siteConfig = {
     ogTitle: "حسابچه — نرم‌افزار حسابداری و مدیریت تجارت",
     ogDescription: "حسابداری، فاکتور، گدام و مدیریت قرض در یک اپ. بدون انترنت، رایگان.",
     siteName: "حسابچه",
-    locale: "fa_AF",
+    locale: "fa",
   },
   "en": {
     title: "Hisabche — Free Accounting & Business Management Software",
@@ -82,7 +82,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
     keywords: config.keywords,
     openGraph: {
       type: "website",
-      url: `https://hisabche.com/${lang === "fa-IR" ? "" : lang}`,
+      url: `https://hisabche.com/${lang === "fa" ? "" : lang}`,
       title: config.ogTitle,
       description: config.ogDescription,
       siteName: config.siteName,
@@ -108,8 +108,8 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
     },
     metadataBase: new URL("https://www.hisabche.com"),
     alternates: {
-      canonical: lang === "fa-IR" ? "/" : `/${lang}`,
-      languages: { "en": "/en", "fa-IR": "/fa-IR", "fa-AF": "/fa-AF" },
+      canonical: lang === "fa" ? "/" : `/${lang}`,
+      languages: { "en": "/en", "fa": "/fa", "fa-AF": "/fa-AF" },
     },
   };
 }
@@ -121,7 +121,7 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children, params }: { children: React.ReactNode; params: Promise<{ lang: string }> }) {
   const { lang } = await params;
-  const isRTL = lang === "fa-IR" || lang === "fa-AF";
+  const isRTL = lang === "fa" || lang === "fa-AF";
 
   return (
     <html lang={lang} dir={isRTL ? "rtl" : "ltr"} suppressHydrationWarning data-scroll-behavior="smooth" className={cn(vazirmatn.variable)}>
@@ -140,7 +140,7 @@ export default async function RootLayout({ children, params }: { children: React
         <link rel="manifest" href="/site.webmanifest" />
         <style>{`html{scroll-behavior:smooth}body{font-family:var(--font-sans,system-ui);background-color:hsl(var(--surface-base,192 55% 6%));color:hsl(var(--fg-primary,160 40% 98%));margin:0;padding:0;line-height:1.55;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}*{box-sizing:border-box;margin:0;padding:0}h1,.h1{font-size:clamp(2.25rem,5vw,4rem);line-height:1.2;font-weight:700}h2,.h2{font-size:clamp(1.75rem,4vw,2.5rem);line-height:1.2;font-weight:600}p,.body{font-size:clamp(.875rem,2vw,1rem);line-height:1.65}button,[role=button]{cursor:pointer;font-family:inherit}img{max-width:100%;height:auto;display:block}html{overflow-y:scroll}:focus-visible{outline:2px solid hsl(var(--color-primary,168 84% 43%) / .5);outline-offset:2px;border-radius:6px}`}</style>
         <link rel="alternate" hrefLang="en" href="https://hisabche.com/en" />
-        <link rel="alternate" hrefLang="fa-IR" href="https://hisabche.com/fa-IR" />
+        <link rel="alternate" hrefLang="fa" href="https://hisabche.com/fa" />
         <link rel="alternate" hrefLang="fa-AF" href="https://hisabche.com/fa-AF" />
         <link rel="alternate" hrefLang="x-default" href="https://hisabche.com" />
         <meta name="theme-color" content="#061417" />
@@ -150,7 +150,7 @@ export default async function RootLayout({ children, params }: { children: React
       </head>
       <body className={cn("min-h-screen antialiased font-sans", "bg-[hsl(var(--surface-base))]", "text-[hsl(var(--fg-primary))]", vazirmatn.variable)}>
         <Script id="theme-init" strategy="beforeInteractive" dangerouslySetInnerHTML={{ __html: `(function(){try{var theme=localStorage.getItem('hisab-theme');var prefersDark=window.matchMedia('(prefers-color-scheme:dark)').matches;if(theme==='dark'||(!theme&&prefersDark)){document.documentElement.classList.add('dark');document.documentElement.style.colorScheme='dark'}else{document.documentElement.classList.remove('dark');document.documentElement.style.colorScheme='light'}}catch(e){}})();` }} />
-        <Script id="schema-jsonld" type="application/ld+json" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "SoftwareApplication", name: lang === "fa-IR" ? "حسابچه" : lang === "fa-AF" ? "حسابچه" : "Hisabche", description: lang === "fa-IR" ? "نرم‌افزار حسابداری و مدیریت موجودی" : lang === "fa-AF" ? "نرم‌افزار حسابداری و مدیریت جنس" : "Accounting and inventory management software", url: "https://hisabche.com", applicationCategory: "BusinessApplication", operatingSystem: "Web", inLanguage: lang, offers: { "@type": "Offer", price: "0", priceCurrency: "USD" } }) }} />
+        <Script id="schema-jsonld" type="application/ld+json" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: JSON.stringify({ "@context": "https://schema.org", "@type": "SoftwareApplication", name: lang === "fa" ? "حسابچه" : lang === "AF" ? "حسابچه" : "Hisabche", description: lang === "fa" ? "نرم‌افزار حسابداری و مدیریت موجودی" : lang === "AF" ? "نرم‌افزار حسابداری و مدیریت جنس" : "Accounting and inventory management software", url: "https://hisabche.com", applicationCategory: "BusinessApplication", operatingSystem: "Web", inLanguage: lang, offers: { "@type": "Offer", price: "0", priceCurrency: "USD" } }) }} />
         <Script strategy="afterInteractive" src="https://www.googletagmanager.com/gtag/js?id=G-T5XG907W4R" />
         <Script id="google-analytics" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-T5XG907W4R');` }} />
         <ClientErrorBoundary><Providers>{children}</Providers></ClientErrorBoundary>

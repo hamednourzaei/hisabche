@@ -3,25 +3,130 @@
 
 import { useSceneObserver } from "./use-scene-observer";
 import { cn } from "@/lib/utils";
-import { Receipt, Package, BookOpen, Smartphone, Wifi, Banknote } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import {
+  Users,
+  FileText,
+  Package,
+  Calculator,
+  Users2,
+  BarChart3,
+  Wifi,
+  Sparkles,
+  Building2,
+  Link,
+  Shield,
+  Smartphone,
+} from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   FeaturesScene v6 — CLS Fixed · GPU-safe · Responsive
-   ✅ Reserved space · will-change · i18n-ready · Mobile-first
+   FeaturesScene v12 — Clean grid of Hisabche features (from master roadmap)
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface FeaturesSceneProps {
   t: (key: string, fallback?: string) => string;
 }
 
-const FEATURE_ICONS = [Receipt, Package, BookOpen, Smartphone, Wifi, Banknote];
+interface FeatureItem {
+  icon: LucideIcon;
+  key: string;
+  title: string;
+  description: string;
+  status?: "active" | "soon" | undefined;
+}
+
+const FEATURES: FeatureItem[] = [
+  {
+    icon: Users,
+    key: "customers",
+    title: "مدیریت مشتریان",
+    description: "اطلاعات مشتری، سوابق خرید و بدهی‌ها",
+    status: "active",
+  },
+  {
+    icon: FileText,
+    key: "invoices",
+    title: "صدور فاکتور",
+    description: "فاکتور فروش سریع و چاپ PDF",
+    status: "active",
+  },
+  {
+    icon: Package,
+    key: "inventory",
+    title: "مدیریت انبار",
+    description: "موجودی، هشدار کمبود، انتقال کالا",
+    status: "active",
+  },
+  {
+    icon: Calculator,
+    key: "accounting",
+    title: "حسابداری و مالی",
+    description: "دفتر کل، سود و زیان، ترازنامه",
+    status: "soon",
+  },
+  {
+    icon: Users2,
+    key: "hr",
+    title: "منابع انسانی",
+    description: "کارمندان، حقوق، حضور و غیاب",
+    status: "soon",
+  },
+  {
+    icon: BarChart3,
+    key: "reports",
+    title: "گزارشات و تحلیل",
+    description: "داشبورد فروش، سود، نمودارها",
+    status: "active",
+  },
+  {
+    icon: Wifi,
+    key: "offline",
+    title: "آفلاین واقعی",
+    description: "کار بدون اینترنت، همگام‌سازی خودکار",
+    status: "active",
+  },
+  {
+    icon: Sparkles,
+    key: "ai",
+    title: "هوش مصنوعی",
+    description: "یادآوری هوشمند، پیشنهاد فروش، تحلیل داده",
+    status: "active",
+  },
+  {
+    icon: Building2,
+    key: "workspace",
+    title: "چند کسب‌وکاری",
+    description: "مدیریت همزمان چند فروشگاه یا شرکت",
+    status: "active",
+  },
+  {
+    icon: Link,
+    key: "integrations",
+    title: "اتصالات و API",
+    description: "اتصال به درگاه‌ها، وب‌هوک، اتصال‌دهنده‌ها",
+    status: "soon",
+  },
+  {
+    icon: Shield,
+    key: "security",
+    title: "امنیت و بک‌آپ",
+    description: "رمزنگاری، بک‌آپ خودکار، ورود دو مرحله‌ای",
+    status: "active",
+  },
+  {
+    icon: Smartphone,
+    key: "mobile",
+    title: "موبایل و وب",
+    description: "اپلیکیشن موبایل و نسخه تحت وب",
+    status: "active",
+  },
+];
 
 export default function FeaturesScene({ t }: FeaturesSceneProps) {
   const { ref, state } = useSceneObserver<HTMLDivElement>({
     threshold: 0.2,
     narrativeState: "confidence",
   });
-
   const animated = state === "animated";
 
   return (
@@ -31,66 +136,62 @@ export default function FeaturesScene({ t }: FeaturesSceneProps) {
       data-narrative="confidence"
       className="section-padding"
     >
-      <div className="container-narrow">
-        {/* ── Header ── */}
+      <div className="container-narrow max-w-6xl">
         <div
           className={cn(
-            "text-center mb-10 sm:mb-16 min-h-[100px] sm:min-h-[120px]",
+            "text-center mb-12 sm:mb-16",
             "transition-all duration-700 motion-reduce:transition-none",
             animated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5",
           )}
         >
           <p className="text-xs sm:text-sm uppercase tracking-[0.2em] mb-2 sm:mb-3 text-[hsl(var(--fg-tertiary))] font-semibold">
-            {t("landing.featuresLabel", "ابزارها")}
+            {t("landing.featuresLabel", "امکانات")}
           </p>
-          <h2 className="text-xl sm:text-3xl lg:text-4xl font-extrabold text-[hsl(var(--fg-primary))] tracking-tight">
-            {t("landing.featuresTitle", "همه ابزارها در یک جا")}
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[hsl(var(--fg-primary))] tracking-tight">
+            {t("landing.featuresTitle", "همه ابزارهای کسب‌وکار، یکجا")}
           </h2>
-          <p className="mt-3 sm:mt-4 text-sm sm:text-lg text-[hsl(var(--fg-secondary))] leading-relaxed max-w-lg mx-auto">
-            {t("landing.featuresDesc", "بدون نیاز به چند برنامه مختلف")}
+          <p className="mt-3 sm:mt-4 text-sm sm:text-base text-[hsl(var(--fg-secondary))] leading-relaxed max-w-lg mx-auto">
+            {t("landing.featuresDesc", "از فروش و انبار تا حسابداری و هوش مصنوعی.")}
           </p>
         </div>
 
-        {/* ── Feature cards ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
-          {FEATURE_ICONS.map((Icon, i) => {
-            const key = `feature${i + 1}`;
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+          {FEATURES.map((feature, i) => {
+            const Icon = feature.icon;
             return (
               <div
-                key={key}
+                key={feature.key}
                 className={cn(
-                  "group relative p-4 sm:p-8 text-center min-h-[180px] sm:min-h-[220px]",
-                  "rounded-[var(--radius-card)]",
-                  "border border-[hsl(var(--border-default))]",
-                  "bg-[hsl(var(--surface-elevated)/0.6)]",
-                  "max-sm:backdrop-blur-none sm:backdrop-blur-sm",
-                  "will-change-transform opacity-0",
-                  "transition-all duration-500 motion-reduce:transition-none",
-                  "hover:border-[hsl(var(--color-primary)/0.3)] hover:-translate-y-1 hover:shadow-[var(--shadow-premium)]",
-                  animated && "opacity-100 translate-y-0 scale-100",
+                  "group relative overflow-hidden rounded-[var(--radius-xl)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-5 sm:p-6 transition-all duration-500",
+                  "hover:border-[hsl(var(--color-primary)/0.3)] hover:shadow-lg hover:-translate-y-1",
+                  "motion-reduce:hover:translate-y-0",
+                  animated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4",
                 )}
                 style={{ transitionDelay: `${i * 80}ms` }}
               >
-                <div
-                  className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[hsl(var(--color-primary)/0.3)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  aria-hidden="true"
-                />
-
-                <div className={cn(
-                  "mx-auto mb-3 sm:mb-5 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl",
-                  "bg-[hsl(var(--color-primary)/0.1)]",
-                  "text-[hsl(var(--color-primary))]",
-                  "transition-transform duration-300 group-hover:scale-110 motion-reduce:group-hover:scale-100",
-                )}>
-                  <Icon className="size-5 sm:size-7" aria-hidden="true" />
+                <div className="flex items-center justify-between mb-3">
+                  <div className="w-10 h-10 rounded-xl bg-[hsl(var(--color-primary)/0.1)] flex items-center justify-center text-[hsl(var(--color-primary))]">
+                    <Icon className="size-5" />
+                  </div>
+                  {feature.status !== undefined && (
+                    <span
+                      className={cn(
+                        "text-xs px-2 py-0.5 rounded-full font-medium",
+                        feature.status === "active"
+                          ? "bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))]"
+                          : "bg-[hsl(var(--color-warning)/0.12)] text-[hsl(var(--color-warning))]",
+                      )}
+                    >
+                      {feature.status === "active" ? "فعال" : "به‌زودی"}
+                    </span>
+                  )}
                 </div>
 
-                <h3 className="font-bold text-sm sm:text-base text-[hsl(var(--fg-primary))] mb-1 sm:mb-2 min-h-[1.25rem] sm:min-h-[1.5rem]">
-                  {t(`landing.${key}Title`, key)}
+                <h3 className="font-semibold text-sm mb-1 text-[hsl(var(--fg-primary))]">
+                  {t(`landing.feature.${feature.key}Title`, feature.title)}
                 </h3>
-
-                <p className="text-xs sm:text-sm text-[hsl(var(--fg-secondary))] leading-relaxed min-h-[2rem] sm:min-h-[2.5rem]">
-                  {t(`landing.${key}Desc`, "")}
+                <p className="text-xs text-[hsl(var(--fg-secondary))] leading-relaxed">
+                  {t(`landing.feature.${feature.key}Desc`, feature.description)}
                 </p>
               </div>
             );

@@ -6,7 +6,6 @@ import { useTranslation } from "react-i18next";
 import { NavigationProvider } from "../../../hooks/menu/use-navigation-state";
 import { TopNav } from "../navigation/top-nav";
 import { NavigationRegistry } from "../navigation/navigation-registry";
-import { cn } from "@/lib/utils";
 
 import dynamic from 'next/dynamic';
 
@@ -18,7 +17,11 @@ const FeaturesScene = dynamic(() => import('./features-scene'), { ssr: true });
 const SocialScene = dynamic(() => import('./social-scene'), { ssr: true });
 const FaqScene = dynamic(() => import('./faq-scene'), { ssr: true });
 const CTAScene = dynamic(() => import('./cta-scene'), { ssr: true });
-const StatsSection = dynamic(() => import('./stats-section'), { ssr: true });
+const TrustBarScene = dynamic(() => import('./trust-bar-scene'), { ssr: true });
+const SecurityScene = dynamic(() => import('./security-scene'), { ssr: true });
+const PricingScene = dynamic(() => import('./pricing-scene'), { ssr: true });
+const SiteFooter = dynamic(() => import('./site-footer'), { ssr: true });
+const DashboardShowcaseScene = dynamic(() => import('./dashboard-showcase-scene'), { ssr: true });
 
 const sectionKeys: Record<string, string> = {
   hero: "landing.navHero",
@@ -120,10 +123,15 @@ export function LandingPage() {
             <CinematicHero t={safeT} onNavigateLogin={navigateLogin} />
           </NavigationRegistry>
 
+          <TrustBarScene t={safeT} />
+
+
           <NavigationRegistry id="pain">
-            <StatsSection t={safeT} />
             <PainScene t={safeT} />
           </NavigationRegistry>
+
+          <DashboardShowcaseScene t={safeT} />
+
 
           <NavigationRegistry id="transform">
             <TransformScene t={safeT} />
@@ -133,9 +141,14 @@ export function LandingPage() {
             <FeaturesScene t={safeT} />
           </NavigationRegistry>
 
+          <SecurityScene t={safeT} />
+
+
           <NavigationRegistry id="testimonials">
             <SocialScene t={safeT} />
           </NavigationRegistry>
+
+          <PricingScene t={safeT} onNavigateLogin={navigateLogin} />
 
           <FaqScene t={safeT} />
 
@@ -143,20 +156,7 @@ export function LandingPage() {
             <CTAScene t={safeT} onNavigateLogin={navigateLogin} />
           </NavigationRegistry>
 
-          <footer
-            className={cn(
-              "px-4 py-8 sm:py-12 text-center",
-              "border-t border-[hsl(var(--border-default))]"
-            )}
-          >
-            <div className="mb-2 text-base sm:text-lg font-bold text-[hsl(var(--fg-primary))]">
-              {safeT("app.name", "حسابچه")}
-              <span className="text-[hsl(var(--color-primary))]">.</span>
-            </div>
-            <p className="text-xs sm:text-[length:var(--text-caption)] text-[hsl(var(--fg-tertiary))]">
-              {safeT("landing.footer", "سیستم مدیریت کسب‌وکار")}
-            </p>
-          </footer>
+          <SiteFooter t={safeT} />
         </main>
       </div>
     </NavigationProvider>

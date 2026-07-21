@@ -5,8 +5,7 @@ import { useSceneObserver } from "./use-scene-observer";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   CTAScene v6 — CLS Fixed · GPU-safe · Responsive
-   ✅ Reserved space · will-change · i18n-ready · Mobile-first
+   CTAScene v10 — Universal persona · Positive outcome · Bounded stage
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface CTASceneProps {
@@ -27,108 +26,58 @@ export default function CTAScene({ t, onNavigateLogin }: CTASceneProps) {
       id="cta"
       ref={ref}
       data-narrative="action"
-      className="relative section-padding overflow-hidden"
+      className="relative"
     >
-      {/* ── Animated gradient background ── */}
-      <div className="pointer-events-none absolute inset-0 contain-layout contain-paint" aria-hidden="true">
-        <div
-          className="absolute rounded-full blur-[150px] animate-[aurora_10s_ease-in-out_infinite] will-change-transform"
-          style={{
-            background: `radial-gradient(circle, hsl(var(--color-primary)/0.15), transparent 70%)`,
-            top: "-30%",
-            insetInlineStart: "50%",
-            width: "min(700px, 150vw)",
-            height: "min(700px, 150vw)",
-          }}
-        />
-        <div
-          className="absolute rounded-full blur-[120px] animate-[aurora_10s_ease-in-out_infinite_5s] will-change-transform"
-          style={{
-            background: `radial-gradient(circle, hsl(var(--color-success)/0.1), transparent 70%)`,
-            bottom: "-20%",
-            insetInlineEnd: "-10%",
-            width: "min(500px, 120vw)",
-            height: "min(500px, 120vw)",
-          }}
-        />
-      </div>
-
-      <div className="container-narrow max-w-2xl relative z-10">
+      <div className="border-t border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
         <div
           className={cn(
-            "relative overflow-hidden text-center",
-            "rounded-[var(--radius-card)]",
-            "border border-[hsl(var(--color-primary)/0.15)]",
-            "bg-[var(--glass-bg)]",
-            "backdrop-blur-[var(--glass-blur)]",
-            "shadow-[var(--shadow-premium)]",
-            "p-6 sm:p-[clamp(2.5rem,6vw,4rem)]",
-            "will-change-transform opacity-0",
+            "container-narrow max-w-3xl py-16 sm:py-20 lg:py-24 text-center space-y-7 sm:space-y-9",
             "transition-all duration-700 motion-reduce:transition-none",
-            animated && "opacity-100 scale-100 translate-y-0",
+            animated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4",
           )}
         >
-          <div
-            className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[hsl(var(--color-primary)/0.4)] to-transparent"
-            aria-hidden="true"
-          />
+          {/* ── Headline: universal, outcome-driven ── */}
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold leading-[1.35] text-[hsl(var(--fg-primary))] tracking-tight">
+            {t(
+              "landing.ctaTitle",
+              "وقتی روز کاری‌ات تمام می‌شود، همه‌چیز باید از قبل مشخص باشد",
+            )}
+          </h2>
 
-          <div
-            className="pointer-events-none absolute -end-20 -top-20 w-48 h-48 rounded-full blur-3xl bg-[hsl(var(--color-primary)/0.08)] max-sm:hidden"
-            aria-hidden="true"
-          />
-          <div
-            className="pointer-events-none absolute -start-20 -bottom-20 w-40 h-40 rounded-full blur-3xl bg-[hsl(var(--color-success)/0.06)] max-sm:hidden"
-            aria-hidden="true"
-          />
+          {/* ── Subtitle: paint the positive future ── */}
+          <p className="text-sm sm:text-lg text-[hsl(var(--fg-secondary))] leading-relaxed max-w-lg mx-auto">
+            {t(
+              "landing.ctaSubtitle",
+              "با حسابچه، پایان روز یعنی مرور نتایج — نه ساعت‌ها جمع‌زدن و پیدا کردن اشتباه‌ها",
+            )}
+          </p>
 
-          <div className="relative space-y-4 sm:space-y-6">
-            <h2 className="text-xl sm:text-3xl lg:text-4xl font-extrabold text-[hsl(var(--fg-primary))] tracking-tight min-h-[2rem] sm:min-h-[3rem]">
-              {t("landing.finalCTATitle", "همین امروز شروع کنید")}
-            </h2>
+          {/* ── Decision ── */}
+          <div>
+            <button
+              type="button"
+              onClick={onNavigateLogin}
+              className={cn(
+                "btn-primary",
+                "rounded-xl px-8 py-3.5 sm:px-10 sm:py-4",
+                "min-h-[48px] sm:min-h-[52px]",
+                "text-base sm:text-lg",
+              )}
+            >
+              {t("landing.ctaButton", "شروع رایگان")}
+              <span className="ms-2 inline-block transition-transform duration-300 group-hover:-translate-x-1 motion-reduce:transform-none">
+                ←
+              </span>
+            </button>
+          </div>
 
-            <p className="text-sm sm:text-lg text-[hsl(var(--fg-secondary))] leading-relaxed max-w-md mx-auto min-h-[1.5rem] sm:min-h-[2rem]">
-              {t("landing.finalCTADesc", "رایگان. بدون کارت بانکی. کمتر از ۱ دقیقه.")}
-            </p>
-
-            <div className="pt-2 sm:pt-4">
-              <button
-                type="button"
-                onClick={onNavigateLogin}
-                className={cn(
-                  "group relative overflow-hidden",
-                  "inline-flex items-center justify-center",
-                  "rounded-full px-6 sm:px-10 py-3 sm:py-4",
-                  "text-sm sm:text-lg font-bold text-white",
-                  "bg-[var(--gradient-brand)]",
-                  "shadow-[var(--shadow-premium)]",
-                  "transition-all duration-300",
-                  "hover:scale-[1.04] hover:shadow-xl",
-                  "active:scale-[0.98]",
-                  "motion-reduce:transform-none",
-                  "min-h-[44px] sm:min-h-[56px]",
-                  "w-full sm:w-auto",
-                )}
-              >
-                <span className="relative z-10 flex items-center gap-2">
-                  {t("landing.finalCTAButton", "شروع رایگان")}
-                  <span className="inline-block transition-transform duration-300 group-hover:-translate-x-1 motion-reduce:transform-none">
-                    ←
-                  </span>
-                </span>
-                <span
-                  className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 motion-reduce:transition-none"
-                  style={{
-                    background: "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.12) 50%, transparent 60%)",
-                  }}
-                  aria-hidden="true"
-                />
-              </button>
-            </div>
-
-            <p className="text-xs text-[hsl(var(--fg-tertiary))] min-h-[1rem]">
-              {t("landing.trustText", "بدون نیاز به کارت بانکی · لغو آسان")}
-            </p>
+          {/* ── Reassurance ── */}
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs sm:text-sm text-[hsl(var(--fg-tertiary))]">
+            <span>{t("landing.ctaReassurance1", "۳۰ ثانیه")}</span>
+            <span className="w-1 h-1 rounded-full bg-[hsl(var(--border-default))]" aria-hidden="true" />
+            <span>{t("landing.ctaReassurance2", "بدون کارت بانکی")}</span>
+            <span className="w-1 h-1 rounded-full bg-[hsl(var(--border-default))]" aria-hidden="true" />
+            <span>{t("landing.ctaReassurance3", "لغو هر زمان")}</span>
           </div>
         </div>
       </div>

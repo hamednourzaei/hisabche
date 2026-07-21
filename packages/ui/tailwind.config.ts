@@ -242,6 +242,15 @@ const config: Config = {
         'auth-spin': {
           to: { transform: 'rotate(360deg)' },
         },
+        // ✅ Marquee (Magic UI pattern) — powers the testimonials marquee
+        'marquee': {
+          from: { transform: 'translateX(0)' },
+          to:   { transform: 'translateX(calc(-100% - var(--gap)))' },
+        },
+        'marquee-vertical': {
+          from: { transform: 'translateY(0)' },
+          to:   { transform: 'translateY(calc(-100% - var(--gap)))' },
+        },
       },
 
       animation: {
@@ -254,6 +263,9 @@ const config: Config = {
         'node-pop':      'node-pop 0.5s var(--ease-out) forwards',
         'pipe-pulse':    'pipe-pulse 2s ease-in-out infinite',
         'auth-spin':     'auth-spin 0.8s linear infinite',
+        // ✅ Marquee
+        'marquee':          'marquee var(--duration) linear infinite',
+        'marquee-vertical': 'marquee-vertical var(--duration) linear infinite',
       },
 
       backgroundImage: {

@@ -52,6 +52,7 @@
     "posthog-js": "^1.374.0",
     "react": "19.2.6",
     "react-dom": "19.2.6",
+    "react-icons": "^5.7.0",
     "socks-proxy-agent": "^10.0.0",
     "tailwind-merge": "^3.5.0",
     "undici": "^8.2.0"

@@ -1,10 +1,12 @@
+// packages/ui/src/components/ui/landing/cinematic-hero.tsx
 "use client";
 
 import { useSceneObserver } from "./use-scene-observer";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   CinematicHero v6 — CLS Fixed · GPU-safe · Responsive
+   CinematicHero v10 — Mobile-centred · Logo first on mobile
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface CinematicHeroProps {
@@ -18,198 +20,226 @@ export default function CinematicHero({ t, onNavigateLogin }: CinematicHeroProps
     narrativeState: "frustration",
   });
 
+  const scrollToDemo = () => {
+    document.getElementById("dashboard-showcase")?.scrollIntoView({ behavior: "smooth" });
+  };
+
   return (
     <section
       id="hero"
       ref={ref}
       data-narrative="frustration"
-      className="relative flex min-h-screen items-center justify-center overflow-hidden section-padding"
+      className="relative flex min-h-[100svh] lg:min-h-screen items-center overflow-hidden py-20 lg:py-0"
     >
-      {/* ── Aurora Background ── */}
-      <div className="pointer-events-none absolute inset-0 contain-layout contain-paint" aria-hidden="true">
-        {/* ✅ اندازه‌ها در موبایل کوچک‌تر */}
-        <div
-          className="absolute rounded-full blur-[160px] sm:blur-[160px] animate-[aurora_12s_ease-in-out_infinite] will-change-transform"
-          style={{
-            background: `radial-gradient(circle, hsl(var(--color-primary)/0.18), transparent 70%)`,
-            top: "-20%",
-            insetInlineStart: "50%",
-            width: "min(800px, 150vw)",
-            height: "min(800px, 150vw)",
-          }}
-        />
-        <div
-          className="absolute rounded-full blur-[140px] sm:blur-[140px] animate-[aurora_12s_ease-in-out_infinite_4s] will-change-transform"
-          style={{
-            background: `radial-gradient(circle, hsl(var(--color-success)/0.12), transparent 70%)`,
-            bottom: "-10%",
-            insetInlineEnd: "-10%",
-            width: "min(600px, 120vw)",
-            height: "min(600px, 120vw)",
-          }}
-        />
-        <div
-          className="absolute rounded-full blur-[130px] sm:blur-[130px] animate-[aurora_12s_ease-in-out_infinite_8s] will-change-transform"
-          style={{
-            background: `radial-gradient(circle, hsl(190_90%_50%/0.1), transparent 70%)`,
-            top: "40%",
-            insetInlineStart: "-5%",
-            width: "min(500px, 100vw)",
-            height: "min(500px, 100vw)",
-          }}
-        />
-      </div>
+      <div className="relative z-10 mx-auto w-full max-w-6xl px-5 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 items-center justify-items-center lg:justify-items-stretch gap-12 lg:gap-16">
+          {/* ── Text content: order-2 on mobile, order-1 on desktop ── */}
+          <div className="order-2 lg:order-1 flex flex-col items-center text-center lg:items-start lg:text-start w-full">
+            {/* Value Pill: Offline */}
+            <div
+              className={cn(
+                "inline-flex items-center gap-2 px-3 py-1.5 mb-6 sm:mb-8",
+                "rounded-full mx-auto lg:mx-0",
+                "bg-[hsl(var(--color-primary)/0.08)] border border-[hsl(var(--color-primary)/0.15)]",
+                "text-xs sm:text-sm font-medium text-[hsl(var(--color-primary))]",
+                "opacity-0 animate-[fade-in-up_0.6s_ease-out_both]",
+              )}
+            >
+              <span className="relative flex h-2 w-2 shrink-0">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[hsl(var(--color-primary))] opacity-50" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-[hsl(var(--color-primary))]" />
+              </span>
+              {t("landing.valuePill", "بدون اینترنت هم کار می‌کند — همیشه، همه‌جا")}
+            </div>
 
-      {/* ── Grid overlay ── */}
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.03] max-sm:hidden"
-        style={{
-          backgroundImage:
-            "linear-gradient(hsl(var(--border-default)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--border-default)) 1px, transparent 1px)",
-          backgroundSize: "60px 60px",
-        }}
-        aria-hidden="true"
-      />
+            {/* H1 */}
+            <h1
+              className={cn(
+                "mb-5 sm:mb-6 max-w-lg mx-auto lg:mx-0",
+                "text-[2rem] leading-[1.15] sm:text-4xl lg:text-5xl xl:text-6xl",
+                "font-bold tracking-tight text-center lg:text-start",
+                "text-[hsl(var(--fg-primary))]",
+                "opacity-0 animate-[fade-in-up_0.6s_ease-out_0.1s_both]",
+              )}
+            >
+              {t("landing.headline", "هر روز با خیال راحت")}{" "}
+              <span className="text-[hsl(var(--color-primary))]">
+                {t("landing.headlineHighlight", "دکانت را ببند")}
+              </span>
+            </h1>
 
-      <div className="relative z-10 container-narrow text-center">
-        {/* ── Badge ── */}
-        <div
-          className={cn(
-            "inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 mb-6 sm:mb-8 min-h-[36px] sm:min-h-[40px]",
-            "rounded-full",
-            "border border-[hsl(var(--color-primary)/0.2)]",
-            "bg-[hsl(var(--color-primary)/0.06)]",
-            "text-[hsl(var(--color-primary))]",
-            "text-xs sm:text-sm font-medium",
-            "opacity-0 animate-[fade-in-up_0.5s_ease-out_both]",
-          )}
-        >
-          <span className="relative flex h-2 w-2 shrink-0">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[hsl(var(--color-primary))] opacity-60" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-[hsl(var(--color-primary))]" />
-          </span>
-          {t("landing.badge", "۳۴۰+ کسب‌وکار فعال در افغانستان")}
-        </div>
+            {/* Subtitle */}
+            <p
+              className={cn(
+                "mb-8 sm:mb-10 max-w-xl mx-auto lg:mx-0",
+                "text-base sm:text-lg lg:text-xl text-center lg:text-start",
+                "text-[hsl(var(--fg-secondary))] leading-relaxed",
+                "opacity-0 animate-[fade-in-up_0.6s_ease-out_0.2s_both]",
+              )}
+            >
+              {t(
+                "landing.subtitle",
+                "فروش، نسیه، موجودی و سود — خودکار حساب می‌شود. مثل یک دستیار نامرئی که هیچ‌وقت اشتباه نمی‌کند.",
+              )}
+            </p>
 
-        {/* ── H1 ── */}
-        <h1
-          className={cn(
-            "max-w-4xl mx-auto mb-4 sm:mb-6 min-h-[2.5rem] sm:min-h-[3rem]",
-            "text-3xl sm:text-5xl lg:text-6xl xl:text-7xl",
-            "font-extrabold leading-[1.08] tracking-tight",
-            "text-[hsl(var(--fg-primary))]",
-            "opacity-0 animate-[fade-in-up_0.5s_ease-out_0.1s_both]",
-          )}
-        >
-          {t("landing.headline", "حسابداری‌ای که")}{" "}
-          <span className="bg-gradient-to-l from-[hsl(var(--color-success))] via-[hsl(190_90%_50%)] to-[hsl(var(--color-primary))] bg-clip-text text-transparent">
-            {t("landing.headlineHighlight", "هیچ‌وقت فراموش نمی‌کنه")}
-          </span>
-        </h1>
+            {/* CTAs + Micro Proof */}
+            <div
+              className={cn(
+                "w-full space-y-4",
+                "opacity-0 animate-[fade-in-up_0.6s_ease-out_0.3s_both]",
+              )}
+            >
+              <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start items-center w-full">
+                <button
+                  type="button"
+                  onClick={onNavigateLogin}
+                  className={cn(
+                    "btn-primary",
+                    "rounded-xl px-7 sm:px-8 py-3.5 sm:py-4",
+                    "min-h-[48px] sm:min-h-[52px]",
+                    "w-full sm:w-auto",
+                  )}
+                >
+                  {t("landing.cta", "شروع رایگان")}
+                  <span className="text-lg" aria-hidden="true">
+                    ←
+                  </span>
+                </button>
 
-        {/* ── Subtitle ── */}
-        <p
-          className={cn(
-            "mx-auto mb-8 sm:mb-10 max-w-xl min-h-[1.5rem] sm:min-h-[2rem]",
-            "text-base sm:text-xl",
-            "text-[hsl(var(--fg-secondary))]",
-            "leading-relaxed",
-            "opacity-0 animate-[fade-in-up_0.5s_ease-out_0.2s_both]",
-          )}
-        >
-          {t("landing.subtitle", "این فقط یک اپ نیست — حافظه‌ی زنده‌ی کسب‌وکار توئه.")}
-        </p>
+                <button
+                  type="button"
+                  onClick={scrollToDemo}
+                  className={cn(
+                    "btn-secondary",
+                    "rounded-xl px-7 sm:px-8 py-3.5 sm:py-4",
+                    "min-h-[48px] sm:min-h-[52px]",
+                    "w-full sm:w-auto",
+                  )}
+                >
+                  {t("landing.ctaSecondary", "مشاهده دموی محصول")}
+                </button>
+              </div>
 
-        {/* ── CTAs ── */}
-        <div
-          className={cn(
-            "flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center min-h-[44px] sm:min-h-[52px]",
-            "opacity-0 animate-[fade-in-up_0.5s_ease-out_0.3s_both]",
-          )}
-        >
-          <button
-            type="button"
-            onClick={onNavigateLogin}
+              <p className="text-center lg:text-start text-xs sm:text-sm text-[hsl(var(--fg-tertiary))]">
+                {t("landing.microProof", "بدون نیاز به آموزش · فعال‌سازی در ۳۰ ثانیه · پشتیبانی فارسی")}
+              </p>
+            </div>
+
+            {/* Trust bar */}
+            <div
+              className={cn(
+                "w-full mt-10 sm:mt-12 pt-8 sm:pt-10",
+                "border-t border-[hsl(var(--border-default))]",
+                "opacity-0 animate-[fade-in-up_0.6s_ease-out_0.4s_both]",
+              )}
+            >
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                <div className="text-center lg:text-start">
+                  <span className="block text-xl sm:text-2xl font-bold text-[hsl(var(--color-primary))]">
+                    {t("landing.statStores", "۳۴۰+")}
+                  </span>
+                  <span className="text-xs sm:text-sm text-[hsl(var(--fg-tertiary))]">
+                    {t("landing.statStoresLabel", "کسب‌وکار فعال")}
+                  </span>
+                </div>
+                <div className="text-center lg:text-start">
+                  <span className="block text-xl sm:text-2xl font-bold text-[hsl(var(--color-primary))]">
+                    {t("landing.statTransactions", "۱۲,۰۰۰+")}
+                  </span>
+                  <span className="text-xs sm:text-sm text-[hsl(var(--fg-tertiary))]">
+                    {t("landing.statTransactionsLabel", "تراکنش روزانه")}
+                  </span>
+                </div>
+                <div className="text-center lg:text-start">
+                  <span className="block text-xl sm:text-2xl font-bold text-[hsl(var(--color-primary))]">
+                    {t("landing.statUptime", "۱۰۰٪")}
+                  </span>
+                  <span className="text-xs sm:text-sm text-[hsl(var(--fg-tertiary))]">
+                    {t("landing.statUptimeLabel", "آفلاین کار می‌کند")}
+                  </span>
+                </div>
+                <div className="text-center lg:text-start">
+                  <span className="block text-xl sm:text-2xl font-bold text-[hsl(var(--color-primary))]">
+                    {t("landing.statRating", "۴.۹")}
+                  </span>
+                  <span className="text-xs sm:text-sm text-[hsl(var(--fg-tertiary))]">
+                    {t("landing.statRatingLabel", "رضایت کاربران")}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Visual: Desktop full rings ── */}
+          <div
             className={cn(
-              "group relative overflow-hidden",
-              "inline-flex items-center justify-center",
-              "rounded-full px-6 sm:px-8 py-3 sm:py-3.5",
-              "text-sm sm:text-base font-bold text-white",
-              "bg-[var(--gradient-brand)]",
-              "shadow-[var(--shadow-premium)]",
-              "transition-all duration-300",
-              "hover:scale-[1.03] hover:shadow-lg",
-              "active:scale-[0.98]",
-              "motion-reduce:transform-none",
-              "min-h-[44px] sm:min-h-[52px]",
+              "hidden lg:flex items-center justify-center order-2",
+              "opacity-0 animate-[fade-in-up_0.6s_ease-out_0.25s_both]",
             )}
           >
-            <span className="relative z-10">
-              {t("landing.cta", "شروع رایگان")}
-              <span className="ms-2 inline-block transition-transform duration-300 group-hover:translate-x-1 motion-reduce:transform-none">
-                ←
-              </span>
-            </span>
-            <span
-              className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 motion-reduce:transition-none"
+            <div className="relative w-80 h-80 xl:w-96 xl:h-96" aria-hidden="true">
+              <div className="absolute inset-0 rounded-full border border-[hsl(var(--color-primary)/0.12)]" />
+              <div className="absolute inset-8 rounded-full border border-[hsl(var(--color-primary)/0.18)]" />
+              <div className="absolute inset-16 rounded-full border border-[hsl(var(--color-primary)/0.22)]" />
+
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full bg-[hsl(var(--color-primary))] shadow-[0_0_12px_hsl(var(--color-primary))]" />
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-2.5 h-2.5 rounded-full bg-[hsl(var(--color-accent))] shadow-[0_0_10px_hsl(var(--color-accent))]" />
+              <div className="absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-[hsl(var(--color-primary-light))] shadow-[0_0_8px_hsl(var(--color-primary-light))]" />
+              <div className="absolute right-0 top-1/3 translate-x-1/2 w-2 h-2 rounded-full bg-[hsl(var(--color-primary))] shadow-[0_0_8px_hsl(var(--color-primary))]" />
+
+              <div className="absolute inset-0 rounded-full border border-[hsl(var(--color-primary)/0.06)] animate-ping [animation-duration:3.5s]" />
+
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="relative">
+                  <div className="absolute inset-0 blur-3xl bg-[hsl(var(--color-primary)/0.2)] rounded-full scale-150" />
+                  <div className="relative animate-[logo-breathe_3s_ease-in-out_infinite]">
+                    <Image
+                      src="/logo-icon.png"
+                      alt={t("landing.logoAlt", "حسابچه")}
+                      width={180}
+                      height={120}
+                      className="w-44 h-auto xl:w-52 drop-shadow-[0_0_40px_hsl(var(--color-primary)/0.5)]"
+                      priority
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              className="absolute inset-0 -z-10 blur-[100px]"
               style={{
-                background: "linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.15) 50%, transparent 60%)",
+                background:
+                  "radial-gradient(ellipse 50% 50% at 50% 50%, hsl(var(--color-primary)/0.12), transparent)",
               }}
               aria-hidden="true"
             />
-          </button>
+          </div>
 
-          <button
-            type="button"
-            onClick={() =>
-              document.getElementById("features")?.scrollIntoView({ behavior: "smooth" })
-            }
+          {/* ── Mobile: small centred logo (order-1, first) ── */}
+          <div
             className={cn(
-              "inline-flex items-center justify-center",
-              "rounded-full px-6 sm:px-8 py-3 sm:py-3.5",
-              "text-sm sm:text-base font-medium",
-              "border border-[hsl(var(--border-default))]",
-              "text-[hsl(var(--fg-secondary))]",
-              "hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]",
-              "transition-colors duration-200",
-              "min-h-[44px] sm:min-h-[52px]",
+              "lg:hidden flex items-center justify-center order-1",
+              "opacity-0 animate-[fade-in-up_0.6s_ease-out_0.25s_both]",
             )}
           >
-            {t("landing.learnMore", "بیشتر بدونید")}
-          </button>
-        </div>
-
-        {/* ── Trust text ── */}
-        <p
-          className={cn(
-            "mt-6 sm:mt-8 min-h-[16px] sm:min-h-[20px]",
-            "text-xs sm:text-sm text-[hsl(var(--fg-tertiary))]",
-            "opacity-0 animate-[fade-in-up_0.5s_ease-out_0.4s_both]",
-          )}
-        >
-          {t("landing.trustText", "بدون کارت بانکی · فعال در ۳۰ ثانیه")}
-        </p>
-
-        {/* ── Trust bar ── */}
-        <div
-          className={cn(
-            "mt-12 sm:mt-16 flex flex-wrap items-center justify-center gap-4 sm:gap-6 lg:gap-10 min-h-[24px] sm:min-h-[28px]",
-            "text-xs sm:text-sm text-[hsl(var(--fg-tertiary))]",
-            "opacity-0 animate-[fade-in-up_0.5s_ease-out_0.5s_both]",
-          )}
-        >
-          {[
-            { icon: "🔌", label: t("landing.trustOffline", "آفلاین واقعی") },
-            { icon: "🔐", label: t("landing.trustSecure", "داده امن") },
-            { icon: "📱", label: t("landing.trustMobile", "موبایل + وب") },
-          ].map(({ icon, label }) => (
-            <div key={label} className="flex items-center gap-1.5 sm:gap-2">
-              <span className="text-base sm:text-lg shrink-0">{icon}</span>
-              <span>{label}</span>
+            <div className="relative animate-[logo-breathe_3s_ease-in-out_infinite]">
+              <Image
+                src="/logo-icon.png"
+                alt={t("landing.logoAlt", "حسابچه")}
+                width={120}
+                height={80}
+                className="w-32 h-auto drop-shadow-[0_0_30px_hsl(var(--color-primary)/0.4)]"
+                priority
+              />
             </div>
-          ))}
+          </div>
         </div>
       </div>
+
+
+
     </section>
   );
 }

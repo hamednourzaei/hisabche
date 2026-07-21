@@ -3,18 +3,62 @@
 
 import { useSceneObserver } from "./use-scene-observer";
 import { cn } from "@/lib/utils";
-import { Zap, Box, Wallet } from "lucide-react";
+import { ArrowRight, TrendingUp, Package, Clock, Shield, Wallet, Zap } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   TransformScene v6 — CLS Fixed · GPU-safe · Responsive
-   ✅ Reserved space · will-change · i18n-ready · Mobile-first
+   TransformScene v7 — Bento outcome grid · Before/After · Emotional
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface TransformSceneProps {
   t: (key: string, fallback?: string) => string;
 }
 
-const ICONS = [Zap, Box, Wallet];
+/* ── Outcome cards data ────────────────────────────────────────────────── */
+
+const OUTCOMES = [
+  {
+    key: "speed",
+    icon: Zap,
+    beforeText: "ثبت دستی، ۲ دقیقه",
+    afterText: "ثبت خودکار در ۵ ثانیه",
+    metric: "۵×",
+    metricLabel: "سریع‌تر",
+    emotion: "تمرکز روی فروش، نه نوشتن",
+  },
+  {
+    key: "inventory",
+    icon: Package,
+    beforeText: "تمام شدن ناگهانی",
+    afterText: "هشدار قبل از اتمام",
+    metric: "۰",
+    metricLabel: "مشتری از دست رفته",
+    emotion: "همیشه موجودی آماده",
+  },
+  {
+    key: "profit",
+    icon: Wallet,
+    beforeText: "سود نامشخص",
+    afterText: "سود لحظه‌ای دقیق",
+    metric: "۱۰۰٪",
+    metricLabel: "شفافیت مالی",
+    emotion: "تصمیم‌گیری با اطمینان",
+  },
+];
+
+/* ── Helper: Number counter animation (visual only) ────────────────────── */
+
+function AnimatedMetric({ value, label }: { value: string; label: string }) {
+  return (
+    <div className="flex items-baseline gap-1">
+      <span className="text-3xl sm:text-4xl font-bold tabular-nums text-[hsl(var(--color-primary))] group-hover:scale-110 transition-transform duration-300 motion-reduce:transform-none">
+        {value}
+      </span>
+      <span className="text-sm text-[hsl(var(--fg-secondary))]">{label}</span>
+    </div>
+  );
+}
+
+/* ── Main Component ────────────────────────────────────────────────────── */
 
 export default function TransformScene({ t }: TransformSceneProps) {
   const { ref, state } = useSceneObserver<HTMLDivElement>({
@@ -29,74 +73,144 @@ export default function TransformScene({ t }: TransformSceneProps) {
       id="transform"
       ref={ref}
       data-narrative="clarity"
-      className="section-padding bg-[hsl(var(--surface-muted)/0.3)]"
+      className="section-padding bg-[hsl(var(--surface-muted)/0.2)]"
     >
-      <div className="container-narrow">
-        {/* ── Header ── */}
+      <div className="container-narrow max-w-6xl">
+        {/* ── Header with transition bridge ── */}
         <div
           className={cn(
-            "text-center mb-10 sm:mb-14 min-h-[100px] sm:min-h-[120px]",
+            "text-center mb-12 sm:mb-16",
             "transition-all duration-700 motion-reduce:transition-none",
             animated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5",
           )}
         >
-          <p className="text-xs sm:text-sm uppercase tracking-[0.2em] mb-2 sm:mb-3 text-[hsl(var(--fg-tertiary))] font-semibold">
+          <p className="text-xs sm:text-sm uppercase tracking-[0.2em] mb-3 text-[hsl(var(--fg-tertiary))] font-semibold">
             {t("landing.transformLabel", "بعد از حسابچه")}
           </p>
-          <h2 className="text-xl sm:text-3xl lg:text-4xl font-extrabold text-[hsl(var(--fg-primary))] tracking-tight mb-3 sm:mb-4">
-            {t("landing.transformTitle", "همه چیز در یک جا")}
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[hsl(var(--fg-primary))] tracking-tight mb-4">
+            {t("landing.transformTitle", "کسب‌وکارت بالاخره تحت کنترل توست")}
           </h2>
-          <p className="mx-auto max-w-xl text-sm sm:text-lg text-[hsl(var(--fg-secondary))] leading-relaxed">
-            {t("landing.transformDesc", "فاکتور، گدام، بدهی… همه در لحظه. بدون کاغذ، بدون فراموشی.")}
+          <p className="mx-auto max-w-2xl text-sm sm:text-base text-[hsl(var(--fg-secondary))] leading-relaxed">
+            {t(
+              "landing.transformBridge",
+              "همین مشکلات دلیلی بود که حسابچه ساخته شد. حالا کنترل کسب‌وکارت را پس بگیر."
+            )}
           </p>
         </div>
 
-        {/* ── Cards ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
-          {ICONS.map((Icon, i) => {
-            const key = `solution${i + 1}`;
+        {/* ── Hero card ── */}
+        <div
+          className={cn(
+            "relative mb-8 sm:mb-10 overflow-hidden rounded-[var(--radius-2xl)] border border-[hsl(var(--color-primary)/0.2)] bg-[hsl(var(--surface-elevated))] shadow-lg",
+            "transition-all duration-700 delay-100 motion-reduce:transition-none",
+            animated ? "opacity-100 translate-y-0 scale-100" : "opacity-0 translate-y-6 scale-[0.98]",
+          )}
+        >
+          {/* Subtle gradient accent */}
+          <div className="absolute inset-0 bg-gradient-to-br from-[hsl(var(--color-primary)/0.05)] to-transparent pointer-events-none" />
+
+          <div className="relative p-6 sm:p-8 lg:p-10 flex flex-col lg:flex-row items-start lg:items-center gap-6 lg:gap-10">
+            {/* Visual stat anchor */}
+            <div className="shrink-0 flex items-center justify-center w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-[hsl(var(--color-primary)/0.1)] text-[hsl(var(--color-primary))] shadow-inner">
+              <TrendingUp className="size-10 sm:size-12" strokeWidth={1.5} />
+            </div>
+
+            <div className="flex-1 space-y-4">
+              <div>
+                <h3 className="text-xl sm:text-2xl font-bold text-[hsl(var(--fg-primary))]">
+                  {t("landing.transformHeroTitle", "صاحب‌اختیار کسب‌وکارت باش")}
+                </h3>
+                <p className="mt-2 text-sm sm:text-base text-[hsl(var(--fg-secondary))] max-w-xl">
+                  {t(
+                    "landing.transformHeroDesc",
+                    "دیگر لازم نیست نگران دفتر، نسیه‌های فراموش‌شده یا محاسبه‌های اشتباه باشی. حسابچه همه چیز را برایت مدیریت می‌کند."
+                  )}
+                </p>
+              </div>
+
+              {/* Mini live stats */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-4">
+                <div className="text-center sm:text-start">
+                  <span className="block text-lg sm:text-xl font-bold text-[hsl(var(--color-success))]">
+                    +۲ ساعت
+                  </span>
+                  <span className="text-xs text-[hsl(var(--fg-tertiary))]">
+                    {t("landing.transformHeroStat1", "زمان ذخیره‌شده روزانه")}
+                  </span>
+                </div>
+                <div className="text-center sm:text-start">
+                  <span className="block text-lg sm:text-xl font-bold text-[hsl(var(--color-success))]">
+                    ۰
+                  </span>
+                  <span className="text-xs text-[hsl(var(--fg-tertiary))]">
+                    {t("landing.transformHeroStat2", "نسیه فراموش‌شده")}
+                  </span>
+                </div>
+                <div className="col-span-2 sm:col-span-1 text-center sm:text-start">
+                  <span className="block text-lg sm:text-xl font-bold text-[hsl(var(--color-success))]">
+                    ۱۰۰٪
+                  </span>
+                  <span className="text-xs text-[hsl(var(--fg-tertiary))]">
+                    {t("landing.transformHeroStat3", "آفلاین و همیشه در دسترس")}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Subtle CTA */}
+            <a
+              href="#interactive-demo"
+              className="shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[hsl(var(--color-primary))] text-[hsl(var(--color-primary-fg))] text-sm font-semibold hover:bg-[hsl(var(--color-primary-hover))] transition-colors self-end lg:self-center"
+            >
+              {t("landing.transformSeeDemo", "مشاهده دمو")}
+              <ArrowRight className="size-4 rtl:rotate-180" />
+            </a>
+          </div>
+        </div>
+
+        {/* ── Outcome cards (Bento grid) ── */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          {OUTCOMES.map((outcome, i) => {
+            const Icon = outcome.icon;
             return (
               <div
-                key={key}
+                key={outcome.key}
                 className={cn(
-                  "group relative text-center p-4 sm:p-8 min-h-[220px] sm:min-h-[280px]",
-                  "rounded-[var(--radius-card)]",
-                  "border border-[hsl(var(--color-primary)/0.15)]",
-                  "bg-[hsl(var(--surface-elevated)/0.4)]",
-                  "max-sm:backdrop-blur-none sm:backdrop-blur-sm",
-                  "will-change-transform opacity-0",
-                  "transition-all duration-500 motion-reduce:transition-none",
-                  "hover:border-[hsl(var(--color-primary)/0.3)] hover:-translate-y-1 hover:shadow-[var(--shadow-premium)]",
-                  animated && "opacity-100 translate-y-0",
+                  "group relative overflow-hidden rounded-[var(--radius-xl)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-5 sm:p-6 transition-all duration-500",
+                  "hover:border-[hsl(var(--color-primary)/0.3)] hover:shadow-lg hover:-translate-y-1",
+                  "motion-reduce:hover:translate-y-0 motion-reduce:transition-none",
+                  animated
+                    ? "opacity-100 translate-y-0"
+                    : "opacity-0 translate-y-4",
                 )}
-                style={{ transitionDelay: `${i * 120}ms` }}
+                style={{ transitionDelay: `${200 + i * 120}ms` }}
               >
-                <div
-                  className="absolute top-0 inset-x-0 h-px bg-gradient-to-r from-transparent via-[hsl(var(--color-primary)/0.3)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                  aria-hidden="true"
-                />
-
-                <div className={cn(
-                  "mx-auto mb-3 sm:mb-5 flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl",
-                  "bg-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))]",
-                  "transition-transform duration-300 group-hover:scale-110 motion-reduce:group-hover:scale-100",
-                )}>
-                  <Icon className="size-5 sm:size-7" aria-hidden="true" />
+                {/* Icon with glow */}
+                <div className="relative mb-4 inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[hsl(var(--color-primary)/0.1)] text-[hsl(var(--color-primary))] group-hover:bg-[hsl(var(--color-primary)/0.15)] transition-colors">
+                  <Icon className="size-6" />
+                  <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-[hsl(var(--color-primary)/0.2)]" />
                 </div>
 
-                <h3 className="text-base sm:text-lg font-bold mb-1 sm:mb-2 text-[hsl(var(--fg-primary))] min-h-[1.25rem] sm:min-h-[1.5rem]">
-                  {t(`landing.${key}Title`, "")}
-                </h3>
+                {/* Before/After contrast */}
+                <div className="flex items-start gap-3 mb-4">
+                  <div className="flex-1">
+                    <span className="block text-xs text-[hsl(var(--fg-tertiary))] line-through">
+                      {outcome.beforeText}
+                    </span>
+                    <span className="block text-sm font-semibold text-[hsl(var(--color-primary))]">
+                      {outcome.afterText}
+                    </span>
+                  </div>
+                  <ArrowRight className="size-4 text-[hsl(var(--fg-tertiary))] shrink-0 mt-0.5 rtl:rotate-180" />
+                </div>
 
-                <p className="text-xs sm:text-sm font-semibold mb-1 sm:mb-2 text-[hsl(var(--color-primary))] min-h-[1rem] sm:min-h-[1.25rem]">
-                  {t(`landing.${key}Sub`, "")}
-                </p>
-
-                <p className="text-[10px] sm:text-xs text-[hsl(var(--fg-secondary))] leading-relaxed min-h-[2rem] sm:min-h-[2.5rem]">
-                  {t(`landing.${key}Desc`, "")}
-                </p>
-
-                <div className="mt-4 sm:mt-5 mx-auto h-0.5 w-10 rounded-full bg-[hsl(var(--color-primary)/0.3)]" />
+                {/* Metric + emotional benefit */}
+                <div className="flex items-end justify-between">
+                  <AnimatedMetric value={outcome.metric} label={outcome.metricLabel} />
+                  <span className="text-xs text-[hsl(var(--fg-secondary))] italic">
+                    {outcome.emotion}
+                  </span>
+                </div>
               </div>
             );
           })}
