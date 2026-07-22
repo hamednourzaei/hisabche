@@ -7,7 +7,7 @@
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "@hisabche/db-schema": "workspace:*",
+    
     "dexie": "^3.2.4"
   },
   "peerDependencies": {
