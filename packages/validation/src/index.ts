@@ -378,6 +378,8 @@ export {
   type InstanceFilters,
 } from './schemas/workflow.schema'
 
+// packages/validation/src/index.ts
+
 // ---------- Notifications ----------
 export {
   notificationTypeEnum,
@@ -389,8 +391,7 @@ export {
   type CreateNotificationInput,
   type Notification,
   type NotificationFilters,
-} from './schemas/notification.schema'
-
+} from './schemas/notification.schema';
 // ---------- Job Queue ----------
 export {
   jobStatusEnum,

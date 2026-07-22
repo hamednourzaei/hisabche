@@ -1,3 +1,4 @@
+// packages/validation/src/schemas/notification.schema.ts
 import { z } from "zod";
 
 export const notificationTypeEnum = z.enum(["info", "success", "warning", "approval_required"]);
@@ -27,8 +28,9 @@ export const notificationFiltersSchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(20),
 });
 
+// ✅ اصلاح شده: ids می‌تواند آرایه‌ای از string باشد (نه لزوماً UUID)
 export const markReadSchema = z.object({
-  ids: z.array(z.string().uuid()).min(1),
+  ids: z.array(z.string()).min(1, "ids must have at least one item"),
 });
 
 export type NotificationType = z.infer<typeof notificationTypeEnum>;
