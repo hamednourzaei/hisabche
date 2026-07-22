@@ -36,7 +36,7 @@ export function useNotifications() {
     queryKey: notificationKeys.list(),
     queryFn: async (): Promise<Notification[]> => {
       // ✅ اصلاح مسیر — اضافه کردن v1
-      const { data } = await apiClient.get<Notification[]>("/api/v1/notifications");
+      const { data } = await apiClient.get<Notification[]>("/v1/notifications");
       return data;
     },
     enabled: authReady,
