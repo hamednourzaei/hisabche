@@ -1,10 +1,11 @@
 // ============================================
 // backend/src/services/invoice.service.ts
-// Hisabche v3.0 — با JOIN customers (حالا کار می‌کند)
+// Hisabche v3.0 — با JOIN customers + Notification
 // ============================================
 
 import { supabase } from "../db";
 import { WorkflowService } from "../services/workflow.service";
+import { NotificationService } from "../services/notification.service"; // ✅ اضافه شد
 import { CreateInvoice, UpdateInvoice, InvoiceFilters } from "@hisabche/validation";
 import { DatabaseError, NotFoundError } from "../errors/database.error";
 import { memoryCache } from "../utils/pagination";
@@ -48,9 +49,11 @@ const INVOICE_ITEMS_LIST_COLUMNS = `
 
 export class InvoiceService {
   private workflowService: WorkflowService;
+  private notificationService: NotificationService; // ✅ اضافه شد
 
   constructor() {
     this.workflowService = new WorkflowService();
+    this.notificationService = new NotificationService(); // ✅ اضافه شد
   }
 
   // ─── List Invoices — با JOIN customers ───
@@ -68,7 +71,6 @@ export class InvoiceService {
     const maxLimit = Math.min(limit, 100);
     const fetchLimit = maxLimit + 1;
 
-    // ✅ حالا JOIN با customers کار می‌کند
     let query = supabase
       .from("invoices")
       .select(`
@@ -137,7 +139,6 @@ export class InvoiceService {
     const items = hasMore ? data.slice(0, maxLimit) : data;
     const nextCursor = hasMore && items.length > 0 ? items[items.length - 1]?.id : null;
 
-    // ✅ استخراج customerName از JOIN
     const invoices = (items || []).map((inv: any) => ({
       ...inv,
       customerName: (inv.customer as any)?.full_name || null,
@@ -215,7 +216,8 @@ export class InvoiceService {
     };
   }
 
-  // ─── Create Invoice ───
+  // ─── Create Invoice ──────────────────────────────────────────────────────
+  // ✅ اضافه کردن Notification
   async create(userId: string, data: CreateInvoice) {
     const invoiceNumber = await this.generateInvoiceNumber();
 
@@ -247,6 +249,7 @@ export class InvoiceService {
 
     if (invoiceError || !invoice) throw new DatabaseError("Failed to create invoice", invoiceError);
 
+    // ─── ایجاد آیتم‌های فاکتور ──────────────────────────────────────────
     if (data.items?.length) {
       const items = data.items.map((item) => ({
         invoice_id: invoice.id,
@@ -271,6 +274,67 @@ export class InvoiceService {
       }
     }
 
+    // ─── ✅ ایجاد نوتیفیکیشن ──────────────────────────────────────────────
+    try {
+      // ✅ دریافت workspace_id
+      const { data: membership } = await supabase
+        .from("workspace_members")
+        .select("workspace_id")
+        .eq("user_id", userId)
+        .limit(1)
+        .single();
+
+      const workspaceId = membership?.workspace_id;
+
+      if (workspaceId) {
+        // ✅ نوتیفیکیشن برای خود کاربر
+        await this.notificationService.create(workspaceId, {
+          user_id: userId,
+          title: "✅ صورت‌حساب جدید ایجاد شد",
+          body: `صورت‌حساب شماره ${invoice.invoice_number} با مبلغ ${invoice.total} ${invoice.currency} ثبت شد.`,
+          type: "success",
+          entity_type: "invoice",
+          entity_id: invoice.id,
+          action_url: `/invoices/${invoice.id}`,
+          metadata: {
+            invoice_number: invoice.invoice_number,
+            total: invoice.total,
+            currency: invoice.currency,
+          },
+        });
+
+        // ✅ اگر مشتری دارد، برای مشتری هم نوتیفیکیشن بفرست
+        if (data.customerId) {
+          const { data: customer } = await supabase
+            .from("customers")
+            .select("user_id")
+            .eq("id", data.customerId)
+            .single();
+
+          if (customer?.user_id) {
+            await this.notificationService.create(workspaceId, {
+              user_id: customer.user_id,
+              title: "📄 صورت‌حساب جدید برای شما",
+              body: `یک صورت‌حساب جدید به مبلغ ${invoice.total} ${invoice.currency} برای شما ثبت شده است.`,
+              type: "info",
+              entity_type: "invoice",
+              entity_id: invoice.id,
+              action_url: `/invoices/${invoice.id}`,
+              metadata: {
+                invoice_number: invoice.invoice_number,
+                total: invoice.total,
+                currency: invoice.currency,
+              },
+            });
+          }
+        }
+      }
+    } catch (notifError) {
+      // ❌ خطای نوتیفیکیشن را لاگ می‌کنیم، اما فاکتور را خراب نمی‌کنیم
+      console.error("Failed to create notification for invoice:", notifError);
+    }
+
+    // ─── پس‌زمینه ──────────────────────────────────────────────────────────
     this.invalidateUserCache(userId);
 
     this.createAccountingEntries(userId, invoice.id, { ...data, invoiceNumber, total: data.total || 0 })
@@ -282,29 +346,75 @@ export class InvoiceService {
     return this.getById(invoice.id, userId);
   }
 
-  // ─── بقیه متدها ───
-  async update(id: string, userId: string, data: UpdateInvoice) {
-    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
-    if (data.status !== undefined) updates.status = data.status;
-    if (data.paidAmount !== undefined) updates.paid_amount = data.paidAmount;
-    if (data.total !== undefined) updates.total = data.total;
-    if (data.notes !== undefined) updates.notes = data.notes;
-    if (data.reference !== undefined) updates.reference = data.reference;
 
-    const { data: invoice, error } = await supabase
-      .from("invoices")
-      .update(updates)
-      .eq("id", id)
-      .eq("user_id", userId)
-      .select(INVOICE_LIST_COLUMNS)
-      .single();
+// ✅ اصلاح شده — بدون خطای TypeScript
+async update(id: string, userId: string, data: UpdateInvoice) {
+  // دریافت فاکتور فعلی برای مقایسه وضعیت
+  const currentInvoice = await this.getById(id, userId);
 
-    if (error) throw new DatabaseError("Failed to update invoice", error);
-    if (!invoice) throw new NotFoundError("Invoice");
+  const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (data.status !== undefined) updates.status = data.status;
+  if (data.paidAmount !== undefined) updates.paid_amount = data.paidAmount;
+  if (data.total !== undefined) updates.total = data.total;
+  if (data.notes !== undefined) updates.notes = data.notes;
+  if (data.reference !== undefined) updates.reference = data.reference;
 
-    this.invalidateUserCache(userId);
-    return invoice;
+  const { data: invoice, error } = await supabase
+    .from("invoices")
+    .update(updates)
+    .eq("id", id)
+    .eq("user_id", userId)
+    .select(INVOICE_LIST_COLUMNS)
+    .single();
+
+  if (error) throw new DatabaseError("Failed to update invoice", error);
+  if (!invoice) throw new NotFoundError("Invoice");
+
+  // ─── ✅ بررسی پرداخت — بدون خطای TypeScript ──────────────────────────
+  const isNowPaid = 
+    (data.status === "completed" || data.status === "paid") &&
+    currentInvoice.status !== "completed" &&
+    currentInvoice.status !== "paid";
+
+  const isFullyPaid = 
+    data.paidAmount !== undefined &&
+    data.paidAmount >= (data.total ?? currentInvoice.total);
+
+  if (isNowPaid || isFullyPaid) {
+    try {
+      const { data: membership } = await supabase
+        .from("workspace_members")
+        .select("workspace_id")
+        .eq("user_id", userId)
+        .limit(1)
+        .single();
+
+      const workspaceId = membership?.workspace_id;
+
+      if (workspaceId) {
+        await this.notificationService.create(workspaceId, {
+          user_id: userId,
+          title: "💰 صورت‌حساب پرداخت شد",
+          body: `صورت‌حساب شماره ${invoice.invoice_number} به مبلغ ${invoice.total} ${invoice.currency} پرداخت شد.`,
+          type: "success",
+          entity_type: "invoice",
+          entity_id: invoice.id,
+          action_url: `/invoices/${invoice.id}`,
+          metadata: {
+            invoice_number: invoice.invoice_number,
+            total: invoice.total,
+            currency: invoice.currency,
+          },
+        });
+      }
+    } catch (notifError) {
+      console.error("Failed to create payment notification:", notifError);
+    }
   }
+
+  this.invalidateUserCache(userId);
+  return invoice;
+}
 
   async delete(id: string, userId: string): Promise<void> {
     await supabase.from("invoice_items").delete().eq("invoice_id", id);

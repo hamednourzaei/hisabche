@@ -33,6 +33,21 @@ export const invoiceItemSchema = z.object({
 export type InvoiceItem = z.infer<typeof invoiceItemSchema>
 
 // ============================================
+// Invoice Status — ✅ اضافه کردن "paid" و "overdue"
+// ============================================
+
+export const invoiceStatusSchema = z.enum([
+  'pending',
+  'paid',        // ✅ اضافه شد
+  'completed',   // ✅ اضافه شد
+  'cancelled',
+  'partial',
+  'overdue',     // ✅ اضافه شد
+])
+
+export type InvoiceStatus = z.infer<typeof invoiceStatusSchema>
+
+// ============================================
 // Invoice
 // ============================================
 
@@ -64,8 +79,8 @@ export const invoiceSchema = z.object({
   paymentMethod: paymentMethodSchema.default('cash'),
   currency: currencyCodeSchema.default('AFN'),
 
-  // Status
-  status: z.enum(['pending', 'completed', 'cancelled', 'partial']).default('pending'),
+  // Status — ✅ استفاده از invoiceStatusSchema
+  status: invoiceStatusSchema.default('pending'),
 
   // Additional
   notes: optionalStringSchema,
@@ -101,13 +116,13 @@ export const updateInvoiceSchema = invoiceSchema.partial().extend({
 export type UpdateInvoice = z.infer<typeof updateInvoiceSchema>
 
 // ============================================
-// Invoice Filters — اضافه کردن page و cursor
+// Invoice Filters
 // ============================================
 
 export const invoiceFiltersSchema = z.object({
   search: z.string().optional(),
   type: z.enum(['sale', 'purchase']).optional(),
-  status: z.enum(['pending', 'completed', 'cancelled', 'partial']).optional(),
+  status: invoiceStatusSchema.optional(),  // ✅ استفاده از invoiceStatusSchema
   customerId: uuidSchema.optional(),
   supplierId: uuidSchema.optional(),
   currency: currencyCodeSchema.optional(),
