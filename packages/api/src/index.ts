@@ -197,18 +197,18 @@ export {
   type TrialStatus,
 } from './hooks/billing'
 
-// ─── Notifications ─────────────────────────────────────────
+// ─── ✅ Notifications ─────────────────────────────────────
 export {
   useNotifications,
   useUnreadCount,
   useMarkAsRead,
+  useMarkAllAsRead,      // ✅ اضافه شد
   notificationKeys,
   type Notification,
 } from './hooks/notifications'
-// packages/api/src/index.ts
 
-// ─── Workflow ───────────────────────────────────────────────────────────────
+// ─── ✅ Workflow ──────────────────────────────────────────
 export {
   useWorkflowInstance,
   type WorkflowInstance,
-} from './hooks/use-workflow';
+} from './hooks/use-workflow'
