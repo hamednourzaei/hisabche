@@ -205,3 +205,10 @@ export {
   notificationKeys,
   type Notification,
 } from './hooks/notifications'
+// packages/api/src/index.ts
+
+// ─── Workflow ───────────────────────────────────────────────────────────────
+export {
+  useWorkflowInstance,
+  type WorkflowInstance,
+} from './hooks/use-workflow';

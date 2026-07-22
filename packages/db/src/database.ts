@@ -1,6 +1,6 @@
 import { Database } from '@nozbe/watermelondb'
 import SQLiteAdapter from '@nozbe/watermelondb/adapters/sqlite'
-import { hisabcheSchema } from './schema/schema'
+import { hisabcheSchema } from './schema'
 import Invoice from './models/Invoice.model'
 import Product from './models/Product.model'
 import Customer from './models/Customer.model'
