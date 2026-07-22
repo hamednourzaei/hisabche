@@ -2,7 +2,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import apiClient from "@hisabche/api";
+import apiClient from "../lib/client";
 
 export interface WorkflowInstance {
   id: string;
