@@ -28,7 +28,7 @@ export function useWorkflowInstance(entityType: string, entityId: string) {
       try {
         // ✅ از API استفاده کن، نه Supabase مستقیم
         const response = await apiClient.get<{ data: WorkflowInstance[]; total: number }>(
-          "/api/v1/workflows/instances",
+          "/v1/workflows/instances",
           {
             params: {
               entity_type: entityType,

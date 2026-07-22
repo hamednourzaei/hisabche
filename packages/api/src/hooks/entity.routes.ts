@@ -5,9 +5,9 @@ import { authenticate } from "../middleware/auth.middleware";
 export async function entityRoutes(fastify: FastifyInstance) {
   const { supabase } = fastify;
 
-  // ─── GET /api/v1/entities/:type/:id/summary ──────────────
+  // ─── GET /v1/entities/:type/:id/summary ──────────────
   fastify.get(
-    "/api/v1/entities/:type/:id/summary",
+    "/v1/entities/:type/:id/summary",
     { preHandler: [authenticate] },
     async (request: any, reply: any) => {
       const { type, id } = request.params;
@@ -92,7 +92,7 @@ export async function entityRoutes(fastify: FastifyInstance) {
     }
   );
 
-  // ─── GET /api/v1/entities/:type/:id/activities ────────────
+  // ─── GET /v1/entities/:type/:id/activities ────────────
   fastify.get(
     "/v1/entities/:type/:id/activities",
     { preHandler: [authenticate] },

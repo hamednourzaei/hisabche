@@ -1,4 +1,4 @@
-// packages/api/src/hooks/notifications.ts
+// packages/src/hooks/notifications.ts
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -68,7 +68,7 @@ export function useNotifications() {
     queryFn: async (): Promise<Notification[]> => {
       try {
         const response = await apiClient.get<NotificationsResponse>(
-          "/api/v1/notifications"
+          "/v1/notifications"
         );
         
         // ✅ استخراج آرایه از response.data.data
@@ -110,7 +110,7 @@ export function useUnreadCount() {
     queryFn: async (): Promise<number> => {
       try {
         const response = await apiClient.get<UnreadCountResponse>(
-          "/api/v1/notifications/unread-count"
+          "/v1/notifications/unread-count"
         );
         
         // ✅ استخراج count از response.data.count
@@ -134,7 +134,7 @@ export function useUnreadCount() {
 /**
  * علامت‌گذاری نوتیفیکیشن‌ها به‌عنوان خوانده‌شده
  * 
- * Backend: PATCH /api/v1/notifications/mark-read
+ * Backend: PATCH /v1/notifications/mark-read
  * Body: { "ids": string[] }
  */
 export function useMarkAsRead() {
@@ -143,7 +143,7 @@ export function useMarkAsRead() {
   return useMutation({
     mutationFn: async (ids: string[]) => {
       if (!ids || ids.length === 0) return;
-      await apiClient.patch("/api/v1/notifications/mark-read", { ids });
+      await apiClient.patch("/v1/notifications/mark-read", { ids });
     },
     onSuccess: () => {
       // ✅ Invalidating هر دو کوئری
@@ -164,7 +164,7 @@ export function useMarkAllAsRead() {
 
   return useMutation({
     mutationFn: async () => {
-      await apiClient.patch("/api/v1/notifications/mark-all-read");
+      await apiClient.patch("/v1/notifications/mark-all-read");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: notificationKeys.list() });
