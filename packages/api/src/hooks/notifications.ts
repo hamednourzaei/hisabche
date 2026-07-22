@@ -67,7 +67,7 @@ export function useMarkAsRead() {
   return useMutation({
     mutationFn: async (ids: string[]) => {
       // ✅ اصلاح مسیر — اضافه کردن v1 و تغییر read به mark-read
-      await apiClient.patch("/api/v1/notifications/mark-read", { ids });
+      await apiClient.patch("/v1/notifications/mark-read", { ids });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: notificationKeys.list() });
