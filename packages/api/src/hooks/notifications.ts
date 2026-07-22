@@ -1,4 +1,4 @@
-// packages/api/src/hooks/notifications.ts
+// packages/src/hooks/notifications.ts
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -35,13 +35,26 @@ export function useNotifications() {
   return useQuery({
     queryKey: notificationKeys.list(),
     queryFn: async (): Promise<Notification[]> => {
-      // ✅ اصلاح مسیر — اضافه کردن v1
-      const { data } = await apiClient.get<Notification[]>("/v1/notifications");
-      return data;
+      try {
+        const response = await apiClient.get("/v1/notifications");
+        // ✅ بررسی ساختار پاسخ
+        if (response.data && Array.isArray(response.data)) {
+          return response.data;
+        }
+        if (response.data?.data && Array.isArray(response.data.data)) {
+          return response.data.data;
+        }
+        return [];
+      } catch (error) {
+        console.error("Failed to fetch notifications:", error);
+        return [];
+      }
     },
     enabled: authReady,
     staleTime: 30_000,
     refetchInterval: 15_000,
+    // ✅ fallback data برای جلوگیری از خطا
+    placeholderData: [],
   });
 }
 
@@ -51,13 +64,25 @@ export function useUnreadCount() {
   return useQuery({
     queryKey: notificationKeys.unread(),
     queryFn: async (): Promise<number> => {
-      // ✅ اصلاح مسیر — اضافه کردن v1 و -count
-      const { data } = await apiClient.get<{ count: number }>("/v1/notifications/unread-count");
-      return data.count;
+      try {
+        const response = await apiClient.get("/v1/notifications/unread-count");
+        // ✅ بررسی ساختار پاسخ
+        if (response.data?.count !== undefined) {
+          return response.data.count;
+        }
+        if (typeof response.data === 'number') {
+          return response.data;
+        }
+        return 0;
+      } catch (error) {
+        console.error("Failed to fetch unread count:", error);
+        return 0;
+      }
     },
     enabled: authReady,
     staleTime: 30_000,
     refetchInterval: 15_000,
+    placeholderData: 0,
   });
 }
 
@@ -66,12 +91,14 @@ export function useMarkAsRead() {
 
   return useMutation({
     mutationFn: async (ids: string[]) => {
-      // ✅ اصلاح مسیر — اضافه کردن v1 و تغییر read به mark-read
       await apiClient.patch("/v1/notifications/mark-read", { ids });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: notificationKeys.list() });
       queryClient.invalidateQueries({ queryKey: notificationKeys.unread() });
+    },
+    onError: (error) => {
+      console.error("Failed to mark notifications as read:", error);
     },
   });
 }

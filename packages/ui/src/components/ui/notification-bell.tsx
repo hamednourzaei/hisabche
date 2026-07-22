@@ -10,9 +10,10 @@ import {
   useNotifications,
   useUnreadCount,
   useMarkAsRead,
-  Notification,
 } from "@hisabche/api";
-// ✅ دیگر نیازی به supabaseClient نیست
+import type { Notification } from "@hisabche/api";
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface NotificationGroup {
   key: string;
@@ -26,12 +27,16 @@ interface NotificationBellProps {
   className?: string;
 }
 
+// ─── Styles ──────────────────────────────────────────────────────────────────
+
 const typeStyles = {
   info: "border-s-[hsl(var(--color-info))]",
   success: "border-s-[hsl(var(--color-success))]",
   warning: "border-s-[hsl(var(--color-warning))]",
   approval_required: "border-s-[hsl(var(--color-primary))]",
 } as const;
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function timeAgo(d: string, t: (key: string, fallback: string) => string): string {
   const m = Math.floor((Date.now() - new Date(d).getTime()) / 60000);
@@ -49,6 +54,10 @@ function resolveEntityUrl(n: Notification): string {
 }
 
 function groupNotifications(list: Notification[]): NotificationGroup[] {
+  if (!list || !Array.isArray(list) || list.length === 0) {
+    return [];
+  }
+  
   const m = new Map<string, Notification[]>();
   for (const n of list) {
     const k = n.entity_type && n.entity_id ? `${n.entity_type}:${n.entity_id}` : n.id;
@@ -151,13 +160,14 @@ export const NotificationBell = memo(function NotificationBell({
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  // ✅ استفاده از API به جای supabaseClient
+  // ✅ داده‌ها با fallback ایمن
   const { data: notifications = [], isLoading } = useNotifications();
   const { data: unreadCount = 0 } = useUnreadCount();
   const { mutate: markAsRead } = useMarkAsRead();
 
+  // ✅ گروه‌بندی با بررسی آرایه
   const groups = useMemo(
-    () => groupNotifications(notifications),
+    () => groupNotifications(notifications || []),
     [notifications]
   );
 
