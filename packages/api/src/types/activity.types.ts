@@ -1,21 +1,30 @@
 // packages/api/src/types/activity.types.ts
+
 export interface ActivityDto {
   id: string;
-  actorId: string;
-  actorName: string;
-  entityType: "invoice" | "customer" | "product" | "payment" | "supplier" | "inventory";
-  entityId: string;
-  action: "created" | "updated" | "paid" | "approved" | "rejected" | "sent" | "archived" | "cancelled";
+  entity_type: string;
+  entity_id: string;
+  action: string;
   title: string;
-  description?: string | undefined;
+  description?: string;
+  actor_id: string;
+  actor_name: string;
+  is_read: boolean;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
   metadata: Record<string, unknown>;
-  importance: number;
-  isRead: boolean;
-  createdAt: string;
+  created_at: string;
 }
 
-// نگه‌داشته شده برای سازگاری با کدی که هنوز ActivityItemDto رو import می‌کنه
-export type ActivityItemDto = ActivityDto;
+export interface ActivityItemDto {
+  id: string;
+  action: string;
+  title: string;
+  description?: string;
+  actor: string;
+  timestamp: string;
+  isRead: boolean;
+  importance: number;
+}
 
 export interface EntitySummaryDto {
   label: string;
@@ -23,27 +32,39 @@ export interface EntitySummaryDto {
   amount?: number;
   currency?: string;
   status?: string;
-  statusLabel?: string;
-  statusColor?: string;
   activityCount: number;
   lastActivity: string;
-  route: string;
+  route?: string;
 }
 
 export interface ActivityGroupDto {
-  entityType: ActivityDto["entityType"];
+  entityType: string;
   entityId: string;
   entitySummary: EntitySummaryDto;
-  activities: ActivityDto[];
+  activities: ActivityItemDto[];
   unreadCount: number;
-  hasUnread: boolean;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
   latestAt: string;
-  priority: "critical" | "high" | "medium" | "low";
+  hasUnread: boolean;
+}
+
+// ✅ اضافه کردن ActivityFilterDto
+export interface ActivityFilterDto {
+  type?: string;
+  status?: string;
+  search?: string;
+  entityType?: string;
+  entityId?: string;
+  startDate?: string;
+  endDate?: string;
+  unread?: boolean;
+  priority?: 'low' | 'medium' | 'high' | 'urgent';
+  limit?: number;
+  cursor?: string | null;
 }
 
 export interface PaginatedActivitiesResponse {
   data: ActivityGroupDto[];
   nextCursor: string | null;
   hasMore: boolean;
-  total: number;
 }

@@ -389,7 +389,7 @@ export const EntityActivityCard = memo(function EntityActivityCard({
                   <span className="text-[10px] text-[hsl(var(--fg-tertiary))] flex items-center gap-1">
                     •
                     {/* ✅ اصلاح: استفاده از timeAgo با تابع wrapper */}
-                    {timeAgo(summary.lastActivity.time, (key: string, fallback: string) => t(key, fallback))}
+                    {timeAgo(summary.lastActivity, (key: string, fallback: string) => t(key, fallback))}
                   </span>
                 )}
               </div>

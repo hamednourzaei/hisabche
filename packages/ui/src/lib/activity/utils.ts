@@ -25,15 +25,23 @@ export function formatRelativeTime(date: string): string {
 }
 
 export function getEntityConfig(type: ActivityGroupDto["entityType"]) {
-  return entityRegistry[type] || entityRegistry.invoice;
+  return (
+    entityRegistry[type as keyof typeof entityRegistry] || entityRegistry.invoice
+  );
 }
 
 export function sortActivities(groups: ActivityGroupDto[]): ActivityGroupDto[] {
   return [...groups].sort((a, b) => {
-    // اولویت: critical > high > medium > low
-    const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
-    const aPriority = priorityOrder[a.priority] ?? 2;
-    const bPriority = priorityOrder[b.priority] ?? 2;
+    // اولویت: urgent > critical > high > medium > low
+    const priorityOrder: Record<string, number> = {
+      urgent: 0,
+      critical: 1,
+      high: 2,
+      medium: 3,
+      low: 4,
+    };
+    const aPriority = priorityOrder[a.priority] ?? 3;
+    const bPriority = priorityOrder[b.priority] ?? 3;
     if (aPriority !== bPriority) return aPriority - bPriority;
     // سپس: unread > read
     if (a.unreadCount > 0 && b.unreadCount === 0) return -1;

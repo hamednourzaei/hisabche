@@ -57,6 +57,7 @@
     "react-intersection-observer": "^10.1.0",
     "socks-proxy-agent": "^10.0.0",
     "tailwind-merge": "^3.5.0",
+    "tree-node-cli": "^3.0.0",
     "undici": "^8.2.0"
   }
 }

@@ -3,8 +3,8 @@
 // ============================================
 
 // ─── Core Client ──────────────────────────────────────────
-export { apiClient } from './lib/client'
-export type { ApiResponse, ApiError } from './lib/client'
+export { apiClient } from "./lib/client";
+export type { ApiResponse, ApiError } from "./lib/client";
 
 // ✅ Token Provider + onUnauthorized
 export {
@@ -13,8 +13,8 @@ export {
   hasToken,
   isTokenProviderReady,
   tokenReady,
-} from './lib/tokenProvider'
-export { setOnUnauthorized } from './lib/client'
+} from "./lib/tokenProvider";
+export { setOnUnauthorized } from "./lib/client";
 
 // ─── Auth Hooks ───────────────────────────────────────────
 export {
@@ -22,7 +22,7 @@ export {
   useSignUp,
   useLogout,
   useCurrentUser,
-} from './hooks/auth'
+} from "./hooks/auth";
 
 // ─── Invoices ─────────────────────────────────────────────
 export {
@@ -32,7 +32,7 @@ export {
   useUpdateInvoice,
   useDeleteInvoice,
   invoiceKeys,
-} from './hooks/invoices'
+} from "./hooks/invoices";
 
 // ─── Products ─────────────────────────────────────────────
 export {
@@ -42,7 +42,7 @@ export {
   useUpdateProduct,
   useDeleteProduct,
   productKeys,
-} from './hooks/products'
+} from "./hooks/products";
 
 // ─── Customers ────────────────────────────────────────────
 export {
@@ -51,7 +51,7 @@ export {
   useCreateCustomer,
   useUpdateCustomer,
   customerKeys,
-} from './hooks/customers'
+} from "./hooks/customers";
 
 // ─── Transactions ─────────────────────────────────────────
 export {
@@ -59,10 +59,10 @@ export {
   useCreateTransaction,
   useLedger,
   transactionKeys,
-} from './hooks/transactions'
+} from "./hooks/transactions";
 
 // ─── Realtime ─────────────────────────────────────────────
-export { useRealtime } from './hooks/useRealtime'
+export { useRealtime } from "./hooks/useRealtime";
 
 // ─── Dashboard ────────────────────────────────────────────
 export {
@@ -74,7 +74,7 @@ export {
   type AIInsight,
   type SalesDataPoint,
   type SalesChartData,
-} from './hooks/dashboard'
+} from "./hooks/dashboard";
 
 // ─── Employees ────────────────────────────────────────────
 export {
@@ -84,7 +84,7 @@ export {
   useUpdateEmployee,
   useDeleteEmployee,
   employeeKeys,
-} from './hooks/employees'
+} from "./hooks/employees";
 
 // ─── Projects ─────────────────────────────────────────────
 export {
@@ -99,7 +99,7 @@ export {
   useDeleteProjectTask,
   projectKeys,
   projectTaskKeys,
-} from './hooks/projects'
+} from "./hooks/projects";
 
 // ─── Workspace ────────────────────────────────────────────
 export {
@@ -110,7 +110,7 @@ export {
   useRemoveMember,
   useUpdateMemberRole,
   workspaceKeys,
-} from './hooks/workspace'
+} from "./hooks/workspace";
 
 // ─── Permissions ──────────────────────────────────────────
 export {
@@ -119,7 +119,7 @@ export {
   useCreateRole,
   useDeleteRole,
   permissionKeys,
-} from './hooks/permissions'
+} from "./hooks/permissions";
 
 // ─── Audit ────────────────────────────────────────────────
 export {
@@ -127,7 +127,7 @@ export {
   auditKeys,
   type AuditLog,
   type AuditResponse,
-} from './hooks/audit'
+} from "./hooks/audit";
 
 // ─── Accounting ───────────────────────────────────────────
 export {
@@ -145,7 +145,7 @@ export {
   type TrialBalance,
   type BalanceSheet,
   type IncomeStatement,
-} from './hooks/accounting'
+} from "./hooks/accounting";
 
 // ─── CRM ──────────────────────────────────────────────────
 export {
@@ -157,7 +157,7 @@ export {
   crmKeys,
   type Interaction,
   type Opportunity,
-} from './hooks/crm'
+} from "./hooks/crm";
 
 // ─── Manufacturing ────────────────────────────────────────
 export {
@@ -170,7 +170,7 @@ export {
   type BOM,
   type BOMItem,
   type WorkOrder,
-} from './hooks/manufacturing'
+} from "./hooks/manufacturing";
 
 // ─── Purchasing ───────────────────────────────────────────
 export {
@@ -181,7 +181,7 @@ export {
   purchasingKeys,
   type PurchaseOrder,
   type PurchaseOrderItem,
-} from './hooks/purchasing'
+} from "./hooks/purchasing";
 
 // ─── Billing & Subscription ───────────────────────────────
 export {
@@ -195,7 +195,7 @@ export {
   type BillingPlan,
   type UsageReport,
   type TrialStatus,
-} from './hooks/billing'
+} from "./hooks/billing";
 
 // ─── Notifications ─────────────────────────────────────────
 export {
@@ -205,49 +205,50 @@ export {
   useMarkAllAsRead,
   notificationKeys,
   type Notification,
-} from './hooks/notifications'
+} from "./hooks/notifications";
 
-// ─── ✅ Activity Hooks ────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+// ─── ✅ Activity Hooks ─────────────────────────────────────
+// ═══════════════════════════════════════════════════════════
+
 export {
-  useActivities,
-  useUnreadActivityCount,
+  // ─── Query Keys ──────────────────────────────────────────
   activityKeys,
-} from './hooks/useActivities'
 
-export { useInfiniteActivities } from './hooks/useInfiniteActivities'
-
-export { useRealtimeActivities } from './hooks/useRealtimeActivities'
-
-export {
-  useEntitySummary,
-  type EntitySummary,
-} from './hooks/useEntitySummary'
-
-export {
+  // ─── Get Hooks ──────────────────────────────────────────
+  useActivities,
+  useInfiniteActivities,
+  // ✅ renamed to avoid collision with hooks/notifications' useUnreadCount
+  useUnreadCount as useUnreadActivityCount,
   useEntityActivities,
+  useEntitySummary,
+
+  // ─── Mutation Hooks ─────────────────────────────────────
+  // ✅ renamed to avoid collision with hooks/notifications' useMarkAsRead / useMarkAllAsRead
+  useMarkAsRead as useMarkActivityAsRead,
+  useMarkAllAsRead as useMarkAllActivitiesAsRead,
+
+  // ─── Types ──────────────────────────────────────────────
+  type ActivityItemDto,
+  type ActivityGroupDto,
+  type EntitySummaryDto,
+  type ActivityFilter,
   type Activity,
-} from './hooks/useEntityActivities'
+  type ActivityGroup,
+  type EntitySummary,
+} from "./hooks/activity";
 
-export { useMarkActivityAsRead } from './hooks/useMarkActivityAsRead'
-
-export { useMarkAllActivitiesAsRead } from './hooks/useMarkAllActivitiesAsRead'
-
-// ─── ✅ Alias برای راحتی استفاده ──────────────────────────
-// نکته: نام useMarkAllAsRead قبلاً در بخش Notifications export شده،
-// برای همین این alias با نام دیگه‌ای export می‌شه تا تداخل نداشته باشن.
-export { useMarkAllActivitiesAsRead as useMarkAllActivityNotificationsAsRead } from './hooks/useMarkAllActivitiesAsRead'
-
-// ─── ✅ Activity Types ─────────────────────────────────────
+// ─── Activity Types (از فایل types) ──────────────────────
 export type {
   ActivityDto,
-  ActivityItemDto,
-  ActivityGroupDto,
-  EntitySummaryDto,
+  // ActivityItemDto, // ❌ از hooks/activity export شده
+  // ActivityGroupDto, // ❌ از hooks/activity export شده
+  // EntitySummaryDto, // ❌ از hooks/activity export شده
   PaginatedActivitiesResponse,
-} from './types/activity.types'
+} from "./types/activity.types";
 
 // ─── Workflow ─────────────────────────────────────────────
 export {
   useWorkflowInstance,
   type WorkflowInstance,
-} from './hooks/use-workflow'
+} from "./hooks/use-workflow";

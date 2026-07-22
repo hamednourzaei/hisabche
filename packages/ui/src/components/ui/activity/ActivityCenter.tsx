@@ -4,9 +4,16 @@
 import { useState, useEffect, useCallback, useRef, useMemo, memo } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
-import { Bell, X, Filter, Search, Inbox, Cloud, CloudOff, RefreshCw } from "lucide-react";
+import { Bell, X, Search, CloudOff, RefreshCw, Cloud } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useInfiniteActivities, useUnreadActivityCount, useMarkAllActivitiesAsRead } from "@hisabche/api";
+import {
+  useInfiniteActivities,
+  useUnreadCount as useUnreadActivityCount,
+  useMarkAllAsRead as useMarkAllActivitiesAsRead,
+  type ActivityGroupDto,
+  type ActivityItemDto,
+  type ActivityFilter,
+} from "@hisabche/api";
 import { VirtualizedActivityList } from "./VirtualizedActivityList";
 import { ActivitySkeleton } from "./ActivitySkeleton";
 import { ActivityEmptyState } from "./ActivityEmptyState";
@@ -16,14 +23,25 @@ import { useActivityAnalytics, activityAnalyticsEvents } from "../../../hooks/ac
 import { useReducedMotion, useEscapeKey } from "../../../hooks/activity/useAccessibility";
 import { useDebounce } from "../../../hooks/activity/useDebounce";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ━━━ Types ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 interface ActivityCenterProps {
   className?: string;
   offlineMode?: boolean;
 }
 
-// ─── Components ──────────────────────────────────────────────────────────────
+type FilterType = "all" | "unread" | "invoices" | "payments" | "customers";
+
+// ━━━ Constants ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// ✅ اصلاح: استفاده از string به جای ActivityDto["entityType"]
+const FILTER_ENTITY_MAP: Record<Exclude<FilterType, "all" | "unread">, string> = {
+  invoices: "invoice",
+  payments: "payment",
+  customers: "customer",
+};
+
+// ━━━ Components ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 const FilterChip = memo(function FilterChip({
   label,
@@ -52,7 +70,7 @@ const FilterChip = memo(function FilterChip({
       {label}
       {count !== undefined && count > 0 && (
         <span className={cn(
-          "ml-1 text-[9px] font-bold",
+          "ms-1 text-[9px] font-bold",
           active ? "text-white/80" : "text-[hsl(var(--fg-tertiary))]"
         )}>
           ({count})
@@ -63,7 +81,7 @@ const FilterChip = memo(function FilterChip({
 });
 FilterChip.displayName = "FilterChip";
 
-// ─── Sync Status ─────────────────────────────────────────────────────────────
+// ━━━ Sync Status ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 const SyncStatus = memo(function SyncStatus({
   isOnline,
@@ -85,7 +103,7 @@ const SyncStatus = memo(function SyncStatus({
     return (
       <span className="flex items-center gap-1.5 text-[10px] text-[hsl(var(--color-warning))]">
         <CloudOff className="size-3.5" />
-        {t("activity.offline", "آفلاین")}
+        {t("activity.offline")}
         {pendingCount > 0 && (
           <span className="px-1.5 py-0.5 bg-[hsl(var(--color-warning)/0.1)] rounded text-[9px]">
             {pendingCount}
@@ -102,7 +120,7 @@ const SyncStatus = memo(function SyncStatus({
           "size-3.5",
           !prefersReducedMotion && "animate-spin"
         )} />
-        {t("activity.syncing", "همگام‌سازی...")}
+        {t("activity.syncing")}
       </span>
     );
   }
@@ -112,7 +130,7 @@ const SyncStatus = memo(function SyncStatus({
       type="button"
       onClick={onSync}
       className="flex items-center gap-1.5 text-[10px] text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--fg-primary))] transition-colors"
-      aria-label={t("activity.sync", "همگام‌سازی")}
+      aria-label={t("activity.sync")}
     >
       <Cloud className="size-3.5" />
       {lastSynced
@@ -120,13 +138,51 @@ const SyncStatus = memo(function SyncStatus({
             hour: "2-digit",
             minute: "2-digit",
           })
-        : t("activity.sync", "همگام‌سازی")}
+        : t("activity.sync")}
     </button>
   );
 });
 SyncStatus.displayName = "SyncStatus";
 
-// ─── Main Component ─────────────────────────────────────────────────────────
+// ━━━ Helpers ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// ✅ اصلاح: استفاده از string به جای ActivityDto["entityType"]
+const getEntityTypeFilter = (filter: FilterType): string | undefined => {
+  if (filter === "all" || filter === "unread") return undefined;
+  return FILTER_ENTITY_MAP[filter];
+};
+
+const filterGroupsByType = (
+  groups: ActivityGroupDto[],
+  filter: FilterType
+): ActivityGroupDto[] => {
+  if (filter === "all") return groups;
+  if (filter === "unread") {
+    return groups.filter((group) => group.unreadCount > 0);
+  }
+  
+  const targetType = FILTER_ENTITY_MAP[filter];
+  return groups.filter((group) => group.entityType === targetType);
+};
+
+const searchGroups = (
+  groups: ActivityGroupDto[],
+  query: string
+): ActivityGroupDto[] => {
+  const lowerQuery = query.toLowerCase().trim();
+  if (!lowerQuery) return groups;
+  
+  return groups.filter(
+    (group) =>
+      group.entitySummary.label.toLowerCase().includes(lowerQuery) ||
+      (group.entitySummary.subtitle?.toLowerCase().includes(lowerQuery) ?? false) ||
+      group.activities.some((activity: ActivityItemDto) => 
+        activity.title.toLowerCase().includes(lowerQuery)
+      )
+  );
+};
+
+// ━━━ Main Component ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export const ActivityCenter = memo(function ActivityCenter({
   className,
@@ -135,21 +191,22 @@ export const ActivityCenter = memo(function ActivityCenter({
   const { t } = useTranslation();
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [filter, setFilter] = useState<"all" | "unread" | "invoices" | "payments" | "customers">("all");
+  const [filter, setFilter] = useState<FilterType>("all");
   const [search, setSearch] = useState("");
   const panelRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
-  const previousFilterRef = useRef(filter);
-  const previousOpenRef = useRef(open);
+  const openTimeRef = useRef(Date.now());
 
-  // ─── Accessibility ─────────────────────────────────────────────────────────
+  // ━━━ Accessibility ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const prefersReducedMotion = useReducedMotion();
 
-  // ─── Analytics ─────────────────────────────────────────────────────────────
+  // ━━━ Analytics ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const { trackActivityEvent } = useActivityAnalytics();
 
-  // ─── Online/Offline state ──────────────────────────────────────────────────
-  const [isOnline, setIsOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
+  // ━━━ Online/Offline state ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const [isOnline, setIsOnline] = useState<boolean>(
+    typeof navigator !== "undefined" ? navigator.onLine : true
+  );
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
 
@@ -166,74 +223,71 @@ export const ActivityCenter = memo(function ActivityCenter({
     };
   }, []);
 
-  // ─── ✅ اصلاح: تعیین type با مقدار دهی صحیح ─────────────────────────────────
-  const getType = (): string | undefined => {
-    if (filter === "invoices") return "invoice";
-    if (filter === "payments") return "payment";
-    if (filter === "customers") return "customer";
-    return undefined;
-  };
+  // ━━━ Debounced search ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const debouncedSearch = useDebounce(search, 300);
 
-  // ─── Data ──────────────────────────────────────────────────────────────────
-// packages/ui/src/components/ui/activity/ActivityCenter.tsx
+  // ━━━ Activity filter ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const activityFilter = useMemo<ActivityFilter>(() => {
+    const entityType = getEntityTypeFilter(filter);
+    const result: ActivityFilter = {};
+    
+    if (entityType) {
+      result.type = entityType;
+    }
+    if (debouncedSearch) {
+      result.search = debouncedSearch;
+    }
+    
+    return result;
+  }, [filter, debouncedSearch]);
 
-// ─── Data ──────────────────────────────────────────────────────────────────
-const {
-  data,
-  isLoading,
-  fetchNextPage,
-  hasNextPage,
-  isFetchingNextPage,
-  refetch,
-} = useInfiniteActivities({
-  type: getType(),
-  search: search || undefined,
-} as any); // ✅ با as any مشکل حل می‌شود
+  // ━━━ Data ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const {
+    data,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch,
+  } = useInfiniteActivities(activityFilter);
 
   const { data: unreadCount = 0 } = useUnreadActivityCount();
   const { mutate: markAllAsRead, isPending: isMarkingAll } = useMarkAllActivitiesAsRead();
 
-  // ─── Debounced search ──────────────────────────────────────────────────────
-  const debouncedSearch = useDebounce(search, 300);
-
-  // ─── Flatten pages ─────────────────────────────────────────────────────────
-  const allGroups = useMemo(() => {
-    return data?.pages.flatMap((page: any) => page.data) ?? [];
+  // ━━━ Flatten pages ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const allGroups = useMemo<ActivityGroupDto[]>(() => {
+    return data?.pages.flatMap((page) => page.data) ?? [];
   }, [data]);
 
-  // ─── Analytics: Track filter change ──────────────────────────────────────
-  useEffect(() => {
-    if (previousFilterRef.current !== filter) {
-      trackActivityEvent(activityAnalyticsEvents.FILTER, {
-        filter,
-        previous: previousFilterRef.current
-      });
-      previousFilterRef.current = filter;
+  // ━━━ Filtered groups ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const filteredGroups = useMemo(() => {
+    const typeFiltered = filterGroupsByType(allGroups, filter);
+    
+    if (!search.trim()) {
+      return sortActivities(typeFiltered);
     }
-  }, [filter, trackActivityEvent]);
 
-  // ─── Analytics: Track open/close ─────────────────────────────────────────
-  useEffect(() => {
-    if (open !== previousOpenRef.current) {
-      trackActivityEvent(
-        open ? activityAnalyticsEvents.OPEN_FEED : activityAnalyticsEvents.CLOSE_FEED,
-        { unreadCount }
-      );
-      previousOpenRef.current = open;
-    }
-  }, [open, trackActivityEvent, unreadCount]);
+    const searched = searchGroups(typeFiltered, search);
+    return sortActivities(searched);
+  }, [allGroups, filter, search]);
 
-  // ─── Analytics: Track search ──────────────────────────────────────────────
-  useEffect(() => {
-    if (debouncedSearch && debouncedSearch.length >= 2) {
-      trackActivityEvent(activityAnalyticsEvents.SEARCH, {
-        query: debouncedSearch,
-        resultsCount: allGroups.length
-      });
-    }
-  }, [debouncedSearch, allGroups.length, trackActivityEvent]);
+  // ━━━ Counts for filter chips ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const filterCounts = useMemo(() => {
+    return {
+      all: allGroups.length,
+      unread: allGroups.filter((g) => g.unreadCount > 0).length,
+      invoices: allGroups.filter((g) => g.entityType === "invoice").length,
+      payments: allGroups.filter((g) => g.entityType === "payment").length,
+      customers: allGroups.filter((g) => g.entityType === "customer").length,
+    };
+  }, [allGroups]);
 
-  // ─── Manual sync ───────────────────────────────────────────────────────────
+  // ━━━ Pending count ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const pendingCount = useMemo(() => {
+    return allGroups.filter((g) => g.unreadCount > 0).length;
+  }, [allGroups]);
+
+  // ━━━ Sync Handler ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const handleSync = useCallback(async () => {
     if (!isOnline || isSyncing) return;
     setIsSyncing(true);
@@ -248,133 +302,131 @@ const {
     }
   }, [isOnline, isSyncing, refetch, trackActivityEvent]);
 
-  // ─── Auto sync on online ──────────────────────────────────────────────────
-  useEffect(() => {
-    if (isOnline) {
-      handleSync();
-    }
-  }, [isOnline, handleSync]);
-
-  // ─── Periodic sync ────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!isOnline) return;
-    const interval = setInterval(handleSync, 60000);
-    return () => clearInterval(interval);
-  }, [isOnline, handleSync]);
-
-  // ─── Filtered groups ──────────────────────────────────────────────────────
-  const filteredGroups = useMemo(() => {
-    let result = [...allGroups];
-
-    if (filter === "unread") {
-      result = result.filter((g: any) => g.unreadCount > 0);
-    } else if (filter === "invoices") {
-      result = result.filter((g: any) => g.entityType === "invoice");
-    } else if (filter === "payments") {
-      result = result.filter((g: any) => g.entityType === "payment");
-    } else if (filter === "customers") {
-      result = result.filter((g: any) => g.entityType === "customer");
-    }
-
-    if (search.trim()) {
-      const query = search.toLowerCase().trim();
-      result = result.filter(
-        (g: any) =>
-          g.entitySummary.label.toLowerCase().includes(query) ||
-          g.entitySummary.subtitle?.toLowerCase().includes(query) ||
-          g.activities.some((a: any) => a.title.toLowerCase().includes(query))
-      );
-    }
-
-    return sortActivities(result);
-  }, [allGroups, filter, search]);
-
-  // ─── Counts for filter chips ──────────────────────────────────────────────
-  const filterCounts = useMemo(() => {
-    return {
-      all: allGroups.length,
-      unread: allGroups.filter((g: any) => g.unreadCount > 0).length,
-      invoices: allGroups.filter((g: any) => g.entityType === "invoice").length,
-      payments: allGroups.filter((g: any) => g.entityType === "payment").length,
-      customers: allGroups.filter((g: any) => g.entityType === "customer").length,
-    };
-  }, [allGroups]);
-
-  // ─── Close handlers ──────────────────────────────────────────────────────
-  const close = useCallback(() => {
-    setOpen(false);
-    trackActivityEvent(activityAnalyticsEvents.CLOSE_FEED, {
-      duration: open ? Date.now() - openTimeRef.current : 0
-    });
-  }, [open, trackActivityEvent]);
-
-  const openTimeRef = useRef(Date.now());
-
+  // ━━━ Open/Close Handlers ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const handleOpen = useCallback(() => {
     setOpen(true);
     openTimeRef.current = Date.now();
     trackActivityEvent(activityAnalyticsEvents.OPEN_FEED, { unreadCount });
   }, [trackActivityEvent, unreadCount]);
 
-  // ─── Escape key ────────────────────────────────────────────────────────────
+  const handleClose = useCallback(() => {
+    trackActivityEvent(activityAnalyticsEvents.CLOSE_FEED, {
+      duration: Date.now() - openTimeRef.current,
+    });
+    setOpen(false);
+  }, [trackActivityEvent]);
+
+  // ━━━ Filter Change Handler ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const handleFilterChange = useCallback((newFilter: FilterType) => {
+    setFilter(newFilter);
+    trackActivityEvent(activityAnalyticsEvents.FILTER, { filter: newFilter });
+  }, [trackActivityEvent]);
+
+  // ━━━ Mark All Read Handler ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const handleMarkAllRead = useCallback(() => {
+    trackActivityEvent(activityAnalyticsEvents.MARK_ALL_READ, {
+      count: unreadCount,
+      totalActivities: allGroups.length,
+    });
+    markAllAsRead();
+  }, [trackActivityEvent, unreadCount, allGroups.length, markAllAsRead]);
+
+  // ━━━ Load More Handler ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const handleLoadMore = useCallback(() => {
+    trackActivityEvent(activityAnalyticsEvents.LOAD_MORE, {
+      currentCount: allGroups.length,
+    });
+    fetchNextPage();
+  }, [allGroups.length, trackActivityEvent, fetchNextPage]);
+
+  // ━━━ Activity Click Handler ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const handleActivityClick = useCallback((activity: ActivityItemDto, group: ActivityGroupDto) => {
+    trackActivityEvent(activityAnalyticsEvents.CLICK_ACTIVITY, {
+      entity_type: group.entityType,
+      entity_id: group.entityId,
+      has_unread: group.hasUnread,
+    });
+    setOpen(false);
+    // ✅ اصلاح: استفاده از route پیش‌فرض اگر undefined باشد
+    const route = group.entitySummary.route || "/dashboard";
+    router.push(route);
+  }, [trackActivityEvent, router]);
+
+  // ━━━ View All Handler ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const handleViewAll = useCallback(() => {
+    trackActivityEvent(activityAnalyticsEvents.VIEW_ALL);
+    setOpen(false);
+    router.push("/activities");
+  }, [trackActivityEvent, router]);
+
+  // ━━━ Effects ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  
+  // Auto sync on online
+  useEffect(() => {
+    if (isOnline) {
+      handleSync();
+    }
+  }, [isOnline, handleSync]);
+
+  // Periodic sync
+  useEffect(() => {
+    if (!isOnline) return;
+    const interval = setInterval(handleSync, 60000);
+    return () => clearInterval(interval);
+  }, [isOnline, handleSync]);
+
+  // Search analytics
+  useEffect(() => {
+    if (debouncedSearch && debouncedSearch.length >= 2) {
+      trackActivityEvent(activityAnalyticsEvents.SEARCH, {
+        query: debouncedSearch,
+        resultsCount: allGroups.length,
+      });
+    }
+  }, [debouncedSearch, allGroups.length, trackActivityEvent]);
+
+  // Escape key
   useEscapeKey(() => {
-    if (open) close();
+    if (open) handleClose();
   });
 
-  // ─── Close on click outside ──────────────────────────────────────────────
+  // Close on click outside
   useEffect(() => {
     if (!open) return;
-    const h = (e: MouseEvent) => {
-      if (!panelRef.current?.contains(e.target as Node)) close();
+    const handleMouseDown = (e: MouseEvent) => {
+      if (!panelRef.current?.contains(e.target as Node)) {
+        handleClose();
+      }
     };
-    const timeout = setTimeout(() => document.addEventListener("mousedown", h), 0);
+    const timeout = setTimeout(() => document.addEventListener("mousedown", handleMouseDown), 0);
     return () => {
       clearTimeout(timeout);
-      document.removeEventListener("mousedown", h);
+      document.removeEventListener("mousedown", handleMouseDown);
     };
-  }, [open, close]);
+  }, [open, handleClose]);
 
-  // ─── Keyboard shortcuts ──────────────────────────────────────────────────
+  // Keyboard shortcuts
   useEffect(() => {
     if (!open) return;
-    const h = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "/") {
         e.preventDefault();
         searchRef.current?.focus();
       }
       if (e.key === "Escape") {
         e.preventDefault();
-        close();
+        handleClose();
       }
     };
-    document.addEventListener("keydown", h);
-    return () => document.removeEventListener("keydown", h);
-  }, [open, close]);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open, handleClose]);
 
-  // ─── Pending count ────────────────────────────────────────────────────────
-  const pendingCount = useMemo(() => {
-    return allGroups.filter((g: any) => g.unreadCount > 0).length;
-  }, [allGroups]);
-
-  // ─── Mark All Read with analytics ────────────────────────────────────────
-  const handleMarkAllRead = useCallback(() => {
-    trackActivityEvent(activityAnalyticsEvents.MARK_ALL_READ, {
-      count: unreadCount,
-      totalActivities: allGroups.length
-    });
-    markAllAsRead();
-  }, [trackActivityEvent, unreadCount, allGroups.length, markAllAsRead]);
-
-  // ─── Load more analytics ──────────────────────────────────────────────────
-  const handleLoadMore = useCallback(() => {
-    trackActivityEvent(activityAnalyticsEvents.LOAD_MORE, {
-      currentCount: allGroups.length
-    });
-  }, [allGroups.length, trackActivityEvent]);
+  // ━━━ Render ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
   return (
     <div className={cn("relative", className)}>
-      {/* ─── Button ───────────────────────────────────────────── */}
+      {/* ━━━ Button ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       <button
         type="button"
         onClick={handleOpen}
@@ -385,25 +437,25 @@ const {
           "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))] focus:ring-offset-2",
           open && "bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-primary))]"
         )}
-        aria-label={t("activity.title", "مرکز فعالیت‌ها")}
+        aria-label={t("activity.title")}
         aria-expanded={open}
         aria-haspopup="dialog"
       >
         <Bell className="size-5" />
         {unreadCount > 0 && (
           <span className="absolute -top-1 -end-1 flex items-center justify-center min-w-[20px] h-[20px] px-1 text-[11px] font-bold text-white bg-[hsl(var(--color-destructive))] rounded-full shadow-sm shadow-[hsl(var(--color-destructive)/0.4)]">
-            {unreadCount > 99 ? "۹۹+" : unreadCount}
+            {unreadCount > 99 ? "99+" : unreadCount}
           </span>
         )}
       </button>
 
-      {/* ─── Panel ────────────────────────────────────────────── */}
+      {/* ━━━ Panel ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
       {open && (
         <div
           ref={panelRef}
           role="dialog"
           aria-modal="true"
-          aria-label={t("activity.title", "مرکز فعالیت‌ها")}
+          aria-label={t("activity.title")}
           className={cn(
             "absolute end-0 top-full mt-2 z-50 w-[440px] max-h-[560px] flex flex-col",
             "rounded-2xl border border-[hsl(var(--border-default))]",
@@ -413,15 +465,15 @@ const {
             "animate-in fade-in-0 slide-in-from-top-2"
           )}
         >
-          {/* ─── Header ────────────────────────────────────────── */}
+          {/* ━━━ Header ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
           <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-[hsl(var(--border-default))]">
             <div className="flex items-center gap-2 min-w-0">
               <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">
-                {t("activity.title", "مرکز فعالیت‌ها")}
+                {t("activity.title")}
               </h3>
               {unreadCount > 0 && (
                 <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-[hsl(var(--color-destructive)/0.1)] text-[hsl(var(--color-destructive))]">
-                  {unreadCount} {t("activity.new", "جدید")}
+                  {unreadCount} {t("activity.new")}
                 </span>
               )}
             </div>
@@ -444,33 +496,33 @@ const {
                     "transition-colors disabled:opacity-40",
                     "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
                   )}
-                  aria-label={t("activity.markAllRead", "خواندن همه")}
+                  aria-label={t("activity.markAllRead")}
                 >
-                  {t("activity.markAllRead", "خواندن همه")}
+                  {t("activity.markAllRead")}
                 </button>
               )}
               <button
                 type="button"
-                onClick={close}
+                onClick={handleClose}
                 className="p-1 rounded-lg text-[hsl(var(--fg-tertiary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors"
-                aria-label={t("action.close", "بستن")}
+                aria-label={t("action.close")}
               >
                 <X className="size-4" />
               </button>
             </div>
           </div>
 
-          {/* ─── Offline Banner ────────────────────────────────── */}
+          {/* ━━━ Offline Banner ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
           {!isOnline && (
             <div className="px-4 py-2 bg-[hsl(var(--color-warning)/0.08)] border-b border-[hsl(var(--border-default))]">
               <p className="text-[11px] text-[hsl(var(--color-warning))] flex items-center gap-2">
                 <CloudOff className="size-3.5" />
-                {t("activity.offlineBanner", "شما آفلاین هستید. فعالیت‌ها از حافظه محلی نمایش داده می‌شوند.")}
+                {t("activity.offlineBanner")}
               </p>
             </div>
           )}
 
-          {/* ─── Toolbar ───────────────────────────────────────── */}
+          {/* ━━━ Toolbar ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
           <div className="px-3 py-2 border-b border-[hsl(var(--border-default))] space-y-2">
             {/* Search */}
             <div className="relative">
@@ -480,14 +532,14 @@ const {
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder={t("activity.search", "جستجو در فعالیت‌ها...")}
+                placeholder={t("activity.search")}
                 className={cn(
                   "w-full h-8 rounded-lg border border-[hsl(var(--border-default))] bg-transparent",
                   "ps-8 pe-10 text-xs text-[hsl(var(--fg-primary))]",
                   "placeholder:text-[hsl(var(--fg-tertiary))]",
                   "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
                 )}
-                aria-label={t("activity.search", "جستجو در فعالیت‌ها")}
+                aria-label={t("activity.search")}
               />
               <kbd className="absolute end-2.5 top-1/2 -translate-y-1/2 text-[10px] text-[hsl(var(--fg-tertiary))] border border-[hsl(var(--border-default))] px-1.5 py-0.5 rounded">
                 /
@@ -497,39 +549,39 @@ const {
             {/* Filter Chips */}
             <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-hide" role="tablist">
               <FilterChip
-                label={t("activity.filter.all", "همه")}
+                label={t("activity.filter.all")}
                 active={filter === "all"}
-                onClick={() => setFilter("all")}
+                onClick={() => handleFilterChange("all")}
                 count={filterCounts.all}
               />
               <FilterChip
-                label={t("activity.filter.unread", "خوانده‌نشده")}
+                label={t("activity.filter.unread")}
                 active={filter === "unread"}
-                onClick={() => setFilter("unread")}
+                onClick={() => handleFilterChange("unread")}
                 count={filterCounts.unread}
               />
               <FilterChip
-                label={t("activity.filter.invoices", "فاکتورها")}
+                label={t("activity.filter.invoices")}
                 active={filter === "invoices"}
-                onClick={() => setFilter("invoices")}
+                onClick={() => handleFilterChange("invoices")}
                 count={filterCounts.invoices}
               />
               <FilterChip
-                label={t("activity.filter.payments", "پرداخت‌ها")}
+                label={t("activity.filter.payments")}
                 active={filter === "payments"}
-                onClick={() => setFilter("payments")}
+                onClick={() => handleFilterChange("payments")}
                 count={filterCounts.payments}
               />
               <FilterChip
-                label={t("activity.filter.customers", "مشتریان")}
+                label={t("activity.filter.customers")}
                 active={filter === "customers"}
-                onClick={() => setFilter("customers")}
+                onClick={() => handleFilterChange("customers")}
                 count={filterCounts.customers}
               />
             </div>
           </div>
 
-          {/* ─── Body ──────────────────────────────────────────── */}
+          {/* ━━━ Body ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
           <div className="overflow-y-auto flex-1 p-3">
             {isLoading && allGroups.length === 0 ? (
               <ActivityMotion type="fade">
@@ -540,17 +592,15 @@ const {
                 <ActivityEmptyState
                   title={
                     search
-                      ? t("activity.empty.search", "نتیجه‌ای یافت نشد")
-                      : t("activity.empty.title", "همه چیز مرتب است")
+                      ? t("activity.empty.search")
+                      : t("activity.empty.title")
                   }
                   subtitle={
                     search
-                      ? t("activity.empty.searchHint", 'عبارت "{query}" در هیچ فعالیتی پیدا نشد', {
-                          query: search,
-                        })
+                      ? t("activity.empty.searchHint", { query: search })
                       : filter === "unread"
-                      ? t("activity.empty.unread", "هیچ فعالیت خوانده‌نشده‌ای ندارید.")
-                      : t("activity.empty.all", "هیچ فعالیتی ثبت نشده است.")
+                      ? t("activity.empty.unread")
+                      : t("activity.empty.all")
                   }
                 />
               </ActivityMotion>
@@ -561,30 +611,18 @@ const {
                 hasNextPage={hasNextPage}
                 fetchNextPage={fetchNextPage}
                 isFetchingNextPage={isFetchingNextPage}
-                onActivityClick={(activity, group) => {
-                  trackActivityEvent(activityAnalyticsEvents.CLICK_ACTIVITY, {
-                    entity_type: group.entityType,
-                    entity_id: group.entityId,
-                    has_unread: group.hasUnread,
-                  });
-                  setOpen(false);
-                  router.push(group.entitySummary.route || "/dashboard");
-                }}
+                onActivityClick={handleActivityClick}
                 estimateSize={180}
                 onLoadMore={handleLoadMore}
               />
             )}
           </div>
 
-          {/* ─── Footer ────────────────────────────────────────── */}
+          {/* ━━━ Footer ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
           {filteredGroups.length > 0 && (
             <button
               type="button"
-              onClick={() => {
-                trackActivityEvent(activityAnalyticsEvents.VIEW_ALL);
-                setOpen(false);
-                router.push("/activities");
-              }}
+              onClick={handleViewAll}
               className={cn(
                 "flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-medium",
                 "text-[hsl(var(--fg-secondary))] hover:text-[hsl(var(--color-primary))]",
@@ -592,9 +630,9 @@ const {
                 "hover:bg-[hsl(var(--surface-muted))] transition-colors duration-150",
                 "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
               )}
-              aria-label={t("activity.viewAll", "مشاهده همه فعالیت‌ها")}
+              aria-label={t("activity.viewAll")}
             >
-              {t("activity.viewAll", "مشاهده همه فعالیت‌ها")}
+              {t("activity.viewAll")}
               <span className="text-[hsl(var(--fg-tertiary))]">→</span>
             </button>
           )}
