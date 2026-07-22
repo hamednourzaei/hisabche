@@ -52,7 +52,7 @@ export function useUnreadCount() {
     queryKey: notificationKeys.unread(),
     queryFn: async (): Promise<number> => {
       // ✅ اصلاح مسیر — اضافه کردن v1 و -count
-      const { data } = await apiClient.get<{ count: number }>("/api/v1/notifications/unread-count");
+      const { data } = await apiClient.get<{ count: number }>("/v1/notifications/unread-count");
       return data.count;
     },
     enabled: authReady,
