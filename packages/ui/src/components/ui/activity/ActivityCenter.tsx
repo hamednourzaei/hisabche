@@ -34,7 +34,6 @@ type FilterType = "all" | "unread" | "invoices" | "payments" | "customers";
 
 // ━━━ Constants ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-// ✅ اصلاح: استفاده از string به جای ActivityDto["entityType"]
 const FILTER_ENTITY_MAP: Record<Exclude<FilterType, "all" | "unread">, string> = {
   invoices: "invoice",
   payments: "payment",
@@ -146,7 +145,6 @@ SyncStatus.displayName = "SyncStatus";
 
 // ━━━ Helpers ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-// ✅ اصلاح: استفاده از string به جای ActivityDto["entityType"]
 const getEntityTypeFilter = (filter: FilterType): string | undefined => {
   if (filter === "all" || filter === "unread") return undefined;
   return FILTER_ENTITY_MAP[filter];
@@ -196,6 +194,7 @@ export const ActivityCenter = memo(function ActivityCenter({
   const panelRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const openTimeRef = useRef(Date.now());
+  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // ━━━ Accessibility ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const prefersReducedMotion = useReducedMotion();
@@ -289,7 +288,10 @@ export const ActivityCenter = memo(function ActivityCenter({
 
   // ━━━ Sync Handler ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const handleSync = useCallback(async () => {
-    if (!isOnline || isSyncing) return;
+    // ✅ جلوگیری از sync همزمان
+    if (isSyncing) return;
+    if (!isOnline) return;
+    
     setIsSyncing(true);
     try {
       await refetch();
@@ -347,7 +349,6 @@ export const ActivityCenter = memo(function ActivityCenter({
       has_unread: group.hasUnread,
     });
     setOpen(false);
-    // ✅ اصلاح: استفاده از route پیش‌فرض اگر undefined باشد
     const route = group.entitySummary.route || "/dashboard";
     router.push(route);
   }, [trackActivityEvent, router]);
@@ -361,19 +362,30 @@ export const ActivityCenter = memo(function ActivityCenter({
 
   // ━━━ Effects ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   
-  // Auto sync on online
+  // ✅ فقط یکبار sync روی online (بدون setInterval)
   useEffect(() => {
     if (isOnline) {
-      handleSync();
+      // با تاخیر ۱ ثانیه تا از لوپ جلوگیری شود
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+      }
+      syncTimeoutRef.current = setTimeout(() => {
+        handleSync();
+      }, 1000);
     }
+    return () => {
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
+      }
+    };
   }, [isOnline, handleSync]);
 
-  // Periodic sync
-  useEffect(() => {
-    if (!isOnline) return;
-    const interval = setInterval(handleSync, 60000);
-    return () => clearInterval(interval);
-  }, [isOnline, handleSync]);
+  // ❌ حذف setInterval
+  // useEffect(() => {
+  //   if (!isOnline) return;
+  //   const interval = setInterval(handleSync, 60000);
+  //   return () => clearInterval(interval);
+  // }, [isOnline, handleSync]);
 
   // Search analytics
   useEffect(() => {

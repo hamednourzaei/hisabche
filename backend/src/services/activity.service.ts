@@ -136,23 +136,32 @@ export class ActivityService {
     return data;
   }
 
-  // ─── Get Activities (with Cursor Pagination) ─────────────────────────────
-  async getActivities(
-    userId: string,
-    filters?: {
-      type?: string | undefined;
-      unread?: boolean | undefined;
-      search?: string | undefined;
-      limit?: number | undefined;
-      cursor?: string | undefined;
-    }
-  ): Promise<PaginatedActivitiesResponse> {
-    const cacheKey = `activities:${userId}:${JSON.stringify(filters)}`;
+// backend/src/services/activity.service.ts
+
+// ─── Get Activities ─────────────────────────────────────────────────────────────
+async getActivities(
+  userId: string,
+  filters?: {
+    type?: string | undefined;
+    unread?: boolean | undefined;
+    search?: string | undefined;
+    limit?: number | undefined;
+    cursor?: string | undefined;
+  }
+): Promise<PaginatedActivitiesResponse> {
+  const cacheKey = `activities:${userId}:${JSON.stringify(filters)}`;
+  
+  try {
     const cached = await memoryCache.get(cacheKey);
     if (cached) return cached as PaginatedActivitiesResponse;
+  } catch (cacheError) {
+    // اگر کش مشکل داشت، ادامه بده
+    console.warn("⚠️ Cache error, continuing without cache:", cacheError);
+  }
 
-    const limit = Math.min(filters?.limit || 20, 100);
+  const limit = Math.min(filters?.limit || 20, 100);
 
+  try {
     let query = supabase
       .from("activities")
       .select("*", { count: "exact" })
@@ -183,6 +192,7 @@ export class ActivityService {
       throw new DatabaseError("Failed to fetch activities", error);
     }
 
+    // ✅ اگر داده‌ای وجود نداشت، خالی برگردان
     if (!activities || activities.length === 0) {
       return {
         data: [],
@@ -217,7 +227,15 @@ export class ActivityService {
       const latest = sortedItems[0];
       const metadata = latest.metadata || {};
 
-      const summary = await this.getEntitySummary(entityType, entityId, userId);
+      // ✅ با try-catch برای هر گروه
+      let summary: Partial<EntitySummaryDto> | null = null;
+      try {
+        summary = await this.getEntitySummary(entityType, entityId, userId);
+      } catch (summaryError) {
+        console.warn(`⚠️ Failed to get summary for ${entityType}:${entityId}`, summaryError);
+        summary = null;
+      }
+
       const unreadCount = sortedItems.filter((i) => !i.is_read).length;
 
       result.push({
@@ -227,10 +245,10 @@ export class ActivityService {
           label: metadata?.invoice_number
             ? `INV-${metadata.invoice_number}`
             : latest.title || "بدون عنوان",
-          subtitle: metadata?.customer_name || summary?.subtitle,
-          amount: metadata?.total || summary?.amount,
-          currency: metadata?.currency || summary?.currency,
-          status: metadata?.status || summary?.status,
+          subtitle: metadata?.customer_name || summary?.subtitle || undefined,
+          amount: metadata?.total || summary?.amount || undefined,
+          currency: metadata?.currency || summary?.currency || undefined,
+          status: metadata?.status || summary?.status || undefined,
           statusLabel: metadata?.status ? statusLabels[metadata.status] : undefined,
           statusColor: metadata?.status ? statusColors[metadata.status] : undefined,
           activityCount: sortedItems.length,
@@ -271,9 +289,116 @@ export class ActivityService {
       total: count || 0,
     };
 
-    await memoryCache.set(cacheKey, response, this.cacheTTL);
+    try {
+      await memoryCache.set(cacheKey, response, this.cacheTTL);
+    } catch (cacheError) {
+      console.warn("⚠️ Failed to set cache:", cacheError);
+    }
+
     return response;
+  } catch (error) {
+    console.error("❌ [ActivityService] Unexpected error in getActivities:", error);
+    // ✅ به جای throw، خالی برگردان
+    return {
+      data: [],
+      nextCursor: null,
+      hasMore: false,
+      total: 0,
+    };
   }
+}
+
+// ─── Get Entity Summary ──────────────────────────────────────────────────
+private async getEntitySummary(
+  entityType: string,
+  entityId: string,
+  userId: string
+): Promise<Partial<EntitySummaryDto> | null> {
+  try {
+    // ✅ اگر entityType یا entityId خالی بود، null برگردان
+    if (!entityType || !entityId) {
+      return null;
+    }
+
+    if (entityType === "invoice") {
+      try {
+        const { data, error } = await supabase
+          .from("invoices")
+          .select(`
+            id,
+            invoice_number,
+            total,
+            currency,
+            status,
+            customer:customers!fk_invoices_customer (
+              full_name
+            )
+          `)
+          .eq("id", entityId)
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        if (error || !data) {
+          console.warn(`⚠️ Invoice not found: ${entityId}`, error?.message);
+          return null;
+        }
+
+        const customer = Array.isArray(data.customer)
+          ? data.customer[0]
+          : data.customer;
+
+        return {
+          label: `INV-${data.invoice_number || entityId.slice(0, 8)}`,
+          subtitle: customer?.full_name || undefined,
+          amount: data.total || undefined,
+          currency: data.currency || undefined,
+          status: data.status || undefined,
+        };
+      } catch (err) {
+        console.warn(`⚠️ Failed to fetch invoice ${entityId}:`, err);
+        return null;
+      }
+    }
+
+    if (entityType === "customer") {
+      try {
+        const { data, error } = await supabase
+          .from("customers")
+          .select("full_name, phone, email, opening_balance")
+          .eq("id", entityId)
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        if (error || !data) {
+          console.warn(`⚠️ Customer not found: ${entityId}`, error?.message);
+          return null;
+        }
+
+        return {
+          label: data.full_name || entityId.slice(0, 8),
+          subtitle: data.phone || data.email || undefined,
+          amount: data.opening_balance || undefined,
+          currency: "AFN",
+        };
+      } catch (err) {
+        console.warn(`⚠️ Failed to fetch customer ${entityId}:`, err);
+        return null;
+      }
+    }
+
+    // ✅ Fallback برای سایر entity types
+    return {
+      label: `${entityType} ${entityId.slice(0, 8)}`,
+      subtitle: undefined,
+      amount: undefined,
+      currency: undefined,
+      status: undefined,
+    };
+  } catch (error) {
+    console.error(`❌ Failed to get entity summary for ${entityType}:${entityId}`, error);
+    return null;
+  }
+}
 
   // ─── Get Entity Summary ──────────────────────────────────────────────────
   private async getEntitySummary(
