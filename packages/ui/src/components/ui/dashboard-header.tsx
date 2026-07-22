@@ -4,6 +4,7 @@ import { memo, useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { NotificationBell } from "./notification-bell";
 import { useTranslation } from "react-i18next";
+import { ActivityCenter } from "@hisabche/ui";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    DashboardHeader v5 — Memoized · Performance Optimized
@@ -292,7 +293,7 @@ export const DashboardHeader = memo(function DashboardHeader({
           >
             {isDark ? IconSun : IconMoon}
           </button>
-          {variant === "dashboard" && <NotificationBell />}
+          {variant === "dashboard" && <ActivityCenter />}
           {variant === "dashboard" && (
             <button
               type="button"

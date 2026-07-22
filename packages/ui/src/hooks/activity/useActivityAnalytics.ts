@@ -59,7 +59,7 @@ export function useActivityAnalytics(provider: AnalyticsProvider = "ga4") {
       }
 
       // ─── Send to API ──────────────────────────────────────────────────
-      await fetch("/api/analytics/activity", {
+      await fetch("/analytics/activity", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ events: batch }),

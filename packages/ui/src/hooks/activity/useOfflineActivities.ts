@@ -151,7 +151,7 @@ export function useOfflineActivities(filters?: { type?: string; unread?: boolean
       await loadLocalActivities();
 
       if (!isOffline) {
-        await fetch('/api/v1/activities/mark-read', {
+        await fetch('/v1/activities/mark-read', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ ids }),
@@ -169,7 +169,7 @@ export function useOfflineActivities(filters?: { type?: string; unread?: boolean
       await loadLocalActivities();
 
       if (!isOffline) {
-        await fetch('/api/v1/activities/mark-all-read', {
+        await fetch('/v1/activities/mark-all-read', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
         });
