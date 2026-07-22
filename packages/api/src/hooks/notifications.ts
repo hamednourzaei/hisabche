@@ -35,7 +35,8 @@ export function useNotifications() {
   return useQuery({
     queryKey: notificationKeys.list(),
     queryFn: async (): Promise<Notification[]> => {
-      const { data } = await apiClient.get<Notification[]>("/notifications");
+      // ✅ اصلاح مسیر — اضافه کردن v1
+      const { data } = await apiClient.get<Notification[]>("/api/v1/notifications");
       return data;
     },
     enabled: authReady,
@@ -50,7 +51,8 @@ export function useUnreadCount() {
   return useQuery({
     queryKey: notificationKeys.unread(),
     queryFn: async (): Promise<number> => {
-      const { data } = await apiClient.get<{ count: number }>("/notifications/unread");
+      // ✅ اصلاح مسیر — اضافه کردن v1 و -count
+      const { data } = await apiClient.get<{ count: number }>("/api/v1/notifications/unread-count");
       return data.count;
     },
     enabled: authReady,
@@ -64,7 +66,8 @@ export function useMarkAsRead() {
 
   return useMutation({
     mutationFn: async (ids: string[]) => {
-      await apiClient.patch("/notifications/read", { ids });
+      // ✅ اصلاح مسیر — اضافه کردن v1 و تغییر read به mark-read
+      await apiClient.patch("/api/v1/notifications/mark-read", { ids });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: notificationKeys.list() });
