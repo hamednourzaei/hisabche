@@ -1,6 +1,6 @@
+// backend/src/services/notification.service.ts
 // ============================================
-// backend/src/services/notification.service.ts — Optimized v2.2
-// FIXED: TypeScript undefined checks
+// Notification Service — با لاگ کامل
 // ============================================
 
 import { supabase } from "../db";
@@ -8,13 +8,11 @@ import type { CreateNotificationInput, NotificationFilters } from "@hisabche/val
 import { DatabaseError } from "../errors/database.error";
 import { memoryCache } from '../utils/pagination';
 
-// ✅ Column Selection Constants
 const NOTIFICATION_COLUMNS = 'id, user_id, workspace_id, title, body, type, action_url, entity_type, entity_id, metadata, is_read, read_at, created_at, updated_at'
 const NOTIFICATION_MINIMAL = 'id, title, body, type, is_read, created_at'
 
 export class NotificationService {
 
-  // ─── Cache Keys ──────────────────────────────────────────────
   private getUnreadCountCacheKey(userId: string) {
     return `notifications:unread:${userId}`
   }
@@ -23,7 +21,6 @@ export class NotificationService {
     return `notifications:list:${userId}:${JSON.stringify(filters)}`
   }
 
-  // ─── Create Notification ────────────────────────────────────
   async create(workspaceId: string, input: CreateNotificationInput) {
     console.log('📝 [NotificationService] Creating notification:', {
       workspaceId,
@@ -65,14 +62,10 @@ export class NotificationService {
     }
 
     console.log('✅ [NotificationService] Notification created:', data);
-
-    // ✅ Invalidate cache
     await this.invalidateCache(input.user_id);
-
     return data;
   }
 
-  // ─── List Notifications ─────────────────────────────────────
   async list(userId: string, filters: NotificationFilters) {
     const cacheKey = this.getListCacheKey(userId, filters)
     
@@ -93,59 +86,89 @@ export class NotificationService {
 
     const { data, error, count } = await query.range(from, to);
 
-    if (error) throw new DatabaseError("Failed to fetch notifications", error);
+    if (error) {
+      console.error('❌ [NotificationService.list] Supabase error:', error);
+      throw new DatabaseError("Failed to fetch notifications", error);
+    }
 
     const result = { data: data || [], total: count || 0 };
-
     await memoryCache.set(cacheKey, result, 30);
-
     return result;
   }
 
-  // ─── Mark as Read ──────────────────────────────────────────
   async markAsRead(ids: string[]) {
-    if (!ids || ids.length === 0) return;
+    console.log('📝 [NotificationService.markAsRead] Called with ids:', ids);
+    
+    if (!ids || ids.length === 0) {
+      console.log('⚠️ [NotificationService.markAsRead] ids is empty, returning');
+      return;
+    }
 
-    // ✅ گرفتن userId برای invalidate cache
-    const { data: notifications } = await supabase
-      .from("notifications")
-      .select("user_id")
-      .in("id", ids)
-      .limit(1);
+    try {
+      const { data: notifications, error: fetchError } = await supabase
+        .from("notifications")
+        .select("user_id")
+        .in("id", ids);
 
-    const { error } = await supabase
-      .from("notifications")
-      .update({ is_read: true, read_at: new Date().toISOString() })
-      .in("id", ids);
+      if (fetchError) {
+        console.error('❌ [NotificationService.markAsRead] Fetch error:', fetchError);
+        throw new DatabaseError("Failed to fetch notifications", fetchError);
+      }
 
-    if (error) throw new DatabaseError("Failed to mark notifications as read", error);
+      console.log('✅ [NotificationService.markAsRead] Found notifications:', 
+        notifications?.map(n => ({ id: n.id, user_id: n.user_id }))
+      );
 
-    // ✅ FIX: چک کردن وجود notifications و notifications[0]
-    if (notifications && notifications.length > 0 && notifications[0]) {
-      await this.invalidateCache(notifications[0].user_id);
+      const { data: updated, error: updateError } = await supabase
+        .from("notifications")
+        .update({ is_read: true, read_at: new Date().toISOString() })
+        .in("id", ids)
+        .select();
+
+      if (updateError) {
+        console.error('❌ [NotificationService.markAsRead] Update error:', updateError);
+        throw new DatabaseError("Failed to mark notifications as read", updateError);
+      }
+
+      console.log('✅ [NotificationService.markAsRead] Updated records:', updated?.length || 0);
+
+      if (notifications && notifications.length > 0) {
+        const userId = notifications[0]?.user_id;
+        if (userId) {
+          await this.invalidateCache(userId);
+          console.log('✅ [NotificationService.markAsRead] Cache invalidated for user:', userId);
+        }
+      }
+    } catch (err) {
+      console.error('❌ [NotificationService.markAsRead] Unexpected error:', err);
+      throw err;
     }
   }
 
-  // ─── Mark All as Read ──────────────────────────────────────
   async markAllAsRead(userId: string) {
-    console.log('📝 [NotificationService] Marking all as read for user:', userId);
+    console.log('📝 [NotificationService.markAllAsRead] Called for user:', userId);
 
-    const { error } = await supabase
-      .from("notifications")
-      .update({ is_read: true, read_at: new Date().toISOString() })
-      .eq("user_id", userId)
-      .eq("is_read", false);
+    try {
+      const { data, error } = await supabase
+        .from("notifications")
+        .update({ is_read: true, read_at: new Date().toISOString() })
+        .eq("user_id", userId)
+        .eq("is_read", false)
+        .select();
 
-    if (error) {
-      console.error('❌ [NotificationService] Supabase error:', error);
-      throw new DatabaseError("Failed to mark all notifications as read", error);
+      if (error) {
+        console.error('❌ [NotificationService.markAllAsRead] Supabase error:', error);
+        throw new DatabaseError("Failed to mark all notifications as read", error);
+      }
+
+      console.log('✅ [NotificationService.markAllAsRead] Updated records:', data?.length || 0);
+      await this.invalidateCache(userId);
+    } catch (err) {
+      console.error('❌ [NotificationService.markAllAsRead] Unexpected error:', err);
+      throw err;
     }
-
-    console.log('✅ [NotificationService] All notifications marked as read');
-    await this.invalidateCache(userId);
   }
 
-  // ─── Get Unread Count ──────────────────────────────────────
   async getUnreadCount(userId: string): Promise<number> {
     const cacheKey = this.getUnreadCountCacheKey(userId)
     
@@ -158,16 +181,16 @@ export class NotificationService {
       .eq("user_id", userId)
       .eq("is_read", false);
 
-    if (error) throw new DatabaseError("Failed to count notifications", error);
+    if (error) {
+      console.error('❌ [NotificationService.getUnreadCount] Supabase error:', error);
+      throw new DatabaseError("Failed to count notifications", error);
+    }
 
     const result = count || 0;
-
     await memoryCache.set(cacheKey, result, 10);
-
     return result;
   }
 
-  // ─── Get Notification by ID ─────────────────────────────────
   async getById(id: string, userId: string) {
     const cacheKey = `notification:${userId}:${id}`
     
@@ -181,13 +204,15 @@ export class NotificationService {
       .eq("user_id", userId)
       .single();
 
-    if (error) throw new DatabaseError("Failed to fetch notification", error);
+    if (error) {
+      console.error('❌ [NotificationService.getById] Supabase error:', error);
+      throw new DatabaseError("Failed to fetch notification", error);
+    }
 
     await memoryCache.set(cacheKey, data, 300)
     return data;
   }
 
-  // ─── Delete Notification ────────────────────────────────────
   async delete(id: string, userId: string) {
     const { data: notification } = await supabase
       .from("notifications")
@@ -202,14 +227,16 @@ export class NotificationService {
       .eq("id", id)
       .eq("user_id", userId);
 
-    if (error) throw new DatabaseError("Failed to delete notification", error);
+    if (error) {
+      console.error('❌ [NotificationService.delete] Supabase error:', error);
+      throw new DatabaseError("Failed to delete notification", error);
+    }
 
     if (notification) {
       await this.invalidateCache(notification.user_id);
     }
   }
 
-  // ─── Delete All Read Notifications ──────────────────────────
   async deleteAllRead(userId: string) {
     const { error } = await supabase
       .from("notifications")
@@ -217,12 +244,14 @@ export class NotificationService {
       .eq("user_id", userId)
       .eq("is_read", true);
 
-    if (error) throw new DatabaseError("Failed to delete read notifications", error);
+    if (error) {
+      console.error('❌ [NotificationService.deleteAllRead] Supabase error:', error);
+      throw new DatabaseError("Failed to delete read notifications", error);
+    }
 
     await this.invalidateCache(userId);
   }
 
-  // ─── Invalidate Cache ───────────────────────────────────────
   private async invalidateCache(userId: string) {
     await memoryCache.invalidate(this.getUnreadCountCacheKey(userId))
     await memoryCache.invalidate(`notifications:list:${userId}:*`)
