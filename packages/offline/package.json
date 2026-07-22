@@ -1,0 +1,16 @@
+{
+  "name": "@hisabche/offline",
+  "version": "1.0.0",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@hisabche/db-schema": "workspace:*",
+    "dexie": "^3.2.4"
+  },
+  "peerDependencies": {
+    "@nozbe/watermelondb": "^0.27.0"
+  }
+}
