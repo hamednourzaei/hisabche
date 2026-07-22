@@ -19,6 +19,16 @@ export interface Notification {
   created_at: string;
 }
 
+// ✅ تایپ پاسخ Backend
+interface NotificationsResponse {
+  data: Notification[];
+  total: number;
+}
+
+interface UnreadCountResponse {
+  count: number;
+}
+
 // ─── Keys ────────────────────────────────────────────────────────────────────
 
 export const notificationKeys = {
@@ -29,6 +39,15 @@ export const notificationKeys = {
 
 // ─── Hooks ──────────────────────────────────────────────────────────────────
 
+/**
+ * دریافت لیست نوتیفیکیشن‌ها
+ * 
+ * Backend Response:
+ * {
+ *   "data": Notification[],
+ *   "total": number
+ * }
+ */
 export function useNotifications() {
   const authReady = useAuthReady();
 
@@ -36,14 +55,20 @@ export function useNotifications() {
     queryKey: notificationKeys.list(),
     queryFn: async (): Promise<Notification[]> => {
       try {
-        const response = await apiClient.get("/v1/notifications");
-        // ✅ بررسی ساختار پاسخ
-        if (response.data && Array.isArray(response.data)) {
-          return response.data;
-        }
+        const response = await apiClient.get<NotificationsResponse>(
+          "/v1/notifications"
+        );
+        
+        // ✅ استخراج آرایه از response.data.data
         if (response.data?.data && Array.isArray(response.data.data)) {
           return response.data.data;
         }
+        
+        // Fallback: اگر داده به شکل دیگری بود
+        if (Array.isArray(response.data)) {
+          return response.data;
+        }
+        
         return [];
       } catch (error) {
         console.error("Failed to fetch notifications:", error);
@@ -53,11 +78,18 @@ export function useNotifications() {
     enabled: authReady,
     staleTime: 30_000,
     refetchInterval: 15_000,
-    // ✅ fallback data برای جلوگیری از خطا
     placeholderData: [],
   });
 }
 
+/**
+ * دریافت تعداد نوتیفیکیشن‌های خوانده‌نشده
+ * 
+ * Backend Response:
+ * {
+ *   "count": number
+ * }
+ */
 export function useUnreadCount() {
   const authReady = useAuthReady();
 
@@ -65,14 +97,15 @@ export function useUnreadCount() {
     queryKey: notificationKeys.unread(),
     queryFn: async (): Promise<number> => {
       try {
-        const response = await apiClient.get("/v1/notifications/unread-count");
-        // ✅ بررسی ساختار پاسخ
-        if (response.data?.count !== undefined) {
+        const response = await apiClient.get<UnreadCountResponse>(
+          "/v1/notifications/unread-count"
+        );
+        
+        // ✅ استخراج count از response.data.count
+        if (response.data?.count !== undefined && typeof response.data.count === 'number') {
           return response.data.count;
         }
-        if (typeof response.data === 'number') {
-          return response.data;
-        }
+        
         return 0;
       } catch (error) {
         console.error("Failed to fetch unread count:", error);
@@ -86,19 +119,47 @@ export function useUnreadCount() {
   });
 }
 
+/**
+ * علامت‌گذاری نوتیفیکیشن‌ها به‌عنوان خوانده‌شده
+ * 
+ * Backend: PATCH /v1/notifications/mark-read
+ * Body: { "ids": string[] }
+ */
 export function useMarkAsRead() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (ids: string[]) => {
+      if (!ids || ids.length === 0) return;
       await apiClient.patch("/v1/notifications/mark-read", { ids });
+    },
+    onSuccess: () => {
+      // ✅ Invalidating هر دو کوئری
+      queryClient.invalidateQueries({ queryKey: notificationKeys.list() });
+      queryClient.invalidateQueries({ queryKey: notificationKeys.unread() });
+    },
+    onError: (error) => {
+      console.error("Failed to mark notifications as read:", error);
+    },
+  });
+}
+
+/**
+ * علامت‌گذاری همه‌ی نوتیفیکیشن‌ها به‌عنوان خوانده‌شده
+ */
+export function useMarkAllAsRead() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      await apiClient.patch("/v1/notifications/mark-all-read");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: notificationKeys.list() });
       queryClient.invalidateQueries({ queryKey: notificationKeys.unread() });
     },
     onError: (error) => {
-      console.error("Failed to mark notifications as read:", error);
+      console.error("Failed to mark all notifications as read:", error);
     },
   });
 }
