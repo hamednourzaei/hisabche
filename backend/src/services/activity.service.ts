@@ -101,7 +101,6 @@ export class ActivityService {
       actorName: input.actorName,
     });
 
-    // ─── Validation ──────────────────────────────────────────────────────
     if (!input.actorId) {
       throw new DatabaseError("actorId is required");
     }
@@ -132,8 +131,6 @@ export class ActivityService {
     }
 
     console.log("✅ [ActivityService] Activity created:", data.id);
-
-    // ─── Invalidate cache ──────────────────────────────────────────────────
     await this.invalidateCache(input.actorId);
 
     return data;
@@ -156,13 +153,12 @@ export class ActivityService {
 
     const limit = Math.min(filters?.limit || 20, 100);
 
-    // ─── Query activities ──────────────────────────────────────────────────
     let query = supabase
       .from("activities")
       .select("*", { count: "exact" })
       .eq("actor_id", userId)
       .order("created_at", { ascending: false })
-      .limit(limit + 1); // +1 برای تشخیص hasMore
+      .limit(limit + 1);
 
     if (filters?.cursor) {
       query = query.lt("created_at", filters.cursor);
@@ -196,14 +192,12 @@ export class ActivityService {
       };
     }
 
-    // ─── Check hasMore ─────────────────────────────────────────────────────
     const hasMore = activities.length > limit;
     const items = hasMore ? activities.slice(0, limit) : activities;
     const nextCursor = hasMore && items.length > 0 
       ? items[items.length - 1]?.created_at 
       : null;
 
-    // ─── Group by entity ──────────────────────────────────────────────────
     const groups = new Map<string, any[]>();
     for (const activity of items) {
       const key = `${activity.entity_type}:${activity.entity_id}`;
@@ -213,12 +207,9 @@ export class ActivityService {
       groups.get(key)!.push(activity);
     }
 
-    // ─── Build DTOs ───────────────────────────────────────────────────────
     const result: ActivityGroupDto[] = [];
 
     for (const [key, groupItems] of groups) {
-      // `key` is always built as `${entity_type}:${entity_id}` above, so this
-      // split always yields exactly two defined strings.
       const [entityType, entityId] = key.split(":") as [string, string];
       const sortedItems = groupItems.sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
@@ -226,9 +217,7 @@ export class ActivityService {
       const latest = sortedItems[0];
       const metadata = latest.metadata || {};
 
-      // ─── Get entity summary ─────────────────────────────────────────────
       const summary = await this.getEntitySummary(entityType, entityId, userId);
-
       const unreadCount = sortedItems.filter((i) => !i.is_read).length;
 
       result.push({
@@ -265,7 +254,6 @@ export class ActivityService {
       });
     }
 
-    // ─── Sort by priority and latest ─────────────────────────────────────
     const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
     result.sort((a, b) => {
       const aPriority = priorityOrder[a.priority] ?? 2;
@@ -295,95 +283,133 @@ export class ActivityService {
   ): Promise<Partial<EntitySummaryDto> | null> {
     try {
       if (entityType === "invoice") {
-        const { data } = await supabase
-          .from("invoices")
-          .select(`
-            id,
-            invoice_number,
-            total,
-            currency,
-            status,
-            customer:customers!fk_invoices_customer (
-              full_name
-            )
-          `)
-          .eq("id", entityId)
-          .eq("user_id", userId)
-          .single();
+        try {
+          const { data, error } = await supabase
+            .from("invoices")
+            .select(`
+              id,
+              invoice_number,
+              total,
+              currency,
+              status,
+              customer:customers!fk_invoices_customer (
+                full_name
+              )
+            `)
+            .eq("id", entityId)
+            .eq("user_id", userId)
+            .maybeSingle();
 
-        if (!data) return null;
+          if (error || !data) {
+            console.warn(`⚠️ Invoice not found: ${entityId}`, error);
+            return null;
+          }
 
-        // The `customer:customers!fk_invoices_customer(full_name)` join is
-        // typed by Supabase as an array even though it's a to-one relation.
-        const customer = Array.isArray(data.customer)
-          ? data.customer[0]
-          : data.customer;
+          const customer = Array.isArray(data.customer)
+            ? data.customer[0]
+            : data.customer;
 
-        return {
-          label: `INV-${data.invoice_number}`,
-          subtitle: customer?.full_name,
-          amount: data.total,
-          currency: data.currency,
-          status: data.status,
-        };
+          return {
+            label: `INV-${data.invoice_number}`,
+            subtitle: customer?.full_name,
+            amount: data.total,
+            currency: data.currency,
+            status: data.status,
+          };
+        } catch (err) {
+          console.warn(`⚠️ Failed to fetch invoice ${entityId}:`, err);
+          return null;
+        }
       }
 
       if (entityType === "customer") {
-        const { data } = await supabase
-          .from("customers")
-          .select("full_name, phone, email, opening_balance")
-          .eq("id", entityId)
-          .eq("user_id", userId)
-          .single();
+        try {
+          const { data, error } = await supabase
+            .from("customers")
+            .select("full_name, phone, email, opening_balance")
+            .eq("id", entityId)
+            .eq("user_id", userId)
+            .maybeSingle();
 
-        if (!data) return null;
+          if (error || !data) {
+            console.warn(`⚠️ Customer not found: ${entityId}`, error);
+            return null;
+          }
 
-        return {
-          label: data.full_name,
-          subtitle: data.phone || data.email,
-          amount: data.opening_balance,
-          currency: "AFN",
-        };
+          return {
+            label: data.full_name,
+            subtitle: data.phone || data.email,
+            amount: data.opening_balance,
+            currency: "AFN",
+          };
+        } catch (err) {
+          console.warn(`⚠️ Failed to fetch customer ${entityId}:`, err);
+          return null;
+        }
       }
 
       if (entityType === "product") {
-        const { data } = await supabase
-          .from("products")
-          .select("name, sku, quantity, sell_price, currency")
-          .eq("id", entityId)
-          .eq("user_id", userId)
-          .single();
+        try {
+          const { data, error } = await supabase
+            .from("products")
+            .select("name, sku, quantity, sell_price, currency")
+            .eq("id", entityId)
+            .eq("user_id", userId)
+            .maybeSingle();
 
-        if (!data) return null;
+          if (error || !data) {
+            console.warn(`⚠️ Product not found: ${entityId}`, error);
+            return null;
+          }
 
-        return {
-          label: data.name,
-          subtitle: data.sku || `موجودی: ${data.quantity}`,
-          amount: data.sell_price,
-          currency: data.currency || "AFN",
-        };
+          return {
+            label: data.name,
+            subtitle: data.sku || `موجودی: ${data.quantity}`,
+            amount: data.sell_price,
+            currency: data.currency || "AFN",
+          };
+        } catch (err) {
+          console.warn(`⚠️ Failed to fetch product ${entityId}:`, err);
+          return null;
+        }
       }
 
       if (entityType === "payment") {
-        const { data } = await supabase
-          .from("transactions")
-          .select("amount, currency, description, reference")
-          .eq("id", entityId)
-          .eq("user_id", userId)
-          .single();
+        try {
+          const { data, error } = await supabase
+            .from("transactions")
+            .select("amount, currency, description, reference")
+            .eq("id", entityId)
+            .eq("user_id", userId)
+            .maybeSingle();
 
-        if (!data) return null;
+          if (error || !data) {
+            console.warn(`⚠️ Payment not found: ${entityId}`, error);
+            return null;
+          }
 
-        return {
-          label: data.reference || "پرداخت",
-          subtitle: data.description,
-          amount: data.amount,
-          currency: data.currency || "AFN",
-        };
+          return {
+            label: data.reference || "پرداخت",
+            subtitle: data.description,
+            amount: data.amount,
+            currency: data.currency || "AFN",
+          };
+        } catch (err) {
+          console.warn(`⚠️ Failed to fetch payment ${entityId}:`, err);
+          return null;
+        }
       }
 
-      return null;
-    } catch {
+      // ✅ Default fallback برای سایر entity types
+      return {
+        label: entityType,
+        subtitle: entityId,
+        activityCount: 0,
+        lastActivity: new Date().toISOString(),
+        route: `/${entityType}s/${entityId}`,
+      };
+    } catch (error) {
+      console.error(`❌ Failed to get entity summary for ${entityType}:${entityId}`, error);
       return null;
     }
   }

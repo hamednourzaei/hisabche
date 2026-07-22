@@ -127,4 +127,13 @@ export async function activityRoutes(fastify: FastifyInstance) {
       }
     }
   );
+
+  // ─── OPTIONS /api/v1/activities ─────────────────────────────────────────
+  fastify.options("/api/v1/activities", async (request, reply) => {
+    return reply.code(204).headers({
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    }).send();
+  });
 }

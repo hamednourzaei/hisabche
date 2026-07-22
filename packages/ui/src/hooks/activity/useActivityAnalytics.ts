@@ -1,78 +1,38 @@
-// packages/ui/src/hooks/useActivityAnalytics.ts
+// packages/ui/src/hooks/activity/useActivityAnalytics.ts
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
-import { apiClient } from "@hisabche/api"; // ✅ استفاده از named import
-
-interface ActivityAnalyticsEvent {
-  name: string;
-  properties?: Record<string, unknown> | undefined;
-  timestamp?: number | undefined;
-}
+import { useCallback } from "react";
 
 type AnalyticsProvider = "ga4" | "posthog" | "mixpanel" | "custom";
 
 export function useActivityAnalytics(provider: AnalyticsProvider = "ga4") {
-  const events = useRef<ActivityAnalyticsEvent[]>([]);
-  const isFlushing = useRef(false);
+  // ─── Track ──────────────────────────────────────────────────────────────
+  const track = useCallback((name: string, properties?: Record<string, unknown>) => {
+    // ✅ فقط در Development لاگ کن
+    if (process.env.NODE_ENV === "development") {
+      console.log(`📊 [Analytics] ${name}`, properties);
+    }
 
-  const track = useCallback(
-    (name: string, properties?: Record<string, unknown>) => {
-      const event: ActivityAnalyticsEvent = {
-        name,
-        properties,
-        timestamp: Date.now(),
-      };
-
-      events.current.push(event);
-
-      if (events.current.length >= 10) {
-        flush();
-      }
-    },
-    []
-  );
-
-  const flush = useCallback(async () => {
-    if (isFlushing.current || events.current.length === 0) return;
-
-    isFlushing.current = true;
-    const batch = [...events.current];
-    events.current = [];
-
-    try {
-      // GA4
-      if (provider === "ga4" && typeof window !== "undefined" && batch[0]) {
+    // ✅ GA4 در Production (اگر موجود باشد)
+    if (process.env.NODE_ENV === "production" && typeof window !== "undefined") {
+      try {
         // @ts-ignore
-        window.gtag?.("event", batch[0].name, {
-          ...batch[0].properties,
+        window.gtag?.("event", name, {
+          ...properties,
           send_to: "G-T5XG907W4R",
         });
+      } catch {
+        // Ignore GA4 errors
       }
-
-      // Console log in development
-      if (process.env.NODE_ENV === "development") {
-        console.log("📊 [Analytics] Events:", batch);
-      }
-
-      // ✅ استفاده از apiClient با named import
-      // و حذف /v1 اضافی چون baseURL قبلاً /api/v1 دارد
-      if (process.env.NODE_ENV === "production") {
-        await apiClient.post("/analytics/activity", { events: batch });
-      }
-    } catch (error) {
-      console.error("Failed to send analytics:", error);
-    } finally {
-      isFlushing.current = false;
     }
-  }, [provider]);
+  }, []);
 
-  useEffect(() => {
-    return () => {
-      flush();
-    };
-  }, [flush]);
+  // ─── Flush ──────────────────────────────────────────────────────────────
+  const flush = useCallback(async () => {
+    // ✅ هیچ کاری نکن (Analytics غیرفعال)
+  }, []);
 
+  // ─── Track Activity Event ──────────────────────────────────────────────
   const trackActivityEvent = useCallback(
     (action: string, group?: any) => {
       track(`activity_${action}`, {
