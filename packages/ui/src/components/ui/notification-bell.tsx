@@ -18,6 +18,9 @@ import {
   User,
   DollarSign,
   Clock,
+  Package,
+  Users,
+  Receipt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -30,38 +33,43 @@ import type { Notification } from "@hisabche/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-// packages/ui/src/components/ui/notification-bell.tsx
-
 interface NotificationGroup {
   key: string;
   entityId: string;
-  entityType: string;
+  entityType: "invoice" | "customer" | "product" | "payment" | "supplier" | "inventory";
   entityLabel: string;
   entityUrl: string;
   items: Notification[];
   hasUnread: boolean;
   unreadCount: number;
   latestAt: string;
-  // ✅ تغییر از optional به required با | undefined
-  invoiceNumber: string | undefined;
-  customerName: string | undefined;
-  total: number | undefined;
-  currency: string | undefined;
-  status: string | undefined;
+  // ✅ همه فیلدها را `| undefined` می‌کنیم
+  invoiceNumber?: string | undefined;
+  customerName?: string | undefined;
+  total?: number | undefined;
+  currency?: string | undefined;
+  status?: string | undefined;
+  summary?: {
+    title: string;
+    icon: any;
+    color: string;
+  };
 }
 
 interface NotificationBellProps {
   className?: string;
 }
 
-// ─── Per-type config ─────────────────────────────────────────────────────────
+// ─── Per-entity type config ──────────────────────────────────────────────────
 
-const typeConfig = {
-  info: { icon: FileText, color: "text-blue-500", bg: "bg-blue-500/10" },
-  success: { icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-500/10" },
-  warning: { icon: AlertTriangle, color: "text-amber-500", bg: "bg-amber-500/10" },
-  approval_required: { icon: ShieldCheck, color: "text-purple-500", bg: "bg-purple-500/10" },
-} as const;
+const entityConfig: Record<NotificationGroup["entityType"], { icon: any; color: string; bg: string }> = {
+  invoice: { icon: FileText, color: "text-blue-500", bg: "bg-blue-500/10" },
+  customer: { icon: Users, color: "text-purple-500", bg: "bg-purple-500/10" },
+  product: { icon: Package, color: "text-amber-500", bg: "bg-amber-500/10" },
+  payment: { icon: Receipt, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+  supplier: { icon: Users, color: "text-orange-500", bg: "bg-orange-500/10" },
+  inventory: { icon: Package, color: "text-rose-500", bg: "bg-rose-500/10" },
+};
 
 const statusColors: Record<string, string> = {
   pending: "text-amber-500 bg-amber-500/10",
@@ -69,6 +77,8 @@ const statusColors: Record<string, string> = {
   completed: "text-emerald-500 bg-emerald-500/10",
   cancelled: "text-red-500 bg-red-500/10",
   partial: "text-blue-500 bg-blue-500/10",
+  overdue: "text-rose-500 bg-rose-500/10",
+  draft: "text-gray-500 bg-gray-500/10",
 };
 
 const statusLabels: Record<string, string> = {
@@ -77,6 +87,8 @@ const statusLabels: Record<string, string> = {
   completed: "تکمیل شده",
   cancelled: "لغو شده",
   partial: "بخشی پرداخت",
+  overdue: "سررسید شده",
+  draft: "پیش‌نویس",
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -87,12 +99,19 @@ function timeAgo(d: string, t: (key: string, fallback: string) => string): strin
   if (m < 60) return t("time.minutesAgo", `${m} دقیقه پیش`);
   const h = Math.floor(m / 60);
   if (h < 24) return t("time.hoursAgo", `${h} ساعت پیش`);
-  return t("time.daysAgo", `${Math.floor(h / 24)} روز پیش`);
+  const d2 = Math.floor(h / 24);
+  if (d2 < 7) return t("time.daysAgo", `${d2} روز پیش`);
+  const w = Math.floor(d2 / 7);
+  if (w < 4) return t("time.weeksAgo", `${w} هفته پیش`);
+  return t("time.monthsAgo", `${Math.floor(d2 / 30)} ماه پیش`);
 }
 
 function resolveEntityUrl(n: Notification): string {
   if (n.action_url) return n.action_url;
   if (n.entity_type === "invoice" && n.entity_id) return `/invoices/${n.entity_id}`;
+  if (n.entity_type === "customer" && n.entity_id) return `/customers/${n.entity_id}`;
+  if (n.entity_type === "product" && n.entity_id) return `/warehouse/${n.entity_id}`;
+  if (n.entity_type === "payment" && n.entity_id) return `/payments/${n.entity_id}`;
   return "/dashboard";
 }
 
@@ -124,30 +143,27 @@ function groupNotifications(list: Notification[]): NotificationGroup[] {
       const latest = sorted[0];
       const metadata = latest?.metadata || {};
 
-      // ✅ بررسی وجود latest
       if (!latest) {
         return {
           key,
           entityId: "",
-          entityType: "unknown",
+          entityType: "invoice" as const,
           entityLabel: "بدون عنوان",
           entityUrl: "/dashboard",
           items: sorted,
           hasUnread: sorted.some((i) => !i.is_read),
           unreadCount: sorted.filter((i) => !i.is_read).length,
           latestAt: "",
-          invoiceNumber: undefined,
-          customerName: undefined,
-          total: undefined,
-          currency: undefined,
-          status: undefined,
         };
       }
+
+      const entityType = (latest.entity_type as NotificationGroup["entityType"]) || "invoice";
+      const config = entityConfig[entityType] || entityConfig.invoice;
 
       return {
         key,
         entityId: latest.entity_id || "",
-        entityType: latest.entity_type || "unknown",
+        entityType,
         entityLabel: metadata?.invoice_number
           ? `فاکتور #${metadata.invoice_number}`
           : latest.title || "بدون عنوان",
@@ -161,6 +177,11 @@ function groupNotifications(list: Notification[]): NotificationGroup[] {
         total: metadata?.total,
         currency: metadata?.currency,
         status: metadata?.status,
+        summary: {
+          title: latest.title || "فعالیت جدید",
+          icon: config.icon,
+          color: config.color,
+        },
       };
     })
     .sort((a, b) => new Date(b.latestAt).getTime() - new Date(a.latestAt).getTime());
@@ -168,14 +189,14 @@ function groupNotifications(list: Notification[]): NotificationGroup[] {
 
 // ─── Sub-components ─────────────────────────────────────────────────────────
 
-const TypeIcon = memo(function TypeIcon({
+const EntityIcon = memo(function EntityIcon({
   type,
-  size = "sm",
+  size = "md",
 }: {
-  type: Notification["type"];
+  type: NotificationGroup["entityType"];
   size?: "sm" | "md";
 }) {
-  const config = typeConfig[type] ?? typeConfig.info;
+  const config = entityConfig[type] || entityConfig.invoice;
   const Icon = config.icon;
   const dim = size === "md" ? "w-10 h-10" : "w-8 h-8";
   const iconDim = size === "md" ? "w-5 h-5" : "w-4 h-4";
@@ -186,7 +207,7 @@ const TypeIcon = memo(function TypeIcon({
     </div>
   );
 });
-TypeIcon.displayName = "TypeIcon";
+EntityIcon.displayName = "EntityIcon";
 
 // ─── Timeline Item ──────────────────────────────────────────────────────────
 
@@ -197,7 +218,7 @@ const TimelineItem = memo(function TimelineItem({
   notification: Notification;
   isLast: boolean;
 }) {
-  const config = typeConfig[notification.type] ?? typeConfig.info;
+  const config = entityConfig[notification.entity_type as NotificationGroup["entityType"]] || entityConfig.invoice;
   const Icon = config.icon;
 
   return (
@@ -239,6 +260,8 @@ const GroupCard = memo(function GroupCard({
 }) {
   const statusColor = group.status ? statusColors[group.status] || "" : "";
   const statusLabel = group.status ? statusLabels[group.status] || group.status : "";
+  const config = entityConfig[group.entityType] || entityConfig.invoice;
+  const Icon = config.icon;
 
   return (
     <div
@@ -254,7 +277,7 @@ const GroupCard = memo(function GroupCard({
         className="w-full text-start p-3 hover:bg-[hsl(var(--surface-muted))] transition-colors duration-150"
       >
         <div className="flex items-start gap-3">
-          <TypeIcon type={group.items[0]?.type || "info"} size="md" />
+          <EntityIcon type={group.entityType} size="md" />
 
           <div className="flex-1 min-w-0">
             {/* Entity Label */}
@@ -320,18 +343,20 @@ const GroupCard = memo(function GroupCard({
       >
         <div className="overflow-hidden">
           <div className="px-3 pb-3 pt-1 border-t border-[hsl(var(--border-default)/0.5)]">
-            {group.items.map((n, index) => (
-              <button
-                key={n.id}
-                onClick={() => onItemClick(n)}
-                className="w-full text-start"
-              >
-                <TimelineItem
-                  notification={n}
-                  isLast={index === group.items.length - 1}
-                />
-              </button>
-            ))}
+            <div className="space-y-2">
+              {group.items.map((n, index) => (
+                <button
+                  key={n.id}
+                  onClick={() => onItemClick(n)}
+                  className="w-full text-start"
+                >
+                  <TimelineItem
+                    notification={n}
+                    isLast={index === group.items.length - 1}
+                  />
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -480,7 +505,7 @@ export const NotificationBell = memo(function NotificationBell({
         <div
           ref={panelRef}
           role="dialog"
-          aria-label={t("notifications.title", "اعلان‌ها")}
+          aria-label={t("notifications.title", "مرکز فعالیت‌ها")}
           className={cn(
             "absolute end-0 top-full mt-2 z-50 w-[400px] max-h-[480px] flex flex-col",
             "rounded-2xl border border-[hsl(var(--border-default))]",
@@ -492,7 +517,7 @@ export const NotificationBell = memo(function NotificationBell({
           <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-[hsl(var(--border-default))]">
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">
-                {t("notifications.title", "اعلان‌ها")}
+                {t("notifications.title", "مرکز فعالیت‌ها")}
               </h3>
               {unreadCount > 0 && (
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[hsl(var(--color-destructive)/0.1)] text-[hsl(var(--color-destructive))]">
@@ -561,7 +586,7 @@ export const NotificationBell = memo(function NotificationBell({
                 "hover:bg-[hsl(var(--surface-muted))] transition-colors duration-150"
               )}
             >
-              {t("notifications.viewAll", "مشاهده همه اعلان‌ها")}
+              {t("notifications.viewAll", "مشاهده همه فعالیت‌ها")}
               <ArrowLeft className="size-3.5 rtl:rotate-180" />
             </button>
           )}

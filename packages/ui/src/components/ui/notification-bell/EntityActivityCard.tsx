@@ -42,13 +42,13 @@ const statusColors: Record<string, string> = {
 };
 
 const statusLabels: Record<string, string> = {
-  pending: "dashboard.status.pending",
-  paid: "dashboard.status.paid",
-  completed: "dashboard.status.completed",
-  cancelled: "dashboard.status.cancelled",
-  partial: "dashboard.status.partial",
-  overdue: "dashboard.status.overdue",
-  draft: "dashboard.status.draft",
+  pending: "در انتظار",
+  paid: "پرداخت شده",
+  completed: "تکمیل شده",
+  cancelled: "لغو شده",
+  partial: "بخشی پرداخت",
+  overdue: "سررسید شده",
+  draft: "پیش‌نویس",
 };
 
 const activityIcons = {
@@ -64,45 +64,45 @@ const activityIcons = {
 };
 
 const activityLabels: Record<string, string> = {
-  created: "entity.activity.created",
-  updated: "entity.activity.updated",
-  status_changed: "entity.activity.statusChanged",
-  payment: "entity.activity.payment",
-  approved: "entity.activity.approved",
-  rejected: "entity.activity.rejected",
-  sent: "entity.activity.sent",
-  archived: "entity.activity.archived",
-  cancelled: "entity.activity.cancelled",
+  created: "ایجاد شد",
+  updated: "ویرایش شد",
+  status_changed: "تغییر وضعیت",
+  payment: "پرداخت",
+  approved: "تأیید شد",
+  rejected: "رد شد",
+  sent: "ارسال شد",
+  archived: "بایگانی شد",
+  cancelled: "لغو شد",
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function timeAgo(date: string, t: (key: string) => string): string {
+function timeAgo(date: string, t: (key: string, fallback: string) => string): string {
   const now = Date.now();
   const diff = now - new Date(date).getTime();
   const minutes = Math.floor(diff / 60000);
 
-  if (minutes < 1) return t("time.justNow");
-  if (minutes < 60) return t("time.minutesAgo", { count: minutes });
+  if (minutes < 1) return t("time.justNow", "همین الان");
+  if (minutes < 60) return t("time.minutesAgo", `${minutes} دقیقه پیش`);
   
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return t("time.hoursAgo", { count: hours });
+  if (hours < 24) return t("time.hoursAgo", `${hours} ساعت پیش`);
   
   const days = Math.floor(hours / 24);
-  if (days < 7) return t("time.daysAgo", { count: days });
+  if (days < 7) return t("time.daysAgo", `${days} روز پیش`);
   
   const weeks = Math.floor(days / 7);
-  if (weeks < 4) return t("time.weeksAgo", { count: weeks });
+  if (weeks < 4) return t("time.weeksAgo", `${weeks} هفته پیش`);
   
   const months = Math.floor(days / 30);
-  if (months < 12) return t("time.monthsAgo", { count: months });
+  if (months < 12) return t("time.monthsAgo", `${months} ماه پیش`);
   
-  return t("time.yearsAgo", { count: Math.floor(months / 12) });
+  return t("time.yearsAgo", `${Math.floor(months / 12)} سال پیش`);
 }
 
-function formatCurrency(amount: number, currency: string, t: (key: string) => string): string {
+function formatCurrency(amount: number, currency: string): string {
   try {
-    return new Intl.NumberFormat(t("locale.code", "fa-AF"), {
+    return new Intl.NumberFormat("fa-AF", {
       style: "currency",
       currency: currency || "AFN",
       maximumFractionDigits: 0,
@@ -116,17 +116,15 @@ function formatCurrency(amount: number, currency: string, t: (key: string) => st
 
 const StatusBadge = memo(function StatusBadge({
   status,
-  t,
 }: {
   status: string;
-  t: (key: string) => string;
 }) {
   const colorClass = statusColors[status] || "text-gray-500 bg-gray-500/10";
   const labelKey = statusLabels[status] || status;
 
   return (
     <span className={cn("text-[10px] font-medium px-1.5 py-0.5 rounded", colorClass)}>
-      {t(labelKey)}
+      {labelKey}
     </span>
   );
 });
@@ -265,7 +263,7 @@ export const EntityActivityCard = memo(function EntityActivityCard({
               {summary.amount !== undefined && (
                 <span className="text-xs font-semibold text-[hsl(var(--fg-primary))] flex items-center gap-1">
                   <DollarSign className="w-3 h-3" aria-hidden="true" />
-                  {formatCurrency(summary.amount, summary.currency || "AFN", t)}
+                  {formatCurrency(summary.amount, summary.currency || "AFN")}
                 </span>
               )}
             </div>
@@ -273,7 +271,7 @@ export const EntityActivityCard = memo(function EntityActivityCard({
             {/* Status + Activity Count */}
             <div className="flex items-center gap-2 mt-1">
               {summary.status && (
-                <StatusBadge status={summary.status} t={t} />
+                <StatusBadge status={summary.status} />
               )}
               <span className="text-[10px] text-[hsl(var(--fg-tertiary))] flex items-center gap-1">
                 <Clock className="w-3 h-3" aria-hidden="true" />
@@ -340,7 +338,7 @@ export const EntityActivityCard = memo(function EntityActivityCard({
                         )}
                         <p className="text-[10px] text-[hsl(var(--fg-tertiary))] mt-0.5">
                           {new Date(activity.timestamp).toLocaleTimeString(
-                            t("locale.code", "fa-AF"),
+                            "fa-AF",
                             {
                               hour: "2-digit",
                               minute: "2-digit",
