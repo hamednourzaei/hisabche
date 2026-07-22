@@ -185,6 +185,19 @@ export const workflowActions = pgTable("workflow_actions", {
 
 export const invoiceRelations = {};
 
+// ─── ✅ EXPORT hisabcheSchema ───────────────────────────────────────────────
+
+export const hisabcheSchema = {
+  invoices,
+  products,
+  customers,
+  transactions,
+  workflows,
+  workflowSteps,
+  workflowInstances,
+  workflowActions,
+};
+
 // ─── Types ─────────────────────────────────────────────────────────────────
 
 export type Invoice = typeof invoices.$inferSelect;

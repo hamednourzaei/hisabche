@@ -107,7 +107,7 @@ export class NotificationService {
     try {
       const { data: notifications, error: fetchError } = await supabase
         .from("notifications")
-        .select("user_id")
+        .select("id, user_id")
         .in("id", ids);
 
       if (fetchError) {

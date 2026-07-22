@@ -1,0 +1,490 @@
+// backend/src/services/activity.service.ts
+// ============================================
+// Activity Service — Entity Activity Feed v2.0
+// با Cursor Pagination + Cache + Performance
+// ============================================
+
+import { supabase } from "../db";
+import { DatabaseError } from "../errors/database.error";
+import { memoryCache } from "../utils/pagination";
+
+// ─── DTOs ────────────────────────────────────────────────────────────────────
+
+export interface ActivityItemDto {
+  id: string;
+  action: string;
+  title: string;
+  description?: string;
+  actor: string;
+  timestamp: string;
+  isRead: boolean;
+  importance: number;
+}
+
+export interface EntitySummaryDto {
+  label: string;
+  subtitle?: string | undefined;
+  amount?: number | undefined;
+  currency?: string | undefined;
+  status?: string | undefined;
+  statusLabel?: string | undefined;
+  statusColor?: string | undefined;
+  activityCount: number;
+  lastActivity: string;
+  route: string;
+}
+
+export interface ActivityGroupDto {
+  entityType: "invoice" | "customer" | "product" | "payment" | "supplier" | "inventory";
+  entityId: string;
+  entitySummary: EntitySummaryDto;
+  activities: ActivityItemDto[];
+  unreadCount: number;
+  latestAt: string;
+  hasUnread: boolean;
+  priority: "critical" | "high" | "medium" | "low";
+}
+
+export interface CreateActivityInput {
+  actorId: string;
+  actorName: string;
+  entityType: string;
+  entityId: string;
+  action: string;
+  title: string;
+  description?: string;
+  metadata?: Record<string, unknown>;
+  importance?: number;
+}
+
+export interface PaginatedActivitiesResponse {
+  data: ActivityGroupDto[];
+  nextCursor: string | null;
+  hasMore: boolean;
+  total: number;
+}
+
+// ─── Status Helpers ─────────────────────────────────────────────────────────
+
+const statusColors: Record<string, string> = {
+  pending: "text-amber-500 bg-amber-500/10",
+  paid: "text-emerald-500 bg-emerald-500/10",
+  completed: "text-emerald-500 bg-emerald-500/10",
+  cancelled: "text-red-500 bg-red-500/10",
+  partial: "text-blue-500 bg-blue-500/10",
+  overdue: "text-rose-500 bg-rose-500/10",
+  draft: "text-gray-500 bg-gray-500/10",
+};
+
+const statusLabels: Record<string, string> = {
+  pending: "در انتظار",
+  paid: "پرداخت شده",
+  completed: "تکمیل شده",
+  cancelled: "لغو شده",
+  partial: "بخشی پرداخت",
+  overdue: "سررسید شده",
+  draft: "پیش‌نویس",
+};
+
+// ─── Main Service ──────────────────────────────────────────────────────────
+
+export class ActivityService {
+  private cacheTTL = 60;
+
+  // ─── Create Activity ─────────────────────────────────────────────────────
+  async createActivity(input: CreateActivityInput) {
+    console.log("📝 [ActivityService] Creating activity:", {
+      entityType: input.entityType,
+      entityId: input.entityId,
+      action: input.action,
+      title: input.title,
+      actorName: input.actorName,
+    });
+
+    // ─── Validation ──────────────────────────────────────────────────────
+    if (!input.actorId) {
+      throw new DatabaseError("actorId is required");
+    }
+    if (!input.entityType || !input.entityId) {
+      throw new DatabaseError("entityType and entityId are required");
+    }
+
+    const { data, error } = await supabase
+      .from("activities")
+      .insert({
+        actor_id: input.actorId,
+        actor_name: input.actorName || input.actorId.slice(0, 8),
+        entity_type: input.entityType,
+        entity_id: input.entityId,
+        action: input.action,
+        title: input.title,
+        description: input.description || "",
+        metadata: input.metadata || {},
+        importance: input.importance || 0,
+        is_read: false,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("❌ [ActivityService] Failed to create activity:", error);
+      throw new DatabaseError("Failed to create activity", error);
+    }
+
+    console.log("✅ [ActivityService] Activity created:", data.id);
+
+    // ─── Invalidate cache ──────────────────────────────────────────────────
+    await this.invalidateCache(input.actorId);
+
+    return data;
+  }
+
+  // ─── Get Activities (with Cursor Pagination) ─────────────────────────────
+  async getActivities(
+    userId: string,
+    filters?: {
+      type?: string | undefined;
+      unread?: boolean | undefined;
+      search?: string | undefined;
+      limit?: number | undefined;
+      cursor?: string | undefined;
+    }
+  ): Promise<PaginatedActivitiesResponse> {
+    const cacheKey = `activities:${userId}:${JSON.stringify(filters)}`;
+    const cached = await memoryCache.get(cacheKey);
+    if (cached) return cached as PaginatedActivitiesResponse;
+
+    const limit = Math.min(filters?.limit || 20, 100);
+
+    // ─── Query activities ──────────────────────────────────────────────────
+    let query = supabase
+      .from("activities")
+      .select("*", { count: "exact" })
+      .eq("actor_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(limit + 1); // +1 برای تشخیص hasMore
+
+    if (filters?.cursor) {
+      query = query.lt("created_at", filters.cursor);
+    }
+
+    if (filters?.type) {
+      query = query.eq("entity_type", filters.type);
+    }
+
+    if (filters?.unread) {
+      query = query.eq("is_read", false);
+    }
+
+    if (filters?.search) {
+      query = query.ilike("title", `%${filters.search}%`);
+    }
+
+    const { data: activities, error, count } = await query;
+
+    if (error) {
+      console.error("❌ [ActivityService] Failed to fetch activities:", error);
+      throw new DatabaseError("Failed to fetch activities", error);
+    }
+
+    if (!activities || activities.length === 0) {
+      return {
+        data: [],
+        nextCursor: null,
+        hasMore: false,
+        total: 0,
+      };
+    }
+
+    // ─── Check hasMore ─────────────────────────────────────────────────────
+    const hasMore = activities.length > limit;
+    const items = hasMore ? activities.slice(0, limit) : activities;
+    const nextCursor = hasMore && items.length > 0 
+      ? items[items.length - 1]?.created_at 
+      : null;
+
+    // ─── Group by entity ──────────────────────────────────────────────────
+    const groups = new Map<string, any[]>();
+    for (const activity of items) {
+      const key = `${activity.entity_type}:${activity.entity_id}`;
+      if (!groups.has(key)) {
+        groups.set(key, []);
+      }
+      groups.get(key)!.push(activity);
+    }
+
+    // ─── Build DTOs ───────────────────────────────────────────────────────
+    const result: ActivityGroupDto[] = [];
+
+    for (const [key, groupItems] of groups) {
+      // `key` is always built as `${entity_type}:${entity_id}` above, so this
+      // split always yields exactly two defined strings.
+      const [entityType, entityId] = key.split(":") as [string, string];
+      const sortedItems = groupItems.sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      const latest = sortedItems[0];
+      const metadata = latest.metadata || {};
+
+      // ─── Get entity summary ─────────────────────────────────────────────
+      const summary = await this.getEntitySummary(entityType, entityId, userId);
+
+      const unreadCount = sortedItems.filter((i) => !i.is_read).length;
+
+      result.push({
+        entityType: entityType as ActivityGroupDto["entityType"],
+        entityId,
+        entitySummary: {
+          label: metadata?.invoice_number
+            ? `INV-${metadata.invoice_number}`
+            : latest.title || "بدون عنوان",
+          subtitle: metadata?.customer_name || summary?.subtitle,
+          amount: metadata?.total || summary?.amount,
+          currency: metadata?.currency || summary?.currency,
+          status: metadata?.status || summary?.status,
+          statusLabel: metadata?.status ? statusLabels[metadata.status] : undefined,
+          statusColor: metadata?.status ? statusColors[metadata.status] : undefined,
+          activityCount: sortedItems.length,
+          lastActivity: latest.created_at,
+          route: `/${entityType}s/${entityId}`,
+        },
+        activities: sortedItems.map((item) => ({
+          id: item.id,
+          action: item.action,
+          title: item.title,
+          description: item.description,
+          actor: item.actor_name,
+          timestamp: item.created_at,
+          isRead: item.is_read,
+          importance: item.importance || 0,
+        })),
+        unreadCount,
+        latestAt: latest.created_at,
+        hasUnread: unreadCount > 0,
+        priority: this.getPriority(latest.importance || 0, unreadCount),
+      });
+    }
+
+    // ─── Sort by priority and latest ─────────────────────────────────────
+    const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+    result.sort((a, b) => {
+      const aPriority = priorityOrder[a.priority] ?? 2;
+      const bPriority = priorityOrder[b.priority] ?? 2;
+      if (aPriority !== bPriority) return aPriority - bPriority;
+      if (a.unreadCount > 0 && b.unreadCount === 0) return -1;
+      if (a.unreadCount === 0 && b.unreadCount > 0) return 1;
+      return new Date(b.latestAt).getTime() - new Date(a.latestAt).getTime();
+    });
+
+    const response: PaginatedActivitiesResponse = {
+      data: result,
+      nextCursor,
+      hasMore,
+      total: count || 0,
+    };
+
+    await memoryCache.set(cacheKey, response, this.cacheTTL);
+    return response;
+  }
+
+  // ─── Get Entity Summary ──────────────────────────────────────────────────
+  private async getEntitySummary(
+    entityType: string,
+    entityId: string,
+    userId: string
+  ): Promise<Partial<EntitySummaryDto> | null> {
+    try {
+      if (entityType === "invoice") {
+        const { data } = await supabase
+          .from("invoices")
+          .select(`
+            id,
+            invoice_number,
+            total,
+            currency,
+            status,
+            customer:customers!fk_invoices_customer (
+              full_name
+            )
+          `)
+          .eq("id", entityId)
+          .eq("user_id", userId)
+          .single();
+
+        if (!data) return null;
+
+        // The `customer:customers!fk_invoices_customer(full_name)` join is
+        // typed by Supabase as an array even though it's a to-one relation.
+        const customer = Array.isArray(data.customer)
+          ? data.customer[0]
+          : data.customer;
+
+        return {
+          label: `INV-${data.invoice_number}`,
+          subtitle: customer?.full_name,
+          amount: data.total,
+          currency: data.currency,
+          status: data.status,
+        };
+      }
+
+      if (entityType === "customer") {
+        const { data } = await supabase
+          .from("customers")
+          .select("full_name, phone, email, opening_balance")
+          .eq("id", entityId)
+          .eq("user_id", userId)
+          .single();
+
+        if (!data) return null;
+
+        return {
+          label: data.full_name,
+          subtitle: data.phone || data.email,
+          amount: data.opening_balance,
+          currency: "AFN",
+        };
+      }
+
+      if (entityType === "product") {
+        const { data } = await supabase
+          .from("products")
+          .select("name, sku, quantity, sell_price, currency")
+          .eq("id", entityId)
+          .eq("user_id", userId)
+          .single();
+
+        if (!data) return null;
+
+        return {
+          label: data.name,
+          subtitle: data.sku || `موجودی: ${data.quantity}`,
+          amount: data.sell_price,
+          currency: data.currency || "AFN",
+        };
+      }
+
+      if (entityType === "payment") {
+        const { data } = await supabase
+          .from("transactions")
+          .select("amount, currency, description, reference")
+          .eq("id", entityId)
+          .eq("user_id", userId)
+          .single();
+
+        if (!data) return null;
+
+        return {
+          label: data.reference || "پرداخت",
+          subtitle: data.description,
+          amount: data.amount,
+          currency: data.currency || "AFN",
+        };
+      }
+
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  // ─── Get Priority ────────────────────────────────────────────────────────
+  private getPriority(importance: number, unreadCount: number): ActivityGroupDto["priority"] {
+    if (importance >= 4 && unreadCount > 0) return "critical";
+    if (importance >= 3 || unreadCount > 0) return "high";
+    if (importance >= 2) return "medium";
+    return "low";
+  }
+
+  // ─── Mark as Read ────────────────────────────────────────────────────────
+  async markAsRead(userId: string, ids: string[]) {
+    console.log("📝 [ActivityService] Marking as read:", ids);
+
+    if (!ids || ids.length === 0) {
+      console.warn("⚠️ [ActivityService] No ids provided for markAsRead");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("activities")
+      .update({ is_read: true })
+      .in("id", ids)
+      .eq("actor_id", userId);
+
+    if (error) {
+      console.error("❌ [ActivityService] Failed to mark as read:", error);
+      throw new DatabaseError("Failed to mark activities as read", error);
+    }
+
+    console.log(`✅ [ActivityService] Marked ${ids.length} activities as read`);
+    await this.invalidateCache(userId);
+  }
+
+  // ─── Mark All as Read ────────────────────────────────────────────────────
+  async markAllAsRead(userId: string) {
+    console.log("📝 [ActivityService] Marking all as read for user:", userId);
+
+    const { error } = await supabase
+      .from("activities")
+      .update({ is_read: true })
+      .eq("actor_id", userId)
+      .eq("is_read", false);
+
+    if (error) {
+      console.error("❌ [ActivityService] Failed to mark all as read:", error);
+      throw new DatabaseError("Failed to mark all activities as read", error);
+    }
+
+    console.log(`✅ [ActivityService] Marked all activities as read for user: ${userId}`);
+    await this.invalidateCache(userId);
+  }
+
+  // ─── Get Unread Count ────────────────────────────────────────────────────
+  async getUnreadCount(userId: string): Promise<number> {
+    const cacheKey = `activities:unread:${userId}`;
+    const cached = await memoryCache.get(cacheKey);
+    if (cached !== null) return cached as number;
+
+    const { count, error } = await supabase
+      .from("activities")
+      .select("id", { count: "exact", head: true })
+      .eq("actor_id", userId)
+      .eq("is_read", false);
+
+    if (error) {
+      console.error("❌ [ActivityService] Failed to get unread count:", error);
+      throw new DatabaseError("Failed to get unread count", error);
+    }
+
+    const result = count || 0;
+    await memoryCache.set(cacheKey, result, 10);
+    return result;
+  }
+
+  // ─── Delete Activity ─────────────────────────────────────────────────────
+  async deleteActivity(userId: string, id: string) {
+    console.log("📝 [ActivityService] Deleting activity:", id);
+
+    const { error } = await supabase
+      .from("activities")
+      .delete()
+      .eq("id", id)
+      .eq("actor_id", userId);
+
+    if (error) {
+      console.error("❌ [ActivityService] Failed to delete activity:", error);
+      throw new DatabaseError("Failed to delete activity", error);
+    }
+
+    console.log(`✅ [ActivityService] Deleted activity: ${id}`);
+    await this.invalidateCache(userId);
+  }
+
+  // ─── Invalidate Cache ────────────────────────────────────────────────────
+  private async invalidateCache(userId: string) {
+    await memoryCache.invalidate(`activities:${userId}:*`);
+    await memoryCache.invalidate(`activities:unread:${userId}`);
+  }
+}
+
+export default ActivityService;

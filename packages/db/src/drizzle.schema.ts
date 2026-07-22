@@ -1,3 +1,8 @@
+// packages/db/src/drizzle.schema.ts
+// ============================================
+// Drizzle Schema — Hisabche v2.4
+// ============================================
+
 import {
   pgTable,
   uuid,
@@ -175,3 +180,32 @@ export const workflowActions = pgTable("workflow_actions", {
   comment: text("comment"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// ─── Relations ─────────────────────────────────────────────────────────────
+
+export const invoiceRelations = {};
+
+// ─── ✅ EXPORT Drizzle Schema ──────────────────────────────────────────────
+
+export const drizzleSchema = {
+  invoices,
+  products,
+  customers,
+  transactions,
+  workflows,
+  workflowSteps,
+  workflowInstances,
+  workflowActions,
+};
+
+// ─── Types ─────────────────────────────────────────────────────────────────
+
+export type Invoice = typeof invoices.$inferSelect;
+export type NewInvoice = typeof invoices.$inferInsert;
+export type Product = typeof products.$inferSelect;
+export type Customer = typeof customers.$inferSelect;
+export type Transaction = typeof transactions.$inferSelect;
+export type Workflow = typeof workflows.$inferSelect;
+export type WorkflowStep = typeof workflowSteps.$inferSelect;
+export type WorkflowInstance = typeof workflowInstances.$inferSelect;
+export type WorkflowAction = typeof workflowActions.$inferSelect;

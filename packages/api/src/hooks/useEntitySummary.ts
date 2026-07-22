@@ -31,9 +31,8 @@ export function useEntitySummary(entityType: string, entityId: string) {
     queryKey: ["entity", "summary", entityType, entityId],
     queryFn: async (): Promise<EntitySummary | null> => {
       if (!entityType || !entityId) return null;
-
       const { data } = await apiClient.get(
-        `/v1/entities/${entityType}/${entityId}/summary`
+        `/api/v1/entities/${entityType}/${entityId}/summary`
       );
       return data;
     },

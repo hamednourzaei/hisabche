@@ -345,9 +345,7 @@ export {
   type AIChatMessage,
 } from './schemas/ai.schema'
 
-// ═══════════════════════════════════════════════════════════════════
-// Workflow & Approval (v1.1)
-// ═══════════════════════════════════════════════════════════════════
+// ---------- Workflow ----------
 export {
   workflowStatusEnum,
   workflowActionEnum,
@@ -378,8 +376,6 @@ export {
   type InstanceFilters,
 } from './schemas/workflow.schema'
 
-// packages/validation/src/index.ts
-
 // ---------- Notifications ----------
 export {
   notificationTypeEnum,
@@ -391,8 +387,20 @@ export {
   type CreateNotificationInput,
   type Notification,
   type NotificationFilters,
-} from './schemas/notification.schema';
-// ---------- Job Queue ----------
+} from './schemas/notification.schema'
+
+// ---------- ✅ Activity ----------
+export {
+  activityTypeEnum,
+  activityActionEnum,
+  activityImportanceEnum,
+  createActivitySchema,
+  activityFiltersSchema,
+  type CreateActivityInput,
+  type ActivityFilters,
+} from './schemas/activity.schema'
+
+// ---------- Job ----------
 export {
   jobStatusEnum,
   createJobSchema,
@@ -402,9 +410,7 @@ export {
   type Job,
 } from './schemas/job.schema'
 
-// ═══════════════════════════════════════════════════════════════════
-// ✅ NEW — Billing & Subscription (فاز ۵)
-// ═══════════════════════════════════════════════════════════════════
+// ---------- Billing ----------
 export {
   planEnum,
   subscriptionStatusEnum,

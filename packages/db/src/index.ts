@@ -3,20 +3,12 @@
 // Only type exports — safe for web, mobile, backend
 // ============================================
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-import type InvoiceType from './models/Invoice.model'
-import type ProductType from './models/Product.model'
-import type CustomerType from './models/Customer.model'
+// ─── Drizzle Schema ──────────────────────────────────────────────────────────
+export { drizzleSchema } from './drizzle.schema'
+export * from './drizzle.schema'
 
-export type Invoice = InvoiceType
-export type Product = ProductType
-export type Customer = CustomerType
-
-// ─── Schema ──────────────────────────────────────────────────────────────────
-export type { hisabcheSchema } from './schema'
-
-// ─── Drizzle Schema ─────────────────────────────────────────────────────────
-export * from './schema'
+// ─── Watermelon Schema ──────────────────────────────────────────────────────
+export { watermelonSchema } from './watermelon.schema'
 
 // ─── Supabase Types ─────────────────────────────────────────────────────────
 export type { Database } from './supabase/types'
@@ -25,5 +17,16 @@ export type { Database } from './supabase/types'
 export { db, client } from './client'
 
 // ─── Watermelon DB ──────────────────────────────────────────────────────────
-export { database, performSync, Invoice, Product, Customer } from './database'
+export { database, performSync } from './database'
+
+// ─── Sync Queue ─────────────────────────────────────────────────────────────
 export { syncQueue } from './sync-queue'
+
+// ─── Activity Repository ──────────────────────────────────────────────────
+export { ActivityRepository } from './repositories/ActivityRepository'
+export type {
+  ActivityRecord,
+  CreateActivityInput,
+  UpdateActivityInput,
+  ActivityFilters,
+} from './repositories/ActivityRepository'

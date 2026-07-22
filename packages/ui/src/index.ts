@@ -104,7 +104,7 @@ export { OnboardingContainer } from './components/ui/onboarding/containers/onboa
 
 // ---------- Dashboard ----------
 export { DashboardView } from './components/ui/dashboard/dashboard-view'
-export { InsightCard } from './components/ui/dashboard/dashboard-stats'  // ✅ StatCard → InsightCard تغییر یافت
+export { InsightCard } from './components/ui/dashboard/dashboard-stats'
 export { DashboardInvoices } from './components/ui/dashboard/dashboard-invoices'
 export { useDashboard } from './hooks/dashboard/use-dashboard'
 
@@ -149,9 +149,37 @@ export { toPersianNumbers, toArabicNumbers, usePersianNumbers } from './lib/pers
 
 // ---------- Types ----------
 export {
-  // ... existing exports
   PricingContainer,
   BillingContainer,
   BillingStatusContainer,
 } from './components/ui/billing'
 export type SupportedLanguage = 'fa-AF' | 'fa-IR'
+
+// ─── ✅ Activity Components ──────────────────────────────────────────────────
+// نکته: CommandPalette و SyncStatus قبلاً بالاتر (Navigation/Data Display) export شدن؛
+// نسخه‌ی activity این کامپوننت‌ها با نام‌های جدا export می‌شه تا تداخل نداشته باشن.
+export {
+  ActivityCenter,
+  ActivityItem,
+  ActivityTimeline,
+  EntityActivityCard,
+  ActivityHeader,
+  ActivityFooter,
+  ActivitySkeleton,
+  ActivityEmptyState,
+  ActivityToolbar,
+  VirtualizedActivityList,
+  ActivityMotion,
+  ActivityPreview,
+  CommandPalette as ActivityCommandPalette,
+  KeyboardNavigator,
+  AccessibleCard,
+  SyncStatus as ActivitySyncStatus,
+  RealtimeStatus,
+  // StatusBadge, // TODO: این کامپوننت هنوز در ./components/ui/activity export نشده — اول اونجا اضافه‌ش کن
+} from './components/ui/activity'
+export type {
+  ActivityItemDto,
+  ActivityGroupDto,
+  EntitySummaryDto,
+} from '@hisabche/api'

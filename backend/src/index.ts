@@ -47,6 +47,8 @@ import { billingRoutes } from './routes/billing.routes'
 import { workflowRoutes } from './routes/workflow.routes'
 import { notificationRoutes } from './routes/notification.routes'
 import { debugRoutes } from './routes/debug.routes'
+// ✅ اضافه کردن Activity Routes
+import { activityRoutes } from './routes/activity.routes'
 
 // ──────────────────────────────────────────────
 // Plugins & Scheduler
@@ -400,6 +402,9 @@ async function start() {
     
     // ✅ ثبت Route‌های Notification
     await server.register(notificationRoutes)
+    
+    // ✅ ثبت Route‌های Activity
+    await server.register(activityRoutes)
     
     await server.register(jobSchedulerPlugin)
     await server.register(billingRoutes)

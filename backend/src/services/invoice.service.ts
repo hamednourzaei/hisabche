@@ -1,6 +1,6 @@
 // ============================================
 // backend/src/services/invoice.service.ts
-// Hisabche v3.1 — با JOIN customers + Notification (fixed silent notification bug)
+// Hisabche v3.1 — با JOIN customers + Notification + Activity (full)
 // ============================================
 
 import { supabase } from "../db";
@@ -9,6 +9,7 @@ import { NotificationService } from "../services/notification.service";
 import { CreateInvoice, UpdateInvoice, InvoiceFilters } from "@hisabche/validation";
 import { DatabaseError, NotFoundError } from "../errors/database.error";
 import { memoryCache } from "../utils/pagination";
+import { ActivityService } from "./activity.service";
 
 // ============================================
 // ✅ OPTIMIZED: فقط ستون‌های مورد نیاز
@@ -50,32 +51,70 @@ const INVOICE_ITEMS_LIST_COLUMNS = `
 export class InvoiceService {
   private workflowService: WorkflowService;
   private notificationService: NotificationService;
+  private activityService: ActivityService;
 
   constructor() {
     this.workflowService = new WorkflowService();
     this.notificationService = new NotificationService();
+    this.activityService = new ActivityService();
   }
 
-  // ✅ استخراج شده به یک متد مشترک تا در create() و update() تکرار نشود
-  // و باگ silent-fail برطرف شود
+  // ─── ✅ تابع دریافت نام نمایشی کاربر ──────────────────────────────────
+  private async getUserDisplayName(userId: string): Promise<string> {
+    try {
+      // 1. از جدول profiles
+      const { data: profile, error: profileError } = await supabase
+        .from("profiles")
+        .select("full_name, display_name")
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (!profileError) {
+        if (profile?.full_name) return profile.full_name;
+        if (profile?.display_name) return profile.display_name;
+      }
+
+      // 2. از جدول users (اگر وجود دارد)
+      const { data: user, error: userError } = await supabase
+        .from("users")
+        .select("email, raw_user_meta_data")
+        .eq("id", userId)
+        .maybeSingle();
+
+      if (!userError && user) {
+        if (user.raw_user_meta_data?.full_name) {
+          return user.raw_user_meta_data.full_name;
+        }
+        if (user.email) {
+          return user.email.split("@")[0] || user.email;
+        }
+      }
+
+      // 3. Fallback: 8 کاراکتر اول userId
+      return userId.slice(0, 8);
+
+    } catch (error) {
+      console.error(`[InvoiceService] Error getting user name for ${userId}:`, error);
+      return userId.slice(0, 8);
+    }
+  }
+
+  // ─── ✅ دریافت workspaceId ──────────────────────────────────────────────
   private async resolveWorkspaceId(userId: string): Promise<string> {
     const { data: membership, error: membershipError } = await supabase
       .from("workspace_members")
       .select("workspace_id")
       .eq("user_id", userId)
       .limit(1)
-      .maybeSingle(); // ✅ به‌جای single(): روی صفر ردیف خطا نمی‌دهد
+      .maybeSingle();
 
     if (membershipError) {
-      // ✅ حالا این خطا دیگر بی‌صدا گم نمی‌شود
       console.error(
         `[InvoiceService] Failed to fetch workspace membership for user ${userId}:`,
         membershipError
       );
     }
 
-    // ✅ fallback: اگر کاربر عضو هیچ workspace‌ای نیست (حساب فردی/بدون تیم)،
-    // از خود userId به‌عنوان workspaceId استفاده می‌کنیم تا نوتیفیکیشن ساخته شود.
     return membership?.workspace_id ?? userId;
   }
 
@@ -307,13 +346,38 @@ export class InvoiceService {
       customerName = customer?.full_name || null;
     }
 
+    // ─── ✅ دریافت نام کاربر ──────────────────────────────────────────────
+    const actorName = await this.getUserDisplayName(userId);
+
+    // ─── ✅ ایجاد Activity ──────────────────────────────────────────────────
+    try {
+      await this.activityService.createActivity({
+        actorId: userId,
+        actorName: actorName,
+        entityType: "invoice",
+        entityId: invoice.id,
+        action: "created",
+        title: `فاکتور #${invoice.invoice_number} ایجاد شد`,
+        description: `مشتری: ${customerName || "بدون مشتری"} • مبلغ: ${invoice.total} ${invoice.currency}`,
+        metadata: {
+          invoice_number: invoice.invoice_number,
+          customer_name: customerName,
+          total: invoice.total,
+          currency: invoice.currency,
+          status: invoice.status,
+        },
+        importance: 4,
+      });
+    } catch (activityError) {
+      console.error("[InvoiceService] Failed to create activity:", activityError);
+    }
+
     // ─── ✅ ایجاد نوتیفیکیشن ──────────────────────────────────────────────
     try {
       const workspaceId = await this.resolveWorkspaceId(userId);
 
       console.log(`[InvoiceService] Creating notification for invoice ${invoice.id} with workspaceId: ${workspaceId}`);
 
-      // ✅ نوتیفیکیشن برای خود کاربر
       await this.notificationService.create(workspaceId, {
         user_id: userId,
         title: "✅ صورت‌حساب جدید ایجاد شد",
@@ -330,7 +394,6 @@ export class InvoiceService {
         },
       });
 
-      // ✅ اگر مشتری دارد و کاربر مرتبطی دارد، برای مشتری هم نوتیفیکیشن بفرست
       if (data.customerId) {
         const { data: customer, error: customerError } = await supabase
           .from("customers")
@@ -361,7 +424,6 @@ export class InvoiceService {
         }
       }
     } catch (notifError) {
-      // ❌ خطای نوتیفیکیشن را لاگ می‌کنیم، اما فاکتور را خراب نمی‌کنیم
       console.error("[InvoiceService] Failed to create notification:", notifError);
     }
 
@@ -379,7 +441,6 @@ export class InvoiceService {
 
   // ─── Update Invoice ──────────────────────────────────────────────────────
   async update(id: string, userId: string, data: UpdateInvoice) {
-    // دریافت فاکتور فعلی برای مقایسه وضعیت
     const currentInvoice = await this.getById(id, userId);
 
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };

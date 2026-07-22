@@ -207,13 +207,44 @@ export {
   type Notification,
 } from './hooks/notifications'
 
-// ─── ✅ Entity Activity ────────────────────────────────────
+// ─── ✅ Activity Hooks ────────────────────────────────────
+export {
+  useActivities,
+  useUnreadActivityCount,
+  activityKeys,
+} from './hooks/useActivities'
+
+export { useInfiniteActivities } from './hooks/useInfiniteActivities'
+
+export { useRealtimeActivities } from './hooks/useRealtimeActivities'
+
 export {
   useEntitySummary,
-  useEntityActivities,
   type EntitySummary,
+} from './hooks/useEntitySummary'
+
+export {
+  useEntityActivities,
   type Activity,
-} from './hooks/entity'
+} from './hooks/useEntityActivities'
+
+export { useMarkActivityAsRead } from './hooks/useMarkActivityAsRead'
+
+export { useMarkAllActivitiesAsRead } from './hooks/useMarkAllActivitiesAsRead'
+
+// ─── ✅ Alias برای راحتی استفاده ──────────────────────────
+// نکته: نام useMarkAllAsRead قبلاً در بخش Notifications export شده،
+// برای همین این alias با نام دیگه‌ای export می‌شه تا تداخل نداشته باشن.
+export { useMarkAllActivitiesAsRead as useMarkAllActivityNotificationsAsRead } from './hooks/useMarkAllActivitiesAsRead'
+
+// ─── ✅ Activity Types ─────────────────────────────────────
+export type {
+  ActivityDto,
+  ActivityItemDto,
+  ActivityGroupDto,
+  EntitySummaryDto,
+  PaginatedActivitiesResponse,
+} from './types/activity.types'
 
 // ─── Workflow ─────────────────────────────────────────────
 export {
