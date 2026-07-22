@@ -84,7 +84,7 @@ export function useActivities(filters?: ActivityFilter) {
   return useQuery({
     queryKey: activityKeys.list(filters),
     queryFn: async (): Promise<ActivityGroupDto[]> => {
-      const { data } = await apiClient.get<ActivityGroupDto[]>("/activities", {
+      const { data } = await apiClient.get<ActivityGroupDto[]>("/v1/activities", {
         params: filters,
       });
       return data;
@@ -103,7 +103,7 @@ export function useInfiniteActivities(filters?: ActivityFilter) {
   return useInfiniteQuery({
     queryKey: activityKeys.infinite(filters),
     queryFn: async ({ pageParam = null }) => {
-      const { data } = await apiClient.get("/activities", {
+      const { data } = await apiClient.get("/v1/activities", {
         params: {
           ...filters,
           cursor: pageParam,
@@ -127,7 +127,7 @@ export function useUnreadCount() {
   return useQuery({
     queryKey: activityKeys.unread(),
     queryFn: async (): Promise<number> => {
-      const { data } = await apiClient.get<{ count: number }>("/activities/unread-count");
+      const { data } = await apiClient.get<{ count: number }>("/v1/activities/unread-count");
       return data.count;
     },
     enabled: authReady,
@@ -144,7 +144,7 @@ export function useMarkAsRead() {
   return useMutation({
     mutationFn: async (ids: string[]) => {
       if (!ids || ids.length === 0) return;
-      await apiClient.patch("/activities/mark-read", { ids });
+      await apiClient.patch("/v1/activities/mark-read", { ids });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: activityKeys.all });
@@ -162,7 +162,7 @@ export function useMarkAllAsRead() {
 
   return useMutation({
     mutationFn: async () => {
-      await apiClient.patch("/activities/mark-all-read");
+      await apiClient.patch("/v1/activities/mark-all-read");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: activityKeys.all });
@@ -182,7 +182,7 @@ export function useEntityActivities(entityType: string, entityId: string) {
     queryKey: activityKeys.entityActivities(entityType, entityId),
     queryFn: async (): Promise<ActivityItemDto[]> => {
       const { data } = await apiClient.get<ActivityItemDto[]>(
-        `/activities/entity/${entityType}/${entityId}`
+        `/v1/activities/entity/${entityType}/${entityId}`
       );
       return data;
     },
@@ -200,7 +200,7 @@ export function useEntitySummary(entityType: string, entityId: string) {
     queryKey: activityKeys.entitySummary(entityType, entityId),
     queryFn: async (): Promise<EntitySummaryDto> => {
       const { data } = await apiClient.get<EntitySummaryDto>(
-        `/activities/entity/${entityType}/${entityId}/summary`
+        `/v1/activities/entity/${entityType}/${entityId}/summary`
       );
       return data;
     },

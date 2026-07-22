@@ -32,21 +32,20 @@ export function getEntityConfig(type: ActivityGroupDto["entityType"]) {
 
 export function sortActivities(groups: ActivityGroupDto[]): ActivityGroupDto[] {
   return [...groups].sort((a, b) => {
-    // اولویت: urgent > critical > high > medium > low
+    // ✅ اصلاح: حذف "critical" چون در تایپ‌ها وجود ندارد
     const priorityOrder: Record<string, number> = {
       urgent: 0,
-      critical: 1,
-      high: 2,
-      medium: 3,
-      low: 4,
+      high: 1,
+      medium: 2,
+      low: 3,
     };
-    const aPriority = priorityOrder[a.priority] ?? 3;
-    const bPriority = priorityOrder[b.priority] ?? 3;
+    const aPriority = priorityOrder[a.priority] ?? 2;
+    const bPriority = priorityOrder[b.priority] ?? 2;
     if (aPriority !== bPriority) return aPriority - bPriority;
-    // سپس: unread > read
+    
     if (a.unreadCount > 0 && b.unreadCount === 0) return -1;
     if (a.unreadCount === 0 && b.unreadCount > 0) return 1;
-    // سپس: جدیدترین
+    
     return new Date(b.latestAt).getTime() - new Date(a.latestAt).getTime();
   });
 }
