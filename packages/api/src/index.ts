@@ -197,17 +197,25 @@ export {
   type TrialStatus,
 } from './hooks/billing'
 
-// ─── ✅ Notifications ─────────────────────────────────────
+// ─── Notifications ─────────────────────────────────────────
 export {
   useNotifications,
   useUnreadCount,
   useMarkAsRead,
-  useMarkAllAsRead,      // ✅ اضافه شد
+  useMarkAllAsRead,
   notificationKeys,
   type Notification,
 } from './hooks/notifications'
 
-// ─── ✅ Workflow ──────────────────────────────────────────
+// ─── ✅ Entity Activity ────────────────────────────────────
+export {
+  useEntitySummary,
+  useEntityActivities,
+  type EntitySummary,
+  type Activity,
+} from './hooks/entity'
+
+// ─── Workflow ─────────────────────────────────────────────
 export {
   useWorkflowInstance,
   type WorkflowInstance,

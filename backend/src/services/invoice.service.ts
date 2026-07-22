@@ -76,9 +76,6 @@ export class InvoiceService {
 
     // ✅ fallback: اگر کاربر عضو هیچ workspace‌ای نیست (حساب فردی/بدون تیم)،
     // از خود userId به‌عنوان workspaceId استفاده می‌کنیم تا نوتیفیکیشن ساخته شود.
-    // اگر ستون workspace_id در جدول notifications شما NOT NULL و FK به جدول
-    // workspaces است، این fallback را باید متناسب با schema واقعی خودتان تغییر دهید
-    // (مثلاً ساخت خودکار یک workspace پیش‌فرض هنگام signup).
     return membership?.workspace_id ?? userId;
   }
 
@@ -299,10 +296,22 @@ export class InvoiceService {
       }
     }
 
-    // ─── ✅ ایجاد نوتیفیکیشن (رفع باگ: قبلاً اگر کاربر workspace_members
-    // نداشت، این بخش کاملاً بی‌صدا رد می‌شد و هیچ نوتیفیکیشنی ساخته نمی‌شد) ──
+    // ─── ✅ دریافت نام مشتری ──────────────────────────────────────────────
+    let customerName: string | null = null;
+    if (data.customerId) {
+      const { data: customer } = await supabase
+        .from("customers")
+        .select("full_name")
+        .eq("id", data.customerId)
+        .maybeSingle();
+      customerName = customer?.full_name || null;
+    }
+
+    // ─── ✅ ایجاد نوتیفیکیشن ──────────────────────────────────────────────
     try {
       const workspaceId = await this.resolveWorkspaceId(userId);
+
+      console.log(`[InvoiceService] Creating notification for invoice ${invoice.id} with workspaceId: ${workspaceId}`);
 
       // ✅ نوتیفیکیشن برای خود کاربر
       await this.notificationService.create(workspaceId, {
@@ -317,16 +326,17 @@ export class InvoiceService {
           invoice_number: invoice.invoice_number,
           total: invoice.total,
           currency: invoice.currency,
+          customer_name: customerName,
         },
       });
 
-      // ✅ اگر مشتری دارد، برای مشتری هم نوتیفیکیشن بفرست
+      // ✅ اگر مشتری دارد و کاربر مرتبطی دارد، برای مشتری هم نوتیفیکیشن بفرست
       if (data.customerId) {
         const { data: customer, error: customerError } = await supabase
           .from("customers")
           .select("user_id")
           .eq("id", data.customerId)
-          .maybeSingle(); // ✅ اگر مشتری کاربر مرتبطی ندارد، خطا نمی‌دهد
+          .maybeSingle();
 
         if (customerError) {
           console.error("Failed to fetch customer for notification:", customerError);
@@ -345,13 +355,14 @@ export class InvoiceService {
               invoice_number: invoice.invoice_number,
               total: invoice.total,
               currency: invoice.currency,
+              customer_name: customerName,
             },
           });
         }
       }
     } catch (notifError) {
       // ❌ خطای نوتیفیکیشن را لاگ می‌کنیم، اما فاکتور را خراب نمی‌کنیم
-      console.error("Failed to create notification for invoice:", notifError);
+      console.error("[InvoiceService] Failed to create notification:", notifError);
     }
 
     // ─── پس‌زمینه ──────────────────────────────────────────────────────────
@@ -366,6 +377,7 @@ export class InvoiceService {
     return this.getById(invoice.id, userId);
   }
 
+  // ─── Update Invoice ──────────────────────────────────────────────────────
   async update(id: string, userId: string, data: UpdateInvoice) {
     // دریافت فاکتور فعلی برای مقایسه وضعیت
     const currentInvoice = await this.getById(id, userId);
@@ -402,6 +414,8 @@ export class InvoiceService {
       try {
         const workspaceId = await this.resolveWorkspaceId(userId);
 
+        console.log(`[InvoiceService] Creating payment notification for invoice ${invoice.id} with workspaceId: ${workspaceId}`);
+
         await this.notificationService.create(workspaceId, {
           user_id: userId,
           title: "💰 صورت‌حساب پرداخت شد",
@@ -417,7 +431,7 @@ export class InvoiceService {
           },
         });
       } catch (notifError) {
-        console.error("Failed to create payment notification:", notifError);
+        console.error("[InvoiceService] Failed to create payment notification:", notifError);
       }
     }
 
@@ -425,6 +439,7 @@ export class InvoiceService {
     return invoice;
   }
 
+  // ─── Delete Invoice ──────────────────────────────────────────────────────
   async delete(id: string, userId: string): Promise<void> {
     await supabase.from("invoice_items").delete().eq("invoice_id", id);
     const { error } = await supabase.from("invoices").delete().eq("id", id).eq("user_id", userId);
@@ -432,6 +447,7 @@ export class InvoiceService {
     this.invalidateUserCache(userId);
   }
 
+  // ─── Invalidate Cache ────────────────────────────────────────────────────
   private invalidateUserCache(userId: string) {
     memoryCache.invalidate(`dashboard:v2:${userId}`);
     memoryCache.invalidate(`sales:${userId}`);
@@ -441,6 +457,7 @@ export class InvoiceService {
     memoryCache.invalidate(`products:${userId}`);
   }
 
+  // ─── Get Summary ─────────────────────────────────────────────────────────
   async getSummary(userId: string) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -472,6 +489,7 @@ export class InvoiceService {
     return { todaySales, totalDebt, lowStockCount };
   }
 
+  // ─── Batch Update Stock ──────────────────────────────────────────────────
   private async batchUpdateStock(items: any[], userId: string) {
     if (!items || items.length === 0) return;
 
@@ -523,6 +541,7 @@ export class InvoiceService {
     }
   }
 
+  // ─── Accounting Entries ──────────────────────────────────────────────────
   private async createAccountingEntries(userId: string, invoiceId: string, data: { type: string; total: number; items?: any[]; invoiceNumber?: string; date?: string }): Promise<void> {
     try {
       const { data: accounts } = await supabase
@@ -591,6 +610,7 @@ export class InvoiceService {
     }
   }
 
+  // ─── Generate Invoice Number ─────────────────────────────────────────────
   private async generateInvoiceNumber(): Promise<string> {
     try {
       const { data, error } = await supabase.rpc('get_next_invoice_number');
@@ -605,6 +625,7 @@ export class InvoiceService {
     return `INV-${Date.now().toString(36).toUpperCase()}`;
   }
 
+  // ─── Try Start Workflow ──────────────────────────────────────────────────
   private async tryStartWorkflow(userId: string, invoiceId: string, total: number): Promise<void> {
     try {
       const { data: workflows } = await supabase

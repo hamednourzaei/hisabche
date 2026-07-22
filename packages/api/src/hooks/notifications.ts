@@ -1,4 +1,4 @@
-// packages/src/hooks/notifications.ts
+// packages/api/src/hooks/notifications.ts
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -17,6 +17,18 @@ export interface Notification {
   entity_id?: string | null;
   is_read: boolean;
   created_at: string;
+  // ✅ اضافه کردن metadata برای اطلاعات فاکتور و سایر Entity‌ها
+  metadata?: {
+    invoice_number?: string;
+    customer_name?: string;
+    total?: number;
+    currency?: string;
+    status?: string;
+    product_name?: string;
+    quantity?: number;
+    payment_amount?: number;
+    [key: string]: unknown;
+  };
 }
 
 // ✅ تایپ پاسخ Backend
@@ -56,7 +68,7 @@ export function useNotifications() {
     queryFn: async (): Promise<Notification[]> => {
       try {
         const response = await apiClient.get<NotificationsResponse>(
-          "/v1/notifications"
+          "/api/v1/notifications"
         );
         
         // ✅ استخراج آرایه از response.data.data
@@ -98,7 +110,7 @@ export function useUnreadCount() {
     queryFn: async (): Promise<number> => {
       try {
         const response = await apiClient.get<UnreadCountResponse>(
-          "/v1/notifications/unread-count"
+          "/api/v1/notifications/unread-count"
         );
         
         // ✅ استخراج count از response.data.count
@@ -122,7 +134,7 @@ export function useUnreadCount() {
 /**
  * علامت‌گذاری نوتیفیکیشن‌ها به‌عنوان خوانده‌شده
  * 
- * Backend: PATCH /v1/notifications/mark-read
+ * Backend: PATCH /api/v1/notifications/mark-read
  * Body: { "ids": string[] }
  */
 export function useMarkAsRead() {
@@ -131,7 +143,7 @@ export function useMarkAsRead() {
   return useMutation({
     mutationFn: async (ids: string[]) => {
       if (!ids || ids.length === 0) return;
-      await apiClient.patch("/v1/notifications/mark-read", { ids });
+      await apiClient.patch("/api/v1/notifications/mark-read", { ids });
     },
     onSuccess: () => {
       // ✅ Invalidating هر دو کوئری
@@ -152,7 +164,7 @@ export function useMarkAllAsRead() {
 
   return useMutation({
     mutationFn: async () => {
-      await apiClient.patch("/v1/notifications/mark-all-read");
+      await apiClient.patch("/api/v1/notifications/mark-all-read");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: notificationKeys.list() });

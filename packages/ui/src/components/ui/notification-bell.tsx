@@ -8,13 +8,16 @@ import {
   Bell,
   X,
   ChevronDown,
-  Info,
   CheckCircle2,
   AlertTriangle,
   ShieldCheck,
   CheckCheck,
   Inbox,
   ArrowLeft,
+  FileText,
+  User,
+  DollarSign,
+  Clock,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -25,69 +28,66 @@ import {
 } from "@hisabche/api";
 import type { Notification } from "@hisabche/api";
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   NotificationBell v2 — Redesigned
-   ✅ آیکون رنگی هر نوع · هیرارشی اطلاعات · Skeleton · Empty State طراحی‌شده
-   ✅ Unread Indicator · Mark All Read · Group Header با شمارش · Hover Effects
-   ✅ Badge System · لینک مشاهده همه
-   ═══════════════════════════════════════════════════════════════════════════ */
-
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+// packages/ui/src/components/ui/notification-bell.tsx
 
 interface NotificationGroup {
   key: string;
+  entityId: string;
+  entityType: string;
   entityLabel: string;
   entityUrl: string;
   items: Notification[];
   hasUnread: boolean;
   unreadCount: number;
-  dominantType: Notification["type"];
   latestAt: string;
+  // ✅ تغییر از optional به required با | undefined
+  invoiceNumber: string | undefined;
+  customerName: string | undefined;
+  total: number | undefined;
+  currency: string | undefined;
+  status: string | undefined;
 }
 
 interface NotificationBellProps {
   className?: string;
 }
 
-// ─── Per-type visual language ───────────────────────────────────────────────
-// هر نوع اعلان آیکون، رنگ و پس‌زمینه‌ی مخصوص خودش را دارد
+// ─── Per-type config ─────────────────────────────────────────────────────────
 
 const typeConfig = {
-  info: {
-    icon: Info,
-    text: "text-[hsl(var(--color-info,210_80%_55%))]",
-    bg: "bg-[hsl(var(--color-info,210_80%_55%)/0.12)]",
-    border: "border-s-[hsl(var(--color-info,210_80%_55%))]",
-  },
-  success: {
-    icon: CheckCircle2,
-    text: "text-[hsl(var(--color-success))]",
-    bg: "bg-[hsl(var(--color-success)/0.12)]",
-    border: "border-s-[hsl(var(--color-success))]",
-  },
-  warning: {
-    icon: AlertTriangle,
-    text: "text-[hsl(var(--color-warning))]",
-    bg: "bg-[hsl(var(--color-warning)/0.12)]",
-    border: "border-s-[hsl(var(--color-warning))]",
-  },
-  approval_required: {
-    icon: ShieldCheck,
-    text: "text-[hsl(var(--color-primary))]",
-    bg: "bg-[hsl(var(--color-primary)/0.12)]",
-    border: "border-s-[hsl(var(--color-primary))]",
-  },
+  info: { icon: FileText, color: "text-blue-500", bg: "bg-blue-500/10" },
+  success: { icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-500/10" },
+  warning: { icon: AlertTriangle, color: "text-amber-500", bg: "bg-amber-500/10" },
+  approval_required: { icon: ShieldCheck, color: "text-purple-500", bg: "bg-purple-500/10" },
 } as const;
+
+const statusColors: Record<string, string> = {
+  pending: "text-amber-500 bg-amber-500/10",
+  paid: "text-emerald-500 bg-emerald-500/10",
+  completed: "text-emerald-500 bg-emerald-500/10",
+  cancelled: "text-red-500 bg-red-500/10",
+  partial: "text-blue-500 bg-blue-500/10",
+};
+
+const statusLabels: Record<string, string> = {
+  pending: "در انتظار",
+  paid: "پرداخت شده",
+  completed: "تکمیل شده",
+  cancelled: "لغو شده",
+  partial: "بخشی پرداخت",
+};
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function timeAgo(d: string, t: (key: string, fallback: string) => string): string {
   const m = Math.floor((Date.now() - new Date(d).getTime()) / 60000);
   if (m < 1) return t("time.justNow", "همین الان");
-  if (m < 60) return t("time.minutesAgo", `${m} دقیقه پیش`).replace("{m}", String(m));
+  if (m < 60) return t("time.minutesAgo", `${m} دقیقه پیش`);
   const h = Math.floor(m / 60);
-  if (h < 24) return t("time.hoursAgo", `${h} ساعت پیش`).replace("{h}", String(h));
-  return t("time.daysAgo", `${Math.floor(h / 24)} روز پیش`).replace("{d}", String(Math.floor(h / 24)));
+  if (h < 24) return t("time.hoursAgo", `${h} ساعت پیش`);
+  return t("time.daysAgo", `${Math.floor(h / 24)} روز پیش`);
 }
 
 function resolveEntityUrl(n: Notification): string {
@@ -96,36 +96,77 @@ function resolveEntityUrl(n: Notification): string {
   return "/dashboard";
 }
 
+function formatCurrency(amount: number, currency: string): string {
+  return new Intl.NumberFormat("fa-AF", {
+    style: "currency",
+    currency: currency || "AFN",
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+// ─── Group Notifications by Entity ─────────────────────────────────────────
+
 function groupNotifications(list: Notification[]): NotificationGroup[] {
-  if (!list || !Array.isArray(list) || list.length === 0) {
-    return [];
-  }
+  if (!list || !Array.isArray(list) || list.length === 0) return [];
 
-  const m = new Map<string, Notification[]>();
+  const map = new Map<string, Notification[]>();
   for (const n of list) {
-    const k = n.entity_type && n.entity_id ? `${n.entity_type}:${n.entity_id}` : n.id;
-    if (!m.has(k)) m.set(k, []);
-    m.get(k)!.push(n);
+    const key = n.entity_type && n.entity_id ? `${n.entity_type}:${n.entity_id}` : n.id;
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(n);
   }
 
-  return Array.from(m.entries())
+  return Array.from(map.entries())
     .map(([key, items]) => {
-      const unreadItems = items.filter((i) => !i.is_read);
+      const sorted = items.sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      const latest = sorted[0];
+      const metadata = latest?.metadata || {};
+
+      // ✅ بررسی وجود latest
+      if (!latest) {
+        return {
+          key,
+          entityId: "",
+          entityType: "unknown",
+          entityLabel: "بدون عنوان",
+          entityUrl: "/dashboard",
+          items: sorted,
+          hasUnread: sorted.some((i) => !i.is_read),
+          unreadCount: sorted.filter((i) => !i.is_read).length,
+          latestAt: "",
+          invoiceNumber: undefined,
+          customerName: undefined,
+          total: undefined,
+          currency: undefined,
+          status: undefined,
+        };
+      }
+
       return {
         key,
-        entityLabel: items[0]!.title,
-        entityUrl: resolveEntityUrl(items[0]!),
-        items,
-        hasUnread: unreadItems.length > 0,
-        unreadCount: unreadItems.length,
-        dominantType: (unreadItems[0] ?? items[0])!.type,
-        latestAt: items[0]!.created_at,
+        entityId: latest.entity_id || "",
+        entityType: latest.entity_type || "unknown",
+        entityLabel: metadata?.invoice_number
+          ? `فاکتور #${metadata.invoice_number}`
+          : latest.title || "بدون عنوان",
+        entityUrl: resolveEntityUrl(latest),
+        items: sorted,
+        hasUnread: sorted.some((i) => !i.is_read),
+        unreadCount: sorted.filter((i) => !i.is_read).length,
+        latestAt: latest.created_at || "",
+        invoiceNumber: metadata?.invoice_number,
+        customerName: metadata?.customer_name,
+        total: metadata?.total,
+        currency: metadata?.currency,
+        status: metadata?.status,
       };
     })
     .sort((a, b) => new Date(b.latestAt).getTime() - new Date(a.latestAt).getTime());
 }
 
-// ─── TypeIcon (شارِد بین گروه و آیتم) ───────────────────────────────────────
+// ─── Sub-components ─────────────────────────────────────────────────────────
 
 const TypeIcon = memo(function TypeIcon({
   type,
@@ -136,74 +177,52 @@ const TypeIcon = memo(function TypeIcon({
 }) {
   const config = typeConfig[type] ?? typeConfig.info;
   const Icon = config.icon;
-  const dim = size === "md" ? "size-8" : "size-6";
-  const iconDim = size === "md" ? "size-4" : "size-3.5";
+  const dim = size === "md" ? "w-10 h-10" : "w-8 h-8";
+  const iconDim = size === "md" ? "w-5 h-5" : "w-4 h-4";
 
   return (
-    <div
-      className={cn(
-        "flex shrink-0 items-center justify-center rounded-full",
-        dim,
-        config.bg
-      )}
-    >
-      <Icon className={cn(iconDim, config.text)} aria-hidden="true" />
+    <div className={cn("flex shrink-0 items-center justify-center rounded-full", dim, config.bg)}>
+      <Icon className={cn(iconDim, config.color)} aria-hidden="true" />
     </div>
   );
 });
 TypeIcon.displayName = "TypeIcon";
 
-// ─── NotificationRow ─────────────────────────────────────────────────────────
-// هیرارشی: عنوان ← توضیحات ← زمان، با نشانگر خوانده‌نشده
+// ─── Timeline Item ──────────────────────────────────────────────────────────
 
-const NotificationRow = memo(function NotificationRow({
-  n,
-  onClick,
-  t,
+const TimelineItem = memo(function TimelineItem({
+  notification,
+  isLast,
 }: {
-  n: Notification;
-  onClick: (n: Notification) => void;
-  t: (key: string, fallback: string) => string;
+  notification: Notification;
+  isLast: boolean;
 }) {
-  const config = typeConfig[n.type] ?? typeConfig.info;
-  const handleClick = useCallback(() => onClick(n), [onClick, n]);
+  const config = typeConfig[notification.type] ?? typeConfig.info;
+  const Icon = config.icon;
 
   return (
-    <button
-      onClick={handleClick}
-      className={cn(
-        "w-full text-start px-3 py-2.5 rounded-lg border-s-2 flex items-start gap-2.5",
-        "transition-all duration-150",
-        "hover:bg-[hsl(var(--surface-muted))] active:scale-[0.99]",
-        "motion-reduce:transition-none motion-reduce:active:scale-100",
-        n.is_read ? "border-s-transparent opacity-60" : config.border
-      )}
-    >
-      {!n.is_read && (
-        <span
-          className="mt-1.5 size-1.5 shrink-0 rounded-full bg-[hsl(var(--color-destructive))]"
-          aria-hidden="true"
-        />
-      )}
-      <div className={cn("min-w-0 flex-1", n.is_read && "ps-[10px]")}>
-        <p className="text-sm font-medium text-[hsl(var(--fg-primary))] line-clamp-1">
-          {n.title}
-        </p>
-        {n.body && (
-          <p className="text-xs text-[hsl(var(--fg-secondary))] mt-0.5 line-clamp-2">
-            {n.body}
-          </p>
+    <div className="flex items-start gap-3">
+      <div className="flex flex-col items-center">
+        <div className={cn("w-6 h-6 rounded-full flex items-center justify-center", config.bg)}>
+          <Icon className={cn("w-3.5 h-3.5", config.color)} aria-hidden="true" />
+        </div>
+        {!isLast && <div className="w-px h-4 bg-[hsl(var(--border-default))]" />}
+      </div>
+      <div className="flex-1 pb-3">
+        <p className="text-sm text-[hsl(var(--fg-primary))]">{notification.title}</p>
+        {notification.body && (
+          <p className="text-xs text-[hsl(var(--fg-secondary))] mt-0.5">{notification.body}</p>
         )}
-        <p className="text-[11px] text-[hsl(var(--fg-tertiary))] mt-1 tabular-nums">
-          {timeAgo(n.created_at, t)}
+        <p className="text-[10px] text-[hsl(var(--fg-tertiary))] mt-1">
+          {timeAgo(notification.created_at, (key) => key)}
         </p>
       </div>
-    </button>
+    </div>
   );
 });
-NotificationRow.displayName = "NotificationRow";
+TimelineItem.displayName = "TimelineItem";
 
-// ─── GroupCard ──────────────────────────────────────────────────────────────
+// ─── Group Card ─────────────────────────────────────────────────────────────
 
 const GroupCard = memo(function GroupCard({
   group,
@@ -218,52 +237,81 @@ const GroupCard = memo(function GroupCard({
   onItemClick: (n: Notification) => void;
   t: (key: string, fallback: string) => string;
 }) {
+  const statusColor = group.status ? statusColors[group.status] || "" : "";
+  const statusLabel = group.status ? statusLabels[group.status] || group.status : "";
+
   return (
-    <div className="rounded-xl overflow-hidden">
+    <div
+      className={cn(
+        "rounded-xl border border-[hsl(var(--border-default))] overflow-hidden transition-all duration-200",
+        group.hasUnread && "border-[hsl(var(--color-primary)/0.3)] shadow-sm"
+      )}
+    >
+      {/* ─── Header ─────────────────────────────────────────── */}
       <button
         type="button"
         onClick={onToggle}
-        className={cn(
-          "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg",
-          "transition-colors duration-150",
-          "hover:bg-[hsl(var(--surface-muted))]"
-        )}
+        className="w-full text-start p-3 hover:bg-[hsl(var(--surface-muted))] transition-colors duration-150"
       >
-        <TypeIcon type={group.dominantType} size="md" />
+        <div className="flex items-start gap-3">
+          <TypeIcon type={group.items[0]?.type || "info"} size="md" />
 
-        <span className="flex-1 min-w-0 text-start">
-          <span className="flex items-center gap-1.5">
-            <span className="text-sm font-semibold text-[hsl(var(--fg-primary))] truncate">
-              {group.entityLabel}
-            </span>
-            {group.items.length > 1 && (
-              <span className="shrink-0 text-[10px] font-bold tabular-nums rounded-full px-1.5 py-0.5 bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-tertiary))]">
-                {group.items.length}
+          <div className="flex-1 min-w-0">
+            {/* Entity Label */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold text-[hsl(var(--fg-primary))] truncate">
+                {group.entityLabel}
               </span>
+              {group.hasUnread && (
+                <span className="shrink-0 w-2 h-2 rounded-full bg-[hsl(var(--color-destructive))]" />
+              )}
+            </div>
+
+            {/* Customer & Amount */}
+            <div className="flex items-center gap-2 mt-0.5">
+              {group.customerName && (
+                <span className="text-xs text-[hsl(var(--fg-secondary))] flex items-center gap-1">
+                  <User className="w-3 h-3" aria-hidden="true" />
+                  {group.customerName}
+                </span>
+              )}
+              {group.total !== undefined && (
+                <span className="text-xs font-semibold text-[hsl(var(--fg-primary))] flex items-center gap-1">
+                  <DollarSign className="w-3 h-3" aria-hidden="true" />
+                  {formatCurrency(group.total, group.currency || "AFN")}
+                </span>
+              )}
+            </div>
+
+            {/* Status & Count */}
+            <div className="flex items-center gap-2 mt-1">
+              {group.status && (
+                <span
+                  className={cn(
+                    "text-[10px] font-medium px-1.5 py-0.5 rounded",
+                    statusColor
+                  )}
+                >
+                  {statusLabel}
+                </span>
+              )}
+              <span className="text-[10px] text-[hsl(var(--fg-tertiary))] flex items-center gap-1">
+                <Clock className="w-3 h-3" aria-hidden="true" />
+                {group.items.length} فعالیت • {timeAgo(group.latestAt, t)}
+              </span>
+            </div>
+          </div>
+
+          <ChevronDown
+            className={cn(
+              "w-4 h-4 shrink-0 text-[hsl(var(--fg-tertiary))] transition-transform duration-200 mt-1",
+              isOpen && "rotate-180"
             )}
-          </span>
-          <span className="block text-[11px] text-[hsl(var(--fg-tertiary))] mt-0.5">
-            {group.hasUnread
-              ? t("notifications.unreadInGroup", `${group.unreadCount} خوانده‌نشده`).replace(
-                  "{n}",
-                  String(group.unreadCount)
-                )
-              : t("notifications.allRead", "همه خوانده شده")}
-          </span>
-        </span>
-
-        {group.hasUnread && (
-          <span className="shrink-0 size-2 rounded-full bg-[hsl(var(--color-destructive))]" />
-        )}
-
-        <ChevronDown
-          className={cn(
-            "size-4 shrink-0 text-[hsl(var(--fg-tertiary))] transition-transform duration-200",
-            isOpen && "rotate-180"
-          )}
-        />
+          />
+        </div>
       </button>
 
+      {/* ─── Timeline ───────────────────────────────────────── */}
       <div
         className={cn(
           "grid transition-[grid-template-rows] duration-200 ease-out",
@@ -271,9 +319,18 @@ const GroupCard = memo(function GroupCard({
         )}
       >
         <div className="overflow-hidden">
-          <div className="space-y-0.5 pt-0.5 ps-1">
-            {group.items.map((n) => (
-              <NotificationRow key={n.id} n={n} onClick={onItemClick} t={t} />
+          <div className="px-3 pb-3 pt-1 border-t border-[hsl(var(--border-default)/0.5)]">
+            {group.items.map((n, index) => (
+              <button
+                key={n.id}
+                onClick={() => onItemClick(n)}
+                className="w-full text-start"
+              >
+                <TimelineItem
+                  notification={n}
+                  isLast={index === group.items.length - 1}
+                />
+              </button>
             ))}
           </div>
         </div>
@@ -283,23 +340,20 @@ const GroupCard = memo(function GroupCard({
 });
 GroupCard.displayName = "GroupCard";
 
-// ─── Skeleton (به‌جای Spinner) ──────────────────────────────────────────────
+// ─── Skeleton ───────────────────────────────────────────────────────────────
 
 const BellSkeleton = memo(function BellSkeleton() {
   return (
-    <div className="space-y-2 px-1 py-1" aria-hidden="true">
-      {[0, 1, 2].map((i) => (
-        <div key={i} className="flex items-center gap-2.5 px-2.5 py-2">
-          <div className="size-8 shrink-0 rounded-full bg-[hsl(var(--surface-muted))] animate-pulse" />
-          <div className="flex-1 space-y-1.5">
-            <div
-              className="h-3.5 rounded bg-[hsl(var(--surface-muted))] animate-pulse"
-              style={{ width: `${65 - i * 10}%` }}
-            />
-            <div
-              className="h-2.5 rounded bg-[hsl(var(--surface-muted))] animate-pulse"
-              style={{ width: `${40 - i * 5}%` }}
-            />
+    <div className="space-y-2 p-2">
+      {[0, 1].map((i) => (
+        <div key={i} className="p-3 border border-[hsl(var(--border-default))] rounded-xl">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-full bg-[hsl(var(--surface-muted))] animate-pulse" />
+            <div className="flex-1 space-y-2">
+              <div className="h-4 bg-[hsl(var(--surface-muted))] rounded w-3/4 animate-pulse" />
+              <div className="h-3 bg-[hsl(var(--surface-muted))] rounded w-1/2 animate-pulse" />
+              <div className="h-3 bg-[hsl(var(--surface-muted))] rounded w-1/3 animate-pulse" />
+            </div>
           </div>
         </div>
       ))}
@@ -308,7 +362,7 @@ const BellSkeleton = memo(function BellSkeleton() {
 });
 BellSkeleton.displayName = "BellSkeleton";
 
-// ─── EmptyState ──────────────────────────────────────────────────────────────
+// ─── Empty State ────────────────────────────────────────────────────────────
 
 const BellEmptyState = memo(function BellEmptyState({
   t,
@@ -316,18 +370,16 @@ const BellEmptyState = memo(function BellEmptyState({
   t: (key: string, fallback: string) => string;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-2.5 px-4 py-10 text-center">
-      <div className="flex size-11 items-center justify-center rounded-2xl bg-[hsl(var(--surface-muted))]">
-        <Inbox className="size-5 text-[hsl(var(--fg-tertiary))]" aria-hidden="true" />
+    <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+      <div className="w-16 h-16 rounded-full bg-[hsl(var(--surface-muted))] flex items-center justify-center mb-4">
+        <Inbox className="w-8 h-8 text-[hsl(var(--fg-tertiary))]" aria-hidden="true" />
       </div>
-      <div className="space-y-0.5">
-        <p className="text-sm font-semibold text-[hsl(var(--fg-primary))]">
-          {t("notifications.empty", "اعلانی وجود ندارد")}
-        </p>
-        <p className="text-xs text-[hsl(var(--fg-tertiary))]">
-          {t("notifications.emptyHint", "به‌محض بروز رویداد جدید، اینجا نشان داده می‌شود")}
-        </p>
-      </div>
+      <h4 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">
+        {t("notifications.empty", "همه چیز مرتب است")}
+      </h4>
+      <p className="text-sm text-[hsl(var(--fg-tertiary))] mt-1">
+        {t("notifications.emptyHint", "اعلان جدیدی ندارید.")}
+      </p>
     </div>
   );
 });
@@ -348,7 +400,7 @@ export const NotificationBell = memo(function NotificationBell({
   const { mutate: markAsRead } = useMarkAsRead();
   const { mutate: markAllAsRead, isPending: isMarkingAll } = useMarkAllAsRead();
 
-  const groups = useMemo(() => groupNotifications(notifications || []), [notifications]);
+  const groups = useMemo(() => groupNotifications(notifications), [notifications]);
 
   const [tog, setTog] = useState<Record<string, boolean>>({});
 
@@ -411,15 +463,15 @@ export const NotificationBell = memo(function NotificationBell({
           "relative p-2 rounded-xl text-[hsl(var(--fg-secondary))]",
           "hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]",
           "transition-colors duration-150",
-          "focus-visible:ring-4 focus-visible:ring-[rgba(18,200,160,0.18)] focus-visible:outline-none"
+          "focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))] focus-visible:outline-none"
         )}
         aria-label={t("notifications.bell", "اعلان‌ها")}
         aria-expanded={open}
       >
         <Bell className="size-5" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -end-1 flex items-center justify-center min-w-[20px] h-[20px] px-1 text-[11px] font-bold text-white bg-[hsl(var(--color-destructive))] rounded-full shadow-sm shadow-[hsl(var(--color-destructive)/0.4)] tabular-nums">
-            {unreadCount > 99 ? t("notifications.many", "۹۹+") : unreadCount}
+          <span className="absolute -top-1 -end-1 flex items-center justify-center min-w-[20px] h-[20px] px-1 text-[11px] font-bold text-white bg-[hsl(var(--color-destructive))] rounded-full shadow-sm shadow-[hsl(var(--color-destructive)/0.4)]">
+            {unreadCount > 99 ? "۹۹+" : unreadCount}
           </span>
         )}
       </button>
@@ -430,24 +482,25 @@ export const NotificationBell = memo(function NotificationBell({
           role="dialog"
           aria-label={t("notifications.title", "اعلان‌ها")}
           className={cn(
-            "absolute end-0 top-full mt-2 z-50 w-80 max-h-[26rem] flex flex-col",
-            "rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] shadow-lg",
-            "animate-in fade-in-0 zoom-in-95 slide-in-from-top-2 duration-150"
+            "absolute end-0 top-full mt-2 z-50 w-[400px] max-h-[480px] flex flex-col",
+            "rounded-2xl border border-[hsl(var(--border-default))]",
+            "bg-[hsl(var(--surface-elevated))] shadow-2xl shadow-black/20",
+            "animate-in fade-in-0 slide-in-from-top-2 duration-200"
           )}
         >
           {/* Header */}
-          <div className="flex items-center justify-between gap-2 px-3 py-2.5 border-b border-[hsl(var(--border-default))]">
-            <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-[hsl(var(--border-default))]">
+            <div className="flex items-center gap-2">
               <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">
                 {t("notifications.title", "اعلان‌ها")}
               </h3>
               {unreadCount > 0 && (
-                <span className="shrink-0 text-[10px] font-bold tabular-nums rounded-full px-1.5 py-0.5 bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))]">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[hsl(var(--color-destructive)/0.1)] text-[hsl(var(--color-destructive))]">
                   {unreadCount}
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-1 shrink-0">
+            <div className="flex items-center gap-1">
               {unreadCount > 0 && (
                 <button
                   type="button"
@@ -459,7 +512,7 @@ export const NotificationBell = memo(function NotificationBell({
                     "transition-colors disabled:opacity-40"
                   )}
                 >
-                  <CheckCheck className="size-3.5" aria-hidden="true" />
+                  <CheckCheck className="size-3.5" />
                   {t("notifications.markAllRead", "خواندن همه")}
                 </button>
               )}
@@ -475,13 +528,13 @@ export const NotificationBell = memo(function NotificationBell({
           </div>
 
           {/* Body */}
-          <div className="overflow-y-auto flex-1 p-1.5">
+          <div className="overflow-y-auto flex-1 p-3">
             {isLoading ? (
               <BellSkeleton />
             ) : groups.length === 0 ? (
               <BellEmptyState t={t} />
             ) : (
-              <div className="space-y-1">
+              <div className="space-y-2">
                 {groups.map((g) => (
                   <GroupCard
                     key={g.key}
@@ -502,14 +555,14 @@ export const NotificationBell = memo(function NotificationBell({
               type="button"
               onClick={handleViewAll}
               className={cn(
-                "flex items-center justify-center gap-1.5 px-3 py-2.5 text-xs font-medium",
+                "flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-medium",
                 "text-[hsl(var(--fg-secondary))] hover:text-[hsl(var(--color-primary))]",
                 "border-t border-[hsl(var(--border-default))]",
                 "hover:bg-[hsl(var(--surface-muted))] transition-colors duration-150"
               )}
             >
               {t("notifications.viewAll", "مشاهده همه اعلان‌ها")}
-              <ArrowLeft className="size-3.5 rtl:rotate-180" aria-hidden="true" />
+              <ArrowLeft className="size-3.5 rtl:rotate-180" />
             </button>
           )}
         </div>

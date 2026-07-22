@@ -25,6 +25,24 @@ export class NotificationService {
 
   // ─── Create Notification ────────────────────────────────────
   async create(workspaceId: string, input: CreateNotificationInput) {
+    console.log('📝 [NotificationService] Creating notification:', {
+      workspaceId,
+      userId: input.user_id,
+      title: input.title,
+      entity_type: input.entity_type,
+      entity_id: input.entity_id,
+    });
+
+    if (!workspaceId) {
+      console.error('❌ [NotificationService] workspaceId is required');
+      return null;
+    }
+
+    if (!input.user_id) {
+      console.error('❌ [NotificationService] user_id is required');
+      return null;
+    }
+
     const { data, error } = await supabase
       .from("notifications")
       .insert({
@@ -41,7 +59,12 @@ export class NotificationService {
       .select(NOTIFICATION_MINIMAL)
       .single();
 
-    if (error) throw new DatabaseError("Failed to create notification", error);
+    if (error) {
+      console.error('❌ [NotificationService] Supabase error:', error);
+      throw new DatabaseError("Failed to create notification", error);
+    }
+
+    console.log('✅ [NotificationService] Notification created:', data);
 
     // ✅ Invalidate cache
     await this.invalidateCache(input.user_id);
@@ -105,14 +128,20 @@ export class NotificationService {
 
   // ─── Mark All as Read ──────────────────────────────────────
   async markAllAsRead(userId: string) {
+    console.log('📝 [NotificationService] Marking all as read for user:', userId);
+
     const { error } = await supabase
       .from("notifications")
       .update({ is_read: true, read_at: new Date().toISOString() })
       .eq("user_id", userId)
       .eq("is_read", false);
 
-    if (error) throw new DatabaseError("Failed to mark all notifications as read", error);
+    if (error) {
+      console.error('❌ [NotificationService] Supabase error:', error);
+      throw new DatabaseError("Failed to mark all notifications as read", error);
+    }
 
+    console.log('✅ [NotificationService] All notifications marked as read');
     await this.invalidateCache(userId);
   }
 
