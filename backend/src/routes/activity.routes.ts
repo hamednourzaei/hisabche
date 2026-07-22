@@ -16,9 +16,9 @@ const activityFiltersSchema = z.object({
 });
 
 export async function activityRoutes(fastify: FastifyInstance) {
-  // ─── GET /v1/activities ──────────────────────────────────────────────
+  // ─── GET /api/v1/activities ──────────────────────────────────────────────
   fastify.get(
-    "/v1/activities",
+    "/api/v1/activities",
     {
       preHandler: [authenticate, cacheMiddleware({ ttl: 30, keyPrefix: 'activities' })],
     },
@@ -43,9 +43,9 @@ export async function activityRoutes(fastify: FastifyInstance) {
     }
   );
 
-  // ─── GET /v1/activities/unread-count ──────────────────────────────
+  // ─── GET /api/v1/activities/unread-count ──────────────────────────────
   fastify.get(
-    "/v1/activities/unread-count",
+    "/api/v1/activities/unread-count",
     {
       preHandler: [authenticate, cacheMiddleware({ ttl: 15, keyPrefix: 'activities-unread' })],
     },
@@ -61,9 +61,9 @@ export async function activityRoutes(fastify: FastifyInstance) {
     }
   );
 
-  // ─── PATCH /v1/activities/mark-read ─────────────────────────────────
+  // ─── PATCH /api/v1/activities/mark-read ─────────────────────────────────
   fastify.patch(
-    "/v1/activities/mark-read",
+    "/api/v1/activities/mark-read",
     {
       preHandler: [authenticate],
     },
@@ -84,9 +84,9 @@ export async function activityRoutes(fastify: FastifyInstance) {
     }
   );
 
-  // ─── PATCH /v1/activities/mark-all-read ────────────────────────────
+  // ─── PATCH /api/v1/activities/mark-all-read ────────────────────────────
   fastify.patch(
-    "/v1/activities/mark-all-read",
+    "/api/v1/activities/mark-all-read",
     {
       preHandler: [authenticate],
     },
@@ -106,9 +106,9 @@ export async function activityRoutes(fastify: FastifyInstance) {
     }
   );
 
-  // ─── DELETE /v1/activities/:id ─────────────────────────────────────
+  // ─── DELETE /api/v1/activities/:id ─────────────────────────────────────
   fastify.delete(
-    "/v1/activities/:id",
+    "/api/v1/activities/:id",
     {
       preHandler: [authenticate],
     },
