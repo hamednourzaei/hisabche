@@ -1,14 +1,17 @@
 // ============================================
 // backend/src/routes/invoice.routes.ts
 // FIXED: Invalidate analytics cache after invoice operations
+// FIXED: Create activity records so the Activity Center receives data
 // ============================================
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { InvoiceService } from "../services/invoice.service";
+import { ActivityService } from "../services/activity.service";
 import { authenticate } from "../middleware/auth.middleware";
 import { cacheMiddleware, clearCache } from "../middleware/cache.middleware";
 
 const invoiceService = new InvoiceService();
+const activityService = new ActivityService();
 
 export async function invoiceRoutes(fastify: FastifyInstance) {
   // GET /api/invoices
@@ -68,6 +71,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
 
   // ─── POST /api/invoices ─────────────────────────────────
   // ✅ FIX: Invalidate analytics cache
+  // ✅ FIX: Create activity record (previously missing — activities table was never populated)
   fastify.post(
     "/api/invoices",
     {
@@ -108,13 +112,38 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
         };
 
         const invoice = await invoiceService.create(userId, data);
-        
+
         // ✅ FIX: Invalidate all related caches
         await clearCache(`invoices:${userId}:*`);
         await clearCache(`dashboard:v2:${userId}`);
         await clearCache(`sales:${userId}:*`);
         await clearCache(`insights:${userId}`);
-        
+
+        // ✅ FIX: Create activity record — wrapped in try/catch so a failure
+        // here never blocks the invoice response itself.
+        try {
+          await activityService.createActivity({
+            actorId: userId,
+            actorName: (request as any).user?.email ?? "",
+            entityType: "invoice",
+            entityId: invoice.id,
+            action: "created",
+            title: `فاکتور ${invoice.invoice_number ?? ""} ایجاد شد`,
+            metadata: {
+              invoice_number: invoice.invoice_number,
+              total: invoice.total,
+              currency: invoice.currency,
+              status: invoice.status,
+              customer_name: body.customerName ?? undefined,
+            },
+            importance: 2,
+          });
+          await clearCache(`activities:${userId}:*`);
+          await clearCache(`activities-unread:${userId}`);
+        } catch (activityErr) {
+          fastify.log.error(activityErr, "Failed to create activity for invoice create");
+        }
+
         return reply.code(201).send(invoice);
       } catch (err: any) {
         fastify.log.error(err);
@@ -125,6 +154,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
 
   // ─── PATCH /api/invoices/:id ────────────────────────────
   // ✅ FIX: Invalidate analytics cache
+  // ✅ FIX: Create activity record (previously missing)
   fastify.patch(
     "/api/invoices/:id",
     {
@@ -136,14 +166,37 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
         const body = request.body as any;
         const userId = (request as any).userId;
         const invoice = await invoiceService.update(id, userId, body);
-        
+
         // ✅ FIX: Invalidate all related caches
         await clearCache(`invoice:${userId}:${id}`);
         await clearCache(`invoices:${userId}:*`);
         await clearCache(`dashboard:v2:${userId}`);
         await clearCache(`sales:${userId}:*`);
         await clearCache(`insights:${userId}`);
-        
+
+        // ✅ FIX: Create activity record
+        try {
+          await activityService.createActivity({
+            actorId: userId,
+            actorName: (request as any).user?.email ?? "",
+            entityType: "invoice",
+            entityId: id,
+            action: "updated",
+            title: `فاکتور ${invoice.invoice_number ?? ""} ویرایش شد`,
+            metadata: {
+              invoice_number: invoice.invoice_number,
+              total: invoice.total,
+              currency: invoice.currency,
+              status: invoice.status,
+            },
+            importance: 1,
+          });
+          await clearCache(`activities:${userId}:*`);
+          await clearCache(`activities-unread:${userId}`);
+        } catch (activityErr) {
+          fastify.log.error(activityErr, "Failed to create activity for invoice update");
+        }
+
         return reply.send(invoice);
       } catch (err: any) {
         fastify.log.error(err);
@@ -154,6 +207,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
 
   // ─── DELETE /api/invoices/:id ───────────────────────────
   // ✅ FIX: Invalidate analytics cache
+  // ✅ FIX: Create activity record (previously missing)
   fastify.delete(
     "/api/invoices/:id",
     {
@@ -164,14 +218,31 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
         const { id } = request.params as { id: string };
         const userId = (request as any).userId;
         await invoiceService.delete(id, userId);
-        
+
         // ✅ FIX: Invalidate all related caches
         await clearCache(`invoice:${userId}:${id}`);
         await clearCache(`invoices:${userId}:*`);
         await clearCache(`dashboard:v2:${userId}`);
         await clearCache(`sales:${userId}:*`);
         await clearCache(`insights:${userId}`);
-        
+
+        // ✅ FIX: Create activity record
+        try {
+          await activityService.createActivity({
+            actorId: userId,
+            actorName: (request as any).user?.email ?? "",
+            entityType: "invoice",
+            entityId: id,
+            action: "deleted",
+            title: "فاکتور حذف شد",
+            importance: 2,
+          });
+          await clearCache(`activities:${userId}:*`);
+          await clearCache(`activities-unread:${userId}`);
+        } catch (activityErr) {
+          fastify.log.error(activityErr, "Failed to create activity for invoice delete");
+        }
+
         return reply.code(204).send();
       } catch (err: any) {
         fastify.log.error(err);

@@ -20,6 +20,7 @@ import { apiClient } from "@hisabche/api";
    ResetPasswordClient v3 — Fixed: confirmPassword + focus
    ✅ confirmPassword به backend فرستاده می‌شود
    ✅ PasswordField از کامپوننت خارج شده (رفع مشکل focus)
+   ✅ FIX: حذف `err: any` — رفع خطای ESLint no-explicit-any
    ═══════════════════════════════════════════════════════════ */
 
 // ─── Password Field (خارج از کامپوننت — ثابت بودن identity) ──
@@ -138,10 +139,23 @@ export const ResetPasswordClient = memo(function ResetPasswordClient() {
             router.push("/login");
           }, 3000);
         }
-      } catch (err: any) {
+      } catch (err) {
+        // ✅ FIX: به‌جای `err: any`، با type guard دستی پیام خطا استخراج می‌شود
+        const message =
+          err &&
+          typeof err === "object" &&
+          "response" in err &&
+          err.response &&
+          typeof err.response === "object" &&
+          "data" in err.response &&
+          err.response.data &&
+          typeof err.response.data === "object" &&
+          "message" in err.response.data
+            ? String((err.response.data as { message: unknown }).message)
+            : undefined;
+
         setError(
-          err?.response?.data?.message ||
-            t("auth.invalidToken", "لینک نامعتبر یا منقضی شده است")
+          message || t("auth.invalidToken", "لینک نامعتبر یا منقضی شده است")
         );
       } finally {
         setLoading(false);

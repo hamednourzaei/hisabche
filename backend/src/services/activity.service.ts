@@ -2,6 +2,7 @@
 // ============================================
 // Activity Service — Entity Activity Feed v2.0
 // با Cursor Pagination + Cache + Performance
+// FIXED: Removed duplicate getEntitySummary implementation (TS2393)
 // ============================================
 
 import { supabase } from "../db";
@@ -136,64 +137,167 @@ export class ActivityService {
     return data;
   }
 
-// backend/src/services/activity.service.ts
+  // ─── Get Activities ─────────────────────────────────────────────────────────────
+  async getActivities(
+    userId: string,
+    filters?: {
+      type?: string | undefined;
+      unread?: boolean | undefined;
+      search?: string | undefined;
+      limit?: number | undefined;
+      cursor?: string | undefined;
+    }
+  ): Promise<PaginatedActivitiesResponse> {
+    const cacheKey = `activities:${userId}:${JSON.stringify(filters)}`;
 
-// ─── Get Activities ─────────────────────────────────────────────────────────────
-async getActivities(
-  userId: string,
-  filters?: {
-    type?: string | undefined;
-    unread?: boolean | undefined;
-    search?: string | undefined;
-    limit?: number | undefined;
-    cursor?: string | undefined;
-  }
-): Promise<PaginatedActivitiesResponse> {
-  const cacheKey = `activities:${userId}:${JSON.stringify(filters)}`;
-  
-  try {
-    const cached = await memoryCache.get(cacheKey);
-    if (cached) return cached as PaginatedActivitiesResponse;
-  } catch (cacheError) {
-    // اگر کش مشکل داشت، ادامه بده
-    console.warn("⚠️ Cache error, continuing without cache:", cacheError);
-  }
-
-  const limit = Math.min(filters?.limit || 20, 100);
-
-  try {
-    let query = supabase
-      .from("activities")
-      .select("*", { count: "exact" })
-      .eq("actor_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(limit + 1);
-
-    if (filters?.cursor) {
-      query = query.lt("created_at", filters.cursor);
+    try {
+      const cached = await memoryCache.get(cacheKey);
+      if (cached) return cached as PaginatedActivitiesResponse;
+    } catch (cacheError) {
+      // اگر کش مشکل داشت، ادامه بده
+      console.warn("⚠️ Cache error, continuing without cache:", cacheError);
     }
 
-    if (filters?.type) {
-      query = query.eq("entity_type", filters.type);
-    }
+    const limit = Math.min(filters?.limit || 20, 100);
 
-    if (filters?.unread) {
-      query = query.eq("is_read", false);
-    }
+    try {
+      let query = supabase
+        .from("activities")
+        .select("*", { count: "exact" })
+        .eq("actor_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(limit + 1);
 
-    if (filters?.search) {
-      query = query.ilike("title", `%${filters.search}%`);
-    }
+      if (filters?.cursor) {
+        query = query.lt("created_at", filters.cursor);
+      }
 
-    const { data: activities, error, count } = await query;
+      if (filters?.type) {
+        query = query.eq("entity_type", filters.type);
+      }
 
-    if (error) {
-      console.error("❌ [ActivityService] Failed to fetch activities:", error);
-      throw new DatabaseError("Failed to fetch activities", error);
-    }
+      if (filters?.unread) {
+        query = query.eq("is_read", false);
+      }
 
-    // ✅ اگر داده‌ای وجود نداشت، خالی برگردان
-    if (!activities || activities.length === 0) {
+      if (filters?.search) {
+        query = query.ilike("title", `%${filters.search}%`);
+      }
+
+      const { data: activities, error, count } = await query;
+
+      if (error) {
+        console.error("❌ [ActivityService] Failed to fetch activities:", error);
+        throw new DatabaseError("Failed to fetch activities", error);
+      }
+
+      // ✅ اگر داده‌ای وجود نداشت، خالی برگردان
+      if (!activities || activities.length === 0) {
+        return {
+          data: [],
+          nextCursor: null,
+          hasMore: false,
+          total: 0,
+        };
+      }
+
+      const hasMore = activities.length > limit;
+      const items = hasMore ? activities.slice(0, limit) : activities;
+      const nextCursor = hasMore && items.length > 0
+        ? items[items.length - 1]?.created_at
+        : null;
+
+      const groups = new Map<string, any[]>();
+      for (const activity of items) {
+        const key = `${activity.entity_type}:${activity.entity_id}`;
+        if (!groups.has(key)) {
+          groups.set(key, []);
+        }
+        groups.get(key)!.push(activity);
+      }
+
+      const result: ActivityGroupDto[] = [];
+
+      for (const [key, groupItems] of groups) {
+        const [entityType, entityId] = key.split(":") as [string, string];
+        const sortedItems = groupItems.sort(
+          (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        const latest = sortedItems[0];
+        const metadata = latest.metadata || {};
+
+        // ✅ با try-catch برای هر گروه
+        let summary: Partial<EntitySummaryDto> | null = null;
+        try {
+          summary = await this.getEntitySummary(entityType, entityId, userId);
+        } catch (summaryError) {
+          console.warn(`⚠️ Failed to get summary for ${entityType}:${entityId}`, summaryError);
+          summary = null;
+        }
+
+        const unreadCount = sortedItems.filter((i) => !i.is_read).length;
+
+        result.push({
+          entityType: entityType as ActivityGroupDto["entityType"],
+          entityId,
+          entitySummary: {
+            label: metadata?.invoice_number
+              ? `INV-${metadata.invoice_number}`
+              : latest.title || "بدون عنوان",
+            subtitle: metadata?.customer_name || summary?.subtitle || undefined,
+            amount: metadata?.total || summary?.amount || undefined,
+            currency: metadata?.currency || summary?.currency || undefined,
+            status: metadata?.status || summary?.status || undefined,
+            statusLabel: metadata?.status ? statusLabels[metadata.status] : undefined,
+            statusColor: metadata?.status ? statusColors[metadata.status] : undefined,
+            activityCount: sortedItems.length,
+            lastActivity: latest.created_at,
+            route: `/${entityType}s/${entityId}`,
+          },
+          activities: sortedItems.map((item) => ({
+            id: item.id,
+            action: item.action,
+            title: item.title,
+            description: item.description,
+            actor: item.actor_name,
+            timestamp: item.created_at,
+            isRead: item.is_read,
+            importance: item.importance || 0,
+          })),
+          unreadCount,
+          latestAt: latest.created_at,
+          hasUnread: unreadCount > 0,
+          priority: this.getPriority(latest.importance || 0, unreadCount),
+        });
+      }
+
+      const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
+      result.sort((a, b) => {
+        const aPriority = priorityOrder[a.priority] ?? 2;
+        const bPriority = priorityOrder[b.priority] ?? 2;
+        if (aPriority !== bPriority) return aPriority - bPriority;
+        if (a.unreadCount > 0 && b.unreadCount === 0) return -1;
+        if (a.unreadCount === 0 && b.unreadCount > 0) return 1;
+        return new Date(b.latestAt).getTime() - new Date(a.latestAt).getTime();
+      });
+
+      const response: PaginatedActivitiesResponse = {
+        data: result,
+        nextCursor,
+        hasMore,
+        total: count || 0,
+      };
+
+      try {
+        await memoryCache.set(cacheKey, response, this.cacheTTL);
+      } catch (cacheError) {
+        console.warn("⚠️ Failed to set cache:", cacheError);
+      }
+
+      return response;
+    } catch (error) {
+      console.error("❌ [ActivityService] Unexpected error in getActivities:", error);
+      // ✅ به جای throw، خالی برگردان
       return {
         data: [],
         nextCursor: null,
@@ -201,212 +305,22 @@ async getActivities(
         total: 0,
       };
     }
-
-    const hasMore = activities.length > limit;
-    const items = hasMore ? activities.slice(0, limit) : activities;
-    const nextCursor = hasMore && items.length > 0 
-      ? items[items.length - 1]?.created_at 
-      : null;
-
-    const groups = new Map<string, any[]>();
-    for (const activity of items) {
-      const key = `${activity.entity_type}:${activity.entity_id}`;
-      if (!groups.has(key)) {
-        groups.set(key, []);
-      }
-      groups.get(key)!.push(activity);
-    }
-
-    const result: ActivityGroupDto[] = [];
-
-    for (const [key, groupItems] of groups) {
-      const [entityType, entityId] = key.split(":") as [string, string];
-      const sortedItems = groupItems.sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
-      const latest = sortedItems[0];
-      const metadata = latest.metadata || {};
-
-      // ✅ با try-catch برای هر گروه
-      let summary: Partial<EntitySummaryDto> | null = null;
-      try {
-        summary = await this.getEntitySummary(entityType, entityId, userId);
-      } catch (summaryError) {
-        console.warn(`⚠️ Failed to get summary for ${entityType}:${entityId}`, summaryError);
-        summary = null;
-      }
-
-      const unreadCount = sortedItems.filter((i) => !i.is_read).length;
-
-      result.push({
-        entityType: entityType as ActivityGroupDto["entityType"],
-        entityId,
-        entitySummary: {
-          label: metadata?.invoice_number
-            ? `INV-${metadata.invoice_number}`
-            : latest.title || "بدون عنوان",
-          subtitle: metadata?.customer_name || summary?.subtitle || undefined,
-          amount: metadata?.total || summary?.amount || undefined,
-          currency: metadata?.currency || summary?.currency || undefined,
-          status: metadata?.status || summary?.status || undefined,
-          statusLabel: metadata?.status ? statusLabels[metadata.status] : undefined,
-          statusColor: metadata?.status ? statusColors[metadata.status] : undefined,
-          activityCount: sortedItems.length,
-          lastActivity: latest.created_at,
-          route: `/${entityType}s/${entityId}`,
-        },
-        activities: sortedItems.map((item) => ({
-          id: item.id,
-          action: item.action,
-          title: item.title,
-          description: item.description,
-          actor: item.actor_name,
-          timestamp: item.created_at,
-          isRead: item.is_read,
-          importance: item.importance || 0,
-        })),
-        unreadCount,
-        latestAt: latest.created_at,
-        hasUnread: unreadCount > 0,
-        priority: this.getPriority(latest.importance || 0, unreadCount),
-      });
-    }
-
-    const priorityOrder = { critical: 0, high: 1, medium: 2, low: 3 };
-    result.sort((a, b) => {
-      const aPriority = priorityOrder[a.priority] ?? 2;
-      const bPriority = priorityOrder[b.priority] ?? 2;
-      if (aPriority !== bPriority) return aPriority - bPriority;
-      if (a.unreadCount > 0 && b.unreadCount === 0) return -1;
-      if (a.unreadCount === 0 && b.unreadCount > 0) return 1;
-      return new Date(b.latestAt).getTime() - new Date(a.latestAt).getTime();
-    });
-
-    const response: PaginatedActivitiesResponse = {
-      data: result,
-      nextCursor,
-      hasMore,
-      total: count || 0,
-    };
-
-    try {
-      await memoryCache.set(cacheKey, response, this.cacheTTL);
-    } catch (cacheError) {
-      console.warn("⚠️ Failed to set cache:", cacheError);
-    }
-
-    return response;
-  } catch (error) {
-    console.error("❌ [ActivityService] Unexpected error in getActivities:", error);
-    // ✅ به جای throw، خالی برگردان
-    return {
-      data: [],
-      nextCursor: null,
-      hasMore: false,
-      total: 0,
-    };
   }
-}
-
-// ─── Get Entity Summary ──────────────────────────────────────────────────
-private async getEntitySummary(
-  entityType: string,
-  entityId: string,
-  userId: string
-): Promise<Partial<EntitySummaryDto> | null> {
-  try {
-    // ✅ اگر entityType یا entityId خالی بود، null برگردان
-    if (!entityType || !entityId) {
-      return null;
-    }
-
-    if (entityType === "invoice") {
-      try {
-        const { data, error } = await supabase
-          .from("invoices")
-          .select(`
-            id,
-            invoice_number,
-            total,
-            currency,
-            status,
-            customer:customers!fk_invoices_customer (
-              full_name
-            )
-          `)
-          .eq("id", entityId)
-          .eq("user_id", userId)
-          .maybeSingle();
-
-        if (error || !data) {
-          console.warn(`⚠️ Invoice not found: ${entityId}`, error?.message);
-          return null;
-        }
-
-        const customer = Array.isArray(data.customer)
-          ? data.customer[0]
-          : data.customer;
-
-        return {
-          label: `INV-${data.invoice_number || entityId.slice(0, 8)}`,
-          subtitle: customer?.full_name || undefined,
-          amount: data.total || undefined,
-          currency: data.currency || undefined,
-          status: data.status || undefined,
-        };
-      } catch (err) {
-        console.warn(`⚠️ Failed to fetch invoice ${entityId}:`, err);
-        return null;
-      }
-    }
-
-    if (entityType === "customer") {
-      try {
-        const { data, error } = await supabase
-          .from("customers")
-          .select("full_name, phone, email, opening_balance")
-          .eq("id", entityId)
-          .eq("user_id", userId)
-          .maybeSingle();
-
-        if (error || !data) {
-          console.warn(`⚠️ Customer not found: ${entityId}`, error?.message);
-          return null;
-        }
-
-        return {
-          label: data.full_name || entityId.slice(0, 8),
-          subtitle: data.phone || data.email || undefined,
-          amount: data.opening_balance || undefined,
-          currency: "AFN",
-        };
-      } catch (err) {
-        console.warn(`⚠️ Failed to fetch customer ${entityId}:`, err);
-        return null;
-      }
-    }
-
-    // ✅ Fallback برای سایر entity types
-    return {
-      label: `${entityType} ${entityId.slice(0, 8)}`,
-      subtitle: undefined,
-      amount: undefined,
-      currency: undefined,
-      status: undefined,
-    };
-  } catch (error) {
-    console.error(`❌ Failed to get entity summary for ${entityType}:${entityId}`, error);
-    return null;
-  }
-}
 
   // ─── Get Entity Summary ──────────────────────────────────────────────────
+  // NOTE: Only one implementation now (previously duplicated — TS2393).
+  // This is the more complete version, covering invoice/customer/product/payment.
   private async getEntitySummary(
     entityType: string,
     entityId: string,
     userId: string
   ): Promise<Partial<EntitySummaryDto> | null> {
     try {
+      // ✅ اگر entityType یا entityId خالی بود، null برگردان
+      if (!entityType || !entityId) {
+        return null;
+      }
+
       if (entityType === "invoice") {
         try {
           const { data, error } = await supabase
@@ -426,7 +340,7 @@ private async getEntitySummary(
             .maybeSingle();
 
           if (error || !data) {
-            console.warn(`⚠️ Invoice not found: ${entityId}`, error);
+            console.warn(`⚠️ Invoice not found: ${entityId}`, error?.message);
             return null;
           }
 
@@ -435,11 +349,11 @@ private async getEntitySummary(
             : data.customer;
 
           return {
-            label: `INV-${data.invoice_number}`,
-            subtitle: customer?.full_name,
-            amount: data.total,
-            currency: data.currency,
-            status: data.status,
+            label: `INV-${data.invoice_number || entityId.slice(0, 8)}`,
+            subtitle: customer?.full_name || undefined,
+            amount: data.total || undefined,
+            currency: data.currency || undefined,
+            status: data.status || undefined,
           };
         } catch (err) {
           console.warn(`⚠️ Failed to fetch invoice ${entityId}:`, err);
@@ -457,14 +371,14 @@ private async getEntitySummary(
             .maybeSingle();
 
           if (error || !data) {
-            console.warn(`⚠️ Customer not found: ${entityId}`, error);
+            console.warn(`⚠️ Customer not found: ${entityId}`, error?.message);
             return null;
           }
 
           return {
-            label: data.full_name,
-            subtitle: data.phone || data.email,
-            amount: data.opening_balance,
+            label: data.full_name || entityId.slice(0, 8),
+            subtitle: data.phone || data.email || undefined,
+            amount: data.opening_balance || undefined,
             currency: "AFN",
           };
         } catch (err) {
@@ -483,7 +397,7 @@ private async getEntitySummary(
             .maybeSingle();
 
           if (error || !data) {
-            console.warn(`⚠️ Product not found: ${entityId}`, error);
+            console.warn(`⚠️ Product not found: ${entityId}`, error?.message);
             return null;
           }
 
@@ -509,7 +423,7 @@ private async getEntitySummary(
             .maybeSingle();
 
           if (error || !data) {
-            console.warn(`⚠️ Payment not found: ${entityId}`, error);
+            console.warn(`⚠️ Payment not found: ${entityId}`, error?.message);
             return null;
           }
 

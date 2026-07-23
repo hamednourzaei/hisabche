@@ -207,6 +207,12 @@ export const ActivityCenter = memo(function ActivityCenter({
     typeof navigator !== "undefined" ? navigator.onLine : true
   );
   const [isSyncing, setIsSyncing] = useState(false);
+  // ✅ FIX: نسخه‌ی ref از isSyncing — برای اینکه handleSync بتونه بدون
+  // قرار دادن isSyncing در دیپندنسی آرایه، مقدار فعلی رو بخونه.
+  // ریشه‌ی حلقه‌ی بی‌نهایت همین بود: isSyncing در deps هندلر →
+  // هر بار sync تغییر reference هندلر → افکت وابسته به هندلر دوباره
+  // اجرا میشه → یک setTimeout تازه → sync دوباره → ... تکرار هر ۱ ثانیه
+  const isSyncingRef = useRef(false);
   const [lastSynced, setLastSynced] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -287,11 +293,14 @@ export const ActivityCenter = memo(function ActivityCenter({
   }, [allGroups]);
 
   // ━━━ Sync Handler ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // ✅ FIX: isSyncing از دیپندنسی حذف شد و به جاش از isSyncingRef خونده میشه.
+  // این باعث میشه reference این تابع فقط وقتی isOnline/refetch/trackActivityEvent
+  // عوض بشه تغییر کنه — نه با هر شروع/پایان sync.
   const handleSync = useCallback(async () => {
-    // ✅ جلوگیری از sync همزمان
-    if (isSyncing) return;
+    if (isSyncingRef.current) return;
     if (!isOnline) return;
-    
+
+    isSyncingRef.current = true;
     setIsSyncing(true);
     try {
       await refetch();
@@ -300,9 +309,10 @@ export const ActivityCenter = memo(function ActivityCenter({
     } catch (error) {
       console.error("Sync failed:", error);
     } finally {
+      isSyncingRef.current = false;
       setIsSyncing(false);
     }
-  }, [isOnline, isSyncing, refetch, trackActivityEvent]);
+  }, [isOnline, refetch, trackActivityEvent]);
 
   // ━━━ Open/Close Handlers ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const handleOpen = useCallback(() => {
@@ -361,31 +371,29 @@ export const ActivityCenter = memo(function ActivityCenter({
   }, [trackActivityEvent, router]);
 
   // ━━━ Effects ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  
-  // ✅ فقط یکبار sync روی online (بدون setInterval)
+
+  // ✅ FIX: این افکت حالا فقط با تغییر isOnline اجرا میشه، نه با هر بار
+  // ساخته‌شدن دوباره‌ی handleSync. قبلاً چون handleSync در دیپندنسی بود
+  // و خودش با هر sync رفرنس عوض می‌کرد (بابت isSyncing)، این افکت هر بار
+  // sync یک بار دیگه هم صدا میزد → یک حلقه‌ی sync هر ۱ ثانیه.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (isOnline) {
-      // با تاخیر ۱ ثانیه تا از لوپ جلوگیری شود
-      if (syncTimeoutRef.current) {
-        clearTimeout(syncTimeoutRef.current);
-      }
-      syncTimeoutRef.current = setTimeout(() => {
-        handleSync();
-      }, 1000);
+    if (!isOnline) return;
+
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
     }
+    syncTimeoutRef.current = setTimeout(() => {
+      handleSync();
+    }, 1000);
+
     return () => {
       if (syncTimeoutRef.current) {
         clearTimeout(syncTimeoutRef.current);
       }
     };
-  }, [isOnline, handleSync]);
-
-  // ❌ حذف setInterval
-  // useEffect(() => {
-  //   if (!isOnline) return;
-  //   const interval = setInterval(handleSync, 60000);
-  //   return () => clearInterval(interval);
-  // }, [isOnline, handleSync]);
+    // فقط با تغییر isOnline دوباره اجرا میشه — handleSync عمداً از deps خارجه
+  }, [isOnline]);
 
   // Search analytics
   useEffect(() => {

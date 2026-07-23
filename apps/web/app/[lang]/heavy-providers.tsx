@@ -1,7 +1,7 @@
 // apps/web/app/[lang]/heavy-providers.tsx
 "use client";
 
-import React, { useEffect, useRef, useCallback, memo } from "react";
+import React, { useEffect, useRef, memo } from "react";
 import { useThemeStore, useAuthStore, useDeviceStore } from "@hisabche/store";
 import { syncLanguageFromStorage } from "@hisabche/i18n";
 
