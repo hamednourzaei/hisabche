@@ -293,7 +293,7 @@ export const DashboardHeader = memo(function DashboardHeader({
           >
             {isDark ? IconSun : IconMoon}
           </button>
-          {variant === "dashboard" && <ActivityCenter />}
+          {variant === "dashboard" && <NotificationBell />}
           {variant === "dashboard" && (
             <button
               type="button"
