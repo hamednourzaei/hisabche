@@ -167,7 +167,7 @@ export const VirtualizedActivityList = memo(function VirtualizedActivityList({
   const [isEndAnnounced, setIsEndAnnounced] = useState(false);
 
   const { ref: loadMoreTriggerRef, inView } = useInView({
-    rootMargin: "100px md:200px",
+    rootMargin: "200px",
     threshold: 0.1,
   });
 
