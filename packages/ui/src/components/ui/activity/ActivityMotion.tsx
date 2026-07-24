@@ -1,17 +1,23 @@
 // packages/ui/src/components/ui/activity/ActivityMotion.tsx
 "use client";
 
-import { useState, useEffect, memo, ReactNode } from "react";
+import { useEffect, useRef, memo } from "react";
 import { cn } from "@/lib/utils";
-import { useMotionDuration, motionClassNames } from "../../../lib/activity/motion";
+import { useReducedMotion } from "../../../hooks/activity/useAccessibility";
 
-interface ActivityMotionProps {
-  children: ReactNode;
-  type?: "fade" | "slide" | "scale" | "spring";
+export interface ActivityMotionProps {
+  children: React.ReactNode;
+  type?: "fade" | "slide" | "scale";
   delay?: number;
   className?: string;
-  onAnimationComplete?: () => void;
+  onAnimationComplete?: () => void | undefined;
 }
+
+const motionClasses = {
+  fade: "animate-fade-in",
+  slide: "animate-slide-up",
+  scale: "animate-scale-in",
+};
 
 export const ActivityMotion = memo(function ActivityMotion({
   children,
@@ -20,37 +26,48 @@ export const ActivityMotion = memo(function ActivityMotion({
   className,
   onAnimationComplete,
 }: ActivityMotionProps) {
-  const [isVisible, setIsVisible] = useState(false);
-  const duration = useMotionDuration("normal");
+  const prefersReducedMotion = useReducedMotion();
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsVisible(true);
+    if (prefersReducedMotion) {
       if (onAnimationComplete) {
-        setTimeout(onAnimationComplete, duration);
+        onAnimationComplete();
       }
-    }, delay);
+      return;
+    }
+
+    const element = ref.current;
+    if (!element) return;
+
+    const timer = setTimeout(() => {
+      if (onAnimationComplete) {
+        onAnimationComplete();
+      }
+    }, 300 + delay);
 
     return () => clearTimeout(timer);
-  }, [delay, duration, onAnimationComplete]);
+  }, [delay, onAnimationComplete, prefersReducedMotion]);
 
-  const typeClasses = {
-    fade: motionClassNames.fadeIn,
-    slide: motionClassNames.slideIn,
-    scale: motionClassNames.scaleIn,
-    spring: motionClassNames.springIn,
-  };
+  if (prefersReducedMotion) {
+    return <div className={cn(className)}>{children}</div>;
+  }
+
+  // Optimize animation duration for mobile
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+  const animationDuration = isMobile ? 150 : 200;
 
   return (
     <div
+      ref={ref}
       className={cn(
-        "transition-all",
-        isVisible ? typeClasses[type] : "opacity-0",
+        motionClasses[type],
+        "opacity-0",
+        delay > 0 && `animation-delay-${Math.min(delay, 150)}`,
         className
       )}
       style={{
-        transitionDuration: `${duration}ms`,
-        transitionTimingFunction: "cubic-bezier(0.34, 1.56, 0.64, 1)",
+        animationDuration: `${animationDuration}ms`,
       }}
     >
       {children}

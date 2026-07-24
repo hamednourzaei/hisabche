@@ -1,8 +1,9 @@
 // packages/ui/src/components/ui/activity/KeyboardNavigator.tsx
 "use client";
 
-import { useEffect, useCallback, useRef, useState } from "react";
-import { useKeyboardShortcuts } from "../../../hooks/activity/useAccessibility";
+import { useEffect, useCallback, useRef, useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
+import { cn } from "@/lib/utils";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -26,7 +27,28 @@ export interface KeyboardNavigatorProps<T extends KeyboardNavigatorItem> {
   initialIndex?: number;
   autoFocus?: boolean;
   className?: string;
+  disabled?: boolean;
+  onEscape?: () => void;
 }
+
+// ─── Helper: Check if key matches shortcut ──────────────────────────────────
+
+function matchesKey(key: string, shortcuts: readonly string[]): boolean {
+  return shortcuts.includes(key);
+}
+
+// ─── Constants ───────────────────────────────────────────────────────────────
+
+const KEYBOARD_SHORTCUTS = {
+  ARROW_DOWN: ["ArrowDown", "j"] as const,
+  ARROW_UP: ["ArrowUp", "k"] as const,
+  SELECT: ["Enter"] as const,
+  MARK_READ: ["r"] as const,
+  DELETE: ["Delete", "Backspace"] as const,
+  ESCAPE: ["Escape"] as const,
+  HOME: ["Home"] as const,
+  END: ["End"] as const,
+} as const;
 
 // ─── Main Component ─────────────────────────────────────────────────────────
 
@@ -40,22 +62,29 @@ export function KeyboardNavigator<T extends KeyboardNavigatorItem>({
   initialIndex = -1,
   autoFocus = true,
   className,
+  disabled = false,
+  onEscape,
 }: KeyboardNavigatorProps<T>) {
+  const { t } = useTranslation();
   const [selectedIndex, setSelectedIndex] = useState(initialIndex);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [isFocused, setIsFocused] = useState(false);
 
-  // ✅ اصلاح: استفاده از as cast برای رفع خطا
-  const selectedItem = (selectedIndex >= 0 && selectedIndex < items.length
-    ? items[selectedIndex]
-    : null) as T | null;
+  // ─── Memoized selected item ──────────────────────────────────────────────
+  const selectedItem = useMemo((): T | null => {
+    if (selectedIndex >= 0 && selectedIndex < items.length) {
+      return items[selectedIndex] ?? null;
+    }
+    return null;
+  }, [selectedIndex, items]);
 
   // ─── Scroll to selected item ──────────────────────────────────────────────
   const scrollToSelected = useCallback(() => {
-    if (selectedIndex < 0 || !containerRef.current) return;
+    if (selectedIndex < 0 || !containerRef.current || disabled) return;
 
     const container = containerRef.current;
-    const items = container.querySelectorAll('[data-activity-item]');
-    const target = items[selectedIndex] as HTMLElement;
+    const itemsList = container.querySelectorAll('[data-activity-item]');
+    const target = itemsList[selectedIndex] as HTMLElement;
 
     if (target) {
       target.scrollIntoView({
@@ -63,7 +92,7 @@ export function KeyboardNavigator<T extends KeyboardNavigatorItem>({
         behavior: "smooth",
       });
     }
-  }, [selectedIndex]);
+  }, [selectedIndex, disabled]);
 
   useEffect(() => {
     scrollToSelected();
@@ -71,45 +100,82 @@ export function KeyboardNavigator<T extends KeyboardNavigatorItem>({
 
   // ─── Auto focus ────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (autoFocus && containerRef.current && items.length > 0) {
+    if (autoFocus && containerRef.current && items.length > 0 && !disabled) {
       const firstItem = containerRef.current.querySelector('[data-activity-item]') as HTMLElement;
       if (firstItem) {
-        firstItem.focus();
+        setTimeout(() => firstItem.focus(), 100);
       }
     }
-  }, [autoFocus, items.length]);
+  }, [autoFocus, items.length, disabled]);
 
-  // ─── Keyboard shortcuts ────────────────────────────────────────────────────
-  useKeyboardShortcuts({
-    "arrowdown": () => {
-      setSelectedIndex((prev) => Math.min(prev + 1, items.length - 1));
-    },
-    "arrowup": () => {
-      setSelectedIndex((prev) => Math.max(prev - 1, 0));
-    },
-    "j": () => {
-      setSelectedIndex((prev) => Math.min(prev + 1, items.length - 1));
-    },
-    "k": () => {
-      setSelectedIndex((prev) => Math.max(prev - 1, 0));
-    },
-    "enter": () => {
-      if (selectedItem) {
-        onSelect(selectedItem);
-        onOpen(selectedItem);
+  // ─── Keyboard handlers ─────────────────────────────────────────────────────
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (disabled || items.length === 0) return;
+
+      const key = e.key;
+
+      // ── Navigation ──────────────────────────────────────────
+      if (matchesKey(key, KEYBOARD_SHORTCUTS.ARROW_DOWN)) {
+        e.preventDefault();
+        setSelectedIndex((prev) => Math.min(prev + 1, items.length - 1));
+        return;
+      }
+
+      if (matchesKey(key, KEYBOARD_SHORTCUTS.ARROW_UP)) {
+        e.preventDefault();
+        setSelectedIndex((prev) => Math.max(prev - 1, 0));
+        return;
+      }
+
+      if (matchesKey(key, KEYBOARD_SHORTCUTS.HOME)) {
+        e.preventDefault();
+        setSelectedIndex(0);
+        return;
+      }
+
+      if (matchesKey(key, KEYBOARD_SHORTCUTS.END)) {
+        e.preventDefault();
+        setSelectedIndex(items.length - 1);
+        return;
+      }
+
+      // ── Actions ─────────────────────────────────────────────
+      if (matchesKey(key, KEYBOARD_SHORTCUTS.SELECT)) {
+        e.preventDefault();
+        if (selectedItem) {
+          onSelect(selectedItem);
+          onOpen(selectedItem);
+        }
+        return;
+      }
+
+      if (matchesKey(key, KEYBOARD_SHORTCUTS.MARK_READ)) {
+        e.preventDefault();
+        if (selectedItem) {
+          onMarkRead(selectedItem);
+        }
+        return;
+      }
+
+      if (matchesKey(key, KEYBOARD_SHORTCUTS.DELETE) && onDelete) {
+        e.preventDefault();
+        if (selectedItem) {
+          onDelete(selectedItem);
+        }
+        return;
+      }
+
+      if (matchesKey(key, KEYBOARD_SHORTCUTS.ESCAPE)) {
+        e.preventDefault();
+        if (onEscape) {
+          onEscape();
+        }
+        return;
       }
     },
-    "r": () => {
-      if (selectedItem) {
-        onMarkRead(selectedItem);
-      }
-    },
-    "delete": () => {
-      if (selectedItem && onDelete) {
-        onDelete(selectedItem);
-      }
-    },
-  });
+    [disabled, items.length, selectedItem, onSelect, onOpen, onMarkRead, onDelete, onEscape]
+  );
 
   // ─── Reset selection when items change ────────────────────────────────────
   useEffect(() => {
@@ -118,28 +184,55 @@ export function KeyboardNavigator<T extends KeyboardNavigatorItem>({
     }
   }, [items.length, selectedIndex]);
 
-  // ─── Return ─────────────────────────────────────────────────────────────────
+  // ─── Announce selection to screen readers ─────────────────────────────────
+  useEffect(() => {
+    if (selectedItem && isFocused) {
+      const announcer = document.getElementById("keyboard-announcer");
+      if (announcer) {
+        const label = (selectedItem as any).label || selectedItem.id;
+        announcer.textContent = t("keyboard.selected", "انتخاب شد: {{label}}", {
+          label,
+        });
+      }
+    }
+  }, [selectedItem, isFocused, t]);
+
+  // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div
-      ref={containerRef}
-      className={className}
-      role="listbox"
-      aria-label="فعالیت‌ها"
-      tabIndex={0}
-      onKeyDown={(e) => {
-        if (["ArrowDown", "ArrowUp", "j", "k", "Enter", "r", "Delete"].includes(e.key)) {
-          e.preventDefault();
-        }
-      }}
-    >
-      {children({
-        selectedIndex,
-        selectedItem,
-        setSelectedIndex,
-        containerRef,
-      })}
-    </div>
+    <>
+      {/* ─── Screen Reader Announcer ────────────────────────── */}
+      <div id="keyboard-announcer" className="sr-only" aria-live="polite" />
+
+      <div
+        ref={containerRef}
+        className={cn(
+          "relative",
+          disabled && "opacity-50 pointer-events-none",
+          className
+        )}
+        role="listbox"
+        aria-label={t("keyboard.activities", "فعالیت‌ها")}
+        tabIndex={disabled ? -1 : 0}
+        onKeyDown={handleKeyDown}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
+      >
+        {children({
+          selectedIndex,
+          selectedItem,
+          setSelectedIndex,
+          containerRef,
+        })}
+
+        {/* ─── Keyboard shortcuts hint ───────────────────────── */}
+        {!disabled && items.length > 0 && (
+          <div className="sr-only">
+            {t("keyboard.hint", "از کلیدهای جهت‌دار برای حرکت، Enter برای انتخاب، r برای علامت‌گذاری خوانده‌شده استفاده کنید")}
+          </div>
+        )}
+      </div>
+    </>
   );
 }
 
@@ -154,21 +247,32 @@ export function useKeyboardNavigator<T extends KeyboardNavigatorItem>({
   onMarkRead,
   onDelete,
   initialIndex = -1,
-}: Pick<KeyboardNavigatorProps<T>, "items" | "onSelect" | "onOpen" | "onMarkRead" | "onDelete" | "initialIndex">) {
+  disabled = false,
+}: {
+  items: T[];
+  onSelect: (item: T) => void;
+  onOpen: (item: T) => void;
+  onMarkRead: (item: T) => void;
+  onDelete?: (item: T) => void;
+  initialIndex?: number;
+  disabled?: boolean;
+}) {
   const [selectedIndex, setSelectedIndex] = useState(initialIndex);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // ✅ اصلاح: استفاده از as cast برای رفع خطا
-  const selectedItem = (selectedIndex >= 0 && selectedIndex < items.length
-    ? items[selectedIndex]
-    : null) as T | null;
+  const selectedItem = useMemo((): T | null => {
+    if (selectedIndex >= 0 && selectedIndex < items.length) {
+      return items[selectedIndex] ?? null;
+    }
+    return null;
+  }, [selectedIndex, items]);
 
   const scrollToSelected = useCallback(() => {
-    if (selectedIndex < 0 || !containerRef.current) return;
+    if (selectedIndex < 0 || !containerRef.current || disabled) return;
 
     const container = containerRef.current;
-    const items = container.querySelectorAll('[data-activity-item]');
-    const target = items[selectedIndex] as HTMLElement;
+    const itemsList = container.querySelectorAll('[data-activity-item]');
+    const target = itemsList[selectedIndex] as HTMLElement;
 
     if (target) {
       target.scrollIntoView({
@@ -176,7 +280,7 @@ export function useKeyboardNavigator<T extends KeyboardNavigatorItem>({
         behavior: "smooth",
       });
     }
-  }, [selectedIndex]);
+  }, [selectedIndex, disabled]);
 
   useEffect(() => {
     scrollToSelected();
@@ -184,28 +288,37 @@ export function useKeyboardNavigator<T extends KeyboardNavigatorItem>({
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (disabled || items.length === 0) return;
+
+      const key = e.key;
       let newIndex = selectedIndex;
 
-      if (e.key === "ArrowDown" || e.key === "j") {
+      if (matchesKey(key, KEYBOARD_SHORTCUTS.ARROW_DOWN)) {
         e.preventDefault();
         newIndex = Math.min(selectedIndex + 1, items.length - 1);
-      } else if (e.key === "ArrowUp" || e.key === "k") {
+      } else if (matchesKey(key, KEYBOARD_SHORTCUTS.ARROW_UP)) {
         e.preventDefault();
         newIndex = Math.max(selectedIndex - 1, 0);
-      } else if (e.key === "Enter") {
+      } else if (matchesKey(key, KEYBOARD_SHORTCUTS.HOME)) {
+        e.preventDefault();
+        newIndex = 0;
+      } else if (matchesKey(key, KEYBOARD_SHORTCUTS.END)) {
+        e.preventDefault();
+        newIndex = items.length - 1;
+      } else if (matchesKey(key, KEYBOARD_SHORTCUTS.SELECT)) {
         e.preventDefault();
         if (selectedItem) {
           onSelect(selectedItem);
           onOpen(selectedItem);
         }
         return;
-      } else if (e.key === "r") {
+      } else if (matchesKey(key, KEYBOARD_SHORTCUTS.MARK_READ)) {
         e.preventDefault();
         if (selectedItem) {
           onMarkRead(selectedItem);
         }
         return;
-      } else if (e.key === "Delete" && onDelete) {
+      } else if (matchesKey(key, KEYBOARD_SHORTCUTS.DELETE) && onDelete) {
         e.preventDefault();
         if (selectedItem) {
           onDelete(selectedItem);
@@ -217,7 +330,7 @@ export function useKeyboardNavigator<T extends KeyboardNavigatorItem>({
 
       setSelectedIndex(newIndex);
     },
-    [selectedIndex, items.length, selectedItem, onSelect, onOpen, onMarkRead, onDelete]
+    [selectedIndex, items.length, selectedItem, onSelect, onOpen, onMarkRead, onDelete, disabled]
   );
 
   return {
@@ -228,5 +341,8 @@ export function useKeyboardNavigator<T extends KeyboardNavigatorItem>({
     handleKeyDown,
     scrollToSelected,
     resetSelection: () => setSelectedIndex(-1),
+    isSelected: (item: T) => selectedItem?.id === item.id,
   };
 }
+
+KeyboardNavigator.displayName = "KeyboardNavigator";

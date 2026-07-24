@@ -2,6 +2,7 @@
 "use client";
 
 import { memo, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { ActivityItem, type ActivityItemData } from "./ActivityItem";
 
@@ -18,15 +19,16 @@ export const ActivityTimeline = memo(function ActivityTimeline({
   className,
   size = "md",
 }: ActivityTimelineProps) {
+  const { t } = useTranslation();
+
   if (!activities || activities.length === 0) {
     return (
-      <div className="py-4 text-center text-sm text-[hsl(var(--fg-tertiary))]">
-        هیچ فعالیتی ثبت نشده است
+      <div className="py-3 md:py-4 text-center text-xs md:text-sm text-[hsl(var(--fg-tertiary))] px-2 md:px-0">
+        {t("activity.timeline.empty", "هیچ فعالیتی ثبت نشده است")}
       </div>
     );
   }
 
-  // ✅ استفاده از useCallback برای ایجاد onClick wrapper
   const createClickHandler = useCallback(
     (activity: ActivityItemData) => {
       if (onActivityClick) {
@@ -38,7 +40,7 @@ export const ActivityTimeline = memo(function ActivityTimeline({
   );
 
   return (
-    <div className={cn("space-y-0.5", className)}>
+    <div className={cn("space-y-0.5 md:space-y-0.5", className)}>
       {activities.map((activity, index) => (
         <ActivityItem
           key={activity.id}

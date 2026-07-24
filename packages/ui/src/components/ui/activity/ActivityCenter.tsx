@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo, memo } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
-import { Bell, X, Search, CloudOff, RefreshCw, Cloud } from "lucide-react";
+import { Bell, X, Search, CloudOff, RefreshCw, Cloud, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   useInfiniteActivities,
@@ -25,7 +25,7 @@ import { useDebounce } from "../../../hooks/activity/useDebounce";
 
 // ━━━ Types ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-interface ActivityCenterProps {
+interface ActivityPopoverProps {
   className?: string;
   offlineMode?: boolean;
 }
@@ -40,7 +40,161 @@ const FILTER_ENTITY_MAP: Record<Exclude<FilterType, "all" | "unread">, string> =
   customers: "customer",
 };
 
-// ━━━ Components ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ━━━ Custom Hooks ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/**
+ * Hook for managing activity feed state and filtering
+ */
+function useActivityFeed(filter: FilterType, searchQuery: string) {
+  const debouncedSearch = useDebounce(searchQuery, 300);
+
+  const activityFilter = useMemo<ActivityFilter>(() => {
+    const entityType = filter === "all" || filter === "unread" 
+      ? undefined 
+      : FILTER_ENTITY_MAP[filter as Exclude<FilterType, "all" | "unread">];
+    
+    const result: ActivityFilter = {};
+    if (entityType) result.type = entityType;
+    if (debouncedSearch) result.search = debouncedSearch;
+    return result;
+  }, [filter, debouncedSearch]);
+
+  const {
+    data,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    refetch,
+    error,
+  } = useInfiniteActivities(activityFilter);
+
+  const { data: unreadCount = 0 } = useUnreadActivityCount();
+  const { mutate: markAllAsRead, isPending: isMarkingAll } = useMarkAllActivitiesAsRead();
+
+  const allGroups = useMemo<ActivityGroupDto[]>(
+    () => data?.pages.flatMap((page) => page.data) ?? [],
+    [data]
+  );
+
+  const filteredGroups = useMemo(() => {
+    let groups = allGroups;
+
+    if (filter === "unread") {
+      groups = groups.filter((g) => g.unreadCount > 0);
+    }
+
+    if (searchQuery.trim()) {
+      const lowerQuery = searchQuery.toLowerCase().trim();
+      groups = groups.filter(
+        (group) =>
+          group.entitySummary.label.toLowerCase().includes(lowerQuery) ||
+          (group.entitySummary.subtitle?.toLowerCase().includes(lowerQuery) ?? false) ||
+          group.activities.some((a: ActivityItemDto) => 
+            a.title.toLowerCase().includes(lowerQuery)
+          )
+      );
+    }
+
+    return sortActivities(groups);
+  }, [allGroups, filter, searchQuery]);
+
+  const filterCounts = useMemo(() => ({
+    all: allGroups.length,
+    unread: allGroups.filter((g) => g.unreadCount > 0).length,
+    invoices: allGroups.filter((g) => g.entityType === "invoice").length,
+    payments: allGroups.filter((g) => g.entityType === "payment").length,
+    customers: allGroups.filter((g) => g.entityType === "customer").length,
+  }), [allGroups]);
+
+  const pendingCount = useMemo(
+    () => allGroups.filter((g) => g.unreadCount > 0).length,
+    [allGroups]
+  );
+
+  return {
+    allGroups,
+    filteredGroups,
+    filterCounts,
+    pendingCount,
+    unreadCount,
+    isLoading,
+    isFetchingNextPage,
+    hasNextPage,
+    error,
+    refetch,
+    fetchNextPage,
+    markAllAsRead,
+    isMarkingAll,
+  };
+}
+
+/**
+ * Hook for managing online/offline state and sync
+ */
+function useSyncStatus(onSync: () => Promise<void>) {
+  const [isOnline, setIsOnline] = useState(
+    typeof navigator !== "undefined" ? navigator.onLine : true
+  );
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [lastSynced, setLastSynced] = useState<Date | null>(null);
+  const isSyncingRef = useRef(false);
+  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    const goOnline = () => setIsOnline(true);
+    const goOffline = () => setIsOnline(false);
+    window.addEventListener("online", goOnline);
+    window.addEventListener("offline", goOffline);
+    return () => {
+      window.removeEventListener("online", goOnline);
+      window.removeEventListener("offline", goOffline);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isOnline) return;
+    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    syncTimeoutRef.current = setTimeout(() => {
+      if (!isSyncingRef.current) {
+        isSyncingRef.current = true;
+        setIsSyncing(true);
+        onSync()
+          .then(() => setLastSynced(new Date()))
+          .catch(console.error)
+          .finally(() => {
+            isSyncingRef.current = false;
+            setIsSyncing(false);
+          });
+      }
+    }, 2000);
+
+    return () => {
+      if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    };
+  }, [isOnline, onSync]);
+
+  const handleManualSync = useCallback(async () => {
+    if (isSyncingRef.current || !isOnline) return;
+    isSyncingRef.current = true;
+    setIsSyncing(true);
+    try {
+      await onSync();
+      setLastSynced(new Date());
+    } catch (error) {
+      console.error("Sync failed:", error);
+    } finally {
+      isSyncingRef.current = false;
+      setIsSyncing(false);
+    }
+  }, [isOnline, onSync]);
+
+  return { isOnline, isSyncing, lastSynced, handleManualSync };
+}
+
+// ━━━ Sub-components ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+// ── Filter Chip ──────────────────────────────────────────────
 
 const FilterChip = memo(function FilterChip({
   label,
@@ -58,7 +212,8 @@ const FilterChip = memo(function FilterChip({
       type="button"
       onClick={onClick}
       className={cn(
-        "shrink-0 px-2.5 py-1 rounded-full text-[10px] font-medium transition-all duration-200",
+        "shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200",
+        "min-h-[36px] min-w-[44px]",
         active
           ? "bg-[hsl(var(--color-primary))] text-white shadow-sm shadow-[hsl(var(--color-primary)/0.3)]"
           : "bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted)/0.8)]",
@@ -66,21 +221,23 @@ const FilterChip = memo(function FilterChip({
       )}
       aria-pressed={active}
     >
-      {label}
-      {count !== undefined && count > 0 && (
-        <span className={cn(
-          "ms-1 text-[9px] font-bold",
-          active ? "text-white/80" : "text-[hsl(var(--fg-tertiary))]"
-        )}>
-          ({count})
-        </span>
-      )}
+      <span className="flex items-center gap-1.5">
+        {label}
+        {count !== undefined && count > 0 && (
+          <span className={cn(
+            "text-[10px] font-bold",
+            active ? "text-white/80" : "text-[hsl(var(--fg-tertiary))]"
+          )}>
+            ({count})
+          </span>
+        )}
+      </span>
     </button>
   );
 });
 FilterChip.displayName = "FilterChip";
 
-// ━━━ Sync Status ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ── Sync Status ──────────────────────────────────────────────
 
 const SyncStatus = memo(function SyncStatus({
   isOnline,
@@ -100,11 +257,11 @@ const SyncStatus = memo(function SyncStatus({
 
   if (!isOnline) {
     return (
-      <span className="flex items-center gap-1.5 text-[10px] text-[hsl(var(--color-warning))]">
-        <CloudOff className="size-3.5" />
-        {t("activity.offline")}
+      <span className="flex items-center gap-1.5 text-xs text-[hsl(var(--color-warning))]">
+        <CloudOff className="size-3.5" aria-hidden="true" />
+        <span className="hidden sm:inline">{t("activity.offline")}</span>
         {pendingCount > 0 && (
-          <span className="px-1.5 py-0.5 bg-[hsl(var(--color-warning)/0.1)] rounded text-[9px]">
+          <span className="px-1.5 py-0.5 bg-[hsl(var(--color-warning)/0.1)] rounded text-[10px]">
             {pendingCount}
           </span>
         )}
@@ -114,12 +271,12 @@ const SyncStatus = memo(function SyncStatus({
 
   if (isSyncing) {
     return (
-      <span className="flex items-center gap-1.5 text-[10px] text-[hsl(var(--fg-tertiary))]">
+      <span className="flex items-center gap-1.5 text-xs text-[hsl(var(--fg-tertiary))]">
         <RefreshCw className={cn(
           "size-3.5",
           !prefersReducedMotion && "animate-spin"
-        )} />
-        {t("activity.syncing")}
+        )} aria-hidden="true" />
+        <span className="hidden sm:inline">{t("activity.syncing")}</span>
       </span>
     );
   }
@@ -128,195 +285,470 @@ const SyncStatus = memo(function SyncStatus({
     <button
       type="button"
       onClick={onSync}
-      className="flex items-center gap-1.5 text-[10px] text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--fg-primary))] transition-colors"
+      className="flex items-center gap-1.5 text-xs text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--fg-primary))] transition-colors"
       aria-label={t("activity.sync")}
     >
-      <Cloud className="size-3.5" />
-      {lastSynced
-        ? new Date(lastSynced).toLocaleTimeString("fa-AF", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })
-        : t("activity.sync")}
+      <Cloud className="size-3.5" aria-hidden="true" />
+      <span className="hidden sm:inline">
+        {lastSynced
+          ? new Date(lastSynced).toLocaleTimeString("fa-AF", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : t("activity.sync")}
+      </span>
     </button>
   );
 });
 SyncStatus.displayName = "SyncStatus";
 
-// ━━━ Helpers ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ── Error State ──────────────────────────────────────────────
 
-const getEntityTypeFilter = (filter: FilterType): string | undefined => {
-  if (filter === "all" || filter === "unread") return undefined;
-  return FILTER_ENTITY_MAP[filter];
-};
-
-const filterGroupsByType = (
-  groups: ActivityGroupDto[],
-  filter: FilterType
-): ActivityGroupDto[] => {
-  if (filter === "all") return groups;
-  if (filter === "unread") {
-    return groups.filter((group) => group.unreadCount > 0);
-  }
+const ErrorState = memo(function ErrorState({
+  message,
+  onRetry,
+}: {
+  message: string;
+  onRetry: () => void;
+}) {
+  const { t } = useTranslation();
   
-  const targetType = FILTER_ENTITY_MAP[filter];
-  return groups.filter((group) => group.entityType === targetType);
-};
-
-const searchGroups = (
-  groups: ActivityGroupDto[],
-  query: string
-): ActivityGroupDto[] => {
-  const lowerQuery = query.toLowerCase().trim();
-  if (!lowerQuery) return groups;
-  
-  return groups.filter(
-    (group) =>
-      group.entitySummary.label.toLowerCase().includes(lowerQuery) ||
-      (group.entitySummary.subtitle?.toLowerCase().includes(lowerQuery) ?? false) ||
-      group.activities.some((activity: ActivityItemDto) => 
-        activity.title.toLowerCase().includes(lowerQuery)
-      )
+  return (
+    <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+      <AlertCircle className="size-12 text-[hsl(var(--color-destructive))] mb-3" aria-hidden="true" />
+      <p className="text-sm text-[hsl(var(--fg-secondary))] mb-4">{message}</p>
+      <button
+        type="button"
+        onClick={onRetry}
+        className="px-4 py-2 rounded-lg text-sm font-medium bg-[hsl(var(--color-primary))] text-white hover:opacity-90 transition-opacity"
+      >
+        {t("activity.retry")}
+      </button>
+    </div>
   );
-};
+});
+ErrorState.displayName = "ErrorState";
+
+// ── Popover Button ───────────────────────────────────────────
+
+const PopoverButton = memo(function PopoverButton({
+  isOpen,
+  unreadCount,
+  onClick,
+}: {
+  isOpen: boolean;
+  unreadCount: number;
+  onClick: () => void;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "relative p-2.5 rounded-xl text-[hsl(var(--fg-secondary))]",
+        "hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]",
+        "transition-all duration-150",
+        "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))] focus:ring-offset-2",
+        isOpen && "bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-primary))]"
+      )}
+      aria-label={t("activity.title")}
+      aria-expanded={isOpen}
+      aria-haspopup="dialog"
+    >
+      <Bell className="size-5" aria-hidden="true" />
+      {unreadCount > 0 && (
+        <span className="absolute -top-1 -end-1 flex items-center justify-center min-w-[20px] h-[20px] px-1 text-[11px] font-bold text-white bg-[hsl(var(--color-destructive))] rounded-full shadow-sm shadow-[hsl(var(--color-destructive)/0.4)]">
+          {unreadCount > 99 ? "99+" : unreadCount}
+        </span>
+      )}
+    </button>
+  );
+});
+PopoverButton.displayName = "PopoverButton";
+
+// ── Popover Panel ────────────────────────────────────────────
+
+const PopoverPanel = memo(function PopoverPanel({
+  isOpen,
+  onClose,
+  children,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const prefersReducedMotion = useReducedMotion();
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleMouseDown = (e: MouseEvent) => {
+      if (!panelRef.current?.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    document.addEventListener("mousedown", handleMouseDown);
+    return () => document.removeEventListener("mousedown", handleMouseDown);
+  }, [isOpen, onClose]);
+
+  useEscapeKey(() => {
+    if (isOpen) onClose();
+  });
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      ref={panelRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Activity feed"
+      className={cn(
+        "absolute end-0 top-full mt-2 z-50 max-h-[560px] flex flex-col",
+        "rounded-2xl border border-[hsl(var(--border-default))]",
+        "bg-[hsl(var(--surface-elevated))] shadow-2xl shadow-black/20",
+        "transition-all duration-200",
+        prefersReducedMotion && "duration-0",
+        "animate-in fade-in-0 slide-in-from-top-2",
+        "w-[calc(100vw-2rem)] sm:w-[440px] lg:w-[480px]"
+      )}
+    >
+      {children}
+    </div>
+  );
+});
+PopoverPanel.displayName = "PopoverPanel";
+
+// ── Popover Header ───────────────────────────────────────────
+
+const PopoverHeader = memo(function PopoverHeader({
+  unreadCount,
+  isMarkingAll,
+  onMarkAllRead,
+  onClose,
+  isOnline,
+  isSyncing,
+  lastSynced,
+  pendingCount,
+  onSync,
+}: {
+  unreadCount: number;
+  isMarkingAll: boolean;
+  onMarkAllRead: () => void;
+  onClose: () => void;
+  isOnline: boolean;
+  isSyncing: boolean;
+  lastSynced: Date | null;
+  pendingCount: number;
+  onSync: () => void;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-[hsl(var(--border-default))]">
+      <div className="flex items-center gap-2 min-w-0">
+        <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">
+          {t("activity.title")}
+        </h3>
+        {unreadCount > 0 && (
+          <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-[hsl(var(--color-destructive)/0.1)] text-[hsl(var(--color-destructive))]">
+            {unreadCount} {t("activity.new")}
+          </span>
+        )}
+      </div>
+      <div className="flex items-center gap-1 shrink-0">
+        <SyncStatus
+          isOnline={isOnline}
+          isSyncing={isSyncing}
+          lastSynced={lastSynced}
+          pendingCount={pendingCount}
+          onSync={onSync}
+        />
+        {unreadCount > 0 && (
+          <button
+            type="button"
+            onClick={onMarkAllRead}
+            disabled={isMarkingAll}
+            className={cn(
+              "px-2 py-1 rounded-lg text-[11px] font-medium",
+              "text-[hsl(var(--color-primary))] hover:bg-[hsl(var(--color-primary)/0.1)]",
+              "transition-colors disabled:opacity-40",
+              "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]",
+              "min-h-[32px]"
+            )}
+            aria-label={t("activity.markAllRead")}
+          >
+            {t("activity.markAllRead")}
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={onClose}
+          className="p-1 rounded-lg text-[hsl(var(--fg-tertiary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors"
+          aria-label={t("action.close")}
+        >
+          <X className="size-4" aria-hidden="true" />
+        </button>
+      </div>
+    </div>
+  );
+});
+PopoverHeader.displayName = "PopoverHeader";
+
+// ── Popover Toolbar ──────────────────────────────────────────
+
+const PopoverToolbar = memo(function PopoverToolbar({
+  search,
+  onSearchChange,
+  filter,
+  onFilterChange,
+  filterCounts,
+  searchRef,
+}: {
+  search: string;
+  onSearchChange: (value: string) => void;
+  filter: FilterType;
+  onFilterChange: (filter: FilterType) => void;
+  filterCounts: ReturnType<typeof useActivityFeed>["filterCounts"];
+  searchRef: React.MutableRefObject<HTMLInputElement | null>;
+}) {
+  const { t } = useTranslation();
+
+  return (
+    <div className="px-3 py-2 border-b border-[hsl(var(--border-default))] space-y-2">
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 size-3.5 text-[hsl(var(--fg-tertiary))]" aria-hidden="true" />
+        <input
+          ref={searchRef}
+          type="search"
+          value={search}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder={t("activity.search")}
+          className={cn(
+            "w-full h-9 rounded-lg border border-[hsl(var(--border-default))] bg-transparent",
+            "ps-8 pe-10 text-sm text-[hsl(var(--fg-primary))]",
+            "placeholder:text-[hsl(var(--fg-tertiary))]",
+            "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
+          )}
+          aria-label={t("activity.search")}
+        />
+        <kbd className="absolute end-2.5 top-1/2 -translate-y-1/2 text-[10px] text-[hsl(var(--fg-tertiary))] border border-[hsl(var(--border-default))] px-1.5 py-0.5 rounded">
+          /
+        </kbd>
+      </div>
+
+      {/* Filter Chips */}
+      <div 
+        className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-hide" 
+        role="tablist"
+        aria-label="Activity filters"
+      >
+        <FilterChip
+          label={t("activity.filter.all")}
+          active={filter === "all"}
+          onClick={() => onFilterChange("all")}
+          count={filterCounts.all}
+        />
+        <FilterChip
+          label={t("activity.filter.unread")}
+          active={filter === "unread"}
+          onClick={() => onFilterChange("unread")}
+          count={filterCounts.unread}
+        />
+        <FilterChip
+          label={t("activity.filter.invoices")}
+          active={filter === "invoices"}
+          onClick={() => onFilterChange("invoices")}
+          count={filterCounts.invoices}
+        />
+        <FilterChip
+          label={t("activity.filter.payments")}
+          active={filter === "payments"}
+          onClick={() => onFilterChange("payments")}
+          count={filterCounts.payments}
+        />
+        <FilterChip
+          label={t("activity.filter.customers")}
+          active={filter === "customers"}
+          onClick={() => onFilterChange("customers")}
+          count={filterCounts.customers}
+        />
+      </div>
+    </div>
+  );
+});
+PopoverToolbar.displayName = "PopoverToolbar";
+
+// ── Popover Body ─────────────────────────────────────────────
+
+const PopoverBody = memo(function PopoverBody({
+  isLoading,
+  filteredGroups,
+  hasNextPage,
+  isFetchingNextPage,
+  error,
+  onRetry,
+  onActivityClick,
+  onLoadMore,
+  search,
+  filter,
+}: {
+  isLoading: boolean;
+  filteredGroups: ActivityGroupDto[];
+  hasNextPage: boolean;
+  isFetchingNextPage: boolean;
+  error: Error | null;
+  onRetry: () => void;
+  onActivityClick: (activity: ActivityItemDto, group: ActivityGroupDto) => void;
+  onLoadMore: () => void;
+  search: string;
+  filter: FilterType;
+}) {
+  const { t } = useTranslation();
+  const [announcement, setAnnouncement] = useState<string>("");
+
+  useEffect(() => {
+    if (isLoading && filteredGroups.length === 0) {
+      setAnnouncement(t("activity.loading"));
+    } else if (filteredGroups.length > 0) {
+      setAnnouncement(t("activity.loaded", { count: filteredGroups.length }));
+    }
+  }, [isLoading, filteredGroups.length, t]);
+
+  if (error) {
+    return (
+      <div className="p-4">
+        <ErrorState message={error.message || t("activity.error")} onRetry={onRetry} />
+      </div>
+    );
+  }
+
+  if (isLoading && filteredGroups.length === 0) {
+    return (
+      <ActivityMotion type="fade">
+        <ActivitySkeleton />
+      </ActivityMotion>
+    );
+  }
+
+  if (filteredGroups.length === 0) {
+    return (
+      <ActivityMotion type="fade">
+        <div className="py-8">
+          <ActivityEmptyState
+            title={
+              search ? t("activity.empty.search") : t("activity.empty.title")
+            }
+            subtitle={
+              search
+                ? t("activity.empty.searchHint", { query: search })
+                : filter === "unread"
+                ? t("activity.empty.unread")
+                : t("activity.empty.all")
+            }
+          />
+        </div>
+      </ActivityMotion>
+    );
+  }
+
+  return (
+    <>
+      <div aria-live="polite" className="sr-only">
+        {announcement}
+      </div>
+      <VirtualizedActivityList
+        groups={filteredGroups}
+        isLoading={isLoading}
+        hasNextPage={hasNextPage}
+        fetchNextPage={onLoadMore}
+        isFetchingNextPage={isFetchingNextPage}
+        onActivityClick={onActivityClick}
+        estimateSize={180}
+        onLoadMore={onLoadMore}
+      />
+    </>
+  );
+});
+PopoverBody.displayName = "PopoverBody";
+
+// ── Popover Footer ───────────────────────────────────────────
+
+const PopoverFooter = memo(function PopoverFooter({
+  hasItems,
+  onViewAll,
+}: {
+  hasItems: boolean;
+  onViewAll: () => void;
+}) {
+  const { t } = useTranslation();
+
+  if (!hasItems) return null;
+
+  return (
+    <button
+      type="button"
+      onClick={onViewAll}
+      className={cn(
+        "flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-medium",
+        "text-[hsl(var(--fg-secondary))] hover:text-[hsl(var(--color-primary))]",
+        "border-t border-[hsl(var(--border-default))]",
+        "hover:bg-[hsl(var(--surface-muted))] transition-colors duration-150",
+        "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]",
+        "min-h-[44px]"
+      )}
+      aria-label={t("activity.viewAll")}
+    >
+      {t("activity.viewAll")}
+      <span className="text-[hsl(var(--fg-tertiary))]" aria-hidden="true">→</span>
+    </button>
+  );
+});
+PopoverFooter.displayName = "PopoverFooter";
 
 // ━━━ Main Component ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 export const ActivityCenter = memo(function ActivityCenter({
   className,
   offlineMode = false,
-}: ActivityCenterProps) {
+}: ActivityPopoverProps) {
   const { t } = useTranslation();
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  
+  const [isOpen, setIsOpen] = useState(false);
   const [filter, setFilter] = useState<FilterType>("all");
   const [search, setSearch] = useState("");
-  const panelRef = useRef<HTMLDivElement>(null);
-  const searchRef = useRef<HTMLInputElement>(null);
+  const searchRef = useRef<HTMLInputElement | null>(null);
   const openTimeRef = useRef(Date.now());
-  const syncTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // ━━━ Accessibility ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  const prefersReducedMotion = useReducedMotion();
-
-  // ━━━ Analytics ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const { trackActivityEvent } = useActivityAnalytics();
 
-  // ━━━ Online/Offline state ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  const [isOnline, setIsOnline] = useState<boolean>(
-    typeof navigator !== "undefined" ? navigator.onLine : true
-  );
-  const [isSyncing, setIsSyncing] = useState(false);
-  // ✅ FIX: نسخه‌ی ref از isSyncing — برای اینکه handleSync بتونه بدون
-  // قرار دادن isSyncing در دیپندنسی آرایه، مقدار فعلی رو بخونه.
-  // ریشه‌ی حلقه‌ی بی‌نهایت همین بود: isSyncing در deps هندلر →
-  // هر بار sync تغییر reference هندلر → افکت وابسته به هندلر دوباره
-  // اجرا میشه → یک setTimeout تازه → sync دوباره → ... تکرار هر ۱ ثانیه
-  const isSyncingRef = useRef(false);
-  const [lastSynced, setLastSynced] = useState<Date | null>(null);
-
-  useEffect(() => {
-    const goOnline = () => setIsOnline(true);
-    const goOffline = () => setIsOnline(false);
-
-    window.addEventListener("online", goOnline);
-    window.addEventListener("offline", goOffline);
-
-    return () => {
-      window.removeEventListener("online", goOnline);
-      window.removeEventListener("offline", goOffline);
-    };
-  }, []);
-
-  // ━━━ Debounced search ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  const debouncedSearch = useDebounce(search, 300);
-
-  // ━━━ Activity filter ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  const activityFilter = useMemo<ActivityFilter>(() => {
-    const entityType = getEntityTypeFilter(filter);
-    const result: ActivityFilter = {};
-    
-    if (entityType) {
-      result.type = entityType;
-    }
-    if (debouncedSearch) {
-      result.search = debouncedSearch;
-    }
-    
-    return result;
-  }, [filter, debouncedSearch]);
-
-  // ━━━ Data ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const {
-    data,
+    filteredGroups,
+    filterCounts,
+    pendingCount,
+    unreadCount,
     isLoading,
-    fetchNextPage,
-    hasNextPage,
     isFetchingNextPage,
+    hasNextPage,
+    error,
     refetch,
-  } = useInfiniteActivities(activityFilter);
+    fetchNextPage,
+    markAllAsRead,
+    isMarkingAll,
+  } = useActivityFeed(filter, search);
 
-  const { data: unreadCount = 0 } = useUnreadActivityCount();
-  const { mutate: markAllAsRead, isPending: isMarkingAll } = useMarkAllActivitiesAsRead();
+  const handleRefetch = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
 
-  // ━━━ Flatten pages ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  const allGroups = useMemo<ActivityGroupDto[]>(() => {
-    return data?.pages.flatMap((page) => page.data) ?? [];
-  }, [data]);
+  const { isOnline, isSyncing, lastSynced, handleManualSync } = useSyncStatus(handleRefetch);
 
-  // ━━━ Filtered groups ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  const filteredGroups = useMemo(() => {
-    const typeFiltered = filterGroupsByType(allGroups, filter);
-    
-    if (!search.trim()) {
-      return sortActivities(typeFiltered);
-    }
-
-    const searched = searchGroups(typeFiltered, search);
-    return sortActivities(searched);
-  }, [allGroups, filter, search]);
-
-  // ━━━ Counts for filter chips ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  const filterCounts = useMemo(() => {
-    return {
-      all: allGroups.length,
-      unread: allGroups.filter((g) => g.unreadCount > 0).length,
-      invoices: allGroups.filter((g) => g.entityType === "invoice").length,
-      payments: allGroups.filter((g) => g.entityType === "payment").length,
-      customers: allGroups.filter((g) => g.entityType === "customer").length,
-    };
-  }, [allGroups]);
-
-  // ━━━ Pending count ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  const pendingCount = useMemo(() => {
-    return allGroups.filter((g) => g.unreadCount > 0).length;
-  }, [allGroups]);
-
-  // ━━━ Sync Handler ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  // ✅ FIX: isSyncing از دیپندنسی حذف شد و به جاش از isSyncingRef خونده میشه.
-  // این باعث میشه reference این تابع فقط وقتی isOnline/refetch/trackActivityEvent
-  // عوض بشه تغییر کنه — نه با هر شروع/پایان sync.
-  const handleSync = useCallback(async () => {
-    if (isSyncingRef.current) return;
-    if (!isOnline) return;
-
-    isSyncingRef.current = true;
-    setIsSyncing(true);
-    try {
-      await refetch();
-      setLastSynced(new Date());
-      trackActivityEvent(activityAnalyticsEvents.SYNC);
-    } catch (error) {
-      console.error("Sync failed:", error);
-    } finally {
-      isSyncingRef.current = false;
-      setIsSyncing(false);
-    }
-  }, [isOnline, refetch, trackActivityEvent]);
-
-  // ━━━ Open/Close Handlers ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const handleOpen = useCallback(() => {
-    setOpen(true);
+    setIsOpen(true);
     openTimeRef.current = Date.now();
     trackActivityEvent(activityAnalyticsEvents.OPEN_FEED, { unreadCount });
   }, [trackActivityEvent, unreadCount]);
@@ -325,339 +757,134 @@ export const ActivityCenter = memo(function ActivityCenter({
     trackActivityEvent(activityAnalyticsEvents.CLOSE_FEED, {
       duration: Date.now() - openTimeRef.current,
     });
-    setOpen(false);
+    setIsOpen(false);
   }, [trackActivityEvent]);
 
-  // ━━━ Filter Change Handler ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const handleFilterChange = useCallback((newFilter: FilterType) => {
     setFilter(newFilter);
     trackActivityEvent(activityAnalyticsEvents.FILTER, { filter: newFilter });
   }, [trackActivityEvent]);
 
-  // ━━━ Mark All Read Handler ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const handleMarkAllRead = useCallback(() => {
     trackActivityEvent(activityAnalyticsEvents.MARK_ALL_READ, {
       count: unreadCount,
-      totalActivities: allGroups.length,
     });
     markAllAsRead();
-  }, [trackActivityEvent, unreadCount, allGroups.length, markAllAsRead]);
+  }, [trackActivityEvent, unreadCount, markAllAsRead]);
 
-  // ━━━ Load More Handler ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const handleLoadMore = useCallback(() => {
     trackActivityEvent(activityAnalyticsEvents.LOAD_MORE, {
-      currentCount: allGroups.length,
+      currentCount: filteredGroups.length,
     });
     fetchNextPage();
-  }, [allGroups.length, trackActivityEvent, fetchNextPage]);
+  }, [filteredGroups.length, trackActivityEvent, fetchNextPage]);
 
-  // ━━━ Activity Click Handler ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  const handleActivityClick = useCallback((activity: ActivityItemDto, group: ActivityGroupDto) => {
-    trackActivityEvent(activityAnalyticsEvents.CLICK_ACTIVITY, {
-      entity_type: group.entityType,
-      entity_id: group.entityId,
-      has_unread: group.hasUnread,
-    });
-    setOpen(false);
-    const route = group.entitySummary.route || "/dashboard";
-    router.push(route);
-  }, [trackActivityEvent, router]);
+  const handleActivityClick = useCallback(
+    (activity: ActivityItemDto, group: ActivityGroupDto) => {
+      trackActivityEvent(activityAnalyticsEvents.CLICK_ACTIVITY, {
+        entity_type: group.entityType,
+        entity_id: group.entityId,
+        has_unread: group.hasUnread,
+      });
+      setIsOpen(false);
+      const route = group.entitySummary.route || "/dashboard";
+      router.push(route);
+    },
+    [trackActivityEvent, router]
+  );
 
-  // ━━━ View All Handler ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   const handleViewAll = useCallback(() => {
     trackActivityEvent(activityAnalyticsEvents.VIEW_ALL);
-    setOpen(false);
+    setIsOpen(false);
     router.push("/activities");
   }, [trackActivityEvent, router]);
 
-  // ━━━ Effects ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const handleRetry = useCallback(() => {
+    refetch();
+  }, [refetch]);
 
-  // ✅ FIX: این افکت حالا فقط با تغییر isOnline اجرا میشه، نه با هر بار
-  // ساخته‌شدن دوباره‌ی handleSync. قبلاً چون handleSync در دیپندنسی بود
-  // و خودش با هر sync رفرنس عوض می‌کرد (بابت isSyncing)، این افکت هر بار
-  // sync یک بار دیگه هم صدا میزد → یک حلقه‌ی sync هر ۱ ثانیه.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (!isOnline) return;
-
-    if (syncTimeoutRef.current) {
-      clearTimeout(syncTimeoutRef.current);
-    }
-    syncTimeoutRef.current = setTimeout(() => {
-      handleSync();
-    }, 1000);
-
-    return () => {
-      if (syncTimeoutRef.current) {
-        clearTimeout(syncTimeoutRef.current);
-      }
-    };
-    // فقط با تغییر isOnline دوباره اجرا میشه — handleSync عمداً از deps خارجه
-  }, [isOnline]);
-
-  // Search analytics
-  useEffect(() => {
-    if (debouncedSearch && debouncedSearch.length >= 2) {
-      trackActivityEvent(activityAnalyticsEvents.SEARCH, {
-        query: debouncedSearch,
-        resultsCount: allGroups.length,
-      });
-    }
-  }, [debouncedSearch, allGroups.length, trackActivityEvent]);
-
-  // Escape key
-  useEscapeKey(() => {
-    if (open) handleClose();
-  });
-
-  // Close on click outside
-  useEffect(() => {
-    if (!open) return;
-    const handleMouseDown = (e: MouseEvent) => {
-      if (!panelRef.current?.contains(e.target as Node)) {
-        handleClose();
-      }
-    };
-    const timeout = setTimeout(() => document.addEventListener("mousedown", handleMouseDown), 0);
-    return () => {
-      clearTimeout(timeout);
-      document.removeEventListener("mousedown", handleMouseDown);
-    };
-  }, [open, handleClose]);
-
-  // Keyboard shortcuts
-  useEffect(() => {
-    if (!open) return;
+    if (!isOpen) return;
+    
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "/") {
         e.preventDefault();
         searchRef.current?.focus();
       }
-      if (e.key === "Escape") {
-        e.preventDefault();
-        handleClose();
-      }
     };
+    
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open, handleClose]);
+  }, [isOpen]);
 
-  // ━━━ Render ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  useEffect(() => {
+    if (search.length >= 2) {
+      trackActivityEvent(activityAnalyticsEvents.SEARCH, {
+        query: search,
+        resultsCount: filteredGroups.length,
+      });
+    }
+  }, [search, filteredGroups.length, trackActivityEvent]);
 
   return (
     <div className={cn("relative", className)}>
-      {/* ━━━ Button ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      <button
-        type="button"
+      <PopoverButton
+        isOpen={isOpen}
+        unreadCount={unreadCount}
         onClick={handleOpen}
-        className={cn(
-          "relative p-2 rounded-xl text-[hsl(var(--fg-secondary))]",
-          "hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]",
-          "transition-all duration-150",
-          "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))] focus:ring-offset-2",
-          open && "bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-primary))]"
+      />
+
+      <PopoverPanel isOpen={isOpen} onClose={handleClose}>
+        <PopoverHeader
+          unreadCount={unreadCount}
+          isMarkingAll={isMarkingAll}
+          onMarkAllRead={handleMarkAllRead}
+          onClose={handleClose}
+          isOnline={isOnline}
+          isSyncing={isSyncing}
+          lastSynced={lastSynced}
+          pendingCount={pendingCount}
+          onSync={handleManualSync}
+        />
+
+        {!isOnline && (
+          <div className="px-4 py-2 bg-[hsl(var(--color-warning)/0.08)] border-b border-[hsl(var(--border-default))]">
+            <p className="text-xs text-[hsl(var(--color-warning))] flex items-center gap-2">
+              <CloudOff className="size-3.5" aria-hidden="true" />
+              {t("activity.offlineBanner")}
+            </p>
+          </div>
         )}
-        aria-label={t("activity.title")}
-        aria-expanded={open}
-        aria-haspopup="dialog"
-      >
-        <Bell className="size-5" />
-        {unreadCount > 0 && (
-          <span className="absolute -top-1 -end-1 flex items-center justify-center min-w-[20px] h-[20px] px-1 text-[11px] font-bold text-white bg-[hsl(var(--color-destructive))] rounded-full shadow-sm shadow-[hsl(var(--color-destructive)/0.4)]">
-            {unreadCount > 99 ? "99+" : unreadCount}
-          </span>
-        )}
-      </button>
 
-      {/* ━━━ Panel ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-      {open && (
-        <div
-          ref={panelRef}
-          role="dialog"
-          aria-modal="true"
-          aria-label={t("activity.title")}
-          className={cn(
-            "absolute end-0 top-full mt-2 z-50 w-[440px] max-h-[560px] flex flex-col",
-            "rounded-2xl border border-[hsl(var(--border-default))]",
-            "bg-[hsl(var(--surface-elevated))] shadow-2xl shadow-black/20",
-            "transition-all duration-200",
-            prefersReducedMotion && "duration-0",
-            "animate-in fade-in-0 slide-in-from-top-2"
-          )}
-        >
-          {/* ━━━ Header ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-          <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-[hsl(var(--border-default))]">
-            <div className="flex items-center gap-2 min-w-0">
-              <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">
-                {t("activity.title")}
-              </h3>
-              {unreadCount > 0 && (
-                <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-[hsl(var(--color-destructive)/0.1)] text-[hsl(var(--color-destructive))]">
-                  {unreadCount} {t("activity.new")}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-1 shrink-0">
-              <SyncStatus
-                isOnline={isOnline}
-                isSyncing={isSyncing}
-                lastSynced={lastSynced}
-                pendingCount={pendingCount}
-                onSync={handleSync}
-              />
-              {unreadCount > 0 && (
-                <button
-                  type="button"
-                  onClick={handleMarkAllRead}
-                  disabled={isMarkingAll}
-                  className={cn(
-                    "px-2 py-1 rounded-lg text-[11px] font-medium",
-                    "text-[hsl(var(--color-primary))] hover:bg-[hsl(var(--color-primary)/0.1)]",
-                    "transition-colors disabled:opacity-40",
-                    "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
-                  )}
-                  aria-label={t("activity.markAllRead")}
-                >
-                  {t("activity.markAllRead")}
-                </button>
-              )}
-              <button
-                type="button"
-                onClick={handleClose}
-                className="p-1 rounded-lg text-[hsl(var(--fg-tertiary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors"
-                aria-label={t("action.close")}
-              >
-                <X className="size-4" />
-              </button>
-            </div>
-          </div>
+        <PopoverToolbar
+          search={search}
+          onSearchChange={setSearch}
+          filter={filter}
+          onFilterChange={handleFilterChange}
+          filterCounts={filterCounts}
+          searchRef={searchRef}
+        />
 
-          {/* ━━━ Offline Banner ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-          {!isOnline && (
-            <div className="px-4 py-2 bg-[hsl(var(--color-warning)/0.08)] border-b border-[hsl(var(--border-default))]">
-              <p className="text-[11px] text-[hsl(var(--color-warning))] flex items-center gap-2">
-                <CloudOff className="size-3.5" />
-                {t("activity.offlineBanner")}
-              </p>
-            </div>
-          )}
-
-          {/* ━━━ Toolbar ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-          <div className="px-3 py-2 border-b border-[hsl(var(--border-default))] space-y-2">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 size-3.5 text-[hsl(var(--fg-tertiary))]" />
-              <input
-                ref={searchRef}
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder={t("activity.search")}
-                className={cn(
-                  "w-full h-8 rounded-lg border border-[hsl(var(--border-default))] bg-transparent",
-                  "ps-8 pe-10 text-xs text-[hsl(var(--fg-primary))]",
-                  "placeholder:text-[hsl(var(--fg-tertiary))]",
-                  "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
-                )}
-                aria-label={t("activity.search")}
-              />
-              <kbd className="absolute end-2.5 top-1/2 -translate-y-1/2 text-[10px] text-[hsl(var(--fg-tertiary))] border border-[hsl(var(--border-default))] px-1.5 py-0.5 rounded">
-                /
-              </kbd>
-            </div>
-
-            {/* Filter Chips */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-hide" role="tablist">
-              <FilterChip
-                label={t("activity.filter.all")}
-                active={filter === "all"}
-                onClick={() => handleFilterChange("all")}
-                count={filterCounts.all}
-              />
-              <FilterChip
-                label={t("activity.filter.unread")}
-                active={filter === "unread"}
-                onClick={() => handleFilterChange("unread")}
-                count={filterCounts.unread}
-              />
-              <FilterChip
-                label={t("activity.filter.invoices")}
-                active={filter === "invoices"}
-                onClick={() => handleFilterChange("invoices")}
-                count={filterCounts.invoices}
-              />
-              <FilterChip
-                label={t("activity.filter.payments")}
-                active={filter === "payments"}
-                onClick={() => handleFilterChange("payments")}
-                count={filterCounts.payments}
-              />
-              <FilterChip
-                label={t("activity.filter.customers")}
-                active={filter === "customers"}
-                onClick={() => handleFilterChange("customers")}
-                count={filterCounts.customers}
-              />
-            </div>
-          </div>
-
-          {/* ━━━ Body ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-          <div className="overflow-y-auto flex-1 p-3">
-            {isLoading && allGroups.length === 0 ? (
-              <ActivityMotion type="fade">
-                <ActivitySkeleton />
-              </ActivityMotion>
-            ) : filteredGroups.length === 0 ? (
-              <ActivityMotion type="fade">
-                <ActivityEmptyState
-                  title={
-                    search
-                      ? t("activity.empty.search")
-                      : t("activity.empty.title")
-                  }
-                  subtitle={
-                    search
-                      ? t("activity.empty.searchHint", { query: search })
-                      : filter === "unread"
-                      ? t("activity.empty.unread")
-                      : t("activity.empty.all")
-                  }
-                />
-              </ActivityMotion>
-            ) : (
-              <VirtualizedActivityList
-                groups={filteredGroups}
-                isLoading={isLoading}
-                hasNextPage={hasNextPage}
-                fetchNextPage={fetchNextPage}
-                isFetchingNextPage={isFetchingNextPage}
-                onActivityClick={handleActivityClick}
-                estimateSize={180}
-                onLoadMore={handleLoadMore}
-              />
-            )}
-          </div>
-
-          {/* ━━━ Footer ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */}
-          {filteredGroups.length > 0 && (
-            <button
-              type="button"
-              onClick={handleViewAll}
-              className={cn(
-                "flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-medium",
-                "text-[hsl(var(--fg-secondary))] hover:text-[hsl(var(--color-primary))]",
-                "border-t border-[hsl(var(--border-default))]",
-                "hover:bg-[hsl(var(--surface-muted))] transition-colors duration-150",
-                "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
-              )}
-              aria-label={t("activity.viewAll")}
-            >
-              {t("activity.viewAll")}
-              <span className="text-[hsl(var(--fg-tertiary))]">→</span>
-            </button>
-          )}
+        <div className="overflow-y-auto flex-1 p-3">
+          <PopoverBody
+            isLoading={isLoading}
+            filteredGroups={filteredGroups}
+            hasNextPage={hasNextPage}
+            isFetchingNextPage={isFetchingNextPage}
+            error={error}
+            onRetry={handleRetry}
+            onActivityClick={handleActivityClick}
+            onLoadMore={handleLoadMore}
+            search={search}
+            filter={filter}
+          />
         </div>
-      )}
+
+        <PopoverFooter
+          hasItems={filteredGroups.length > 0}
+          onViewAll={handleViewAll}
+        />
+      </PopoverPanel>
     </div>
   );
 });

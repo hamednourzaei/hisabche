@@ -1,13 +1,15 @@
 // packages/ui/src/components/ui/activity/VirtualizedActivityList.tsx
 "use client";
 
-import { useRef, useEffect, useCallback, memo } from "react";
+import { useRef, useEffect, useCallback, memo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useInView } from "react-intersection-observer";
+import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { EntityActivityCard } from "./EntityActivityCard";
 import { ActivitySkeleton } from "./ActivitySkeleton";
 import { ActivityMotion } from "./ActivityMotion";
-import { useMotionDuration } from "../../../lib/activity/motion";
 import type { ActivityGroupDto } from "@hisabche/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -21,6 +23,7 @@ interface VirtualizedActivityListProps {
   onActivityClick: (activity: any, group: ActivityGroupDto) => void;
   estimateSize?: number;
   onLoadMore?: (() => void) | undefined;
+  className?: string;
 }
 
 // ─── Components ──────────────────────────────────────────────────────────────
@@ -28,34 +31,122 @@ interface VirtualizedActivityListProps {
 const LoaderRow = memo(function LoaderRow({
   isFetchingNextPage,
   hasNextPage,
-  onLoadMore,
 }: {
   isFetchingNextPage: boolean;
   hasNextPage: boolean;
-  onLoadMore?: (() => void) | undefined;
 }) {
-  useEffect(() => {
-    if (hasNextPage && !isFetchingNextPage && onLoadMore) {
-      onLoadMore();
-    }
-  }, [hasNextPage, isFetchingNextPage, onLoadMore]);
+  const { t } = useTranslation();
+
+  if (isFetchingNextPage) {
+    return (
+      <div className="flex items-center justify-center gap-2 py-3 md:py-4" role="status" aria-live="polite">
+        <Loader2 className="h-3.5 w-3.5 md:h-4 md:w-4 animate-spin text-[hsl(var(--color-primary))]" aria-hidden="true" />
+        <span className="text-[10px] md:text-xs text-[hsl(var(--fg-tertiary))]">
+          {t("activity.loadingMore", "بارگذاری بیشتر...")}
+        </span>
+      </div>
+    );
+  }
+
+  if (hasNextPage) {
+    return (
+      <div className="flex items-center justify-center py-3 md:py-4">
+        <span className="text-[10px] md:text-xs text-[hsl(var(--fg-tertiary))]">
+          {t("activity.scrollForMore", "برای بارگذاری بیشتر اسکرول کنید")}
+        </span>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex items-center justify-center py-4">
-      {isFetchingNextPage ? (
-        <div className="flex items-center gap-2 text-[hsl(var(--fg-tertiary))]">
-          <div className="h-5 w-5 animate-spin rounded-full border-2 border-[hsl(var(--color-primary))] border-t-transparent" />
-          <span className="text-xs">بارگذاری بیشتر...</span>
-        </div>
-      ) : hasNextPage ? (
-        <span className="text-xs text-[hsl(var(--fg-tertiary))]">
-          برای بارگذاری بیشتر اسکرول کنید
-        </span>
-      ) : null}
+    <div className="flex items-center justify-center py-3 md:py-4">
+      <span className="text-[10px] md:text-xs text-[hsl(var(--fg-tertiary))]">
+        {t("activity.endOfList", "به انتهای لیست رسیدید")}
+      </span>
     </div>
   );
 });
 LoaderRow.displayName = "LoaderRow";
+
+// ── Activity Item ─────────────────────────────────────────────
+
+const ActivityItem = memo(function ActivityItem({
+  group,
+  index,
+  isLast,
+  onActivityClick,
+  virtualSize,
+  virtualStart,
+  lastItemRef,
+  onAnimationComplete,
+}: {
+  group: ActivityGroupDto;
+  index: number;
+  isLast: boolean;
+  onActivityClick: (activity: any, group: ActivityGroupDto) => void;
+  virtualSize: number;
+  virtualStart: number;
+  lastItemRef?: (node?: Element | null | undefined) => void;
+  onAnimationComplete?: () => void;
+}) {
+  const { t } = useTranslation();
+
+  const handleActivityClick = useCallback(
+    (activity: any) => {
+      onActivityClick(activity, group);
+    },
+    [onActivityClick, group]
+  );
+
+  const motionProps: {
+    type: "slide";
+    delay: number;
+    className: string;
+    onAnimationComplete?: () => void;
+  } = {
+    type: "slide",
+    delay: Math.min(index * 20, 200),
+    className: "px-0.5 py-0.5 md:py-1",
+  };
+
+  if (onAnimationComplete) {
+    motionProps.onAnimationComplete = onAnimationComplete;
+  }
+
+  return (
+    <ActivityMotion {...motionProps}>
+      <div
+        ref={isLast ? lastItemRef : undefined}
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: `${virtualSize}px`,
+          transform: `translateY(${virtualStart}px)`,
+        }}
+        className="px-0.5 py-0.5 md:py-1"
+        data-activity-item
+        tabIndex={0}
+        role="article"
+        aria-label={t("activity.itemLabel", {
+          label: group.entitySummary.label,
+        })}
+      >
+        <EntityActivityCard
+          entityType={group.entityType}
+          entityId={group.entityId}
+          entitySummary={group.entitySummary}
+          activities={group.activities}
+          hasUnread={group.hasUnread}
+          onActivityClick={handleActivityClick}
+          compact={true}
+        />
+      </div>
+    </ActivityMotion>
+  );
+});
+ActivityItem.displayName = "ActivityItem";
 
 // ─── Main Component ─────────────────────────────────────────────────────────
 
@@ -66,41 +157,66 @@ export const VirtualizedActivityList = memo(function VirtualizedActivityList({
   fetchNextPage,
   isFetchingNextPage,
   onActivityClick,
-  estimateSize = 180,
+  estimateSize = 160,
   onLoadMore,
+  className,
 }: VirtualizedActivityListProps) {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
-  const { ref: lastItemRef, inView } = useInView({
-    rootMargin: "200px",
+  const keyboardIndexRef = useRef(0);
+  const [isEndAnnounced, setIsEndAnnounced] = useState(false);
+
+  const { ref: loadMoreTriggerRef, inView } = useInView({
+    rootMargin: "100px md:200px",
     threshold: 0.1,
   });
 
-  const motionDuration = useMotionDuration("fast");
-
-  // ─── Virtualizer ──────────────────────────────────────────────────────────
   const rowVirtualizer = useVirtualizer({
     count: hasNextPage ? groups.length + 1 : groups.length,
     getScrollElement: () => containerRef.current,
     estimateSize: () => estimateSize,
-    overscan: 5,
+    overscan: 3,
   });
 
-  // ─── Auto-fetch next page ──────────────────────────────────────────────
+  useEffect(() => {
+    keyboardIndexRef.current = 0;
+  }, [groups.length]);
+
   useEffect(() => {
     if (inView && hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
-      onLoadMore?.();
+      if (onLoadMore) {
+        onLoadMore();
+      }
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage, onLoadMore]);
 
-  const keyboardIndexRef = useRef(0);
+  useEffect(() => {
+    if (!hasNextPage && groups.length > 0 && !isEndAnnounced) {
+      const announcer = document.getElementById("activity-announcer");
+      if (announcer) {
+        announcer.textContent = t("activity.endOfList", "به انتهای لیست فعالیت‌ها رسیدید");
+        setIsEndAnnounced(true);
+      }
+    }
+  }, [hasNextPage, groups.length, isEndAnnounced, t]);
 
-  // ─── Keyboard navigation ────────────────────────────────────────────────
+  useEffect(() => {
+    if (hasNextPage) {
+      setIsEndAnnounced(false);
+    }
+  }, [hasNextPage]);
+
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) {
+        return;
+      }
+
       const currentIndex = keyboardIndexRef.current;
       let newIndex = currentIndex;
 
@@ -135,18 +251,18 @@ export const VirtualizedActivityList = memo(function VirtualizedActivityList({
     return () => container.removeEventListener("keydown", handleKeyDown);
   }, [rowVirtualizer, groups.length]);
 
-  // ─── Announce count to screen readers ────────────────────────────────────
   useEffect(() => {
     const announcer = document.getElementById("activity-announcer");
-    if (announcer && groups.length > 0) {
-      announcer.textContent = `${groups.length} فعالیت نمایش داده شده است`;
+    if (announcer && groups.length > 0 && !isLoading) {
+      announcer.textContent = t("activity.itemsLoaded", {
+        count: groups.length,
+      });
     }
-  }, [groups.length]);
+  }, [groups.length, isLoading, t]);
 
-  // ─── Render ──────────────────────────────────────────────────────────────
   if (isLoading && groups.length === 0) {
     return (
-      <div className="space-y-2 p-2" role="status" aria-label="در حال بارگذاری فعالیت‌ها">
+      <div className="space-y-1.5 md:space-y-2 p-1.5 md:p-2" role="status" aria-label={t("activity.loading", "در حال بارگذاری فعالیت‌ها")}>
         {[1, 2, 3].map((i) => (
           <ActivitySkeleton key={i} />
         ))}
@@ -156,7 +272,6 @@ export const VirtualizedActivityList = memo(function VirtualizedActivityList({
 
   return (
     <>
-      {/* ─── Screen Reader Announcer ──────────────────────────────────────── */}
       <div
         id="activity-announcer"
         role="status"
@@ -167,11 +282,18 @@ export const VirtualizedActivityList = memo(function VirtualizedActivityList({
 
       <div
         ref={containerRef}
-        className="overflow-y-auto scrollbar-thin scrollbar-thumb-[hsl(var(--surface-muted))] scrollbar-track-transparent"
-  style={{ contain: "strict", height: "calc(100vh - 11rem)" }}
+        className={cn(
+          "overflow-y-auto scrollbar-thin scrollbar-thumb-[hsl(var(--surface-muted))] scrollbar-track-transparent",
+          className
+        )}
+        style={{
+          contain: "layout style",
+          height: "100%",
+          position: "relative",
+        }}
         role="feed"
-        aria-label="فید فعالیت‌ها"
-        aria-busy={isLoading}
+        aria-label={t("activity.feedLabel", "فید فعالیت‌ها")}
+        aria-busy={isFetchingNextPage}
       >
         <div
           style={{
@@ -187,8 +309,8 @@ export const VirtualizedActivityList = memo(function VirtualizedActivityList({
             if (isLoaderRow) {
               return (
                 <div
-                  key={virtualRow.index}
-                  ref={lastItemRef}
+                  key={`loader-${virtualRow.index}`}
+                  ref={loadMoreTriggerRef}
                   style={{
                     position: "absolute",
                     top: 0,
@@ -198,11 +320,7 @@ export const VirtualizedActivityList = memo(function VirtualizedActivityList({
                     transform: `translateY(${virtualRow.start}px)`,
                   }}
                 >
-                  <LoaderRow
-                    isFetchingNextPage={isFetchingNextPage}
-                    hasNextPage={hasNextPage}
-                    onLoadMore={onLoadMore}
-                  />
+                  <LoaderRow isFetchingNextPage={isFetchingNextPage} hasNextPage={hasNextPage} />
                 </div>
               );
             }
@@ -211,58 +329,38 @@ export const VirtualizedActivityList = memo(function VirtualizedActivityList({
 
             const isLastItem = virtualRow.index === groups.length - 1;
 
-            return (
-              <ActivityMotion
-                key={group.entityId}
-                type="slide"
-                delay={Math.min(virtualRow.index * 20, 200)}
-                className="px-0.5 py-1"
-                onAnimationComplete={() => {
-                  if (isLastItem && !hasNextPage) {
-                    // Announce end of list
-                    const announcer = document.getElementById("activity-announcer");
-                    if (announcer) {
-                      announcer.textContent = "به انتهای لیست فعالیت‌ها رسیدید";
-                    }
-                  }
-                }}
-              >
-                <div
-                  ref={isLastItem ? lastItemRef : undefined}
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    height: `${virtualRow.size}px`,
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }}
-                  className="px-0.5 py-1"
-                  data-activity-item
-                  tabIndex={0}
-                  role="article"
-                  aria-label={`فعالیت ${group.entitySummary.label}`}
-                  aria-describedby={`activity-desc-${group.entityId}`}
-                >
-                  {/* ✅ FIX: pass entitySummary and activities straight from
-                      the group — this data already came from the
-                      /v1/activities response and is complete. Previously
-                      EntityActivityCard fetched these itself via
-                      useEntitySummary/useEntityActivities against a
-                      separate endpoint that failed, causing it to render
-                      null while this reserved slot stayed empty. */}
-                  <EntityActivityCard
-                    entityType={group.entityType}
-                    entityId={group.entityId}
-                    entitySummary={group.entitySummary}
-                    activities={group.activities}
-                    hasUnread={group.hasUnread}
-                    onActivityClick={(activity) => onActivityClick(activity, group)}
-                    compact={true}
-                  />
-                </div>
-              </ActivityMotion>
-            );
+            const activityItemProps: {
+              group: ActivityGroupDto;
+              index: number;
+              isLast: boolean;
+              onActivityClick: (activity: any, group: ActivityGroupDto) => void;
+              virtualSize: number;
+              virtualStart: number;
+              lastItemRef?: (node?: Element | null | undefined) => void;
+              onAnimationComplete?: () => void;
+            } = {
+              group,
+              index: virtualRow.index,
+              isLast: isLastItem,
+              onActivityClick,
+              virtualSize: virtualRow.size,
+              virtualStart: virtualRow.start,
+            };
+
+            if (isLastItem) {
+              activityItemProps.lastItemRef = loadMoreTriggerRef;
+            }
+
+            if (isLastItem && !hasNextPage) {
+              activityItemProps.onAnimationComplete = () => {
+                const announcer = document.getElementById("activity-announcer");
+                if (announcer) {
+                  announcer.textContent = t("activity.endOfList", "به انتهای لیست فعالیت‌ها رسیدید");
+                }
+              };
+            }
+
+            return <ActivityItem key={group.entityId} {...activityItemProps} />;
           })}
         </div>
       </div>
