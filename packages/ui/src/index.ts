@@ -37,6 +37,7 @@ export { NavigationProvider, useNavigation } from './hooks/menu/use-navigation-s
 export { TopNav } from './components/ui/navigation/top-nav'
 export { SideNav } from './components/ui/navigation/side-nav'
 export { NavigationRegistry } from './components/ui/navigation/navigation-registry'
+export { ActivitiesPage } from "./components/ui/activity/ActivitiesPage";
 
 // ---------- Landing ----------
 export { GlassNavbar, AnimatedCounter, Section, FeatureCard, SectionHeading, GradientMesh, ShimmerCTA } from './components/ui/landing-section'

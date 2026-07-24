@@ -2,6 +2,7 @@
 // ─── Activity Design System ────────────────────────────────────────────────
 
 export { ActivityCenter } from "./ActivityCenter";
+export { ActivitiesPage } from "./ActivitiesPage";
 export { ActivityItem } from "./ActivityItem";
 export { ActivityTimeline } from "./ActivityTimeline";
 export { EntityActivityCard } from "./EntityActivityCard";
