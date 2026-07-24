@@ -167,8 +167,8 @@ export const VirtualizedActivityList = memo(function VirtualizedActivityList({
 
       <div
         ref={containerRef}
-        className="h-full overflow-y-auto scrollbar-thin scrollbar-thumb-[hsl(var(--surface-muted))] scrollbar-track-transparent"
-        style={{ contain: "strict" }}
+        className="overflow-y-auto scrollbar-thin scrollbar-thumb-[hsl(var(--surface-muted))] scrollbar-track-transparent"
+  style={{ contain: "strict", height: "calc(100vh - 11rem)" }}
         role="feed"
         aria-label="فید فعالیت‌ها"
         aria-busy={isLoading}
