@@ -8,9 +8,6 @@ import {
   Bell,
   X,
   ChevronDown,
-  CheckCircle2,
-  AlertTriangle,
-  ShieldCheck,
   CheckCheck,
   Inbox,
   ArrowLeft,
@@ -43,7 +40,6 @@ interface NotificationGroup {
   hasUnread: boolean;
   unreadCount: number;
   latestAt: string;
-  // ✅ همه فیلدها را `| undefined` می‌کنیم
   invoiceNumber?: string | undefined;
   customerName?: string | undefined;
   total?: number | undefined;
@@ -116,11 +112,15 @@ function resolveEntityUrl(n: Notification): string {
 }
 
 function formatCurrency(amount: number, currency: string): string {
-  return new Intl.NumberFormat("fa-AF", {
-    style: "currency",
-    currency: currency || "AFN",
-    maximumFractionDigits: 0,
-  }).format(amount);
+  try {
+    return new Intl.NumberFormat("fa-AF", {
+      style: "currency",
+      currency: currency || "AFN",
+      maximumFractionDigits: 0,
+    }).format(amount);
+  } catch {
+    return `${amount} ${currency || "AFN"}`;
+  }
 }
 
 // ─── Group Notifications by Entity ─────────────────────────────────────────
@@ -198,8 +198,8 @@ const EntityIcon = memo(function EntityIcon({
 }) {
   const config = entityConfig[type] || entityConfig.invoice;
   const Icon = config.icon;
-  const dim = size === "md" ? "w-10 h-10" : "w-8 h-8";
-  const iconDim = size === "md" ? "w-5 h-5" : "w-4 h-4";
+  const dim = size === "md" ? "w-8 h-8 md:w-10 md:h-10" : "w-6 h-6 md:w-8 md:h-8";
+  const iconDim = size === "md" ? "w-4 h-4 md:w-5 md:h-5" : "w-3 h-3 md:w-4 md:h-4";
 
   return (
     <div className={cn("flex shrink-0 items-center justify-center rounded-full", dim, config.bg)}>
@@ -218,24 +218,27 @@ const TimelineItem = memo(function TimelineItem({
   notification: Notification;
   isLast: boolean;
 }) {
+  const { t } = useTranslation();
   const config = entityConfig[notification.entity_type as NotificationGroup["entityType"]] || entityConfig.invoice;
   const Icon = config.icon;
 
   return (
-    <div className="flex items-start gap-3">
+    <div className="flex items-start gap-2 md:gap-3">
       <div className="flex flex-col items-center">
-        <div className={cn("w-6 h-6 rounded-full flex items-center justify-center", config.bg)}>
-          <Icon className={cn("w-3.5 h-3.5", config.color)} aria-hidden="true" />
+        <div className={cn("w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center", config.bg)}>
+          <Icon className={cn("w-3 h-3 md:w-3.5 md:h-3.5", config.color)} aria-hidden="true" />
         </div>
-        {!isLast && <div className="w-px h-4 bg-[hsl(var(--border-default))]" />}
+        {!isLast && <div className="w-px h-3 md:h-4 bg-[hsl(var(--border-default))]" />}
       </div>
-      <div className="flex-1 min-w-0 pb-3">
-        <p className="text-sm text-[hsl(var(--fg-primary))]">{notification.title}</p>
+      <div className="flex-1 pb-2 md:pb-3">
+        <p className="text-xs md:text-sm text-[hsl(var(--fg-primary))] line-clamp-2">{notification.title}</p>
         {notification.body && (
-          <p className="text-xs text-[hsl(var(--fg-secondary))] mt-0.5">{notification.body}</p>
+          <p className="text-[10px] md:text-xs text-[hsl(var(--fg-secondary))] mt-0.5 line-clamp-2">
+            {notification.body}
+          </p>
         )}
-        <p className="text-[10px] text-[hsl(var(--fg-tertiary))] mt-1">
-          {timeAgo(notification.created_at, (key) => key)}
+        <p className="text-[9px] md:text-[10px] text-[hsl(var(--fg-tertiary))] mt-1">
+          {timeAgo(notification.created_at, t)}
         </p>
       </div>
     </div>
@@ -250,14 +253,13 @@ const GroupCard = memo(function GroupCard({
   isOpen,
   onToggle,
   onItemClick,
-  t,
 }: {
   group: NotificationGroup;
   isOpen: boolean;
   onToggle: () => void;
   onItemClick: (n: Notification) => void;
-  t: (key: string, fallback: string) => string;
 }) {
+  const { t } = useTranslation();
   const statusColor = group.status ? statusColors[group.status] || "" : "";
   const statusLabel = group.status ? statusLabels[group.status] || group.status : "";
   const config = entityConfig[group.entityType] || entityConfig.invoice;
@@ -266,7 +268,7 @@ const GroupCard = memo(function GroupCard({
   return (
     <div
       className={cn(
-        "w-full rounded-xl border border-[hsl(var(--border-default))] overflow-hidden transition-all duration-200",
+        "rounded-xl border border-[hsl(var(--border-default))] overflow-hidden transition-all duration-200",
         group.hasUnread && "border-[hsl(var(--color-primary)/0.3)] shadow-sm"
       )}
     >
@@ -274,60 +276,61 @@ const GroupCard = memo(function GroupCard({
       <button
         type="button"
         onClick={onToggle}
-        className="w-full text-start p-3 hover:bg-[hsl(var(--surface-muted))] transition-colors duration-150"
+        aria-expanded={isOpen}
+        className="w-full text-start p-2 md:p-3 hover:bg-[hsl(var(--surface-muted))] transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
       >
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-2 md:gap-3">
           <EntityIcon type={group.entityType} size="md" />
 
           <div className="flex-1 min-w-0">
             {/* Entity Label */}
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold text-[hsl(var(--fg-primary))] truncate">
+            <div className="flex items-center gap-1.5 md:gap-2">
+              <span className="text-xs md:text-sm font-semibold text-[hsl(var(--fg-primary))] truncate">
                 {group.entityLabel}
               </span>
               {group.hasUnread && (
-                <span className="shrink-0 w-2 h-2 rounded-full bg-[hsl(var(--color-destructive))]" />
+                <span className="shrink-0 w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-[hsl(var(--color-destructive))]" />
               )}
             </div>
 
             {/* Customer & Amount */}
-            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+            <div className="flex items-center gap-1.5 md:gap-2 mt-0.5 flex-wrap">
               {group.customerName && (
-                <span className="text-xs text-[hsl(var(--fg-secondary))] flex items-center gap-1 min-w-0">
-                  <User className="w-3 h-3 shrink-0" aria-hidden="true" />
-                  <span className="truncate">{group.customerName}</span>
+                <span className="text-[10px] md:text-xs text-[hsl(var(--fg-secondary))] flex items-center gap-1">
+                  <User className="w-2.5 h-2.5 md:w-3 md:h-3" aria-hidden="true" />
+                  <span className="truncate max-w-[100px] md:max-w-none">{group.customerName}</span>
                 </span>
               )}
               {group.total !== undefined && (
-                <span className="text-xs font-semibold text-[hsl(var(--fg-primary))] flex items-center gap-1 shrink-0">
-                  <DollarSign className="w-3 h-3" aria-hidden="true" />
+                <span className="text-[10px] md:text-xs font-semibold text-[hsl(var(--fg-primary))] flex items-center gap-1">
+                  <DollarSign className="w-2.5 h-2.5 md:w-3 md:h-3" aria-hidden="true" />
                   {formatCurrency(group.total, group.currency || "AFN")}
                 </span>
               )}
             </div>
 
             {/* Status & Count */}
-            <div className="flex items-center gap-2 mt-1 flex-wrap">
+            <div className="flex items-center gap-1.5 md:gap-2 mt-0.5 flex-wrap">
               {group.status && (
                 <span
                   className={cn(
-                    "text-[10px] font-medium px-1.5 py-0.5 rounded shrink-0",
+                    "text-[8px] md:text-[10px] font-medium px-1 md:px-1.5 py-0.5 rounded",
                     statusColor
                   )}
                 >
                   {statusLabel}
                 </span>
               )}
-              <span className="text-[10px] text-[hsl(var(--fg-tertiary))] flex items-center gap-1 shrink-0">
-                <Clock className="w-3 h-3" aria-hidden="true" />
-                {group.items.length} فعالیت • {timeAgo(group.latestAt, t)}
+              <span className="text-[8px] md:text-[10px] text-[hsl(var(--fg-tertiary))] flex items-center gap-1">
+                <Clock className="w-2.5 h-2.5 md:w-3 md:h-3" aria-hidden="true" />
+                {group.items.length} {t("notifications.activities", "فعالیت")} • {timeAgo(group.latestAt, t)}
               </span>
             </div>
           </div>
 
           <ChevronDown
             className={cn(
-              "w-4 h-4 shrink-0 text-[hsl(var(--fg-tertiary))] transition-transform duration-200 mt-1",
+              "w-3.5 h-3.5 md:w-4 md:h-4 shrink-0 text-[hsl(var(--fg-tertiary))] transition-transform duration-200 mt-1",
               isOpen && "rotate-180"
             )}
           />
@@ -342,13 +345,13 @@ const GroupCard = memo(function GroupCard({
         )}
       >
         <div className="overflow-hidden">
-          <div className="px-3 pb-3 pt-1 border-t border-[hsl(var(--border-default)/0.5)]">
-            <div className="space-y-2">
+          <div className="px-2 md:px-3 pb-2 md:pb-3 pt-1 border-t border-[hsl(var(--border-default)/0.5)]">
+            <div className="space-y-1 md:space-y-2">
               {group.items.map((n, index) => (
                 <button
                   key={n.id}
                   onClick={() => onItemClick(n)}
-                  className="w-full text-start"
+                  className="w-full text-start focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))] rounded"
                 >
                   <TimelineItem
                     notification={n}
@@ -369,15 +372,15 @@ GroupCard.displayName = "GroupCard";
 
 const BellSkeleton = memo(function BellSkeleton() {
   return (
-    <div className="space-y-2 p-2">
+    <div className="space-y-1.5 md:space-y-2 p-1.5 md:p-2" role="status" aria-label="در حال بارگذاری اعلان‌ها">
       {[0, 1].map((i) => (
-        <div key={i} className="p-3 border border-[hsl(var(--border-default))] rounded-xl">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-full bg-[hsl(var(--surface-muted))] animate-pulse" />
-            <div className="flex-1 space-y-2">
-              <div className="h-4 bg-[hsl(var(--surface-muted))] rounded w-3/4 animate-pulse" />
-              <div className="h-3 bg-[hsl(var(--surface-muted))] rounded w-1/2 animate-pulse" />
-              <div className="h-3 bg-[hsl(var(--surface-muted))] rounded w-1/3 animate-pulse" />
+        <div key={i} className="p-2 md:p-3 border border-[hsl(var(--border-default))] rounded-xl">
+          <div className="flex items-start gap-2 md:gap-3">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-[hsl(var(--surface-muted))] animate-pulse" />
+            <div className="flex-1 space-y-1.5 md:space-y-2">
+              <div className="h-3 md:h-4 bg-[hsl(var(--surface-muted))] rounded w-3/4 animate-pulse" />
+              <div className="h-2.5 md:h-3 bg-[hsl(var(--surface-muted))] rounded w-1/2 animate-pulse" />
+              <div className="h-2.5 md:h-3 bg-[hsl(var(--surface-muted))] rounded w-1/3 animate-pulse" />
             </div>
           </div>
         </div>
@@ -389,20 +392,18 @@ BellSkeleton.displayName = "BellSkeleton";
 
 // ─── Empty State ────────────────────────────────────────────────────────────
 
-const BellEmptyState = memo(function BellEmptyState({
-  t,
-}: {
-  t: (key: string, fallback: string) => string;
-}) {
+const BellEmptyState = memo(function BellEmptyState() {
+  const { t } = useTranslation();
+
   return (
-    <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-      <div className="w-16 h-16 rounded-full bg-[hsl(var(--surface-muted))] flex items-center justify-center mb-4">
-        <Inbox className="w-8 h-8 text-[hsl(var(--fg-tertiary))]" aria-hidden="true" />
+    <div className="flex flex-col items-center justify-center py-8 md:py-12 px-3 md:px-4 text-center">
+      <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-[hsl(var(--surface-muted))] flex items-center justify-center mb-3 md:mb-4">
+        <Inbox className="w-6 h-6 md:w-8 md:h-8 text-[hsl(var(--fg-tertiary))]" aria-hidden="true" />
       </div>
-      <h4 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">
+      <h4 className="text-xs md:text-sm font-semibold text-[hsl(var(--fg-primary))]">
         {t("notifications.empty", "همه چیز مرتب است")}
       </h4>
-      <p className="text-sm text-[hsl(var(--fg-tertiary))] mt-1">
+      <p className="text-xs md:text-sm text-[hsl(var(--fg-tertiary))] mt-0.5 md:mt-1">
         {t("notifications.emptyHint", "اعلان جدیدی ندارید.")}
       </p>
     </div>
@@ -419,6 +420,17 @@ export const NotificationBell = memo(function NotificationBell({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // ─── Detect mobile ─────────────────────────────────────────
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   const { data: notifications = [], isLoading } = useNotifications();
   const { data: unreadCount = 0 } = useUnreadCount();
@@ -429,11 +441,11 @@ export const NotificationBell = memo(function NotificationBell({
 
   const [tog, setTog] = useState<Record<string, boolean>>({});
 
-  const isOpen = useCallback((g: NotificationGroup) => tog[g.key] ?? g.hasUnread, [tog]);
+  const isOpenGroup = useCallback((g: NotificationGroup) => tog[g.key] ?? g.hasUnread, [tog]);
 
-  const toggleFn = useCallback(
-    (g: NotificationGroup) => setTog((p) => ({ ...p, [g.key]: !isOpen(g) })),
-    [isOpen]
+  const toggleGroup = useCallback(
+    (g: NotificationGroup) => setTog((p) => ({ ...p, [g.key]: !isOpenGroup(g) })),
+    [isOpenGroup]
   );
 
   const close = useCallback(() => setOpen(false), []);
@@ -458,18 +470,6 @@ export const NotificationBell = memo(function NotificationBell({
     document.addEventListener("keydown", h);
     return () => document.removeEventListener("keydown", h);
   }, [open, close]);
-
-  // جلوگیری از اسکرول پس‌زمینه وقتی پنل روی موبایل باز است
-  useEffect(() => {
-    if (!open) return;
-    const isMobile = window.matchMedia("(max-width: 639px)").matches;
-    if (!isMobile) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [open]);
 
   const click = useCallback(
     (n: Notification) => {
@@ -505,7 +505,7 @@ export const NotificationBell = memo(function NotificationBell({
         aria-label={t("notifications.bell", "اعلان‌ها")}
         aria-expanded={open}
       >
-        <Bell className="size-5" />
+        <Bell className="size-5" aria-hidden="true" />
         {unreadCount > 0 && (
           <span className="absolute -top-1 -end-1 flex items-center justify-center min-w-[20px] h-[20px] px-1 text-[11px] font-bold text-white bg-[hsl(var(--color-destructive))] rounded-full shadow-sm shadow-[hsl(var(--color-destructive)/0.4)]">
             {unreadCount > 99 ? "۹۹+" : unreadCount}
@@ -515,84 +515,90 @@ export const NotificationBell = memo(function NotificationBell({
 
       {open && (
         <>
-          {/* بک‌دراپ فقط روی موبایل، برای تمرکز روی پنل و بستن با کلیک بیرون */}
-          <div
-            className="fixed inset-0 z-40 bg-black/30 sm:hidden"
-            aria-hidden="true"
-            onClick={close}
-          />
+          {/* Backdrop - فقط برای موبایل */}
+          {isMobile && (
+            <div
+              className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm animate-in fade-in-0 duration-200"
+              aria-hidden="true"
+              onClick={close}
+            />
+          )}
 
           <div
             ref={panelRef}
             role="dialog"
             aria-label={t("notifications.title", "مرکز فعالیت‌ها")}
-            dir="rtl"
             className={cn(
-              // موبایل: پنل ثابت، عرض کامل با حاشیه، وسط صفحه (بدون گرایش به چپ/راست)
-              "fixed left-3 right-3 top-16 z-50",
-              // دسکتاپ: رفتار قبلی، چسبیده به دکمه زنگ با عرض ثابت
-              "sm:absolute sm:left-auto sm:right-auto sm:end-0 sm:top-full sm:mt-2",
-              "w-auto sm:w-[400px] max-w-full max-h-[70vh] sm:max-h-[480px] flex flex-col",
-              "rounded-2xl border border-[hsl(var(--border-default))]",
+              "z-50 flex flex-col",
+              "border border-[hsl(var(--border-default))]",
               "bg-[hsl(var(--surface-elevated))] shadow-2xl shadow-black/20",
+              
+              // Mobile: fixed position, full width with margin
+              isMobile
+                ? "fixed left-4 right-4 top-16 max-h-[calc(100dvh-80px)] rounded-2xl"
+                : "absolute end-0 top-full mt-2 w-[400px] max-h-[480px] rounded-2xl",
+              
               "animate-in fade-in-0 slide-in-from-top-2 duration-200"
             )}
           >
             {/* Header */}
-            <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-[hsl(var(--border-default))]">
-              <div className="flex items-center gap-2 min-w-0">
-                <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">
+            <div className="flex items-center justify-between gap-1.5 md:gap-2 px-3 md:px-4 py-2.5 md:py-3 border-b border-[hsl(var(--border-default))] shrink-0">
+              <div className="flex items-center gap-1.5 md:gap-2 min-w-0">
+                <h3 className="text-xs md:text-sm font-semibold text-[hsl(var(--fg-primary))]">
                   {t("notifications.title", "مرکز فعالیت‌ها")}
                 </h3>
                 {unreadCount > 0 && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[hsl(var(--color-destructive)/0.1)] text-[hsl(var(--color-destructive))]">
+                  <span className="shrink-0 text-[8px] md:text-[10px] font-bold px-1.5 md:px-2 py-0.5 rounded-full bg-[hsl(var(--color-destructive)/0.1)] text-[hsl(var(--color-destructive))]">
                     {unreadCount}
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-1 shrink-0">
+              <div className="flex items-center gap-0.5 md:gap-1 shrink-0">
                 {unreadCount > 0 && (
                   <button
                     type="button"
                     onClick={handleMarkAllAsRead}
                     disabled={isMarkingAll}
                     className={cn(
-                      "flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium",
+                      "flex items-center gap-0.5 md:gap-1 px-1.5 md:px-2 py-1 rounded-lg",
+                      "text-[9px] md:text-[11px] font-medium",
                       "text-[hsl(var(--color-primary))] hover:bg-[hsl(var(--color-primary)/0.1)]",
-                      "transition-colors disabled:opacity-40"
+                      "transition-colors disabled:opacity-40",
+                      "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]",
+                      "min-h-[28px] md:min-h-[32px]"
                     )}
+                    aria-label={t("notifications.markAllRead", "خواندن همه")}
                   >
-                    <CheckCheck className="size-3.5" />
-                    {t("notifications.markAllRead", "خواندن همه")}
+                    <CheckCheck className="size-3 md:size-3.5" aria-hidden="true" />
+                    <span className="hidden sm:inline">{t("notifications.markAllRead", "خواندن همه")}</span>
                   </button>
                 )}
                 <button
                   type="button"
                   onClick={close}
-                  className="p-1 rounded-lg text-[hsl(var(--fg-tertiary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors"
+                  className="p-1 rounded-lg text-[hsl(var(--fg-tertiary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
                   aria-label={t("action.close", "بستن")}
                 >
-                  <X className="size-4" />
+                  <X className="size-3.5 md:size-4" aria-hidden="true" />
                 </button>
               </div>
             </div>
 
             {/* Body */}
-            <div className="overflow-y-auto overflow-x-hidden flex-1 p-3 min-w-0">
+            <div className="overflow-y-auto flex-1 p-2 md:p-3">
               {isLoading ? (
                 <BellSkeleton />
               ) : groups.length === 0 ? (
-                <BellEmptyState t={t} />
+                <BellEmptyState />
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-1.5 md:space-y-2">
                   {groups.map((g) => (
                     <GroupCard
                       key={g.key}
                       group={g}
-                      isOpen={isOpen(g)}
-                      onToggle={() => toggleFn(g)}
+                      isOpen={isOpenGroup(g)}
+                      onToggle={() => toggleGroup(g)}
                       onItemClick={click}
-                      t={t}
                     />
                   ))}
                 </div>
@@ -605,14 +611,17 @@ export const NotificationBell = memo(function NotificationBell({
                 type="button"
                 onClick={handleViewAll}
                 className={cn(
-                  "flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-medium",
+                  "flex items-center justify-center gap-1 md:gap-1.5 px-3 md:px-4 py-2 md:py-2.5 text-[10px] md:text-xs font-medium",
                   "text-[hsl(var(--fg-secondary))] hover:text-[hsl(var(--color-primary))]",
                   "border-t border-[hsl(var(--border-default))]",
-                  "hover:bg-[hsl(var(--surface-muted))] transition-colors duration-150"
+                  "hover:bg-[hsl(var(--surface-muted))] transition-colors duration-150",
+                  "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]",
+                  "min-h-[36px] md:min-h-[44px] shrink-0"
                 )}
+                aria-label={t("notifications.viewAll", "مشاهده همه فعالیت‌ها")}
               >
                 {t("notifications.viewAll", "مشاهده همه فعالیت‌ها")}
-                <ArrowLeft className="size-3.5 rtl:rotate-180" />
+                <ArrowLeft className="size-3 md:size-3.5 rtl:rotate-180" aria-hidden="true" />
               </button>
             )}
           </div>
