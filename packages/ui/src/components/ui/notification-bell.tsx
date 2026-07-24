@@ -8,9 +8,6 @@ import {
   Bell,
   X,
   ChevronDown,
-  CheckCircle2,
-  AlertTriangle,
-  ShieldCheck,
   CheckCheck,
   Inbox,
   ArrowLeft,
@@ -414,6 +411,27 @@ const BellEmptyState = memo(function BellEmptyState() {
 });
 BellEmptyState.displayName = "BellEmptyState";
 
+// ─── Backdrop ───────────────────────────────────────────────────────────────
+
+const Backdrop = memo(function Backdrop({
+  isOpen,
+  onClose,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  if (!isOpen) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm animate-in fade-in-0 duration-200 sm:hidden"
+      onClick={onClose}
+      aria-hidden="true"
+    />
+  );
+});
+Backdrop.displayName = "Backdrop";
+
 // ─── Main Component ─────────────────────────────────────────────────────────
 
 export const NotificationBell = memo(function NotificationBell({
@@ -485,9 +503,11 @@ export const NotificationBell = memo(function NotificationBell({
 
   return (
     <div className={cn("relative", className)}>
+      <Backdrop isOpen={open} onClose={close} />
+
       <button
         type="button"
-        onClick={() => setOpen(!open)}
+        onClick={() => setOpen((prev) => !prev)}
         className={cn(
           "relative p-2 rounded-xl text-[hsl(var(--fg-secondary))]",
           "hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]",
@@ -511,17 +531,24 @@ export const NotificationBell = memo(function NotificationBell({
           role="dialog"
           aria-label={t("notifications.title", "مرکز فعالیت‌ها")}
           className={cn(
-            "absolute end-0 top-full mt-2 z-50 flex flex-col",
+            "z-50 flex flex-col",
             "border border-[hsl(var(--border-default))]",
             "bg-[hsl(var(--surface-elevated))] shadow-2xl shadow-black/20",
-            "animate-in fade-in-0 slide-in-from-top-2 duration-200",
-            "w-[calc(100vw-1rem)] max-w-[400px]",
-            "max-h-[70vh] md:max-h-[480px]",
-            "rounded-xl md:rounded-2xl"
+            
+            // Mobile: from bottom of header to bottom of screen
+            "fixed inset-x-0 top-14 bottom-0",
+            "rounded-t-2xl",
+            "animate-in slide-in-from-bottom-2 duration-300 ease-out",
+            
+            // Desktop: popover from bell
+            "sm:absolute sm:end-0 sm:top-full sm:bottom-auto",
+            "sm:mt-2 sm:w-[400px] sm:max-h-[480px]",
+            "sm:rounded-2xl sm:shadow-xl",
+            "sm:animate-in sm:fade-in-0 sm:slide-in-from-top-2 sm:duration-200"
           )}
         >
           {/* Header */}
-          <div className="flex items-center justify-between gap-1.5 md:gap-2 px-3 md:px-4 py-2.5 md:py-3 border-b border-[hsl(var(--border-default))]">
+          <div className="flex items-center justify-between gap-1.5 md:gap-2 px-3 md:px-4 py-2.5 md:py-3 border-b border-[hsl(var(--border-default))] shrink-0">
             <div className="flex items-center gap-1.5 md:gap-2 min-w-0">
               <h3 className="text-xs md:text-sm font-semibold text-[hsl(var(--fg-primary))]">
                 {t("notifications.title", "مرکز فعالیت‌ها")}
@@ -595,7 +622,7 @@ export const NotificationBell = memo(function NotificationBell({
                 "border-t border-[hsl(var(--border-default))]",
                 "hover:bg-[hsl(var(--surface-muted))] transition-colors duration-150",
                 "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]",
-                "min-h-[36px] md:min-h-[44px]"
+                "min-h-[36px] md:min-h-[44px] shrink-0"
               )}
               aria-label={t("notifications.viewAll", "مشاهده همه فعالیت‌ها")}
             >
