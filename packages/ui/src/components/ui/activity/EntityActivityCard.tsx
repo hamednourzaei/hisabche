@@ -21,14 +21,24 @@ import {
   Receipt,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useEntitySummary, useEntityActivities } from "@hisabche/api";
+import type { ActivityItemDto, EntitySummaryDto } from "@hisabche/api";
 import { ActivityPreview } from "./ActivityPreview";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+// ✅ FIX: entitySummary and activities are now required props, coming
+// straight from the /v1/activities response (ActivityGroupDto), which
+// already contains everything needed. Previously this component fetched
+// them itself via useEntitySummary/useEntityActivities against a
+// /v1/activities/entity/:type/:id(/summary) route that either doesn't
+// exist or fails — causing `if (!summary) return null`, i.e. the card
+// silently rendering nothing while the virtualizer still reserved space
+// for it (matching the "1 item counted, nothing shown" symptom).
 interface EntityActivityCardProps {
   entityType: string;
   entityId: string;
+  entitySummary: EntitySummaryDto;
+  activities: ActivityItemDto[];
   hasUnread: boolean;
   onActivityClick: (activity: any) => void;
   compact?: boolean;
@@ -87,7 +97,6 @@ type ActivityType = keyof typeof activityIcons;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-// ✅ اصلاح: timeAgo با تایپ صحیح
 function timeAgo(date: string, t: (key: string, fallback: string) => string): string {
   const now = Date.now();
   const diff = now - new Date(date).getTime();
@@ -95,19 +104,19 @@ function timeAgo(date: string, t: (key: string, fallback: string) => string): st
 
   if (minutes < 1) return t("time.justNow", "همین الان");
   if (minutes < 60) return t("time.minutesAgo", `${minutes} دقیقه پیش`);
-  
+
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return t("time.hoursAgo", `${hours} ساعت پیش`);
-  
+
   const days = Math.floor(hours / 24);
   if (days < 7) return t("time.daysAgo", `${days} روز پیش`);
-  
+
   const weeks = Math.floor(days / 7);
   if (weeks < 4) return t("time.weeksAgo", `${weeks} هفته پیش`);
-  
+
   const months = Math.floor(days / 30);
   if (months < 12) return t("time.monthsAgo", `${months} ماه پیش`);
-  
+
   return t("time.yearsAgo", `${Math.floor(months / 12)} سال پیش`);
 }
 
@@ -146,26 +155,12 @@ const StatusBadge = memo(function StatusBadge({
 });
 StatusBadge.displayName = "StatusBadge";
 
-const ActivityIcon = memo(function ActivityIcon({
-  type,
-}: {
-  type: ActivityType;
-}) {
-  const Icon = activityIcons[type] || CheckCircle2;
-  return (
-    <div className="w-6 h-6 rounded-full bg-[hsl(var(--surface-muted))] flex items-center justify-center group-hover:bg-[hsl(var(--surface-muted)/0.8)] transition-colors">
-      <Icon className="w-3.5 h-3.5 text-[hsl(var(--fg-tertiary))]" />
-    </div>
-  );
-});
-ActivityIcon.displayName = "ActivityIcon";
-
 // ─── Preview Component ──────────────────────────────────────────────────────
 
 const PreviewContent = memo(function PreviewContent({
   summary,
 }: {
-  summary: any;
+  summary: EntitySummaryDto;
 }) {
   const { t } = useTranslation();
 
@@ -195,42 +190,8 @@ const PreviewContent = memo(function PreviewContent({
 });
 PreviewContent.displayName = "PreviewContent";
 
-// ─── Skeleton ────────────────────────────────────────────────────────────────
+// ─── Empty Timeline ──────────────────────────────────────────────────────────
 
-const CardSkeleton = memo(function CardSkeleton() {
-  return (
-    <div className="p-3 border border-[hsl(var(--border-default))] rounded-xl animate-pulse">
-      <div className="flex items-start gap-3">
-        <div className="w-10 h-10 rounded-full bg-[hsl(var(--surface-muted))]" />
-        <div className="flex-1 space-y-2">
-          <div className="h-4 bg-[hsl(var(--surface-muted))] rounded w-3/4" />
-          <div className="h-3 bg-[hsl(var(--surface-muted))] rounded w-1/2" />
-          <div className="h-3 bg-[hsl(var(--surface-muted))] rounded w-1/3" />
-        </div>
-      </div>
-    </div>
-  );
-});
-CardSkeleton.displayName = "CardSkeleton";
-
-const TimelineSkeleton = memo(function TimelineSkeleton() {
-  return (
-    <div className="space-y-2 py-2">
-      {[1, 2, 3].map((i) => (
-        <div key={i} className="flex items-start gap-3 animate-pulse">
-          <div className="w-6 h-6 rounded-full bg-[hsl(var(--surface-muted))]" />
-          <div className="flex-1 space-y-1">
-            <div className="h-4 bg-[hsl(var(--surface-muted))] rounded w-3/4" />
-            <div className="h-3 bg-[hsl(var(--surface-muted))] rounded w-1/3" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-});
-TimelineSkeleton.displayName = "TimelineSkeleton";
-
-// ─── ✅ اصلاح: EmptyTimeline با تایپ صحیح ──────────────────────────────────
 const EmptyTimeline = memo(function EmptyTimeline() {
   const { t } = useTranslation();
   return (
@@ -250,11 +211,11 @@ const TimelineItem = memo(function TimelineItem({
   isLast,
   onClick,
 }: {
-  activity: any;
+  activity: ActivityItemDto;
   isLast: boolean;
   onClick: () => void;
 }) {
-  const type = activity.type as ActivityType;
+  const type = activity.action as ActivityType;
   const Icon = activityIcons[type] || CheckCircle2;
 
   return (
@@ -294,6 +255,8 @@ TimelineItem.displayName = "TimelineItem";
 export const EntityActivityCard = memo(function EntityActivityCard({
   entityType,
   entityId,
+  entitySummary,
+  activities,
   hasUnread,
   onActivityClick,
   compact = false,
@@ -301,16 +264,12 @@ export const EntityActivityCard = memo(function EntityActivityCard({
   const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
 
-  const { data: summary, isLoading: summaryLoading } = useEntitySummary(entityType, entityId);
-  const { data: activities, isLoading: activitiesLoading } = useEntityActivities(entityType, entityId);
-
   const toggle = useCallback(() => setIsOpen((p) => !p), []);
 
-  if (summaryLoading) {
-    return <CardSkeleton />;
-  }
-
-  if (!summary) return null;
+  // ✅ FIX: no more loading/null state to worry about — entitySummary is
+  // guaranteed by the parent (ActivityGroupDto always has it), so no
+  // early `return null` that would leave reserved virtualizer space empty.
+  const summary = entitySummary;
 
   const entityKey = getEntityTypeKey(entityType);
   const config = entityConfig[entityKey] || entityConfig.invoice;
@@ -380,15 +339,13 @@ export const EntityActivityCard = memo(function EntityActivityCard({
                 {summary.status && <StatusBadge status={summary.status} />}
                 <span className="text-[10px] text-[hsl(var(--fg-tertiary))] flex items-center gap-1">
                   <Clock className="w-3 h-3" aria-hidden="true" />
-                  {!compact 
+                  {!compact
                     ? t("entity.activity.count", { count: summary.activityCount })
-                    : summary.activityCount
-                  }
+                    : summary.activityCount}
                 </span>
                 {summary.lastActivity && (
                   <span className="text-[10px] text-[hsl(var(--fg-tertiary))] flex items-center gap-1">
                     •
-                    {/* ✅ اصلاح: استفاده از timeAgo با تابع wrapper */}
                     {timeAgo(summary.lastActivity, (key: string, fallback: string) => t(key, fallback))}
                   </span>
                 )}
@@ -418,9 +375,7 @@ export const EntityActivityCard = memo(function EntityActivityCard({
             "px-3 pt-1 border-t border-[hsl(var(--border-default)/0.5)]",
             !compact ? "pb-3" : "pb-1"
           )}>
-            {activitiesLoading ? (
-              <TimelineSkeleton />
-            ) : !activities || activities.length === 0 ? (
+            {!activities || activities.length === 0 ? (
               <EmptyTimeline />
             ) : (
               <div className="space-y-0.5">

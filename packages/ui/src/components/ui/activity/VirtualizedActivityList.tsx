@@ -244,9 +244,18 @@ export const VirtualizedActivityList = memo(function VirtualizedActivityList({
                   aria-label={`فعالیت ${group.entitySummary.label}`}
                   aria-describedby={`activity-desc-${group.entityId}`}
                 >
+                  {/* ✅ FIX: pass entitySummary and activities straight from
+                      the group — this data already came from the
+                      /v1/activities response and is complete. Previously
+                      EntityActivityCard fetched these itself via
+                      useEntitySummary/useEntityActivities against a
+                      separate endpoint that failed, causing it to render
+                      null while this reserved slot stayed empty. */}
                   <EntityActivityCard
                     entityType={group.entityType}
                     entityId={group.entityId}
+                    entitySummary={group.entitySummary}
+                    activities={group.activities}
                     hasUnread={group.hasUnread}
                     onActivityClick={(activity) => onActivityClick(activity, group)}
                     compact={true}
