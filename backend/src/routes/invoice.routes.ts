@@ -125,6 +125,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
           await activityService.createActivity({
             actorId: userId,
             actorName: (request as any).user?.email ?? "",
+            workspaceId: (request as any).workspaceId,
             entityType: "invoice",
             entityId: invoice.id,
             action: "created",
@@ -179,6 +180,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
           await activityService.createActivity({
             actorId: userId,
             actorName: (request as any).user?.email ?? "",
+            workspaceId: (request as any).workspaceId,
             entityType: "invoice",
             entityId: id,
             action: "updated",
@@ -231,6 +233,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
           await activityService.createActivity({
             actorId: userId,
             actorName: (request as any).user?.email ?? "",
+            workspaceId: (request as any).workspaceId,
             entityType: "invoice",
             entityId: id,
             action: "deleted",

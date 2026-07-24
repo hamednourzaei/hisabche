@@ -49,6 +49,8 @@ export interface ActivityGroupDto {
 export interface CreateActivityInput {
   actorId: string;
   actorName: string;
+  // ✅ FIX: required — activities.workspace_id is NOT NULL in the DB
+  workspaceId: string;
   entityType: string;
   entityId: string;
   action: string;
@@ -100,6 +102,7 @@ export class ActivityService {
       action: input.action,
       title: input.title,
       actorName: input.actorName,
+      workspaceId: input.workspaceId,
     });
 
     if (!input.actorId) {
@@ -108,12 +111,19 @@ export class ActivityService {
     if (!input.entityType || !input.entityId) {
       throw new DatabaseError("entityType and entityId are required");
     }
+    // ✅ FIX: fail fast with a clear message instead of hitting the
+    // DB and getting a cryptic 23502 not-null violation.
+    if (!input.workspaceId) {
+      throw new DatabaseError("workspaceId is required");
+    }
 
     const { data, error } = await supabase
       .from("activities")
       .insert({
         actor_id: input.actorId,
         actor_name: input.actorName || input.actorId.slice(0, 8),
+        // ✅ FIX: previously missing — activities.workspace_id is NOT NULL
+        workspace_id: input.workspaceId,
         entity_type: input.entityType,
         entity_id: input.entityId,
         action: input.action,
