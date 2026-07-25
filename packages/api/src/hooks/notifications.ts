@@ -1,9 +1,18 @@
 // packages/src/hooks/notifications.ts
+// FIXED: حذف refetchInterval و جایگزینی با Realtime واقعی روی
+// جدول notifications.
+//
+// چرا: این سیستم بر خلاف activities هیچ Realtime subscription
+// نداشت — فقط polling هر ۱۵ ثانیه. با useRealtime (که در پروژه
+// از قبل با subscribeToChannel روی event: '*' پیاده‌سازی شده)
+// حالا هر تغییر (INSERT/UPDATE/DELETE) در notifications بلافاصله
+// queryKey های مرتبط را invalidate می‌کند.
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "../lib/client";
 import { useAuthReady } from "./useAuthReady";
+import { useRealtime } from "./useRealtime";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -53,7 +62,7 @@ export const notificationKeys = {
 
 /**
  * دریافت لیست نوتیفیکیشن‌ها
- * 
+ *
  * Backend Response:
  * {
  *   "data": Notification[],
@@ -63,6 +72,10 @@ export const notificationKeys = {
 export function useNotifications() {
   const authReady = useAuthReady();
 
+  // ✅ FIX: به‌جای refetchInterval، subscribe مستقیم به جدول
+  // notifications — با هر تغییر، لیست بلافاصله invalidate می‌شود.
+  useRealtime({ table: "notifications", queryKey: notificationKeys.list() as unknown as string[] });
+
   return useQuery({
     queryKey: notificationKeys.list(),
     queryFn: async (): Promise<Notification[]> => {
@@ -70,17 +83,17 @@ export function useNotifications() {
         const response = await apiClient.get<NotificationsResponse>(
           "/v1/notifications"
         );
-        
+
         // ✅ استخراج آرایه از response.data.data
         if (response.data?.data && Array.isArray(response.data.data)) {
           return response.data.data;
         }
-        
+
         // Fallback: اگر داده به شکل دیگری بود
         if (Array.isArray(response.data)) {
           return response.data;
         }
-        
+
         return [];
       } catch (error) {
         console.error("Failed to fetch notifications:", error);
@@ -88,15 +101,15 @@ export function useNotifications() {
       }
     },
     enabled: authReady,
-    staleTime: 30_000,
-    refetchInterval: 15_000,
+    staleTime: 60_000,
+    // ✅ FIX: بدون refetchInterval — Realtime جایگزین شده.
     placeholderData: [],
   });
 }
 
 /**
  * دریافت تعداد نوتیفیکیشن‌های خوانده‌نشده
- * 
+ *
  * Backend Response:
  * {
  *   "count": number
@@ -105,6 +118,10 @@ export function useNotifications() {
 export function useUnreadCount() {
   const authReady = useAuthReady();
 
+  // ✅ FIX: همان جدول notifications، همان منطق —
+  // یک تغییر (مثلاً mark-as-read) هم شمارش را بلافاصله به‌روز می‌کند.
+  useRealtime({ table: "notifications", queryKey: notificationKeys.unread() as unknown as string[] });
+
   return useQuery({
     queryKey: notificationKeys.unread(),
     queryFn: async (): Promise<number> => {
@@ -112,12 +129,12 @@ export function useUnreadCount() {
         const response = await apiClient.get<UnreadCountResponse>(
           "/v1/notifications/unread-count"
         );
-        
+
         // ✅ استخراج count از response.data.count
         if (response.data?.count !== undefined && typeof response.data.count === 'number') {
           return response.data.count;
         }
-        
+
         return 0;
       } catch (error) {
         console.error("Failed to fetch unread count:", error);
@@ -125,15 +142,15 @@ export function useUnreadCount() {
       }
     },
     enabled: authReady,
-    staleTime: 30_000,
-    refetchInterval: 15_000,
+    staleTime: 60_000,
+    // ✅ FIX: بدون refetchInterval — Realtime جایگزین شده.
     placeholderData: 0,
   });
 }
 
 /**
  * علامت‌گذاری نوتیفیکیشن‌ها به‌عنوان خوانده‌شده
- * 
+ *
  * Backend: PATCH /v1/notifications/mark-read
  * Body: { "ids": string[] }
  */

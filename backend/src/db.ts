@@ -1,10 +1,34 @@
 // ============================================
-// backend/src/db.ts — Optimized v2.1
+// backend/src/db.ts — Optimized v2.2
+// FIXED: حذف کامل hardcoded fallback برای SUPABASE_URL و
+// SUPABASE_SERVICE_KEY. قبلاً اگر متغیر محیطی ست نمی‌شد، یک
+// URL و Service Role Key واقعی (با دسترسی کامل و بدون RLS)
+// به‌صورت hardcode در کد استفاده می‌شد — یعنی هر کپی از این
+// فایل (حتی در یک چت یا ریپوی دیگر) کلید واقعی production را
+// افشا می‌کرد. حالا نبود این دو متغیر باعث خطای صریح در
+// startup می‌شود، نه استفاده‌ی خاموش از یک کلید قدیمی/نادرست.
 // ============================================
 
 import { createClient, SupabaseClientOptions } from '@supabase/supabase-js'
 
 const isLocal = !process.env.RENDER
+
+// ✅ FIX: بدون fallback — نبود این دو متغیر باید در استارت‌آپ
+// به‌صورت صریح fail شود، نه با یک کلید hardcode جایگزین شود.
+const SUPABASE_URL = process.env.SUPABASE_URL
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY
+
+if (!SUPABASE_URL) {
+  throw new Error(
+    '❌ SUPABASE_URL environment variable is required and was not set.'
+  )
+}
+
+if (!SUPABASE_SERVICE_KEY) {
+  throw new Error(
+    '❌ SUPABASE_SERVICE_KEY environment variable is required and was not set.'
+  )
+}
 
 let clientOptions: SupabaseClientOptions<'public'> = {
   auth: { persistSession: false },
@@ -13,7 +37,7 @@ let clientOptions: SupabaseClientOptions<'public'> = {
   },
   global: {
     headers: {
-      'x-hisabche-version': '2.1',
+      'x-hisabche-version': '2.2',
     },
   },
 }
@@ -32,8 +56,8 @@ if (isLocal) {
 }
 
 export const supabase = createClient(
-  process.env.SUPABASE_URL || 'https://quxpxatopmquheoazzlj.supabase.co',
-  process.env.SUPABASE_SERVICE_KEY || 'sb_secret_OPjGqLO0yOI5tROyEQxGxw_xRax46Kh',
+  SUPABASE_URL,
+  SUPABASE_SERVICE_KEY,
   clientOptions
 )
 
@@ -73,16 +97,16 @@ export const withConnection = async <T>(
   const startTime = Date.now()
   dbStats.incrementConnection()
   dbStats.incrementQueries()
-  
+
   try {
     const result = await fn()
     const duration = Date.now() - startTime
-    
+
     if (duration > 500) {
       dbStats.incrementSlowQueries()
       console.warn(`⚠️ Slow query: ${queryName || 'unnamed'} - ${duration}ms`)
     }
-    
+
     return result
   } finally {
     dbStats.decrementConnection()

@@ -1,11 +1,27 @@
 // ============================================
 // packages/api/src/hooks/dashboard.ts
+// FIXED: حذف polling و جایگزینی با Realtime واقعی.
+//
+// چرا: این هوک‌ها با refetchInterval (۶۰-۱۲۰ ثانیه) کار
+// می‌کردند، یعنی حتی وقتی هیچ تغییری رخ نداده بود، هر کاربر
+// باز هم درخواست می‌زد؛ و برعکس، وقتی یک فاکتور/مشتری/محصول
+// همان لحظه تغییر می‌کرد، KPI ها تا رسیدن نوبت polling بعدی
+// (حداکثر ۲ دقیقه) کهنه می‌ماندند — چیزی که طبق نیاز واقعی
+// («KPI ها باید لحظه‌ای با تغییر customer/warehouse/چارت آپدیت
+// شوند») قابل قبول نیست.
+//
+// useRealtime (که از قبل در پروژه با subscribeToChannel روی
+// event: '*' — یعنی INSERT/UPDATE/DELETE — پیاده‌سازی شده بود)
+// حالا مستقیماً در این فایل استفاده می‌شود. هر جدولی که روی
+// یک KPI اثر دارد، جدا subscribe می‌شود و با هر تغییر، همان
+// queryKey را invalidate می‌کند — بدون هیچ polling ثابتی.
 // ============================================
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
 import { apiClient } from "../lib/client";
 import { useAuthReady } from "./useAuthReady";
+import { useRealtime } from "./useRealtime";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface DashboardKPIs {
@@ -106,8 +122,21 @@ interface DashboardSalesParams {
 // ─── Hooks ──────────────────────────────────────────────────────────────────
 
 // ✅ گیت شده با authReady: قبل از hydrate شدن session، fire نمی‌شود
+// ✅ FIX: به‌جای refetchInterval، سه Realtime subscription جدا —
+// چون KPI های این هوک (todaySales, monthlyRevenue, pendingPayments
+// از invoices؛ activeCustomers/customerGrowth از customers؛
+// lowStockAlerts از products) به سه جدول متفاوت وابسته‌اند.
+// هر تغییری در هرکدام، بلافاصله همان queryKey (dashboardKeys.kpis())
+// را invalidate می‌کند.
 export function useDashboardKPIs() {
   const authReady = useAuthReady();
+
+  // ✅ FIX: useRealtime فقط string[] قبول می‌کند، ولی
+  // dashboardKeys.kpis() شامل مقادیر ثابت رشته‌ای است — همان‌طور
+  // که هست کار می‌کند. اینجا فقط برای type safety صریح تبدیل شده.
+  useRealtime({ table: "invoices", queryKey: dashboardKeys.kpis() as unknown as string[] });
+  useRealtime({ table: "customers", queryKey: dashboardKeys.kpis() as unknown as string[] });
+  useRealtime({ table: "products", queryKey: dashboardKeys.kpis() as unknown as string[] });
 
   return useQuery({
     queryKey: dashboardKeys.kpis(),
@@ -116,14 +145,23 @@ export function useDashboardKPIs() {
       return data;
     },
     enabled: authReady,
-    staleTime: 30_000,
-    refetchInterval: 60_000,
+    staleTime: 60_000,
+    // ✅ FIX: بدون refetchInterval — Realtime جایگزین polling شده.
+    // staleTime بالاتر رفته چون دیگر polling دوره‌ای پشتوانه نیست؛
+    // این فقط سقف زمانی «بدون هیچ رویداد Realtime» است، نه فاصله‌ی
+    // معمول رفرش.
   });
 }
 
 // ✅ گیت شده با authReady
+// ✅ FIX: AI insights از ترکیب چند منبع ساخته می‌شود (فاکتورها،
+// مشتریان، موجودی)، پس همان سه جدول را subscribe می‌کنیم.
 export function useAIInsights() {
   const authReady = useAuthReady();
+
+  useRealtime({ table: "invoices", queryKey: dashboardKeys.insights() as unknown as string[] });
+  useRealtime({ table: "customers", queryKey: dashboardKeys.insights() as unknown as string[] });
+  useRealtime({ table: "products", queryKey: dashboardKeys.insights() as unknown as string[] });
 
   return useQuery({
     queryKey: dashboardKeys.insights(),
@@ -132,12 +170,13 @@ export function useAIInsights() {
       return data;
     },
     enabled: authReady,
-    staleTime: 60_000,
-    refetchInterval: 120_000,
+    staleTime: 120_000,
+    // ✅ FIX: بدون refetchInterval — به Realtime تکیه می‌شود.
   });
 }
 
 // ✅ گیت شده با authReady
+// ✅ FIX: چارت فروش فقط به invoices وابسته است.
 export function useDashboardSales(params?: DashboardSalesParams) {
   const authReady = useAuthReady();
 
@@ -158,6 +197,8 @@ export function useDashboardSales(params?: DashboardSalesParams) {
   if (params?.to) {
     queryParams.endDate = params.to;
   }
+
+  useRealtime({ table: "invoices", queryKey: dashboardKeys.sales(queryParams) as unknown as string[] });
 
   return useQuery({
     queryKey: dashboardKeys.sales(queryParams),
@@ -200,7 +241,7 @@ export function useDashboardSales(params?: DashboardSalesParams) {
       return { data: fallbackData, chartData: fallbackData, total: 0, average: 0 };
     },
     enabled: authReady,
-    staleTime: 60_000,
-    refetchInterval: 120_000,
+    staleTime: 120_000,
+    // ✅ FIX: بدون refetchInterval — به Realtime تکیه می‌شود.
   });
 }

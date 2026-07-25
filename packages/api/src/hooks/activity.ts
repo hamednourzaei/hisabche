@@ -1,4 +1,19 @@
 // packages/api/src/hooks/activity.ts
+// FIXED: حذف refetchInterval از هر سه هوک.
+//
+// چرا: useRealtimeActivities.ts (که در ActivityCenter کنار این
+// هوک‌ها استفاده می‌شود) از قبل به‌صورت زنده روی رویداد INSERT
+// جدول activities subscribe است و با هر ردیف جدید، مستقیماً
+// queryClient.setQueryData را صدا می‌زند (optimistic update) و
+// activityKeys.unread() را invalidate می‌کند. یعنی داده همیشه
+// از طریق Realtime تازه است؛ refetchInterval های ۱۵ و ۳۰ ثانیه‌ای
+// قبلی صرفاً بار اضافه به سرور می‌زدند بدون فایده‌ی واقعی.
+//
+// توجه: این هوک‌ها به‌تنهایی (بدون useRealtimeActivities در
+// کامپوننت والد) دیگر خودشان تازه نمی‌مانند. اگر در آینده جایی
+// این هوک بدون useRealtimeActivities استفاده شود، باید یا
+// useRealtimeActivities به همان‌جا اضافه شود یا یک staleTime/
+// polling محدود برگردانده شود.
 "use client";
 
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from "@tanstack/react-query";
@@ -91,7 +106,8 @@ export function useActivities(filters?: ActivityFilter) {
     },
     enabled: authReady,
     staleTime: 30_000,
-    refetchInterval: 30_000,
+    // ✅ FIX: بدون refetchInterval — Realtime (useRealtimeActivities)
+    // این نقش را ایفا می‌کند.
     placeholderData: [],
   });
 }
@@ -116,7 +132,8 @@ export function useInfiniteActivities(filters?: ActivityFilter) {
     initialPageParam: null as string | null,
     enabled: authReady,
     staleTime: 30_000,
-    refetchInterval: 30_000,
+    // ✅ FIX: بدون refetchInterval — Realtime (useRealtimeActivities)
+    // این نقش را ایفا می‌کند.
   });
 }
 
@@ -132,7 +149,9 @@ export function useUnreadCount() {
     },
     enabled: authReady,
     staleTime: 30_000,
-    refetchInterval: 30_000,
+    // ✅ FIX: بدون refetchInterval — useRealtimeActivities بعد از
+    // هر رویداد جدید، مستقیماً activityKeys.unread() را
+    // invalidateQueries می‌کند، پس این عدد همیشه تازه می‌ماند.
     placeholderData: 0,
   });
 }
