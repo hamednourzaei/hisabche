@@ -1,10 +1,20 @@
 // ============================================
 // Customer Hooks — TanStack Query
+// FIXED: اضافه شدن Realtime روی جدول customers — با هر
+// INSERT/UPDATE/DELETE، لیست و جزئیات مشتریان بلافاصله invalidate
+// می‌شوند.
+//
+// نکته: مثل invoices.ts و products.ts، فقط useCustomers (لیست)
+// subscription realtime دارد — با customerKeys.all (سطح ریشه) که
+// هم لیست‌ها و هم صفحات جزئیات را پوشش می‌دهد. useCustomer
+// (جزئیات) عمداً subscription جدای خودش را ندارد تا از دو کانال
+// هم‌زمان روی جدول customers جلوگیری شود.
 // ============================================
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
+import { useRealtime } from './useRealtime'
 import type {
   Customer,
   CreateCustomer,
@@ -31,6 +41,11 @@ export const customerKeys = {
 export function useCustomers(filters: CustomerFilters = { page: 1, limit: 20, sortDirection: 'desc' }) {
   const authReady = useAuthReady()
 
+  // ✅ FIX: تنها subscription realtime برای جدول customers — با
+  // customerKeys.all، هم لیست‌ها (هر فیلتری) و هم جزئیات مشتری
+  // پوشش داده می‌شوند.
+  useRealtime({ table: 'customers', queryKey: customerKeys.all as unknown as string[] })
+
   return useQuery({
     queryKey: customerKeys.list(filters),
     queryFn: async () => {
@@ -45,6 +60,9 @@ export function useCustomers(filters: CustomerFilters = { page: 1, limit: 20, so
   })
 }
 
+// ⚠️ توجه: این هوک عمداً subscription realtime جدای خودش را ندارد
+// (توضیح در بالای فایل). اگر در صفحه‌ای مستقل و بدون useCustomers
+// استفاده می‌شود، به‌روزرسانی realtime نخواهد داشت.
 export function useCustomer(id: string | undefined) {
   const authReady = useAuthReady()
 

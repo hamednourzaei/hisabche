@@ -1,10 +1,22 @@
 // ============================================
 // Accounting Hooks — TanStack Query
+// FIXED: اضافه شدن Realtime روی جداول accounts، journal_entries و
+// journal_lines.
+//
+// نکته: سه جدول کاملاً جدا داریم که هرکدام subscription مستقل خود
+// را می‌خواهند. برای سادگی و جلوگیری از سه کانال هم‌زمان، هر سه
+// subscription روی accountingKeys.all invalidate می‌کنند — یعنی با
+// تغییر هرکدام از این جداول، تمام صفحات حسابداری (accounts, journal,
+// trial-balance, balance-sheet, income-statement) که مشتق از همین
+// داده‌ها هستند، invalidate می‌شوند. این ساده‌تر از invalidate
+// دقیق و جداگانه‌ی هر بخش است و چون این صفحات معمولاً پرترافیک
+// نیستند، هزینه‌ی اضافی invalidate کردن بیشتر از حد لازم ناچیز است.
 // ============================================
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
+import { useRealtime } from './useRealtime'
 
 // ═══ Types ═══
 export interface Account {
@@ -50,6 +62,11 @@ export const accountingKeys = {
 export function useAccounts() {
   const authReady = useAuthReady()
 
+  // ✅ FIX: subscription realtime برای جدول accounts — با
+  // accountingKeys.all، تمام صفحات مشتق‌شده (trial balance, balance
+  // sheet, ...) هم پوشش داده می‌شوند.
+  useRealtime({ table: 'accounts', queryKey: accountingKeys.all as unknown as string[] })
+
   return useQuery({
     queryKey: accountingKeys.accounts(),
     queryFn: async (): Promise<Account[]> => {
@@ -76,6 +93,11 @@ export function useCreateAccount() {
 
 export function useJournalEntries() {
   const authReady = useAuthReady()
+
+  // ✅ FIX: subscription realtime برای journal_entries — جدا از
+  // accounts چون جدول کاملاً متفاوتی است، ولی هر دو یک queryKey
+  // مشترک (accountingKeys.all) را invalidate می‌کنند.
+  useRealtime({ table: 'journal_entries', queryKey: accountingKeys.all as unknown as string[] })
 
   return useQuery({
     queryKey: accountingKeys.journalEntries(),
@@ -105,6 +127,12 @@ export function useCreateJournalEntry() {
 export function useTrialBalance(date: string) {
   const authReady = useAuthReady()
 
+  // ✅ FIX: subscription realtime برای journal_lines — چون
+  // trial-balance مستقیماً از خطوط دفتر کل (journal_lines) محاسبه
+  // می‌شود، این صفحه باید با هر تغییر در آن‌ها بلافاصله invalidate
+  // شود. سومین و آخرین جدول جدا در این فایل.
+  useRealtime({ table: 'journal_lines', queryKey: accountingKeys.all as unknown as string[] })
+
   return useQuery({
     queryKey: accountingKeys.trialBalance(date),
     queryFn: async (): Promise<TrialBalance[]> => {
@@ -116,6 +144,12 @@ export function useTrialBalance(date: string) {
   })
 }
 
+// ⚠️ توجه: useBalanceSheet و useIncomeStatement عمداً subscription
+// realtime جدای خودشان را ندارند. هر دو از همان جداول (accounts,
+// journal_entries, journal_lines) مشتق می‌شوند که توسط
+// useAccounts/useJournalEntries/useTrialBalance پوشش داده شده‌اند؛
+// اگر این صفحات بدون هیچ‌کدام از آن هوک‌ها در همان صفحه استفاده
+// شوند، به‌روزرسانی realtime نخواهند داشت.
 export function useBalanceSheet(date: string) {
   const authReady = useAuthReady()
 

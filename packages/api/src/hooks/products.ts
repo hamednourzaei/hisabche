@@ -1,10 +1,23 @@
 // ============================================
 // Product Hooks — TanStack Query
+// FIXED: اضافه شدن Realtime روی جدول products — با هر
+// INSERT/UPDATE/DELETE، لیست و جزئیات محصولات بلافاصله invalidate
+// می‌شوند (به‌جای تکیه‌ی صرف روی invalidateQueries دستی بعد از هر
+// mutation که فقط تغییرات همین کلاینت را پوشش می‌داد).
+//
+// نکته: مثل invoices.ts، فقط useProducts (لیست) subscription
+// realtime دارد — با productKeys.all (سطح ریشه) که هم لیست‌ها و هم
+// صفحات جزئیات را پوشش می‌دهد. useProduct (جزئیات) عمداً subscription
+// جدای خودش را ندارد تا از دو کانال هم‌زمان روی جدول products
+// جلوگیری شود. اگر صفحه‌ای فقط useProduct را بدون useProducts در
+// همان صفحه استفاده می‌کند، آن صفحه realtime نخواهد بود — در آن
+// صورت باید یک useRealtime مستقل به useProduct اضافه شود.
 // ============================================
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
+import { useRealtime } from './useRealtime'
 import type {
   Product,
   CreateProduct,
@@ -30,6 +43,11 @@ export const productKeys = {
 // ✅ گیت شده با authReady
 export function useProducts(filters: Partial<ProductFilters> = {}) {
   const authReady = useAuthReady()
+
+  // ✅ FIX: تنها subscription realtime برای جدول products — با
+  // productKeys.all، هم لیست‌ها (هر فیلتری) و هم جزئیات محصول
+  // پوشش داده می‌شوند.
+  useRealtime({ table: 'products', queryKey: productKeys.all as unknown as string[] })
 
   // ✅ فقط فیلدهایی که ارسال نشده‌اند را با default پر کن
   const mergedFilters: ProductFilters = {
@@ -60,6 +78,9 @@ export function useProducts(filters: Partial<ProductFilters> = {}) {
   })
 }
 
+// ⚠️ توجه: این هوک عمداً subscription realtime جدای خودش را ندارد
+// (توضیح در بالای فایل). اگر در صفحه‌ای مستقل و بدون useProducts
+// استفاده می‌شود، به‌روزرسانی realtime نخواهد داشت.
 export function useProduct(id: string | undefined) {
   const authReady = useAuthReady()
 

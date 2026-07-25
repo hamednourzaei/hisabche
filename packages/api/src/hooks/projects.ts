@@ -1,11 +1,20 @@
 // ============================================
 // packages/api/src/hooks/projects.ts
+// FIXED: اضافه شدن Realtime روی جداول projects و project_tasks.
+//
+// نکته: چون projects و project_tasks دو جدول کاملاً جدا در
+// دیتابیس هستند (نه یک entity با namespace فرعی مثل ledger)، دو
+// subscription realtime مستقل لازم است — یکی در useProjects (برای
+// جدول projects) و یکی در useProjectTasks (برای جدول project_tasks).
+// این با الگوی invoices/products/customers فرق دارد چون آن‌ها
+// فقط یک جدول داشتند.
 // ============================================
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../lib/client";
 import { useAuthReady } from "./useAuthReady";
+import { useRealtime } from "./useRealtime";
 
 export const projectKeys = {
   all: ["projects"] as const,
@@ -15,6 +24,11 @@ export const projectKeys = {
 
 export function useProjects(params?: { status?: string } | undefined) {
   const authReady = useAuthReady();
+
+  // ✅ FIX: subscription realtime برای جدول projects — با
+  // projectKeys.all، هم لیست‌ها (با هر params) و هم جزئیات یک
+  // پروژه‌ی خاص پوشش داده می‌شوند.
+  useRealtime({ table: "projects", queryKey: projectKeys.all as unknown as string[] });
 
   return useQuery({
     queryKey: projectKeys.list(params),
@@ -56,6 +70,15 @@ export const projectTaskKeys = {
 
 export function useProjectTasks(projectId: string) {
   const authReady = useAuthReady();
+
+  // ✅ FIX: subscription realtime مستقل برای جدول project_tasks —
+  // جدا از projects چون entity/جدول کاملاً متفاوتی است. توجه: اسم
+  // جدول در Supabase با underscore است (project_tasks)، در حالی که
+  // projectTaskKeys از خط‌تیره در query key استفاده می‌کند
+  // ("project-tasks") — این دو با هم بی‌ربط‌اند: اولی اسم جدول
+  // دیتابیس برای subscribeToChannel است، دومی صرفاً یک شناسه‌ی
+  // داخلی TanStack Query.
+  useRealtime({ table: "project_tasks", queryKey: projectTaskKeys.all as unknown as string[] });
 
   return useQuery({
     queryKey: projectTaskKeys.list(projectId),
@@ -101,6 +124,9 @@ export function useDeleteProjectTask() {
 }
 
 // ─── Single Project ─────────────────────────────────────────
+// ⚠️ توجه: این هوک عمداً subscription realtime جدای خودش را ندارد.
+// به‌روزرسانی realtime آن از طریق subscription موجود در
+// useProjects (که باید در همان صفحه mount باشد) تأمین می‌شود.
 export function useProject(id: string) {
   const authReady = useAuthReady();
 

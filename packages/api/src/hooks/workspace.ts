@@ -1,11 +1,20 @@
 // ============================================
 // packages/api/src/hooks/workspace.ts
+// FIXED: اضافه شدن Realtime روی جداول workspaces و workspace_members.
+//
+// نکته: چون workspaces و workspace_members دو جدول جدا در دیتابیس
+// هستند، دو subscription مستقل لازم است — یکی در useWorkspaces
+// (برای جدول workspaces) و یکی در useWorkspaceMembers (برای جدول
+// workspace_members). دومی اهمیت بیشتری دارد چون تغییرات عضویت
+// (دعوت عضو جدید، تغییر نقش، حذف عضو) باید بلافاصله برای بقیه‌ی
+// اعضای همان workspace دیده شود.
 // ============================================
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../lib/client";
 import { useAuthReady } from "./useAuthReady";
+import { useRealtime } from "./useRealtime";
 
 export const workspaceKeys = {
   all: ["workspaces"] as const,
@@ -16,6 +25,9 @@ export const workspaceKeys = {
 
 export function useWorkspaces() {
   const authReady = useAuthReady();
+
+  // ✅ FIX: subscription realtime برای جدول workspaces.
+  useRealtime({ table: "workspaces", queryKey: workspaceKeys.all as unknown as string[] });
 
   return useQuery({
     queryKey: workspaceKeys.list(),
@@ -29,6 +41,12 @@ export function useWorkspaces() {
 
 export function useWorkspaceMembers(workspaceId: string) {
   const authReady = useAuthReady();
+
+  // ✅ FIX: subscription realtime مستقل برای جدول workspace_members
+  // — با هر دعوت/حذف/تغییر نقش عضو، این هوک بلافاصله invalidate
+  // می‌شود، صرف‌نظر از این‌که useWorkspaces در همان صفحه mount
+  // باشد یا نه (چون این دو جدول کاملاً جدا هستند).
+  useRealtime({ table: "workspace_members", queryKey: workspaceKeys.all as unknown as string[] });
 
   return useQuery({
     queryKey: workspaceKeys.members(workspaceId),

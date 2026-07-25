@@ -1,10 +1,16 @@
 // ============================================
 // CRM Hooks — TanStack Query (Fixed Paths)
+// FIXED: اضافه شدن Realtime روی جداول interactions و opportunities.
+// پیش‌نیاز: هر دو جدول RLS فعال داشتند ولی هیچ policy ای نداشتند
+// (deny by default) — قبل از اضافه شدن این realtime، policy های
+// SELECT (user_id = auth.uid()) برای هر دو جدول در Supabase اضافه
+// شد، وگرنه subscription بی‌صدا هیچ eventای دریافت نمی‌کرد.
 // ============================================
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
+import { useRealtime } from './useRealtime'
 
 // ═══ Types ═══
 export interface Interaction {
@@ -28,6 +34,11 @@ export const crmKeys = {
 // ═══ Hooks ═══
 export function useInteractions(customerId?: string) {
   const authReady = useAuthReady()
+
+  // ✅ FIX: subscription realtime برای جدول interactions — با
+  // crmKeys.all، هم interactions هم opportunities (با هر customerId)
+  // پوشش داده می‌شوند.
+  useRealtime({ table: 'interactions', queryKey: crmKeys.all as unknown as string[] })
 
   return useQuery({
     queryKey: crmKeys.interactions(customerId),
@@ -58,6 +69,11 @@ export function useCreateInteraction() {
 
 export function useOpportunities(customerId?: string) {
   const authReady = useAuthReady()
+
+  // ✅ FIX: subscription realtime مستقل برای جدول opportunities —
+  // جدا از interactions چون جدول متفاوتی است، ولی هر دو همان
+  // crmKeys.all را invalidate می‌کنند.
+  useRealtime({ table: 'opportunities', queryKey: crmKeys.all as unknown as string[] })
 
   return useQuery({
     queryKey: crmKeys.opportunities(customerId),

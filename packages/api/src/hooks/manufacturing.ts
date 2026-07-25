@@ -1,10 +1,19 @@
 // ============================================
 // Manufacturing Hooks — TanStack Query
+// FIXED: اضافه شدن Realtime روی جداول boms، bom_items و work_orders.
+//
+// ⚠️ پیش‌نیاز قبل از استفاده از این فایل: طبق چک RLS، هر سه جدول
+// (boms, bom_items, work_orders) در حال حاضر rowsecurity=true دارند
+// ولی هیچ policy ای برایشان تعریف نشده (deny by default) — یعنی
+// subscription های زیر بدون خطا، ولی بی‌صدا هیچ eventای دریافت
+// نخواهند کرد تا زمانی که policy های SELECT مناسب اضافه شوند.
+// اسکریپت SQL لازم جداگانه ارائه می‌شود.
 // ============================================
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
+import { useRealtime } from './useRealtime'
 
 // ═══ Types ═══
 export interface BOM {
@@ -34,6 +43,11 @@ export const manufacturingKeys = {
 export function useBOMs(productId?: string) {
   const authReady = useAuthReady()
 
+  // ✅ FIX: subscription realtime برای جدول boms — با
+  // manufacturingKeys.all، هم BOM ها و هم work orders پوشش داده
+  // می‌شوند.
+  useRealtime({ table: 'boms', queryKey: manufacturingKeys.all as unknown as string[] })
+
   return useQuery({
     queryKey: manufacturingKeys.boms(productId),
     queryFn: async (): Promise<BOM[]> => {
@@ -62,6 +76,11 @@ export function useCreateBOM() {
 
 export function useWorkOrders(status?: string) {
   const authReady = useAuthReady()
+
+  // ✅ FIX: subscription realtime مستقل برای جدول work_orders —
+  // جدا از boms چون جدول متفاوتی است، ولی هر دو همان
+  // manufacturingKeys.all را invalidate می‌کنند.
+  useRealtime({ table: 'work_orders', queryKey: manufacturingKeys.all as unknown as string[] })
 
   return useQuery({
     queryKey: manufacturingKeys.workOrders(status),

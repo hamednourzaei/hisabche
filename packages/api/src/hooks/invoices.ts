@@ -1,10 +1,24 @@
 // ============================================
 // Invoice Hooks — TanStack Query
+// FIXED: اضافه شدن Realtime روی جدول invoices — با هر
+// INSERT/UPDATE/DELETE، لیست فاکتورها بلافاصله invalidate می‌شود
+// (به‌جای تکیه‌ی صرف روی invalidateQueries دستی بعد از هر mutation
+// که فقط تغییرات همین کلاینت را پوشش می‌داد، نه تغییرات از دستگاه‌ها
+// یا تب‌های دیگر).
+//
+// نکته: چون useInvoices بر اساس filters چند queryKey متفاوت می‌سازد
+// (هر فیلتر/صفحه یک key جدا)، اینجا از invoiceKeys.lists() (سطح
+// والد، بدون فیلتر) به useRealtime داده شده — با هر تغییر، تمام
+// کوئری‌هایی که زیرمجموعه‌ی ['invoices', 'list'] هستند (یعنی همه‌ی
+// فیلترها و صفحات) invalidate می‌شوند. جزئیات یک فاکتور خاص
+// (invoiceKeys.detail) هم همینطور، چون همه زیرمجموعه‌ی
+// invoiceKeys.all هستند.
 // ============================================
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
+import { useRealtime } from './useRealtime'
 import type {
   Invoice,
   CreateInvoice,
@@ -44,6 +58,16 @@ export const invoiceKeys = {
 export function useInvoices(filters: InvoiceFilters = { page: 1, limit: 20, sortDirection: 'desc' }) {
   const authReady = useAuthReady()
 
+  // ✅ FIX: به‌جای polling، subscribe مستقیم به جدول invoices —
+  // با هر تغییر، هم تمام لیست‌های فاکتور (صرف‌نظر از فیلتر) و هم
+  // صفحات جزئیات یک فاکتور خاص بلافاصله invalidate می‌شوند.
+  // عمداً از invoiceKeys.all (سطح ریشه) استفاده شده، نه .lists() —
+  // چون useInvoice (جزئیات فاکتور) دیگر subscription جدای خودش را
+  // ندارد؛ نگه‌داشتن این یک subscription در useInvoices کافی است و
+  // از ساخته‌شدن دو کانال هم‌زمان روی جدول invoices (وقتی لیست و
+  // جزئیات یک فاکتور در یک صفحه هم‌زمان mount هستند) جلوگیری می‌کند.
+  useRealtime({ table: 'invoices', queryKey: invoiceKeys.all as unknown as string[] })
+
   return useQuery({
     queryKey: invoiceKeys.list(filters),
     queryFn: async () => {
@@ -64,6 +88,13 @@ export function useInvoices(filters: InvoiceFilters = { page: 1, limit: 20, sort
   })
 }
 
+// ⚠️ توجه: useInvoice عمداً subscription realtime جدای خودش را ندارد.
+// اگر این هوک بدون useInvoices در همان صفحه استفاده شود (مثلاً یک
+// صفحه‌ی جزئیات مستقل که هیچ‌جا لیست فاکتورها را mount نمی‌کند)،
+// به‌روزرسانی realtime برای آن صفحه کار نخواهد کرد — چون هیچ
+// subscription فعالی روی جدول invoices وجود نخواهد داشت. اگر با
+// چنین صفحه‌ای مواجه شدی، همین‌جا یک useRealtime مستقل با
+// queryKey: invoiceKeys.detail(id!) اضافه کن.
 export function useInvoice(id: string | undefined) {
   const authReady = useAuthReady()
 
