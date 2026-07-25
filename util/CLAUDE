@@ -1,0 +1,197 @@
+# حسابچه — بریف آماده‌سازی برای Claude Code
+### پیاده‌سازی معماری Event-Driven (Manifest v9.0) برای مقیاس ۵۰,۰۰۰+ کاربر
+
+> این فایل برای زمانی نوشته شده که Pro (یا بالاتر) خریداری شد و کار با Claude Code شروع می‌شود.
+> شامل سه بخش است: (۱) پرامپت شروع، (۲) چک‌لیست پیش‌نیازها، (۳) نیازمندی‌های فنی و ابزارها.
+
+---
+
+## ۱. پرامپت شروع (Session اول در Claude Code)
+
+این پرامپت را داخل پوشه‌ی ریشه‌ی پروژه (`C:\Users\hamed\Desktop\hisabche`) در ترمینال Claude Code اجرا کن:
+
+```
+تو یک Senior Principal Backend Architect و Full Stack Engineer هستی.
+
+وظیفه‌ات اجرای مرحله‌به‌مرحله‌ی Hisabche Event Architecture Manifest v9.0 است —
+منیفست کامل را در فایل ضمیمه (یا مسیر util/manifest-v9.md اگر ذخیره شده) پیدا می‌کنی.
+
+قوانین ایمنی فایل (اجباری، بدون استثنا):
+1. هرگز بیش از یک فایل را در هر پاسخ تغییر، حذف، یا rename نکن.
+2. قبل از تغییر هر فایل موجود: توقف کن، محتوای فعلی فایل را از من با ابزارهای
+   view/bash بخوان (چون به کدهای من دسترسی مستقیم داری، نیازی به درخواست از من نیست
+   مگر فایل را در ریپو پیدا نکردی).
+3. قبل از ساخت فایل جدید: توضیح بده چرا لازم است، کجا قرار می‌گیرد، چه
+   dependency‌هایی دارد، سپس منتظر تأیید من بمان.
+4. هرگز فایلی را بدون تأیید صریح حذف نکن.
+5. هرگز کل معماری را بازنویسی نکن — فقط کوچک‌ترین تغییر لازم.
+
+سبک اجرا:
+- در فازها کار کن (Phase 0 تا Phase 6، طبق منیفست).
+- بعد از هر فاز: توضیح بده چه کاری انجام شد، چه ریسک‌هایی دارد، و منتظر
+  تأیید من برای فاز بعدی بمان — هرگز خودکار ادامه نده.
+
+قوانین کدنویسی:
+- TypeScript strict mode
+- صفر استفاده از `any` — از generics و discriminated union درست استفاده کن
+- رشته‌های hardcoded ممنوع — از enum یا constant استفاده کن
+- منطق تکراری ممنوع — از سرویس‌های موجود استفاده کن
+- حداکثر طول تابع: ۲۵ خط
+- الگوهای موجود پروژه را حفظ کن، معماری فعلی را بدون تأیید تغییر نده
+- بدون نصب پکیج جدید بدون تأیید من
+
+فرمت هر پاسخ:
+## فاز فعلی
+## فایل (مسیر)
+## اقدام (ساخت/تغییر/بررسی)
+## دلیل
+## ورودی مورد نیاز (اگر لازم است)
+
+قبل از هرکاری: Phase 0 (Project Audit) را شروع کن. ساختار پوشه‌ی backend/src،
+فایل‌های package.json (ریشه، backend، packages/api)، و اسکیمای فعلی دیتابیس
+(خصوصاً جداول event_log، sync_queue، event_types، activities) را خودت با
+دسترسی مستقیم به فایل‌سیستم بررسی کن و یک گزارش وضعیت فعلی به من بده — هنوز
+هیچ کدی تغییر نده.
+
+نکته‌ی مهم: در طول توسعه‌ی این پروژه (Hisabche)، این باگ‌ها/الگوهای مشکل‌ساز
+قبلاً پیدا و برخی رفع شده‌اند — حتماً هنگام Audit این‌ها را هم چک کن که دوباره
+تکرار نشده باشند:
+- دو نسخه از یک Repository/Hook هم‌زمان در پروژه وجود دارد (کد مرده) — قبل از
+  ساخت چیز جدید، grep بزن ببین نسخه‌ی مشابه از قبل نیست.
+- کش (چه Redis از طریق cache.service.ts، چه memoryCache از utils/pagination.ts)
+  گاهی پاسخ خالی/خطا را cache می‌کند بدون چک محتوا — قبل از cache کردن هر
+  پاسخ، بررسی کن که واقعاً معتبر است.
+- ستون‌هایی که کد فرض می‌کند در دیتابیس هست ولی واقعاً نیست (مثال گذشته:
+  activities.actor_name) — همیشه schema واقعی را با Supabase MCP یا SQL query
+  تأیید کن، نه فقط از روی کد حدس بزن.
+- Foreign key ها به auth.users اشاره نمی‌کنند، به public.profiles اشاره
+  می‌کنند — و trigger ساخت profile (handle_new_user) ممکن است روی
+  raw_user_meta_data->>'full_name' خالی crash کند. قبل از هر migration که به
+  profiles وابسته است، این trigger را verify کن.
+- useEffect هایی که یک هندلر async را در dependency array خود دارند و آن
+  هندلر state ای را تغییر می‌دهد که خودش dependency هندلر است → حلقه‌ی
+  بی‌نهایت. مراقب این الگو در Phase 5 (frontend hooks) باش.
+```
+
+---
+
+## ۲. چک‌لیست پیش‌نیازها (قبل از شروع Session)
+
+### دسترسی و حساب‌ها
+- [ ] پلن Claude Pro (یا بالاتر) فعال است
+- [ ] Claude Code نصب شده (`npm install -g @anthropic-ai/claude-code` یا از claude.com/claude-code)
+- [ ] دسترسی مستقیم به ریپوی `C:\Users\hamed\Desktop\hisabche` از طریق ترمینال
+- [ ] دسترسی به Supabase Dashboard (SQL Editor) — برای اجرای migration ها دستی در صورت نیاز
+- [ ] دسترسی به Render Dashboard — برای ساخت سرویس جدید Worker (جدا از API)
+- [ ] Git repository تمیز — یک commit پایدار قبل از شروع (`git commit -am "before event architecture migration"`) تا در صورت مشکل بتوان برگشت
+
+### پشتیبان‌گیری (حیاتی — قبل از هر migration)
+- [ ] یک backup کامل از دیتابیس Supabase گرفته شود (Database → Backups → Scheduled/Manual)
+- [ ] فایل‌های فعلی `backend/src/routes/*.ts` و `backend/src/services/*.ts` جایی خارج از git هم ذخیره شوند (اختیاری، ولی برای این پروژه با توجه به سابقه‌ی باگ‌های schema توصیه می‌شود)
+
+### دانش پروژه که باید در دسترس Claude Code باشد
+- [ ] فایل کامل منیفست v9.0 (همان که در این مکالمه داده شد) به‌صورت `.md` در پوشه‌ی `util/` یا مشابه ذخیره شود تا Claude Code بتواند مستقیم بخواندش
+- [ ] خلاصه‌ای از باگ‌های قبلاً پیدا‌شده و رفع‌شده (فهرست بالا در پرامپت گنجانده شده)
+- [ ] دسترسی به `database-dependencies-report.md` که در ریشه‌ی پروژه موجود است (طبق ساختار فایل‌ها)
+
+---
+
+## ۳. نیازمندی‌های فنی و زیرساخت
+
+### زیرساخت (قبل از Phase 3 — Worker System)
+منیفست یک **process جدا برای Worker** پیشنهاد می‌دهد (خارج از API). این یعنی:
+
+| نیاز | وضعیت فعلی (حدسی بر اساس لاگ‌ها) | اقدام لازم |
+|---|---|---|
+| سرویس API جدا | موجود (Render, هایبرنیت می‌شود بعد از بی‌کاری) | — |
+| سرویس Worker جدا | وجود ندارد | ساخت یک Render Web Service یا Background Worker جدید |
+| Instance tier | فعلاً به‌نظر `nano`/hibernate | برای اجرای هم‌زمان API + Worker + احتمال ۲ replica طبق `docker-compose.yml` منیفست، به‌احتمال زیاد باید ارتقا به تیر بالاتر (Starter یا Standard) داده شود، وگرنه worker با API روی منابع رقابت می‌کند |
+| Supabase Compute | `nano` | برای ۵۰k کاربر همزمان و اضافه‌شدن ۹ جدول/index جدید، باید حداقل قبل از رفتن به production واقعی ارتقا بررسی شود (فعلاً برای توسعه/تست nano کافی است) |
+| Connection pooling | نامشخص — باید بررسی شود آیا از Supabase Pooler (PgBouncer) استفاده می‌شود | Worker با `pg.Pool` جدا به connection های بیشتری نیاز دارد — حتماً از Supavisor/PgBouncer transaction mode استفاده شود، نه اتصال مستقیم |
+
+### وابستگی‌های npm جدید (طبق منیفست)
+Worker جدا از `pg` (node-postgres) به‌جای Supabase client استفاده می‌کند:
+```bash
+npm install pg
+npm install --save-dev @types/pg
+```
+این باید در `backend/package.json` اضافه شود (Phase 3، با تأیید کاربر طبق قانون "بدون نصب پکیج بدون تأیید").
+
+### متغیرهای محیطی جدید مورد نیاز
+```
+DATABASE_URL=              # اتصال مستقیم Postgres (نه از طریق Supabase client) — برای pg.Pool در worker
+WORKER_ID=worker-1          # شناسه‌ی هر instance از worker
+TOTAL_WORKERS=1             # تعداد کل worker ها برای partition کردن رویدادها
+SUPABASE_SERVICE_ROLE_KEY=  # برای broadcast به Realtime از سمت worker (اگر از قبل نیست)
+```
+
+### Docker (اختیاری، اگر بخواهید دقیقاً طبق منیفست عمل کنید)
+منیفست `docker-compose.yml` + `Dockerfile.api` + `Dockerfile.worker` جدا پیشنهاد می‌دهد. اگر روی Render مستقیم (بدون Docker سفارشی) کار می‌کنید، این بخش باید با یک "Background Worker" جدا در Render جایگزین شود (Render از Docker خودش پشتیبانی می‌کند ولی نیازی به docker-compose نیست — هر سرویس را جدا می‌سازید).
+
+---
+
+## ۴. ترتیب واقعی پیشنهادی (نه لزوماً همان فازبندی خام منیفست)
+
+با توجه به سابقه‌ی این پروژه (باگ‌های schema mismatch که در توسعه‌ی activity feed پیدا شد)، پیشنهاد می‌شود قبل از Phase 1 منیفست، این مرحله‌ی صفر اضافه شود:
+
+**Phase -1 (پیشنهادی، قبل از Phase 0 منیفست): Schema Reconciliation**
+- Claude Code با دسترسی مستقیم (یا از طریق Supabase MCP اگر وصل است) تمام جداول موجود را با کدی که به آن‌ها ارجاع می‌دهد مقایسه کند
+- گزارشی از mismatch های احتمالی (ستون‌های گم‌شده، FK های اشتباه) قبل از افزودن ۹ جدول جدید بدهد
+- این از تکرار مشکلاتی مثل `actor_name`/`workspace_id`/`profiles` که در این مکالمه رفع شد جلوگیری می‌کند
+
+---
+
+## ۵. یادآوری مهم درباره‌ی محدودیت‌های Pro
+
+- Pro محدودیت usage در بازه‌های ۵ ساعته دارد (rolling session)، نه سقف روزانه
+- برای پروژه‌ای به این حجم (۹ migration، چندین service/route/worker/hook)، احتمال برخورد به محدودیت usage در میانه‌ی یک فاز طولانی وجود دارد — اگر این اتفاق افتاد، عادی است؛ صبر کنید تا session بعدی و از همان‌جا ادامه دهید (Claude Code context قبلی را در حافظه‌ی پروژه نگه می‌دارد اگر از `CLAUDE.md` یا فایل‌های memory استفاده شود)
+- توصیه: یک فایل `CLAUDE.md` در ریشه‌ی پروژه بسازید که خلاصه‌ی وضعیت فعلی فاز و تصمیمات گرفته‌شده را نگه دارد، تا هر session جدید سریع context بگیرد
+
+---
+
+## ۶. لیست کامل فایل‌هایی که طبق منیفست تغییر/ساخته می‌شوند
+
+### فایل‌های جدید (ساخت)
+```
+supabase/migrations/01_event_log_upgrade.sql
+supabase/migrations/02_client_mutations.sql
+supabase/migrations/03_event_handlers.sql
+supabase/migrations/04_tenant_sequences.sql
+supabase/migrations/05_indexes_optimization.sql
+supabase/migrations/06_dead_letter_queue.sql
+supabase/migrations/07_idempotency_keys.sql
+supabase/migrations/08_event_handler_execution.sql
+supabase/migrations/09_sync_checkpoints.sql
+backend/src/types/event.types.ts
+backend/src/services/idempotency.service.ts
+backend/src/services/event.service.ts  (احتمالاً از قبل event.service.ts وجود دارد — باید merge شود، نه بازنویسی)
+backend/src/consumers/index.ts
+backend/src/consumers/realtime.consumer.ts
+backend/src/consumers/sync.consumer.ts
+backend/src/consumers/webhook.consumer.ts
+backend/src/workers/event-worker.ts
+backend/src/services/recovery.service.ts
+docker-compose.yml  (یا معادل Render)
+Dockerfile.api
+Dockerfile.worker
+packages/api/src/hooks/useLiveQuery.ts
+```
+
+### فایل‌های موجود که تغییر می‌کنند
+```
+backend/src/routes/invoice.routes.ts        (افزودن eventService.createEvent)
+backend/src/routes/*.routes.ts               (سایر route های نوشتنی، تدریجی)
+backend/src/index.ts                         (راه‌اندازی worker یا جداسازی از API)
+backend/package.json                         (افزودن pg، @types/pg)
+```
+
+---
+
+## ۷. سؤالی که باید قبل از شروع از خودتان بپرسید
+
+این پروژه با یک کاربر فعال (شما) در حال توسعه است. معماری event-driven کامل (با worker جدا، idempotency، dead-letter queue) معمولاً زمانی ارزش سرمایه‌گذاری دارد که:
+- ترافیک واقعی همزمان دارید (نه صرفاً پیش‌بینی آینده)
+- تیمی برای نگهداری worker جدا دارید
+- محصول pattern های استفاده‌ی واقعی کاربران را نشان داده که نیاز به این معماری را ثابت می‌کند
+
+اگر هنوز در مرحله‌ی اعتبارسنجی محصول هستید، ممکن است منطقی‌تر باشد ابتدا نسخه‌ی ساده‌تری (فقط رفع باگ‌های فعلی + بهینه‌سازی `refetchInterval`/`staleTime` که در مکالمه‌ی قبلی مطرح شد) پیاده‌سازی شود و معماری event-driven کامل زمانی اجرا شود که سیگنال واقعی رشد کاربر دیده شود.

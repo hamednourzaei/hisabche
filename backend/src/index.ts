@@ -1,8 +1,22 @@
 // ============================================
-// backend/src/index.ts — Hisabche API Server v2.4
+// backend/src/index.ts — Hisabche API Server v2.5
 // FIXED: workspaceRoutes import — use default import
 // FIXED: notificationRoutes — properly registered
 // FIXED: debugRoutes — properly registered
+// FIXED (v2.5): Removed global HTTP-level cache layer.
+//   Root cause: this layer built keys as `http:${userId}:${url}`
+//   while every route-level cache (cacheMiddleware) builds keys
+//   as `${keyPrefix}:${userId}:${url}` (e.g. `activities:${userId}:...`).
+//   Because `userId` came BEFORE the prefix here but AFTER the
+//   prefix in cacheMiddleware, clearCache(`activities:${userId}:*`)
+//   could never match this layer's keys — so invalidation after
+//   writes (e.g. creating an invoice) never cleared the global
+//   cache, and clients could keep seeing stale data.
+//   cacheMiddleware already covers every route that needs caching
+//   with correct, invalidatable keys, so this layer is removed
+//   rather than reconciled. Routes without cacheMiddleware simply
+//   run uncached now instead of being served through an
+//   uninvalidatable cache.
 // ============================================
 
 import Fastify from 'fastify'
@@ -18,7 +32,6 @@ import dotenv from 'dotenv'
 // ──────────────────────────────────────────────
 import { authenticate } from './middleware/auth.middleware'
 import { supabase } from './db'
-import { memoryCache } from './utils/pagination'
 
 // ──────────────────────────────────────────────
 // Routes
@@ -91,7 +104,7 @@ const server = Fastify({
 // ──────────────────────────────────────────────
 // STARTUP LOGGING
 // ──────────────────────────────────────────────
-server.log.info(`🚀 Starting Hisabche API v2.4...`)
+server.log.info(`🚀 Starting Hisabche API v2.5...`)
 server.log.info(`📦 Environment: ${process.env.NODE_ENV || 'development'}`)
 
 // ──────────────────────────────────────────────
@@ -103,94 +116,46 @@ server.addHook('onRequest', async (request) => {
 
 server.addHook('onSend', async (request, reply, payload) => {
   const duration = Date.now() - ((request as any).startTime || Date.now())
-  
+
   reply.header('X-Response-Time-MS', duration.toString())
   reply.header('X-Content-Type-Options', 'nosniff')
   reply.header('X-Frame-Options', 'DENY')
   reply.header('X-XSS-Protection', '1; mode=block')
-  
+
   if (duration > 500) {
     request.log.warn(`⚠️ SLOW: ${request.method} ${request.url} - ${duration}ms`)
   }
-  
+
   return payload
 })
 
 // ──────────────────────────────────────────────
-// 2. AUTH MIDDLEWARE (قبل از کش)
+// 2. AUTH MIDDLEWARE
 // ──────────────────────────────────────────────
 server.addHook('preHandler', async (request, reply) => {
   const url = request.url
-  
+
   const publicPaths = [
     '/docs', '/live', '/ready', '/api', '/api/health', '/api/slo',
     '/api/auth/login', '/api/auth/signup', '/api/auth/forgot-password',
     '/api/auth/reset-password', '/api/auth/verify-email',
   ]
-  
+
   if (publicPaths.some(p => url.startsWith(p))) return
   if (request.method === 'OPTIONS') return
-  
+
   await authenticate(request, reply)
 })
 
 // ──────────────────────────────────────────────
-// 3. CACHE MIDDLEWARE (بعد از Auth — با userId)
-// ──────────────────────────────────────────────
-server.addHook('preHandler', async (request, reply) => {
-  // فقط GET درخواست‌ها
-  if (request.method !== 'GET') return
-
-  const skipPaths = ['/api/health', '/api/live', '/api/ready', '/docs', '/api', '/api/slo']
-  if (skipPaths.some(p => request.url.startsWith(p))) return
-  if (request.url.includes('auth')) return
-
-  const userId = (request as any).userId || 'anonymous'
-  const cacheKey = `http:${userId}:${request.url}`
-  
-  try {
-    const cached = await memoryCache.get(cacheKey)
-    if (cached) {
-      reply.header('x-cache', 'HIT')
-      reply.header('x-user-id', userId.substring(0, 8))
-      reply.header('Cache-Control', 'private, max-age=30')
-      return reply.send(cached)
-    }
-    reply.header('x-cache', 'MISS')
-    reply.header('x-user-id', userId.substring(0, 8))
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : String(err)
-    request.log.error(`Cache error: ${errorMessage}`)
-  }
-})
-
-// ذخیره پاسخ در کش (بعد از auth)
-server.addHook('onSend', async (request, reply, payload) => {
-  if (request.method === 'GET' && reply.statusCode === 200) {
-    const skipPaths = ['/api/health', '/api/live', '/api/ready', '/docs', '/api', '/api/slo']
-    if (!skipPaths.some(p => request.url.startsWith(p)) && !request.url.includes('auth')) {
-      const userId = (request as any).userId || 'anonymous'
-      const cacheKey = `http:${userId}:${request.url}`
-      try {
-        await memoryCache.set(cacheKey, payload, 60)
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : String(err)
-        request.log.error(`Cache set error: ${errorMessage}`)
-      }
-    }
-  }
-  return payload
-})
-
-// ──────────────────────────────────────────────
-// 4. HEALTH CHECKS
+// 3. HEALTH CHECKS
 // ──────────────────────────────────────────────
 server.get('/api/health', async () => ({
   status: 'ok',
   timestamp: new Date().toISOString(),
   uptime: process.uptime(),
   env: process.env.NODE_ENV,
-  version: '2.4.0',
+  version: '2.5.0',
   cache: process.env.REDIS_URL ? 'redis' : 'memory',
 }))
 
@@ -218,7 +183,7 @@ server.get('/ready', async () => {
 
 server.get('/api', async () => ({
   name: 'Hisabche API',
-  version: '2.4.0',
+  version: '2.5.0',
   status: 'complete',
   docs: '/docs',
   health: '/api/health',
@@ -228,7 +193,7 @@ server.get('/api', async () => ({
 
 server.get('/api/slo', async () => ({
   service: 'Hisabche API',
-  version: '2.4.0',
+  version: '2.5.0',
   slo: {
     availability: '99.9%',
     p95Latency: '< 200ms',
@@ -239,7 +204,7 @@ server.get('/api/slo', async () => ({
 }))
 
 // ──────────────────────────────────────────────
-// 5. 404 HANDLER
+// 4. 404 HANDLER
 // ──────────────────────────────────────────────
 server.setNotFoundHandler((request, reply) => {
   reply.status(404).send({
@@ -252,23 +217,23 @@ server.setNotFoundHandler((request, reply) => {
 })
 
 // ──────────────────────────────────────────────
-// 6. ERROR HANDLER
+// 5. ERROR HANDLER
 // ──────────────────────────────────────────────
 server.setErrorHandler((error, request, reply) => {
   const errorMessage = error instanceof Error ? error.message : String(error)
   const errorStack = error instanceof Error ? error.stack : undefined
-  
+
   request.log.error({
     message: errorMessage,
     stack: errorStack,
     url: request.url,
     method: request.method,
   })
-  
+
   const err = error as any
   const status = err.statusCode || 500
   const message = err.message || 'Internal Server Error'
-  
+
   reply.status(status).send({
     statusCode: status,
     error: err.name || 'Error',
@@ -279,18 +244,18 @@ server.setErrorHandler((error, request, reply) => {
 })
 
 // ──────────────────────────────────────────────
-// 7. START SERVER
+// 6. START SERVER
 // ──────────────────────────────────────────────
 async function start() {
   try {
-    // ─── 7.1 COMPRESSION ──────────────────────
+    // ─── 6.1 COMPRESSION ──────────────────────
     await server.register(compress, {
       global: true,
       threshold: 1024,
       encodings: ['gzip', 'deflate'],
     })
 
-    // ─── 7.2 CORS ─────────────────────────────
+    // ─── 6.2 CORS ─────────────────────────────
     await server.register(cors, {
       origin: isProduction
         ? [
@@ -312,13 +277,13 @@ async function start() {
       allowedHeaders: ['Content-Type', 'Authorization', 'x-client-id', 'Accept'],
     })
 
-    // ─── 7.3 SWAGGER ──────────────────────────
+    // ─── 6.3 SWAGGER ──────────────────────────
     await server.register(swagger, {
       openapi: {
         info: {
           title: 'Hisabche API',
-          description: 'Business Operating System API v2.4',
-          version: '2.4.0',
+          description: 'Business Operating System API v2.5',
+          version: '2.5.0',
           contact: {
             name: 'Hisabche Team',
             email: 'support@hisabche.com',
@@ -353,7 +318,7 @@ async function start() {
       staticCSP: true,
     })
 
-    // ─── 7.4 RATE LIMIT ────────────────────────
+    // ─── 6.4 RATE LIMIT ────────────────────────
     await server.register(rateLimit, {
       max: 100,
       timeWindow: '1 minute',
@@ -372,7 +337,7 @@ async function start() {
       },
     })
 
-    // ─── 7.5 REGISTER ROUTES ──────────────────
+    // ─── 6.5 REGISTER ROUTES ──────────────────
     server.log.info('📦 Registering routes...')
 
     await server.register(authRoutes)
@@ -396,34 +361,33 @@ async function start() {
     await server.register(manufacturingRoutes)
     await server.register(purchasingRoutes)
     await server.register(workflowRoutes)
-    
+
     // ✅ ثبت Route‌های دیباگ (فقط برای دیباگ)
     await server.register(debugRoutes)
-    
+
     // ✅ ثبت Route‌های Notification
     await server.register(notificationRoutes)
-    
+
     // ✅ ثبت Route‌های Activity
     await server.register(activityRoutes)
-    
+
     await server.register(jobSchedulerPlugin)
     await server.register(billingRoutes)
 
     server.log.info('✅ All routes registered successfully')
 
-    // ─── 7.6 START LISTENING ──────────────────
+    // ─── 6.6 START LISTENING ──────────────────
     await server.listen({ port: PORT, host: HOST })
-    
-    console.log(`\n🚀 Server running on ${HOST}:${PORT} — v2.4 Fully Optimized`)
+
+    console.log(`\n🚀 Server running on ${HOST}:${PORT} — v2.5`)
     console.log(`📚 Swagger UI: /docs`)
     console.log(`💚 Health: /api/health | /live | /ready`)
-    console.log(`🔍 Cache: ${process.env.REDIS_URL ? '✅ Redis enabled' : '📦 Memory cache'}`)
-    console.log(`🔒 Cache: User-specific (userId in cache key)`)
+    console.log(`🔍 Cache: per-route only (cacheMiddleware), global HTTP cache layer removed in v2.5`)
     console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}\n`)
 
-    // ─── 7.7 START SCHEDULER ──────────────────
+    // ─── 6.7 START SCHEDULER ──────────────────
     startScheduler()
-    
+
   } catch (err) {
     const error = err as Error
     server.log.error(error)
@@ -432,7 +396,7 @@ async function start() {
 }
 
 // ──────────────────────────────────────────────
-// 8. GRACEFUL SHUTDOWN
+// 7. GRACEFUL SHUTDOWN
 // ──────────────────────────────────────────────
 async function shutdown(signal: string) {
   try {

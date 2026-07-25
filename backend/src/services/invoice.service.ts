@@ -1,6 +1,16 @@
 // ============================================
 // backend/src/services/invoice.service.ts
-// Hisabche v3.1 — با JOIN customers + Notification + Activity (full)
+// Hisabche v3.2 — با JOIN customers + Notification + Activity (full)
+// FIXED (v3.2): workspaceId به createActivity اضافه شد (خطای build:
+// Property 'workspaceId' is missing in type 'CreateActivityInput').
+// از تابع resolveWorkspaceId موجود در همین کلاس استفاده شده تا با
+// همان منطقی که برای notification استفاده می‌شود هماهنگ باشد.
+//
+// ⚠️ توجه: invoice.routes.ts هم بعد از صدا زدن invoiceService.create
+// یک بار دیگر activityService.createActivity را برای همین فاکتور صدا
+// می‌زند — یعنی در حال حاضر هر فاکتور جدید دو رکورد activity می‌سازد.
+// این نسخه فقط خطای build را رفع می‌کند؛ حذف فراخوانی تکراری در
+// invoice.routes.ts باید جداگانه انجام شود.
 // ============================================
 
 import { supabase } from "../db";
@@ -346,14 +356,16 @@ export class InvoiceService {
       customerName = customer?.full_name || null;
     }
 
-    // ─── ✅ دریافت نام کاربر ──────────────────────────────────────────────
+    // ─── ✅ دریافت نام کاربر و workspace ────────────────────────────────
     const actorName = await this.getUserDisplayName(userId);
+    const workspaceId = await this.resolveWorkspaceId(userId);
 
     // ─── ✅ ایجاد Activity ──────────────────────────────────────────────────
     try {
       await this.activityService.createActivity({
         actorId: userId,
         actorName: actorName,
+        workspaceId: workspaceId,
         entityType: "invoice",
         entityId: invoice.id,
         action: "created",
@@ -374,8 +386,6 @@ export class InvoiceService {
 
     // ─── ✅ ایجاد نوتیفیکیشن ──────────────────────────────────────────────
     try {
-      const workspaceId = await this.resolveWorkspaceId(userId);
-
       console.log(`[InvoiceService] Creating notification for invoice ${invoice.id} with workspaceId: ${workspaceId}`);
 
       await this.notificationService.create(workspaceId, {

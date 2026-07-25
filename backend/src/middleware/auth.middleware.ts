@@ -2,6 +2,14 @@
 // backend/src/middleware/auth.middleware.ts
 // FIXED: کش کردن نتیجه auth برای حذف کوئری تکراری
 // روی هر درخواست (که سریالی و بدون ایندکس بود)
+// FIXED (v2): memoryCache.get/set در pagination.ts به‌صورت async
+// (Redis-backed) هستند — قبلاً بدون await صدا زده می‌شدند که باعث
+// می‌شد `cached` همیشه یک Promise باشد، نه مقدار resolve‌شده (خطای
+// build: Property 'user' does not exist on type 'Promise<...>').
+// FIXED (v2): واحد TTL اصلاح شد — memoryCache.set (از طریق
+// cacheService.set) مقدار TTL را به‌عنوان ثانیه به Redis (EX) پاس
+// می‌دهد، نه میلی‌ثانیه. مقدار قبلی (30_000) عملاً باعث می‌شد کش
+// auth حدود ۸.۳ ساعت (نه ۳۰ ثانیه) زنده بماند.
 // ============================================
 
 import { FastifyRequest, FastifyReply } from 'fastify'
@@ -24,9 +32,11 @@ interface CachedAuth {
   role: string
 }
 
-// ✅ TTL کش auth — کوتاه نگه داشته شده برای تعادل بین سرعت و امنیت
-// (اگه نیاز به revoke فوری‌تر توکن/نقش داری، این عدد رو کمتر کن)
-const AUTH_CACHE_TTL_MS = 30_000
+// ✅ TTL کش auth بر حسب ثانیه — کوتاه نگه داشته شده برای تعادل بین
+// سرعت و امنیت (اگه نیاز به revoke فوری‌تر توکن/نقش داری، این عدد
+// رو کمتر کن). واحد: ثانیه، چون memoryCache.set → cacheService.set
+// از Redis EX (ثانیه) استفاده می‌کند.
+const AUTH_CACHE_TTL_SECONDS = 30
 
 export async function authenticate(request: FastifyRequest, reply: FastifyReply) {
   const authHeader = request.headers.authorization
@@ -36,9 +46,10 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
 
   const token = authHeader.replace('Bearer ', '')
 
-  // ✅ FIX: چک کش قبل از هر کوئری
+  // ✅ FIX: چک کش قبل از هر کوئری — await اضافه شد چون memoryCache.get
+  // یک Promise برمی‌گرداند (wrapper روی cacheService.get که Redis-backed است)
   const cacheKey = `auth:${token}`
-  const cached = memoryCache.get<CachedAuth>(cacheKey)
+  const cached = await memoryCache.get<CachedAuth>(cacheKey)
 
   if (cached) {
     request.user = cached.user
@@ -70,8 +81,8 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
     role: membership?.role || 'admin',
   }
 
-  // ✅ FIX: ذخیره در کش برای درخواست‌های بعدی همین کاربر
-  memoryCache.set(cacheKey, result, AUTH_CACHE_TTL_MS)
+  // ✅ FIX: ذخیره در کش برای درخواست‌های بعدی همین کاربر — await اضافه شد
+  await memoryCache.set(cacheKey, result, AUTH_CACHE_TTL_SECONDS)
 
   request.user = user
   request.userId = user.id

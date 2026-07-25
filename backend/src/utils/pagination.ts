@@ -1,9 +1,25 @@
 // ============================================
 // backend/src/utils/pagination.ts
-// Hisabche v2.0 — Keyset Pagination + Memory Cache
+// Hisabche v2.1 — Keyset Pagination + Shared Cache
+// FIXED: memoryCache از یک Map محلی (per-process) به Redis
+// واقعی (از طریق cacheService) تغییر کرد.
+//
+// چرا: با چند instance همزمان (لازم برای مقیاس ۵۰k کاربر)،
+// یک Map در حافظه‌ی هر پروسه جدا بود — یعنی invalidate شدن
+// کش در یک instance، در instance های دیگر اثر نداشت، و همین
+// باعث می‌شد کاربر گاهی داده‌ی قدیمی ببیند بسته به این‌که
+// درخواستش به کدام instance می‌رفت.
+// حالا همه‌ی instance ها یک Redis مشترک (همان که
+// cache.service.ts برای cacheMiddleware استفاده می‌کند) را
+// می‌بینند، پس invalidate در همه‌جا هم‌زمان اثر می‌کند.
+//
+// امضای get/set/invalidate عمداً دست‌نخورده مانده تا هیچ فایل
+// دیگری (activity.service.ts، event.service.ts،
+// notification.service.ts، index.ts) نیاز به تغییر نداشته باشد.
 // ============================================
 
 import { supabase } from '../db'
+import { cacheService } from '../services/cache.service'
 
 // ═══════════════════════════════════════════
 // Types
@@ -34,7 +50,7 @@ export async function keysetPaginate<T>(
   params: PaginationParams = {}
 ): Promise<PaginatedResponse<T>> {
   const { limit = 20, cursor } = params
-  
+
   let query = supabase
     .from(table)
     .select(columns, { count: 'exact' })
@@ -71,47 +87,38 @@ export async function keysetPaginate<T>(
 }
 
 // ═══════════════════════════════════════════
-// Simple In-Memory Cache
+// Shared Cache (Redis-backed)
 // ═══════════════════════════════════════════
+// ✅ FIX: قبلاً یک Map محلی در حافظه‌ی پروسه بود — حالا wrapper
+// نازکی روی cacheService (Redis) است. TTL پیش‌فرض همان ۳۰ ثانیه‌ی
+// قبلی حفظ شده تا رفتار فعلی سرویس‌های مصرف‌کننده تغییر نکند.
 
-interface CacheEntry<T> {
-  data: T
-  expiry: number
-}
+const DEFAULT_TTL_SECONDS = 30
 
 class MemoryCache {
-  private cache = new Map<string, CacheEntry<any>>()
-  private defaultTTL = 30_000 // 30 seconds
-
-  get<T>(key: string): T | null {
-    const entry = this.cache.get(key)
-    if (!entry) return null
-    
-    if (Date.now() > entry.expiry) {
-      this.cache.delete(key)
-      return null
-    }
-    
-    return entry.data as T
+  async get<T>(key: string): Promise<T | null> {
+    return cacheService.get<T>(key)
   }
 
-  set<T>(key: string, data: T, ttl?: number): void {
-    this.cache.set(key, {
-      data,
-      expiry: Date.now() + (ttl || this.defaultTTL),
-    })
+  async set<T>(key: string, data: T, ttlSeconds?: number): Promise<void> {
+    await cacheService.set(key, data, ttlSeconds ?? DEFAULT_TTL_SECONDS)
   }
 
-  invalidate(pattern: string): void {
-    for (const key of this.cache.keys()) {
-      if (key.includes(pattern)) {
-        this.cache.delete(key)
-      }
-    }
+  // ✅ FIX: قبلاً با پیمایش دستی روی Map و key.includes(pattern)
+  // کار می‌کرد. الان از delPattern واقعی Redis (که با SCAN،
+  // نه KEYS، پیاده شده — همان چیزی که در cache.service.ts دیدیم)
+  // استفاده می‌کند. ورودی این متد در فراخوانی‌های فعلی پروژه گاهی
+  // یک substring ساده است (نه glob pattern با *) — چون
+  // cacheService.delPattern از MATCH با glob استفاده می‌کند، اگر
+  // ورودی خودش * نداشته باشد، به صورت خودکار با *...* پوشانده
+  // می‌شود تا رفتار قبلی (شامل‌بودن substring) حفظ شود.
+  async invalidate(pattern: string): Promise<void> {
+    const globPattern = pattern.includes('*') ? pattern : `*${pattern}*`
+    await cacheService.delPattern(globPattern)
   }
 
-  clear(): void {
-    this.cache.clear()
+  async clear(): Promise<void> {
+    await cacheService.flush()
   }
 }
 
@@ -121,18 +128,17 @@ export const memoryCache = new MemoryCache()
 // Cache Helper
 // ═══════════════════════════════════════════
 
-export function withCache<T>(
+export async function withCache<T>(
   key: string,
-  ttl: number,
+  ttlSeconds: number,
   fetcher: () => Promise<T>
 ): Promise<T> {
-  const cached = memoryCache.get<T>(key)
-  if (cached) {
-    return Promise.resolve(cached)
+  const cached = await memoryCache.get<T>(key)
+  if (cached !== null) {
+    return cached
   }
 
-  return fetcher().then(data => {
-    memoryCache.set(key, data, ttl)
-    return data
-  })
+  const data = await fetcher()
+  await memoryCache.set(key, data, ttlSeconds)
+  return data
 }

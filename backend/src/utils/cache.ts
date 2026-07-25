@@ -1,5 +1,9 @@
 // ============================================
 // backend/src/utils/cache.ts — Cache Keys + Helpers
+// FIXED: memoryCache.get/set در pagination.ts async هستند
+// (Redis-backed از طریق cacheService) — قبلاً بدون await صدا زده
+// می‌شدند که باعث می‌شد `cached` همیشه یک Promise باشد، نه مقدار
+// resolve‌شده (خطای build: Type 'T | null' is not assignable to 'T').
 // ============================================
 
 import { memoryCache } from './pagination'
@@ -22,14 +26,14 @@ export const CacheKeys = {
 // ═══════════════════════════════════════════
 
 export async function withCacheKey<T>(key: string, ttl: number, fetcher: () => Promise<T>): Promise<T> {
-  const cached = memoryCache.get<T>(key)
+  const cached = await memoryCache.get<T>(key)
   if (cached) {
     console.log(`✅ Cache HIT: ${key}`)
     return cached
   }
-  
+
   console.log(`❌ Cache MISS: ${key}`)
   const data = await fetcher()
-  memoryCache.set(key, data, ttl)
+  await memoryCache.set(key, data, ttl)
   return data
 }
