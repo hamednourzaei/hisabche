@@ -1,4 +1,9 @@
 // packages/ui/src/components/ui/activity/ActivityCenter.tsx
+// REDESIGNED: این فایل تقریباً هیچ کلاس md:/lg: نداشت — همه‌ی
+// اندازه‌ها ثابت و برای دسکتاپ طراحی شده بودند. اکنون هر زیرکامپوننت
+// (دکمه، پنل، هدر، تولبار، چیپ فیلتر، فوتر) سه پله (پایه=موبایل،
+// md=تبلت، lg=دسکتاپ) دارد. عرض و ارتفاع پنل هم نسبت به viewport
+// (100vw / 100vh) محدود شده‌اند تا در صفحه‌های کوچک سرریز نشوند.
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo, memo } from "react";
@@ -212,8 +217,11 @@ const FilterChip = memo(function FilterChip({
       type="button"
       onClick={onClick}
       className={cn(
-        "shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all duration-200",
-        "min-h-[36px] min-w-[44px]",
+        // ✅ سه پله برای پدینگ، فونت و ارتفاع
+        "shrink-0 rounded-full font-medium transition-all duration-200",
+        "px-2.5 md:px-3 lg:px-3.5 py-1 md:py-1.5 lg:py-1.5",
+        "text-[11px] md:text-xs lg:text-sm",
+        "min-h-[32px] md:min-h-[36px] lg:min-h-[38px] min-w-[44px]",
         active
           ? "bg-[hsl(var(--color-primary))] text-white shadow-sm shadow-[hsl(var(--color-primary)/0.3)]"
           : "bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted)/0.8)]",
@@ -225,7 +233,7 @@ const FilterChip = memo(function FilterChip({
         {label}
         {count !== undefined && count > 0 && (
           <span className={cn(
-            "text-[10px] font-bold",
+            "font-bold text-[9px] md:text-[10px] lg:text-xs",
             active ? "text-white/80" : "text-[hsl(var(--fg-tertiary))]"
           )}>
             ({count})
@@ -257,11 +265,11 @@ const SyncStatus = memo(function SyncStatus({
 
   if (!isOnline) {
     return (
-      <span className="flex items-center gap-1.5 text-xs text-[hsl(var(--color-warning))]">
-        <CloudOff className="size-3.5" aria-hidden="true" />
+      <span className="flex items-center gap-1.5 text-[11px] md:text-xs text-[hsl(var(--color-warning))]">
+        <CloudOff className="size-3 md:size-3.5" aria-hidden="true" />
         <span className="hidden sm:inline">{t("activity.offline")}</span>
         {pendingCount > 0 && (
-          <span className="px-1.5 py-0.5 bg-[hsl(var(--color-warning)/0.1)] rounded text-[10px]">
+          <span className="px-1.5 py-0.5 bg-[hsl(var(--color-warning)/0.1)] rounded text-[9px] md:text-[10px]">
             {pendingCount}
           </span>
         )}
@@ -271,9 +279,9 @@ const SyncStatus = memo(function SyncStatus({
 
   if (isSyncing) {
     return (
-      <span className="flex items-center gap-1.5 text-xs text-[hsl(var(--fg-tertiary))]">
+      <span className="flex items-center gap-1.5 text-[11px] md:text-xs text-[hsl(var(--fg-tertiary))]">
         <RefreshCw className={cn(
-          "size-3.5",
+          "size-3 md:size-3.5",
           !prefersReducedMotion && "animate-spin"
         )} aria-hidden="true" />
         <span className="hidden sm:inline">{t("activity.syncing")}</span>
@@ -285,10 +293,10 @@ const SyncStatus = memo(function SyncStatus({
     <button
       type="button"
       onClick={onSync}
-      className="flex items-center gap-1.5 text-xs text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--fg-primary))] transition-colors"
+      className="flex items-center gap-1.5 text-[11px] md:text-xs text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--fg-primary))] transition-colors"
       aria-label={t("activity.sync")}
     >
-      <Cloud className="size-3.5" aria-hidden="true" />
+      <Cloud className="size-3 md:size-3.5" aria-hidden="true" />
       <span className="hidden sm:inline">
         {lastSynced
           ? new Date(lastSynced).toLocaleTimeString("fa-AF", {
@@ -314,13 +322,13 @@ const ErrorState = memo(function ErrorState({
   const { t } = useTranslation();
   
   return (
-    <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-      <AlertCircle className="size-12 text-[hsl(var(--color-destructive))] mb-3" aria-hidden="true" />
-      <p className="text-sm text-[hsl(var(--fg-secondary))] mb-4">{message}</p>
+    <div className="flex flex-col items-center justify-center py-8 md:py-10 lg:py-12 px-4 text-center">
+      <AlertCircle className="size-10 md:size-11 lg:size-12 text-[hsl(var(--color-destructive))] mb-3" aria-hidden="true" />
+      <p className="text-xs md:text-sm text-[hsl(var(--fg-secondary))] mb-4">{message}</p>
       <button
         type="button"
         onClick={onRetry}
-        className="px-4 py-2 rounded-lg text-sm font-medium bg-[hsl(var(--color-primary))] text-white hover:opacity-90 transition-opacity"
+        className="px-3.5 md:px-4 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-medium bg-[hsl(var(--color-primary))] text-white hover:opacity-90 transition-opacity"
       >
         {t("activity.retry")}
       </button>
@@ -347,7 +355,8 @@ const PopoverButton = memo(function PopoverButton({
       type="button"
       onClick={onClick}
       className={cn(
-        "relative p-2.5 rounded-xl text-[hsl(var(--fg-secondary))]",
+        "relative rounded-xl text-[hsl(var(--fg-secondary))]",
+        "p-2 md:p-2.5 lg:p-3",
         "hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]",
         "transition-all duration-150",
         "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))] focus:ring-offset-2",
@@ -357,9 +366,9 @@ const PopoverButton = memo(function PopoverButton({
       aria-expanded={isOpen}
       aria-haspopup="dialog"
     >
-      <Bell className="size-5" aria-hidden="true" />
+      <Bell className="size-[18px] md:size-5 lg:size-[22px]" aria-hidden="true" />
       {unreadCount > 0 && (
-        <span className="absolute -top-1 -end-1 flex items-center justify-center min-w-[20px] h-[20px] px-1 text-[11px] font-bold text-white bg-[hsl(var(--color-destructive))] rounded-full shadow-sm shadow-[hsl(var(--color-destructive)/0.4)]">
+        <span className="absolute -top-1 -end-1 flex items-center justify-center min-w-[18px] md:min-w-[20px] h-[18px] md:h-[20px] px-1 text-[10px] md:text-[11px] font-bold text-white bg-[hsl(var(--color-destructive))] rounded-full shadow-sm shadow-[hsl(var(--color-destructive)/0.4)]">
           {unreadCount > 99 ? "99+" : unreadCount}
         </span>
       )}
@@ -406,13 +415,18 @@ const PopoverPanel = memo(function PopoverPanel({
       aria-modal="true"
       aria-label="Activity feed"
       className={cn(
-        "absolute end-0 top-full mt-2 z-50 max-h-[560px] flex flex-col",
-        "rounded-2xl border border-[hsl(var(--border-default))]",
+        "absolute end-0 top-full mt-2 z-50 flex flex-col",
+        // ✅ FIX: ارتفاع پنل نسبت به viewport محدود می‌شود تا روی
+        // موبایل با صفحه‌ی کوچک (مثلاً لندسکیپ) سرریز نکند.
+        "max-h-[min(560px,80vh)] md:max-h-[min(600px,85vh)]",
+        "rounded-xl md:rounded-2xl border border-[hsl(var(--border-default))]",
         "bg-[hsl(var(--surface-elevated))] shadow-2xl shadow-black/20",
         "transition-all duration-200",
         prefersReducedMotion && "duration-0",
         "animate-in fade-in-0 slide-in-from-top-2",
-        "w-[calc(100vw-2rem)] sm:w-[440px] lg:w-[480px]"
+        // ✅ FIX: سه پله برای عرض — موبایل تقریباً تمام‌عرض (با
+        // حاشیه‌ی کوچک)، تبلت عرض ثابت متوسط، دسکتاپ عرض ثابت بزرگ‌تر
+        "w-[calc(100vw-1.5rem)] xs:w-[calc(100vw-2rem)] sm:w-[400px] md:w-[440px] lg:w-[480px]"
       )}
     >
       {children}
@@ -447,13 +461,13 @@ const PopoverHeader = memo(function PopoverHeader({
   const { t } = useTranslation();
 
   return (
-    <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-[hsl(var(--border-default))]">
+    <div className="flex items-center justify-between gap-2 px-3 md:px-4 py-2.5 md:py-3 border-b border-[hsl(var(--border-default))]">
       <div className="flex items-center gap-2 min-w-0">
-        <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">
+        <h3 className="text-sm md:text-base font-semibold text-[hsl(var(--fg-primary))]">
           {t("activity.title")}
         </h3>
         {unreadCount > 0 && (
-          <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full bg-[hsl(var(--color-destructive)/0.1)] text-[hsl(var(--color-destructive))]">
+          <span className="shrink-0 text-[9px] md:text-[10px] font-bold px-1.5 md:px-2 py-0.5 rounded-full bg-[hsl(var(--color-destructive)/0.1)] text-[hsl(var(--color-destructive))]">
             {unreadCount} {t("activity.new")}
           </span>
         )}
@@ -472,11 +486,13 @@ const PopoverHeader = memo(function PopoverHeader({
             onClick={onMarkAllRead}
             disabled={isMarkingAll}
             className={cn(
-              "px-2 py-1 rounded-lg text-[11px] font-medium",
+              "rounded-lg font-medium",
+              "px-1.5 md:px-2 py-1",
+              "text-[10px] md:text-[11px]",
               "text-[hsl(var(--color-primary))] hover:bg-[hsl(var(--color-primary)/0.1)]",
               "transition-colors disabled:opacity-40",
               "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]",
-              "min-h-[32px]"
+              "min-h-[30px] md:min-h-[32px]"
             )}
             aria-label={t("activity.markAllRead")}
           >
@@ -489,7 +505,7 @@ const PopoverHeader = memo(function PopoverHeader({
           className="p-1 rounded-lg text-[hsl(var(--fg-tertiary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors"
           aria-label={t("action.close")}
         >
-          <X className="size-4" aria-hidden="true" />
+          <X className="size-3.5 md:size-4" aria-hidden="true" />
         </button>
       </div>
     </div>
@@ -517,7 +533,7 @@ const PopoverToolbar = memo(function PopoverToolbar({
   const { t } = useTranslation();
 
   return (
-    <div className="px-3 py-2 border-b border-[hsl(var(--border-default))] space-y-2">
+    <div className="px-2.5 md:px-3 py-2 border-b border-[hsl(var(--border-default))] space-y-2">
       {/* Search */}
       <div className="relative">
         <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 size-3.5 text-[hsl(var(--fg-tertiary))]" aria-hidden="true" />
@@ -528,14 +544,18 @@ const PopoverToolbar = memo(function PopoverToolbar({
           onChange={(e) => onSearchChange(e.target.value)}
           placeholder={t("activity.search")}
           className={cn(
-            "w-full h-9 rounded-lg border border-[hsl(var(--border-default))] bg-transparent",
-            "ps-8 pe-10 text-sm text-[hsl(var(--fg-primary))]",
+            "w-full rounded-lg border border-[hsl(var(--border-default))] bg-transparent",
+            "h-8 md:h-9",
+            "ps-8 pe-10 text-xs md:text-sm text-[hsl(var(--fg-primary))]",
             "placeholder:text-[hsl(var(--fg-tertiary))]",
             "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
           )}
           aria-label={t("activity.search")}
         />
-        <kbd className="absolute end-2.5 top-1/2 -translate-y-1/2 text-[10px] text-[hsl(var(--fg-tertiary))] border border-[hsl(var(--border-default))] px-1.5 py-0.5 rounded">
+        {/* ✅ FIX: میانبر کیبورد فقط جایی معنا دارد که کیبورد فیزیکی
+            باشد — روی موبایل مخفی می‌شود چون فضا را اشغال می‌کند و
+            کاربردی هم ندارد. */}
+        <kbd className="hidden md:block absolute end-2.5 top-1/2 -translate-y-1/2 text-[10px] text-[hsl(var(--fg-tertiary))] border border-[hsl(var(--border-default))] px-1.5 py-0.5 rounded">
           /
         </kbd>
       </div>
@@ -620,7 +640,7 @@ const PopoverBody = memo(function PopoverBody({
 
   if (error) {
     return (
-      <div className="p-4">
+      <div className="p-3 md:p-4">
         <ErrorState message={error.message || t("activity.error")} onRetry={onRetry} />
       </div>
     );
@@ -637,7 +657,7 @@ const PopoverBody = memo(function PopoverBody({
   if (filteredGroups.length === 0) {
     return (
       <ActivityMotion type="fade">
-        <div className="py-8">
+        <div className="py-6 md:py-8">
           <ActivityEmptyState
             title={
               search ? t("activity.empty.search") : t("activity.empty.title")
@@ -693,12 +713,14 @@ const PopoverFooter = memo(function PopoverFooter({
       type="button"
       onClick={onViewAll}
       className={cn(
-        "flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-medium",
+        "flex items-center justify-center gap-1.5 font-medium",
+        "px-3 md:px-4 py-2 md:py-2.5",
+        "text-[11px] md:text-xs",
         "text-[hsl(var(--fg-secondary))] hover:text-[hsl(var(--color-primary))]",
         "border-t border-[hsl(var(--border-default))]",
         "hover:bg-[hsl(var(--surface-muted))] transition-colors duration-150",
         "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]",
-        "min-h-[44px]"
+        "min-h-[40px] md:min-h-[44px]"
       )}
       aria-label={t("activity.viewAll")}
     >
@@ -848,9 +870,9 @@ export const ActivityCenter = memo(function ActivityCenter({
         />
 
         {!isOnline && (
-          <div className="px-4 py-2 bg-[hsl(var(--color-warning)/0.08)] border-b border-[hsl(var(--border-default))]">
-            <p className="text-xs text-[hsl(var(--color-warning))] flex items-center gap-2">
-              <CloudOff className="size-3.5" aria-hidden="true" />
+          <div className="px-3 md:px-4 py-2 bg-[hsl(var(--color-warning)/0.08)] border-b border-[hsl(var(--border-default))]">
+            <p className="text-[11px] md:text-xs text-[hsl(var(--color-warning))] flex items-center gap-2">
+              <CloudOff className="size-3 md:size-3.5" aria-hidden="true" />
               {t("activity.offlineBanner")}
             </p>
           </div>
@@ -865,7 +887,7 @@ export const ActivityCenter = memo(function ActivityCenter({
           searchRef={searchRef}
         />
 
-        <div className="overflow-y-auto flex-1 p-3">
+        <div className="overflow-y-auto flex-1 p-2.5 md:p-3">
           <PopoverBody
             isLoading={isLoading}
             filteredGroups={filteredGroups}

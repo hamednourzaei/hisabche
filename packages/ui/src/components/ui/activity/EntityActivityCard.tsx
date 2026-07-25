@@ -1,4 +1,9 @@
 // packages/ui/src/components/ui/activity/EntityActivityCard.tsx
+// REDESIGNED: اضافه شدن پله‌ی سوم (lg) به تمام کلاس‌های اندازه که
+// قبلاً فقط دو پله (پایه=موبایل، md=تبلت/دسکتاپ) داشتند. روی صفحات
+// بزرگ (lg و بالاتر)، آیکون‌ها، فونت‌ها و فاصله‌ها کمی بزرگ‌تر و
+// راحت‌تر می‌شوند تا کارت‌ها در صفحه‌ی عریض‌تر (max-w-5xl در
+// ActivitiesPage) خالی و کوچک به‌نظر نرسند.
 "use client";
 
 import { useState, memo, useCallback, useMemo } from "react";
@@ -144,7 +149,7 @@ const StatusBadge = memo(function StatusBadge({ status }: { status: string }) {
 
   return (
     <span className={cn(
-      "text-[10px] md:text-xs font-medium px-1.5 py-0.5 rounded",
+      "text-[10px] md:text-xs lg:text-sm font-medium px-1.5 md:px-2 py-0.5 rounded",
       config.color,
       "whitespace-nowrap"
     )}>
@@ -173,7 +178,7 @@ const TimelineItem = memo(function TimelineItem({
       type="button"
       onClick={onClick}
       className={cn(
-        "w-full text-start flex items-start gap-2 md:gap-3 group py-1 md:py-1.5 rounded-lg",
+        "w-full text-start flex items-start gap-2 md:gap-3 group py-1 md:py-1.5 lg:py-2 rounded-lg",
         "hover:bg-[hsl(var(--surface-muted))] transition-colors duration-150",
         "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))] focus:ring-offset-1",
         "px-0.5 md:px-1"
@@ -182,25 +187,26 @@ const TimelineItem = memo(function TimelineItem({
       <div className="flex flex-col items-center shrink-0">
         <div
           className={cn(
-            "w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center",
+            "rounded-full flex items-center justify-center",
+            "w-5 h-5 md:w-6 md:h-6 lg:w-7 lg:h-7",
             "bg-[hsl(var(--surface-muted))] group-hover:bg-[hsl(var(--surface-muted)/0.8)]",
             "transition-colors duration-150"
           )}
         >
-          <Icon className="w-3 h-3 md:w-3.5 md:h-3.5 text-[hsl(var(--fg-tertiary))]" />
+          <Icon className="w-3 h-3 md:w-3.5 md:h-3.5 lg:w-4 lg:h-4 text-[hsl(var(--fg-tertiary))]" />
         </div>
-        {!isLast && <div className="w-px h-2 md:h-3 bg-[hsl(var(--border-default))]" />}
+        {!isLast && <div className="w-px h-2 md:h-3 lg:h-3.5 bg-[hsl(var(--border-default))]" />}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-xs md:text-sm text-[hsl(var(--fg-primary))] group-hover:text-[hsl(var(--color-primary))] transition-colors line-clamp-2">
+        <p className="text-xs md:text-sm lg:text-base text-[hsl(var(--fg-primary))] group-hover:text-[hsl(var(--color-primary))] transition-colors line-clamp-2">
           {activity.title}
         </p>
         {activity.description && (
-          <p className="text-[10px] md:text-xs text-[hsl(var(--fg-secondary))] mt-0.5 line-clamp-2">
+          <p className="text-[10px] md:text-xs lg:text-sm text-[hsl(var(--fg-secondary))] mt-0.5 line-clamp-2">
             {activity.description}
           </p>
         )}
-        <p className="text-[9px] md:text-[10px] text-[hsl(var(--fg-tertiary))] mt-0.5">
+        <p className="text-[9px] md:text-[10px] lg:text-xs text-[hsl(var(--fg-tertiary))] mt-0.5">
           {new Date(activity.timestamp).toLocaleTimeString("fa-AF", {
             hour: "2-digit",
             minute: "2-digit",
@@ -240,8 +246,8 @@ const TimelineList = memo(function TimelineList({
 
   if (activities.length === 0) {
     return (
-      <div className="py-3 md:py-4 text-center">
-        <p className="text-xs md:text-sm text-[hsl(var(--fg-tertiary))]">
+      <div className="py-3 md:py-4 lg:py-5 text-center">
+        <p className="text-xs md:text-sm lg:text-base text-[hsl(var(--fg-tertiary))]">
           {t("entity.activity.empty")}
         </p>
       </div>
@@ -249,7 +255,7 @@ const TimelineList = memo(function TimelineList({
   }
 
   return (
-    <div className="space-y-0.5">
+    <div className="space-y-0.5 lg:space-y-1">
       {displayActivities.map((activity, index) => {
         const isLast = index === displayActivities.length - 1;
         return (
@@ -266,7 +272,7 @@ const TimelineList = memo(function TimelineList({
         <button
           type="button"
           onClick={onShowMore}
-          className="w-full text-center text-[9px] md:text-[10px] font-medium text-[hsl(var(--color-primary))] hover:underline py-1.5 md:py-2 mt-0.5 md:mt-1"
+          className="w-full text-center text-[9px] md:text-[10px] lg:text-xs font-medium text-[hsl(var(--color-primary))] hover:underline py-1.5 md:py-2 mt-0.5 md:mt-1"
         >
           {showMoreLabel ||
             t("activity.showMore", `نمایش ${activities.length - (maxDisplay || 0)} فعالیت دیگر`)}
@@ -312,70 +318,72 @@ const CardHeader = memo(function CardHeader({
       aria-expanded={isOpen}
       aria-controls={`timeline-${entityId || entityType}`}
       className={cn(
-        "w-full text-start p-2 md:p-3 rounded-xl",
+        "w-full text-start rounded-xl",
+        "p-2 md:p-3 lg:p-4",
         "hover:bg-[hsl(var(--surface-muted))] transition-colors duration-150",
         "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))] focus:ring-offset-1",
         "group"
       )}
     >
-      <div className="flex items-start gap-2 md:gap-3">
+      <div className="flex items-start gap-2 md:gap-3 lg:gap-4">
         {/* Icon */}
         <div
           className={cn(
-            "w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center shrink-0",
+            "rounded-full flex items-center justify-center shrink-0",
+            "w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12",
             config.bg,
             "group-hover:scale-105 transition-transform duration-200"
           )}
         >
-          <Icon className={cn("w-4 h-4 md:w-5 md:h-5", config.color)} />
+          <Icon className={cn("w-4 h-4 md:w-5 md:h-5 lg:w-6 lg:h-6", config.color)} />
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
-            <span className="text-xs md:text-sm font-semibold text-[hsl(var(--fg-primary))] truncate">
+            <span className="text-xs md:text-sm lg:text-base font-semibold text-[hsl(var(--fg-primary))] truncate">
               {summary.label}
             </span>
             {hasUnread && (
               <span
-                className="shrink-0 w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-[hsl(var(--color-destructive))]"
+                className="shrink-0 rounded-full bg-[hsl(var(--color-destructive))] w-1.5 h-1.5 md:w-2 md:h-2 lg:w-2.5 lg:h-2.5"
                 aria-label={t("entity.activity.unread")}
               />
             )}
             {!compact && (
-              <span className="text-[9px] md:text-[10px] text-[hsl(var(--fg-tertiary))] font-medium shrink-0">
+              <span className="text-[9px] md:text-[10px] lg:text-xs text-[hsl(var(--fg-tertiary))] font-medium shrink-0">
                 {config.label}
               </span>
             )}
           </div>
 
-          <div className="flex items-center gap-1.5 md:gap-2 mt-0.5 flex-wrap">
+          <div className="flex items-center gap-1.5 md:gap-2 lg:gap-3 mt-0.5 flex-wrap">
             {summary.subtitle && (
-              <span className="text-[10px] md:text-xs text-[hsl(var(--fg-secondary))] flex items-center gap-1">
-                <User className="w-2.5 h-2.5 md:w-3 md:h-3 shrink-0" aria-hidden="true" />
+              <span className="text-[10px] md:text-xs lg:text-sm text-[hsl(var(--fg-secondary))] flex items-center gap-1">
+                <User className="w-2.5 h-2.5 md:w-3 md:h-3 lg:w-3.5 lg:h-3.5 shrink-0" aria-hidden="true" />
                 <span className="truncate max-w-[120px] md:max-w-none">{summary.subtitle}</span>
               </span>
             )}
             {summary.amount !== undefined && (
-              <span className="text-[10px] md:text-xs font-semibold text-[hsl(var(--fg-primary))] flex items-center gap-1 shrink-0">
-                <DollarSign className="w-2.5 h-2.5 md:w-3 md:h-3" aria-hidden="true" />
+              <span className="text-[10px] md:text-xs lg:text-sm font-semibold text-[hsl(var(--fg-primary))] flex items-center gap-1 shrink-0">
+                <DollarSign className="w-2.5 h-2.5 md:w-3 md:h-3 lg:w-3.5 lg:h-3.5" aria-hidden="true" />
                 {formatCurrency(summary.amount, summary.currency || "AFN")}
               </span>
             )}
           </div>
 
-          <div className="flex items-center gap-1.5 md:gap-2 mt-0.5 md:mt-1 flex-wrap">
+          <div className="flex items-center gap-1.5 md:gap-2 lg:gap-2.5 mt-0.5 md:mt-1 flex-wrap">
             {summary.status && <StatusBadge status={summary.status} />}
-            <span className="text-[9px] md:text-[10px] text-[hsl(var(--fg-tertiary))] flex items-center gap-1 shrink-0">
-              <Clock className="w-2.5 h-2.5 md:w-3 md:h-3" aria-hidden="true" />
+            <span className="text-[9px] md:text-[10px] lg:text-xs text-[hsl(var(--fg-tertiary))] flex items-center gap-1 shrink-0">
+              <Clock className="w-2.5 h-2.5 md:w-3 md:h-3 lg:w-3.5 lg:h-3.5" aria-hidden="true" />
               {compact ? summary.activityCount : t("entity.activity.count", { count: summary.activityCount })}
             </span>
             {timeAgoText && (
               <>
-                <span className="text-[9px] md:text-[10px] text-[hsl(var(--fg-tertiary))]" aria-hidden="true">
+                <span className="text-[9px] md:text-[10px] lg:text-xs text-[hsl(var(--fg-tertiary))]" aria-hidden="true">
                   •
                 </span>
-                <span className="text-[9px] md:text-[10px] text-[hsl(var(--fg-tertiary))] shrink-0">
+                <span className="text-[9px] md:text-[10px] lg:text-xs text-[hsl(var(--fg-tertiary))] shrink-0">
                   {timeAgoText}
                 </span>
               </>
@@ -386,7 +394,8 @@ const CardHeader = memo(function CardHeader({
         {/* Chevron */}
         <ChevronDown
           className={cn(
-            "w-3.5 h-3.5 md:w-4 md:h-4 shrink-0 text-[hsl(var(--fg-tertiary))] transition-transform duration-200 mt-1",
+            "shrink-0 text-[hsl(var(--fg-tertiary))] transition-transform duration-200 mt-1",
+            "w-3.5 h-3.5 md:w-4 md:h-4 lg:w-5 lg:h-5",
             isOpen && "rotate-180",
             "group-hover:text-[hsl(var(--fg-primary))]"
           )}
@@ -495,8 +504,9 @@ export const EntityActivityCard = memo(function EntityActivityCard({
         <div className="overflow-hidden">
           <div
             className={cn(
-              "px-2 md:px-3 pt-1 pb-2 md:pb-3 border-t border-[hsl(var(--border-default)/0.5)]",
-              compact && "pb-1.5 md:pb-2"
+              "border-t border-[hsl(var(--border-default)/0.5)]",
+              "px-2 md:px-3 lg:px-4 pt-1 pb-2 md:pb-3 lg:pb-4",
+              compact && "pb-1.5 md:pb-2 lg:pb-2.5"
             )}
           >
             <TimelineList
@@ -507,11 +517,11 @@ export const EntityActivityCard = memo(function EntityActivityCard({
             />
 
             {!compact && onOpenEntity && activities.length > 0 && (
-              <div className="mt-2 md:mt-3 pt-1.5 md:pt-2 border-t border-[hsl(var(--border-default)/0.5)]">
+              <div className="mt-2 md:mt-3 lg:mt-4 pt-1.5 md:pt-2 lg:pt-2.5 border-t border-[hsl(var(--border-default)/0.5)]">
                 <button
                   type="button"
                   onClick={handleOpenEntity}
-                  className="w-full text-center text-[9px] md:text-[10px] font-medium text-[hsl(var(--color-primary))] hover:underline py-1 transition-colors"
+                  className="w-full text-center text-[9px] md:text-[10px] lg:text-xs font-medium text-[hsl(var(--color-primary))] hover:underline py-1 transition-colors"
                 >
                   {t("activity.open", "باز کردن")} {entitySummary.label} →
                 </button>
