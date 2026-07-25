@@ -50,6 +50,15 @@ const JOB_HANDLERS: Record<string, () => Promise<void>> = {
 };
 
 export async function jobSchedulerPlugin(fastify: FastifyInstance) {
+  // ✅ FIX: فاصله از ۶۰ ثانیه به ۱۰ دقیقه افزایش یافت.
+  // بررسی شد که هیچ‌جای پروژه (نه route ها، نه scheduler، نه جای
+  // دیگری) هیچ‌وقت jobService.create(...) را صدا نمی‌زند — یعنی
+  // جدول background_jobs عملاً همیشه خالی است و این interval فقط
+  // یک کوئری خالی به Supabase می‌زد بدون هیچ نتیجه‌ای، ۱۴۴۰ بار در
+  // روز. تا زمانی که یک مسیر واقعی برای ساخت job اضافه نشود
+  // (مثلاً CHECK_OVERDUE_INVOICES که در JOB_HANDLERS تعریف شده ولی
+  // هیچ‌جا trigger نمی‌شود)، این فقط یک safety net است، نه چیزی
+  // که تأخیرش اهمیت عملیاتی داشته باشد.
   const interval = setInterval(async () => {
     const jobs = await jobService.fetchPending();
     for (const job of jobs) {
@@ -66,7 +75,7 @@ export async function jobSchedulerPlugin(fastify: FastifyInstance) {
         await jobService.markFailed(job.id, `Unknown job_type: ${job.job_type}`);
       }
     }
-  }, 60_000);
+  }, 10 * 60_000);
 
   fastify.addHook("onClose", () => clearInterval(interval));
 }
