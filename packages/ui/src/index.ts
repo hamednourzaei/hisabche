@@ -129,6 +129,18 @@ export { PermissionsView } from './components/ui/permissions/permissions-view'
 export { AuditContainer } from './components/ui/audit/containers/audit-container'
 export { AuditView } from './components/ui/audit/audit-view'
 
+// ---------- CRM ----------
+export { CrmContainer } from './components/ui/crm/containers/crm-container'
+export { CrmView, type CrmTabId } from './components/ui/crm/crm-view'
+
+// ---------- Manufacturing ----------
+export { ManufacturingContainer } from './components/ui/manufacturing/containers/manufacturing-container'
+export { ManufacturingView, type ManufacturingTabId } from './components/ui/manufacturing/manufacturing-view'
+
+// ---------- Purchasing ----------
+export { PurchasingContainer } from './components/ui/purchasing/containers/purchasing-container'
+export { PurchasingView } from './components/ui/purchasing/purchasing-view'
+
 // ---------- Workspace ----------
 export { WorkspaceContainer } from './components/ui/workspace/containers/workspace-container'
 

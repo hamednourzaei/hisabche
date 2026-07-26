@@ -5,16 +5,17 @@
 import {
   LayoutDashboard, Package, Receipt, BookOpen, Settings,
   Users, Kanban, Shield, Building2, Key, EllipsisVertical,
+  Calculator, Handshake, Factory, ShoppingCart,
   type LucideIcon
 } from 'lucide-react'
 
 export interface NavItem {
-  id: 'dashboard' | 'warehouse' | 'invoices' | 'customers' | 'human-resources' | 'projects' | 'audit' | 'permissions' | 'workspace' | 'settings'
+  id: 'dashboard' | 'warehouse' | 'invoices' | 'customers' | 'human-resources' | 'projects' | 'audit' | 'permissions' | 'workspace' | 'settings' | 'accounting' | 'crm' | 'manufacturing' | 'purchasing'
   icon: LucideIcon
   labelKey: string
   descriptionKey: string
   path: string
-  group?: 'main' | 'sales' | 'team' | 'system'
+  group?: 'main' | 'sales' | 'team' | 'system' | 'business'
 }
 
 export interface NavGroup {
@@ -38,6 +39,12 @@ export const NAV_ITEMS: NavItem[] = [
   { id: 'projects', icon: Kanban, labelKey: 'nav.projects', descriptionKey: 'nav.projects.description', path: '/projects', group: 'team' },
   { id: 'workspace', icon: Building2, labelKey: 'workspace.title', descriptionKey: 'workspace.description', path: '/workspace', group: 'team' },
 
+  // ─── کسب‌وکار ───
+  { id: 'accounting', icon: Calculator, labelKey: 'nav.accounting', descriptionKey: 'nav.accounting.description', path: '/accounting', group: 'business' },
+  { id: 'crm', icon: Handshake, labelKey: 'nav.crm', descriptionKey: 'nav.crm.description', path: '/crm', group: 'business' },
+  { id: 'manufacturing', icon: Factory, labelKey: 'nav.manufacturing', descriptionKey: 'nav.manufacturing.description', path: '/manufacturing', group: 'business' },
+  { id: 'purchasing', icon: ShoppingCart, labelKey: 'nav.purchasing', descriptionKey: 'nav.purchasing.description', path: '/purchasing', group: 'business' },
+
   // ─── سیستم ───
   { id: 'permissions', icon: Key, labelKey: 'nav.permissions', descriptionKey: 'nav.permissions.description', path: '/permissions', group: 'system' },
   { id: 'audit', icon: Shield, labelKey: 'nav.audit', descriptionKey: 'nav.audit.description', path: '/audit', group: 'system' },
@@ -51,6 +58,7 @@ export const PRIMARY_ITEMS: NavItem[] = NAV_ITEMS.filter(
 
 // گروه‌های پنهان (فقط تو «بیشتر» نمایش داده می‌شوند)
 export const MORE_GROUPS: NavGroup[] = [
+  { id: 'business', labelKey: 'nav.groups.business', icon: Calculator, items: NAV_ITEMS.filter((i) => i.group === 'business') },
   { id: 'team', labelKey: 'nav.groups.team', icon: Users, items: NAV_ITEMS.filter((i) => i.group === 'team') },
   { id: 'system', labelKey: 'nav.groups.system', icon: Settings, items: NAV_ITEMS.filter((i) => i.group === 'system') },
 ]
@@ -70,6 +78,10 @@ export const COMMAND_ITEMS = [
   { id: 'customers',    labelKey: 'customers.addCustomer', descriptionKey: 'customers.addCustomerDesc', icon: '👤', shortcut: '', path: '/customers?add=true' },
   { id: 'human-resources', labelKey: 'nav.humanResources', descriptionKey: 'nav.humanResources.description', icon: '👥', shortcut: '', path: '/human-resources' },  // ← تغییر
   { id: 'projects',     labelKey: 'nav.projects',     descriptionKey: 'nav.projects.description',     icon: '📋', shortcut: '', path: '/projects' },
+  { id: 'accounting',   labelKey: 'nav.accounting',   descriptionKey: 'nav.accounting.description',   icon: '🧮', shortcut: '', path: '/accounting' },
+  { id: 'crm',          labelKey: 'nav.crm',          descriptionKey: 'nav.crm.description',          icon: '🤝', shortcut: '', path: '/crm' },
+  { id: 'manufacturing', labelKey: 'nav.manufacturing', descriptionKey: 'nav.manufacturing.description', icon: '🏭', shortcut: '', path: '/manufacturing' },
+  { id: 'purchasing',   labelKey: 'nav.purchasing',   descriptionKey: 'nav.purchasing.description',   icon: '🛒', shortcut: '', path: '/purchasing' },
   { id: 'permissions',  labelKey: 'nav.permissions',  descriptionKey: 'nav.permissions.description',  icon: '🔑', shortcut: '', path: '/permissions' },
   { id: 'audit',        labelKey: 'nav.audit',        descriptionKey: 'nav.audit.description',        icon: '🛡️', shortcut: '', path: '/audit' },
   { id: 'workspace',    labelKey: 'workspace.title',  descriptionKey: 'workspace.description',         icon: '🏢', shortcut: '', path: '/workspace' },

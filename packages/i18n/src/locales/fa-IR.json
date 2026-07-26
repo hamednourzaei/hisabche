@@ -561,6 +561,14 @@
     "projects.description": "پروژه‌ها و وظایف",
     "audit": "حسابرسی",
     "audit.description": "گزارش‌ها و پیگیری تغییرات",
+    "accounting": "حسابداری",
+    "accounting.description": "حساب‌ها، دفتر روزنامه و گزارش‌های مالی",
+    "crm": "ارتباط با مشتریان",
+    "crm.description": "تعاملات و فرصت‌های فروش",
+    "manufacturing": "تولید",
+    "manufacturing.description": "فرمول‌های ساخت و دستورهای تولید",
+    "purchasing": "خرید",
+    "purchasing.description": "سفارش‌های خرید و تأمین‌کنندگان",
     "permissions": "مجوزها",
     "permissions.description": "نقش‌ها و مجوزها",
     "pricing": "قیمت‌گذاری",
@@ -568,6 +576,7 @@
     "groups": {
       "main": "اصلی",
       "sales": "فروش و موجودی",
+      "business": "کسب‌وکار",
       "team": "تیم",
       "system": "سیستم"
     },
@@ -1393,6 +1402,82 @@
     "deleted": "حذف شد",
     "login": "ورود",
     "logout": "خروج"
+  },
+  "crm": {
+    "title": "ارتباط با مشتریان",
+    "tabs": {
+      "interactions": "تعاملات",
+      "opportunities": "فرصت‌های فروش"
+    },
+    "interactions": {
+      "empty": "هیچ تعاملی ثبت نشده",
+      "subject": "موضوع",
+      "type": "نوع",
+      "date": "تاریخ"
+    },
+    "opportunities": {
+      "empty": "هیچ فرصت فروشی ثبت نشده",
+      "title": "عنوان",
+      "stage": "مرحله",
+      "value": "ارزش",
+      "probability": "احتمال",
+      "expectedCloseDate": "تاریخ تخمینی"
+    },
+    "stage": {
+      "lead": "سرنخ",
+      "qualified": "واجد شرایط",
+      "proposal": "پیشنهاد",
+      "negotiation": "مذاکره",
+      "closedWon": "موفق",
+      "closedLost": "ناموفق"
+    }
+  },
+  "manufacturing": {
+    "title": "تولید",
+    "tabs": {
+      "boms": "فرمول‌های ساخت",
+      "workOrders": "دستورهای تولید"
+    },
+    "boms": {
+      "empty": "هیچ فرمول ساختی ثبت نشده",
+      "product": "محصول",
+      "version": "نسخه",
+      "itemsCount": "تعداد اقلام",
+      "status": "وضعیت",
+      "active": "فعال",
+      "inactive": "غیرفعال"
+    },
+    "workOrders": {
+      "empty": "هیچ دستور تولیدی ثبت نشده",
+      "product": "محصول",
+      "quantity": "تعداد",
+      "status": "وضعیت",
+      "startDate": "تاریخ شروع",
+      "actions": "عملیات",
+      "complete": "تکمیل"
+    },
+    "status": {
+      "planned": "برنامه‌ریزی‌شده",
+      "inProgress": "در حال انجام",
+      "completed": "تکمیل‌شده",
+      "cancelled": "لغوشده"
+    }
+  },
+  "purchasing": {
+    "title": "خرید",
+    "empty": "هیچ سفارش خریدی ثبت نشده",
+    "supplier": "تأمین‌کننده",
+    "orderDate": "تاریخ سفارش",
+    "itemsCount": "تعداد اقلام",
+    "expectedDeliveryDate": "تاریخ تحویل",
+    "statusLabel": "وضعیت",
+    "actions": "عملیات",
+    "receiveGoods": "دریافت کالا",
+    "status": {
+      "pending": "در انتظار",
+      "received": "دریافت‌شده",
+      "cancelled": "لغوشده"
+    }
   },
   "billing": {
     "loading": "در حال بارگذاری...",

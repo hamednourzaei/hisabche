@@ -11,6 +11,54 @@ const CACHE_DEFAULT_TTL = parseInt(process.env.CACHE_DEFAULT_TTL || '60', 10)
 const CACHE_LONG_TTL = parseInt(process.env.CACHE_LONG_TTL || '300', 10)
 const CACHE_SHORT_TTL = parseInt(process.env.CACHE_SHORT_TTL || '30', 10)
 
+// ============================================
+// ✅ FIX: In-memory fallback cache — قبلاً وقتی Redis غیرقابل‌دسترس
+// بود (مثلاً REDIS_URL روی هاست داخلی production که از dev لوکال
+// resolve نمی‌شود)، get/set به‌صورت خاموش fail می‌شدند و null/false
+// برمی‌گرداندند. این یعنی کش auth در auth.middleware.ts هیچ‌وقت hit
+// نمی‌خورد و supabase.auth.getUser() — یک درخواست واقعی به سرور Auth
+// سوپابیس — روی *هر* درخواست بک‌اند (نه فقط هر ناوبری) اجرا می‌شد.
+// این fallback با همان امضای get/set/delPattern (شامل TTL و
+// glob pattern با *) جایگزین موقت Redis می‌شود تا کش — و درنتیجه
+// نرخ درخواست به Supabase Auth — مستقل از دسترس‌پذیری Redis درست کار کند.
+// ============================================
+const fallbackStore = new Map<string, { value: string; expiresAt: number }>()
+const FALLBACK_MAX_ENTRIES = 5000
+
+function fallbackPrune(key: string): void {
+  const entry = fallbackStore.get(key)
+  if (entry && entry.expiresAt <= Date.now()) fallbackStore.delete(key)
+}
+
+function fallbackGet(key: string): string | null {
+  fallbackPrune(key)
+  return fallbackStore.get(key)?.value ?? null
+}
+
+function fallbackSet(key: string, value: string, ttlSeconds: number): void {
+  if (!fallbackStore.has(key) && fallbackStore.size >= FALLBACK_MAX_ENTRIES) {
+    const oldestKey = fallbackStore.keys().next().value
+    if (oldestKey !== undefined) fallbackStore.delete(oldestKey)
+  }
+  fallbackStore.set(key, { value, expiresAt: Date.now() + ttlSeconds * 1000 })
+}
+
+function fallbackDel(key: string): boolean {
+  return fallbackStore.delete(key)
+}
+
+function fallbackDelPattern(pattern: string): number {
+  const regex = new RegExp(`^${pattern.split('*').map((p) => p.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*')}$`)
+  let deleted = 0
+  for (const key of fallbackStore.keys()) {
+    if (regex.test(key)) {
+      fallbackStore.delete(key)
+      deleted++
+    }
+  }
+  return deleted
+}
+
 // ✅ Stats for monitoring
 interface CacheStats {
   hits: number
@@ -77,6 +125,10 @@ class CacheService {
 
   // ─── Get cache ──────────────────────────────────────────────
   async get<T>(key: string): Promise<T | null> {
+    if (!this.isConnected) {
+      const cached = fallbackGet(key)
+      return cached ? (JSON.parse(cached) as T) : null
+    }
     try {
       const data = await this.client.get(key)
       if (data) {
@@ -89,12 +141,17 @@ class CacheService {
       this.stats.errors++
       const errorMessage = err instanceof Error ? err.message : String(err)
       console.error(`❌ Cache get error [${key}]:`, errorMessage)
-      return null
+      const cached = fallbackGet(key)
+      return cached ? (JSON.parse(cached) as T) : null
     }
   }
 
   // ─── Set cache with TTL ────────────────────────────────────
   async set<T>(key: string, value: T, ttl: number = this.defaultTTL): Promise<boolean> {
+    if (!this.isConnected) {
+      fallbackSet(key, JSON.stringify(value), ttl)
+      return true
+    }
     try {
       await this.client.set(key, JSON.stringify(value), 'EX', ttl)
       this.stats.sets++
@@ -103,7 +160,8 @@ class CacheService {
       this.stats.errors++
       const errorMessage = err instanceof Error ? err.message : String(err)
       console.error(`❌ Cache set error [${key}]:`, errorMessage)
-      return false
+      fallbackSet(key, JSON.stringify(value), ttl)
+      return true
     }
   }
 
@@ -118,21 +176,28 @@ class CacheService {
 
   // ─── Delete cache ──────────────────────────────────────────
   async del(key: string): Promise<boolean> {
+    if (!this.isConnected) {
+      return fallbackDel(key)
+    }
     try {
       const result = await this.client.del(key)
       this.stats.deletes++
+      fallbackDel(key)
       return result > 0
     } catch (err) {
       this.stats.errors++
       const errorMessage = err instanceof Error ? err.message : String(err)
       console.error(`❌ Cache del error [${key}]:`, errorMessage)
-      return false
+      return fallbackDel(key)
     }
   }
 
   // ─── Delete by pattern ─────────────────────────────────────
   // ✅ FIX: استفاده از SCAN به جای KEYS (برای Production)
   async delPattern(pattern: string): Promise<number> {
+    if (!this.isConnected) {
+      return fallbackDelPattern(pattern)
+    }
     try {
       let deletedCount = 0
       let cursor = '0'
@@ -152,14 +217,15 @@ class CacheService {
           deletedCount += deleted
         }
       } while (cursor !== '0')
-      
+
       this.stats.deletes += deletedCount
+      fallbackDelPattern(pattern)
       return deletedCount
     } catch (err) {
       this.stats.errors++
       const errorMessage = err instanceof Error ? err.message : String(err)
       console.error(`❌ Cache delPattern error [${pattern}]:`, errorMessage)
-      return 0
+      return fallbackDelPattern(pattern)
     }
   }
 
@@ -215,6 +281,8 @@ class CacheService {
 
   // ─── Flush all cache ──────────────────────────────────────
   async flush(): Promise<boolean> {
+    fallbackStore.clear()
+    if (!this.isConnected) return true
     try {
       await this.client.flushall()
       this.stats = { hits: 0, misses: 0, sets: 0, deletes: 0, errors: 0 }

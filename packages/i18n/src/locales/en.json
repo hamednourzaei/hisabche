@@ -561,6 +561,14 @@
     "projects.description": "Projects & tasks",
     "audit": "Audit",
     "audit.description": "Reports & change tracking",
+    "accounting": "Accounting",
+    "accounting.description": "Accounts, journal & financial reports",
+    "crm": "CRM",
+    "crm.description": "Customer interactions & sales opportunities",
+    "manufacturing": "Manufacturing",
+    "manufacturing.description": "Bills of materials & work orders",
+    "purchasing": "Purchasing",
+    "purchasing.description": "Purchase orders & suppliers",
     "permissions": "Permissions",
     "permissions.description": "Roles & permissions",
     "pricing": "Pricing",
@@ -568,6 +576,7 @@
     "groups": {
       "main": "Main",
       "sales": "Sales & Inventory",
+      "business": "Business",
       "team": "Team",
       "system": "System"
     },
@@ -1377,6 +1386,82 @@
     "forRole": "Permissions for",
     "selectRole": "Select a role",
     "selectRoleHint": "Select a role to view its permissions"
+  },
+  "crm": {
+    "title": "CRM",
+    "tabs": {
+      "interactions": "Interactions",
+      "opportunities": "Opportunities"
+    },
+    "interactions": {
+      "empty": "No interactions recorded",
+      "subject": "Subject",
+      "type": "Type",
+      "date": "Date"
+    },
+    "opportunities": {
+      "empty": "No sales opportunities recorded",
+      "title": "Title",
+      "stage": "Stage",
+      "value": "Value",
+      "probability": "Probability",
+      "expectedCloseDate": "Expected close date"
+    },
+    "stage": {
+      "lead": "Lead",
+      "qualified": "Qualified",
+      "proposal": "Proposal",
+      "negotiation": "Negotiation",
+      "closedWon": "Closed won",
+      "closedLost": "Closed lost"
+    }
+  },
+  "manufacturing": {
+    "title": "Manufacturing",
+    "tabs": {
+      "boms": "Bills of materials",
+      "workOrders": "Work orders"
+    },
+    "boms": {
+      "empty": "No bills of materials recorded",
+      "product": "Product",
+      "version": "Version",
+      "itemsCount": "Items count",
+      "status": "Status",
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "workOrders": {
+      "empty": "No work orders recorded",
+      "product": "Product",
+      "quantity": "Quantity",
+      "status": "Status",
+      "startDate": "Start date",
+      "actions": "Actions",
+      "complete": "Complete"
+    },
+    "status": {
+      "planned": "Planned",
+      "inProgress": "In progress",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    }
+  },
+  "purchasing": {
+    "title": "Purchasing",
+    "empty": "No purchase orders recorded",
+    "supplier": "Supplier",
+    "orderDate": "Order date",
+    "itemsCount": "Items count",
+    "expectedDeliveryDate": "Expected delivery",
+    "statusLabel": "Status",
+    "actions": "Actions",
+    "receiveGoods": "Receive goods",
+    "status": {
+      "pending": "Pending",
+      "received": "Received",
+      "cancelled": "Cancelled"
+    }
   },
   "audit": {
     "title": "Audit",

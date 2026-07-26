@@ -40,7 +40,7 @@ export class CrmService {
     
     // ✅ کش کردن با پارامترهای صفحه‌بندی
     const paginatedCacheKey = `${cacheKey}:${page}:${limit}`
-    const cached = await memoryCache.get(paginatedCacheKey)
+    const cached = await memoryCache.get<{ interactions: any[]; total: number; page: number; limit: number; totalPages: number }>(paginatedCacheKey)
     if (cached) return cached
 
     let query = supabase
@@ -101,8 +101,8 @@ export class CrmService {
 
     const cacheKey = this.getOpportunitiesCacheKey(userId, customerId)
     const paginatedCacheKey = `${cacheKey}:${page}:${limit}`
-    
-    const cached = await memoryCache.get(paginatedCacheKey)
+
+    const cached = await memoryCache.get<{ opportunities: any[]; total: number; page: number; limit: number; totalPages: number }>(paginatedCacheKey)
     if (cached) return cached
 
     let query = supabase

@@ -5,6 +5,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
+import { useRealtime } from './useRealtime'
 
 // ═══ Types ═══
 export interface PurchaseOrder {
@@ -31,10 +32,16 @@ export const purchasingKeys = {
 export function usePurchaseOrders() {
   const authReady = useAuthReady()
 
+  // ✅ FIX: subscription realtime برای جدول purchase_orders — با
+  // purchasingKeys.all، هم لیست هم جزئیات هر سفارش پوشش داده می‌شوند.
+  useRealtime({ table: 'purchase_orders', queryKey: purchasingKeys.all as unknown as string[] })
+
   return useQuery({
     queryKey: purchasingKeys.orders(),
     queryFn: async (): Promise<PurchaseOrder[]> => {
-      const { data } = await apiClient.get('/purchasing/orders')
+      // ✅ FIX: مسیر واقعی route در بک‌اند /api/purchase-orders است
+      // (نه /api/purchasing/orders)
+      const { data } = await apiClient.get('/purchase-orders')
       return data
     },
     enabled: authReady,
@@ -48,7 +55,7 @@ export function usePurchaseOrder(id: string) {
   return useQuery({
     queryKey: purchasingKeys.order(id),
     queryFn: async (): Promise<PurchaseOrder> => {
-      const { data } = await apiClient.get(`/purchasing/orders/${id}`)
+      const { data } = await apiClient.get(`/purchase-orders/${id}`)
       return data
     },
     enabled: authReady && !!id,
@@ -60,7 +67,7 @@ export function useCreatePurchaseOrder() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (input: any) => {
-      const { data } = await apiClient.post('/purchasing/orders', input)
+      const { data } = await apiClient.post('/purchase-orders', input)
       return data
     },
     onSuccess: () => {
@@ -73,7 +80,7 @@ export function useReceiveGoods() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (id: string) => {
-      const { data } = await apiClient.post(`/purchasing/orders/${id}/receive`)
+      const { data } = await apiClient.post(`/purchase-orders/${id}/receive`)
       return data
     },
     onSuccess: (_data, id) => {

@@ -37,8 +37,8 @@ export async function crmRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const { customerId } = request.query as { customerId?: string }
-      const interactions = await crmService.listInteractions(request.userId, customerId)
-      return reply.send(interactions)
+      const result = await crmService.listInteractions(request.userId, customerId)
+      return reply.send(result.interactions)
     } catch (err) {
       fastify.log.error(err)
       return reply.code(500).send({ error: 'Failed to fetch interactions' })
@@ -83,8 +83,8 @@ export async function crmRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const { customerId } = request.query as { customerId?: string }
-      const opportunities = await crmService.listOpportunities(request.userId, customerId)
-      return reply.send(opportunities)
+      const result = await crmService.listOpportunities(request.userId, customerId)
+      return reply.send(result.opportunities)
     } catch (err) {
       fastify.log.error(err)
       return reply.code(500).send({ error: 'Failed to fetch opportunities' })
