@@ -1,90 +1,119 @@
 // ============================================
-// apps/web/app/(dashboard)/constants/nav-items.ts
+// apps/web/app/[lang]/(dashboard)/constants/nav-items.ts
+//
+// Intent-driven navigation.
+// Every entry answers one sentence: "I came here because I want to ___".
+// Primary = the six things a shop owner does every day.
+// Secondary = everything they do occasionally, grouped by who/what it is about.
+//
+// Paths are limited to routes that actually exist under (dashboard)/.
 // ============================================
 
 import {
-  LayoutDashboard, Package, Receipt, BookOpen, Settings,
-  Users, Kanban, Shield, Building2, Key, EllipsisVertical,
-  Calculator, Handshake, Factory, ShoppingCart,
+  LayoutDashboard, PlusCircle, Wallet, Boxes, ShoppingCart, TrendingUp,
+  Users, BookOpen, Handshake, Building2, Kanban, Factory,
+  Settings, Key, Shield, Bell, RefreshCw, EllipsisVertical,
   type LucideIcon
 } from 'lucide-react'
 
+export type NavId =
+  // primary — daily intents
+  | 'today' | 'sell' | 'get-paid' | 'stock' | 'buy' | 'money'
+  // secondary — people
+  | 'buyers' | 'follow-up' | 'team' | 'coworkers'
+  // secondary — work
+  | 'projects' | 'production'
+  // secondary — system
+  | 'settings' | 'access' | 'history' | 'events' | 'sync'
+
+export type NavGroupId = 'primary' | 'people' | 'work' | 'system'
+
 export interface NavItem {
-  id: 'dashboard' | 'warehouse' | 'invoices' | 'customers' | 'human-resources' | 'projects' | 'audit' | 'permissions' | 'workspace' | 'settings' | 'accounting' | 'crm' | 'manufacturing' | 'purchasing'
+  id: NavId
   icon: LucideIcon
+  /** Used by the command palette, which renders a text glyph rather than a component. */
+  emoji: string
   labelKey: string
   descriptionKey: string
   path: string
-  group?: 'main' | 'sales' | 'team' | 'system' | 'business'
+  group: NavGroupId
 }
 
 export interface NavGroup {
-  id: string;
-  labelKey: string;
-  icon: LucideIcon;
-  items: NavItem[];
+  id: NavGroupId
+  labelKey: string
+  icon: LucideIcon
+  items: NavItem[]
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  // ─── اصلی ───
-  { id: 'dashboard', icon: LayoutDashboard, labelKey: 'nav.dashboard', descriptionKey: 'nav.dashboard.description', path: '/dashboard', group: 'main' },
+  // ─── کارهای هر روز ───
+  { id: 'today',    icon: LayoutDashboard, emoji: '☀️', labelKey: 'nav.today',   descriptionKey: 'nav.today.description',   path: '/dashboard',     group: 'primary' },
+  { id: 'sell',     icon: PlusCircle,      emoji: '➕', labelKey: 'nav.sell',    descriptionKey: 'nav.sell.description',    path: '/quick-invoice', group: 'primary' },
+  { id: 'get-paid', icon: Wallet,          emoji: '💰', labelKey: 'nav.getPaid', descriptionKey: 'nav.getPaid.description', path: '/invoices',      group: 'primary' },
+  { id: 'stock',    icon: Boxes,           emoji: '📦', labelKey: 'nav.stock',   descriptionKey: 'nav.stock.description',   path: '/warehouse',     group: 'primary' },
+  { id: 'buy',      icon: ShoppingCart,    emoji: '🛒', labelKey: 'nav.buy',     descriptionKey: 'nav.buy.description',     path: '/purchasing',    group: 'primary' },
+  { id: 'money',    icon: TrendingUp,      emoji: '📈', labelKey: 'nav.money',   descriptionKey: 'nav.money.description',   path: '/accounting',    group: 'primary' },
 
-  // ─── فروش و موجودی ───
-  { id: 'invoices', icon: Receipt, labelKey: 'nav.invoices', descriptionKey: 'nav.invoices.description', path: '/invoices', group: 'sales' },
-  { id: 'customers', icon: BookOpen, labelKey: 'nav.customers', descriptionKey: 'nav.customers.description', path: '/customers', group: 'sales' },
-  { id: 'warehouse', icon: Package, labelKey: 'nav.warehouse', descriptionKey: 'nav.warehouse.description', path: '/warehouse', group: 'sales' },  // ← تغییر
+  // ─── مردم ───
+  { id: 'buyers',    icon: BookOpen,  emoji: '📒', labelKey: 'nav.buyers',    descriptionKey: 'nav.buyers.description',    path: '/customers',       group: 'people' },
+  { id: 'follow-up', icon: Handshake, emoji: '🤝', labelKey: 'nav.followUp',  descriptionKey: 'nav.followUp.description',  path: '/crm',             group: 'people' },
+  { id: 'team',      icon: Users,     emoji: '👥', labelKey: 'nav.team',      descriptionKey: 'nav.team.description',      path: '/human-resources', group: 'people' },
+  { id: 'coworkers', icon: Building2, emoji: '🏢', labelKey: 'nav.coworkers', descriptionKey: 'nav.coworkers.description', path: '/workspace',       group: 'people' },
 
-  // ─── تیم ───
-  { id: 'human-resources', icon: Users, labelKey: 'nav.humanResources', descriptionKey: 'nav.humanResources.description', path: '/human-resources', group: 'team' },  // ← تغییر
-  { id: 'projects', icon: Kanban, labelKey: 'nav.projects', descriptionKey: 'nav.projects.description', path: '/projects', group: 'team' },
-  { id: 'workspace', icon: Building2, labelKey: 'workspace.title', descriptionKey: 'workspace.description', path: '/workspace', group: 'team' },
+  // ─── کارها ───
+  { id: 'projects',   icon: Kanban,  emoji: '📋', labelKey: 'nav.projects',   descriptionKey: 'nav.projects.description',   path: '/projects',      group: 'work' },
+  { id: 'production', icon: Factory, emoji: '🏭', labelKey: 'nav.production', descriptionKey: 'nav.production.description', path: '/manufacturing', group: 'work' },
 
-  // ─── کسب‌وکار ───
-  { id: 'accounting', icon: Calculator, labelKey: 'nav.accounting', descriptionKey: 'nav.accounting.description', path: '/accounting', group: 'business' },
-  { id: 'crm', icon: Handshake, labelKey: 'nav.crm', descriptionKey: 'nav.crm.description', path: '/crm', group: 'business' },
-  { id: 'manufacturing', icon: Factory, labelKey: 'nav.manufacturing', descriptionKey: 'nav.manufacturing.description', path: '/manufacturing', group: 'business' },
-  { id: 'purchasing', icon: ShoppingCart, labelKey: 'nav.purchasing', descriptionKey: 'nav.purchasing.description', path: '/purchasing', group: 'business' },
+  // ─── تنظیمات و امنیت ───
+  { id: 'settings', icon: Settings,  emoji: '⚙️', labelKey: 'nav.settings', descriptionKey: 'nav.settings.description', path: '/settings',    group: 'system' },
+  { id: 'access',   icon: Key,       emoji: '🔑', labelKey: 'nav.access',   descriptionKey: 'nav.access.description',   path: '/permissions', group: 'system' },
+  { id: 'history',  icon: Shield,    emoji: '🛡️', labelKey: 'nav.history',  descriptionKey: 'nav.history.description',  path: '/audit',       group: 'system' },
+  { id: 'events',   icon: Bell,      emoji: '🔔', labelKey: 'nav.events',   descriptionKey: 'nav.events.description',   path: '/activities',  group: 'system' },
+  { id: 'sync',     icon: RefreshCw, emoji: '🔄', labelKey: 'nav.sync',     descriptionKey: 'nav.sync.description',     path: '/sync-center', group: 'system' },
+]
 
-  // ─── سیستم ───
-  { id: 'permissions', icon: Key, labelKey: 'nav.permissions', descriptionKey: 'nav.permissions.description', path: '/permissions', group: 'system' },
-  { id: 'audit', icon: Shield, labelKey: 'nav.audit', descriptionKey: 'nav.audit.description', path: '/audit', group: 'system' },
-  { id: 'settings', icon: Settings, labelKey: 'nav.settings', descriptionKey: 'nav.settings.description', path: '/settings', group: 'system' },
-] as const
+// آیتم‌های همیشه-دیده — کارهای هر روزِ یک فروشنده
+export const PRIMARY_ITEMS: NavItem[] = NAV_ITEMS.filter((i) => i.group === 'primary')
 
-// آیتم‌های اصلی (بدون گروه‌بندی — همیشه نمایش داده می‌شوند)
-export const PRIMARY_ITEMS: NavItem[] = NAV_ITEMS.filter(
-  (i) => i.group === 'main' || i.group === 'sales'
-)
-
-// گروه‌های پنهان (فقط تو «بیشتر» نمایش داده می‌شوند)
+// گروه‌های کم‌استفاده — فقط داخل «بیشتر»
 export const MORE_GROUPS: NavGroup[] = [
-  { id: 'business', labelKey: 'nav.groups.business', icon: Calculator, items: NAV_ITEMS.filter((i) => i.group === 'business') },
-  { id: 'team', labelKey: 'nav.groups.team', icon: Users, items: NAV_ITEMS.filter((i) => i.group === 'team') },
+  { id: 'people', labelKey: 'nav.groups.people', icon: Users,    items: NAV_ITEMS.filter((i) => i.group === 'people') },
+  { id: 'work',   labelKey: 'nav.groups.work',   icon: Kanban,   items: NAV_ITEMS.filter((i) => i.group === 'work') },
   { id: 'system', labelKey: 'nav.groups.system', icon: Settings, items: NAV_ITEMS.filter((i) => i.group === 'system') },
 ]
 
 // آیکون دکمه «بیشتر»
 export const MORE_ICON = EllipsisVertical
 
-export type NavId = NavItem['id']
 export const SYNC_INTERVAL_MS = 30_000
 
-export const COMMAND_ITEMS = [
-  { id: 'dashboard',    labelKey: 'nav.dashboard',    descriptionKey: 'nav.dashboard.description',    icon: '📊', shortcut: '', path: '/dashboard' },
-  { id: 'new-invoice',  labelKey: 'quickInvoice.title', descriptionKey: 'quickInvoice.description', icon: '🧾', shortcut: 'N', path: '/quick-invoice' },
-  { id: 'warehouse',    labelKey: 'nav.warehouse',    descriptionKey: 'nav.warehouse.description',    icon: '📦', shortcut: '', path: '/warehouse' },  // ← تغییر
-  { id: 'invoices',     labelKey: 'nav.invoices',      descriptionKey: 'nav.invoices.description',      icon: '📑', shortcut: '', path: '/invoices' },
-  { id: 'customers',     labelKey: 'nav.customers',     descriptionKey: 'nav.customers.description',     icon: '📒', shortcut: '', path: '/customers' },
-  { id: 'customers',    labelKey: 'customers.addCustomer', descriptionKey: 'customers.addCustomerDesc', icon: '👤', shortcut: '', path: '/customers?add=true' },
-  { id: 'human-resources', labelKey: 'nav.humanResources', descriptionKey: 'nav.humanResources.description', icon: '👥', shortcut: '', path: '/human-resources' },  // ← تغییر
-  { id: 'projects',     labelKey: 'nav.projects',     descriptionKey: 'nav.projects.description',     icon: '📋', shortcut: '', path: '/projects' },
-  { id: 'accounting',   labelKey: 'nav.accounting',   descriptionKey: 'nav.accounting.description',   icon: '🧮', shortcut: '', path: '/accounting' },
-  { id: 'crm',          labelKey: 'nav.crm',          descriptionKey: 'nav.crm.description',          icon: '🤝', shortcut: '', path: '/crm' },
-  { id: 'manufacturing', labelKey: 'nav.manufacturing', descriptionKey: 'nav.manufacturing.description', icon: '🏭', shortcut: '', path: '/manufacturing' },
-  { id: 'purchasing',   labelKey: 'nav.purchasing',   descriptionKey: 'nav.purchasing.description',   icon: '🛒', shortcut: '', path: '/purchasing' },
-  { id: 'permissions',  labelKey: 'nav.permissions',  descriptionKey: 'nav.permissions.description',  icon: '🔑', shortcut: '', path: '/permissions' },
-  { id: 'audit',        labelKey: 'nav.audit',        descriptionKey: 'nav.audit.description',        icon: '🛡️', shortcut: '', path: '/audit' },
-  { id: 'workspace',    labelKey: 'workspace.title',  descriptionKey: 'workspace.description',         icon: '🏢', shortcut: '', path: '/workspace' },
-  { id: 'settings',     labelKey: 'nav.settings',     descriptionKey: 'nav.settings.description',     icon: '⚙️', shortcut: '', path: '/settings' },
-  { id: 'sync',         labelKey: 'sync.title',       descriptionKey: 'sync.description',             icon: '🔄', shortcut: '', path: '/sync-center' },
-] as const
+// Command palette — همان واژگانِ ناوبری، بدون تکرار مقصد.
+// تنها موردی که در ناوبری نیست، «افزودن خریدار» است چون یک عمل است، نه یک مقصد.
+export interface CommandItem {
+  id: string
+  labelKey: string
+  descriptionKey: string
+  icon: string
+  shortcut: string
+  path: string
+}
+
+export const COMMAND_ITEMS: CommandItem[] = [
+  ...NAV_ITEMS.map((item) => ({
+    id: item.id as string,
+    labelKey: item.labelKey,
+    descriptionKey: item.descriptionKey,
+    icon: item.emoji,
+    shortcut: item.id === 'sell' ? 'N' : '',
+    path: item.path,
+  })),
+  {
+    id: 'add-buyer',
+    labelKey: 'nav.addBuyer',
+    descriptionKey: 'nav.addBuyer.description',
+    icon: '👤',
+    shortcut: '',
+    path: '/customers?add=true',
+  },
+]

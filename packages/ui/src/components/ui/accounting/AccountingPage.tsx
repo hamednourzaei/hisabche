@@ -43,10 +43,10 @@ export function AccountingPage() {
       {/* ─── Header ─────────────────────────────────────────── */}
       <div className="pb-3 md:pb-4 lg:pb-5">
         <h1 className="font-bold text-[hsl(var(--fg-primary))] text-lg md:text-xl lg:text-2xl">
-          {t("accounting.title", "حسابداری")}
+          {t("nav.money", "پول و سود")}
         </h1>
         <p className="text-[11px] md:text-xs lg:text-sm text-[hsl(var(--fg-tertiary))] mt-0.5 md:mt-1">
-          {t("accounting.subtitle", "مدیریت حساب‌ها، اسناد و گزارش‌های مالی")}
+          {t("nav.money.description", "درآمد، خرج و سود شما")}
         </p>
       </div>
 

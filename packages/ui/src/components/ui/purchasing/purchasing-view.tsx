@@ -65,7 +65,7 @@ export const PurchasingView = memo(function PurchasingView({
       <div className="flex items-center gap-2">
         <ShoppingCart className="size-6 text-[hsl(var(--color-primary))]" />
         <h1 className="text-2xl font-bold text-[hsl(var(--fg-primary))]">
-          {t("purchasing.title", "خرید")}
+          {t("nav.buy", "خرید")}
         </h1>
         <span className="text-xs text-[hsl(var(--fg-tertiary))] bg-[hsl(var(--surface-muted))] px-2 py-1 rounded-full">
           {orders.length.toLocaleString("fa-AF")}

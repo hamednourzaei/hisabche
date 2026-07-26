@@ -3,6 +3,7 @@
 
 import { useState, useCallback, memo } from "react";
 import { useTranslation } from "react-i18next";
+import Link from "next/link";
 import {
   useBackupStore,
   useDeviceStore,
@@ -21,6 +22,8 @@ import {
   LogOut,
   Check,
   Loader2,
+  CreditCard,
+  ChevronLeft,
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -431,6 +434,38 @@ const StorageSection = memo(function StorageSection() {
 });
 StorageSection.displayName = "StorageSection";
 
+// ─── Billing Link ────────────────────────────────────────────────────────────
+
+const BillingSection = memo(function BillingSection() {
+  const { t } = useTranslation();
+
+  return (
+    <Link
+      href="/billing"
+      className={cn(
+        "flex items-center gap-3 rounded-2xl p-4 sm:p-5",
+        "border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]",
+        "transition-colors duration-150 hover:bg-[hsl(var(--surface-muted))]",
+        "motion-reduce:transition-none"
+      )}
+    >
+      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[hsl(var(--color-primary)/0.1)] shrink-0">
+        <CreditCard className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold text-[hsl(var(--fg-primary))]">
+          {t("nav.billing", "پلن و اشتراک")}
+        </p>
+        <p className="text-sm text-[hsl(var(--fg-secondary))] truncate">
+          {t("nav.billing.description", "طرح فعلی، ارتقا و صورت‌حساب اشتراک")}
+        </p>
+      </div>
+      <ChevronLeft className="size-4 text-[hsl(var(--fg-tertiary))] rtl:rotate-180 shrink-0" aria-hidden="true" />
+    </Link>
+  );
+});
+BillingSection.displayName = "BillingSection";
+
 // ─── Main Page ─────────────────────────────────────────────────────────────
 
 export const SettingsPage = memo(function SettingsPage() {
@@ -448,6 +483,7 @@ export const SettingsPage = memo(function SettingsPage() {
       </div>
 
       <AccountSection />
+      <BillingSection />
       <BackupSection />
       <PerformanceSection />
       <SafetySection />

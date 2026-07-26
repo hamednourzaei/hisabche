@@ -73,7 +73,7 @@ export function SyncCenterPage({
       <div className="space-y-1.5">
         <h1 className="flex items-center gap-3 text-3xl font-bold text-[hsl(var(--fg-primary))]">
           <Shield className="size-8 text-[hsl(var(--color-primary))]" aria-hidden="true" />
-          {t("sync.title", "مرکز همگام‌سازی")}
+          {t("nav.sync", "همگام‌سازی")}
         </h1>
         <p className="text-sm text-[hsl(var(--fg-secondary))]">
           {t("sync.description", "مدیریت امنیت، بکاپ و وضعیت اتصال برنامه")}

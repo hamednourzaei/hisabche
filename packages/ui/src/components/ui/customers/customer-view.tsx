@@ -243,7 +243,7 @@ function CustomersHeader({
             isMobile ? "text-lg" : "text-2xl sm:text-3xl"
           )}
         >
-          {t("customers.title", "باقیداری")}
+          {t("nav.buyers", "خریدارها")}
         </h1>
         {isMobile ? (
           <p className="text-xs text-[hsl(var(--fg-tertiary))]">

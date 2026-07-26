@@ -268,7 +268,7 @@ export const HumanResourcesView = memo(function HumanResourcesView({
         <div className="flex items-center gap-2">
           <Users className="size-6 text-[hsl(var(--color-primary))]" />
           <h1 className="text-2xl font-bold text-[hsl(var(--fg-primary))]">
-            {t("hr.title", "منابع انسانی")}
+            {t("nav.team", "تیم و حقوق")}
           </h1>
         </div>
         <div className="flex items-center gap-2">

@@ -78,7 +78,7 @@ export const CrmView = memo(function CrmView({
       <div className="flex items-center gap-2">
         <Handshake className="size-6 text-[hsl(var(--color-primary))]" />
         <h1 className="text-2xl font-bold text-[hsl(var(--fg-primary))]">
-          {t("crm.title", "ارتباط با مشتریان")}
+          {t("nav.followUp", "پیگیری فروش")}
         </h1>
       </div>
 

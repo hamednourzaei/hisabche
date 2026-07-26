@@ -11,19 +11,26 @@ import { NavigationRegistry } from "../navigation/navigation-registry";
 import dynamic from 'next/dynamic';
 
 // ─── Components ──────────────────────────────────────────────────────────────
+// ✅ Hero is the LCP element — imported eagerly (no dynamic wrapper) so it
+// ships in the main bundle with no extra network round-trip.
+// Everything below the fold is dynamically imported so its JS is fetched
+// in a separate chunk and hydrated only once it reaches the viewport,
+// instead of blocking the initial script evaluation.
+import CinematicHero from './cinematic-hero';
 
-const CinematicHero = dynamic(() => import('./cinematic-hero'), { ssr: true });
-const PainScene = dynamic(() => import('./pain-scene'), { ssr: true });
-const TransformScene = dynamic(() => import('./transform-scene'), { ssr: true });
-const FeaturesScene = dynamic(() => import('./features-scene'), { ssr: true });
-const SocialScene = dynamic(() => import('./social-scene'), { ssr: true });
-const FaqScene = dynamic(() => import('./faq-scene'), { ssr: true });
-const CTAScene = dynamic(() => import('./cta-scene'), { ssr: true });
-const TrustBarScene = dynamic(() => import('./trust-bar-scene'), { ssr: true });
-const SecurityScene = dynamic(() => import('./security-scene'), { ssr: true });
-const PricingScene = dynamic(() => import('./pricing-scene'), { ssr: true });
-const SiteFooter = dynamic(() => import('./site-footer'), { ssr: true });
-const DashboardShowcaseScene = dynamic(() => import('./dashboard-showcase-scene'), { ssr: true });
+const sceneLoading = () => <div className="min-h-[40vh]" aria-hidden="true" />;
+
+const PainScene = dynamic(() => import('./pain-scene'), { loading: sceneLoading });
+const TransformScene = dynamic(() => import('./transform-scene'), { loading: sceneLoading });
+const FeaturesScene = dynamic(() => import('./features-scene'), { loading: sceneLoading });
+const SocialScene = dynamic(() => import('./social-scene'), { loading: sceneLoading });
+const FaqScene = dynamic(() => import('./faq-scene'), { loading: sceneLoading });
+const CTAScene = dynamic(() => import('./cta-scene'), { loading: sceneLoading });
+const TrustBarScene = dynamic(() => import('./trust-bar-scene'), { loading: sceneLoading });
+const SecurityScene = dynamic(() => import('./security-scene'), { loading: sceneLoading });
+const PricingScene = dynamic(() => import('./pricing-scene'), { loading: sceneLoading });
+const SiteFooter = dynamic(() => import('./site-footer'), { loading: sceneLoading });
+const DashboardShowcaseScene = dynamic(() => import('./dashboard-showcase-scene'), { loading: sceneLoading });
 
 const sectionFallbacks: Record<string, Record<string, string>> = {
   en: {
@@ -60,8 +67,6 @@ function getLocaleFromPathname(pathname: string): string {
 // ─── Main LandingPage ──────────────────────────────────────────────────────
 
 export function LandingPage() {
-  console.log("🔥🔥🔥 LandingPage RENDERING 🔥🔥🔥");
-  
   const router = useRouter();
   const pathname = usePathname();
   const { t, i18n } = useTranslation();
@@ -70,16 +75,6 @@ export function LandingPage() {
 
   const currentLocale = getLocaleFromPathname(pathname);
   const fallbacks = sectionFallbacks[currentLocale] || sectionFallbacks["fa-IR"];
-
-  // ── Log page load ──
-  useEffect(() => {
-    console.log("🚀 LandingPage mounted", {
-      pathname,
-      locale: currentLocale,
-      width: typeof window !== 'undefined' ? window.innerWidth : 'unknown',
-      height: typeof window !== 'undefined' ? window.innerHeight : 'unknown',
-    });
-  }, []);
 
   const NAVIGATION_SECTIONS = useMemo(
     () => [

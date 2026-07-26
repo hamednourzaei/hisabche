@@ -4,17 +4,18 @@
 import { memo, useMemo, useId } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  Receipt, 
-  AlertTriangle, 
-  Package, 
+import {
+  TrendingUp,
+  TrendingDown,
+  Receipt,
+  AlertTriangle,
+  Package,
   Users,
   ArrowRight,
   CheckCircle,
   Clock,
-  FileText
+  FileText,
+  ShoppingCart
 } from "lucide-react";
 import { useCurrency } from "../../../hooks/dashboard/use-currency";
 
@@ -36,7 +37,7 @@ interface BusinessHealthData {
 interface BusinessHealthPanelProps {
   data: BusinessHealthData;
   isLoading: boolean;
-  onAction: (action: "invoice" | "payments" | "warehouse" | "customers") => void;
+  onAction: (action: "invoice" | "payments" | "warehouse" | "customers" | "buy") => void;
 }
 
 // ─── Skeleton ──────────────────────────────────────────────────────────────
@@ -408,7 +409,7 @@ AttentionPanel.displayName = "AttentionPanel";
 const QuickActions = memo(function QuickActions({
   onAction,
 }: {
-  onAction: (action: "invoice" | "payments" | "warehouse" | "customers") => void;
+  onAction: (action: "invoice" | "payments" | "warehouse" | "customers" | "buy") => void;
 }) {
   const { t } = useTranslation();
 
@@ -433,6 +434,13 @@ const QuickActions = memo(function QuickActions({
       icon: Package,
       description: t("actions.manageStockDesc"),
       color: "text-[hsl(var(--status-warning))] bg-[hsl(var(--status-warning)/0.1)]"
+    },
+    {
+      id: "buy" as const,
+      label: t("actions.buyStock"),
+      icon: ShoppingCart,
+      description: t("actions.buyStockDesc"),
+      color: "text-[hsl(var(--status-info))] bg-[hsl(var(--status-info)/0.1)]"
     }
   ], [t]);
 
@@ -445,7 +453,7 @@ const QuickActions = memo(function QuickActions({
         </h3>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
         {actions.map(({ id, label, icon: Icon, description, color }) => (
           <button
             key={id}

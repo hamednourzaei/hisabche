@@ -305,7 +305,7 @@ export const PermissionsView = memo(function PermissionsView({
         <div className="flex items-center gap-2">
           <Shield className="size-6 text-[hsl(var(--color-primary))]" />
           <h1 className="text-2xl font-bold text-[hsl(var(--fg-primary))]">
-            {t("permissions.title", "نقش‌ها و دسترسی‌ها")}
+            {t("nav.access", "دسترسی‌ها")}
           </h1>
         </div>
         <button

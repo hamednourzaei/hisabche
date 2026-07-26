@@ -185,7 +185,7 @@ export const AuditView = memo(function AuditView({
         <div className="flex items-center gap-2">
           <Shield className="size-6 text-[hsl(var(--color-primary))]" />
           <h1 className="text-2xl font-bold text-[hsl(var(--fg-primary))]">
-            {t("audit.title", "حسابرسی")}
+            {t("nav.history", "سابقه تغییرات")}
           </h1>
           <span className="text-xs text-[hsl(var(--fg-tertiary))] bg-[hsl(var(--surface-muted))] px-2 py-1 rounded-full">
             {total.toLocaleString("fa-AF")}

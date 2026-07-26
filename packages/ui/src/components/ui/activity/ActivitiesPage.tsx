@@ -175,7 +175,7 @@ export function ActivitiesPage() {
       <div className="flex items-center justify-between gap-2 pb-3 md:pb-4 lg:pb-5">
         <div className="flex items-center gap-1.5 md:gap-2 min-w-0">
           <h1 className="font-bold text-[hsl(var(--fg-primary))] truncate text-lg md:text-xl lg:text-2xl">
-            {t("activity.title")}
+            {t("nav.events", "رخدادها")}
           </h1>
           {unreadCount > 0 && (
             <span className="shrink-0 font-bold rounded-full bg-[hsl(var(--color-destructive)/0.1)] text-[hsl(var(--color-destructive))] text-[10px] md:text-xs lg:text-sm px-1.5 md:px-2 lg:px-2.5 py-0.5 lg:py-1">

@@ -43,10 +43,10 @@ const InvoicesHeader = memo(function InvoicesHeader({
     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="space-y-1">
         <h1 className="text-xl font-bold sm:text-2xl lg:text-3xl text-[hsl(var(--fg-primary))]">
-          {t("invoices.title", "فاکتورها")}
+          {t("nav.getPaid", "دریافت پول")}
         </h1>
         <p className="text-xs sm:text-sm text-[hsl(var(--fg-secondary))]">
-          {t("invoices.description", "مدیریت و مشاهده فاکتورها")}
+          {t("nav.getPaid.description", "چه کسی چقدر باید بپردازد")}
         </p>
       </div>
       <button

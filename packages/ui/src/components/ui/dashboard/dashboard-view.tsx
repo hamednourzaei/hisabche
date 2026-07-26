@@ -202,7 +202,7 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
     onDateRangeChange,
   } = props;
 
-  const handleHealthAction = (action: "invoice" | "payments" | "warehouse" | "customers") => {
+  const handleHealthAction = (action: "invoice" | "payments" | "warehouse" | "customers" | "buy") => {
     switch (action) {
       case "invoice":
         onNavigateQuickInvoice();
@@ -215,6 +215,9 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
         break;
       case "customers":
         onNavigateCustomers();
+        break;
+      case "buy":
+        onNavigate("/purchasing");
         break;
     }
   };

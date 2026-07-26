@@ -75,7 +75,7 @@ export const ManufacturingView = memo(function ManufacturingView({
       <div className="flex items-center gap-2">
         <Factory className="size-6 text-[hsl(var(--color-primary))]" />
         <h1 className="text-2xl font-bold text-[hsl(var(--fg-primary))]">
-          {t("manufacturing.title", "تولید")}
+          {t("nav.production", "ساخت و تولید")}
         </h1>
       </div>
 
