@@ -1,4 +1,12 @@
 // packages/api/src/hooks/audit.ts
+// FIXED: باگ لایه‌ی گم‌شده‌ی .data — بک‌اند مستقیم
+// { data: [...], total, page, limit, totalPages } برمی‌گرداند.
+// apiClient.get (axios) این بدنه را داخل response.data قرار می‌دهد،
+// یعنی آرایه‌ی واقعی logs در response.data.data بود. قبلاً کل
+// response (wrapper کامل axios) به extractAuditData پاس داده
+// می‌شد، نه response.data — به همین دلیل با اینکه سرور همیشه
+// 200 و داده‌ی درست برمی‌گرداند، جدول در فرانت همیشه خالی
+// نمایش داده می‌شد.
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
@@ -39,11 +47,11 @@ export interface AuditResponse {
   limit?: number;
 }
 
-function extractAuditData(response: unknown): AuditResponse {
-  const data = response as Record<string, unknown>;
+function extractAuditData(body: unknown): AuditResponse {
+  const data = body as Record<string, unknown>;
 
-  // ✅ 1. Check for response.data.logs
-  if (data?.data && typeof data.data === "object") {
+  // ✅ 1. Check for body.data.logs (بدنه‌ای که خودش یک لایه‌ی nested دارد)
+  if (data?.data && typeof data.data === "object" && !Array.isArray(data.data)) {
     const nested = data.data as Record<string, unknown>;
     if (nested?.logs && Array.isArray(nested.logs)) {
       return {
@@ -53,7 +61,7 @@ function extractAuditData(response: unknown): AuditResponse {
     }
   }
 
-  // ✅ 2. Check for response.logs directly
+  // ✅ 2. Check for body.logs directly
   if (data?.logs && Array.isArray(data.logs)) {
     return {
       logs: data.logs as AuditLog[],
@@ -61,7 +69,8 @@ function extractAuditData(response: unknown): AuditResponse {
     };
   }
 
-  // ✅ 3. Check for response.data as array
+  // ✅ 3. Check for body.data as array — این دقیقاً فرمت واقعی
+  // بک‌اند فعلی است: { data: AuditLog[], total, page, limit, totalPages }
   if (data?.data && Array.isArray(data.data)) {
     return {
       logs: data.data as AuditLog[],
@@ -69,7 +78,15 @@ function extractAuditData(response: unknown): AuditResponse {
     };
   }
 
-  // ✅ 4. Fallback: empty
+  // ✅ 4. Fallback: خود body یک آرایه است
+  if (Array.isArray(data)) {
+    return {
+      logs: data as unknown as AuditLog[],
+      total: (data as unknown as AuditLog[]).length,
+    };
+  }
+
+  // ✅ 5. Fallback: empty
   return {
     logs: [],
     total: 0,
@@ -88,7 +105,9 @@ export function useAuditLogs(params: UseAuditLogsParams = {}) {
         params: { page, limit, ...rest },
       });
 
-      return extractAuditData(response);
+      // ✅ FIX: response.data (نه خود response) بدنه‌ی واقعی JSON
+      // است که بک‌اند برگردانده.
+      return extractAuditData(response.data);
     },
     enabled: authReady,
     staleTime: 30000,
