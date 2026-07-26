@@ -26,7 +26,7 @@ export { Toaster } from './components/ui/sonner'
 export { SaveIndicator, type SaveIndicatorProps } from './components/ui/save-indicator'
 export { Celebration, type CelebrationProps } from './components/ui/celebration'
 export { ErrorBoundary } from './components/ui/error-boundary'
-
+export {AccountingPage} from "./components/ui/accounting"
 // ---------- Navigation — Dashboard ----------
 export { DashboardSidebar, BottomNav, type NavItem } from './components/ui/dashboard-sidebar'
 export { DashboardHeader } from './components/ui/dashboard-header'
