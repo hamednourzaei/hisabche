@@ -164,22 +164,26 @@ export async function accountingRoutes(fastify: FastifyInstance) {
   })
 
   // ─── GET /income-statement ─────────────────────────────
-  fastify.get('/income-statement', {
-    preHandler: [authenticate, cacheMiddleware({ ttl: 300, keyPrefix: 'income-statement' })],
-    schema: {
-      querystring: toJsonSchema(incomeStatementQuerySchema),
-      response: { 200: toJsonSchema(z.any()) },
-    },
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const { fromDate, toDate } = request.query as { fromDate: string; toDate: string }
-      const incomeStatement = await accountingService.getIncomeStatement(request.userId, fromDate, toDate)
-      return reply.send(incomeStatement)
-    } catch (err) {
-      fastify.log.error(err)
-      return reply.code(500).send({ error: 'Failed to fetch income statement' })
-    }
-  })
+fastify.get('/income-statement', {
+  preHandler: [authenticate, cacheMiddleware({ ttl: 300, keyPrefix: 'income-statement' })],
+  schema: {
+    querystring: toJsonSchema(z.object({
+      from: z.string(),
+      to: z.string(),
+      limit: z.string().optional(),
+    })),
+    response: { 200: toJsonSchema(z.any()) },
+  },
+}, async (request: FastifyRequest, reply: FastifyReply) => {
+  try {
+    const { from, to } = request.query as { from: string; to: string }
+    const incomeStatement = await accountingService.getIncomeStatement(request.userId, from, to)
+    return reply.send(incomeStatement)
+  } catch (err) {
+    fastify.log.error(err)
+    return reply.code(500).send({ error: 'Failed to fetch income statement' })
+  }
+})
 
   // ─── GET /cash-flow ────────────────────────────────────
   fastify.get('/cash-flow', {
