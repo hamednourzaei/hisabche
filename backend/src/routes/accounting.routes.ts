@@ -1,5 +1,10 @@
 // ============================================
 // backend/src/routes/accounting.routes.ts
+// FIXED: Removed /api prefix — now registered with
+// prefix: '/api/accounting' in index.ts, matching
+// what the frontend hooks request.
+// Also fixed query schemas to accept limit & date
+// params that the frontend actually sends.
 // ============================================
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
@@ -20,18 +25,35 @@ const toJsonSchema = (schema: any) => {
   return result
 }
 
-const dateRangeSchema = z.object({
+// ✅ Common query params that frontend sends
+const listQuerySchema = z.object({
+  limit: z.string().optional(),
+  cursor: z.string().optional(),
+})
+
+const dateQuerySchema = z.object({
+  date: z.string().default(new Date().toISOString()),
+  limit: z.string().optional(),
+})
+
+const dateRangeQuerySchema = z.object({
   startDate: z.string().min(1),
   endDate: z.string().min(1),
+})
+
+const incomeStatementQuerySchema = z.object({
+  fromDate: z.string(),
+  toDate: z.string(),
 })
 
 export async function accountingRoutes(fastify: FastifyInstance) {
   const accountingService = new AccountingService()
 
-  // ─── GET /api/accounts ──────────────────────────────────
-  fastify.get('/api/accounts', {
+  // ─── GET /accounts ─────────────────────────────────────
+  fastify.get('/accounts', {
     preHandler: [authenticate, cacheMiddleware({ ttl: 120, keyPrefix: 'accounts' })],
     schema: {
+      querystring: toJsonSchema(listQuerySchema),
       response: { 200: toJsonSchema(z.array(z.any())) },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
@@ -44,8 +66,8 @@ export async function accountingRoutes(fastify: FastifyInstance) {
     }
   })
 
-  // ─── POST /api/accounts ─────────────────────────────────
-  fastify.post('/api/accounts', {
+  // ─── POST /accounts ────────────────────────────────────
+  fastify.post('/accounts', {
     preHandler: [authenticate],
     schema: {
       body: toJsonSchema(createAccountSchema),
@@ -66,10 +88,11 @@ export async function accountingRoutes(fastify: FastifyInstance) {
     }
   })
 
-  // ─── GET /api/journal ───────────────────────────────────
-  fastify.get('/api/journal', {
+  // ─── GET /journal ──────────────────────────────────────
+  fastify.get('/journal', {
     preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'journal' })],
     schema: {
+      querystring: toJsonSchema(listQuerySchema),
       response: { 200: toJsonSchema(z.array(z.any())) },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
@@ -82,8 +105,8 @@ export async function accountingRoutes(fastify: FastifyInstance) {
     }
   })
 
-  // ─── POST /api/journal ──────────────────────────────────
-  fastify.post('/api/journal', {
+  // ─── POST /journal ─────────────────────────────────────
+  fastify.post('/journal', {
     preHandler: [authenticate],
     schema: {
       body: toJsonSchema(createJournalEntrySchema),
@@ -104,11 +127,11 @@ export async function accountingRoutes(fastify: FastifyInstance) {
     }
   })
 
-  // ─── GET /api/trial-balance ─────────────────────────────
-  fastify.get('/api/trial-balance', {
+  // ─── GET /trial-balance ────────────────────────────────
+  fastify.get('/trial-balance', {
     preHandler: [authenticate, cacheMiddleware({ ttl: 300, keyPrefix: 'trial-balance' })],
     schema: {
-      querystring: toJsonSchema(z.object({ date: z.string().datetime().default(new Date().toISOString()) })),
+      querystring: toJsonSchema(dateQuerySchema),
       response: { 200: toJsonSchema(z.array(z.any())) },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
@@ -122,11 +145,11 @@ export async function accountingRoutes(fastify: FastifyInstance) {
     }
   })
 
-  // ─── GET /api/balance-sheet ─────────────────────────────
-  fastify.get('/api/balance-sheet', {
+  // ─── GET /balance-sheet ────────────────────────────────
+  fastify.get('/balance-sheet', {
     preHandler: [authenticate, cacheMiddleware({ ttl: 300, keyPrefix: 'balance-sheet' })],
     schema: {
-      querystring: toJsonSchema(z.object({ date: z.string().datetime().default(new Date().toISOString()) })),
+      querystring: toJsonSchema(dateQuerySchema),
       response: { 200: toJsonSchema(z.any()) },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
@@ -140,14 +163,11 @@ export async function accountingRoutes(fastify: FastifyInstance) {
     }
   })
 
-  // ─── GET /api/income-statement ──────────────────────────
-  fastify.get('/api/income-statement', {
+  // ─── GET /income-statement ─────────────────────────────
+  fastify.get('/income-statement', {
     preHandler: [authenticate, cacheMiddleware({ ttl: 300, keyPrefix: 'income-statement' })],
     schema: {
-      querystring: toJsonSchema(z.object({
-        fromDate: z.string().datetime(),
-        toDate: z.string().datetime(),
-      })),
+      querystring: toJsonSchema(incomeStatementQuerySchema),
       response: { 200: toJsonSchema(z.any()) },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
@@ -161,11 +181,11 @@ export async function accountingRoutes(fastify: FastifyInstance) {
     }
   })
 
-  // ─── NEW: GET /api/cash-flow ────────────────────────────
-  fastify.get('/api/cash-flow', {
+  // ─── GET /cash-flow ────────────────────────────────────
+  fastify.get('/cash-flow', {
     preHandler: [authenticate, cacheMiddleware({ ttl: 120, keyPrefix: 'cash-flow' })],
     schema: {
-      querystring: toJsonSchema(dateRangeSchema),
+      querystring: toJsonSchema(dateRangeQuerySchema),
       response: { 200: toJsonSchema(z.any()) },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
@@ -179,8 +199,8 @@ export async function accountingRoutes(fastify: FastifyInstance) {
     }
   })
 
-  // ─── NEW: GET /api/customer-debt ────────────────────────
-  fastify.get('/api/customer-debt', {
+  // ─── GET /customer-debt ────────────────────────────────
+  fastify.get('/customer-debt', {
     preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'customer-debt' })],
     schema: {
       response: { 200: toJsonSchema(z.any()) },

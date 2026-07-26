@@ -4,19 +4,12 @@
 // FIXED: notificationRoutes — properly registered
 // FIXED: debugRoutes — properly registered
 // FIXED (v2.5): Removed global HTTP-level cache layer.
-//   Root cause: this layer built keys as `http:${userId}:${url}`
-//   while every route-level cache (cacheMiddleware) builds keys
-//   as `${keyPrefix}:${userId}:${url}` (e.g. `activities:${userId}:...`).
-//   Because `userId` came BEFORE the prefix here but AFTER the
-//   prefix in cacheMiddleware, clearCache(`activities:${userId}:*`)
-//   could never match this layer's keys — so invalidation after
-//   writes (e.g. creating an invoice) never cleared the global
-//   cache, and clients could keep seeing stale data.
-//   cacheMiddleware already covers every route that needs caching
-//   with correct, invalidatable keys, so this layer is removed
-//   rather than reconciled. Routes without cacheMiddleware simply
-//   run uncached now instead of being served through an
-//   uninvalidatable cache.
+// FIXED (v2.6): accountingRoutes registered with prefix '/api/accounting'
+//   to match what the frontend hooks actually request. Previously
+//   accounting routes were defined as /api/accounts, /api/journal etc.
+//   but the frontend requests /accounting/accounts, /accounting/journal
+//   etc. (with baseURL /api). This prefix solves the mismatch without
+//   touching any other route's registration pattern.
 // ============================================
 
 import Fastify from 'fastify'
@@ -356,7 +349,8 @@ async function start() {
     await server.register(eventRoutes)
     await server.register(analyticsRoutes)
     await server.register(aiRoutes)
-    await server.register(accountingRoutes)
+    // ✅ FIXED (v2.6): accountingRoutes با prefix ثبت می‌شود
+    await server.register(accountingRoutes, { prefix: '/api/accounting' })
     await server.register(crmRoutes)
     await server.register(manufacturingRoutes)
     await server.register(purchasingRoutes)
