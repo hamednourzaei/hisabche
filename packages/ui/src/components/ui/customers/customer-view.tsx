@@ -2,7 +2,7 @@
 // 🎯 Control Center v7 — Production-Ready, Mobile-First, RTL, Offline-Ready
 "use client"
 
-import { useState, useMemo, useCallback, lazy, Suspense, memo } from "react"
+import { useState, useEffect, useMemo, useCallback, lazy, Suspense, memo } from "react"
 import { cn } from "@/lib/utils"
 import {
   Plus,
@@ -56,14 +56,17 @@ function formatDate(value: unknown, locale = "fa-IR"): string {
 function useIsMobile(breakpoint = 640): boolean {
   const [isMobile, setIsMobile] = useState(false)
 
-  useState(() => {
+  // ✅ FIX: قبلاً از useState(initializer) به‌جای useEffect استفاده می‌شد —
+  // یعنی listener فقط یک‌بار (بدون تضمین رسمی) اضافه می‌شد و cleanup
+  // برگشتی هرگز صدا زده نمی‌شد (useState از cleanup پشتیبانی نمی‌کند)،
+  // که هم نشتی حافظه ایجاد می‌کرد و هم تشخیص موبایل را غیرقابل‌اعتماد.
+  useEffect(() => {
     if (typeof window === "undefined") return
     const check = () => setIsMobile(window.innerWidth < breakpoint)
     check()
-    const handler = () => setIsMobile(window.innerWidth < breakpoint)
-    window.addEventListener("resize", handler)
-    return () => window.removeEventListener("resize", handler)
-  })
+    window.addEventListener("resize", check)
+    return () => window.removeEventListener("resize", check)
+  }, [breakpoint])
 
   return isMobile
 }

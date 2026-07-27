@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev -p 3039",
     "build": "next build",
+    "postbuild": "node scripts/copy-standalone-assets.js",
     "start": "next start",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",

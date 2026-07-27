@@ -48,6 +48,8 @@ export interface SyncCenterPageProps {
   autoBackupEnabled: boolean;
   backups: BackupItem[];
   auditLog: AuditItem[];
+  /** اندازه‌ی واقعی داده‌ی محلی (hisabche-* در localStorage)، نه عدد ساختگی. */
+  localStorageSize: string;
   onSync: () => void;
   onBackup: () => void;
   onToggleAutoBackup: () => void;
@@ -63,6 +65,7 @@ export function SyncCenterPage({
   autoBackupEnabled,
   backups,
   auditLog,
+  localStorageSize,
   onSync,
   onBackup,
   onToggleAutoBackup,
@@ -166,7 +169,7 @@ export function SyncCenterPage({
               <HardDrive className="size-7 text-[hsl(var(--fg-secondary))]" aria-hidden="true" />
             </div>
             <div>
-              <p className="text-xl font-bold tabular-nums text-[hsl(var(--fg-primary))]">24 MB</p>
+              <p className="text-xl font-bold tabular-nums text-[hsl(var(--fg-primary))]">{localStorageSize}</p>
               <p className="text-xs text-[hsl(var(--fg-tertiary))]">
                 {t("sync.localStorage", "حافظه محلی")}
               </p>
@@ -204,7 +207,7 @@ export function SyncCenterPage({
                 className={cn("size-4", isSyncing && "animate-spin")}
                 aria-hidden="true"
               />
-              {t("sync.syncNow", "همگام‌سازی الآن")}
+              {t("sync.syncNow", "به‌روزرسانی اطلاعات")}
             </button>
 
             <button
@@ -371,32 +374,25 @@ export function SyncCenterPage({
               {t("sync.networkStatus", "وضعیت شبکه")}
             </h2>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-2xl border border-[hsl(var(--border-default))] p-4 text-start">
-              <p className="mb-1 text-sm text-[hsl(var(--fg-secondary))]">
-                {t("sync.internet", "اینترنت")}
-              </p>
-              <p
-                className={cn(
-                  "font-semibold",
-                  isOnline
-                    ? "text-[hsl(var(--color-success))]"
-                    : "text-[hsl(var(--color-warning))]",
-                )}
-              >
-                {isOnline
-                  ? t("sync.connected", "متصل")
-                  : t("sync.disconnected", "قطع")}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-[hsl(var(--border-default))] p-4 text-start">
-              <p className="mb-1 text-sm text-[hsl(var(--fg-secondary))]">
-                {t("sync.serverStatus", "وضعیت سرور")}
-              </p>
-              <p className="font-semibold text-[hsl(var(--color-success))]">
-                {t("sync.stable", "پایدار")}
-              </p>
-            </div>
+          {/* ✅ FIX: کارت «وضعیت سرور: پایدار» حذف شد — این یک متن hardcoded
+              بود که هیچ health-check واقعی پشتش نبود و همیشه «پایدار»
+              نشان می‌داد، حتی اگر سرور واقعاً پایین بود. */}
+          <div className="rounded-2xl border border-[hsl(var(--border-default))] p-4 text-start">
+            <p className="mb-1 text-sm text-[hsl(var(--fg-secondary))]">
+              {t("sync.internet", "اینترنت")}
+            </p>
+            <p
+              className={cn(
+                "font-semibold",
+                isOnline
+                  ? "text-[hsl(var(--color-success))]"
+                  : "text-[hsl(var(--color-warning))]",
+              )}
+            >
+              {isOnline
+                ? t("sync.connected", "متصل")
+                : t("sync.disconnected", "قطع")}
+            </p>
           </div>
         </div>
       </div>

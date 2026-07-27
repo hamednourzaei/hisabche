@@ -57,10 +57,14 @@ function Switch({ className, size = "default", ...props }: SwitchProps) {
           // Sizes
           size === "default" && "h-5 w-5",
           size === "sm" && "h-4 w-4",
-          // ✅ RTL-safe: استفاده از inset-inline-start/end
-          "inset-inline-start-0.5",
-          "data-[state=checked]:inset-inline-start-[calc(100%-1.25rem-0.125rem)]",
-          size === "sm" && "data-[state=checked]:inset-inline-start-[calc(100%-1rem-0.125rem)]",
+          // ✅ FIX: "inset-inline-start-*" اصلاً یک کلاس معتبر Tailwind
+          // نیست (کامپایل نمی‌شود، هیچ CSS تولید نمی‌کند) — همین باعث
+          // می‌شد thumb هیچ موقعیت افقی نگیرد و به یک دایره‌ی ثابت وسط
+          // تبدیل شود. نام درست utility منطقی (RTL-safe) خودِ "start"/"end"
+          // است که Tailwind به inset-inline-start/end ترجمه می‌کند.
+          "start-0.5",
+          "data-[state=checked]:start-[calc(100%-1.25rem-0.125rem)]",
+          size === "sm" && "data-[state=checked]:start-[calc(100%-1rem-0.125rem)]",
         )}
       />
     </SwitchPrimitive.Root>

@@ -249,6 +249,23 @@ export type {
 
 // ─── Workflow ─────────────────────────────────────────────
 export {
+  useWorkflows,
+  useWorkflow,
+  useCreateWorkflow,
+  useWorkflowInstances,
+  useWorkflowInstanceDetail,
   useWorkflowInstance,
+  useStartWorkflowInstance,
+  usePerformWorkflowAction,
+  workflowKeys,
+  type Workflow,
+  type WorkflowStep,
   type WorkflowInstance,
+  type WorkflowActionRecord,
+  type WorkflowFilters,
+  type InstanceFilters,
+  type WorkflowEntityType,
+  type WorkflowStatus,
+  type WorkflowActionType,
+  type ApproverRole,
 } from "./hooks/use-workflow";

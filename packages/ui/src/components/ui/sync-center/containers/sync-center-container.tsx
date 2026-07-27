@@ -1,15 +1,17 @@
 "use client"
 
-import { useCallback } from "react"
+import { useCallback, useMemo } from "react"
 import { useTranslation } from "react-i18next"
+import { useQueryClient } from "@tanstack/react-query"
 import { useSyncStore, useBackupStore } from "@hisabche/store"
 import { SyncCenterPage } from "../sync-center-page"
 import type { SyncCenterPageProps } from "../sync-center-page"
 
 export function SyncCenterContainer() {
   const { t } = useTranslation()
+  const queryClient = useQueryClient()
   const { isOnline, isSyncing, pendingCount, lastSyncedAt, setLastSynced } = useSyncStore()
-  const { backups, autoBackupEnabled, setAutoBackup, addBackup, auditLog } = useBackupStore()
+  const { backups, autoBackupEnabled, setAutoBackup, addBackup, createBackup, auditLog } = useBackupStore()
 
   const safeT = useCallback(
     (key: string, fallback?: string) => {
@@ -30,11 +32,36 @@ export function SyncCenterContainer() {
     [t]
   )
 
-  const handleSync = useCallback(() => setLastSynced(Date.now()), [setLastSynced])
-  const handleBackup = useCallback(
-    () => addBackup({ id: `backup-${Date.now()}`, timestamp: Date.now(), size: `${Math.floor(Math.random() * 500 + 100)} KB`, type: "manual", status: "completed" }),
-    [addBackup]
-  )
+  // ✅ FIX: قبلاً «همگام‌سازی الآن» فقط یک ساعت محلی را عوض می‌کرد و هیچ
+  // کاری واقعی انجام نمی‌داد. حالا واقعاً تمام کش‌های TanStack Query را
+  // invalidate می‌کند تا داده‌ی هر صفحه از سرور دوباره خوانده شود.
+  const handleSync = useCallback(() => {
+    queryClient.invalidateQueries()
+    setLastSynced(Date.now())
+  }, [queryClient, setLastSynced])
+
+  const localStorageSize = useMemo(() => {
+    if (typeof window === "undefined") return "0 KB"
+    let bytes = 0
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && key.startsWith("hisabche-")) {
+        bytes += new Blob([localStorage.getItem(key) || ""]).size
+      }
+    }
+    return bytes > 1024 * 1024
+      ? `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+      : `${Math.max(1, Math.round(bytes / 1024))} KB`
+  }, [backups, auditLog])
+  // ✅ FIX: قبلاً اندازه‌ی بکاپ با Math.random() ساخته می‌شد (عدد جعلی).
+  // حالا از createBackup() واقعی استفاده می‌کند که داده‌های واقعی
+  // localStorage را serialize کرده و اندازه‌ی واقعی (Blob.size) را
+  // محاسبه می‌کند؛ فقط نوع رکورد را به "manual" تغییر می‌دهیم چون
+  // createBackup() پیش‌فرض آن را "auto" ثبت می‌کند.
+  const handleBackup = useCallback(() => {
+    const backup = createBackup()
+    addBackup({ ...backup, type: "manual" })
+  }, [createBackup, addBackup])
   const handleToggleAutoBackup = useCallback(() => setAutoBackup(!autoBackupEnabled), [autoBackupEnabled, setAutoBackup])
 
   return (
@@ -48,6 +75,7 @@ export function SyncCenterContainer() {
       autoBackupEnabled={autoBackupEnabled}
       backups={backups as SyncCenterPageProps["backups"]}
       auditLog={auditLog as SyncCenterPageProps["auditLog"]}
+      localStorageSize={localStorageSize}
       onSync={handleSync}
       onBackup={handleBackup}
       onToggleAutoBackup={handleToggleAutoBackup}

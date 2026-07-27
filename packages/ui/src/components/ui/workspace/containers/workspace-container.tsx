@@ -19,7 +19,6 @@ export const WorkspaceContainer = memo(function WorkspaceContainer() {
   
   // ✅ جلوگیری از به‌روزرسانی مکرر با useRef
   const isInitialized = useRef(false);
-  const isMembersUpdated = useRef(false);
 
   // ✅ ست کردن workspace اول (فقط یک بار)
   const setInitialWorkspace = useCallback(() => {
@@ -40,9 +39,13 @@ export const WorkspaceContainer = memo(function WorkspaceContainer() {
     setInitialWorkspace();
   }, [setInitialWorkspace]);
 
-  // ✅ آپدیت اعضا (فقط یک بار و با شرط تغییر)
+  // ✅ FIX: قبلاً isMembersUpdated.current بعد از اولین sync برای همیشه
+  // true می‌ماند و همین‌جا return می‌کرد — یعنی بعد از اولین بار، دعوت
+  // عضو جدید/تغییر نقش/حذف عضو هرگز در UI دیده نمی‌شد مگر با رفرش کامل
+  // صفحه. حالا این افکت با هر تغییر واقعی membersData اجرا می‌شود؛
+  // مقایسه‌ی JSON.stringify همان‌طور که قبلاً بود، از نوشتن تکراری/حلقه‌ی
+  // بی‌نهایت جلوگیری می‌کند.
   useEffect(() => {
-    if (isMembersUpdated.current) return;
     if (membersData && Array.isArray(membersData) && membersData.length > 0) {
       const realMembers = membersData.map((m: any) => ({
         id: m.id,
@@ -53,13 +56,12 @@ export const WorkspaceContainer = memo(function WorkspaceContainer() {
         joinedAt: m.joined_at ? new Date(m.joined_at).getTime() : Date.now(),
         isActive: true,
       }));
-      
-      // ✅ فقط اگر members تغییر کرده باشد، به‌روزرسانی کن
+
+      // ✅ فقط اگر members واقعاً تغییر کرده باشد، به‌روزرسانی کن
       const currentMembers = useWorkspaceStore.getState().members;
       if (JSON.stringify(currentMembers) !== JSON.stringify(realMembers)) {
         useWorkspaceStore.setState({ members: realMembers });
       }
-      isMembersUpdated.current = true;
     }
   }, [membersData]);
 

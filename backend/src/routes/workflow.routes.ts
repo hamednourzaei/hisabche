@@ -18,6 +18,7 @@ import {
 import { WorkflowService } from "../services/workflow.service";
 import { authenticate } from "../middleware/auth.middleware";
 import { cacheMiddleware, clearCache } from "../middleware/cache.middleware";
+import { ForbiddenError } from "../errors/auth.error";
 
 // ✅ Same pattern as analytics.routes.ts — use `any` to avoid deep instantiation
 const toJsonSchema = (schema: any) => {
@@ -298,6 +299,12 @@ export async function workflowRoutes(fastify: FastifyInstance) {
           return reply
             .code(400)
             .send({ error: "Validation failed", details: err.errors });
+        }
+        // ✅ FIX: قبلاً ForbiddenError هم به ۵۰۰ سقوط می‌کرد — یعنی حتی
+        // اگر سرویس درست 403 پرتاب می‌کرد، کلاینت هیچ‌وقت آن را
+        // به‌عنوان "دسترسی ندارید" نمی‌دید.
+        if (err instanceof ForbiddenError) {
+          return reply.code(err.statusCode).send({ error: err.message });
         }
         fastify.log.error(err);
         return reply

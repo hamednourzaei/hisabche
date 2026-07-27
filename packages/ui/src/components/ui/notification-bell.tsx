@@ -102,13 +102,40 @@ function timeAgo(d: string, t: (key: string, fallback: string) => string): strin
   return t("time.monthsAgo", `${Math.floor(d2 / 30)} ماه پیش`);
 }
 
+// ✅ FIX: قبلاً فقط ۴ نوع entity شناخته می‌شد و بقیه (project، workflow،
+// purchase_order، ...) بی‌صدا به "/dashboard" سقوط می‌کردند. همچنین
+// "customer" و "payment" به route هایی اشاره داشتند که اصلاً در اپ
+// وجود ندارند (صفحه‌ی مشتریان route جزئیات جدا ندارد، "/payments"
+// هم هیچ‌وقت ساخته نشده) — یعنی همیشه ۴۰۴ می‌دادند.
 function resolveEntityUrl(n: Notification): string {
   if (n.action_url) return n.action_url;
-  if (n.entity_type === "invoice" && n.entity_id) return `/invoices/${n.entity_id}`;
-  if (n.entity_type === "customer" && n.entity_id) return `/customers/${n.entity_id}`;
-  if (n.entity_type === "product" && n.entity_id) return `/warehouse/${n.entity_id}`;
-  if (n.entity_type === "payment" && n.entity_id) return `/payments/${n.entity_id}`;
-  return "/dashboard";
+  const id = n.entity_id;
+  switch (n.entity_type) {
+    case "invoice":
+      return id ? `/invoices/${id}` : "/invoices";
+    case "customer":
+      return "/customers";
+    case "product":
+    case "inventory":
+      return id ? `/warehouse/${id}` : "/warehouse";
+    case "payment":
+      return "/invoices?filter=pending";
+    case "project":
+    case "task":
+      return id ? `/projects/${id}` : "/projects";
+    case "purchase_order":
+      return "/purchasing";
+    case "workflow_instance":
+    case "workflow":
+      return "/approvals";
+    case "opportunity":
+    case "interaction":
+      return "/crm";
+    case "employee":
+      return id ? `/human-resources/${id}` : "/human-resources";
+    default:
+      return "/activities";
+  }
 }
 
 function formatCurrency(amount: number, currency: string): string {

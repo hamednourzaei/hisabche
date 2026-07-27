@@ -3,7 +3,7 @@
 
 import { useState, useCallback, memo } from "react";
 import { useTranslation } from "react-i18next";
-import { useInteractions, useOpportunities } from "@hisabche/api";
+import { useInteractions, useOpportunities, useCreateInteraction } from "@hisabche/api";
 import { CrmView, type CrmTabId } from "../crm-view";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -42,6 +42,15 @@ export const CrmContainer = memo(function CrmContainer() {
 
   const handleTabChange = useCallback((tab: CrmTabId) => setActiveTab(tab), []);
 
+  const { mutateAsync: createInteraction, isPending: isCreatingInteraction } = useCreateInteraction();
+
+  const handleCreateInteraction = useCallback(
+    async (input: { customerId: string; type: string; subject: string; content: string }) => {
+      await createInteraction(input);
+    },
+    [createInteraction]
+  );
+
   return (
     <CrmView
       t={t}
@@ -51,6 +60,8 @@ export const CrmContainer = memo(function CrmContainer() {
       opportunities={opportunities ?? []}
       isLoading={isLoading}
       error={error?.message || null}
+      isCreatingInteraction={isCreatingInteraction}
+      onCreateInteraction={handleCreateInteraction}
     />
   );
 });

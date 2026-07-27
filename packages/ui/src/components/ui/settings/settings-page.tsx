@@ -10,6 +10,7 @@ import {
   useAuthStore,
 } from "@hisabche/store";
 import { cn } from "@/lib/utils";
+import { Switch } from "../switch";
 import {
   Shield,
   Monitor,
@@ -24,6 +25,7 @@ import {
   Loader2,
   CreditCard,
   ChevronLeft,
+  ListChecks,
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -45,57 +47,6 @@ const PERFORMANCE_MODES = [
   { value: "normal", labelKey: "settings.perfNormal", fallback: "معمولی" },
   { value: "lite", labelKey: "settings.perfLite", fallback: "اقتصادی" },
 ] as const;
-
-// ─── Switch ─────────────────────────────────────────────────────────────────
-
-const Switch = memo(function Switch({
-  checked,
-  onCheckedChange,
-  disabled,
-  id,
-}: {
-  checked: boolean;
-  onCheckedChange: (checked: boolean) => void;
-  disabled?: boolean;
-  id?: string;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      id={id}
-      aria-checked={checked}
-      disabled={disabled}
-      onClick={() => onCheckedChange(!checked)}
-      className={cn(
-        "relative inline-flex shrink-0 items-center",
-        "h-6 w-11",
-        "rounded-full",
-        "transition-colors duration-200",
-        "focus:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring-color)/0.5)] focus-visible:ring-offset-1",
-        "disabled:opacity-40 disabled:cursor-not-allowed",
-        "motion-reduce:transition-none",
-        checked
-          ? "bg-[hsl(var(--color-success))]"
-          : "bg-[hsl(var(--surface-muted))] border border-[hsl(var(--border-default))]",
-      )}
-    >
-      <span
-        className={cn(
-          "block rounded-full bg-white shadow-sm",
-          "size-5",
-          "transition-all duration-200",
-          "motion-reduce:transition-none",
-          "absolute top-1/2 -translate-y-1/2",
-          checked
-            ? "inset-inline-end-0.5"
-            : "inset-inline-start-0.5",
-        )}
-      />
-    </button>
-  );
-});
-Switch.displayName = "Switch";
 
 // ─── Account Section ──────────────────────────────────────────────────────
 
@@ -466,6 +417,36 @@ const BillingSection = memo(function BillingSection() {
 });
 BillingSection.displayName = "BillingSection";
 
+const WorkflowTemplatesSection = memo(function WorkflowTemplatesSection() {
+  const { t } = useTranslation();
+
+  return (
+    <Link
+      href="/workflow-templates"
+      className={cn(
+        "flex items-center gap-3 rounded-2xl p-4 sm:p-5",
+        "border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]",
+        "transition-colors duration-150 hover:bg-[hsl(var(--surface-muted))]",
+        "motion-reduce:transition-none"
+      )}
+    >
+      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[hsl(var(--color-primary)/0.1)] shrink-0">
+        <ListChecks className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold text-[hsl(var(--fg-primary))]">
+          {t("workflow.templates.title", "الگوهای تأیید")}
+        </p>
+        <p className="text-sm text-[hsl(var(--fg-secondary))] truncate">
+          {t("workflow.templates.description", "بدون حداقل یک الگوی فعال، هیچ فاکتور/سفارش خریدی وارد چرخه‌ی تأیید نمی‌شود.")}
+        </p>
+      </div>
+      <ChevronLeft className="size-4 text-[hsl(var(--fg-tertiary))] rtl:rotate-180 shrink-0" aria-hidden="true" />
+    </Link>
+  );
+});
+WorkflowTemplatesSection.displayName = "WorkflowTemplatesSection";
+
 // ─── Main Page ─────────────────────────────────────────────────────────────
 
 export const SettingsPage = memo(function SettingsPage() {
@@ -484,6 +465,7 @@ export const SettingsPage = memo(function SettingsPage() {
 
       <AccountSection />
       <BillingSection />
+      <WorkflowTemplatesSection />
       <BackupSection />
       <PerformanceSection />
       <SafetySection />

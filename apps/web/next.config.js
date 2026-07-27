@@ -1,3 +1,5 @@
+const path = require('path')
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
@@ -6,8 +8,18 @@ const nextConfig = {
   compress: true,
   productionBrowserSourceMaps: false,
 
+  // ✅ FIX: بدون این، Next.js ریشه‌ی workspace را اشتباه حدس می‌زد
+  // (به‌خاطر یک package-lock.json اضافه در C:\Users\hamed) و خروجی
+  // standalone را زیر یک مسیر عجیب (.next/standalone/Desktop/hisabche/...)
+  // می‌ساخت که با هیچ مسیر واقعی روی سرور production مطابقت نداشت —
+  // همان چیزی که باعث ۴۰۴ شدن عکس‌های public/ (dashboard-desktop.png و
+  // مشابه) در production می‌شد.
+  outputFileTracingRoot: path.join(__dirname, '../..'),
+
   // ✅ Turbopack
-  turbopack: {},
+  turbopack: {
+    root: path.join(__dirname, '../..'),
+  },
 
   transpilePackages: [
     '@hisabche/ui',

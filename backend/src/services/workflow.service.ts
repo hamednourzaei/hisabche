@@ -13,6 +13,7 @@ import type {
   WorkflowFilters, InstanceFilters,
 } from "@hisabche/validation";
 import { DatabaseError } from "../errors/database.error";
+import { ForbiddenError } from "../errors/auth.error";
 
 // ✅ Column Selection Constants
 const WORKFLOW_COLUMNS = 'id, workspace_id, name, description, entity_type, is_active, created_at, updated_at, deleted_at'
@@ -374,6 +375,22 @@ export class WorkflowService {
     const currentStep = steps.find(s => s.step_order === currentStepNumber)
     if (!currentStep) {
       throw new DatabaseError("Current step not found");
+    }
+
+    // ✅ FIX: قبلاً هیچ‌جا چک نمی‌شد که userRole با approver_role همین
+    // مرحله مطابقت دارد یا نه — یعنی هر کاربر authenticated (member،
+    // viewer، ...) می‌توانست هر مرحله‌ی approval را تأیید/رد کند.
+    // "owner"/"admin" (نقش‌های workspace) همیشه override دارند؛ در غیر
+    // این صورت نقش کاربر باید دقیقاً همان approver_role مرحله باشد.
+    const canAct =
+      userRole === "owner" ||
+      userRole === "admin" ||
+      userRole === (currentStep.approver_role as string);
+
+    if (!canAct) {
+      throw new ForbiddenError(
+        `Only a "${currentStep.approver_role}" (or workspace admin/owner) can act on this step`
+      );
     }
 
     const { data: action, error: actionError } = await supabase

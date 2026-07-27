@@ -141,6 +141,14 @@ export { ManufacturingView, type ManufacturingTabId } from './components/ui/manu
 export { PurchasingContainer } from './components/ui/purchasing/containers/purchasing-container'
 export { PurchasingView } from './components/ui/purchasing/purchasing-view'
 
+// ---------- Workflow / Approvals ----------
+export { ApprovalsContainer } from './components/ui/workflow/containers/approvals-container'
+export { ApprovalsView } from './components/ui/workflow/approvals-view'
+export { ApprovalCard } from './components/ui/workflow/approval-timeline'
+export { ApprovalActions } from './components/ui/workflow/approval-actions'
+export { WorkflowTemplatesContainer } from './components/ui/workflow/containers/workflow-templates-container'
+export { WorkflowTemplatesView } from './components/ui/workflow/workflow-templates-view'
+
 // ---------- Workspace ----------
 export { WorkspaceContainer } from './components/ui/workspace/containers/workspace-container'
 

@@ -1,11 +1,18 @@
 // packages/ui/src/components/ui/crm/crm-view.tsx
 "use client";
 
-import { memo, useMemo } from "react";
+import { memo, useMemo, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { useCurrency } from "../../../hooks/use-currency";
-import { Handshake, MessageSquare, Briefcase } from "lucide-react";
+import { Handshake, MessageSquare, Briefcase, Plus, X } from "lucide-react";
+import { CustomerPicker } from "../customer-picker";
 import type { Interaction, Opportunity } from "@hisabche/api";
+
+interface CustomerOption {
+  id: string;
+  name: string;
+  phone: string;
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    CrmView — Memoized · Performance Optimized
@@ -22,7 +29,11 @@ interface CrmViewProps {
   opportunities: Opportunity[];
   isLoading: boolean;
   error?: string | null;
+  isCreatingInteraction: boolean;
+  onCreateInteraction: (input: { customerId: string; type: string; subject: string; content: string }) => Promise<void>;
 }
+
+const INTERACTION_TYPES = ["call", "meeting", "email", "note"] as const;
 
 const STAGE_BADGE_MAP: Record<string, string> = {
   lead: "bg-[hsl(var(--fg-tertiary)/0.12)] text-[hsl(var(--fg-tertiary))]",
@@ -54,8 +65,25 @@ export const CrmView = memo(function CrmView({
   opportunities,
   isLoading,
   error,
+  isCreatingInteraction,
+  onCreateInteraction,
 }: CrmViewProps) {
   const { format: formatMoney } = useCurrency();
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [customer, setCustomer] = useState<CustomerOption | null>(null);
+  const [type, setType] = useState<string>("call");
+  const [subject, setSubject] = useState("");
+  const [content, setContent] = useState("");
+
+  const handleSubmit = useCallback(async () => {
+    if (!customer || !subject.trim()) return;
+    await onCreateInteraction({ customerId: customer.id, type, subject: subject.trim(), content: content.trim() });
+    setCustomer(null);
+    setType("call");
+    setSubject("");
+    setContent("");
+    setIsFormOpen(false);
+  }, [customer, type, subject, content, onCreateInteraction]);
 
   const stageLabel = useMemo(
     () => (stage: string) => {
@@ -110,7 +138,63 @@ export const CrmView = memo(function CrmView({
           <Briefcase className="size-4" />
           {t("crm.tabs.opportunities", "فرصت‌های فروش")}
         </button>
+        {activeTab === "interactions" && (
+          <button
+            type="button"
+            onClick={() => setIsFormOpen((v) => !v)}
+            className="ms-auto mb-1 inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold text-white bg-[hsl(var(--color-primary))] hover:brightness-110 transition-all"
+          >
+            {isFormOpen ? <X className="size-4" /> : <Plus className="size-4" />}
+            {t("crm.interactions.new", "تعامل جدید")}
+          </button>
+        )}
       </div>
+
+      {/* New Interaction Form */}
+      {activeTab === "interactions" && isFormOpen && (
+        <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-5 space-y-4">
+          <CustomerPicker
+            value={customer}
+            onChange={setCustomer}
+            placeholder={t("customer.pickPlaceholder", "انتخاب مشتری...")}
+          />
+          <div className="grid grid-cols-2 gap-3">
+            <select
+              value={type}
+              onChange={(e) => setType(e.target.value)}
+              className="w-full rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 py-2.5 text-sm text-[hsl(var(--fg-primary))]"
+            >
+              {INTERACTION_TYPES.map((it) => (
+                <option key={it} value={it}>
+                  {t(`crm.interactions.type.${it}`, it)}
+                </option>
+              ))}
+            </select>
+            <input
+              type="text"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              placeholder={t("crm.interactions.subject", "موضوع")}
+              className="w-full rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 py-2.5 text-sm text-[hsl(var(--fg-primary))]"
+            />
+          </div>
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            placeholder={t("crm.interactions.contentPlaceholder", "توضیحات (اختیاری)")}
+            rows={2}
+            className="w-full rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 py-2.5 text-sm text-[hsl(var(--fg-primary))] resize-none"
+          />
+          <button
+            type="button"
+            disabled={!customer || !subject.trim() || isCreatingInteraction}
+            onClick={handleSubmit}
+            className="w-full rounded-full px-5 py-2.5 text-sm font-bold text-white bg-[hsl(var(--color-primary))] hover:brightness-110 disabled:opacity-40 transition-all"
+          >
+            {t("crm.interactions.create", "ثبت تعامل")}
+          </button>
+        </div>
+      )}
 
       {/* Error */}
       {error && (

@@ -11,7 +11,7 @@
 
 import {
   LayoutDashboard, PlusCircle, Wallet, Boxes, ShoppingCart, TrendingUp,
-  Users, BookOpen, Handshake, Building2, Kanban, Factory,
+  Users, BookOpen, Handshake, Building2, Kanban, Factory, ClipboardCheck,
   Settings, Key, Shield, Bell, RefreshCw, EllipsisVertical,
   type LucideIcon
 } from 'lucide-react'
@@ -22,7 +22,7 @@ export type NavId =
   // secondary — people
   | 'buyers' | 'follow-up' | 'team' | 'coworkers'
   // secondary — work
-  | 'projects' | 'production'
+  | 'projects' | 'production' | 'approvals'
   // secondary — system
   | 'settings' | 'access' | 'history' | 'events' | 'sync'
 
@@ -64,6 +64,7 @@ export const NAV_ITEMS: NavItem[] = [
   // ─── کارها ───
   { id: 'projects',   icon: Kanban,  emoji: '📋', labelKey: 'nav.projects',   descriptionKey: 'nav.projects.description',   path: '/projects',      group: 'work' },
   { id: 'production', icon: Factory, emoji: '🏭', labelKey: 'nav.production', descriptionKey: 'nav.production.description', path: '/manufacturing', group: 'work' },
+  { id: 'approvals',  icon: ClipboardCheck, emoji: '✅', labelKey: 'nav.approvals', descriptionKey: 'nav.approvals.description', path: '/approvals', group: 'work' },
 
   // ─── تنظیمات و امنیت ───
   { id: 'settings', icon: Settings,  emoji: '⚙️', labelKey: 'nav.settings', descriptionKey: 'nav.settings.description', path: '/settings',    group: 'system' },
