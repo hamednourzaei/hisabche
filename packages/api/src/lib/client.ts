@@ -38,9 +38,6 @@ export const apiClient: AxiosInstance = axios.create({
     'Content-Type': 'application/json',
     Accept: 'application/json',
   },
-  params: {
-    limit: 50,
-  },
 })
 
 // ============================================
@@ -86,6 +83,13 @@ apiClient.interceptors.request.use(
       ? localStorage.getItem('hisabche-lang') || 'fa-AF'
       : 'fa-AF'
     config.headers['Accept-Language'] = lang
+
+    // ✅ FIX: قبلاً limit=50 روی axios instance به‌صورت گلوبال ست شده بود و
+    // به تمام درخواست‌ها (حتی POST و درخواست‌های تک‌آیتمی مثل GET /:id) اضافه
+    // می‌شد. حالا فقط برای GET و فقط وقتی خودِ درخواست limit مشخص نکرده باشد.
+    if (config.method?.toLowerCase() === 'get' && config.params?.limit === undefined) {
+      config.params = { ...config.params, limit: 50 }
+    }
 
     return config
   },

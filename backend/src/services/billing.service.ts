@@ -97,9 +97,12 @@ export class BillingService {
   }
 
   // ─── Get Current Subscription ────────────────────────────────
+  // ✅ FIX: هر کاربری که هنوز رکورد subscription ندارد (مثلاً race condition
+  // در ثبت‌نام) دیگر باعث 500 نمی‌شود — به همان مسیر getOrCreateSubscription
+  // برمی‌گردد که یک اشتراک آزمایشی می‌سازد.
   async getCurrentSubscription(userId: string): Promise<Subscription> {
     const cacheKey = this.getSubscriptionCacheKey(userId)
-    
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached as Subscription
 
@@ -107,10 +110,14 @@ export class BillingService {
       .from('subscriptions')
       .select('*')
       .eq('user_id', userId)
-      .single()
+      .maybeSingle()
 
     if (error) throw new DatabaseError('Failed to fetch subscription', error)
-    
+
+    if (!data) {
+      return this.getOrCreateSubscription(userId)
+    }
+
     const subscription = this.mapSubscription(data)
     await memoryCache.set(cacheKey, subscription, 300)
     return subscription
