@@ -3,7 +3,6 @@
 
 import {
   useEffect,
-  useRef,
   useState,
   useCallback,
   useMemo,
@@ -19,7 +18,7 @@ import {
   useBackupStore,
 } from "@hisabche/store";
 import { QuickInvoicePage } from "../quick-invoice-page";
-import type { QuickInvoicePageProps } from "../quick-invoice-page";
+import type { QuickInvoicePageProps, InvoiceLineItem } from "../quick-invoice-page";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    QuickInvoiceContainer v2 — Memoized · Performance Optimized
@@ -34,15 +33,11 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
   const preferences = usePreferencesStore();
   const { setSaveStatus } = useSyncStore();
   const { addAuditEntry } = useBackupStore();
-  const inputRef = useRef<HTMLInputElement>(null!);
 
   const [step, setStep] = useState<QuickInvoicePageProps["step"]>("product");
-  const [selectedProduct, setSelectedProduct] =
-    useState<QuickInvoicePageProps["selectedProduct"]>(null);
+  const [items, setItems] = useState<InvoiceLineItem[]>([]);
   const [selectedCustomer, setSelectedCustomer] =
     useState<QuickInvoicePageProps["selectedCustomer"]>(null);
-  const [price, setPrice] = useState("");
-  const [quantity, setQuantity] = useState("1");
   const [paymentType, setPaymentType] =
     useState<QuickInvoicePageProps["paymentType"]>("cash");
   const [paidNow, setPaidNow] = useState("");
@@ -52,10 +47,6 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
   const [elapsed, setElapsed] = useState(0);
 
   useEffect(() => {
-    inputRef.current?.focus();
-  }, [step]);
-
-  useEffect(() => {
     const interval = setInterval(
       () => setElapsed(Math.floor((Date.now() - startTime) / 1000)),
       1000
@@ -63,22 +54,51 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
     return () => clearInterval(interval);
   }, [startTime]);
 
-  useEffect(() => {
-    if (selectedProduct?.sellPrice) {
-      setPrice(selectedProduct.sellPrice.toString());
-    }
-  }, [selectedProduct]);
-
   // ✅ useMemo برای محاسبات
   const total = useMemo(
-    () => (parseFloat(price) || 0) * (parseInt(quantity) || 1),
-    [price, quantity]
+    () =>
+      items.reduce(
+        (sum, item) => sum + (parseFloat(item.price) || 0) * (parseInt(item.quantity) || 0),
+        0
+      ),
+    [items]
   );
 
   const productName = useMemo(
-    () => selectedProduct?.name ?? "",
-    [selectedProduct]
+    () => items.map((item) => item.product.name).join("، "),
+    [items]
   );
+
+  const addItem = useCallback((product: QuickInvoicePageProps["items"][number]["product"]) => {
+    setItems((prev) => {
+      if (prev.some((item) => item.product.id === product.id)) return prev;
+      return [
+        ...prev,
+        {
+          key: product.id,
+          product,
+          quantity: "1",
+          price: product.sellPrice.toString(),
+        },
+      ];
+    });
+  }, []);
+
+  const removeItem = useCallback((key: string) => {
+    setItems((prev) => prev.filter((item) => item.key !== key));
+  }, []);
+
+  const updateItemQuantity = useCallback((key: string, quantity: string) => {
+    setItems((prev) =>
+      prev.map((item) => (item.key === key ? { ...item, quantity } : item))
+    );
+  }, []);
+
+  const updateItemPrice = useCallback((key: string, price: string) => {
+    setItems((prev) =>
+      prev.map((item) => (item.key === key ? { ...item, price } : item))
+    );
+  }, []);
 
   const paidAmount = useMemo(
     () => (paymentType === "cash" ? total : parseFloat(paidNow) || 0),
@@ -112,7 +132,7 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
   }, [createdInvoiceId, router]);
 
   const handleCreate = useCallback(async () => {
-    if (!selectedProduct || !price) return;
+    if (items.length === 0) return;
 
     setSaveStatus("saving");
 
@@ -130,20 +150,24 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
         paymentMethod: paymentType === "cash" ? "cash" : "credit",
         currency: (preferences.lastCurrency as "AFN" | "USD" | "PKR" | "IRR") ?? "AFN",
         customerId: selectedCustomer?.id || undefined,
-        items: [
-          {
-            productId: selectedProduct.id,
-            productName: selectedProduct.name,
-            quantity: parseInt(quantity),
-            unitPrice: parseFloat(price),
+        items: items.map((item) => {
+          const quantity = parseInt(item.quantity) || 1;
+          const unitPrice = parseFloat(item.price) || 0;
+          return {
+            productId: item.product.id,
+            productName: item.product.name,
+            quantity,
+            unitPrice,
             discount: 0,
-            totalPrice: total,
-          },
-        ],
+            totalPrice: quantity * unitPrice,
+          };
+        }),
       });
 
-      preferences.addRecentProduct(selectedProduct.name);
-      preferences.addFrequentProduct(selectedProduct.name);
+      for (const item of items) {
+        preferences.addRecentProduct(item.product.name);
+        preferences.addFrequentProduct(item.product.name);
+      }
       if (selectedCustomer) {
         preferences.setLastCustomer(selectedCustomer.name, selectedCustomer.id);
       }
@@ -167,12 +191,10 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
       console.error("Failed to create invoice:", error);
     }
   }, [
-    selectedProduct,
-    price,
+    items,
     total,
     paidAmount,
     paymentType,
-    quantity,
     selectedCustomer,
     preferences,
     createInvoice,
@@ -199,10 +221,8 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
       showSaved={false}
       showCelebration={showCelebration}
       step={step}
-      selectedProduct={selectedProduct}
+      items={items}
       selectedCustomer={selectedCustomer}
-      price={price}
-      quantity={quantity}
       paymentType={paymentType}
       paidNow={paidNow}
       total={total}
@@ -210,11 +230,11 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
       paidAmount={paidAmount}
       createdInvoiceId={createdInvoiceId}
       isPending={createInvoice.isPending}
-      inputRef={inputRef}
-      onSelectProduct={setSelectedProduct}
+      onAddItem={addItem}
+      onRemoveItem={removeItem}
+      onUpdateItemQuantity={updateItemQuantity}
+      onUpdateItemPrice={updateItemPrice}
       onSelectCustomer={setSelectedCustomer}
-      onPriceChange={setPrice}
-      onQuantityChange={setQuantity}
       onPaymentTypeChange={setPaymentType}
       onPaidNowChange={setPaidNow}
       onSetStep={setStep}

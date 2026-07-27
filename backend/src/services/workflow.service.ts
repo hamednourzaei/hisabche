@@ -12,7 +12,7 @@ import type {
   Workflow, WorkflowInstance, WorkflowActionRecord,
   WorkflowFilters, InstanceFilters,
 } from "@hisabche/validation";
-import { DatabaseError } from "../errors/database.error";
+import { DatabaseError, NotFoundError } from "../errors/database.error";
 import { ForbiddenError } from "../errors/auth.error";
 
 // ✅ Column Selection Constants
@@ -172,10 +172,11 @@ export class WorkflowService {
       .select(WORKFLOW_COLUMNS)
       .eq("id", workflowId)
       .is("deleted_at", null)
-      .single();
+      .maybeSingle();
 
-    if (error || !data) throw new DatabaseError("Workflow not found", error);
-    
+    if (error) throw new DatabaseError("Failed to fetch workflow", error);
+    if (!data) throw new NotFoundError("Workflow");
+
     const result = this.mapWorkflow(data)
     await memoryCache.set(cacheKey, result, 300)
     return result

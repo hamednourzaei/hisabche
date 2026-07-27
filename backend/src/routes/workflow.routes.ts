@@ -19,6 +19,7 @@ import { WorkflowService } from "../services/workflow.service";
 import { authenticate } from "../middleware/auth.middleware";
 import { cacheMiddleware, clearCache } from "../middleware/cache.middleware";
 import { ForbiddenError } from "../errors/auth.error";
+import { NotFoundError } from "../errors/database.error";
 
 // ✅ Same pattern as analytics.routes.ts — use `any` to avoid deep instantiation
 const toJsonSchema = (schema: any) => {
@@ -111,6 +112,9 @@ export async function workflowRoutes(fastify: FastifyInstance) {
         const workflow = await workflowService.getWorkflow(id);
         return reply.send(workflow);
       } catch (err) {
+        if (err instanceof NotFoundError) {
+          return reply.code(404).send({ error: err.message });
+        }
         fastify.log.error(err);
         return reply.code(500).send({ error: "Failed to fetch workflow" });
       }

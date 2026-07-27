@@ -2,12 +2,11 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { Plus, Trash2, Eye, Users, Save, Download, Search, ArrowUpDown } from "lucide-react";
+import { Plus, Trash2, Eye, Users, Download, Search, ArrowUpDown } from "lucide-react";
 import { useState, useMemo, useCallback, memo } from "react";
 import { useForm, useController } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useAutosave } from "../../../hooks/use-autosave";
 import { exportToCSV } from "../../../lib/export";
 import { useSortFilter } from "../../../hooks/use-sort-filter";
 import { JalaliDatePicker } from "../../ui/jalali-datepicker";
@@ -156,8 +155,6 @@ export const HumanResourcesView = memo(function HumanResourcesView({
   onView,
 }: HumanResourcesViewProps) {
   const [showForm, setShowForm] = useState(false);
-  const [draftSaved, setDraftSaved] = useState(false);
-  const [draftTime, setDraftTime] = useState<string | null>(null);
   const [phoneValue, setPhoneValue] = useState("");
   const { sortedData: sortedEmployees, sort, toggleSort, filter, setFilter } = useSortFilter(employees);
 
@@ -165,9 +162,8 @@ export const HumanResourcesView = memo(function HumanResourcesView({
     register,
     handleSubmit,
     reset,
-    watch,
     control,
-    formState: { errors, isSubmitting, isDirty },
+    formState: { errors, isSubmitting },
   } = useForm<EmployeeForm>({
     resolver: zodResolver(employeeSchema),
     defaultValues: {
@@ -189,39 +185,6 @@ export const HumanResourcesView = memo(function HumanResourcesView({
 
   const { field: hireDateField } = useController({ name: "hireDate", control });
   const { field: dateOfBirthField } = useController({ name: "dateOfBirth", control });
-  const formValues = watch();
-
-  useAutosave(
-    formValues,
-    async (data) => {
-      if (!showForm) return;
-      if (!data.firstName && !data.lastName) return;
-      await onCreate({
-        firstName: data.firstName || t("hr.draft", "پیش‌نویس"),
-        lastName: data.lastName || t("hr.draft", "پیش‌نویس"),
-        fatherName: data.fatherName || undefined,
-        employeeCode: data.employeeCode || `DRAFT-${Date.now()}`,
-        nationalId: data.nationalId || undefined,
-        dateOfBirth: data.dateOfBirth || undefined,
-        gender: data.gender || undefined,
-        phone: phoneValue || undefined,
-        email: data.email || undefined,
-        address: data.address || undefined,
-        position: data.position || undefined,
-        hireDate: data.hireDate ? `${data.hireDate}T00:00:00Z` : new Date().toISOString(),
-        salary: data.salary ? Number(data.salary) : 0,
-        employmentType: "full_time",
-        salaryCurrency: "AFN",
-        status: "draft",
-      });
-      setDraftSaved(true);
-      setDraftTime(
-        new Date().toLocaleTimeString("fa-AF", { hour: "2-digit", minute: "2-digit" })
-      );
-      setTimeout(() => setDraftSaved(false), 3000);
-    },
-    { interval: 5000, enabled: showForm && isDirty }
-  );
 
   const onSubmit = useCallback(
     async (data: EmployeeForm) => {
@@ -243,7 +206,6 @@ export const HumanResourcesView = memo(function HumanResourcesView({
         salaryCurrency: "AFN",
       });
       setShowForm(false);
-      setDraftSaved(false);
       setPhoneValue("");
       reset();
     },
@@ -256,7 +218,6 @@ export const HumanResourcesView = memo(function HumanResourcesView({
 
   const toggleForm = useCallback(() => {
     setShowForm((prev) => !prev);
-    setDraftSaved(false);
   }, []);
 
   const totalPages = useMemo(() => Math.ceil(total / 20), [total]);
@@ -306,16 +267,6 @@ export const HumanResourcesView = memo(function HumanResourcesView({
           onSubmit={handleSubmit(onSubmit)}
           className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-6 space-y-4"
         >
-          {draftSaved && (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[hsl(var(--color-success)/0.08)] border border-[hsl(var(--color-success)/0.15)] text-xs text-[hsl(var(--color-success))]">
-              <Save className="size-3.5" />
-              <span>
-                {t("hr.draftSaved", "پیش‌نویس ذخیره شد")}
-                {draftTime ? ` — ${draftTime}` : ""}
-              </span>
-            </div>
-          )}
-
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <FormField name="firstName" label={t("hr.firstName", "نام *")} register={register} errors={errors} />
             <FormField name="lastName" label={t("hr.lastName", "تخلص *")} register={register} errors={errors} />
@@ -379,10 +330,7 @@ export const HumanResourcesView = memo(function HumanResourcesView({
             </button>
             <button
               type="button"
-              onClick={() => {
-                setShowForm(false);
-                setDraftSaved(false);
-              }}
+              onClick={() => setShowForm(false)}
               className="rounded-full border border-[hsl(var(--border-default))] px-6 py-2.5 text-sm"
             >
               {t("action.cancel", "لغو")}

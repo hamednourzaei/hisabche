@@ -10,6 +10,8 @@ import {
   Package,
   ShoppingCart,
   CreditCard,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import { ProductPicker } from "../product-picker";
 import { CustomerPicker } from "../customer-picker";
@@ -33,11 +35,17 @@ interface CustomerOption {
   phone: string;
 }
 
+export interface InvoiceLineItem {
+  key: string;
+  product: ProductOption;
+  quantity: string;
+  price: string;
+}
+
 type Step = "product" | "customer" | "price" | "done";
 type PaymentType = "cash" | "credit";
 
 const STEPS: Step[] = ["product", "customer", "price", "done"] as const;
-const QUANTITIES = ["1", "2", "3", "5", "10"] as const;
 
 export interface QuickInvoicePageProps {
   t: (key: string, fallback?: string) => string;
@@ -45,10 +53,8 @@ export interface QuickInvoicePageProps {
   showSaved: boolean;
   showCelebration: boolean;
   step: Step;
-  selectedProduct: ProductOption | null;
+  items: InvoiceLineItem[];
   selectedCustomer: CustomerOption | null;
-  price: string;
-  quantity: string;
   paymentType: PaymentType;
   paidNow: string;
   total: number;
@@ -56,11 +62,11 @@ export interface QuickInvoicePageProps {
   paidAmount: number;
   createdInvoiceId: string | null;
   isPending: boolean;
-  inputRef: React.Ref<HTMLInputElement>;
-  onSelectProduct: (p: ProductOption | null) => void;
+  onAddItem: (p: ProductOption) => void;
+  onRemoveItem: (key: string) => void;
+  onUpdateItemQuantity: (key: string, quantity: string) => void;
+  onUpdateItemPrice: (key: string, price: string) => void;
   onSelectCustomer: (c: CustomerOption | null) => void;
-  onPriceChange: (v: string) => void;
-  onQuantityChange: (q: string) => void;
   onPaymentTypeChange: (t: PaymentType) => void;
   onPaidNowChange: (v: string) => void;
   onSetStep: (s: Step) => void;
@@ -92,16 +98,76 @@ const Row = memo(function Row({
 });
 Row.displayName = "Row";
 
-// ─── Step: Product ─────────────────────────────────────────────────────────
+// ─── Step: Items (multi-product) ───────────────────────────────────────────
 
-const ProductStep = memo(function ProductStep({
-  selectedProduct,
-  onSelectProduct,
+const ItemRow = memo(function ItemRow({
+  item,
+  onRemove,
+  onUpdateQuantity,
+  onUpdatePrice,
+  t,
+}: {
+  item: InvoiceLineItem;
+  onRemove: (key: string) => void;
+  onUpdateQuantity: (key: string, quantity: string) => void;
+  onUpdatePrice: (key: string, price: string) => void;
+  t: (key: string, fallback?: string) => string;
+}) {
+  const lineTotal = (parseFloat(item.price) || 0) * (parseInt(item.quantity) || 0);
+  return (
+    <div className="rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] p-3 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <span className="truncate font-medium text-sm text-[hsl(var(--fg-primary))]">
+          {item.product.name}
+        </span>
+        <button
+          type="button"
+          onClick={() => onRemove(item.key)}
+          className="shrink-0 rounded-full p-1.5 text-[hsl(var(--fg-tertiary))] hover:bg-[hsl(var(--color-destructive)/0.1)] hover:text-[hsl(var(--color-destructive))]"
+          aria-label={t("action.delete", "حذف")}
+        >
+          <Trash2 className="size-4" aria-hidden="true" />
+        </button>
+      </div>
+      <div className="flex items-center gap-2">
+        <input
+          type="number"
+          min={1}
+          value={item.quantity}
+          onChange={(e) => onUpdateQuantity(item.key, e.target.value)}
+          className="w-16 rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] px-2 py-1.5 text-sm text-center text-[hsl(var(--fg-primary))] focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)]"
+        />
+        <span className="text-xs text-[hsl(var(--fg-tertiary))]">×</span>
+        <input
+          type="number"
+          min={0}
+          value={item.price}
+          onChange={(e) => onUpdatePrice(item.key, e.target.value)}
+          className="flex-1 rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] px-2 py-1.5 text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)]"
+        />
+        <span className="shrink-0 text-sm font-bold tabular-nums text-[hsl(var(--color-primary))]">
+          {lineTotal.toLocaleString()}
+        </span>
+      </div>
+    </div>
+  );
+});
+ItemRow.displayName = "ItemRow";
+
+const ItemsStep = memo(function ItemsStep({
+  items,
+  onAddItem,
+  onRemoveItem,
+  onUpdateItemQuantity,
+  onUpdateItemPrice,
   onNext,
   t,
 }: {
-  selectedProduct: ProductOption | null;
-  onSelectProduct: (p: ProductOption | null) => void;
+  items: InvoiceLineItem[];
+  onAddItem: (p: ProductOption) => void;
+  onRemoveItem: (key: string) => void;
+  onUpdateItemQuantity: (key: string, quantity: string) => void;
+  onUpdateItemPrice: (key: string, price: string) => void;
   onNext: () => void;
   t: (key: string, fallback?: string) => string;
 }) {
@@ -113,22 +179,40 @@ const ProductStep = memo(function ProductStep({
             <Package className="size-8 text-[hsl(var(--color-primary))]" aria-hidden="true" />
           </div>
           <h1 className="text-2xl font-bold text-[hsl(var(--fg-primary))]">
-            {t("quickInvoice.whatSold", "نام محصول")}
+            {t("quickInvoice.whatSold", "اجناس فاکتور")}
           </h1>
           <p className="mt-2 text-sm text-[hsl(var(--fg-secondary))]">
-            {t("quickInvoice.whatSoldDesc", "چه چیزی فروختید؟")}
+            {t("quickInvoice.whatSoldDesc", "یک یا چند جنس را انتخاب کنید")}
           </p>
         </div>
 
-        <ProductPicker
-          value={selectedProduct}
-          onChange={onSelectProduct}
-          placeholder={t("warehouse.pickProduct", "انتخاب محصول از گدام...")}
-        />
+        {items.length > 0 && (
+          <div className="space-y-2">
+            {items.map((item) => (
+              <ItemRow
+                key={item.key}
+                item={item}
+                onRemove={onRemoveItem}
+                onUpdateQuantity={onUpdateItemQuantity}
+                onUpdatePrice={onUpdateItemPrice}
+                t={t}
+              />
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-center gap-2">
+          <Plus className="size-4 shrink-0 text-[hsl(var(--fg-tertiary))]" aria-hidden="true" />
+          <ProductPicker
+            value={null}
+            onChange={(p) => p && onAddItem(p)}
+            placeholder={t("warehouse.pickProduct", "افزودن جنس از گدام...")}
+          />
+        </div>
 
         <button
           type="button"
-          disabled={!selectedProduct}
+          disabled={items.length === 0}
           onClick={onNext}
           className={cn(
             "w-full inline-flex items-center justify-center gap-2 rounded-full px-6 py-3",
@@ -147,7 +231,7 @@ const ProductStep = memo(function ProductStep({
     </div>
   );
 });
-ProductStep.displayName = "ProductStep";
+ItemsStep.displayName = "ItemsStep";
 
 // ─── Step: Customer ────────────────────────────────────────────────────────
 
@@ -219,46 +303,34 @@ const CustomerStep = memo(function CustomerStep({
 });
 CustomerStep.displayName = "CustomerStep";
 
-// ─── Step: Price ──────────────────────────────────────────────────────────
+// ─── Step: Payment ──────────────────────────────────────────────────────────
 
 const PriceStep = memo(function PriceStep({
   t,
-  selectedProduct,
+  items,
   selectedCustomer,
-  productName,
-  price,
-  quantity,
   paymentType,
   paidNow,
   total,
   isPending,
-  inputRef,
-  onPriceChange,
-  onQuantityChange,
   onPaymentTypeChange,
   onPaidNowChange,
   onBack,
   onCreate,
 }: {
   t: (key: string, fallback?: string) => string;
-  selectedProduct: ProductOption | null;
+  items: InvoiceLineItem[];
   selectedCustomer: CustomerOption | null;
-  productName: string;
-  price: string;
-  quantity: string;
   paymentType: PaymentType;
   paidNow: string;
   total: number;
   isPending: boolean;
-  inputRef: React.Ref<HTMLInputElement>;
-  onPriceChange: (v: string) => void;
-  onQuantityChange: (q: string) => void;
   onPaymentTypeChange: (t: PaymentType) => void;
   onPaidNowChange: (v: string) => void;
   onBack: () => void;
   onCreate: () => void;
 }) {
-  const hasValidPrice = price && parseFloat(price) > 0;
+  const hasItems = items.length > 0;
 
   return (
     <div className="rounded-2xl border border-[hsl(var(--border-strong))] bg-[hsl(var(--surface-elevated))]">
@@ -271,17 +343,23 @@ const PriceStep = memo(function PriceStep({
             {t("invoices.total", "مبلغ فاکتور")}
           </h1>
           <p className="mt-2 text-sm text-[hsl(var(--fg-secondary))]">
-            {t("quickInvoice.howMuch", "مبلغ فروش را وارد کنید")}
+            {t("quickInvoice.howToPay", "نوع پرداخت را انتخاب کنید")}
           </p>
         </div>
 
-        <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] p-4 text-start">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-sm text-[hsl(var(--fg-secondary))]">{t("invoices.items", "محصول")}</span>
-            <span className="font-medium text-[hsl(var(--fg-primary))]">{productName}</span>
-          </div>
+        <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] p-4 text-start space-y-2">
+          {items.map((item) => (
+            <div key={item.key} className="flex items-center justify-between text-sm">
+              <span className="text-[hsl(var(--fg-secondary))]">
+                {item.product.name} × {item.quantity}
+              </span>
+              <span className="font-medium text-[hsl(var(--fg-primary))]">
+                {((parseFloat(item.price) || 0) * (parseInt(item.quantity) || 0)).toLocaleString()}
+              </span>
+            </div>
+          ))}
           {selectedCustomer && (
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between border-t border-[hsl(var(--border-default))] pt-2">
               <span className="text-sm text-[hsl(var(--fg-secondary))]">{t("invoices.customer", "مشتری")}</span>
               <span className="font-medium text-[hsl(var(--fg-primary))]">{selectedCustomer.name}</span>
             </div>
@@ -327,54 +405,7 @@ const PriceStep = memo(function PriceStep({
           </div>
         )}
 
-        <div>
-          <label className="mb-2 block text-sm font-medium text-[hsl(var(--fg-primary))]">
-            {t("invoices.quantity", "تعداد")}
-          </label>
-          <div className="flex gap-2">
-            {QUANTITIES.map((q) => (
-              <button
-                key={q}
-                type="button"
-                onClick={() => onQuantityChange(q)}
-                className={cn(
-                  "h-10 w-10 rounded-full text-sm font-bold transition-all duration-200 motion-reduce:transition-none",
-                  quantity === q
-                    ? "bg-[hsl(var(--color-primary))] text-white shadow-sm"
-                    : "border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]"
-                )}
-              >
-                {q}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-1.5">
-          <label className="text-sm font-medium text-[hsl(var(--fg-primary))]">
-            {t("invoices.unitPrice", "قیمت")} (AFN)
-          </label>
-          <div className="relative">
-            <DollarSign className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))] pointer-events-none" aria-hidden="true" />
-            <input
-              ref={inputRef}
-              type="number"
-              value={price}
-              onChange={(e) => onPriceChange(e.target.value)}
-              placeholder={t("quickInvoice.pricePlaceholder", "مثلاً 500")}
-              className={cn(
-                "w-full rounded-xl ps-9 pe-3 py-3 text-sm",
-                "border border-[hsl(var(--border-default))]",
-                "bg-[hsl(var(--surface-base))]",
-                "text-[hsl(var(--fg-primary))]",
-                "placeholder:text-[hsl(var(--fg-tertiary))]",
-                "focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]"
-              )}
-            />
-          </div>
-        </div>
-
-        {hasValidPrice && (
+        {hasItems && (
           <div className="rounded-2xl bg-[hsl(var(--color-primary)/0.05)] p-5 text-center border border-[hsl(var(--border-default))]">
             <p className="mb-2 text-sm text-[hsl(var(--fg-secondary))]">{t("common.total", "مبلغ کل")}</p>
             <p className="text-4xl font-bold tabular-nums text-[hsl(var(--color-primary))]">
@@ -407,7 +438,7 @@ const PriceStep = memo(function PriceStep({
           </button>
           <button
             type="button"
-            disabled={!hasValidPrice || isPending}
+            disabled={!hasItems || isPending}
             onClick={onCreate}
             className={cn(
               "w-full inline-flex items-center justify-center gap-2 rounded-full px-6 py-3",
@@ -434,7 +465,6 @@ PriceStep.displayName = "PriceStep";
 const DoneStep = memo(function DoneStep({
   t,
   productName,
-  quantity,
   paymentType,
   total,
   paidAmount,
@@ -445,7 +475,6 @@ const DoneStep = memo(function DoneStep({
 }: {
   t: (key: string, fallback?: string) => string;
   productName: string;
-  quantity: string;
   paymentType: PaymentType;
   total: number;
   paidAmount: number;
@@ -472,8 +501,7 @@ const DoneStep = memo(function DoneStep({
         </div>
 
         <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] p-5 text-start">
-          <Row label={t("invoices.items", "محصول")} value={productName} />
-          <Row label={t("invoices.quantity", "تعداد")} value={quantity} />
+          <Row label={t("invoices.items", "اجناس")} value={productName} />
           <Row
             label={t("common.status", "نوع")}
             value={paymentType === "cash" ? `💵 ${t("invoices.cash", "نقد")}` : `📝 ${t("invoices.credit", "نسیه")}`}
@@ -575,10 +603,8 @@ export const QuickInvoicePage = memo(function QuickInvoicePage({
   showSaved,
   showCelebration,
   step,
-  selectedProduct,
+  items,
   selectedCustomer,
-  price,
-  quantity,
   paymentType,
   paidNow,
   total,
@@ -586,11 +612,11 @@ export const QuickInvoicePage = memo(function QuickInvoicePage({
   paidAmount,
   createdInvoiceId,
   isPending,
-  inputRef,
-  onSelectProduct,
+  onAddItem,
+  onRemoveItem,
+  onUpdateItemQuantity,
+  onUpdateItemPrice,
   onSelectCustomer,
-  onPriceChange,
-  onQuantityChange,
   onPaymentTypeChange,
   onPaidNowChange,
   onSetStep,
@@ -626,11 +652,14 @@ export const QuickInvoicePage = memo(function QuickInvoicePage({
           </div>
         </div>
 
-        {/* Step 1: Product */}
+        {/* Step 1: Items */}
         {step === "product" && (
-          <ProductStep
-            selectedProduct={selectedProduct}
-            onSelectProduct={onSelectProduct}
+          <ItemsStep
+            items={items}
+            onAddItem={onAddItem}
+            onRemoveItem={onRemoveItem}
+            onUpdateItemQuantity={onUpdateItemQuantity}
+            onUpdateItemPrice={onUpdateItemPrice}
             onNext={() => onSetStep("customer")}
             t={t}
           />
@@ -651,18 +680,12 @@ export const QuickInvoicePage = memo(function QuickInvoicePage({
         {step === "price" && (
           <PriceStep
             t={t}
-            selectedProduct={selectedProduct}
+            items={items}
             selectedCustomer={selectedCustomer}
-            productName={productName}
-            price={price}
-            quantity={quantity}
             paymentType={paymentType}
             paidNow={paidNow}
             total={total}
             isPending={isPending}
-            inputRef={inputRef}
-            onPriceChange={onPriceChange}
-            onQuantityChange={onQuantityChange}
             onPaymentTypeChange={onPaymentTypeChange}
             onPaidNowChange={onPaidNowChange}
             onBack={() => onSetStep("customer")}
@@ -675,7 +698,6 @@ export const QuickInvoicePage = memo(function QuickInvoicePage({
           <DoneStep
             t={t}
             productName={productName}
-            quantity={quantity}
             paymentType={paymentType}
             total={total}
             paidAmount={paidAmount}
