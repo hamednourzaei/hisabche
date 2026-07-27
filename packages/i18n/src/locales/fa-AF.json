@@ -839,7 +839,30 @@
     "date": "تاریخ",
     "paidAmount": "پرداخت‌شده",
     "status": "وضعیت",
-    "open": "باز"
+    "open": "باز",
+    "salesInvoice": "فاکتور فروش",
+    "notYetSaved": "—",
+    "barcodePlaceholder": "پس از ثبت فعال می‌شود",
+    "invoiceInfo": "اطلاعات فاکتور",
+    "customerInfo": "اطلاعات مشتری",
+    "walkInCustomer": "مشتری عمومی",
+    "unit": "واحد",
+    "shipping": "هزینه ارسال",
+    "customerSignature": "امضای مشتری",
+    "sellerSignature": "مهر و امضای فروشنده",
+    "thankYou": "از خرید شما سپاسگزاریم",
+    "actions": "عملیات",
+    "paymentSummary": "خلاصه پرداخت",
+    "metadata": "مشخصات فاکتور",
+    "createdAt": "تاریخ ثبت",
+    "updatedAt": "آخرین بروزرسانی",
+    "displaySettings": "تنظیمات نمایش",
+    "showSignature": "نمایش امضا",
+    "showNotes": "نمایش یادداشت",
+    "showBarcode": "نمایش بارکد",
+    "exportPNG": "خروجی تصویر",
+    "exporting": "در حال خروجی...",
+    "pngError": "خطا در ساخت خروجی تصویر."
   },
   "warehouse": {
     "title": "انبار",
@@ -1238,7 +1261,9 @@
     "productPlaceholder": "مثلاً برنج، روغن، چای...",
     "customerPlaceholder": "مثلاً احمد، محمد...",
     "pricePlaceholder": "مثلاً ۵۰۰",
-    "lastCustomer": "آخرین مشتری"
+    "lastCustomer": "آخرین مشتری",
+    "previewTitle": "پیش‌نمایش فاکتور",
+    "previewDesc": "قبل از ثبت نهایی، فاکتور را بررسی کنید"
   },
   "payment": {
     "record": "ثبت پرداخت",

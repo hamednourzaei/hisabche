@@ -1,17 +1,20 @@
 "use client";
 
-import { cn } from "@/lib/utils";
-import {
-  ArrowRight, Printer, Share2, MessageCircle, Send, Mail,
-  Loader2, FileText, Calendar, User,
-} from "lucide-react";
-import InvoicePDFDownload from "./InvoicePDFDownload";
+import { useState, type RefObject } from "react";
+import { ArrowRight, Loader2, FileText } from "lucide-react";
 import { ApprovalCard } from "../workflow/approval-timeline";
+import {
+  InvoiceDocument,
+  type InvoiceDocumentData,
+  type InvoiceDocumentDisplaySettings,
+} from "./invoice-document";
+import { InvoiceSidebar, type InvoiceSidebarActions } from "./invoice-sidebar";
 
 interface InvoiceItem {
-  id?: string; productName?: string; product_name?: string;
-  quantity?: number; unitPrice?: number; unit_price?: number;
-  totalPrice?: number; total_price?: number;
+  id?: string | undefined; productName?: string | undefined; product_name?: string | undefined;
+  quantity?: number | undefined; unit?: string | undefined; discount?: number | undefined;
+  unitPrice?: number | undefined; unit_price?: number | undefined;
+  totalPrice?: number | undefined; total_price?: number | undefined;
 }
 
 interface TimelineAction {
@@ -23,9 +26,12 @@ interface TimelineAction {
 interface TimelineStep { step_order: number; approver_role: string; is_final: boolean; }
 
 export interface InvoiceDetailDisplay {
-  id: string; invoiceNumber: string; date: string; status: string; currency: string;
-  subtotal: number; total: number; customerName: string; discountTotal: number;
-  taxTotal: number; paidAmount: number; createdAt: string; items: InvoiceItem[];
+  id: string; invoiceNumber: string; date: string; dueDate?: string | null | undefined; status: string; currency: string;
+  subtotal: number; total: number; customerName: string;
+  customerPhone?: string | null | undefined; customerEmail?: string | null | undefined; customerAddress?: string | null | undefined;
+  discountTotal: number; taxTotal: number; paidAmount: number;
+  createdAt: string; updatedAt?: string | undefined; notes?: string | null | undefined;
+  businessName?: string | undefined; items: InvoiceItem[];
 }
 
 export interface InvoiceDetailPageProps {
@@ -33,6 +39,9 @@ export interface InvoiceDetailPageProps {
   invoice: InvoiceDetailDisplay | null; isLoading: boolean;
   onBack: () => void; onPrint: () => void; onSharePDF: () => void;
   onWhatsApp: () => void; onTelegram: () => void; onEmail: () => void;
+  onExportPNG?: () => void; exportingPNG?: boolean;
+  pdfDownloadSlot?: React.ReactNode;
+  documentRef?: RefObject<HTMLDivElement>;
   statusVariant: (status: string) => "success" | "warning" | "destructive" | "secondary";
   workflowInstance?: { id: string; status: string; current_step: number; total_steps: number } | null;
   workflowActions?: TimelineAction[]; workflowSteps?: TimelineStep[];
@@ -40,21 +49,23 @@ export interface InvoiceDetailPageProps {
   onWorkflowAction?: (action: "approved" | "rejected" | "cancelled", comment?: string) => Promise<void>;
 }
 
-const statusBadgeStyles: Record<string, string> = {
-  success: "bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))] border-[hsl(var(--color-success)/0.2)]",
-  warning: "bg-[hsl(var(--color-warning)/0.12)] text-[hsl(var(--color-warning))] border-[hsl(var(--color-warning)/0.2)]",
-  destructive: "bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))] border-[hsl(var(--color-destructive)/0.2)]",
-  secondary: "bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))] border-[hsl(var(--border-default))]",
-};
-
-const outlineBtn = "inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors duration-150 motion-reduce:transition-none";
 const ghostBtn = "inline-flex items-center justify-center rounded-full p-2 text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors duration-150 motion-reduce:transition-none";
+const outlineBtn = "inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors duration-150 motion-reduce:transition-none";
+
+const DEFAULT_DISPLAY: InvoiceDocumentDisplaySettings = {
+  showSignature: true,
+  showNotes: true,
+  showBarcode: true,
+};
 
 export function InvoiceDetailPage({
   t, invoice, isLoading, onBack, onPrint, onSharePDF, onWhatsApp, onTelegram, onEmail,
+  onExportPNG, exportingPNG, pdfDownloadSlot, documentRef,
   statusVariant, workflowInstance, workflowActions = [], workflowSteps = [],
   workflowPending = false, onWorkflowAction,
 }: InvoiceDetailPageProps) {
+  const [display, setDisplay] = useState<InvoiceDocumentDisplaySettings>(DEFAULT_DISPLAY);
+
   if (isLoading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -73,27 +84,55 @@ export function InvoiceDetailPage({
     );
   }
 
-  const { invoiceNumber, date, status, currency, subtotal, total, customerName, discountTotal, taxTotal, paidAmount, createdAt, items } = invoice;
-  const badgeStyle = statusBadgeStyles[statusVariant(status)] ?? statusBadgeStyles.secondary;
-  const remaining = total - paidAmount;
+  const {
+    invoiceNumber, date, dueDate, status, currency, subtotal, total, customerName,
+    customerPhone, customerEmail, customerAddress, discountTotal, taxTotal, paidAmount,
+    createdAt, updatedAt, notes, businessName, items,
+  } = invoice;
+
+  const documentData: InvoiceDocumentData = {
+    invoiceNumber,
+    date,
+    dueDate,
+    business: { name: businessName || t("app.name", "Hisabche") },
+    customer: customerName || customerPhone || customerEmail || customerAddress
+      ? { name: customerName, phone: customerPhone, email: customerEmail, address: customerAddress }
+      : null,
+    items: items.map((item, i) => ({
+      id: item.id ?? String(i),
+      productName: item.productName ?? item.product_name ?? "",
+      quantity: item.quantity ?? 0,
+      unit: item.unit,
+      unitPrice: item.unitPrice ?? item.unit_price ?? 0,
+      discount: item.discount ?? 0,
+      totalPrice: item.totalPrice ?? item.total_price ?? 0,
+    })),
+    currency,
+    subtotal,
+    discountTotal,
+    taxTotal,
+    total,
+    paidAmount,
+    notes,
+  };
+
+  const actions: InvoiceSidebarActions = {
+    onPrint,
+    onSharePDF,
+    onWhatsApp,
+    onTelegram,
+    onEmail,
+    onExportPNG,
+    exportingPNG,
+    pdfDownloadSlot,
+  };
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between no-print">
-        <div className="flex items-center gap-3">
-          <button type="button" onClick={onBack} className={ghostBtn}><ArrowRight className="size-5" /></button>
-          <h1 className="text-2xl font-bold text-[hsl(var(--fg-primary))]">{t("invoices.detail", "جزئیات فاکتور")} #{invoiceNumber}</h1>
-          <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border shrink-0", badgeStyle)}>{t(`invoices.${status}`, status)}</span>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={onWhatsApp} className={outlineBtn}><MessageCircle className="size-4" /><span className="hidden sm:inline">WhatsApp</span></button>
-          <button type="button" onClick={onTelegram} className={outlineBtn}><Send className="size-4" /><span className="hidden sm:inline">Telegram</span></button>
-          <button type="button" onClick={onEmail} className={outlineBtn}><Mail className="size-4" /><span className="hidden sm:inline">{t("action.email", "ایمیل")}</span></button>
-          <button type="button" onClick={onSharePDF} className={outlineBtn}><Share2 className="size-4" /><span className="hidden sm:inline">{t("action.share", "اشتراک")}</span></button>
-          <button type="button" onClick={onPrint} className={outlineBtn}><Printer className="size-4" /><span className="hidden sm:inline">{t("action.print", "چاپ")}</span></button>
-          <InvoicePDFDownload invoice={invoice} />
-        </div>
+      <div className="flex items-center gap-3 no-print">
+        <button type="button" onClick={onBack} className={ghostBtn}><ArrowRight className="size-5" /></button>
+        <h1 className="text-2xl font-bold text-[hsl(var(--fg-primary))]">{t("invoices.detail", "جزئیات فاکتور")} #{invoiceNumber}</h1>
       </div>
 
       {/* Workflow Approval Card */}
@@ -111,46 +150,21 @@ export function InvoiceDetailPage({
         />
       )}
 
-      {/* Invoice Paper */}
-      <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
-        <div className="p-6 sm:p-8">
-          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-<h2 className="text-3xl font-bold text-[hsl(var(--color-primary))]">{t("app.name", "Hisabche")}</h2>            <div className="text-end">
-              <p className="text-2xl font-bold text-[hsl(var(--fg-primary))]">#{invoiceNumber}</p>
-              <div className="mt-2 space-y-1 text-sm text-[hsl(var(--fg-secondary))]">
-                <div className="flex items-center justify-end gap-2"><Calendar className="size-3.5" />{new Date(date).toLocaleDateString("fa-AF")}</div>
-                {customerName && <div className="flex items-center justify-end gap-2"><User className="size-3.5" />{customerName}</div>}
-              </div>
-            </div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead><tr className="border-b border-[hsl(var(--border-default))]"><th className="px-2 py-3 text-start font-medium text-[hsl(var(--fg-secondary))]">#</th><th className="px-2 py-3 text-start font-medium text-[hsl(var(--fg-secondary))]">{t("warehouse.productName", "نام محصول")}</th><th className="px-2 py-3 text-center font-medium text-[hsl(var(--fg-secondary))]">{t("invoices.quantity", "تعداد")}</th><th className="px-2 py-3 text-end font-medium text-[hsl(var(--fg-secondary))]">{t("invoices.unitPrice", "قیمت واحد")}</th><th className="px-2 py-3 text-end font-medium text-[hsl(var(--fg-secondary))]">{t("invoices.totalPrice", "قیمت کل")}</th></tr></thead>
-              <tbody>
-                {items.map((item, i) => (
-                  <tr key={item.id || i} className="border-b border-[hsl(var(--border-default))]">
-                    <td className="px-2 py-3 text-[hsl(var(--fg-tertiary))]">{i + 1}</td>
-                    <td className="px-2 py-3 font-medium text-[hsl(var(--fg-primary))]">{item.productName ?? item.product_name}</td>
-                    <td className="px-2 py-3 text-center text-[hsl(var(--fg-primary))]">{item.quantity}</td>
-                    <td className="px-2 py-3 text-end tabular-nums text-[hsl(var(--fg-primary))]">{(item.unitPrice ?? item.unit_price)?.toLocaleString()} {currency}</td>
-                    <td className="px-2 py-3 text-end font-medium tabular-nums text-[hsl(var(--fg-primary))]">{(item.totalPrice ?? item.total_price)?.toLocaleString()} {currency}</td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr><td colSpan={4} className="px-2 py-3 text-end font-medium text-[hsl(var(--fg-primary))]">{t("invoices.subtotal", "جمع")}</td><td className="px-2 py-3 text-end font-medium tabular-nums text-[hsl(var(--fg-primary))]">{subtotal.toLocaleString()} {currency}</td></tr>
-                {discountTotal > 0 && <tr><td colSpan={4} className="px-2 py-2 text-end text-[hsl(var(--fg-secondary))]">{t("invoices.discount", "تخفیف")}</td><td className="px-2 py-2 text-end text-[hsl(var(--color-destructive))] tabular-nums">-{discountTotal.toLocaleString()} {currency}</td></tr>}
-                {taxTotal > 0 && <tr><td colSpan={4} className="px-2 py-2 text-end text-[hsl(var(--fg-secondary))]">{t("invoices.tax", "مالیات")}</td><td className="px-2 py-2 text-end tabular-nums text-[hsl(var(--fg-primary))]">{taxTotal.toLocaleString()} {currency}</td></tr>}
-                <tr className="border-t-2 border-[hsl(var(--border-default))]"><td colSpan={4} className="px-2 py-3 text-end text-lg font-bold text-[hsl(var(--fg-primary))]">{t("invoices.total", "مجموع")}</td><td className="px-2 py-3 text-end text-lg font-bold text-[hsl(var(--color-primary))] tabular-nums">{total.toLocaleString()} {currency}</td></tr>
-                {paidAmount > 0 && <tr><td colSpan={4} className="px-2 py-2 text-end text-[hsl(var(--fg-secondary))]">{t("invoices.paid", "پرداخت شده")}</td><td className="px-2 py-2 text-end text-[hsl(var(--color-success))] tabular-nums">-{paidAmount.toLocaleString()} {currency}</td></tr>}
-                {remaining > 0 && <tr><td colSpan={4} className="px-2 py-2 text-end font-medium text-[hsl(var(--color-destructive))]">{t("invoices.remaining", "باقیمانده")}</td><td className="px-2 py-2 text-end font-medium text-[hsl(var(--color-destructive))] tabular-nums">{remaining.toLocaleString()} {currency}</td></tr>}
-              </tfoot>
-            </table>
-          </div>
-          <div className="mt-8 border-t border-[hsl(var(--border-default))] pt-4 text-center text-sm text-[hsl(var(--fg-secondary))]">
-            <p>{t("invoices.generatedBy", "ایجاد شده توسط")} Hisabche — hisabche.com</p>
-            <p className="mt-1">{new Date(createdAt).toLocaleDateString("fa-AF")} {new Date(createdAt).toLocaleTimeString("fa-AF")}</p>
-          </div>
+      {/* Document + Sidebar */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <InvoiceDocument ref={documentRef} t={t} data={documentData} display={display} />
+        </div>
+        <div className="no-print lg:col-span-1">
+          <InvoiceSidebar
+            t={t}
+            statusInfo={{ status, variant: statusVariant(status) }}
+            summary={{ total, paidAmount, currency }}
+            metadata={{ invoiceNumber, createdAt, updatedAt }}
+            actions={actions}
+            display={display}
+            onDisplayChange={(key, value) => setDisplay((prev) => ({ ...prev, [key]: value }))}
+          />
         </div>
       </div>
     </div>

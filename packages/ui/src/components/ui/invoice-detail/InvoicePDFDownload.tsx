@@ -11,7 +11,7 @@ import { apiClient } from "@hisabche/api";
    InvoicePDFDownload v3 — i18n-ready
    ═══════════════════════════════════════════════════════════════════════════ */
 
-interface Invoice { id?: string; }
+interface Invoice { id?: string | undefined; }
 
 interface Props { invoice: Invoice; }
 

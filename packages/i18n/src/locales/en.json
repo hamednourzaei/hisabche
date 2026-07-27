@@ -839,7 +839,30 @@
     "date": "Date",
     "paidAmount": "Paid",
     "status": "Status",
-    "open": "Open"
+    "open": "Open",
+    "salesInvoice": "Sales Invoice",
+    "notYetSaved": "—",
+    "barcodePlaceholder": "Enabled after saving",
+    "invoiceInfo": "Invoice Info",
+    "customerInfo": "Customer Info",
+    "walkInCustomer": "Walk-in Customer",
+    "unit": "Unit",
+    "shipping": "Shipping",
+    "customerSignature": "Customer Signature",
+    "sellerSignature": "Seller Signature & Stamp",
+    "thankYou": "Thank you for your business",
+    "actions": "Actions",
+    "paymentSummary": "Payment Summary",
+    "metadata": "Invoice Metadata",
+    "createdAt": "Created At",
+    "updatedAt": "Last Updated",
+    "displaySettings": "Display Settings",
+    "showSignature": "Show Signature",
+    "showNotes": "Show Notes",
+    "showBarcode": "Show Barcode",
+    "exportPNG": "Export as PNG",
+    "exporting": "Exporting...",
+    "pngError": "Failed to generate PNG export."
   },
   "warehouse": {
     "title": "Warehouse",
@@ -1238,7 +1261,9 @@
     "productPlaceholder": "e.g. Rice, Oil, Tea...",
     "customerPlaceholder": "e.g. Ahmad, Mohammad...",
     "pricePlaceholder": "e.g. 500",
-    "lastCustomer": "Last Customer"
+    "lastCustomer": "Last Customer",
+    "previewTitle": "Invoice Preview",
+    "previewDesc": "Review the invoice before creating it"
   },
   "payment": {
     "record": "Record Payment",

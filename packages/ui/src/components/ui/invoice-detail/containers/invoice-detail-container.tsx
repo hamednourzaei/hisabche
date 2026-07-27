@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { useInvoice } from "@hisabche/api";
@@ -8,6 +8,7 @@ import {
   InvoiceDetailPage,
   type InvoiceDetailDisplay,
 } from "../invoice-detail-page";
+import InvoicePDFDownload from "../InvoicePDFDownload";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabaseClient } from "@hisabche/auth";
 
@@ -56,8 +57,9 @@ export function InvoiceDetailContainer() {
   const { t } = useTranslation();
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
-  const printRef = useRef<HTMLDivElement>(null);
+  const documentRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
+  const [exportingPNG, setExportingPNG] = useState(false);
 
   const { data: invoice, isLoading } = useInvoice(id);
 
@@ -143,17 +145,23 @@ export function InvoiceDetailContainer() {
   const display: InvoiceDetailDisplay | null = useMemo(() => {
     if (!invoice) return null;
     const inv = invoice as unknown as Record<string, unknown>;
+    const customer = (inv.customer as Record<string, unknown> | null) ?? null;
     return {
       id: inv.id as string,
       invoiceNumber:
         (getField(inv.invoiceNumber, inv.invoice_number) as string) ?? "",
       date: inv.date as string,
+      dueDate:
+        (getField(inv.dueDate, inv.due_date) as string | undefined) ?? null,
       status: inv.status as string,
       currency: (inv.currency as string) ?? "AFN",
       subtotal: (inv.subtotal as number) ?? 0,
       total: (inv.total as number) ?? 0,
       customerName:
         (getField(inv.customerName, inv.customer_name) as string) ?? "",
+      customerPhone: (customer?.phone as string | undefined) ?? null,
+      customerEmail: (customer?.email as string | undefined) ?? null,
+      customerAddress: (customer?.address as string | undefined) ?? null,
       discountTotal:
         (getField(inv.discountTotal, inv.discount_total) as number) ?? 0,
       taxTotal: (getField(inv.taxTotal, inv.tax_total) as number) ?? 0,
@@ -162,15 +170,28 @@ export function InvoiceDetailContainer() {
       createdAt:
         (getField(inv.createdAt, inv.created_at) as string) ??
         (inv.date as string),
+      updatedAt:
+        (getField(inv.updatedAt, inv.updated_at) as string | undefined) ??
+        undefined,
+      notes: (inv.notes as string | undefined) ?? null,
+      // ✅ نام کسب‌وکار هنوز از هیچ هوکی fetch نمی‌شود (نیازمند
+      // شناسایی workspace فعال است) — فعلاً fallback به نام اپ در
+      // کامپوننت سند اعمال می‌شود.
+      businessName: undefined,
       items: (
         (inv.items as unknown[]) ??
         (inv.invoiceItems as unknown[]) ??
+        (inv.invoice_items as unknown[]) ??
         []
       ).map((item: any) => ({
         id: item.id,
         productName: item.productName ?? item.product_name,
         product_name: item.product_name,
         quantity: item.quantity,
+        // ⚠️ واحد (unit) در جدول invoice_items ذخیره نمی‌شود؛ عمداً
+        // undefined می‌ماند تا کامپوننت سند به‌جای جعل داده، «—» نشان دهد.
+        unit: item.unit,
+        discount: item.discount ?? 0,
         unitPrice: item.unitPrice ?? item.unit_price,
         unit_price: item.unit_price,
         totalPrice: item.totalPrice ?? item.total_price,
@@ -194,8 +215,8 @@ export function InvoiceDetailContainer() {
   );
 
   const handlePrint = useCallback(() => {
-    if (!printRef.current) return;
-    const content = printRef.current.innerHTML;
+    if (!documentRef.current) return;
+    const content = documentRef.current.innerHTML;
     let styles = "";
     document
       .querySelectorAll("style, link[rel='stylesheet']")
@@ -214,6 +235,30 @@ export function InvoiceDetailContainer() {
       win.close();
     }, 500);
   }, []);
+
+  const handleExportPNG = useCallback(async () => {
+    if (!documentRef.current || exportingPNG) return;
+    try {
+      setExportingPNG(true);
+      const { default: html2canvas } = await import("html2canvas");
+      const canvas = await html2canvas(documentRef.current, {
+        backgroundColor: "#ffffff",
+        scale: 2,
+        useCORS: true,
+      });
+      const dataUrl = canvas.toDataURL("image/png");
+      const link = document.createElement("a");
+      link.href = dataUrl;
+      link.download = `invoice-${id ?? "hisabche"}.png`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch {
+      alert(t("invoices.pngError", "خطا در ساخت خروجی تصویر."));
+    } finally {
+      setExportingPNG(false);
+    }
+  }, [exportingPNG, id, t]);
 
   const handleSharePDF = useCallback(async () => {
     if (!invoice) return;
@@ -285,6 +330,10 @@ export function InvoiceDetailContainer() {
       onWhatsApp={handleWhatsApp}
       onTelegram={handleTelegram}
       onEmail={handleEmail}
+      onExportPNG={handleExportPNG}
+      exportingPNG={exportingPNG}
+      pdfDownloadSlot={invoice ? <InvoicePDFDownload invoice={invoice} /> : null}
+      documentRef={documentRef}
       statusVariant={statusVariant}
       workflowInstance={workflowData?.instance ?? null}
       workflowActions={workflowData?.actions ?? []}

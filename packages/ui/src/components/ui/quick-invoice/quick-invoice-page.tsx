@@ -8,14 +8,21 @@ import {
   User,
   DollarSign,
   Package,
-  ShoppingCart,
   CreditCard,
   Plus,
   Trash2,
+  Eye,
+  Pencil,
 } from "lucide-react";
 import { ProductPicker } from "../product-picker";
 import { CustomerPicker } from "../customer-picker";
-import { memo, useMemo } from "react";
+import { memo, useMemo, useState } from "react";
+import {
+  InvoiceDocument,
+  type InvoiceDocumentData,
+  type InvoiceDocumentDisplaySettings,
+} from "../invoice-detail/invoice-document";
+import { InvoiceSidebar } from "../invoice-detail/invoice-sidebar";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    QuickInvoicePage v4 — Memoized · Performance Optimized
@@ -42,10 +49,10 @@ export interface InvoiceLineItem {
   price: string;
 }
 
-type Step = "product" | "customer" | "price" | "done";
+type Step = "product" | "customer" | "price" | "preview" | "done";
 type PaymentType = "cash" | "credit";
 
-const STEPS: Step[] = ["product", "customer", "price", "done"] as const;
+const STEPS: Step[] = ["product", "customer", "price", "preview", "done"] as const;
 
 export interface QuickInvoicePageProps {
   t: (key: string, fallback?: string) => string;
@@ -70,7 +77,7 @@ export interface QuickInvoicePageProps {
   onPaymentTypeChange: (t: PaymentType) => void;
   onPaidNowChange: (v: string) => void;
   onSetStep: (s: Step) => void;
-  onCreate: () => void;
+  onConfirmCreate: () => void;
   onDismissCelebration: () => void;
   onViewInvoice: () => void;
   onViewAllInvoices: () => void;
@@ -316,7 +323,7 @@ const PriceStep = memo(function PriceStep({
   onPaymentTypeChange,
   onPaidNowChange,
   onBack,
-  onCreate,
+  onNext,
 }: {
   t: (key: string, fallback?: string) => string;
   items: InvoiceLineItem[];
@@ -328,7 +335,7 @@ const PriceStep = memo(function PriceStep({
   onPaymentTypeChange: (t: PaymentType) => void;
   onPaidNowChange: (v: string) => void;
   onBack: () => void;
-  onCreate: () => void;
+  onNext: () => void;
 }) {
   const hasItems = items.length > 0;
 
@@ -439,7 +446,7 @@ const PriceStep = memo(function PriceStep({
           <button
             type="button"
             disabled={!hasItems || isPending}
-            onClick={onCreate}
+            onClick={onNext}
             className={cn(
               "w-full inline-flex items-center justify-center gap-2 rounded-full px-6 py-3",
               "text-sm font-bold text-white",
@@ -450,8 +457,8 @@ const PriceStep = memo(function PriceStep({
               "motion-reduce:transition-none"
             )}
           >
-            <ShoppingCart className="size-4" aria-hidden="true" />
-            {t("action.submit", "ثبت فاکتور")}
+            <Eye className="size-4" aria-hidden="true" />
+            {t("action.previewInvoice", "پیش‌نمایش فاکتور")}
           </button>
         </div>
       </div>
@@ -459,6 +466,128 @@ const PriceStep = memo(function PriceStep({
   );
 });
 PriceStep.displayName = "PriceStep";
+
+// ─── Step: Preview / Confirm ────────────────────────────────────────────────
+
+const DEFAULT_PREVIEW_DISPLAY: InvoiceDocumentDisplaySettings = {
+  showSignature: true,
+  showNotes: true,
+  showBarcode: true,
+};
+
+const PreviewStep = memo(function PreviewStep({
+  t,
+  items,
+  selectedCustomer,
+  paymentType,
+  paidNow,
+  total,
+  isPending,
+  onBack,
+  onConfirm,
+}: {
+  t: (key: string, fallback?: string) => string;
+  items: InvoiceLineItem[];
+  selectedCustomer: CustomerOption | null;
+  paymentType: PaymentType;
+  paidNow: string;
+  total: number;
+  isPending: boolean;
+  onBack: () => void;
+  onConfirm: () => void;
+}) {
+  const [display, setDisplay] = useState<InvoiceDocumentDisplaySettings>(DEFAULT_PREVIEW_DISPLAY);
+  const paidAmount = paymentType === "cash" ? total : parseFloat(paidNow) || 0;
+
+  const documentData: InvoiceDocumentData = useMemo(
+    () => ({
+      // ⚠️ فاکتور هنوز ثبت نشده — شماره فاکتور و تاریخ ثبت وجود ندارند
+      // و عمداً fabricate نمی‌شوند؛ کامپوننت سند به‌جای آن «—» نشان می‌دهد.
+      invoiceNumber: undefined,
+      date: new Date().toISOString(),
+      business: { name: t("app.name", "Hisabche") },
+      customer: selectedCustomer
+        ? { name: selectedCustomer.name, phone: selectedCustomer.phone }
+        : null,
+      items: items.map((item) => ({
+        id: item.key,
+        productName: item.product.name,
+        quantity: parseInt(item.quantity) || 0,
+        unit: item.product.unit,
+        unitPrice: parseFloat(item.price) || 0,
+        totalPrice: (parseFloat(item.price) || 0) * (parseInt(item.quantity) || 0),
+      })),
+      currency: "AFN",
+      subtotal: total,
+      total,
+      paidAmount,
+    }),
+    [items, selectedCustomer, total, paidAmount, t]
+  );
+
+  return (
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="lg:col-span-2 space-y-4">
+        <div className="text-center lg:text-start">
+          <h1 className="text-xl font-bold text-[hsl(var(--fg-primary))]">
+            {t("quickInvoice.previewTitle", "پیش‌نمایش فاکتور")}
+          </h1>
+          <p className="mt-1 text-sm text-[hsl(var(--fg-secondary))]">
+            {t("quickInvoice.previewDesc", "قبل از ثبت نهایی، فاکتور را بررسی کنید")}
+          </p>
+        </div>
+        <InvoiceDocument t={t} data={documentData} display={display} />
+      </div>
+
+      <div className="space-y-4">
+        <InvoiceSidebar
+          t={t}
+          summary={{ total, paidAmount, currency: "AFN" }}
+          display={display}
+          onDisplayChange={(key, value) => setDisplay((prev) => ({ ...prev, [key]: value }))}
+        />
+
+        <div className="flex flex-col gap-3">
+          <button
+            type="button"
+            disabled={isPending}
+            onClick={onConfirm}
+            className={cn(
+              "w-full inline-flex items-center justify-center gap-2 rounded-full px-6 py-3",
+              "text-sm font-bold text-white",
+              "bg-[hsl(var(--color-primary))]",
+              "shadow-sm shadow-[hsl(var(--color-primary)/0.15)]",
+              "transition-all duration-200 hover:brightness-110 active:scale-[0.98]",
+              "disabled:opacity-40 disabled:cursor-not-allowed",
+              "motion-reduce:transition-none"
+            )}
+          >
+            <Check className="size-4" aria-hidden="true" />
+            {t("action.confirmCreate", "تأیید و ساخت فاکتور")}
+          </button>
+          <button
+            type="button"
+            onClick={onBack}
+            disabled={isPending}
+            className={cn(
+              "w-full inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium",
+              "border border-[hsl(var(--border-default))]",
+              "text-[hsl(var(--fg-secondary))]",
+              "hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]",
+              "transition-colors duration-150",
+              "motion-reduce:transition-none",
+              "disabled:opacity-40 disabled:cursor-not-allowed"
+            )}
+          >
+            <Pencil className="size-4" aria-hidden="true" />
+            {t("action.backToEdit", "بازگشت و ویرایش")}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+});
+PreviewStep.displayName = "PreviewStep";
 
 // ─── Step: Done ────────────────────────────────────────────────────────────
 
@@ -620,7 +749,7 @@ export const QuickInvoicePage = memo(function QuickInvoicePage({
   onPaymentTypeChange,
   onPaidNowChange,
   onSetStep,
-  onCreate,
+  onConfirmCreate,
   onDismissCelebration,
   onViewInvoice,
   onViewAllInvoices,
@@ -630,7 +759,7 @@ export const QuickInvoicePage = memo(function QuickInvoicePage({
       {/* Celebration Pop-up */}
       {showCelebration && <Celebration onDismiss={onDismissCelebration} t={t} />}
 
-      <div className="mx-auto max-w-xl">
+      <div className={cn("mx-auto", step === "preview" ? "max-w-5xl" : "max-w-xl")}>
         {/* Timer + Step Indicators */}
         <div className="mb-8 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -689,11 +818,26 @@ export const QuickInvoicePage = memo(function QuickInvoicePage({
             onPaymentTypeChange={onPaymentTypeChange}
             onPaidNowChange={onPaidNowChange}
             onBack={() => onSetStep("customer")}
-            onCreate={onCreate}
+            onNext={() => onSetStep("preview")}
           />
         )}
 
-        {/* Step 4: Done */}
+        {/* Step 4: Preview & confirm */}
+        {step === "preview" && (
+          <PreviewStep
+            t={t}
+            items={items}
+            selectedCustomer={selectedCustomer}
+            paymentType={paymentType}
+            paidNow={paidNow}
+            total={total}
+            isPending={isPending}
+            onBack={() => onSetStep("price")}
+            onConfirm={onConfirmCreate}
+          />
+        )}
+
+        {/* Step 5: Done */}
         {step === "done" && (
           <DoneStep
             t={t}
