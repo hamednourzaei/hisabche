@@ -32,14 +32,16 @@ export class AnalyticsService {
       // ✅ اگر RPC موفق بود، از آن استفاده کن
       if (!kpiResult.error && kpiResult.data && kpiResult.data.length > 0) {
         const r = kpiResult.data[0];
+        const monthlyRevenue = Number(r.monthly_revenue) || 0;
+        const growthMetrics = await this.getGrowthAndPendingMetrics(userId, monthlyRevenue);
         return {
           todaySales: Number(r.today_sales) || 0,
           todayInvoices: Number(r.today_invoices) || 0,
-          monthlyRevenue: Number(r.monthly_revenue) || 0,
-          monthlyGrowth: 0, // TODO: محاسبه رشد ماهانه نیاز به مقایسه با ماه قبل دارد
+          monthlyRevenue,
           pendingPayments: Number(r.pending_total) || 0,
           activeCustomers: Number(r.active_customers) || 0,
           lowStockAlerts,
+          ...growthMetrics,
         };
       }
 
@@ -47,6 +49,37 @@ export class AnalyticsService {
       console.error('RPC error, falling back to query:', kpiResult.error);
       return this.getDashboardKpisFallback(userId, lowStockAlerts);
     });
+  }
+
+  // ─── Growth & Pending Count — محاسبه‌ی واقعی رشد ماهانه و رشد مشتریان ───
+  private async getGrowthAndPendingMetrics(userId: string, monthlyRevenue: number) {
+    const now = new Date();
+    const firstOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const firstOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
+
+    const [prevMonthInvoices, pendingCount, customersThisMonth, customersBeforeThisMonth] = await Promise.all([
+      supabase.from('invoices').select('total').eq('user_id', userId).gte('date', firstOfPrevMonth).lt('date', firstOfThisMonth),
+      supabase.from('invoices').select('id', { count: 'exact', head: true }).eq('user_id', userId).neq('status', 'paid'),
+      supabase.from('customers').select('id', { count: 'exact', head: true }).eq('user_id', userId).gte('created_at', firstOfThisMonth),
+      supabase.from('customers').select('id', { count: 'exact', head: true }).eq('user_id', userId).lt('created_at', firstOfThisMonth),
+    ]);
+
+    const prevMonthRevenue = (prevMonthInvoices.data || []).reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);
+    const monthlyGrowth = prevMonthRevenue > 0
+      ? Math.round(((monthlyRevenue - prevMonthRevenue) / prevMonthRevenue) * 1000) / 10
+      : (monthlyRevenue > 0 ? 100 : 0);
+
+    const newCustomersThisMonth = customersThisMonth.count || 0;
+    const totalBeforeThisMonth = customersBeforeThisMonth.count || 0;
+    const customerGrowth = totalBeforeThisMonth > 0
+      ? Math.round((newCustomersThisMonth / totalBeforeThisMonth) * 1000) / 10
+      : (newCustomersThisMonth > 0 ? 100 : 0);
+
+    return {
+      monthlyGrowth,
+      customerGrowth,
+      pendingPaymentsCount: pendingCount.count || 0,
+    };
   }
 
   // ─── Dashboard KPIs — Fallback (زمانی که RPC موجود نیست) ───
@@ -100,14 +133,17 @@ export class AnalyticsService {
       }
     }
 
+    const roundedMonthlyRevenue = Math.round(monthlyRevenue * 100) / 100;
+    const growthMetrics = await this.getGrowthAndPendingMetrics(userId, roundedMonthlyRevenue);
+
     return {
       todaySales: Math.round(todaySales * 100) / 100,
       todayInvoices,
-      monthlyRevenue: Math.round(monthlyRevenue * 100) / 100,
-      monthlyGrowth: 0,
+      monthlyRevenue: roundedMonthlyRevenue,
       pendingPayments: Math.round(pendingTotal * 100) / 100,
       activeCustomers: uniqueCustomers.size,
       lowStockAlerts,
+      ...growthMetrics,
     };
   }
 
@@ -363,7 +399,9 @@ export class AnalyticsService {
       monthlyRevenue: 0,
       monthlyGrowth: 0,
       pendingPayments: 0,
+      pendingPaymentsCount: 0,
       activeCustomers: 0,
+      customerGrowth: 0,
       lowStockAlerts: 0,
     };
   }

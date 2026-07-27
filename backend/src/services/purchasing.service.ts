@@ -7,6 +7,7 @@ import { supabase } from '../db'
 import { CreatePurchaseOrder, UpdatePurchaseOrder } from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
 import { memoryCache } from '../utils/pagination'
+import { logBusinessEvent } from './event-log.service'
 
 // ✅ Column Selection Constants
 const PO_LIST_COLUMNS = 'id, supplier_id, order_date, expected_delivery_date, status, notes, received_at, created_at, updated_at'
@@ -90,6 +91,16 @@ export class PurchasingService {
     }
 
     await this.invalidatePurchaseOrderCache(userId)
+
+    logBusinessEvent({
+      userId,
+      entityType: 'purchase_order',
+      entityId: order.id,
+      action: 'created',
+      title: `سفارش خرید جدید ثبت شد`,
+      notifyType: 'success',
+      actionUrl: `/purchasing`,
+    }).catch((err) => console.error('[PurchasingService] logBusinessEvent failed:', err))
 
     return this.getPurchaseOrder(order.id, userId)
   }

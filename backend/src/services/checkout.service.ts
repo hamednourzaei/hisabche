@@ -8,6 +8,7 @@ import { BillingService } from './billing.service'
 import { DatabaseError } from '../errors/database.error'
 import { supabase } from '../db'
 import { memoryCache } from '../utils/pagination'
+import { logBusinessEvent } from './event-log.service'
 
 // ─── Constants ──────────────────────────────────────────────
 const CHECKOUT_SESSION_TTL = 30 * 60 // 30 minutes
@@ -159,6 +160,16 @@ export class CheckoutService {
 
     // ۶. ثبت رویداد
     console.log(`✅ User ${userId} upgraded to ${checkout.plan}`)
+
+    logBusinessEvent({
+      userId,
+      entityType: 'billing',
+      entityId: checkoutId,
+      action: 'upgraded',
+      title: `اشتراک شما به پلن ${checkout.plan} ارتقا یافت 🎉`,
+      notifyType: 'success',
+      actionUrl: '/billing',
+    }).catch((err) => console.error('[CheckoutService] logBusinessEvent failed:', err))
   }
 
   // ─── Handle Checkout Cancel ───────────────────────────────

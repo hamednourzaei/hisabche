@@ -1163,6 +1163,7 @@
     "thisMonth": "this month",
     "viewReport": "View Report",
     "vsLastWeek": "vs last week",
+    "vsYesterday": "vs yesterday",
     "dataRange": "Last {count} days",
     "salesTrend": "Sales trend",
     "createInvoice": "Create Invoice",

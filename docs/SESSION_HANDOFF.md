@@ -67,6 +67,24 @@
 - **Accounting و Invoices کاملاً مستقل‌اند** — ساخت فاکتور خودکار سند حسابداری نمی‌سازد.
 - Redis گاهی از این محیط dev قابل‌دسترس نیست (هاست داخلی Render) — `cache.service.ts` یک fallback درون‌حافظه‌ای دارد که قبلاً اضافه شده.
 
+## Mobile Parity Gap (Verify شده — نه از حافظه)
+
+اگر قرار است `apps/mobile` طبق وب کامل شود، این‌ها را از همین الان بدان تا دوباره کدبیس را نخوانی:
+
+### وضعیت فعلی موبایل
+- فقط **۱۰ فایل صفحه** در `apps/mobile/screens/`: LoginScreen, OnboardingScreen, CustomersScreen, InvoicesScreen, InvoiceDetailScreen, QuickInvoiceScreen, ProductDetailScreen, SettingsScreen, SyncCenterScreen, WarehouseScreen.
+- **هیچ react-navigation یا کتابخانه‌ی ناوبری واقعی نصب نیست.** `App.tsx` یک `type Screen = 'dashboard' | 'warehouse' | 'invoices' | 'customers' | 'settings' | 'invoiceDetail' | 'productDetail'` دستی دارد و با `useState<Screen>('dashboard')` + یک `global.navigation` شیم سوییچ می‌کند — یعنی حتی onboarding/sync-center/quick-invoice هم در همین union اصلی نیستند (جدا هندل می‌شوند).
+- پکیج‌های مشترک (`@hisabche/api`, `@hisabche/store`, `@hisabche/ui`, `@hisabche/i18n`, `@hisabche/validation`) به‌عنوان dependency وصل‌اند، پس هوک‌های TanStack Query و Zustand store ها (از جمله همه‌ی فیکس‌های امروز مثل realtime channel یکتا) **خودکار روی موبایل هم اثر می‌گذارند** — نیازی به تکرار آن فیکس‌ها نیست.
+- **`@nozbe/watermelondb` اصلاً به `package.json` موبایل اضافه نشده** — یعنی حتی اگر بعداً offline واقعی برای وب ساخته شود، مسیر موبایلش از پیش‌شرط dependency خالی است.
+
+### ماژول‌هایی که کلاً روی موبایل غایب‌اند (باید از صفر ساخته شوند)
+Accounting, CRM, Manufacturing, Purchasing, Human Resources, Projects/Kanban, Workflow/Approvals, Billing, Permissions, Audit, Activities/Notifications — یعنی تقریباً هر چیزی که امروز روی وب ساختیم یا فیکس کردیم (Approvals, Workflow Templates, Billing route) روی موبایل اصلاً وجود ندارد.
+
+### پیشنهاد ترتیب کار (اگر خواستی شروع کنی)
+1. اول یک navigator واقعی نصب کن (`@react-navigation/native` + stack/tab) — بدون این، اضافه کردن ۱۰+ صفحه‌ی جدید به همان الگوی `useState<Screen>` دستی غیرقابل‌نگهداری می‌شود؛ این خودش طبق قانون «Refactor بزرگ» باید اول Blueprint بگیرد.
+2. بعد صفحات را به‌ترتیب همان اولویت نویگیشن وب اضافه کن (Today, Sell, Get Paid, Stock, Buy, Money) — چون هوک‌ها و منطق business logic از قبل در `@hisabche/api`/`@hisabche/store` مشترک و آماده‌اند، فقط UI موبایل لازم است، نه منطق جدید.
+3. برای هرکدام همان قانون «حداکثر ۲ فایل هر iteration» را رعایت کن.
+
 ## Build Commands مرجع
 ```bash
 cd apps/web && npx tsc --noEmit          # static verify فرانت

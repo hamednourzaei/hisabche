@@ -7,6 +7,7 @@ import { supabase } from '../db'
 import { CreateInteraction, CreateOpportunity, UpdateOpportunity } from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
 import { memoryCache } from '../utils/pagination'
+import { logBusinessEvent } from './event-log.service'
 
 // ✅ Column Selection Constants
 const INTERACTION_COLUMNS = 'id, customer_id, type, subject, content, interaction_date, created_at'
@@ -149,7 +150,16 @@ export class CrmService {
 
     // ✅ Clear cache
     await this.invalidateOpportunityCache(userId, data.customerId)
-    
+
+    logBusinessEvent({
+      userId,
+      entityType: 'opportunity',
+      entityId: opportunity.id,
+      action: 'created',
+      title: `فرصت فروش جدید: ${opportunity.title}`,
+      notify: false,
+    }).catch((err) => console.error('[CrmService] logBusinessEvent failed:', err))
+
     return opportunity
   }
 
@@ -184,7 +194,21 @@ export class CrmService {
     if (existing) {
       await this.invalidateOpportunityCache(userId, existing.customer_id)
     }
-    
+
+    if (data.stage === 'won' || data.stage === 'lost') {
+      logBusinessEvent({
+        userId,
+        entityType: 'opportunity',
+        entityId: opportunity.id,
+        action: 'stage_changed',
+        title: data.stage === 'won'
+          ? `فرصت فروش «${opportunity.title}» برنده شد 🎉`
+          : `فرصت فروش «${opportunity.title}» از دست رفت`,
+        notifyType: data.stage === 'won' ? 'success' : 'warning',
+        actionUrl: '/crm',
+      }).catch((err) => console.error('[CrmService] logBusinessEvent failed:', err))
+    }
+
     return opportunity
   }
 

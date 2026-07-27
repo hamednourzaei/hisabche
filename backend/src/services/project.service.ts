@@ -11,6 +11,7 @@ import {
 } from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
 import { memoryCache } from '../utils/pagination'
+import { logBusinessEvent } from './event-log.service'
 
 // ✅ Column Selection Constants
 const PROJECT_LIST_COLUMNS = 'id, name, description, client_id, start_date, end_date, budget, currency, status, priority, progress, tags, created_at, updated_at'
@@ -107,6 +108,16 @@ export class ProjectService {
 
     // ✅ Invalidate cache
     await this.invalidateProjectCache(userId)
+
+    logBusinessEvent({
+      userId,
+      entityType: 'project',
+      entityId: project.id,
+      action: 'created',
+      title: `پروژه جدید: ${project.name}`,
+      description: project.description || undefined,
+      notify: false,
+    }).catch((err) => console.error('[ProjectService] logBusinessEvent failed:', err))
 
     return project
   }

@@ -61,6 +61,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
   };
 }
 
-export default function EmployeeDetailPage({ params }: { params: { id: string } }) {
-  return <EmployeeDetailContainer id={params.id} />;
+export default async function EmployeeDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  return <EmployeeDetailContainer id={id} />;
 }

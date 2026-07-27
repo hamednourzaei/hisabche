@@ -202,6 +202,15 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
     onDateRangeChange,
   } = props;
 
+  // ✅ مقایسه‌ی واقعی «امروز نسبت به دیروز» از داخل داده‌ی نمودار (به‌جای مقایسه‌ی نادرست با درآمد ماهانه)
+  const previousDaySalesTotal = useMemo(() => {
+    if (!salesChartData || salesChartData.length === 0) return 0;
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split("T")[0];
+    return salesChartData.find((d) => d.date === yesterdayStr)?.value ?? 0;
+  }, [salesChartData]);
+
   const handleHealthAction = (action: "invoice" | "payments" | "warehouse" | "customers" | "buy") => {
     switch (action) {
       case "invoice":
@@ -280,7 +289,7 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
               isLoading={chartLoading}
               fmt={fmt}
               height={180}
-              previousPeriodTotal={monthlyRevenue}
+              previousPeriodTotal={previousDaySalesTotal}
               currentPeriodTotal={todaySales}
               onViewFullReport={() => onNavigate("/reports")}
             />

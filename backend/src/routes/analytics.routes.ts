@@ -51,7 +51,9 @@ const DashboardKPIsSchema = z.object({
   monthlyRevenue: z.number(),
   monthlyGrowth: z.number(),
   pendingPayments: z.number(),
+  pendingPaymentsCount: z.number(),
   activeCustomers: z.number(),
+  customerGrowth: z.number(),
   lowStockAlerts: z.number(),
 })
 

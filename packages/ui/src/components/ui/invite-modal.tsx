@@ -145,13 +145,13 @@ export const InviteModal = memo(function InviteModal({
               <div className="flex items-center gap-2 p-3 rounded-xl bg-[hsl(var(--color-success)/0.08)] border border-[hsl(var(--color-success)/0.2)]">
                 <Check className="size-5 text-[hsl(var(--color-success))] shrink-0" />
                 <p className="text-sm text-[hsl(var(--color-success))]">
-                  {t("workspace.inviteSent", "دعوت‌نامه با موفقیت ایجاد شد")}
+                  {t("workspace.inviteSent", "ایمیل دعوت برای کاربر ارسال شد")}
                 </p>
               </div>
 
               <div>
                 <p className="text-xs text-[hsl(var(--fg-secondary))] mb-1.5">
-                  {t("workspace.inviteLinkLabel", "لینک دعوت:")}
+                  {t("workspace.inviteLinkLabel", "یا لینک دعوت را مستقیم ارسال کنید:")}
                 </p>
                 <div className="flex items-center gap-2 p-3 rounded-xl bg-[hsl(var(--surface-base))] border border-[hsl(var(--border-default))]">
                   <input

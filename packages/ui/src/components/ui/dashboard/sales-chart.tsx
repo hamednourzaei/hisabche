@@ -167,7 +167,7 @@ export const SalesChart = memo(function SalesChart({
               )}
               {Math.abs(percentageChange).toFixed(1)}%
               <span className="text-xs text-[hsl(var(--fg-tertiary))] font-normal">
-                {t("dashboard.vsLastWeek")}
+                {t("dashboard.vsYesterday")}
               </span>
             </span>
           )}

@@ -62,6 +62,14 @@ const translations = {
       ignore: 'اگر شما این درخواست را نداده‌اید، این ایمیل را نادیده بگیرید.',
     },
 
+    invite: {
+      title: '🤝 دعوت به فضای کاری',
+      body: (inviter: string, workspace: string) => `<strong>${inviter}</strong> شما را به فضای کاری <strong>${workspace}</strong> در حسابچه دعوت کرده است.`,
+      button: 'پذیرفتن دعوت',
+      expire: 'این دعوت تا ۷ روز معتبر است.',
+      subject: (workspace: string) => `دعوت به فضای کاری ${workspace} در حسابچه`,
+    },
+
     trial: {
       started: {
         title: '🎉 دوره آزمایشی شما شروع شد!',
@@ -129,6 +137,14 @@ const translations = {
       ignore: 'اگر شما این درخواست را نداده‌اید، این ایمیل را نادیده بگیرید.',
     },
 
+    invite: {
+      title: '🤝 دعوت به فضای کاری',
+      body: (inviter: string, workspace: string) => `<strong>${inviter}</strong> شما را به فضای کاری <strong>${workspace}</strong> در حسابچه دعوت کرده است.`,
+      button: 'پذیرفتن دعوت',
+      expire: 'این دعوت تا ۷ روز معتبر است.',
+      subject: (workspace: string) => `دعوت به فضای کاری ${workspace} در حسابچه`,
+    },
+
     trial: {
       started: {
         title: '🎉 دوره آزمایشی شما شروع شد!',
@@ -194,6 +210,14 @@ const translations = {
       button: 'Reset Password',
       expire: 'This link is valid for 1 hour.',
       ignore: 'If you did not request this, please ignore this email.',
+    },
+
+    invite: {
+      title: '🤝 Workspace Invitation',
+      body: (inviter: string, workspace: string) => `<strong>${inviter}</strong> invited you to join the <strong>${workspace}</strong> workspace on Hisabche.`,
+      button: 'Accept Invitation',
+      expire: 'This invitation is valid for 7 days.',
+      subject: (workspace: string) => `Invitation to join ${workspace} on Hisabche`,
     },
 
     trial: {
@@ -425,6 +449,20 @@ export const emailService = {
       `<p class="expire">⏰ ${t.reset.expire}</p><p style="font-size: 12px; color: #888;">${t.reset.ignore}</p>`,
     )
     return this.send({ to, subject: `${t.reset.title} - ${t.brand}`, html })
+  },
+
+  // ─── Workspace Invite ─────────────────────────────────────────
+  async sendWorkspaceInvite(to: string, inviterName: string, workspaceName: string, inviteLink: string, lang: Language = 'fa-IR') {
+    const t = translations[lang]
+    const html = buildEmailHtml(
+      lang,
+      t.invite.title,
+      t.invite.body(inviterName, workspaceName),
+      t.invite.button,
+      inviteLink,
+      `<p class="expire">⏰ ${t.invite.expire}</p>`,
+    )
+    return this.send({ to, subject: t.invite.subject(workspaceName), html })
   },
 
   // ─── Trial Started ───────────────────────────────────────────

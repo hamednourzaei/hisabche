@@ -6,6 +6,7 @@
 import { supabase } from '../db'
 import { DatabaseError } from '../errors/database.error'
 import { memoryCache } from '../utils/pagination'
+import { logBusinessEvent } from './event-log.service'
 
 // ✅ Column Selection Constants
 const BOM_LIST_COLUMNS = 'id, product_id, version, is_active, created_at, updated_at'
@@ -197,8 +198,18 @@ export class ManufacturingService {
       .single()
 
     if (error) throw new DatabaseError('Failed to create work order', error)
-    
+
     await this.invalidateWorkOrderCache(userId)
+
+    logBusinessEvent({
+      userId,
+      entityType: 'work_order',
+      entityId: workOrder.id,
+      action: 'created',
+      title: `دستور تولید جدید ثبت شد`,
+      notify: false,
+    }).catch((err) => console.error('[ManufacturingService] logBusinessEvent failed:', err))
+
     return workOrder
   }
 

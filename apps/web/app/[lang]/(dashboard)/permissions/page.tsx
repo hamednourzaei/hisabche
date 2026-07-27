@@ -8,9 +8,9 @@ const titles: Record<string, string> = {
 };
 
 const descriptions: Record<string, string> = {
-  "fa-IR": "مدیریت نقش‌های کاربری و سطوح دسترسی در حسابچه. کنترل کامل بر مجوزهای هر کاربر در فضای کاری.",
-  "fa-AF": "مدیریت نقش‌های کاربری و سطوح دسترسی در حسابچه. کنترل کامل بر مجوزهای هر کاربر در فضای کاری.",
-  "en": "Manage user roles and permission levels in Hisabche. Full control over each user's access in the workspace.",
+  "fa-IR": "مشاهده‌ی نقش‌های تیم و آنچه هر نقش در حسابچه می‌تواند انجام دهد.",
+  "fa-AF": "مشاهده‌ی نقش‌های تیم و آنچه هر نقش در حسابچه می‌تواند انجام دهد.",
+  "en": "See your team's roles and what each role can do in Hisabche.",
 };
 
 const keywords: Record<string, string[]> = {

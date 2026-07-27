@@ -7,6 +7,7 @@ import { supabase } from '../db'
 import { CreateWorkspace, UpdateWorkspace, UpdateMemberRole, CreateInvite, AcceptInvite } from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
 import { memoryCache } from '../utils/pagination'
+import { emailService } from './email.service'
 import crypto from 'crypto'
 
 // ✅ Types
@@ -311,8 +312,33 @@ export class WorkspaceService {
 
     // ✅ Invalidate cache
     await this.invalidateInviteCache(data.workspaceId)
-    
+
+    this.sendInviteEmail(userId, data.workspaceId, data.email, rawToken).catch((err) =>
+      console.error('Failed to send invite email:', err)
+    )
+
     return { ...invite, token: rawToken }
+  }
+
+  // ─── Send invite email (fire-and-forget) ───────────────────
+  private async sendInviteEmail(inviterId: string, workspaceId: string, toEmail: string, rawToken: string) {
+    const [{ data: inviter }, { data: workspace }] = await Promise.all([
+      supabase.from('users').select('full_name, preferred_language').eq('id', inviterId).single(),
+      supabase.from('workspaces').select('name').eq('id', workspaceId).single(),
+    ])
+
+    if (!workspace) return
+
+    const inviteLink = `${process.env.FRONTEND_URL || 'https://hisabche.com'}/accept-invite?token=${rawToken}`
+    const lang = await emailService.getUserLanguage(inviterId)
+
+    await emailService.sendWorkspaceInvite(
+      toEmail,
+      inviter?.full_name || 'یک همکار',
+      workspace.name,
+      inviteLink,
+      lang
+    )
   }
 
   // ─── List Invites ─────────────────────────────────────────

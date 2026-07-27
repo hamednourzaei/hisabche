@@ -7,6 +7,7 @@ import { supabase } from '../db'
 import { CreateCustomer, UpdateCustomer, CustomerFilters } from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
 import { memoryCache } from '../utils/pagination'
+import { logBusinessEvent } from './event-log.service'
 
 // ✅ Types
 interface Customer {
@@ -201,6 +202,16 @@ export class CustomerService {
 
     // ✅ Clear cache
     await this.invalidateCache(userId, customer.id)
+
+    logBusinessEvent({
+      userId,
+      entityType: 'customer',
+      entityId: customer.id,
+      action: 'created',
+      title: `مشتری جدید: ${customer.full_name}`,
+      description: customer.phone || customer.email || undefined,
+      notify: false,
+    }).catch((err) => console.error('[CustomerService] logBusinessEvent failed:', err))
 
     return mapCustomer(customer)
   }

@@ -13,6 +13,7 @@ import {
 } from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
 import { memoryCache } from '../utils/pagination'
+import { logBusinessEvent } from './event-log.service'
 
 // ✅ Column Selection Constants
 const DEPARTMENT_COLUMNS = 'id, name, name_en, parent_id, manager_id, description, is_active, created_at'
@@ -211,8 +212,19 @@ export class HumanResourcesService {
       .single()
 
     if (error) throw new DatabaseError('Failed to create employee', error)
-    
+
     await this.invalidateEmployeeCache(userId)
+
+    logBusinessEvent({
+      userId,
+      entityType: 'employee',
+      entityId: emp.id,
+      action: 'created',
+      title: `کارمند جدید: ${emp.first_name} ${emp.last_name}`,
+      description: emp.position || undefined,
+      notify: false,
+    }).catch((err) => console.error('[HumanResourcesService] logBusinessEvent failed:', err))
+
     return emp
   }
 

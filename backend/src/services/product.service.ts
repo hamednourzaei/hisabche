@@ -8,6 +8,7 @@ import { CreateProduct, UpdateProduct, ProductFilters } from '@hisabche/validati
 import { DatabaseError, NotFoundError } from '../errors/database.error'
 import { mapProduct } from '../utils/product.mapper'
 import { memoryCache } from '../utils/pagination'
+import { logBusinessEvent } from './event-log.service'
 
 // ✅ Column Selection Constants
 const PRODUCT_LIST_COLUMNS = `
@@ -156,6 +157,16 @@ export class ProductService {
     if (error) throw new DatabaseError('Failed to create product', error)
 
     await this.invalidateUserCache(userId)
+
+    logBusinessEvent({
+      userId,
+      entityType: 'product',
+      entityId: product.id,
+      action: 'created',
+      title: `کالای جدید: ${product.name}`,
+      description: product.sku ? `کد: ${product.sku}` : undefined,
+      notify: false,
+    }).catch((err) => console.error('[ProductService] logBusinessEvent failed:', err))
 
     return mapProduct(product)
   }
