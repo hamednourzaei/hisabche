@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useTranslation } from "react-i18next";
@@ -42,9 +42,16 @@ export function AuthContainer({
   initialMode?: "login" | "signup";
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useTranslation();
   const st = useSafeT();
   const [flipped, setFlipped] = useState(initialMode === "signup");
+
+  // ✅ FIX: قبلاً بعد از لاگین/ثبت‌نام همیشه به /dashboard می‌رفت و
+  // پارامتر redirect (مثلاً /accept-invite?token=...) نادیده گرفته
+  // می‌شد — یعنی کاربری که از لینک دعوت وارد ثبت‌نام می‌شد هرگز به
+  // مرحله‌ی پذیرش دعوت برنمی‌گشت و در workspace خودش owner می‌ماند.
+  const redirectTarget = searchParams.get("redirect") || "/dashboard";
 
   // ─── Switch mode ──────────────────────────────
   const handleSwitch = useCallback(() => {
@@ -73,7 +80,7 @@ export function AuthContainer({
 
     const s = useAuthStore.getState();
     if (s.isAuthenticated && !s.error) {
-      router.push("/dashboard");
+      router.push(redirectTarget);
     }
   });
 
@@ -84,7 +91,7 @@ export function AuthContainer({
     });
     const s = useAuthStore.getState();
     if (s.isAuthenticated && !s.error) {
-      router.push("/dashboard");
+      router.push(redirectTarget);
     }
   }, [loginStore, router]);
 
@@ -132,7 +139,7 @@ export function AuthContainer({
 
       const s = useAuthStore.getState();
       if (s.isAuthenticated && !s.error) {
-        router.push("/dashboard");
+        router.push(redirectTarget);
       }
     }
   );
