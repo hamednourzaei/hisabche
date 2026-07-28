@@ -12,8 +12,6 @@
     "clean": "rm -rf .next node_modules",
     "test:e2e": "playwright test"
   },
-
-  
   "dependencies": {
     "@base-ui/react": "^1.5.0",
     "@hisabche/api": "*",
