@@ -133,10 +133,13 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
       await clearCache('workspaces:*')
       await clearCache('workspace-members:*')
       return reply.send(result)
-    } catch (e) { 
-      if (e instanceof z.ZodError) return reply.code(400).send({ error: 'Validation', details: e.errors }); 
-      fastify.log.error(e); 
-      return reply.code(500).send({ error: 'Failed' }) 
+    } catch (e) {
+      if (e instanceof z.ZodError) return reply.code(400).send({ error: 'Validation', details: e.errors });
+      if (e instanceof Error && e.message === 'Invalid or expired invite') {
+        return reply.code(400).send({ error: e.message })
+      }
+      fastify.log.error(e);
+      return reply.code(500).send({ error: 'Failed' })
     }
   })
   
