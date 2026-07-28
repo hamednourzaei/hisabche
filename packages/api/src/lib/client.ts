@@ -111,7 +111,13 @@ apiClient.interceptors.response.use(
     const responseData = error.response?.data as any
 
     const apiError: ApiError = {
+      // ✅ FIX: اکثر route های بک‌اند خطا رو با کلید `error` برمی‌گردونن
+      // (مثلاً { error: 'Wrong email' })، نه `message` — قبلاً این‌جا
+      // فقط responseData?.message چک می‌شد، پس همیشه به پیام عمومی
+      // axios ("Request failed with status code 400") سقوط می‌کرد و
+      // پیام واقعی سرور هیچ‌وقت به کاربر نمی‌رسید.
       message:
+        responseData?.error ||
         responseData?.message ||
         error.message ||
         'An unexpected error occurred',
