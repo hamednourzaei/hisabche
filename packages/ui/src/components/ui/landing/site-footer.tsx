@@ -41,33 +41,10 @@ const COLUMNS: FooterColumn[] = [
     ],
   },
   {
-    titleKey: "landing.footerColFeatures",
-    titleFallback: "امکانات",
-    links: [
-      { key: "invoicing", fallback: "فاکتور فروش", href: "/features/invoicing" },
-      { key: "inventory", fallback: "مدیریت گدام", href: "/features/inventory" },
-      { key: "debt", fallback: "مدیریت بدهی مشتری", href: "/features/debt" },
-      { key: "reports", fallback: "گزارش‌گیری", href: "/features/reports" },
-    ],
-  },
-  {
-    titleKey: "landing.footerColIndustries",
-    titleFallback: "کسب‌وکارها",
-    links: [
-      { key: "retail", fallback: "خرده‌فروشی", href: "/industries/retail" },
-      { key: "pharmacy", fallback: "دواخانه", href: "/industries/pharmacy" },
-      { key: "restaurant", fallback: "رستوران", href: "/industries/restaurant" },
-      { key: "wholesale", fallback: "عمده‌فروشی", href: "/industries/wholesale" },
-    ],
-  },
-  {
     titleKey: "landing.footerColCompany",
     titleFallback: "شرکت",
     links: [
-      { key: "about", fallback: "درباره ما", href: "/about" },
-      { key: "blog", fallback: "وبلاگ", href: "/blog" },
       { key: "contact", fallback: "تماس با ما", href: "/contact" },
-      { key: "careers", fallback: "فرصت‌های شغلی", href: "/careers" },
     ],
   },
   {
@@ -97,9 +74,9 @@ export default function SiteFooter({ t }: SiteFooterProps) {
       )}
     >
       <div className="container-narrow px-4 sm:px-6 py-8 sm:py-10 lg:py-16">
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-6 sm:gap-6 lg:gap-8">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-6 lg:gap-8">
           {/* ── Brand block ── */}
-          <div className="col-span-2 sm:col-span-3 lg:col-span-1 mb-2 sm:mb-0">
+          <div className="col-span-2 sm:col-span-1 mb-2 sm:mb-0">
             <div className="mb-2 sm:mb-3 text-base sm:text-lg font-bold text-[hsl(var(--fg-primary))]">
               {t("app.name", "حسابچه")}
               <span className="text-[hsl(var(--color-primary))]">.</span>

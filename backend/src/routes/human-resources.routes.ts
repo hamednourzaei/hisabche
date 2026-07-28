@@ -106,7 +106,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
     preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'employees' })],
     schema: {
       querystring: toJsonSchema(z.object({ departmentId: z.string().uuid().optional() })),
-      response: { 200: toJsonSchema(z.array(z.any())) },
+      response: { 200: toJsonSchema(z.object({ employees: z.array(z.any()), total: z.number() })) },
     },
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {

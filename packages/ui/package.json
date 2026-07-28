@@ -65,6 +65,7 @@
     ".": "./src/index.ts",
     "./globals.css": "./src/styles/globals.css",
     "./landing/landing-page": "./src/components/ui/landing/landing-page.tsx",
+    "./landing/site-footer": "./src/components/ui/landing/site-footer.tsx",
     "./settings/settings-page": "./src/components/ui/settings/settings-page.tsx",
     "./components/ui/dashboard/containers/dashboard-container": "./src/components/ui/dashboard/containers/dashboard-container.tsx",
     "./components/ui/warehouse/containers/warehouse-container": "./src/components/ui/warehouse/containers/warehouse-container.tsx",

@@ -449,13 +449,27 @@ export class ActivityService {
         }
       }
 
-      // ✅ Default fallback برای سایر entity types
+      // ✅ Default fallback برای سایر entity types — نگاشت واقعی مسیر
+      // (قبلاً با pluralize کورکورانه `/${entityType}s/${id}` می‌ساخت که
+      // برای employee به `/employees/:id` (مسیر ناموجود) می‌رسید)
+      const routeMap: Record<string, string> = {
+        employee: `/human-resources/${entityId}`,
+        project: `/projects/${entityId}`,
+        purchase_order: `/purchasing`,
+        work_order: `/manufacturing`,
+        workflow: `/approvals`,
+        workflow_instance: `/approvals`,
+        opportunity: `/crm`,
+        interaction: `/crm`,
+        billing: `/billing`,
+      };
+
       return {
         label: entityType,
         subtitle: entityId,
         activityCount: 0,
         lastActivity: new Date().toISOString(),
-        route: `/${entityType}s/${entityId}`,
+        route: routeMap[entityType] || `/activities`,
       };
     } catch (error) {
       console.error(`❌ Failed to get entity summary for ${entityType}:${entityId}`, error);

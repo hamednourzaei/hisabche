@@ -85,9 +85,7 @@ export const createProjectTaskSchema = projectTaskSchema.omit({
 
 export type CreateProjectTask = z.infer<typeof createProjectTaskSchema>
 
-export const updateProjectTaskSchema = projectTaskSchema.partial().extend({
-  id: uuidSchema,
-})
+export const updateProjectTaskSchema = projectTaskSchema.partial()
 
 export type UpdateProjectTask = z.infer<typeof updateProjectTaskSchema>
 
