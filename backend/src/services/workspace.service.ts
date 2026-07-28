@@ -372,14 +372,22 @@ export class WorkspaceService {
   // ─── Accept Invite — OPTIMIZED ─────────────────────────────
   async acceptInvite(userId: string, userEmail: string, data: AcceptInvite) {
     const tokenHash = hashToken(data.token)
-    
+
     // ✅ یک کوئری برای گرفتن invite
-    const { data: invite } = await supabase
+    const { data: invite, error: inviteError } = await supabase
       .from('workspace_invites')
       .select('id, workspace_id, email, role, expires_at')
       .eq('token_hash', tokenHash)
       .eq('status', 'pending')
       .single()
+
+    // 🔍 لاگ تشخیصی موقت — بعد از حل مشکل حذف شود
+    console.log('[acceptInvite] debug', {
+      receivedTokenLen: data.token?.length,
+      computedTokenHash: tokenHash,
+      inviteFound: !!invite,
+      inviteError: inviteError ? { code: inviteError.code, message: inviteError.message } : null,
+    })
 
     if (!invite) throw new DatabaseError('Invalid or expired invite')
     if (invite.email.toLowerCase() !== userEmail.toLowerCase()) {

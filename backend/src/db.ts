@@ -35,7 +35,7 @@ if (!SUPABASE_SERVICE_KEY) {
 // این باگ چند خطای امروز (RLS بلاک‌کردن insert/select با وجود سطر
 // صحیح در دیتابیس) را توضیح می‌دهد اگر اینجا anon چاپ شود.
 try {
-  const payloadBase64 = SUPABASE_SERVICE_KEY.split('.')[1]
+  const payloadBase64 = SUPABASE_SERVICE_KEY.split('.')[1] || ''
   const payload = JSON.parse(Buffer.from(payloadBase64, 'base64').toString('utf8'))
   console.log(`🔑 [SUPABASE_SERVICE_KEY] role claim = "${payload.role}" (باید "service_role" باشد)`)
   if (payload.role !== 'service_role') {
