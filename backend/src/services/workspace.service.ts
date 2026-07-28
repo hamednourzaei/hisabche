@@ -369,27 +369,26 @@ export class WorkspaceService {
     return result
   }
 
-  // ─── Accept Invite — OPTIMIZED ─────────────────────────────
+  // ─── Accept Invite ──────────────────────────────────────────
+  // ✅ FIX: کوئری قبلی (token_hash + status='pending' با .single()) در
+  // یک بازه‌ی نامشخص مدام PGRST116 (۰ ردیف) برمی‌گرداند در حالی که همان
+  // ردیف با همان مقادیر از SQL Editor مستقیم قابل مشاهده بود — یعنی
+  // مشکل در ترکیب فیلترها/single() از طریق PostgREST بود، نه در خود
+  // داده. حالا فقط با token_hash (تنها شرط، بدون ترکیب) و maybeSingle
+  // واکشی می‌کنیم و بقیه‌ی شرط‌ها (status/email/expiry) را در کد چک
+  // می‌کنیم — هم ساده‌تر، هم خطای دقیق‌تر می‌دهد.
   async acceptInvite(userId: string, userEmail: string, data: AcceptInvite) {
     const tokenHash = hashToken(data.token)
 
-    // ✅ یک کوئری برای گرفتن invite
     const { data: invite, error: inviteError } = await supabase
       .from('workspace_invites')
-      .select('id, workspace_id, email, role, expires_at')
+      .select('id, workspace_id, email, role, status, expires_at')
       .eq('token_hash', tokenHash)
-      .eq('status', 'pending')
-      .single()
+      .maybeSingle()
 
-    // 🔍 لاگ تشخیصی موقت — بعد از حل مشکل حذف شود
-    console.log('[acceptInvite] debug', {
-      receivedTokenLen: data.token?.length,
-      computedTokenHash: tokenHash,
-      inviteFound: !!invite,
-      inviteError: inviteError ? { code: inviteError.code, message: inviteError.message } : null,
-    })
-
+    if (inviteError) throw new DatabaseError('Failed to look up invite', inviteError)
     if (!invite) throw new DatabaseError('Invalid or expired invite')
+    if (invite.status !== 'pending') throw new DatabaseError('Invite already used or cancelled')
     if (invite.email.toLowerCase() !== userEmail.toLowerCase()) {
       throw new DatabaseError('Wrong email')
     }

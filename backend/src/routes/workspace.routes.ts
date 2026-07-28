@@ -135,7 +135,8 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
       return reply.send(result)
     } catch (e) {
       if (e instanceof z.ZodError) return reply.code(400).send({ error: 'Validation', details: e.errors });
-      if (e instanceof Error && e.message === 'Invalid or expired invite') {
+      const clientErrors = ['Invalid or expired invite', 'Invite already used or cancelled', 'Wrong email', 'Expired', 'Workspace inactive', 'Already member']
+      if (e instanceof Error && clientErrors.includes(e.message)) {
         return reply.code(400).send({ error: e.message })
       }
       fastify.log.error(e);
