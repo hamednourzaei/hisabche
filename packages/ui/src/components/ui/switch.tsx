@@ -65,19 +65,22 @@ function Switch({ className, size = "default", ...props }: SwitchProps) {
           "pointer-events-none block rounded-full",
           "bg-white",
           "shadow-sm",
-          "transition-transform duration-200",
+          "transition-[inset-inline-start] duration-200",
           "motion-reduce:transition-none",
-          "absolute top-1/2 start-0.5 -translate-y-1/2",
+          "absolute top-1/2 -translate-y-1/2 start-0.5",
           // Sizes
           size === "default" && "h-5 w-5",
           size === "sm" && "h-4 w-4",
-          // LTR: slide right on check. RTL: slide left on check.
-          size === "default" && "data-[state=checked]:translate-x-5 rtl:data-[state=checked]:-translate-x-5",
-          size === "sm" && "data-[state=checked]:translate-x-4 rtl:data-[state=checked]:-translate-x-4",
-          // -translate-y-1/2 must stay applied together with translate-x —
-          // Tailwind's translate utilities share the same CSS custom
-          // properties, so both axes always compose correctly regardless
-          // of which one was set last.
+          // ✅ FIX: combining `rtl:` with `translate-x` relied on two
+          // same-property utility classes racing in the compiled CSS
+          // (base vs rtl-prefixed) — whichever landed later in Tailwind's
+          // generated stylesheet won, regardless of the actual `dir`
+          // attribute, so in RTL the thumb slid the LTR direction and
+          // overflowed the track. `inset-inline-start` is direction-aware
+          // by itself (no rtl: variant needed) — it always slides toward
+          // the track's *visual* end correctly in both directions.
+          size === "default" && "data-[state=checked]:start-[22px]",
+          size === "sm" && "data-[state=checked]:start-[18px]",
         )}
       />
     </SwitchPrimitive.Root>
