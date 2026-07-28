@@ -55,7 +55,10 @@ export const InviteModal = memo(function InviteModal({
         email: email.trim(),
         role,
       });
-      const link = `${window.location.origin}/accept-invite?token=${response?.token ?? ""}`;
+      // ✅ FIX: بدون پیشوند زبان، لینک به مسیر اشتباه می‌رفت (صفحه فقط
+      // زیر app/[lang]/accept-invite وجود دارد)
+      const currentLangSegment = window.location.pathname.split("/")[1] || "af";
+      const link = `${window.location.origin}/${currentLangSegment}/accept-invite?token=${response?.token ?? ""}`;
       setInviteLink(link);
       setSent(true);
     } catch (err: any) {

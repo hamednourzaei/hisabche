@@ -329,8 +329,14 @@ export class WorkspaceService {
 
     if (!workspace) return
 
-    const inviteLink = `${process.env.FRONTEND_URL || 'https://hisabche.com'}/accept-invite?token=${rawToken}`
     const lang = await emailService.getUserLanguage(inviterId)
+    // ✅ FIX: لینک قبلاً بدون پیشوند زبان بود (/accept-invite) در حالی
+    // که صفحه‌ی واقعی فقط زیر app/[lang]/accept-invite وجود دارد و هیچ
+    // middleware‌ای برای اضافه‌کردن خودکار locale به مسیرهای بدون زبان
+    // نیست — یعنی لینک همیشه به مسیر اشتباه می‌رفت.
+    const urlLangMap: Record<string, string> = { 'fa-IR': 'fa', 'fa-AF': 'af', en: 'en' }
+    const urlLang = urlLangMap[lang] || 'af'
+    const inviteLink = `${process.env.FRONTEND_URL || 'https://hisabche.com'}/${urlLang}/accept-invite?token=${rawToken}`
 
     await emailService.sendWorkspaceInvite(
       toEmail,
