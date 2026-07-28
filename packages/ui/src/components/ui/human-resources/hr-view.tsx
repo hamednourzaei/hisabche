@@ -194,7 +194,7 @@ export const HumanResourcesView = memo(function HumanResourcesView({
         fatherName: data.fatherName || undefined,
         employeeCode: data.employeeCode,
         nationalId: data.nationalId || undefined,
-        dateOfBirth: data.dateOfBirth || undefined,
+        dateOfBirth: data.dateOfBirth ? `${data.dateOfBirth}T00:00:00Z` : undefined,
         gender: data.gender || undefined,
         phone: phoneValue || undefined,
         email: data.email || undefined,

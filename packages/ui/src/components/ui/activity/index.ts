@@ -1,24 +1,16 @@
 // packages/ui/src/components/ui/activity/index.ts
 // ─── Activity Design System ────────────────────────────────────────────────
+// Consolidated: this folder previously held ~19 files, most of them dead
+// (no consumer anywhere in the app). Only the pieces that make up the real
+// /activities page remain, plus the two new files that replace the old
+// EntityActivityCard/ActivityItem/VirtualizedActivityList/ActivityMotion
+// stack with a single, simpler card + list pair.
 
-export { ActivityCenter } from "./ActivityCenter";
 export { ActivitiesPage } from "./ActivitiesPage";
-export { ActivityItem } from "./ActivityItem";
-export { ActivityTimeline } from "./ActivityTimeline";
-export { EntityActivityCard } from "./EntityActivityCard";
-export { ActivityHeader } from "./ActivityHeader";
-export { ActivityFooter } from "./ActivityFooter";
+export { ActivityGroupCard } from "./ActivityGroupCard";
+export { ActivityFeedList } from "./ActivityFeedList";
 export { ActivitySkeleton } from "./ActivitySkeleton";
 export { ActivityEmptyState } from "./ActivityEmptyState";
-export { ActivityToolbar } from "./ActivityToolbar";
-export { VirtualizedActivityList } from "./VirtualizedActivityList";
-export { ActivityMotion } from "./ActivityMotion";
-export { ActivityPreview } from "./ActivityPreview";
-export { CommandPalette } from "./CommandPalette";
-export { KeyboardNavigator } from "./KeyboardNavigator";
-export { AccessibleCard } from "./AccessibleCard";
-export { SyncStatus } from "./SyncStatus";
-export { RealtimeStatus } from "./RealtimeStatus";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 export type {
@@ -26,16 +18,3 @@ export type {
   ActivityGroupDto,
   EntitySummaryDto,
 } from "@hisabche/api";
-
-// ─── Hooks ──────────────────────────────────────────────────────────────────
-export { useActivityAnalytics } from "../../../hooks/activity/useActivityAnalytics";
-export { useActivityKeyboard } from "../../../hooks/activity/useActivityKeyboard";
-export { useOfflineActivities } from "../../../hooks/activity/useOfflineActivities";
-export {
-  useReducedMotion,
-  useFocusTrap,
-  useEscapeKey,
-  useAriaAnnouncer,
-  useKeyboardShortcuts,
-} from "../../../hooks/activity/useAccessibility";
-export { useMotionDuration, useMotionEasing } from "../../../lib/activity/motion";

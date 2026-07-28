@@ -654,6 +654,11 @@
       "yearly": "سالانه"
     }
   },
+  "calendar": {
+    "system": "هجری شمسی افغانی",
+    "months": ["حمل", "ثور", "جوزا", "سرطان", "اسد", "سنبله", "میزان", "عقرب", "قوس", "جدی", "دلو", "حوت"],
+    "weekdaysShort": ["ش", "ی", "د", "س", "چ", "پ", "ج"]
+  },
   "auth": {
     "signIn": "ورود",
     "signUp": "ثبت‌نام",
@@ -1385,7 +1390,7 @@
     "taskTitle": "عنوان وظیفه",
     "assignee": "مسئول",
     "dueDate": "سررسید",
-    "todo": "در حال انجام",
+    "todo": "برای انجام",
     "review": "در حال بررسی",
     "done": "انجام‌شده",
     "members": "اعضا",
@@ -1397,7 +1402,15 @@
     "noProjects": "پروژه‌ای یافت نشد",
     "noTasks": "وظیفه‌ای یافت نشد",
     "notFound": "پروژه یافت نشد",
-    "progress": "پیشرفت"
+    "progress": "پیشرفت",
+    "unassigned": "بدون مسئول",
+    "changeStatus": "تغییر وضعیت",
+    "selectedSuffix": "مورد انتخاب شده",
+    "markDone": "علامت به‌عنوان انجام‌شده",
+    "markTodo": "بازگشت به برای انجام",
+    "clearSelection": "لغو انتخاب",
+    "selectAll": "انتخاب همه",
+    "tasksDoneLabel": "وظیفه انجام‌شده"
   },
   "workspace": {
     "title": "فضای کاری",
@@ -1466,7 +1479,10 @@
     "updated": "به‌روزرسانی شد",
     "deleted": "حذف شد",
     "login": "ورود",
-    "logout": "خروج"
+    "logout": "خروج",
+    "fromDate": "از تاریخ",
+    "toDate": "تا تاریخ",
+    "dateRangeSeparator": "تا"
   },
   "crm": {
     "title": "ارتباط با مشتریان",
@@ -1510,7 +1526,16 @@
       "itemsCount": "تعداد اقلام",
       "status": "وضعیت",
       "active": "فعال",
-      "inactive": "غیرفعال"
+      "inactive": "غیرفعال",
+      "create": "افزودن فرمول ساخت",
+      "dialogTitle": "فرمول ساخت جدید",
+      "selectProduct": "انتخاب محصول",
+      "selectProductPlaceholder": "-- انتخاب محصول --",
+      "items": "اقلام مواد اولیه",
+      "addItem": "افزودن قلم",
+      "rawMaterial": "ماده اولیه",
+      "quantity": "مقدار",
+      "unitCost": "بهای واحد"
     },
     "workOrders": {
       "empty": "هیچ دستور تولیدی ثبت نشده",
@@ -1518,8 +1543,16 @@
       "quantity": "تعداد",
       "status": "وضعیت",
       "startDate": "تاریخ شروع",
+      "endDate": "تاریخ پایان",
       "actions": "عملیات",
-      "complete": "تکمیل"
+      "complete": "تکمیل",
+      "create": "دستور تولید جدید",
+      "dialogTitle": "دستور تولید جدید",
+      "selectProduct": "انتخاب محصول",
+      "selectProductPlaceholder": "-- انتخاب محصول --",
+      "selectBom": "انتخاب فرمول ساخت",
+      "selectBomPlaceholder": "-- انتخاب فرمول --",
+      "noBomsForProduct": "برای این محصول فرمول ساختی ثبت نشده"
     },
     "status": {
       "planned": "برنامه‌ریزی‌شده",
@@ -1639,7 +1672,39 @@
     "justNow": "همین الان",
     "minutesAgo": "{m} دقیقه پیش",
     "hoursAgo": "{h} ساعت پیش",
-    "daysAgo": "{d} روز پیش"
+    "daysAgo": "{d} روز پیش",
+    "weeksAgo": "{w} هفته پیش",
+    "monthsAgo": "{mo} ماه پیش",
+    "yearsAgo": "{y} سال پیش"
+  },
+  "activity": {
+    "title": "فعالیت‌ها",
+    "new": "جدید",
+    "markAllRead": "علامت‌گذاری همه به‌عنوان خوانده‌شده",
+    "search": "جستجو در فعالیت‌ها",
+    "unread": "خوانده نشده",
+    "by": "توسط {{actor}}",
+    "itemLabel": "فعالیت: {{title}}",
+    "showMore": "نمایش {{count}} فعالیت دیگر",
+    "open": "باز کردن",
+    "feedLabel": "فید فعالیت‌ها",
+    "loadingMore": "بارگذاری بیشتر...",
+    "scrollForMore": "برای بارگذاری بیشتر اسکرول کنید",
+    "endOfList": "به انتهای لیست رسیدید",
+    "filter": {
+      "all": "همه",
+      "unread": "خوانده‌نشده",
+      "invoices": "فاکتورها",
+      "payments": "پرداخت‌ها",
+      "customers": "مشتریان"
+    },
+    "empty": {
+      "title": "فعالیتی یافت نشد",
+      "all": "هنوز فعالیتی ثبت نشده است",
+      "unread": "هیچ فعالیت خوانده‌نشده‌ای وجود ندارد",
+      "search": "نتیجه‌ای یافت نشد",
+      "searchHint": "برای «{{query}}» نتیجه‌ای پیدا نشد"
+    }
   },
   "commandPalette": {
     "title": "پالت دستورات",

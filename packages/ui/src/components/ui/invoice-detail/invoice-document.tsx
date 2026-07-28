@@ -205,8 +205,14 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
             </div>
           </div>
 
-          {/* Items table */}
-          <div className="overflow-x-auto">
+          {/* Items table
+              overflow-x-auto lets wide tables scroll horizontally on narrow
+              screens without clipping. touch-pan-y keeps vertical swipes
+              (page/section scroll) working even when the gesture starts over
+              this table — otherwise a touch that begins here can get
+              captured by the horizontal scroller and the rest of the
+              invoice becomes hard to reach on mobile. */}
+          <div className="overflow-x-auto touch-pan-y">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-[hsl(var(--border-default))]">

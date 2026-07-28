@@ -3,7 +3,7 @@
 
 import { memo, useMemo } from "react";
 import { cn } from "@/lib/utils";
-import { Factory, Layers, ClipboardList, Check } from "lucide-react";
+import { Factory, Layers, ClipboardList, Check, Plus } from "lucide-react";
 import type { BOM, WorkOrder } from "@hisabche/api";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -23,6 +23,8 @@ interface ManufacturingViewProps {
   error?: string | null;
   completingId?: string | null;
   onCompleteWorkOrder: (id: string) => void;
+  onOpenCreateBom: () => void;
+  onOpenCreateWorkOrder: () => void;
 }
 
 const STATUS_BADGE_MAP: Record<string, string> = {
@@ -55,6 +57,8 @@ export const ManufacturingView = memo(function ManufacturingView({
   error,
   completingId,
   onCompleteWorkOrder,
+  onOpenCreateBom,
+  onOpenCreateWorkOrder,
 }: ManufacturingViewProps) {
   const statusLabel = useMemo(
     () => (status: string) => {
@@ -72,11 +76,26 @@ export const ManufacturingView = memo(function ManufacturingView({
   return (
     <div className="space-y-6 max-w-6xl mx-auto px-4">
       {/* Header */}
-      <div className="flex items-center gap-2">
-        <Factory className="size-6 text-[hsl(var(--color-primary))]" />
-        <h1 className="text-2xl font-bold text-[hsl(var(--fg-primary))]">
-          {t("nav.production", "ساخت و تولید")}
-        </h1>
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
+          <Factory className="size-6 text-[hsl(var(--color-primary))]" />
+          <h1 className="text-2xl font-bold text-[hsl(var(--fg-primary))]">
+            {t("nav.production", "ساخت و تولید")}
+          </h1>
+        </div>
+        <button
+          type="button"
+          onClick={activeTab === "boms" ? onOpenCreateBom : onOpenCreateWorkOrder}
+          className={cn(
+            "flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-opacity",
+            "bg-[hsl(var(--color-primary))] text-white hover:opacity-90"
+          )}
+        >
+          <Plus className="size-4" aria-hidden="true" />
+          {activeTab === "boms"
+            ? t("manufacturing.boms.create", "افزودن فرمول ساخت")
+            : t("manufacturing.workOrders.create", "دستور تولید جدید")}
+        </button>
       </div>
 
       {/* Tabs */}
@@ -128,9 +147,17 @@ export const ManufacturingView = memo(function ManufacturingView({
           boms.length === 0 ? (
             <div className="p-12 text-center">
               <Layers className="size-12 mx-auto mb-3 text-[hsl(var(--fg-tertiary))]" />
-              <p className="text-[hsl(var(--fg-secondary))]">
+              <p className="text-[hsl(var(--fg-secondary))] mb-3">
                 {t("manufacturing.boms.empty", "هیچ فرمول ساختی ثبت نشده")}
               </p>
+              <button
+                type="button"
+                onClick={onOpenCreateBom}
+                className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium bg-[hsl(var(--color-primary))] text-white hover:opacity-90 transition-opacity"
+              >
+                <Plus className="size-4" aria-hidden="true" />
+                {t("manufacturing.boms.create", "افزودن فرمول ساخت")}
+              </button>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -185,9 +212,17 @@ export const ManufacturingView = memo(function ManufacturingView({
         ) : workOrders.length === 0 ? (
           <div className="p-12 text-center">
             <ClipboardList className="size-12 mx-auto mb-3 text-[hsl(var(--fg-tertiary))]" />
-            <p className="text-[hsl(var(--fg-secondary))]">
+            <p className="text-[hsl(var(--fg-secondary))] mb-3">
               {t("manufacturing.workOrders.empty", "هیچ دستور تولیدی ثبت نشده")}
             </p>
+            <button
+              type="button"
+              onClick={onOpenCreateWorkOrder}
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium bg-[hsl(var(--color-primary))] text-white hover:opacity-90 transition-opacity"
+            >
+              <Plus className="size-4" aria-hidden="true" />
+              {t("manufacturing.workOrders.create", "دستور تولید جدید")}
+            </button>
           </div>
         ) : (
           <div className="overflow-x-auto">

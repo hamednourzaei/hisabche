@@ -13,25 +13,48 @@ interface JalaliDatePickerProps {
   className?: string;
   disabled?: boolean;
   dropUp?: boolean;
+  /**
+   * Which calendar system to render. Defaults to the app's current i18n
+   * language (`i18n.language`) so callers don't need to think about it in
+   * the common case. "fa-IR" → Iranian Jalali month names, "fa-AF" →
+   * Afghan Dari Jalali month names (same underlying solar-Hijri calendar,
+   * different names), anything starting with "en" → plain Gregorian.
+   * `value`/`onChange` are ALWAYS a Gregorian ISO date string
+   * (YYYY-MM-DD) regardless of which calendar is displayed — only the
+   * on-screen month/day grid changes.
+   */
+  locale?: string;
 }
 
-const monthKeys = [
-  "months.farvardin", "months.ordibehesht", "months.khordad", "months.tir",
-  "months.mordad", "months.shahrivar", "months.mehr", "months.aban",
-  "months.azar", "months.dey", "months.bahman", "months.esfand",
-] as const;
-
-const monthDefaults = [
+// Iranian Jalali month names (fa-IR)
+const monthDefaultsIR = [
   "فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور",
   "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند",
 ];
 
-const weekdayKeys = [
-  "weekdays.sat", "weekdays.sun", "weekdays.mon", "weekdays.tue",
-  "weekdays.wed", "weekdays.thu", "weekdays.fri",
-] as const;
+// Afghan Dari Jalali month names (fa-AF) — same solar-Hijri calendar as
+// fa-IR, different month names/locale conventions.
+const monthDefaultsAF = [
+  "حمل", "ثور", "جوزا", "سرطان", "اسد", "سنبله",
+  "میزان", "عقرب", "قوس", "جدی", "دلو", "حوت",
+];
 
-const weekdayDefaults = ["ش", "ی", "د", "س", "چ", "پ", "ج"];
+// Gregorian month names (en)
+const monthDefaultsEN = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
+const weekdayDefaultsFa = ["ش", "ی", "د", "س", "چ", "پ", "ج"]; // starts Saturday
+const weekdayDefaultsEn = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]; // starts Sunday
+
+type CalendarSystem = "jalali-ir" | "jalali-af" | "gregorian";
+
+function resolveCalendarSystem(locale: string): CalendarSystem {
+  if (locale.startsWith("en")) return "gregorian";
+  if (locale.startsWith("fa-AF") || locale.startsWith("prs") || locale === "af") return "jalali-af";
+  return "jalali-ir";
+}
 
 function toJalali(date: Date): { year: number; month: number; day: number } {
   const gy = date.getFullYear();
@@ -79,9 +102,28 @@ function jalaliToGregorianString(jalaliDate: string): string {
   return toGregorian(y, m, d).toISOString().split("T")[0] as string;
 }
 
-export function JalaliDatePicker({ value, onChange, placeholder, className, disabled = false, dropUp = false }: JalaliDatePickerProps) {
-  const { t } = useTranslation();
-  const today = toJalali(new Date());
+export function JalaliDatePicker({ value, onChange, placeholder, className, disabled = false, dropUp = false, locale }: JalaliDatePickerProps) {
+  const { t, i18n } = useTranslation();
+  const effectiveLocale = locale ?? i18n.language ?? "fa-IR";
+  const calendarSystem = resolveCalendarSystem(effectiveLocale);
+  const isGregorian = calendarSystem === "gregorian";
+
+  const monthDefaults =
+    calendarSystem === "jalali-af" ? monthDefaultsAF :
+    calendarSystem === "gregorian" ? monthDefaultsEN :
+    monthDefaultsIR;
+  const weekdayDefaults = isGregorian ? weekdayDefaultsEn : weekdayDefaultsFa;
+  // Look up month/weekday names in the i18n resources for the calendar's
+  // OWN language (not necessarily the active UI language, if `locale` was
+  // explicitly overridden) so callers can render e.g. an Afghan-calendar
+  // picker even while the UI itself is in English.
+  const calendarLng = calendarSystem === "jalali-af" ? "fa-AF" : calendarSystem === "gregorian" ? "en" : "fa-IR";
+  const calendarT = i18n.getFixedT ? i18n.getFixedT(calendarLng) : t;
+
+  const today = isGregorian
+    ? (() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() + 1, day: d.getDate() }; })()
+    : toJalali(new Date());
+
   const [isOpen, setIsOpen] = useState(false);
   const [year, setYear] = useState(today.year);
   const [month, setMonth] = useState(today.month);
@@ -89,16 +131,23 @@ export function JalaliDatePicker({ value, onChange, placeholder, className, disa
   const panelRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
 
-  const months = monthKeys.map((k, i) => t(k, monthDefaults[i] ?? ""));
-  const weekdays = weekdayKeys.map((k, i) => t(k, weekdayDefaults[i] ?? ""));
+  const months = calendarT("calendar.months", { returnObjects: true, defaultValue: monthDefaults }) as string[];
+  const weekdays = calendarT("calendar.weekdaysShort", { returnObjects: true, defaultValue: weekdayDefaults }) as string[];
 
   useEffect(() => {
-    if (value) {
-      const parts = value.split("-").map(Number);
-      const y = parts[0], m = parts[1], d = parts[2];
-      if (y && m && d) { setYear(y); setMonth(m); setSelectedDay(d); }
+    if (!value) return;
+    const parts = value.split("-").map(Number);
+    const gy = parts[0], gm = parts[1], gd = parts[2];
+    if (!gy || !gm || !gd) return;
+    // `value` is always a Gregorian ISO date string — convert it into
+    // whichever calendar system is currently displayed.
+    if (isGregorian) {
+      setYear(gy); setMonth(gm); setSelectedDay(gd);
+    } else {
+      const j = toJalali(new Date(gy, gm - 1, gd));
+      setYear(j.year); setMonth(j.month); setSelectedDay(j.day);
     }
-  }, [value]);
+  }, [value, isGregorian]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -110,17 +159,19 @@ export function JalaliDatePicker({ value, onChange, placeholder, className, disa
     return () => { clearTimeout(timer); document.removeEventListener("mousedown", handleClick); };
   }, [isOpen]);
 
-  const daysInMonth = getDaysInMonth(year, month);
-  const firstDayOfWeek = toJalali(toGregorian(year, month, 1));
-  const weekdayOffset = (firstDayOfWeek.day + firstDayOfWeek.month * 2) % 7;
+  const daysInMonth = isGregorian ? new Date(year, month, 0).getDate() : getDaysInMonth(year, month);
+  const weekdayOffset = isGregorian
+    ? new Date(year, month - 1, 1).getDay()
+    : (toJalali(toGregorian(year, month, 1)).day + toJalali(toGregorian(year, month, 1)).month * 2) % 7;
 
   const handleSelect = useCallback((day: number) => {
-    const jalaliDate = formatJalaliDate(year, month, day);
-    const gregorianDate = jalaliToGregorianString(jalaliDate);
+    const gregorianDate = isGregorian
+      ? `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`
+      : jalaliToGregorianString(formatJalaliDate(year, month, day));
     setSelectedDay(day);
     onChange(gregorianDate);
     setIsOpen(false);
-  }, [year, month, onChange]);
+  }, [year, month, onChange, isGregorian]);
 
   const prevMonth = () => { if (month === 1) { setYear(y => y - 1); setMonth(12); } else setMonth(m => m - 1); };
   const nextMonth = () => { if (month === 12) { setYear(y => y + 1); setMonth(1); } else setMonth(m => m + 1); };

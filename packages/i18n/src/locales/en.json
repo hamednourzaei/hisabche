@@ -654,6 +654,11 @@
       "yearly": "Yearly"
     }
   },
+  "calendar": {
+    "system": "Gregorian",
+    "months": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+    "weekdaysShort": ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
+  },
   "auth": {
     "signIn": "Sign In",
     "signUp": "Sign Up",
@@ -1397,7 +1402,15 @@
     "noProjects": "No projects found",
     "noTasks": "No tasks found",
     "notFound": "Project not found",
-    "progress": "Progress"
+    "progress": "Progress",
+    "unassigned": "Unassigned",
+    "changeStatus": "Change Status",
+    "selectedSuffix": "selected",
+    "markDone": "Mark as Done",
+    "markTodo": "Mark as To Do",
+    "clearSelection": "Clear Selection",
+    "selectAll": "Select All",
+    "tasksDoneLabel": "tasks completed"
   },
   "workspace": {
     "title": "Workspace",
@@ -1494,7 +1507,16 @@
       "itemsCount": "Items count",
       "status": "Status",
       "active": "Active",
-      "inactive": "Inactive"
+      "inactive": "Inactive",
+      "create": "Add bill of materials",
+      "dialogTitle": "New bill of materials",
+      "selectProduct": "Select product",
+      "selectProductPlaceholder": "-- Select product --",
+      "items": "Raw material items",
+      "addItem": "Add item",
+      "rawMaterial": "Raw material",
+      "quantity": "Quantity",
+      "unitCost": "Unit cost"
     },
     "workOrders": {
       "empty": "No work orders recorded",
@@ -1502,8 +1524,16 @@
       "quantity": "Quantity",
       "status": "Status",
       "startDate": "Start date",
+      "endDate": "End date",
       "actions": "Actions",
-      "complete": "Complete"
+      "complete": "Complete",
+      "create": "New work order",
+      "dialogTitle": "New work order",
+      "selectProduct": "Select product",
+      "selectProductPlaceholder": "-- Select product --",
+      "selectBom": "Select bill of materials",
+      "selectBomPlaceholder": "-- Select BOM --",
+      "noBomsForProduct": "No bill of materials recorded for this product"
     },
     "status": {
       "planned": "Planned",
@@ -1542,7 +1572,10 @@
     "updated": "Updated",
     "deleted": "Deleted",
     "login": "Login",
-    "logout": "Logout"
+    "logout": "Logout",
+    "fromDate": "From date",
+    "toDate": "To date",
+    "dateRangeSeparator": "to"
   },
   "billing": {
     "loading": "Loading...",
@@ -1639,7 +1672,39 @@
     "justNow": "Just now",
     "minutesAgo": "{m} minutes ago",
     "hoursAgo": "{h} hours ago",
-    "daysAgo": "{d} days ago"
+    "daysAgo": "{d} days ago",
+    "weeksAgo": "{w} weeks ago",
+    "monthsAgo": "{mo} months ago",
+    "yearsAgo": "{y} years ago"
+  },
+  "activity": {
+    "title": "Activities",
+    "new": "new",
+    "markAllRead": "Mark all as read",
+    "search": "Search activities",
+    "unread": "Unread",
+    "by": "by {{actor}}",
+    "itemLabel": "Activity: {{title}}",
+    "showMore": "Show {{count}} more activities",
+    "open": "Open",
+    "feedLabel": "Activity feed",
+    "loadingMore": "Loading more...",
+    "scrollForMore": "Scroll for more",
+    "endOfList": "You've reached the end of the list",
+    "filter": {
+      "all": "All",
+      "unread": "Unread",
+      "invoices": "Invoices",
+      "payments": "Payments",
+      "customers": "Customers"
+    },
+    "empty": {
+      "title": "No activity found",
+      "all": "No activity yet",
+      "unread": "No unread activity",
+      "search": "No results found",
+      "searchHint": "No results found for \"{{query}}\""
+    }
   },
   "commandPalette": {
     "title": "Command Palette",

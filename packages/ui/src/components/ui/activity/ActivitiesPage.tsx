@@ -1,14 +1,14 @@
 // packages/ui/src/components/ui/activity/ActivitiesPage.tsx
-// REDESIGNED: پاسخگویی مجزا برای موبایل / تبلت (md) / دسکتاپ (lg+).
-// قبلاً فقط دو پله (پایه = موبایل، md = «همه‌ی بقیه») وجود داشت، یعنی
-// تبلت ۷۶۸px و دسکتاپ ۱۹۲۰px دقیقاً یک ظاهر داشتند. اکنون max-width
-// صفحه، اسپیسینگ، اندازه‌ی فونت و چیدمان فیلترها هرکدام سه پله دارند.
+// Activity / Events feed. Rebuilt on top of the app's shadcn-style
+// primitives (Tabs, Badge) instead of a bespoke, overbuilt implementation.
+// Data layer (hooks, filter semantics, click-through routing) is untouched —
+// only presentation changed.
 "use client";
 
-import { useState, useCallback, useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
-import { Search } from "lucide-react";
+import { Search, CheckCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   useInfiniteActivities,
@@ -18,12 +18,14 @@ import {
   type ActivityItemDto,
   type ActivityFilter,
 } from "@hisabche/api";
-import { VirtualizedActivityList } from "./VirtualizedActivityList";
+import { Tabs, TabsList, TabsTrigger } from "../tabs";
+import { Badge } from "../badge";
+import { ActivityFeedList } from "./ActivityFeedList";
 import { ActivitySkeleton } from "./ActivitySkeleton";
 import { ActivityEmptyState } from "./ActivityEmptyState";
 import { useDebounce } from "../../../hooks/activity/useDebounce";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─── Filter mapping (kept exactly as before — this logic is correct) ───────
 
 type FilterType = "all" | "unread" | "invoices" | "payments" | "customers";
 
@@ -58,50 +60,6 @@ const searchGroups = (groups: ActivityGroupDto[], query: string): ActivityGroupD
       group.activities.some((a: ActivityItemDto) => a.title.toLowerCase().includes(q))
   );
 };
-
-// ─── Filter Chip ──────────────────────────────────────────────────────────────
-
-function FilterChip({
-  label,
-  active,
-  onClick,
-  count,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-  count?: number;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        // ✅ سه پله: موبایل فشرده، تبلت (md) کمی بازتر، دسکتاپ (lg) راحت‌تر
-        "shrink-0 px-2 md:px-3 lg:px-4 py-1 md:py-1.5 lg:py-2 rounded-full font-medium transition-all duration-200",
-        "text-[10px] md:text-xs lg:text-sm",
-        "min-h-[28px] md:min-h-[36px] lg:min-h-[40px]",
-        active
-          ? "bg-[hsl(var(--color-primary))] text-white shadow-sm shadow-[hsl(var(--color-primary)/0.3)]"
-          : "bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted)/0.8)]",
-        "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))] focus:ring-offset-2"
-      )}
-      aria-pressed={active}
-    >
-      <span className="flex items-center gap-1 lg:gap-1.5">
-        {label}
-        {count !== undefined && count > 0 && (
-          <span className={cn(
-            "font-bold text-[8px] md:text-[10px] lg:text-xs",
-            active ? "text-white/80" : "text-[hsl(var(--fg-tertiary))]"
-          )}>
-            ({count})
-          </span>
-        )}
-      </span>
-    </button>
-  );
-}
 
 // ─── Main Page Component ──────────────────────────────────────────────────────
 
@@ -162,25 +120,18 @@ export function ActivitiesPage() {
     [router]
   );
 
-  const handleLoadMore = useCallback(() => {
-    fetchNextPage();
-  }, [fetchNextPage]);
-
   return (
-    // ✅ FIX: max-width سه‌پله‌ای — موبایل تمام‌عرض، تبلت (md) کمی
-    // محدود، دسکتاپ (lg) عریض‌تر تا در صفحه‌نمایش‌های بزرگ باریک و
-    // گم نشود. پدینگ افقی هم به همین ترتیب رشد می‌کند.
     <div className="flex flex-col h-full w-full max-w-3xl md:max-w-4xl lg:max-w-5xl mx-auto px-3 md:px-4 lg:px-6">
       {/* ─── Header ─────────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-2 pb-3 md:pb-4 lg:pb-5">
-        <div className="flex items-center gap-1.5 md:gap-2 min-w-0">
+        <div className="flex items-center gap-2 min-w-0">
           <h1 className="font-bold text-[hsl(var(--fg-primary))] truncate text-lg md:text-xl lg:text-2xl">
             {t("nav.events", "رخدادها")}
           </h1>
           {unreadCount > 0 && (
-            <span className="shrink-0 font-bold rounded-full bg-[hsl(var(--color-destructive)/0.1)] text-[hsl(var(--color-destructive))] text-[10px] md:text-xs lg:text-sm px-1.5 md:px-2 lg:px-2.5 py-0.5 lg:py-1">
-              {unreadCount} {t("activity.new")}
-            </span>
+            <Badge variant="destructive" size="sm" className="shrink-0">
+              {unreadCount} {t("activity.new", "جدید")}
+            </Badge>
           )}
         </div>
         {unreadCount > 0 && (
@@ -189,21 +140,22 @@ export function ActivitiesPage() {
             onClick={() => markAllAsRead()}
             disabled={isMarkingAll}
             className={cn(
-              "rounded-lg font-medium",
+              "shrink-0 inline-flex items-center gap-1.5 rounded-lg font-medium",
               "px-2 md:px-3 lg:px-4 py-1 md:py-1.5 lg:py-2",
-              "text-[10px] md:text-xs lg:text-sm",
+              "text-[11px] md:text-xs lg:text-sm",
               "text-[hsl(var(--color-primary))] hover:bg-[hsl(var(--color-primary)/0.1)]",
               "transition-colors disabled:opacity-40",
-              "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring-color)/0.4)]",
               "min-h-[28px] md:min-h-[36px] lg:min-h-[40px]"
             )}
           >
-            {t("activity.markAllRead")}
+            <CheckCheck className="size-3.5 md:size-4" aria-hidden="true" />
+            <span className="hidden sm:inline">{t("activity.markAllRead", "علامت‌گذاری همه به‌عنوان خوانده‌شده")}</span>
           </button>
         )}
       </div>
 
-      {/* ─── Toolbar ────────────────────────────────────────── */}
+      {/* ─── Toolbar: search + filter tabs ─────────────────── */}
       <div className="space-y-2 md:space-y-3 lg:space-y-4 pb-3 md:pb-4 lg:pb-5">
         <div className="relative">
           <Search className="absolute start-2.5 md:start-3 lg:start-3.5 top-1/2 -translate-y-1/2 size-3.5 md:size-4 lg:size-[18px] text-[hsl(var(--fg-tertiary))]" />
@@ -212,60 +164,78 @@ export function ActivitiesPage() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={t("activity.search")}
+            placeholder={t("activity.search", "جستجو در فعالیت‌ها")}
             className={cn(
               "w-full rounded-lg md:rounded-xl border border-[hsl(var(--border-default))] bg-transparent",
               "h-9 md:h-10 lg:h-11",
               "ps-8 md:ps-9 lg:ps-10 pe-3 md:pe-4 lg:pe-5",
               "text-xs md:text-sm lg:text-base text-[hsl(var(--fg-primary))]",
               "placeholder:text-[hsl(var(--fg-tertiary))]",
-              "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
+              "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring-color)/0.4)]"
             )}
           />
         </div>
 
-        {/* ✅ FIX: روی موبایل اسکرول افقی (چیپ‌ها جا نمی‌شوند)، از md
-            به بعد wrap می‌شود چون فضای کافی برای نمایش همه در یک یا
-            دو خط بدون اسکرول هست. */}
-        <div
-          className="flex items-center gap-1 md:gap-1.5 lg:gap-2 overflow-x-auto md:overflow-x-visible md:flex-wrap pb-0.5 md:pb-0 scrollbar-hide"
-          role="tablist"
-        >
-          <FilterChip label={t("activity.filter.all")} active={filter === "all"} onClick={() => setFilter("all")} count={filterCounts.all} />
-          <FilterChip label={t("activity.filter.unread")} active={filter === "unread"} onClick={() => setFilter("unread")} count={filterCounts.unread} />
-          <FilterChip label={t("activity.filter.invoices")} active={filter === "invoices"} onClick={() => setFilter("invoices")} count={filterCounts.invoices} />
-          <FilterChip label={t("activity.filter.payments")} active={filter === "payments"} onClick={() => setFilter("payments")} count={filterCounts.payments} />
-          <FilterChip label={t("activity.filter.customers")} active={filter === "customers"} onClick={() => setFilter("customers")} count={filterCounts.customers} />
-        </div>
+        <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterType)}>
+          <TabsList className="w-full md:w-auto flex-nowrap md:flex-wrap justify-start">
+            <TabsTrigger value="all">
+              {t("activity.filter.all", "همه")}
+              {filterCounts.all > 0 && (
+                <span className="text-[hsl(var(--fg-tertiary))] font-normal">({filterCounts.all})</span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="unread">
+              {t("activity.filter.unread", "خوانده‌نشده")}
+              {filterCounts.unread > 0 && (
+                <span className="text-[hsl(var(--fg-tertiary))] font-normal">({filterCounts.unread})</span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="invoices">
+              {t("activity.filter.invoices", "فاکتورها")}
+              {filterCounts.invoices > 0 && (
+                <span className="text-[hsl(var(--fg-tertiary))] font-normal">({filterCounts.invoices})</span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="payments">
+              {t("activity.filter.payments", "پرداخت‌ها")}
+              {filterCounts.payments > 0 && (
+                <span className="text-[hsl(var(--fg-tertiary))] font-normal">({filterCounts.payments})</span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="customers">
+              {t("activity.filter.customers", "مشتریان")}
+              {filterCounts.customers > 0 && (
+                <span className="text-[hsl(var(--fg-tertiary))] font-normal">({filterCounts.customers})</span>
+              )}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
 
       {/* ─── Body ───────────────────────────────────────────── */}
-      <div className="flex-1 min-h-[400px] md:min-h-[500px] lg:min-h-[600px] rounded-xl md:rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] overflow-hidden">
+      <div className="flex-1 min-h-[400px] md:min-h-[500px] lg:min-h-[600px] rounded-xl md:rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] overflow-hidden">
         {isLoading && allGroups.length === 0 ? (
           <ActivitySkeleton />
         ) : filteredGroups.length === 0 ? (
           <div className="p-4 md:p-6 lg:p-8">
             <ActivityEmptyState
-              title={search ? t("activity.empty.search") : t("activity.empty.title")}
+              title={search ? t("activity.empty.search", "نتیجه‌ای یافت نشد") : t("activity.empty.title", "فعالیتی یافت نشد")}
               subtitle={
                 search
-                  ? t("activity.empty.searchHint", { query: search })
+                  ? t("activity.empty.searchHint", "برای «{{query}}» نتیجه‌ای پیدا نشد", { query: search })
                   : filter === "unread"
-                    ? t("activity.empty.unread")
-                    : t("activity.empty.all")
+                    ? t("activity.empty.unread", "هیچ فعالیت خوانده‌نشده‌ای وجود ندارد")
+                    : t("activity.empty.all", "هنوز فعالیتی ثبت نشده است")
               }
             />
           </div>
         ) : (
-          <VirtualizedActivityList
+          <ActivityFeedList
             groups={filteredGroups}
-            isLoading={isLoading}
             hasNextPage={hasNextPage}
-            fetchNextPage={fetchNextPage}
             isFetchingNextPage={isFetchingNextPage}
+            fetchNextPage={fetchNextPage}
             onActivityClick={handleActivityClick}
-            estimateSize={160}
-            onLoadMore={handleLoadMore}
           />
         )}
       </div>

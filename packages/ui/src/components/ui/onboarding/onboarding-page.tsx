@@ -54,22 +54,22 @@ const WelcomeStep = memo(function WelcomeStep({
 }) {
   return (
     <div className="mx-auto max-w-xl text-center">
-      <div className="mb-6 flex justify-center">
-        <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-[var(--gradient-brand)] shadow-lg shadow-[hsl(var(--color-primary)/0.2)]">
-          <span className="text-4xl font-bold text-white">ح</span>
+      <div className="mb-4 flex justify-center sm:mb-6">
+        <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-[var(--gradient-brand)] shadow-lg shadow-[hsl(var(--color-primary)/0.2)] sm:h-20 sm:w-20">
+          <span className="text-2xl font-bold text-white sm:text-3xl">ح</span>
         </div>
       </div>
-      <h2 className="mb-4 text-4xl font-bold text-[hsl(var(--fg-primary))]">
+      <h2 className="mb-3 text-2xl font-bold text-[hsl(var(--fg-primary))] sm:mb-4 sm:text-3xl">
         {t("onboarding.welcome", "به حسابچه خوش آمدید")}
       </h2>
-      <p className="mb-10 text-lg text-[hsl(var(--fg-secondary))]">
+      <p className="mb-6 text-base text-[hsl(var(--fg-secondary))] sm:mb-8 sm:text-lg">
         {t("onboarding.welcomeDesc", "در چند مرحله کوتاه حسابچه را برای کسب و کار شما آماده می‌کنیم.")}
       </p>
       <button
         type="button"
         onClick={onStart}
         className={cn(
-          "inline-flex items-center gap-2 rounded-full px-8 py-3.5",
+          "inline-flex items-center gap-2 rounded-full px-6 py-3 sm:px-8 sm:py-3.5",
           "text-base font-bold text-white",
           "bg-[var(--gradient-brand)]",
           "shadow-md shadow-[hsl(var(--color-primary)/0.15)]",
@@ -110,27 +110,27 @@ const BusinessTypeStep = memo(function BusinessTypeStep({
 
   return (
     <div className="mx-auto w-full max-w-3xl">
-      <h2 className="mb-8 text-center text-2xl font-bold text-[hsl(var(--fg-primary))]">
+      <h2 className="mb-5 text-center text-xl font-bold text-[hsl(var(--fg-primary))] sm:mb-8 sm:text-2xl">
         {t("onboarding.businessType", "نوع کسب و کار")}
       </h2>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         {businessTypes.map((item) => (
           <button
             key={item.id}
             type="button"
             onClick={() => onSetBusinessType(item.id)}
             className={cn(
-              "rounded-2xl border-2 p-6 transition-all duration-200",
+              "rounded-2xl border-2 p-4 transition-all duration-200 sm:p-6",
               "motion-reduce:transition-none",
               businessType === item.id ? selectedClasses : unselectedClasses
             )}
           >
-            <item.icon className="mb-4 size-10 text-[hsl(var(--color-primary))]" aria-hidden="true" />
-            <h3 className="font-semibold text-[hsl(var(--fg-primary))]">{t(item.labelKey, item.id)}</h3>
+            <item.icon className="mb-2 size-7 text-[hsl(var(--color-primary))] sm:mb-4 sm:size-10" aria-hidden="true" />
+            <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))] sm:text-base">{t(item.labelKey, item.id)}</h3>
           </button>
         ))}
       </div>
-      <div className="mt-8 flex justify-between">
+      <div className="mt-6 flex justify-between sm:mt-8">
         <button
           type="button"
           onClick={onBack}
@@ -189,31 +189,31 @@ const StoreSizeStep = memo(function StoreSizeStep({
 
   return (
     <div className="mx-auto w-full max-w-3xl">
-      <h2 className="mb-8 text-center text-2xl font-bold text-[hsl(var(--fg-primary))]">
+      <h2 className="mb-5 text-center text-xl font-bold text-[hsl(var(--fg-primary))] sm:mb-8 sm:text-2xl">
         {t("onboarding.storeSize", "اندازه کسب و کار")}
       </h2>
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         {storeSizes.map((item) => (
           <button
             key={item.id}
             type="button"
             onClick={() => onSetStoreSize(item.id)}
             className={cn(
-              "flex w-full items-center gap-4 rounded-2xl border-2 p-5 transition-all duration-200 text-start",
+              "flex w-full items-center gap-3 rounded-2xl border-2 p-3.5 transition-all duration-200 text-start sm:gap-4 sm:p-5",
               "motion-reduce:transition-none",
               storeSize === item.id ? selectedClasses : unselectedClasses
             )}
           >
-            <item.icon className="size-10 text-[hsl(var(--color-primary))]" aria-hidden="true" />
-            <div>
-              <h3 className="font-semibold text-[hsl(var(--fg-primary))]">{t(item.labelKey, item.id)}</h3>
-              <p className="text-sm text-[hsl(var(--fg-secondary))]">{t(item.descKey, "")}</p>
+            <item.icon className="size-8 shrink-0 text-[hsl(var(--color-primary))] sm:size-10" aria-hidden="true" />
+            <div className="min-w-0">
+              <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))] sm:text-base">{t(item.labelKey, item.id)}</h3>
+              <p className="text-xs text-[hsl(var(--fg-secondary))] sm:text-sm">{t(item.descKey, "")}</p>
             </div>
-            {storeSize === item.id && <Check className="ms-auto size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />}
+            {storeSize === item.id && <Check className="ms-auto size-5 shrink-0 text-[hsl(var(--color-primary))]" aria-hidden="true" />}
           </button>
         ))}
       </div>
-      <div className="mt-8 flex justify-between">
+      <div className="mt-6 flex justify-between sm:mt-8">
         <button
           type="button"
           onClick={onBack}
@@ -273,27 +273,27 @@ const CurrencyStep = memo(function CurrencyStep({
 
   return (
     <div className="mx-auto w-full max-w-3xl">
-      <h2 className="mb-8 text-center text-2xl font-bold text-[hsl(var(--fg-primary))]">
+      <h2 className="mb-5 text-center text-xl font-bold text-[hsl(var(--fg-primary))] sm:mb-8 sm:text-2xl">
         {t("onboarding.defaultCurrency", "ارز پیشفرض")}
       </h2>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         {currencies.map((cur) => (
           <button
             key={cur.code}
             type="button"
             onClick={() => onSetCurrency(cur.code)}
             className={cn(
-              "rounded-2xl border-2 p-5 transition-all duration-200",
+              "rounded-2xl border-2 p-3.5 transition-all duration-200 sm:p-5",
               "motion-reduce:transition-none",
               defaultCurrency === cur.code ? selectedClasses : unselectedClasses
             )}
           >
-            <div className="mb-2 text-3xl">{cur.flag}</div>
-            <div className="font-medium text-[hsl(var(--fg-primary))]">{t(cur.labelKey, cur.code)}</div>
+            <div className="mb-1.5 text-2xl sm:mb-2 sm:text-3xl">{cur.flag}</div>
+            <div className="text-sm font-medium text-[hsl(var(--fg-primary))] sm:text-base">{t(cur.labelKey, cur.code)}</div>
           </button>
         ))}
       </div>
-      <div className="mt-8 flex justify-between">
+      <div className="mt-6 flex justify-between sm:mt-8">
         <button
           type="button"
           onClick={onBack}
@@ -346,19 +346,19 @@ const CompleteStep = memo(function CompleteStep({
 }) {
   return (
     <div className="mx-auto max-w-xl text-center">
-      <div className="mb-6 flex justify-center">
-        <div className="flex h-24 w-24 items-center justify-center rounded-full bg-[hsl(var(--color-success)/0.1)]">
-          <Check className="size-12 text-[hsl(var(--color-success))]" aria-hidden="true" />
+      <div className="mb-4 flex justify-center sm:mb-6">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[hsl(var(--color-success)/0.1)] sm:h-20 sm:w-20">
+          <Check className="size-8 text-[hsl(var(--color-success))] sm:size-10" aria-hidden="true" />
         </div>
       </div>
-      <h2 className="mb-4 text-3xl font-bold text-[hsl(var(--fg-primary))]">
+      <h2 className="mb-3 text-2xl font-bold text-[hsl(var(--fg-primary))] sm:mb-4 sm:text-3xl">
         {t("onboarding.ready", "همه چیز آماده است")}
       </h2>
-      <p className="mb-8 text-[hsl(var(--fg-secondary))]">
+      <p className="mb-5 text-sm text-[hsl(var(--fg-secondary))] sm:mb-8 sm:text-base">
         {t("onboarding.readyDesc", "حسابچه با موفقیت پیکربندی شد.")}
       </p>
-      <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] mb-8">
-        <div className="p-6 space-y-4 text-start">
+      <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] mb-5 sm:mb-8">
+        <div className="p-4 space-y-3 text-start sm:p-6 sm:space-y-4">
           <Row label={t("onboarding.businessType", "نوع کسب و کار")} value={businessTypeLabel} />
           <Row label={t("onboarding.size", "اندازه")} value={storeSizeLabel} />
           <Row label={t("onboarding.currency", "ارز")} value={currencyLabel} />
@@ -368,7 +368,7 @@ const CompleteStep = memo(function CompleteStep({
         type="button"
         onClick={onComplete}
         className={cn(
-          "w-full inline-flex items-center justify-center gap-2 rounded-full px-8 py-3.5",
+          "w-full inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 sm:px-8 sm:py-3.5",
           "text-base font-bold text-white",
           "bg-[var(--gradient-brand)]",
           "shadow-md shadow-[hsl(var(--color-primary)/0.15)]",
@@ -410,14 +410,14 @@ export const OnboardingPage = memo(function OnboardingPage({
   const handleNext3 = useCallback(() => onSetStep(4), [onSetStep]);
 
   return (
-    <div className="min-h-screen bg-[hsl(var(--surface-base))]">
-      <div className="mx-auto flex max-w-5xl flex-col px-4 py-8">
-        <div className="mb-10 flex items-center justify-center gap-2">
+    <div className="min-h-[100dvh] bg-[hsl(var(--surface-base))]">
+      <div className="mx-auto flex max-w-5xl flex-col px-4 py-5 sm:py-8">
+        <div className="mb-6 flex items-center justify-center gap-1.5 sm:mb-10 sm:gap-2">
           {[1, 2, 3, 4].map((s) => (
             <div
               key={s}
               className={cn(
-                "h-2 w-20 rounded-full transition-all duration-300",
+                "h-1.5 w-12 rounded-full transition-all duration-300 sm:h-2 sm:w-20",
                 s <= step ? "bg-[hsl(var(--color-primary))]" : "bg-[hsl(var(--surface-muted))]"
               )}
             />

@@ -240,7 +240,10 @@ export class ProjectService {
 
     if (error || !task) throw new DatabaseError('Failed to create task', error)
 
-    // ✅ Invalidate cache
+    // ✅ افزودن وظیفه‌ی جدید مخرج نسبت انجام‌شده/کل را تغییر می‌دهد،
+    // پس progress پروژه باید دوباره محاسبه شود (قبلاً فقط در
+    // updateTask/deleteTask انجام می‌شد و این یک باگ بود)
+    await this.recalculateProjectProgress(userId, data.projectId)
     await this.invalidateTaskCache(userId, data.projectId)
 
     return task

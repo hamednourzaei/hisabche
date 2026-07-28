@@ -2,8 +2,10 @@
 "use client";
 
 import { memo, useState, useEffect, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import { Shield, Search, Download, RefreshCw, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { JalaliDatePicker } from "../jalali-datepicker";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    AuditView v2 — Memoized · Performance Optimized
@@ -70,9 +72,13 @@ const getActionLabel = (action: string, t: (key: string, fallback?: string) => s
   return map[action] || action;
 };
 
-function formatDate(date: string): string {
+// ✅ locale-aware: fa-AF/fa-IR render via the Persian (solar-Hijri) calendar
+// with locale-appropriate digits/conventions, "en" renders plain Gregorian —
+// previously this was hardcoded to "fa-AF" regardless of the active UI
+// language.
+function formatDate(date: string, locale: string): string {
   try {
-    return new Date(date).toLocaleDateString("fa-AF", {
+    return new Date(date).toLocaleDateString(locale, {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -99,6 +105,8 @@ export const AuditView = memo(function AuditView({
   onRefresh,
   onExport,
 }: AuditViewProps) {
+  const { i18n } = useTranslation();
+  const locale = i18n.language || "fa-IR";
   const [searchTerm, setSearchTerm] = useState(filters.search || "");
 
   // Debounce search
@@ -156,7 +164,7 @@ export const AuditView = memo(function AuditView({
           className="border-b border-[hsl(var(--border-default))] hover:bg-[hsl(var(--surface-muted)/0.5)] transition-colors"
         >
           <td className="px-4 py-3 text-xs text-[hsl(var(--fg-secondary))] whitespace-nowrap">
-            {formatDate(log.created_at)}
+            {formatDate(log.created_at, locale)}
           </td>
           <td className="px-4 py-3">{actionBadge(log.action)}</td>
           <td className="px-4 py-3 text-xs text-[hsl(var(--fg-secondary))]">
@@ -175,7 +183,7 @@ export const AuditView = memo(function AuditView({
           </td>
         </tr>
       )),
-    [logs, actionBadge]
+    [logs, actionBadge, locale]
   );
 
   return (
@@ -188,7 +196,7 @@ export const AuditView = memo(function AuditView({
             {t("nav.history", "سابقه تغییرات")}
           </h1>
           <span className="text-xs text-[hsl(var(--fg-tertiary))] bg-[hsl(var(--surface-muted))] px-2 py-1 rounded-full">
-            {total.toLocaleString("fa-AF")}
+            {total.toLocaleString(locale)}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -266,23 +274,25 @@ export const AuditView = memo(function AuditView({
           ))}
         </select>
 
-        <input
-          type="date"
-          value={filters.startDate || ""}
-          onChange={(e) =>
-            onFiltersChange({ ...filters, startDate: e.target.value || undefined, page: 1 })
-          }
-          className="rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] px-3 py-2 text-xs"
-        />
-
-        <input
-          type="date"
-          value={filters.endDate || ""}
-          onChange={(e) =>
-            onFiltersChange({ ...filters, endDate: e.target.value || undefined, page: 1 })
-          }
-          className="rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] px-3 py-2 text-xs"
-        />
+        <div className="flex items-center gap-1.5">
+          <JalaliDatePicker
+            value={filters.startDate || ""}
+            onChange={(date) =>
+              onFiltersChange({ ...filters, startDate: date || undefined, page: 1 })
+            }
+            placeholder={t("audit.fromDate", "از تاریخ")}
+            className="w-36"
+          />
+          <span className="text-xs text-[hsl(var(--fg-tertiary))]">{t("audit.dateRangeSeparator", "تا")}</span>
+          <JalaliDatePicker
+            value={filters.endDate || ""}
+            onChange={(date) =>
+              onFiltersChange({ ...filters, endDate: date || undefined, page: 1 })
+            }
+            placeholder={t("audit.toDate", "تا تاریخ")}
+            className="w-36"
+          />
+        </div>
 
         {hasFilters && (
           <button
@@ -361,7 +371,7 @@ export const AuditView = memo(function AuditView({
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <span className="text-xs text-[hsl(var(--fg-tertiary))]">
             {t("audit.showing", "نمایش")} {(page - 1) * 30 + 1} - {Math.min(page * 30, total)}{" "}
-            {t("audit.of", "از")} {total.toLocaleString("fa-AF")}
+            {t("audit.of", "از")} {total.toLocaleString(locale)}
           </span>
           <div className="flex items-center gap-2">
             <button

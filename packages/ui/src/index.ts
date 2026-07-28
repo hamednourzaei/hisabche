@@ -177,27 +177,13 @@ export {
 export type SupportedLanguage = 'fa-AF' | 'fa-IR'
 
 // ─── ✅ Activity Components ──────────────────────────────────────────────────
-// نکته: CommandPalette و SyncStatus قبلاً بالاتر (Navigation/Data Display) export شدن؛
-// نسخه‌ی activity این کامپوننت‌ها با نام‌های جدا export می‌شه تا تداخل نداشته باشن.
+// (Consolidated — see packages/ui/src/components/ui/activity/index.ts for
+// what's left after removing ~14 dead files that had no consumers anywhere.)
 export {
-  ActivityCenter,
-  ActivityItem,
-  ActivityTimeline,
-  EntityActivityCard,
-  ActivityHeader,
-  ActivityFooter,
+  ActivityGroupCard,
+  ActivityFeedList,
   ActivitySkeleton,
   ActivityEmptyState,
-  ActivityToolbar,
-  VirtualizedActivityList,
-  ActivityMotion,
-  ActivityPreview,
-  CommandPalette as ActivityCommandPalette,
-  KeyboardNavigator,
-  AccessibleCard,
-  SyncStatus as ActivitySyncStatus,
-  RealtimeStatus,
-  // StatusBadge, // TODO: این کامپوننت هنوز در ./components/ui/activity export نشده — اول اونجا اضافه‌ش کن
 } from './components/ui/activity'
 export type {
   ActivityItemDto,

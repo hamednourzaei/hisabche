@@ -6,8 +6,22 @@ import * as SwitchPrimitive from "@radix-ui/react-switch";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   Switch v3 — Hisabche Design Language
-   ✅ RTL-ready · Fixed thumb movement · Touch-friendly
+   Switch v4 — Hisabche Design Language
+   ✅ RTL-ready · Responsive · Touch-friendly
+
+   RTL fix note: relying purely on Tailwind's logical `start-*`/`end-*`
+   inset utilities (v3) turned out to be fragile in practice — the thumb
+   is positioned with `position: absolute`, so its horizontal offset must
+   be an exact pixel/rem value, and mixing that with `data-[state=checked]`
+   variants made the intended direction hard to verify and easy to regress.
+   The robust, easy-to-reason-about approach (same one shadcn/ui ships) is
+   a `transform: translateX()` on the thumb: it starts at the track's
+   start edge (`start-0.5`, RTL-safe) and slides by a fixed physical
+   distance when checked. Because `translate-x-*` is a *physical* (not
+   logical) utility, we explicitly flip its sign for RTL with the `rtl:`
+   variant — same convention already used sitewide (see
+   `ChevronLeft ... rtl:rotate-180` in settings-page.tsx). Net effect:
+   LTR checked → thumb slides right. RTL checked → thumb slides left.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 interface SwitchProps
@@ -24,10 +38,11 @@ function Switch({ className, size = "default", ...props }: SwitchProps) {
         "peer relative inline-flex shrink-0 items-center",
         "rounded-full",
         "transition-colors duration-200",
-        "outline-none",
-        // Sizes
-        size === "default" && "h-6 w-11",      // ✅ 24px x 44px
-        size === "sm" && "h-5 w-9",            // ✅ 20px x 36px
+        "outline-none cursor-pointer",
+        // Sizes (fixed physical size — a toggle shouldn't scale with
+        // viewport width, it just needs to render correctly at every width)
+        size === "default" && "h-6 w-11",      // 24px x 44px
+        size === "sm" && "h-5 w-9",            // 20px x 36px
         // Colors
         "border-2 border-transparent",
         "bg-[hsl(var(--surface-muted))]",
@@ -47,24 +62,22 @@ function Switch({ className, size = "default", ...props }: SwitchProps) {
     >
       <SwitchPrimitive.Thumb
         className={cn(
-          "block rounded-full",
+          "pointer-events-none block rounded-full",
           "bg-white",
           "shadow-sm",
-          "transition-all duration-200",
+          "transition-transform duration-200",
           "motion-reduce:transition-none",
-          // ✅ Position absolute برای کنترل دقیق موقعیت
-          "absolute top-1/2 -translate-y-1/2",
+          "absolute top-1/2 start-0.5 -translate-y-1/2",
           // Sizes
           size === "default" && "h-5 w-5",
           size === "sm" && "h-4 w-4",
-          // ✅ FIX: "inset-inline-start-*" اصلاً یک کلاس معتبر Tailwind
-          // نیست (کامپایل نمی‌شود، هیچ CSS تولید نمی‌کند) — همین باعث
-          // می‌شد thumb هیچ موقعیت افقی نگیرد و به یک دایره‌ی ثابت وسط
-          // تبدیل شود. نام درست utility منطقی (RTL-safe) خودِ "start"/"end"
-          // است که Tailwind به inset-inline-start/end ترجمه می‌کند.
-          "start-0.5",
-          "data-[state=checked]:start-[calc(100%-1.25rem-0.125rem)]",
-          size === "sm" && "data-[state=checked]:start-[calc(100%-1rem-0.125rem)]",
+          // LTR: slide right on check. RTL: slide left on check.
+          size === "default" && "data-[state=checked]:translate-x-5 rtl:data-[state=checked]:-translate-x-5",
+          size === "sm" && "data-[state=checked]:translate-x-4 rtl:data-[state=checked]:-translate-x-4",
+          // -translate-y-1/2 must stay applied together with translate-x —
+          // Tailwind's translate utilities share the same CSS custom
+          // properties, so both axes always compose correctly regardless
+          // of which one was set last.
         )}
       />
     </SwitchPrimitive.Root>

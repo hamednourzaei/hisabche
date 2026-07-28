@@ -3,7 +3,7 @@
 
 import { useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
-import { useProject, useUpdateProject, useProjectTasks, useCreateProjectTask, useUpdateProjectTask, useDeleteProjectTask } from "@hisabche/api";
+import { useProject, useUpdateProject, useProjectTasks, useCreateProjectTask, useUpdateProjectTask, useDeleteProjectTask, useEmployees } from "@hisabche/api";
 import { ProjectDetailView } from "../project-detail-view";
 import { useCallback, memo } from "react";
 
@@ -33,6 +33,7 @@ export const ProjectDetailContainer = memo(function ProjectDetailContainer({
 
   const { data: project, isLoading } = useProject(id);
   const { data: tasks, isLoading: tasksLoading } = useProjectTasks(id);
+  const { data: employees } = useEmployees();
   const updateProject = useUpdateProject();
   const createTask = useCreateProjectTask();
   const updateTask = useUpdateProjectTask();
@@ -68,6 +69,7 @@ export const ProjectDetailContainer = memo(function ProjectDetailContainer({
       isLoading={isLoading}
       tasks={tasks ?? []}
       tasksLoading={tasksLoading}
+      employees={employees ?? []}
       onUpdateProject={handleUpdateProject}
       onCreateTask={handleCreateTask}
       onUpdateTask={handleUpdateTask}

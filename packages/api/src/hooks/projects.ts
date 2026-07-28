@@ -98,7 +98,13 @@ export function useCreateProjectTask() {
       const { data } = await apiClient.post(`/projects/${projectId}/tasks`, values);
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: projectTaskKeys.all }),
+    // ✅ FIX: علاوه بر لیست وظایف، کش پروژه (که فیلد progress در آن است)
+    // نیز invalidate می‌شود تا درصد پیشرفت پس از افزودن/تغییر/حذف وظیفه
+    // بدون رفرش دستی صفحه به‌روز بماند.
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: projectTaskKeys.all });
+      qc.invalidateQueries({ queryKey: projectKeys.all });
+    },
   });
 }
 
@@ -109,7 +115,10 @@ export function useUpdateProjectTask() {
       const { data } = await apiClient.patch(`/tasks/${id}`, values);
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: projectTaskKeys.all }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: projectTaskKeys.all });
+      qc.invalidateQueries({ queryKey: projectKeys.all });
+    },
   });
 }
 
@@ -119,7 +128,10 @@ export function useDeleteProjectTask() {
     mutationFn: async (id: string) => {
       await apiClient.delete(`/tasks/${id}`);
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: projectTaskKeys.all }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: projectTaskKeys.all });
+      qc.invalidateQueries({ queryKey: projectKeys.all });
+    },
   });
 }
 

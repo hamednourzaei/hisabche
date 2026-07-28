@@ -61,11 +61,11 @@ const AccountSection = memo(function AccountSection() {
   return (
     <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
       <div className="p-6 space-y-5">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[hsl(var(--color-primary)/0.12)] text-lg font-bold text-[hsl(var(--color-primary))] shrink-0">
             {user?.fullName?.charAt(0) || "ح"}
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <h2 className="truncate font-semibold text-[hsl(var(--fg-primary))]">
               {user?.fullName || t("common.noName", "کاربر")}
             </h2>
@@ -169,8 +169,8 @@ const BackupSection = memo(function BackupSection() {
           </h2>
         </div>
 
-        <div className="flex items-center justify-between rounded-xl border border-[hsl(var(--border-default))] p-4">
-          <div className="text-start">
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-[hsl(var(--border-default))] p-4">
+          <div className="min-w-0 text-start">
             <p className="font-medium text-[hsl(var(--fg-primary))]">
               {t("settings.autoBackup", "بکاپ خودکار")}
             </p>
@@ -178,7 +178,7 @@ const BackupSection = memo(function BackupSection() {
               {t("settings.autoBackupDesc", "هر ۲۴ ساعت بکاپ گرفته شود")}
             </p>
           </div>
-          <Switch checked={autoBackupEnabled} onCheckedChange={setAutoBackup} />
+          <Switch checked={autoBackupEnabled} onCheckedChange={setAutoBackup} className="shrink-0" />
         </div>
 
         <div className="grid gap-3 sm:grid-cols-3">
