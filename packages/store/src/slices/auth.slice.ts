@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 import CryptoJS from 'crypto-js'
 import { registerTokenGetter } from '@hisabche/api'
 import { setOnUnauthorized } from '@hisabche/api'
+import { useWorkspaceStore } from './workspace.slice'
 
 // ============================================
 // ENCRYPTION
@@ -251,6 +252,13 @@ export const useAuthStore = create<AuthState>()(
           console.error('LOGOUT ERROR:', err)
         } finally {
           clearAuthStorage()
+
+          // ✅ FIX: workspaceId قبلاً در localStorage می‌ماند و بعد از
+          // لاگین با حساب دیگر در همان مرورگر، هنوز به workspace کاربر
+          // قبلی اشاره می‌کرد (باعث خطای "Access denied" هنگام دعوت
+          // عضو جدید می‌شد).
+          useWorkspaceStore.persist.clearStorage()
+          useWorkspaceStore.setState({ workspaceId: null, workspaceName: '', members: [], invites: [], currentUserRole: 'member' })
 
           set({
             user: null,

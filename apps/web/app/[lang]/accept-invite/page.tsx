@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback, useMemo, memo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { apiClient } from "@hisabche/api";
-import { supabaseClient } from "@hisabche/auth";
+import { useAuthStore } from "@hisabche/store";
 import { CheckCircle, XCircle, Loader2, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -116,10 +116,14 @@ const AcceptInvitePage = memo(function AcceptInvitePage() {
     const signal = controller.signal;
 
     try {
-      // ✅ Check session
-      const { data: sessionData } = await supabaseClient.auth.getSession();
+      // ✅ FIX: قبلاً سشن را از سرویس Supabase مستقیم چک می‌کرد، اما
+      // لاگین واقعی برنامه (useAuthStore) از بک‌اند سفارشی خودمان است
+      // و هرگز سشن Supabase نمی‌سازد — یعنی این چک همیشه false بود و
+      // بعد از لاگین موفق دوباره کاربر را به /login برمی‌گرداند
+      // (حلقه‌ی بی‌نهایت). حالا از همان store واقعی auth چک می‌شود.
+      const isAuthenticated = useAuthStore.getState().isAuthenticated;
 
-      if (!sessionData.session) {
+      if (!isAuthenticated) {
         // ✅ Redirect to login with return URL
         const redirectUrl = `/login?redirect=${encodeURIComponent(
           `/accept-invite?token=${token}`
