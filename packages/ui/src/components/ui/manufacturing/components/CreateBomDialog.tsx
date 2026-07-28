@@ -4,6 +4,7 @@
 import { memo, useState, useCallback, useEffect } from "react";
 import { X, Loader2, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { MoneyInput } from "../../money-input";
 
 export interface CreateBomItemInput {
   rawMaterialId: string;
@@ -194,12 +195,9 @@ export const CreateBomDialog = memo(function CreateBomDialog({
                     placeholder={t("manufacturing.boms.quantity", "مقدار")}
                     className="w-16 md:w-20 h-9 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-2 text-xs text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
                   />
-                  <input
-                    type="number"
-                    min="0"
-                    step="any"
+                  <MoneyInput
                     value={item.unitCost}
-                    onChange={(e) => handleItemChange(item.key, "unitCost", e.target.value)}
+                    onChange={(raw) => handleItemChange(item.key, "unitCost", raw)}
                     placeholder={t("manufacturing.boms.unitCost", "بهای واحد")}
                     className="w-20 md:w-24 h-9 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-2 text-xs text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
                   />

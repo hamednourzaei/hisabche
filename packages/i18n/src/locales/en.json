@@ -657,7 +657,9 @@
   "calendar": {
     "system": "Gregorian",
     "months": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
-    "weekdaysShort": ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
+    "weekdaysShort": ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"],
+    "prev": "Previous",
+    "next": "Next"
   },
   "auth": {
     "signIn": "Sign In",

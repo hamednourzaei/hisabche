@@ -11,6 +11,7 @@ import { exportToCSV } from "../../../lib/export";
 import { useSortFilter } from "../../../hooks/use-sort-filter";
 import { JalaliDatePicker } from "../../ui/jalali-datepicker";
 import { PhoneInput } from "../../ui/phone-input";
+import { MoneyInput } from "../../ui/money-input";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    HumanResourcesView v10 — Memoized · Performance Optimized
@@ -185,6 +186,7 @@ export const HumanResourcesView = memo(function HumanResourcesView({
 
   const { field: hireDateField } = useController({ name: "hireDate", control });
   const { field: dateOfBirthField } = useController({ name: "dateOfBirth", control });
+  const { field: salaryField } = useController({ name: "salary", control });
 
   const onSubmit = useCallback(
     async (data: EmployeeForm) => {
@@ -317,7 +319,19 @@ export const HumanResourcesView = memo(function HumanResourcesView({
               )}
             </div>
 
-            <FormField name="salary" type="number" label={t("hr.salary", "معاش")} register={register} errors={errors} />
+            <div>
+              <MoneyInput
+                value={salaryField.value ?? ""}
+                onChange={salaryField.onChange}
+                placeholder={t("hr.salary", "معاش")}
+                className={cn(inputClass, "w-full h-auto", errors.salary && errorClass)}
+              />
+              {errors.salary && (
+                <p className="text-xs text-[hsl(var(--color-destructive))] mt-1 px-1">
+                  {errors.salary.message}
+                </p>
+              )}
+            </div>
           </div>
 
           <div className="flex gap-3">

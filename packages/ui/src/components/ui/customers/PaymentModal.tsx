@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next"
 import { z } from "zod"
 import { useCreateTransaction } from "@hisabche/api"
 import { Button } from "../button"
-import { Input } from "../input"
+import { MoneyInput } from "../money-input"
 import { SaveIndicator } from "../save-indicator"
 import {
   Dialog,
@@ -205,11 +205,9 @@ export function PaymentModal({ open, onClose, onPaid, customer, openInvoices }: 
 
           {openInvoices.length > 0 && (
             <>
-              <Input
-                type="number"
-                inputMode="decimal"
+              <MoneyInput
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(raw) => setAmount(raw)}
                 placeholder={`${t("customers.form.default")}: ${fmt(suggested)} AFN`}
                 label={t("customers.form.paymentAmount")}
                 startIcon={<DollarSign className="size-4" aria-hidden />}

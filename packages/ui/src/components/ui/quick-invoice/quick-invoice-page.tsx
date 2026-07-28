@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { ProductPicker } from "../product-picker";
 import { CustomerPicker } from "../customer-picker";
+import { MoneyInput } from "../money-input";
 import { memo, useMemo, useState } from "react";
 import {
   InvoiceDocument,
@@ -145,12 +146,10 @@ const ItemRow = memo(function ItemRow({
           className="w-16 rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] px-2 py-1.5 text-sm text-center text-[hsl(var(--fg-primary))] focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)]"
         />
         <span className="text-xs text-[hsl(var(--fg-tertiary))]">×</span>
-        <input
-          type="number"
-          min={0}
+        <MoneyInput
           value={item.price}
-          onChange={(e) => onUpdatePrice(item.key, e.target.value)}
-          className="flex-1 rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] px-2 py-1.5 text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)]"
+          onChange={(raw) => onUpdatePrice(item.key, raw)}
+          className="flex-1 h-auto rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] px-2 py-1.5 text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)]"
         />
         <span className="shrink-0 text-sm font-bold tabular-nums text-[hsl(var(--color-primary))]">
           {lineTotal.toLocaleString()}
@@ -395,13 +394,12 @@ const PriceStep = memo(function PriceStep({
         {paymentType === "credit" && (
           <div className="relative">
             <CreditCard className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))] pointer-events-none" aria-hidden="true" />
-            <input
-              type="number"
+            <MoneyInput
               value={paidNow}
-              onChange={(e) => onPaidNowChange(e.target.value)}
+              onChange={(raw) => onPaidNowChange(raw)}
               placeholder={`${t("payment.record", "پیش‌پرداخت")} (کل: ${total.toLocaleString()} AFN)`}
               className={cn(
-                "w-full rounded-xl ps-9 pe-3 py-3 text-sm",
+                "w-full h-auto rounded-xl ps-9 pe-3 py-3 text-sm",
                 "border border-[hsl(var(--border-default))]",
                 "bg-[hsl(var(--surface-base))]",
                 "text-[hsl(var(--fg-primary))]",

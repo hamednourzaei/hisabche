@@ -14,6 +14,7 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
+import { MoneyInput } from "../money-input";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ProductDetailPage v3 — Hisabche Design Language
@@ -307,12 +308,10 @@ export function ProductDetailPage({
                     <label className="block text-sm font-medium text-[hsl(var(--fg-primary))] mb-1.5">
                       {t(`warehouse.${field}`, field === "sellPrice" ? "قیمت فروش" : "قیمت خرید")} (AFN)
                     </label>
-                    <input
-                      type="number"
-                      step="0.01"
+                    <MoneyInput
                       value={editValues[field]}
-                      onChange={(e) => handleEditChange(field, parseFloat(e.target.value) || 0)}
-                      className={cn(inputBase, errors[field] && "border-[hsl(var(--color-destructive))]")}
+                      onChange={(raw) => handleEditChange(field, parseFloat(raw) || 0)}
+                      className={cn(inputBase, "h-auto", errors[field] && "border-[hsl(var(--color-destructive))]")}
                     />
                     {errors[field] && (
                       <p className="mt-1 text-sm text-[hsl(var(--color-destructive))]" role="alert">

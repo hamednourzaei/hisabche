@@ -6,6 +6,7 @@ import { ArrowRight, Save, User, Mail, MapPin, Briefcase, Calendar, Banknote, Cr
 import { useState, useEffect, useCallback, useMemo, memo } from "react";
 import { JalaliDatePicker } from "../../ui/jalali-datepicker";
 import { PhoneInput } from "../../ui/phone-input";
+import { MoneyInput } from "../../ui/money-input";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    EmployeeDetailView v2 — Memoized · Performance Optimized
@@ -184,6 +185,13 @@ const Field = memo(function Field({
             onChange={(val) => setForm?.({ ...form, phone: val })}
             placeholder={label}
             defaultCountry="+93"
+          />
+        ) : isEditable && field === "salary" ? (
+          <MoneyInput
+            value={form?.salary ?? ""}
+            onChange={(raw) => setForm?.({ ...form, salary: Number(raw) || 0 })}
+            placeholder={label}
+            className="w-full bg-transparent border-b border-[hsl(var(--border-default))] rounded-none px-0 py-1 h-auto text-sm font-medium focus:outline-none focus:ring-0 focus:border-[hsl(var(--color-primary))]"
           />
         ) : isEditable && field ? (
           <input

@@ -14,6 +14,7 @@ import {
 } from "../dialog";
 import { ProductPicker } from "../product-picker";
 import { PhoneInput } from "../phone-input";
+import { MoneyInput } from "../money-input";
 import { useSyncStore, useBackupStore } from "@hisabche/store";
 import { cn } from "@/lib/utils";
 import {
@@ -272,13 +273,11 @@ export function AddCustomerModal({
                     className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))] pointer-events-none"
                     aria-hidden="true"
                   />
-                  <input
-                    type="number"
-                    step="0.01"
+                  <MoneyInput
                     value={unitPrice}
-                    onChange={(e) => setUnitPrice(e.target.value)}
+                    onChange={(raw) => setUnitPrice(raw)}
                     placeholder={t("customers.form.unitPrice", "قیمت واحد")}
-                    className={inputBase}
+                    className={cn(inputBase, "h-auto")}
                   />
                 </div>
                 <div className="relative">

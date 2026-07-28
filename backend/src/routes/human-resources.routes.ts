@@ -111,8 +111,8 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
   }, async (request: FastifyRequest, reply: FastifyReply) => {
     try {
       const { departmentId } = request.query as { departmentId?: string }
-      const employees = await humanResourcesService.listEmployees(request.userId, departmentId)
-      return reply.send(employees)
+      const employees = await humanResourcesService.listEmployees(request.userId, departmentId) as unknown[]
+      return reply.send({ employees, total: employees.length })
     } catch (err) {
       fastify.log.error(err)
       return reply.code(500).send({ error: 'Failed to fetch employees' })

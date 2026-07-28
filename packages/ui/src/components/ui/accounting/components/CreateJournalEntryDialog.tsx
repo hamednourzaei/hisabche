@@ -5,6 +5,7 @@ import { memo, useState, useCallback, useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { X, Loader2, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { MoneyInput } from "../../money-input";
 import type { Account } from "@hisabche/api";
 
 interface JournalLineInput {
@@ -209,22 +210,16 @@ export const CreateJournalEntryDialog = memo(function CreateJournalEntryDialog({
                       </option>
                     ))}
                   </select>
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
+                  <MoneyInput
                     placeholder={t("accounting.journal.debit", "بدهکار")}
                     value={line.debit}
-                    onChange={(e) => handleLineChange(index, "debit", e.target.value)}
+                    onChange={(raw) => handleLineChange(index, "debit", raw)}
                     className="w-20 md:w-28 h-9 md:h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-2 text-[11px] md:text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
                   />
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
+                  <MoneyInput
                     placeholder={t("accounting.journal.credit", "بستانکار")}
                     value={line.credit}
-                    onChange={(e) => handleLineChange(index, "credit", e.target.value)}
+                    onChange={(raw) => handleLineChange(index, "credit", raw)}
                     className="w-20 md:w-28 h-9 md:h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-2 text-[11px] md:text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
                   />
                   <button

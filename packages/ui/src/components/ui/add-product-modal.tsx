@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { DollarSign, Package, AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "./button";
 import { Input } from "./input";
+import { MoneyInput } from "./money-input";
 import { Label } from "./label";
 import {
   Dialog,
@@ -290,17 +291,12 @@ export const AddProductModal = memo(function AddProductModal({
               </Label>
               <div className="relative">
                 <DollarSign className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))] pointer-events-none" />
-                <Input
+                <MoneyInput
                   id="product-buy-price"
                   value={formData.buyPrice}
-                  onChange={(e) =>
-                    handleChange("buyPrice", Number(e.target.value))
-                  }
-                  type="number"
-                  step="0.01"
-                  min={0}
+                  onChange={(raw) => handleChange("buyPrice", Number(raw))}
                   placeholder="0.00"
-                  className={inputClass}
+                  className={`${inputClass} ps-10`}
                   disabled={isPending}
                 />
               </div>
@@ -316,17 +312,12 @@ export const AddProductModal = memo(function AddProductModal({
               </Label>
               <div className="relative">
                 <DollarSign className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))] pointer-events-none" />
-                <Input
+                <MoneyInput
                   id="product-sell-price"
                   value={formData.sellPrice}
-                  onChange={(e) =>
-                    handleChange("sellPrice", Number(e.target.value))
-                  }
-                  type="number"
-                  step="0.01"
-                  min={0}
+                  onChange={(raw) => handleChange("sellPrice", Number(raw))}
                   placeholder="0.00"
-                  className={inputClass}
+                  className={`${inputClass} ps-10`}
                   disabled={isPending}
                 />
               </div>
