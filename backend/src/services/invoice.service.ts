@@ -231,9 +231,7 @@ export class InvoiceService {
 
   // ─── Get Invoice By ID ───
   async getById(id: string, userId: string) {
-    const { data, error } = await supabase
-      .from("invoices")
-      .select(`
+    const baseColumns = `
         id,
         invoice_number,
         type,
@@ -272,10 +270,32 @@ export class InvoiceService {
           total_price,
           notes
         )
-      `)
+      `;
+
+    // ✅ public_token is used to build a shareable/QR link that works
+    // without login (see invoice-public.routes.ts). Requested separately
+    // with a graceful fallback: if docs/invoice-public-share-migration.sql
+    // hasn't been run yet, the column doesn't exist (Postgres 42703) and
+    // we simply omit it — the frontend then falls back to the
+    // authenticated-route link for the QR code.
+    let data: any = null;
+    let error: any = null;
+
+    ({ data, error } = await supabase
+      .from("invoices")
+      .select(`public_token,\n${baseColumns}`)
       .eq("id", id)
       .eq("user_id", userId)
-      .single();
+      .single());
+
+    if (error && (error.code === "42703" || /public_token/.test(error.message || ""))) {
+      ({ data, error } = await supabase
+        .from("invoices")
+        .select(baseColumns)
+        .eq("id", id)
+        .eq("user_id", userId)
+        .single());
+    }
 
     if (error || !data) {
       throw new NotFoundError("Invoice");
@@ -285,6 +305,77 @@ export class InvoiceService {
       ...data,
       customerName: (data.customer as any)?.full_name || null,
       customer: (data.customer as any) || null,
+    };
+  }
+
+  // ─── Get Invoice for public (unauthenticated) read-only view ─────────────
+  // ⚠️ Looked up by `public_token` (unguessable uuid), NEVER by the
+  // sequential/primary `id` — that would let anyone enumerate every
+  // invoice by iterating ids. Only returns the fields InvoiceDocument
+  // needs; no user_id / internal fields are exposed.
+  //
+  // Graceful fallback: until docs/invoice-public-share-migration.sql is
+  // run, the `public_token` column doesn't exist yet. Postgres returns
+  // error code 42703 (undefined_column) in that case — we catch it and
+  // fall back to treating the given token as the raw invoice `id`
+  // instead, so the feature still works (just with a guessable link)
+  // until the migration lands.
+  async getPublicByToken(token: string) {
+    const columns = `
+      id,
+      public_token,
+      invoice_number,
+      date,
+      due_date,
+      subtotal,
+      discount_total,
+      tax_total,
+      total,
+      paid_amount,
+      currency,
+      status,
+      notes,
+      customer:customers!fk_invoices_customer ( full_name, phone, email, address ),
+      invoice_items ( id, product_name, quantity, unit_price, discount, total_price )
+    `;
+
+    let data: any = null;
+    let error: any = null;
+
+    ({ data, error } = await supabase
+      .from("invoices")
+      .select(columns)
+      .eq("public_token", token)
+      .single());
+
+    if (error && (error.code === "42703" || /public_token/.test(error.message || ""))) {
+      // Column not migrated yet — fall back to raw id lookup.
+      ({ data, error } = await supabase
+        .from("invoices")
+        .select(columns.replace("public_token,\n      ", ""))
+        .eq("id", token)
+        .single());
+    }
+
+    if (error || !data) {
+      throw new NotFoundError("Invoice");
+    }
+
+    return {
+      id: data.id,
+      invoiceNumber: data.invoice_number,
+      date: data.date,
+      dueDate: data.due_date,
+      subtotal: data.subtotal,
+      discountTotal: data.discount_total,
+      taxTotal: data.tax_total,
+      total: data.total,
+      paidAmount: data.paid_amount,
+      currency: data.currency,
+      status: data.status,
+      notes: data.notes,
+      customer: data.customer || null,
+      items: data.invoice_items || [],
     };
   }
 

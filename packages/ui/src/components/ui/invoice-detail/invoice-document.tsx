@@ -6,24 +6,24 @@ import { Barcode, Calendar, Mail, MapPin, Phone, User } from "lucide-react";
 // ✅ QR واقعی: لینک عمومی فاکتور رو به‌صورت عکس QR تولید می‌کنه که
 // کپی/دانلود/اشتراک‌گذاری (چون داخل خروجی PDF/PNG/چاپ همین سند قرار
 // می‌گیره) واقعاً کار می‌کنه — قبلاً فقط آیکون جای‌نگه‌دار بود.
-function InvoiceQRCode({ value }: { value: string }) {
+export function InvoiceQRCode({ value, size = 64 }: { value: string; size?: number }) {
   const [dataUrl, setDataUrl] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     import("qrcode").then((QRCode) => {
-      QRCode.toDataURL(value, { margin: 1, width: 88 }).then((url) => {
+      QRCode.toDataURL(value, { margin: 1, width: size * 2 }).then((url) => {
         if (!cancelled) setDataUrl(url);
       }).catch(() => {});
     });
     return () => {
       cancelled = true;
     };
-  }, [value]);
+  }, [value, size]);
 
   if (!dataUrl) return null;
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={dataUrl} alt="QR" className="size-16 rounded" />;
+  return <img src={dataUrl} alt="QR" className="rounded" style={{ width: size, height: size }} />;
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -66,7 +66,8 @@ export interface InvoiceDocumentDisplaySettings {
 }
 
 export interface InvoiceDocumentData {
-  invoiceId?: string | undefined; // real DB id — used to build a scannable/shareable link
+  invoiceId?: string | undefined; // real DB id — used as a fallback link if no public token yet
+  publicToken?: string | undefined; // unguessable share token — used for the QR/public link when available
   invoiceNumber?: string | undefined; // absent for an unsaved preview
   date: string;
   dueDate?: string | null | undefined;
@@ -97,6 +98,23 @@ function urlLangFromLocale(locale: string): string {
   return "en";
 }
 
+// ✅ اگر public_token در دسترس باشد، لینک به مسیر عمومی (بدون نیاز به ورود)
+// اشاره می‌کند؛ در غیر این صورت (تا وقتی migration اجرا شود) به مسیر
+// احراز-هویت‌دار قبلی برمی‌گردد — یعنی اسکن QR فعلاً ممکن است هنوز
+// درخواست ورود کند تا وقتی ستون public_token در دیتابیس اضافه شود.
+export function buildInvoiceShareUrl(
+  locale: string,
+  invoiceId?: string,
+  publicToken?: string
+): string | null {
+  const origin =
+    typeof window !== "undefined" ? window.location.origin : "https://hisabche.com";
+  const lang = urlLangFromLocale(locale);
+  if (publicToken) return `${origin}/${lang}/public-invoice/${publicToken}`;
+  if (invoiceId) return `${origin}/${lang}/invoices/${invoiceId}`;
+  return null;
+}
+
 const fmtDate = (d: string, locale: string) => {
   try {
     return new Date(d).toLocaleDateString(locale);
@@ -109,6 +127,7 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
   function InvoiceDocument({ t, data, display, locale = "fa-AF" }, ref) {
     const {
       invoiceId,
+      publicToken,
       invoiceNumber,
       date,
       dueDate,
@@ -176,15 +195,9 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
                 {invoiceNumber ? `#${invoiceNumber}` : t("invoices.notYetSaved", "—")}
               </p>
               {display.showBarcode && (
-                invoiceId ? (
+                (invoiceId || publicToken) ? (
                   <div className="mt-2 flex justify-end">
-                    <InvoiceQRCode
-                      value={
-                        typeof window !== "undefined"
-                          ? `${window.location.origin}/${urlLangFromLocale(locale)}/invoices/${invoiceId}`
-                          : `https://hisabche.com/${urlLangFromLocale(locale)}/invoices/${invoiceId}`
-                      }
-                    />
+                    <InvoiceQRCode value={buildInvoiceShareUrl(locale, invoiceId, publicToken)!} />
                   </div>
                 ) : (
                   <div className="mt-2 flex items-center justify-end gap-1.5 rounded-lg border border-dashed border-[hsl(var(--border-default))] px-3 py-2 text-[hsl(var(--fg-tertiary))]">

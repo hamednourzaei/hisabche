@@ -101,6 +101,7 @@ export { DashboardContainer } from './components/ui/dashboard/containers/dashboa
 export { warehouseContainer } from './components/ui/warehouse/containers/Warehouse-container'
 export { ProductDetailContainer } from './components/ui/warehouse-detail/containers/warehouse-detail-container'
 export { InvoiceDetailContainer } from './components/ui/invoice-detail/containers/invoice-detail-container'
+export { PublicInvoiceContainer } from './components/ui/invoice-detail/containers/public-invoice-container'
 export { QuickInvoiceContainer } from './components/ui/quick-invoice/containers/quick-invoice-container'
 export { SyncCenterContainer } from './components/ui/sync-center/containers/sync-center-container'
 export { OnboardingContainer } from './components/ui/onboarding/containers/onboarding-container'

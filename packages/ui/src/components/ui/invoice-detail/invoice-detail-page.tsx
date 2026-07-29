@@ -5,6 +5,7 @@ import { ArrowRight, Loader2, FileText } from "lucide-react";
 import { ApprovalCard } from "../workflow/approval-timeline";
 import {
   InvoiceDocument,
+  buildInvoiceShareUrl,
   type InvoiceDocumentData,
   type InvoiceDocumentDisplaySettings,
 } from "./invoice-document";
@@ -26,7 +27,7 @@ interface TimelineAction {
 interface TimelineStep { step_order: number; approver_role: string; is_final: boolean; }
 
 export interface InvoiceDetailDisplay {
-  id: string; invoiceNumber: string; date: string; dueDate?: string | null | undefined; status: string; currency: string;
+  id: string; publicToken?: string | undefined; invoiceNumber: string; date: string; dueDate?: string | null | undefined; status: string; currency: string;
   subtotal: number; total: number; customerName: string;
   customerPhone?: string | null | undefined; customerEmail?: string | null | undefined; customerAddress?: string | null | undefined;
   discountTotal: number; taxTotal: number; paidAmount: number;
@@ -85,13 +86,14 @@ export function InvoiceDetailPage({
   }
 
   const {
-    id: invoiceId, invoiceNumber, date, dueDate, status, currency, subtotal, total, customerName,
+    id: invoiceId, publicToken, invoiceNumber, date, dueDate, status, currency, subtotal, total, customerName,
     customerPhone, customerEmail, customerAddress, discountTotal, taxTotal, paidAmount,
     createdAt, updatedAt, notes, businessName, items,
   } = invoice;
 
   const documentData: InvoiceDocumentData = {
     invoiceId,
+    publicToken,
     invoiceNumber,
     date,
     dueDate,
@@ -128,6 +130,8 @@ export function InvoiceDetailPage({
     pdfDownloadSlot,
   };
 
+  const shareUrl = buildInvoiceShareUrl("fa-AF", invoiceId, publicToken);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -163,6 +167,7 @@ export function InvoiceDetailPage({
             summary={{ total, paidAmount, currency }}
             metadata={{ invoiceNumber, createdAt, updatedAt }}
             actions={actions}
+            shareUrl={shareUrl}
             display={display}
             onDisplayChange={(key, value) => setDisplay((prev) => ({ ...prev, [key]: value }))}
           />

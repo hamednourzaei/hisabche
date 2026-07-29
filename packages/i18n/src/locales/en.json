@@ -888,7 +888,12 @@
     "showBarcode": "Show Barcode",
     "exportPNG": "Export as PNG",
     "exporting": "Exporting...",
-    "pngError": "Failed to generate PNG export."
+    "pngError": "Failed to generate PNG export.",
+    "copyLink": "Copy link",
+    "copied": "Copied",
+    "shareNative": "More",
+    "qrHint": "Scan this code to view the invoice without signing in",
+    "publicFooter": "This invoice was issued by Hisabche"
   },
   "warehouse": {
     "title": "Warehouse",

@@ -7,9 +7,20 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { createHash } from "crypto";
 import { renderToStream } from "@react-pdf/renderer";
 import { createClient } from "@supabase/supabase-js";
+import QRCode from "qrcode";
 import { supabase } from "../db";
 import InvoicePDFDocument from "../pdf/InvoicePDFDocument";
 import { authenticate } from "../middleware/auth.middleware";
+
+// Same public share link the on-page QR/InvoiceQRCode encodes — falls back
+// to the raw invoice id when public_token hasn't been migrated in yet
+// (see docs/invoice-public-share-migration.sql).
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://hisabche.com";
+function buildShareUrl(invoiceId: string, publicToken?: string | null): string {
+  return publicToken
+    ? `${FRONTEND_URL}/af/public-invoice/${publicToken}`
+    : `${FRONTEND_URL}/af/invoices/${invoiceId}`;
+}
 
 // ─── Supabase Storage Client (service role — storage admin only) ──
 const supabaseUrl = process.env.SUPABASE_URL || "";
@@ -185,8 +196,16 @@ export async function invoicePdfRoutes(
 
       // 3. Generate PDF + Upload (fire-and-forget)
       try {
+        let qrDataUrl: string | null = null;
+        try {
+          const shareUrl = buildShareUrl(id, (invoice as any).public_token);
+          qrDataUrl = await QRCode.toDataURL(shareUrl, { margin: 1, width: 160 });
+        } catch (qrErr) {
+          fastify.log.error({ err: qrErr, invoiceId: id }, "QR generation failed — continuing without it");
+        }
+
         const stream = await renderToStream(
-          InvoicePDFDocument({ invoice: invoice as any })
+          InvoicePDFDocument({ invoice: invoice as any, qrDataUrl })
         );
 
         const chunks: Buffer[] = [];

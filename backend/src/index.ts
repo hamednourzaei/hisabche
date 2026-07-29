@@ -33,6 +33,7 @@ import { authRoutes } from './routes/auth.routes'
 import { syncRoutes } from './routes/sync.routes'
 import { invoiceRoutes } from './routes/invoice.routes'
 import { invoicePdfRoutes } from './routes/invoice-pdf.routes'
+import { invoicePublicRoutes } from './routes/invoice-public.routes'
 import { productRoutes } from './routes/product.routes'
 import { customerRoutes } from './routes/customer.routes'
 import { transactionRoutes } from './routes/transaction.routes'
@@ -337,6 +338,7 @@ async function start() {
     await server.register(syncRoutes)
     await server.register(invoiceRoutes)
     await server.register(invoicePdfRoutes)
+    await server.register(invoicePublicRoutes)
     await server.register(productRoutes)
     await server.register(customerRoutes)
     await server.register(transactionRoutes)

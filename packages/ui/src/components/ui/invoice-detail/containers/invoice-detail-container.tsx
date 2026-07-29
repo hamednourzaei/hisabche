@@ -148,6 +148,7 @@ export function InvoiceDetailContainer() {
     const customer = (inv.customer as Record<string, unknown> | null) ?? null;
     return {
       id: inv.id as string,
+      publicToken: (getField(inv.publicToken, inv.public_token) as string | undefined) ?? undefined,
       invoiceNumber:
         (getField(inv.invoiceNumber, inv.invoice_number) as string) ?? "",
       date: inv.date as string,

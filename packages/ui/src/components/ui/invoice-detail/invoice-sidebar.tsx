@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { Switch } from "../switch";
 import {
@@ -10,8 +10,11 @@ import {
   Send,
   Mail,
   Image as ImageIcon,
+  Link as LinkIcon,
+  Check,
+  ChevronDown,
 } from "lucide-react";
-import type { InvoiceDocumentDisplaySettings } from "./invoice-document";
+import { InvoiceQRCode, type InvoiceDocumentDisplaySettings } from "./invoice-document";
 
 /* ═══════════════════════════════════════════════════════════
    InvoiceSidebar — status + actions + payment summary + metadata
@@ -54,6 +57,8 @@ export interface InvoiceSidebarProps {
   summary: InvoiceSidebarSummary;
   metadata?: InvoiceSidebarMetadata | null;
   actions?: InvoiceSidebarActions | null;
+  /** Public/shareable link for this invoice — shown as a QR + "copy link" action in the share panel */
+  shareUrl?: string | null | undefined;
   display: InvoiceDocumentDisplaySettings;
   onDisplayChange: (key: keyof InvoiceDocumentDisplaySettings, value: boolean) => void;
   locale?: string;
@@ -102,17 +107,55 @@ const Card = ({ title, children }: { title: string; children: ReactNode }) => (
   </div>
 );
 
+// آیکون‌های کانال‌های اشتراک‌گذاری در یک شبکه‌ی فشرده به‌جای لیست بلند عمودی
+const IconAction = ({
+  icon,
+  label,
+  onClick,
+  disabled,
+}: {
+  icon: ReactNode;
+  label: string;
+  onClick?: (() => void) | undefined;
+  disabled?: boolean | undefined;
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    disabled={disabled}
+    title={label}
+    className="flex flex-col items-center gap-1.5 rounded-xl border border-[hsl(var(--border-default))] p-2.5 text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors duration-150 motion-reduce:transition-none disabled:opacity-40 disabled:cursor-not-allowed"
+  >
+    {icon}
+    <span className="text-[10px] leading-none">{label}</span>
+  </button>
+);
+
 export function InvoiceSidebar({
   t,
   statusInfo,
   summary,
   metadata,
   actions,
+  shareUrl,
   display,
   onDisplayChange,
   locale = "fa-AF",
 }: InvoiceSidebarProps) {
   const remaining = summary.total - summary.paidAmount;
+  const [shareOpen, setShareOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyLink = async () => {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // ignore — clipboard may be unavailable (non-secure context, permissions, etc.)
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -141,29 +184,56 @@ export function InvoiceSidebar({
                 {t("action.print", "چاپ")}
               </button>
             )}
-            {actions.onSharePDF && (
-              <button type="button" onClick={actions.onSharePDF} className={outlineBtn}>
+
+            {/* ✅ دکمه‌ی اصلی «اشتراک‌گذاری» — با کلیک، پنل کانال‌ها به‌صورت
+                شبکه‌ی فشرده باز می‌شود؛ به‌جای یک لیست عمودی طولانی که هر
+                کانال یک ردیف جدا داشت. */}
+            <button
+              type="button"
+              onClick={() => setShareOpen((v) => !v)}
+              className={cn(outlineBtn, "justify-between")}
+              aria-expanded={shareOpen}
+            >
+              <span className="flex items-center gap-2">
                 <Share2 className="size-4" />
                 {t("action.share", "اشتراک‌گذاری")}
-              </button>
-            )}
-            {actions.onWhatsApp && (
-              <button type="button" onClick={actions.onWhatsApp} className={outlineBtn}>
-                <MessageCircle className="size-4" />
-                WhatsApp
-              </button>
-            )}
-            {actions.onTelegram && (
-              <button type="button" onClick={actions.onTelegram} className={outlineBtn}>
-                <Send className="size-4" />
-                Telegram
-              </button>
-            )}
-            {actions.onEmail && (
-              <button type="button" onClick={actions.onEmail} className={outlineBtn}>
-                <Mail className="size-4" />
-                {t("action.email", "ایمیل")}
-              </button>
+              </span>
+              <ChevronDown className={cn("size-4 transition-transform duration-150 motion-reduce:transition-none", shareOpen && "rotate-180")} />
+            </button>
+
+            {shareOpen && (
+              <div className="rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))] p-3">
+                <div className="grid grid-cols-4 gap-2">
+                  {actions.onWhatsApp && (
+                    <IconAction icon={<MessageCircle className="size-4" />} label="WhatsApp" onClick={actions.onWhatsApp} />
+                  )}
+                  {actions.onTelegram && (
+                    <IconAction icon={<Send className="size-4" />} label="Telegram" onClick={actions.onTelegram} />
+                  )}
+                  {actions.onEmail && (
+                    <IconAction icon={<Mail className="size-4" />} label={t("action.email", "ایمیل")} onClick={actions.onEmail} />
+                  )}
+                  {actions.onSharePDF && (
+                    <IconAction icon={<Share2 className="size-4" />} label={t("invoices.shareNative", "سایر")} onClick={actions.onSharePDF} />
+                  )}
+                  <IconAction
+                    icon={copied ? <Check className="size-4" /> : <LinkIcon className="size-4" />}
+                    label={copied ? t("invoices.copied", "کپی شد") : t("invoices.copyLink", "کپی لینک")}
+                    onClick={handleCopyLink}
+                    disabled={!shareUrl}
+                  />
+                </div>
+
+                {/* پیش‌نمایش QR — همان لینک عمومی که در متن سند هم چاپ می‌شود */}
+                {shareUrl && (
+                  <div className="mt-3 flex items-center gap-3 border-t border-[hsl(var(--border-default))] pt-3">
+                    <InvoiceQRCode value={shareUrl} size={56} />
+                    <p className="text-[11px] leading-relaxed text-[hsl(var(--fg-tertiary))]">
+                      {t("invoices.qrHint", "با اسکن این کد، فاکتور بدون نیاز به ورود قابل مشاهده است")}
+                    </p>
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </Card>
