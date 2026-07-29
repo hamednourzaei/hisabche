@@ -24,6 +24,7 @@ import {
   type InvoiceDocumentDisplaySettings,
 } from "../invoice-detail/invoice-document";
 import { InvoiceSidebar } from "../invoice-detail/invoice-sidebar";
+import { useWorkspaces } from "@hisabche/api";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    QuickInvoicePage v4 — Memoized · Performance Optimized
@@ -497,13 +498,23 @@ const PreviewStep = memo(function PreviewStep({
   const [display, setDisplay] = useState<InvoiceDocumentDisplaySettings>(DEFAULT_PREVIEW_DISPLAY);
   const paidAmount = paymentType === "cash" ? total : parseFloat(paidNow) || 0;
 
+  // ✅ فرض تک-workspace: اولین workspace کاربر — برای نمایش لوگو/مهر کسب‌وکار روی پیش‌نمایش فاکتور
+  const { data: workspaces } = useWorkspaces();
+  const currentWorkspace = Array.isArray(workspaces)
+    ? (workspaces[0] as { name?: string; logo_url?: string | null; stamp_url?: string | null } | undefined)
+    : undefined;
+
   const documentData: InvoiceDocumentData = useMemo(
     () => ({
       // ⚠️ فاکتور هنوز ثبت نشده — شماره فاکتور و تاریخ ثبت وجود ندارند
       // و عمداً fabricate نمی‌شوند؛ کامپوننت سند به‌جای آن «—» نشان می‌دهد.
       invoiceNumber: undefined,
       date: new Date().toISOString(),
-      business: { name: t("app.name", "Hisabche") },
+      business: {
+        name: currentWorkspace?.name || t("app.name", "Hisabche"),
+        logoUrl: currentWorkspace?.logo_url ?? null,
+        stampUrl: currentWorkspace?.stamp_url ?? null,
+      },
       customer: selectedCustomer
         ? { name: selectedCustomer.name, phone: selectedCustomer.phone }
         : null,
@@ -520,7 +531,7 @@ const PreviewStep = memo(function PreviewStep({
       total,
       paidAmount,
     }),
-    [items, selectedCustomer, total, paidAmount, t]
+    [items, selectedCustomer, total, paidAmount, t, currentWorkspace]
   );
 
   return (

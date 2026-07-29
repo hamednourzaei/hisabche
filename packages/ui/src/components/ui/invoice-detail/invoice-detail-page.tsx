@@ -32,7 +32,10 @@ export interface InvoiceDetailDisplay {
   customerPhone?: string | null | undefined; customerEmail?: string | null | undefined; customerAddress?: string | null | undefined;
   discountTotal: number; taxTotal: number; paidAmount: number;
   createdAt: string; updatedAt?: string | undefined; notes?: string | null | undefined;
-  businessName?: string | undefined; items: InvoiceItem[];
+  businessName?: string | undefined;
+  businessLogoUrl?: string | null | undefined;
+  businessStampUrl?: string | null | undefined;
+  items: InvoiceItem[];
 }
 
 export interface InvoiceDetailPageProps {
@@ -88,7 +91,7 @@ export function InvoiceDetailPage({
   const {
     id: invoiceId, publicToken, invoiceNumber, date, dueDate, status, currency, subtotal, total, customerName,
     customerPhone, customerEmail, customerAddress, discountTotal, taxTotal, paidAmount,
-    createdAt, updatedAt, notes, businessName, items,
+    createdAt, updatedAt, notes, businessName, businessLogoUrl, businessStampUrl, items,
   } = invoice;
 
   const documentData: InvoiceDocumentData = {
@@ -97,7 +100,11 @@ export function InvoiceDetailPage({
     invoiceNumber,
     date,
     dueDate,
-    business: { name: businessName || t("app.name", "Hisabche") },
+    business: {
+      name: businessName || t("app.name", "Hisabche"),
+      logoUrl: businessLogoUrl,
+      stampUrl: businessStampUrl,
+    },
     customer: customerName || customerPhone || customerEmail || customerAddress
       ? { name: customerName, phone: customerPhone, email: customerEmail, address: customerAddress }
       : null,

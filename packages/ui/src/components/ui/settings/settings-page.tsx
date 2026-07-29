@@ -1,7 +1,7 @@
 // packages/ui/src/components/ui/settings/settings-page.tsx
 "use client";
 
-import { useState, useCallback, memo } from "react";
+import { useState, useCallback, useMemo, useRef, memo } from "react";
 import { useTranslation } from "react-i18next";
 import Link from "next/link";
 import {
@@ -9,6 +9,7 @@ import {
   useDeviceStore,
   useAuthStore,
 } from "@hisabche/store";
+import { useWorkspaces, useUpdateWorkspace } from "@hisabche/api";
 import { cn } from "@/lib/utils";
 import { Switch } from "../switch";
 import {
@@ -26,6 +27,9 @@ import {
   CreditCard,
   ChevronLeft,
   ListChecks,
+  Stamp,
+  Upload,
+  X,
 } from "lucide-react";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -118,6 +122,151 @@ const AccountSection = memo(function AccountSection() {
   );
 });
 AccountSection.displayName = "AccountSection";
+
+// ─── Business Stamp Section ───────────────────────────────────────────────
+// آپلود مهر/امضای صاحب کسب‌وکار — یک‌بار ثبت می‌شود و طبق business.stampUrl
+// روی همه‌ی فاکتورها (InvoiceDocument) نمایش داده می‌شود.
+
+const ALLOWED_STAMP_TYPES = ["image/png", "image/svg+xml"];
+const MAX_STAMP_SIZE = 1024 * 1024; // 1MB — چون به‌صورت data URL در ستون متنی ذخیره می‌شود
+
+const BusinessStampSection = memo(function BusinessStampSection() {
+  const { t } = useTranslation();
+  const { data: workspaces } = useWorkspaces();
+  const updateWorkspace = useUpdateWorkspace();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // ✅ فرض تک-workspace: اولین workspace کاربر (فعلاً هیچ workspace-switcher‌ای در برنامه نیست)
+  const workspace = useMemo(
+    () => (Array.isArray(workspaces) ? workspaces[0] : undefined) as
+      | { id: string; stamp_url?: string | null; myRole?: string }
+      | undefined,
+    [workspaces],
+  );
+  const workspaceId = workspace?.id;
+  const stampUrl: string | null = workspace?.stamp_url ?? null;
+  const canEdit = workspace?.myRole === "owner" || workspace?.myRole === "admin";
+  const isSaving = updateWorkspace.isPending;
+
+  const handlePickFile = useCallback(() => fileInputRef.current?.click(), []);
+
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      e.target.value = "";
+      if (!file || !workspaceId) return;
+
+      if (!ALLOWED_STAMP_TYPES.includes(file.type)) {
+        setError(t("settings.stampInvalidType", "فقط تصویر PNG یا SVG پذیرفته می‌شود"));
+        return;
+      }
+      if (file.size > MAX_STAMP_SIZE) {
+        setError(t("settings.stampTooLarge", "حجم تصویر باید کمتر از ۱ مگابایت باشد"));
+        return;
+      }
+      setError(null);
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        updateWorkspace.mutate({ id: workspaceId, stampUrl: dataUrl });
+      };
+      reader.onerror = () => setError(t("settings.stampUploadFailed", "بارگذاری تصویر ناموفق بود"));
+      reader.readAsDataURL(file);
+    },
+    [workspaceId, updateWorkspace, t],
+  );
+
+  const handleRemove = useCallback(() => {
+    if (!workspaceId) return;
+    updateWorkspace.mutate({ id: workspaceId, stampUrl: null });
+  }, [workspaceId, updateWorkspace]);
+
+  if (!canEdit) return null;
+
+  return (
+    <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
+      <div className="p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <Stamp className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+          <h2 className="text-lg font-bold text-[hsl(var(--fg-primary))]">
+            {t("settings.businessStamp", "مهر و امضا")}
+          </h2>
+        </div>
+        <p className="text-sm text-[hsl(var(--fg-secondary))]">
+          {t(
+            "settings.businessStampDesc",
+            "تصویر مهر یا امضای خود را یک‌بار بارگذاری کنید تا به‌صورت خودکار در پایین همه‌ی فاکتورها نمایش داده شود.",
+          )}
+        </p>
+
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex h-20 w-40 shrink-0 items-center justify-center rounded-xl border border-dashed border-[hsl(var(--border-strong))] bg-[hsl(var(--surface-muted))]">
+            {stampUrl ? (
+              <img src={stampUrl} alt="" className="max-h-16 max-w-full object-contain" />
+            ) : (
+              <span className="px-2 text-center text-xs text-[hsl(var(--fg-tertiary))]">
+                {t("settings.stampNotSet", "تنظیم نشده")}
+              </span>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={handlePickFile}
+              disabled={isSaving || !workspaceId}
+              className={cn(
+                "inline-flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium",
+                "border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))]",
+                "hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]",
+                "transition-colors duration-150 disabled:opacity-40",
+                "motion-reduce:transition-none",
+              )}
+            >
+              {isSaving ? (
+                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              ) : (
+                <Upload className="size-4" aria-hidden="true" />
+              )}
+              {t("settings.uploadStamp", "بارگذاری تصویر")}
+            </button>
+
+            {stampUrl && (
+              <button
+                type="button"
+                onClick={handleRemove}
+                disabled={isSaving}
+                className={cn(
+                  "inline-flex items-center justify-center gap-2 rounded-full px-4 py-2 text-sm font-medium",
+                  "text-[hsl(var(--color-destructive))] hover:bg-[hsl(var(--color-destructive)/0.08)]",
+                  "transition-colors duration-150 disabled:opacity-40",
+                )}
+              >
+                <X className="size-4" aria-hidden="true" />
+                {t("settings.removeStamp", "حذف تصویر")}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {error && (
+          <p className="text-sm text-[hsl(var(--color-destructive))]">{error}</p>
+        )}
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/png,image/svg+xml"
+          className="hidden"
+          onChange={handleFileChange}
+        />
+      </div>
+    </div>
+  );
+});
+BusinessStampSection.displayName = "BusinessStampSection";
 
 // ─── Backup Section ───────────────────────────────────────────────────────
 
@@ -464,6 +613,7 @@ export const SettingsPage = memo(function SettingsPage() {
       </div>
 
       <AccountSection />
+      <BusinessStampSection />
       <BillingSection />
       <WorkflowTemplatesSection />
       <BackupSection />

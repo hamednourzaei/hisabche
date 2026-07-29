@@ -14,7 +14,7 @@ import {
   Check,
   ChevronDown,
 } from "lucide-react";
-import { InvoiceQRCode, type InvoiceDocumentDisplaySettings } from "./invoice-document";
+import { type InvoiceDocumentDisplaySettings } from "./invoice-document";
 
 /* ═══════════════════════════════════════════════════════════
    InvoiceSidebar — status + actions + payment summary + metadata
@@ -142,7 +142,6 @@ export function InvoiceSidebar({
   onDisplayChange,
   locale = "fa-AF",
 }: InvoiceSidebarProps) {
-  const remaining = summary.total - summary.paidAmount;
   const [shareOpen, setShareOpen] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -171,19 +170,24 @@ export function InvoiceSidebar({
       {actions && (
         <Card title={t("invoices.actions", "عملیات")}>
           <div className="space-y-2">
-            {actions.pdfDownloadSlot}
-            {actions.onExportPNG && (
-              <button type="button" onClick={actions.onExportPNG} disabled={actions.exportingPNG} className={outlineBtn}>
-                <ImageIcon className="size-4" />
-                {actions.exportingPNG ? t("invoices.exporting", "در حال خروجی...") : t("invoices.exportPNG", "خروجی تصویر")}
-              </button>
-            )}
-            {actions.onPrint && (
-              <button type="button" onClick={actions.onPrint} className={outlineBtn}>
-                <Printer className="size-4" />
-                {t("action.print", "چاپ")}
-              </button>
-            )}
+            {/* ✅ سه عملیات اصلی به‌صورت یک ردیف افقی به‌جای ستون بلند */}
+            <div className="grid grid-cols-3 gap-2">
+              {actions.pdfDownloadSlot ? (
+                <div className="[&>*]:w-full">{actions.pdfDownloadSlot}</div>
+              ) : <div />}
+              {actions.onExportPNG ? (
+                <button type="button" onClick={actions.onExportPNG} disabled={actions.exportingPNG} className="flex flex-col items-center gap-1 rounded-xl border border-[hsl(var(--border-default))] p-2.5 text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors duration-150 disabled:opacity-40">
+                  <ImageIcon className="size-4" />
+                  <span className="text-[10px] leading-none">{actions.exportingPNG ? t("invoices.exporting", "...") : t("invoices.exportPNG", "خروجی تصویر")}</span>
+                </button>
+              ) : <div />}
+              {actions.onPrint ? (
+                <button type="button" onClick={actions.onPrint} className="flex flex-col items-center gap-1 rounded-xl border border-[hsl(var(--border-default))] p-2.5 text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors duration-150">
+                  <Printer className="size-4" />
+                  <span className="text-[10px] leading-none">{t("action.print", "چاپ")}</span>
+                </button>
+              ) : <div />}
+            </div>
 
             {/* ✅ دکمه‌ی اصلی «اشتراک‌گذاری» — با کلیک، پنل کانال‌ها به‌صورت
                 شبکه‌ی فشرده باز می‌شود؛ به‌جای یک لیست عمودی طولانی که هر
@@ -223,40 +227,11 @@ export function InvoiceSidebar({
                     disabled={!shareUrl}
                   />
                 </div>
-
-                {/* پیش‌نمایش QR — همان لینک عمومی که در متن سند هم چاپ می‌شود */}
-                {shareUrl && (
-                  <div className="mt-3 flex items-center gap-3 border-t border-[hsl(var(--border-default))] pt-3">
-                    <InvoiceQRCode value={shareUrl} size={56} />
-                    <p className="text-[11px] leading-relaxed text-[hsl(var(--fg-tertiary))]">
-                      {t("invoices.qrHint", "با اسکن این کد، فاکتور بدون نیاز به ورود قابل مشاهده است")}
-                    </p>
-                  </div>
-                )}
               </div>
             )}
           </div>
         </Card>
       )}
-
-      <Card title={t("invoices.paymentSummary", "خلاصه پرداخت")}>
-        <div className="space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-[hsl(var(--fg-secondary))]">{t("invoices.total", "مجموع")}</span>
-            <span className="font-bold tabular-nums text-[hsl(var(--fg-primary))]">{summary.total.toLocaleString()} {summary.currency}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-[hsl(var(--fg-secondary))]">{t("invoices.paid", "پرداخت شده")}</span>
-            <span className="font-medium tabular-nums text-[hsl(var(--color-success))]">{summary.paidAmount.toLocaleString()} {summary.currency}</span>
-          </div>
-          <div className="flex justify-between border-t border-[hsl(var(--border-default))] pt-2">
-            <span className="text-[hsl(var(--fg-secondary))]">{t("invoices.remaining", "باقیمانده")}</span>
-            <span className={cn("font-bold tabular-nums", remaining > 0 ? "text-[hsl(var(--color-destructive))]" : "text-[hsl(var(--color-success))]")}>
-              {remaining.toLocaleString()} {summary.currency}
-            </span>
-          </div>
-        </div>
-      </Card>
 
       {metadata && (
         <Card title={t("invoices.metadata", "اطلاعات فاکتور")}>

@@ -20,6 +20,7 @@ export const workspaceSchema = z.object({
   slug: nonEmptyStringSchema,
   description: optionalStringSchema,
   logoUrl: z.string().url().optional().nullable(),
+  stampUrl: z.string().optional().nullable(),
   isActive: z.boolean().default(true),
   createdAt: isoDateSchema.optional(),
   updatedAt: isoDateSchema.optional(),

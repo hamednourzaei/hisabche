@@ -69,6 +69,17 @@ export function useCreateWorkspace() {
   });
 }
 
+export function useUpdateWorkspace() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...values }: { id: string; [key: string]: unknown }) => {
+      const { data } = await apiClient.patch(`/workspaces/${id}`, values);
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: workspaceKeys.all }),
+  });
+}
+
 export function useInviteMember() {
   const qc = useQueryClient();
   return useMutation({

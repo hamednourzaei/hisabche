@@ -24,6 +24,7 @@ interface WorkspaceWithRole {
   slug: string
   description: string | null
   logo_url: string | null
+  stamp_url: string | null
   owner_id: string
   is_active: boolean
   created_at: string
@@ -36,7 +37,7 @@ function hashToken(token: string): string {
 }
 
 // ✅ Column Selection Constants
-const WORKSPACE_COLUMNS = 'id, name, slug, description, logo_url, owner_id, is_active, created_at, updated_at'
+const WORKSPACE_COLUMNS = 'id, name, slug, description, logo_url, stamp_url, owner_id, is_active, created_at, updated_at'
 const WORKSPACE_MINIMAL = 'id, name, slug, is_active'
 
 const MEMBER_COLUMNS = 'id, user_id, role, joined_at'
@@ -75,6 +76,7 @@ export class WorkspaceService {
         slug,
         description: data.description || null,
         logo_url: data.logoUrl || null,
+        stamp_url: data.stampUrl || null,
         owner_id: userId,
       })
       .select(WORKSPACE_COLUMNS)
@@ -181,6 +183,7 @@ export class WorkspaceService {
     if (data.name !== undefined) updates.name = data.name
     if (data.description !== undefined) updates.description = data.description
     if (data.logoUrl !== undefined) updates.logo_url = data.logoUrl
+    if (data.stampUrl !== undefined) updates.stamp_url = data.stampUrl
 
     const { data: ws, error } = await supabase
       .from('workspaces')

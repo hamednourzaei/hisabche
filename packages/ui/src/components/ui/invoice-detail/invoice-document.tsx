@@ -26,6 +26,33 @@ export function InvoiceQRCode({ value, size = 64 }: { value: string; size?: numb
   return <img src={dataUrl} alt="QR" className="rounded" style={{ width: size, height: size }} />;
 }
 
+// ✅ کلیک روی QR = کپی لینک (بدون نیاز به رفتن به پنل اشتراک‌گذاری)
+function CopyableQR({ value, t }: { value: string; t: (key: string, fallback?: string) => string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard ممکن است در دسترس نباشد
+    }
+  };
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      title={t("invoices.copyLink", "کپی لینک")}
+      className="mt-2 w-fit cursor-pointer rounded-lg transition-opacity hover:opacity-80"
+    >
+      <InvoiceQRCode value={value} size={64} />
+      {copied && (
+        <p className="mt-0.5 text-[10px] text-[hsl(var(--color-success))]">{t("invoices.copied", "کپی شد")}</p>
+      )}
+    </button>
+  );
+}
+
 /* ═══════════════════════════════════════════════════════════
    InvoiceDocument — shared "paper" visual
    Used by both the invoice detail page (saved invoice) and the
@@ -50,6 +77,8 @@ export interface InvoiceDocumentBusiness {
   phone?: string | null | undefined;
   email?: string | null | undefined;
   address?: string | null | undefined;
+  /** مهر/امضای مالک — اگر ست شده باشد، به‌جای خط‌چین زیر هر فاکتور نمایش داده می‌شود */
+  stampUrl?: string | null | undefined;
 }
 
 export interface InvoiceDocumentCustomer {
@@ -152,9 +181,9 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
         ref={ref}
         className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]"
       >
-        <div className="p-6 sm:p-8">
+        <div className="max-w-full overflow-x-hidden p-3 text-xs sm:p-6 sm:text-sm md:p-8">
           {/* Business header */}
-          <div className="mb-6 flex flex-col gap-4 border-b border-[hsl(var(--border-default))] pb-6 sm:flex-row sm:items-start sm:justify-between">
+          <div className="mb-4 flex flex-col gap-3 border-b border-[hsl(var(--border-default))] pb-4 sm:mb-6 sm:flex-row sm:items-start sm:justify-between sm:pb-6">
             <div className="flex items-center gap-3">
               {business.logoUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -186,6 +215,17 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
                     </div>
                   )}
                 </div>
+                {/* QR — فقط همین یک‌جا، زیر نام کسب‌وکار؛ کلیک = کپی لینک */}
+                {display.showBarcode && (
+                  (invoiceId || publicToken) ? (
+                    <CopyableQR value={buildInvoiceShareUrl(locale, invoiceId, publicToken)!} t={t} />
+                  ) : (
+                    <div className="mt-2 flex items-center gap-1.5 rounded-lg border border-dashed border-[hsl(var(--border-default))] px-3 py-2 text-[hsl(var(--fg-tertiary))] w-fit">
+                      <Barcode className="size-5" />
+                      <span className="text-[10px]">{t("invoices.barcodePlaceholder", "پس از ثبت فعال می‌شود")}</span>
+                    </div>
+                  )
+                )}
               </div>
             </div>
 
@@ -194,18 +234,6 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
               <p className="text-2xl font-bold text-[hsl(var(--fg-primary))]">
                 {invoiceNumber ? `#${invoiceNumber}` : t("invoices.notYetSaved", "—")}
               </p>
-              {display.showBarcode && (
-                (invoiceId || publicToken) ? (
-                  <div className="mt-2 flex justify-end">
-                    <InvoiceQRCode value={buildInvoiceShareUrl(locale, invoiceId, publicToken)!} />
-                  </div>
-                ) : (
-                  <div className="mt-2 flex items-center justify-end gap-1.5 rounded-lg border border-dashed border-[hsl(var(--border-default))] px-3 py-2 text-[hsl(var(--fg-tertiary))]">
-                    <Barcode className="size-5" />
-                    <span className="text-[10px]">{t("invoices.barcodePlaceholder", "پس از ثبت فعال می‌شود")}</span>
-                  </div>
-                )
-              )}
             </div>
           </div>
 
@@ -269,36 +297,36 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
               this table — otherwise a touch that begins here can get
               captured by the horizontal scroller and the rest of the
               invoice becomes hard to reach on mobile. */}
-          <div className="overflow-x-auto touch-pan-y">
-            <table className="w-full text-sm">
+          <div className="overflow-x-auto touch-pan-y rounded-lg border border-[hsl(var(--border-default))]">
+            <table className="w-full min-w-[520px] border-collapse text-[11px] sm:min-w-0 sm:text-sm">
               <thead>
-                <tr className="border-b border-[hsl(var(--border-default))]">
-                  <th className="px-2 py-3 text-start font-medium text-[hsl(var(--fg-secondary))]">#</th>
-                  <th className="px-2 py-3 text-start font-medium text-[hsl(var(--fg-secondary))]">{t("warehouse.productName", "نام محصول")}</th>
-                  <th className="px-2 py-3 text-center font-medium text-[hsl(var(--fg-secondary))]">{t("invoices.quantity", "تعداد")}</th>
-                  <th className="px-2 py-3 text-center font-medium text-[hsl(var(--fg-secondary))]">{t("invoices.unit", "واحد")}</th>
-                  <th className="px-2 py-3 text-end font-medium text-[hsl(var(--fg-secondary))]">{t("invoices.unitPrice", "قیمت واحد")}</th>
-                  <th className="px-2 py-3 text-end font-medium text-[hsl(var(--fg-secondary))]">{t("invoices.discount", "تخفیف")}</th>
-                  <th className="px-2 py-3 text-end font-medium text-[hsl(var(--fg-secondary))]">{t("invoices.totalPrice", "قیمت کل")}</th>
+                <tr className="border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))]">
+                  <th className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-start font-medium text-[hsl(var(--fg-secondary))] sm:px-2 sm:py-3">#</th>
+                  <th className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-start font-medium text-[hsl(var(--fg-secondary))] sm:px-2 sm:py-3">{t("warehouse.productName", "نام محصول")}</th>
+                  <th className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-center font-medium text-[hsl(var(--fg-secondary))] sm:px-2 sm:py-3">{t("invoices.quantity", "تعداد")}</th>
+                  <th className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-center font-medium text-[hsl(var(--fg-secondary))] sm:px-2 sm:py-3">{t("invoices.unit", "واحد")}</th>
+                  <th className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-end font-medium text-[hsl(var(--fg-secondary))] sm:px-2 sm:py-3">{t("invoices.unitPrice", "قیمت واحد")}</th>
+                  <th className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-end font-medium text-[hsl(var(--fg-secondary))] sm:px-2 sm:py-3">{t("invoices.discount", "تخفیف")}</th>
+                  <th className="px-1.5 py-2 text-end font-medium text-[hsl(var(--fg-secondary))] sm:px-2 sm:py-3">{t("invoices.totalPrice", "قیمت کل")}</th>
                 </tr>
               </thead>
               <tbody>
                 {items.map((item, i) => (
                   <tr key={item.id || i} className="border-b border-[hsl(var(--border-default))]">
-                    <td className="px-2 py-3 text-[hsl(var(--fg-tertiary))]">{i + 1}</td>
-                    <td className="px-2 py-3 font-medium text-[hsl(var(--fg-primary))]">{item.productName}</td>
-                    <td className="px-2 py-3 text-center text-[hsl(var(--fg-primary))]">{item.quantity}</td>
-                    <td className="px-2 py-3 text-center text-[hsl(var(--fg-tertiary))]">{item.unit ?? "—"}</td>
-                    <td className="px-2 py-3 text-end tabular-nums text-[hsl(var(--fg-primary))]">{item.unitPrice.toLocaleString()} {currency}</td>
-                    <td className="px-2 py-3 text-end tabular-nums text-[hsl(var(--fg-tertiary))]">{item.discount ? `${item.discount}%` : "—"}</td>
-                    <td className="px-2 py-3 text-end font-medium tabular-nums text-[hsl(var(--fg-primary))]">{item.totalPrice.toLocaleString()} {currency}</td>
+                    <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-[hsl(var(--fg-tertiary))] sm:px-2 sm:py-3">{i + 1}</td>
+                    <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 font-medium text-[hsl(var(--fg-primary))] sm:px-2 sm:py-3">{item.productName}</td>
+                    <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-center text-[hsl(var(--fg-primary))] sm:px-2 sm:py-3">{item.quantity}</td>
+                    <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-center text-[hsl(var(--fg-tertiary))] sm:px-2 sm:py-3">{item.unit ?? "—"}</td>
+                    <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-end tabular-nums text-[hsl(var(--fg-primary))] sm:px-2 sm:py-3">{item.unitPrice.toLocaleString()} {currency}</td>
+                    <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-end tabular-nums text-[hsl(var(--fg-tertiary))] sm:px-2 sm:py-3">{item.discount ? `${item.discount}%` : "—"}</td>
+                    <td className="px-1.5 py-2 text-end font-medium tabular-nums text-[hsl(var(--fg-primary))] sm:px-2 sm:py-3">{item.totalPrice.toLocaleString()} {currency}</td>
                   </tr>
                 ))}
               </tbody>
               <tfoot>
                 <tr>
-                  <td colSpan={6} className="px-2 py-3 text-end font-medium text-[hsl(var(--fg-primary))]">{t("invoices.subtotal", "جمع")}</td>
-                  <td className="px-2 py-3 text-end font-medium tabular-nums text-[hsl(var(--fg-primary))]">{subtotal.toLocaleString()} {currency}</td>
+                  <td colSpan={6} className="px-1.5 py-2 text-end font-medium text-[hsl(var(--fg-primary))] sm:px-2 sm:py-3">{t("invoices.subtotal", "جمع")}</td>
+                  <td className="px-1.5 py-2 text-end font-medium tabular-nums text-[hsl(var(--fg-primary))] sm:px-2 sm:py-3">{subtotal.toLocaleString()} {currency}</td>
                 </tr>
                 {discountTotal > 0 && (
                   <tr>
@@ -346,15 +374,16 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
             </div>
           )}
 
-          {/* Signature area */}
+          {/* Signature area — فقط مهر و امضای فروشنده (امضای مشتری حذف شد) */}
           {display.showSignature && (
-            <div className="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <div className="mt-8 flex justify-center">
               <div className="text-center">
-                <div className="h-16 border-b border-dashed border-[hsl(var(--border-strong))]" />
-                <p className="mt-2 text-xs text-[hsl(var(--fg-tertiary))]">{t("invoices.customerSignature", "امضای مشتری")}</p>
-              </div>
-              <div className="text-center">
-                <div className="h-16 border-b border-dashed border-[hsl(var(--border-strong))]" />
+                {business.stampUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={business.stampUrl} alt="" className="mx-auto h-16 object-contain" />
+                ) : (
+                  <div className="h-16 w-40 border-b border-dashed border-[hsl(var(--border-strong))]" />
+                )}
                 <p className="mt-2 text-xs text-[hsl(var(--fg-tertiary))]">{t("invoices.sellerSignature", "مهر و امضای فروشنده")}</p>
               </div>
             </div>

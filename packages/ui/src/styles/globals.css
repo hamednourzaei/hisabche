@@ -465,7 +465,11 @@ p, .body { font-size: var(--text-body); line-height: var(--leading-relaxed); fon
    PERFORMANCE & ACCESSIBILITY
    ─────────────────────────────────────────────────────────────────────────── */
 @media (pointer: coarse) {
-  button, [role="button"], a, input, select, textarea { min-height: 44px; }
+  /* [role="switch"] استثنا شد — این قانون min-height را روی دکمه‌ی
+     سویچ (که یک pill کوتاه ۲۰-۲۴px است) هم اعمال می‌کرد و آن را به
+     یک مربع/دایره تبدیل می‌کرد چون عرض (w-9/w-11) ثابت می‌ماند ولی
+     ارتفاع به ۴۴px می‌رسید. */
+  button:not([role="switch"]), [role="button"]:not([role="switch"]), a, input, select, textarea { min-height: 44px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }

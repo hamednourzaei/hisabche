@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
-import { useInvoice } from "@hisabche/api";
+import { useInvoice, useWorkspaces } from "@hisabche/api";
 import {
   InvoiceDetailPage,
   type InvoiceDetailDisplay,
@@ -62,6 +62,12 @@ export function InvoiceDetailContainer() {
   const [exportingPNG, setExportingPNG] = useState(false);
 
   const { data: invoice, isLoading } = useInvoice(id);
+
+  // ✅ فرض تک-workspace: اولین workspace کاربر — برای نمایش لوگو/مهر کسب‌وکار روی فاکتور
+  const { data: workspaces } = useWorkspaces();
+  const currentWorkspace = Array.isArray(workspaces)
+    ? (workspaces[0] as { name?: string; logo_url?: string | null; stamp_url?: string | null } | undefined)
+    : undefined;
 
   // ✅ Workflow instance hook — inside component
   const { data: workflowData } = useQuery({
@@ -175,10 +181,11 @@ export function InvoiceDetailContainer() {
         (getField(inv.updatedAt, inv.updated_at) as string | undefined) ??
         undefined,
       notes: (inv.notes as string | undefined) ?? null,
-      // ✅ نام کسب‌وکار هنوز از هیچ هوکی fetch نمی‌شود (نیازمند
-      // شناسایی workspace فعال است) — فعلاً fallback به نام اپ در
-      // کامپوننت سند اعمال می‌شود.
-      businessName: undefined,
+      // ✅ نام/لوگو/مهر کسب‌وکار از workspace فعلی کاربر خوانده می‌شود؛
+      // در نبود workspace به نام اپ در کامپوننت سند fallback می‌شود.
+      businessName: currentWorkspace?.name,
+      businessLogoUrl: currentWorkspace?.logo_url ?? null,
+      businessStampUrl: currentWorkspace?.stamp_url ?? null,
       items: (
         (inv.items as unknown[]) ??
         (inv.invoiceItems as unknown[]) ??
@@ -199,7 +206,7 @@ export function InvoiceDetailContainer() {
         total_price: item.total_price,
       })),
     };
-  }, [invoice]);
+  }, [invoice, currentWorkspace]);
 
   const safeT = useCallback(
     (key: string, fallback?: string) => {

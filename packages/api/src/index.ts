@@ -106,6 +106,7 @@ export {
   useWorkspaces,
   useWorkspaceMembers,
   useCreateWorkspace,
+  useUpdateWorkspace,
   useInviteMember,
   useRemoveMember,
   useUpdateMemberRole,
