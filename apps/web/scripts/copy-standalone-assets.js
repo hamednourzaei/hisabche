@@ -7,8 +7,10 @@
 // files exist in the repo.
 "use strict";
 
+/* eslint-disable @typescript-eslint/no-require-imports -- CJS build script, require() is required here */
 const fs = require("fs");
 const path = require("path");
+/* eslint-enable @typescript-eslint/no-require-imports */
 
 const webDir = __dirname.replace(/[\\/]scripts$/, "");
 const standaloneWebDir = path.join(webDir, ".next", "standalone", "apps", "web");

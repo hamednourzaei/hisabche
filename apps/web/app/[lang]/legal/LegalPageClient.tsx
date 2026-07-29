@@ -1,15 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/lib/utils";
 import SiteFooter from "@hisabche/ui/landing/site-footer";
-
-function getLocaleFromPathname(pathname: string): string {
-  const match = pathname.match(/^\/(fa-IR|fa-AF|en)/);
-  return match?.[1] ?? "fa-IR";
-}
 
 interface LegalSection {
   heading: string;
@@ -25,9 +19,7 @@ export interface LegalPageClientProps {
 }
 
 export function LegalPageClient({ titleKey, titleFallback, introKey, introFallback, sectionsKey }: LegalPageClientProps) {
-  const pathname = usePathname();
   const { t } = useTranslation();
-  const locale = getLocaleFromPathname(pathname);
 
   const safeT = (key: string, fallback?: string) => {
     const result = t(key);

@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- CJS config file, require() is required here
 const path = require('path')
 
 /** @type {import('next').NextConfig} */
