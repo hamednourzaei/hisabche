@@ -129,7 +129,10 @@ const DashboardLayout = memo(function DashboardLayout({
     (lang: string) => {
       if (lang === currentLang) return;
 
-      const pathWithoutLocale = pathname.replace(/^\/(fa-IR|fa-AF|en)/, "") || "/";
+      // ✅ FIX: مسیرهای واقعی af/fa/en هستن، نه fa-IR/fa-AF (که فرمت
+      // قدیمی locale JSON هاست) — قبلاً این regex هیچ‌وقت match
+      // نمی‌شد و مسیر جدید دوباره‌پیشونددار می‌شد (مثلاً /fa/af/...)
+      const pathWithoutLocale = pathname.replace(/^\/(fa|af|en)(?=\/|$)/, "") || "/";
       const newPath = `/${lang}${pathWithoutLocale}`;
 
       router.push(newPath);

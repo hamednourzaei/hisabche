@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { Switch } from "../switch";
 import {
   Printer,
   Share2,
@@ -75,6 +76,10 @@ const fmtDate = (d: string, locale: string) => {
   }
 };
 
+// ✅ FIX: قبلاً یک سویچ دستی جداگانه با همان باگ rtl:/translate-x
+// کامپوننت مشترک (packages/ui/.../switch.tsx) اینجا کپی شده بود —
+// حالا از همان کامپوننت مشترک (که با inset-inline-start درست شد)
+// استفاده می‌شود تا یک پیاده‌سازی سویچ در کل پروژه وجود داشته باشد.
 const Toggle = ({
   label,
   checked,
@@ -86,23 +91,7 @@ const Toggle = ({
 }) => (
   <label className="flex cursor-pointer items-center justify-between gap-3 py-1.5">
     <span className="text-sm text-[hsl(var(--fg-secondary))]">{label}</span>
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={() => onChange(!checked)}
-      className={cn(
-        "relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors duration-150 motion-reduce:transition-none",
-        checked ? "bg-[hsl(var(--color-primary))]" : "bg-[hsl(var(--surface-muted))] border border-[hsl(var(--border-default))]"
-      )}
-    >
-      <span
-        className={cn(
-          "inline-block size-3.5 transform rounded-full bg-white transition-transform duration-150 motion-reduce:transition-none",
-          checked ? "-translate-x-4 rtl:translate-x-4" : "translate-x-0.5"
-        )}
-      />
-    </button>
+    <Switch checked={checked} onCheckedChange={onChange} size="sm" />
   </label>
 );
 
