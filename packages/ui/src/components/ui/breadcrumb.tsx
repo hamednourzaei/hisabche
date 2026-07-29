@@ -2,7 +2,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, Home } from "lucide-react";
 import Link from "next/link";
@@ -13,7 +13,7 @@ const ROUTE_LABELS: Record<string, { key: string; fallback: string }> = {
 warehouse: { key: "nav.warehouse", fallback: "انبار" },
 invoices: { key: "nav.invoices", fallback: "فاکتورها" },
   customers: { key: "nav.customers", fallback: "باقی‌داری" },
-  hr: { key: "nav.hr", fallback: "منابع انسانی" },
+  hr: { key: "nav.human-resources", fallback: "منابع انسانی" },
   projects: { key: "nav.projects", fallback: "پروژه‌ها" },
   permissions: { key: "nav.permissions", fallback: "دسترسی‌ها" },
   audit: { key: "nav.audit", fallback: "حسابرسی" },
@@ -26,11 +26,11 @@ invoices: { key: "nav.invoices", fallback: "فاکتورها" },
 
 export function Breadcrumb({ className }: { className?: string }) {
   const pathname = usePathname();
-  const { t } = useTranslation();
+  const t = useTranslations();
 
   // حذف locale prefix و split
   const segments = pathname
-    .replace(/^\/(fa-AF|fa-IR|en)/, "")
+    .replace(/^\/(af|en)(?=\/|$)/, "")
     .split("/")
     .filter(Boolean);
 
@@ -44,7 +44,7 @@ export function Breadcrumb({ className }: { className?: string }) {
     if (isUUID) {
       return {
         href,
-        label: t("common.details", "جزئیات"),
+        label: t("common.details"),
         isLast,
         isClickable: false,
       };
@@ -53,7 +53,7 @@ export function Breadcrumb({ className }: { className?: string }) {
     const routeLabel = ROUTE_LABELS[segment];
     return {
       href,
-      label: routeLabel ? t(routeLabel.key, routeLabel.fallback) : segment,
+      label: routeLabel ? t(routeLabel.key) : segment,
       isLast,
       isClickable: !isLast,
     };

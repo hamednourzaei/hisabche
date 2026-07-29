@@ -7,7 +7,7 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { Search, CheckCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -64,7 +64,7 @@ const searchGroups = (groups: ActivityGroupDto[], query: string): ActivityGroupD
 // ─── Main Page Component ──────────────────────────────────────────────────────
 
 export function ActivitiesPage() {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const router = useRouter();
   const [filter, setFilter] = useState<FilterType>("all");
   const [search, setSearch] = useState("");
@@ -126,11 +126,11 @@ export function ActivitiesPage() {
       <div className="flex items-center justify-between gap-2 pb-3 md:pb-4 lg:pb-5">
         <div className="flex items-center gap-2 min-w-0">
           <h1 className="font-bold text-[hsl(var(--fg-primary))] truncate text-lg md:text-xl lg:text-2xl">
-            {t("nav.events", "رخدادها")}
+            {t("nav.events")}
           </h1>
           {unreadCount > 0 && (
             <Badge variant="destructive" size="sm" className="shrink-0">
-              {unreadCount} {t("activity.new", "جدید")}
+              {unreadCount} {t("activity.new")}
             </Badge>
           )}
         </div>
@@ -150,7 +150,7 @@ export function ActivitiesPage() {
             )}
           >
             <CheckCheck className="size-3.5 md:size-4" aria-hidden="true" />
-            <span className="hidden sm:inline">{t("activity.markAllRead", "علامت‌گذاری همه به‌عنوان خوانده‌شده")}</span>
+            <span className="hidden sm:inline">{t("activity.markAllRead")}</span>
           </button>
         )}
       </div>
@@ -164,7 +164,7 @@ export function ActivitiesPage() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder={t("activity.search", "جستجو در فعالیت‌ها")}
+            placeholder={t("activity.search")}
             className={cn(
               "w-full rounded-lg md:rounded-xl border border-[hsl(var(--border-default))] bg-transparent",
               "h-9 md:h-10 lg:h-11",
@@ -179,31 +179,31 @@ export function ActivitiesPage() {
         <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterType)}>
           <TabsList className="w-full md:w-auto flex-nowrap md:flex-wrap justify-start">
             <TabsTrigger value="all">
-              {t("activity.filter.all", "همه")}
+              {t("activity.filter.all")}
               {filterCounts.all > 0 && (
                 <span className="text-[hsl(var(--fg-tertiary))] font-normal">({filterCounts.all})</span>
               )}
             </TabsTrigger>
             <TabsTrigger value="unread">
-              {t("activity.filter.unread", "خوانده‌نشده")}
+              {t("activity.filter.unread")}
               {filterCounts.unread > 0 && (
                 <span className="text-[hsl(var(--fg-tertiary))] font-normal">({filterCounts.unread})</span>
               )}
             </TabsTrigger>
             <TabsTrigger value="invoices">
-              {t("activity.filter.invoices", "فاکتورها")}
+              {t("activity.filter.invoices")}
               {filterCounts.invoices > 0 && (
                 <span className="text-[hsl(var(--fg-tertiary))] font-normal">({filterCounts.invoices})</span>
               )}
             </TabsTrigger>
             <TabsTrigger value="payments">
-              {t("activity.filter.payments", "پرداخت‌ها")}
+              {t("activity.filter.payments")}
               {filterCounts.payments > 0 && (
                 <span className="text-[hsl(var(--fg-tertiary))] font-normal">({filterCounts.payments})</span>
               )}
             </TabsTrigger>
             <TabsTrigger value="customers">
-              {t("activity.filter.customers", "مشتریان")}
+              {t("activity.filter.customers")}
               {filterCounts.customers > 0 && (
                 <span className="text-[hsl(var(--fg-tertiary))] font-normal">({filterCounts.customers})</span>
               )}
@@ -219,13 +219,13 @@ export function ActivitiesPage() {
         ) : filteredGroups.length === 0 ? (
           <div className="p-4 md:p-6 lg:p-8">
             <ActivityEmptyState
-              title={search ? t("activity.empty.search", "نتیجه‌ای یافت نشد") : t("activity.empty.title", "فعالیتی یافت نشد")}
+              title={search ? t("activity.empty.search") : t("activity.empty.title")}
               subtitle={
                 search
-                  ? t("activity.empty.searchHint", "برای «{{query}}» نتیجه‌ای پیدا نشد", { query: search })
+                  ? t("activity.empty.searchHint", { query: search })
                   : filter === "unread"
-                    ? t("activity.empty.unread", "هیچ فعالیت خوانده‌نشده‌ای وجود ندارد")
-                    : t("activity.empty.all", "هنوز فعالیتی ثبت نشده است")
+                    ? t("activity.empty.unread")
+                    : t("activity.empty.all")
               }
             />
           </div>

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -26,7 +26,7 @@ const CONFETTI_COLORS = [
 const CONFETTI_SIZES = ["size-1.5", "size-2", "size-2.5", "size-1.5", "size-2", "size-2.5"];
 
 const Celebration: React.FC<CelebrationProps> = ({ show, message, emoji = "🎉", duration = 3000, onComplete }) => {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const [open, setOpen] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
   const handleComplete = useCallback(() => onComplete?.(), [onComplete]);

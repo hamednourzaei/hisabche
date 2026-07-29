@@ -2,7 +2,7 @@
 "use client";
 
 import { memo, useMemo } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { 
   Sparkles, 
@@ -121,7 +121,7 @@ const AIInsightBanner = memo(function AIInsightBanner({
   isLoading: boolean;
   onAction: (action: string) => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   
   if (isLoading) {
     return (

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback, memo, type ReactNode } from "react";
 import Link from "next/link";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -249,7 +249,7 @@ export const GlassNavbar = memo(function GlassNavbar({
   homeAriaLabel,
   onNavigateLogin,
 }: GlassNavbarProps) {
-  const { t } = useTranslation();
+  const t = useTranslations();
 
   return (
     <nav
@@ -269,7 +269,7 @@ export const GlassNavbar = memo(function GlassNavbar({
         >
           <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[hsl(var(--color-primary))]">
             <span className="text-xs font-bold text-white">
-              {t("app.name", "حسابچه").charAt(0)}
+              {t("app.name").charAt(0)}
             </span>
           </div>
           <span className="text-sm font-bold text-[hsl(var(--fg-primary))]">

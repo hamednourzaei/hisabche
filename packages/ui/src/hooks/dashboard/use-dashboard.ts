@@ -2,7 +2,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import {
   useInvoices,
   useProducts,
@@ -52,7 +52,7 @@ type ProductsResponseWithSummary = ProductsResponse & { summary?: ProductsSummar
 // ─── Main Hook ─────────────────────────────────────────────────────────────
 
 export function useDashboard() {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const currency = useCurrency();
 
   // ─── 1. Fetch KPI data ──────────────────────────────────────────────────

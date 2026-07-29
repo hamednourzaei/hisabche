@@ -2,7 +2,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { useProject, useUpdateProject, useProjectTasks, useCreateProjectTask, useUpdateProjectTask, useDeleteProjectTask, useEmployees } from "@hisabche/api";
 import { ProjectDetailView } from "../project-detail-view";
 import { useCallback, memo } from "react";
@@ -19,17 +19,10 @@ interface ProjectDetailContainerProps {
 export const ProjectDetailContainer = memo(function ProjectDetailContainer({
   id,
 }: ProjectDetailContainerProps) {
-  const { t: tOriginal } = useTranslation();
+  const t = useTranslations();
   const router = useRouter();
 
-  // ✅ safeT wrapper
-  const safeT = useCallback(
-    (key: string, fallback?: string): string => {
-      const result = tOriginal(key);
-      return result && result !== key ? result : (fallback ?? key);
-    },
-    [tOriginal]
-  );
+  const safeT = t;
 
   const { data: project, isLoading } = useProject(id);
   const { data: tasks, isLoading: tasksLoading } = useProjectTasks(id);

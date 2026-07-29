@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { Loader2, FileText } from "lucide-react";
 import { InvoiceDocument, type InvoiceDocumentData } from "../invoice-document";
 
@@ -38,7 +38,7 @@ interface PublicInvoiceResponse {
 }
 
 export function PublicInvoiceContainer({ token }: { token: string }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const [data, setData] = useState<PublicInvoiceResponse | null>(null);
   const [error, setError] = useState(false);
   const [loading, setLoading] = useState(true);

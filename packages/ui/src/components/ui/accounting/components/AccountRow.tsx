@@ -2,7 +2,7 @@
 "use client";
 
 import { memo } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import type { Account } from "@hisabche/api";
 
@@ -19,7 +19,7 @@ const TYPE_COLORS: Record<string, string> = {
 };
 
 export const AccountRow = memo(function AccountRow({ account }: AccountRowProps) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const typeColor = TYPE_COLORS[account.type] || "text-gray-500 bg-gray-500/10";
 
   return (
@@ -32,7 +32,7 @@ export const AccountRow = memo(function AccountRow({ account }: AccountRowProps)
       </td>
       <td className="px-2 md:px-3 lg:px-4 py-2 md:py-2.5 lg:py-3">
         <span className={cn("text-[9px] md:text-[10px] lg:text-xs font-medium px-1.5 md:px-2 py-0.5 rounded whitespace-nowrap", typeColor)}>
-          {t(`accounting.accountType.${account.type}`, account.type)}
+          {t(`accounting.accountTypes.${account.type}`)}
         </span>
       </td>
       <td className="px-2 md:px-3 lg:px-4 py-2 md:py-2.5 lg:py-3 text-[11px] md:text-sm text-center">
@@ -41,7 +41,7 @@ export const AccountRow = memo(function AccountRow({ account }: AccountRowProps)
             "inline-block w-2 h-2 rounded-full",
             account.isActive ? "bg-[hsl(var(--color-success))]" : "bg-[hsl(var(--fg-tertiary))]"
           )}
-          aria-label={account.isActive ? t("accounting.accounts.active", "فعال") : t("accounting.accounts.inactive", "غیرفعال")}
+          aria-label={account.isActive ? t("accounting.accounts.active") : t("accounting.accounts.inactive")}
         />
       </td>
     </tr>

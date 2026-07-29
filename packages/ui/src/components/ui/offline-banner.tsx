@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { WifiOff, Wifi, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -24,7 +24,7 @@ const variantStyles = {
 type Variant = keyof typeof variantStyles;
 
 const OfflineBanner: React.FC<OfflineBannerProps> = ({ pendingCount, isOnline, isSyncing = false }) => {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const isVisible = !isOnline || pendingCount > 0 || isSyncing;
   if (!isVisible) return null;
 
@@ -34,11 +34,11 @@ const OfflineBanner: React.FC<OfflineBannerProps> = ({ pendingCount, isOnline, i
 
   const message = !isOnline
     ? pendingCount > 0
-      ? t("sync.offlinePending", `شما آفلاین هستید — ${pendingCount} عملیات در انتظار همگام‌سازی`).replace("{count}", String(pendingCount))
-      : t("sync.offlineViewable", "شما آفلاین هستید — اطلاعات ذخیره شده قابل مشاهده است")
+      ? t("sync.offlinePending").replace("{count}", String(pendingCount))
+      : t("sync.offlineViewable")
     : isSyncing
-      ? t("sync.syncing", "در حال همگام‌سازی...")
-      : t("sync.pending", `${pendingCount} عملیات در انتظار همگام‌سازی`).replace("{count}", String(pendingCount));
+      ? t("sync.syncing")
+      : t("sync.pending").replace("{count}", String(pendingCount));
 
   return (
     <div role="alert" aria-live="polite" className={cn("flex items-center justify-center gap-2", "px-4 py-2.5", "text-sm font-medium", "border-b", "transition-colors duration-300", "motion-reduce:transition-none", styles.bg, styles.fg, styles.border)}>

@@ -9,7 +9,7 @@ import {
   memo,
 } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { useCreateInvoice } from "@hisabche/api";
 import {
   useOnboardingStore,
@@ -26,7 +26,7 @@ import type { QuickInvoicePageProps, InvoiceLineItem } from "../quick-invoice-pa
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
-  const { t: tOriginal } = useTranslation();
+  const t = useTranslations();
   const router = useRouter();
   const createInvoice = useCreateInvoice();
   const { markInvoiceCreated } = useOnboardingStore();
@@ -105,14 +105,7 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
     [paymentType, total, paidNow]
   );
 
-  // ✅ safeT wrapper
-  const safeT = useCallback(
-    (key: string, fallback?: string): string => {
-      const result = tOriginal(key);
-      return result && result !== key ? result : (fallback ?? key);
-    },
-    [tOriginal]
-  );
+  const safeT = t;
 
   const elapsedFormatted = useMemo(
     () =>

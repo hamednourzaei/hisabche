@@ -3,16 +3,14 @@
 "use client"
 
 import { useMemo, useCallback, useEffect } from "react"
-import { useTranslation } from "react-i18next"
+import { useTranslations } from "next-intl";
 import { useProducts, useDeleteProduct, useRealtime } from "@hisabche/api"
 import { useSyncStore, useBackupStore } from "@hisabche/store"
 import { mapProducts, calculateTotals } from "../../lib/warehouse/warehouse-mappers"
 import type { RawProduct } from "../../lib/warehouse/warehouse-types"
 
 export function useWarehouse(search: string) {
-  const { t } = useTranslation()
-
-  const { data, isLoading, refetch } = useProducts({
+  const t = useTranslations();const { data, isLoading, refetch } = useProducts({
     page: 1,
     limit: 100,
     sortDirection: "desc",
@@ -55,9 +53,9 @@ export function useWarehouse(search: string) {
 
   const stockLabel = useCallback(
     (qty: number, min: number) => {
-      if (qty === 0) return t("warehouse.outOfStock", "ناموجود")
-      if (qty <= min) return t("warehouse.lowStock", "موجودی کم")
-      return t("warehouse.inStock", "موجود")
+      if (qty === 0) return t("warehouse.outOfStock")
+      if (qty <= min) return t("warehouse.lowStock")
+      return t("warehouse.inStock")
     },
     [t]
   )

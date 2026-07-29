@@ -2,7 +2,7 @@
 "use client";
 
 import { memo, useState, useCallback, useEffect } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -30,7 +30,7 @@ export const CreateAccountDialog = memo(function CreateAccountDialog({
   isSubmitting,
   parentOptions,
 }: CreateAccountDialogProps) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [type, setType] = useState<string>("asset");
@@ -81,13 +81,13 @@ export const CreateAccountDialog = memo(function CreateAccountDialog({
       >
         <div className="flex items-center justify-between px-4 md:px-5 py-3 md:py-4 border-b border-[hsl(var(--border-default))]">
           <h2 id="create-account-title" className="text-sm md:text-base font-semibold text-[hsl(var(--fg-primary))]">
-            {t("accounting.accounts.createTitle", "حساب جدید")}
+            {t("accounting.accounts.createTitle")}
           </h2>
           <button
             type="button"
             onClick={onClose}
             className="p-1 rounded-lg text-[hsl(var(--fg-tertiary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors"
-            aria-label={t("action.close", "بستن")}
+            aria-label={t("action.close")}
           >
             <X className="size-4 md:size-5" aria-hidden="true" />
           </button>
@@ -96,7 +96,7 @@ export const CreateAccountDialog = memo(function CreateAccountDialog({
         <form onSubmit={handleSubmit} className="p-4 md:p-5 space-y-3 md:space-y-4">
           <div className="space-y-1 md:space-y-1.5">
             <label htmlFor="account-code" className="text-xs md:text-sm font-medium text-[hsl(var(--fg-secondary))]">
-              {t("accounting.accounts.code", "کد حساب")}
+              {t("accounting.accounts.code")}
             </label>
             <input
               id="account-code"
@@ -111,7 +111,7 @@ export const CreateAccountDialog = memo(function CreateAccountDialog({
 
           <div className="space-y-1 md:space-y-1.5">
             <label htmlFor="account-name" className="text-xs md:text-sm font-medium text-[hsl(var(--fg-secondary))]">
-              {t("accounting.accounts.name", "نام حساب")}
+              {t("accounting.accounts.name")}
             </label>
             <input
               id="account-name"
@@ -120,13 +120,13 @@ export const CreateAccountDialog = memo(function CreateAccountDialog({
               onChange={(e) => setName(e.target.value)}
               required
               className="w-full h-9 md:h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-3 text-xs md:text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
-              placeholder={t("accounting.accounts.namePlaceholder", "مثلاً: صندوق")}
+              placeholder={t("accounting.accounts.namePlaceholder")}
             />
           </div>
 
           <div className="space-y-1 md:space-y-1.5">
             <label htmlFor="account-type" className="text-xs md:text-sm font-medium text-[hsl(var(--fg-secondary))]">
-              {t("accounting.accounts.type", "نوع حساب")}
+              {t("accounting.accounts.type")}
             </label>
             <select
               id="account-type"
@@ -136,7 +136,7 @@ export const CreateAccountDialog = memo(function CreateAccountDialog({
             >
               {ACCOUNT_TYPES.map((accType) => (
                 <option key={accType} value={accType}>
-                  {t(`accounting.accountType.${accType}`, accType)}
+                  {t(`accounting.accountTypes.${accType}`)}
                 </option>
               ))}
             </select>
@@ -145,7 +145,7 @@ export const CreateAccountDialog = memo(function CreateAccountDialog({
           {parentOptions.length > 0 && (
             <div className="space-y-1 md:space-y-1.5">
               <label htmlFor="account-parent" className="text-xs md:text-sm font-medium text-[hsl(var(--fg-secondary))]">
-                {t("accounting.accounts.parent", "حساب والد (اختیاری)")}
+                {t("accounting.accounts.parent")}
               </label>
               <select
                 id="account-parent"
@@ -153,7 +153,7 @@ export const CreateAccountDialog = memo(function CreateAccountDialog({
                 onChange={(e) => setParentId(e.target.value)}
                 className="w-full h-9 md:h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-3 text-xs md:text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
               >
-                <option value="">{t("accounting.accounts.noParent", "بدون والد")}</option>
+                <option value="">{t("accounting.accounts.noParent")}</option>
                 {parentOptions.map((opt) => (
                   <option key={opt.id} value={opt.id}>
                     {opt.label}
@@ -169,7 +169,7 @@ export const CreateAccountDialog = memo(function CreateAccountDialog({
               onClick={onClose}
               className="flex-1 h-9 md:h-10 rounded-lg text-xs md:text-sm font-medium border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] transition-colors"
             >
-              {t("action.cancel", "انصراف")}
+              {t("action.cancel")}
             </button>
             <button
               type="submit"
@@ -177,7 +177,7 @@ export const CreateAccountDialog = memo(function CreateAccountDialog({
               className="flex-1 h-9 md:h-10 rounded-lg text-xs md:text-sm font-medium bg-[hsl(var(--color-primary))] text-white hover:opacity-90 disabled:opacity-40 transition-opacity flex items-center justify-center gap-2"
             >
               {isSubmitting && <Loader2 className="size-3.5 md:size-4 animate-spin" aria-hidden="true" />}
-              {t("action.create", "ایجاد")}
+              {t("action.create")}
             </button>
           </div>
         </form>

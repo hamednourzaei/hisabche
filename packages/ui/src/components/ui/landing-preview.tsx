@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useEffect, useState, useCallback, useMemo } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -169,16 +169,10 @@ function useInView(threshold = 0.05) {
 // ─── Main Component ─────────────────────────────────────────────────────────
 
 export const LandingPreview = memo(function LandingPreview() {
-  const { t: tOriginal } = useTranslation();
+  const t = useTranslations();
 
   // ✅ safeT wrapper
-  const t = useCallback(
-    (key: string, fallback?: string): string => {
-      const result = tOriginal(key);
-      return result && result !== key ? result : (fallback ?? key);
-    },
-    [tOriginal]
-  );
+
 
   const { ref, inView } = useInView(0.05);
   const [hydrated, setHydrated] = useState(false);

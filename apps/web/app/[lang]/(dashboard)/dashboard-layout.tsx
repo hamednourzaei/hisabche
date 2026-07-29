@@ -8,7 +8,7 @@ import {
   useThemeStore,
   useOnboardingStore,
 } from "@hisabche/store";
-import { useTranslation } from "react-i18next";
+import { useTranslations, useLocale } from "next-intl";
 import {
   DashboardHeader,
   DashboardSidebar,
@@ -33,18 +33,13 @@ import "@hisabche/ui/globals.css";
    ✅ memo · useCallback · useMemo · prefetch بهینه
    ═══════════════════════════════════════════════════════════════════════════ */
 
-function getLocaleFromPathname(pathname: string): string {
-  const match = pathname.match(/^\/(fa-IR|fa-AF|en)/);
-  return match?.[1] ?? "fa-IR";
-}
-
 // ─── Hook: Prefetch Routes ─────────────────────────────────────────────────
 
 function usePrefetchRoutes(pathname: string) {
   const router = useRouter();
 
   useEffect(() => {
-    const currentPath = pathname.replace(/^\/(fa-IR|fa-AF|en)/, "") || "/";
+    const currentPath = pathname.replace(/^\/(af|en)(?=\/|$)/, "") || "/";
 
     const relevantItems = NAV_ITEMS.filter((item) => {
       return (
@@ -97,7 +92,8 @@ const DashboardLayout = memo(function DashboardLayout({
 }: {
   children: ReactNode;
 }) {
-  const { t, i18n } = useTranslation();
+  const t = useTranslations();
+  const locale = useLocale();
   const router = useRouter();
   const pathname = usePathname();
   const isDark = useThemeStore((s) => s.isDark);
@@ -116,36 +112,42 @@ const DashboardLayout = memo(function DashboardLayout({
     }
   }, [pathname]);
 
-  const currentLang = getLocaleFromPathname(pathname);
+  const currentLang = locale;
 
-  useEffect(() => {
-    if (i18n.language !== currentLang) {
-      i18n.changeLanguage(currentLang);
-      localStorage.setItem("hisabche-lang", currentLang);
-    }
-  }, [currentLang, i18n]);
+  // ✅ FIX: مسیرهای واقعی af/fa/en هستن، نه fa-IR/fa-AF (که فرمت
+  // قدیمی locale JSON هاست) — قبلاً این regex هیچ‌وقت match
+  // نمی‌شد و مسیر جدید دوباره‌پیشونددار می‌شد (مثلاً /fa/af/...)
+  const withLocale = useCallback(
+    (path: string, lang: string = currentLang) => {
+      const pathWithoutLocale = path.replace(/^\/(fa|af|en)(?=\/|$)/, "") || "/";
+      // localePrefix: 'as-needed' — default locale (fa) stays unprefixed.
+      return lang === "fa" ? pathWithoutLocale : `/${lang}${pathWithoutLocale}`;
+    },
+    [currentLang]
+  );
 
   const toggleLang = useCallback(
     (lang: string) => {
       if (lang === currentLang) return;
 
-      // ✅ FIX: مسیرهای واقعی af/fa/en هستن، نه fa-IR/fa-AF (که فرمت
-      // قدیمی locale JSON هاست) — قبلاً این regex هیچ‌وقت match
-      // نمی‌شد و مسیر جدید دوباره‌پیشونددار می‌شد (مثلاً /fa/af/...)
-      const pathWithoutLocale = pathname.replace(/^\/(fa|af|en)(?=\/|$)/, "") || "/";
-      const newPath = `/${lang}${pathWithoutLocale}`;
+      const newPath = withLocale(pathname, lang);
 
       router.push(newPath);
     },
-    [pathname, currentLang, router]
+    [pathname, currentLang, router, withLocale]
   );
 
   const handleNavigate = useCallback(
     (_id: string, path: string) => {
-      setOptimisticPath(path);
-      router.push(path);
+      // `path` from NAV_ITEMS/PRIMARY_ITEMS/MORE_GROUPS is always bare
+      // (e.g. "/dashboard") — re-prefix with the current locale so the
+      // user isn't silently switched back to the default locale, and so
+      // isPathActive() stays consistent with the resulting pathname.
+      const localizedPath = withLocale(path);
+      setOptimisticPath(localizedPath);
+      router.push(localizedPath);
     },
-    [router]
+    [router, withLocale]
   );
 
   const handleLogout = useCallback(() => {
@@ -160,7 +162,7 @@ const DashboardLayout = memo(function DashboardLayout({
       PRIMARY_ITEMS.map((item) => ({
         id: item.id,
         icon: item.icon,
-        label: t(item.labelKey, item.id),
+        label: t(item.labelKey),
         path: item.path,
       })),
     [t]
@@ -170,12 +172,12 @@ const DashboardLayout = memo(function DashboardLayout({
     () =>
       MORE_GROUPS.map((g) => ({
         id: g.id,
-        label: t(g.labelKey, g.id),
+        label: t(g.labelKey),
         icon: g.icon,
         items: g.items.map((item) => ({
           id: item.id,
           icon: item.icon,
-          label: t(item.labelKey, item.id),
+          label: t(item.labelKey),
           path: item.path,
         })),
       })),
@@ -191,11 +193,12 @@ const DashboardLayout = memo(function DashboardLayout({
         icon: cmd.icon,
         ...(cmd.shortcut ? { shortcut: cmd.shortcut } : {}),
         onSelect: () => {
-          setOptimisticPath(cmd.path);
-          router.push(cmd.path);
+          const localizedPath = withLocale(cmd.path);
+          setOptimisticPath(localizedPath);
+          router.push(localizedPath);
         },
       })),
-    [router, t]
+    [router, t, withLocale]
   );
 
   const hasHydrated = useAuthStore((s) => s.hasHydrated);
@@ -203,7 +206,7 @@ const DashboardLayout = memo(function DashboardLayout({
 
   if (hasHydrated && !isAuthenticated) return null;
 
-  const isRtl = currentLang === "fa-AF" || currentLang === "fa-IR";
+  const isRtl = currentLang === "fa" || currentLang === "af";
 
   return (
     <div

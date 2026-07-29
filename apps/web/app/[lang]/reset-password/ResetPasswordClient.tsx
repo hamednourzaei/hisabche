@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback, memo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import {
   Lock,
@@ -84,7 +84,7 @@ const PasswordField = memo(function PasswordField({
 
 // ─── Main Component ─────────────────────────────────────
 export const ResetPasswordClient = memo(function ResetPasswordClient() {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const router = useRouter();
   const params = useSearchParams();
   const token = params.get("token");
@@ -99,7 +99,7 @@ export const ResetPasswordClient = memo(function ResetPasswordClient() {
 
   useEffect(() => {
     if (!token) {
-      setError(t("auth.invalidToken", "لینک نامعتبر یا منقضی شده است"));
+      setError(t("auth.invalidToken"));
     }
   }, [token, t]);
 
@@ -110,14 +110,14 @@ export const ResetPasswordClient = memo(function ResetPasswordClient() {
 
       if (password !== confirmPassword) {
         setError(
-          t("auth.passwordMismatch", "رمز عبور با تکرارش مطابقت ندارد")
+          t("auth.passwordMismatch")
         );
         return;
       }
 
       if (password.length < 8) {
         setError(
-          t("auth.passwordMinLength", "رمز عبور حداقل ۸ حرف باشد")
+          t("auth.passwordMinLength")
         );
         return;
       }
@@ -155,7 +155,7 @@ export const ResetPasswordClient = memo(function ResetPasswordClient() {
             : undefined;
 
         setError(
-          message || t("auth.invalidToken", "لینک نامعتبر یا منقضی شده است")
+          message || t("auth.invalidToken")
         );
       } finally {
         setLoading(false);
@@ -181,7 +181,7 @@ export const ResetPasswordClient = memo(function ResetPasswordClient() {
           )}
         >
           <ArrowLeft className="size-4" />
-          {t("action.back", "بازگشت به ورود")}
+          {t("action.back")}
         </button>
 
         {/* Header */}
@@ -197,20 +197,17 @@ export const ResetPasswordClient = memo(function ResetPasswordClient() {
           </div>
           <h1 className="text-2xl font-bold text-[hsl(var(--fg-primary))]">
             {success
-              ? t("auth.resetSuccess", "رمز عبور با موفقیت تغییر کرد")
+              ? t("auth.resetSuccess")
               : token
-                ? t("auth.resetPassword", "بازنشانی رمز عبور")
-                : t("auth.invalidToken", "لینک نامعتبر")}
+                ? t("auth.resetPassword")
+                : t("auth.invalidToken")}
           </h1>
           <p className="mt-2 text-sm text-[hsl(var(--fg-secondary))]">
             {success
-              ? t("auth.redirectingToLogin", "در حال انتقال به صفحه ورود...")
+              ? t("auth.redirectingToLogin")
               : token
-                ? t("auth.enterNewPassword", "رمز عبور جدید خود را وارد کنید")
-                : t(
-                    "auth.tokenExpired",
-                    "این لینک منقضی شده یا قبلاً استفاده شده است"
-                  )}
+                ? t("auth.enterNewPassword")
+                : t("auth.tokenExpired")}
           </p>
         </div>
 
@@ -220,7 +217,7 @@ export const ResetPasswordClient = memo(function ResetPasswordClient() {
             <PasswordField
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder={t("auth.newPassword", "رمز عبور جدید")}
+              placeholder={t("auth.newPassword")}
               show={showPassword}
               onToggle={() => setShowPassword((p) => !p)}
               autoFocus
@@ -229,7 +226,7 @@ export const ResetPasswordClient = memo(function ResetPasswordClient() {
             <PasswordField
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder={t("auth.confirmPassword", "تکرار رمز عبور")}
+              placeholder={t("auth.confirmPassword")}
               show={showConfirmPassword}
               onToggle={() => setShowConfirmPassword((p) => !p)}
             />
@@ -253,7 +250,7 @@ export const ResetPasswordClient = memo(function ResetPasswordClient() {
               )}
             >
               {loading && <Loader2 className="size-4 animate-spin" />}
-              {t("auth.resetPassword", "بازنشانی رمز عبور")}
+              {t("auth.resetPassword")}
             </button>
           </form>
         )}
@@ -272,7 +269,7 @@ export const ResetPasswordClient = memo(function ResetPasswordClient() {
                 "transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
               )}
             >
-              {t("action.back", "بازگشت به ورود")}
+              {t("action.back")}
             </button>
           </div>
         )}

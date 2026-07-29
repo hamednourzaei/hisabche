@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useCallback, useMemo, useRef, memo } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import {
   useBackupStore,
@@ -55,7 +55,7 @@ const PERFORMANCE_MODES = [
 // ─── Account Section ──────────────────────────────────────────────────────
 
 const AccountSection = memo(function AccountSection() {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const { user, logout } = useAuthStore();
 
   const handleLogout = useCallback(() => {
@@ -71,29 +71,29 @@ const AccountSection = memo(function AccountSection() {
           </div>
           <div className="min-w-0 flex-1">
             <h2 className="truncate font-semibold text-[hsl(var(--fg-primary))]">
-              {user?.fullName || t("common.noName", "کاربر")}
+              {user?.fullName || t("common.noName")}
             </h2>
             <p className="truncate text-sm text-[hsl(var(--fg-secondary))]">
               {user?.email}
             </p>
           </div>
           <span className="ms-auto shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))] border border-[hsl(var(--color-success)/0.2)]">
-            {t("common.active", "فعال")}
+            {t("common.active")}
           </span>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-xl border border-[hsl(var(--border-default))] p-4 text-start">
             <p className="mb-1 text-xs text-[hsl(var(--fg-tertiary))]">
-              {t("settings.businessName", "کسب‌وکار")}
+              {t("settings.businessName")}
             </p>
             <p className="font-medium text-[hsl(var(--fg-primary))]">
-              {user?.businessName || t("settings.notSet", "ثبت نشده")}
+              {user?.businessName || t("settings.notSet")}
             </p>
           </div>
           <div className="rounded-xl border border-[hsl(var(--border-default))] p-4 text-start">
             <p className="mb-1 text-xs text-[hsl(var(--fg-tertiary))]">
-              {t("settings.memberSince", "تاریخ عضویت")}
+              {t("settings.memberSince")}
             </p>
             <p className="font-medium text-[hsl(var(--fg-primary))]">
               {user?.createdAt
@@ -115,7 +115,7 @@ const AccountSection = memo(function AccountSection() {
           )}
         >
           <LogOut className="size-4" aria-hidden="true" />
-          {t("auth.signOut", "خروج")}
+          {t("auth.signOut")}
         </button>
       </div>
     </div>
@@ -131,7 +131,7 @@ const ALLOWED_STAMP_TYPES = ["image/png", "image/svg+xml"];
 const MAX_STAMP_SIZE = 1024 * 1024; // 1MB — چون به‌صورت data URL در ستون متنی ذخیره می‌شود
 
 const BusinessStampSection = memo(function BusinessStampSection() {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const { data: workspaces } = useWorkspaces();
   const updateWorkspace = useUpdateWorkspace();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -158,11 +158,11 @@ const BusinessStampSection = memo(function BusinessStampSection() {
       if (!file || !workspaceId) return;
 
       if (!ALLOWED_STAMP_TYPES.includes(file.type)) {
-        setError(t("settings.stampInvalidType", "فقط تصویر PNG یا SVG پذیرفته می‌شود"));
+        setError(t("settings.stampInvalidType"));
         return;
       }
       if (file.size > MAX_STAMP_SIZE) {
-        setError(t("settings.stampTooLarge", "حجم تصویر باید کمتر از ۱ مگابایت باشد"));
+        setError(t("settings.stampTooLarge"));
         return;
       }
       setError(null);
@@ -172,7 +172,7 @@ const BusinessStampSection = memo(function BusinessStampSection() {
         const dataUrl = reader.result as string;
         updateWorkspace.mutate({ id: workspaceId, stampUrl: dataUrl });
       };
-      reader.onerror = () => setError(t("settings.stampUploadFailed", "بارگذاری تصویر ناموفق بود"));
+      reader.onerror = () => setError(t("settings.stampUploadFailed"));
       reader.readAsDataURL(file);
     },
     [workspaceId, updateWorkspace, t],
@@ -191,14 +191,11 @@ const BusinessStampSection = memo(function BusinessStampSection() {
         <div className="flex items-center gap-2">
           <Stamp className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
           <h2 className="text-lg font-bold text-[hsl(var(--fg-primary))]">
-            {t("settings.businessStamp", "مهر و امضا")}
+            {t("settings.businessStamp")}
           </h2>
         </div>
         <p className="text-sm text-[hsl(var(--fg-secondary))]">
-          {t(
-            "settings.businessStampDesc",
-            "تصویر مهر یا امضای خود را یک‌بار بارگذاری کنید تا به‌صورت خودکار در پایین همه‌ی فاکتورها نمایش داده شود.",
-          )}
+          {t("settings.businessStampDesc")}
         </p>
 
         <div className="flex flex-wrap items-center gap-4">
@@ -207,7 +204,7 @@ const BusinessStampSection = memo(function BusinessStampSection() {
               <img src={stampUrl} alt="" className="max-h-16 max-w-full object-contain" />
             ) : (
               <span className="px-2 text-center text-xs text-[hsl(var(--fg-tertiary))]">
-                {t("settings.stampNotSet", "تنظیم نشده")}
+                {t("settings.stampNotSet")}
               </span>
             )}
           </div>
@@ -230,7 +227,7 @@ const BusinessStampSection = memo(function BusinessStampSection() {
               ) : (
                 <Upload className="size-4" aria-hidden="true" />
               )}
-              {t("settings.uploadStamp", "بارگذاری تصویر")}
+              {t("settings.uploadStamp")}
             </button>
 
             {stampUrl && (
@@ -245,7 +242,7 @@ const BusinessStampSection = memo(function BusinessStampSection() {
                 )}
               >
                 <X className="size-4" aria-hidden="true" />
-                {t("settings.removeStamp", "حذف تصویر")}
+                {t("settings.removeStamp")}
               </button>
             )}
           </div>
@@ -271,7 +268,7 @@ BusinessStampSection.displayName = "BusinessStampSection";
 // ─── Backup Section ───────────────────────────────────────────────────────
 
 const BackupSection = memo(function BackupSection() {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const {
     autoBackupEnabled,
     setAutoBackup,
@@ -314,17 +311,17 @@ const BackupSection = memo(function BackupSection() {
         <div className="flex items-center gap-2">
           <Database className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
           <h2 className="text-lg font-bold text-[hsl(var(--fg-primary))]">
-            {t("settings.backup", "بکاپ")}
+            {t("settings.backup")}
           </h2>
         </div>
 
         <div className="flex items-center justify-between gap-3 rounded-xl border border-[hsl(var(--border-default))] p-4">
           <div className="min-w-0 text-start">
             <p className="font-medium text-[hsl(var(--fg-primary))]">
-              {t("settings.autoBackup", "بکاپ خودکار")}
+              {t("settings.autoBackup")}
             </p>
             <p className="text-sm text-[hsl(var(--fg-secondary))]">
-              {t("settings.autoBackupDesc", "هر ۲۴ ساعت بکاپ گرفته شود")}
+              {t("settings.autoBackupDesc")}
             </p>
           </div>
           <Switch checked={autoBackupEnabled} onCheckedChange={setAutoBackup} className="shrink-0" />
@@ -348,7 +345,7 @@ const BackupSection = memo(function BackupSection() {
             ) : (
               <FileJson className="size-4" aria-hidden="true" />
             )}
-            {t("settings.exportJSON", "خروجی JSON")}
+            {t("settings.exportJSON")}
           </button>
 
           <button
@@ -361,7 +358,7 @@ const BackupSection = memo(function BackupSection() {
             )}
           >
             <FileText className="size-4" aria-hidden="true" />
-            {t("settings.exportCSV", "خروجی CSV")}
+            {t("settings.exportCSV")}
           </button>
 
           <button
@@ -374,7 +371,7 @@ const BackupSection = memo(function BackupSection() {
             )}
           >
             <Cloud className="size-4" aria-hidden="true" />
-            {t("settings.sync", "همگام‌سازی")}
+            {t("settings.sync")}
           </button>
         </div>
 
@@ -383,19 +380,19 @@ const BackupSection = memo(function BackupSection() {
             <div className="mb-2 flex items-center gap-2 text-[hsl(var(--color-success))]">
               <Shield className="size-4" aria-hidden="true" />
               <span className="font-medium">
-                {t("settings.lastBackup", "آخرین بکاپ")}
+                {t("settings.lastBackup")}
               </span>
             </div>
             <div className="space-y-1 text-sm text-[hsl(var(--fg-secondary))]">
               <p>
-                {t("settings.backupCount", "تعداد بکاپ‌ها")}: {backups.length}
+                {t("settings.backupCount")}: {backups.length}
               </p>
               <p>
-                {t("settings.backupDate", "تاریخ")}:{" "}
+                {t("settings.backupDate")}:{" "}
                 {new Date(latestBackup.timestamp).toLocaleDateString("fa-AF")}
               </p>
               <p>
-                {t("settings.backupSize", "حجم")}: {latestBackup.size}
+                {t("settings.backupSize")}: {latestBackup.size}
               </p>
             </div>
           </div>
@@ -409,7 +406,7 @@ BackupSection.displayName = "BackupSection";
 // ─── Performance Section ──────────────────────────────────────────────────
 
 const PerformanceSection = memo(function PerformanceSection() {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const { performanceMode, setPerformanceMode } = useDeviceStore();
 
   return (
@@ -418,7 +415,7 @@ const PerformanceSection = memo(function PerformanceSection() {
         <div className="flex items-center gap-2">
           <Monitor className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
           <h2 className="text-lg font-bold text-[hsl(var(--fg-primary))]">
-            {t("settings.performance", "عملکرد")}
+            {t("settings.performance")}
           </h2>
         </div>
 
@@ -442,7 +439,7 @@ const PerformanceSection = memo(function PerformanceSection() {
         </div>
 
         <p className="text-sm text-[hsl(var(--fg-secondary))]">
-          {t("settings.perfDesc", "حالت اقتصادی برای دستگاه‌های ضعیف‌تر مناسب است")}
+          {t("settings.perfDesc")}
         </p>
       </div>
     </div>
@@ -453,7 +450,7 @@ PerformanceSection.displayName = "PerformanceSection";
 // ─── Safety Section ───────────────────────────────────────────────────────
 
 const SafetySection = memo(function SafetySection() {
-  const { t } = useTranslation();
+  const t = useTranslations();
 
   return (
     <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
@@ -461,7 +458,7 @@ const SafetySection = memo(function SafetySection() {
         <div className="flex items-center gap-2">
           <Shield className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
           <h2 className="text-lg font-bold text-[hsl(var(--fg-primary))]">
-            {t("settings.safety", "امنیت داده‌ها")}
+            {t("settings.safety")}
           </h2>
         </div>
 
@@ -487,7 +484,7 @@ SafetySection.displayName = "SafetySection";
 // ─── Storage Section ──────────────────────────────────────────────────────
 
 const StorageSection = memo(function StorageSection() {
-  const { t } = useTranslation();
+  const t = useTranslations();
 
   const handleClearCache = useCallback(() => {
     // TODO: Implement cache clearing
@@ -500,14 +497,14 @@ const StorageSection = memo(function StorageSection() {
         <div className="flex items-center gap-2">
           <Download className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
           <h2 className="text-lg font-bold text-[hsl(var(--fg-primary))]">
-            {t("settings.storage", "حافظه و کش")}
+            {t("settings.storage")}
           </h2>
         </div>
 
         <div className="rounded-xl border border-[hsl(var(--border-default))] p-4 text-start">
           <div className="mb-3 flex items-center justify-between">
             <span className="text-sm text-[hsl(var(--fg-secondary))]">
-              {t("settings.cache", "کش برنامه")}
+              {t("settings.cache")}
             </span>
             <span className="rounded-full px-2.5 py-0.5 text-xs font-medium bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))] border border-[hsl(var(--border-default))]">
               24 MB
@@ -525,7 +522,7 @@ const StorageSection = memo(function StorageSection() {
             )}
           >
             <Trash2 className="size-4" aria-hidden="true" />
-            {t("settings.clearCache", "پاک کردن کش")}
+            {t("settings.clearCache")}
           </button>
         </div>
       </div>
@@ -537,7 +534,7 @@ StorageSection.displayName = "StorageSection";
 // ─── Billing Link ────────────────────────────────────────────────────────────
 
 const BillingSection = memo(function BillingSection() {
-  const { t } = useTranslation();
+  const t = useTranslations();
 
   return (
     <Link
@@ -554,10 +551,10 @@ const BillingSection = memo(function BillingSection() {
       </div>
       <div className="min-w-0 flex-1">
         <p className="font-semibold text-[hsl(var(--fg-primary))]">
-          {t("nav.billing", "پلن و اشتراک")}
+          {t("nav.billing")}
         </p>
         <p className="text-sm text-[hsl(var(--fg-secondary))] truncate">
-          {t("nav.billing.description", "طرح فعلی، ارتقا و صورت‌حساب اشتراک")}
+          {t("nav.billing.description")}
         </p>
       </div>
       <ChevronLeft className="size-4 text-[hsl(var(--fg-tertiary))] rtl:rotate-180 shrink-0" aria-hidden="true" />
@@ -567,7 +564,7 @@ const BillingSection = memo(function BillingSection() {
 BillingSection.displayName = "BillingSection";
 
 const WorkflowTemplatesSection = memo(function WorkflowTemplatesSection() {
-  const { t } = useTranslation();
+  const t = useTranslations();
 
   return (
     <Link
@@ -584,10 +581,10 @@ const WorkflowTemplatesSection = memo(function WorkflowTemplatesSection() {
       </div>
       <div className="min-w-0 flex-1">
         <p className="font-semibold text-[hsl(var(--fg-primary))]">
-          {t("workflow.templates.title", "الگوهای تأیید")}
+          {t("workflow.templates.title")}
         </p>
         <p className="text-sm text-[hsl(var(--fg-secondary))] truncate">
-          {t("workflow.templates.description", "بدون حداقل یک الگوی فعال، هیچ فاکتور/سفارش خریدی وارد چرخه‌ی تأیید نمی‌شود.")}
+          {t("workflow.templates.description")}
         </p>
       </div>
       <ChevronLeft className="size-4 text-[hsl(var(--fg-tertiary))] rtl:rotate-180 shrink-0" aria-hidden="true" />
@@ -599,16 +596,16 @@ WorkflowTemplatesSection.displayName = "WorkflowTemplatesSection";
 // ─── Main Page ─────────────────────────────────────────────────────────────
 
 export const SettingsPage = memo(function SettingsPage() {
-  const { t } = useTranslation();
+  const t = useTranslations();
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">
       <div className="mb-4">
         <h1 className="text-2xl font-bold text-[hsl(var(--fg-primary))] mb-2">
-          {t("settings.title", "تنظیمات")}
+          {t("settings.title")}
         </h1>
         <p className="text-sm text-[hsl(var(--fg-secondary))]">
-          {t("settings.description", "مدیریت حساب، بکاپ و تنظیمات برنامه")}
+          {t("settings.description")}
         </p>
       </div>
 

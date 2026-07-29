@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useCallback, memo } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { useInteractions, useOpportunities, useCreateInteraction } from "@hisabche/api";
 import { CrmView, type CrmTabId } from "../crm-view";
 
@@ -12,15 +12,8 @@ import { CrmView, type CrmTabId } from "../crm-view";
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export const CrmContainer = memo(function CrmContainer() {
-  const { t: tOriginal } = useTranslation();
+  const t = useTranslations();
 
-  const t = useCallback(
-    (key: string, fallback?: string): string => {
-      const result = tOriginal(key);
-      return result && result !== key ? result : (fallback ?? key);
-    },
-    [tOriginal]
-  );
 
   const [activeTab, setActiveTab] = useState<CrmTabId>("interactions");
 

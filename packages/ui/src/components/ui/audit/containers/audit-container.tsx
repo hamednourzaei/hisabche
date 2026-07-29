@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useCallback, memo, useMemo } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { useAuditLogs, type AuditLog, type AuditResponse } from "@hisabche/api";
 import { AuditView } from "../audit-view";
 
@@ -12,16 +12,10 @@ import { AuditView } from "../audit-view";
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export const AuditContainer = memo(function AuditContainer() {
-  const { t: tOriginal } = useTranslation();
+  const t = useTranslations();
 
   // ✅ safeT wrapper
-  const t = useCallback(
-    (key: string, fallback?: string): string => {
-      const result = tOriginal(key);
-      return result && result !== key ? result : (fallback ?? key);
-    },
-    [tOriginal]
-  );
+
 
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<{

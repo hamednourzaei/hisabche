@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslation } from 'react-i18next'
+import { useTranslations } from "next-intl";
 import { usePlans, useUpgrade } from '@hisabche/api'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../../card'
 import { Button } from '../../button'
@@ -8,8 +8,7 @@ import { Badge } from '../../badge'
 import { Check } from 'lucide-react'
 
 export function PricingContainer() {
-  const { t } = useTranslation()
-  const { data: plans, isLoading } = usePlans()
+  const t = useTranslations();const { data: plans, isLoading } = usePlans()
   const upgrade = useUpgrade()
 
   if (isLoading) {

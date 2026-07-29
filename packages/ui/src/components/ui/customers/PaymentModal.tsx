@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { useTranslation } from "react-i18next"
+import { useTranslations } from "next-intl";
 import { z } from "zod"
 import { useCreateTransaction } from "@hisabche/api"
 import { Button } from "../button"
@@ -57,8 +57,7 @@ interface PaymentModalProps {
 }
 
 export function PaymentModal({ open, onClose, onPaid, customer, openInvoices }: PaymentModalProps) {
-  const { t } = useTranslation()
-  const createTx = useCreateTransaction()
+  const t = useTranslations();const createTx = useCreateTransaction()
   const { setSaveStatus } = useSyncStore()
   const { addAuditEntry } = useBackupStore()
   const [amount, setAmount] = useState("")
@@ -122,7 +121,7 @@ export function PaymentModal({ open, onClose, onPaid, customer, openInvoices }: 
         action: "payment",
         entity: "transaction",
         entityId: customer.id,
-        details: t("customers.paymentDetails", `پرداخت ${fmt(parsed.data.amount)} AFN از ${customer.fullName || customer.name} — فاکتور #${targetInvoice}`),
+        details: t("customers.paymentDetails"),
       })
 
       setSaveStatus("saved")
@@ -161,7 +160,7 @@ export function PaymentModal({ open, onClose, onPaid, customer, openInvoices }: 
   return (
     <Dialog open={open} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="max-w-md">
-        <SaveIndicator show={showSaved} message={t("common.saved", "پرداخت ثبت شد ✅")} />
+        <SaveIndicator show={showSaved} message={t("common.saved")} />
 
         <DialogHeader>
           <DialogTitle>
@@ -194,7 +193,7 @@ export function PaymentModal({ open, onClose, onPaid, customer, openInvoices }: 
               <div className="space-y-1">
                 <p className="font-semibold text-foreground">{t("customers.noOpenDeals")}</p>
                 <p className="text-sm text-muted-foreground">
-                  {t("customers.noOpenDealsDesc", "این مشتری بدهی باز ندارد")}
+                  {t("customers.noOpenDealsDesc")}
                 </p>
               </div>
               <Button variant="outline" size="sm" onClick={handleClose}>

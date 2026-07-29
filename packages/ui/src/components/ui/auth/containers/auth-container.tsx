@@ -4,7 +4,7 @@ import { useState, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { z } from "zod";
 import { useAuthStore, type User } from "@hisabche/store";
 import { loginSchema, type LoginInput } from "@hisabche/validation";
@@ -29,7 +29,7 @@ const signupSchema = z.object({
 type SignupInput = z.infer<typeof signupSchema>;
 
 function useSafeT() {
-  const { t } = useTranslation();
+  const t = useTranslations();
   return (key: string, fallback: string) => {
     const v = t(key);
     return v && v !== key ? v : fallback;
@@ -43,7 +43,7 @@ export function AuthContainer({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { t } = useTranslation();
+  const t = useTranslations();
   const st = useSafeT();
   const [flipped, setFlipped] = useState(initialMode === "signup");
 
@@ -144,7 +144,7 @@ export function AuthContainer({
     }
   );
 
-  const translateError = (k?: string) => (k ? t(k, k) : undefined);
+  const translateError = (k?: string) => (k ? (t.has(k) ? t(k) : k) : undefined);
 
   const signupProps = {
     st,

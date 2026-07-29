@@ -2,7 +2,7 @@
 "use client";
 
 import { useCallback, memo } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { usePurchaseOrders, useReceiveGoods } from "@hisabche/api";
 import { PurchasingView } from "../purchasing-view";
 
@@ -12,15 +12,8 @@ import { PurchasingView } from "../purchasing-view";
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export const PurchasingContainer = memo(function PurchasingContainer() {
-  const { t: tOriginal } = useTranslation();
+  const t = useTranslations();
 
-  const t = useCallback(
-    (key: string, fallback?: string): string => {
-      const result = tOriginal(key);
-      return result && result !== key ? result : (fallback ?? key);
-    },
-    [tOriginal]
-  );
 
   const { data: orders, isLoading, error } = usePurchaseOrders();
   const { mutate: receiveGoods, isPending, variables: receivingId } = useReceiveGoods();

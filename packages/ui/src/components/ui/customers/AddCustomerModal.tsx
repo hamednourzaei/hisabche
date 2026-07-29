@@ -4,7 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { useCreateCustomer, useCreateInvoice } from "@hisabche/api";
 import {
   Dialog,
@@ -67,7 +67,7 @@ export function AddCustomerModal({
   onClose,
   onCreated,
 }: AddCustomerModalProps) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const createCustomer = useCreateCustomer();
   const createInvoice = useCreateInvoice();
   const { setSaveStatus } = useSyncStore();
@@ -128,7 +128,7 @@ export function AddCustomerModal({
         action: "create",
         entity: "customer",
         entityId: customer.id || "",
-        details: `${t("customers.newCustomerDetails", "مشتری جدید")}: ${data.name}`,
+        details: `${t("customers.newCustomerDetails")}: ${data.name}`,
       });
 
       if (withDebt && product && total > 0) {
@@ -169,7 +169,7 @@ export function AddCustomerModal({
       close();
     } catch {
       setSaveStatus("error");
-      setError(t("common.saveError", "خطا در ذخیره اطلاعات"));
+      setError(t("common.saveError"));
       setTimeout(() => setSaveStatus("idle"), 2000);
     }
   };
@@ -188,13 +188,13 @@ export function AddCustomerModal({
             className="absolute top-3 end-3 flex items-center gap-2 text-sm text-[hsl(var(--color-success))]"
           >
             <Check className="size-4" aria-hidden="true" />
-            <span>{t("common.saved", "ذخیره شد ✅")}</span>
+            <span>{t("common.saved")}</span>
           </div>
         )}
 
         <DialogHeader>
           <DialogTitle>
-            {t("customers.addCustomer", "افزودن مشتری جدید")}
+            {t("customers.addCustomer")}
           </DialogTitle>
         </DialogHeader>
 
@@ -208,7 +208,7 @@ export function AddCustomerModal({
               />
               <input
                 {...register("name")}
-                placeholder={t("customers.form.namePlaceholder", "نام کامل")}
+                placeholder={t("customers.form.namePlaceholder")}
                 autoFocus
                 className={cn(inputBase, errors.name && "border-[hsl(var(--color-destructive))]")}
               />
@@ -225,7 +225,7 @@ export function AddCustomerModal({
             <PhoneInput
               value={phoneValue}
               onChange={setPhoneValue}
-              placeholder={t("customers.form.phonePlaceholder", "شماره تماس")}
+              placeholder={t("customers.form.phonePlaceholder")}
               defaultCountry="+98"
             />
           </div>
@@ -242,7 +242,7 @@ export function AddCustomerModal({
                   : outlineBtn,
               )}
             >
-              {t("customers.form.newCustomer", "مشتری بدون بدهی")}
+              {t("customers.form.newCustomer")}
             </button>
             <button
               type="button"
@@ -254,7 +254,7 @@ export function AddCustomerModal({
                   : outlineBtn,
               )}
             >
-              {t("customers.form.hasDebt", "مشتری دارای بدهی")}
+              {t("customers.form.hasDebt")}
             </button>
           </div>
 
@@ -264,7 +264,7 @@ export function AddCustomerModal({
               <ProductPicker
                 value={product}
                 onChange={setProduct}
-                placeholder={t("customers.form.whichProduct", "انتخاب محصول")}
+                placeholder={t("customers.form.whichProduct")}
               />
 
               <div className="grid grid-cols-2 gap-2">
@@ -276,7 +276,7 @@ export function AddCustomerModal({
                   <MoneyInput
                     value={unitPrice}
                     onChange={(raw) => setUnitPrice(raw)}
-                    placeholder={t("customers.form.unitPrice", "قیمت واحد")}
+                    placeholder={t("customers.form.unitPrice")}
                     className={cn(inputBase, "h-auto")}
                   />
                 </div>
@@ -289,7 +289,7 @@ export function AddCustomerModal({
                     type="number"
                     value={qty}
                     onChange={(e) => setQty(e.target.value)}
-                    placeholder={t("customers.form.qty", "تعداد")}
+                    placeholder={t("customers.form.qty")}
                     className={inputBase}
                   />
                 </div>
@@ -297,7 +297,7 @@ export function AddCustomerModal({
 
               {total > 0 && (
                 <p className="text-center text-lg font-bold tabular-nums text-[hsl(var(--color-primary))]">
-                  {t("customers.form.total", "مجموع")}: {fmt(total)} AFN
+                  {t("customers.form.total")}: {fmt(total)} AFN
                 </p>
               )}
             </div>
@@ -328,7 +328,7 @@ export function AddCustomerModal({
               onClick={close}
               className={cn(outlineBtn, "w-full")}
             >
-              {t("common.cancel", "انصراف")}
+              {t("common.cancel")}
             </button>
             <button
               type="submit"
@@ -338,7 +338,7 @@ export function AddCustomerModal({
               {pending && (
                 <Loader2 className="size-4 animate-spin" aria-hidden="true" />
               )}
-              {t("common.save", "ذخیره")}
+              {t("common.save")}
             </button>
           </div>
         </form>

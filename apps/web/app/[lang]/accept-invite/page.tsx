@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useCallback, useMemo, memo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { apiClient } from "@hisabche/api";
 import { useAuthStore } from "@hisabche/store";
 import { CheckCircle, XCircle, Loader2, ArrowRight } from "lucide-react";
@@ -30,14 +30,14 @@ interface ApiError {
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 
-function getErrorMessage(err: ApiError, t: (key: string, fallback?: string) => string): string {
+function getErrorMessage(err: ApiError, t: (key: string) => string): string {
   if (err?.response?.data?.error) {
     return err.response.data.error;
   }
   if (err?.message) {
     return err.message;
   }
-  return t("workspace.inviteExpired", "لینک دعوت منقضی شده یا نامعتبر است.");
+  return t("workspace.inviteExpired");
 }
 
 function extractToken(params: URLSearchParams): string | null {
@@ -82,18 +82,9 @@ StatusIcon.displayName = "StatusIcon";
 // ─── Main Component ────────────────────────────────────────────────────────
 
 const AcceptInvitePage = memo(function AcceptInvitePage() {
-  const { t: tOriginal } = useTranslation();
+  const t = useTranslations();
   const router = useRouter();
   const params = useSearchParams();
-
-  // ✅ safeT wrapper
-  const t = useCallback(
-    (key: string, fallback?: string): string => {
-      const result = tOriginal(key);
-      return result && result !== key ? result : (fallback ?? key);
-    },
-    [tOriginal]
-  );
 
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
@@ -105,7 +96,7 @@ const AcceptInvitePage = memo(function AcceptInvitePage() {
   const handleAcceptInvite = useCallback(async () => {
     if (!token) {
       setStatus("error");
-      setMessage(t("workspace.inviteInvalidToken", "لینک دعوت نامعتبر است."));
+      setMessage(t("workspace.inviteInvalidToken"));
       return;
     }
 
@@ -142,10 +133,7 @@ const AcceptInvitePage = memo(function AcceptInvitePage() {
 
       setStatus("success");
       setMessage(
-        t(
-          "workspace.inviteAccepted",
-          "دعوت با موفقیت پذیرفته شد! در حال انتقال به ورک‌اسپیس..."
-        )
+        t("workspace.inviteAccepted")
       );
 
       // ✅ Redirect after success
@@ -195,7 +183,7 @@ const AcceptInvitePage = memo(function AcceptInvitePage() {
         <div className="text-center space-y-4">
           <StatusIcon status="loading" />
           <p className="text-lg text-[hsl(var(--fg-secondary))]">
-            {t("workspace.inviteChecking", "در حال بررسی دعوت...")}
+            {t("workspace.inviteChecking")}
           </p>
         </div>
       </div>
@@ -213,7 +201,7 @@ const AcceptInvitePage = memo(function AcceptInvitePage() {
           </p>
           <div className="flex items-center justify-center gap-2 text-sm text-[hsl(var(--fg-secondary))]">
             <Loader2 className="size-4 animate-spin" />
-            {t("workspace.redirecting", "در حال انتقال...")}
+            {t("workspace.redirecting")}
           </div>
         </div>
       </div>
@@ -227,7 +215,7 @@ const AcceptInvitePage = memo(function AcceptInvitePage() {
         <StatusIcon status="error" />
         <div>
           <p className="text-lg font-bold text-[hsl(var(--color-destructive))]">
-            {t("workspace.inviteError", "خطا")}
+            {t("workspace.inviteError")}
           </p>
           <p className="text-sm text-[hsl(var(--fg-secondary))] mt-2">
             {message}
@@ -247,7 +235,7 @@ const AcceptInvitePage = memo(function AcceptInvitePage() {
             )}
           >
             <Loader2 className="size-4" />
-            {t("action.retry", "تلاش مجدد")}
+            {t("action.retry")}
           </button>
 
           <button
@@ -260,7 +248,7 @@ const AcceptInvitePage = memo(function AcceptInvitePage() {
               "transition-all duration-200",
             )}
           >
-            {t("workspace.goToWorkspace", "رفتن به ورک‌اسپیس")}
+            {t("workspace.goToWorkspace")}
             <ArrowRight className="size-4" />
           </button>
         </div>

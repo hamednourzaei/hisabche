@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useCallback, useMemo } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { useInvoices, useDeleteInvoice } from "@hisabche/api";
 import { mapInvoices } from "../../lib/invoices/invoices-mappers";
 import { STATUS_MAP } from "../../lib/invoices/invoices-format";
@@ -19,7 +19,7 @@ const DEFAULT_FILTERS: InvoicesQueryParams = {
 // ─── Main Hook ─────────────────────────────────────────────────────────────
 
 export function useInvoicesPage() {
-  const { t } = useTranslation();
+  const t = useTranslations();
 
   const [filters, setFilters] = useState<InvoicesQueryParams>(DEFAULT_FILTERS);
 

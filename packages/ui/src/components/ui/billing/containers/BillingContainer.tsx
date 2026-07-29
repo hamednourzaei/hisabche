@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslation } from 'react-i18next'
+import { useTranslations } from "next-intl";
 import { useSubscription, useTrialStatus, useUsage, useUpgrade, useCancelSubscription } from '@hisabche/api'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../card'
 import { Button } from '../../button'
@@ -9,8 +9,7 @@ import { Progress } from '../../progress'
 import { Loader2, Check, X } from 'lucide-react'
 
 export function BillingContainer() {
-  const { t } = useTranslation()
-  const { data: subscription, isLoading: subLoading } = useSubscription()
+  const t = useTranslations();const { data: subscription, isLoading: subLoading } = useSubscription()
   const { data: trialStatus, isLoading: trialLoading } = useTrialStatus()
   const { data: usage, isLoading: usageLoading } = useUsage()
   const upgrade = useUpgrade()

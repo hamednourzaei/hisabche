@@ -2,7 +2,7 @@
 "use client";
 
 import { memo } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { Wallet, BookOpen, Scale, FileBarChart, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -29,13 +29,13 @@ interface AccountingTabsProps {
 }
 
 export const AccountingTabs = memo(function AccountingTabs({ activeTab, onTabChange }: AccountingTabsProps) {
-  const { t } = useTranslation();
+  const t = useTranslations();
 
   return (
     <div
       className="flex items-center gap-1 md:gap-1.5 lg:gap-2 overflow-x-auto pb-0.5 scrollbar-hide"
       role="tablist"
-      aria-label={t("accounting.tabs.label", "تب‌های حسابداری")}
+      aria-label={t("accounting.tabs.label")}
     >
       {TABS.map((tab) => {
         const Icon = tab.icon;
@@ -59,7 +59,7 @@ export const AccountingTabs = memo(function AccountingTabs({ activeTab, onTabCha
             )}
           >
             <Icon className="size-3.5 md:size-4 lg:size-[18px]" aria-hidden="true" />
-            <span>{t(tab.labelKey, tab.labelFallback)}</span>
+            <span>{t(tab.labelKey)}</span>
           </button>
         );
       })}

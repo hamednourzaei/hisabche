@@ -67,9 +67,15 @@ const nextConfig = {
   async redirects() {
     return [
       {
+        // Canonicalize apex domain -> www, preserving the original path (including
+        // any locale segment already in it, e.g. /fa/pricing or /en/login).
+        // Previously this force-prefixed everything with "/en", which meant a
+        // request like hisabche.com/fa/pricing was sent to
+        // https://www.hisabche.com/en/fa/pricing — a non-existent, double-locale
+        // URL — breaking hreflang targets and any inbound links to the apex domain.
         source: '/:path*',
         has: [{ type: 'host', value: 'hisabche.com' }],
-        destination: 'https://www.hisabche.com/en/:path*',
+        destination: 'https://www.hisabche.com/:path*',
         permanent: true,
       },
     ]
@@ -122,4 +128,6 @@ const nextConfig = {
   },
 }
 
-module.exports = nextConfig
+const withNextIntl = require('next-intl/plugin')('./i18n/request.ts')
+
+module.exports = withNextIntl(nextConfig)

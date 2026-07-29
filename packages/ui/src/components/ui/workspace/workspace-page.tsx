@@ -3,7 +3,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo, memo } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { useWorkspaceStore, useAuthStore, type WorkspaceMember, type WorkspaceRole } from "@hisabche/store";
 import { useRemoveMember, useUpdateMemberRole } from "@hisabche/api";
@@ -43,7 +43,7 @@ const MemberRow = memo(function MemberRow({
   onRoleChange: (memberId: string, newRole: WorkspaceRole) => void;
   onRemove: (memberId: string) => void;
   roleLabel: (role: string) => string;
-  t: (key: string, fallback?: string) => string;
+  t: (key: string) => string;
 }) {
   const bs = badgeStyles[member.role === "owner" ? "warning" : member.role === "admin" ? "default" : "secondary"] ?? badgeStyles.secondary;
 
@@ -66,9 +66,9 @@ const MemberRow = memo(function MemberRow({
             onChange={(e) => onRoleChange(member.id, e.target.value as WorkspaceRole)}
             className="text-xs rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))] px-2 py-1 cursor-pointer"
           >
-            <option value="admin">{t("workspace.admin", "مدیر")}</option>
-            <option value="member">{t("workspace.employee", "کارمند")}</option>
-            <option value="viewer">{t("workspace.viewer", "ناظر")}</option>
+            <option value="admin">{t("workspace.admin")}</option>
+            <option value="member">{t("workspace.employee")}</option>
+            <option value="viewer">{t("workspace.viewer")}</option>
           </select>
         ) : (
           <span className={cn("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold border shrink-0 gap-1", bs)}>
@@ -81,7 +81,7 @@ const MemberRow = memo(function MemberRow({
           <button
             onClick={() => onRemove(member.id)}
             className="p-1 rounded-lg text-[hsl(var(--fg-tertiary))] hover:bg-[hsl(var(--color-destructive)/0.1)] hover:text-[hsl(var(--color-destructive))] transition-colors"
-            aria-label={t("action.remove", "حذف")}
+            aria-label={t("action.remove")}
           >
             <X className="size-4" />
           </button>
@@ -95,16 +95,9 @@ MemberRow.displayName = "MemberRow";
 // ─── Main Component ─────────────────────────────────────────────────────────
 
 export const WorkspacePage = memo(function WorkspacePage() {
-  const { t: tOriginal } = useTranslation();
+  const t = useTranslations();
 
-  // ✅ safeT wrapper برای تطابق با exactOptionalPropertyTypes
-  const safeT = useCallback(
-    (key: string, fallback?: string): string => {
-      const result = tOriginal(key);
-      return result && result !== key ? result : (fallback ?? key);
-    },
-    [tOriginal]
-  );
+  const safeT = t;
 
   const { workspaceId, workspaceName, members, currentUserRole, loading, fetchWorkspace } = useWorkspaceStore();
   const userId = useAuthStore((s) => s.user?.id);
@@ -119,9 +112,9 @@ export const WorkspacePage = memo(function WorkspacePage() {
   const roleLabel = useCallback(
     (role: string) => {
       switch (role) {
-        case "owner": return safeT("workspace.owner", "مالک");
-        case "admin": return safeT("workspace.admin", "مدیر");
-        default: return safeT("workspace.employee", "کارمند");
+        case "owner": return safeT("workspace.owner");
+        case "admin": return safeT("workspace.admin");
+        default: return safeT("workspace.employee");
       }
     },
     [safeT]
@@ -136,12 +129,12 @@ export const WorkspacePage = memo(function WorkspacePage() {
 
   const handleRemove = useCallback(
     async (memberId: string) => {
-      if (!confirm(safeT("workspace.confirmRemove", "آیا از حذف این عضو اطمینان دارید؟"))) return;
+      if (!confirm(safeT("workspace.confirmRemove"))) return;
       try {
         await removeMember.mutateAsync({ workspaceId: workspaceId!, memberId });
         refresh();
       } catch {
-        alert(safeT("workspace.removeFailed", "حذف عضو ناموفق بود"));
+        alert(safeT("workspace.removeFailed"));
       }
     },
     [workspaceId, removeMember, refresh, safeT]
@@ -153,7 +146,7 @@ export const WorkspacePage = memo(function WorkspacePage() {
         await updateRole.mutateAsync({ workspaceId: workspaceId!, memberId, role: newRole });
         refresh();
       } catch {
-        alert(safeT("workspace.roleChangeFailed", "تغییر نقش ناموفق بود"));
+        alert(safeT("workspace.roleChangeFailed"));
       }
     },
     [workspaceId, updateRole, refresh, safeT]
@@ -193,10 +186,10 @@ export const WorkspacePage = memo(function WorkspacePage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1.5">
           <h1 className="text-2xl font-bold sm:text-3xl text-[hsl(var(--fg-primary))]">
-            {safeT("nav.coworkers", "همکاران")}
+            {safeT("nav.coworkers")}
           </h1>
           <p className="text-sm text-[hsl(var(--fg-secondary))]">
-            {workspaceName || safeT("workspace.defaultName", "ورک‌اسپیس من")}
+            {workspaceName || safeT("workspace.defaultName")}
           </p>
         </div>
         {isAdmin && (
@@ -206,7 +199,7 @@ export const WorkspacePage = memo(function WorkspacePage() {
             className="inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold bg-[hsl(var(--color-primary))] text-white shadow-sm shadow-[hsl(var(--color-primary)/0.15)] transition-all duration-200 hover:brightness-110 active:scale-[0.98]"
           >
             <UserPlus className="size-4" />
-            {safeT("workspace.inviteMember", "دعوت عضو")}
+            {safeT("workspace.inviteMember")}
           </button>
         )}
       </div>
@@ -217,13 +210,13 @@ export const WorkspacePage = memo(function WorkspacePage() {
           <div className="mb-4 flex items-center gap-2">
             <Users className="size-5 text-[hsl(var(--color-primary))]" />
             <h2 className="text-lg font-semibold text-[hsl(var(--fg-primary))]">
-              {safeT("workspace.members", "اعضا")} ({members.length})
+              {safeT("workspace.members")} ({members.length})
             </h2>
           </div>
 
           {members.length === 0 ? (
             <p className="py-8 text-center text-sm text-[hsl(var(--fg-tertiary))]">
-              {safeT("workspace.noMembers", "هنوز عضوی اضافه نشده")}
+              {safeT("workspace.noMembers")}
             </p>
           ) : (
             <div className="space-y-2">{memberRows}</div>
@@ -235,20 +228,20 @@ export const WorkspacePage = memo(function WorkspacePage() {
       <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
         <div className="space-y-3 p-6 text-start">
           <h3 className="font-semibold text-[hsl(var(--fg-primary))]">
-            {safeT("workspace.permissions", "دسترسی‌ها")}
+            {safeT("workspace.permissions")}
           </h3>
           <div className="grid gap-2 text-sm text-[hsl(var(--fg-secondary))]">
             <div className="flex items-center gap-2">
               <Crown className="size-4 text-[hsl(var(--color-warning))]" />
-              <span>{safeT("workspace.ownerPerms", "مالک: دسترسی کامل به همه چیز")}</span>
+              <span>{safeT("workspace.ownerPerms")}</span>
             </div>
             <div className="flex items-center gap-2">
               <Shield className="size-4 text-[hsl(var(--color-primary))]" />
-              <span>{safeT("workspace.adminPerms", "مدیر: مدیریت محصولات، فاکتورها و دعوت اعضا")}</span>
+              <span>{safeT("workspace.adminPerms")}</span>
             </div>
             <div className="flex items-center gap-2">
               <User className="size-4 text-[hsl(var(--fg-secondary))]" />
-              <span>{safeT("workspace.employeePerms", "کارمند: فقط ثبت فاکتور و مشاهده")}</span>
+              <span>{safeT("workspace.employeePerms")}</span>
             </div>
           </div>
         </div>

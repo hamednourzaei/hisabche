@@ -2,12 +2,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { useEmployee, useUpdateEmployee } from "@hisabche/api";
 import { EmployeeDetailView } from "../employee-detail-view";
 
 export function EmployeeDetailContainer({ id }: { id: string }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const router = useRouter();
   const { data: employee, isLoading } = useEmployee(id);
   const updateEmployee = useUpdateEmployee();

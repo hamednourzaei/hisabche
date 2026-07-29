@@ -3,7 +3,7 @@
 
 import { useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { useWarehouse } from "../../../../hooks/warehouse/use-warehouse";
 import { WarehouseView } from "../warehouse-view";
 import { AddProductModal } from "../../add-product-modal";
@@ -18,7 +18,7 @@ const CURRENCIES = [
 ];
 
 export function warehouseContainer() {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");

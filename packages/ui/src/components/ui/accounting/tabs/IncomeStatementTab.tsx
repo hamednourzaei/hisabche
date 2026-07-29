@@ -2,7 +2,7 @@
 "use client";
 
 import { memo, useState, useMemo } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useIncomeStatement } from "@hisabche/api";
@@ -31,7 +31,7 @@ function getToday(): string {
 }
 
 export const IncomeStatementTab = memo(function IncomeStatementTab() {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const [from, setFrom] = useState(getFirstDayOfMonth);
   const [to, setTo] = useState(getToday);
   const { data, isLoading } = useIncomeStatement(from, to);
@@ -51,7 +51,7 @@ export const IncomeStatementTab = memo(function IncomeStatementTab() {
     <div className="flex flex-col h-full">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 md:gap-3 px-3 md:px-4 lg:px-5 py-2.5 md:py-3 lg:py-4 border-b border-[hsl(var(--border-default))]">
         <h2 className="text-xs md:text-sm lg:text-base font-semibold text-[hsl(var(--fg-primary))]">
-          {t("accounting.incomeStatement.title", "سود و زیان")}
+          {t("accounting.incomeStatement.title")}
         </h2>
         <div className="flex items-end gap-2 md:gap-3">
           <DateRangePicker from={from} to={to} onFromChange={setFrom} onToChange={setTo} />
@@ -63,13 +63,13 @@ export const IncomeStatementTab = memo(function IncomeStatementTab() {
         {isLoading ? (
           <AccountingSkeleton rows={3} />
         ) : !data ? (
-          <AccountingEmptyState title={t("accounting.incomeStatement.empty.title", "داده‌ای برای این بازه یافت نشد")} />
+          <AccountingEmptyState title={t("accounting.incomeStatement.empty.title")} />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 md:gap-3 lg:gap-4">
             <div className="rounded-lg md:rounded-xl border border-[hsl(var(--border-default))] p-3 md:p-4 lg:p-5 bg-[hsl(var(--surface-elevated))]">
               <div className="flex items-center gap-2 text-[hsl(var(--color-success))] mb-1.5 md:mb-2">
                 <TrendingUp className="size-4 md:size-5" aria-hidden="true" />
-                <span className="text-[11px] md:text-xs lg:text-sm font-medium">{t("accounting.incomeStatement.revenue", "درآمد")}</span>
+                <span className="text-[11px] md:text-xs lg:text-sm font-medium">{t("accounting.incomeStatement.revenue")}</span>
               </div>
               <p className="text-lg md:text-xl lg:text-2xl font-bold text-[hsl(var(--fg-primary))]">
                 {data.revenue.toLocaleString()}
@@ -79,7 +79,7 @@ export const IncomeStatementTab = memo(function IncomeStatementTab() {
             <div className="rounded-lg md:rounded-xl border border-[hsl(var(--border-default))] p-3 md:p-4 lg:p-5 bg-[hsl(var(--surface-elevated))]">
               <div className="flex items-center gap-2 text-[hsl(var(--color-destructive))] mb-1.5 md:mb-2">
                 <TrendingDown className="size-4 md:size-5" aria-hidden="true" />
-                <span className="text-[11px] md:text-xs lg:text-sm font-medium">{t("accounting.incomeStatement.expenses", "هزینه‌ها")}</span>
+                <span className="text-[11px] md:text-xs lg:text-sm font-medium">{t("accounting.incomeStatement.expenses")}</span>
               </div>
               <p className="text-lg md:text-xl lg:text-2xl font-bold text-[hsl(var(--fg-primary))]">
                 {data.expenses.toLocaleString()}
@@ -96,7 +96,7 @@ export const IncomeStatementTab = memo(function IncomeStatementTab() {
             >
               <div className={cn("flex items-center gap-2 mb-1.5 md:mb-2", isProfit ? "text-[hsl(var(--color-success))]" : "text-[hsl(var(--color-destructive))]")}>
                 {isProfit ? <TrendingUp className="size-4 md:size-5" aria-hidden="true" /> : <TrendingDown className="size-4 md:size-5" aria-hidden="true" />}
-                <span className="text-[11px] md:text-xs lg:text-sm font-medium">{t("accounting.incomeStatement.netIncome", "سود خالص")}</span>
+                <span className="text-[11px] md:text-xs lg:text-sm font-medium">{t("accounting.incomeStatement.netIncome")}</span>
               </div>
               <p className="text-lg md:text-xl lg:text-2xl font-bold text-[hsl(var(--fg-primary))]">
                 {data.netIncome.toLocaleString()}

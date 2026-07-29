@@ -4,7 +4,7 @@
 "use client"
 
 import { useState, useCallback, useMemo } from "react"
-import { useTranslation } from "react-i18next"
+import { useTranslations } from "next-intl";
 import { customersView } from "../customer-view"
 import { fmt } from "../../../../lib/customers/customers-format"
 import type { CustomerWithDebt } from "../../../../lib/customers/customers-types"
@@ -23,17 +23,8 @@ type CustomerWithInvoices = CustomerWithDebt & {
 // ============================================================
 
 export function CustomersContainer() {
-  const { t: tOriginal } = useTranslation()
+  const t = useTranslations();// ✅ Wrapper برای تطابق signature با CustomersViewProps
 
-  // ✅ Wrapper برای تطابق signature با CustomersViewProps
-  const t = useCallback(
-    (key: string, fallback?: string): string => {
-      const result = tOriginal(key)
-      // اگر ترجمه پیدا نشد، از fallback استفاده کن
-      return result === key ? (fallback ?? key) : result
-    },
-    [tOriginal]
-  )
 
   // ============================================================
   // 📦 داده‌ها

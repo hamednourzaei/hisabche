@@ -277,16 +277,20 @@ function FaqAccordionItem({
   );
 }
 
-function FaqJsonLd() {
+function FaqJsonLd({ t }: { t: (key: string, fallback?: string) => string }) {
+  // Structured data must mirror the visible, translated text — otherwise Google
+  // sees a mismatch between the FAQPage schema (previously always Persian) and
+  // the on-page content for en/af locales, which disqualifies the page from
+  // FAQ rich results.
   const faqData = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
     mainEntity: ALL_ITEMS.map((item) => ({
       "@type": "Question",
-      name: item.fallbackQuestion,
+      name: t(item.questionKey, item.fallbackQuestion),
       acceptedAnswer: {
         "@type": "Answer",
-        text: item.fallbackAnswer,
+        text: t(item.answerKey, item.fallbackAnswer),
       },
     })),
   };
@@ -323,7 +327,7 @@ export default function FaqScene({ t }: FaqSceneProps) {
 
   return (
     <section id="faq" className="py-12 sm:py-16 lg:py-20">
-      <FaqJsonLd />
+      <FaqJsonLd t={t} />
 
       <div className="container-narrow max-w-3xl px-4 sm:px-6">
         <div className="text-center mb-10 sm:mb-12 lg:mb-14">

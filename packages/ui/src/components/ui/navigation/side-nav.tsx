@@ -3,7 +3,7 @@
 
 import { memo, useCallback } from "react";
 import { useNavigation } from "../../../hooks/menu/use-navigation-state";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -78,7 +78,7 @@ NavItem.displayName = "NavItem";
 
 export const SideNav = memo(function SideNav({ items }: SideNavProps) {
   const { activeSection, setSection } = useNavigation();
-  const { t } = useTranslation();
+  const t = useTranslations();
 
   const handleSetSection = useCallback(
     (id: string) => setSection(id),
@@ -97,14 +97,14 @@ export const SideNav = memo(function SideNav({ items }: SideNavProps) {
       {/* Header */}
       <div className="flex items-center gap-2.5 px-4 py-[11px] border-b border-[hsl(var(--border-default))]">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--gradient-brand)] text-white text-sm font-bold shrink-0">
-          {t("app.name", "حسابچه").charAt(0)}
+          {t("app.name").charAt(0)}
         </div>
         <div className="min-w-0 leading-tight">
           <p className="text-sm font-semibold truncate text-[hsl(var(--fg-primary))]">
-            {t("app.name", "حسابچه")}
+            {t("app.name")}
           </p>
           <p className="text-[11px] text-[hsl(var(--fg-tertiary))]">
-            {t("app.tagline", "مدیریت کسب‌وکار")}
+            {t("app.tagline")}
           </p>
         </div>
       </div>

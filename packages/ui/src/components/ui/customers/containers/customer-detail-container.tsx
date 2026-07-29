@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useMemo, useState } from "react"
-import { useTranslation } from "react-i18next"
+import { useTranslations } from "next-intl";
 import { useCustomers, useInvoices } from "@hisabche/api"
 import { CustomerDetailView } from "../customer-detail-view"
 
@@ -42,8 +42,7 @@ export function CustomerDetailContainer({
   customerId: string
   onBack: () => void
 }) {
-  const { t } = useTranslation()
-  const [payOpen, setPayOpen] = useState(false)
+  const t = useTranslations();const [payOpen, setPayOpen] = useState(false)
 
   const { data: customersData } = useCustomers({
     page: 1,

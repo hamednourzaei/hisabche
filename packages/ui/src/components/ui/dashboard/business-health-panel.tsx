@@ -2,7 +2,7 @@
 "use client";
 
 import { memo, useMemo, useId } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import {
   TrendingUp,
@@ -62,7 +62,7 @@ BusinessHealthSkeleton.displayName = "BusinessHealthSkeleton";
 // ─── Status Badge ──────────────────────────────────────────────────────────
 
 const StatusBadge = memo(function StatusBadge({ status }: { status: "excellent" | "good" | "neutral" | "attention" }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   
   const statusMap = useMemo(() => ({
     excellent: {
@@ -118,7 +118,7 @@ const BusinessHealthHero = memo(function BusinessHealthHero({
   onAction: () => void;
   formatCurrency: (v: number) => string;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const descriptionId = useId();
   
   const { status, statusText, interpretation } = useMemo(() => {
@@ -242,7 +242,7 @@ const PerformanceSnapshot = memo(function PerformanceSnapshot({
   isLoading: boolean;
   formatCurrency: (v: number) => string;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
 
   if (isLoading) {
     return (
@@ -308,7 +308,7 @@ const AttentionPanel = memo(function AttentionPanel({
   onAction: (action: "payments" | "warehouse") => void;
   formatCurrency: (v: number) => string;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
 
   if (isLoading) {
     return (
@@ -411,7 +411,7 @@ const QuickActions = memo(function QuickActions({
 }: {
   onAction: (action: "invoice" | "payments" | "warehouse" | "customers" | "buy") => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
 
   const actions = useMemo(() => [
     {
@@ -491,7 +491,7 @@ export const BusinessHealthPanel = memo(function BusinessHealthPanel({
   isLoading,
   onAction,
 }: BusinessHealthPanelProps) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const { format } = useCurrency();
 
   if (isLoading) {

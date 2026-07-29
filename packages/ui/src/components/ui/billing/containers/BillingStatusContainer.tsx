@@ -1,14 +1,13 @@
 "use client";
 
-import { useTranslation } from 'react-i18next'
+import { useTranslations } from "next-intl";
 import { useSubscription, useTrialStatus } from '@hisabche/api'
 import { Badge } from '../../badge'
 import { Button } from '../../button'
 import { Progress } from '../../progress'
 
 export function BillingStatusContainer() {
-  const { t } = useTranslation()
-  const { data: subscription } = useSubscription()
+  const t = useTranslations();const { data: subscription } = useSubscription()
   const { data: trialStatus } = useTrialStatus()
 
   if (!subscription) return null

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import SiteFooter from "@hisabche/ui/landing/site-footer";
 
@@ -19,7 +19,7 @@ export interface LegalPageClientProps {
 }
 
 export function LegalPageClient({ titleKey, titleFallback, introKey, introFallback, sectionsKey }: LegalPageClientProps) {
-  const { t } = useTranslation();
+  const t = useTranslations();
 
   const safeT = (key: string, fallback?: string) => {
     const result = t(key);

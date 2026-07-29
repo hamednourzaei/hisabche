@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { useTranslation } from "react-i18next"
+import { useTranslations } from "next-intl";
 import {
   useProduct,
   useUpdateProduct,
@@ -55,8 +55,7 @@ type StockStatus =
   | "secondary"
 
 export function ProductDetailContainer() {
-  const { t } = useTranslation()
-  const router = useRouter()
+  const t = useTranslations();const router = useRouter()
   const { id } = useParams<{ id: string }>()
 
   const { data: product, isLoading } = useProduct(id)
@@ -127,10 +126,7 @@ export function ProductDetailContainer() {
   const handleDelete = useCallback(async () => {
     if (
       !confirm(
-        t(
-          "warehouse.deleteConfirm",
-          "آیا از حذف این محصول اطمینان دارید؟"
-        )
+        t("warehouse.deleteConfirm")
       )
     )
       return
@@ -162,10 +158,10 @@ export function ProductDetailContainer() {
   const stockLabel = useMemo(() => {
     if (!productData) return ""
     if (productData.quantity === 0)
-      return t("warehouse.outOfStock", "ناموجود")
+      return t("warehouse.outOfStock")
     if (productData.quantity <= productData.minStockLevel)
-      return t("warehouse.lowStock", "موجودی کم")
-    return t("warehouse.inStock", "موجود")
+      return t("warehouse.lowStock")
+    return t("warehouse.inStock")
   }, [productData, t])
 
   const profitPerUnit = productData

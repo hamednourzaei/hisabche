@@ -2,7 +2,7 @@
 "use client";
 
 import { memo, useMemo } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Sparkles, AlertTriangle, Info, Lightbulb, TrendingUp } from "lucide-react";
 
@@ -80,7 +80,7 @@ InsightsSkeleton.displayName = "InsightsSkeleton";
 // ─── Empty State ────────────────────────────────────────────────────────────
 
 const InsightsEmpty = memo(function InsightsEmpty() {
-  const { t } = useTranslation();
+  const t = useTranslations();
   return (
     <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-4 sm:p-6 text-center">
       <Sparkles className="size-6 sm:size-8 mx-auto mb-1.5 sm:mb-2 text-[hsl(var(--fg-tertiary))]" />
@@ -152,7 +152,7 @@ export const AIInsights = memo(function AIInsights({
   isLoading,
   onAction,
 }: AIInsightsProps) {
-  const { t } = useTranslation();
+  const t = useTranslations();
 
   const insightItems = useMemo(
     () =>

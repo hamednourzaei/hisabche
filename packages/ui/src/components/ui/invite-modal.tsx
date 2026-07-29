@@ -4,7 +4,7 @@
 "use client";
 
 import { useState, useCallback, memo } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X, Check, ChevronDown, Copy } from "lucide-react";
 import { type WorkspaceRole } from "@hisabche/store";
@@ -27,16 +27,10 @@ export const InviteModal = memo(function InviteModal({
   onClose,
   workspaceId,
 }: Props) {
-  const { t: tOriginal } = useTranslation();
+  const t = useTranslations();
 
   // ✅ safeT wrapper
-  const t = useCallback(
-    (key: string, fallback?: string): string => {
-      const result = tOriginal(key);
-      return result && result !== key ? result : (fallback ?? key);
-    },
-    [tOriginal]
-  );
+
 
   const inviteMember = useInviteMember();
   const [email, setEmail] = useState("");

@@ -7,7 +7,7 @@
 "use client";
 
 import { memo, useCallback, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { ChevronDown, Clock, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ActivityGroupDto, ActivityItemDto } from "@hisabche/api";
@@ -24,19 +24,19 @@ const STATUS_COLOR_CLASSES: Record<string, string> = {
   gray: "text-gray-500 bg-gray-500/10",
 };
 
-function timeAgo(iso: string, t: (key: string, fallback: string) => string): string {
+function timeAgo(iso: string, t: (key: string) => string): string {
   const minutes = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
-  if (!Number.isFinite(minutes) || minutes < 1) return t("time.justNow", "همین الان");
-  if (minutes < 60) return t("time.minutesAgo", `${minutes} دقیقه پیش`);
+  if (!Number.isFinite(minutes) || minutes < 1) return t("time.justNow");
+  if (minutes < 60) return t("time.minutesAgo");
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return t("time.hoursAgo", `${hours} ساعت پیش`);
+  if (hours < 24) return t("time.hoursAgo");
   const days = Math.floor(hours / 24);
-  if (days < 7) return t("time.daysAgo", `${days} روز پیش`);
+  if (days < 7) return t("time.daysAgo");
   const weeks = Math.floor(days / 7);
-  if (weeks < 4) return t("time.weeksAgo", `${weeks} هفته پیش`);
+  if (weeks < 4) return t("time.weeksAgo");
   const months = Math.floor(days / 30);
-  if (months < 12) return t("time.monthsAgo", `${months} ماه پیش`);
-  return t("time.yearsAgo", `${Math.floor(months / 12)} سال پیش`);
+  if (months < 12) return t("time.monthsAgo");
+  return t("time.yearsAgo");
 }
 
 function formatAmount(amount: number, currency?: string): string {
@@ -65,7 +65,7 @@ const ActivityRow = memo(function ActivityRow({
   activity: ActivityItemDto;
   onClick: () => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
 
   return (
     <button
@@ -84,7 +84,7 @@ const ActivityRow = memo(function ActivityRow({
         {!activity.isRead && (
           <span
             className="shrink-0 mt-1 size-1.5 rounded-full bg-[hsl(var(--color-primary))]"
-            aria-label={t("activity.unread", "خوانده نشده")}
+            aria-label={t("activity.unread")}
           />
         )}
       </div>
@@ -97,7 +97,7 @@ const ActivityRow = memo(function ActivityRow({
         {activity.actor && (
           <span className="inline-flex items-center gap-1 truncate max-w-[140px]">
             <User className="size-2.5 md:size-3 shrink-0" aria-hidden="true" />
-            {t("activity.by", "توسط {{actor}}", { actor: activity.actor })}
+            {t("activity.by", { actor: activity.actor })}
           </span>
         )}
         <span>{timeAgo(activity.timestamp, t)}</span>
@@ -120,7 +120,7 @@ export const ActivityGroupCard = memo(function ActivityGroupCard({
   onActivityClick,
   className,
 }: ActivityGroupCardProps) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const [isOpen, setIsOpen] = useState(false);
 
   const config = getEntityConfig(group.entityType);
@@ -175,7 +175,7 @@ export const ActivityGroupCard = memo(function ActivityGroupCard({
           "hover:bg-[hsl(var(--surface-muted))] transition-colors duration-150",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring-color)/0.4)]"
         )}
-        aria-label={t("activity.itemLabel", "فعالیت: {{title}}", {
+        aria-label={t("activity.itemLabel", {
           title: entitySummary.label,
         })}
       >
@@ -204,7 +204,7 @@ export const ActivityGroupCard = memo(function ActivityGroupCard({
             {group.hasUnread && (
               <span
                 className="shrink-0 size-1.5 rounded-full bg-[hsl(var(--color-primary))]"
-                aria-label={t("activity.unread", "خوانده نشده")}
+                aria-label={t("activity.unread")}
               />
             )}
             {statusInfo && (
@@ -247,7 +247,7 @@ export const ActivityGroupCard = memo(function ActivityGroupCard({
             type="button"
             onClick={handleToggle}
             aria-expanded={isOpen}
-            aria-label={t("activity.showMore", "نمایش {{count}} فعالیت دیگر", { count: restCount })}
+            aria-label={t("activity.showMore", { count: restCount })}
             className={cn(
               "shrink-0 rounded-lg p-1 md:p-1.5 mt-0.5",
               "text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--fg-primary))]",

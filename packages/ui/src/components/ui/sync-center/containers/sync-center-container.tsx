@@ -1,15 +1,14 @@
 "use client"
 
 import { useCallback, useMemo } from "react"
-import { useTranslation } from "react-i18next"
+import { useTranslations } from "next-intl";
 import { useQueryClient } from "@tanstack/react-query"
 import { useSyncStore, useBackupStore } from "@hisabche/store"
 import { SyncCenterPage } from "../sync-center-page"
 import type { SyncCenterPageProps } from "../sync-center-page"
 
 export function SyncCenterContainer() {
-  const { t } = useTranslation()
-  const queryClient = useQueryClient()
+  const t = useTranslations();const queryClient = useQueryClient()
   const { isOnline, isSyncing, pendingCount, lastSyncedAt, setLastSynced } = useSyncStore()
   const { backups, autoBackupEnabled, setAutoBackup, addBackup, createBackup, auditLog } = useBackupStore()
 
@@ -24,10 +23,10 @@ export function SyncCenterContainer() {
   const timeAgo = useCallback(
     (ts: number) => {
       const s = Math.floor((Date.now() - ts) / 1000)
-      if (s < 60) return `${s} ${t("sync.secondsAgo", "ثانیه پیش")}`
-      if (s < 3600) return `${Math.floor(s / 60)} ${t("sync.minutesAgo", "دقیقه پیش")}`
-      if (s < 86400) return `${Math.floor(s / 3600)} ${t("sync.hoursAgo", "ساعت پیش")}`
-      return `${Math.floor(s / 86400)} ${t("sync.daysAgo", "روز پیش")}`
+      if (s < 60) return `${s} ${t("sync.secondsAgo")}`
+      if (s < 3600) return `${Math.floor(s / 60)} ${t("sync.minutesAgo")}`
+      if (s < 86400) return `${Math.floor(s / 3600)} ${t("sync.hoursAgo")}`
+      return `${Math.floor(s / 86400)} ${t("sync.daysAgo")}`
     },
     [t]
   )

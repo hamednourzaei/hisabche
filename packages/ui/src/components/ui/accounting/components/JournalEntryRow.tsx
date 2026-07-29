@@ -2,7 +2,7 @@
 "use client";
 
 import { memo, useState, useCallback, useMemo } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { JournalEntry, Account } from "@hisabche/api";
@@ -25,7 +25,7 @@ function formatDate(date: string): string {
 }
 
 export const JournalEntryRow = memo(function JournalEntryRow({ entry, accounts }: JournalEntryRowProps) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const [isOpen, setIsOpen] = useState(false);
 
   const toggle = useCallback(() => setIsOpen((prev) => !prev), []);
@@ -82,9 +82,9 @@ export const JournalEntryRow = memo(function JournalEntryRow({ entry, accounts }
           <table className="w-full">
             <thead>
               <tr className="text-[9px] md:text-[10px] lg:text-xs text-[hsl(var(--fg-tertiary))]">
-                <th className="text-start font-medium py-1">{t("accounting.journal.account", "حساب")}</th>
-                <th className="text-end font-medium py-1">{t("accounting.journal.debit", "بدهکار")}</th>
-                <th className="text-end font-medium py-1">{t("accounting.journal.credit", "بستانکار")}</th>
+                <th className="text-start font-medium py-1">{t("accounting.journal.account")}</th>
+                <th className="text-end font-medium py-1">{t("accounting.journal.debit")}</th>
+                <th className="text-end font-medium py-1">{t("accounting.journal.credit")}</th>
               </tr>
             </thead>
             <tbody>

@@ -409,47 +409,26 @@
       "start1Q": "Is Hisabche free?",
       "start1A": "Yes, the free version of Hisabche is completely free for one business and core features. You can purchase the business version for advanced features.",
       "related": {
-        "pricing": "View Pricing"
+        "access": "User Management"
       },
       "start2Q": "How do I start with Hisabche?",
       "start2A": "Just click the 'Start Free' button and enter your mobile number. No credit card is needed. After verifying your number, Hisabche is ready immediately.",
-      "related": {
-        "signup": "Start Free"
-      },
       "offline1Q": "Do I absolutely need internet?",
       "offline1A": "No. Hisabche works completely offline. You can create invoices, update inventory, and add customers even when the internet is down. As soon as you reconnect, everything syncs automatically.",
-      "related": {
-        "offlineFlow": "How Offline Works"
-      },
       "offline2Q": "If my phone breaks, will I lose my data?",
       "offline2A": "No. All your data is backed up on Hisabche's secure servers. A secure copy is also saved on your phone itself. So you can work with peace of mind.",
-      "related": {
-        "security": "More About Security"
-      },
       "offline3Q": "How many phones can I use it on?",
       "offline3A": "With one account, you can log in simultaneously on multiple devices (mobile, tablet, laptop). Synchronization between devices happens automatically.",
       "acc1Q": "How do I record credit (customer debt)?",
       "acc1A": "When recording a sale, select the 'Credit' option. Hisabche automatically records the customer's debt and sends you a reminder when it's due.",
-      "related": {
-        "debt": "Debtors Feature"
-      },
       "acc2Q": "Can I manage my warehouse inventory?",
       "acc2A": "Yes. For every product you define, its inventory decreases automatically with each sale. You'll also be alerted before an item runs out.",
-      "related": {
-        "inventory": "Inventory Management"
-      },
       "acc3Q": "How can I see my profit and loss?",
       "acc3A": "On the Hisabche dashboard, the profit and loss chart is visible in real-time. You can see your daily, weekly, and monthly profits.",
-      "related": {
-        "reports": "Real-time Reports"
-      },
       "sec1Q": "How secure is my data?",
       "sec1A": "All data is encrypted in transit and at rest. Daily backups are also taken, and you are the complete owner of your data.",
       "sec2Q": "How many users can work simultaneously?",
       "sec2A": "Depending on the plan, you can add multiple users with different access levels. Even in the free plan, you can add an additional accountant.",
-      "related": {
-        "access": "User Management"
-      },
       "dev1Q": "Does it work on older Android phones?",
       "dev1A": "Yes. Hisabche is designed to run smoothly on Android 7+ phones with 2GB of RAM. Even on budget devices.",
       "dev2Q": "Is there a Windows version?",
@@ -539,6 +518,80 @@
         "role": "Bookstore Owner, Herat",
         "quote": "Their support responds quickly, even at night."
       }
+    },
+    "legalPage": {
+      "backHome": "Back to home",
+      "lastUpdated": "Last updated: {date}",
+      "termsTitle": "Terms of Use",
+      "termsIntro": "By using Hisabche, you agree to the terms below. Please read them carefully before using the service.",
+      "termsSections": [
+        {
+          "heading": "1. About the service",
+          "body": "Hisabche is an accounting and business-management app offering invoicing, warehouse/inventory management, customer debt tracking, project management, purchasing, manufacturing, and HR tools. Some features work fully offline; others require a connection to our servers."
+        },
+        {
+          "heading": "2. Your account",
+          "body": "You are responsible for keeping your account credentials confidential and for all activity under your account. Contact us immediately if you notice any unauthorized use."
+        },
+        {
+          "heading": "3. Your data",
+          "body": "Business data you enter (invoices, inventory, customers, and similar records) belongs to you. We use it only to provide the service to you and do not sell it to third parties."
+        },
+        {
+          "heading": "4. Acceptable use",
+          "body": "You may not use Hisabche for unlawful activity, to infringe on others' rights, or to attempt unauthorized access to our systems."
+        },
+        {
+          "heading": "5. Availability",
+          "body": "We aim to keep the service available at all times, but brief interruptions may occur for maintenance, updates, or technical issues. The offline app remains usable during these periods."
+        },
+        {
+          "heading": "6. Changes",
+          "body": "We may update these terms from time to time. Material changes will be communicated through the app or by email."
+        },
+        {
+          "heading": "7. Contact",
+          "body": "For questions about these terms, reach us at support@hisabche.com."
+        }
+      ],
+      "privacyTitle": "Privacy Policy",
+      "privacyIntro": "Your privacy matters to us. This page explains what information we collect and how we use it.",
+      "privacySections": [
+        {
+          "heading": "1. Information we collect",
+          "body": "Account details (name, email, phone), business data you enter yourself (invoices, inventory, customers, transactions), and limited technical data (device type, error logs) used to improve app performance."
+        },
+        {
+          "heading": "2. How we use it",
+          "body": "This information is used solely to provide and improve the Hisabche service, offer customer support, and secure your account. We do not sell your information to advertisers."
+        },
+        {
+          "heading": "3. Storage and security",
+          "body": "Your data is stored on secure cloud infrastructure (Supabase) with encryption. The offline app also stores data locally on your device."
+        },
+        {
+          "heading": "4. Sharing with third parties",
+          "body": "We do not share your information with third parties, except essential infrastructure providers (such as our cloud hosting service) bound by confidentiality obligations."
+        },
+        {
+          "heading": "5. Your rights",
+          "body": "You may request access to, correction of, export of, or full deletion of your account data at any time by contacting support."
+        },
+        {
+          "heading": "6. Cookies",
+          "body": "We use only essential cookies to maintain your login session; no advertising or tracking cookies are used."
+        },
+        {
+          "heading": "7. Contact",
+          "body": "For privacy questions, contact support@hisabche.com."
+        }
+      ],
+      "contactTitle": "Contact Us",
+      "contactIntro": "Have a question or need support? We'd be happy to help.",
+      "contactEmailLabel": "Support email",
+      "contactTelegramLabel": "Telegram",
+      "contactHoursLabel": "Response time",
+      "contactHoursValue": "Usually under 24 business hours"
     }
   },
   "nav": {
@@ -569,11 +622,59 @@
       "main": "Main",
       "sales": "Sales & Inventory",
       "team": "Team",
-      "system": "System"
+      "system": "System",
+      "business": "Business",
+      "people": "People",
+      "work": "Work"
     },
     "mainNav": "Main navigation",
     "mobileNav": "Mobile navigation",
-    "more": "More"
+    "more": "More",
+    "today": "Today",
+    "today.description": "What's happening today",
+    "sell": "Sell",
+    "sell.description": "Record a new sale",
+    "getPaid": "Get Paid",
+    "getPaid.description": "Who owes you how much",
+    "stock": "Stock",
+    "stock.description": "What you have and what's running low",
+    "buy": "Buy",
+    "buy.description": "Order goods from a supplier",
+    "money": "Money & Profit",
+    "money.description": "Your income, spending and profit",
+    "buyers": "Buyers",
+    "buyers.description": "Your customers and their balances",
+    "followUp": "Follow Up",
+    "followUp.description": "Conversations and likely sales",
+    "team": "Team & Pay",
+    "team.description": "Staff, attendance and salaries",
+    "coworkers": "Coworkers",
+    "coworkers.description": "People who work with you",
+    "production": "Make & Produce",
+    "production.description": "Work orders and required materials",
+    "access": "Access",
+    "access.description": "Who can reach what",
+    "history": "Change History",
+    "history.description": "Who changed what",
+    "events": "Events",
+    "events.description": "Latest activity in your business",
+    "sync": "Sync",
+    "sync.description": "Connection and backup status",
+    "billing": "Plan & Billing",
+    "billing.description": "Current plan, upgrades and subscription billing",
+    "approvals": "Awaiting Your Approval",
+    "approvals.description": "Requests you need to approve or reject",
+    "approvals.empty": "Nothing is waiting for your approval",
+    "addBuyer": "Add Buyer",
+    "addBuyer.description": "Register a new customer",
+    "accounting": "Money & Profit",
+    "accounting.description": "Your income, spending and profit",
+    "crm": "Follow Up",
+    "crm.description": "Conversations and likely sales",
+    "manufacturing": "Make & Produce",
+    "manufacturing.description": "Work orders and required materials",
+    "purchasing": "Buy",
+    "purchasing.description": "Order goods from a supplier"
   },
   "dateRange": {
     "today": "Today",
@@ -733,7 +834,11 @@
     "noCustomer": "Unknown Customer",
     "moreItems": "more items",
     "alert": "Alert",
-    "viewDetails": "View Details"
+    "viewDetails": "View Details",
+    "zero": "0",
+    "loading": "Loading...",
+    "optional": "Optional",
+    "required": "Required"
   },
   "invoices": {
     "title": "Invoice",
@@ -791,7 +896,35 @@
     "date": "Date",
     "paidAmount": "Paid",
     "status": "Status",
-    "open": "Open"
+    "open": "Open",
+    "salesInvoice": "Sales Invoice",
+    "notYetSaved": "—",
+    "barcodePlaceholder": "Enabled after saving",
+    "invoiceInfo": "Invoice Info",
+    "customerInfo": "Customer Info",
+    "walkInCustomer": "Walk-in Customer",
+    "unit": "Unit",
+    "shipping": "Shipping",
+    "customerSignature": "Customer Signature",
+    "sellerSignature": "Seller Signature & Stamp",
+    "thankYou": "Thank you for your business",
+    "actions": "Actions",
+    "paymentSummary": "Payment Summary",
+    "metadata": "Invoice Metadata",
+    "createdAt": "Created At",
+    "updatedAt": "Last Updated",
+    "displaySettings": "Display Settings",
+    "showSignature": "Show Signature",
+    "showNotes": "Show Notes",
+    "showBarcode": "Show Barcode",
+    "exportPNG": "Export as PNG",
+    "exporting": "Exporting...",
+    "pngError": "Failed to generate PNG export.",
+    "copyLink": "Copy link",
+    "copied": "Copied",
+    "shareNative": "More",
+    "qrHint": "Scan this code to view the invoice without signing in",
+    "publicFooter": "This invoice was issued by Hisabche"
   },
   "warehouse": {
     "title": "Warehouse",
@@ -855,11 +988,11 @@
     "totalDebt": "Total Debt",
     "recordPayment": "Record Payment",
     "selectInvoice": "Select Invoice",
-    "paymentFrom": "Payment from {{name}}",
+    "paymentFrom": "Payment from {name}",
     "openDealsTitle": "Open Deals",
     "noOpenDeals": "No open deals",
     "notFound": "Customer not found",
-    "ofPaid": "of {{total}} — {{paid}} paid",
+    "ofPaid": "of {total} — {paid} paid",
     "customerLedger": "Customer Ledger",
     "supplierLedger": "Supplier Ledger",
     "openingBalance": "Opening Balance",
@@ -931,7 +1064,7 @@
     "noOpportunities": "No opportunities yet",
     "addInteraction": "Add",
     "addOpportunity": "Add",
-    "ofTotal": "of {{total}}",
+    "ofTotal": "of {total}",
     "pay": "Pay",
     "noInvoices": "No invoices found"
   },
@@ -950,7 +1083,26 @@
     "stageProposal": "Proposal",
     "stageNegotiation": "Negotiation",
     "stageWon": "Won",
-    "stageLost": "Lost"
+    "stageLost": "Lost",
+    "title": "CRM",
+    "tabs": {
+      "interactions": "Interactions",
+      "opportunities": "Opportunities"
+    },
+    "interactions": {
+      "empty": "No interactions recorded",
+      "subject": "Subject",
+      "type": "Type",
+      "date": "Date"
+    },
+    "opportunities": {
+      "empty": "No sales opportunities recorded",
+      "title": "Title",
+      "stage": "Stage",
+      "value": "Value",
+      "probability": "Probability",
+      "expectedCloseDate": "Expected close date"
+    }
   },
   "payments": {
     "amount": "Amount",
@@ -1018,7 +1170,15 @@
     "memberSince": "Member Since",
     "notSet": "Not set",
     "lightMode": "Light mode",
-    "darkMode": "Dark mode"
+    "darkMode": "Dark mode",
+    "businessStamp": "Stamp & Signature",
+    "businessStampDesc": "Upload your stamp or signature image once to have it automatically shown at the bottom of every invoice.",
+    "stampNotSet": "Not set",
+    "uploadStamp": "Upload image",
+    "removeStamp": "Remove image",
+    "stampInvalidType": "Only PNG or SVG images are accepted",
+    "stampTooLarge": "Image size must be under 1MB",
+    "stampUploadFailed": "Failed to upload image"
   },
   "sync": {
     "title": "Sync",
@@ -1028,8 +1188,8 @@
     "syncFailed": "Sync Failed",
     "offline": "Offline",
     "online": "Online",
-    "pendingCount": "{{count}} pending operations",
-    "lastSynced": "Last synced: {{time}}",
+    "pendingCount": "{count} pending operations",
+    "lastSynced": "Last synced: {time}",
     "justNow": "Just now",
     "secondsAgo": "{s} seconds ago",
     "minutesAgo": "{m} minutes ago",
@@ -1062,13 +1222,13 @@
   },
   "validation": {
     "required": "This field is required",
-    "minLength": "Minimum {{min}} characters",
-    "maxLength": "Maximum {{max}} characters",
+    "minLength": "Minimum {min} characters",
+    "maxLength": "Maximum {max} characters",
     "email": "Invalid email address",
     "phone": "Invalid phone number",
     "number": "Please enter a number",
-    "min": "Minimum {{min}}",
-    "max": "Maximum {{max}}",
+    "min": "Minimum {min}",
+    "max": "Maximum {max}",
     "positiveNumber": "Please enter a positive number",
     "url": "Invalid URL"
   },
@@ -1088,7 +1248,11 @@
     "viewAllInvoices": "View All Invoices",
     "itemsNeedReorder": "Items to reorder",
     "ready": "All set!",
-    "salesChart": "Sales Chart",
+    "salesChart": {
+      "emptyAria": "No sales data yet",
+      "ariaLabel": "Sales chart",
+      "description": "Total: {total}, {change} from previous period"
+    },
     "greeting": {
       "morning": "Good Morning",
       "afternoon": "Good Afternoon",
@@ -1110,21 +1274,21 @@
     "activeCustomers": "Active Customers",
     "lowStockAlerts": "Low Stock Alerts",
     "invoicesCount": "{count} Invoices",
-    "salesChart": {
-      "emptyAria": "No sales data yet",
-      "ariaLabel": "Sales chart",
-      "description": "Total: {{total}}, {{change}} from previous period"
-    },
     "startSelling": "Start selling to see your chart",
     "createInvoice": "Create Invoice",
     "viewReport": "View Report",
     "vsLastWeek": "vs last week",
-    "dataRange": "Last {{count}} periods",
+    "dataRange": "Last {count} periods",
     "salesTrend": "Sales trend",
     "aiInsight": {
       "aria": "AI insight for your business",
       "action": "Take action"
-    }
+    },
+    "todayInvoices": "Invoices",
+    "growth": "Growth",
+    "thisMonth": "this month",
+    "vsYesterday": "vs yesterday",
+    "viewAll": "View All"
   },
   "quickInvoice": {
     "title": "Quick Invoice",
@@ -1135,7 +1299,9 @@
     "productPlaceholder": "e.g. Rice, Oil, Tea...",
     "customerPlaceholder": "e.g. Ahmad, Mohammad...",
     "pricePlaceholder": "e.g. 500",
-    "lastCustomer": "Last Customer"
+    "lastCustomer": "Last Customer",
+    "previewTitle": "Invoice Preview",
+    "previewDesc": "Review the invoice before creating it"
   },
   "payment": {
     "record": "Record Payment",
@@ -1168,7 +1334,14 @@
     "balance": "Balance",
     "date": "Date",
     "description": "Description",
-    "reference": "Reference"
+    "reference": "Reference",
+    "accountTypes": {
+      "asset": "Asset",
+      "liability": "Liability",
+      "equity": "Equity",
+      "revenue": "Revenue",
+      "expense": "Expense"
+    }
   },
   "hr": {
     "title": "Human Resources",
@@ -1269,7 +1442,15 @@
     "noProjects": "No projects found",
     "noTasks": "No tasks found",
     "notFound": "Project not found",
-    "progress": "Progress"
+    "progress": "Progress",
+    "unassigned": "Unassigned",
+    "changeStatus": "Change Status",
+    "selectedSuffix": "selected",
+    "markDone": "Mark as Done",
+    "markTodo": "Mark as To Do",
+    "clearSelection": "Clear Selection",
+    "selectAll": "Select All",
+    "tasksDoneLabel": "tasks completed"
   },
   "workspace": {
     "title": "Workspace",
@@ -1338,7 +1519,10 @@
     "updated": "Updated",
     "deleted": "Deleted",
     "login": "Login",
-    "logout": "Logout"
+    "logout": "Logout",
+    "fromDate": "From date",
+    "toDate": "To date",
+    "dateRangeSeparator": "to"
   },
   "billing": {
     "loading": "Loading...",
@@ -1353,7 +1537,7 @@
     "upgrade": "Upgrade",
     "upgradeNow": "Upgrade to Pro",
     "days": "days",
-    "daysLeft": "{{days}} days left",
+    "daysLeft": "{days} days left",
     "gracePeriod": "Grace Period",
     "startFree": "Start Free",
     "startPro": "Start with Pro",
@@ -1435,7 +1619,10 @@
     "justNow": "Just now",
     "minutesAgo": "{m} minutes ago",
     "hoursAgo": "{h} hours ago",
-    "daysAgo": "{d} days ago"
+    "daysAgo": "{d} days ago",
+    "weeksAgo": "{w} weeks ago",
+    "monthsAgo": "{mo} months ago",
+    "yearsAgo": "{y} years ago"
   },
   "commandPalette": {
     "title": "Command Palette",
@@ -1469,7 +1656,8 @@
     "mediumStore": "Medium Store",
     "mediumStoreDesc": "3-10 employees",
     "largeStore": "Large Business",
-    "largeStoreDesc": "10+ employees"
+    "largeStoreDesc": "10+ employees",
+    "title": "Setup"
   },
   "status": {
     "excellent": "Excellent",
@@ -1487,7 +1675,7 @@
     "neutralDetail": "Sales are flat. Consider exploring new revenue channels.",
     "attention": "Declining Trend",
     "attentionDetail": "Sales are dropping. It's time for a strategic review.",
-    "salesSummary": "Today: {{sales}} from {{invoices}} invoices",
+    "salesSummary": "Today: {sales} from {invoices} invoices",
     "todaySales": "Today's Sales",
     "todayInvoices": "Invoices",
     "growth": "Growth"
@@ -1501,10 +1689,10 @@
   "attention": {
     "allGood": "Everything looks great! No issues detected.",
     "needAttention": "Needs Your Attention",
-    "paymentsAria": "{{count}} pending payments totaling {{amount}}",
+    "paymentsAria": "{count} pending payments totaling {amount}",
     "pendingPayments": "Pending Payments",
-    "paymentsDetail": "{{count}} invoices · {{amount}}",
-    "stockAria": "{{count}} items low in stock",
+    "paymentsDetail": "{count} invoices · {amount}",
+    "stockAria": "{count} items low in stock",
     "lowStock": "Low Stock Alert"
   },
   "actions": {
@@ -1514,7 +1702,9 @@
     "viewPaymentsDesc": "Review pending invoices",
     "manageStock": "Inventory",
     "manageStockDesc": "Reorder low stock items",
-    "quickActions": "Quick Actions"
+    "quickActions": "Quick Actions",
+    "buyStock": "Buy Stock",
+    "buyStockDesc": "Place a new order with a supplier"
   },
   "panel": {
     "ariaLabel": "Business overview panel"
@@ -1592,6 +1782,133 @@
       "crm": "CRM",
       "reports": "Live Reports",
       "invoice": "Smart Invoice"
+    }
+  },
+  "calendar": {
+    "system": "Gregorian",
+    "months": [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December"
+    ],
+    "weekdaysShort": [
+      "Su",
+      "Mo",
+      "Tu",
+      "We",
+      "Th",
+      "Fr",
+      "Sa"
+    ],
+    "prev": "Previous",
+    "next": "Next"
+  },
+  "manufacturing": {
+    "title": "Manufacturing",
+    "tabs": {
+      "boms": "Bills of materials",
+      "workOrders": "Work orders"
+    },
+    "boms": {
+      "empty": "No bills of materials recorded",
+      "product": "Product",
+      "version": "Version",
+      "itemsCount": "Items count",
+      "status": "Status",
+      "active": "Active",
+      "inactive": "Inactive",
+      "create": "Add bill of materials",
+      "dialogTitle": "New bill of materials",
+      "selectProduct": "Select product",
+      "selectProductPlaceholder": "-- Select product --",
+      "items": "Raw material items",
+      "addItem": "Add item",
+      "rawMaterial": "Raw material",
+      "quantity": "Quantity",
+      "unitCost": "Unit cost"
+    },
+    "workOrders": {
+      "empty": "No work orders recorded",
+      "product": "Product",
+      "quantity": "Quantity",
+      "status": "Status",
+      "startDate": "Start date",
+      "endDate": "End date",
+      "actions": "Actions",
+      "complete": "Complete",
+      "create": "New work order",
+      "dialogTitle": "New work order",
+      "selectProduct": "Select product",
+      "selectProductPlaceholder": "-- Select product --",
+      "selectBom": "Select bill of materials",
+      "selectBomPlaceholder": "-- Select BOM --",
+      "noBomsForProduct": "No bill of materials recorded for this product"
+    },
+    "status": {
+      "planned": "Planned",
+      "inProgress": "In progress",
+      "completed": "Completed",
+      "cancelled": "Cancelled"
+    }
+  },
+  "purchasing": {
+    "title": "Purchasing",
+    "empty": "No purchase orders recorded",
+    "supplier": "Supplier",
+    "orderDate": "Order date",
+    "itemsCount": "Items count",
+    "expectedDeliveryDate": "Expected delivery",
+    "statusLabel": "Status",
+    "actions": "Actions",
+    "receiveGoods": "Receive goods",
+    "status": {
+      "pending": "Pending",
+      "received": "Received",
+      "cancelled": "Cancelled"
+    }
+  },
+  "activity": {
+    "title": "Activities",
+    "new": "new",
+    "markAllRead": "Mark all as read",
+    "search": "Search activities",
+    "unread": "Unread",
+    "by": "by {actor}",
+    "itemLabel": "Activity: {title}",
+    "showMore": "Show {count} more activities",
+    "open": "Open",
+    "feedLabel": "Activity feed",
+    "loadingMore": "Loading more...",
+    "scrollForMore": "Scroll for more",
+    "endOfList": "You've reached the end of the list",
+    "filter": {
+      "all": "All",
+      "unread": "Unread",
+      "invoices": "Invoices",
+      "payments": "Payments",
+      "customers": "Customers"
+    },
+    "empty": {
+      "title": "No activity found",
+      "all": "No activity yet",
+      "unread": "No unread activity",
+      "search": "No results found",
+      "searchHint": "No results found for \"{query}\""
+    }
+  },
+  "entity": {
+    "activity": {
+      "empty": "No activity recorded yet",
+      "count": "{count} activities"
     }
   }
 }

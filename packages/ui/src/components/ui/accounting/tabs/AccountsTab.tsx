@@ -2,7 +2,7 @@
 "use client";
 
 import { memo, useState, useCallback, useMemo } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAccounts, useCreateAccount } from "@hisabche/api";
@@ -21,7 +21,7 @@ const exportColumns: ExportColumn<Account>[] = [
 ];
 
 export const AccountsTab = memo(function AccountsTab() {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { data: accounts, isLoading } = useAccounts();
   const { mutate: createAccount, isPending } = useCreateAccount();
@@ -47,7 +47,7 @@ export const AccountsTab = memo(function AccountsTab() {
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between gap-2 px-3 md:px-4 lg:px-5 py-2.5 md:py-3 lg:py-4 border-b border-[hsl(var(--border-default))]">
         <h2 className="text-xs md:text-sm lg:text-base font-semibold text-[hsl(var(--fg-primary))]">
-          {t("accounting.accounts.title", "فهرست حساب‌ها")}
+          {t("accounting.accounts.title")}
         </h2>
         <div className="flex items-center gap-1.5 md:gap-2">
           <ExportButton
@@ -66,7 +66,7 @@ export const AccountsTab = memo(function AccountsTab() {
             )}
           >
             <Plus className="size-3.5 md:size-4" aria-hidden="true" />
-            {t("accounting.accounts.create", "حساب جدید")}
+            {t("accounting.accounts.create")}
           </button>
         </div>
       </div>
@@ -76,17 +76,17 @@ export const AccountsTab = memo(function AccountsTab() {
           <AccountingSkeleton />
         ) : !accounts || accounts.length === 0 ? (
           <AccountingEmptyState
-            title={t("accounting.accounts.empty.title", "هیچ حسابی ثبت نشده")}
-            subtitle={t("accounting.accounts.empty.subtitle", "برای شروع، اولین حساب خود را ایجاد کنید")}
+            title={t("accounting.accounts.empty.title")}
+            subtitle={t("accounting.accounts.empty.subtitle")}
           />
         ) : (
           <table className="w-full">
             <thead className="sticky top-0 bg-[hsl(var(--surface-elevated))] z-10">
               <tr className="border-b border-[hsl(var(--border-default))] text-[9px] md:text-[10px] lg:text-xs text-[hsl(var(--fg-tertiary))]">
-                <th className="px-2 md:px-3 lg:px-4 py-2 text-start font-medium">{t("accounting.accounts.code", "کد")}</th>
-                <th className="px-2 md:px-3 lg:px-4 py-2 text-start font-medium">{t("accounting.accounts.name", "نام")}</th>
-                <th className="px-2 md:px-3 lg:px-4 py-2 text-start font-medium">{t("accounting.accounts.type", "نوع")}</th>
-                <th className="px-2 md:px-3 lg:px-4 py-2 text-center font-medium">{t("accounting.accounts.status", "وضعیت")}</th>
+                <th className="px-2 md:px-3 lg:px-4 py-2 text-start font-medium">{t("accounting.accounts.code")}</th>
+                <th className="px-2 md:px-3 lg:px-4 py-2 text-start font-medium">{t("accounting.accounts.name")}</th>
+                <th className="px-2 md:px-3 lg:px-4 py-2 text-start font-medium">{t("accounting.accounts.type")}</th>
+                <th className="px-2 md:px-3 lg:px-4 py-2 text-center font-medium">{t("accounting.accounts.status")}</th>
               </tr>
             </thead>
             <tbody>

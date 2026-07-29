@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════
-// apps/web/app/signup/page.tsx
+// apps/web/app/[lang]/login/page.tsx
 // ═══════════════════════════════════════════════════════════
 "use client"
 
@@ -7,6 +7,6 @@ import dynamic from "next/dynamic"
 
 const LoginClient = dynamic(() => import("./LoginClient"), { ssr: false })
 
-export default function SignupPage() {
+export default function LoginPage() {
   return <LoginClient />
 }

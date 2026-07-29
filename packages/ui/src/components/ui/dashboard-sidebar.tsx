@@ -4,7 +4,7 @@ import { memo, useState, useRef, useEffect, useCallback, useId } from "react";
 import { cn } from "@/lib/utils";
 import type { ElementType, ReactElement } from "react";
 import { useAuthStore } from "@hisabche/store";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    DashboardSidebar v7.3 — Memoized · Performance Optimized
@@ -27,7 +27,9 @@ export interface NavGroup {
 }
 
 function isPathActive(currentPath: string, itemPath: string): boolean {
-  const normalized = currentPath.replace(/^\/(fa-IR|fa-AF|en)/, "") || "/";
+  // Locales are fa/af/en (see apps/web/app/[lang]/i18n-config.ts). `fa` is the
+  // default and unprefixed (localePrefix: 'as-needed'), `af`/`en` are prefixed.
+  const normalized = currentPath.replace(/^\/(fa|af|en)(?=\/|$)/, "") || "/";
   if (normalized === itemPath) return true;
   if (normalized.startsWith(itemPath + "/")) return true;
   if (normalized.startsWith(itemPath + "?")) return true;
@@ -211,7 +213,7 @@ export const DashboardSidebar = memo(function DashboardSidebar({
   activeNav: string;
   onNavigate: (id: string, path: string) => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const user = useAuthStore((s) => s.user);
   const [isMoreOpen, setIsMoreOpen] = useState(true);
   const morePanelRef = useRef<HTMLDivElement>(null);
@@ -255,7 +257,7 @@ export const DashboardSidebar = memo(function DashboardSidebar({
 
   return (
     <aside
-      aria-label={t("nav.mainNav", "ناوبری اصلی")}
+      aria-label={t("nav.mainNav")}
       className={cn(
         "hidden lg:flex lg:flex-col shrink-0",
         "w-56 h-screen sticky top-0 overflow-y-auto",
@@ -266,10 +268,10 @@ export const DashboardSidebar = memo(function DashboardSidebar({
       {/* Header */}
       <div className="flex flex-col items-center gap-1 pt-6 pb-4">
         <div className="transition-all duration-300 motion-reduce:transition-none hover:scale-105 hover:filter hover:drop-shadow-[0_0_18px_hsl(var(--color-primary)/0.25)]">
-          <img src="/logo-icon.png" alt={t("app.name", "حسابچه")} className="h-16 w-16 object-contain" />
+          <img src="/logo-icon.png" alt={t("app.name")} className="h-16 w-16 object-contain" />
         </div>
         <span className="text-xs font-semibold text-[hsl(var(--fg-primary))] truncate max-w-[140px] text-center">
-          {user?.businessName || user?.fullName || t("app.name", "حسابچه")}
+          {user?.businessName || user?.fullName || t("app.name")}
         </span>
       </div>
 
@@ -313,7 +315,7 @@ export const DashboardSidebar = memo(function DashboardSidebar({
               isMoreOpen && "rotate-90"
             )}
           />
-          <span className="flex-1 truncate">{t("nav.more", "بیشتر")}</span>
+          <span className="flex-1 truncate">{t("nav.more")}</span>
           {hasMoreActive && !isMoreOpen && (
             <span className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--color-primary))] shrink-0" />
           )}
@@ -411,7 +413,7 @@ export const BottomNav = memo(function BottomNav({
   activeNav: string;
   onNavigate: (id: string, path: string) => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
   const moreBtnRef = useRef<HTMLButtonElement>(null);
@@ -477,7 +479,7 @@ export const BottomNav = memo(function BottomNav({
   return (
     <>
       <nav
-        aria-label={t("nav.mobileNav", "ناوبری موبایل")}
+        aria-label={t("nav.mobileNav")}
         className="fixed bottom-4 inset-x-4 z-modal max-w-[480px] mx-auto lg:hidden"
         style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       >
@@ -557,7 +559,7 @@ export const BottomNav = memo(function BottomNav({
                 aria-expanded={isMoreOpen}
                 aria-haspopup="true"
                 aria-controls={isMoreOpen ? menuId : undefined}
-                aria-label={t("nav.more", "بیشتر")}
+                aria-label={t("nav.more")}
               >
                 {hasMoreActive && !isMoreOpen && (
                   <span className="absolute bottom-1.5 w-1 h-1 rounded-full bg-[hsl(var(--color-primary))]" />
@@ -577,7 +579,7 @@ export const BottomNav = memo(function BottomNav({
                   )}
                   style={{ fontSize: 10 }}
                 >
-                  {t("nav.more", "بیشتر")}
+                  {t("nav.more")}
                 </span>
               </button>
             </li>
@@ -591,7 +593,7 @@ export const BottomNav = memo(function BottomNav({
             ref={popoverRef}
             id={menuId}
             role="menu"
-            aria-label={t("nav.more", "بیشتر")}
+            aria-label={t("nav.more")}
             className={cn(
               "fixed inset-x-4 z-popover max-w-[480px] mx-auto lg:hidden",
               "animate-in slide-in-from-bottom-2 fade-in-0 duration-200 motion-reduce:animate-none"
@@ -608,13 +610,13 @@ export const BottomNav = memo(function BottomNav({
             >
               <div className="flex items-center justify-between px-4 py-2.5 border-b border-[hsl(var(--border-default))] opacity-70">
                 <span className="text-xs font-semibold text-[hsl(var(--fg-secondary))]">
-                  {t("nav.more", "بیشتر")}
+                  {t("nav.more")}
                 </span>
                 <button
                   type="button"
                   onClick={closeAndRestoreFocus}
                   className="p-1 rounded-lg text-[hsl(var(--fg-tertiary))] active:text-[hsl(var(--fg-primary))] active:bg-[hsl(var(--surface-muted))]"
-                  aria-label={t("action.close", "بستن")}
+                  aria-label={t("action.close")}
                 >
                   <svg width={16} height={16} viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round">
                     <path d="M5 5l10 10M15 5L5 15" />

@@ -8,7 +8,7 @@ import {
   useEffect,
   memo,
 } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import * as Select from "@radix-ui/react-select";
 import {
   Check,
@@ -53,16 +53,10 @@ export const CustomerPicker = memo(
       },
       _ref,
     ) => {
-      const { t: tOriginal } = useTranslation();
+      const t = useTranslations();
 
       // ✅ safeT wrapper
-      const t = useCallback(
-        (key: string, fallback?: string): string => {
-          const result = tOriginal(key);
-          return result && result !== key ? result : (fallback ?? key);
-        },
-        [tOriginal]
-      );
+
 
       const [open, setOpen] = useState(false);
       const [search, setSearch] = useState("");

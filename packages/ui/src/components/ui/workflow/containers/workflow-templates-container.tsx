@@ -2,19 +2,12 @@
 "use client";
 
 import { memo, useCallback } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { useWorkflows, useCreateWorkflow, type WorkflowEntityType, type WorkflowStep } from "@hisabche/api";
 import { WorkflowTemplatesView } from "../workflow-templates-view";
 
 export const WorkflowTemplatesContainer = memo(function WorkflowTemplatesContainer() {
-  const { t: tOriginal } = useTranslation();
-  const t = useCallback(
-    (key: string, fallback?: string): string => {
-      const result = tOriginal(key);
-      return result && result !== key ? result : (fallback ?? key);
-    },
-    [tOriginal]
-  );
+  const t = useTranslations();
 
   const { data, isLoading } = useWorkflows();
   const { mutateAsync: createWorkflow, isPending } = useCreateWorkflow();

@@ -2,7 +2,7 @@
 "use client";
 
 import { memo } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,7 +19,7 @@ export const SingleDatePicker = memo(function SingleDatePicker({
   label,
   className,
 }: SingleDatePickerProps) {
-  const { t } = useTranslation();
+  const t = useTranslations();
 
   return (
     <div className={cn("flex flex-col gap-1 md:gap-1.5", className)}>
@@ -41,7 +41,7 @@ export const SingleDatePicker = memo(function SingleDatePicker({
             "text-[11px] md:text-xs lg:text-sm text-[hsl(var(--fg-primary))]",
             "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
           )}
-          aria-label={label || t("accounting.dateRange.date", "تاریخ")}
+          aria-label={label || t("accounting.dateRange.date")}
         />
       </div>
     </div>
@@ -63,19 +63,19 @@ export const DateRangePicker = memo(function DateRangePicker({
   onToChange,
   className,
 }: DateRangePickerProps) {
-  const { t } = useTranslation();
+  const t = useTranslations();
 
   return (
     <div className={cn("flex items-end gap-2 md:gap-3", className)}>
       <SingleDatePicker
         value={from}
         onChange={onFromChange}
-        label={t("accounting.dateRange.from", "از تاریخ")}
+        label={t("accounting.dateRange.from")}
       />
       <SingleDatePicker
         value={to}
         onChange={onToChange}
-        label={t("accounting.dateRange.to", "تا تاریخ")}
+        label={t("accounting.dateRange.to")}
       />
     </div>
   );

@@ -2,7 +2,7 @@
 "use client";
 
 import { memo, useState, useMemo } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { useBalanceSheet } from "@hisabche/api";
 import { SingleDatePicker } from "../components/DateRangePicker";
@@ -58,7 +58,7 @@ function SectionBlock({
 }
 
 export const BalanceSheetTab = memo(function BalanceSheetTab() {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const { data, isLoading } = useBalanceSheet(date);
 
@@ -77,10 +77,10 @@ export const BalanceSheetTab = memo(function BalanceSheetTab() {
     <div className="flex flex-col h-full">
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 md:gap-3 px-3 md:px-4 lg:px-5 py-2.5 md:py-3 lg:py-4 border-b border-[hsl(var(--border-default))]">
         <h2 className="text-xs md:text-sm lg:text-base font-semibold text-[hsl(var(--fg-primary))]">
-          {t("accounting.balanceSheet.title", "ترازنامه")}
+          {t("accounting.balanceSheet.title")}
         </h2>
         <div className="flex items-center gap-2 md:gap-3">
-          <SingleDatePicker value={date} onChange={setDate} label={t("accounting.balanceSheet.asOf", "تا تاریخ")} />
+          <SingleDatePicker value={date} onChange={setDate} label={t("accounting.balanceSheet.asOf")} />
           <ExportButton data={exportData} columns={exportColumns} filename="balance-sheet" className="mb-0" />
         </div>
       </div>
@@ -89,23 +89,23 @@ export const BalanceSheetTab = memo(function BalanceSheetTab() {
         {isLoading ? (
           <AccountingSkeleton />
         ) : !data ? (
-          <AccountingEmptyState title={t("accounting.balanceSheet.empty.title", "داده‌ای برای این تاریخ یافت نشد")} />
+          <AccountingEmptyState title={t("accounting.balanceSheet.empty.title")} />
         ) : (
           <div className="space-y-3 md:space-y-4 lg:space-y-5">
             <SectionBlock
-              title={t("accounting.balanceSheet.assets", "دارایی‌ها")}
+              title={t("accounting.balanceSheet.assets")}
               total={data.assets.total}
               details={data.assets.details}
               accentClass="bg-blue-500/10 text-blue-500"
             />
             <SectionBlock
-              title={t("accounting.balanceSheet.liabilities", "بدهی‌ها")}
+              title={t("accounting.balanceSheet.liabilities")}
               total={data.liabilities.total}
               details={data.liabilities.details}
               accentClass="bg-rose-500/10 text-rose-500"
             />
             <SectionBlock
-              title={t("accounting.balanceSheet.equity", "حقوق صاحبان سهام")}
+              title={t("accounting.balanceSheet.equity")}
               total={data.equity.total}
               details={data.equity.details}
               accentClass="bg-purple-500/10 text-purple-500"
@@ -121,8 +121,8 @@ export const BalanceSheetTab = memo(function BalanceSheetTab() {
             >
               <span>
                 {isBalanced
-                  ? t("accounting.balanceSheet.balanced", "ترازنامه متوازن است")
-                  : t("accounting.balanceSheet.unbalanced", "ترازنامه نامتوازن است")}
+                  ? t("accounting.balanceSheet.balanced")
+                  : t("accounting.balanceSheet.unbalanced")}
               </span>
               <span>
                 {data.assets.total.toLocaleString()} = {(data.liabilities.total + data.equity.total).toLocaleString()}

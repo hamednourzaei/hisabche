@@ -3,7 +3,7 @@
 
 import { useState, useCallback, memo } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Mail, ArrowLeft, Loader2, CheckCircle } from "lucide-react";
 import { apiClient } from "@hisabche/api";
@@ -14,7 +14,7 @@ import { apiClient } from "@hisabche/api";
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export const ForgotPasswordClient = memo(function ForgotPasswordClient() {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -72,7 +72,7 @@ export const ForgotPasswordClient = memo(function ForgotPasswordClient() {
           )}
         >
           <ArrowLeft className="size-4" />
-          {t("action.back", "بازگشت")}
+          {t("action.back")}
         </button>
 
         {/* Header */}
@@ -86,13 +86,13 @@ export const ForgotPasswordClient = memo(function ForgotPasswordClient() {
           </div>
           <h1 className="text-2xl font-bold text-[hsl(var(--fg-primary))]">
             {sent
-              ? t("auth.resetLinkSent", "لینک ارسال شد")
-              : t("auth.forgotPassword", "فراموشی رمز عبور")}
+              ? t("auth.resetLinkSent")
+              : t("auth.forgotPassword")}
           </h1>
           <p className="mt-2 text-sm text-[hsl(var(--fg-secondary))]">
             {sent
-              ? t("auth.checkEmail", "لطفاً ایمیل خود را بررسی کنید. لینک بازنشانی تا ۱ ساعت معتبر است.")
-              : t("auth.enterEmailForReset", "ایمیل خود را وارد کنید تا لینک بازنشانی برای شما ارسال شود")}
+              ? t("auth.checkEmail")
+              : t("auth.enterEmailForReset")}
           </p>
         </div>
 
@@ -105,7 +105,7 @@ export const ForgotPasswordClient = memo(function ForgotPasswordClient() {
                 type="email"
                 value={email}
                 onChange={handleEmailChange}
-                placeholder={t("auth.email", "ایمیل")}
+                placeholder={t("auth.email")}
                 autoFocus
                 required
                 className={cn(
@@ -136,7 +136,7 @@ export const ForgotPasswordClient = memo(function ForgotPasswordClient() {
               )}
             >
               {loading && <Loader2 className="size-4 animate-spin" />}
-              {t("auth.sendResetLink", "ارسال لینک بازنشانی")}
+              {t("auth.sendResetLink")}
             </button>
           </form>
         )}
@@ -148,7 +148,7 @@ export const ForgotPasswordClient = memo(function ForgotPasswordClient() {
             onClick={handleGoToLogin}
             className="text-[hsl(var(--color-primary))] hover:underline font-semibold"
           >
-            {t("action.back", "بازگشت به ورود")}
+            {t("action.back")}
           </button>
         </p>
       </div>

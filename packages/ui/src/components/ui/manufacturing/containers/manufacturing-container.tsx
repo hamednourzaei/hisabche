@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useCallback, useMemo, memo } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import {
   useBOMs,
   useWorkOrders,
@@ -21,15 +21,9 @@ import { CreateWorkOrderDialog, type CreateWorkOrderInput } from "../components/
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export const ManufacturingContainer = memo(function ManufacturingContainer() {
-  const { t: tOriginal } = useTranslation();
+  const t = useTranslations();
 
-  const t = useCallback(
-    (key: string, fallback?: string): string => {
-      const result = tOriginal(key);
-      return result && result !== key ? result : (fallback ?? key);
-    },
-    [tOriginal]
-  );
+
 
   const [activeTab, setActiveTab] = useState<ManufacturingTabId>("boms");
   const [isBomDialogOpen, setIsBomDialogOpen] = useState(false);

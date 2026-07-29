@@ -2,13 +2,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { useEmployees, useCreateEmployee, useDeleteEmployee } from "@hisabche/api";
 import { HumanResourcesView } from "../hr-view";
 import { useState } from "react";
 
 export function HumanResourcesContainer() {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const router = useRouter();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");

@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo, memo } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import {
   Bell,
   X,
@@ -89,17 +89,17 @@ const statusLabels: Record<string, string> = {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function timeAgo(d: string, t: (key: string, fallback: string) => string): string {
+function timeAgo(d: string, t: (key: string) => string): string {
   const m = Math.floor((Date.now() - new Date(d).getTime()) / 60000);
-  if (m < 1) return t("time.justNow", "همین الان");
-  if (m < 60) return t("time.minutesAgo", `${m} دقیقه پیش`);
+  if (m < 1) return t("time.justNow");
+  if (m < 60) return t("time.minutesAgo");
   const h = Math.floor(m / 60);
-  if (h < 24) return t("time.hoursAgo", `${h} ساعت پیش`);
+  if (h < 24) return t("time.hoursAgo");
   const d2 = Math.floor(h / 24);
-  if (d2 < 7) return t("time.daysAgo", `${d2} روز پیش`);
+  if (d2 < 7) return t("time.daysAgo");
   const w = Math.floor(d2 / 7);
-  if (w < 4) return t("time.weeksAgo", `${w} هفته پیش`);
-  return t("time.monthsAgo", `${Math.floor(d2 / 30)} ماه پیش`);
+  if (w < 4) return t("time.weeksAgo");
+  return t("time.monthsAgo");
 }
 
 // ✅ FIX: قبلاً فقط ۴ نوع entity شناخته می‌شد و بقیه (project، workflow،
@@ -245,7 +245,7 @@ const TimelineItem = memo(function TimelineItem({
   notification: Notification;
   isLast: boolean;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const config = entityConfig[notification.entity_type as NotificationGroup["entityType"]] || entityConfig.invoice;
   const Icon = config.icon;
 
@@ -286,7 +286,7 @@ const GroupCard = memo(function GroupCard({
   onToggle: () => void;
   onItemClick: (n: Notification) => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const statusColor = group.status ? statusColors[group.status] || "" : "";
   const statusLabel = group.status ? statusLabels[group.status] || group.status : "";
   const config = entityConfig[group.entityType] || entityConfig.invoice;
@@ -350,7 +350,7 @@ const GroupCard = memo(function GroupCard({
               )}
               <span className="text-[8px] md:text-[10px] text-[hsl(var(--fg-tertiary))] flex items-center gap-1">
                 <Clock className="w-2.5 h-2.5 md:w-3 md:h-3" aria-hidden="true" />
-                {group.items.length} {t("notifications.activities", "فعالیت")} • {timeAgo(group.latestAt, t)}
+                {group.items.length} {t("notifications.activities")} • {timeAgo(group.latestAt, t)}
               </span>
             </div>
           </div>
@@ -420,7 +420,7 @@ BellSkeleton.displayName = "BellSkeleton";
 // ─── Empty State ────────────────────────────────────────────────────────────
 
 const BellEmptyState = memo(function BellEmptyState() {
-  const { t } = useTranslation();
+  const t = useTranslations();
 
   return (
     <div className="flex flex-col items-center justify-center py-8 md:py-12 px-3 md:px-4 text-center">
@@ -428,10 +428,10 @@ const BellEmptyState = memo(function BellEmptyState() {
         <Inbox className="w-6 h-6 md:w-8 md:h-8 text-[hsl(var(--fg-tertiary))]" aria-hidden="true" />
       </div>
       <h4 className="text-xs md:text-sm font-semibold text-[hsl(var(--fg-primary))]">
-        {t("notifications.empty", "همه چیز مرتب است")}
+        {t("notifications.empty")}
       </h4>
       <p className="text-xs md:text-sm text-[hsl(var(--fg-tertiary))] mt-0.5 md:mt-1">
-        {t("notifications.emptyHint", "اعلان جدیدی ندارید.")}
+        {t("notifications.emptyHint")}
       </p>
     </div>
   );
@@ -443,7 +443,7 @@ BellEmptyState.displayName = "BellEmptyState";
 export const NotificationBell = memo(function NotificationBell({
   className,
 }: NotificationBellProps) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -529,7 +529,7 @@ export const NotificationBell = memo(function NotificationBell({
           "transition-colors duration-150",
           "focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))] focus-visible:outline-none"
         )}
-        aria-label={t("notifications.bell", "اعلان‌ها")}
+        aria-label={t("notifications.bell")}
         aria-expanded={open}
       >
         <Bell className="size-5" aria-hidden="true" />
@@ -554,7 +554,7 @@ export const NotificationBell = memo(function NotificationBell({
           <div
             ref={panelRef}
             role="dialog"
-            aria-label={t("notifications.title", "مرکز فعالیت‌ها")}
+            aria-label={t("notifications.title")}
             className={cn(
               "z-50 flex flex-col",
               "border border-[hsl(var(--border-default))]",
@@ -572,7 +572,7 @@ export const NotificationBell = memo(function NotificationBell({
             <div className="flex items-center justify-between gap-1.5 md:gap-2 px-3 md:px-4 py-2.5 md:py-3 border-b border-[hsl(var(--border-default))] shrink-0">
               <div className="flex items-center gap-1.5 md:gap-2 min-w-0">
                 <h3 className="text-xs md:text-sm font-semibold text-[hsl(var(--fg-primary))]">
-                  {t("notifications.title", "مرکز فعالیت‌ها")}
+                  {t("notifications.title")}
                 </h3>
                 {unreadCount > 0 && (
                   <span className="shrink-0 text-[8px] md:text-[10px] font-bold px-1.5 md:px-2 py-0.5 rounded-full bg-[hsl(var(--color-destructive)/0.1)] text-[hsl(var(--color-destructive))]">
@@ -594,17 +594,17 @@ export const NotificationBell = memo(function NotificationBell({
                       "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]",
                       "min-h-[28px] md:min-h-[32px]"
                     )}
-                    aria-label={t("notifications.markAllRead", "خواندن همه")}
+                    aria-label={t("notifications.markAllRead")}
                   >
                     <CheckCheck className="size-3 md:size-3.5" aria-hidden="true" />
-                    <span className="hidden sm:inline">{t("notifications.markAllRead", "خواندن همه")}</span>
+                    <span className="hidden sm:inline">{t("notifications.markAllRead")}</span>
                   </button>
                 )}
                 <button
                   type="button"
                   onClick={close}
                   className="p-1 rounded-lg text-[hsl(var(--fg-tertiary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
-                  aria-label={t("action.close", "بستن")}
+                  aria-label={t("action.close")}
                 >
                   <X className="size-3.5 md:size-4" aria-hidden="true" />
                 </button>
@@ -645,9 +645,9 @@ export const NotificationBell = memo(function NotificationBell({
                   "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]",
                   "min-h-[36px] md:min-h-[44px] shrink-0"
                 )}
-                aria-label={t("notifications.viewAll", "مشاهده همه فعالیت‌ها")}
+                aria-label={t("notifications.viewAll")}
               >
-                {t("notifications.viewAll", "مشاهده همه فعالیت‌ها")}
+                {t("notifications.viewAll")}
                 <ArrowLeft className="size-3 md:size-3.5 rtl:rotate-180" aria-hidden="true" />
               </button>
             )}

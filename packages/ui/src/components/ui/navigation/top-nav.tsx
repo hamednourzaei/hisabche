@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback, memo } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
 import { useNavigation } from "../../../hooks/menu/use-navigation-state";
 import { useAuthStore } from "@hisabche/store";
@@ -69,7 +69,7 @@ export const TopNav = memo(function TopNav({
   onLogout,
   businessName,
 }: TopNavProps) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const pathname = usePathname();
   const { sections, setSection, activeSection, scrollProgress, narrativeState } = useNavigation();
   const user = useAuthStore((s) => s.user);
@@ -79,7 +79,7 @@ export const TopNav = memo(function TopNav({
   const locale = getLocaleFromPathname(pathname);
   const isRTL = locale === "fa-IR" || locale === "fa-AF";
 
-  const displayName = businessName || user?.businessName || user?.fullName || t("app.name", "Hisabche");
+  const displayName = businessName || user?.businessName || user?.fullName || t("app.name");
 
   useEffect(() => {
     if (typeof document !== "undefined") {

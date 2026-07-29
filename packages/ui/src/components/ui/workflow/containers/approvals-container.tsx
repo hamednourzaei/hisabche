@@ -2,7 +2,7 @@
 "use client";
 
 import { memo, useCallback, useMemo } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import {
   useWorkflowInstances,
   useWorkflowInstanceDetail,
@@ -12,6 +12,12 @@ import {
 } from "@hisabche/api";
 import { ApprovalCard } from "../approval-timeline";
 import { ApprovalsView } from "../approvals-view";
+import { useToast } from "../../toast-provider";
+
+interface ApiErrorLike {
+  status?: number;
+  message?: string;
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ApprovalsContainer — همه‌ی hookهای داده اینجا زندگی می‌کنند.
@@ -30,12 +36,22 @@ const ApprovalInstanceCard = memo(function ApprovalInstanceCard({
   const { data: detail, isLoading: detailLoading } = useWorkflowInstanceDetail(instance.id);
   const { data: workflow, isLoading: workflowLoading } = useWorkflow(instance.workflow_id);
   const { mutateAsync: performAction } = usePerformWorkflowAction();
+  const toast = useToast();
 
   const handleAction = useCallback(
     async (action: "approved" | "rejected" | "cancelled", comment?: string) => {
-      await performAction({ instanceId: instance.id, action, ...(comment !== undefined && { comment }) });
+      try {
+        await performAction({ instanceId: instance.id, action, ...(comment !== undefined && { comment }) });
+      } catch (err) {
+        const apiError = err as ApiErrorLike;
+        const message =
+          apiError.status === 403
+            ? t("workflow.forbiddenError", "شما اجازه‌ی انجام این اقدام را در این مرحله ندارید.")
+            : apiError.message ?? t("workflow.actionError", "انجام اقدام با خطا مواجه شد.");
+        toast.error(t("workflow.actionErrorTitle", "خطا در انجام اقدام"), message);
+      }
     },
-    [performAction, instance.id]
+    [performAction, instance.id, toast, t]
   );
 
   if (detailLoading || workflowLoading || !detail || !workflow) {
@@ -58,15 +74,8 @@ const ApprovalInstanceCard = memo(function ApprovalInstanceCard({
 ApprovalInstanceCard.displayName = "ApprovalInstanceCard";
 
 export const ApprovalsContainer = memo(function ApprovalsContainer() {
-  const { t: tOriginal } = useTranslation();
+  const t = useTranslations();
 
-  const t = useCallback(
-    (key: string, fallback?: string): string => {
-      const result = tOriginal(key);
-      return result && result !== key ? result : (fallback ?? key);
-    },
-    [tOriginal]
-  );
 
   const { data, isLoading } = useWorkflowInstances();
 

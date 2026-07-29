@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { Check, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSyncStore } from "@hisabche/store";
@@ -16,7 +16,7 @@ export interface SaveIndicatorProps {
 }
 
 const SaveIndicator: React.FC<SaveIndicatorProps> = ({ show = false, message }) => {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const { saveStatus } = useSyncStore();
   const isVisible = saveStatus !== "idle" || show;
   if (!isVisible) return null;
@@ -27,12 +27,12 @@ const SaveIndicator: React.FC<SaveIndicatorProps> = ({ show = false, message }) 
         {saveStatus === "saving" || (show && saveStatus === "idle") ? (
           <>
             <Loader2 className="size-4 animate-spin text-[hsl(var(--color-primary))]" aria-hidden="true" />
-            <span className="text-[hsl(var(--fg-secondary))]">{message || t("common.saving", "در حال ذخیره...")}</span>
+            <span className="text-[hsl(var(--fg-secondary))]">{message || t("common.saving")}</span>
           </>
         ) : saveStatus === "saved" ? (
           <>
             <Check className="size-4 text-[hsl(var(--color-success))]" aria-hidden="true" />
-            <span className="text-[hsl(var(--color-success))]">{message || t("common.saved", "ذخیره شد")}</span>
+            <span className="text-[hsl(var(--color-success))]">{message || t("common.saved")}</span>
           </>
         ) : null}
       </div>

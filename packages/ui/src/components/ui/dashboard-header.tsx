@@ -3,7 +3,7 @@
 import { memo, useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { NotificationBell } from "./notification-bell";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    DashboardHeader v5 — Memoized · Performance Optimized
@@ -40,7 +40,7 @@ const SyncPill = memo(function SyncPill({
   isOnline: boolean;
   isSyncing: boolean;
   pendingCount: number;
-  t: (key: string, fallback: string) => string;
+  t: (key: string) => string;
 }) {
   if (!isOnline) {
     return (
@@ -52,7 +52,7 @@ const SyncPill = memo(function SyncPill({
         )}
       >
         <span className="size-1.5 rounded-full bg-[hsl(var(--color-warning))]" aria-hidden="true" />
-        {t("sync.offline", "آفلاین")}
+        {t("sync.offline")}
       </span>
     );
   }
@@ -66,7 +66,7 @@ const SyncPill = memo(function SyncPill({
         )}
       >
         <span className="size-1.5 rounded-full bg-[hsl(var(--color-primary))] animate-pulse" aria-hidden="true" />
-        {t("sync.syncing", "همگام‌سازی")}
+        {t("sync.syncing")}
         {pendingCount > 0 ? ` · ${pendingCount}` : ""}
       </span>
     );
@@ -75,8 +75,8 @@ const SyncPill = memo(function SyncPill({
     const s = Math.floor((Date.now() - lastSyncedAt) / 1000);
     const label =
       s < 60
-        ? t("sync.justNow", "لحظاتی پیش")
-        : t("sync.minutesAgo", `${Math.floor(s / 60)} دقیقه پیش`).replace(
+        ? t("sync.justNow")
+        : t("sync.minutesAgo").replace(
             "{m}",
             String(Math.floor(s / 60))
           );
@@ -111,7 +111,7 @@ const LanguageSelect = memo(function LanguageSelect({
   currentLang: string;
   onChange: (lang: string) => void;
 }) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const [isOpen, setIsOpen] = useState(false);
   const selected = LANGUAGES.find((l) => l.code === currentLang) ?? LANGUAGES[0];
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -131,7 +131,7 @@ const LanguageSelect = memo(function LanguageSelect({
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        aria-label={t("settings.changeLanguage", "تغییر زبان")}
+        aria-label={t("settings.changeLanguage")}
         className={cn(
           "inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5",
           "text-[11px] font-medium",
@@ -145,7 +145,7 @@ const LanguageSelect = memo(function LanguageSelect({
         )}
       >
         <span className="text-sm">{selected?.flag ?? "🌐"}</span>
-        <span className="hidden sm:inline">{selected?.nativeLabel ?? t("settings.language", "زبان")}</span>
+        <span className="hidden sm:inline">{selected?.nativeLabel ?? t("settings.language")}</span>
         <svg
           width="12"
           height="12"
@@ -240,7 +240,7 @@ export const DashboardHeader = memo(function DashboardHeader({
   onLogout,
   onNavigateLogin,
 }: HeaderProps) {
-  const { t } = useTranslation();
+  const t = useTranslations();
 
   return (
     <header
@@ -281,7 +281,7 @@ export const DashboardHeader = memo(function DashboardHeader({
           <button
             type="button"
             onClick={onToggleTheme}
-            aria-label={isDark ? t("settings.lightMode", "حالت روشن") : t("settings.darkMode", "حالت تاریک")}
+            aria-label={isDark ? t("settings.lightMode") : t("settings.darkMode")}
             className={cn(
               "inline-flex items-center rounded-lg p-1.5",
               isDark ? "text-[hsl(var(--color-warning))]" : "text-[hsl(var(--fg-secondary))]",
@@ -297,7 +297,7 @@ export const DashboardHeader = memo(function DashboardHeader({
             <button
               type="button"
               onClick={onLogout}
-              aria-label={t("auth.signOut", "خروج")}
+              aria-label={t("auth.signOut")}
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5",
                 "text-[hsl(var(--fg-secondary))]",

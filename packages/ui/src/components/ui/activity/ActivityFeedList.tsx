@@ -7,7 +7,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ActivityGroupDto, ActivityItemDto } from "@hisabche/api";
@@ -30,7 +30,7 @@ export function ActivityFeedList({
   onActivityClick,
   className,
 }: ActivityFeedListProps) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -56,7 +56,7 @@ export function ActivityFeedList({
       className={cn("overflow-y-auto h-full", className)}
       role="feed"
       aria-busy={isFetchingNextPage}
-      aria-label={t("activity.feedLabel", "فید فعالیت‌ها")}
+      aria-label={t("activity.feedLabel")}
     >
       <div className="space-y-1.5 md:space-y-2 p-1.5 md:p-2">
         {groups.map((group) => (
@@ -73,11 +73,11 @@ export function ActivityFeedList({
           {isFetchingNextPage ? (
             <span className="flex items-center gap-2 text-[11px] md:text-xs text-[hsl(var(--fg-tertiary))]">
               <Loader2 className="size-3.5 md:size-4 animate-spin text-[hsl(var(--color-primary))]" aria-hidden="true" />
-              {t("activity.loadingMore", "بارگذاری بیشتر...")}
+              {t("activity.loadingMore")}
             </span>
           ) : (
             <span className="text-[11px] md:text-xs text-[hsl(var(--fg-tertiary))]">
-              {t("activity.scrollForMore", "برای بارگذاری بیشتر اسکرول کنید")}
+              {t("activity.scrollForMore")}
             </span>
           )}
         </div>
@@ -86,7 +86,7 @@ export function ActivityFeedList({
       {!hasNextPage && groups.length > 0 && (
         <div className="flex items-center justify-center py-3 md:py-4">
           <span className="text-[11px] md:text-xs text-[hsl(var(--fg-tertiary))]">
-            {t("activity.endOfList", "به انتهای لیست رسیدید")}
+            {t("activity.endOfList")}
           </span>
         </div>
       )}

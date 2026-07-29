@@ -1,68 +1,62 @@
 // ═══════════════════════════════════════════════════════════
-// apps/web/app/[lang]/signup/layout.tsx
+// apps/web/app/[lang]/login/layout.tsx
 // ═══════════════════════════════════════════════════════════
 
 const titles: Record<string, string> = {
-  "fa-IR": "ثبت‌نام",
-  "fa-AF": "ثبت‌نام",
-  "en": "Sign Up",
+  "fa": "ورود",
+  "af": "ورود",
+  "en": "Login",
 };
 
 const descriptions: Record<string, string> = {
-  "fa-IR": "ثبت‌نام در حسابچه و شروع مدیریت کسب‌وکار. ایجاد حساب رایگان در کمتر از ۱ دقیقه.",
-  "fa-AF": "ثبت‌نام در حسابچه و شروع مدیریت تجارت. ایجاد حساب رایگان در کمتر از ۱ دقیقه.",
-  "en": "Sign up for Hisabche and start managing your business. Create a free account in under 1 minute.",
+  "fa": "ورود به حساب حسابچه و مدیریت کسب‌وکار خود. دسترسی سریع و امن به داشبورد.",
+  "af": "ورود به حساب حسابچه و مدیریت تجارت خود. دسترسی سریع و امن به داشبورد.",
+  "en": "Log in to your Hisabche account and manage your business. Fast, secure access to your dashboard.",
 };
 
 const keywords: Record<string, string[]> = {
-  "fa-IR": [
-    "ثبت‌نام",
-    "ایجاد حساب",
-    "ثبت‌نام رایگان",
-    "حساب جدید",
-    "عضویت",
+  "fa": [
+    "ورود",
+    "ورود به حساب",
+    "ورود کاربران",
+    "حساب کاربری",
     "نرم‌افزار حسابداری",
     "مدیریت کسب‌وکار",
     "حسابچه",
-    "شروع کار",
-    "ثبت‌نام آنلاین",
+    "ورود آنلاین",
   ],
-  "fa-AF": [
-    "ثبت‌نام",
-    "ایجاد حساب",
-    "ثبت‌نام رایگان",
-    "حساب جدید",
-    "عضویت",
+  "af": [
+    "ورود",
+    "ورود به حساب",
+    "ورود کاربران",
+    "حساب کاربری",
     "نرم‌افزار حسابداری",
     "مدیریت تجارت",
     "حسابچه",
-    "شروع کار",
-    "ثبت‌نام آنلاین",
+    "ورود آنلاین",
   ],
   "en": [
-    "sign up",
-    "create account",
-    "free signup",
-    "new account",
-    "register",
+    "login",
+    "log in",
+    "sign in",
+    "account access",
     "accounting software",
     "business management",
     "hisabche",
-    "get started",
-    "online registration",
+    "online login",
   ],
 };
 
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
   return {
-    title: titles[lang] || titles["fa-IR"],
-    description: descriptions[lang] || descriptions["fa-IR"],
-    keywords: keywords[lang] || keywords["fa-IR"],
+    title: titles[lang] || titles["fa"],
+    description: descriptions[lang] || descriptions["fa"],
+    keywords: keywords[lang] || keywords["fa"],
     robots: { index: false, follow: false },
   };
 }
 
-export default function SignupLayout({ children }: { children: React.ReactNode }) {
+export default function LoginLayout({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }

@@ -2,7 +2,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { useOnboardingStore, type BusinessType, type StoreSize, type Currency } from "@hisabche/store";
 import { OnboardingPage } from "../onboarding-page";
 import { useCallback, useMemo, memo } from "react";
@@ -27,17 +27,10 @@ const storeSizes: { id: StoreSize; labelFa: string }[] = [
 ];
 
 export const OnboardingContainer = memo(function OnboardingContainer() {
-  const { t: tOriginal } = useTranslation();
+  const t = useTranslations();
   const router = useRouter();
 
-  // ✅ safeT wrapper
-  const safeT = useCallback(
-    (key: string, fallback?: string): string => {
-      const result = tOriginal(key);
-      return result && result !== key ? result : (fallback ?? key);
-    },
-    [tOriginal]
-  );
+  const safeT = t;
 
   const {
     step,

@@ -7,7 +7,7 @@ import {
   forwardRef,
   useEffect,
 } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { Package, Loader2, Search } from "lucide-react";
 import { useProducts } from "@hisabche/api";
 import { cn } from "@/lib/utils";
@@ -40,7 +40,7 @@ interface ProductPickerProps {
 
 export const ProductPicker = forwardRef<HTMLButtonElement, ProductPickerProps>(
   ({ value, onChange, placeholder, disabled = false, className }, _ref) => {
-    const { t } = useTranslation();
+    const t = useTranslations();
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState("");
     const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -98,7 +98,7 @@ export const ProductPicker = forwardRef<HTMLButtonElement, ProductPickerProps>(
             <SelectValue
               placeholder={
                 placeholder ||
-                t("warehouse.pickProduct", "انتخاب محصول...")
+                t("warehouse.pickProduct")
               }
             />
           </div>
@@ -116,7 +116,7 @@ export const ProductPicker = forwardRef<HTMLButtonElement, ProductPickerProps>(
                 autoFocus
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder={t("action.search", "جستجو") + "..."}
+                placeholder={t("action.search") + "..."}
                 className={cn(
                   "w-full rounded-lg ps-9 pe-3 py-2",
                   "text-sm",
@@ -141,7 +141,7 @@ export const ProductPicker = forwardRef<HTMLButtonElement, ProductPickerProps>(
             </div>
           ) : products.length === 0 ? (
             <p className="p-4 text-center text-sm text-[hsl(var(--fg-tertiary))]">
-              {t("warehouse.noProducts", "محصولی پیدا نشد")}
+              {t("warehouse.noProducts")}
             </p>
           ) : (
             products.map((product) => (
@@ -155,7 +155,7 @@ export const ProductPicker = forwardRef<HTMLButtonElement, ProductPickerProps>(
                   </span>
                   <span className="text-xs text-[hsl(var(--fg-tertiary))]">
                     {(product.sellPrice ?? 0).toLocaleString()} AFN /{" "}
-                    {product.unit ?? t("warehouse.units.piece", "عدد")}
+                    {product.unit ?? t("warehouse.units.piece")}
                   </span>
                 </div>
               </SelectItem>

@@ -2,7 +2,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 
 export type CurrencyCode = "AFN" | "USD" | "EUR" | "IRR";
 
@@ -21,12 +21,12 @@ export function useCurrency(options: UseCurrencyOptions = {}) {
     maximumFractionDigits = 2,
   } = options;
 
-  const { t } = useTranslation();
+  const t = useTranslations();
 
   const format = useMemo(() => {
     return (amount: number, showCode: boolean = true): string => {
       if (amount === undefined || amount === null || isNaN(amount)) {
-        return t("common.zero", "۰");
+        return t("common.zero");
       }
 
       const formatter = new Intl.NumberFormat(locale, {

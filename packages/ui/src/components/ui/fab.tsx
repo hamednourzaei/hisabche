@@ -3,7 +3,7 @@
 
 import * as React from "react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Plus } from "lucide-react";
 
@@ -33,7 +33,7 @@ const positionStyles: Record<string, string> = {
 
 const Fab = React.forwardRef<HTMLDivElement, FabProps>(
   ({ actions, position = "bottom-end", className }, ref) => {
-    const { t } = useTranslation();
+    const t = useTranslations();
     const [open, setOpen] = React.useState(false);
 
     const handleAction = React.useCallback((action: FabAction) => {
@@ -49,7 +49,7 @@ const Fab = React.forwardRef<HTMLDivElement, FabProps>(
           <DropdownMenu.Trigger asChild>
             <button
               type="button"
-              aria-label={open ? t("action.close", "بستن منو") : t("action.open", "باز کردن منو")}
+              aria-label={open ? t("action.close") : t("action.open")}
               className={cn(
                 "flex h-14 w-14 items-center justify-center rounded-full shadow-lg",
                 "transition-transform duration-200 motion-reduce:transition-none",

@@ -2,7 +2,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { useCallback, useState } from "react";
 
 import { DashboardView } from "../dashboard-view";
@@ -12,12 +12,12 @@ import { fmt } from "../../../../lib/dashboard/dashboard-format";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
-type Translate = (key: string, fallback?: string) => string;
+type Translate = (key: string) => string;
 
 // ─── Main Container ──────────────────────────────────────────────────────
 
 export function DashboardContainer() {
-  const { t: tOriginal } = useTranslation();
+  const t = useTranslations();
   const router = useRouter();
 
   // ─── State ──────────────────────────────────────────────────────────────
@@ -28,15 +28,6 @@ export function DashboardContainer() {
     weekAgo.setDate(weekAgo.getDate() - 6);
     return { from: weekAgo, to: today };
   });
-
-  // ✅ Wrapper برای تطابق signature
-  const t = useCallback<Translate>(
-    (key: string, fallback?: string) => {
-      const result = tOriginal(key);
-      return result === key ? (fallback ?? key) : result;
-    },
-    [tOriginal]
-  );
 
   // ─── Data ──────────────────────────────────────────────────────────────
 

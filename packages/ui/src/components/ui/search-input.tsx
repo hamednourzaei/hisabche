@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import * as Popover from "@radix-ui/react-popover";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Search, X, Clock, ArrowRight } from "lucide-react";
 
@@ -21,7 +21,7 @@ export interface SearchInputProps extends React.InputHTMLAttributes<HTMLInputEle
 
 const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
   ({ className, placeholder, onSearch, recentItems = [], frequentItems = [], showRecent = true, ...props }, ref) => {
-    const { t } = useTranslation();
+    const t = useTranslations();
     const [value, setValue] = React.useState("");
     const [open, setOpen] = React.useState(false);
 
@@ -57,12 +57,12 @@ const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
               value={value}
               onChange={handleChange}
               onFocus={() => value && setOpen(true)}
-              placeholder={placeholder || t("action.search", "جستجو...")}
+              placeholder={placeholder || t("action.search")}
               className={cn("h-10 w-full rounded-xl", "ps-10 pe-10", "text-sm", "border border-[hsl(var(--border-default))]", "bg-[hsl(var(--surface-base))]", "text-[hsl(var(--fg-primary))]", "placeholder:text-[hsl(var(--fg-tertiary))]", "transition-all duration-200", "focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]", "motion-reduce:transition-none")}
               {...props}
             />
             {value && (
-              <button type="button" onClick={handleClear} className={cn("absolute end-2 top-1/2 -translate-y-1/2", "p-1 rounded-full", "text-[hsl(var(--fg-tertiary))]", "hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]", "transition-colors duration-150", "motion-reduce:transition-none")} aria-label={t("action.clear", "پاک کردن جستجو")}>
+              <button type="button" onClick={handleClear} className={cn("absolute end-2 top-1/2 -translate-y-1/2", "p-1 rounded-full", "text-[hsl(var(--fg-tertiary))]", "hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]", "transition-colors duration-150", "motion-reduce:transition-none")} aria-label={t("action.clear")}>
                 <X className="size-4" aria-hidden="true" />
               </button>
             )}
@@ -75,7 +75,7 @@ const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
                   <div>
                     <div className="flex items-center gap-1.5 px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--fg-tertiary))]">
                       <Clock className="size-3" aria-hidden="true" />
-                      {t("search.recent", "اخیر")}
+                      {t("search.recent")}
                     </div>
                     {filteredRecent.slice(0, 5).map((item, i) => (
                       <button key={`recent-${i}-${item}`} type="button" onClick={() => handleSelect(item)} className={cn("flex w-full items-center gap-2 px-3 py-2.5", "text-sm text-start", "text-[hsl(var(--fg-primary))]", "hover:bg-[hsl(var(--color-primary)/0.08)]", "transition-colors duration-100", "motion-reduce:transition-none", "min-h-[44px]")}>
@@ -90,7 +90,7 @@ const SearchInput = React.forwardRef<HTMLInputElement, SearchInputProps>(
                   <div>
                     {showRecent && filteredRecent.length > 0 && <div className="mx-3 my-1 h-px bg-[hsl(var(--border-default))]" />}
                     <div className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wider text-[hsl(var(--fg-tertiary))]">
-                      {t("search.frequent", "پرتکرار")}
+                      {t("search.frequent")}
                     </div>
                     {filteredFrequent.slice(0, 3).map((item, i) => (
                       <button key={`freq-${i}-${item}`} type="button" onClick={() => handleSelect(item)} className={cn("flex w-full items-center gap-2 px-3 py-2.5", "text-sm text-start", "text-[hsl(var(--fg-primary))]", "hover:bg-[hsl(var(--color-primary)/0.08)]", "transition-colors duration-100", "motion-reduce:transition-none", "min-h-[44px]")}>

@@ -2,7 +2,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { useProjects, useCreateProject, useDeleteProject } from "@hisabche/api";
 import { ProjectsView } from "../projects-view";
 import { useState, useCallback, memo } from "react";
@@ -16,17 +16,10 @@ import { useState, useCallback, memo } from "react";
 import type { StatusType } from "../projects-view";
 
 export const ProjectsContainer = memo(function ProjectsContainer() {
-  const { t: tOriginal } = useTranslation();
+  const t = useTranslations();
   const router = useRouter();
 
-  // ✅ safeT wrapper
-  const safeT = useCallback(
-    (key: string, fallback?: string): string => {
-      const result = tOriginal(key);
-      return result && result !== key ? result : (fallback ?? key);
-    },
-    [tOriginal]
-  );
+  const safeT = t;
 
   // ✅ type-safe status
   const [status, setStatus] = useState<StatusType | undefined>(undefined);

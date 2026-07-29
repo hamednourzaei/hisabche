@@ -42,6 +42,7 @@
 | کلیک روی نوتیفیکیشن جای درست نمی‌رفت | `notification-bell.tsx`'s `resolveEntityUrl` | فقط ۴ نوع entity پشتیبانی می‌شد؛ مسیرهای `customer`/`payment` اصلاً وجود نداشتند (۴۰۴ تضمینی). حالا همه‌ی entity type های واقعی (invoice, customer, product, payment, project, purchase_order, workflow, opportunity, employee) به مسیر درست می‌روند |
 | CRM فقط Read-only بود | `crm-view.tsx` + `crm-container.tsx` | `useCreateInteraction` در barrel بود ولی هیچ UI برای ساخت تعامل جدید نبود — فرم inline اضافه شد |
 | Landing page کند بود (Lighthouse فاجعه‌بار) | `landing-page.tsx` | تمام ۱۱ سکشن زیر fold با `dynamic(..., {ssr:true})` بدون `loading` بودند = هیچ code-splitting واقعی. حالا Hero eager، بقیه با `loading` skeleton |
+| کلیک روی آیتم sidebar/bottom-bar هایلایت را اشتباه نشون می‌داد و مشخص نبود کدوم صفحه فعاله (مخصوص کاربران locale `af`/دری) | `packages/ui/src/components/ui/dashboard-sidebar.tsx` (`isPathActive`), `apps/web/app/[lang]/(dashboard)/dashboard-layout.tsx` (`handleNavigate` و command-palette `onSelect`) | `isPathActive` پیشوندهای locale قدیمی `fa-IR`/`fa-AF` را strip می‌کرد، نه کدهای واقعی routing `fa`/`af`/`en`؛ در نتیجه پیشوند `af` هیچ‌وقت از مسیر جاری حذف نمی‌شد و با مسیر آیتم match نمی‌کرد. هم‌زمان `handleNavigate` مسیرهای بدون پیشوند locale را مستقیم push می‌کرد و کاربر را بی‌صدا به locale پیش‌فرض (`fa`) برمی‌گرداند. فیکس: یک هلپر مشترک `withLocale` که با `localePrefix: 'as-needed'` سازگاره (`fa` بدون پیشوند، `af`/`en` با پیشوند) اضافه شد و در هر دو فایل استفاده می‌شود؛ با `npx tsc --noEmit` در `apps/web` Verify شد |
 | hreflang اشتباه | `apps/web/app/[lang]/layout.tsx` | `alternates.languages` به `/FA`/`/AF` (حروف بزرگ، مسیر ناموجود) اشاره می‌کرد؛ اصلاح به `/fa`/`/af` |
 
 ### ۵. Billing/Settings
@@ -51,13 +52,13 @@
 
 | # | مورد | وضعیت |
 |---|---|---|
-| 1 | **`human-resources/[id]/page.tsx`** — همان باگ async params که در projects فیکس شد، اینجا هنوز نه | آماده برای فیکس فوری (۱ فایل، کاملاً شناخته‌شده) |
+| 1 | ~~`human-resources/[id]/page.tsx` async params~~ | **غلط بود** — کد را دوباره خواندم؛ از قبل `await params` می‌کند و `id` را درست پاس می‌دهد. رفع نیازی نداشت. |
 | 2 | ادغام Activity → Notifications (کاربر می‌خواهد فعالیت‌های پروژه هم در نوتیفیکیشن باشد) | نیاز به Blueprint (احتمالاً >۲ فایل) |
 | 3 | «دسته‌بندی/نام‌گذاری» Settings که کاربر گفته «افتضاح است» | نیاز به توضیح دقیق‌تر کاربر — کدام بخش دقیقاً |
 | 4 | Multi-item Invoice | **Blueprint آماده است** (در گفتگو ثبت شده)، فقط اجرا مانده — بک‌اند/schema از قبل چندقلمی است، فقط UI `quick-invoice-page.tsx` تک‌قلمی است |
 | 5 | Escalation/SLA/Delegation واقعی در Workflow | فیچر جدید، نه باگ |
 | 6 | Lighthouse سایر صفحات (login, signup, warehouse, invoices, accounting) | هنوز بررسی نشده به‌جز لندینگ |
-| 7 | نمایش کاربرپسند خطای ۴۰۳ در تأیید/رد Workflow | باگ کوچک شناخته‌شده |
+| 7 | ~~نمایش کاربرپسند خطای ۴۰۳ در تأیید/رد Workflow~~ | **فیکس شد** — `approvals-container.tsx`: `handleAction` قبلاً catch نداشت (خطا کاملاً بی‌صدا می‌شد)؛ حالا با `useToast` پیام خطا (۴۰۳ = پیام اختصاصی «اجازه ندارید») نمایش داده می‌شود. |
 
 ## نکات معماری مهم که باید یادت بماند
 

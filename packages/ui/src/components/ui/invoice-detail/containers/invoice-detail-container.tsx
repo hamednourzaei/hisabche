@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import {
   useInvoice,
   useWorkspaces,
@@ -60,7 +60,7 @@ interface WorkflowStep {
    ═══════════════════════════════════════════════════════════ */
 
 export function InvoiceDetailContainer() {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
   const documentRef = useRef<HTMLDivElement>(null);
@@ -209,7 +209,7 @@ export function InvoiceDetailContainer() {
       link.click();
       link.remove();
     } catch {
-      alert(t("invoices.pngError", "خطا در ساخت خروجی تصویر."));
+      alert(t("invoices.pngError"));
     } finally {
       setExportingPNG(false);
     }

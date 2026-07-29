@@ -2,7 +2,7 @@
 "use client";
 
 import { memo, useCallback, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { Download, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -38,7 +38,7 @@ function toCsv<T>(data: T[], columns: ExportColumn<T>[]): string {
 }
 
 function ExportButtonInner<T>({ data, columns, filename, className }: ExportButtonProps<T>) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const [isExporting, setIsExporting] = useState(false);
 
   const handleExport = useCallback(() => {
@@ -75,14 +75,14 @@ function ExportButtonInner<T>({ data, columns, filename, className }: ExportButt
         "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]",
         className
       )}
-      aria-label={t("accounting.export.label", "خروجی CSV")}
+      aria-label={t("accounting.export.label")}
     >
       {isExporting ? (
         <Loader2 className="size-3.5 md:size-4 animate-spin" aria-hidden="true" />
       ) : (
         <Download className="size-3.5 md:size-4" aria-hidden="true" />
       )}
-      <span>{t("accounting.export.button", "خروجی CSV")}</span>
+      <span>{t("accounting.export.button")}</span>
     </button>
   );
 }

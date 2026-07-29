@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useCallback, useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { DollarSign, Package, AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "./button";
 import { Input } from "./input";
@@ -57,7 +57,7 @@ export const AddProductModal = memo(function AddProductModal({
   onClose,
   onCreated,
 }: AddProductModalProps) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const createProduct = useCreateProduct();
   const { setSaveStatus } = useSyncStore();
   const { addAuditEntry } = useBackupStore();
@@ -75,19 +75,19 @@ export const AddProductModal = memo(function AddProductModal({
   const validate = useCallback((): boolean => {
     const newErrors: Record<string, string> = {};
     if (!formData.name.trim()) {
-      newErrors.name = t("product.nameRequired", "نام محصول الزامی است");
+      newErrors.name = t("product.nameRequired");
     }
     if (formData.quantity < 0) {
-      newErrors.quantity = t("validation.min", "مقدار وارد شده معتبر نیست");
+      newErrors.quantity = t("validation.min");
     }
     if (formData.buyPrice < 0) {
-      newErrors.buyPrice = t("validation.min", "مقدار وارد شده معتبر نیست");
+      newErrors.buyPrice = t("validation.min");
     }
     if (formData.sellPrice < 0) {
-      newErrors.sellPrice = t("validation.min", "مقدار وارد شده معتبر نیست");
+      newErrors.sellPrice = t("validation.min");
     }
     if (formData.minStock < 0) {
-      newErrors.minStock = t("validation.min", "مقدار وارد شده معتبر نیست");
+      newErrors.minStock = t("validation.min");
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -148,7 +148,7 @@ export const AddProductModal = memo(function AddProductModal({
       onClose();
     } catch (error) {
       console.error("Failed to create product:", error);
-      setErrors({ form: t("common.error", "خطا در ذخیره محصول") });
+      setErrors({ form: t("common.error") });
       setSaveStatus("idle");
     } finally {
       setIsSubmitting(false);
@@ -187,19 +187,16 @@ export const AddProductModal = memo(function AddProductModal({
         {isPending && (
           <div className="absolute top-3 end-3 flex items-center gap-2 text-sm text-[hsl(var(--fg-secondary))]">
             <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-            <span>{t("common.saving", "در حال ذخیره...")}</span>
+            <span>{t("common.saving")}</span>
           </div>
         )}
 
         <DialogHeader>
           <DialogTitle>
-            {t("warehouse.addProductModal", "محصول جدید")}
+            {t("warehouse.addProductModal")}
           </DialogTitle>
           <DialogDescription>
-            {t(
-              "warehouse.addProductDescription",
-              "اطلاعات محصول جدید را وارد کنید. پس از ثبت، محصول در لیست موجودی نمایش داده می‌شود."
-            )}
+            {t("warehouse.addProductDescription")}
           </DialogDescription>
         </DialogHeader>
 
@@ -213,7 +210,7 @@ export const AddProductModal = memo(function AddProductModal({
           {/* Name */}
           <div className="space-y-2">
             <Label htmlFor="product-name">
-              {t("warehouse.productName", "نام محصول")}
+              {t("warehouse.productName")}
               <span className="text-[hsl(var(--color-destructive))] ms-1">*</span>
             </Label>
             <div className="relative">
@@ -222,10 +219,7 @@ export const AddProductModal = memo(function AddProductModal({
                 id="product-name"
                 value={formData.name}
                 onChange={(e) => handleChange("name", e.target.value)}
-                placeholder={t(
-                  "warehouse.productNamePlaceholder",
-                  "نام محصول را وارد کنید"
-                )}
+                placeholder={t("warehouse.productNamePlaceholder")}
                 className={inputClass}
                 autoFocus
                 disabled={isPending}
@@ -242,7 +236,7 @@ export const AddProductModal = memo(function AddProductModal({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="product-quantity">
-                {t("warehouse.initialStock", "موجودی اولیه")}
+                {t("warehouse.initialStock")}
               </Label>
               <Input
                 id="product-quantity"
@@ -263,19 +257,19 @@ export const AddProductModal = memo(function AddProductModal({
               )}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="product-unit">{t("warehouse.unit", "واحد")}</Label>
+              <Label htmlFor="product-unit">{t("warehouse.unit")}</Label>
               <Select
                 value={formData.unit}
                 onValueChange={(value: UnitType) => handleChange("unit", value)}
                 disabled={isPending}
               >
                 <SelectTrigger className="w-full min-h-[44px]">
-                  <SelectValue placeholder={t("warehouse.unit", "واحد")} />
+                  <SelectValue placeholder={t("warehouse.unit")} />
                 </SelectTrigger>
                 <SelectContent>
                   {UNIT_OPTIONS.map((opt) => (
                     <SelectItem key={opt.value} value={opt.value}>
-                      {t(opt.labelKey, opt.fallback)}
+                      {t(opt.labelKey)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -287,7 +281,7 @@ export const AddProductModal = memo(function AddProductModal({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label htmlFor="product-buy-price">
-                {t("warehouse.buyPrice", "قیمت خرید (AFN)")}
+                {t("warehouse.buyPrice")}
               </Label>
               <div className="relative">
                 <DollarSign className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))] pointer-events-none" />
@@ -308,7 +302,7 @@ export const AddProductModal = memo(function AddProductModal({
             </div>
             <div className="space-y-2">
               <Label htmlFor="product-sell-price">
-                {t("warehouse.sellPrice", "قیمت فروش (AFN)")}
+                {t("warehouse.sellPrice")}
               </Label>
               <div className="relative">
                 <DollarSign className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))] pointer-events-none" />
@@ -332,7 +326,7 @@ export const AddProductModal = memo(function AddProductModal({
           {/* Min Stock */}
           <div className="space-y-2">
             <Label htmlFor="product-min-stock">
-              {t("warehouse.minStock", "حداقل موجودی هشدار")}
+              {t("warehouse.minStock")}
             </Label>
             <div className="relative">
               <AlertTriangle className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))] pointer-events-none" />
@@ -372,7 +366,7 @@ export const AddProductModal = memo(function AddProductModal({
               onClick={handleClose}
               disabled={isPending}
             >
-              {t("action.cancel", "انصراف")}
+              {t("action.cancel")}
             </Button>
             <Button
               type="submit"
@@ -382,7 +376,7 @@ export const AddProductModal = memo(function AddProductModal({
               {isPending && (
                 <Loader2 className="size-4 me-2 animate-spin" />
               )}
-              {t("action.save", "ذخیره")}
+              {t("action.save")}
             </Button>
           </div>
         </form>

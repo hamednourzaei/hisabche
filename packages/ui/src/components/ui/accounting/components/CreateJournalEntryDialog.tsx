@@ -2,7 +2,7 @@
 "use client";
 
 import { memo, useState, useCallback, useEffect, useMemo } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { X, Loader2, Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MoneyInput } from "../../money-input";
@@ -38,7 +38,7 @@ export const CreateJournalEntryDialog = memo(function CreateJournalEntryDialog({
   isSubmitting,
   accounts,
 }: CreateJournalEntryDialogProps) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [description, setDescription] = useState("");
   const [reference, setReference] = useState("");
@@ -125,13 +125,13 @@ export const CreateJournalEntryDialog = memo(function CreateJournalEntryDialog({
       >
         <div className="flex items-center justify-between px-4 md:px-5 py-3 md:py-4 border-b border-[hsl(var(--border-default))]">
           <h2 id="create-journal-title" className="text-sm md:text-base font-semibold text-[hsl(var(--fg-primary))]">
-            {t("accounting.journal.createTitle", "سند روزنامه جدید")}
+            {t("accounting.journal.createTitle")}
           </h2>
           <button
             type="button"
             onClick={onClose}
             className="p-1 rounded-lg text-[hsl(var(--fg-tertiary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors"
-            aria-label={t("action.close", "بستن")}
+            aria-label={t("action.close")}
           >
             <X className="size-4 md:size-5" aria-hidden="true" />
           </button>
@@ -141,7 +141,7 @@ export const CreateJournalEntryDialog = memo(function CreateJournalEntryDialog({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div className="space-y-1 md:space-y-1.5">
               <label htmlFor="journal-date" className="text-xs md:text-sm font-medium text-[hsl(var(--fg-secondary))]">
-                {t("accounting.journal.date", "تاریخ")}
+                {t("accounting.journal.date")}
               </label>
               <input
                 id="journal-date"
@@ -154,7 +154,7 @@ export const CreateJournalEntryDialog = memo(function CreateJournalEntryDialog({
             </div>
             <div className="space-y-1 md:space-y-1.5">
               <label htmlFor="journal-reference" className="text-xs md:text-sm font-medium text-[hsl(var(--fg-secondary))]">
-                {t("accounting.journal.reference", "مرجع (اختیاری)")}
+                {t("accounting.journal.reference")}
               </label>
               <input
                 id="journal-reference"
@@ -168,7 +168,7 @@ export const CreateJournalEntryDialog = memo(function CreateJournalEntryDialog({
 
           <div className="space-y-1 md:space-y-1.5">
             <label htmlFor="journal-description" className="text-xs md:text-sm font-medium text-[hsl(var(--fg-secondary))]">
-              {t("accounting.journal.description", "شرح سند")}
+              {t("accounting.journal.description")}
             </label>
             <input
               id="journal-description"
@@ -183,7 +183,7 @@ export const CreateJournalEntryDialog = memo(function CreateJournalEntryDialog({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs md:text-sm font-medium text-[hsl(var(--fg-secondary))]">
-                {t("accounting.journal.lines", "خطوط سند")}
+                {t("accounting.journal.lines")}
               </span>
               <button
                 type="button"
@@ -191,7 +191,7 @@ export const CreateJournalEntryDialog = memo(function CreateJournalEntryDialog({
                 className="flex items-center gap-1 text-[11px] md:text-xs font-medium text-[hsl(var(--color-primary))] hover:underline"
               >
                 <Plus className="size-3 md:size-3.5" aria-hidden="true" />
-                {t("accounting.journal.addLine", "افزودن خط")}
+                {t("accounting.journal.addLine")}
               </button>
             </div>
 
@@ -203,7 +203,7 @@ export const CreateJournalEntryDialog = memo(function CreateJournalEntryDialog({
                     onChange={(e) => handleLineChange(index, "accountId", e.target.value)}
                     className="flex-1 min-w-0 h-9 md:h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-2 text-[11px] md:text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
                   >
-                    <option value="">{t("accounting.journal.selectAccount", "انتخاب حساب")}</option>
+                    <option value="">{t("accounting.journal.selectAccount")}</option>
                     {accounts.map((acc) => (
                       <option key={acc.id} value={acc.id}>
                         {acc.code} - {acc.name}
@@ -211,13 +211,13 @@ export const CreateJournalEntryDialog = memo(function CreateJournalEntryDialog({
                     ))}
                   </select>
                   <MoneyInput
-                    placeholder={t("accounting.journal.debit", "بدهکار")}
+                    placeholder={t("accounting.journal.debit")}
                     value={line.debit}
                     onChange={(raw) => handleLineChange(index, "debit", raw)}
                     className="w-20 md:w-28 h-9 md:h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-2 text-[11px] md:text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
                   />
                   <MoneyInput
-                    placeholder={t("accounting.journal.credit", "بستانکار")}
+                    placeholder={t("accounting.journal.credit")}
                     value={line.credit}
                     onChange={(raw) => handleLineChange(index, "credit", raw)}
                     className="w-20 md:w-28 h-9 md:h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-2 text-[11px] md:text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
@@ -227,7 +227,7 @@ export const CreateJournalEntryDialog = memo(function CreateJournalEntryDialog({
                     onClick={() => handleRemoveLine(index)}
                     disabled={lines.length <= 2}
                     className="shrink-0 p-1.5 md:p-2 rounded-lg text-[hsl(var(--fg-tertiary))] hover:bg-[hsl(var(--color-destructive)/0.1)] hover:text-[hsl(var(--color-destructive))] disabled:opacity-30 transition-colors"
-                    aria-label={t("action.remove", "حذف")}
+                    aria-label={t("action.remove")}
                   >
                     <Trash2 className="size-3.5 md:size-4" aria-hidden="true" />
                   </button>
@@ -243,12 +243,12 @@ export const CreateJournalEntryDialog = memo(function CreateJournalEntryDialog({
                   : "bg-[hsl(var(--color-warning)/0.1)] text-[hsl(var(--color-warning))]"
               )}
             >
-              <span>{t("accounting.journal.totalDebit", "جمع بدهکار")}: {totals.debit.toLocaleString()}</span>
-              <span>{t("accounting.journal.totalCredit", "جمع بستانکار")}: {totals.credit.toLocaleString()}</span>
+              <span>{t("accounting.journal.totalDebit")}: {totals.debit.toLocaleString()}</span>
+              <span>{t("accounting.journal.totalCredit")}: {totals.credit.toLocaleString()}</span>
               <span>
                 {totals.isBalanced
-                  ? t("accounting.journal.balanced", "متوازن")
-                  : t("accounting.journal.unbalanced", "نامتوازن")}
+                  ? t("accounting.journal.balanced")
+                  : t("accounting.journal.unbalanced")}
               </span>
             </div>
           </div>
@@ -259,7 +259,7 @@ export const CreateJournalEntryDialog = memo(function CreateJournalEntryDialog({
               onClick={onClose}
               className="flex-1 h-9 md:h-10 rounded-lg text-xs md:text-sm font-medium border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] transition-colors"
             >
-              {t("action.cancel", "انصراف")}
+              {t("action.cancel")}
             </button>
             <button
               type="submit"
@@ -267,7 +267,7 @@ export const CreateJournalEntryDialog = memo(function CreateJournalEntryDialog({
               className="flex-1 h-9 md:h-10 rounded-lg text-xs md:text-sm font-medium bg-[hsl(var(--color-primary))] text-white hover:opacity-90 disabled:opacity-40 transition-opacity flex items-center justify-center gap-2"
             >
               {isSubmitting && <Loader2 className="size-3.5 md:size-4 animate-spin" aria-hidden="true" />}
-              {t("action.create", "ایجاد")}
+              {t("action.create")}
             </button>
           </div>
         </form>

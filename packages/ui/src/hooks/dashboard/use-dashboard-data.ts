@@ -2,7 +2,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import {
   useDashboardKPIs,
   useAIInsights,
@@ -28,7 +28,7 @@ interface RecentInvoice {
 // ─── Main Hook ────────────────────────────────────────────────────────────
 
 export function useDashboardData(dateRange: DateRange) {
-  const { t } = useTranslation();
+  const t = useTranslations();
 
   // ─── Data Fetching ──────────────────────────────────────────────────────
 

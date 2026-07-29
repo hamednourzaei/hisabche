@@ -2,7 +2,7 @@
 "use client";
 
 import { memo, useMemo, useId } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
 import { ArrowUp, ArrowDown, FileText } from "lucide-react";
@@ -57,7 +57,7 @@ export const SalesChart = memo(function SalesChart({
   currentPeriodTotal = 0,
   onViewFullReport,
 }: SalesChartProps) {
-  const { t } = useTranslation();
+  const t = useTranslations();
   const descriptionId = useId();
   const isMobile = useIsMobile();
   const isReducedMotion = useIsReducedMotion();
@@ -120,8 +120,8 @@ export const SalesChart = memo(function SalesChart({
   const animationDuration = isMobile ? 0 : isReducedMotion ? 0 : 200;
 
   // ✅ اصلاح: استفاده از کلیدهای ترجمه‌ی صحیح
-  const ariaLabel = t("dashboard.salesChart.ariaLabel", "نمودار فروش");
-  const description = t("dashboard.salesChart.description", "نمودار فروش در بازه‌ی انتخاب‌شده");
+  const ariaLabel = t("dashboard.salesChart.ariaLabel");
+  const description = t("dashboard.salesChart.description");
 
   return (
     <section

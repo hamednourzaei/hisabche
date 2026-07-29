@@ -1,13 +1,12 @@
 "use client";
 
-import { useTranslation } from 'react-i18next'
+import { useTranslations } from "next-intl";
 import { useUsage } from '@hisabche/api'
 import { Card, CardContent, CardHeader, CardTitle } from '../card'
 import { Progress } from '../progress'
 
 export function UsageWidget() {
-  const { t } = useTranslation()
-  const { data, isLoading } = useUsage()
+  const t = useTranslations();const { data, isLoading } = useUsage()
 
   if (isLoading) return <div>{t('billing.loading')}</div>
   if (!data) return null

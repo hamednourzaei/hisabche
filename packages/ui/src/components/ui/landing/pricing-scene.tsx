@@ -3,7 +3,7 @@
 
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useTranslation } from "react-i18next";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Check, Minus, ChevronDown } from "lucide-react";
 
@@ -129,7 +129,7 @@ function Cell({ value }: { value: "check" | "dash" | string }) {
 
 export default function PricingScene(props: PricingSceneProps) {
   const router = useRouter();
-  const { t } = useTranslation();
+  const t = useTranslations();
 
   const st = (key: string, fallback?: string): string => {
     if (typeof t === "function") {

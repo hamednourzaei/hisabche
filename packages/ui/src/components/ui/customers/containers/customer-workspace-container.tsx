@@ -2,7 +2,7 @@
 "use client"
 
 import { useState, useCallback, useMemo } from "react"
-import { useTranslation } from "react-i18next"
+import { useTranslations } from "next-intl";
 import { useCustomer, useInvoices, useInteractions, useOpportunities } from "@hisabche/api"
 import { customerWorkspace } from "../customer-workspace"
 import { fmt } from "../../../../lib/customers/customers-format"
@@ -16,8 +16,7 @@ interface CustomerWorkspaceContainerProps {
 }
 
 export function CustomerWorkspaceContainer({ customerId, customerBase, onBack }: CustomerWorkspaceContainerProps) {
-  const { t } = useTranslation()
-  const [activeTab, setActiveTab] = useState<string>("invoices")
+  const t = useTranslations();const [activeTab, setActiveTab] = useState<string>("invoices")
   const [payOpen, setPayOpen] = useState(false)
 
   const { data: customer } = useCustomer(customerId)
