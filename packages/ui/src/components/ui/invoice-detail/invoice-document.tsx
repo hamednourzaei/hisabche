@@ -1,7 +1,30 @@
 "use client";
 
-import { forwardRef } from "react";
+import { forwardRef, useEffect, useState } from "react";
 import { Barcode, Calendar, Mail, MapPin, Phone, User } from "lucide-react";
+
+// ✅ QR واقعی: لینک عمومی فاکتور رو به‌صورت عکس QR تولید می‌کنه که
+// کپی/دانلود/اشتراک‌گذاری (چون داخل خروجی PDF/PNG/چاپ همین سند قرار
+// می‌گیره) واقعاً کار می‌کنه — قبلاً فقط آیکون جای‌نگه‌دار بود.
+function InvoiceQRCode({ value }: { value: string }) {
+  const [dataUrl, setDataUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    import("qrcode").then((QRCode) => {
+      QRCode.toDataURL(value, { margin: 1, width: 88 }).then((url) => {
+        if (!cancelled) setDataUrl(url);
+      }).catch(() => {});
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [value]);
+
+  if (!dataUrl) return null;
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={dataUrl} alt="QR" className="size-16 rounded" />;
+}
 
 /* ═══════════════════════════════════════════════════════════
    InvoiceDocument — shared "paper" visual
@@ -43,6 +66,7 @@ export interface InvoiceDocumentDisplaySettings {
 }
 
 export interface InvoiceDocumentData {
+  invoiceId?: string | undefined; // real DB id — used to build a scannable/shareable link
   invoiceNumber?: string | undefined; // absent for an unsaved preview
   date: string;
   dueDate?: string | null | undefined;
@@ -66,6 +90,13 @@ export interface InvoiceDocumentProps {
   locale?: string;
 }
 
+// نگاشت locale بلند (fa-AF/fa-IR/en) به پیشوند واقعی مسیر (af/fa/en)
+function urlLangFromLocale(locale: string): string {
+  if (locale.startsWith("fa-AF")) return "af";
+  if (locale.startsWith("fa")) return "fa";
+  return "en";
+}
+
 const fmtDate = (d: string, locale: string) => {
   try {
     return new Date(d).toLocaleDateString(locale);
@@ -77,6 +108,7 @@ const fmtDate = (d: string, locale: string) => {
 export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
   function InvoiceDocument({ t, data, display, locale = "fa-AF" }, ref) {
     const {
+      invoiceId,
       invoiceNumber,
       date,
       dueDate,
@@ -144,10 +176,22 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
                 {invoiceNumber ? `#${invoiceNumber}` : t("invoices.notYetSaved", "—")}
               </p>
               {display.showBarcode && (
-                <div className="mt-2 flex items-center justify-end gap-1.5 rounded-lg border border-dashed border-[hsl(var(--border-default))] px-3 py-2 text-[hsl(var(--fg-tertiary))]">
-                  <Barcode className="size-5" />
-                  <span className="text-[10px]">{invoiceNumber ?? t("invoices.barcodePlaceholder", "پس از ثبت فعال می‌شود")}</span>
-                </div>
+                invoiceId ? (
+                  <div className="mt-2 flex justify-end">
+                    <InvoiceQRCode
+                      value={
+                        typeof window !== "undefined"
+                          ? `${window.location.origin}/${urlLangFromLocale(locale)}/invoices/${invoiceId}`
+                          : `https://hisabche.com/${urlLangFromLocale(locale)}/invoices/${invoiceId}`
+                      }
+                    />
+                  </div>
+                ) : (
+                  <div className="mt-2 flex items-center justify-end gap-1.5 rounded-lg border border-dashed border-[hsl(var(--border-default))] px-3 py-2 text-[hsl(var(--fg-tertiary))]">
+                    <Barcode className="size-5" />
+                    <span className="text-[10px]">{t("invoices.barcodePlaceholder", "پس از ثبت فعال می‌شود")}</span>
+                  </div>
+                )
               )}
             </div>
           </div>

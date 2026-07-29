@@ -85,12 +85,13 @@ export function InvoiceDetailPage({
   }
 
   const {
-    invoiceNumber, date, dueDate, status, currency, subtotal, total, customerName,
+    id: invoiceId, invoiceNumber, date, dueDate, status, currency, subtotal, total, customerName,
     customerPhone, customerEmail, customerAddress, discountTotal, taxTotal, paidAmount,
     createdAt, updatedAt, notes, businessName, items,
   } = invoice;
 
   const documentData: InvoiceDocumentData = {
+    invoiceId,
     invoiceNumber,
     date,
     dueDate,
