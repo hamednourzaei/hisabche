@@ -3,14 +3,20 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslation } from "react-i18next";
-import { useInvoice, useWorkspaces } from "@hisabche/api";
+import {
+  useInvoice,
+  useWorkspaces,
+  useWorkflowInstance,
+  useWorkflowInstanceDetail,
+  useWorkflow,
+  usePerformWorkflowAction,
+} from "@hisabche/api";
 import {
   InvoiceDetailPage,
   type InvoiceDetailDisplay,
 } from "../invoice-detail-page";
 import InvoicePDFDownload from "../InvoicePDFDownload";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabaseClient } from "@hisabche/auth";
+import { useQueryClient } from "@tanstack/react-query";
 
 /* ═══════════════════════════════════════════════════════════
    CONSTANTS
@@ -69,83 +75,24 @@ export function InvoiceDetailContainer() {
     ? (workspaces[0] as { name?: string; logo_url?: string | null; stamp_url?: string | null } | undefined)
     : undefined;
 
-  // ✅ Workflow instance hook — inside component
-  const { data: workflowData } = useQuery({
-    queryKey: ["workflow-instance", id],
-    queryFn: async () => {
-      if (!id) return null;
+  // ✅ FIX: قبلاً این سه کوئری مستقیم با supabaseClient (anon key) زده
+  // می‌شد که هیچ session واقعی‌ای ندارد (auth واقعی از بک‌اند ماست، نه
+  // Supabase Auth سمت کلاینت) — همین باعث ۴۰۱ Unauthorized می‌شد.
+  // حالا از هوک‌های آماده که از apiClient (توکن backend) رد می‌شوند
+  // استفاده می‌کند.
+  const { data: workflowInstanceBase } = useWorkflowInstance("invoice", id ?? "");
+  const { data: workflowDetail } = useWorkflowInstanceDetail(workflowInstanceBase?.id ?? "");
+  const { data: workflowTemplate } = useWorkflow(workflowInstanceBase?.workflow_id ?? "");
+  const { mutateAsync: performWorkflowAction } = usePerformWorkflowAction();
 
-      const { data: instances } = await supabaseClient
-        .from("workflow_instances")
-        .select("id, status, current_step, total_steps, workflow_id")
-        .eq("entity_type", "invoice")
-        .eq("entity_id", id)
-        .limit(1);
-
-      const instance = instances?.[0];
-      if (!instance) return null;
-
-      const { data: steps } = await supabaseClient
-        .from("workflow_steps")
-        .select("step_order, approver_role, is_final")
-        .eq("workflow_id", instance.workflow_id)
-        .order("step_order");
-
-      const { data: actions } = await supabaseClient
-        .from("workflow_actions")
-        .select("*")
-        .eq("instance_id", instance.id)
-        .order("created_at", { ascending: false });
-
-      return {
-        instance: {
-          id: instance.id,
-          status: instance.status,
-          current_step: instance.current_step,
-          total_steps: instance.total_steps,
-        },
-        steps: (steps || []) as WorkflowStep[],
-        actions: (actions || []) as WorkflowActionRecord[],
-      };
-    },
-    enabled: !!id,
-  });
-
-  const workflowMutation = useMutation({
-    mutationFn: async ({
-      action,
-      comment,
-    }: {
-      action: "approved" | "rejected" | "cancelled";
-      comment?: string;
-    }) => {
-      const token = (await supabaseClient.auth.getSession()).data.session
-        ?.access_token;
-      if (!token) throw new Error("No token");
-
-      const body: Record<string, string> = { action };
-      if (comment) body.comment = comment;
-
-      const res = await fetch(
-        `https://hisabche.onrender.com/api/v1/workflows/instances/${workflowData?.instance?.id}/action`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify(body),
-        }
-      );
-
-      if (!res.ok) throw new Error("Failed to perform workflow action");
-      return res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["workflow-instance", id] });
-      queryClient.invalidateQueries({ queryKey: ["invoice", id] });
-    },
-  });
+  const workflowData = useMemo(() => {
+    if (!workflowInstanceBase) return null;
+    return {
+      instance: workflowInstanceBase,
+      steps: (workflowTemplate?.steps ?? []) as WorkflowStep[],
+      actions: (workflowDetail?.actions ?? []) as WorkflowActionRecord[],
+    };
+  }, [workflowInstanceBase, workflowTemplate, workflowDetail]);
 
   // ✅ FIX: استفاده از unknown به عنوان واسط
   const display: InvoiceDetailDisplay | null = useMemo(() => {
@@ -322,9 +269,11 @@ export function InvoiceDetailContainer() {
 
   const handleWorkflowAction = useCallback(
     async (action: "approved" | "rejected" | "cancelled", comment?: string) => {
-      await workflowMutation.mutateAsync({ action, comment: comment ?? "" });
+      if (!workflowInstanceBase?.id) return;
+      await performWorkflowAction({ instanceId: workflowInstanceBase.id, action, ...(comment !== undefined && { comment }) });
+      queryClient.invalidateQueries({ queryKey: ["invoice", id] });
     },
-    [workflowMutation]
+    [performWorkflowAction, workflowInstanceBase, queryClient, id]
   );
 
   return (
