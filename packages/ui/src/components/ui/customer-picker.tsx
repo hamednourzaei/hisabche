@@ -6,6 +6,7 @@ import {
   useMemo,
   forwardRef,
   useEffect,
+  useRef,
   memo,
 } from "react";
 import { useTranslations } from "next-intl";
@@ -53,7 +54,15 @@ export const CustomerPicker = memo(
       },
       _ref,
     ) => {
-      const t = useTranslations();
+      const tOriginal = useTranslations();
+
+      const t = (key: string, fallback?: string): string => {
+
+        const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
+
+        return v && v !== key ? v : (fallback ?? key);
+
+      };
 
       // ✅ safeT wrapper
 
@@ -62,7 +71,9 @@ export const CustomerPicker = memo(
       const [search, setSearch] = useState("");
       const [debouncedSearch, setDebouncedSearch] = useState("");
       const [quickName, setQuickName] = useState("");
+      const [quickPhone, setQuickPhone] = useState("");
       const [createError, setCreateError] = useState<string | null>(null);
+      const phoneInputRef = useRef<HTMLInputElement>(null);
 
       // Debounce search
       useEffect(() => {
@@ -108,6 +119,7 @@ export const CustomerPicker = memo(
           const nc = await createCustomer.mutateAsync({
             type: "cash",
             fullName: trimmed,
+            ...(quickPhone.trim() && { phone: quickPhone.trim() }),
             openingBalance: 0,
             isActive: true,
           });
@@ -119,13 +131,24 @@ export const CustomerPicker = memo(
           onQuickCreate?.(opt);
           onChange(opt);
           setQuickName("");
+          setQuickPhone("");
           setOpen(false);
         } catch {
           setCreateError(t("customer.createError", "خطا در ایجاد مشتری"));
         }
-      }, [quickName, createCustomer, onChange, onQuickCreate, t]);
+      }, [quickName, quickPhone, createCustomer, onChange, onQuickCreate, t]);
 
-      const handleKeyDown = useCallback(
+      const handleNameKeyDown = useCallback(
+        (e: React.KeyboardEvent<HTMLInputElement>) => {
+          if (e.key === "Enter" && quickName.trim()) {
+            e.preventDefault();
+            phoneInputRef.current?.focus();
+          }
+        },
+        [quickName]
+      );
+
+      const handlePhoneKeyDown = useCallback(
         (e: React.KeyboardEvent<HTMLInputElement>) => {
           if (e.key === "Enter") {
             e.preventDefault();
@@ -267,27 +290,47 @@ export const CustomerPicker = memo(
                         {createError}
                       </p>
                     )}
-                    <div className="flex gap-2">
-                      <input
-                        value={quickName}
-                        onChange={(e) => {
-                          setQuickName(e.target.value);
-                          setCreateError(null);
-                        }}
-                        placeholder={t(
-                          "customer.quickCreate",
-                          "ایجاد سریع مشتری"
-                        )}
-                        className={cn(
-                          "flex-1 rounded-lg px-3 py-2 text-sm",
-                          "border border-[hsl(var(--border-default))]",
-                          "bg-[hsl(var(--surface-base))]",
-                          "text-[hsl(var(--fg-primary))]",
-                          "placeholder:text-[hsl(var(--fg-tertiary))]",
-                          "focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]",
-                        )}
-                        onKeyDown={handleKeyDown}
-                      />
+                    <div className="flex flex-col gap-2">
+                      <div className="flex gap-2">
+                        <input
+                          value={quickName}
+                          onChange={(e) => {
+                            setQuickName(e.target.value);
+                            setCreateError(null);
+                          }}
+                          placeholder={t(
+                            "customer.quickCreate",
+                            "ایجاد سریع مشتری"
+                          )}
+                          className={cn(
+                            "flex-1 rounded-lg px-3 py-2 text-sm",
+                            "border border-[hsl(var(--border-default))]",
+                            "bg-[hsl(var(--surface-base))]",
+                            "text-[hsl(var(--fg-primary))]",
+                            "placeholder:text-[hsl(var(--fg-tertiary))]",
+                            "focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]",
+                          )}
+                          onKeyDown={handleNameKeyDown}
+                        />
+                      </div>
+                      {quickName.trim() && (
+                        <input
+                          ref={phoneInputRef}
+                          type="tel"
+                          value={quickPhone}
+                          onChange={(e) => setQuickPhone(e.target.value)}
+                          placeholder={t("customer.phoneOptional", "شماره تماس (اختیاری)")}
+                          className={cn(
+                            "rounded-lg px-3 py-2 text-sm",
+                            "border border-[hsl(var(--border-default))]",
+                            "bg-[hsl(var(--surface-base))]",
+                            "text-[hsl(var(--fg-primary))]",
+                            "placeholder:text-[hsl(var(--fg-tertiary))]",
+                            "focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]",
+                          )}
+                          onKeyDown={handlePhoneKeyDown}
+                        />
+                      )}
                       <button
                         type="button"
                         onClick={handleQuickCreate}

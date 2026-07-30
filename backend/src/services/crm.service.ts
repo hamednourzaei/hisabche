@@ -5,16 +5,44 @@
 
 import { supabase } from '../db'
 import { CreateInteraction, CreateOpportunity, UpdateOpportunity } from '@hisabche/validation'
-import { DatabaseError } from '../errors/database.error'
+import { DatabaseError, NotFoundError } from '../errors/database.error'
 import { memoryCache } from '../utils/pagination'
 import { logBusinessEvent } from './event-log.service'
 
 // ✅ Column Selection Constants
-const INTERACTION_COLUMNS = 'id, customer_id, type, subject, content, interaction_date, created_at'
-const INTERACTION_MINIMAL_COLUMNS = 'id, customer_id, type, subject, interaction_date'
+// ⚠️ status / public_token / employee_id / employee_name / customers_snapshot /
+// status_history come from docs/task-assignment-migration.sql. Until that
+// migration runs, selecting them raises Postgres 42703 (undefined_column) —
+// callers that need to work before/after the migration use the same
+// graceful-fallback pattern as invoice.service.ts's public_token handling.
+const INTERACTION_COLUMNS = 'id, customer_id, type, subject, content, interaction_date, created_at, status, public_token, employee_id, employee_name, customers_snapshot, status_history'
+const INTERACTION_MINIMAL_COLUMNS = INTERACTION_COLUMNS
+const INTERACTION_LEGACY_COLUMNS = 'id, customer_id, type, subject, content, interaction_date, created_at'
 
 const OPPORTUNITY_COLUMNS = 'id, customer_id, title, description, stage, value, expected_close_date, probability, created_at, updated_at'
 const OPPORTUNITY_MINIMAL_COLUMNS = 'id, customer_id, title, stage, value, probability, expected_close_date'
+
+// ✅ Mapper — snake_case (DB) -> camelCase (frontend). Missing this mapper
+// was the root cause of the CRM "date column doesn't show a date" bug:
+// the frontend reads `interaction.interactionDate` but the DB row only
+// has `interaction_date`, so every date rendered as "-".
+function mapInteraction(raw: Record<string, any>) {
+  return {
+    id: raw.id,
+    customerId: raw.customer_id,
+    type: raw.type,
+    subject: raw.subject,
+    content: raw.content,
+    interactionDate: raw.interaction_date,
+    createdAt: raw.created_at,
+    status: raw.status ?? 'pending',
+    publicToken: raw.public_token ?? null,
+    employeeId: raw.employee_id ?? null,
+    employeeName: raw.employee_name ?? null,
+    customers: Array.isArray(raw.customers_snapshot) ? raw.customers_snapshot : [],
+    statusHistory: Array.isArray(raw.status_history) ? raw.status_history : [],
+  }
+}
 
 export class CrmService {
 
@@ -27,9 +55,9 @@ export class CrmService {
     return `crm:opportunities:${userId}:${customerId || 'all'}`
   }
 
-  // ─── Interactions ─────────────────────────────────────────
+  // ─── Interactions (a.k.a. Tasks) ───────────────────────────
   async listInteractions(
-    userId: string, 
+    userId: string,
     customerId?: string,
     options?: { limit?: number; page?: number }
   ) {
@@ -38,26 +66,32 @@ export class CrmService {
     const offset = (page - 1) * limit
 
     const cacheKey = this.getInteractionsCacheKey(userId, customerId)
-    
+
     // ✅ کش کردن با پارامترهای صفحه‌بندی
     const paginatedCacheKey = `${cacheKey}:${page}:${limit}`
     const cached = await memoryCache.get<{ interactions: any[]; total: number; page: number; limit: number; totalPages: number }>(paginatedCacheKey)
     if (cached) return cached
 
-    let query = supabase
-      .from('interactions')
-      .select(INTERACTION_MINIMAL_COLUMNS, { count: 'estimated' })
-      .eq('user_id', userId)
-      .order('interaction_date', { ascending: false })
-      .range(offset, offset + limit - 1)
+    const runQuery = (columns: string) => {
+      let query = supabase
+        .from('interactions')
+        .select(columns, { count: 'estimated' })
+        .eq('user_id', userId)
+        .order('interaction_date', { ascending: false })
+        .range(offset, offset + limit - 1)
+      if (customerId) query = query.eq('customer_id', customerId)
+      return query
+    }
 
-    if (customerId) query = query.eq('customer_id', customerId)
-
-    const { data, error, count } = await query
+    let { data, error, count } = await runQuery(INTERACTION_MINIMAL_COLUMNS)
+    if (error && (error.code === '42703' || /column/.test(error.message || ''))) {
+      // Task-assignment migration not run yet — fall back to legacy columns.
+      ;({ data, error, count } = await runQuery(INTERACTION_LEGACY_COLUMNS))
+    }
     if (error) throw new DatabaseError('Failed to fetch interactions', error)
 
     const result = {
-      interactions: data || [],
+      interactions: (data || []).map(mapInteraction),
       total: count || 0,
       page,
       limit,
@@ -69,25 +103,117 @@ export class CrmService {
   }
 
   async createInteraction(userId: string, data: CreateInteraction) {
-    const { data: interaction, error } = await supabase
+    const customerIds = data.customerIds && data.customerIds.length > 0 ? data.customerIds : [data.customerId]
+
+    let customersSnapshot: Array<{ id: string; name: string; phone: string | null }> = []
+    if (customerIds.length > 0) {
+      const { data: customers } = await supabase
+        .from('customers')
+        .select('id, full_name, phone')
+        .in('id', customerIds)
+        .eq('user_id', userId)
+      customersSnapshot = (customers || []).map((c: any) => ({ id: c.id, name: c.full_name, phone: c.phone ?? null }))
+    }
+
+    const now = new Date().toISOString()
+    const insertPayload: Record<string, unknown> = {
+      customer_id: data.customerId,
+      type: data.type,
+      subject: data.subject || '',
+      content: data.content || '',
+      interaction_date: data.interactionDate || now,
+      user_id: userId,
+      status: 'pending',
+      employee_id: data.employeeId || null,
+      employee_name: data.employeeName || null,
+      customers_snapshot: customersSnapshot,
+      status_history: [{ status: 'pending', changedAt: now, changedBy: 'owner' }],
+    }
+
+    let { data: interaction, error } = await supabase
       .from('interactions')
-      .insert({
-        customer_id: data.customerId,
-        type: data.type,
-        subject: data.subject || '',
-        content: data.content || '',
-        interaction_date: data.interactionDate || new Date().toISOString(),
-        user_id: userId,
-      })
+      .insert(insertPayload)
       .select(INTERACTION_COLUMNS)
       .single()
 
-    if (error) throw new DatabaseError('Failed to create interaction', error)
+    if (error && (error.code === '42703' || /column/.test(error.message || ''))) {
+      // Task-assignment migration not run yet — insert legacy columns only.
+      ;({ data: interaction, error } = await supabase
+        .from('interactions')
+        .insert({
+          customer_id: data.customerId,
+          type: data.type,
+          subject: data.subject || '',
+          content: data.content || '',
+          interaction_date: data.interactionDate || now,
+          user_id: userId,
+        })
+        .select(INTERACTION_LEGACY_COLUMNS)
+        .single())
+    }
+
+    if (error || !interaction) throw new DatabaseError('Failed to create interaction', error)
 
     // ✅ Clear cache
     await this.invalidateInteractionCache(userId, data.customerId)
-    
-    return interaction
+
+    return mapInteraction(interaction)
+  }
+
+  // ─── Update task status (owner, authenticated) ─────────────
+  async updateInteractionStatus(userId: string, id: string, status: 'pending' | 'in_progress' | 'completed', changedBy = 'owner') {
+    return this.applyStatusChange({ id, userId }, status, changedBy)
+  }
+
+  // ─── Get task for public (unauthenticated) view ────────────
+  // ⚠️ Looked up by `public_token` (unguessable uuid), never by `id` —
+  // same reasoning as InvoiceService.getPublicByToken: looking up by the
+  // sequential id would let anyone enumerate every task.
+  async getPublicTaskByToken(token: string) {
+    const { data, error } = await supabase
+      .from('interactions')
+      .select(INTERACTION_COLUMNS)
+      .eq('public_token', token)
+      .single()
+
+    if (error || !data) throw new NotFoundError('Task')
+    return mapInteraction(data)
+  }
+
+  // ─── Update task status via public token (assigned employee, no login) ─
+  // Scoped to ONLY this one task's status — nothing else is readable or
+  // writable through this path.
+  async updatePublicTaskStatus(token: string, status: 'in_progress' | 'completed') {
+    return this.applyStatusChange({ publicToken: token }, status, 'employee')
+  }
+
+  private async applyStatusChange(
+    lookup: { id: string; userId: string } | { publicToken: string },
+    status: 'pending' | 'in_progress' | 'completed',
+    changedBy: string
+  ) {
+    let existingQuery = supabase.from('interactions').select('id, user_id, customer_id, status_history')
+    existingQuery = 'id' in lookup
+      ? existingQuery.eq('id', lookup.id).eq('user_id', lookup.userId)
+      : existingQuery.eq('public_token', lookup.publicToken)
+
+    const { data: existing, error: fetchError } = await existingQuery.single()
+    if (fetchError || !existing) throw new NotFoundError('Task')
+
+    const history = Array.isArray(existing.status_history) ? existing.status_history : []
+    const updatedHistory = [...history, { status, changedAt: new Date().toISOString(), changedBy }]
+
+    let updateQuery = supabase
+      .from('interactions')
+      .update({ status, status_history: updatedHistory })
+      .eq('id', existing.id)
+    updateQuery = 'id' in lookup ? updateQuery.eq('user_id', lookup.userId) : updateQuery
+
+    const { data, error } = await updateQuery.select(INTERACTION_COLUMNS).single()
+    if (error) throw new DatabaseError('Failed to update task status', error)
+
+    await this.invalidateInteractionCache(existing.user_id, existing.customer_id)
+    return mapInteraction(data)
   }
 
   // ─── Opportunities ────────────────────────────────────────

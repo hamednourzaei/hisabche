@@ -23,7 +23,12 @@ type CustomerWithInvoices = CustomerWithDebt & {
 // ============================================================
 
 export function CustomersContainer() {
-  const t = useTranslations();// ✅ Wrapper برای تطابق signature با CustomersViewProps
+  const tOriginal = useTranslations();
+  // ✅ Wrapper برای تطابق signature با CustomersViewProps
+  const t = (key: string, fallback?: string): string => {
+    const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
+    return v && v !== key ? v : (fallback ?? key);
+  };
 
 
   // ============================================================
@@ -38,6 +43,9 @@ export function CustomersContainer() {
     overdueCount,
     vipCount,
     todaySales,
+    totalSales,
+    topCustomerName,
+    topCustomerAmount,
     openDealsCount,
     isLoading,
     isError,
@@ -114,6 +122,9 @@ export function CustomersContainer() {
     overdueCount,
     vipCount,
     todaySales,
+    totalSales,
+    topCustomerName,
+    topCustomerAmount,
     openDealsCount,
     isLoading,
     isError,

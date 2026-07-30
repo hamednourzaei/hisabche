@@ -169,7 +169,15 @@ function useInView(threshold = 0.05) {
 // ─── Main Component ─────────────────────────────────────────────────────────
 
 export const LandingPreview = memo(function LandingPreview() {
-  const t = useTranslations();
+  const tOriginal = useTranslations();
+
+  const t = (key: string, fallback?: string): string => {
+
+    const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
+
+    return v && v !== key ? v : (fallback ?? key);
+
+  };
 
   // ✅ safeT wrapper
 

@@ -11,7 +11,18 @@ const BASE_URL = "https://www.hisabche.com";
 // Search Console "Submitted URL marked noindex" / 404 errors.
 const routes = [
   { path: "" },
+  { path: "/about" },
+  { path: "/contact" },
   { path: "/legal/terms" },
+  { path: "/legal/privacy" },
+  { path: "/legal/cookies" },
+  { path: "/legal/disclaimer" },
+  { path: "/legal/refund" },
+  { path: "/legal/accessibility" },
+  { path: "/legal/security" },
+  { path: "/legal/data-deletion" },
+  { path: "/legal/gdpr" },
+  { path: "/legal/copyright" },
 ];
 
 // Must match the actual locale segments served by app/[lang] (see i18n-config.ts):

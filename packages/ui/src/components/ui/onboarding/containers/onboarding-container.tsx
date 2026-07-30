@@ -27,7 +27,11 @@ const storeSizes: { id: StoreSize; labelFa: string }[] = [
 ];
 
 export const OnboardingContainer = memo(function OnboardingContainer() {
-  const t = useTranslations();
+  const tOriginal = useTranslations();
+  const t = (key: string, fallback?: string): string => {
+    const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
+    return v && v !== key ? v : (fallback ?? key);
+  };
   const router = useRouter();
 
   const safeT = t;

@@ -137,11 +137,15 @@ export {
 export {
   interactionSchema,
   createInteractionSchema,
+  updateInteractionStatusSchema,
+  publicUpdateTaskStatusSchema,
   opportunitySchema,
   createOpportunitySchema,
   updateOpportunitySchema,
   type Interaction,
   type CreateInteraction,
+  type UpdateInteractionStatus,
+  type PublicUpdateTaskStatus,
   type Opportunity,
   type CreateOpportunity,
   type UpdateOpportunity,
@@ -248,6 +252,7 @@ export {
   workspaceInviteSchema,
   createInviteSchema,
   acceptInviteSchema,
+  createMemberDirectSchema,
   type Workspace,
   type CreateWorkspace,
   type UpdateWorkspace,
@@ -257,6 +262,7 @@ export {
   type WorkspaceInvite,
   type CreateInvite,
   type AcceptInvite,
+  type CreateMemberDirect,
 } from './schemas/workspace.schema'
 
 // ---------- Permissions ----------

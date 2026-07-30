@@ -13,9 +13,25 @@ import { useAuthReady } from './useAuthReady'
 import { useRealtime } from './useRealtime'
 
 // ═══ Types ═══
+export type TaskStatus = 'pending' | 'in_progress' | 'completed'
+
+export interface InteractionCustomer {
+  id: string; name: string; phone: string | null;
+}
+
+export interface InteractionStatusEvent {
+  status: TaskStatus; changedAt: string; changedBy?: string;
+}
+
 export interface Interaction {
   id: string; customerId: string; type: string; subject: string;
   content: string; interactionDate: string; createdAt: string;
+  status: TaskStatus;
+  publicToken?: string | null;
+  employeeId?: string | null;
+  employeeName?: string | null;
+  customers?: InteractionCustomer[];
+  statusHistory?: InteractionStatusEvent[];
 }
 
 export interface Opportunity {
@@ -54,12 +70,32 @@ export function useInteractions(customerId?: string) {
   })
 }
 
+export interface CreateInteractionInput {
+  customerId: string; customerIds?: string[]; type: string; subject: string;
+  content?: string; employeeId?: string; employeeName?: string;
+}
+
 export function useCreateInteraction() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (input: any) => {
+    mutationFn: async (input: CreateInteractionInput) => {
       const { data } = await apiClient.post('/interactions', input)
-      return data
+      return data as Interaction
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: crmKeys.all })
+    },
+  })
+}
+
+// ✅ Owner-side authenticated status override — separate from the
+// public-token path an assigned employee uses (see public task hooks).
+export function useUpdateInteractionStatus() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: TaskStatus }) => {
+      const { data } = await apiClient.patch(`/interactions/${id}/status`, { status })
+      return data as Interaction
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: crmKeys.all })

@@ -34,6 +34,9 @@ export interface DashboardKPIs {
   activeCustomers: number;
   customerGrowth: number;
   lowStockAlerts: number;
+  totalSales: number;
+  customerDebt: number;
+  warehouseValue: number;
 }
 
 export interface AIInsight {

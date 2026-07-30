@@ -2,7 +2,7 @@
 
 import { cn } from "@/lib/utils";
 import { useState } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations, useLocale } from "next-intl";
 
 interface PhoneInputProps {
   value: string;
@@ -40,13 +40,13 @@ const COUNTRY_CODES = [
 type CountryKey = (typeof COUNTRY_CODES)[number]["nameKey"];
 
 const countryNames: Record<string, Record<CountryKey, string>> = {
-  "fa-IR": {
+  "fa": {
     afghanistan: "افغانستان", iran: "ایران", pakistan: "پاکستان", usa: "آمریکا", uk: "انگلستان",
     turkey: "ترکیه", uae: "امارات", india: "هند", germany: "آلمان", france: "فرانسه",
     saudi: "عربستان", iraq: "عراق", syria: "سوریه", qatar: "قطر", bahrain: "بحرین",
     oman: "عمان", kuwait: "کویت", egypt: "مصر", russia: "روسیه", china: "چین",
   },
-  "fa-AF": {
+  "af": {
     afghanistan: "افغانستان", iran: "ایران", pakistan: "پاکستان", usa: "آمریکا", uk: "بریتانیا",
     turkey: "ترکیه", uae: "امارات", india: "هند", germany: "آلمان", france: "فرانسه",
     saudi: "عربستان", iraq: "عراق", syria: "سوریه", qatar: "قطر", bahrain: "بحرین",
@@ -61,15 +61,19 @@ const countryNames: Record<string, Record<CountryKey, string>> = {
 };
 
 function getCountryName(lang: string, key: CountryKey): string {
-  const names = countryNames[lang] ?? countryNames["fa-IR"]!;
+  const names = countryNames[lang] ?? countryNames["fa"]!;
   return names[key];
 }
 
 export function PhoneInput({
   value, onChange, placeholder, className, disabled = false, error, defaultCountry = "+98",
 }: PhoneInputProps) {
-  const { t, i18n } = useTranslation();
-  const lang = i18n.language || "fa-IR";
+  const tOriginal = useTranslations();
+  const t = (key: string, fallback?: string) => {
+    const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
+    return v && v !== key ? v : (fallback ?? key);
+  };
+  const lang = useLocale();
 
   const [selectedCountry, setSelectedCountry] = useState(defaultCountry);
   const [isOpen, setIsOpen] = useState(false);

@@ -2,7 +2,7 @@
 "use client";
 
 import { memo, useState, useEffect, useCallback, useMemo } from "react";
-import { useTranslation } from "react-i18next";
+import { useLocale } from "next-intl";
 import { cn } from "@/lib/utils";
 import { Shield, Search, Download, RefreshCw, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { JalaliDatePicker } from "../jalali-datepicker";
@@ -76,9 +76,13 @@ const getActionLabel = (action: string, t: (key: string, fallback?: string) => s
 // with locale-appropriate digits/conventions, "en" renders plain Gregorian —
 // previously this was hardcoded to "fa-AF" regardless of the active UI
 // language.
+// ✅ کد routing "af" با کد واقعی BCP-47 عربی/آفریکانس تداخل دارد — برای
+// Intl حتماً باید "fa-AF" پاس داده شود تا تقویم فارسی/شمسی درست رندر شود
+const INTL_LOCALE: Record<string, string> = { fa: "fa", af: "fa-AF", en: "en" };
+
 function formatDate(date: string, locale: string): string {
   try {
-    return new Date(date).toLocaleDateString(locale, {
+    return new Date(date).toLocaleDateString(INTL_LOCALE[locale] ?? locale, {
       year: "numeric",
       month: "short",
       day: "numeric",
@@ -105,8 +109,8 @@ export const AuditView = memo(function AuditView({
   onRefresh,
   onExport,
 }: AuditViewProps) {
-  const { i18n } = useTranslation();
-  const locale = i18n.language || "fa-IR";
+  const locale = useLocale();
+  const intlLocale = INTL_LOCALE[locale] ?? locale;
   const [searchTerm, setSearchTerm] = useState(filters.search || "");
 
   // Debounce search
@@ -196,7 +200,7 @@ export const AuditView = memo(function AuditView({
             {t("nav.history", "سابقه تغییرات")}
           </h1>
           <span className="text-xs text-[hsl(var(--fg-tertiary))] bg-[hsl(var(--surface-muted))] px-2 py-1 rounded-full">
-            {total.toLocaleString(locale)}
+            {total.toLocaleString(intlLocale)}
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -371,7 +375,7 @@ export const AuditView = memo(function AuditView({
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <span className="text-xs text-[hsl(var(--fg-tertiary))]">
             {t("audit.showing", "نمایش")} {(page - 1) * 30 + 1} - {Math.min(page * 30, total)}{" "}
-            {t("audit.of", "از")} {total.toLocaleString(locale)}
+            {t("audit.of", "از")} {total.toLocaleString(intlLocale)}
           </span>
           <div className="flex items-center gap-2">
             <button

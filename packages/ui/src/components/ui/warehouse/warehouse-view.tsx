@@ -25,7 +25,6 @@ interface WarehouseViewProps {
   total: number;
   isLoading: boolean;
   totalValue: number;
-  lowStock: number;
   outOfStock: number;
   currencies: Currency[];
   onNavigate: (id: string) => void;
@@ -201,7 +200,6 @@ export const WarehouseView = memo(function WarehouseView({
   total,
   isLoading,
   totalValue,
-  lowStock,
   outOfStock,
   currencies,
   onNavigate,
@@ -214,12 +212,12 @@ export const WarehouseView = memo(function WarehouseView({
       t,
       fmt,
       total,
-      lowStock,
       outOfStock,
       totalValue,
+      products,
       isLoading,
     }),
-    [t, fmt, total, lowStock, outOfStock, totalValue, isLoading]
+    [t, fmt, total, outOfStock, totalValue, products, isLoading]
   );
 
   const showEmptyState = !isLoading && products.length === 0;

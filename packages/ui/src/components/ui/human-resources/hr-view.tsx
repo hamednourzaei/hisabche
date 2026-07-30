@@ -2,7 +2,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { Plus, Trash2, Eye, Users, Download, Search, ArrowUpDown } from "lucide-react";
+import { Plus, Trash2, Users, Download, Search, ArrowUpDown, Wallet, ChevronDown } from "lucide-react";
 import { useState, useMemo, useCallback, memo } from "react";
 import { useForm, useController } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,7 +14,7 @@ import { PhoneInput } from "../../ui/phone-input";
 import { MoneyInput } from "../../ui/money-input";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   HumanResourcesView v10 — Memoized · Performance Optimized
+   HumanResourcesView v11 — تیم و حقوق (merged workspace + employees)
    ✅ memo · useCallback · useMemo
    ═══════════════════════════════════════════════════════════════════════════ */
 
@@ -54,15 +54,23 @@ interface Employee {
   salary?: number;
 }
 
+interface AccessGrant {
+  email: string;
+  password: string;
+  role: "admin" | "member";
+}
+
 interface HumanResourcesViewProps {
   t: (key: string, fallback?: string) => string;
   employees: Employee[];
   total: number;
   page: number;
   isLoading: boolean;
+  payrollTotal: number;
+  payrollByEmployee: Record<string, number>;
   onPageChange: (page: number) => void;
   onSearch: (query: string) => void;
-  onCreate: (values: Record<string, unknown>) => Promise<void>;
+  onCreate: (values: Record<string, unknown>, access?: AccessGrant) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
   onView: (id: string) => void;
 }
@@ -90,18 +98,61 @@ const SORTABLE_COLUMNS: { key: keyof Employee; label: string }[] = [
 ];
 
 // ─── Status Badge ──────────────────────────────────────────────────────────
-
-const statusBadgeMap: Record<string, string> = {
-  active: "bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))]",
-  inactive: "bg-[hsl(var(--fg-tertiary)/0.12)] text-[hsl(var(--fg-tertiary))]",
-  terminated: "bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))]",
-  on_leave: "bg-[hsl(var(--color-warning)/0.12)] text-[hsl(var(--color-warning))]",
-};
+// وضعیت واقعی در schema: active | inactive | terminated | on_leave
 
 function getStatusBadge(status: string, t: (key: string, fallback?: string) => string) {
-  const cls = statusBadgeMap[status] || statusBadgeMap.active;
-  return <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium", cls)}>{t(`hr.${status}`, status)}</span>;
+  if (status === "terminated") {
+    return (
+      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))]">
+        {t("hr.terminated", "اخراج")}
+      </span>
+    );
+  }
+  if (status === "on_leave") {
+    return (
+      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-[hsl(var(--color-warning)/0.12)] text-[hsl(var(--color-warning))]">
+        {t("hr.on_leave", "مرخصی")}
+      </span>
+    );
+  }
+  if (status === "inactive") {
+    return (
+      <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-[hsl(var(--fg-tertiary)/0.12)] text-[hsl(var(--fg-tertiary))]">
+        {t("hr.inactive", "غیرفعال")}
+      </span>
+    );
+  }
+  return (
+    <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))]">
+      {t("hr.active", "کارمند")}
+    </span>
+  );
 }
+
+// ─── KPI Stat Card ─────────────────────────────────────────────────────────
+
+const StatCard = memo(function StatCard({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string;
+  value: string | number;
+  icon: React.ElementType;
+}) {
+  return (
+    <div className="flex-1 min-w-[180px] flex items-start justify-between gap-3 p-4 rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
+      <div>
+        <p className="text-xs text-[hsl(var(--fg-secondary))]">{label}</p>
+        <p className="text-xl font-bold tabular-nums text-[hsl(var(--fg-primary))] mt-1">{value}</p>
+      </div>
+      <div className="flex h-10 w-10 items-center justify-center rounded-xl shrink-0 bg-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))]">
+        <Icon className="size-5" aria-hidden="true" />
+      </div>
+    </div>
+  );
+});
+StatCard.displayName = "StatCard";
 
 // ─── Sub-components ────────────────────────────────────────────────────────
 
@@ -149,6 +200,8 @@ export const HumanResourcesView = memo(function HumanResourcesView({
   total,
   page,
   isLoading,
+  payrollTotal,
+  payrollByEmployee,
   onPageChange,
   onSearch,
   onCreate,
@@ -157,6 +210,10 @@ export const HumanResourcesView = memo(function HumanResourcesView({
 }: HumanResourcesViewProps) {
   const [showForm, setShowForm] = useState(false);
   const [phoneValue, setPhoneValue] = useState("");
+  const [grantAccess, setGrantAccess] = useState(false);
+  const [accessRole, setAccessRole] = useState<"admin" | "member">("member");
+  const [accessEmail, setAccessEmail] = useState("");
+  const [accessPassword, setAccessPassword] = useState("");
   const { sortedData: sortedEmployees, sort, toggleSort, filter, setFilter } = useSortFilter(employees);
 
   const {
@@ -188,30 +245,46 @@ export const HumanResourcesView = memo(function HumanResourcesView({
   const { field: dateOfBirthField } = useController({ name: "dateOfBirth", control });
   const { field: salaryField } = useController({ name: "salary", control });
 
+  const accessInvalid = grantAccess && (!accessEmail.trim() || accessPassword.trim().length < 8);
+
+  const resetAccessFields = useCallback(() => {
+    setGrantAccess(false);
+    setAccessRole("member");
+    setAccessEmail("");
+    setAccessPassword("");
+  }, []);
+
   const onSubmit = useCallback(
     async (data: EmployeeForm) => {
-      await onCreate({
-        firstName: data.firstName,
-        lastName: data.lastName,
-        fatherName: data.fatherName || undefined,
-        employeeCode: data.employeeCode,
-        nationalId: data.nationalId || undefined,
-        dateOfBirth: data.dateOfBirth ? `${data.dateOfBirth}T00:00:00Z` : undefined,
-        gender: data.gender || undefined,
-        phone: phoneValue || undefined,
-        email: data.email || undefined,
-        address: data.address || undefined,
-        position: data.position || undefined,
-        hireDate: data.hireDate ? `${data.hireDate}T00:00:00Z` : new Date().toISOString(),
-        salary: data.salary ? Number(data.salary) : 0,
-        employmentType: "full_time",
-        salaryCurrency: "AFN",
-      });
+      if (accessInvalid) return;
+      await onCreate(
+        {
+          firstName: data.firstName,
+          lastName: data.lastName,
+          fatherName: data.fatherName || undefined,
+          employeeCode: data.employeeCode,
+          nationalId: data.nationalId || undefined,
+          dateOfBirth: data.dateOfBirth ? `${data.dateOfBirth}T00:00:00Z` : undefined,
+          gender: data.gender || undefined,
+          phone: phoneValue || undefined,
+          email: data.email || undefined,
+          address: data.address || undefined,
+          position: data.position || undefined,
+          hireDate: data.hireDate ? `${data.hireDate}T00:00:00Z` : new Date().toISOString(),
+          salary: data.salary ? Number(data.salary) : 0,
+          employmentType: "full_time",
+          salaryCurrency: "AFN",
+        },
+        grantAccess
+          ? { email: accessEmail.trim(), password: accessPassword, role: accessRole }
+          : undefined
+      );
       setShowForm(false);
       setPhoneValue("");
+      resetAccessFields();
       reset();
     },
-    [onCreate, phoneValue, reset]
+    [onCreate, phoneValue, reset, grantAccess, accessEmail, accessPassword, accessRole, accessInvalid, resetAccessFields]
   );
 
   const handleExport = useCallback(() => {
@@ -225,7 +298,7 @@ export const HumanResourcesView = memo(function HumanResourcesView({
   const totalPages = useMemo(() => Math.ceil(total / 20), [total]);
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -261,6 +334,16 @@ export const HumanResourcesView = memo(function HumanResourcesView({
             {t("hr.addEmployee", "کارمند جدید")}
           </button>
         </div>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="flex gap-4 flex-wrap">
+        <StatCard
+          label={t("hr.totalPayroll", "جمع حقوق پرداختی")}
+          value={`${payrollTotal.toLocaleString("fa-AF")} AFN`}
+          icon={Wallet}
+        />
+        <StatCard label={t("hr.totalEmployees", "تعداد کارمندان")} value={total} icon={Users} />
       </div>
 
       {/* Form */}
@@ -334,17 +417,77 @@ export const HumanResourcesView = memo(function HumanResourcesView({
             </div>
           </div>
 
+          {/* Grant Site Access */}
+          <div className="rounded-xl border border-[hsl(var(--border-default))] p-4 space-y-4">
+            <label className="flex items-center justify-between gap-3 cursor-pointer">
+              <span className="text-sm font-medium text-[hsl(var(--fg-primary))]">
+                {t("hr.grantAccess", "می‌خواهید به او دسترسی به سایت بدهید؟")}
+              </span>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={grantAccess}
+                onClick={() => setGrantAccess((v) => !v)}
+                className={cn(
+                  "relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors",
+                  grantAccess ? "bg-[hsl(var(--color-primary))]" : "bg-[hsl(var(--surface-muted))]"
+                )}
+              >
+                <span
+                  className={cn(
+                    "inline-block size-4 transform rounded-full bg-white transition-transform",
+                    grantAccess ? "-translate-x-6" : "-translate-x-1"
+                  )}
+                />
+              </button>
+            </label>
+
+            {grantAccess && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="relative">
+                  <select
+                    value={accessRole}
+                    onChange={(e) => setAccessRole(e.target.value as "admin" | "member")}
+                    className={cn(inputClass, "appearance-none w-full pe-10")}
+                  >
+                    <option value="admin">{t("workspace.admin", "مدیر")}</option>
+                    <option value="member">{t("workspace.employee", "کارمند")}</option>
+                  </select>
+                  <ChevronDown className="absolute end-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))] pointer-events-none" />
+                </div>
+                <div />
+                <input
+                  type="email"
+                  value={accessEmail}
+                  onChange={(e) => setAccessEmail(e.target.value)}
+                  placeholder={t("hr.accessEmail", "ایمیل ورود *")}
+                  className={cn(inputClass, "w-full")}
+                />
+                <input
+                  type="password"
+                  value={accessPassword}
+                  onChange={(e) => setAccessPassword(e.target.value)}
+                  placeholder={t("hr.accessPassword", "رمز عبور (حداقل ۸ کاراکتر) *")}
+                  className={cn(inputClass, "w-full")}
+                />
+              </div>
+            )}
+          </div>
+
           <div className="flex gap-3">
             <button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || accessInvalid}
               className="rounded-full bg-[hsl(var(--color-primary))] text-white px-6 py-2.5 text-sm font-bold disabled:opacity-50"
             >
               {isSubmitting ? "..." : t("action.save", "ذخیره")}
             </button>
             <button
               type="button"
-              onClick={() => setShowForm(false)}
+              onClick={() => {
+                setShowForm(false);
+                resetAccessFields();
+              }}
               className="rounded-full border border-[hsl(var(--border-default))] px-6 py-2.5 text-sm"
             >
               {t("action.cancel", "لغو")}
@@ -403,54 +546,52 @@ export const HumanResourcesView = memo(function HumanResourcesView({
             </p>
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))]">
-                <th className="px-4 py-3 text-start font-medium">{t("hr.employeeCode", "کد")}</th>
-                <th className="px-4 py-3 text-start font-medium">{t("hr.firstName", "نام")}</th>
-                <th className="px-4 py-3 text-start font-medium hidden sm:table-cell">
-                  {t("hr.nationalId", "تذکره")}
-                </th>
-                <th className="px-4 py-3 text-start font-medium">{t("hr.phone", "تلفن")}</th>
-                <th className="px-4 py-3 text-start font-medium">{t("hr.status", "وضعیت")}</th>
-                <th className="px-4 py-3 text-center font-medium w-20">{t("action.actions", "...")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedEmployees.map((emp) => (
-                <tr
-                  key={emp.id}
-                  className="border-b border-[hsl(var(--border-default))] hover:bg-[hsl(var(--surface-muted)/0.5)] transition-colors"
-                >
-                  <td className="px-4 py-3 font-mono text-xs">{emp.employee_code}</td>
-                  <td className="px-4 py-3 font-medium">{emp.first_name} {emp.last_name}</td>
-                  <td className="px-4 py-3 text-xs text-[hsl(var(--fg-secondary))] hidden sm:table-cell">
-                    {emp.national_id || "-"}
-                  </td>
-                  <td className="px-4 py-3 text-xs text-[hsl(var(--fg-secondary))]">
-                    {emp.phone || "-"}
-                  </td>
-                  <td className="px-4 py-3">{getStatusBadge(emp.status, t)}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-center gap-1">
-                      <button
-                        onClick={() => onView(emp.id)}
-                        className="p-1.5 rounded-lg hover:bg-[hsl(var(--surface-muted))]"
-                      >
-                        <Eye className="size-4" />
-                      </button>
-                      <button
-                        onClick={() => onDelete(emp.id)}
-                        className="p-1.5 rounded-lg hover:bg-[hsl(var(--color-destructive)/0.1)] text-[hsl(var(--color-destructive))]"
-                      >
-                        <Trash2 className="size-4" />
-                      </button>
-                    </div>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))]">
+                  <th className="px-4 py-3 text-start font-medium whitespace-nowrap">{t("hr.employeeCode", "کد کارمند")}</th>
+                  <th className="px-4 py-3 text-start font-medium whitespace-nowrap">{t("hr.firstName", "نام")}</th>
+                  <th className="px-4 py-3 text-start font-medium whitespace-nowrap">{t("hr.hireDate", "تاریخ شروع کار")}</th>
+                  <th className="px-4 py-3 text-start font-medium whitespace-nowrap">{t("hr.status", "وضعیت")}</th>
+                  <th className="px-4 py-3 text-start font-medium whitespace-nowrap">{t("hr.totalPayroll", "جمع حقوق")}</th>
+                  <th className="px-4 py-3 text-center font-medium w-14 whitespace-nowrap">{t("action.actions", "...")}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {sortedEmployees.map((emp) => (
+                  <tr
+                    key={emp.id}
+                    onClick={() => onView(emp.id)}
+                    className="border-b border-[hsl(var(--border-default))] hover:bg-[hsl(var(--surface-muted)/0.5)] transition-colors cursor-pointer"
+                  >
+                    <td className="px-4 py-3 font-mono text-xs whitespace-nowrap">{emp.employee_code}</td>
+                    <td className="px-4 py-3 font-medium whitespace-nowrap">{emp.first_name} {emp.last_name}</td>
+                    <td className="px-4 py-3 text-xs text-[hsl(var(--fg-secondary))] whitespace-nowrap">
+                      {emp.hire_date ? new Date(emp.hire_date).toLocaleDateString("fa-AF") : "-"}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">{getStatusBadge(emp.status, t)}</td>
+                    <td className="px-4 py-3 text-xs font-medium whitespace-nowrap tabular-nums">
+                      {(payrollByEmployee[emp.id] || 0).toLocaleString("fa-AF")} AFN
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-center gap-1">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete(emp.id);
+                          }}
+                          className="p-1.5 rounded-lg hover:bg-[hsl(var(--color-destructive)/0.1)] text-[hsl(var(--color-destructive))]"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 

@@ -7,7 +7,11 @@ import { useWorkflows, useCreateWorkflow, type WorkflowEntityType, type Workflow
 import { WorkflowTemplatesView } from "../workflow-templates-view";
 
 export const WorkflowTemplatesContainer = memo(function WorkflowTemplatesContainer() {
-  const t = useTranslations();
+  const tOriginal = useTranslations();
+  const t = (key: string, fallback?: string): string => {
+    const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
+    return v && v !== key ? v : (fallback ?? key);
+  };
 
   const { data, isLoading } = useWorkflows();
   const { mutateAsync: createWorkflow, isPending } = useCreateWorkflow();

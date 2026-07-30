@@ -2,7 +2,7 @@
 // 🎯 Control Center v7 — Production-Ready, Mobile-First, RTL, Offline-Ready
 "use client"
 
-import { useState, useEffect, useMemo, useCallback, lazy, Suspense, memo } from "react"
+import { useState, useEffect, useMemo, useCallback, Suspense } from "react"
 import { cn } from "@/lib/utils"
 import {
   Plus,
@@ -24,7 +24,6 @@ import type { CustomerWithDebt } from "../../../lib/customers/customers-types"
 
 // Components
 import { customersStats } from "./customer-stats"
-import { DataGrid } from "./datagrid/datagrid"
 
 // Lazy load modals (برای کاهش bundle size)
 // Import عادی (بدون lazy)
@@ -125,98 +124,6 @@ function filterCustomers(
     default:
       return result
   }
-}
-
-/** تولید ستون‌های دیتاگرید (با useMemo در کامپوننت) */
-function getCustomerColumns(
-  t: (key: string, fallback?: string) => string,
-  fmt: (v: number) => string,
-  currency: string,
-  onSelect: (id: string) => void
-) {
-  return [
-    {
-      id: "name",
-      header: t("customers.customer", "مشتری"),
-      accessor: (row: CustomerWithDebt) => row.fullName || row.name || "",
-      render: (value: string, row: CustomerWithDebt) => (
-        <div
-          className="flex items-center gap-3 cursor-pointer"
-          onClick={() => onSelect(row.id)}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault()
-              onSelect(row.id)
-            }
-          }}
-        >
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--color-primary)/0.1)]">
-            <span className="text-sm font-bold text-[hsl(var(--color-primary))]">
-              {value.charAt(0) || "?"}
-            </span>
-          </div>
-          <p className="text-sm font-semibold text-[hsl(var(--fg-primary))] hover:text-[hsl(var(--color-primary))]">
-            {value}
-          </p>
-        </div>
-      ),
-    },
-    {
-      id: "phone",
-      header: t("customers.phone", "تلفن"),
-      accessor: (row: CustomerWithDebt) => row.phone || "-",
-      width: 130,
-    },
-    {
-      id: "debt",
-      header: t("customers.debt", "بدهی"),
-      accessor: (row: CustomerWithDebt) => row.totalDebt || 0,
-      type: "currency" as const,
-      align: "right" as const,
-      width: 120,
-      render: (value: number) => (
-        <span
-          className={
-            value > 0
-              ? "font-bold tabular-nums text-[hsl(var(--color-destructive))]"
-              : "tabular-nums text-[hsl(var(--color-success))]"
-          }
-        >
-          {value > 0 ? fmt(value) : "۰"} {currency}
-        </span>
-      ),
-    },
-    {
-      id: "lastPurchase",
-      header: t("customers.lastPurchase", "آخرین خرید"),
-      accessor: (row: CustomerWithDebt) =>
-        (row as CustomerWithDebt & { lastInvoiceDate?: string }).lastInvoiceDate ||
-        null,
-      width: 120,
-      render: (value: string) => (
-        <span className="text-sm text-[hsl(var(--fg-secondary))]">
-          {formatDate(value)}
-        </span>
-      ),
-    },
-    {
-      id: "openCount",
-      header: t("customers.openInvoices", "باز"),
-      accessor: (row: CustomerWithDebt) => row.openCount || 0,
-      align: "center" as const,
-      width: 50,
-    },
-    {
-      id: "status",
-      header: t("customers.status", "وضعیت"),
-      accessor: (row: CustomerWithDebt) =>
-        (row.totalDebt || 0) > 0 ? "debtor" : "settled",
-      type: "badge" as const,
-      width: 90,
-    },
-  ]
 }
 
 // ============================================================
@@ -426,76 +333,6 @@ function CustomersToolbar({
   )
 }
 
-/** کارت مشتری در موبایل (با memo) */
-const CustomerCard = memo(function CustomerCard({
-  customer,
-  t,
-  fmt,
-  currency,
-  onSelect,
-}: {
-  customer: CustomerWithDebt
-  t: (key: string, fallback?: string) => string
-  fmt: (v: number) => string
-  currency: string
-  onSelect: (id: string) => void
-}) {
-  const hasDebt = (customer.totalDebt || 0) > 0
-  const name = customer.fullName || customer.name || "?"
-
-  return (
-    <div
-      onClick={() => onSelect(customer.id)}
-      className="rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-4 active:scale-[0.98] transition-transform cursor-pointer"
-      role="button"
-      tabIndex={0}
-      aria-label={`${t("customers.customer", "مشتری")} ${name}`}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault()
-          onSelect(customer.id)
-        }
-      }}
-    >
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--color-primary)/0.1)]">
-            <span className="text-sm font-bold text-[hsl(var(--color-primary))]">
-              {name.charAt(0)}
-            </span>
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-[hsl(var(--fg-primary))]">{name}</p>
-            {customer.phone && (
-              <p className="text-xs text-[hsl(var(--fg-tertiary))]">{customer.phone}</p>
-            )}
-          </div>
-        </div>
-        <span
-          className={cn(
-            "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold",
-            hasDebt
-              ? "bg-[hsl(var(--color-destructive)/0.1)] text-[hsl(var(--color-destructive))]"
-              : "bg-[hsl(var(--color-success)/0.1)] text-[hsl(var(--color-success))]"
-          )}
-        >
-          {hasDebt ? t("customers.debtor", "بدهکار") : t("customers.settled", "تسویه")}
-        </span>
-      </div>
-      <div className="flex items-center justify-between text-xs text-[hsl(var(--fg-secondary))]">
-        <span>
-          {customer.openCount || 0} {t("customers.openInvoices", "فاکتور باز")}
-        </span>
-        {hasDebt && (
-          <span className="font-bold text-[hsl(var(--color-destructive))]">
-            {fmt(customer.totalDebt || 0)} {currency}
-          </span>
-        )}
-      </div>
-    </div>
-  )
-})
-
 /** حالت‌های داده */
 function LoadingSkeleton({
   isMobile,
@@ -570,9 +407,111 @@ function ErrorState({
   )
 }
 
-/** محتوای اصلی (با مدیریت ۵ حالت) */
+/** جدول واکنش‌گرا مشتریان — مطابق قرارداد invoices-view (overflow-x-auto + whitespace-nowrap) */
+function CustomersTable({
+  t,
+  fmt,
+  currency,
+  filtered,
+  onSelectCustomer,
+}: {
+  t: (key: string, fallback?: string) => string
+  fmt: (v: number) => string
+  currency: string
+  filtered: CustomerWithDebt[]
+  onSelectCustomer: (id: string) => void
+}) {
+  return (
+    <div className="overflow-x-auto rounded-2xl border border-[hsl(var(--border-default))]">
+      <table className="w-full min-w-[640px] text-sm">
+        <thead>
+          <tr className="border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))] text-start">
+            {[
+              ["customers.customer", "مشتری"],
+              ["customers.phone", "تلفن"],
+              ["customers.debt", "بدهی"],
+              ["customers.lastPurchase", "آخرین خرید"],
+              ["customers.openInvoices", "باز"],
+              ["customers.status", "وضعیت"],
+            ].map(([key, fallback]) => (
+              <th
+                key={key}
+                className="whitespace-nowrap px-3 py-2.5 text-xs font-semibold text-[hsl(var(--fg-tertiary))]"
+              >
+                {t(key!, fallback)}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {filtered.map((c) => {
+            const name = c.fullName || c.name || ""
+            const hasDebt = (c.totalDebt || 0) > 0
+            const lastInvoiceDate = (
+              c as CustomerWithDebt & { lastInvoiceDate?: string }
+            ).lastInvoiceDate
+
+            return (
+              <tr
+                key={c.id}
+                onClick={() => onSelectCustomer(c.id)}
+                className="cursor-pointer border-b border-[hsl(var(--border-default))] last:border-0 hover:bg-[hsl(var(--surface-muted)/0.5)] transition-colors duration-150"
+              >
+                <td className="whitespace-nowrap px-3 py-2.5">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--color-primary)/0.1)]">
+                      <span className="text-sm font-bold text-[hsl(var(--color-primary))]">
+                        {name.charAt(0) || "?"}
+                      </span>
+                    </div>
+                    <p className="font-semibold text-[hsl(var(--fg-primary))]">{name}</p>
+                  </div>
+                </td>
+                <td className="whitespace-nowrap px-3 py-2.5 text-[hsl(var(--fg-secondary))]">
+                  {c.phone || "-"}
+                </td>
+                <td className="whitespace-nowrap px-3 py-2.5 tabular-nums">
+                  <span
+                    className={cn(
+                      hasDebt
+                        ? "font-bold text-[hsl(var(--color-destructive))]"
+                        : "text-[hsl(var(--color-success))]"
+                    )}
+                  >
+                    {hasDebt ? fmt(c.totalDebt || 0) : "۰"} {currency}
+                  </span>
+                </td>
+                <td className="whitespace-nowrap px-3 py-2.5 text-[hsl(var(--fg-secondary))]">
+                  {formatDate(lastInvoiceDate)}
+                </td>
+                <td className="whitespace-nowrap px-3 py-2.5 text-center tabular-nums text-[hsl(var(--fg-secondary))]">
+                  {c.openCount || 0}
+                </td>
+                <td className="whitespace-nowrap px-3 py-2.5">
+                  <span
+                    className={cn(
+                      "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold border",
+                      hasDebt
+                        ? "bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))] border-[hsl(var(--color-destructive)/0.2)]"
+                        : "bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))] border-[hsl(var(--color-success)/0.2)]"
+                    )}
+                  >
+                    {hasDebt ? t("customers.debtor", "بدهکار") : t("customers.settled", "تسویه")}
+                  </span>
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+/** محتوای اصلی (با مدیریت ۴ حالت) */
 function CustomersContent({
   t,
+  fmt,
   isLoading,
   isError,
   errorMessage,
@@ -580,11 +519,10 @@ function CustomersContent({
   filtered,
   isMobile,
   currency,
-  fmt,
   onSelectCustomer,
-  getColumns,
 }: {
   t: (key: string, fallback?: string) => string
+  fmt: (v: number) => string
   isLoading: boolean
   isError: boolean
   errorMessage: string
@@ -592,62 +530,24 @@ function CustomersContent({
   filtered: CustomerWithDebt[]
   isMobile: boolean
   currency: string
-  fmt: (v: number) => string
   onSelectCustomer: (id: string) => void
-  getColumns: typeof getCustomerColumns
 }) {
-  const columns = useMemo(
-    () => getColumns(t, fmt, currency, onSelectCustomer),
-    [t, fmt, currency, onSelectCustomer, getColumns]
-  )
+  if (isLoading) return <LoadingSkeleton isMobile={isMobile} t={t} />
+  if (isError) return <ErrorState t={t} message={errorMessage} onRetry={onRetry} />
+  if (filtered.length === 0) return <EmptyState t={t} isMobile={isMobile} />
 
   return (
-    <div
-      className={cn(
-        "rounded-2xl border border-[hsl(var(--border-default))]",
-        "bg-[hsl(var(--surface-elevated))]",
-        "shadow-[var(--shadow-premium)]",
-        "overflow-hidden"
-      )}
-    >
-      {!isLoading && !isError && filtered.length > 0 && (
-        <div className="flex items-center justify-between px-4 py-2.5 border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted)/0.4)]">
-          <span className="text-xs font-medium text-[hsl(var(--fg-secondary))]">
-            {filtered.length} {t("customers.customers", "مشتری")}
-          </span>
-        </div>
-      )}
-
-      <div className={cn(!isMobile && "p-0", isMobile && "p-2")}>
-        {/* ۵ حالت داده */}
-        {isLoading && <LoadingSkeleton isMobile={isMobile} t={t} />}
-        {isError && !isLoading && (
-          <ErrorState t={t} message={errorMessage} onRetry={onRetry} />
-        )}
-        {!isLoading && !isError && filtered.length === 0 && (
-          <EmptyState t={t} isMobile={isMobile} />
-        )}
-        {!isLoading && !isError && filtered.length > 0 && (
-          <>
-            {isMobile ? (
-              <div className="space-y-2">
-                {filtered.map((c) => (
-                  <CustomerCard
-                    key={c.id}
-                    customer={c}
-                    t={t}
-                    fmt={fmt}
-                    currency={currency}
-                    onSelect={onSelectCustomer}
-                  />
-                ))}
-              </div>
-            ) : (
-              <DataGrid t={t} columns={columns} data={filtered} />
-            )}
-          </>
-        )}
-      </div>
+    <div className="space-y-2">
+      <span className="text-xs font-medium text-[hsl(var(--fg-secondary))]">
+        {filtered.length} {t("customers.customers", "مشتری")}
+      </span>
+      <CustomersTable
+        t={t}
+        fmt={fmt}
+        currency={currency}
+        filtered={filtered}
+        onSelectCustomer={onSelectCustomer}
+      />
     </div>
   )
 }
@@ -669,6 +569,9 @@ export function customersView(props: CustomersViewProps) {
     overdueCount,
     vipCount,
     todaySales,
+    totalSales,
+    topCustomerName,
+    topCustomerAmount,
     openDealsCount,
     isLoading,
     isError = false,
@@ -780,19 +683,16 @@ export function customersView(props: CustomersViewProps) {
       />
 
       {/* KPI */}
-      <div className={isMobile ? "flex gap-2 overflow-x-auto pb-1 -mx-1 px-1" : ""}>
-        {customersStats({
-          t,
-          fmt,
-          totalCustomers,
-          totalDebt,
-          overdueCount,
-          vipCount,
-          todaySales,
-          currency,
-          isMobile,
-        })}
-      </div>
+      {customersStats({
+        t,
+        fmt,
+        totalCustomers,
+        totalSales,
+        totalDebt,
+        topCustomerName,
+        topCustomerAmount,
+        currency,
+      })}
 
       {/* محتوای اصلی */}
       <CustomersContent
@@ -806,7 +706,6 @@ export function customersView(props: CustomersViewProps) {
         currency={currency}
         fmt={fmt}
         onSelectCustomer={onSelectCustomer}
-        getColumns={getCustomerColumns}
       />
     </div>
   )

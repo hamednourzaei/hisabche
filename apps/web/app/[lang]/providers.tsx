@@ -3,8 +3,6 @@
 
 import React, { Suspense, lazy, useMemo } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { I18nextProvider } from "react-i18next";
-import i18n from "@hisabche/i18n";
 import { ToastProvider } from "@hisabche/ui";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -35,13 +33,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={client}>
-      <I18nextProvider i18n={i18n}>
-        <ToastProvider>
-          <Suspense fallback={<>{children}</>}>
-            <HeavyProviders>{children}</HeavyProviders>
-          </Suspense>
-        </ToastProvider>
-      </I18nextProvider>
+      <ToastProvider>
+        <Suspense fallback={<>{children}</>}>
+          <HeavyProviders>{children}</HeavyProviders>
+        </Suspense>
+      </ToastProvider>
     </QueryClientProvider>
   );
 }

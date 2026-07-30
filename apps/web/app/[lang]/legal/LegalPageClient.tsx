@@ -26,7 +26,8 @@ export function LegalPageClient({ titleKey, titleFallback, introKey, introFallba
     return result && result !== key ? result : (fallback ?? key);
   };
 
-  const sections = t(sectionsKey, { returnObjects: true }) as LegalSection[];
+  const sectionsRaw = t.raw(sectionsKey) as unknown;
+  const sections = Array.isArray(sectionsRaw) ? (sectionsRaw as LegalSection[]) : [];
   const lastUpdated = safeT("landing.legalPage.lastUpdated", "Last updated: {date}").replace("{date}", "2026-07-28");
 
   return (

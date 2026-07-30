@@ -4,7 +4,7 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
-import { createWorkspaceSchema, updateWorkspaceSchema, updateMemberRoleSchema, createInviteSchema, acceptInviteSchema } from '@hisabche/validation'
+import { createWorkspaceSchema, updateWorkspaceSchema, updateMemberRoleSchema, createInviteSchema, acceptInviteSchema, createMemberDirectSchema } from '@hisabche/validation'
 import { WorkspaceService } from '../services/workspace.service'
 import { authenticate } from '../middleware/auth.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
@@ -144,7 +144,28 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
     }
   })
   
-  fastify.delete('/api/workspaces/:id/invites/:inviteId', { 
+  fastify.post('/api/workspaces/:id/members/direct', {
+    preHandler: [authenticate],
+    schema: { body: toJsonSchema(createMemberDirectSchema.omit({ workspaceId: true })) }
+  }, async (req, reply) => {
+    try {
+      const { id } = req.params as any
+      const data = createMemberDirectSchema.omit({ workspaceId: true }).parse(req.body)
+      const result = await svc.createMemberDirect(req.userId, id, { ...data, workspaceId: id })
+      await clearCache(`workspace-members:${id}:*`)
+      return reply.code(201).send(result)
+    } catch (e) {
+      if (e instanceof z.ZodError) return reply.code(400).send({ error: 'Validation', details: e.errors });
+      const clientErrors = ['Insufficient permissions', 'Email already registered', 'Access denied']
+      if (e instanceof Error && clientErrors.includes(e.message)) {
+        return reply.code(400).send({ error: e.message })
+      }
+      fastify.log.error(e);
+      return reply.code(500).send({ error: 'Failed to create member' })
+    }
+  })
+
+  fastify.delete('/api/workspaces/:id/invites/:inviteId', {
     preHandler: [authenticate] 
   }, async (req, reply) => {
     try { 

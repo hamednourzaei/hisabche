@@ -163,12 +163,14 @@ export class InvoiceService {
         status,
         created_at,
         updated_at,
+        public_token,
         customer:customers!fk_invoices_customer (
           id,
           full_name,
           phone,
           email
-        )
+        ),
+        invoice_items ( quantity )
       `)
       .eq("user_id", userId)
       .order(sortBy, { ascending: sortDirection === "asc" })
@@ -215,6 +217,7 @@ export class InvoiceService {
       ...inv,
       customerName: (inv.customer as any)?.full_name || null,
       customer: (inv.customer as any) || null,
+      itemsSent: ((inv.invoice_items as any[]) || []).reduce((sum, i) => sum + (Number(i.quantity) || 0), 0),
     }));
 
     const result = {

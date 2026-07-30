@@ -38,7 +38,7 @@ const PAYROLL_COLUMNS = `
   overtime_hours, overtime_rate, overtime_amount, tax_amount, net_salary,
   currency, status, payment_date, notes, created_at
 `
-const PAYROLL_MINIMAL = 'id, employee_id, period_start, period_end, net_salary, status'
+const PAYROLL_MINIMAL = 'id, employee_id, period_start, period_end, net_salary, status, payment_date, currency'
 
 const LEAVE_COLUMNS = `
   id, employee_id, leave_type, start_date, end_date, total_days,
@@ -403,6 +403,28 @@ export class HumanResourcesService {
     
     await this.invalidatePayrollCache(userId)
     return payroll
+  }
+
+  // ─── Payroll Summary (جمع حقوق) ──────────────────────────────
+  // aggregate سمت سرور — جمع کل پرداختی‌ها و جمع هر کارمند، برای
+  // کارت‌های KPI و ستون «جمع حقوق» بدون محاسبه‌ی سنگین سمت کلاینت.
+  async getPayrollSummary(userId: string) {
+    const { data, error } = await supabase
+      .from('payrolls')
+      .select('employee_id, net_salary')
+      .eq('user_id', userId)
+
+    if (error) throw new DatabaseError('Failed to fetch payroll summary', error)
+
+    const byEmployee: Record<string, number> = {}
+    let total = 0
+    for (const row of data || []) {
+      const amount = Number(row.net_salary) || 0
+      total += amount
+      byEmployee[row.employee_id] = (byEmployee[row.employee_id] || 0) + amount
+    }
+
+    return { total, byEmployee }
   }
 
   // ─── Leaves ─────────────────────────────────────────────────

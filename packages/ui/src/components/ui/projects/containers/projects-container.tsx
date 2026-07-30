@@ -16,7 +16,11 @@ import { useState, useCallback, memo } from "react";
 import type { StatusType } from "../projects-view";
 
 export const ProjectsContainer = memo(function ProjectsContainer() {
-  const t = useTranslations();
+  const tOriginal = useTranslations();
+  const t = (key: string, fallback?: string): string => {
+    const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
+    return v && v !== key ? v : (fallback ?? key);
+  };
   const router = useRouter();
 
   const safeT = t;

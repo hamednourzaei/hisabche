@@ -167,11 +167,16 @@ export class WorkflowService {
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached as Workflow
 
+    // ✅ FIX: برخلاف listWorkflows (که فقط تمپلیت‌های فعال را نشان می‌دهد)،
+    // این متد باید حتی تمپلیت soft-delete شده را هم برگرداند — چون
+    // workflow_instances قبلی هنوز به این workflow_id ارجاع می‌دهند و صفحه‌ی
+    // approvals برای رندر کردن مراحل (steps) هر instance نیاز به همین متد دارد.
+    // فیلتر deleted_at اینجا باعث ۴۰۴ همیشگی برای هر instance می‌شد که
+    // تمپلیتش بعداً حذف شده بود (کارت آن روی صفحه تا ابد در حالت لودینگ می‌ماند).
     const { data, error } = await supabase
       .from("workflows")
       .select(WORKFLOW_COLUMNS)
       .eq("id", workflowId)
-      .is("deleted_at", null)
       .maybeSingle();
 
     if (error) throw new DatabaseError("Failed to fetch workflow", error);

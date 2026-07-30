@@ -14,20 +14,39 @@ export class AnalyticsService {
     const cacheKey = `dashboard:v2:${userId}`;
 
     return withCacheKey(cacheKey, 60_000, async () => {
-      // ✅ RPC (فاکتورها) و products (برای lowStock) موازی
-      const [kpiResult, productsResult] = await Promise.all([
+      // ✅ RPC (فاکتورها) و products (برای lowStock + ارزش انبار) موازی
+      const [kpiResult, productsResult, salesTotalsResult] = await Promise.all([
         supabase.rpc('get_dashboard_kpis', { p_user_id: userId }),
         supabase
           .from('products')
-          .select('quantity, min_stock_level')
+          .select('quantity, min_stock_level, buy_price')
           .eq('user_id', userId)
           .eq('is_active', true),
+        supabase
+          .from('invoices')
+          .select('total, paid_amount, status')
+          .eq('user_id', userId),
       ]);
 
-      // محاسبه lowStockAlerts از productsResult
+      // محاسبه lowStockAlerts + ارزش کل انبار از productsResult
       const lowStockAlerts = (productsResult.data || [])
         .filter(p => Number(p.quantity) <= Number(p.min_stock_level))
         .length;
+      const warehouseValue = (productsResult.data || [])
+        .reduce((sum, p) => sum + Number(p.quantity || 0) * Number(p.buy_price || 0), 0);
+
+      // ✅ کارت «فروش کل» و «بدهی مشتریان» — مستقل از RPC/fallback، همیشه از داده‌ی واقعی فاکتورها
+      const invoices = salesTotalsResult.data || [];
+      const totalSales = invoices.reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);
+      const customerDebt = invoices.reduce((sum, inv) => {
+        if (inv.status === 'paid') return sum;
+        return sum + (Number(inv.total) || 0) - (Number(inv.paid_amount) || 0);
+      }, 0);
+      const extraCards = {
+        totalSales: Math.round(totalSales * 100) / 100,
+        customerDebt: Math.round(customerDebt * 100) / 100,
+        warehouseValue: Math.round(warehouseValue * 100) / 100,
+      };
 
       // ✅ اگر RPC موفق بود، از آن استفاده کن
       if (!kpiResult.error && kpiResult.data && kpiResult.data.length > 0) {
@@ -41,13 +60,15 @@ export class AnalyticsService {
           pendingPayments: Number(r.pending_total) || 0,
           activeCustomers: Number(r.active_customers) || 0,
           lowStockAlerts,
+          ...extraCards,
           ...growthMetrics,
         };
       }
 
       // ✅ Fallback: اگر RPC خطا داد، از کوئری معمولی استفاده کن
       console.error('RPC error, falling back to query:', kpiResult.error);
-      return this.getDashboardKpisFallback(userId, lowStockAlerts);
+      const fallback = await this.getDashboardKpisFallback(userId, lowStockAlerts);
+      return { ...fallback, ...extraCards };
     });
   }
 
@@ -234,14 +255,23 @@ export class AnalyticsService {
         .filter(inv => new Date(inv.date) >= fourteenDaysAgo)
         .reduce((acc: any[], inv) => {
           const date = inv.date?.split('T')[0] || '';
-          const existing = acc.find(d => d.label === date);
-          if (existing) {
-            existing.value += Number(inv.total) || 0;
-          } else {
-            acc.push({ label: date, value: Number(inv.total) || 0, date });
+          let existing = acc.find(d => d.label === date);
+          if (!existing) {
+            existing = { label: date, value: 0, date, invoiceCount: 0, customerIds: new Set<string>() };
+            acc.push(existing);
           }
+          existing.value += Number(inv.total) || 0;
+          existing.invoiceCount += 1;
+          if (inv.customer_id) existing.customerIds.add(inv.customer_id);
           return acc;
-        }, []);
+        }, [])
+        .map((d: any) => ({
+          label: d.label,
+          value: d.value,
+          date: d.date,
+          invoiceCount: d.invoiceCount,
+          customerCount: d.customerIds.size,
+        }));
 
       return {
         totalRevenue: Math.round(totalRevenue * 100) / 100,
@@ -403,6 +433,9 @@ export class AnalyticsService {
       activeCustomers: 0,
       customerGrowth: 0,
       lowStockAlerts: 0,
+      totalSales: 0,
+      customerDebt: 0,
+      warehouseValue: 0,
     };
   }
 

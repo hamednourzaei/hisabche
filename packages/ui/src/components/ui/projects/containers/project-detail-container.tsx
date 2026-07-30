@@ -19,7 +19,11 @@ interface ProjectDetailContainerProps {
 export const ProjectDetailContainer = memo(function ProjectDetailContainer({
   id,
 }: ProjectDetailContainerProps) {
-  const t = useTranslations();
+  const tOriginal = useTranslations();
+  const t = (key: string, fallback?: string): string => {
+    const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
+    return v && v !== key ? v : (fallback ?? key);
+  };
   const router = useRouter();
 
   const safeT = t;

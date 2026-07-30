@@ -21,7 +21,8 @@ import {
 
 export const invoiceItemSchema = z.object({
   id: uuidSchema.optional(),
-  productId: uuidSchema,
+  // اختیاری: آیتم با نام دلخواه (بدون محصول واقعی از انبار، مثلاً خدمات) productId ندارد
+  productId: uuidSchema.optional(),
   productName: nonEmptyStringSchema,
   quantity: positiveNumberSchema,
   unitPrice: positiveNumberSchema,

@@ -17,6 +17,7 @@ import {
 import { ProductPicker } from "../product-picker";
 import { CustomerPicker } from "../customer-picker";
 import { MoneyInput } from "../money-input";
+import { Switch } from "../switch";
 import { memo, useMemo, useState } from "react";
 import {
   InvoiceDocument,
@@ -66,18 +67,26 @@ export interface QuickInvoicePageProps {
   selectedCustomer: CustomerOption | null;
   paymentType: PaymentType;
   paidNow: string;
+  subtotal: number;
+  discountValue: string;
+  discountType: "fixed" | "percentage";
   total: number;
   productName: string;
   paidAmount: number;
+  isPaid: boolean;
   createdInvoiceId: string | null;
   isPending: boolean;
   onAddItem: (p: ProductOption) => void;
+  onAddCustomItem: (name: string) => void;
   onRemoveItem: (key: string) => void;
   onUpdateItemQuantity: (key: string, quantity: string) => void;
   onUpdateItemPrice: (key: string, price: string) => void;
   onSelectCustomer: (c: CustomerOption | null) => void;
   onPaymentTypeChange: (t: PaymentType) => void;
   onPaidNowChange: (v: string) => void;
+  onDiscountValueChange: (v: string) => void;
+  onDiscountTypeChange: (t: "fixed" | "percentage") => void;
+  onIsPaidChange: (v: boolean) => void;
   onSetStep: (s: Step) => void;
   onConfirmCreate: () => void;
   onDismissCelebration: () => void;
@@ -164,6 +173,7 @@ ItemRow.displayName = "ItemRow";
 const ItemsStep = memo(function ItemsStep({
   items,
   onAddItem,
+  onAddCustomItem,
   onRemoveItem,
   onUpdateItemQuantity,
   onUpdateItemPrice,
@@ -172,12 +182,23 @@ const ItemsStep = memo(function ItemsStep({
 }: {
   items: InvoiceLineItem[];
   onAddItem: (p: ProductOption) => void;
+  onAddCustomItem: (name: string) => void;
   onRemoveItem: (key: string) => void;
   onUpdateItemQuantity: (key: string, quantity: string) => void;
   onUpdateItemPrice: (key: string, price: string) => void;
   onNext: () => void;
   t: (key: string, fallback?: string) => string;
 }) {
+  const [showCustom, setShowCustom] = useState(false);
+  const [customName, setCustomName] = useState("");
+
+  const handleAddCustom = () => {
+    if (!customName.trim()) return;
+    onAddCustomItem(customName);
+    setCustomName("");
+    setShowCustom(false);
+  };
+
   return (
     <div className="rounded-2xl border border-[hsl(var(--border-strong))] bg-[hsl(var(--surface-elevated))]">
       <div className="p-6 space-y-6">
@@ -216,6 +237,36 @@ const ItemsStep = memo(function ItemsStep({
             placeholder={t("warehouse.pickProduct", "افزودن جنس از گدام...")}
           />
         </div>
+
+        {/* ✅ آیتم با نام دلخواه — برای خدماتی که در انبار محصول ندارند (مثلاً ترجمه، کرایه) */}
+        {showCustom ? (
+          <div className="flex items-center gap-2">
+            <input
+              autoFocus
+              value={customName}
+              onChange={(e) => setCustomName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleAddCustom()}
+              placeholder={t("quickInvoice.customItemName", "نام دلخواه (مثلاً: کرایه تاکسی)")}
+              className="flex-1 rounded-lg px-3 py-2 text-sm border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))] focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)]"
+            />
+            <button
+              type="button"
+              onClick={handleAddCustom}
+              disabled={!customName.trim()}
+              className="shrink-0 rounded-lg px-3 py-2 text-sm font-medium text-white bg-[var(--gradient-brand)] disabled:opacity-40"
+            >
+              {t("action.add", "افزودن")}
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowCustom(true)}
+            className="text-sm text-[hsl(var(--color-primary))] hover:underline"
+          >
+            + {t("quickInvoice.addCustomItem", "با نام دلخواه پر کن")}
+          </button>
+        )}
 
         <button
           type="button"
@@ -318,10 +369,17 @@ const PriceStep = memo(function PriceStep({
   selectedCustomer,
   paymentType,
   paidNow,
+  subtotal,
+  discountValue,
+  discountType,
   total,
+  isPaid,
   isPending,
   onPaymentTypeChange,
   onPaidNowChange,
+  onDiscountValueChange,
+  onDiscountTypeChange,
+  onIsPaidChange,
   onBack,
   onNext,
 }: {
@@ -330,10 +388,17 @@ const PriceStep = memo(function PriceStep({
   selectedCustomer: CustomerOption | null;
   paymentType: PaymentType;
   paidNow: string;
+  subtotal: number;
+  discountValue: string;
+  discountType: "fixed" | "percentage";
   total: number;
+  isPaid: boolean;
   isPending: boolean;
   onPaymentTypeChange: (t: PaymentType) => void;
   onPaidNowChange: (v: string) => void;
+  onDiscountValueChange: (v: string) => void;
+  onDiscountTypeChange: (t: "fixed" | "percentage") => void;
+  onIsPaidChange: (v: boolean) => void;
   onBack: () => void;
   onNext: () => void;
 }) {
@@ -373,6 +438,39 @@ const PriceStep = memo(function PriceStep({
           )}
         </div>
 
+        {/* ✅ تخفیف (عدد ثابت یا درصد) — قبل از پیش‌نمایش اعمال می‌شود */}
+        <div className="flex items-center gap-2">
+          <MoneyInput
+            value={discountValue}
+            onChange={onDiscountValueChange}
+            placeholder={t("quickInvoice.discount", "تخفیف (اختیاری)")}
+            className="flex-1 h-auto rounded-xl px-3 py-2.5 text-sm border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))] focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)]"
+          />
+          <div className="flex shrink-0 rounded-xl border border-[hsl(var(--border-default))] overflow-hidden">
+            {(["fixed", "percentage"] as const).map((dt) => (
+              <button
+                key={dt}
+                type="button"
+                onClick={() => onDiscountTypeChange(dt)}
+                className={cn(
+                  "px-3 py-2.5 text-sm font-medium transition-colors duration-150",
+                  discountType === dt
+                    ? "bg-[hsl(var(--color-primary))] text-white"
+                    : "text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]"
+                )}
+              >
+                {dt === "fixed" ? "AFN" : "%"}
+              </button>
+            ))}
+          </div>
+        </div>
+        {parseFloat(discountValue) > 0 && (
+          <div className="flex items-center justify-between text-xs text-[hsl(var(--fg-tertiary))] -mt-3">
+            <span>{t("quickInvoice.subtotal", "جمع قبل از تخفیف")}</span>
+            <span className="tabular-nums">{subtotal.toLocaleString()} AFN</span>
+          </div>
+        )}
+
         <div className="flex gap-2">
           {(["cash", "credit"] as PaymentType[]).map((type) => (
             <button
@@ -392,7 +490,15 @@ const PriceStep = memo(function PriceStep({
           ))}
         </div>
 
-        {paymentType === "credit" && (
+        {/* ✅ سویچ صریح «تسویه شده / تسویه‌نشده» — مستقل از نوع پرداخت */}
+        <label className="flex items-center justify-between gap-3 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-4 py-3 cursor-pointer">
+          <span className="text-sm font-medium text-[hsl(var(--fg-primary))]">
+            {t("quickInvoice.isPaid", "این فاکتور تسویه شده است")}
+          </span>
+          <Switch checked={isPaid} onCheckedChange={onIsPaidChange} />
+        </label>
+
+        {paymentType === "credit" && !isPaid && (
           <div className="relative">
             <CreditCard className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))] pointer-events-none" aria-hidden="true" />
             <MoneyInput
@@ -418,7 +524,7 @@ const PriceStep = memo(function PriceStep({
               {total.toLocaleString()}
             </p>
             <p className="mt-1 text-sm text-[hsl(var(--fg-secondary))]">
-              {paymentType === "cash"
+              {isPaid
                 ? t("invoices.paid", "پرداخت کامل")
                 : paidNow
                   ? `${t("payment.record", "پیش‌پرداخت")}: ${parseFloat(paidNow).toLocaleString()} AFN — ${t("invoices.remaining", "باقی‌مانده")}: ${(total - parseFloat(paidNow || "0")).toLocaleString()} AFN`
@@ -478,9 +584,8 @@ const PreviewStep = memo(function PreviewStep({
   t,
   items,
   selectedCustomer,
-  paymentType,
-  paidNow,
   total,
+  paidAmount,
   isPending,
   onBack,
   onConfirm,
@@ -488,15 +593,13 @@ const PreviewStep = memo(function PreviewStep({
   t: (key: string, fallback?: string) => string;
   items: InvoiceLineItem[];
   selectedCustomer: CustomerOption | null;
-  paymentType: PaymentType;
-  paidNow: string;
   total: number;
+  paidAmount: number;
   isPending: boolean;
   onBack: () => void;
   onConfirm: () => void;
 }) {
   const [display, setDisplay] = useState<InvoiceDocumentDisplaySettings>(DEFAULT_PREVIEW_DISPLAY);
-  const paidAmount = paymentType === "cash" ? total : parseFloat(paidNow) || 0;
 
   // ✅ فرض تک-workspace: اولین workspace کاربر — برای نمایش لوگو/مهر کسب‌وکار روی پیش‌نمایش فاکتور
   const { data: workspaces } = useWorkspaces();
@@ -745,18 +848,26 @@ export const QuickInvoicePage = memo(function QuickInvoicePage({
   selectedCustomer,
   paymentType,
   paidNow,
+  subtotal,
+  discountValue,
+  discountType,
   total,
   productName,
   paidAmount,
+  isPaid,
   createdInvoiceId,
   isPending,
   onAddItem,
+  onAddCustomItem,
   onRemoveItem,
   onUpdateItemQuantity,
   onUpdateItemPrice,
   onSelectCustomer,
   onPaymentTypeChange,
   onPaidNowChange,
+  onDiscountValueChange,
+  onDiscountTypeChange,
+  onIsPaidChange,
   onSetStep,
   onConfirmCreate,
   onDismissCelebration,
@@ -795,6 +906,7 @@ export const QuickInvoicePage = memo(function QuickInvoicePage({
           <ItemsStep
             items={items}
             onAddItem={onAddItem}
+            onAddCustomItem={onAddCustomItem}
             onRemoveItem={onRemoveItem}
             onUpdateItemQuantity={onUpdateItemQuantity}
             onUpdateItemPrice={onUpdateItemPrice}
@@ -822,10 +934,17 @@ export const QuickInvoicePage = memo(function QuickInvoicePage({
             selectedCustomer={selectedCustomer}
             paymentType={paymentType}
             paidNow={paidNow}
+            subtotal={subtotal}
+            discountValue={discountValue}
+            discountType={discountType}
             total={total}
+            isPaid={isPaid}
             isPending={isPending}
             onPaymentTypeChange={onPaymentTypeChange}
             onPaidNowChange={onPaidNowChange}
+            onDiscountValueChange={onDiscountValueChange}
+            onDiscountTypeChange={onDiscountTypeChange}
+            onIsPaidChange={onIsPaidChange}
             onBack={() => onSetStep("customer")}
             onNext={() => onSetStep("preview")}
           />
@@ -837,8 +956,7 @@ export const QuickInvoicePage = memo(function QuickInvoicePage({
             t={t}
             items={items}
             selectedCustomer={selectedCustomer}
-            paymentType={paymentType}
-            paidNow={paidNow}
+            paidAmount={paidAmount}
             total={total}
             isPending={isPending}
             onBack={() => onSetStep("price")}

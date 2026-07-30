@@ -44,6 +44,7 @@ const COLUMNS: FooterColumn[] = [
     titleKey: "landing.footerColCompany",
     titleFallback: "شرکت",
     links: [
+      { key: "about", fallback: "درباره ما", href: "/about" },
       { key: "contact", fallback: "تماس با ما", href: "/contact" },
     ],
   },
@@ -53,6 +54,14 @@ const COLUMNS: FooterColumn[] = [
     links: [
       { key: "terms", fallback: "شرایط استفاده", href: "/legal/terms" },
       { key: "privacy", fallback: "حریم خصوصی", href: "/legal/privacy" },
+      { key: "cookies", fallback: "سیاست کوکی", href: "/legal/cookies" },
+      { key: "refund", fallback: "بازگشت وجه", href: "/legal/refund" },
+      { key: "disclaimer", fallback: "سلب مسئولیت", href: "/legal/disclaimer" },
+      { key: "copyright", fallback: "حق نشر", href: "/legal/copyright" },
+      { key: "security", fallback: "امنیت", href: "/legal/security" },
+      { key: "accessibility", fallback: "دسترسی‌پذیری", href: "/legal/accessibility" },
+      { key: "gdpr", fallback: "حقوق حریم خصوصی", href: "/legal/gdpr" },
+      { key: "dataDeletion", fallback: "درخواست حذف داده", href: "/legal/data-deletion" },
     ],
   },
 ];
@@ -135,7 +144,7 @@ export default function SiteFooter({ t }: SiteFooterProps) {
           )}
         >
           <p className="text-[9px] sm:text-[10px] lg:text-xs text-[hsl(var(--fg-tertiary))] order-2 sm:order-1">
-            {t("landing.footerCopyright", `© ${year} حسابچه. تمامی حقوق محفوظ است.`)}
+            {t("landing.footerCopyright", `© ${year} حسابچه. تمامی حقوق محفوظ است.`).replace("{year}", String(year))}
           </p>
           <p className="text-[9px] sm:text-[10px] lg:text-xs text-[hsl(var(--fg-tertiary))] order-1 sm:order-2">
             {t("landing.footer", "سیستم مدیریت کسب‌وکار")}

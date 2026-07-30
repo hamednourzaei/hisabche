@@ -8,18 +8,35 @@ export interface RawInvoice {
   invoiceNumber?: string
   invoice_number?: string
   date?: string
+  created_at?: string
+  updated_at?: string
   status?: string
   total?: number
   currency?: string
+  type?: string
+  customerName?: string | null
+  customer?: { full_name?: string; company?: string | null } | null
+  paid_amount?: number
+  itemsSent?: number
+  publicToken?: string
+  public_token?: string
 }
 
 export interface Invoice {
   id: string
   invoiceNumber: string
   date: string
+  createdAt: string
   status: string
   total: number
   currency: string
+  type: string
+  customerName: string
+  /** Business/company name for the customer — blank until customers.company exists in the schema */
+  company: string
+  paymentDate: string
+  itemsSent: number
+  publicToken?: string
 }
 
 // این تایپ باید دقیقاً با useInvoices از @hisabche/api مطابقت داشته باشد

@@ -1,7 +1,7 @@
 // packages/ui/src/components/ui/dashboard/sales-chart.tsx
 "use client";
 
-import { memo, useMemo, useId } from "react";
+import { memo, useMemo, useId, useState } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
@@ -17,6 +17,8 @@ export interface ChartDataPoint {
   label: string;
   value: number;
   date: string;
+  invoiceCount?: number;
+  customerCount?: number;
 }
 
 interface SalesChartProps {
@@ -57,10 +59,16 @@ export const SalesChart = memo(function SalesChart({
   currentPeriodTotal = 0,
   onViewFullReport,
 }: SalesChartProps) {
-  const t = useTranslations();
+  const tOriginal = useTranslations();
+  const t = (key: string, fallback?: string) => {
+    const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
+    return v && v !== key ? v : (fallback ?? key);
+  };
   const descriptionId = useId();
   const isMobile = useIsMobile();
   const isReducedMotion = useIsReducedMotion();
+  const [showInvoices, setShowInvoices] = useState(true);
+  const [showCustomers, setShowCustomers] = useState(true);
 
   // Calculate insights with safe percentage
   const { percentageChange, isPositive, allZero, hasData } = useMemo(() => {
@@ -180,16 +188,40 @@ export const SalesChart = memo(function SalesChart({
             fmt={fmt}
             height={height}
             animationDuration={animationDuration}
+            showInvoices={showInvoices}
+            showCustomers={showCustomers}
           />
         </div>
 
-        {/* Contextual footer */}
-        <div className="flex items-center justify-between text-xs text-[hsl(var(--fg-tertiary))] pt-1 border-t border-[hsl(var(--border-default)/0.5)]">
-          <span>{t("dashboard.dataRange", { count: data.length })}</span>
-          <span className="flex items-center gap-1">
-            <span className="inline-block h-2 w-2 rounded-full bg-[hsl(var(--status-info))]" />
-            {t("dashboard.salesTrend")}
-          </span>
+        {/* Contextual footer — سویچ‌های فعال/غیرفعال کردن هر خط (فروش همیشه روشن است) */}
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[hsl(var(--fg-tertiary))] pt-1 border-t border-[hsl(var(--border-default)/0.5)]">
+          <span>{tOriginal("dashboard.dataRange", { count: data.length })}</span>
+          <div className="flex items-center gap-3">
+            <span className="flex items-center gap-1">
+              <span className="inline-block h-2 w-2 rounded-full bg-[hsl(var(--color-primary))]" />
+              {t("dashboard.salesTrend")}
+            </span>
+            <label className="flex items-center gap-1 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={showInvoices}
+                onChange={(e) => setShowInvoices(e.target.checked)}
+                className="size-3 accent-[hsl(var(--status-info))]"
+              />
+              <span className="inline-block h-2 w-2 rounded-full bg-[hsl(var(--status-info))]" />
+              {t("dashboard.invoicesLine", "فاکتورها")}
+            </label>
+            <label className="flex items-center gap-1 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={showCustomers}
+                onChange={(e) => setShowCustomers(e.target.checked)}
+                className="size-3 accent-[hsl(var(--color-warning))]"
+              />
+              <span className="inline-block h-2 w-2 rounded-full bg-[hsl(var(--color-warning))]" />
+              {t("dashboard.customersLine", "مشتریان")}
+            </label>
+          </div>
         </div>
       </div>
     </section>

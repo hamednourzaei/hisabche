@@ -2,7 +2,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { ArrowRight, Save, User, Mail, MapPin, Briefcase, Calendar, Banknote, CreditCard, UserCircle, Hash, Clock, UserPlus, Edit, ShieldX, Pause, UserCheck, Plane, Phone } from "lucide-react";
+import { ArrowRight, Save, User, Mail, MapPin, Briefcase, Calendar, Banknote, CreditCard, UserCircle, Hash, Clock, UserPlus, Edit, ShieldX, Pause, UserCheck, Plane, Phone, Plus, X, Wallet } from "lucide-react";
 import { useState, useEffect, useCallback, useMemo, memo } from "react";
 import { JalaliDatePicker } from "../../ui/jalali-datepicker";
 import { PhoneInput } from "../../ui/phone-input";
@@ -42,11 +42,25 @@ interface TimelineEvent {
   description?: string;
 }
 
+interface Payroll {
+  id: string;
+  employee_id: string;
+  period_start: string;
+  period_end: string;
+  net_salary: number;
+  status: string;
+  payment_date?: string | null;
+  currency?: string;
+}
+
 interface EmployeeDetailViewProps {
   t: (key: string, fallback?: string) => string;
   employee: EmployeeData | null | undefined;
   isLoading: boolean;
+  payrolls: Payroll[];
+  isLoadingPayrolls: boolean;
   onUpdate: (values: Record<string, unknown>) => Promise<void>;
+  onAddPayment: (values: { amount: number; date: string }) => Promise<void>;
   onBack: () => void;
 }
 
@@ -214,17 +228,87 @@ const Field = memo(function Field({
 });
 Field.displayName = "Field";
 
+// ─── Salary Payments Section ──────────────────────────────────────────────
+
+const AddPaymentForm = memo(function AddPaymentForm({
+  t,
+  onSubmit,
+  onCancel,
+}: {
+  t: (key: string, fallback?: string) => string;
+  onSubmit: (values: { amount: number; date: string }) => Promise<void>;
+  onCancel: () => void;
+}) {
+  const [amount, setAmount] = useState<string>("");
+  const [date, setDate] = useState<string>("");
+  const [submitting, setSubmitting] = useState(false);
+
+  const isValid = Number(amount) > 0 && !!date;
+
+  const handleSubmit = useCallback(async () => {
+    if (!isValid) return;
+    setSubmitting(true);
+    try {
+      await onSubmit({ amount: Number(amount), date });
+      setAmount("");
+      setDate("");
+    } finally {
+      setSubmitting(false);
+    }
+  }, [amount, date, isValid, onSubmit]);
+
+  return (
+    <div className="rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] p-4 space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <MoneyInput
+          value={amount}
+          onChange={setAmount}
+          placeholder={t("hr.paymentAmount", "مبلغ پرداخت")}
+          className="w-full"
+        />
+        <JalaliDatePicker
+          value={date}
+          onChange={setDate}
+          placeholder={t("hr.paymentDate", "تاریخ پرداخت")}
+        />
+      </div>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={handleSubmit}
+          disabled={!isValid || submitting}
+          className="rounded-full bg-[hsl(var(--color-primary))] text-white px-5 py-2 text-sm font-bold disabled:opacity-50"
+        >
+          {submitting ? "..." : t("action.save", "ذخیره")}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-full border border-[hsl(var(--border-default))] px-5 py-2 text-sm"
+        >
+          {t("action.cancel", "لغو")}
+        </button>
+      </div>
+    </div>
+  );
+});
+AddPaymentForm.displayName = "AddPaymentForm";
+
 // ─── Main Component ────────────────────────────────────────────────────────
 
 export const EmployeeDetailView = memo(function EmployeeDetailView({
   t,
   employee,
   isLoading,
+  payrolls,
+  isLoadingPayrolls,
   onUpdate,
+  onAddPayment,
   onBack,
 }: EmployeeDetailViewProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState<Partial<EmployeeData>>({});
+  const [showAddPayment, setShowAddPayment] = useState(false);
 
   useEffect(() => {
     if (employee) setForm(employee);
@@ -258,6 +342,22 @@ export const EmployeeDetailView = memo(function EmployeeDetailView({
   const timeline = useMemo(
     () => (employee ? generateTimeline(employee, t) : []),
     [employee, t]
+  );
+
+  const sortedPayrolls = useMemo(
+    () =>
+      [...payrolls].sort((a, b) =>
+        (b.payment_date || b.period_start).localeCompare(a.payment_date || a.period_start)
+      ),
+    [payrolls]
+  );
+
+  const handleAddPayment = useCallback(
+    async (values: { amount: number; date: string }) => {
+      await onAddPayment(values);
+      setShowAddPayment(false);
+    },
+    [onAddPayment]
   );
 
   if (isLoading) {
@@ -483,6 +583,54 @@ export const EmployeeDetailView = memo(function EmployeeDetailView({
                 );
               })}
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* Salary Payments */}
+      <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Wallet className="size-5 text-[hsl(var(--color-primary))]" />
+            <h2 className="text-base font-semibold text-[hsl(var(--fg-primary))]">
+              {t("hr.salaryPayments", "پرداخت‌های حقوق")}
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowAddPayment((v) => !v)}
+            className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold bg-[hsl(var(--color-primary))] text-white"
+          >
+            {showAddPayment ? <X className="size-3.5" /> : <Plus className="size-3.5" />}
+            {t("hr.addPayment", "ثبت پرداخت")}
+          </button>
+        </div>
+
+        {showAddPayment && (
+          <AddPaymentForm t={t} onSubmit={handleAddPayment} onCancel={() => setShowAddPayment(false)} />
+        )}
+
+        {isLoadingPayrolls ? (
+          <div className="h-16 rounded-xl bg-[hsl(var(--surface-muted))] animate-pulse" />
+        ) : sortedPayrolls.length === 0 ? (
+          <p className="text-sm text-[hsl(var(--fg-secondary))] text-center py-4">
+            {t("hr.noPayments", "هنوز پرداختی ثبت نشده")}
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {sortedPayrolls.map((p) => (
+              <div
+                key={p.id}
+                className="flex items-center justify-between rounded-xl border border-[hsl(var(--border-default))] p-3"
+              >
+                <span className="text-xs text-[hsl(var(--fg-secondary))]">
+                  {p.payment_date || p.period_start}
+                </span>
+                <span className="text-sm font-bold tabular-nums text-[hsl(var(--fg-primary))]">
+                  {Number(p.net_salary).toLocaleString("fa-AF")} {p.currency || "AFN"}
+                </span>
+              </div>
+            ))}
           </div>
         )}
       </div>

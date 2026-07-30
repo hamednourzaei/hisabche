@@ -24,6 +24,7 @@ import { ActivityFeedList } from "./ActivityFeedList";
 import { ActivitySkeleton } from "./ActivitySkeleton";
 import { ActivityEmptyState } from "./ActivityEmptyState";
 import { useDebounce } from "../../../hooks/activity/useDebounce";
+import { AuditContainer } from "../audit/containers/audit-container";
 
 // ─── Filter mapping (kept exactly as before — this logic is correct) ───────
 
@@ -63,9 +64,12 @@ const searchGroups = (groups: ActivityGroupDto[], query: string): ActivityGroupD
 
 // ─── Main Page Component ──────────────────────────────────────────────────────
 
+type SectionType = "activity" | "audit";
+
 export function ActivitiesPage() {
   const t = useTranslations();
   const router = useRouter();
+  const [section, setSection] = useState<SectionType>("activity");
   const [filter, setFilter] = useState<FilterType>("all");
   const [search, setSearch] = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
@@ -155,8 +159,22 @@ export function ActivitiesPage() {
         )}
       </div>
 
+      {/* ─── Section switch: activity feed vs audit log ────── */}
+      <Tabs value={section} onValueChange={(v) => setSection(v as SectionType)}>
+        <TabsList className="w-full md:w-auto">
+          <TabsTrigger value="activity">{t("nav.events")}</TabsTrigger>
+          <TabsTrigger value="audit">{t("nav.history")}</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {section === "audit" ? (
+        <div className="pt-3 md:pt-4 lg:pt-5">
+          <AuditContainer />
+        </div>
+      ) : (
+        <>
       {/* ─── Toolbar: search + filter tabs ─────────────────── */}
-      <div className="space-y-2 md:space-y-3 lg:space-y-4 pb-3 md:pb-4 lg:pb-5">
+      <div className="space-y-2 md:space-y-3 lg:space-y-4 pb-3 md:pb-4 lg:pb-5 pt-3 md:pt-4 lg:pt-5">
         <div className="relative">
           <Search className="absolute start-2.5 md:start-3 lg:start-3.5 top-1/2 -translate-y-1/2 size-3.5 md:size-4 lg:size-[18px] text-[hsl(var(--fg-tertiary))]" />
           <input
@@ -239,6 +257,8 @@ export function ActivitiesPage() {
           />
         )}
       </div>
+        </>
+      )}
     </div>
   );
 }

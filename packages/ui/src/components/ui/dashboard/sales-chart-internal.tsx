@@ -4,8 +4,9 @@
 import { memo, useMemo, useId } from "react";
 import {
   ResponsiveContainer,
-  AreaChart,
+  ComposedChart,
   Area,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -17,6 +18,8 @@ interface ChartDataPoint {
   label: string;
   value: number;
   date: string;
+  invoiceCount?: number;
+  customerCount?: number;
 }
 
 interface InternalChartProps {
@@ -24,6 +27,8 @@ interface InternalChartProps {
   fmt: (v: number) => string;
   height: number;
   animationDuration: number;
+  showInvoices?: boolean;
+  showCustomers?: boolean;
 }
 
 const GRID_STROKE = "hsl(var(--border-default))";
@@ -44,11 +49,15 @@ function aggregateDataPoints(data: ChartDataPoint[], maxPoints: number): ChartDa
 
     const total = chunk.reduce((sum, d) => sum + d.value, 0);
     const avg = Math.round(total / chunk.length);
+    const invoiceCount = chunk.reduce((sum, d) => sum + (d.invoiceCount ?? 0), 0);
+    const customerCount = chunk.reduce((sum, d) => sum + (d.customerCount ?? 0), 0);
 
     result.push({
       label: first.label,
       value: avg,
       date: first.date,
+      invoiceCount,
+      customerCount,
     });
   }
 
@@ -64,11 +73,7 @@ const CustomTooltip = memo(function CustomTooltip({
   active?: boolean;
   payload?: Array<{
     value: number;
-    payload: {
-      label: string;
-      value: number;
-      date: string;
-    };
+    payload: ChartDataPoint;
   }>;
   fmt: (v: number) => string;
 }) {
@@ -92,6 +97,12 @@ const CustomTooltip = memo(function CustomTooltip({
       <p className="text-sm font-semibold text-[hsl(var(--color-primary))]">
         {fmt(dataPoint.value)}
       </p>
+      {dataPoint.invoiceCount !== undefined && (
+        <p className="text-[11px] text-[hsl(var(--status-info))]">{dataPoint.invoiceCount} فاکتور</p>
+      )}
+      {dataPoint.customerCount !== undefined && (
+        <p className="text-[11px] text-[hsl(var(--status-warning,var(--color-warning)))]">{dataPoint.customerCount} مشتری</p>
+      )}
     </div>
   );
 });
@@ -102,6 +113,8 @@ export default memo(function InternalSalesChart({
   fmt,
   height,
   animationDuration,
+  showInvoices = true,
+  showCustomers = true,
 }: InternalChartProps) {
   const gradientId = useId();
 
@@ -122,9 +135,9 @@ export default memo(function InternalSalesChart({
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <AreaChart
+      <ComposedChart
         data={aggregatedData}
-        margin={{ top: 4, right: 4, left: -20, bottom: 0 }}
+        margin={{ top: 4, right: showInvoices || showCustomers ? 20 : 4, left: -20, bottom: 0 }}
       >
         <defs>
           <linearGradient
@@ -159,14 +172,27 @@ export default memo(function InternalSalesChart({
           dy={8}
         />
         <YAxis
+          yAxisId="value"
           axisLine={false}
           tickLine={false}
           tick={{ fontSize: 11, fill: "hsl(var(--fg-tertiary))" }}
           tickFormatter={(v: number) => fmt(v)}
           width={60}
         />
+        {(showInvoices || showCustomers) && (
+          <YAxis
+            yAxisId="count"
+            orientation="right"
+            axisLine={false}
+            tickLine={false}
+            tick={{ fontSize: 11, fill: "hsl(var(--fg-tertiary))" }}
+            allowDecimals={false}
+            width={30}
+          />
+        )}
         <Tooltip content={<CustomTooltip fmt={fmt} />} />
         <Area
+          yAxisId="value"
           type="monotone"
           dataKey="value"
           stroke="hsl(var(--color-primary))"
@@ -183,7 +209,29 @@ export default memo(function InternalSalesChart({
           animationDuration={animationDuration}
           animationEasing="ease-out"
         />
-      </AreaChart>
+        {showInvoices && (
+          <Line
+            yAxisId="count"
+            type="monotone"
+            dataKey="invoiceCount"
+            stroke="hsl(var(--status-info))"
+            strokeWidth={2}
+            dot={false}
+            animationDuration={animationDuration}
+          />
+        )}
+        {showCustomers && (
+          <Line
+            yAxisId="count"
+            type="monotone"
+            dataKey="customerCount"
+            stroke="hsl(var(--color-warning))"
+            strokeWidth={2}
+            dot={false}
+            animationDuration={animationDuration}
+          />
+        )}
+      </ComposedChart>
     </ResponsiveContainer>
   );
 });

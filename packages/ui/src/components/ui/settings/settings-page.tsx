@@ -55,7 +55,11 @@ const PERFORMANCE_MODES = [
 // ─── Account Section ──────────────────────────────────────────────────────
 
 const AccountSection = memo(function AccountSection() {
-  const t = useTranslations();
+  const tOriginal = useTranslations();
+  const t = (key: string, fallback?: string): string => {
+    const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
+    return v && v !== key ? v : (fallback ?? key);
+  };
   const { user, logout } = useAuthStore();
 
   const handleLogout = useCallback(() => {
@@ -131,7 +135,11 @@ const ALLOWED_STAMP_TYPES = ["image/png", "image/svg+xml"];
 const MAX_STAMP_SIZE = 1024 * 1024; // 1MB — چون به‌صورت data URL در ستون متنی ذخیره می‌شود
 
 const BusinessStampSection = memo(function BusinessStampSection() {
-  const t = useTranslations();
+  const tOriginal = useTranslations();
+  const t = (key: string, fallback?: string): string => {
+    const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
+    return v && v !== key ? v : (fallback ?? key);
+  };
   const { data: workspaces } = useWorkspaces();
   const updateWorkspace = useUpdateWorkspace();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -268,7 +276,11 @@ BusinessStampSection.displayName = "BusinessStampSection";
 // ─── Backup Section ───────────────────────────────────────────────────────
 
 const BackupSection = memo(function BackupSection() {
-  const t = useTranslations();
+  const tOriginal = useTranslations();
+  const t = (key: string, fallback?: string): string => {
+    const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
+    return v && v !== key ? v : (fallback ?? key);
+  };
   const {
     autoBackupEnabled,
     setAutoBackup,
@@ -406,7 +418,11 @@ BackupSection.displayName = "BackupSection";
 // ─── Performance Section ──────────────────────────────────────────────────
 
 const PerformanceSection = memo(function PerformanceSection() {
-  const t = useTranslations();
+  const tOriginal = useTranslations();
+  const t = (key: string, fallback?: string): string => {
+    const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
+    return v && v !== key ? v : (fallback ?? key);
+  };
   const { performanceMode, setPerformanceMode } = useDeviceStore();
 
   return (
@@ -450,7 +466,11 @@ PerformanceSection.displayName = "PerformanceSection";
 // ─── Safety Section ───────────────────────────────────────────────────────
 
 const SafetySection = memo(function SafetySection() {
-  const t = useTranslations();
+  const tOriginal = useTranslations();
+  const t = (key: string, fallback?: string): string => {
+    const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
+    return v && v !== key ? v : (fallback ?? key);
+  };
 
   return (
     <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
@@ -484,7 +504,11 @@ SafetySection.displayName = "SafetySection";
 // ─── Storage Section ──────────────────────────────────────────────────────
 
 const StorageSection = memo(function StorageSection() {
-  const t = useTranslations();
+  const tOriginal = useTranslations();
+  const t = (key: string, fallback?: string): string => {
+    const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
+    return v && v !== key ? v : (fallback ?? key);
+  };
 
   const handleClearCache = useCallback(() => {
     // TODO: Implement cache clearing
@@ -534,7 +558,11 @@ StorageSection.displayName = "StorageSection";
 // ─── Billing Link ────────────────────────────────────────────────────────────
 
 const BillingSection = memo(function BillingSection() {
-  const t = useTranslations();
+  const tOriginal = useTranslations();
+  const t = (key: string, fallback?: string): string => {
+    const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
+    return v && v !== key ? v : (fallback ?? key);
+  };
 
   return (
     <Link
@@ -564,7 +592,11 @@ const BillingSection = memo(function BillingSection() {
 BillingSection.displayName = "BillingSection";
 
 const WorkflowTemplatesSection = memo(function WorkflowTemplatesSection() {
-  const t = useTranslations();
+  const tOriginal = useTranslations();
+  const t = (key: string, fallback?: string): string => {
+    const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
+    return v && v !== key ? v : (fallback ?? key);
+  };
 
   return (
     <Link
@@ -596,7 +628,11 @@ WorkflowTemplatesSection.displayName = "WorkflowTemplatesSection";
 // ─── Main Page ─────────────────────────────────────────────────────────────
 
 export const SettingsPage = memo(function SettingsPage() {
-  const t = useTranslations();
+  const tOriginal = useTranslations();
+  const t = (key: string, fallback?: string): string => {
+    const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
+    return v && v !== key ? v : (fallback ?? key);
+  };
 
   return (
     <div className="max-w-3xl mx-auto px-4 py-8 space-y-6">

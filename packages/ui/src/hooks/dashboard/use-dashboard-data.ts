@@ -10,6 +10,7 @@ import {
   useInvoices,
   useRealtime,
   useProducts,
+  useActivities,
 } from "@hisabche/api";
 import { mapRecentInvoices, mapLowStockItems } from "../../lib/dashboard/dashboard-mappers";
 import { getTodayDate, getDaysAgo } from "../../lib/dashboard/dashboard-utils";
@@ -77,6 +78,11 @@ export function useDashboardData(dateRange: DateRange) {
     sortDirection: "desc",
   });
 
+  const {
+    data: activitiesData,
+    isLoading: activitiesLoading,
+  } = useActivities();
+
   // ─── Realtime Subscriptions ─────────────────────────────────────────────
 
   useRealtime({
@@ -133,6 +139,7 @@ export function useDashboardData(dateRange: DateRange) {
     insights,
     salesChartData,
     recentInvoices,
+    recentActivities: activitiesData ?? [],
     lowStockItems,
     pendingPaymentsCount,
     customerGrowth,
@@ -143,6 +150,7 @@ export function useDashboardData(dateRange: DateRange) {
     chartLoading: salesLoading,
     invLoading: invoicesLoading,
     prodLoading: productsLoading,
+    activitiesLoading,
     refetchKpis,
     refetchInsights,
     refetchSales,

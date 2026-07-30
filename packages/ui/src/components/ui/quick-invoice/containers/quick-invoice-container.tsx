@@ -41,6 +41,9 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
   const [paymentType, setPaymentType] =
     useState<QuickInvoicePageProps["paymentType"]>("cash");
   const [paidNow, setPaidNow] = useState("");
+  const [discountValue, setDiscountValue] = useState("");
+  const [discountType, setDiscountType] = useState<"fixed" | "percentage">("fixed");
+  const [isPaid, setIsPaid] = useState(true);
   const [showCelebration, setShowCelebration] = useState(false);
   const [createdInvoiceId, setCreatedInvoiceId] = useState<string | null>(null);
   const [startTime] = useState(Date.now());
@@ -55,13 +58,24 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
   }, [startTime]);
 
   // ✅ useMemo برای محاسبات
-  const total = useMemo(
+  const subtotal = useMemo(
     () =>
       items.reduce(
         (sum, item) => sum + (parseFloat(item.price) || 0) * (parseInt(item.quantity) || 0),
         0
       ),
     [items]
+  );
+
+  const discountAmount = useMemo(() => {
+    const v = parseFloat(discountValue) || 0;
+    if (v <= 0) return 0;
+    return discountType === "percentage" ? (subtotal * v) / 100 : v;
+  }, [discountValue, discountType, subtotal]);
+
+  const total = useMemo(
+    () => Math.max(0, Math.round((subtotal - discountAmount) * 100) / 100),
+    [subtotal, discountAmount]
   );
 
   const productName = useMemo(
@@ -84,6 +98,23 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
     });
   }, []);
 
+  // ✅ آیتم با نام دلخواه (بدون محصول واقعی از انبار) — مثلاً حق‌الزحمه خدمات
+  // product.id خالی می‌ماند تا در handleCreate با undefined جایگزین شود و
+  // به‌جای شناسه‌ی جعلی محصول، productId اصلاً ارسال نشود (مغایرت FK نداشته باشیم).
+  const addCustomItem = useCallback((name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setItems((prev) => [
+      ...prev,
+      {
+        key: `custom-${Date.now()}`,
+        product: { id: "", name: trimmed, sellPrice: 0, unit: "" },
+        quantity: "1",
+        price: "0",
+      },
+    ]);
+  }, []);
+
   const removeItem = useCallback((key: string) => {
     setItems((prev) => prev.filter((item) => item.key !== key));
   }, []);
@@ -100,12 +131,20 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
     );
   }, []);
 
+  // ✅ سویچ «تسویه شده» صریح — مستقل از نوع پرداخت (نقد/نسیه)، کاربر می‌تواند
+  // برای هر دو حالت وضعیت پرداخت را دستی مشخص کند
   const paidAmount = useMemo(
-    () => (paymentType === "cash" ? total : parseFloat(paidNow) || 0),
-    [paymentType, total, paidNow]
+    () => (isPaid ? total : parseFloat(paidNow) || 0),
+    [isPaid, total, paidNow]
   );
 
-  const safeT = t;
+  const safeT = useCallback(
+    (key: string, fallback?: string): string => {
+      const v = t(key as Parameters<typeof t>[0]);
+      return v && v !== key ? v : (fallback ?? key);
+    },
+    [t]
+  );
 
   const elapsedFormatted = useMemo(
     () =>
@@ -133,9 +172,9 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
       const newInvoice = await createInvoice.mutateAsync({
         type: "sale",
         date: new Date().toISOString(),
-        subtotal: total,
-        discountTotal: 0,
-        discountType: "fixed",
+        subtotal,
+        discountTotal: discountAmount,
+        discountType,
         taxRate: preferences.lastTaxRate ?? 0,
         taxTotal: 0,
         total,
@@ -147,7 +186,8 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
           const quantity = parseInt(item.quantity) || 1;
           const unitPrice = parseFloat(item.price) || 0;
           return {
-            productId: item.product.id,
+            // آیتم با نام دلخواه، product.id خالی است — productId ارسال نمی‌شود
+            ...(item.product.id && { productId: item.product.id }),
             productName: item.product.name,
             quantity,
             unitPrice,
@@ -185,6 +225,9 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
     }
   }, [
     items,
+    subtotal,
+    discountAmount,
+    discountType,
     total,
     paidAmount,
     paymentType,
@@ -218,18 +261,26 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
       selectedCustomer={selectedCustomer}
       paymentType={paymentType}
       paidNow={paidNow}
+      subtotal={subtotal}
+      discountValue={discountValue}
+      discountType={discountType}
       total={total}
       productName={productName}
       paidAmount={paidAmount}
+      isPaid={isPaid}
       createdInvoiceId={createdInvoiceId}
       isPending={createInvoice.isPending}
       onAddItem={addItem}
+      onAddCustomItem={addCustomItem}
       onRemoveItem={removeItem}
       onUpdateItemQuantity={updateItemQuantity}
       onUpdateItemPrice={updateItemPrice}
       onSelectCustomer={setSelectedCustomer}
       onPaymentTypeChange={setPaymentType}
       onPaidNowChange={setPaidNow}
+      onDiscountValueChange={setDiscountValue}
+      onDiscountTypeChange={setDiscountType}
+      onIsPaidChange={setIsPaid}
       onSetStep={setStep}
       onConfirmCreate={handleCreate}
       onDismissCelebration={dismissCelebration}

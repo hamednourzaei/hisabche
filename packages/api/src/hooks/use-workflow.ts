@@ -113,6 +113,7 @@ export function useWorkflow(id: string) {
     },
     enabled: authReady && !!id,
     staleTime: 120_000,
+    retry: false,
   });
 }
 

@@ -44,6 +44,9 @@ interface UseCustomersDataResult {
   overdueCount: number
   vipCount: number
   todaySales: number
+  totalSales: number
+  topCustomerName: string | null
+  topCustomerAmount: number
   openDealsCount: number
   isLoading: boolean
   isError: boolean
@@ -194,6 +197,24 @@ export function useCustomersData(
       })
       .reduce((sum, inv) => sum + (inv.total || 0), 0)
 
+    // کل فروش (مجموع خرید همه‌ی مشتریان)
+    const totalSales = enrichedCustomers.reduce(
+      (sum, c) => sum + (c.totalPurchases || 0),
+      0
+    )
+
+    // پرخریدترین مشتری
+    const topCustomer = enrichedCustomers.reduce<ExtendedCustomer | null>(
+      (top, c) =>
+        (c.totalPurchases || 0) > (top?.totalPurchases || 0) ? c : top,
+      null
+    )
+    const topCustomerName =
+      topCustomer && (topCustomer.totalPurchases || 0) > 0
+        ? topCustomer.fullName || topCustomer.name || null
+        : null
+    const topCustomerAmount = topCustomer?.totalPurchases || 0
+
     return {
       customersWithDebt: enrichedCustomers,
       customersWithOpenInvoices: enrichedCustomers,
@@ -203,6 +224,9 @@ export function useCustomersData(
       overdueCount,
       vipCount,
       todaySales,
+      totalSales,
+      topCustomerName,
+      topCustomerAmount,
       openDealsCount,
     }
   }, [customersData, invoicesData])

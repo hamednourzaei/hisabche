@@ -101,6 +101,27 @@ export function useRemoveMember() {
   });
 }
 
+// ✅ Direct member creation — دسترسی مستقیم کارمند به سایت (بدون فرآیند دعوت ایمیلی)
+export function useCreateMemberDirect() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      workspaceId,
+      ...values
+    }: {
+      workspaceId: string;
+      email: string;
+      password: string;
+      fullName: string;
+      role: "admin" | "member";
+    }) => {
+      const { data } = await apiClient.post(`/workspaces/${workspaceId}/members/direct`, values);
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: workspaceKeys.all }),
+  });
+}
+
 // ✅ Update member role
 export function useUpdateMemberRole() {
   const qc = useQueryClient();

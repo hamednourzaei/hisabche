@@ -3,16 +3,11 @@
 
 import { memo, useMemo, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { useCurrency } from "../../../hooks/use-currency";
-import { Handshake, MessageSquare, Briefcase, Plus, X } from "lucide-react";
-import { CustomerPicker } from "../customer-picker";
-import type { Interaction, Opportunity } from "@hisabche/api";
-
-interface CustomerOption {
-  id: string;
-  name: string;
-  phone: string;
-}
+import { Handshake, MessageSquare, BarChart3, Plus, X, ClipboardList, Users, Clock, PlayCircle, CheckCircle2 } from "lucide-react";
+import { CustomerMultiPicker, type CustomerOption } from "./customer-multi-picker";
+import { TaskDetailModal } from "./task-detail-modal";
+import { TaskStatsChart, type EmployeeTaskStat } from "./task-stats-chart";
+import type { Interaction, TaskStatus } from "@hisabche/api";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    CrmView — Memoized · Performance Optimized
@@ -21,27 +16,46 @@ interface CustomerOption {
 
 export type CrmTabId = "interactions" | "opportunities";
 
+export interface EmployeeOption {
+  id: string;
+  name: string;
+}
+
 interface CrmViewProps {
   t: (key: string, fallback?: string) => string;
   activeTab: CrmTabId;
   onTabChange: (tab: CrmTabId) => void;
   interactions: Interaction[];
-  opportunities: Opportunity[];
+  employees: EmployeeOption[];
   isLoading: boolean;
   error?: string | null;
   isCreatingInteraction: boolean;
-  onCreateInteraction: (input: { customerId: string; type: string; subject: string; content: string }) => Promise<void>;
+  isUpdatingStatus: boolean;
+  onCreateInteraction: (input: {
+    customerId: string;
+    customerIds: string[];
+    employeeId: string;
+    employeeName: string;
+    type: string;
+    subject: string;
+    content: string;
+  }) => Promise<void>;
+  onUpdateStatus: (id: string, status: TaskStatus) => Promise<void>;
+  getPublicTaskUrl: (token: string) => string;
 }
 
 const INTERACTION_TYPES = ["call", "meeting", "email", "note"] as const;
 
-const STAGE_BADGE_MAP: Record<string, string> = {
-  lead: "bg-[hsl(var(--fg-tertiary)/0.12)] text-[hsl(var(--fg-tertiary))]",
-  qualified: "bg-[hsl(var(--color-info)/0.12)] text-[hsl(var(--color-info))]",
-  proposal: "bg-[hsl(var(--color-warning)/0.12)] text-[hsl(var(--color-warning))]",
-  negotiation: "bg-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))]",
-  closed_won: "bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))]",
-  closed_lost: "bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))]",
+const STATUS_LABEL_KEY: Record<TaskStatus, [string, string]> = {
+  pending: ["crm.status.pending", "در حال انتظار"],
+  in_progress: ["crm.status.inProgress", "در حال انجام"],
+  completed: ["crm.status.completed", "کامل شد"],
+};
+
+const STATUS_BADGE_MAP: Record<TaskStatus, string> = {
+  pending: "bg-[hsl(var(--color-warning)/0.12)] text-[hsl(var(--color-warning))]",
+  in_progress: "bg-[hsl(var(--color-info)/0.12)] text-[hsl(var(--color-info))]",
+  completed: "bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))]",
 };
 
 function formatDate(date?: string): string {
@@ -62,43 +76,79 @@ export const CrmView = memo(function CrmView({
   activeTab,
   onTabChange,
   interactions,
-  opportunities,
+  employees,
   isLoading,
   error,
   isCreatingInteraction,
+  isUpdatingStatus,
   onCreateInteraction,
+  onUpdateStatus,
+  getPublicTaskUrl,
 }: CrmViewProps) {
-  const { format: formatMoney } = useCurrency();
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [customer, setCustomer] = useState<CustomerOption | null>(null);
+  const [customers, setCustomers] = useState<CustomerOption[]>([]);
+  const [employeeId, setEmployeeId] = useState<string>("");
   const [type, setType] = useState<string>("call");
   const [subject, setSubject] = useState("");
   const [content, setContent] = useState("");
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
 
   const handleSubmit = useCallback(async () => {
-    if (!customer || !subject.trim()) return;
-    await onCreateInteraction({ customerId: customer.id, type, subject: subject.trim(), content: content.trim() });
-    setCustomer(null);
+    if (customers.length === 0 || !subject.trim() || !employeeId) return;
+    const employee = employees.find((e) => e.id === employeeId);
+    await onCreateInteraction({
+      customerId: customers[0]!.id,
+      customerIds: customers.map((c) => c.id),
+      employeeId,
+      employeeName: employee?.name ?? "",
+      type,
+      subject: subject.trim(),
+      content: content.trim(),
+    });
+    setCustomers([]);
+    setEmployeeId("");
     setType("call");
     setSubject("");
     setContent("");
     setIsFormOpen(false);
-  }, [customer, type, subject, content, onCreateInteraction]);
+  }, [customers, employeeId, employees, type, subject, content, onCreateInteraction]);
 
-  const stageLabel = useMemo(
-    () => (stage: string) => {
-      const map: Record<string, string> = {
-        lead: t("crm.stage.lead", "سرنخ"),
-        qualified: t("crm.stage.qualified", "واجد شرایط"),
-        proposal: t("crm.stage.proposal", "پیشنهاد"),
-        negotiation: t("crm.stage.negotiation", "مذاکره"),
-        closed_won: t("crm.stage.closedWon", "موفق"),
-        closed_lost: t("crm.stage.closedLost", "ناموفق"),
-      };
-      return map[stage] || stage;
-    },
-    [t]
+  const selectedTask = useMemo(
+    () => interactions.find((i) => i.id === selectedTaskId) ?? null,
+    [interactions, selectedTaskId]
   );
+
+  // ─── Task stats (Part F) — real aggregates derived from the status field ──
+  const { totalCount, pendingCount, inProgressCount, completedCount, employeeStats } = useMemo(() => {
+    let pendingCount = 0;
+    let inProgressCount = 0;
+    let completedCount = 0;
+    const byEmployee = new Map<string, EmployeeTaskStat>();
+
+    for (const task of interactions) {
+      if (task.status === "pending") pendingCount++;
+      else if (task.status === "in_progress") inProgressCount++;
+      else if (task.status === "completed") completedCount++;
+
+      const employeeName = task.employeeName || t("crm.unassigned", "بدون تخصیص");
+      const stat = byEmployee.get(employeeName) ?? {
+        employee: employeeName,
+        pending: 0,
+        in_progress: 0,
+        completed: 0,
+      };
+      stat[task.status]++;
+      byEmployee.set(employeeName, stat);
+    }
+
+    return {
+      totalCount: interactions.length,
+      pendingCount,
+      inProgressCount,
+      completedCount,
+      employeeStats: Array.from(byEmployee.values()),
+    };
+  }, [interactions, t]);
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto px-4">
@@ -135,8 +185,8 @@ export const CrmView = memo(function CrmView({
               : "border-transparent text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--fg-primary))]"
           )}
         >
-          <Briefcase className="size-4" />
-          {t("crm.tabs.opportunities", "فرصت‌های فروش")}
+          <BarChart3 className="size-4" />
+          {t("crm.tabs.stats", "آمار تعاملات")}
         </button>
         {activeTab === "interactions" && (
           <button
@@ -145,19 +195,33 @@ export const CrmView = memo(function CrmView({
             className="ms-auto mb-1 inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-bold text-white bg-[hsl(var(--color-primary))] hover:brightness-110 transition-all"
           >
             {isFormOpen ? <X className="size-4" /> : <Plus className="size-4" />}
-            {t("crm.interactions.new", "تعامل جدید")}
+            {t("crm.interactions.new", "وظیفه جدید")}
           </button>
         )}
       </div>
 
-      {/* New Interaction Form */}
+      {/* New Task Form */}
       {activeTab === "interactions" && isFormOpen && (
         <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-5 space-y-4">
-          <CustomerPicker
-            value={customer}
-            onChange={setCustomer}
-            placeholder={t("customer.pickPlaceholder", "انتخاب مشتری...")}
+          <select
+            value={employeeId}
+            onChange={(e) => setEmployeeId(e.target.value)}
+            className="w-full rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 py-2.5 text-sm text-[hsl(var(--fg-primary))]"
+          >
+            <option value="">{t("crm.pickEmployeePlaceholder", "انتخاب پرسنل...")}</option>
+            {employees.map((emp) => (
+              <option key={emp.id} value={emp.id}>
+                {emp.name}
+              </option>
+            ))}
+          </select>
+
+          <CustomerMultiPicker
+            value={customers}
+            onChange={setCustomers}
+            placeholder={t("crm.pickCustomersPlaceholder", "انتخاب مشتری‌ها...")}
           />
+
           <div className="grid grid-cols-2 gap-3">
             <select
               value={type}
@@ -187,11 +251,11 @@ export const CrmView = memo(function CrmView({
           />
           <button
             type="button"
-            disabled={!customer || !subject.trim() || isCreatingInteraction}
+            disabled={customers.length === 0 || !subject.trim() || !employeeId || isCreatingInteraction}
             onClick={handleSubmit}
             className="w-full rounded-full px-5 py-2.5 text-sm font-bold text-white bg-[hsl(var(--color-primary))] hover:brightness-110 disabled:opacity-40 transition-all"
           >
-            {t("crm.interactions.create", "ثبت تعامل")}
+            {t("crm.interactions.create", "ثبت وظیفه")}
           </button>
         </div>
       )}
@@ -204,19 +268,19 @@ export const CrmView = memo(function CrmView({
       )}
 
       {/* Body */}
-      <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] overflow-hidden">
-        {isLoading ? (
-          <div className="p-8 space-y-3">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-12 rounded-xl bg-[hsl(var(--surface-muted))] animate-pulse" />
-            ))}
-          </div>
-        ) : activeTab === "interactions" ? (
-          interactions.length === 0 ? (
+      {activeTab === "interactions" ? (
+        <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] overflow-hidden">
+          {isLoading ? (
+            <div className="p-8 space-y-3">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-12 rounded-xl bg-[hsl(var(--surface-muted))] animate-pulse" />
+              ))}
+            </div>
+          ) : interactions.length === 0 ? (
             <div className="p-12 text-center">
-              <MessageSquare className="size-12 mx-auto mb-3 text-[hsl(var(--fg-tertiary))]" />
+              <ClipboardList className="size-12 mx-auto mb-3 text-[hsl(var(--fg-tertiary))]" />
               <p className="text-[hsl(var(--fg-secondary))]">
-                {t("crm.interactions.empty", "هیچ تعاملی ثبت نشده")}
+                {t("crm.interactions.empty", "هیچ وظیفه‌ای ثبت نشده")}
               </p>
             </div>
           ) : (
@@ -224,6 +288,15 @@ export const CrmView = memo(function CrmView({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))]">
+                    <th className="px-4 py-3 text-start font-medium text-[hsl(var(--fg-secondary))] text-xs">
+                      {t("crm.employee", "نام پرسنل")}
+                    </th>
+                    <th className="px-4 py-3 text-start font-medium text-[hsl(var(--fg-secondary))] text-xs">
+                      {t("crm.customerCount", "تعداد مشتری")}
+                    </th>
+                    <th className="px-4 py-3 text-start font-medium text-[hsl(var(--fg-secondary))] text-xs">
+                      {t("crm.customerPhone", "شماره مشتری")}
+                    </th>
                     <th className="px-4 py-3 text-start font-medium text-[hsl(var(--fg-secondary))] text-xs">
                       {t("crm.interactions.subject", "موضوع")}
                     </th>
@@ -233,87 +306,121 @@ export const CrmView = memo(function CrmView({
                     <th className="px-4 py-3 text-start font-medium text-[hsl(var(--fg-secondary))] text-xs">
                       {t("crm.interactions.date", "تاریخ")}
                     </th>
+                    <th className="px-4 py-3 text-start font-medium text-[hsl(var(--fg-secondary))] text-xs">
+                      {t("crm.process", "فرایند")}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {interactions.map((interaction) => (
-                    <tr
-                      key={interaction.id}
-                      className="border-b border-[hsl(var(--border-default))] hover:bg-[hsl(var(--surface-muted)/0.5)] transition-colors"
-                    >
-                      <td className="px-4 py-3 text-[hsl(var(--fg-primary))]">{interaction.subject}</td>
-                      <td className="px-4 py-3 text-xs text-[hsl(var(--fg-secondary))]">{interaction.type}</td>
-                      <td className="px-4 py-3 text-xs text-[hsl(var(--fg-secondary))] whitespace-nowrap">
-                        {formatDate(interaction.interactionDate)}
-                      </td>
-                    </tr>
-                  ))}
+                  {interactions.map((interaction) => {
+                    const custs = interaction.customers ?? [];
+                    const first = custs[0];
+                    const extra = custs.length - 1;
+                    return (
+                      <tr
+                        key={interaction.id}
+                        onClick={() => setSelectedTaskId(interaction.id)}
+                        className="cursor-pointer border-b border-[hsl(var(--border-default))] hover:bg-[hsl(var(--surface-muted)/0.5)] transition-colors"
+                      >
+                        <td className="px-4 py-3 text-[hsl(var(--fg-primary))] whitespace-nowrap">
+                          {interaction.employeeName || "-"}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-[hsl(var(--fg-secondary))]">
+                          <span className="inline-flex items-center gap-1">
+                            <Users className="size-3.5" />
+                            {custs.length}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-[hsl(var(--fg-secondary))] whitespace-nowrap">
+                          {first?.phone ? (
+                            <>
+                              {first.phone}
+                              {extra > 0 && (
+                                <span className="text-[hsl(var(--fg-tertiary))]"> +{extra}</span>
+                              )}
+                            </>
+                          ) : (
+                            "-"
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-[hsl(var(--fg-primary))]">{interaction.subject}</td>
+                        <td className="px-4 py-3 text-xs text-[hsl(var(--fg-secondary))]">
+                          {t(`crm.interactions.type.${interaction.type}`, interaction.type)}
+                        </td>
+                        <td className="px-4 py-3 text-xs text-[hsl(var(--fg-secondary))] whitespace-nowrap">
+                          {formatDate(interaction.interactionDate)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={cn(
+                              "px-2 py-0.5 rounded-full text-xs font-medium",
+                              STATUS_BADGE_MAP[interaction.status]
+                            )}
+                          >
+                            {t(...STATUS_LABEL_KEY[interaction.status])}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
-          )
-        ) : opportunities.length === 0 ? (
-          <div className="p-12 text-center">
-            <Briefcase className="size-12 mx-auto mb-3 text-[hsl(var(--fg-tertiary))]" />
-            <p className="text-[hsl(var(--fg-secondary))]">
-              {t("crm.opportunities.empty", "هیچ فرصت فروشی ثبت نشده")}
-            </p>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {/* KPI cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
+            {[
+              { id: "total", icon: ClipboardList, label: t("crm.stats.total", "مجموع وظایف"), value: totalCount },
+              { id: "in_progress", icon: PlayCircle, label: t("crm.status.inProgress", "در حال انجام"), value: inProgressCount },
+              { id: "pending", icon: Clock, label: t("crm.status.pending", "در حال انتظار"), value: pendingCount },
+              { id: "completed", icon: CheckCircle2, label: t("crm.status.completed", "کامل شد"), value: completedCount },
+            ].map((card) => (
+              <div
+                key={card.id}
+                className="min-w-0 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-2.5 sm:p-4 space-y-1 sm:space-y-2"
+              >
+                <div className="flex items-center gap-1.5 sm:gap-2">
+                  <card.icon className="size-3.5 sm:size-4 shrink-0 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+                  <span className="truncate text-[10px] sm:text-xs text-[hsl(var(--fg-secondary))]">{card.label}</span>
+                </div>
+                <p className="truncate text-sm sm:text-xl font-bold tabular-nums text-[hsl(var(--fg-primary))]">
+                  {card.value}
+                </p>
+              </div>
+            ))}
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))]">
-                  <th className="px-4 py-3 text-start font-medium text-[hsl(var(--fg-secondary))] text-xs">
-                    {t("crm.opportunities.title", "عنوان")}
-                  </th>
-                  <th className="px-4 py-3 text-start font-medium text-[hsl(var(--fg-secondary))] text-xs">
-                    {t("crm.opportunities.stage", "مرحله")}
-                  </th>
-                  <th className="px-4 py-3 text-start font-medium text-[hsl(var(--fg-secondary))] text-xs">
-                    {t("crm.opportunities.value", "ارزش")}
-                  </th>
-                  <th className="px-4 py-3 text-start font-medium text-[hsl(var(--fg-secondary))] text-xs hidden sm:table-cell">
-                    {t("crm.opportunities.probability", "احتمال")}
-                  </th>
-                  <th className="px-4 py-3 text-start font-medium text-[hsl(var(--fg-secondary))] text-xs hidden md:table-cell">
-                    {t("crm.opportunities.expectedCloseDate", "تاریخ تخمینی")}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {opportunities.map((opportunity) => (
-                  <tr
-                    key={opportunity.id}
-                    className="border-b border-[hsl(var(--border-default))] hover:bg-[hsl(var(--surface-muted)/0.5)] transition-colors"
-                  >
-                    <td className="px-4 py-3 text-[hsl(var(--fg-primary))]">{opportunity.title}</td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={cn(
-                          "px-2 py-0.5 rounded-full text-xs font-medium",
-                          STAGE_BADGE_MAP[opportunity.stage] || STAGE_BADGE_MAP.lead
-                        )}
-                      >
-                        {stageLabel(opportunity.stage)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-xs text-[hsl(var(--fg-secondary))] whitespace-nowrap">
-                      {formatMoney(opportunity.value)}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-[hsl(var(--fg-secondary))] hidden sm:table-cell">
-                      {opportunity.probability}%
-                    </td>
-                    <td className="px-4 py-3 text-xs text-[hsl(var(--fg-secondary))] hidden md:table-cell whitespace-nowrap">
-                      {formatDate(opportunity.expectedCloseDate)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+
+          {/* Bar chart: task count per employee, colored by status */}
+          {isLoading ? (
+            <div className="h-64 rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
+          ) : (
+            <TaskStatsChart
+              data={employeeStats}
+              labels={{
+                pending: t("crm.status.pending", "در حال انتظار"),
+                in_progress: t("crm.status.inProgress", "در حال انجام"),
+                completed: t("crm.status.completed", "کامل شد"),
+              }}
+              emptyLabel={t("crm.opportunities.empty", "هیچ وظیفه‌ای ثبت نشده")}
+            />
+          )}
+        </div>
+      )}
+
+      {/* Task detail modal */}
+      {selectedTask && (
+        <TaskDetailModal
+          t={t}
+          task={selectedTask}
+          publicTaskUrl={selectedTask.publicToken ? getPublicTaskUrl(selectedTask.publicToken) : null}
+          isUpdating={isUpdatingStatus}
+          onClose={() => setSelectedTaskId(null)}
+          onUpdateStatus={(status) => onUpdateStatus(selectedTask.id, status)}
+        />
+      )}
     </div>
   );
 });

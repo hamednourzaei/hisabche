@@ -12,7 +12,7 @@
 import {
   LayoutDashboard, PlusCircle, Wallet, Boxes, ShoppingCart, TrendingUp,
   Users, BookOpen, Handshake, Building2, Kanban, Factory, ClipboardCheck,
-  Settings, Key, Shield, Bell, RefreshCw, EllipsisVertical,
+  Settings, Key, Bell, RefreshCw, EllipsisVertical,
   type LucideIcon
 } from 'lucide-react'
 
@@ -20,7 +20,7 @@ export type NavId =
   // primary — daily intents
   | 'today' | 'sell' | 'get-paid' | 'stock' | 'buy' | 'money'
   // secondary — people
-  | 'buyers' | 'follow-up' | 'team' | 'coworkers'
+  | 'buyers' | 'follow-up' | 'team'
   // secondary — work
   | 'projects' | 'production' | 'approvals'
   // secondary — system
@@ -59,7 +59,6 @@ export const NAV_ITEMS: NavItem[] = [
   { id: 'buyers',    icon: BookOpen,  emoji: '📒', labelKey: 'nav.buyers',    descriptionKey: 'nav.buyers.description',    path: '/customers',       group: 'people' },
   { id: 'follow-up', icon: Handshake, emoji: '🤝', labelKey: 'nav.followUp',  descriptionKey: 'nav.followUp.description',  path: '/crm',             group: 'people' },
   { id: 'team',      icon: Users,     emoji: '👥', labelKey: 'nav.team',      descriptionKey: 'nav.team.description',      path: '/human-resources', group: 'people' },
-  { id: 'coworkers', icon: Building2, emoji: '🏢', labelKey: 'nav.coworkers', descriptionKey: 'nav.coworkers.description', path: '/workspace',       group: 'people' },
 
   // ─── کارها ───
   { id: 'projects',   icon: Kanban,  emoji: '📋', labelKey: 'nav.projects',   descriptionKey: 'nav.projects.description',   path: '/projects',      group: 'work' },
@@ -69,7 +68,6 @@ export const NAV_ITEMS: NavItem[] = [
   // ─── تنظیمات و امنیت ───
   { id: 'settings', icon: Settings,  emoji: '⚙️', labelKey: 'nav.settings', descriptionKey: 'nav.settings.description', path: '/settings',    group: 'system' },
   { id: 'access',   icon: Key,       emoji: '🔑', labelKey: 'nav.access',   descriptionKey: 'nav.access.description',   path: '/permissions', group: 'system' },
-  { id: 'history',  icon: Shield,    emoji: '🛡️', labelKey: 'nav.history',  descriptionKey: 'nav.history.description',  path: '/audit',       group: 'system' },
   { id: 'events',   icon: Bell,      emoji: '🔔', labelKey: 'nav.events',   descriptionKey: 'nav.events.description',   path: '/activities',  group: 'system' },
   { id: 'sync',     icon: RefreshCw, emoji: '🔄', labelKey: 'nav.sync',     descriptionKey: 'nav.sync.description',     path: '/sync-center', group: 'system' },
 ]

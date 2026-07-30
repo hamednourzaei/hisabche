@@ -1,19 +1,22 @@
 // packages/ui/src/components/ui/dashboard/dashboard-view.tsx
 "use client";
 
-import { memo, useMemo } from "react";
+import { memo, useId, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
-import { 
-  Sparkles, 
-  TrendingUp, 
-  Receipt, 
+import {
+  Sparkles,
+  TrendingUp,
+  Wallet,
+  CreditCard,
+  Boxes,
+  Activity as ActivityIcon,
 } from "lucide-react";
 import { SalesChart, type ChartDataPoint } from "./sales-chart";
 import { DateRangePicker, type DateRange, type PresetKey } from "./date-range-picker";
 import type { AIInsight } from "@hisabche/api";
+import type { ActivityGroupDto } from "@hisabche/api";
 import dynamic from "next/dynamic";
-import { BusinessHealthPanel } from "./business-health-panel";
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -22,47 +25,31 @@ type Translate = (key: string, fallback?: string) => string;
 interface DashboardViewProps {
   t: Translate;
   fmt: (v: number) => string;
-  
+
   // KPI Data
+  totalSales: number;
   todaySales: number;
-  todayInvoices: number;
-  monthlyRevenue: number;
-  monthlyGrowth: number;
-  pendingPayments: number;
-  pendingPaymentsCount: number;
-  activeCustomers: number;
-  customerGrowth: number;
-  lowStockAlerts: number;
-  lowStockItems: Array<{ name: string; quantity: number }>;
-  
+  customerDebt: number;
+  warehouseValue: number;
+
   // Loading States
   kpiLoading: boolean;
   insightsLoading: boolean;
   chartLoading: boolean;
-  invLoading: boolean;
-  
+  activitiesLoading: boolean;
+
   // AI Insights
   insights: AIInsight[];
-  
+
   // Chart Data
   salesChartData: ChartDataPoint[];
   dateRange: DateRange;
-  
-  // Invoices
-  recentInvoices: Array<{
-    id: string;
-    customer: string;
-    total: number;
-    date: string;
-  }>;
-  
+
+  // Activities
+  recentActivities: ActivityGroupDto[];
+
   // Actions
   onNavigate: (route: string) => void;
-  onNavigateWarehouse: () => void;
-  onNavigateCustomers: () => void;
-  onNavigateQuickInvoice: () => void;
-  onNavigateInvoice: (id: string) => void;
-  onViewAllInvoices: () => void;
   onInsightAction: (action: string) => void;
   onDateRangeChange: (range: DateRange, preset: PresetKey) => void;
 }
@@ -71,14 +58,6 @@ interface DashboardViewProps {
 
 const LazySalesChart = dynamic(
   () => import("./sales-chart").then(mod => mod.SalesChart),
-  {
-    ssr: false,
-    loading: () => <div className="h-[180px] sm:h-[200px] rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
-  }
-);
-
-const LazyDashboardInvoices = dynamic(
-  () => import("./dashboard-invoices").then(mod => mod.DashboardInvoices),
   {
     ssr: false,
     loading: () => <div className="h-[180px] sm:h-[200px] rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
@@ -110,9 +89,74 @@ const Greeting = memo(function Greeting({
 });
 Greeting.displayName = "Greeting";
 
-// ─── AI Insight ────────────────────────────────────────────────────────────
+// ─── KPI Card + Sparkline ───────────────────────────────────────────────────
 
-const AIInsightBanner = memo(function AIInsightBanner({
+// اسپارک‌لاین SVG سبک (بدون کتابخانه‌ی جداگانه) — فقط برای کارت‌هایی که
+// سری زمانی واقعی دارند رنگی/جهت‌دار رسم می‌شود؛ برای کارت‌هایی که هنوز
+// اسنپ‌شات تاریخی ندارند (بدهی مشتریان، ارزش انبار) یک خط خنثی نمایش داده
+// می‌شود تا روند غلط/جعلی به کاربر نشان داده نشود.
+const Sparkline = memo(function Sparkline({ values }: { values: number[] | null }) {
+  const id = useId();
+  if (!values || values.length < 2) {
+    return (
+      <svg viewBox="0 0 100 28" className="w-full h-7" aria-hidden="true">
+        <line x1="0" y1="20" x2="100" y2="20" stroke="hsl(var(--border-strong))" strokeWidth="2" strokeDasharray="2 3" />
+      </svg>
+    );
+  }
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const points = values
+    .map((v, i) => {
+      const x = (i / (values.length - 1)) * 100;
+      const y = 26 - ((v - min) / range) * 24;
+      return `${x},${y}`;
+    })
+    .join(" ");
+  const trendingUp = values[values.length - 1]! >= values[0]!;
+  const color = trendingUp ? "hsl(var(--status-positive))" : "hsl(var(--status-negative))";
+
+  return (
+    <svg viewBox="0 0 100 28" className="w-full h-7" aria-hidden="true">
+      <polyline points={points} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+});
+Sparkline.displayName = "Sparkline";
+
+const KpiCard = memo(function KpiCard({
+  icon: Icon,
+  label,
+  value,
+  trend,
+  isLoading,
+}: {
+  icon: typeof TrendingUp;
+  label: string;
+  value: string;
+  trend: number[] | null;
+  isLoading: boolean;
+}) {
+  if (isLoading) {
+    return <div className="h-[104px] rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />;
+  }
+  return (
+    <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-4 space-y-2">
+      <div className="flex items-center gap-2">
+        <Icon className="size-4 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+        <span className="text-xs text-[hsl(var(--fg-secondary))]">{label}</span>
+      </div>
+      <p className="text-xl font-bold tabular-nums text-[hsl(var(--fg-primary))]">{value}</p>
+      <Sparkline values={trend} />
+    </div>
+  );
+});
+KpiCard.displayName = "KpiCard";
+
+// ─── AI Insights (عمودی) ────────────────────────────────────────────────────
+
+const AIInsightsPanel = memo(function AIInsightsPanel({
   insights,
   isLoading,
   onAction,
@@ -121,52 +165,128 @@ const AIInsightBanner = memo(function AIInsightBanner({
   isLoading: boolean;
   onAction: (action: string) => void;
 }) {
-  const t = useTranslations();
-  
-  if (isLoading) {
-    return (
-      <div className="h-14 sm:h-16 rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
-    );
-  }
-  
-  if (!insights || insights.length === 0) {
-    return null;
-  }
-  
-  const insight = insights[0]!;
-  
+  const tOriginal = useTranslations();
+  const t = (key: string, fallback?: string) => {
+    const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
+    return v && v !== key ? v : (fallback ?? key);
+  };
+
   return (
-    <section
-      className="rounded-2xl border border-[hsl(var(--color-primary)/0.2)] bg-[hsl(var(--color-primary)/0.05)] p-3 sm:p-4"
-      aria-label={t("dashboard.aiInsight.aria")}
-      role="status"
-      aria-live="polite"
-    >
-      <div className="flex items-start gap-2.5 sm:gap-3">
-        <div className="rounded-full bg-[hsl(var(--color-primary)/0.1)] p-1.5 sm:p-2 shrink-0">
-          <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-xs sm:text-sm font-medium text-[hsl(var(--fg-primary))] line-clamp-1">
-            {insight.title}
-          </p>
-          <p className="text-[10px] sm:text-sm text-[hsl(var(--fg-secondary))] line-clamp-2">
-            {insight.description}
-          </p>
-          {insight.action && (
-            <button
-              onClick={() => onAction(insight.action!)}
-              className="mt-1 sm:mt-2 text-[10px] sm:text-sm font-medium text-[hsl(var(--color-primary))] hover:underline focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))] rounded-md px-1.5 sm:px-2 py-0.5"
-            >
-              {insight.actionLabel || t("dashboard.aiInsight.action")}
-            </button>
-          )}
-        </div>
+    <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] overflow-hidden">
+      <div className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 pt-4 sm:pt-5 pb-2 sm:pb-3">
+        <Sparkles className="size-4 sm:size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+        <h2 className="text-sm sm:text-base font-semibold text-[hsl(var(--fg-primary))]">
+          {t("dashboard.aiInsights", "پیشنهادهای هوشمند")}
+        </h2>
       </div>
-    </section>
+      <div className="px-4 sm:px-6 pb-4 sm:pb-5 space-y-2.5">
+        {isLoading ? (
+          <div className="space-y-2">
+            <div className="h-16 rounded-xl bg-[hsl(var(--surface-muted))] animate-pulse" />
+            <div className="h-16 rounded-xl bg-[hsl(var(--surface-muted))] animate-pulse" />
+          </div>
+        ) : insights.length === 0 ? (
+          <p className="text-xs text-[hsl(var(--fg-tertiary))] py-4 text-center">
+            {t("dashboard.noInsights", "فعلاً پیشنهادی وجود ندارد")}
+          </p>
+        ) : (
+          insights.map((insight, i) => (
+            <div
+              key={i}
+              className="rounded-xl border border-[hsl(var(--color-primary)/0.2)] bg-[hsl(var(--color-primary)/0.05)] p-3"
+            >
+              <p className="text-xs sm:text-sm font-medium text-[hsl(var(--fg-primary))]">{insight.title}</p>
+              <p className="text-[11px] sm:text-xs text-[hsl(var(--fg-secondary))] mt-0.5">{insight.description}</p>
+              {insight.action && (
+                <button
+                  onClick={() => onAction(insight.action!)}
+                  className="mt-1.5 text-[11px] sm:text-xs font-medium text-[hsl(var(--color-primary))] hover:underline focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))] rounded-md"
+                >
+                  {insight.actionLabel || t("dashboard.aiInsight.action")}
+                </button>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
   );
 });
-AIInsightBanner.displayName = "AIInsightBanner";
+AIInsightsPanel.displayName = "AIInsightsPanel";
+
+// ─── Recent Activities (پایین صفحه) ─────────────────────────────────────────
+
+const RecentActivities = memo(function RecentActivities({
+  groups,
+  isLoading,
+  onNavigate,
+}: {
+  groups: ActivityGroupDto[];
+  isLoading: boolean;
+  onNavigate: (route: string) => void;
+}) {
+  const tOriginal = useTranslations();
+  const t = (key: string, fallback?: string) => {
+    const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
+    return v && v !== key ? v : (fallback ?? key);
+  };
+
+  const items = useMemo(
+    () =>
+      groups
+        .flatMap((g) =>
+          g.activities.map((a) => ({ ...a, entitySummary: g.entitySummary }))
+        )
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        .slice(0, 8),
+    [groups]
+  );
+
+  return (
+    <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] overflow-hidden">
+      <div className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 pt-4 sm:pt-5 pb-2 sm:pb-3">
+        <ActivityIcon className="size-4 sm:size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+        <h2 className="text-sm sm:text-base font-semibold text-[hsl(var(--fg-primary))]">
+          {t("dashboard.recentActivities", "فعالیت‌های اخیر")}
+        </h2>
+      </div>
+      <div className="px-4 sm:px-6 pb-4 sm:pb-5">
+        {isLoading ? (
+          <div className="space-y-2">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="h-10 rounded-xl bg-[hsl(var(--surface-muted))] animate-pulse" />
+            ))}
+          </div>
+        ) : items.length === 0 ? (
+          <p className="text-xs text-[hsl(var(--fg-tertiary))] py-4 text-center">
+            {t("dashboard.noActivities", "فعالیتی ثبت نشده است")}
+          </p>
+        ) : (
+          <ul className="divide-y divide-[hsl(var(--border-default)/0.6)]">
+            {items.map((a) => (
+              <li key={a.id}>
+                <button
+                  type="button"
+                  onClick={() => a.entitySummary.route && onNavigate(a.entitySummary.route)}
+                  className="w-full flex items-center justify-between gap-3 py-2.5 text-start hover:bg-[hsl(var(--surface-muted)/0.5)] rounded-lg px-2 -mx-2 transition-colors duration-150"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm text-[hsl(var(--fg-primary))] truncate">{a.title}</p>
+                    <p className="text-[11px] text-[hsl(var(--fg-tertiary))] truncate">{a.entitySummary.label}</p>
+                  </div>
+                  <span className="text-[11px] text-[hsl(var(--fg-tertiary))] shrink-0">
+                    {new Date(a.timestamp).toLocaleDateString("fa-AF")}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+});
+RecentActivities.displayName = "RecentActivities";
 
 // ─── Main Component ───────────────────────────────────────────────────────
 
@@ -174,35 +294,28 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
   const {
     t,
     fmt,
+    totalSales,
     todaySales,
-    todayInvoices,
-    monthlyRevenue,
-    monthlyGrowth,
-    pendingPayments,
-    pendingPaymentsCount,
-    activeCustomers,
-    customerGrowth,
-    lowStockAlerts,
-    lowStockItems,
+    customerDebt,
+    warehouseValue,
     kpiLoading,
     insights,
     insightsLoading,
     salesChartData,
     chartLoading,
     dateRange,
-    invLoading,
-    recentInvoices,
+    activitiesLoading,
+    recentActivities,
     onNavigate,
-    onNavigateWarehouse,
-    onNavigateCustomers,
-    onNavigateQuickInvoice,
-    onNavigateInvoice,
-    onViewAllInvoices,
     onInsightAction,
     onDateRangeChange,
   } = props;
 
-  // ✅ مقایسه‌ی واقعی «امروز نسبت به دیروز» از داخل داده‌ی نمودار (به‌جای مقایسه‌ی نادرست با درآمد ماهانه)
+  const salesTrend = useMemo(
+    () => (salesChartData.length > 1 ? salesChartData.map((d) => d.value) : null),
+    [salesChartData]
+  );
+
   const previousDaySalesTotal = useMemo(() => {
     if (!salesChartData || salesChartData.length === 0) return 0;
     const yesterday = new Date();
@@ -211,59 +324,21 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
     return salesChartData.find((d) => d.date === yesterdayStr)?.value ?? 0;
   }, [salesChartData]);
 
-  const handleHealthAction = (action: "invoice" | "payments" | "warehouse" | "customers" | "buy") => {
-    switch (action) {
-      case "invoice":
-        onNavigateQuickInvoice();
-        break;
-      case "payments":
-        onNavigate("/invoices?filter=pending");
-        break;
-      case "warehouse":
-        onNavigateWarehouse();
-        break;
-      case "customers":
-        onNavigateCustomers();
-        break;
-      case "buy":
-        onNavigate("/purchasing");
-        break;
-    }
-  };
-
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Level 1: Context */}
       <Greeting t={t} />
-      
-      {/* Level 2: What's important */}
-      <AIInsightBanner
-        insights={insights}
-        isLoading={insightsLoading}
-        onAction={onInsightAction}
-      />
 
-      {/* Level 3: Business Health Panel */}
-      <BusinessHealthPanel
-        data={{
-          todaySales,
-          todayInvoices,
-          monthlyRevenue,
-          monthlyGrowth,
-          pendingPayments,
-          pendingPaymentsCount,
-          activeCustomers,
-          customerGrowth,
-          lowStockAlerts,
-          lowStockItems,
-        }}
-        isLoading={kpiLoading}
-        onAction={handleHealthAction}
-      />
+      {/* Level 2: KPI cards — ۴ کارت افقی */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        <KpiCard icon={TrendingUp} label={t("dashboard.totalSales", "فروش کل")} value={fmt(totalSales)} trend={salesTrend} isLoading={kpiLoading} />
+        <KpiCard icon={Wallet} label={t("dashboard.todaySales", "فروش امروز")} value={fmt(todaySales)} trend={salesTrend} isLoading={kpiLoading} />
+        <KpiCard icon={CreditCard} label={t("dashboard.customerDebt", "بدهی مشتریان")} value={fmt(customerDebt)} trend={null} isLoading={kpiLoading} />
+        <KpiCard icon={Boxes} label={t("dashboard.warehouseValue", "ارزش کل انبار")} value={fmt(warehouseValue)} trend={null} isLoading={kpiLoading} />
+      </div>
 
-      {/* Level 4: Deep Dive */}
+      {/* Level 3: Chart + AI Insights (عمودی، جای قبلی صورت‌حساب‌های اخیر) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
-        {/* Chart - 2 columns */}
         <div className="lg:col-span-2">
           <div className={cn(
             "rounded-2xl border border-[hsl(var(--border-default))]",
@@ -296,32 +371,13 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
           </div>
         </div>
 
-        {/* Recent Invoices - 1 column */}
         <div className="lg:col-span-1">
-          <div className={cn(
-            "rounded-2xl border border-[hsl(var(--border-default))]",
-            "bg-[hsl(var(--surface-elevated))]",
-            "overflow-hidden"
-          )}>
-            <div className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 pt-4 sm:pt-5 pb-2 sm:pb-3">
-              <Receipt className="size-4 sm:size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
-              <h2 className="text-sm sm:text-base font-semibold text-[hsl(var(--fg-primary))]">
-                {t("dashboard.recentInvoices")}
-              </h2>
-            </div>
-            <div className="px-4 sm:px-6 pb-4 sm:pb-5">
-              <LazyDashboardInvoices
-                t={t}
-                invLoading={invLoading}
-                recentInvoices={recentInvoices}
-                onNavigateInvoice={onNavigateInvoice}
-                onNavigateQuickInvoice={onNavigateQuickInvoice}
-                onViewAllInvoices={onViewAllInvoices}
-              />
-            </div>
-          </div>
+          <AIInsightsPanel insights={insights} isLoading={insightsLoading} onAction={onInsightAction} />
         </div>
       </div>
+
+      {/* Level 4: Recent Activities — انتهای صفحه */}
+      <RecentActivities groups={recentActivities} isLoading={activitiesLoading} onNavigate={onNavigate} />
     </div>
   );
 });

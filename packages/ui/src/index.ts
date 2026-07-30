@@ -135,6 +135,7 @@ export { AuditView } from './components/ui/audit/audit-view'
 // ---------- CRM ----------
 export { CrmContainer } from './components/ui/crm/containers/crm-container'
 export { CrmView, type CrmTabId } from './components/ui/crm/crm-view'
+export { PublicTaskContainer } from './components/ui/crm/containers/public-task-container'
 
 // ---------- Manufacturing ----------
 export { ManufacturingContainer } from './components/ui/manufacturing/containers/manufacturing-container'

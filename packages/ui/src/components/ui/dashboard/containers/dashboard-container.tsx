@@ -17,7 +17,14 @@ type Translate = (key: string) => string;
 // ─── Main Container ──────────────────────────────────────────────────────
 
 export function DashboardContainer() {
-  const t = useTranslations();
+  const tOriginal = useTranslations();
+  const t = useCallback(
+    (key: string, fallback?: string): string => {
+      const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
+      return v && v !== key ? v : (fallback ?? key);
+    },
+    [tOriginal]
+  );
   const router = useRouter();
 
   // ─── State ──────────────────────────────────────────────────────────────
@@ -35,15 +42,11 @@ export function DashboardContainer() {
     kpis,
     insights,
     salesChartData,
-    recentInvoices,
-    lowStockItems,
-    pendingPaymentsCount,
-    customerGrowth,
-    lowStockAlerts,
+    recentActivities,
     kpiLoading,
     insightsLoading,
     chartLoading,
-    invLoading,
+    activitiesLoading,
   } = useDashboardData(dateRange);
 
   // ─── Callbacks ──────────────────────────────────────────────────────────
@@ -65,30 +68,19 @@ export function DashboardContainer() {
     <DashboardView
       t={t}
       fmt={fmt}
+      totalSales={kpis?.totalSales ?? 0}
       todaySales={kpis?.todaySales ?? 0}
-      todayInvoices={kpis?.todayInvoices ?? 0}
-      monthlyRevenue={kpis?.monthlyRevenue ?? 0}
-      monthlyGrowth={kpis?.monthlyGrowth ?? 0}
-      pendingPayments={kpis?.pendingPayments ?? 0}
-      pendingPaymentsCount={pendingPaymentsCount}
-      activeCustomers={kpis?.activeCustomers ?? 0}
-      customerGrowth={customerGrowth}
-      lowStockAlerts={lowStockAlerts}
-      lowStockItems={lowStockItems}
+      customerDebt={kpis?.customerDebt ?? 0}
+      warehouseValue={kpis?.warehouseValue ?? 0}
       kpiLoading={kpiLoading}
       insights={insights ?? []}
       insightsLoading={insightsLoading}
       salesChartData={salesChartData}
       chartLoading={chartLoading}
       dateRange={dateRange}
-      invLoading={invLoading}
-      recentInvoices={recentInvoices}
+      activitiesLoading={activitiesLoading}
+      recentActivities={recentActivities}
       onNavigate={(route) => router.push(route)}
-      onNavigateWarehouse={() => router.push("/warehouse")}
-      onNavigateCustomers={() => router.push("/customers")}
-      onNavigateQuickInvoice={() => router.push("/quick-invoice")}
-      onNavigateInvoice={(id) => router.push(`/invoices/${id}`)}
-      onViewAllInvoices={() => router.push("/invoices")}
       onInsightAction={handleAction}
       onDateRangeChange={handleDateRangeChange}
     />

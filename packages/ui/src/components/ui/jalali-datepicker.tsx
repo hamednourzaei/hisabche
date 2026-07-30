@@ -3,7 +3,7 @@
 
 import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useTranslation } from "react-i18next";
+import { useTranslations, useLocale } from "next-intl";
 import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface JalaliDatePickerProps {
@@ -15,7 +15,7 @@ interface JalaliDatePickerProps {
   dropUp?: boolean;
   /**
    * Which calendar system to render. Defaults to the app's current i18n
-   * language (`i18n.language`) so callers don't need to think about it in
+   * language (next-intl's `useLocale()`) so callers don't need to think about it in
    * the common case. "fa-IR" → Iranian Jalali month names, "fa-AF" →
    * Afghan Dari Jalali month names (same underlying solar-Hijri calendar,
    * different names), anything starting with "en" → plain Gregorian.
@@ -185,8 +185,13 @@ function jalaliToGregorianString(jalaliDate: string): string {
 }
 
 export function JalaliDatePicker({ value, onChange, placeholder, className, disabled = false, dropUp = false, locale }: JalaliDatePickerProps) {
-  const { t, i18n } = useTranslation();
-  const effectiveLocale = locale ?? i18n.language ?? "fa-IR";
+  const tOriginal = useTranslations();
+  const t = (key: string, fallback?: string) => {
+    const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
+    return v && v !== key ? v : (fallback ?? key);
+  };
+  const appLocale = useLocale();
+  const effectiveLocale = locale ?? appLocale;
   const calendarSystem = resolveCalendarSystem(effectiveLocale);
   const isGregorian = calendarSystem === "gregorian";
 
@@ -195,12 +200,15 @@ export function JalaliDatePicker({ value, onChange, placeholder, className, disa
     calendarSystem === "gregorian" ? monthDefaultsEN :
     monthDefaultsIR;
   const weekdayDefaults = isGregorian ? weekdayDefaultsEn : weekdayDefaultsFa;
-  // Look up month/weekday names in the i18n resources for the calendar's
-  // OWN language (not necessarily the active UI language, if `locale` was
-  // explicitly overridden) so callers can render e.g. an Afghan-calendar
-  // picker even while the UI itself is in English.
-  const calendarLng = calendarSystem === "jalali-af" ? "fa-AF" : calendarSystem === "gregorian" ? "en" : "fa-IR";
-  const calendarT = i18n.getFixedT ? i18n.getFixedT(calendarLng) : t;
+  // next-intl loads messages for the ACTIVE ROUTE locale only (no react-i18next-style
+  // getFixedT cross-locale override) — this is fine in practice since no caller ever
+  // passes an explicit `locale` prop different from the app's own locale, so the
+  // calendar's language always matches `appLocale`'s own message file anyway (which
+  // already has locale-correct month/weekday names — af→Dari names, fa→Iranian names).
+  const monthsRaw = tOriginal.raw("calendar.months") as unknown;
+  const weekdaysRaw = tOriginal.raw("calendar.weekdaysShort") as unknown;
+  const months = Array.isArray(monthsRaw) ? (monthsRaw as string[]) : monthDefaults;
+  const weekdays = Array.isArray(weekdaysRaw) ? (weekdaysRaw as string[]) : weekdayDefaults;
 
   const today = isGregorian
     ? (() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() + 1, day: d.getDate() }; })()
@@ -216,9 +224,6 @@ export function JalaliDatePicker({ value, onChange, placeholder, className, disa
   const [jumpYear, setJumpYear] = useState(year);
   const panelRef = useRef<HTMLDivElement>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
-
-  const months = calendarT("calendar.months", { returnObjects: true, defaultValue: monthDefaults }) as string[];
-  const weekdays = calendarT("calendar.weekdaysShort", { returnObjects: true, defaultValue: weekdayDefaults }) as string[];
 
   useEffect(() => {
     if (!value) return;

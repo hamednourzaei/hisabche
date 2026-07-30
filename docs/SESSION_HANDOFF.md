@@ -64,7 +64,7 @@
 
 - **سه مسیر auth موازی وجود دارد** (`packages/auth`, `packages/api/hooks/auth.ts`, `store/auth.slice.ts`) — فقط سومی واقعاً فعال است.
 - **Offline/Sync واقعی نیست** — همه‌چیز local/mock بود؛ فقط Sync Center بخشی از آن (backup واقعی، sync fake) اصلاح شد.
-- **دو سیستم locale ناهم‌خوان**: next-intl از `fa/af/en` استفاده می‌کند، بقیه‌ی کد قدیمی از `fa-IR/fa-AF/en` — مسیرهایی مثل `/fa-AF/...` همیشه ۴۰۴ می‌دهند.
+- ~~دو سیستم locale ناهم‌خوان~~ **حل شد** — کل `apps/web`+`packages/ui` از react-i18next به next-intl مهاجرت کامل شد (`fa`/`af`/`en`)؛ `packages/i18n` (react-i18next) فقط برای `apps/mobile` باقی مانده چون next-intl در React Native کار نمی‌کند.
 - **Accounting و Invoices کاملاً مستقل‌اند** — ساخت فاکتور خودکار سند حسابداری نمی‌سازد.
 - Redis گاهی از این محیط dev قابل‌دسترس نیست (هاست داخلی Render) — `cache.service.ts` یک fallback درون‌حافظه‌ای دارد که قبلاً اضافه شده.
 

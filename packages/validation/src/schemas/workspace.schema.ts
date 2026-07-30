@@ -103,3 +103,19 @@ export const acceptInviteSchema = z.object({
 })
 
 export type AcceptInvite = z.infer<typeof acceptInviteSchema>
+
+// ============================================
+// Direct Member Creation (دسترسی مستقیم کارمند به سایت)
+// عضو با ایمیل/پسورد مستقیم زیر workspace مالک ساخته می‌شود،
+// بدون فرآیند دعوت/پذیرش ایمیلی — چون خودِ مالک پسورد را وارد می‌کند.
+// ============================================
+
+export const createMemberDirectSchema = z.object({
+  workspaceId: uuidSchema,
+  email: z.string().email(),
+  password: z.string().min(8),
+  fullName: nonEmptyStringSchema,
+  role: z.enum(['admin', 'member']).default('member'),
+})
+
+export type CreateMemberDirect = z.infer<typeof createMemberDirectSchema>

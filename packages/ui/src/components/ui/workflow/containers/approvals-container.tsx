@@ -33,8 +33,8 @@ const ApprovalInstanceCard = memo(function ApprovalInstanceCard({
   instance: WorkflowInstance;
   t: (key: string, fallback?: string) => string;
 }) {
-  const { data: detail, isLoading: detailLoading } = useWorkflowInstanceDetail(instance.id);
-  const { data: workflow, isLoading: workflowLoading } = useWorkflow(instance.workflow_id);
+  const { data: detail, isLoading: detailLoading, isError: detailError } = useWorkflowInstanceDetail(instance.id);
+  const { data: workflow, isLoading: workflowLoading, isError: workflowError } = useWorkflow(instance.workflow_id);
   const { mutateAsync: performAction } = usePerformWorkflowAction();
   const toast = useToast();
 
@@ -53,6 +53,14 @@ const ApprovalInstanceCard = memo(function ApprovalInstanceCard({
     },
     [performAction, instance.id, toast, t]
   );
+
+  if (detailError || workflowError) {
+    return (
+      <div className="h-16 rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))] flex items-center justify-center text-xs text-[hsl(var(--fg-tertiary))]">
+        {t("workflow.loadError", "بارگذاری این درخواست تأیید با خطا مواجه شد.")}
+      </div>
+    );
+  }
 
   if (detailLoading || workflowLoading || !detail || !workflow) {
     return <div className="h-32 rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />;
@@ -74,7 +82,11 @@ const ApprovalInstanceCard = memo(function ApprovalInstanceCard({
 ApprovalInstanceCard.displayName = "ApprovalInstanceCard";
 
 export const ApprovalsContainer = memo(function ApprovalsContainer() {
-  const t = useTranslations();
+  const tOriginal = useTranslations();
+  const t = (key: string, fallback?: string): string => {
+    const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
+    return v && v !== key ? v : (fallback ?? key);
+  };
 
 
   const { data, isLoading } = useWorkflowInstances();

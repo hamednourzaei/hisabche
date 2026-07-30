@@ -1,9 +1,9 @@
 // packages/ui/src/components/ui/landing/landing-page.tsx
 "use client";
 
-import { useRouter, usePathname } from "next/navigation";
-import { useCallback, useEffect, useState, useMemo } from "react";
-import { useTranslation } from "react-i18next";
+import { useRouter } from "next/navigation";
+import { useCallback, useMemo } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { NavigationProvider } from "../../../hooks/menu/use-navigation-state";
 import { TopNav } from "../navigation/top-nav";
 import { NavigationRegistry } from "../navigation/navigation-registry";
@@ -41,7 +41,7 @@ const sectionFallbacks: Record<string, Record<string, string>> = {
     testimonials: "Trust",
     cta: "Start",
   },
-  "fa-IR": {
+  fa: {
     hero: "خانه",
     pain: "مشکل",
     transform: "راه‌حل",
@@ -49,7 +49,7 @@ const sectionFallbacks: Record<string, Record<string, string>> = {
     testimonials: "اعتماد",
     cta: "شروع",
   },
-  "fa-AF": {
+  af: {
     hero: "خانه",
     pain: "مشکل",
     transform: "راه حل",
@@ -59,69 +59,38 @@ const sectionFallbacks: Record<string, Record<string, string>> = {
   },
 };
 
-function getLocaleFromPathname(pathname: string): string {
-  const match = pathname.match(/^\/(fa-IR|fa-AF|en)/);
-  return match?.[1] ?? "fa-IR";
-}
-
 // ─── Main LandingPage ──────────────────────────────────────────────────────
 
 export function LandingPage() {
   const router = useRouter();
-  const pathname = usePathname();
-  const { t, i18n } = useTranslation();
+  const t = useTranslations();
+  // next-intl همیشه پیام‌های همان locale مسیر جاری را برمی‌گرداند —
+  // برخلاف react-i18next نیازی به sync دستی (changeLanguage) یا حالت
+  // "ready" برای منتظرماندن آن sync نیست.
+  const locale = useLocale();
   const navigateLogin = useCallback(() => router.push("/login"), [router]);
-  const [ready, setReady] = useState(false);
 
-  const currentLocale = getLocaleFromPathname(pathname);
-  const fallbacks = sectionFallbacks[currentLocale] || sectionFallbacks["fa-IR"];
-
-  const NAVIGATION_SECTIONS = useMemo(
-    () => [
-      { id: "hero" as const, label: t("landing.navHero", fallbacks?.hero ?? "Home"), narrative: "frustration" as const },
-      { id: "pain" as const, label: t("landing.navPain", fallbacks?.pain ?? "Problem"), narrative: "confusion" as const },
-      { id: "transform" as const, label: t("landing.navTransform", fallbacks?.transform ?? "Solution"), narrative: "clarity" as const },
-      { id: "features" as const, label: t("landing.navFeatures", fallbacks?.features ?? "Features"), narrative: "confidence" as const },
-      { id: "testimonials" as const, label: t("landing.navTestimonials", fallbacks?.testimonials ?? "Trust"), narrative: "trust" as const },
-      { id: "cta" as const, label: t("landing.navCTA", fallbacks?.cta ?? "Start"), narrative: "action" as const },
-    ],
-    [t, fallbacks]
-  );
-
-  useEffect(() => {
-    let isMounted = true;
-    
-    if (i18n.language !== currentLocale) {
-      i18n.changeLanguage(currentLocale).then(() => {
-        if (isMounted) {
-          localStorage.setItem("hisabche-lang", currentLocale);
-          setReady(true);
-        }
-      });
-    } else {
-      setReady(true);
-    }
-    
-    return () => {
-      isMounted = false;
-    };
-  }, [currentLocale, i18n]);
+  const fallbacks = sectionFallbacks[locale] || sectionFallbacks.fa;
 
   const safeT = useCallback(
     (key: string, fallback?: string) => {
-      const result = t(key);
+      const result = t(key as Parameters<typeof t>[0]);
       return result && result !== key ? result : (fallback ?? key);
     },
     [t]
   );
 
-  if (!ready) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-[hsl(var(--surface-base))]">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[hsl(var(--color-primary))] border-t-transparent" />
-      </div>
-    );
-  }
+  const NAVIGATION_SECTIONS = useMemo(
+    () => [
+      { id: "hero" as const, label: safeT("landing.navHero", fallbacks?.hero ?? "Home"), narrative: "frustration" as const },
+      { id: "pain" as const, label: safeT("landing.navPain", fallbacks?.pain ?? "Problem"), narrative: "confusion" as const },
+      { id: "transform" as const, label: safeT("landing.navTransform", fallbacks?.transform ?? "Solution"), narrative: "clarity" as const },
+      { id: "features" as const, label: safeT("landing.navFeatures", fallbacks?.features ?? "Features"), narrative: "confidence" as const },
+      { id: "testimonials" as const, label: safeT("landing.navTestimonials", fallbacks?.testimonials ?? "Trust"), narrative: "trust" as const },
+      { id: "cta" as const, label: safeT("landing.navCTA", fallbacks?.cta ?? "Start"), narrative: "action" as const },
+    ],
+    [safeT, fallbacks]
+  );
 
   return (
     <NavigationProvider sections={NAVIGATION_SECTIONS}>

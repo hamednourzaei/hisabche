@@ -27,6 +27,11 @@ export function InvoicesContainer() {
     [router]
   )
 
+  const handleNavigateInvoiceAction = useCallback(
+    (id: string, action: "pdf" | "print" | "png") => router.push(`/invoices/${id}?action=${action}`),
+    [router]
+  )
+
   const handleNewInvoice = useCallback(
     () => router.push("/quick-invoice"),
     [router]
@@ -43,6 +48,7 @@ export function InvoicesContainer() {
       onClearFilters={handleClearFilters}
       onPageChange={handlePageChange}
       onNavigateInvoice={handleNavigateInvoice}
+      onNavigateInvoiceAction={handleNavigateInvoiceAction}
       onNewInvoice={handleNewInvoice}
       onDeleteInvoice={handleDeleteInvoice}
       statusVariant={statusVariant}

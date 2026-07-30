@@ -49,7 +49,7 @@ const nextConfig = {
       'lucide-react',
       'framer-motion',
       '@tanstack/react-query',
-      'react-i18next',
+      'next-intl',
       '@radix-ui/react-dialog',
       '@radix-ui/react-dropdown-menu',
       '@radix-ui/react-select',

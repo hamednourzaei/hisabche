@@ -2,9 +2,9 @@
 "use client";
 
 import { memo } from "react";
-import { useTranslations } from "next-intl";
-import { Calendar } from "lucide-react";
+import { useTranslations, useLocale } from "next-intl";
 import { cn } from "@/lib/utils";
+import { JalaliDatePicker } from "../../jalali-datepicker";
 
 interface SingleDatePickerProps {
   value: string;
@@ -20,6 +20,7 @@ export const SingleDatePicker = memo(function SingleDatePicker({
   className,
 }: SingleDatePickerProps) {
   const t = useTranslations();
+  const locale = useLocale();
 
   return (
     <div className={cn("flex flex-col gap-1 md:gap-1.5", className)}>
@@ -28,22 +29,13 @@ export const SingleDatePicker = memo(function SingleDatePicker({
           {label}
         </label>
       )}
-      <div className="relative">
-        <Calendar className="absolute start-2.5 md:start-3 top-1/2 -translate-y-1/2 size-3.5 md:size-4 text-[hsl(var(--fg-tertiary))] pointer-events-none" aria-hidden="true" />
-        <input
-          type="date"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className={cn(
-            "w-full rounded-lg border border-[hsl(var(--border-default))] bg-transparent",
-            "h-8 md:h-9 lg:h-10",
-            "ps-8 md:ps-9 lg:ps-10 pe-2 md:pe-3",
-            "text-[11px] md:text-xs lg:text-sm text-[hsl(var(--fg-primary))]",
-            "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
-          )}
-          aria-label={label || t("accounting.dateRange.date")}
-        />
-      </div>
+      <JalaliDatePicker
+        value={value}
+        onChange={onChange}
+        locale={locale}
+        placeholder={label || t("accounting.dateRange.date")}
+        className="h-8 md:h-9 lg:h-10 text-[11px] md:text-xs lg:text-sm"
+      />
     </div>
   );
 });

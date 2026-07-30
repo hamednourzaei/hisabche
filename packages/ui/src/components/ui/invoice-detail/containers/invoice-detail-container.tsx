@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useMemo, useRef, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import {
   useInvoice,
@@ -63,7 +63,9 @@ export function InvoiceDetailContainer() {
   const t = useTranslations();
   const router = useRouter();
   const { id } = useParams<{ id: string }>();
+  const searchParams = useSearchParams();
   const documentRef = useRef<HTMLDivElement>(null);
+  const autoActionRef = useRef(false);
   const queryClient = useQueryClient();
   const [exportingPNG, setExportingPNG] = useState(false);
 
@@ -214,6 +216,16 @@ export function InvoiceDetailContainer() {
       setExportingPNG(false);
     }
   }, [exportingPNG, id, t]);
+
+  // ✅ اکشن‌های سریع از جدول فاکتورها (?action=print|png) — یک‌بار پس از لود سند اجرا می‌شود
+  useEffect(() => {
+    const action = searchParams.get("action");
+    if (!action || autoActionRef.current || !invoice || !documentRef.current) return;
+    autoActionRef.current = true;
+    if (action === "print") handlePrint();
+    if (action === "png") handleExportPNG();
+    router.replace(`/invoices/${id}`);
+  }, [searchParams, invoice, handlePrint, handleExportPNG, router, id]);
 
   const handleSharePDF = useCallback(async () => {
     if (!invoice) return;

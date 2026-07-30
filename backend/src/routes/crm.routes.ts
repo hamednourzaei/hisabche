@@ -7,6 +7,8 @@ import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
   createInteractionSchema,
+  updateInteractionStatusSchema,
+  publicUpdateTaskStatusSchema,
   createOpportunitySchema,
   updateOpportunitySchema,
 } from '@hisabche/validation'
@@ -66,6 +68,82 @@ export async function crmRoutes(fastify: FastifyInstance) {
       }
       fastify.log.error(err)
       return reply.code(500).send({ error: 'Failed to create interaction' })
+    }
+  })
+
+  // ─── PATCH /api/interactions/:id/status ──────────────────
+  // Owner-side, authenticated manual status override (in case the
+  // employee forgot to mark it complete on the public link).
+  fastify.patch('/api/interactions/:id/status', {
+    preHandler: [authenticate],
+    schema: {
+      params: toJsonSchema(z.object({ id: z.string().uuid() })),
+      body: toJsonSchema(updateInteractionStatusSchema),
+      response: { 200: toJsonSchema(z.any()) },
+    },
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const { id } = request.params as { id: string }
+      const { status } = updateInteractionStatusSchema.parse(request.body)
+      const interaction = await crmService.updateInteractionStatus(request.userId, id, status)
+      await clearCache('interactions:*')
+      return reply.send(interaction)
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return reply.code(400).send({ error: 'Validation failed', details: err.errors })
+      }
+      fastify.log.error(err)
+      return reply.code(500).send({ error: 'Failed to update task status' })
+    }
+  })
+
+  // ─── GET /api/public/tasks/:token ────────────────────────
+  // Public, unauthenticated, read-only task view — reached via the
+  // link the owner shares with an employee who has no site account.
+  // Looked up ONLY by the unguessable public_token, never by id, and
+  // exposes nothing beyond this one task. No `authenticate` preHandler
+  // on purpose (mirrors invoice-public.routes.ts).
+  fastify.get('/api/public/tasks/:token', {
+    config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
+    schema: {
+      params: toJsonSchema(z.object({ token: z.string().min(8) })),
+      response: { 200: toJsonSchema(z.any()) },
+    },
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const { token } = request.params as { token: string }
+      const task = await crmService.getPublicTaskByToken(token)
+      return reply.send(task)
+    } catch (err) {
+      fastify.log.error(err)
+      return reply.code(404).send({ error: 'Task not found' })
+    }
+  })
+
+  // ─── PATCH /api/public/tasks/:token/status ───────────────
+  // The only write the public link allows: advancing this one task's
+  // status to "in_progress" or "completed". No auth, but scoped
+  // strictly to the row matching this token — same trust model as
+  // sharing an invoice link.
+  fastify.patch('/api/public/tasks/:token/status', {
+    config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
+    schema: {
+      params: toJsonSchema(z.object({ token: z.string().min(8) })),
+      body: toJsonSchema(publicUpdateTaskStatusSchema),
+      response: { 200: toJsonSchema(z.any()) },
+    },
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const { token } = request.params as { token: string }
+      const { status } = publicUpdateTaskStatusSchema.parse(request.body)
+      const task = await crmService.updatePublicTaskStatus(token, status)
+      return reply.send(task)
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        return reply.code(400).send({ error: 'Validation failed', details: err.errors })
+      }
+      fastify.log.error(err)
+      return reply.code(404).send({ error: 'Task not found' })
     }
   })
 

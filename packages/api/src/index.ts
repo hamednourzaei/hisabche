@@ -108,10 +108,19 @@ export {
   useCreateWorkspace,
   useUpdateWorkspace,
   useInviteMember,
+  useCreateMemberDirect,
   useRemoveMember,
   useUpdateMemberRole,
   workspaceKeys,
 } from "./hooks/workspace";
+
+// ─── Payroll ──────────────────────────────────────────────
+export {
+  usePayrolls,
+  usePayrollSummary,
+  useCreatePayroll,
+  payrollKeys,
+} from "./hooks/payroll";
 
 // ─── Permissions ──────────────────────────────────────────
 export {
@@ -152,11 +161,16 @@ export {
 export {
   useInteractions,
   useCreateInteraction,
+  useUpdateInteractionStatus,
   useOpportunities,
   useCreateOpportunity,
   useUpdateOpportunity,
   crmKeys,
   type Interaction,
+  type CreateInteractionInput,
+  type TaskStatus,
+  type InteractionCustomer,
+  type InteractionStatusEvent,
   type Opportunity,
 } from "./hooks/crm";
 

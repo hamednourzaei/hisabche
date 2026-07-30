@@ -20,6 +20,9 @@ export interface CustomersViewProps {
   overdueCount: number
   vipCount: number
   todaySales: number
+  totalSales: number
+  topCustomerName: string | null
+  topCustomerAmount: number
   openDealsCount: number
 
   // States

@@ -258,6 +258,22 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
   // PAYROLL
   // ═══════════════════════════════════════════════════════════
 
+  // ─── GET /api/payrolls/summary ─────────────────────────────
+  fastify.get('/api/payrolls/summary', {
+    preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'payrolls-summary' })],
+    schema: {
+      response: { 200: toJsonSchema(z.object({ total: z.number(), byEmployee: z.record(z.number()) })) },
+    },
+  }, async (request: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const summary = await humanResourcesService.getPayrollSummary(request.userId)
+      return reply.send(summary)
+    } catch (err) {
+      fastify.log.error(err)
+      return reply.code(500).send({ error: 'Failed to fetch payroll summary' })
+    }
+  })
+
   // ─── GET /api/payrolls ────────────────────────────────────
   fastify.get('/api/payrolls', {
     preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'payrolls' })],

@@ -1,11 +1,11 @@
 "use client";
 
-import { memo, useMemo, useCallback } from "react";  // ✅ اضافه شد
+import { memo, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "../empty-state";
 import { InvoicesSkeleton } from "./invoices-skeleton";
 import { Plus, Search } from "lucide-react";
-import { InvoiceCard } from "./invoices-card";
+import { InvoiceRowActions } from "./invoice-row-actions";
 import type { Invoice } from "../../../lib/invoices/invoices-types";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -23,12 +23,20 @@ interface InvoicesViewProps {
   onClearFilters: () => void;
   onPageChange: (page: number) => void;
   onNavigateInvoice: (id: string) => void;
+  onNavigateInvoiceAction: (id: string, action: "pdf" | "print" | "png") => void;
   onNewInvoice: () => void;
   onDeleteInvoice: (id: string) => void;
   statusVariant: (
     status: string,
   ) => "success" | "warning" | "destructive" | "secondary";
 }
+
+const statusBadgeStyles: Record<string, string> = {
+  success: "bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))] border-[hsl(var(--color-success)/0.2)]",
+  warning: "bg-[hsl(var(--color-warning)/0.12)] text-[hsl(var(--color-warning))] border-[hsl(var(--color-warning)/0.2)]",
+  destructive: "bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))] border-[hsl(var(--color-destructive)/0.2)]",
+  secondary: "bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))] border-[hsl(var(--border-default))]",
+};
 
 // ─── Sub-components (هر کدام < ۲۰ خط) ──────────────────────────────────────
 
@@ -213,30 +221,14 @@ export const InvoicesView = memo(function InvoicesView({
   onClearFilters,
   onPageChange,
   onNavigateInvoice,
+  onNavigateInvoiceAction,
   onNewInvoice,
   onDeleteInvoice,
   statusVariant,
 }: InvoicesViewProps) {
-  // ✅ useMemo: فقط زمانی محاسبه می‌شود که invoices یا فیلترها تغییر کنند
   const totalPages = useMemo(
     () => Math.ceil(total / filters.limit),
     [total, filters.limit]
-  );
-
-  // ✅ useMemo: فقط زمانی کارت‌ها رندر می‌شوند که invoices تغییر کند
-  const invoiceCards = useMemo(
-    () =>
-      invoices.map((inv) => (
-        <InvoiceCard
-          key={inv.id}
-          inv={inv}
-          onNavigate={onNavigateInvoice}
-          onDelete={onDeleteInvoice}
-          statusVariant={statusVariant}
-          t={t}
-        />
-      )),
-    [invoices, onNavigateInvoice, onDeleteInvoice, statusVariant, t]
   );
 
   if (isLoading) {
@@ -259,8 +251,55 @@ export const InvoicesView = memo(function InvoicesView({
           }}
         />
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {invoiceCards}
+        <div className="overflow-x-auto rounded-2xl border border-[hsl(var(--border-default))]">
+          <table className="w-full min-w-[900px] text-sm">
+            <thead>
+              <tr className="border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))] text-start">
+                {[
+                  ["invoices.status", "وضعیت"],
+                  ["invoices.type", "نوع"],
+                  ["invoices.invoiceNumber", "فاکتور"],
+                  ["invoices.createdAt", "ثبت شده"],
+                  ["invoices.customerName", "خریدار"],
+                  ["invoices.company", "شرکت"],
+                  ["invoices.total", "مجموع"],
+                  ["invoices.paymentDate", "تاریخ تسویه"],
+                  ["invoices.itemsSent", "ارسال‌شده"],
+                  ["invoices.actions", "عملیات"],
+                ].map(([key, fallback]) => (
+                  <th key={key} className="whitespace-nowrap px-3 py-2.5 text-xs font-semibold text-[hsl(var(--fg-tertiary))]">
+                    {t(key!, fallback)}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {invoices.map((inv) => (
+                <tr
+                  key={inv.id}
+                  onClick={() => onNavigateInvoice(inv.id)}
+                  className="cursor-pointer border-b border-[hsl(var(--border-default))] last:border-0 hover:bg-[hsl(var(--surface-muted)/0.5)] transition-colors duration-150"
+                >
+                  <td className="whitespace-nowrap px-3 py-2.5">
+                    <span className={cn("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold border", statusBadgeStyles[statusVariant(inv.status)] ?? statusBadgeStyles.secondary)}>
+                      {t(`invoices.${inv.status}`, inv.status)}
+                    </span>
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-2.5 text-[hsl(var(--fg-secondary))]">{t(`invoices.type.${inv.type}`, inv.type)}</td>
+                  <td className="whitespace-nowrap px-3 py-2.5 font-medium text-[hsl(var(--fg-primary))]">#{inv.invoiceNumber}</td>
+                  <td className="whitespace-nowrap px-3 py-2.5 text-[hsl(var(--fg-secondary))]">{inv.createdAt}</td>
+                  <td className="whitespace-nowrap px-3 py-2.5 text-[hsl(var(--fg-primary))]">{inv.customerName || "—"}</td>
+                  <td className="whitespace-nowrap px-3 py-2.5 text-[hsl(var(--fg-tertiary))]">{inv.company || ""}</td>
+                  <td className="whitespace-nowrap px-3 py-2.5 tabular-nums font-semibold text-[hsl(var(--fg-primary))]">{inv.total.toLocaleString()} {inv.currency}</td>
+                  <td className="whitespace-nowrap px-3 py-2.5 text-[hsl(var(--fg-secondary))]">{inv.paymentDate || "—"}</td>
+                  <td className="whitespace-nowrap px-3 py-2.5 tabular-nums text-[hsl(var(--fg-secondary))]">{inv.itemsSent}</td>
+                  <td className="whitespace-nowrap px-3 py-2.5" onClick={(e) => e.stopPropagation()}>
+                    <InvoiceRowActions inv={inv} t={t} onNavigate={onNavigateInvoice} onNavigateAction={onNavigateInvoiceAction} onDelete={onDeleteInvoice} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 

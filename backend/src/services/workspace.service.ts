@@ -4,7 +4,7 @@
 // ============================================
 
 import { supabase } from '../db'
-import { CreateWorkspace, UpdateWorkspace, UpdateMemberRole, CreateInvite, AcceptInvite } from '@hisabche/validation'
+import { CreateWorkspace, UpdateWorkspace, UpdateMemberRole, CreateInvite, AcceptInvite, CreateMemberDirect } from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
 import { memoryCache } from '../utils/pagination'
 import { emailService } from './email.service'
@@ -490,6 +490,43 @@ export class WorkspaceService {
     await this.invalidateInviteCache(workspaceId)
 
     return { ...inv, token: rawToken, status: 'pending', expires_at: expiresAt.toISOString() }
+  }
+
+  // ─── Direct Member Creation (دسترسی مستقیم کارمند) ─────────
+  // مالک بدون فرآیند دعوت ایمیلی، مستقیم ایمیل/پسورد کارمند را
+  // وارد می‌کند و یک حساب واقعی login-capable زیر همین workspace
+  // با نقش انتخابی ساخته می‌شود. فقط owner می‌تواند این کار را انجام دهد.
+  async createMemberDirect(ownerUserId: string, workspaceId: string, data: CreateMemberDirect) {
+    await this.requireRole(ownerUserId, workspaceId, 'owner')
+
+    const { data: created, error: createError } = await supabase.auth.admin.createUser({
+      email: data.email,
+      password: data.password,
+      email_confirm: true,
+      user_metadata: { full_name: data.fullName },
+    })
+
+    if (createError || !created.user) {
+      if (createError?.message?.includes('already')) {
+        throw new DatabaseError('Email already registered')
+      }
+      throw new DatabaseError('Failed to create account', createError)
+    }
+
+    await supabase.from('profiles').upsert(
+      { id: created.user.id, full_name: data.fullName },
+      { onConflict: 'id' }
+    )
+
+    const { error: memberError } = await supabase
+      .from('workspace_members')
+      .insert({ workspace_id: workspaceId, user_id: created.user.id, role: data.role })
+
+    if (memberError) throw new DatabaseError('Failed to add member', memberError)
+
+    await this.invalidateWorkspaceCache(workspaceId)
+
+    return { success: true, userId: created.user.id }
   }
 
   // ─── Permission Helpers ─────────────────────────────────────

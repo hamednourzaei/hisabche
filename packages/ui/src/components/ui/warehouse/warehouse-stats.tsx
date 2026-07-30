@@ -1,13 +1,13 @@
 // packages/ui/src/components/ui/warehouse/warehouse-stats.tsx
 "use client";
 
-import { memo, useMemo } from "react";
+import { memo, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
-import { Package, AlertTriangle, DollarSign } from "lucide-react";
+import { Package, AlertTriangle, DollarSign, ChevronDown } from "lucide-react";
+import type { Product } from "../../../lib/warehouse/warehouse-types";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   WarehouseStats v5 — Memoized · Performance Optimized · PascalCase
-   ✅ memo · useMemo · PascalCase
+   WarehouseStats v6 — یک ردیف افقی در همه‌ی ابعاد (بدون stack شدن در موبایل)
    ═══════════════════════════════════════════════════════════════════════════ */
 
 type Tone = "emerald" | "amber" | "rose" | "purple";
@@ -33,6 +33,7 @@ interface StatCardProps {
   icon: React.ElementType;
   tone: Tone;
   isLoading?: boolean;
+  action?: React.ReactNode;
 }
 
 const StatCard = memo(function StatCard({
@@ -42,134 +43,190 @@ const StatCard = memo(function StatCard({
   icon: Icon,
   tone,
   isLoading = false,
+  action,
 }: StatCardProps) {
   return (
     <div
       className={cn(
-        "flex items-center gap-3 p-4 rounded-2xl",
+        "flex min-w-[220px] shrink-0 items-start justify-between gap-3 p-4 rounded-2xl",
         "border border-[hsl(var(--border-default))]",
         "bg-gradient-to-br",
         TONE_BG[tone],
       )}
     >
-      <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl shrink-0", TONE_ICON[tone])}>
-        <Icon className="size-5" aria-hidden="true" />
+      <div className="flex items-start gap-3">
+        <div className={cn("flex h-10 w-10 items-center justify-center rounded-xl shrink-0", TONE_ICON[tone])}>
+          <Icon className="size-5" aria-hidden="true" />
+        </div>
+        <div>
+          {isLoading ? (
+            <>
+              <div className="h-5 w-20 rounded bg-[hsl(var(--surface-muted))] animate-pulse mb-1" />
+              <div className="h-3 w-16 rounded bg-[hsl(var(--surface-muted))] animate-pulse" />
+            </>
+          ) : (
+            <>
+              <p className="text-xl font-bold tabular-nums text-[hsl(var(--fg-primary))]">
+                {value}
+              </p>
+              <p className="text-xs text-[hsl(var(--fg-secondary))]">{label}</p>
+            </>
+          )}
+          {hint && !isLoading && (
+            <p className="text-[10px] text-[hsl(var(--fg-tertiary))] mt-0.5">{hint}</p>
+          )}
+        </div>
       </div>
-      <div>
-        {isLoading ? (
-          <>
-            <div className="h-5 w-20 rounded bg-[hsl(var(--surface-muted))] animate-pulse mb-1" />
-            <div className="h-3 w-16 rounded bg-[hsl(var(--surface-muted))] animate-pulse" />
-          </>
-        ) : (
-          <>
-            <p className="text-xl font-bold tabular-nums text-[hsl(var(--fg-primary))]">
-              {value}
-            </p>
-            <p className="text-xs text-[hsl(var(--fg-secondary))]">{label}</p>
-          </>
-        )}
-        {hint && !isLoading && (
-          <p className="text-[10px] text-[hsl(var(--fg-tertiary))] mt-0.5">{hint}</p>
-        )}
-      </div>
+      {action}
     </div>
   );
 });
 StatCard.displayName = "StatCard";
 
+// ─── دراپ‌داون آستانه‌ی «موجودی کم» — کاربر خودش تعیین می‌کند زیر چه عددی کم حساب شود ───
+
+const THRESHOLD_PRESETS = [5, 10] as const;
+
+const LowStockThresholdPicker = memo(function LowStockThresholdPicker({
+  threshold,
+  onChange,
+  t,
+}: {
+  threshold: number;
+  onChange: (v: number) => void;
+  t: (key: string, fallback?: string) => string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [custom, setCustom] = useState(String(threshold));
+
+  return (
+    <div className="relative shrink-0">
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((v) => !v);
+        }}
+        className="flex items-center gap-1 rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-2 py-1 text-[11px] text-[hsl(var(--fg-secondary))]"
+      >
+        {t("warehouse.lowStockThreshold", "زیر")} {threshold}
+        <ChevronDown className="size-3" aria-hidden="true" />
+      </button>
+      {open && (
+        <div className="absolute end-0 z-20 mt-1 w-36 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-2 shadow-lg">
+          {THRESHOLD_PRESETS.map((p) => (
+            <button
+              key={p}
+              type="button"
+              onClick={() => {
+                onChange(p);
+                setOpen(false);
+              }}
+              className="block w-full rounded-lg px-2 py-1.5 text-start text-xs text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]"
+            >
+              {t("warehouse.lowStockThreshold", "زیر")} {p}
+            </button>
+          ))}
+          <div className="mt-1 flex gap-1 border-t border-[hsl(var(--border-default))] pt-1.5">
+            <input
+              type="number"
+              min={1}
+              value={custom}
+              onChange={(e) => setCustom(e.target.value)}
+              className="w-full rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-2 py-1 text-xs text-[hsl(var(--fg-primary))]"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                const n = parseInt(custom);
+                if (n > 0) {
+                  onChange(n);
+                  setOpen(false);
+                }
+              }}
+              className="shrink-0 rounded-lg bg-[hsl(var(--color-primary))] px-2 py-1 text-xs font-medium text-white"
+            >
+              {t("action.apply", "اعمال")}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});
+LowStockThresholdPicker.displayName = "LowStockThresholdPicker";
+
 interface WarehouseStatsProps {
   t: (key: string, fallback?: string) => string;
   fmt: (v: number) => string;
   total: number;
-  lowStock: number;
   outOfStock: number;
   totalValue: number;
+  products: Product[];
   isLoading?: boolean;
-}
-
-function getLowStockTone(value: number): Tone {
-  if (value === 0) return "emerald";
-  if (value < 5) return "rose";
-  if (value < 15) return "amber";
-  return "purple";
-}
-
-function getOutOfStockTone(value: number): Tone {
-  if (value === 0) return "emerald";
-  if (value > 20) return "rose";
-  if (value > 10) return "amber";
-  return "purple";
-}
-
-function getTotalValueTone(value: number): Tone {
-  if (value > 1_000_000) return "emerald";
-  if (value > 500_000) return "purple";
-  if (value > 100_000) return "amber";
-  return "rose";
 }
 
 export const WarehouseStats = memo(function WarehouseStats({
   t,
   fmt,
   total,
-  lowStock,
   outOfStock,
   totalValue,
+  products,
   isLoading = false,
 }: WarehouseStatsProps) {
-  const tones = useMemo(
-    () => ({
-      lowStock: getLowStockTone(lowStock),
-      outOfStock: getOutOfStockTone(outOfStock),
-      totalValue: getTotalValueTone(totalValue),
-    }),
-    [lowStock, outOfStock, totalValue]
+  const [lowStockThreshold, setLowStockThreshold] = useState(5);
+
+  const lowStockCount = useMemo(
+    () => products.filter((p) => p.quantity > 0 && p.quantity < lowStockThreshold).length,
+    [products, lowStockThreshold]
   );
 
-  const hints = useMemo(
-    () => ({
-      lowStock: lowStock === 0 ? t("warehouse.noLowStock", "هیچ محصولی با موجودی کم نیست") : undefined,
-      outOfStock: outOfStock === 0 ? t("warehouse.noOutOfStock", "هیچ محصول ناموجودی نیست") : undefined,
-    }),
-    [lowStock, outOfStock, t]
-  );
+  const lowStockTone: Tone = lowStockCount === 0 ? "emerald" : lowStockCount < 5 ? "amber" : "rose";
+  const outOfStockTone: Tone = outOfStock === 0 ? "emerald" : outOfStock > 10 ? "rose" : "amber";
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <StatCard
-        label={t("warehouse.totalProducts", "کل محصولات")}
-        value={total}
-        icon={Package}
-        tone="purple"
-        isLoading={isLoading}
-      />
+    <div className="flex gap-4 overflow-x-auto pb-1 snap-x">
+      <div className="snap-start">
+        <StatCard
+          label={t("warehouse.totalValue", "ارزش کل (AFN)")}
+          value={fmt(totalValue)}
+          icon={DollarSign}
+          tone="purple"
+          isLoading={isLoading}
+        />
+      </div>
 
-      <StatCard
-        label={t("warehouse.lowStock", "موجودی کم")}
-        value={lowStock}
-        icon={AlertTriangle}
-        tone={tones.lowStock}
-        hint={hints.lowStock}
-        isLoading={isLoading}
-      />
+      <div className="snap-start">
+        <StatCard
+          label={t("warehouse.totalProducts", "تعداد محصولات")}
+          value={total}
+          icon={Package}
+          tone="purple"
+          isLoading={isLoading}
+        />
+      </div>
 
-      <StatCard
-        label={t("warehouse.outOfStock", "ناموجود")}
-        value={outOfStock}
-        icon={AlertTriangle}
-        tone={tones.outOfStock}
-        hint={hints.outOfStock}
-        isLoading={isLoading}
-      />
+      <div className="snap-start">
+        <StatCard
+          label={t("warehouse.lowStock", "موجودی کم")}
+          value={lowStockCount}
+          icon={AlertTriangle}
+          tone={lowStockTone}
+          isLoading={isLoading}
+          action={<LowStockThresholdPicker threshold={lowStockThreshold} onChange={setLowStockThreshold} t={t} />}
+        />
+      </div>
 
-      <StatCard
-        label={t("warehouse.totalValue", "ارزش کل (AFN)")}
-        value={fmt(totalValue)}
-        icon={DollarSign}
-        tone={tones.totalValue}
-        isLoading={isLoading}
-      />
+      <div className="snap-start">
+        <StatCard
+          label={t("warehouse.outOfStock", "ناموجود")}
+          value={outOfStock}
+          icon={AlertTriangle}
+          tone={outOfStockTone}
+          isLoading={isLoading}
+        />
+      </div>
     </div>
   );
 });
