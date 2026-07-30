@@ -527,14 +527,46 @@
       }
     },
     "transformStep": {
-      "sale": { "label": "Record sale", "desc": "You record the sale", "before": "Manual paper entry" },
-      "invoice": { "label": "Invoice", "desc": "Invoice is generated automatically", "before": "Writing invoices by hand" },
-      "inventory": { "label": "Inventory", "desc": "Stock is updated", "before": "Guessing stock levels" },
-      "accounting": { "label": "Accounting", "desc": "Profit is calculated instantly", "before": "Calculating with a calculator" },
-      "debt": { "label": "Credit", "desc": "Customer debt is recorded", "before": "Credit tracked in a notebook" },
-      "backup": { "label": "Backup", "desc": "A backup copy is taken", "before": "Fear of losing data" },
-      "sync": { "label": "Sync", "desc": "All devices stay in sync", "before": "Scattered data" },
-      "smile": { "label": "Peace of mind", "desc": "Everything is under control", "before": "Stress and confusion" }
+      "sale": {
+        "label": "Record sale",
+        "desc": "You record the sale",
+        "before": "Manual paper entry"
+      },
+      "invoice": {
+        "label": "Invoice",
+        "desc": "Invoice is generated automatically",
+        "before": "Writing invoices by hand"
+      },
+      "inventory": {
+        "label": "Inventory",
+        "desc": "Stock is updated",
+        "before": "Guessing stock levels"
+      },
+      "accounting": {
+        "label": "Accounting",
+        "desc": "Profit is calculated instantly",
+        "before": "Calculating with a calculator"
+      },
+      "debt": {
+        "label": "Credit",
+        "desc": "Customer debt is recorded",
+        "before": "Credit tracked in a notebook"
+      },
+      "backup": {
+        "label": "Backup",
+        "desc": "A backup copy is taken",
+        "before": "Fear of losing data"
+      },
+      "sync": {
+        "label": "Sync",
+        "desc": "All devices stay in sync",
+        "before": "Scattered data"
+      },
+      "smile": {
+        "label": "Peace of mind",
+        "desc": "Everything is under control",
+        "before": "Stress and confusion"
+      }
     },
     "transformBeforeTitle": "Before Hisabche",
     "transformBeforeDesc": "You did everything manually. You wasted time, made mistakes, and felt stressed.",
@@ -621,72 +653,174 @@
       "cookieTitle": "Cookie Policy",
       "cookieIntro": "This page explains what cookies Hisabche uses and why.",
       "cookieSections": [
-        { "heading": "1. What a cookie is", "body": "A cookie is a small text file stored in your browser while you use Hisabche to keep you signed in." },
-        { "heading": "2. Cookies we use", "body": "We only use essential cookies for authentication and session management. Hisabche does not use any advertising or third-party tracking cookies." },
-        { "heading": "3. Managing cookies", "body": "You can block or clear cookies from your browser settings; note that blocking essential cookies may prevent you from signing in." },
-        { "heading": "4. Contact", "body": "For questions about cookies, contact support@hisabche.com." }
+        {
+          "heading": "1. What a cookie is",
+          "body": "A cookie is a small text file stored in your browser while you use Hisabche to keep you signed in."
+        },
+        {
+          "heading": "2. Cookies we use",
+          "body": "We only use essential cookies for authentication and session management. Hisabche does not use any advertising or third-party tracking cookies."
+        },
+        {
+          "heading": "3. Managing cookies",
+          "body": "You can block or clear cookies from your browser settings; note that blocking essential cookies may prevent you from signing in."
+        },
+        {
+          "heading": "4. Contact",
+          "body": "For questions about cookies, contact support@hisabche.com."
+        }
       ],
       "disclaimerTitle": "Disclaimer",
       "disclaimerIntro": "Please read this disclaimer carefully before using Hisabche.",
       "disclaimerSections": [
-        { "heading": "1. No warranty", "body": "Hisabche is provided \"as is\". We work hard to keep financial calculations and reports accurate, but responsibility for the accuracy of entered data and resulting financial decisions rests with the user." },
-        { "heading": "2. Not financial or legal advice", "body": "Hisabche's content (reports, AI suggestions, guides) is not a substitute for professional accounting, tax or legal advice." },
-        { "heading": "3. Limitation of liability", "body": "Hisabche is not liable for indirect damages arising from downtime, data loss, or decisions made based on data in the app; we recommend backing up your data regularly." },
-        { "heading": "4. Contact", "body": "For questions, contact support@hisabche.com." }
+        {
+          "heading": "1. No warranty",
+          "body": "Hisabche is provided \"as is\". We work hard to keep financial calculations and reports accurate, but responsibility for the accuracy of entered data and resulting financial decisions rests with the user."
+        },
+        {
+          "heading": "2. Not financial or legal advice",
+          "body": "Hisabche's content (reports, AI suggestions, guides) is not a substitute for professional accounting, tax or legal advice."
+        },
+        {
+          "heading": "3. Limitation of liability",
+          "body": "Hisabche is not liable for indirect damages arising from downtime, data loss, or decisions made based on data in the app; we recommend backing up your data regularly."
+        },
+        {
+          "heading": "4. Contact",
+          "body": "For questions, contact support@hisabche.com."
+        }
       ],
       "refundTitle": "Refund Policy",
       "refundIntro": "This policy explains the refund terms for Hisabche's paid plans.",
       "refundSections": [
-        { "heading": "1. Free trial", "body": "Before purchasing a paid plan, you can use the free tier or trial period to confirm Hisabche is the right fit for your business." },
-        { "heading": "2. Refunds", "body": "If a technical issue prevents you from using a paid feature and it is reported within 7 days of purchase, you'll receive a full refund." },
-        { "heading": "3. Cancelling a subscription", "body": "You can cancel your subscription any time from Settings; cancelling stops the next renewal but does not refund the current billing period except as described in section 2." },
-        { "heading": "4. Requesting a refund", "body": "To request a refund, email support@hisabche.com with your transaction number." }
+        {
+          "heading": "1. Free trial",
+          "body": "Before purchasing a paid plan, you can use the free tier or trial period to confirm Hisabche is the right fit for your business."
+        },
+        {
+          "heading": "2. Refunds",
+          "body": "If a technical issue prevents you from using a paid feature and it is reported within 7 days of purchase, you'll receive a full refund."
+        },
+        {
+          "heading": "3. Cancelling a subscription",
+          "body": "You can cancel your subscription any time from Settings; cancelling stops the next renewal but does not refund the current billing period except as described in section 2."
+        },
+        {
+          "heading": "4. Requesting a refund",
+          "body": "To request a refund, email support@hisabche.com with your transaction number."
+        }
       ],
       "accessibilityTitle": "Accessibility Statement",
       "accessibilityIntro": "Hisabche is committed to providing a usable experience for all users, including people with disabilities.",
       "accessibilitySections": [
-        { "heading": "1. Our efforts", "body": "Our team pays attention to sufficient color contrast, keyboard support, and semantic HTML structure when designing Hisabche." },
-        { "heading": "2. Known limitations", "body": "Some parts of the app do not yet fully meet WCAG standards; we are continuously working to improve them." },
-        { "heading": "3. Feedback", "body": "If you run into an accessibility barrier anywhere in Hisabche, we'd love to hear from you at support@hisabche.com." }
+        {
+          "heading": "1. Our efforts",
+          "body": "Our team pays attention to sufficient color contrast, keyboard support, and semantic HTML structure when designing Hisabche."
+        },
+        {
+          "heading": "2. Known limitations",
+          "body": "Some parts of the app do not yet fully meet WCAG standards; we are continuously working to improve them."
+        },
+        {
+          "heading": "3. Feedback",
+          "body": "If you run into an accessibility barrier anywhere in Hisabche, we'd love to hear from you at support@hisabche.com."
+        }
       ],
       "securityTitle": "Security",
       "securityIntro": "An overview of how Hisabche protects your business data.",
       "securitySections": [
-        { "heading": "1. Encryption", "body": "Traffic between your device and our servers is encrypted over HTTPS, and data is stored on secure cloud infrastructure (Supabase)." },
-        { "heading": "2. Access control", "body": "Access to each business's data is scoped to that business; internal roles and permissions (the Access page) determine what each team member can see and do." },
-        { "heading": "3. Backups", "body": "Your data is backed up regularly; the offline version of the app also keeps a local copy on your device." },
-        { "heading": "4. Reporting a security issue", "body": "If you discover a security vulnerability, please report it immediately to support@hisabche.com." }
+        {
+          "heading": "1. Encryption",
+          "body": "Traffic between your device and our servers is encrypted over HTTPS, and data is stored on secure cloud infrastructure (Supabase)."
+        },
+        {
+          "heading": "2. Access control",
+          "body": "Access to each business's data is scoped to that business; internal roles and permissions (the Access page) determine what each team member can see and do."
+        },
+        {
+          "heading": "3. Backups",
+          "body": "Your data is backed up regularly; the offline version of the app also keeps a local copy on your device."
+        },
+        {
+          "heading": "4. Reporting a security issue",
+          "body": "If you discover a security vulnerability, please report it immediately to support@hisabche.com."
+        }
       ],
       "dataDeletionTitle": "Data Deletion Request",
       "dataDeletionIntro": "You can request full deletion of your Hisabche account and data at any time.",
       "dataDeletionSections": [
-        { "heading": "1. How to request", "body": "To permanently delete your account and all associated data (invoices, customers, inventory, settings), email support@hisabche.com from your account's registered email address and request account deletion." },
-        { "heading": "2. Processing time", "body": "Your request is processed within 30 days and your data is fully deleted, unless the law requires certain financial records to be retained for a specific period." },
-        { "heading": "3. Irreversibility", "body": "Account and data deletion cannot be undone; export any data you need before requesting deletion." }
+        {
+          "heading": "1. How to request",
+          "body": "To permanently delete your account and all associated data (invoices, customers, inventory, settings), email support@hisabche.com from your account's registered email address and request account deletion."
+        },
+        {
+          "heading": "2. Processing time",
+          "body": "Your request is processed within 30 days and your data is fully deleted, unless the law requires certain financial records to be retained for a specific period."
+        },
+        {
+          "heading": "3. Irreversibility",
+          "body": "Account and data deletion cannot be undone; export any data you need before requesting deletion."
+        }
       ],
       "gdprTitle": "GDPR & Privacy Rights",
       "gdprIntro": "An overview of your data-protection rights and how to exercise them at Hisabche.",
       "gdprSections": [
-        { "heading": "1. Right of access", "body": "You can request a copy of all personal data we hold about you." },
-        { "heading": "2. Right to rectification", "body": "You can correct inaccurate or incomplete account information at any time via Settings or by contacting support." },
-        { "heading": "3. Right to erasure", "body": "You can request full deletion of your data via the Data Deletion Request page." },
-        { "heading": "4. Right to data portability", "body": "You can export your business data in a structured format (e.g. CSV)." },
-        { "heading": "5. Contact", "body": "To exercise any of these rights, contact support@hisabche.com." }
+        {
+          "heading": "1. Right of access",
+          "body": "You can request a copy of all personal data we hold about you."
+        },
+        {
+          "heading": "2. Right to rectification",
+          "body": "You can correct inaccurate or incomplete account information at any time via Settings or by contacting support."
+        },
+        {
+          "heading": "3. Right to erasure",
+          "body": "You can request full deletion of your data via the Data Deletion Request page."
+        },
+        {
+          "heading": "4. Right to data portability",
+          "body": "You can export your business data in a structured format (e.g. CSV)."
+        },
+        {
+          "heading": "5. Contact",
+          "body": "To exercise any of these rights, contact support@hisabche.com."
+        }
       ],
       "copyrightTitle": "Copyright",
       "copyrightIntro": "This page covers the intellectual property in the Hisabche software, design and content.",
       "copyrightSections": [
-        { "heading": "1. Ownership", "body": "All rights to the Hisabche software, UI design, logo and this website's content belong to Hisabche unless stated otherwise." },
-        { "heading": "2. Your data", "body": "This copyright does not extend to your business data (invoices, customer records, etc.) — that data remains yours." },
-        { "heading": "3. Contact", "body": "For copyright questions, contact support@hisabche.com." }
+        {
+          "heading": "1. Ownership",
+          "body": "All rights to the Hisabche software, UI design, logo and this website's content belong to Hisabche unless stated otherwise."
+        },
+        {
+          "heading": "2. Your data",
+          "body": "This copyright does not extend to your business data (invoices, customer records, etc.) — that data remains yours."
+        },
+        {
+          "heading": "3. Contact",
+          "body": "For copyright questions, contact support@hisabche.com."
+        }
       ],
       "aboutTitle": "About Us",
       "aboutIntro": "Hisabche is accounting, invoicing and inventory-management software built for small and medium businesses in Iran and Afghanistan.",
       "aboutSections": [
-        { "heading": "Why Hisabche", "body": "Many small businesses still track their books on paper or in spreadsheets. Hisabche is simple, fast, and works even without internet access, to replace that." },
-        { "heading": "What we do", "body": "We bring invoicing, inventory management, customer debt tracking, accounting, purchasing and HR together in one app." },
-        { "heading": "Who it's for", "body": "Hisabche is built for shops, wholesalers, small manufacturers, and any small or medium business that needs simple financial and inventory management." },
-        { "heading": "Contact the team", "body": "For any question or suggestion, reach us at support@hisabche.com." }
+        {
+          "heading": "Why Hisabche",
+          "body": "Many small businesses still track their books on paper or in spreadsheets. Hisabche is simple, fast, and works even without internet access, to replace that."
+        },
+        {
+          "heading": "What we do",
+          "body": "We bring invoicing, inventory management, customer debt tracking, accounting, purchasing and HR together in one app."
+        },
+        {
+          "heading": "Who it's for",
+          "body": "Hisabche is built for shops, wholesalers, small manufacturers, and any small or medium business that needs simple financial and inventory management."
+        },
+        {
+          "heading": "Contact the team",
+          "body": "For any question or suggestion, reach us at support@hisabche.com."
+        }
       ]
     }
   },
@@ -1505,7 +1639,21 @@
       "equity": "Equity",
       "revenue": "Revenue",
       "expense": "Expense"
-    }
+    },
+    "cashFlow": "Cash Flow",
+    "addAccount": "Add Account",
+    "accountCode": "Account Code",
+    "accountName": "Account Name",
+    "accountType": "Account Type",
+    "parentAccount": "Parent Account",
+    "debit": "Debit",
+    "credit": "Credit",
+    "totalDebit": "Total Debit",
+    "totalCredit": "Total Credit",
+    "balance": "Balance",
+    "date": "Date",
+    "description": "Description",
+    "reference": "Reference"
   },
   "hr": {
     "title": "Human Resources",

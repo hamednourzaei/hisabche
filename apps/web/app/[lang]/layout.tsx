@@ -11,7 +11,7 @@ import { Analytics } from "@vercel/analytics/next";
 import Script from "next/script";
 import { AnalyticsPageview } from "./analytics-pageview";
 import { Suspense } from "react";
-import { NextIntlClientProvider } from "next-intl";
+import { NextIntlClientProvider, IntlErrorCode } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -158,7 +158,20 @@ export default async function RootLayout({ children, params }: { children: React
         <Script strategy="afterInteractive" src="https://www.googletagmanager.com/gtag/js?id=G-T5XG907W4R" />
         <Script id="google-analytics" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-T5XG907W4R');` }} />
         <ClientErrorBoundary>
-          <NextIntlClientProvider locale={locale} messages={messages}>
+          <NextIntlClientProvider
+            locale={locale}
+            messages={messages}
+            onError={(error) => {
+              // ✅ safeT/st wrapper های موجود در کد، خودشان fallback را
+              // نمایش می‌دهند — این خطا فقط نویز کنسول است، نه باگ واقعی.
+              if (error.code === IntlErrorCode.MISSING_MESSAGE) return;
+              console.error(error);
+            }}
+            getMessageFallback={({ key, namespace }) => {
+              const path = namespace ? `${namespace}.${key}` : key;
+              return path.split(".").pop() ?? path;
+            }}
+          >
             <Providers>{children}</Providers>
           </NextIntlClientProvider>
         </ClientErrorBoundary>
