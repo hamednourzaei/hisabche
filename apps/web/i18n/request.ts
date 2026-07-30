@@ -36,9 +36,14 @@ export default getRequestConfig(async ({ requestLocale }) => {
     // شده‌اند و صرفاً نویز کنسول‌اند، نه باگ visible. کاملاً بی‌صدا می‌کنیم؛
     // getMessageFallback زیر همچنان یک متن امن برمی‌گرداند تا رندر کرش نکند.
     onError() {},
+    // ✅ FIX: باید مسیر کامل کلید برگردد (نه فقط بخش آخر آن) — چون
+    // wrapper های safeT/st در کل کدبیس با مقایسه‌ی `v !== key` (که key همان
+    // مسیر کامل است) تشخیص می‌دهند ترجمه واقعاً پیدا شده یا نه. برگرداندن
+    // فقط بخش آخر (مثلاً "transformHighlight") باعث می‌شد safeT فکر کند
+    // ترجمه پیدا شده و همان متن خام کلید را به‌جای fallback فارسی درست
+    // نمایش دهد.
     getMessageFallback({ key, namespace }) {
-      const path = namespace ? `${namespace}.${key}` : key;
-      return path.split('.').pop() ?? path;
+      return namespace ? `${namespace}.${key}` : key;
     },
   };
 });
