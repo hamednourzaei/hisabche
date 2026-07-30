@@ -999,6 +999,8 @@
   "common": {
     "yes": "بله",
     "no": "نه",
+    "moreItems": "مورد دیگر",
+  "noCustomer": "بدون مشتری",
     "ok": "باشه",
     "or": "یا",
     "and": "و",
@@ -1474,6 +1476,8 @@
   "dashboard": {
     "welcome": "خوش اومدی",
     "todaySales": "فروش امروز",
+    "customersLine": "مشتریان",
+  "invoicesLine": "فاکتورها",
     "lowStockAlert": "هشدار کمبود موجودی",
     "totalDebt": "کل بدهی",
     "recentInvoices": "فاکتورهای اخیر",

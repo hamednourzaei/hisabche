@@ -991,6 +991,7 @@
   },
   "common": {
     "yes": "Yes",
+   
     "no": "No",
     "ok": "OK",
     "or": "or",
@@ -1472,6 +1473,8 @@
     "welcome": "Welcome",
     "todaySales": "Today's Sales",
     "lowStockAlert": "Low Stock",
+    "customersLine": "customers",
+  "invoicesLine": " invoices",
     "totalDebt": "Total Debt",
     "recentInvoices": "Recent Invoices",
     "noInvoicesYet": "No invoices yet",
