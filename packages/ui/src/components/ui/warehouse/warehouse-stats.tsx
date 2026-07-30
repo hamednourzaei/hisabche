@@ -1,7 +1,8 @@
 // packages/ui/src/components/ui/warehouse/warehouse-stats.tsx
 "use client";
 
-import { memo, useMemo, useState } from "react";
+import { memo, useMemo, useRef, useState, useLayoutEffect } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { Package, AlertTriangle, DollarSign, ChevronDown } from "lucide-react";
 import type { Product } from "../../../lib/warehouse/warehouse-types";
@@ -98,10 +99,34 @@ const LowStockThresholdPicker = memo(function LowStockThresholdPicker({
 }) {
   const [open, setOpen] = useState(false);
   const [custom, setCustom] = useState(String(threshold));
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const [panelPos, setPanelPos] = useState<{ top: number; left: number } | null>(null);
+
+  // ✅ FIX: قبلاً پنل با position:absolute داخل ردیف کارت‌ها (که خودش
+  // overflow-x-auto دارد) رندر می‌شد — چون یک المان absolute می‌تواند
+  // scrollWidth والد اسکرول‌شونده را عوض کند، مرورگر کل ردیف ۴ کارت را
+  // برای نمایش پنل اسکرول افقی می‌کرد، به‌جای اینکه فقط خود پنل باز شود.
+  // با رندر از طریق portal با position:fixed (خارج از هر والد اسکرول‌دار)
+  // این مشکل کاملاً حل می‌شود.
+  useLayoutEffect(() => {
+    if (!open || !btnRef.current) return;
+    const update = () => {
+      const rect = btnRef.current!.getBoundingClientRect();
+      setPanelPos({ top: rect.bottom + 4, left: rect.right - 144 });
+    };
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [open]);
 
   return (
-    <div className="relative shrink-0">
+    <div className="shrink-0">
       <button
+        ref={btnRef}
         type="button"
         onClick={(e) => {
           e.stopPropagation();
@@ -112,45 +137,53 @@ const LowStockThresholdPicker = memo(function LowStockThresholdPicker({
         {t("warehouse.lowStockThreshold", "زیر")} {threshold}
         <ChevronDown className="size-3" aria-hidden="true" />
       </button>
-      {open && (
-        <div className="absolute end-0 z-20 mt-1 w-36 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-2 shadow-lg">
-          {THRESHOLD_PRESETS.map((p) => (
-            <button
-              key={p}
-              type="button"
-              onClick={() => {
-                onChange(p);
-                setOpen(false);
-              }}
-              className="block w-full rounded-lg px-2 py-1.5 text-start text-xs text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]"
+      {open && panelPos && typeof document !== "undefined" &&
+        createPortal(
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+            <div
+              className="fixed z-50 w-36 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-2 shadow-lg"
+              style={{ top: panelPos.top, left: Math.max(8, panelPos.left) }}
             >
-              {t("warehouse.lowStockThreshold", "زیر")} {p}
-            </button>
-          ))}
-          <div className="mt-1 flex gap-1 border-t border-[hsl(var(--border-default))] pt-1.5">
-            <input
-              type="number"
-              min={1}
-              value={custom}
-              onChange={(e) => setCustom(e.target.value)}
-              className="w-full rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-2 py-1 text-xs text-[hsl(var(--fg-primary))]"
-            />
-            <button
-              type="button"
-              onClick={() => {
-                const n = parseInt(custom);
-                if (n > 0) {
-                  onChange(n);
-                  setOpen(false);
-                }
-              }}
-              className="shrink-0 rounded-lg bg-[hsl(var(--color-primary))] px-2 py-1 text-xs font-medium text-white"
-            >
-              {t("action.apply", "اعمال")}
-            </button>
-          </div>
-        </div>
-      )}
+              {THRESHOLD_PRESETS.map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => {
+                    onChange(p);
+                    setOpen(false);
+                  }}
+                  className="block w-full rounded-lg px-2 py-1.5 text-start text-xs text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]"
+                >
+                  {t("warehouse.lowStockThreshold", "زیر")} {p}
+                </button>
+              ))}
+              <div className="mt-1 flex gap-1 border-t border-[hsl(var(--border-default))] pt-1.5">
+                <input
+                  type="number"
+                  min={1}
+                  value={custom}
+                  onChange={(e) => setCustom(e.target.value)}
+                  className="w-full rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-2 py-1 text-xs text-[hsl(var(--fg-primary))]"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const n = parseInt(custom);
+                    if (n > 0) {
+                      onChange(n);
+                      setOpen(false);
+                    }
+                  }}
+                  className="shrink-0 rounded-lg bg-[hsl(var(--color-primary))] px-2 py-1 text-xs font-medium text-white"
+                >
+                  {t("action.apply", "اعمال")}
+                </button>
+              </div>
+            </div>
+          </>,
+          document.body
+        )}
     </div>
   );
 });

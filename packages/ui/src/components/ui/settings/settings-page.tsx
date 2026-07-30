@@ -582,7 +582,7 @@ const BillingSection = memo(function BillingSection() {
           {t("nav.billing")}
         </p>
         <p className="text-sm text-[hsl(var(--fg-secondary))] truncate">
-          {t("nav.billing.description")}
+          {t("nav.billing_description")}
         </p>
       </div>
       <ChevronLeft className="size-4 text-[hsl(var(--fg-tertiary))] rtl:rotate-180 shrink-0" aria-hidden="true" />

@@ -46,7 +46,7 @@ export function AccountingPage() {
           {t("nav.money")}
         </h1>
         <p className="text-[11px] md:text-xs lg:text-sm text-[hsl(var(--fg-tertiary))] mt-0.5 md:mt-1">
-          {t("nav.money.description")}
+          {t("nav.money_description")}
         </p>
       </div>
 

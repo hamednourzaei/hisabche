@@ -11,8 +11,8 @@ import { Analytics } from "@vercel/analytics/next";
 import Script from "next/script";
 import { AnalyticsPageview } from "./analytics-pageview";
 import { Suspense } from "react";
-import { NextIntlClientProvider, IntlErrorCode } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
+import { IntlProvider } from "./intl-provider";
 
 /* ═══════════════════════════════════════════════════════════════════════════
    RootLayout v8 — Fixed Favicons + PWA manifest
@@ -158,22 +158,14 @@ export default async function RootLayout({ children, params }: { children: React
         <Script strategy="afterInteractive" src="https://www.googletagmanager.com/gtag/js?id=G-T5XG907W4R" />
         <Script id="google-analytics" strategy="afterInteractive" dangerouslySetInnerHTML={{ __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-T5XG907W4R');` }} />
         <ClientErrorBoundary>
-          <NextIntlClientProvider
-            locale={locale}
-            messages={messages}
-            onError={(error) => {
-              // ✅ safeT/st wrapper های موجود در کد، خودشان fallback را
-              // نمایش می‌دهند — این خطا فقط نویز کنسول است، نه باگ واقعی.
-              if (error.code === IntlErrorCode.MISSING_MESSAGE) return;
-              console.error(error);
-            }}
-            getMessageFallback={({ key, namespace }) => {
-              const path = namespace ? `${namespace}.${key}` : key;
-              return path.split(".").pop() ?? path;
-            }}
-          >
+          {/* ✅ FIX: onError/getMessageFallback را نمی‌شود مستقیم از این
+              Server Component به NextIntlClientProvider پاس داد (کرش RSC:
+              "Functions cannot be passed directly to Client Components") —
+              به همین خاطر در یک wrapper جدا و "use client" (IntlProvider)
+              تعریف شده‌اند تا کاملاً سمت کلاینت بمانند. */}
+          <IntlProvider locale={locale} messages={messages}>
             <Providers>{children}</Providers>
-          </NextIntlClientProvider>
+          </IntlProvider>
         </ClientErrorBoundary>
         <Suspense fallback={null}><AnalyticsPageview /></Suspense>
         <SpeedInsights /><Analytics />

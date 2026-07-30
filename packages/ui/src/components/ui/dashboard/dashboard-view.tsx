@@ -349,7 +349,7 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
               <div className="flex items-center gap-1.5 sm:gap-2">
                 <TrendingUp className="size-4 sm:size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
                 <h2 className="text-sm sm:text-base font-semibold text-[hsl(var(--fg-primary))]">
-                  {t("dashboard.salesChart")}
+                  {t("dashboard.salesChartTitle", "نمودار فروش")}
                 </h2>
               </div>
               <DateRangePicker

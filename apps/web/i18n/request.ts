@@ -29,14 +29,13 @@ export default getRequestConfig(async ({ requestLocale }) => {
     // در سرور Error پرتاب می‌کرد (که برای بعضی مسیرها باعث ۵۰۰ می‌شد) و در
     // کلاینت انبوهی از console.error تولید می‌کرد. حالا فقط لاگ می‌کنیم و
     // یک متن برگشتی امن نمایش می‌دهیم؛ رندر هیچ‌وقت کرش نمی‌کند.
-    onError(error) {
-      // ✅ خیلی از کامپوننت‌ها از wrapper محلی safeT/st استفاده می‌کنند که
-      // t(key) خام next-intl را صدا می‌زند و اگر کلید نبود، خودش fallback
-      // درست را نمایش می‌دهد — یعنی MISSING_MESSAGE در این موارد قبلاً
-      // در سطح UI هندل شده و صرفاً نویز کنسول است، نه باگ واقعی.
-      if (error.code === IntlErrorCode.MISSING_MESSAGE) return;
-      console.error(error);
-    },
+    // ✅ خیلی از کامپوننت‌ها از wrapper محلی safeT/st استفاده می‌کنند که
+    // t(key) خام next-intl را صدا می‌زند و اگر کلید نبود یا مسیر اشتباه
+    // بود، خودشان fallback درست را نمایش می‌دهند — یعنی این خطاها
+    // (MISSING_MESSAGE، INSUFFICIENT_PATH و مشابه) قبلاً در سطح UI هندل
+    // شده‌اند و صرفاً نویز کنسول‌اند، نه باگ visible. کاملاً بی‌صدا می‌کنیم؛
+    // getMessageFallback زیر همچنان یک متن امن برمی‌گرداند تا رندر کرش نکند.
+    onError() {},
     getMessageFallback({ key, namespace }) {
       const path = namespace ? `${namespace}.${key}` : key;
       return path.split('.').pop() ?? path;

@@ -41,7 +41,7 @@ export const ApprovalsView = memo(function ApprovalsView({
         <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-12 text-center">
           <ClipboardCheck className="size-12 mx-auto mb-3 text-[hsl(var(--fg-tertiary))]" />
           <p className="text-[hsl(var(--fg-secondary))]">
-            {t("nav.approvals.empty", "چیزی در انتظار تأیید شما نیست")}
+            {t("nav.approvals_empty", "چیزی در انتظار تأیید شما نیست")}
           </p>
         </div>
       ) : (

@@ -54,7 +54,7 @@ const InvoicesHeader = memo(function InvoicesHeader({
           {t("nav.getPaid", "دریافت پول")}
         </h1>
         <p className="text-xs sm:text-sm text-[hsl(var(--fg-secondary))]">
-          {t("nav.getPaid.description", "چه کسی چقدر باید بپردازد")}
+          {t("nav.getPaid_description", "چه کسی چقدر باید بپردازد")}
         </p>
       </div>
       <button

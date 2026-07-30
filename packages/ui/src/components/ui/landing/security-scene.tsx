@@ -198,7 +198,10 @@ export default function SecurityScene({ t }: SecuritySceneProps) {
               key={badge}
               className="inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-[9px] sm:text-xs lg:text-sm font-medium border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] text-[hsl(var(--fg-secondary))]"
             >
-              {t(`landing.security.badge.${badge}`, badge)}
+              {/* ✅ FIX: کلید next-intl نمی‌تواند "." داشته باشد (مثلاً در
+                  «99.9% Available») — قبلاً باعث کرش INVALID_KEY کل صفحه
+                  می‌شد. اینجا و در فایل‌های پیام، "." با "_" جایگزین شده. */}
+              {t(`landing.security.badge.${badge.replace(/\./g, "_")}`, badge)}
             </span>
           ))}
         </div>

@@ -80,7 +80,7 @@ const WarehouseHeader = memo(function WarehouseHeader({
           {t("nav.stock", "موجودی")}
         </h1>
         <p className="text-sm text-[hsl(var(--fg-secondary))]">
-          {t("nav.stock.description", "چه چیزی داریم و چه چیزی کم است")}
+          {t("nav.stock_description", "چه چیزی داریم و چه چیزی کم است")}
         </p>
       </div>
 
