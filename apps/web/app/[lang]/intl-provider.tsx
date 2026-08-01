@@ -31,8 +31,7 @@ export function IntlProvider({
         // fallback درست را نمایش می‌دهند — این خطا فقط نویز کنسول است.
       }}
       getMessageFallback={({ key, namespace }) => {
-        const path = namespace ? `${namespace}.${key}` : key;
-        return path.split(".").pop() ?? path;
+        return namespace ? `${namespace}.${key}` : key;
       }}
     >
       {children}
