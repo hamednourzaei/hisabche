@@ -76,7 +76,9 @@ export function PaymentModal({ open, onClose, onPaid, customer, openInvoices }: 
   const suggested = useMemo(() => {
     const inv = openInvoices.find((i) => i.id === invoiceId)
     if (inv) return remaining(inv)
-    return openInvoices.length ? Math.min(...openInvoices.map(remaining)) : 0
+    // ✅ FIX: spread با Math.min برای لیست‌های بزرگ می‌تواند Call Stack را پر
+    // کند و تب مرورگر را کرش کند؛ reduce امن است صرف‌نظر از طول آرایه.
+    return openInvoices.length ? openInvoices.reduce((min, i) => Math.min(min, remaining(i)), Infinity) : 0
   }, [openInvoices, invoiceId])
 
   const handleClose = useCallback(() => {

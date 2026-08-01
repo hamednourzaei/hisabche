@@ -104,8 +104,17 @@ const Sparkline = memo(function Sparkline({ values }: { values: number[] | null 
       </svg>
     );
   }
-  const min = Math.min(...values);
-  const max = Math.max(...values);
+  // ✅ FIX: Math.min(...values)/Math.max(...values) با آرایه‌ی نسبتاً بزرگ
+  // (مثلاً بازه‌ی زمانی طولانی در نمودار فروش) می‌تواند Call Stack را پر کند
+  // و کل تب مرورگر را کرش کند (نه یک خطای قابل catch در React) — چون
+  // spread کردن آرگومان‌ها به یک تابع، هر عنصر را یک آرگومان جداگانه می‌کند.
+  // با یک حلقه‌ی ساده، این محدودیت اندازه‌ی آرایه از بین می‌رود.
+  let min = values[0]!;
+  let max = values[0]!;
+  for (const v of values) {
+    if (v < min) min = v;
+    if (v > max) max = v;
+  }
   const range = max - min || 1;
   const points = values
     .map((v, i) => {
