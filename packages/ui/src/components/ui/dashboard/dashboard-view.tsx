@@ -176,8 +176,13 @@ const AIInsightsPanel = memo(function AIInsightsPanel({
 }) {
   const tOriginal = useTranslations();
   const t = (key: string, fallback?: string) => {
-    const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
-    return v && v !== key ? v : (fallback ?? key);
+    try {
+      const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
+      return v && v !== key ? v : (fallback ?? key);
+    } catch (err) {
+      console.error("[DEBUG dashboard] t() threw for key:", key, err);
+      return fallback ?? key;
+    }
   };
 
   return (
@@ -236,8 +241,13 @@ const RecentActivities = memo(function RecentActivities({
 }) {
   const tOriginal = useTranslations();
   const t = (key: string, fallback?: string) => {
-    const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
-    return v && v !== key ? v : (fallback ?? key);
+    try {
+      const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
+      return v && v !== key ? v : (fallback ?? key);
+    } catch (err) {
+      console.error("[DEBUG dashboard] t() threw for key:", key, err);
+      return fallback ?? key;
+    }
   };
 
   const items = useMemo(
