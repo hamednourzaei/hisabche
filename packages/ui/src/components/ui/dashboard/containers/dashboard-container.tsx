@@ -55,7 +55,7 @@ export function DashboardContainer() {
   // (Render) هنوز نسخه‌ی جدید analytics.service.ts را ندارد و باید جدا
   // دیپلوی شود — چون این فیلدها فقط در فرانت (Vercel) پوش نمی‌شوند.
   useEffect(() => {
-    console.log("[DEBUG dashboard] kpiLoading:", kpiLoading, "kpis:", kpis);
+    console.error("[DEBUG dashboard] kpiLoading:", kpiLoading, "kpis:", kpis);
   }, [kpiLoading, kpis]);
 
   // ─── Callbacks ──────────────────────────────────────────────────────────
