@@ -139,7 +139,7 @@ export function useDashboardData(dateRange: DateRange) {
     insights,
     salesChartData,
     recentInvoices,
-    recentActivities: activitiesData ?? [],
+    recentActivities: Array.isArray(activitiesData) ? activitiesData : [],
     lowStockItems,
     pendingPaymentsCount,
     customerGrowth,

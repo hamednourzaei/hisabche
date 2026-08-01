@@ -252,7 +252,7 @@ const RecentActivities = memo(function RecentActivities({
 
   const items = useMemo(
     () =>
-      groups
+      (Array.isArray(groups) ? groups : [])
         .flatMap((g) =>
           (g.activities ?? []).map((a) => ({
             ...a,
