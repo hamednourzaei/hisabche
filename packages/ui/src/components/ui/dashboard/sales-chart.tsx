@@ -61,8 +61,21 @@ export const SalesChart = memo(function SalesChart({
 }: SalesChartProps) {
   const tOriginal = useTranslations();
   const t = (key: string, fallback?: string) => {
-    const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
-    return v && v !== key ? v : (fallback ?? key);
+    try {
+      const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
+      return v && v !== key ? v : (fallback ?? key);
+    } catch (err) {
+      console.error("[DEBUG dashboard] t() threw for key:", key, err);
+      return fallback ?? key;
+    }
+  };
+  const tCount = (key: string, values: Record<string, unknown>, fallback?: string) => {
+    try {
+      return tOriginal(key as Parameters<typeof tOriginal>[0], values as never);
+    } catch (err) {
+      console.error("[DEBUG dashboard] tOriginal() threw for key:", key, err);
+      return fallback ?? key;
+    }
   };
   const descriptionId = useId();
   const isMobile = useIsMobile();
@@ -195,7 +208,7 @@ export const SalesChart = memo(function SalesChart({
 
         {/* Contextual footer — سویچ‌های فعال/غیرفعال کردن هر خط (فروش همیشه روشن است) */}
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[hsl(var(--fg-tertiary))] pt-1 border-t border-[hsl(var(--border-default)/0.5)]">
-          <span>{tOriginal("dashboard.dataRange", { count: data.length })}</span>
+          <span>{tCount("dashboard.dataRange", { count: data?.length ?? 0 }, `Last ${data?.length ?? 0} periods`)}</span>
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1">
               <span className="inline-block h-2 w-2 rounded-full bg-[hsl(var(--color-primary))]" />
