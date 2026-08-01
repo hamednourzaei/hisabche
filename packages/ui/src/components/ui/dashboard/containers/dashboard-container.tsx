@@ -87,7 +87,7 @@ export function DashboardContainer() {
       customerDebt={kpis?.customerDebt ?? 0}
       warehouseValue={kpis?.warehouseValue ?? 0}
       kpiLoading={kpiLoading}
-      insights={insights ?? []}
+      insights={Array.isArray(insights) ? insights : []}
       insightsLoading={insightsLoading}
       salesChartData={salesChartData}
       chartLoading={chartLoading}
