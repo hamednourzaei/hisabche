@@ -32,7 +32,7 @@ function FallbackUI({
   description: string;
   retry: string;
   onReset: () => void;
-  error?: Error | null;
+  error?: Error | null | undefined;
 }) {
   return (
     <div className="flex min-h-[400px] items-center justify-center p-8">
@@ -68,7 +68,7 @@ const STATIC_TEXT = {
 // بیرون از NextIntlClientProvider رندر شود، useTranslations خودش throw
 // می‌کند — و چون این UI خودِ fallback ارور بود، خطا از ErrorBoundary فرار
 // می‌کرد و کل سایت سیاه می‌شد. حالا با یک boundary داخلی محافظت شده است.
-function TranslatedFallback({ onReset, error }: { onReset: () => void; error?: Error | null }) {
+function TranslatedFallback({ onReset, error }: { onReset: () => void; error?: Error | null | undefined }) {
   const t = useTranslations();
   const tr = (key: string, fallback: string) => {
     try {
@@ -92,10 +92,10 @@ function TranslatedFallback({ onReset, error }: { onReset: () => void; error?: E
 // boundary داخلی: اگر ترجمه‌ها در دسترس نبودند، متن ثابت نمایش داده می‌شود
 // به‌جای این‌که کل اپلیکیشن از کار بیفتد.
 class ErrorFallback extends React.Component<
-  { onReset: () => void; error?: Error | null },
+  { onReset: () => void; error?: Error | null | undefined },
   { intlFailed: boolean }
 > {
-  constructor(props: { onReset: () => void; error?: Error | null }) {
+  constructor(props: { onReset: () => void; error?: Error | null | undefined }) {
     super(props);
     this.state = { intlFailed: false };
   }
