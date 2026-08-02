@@ -133,7 +133,7 @@ export class InvoiceService {
     const {
       search, type, status, customerId, supplierId,
       currency, dateFrom, dateTo, minTotal, maxTotal,
-      limit = 20, cursor, sortBy = "created_at", sortDirection = "desc"
+      limit = 20, cursor, page = 1, sortBy = "created_at", sortDirection = "desc"
     } = filters;
 
     const cacheKey = `invoices:${userId}:${JSON.stringify(filters)}`;
@@ -173,8 +173,20 @@ export class InvoiceService {
         invoice_items ( quantity )
       `)
       .eq("user_id", userId)
-      .order(sortBy, { ascending: sortDirection === "asc" })
-      .limit(fetchLimit);
+      .order(sortBy, { ascending: sortDirection === "asc" });
+
+    // ✅ FIX: رابط کاربری فاکتورها صفحه‌محور است (قبلی/بعدی + «۱ / ۳») و
+    // پارامتر page را می‌فرستد، ولی این سرویس فقط cursor را می‌شناخت و page
+    // را کاملاً نادیده می‌گرفت — یعنی هر بار همان صفحه‌ی اول برمی‌گشت و
+    // دکمه‌های صفحه‌بندی هیچ کاری نمی‌کردند. حالا وقتی cursor نباشد از
+    // offset استفاده می‌شود. (cursor برای مصرف‌کننده‌های infinite-scroll
+    // دست‌نخورده باقی می‌ماند.)
+    if (!cursor && page > 1) {
+      const offset = (page - 1) * maxLimit;
+      query = query.range(offset, offset + maxLimit);
+    } else {
+      query = query.limit(fetchLimit);
+    }
 
     if (search) query = query.ilike("invoice_number", `%${search}%`);
     if (type) query = query.eq("type", type);
@@ -195,12 +207,35 @@ export class InvoiceService {
       }
     }
 
+    // ✅ FIX: کوئری شمارش هیچ‌کدام از فیلترها را اعمال نمی‌کرد و همیشه کل
+    // فاکتورهای کاربر را می‌شمرد؛ در نتیجه با فیلتر/جستجو تعداد صفحات
+    // («۱ / ۳») غلط می‌شد و کاربر به صفحه‌هایی می‌رفت که خالی بودند.
+    // وقتی فیلتری فعال است از شمارش دقیق استفاده می‌شود چون تخمین
+    // (estimated) برای زیرمجموعه‌های فیلترشده قابل اتکا نیست.
+    const hasFilters =
+      Boolean(search || type || status || customerId || supplierId || currency || dateFrom || dateTo) ||
+      minTotal !== undefined ||
+      maxTotal !== undefined;
+
+    let countQuery = supabase
+      .from("invoices")
+      .select("id", { count: hasFilters ? "exact" : "estimated", head: true })
+      .eq("user_id", userId);
+
+    if (search) countQuery = countQuery.ilike("invoice_number", `%${search}%`);
+    if (type) countQuery = countQuery.eq("type", type);
+    if (status) countQuery = countQuery.eq("status", status);
+    if (customerId) countQuery = countQuery.eq("customer_id", customerId);
+    if (supplierId) countQuery = countQuery.eq("supplier_id", supplierId);
+    if (currency) countQuery = countQuery.eq("currency", currency);
+    if (dateFrom) countQuery = countQuery.gte("date", dateFrom);
+    if (dateTo) countQuery = countQuery.lte("date", dateTo);
+    if (minTotal !== undefined) countQuery = countQuery.gte("total", minTotal);
+    if (maxTotal !== undefined) countQuery = countQuery.lte("total", maxTotal);
+
     const [queryResult, countResult] = await Promise.all([
       query,
-      supabase
-        .from("invoices")
-        .select("id", { count: "estimated", head: true })
-        .eq("user_id", userId),
+      countQuery,
     ]);
 
     const { data, error } = queryResult;

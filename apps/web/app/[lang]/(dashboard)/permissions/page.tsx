@@ -2,19 +2,19 @@
 import { PermissionsContainer } from "@hisabche/ui";
 
 const titles: Record<string, string> = {
-  "fa-IR": "نقش‌ها و دسترسی‌ها",
-  "fa-AF": "نقش‌ها و دسترسی‌ها",
+  "fa": "نقش‌ها و دسترسی‌ها",
+  "af": "نقش‌ها و دسترسی‌ها",
   "en": "Roles & Permissions",
 };
 
 const descriptions: Record<string, string> = {
-  "fa-IR": "مشاهده‌ی نقش‌های تیم و آنچه هر نقش در حسابچه می‌تواند انجام دهد.",
-  "fa-AF": "مشاهده‌ی نقش‌های تیم و آنچه هر نقش در حسابچه می‌تواند انجام دهد.",
+  "fa": "مشاهده‌ی نقش‌های تیم و آنچه هر نقش در حسابچه می‌تواند انجام دهد.",
+  "af": "مشاهده‌ی نقش‌های تیم و آنچه هر نقش در حسابچه می‌تواند انجام دهد.",
   "en": "See your team's roles and what each role can do in Hisabche.",
 };
 
 const keywords: Record<string, string[]> = {
-  "fa-IR": [
+  "fa": [
     "نقش کاربری",
     "دسترسی",
     "مجوز",
@@ -26,7 +26,7 @@ const keywords: Record<string, string[]> = {
     "حسابچه",
     "سطح دسترسی",
   ],
-  "fa-AF": [
+  "af": [
     "نقش کاربری",
     "دسترسی",
     "مجوز",
@@ -55,9 +55,9 @@ const keywords: Record<string, string[]> = {
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
   return {
-    title: titles[lang] || titles["fa-IR"],
-    description: descriptions[lang] || descriptions["fa-IR"],
-    keywords: keywords[lang] || keywords["fa-IR"],
+    title: titles[lang] || titles["fa"],
+    description: descriptions[lang] || descriptions["fa"],
+    keywords: keywords[lang] || keywords["fa"],
   };
 }
 

@@ -1,19 +1,19 @@
 import { QuickInvoiceContainer } from "@hisabche/ui";
 
 const titles: Record<string, string> = {
-  "fa-IR": "فاکتور سریع",
-  "fa-AF": "فاکتور سریع",
+  "fa": "فاکتور سریع",
+  "af": "فاکتور سریع",
   "en": "Quick Invoice",
 };
 
 const descriptions: Record<string, string> = {
-  "fa-IR": "ثبت فاکتور در کمتر از ۳۰ ثانیه با حسابچه. فروش سریع، انتخاب محصول از انبار و مشتری از دفتر تلفن.",
-  "fa-AF": "ثبت فاکتور در کمتر از ۳۰ ثانیه با حسابچه. فروش سریع، انتخاب جنس از گدام و مشتری از دفتر تلفن.",
+  "fa": "ثبت فاکتور در کمتر از ۳۰ ثانیه با حسابچه. فروش سریع، انتخاب محصول از انبار و مشتری از دفتر تلفن.",
+  "af": "ثبت فاکتور در کمتر از ۳۰ ثانیه با حسابچه. فروش سریع، انتخاب جنس از گدام و مشتری از دفتر تلفن.",
   "en": "Create an invoice in under 30 seconds with Hisabche. Quick sale, pick product from stock and customer from contacts.",
 };
 
 const keywords: Record<string, string[]> = {
-  "fa-IR": [
+  "fa": [
     "فاکتور سریع",
     "ثبت فاکتور",
     "فروش سریع",
@@ -25,7 +25,7 @@ const keywords: Record<string, string[]> = {
     "حسابچه",
     "فاکتور آسان",
   ],
-  "fa-AF": [
+  "af": [
     "فاکتور سریع",
     "ثبت فاکتور",
     "فروش سریع",
@@ -54,9 +54,9 @@ const keywords: Record<string, string[]> = {
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
   return {
-    title: titles[lang] || titles["fa-IR"],
-    description: descriptions[lang] || descriptions["fa-IR"],
-    keywords: keywords[lang] || keywords["fa-IR"],
+    title: titles[lang] || titles["fa"],
+    description: descriptions[lang] || descriptions["fa"],
+    keywords: keywords[lang] || keywords["fa"],
     robots: { index: false, follow: false },
   };
 }

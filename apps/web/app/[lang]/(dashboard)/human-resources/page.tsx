@@ -2,19 +2,19 @@
 import { HumanResourcesContainer } from "@hisabche/ui";
 
 const titles: Record<string, string> = {
-  "fa-IR": "منابع انسانی",
-  "fa-AF": "منابع بشری",
+  "fa": "منابع انسانی",
+  "af": "منابع بشری",
   "en": "Human Resources",
 };
 
 const descriptions: Record<string, string> = {
-  "fa-IR": "مدیریت کارمندان، حقوق و دستمزد، حضور و غیاب و مرخصی‌ها در حسابچه. سیستم کامل منابع انسانی.",
-  "fa-AF": "مدیریت کارمندان، حقوق و دستمزد، حضور و غیاب و مرخصی‌ها در حسابچه. سیستم کامل منابع بشری.",
+  "fa": "مدیریت کارمندان، حقوق و دستمزد، حضور و غیاب و مرخصی‌ها در حسابچه. سیستم کامل منابع انسانی.",
+  "af": "مدیریت کارمندان، حقوق و دستمزد، حضور و غیاب و مرخصی‌ها در حسابچه. سیستم کامل منابع بشری.",
   "en": "Manage employees, payroll, attendance and leaves in Hisabche. Complete human resources system.",
 };
 
 const keywords: Record<string, string[]> = {
-  "fa-IR": [
+  "fa": [
     "منابع انسانی",
     "مدیریت کارمندان",
     "حقوق و دستمزد",
@@ -26,7 +26,7 @@ const keywords: Record<string, string[]> = {
     "حسابچه",
     "مدیریت پرسنل",
   ],
-  "fa-AF": [
+  "af": [
     "منابع بشری",
     "مدیریت کارمندان",
     "حقوق و دستمزد",
@@ -55,9 +55,9 @@ const keywords: Record<string, string[]> = {
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
   return {
-    title: titles[lang] || titles["fa-IR"],
-    description: descriptions[lang] || descriptions["fa-IR"],
-    keywords: keywords[lang] || keywords["fa-IR"],
+    title: titles[lang] || titles["fa"],
+    description: descriptions[lang] || descriptions["fa"],
+    keywords: keywords[lang] || keywords["fa"],
   };
 }
 

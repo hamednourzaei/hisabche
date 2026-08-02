@@ -44,29 +44,29 @@ export function DashboardSkeleton() {
 }
 
 const titles: Record<string, string> = {
-  "fa-IR": "داشبورد",
-  "fa-AF": "داشبورد",
+  "fa": "داشبورد",
+  "af": "داشبورد",
   "en": "Dashboard",
 };
 
 const descriptions: Record<string, string> = {
-  "fa-IR": "نمای کلی کسب‌وکار",
-  "fa-AF": "نمای کلی تجارت",
+  "fa": "نمای کلی کسب‌وکار",
+  "af": "نمای کلی تجارت",
   "en": "Business overview",
 };
 
 const keywords: Record<string, string[]> = {
-  "fa-IR": ["داشبورد", "فروش", "انبار", "بدهی", "گزارش", "کسب‌وکار"],
-  "fa-AF": ["داشبورد", "فروش", "گدام", "قرض", "گزارش", "تجارت"],
+  "fa": ["داشبورد", "فروش", "انبار", "بدهی", "گزارش", "کسب‌وکار"],
+  "af": ["داشبورد", "فروش", "گدام", "قرض", "گزارش", "تجارت"],
   "en": ["dashboard", "sales", "inventory", "debt", "reports", "business"],
 };
 
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
   return {
-    title: titles[lang] || titles["fa-IR"],
-    description: descriptions[lang] || descriptions["fa-IR"],
-    keywords: keywords[lang] || keywords["fa-IR"],
+    title: titles[lang] || titles["fa"],
+    description: descriptions[lang] || descriptions["fa"],
+    keywords: keywords[lang] || keywords["fa"],
     robots: { index: false, follow: false },
   };
 }

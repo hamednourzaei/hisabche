@@ -43,6 +43,13 @@ interface ApprovalCardProps {
   onAction: (action: WorkflowAction, comment?: string) => Promise<void>;
   t: (key: string, fallback?: string) => string;
   disabled?: boolean;
+  // ✅ اطلاعات موجودیتی که باید تأیید شود — بدون این‌ها کارت فقط «فرآیند
+  // تأیید / تأیید / رد» نشان می‌داد و معلوم نبود اصلاً چه چیزی در انتظار
+  // تأیید است. این داده‌ها از قبل در instance موجود بودند، فقط رندر نمی‌شدند.
+  entityType?: string | undefined;
+  entityId?: string | undefined;
+  totalSteps?: number | undefined;
+  startedAt?: string | undefined;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -171,6 +178,10 @@ export const ApprovalCard = memo(function ApprovalCard({
   onAction,
   t,
   disabled = false,
+  entityType,
+  entityId,
+  totalSteps,
+  startedAt,
 }: ApprovalCardProps) {
   const [showReject, setShowReject] = useState(false);
   const [loading, setLoading] = useState<WorkflowAction | null>(null);
@@ -202,10 +213,34 @@ export const ApprovalCard = memo(function ApprovalCard({
 
   return (
     <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-4 sm:p-5 space-y-4">
-      {/* Header */}
-      <h4 className="text-sm font-bold text-[hsl(var(--fg-primary))]">
-        {t("workflow.title", "فرآیند تأیید")}
-      </h4>
+      {/* Header — چه چیزی در انتظار تأیید است */}
+      <div className="space-y-1 border-b border-[hsl(var(--border-default)/0.6)] pb-3">
+        <h4 className="text-sm font-bold text-[hsl(var(--fg-primary))]">
+          {entityType
+            ? t(`workflow.entity.${entityType}`, entityType)
+            : t("workflow.title", "فرآیند تأیید")}
+          {entityId ? (
+            <span className="ms-1.5 font-mono text-[11px] font-normal text-[hsl(var(--fg-tertiary))]" dir="ltr">
+              #{entityId.slice(0, 8)}
+            </span>
+          ) : null}
+        </h4>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[hsl(var(--fg-secondary))]">
+          {typeof totalSteps === "number" && totalSteps > 0 ? (
+            <span>
+              {t("workflow.stepProgress", "مرحله")} {currentStep} / {totalSteps}
+            </span>
+          ) : null}
+          {startedAt ? (
+            <span>
+              {t("workflow.startedAt", "شروع")}: {new Date(startedAt).toLocaleDateString("fa-AF")}
+            </span>
+          ) : null}
+          <span className="text-[hsl(var(--fg-tertiary))]">
+            {t(`workflow.status.${status}`, status)}
+          </span>
+        </div>
+      </div>
 
       <div className="flex flex-col lg:flex-row gap-5">
         {/* Left: Timeline */}

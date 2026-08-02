@@ -6,8 +6,8 @@
 import { PublicInvoiceContainer } from "@hisabche/ui";
 
 const titles: Record<string, string> = {
-  "fa-IR": "مشاهده فاکتور",
-  "fa-AF": "مشاهده فاکتور",
+  "fa": "مشاهده فاکتور",
+  "af": "مشاهده فاکتور",
   en: "View Invoice",
 };
 
@@ -18,7 +18,7 @@ export async function generateMetadata({
 }) {
   const { lang } = await params;
   return {
-    title: titles[lang] || titles["fa-IR"],
+    title: titles[lang] || titles["fa"],
     robots: { index: false, follow: false },
   };
 }

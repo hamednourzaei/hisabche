@@ -991,7 +991,6 @@
   },
   "common": {
     "yes": "Yes",
-   
     "no": "No",
     "ok": "OK",
     "or": "or",
@@ -1474,7 +1473,7 @@
     "todaySales": "Today's Sales",
     "lowStockAlert": "Low Stock",
     "customersLine": "customers",
-  "invoicesLine": " invoices",
+    "invoicesLine": " invoices",
     "totalDebt": "Total Debt",
     "recentInvoices": "Recent Invoices",
     "noInvoicesYet": "No invoices yet",
@@ -2231,6 +2230,27 @@
     "activity": {
       "empty": "No activity recorded yet",
       "count": "{count} activities"
+    }
+  },
+  "workflow": {
+    "stepProgress": "Step",
+    "startedAt": "Started",
+    "entity": {
+      "invoice": "Invoice",
+      "expense": "Expense",
+      "purchase_order": "Purchase Order",
+      "payroll": "Payroll",
+      "product": "Product",
+      "customer": "Customer",
+      "project": "Project",
+      "task": "Task"
+    },
+    "status": {
+      "pending": "Pending",
+      "in_progress": "In Review",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "cancelled": "Cancelled"
     }
   }
 }

@@ -1,19 +1,19 @@
 // apps/web/app/[lang]/accept-invite/layout.tsx
 
 const titles: Record<string, string> = {
-  "fa-IR": "پذیرش دعوت",
-  "fa-AF": "پذیرش دعوت",
+  "fa": "پذیرش دعوت",
+  "af": "پذیرش دعوت",
   "en": "Accept Invite",
 };
 
 const descriptions: Record<string, string> = {
-  "fa-IR": "پذیرش دعوت همکاری در فضای کاری حسابچه. به تیم خود بپیوندید و همکاری را شروع کنید.",
-  "fa-AF": "پذیرش دعوت همکاری در فضای کاری حسابچه. به تیم خود بپیوندید و همکاری را شروع کنید.",
+  "fa": "پذیرش دعوت همکاری در فضای کاری حسابچه. به تیم خود بپیوندید و همکاری را شروع کنید.",
+  "af": "پذیرش دعوت همکاری در فضای کاری حسابچه. به تیم خود بپیوندید و همکاری را شروع کنید.",
   "en": "Accept team invitation in Hisabche workspace. Join your team and start collaborating.",
 };
 
 const keywords: Record<string, string[]> = {
-  "fa-IR": [
+  "fa": [
     "پذیرش دعوت",
     "دعوت همکاری",
     "فضای کاری",
@@ -25,7 +25,7 @@ const keywords: Record<string, string[]> = {
     "دعوت‌نامه",
     "پیوستن به تیم",
   ],
-  "fa-AF": [
+  "af": [
     "پذیرش دعوت",
     "دعوت همکاری",
     "فضای کاری",
@@ -54,9 +54,9 @@ const keywords: Record<string, string[]> = {
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
   return {
-    title: titles[lang] || titles["fa-IR"],
-    description: descriptions[lang] || descriptions["fa-IR"],
-    keywords: keywords[lang] || keywords["fa-IR"],
+    title: titles[lang] || titles["fa"],
+    description: descriptions[lang] || descriptions["fa"],
+    keywords: keywords[lang] || keywords["fa"],
     robots: { index: false, follow: false },
   };
 }

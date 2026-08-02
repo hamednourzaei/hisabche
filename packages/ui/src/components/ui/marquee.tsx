@@ -69,7 +69,16 @@ export function Marquee({
             "flex shrink-0 justify-around [gap:var(--gap)]",
             vertical ? "animate-marquee-vertical flex-col" : "animate-marquee flex-row",
             pauseOnHover && "group-hover:[animation-play-state:paused]",
-            reverse && "[animation-direction:reverse]",
+            // ✅ FIX (RTL): کی‌فریم مارکی جهت‌ثابت است (translateX منفی). در
+            // چیدمان RTL محتوای ردیفِ بدون reverse از دید خارج می‌شد و ردیف
+            // خالی به‌نظر می‌رسید — دقیقاً چیزی که در فارسی/دری دیده می‌شد و
+            // در انگلیسی نه. در RTL جهت هر دو ردیف برعکس می‌شود تا رفتار با
+            // LTR یکسان بماند.
+            !vertical &&
+              (reverse
+                ? "[animation-direction:reverse] rtl:[animation-direction:normal]"
+                : "rtl:[animation-direction:reverse]"),
+            vertical && reverse && "[animation-direction:reverse]",
             "motion-reduce:animate-none",
           )}
         >

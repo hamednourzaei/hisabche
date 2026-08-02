@@ -1000,7 +1000,7 @@
     "yes": "بله",
     "no": "نه",
     "moreItems": "مورد دیگر",
-  "noCustomer": "بدون مشتری",
+    "noCustomer": "بدون مشتری",
     "ok": "باشه",
     "or": "یا",
     "and": "و",
@@ -1477,7 +1477,7 @@
     "welcome": "خوش اومدی",
     "todaySales": "فروش امروز",
     "customersLine": "مشتریان",
-  "invoicesLine": "فاکتورها",
+    "invoicesLine": "فاکتورها",
     "lowStockAlert": "هشدار کمبود موجودی",
     "totalDebt": "کل بدهی",
     "recentInvoices": "فاکتورهای اخیر",
@@ -2258,6 +2258,27 @@
     "activity": {
       "empty": "هیچ فعالیتی ثبت نشده است",
       "count": "{count} فعالیت"
+    }
+  },
+  "workflow": {
+    "stepProgress": "مرحله",
+    "startedAt": "شروع",
+    "entity": {
+      "invoice": "فاکتور",
+      "expense": "مصرف",
+      "purchase_order": "سفارش خرید",
+      "payroll": "معاش",
+      "product": "محصول",
+      "customer": "مشتری",
+      "project": "پروژه",
+      "task": "وظیفه"
+    },
+    "status": {
+      "pending": "در انتظار",
+      "in_progress": "در حال بررسی",
+      "approved": "تأیید شده",
+      "rejected": "رد شده",
+      "cancelled": "لغو شده"
     }
   }
 }

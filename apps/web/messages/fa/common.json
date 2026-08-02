@@ -1000,7 +1000,7 @@
     "cancel": "انصراف",
     "save": "ذخیره",
     "moreItems": "مورد دیگر",
-  "noCustomer": "بدون مشتری",
+    "noCustomer": "بدون مشتری",
     "back": "بازگشت",
     "retry": "تلاش دوباره",
     "noName": "کاربر",
@@ -1480,8 +1480,8 @@
     "lowStockAlert": "موجودی کم",
     "totalDebt": "کل بدهی",
     "recentInvoices": "آخرین فاکتورها",
-        "customersLine": "مشتریان",
-  "invoicesLine": "فاکتورها",
+    "customersLine": "مشتریان",
+    "invoicesLine": "فاکتورها",
     "noInvoicesYet": "هنوز فاکتوری ثبت نشده",
     "viewAllInvoices": "مشاهده همه فاکتورها",
     "itemsNeedReorder": "کالاهای نیازمند سفارش",
@@ -2259,6 +2259,27 @@
     "activity": {
       "empty": "هیچ فعالیتی ثبت نشده است",
       "count": "{count} فعالیت"
+    }
+  },
+  "workflow": {
+    "stepProgress": "مرحله",
+    "startedAt": "شروع",
+    "entity": {
+      "invoice": "فاکتور",
+      "expense": "هزینه",
+      "purchase_order": "سفارش خرید",
+      "payroll": "حقوق و دستمزد",
+      "product": "محصول",
+      "customer": "مشتری",
+      "project": "پروژه",
+      "task": "وظیفه"
+    },
+    "status": {
+      "pending": "در انتظار",
+      "in_progress": "در حال بررسی",
+      "approved": "تأیید شده",
+      "rejected": "رد شده",
+      "cancelled": "لغو شده"
     }
   }
 }

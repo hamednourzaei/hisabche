@@ -1,19 +1,19 @@
 import { SyncCenterContainer } from "@hisabche/ui";
 
 const titles: Record<string, string> = {
-  "fa-IR": "مرکز همگام‌سازی",
-  "fa-AF": "مرکز همگام‌سازی",
+  "fa": "مرکز همگام‌سازی",
+  "af": "مرکز همگام‌سازی",
   "en": "Sync Center",
 };
 
 const descriptions: Record<string, string> = {
-  "fa-IR": "مدیریت همگام‌سازی آفلاین، صف عملیات و وضعیت اتصال در حسابچه. داده‌های شما همیشه به‌روز و امن.",
-  "fa-AF": "مدیریت همگام‌سازی آفلاین، صف عملیات و وضعیت اتصال در حسابچه. داده‌های شما همیشه به‌روز و امن.",
+  "fa": "مدیریت همگام‌سازی آفلاین، صف عملیات و وضعیت اتصال در حسابچه. داده‌های شما همیشه به‌روز و امن.",
+  "af": "مدیریت همگام‌سازی آفلاین، صف عملیات و وضعیت اتصال در حسابچه. داده‌های شما همیشه به‌روز و امن.",
   "en": "Manage offline sync, operation queue and connection status in Hisabche. Your data always up-to-date and secure.",
 };
 
 const keywords: Record<string, string[]> = {
-  "fa-IR": [
+  "fa": [
     "همگام‌سازی",
     "همگام‌سازی آفلاین",
     "صف عملیات",
@@ -25,7 +25,7 @@ const keywords: Record<string, string[]> = {
     "حسابچه",
     "داده امن",
   ],
-  "fa-AF": [
+  "af": [
     "همگام‌سازی",
     "همگام‌سازی آفلاین",
     "صف عملیات",
@@ -54,9 +54,9 @@ const keywords: Record<string, string[]> = {
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
   return {
-    title: titles[lang] || titles["fa-IR"],
-    description: descriptions[lang] || descriptions["fa-IR"],
-    keywords: keywords[lang] || keywords["fa-IR"],
+    title: titles[lang] || titles["fa"],
+    description: descriptions[lang] || descriptions["fa"],
+    keywords: keywords[lang] || keywords["fa"],
     robots: { index: false, follow: false },
   };
 }

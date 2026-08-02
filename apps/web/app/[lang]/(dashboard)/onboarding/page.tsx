@@ -2,19 +2,19 @@
 import { OnboardingContainer } from "@hisabche/ui";
 
 const titles: Record<string, string> = {
-  "fa-IR": "راه‌اندازی",
-  "fa-AF": "راه‌اندازی",
+  "fa": "راه‌اندازی",
+  "af": "راه‌اندازی",
   "en": "Onboarding",
 };
 
 const descriptions: Record<string, string> = {
-  "fa-IR": "راه‌اندازی سریع حسابچه برای کسب‌وکار شما. تنظیم نام تجاری، ارز، انبار و اطلاعات اولیه در چند دقیقه.",
-  "fa-AF": "راه‌اندازی سریع حسابچه برای تجارت شما. تنظیم نام تجاری، ارز، گدام و اطلاعات اولیه در چند دقیقه.",
+  "fa": "راه‌اندازی سریع حسابچه برای کسب‌وکار شما. تنظیم نام تجاری، ارز، انبار و اطلاعات اولیه در چند دقیقه.",
+  "af": "راه‌اندازی سریع حسابچه برای تجارت شما. تنظیم نام تجاری، ارز، گدام و اطلاعات اولیه در چند دقیقه.",
   "en": "Quick Hisabche setup for your business. Set up business name, currency, warehouse and basic info in minutes.",
 };
 
 const keywords: Record<string, string[]> = {
-  "fa-IR": [
+  "fa": [
     "راه‌اندازی",
     "شروع کار",
     "تنظیمات اولیه",
@@ -26,7 +26,7 @@ const keywords: Record<string, string[]> = {
     "شروع سریع",
     "تنظیم فروشگاه",
   ],
-  "fa-AF": [
+  "af": [
     "راه‌اندازی",
     "شروع کار",
     "تنظیمات اولیه",
@@ -55,9 +55,9 @@ const keywords: Record<string, string[]> = {
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
   return {
-    title: titles[lang] || titles["fa-IR"],
-    description: descriptions[lang] || descriptions["fa-IR"],
-    keywords: keywords[lang] || keywords["fa-IR"],
+    title: titles[lang] || titles["fa"],
+    description: descriptions[lang] || descriptions["fa"],
+    keywords: keywords[lang] || keywords["fa"],
     robots: { index: false, follow: false },
   };
 }

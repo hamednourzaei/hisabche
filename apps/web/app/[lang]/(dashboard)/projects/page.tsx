@@ -2,19 +2,19 @@
 import { ProjectsContainer } from "@hisabche/ui";
 
 const titles: Record<string, string> = {
-  "fa-IR": "پروژه‌ها",
-  "fa-AF": "پروژه‌ها",
+  "fa": "پروژه‌ها",
+  "af": "پروژه‌ها",
   "en": "Projects",
 };
 
 const descriptions: Record<string, string> = {
-  "fa-IR": "مدیریت پروژه، تسک‌ها، اعضا و زمان‌بندی در حسابچه. پیگیری پیشرفت پروژه‌ها به‌صورت لحظه‌ای.",
-  "fa-AF": "مدیریت پروژه، تسک‌ها، اعضا و زمان‌بندی در حسابچه. پیگیری پیشرفت پروژه‌ها به‌صورت لحظه‌ای.",
+  "fa": "مدیریت پروژه، تسک‌ها، اعضا و زمان‌بندی در حسابچه. پیگیری پیشرفت پروژه‌ها به‌صورت لحظه‌ای.",
+  "af": "مدیریت پروژه، تسک‌ها، اعضا و زمان‌بندی در حسابچه. پیگیری پیشرفت پروژه‌ها به‌صورت لحظه‌ای.",
   "en": "Project management, tasks, members and scheduling in Hisabche. Track project progress in real-time.",
 };
 
 const keywords: Record<string, string[]> = {
-  "fa-IR": [
+  "fa": [
     "مدیریت پروژه",
     "تسک",
     "وظایف",
@@ -26,7 +26,7 @@ const keywords: Record<string, string[]> = {
     "حسابچه",
     "رهگیری پروژه",
   ],
-  "fa-AF": [
+  "af": [
     "مدیریت پروژه",
     "تسک",
     "وظایف",
@@ -55,9 +55,9 @@ const keywords: Record<string, string[]> = {
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
   return {
-    title: titles[lang] || titles["fa-IR"],
-    description: descriptions[lang] || descriptions["fa-IR"],
-    keywords: keywords[lang] || keywords["fa-IR"],
+    title: titles[lang] || titles["fa"],
+    description: descriptions[lang] || descriptions["fa"],
+    keywords: keywords[lang] || keywords["fa"],
   };
 }
 

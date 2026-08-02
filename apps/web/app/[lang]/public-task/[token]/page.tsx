@@ -7,8 +7,8 @@
 import { PublicTaskContainer } from "@hisabche/ui";
 
 const titles: Record<string, string> = {
-  "fa-IR": "مشاهده وظیفه",
-  "fa-AF": "مشاهده وظیفه",
+  "fa": "مشاهده وظیفه",
+  "af": "مشاهده وظیفه",
   en: "View Task",
 };
 
@@ -19,7 +19,7 @@ export async function generateMetadata({
 }) {
   const { lang } = await params;
   return {
-    title: titles[lang] || titles["fa-IR"],
+    title: titles[lang] || titles["fa"],
     robots: { index: false, follow: false },
   };
 }

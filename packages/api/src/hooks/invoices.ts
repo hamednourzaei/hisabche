@@ -19,6 +19,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
 import { useRealtime } from './useRealtime'
+import { dashboardKeys } from './dashboard'
 import type {
   Invoice,
   CreateInvoice,
@@ -119,6 +120,10 @@ export function useCreateInvoice() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() })
+      // ✅ FIX: کارت‌های داشبورد، نمودار فروش و پیشنهادهای هوشمند همگی از
+      // فاکتورها مشتق می‌شوند؛ بدون این invalidate بعد از ثبت فاکتور تا
+      // انقضای staleTime داده‌ی قدیمی نشان داده می‌شد.
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.all })
     },
   })
 }
@@ -153,6 +158,7 @@ export function useUpdateInvoice() {
     onSettled: (_data, _error, vars) => {
       queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(vars.id) })
       queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.all })
     },
   })
 }
@@ -166,6 +172,10 @@ export function useDeleteInvoice() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: invoiceKeys.lists() })
+      // ✅ FIX: کارت‌های داشبورد، نمودار فروش و پیشنهادهای هوشمند همگی از
+      // فاکتورها مشتق می‌شوند؛ بدون این invalidate بعد از ثبت فاکتور تا
+      // انقضای staleTime داده‌ی قدیمی نشان داده می‌شد.
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.all })
     },
   })
 }

@@ -485,34 +485,8 @@ export default function TransformScene({ t }: TransformSceneProps) {
       className="py-8 sm:py-12 lg:py-16 bg-[hsl(var(--surface-base))] overflow-hidden"
     >
       <div className="container-narrow max-w-6xl px-4 sm:px-6">
-        {/* ── Header ── */}
-        <div
-          className={cn(
-            "text-center mb-6 sm:mb-8 lg:mb-10",
-            "transition-all duration-700 motion-reduce:transition-none",
-            animated ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"
-          )}
-        >
-          <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-1 sm:py-1.5 rounded-full bg-[hsl(var(--color-primary)/0.06)] border border-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))] text-[10px] sm:text-xs font-semibold mb-2 sm:mb-3">
-            <Shield className="size-3 sm:size-3.5" />
-            {t("landing.transformBadge", "از آشفتگی تا کنترل")}
-          </div>
-
-          <h2 className="text-xl sm:text-2xl lg:text-4xl font-bold text-[hsl(var(--fg-primary))] tracking-tight px-4 sm:px-0">
-            {t("landing.transformTitle", "هر کاری که انجام می‌دادی...")}
-            <br className="hidden sm:block" />
-            <span className="text-[hsl(var(--color-primary))]">
-              {t("landing.transformHighlight", "حالا خودکار می‌شود")}
-            </span>
-          </h2>
-
-          <p className="mt-2 sm:mt-3 text-sm sm:text-base lg:text-lg text-[hsl(var(--fg-secondary))] max-w-2xl mx-auto px-4 sm:px-0 leading-relaxed">
-            {t(
-              "landing.transformBridge",
-              "یک فروش ثبت می‌کنی. حسابچه پشت صحنه کلی کار انجام می‌دهد. بدون اینکه حتی متوجه شوی."
-            )}
-          </p>
-        </div>
+        {/* بلوک هدر (transformBadge / transformTitle / transformHighlight /
+            transformBridge) طبق درخواست حذف شد. */}
 
         {/* ── Cinematic Story ── */}
         <div

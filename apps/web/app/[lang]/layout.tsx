@@ -111,7 +111,7 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
     metadataBase: new URL("https://www.hisabche.com"),
     alternates: {
       canonical: lang === "fa" ? "/" : `/${lang}`,
-      languages: { "en": "/en", "fa": "/", "af": "/af", "x-default": "/" },
+      languages: { "en": "/en", "fa": "/", "fa-AF": "/af", "x-default": "/" },
     },
   };
 }

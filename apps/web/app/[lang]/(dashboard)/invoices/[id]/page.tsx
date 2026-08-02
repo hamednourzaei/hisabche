@@ -1,19 +1,19 @@
 import { InvoiceDetailContainer } from "@hisabche/ui";
 
 const titles: Record<string, string> = {
-  "fa-IR": "جزئیات فاکتور",
-  "fa-AF": "جزئیات فاکتور",
+  "fa": "جزئیات فاکتور",
+  "af": "جزئیات فاکتور",
   "en": "Invoice Details",
 };
 
 const descriptions: Record<string, string> = {
-  "fa-IR": "مشاهده، ویرایش، چاپ و دانلود فاکتور در حسابچه. مدیریت اقلام، پرداخت‌ها و وضعیت فاکتور.",
-  "fa-AF": "مشاهده، ویرایش، چاپ و دانلود فاکتور در حسابچه. مدیریت اقلام، پرداخت‌ها و وضعیت فاکتور.",
+  "fa": "مشاهده، ویرایش، چاپ و دانلود فاکتور در حسابچه. مدیریت اقلام، پرداخت‌ها و وضعیت فاکتور.",
+  "af": "مشاهده، ویرایش، چاپ و دانلود فاکتور در حسابچه. مدیریت اقلام، پرداخت‌ها و وضعیت فاکتور.",
   "en": "View, edit, print and download invoice in Hisabche. Manage items, payments and invoice status.",
 };
 
 const keywords: Record<string, string[]> = {
-  "fa-IR": [
+  "fa": [
     "جزئیات فاکتور",
     "ویرایش فاکتور",
     "چاپ فاکتور",
@@ -25,7 +25,7 @@ const keywords: Record<string, string[]> = {
     "مشاهده فاکتور",
     "فاکتور فروش",
   ],
-  "fa-AF": [
+  "af": [
     "جزئیات فاکتور",
     "ویرایش فاکتور",
     "چاپ فاکتور",
@@ -54,9 +54,9 @@ const keywords: Record<string, string[]> = {
 export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
   return {
-    title: titles[lang] || titles["fa-IR"],
-    description: descriptions[lang] || descriptions["fa-IR"],
-    keywords: keywords[lang] || keywords["fa-IR"],
+    title: titles[lang] || titles["fa"],
+    description: descriptions[lang] || descriptions["fa"],
+    keywords: keywords[lang] || keywords["fa"],
     robots: { index: false, follow: false },
   };
 }
