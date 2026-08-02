@@ -3,7 +3,7 @@
 
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 
 import { DashboardView } from "../dashboard-view";
 import { DateRangePicker, type DateRange, type PresetKey } from "../date-range-picker";
@@ -53,15 +53,6 @@ export function DashboardContainer() {
     chartLoading,
     activitiesLoading,
   } = useDashboardData(dateRange);
-
-  // 🔍 DEBUG: موقتی — برای تشخیص این‌که چرا ۴ کارت اول همیشه صفر نشان
-  // می‌دهند. اگر در کنسول `kpis` مقادیر totalSales/todaySales/customerDebt/
-  // warehouseValue را "undefined" نشان دهد (نه عدد ۰ واقعی)، یعنی بک‌اند
-  // (Render) هنوز نسخه‌ی جدید analytics.service.ts را ندارد و باید جدا
-  // دیپلوی شود — چون این فیلدها فقط در فرانت (Vercel) پوش نمی‌شوند.
-  useEffect(() => {
-    console.error("[DEBUG dashboard] kpiLoading:", kpiLoading, "kpis:", kpis);
-  }, [kpiLoading, kpis]);
 
   // ─── Callbacks ──────────────────────────────────────────────────────────
 

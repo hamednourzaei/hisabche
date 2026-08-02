@@ -350,11 +350,14 @@ export class AIService {
           .select('name, quantity, min_stock_level')
           .eq('user_id', userId)
           .eq('is_active', true),
+        // ✅ FIX: قبلاً هر فاکتوری که status آن دقیقاً 'paid' نبود «پرداخت‌نشده»
+        // شمرده می‌شد؛ ولی وضعیت واقعی فاکتورهای پرداخت‌شده 'completed' است،
+        // برای همین همه‌ی فاکتورها به‌اشتباه در انتظار پرداخت گزارش می‌شدند.
+        // ملاک درست، مبلغ باقی‌مانده است نه رشته‌ی status.
         supabase
           .from('invoices')
-          .select('id', { count: 'estimated', head: true })
+          .select('total, paid_amount, status')
           .eq('user_id', userId)
-          .neq('status', 'paid')
           .neq('status', 'cancelled'),
         supabase
           .from('invoices')
@@ -382,7 +385,9 @@ export class AIService {
       }
 
       // ✅ فاکتورهای پرداخت‌نشده
-      const unpaidCount = unpaidResult.count || 0
+      const unpaidCount = (unpaidResult.data || []).filter(
+        (inv: any) => (Number(inv.total) || 0) - (Number(inv.paid_amount) || 0) > 0
+      ).length
       if (unpaidCount > 0) {
         insights.push({
           type: 'info',

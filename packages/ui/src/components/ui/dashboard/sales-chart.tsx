@@ -142,7 +142,16 @@ export const SalesChart = memo(function SalesChart({
 
   // ✅ اصلاح: استفاده از کلیدهای ترجمه‌ی صحیح
   const ariaLabel = t("dashboard.salesChart.ariaLabel");
-  const description = t("dashboard.salesChart.description");
+  // ✅ FIX: این wrapper فقط رشته برمی‌گرداند و مقادیر ICU را جای‌گذاری نمی‌کند،
+  // برای همین «{total}» و «{change}» عیناً نمایش داده می‌شدند.
+  const description = t("dashboard.salesChart.description")
+    .replace("{total}", fmt(currentPeriodTotal))
+    .replace(
+      "{change}",
+      previousPeriodTotal > 0
+        ? `${percentageChange >= 0 ? "+" : ""}${percentageChange.toFixed(1)}٪`
+        : "—"
+    );
 
   return (
     <section
