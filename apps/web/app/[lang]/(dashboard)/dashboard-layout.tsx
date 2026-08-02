@@ -132,7 +132,15 @@ const DashboardLayout = memo(function DashboardLayout({
 
       const newPath = withLocale(pathname, lang);
 
+      // ✅ FIX: middleware با localeDetection:true کوکی NEXT_LOCALE را می‌خواند.
+      // چون فارسی (locale پیش‌فرض) بدون پیشوند سرو می‌شود، مسیر «/dashboard»
+      // توسط کوکی قدیمی (مثلاً af) دوباره به «/af/dashboard» ریدایرکت می‌شد و
+      // انتخاب فارسی هیچ‌وقت نمی‌گرفت. با به‌روزرسانی کوکی، تشخیص زبان با
+      // انتخاب کاربر هم‌راستا می‌شود.
+      document.cookie = `NEXT_LOCALE=${lang};path=/;max-age=31536000;samesite=lax`;
+
       router.push(newPath);
+      router.refresh();
     },
     [pathname, currentLang, router, withLocale]
   );

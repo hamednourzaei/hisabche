@@ -266,13 +266,14 @@ const RecentActivities = memo(function RecentActivities({
 
   return (
     <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] overflow-hidden">
-      <div className="flex items-center gap-1.5 sm:gap-2 px-4 sm:px-6 pt-4 sm:pt-5 pb-2 sm:pb-3">
+      {/* هدر با جداکننده‌ی بالا/پایین تا بخش فعالیت‌ها تفکیک بصری واضح‌تری داشته باشد */}
+      <div className="flex items-center gap-1.5 sm:gap-2 border-b border-[hsl(var(--border-default)/0.6)] bg-[hsl(var(--surface-muted)/0.35)] px-4 sm:px-6 py-3 sm:py-3.5">
         <ActivityIcon className="size-4 sm:size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
         <h2 className="text-sm sm:text-base font-semibold text-[hsl(var(--fg-primary))]">
           {t("dashboard.recentActivities", "فعالیت‌های اخیر")}
         </h2>
       </div>
-      <div className="px-4 sm:px-6 pb-4 sm:pb-5">
+      <div className="border-t border-[hsl(var(--border-default)/0.35)] px-4 sm:px-6 py-3 sm:py-4">
         {isLoading ? (
           <div className="space-y-2">
             {[0, 1, 2].map((i) => (
@@ -353,8 +354,11 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
 
       {/* Level 2: KPI cards — ۴ کارت افقی */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <KpiCard icon={TrendingUp} label={t("dashboard.totalSales", "فروش کل")} value={fmt(totalSales)} trend={salesTrend} isLoading={kpiLoading} />
-        <KpiCard icon={Wallet} label={t("dashboard.todaySales", "فروش امروز")} value={fmt(todaySales)} trend={salesTrend} isLoading={kpiLoading} />
+        {/* ✅ این دو کارت روندشان را از داده‌ی نمودار می‌گیرند، پس تا وقتی آن
+            کوئری کامل نشده باید skeleton نشان دهند؛ وگرنه یک لحظه با
+            trend=null رندر می‌شوند و خط خنثی (نه اسپارک‌لاین) دیده می‌شود. */}
+        <KpiCard icon={TrendingUp} label={t("dashboard.totalSales", "فروش کل")} value={fmt(totalSales)} trend={salesTrend} isLoading={kpiLoading || chartLoading} />
+        <KpiCard icon={Wallet} label={t("dashboard.todaySales", "فروش امروز")} value={fmt(todaySales)} trend={salesTrend} isLoading={kpiLoading || chartLoading} />
         <KpiCard icon={CreditCard} label={t("dashboard.customerDebt", "بدهی مشتریان")} value={fmt(customerDebt)} trend={null} isLoading={kpiLoading} />
         <KpiCard icon={Boxes} label={t("dashboard.warehouseValue", "ارزش کل انبار")} value={fmt(warehouseValue)} trend={null} isLoading={kpiLoading} />
       </div>
