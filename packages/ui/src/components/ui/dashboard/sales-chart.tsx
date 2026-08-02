@@ -83,6 +83,19 @@ export const SalesChart = memo(function SalesChart({
   const [showInvoices, setShowInvoices] = useState(true);
   const [showCustomers, setShowCustomers] = useState(true);
 
+  // ✅ FIX (باگ toggle): اگر پاسخ API این سری‌ها را نداشته باشد، تیک زدن هیچ
+  // خطی اضافه نمی‌کرد و کاربر فکر می‌کرد کنترل خراب است. حالا تیک غیرفعال
+  // می‌شود و علتش در tooltip گفته می‌شود.
+  const hasInvoiceSeries = useMemo(
+    () => (data ?? []).some((d) => typeof d.invoiceCount === "number"),
+    [data]
+  );
+  const hasCustomerSeries = useMemo(
+    () => (data ?? []).some((d) => typeof d.customerCount === "number"),
+    [data]
+  );
+  const noSeriesHint = "این داده در پاسخ سرور موجود نیست";
+
   // Calculate insights with safe percentage
   const { percentageChange, isPositive, allZero, hasData } = useMemo(() => {
     const hasData = data && data.length > 0;
@@ -223,20 +236,34 @@ export const SalesChart = memo(function SalesChart({
               <span className="inline-block h-2 w-2 rounded-full bg-[hsl(var(--color-primary))]" />
               {t("dashboard.salesTrend")}
             </span>
-            <label className="flex items-center gap-1 cursor-pointer select-none">
+            <label
+              className={cn(
+                "flex items-center gap-1 select-none",
+                hasInvoiceSeries ? "cursor-pointer" : "cursor-not-allowed opacity-40"
+              )}
+              title={hasInvoiceSeries ? undefined : noSeriesHint}
+            >
               <input
                 type="checkbox"
-                checked={showInvoices}
+                checked={showInvoices && hasInvoiceSeries}
+                disabled={!hasInvoiceSeries}
                 onChange={(e) => setShowInvoices(e.target.checked)}
                 className="size-3 accent-[hsl(var(--status-info))]"
               />
               <span className="inline-block h-2 w-2 rounded-full bg-[hsl(var(--status-info))]" />
               {t("dashboard.invoicesLine", "فاکتورها")}
             </label>
-            <label className="flex items-center gap-1 cursor-pointer select-none">
+            <label
+              className={cn(
+                "flex items-center gap-1 select-none",
+                hasCustomerSeries ? "cursor-pointer" : "cursor-not-allowed opacity-40"
+              )}
+              title={hasCustomerSeries ? undefined : noSeriesHint}
+            >
               <input
                 type="checkbox"
-                checked={showCustomers}
+                checked={showCustomers && hasCustomerSeries}
+                disabled={!hasCustomerSeries}
                 onChange={(e) => setShowCustomers(e.target.checked)}
                 className="size-3 accent-[hsl(var(--color-warning))]"
               />

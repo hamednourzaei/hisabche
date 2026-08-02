@@ -2,17 +2,16 @@
 "use client";
 
 import { memo, useMemo, useId } from "react";
+import { ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid } from "recharts";
+
 import {
-  ResponsiveContainer,
-  ComposedChart,
-  Area,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-} from "recharts";
-import { cn } from "@/lib/utils";
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+  type ChartConfig,
+} from "../chart";
 
 interface ChartDataPoint {
   label: string;
@@ -31,8 +30,6 @@ interface InternalChartProps {
   showCustomers?: boolean;
 }
 
-const GRID_STROKE = "hsl(var(--border-default))";
-
 // ✅ تابع aggregate با بررسی کامل TypeScript
 function aggregateDataPoints(data: ChartDataPoint[], maxPoints: number): ChartDataPoint[] {
   if (data.length <= maxPoints) return data;
@@ -43,70 +40,37 @@ function aggregateDataPoints(data: ChartDataPoint[], maxPoints: number): ChartDa
   for (let i = 0; i < data.length; i += step) {
     const chunk = data.slice(i, i + step);
 
-    // ✅ بررسی وجود اولین عنصر
     const first = chunk[0];
     if (!first) continue;
 
     const total = chunk.reduce((sum, d) => sum + d.value, 0);
     const avg = Math.round(total / chunk.length);
-    const invoiceCount = chunk.reduce((sum, d) => sum + (d.invoiceCount ?? 0), 0);
-    const customerCount = chunk.reduce((sum, d) => sum + (d.customerCount ?? 0), 0);
+    const hasInvoice = chunk.some((d) => d.invoiceCount !== undefined);
+    const hasCustomer = chunk.some((d) => d.customerCount !== undefined);
 
     result.push({
       label: first.label,
       value: avg,
       date: first.date,
-      invoiceCount,
-      customerCount,
+      // ✅ اگر داده‌ی اصلی این فیلد را نداشته باشد، نباید صفرِ ساختگی بسازیم؛
+      // در غیر این صورت خطی با مقدار صفر رسم می‌شود که گمراه‌کننده است.
+      ...(hasInvoice
+        ? { invoiceCount: chunk.reduce((s, d) => s + (d.invoiceCount ?? 0), 0) }
+        : {}),
+      ...(hasCustomer
+        ? { customerCount: chunk.reduce((s, d) => s + (d.customerCount ?? 0), 0) }
+        : {}),
     });
   }
 
   return result;
 }
 
-// ✅ CustomTooltip با TypeScript کامل
-const CustomTooltip = memo(function CustomTooltip({
-  active,
-  payload,
-  fmt,
-}: {
-  active?: boolean;
-  payload?: Array<{
-    value: number;
-    payload: ChartDataPoint;
-  }>;
-  fmt: (v: number) => string;
-}) {
-  if (!active || !payload || payload.length === 0 || !payload[0]?.payload) {
-    return null;
-  }
-
-  const dataPoint = payload[0].payload;
-
-  return (
-    <div
-      className={cn(
-        "rounded-xl px-3 py-2 shadow-lg border",
-        "bg-[hsl(var(--surface-elevated)/0.98)] backdrop-blur-md",
-        "border-[hsl(var(--border-default))]"
-      )}
-    >
-      <p className="text-[11px] text-[hsl(var(--fg-tertiary))] mb-0.5">
-        {dataPoint.label}
-      </p>
-      <p className="text-sm font-semibold text-[hsl(var(--color-primary))]">
-        {fmt(dataPoint.value)}
-      </p>
-      {dataPoint.invoiceCount !== undefined && (
-        <p className="text-[11px] text-[hsl(var(--status-info))]">{dataPoint.invoiceCount} فاکتور</p>
-      )}
-      {dataPoint.customerCount !== undefined && (
-        <p className="text-[11px] text-[hsl(var(--status-warning,var(--color-warning)))]">{dataPoint.customerCount} مشتری</p>
-      )}
-    </div>
-  );
-});
-CustomTooltip.displayName = "CustomTooltip";
+const chartConfig = {
+  value: { label: "فروش", color: "hsl(var(--color-primary))" },
+  invoiceCount: { label: "فاکتور", color: "hsl(var(--status-info))" },
+  customerCount: { label: "مشتری", color: "hsl(var(--color-warning))" },
+} satisfies ChartConfig;
 
 export default memo(function InternalSalesChart({
   data,
@@ -123,6 +87,23 @@ export default memo(function InternalSalesChart({
     return data.length > 12 ? aggregateDataPoints(data, 12) : data;
   }, [data]);
 
+  // ✅ FIX (باگ toggle): خط فقط وقتی رسم می‌شود که داده‌اش واقعاً موجود باشد.
+  // بک‌اند این فیلدها را می‌سازد، ولی تا وقتی نسخه‌ی جدید دیپلوی نشده باشد
+  // پاسخ فقط {label,value,date} دارد و <Line> چیزی برای کشیدن ندارد — یعنی
+  // تیک روشن/خاموش می‌شد بدون این‌که خطی اضافه شود.
+  const hasInvoiceSeries = useMemo(
+    () => aggregatedData.some((d) => typeof d.invoiceCount === "number"),
+    [aggregatedData]
+  );
+  const hasCustomerSeries = useMemo(
+    () => aggregatedData.some((d) => typeof d.customerCount === "number"),
+    [aggregatedData]
+  );
+
+  const renderInvoices = showInvoices && hasInvoiceSeries;
+  const renderCustomers = showCustomers && hasCustomerSeries;
+  const hasRightAxis = renderInvoices || renderCustomers;
+
   if (!data || data.length === 0) {
     return (
       <div className="w-full flex items-center justify-center" style={{ height }}>
@@ -134,74 +115,67 @@ export default memo(function InternalSalesChart({
   }
 
   return (
-    <ResponsiveContainer width="100%" height={height}>
+    <ChartContainer config={chartConfig} className="w-full" style={{ height }}>
       <ComposedChart
         data={aggregatedData}
-        margin={{ top: 4, right: showInvoices || showCustomers ? 20 : 4, left: -20, bottom: 0 }}
+        margin={{ top: 4, right: hasRightAxis ? 20 : 4, left: -20, bottom: 0 }}
       >
         <defs>
-          <linearGradient
-            id={`salesGradient-${gradientId}`}
-            x1="0"
-            y1="0"
-            x2="0"
-            y2="1"
-          >
-            <stop
-              offset="0%"
-              stopColor="hsl(var(--color-primary))"
-              stopOpacity={0.2}
-            />
-            <stop
-              offset="100%"
-              stopColor="hsl(var(--color-primary))"
-              stopOpacity={0}
-            />
+          <linearGradient id={`salesGradient-${gradientId}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--color-value)" stopOpacity={0.2} />
+            <stop offset="100%" stopColor="var(--color-value)" stopOpacity={0} />
           </linearGradient>
         </defs>
-        <CartesianGrid
-          stroke={GRID_STROKE}
-          strokeDasharray="3 3"
-          vertical={false}
-        />
-        <XAxis
-          dataKey="label"
-          axisLine={false}
-          tickLine={false}
-          tick={{ fontSize: 11, fill: "hsl(var(--fg-tertiary))" }}
-          dy={8}
-        />
+
+        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+
+        <XAxis dataKey="label" axisLine={false} tickLine={false} dy={8} tick={{ fontSize: 11 }} />
+
         <YAxis
           yAxisId="value"
           axisLine={false}
           tickLine={false}
-          tick={{ fontSize: 11, fill: "hsl(var(--fg-tertiary))" }}
+          tick={{ fontSize: 11 }}
           tickFormatter={(v: number) => fmt(v)}
           width={60}
         />
-        {(showInvoices || showCustomers) && (
+
+        {hasRightAxis && (
           <YAxis
             yAxisId="count"
             orientation="right"
             axisLine={false}
             tickLine={false}
-            tick={{ fontSize: 11, fill: "hsl(var(--fg-tertiary))" }}
+            tick={{ fontSize: 11 }}
             allowDecimals={false}
             width={30}
           />
         )}
-        <Tooltip content={<CustomTooltip fmt={fmt} />} />
+
+        <ChartTooltip
+          content={
+            <ChartTooltipContent
+              labelKey="label"
+              formatter={(value: any, name: any) =>
+                name === "value" ? fmt(Number(value)) : String(value)
+              }
+            />
+          }
+        />
+
+        {hasRightAxis && <ChartLegend content={<ChartLegendContent />} />}
+
         <Area
           yAxisId="value"
           type="monotone"
           dataKey="value"
-          stroke="hsl(var(--color-primary))"
+          stroke="var(--color-value)"
           strokeWidth={2}
           fill={`url(#salesGradient-${gradientId})`}
           dot={false}
           activeDot={{
             r: 4,
-            fill: "hsl(var(--color-primary))",
+            fill: "var(--color-value)",
             stroke: "hsl(var(--surface-elevated))",
             strokeWidth: 2,
             tabIndex: 0,
@@ -209,29 +183,31 @@ export default memo(function InternalSalesChart({
           animationDuration={animationDuration}
           animationEasing="ease-out"
         />
-        {showInvoices && (
+
+        {renderInvoices && (
           <Line
             yAxisId="count"
             type="monotone"
             dataKey="invoiceCount"
-            stroke="hsl(var(--status-info))"
+            stroke="var(--color-invoiceCount)"
             strokeWidth={2}
             dot={false}
             animationDuration={animationDuration}
           />
         )}
-        {showCustomers && (
+
+        {renderCustomers && (
           <Line
             yAxisId="count"
             type="monotone"
             dataKey="customerCount"
-            stroke="hsl(var(--color-warning))"
+            stroke="var(--color-customerCount)"
             strokeWidth={2}
             dot={false}
             animationDuration={animationDuration}
           />
         )}
       </ComposedChart>
-    </ResponsiveContainer>
+    </ChartContainer>
   );
 });

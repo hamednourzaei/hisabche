@@ -41,6 +41,13 @@ const SalesSummarySchema = z.object({
       label: z.string(),
       value: z.number(),
       date: z.string(),
+      // ✅ FIX: سرویس این دو فیلد را محاسبه می‌کرد، ولی چون در schema نبودند
+      // Zod (که کلیدهای ناشناخته را strip می‌کند) آن‌ها را از پاسخ حذف می‌کرد.
+      // نتیجه: خط «فاکتورها» و «مشتریان» در نمودار هیچ داده‌ای نداشت و تیک
+      // زدنشان هیچ خطی اضافه نمی‌کرد. optional است چون مسیر fallback
+      // (chartData: []) این فیلدها را ندارد.
+      invoiceCount: z.number().optional(),
+      customerCount: z.number().optional(),
     })
   ),
 })
