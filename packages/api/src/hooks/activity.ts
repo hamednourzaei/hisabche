@@ -99,10 +99,14 @@ export function useActivities(filters?: ActivityFilter) {
   return useQuery({
     queryKey: activityKeys.list(filters),
     queryFn: async (): Promise<ActivityGroupDto[]> => {
-      const { data } = await apiClient.get<ActivityGroupDto[]>("/v1/activities", {
+      // ✅ FIX: بک‌اند یک envelope صفحه‌بندی‌شده برمی‌گرداند
+      // ({ data, nextCursor, hasMore, total })، نه آرایه‌ی خام. قبلاً همین
+      // آبجکت مستقیم به کامپوننت می‌رفت و باعث «flatMap is not a function»
+      // می‌شد.
+      const { data } = await apiClient.get<{ data?: ActivityGroupDto[] } | ActivityGroupDto[]>("/v1/activities", {
         params: filters,
       });
-      return data;
+      return Array.isArray(data) ? data : (data?.data ?? []);
     },
     enabled: authReady,
     staleTime: 30_000,

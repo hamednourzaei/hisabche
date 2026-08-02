@@ -26,11 +26,13 @@ function FallbackUI({
   description,
   retry,
   onReset,
+  error,
 }: {
   title: string;
   description: string;
   retry: string;
   onReset: () => void;
+  error?: Error | null;
 }) {
   return (
     <div className="flex min-h-[400px] items-center justify-center p-8">
@@ -39,7 +41,12 @@ function FallbackUI({
           <AlertTriangle className="size-8 text-[hsl(var(--color-destructive))]" aria-hidden="true" />
         </div>
         <h2 className="mb-2 text-xl font-bold text-[hsl(var(--fg-primary))]">{title}</h2>
-        <p className="mb-6 text-sm text-[hsl(var(--fg-secondary))]">{description}</p>
+        <p className="mb-4 text-sm text-[hsl(var(--fg-secondary))]">{description}</p>
+        {error?.message ? (
+          <pre className="mb-6 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))] p-3 text-start text-[11px] text-[hsl(var(--fg-secondary))]" dir="ltr">
+            {error.name}: {error.message}
+          </pre>
+        ) : null}
         <button type="button" onClick={onReset}
           className={cn("inline-flex items-center gap-2 rounded-full px-4 py-2.5", "text-sm font-medium", "border border-[hsl(var(--border-default))]", "text-[hsl(var(--fg-secondary))]", "hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]", "transition-colors duration-150", "motion-reduce:transition-none")}>
           <RefreshCw className="size-4" aria-hidden="true" />
@@ -61,7 +68,7 @@ const STATIC_TEXT = {
 // بیرون از NextIntlClientProvider رندر شود، useTranslations خودش throw
 // می‌کند — و چون این UI خودِ fallback ارور بود، خطا از ErrorBoundary فرار
 // می‌کرد و کل سایت سیاه می‌شد. حالا با یک boundary داخلی محافظت شده است.
-function TranslatedFallback({ onReset }: { onReset: () => void }) {
+function TranslatedFallback({ onReset, error }: { onReset: () => void; error?: Error | null }) {
   const t = useTranslations();
   const tr = (key: string, fallback: string) => {
     try {
@@ -77,14 +84,18 @@ function TranslatedFallback({ onReset }: { onReset: () => void }) {
       description={tr("error.description", STATIC_TEXT.description)}
       retry={tr("action.retry", STATIC_TEXT.retry)}
       onReset={onReset}
+      error={error}
     />
   );
 }
 
 // boundary داخلی: اگر ترجمه‌ها در دسترس نبودند، متن ثابت نمایش داده می‌شود
 // به‌جای این‌که کل اپلیکیشن از کار بیفتد.
-class ErrorFallback extends React.Component<{ onReset: () => void }, { intlFailed: boolean }> {
-  constructor(props: { onReset: () => void }) {
+class ErrorFallback extends React.Component<
+  { onReset: () => void; error?: Error | null },
+  { intlFailed: boolean }
+> {
+  constructor(props: { onReset: () => void; error?: Error | null }) {
     super(props);
     this.state = { intlFailed: false };
   }
@@ -95,9 +106,9 @@ class ErrorFallback extends React.Component<{ onReset: () => void }, { intlFaile
 
   render() {
     if (this.state.intlFailed) {
-      return <FallbackUI {...STATIC_TEXT} onReset={this.props.onReset} />;
+      return <FallbackUI {...STATIC_TEXT} onReset={this.props.onReset} error={this.props.error} />;
     }
-    return <TranslatedFallback onReset={this.props.onReset} />;
+    return <TranslatedFallback onReset={this.props.onReset} error={this.props.error} />;
   }
 }
 
@@ -113,6 +124,14 @@ class ErrorBoundary extends React.Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    // ✅ در پروداکشن فقط console.error زنده می‌ماند (removeConsole در
+    // next.config همه‌ی console.log ها را حذف می‌کند)، پس عمداً error است.
+    console.error(
+      "[ErrorBoundary] پیام خطا:", error?.message || "(بدون پیام)",
+      "\n[ErrorBoundary] نام:", error?.name,
+      "\n[ErrorBoundary] کامپوننتی که کرش کرد:", errorInfo?.componentStack,
+      "\n[ErrorBoundary] stack:", error?.stack
+    );
     this.props.onError?.(error, errorInfo);
   }
 
@@ -123,7 +142,7 @@ class ErrorBoundary extends React.Component<Props, State> {
   render() {
     if (this.state.hasError) {
       if (this.props.fallback) return this.props.fallback;
-      return <ErrorFallback onReset={this.handleReset} />;
+      return <ErrorFallback onReset={this.handleReset} error={this.state.error} />;
     }
     return this.props.children;
   }

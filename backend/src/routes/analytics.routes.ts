@@ -55,6 +55,13 @@ const DashboardKPIsSchema = z.object({
   activeCustomers: z.number(),
   customerGrowth: z.number(),
   lowStockAlerts: z.number(),
+  // ✅ FIX: این سه فیلد را سرویس محاسبه می‌کرد، اما چون در schema نبودند هم
+  // Zod (.parse) و هم response serialization فست‌فای آن‌ها را حذف می‌کردند —
+  // به همین دلیل چهار کارت اول داشبورد همیشه صفر نشان داده می‌شد.
+  // default(0) برای زمانی است که کش ۶۰ ثانیه‌ای هنوز آبجکت قدیمی را دارد.
+  totalSales: z.number().default(0),
+  customerDebt: z.number().default(0),
+  warehouseValue: z.number().default(0),
 })
 
 const DateRangeSchema = z.object({
