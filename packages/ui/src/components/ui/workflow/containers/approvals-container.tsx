@@ -33,7 +33,20 @@ const ApprovalInstanceCard = memo(function ApprovalInstanceCard({
   instance: WorkflowInstance;
   t: (key: string, fallback?: string) => string;
 }) {
-  const { data: detail, isLoading: detailLoading, isError: detailError } = useWorkflowInstanceDetail(instance.id);
+  // ✅ FIX (N+1): قبلاً هر کارت جداگانه جزئیات نمونه را می‌گرفت — برای ۱۰
+  // کارت یعنی ۱۰ درخواست موازی (در لاگ پروداکشن هرکدام ۸۰۰-۹۱۳ms). حالا
+  // اکشن‌ها همراه خودِ لیست می‌آیند، پس فقط وقتی درخواست جداگانه می‌زنیم که
+  // بک‌اند هنوز آن‌ها را ضمیمه نکرده باشد (سازگاری با نسخه‌ی قدیمی بک‌اند).
+  const embeddedActions = (instance as unknown as { actions?: unknown[] }).actions;
+  const hasEmbedded = Array.isArray(embeddedActions);
+  const { data: detail, isLoading: detailFetching, isError: detailError } = useWorkflowInstanceDetail(
+    hasEmbedded ? "" : instance.id
+  );
+  const detailLoading = hasEmbedded ? false : detailFetching;
+  // منبع نهایی اکشن‌ها: ضمیمه‌ی لیست، وگرنه پاسخ درخواست جداگانه.
+  const actions = (hasEmbedded ? embeddedActions : detail?.actions) as
+    | Parameters<typeof ApprovalCard>[0]["actions"]
+    | undefined;
   const { data: workflow, isLoading: workflowLoading, isError: workflowError } = useWorkflow(instance.workflow_id);
   const { mutateAsync: performAction } = usePerformWorkflowAction();
   const toast = useToast();
@@ -62,13 +75,13 @@ const ApprovalInstanceCard = memo(function ApprovalInstanceCard({
     );
   }
 
-  if (detailLoading || workflowLoading || !detail || !workflow) {
+  if (detailLoading || workflowLoading || !actions || !workflow) {
     return <div className="h-32 rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />;
   }
 
   return (
     <ApprovalCard
-      actions={detail.actions}
+      actions={actions}
       steps={workflow.steps}
       currentStep={instance.current_step}
       status={instance.status}

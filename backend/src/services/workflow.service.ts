@@ -303,8 +303,36 @@ export class WorkflowService {
 
     if (error) throw new DatabaseError("Failed to list instances", error);
 
+    const instances = (data || []).map((row) => this.mapInstance(row))
+
+    // ✅ FIX (N+1): صفحه‌ی approvals برای هر کارت جداگانه
+    // GET /workflows/instances/:id می‌زد — در لاگ پروداکشن ۱۰ کارت یعنی ۱۰
+    // درخواست موازی که هرکدام ۸۰۰-۹۱۳ms طول می‌کشید (چون پشت یک CPU صف
+    // می‌شدند). حالا اکشن‌های همه‌ی نمونه‌ها با **یک** کوئری گرفته و ضمیمه
+    // می‌شوند تا کلاینت به آن درخواست‌ها نیازی نداشته باشد.
+    const ids = instances.map((i) => i.id).filter(Boolean)
+    const actionsByInstance = new Map<string, WorkflowActionRecord[]>()
+
+    if (ids.length > 0) {
+      const { data: actionRows } = await supabase
+        .from("workflow_actions")
+        .select(ACTION_MINIMAL)
+        .in("instance_id", ids)
+        .order("created_at", { ascending: false })
+
+      for (const row of actionRows || []) {
+        const action = this.mapAction(row)
+        const list = actionsByInstance.get(action.instance_id) ?? []
+        list.push(action)
+        actionsByInstance.set(action.instance_id, list)
+      }
+    }
+
     const result = {
-      data: (data || []).map((row) => this.mapInstance(row)),
+      data: instances.map((instance) => ({
+        ...instance,
+        actions: actionsByInstance.get(instance.id) ?? [],
+      })),
       total: count || 0,
     }
 
