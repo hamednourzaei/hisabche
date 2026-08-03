@@ -228,6 +228,24 @@ export class ActivityService {
 
       const result: ActivityGroupDto[] = [];
 
+      // ✅ FIX (کندی): getEntitySummary قبلاً داخل حلقه با await صدا زده
+      // می‌شد، یعنی برای هر گروه یک رفت‌وبرگشت جداگانه و **ترتیبی** به
+      // دیتابیس. با ۱۴ گروه این یعنی ۱۴ کوئری پشت‌سرهم و پاسخ ۳.۵ ثانیه‌ای.
+      // حالا همه با هم موازی اجرا می‌شوند، پس زمان کل تقریباً برابر کندترین
+      // کوئری است نه مجموع همه.
+      const summaryByKey = new Map<string, Partial<EntitySummaryDto> | null>();
+      await Promise.all(
+        Array.from(groups.keys()).map(async (key) => {
+          const [entityType, entityId] = key.split(":") as [string, string];
+          try {
+            summaryByKey.set(key, await this.getEntitySummary(entityType, entityId, userId));
+          } catch (summaryError) {
+            console.warn(`⚠️ Failed to get summary for ${key}`, summaryError);
+            summaryByKey.set(key, null);
+          }
+        })
+      );
+
       for (const [key, groupItems] of groups) {
         const [entityType, entityId] = key.split(":") as [string, string];
         const sortedItems = groupItems.sort(
@@ -236,14 +254,8 @@ export class ActivityService {
         const latest = sortedItems[0];
         const metadata = latest.metadata || {};
 
-        // ✅ با try-catch برای هر گروه
-        let summary: Partial<EntitySummaryDto> | null = null;
-        try {
-          summary = await this.getEntitySummary(entityType, entityId, userId);
-        } catch (summaryError) {
-          console.warn(`⚠️ Failed to get summary for ${entityType}:${entityId}`, summaryError);
-          summary = null;
-        }
+        // خلاصه‌ها بالاتر به‌صورت موازی گرفته شده‌اند.
+        const summary = summaryByKey.get(key) ?? null;
 
         const unreadCount = sortedItems.filter((i) => !i.is_read).length;
 

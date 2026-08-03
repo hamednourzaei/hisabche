@@ -62,6 +62,7 @@ import { activityRoutes } from './routes/activity.routes'
 // ──────────────────────────────────────────────
 import { jobSchedulerPlugin } from './plugins/job-scheduler.plugin'
 import { startScheduler } from './scheduler'
+import { getMetrics, enterMetricsContext } from './utils/request-metrics'
 
 // ──────────────────────────────────────────────
 // Environment
@@ -106,6 +107,37 @@ server.log.info(`📦 Environment: ${process.env.NODE_ENV || 'development'}`)
 // ──────────────────────────────────────────────
 server.addHook('onRequest', async (request) => {
   ;(request as any).startTime = Date.now()
+  // context شمارنده‌ی کوئری را برای این درخواست فعال می‌کند.
+  enterMetricsContext()
+})
+
+server.addHook('onResponse', async (request, reply) => {
+  // فاز ۰ — یک خط ساختاریافته به‌ازای هر درخواست، تا بتوان جدول
+  // «Endpoint / تعداد Query / زمان DB / زمان کل» را مستقیماً از لاگ Render
+  // ساخت. OPTIONS ها حذف می‌شوند چون نویز محض‌اند.
+  if (request.method === 'OPTIONS') return
+
+  const total = Date.now() - ((request as any).startTime || Date.now())
+  const m = getMetrics()
+
+  request.log.info(
+    {
+      perf: true,
+      method: request.method,
+      route: (request as any).routeOptions?.url ?? request.url.split('?')[0],
+      status: reply.statusCode,
+      totalMs: total,
+      dbMs: m?.dbTimeMs ?? null,
+      queries: m?.queryCount ?? null,
+      // زمانی که در دیتابیس نگذشته: middleware، سریال‌سازی، شبکه‌ی داخلی
+      overheadMs: m ? total - m.dbTimeMs : null,
+      cacheHits: m?.cacheHits ?? null,
+      cacheMisses: m?.cacheMisses ?? null,
+      userId: (request as any).userId ?? null,
+      workspaceId: (request as any).workspaceId ?? null,
+    },
+    '📊 perf'
+  )
 })
 
 server.addHook('onSend', async (request, reply, payload) => {
@@ -269,6 +301,11 @@ async function start() {
       credentials: true,
       methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'x-client-id', 'Accept'],
+      // ✅ FIX (کندی): بدون maxAge مرورگر برای هر درخواست یک OPTIONS جداگانه
+      // می‌فرستد (در لاگ‌ها به‌وضوح دیده می‌شود). خود OPTIONS سریع است، اما
+      // یک رفت‌وبرگشت شبکه‌ی کامل تا سرور اضافه می‌کند. با کش ۲۴ ساعته‌ی
+      // preflight، این رفت‌وبرگشت از مسیر تمام درخواست‌های بعدی حذف می‌شود.
+      maxAge: 86400,
     })
 
     // ─── 6.3 SWAGGER ──────────────────────────
