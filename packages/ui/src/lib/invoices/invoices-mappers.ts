@@ -12,6 +12,7 @@ export const mapInvoices = (rawInvoices: RawInvoice[] | undefined): Invoice[] =>
       invoiceNumber: inv.invoiceNumber ?? inv.invoice_number ?? "???",
       date: inv.date ? fmtDate(inv.date) : "",
       createdAt: inv.created_at ? fmtDate(inv.created_at) : (inv.date ? fmtDate(inv.date) : ""),
+      isoDate: inv.date ?? inv.created_at ?? "",
       status: inv.status ?? "",
       total: inv.total ?? 0,
       currency: inv.currency ?? "AFN",

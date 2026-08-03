@@ -1,0 +1,32 @@
+/* Desktop reuses the production web design system verbatim. */
+@import '@hisabche/ui/globals.css';
+
+@font-face {
+  font-family: 'Vazirmatn';
+  src: url('./assets/fonts/Vazirmatn-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Vazirmatn';
+  src: url('./assets/fonts/Vazirmatn-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-display: swap;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+  font-family: 'Vazirmatn', system-ui, sans-serif;
+}
+
+/* Desktop density: tighter than web defaults. */
+:root {
+  --row-height: 40px;
+  --sidebar-width: 248px;
+  --sidebar-width-collapsed: 64px;
+  --toolbar-height: 52px;
+}

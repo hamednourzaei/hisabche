@@ -5,6 +5,7 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
+import { removeStorage, writeStorage, STORAGE_KEYS } from '../storage'
 import type { LoginInput, SignUpInput } from '@hisabche/validation'
 
 interface AuthResponse {
@@ -25,9 +26,7 @@ export function useLogin() {
     mutationFn: async (input: LoginInput) => {
       const response = await apiClient.post<AuthResponse['data']>('/auth/login', input)
       const data = (response as any).data || response
-      if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
-        localStorage.setItem('hisabche-token', data.token)
-      }
+      writeStorage(STORAGE_KEYS.token, data.token)
       return data
     },
   })
@@ -38,9 +37,7 @@ export function useSignUp() {
     mutationFn: async (input: SignUpInput) => {
       const response = await apiClient.post<AuthResponse['data']>('/auth/signup', input)
       const data = (response as any).data || response
-      if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
-        localStorage.setItem('hisabche-token', data.token)
-      }
+      writeStorage(STORAGE_KEYS.token, data.token)
       return data
     },
   })
@@ -50,9 +47,7 @@ export function useLogout() {
   return useMutation({
     mutationFn: async () => {
       await apiClient.post('/auth/logout')
-      if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
-        localStorage.removeItem('hisabche-token')
-      }
+      removeStorage(STORAGE_KEYS.token)
     },
   })
 }

@@ -1,19 +1,25 @@
 {
-  
-   "main": "index.js",
   "expo": {
     "name": "Hisabche",
     "slug": "hisabche",
+    "scheme": "hisabche",
     "version": "0.0.1",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "splash": {
-      "backgroundColor": "#059669"
+      "backgroundColor": "#059669",
+      "resizeMode": "contain"
     },
-    "assetBundlePatterns": ["**/*"],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.hisabche.mobile"
+      "bundleIdentifier": "com.hisabche.mobile",
+      "infoPlist": {
+        "NSCameraUsageDescription": "برای اسکن بارکد کالاها به دوربین نیاز است.",
+        "NSFaceIDUsageDescription": "برای ورود امن به حساب خود."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -22,14 +28,26 @@
       "package": "com.hisabche.mobile",
       "permissions": [
         "CAMERA",
-        "INTERNET"
+        "INTERNET",
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT"
       ]
     },
     "web": {
-      "bundler": "metro"
+      "bundler": "metro",
+      "output": "single"
     },
-    "plugins": [],
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-localization",
+      "expo-font",
+      "expo-camera",
+      "expo-local-authentication",
+      "expo-notifications"
+    ],
     "extra": {
+      "apiUrl": "https://api.hisabche.com/api",
       "eas": {
         "projectId": "your-project-id"
       }

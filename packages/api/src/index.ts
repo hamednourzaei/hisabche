@@ -16,6 +16,18 @@ export {
 } from "./lib/tokenProvider";
 export { setOnUnauthorized } from "./lib/client";
 
+// ─── Storage Adapter (platform agnostic) ──────────────────
+export {
+  registerStorage,
+  getStorage,
+  readStorage,
+  writeStorage,
+  removeStorage,
+  STORAGE_KEYS,
+  type KeyValueStorage,
+} from "./storage";
+export { createWebStorage } from "./storage/web";
+
 // ─── Auth Hooks ───────────────────────────────────────────
 export {
   useLogin,
@@ -32,6 +44,7 @@ export {
   useUpdateInvoice,
   useDeleteInvoice,
   invoiceKeys,
+  type InvoiceWithCustomer,
 } from "./hooks/invoices";
 
 // ─── Products ─────────────────────────────────────────────

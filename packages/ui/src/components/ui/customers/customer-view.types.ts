@@ -25,6 +25,12 @@ export interface CustomersViewProps {
   topCustomerAmount: number
   openDealsCount: number
 
+  // Trends (درصد تغییر ماهانه)
+  customersDelta?: number | null
+  salesDelta?: number | null
+  debtDelta?: number | null
+  topCustomerDelta?: number | null
+
   // States
   isLoading: boolean
   isError: boolean

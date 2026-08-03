@@ -4,8 +4,9 @@ import { memo, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "../empty-state";
 import { InvoicesSkeleton } from "./invoices-skeleton";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, FileText, DollarSign, CheckCircle2, Clock } from "lucide-react";
 import { InvoiceRowActions } from "./invoice-row-actions";
+import { BentoStats, type BentoStat } from "../bento-stats";
 import type { Invoice } from "../../../lib/invoices/invoices-types";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -37,6 +38,81 @@ const statusBadgeStyles: Record<string, string> = {
   destructive: "bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))] border-[hsl(var(--color-destructive)/0.2)]",
   secondary: "bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))] border-[hsl(var(--border-default))]",
 };
+
+// ─── آمار (بنتو گرید) ───────────────────────────────────────────────────────
+
+const PAID_STATUSES = new Set(["paid", "completed"]);
+
+/** شماره‌ی ماه نسبی: 0 = ماه جاری، 1 = ماه قبل */
+function monthOffset(value: string, now: Date): number | null {
+  if (!value) return null;
+  const d = new Date(value);
+  if (isNaN(d.getTime())) return null;
+  return (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
+}
+
+/** درصد تغییر؛ null یعنی داده‌ای برای مقایسه نیست */
+function percentChange(current: number, previous: number): number | null {
+  if (previous === 0) return current === 0 ? null : 100;
+  return ((current - previous) / Math.abs(previous)) * 100;
+}
+
+function useInvoiceStats(invoices: Invoice[], t: (key: string, fallback?: string) => string) {
+  return useMemo<BentoStat[]>(() => {
+    const now = new Date();
+    const active = invoices.filter((inv) => inv.status !== "cancelled");
+    const inMonth = (offset: number) =>
+      active.filter((inv) => monthOffset(inv.isoDate, now) === offset);
+
+    const sum = (list: Invoice[]) => list.reduce((acc, inv) => acc + (inv.total || 0), 0);
+    const paid = (list: Invoice[]) => list.filter((inv) => PAID_STATUSES.has(inv.status));
+    const pending = (list: Invoice[]) => list.filter((inv) => !PAID_STATUSES.has(inv.status));
+
+    const cur = inMonth(0);
+    const prev = inMonth(1);
+    const currency = active[0]?.currency || "AFN";
+    const monthly = t("common.vsLastMonth", "نسبت به ماه قبل");
+
+    return [
+      {
+        id: "count",
+        icon: FileText,
+        label: t("invoices.totalCount", "تعداد فاکتورها"),
+        amount: active.length,
+        delta: percentChange(cur.length, prev.length),
+        deltaLabel: monthly,
+      },
+      {
+        id: "amount",
+        icon: DollarSign,
+        label: t("invoices.totalAmount", "مجموع مبلغ"),
+        amount: sum(active),
+        suffix: currency,
+        delta: percentChange(sum(cur), sum(prev)),
+        deltaLabel: monthly,
+      },
+      {
+        id: "paid",
+        icon: CheckCircle2,
+        label: t("invoices.paidAmount", "تسویه‌شده"),
+        amount: sum(paid(active)),
+        suffix: currency,
+        delta: percentChange(sum(paid(cur)), sum(paid(prev))),
+        deltaLabel: monthly,
+      },
+      {
+        id: "pending",
+        icon: Clock,
+        label: t("invoices.pendingAmount", "در انتظار پرداخت"),
+        amount: sum(pending(active)),
+        suffix: currency,
+        delta: percentChange(sum(pending(cur)), sum(pending(prev))),
+        deltaLabel: monthly,
+        invertDelta: true,
+      },
+    ];
+  }, [invoices, t]);
+}
 
 // ─── Sub-components (هر کدام < ۲۰ خط) ──────────────────────────────────────
 
@@ -231,6 +307,8 @@ export const InvoicesView = memo(function InvoicesView({
     [total, filters.limit]
   );
 
+  const stats = useInvoiceStats(invoices, t);
+
   if (isLoading) {
     return <InvoicesSkeleton />;
   }
@@ -239,6 +317,8 @@ export const InvoicesView = memo(function InvoicesView({
     <div className="space-y-5 sm:space-y-6">
       <InvoicesHeader t={t} onNewInvoice={onNewInvoice} />
       <SearchBar t={t} onSearchChange={onSearchChange} onClearFilters={onClearFilters} />
+
+      {invoices.length > 0 && <BentoStats t={t} stats={stats} />}
 
       {invoices.length === 0 ? (
         <EmptyState

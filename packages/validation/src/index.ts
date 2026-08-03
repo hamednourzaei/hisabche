@@ -48,6 +48,8 @@ export {
   createInvoiceSchema,
   updateInvoiceSchema,
   invoiceFiltersSchema,
+  invoiceStatusSchema,
+  type InvoiceStatus,
   type InvoiceItem,
   type Invoice,
   type CreateInvoice,

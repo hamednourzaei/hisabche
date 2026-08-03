@@ -1,0 +1,28 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "types": ["vite/client", "jest"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@hisabche/api": ["../../packages/api/src"],
+      "@hisabche/auth-core": ["../../packages/auth-core/src"],
+      "@hisabche/i18n": ["../../packages/i18n/src"],
+      "@hisabche/validation": ["../../packages/validation/src"],
+      "@hisabche/store": ["../../packages/store/src"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "electron/shared/**/*.ts"],
+  "exclude": ["node_modules", "out", "dist"]
+}

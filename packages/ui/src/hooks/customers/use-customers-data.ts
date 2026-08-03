@@ -23,6 +23,38 @@ type ExtendedCustomer = CustomerWithDebt & {
   invoices?: InvoiceForDebt[]
   lastInvoiceDate?: string | null
   paidAmount?: number  // ✅ اضافه شد
+  createdAt?: string
+  created_at?: string
+}
+
+// ============================================================
+// 📈 کمک‌تابع‌های محاسبه‌ی درصد تغییر
+// ============================================================
+
+/** درصد تغییر؛ null یعنی داده‌ای برای مقایسه وجود ندارد */
+function percentChange(current: number, previous: number): number | null {
+  if (previous === 0) return current === 0 ? null : 100
+  return ((current - previous) / Math.abs(previous)) * 100
+}
+
+/** شماره‌ی ماه نسبی: 0 = ماه جاری، 1 = ماه قبل */
+function monthOffset(value: string | undefined | null, now: Date): number | null {
+  if (!value) return null
+  const d = new Date(value)
+  if (isNaN(d.getTime())) return null
+  return (
+    (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth())
+  )
+}
+
+/** اختلاف روز نسبت به امروز: 0 = امروز، 1 = دیروز */
+function dayOffset(value: string | undefined | null, now: Date): number | null {
+  if (!value) return null
+  const d = new Date(value)
+  if (isNaN(d.getTime())) return null
+  const ms = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() -
+    new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+  return Math.round(ms / 86_400_000)
 }
 
 // Type برای مشتری با invoices (برای Payment Modal)
@@ -48,6 +80,13 @@ interface UseCustomersDataResult {
   topCustomerName: string | null
   topCustomerAmount: number
   openDealsCount: number
+  /** درصد تغییر ماهانه */
+  customersDelta: number | null
+  salesDelta: number | null
+  debtDelta: number | null
+  topCustomerDelta: number | null
+  /** درصد تغییر روزانه */
+  todaySalesDelta: number | null
   isLoading: boolean
   isError: boolean
   error: Error | null
@@ -215,6 +254,57 @@ export function useCustomersData(
         : null
     const topCustomerAmount = topCustomer?.totalPurchases || 0
 
+    // ============================================================
+    // 📈 درصد تغییر (ماهانه / روزانه)
+    // ============================================================
+    const now = new Date()
+    const activeInvoices = invoices.filter((inv) => inv.status !== "cancelled")
+    const invoiceDate = (inv: ExtendedInvoice) => inv.date || inv.created_at
+
+    const salesByMonth = (offset: number) =>
+      activeInvoices
+        .filter((inv) => monthOffset(invoiceDate(inv), now) === offset)
+        .reduce((sum, inv) => sum + (inv.total || 0), 0)
+
+    const debtByMonth = (offset: number) =>
+      activeInvoices
+        .filter(
+          (inv) =>
+            inv.status !== "paid" && monthOffset(invoiceDate(inv), now) === offset
+        )
+        .reduce(
+          (sum, inv) =>
+            sum + Math.max(0, (inv.total || 0) - (inv.paidAmount || inv.paid_amount || 0)),
+          0
+        )
+
+    const customersByMonth = (offset: number) =>
+      customers.filter(
+        (c) => monthOffset(c.createdAt || c.created_at, now) === offset
+      ).length
+
+    const topCustomerByMonth = (offset: number) =>
+      topCustomer
+        ? activeInvoices
+            .filter(
+              (inv) =>
+                (inv.customerId === topCustomer.id || inv.customer_id === topCustomer.id) &&
+                monthOffset(invoiceDate(inv), now) === offset
+            )
+            .reduce((sum, inv) => sum + (inv.total || 0), 0)
+        : 0
+
+    const salesByDay = (offset: number) =>
+      activeInvoices
+        .filter((inv) => dayOffset(invoiceDate(inv), now) === offset)
+        .reduce((sum, inv) => sum + (inv.total || 0), 0)
+
+    const customersDelta = percentChange(customersByMonth(0), customersByMonth(1))
+    const salesDelta = percentChange(salesByMonth(0), salesByMonth(1))
+    const debtDelta = percentChange(debtByMonth(0), debtByMonth(1))
+    const topCustomerDelta = percentChange(topCustomerByMonth(0), topCustomerByMonth(1))
+    const todaySalesDelta = percentChange(salesByDay(0), salesByDay(1))
+
     return {
       customersWithDebt: enrichedCustomers,
       customersWithOpenInvoices: enrichedCustomers,
@@ -228,6 +318,11 @@ export function useCustomersData(
       topCustomerName,
       topCustomerAmount,
       openDealsCount,
+      customersDelta,
+      salesDelta,
+      debtDelta,
+      topCustomerDelta,
+      todaySalesDelta,
     }
   }, [customersData, invoicesData])
 

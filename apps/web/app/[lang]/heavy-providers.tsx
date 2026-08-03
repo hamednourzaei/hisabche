@@ -5,10 +5,6 @@ import React, { useEffect, useRef, memo } from "react";
 import { useThemeStore, useAuthStore, useDeviceStore } from "@hisabche/store";
 import { syncLanguageFromStorage } from "@hisabche/i18n";
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   HeavyProviders v2 — Memoized · Optimized · Non-blocking
-   ✅ memo · useCallback · useRef · وابستگی‌های اصلاح‌شده
-   ═══════════════════════════════════════════════════════════════════════════ */
 
 // ─── Analytics Loader ──────────────────────────────────────────────────────
 
@@ -66,11 +62,11 @@ const ThemeInitializer = memo(function ThemeInitializer({
     if (initialized.current) return;
     initialized.current = true;
 
+    // ✅ FIX: کلاس‌ها را دستی ست نکن — با mode==='system' هر دو کلاس پاک می‌شدند
+    // و تم به حالت پیش‌فرض تیره برمی‌گشت. applyTheme داخل setMode این کار را می‌کند.
     setMode(mode);
 
     const html = document.documentElement;
-    html.classList.toggle("dark", mode === "dark");
-    html.classList.toggle("light", mode === "light");
 
     // ✅ Device detection
     const { detectDevice, performanceMode, reducedMotion, dataSaver } =

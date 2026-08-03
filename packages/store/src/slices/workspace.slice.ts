@@ -5,7 +5,11 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { supabaseClient } from '@hisabche/auth'
 
-export type WorkspaceRole = 'owner' | 'admin' | 'member' | 'viewer'
+// ✅ نقش‌ها و رتبه‌بندی‌شان از @hisabche/auth-core می‌آیند (منبع واحد
+// برای وب و موبایل) — این فایل دیگر تعریف موازی ندارد.
+import { ROLE_RANK, type WorkspaceRole } from '@hisabche/auth-core'
+
+export type { WorkspaceRole }
 
 export interface WorkspaceMember {
   id: string
@@ -47,7 +51,6 @@ interface WorkspaceState {
   canInvite: () => boolean
 }
 
-const ROLE_RANK: Record<string, number> = { owner: 4, admin: 3, member: 2, viewer: 1 }
 
 export const useWorkspaceStore = create<WorkspaceState>()(
   persist(

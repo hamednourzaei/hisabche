@@ -4,19 +4,7 @@
 
 import { useState, useEffect, useMemo, useCallback, Suspense } from "react"
 import { cn } from "@/lib/utils"
-import {
-  Plus,
-  Search,
-  Download,
-  Star,
-  AlertTriangle,
-  DollarSign,
-  User,
-  LayoutGrid,
-  ChevronDown,
-  ChevronUp,
-  AlertCircle,
-} from "lucide-react"
+import { Plus, Search, Download, User, AlertCircle } from "lucide-react"
 
 // Types
 import type { CustomersViewProps } from "./customer-view.types"
@@ -71,59 +59,21 @@ function useIsMobile(breakpoint = 640): boolean {
 }
 
 // ============================================================
-// 🎯 Filters & Columns (ثابت برای جلوگیری از re-render)
+// 🎯 جستجو
 // ============================================================
 
-const SMART_FILTERS = [
-  { id: "all", icon: User, labelKey: "customers.filterAll", fallback: "همه" },
-  {
-    id: "debtors",
-    icon: DollarSign,
-    labelKey: "customers.filterDebtors",
-    fallback: "بدهکار",
-  },
-  { id: "vip", icon: Star, labelKey: "customers.filterVip", fallback: "VIP" },
-  {
-    id: "overdue",
-    icon: AlertTriangle,
-    labelKey: "customers.filterOverdue",
-    fallback: "عقب‌افتاده",
-  },
-] as const
-
-type FilterId = (typeof SMART_FILTERS)[number]["id"]
-
-/** منطق فیلتر (خالص - بدون side effect) */
+/** منطق جستجو (خالص - بدون side effect) */
 function filterCustomers(
   customers: CustomerWithDebt[],
-  search: string,
-  filterId: FilterId
+  search: string
 ): CustomerWithDebt[] {
-  let result = customers
-
-  if (search.trim()) {
-    const term = search.toLowerCase()
-    result = result.filter(
-      (c) =>
-        (c.fullName || c.name || "").toLowerCase().includes(term) ||
-        (c.phone || "").toLowerCase().includes(term)
-    )
-  }
-
-  switch (filterId) {
-    case "vip":
-      return result.filter((c) =>
-        (c as CustomerWithDebt & { tags?: string[] }).tags?.includes("vip")
-      )
-    case "debtors":
-      return result.filter((c) => (c.totalDebt || 0) > 0)
-    case "overdue":
-      return result.filter(
-        (c) => (c as CustomerWithDebt & { isOverdue?: boolean }).isOverdue === true
-      )
-    default:
-      return result
-  }
+  if (!search.trim()) return customers
+  const term = search.toLowerCase()
+  return customers.filter(
+    (c) =>
+      (c.fullName || c.name || "").toLowerCase().includes(term) ||
+      (c.phone || "").toLowerCase().includes(term)
+  )
 }
 
 // ============================================================
@@ -180,155 +130,27 @@ function CustomersHeader({
   )
 }
 
-/** دکمه‌ی فیلتر */
-function FilterButton({
-  filter,
-  isActive,
-  onClick,
-  t,
-}: {
-  filter: (typeof SMART_FILTERS)[number]
-  isActive: boolean
-  onClick: () => void
-  t: (key: string, fallback?: string) => string
-}) {
-  const Icon = filter.icon
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border whitespace-nowrap transition-all",
-        isActive
-          ? "border-[hsl(var(--color-primary))] bg-[hsl(var(--color-primary)/0.1)] text-[hsl(var(--color-primary))]"
-          : "border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))]"
-      )}
-      aria-label={t(filter.labelKey, filter.fallback)}
-      aria-pressed={isActive}
-    >
-      <Icon className="size-3" />
-      {t(filter.labelKey, filter.fallback)}
-    </button>
-  )
-}
-
-/** نوار ابزار (جستجو + فیلترها) */
+/** نوار ابزار — فقط جستجو */
 function CustomersToolbar({
   t,
   search,
   onSearchChange,
-  activeFilter,
-  onFilterChange,
-  isMobile,
-  expanded,
-  onToggleExpanded,
-  onExport,
 }: {
   t: (key: string, fallback?: string) => string
   search: string
   onSearchChange: (value: string) => void
-  activeFilter: FilterId
-  onFilterChange: (id: FilterId) => void
-  isMobile: boolean
-  expanded: boolean
-  onToggleExpanded: () => void
-  onExport: () => void
 }) {
-  const visibleFilters = isMobile && !expanded ? SMART_FILTERS.slice(0, 2) : SMART_FILTERS
-
   return (
-    <div className="space-y-2">
-      {/* جستجو */}
-      <div className="relative">
-        <Search className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))]" />
-        <input
-          type="text"
-          placeholder={t("customers.searchPlaceholder", "جستجوی نام، شماره...")}
-          value={search}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="w-full rounded-xl ps-9 pe-4 py-2.5 text-sm border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))] transition-shadow duration-150 focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] focus:shadow-[var(--focus-ring)]"
-          aria-label={t("customers.searchPlaceholder", "جستجوی نام، شماره...")}
-        />
-      </div>
-
-      {/* فیلترها */}
-      <div className="flex items-center gap-1.5 overflow-x-auto">
-        {visibleFilters.map((f) => (
-          <FilterButton
-            key={f.id}
-            filter={f}
-            isActive={activeFilter === f.id}
-            onClick={() => onFilterChange(f.id)}
-            t={t}
-          />
-        ))}
-
-        {!isMobile && (
-          <>
-            <span className="w-px h-5 bg-[hsl(var(--border-default))] mx-1" />
-            <button
-              onClick={onExport}
-              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]"
-              aria-label={t("common.export", "خروجی")}
-            >
-              <Download className="size-3" />
-              {t("common.export", "خروجی")}
-            </button>
-            <button
-              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]"
-              aria-label={t("common.columns", "ستون‌ها")}
-            >
-              <LayoutGrid className="size-3" />
-              {t("common.columns", "ستون‌ها")}
-            </button>
-          </>
-        )}
-
-        {isMobile && (
-          <button
-            onClick={onToggleExpanded}
-            className={cn(
-              "inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium border whitespace-nowrap transition-all shrink-0",
-              expanded
-                ? "border-[hsl(var(--color-primary))] bg-[hsl(var(--color-primary)/0.1)] text-[hsl(var(--color-primary))]"
-                : "border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))]"
-            )}
-            aria-label={expanded ? t("common.less", "کمتر") : t("common.more", "بیشتر")}
-          >
-            {expanded ? <ChevronUp className="size-3" /> : <ChevronDown className="size-3" />}
-            {expanded ? t("common.less", "کمتر") : t("common.more", "بیشتر")}
-          </button>
-        )}
-      </div>
-
-      {/* فیلترهای توسعه‌یافته در موبایل */}
-      {isMobile && expanded && (
-        <div className="flex items-center gap-1.5 flex-wrap">
-          {SMART_FILTERS.slice(2).map((f) => (
-            <FilterButton
-              key={f.id}
-              filter={f}
-              isActive={activeFilter === f.id}
-              onClick={() => onFilterChange(f.id)}
-              t={t}
-            />
-          ))}
-          <button
-            onClick={onExport}
-            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]"
-            aria-label={t("common.export", "خروجی")}
-          >
-            <Download className="size-3" />
-            {t("common.export", "خروجی")}
-          </button>
-          <button
-            className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]"
-            aria-label={t("common.columns", "ستون‌ها")}
-          >
-            <LayoutGrid className="size-3" />
-            {t("common.columns", "ستون‌ها")}
-          </button>
-        </div>
-      )}
+    <div className="relative">
+      <Search className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))]" />
+      <input
+        type="text"
+        placeholder={t("customers.searchPlaceholder", "جستجوی نام، شماره...")}
+        value={search}
+        onChange={(e) => onSearchChange(e.target.value)}
+        className="w-full rounded-xl ps-9 pe-4 py-2.5 text-sm border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))] transition-shadow duration-150 focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] focus:shadow-[var(--focus-ring)]"
+        aria-label={t("customers.searchPlaceholder", "جستجوی نام، شماره...")}
+      />
     </div>
   )
 }
@@ -520,6 +342,7 @@ function CustomersContent({
   isMobile,
   currency,
   onSelectCustomer,
+  onExport,
 }: {
   t: (key: string, fallback?: string) => string
   fmt: (v: number) => string
@@ -531,6 +354,7 @@ function CustomersContent({
   isMobile: boolean
   currency: string
   onSelectCustomer: (id: string) => void
+  onExport: () => void
 }) {
   if (isLoading) return <LoadingSkeleton isMobile={isMobile} t={t} />
   if (isError) return <ErrorState t={t} message={errorMessage} onRetry={onRetry} />
@@ -538,9 +362,20 @@ function CustomersContent({
 
   return (
     <div className="space-y-2">
-      <span className="text-xs font-medium text-[hsl(var(--fg-secondary))]">
-        {filtered.length} {t("customers.customers", "مشتری")}
-      </span>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs font-medium text-[hsl(var(--fg-secondary))]">
+          {filtered.length} {t("customers.customers", "مشتری")}
+        </span>
+        <button
+          type="button"
+          onClick={onExport}
+          className="inline-flex items-center gap-1.5 rounded-full border border-[hsl(var(--border-default))] px-3 py-1.5 text-xs font-medium text-[hsl(var(--fg-secondary))] transition-colors duration-150 hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]"
+          aria-label={t("common.export", "خروجی")}
+        >
+          <Download className="size-3" />
+          {t("common.export", "خروجی")}
+        </button>
+      </div>
       <CustomersTable
         t={t}
         fmt={fmt}
@@ -591,16 +426,18 @@ export function customersView(props: CustomersViewProps) {
     onPaymentSuccess,
     onNewCreditInvoice,
     currency = "AFN",
+    customersDelta = null,
+    salesDelta = null,
+    debtDelta = null,
+    topCustomerDelta = null,
   } = props
 
-  const [activeFilter, setActiveFilter] = useState<FilterId>("all")
-  const [expanded, setExpanded] = useState(false)
   const isMobile = useIsMobile()
 
   // فیلتر کردن با useMemo
   const filtered = useMemo(
-    () => filterCustomers(customersWithDebt, search, activeFilter),
-    [customersWithDebt, search, activeFilter]
+    () => filterCustomers(customersWithDebt, search),
+    [customersWithDebt, search]
   )
 
   // خروجی CSV
@@ -670,19 +507,9 @@ export function customersView(props: CustomersViewProps) {
       />
 
       {/* نوار ابزار */}
-      <CustomersToolbar
-        t={t}
-        search={search}
-        onSearchChange={onSearchChange}
-        activeFilter={activeFilter}
-        onFilterChange={setActiveFilter}
-        isMobile={isMobile}
-        expanded={expanded}
-        onToggleExpanded={() => setExpanded((prev) => !prev)}
-        onExport={handleExportCSV}
-      />
+      <CustomersToolbar t={t} search={search} onSearchChange={onSearchChange} />
 
-      {/* KPI */}
+      {/* KPI — بنتو گرید */}
       {customersStats({
         t,
         fmt,
@@ -692,6 +519,10 @@ export function customersView(props: CustomersViewProps) {
         topCustomerName,
         topCustomerAmount,
         currency,
+        customersDelta,
+        salesDelta,
+        debtDelta,
+        topCustomerDelta,
       })}
 
       {/* محتوای اصلی */}
@@ -706,6 +537,7 @@ export function customersView(props: CustomersViewProps) {
         currency={currency}
         fmt={fmt}
         onSelectCustomer={onSelectCustomer}
+        onExport={handleExportCSV}
       />
     </div>
   )

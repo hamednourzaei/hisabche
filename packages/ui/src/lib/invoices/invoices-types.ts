@@ -27,6 +27,8 @@ export interface Invoice {
   invoiceNumber: string
   date: string
   createdAt: string
+  /** تاریخ خام ISO — برای محاسبات آماری (نمایش داده نمی‌شود) */
+  isoDate: string
   status: string
   total: number
   currency: string

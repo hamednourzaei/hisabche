@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import CryptoJS from 'crypto-js'
+import type { AuthUser } from '@hisabche/auth-core'
 import { registerTokenGetter } from '@hisabche/api'
 import { setOnUnauthorized } from '@hisabche/api'
 import { useWorkspaceStore } from './workspace.slice'
@@ -48,14 +49,9 @@ function clearAuthStorage() {
 // ============================================
 // TYPES
 // ============================================
-export interface User {
-  id: string
-  email: string
-  fullName: string
-  businessName?: string
-  avatarUrl?: string
-  createdAt: string
-}
+// ✅ مدل هویت از @hisabche/auth-core می‌آید تا وب و موبایل یک تعریف
+// مشترک داشته باشند (قبلاً این interface اینجا و در اپ موبایل تکرار می‌شد).
+export type User = AuthUser
 
 export interface AuthState {
   user: User | null

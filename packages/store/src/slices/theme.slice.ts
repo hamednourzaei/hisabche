@@ -33,10 +33,15 @@ function resolveIsDark(mode: ThemeMode): boolean {
   return mode === 'dark'
 }
 
+// ✅ FIX: توکن‌های تم روشن فقط زیر `.light` / `[data-theme="light"]` تعریف شده‌اند
+// و `:root` خودش تیره است؛ پس صرفاً برداشتن کلاس `dark` سایت را روشن نمی‌کرد.
+// حالا هر دو کلاس و data-theme هم‌زمان همگام می‌شوند.
 function applyTheme(isDark: boolean): void {
   if (typeof document === 'undefined') return
   const root = document.documentElement
   root.classList.toggle('dark', isDark)
+  root.classList.toggle('light', !isDark)
+  root.dataset.theme = isDark ? 'dark' : 'light'
   root.style.colorScheme = isDark ? 'dark' : 'light'
 }
 

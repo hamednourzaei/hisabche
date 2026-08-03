@@ -1,0 +1,38 @@
+// ============================================
+// Canonical identity model — single source of truth for web and mobile.
+// Platform packages must import these instead of redeclaring them.
+// ============================================
+
+export interface AuthUser {
+  id: string
+  email: string
+  fullName: string
+  businessName?: string
+  avatarUrl?: string
+  createdAt: string
+}
+
+/** Workspace-level role. Ordering is meaningful — see ROLE_RANK. */
+export type WorkspaceRole = 'owner' | 'admin' | 'member' | 'viewer'
+
+export interface WorkspaceContext {
+  workspaceId: string
+  workspaceName: string
+  role: WorkspaceRole
+}
+
+export interface Session {
+  user: AuthUser
+  token: string
+  workspace?: WorkspaceContext
+}
+
+export interface LoginCredentials {
+  email: string
+  password: string
+}
+
+export interface SignUpPayload extends LoginCredentials {
+  fullName: string
+  businessName?: string
+}

@@ -1,0 +1,64 @@
+name: Mobile
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/**'
+      - '.github/workflows/mobile.yml'
+  pull_request:
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/**'
+
+jobs:
+  verify:
+    name: Type-check, test and bundle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # The repo pins react 19 while RN 0.74 peers react 18 — the install
+      # has always required this flag.
+      - run: npm ci --legacy-peer-deps
+
+      - name: Type-check
+        run: npm run type-check --workspace @hisabche/mobile
+
+      - name: Unit tests
+        run: npm test --workspace @hisabche/mobile
+
+      # Proves the Metro graph resolves for a real device target.
+      - name: Bundle (Android)
+        working-directory: apps/mobile
+        run: npx expo export --platform android --no-bytecode --output-dir ../../.expo-export
+
+  build:
+    name: EAS build
+    needs: verify
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - run: npm ci --legacy-peer-deps
+
+      - name: Build Android + iOS
+        working-directory: apps/mobile
+        run: eas build --platform all --profile production --non-interactive --no-wait

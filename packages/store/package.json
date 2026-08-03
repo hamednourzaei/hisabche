@@ -11,7 +11,8 @@
   },
   "dependencies": {
     "crypto-js": "^4.2.0",
-    "zustand": "^4.5.2"
+    "zustand": "^4.5.2",
+    "@hisabche/auth-core": "*"
   },
   "peerDependencies": {
     "react": "^18.2.0"

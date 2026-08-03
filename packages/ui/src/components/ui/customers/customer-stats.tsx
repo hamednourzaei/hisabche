@@ -2,6 +2,7 @@
 "use client"
 
 import { Users, DollarSign, Wallet, Trophy } from "lucide-react"
+import { BentoStats, compactAmount, type BentoStat } from "../bento-stats"
 
 interface CustomerStatsProps {
   t: (key: string, fallback?: string) => string
@@ -12,66 +13,68 @@ interface CustomerStatsProps {
   topCustomerName: string | null
   topCustomerAmount: number
   currency?: string
+  /** درصد تغییر ماهانه */
+  customersDelta?: number | null
+  salesDelta?: number | null
+  debtDelta?: number | null
+  topCustomerDelta?: number | null
 }
 
-/** ردیف کارت‌های KPI — همیشه یک ردیف افقی، حتی در موبایل (اسکرول افقی در صورت نیاز) */
+/** باکس KPI — موبایل: بنتو گرید نامتقارن ۲×۲ · دسکتاپ: چهار کارت */
 export function customersStats({
   t,
-  fmt,
   totalCustomers,
   totalSales,
   totalDebt,
   topCustomerName,
   topCustomerAmount,
   currency = "AFN",
+  customersDelta = null,
+  salesDelta = null,
+  debtDelta = null,
+  topCustomerDelta = null,
 }: CustomerStatsProps) {
-  const cards = [
+  const monthly = t("common.vsLastMonth", "نسبت به ماه قبل")
+
+  const stats: BentoStat[] = [
     {
       id: "total",
       icon: Users,
       label: t("customers.totalCustomers", "تعداد مشتریان"),
-      value: String(totalCustomers),
+      amount: totalCustomers,
+      delta: customersDelta,
+      deltaLabel: monthly,
     },
     {
       id: "sales",
       icon: DollarSign,
       label: t("customers.totalSales", "مجموع فروش"),
-      value: `${fmt(totalSales)} ${currency}`,
+      amount: totalSales,
+      suffix: currency,
+      delta: salesDelta,
+      deltaLabel: monthly,
     },
     {
       id: "debt",
       icon: Wallet,
       label: t("customers.totalDebt", "کل بدهی"),
-      value: `${fmt(totalDebt)} ${currency}`,
+      amount: totalDebt,
+      suffix: currency,
+      delta: debtDelta,
+      deltaLabel: monthly,
+      invertDelta: true,
     },
     {
       id: "top",
       icon: Trophy,
       label: t("customers.topCustomer", "پرخریدترین مشتری"),
-      value: topCustomerName
-        ? `${topCustomerName} (${fmt(topCustomerAmount)} ${currency})`
-        : "-",
+      text: topCustomerName
+        ? `${topCustomerName} · ${compactAmount(topCustomerAmount, t)} ${currency}`
+        : "—",
+      delta: topCustomerName ? topCustomerDelta : null,
+      deltaLabel: monthly,
     },
   ]
 
-  return (
-    <div className="grid grid-cols-4 gap-2 sm:gap-3 w-full overflow-x-auto">
-      {cards.map((card) => (
-        <div
-          key={card.id}
-          className="min-w-0 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-2.5 sm:p-4 space-y-1 sm:space-y-2"
-        >
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <card.icon className="size-3.5 sm:size-4 shrink-0 text-[hsl(var(--color-primary))]" aria-hidden="true" />
-            <span className="truncate text-[10px] sm:text-xs text-[hsl(var(--fg-secondary))]">
-              {card.label}
-            </span>
-          </div>
-          <p className="truncate text-sm sm:text-xl font-bold tabular-nums text-[hsl(var(--fg-primary))]">
-            {card.value}
-          </p>
-        </div>
-      ))}
-    </div>
-  )
+  return <BentoStats t={t} stats={stats} />
 }

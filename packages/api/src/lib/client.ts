@@ -1,5 +1,9 @@
 import axios, { AxiosInstance, AxiosError } from 'axios'
 import { getToken, tokenReady } from './tokenProvider'
+import { readStorage, STORAGE_KEYS } from '../storage'
+// Side-effect import: auto-registers the browser adapter when localStorage
+// exists. On React Native the host app registers a SecureStore adapter.
+import '../storage/web'
 
 // ============================================
 // Types
@@ -43,8 +47,6 @@ export const apiClient: AxiosInstance = axios.create({
 // ============================================
 // Helpers
 // ============================================
-const isBrowser = (): boolean => typeof window !== 'undefined'
-
 // ✅ callback برای ۴۰۱ — بدون import از Store
 let onUnauthorized: (() => void) | null = null
 
@@ -79,10 +81,9 @@ apiClient.interceptors.request.use(
       devLog('[API Client] no token — unauthenticated request')
     }
 
-    const lang = isBrowser()
-      ? localStorage.getItem('hisabche-lang') || 'fa-AF'
-      : 'fa-AF'
-    config.headers['Accept-Language'] = lang
+    // ✅ زبان از لایه‌ی storage خوانده می‌شود (localStorage روی وب،
+    // SecureStore روی موبایل) — این فایل دیگر پلتفرم را نمی‌شناسد.
+    config.headers['Accept-Language'] = readStorage(STORAGE_KEYS.language) || 'fa-AF'
 
     // ✅ FIX: قبلاً limit=50 روی axios instance به‌صورت گلوبال ست شده بود و
     // به تمام درخواست‌ها (حتی POST و درخواست‌های تک‌آیتمی مثل GET /:id) اضافه
@@ -127,7 +128,9 @@ apiClient.interceptors.response.use(
     }
 
     // ✅ ۴۰۱ → فقط callback صدا می‌شود (بدون logout، بدون loop)
-    if (apiError.status === 401 && isBrowser()) {
+    // ✅ بدون گیت پلتفرم — callback فقط وقتی ثبت شده باشد صدا می‌شود،
+    // پس روی سرور بی‌اثر و روی موبایل (که window دارد ولی مرورگر نیست) درست است.
+    if (apiError.status === 401) {
       devLog('[API Client] 401 — triggering onUnauthorized callback')
       onUnauthorized?.()
     }

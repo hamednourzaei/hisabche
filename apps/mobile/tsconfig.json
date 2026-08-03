@@ -10,6 +10,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
+    "strict": true,
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"],
@@ -18,7 +19,9 @@
       "@hisabche/i18n": ["../../packages/i18n/src"],
       "@hisabche/store": ["../../packages/store/src"],
       "@hisabche/validation": ["../../packages/validation/src"],
-      "@hisabche/api": ["../../packages/api/src"]
+      "@hisabche/api": ["../../packages/api/src"],
+      "@hisabche/mobile-ui": ["../../packages/mobile-ui/src"],
+      "@hisabche/mobile-ui/*": ["../../packages/mobile-ui/src/*"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx"],
