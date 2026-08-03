@@ -8,15 +8,35 @@ import { DateRange } from '@hisabche/validation';
 import { CacheKeys, withCacheKey } from '../utils/cache';
 import { memoryCache } from '../utils/pagination';
 
+// ستون invoices.date از نوع timestamptz است. مقایسه‌ی مستقیم با یک رشته‌ی
+// تاریخِ بدون ساعت («2026-08-02») یعنی «تا ساعت ۰۰:۰۰ آن روز»، که کل آن روز
+// را حذف می‌کند. این تابع ابتدای روزِ بعد را برمی‌گرداند تا با «<» کل روزِ
+// endDate پوشش داده شود.
+function endOfDayExclusive(endDate: string): string {
+  const d = new Date(endDate);
+  if (Number.isNaN(d.getTime())) return endDate;
+  d.setUTCDate(d.getUTCDate() + 1);
+  d.setUTCHours(0, 0, 0, 0);
+  return d.toISOString();
+}
+
+// شروع امروز به وقت UTC — برای محاسبه‌ی «فروش امروز» در JS.
+function startOfTodayISO(): string {
+  const d = new Date();
+  d.setUTCHours(0, 0, 0, 0);
+  return d.toISOString();
+}
+
 export class AnalyticsService {
   // ─── Dashboard KPIs — OPTIMIZED with RPC + Parallel Queries ───
   async getDashboardKpis(userId: string) {
     const cacheKey = `dashboard:v2:${userId}`;
 
     return withCacheKey(cacheKey, 60_000, async () => {
-      // ✅ RPC (فاکتورها) و products (برای lowStock + ارزش انبار) موازی
-      const [kpiResult, productsResult, salesTotalsResult] = await Promise.all([
-        supabase.rpc('get_dashboard_kpis', { p_user_id: userId }),
+      // ✅ فراخوانی RPC حذف شد: خروجی‌اش دیگر استفاده نمی‌شود چون همه‌ی
+      // KPIها از روی همین آرایه‌ی invoices محاسبه می‌شوند. نگه‌داشتنش فقط
+      // یک رفت‌وبرگشت اضافی به دیتابیس بود.
+      const [productsResult, salesTotalsResult] = await Promise.all([
         supabase
           .from('products')
           .select('quantity, min_stock_level, buy_price')
@@ -24,7 +44,7 @@ export class AnalyticsService {
           .eq('is_active', true),
         supabase
           .from('invoices')
-          .select('total, paid_amount, status')
+          .select('total, paid_amount, status, date, customer_id')
           .eq('user_id', userId),
       ]);
 
@@ -42,130 +62,99 @@ export class AnalyticsService {
         if (inv.status === 'paid') return sum;
         return sum + (Number(inv.total) || 0) - (Number(inv.paid_amount) || 0);
       }, 0);
+      // ✅ FIX: «فروش امروز» از RPC (get_dashboard_kpis) می‌آمد و همیشه صفر
+      // بود، در حالی که سه کارت دیگر که در JS و بدون فیلتر تاریخ حساب
+      // می‌شوند درست کار می‌کردند. چون آن تابع SQL در ریپو نیست و قابل
+      // اصلاح نبود، این مقدار هم مثل بقیه از خودِ فاکتورها محاسبه می‌شود تا
+      // رفتارش با کارت‌های سالم یکسان باشد.
+      const todayStart = startOfTodayISO();
+      const todayInvoicesList = invoices.filter(
+        (inv) => inv.date && new Date(inv.date).toISOString() >= todayStart
+      );
+      const todaySales = todayInvoicesList.reduce(
+        (sum, inv) => sum + (Number(inv.total) || 0),
+        0
+      );
+
       const extraCards = {
         totalSales: Math.round(totalSales * 100) / 100,
         customerDebt: Math.round(customerDebt * 100) / 100,
         warehouseValue: Math.round(warehouseValue * 100) / 100,
+        todaySales: Math.round(todaySales * 100) / 100,
+        todayInvoices: todayInvoicesList.length,
       };
 
-      // ✅ اگر RPC موفق بود، از آن استفاده کن
-      if (!kpiResult.error && kpiResult.data && kpiResult.data.length > 0) {
-        const r = kpiResult.data[0];
-        const monthlyRevenue = Number(r.monthly_revenue) || 0;
-        const growthMetrics = await this.getGrowthAndPendingMetrics(userId, monthlyRevenue);
-        return {
-          todaySales: Number(r.today_sales) || 0,
-          todayInvoices: Number(r.today_invoices) || 0,
-          monthlyRevenue,
-          pendingPayments: Number(r.pending_total) || 0,
-          activeCustomers: Number(r.active_customers) || 0,
-          lowStockAlerts,
-          ...extraCards,
-          ...growthMetrics,
-        };
+      // ✅ همه‌ی KPIها دقیقاً مثل «فروش کل» از روی همین آرایه‌ی invoices در JS
+      // محاسبه می‌شوند و دیگر به RPC (get_dashboard_kpis) تکیه نمی‌شود.
+      // دلیل: آن تابع SQL در ریپو نیست، قابل بازبینی نبود و دو بار داده‌ی غلط
+      // داد (فروش امروز همیشه صفر، و شمارش «در انتظار پرداخت» برابر کل
+      // فاکتورها). این آرایه از قبل برای سه کارت دیگر واکشی می‌شد، پس این
+      // محاسبه هزینه‌ی کوئری اضافه‌ای ندارد.
+      const now = new Date();
+      const firstOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const firstOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+
+      let monthlyRevenue = 0;
+      let prevMonthRevenue = 0;
+      let pendingPayments = 0;
+      let pendingPaymentsCount = 0;
+      const activeCustomerIds = new Set<string>();
+
+      for (const inv of invoices) {
+        const total = Number(inv.total) || 0;
+        const paid = Number(inv.paid_amount) || 0;
+
+        // ملاک «در انتظار پرداخت» مبلغ باقی‌مانده است، نه رشته‌ی status —
+        // وضعیت واقعی فاکتورهای پرداخت‌شده 'completed' است نه 'paid'.
+        if (inv.status !== 'cancelled' && total - paid > 0) {
+          pendingPayments += total - paid;
+          pendingPaymentsCount += 1;
+        }
+
+        if (inv.date) {
+          const d = new Date(inv.date);
+          if (d >= firstOfThisMonth) monthlyRevenue += total;
+          else if (d >= firstOfPrevMonth) prevMonthRevenue += total;
+        }
+
+        if (inv.customer_id) activeCustomerIds.add(inv.customer_id);
       }
 
-      // ✅ Fallback: اگر RPC خطا داد، از کوئری معمولی استفاده کن
-      console.error('RPC error, falling back to query:', kpiResult.error);
-      const fallback = await this.getDashboardKpisFallback(userId, lowStockAlerts);
-      return { ...fallback, ...extraCards };
+      const monthlyGrowth = prevMonthRevenue > 0
+        ? Math.round(((monthlyRevenue - prevMonthRevenue) / prevMonthRevenue) * 1000) / 10
+        : (monthlyRevenue > 0 ? 100 : 0);
+
+      const customerGrowth = await this.getCustomerGrowth(userId, firstOfThisMonth.toISOString());
+
+      return {
+        monthlyRevenue: Math.round(monthlyRevenue * 100) / 100,
+        monthlyGrowth,
+        pendingPayments: Math.round(pendingPayments * 100) / 100,
+        pendingPaymentsCount,
+        activeCustomers: activeCustomerIds.size,
+        customerGrowth,
+        lowStockAlerts,
+        ...extraCards,
+      };
     });
   }
 
-  // ─── Growth & Pending Count — محاسبه‌ی واقعی رشد ماهانه و رشد مشتریان ───
-  private async getGrowthAndPendingMetrics(userId: string, monthlyRevenue: number) {
-    const now = new Date();
-    const firstOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-    const firstOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
-
-    const [prevMonthInvoices, pendingCount, customersThisMonth, customersBeforeThisMonth] = await Promise.all([
-      supabase.from('invoices').select('total').eq('user_id', userId).gte('date', firstOfPrevMonth).lt('date', firstOfThisMonth),
-      supabase.from('invoices').select('id', { count: 'exact', head: true }).eq('user_id', userId).neq('status', 'paid'),
+  // ─── رشد مشتریان ───
+  // ✅ درآمد ماهانه، رشد ماهانه و شمارش «در انتظار پرداخت» از این‌جا حذف
+  // شدند چون حالا در getDashboardKpis از روی همان آرایه‌ی invoices محاسبه
+  // می‌شوند (سه کوئری کمتر). فقط رشد مشتریان به جدول customers نیاز دارد.
+  private async getCustomerGrowth(userId: string, firstOfThisMonth: string) {
+    const [customersThisMonth, customersBeforeThisMonth] = await Promise.all([
       supabase.from('customers').select('id', { count: 'exact', head: true }).eq('user_id', userId).gte('created_at', firstOfThisMonth),
       supabase.from('customers').select('id', { count: 'exact', head: true }).eq('user_id', userId).lt('created_at', firstOfThisMonth),
     ]);
 
-    const prevMonthRevenue = (prevMonthInvoices.data || []).reduce((sum, inv) => sum + (Number(inv.total) || 0), 0);
-    const monthlyGrowth = prevMonthRevenue > 0
-      ? Math.round(((monthlyRevenue - prevMonthRevenue) / prevMonthRevenue) * 1000) / 10
-      : (monthlyRevenue > 0 ? 100 : 0);
-
     const newCustomersThisMonth = customersThisMonth.count || 0;
     const totalBeforeThisMonth = customersBeforeThisMonth.count || 0;
-    const customerGrowth = totalBeforeThisMonth > 0
+
+    return totalBeforeThisMonth > 0
       ? Math.round((newCustomersThisMonth / totalBeforeThisMonth) * 1000) / 10
       : (newCustomersThisMonth > 0 ? 100 : 0);
-
-    return {
-      monthlyGrowth,
-      customerGrowth,
-      pendingPaymentsCount: pendingCount.count || 0,
-    };
-  }
-
-  // ─── Dashboard KPIs — Fallback (زمانی که RPC موجود نیست) ───
-  private async getDashboardKpisFallback(userId: string, lowStockAlerts: number) {
-    const { data: allData, error } = await supabase
-      .from('invoices')
-      .select(`
-        total,
-        status,
-        date,
-        paid_amount,
-        customer_id
-      `)
-      .eq('user_id', userId);
-
-    if (error || !allData) {
-      return this.emptyDashboardKpis();
-    }
-
-    const today = new Date().toISOString().split('T')[0];
-    const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-    
-    let todaySales = 0;
-    let todayInvoices = 0;
-    let monthlyRevenue = 0;
-    let pendingTotal = 0;
-    const uniqueCustomers = new Set();
-
-    for (const invoice of allData) {
-      const date = invoice.date?.split('T')[0] || '';
-      const total = Number(invoice.total) || 0;
-      const paidAmount = Number(invoice.paid_amount) || 0;
-
-      if (invoice.customer_id) {
-        uniqueCustomers.add(invoice.customer_id);
-      }
-
-      if (date === today) {
-        todayInvoices++;
-        if (invoice.status === 'paid') {
-          todaySales += total;
-        }
-      }
-
-      if (date >= firstOfMonth) {
-        monthlyRevenue += total;
-      }
-
-      if (invoice.status !== 'paid') {
-        pendingTotal += (total - paidAmount);
-      }
-    }
-
-    const roundedMonthlyRevenue = Math.round(monthlyRevenue * 100) / 100;
-    const growthMetrics = await this.getGrowthAndPendingMetrics(userId, roundedMonthlyRevenue);
-
-    return {
-      todaySales: Math.round(todaySales * 100) / 100,
-      todayInvoices,
-      monthlyRevenue: roundedMonthlyRevenue,
-      pendingPayments: Math.round(pendingTotal * 100) / 100,
-      activeCustomers: uniqueCustomers.size,
-      lowStockAlerts,
-      ...growthMetrics,
-    };
   }
 
   // ─── Sales Summary — OPTIMIZED ───
@@ -193,7 +182,12 @@ export class AnalyticsService {
         `)
         .eq('user_id', userId)
         .gte('date', startDate)
-        .lte('date', endDate)
+        // ✅ FIX: ستون date از نوع timestamptz است اما endDate فقط تاریخ است
+        // ('2026-08-02'). شرط lte عملاً می‌شد date <= '2026-08-02 00:00:00'،
+        // پس هر فاکتوری که امروز بعد از نیمه‌شب ثبت می‌شد از نمودار حذف
+        // می‌شد و فروش امروز هیچ‌وقت دیده نمی‌شد. حالا تا انتهای روزِ endDate
+        // (ابتدای روز بعد، انحصاری) در نظر گرفته می‌شود.
+        .lt('date', endOfDayExclusive(endDate))
         .order('date', { ascending: false });
 
       if (error || !invoices || invoices.length === 0) {
