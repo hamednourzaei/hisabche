@@ -38,6 +38,53 @@ interface CachedAuth {
 // از Redis EX (ثانیه) استفاده می‌کند.
 const AUTH_CACHE_TTL_SECONDS = 30
 
+// حداکثر مدتی که نتیجه‌ی یک توکن تأییدشده کش می‌ماند (ثانیه). حتی اگر توکن
+// عمر بلندتری داشته باشد، از این بیشتر کش نمی‌شود تا پنجره‌ی revoke منطقی
+// بماند.
+const AUTH_CACHE_MAX_TTL_SECONDS = 3600
+
+// فاصله‌ی امن قبل از انقضای توکن؛ تا درخواستی با توکنِ تازه‌منقضی‌شده از کش
+// سرو نشود.
+const AUTH_CACHE_EXPIRY_SKEW_SECONDS = 60
+
+/**
+ * زمان انقضای (exp) توکن را از payload خودش می‌خواند.
+ *
+ * ⚠️ این تابع امضا را تأیید نمی‌کند و نباید هرگز به‌عنوان مبنای اعتماد
+ * استفاده شود — فقط زمانی صدا زده می‌شود که توکن قبلاً توسط
+ * supabase.auth.getUser() تأیید شده باشد، و صرفاً برای تعیین طول عمر کش
+ * به‌کار می‌رود.
+ */
+function getTokenExpirySeconds(token: string): number | null {
+  const parts = token.split('.')
+  if (parts.length !== 3 || !parts[1]) return null
+  try {
+    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString('utf8'))
+    return typeof payload?.exp === 'number' ? payload.exp : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * کش را تا کمی قبل از انقضای توکن نگه می‌دارد.
+ *
+ * ✅ FIX: قبلاً هر توکن فقط ۳۰ ثانیه کش می‌شد، یعنی هنگام گشتن در برنامه
+ * تقریباً هر ۳۰ ثانیه یک بار supabase.auth.getUser() صدا زده می‌شد و
+ * مصرف Auth بی‌دلیل بالا می‌رفت. حالا هر توکن فقط **یک بار** تأیید می‌شود
+ * و نتیجه تا انقضای همان توکن معتبر می‌ماند؛ یعنی عملاً یک درخواست auth
+ * به‌ازای هر ورود/رفرش توکن، نه به‌ازای هر ۳۰ ثانیه گشتن در صفحات.
+ */
+function resolveAuthCacheTtl(token: string): number {
+  const exp = getTokenExpirySeconds(token)
+  if (!exp) return AUTH_CACHE_TTL_SECONDS
+
+  const remaining = exp - Math.floor(Date.now() / 1000) - AUTH_CACHE_EXPIRY_SKEW_SECONDS
+  if (remaining <= 0) return AUTH_CACHE_TTL_SECONDS
+
+  return Math.min(remaining, AUTH_CACHE_MAX_TTL_SECONDS)
+}
+
 export async function authenticate(request: FastifyRequest, reply: FastifyReply) {
   const authHeader = request.headers.authorization
   if (!authHeader) {
@@ -82,7 +129,7 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
   }
 
   // ✅ FIX: ذخیره در کش برای درخواست‌های بعدی همین کاربر — await اضافه شد
-  await memoryCache.set(cacheKey, result, AUTH_CACHE_TTL_SECONDS)
+  await memoryCache.set(cacheKey, result, resolveAuthCacheTtl(token))
 
   request.user = user
   request.userId = user.id
