@@ -1071,7 +1071,7 @@
     "zero": "۰",
     "increase": "افزایش",
     "decrease": "کاهش",
-    "loading": "در حال بارگذاری...",
+    "loading": "در حال جستجو...",
     "optional": "اختیاری",
     "required": "الزامی"
   },
@@ -1413,7 +1413,12 @@
     "removeStamp": "حذف تصویر",
     "stampInvalidType": "فقط تصویر PNG یا SVG پذیرفته می‌شود",
     "stampTooLarge": "حجم تصویر باید کمتر از ۱ مگابایت باشد",
-    "stampUploadFailed": "بارگذاری تصویر ناموفق بود"
+    "stampUploadFailed": "بارگذاری تصویر ناموفق بود",
+    "fullName": "نام",
+    "editProfile": "ویرایش معلومات",
+    "businessNamePlaceholder": "مثلاً: دوکان حسابچه",
+    "fullNameRequired": "نام نمی‌تواند خالی باشد",
+    "saveFailed": "ذخیره نشد. دوباره کوشش کنید."
   },
   "sync": {
     "title": "همگام‌سازی",
@@ -1532,7 +1537,8 @@
     "noActivities": "فعالیتی ثبت نشده است",
     "totalSales": "فروش کل",
     "customerDebt": "قرض مشتریان",
-    "warehouseValue": "ارزش کل گدام"
+    "warehouseValue": "ارزش کل گدام",
+    "vsLastMonth": "نسبت به ماه گذشته"
   },
   "quickInvoice": {
     "title": "فاکتور سریع",
@@ -1545,7 +1551,11 @@
     "pricePlaceholder": "مثلاً ۵۰۰",
     "lastCustomer": "آخرین مشتری",
     "previewTitle": "پیش‌نمایش فاکتور",
-    "previewDesc": "قبل از ثبت نهایی، فاکتور را بررسی کنید"
+    "previewDesc": "قبل از ثبت نهایی، فاکتور را بررسی کنید",
+    "quantity": "تعداد",
+    "unitPrice": "مبلغ واحد",
+    "lineTotal": "جمع",
+    "unitPricePlaceholder": "مبلغ را وارد کنید"
   },
   "payment": {
     "record": "ثبت پرداخت",
@@ -1981,7 +1991,11 @@
   },
   "search": {
     "recent": "اخیر",
-    "frequent": "مکرر"
+    "frequent": "مکرر",
+    "placeholder": "جستجو در مشتریان، محصولات، فاکتورها...",
+    "pages": "صفحه‌ها",
+    "noResults": "چیزی پیدا نشد",
+    "minChars": "حداقل دو حرف بنویسید"
   },
   "onboarding": {
     "welcome": "به حسابچه خوش اومدی",
@@ -2280,5 +2294,8 @@
       "rejected": "رد شده",
       "cancelled": "لغو شده"
     }
+  },
+  "action": {
+    "clear": "پاک کردن"
   }
 }

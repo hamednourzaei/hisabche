@@ -147,10 +147,19 @@ const ItemRow = memo(function ItemRow({
           <Trash2 className="size-4" aria-hidden="true" />
         </button>
       </div>
+      {/* ✅ قبلاً هیچ برچسب یا placeholder ای روی این ردیف نبود؛ کاربر
+          نمی‌فهمید کدام فیلد «مبلغ» است و فکر می‌کرد جنس دلخواه قیمت ندارد. */}
+      <div className="flex items-center gap-2 px-0.5 text-[10px] text-[hsl(var(--fg-tertiary))]">
+        <span className="w-16 text-center">{t("quickInvoice.quantity", "تعداد")}</span>
+        <span className="w-3" aria-hidden="true" />
+        <span className="flex-1">{t("quickInvoice.unitPrice", "مبلغ واحد")}</span>
+        <span className="shrink-0">{t("quickInvoice.lineTotal", "جمع")}</span>
+      </div>
       <div className="flex items-center gap-2">
         <input
           type="number"
           min={1}
+          aria-label={t("quickInvoice.quantity", "تعداد")}
           value={item.quantity}
           onChange={(e) => onUpdateQuantity(item.key, e.target.value)}
           className="w-16 rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] px-2 py-1.5 text-sm text-center text-[hsl(var(--fg-primary))] focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)]"
@@ -159,6 +168,8 @@ const ItemRow = memo(function ItemRow({
         <MoneyInput
           value={item.price}
           onChange={(raw) => onUpdatePrice(item.key, raw)}
+          placeholder={t("quickInvoice.unitPricePlaceholder", "مبلغ را وارد کنید")}
+          aria-label={t("quickInvoice.unitPrice", "مبلغ واحد")}
           className="flex-1 h-auto rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] px-2 py-1.5 text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)]"
         />
         <span className="shrink-0 text-sm font-bold tabular-nums text-[hsl(var(--color-primary))]">

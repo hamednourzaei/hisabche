@@ -15,6 +15,7 @@ import {
   BottomNav,
   CommandPalette,
   Breadcrumb,
+  GlobalSearch,
 } from "@hisabche/ui";
 import {
   useEffect,
@@ -120,8 +121,8 @@ const DashboardLayout = memo(function DashboardLayout({
   const withLocale = useCallback(
     (path: string, lang: string = currentLang) => {
       const pathWithoutLocale = path.replace(/^\/(fa|af|en)(?=\/|$)/, "") || "/";
-      // localePrefix: 'as-needed' — default locale (fa) stays unprefixed.
-      return lang === "fa" ? pathWithoutLocale : `/${lang}${pathWithoutLocale}`;
+      // ✅ localePrefix: 'always' — همه‌ی زبان‌ها از جمله fa پیشوند می‌گیرند.
+      return `/${lang}${pathWithoutLocale}`;
     },
     [currentLang]
   );
@@ -192,6 +193,26 @@ const DashboardLayout = memo(function DashboardLayout({
     [t]
   );
 
+  // ✅ صفحه‌های قابل جستجو — از همان NAV_ITEMS ساخته می‌شوند تا با منو
+  // هم‌خوان بمانند و جای دیگری نگهداری نشوند.
+  const searchablePages = useMemo(
+    () =>
+      NAV_ITEMS.map((item) => ({
+        id: item.id,
+        label: t(item.labelKey),
+        path: item.path,
+      })),
+    [t]
+  );
+
+  const handleSearchNavigate = useCallback(
+    (path: string) => {
+      const localizedPath = withLocale(path);
+      setOptimisticPath(localizedPath);
+      router.push(localizedPath);
+    },
+    [router, withLocale]
+  );
   const commands = useMemo(
     () =>
       COMMAND_ITEMS.map((cmd) => ({
@@ -260,6 +281,16 @@ const DashboardLayout = memo(function DashboardLayout({
           onNavigateLogin={handleNavigateLogin}
         />
 
+        <div className="border-b border-[hsl(var(--border-default))] px-4 py-3">
+          <GlobalSearch
+            pages={searchablePages}
+            onNavigate={handleSearchNavigate}
+            t={(key, fallback) => {
+              const v = t(key as Parameters<typeof t>[0]);
+              return v && v !== key ? v : (fallback ?? key);
+            }}
+          />
+        </div>
         <main className="min-w-0 flex-1 overflow-y-auto p-4 pb-20 lg:pb-4">
           <Breadcrumb className="mb-4" />
           {children}

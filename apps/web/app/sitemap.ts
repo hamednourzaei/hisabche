@@ -42,7 +42,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
         lastModified: now,
         alternates: {
           languages: {
-            "fa": `${BASE_URL}${route.path}`,
+            "fa": `${BASE_URL}/fa${route.path}`,
             "fa-AF": `${BASE_URL}/af${route.path}`,
             "en": `${BASE_URL}/en${route.path}`,
           },

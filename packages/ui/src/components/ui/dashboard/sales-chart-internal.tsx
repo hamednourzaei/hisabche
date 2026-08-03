@@ -122,14 +122,23 @@ export default memo(function InternalSalesChart({
       >
         <defs>
           <linearGradient id={`salesGradient-${gradientId}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--color-value)" stopOpacity={0.2} />
+            {/* گرادیان سه‌مرحله‌ای: محو‌شدن نرم‌تر و کمتر تخت به‌نظر می‌رسد */}
+            <stop offset="0%" stopColor="var(--color-value)" stopOpacity={0.28} />
+            <stop offset="55%" stopColor="var(--color-value)" stopOpacity={0.08} />
             <stop offset="100%" stopColor="var(--color-value)" stopOpacity={0} />
           </linearGradient>
         </defs>
 
-        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+        <CartesianGrid strokeDasharray="4 6" vertical={false} strokeOpacity={0.5} />
 
-        <XAxis dataKey="label" axisLine={false} tickLine={false} dy={8} tick={{ fontSize: 11 }} />
+        <XAxis
+          dataKey="label"
+          axisLine={false}
+          tickLine={false}
+          dy={10}
+          tick={{ fontSize: 11 }}
+          minTickGap={16}
+        />
 
         <YAxis
           yAxisId="value"
@@ -170,14 +179,16 @@ export default memo(function InternalSalesChart({
           type="monotone"
           dataKey="value"
           stroke="var(--color-value)"
-          strokeWidth={2}
+          strokeWidth={2.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
           fill={`url(#salesGradient-${gradientId})`}
           dot={false}
           activeDot={{
-            r: 4,
+            r: 5,
             fill: "var(--color-value)",
             stroke: "hsl(var(--surface-elevated))",
-            strokeWidth: 2,
+            strokeWidth: 3,
             tabIndex: 0,
           }}
           animationDuration={animationDuration}
@@ -191,6 +202,8 @@ export default memo(function InternalSalesChart({
             dataKey="invoiceCount"
             stroke="var(--color-invoiceCount)"
             strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
             dot={false}
             animationDuration={animationDuration}
           />
@@ -203,6 +216,9 @@ export default memo(function InternalSalesChart({
             dataKey="customerCount"
             stroke="var(--color-customerCount)"
             strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeDasharray="5 4"
             dot={false}
             animationDuration={animationDuration}
           />

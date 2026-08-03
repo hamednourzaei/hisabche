@@ -179,12 +179,6 @@ export const AuditView = memo(function AuditView({
               </span>
             )}
           </td>
-          <td className="px-4 py-3 text-xs text-[hsl(var(--fg-secondary))] hidden sm:table-cell">
-            {log.user_name || log.user_id?.slice(0, 8) || "-"}
-          </td>
-          <td className="px-4 py-3 text-xs text-[hsl(var(--fg-tertiary))] hidden md:table-cell max-w-[150px] truncate">
-            {log.details ? JSON.stringify(log.details).slice(0, 50) : "-"}
-          </td>
         </tr>
       )),
     [logs, actionBadge, locale]
@@ -208,15 +202,17 @@ export const AuditView = memo(function AuditView({
             <button
               onClick={onRefresh}
               className={cn(
-                "inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium",
+                "inline-flex items-center justify-center rounded-full p-2.5",
                 "border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))]",
-                "hover:bg-[hsl(var(--surface-muted))]",
-                isLoading && "animate-spin"
+                "hover:bg-[hsl(var(--surface-muted))] transition-colors"
               )}
               disabled={isLoading}
+              aria-label={t("audit.refresh", "بروزرسانی")}
+              title={t("audit.refresh", "بروزرسانی")}
             >
-              <RefreshCw className="size-4" />
-              {t("audit.refresh", "بروزرسانی")}
+              {/* ✅ متن حذف شد؛ چرخش روی خودِ آیکون است نه کل دکمه.
+                  aria-label نگه داشته شد تا دکمه برای screen reader بی‌نام نشود. */}
+              <RefreshCw className={cn("size-4", isLoading && "animate-spin")} />
             </button>
           )}
           {onExport && (
@@ -355,12 +351,6 @@ export const AuditView = memo(function AuditView({
                   </th>
                   <th className="px-4 py-3 text-start font-medium text-[hsl(var(--fg-secondary))] text-xs">
                     {t("audit.entity", "موجودیت")}
-                  </th>
-                  <th className="px-4 py-3 text-start font-medium text-[hsl(var(--fg-secondary))] text-xs hidden sm:table-cell">
-                    {t("audit.user", "کاربر")}
-                  </th>
-                  <th className="px-4 py-3 text-start font-medium text-[hsl(var(--fg-secondary))] text-xs hidden md:table-cell">
-                    {t("audit.details", "جزئیات")}
                   </th>
                 </tr>
               </thead>

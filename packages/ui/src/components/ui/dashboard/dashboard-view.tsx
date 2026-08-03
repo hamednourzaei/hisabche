@@ -1,7 +1,7 @@
 // packages/ui/src/components/ui/dashboard/dashboard-view.tsx
 "use client";
 
-import { memo, useId, useMemo } from "react";
+import { memo, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import {
@@ -31,6 +31,7 @@ interface DashboardViewProps {
   todaySales: number;
   customerDebt: number;
   warehouseValue: number;
+  monthlyGrowth?: number | null | undefined;
 
   // Loading States
   kpiLoading: boolean;
@@ -89,75 +90,65 @@ const Greeting = memo(function Greeting({
 });
 Greeting.displayName = "Greeting";
 
-// ─── KPI Card + Sparkline ───────────────────────────────────────────────────
+// ─── KPI Card ──────────────────────────────────────────────────────────────
 
-// اسپارک‌لاین SVG سبک (بدون کتابخانه‌ی جداگانه) — فقط برای کارت‌هایی که
-// سری زمانی واقعی دارند رنگی/جهت‌دار رسم می‌شود؛ برای کارت‌هایی که هنوز
-// اسنپ‌شات تاریخی ندارند (بدهی مشتریان، ارزش انبار) یک خط خنثی نمایش داده
-// می‌شود تا روند غلط/جعلی به کاربر نشان داده نشود.
-const Sparkline = memo(function Sparkline({ values }: { values: number[] | null }) {
-  const id = useId();
-  if (!values || values.length < 2) {
-    return (
-      <svg viewBox="0 0 100 28" className="w-full h-7" aria-hidden="true">
-        <line x1="0" y1="20" x2="100" y2="20" stroke="hsl(var(--border-strong))" strokeWidth="2" strokeDasharray="2 3" />
-      </svg>
-    );
-  }
-  // ✅ FIX: Math.min(...values)/Math.max(...values) با آرایه‌ی نسبتاً بزرگ
-  // (مثلاً بازه‌ی زمانی طولانی در نمودار فروش) می‌تواند Call Stack را پر کند
-  // و کل تب مرورگر را کرش کند (نه یک خطای قابل catch در React) — چون
-  // spread کردن آرگومان‌ها به یک تابع، هر عنصر را یک آرگومان جداگانه می‌کند.
-  // با یک حلقه‌ی ساده، این محدودیت اندازه‌ی آرایه از بین می‌رود.
-  let min = values[0]!;
-  let max = values[0]!;
-  for (const v of values) {
-    if (v < min) min = v;
-    if (v > max) max = v;
-  }
-  const range = max - min || 1;
-  const points = values
-    .map((v, i) => {
-      const x = (i / (values.length - 1)) * 100;
-      const y = 26 - ((v - min) / range) * 24;
-      return `${x},${y}`;
-    })
-    .join(" ");
-  const trendingUp = values[values.length - 1]! >= values[0]!;
-  const color = trendingUp ? "hsl(var(--status-positive))" : "hsl(var(--status-negative))";
-
-  return (
-    <svg viewBox="0 0 100 28" className="w-full h-7" aria-hidden="true">
-      <polyline points={points} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-});
-Sparkline.displayName = "Sparkline";
 
 const KpiCard = memo(function KpiCard({
   icon: Icon,
   label,
   value,
-  trend,
+  change,
+  changeLabel,
   isLoading,
 }: {
   icon: typeof TrendingUp;
   label: string;
   value: string;
-  trend: number[] | null;
+  // ✅ اسپارک‌لاین حذف شد: برای «بدهی مشتریان» و «ارزش انبار» هیچ سری
+  // زمانی وجود نداشت و فقط یک خط‌چین خنثی رسم می‌شد. حالا به‌جایش درصد
+  // تغییر واقعی نمایش داده می‌شود (null یعنی داده‌ی مقایسه‌ای نداریم).
+  change: number | null;
+  changeLabel?: string | undefined;
   isLoading: boolean;
 }) {
   if (isLoading) {
     return <div className="h-[104px] rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />;
   }
+  const positive = (change ?? 0) >= 0;
   return (
     <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-4 space-y-2">
       <div className="flex items-center gap-2">
         <Icon className="size-4 text-[hsl(var(--color-primary))]" aria-hidden="true" />
         <span className="text-xs text-[hsl(var(--fg-secondary))]">{label}</span>
       </div>
-      <p className="text-xl font-bold tabular-nums text-[hsl(var(--fg-primary))]">{value}</p>
-      <Sparkline values={trend} />
+      {/* ✅ عدد هرگز خلاصه یا گرد نمی‌شود؛ به‌جایش با بلندتر شدن رقم‌ها،
+          اندازه‌ی فونت کم می‌شود تا نه از کارت بیرون بزند و نه به خط بعد برود. */}
+      <p
+        className={cn(
+          "font-bold tabular-nums text-[hsl(var(--fg-primary))] whitespace-nowrap overflow-hidden",
+          value.length <= 9
+            ? "text-xl"
+            : value.length <= 12
+              ? "text-lg"
+              : value.length <= 15
+                ? "text-base"
+                : "text-sm"
+        )}
+        title={value}
+      >
+        {value}
+      </p>
+      {change === null ? (
+        <p className="text-[11px] text-[hsl(var(--fg-tertiary))]">—</p>
+      ) : (
+        <p className={cn(
+          "flex items-center gap-1 text-[11px] tabular-nums",
+          positive ? "text-[hsl(var(--status-positive))]" : "text-[hsl(var(--status-negative))]"
+        )}>
+          {positive ? "▲" : "▼"} {Math.abs(change).toFixed(1)}٪
+          {changeLabel ? <span className="text-[hsl(var(--fg-tertiary))]">{changeLabel}</span> : null}
+        </p>
+      )}
     </div>
   );
 });
@@ -321,6 +312,7 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
     todaySales,
     customerDebt,
     warehouseValue,
+    monthlyGrowth,
     kpiLoading,
     insights,
     insightsLoading,
@@ -334,10 +326,17 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
     onDateRangeChange,
   } = props;
 
-  const salesTrend = useMemo(
-    () => (salesChartData.length > 1 ? salesChartData.map((d) => d.value) : null),
-    [salesChartData]
-  );
+  // ✅ درصد تغییر واقعی به‌جای اسپارک‌لاین.
+  // کارت «فروش امروز» با دیروز مقایسه می‌شود (از داده‌ی روزانه‌ی نمودار).
+  const todayChange = useMemo(() => {
+    const series = Array.isArray(salesChartData) ? salesChartData : [];
+    if (series.length < 2) return null;
+    const sorted = [...series].sort((a, b) => String(a.date).localeCompare(String(b.date)));
+    const prev = sorted[sorted.length - 2];
+    const prevValue = Number(prev?.value) || 0;
+    if (prevValue <= 0) return todaySales > 0 ? 100 : null;
+    return ((todaySales - prevValue) / prevValue) * 100;
+  }, [salesChartData, todaySales]);
 
   const previousDaySalesTotal = useMemo(() => {
     if (!salesChartData || salesChartData.length === 0) return 0;
@@ -357,10 +356,10 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
         {/* ✅ این دو کارت روندشان را از داده‌ی نمودار می‌گیرند، پس تا وقتی آن
             کوئری کامل نشده باید skeleton نشان دهند؛ وگرنه یک لحظه با
             trend=null رندر می‌شوند و خط خنثی (نه اسپارک‌لاین) دیده می‌شود. */}
-        <KpiCard icon={TrendingUp} label={t("dashboard.totalSales", "فروش کل")} value={fmt(totalSales)} trend={salesTrend} isLoading={kpiLoading || chartLoading} />
-        <KpiCard icon={Wallet} label={t("dashboard.todaySales", "فروش امروز")} value={fmt(todaySales)} trend={salesTrend} isLoading={kpiLoading || chartLoading} />
-        <KpiCard icon={CreditCard} label={t("dashboard.customerDebt", "بدهی مشتریان")} value={fmt(customerDebt)} trend={null} isLoading={kpiLoading} />
-        <KpiCard icon={Boxes} label={t("dashboard.warehouseValue", "ارزش کل انبار")} value={fmt(warehouseValue)} trend={null} isLoading={kpiLoading} />
+        <KpiCard icon={TrendingUp} label={t("dashboard.totalSales", "فروش کل")} value={fmt(totalSales)} change={monthlyGrowth ?? null} changeLabel={t("dashboard.vsLastMonth", "نسبت به ماه گذشته")} isLoading={kpiLoading} />
+        <KpiCard icon={Wallet} label={t("dashboard.todaySales", "فروش امروز")} value={fmt(todaySales)} change={todayChange} changeLabel={t("dashboard.vsYesterday", "نسبت به دیروز")} isLoading={kpiLoading || chartLoading} />
+        <KpiCard icon={CreditCard} label={t("dashboard.customerDebt", "بدهی مشتریان")} value={fmt(customerDebt)} change={null} isLoading={kpiLoading} />
+        <KpiCard icon={Boxes} label={t("dashboard.warehouseValue", "ارزش کل انبار")} value={fmt(warehouseValue)} change={null} isLoading={kpiLoading} />
       </div>
 
       {/* Level 3: Chart + AI Insights (عمودی، جای قبلی صورت‌حساب‌های اخیر) */}

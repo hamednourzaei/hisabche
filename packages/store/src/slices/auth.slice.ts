@@ -74,6 +74,9 @@ export interface AuthState {
     businessName?: string
   }) => Promise<void>
   logout: () => Promise<void>
+  // ✅ ویرایش پروفایل — endpoint سمت سرور (PATCH /api/auth/profile) از قبل
+  // وجود داشت ولی هیچ‌جای فرانت صدایش نمی‌زد، پس فیلدها فقط خواندنی بودند.
+  updateProfile: (input: { fullName?: string; businessName?: string }) => Promise<void>
   initAuth: () => void
   clearError: () => void
 }
@@ -155,6 +158,42 @@ export const useAuthStore = create<AuthState>()(
         })
       },
 
+      updateProfile: async (input) => {
+        const { token, user } = get()
+        if (!token || !user) throw new Error('NOT_AUTHENTICATED')
+
+        set({ isLoading: true, error: null })
+        try {
+          const res = await fetch(`${API_BASE}/auth/profile`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(input),
+          })
+
+          if (!res.ok) {
+            const detail = await res.json().catch(() => null)
+            throw new Error(detail?.error || 'PROFILE_UPDATE_FAILED')
+          }
+
+          // پاسخ سرور ممکن است کاربر کامل را برنگرداند؛ مقادیر ارسالی را
+          // روی کاربر فعلی merge می‌کنیم تا UI بلافاصله به‌روز شود.
+          const payload = await res.json().catch(() => null)
+          const updated = (payload && payload.user) ? payload.user : {}
+          set({
+            user: { ...user, ...input, ...updated },
+            isLoading: false,
+          })
+        } catch (err) {
+          set({
+            isLoading: false,
+            error: err instanceof Error ? err.message : 'PROFILE_UPDATE_FAILED',
+          })
+          throw err
+        }
+      },
       clearError: () => set({ error: null }),
 
       login: async (credentials) => {

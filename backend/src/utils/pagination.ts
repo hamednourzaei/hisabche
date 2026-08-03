@@ -95,12 +95,42 @@ export async function keysetPaginate<T>(
 
 const DEFAULT_TTL_SECONDS = 30
 
+// ✅ L1 — کش درون‌پروسه‌ای جلوی Redis.
+// اندازه‌گیری پروداکشن نشان داد یک «Cache HIT» کامل ۱۹۵ms طول می‌کشد، چون هر
+// درخواست دست‌کم دو رفت‌وبرگشت Redis دارد (یکی auth، یکی داده) و Redis خارج
+// از پروسه است. L1 این رفت‌وبرگشت‌ها را برای کلیدهای داغ حذف می‌کند. TTL
+// عمداً کوتاه است تا در حالت چند-instance کهنگی داده حداکثر چند ثانیه باشد؛
+// Redis همچنان منبع حقیقت مشترک می‌ماند.
+const L1_TTL_MS = 5_000
+const L1_MAX_ENTRIES = 500
+const l1 = new Map<string, { value: unknown; expiresAt: number }>()
+
+function l1Get<T>(key: string): T | null {
+  const hit = l1.get(key)
+  if (!hit) return null
+  if (Date.now() > hit.expiresAt) { l1.delete(key); return null }
+  return hit.value as T
+}
+
+function l1Set(key: string, value: unknown): void {
+  if (l1.size >= L1_MAX_ENTRIES) {
+    const oldest = l1.keys().next().value
+    if (oldest !== undefined) l1.delete(oldest)
+  }
+  l1.set(key, { value, expiresAt: Date.now() + L1_TTL_MS })
+}
+
 class MemoryCache {
   async get<T>(key: string): Promise<T | null> {
-    return cacheService.get<T>(key)
+    const local = l1Get<T>(key)
+    if (local !== null) return local
+    const remote = await cacheService.get<T>(key)
+    if (remote !== null && remote !== undefined) l1Set(key, remote)
+    return remote
   }
 
   async set<T>(key: string, data: T, ttlSeconds?: number): Promise<void> {
+    l1Set(key, data)
     await cacheService.set(key, data, ttlSeconds ?? DEFAULT_TTL_SECONDS)
   }
 
@@ -113,11 +143,13 @@ class MemoryCache {
   // ورودی خودش * نداشته باشد، به صورت خودکار با *...* پوشانده
   // می‌شود تا رفتار قبلی (شامل‌بودن substring) حفظ شود.
   async invalidate(pattern: string): Promise<void> {
+    l1.clear()
     const globPattern = pattern.includes('*') ? pattern : `*${pattern}*`
     await cacheService.delPattern(globPattern)
   }
 
   async clear(): Promise<void> {
+    l1.clear()
     await cacheService.flush()
   }
 }

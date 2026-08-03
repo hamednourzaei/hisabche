@@ -1066,7 +1066,7 @@
     "alert": "Alert",
     "viewDetails": "View Details",
     "zero": "0",
-    "loading": "Loading...",
+    "loading": "Searching...",
     "optional": "Optional",
     "required": "Required"
   },
@@ -1408,7 +1408,12 @@
     "removeStamp": "Remove image",
     "stampInvalidType": "Only PNG or SVG images are accepted",
     "stampTooLarge": "Image size must be under 1MB",
-    "stampUploadFailed": "Failed to upload image"
+    "stampUploadFailed": "Failed to upload image",
+    "fullName": "Name",
+    "editProfile": "Edit profile",
+    "businessNamePlaceholder": "e.g. Hisabche Store",
+    "fullNameRequired": "Name cannot be empty",
+    "saveFailed": "Could not save. Please try again."
   },
   "sync": {
     "title": "Sync",
@@ -1527,7 +1532,8 @@
     "noActivities": "No activity recorded yet",
     "totalSales": "Total Sales",
     "customerDebt": "Customer Debt",
-    "warehouseValue": "Total Warehouse Value"
+    "warehouseValue": "Total Warehouse Value",
+    "vsLastMonth": "vs last month"
   },
   "quickInvoice": {
     "title": "Quick Invoice",
@@ -1540,7 +1546,11 @@
     "pricePlaceholder": "e.g. 500",
     "lastCustomer": "Last Customer",
     "previewTitle": "Invoice Preview",
-    "previewDesc": "Review the invoice before creating it"
+    "previewDesc": "Review the invoice before creating it",
+    "quantity": "Qty",
+    "unitPrice": "Unit price",
+    "lineTotal": "Total",
+    "unitPricePlaceholder": "Enter amount"
   },
   "payment": {
     "record": "Record Payment",
@@ -1953,7 +1963,11 @@
   },
   "search": {
     "recent": "Recent",
-    "frequent": "Frequent"
+    "frequent": "Frequent",
+    "placeholder": "Search customers, products, invoices...",
+    "pages": "Pages",
+    "noResults": "No results found",
+    "minChars": "Type at least two characters"
   },
   "onboarding": {
     "welcome": "Welcome to Hisabche",
@@ -2252,5 +2266,8 @@
       "rejected": "Rejected",
       "cancelled": "Cancelled"
     }
+  },
+  "action": {
+    "clear": "Clear"
   }
 }

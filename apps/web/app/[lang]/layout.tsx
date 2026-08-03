@@ -110,8 +110,8 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
     },
     metadataBase: new URL("https://www.hisabche.com"),
     alternates: {
-      canonical: lang === "fa" ? "/" : `/${lang}`,
-      languages: { "en": "/en", "fa": "/", "fa-AF": "/af", "x-default": "/" },
+      canonical: `/${lang}`,
+      languages: { "en": "/en", "fa": "/fa", "fa-AF": "/af", "x-default": "/fa" },
     },
   };
 }
@@ -144,9 +144,9 @@ export default async function RootLayout({ children, params }: { children: React
         <link rel="manifest" href="/site.webmanifest" />
         <style>{`html{scroll-behavior:smooth}body{font-family:var(--font-sans,system-ui);background-color:hsl(var(--surface-base,192 55% 6%));color:hsl(var(--fg-primary,160 40% 98%));margin:0;padding:0;line-height:1.55;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}*{box-sizing:border-box;margin:0;padding:0}h1,.h1{font-size:clamp(2.25rem,5vw,4rem);line-height:1.2;font-weight:700}h2,.h2{font-size:clamp(1.75rem,4vw,2.5rem);line-height:1.2;font-weight:600}p,.body{font-size:clamp(.875rem,2vw,1rem);line-height:1.65}button,[role=button]{cursor:pointer;font-family:inherit}img{max-width:100%;height:auto;display:block}html{overflow-y:scroll}:focus-visible{outline:2px solid hsl(var(--color-primary,168 84% 43%) / .5);outline-offset:2px;border-radius:6px}`}</style>
         <link rel="alternate" hrefLang="en" href="https://www.hisabche.com/en" />
-        <link rel="alternate" hrefLang="fa" href="https://www.hisabche.com/" />
+        <link rel="alternate" hrefLang="fa" href="https://www.hisabche.com/fa" />
         <link rel="alternate" hrefLang="fa-AF" href="https://www.hisabche.com/af" />
-        <link rel="alternate" hrefLang="x-default" href="https://www.hisabche.com/" />
+        <link rel="alternate" hrefLang="x-default" href="https://www.hisabche.com/fa" />
         <meta name="theme-color" content="#061417" />
         <meta name="color-scheme" content="dark light" />
         <link rel="dns-prefetch" href="https://api.hisabche.com" />

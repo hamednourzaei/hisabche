@@ -33,6 +33,7 @@ export {AccountingPage} from "./components/ui/accounting"
 export { DashboardSidebar, BottomNav, type NavItem } from './components/ui/dashboard-sidebar'
 export { DashboardHeader } from './components/ui/dashboard-header'
 export { CommandPalette } from './components/ui/command-palette'
+export { GlobalSearch, type SearchPageItem } from './components/ui/global-search'
 
 // ---------- Navigation — Enterprise ----------
 export { NavigationProvider, useNavigation } from './hooks/menu/use-navigation-state'

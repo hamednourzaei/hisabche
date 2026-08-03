@@ -5,7 +5,10 @@ import { locales, defaultLocale } from './app/[lang]/i18n-config';
 const intlMiddleware = createMiddleware({
   locales,
   defaultLocale,
-  localePrefix: 'as-needed',
+  // ✅ همه‌ی زبان‌ها پیشوند می‌گیرند (fa هم /fa). قبلاً fa به‌عنوان زبان
+  // پیش‌فرض بدون پیشوند سرو می‌شد و URL هنگام تعویض به فارسی تغییر
+  // محسوسی نداشت.
+  localePrefix: 'always',
   localeDetection: true,
 });
 

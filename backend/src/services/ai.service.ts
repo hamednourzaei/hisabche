@@ -347,7 +347,7 @@ export class AIService {
       const [productsResult, unpaidResult, weekResult] = await Promise.all([
         supabase
           .from('products')
-          .select('name, quantity, min_stock_level')
+          .select('name, quantity, min_stock_level, buy_price')
           .eq('user_id', userId)
           .eq('is_active', true),
         // ✅ FIX: قبلاً هر فاکتوری که status آن دقیقاً 'paid' نبود «پرداخت‌نشده»
@@ -363,7 +363,10 @@ export class AIService {
           .from('invoices')
           .select('total')
           .eq('user_id', userId)
-          .eq('status', 'paid')
+          // ✅ FIX: فیلتر status === 'paid' حذف شد — وضعیت واقعی فاکتورهای
+          // پرداخت‌شده 'completed' است، پس این کوئری همیشه خالی برمی‌گشت و
+          // پیشنهاد «فروش هفته گذشته» هرگز نمایش داده نمی‌شد.
+          .neq('status', 'cancelled')
           .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()),
       ])
 
@@ -410,6 +413,76 @@ export class AIService {
           action: '/dashboard',
           actionLabel: 'مشاهده داشبورد',
           metric: weekSales,
+          metricLabel: 'افغانی',
+        })
+      }
+
+      // ✅ قواعد بیشتر — همگی از همان داده‌ی از قبل واکشی‌شده ساخته می‌شوند،
+      // پس هیچ کوئری اضافه‌ای به دیتابیس اضافه نمی‌کنند.
+      const invoiceRows: any[] = unpaidResult.data || []
+
+      // مجموع مبلغ معوق (نه فقط تعداد فاکتور)
+      const outstanding = invoiceRows.reduce(
+        (sum: number, inv: any) =>
+          sum + Math.max(0, (Number(inv.total) || 0) - (Number(inv.paid_amount) || 0)),
+        0
+      )
+      if (outstanding > 0) {
+        insights.push({
+          type: 'warning',
+          title: 'مبلغ معوق مشتریان',
+          description: `${outstanding.toLocaleString()} افغانی هنوز از مشتریان دریافت نشده است.`,
+          action: '/customers',
+          actionLabel: 'پیگیری بدهکاران',
+          metric: outstanding,
+          metricLabel: 'افغانی',
+        })
+      }
+
+      // محصولات تمام‌شده — متفاوت از هشدار «موجودی کم»
+      const outOfStock = products.filter((p: any) => Number(p.quantity) <= 0)
+      if (outOfStock.length > 0) {
+        const names = outOfStock.slice(0, 3).map((p: any) => p.name).join('، ')
+        insights.push({
+          type: 'warning',
+          title: 'محصولات تمام‌شده',
+          description: `${outOfStock.length} محصول موجودی صفر دارند: ${names}.`,
+          action: '/warehouse',
+          actionLabel: 'ثبت خرید',
+          metric: outOfStock.length,
+          metricLabel: 'محصول',
+        })
+      }
+
+      // سرمایه‌ی خوابیده در انبار
+      const stockValue = products.reduce(
+        (sum: number, p: any) => sum + Number(p.quantity || 0) * Number(p.buy_price || 0),
+        0
+      )
+      if (stockValue > 0) {
+        insights.push({
+          type: 'info',
+          title: 'ارزش موجودی انبار',
+          description: `${stockValue.toLocaleString()} افغانی سرمایه در انبار شماست.`,
+          action: '/warehouse',
+          actionLabel: 'مشاهده انبار',
+          metric: stockValue,
+          metricLabel: 'افغانی',
+        })
+      }
+
+      // میانگین مبلغ فاکتور
+      if (invoiceRows.length > 0) {
+        const avg =
+          invoiceRows.reduce((sum: number, i: any) => sum + (Number(i.total) || 0), 0) /
+          invoiceRows.length
+        insights.push({
+          type: 'tip',
+          title: 'میانگین مبلغ فاکتور',
+          description: `هر فاکتور به‌طور میانگین ${Math.round(avg).toLocaleString()} افغانی است.`,
+          action: '/invoices',
+          actionLabel: 'مشاهده فاکتورها',
+          metric: Math.round(avg),
           metricLabel: 'افغانی',
         })
       }

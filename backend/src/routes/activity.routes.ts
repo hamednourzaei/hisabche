@@ -13,6 +13,7 @@ const activityFiltersSchema = z.object({
   search: z.string().optional(),
   limit: z.coerce.number().min(1).max(100).default(20),
   cursor: z.string().optional(),
+  page: z.coerce.number().min(1).optional(),
 });
 
 export async function activityRoutes(fastify: FastifyInstance) {
@@ -33,6 +34,7 @@ export async function activityRoutes(fastify: FastifyInstance) {
           search: query.search,
           limit: query.limit,
           cursor: query.cursor,
+          page: query.page,
         });
 
         return reply.send(result);

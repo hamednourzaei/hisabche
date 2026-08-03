@@ -156,6 +156,7 @@ export class ActivityService {
       search?: string | undefined;
       limit?: number | undefined;
       cursor?: string | undefined;
+      page?: number | undefined;
     }
   ): Promise<PaginatedActivitiesResponse> {
     const cacheKey = `activities:${userId}:${JSON.stringify(filters)}`;
@@ -177,6 +178,15 @@ export class ActivityService {
         .eq("actor_id", userId)
         .order("created_at", { ascending: false })
         .limit(limit + 1);
+
+      // ✅ FIX: این endpoint فقط cursor را می‌شناخت، ولی UI صفحه‌محور است
+      // («۱ / ۳») و page می‌فرستد — پس همیشه همان صفحه‌ی اول برمی‌گشت و
+      // دکمه‌ی «صفحه بعد» کاری نمی‌کرد.
+      const page = Math.max(1, Number(filters?.page) || 1);
+      if (!filters?.cursor && page > 1) {
+        const offset = (page - 1) * limit;
+        query = query.range(offset, offset + limit);
+      }
 
       if (filters?.cursor) {
         query = query.lt("created_at", filters.cursor);

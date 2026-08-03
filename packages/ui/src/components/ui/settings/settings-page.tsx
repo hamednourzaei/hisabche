@@ -60,8 +60,46 @@ const AccountSection = memo(function AccountSection() {
     const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
     return v && v !== key ? v : (fallback ?? key);
   };
-  const { user, logout } = useAuthStore();
+  const { user, logout, updateProfile } = useAuthStore();
 
+  // ✅ این فیلدها قبلاً فقط خواندنی بودند («تنظیم نشده» / «-») در حالی که
+  // endpoint PATCH /api/auth/profile از قبل وجود داشت و هیچ‌جا استفاده
+  // نمی‌شد. حالا کاربر می‌تواند نام و نام کسب‌وکار را ویرایش کند.
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [fullNameDraft, setFullNameDraft] = useState("");
+  const [businessNameDraft, setBusinessNameDraft] = useState("");
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+
+  const startEditProfile = useCallback(() => {
+    setFullNameDraft(user?.fullName ?? "");
+    setBusinessNameDraft(user?.businessName ?? "");
+    setProfileError(null);
+    setIsEditingProfile(true);
+  }, [user?.fullName, user?.businessName]);
+
+  const cancelEditProfile = useCallback(() => {
+    setIsEditingProfile(false);
+    setProfileError(null);
+  }, []);
+
+  const saveProfile = useCallback(async () => {
+    const fullName = fullNameDraft.trim();
+    if (!fullName) {
+      setProfileError(t("settings.fullNameRequired", "نام نمی‌تواند خالی باشد"));
+      return;
+    }
+    setIsSavingProfile(true);
+    setProfileError(null);
+    try {
+      await updateProfile({ fullName, businessName: businessNameDraft.trim() });
+      setIsEditingProfile(false);
+    } catch {
+      setProfileError(t("settings.saveFailed", "ذخیره نشد. دوباره تلاش کنید."));
+    } finally {
+      setIsSavingProfile(false);
+    }
+  }, [fullNameDraft, businessNameDraft, updateProfile, t]);
   const handleLogout = useCallback(() => {
     logout();
   }, [logout]);
@@ -86,6 +124,54 @@ const AccountSection = memo(function AccountSection() {
           </span>
         </div>
 
+        {isEditingProfile ? (
+          <div className="space-y-3">
+            <div>
+              <label className="mb-1 block text-xs text-[hsl(var(--fg-tertiary))]" htmlFor="profile-full-name">
+                {t("settings.fullName", "نام")}
+              </label>
+              <input
+                id="profile-full-name"
+                value={fullNameDraft}
+                onChange={(e) => setFullNameDraft(e.target.value)}
+                className={"w-full rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 py-2 text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)]"}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs text-[hsl(var(--fg-tertiary))]" htmlFor="profile-business-name">
+                {t("settings.businessName")}
+              </label>
+              <input
+                id="profile-business-name"
+                value={businessNameDraft}
+                onChange={(e) => setBusinessNameDraft(e.target.value)}
+                placeholder={t("settings.businessNamePlaceholder", "مثلاً: فروشگاه حسابچه")}
+                className={"w-full rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 py-2 text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)]"}
+              />
+            </div>
+            {profileError ? (
+              <p className="text-xs text-[hsl(var(--color-destructive))]">{profileError}</p>
+            ) : null}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={saveProfile}
+                disabled={isSavingProfile}
+                className="rounded-full bg-[hsl(var(--color-primary))] px-4 py-2 text-sm font-bold text-white disabled:opacity-50"
+              >
+                {isSavingProfile ? t("common.saving", "در حال ذخیره...") : t("common.save", "ذخیره")}
+              </button>
+              <button
+                type="button"
+                onClick={cancelEditProfile}
+                disabled={isSavingProfile}
+                className="rounded-full border border-[hsl(var(--border-default))] px-4 py-2 text-sm text-[hsl(var(--fg-secondary))]"
+              >
+                {t("common.cancel", "انصراف")}
+              </button>
+            </div>
+          </div>
+        ) : (
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="rounded-xl border border-[hsl(var(--border-default))] p-4 text-start">
             <p className="mb-1 text-xs text-[hsl(var(--fg-tertiary))]">
@@ -106,6 +192,17 @@ const AccountSection = memo(function AccountSection() {
             </p>
           </div>
         </div>
+        )}
+
+        {!isEditingProfile ? (
+          <button
+            type="button"
+            onClick={startEditProfile}
+            className="w-full rounded-full border border-[hsl(var(--border-default))] px-4 py-2.5 text-sm font-medium text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]"
+          >
+            {t("settings.editProfile", "ویرایش اطلاعات")}
+          </button>
+        ) : null}
 
         <button
           type="button"
