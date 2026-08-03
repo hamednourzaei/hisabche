@@ -35,13 +35,13 @@ export function useDashboardData(dateRange: DateRange) {
 
   const {
     data: kpis,
-    isLoading: kpiLoading,
+    isPending: kpiLoading,
     refetch: refetchKpis,
   } = useDashboardKPIs();
 
   const {
     data: insights,
-    isLoading: insightsLoading,
+    isPending: insightsLoading,
     refetch: refetchInsights,
   } = useAIInsights();
 
@@ -51,7 +51,7 @@ export function useDashboardData(dateRange: DateRange) {
 
   const {
     data: salesData,
-    isLoading: salesLoading,
+    isPending: salesLoading,
     refetch: refetchSales,
   } = useDashboardSales({
     from: fromDate,
@@ -80,7 +80,7 @@ export function useDashboardData(dateRange: DateRange) {
 
   const {
     data: activitiesData,
-    isLoading: activitiesLoading,
+    isPending: activitiesLoading,
   } = useActivities();
 
   // ─── Realtime Subscriptions ─────────────────────────────────────────────

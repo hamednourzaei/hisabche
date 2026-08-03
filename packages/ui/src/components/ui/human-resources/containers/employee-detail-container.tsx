@@ -24,10 +24,19 @@ export function EmployeeDetailContainer({ id }: { id: string }) {
   };
 
   const handleAddPayment = async (values: { amount: number; date: string }) => {
+    // ✅ FIX: ورودی تاریخ فقط «2026-08-01» می‌دهد، اما schema سمت سرور
+    // (isoDateSchema = z.string().datetime()) تاریخ-زمانِ کامل ISO می‌خواهد؛
+    // برای همین درخواست با خطای ۴۰۰ رد می‌شد:
+    // body/periodStart must match format "date-time"
+    const parsed = new Date(values.date);
+    const isoDate = Number.isNaN(parsed.getTime())
+      ? new Date().toISOString()
+      : parsed.toISOString();
+
     await createPayroll.mutateAsync({
       employeeId: id,
-      periodStart: values.date,
-      periodEnd: values.date,
+      periodStart: isoDate,
+      periodEnd: isoDate,
       baseSalary: values.amount,
       bonuses: 0,
       deductions: 0,
@@ -37,7 +46,7 @@ export function EmployeeDetailContainer({ id }: { id: string }) {
       netSalary: values.amount,
       currency: employee?.salary_currency || "AFN",
       status: "paid",
-      paymentDate: values.date,
+      paymentDate: isoDate,
     });
   };
 

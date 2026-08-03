@@ -235,7 +235,13 @@ const DashboardLayout = memo(function DashboardLayout({
         onNavigate={handleNavigate}
       />
 
-      <div className="flex min-h-screen flex-1 flex-col">
+      {/* ✅ FIX (رسپانسیو): این یک flex item است و مقدار پیش‌فرض
+          min-width:auto اجازه نمی‌دهد کوچک‌تر از عرض محتوایش شود. جدول‌ها
+          min-w-[820px] دارند، پس بدون min-w-0 کل صفحه پهن می‌شد و در موبایل
+          overflow افقی می‌داد — به‌جای اینکه خودِ جدول داخل
+          overflow-x-auto اسکرول شود. این یک اصلاح در همین‌جا، همه‌ی
+          صفحه‌های جدول‌دار (انبار، فاکتورها، مشتریان، CRM) را درست می‌کند. */}
+      <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         <DashboardHeader
           variant="dashboard"
           appName={t("app.name")}
@@ -254,7 +260,7 @@ const DashboardLayout = memo(function DashboardLayout({
           onNavigateLogin={handleNavigateLogin}
         />
 
-        <main className="flex-1 overflow-y-auto p-4 pb-20 lg:pb-4">
+        <main className="min-w-0 flex-1 overflow-y-auto p-4 pb-20 lg:pb-4">
           <Breadcrumb className="mb-4" />
           {children}
         </main>
