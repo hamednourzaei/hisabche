@@ -5,7 +5,6 @@ import { memo, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "../empty-state";
 import { BentoStats, type BentoStat } from "../bento-stats";
-import { WarehouseStats } from "./warehouse-stats";
 import { WarehouseProductList } from "./warehouse-product-list";
 import { Plus, Check, DollarSign, Package, AlertTriangle } from "lucide-react";
 import type { Product, Currency } from "../../../lib/warehouse/warehouse-types";
@@ -176,48 +175,38 @@ export const WarehouseView = memo(function WarehouseView({
     [products, lowStockThreshold]
   );
 
-  // ✅ Mobile: همان BentoStats که /invoices استفاده میکند — موبایل پیکسل‌به‌پیکسل یکسان
-  const mobileStats: BentoStat[] = useMemo(
+  // ✅ دقیقاً همان BentoStats که /invoices استفاده میکند — در همه‌ی ابعاد.
+  // ⚠️ عمداً از `text` استفاده شده (نه `amount`) چون BentoStats مقدار متنی
+  // را هرگز compact نمی‌کند — عدد کامل در موبایل/تبلت/دسکتاپ ثابت می‌ماند
+  // (مثلاً 27,820,000 AFN) و فقط اندازه‌ی فونت تغییر می‌کند.
+  const stats: BentoStat[] = useMemo(
     () => [
       {
         id: "value",
         icon: DollarSign,
         label: t("warehouse.totalValue", "ارزش کل (AFN)"),
-        amount: totalValue,
+        text: `${fmt(totalValue)} AFN`,
       },
       {
         id: "count",
         icon: Package,
         label: t("warehouse.totalProducts", "تعداد محصولات"),
-        amount: total,
+        text: fmt(total),
       },
       {
         id: "low",
         icon: AlertTriangle,
         label: t("warehouse.lowStock", "موجودی کم"),
-        amount: lowStockCount,
+        text: fmt(lowStockCount),
       },
       {
         id: "out",
         icon: AlertTriangle,
         label: t("warehouse.outOfStock", "ناموجود"),
-        amount: outOfStock,
+        text: fmt(outOfStock),
       },
     ],
-    [t, totalValue, total, lowStockCount, outOfStock]
-  );
-
-  const statsProps = useMemo(
-    () => ({
-      t,
-      fmt,
-      total,
-      outOfStock,
-      totalValue,
-      products,
-      isLoading,
-    }),
-    [t, fmt, total, outOfStock, totalValue, products, isLoading]
+    [t, fmt, totalValue, total, lowStockCount, outOfStock]
   );
 
   const showEmptyState = !isLoading && products.length === 0;
@@ -227,13 +216,8 @@ export const WarehouseView = memo(function WarehouseView({
       <SaveIndicator t={t} deletingId={deletingId} />
       <WarehouseHeader t={t} onOpenAddModal={onOpenAddModal} />
 
-      {/* موبایل: کارت‌های یکسان با /invoices — دسکتاپ: همان WarehouseStats قبلی */}
-      <div className="md:hidden">
-        <BentoStats t={t} stats={mobileStats} />
-      </div>
-      <div className="hidden md:block">
-        <WarehouseStats {...statsProps} />
-      </div>
+      {/* همان کامپوننت و گرید invoices — فقط داده‌ی warehouse */}
+      <BentoStats t={t} stats={stats} />
 
       <CurrencyChips fmt={fmt} currencies={currencies} totalValue={totalValue} />
 
