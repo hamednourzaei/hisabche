@@ -1,12 +1,13 @@
 // packages/ui/src/components/ui/warehouse/warehouse-view.tsx
 "use client";
 
-import { memo, useMemo } from "react";
+import { memo, useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "../empty-state";
+import { BentoStats, type BentoStat } from "../bento-stats";
 import { WarehouseStats } from "./warehouse-stats";
 import { WarehouseProductList } from "./warehouse-product-list";
-import { Plus, Check } from "lucide-react";
+import { Plus, Check, DollarSign, Package, AlertTriangle } from "lucide-react";
 import type { Product, Currency } from "../../../lib/warehouse/warehouse-types";
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -168,6 +169,44 @@ export const WarehouseView = memo(function WarehouseView({
   stockStatus,
   stockLabel,
 }: WarehouseViewProps) {
+  const [lowStockThreshold] = useState(5);
+
+  const lowStockCount = useMemo(
+    () => products.filter((p) => p.quantity > 0 && p.quantity < lowStockThreshold).length,
+    [products, lowStockThreshold]
+  );
+
+  // ✅ Mobile: همان BentoStats که /invoices استفاده میکند — موبایل پیکسل‌به‌پیکسل یکسان
+  const mobileStats: BentoStat[] = useMemo(
+    () => [
+      {
+        id: "value",
+        icon: DollarSign,
+        label: t("warehouse.totalValue", "ارزش کل (AFN)"),
+        amount: totalValue,
+      },
+      {
+        id: "count",
+        icon: Package,
+        label: t("warehouse.totalProducts", "تعداد محصولات"),
+        amount: total,
+      },
+      {
+        id: "low",
+        icon: AlertTriangle,
+        label: t("warehouse.lowStock", "موجودی کم"),
+        amount: lowStockCount,
+      },
+      {
+        id: "out",
+        icon: AlertTriangle,
+        label: t("warehouse.outOfStock", "ناموجود"),
+        amount: outOfStock,
+      },
+    ],
+    [t, totalValue, total, lowStockCount, outOfStock]
+  );
+
   const statsProps = useMemo(
     () => ({
       t,
@@ -188,7 +227,13 @@ export const WarehouseView = memo(function WarehouseView({
       <SaveIndicator t={t} deletingId={deletingId} />
       <WarehouseHeader t={t} onOpenAddModal={onOpenAddModal} />
 
-      <WarehouseStats {...statsProps} />
+      {/* موبایل: کارت‌های یکسان با /invoices — دسکتاپ: همان WarehouseStats قبلی */}
+      <div className="md:hidden">
+        <BentoStats t={t} stats={mobileStats} />
+      </div>
+      <div className="hidden md:block">
+        <WarehouseStats {...statsProps} />
+      </div>
 
       <CurrencyChips fmt={fmt} currencies={currencies} totalValue={totalValue} />
 

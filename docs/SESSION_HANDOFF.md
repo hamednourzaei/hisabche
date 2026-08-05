@@ -48,6 +48,15 @@
 ### ۵. Billing/Settings
 - `/billing` route جدید ساخته شد (BillingContainer از قبل وجود داشت ولی هیچ route‌ای نداشت) — از Settings لینک می‌شود.
 
+### ۶. ماژول‌های گمشده + Fix Build (کامل — Build/TS/ESLint سبز)
+- **Sales Follow-up module** (جدید): `packages/ui/src/components/ui/sales-followup/` (sales-followup-view.tsx + containers/sales-followup-container.tsx) + `packages/api/src/hooks/sales-followup.ts` (useSalesFollowups/useCreateFollowup/useUpdateFollowup/useDeleteFollowup) + route `/sales-followup`. شامل: status pipeline (new/contacted/meeting_scheduled/won/lost/pending)، next action date، assigned employee، reminder، فیلترها.
+- **Team & Payroll module** (جدید): `packages/ui/src/components/ui/team-and-payroll/` (team-and-payroll-view.tsx + containers/team-and-payroll-container.tsx) + route `/team&page`. شامل: employee list، roles، salary، payroll status (paid/pending/processing/overdue)، history، KPI cards.
+- **Approvals fix**: `packages/ui/src/components/ui/approvals/containers/approvals-container.tsx` (re-export از workflow با مسیر نسبی درست `../../workflow/...`) + `apps/web/app/[lang]/(dashboard)/approvals/page.tsx` (metadata کامل + Suspense).
+- **VPS_MIGRATION.md** (جدید): docs کامل migration — server requirements، env vars، DB migration، build/deploy/rollback.
+- **Build Fix**: `packages/ui/src/index.ts` بازنویسی شد (قبلاً کل محتوا دوبار کپی شده بود → ۱۴۷ خطای duplicate export). `packages/api/src/index.ts` sales-followup hooks اضافه شد. `apps/web/proxy.ts` تایپ میان‌افزار درست شد (NextRequest/NextResponse صریح، `as unknown as` برای نسخه‌ی تکراری next در pnpm). `apps/web/i18n/request.ts` و `nav-items.ts` و `next.config.js` — unused import/require lint فیکس شد.
+- **نتیجه**: `next build` ✅ بدون خطا، `tsc --noEmit` (apps/web) ✅ بدون خطا، `eslint .` ✅ بدون خطا. Route ها در build ثبت شدند: `/sales-followup`، `/team&page`، `/approvals`.
+- **نکته**: آدرس route تیم و حقوق `team&page` است (نام عجیب، از دستور اولیه) — اگر خواستی به `team` تغییر کند، فایل page را rename کن.
+
 ## صف اولویت فعلی (بازمحاسبه‌نشده از آخرین لحظه)
 
 | # | مورد | وضعیت |
