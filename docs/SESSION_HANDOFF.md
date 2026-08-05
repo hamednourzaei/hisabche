@@ -57,6 +57,12 @@
 - **نتیجه**: `next build` ✅ بدون خطا، `tsc --noEmit` (apps/web) ✅ بدون خطا، `eslint .` ✅ بدون خطا. Route ها در build ثبت شدند: `/sales-followup`، `/team&page`، `/approvals`.
 - **نکته**: آدرس route تیم و حقوق `team&page` است (نام عجیب، از دستور اولیه) — اگر خواستی به `team` تغییر کند، فایل page را rename کن.
 
+### ۷. Warehouse UI Refactor (Mobile Parity با Invoices — کامل)
+- `packages/ui/src/components/ui/warehouse/warehouse-view.tsx`: کارت‌های خلاصه‌ی `/af/warehouse` زیر `<768px` حالا **همان `BentoStats` مشترک `/af/invoices`** را رندر می‌کنند (گرید نامتقارن ۲×۲، padding، تایپوگرافی، آیکون‌ها، shadow — پیکسل‌به‌پیکسل یکسان). دسکتاپ (≥md) تغییری نکرد — همان `WarehouseStats` قبلی با threshold picker.
+- پیاده‌سازی: `BentoStats` (کامپوننت موجود) روی `<md` + `WarehouseStats` روی `≥md` با دو div مخفی (`md:hidden` / `hidden md:block`). هیچ JSX/Tailwind تکراری ساخته نشد — دقیقاً همان کامپوننت invoices.
+- مقادیر کارت‌ها: totalValue / total / lowStockCount (threshold پیش‌فرض ۵، داخل view محاسبه می‌شود) / outOfStock. منطق بیزینس و API تغییر نکرد.
+- Verify: `tsc --noEmit` ✅، `next build` ✅، `eslint .` ✅. (نکته: قبل از tsc باید `.next/dev` پاک شود — استایل‌های stale بین dev/prod build تداخل نوع می‌سازند.)
+
 ## صف اولویت فعلی (بازمحاسبه‌نشده از آخرین لحظه)
 
 | # | مورد | وضعیت |
