@@ -152,6 +152,20 @@ export {
   type AuditResponse,
 } from "./hooks/audit";
 
+// ─── Sales Follow-up ──────────────────────────────────────
+export {
+  useSalesFollowups,
+  useFollowup,
+  useCreateFollowup,
+  useUpdateFollowup,
+  useDeleteFollowup,
+  salesFollowupKeys,
+  type FollowUp,
+  type CreateFollowUpInput,
+  type UpdateFollowUpInput,
+  type FollowUpFilters,
+} from "./hooks/sales-followup";
+
 // ─── Accounting ───────────────────────────────────────────
 export {
   useAccounts,

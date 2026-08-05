@@ -2,6 +2,13 @@
   "name": "@hisabche/desktop",
   "version": "0.0.1",
   "private": true,
+  "packageManager": "pnpm@11.9.0",
+  "pnpm": {
+    "overrides": {
+      "react": "19.2.6",
+      "react-dom": "19.2.6"
+    }
+  },
   "main": "out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",

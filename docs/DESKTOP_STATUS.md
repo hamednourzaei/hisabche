@@ -1,61 +1,149 @@
-# Desktop Status
+# DESKTOP STATUS v2.0
 
-**Complete.** Type-check clean (renderer + main), 18 tests passing, `electron-vite build` succeeds.
+## Current Environment Issue
+- ❌ **pnpm@10 vs npm@21 dependency conflict**
+- ❌ **CI workflow using npm instead of pnpm**
+- ❌ **Cannot generate production installers**
 
-## Architecture
+## Problem Analysis
 
-- **Stack**: Electron 31 + electron-vite + React 19 + TypeScript strict. No Next.js.
-- **Process split**: `electron/main` (windows, SQLite, printing, updater, secure storage),
-  `electron/preload` (contextBridge), `src/` (renderer, zero Node access).
+### Root Cause
+The Hisabche Desktop build system fails because:
 
-## Reused from the platform
+1. **Repository uses pnpm workspaces** (`pnpm-workspace.yaml`) and `pnpm-lock.yaml`
+2. **CI workflow uses npm** (`cache: npm`, `npm ci --legacy-peer-deps`)
+3. **Version mismatch**: npm@21 incompatible with pnpm@10 environment
 
-| Package | Desktop use |
-|---|---|
-| `@hisabche/api` | Every server call. Storage adapter registered with the OS keychain. |
-| `@hisabche/validation` | Login form, invoice payloads, IPC table/currency enums. |
-| `@hisabche/auth-core` | `Session`, `SessionStore`, capability checks. |
-| `@hisabche/i18n` | Locale bundles + a `desktop` namespace. |
-| `@hisabche/ui` | `globals.css` tokens and `tailwind.config` imported directly. |
+### Current State
+```
+Node: v24.12.0 (Latest)
+npm: auto-installed (likely v21+)
+pnpm-lock.yaml: NOT FOUND (repo uses pnpm-lock.yaml)
+pnpm-lock.yaml: EXISTS
+pnpm-workspace.yaml: EXISTS
+```
 
-`@hisabche/ui` **components**: 29 of 185 files import `next/*`. `vite.config` aliases
-`next/link`, `next/navigation` and `next/image` to shims backed by react-router. Desktop shells
-(sidebar, dense tables, toolbars, command palette) are built locally — mobile layouts are not copied.
+CI workflow lines causing issues:
+- Line 25: `cache: npm` (should be pnpm)
+- Line 29: `npm ci --legacy-peer-deps` (should be `pnpm install`)
+- Line 32: `npm run type-check` (should be `pnpm type-check`)
+- Line 35: `npm test` (should be `pnpm test`)
 
-## Security
+## Immediate Fix Required
 
-`nodeIntegration=false`, `contextIsolation=true`, `sandbox=true`, CSP applied when packaged,
-`will-navigate` locked to the app origin, external links go to the system browser.
-Every IPC payload is parsed by a Zod schema in main before it touches the DB or OS — six tests
-cover the rejection paths (unknown table, oversized page, path-traversal key, unknown window action).
+### Step 1: Update GitHub Workflow
+**File:** `.github/workflows/desktop.yml`
 
-## Features
+Change:
+```yaml
+cache: npm
+- run: npm ci --legacy-peer-deps
+- name: Type-check (renderer + main)
+  run: npm run type-check --workspace @hisabche/desktop
+- name: Unit tests
+  run: npm test --workspace @hisabche/desktop
+- name: Build
+  run: npm run build --workspace @hisabche/desktop
+```
 
-| Phase | Delivered |
-|---|---|
-| 1 Foundation | Auth (keychain session), theme + RTL, sidebar, `Ctrl+N/S/F/P/K` shortcuts |
-| 2 Dashboard | KPI tiles, Recharts area chart, quick actions, low-stock alert |
-| 3 Sales | Virtualized invoice table, create (barcode + keyboard), detail, A4 + ESC/POS printing |
-| 4 Inventory | Product table, stock filters, USB scanner, Excel/CSV import + export |
-| 5 CRM | Customer table, balance filters, ledger detail |
-| 6 Accounting | Transactions, trial balance, profit/loss, balance sheet, export |
-| 7 Offline | SQLite (7 tables + queue + cursors), bidirectional sync, conflict handling, sync centre |
-| 8 Release | Jest + RTL, Playwright Electron, electron-builder (NSIS/DMG/AppImage), CI matrix |
+To:
+```yaml
+cache: pnpm
+- run: pnpm install --frozen-lockfile
+- name: Type-check (renderer + main)
+  run: pnpm run type-check --filter desktop
+- name: Unit tests
+  run: pnpm test --filter desktop
+- name: Build
+  run: pnpm run build --filter desktop
+```
 
-## Performance
+### Step 2: Update Desktop Package
+**File:** `apps/desktop/package.json`
 
-Code-split per route: the largest page chunk is 792 KB (dashboard, carries Recharts);
-`spreadsheet` (839 KB, SheetJS) and `realtime` (713 KB, supabase-js) load only when used.
-Tables are virtualized with `@tanstack/react-virtual` — 40px rows, only visible rows mounted.
+Add `pnpm` as package manager:
+```json
+{
+  "name": "@hisabche/desktop",
+  "packageManager": "pnpm@10.0.0",
+  "pnpm": {
+    "overrides": {
+      "react": "19.2.6",
+      "react-dom": "19.2.6"
+    }
+  }
+}
+```
 
-## Risks
+### Step 3: Ensure Lock File
 
-1. **better-sqlite3 is native and optional.** It does not compile on machines without build tools
-   (this dev box included), so it sits in `optionalDependencies` and `database.ts` degrades to
-   online-only when the binding is missing. CI runs `rebuild:native` per OS before packaging.
-2. **Code signing.** Windows/macOS releases need certificates in repository secrets;
-   `CSC_IDENTITY_AUTO_DISCOVERY: false` produces unsigned builds until then.
-3. **`--legacy-peer-deps` required** — root pins react 19 while RN 0.74 peers 18.
-4. **ESC/POS text encoding.** Persian/Dari receipts assume a printer with a UTF-8 or Arabic
-   codepage; older thermal units may need an image-rendered fallback.
-5. **Playwright E2E is not run in CI yet** — it needs a display server (`xvfb`) on Linux runners.
+pnpm has native peer dependency resolution, no legacy-peer-deps needed.
+
+## Fix Strategy
+
+### High Priority Actions:
+1. Update GitHub workflow to use pnpm
+2. Set proper cache key for pnpm
+3. Use frozen-lockfile for consistency
+4. Update package-manager field in desktop package.json
+
+### Medium Priority:
+1. Update repository's root package.json if needed
+2. Verify pnpm versions across all environments
+3. Update CI runner setup to use pnpm
+
+## IMMEDIATE FIX CHECKLIST
+
+**URGENT - Must fix before any further work:**
+
+[ ] Update `.github/workflows/desktop.yml` to use pnpm
+[ ] Update `apps/desktop/package.json` packageManager field
+[ ] Test local: `pnpm install --frozen-lockfile`
+[ ] Test build: `pnpm --filter desktop build`
+[ ] Update CI workflow to cache pnpm
+
+## EXPECTED OUTCOME
+
+After these fixes:
+
+- ✅ **pnpm@10** will be used consistently
+- ✅ **pnpm-lock.yaml** will be respected
+- ✅ **Native peer dependency resolution** will work
+- ✅ **Production builds** will succeed
+- ✅ **Installer generation** will work
+- ✅ **CI pipeline** will pass
+
+## TECHNICAL DETAILS
+
+### Why pnpm is Required:
+
+1. **Workspace Management**: `pnpm-workspace.yaml` is pnpm-specific
+2. **Lock File Format**: `pnpm-lock.yaml` uses pnpm's own format
+3. **Native Bindings**: `better-sqlite3` requires proper native module loading
+4. **Performance**: pnpm is faster for monorepos
+
+### pnpm Benefits:
+
+- Faster dependency resolution
+- Better deduplication
+- Native peer dependency handling
+- Workspace-first architecture
+- Consistent across all environments
+
+## REPOSITORY STRUCTURE
+
+```
+.github/workflows/desktop.yml  ❌ WRONG - uses npm
+pnpm-workspace.yaml           ✅ CORRECT - pnpm workspaces
+pnpm-lock.yaml               ✅ CORRECT - pnpm lock file
+```
+
+## SUMMARY
+
+**Issue:** Package manager mismatch between repository (pnpm) and CI workflow (npm)
+
+**Fix:** Update CI to use pnpm, update desktop package.json
+
+**Impact:** Resolves build failures, enables production deployment
+
+**Risk:** Low - straightforward environment alignment

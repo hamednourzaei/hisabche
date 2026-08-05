@@ -28,7 +28,8 @@ export { Toaster } from './components/ui/sonner'
 export { SaveIndicator, type SaveIndicatorProps } from './components/ui/save-indicator'
 export { Celebration, type CelebrationProps } from './components/ui/celebration'
 export { ErrorBoundary } from './components/ui/error-boundary'
-export {AccountingPage} from "./components/ui/accounting"
+export { AccountingPage } from "./components/ui/accounting"
+
 // ---------- Navigation — Dashboard ----------
 export { DashboardSidebar, BottomNav, type NavItem } from './components/ui/dashboard-sidebar'
 export { DashboardHeader } from './components/ui/dashboard-header'
@@ -40,7 +41,7 @@ export { NavigationProvider, useNavigation } from './hooks/menu/use-navigation-s
 export { TopNav } from './components/ui/navigation/top-nav'
 export { SideNav } from './components/ui/navigation/side-nav'
 export { NavigationRegistry } from './components/ui/navigation/navigation-registry'
-export { ActivitiesPage } from "./components/ui/activity/ActivitiesPage";
+export { ActivitiesPage } from "./components/ui/activity/ActivitiesPage"
 
 // ---------- Landing ----------
 export { GlassNavbar, AnimatedCounter, Section, FeatureCard, SectionHeading, GradientMesh, ShimmerCTA } from './components/ui/landing-section'
@@ -96,7 +97,7 @@ export { customersView, customersSkeleton } from './components/ui/customers'
 export { customersContainer as customersPage } from './components/ui/customers/containers/customer-container'
 
 // ---------- Pages — Warehouse ----------
-export {  WarehouseView } from './components/ui/warehouse/warehouse-view'
+export { WarehouseView } from './components/ui/warehouse/warehouse-view'
 export { warehouseSkeleton } from './components/ui/warehouse/warehouse-skeleton'
 export { ProductDetailPage } from './components/ui/warehouse-detail'
 
@@ -105,6 +106,11 @@ export { InvoicesContainer } from './components/ui/invoices/containers/invoices-
 export { InvoicesView } from './components/ui/invoices/invoices-view'
 export { InvoicesSkeleton } from './components/ui/invoices/invoices-skeleton'
 export { InvoiceDetailPage } from './components/ui/invoice-detail/invoice-detail-page'
+
+// ---------- Pages — Sales & Follow-up ----------
+export { SalesFollowupContainer } from './components/ui/sales-followup/containers/sales-followup-container'
+export { SalesFollowupView } from './components/ui/sales-followup/sales-followup-view'
+export type { FollowUpStatus, FollowUp, Customer } from './components/ui/sales-followup/sales-followup-view'
 
 // ---------- Pages — Settings & Others ----------
 export { SettingsPage } from './components/ui/settings'
@@ -135,6 +141,15 @@ export { HumanResourcesContainer } from './components/ui/human-resources/contain
 export { HumanResourcesView } from './components/ui/human-resources/hr-view'
 export { EmployeeDetailContainer } from './components/ui/human-resources/containers/employee-detail-container'
 export { EmployeeDetailView } from './components/ui/human-resources/employee-detail-view'
+
+// ---------- Approvals (Fixed) ----------
+export { ApprovalsContainer as approvalsPage } from './components/ui/approvals/containers/approvals-container'
+
+// ---------- Team & Payroll ----------
+export { TeamAndPayrollContainer } from './components/ui/team-and-payroll/containers/team-and-payroll-container'
+export { TeamAndPayrollView } from './components/ui/team-and-payroll/team-and-payroll-view'
+export type { EmployeeStatus, PayrollStatus } from './components/ui/team-and-payroll/team-and-payroll-view'
+export type { Employee, PayrollRecord } from './components/ui/team-and-payroll/team-and-payroll-view'
 
 // ---------- Projects ----------
 export { ProjectsContainer } from './components/ui/projects/containers/projects-container'

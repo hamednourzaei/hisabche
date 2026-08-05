@@ -22,20 +22,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
+          cache: pnpm
 
-      # The repo pins react 19 while RN 0.74 peers react 18 — the install
-      # has always required this flag.
-      - run: npm ci --legacy-peer-deps
+      - run: pnpm install --frozen-lockfile
 
       - name: Type-check (renderer + main)
-        run: npm run type-check --workspace @hisabche/desktop
+        run: pnpm run type-check --filter desktop
 
       - name: Unit tests
-        run: npm test --workspace @hisabche/desktop
+        run: pnpm test --filter desktop
 
       - name: Build
-        run: npm run build --workspace @hisabche/desktop
+        run: pnpm run build --filter desktop
 
   package:
     name: Package ${{ matrix.os }}
@@ -58,16 +56,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
+          cache: pnpm
 
-      - run: npm ci --legacy-peer-deps
+      - run: pnpm install --frozen-lockfile
 
       # better-sqlite3 is native — rebuild it against this Electron ABI.
       - name: Rebuild native modules
-        run: npm run rebuild:native --workspace @hisabche/desktop
+        run: pnpm run rebuild:native --filter desktop
 
       - name: Package
-        run: npm run ${{ matrix.script }} --workspace @hisabche/desktop
+        run: pnpm run ${{ matrix.script }} --filter desktop
         env:
           # Unsigned until certificates are added to repository secrets.
           CSC_IDENTITY_AUTO_DISCOVERY: false

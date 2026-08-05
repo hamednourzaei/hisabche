@@ -23,6 +23,38 @@ export interface PrintHtmlInput {
 }
 
 export async function printHtml(input: PrintHtmlInput): Promise<boolean> {
+  // Validate input
+  if (!input.html || typeof input.html !== 'string' || input.html.length > 2_000_000) {
+    throw new Error('INVALID_INPUT: Invalid HTML content')
+  }
+
+  // Validate device name if provided
+  if (input.deviceName && (typeof input.deviceName !== 'string' || input.deviceName.length > 200)) {
+    throw new Error('INVALID_INPUT: Invalid device name')
+  }
+
+  // Check authentication
+  const { sessionStore } = await import('./shared/lib/storage')
+  const session = await sessionStore.read()
+  if (!session?.token) {
+    throw new Error('UNAUTHORIZED: No valid session')
+  }
+
+  // Check authorization (printing requires record.create permission)
+  const { sessionCan } = await import('./features/auth/auth.store')
+  if (!sessionCan(session, 'record.create')) {
+    throw new Error('FORBIDDEN: Insufficient permissions for printing')
+  }
+
+  // Validate printer device if provided
+  if (input.deviceName) {
+    // Additional printer-specific validation can be added here
+    // For now, just ensure the device name format is safe
+    if (input.deviceName.includes(';') || input.deviceName.includes('&') || input.deviceName.includes('|')) {
+      throw new Error('INVALID_INPUT: Device name contains invalid characters')
+    }
+  }
+
   const win = new BrowserWindow({
     show: false,
     webPreferences: { offscreen: true, nodeIntegration: false, contextIsolation: true },

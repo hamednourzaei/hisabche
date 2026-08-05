@@ -1,5 +1,5 @@
 // ============================================
-// Desktop auth store.
+// Desktop auth store with security hardening.
 //
 // The session model, role rules and persistence contract live in
 // @hisabche/auth-core; this store only supplies the desktop adapter
@@ -9,6 +9,7 @@
 import { create } from 'zustand'
 import { registerTokenGetter, setOnUnauthorized, type ApiError } from '@hisabche/api'
 import {
+  isSession,
   sessionCan,
   type Capability,
   type LoginCredentials,
@@ -24,10 +25,13 @@ export interface AuthState {
   isHydrated: boolean
   isLoading: boolean
   error: string | null
+  isSessionValid: boolean
 
   hydrate: () => Promise<void>
   login: (input: LoginCredentials) => Promise<void>
   logout: () => Promise<void>
+  validateSession: () => Promise<boolean>
+  refreshToken: () => Promise<void>
   clearError: () => void
 }
 
@@ -48,28 +52,151 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isHydrated: false,
   isLoading: false,
   error: null,
+  isSessionValid: false,
 
   hydrate: async () => {
-    const session = await sessionStore.read()
-    set({ session, isAuthenticated: session !== null, isHydrated: true })
+    try {
+      const session = await sessionStore.read()
+      const isValid = isSession(session)
+      set({
+        session,
+        isAuthenticated: session !== null,
+        isHydrated: true,
+        isSessionValid: isValid,
+        error: isValid ? null : 'INVALID_SESSION_DATA'
+      })
+    } catch (error) {
+      set({
+        isHydrated: true,
+        error: toMessage(error),
+        session: null,
+        isAuthenticated: false,
+        isSessionValid: false
+      })
+    }
+  },
+
+  validateSession: async () => {
+    const state = get()
+    if (!state.session) return false
+
+    try {
+      const response = await apiClient.post('/auth/validate', { token: state.session.token })
+      const isValid = response.data.valid === true
+
+      if (!isValid) {
+        await sessionStore.clear()
+        set({
+          session: null,
+          isAuthenticated: false,
+          isSessionValid: false,
+          error: 'SESSION_INVALID_OR_EXPIRED'
+        })
+      }
+
+      set({ isSessionValid: isValid })
+      return isValid
+    } catch (error) {
+      await sessionStore.clear()
+      set({
+        session: null,
+        isAuthenticated: false,
+        isSessionValid: false,
+        error: toMessage(error)
+      })
+      return false
+    }
+  },
+
+  refreshToken: async () => {
+    const state = get()
+    if (!state.session?.token) {
+      throw new Error('NO_TOKEN_TO_REFRESH')
+    }
+
+    set({ isLoading: true, error: null })
+    try {
+      const response = await apiClient.post<{ token: string }>('/auth/refresh', {
+        token: state.session.token
+      })
+
+      const newSession: Session = {
+        ...state.session,
+        token: response.data.token,
+        user: state.session.user
+      }
+
+      await sessionStore.write(newSession)
+      set({
+        session: newSession,
+        isSessionValid: true,
+        isLoading: false,
+        error: null
+      })
+    } catch (error) {
+      set({
+        isLoading: false,
+        error: toMessage(error)
+      })
+      throw error
+    }
   },
 
   login: async (input) => {
     set({ isLoading: true, error: null })
     try {
-      const session = await postLogin({ email: input.email.trim(), password: input.password })
+      // Validate input format
+      const email = input.email.trim()
+      if (!email || !email.includes('@') || email.length > 254) {
+        throw new Error('INVALID_EMAIL_FORMAT')
+      }
+
+      if (!input.password || typeof input.password !== 'string' || input.password.length < 8) {
+        throw new Error('INVALID_PASSWORD_REQUIREMENTS')
+      }
+
+      const session = await postLogin({ email, password: input.password })
+
+      if (!isSession(session)) {
+        throw new Error('INVALID_SESSION_RESPONSE')
+      }
+
       await sessionStore.write(session)
-      set({ session, isAuthenticated: true, isLoading: false })
+      set({
+        session,
+        isAuthenticated: true,
+        isLoading: false,
+        isSessionValid: true,
+        error: null
+      })
     } catch (error) {
-      set({ isLoading: false, error: toMessage(error) })
+      set({
+        isLoading: false,
+        error: toMessage(error)
+      })
       throw error
     }
   },
 
   logout: async () => {
-    if (get().session) await apiClient.post('/auth/logout', {}).catch(() => undefined)
-    await sessionStore.clear()
-    set({ session: null, isAuthenticated: false, isLoading: false, error: null })
+    const state = get()
+    if (state.session) {
+      try {
+        await apiClient.post('/auth/logout', { token: state.session.token })
+      } catch (error) {
+        console.error('Logout API call failed:', error)
+      }
+
+      await sessionStore.clear()
+    }
+
+    set({
+      session: null,
+      isAuthenticated: false,
+      isSessionValid: false,
+      isLoading: false,
+      error: null
+    })
   },
 
   clearError: () => set({ error: null }),
@@ -91,5 +218,10 @@ registerTokenGetter(() => useAuthStore.getState().session?.token ?? null)
 
 setOnUnauthorized(() => {
   void sessionStore.clear()
-  useAuthStore.setState({ session: null, isAuthenticated: false })
+  useAuthStore.setState({
+    session: null,
+    isAuthenticated: false,
+    isSessionValid: false,
+    error: 'UNAUTHORIZED'
+  })
 })

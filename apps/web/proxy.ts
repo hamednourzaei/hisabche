@@ -1,5 +1,6 @@
 // apps/web/proxy.ts
 import createMiddleware from 'next-intl/middleware';
+import type { NextRequest, NextResponse } from 'next/server';
 import { locales, defaultLocale } from './app/[lang]/i18n-config';
 
 const intlMiddleware = createMiddleware({
@@ -10,9 +11,11 @@ const intlMiddleware = createMiddleware({
   // محسوسی نداشت.
   localePrefix: 'always',
   localeDetection: true,
-});
+}) as unknown as (req: NextRequest) => NextResponse;
 
-export default intlMiddleware;
+export default function middleware(req: NextRequest): ReturnType<typeof intlMiddleware> {
+  return intlMiddleware(req);
+}
 
 export const config = {
   // ✅ FIX: قبلاً فقط یک لیست ثابت از فایل‌های استاتیک (favicon، manifest و..)

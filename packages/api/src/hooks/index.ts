@@ -1,4 +1,5 @@
 export * from "./audit";
+export * from "./crm";
 export * from "./dashboard";
 export * from "./employees";
 export * from "./projects";
@@ -8,3 +9,4 @@ export * from "./invoices";
 export * from "./products";
 export * from "./customers";
 export * from "./useAuthReady";
+export * from "./sales-followup";
