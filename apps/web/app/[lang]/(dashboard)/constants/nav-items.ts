@@ -11,7 +11,7 @@
 
 import {
   LayoutDashboard, PlusCircle, Wallet, Boxes, ShoppingCart, TrendingUp,
-  Users, BookOpen, Handshake, Building2, Kanban, Factory, ClipboardCheck,
+  Users, BookOpen, Handshake, Kanban, Factory, ClipboardCheck,
   Settings, Key, Bell, RefreshCw, EllipsisVertical,
   type LucideIcon
 } from 'lucide-react'

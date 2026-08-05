@@ -128,6 +128,7 @@ const nextConfig = {
   },
 }
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- CJS config file, require() is required here
 const withNextIntl = require('next-intl/plugin')('./i18n/request.ts')
 
 module.exports = withNextIntl(nextConfig)

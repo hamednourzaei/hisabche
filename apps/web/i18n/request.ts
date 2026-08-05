@@ -1,6 +1,5 @@
 // apps/web/i18n/request.ts
 import { getRequestConfig } from 'next-intl/server';
-import { IntlErrorCode } from 'next-intl';
 import { locales, defaultLocale, type Locale } from '../app/[lang]/i18n-config';
 
 export default getRequestConfig(async ({ requestLocale }) => {
