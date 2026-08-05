@@ -185,7 +185,8 @@ export const WarehouseView = memo(function WarehouseView({
         id: "value",
         icon: DollarSign,
         label: t("warehouse.totalValue", "ارزش کل (AFN)"),
-        text: `${fmt(totalValue)} AFN`,
+        text: fmt(totalValue),
+        suffix: "AFN",
       },
       {
         id: "count",
