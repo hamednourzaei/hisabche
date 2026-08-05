@@ -5,12 +5,7 @@ import React, { useEffect, useRef, memo } from "react";
 import { useThemeStore, useAuthStore, useDeviceStore } from "@hisabche/store";
 import { syncLanguageFromStorage } from "@hisabche/i18n";
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   HeavyProviders v2 — Memoized · Optimized · Non-blocking
-   ✅ memo · useCallback · useRef · وابستگی‌های اصلاح‌شده
-   ═══════════════════════════════════════════════════════════════════════════ */
 
-// ─── Analytics Loader ──────────────────────────────────────────────────────
 
 let analyticsLoaded = false;
 
