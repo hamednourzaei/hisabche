@@ -279,18 +279,19 @@ const DashboardLayout = memo(function DashboardLayout({
           onToggleLang={toggleLang}
           onLogout={handleLogout}
           onNavigateLogin={handleNavigateLogin}
+          searchSlot={
+            <GlobalSearch
+              compact
+              pages={searchablePages}
+              onNavigate={handleSearchNavigate}
+              t={(key, fallback) => {
+                const v = t(key as Parameters<typeof t>[0]);
+                return v && v !== key ? v : (fallback ?? key);
+              }}
+            />
+          }
         />
 
-        <div className="border-b border-[hsl(var(--border-default))] px-4 py-3">
-          <GlobalSearch
-            pages={searchablePages}
-            onNavigate={handleSearchNavigate}
-            t={(key, fallback) => {
-              const v = t(key as Parameters<typeof t>[0]);
-              return v && v !== key ? v : (fallback ?? key);
-            }}
-          />
-        </div>
         <main className="min-w-0 flex-1 overflow-y-auto p-4 pb-20 lg:pb-4">
           <Breadcrumb className="mb-4" />
           {children}

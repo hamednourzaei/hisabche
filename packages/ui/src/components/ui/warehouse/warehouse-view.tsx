@@ -6,12 +6,11 @@ import { cn } from "@/lib/utils";
 import { EmptyState } from "../empty-state";
 import { WarehouseStats } from "./warehouse-stats";
 import { WarehouseProductList } from "./warehouse-product-list";
-import { Plus, Search, Check } from "lucide-react";
+import { Plus, Check } from "lucide-react";
 import type { Product, Currency } from "../../../lib/warehouse/warehouse-types";
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   WarehouseView v4 — Memoized · Component Separation · PascalCase
-   ✅ memo · useMemo · PascalCase components
+   WarehouseView v5 — search moved onto the table toolbar
    ═══════════════════════════════════════════════════════════════════════════ */
 
 interface WarehouseViewProps {
@@ -74,9 +73,10 @@ const WarehouseHeader = memo(function WarehouseHeader({
   onOpenAddModal: () => void;
 }) {
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="space-y-1.5">
-        <h1 className="text-2xl font-bold sm:text-3xl text-[hsl(var(--fg-primary))]">
+    // Title and action share one row at every width, mobile included.
+    <div className="flex flex-row items-start justify-between gap-3">
+      <div className="min-w-0 space-y-1.5">
+        <h1 className="truncate text-2xl font-bold sm:text-3xl text-[hsl(var(--fg-primary))]">
           {t("nav.stock", "موجودی")}
         </h1>
         <p className="text-sm text-[hsl(var(--fg-secondary))]">
@@ -88,7 +88,7 @@ const WarehouseHeader = memo(function WarehouseHeader({
         type="button"
         onClick={onOpenAddModal}
         className={cn(
-          "inline-flex items-center gap-2 rounded-full px-5 py-2.5",
+          "inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2.5 sm:px-5",
           "min-h-[44px] sm:min-h-[40px]",
           "text-sm font-bold text-white",
           "bg-[var(--gradient-brand)]",
@@ -99,51 +99,12 @@ const WarehouseHeader = memo(function WarehouseHeader({
         )}
       >
         <Plus className="size-4" aria-hidden="true" />
-        {t("warehouse.addProduct", "افزودن محصول")}
+        <span className="whitespace-nowrap">{t("warehouse.addProduct", "افزودن محصول")}</span>
       </button>
     </div>
   );
 });
 WarehouseHeader.displayName = "WarehouseHeader";
-
-// ─── SearchBar ──────────────────────────────────────────────────────────────
-
-const WarehouseSearch = memo(function WarehouseSearch({
-  t,
-  search,
-  onSearchChange,
-}: {
-  t: (key: string, fallback?: string) => string;
-  search: string;
-  onSearchChange: (value: string) => void;
-}) {
-  return (
-    <div className="max-w-sm relative">
-      <Search
-        className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))] pointer-events-none"
-        aria-hidden="true"
-      />
-      <input
-        type="text"
-        placeholder={`${t("action.search", "جستجو")}...`}
-        value={search}
-        onChange={(e) => onSearchChange(e.target.value)}
-        className={cn(
-          "w-full rounded-xl ps-9 pe-3 py-2.5 text-sm",
-          "min-h-[44px] sm:min-h-[40px]",
-          "border border-[hsl(var(--border-default))]",
-          "bg-[hsl(var(--surface-base))]",
-          "text-[hsl(var(--fg-primary))]",
-          "placeholder:text-[hsl(var(--fg-tertiary))]",
-          "focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]",
-          "transition-colors duration-200",
-          "motion-reduce:transition-none",
-        )}
-      />
-    </div>
-  );
-});
-WarehouseSearch.displayName = "WarehouseSearch";
 
 // ─── CurrencyChips ─────────────────────────────────────────────────────────
 
@@ -227,25 +188,12 @@ export const WarehouseView = memo(function WarehouseView({
       <SaveIndicator t={t} deletingId={deletingId} />
       <WarehouseHeader t={t} onOpenAddModal={onOpenAddModal} />
 
-      {/* ✅ استفاده از JSX با PascalCase */}
       <WarehouseStats {...statsProps} />
 
       <CurrencyChips fmt={fmt} currencies={currencies} totalValue={totalValue} />
 
-      <WarehouseSearch t={t} search={search} onSearchChange={onSearchChange} />
-
       {isLoading ? (
         <LoadingSkeleton />
-      ) : showEmptyState ? (
-        <EmptyState
-          icon="product"
-          title={t("warehouse.noProducts", "هیچ محصولی موجود نیست")}
-          description={t("warehouse.noProductsDesc", "اولین محصول خود را اضافه کنید")}
-          action={{
-            label: t("warehouse.addProduct", "افزودن محصول"),
-            onClick: onOpenAddModal,
-          }}
-        />
       ) : (
         <WarehouseProductList
           t={t}
@@ -256,6 +204,21 @@ export const WarehouseView = memo(function WarehouseView({
           onNavigate={onNavigate}
           onDelete={onDelete}
           deletingId={deletingId}
+          search={search}
+          onSearchChange={onSearchChange}
+          emptyState={
+            showEmptyState ? (
+              <EmptyState
+                icon="product"
+                title={t("warehouse.noProducts", "هیچ محصولی موجود نیست")}
+                description={t("warehouse.noProductsDesc", "اولین محصول خود را اضافه کنید")}
+                action={{
+                  label: t("warehouse.addProduct", "افزودن محصول"),
+                  onClick: onOpenAddModal,
+                }}
+              />
+            ) : undefined
+          }
         />
       )}
     </div>

@@ -84,7 +84,7 @@ export function SyncCenterPage({
       </div>
 
       {/* KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {/* Connection */}
         <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-5 transition-shadow duration-200 hover:shadow-lg">
           <div className="flex items-center gap-4">

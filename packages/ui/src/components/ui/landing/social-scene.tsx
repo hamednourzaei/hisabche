@@ -143,12 +143,12 @@ export default function SocialScene({ t }: SocialSceneProps) {
             animated ? "opacity-100" : "opacity-0",
           )}
         >
-          <Marquee pauseOnHover repeat={2} className="[--duration:32s]">
+          <Marquee pauseOnHover repeat={4} className="[--duration:32s]">
             {rowA.map((r) => (
               <ReviewCard key={r.key} review={r} />
             ))}
           </Marquee>
-          <Marquee reverse pauseOnHover repeat={2} className="[--duration:32s]">
+          <Marquee reverse pauseOnHover repeat={4} className="[--duration:32s]">
             {rowB.map((r) => (
               <ReviewCard key={r.key} review={r} />
             ))}

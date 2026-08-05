@@ -18,13 +18,14 @@ function selectionFeedback(): void {
 }
 
 interface TabItemProps {
+  testID: string
   focused: boolean
   label: string
   icon: React.ReactNode
   onPress: () => void
 }
 
-const TabItem = memo(function TabItem({ focused, label, icon, onPress }: TabItemProps) {
+const TabItem = memo(function TabItem({ testID, focused, label, icon, onPress }: TabItemProps) {
   const { colors, spacing, radius, duration } = useTheme()
   const progress = useRef(new Animated.Value(focused ? 1 : 0)).current
 
@@ -41,6 +42,7 @@ const TabItem = memo(function TabItem({ focused, label, icon, onPress }: TabItem
 
   return (
     <Pressable
+      testID={testID}
       accessibilityRole="tab"
       accessibilityState={{ selected: focused }}
       accessibilityLabel={label}
@@ -94,6 +96,7 @@ export function AnimatedTabBar({ state, descriptors, navigation }: BottomTabBarP
         return (
           <TabItem
             key={route.key}
+            testID={`tab-${route.name === 'index' ? 'home' : route.name}`}
             focused={focused}
             label={typeof options?.title === 'string' ? options.title : route.name}
             icon={options?.tabBarIcon?.({ color, focused, size: 22 })}

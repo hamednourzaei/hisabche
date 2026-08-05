@@ -69,6 +69,8 @@ export function LandingPage() {
   // "ready" برای منتظرماندن آن sync نیست.
   const locale = useLocale();
   const navigateLogin = useCallback(() => router.push("/login"), [router]);
+  // دکمه‌های «شروع کن» کاربر تازه را به ثبت‌نام می‌برند، نه صفحه‌ی ورود.
+  const navigateSignup = useCallback(() => router.push("/signup"), [router]);
 
   const fallbacks = sectionFallbacks[locale] || sectionFallbacks.fa;
 
@@ -99,7 +101,7 @@ export function LandingPage() {
 
         <main>
           <NavigationRegistry id="hero">
-            <CinematicHero t={safeT} onNavigateLogin={navigateLogin} />
+            <CinematicHero t={safeT} onNavigateLogin={navigateSignup} />
           </NavigationRegistry>
 
           <TrustBarScene t={safeT} />
@@ -124,12 +126,12 @@ export function LandingPage() {
             <SocialScene t={safeT} />
           </NavigationRegistry>
 
-          <PricingScene t={safeT} onNavigateLogin={navigateLogin} />
+          <PricingScene t={safeT} onNavigateLogin={navigateSignup} />
 
           <FaqScene t={safeT} />
 
           <NavigationRegistry id="cta">
-            <CTAScene t={safeT} onNavigateLogin={navigateLogin} />
+            <CTAScene t={safeT} onNavigateLogin={navigateSignup} />
           </NavigationRegistry>
 
           <SiteFooter t={safeT} />

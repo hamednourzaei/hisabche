@@ -2,15 +2,28 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "target": "ES2022",
-    "lib": ["ES2022"],
+    "lib": [
+      "ES2022"
+    ],
     "module": "CommonJS",
     "moduleResolution": "node",
     "esModuleInterop": true,
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
-    "types": ["node", "electron"]
+    "types": [
+      "node",
+      "electron",
+      "jest"
+    ]
   },
-  "include": ["electron/**/*.ts", "electron.vite.config.ts"],
-  "exclude": ["node_modules", "out", "dist"]
+  "include": [
+    "electron/**/*.ts",
+    "electron.vite.config.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "out",
+    "dist"
+  ]
 }

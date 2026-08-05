@@ -218,6 +218,8 @@ interface HeaderProps {
   signOutLabel: string;
   onToggleTheme: () => void;
   onToggleLang: (lang: string) => void;
+  /** جستجوی سراسری — کنار انتخاب زبان رندر می‌شود. */
+  searchSlot?: React.ReactNode;
   onLogout?: () => void;
   onNavigateLogin: () => void;
 }
@@ -239,6 +241,7 @@ export const DashboardHeader = memo(function DashboardHeader({
   onToggleLang,
   onLogout,
   onNavigateLogin,
+  searchSlot,
 }: HeaderProps) {
   const t = useTranslations();
 
@@ -277,6 +280,7 @@ export const DashboardHeader = memo(function DashboardHeader({
           )}
         </div>
         <div className="flex items-center gap-1 sm:gap-2">
+          {searchSlot}
           <LanguageSelect currentLang={currentLang} onChange={onToggleLang} />
           <button
             type="button"
@@ -284,7 +288,9 @@ export const DashboardHeader = memo(function DashboardHeader({
             aria-label={isDark ? t("settings.lightMode") : t("settings.darkMode")}
             className={cn(
               "inline-flex items-center rounded-lg p-1.5",
-              isDark ? "text-[hsl(var(--color-warning))]" : "text-[hsl(var(--fg-secondary))]",
+              // آیکون در هر دو تم زرد کهربایی می‌ماند — قبلاً در حالت لایت
+              // خاکستری می‌شد و بین بقیه‌ی آیکون‌ها گم بود.
+              "text-[hsl(var(--color-warning))]",
               "hover:bg-[hsl(var(--surface-muted))]",
               "transition-colors duration-150",
               "motion-reduce:transition-none"

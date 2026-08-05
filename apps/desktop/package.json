@@ -9,7 +9,7 @@
     "start": "electron-vite preview",
     "lint": "echo ok",
     "type-check": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
-    "test": "jest --passWithNoTests",
+    "test": "jest",
     "e2e": "playwright test",
     "package:win": "electron-vite build && electron-builder --win --publish never",
     "package:mac": "electron-vite build && electron-builder --mac --publish never",

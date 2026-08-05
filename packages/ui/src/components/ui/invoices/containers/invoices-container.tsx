@@ -8,15 +8,16 @@ import { InvoicesView } from "../invoices-view"
 
 export function InvoicesContainer() {
   const router = useRouter()
-  
+
   const {
     invoices,
+    statsInvoices,
     isLoading,
     total,
+    searchValue,
     filters,
     statusVariant,
     handleSearchChange,
-    handleClearFilters,
     handlePageChange,
     handleDeleteInvoice,
     safeT,
@@ -41,11 +42,12 @@ export function InvoicesContainer() {
     <InvoicesView
       t={safeT}
       invoices={invoices}
+      statsInvoices={statsInvoices}
       isLoading={isLoading}
       total={total}
+      searchValue={searchValue}
       filters={filters}
       onSearchChange={handleSearchChange}
-      onClearFilters={handleClearFilters}
       onPageChange={handlePageChange}
       onNavigateInvoice={handleNavigateInvoice}
       onNavigateInvoiceAction={handleNavigateInvoiceAction}

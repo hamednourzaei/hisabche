@@ -10,6 +10,7 @@ export interface FloatingButtonProps {
   label?: string | undefined
   icon?: React.ReactNode | undefined
   bottomOffset?: number | undefined
+  testID?: string | undefined
 }
 
 export const FloatingButton = memo(function FloatingButton({
@@ -18,6 +19,7 @@ export const FloatingButton = memo(function FloatingButton({
   label,
   icon,
   bottomOffset = 0,
+  testID,
 }: FloatingButtonProps) {
   const { colors, spacing, radius, elevation } = useTheme()
   const scale = useRef(new Animated.Value(1)).current
@@ -38,6 +40,7 @@ export const FloatingButton = memo(function FloatingButton({
       ]}
     >
       <Pressable
+        testID={testID}
         accessibilityRole="button"
         accessibilityLabel={accessibilityLabel}
         onPress={onPress}

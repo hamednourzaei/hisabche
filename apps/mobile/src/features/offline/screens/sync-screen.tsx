@@ -39,12 +39,14 @@ export function SyncScreen() {
 
       <ScrollView contentContainerStyle={{ padding: spacing.md, gap: spacing.md }}>
         {entries.length === 0 ? (
-          <EmptyState title={t('sync.queueEmpty')} />
+          <View testID="sync-empty">
+            <EmptyState title={t('sync.queueEmpty')} />
+          </View>
         ) : (
           <>
-            <Button label={t('sync.syncNow')} fullWidth onPress={onSyncAll} />
-            {entries.map((entry) => (
-              <MobileCard key={entry.clientId}>
+            <Button testID="sync-now" label={t('sync.syncNow')} fullWidth onPress={onSyncAll} />
+            {entries.map((entry, index) => (
+              <MobileCard key={entry.clientId} testID={`sync-entry-${index}`}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
                   <View style={{ flex: 1, gap: spacing.xs }}>
                     <Text variant="bodyStrong">{entry.kind}</Text>

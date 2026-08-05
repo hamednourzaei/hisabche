@@ -12,18 +12,20 @@ export interface LineItemRowProps {
   item: DraftItem
   currency: CurrencyCode
   onRemove: () => void
+  testID?: string | undefined
 }
 
 export const LineItemRow = memo(function LineItemRow({
   item,
   currency,
   onRemove,
+  testID,
 }: LineItemRowProps) {
   const { t } = useTranslation('mobile')
   const { spacing, colors } = useTheme()
 
   return (
-    <MobileCard padding="sm">
+    <MobileCard padding="sm" testID={testID}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
         <View style={{ flex: 1, gap: 2 }}>
           <Text variant="bodyStrong" numberOfLines={1}>

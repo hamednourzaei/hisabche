@@ -1,0 +1,82 @@
+name: Desktop
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/desktop/**'
+      - 'packages/**'
+      - '.github/workflows/desktop.yml'
+  pull_request:
+    paths:
+      - 'apps/desktop/**'
+      - 'packages/**'
+
+jobs:
+  verify:
+    name: Type-check, test and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # The repo pins react 19 while RN 0.74 peers react 18 — the install
+      # has always required this flag.
+      - run: npm ci --legacy-peer-deps
+
+      - name: Type-check (renderer + main)
+        run: npm run type-check --workspace @hisabche/desktop
+
+      - name: Unit tests
+        run: npm test --workspace @hisabche/desktop
+
+      - name: Build
+        run: npm run build --workspace @hisabche/desktop
+
+  package:
+    name: Package ${{ matrix.os }}
+    needs: verify
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            script: package:win
+          - os: macos-latest
+            script: package:mac
+          - os: ubuntu-latest
+            script: package:linux
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci --legacy-peer-deps
+
+      # better-sqlite3 is native — rebuild it against this Electron ABI.
+      - name: Rebuild native modules
+        run: npm run rebuild:native --workspace @hisabche/desktop
+
+      - name: Package
+        run: npm run ${{ matrix.script }} --workspace @hisabche/desktop
+        env:
+          # Unsigned until certificates are added to repository secrets.
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hisabche-${{ matrix.os }}
+          path: |
+            apps/desktop/dist/*.exe
+            apps/desktop/dist/*.dmg
+            apps/desktop/dist/*.AppImage
+          if-no-files-found: ignore

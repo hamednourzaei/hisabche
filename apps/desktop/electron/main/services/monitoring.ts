@@ -15,7 +15,7 @@ export function initCrashReporting(): void {
 
     Sentry.init({
       dsn: DSN,
-      release: process.env.npm_package_version,
+      ...(process.env.npm_package_version ? { release: process.env.npm_package_version } : {}),
       tracesSampleRate: 0.1,
     })
   } catch (error) {

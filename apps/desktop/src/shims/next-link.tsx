@@ -23,7 +23,7 @@ const Link = forwardRef<HTMLAnchorElement, NextLinkProps>(function Link(
   }
 
   return (
-    <RouterLink ref={ref} to={href} replace={replace} {...rest}>
+    <RouterLink ref={ref} to={href} replace={replace ?? false} {...rest}>
       {children}
     </RouterLink>
   )

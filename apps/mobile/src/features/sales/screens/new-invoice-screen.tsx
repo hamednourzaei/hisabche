@@ -1,5 +1,6 @@
 // ============================================
-// Create invoice — customer picker, line items, offline-capable submit.
+// Create invoice — customer and product chosen in bottom sheets,
+// never on a pushed page. Offline-capable submit.
 // ============================================
 
 import React, { useCallback, useState } from 'react'
@@ -7,14 +8,23 @@ import { Alert, KeyboardAvoidingView, Platform, ScrollView, View } from 'react-n
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { useTranslation } from 'react-i18next'
-import { Button, Input, MobileCard, Text, useTheme } from '@hisabche/mobile-ui'
+import {
+  Avatar,
+  Button,
+  MobileCard,
+  Money,
+  SectionHeader,
+  Text,
+  useTheme,
+} from '@hisabche/mobile-ui'
 
 import { AppScreen } from '../../../shared/components/app-screen'
 import { ScreenHeader } from '../../../shared/components/screen-header'
-import { formatCurrency } from '../../../shared/lib/format'
+import { currencySign, formatAmount } from '../../../shared/lib/format'
 import { useCurrency } from '../../settings/preferences.store'
 import { CustomerPickerSheet } from '../components/customer-picker-sheet'
 import { LineItemRow } from '../components/line-item-row'
+import { ProductPickerSheet } from '../components/product-picker-sheet'
 import { useSubmitInvoice } from '../hooks/use-create-invoice'
 import { useInvoiceDraft } from '../hooks/use-invoice-draft'
 
@@ -27,21 +37,8 @@ export function NewInvoiceScreen() {
   const draft = useInvoiceDraft()
   const { submit, isSubmitting } = useSubmitInvoice()
 
-  const [pickerOpen, setPickerOpen] = useState(false)
-  const [itemName, setItemName] = useState('')
-  const [itemQty, setItemQty] = useState('1')
-  const [itemPrice, setItemPrice] = useState('')
-
-  const onAddItem = useCallback(() => {
-    const quantity = Number(itemQty)
-    const unitPrice = Number(itemPrice)
-    if (!itemName.trim() || quantity <= 0 || unitPrice <= 0) return
-
-    draft.addItem({ productName: itemName.trim(), quantity, unitPrice, discount: 0 })
-    setItemName('')
-    setItemQty('1')
-    setItemPrice('')
-  }, [draft, itemName, itemPrice, itemQty])
+  const [customerOpen, setCustomerOpen] = useState(false)
+  const [productOpen, setProductOpen] = useState(false)
 
   const onSubmit = useCallback(async () => {
     if (draft.items.length === 0) {
@@ -67,70 +64,69 @@ export function NewInvoiceScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
-          contentContainerStyle={{ padding: spacing.md, gap: spacing.md, paddingBottom: 120 }}
+          contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg, paddingBottom: 140 }}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <MobileCard onPress={() => setPickerOpen(true)}>
-            <Text variant="label" tone="secondary">
-              {t('sales.customer')}
-            </Text>
-            <Text variant="bodyStrong" style={{ marginTop: spacing.xs }}>
-              {draft.customerName ?? t('sales.selectCustomer')}
-            </Text>
+          <MobileCard onPress={() => setCustomerOpen(true)} padding="lg">
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+              <Avatar name={draft.customerName ?? '?'} size={40} />
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text variant="legal" tone="tertiary">
+                  {t('sales.customer')}
+                </Text>
+                <Text variant="bodyStrong" numberOfLines={1}>
+                  {draft.customerName ?? t('sales.selectCustomer')}
+                </Text>
+              </View>
+              <Ionicons name="chevron-back" size={18} color={colors.fgTertiary} />
+            </View>
           </MobileCard>
 
-          <MobileCard>
-            <Text variant="label" tone="secondary">
-              {t('sales.addItem')}
-            </Text>
-            <View style={{ gap: spacing.sm, marginTop: spacing.sm }}>
-              <Input value={itemName} onChangeText={setItemName} label={t('sales.items')} />
-              <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-                <View style={{ flex: 1 }}>
-                  <Input
-                    value={itemQty}
-                    onChangeText={setItemQty}
-                    label={t('sales.quantity')}
-                    keyboardType="numeric"
+          <View>
+            <SectionHeader
+              title={t('sales.items')}
+              actionLabel={t('sales.addItem')}
+              actionTestID="add-item"
+              onAction={() => setProductOpen(true)}
+            />
+
+            {draft.items.length === 0 ? (
+              <MobileCard variant="muted" elevated="none" padding="lg">
+                <Text variant="caption" tone="tertiary" style={{ textAlign: 'center' }}>
+                  {t('sales.noItems')}
+                </Text>
+              </MobileCard>
+            ) : (
+              <View style={{ gap: spacing.sm }}>
+                {draft.items.map((item, index) => (
+                  <LineItemRow
+                    key={item.key}
+                    testID={`line-item-${index}`}
+                    item={item}
+                    currency={currency}
+                    onRemove={() => draft.removeItem(item.key)}
                   />
-                </View>
-                <View style={{ flex: 2 }}>
-                  <Input
-                    value={itemPrice}
-                    onChangeText={setItemPrice}
-                    label={t('sales.unitPrice')}
-                    keyboardType="numeric"
-                  />
-                </View>
+                ))}
               </View>
-              <Button
-                label={t('sales.addItem')}
-                variant="ghost"
-                onPress={onAddItem}
-                icon={<Ionicons name="add" size={18} color={colors.fgPrimary} />}
+            )}
+          </View>
+
+          <MobileCard padding="lg" elevated="md">
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Text variant="label" tone="secondary" style={{ flex: 1 }}>
+                {t('sales.grandTotal')}
+              </Text>
+              <Money
+                amount={formatAmount(draft.total)}
+                sign={currencySign(currency)}
+                size="large"
               />
             </View>
           </MobileCard>
 
-          {draft.items.map((item) => (
-            <LineItemRow
-              key={item.key}
-              item={item}
-              currency={currency}
-              onRemove={() => draft.removeItem(item.key)}
-            />
-          ))}
-
-          <MobileCard>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <Text variant="label" tone="secondary">
-                {t('sales.grandTotal')}
-              </Text>
-              <Text variant="heading">{formatCurrency(draft.total, currency)}</Text>
-            </View>
-          </MobileCard>
-
           <Button
+            testID="invoice-save"
             label={t('common.save')}
             size="lg"
             fullWidth
@@ -141,11 +137,20 @@ export function NewInvoiceScreen() {
       </KeyboardAvoidingView>
 
       <CustomerPickerSheet
-        visible={pickerOpen}
-        onClose={() => setPickerOpen(false)}
+        visible={customerOpen}
+        onClose={() => setCustomerOpen(false)}
         onSelect={(customer) => {
           draft.setCustomer(customer.id, customer.fullName)
-          setPickerOpen(false)
+          setCustomerOpen(false)
+        }}
+      />
+
+      <ProductPickerSheet
+        visible={productOpen}
+        onClose={() => setProductOpen(false)}
+        onSelect={(product) => {
+          draft.addItem({ ...product, discount: 0 })
+          setProductOpen(false)
         }}
       />
     </AppScreen>

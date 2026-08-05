@@ -23,6 +23,7 @@ export interface BottomSheetProps {
   title?: string | undefined
   /** Fraction of screen height, 0–1. */
   height?: number | undefined
+  testID?: string | undefined
   children: ReactNode
 }
 
@@ -33,6 +34,7 @@ export const BottomSheet = memo(function BottomSheet({
   onClose,
   title,
   height = 0.7,
+  testID,
   children,
 }: BottomSheetProps) {
   const { colors, radius, spacing, duration, elevation } = useTheme()
@@ -95,7 +97,9 @@ export const BottomSheet = memo(function BottomSheet({
             </View>
           ) : null}
 
-          <View style={{ flex: 1 }}>{children}</View>
+          <View testID={testID} style={{ flex: 1 }}>
+            {children}
+          </View>
         </Animated.View>
       </KeyboardAvoidingView>
     </Modal>

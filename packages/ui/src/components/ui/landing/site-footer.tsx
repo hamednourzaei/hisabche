@@ -83,41 +83,44 @@ export default function SiteFooter({ t }: SiteFooterProps) {
       )}
     >
       <div className="container-narrow px-4 sm:px-6 py-8 sm:py-10 lg:py-16">
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 sm:gap-6 lg:gap-8">
-          {/* ── Brand block ── */}
-          <div className="col-span-2 sm:col-span-1 mb-2 sm:mb-0">
-            <div className="mb-2 sm:mb-3 text-base sm:text-lg font-bold text-[hsl(var(--fg-primary))]">
-              {t("app.name", "حسابچه")}
-              <span className="text-[hsl(var(--color-primary))]">.</span>
-            </div>
-            <p className="text-[10px] sm:text-xs lg:text-sm text-[hsl(var(--fg-tertiary))] leading-relaxed max-w-[200px] sm:max-w-[220px]">
-              {t("landing.footerTagline", "حافظه‌ی زنده‌ی کسب‌وکار تو — آفلاین، امن، همیشه در دسترس.")}
-            </p>
-            <div className="flex items-center gap-2 sm:gap-3 mt-3 sm:mt-4">
-              {SOCIALS.map(({ icon: Icon, label, href }) => (
-                <a
-                  key={label}
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={label}
-                  className={cn(
-                    "flex items-center justify-center w-7 h-7 sm:w-8 sm:h-8 rounded-full",
-                    "border border-[hsl(var(--border-default))] text-[hsl(var(--fg-tertiary))]",
-                    "hover:text-[hsl(var(--color-primary))] hover:border-[hsl(var(--color-primary)/0.3)]",
-                    "transition-colors duration-200",
-                  )}
-                >
-                  <Icon className="size-3.5 sm:size-4" aria-hidden="true" />
-                </a>
-              ))}
-            </div>
+        {/* ── Brand block: centred above the columns at every width ── */}
+        <div className="mb-8 flex flex-col items-center text-center sm:mb-10">
+          <div className="mb-2 text-base font-bold text-[hsl(var(--fg-primary))] sm:mb-3 sm:text-lg">
+            {t("app.name", "حسابچه")}
+            <span className="text-[hsl(var(--color-primary))]">.</span>
           </div>
+          <p className="max-w-sm text-[11px] leading-relaxed text-[hsl(var(--fg-tertiary))] sm:text-xs lg:text-sm">
+            {t("landing.footerTagline", "حافظه‌ی زنده‌ی کسب‌وکار تو — آفلاین، امن، همیشه در دسترس.")}
+          </p>
 
-          {/* ── Link columns ── */}
+          {/* دکمه‌های ارتباطی مربع با گوشه‌ی نرم — دایره در موبایل ریز و بی‌ریخت بود. */}
+          <div className="mt-4 flex items-center justify-center gap-2.5 sm:gap-3">
+            {SOCIALS.map(({ icon: Icon, label, href }) => (
+              <a
+                key={label}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={label}
+                className={cn(
+                  "flex size-10 items-center justify-center rounded-xl sm:size-11",
+                  "border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]",
+                  "text-[hsl(var(--fg-secondary))]",
+                  "hover:border-[hsl(var(--color-primary)/0.35)] hover:text-[hsl(var(--color-primary))]",
+                  "transition-colors duration-200",
+                )}
+              >
+                <Icon className="size-[18px]" aria-hidden="true" />
+              </a>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Link columns: three across at every width ── */}
+        <div className="grid grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           {COLUMNS.map((col) => (
             <nav key={col.titleKey} aria-label={t(col.titleKey, col.titleFallback)}>
-              <h3 className="text-[10px] sm:text-xs lg:text-sm font-semibold text-[hsl(var(--fg-primary))] mb-2 sm:mb-3 lg:mb-4">
+              <h3 className="mb-2 text-[11px] font-semibold text-[hsl(var(--fg-primary))] sm:mb-3 sm:text-xs lg:mb-4 lg:text-sm">
                 {t(col.titleKey, col.titleFallback)}
               </h3>
               <ul className="space-y-1.5 sm:space-y-2 lg:space-y-2.5">

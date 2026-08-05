@@ -76,7 +76,7 @@ export function SettingsScreen() {
           <Text variant="bodyStrong">{t('more.accounting')}</Text>
         </MobileCard>
 
-        <MobileCard onPress={() => router.push('/sync')}>
+        <MobileCard testID="open-sync" onPress={() => router.push('/sync')}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
             <Text variant="bodyStrong" style={{ flex: 1 }}>
               {t('more.sync')}

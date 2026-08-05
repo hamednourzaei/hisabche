@@ -37,14 +37,7 @@ export function customersStats({
   const monthly = t("common.vsLastMonth", "نسبت به ماه قبل")
 
   const stats: BentoStat[] = [
-    {
-      id: "total",
-      icon: Users,
-      label: t("customers.totalCustomers", "تعداد مشتریان"),
-      amount: totalCustomers,
-      delta: customersDelta,
-      deltaLabel: monthly,
-    },
+    // مجموع فروش اول می‌آید: عدد اصلی کسب‌وکار است، نه شمارش مشتری‌ها.
     {
       id: "sales",
       icon: DollarSign,
@@ -52,6 +45,14 @@ export function customersStats({
       amount: totalSales,
       suffix: currency,
       delta: salesDelta,
+      deltaLabel: monthly,
+    },
+    {
+      id: "total",
+      icon: Users,
+      label: t("customers.totalCustomers", "تعداد مشتریان"),
+      amount: totalCustomers,
+      delta: customersDelta,
       deltaLabel: monthly,
     },
     {

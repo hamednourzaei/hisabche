@@ -37,14 +37,21 @@ interface GlobalSearchProps {
   onNavigate: (path: string) => void;
   t: (key: string, fallback?: string) => string;
   placeholder?: string | undefined;
+  /**
+   * حالت هدر: زیر md فقط یک آیکون 🔍 دیده می‌شود و با کلیک، فیلد به سمت
+   * پایین باز می‌شود؛ از md به بالا فیلد همیشه باز است.
+   */
+  compact?: boolean | undefined;
 }
 
 const MIN_QUERY_LENGTH = 2;
 const DEBOUNCE_MS = 300;
 
-export function GlobalSearch({ pages = [], onNavigate, t, placeholder }: GlobalSearchProps) {
+export function GlobalSearch({ pages = [], onNavigate, t, placeholder, compact = false }: GlobalSearchProps) {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
+  /** فقط در حالت compact و زیر md معنا دارد. */
+  const [expanded, setExpanded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [remote, setRemote] = useState<ResultItem[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -143,13 +150,16 @@ export function GlobalSearch({ pages = [], onNavigate, t, placeholder }: GlobalS
 
   // ─── بستن با کلیک بیرون ─────────────────────────────────────────────────
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen && !expanded) return;
     const onClickOutside = (e: MouseEvent) => {
-      if (!containerRef.current?.contains(e.target as Node)) setIsOpen(false);
+      if (containerRef.current?.contains(e.target as Node)) return;
+      setIsOpen(false);
+      // در حالت فشرده، کلیک بیرون فیلد را هم جمع می‌کند.
+      setExpanded(false);
     };
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
-  }, [isOpen]);
+  }, [expanded, isOpen]);
 
   const select = useCallback(
     (item: ResultItem) => {
@@ -174,8 +184,35 @@ export function GlobalSearch({ pages = [], onNavigate, t, placeholder }: GlobalS
   const showPanel = isOpen && query.trim().length > 0;
 
   return (
-    <div ref={containerRef} className="relative w-full max-w-md">
-      <div className="relative">
+    <div
+      ref={containerRef}
+      className={cn("relative", compact ? "md:w-72 lg:w-80" : "w-full max-w-md")}
+    >
+      {/* حالت فشرده: زیر md فقط دکمه‌ی ذره‌بین. با باز شدن، فیلد جای آن را
+          می‌گیرد و پنل نتایج به سمت پایین باز می‌شود. */}
+      {compact && !expanded ? (
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          aria-label={t("search.placeholder", "جستجو")}
+          className={cn(
+            "inline-flex size-9 items-center justify-center rounded-lg md:hidden",
+            "text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]",
+            "transition-colors duration-150 motion-reduce:transition-none",
+          )}
+        >
+          <Search className="size-[18px]" aria-hidden="true" />
+        </button>
+      ) : null}
+
+      <div
+        className={cn(
+          "relative",
+          // زیر md وقتی بسته است پنهان می‌ماند؛ از md به بالا همیشه باز.
+          compact && !expanded && "hidden md:block",
+          compact && expanded && "fixed inset-x-3 top-16 z-50 md:static md:inset-auto md:top-auto",
+        )}
+      >
         <Search
           className="pointer-events-none absolute inset-inline-start-3 top-1/2 size-4 -translate-y-1/2 text-[hsl(var(--fg-tertiary))] start-3"
           aria-hidden="true"

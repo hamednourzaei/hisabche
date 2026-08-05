@@ -49,7 +49,7 @@ const StatCard = memo(function StatCard({
   return (
     <div
       className={cn(
-        "flex min-w-[220px] shrink-0 items-start justify-between gap-3 p-4 rounded-2xl",
+        "flex h-full w-full items-start justify-between gap-3 rounded-2xl p-3 sm:p-4",
         "border border-[hsl(var(--border-default))]",
         "bg-gradient-to-br",
         TONE_BG[tone],
@@ -219,8 +219,8 @@ export const WarehouseStats = memo(function WarehouseStats({
   const outOfStockTone: Tone = outOfStock === 0 ? "emerald" : outOfStock > 10 ? "rose" : "amber";
 
   return (
-    <div className="flex gap-4 overflow-x-auto pb-1 snap-x">
-      <div className="snap-start">
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4">
+      <div className="min-w-0">
         <StatCard
           label={t("warehouse.totalValue", "ارزش کل (AFN)")}
           value={fmt(totalValue)}
@@ -230,7 +230,7 @@ export const WarehouseStats = memo(function WarehouseStats({
         />
       </div>
 
-      <div className="snap-start">
+      <div className="min-w-0">
         <StatCard
           label={t("warehouse.totalProducts", "تعداد محصولات")}
           value={total}
@@ -240,7 +240,7 @@ export const WarehouseStats = memo(function WarehouseStats({
         />
       </div>
 
-      <div className="snap-start">
+      <div className="min-w-0">
         <StatCard
           label={t("warehouse.lowStock", "موجودی کم")}
           value={lowStockCount}
@@ -251,7 +251,7 @@ export const WarehouseStats = memo(function WarehouseStats({
         />
       </div>
 
-      <div className="snap-start">
+      <div className="min-w-0">
         <StatCard
           label={t("warehouse.outOfStock", "ناموجود")}
           value={outOfStock}

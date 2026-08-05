@@ -9,6 +9,7 @@ export interface SectionHeaderProps {
   subtitle?: string | undefined
   actionLabel?: string | undefined
   onAction?: (() => void) | undefined
+  actionTestID?: string | undefined
   trailing?: ReactNode | undefined
 }
 
@@ -17,6 +18,7 @@ export const SectionHeader = memo(function SectionHeader({
   subtitle,
   actionLabel,
   onAction,
+  actionTestID,
   trailing,
 }: SectionHeaderProps) {
   const { spacing } = useTheme()
@@ -42,7 +44,7 @@ export const SectionHeader = memo(function SectionHeader({
       {trailing}
 
       {actionLabel && onAction ? (
-        <Pressable accessibilityRole="button" onPress={onAction} hitSlop={8}>
+        <Pressable testID={actionTestID} accessibilityRole="button" onPress={onAction} hitSlop={8}>
           <Text variant="label" tone="brand">
             {actionLabel}
           </Text>

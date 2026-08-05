@@ -34,6 +34,7 @@ export { SearchBar, type SearchBarProps } from './components/search-bar'
 export { FilterBar, type FilterBarProps, type FilterOption } from './components/filter-bar'
 export { QuickAction, type QuickActionProps } from './components/quick-action'
 export { FloatingButton, type FloatingButtonProps } from './components/floating-button'
+export { SwipeRow, type SwipeRowProps, type SwipeAction } from './components/swipe-row'
 
 // Indicators
 export { Badge, badgePalette, type BadgeProps, type BadgeTone } from './components/badge'

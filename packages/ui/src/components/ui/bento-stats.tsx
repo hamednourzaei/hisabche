@@ -36,6 +36,17 @@ export function compactAmount(v: number, t?: Translate): string {
   return localeNumber(v)
 }
 
+/**
+ * رنگ عدد بر اساس علامت آن. متن‌های غیرعددی (مثل نام پرخریدترین مشتری)
+ * `amount` ندارند و خنثی می‌مانند.
+ */
+function amountTone(amount: number | undefined): string {
+  if (amount === undefined || amount === 0) return "text-[hsl(var(--fg-primary))]";
+  return amount < 0
+    ? "text-[hsl(var(--color-destructive))]"
+    : "text-[hsl(var(--color-success))]";
+}
+
 /** هرچه متن بلندتر، فونت کوچک‌تر — جلوگیری از سرریز در کارت */
 function valueFontClass(text: string): string {
   const len = text.length
@@ -143,8 +154,11 @@ export function BentoStats({ t, stats, className }: BentoStatsProps) {
 
             <p
               className={cn(
-                "mt-1.5 truncate font-bold tabular-nums text-[hsl(var(--fg-primary))] sm:mt-2",
-                valueFontClass(value)
+                "mt-1.5 truncate font-bold tabular-nums sm:mt-2",
+                valueFontClass(value),
+                // عدد منفی قرمز، مثبت سبز، صفر خنثی — کاربر باید بدون خواندن
+                // علامت هم بفهمد وضعیت خوب است یا بد.
+                amountTone(stat.amount)
               )}
               title={value}
             >

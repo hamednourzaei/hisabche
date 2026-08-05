@@ -16,6 +16,14 @@ const DEFAULT_FILTERS: InvoicesQueryParams = {
   sortDirection: "desc",
 };
 
+/**
+ * ✅ FIX: کارت‌های آمار قبلاً فقط روی همان صفحه‌ی جاری (۱۰ فاکتور) حساب
+ * می‌شدند — یعنی کاربری با ۳۰ فاکتور، عدد ۱۰ می‌دید. حالا یک کوئری جدا با
+ * سقف بالا فقط برای آمار زده می‌شود تا شمارش و مجموع‌ها کل فاکتورها را
+ * پوشش دهند، بدون آن‌که اندازه‌ی صفحه‌ی جدول تغییر کند.
+ */
+const STATS_LIMIT = 500;
+
 // ─── Main Hook ─────────────────────────────────────────────────────────────
 
 export function useInvoicesPage() {
@@ -25,12 +33,24 @@ export function useInvoicesPage() {
 
   // ─── Data Fetching ──────────────────────────────────────────────────────
   const { data, isLoading, refetch } = useInvoices(filters);
+  const { data: statsData } = useInvoices({
+    page: 1,
+    limit: STATS_LIMIT,
+    sortDirection: "desc",
+    ...(filters.search ? { search: filters.search } : {}),
+  });
   const deleteInvoice = useDeleteInvoice();
 
   // ─── Transformations ────────────────────────────────────────────────────
   const invoices = useMemo(
     () => mapInvoices(data?.invoices as any[] | undefined),
     [data]
+  );
+
+  /** همه‌ی فاکتورهای منطبق با فیلتر — فقط برای کارت‌های آمار. */
+  const statsInvoices = useMemo(
+    () => mapInvoices(statsData?.invoices as any[] | undefined),
+    [statsData]
   );
 
   const total = data?.total ?? 0;
@@ -78,8 +98,10 @@ export function useInvoicesPage() {
   // ─── Return ────────────────────────────────────────────────────────────
   return {
     invoices,
+    statsInvoices,
     isLoading,
     total,
+    searchValue: filters.search ?? "",
     filters: {
       page: filters.page,
       limit: filters.limit,

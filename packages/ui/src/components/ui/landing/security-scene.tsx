@@ -88,15 +88,6 @@ const PILLARS: TrustPillar[] = [
   },
 ];
 
-const TRUST_BADGES = [
-  "آفلاین اول",
-  "رمزنگاری شده",
-  "بک‌آپ خودکار",
-  "کنترل دسترسی",
-  "ثبت رویدادها",
-  "چند کاربره",
-  "۹۹.۹٪ در دسترس",
-];
 
 export default function SecurityScene({ t }: SecuritySceneProps) {
   const ref = useRef<HTMLDivElement>(null);
@@ -186,25 +177,6 @@ export default function SecurityScene({ t }: SecuritySceneProps) {
           ))}
         </div>
 
-        <div
-          className={cn(
-            "mt-8 sm:mt-10 lg:mt-12 flex flex-wrap items-center justify-center gap-2 sm:gap-3 lg:gap-4",
-            "transition-all duration-700 delay-200 motion-reduce:transition-none",
-            animated ? "opacity-100" : "opacity-0",
-          )}
-        >
-          {TRUST_BADGES.map((badge) => (
-            <span
-              key={badge}
-              className="inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-[9px] sm:text-xs lg:text-sm font-medium border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] text-[hsl(var(--fg-secondary))]"
-            >
-              {/* ✅ FIX: کلید next-intl نمی‌تواند "." داشته باشد (مثلاً در
-                  «99.9% Available») — قبلاً باعث کرش INVALID_KEY کل صفحه
-                  می‌شد. اینجا و در فایل‌های پیام، "." با "_" جایگزین شده. */}
-              {t(`landing.security.badge.${badge.replace(/\./g, "_")}`, badge)}
-            </span>
-          ))}
-        </div>
       </div>
     </section>
   );

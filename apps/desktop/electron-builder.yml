@@ -1,0 +1,50 @@
+appId: com.hisabche.desktop
+productName: Hisabche
+copyright: Copyright © Hisabche
+
+directories:
+  output: dist
+  buildResources: resources
+
+files:
+  - out/**/*
+  - package.json
+
+# better-sqlite3 is a native module — it must stay unpacked so the
+# .node binding can be dlopen'd from inside the asar.
+asarUnpack:
+  - '**/node_modules/better-sqlite3/**'
+
+npmRebuild: true
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  artifactName: ${productName}-${version}-setup.${ext}
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+
+mac:
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+  category: public.app-category.business
+  artifactName: ${productName}-${version}-${arch}.${ext}
+  # Hardened runtime requires a Developer ID certificate in CI secrets.
+  hardenedRuntime: true
+  gatekeeperAssess: false
+
+linux:
+  target:
+    - target: AppImage
+      arch: [x64]
+  category: Office
+  artifactName: ${productName}-${version}.${ext}
+
+publish: null

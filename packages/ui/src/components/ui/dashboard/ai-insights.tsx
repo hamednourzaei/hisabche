@@ -67,7 +67,7 @@ const InsightsSkeleton = memo(function InsightsSkeleton() {
         <div className="h-4 sm:h-5 w-4 sm:w-5 rounded bg-[hsl(var(--surface-muted))] animate-pulse" />
         <div className="h-4 sm:h-5 w-24 sm:w-32 rounded bg-[hsl(var(--surface-muted))] animate-pulse" />
       </div>
-      <div className="space-y-2 sm:space-y-3">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
         {[1, 2, 3].map((i) => (
           <div key={i} className="h-14 sm:h-16 rounded-xl bg-[hsl(var(--surface-muted))] animate-pulse" />
         ))}
@@ -182,7 +182,7 @@ export const AIInsights = memo(function AIInsights({
           {t("dashboard.smartInsights")}
         </h2>
       </div>
-      <div className="space-y-2 sm:space-y-3">{insightItems}</div>
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">{insightItems}</div>
     </div>
   );
 });

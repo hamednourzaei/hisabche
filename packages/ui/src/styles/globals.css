@@ -144,18 +144,35 @@
    LIGHT THEME
    ═══════════════════════════════════════════════════════════════════════════ */
 :root[data-theme="light"], .light {
-  --surface-base: 168 25% 98%;
-  --surface-muted: 166 22% 95%;
+  /* ── Surfaces ──
+     الهام از Linear / Notion / Vercel: پس‌زمینه یک off-white گرم و کم‌اشباع
+     است، نه سفید خالص؛ و کارت‌ها سفید می‌مانند تا از زمینه «بلند» شوند.
+     همین اختلاف کوچک، عمق می‌سازد بدون آن‌که به سایه‌ی سنگین نیاز باشد.
+     تُن گرم (hue 40) با سبز-فیروزه‌ای برند تضاد ندارد و چشم را بعد از
+     کار طولانی خسته نمی‌کند. */
+  --surface-base: 40 16% 97%;
+  --surface-muted: 40 12% 94%;
   --surface-elevated: 0 0% 100%;
-  --surface-overlay: 166 22% 95%;
-  --fg-primary: 210 33% 9%;
-  --fg-secondary: 174 15% 38%;
-  --fg-tertiary: 168 8% 53%;
-  --border-default: 166 22% 87%;
-  --border-strong: 166 22% 77%;
-  --glass-bg: rgba(255, 255, 255, 0.82);
-  --glass-border: rgba(15, 127, 116, 0.12);
-  --shadow-premium: 0 10px 30px rgba(16, 24, 32, 0.08), 0 0 30px rgba(15, 127, 116, 0.08);
+  --surface-overlay: 40 14% 96%;
+
+  /* ── Text ──
+     مشکی خالص استفاده نمی‌شود؛ یک خاکستری خیلی تیره‌ی کمی سرد، هم کنتراست
+     AA را نگه می‌دارد و هم لبه‌ها را نرم می‌کند. */
+  --fg-primary: 220 18% 13%;
+  --fg-secondary: 220 9% 40%;
+  --fg-tertiary: 220 7% 55%;
+
+  /* ── Lines ──
+     مرزها باید حس «جداکننده» بدهند نه «قاب». اشباع پایین، روشنایی بالا. */
+  --border-default: 40 10% 88%;
+  --border-strong: 40 10% 79%;
+
+  --glass-bg: rgba(255, 255, 255, 0.78);
+  --glass-border: rgba(15, 127, 116, 0.10);
+
+  /* سایه‌ی لایت باید تقریباً نامرئی باشد — فقط ارتفاع را القا کند. */
+  --shadow-premium: 0 1px 2px rgba(16, 20, 24, 0.04), 0 12px 32px -12px rgba(16, 20, 24, 0.12);
+
   --hisab-ring: var(--color-primary);
   --color-purple: var(--color-primary);
   --color-cyan: 168 70% 46%;
@@ -189,6 +206,23 @@
    ─────────────────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; overflow-y: scroll; }
+
+/* ───────────────────────────────────────────────────────────────────────────
+   iOS: هر فیلدی با فونت کوچک‌تر از ۱۶px باعث زوم خودکار صفحه هنگام فوکوس
+   می‌شود. به‌جای غیرفعال‌کردن zoom در viewport (که دسترسی‌پذیری را خراب
+   می‌کند)، فقط روی سافاری موبایل کف فونت ۱۶px گذاشته می‌شود.
+   `-webkit-touch-callout` فقط در iOS پشتیبانی می‌شود، پس دسکتاپ و اندروید
+   دست‌نخورده می‌مانند.
+   ─────────────────────────────────────────────────────────────────────────── */
+@supports (-webkit-touch-callout: none) {
+  @media (max-width: 820px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+    select,
+    textarea {
+      font-size: 16px;
+    }
+  }
+}
 body {
   font-family: var(--font-sans, 'Vazirmatn', system-ui, -apple-system, sans-serif);
   background-color: hsl(var(--surface-base));
