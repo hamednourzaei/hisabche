@@ -12,6 +12,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
+import { sessionCan } from '@hisabche/auth-core'
 
 const run = promisify(execFile)
 
@@ -34,14 +35,13 @@ export async function printHtml(input: PrintHtmlInput): Promise<boolean> {
   }
 
   // Check authentication
-  const { sessionStore } = await import('./shared/lib/storage')
+  const { sessionStore } = await import('../../shared/lib/storage')
   const session = await sessionStore.read()
   if (!session?.token) {
     throw new Error('UNAUTHORIZED: No valid session')
   }
 
   // Check authorization (printing requires record.create permission)
-  const { sessionCan } = await import('./features/auth/auth.store')
   if (!sessionCan(session, 'record.create')) {
     throw new Error('FORBIDDEN: Insufficient permissions for printing')
   }
@@ -50,7 +50,11 @@ export async function printHtml(input: PrintHtmlInput): Promise<boolean> {
   if (input.deviceName) {
     // Additional printer-specific validation can be added here
     // For now, just ensure the device name format is safe
-    if (input.deviceName.includes(';') || input.deviceName.includes('&') || input.deviceName.includes('|')) {
+    if (
+      input.deviceName.includes(';') ||
+      input.deviceName.includes('&') ||
+      input.deviceName.includes('|')
+    ) {
       throw new Error('INVALID_INPUT: Device name contains invalid characters')
     }
   }
@@ -70,7 +74,7 @@ export async function printHtml(input: PrintHtmlInput): Promise<boolean> {
           landscape: input.landscape,
           ...(input.deviceName ? { deviceName: input.deviceName } : {}),
         },
-        (success) => resolve(success)
+        (success) => resolve(success),
       )
     })
   } finally {

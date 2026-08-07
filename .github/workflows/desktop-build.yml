@@ -1,4 +1,4 @@
-name: Desktop
+name: Desktop Build
 
 on:
   push:
@@ -6,18 +6,26 @@ on:
     paths:
       - 'apps/desktop/**'
       - 'packages/**'
-      - '.github/workflows/desktop.yml'
+      - '.github/workflows/desktop-build.yml'
   pull_request:
     paths:
       - 'apps/desktop/**'
       - 'packages/**'
 
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
-    name: Type-check, test and build
+    name: Type-check, test, electron-vite build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
 
       - uses: actions/setup-node@v4
         with:
@@ -26,14 +34,16 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Type-check (renderer + main)
-        run: pnpm run type-check --filter desktop
+      - name: Type-check (renderer + main/preload)
+        run: pnpm --filter @hisabche/desktop type-check
 
-      - name: Unit tests
-        run: pnpm test --filter desktop
+      - name: Unit tests (incl. IPC contract)
+        run: pnpm --filter @hisabche/desktop test
 
-      - name: Build
-        run: pnpm run build --filter desktop
+      # electron-vite build compiles main + preload + renderer — the exact
+      # gate for preload/main contract mismatch.
+      - name: Build (electron-vite)
+        run: pnpm --filter @hisabche/desktop build
 
   package:
     name: Package ${{ matrix.os }}
@@ -53,6 +63,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -60,12 +74,12 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # better-sqlite3 is native — rebuild it against this Electron ABI.
+      # better-sqlite3 is native — rebuild against this Electron ABI.
       - name: Rebuild native modules
-        run: pnpm run rebuild:native --filter desktop
+        run: pnpm --filter @hisabche/desktop rebuild:native
 
       - name: Package
-        run: pnpm run ${{ matrix.script }} --filter desktop
+        run: pnpm --filter @hisabche/desktop ${{ matrix.script }}
         env:
           # Unsigned until certificates are added to repository secrets.
           CSC_IDENTITY_AUTO_DISCOVERY: false

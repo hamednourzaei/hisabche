@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": {
+      "@hisabche/db-schema": ["../db-schema/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["node_modules"]
+}

@@ -27,7 +27,7 @@ export const desktopStorage: KeyValueStorage = {
 }
 
 const secureBackend = {
-  get: (key: string) => bridge()?.secure.get(key) ?? Promise.resolve(null),
+  get: (key: string) => (bridge()?.secure.get(key) ?? Promise.resolve(null)).catch(() => null),
   set: async (key: string, value: string) => {
     await bridge()?.secure.set(key, value)
   },
@@ -47,6 +47,6 @@ export async function initStorage(): Promise<void> {
     keys.map(async (key) => {
       const value = await secureBackend.get(key)
       if (value !== null) cache.set(key, value)
-    })
+    }),
   )
 }

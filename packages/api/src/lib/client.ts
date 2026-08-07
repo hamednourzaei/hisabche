@@ -24,9 +24,12 @@ export interface ApiError {
 // ============================================
 // Client Setup
 // ============================================
-const BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'https://api.hisabche.com/api'
-const isDev = process.env.NODE_ENV !== 'production'
+// Guarded against a renderer without Node globals: the Electron renderer has no
+// `process`, so this package must not crash on import there. Host apps that
+// need a different base URL re-point `apiClient.defaults.baseURL` after import.
+const env: Record<string, string | undefined> = typeof process !== 'undefined' ? process.env : {}
+const BASE_URL = env.NEXT_PUBLIC_API_URL || 'https://api.hisabche.com/api'
+const isDev = env.NODE_ENV !== 'production'
 
 // حداکثر زمانی که یک درخواست منتظر آماده شدن Auth Store می‌ماند (میلی‌ثانیه)
 const TOKEN_READY_TIMEOUT_MS = 2000
@@ -94,7 +97,7 @@ apiClient.interceptors.request.use(
 
     return config
   },
-  (error) => Promise.reject(error)
+  (error) => Promise.reject(error),
 )
 
 // ============================================
@@ -107,7 +110,7 @@ apiClient.interceptors.response.use(
       message?: string
       code?: string
       details?: Record<string, string[]>
-    }>
+    }>,
   ) => {
     const responseData = error.response?.data as any
 
@@ -136,7 +139,7 @@ apiClient.interceptors.response.use(
     }
 
     return Promise.reject(apiError)
-  }
+  },
 )
 
 export default apiClient

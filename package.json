@@ -14,15 +14,28 @@
     "type-check": "turbo run type-check",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
-    "clean": "turbo run clean && rm -rf node_modules"
+    "clean": "turbo run clean && rm -rf node_modules",
+    "prepare": "husky"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@next/eslint-plugin-next": "^16.3.0",
     "@types/node": "^20.14.0",
     "@types/pg": "^8.20.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "electron": "^31.7.7",
+    "electron-rebuild": "^3.2.9",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.3.0",
     "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.9.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.3.0",
     "prettier": "^3.2.5",
     "turbo": "^1.13.4",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.66.0",
     "zod": "^3.25.76"
   },
   "engines": {
@@ -39,6 +52,8 @@
     "@supabase/supabase-js": "^2.106.0",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
+    "better-sqlite3": "^13.0.3",
+    "cac": "^7.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "critters": "^0.0.23",
@@ -58,6 +73,7 @@
     "socks-proxy-agent": "^10.0.0",
     "tailwind-merge": "^3.5.0",
     "tree-node-cli": "^3.0.0",
-    "undici": "^8.2.0"
+    "undici": "^8.2.0",
+    "vite": "^8.2.0"
   }
 }

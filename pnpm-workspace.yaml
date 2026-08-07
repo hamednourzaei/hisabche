@@ -1,6 +1,19 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
 allowBuilds:
-  '@parcel/watcher': set this to true or false
-  '@sentry/cli': set this to true or false
-  '@swc/core': set this to true or false
-  core-js: set this to true or false
-  esbuild: set this to true or false
+  '@parcel/watcher': true
+  '@sentry/cli': true
+  '@swc/core': true
+  better-sqlite3: true
+  core-js: true
+  detox: true
+  dtrace-provider: true
+  electron: true
+  electron-winstaller: true
+  esbuild: true
+  lzma-native: true
+  sharp: true
+  unrs-resolver: true
+minimumReleaseAgeExclude:
+  - better-sqlite3@13.0.3

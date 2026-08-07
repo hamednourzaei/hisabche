@@ -1,13 +1,13 @@
 import { Database } from '@nozbe/watermelondb'
 import SQLiteAdapter from '@nozbe/watermelondb/adapters/sqlite'
-import { hisabcheSchema } from './schema'
+import { watermelonSchema } from './watermelon.schema'
 import Invoice from './models/Invoice.model'
 import Product from './models/Product.model'
 import Customer from './models/Customer.model'
 import { syncDatabase } from './sync'
 
 const adapter = new SQLiteAdapter({
-  schema: hisabcheSchema,
+  schema: watermelonSchema,
   jsi: true,
   onSetUpError: (error: Error) => {
     console.error('Database setup error:', error)

@@ -40,12 +40,96 @@ function toMessage(error: unknown): string {
   return apiError?.message ?? 'NETWORK_ERROR'
 }
 
-async function postLogin(body: LoginCredentials): Promise<Session> {
-  const response = await apiClient.post<Session & { data?: Session }>('/auth/login', body)
-  const payload = response.data
-  return payload.data ?? payload
+// ============================================
+// The backend's Supabase-issued JWT already carries the user's id (`sub`)
+// and email in its payload. Some /auth/login responses return an empty
+// `user: {}` object even though the token itself has everything we need,
+// so we fall back to decoding the token's claims to fill in the gaps.
+// This mirrors what the web app effectively gets "for free" by talking
+// to the Supabase client directly (packages/store/src/slices/auth.slice.ts).
+//
+// Note: this is NOT a security check. We are only reading the payload of
+// a token we already received over an authenticated response; the server
+// remains the source of truth and verifies the token on every request.
+// ============================================
+function decodeJwtPayload(token: string): { sub?: string; email?: string } {
+  try {
+    const base64Url = token.split('.')[1]
+    if (!base64Url) return {}
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+    const json = atob(base64)
+    return JSON.parse(json)
+  } catch {
+    return {}
+  }
 }
 
+/** Fill in missing user.id / user.email from the JWT claims when the backend omits them. */
+function hydrateUserFromToken(
+  rawUser: Partial<Session['user']> | undefined,
+  token: string,
+): Session['user'] {
+  const claims = decodeJwtPayload(token)
+  return {
+    ...rawUser,
+    id: rawUser?.id ?? claims.sub ?? '',
+    email: rawUser?.email ?? claims.email ?? '',
+  } as Session['user']
+}
+
+async function postLogin(body: LoginCredentials): Promise<Session> {
+  const response = await apiClient.post<
+    | Session
+    | {
+        data?: Session
+        user?: Session['user']
+        token?: string
+        access_token?: string
+      }
+  >('/auth/login', body)
+
+  const payload = response.data
+
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    'token' in payload &&
+    typeof payload.token === 'string' &&
+    'user' in payload &&
+    payload.user
+  ) {
+    return {
+      user: hydrateUserFromToken(payload.user, payload.token),
+      token: payload.token,
+    }
+  }
+
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    'data' in payload &&
+    payload.data &&
+    isSession(payload.data)
+  ) {
+    return payload.data
+  }
+
+  if (
+    payload &&
+    typeof payload === 'object' &&
+    'access_token' in payload &&
+    typeof payload.access_token === 'string' &&
+    'user' in payload &&
+    payload.user
+  ) {
+    return {
+      user: hydrateUserFromToken(payload.user, payload.access_token),
+      token: payload.access_token,
+    }
+  }
+
+  throw new Error('INVALID_SESSION_RESPONSE')
+}
 export const useAuthStore = create<AuthState>((set, get) => ({
   session: null,
   isAuthenticated: false,
@@ -63,7 +147,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isAuthenticated: session !== null,
         isHydrated: true,
         isSessionValid: isValid,
-        error: isValid ? null : 'INVALID_SESSION_DATA'
+        error: isValid ? null : 'INVALID_SESSION_DATA',
       })
     } catch (error) {
       set({
@@ -71,7 +155,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         error: toMessage(error),
         session: null,
         isAuthenticated: false,
-        isSessionValid: false
+        isSessionValid: false,
       })
     }
   },
@@ -90,7 +174,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           session: null,
           isAuthenticated: false,
           isSessionValid: false,
-          error: 'SESSION_INVALID_OR_EXPIRED'
+          error: 'SESSION_INVALID_OR_EXPIRED',
         })
       }
 
@@ -102,7 +186,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         session: null,
         isAuthenticated: false,
         isSessionValid: false,
-        error: toMessage(error)
+        error: toMessage(error),
       })
       return false
     }
@@ -117,13 +201,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true, error: null })
     try {
       const response = await apiClient.post<{ token: string }>('/auth/refresh', {
-        token: state.session.token
+        token: state.session.token,
       })
 
       const newSession: Session = {
         ...state.session,
         token: response.data.token,
-        user: state.session.user
+        user: state.session.user,
       }
 
       await sessionStore.write(newSession)
@@ -131,12 +215,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         session: newSession,
         isSessionValid: true,
         isLoading: false,
-        error: null
+        error: null,
       })
     } catch (error) {
       set({
         isLoading: false,
-        error: toMessage(error)
+        error: toMessage(error),
       })
       throw error
     }
@@ -167,12 +251,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isAuthenticated: true,
         isLoading: false,
         isSessionValid: true,
-        error: null
+        error: null,
       })
     } catch (error) {
       set({
         isLoading: false,
-        error: toMessage(error)
+        error: toMessage(error),
       })
       throw error
     }
@@ -195,7 +279,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       isAuthenticated: false,
       isSessionValid: false,
       isLoading: false,
-      error: null
+      error: null,
     })
   },
 
@@ -222,6 +306,6 @@ setOnUnauthorized(() => {
     session: null,
     isAuthenticated: false,
     isSessionValid: false,
-    error: 'UNAUTHORIZED'
+    error: 'UNAUTHORIZED',
   })
 })

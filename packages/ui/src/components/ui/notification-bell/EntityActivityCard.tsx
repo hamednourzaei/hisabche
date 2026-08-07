@@ -1,8 +1,8 @@
 // packages/ui/src/components/ui/notification-bell/EntityActivityCard.tsx
-"use client";
+'use client'
 
-import { useState, memo, useCallback } from "react";
-import { useTranslations } from "next-intl";
+import { useState, memo, useCallback } from 'react'
+import { useTranslations } from 'next-intl'
 import {
   ChevronDown,
   User,
@@ -16,42 +16,43 @@ import {
   Send,
   Archive,
   RefreshCw,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useEntitySummary, useEntityActivities } from "@hisabche/api";
+  type LucideIcon,
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { useEntitySummary, useEntityActivities } from '@hisabche/api'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface EntityActivityCardProps {
-  entityType: string;
-  entityId: string;
-  hasUnread: boolean;
-  onActivityClick: (activity: any) => void;
+  entityType: string
+  entityId: string
+  hasUnread: boolean
+  onActivityClick: (activity: any) => void
 }
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
 const statusColors: Record<string, string> = {
-  pending: "text-amber-500 bg-amber-500/10",
-  paid: "text-emerald-500 bg-emerald-500/10",
-  completed: "text-emerald-500 bg-emerald-500/10",
-  cancelled: "text-red-500 bg-red-500/10",
-  partial: "text-blue-500 bg-blue-500/10",
-  overdue: "text-rose-500 bg-rose-500/10",
-  draft: "text-gray-500 bg-gray-500/10",
-};
+  pending: 'text-amber-500 bg-amber-500/10',
+  paid: 'text-emerald-500 bg-emerald-500/10',
+  completed: 'text-emerald-500 bg-emerald-500/10',
+  cancelled: 'text-red-500 bg-red-500/10',
+  partial: 'text-blue-500 bg-blue-500/10',
+  overdue: 'text-rose-500 bg-rose-500/10',
+  draft: 'text-gray-500 bg-gray-500/10',
+}
 
 const statusLabels: Record<string, string> = {
-  pending: "در انتظار",
-  paid: "پرداخت شده",
-  completed: "تکمیل شده",
-  cancelled: "لغو شده",
-  partial: "بخشی پرداخت",
-  overdue: "سررسید شده",
-  draft: "پیش‌نویس",
-};
+  pending: 'در انتظار',
+  paid: 'پرداخت شده',
+  completed: 'تکمیل شده',
+  cancelled: 'لغو شده',
+  partial: 'بخشی پرداخت',
+  overdue: 'سررسید شده',
+  draft: 'پیش‌نویس',
+}
 
-const activityIcons = {
+const activityIcons: Record<string, LucideIcon> = {
   created: CheckCircle2,
   updated: FileText,
   status_changed: RefreshCw,
@@ -61,88 +62,80 @@ const activityIcons = {
   sent: Send,
   archived: Archive,
   cancelled: XCircle,
-};
+}
 
 const activityLabels: Record<string, string> = {
-  created: "ایجاد شد",
-  updated: "ویرایش شد",
-  status_changed: "تغییر وضعیت",
-  payment: "پرداخت",
-  approved: "تأیید شد",
-  rejected: "رد شد",
-  sent: "ارسال شد",
-  archived: "بایگانی شد",
-  cancelled: "لغو شد",
-};
+  created: 'ایجاد شد',
+  updated: 'ویرایش شد',
+  status_changed: 'تغییر وضعیت',
+  payment: 'پرداخت',
+  approved: 'تأیید شد',
+  rejected: 'رد شد',
+  sent: 'ارسال شد',
+  archived: 'بایگانی شد',
+  cancelled: 'لغو شد',
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function timeAgo(date: string, t: (key: string, fallback: string) => string): string {
-  const now = Date.now();
-  const diff = now - new Date(date).getTime();
-  const minutes = Math.floor(diff / 60000);
+function timeAgo(date: string, t: (key: string) => string): string {
+  const now = Date.now()
+  const diff = now - new Date(date).getTime()
+  const minutes = Math.floor(diff / 60000)
 
-  if (minutes < 1) return t("time.justNow");
-  if (minutes < 60) return t("time.minutesAgo");
-  
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return t("time.hoursAgo");
-  
-  const days = Math.floor(hours / 24);
-  if (days < 7) return t("time.daysAgo");
-  
-  const weeks = Math.floor(days / 7);
-  if (weeks < 4) return t("time.weeksAgo");
-  
-  const months = Math.floor(days / 30);
-  if (months < 12) return t("time.monthsAgo");
-  
-  return t("time.yearsAgo");
+  if (minutes < 1) return t('time.justNow')
+  if (minutes < 60) return t('time.minutesAgo')
+
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return t('time.hoursAgo')
+
+  const days = Math.floor(hours / 24)
+  if (days < 7) return t('time.daysAgo')
+
+  const weeks = Math.floor(days / 7)
+  if (weeks < 4) return t('time.weeksAgo')
+
+  const months = Math.floor(days / 30)
+  if (months < 12) return t('time.monthsAgo')
+
+  return t('time.yearsAgo')
 }
 
 function formatCurrency(amount: number, currency: string): string {
   try {
-    return new Intl.NumberFormat("fa-AF", {
-      style: "currency",
-      currency: currency || "AFN",
+    return new Intl.NumberFormat('fa-AF', {
+      style: 'currency',
+      currency: currency || 'AFN',
       maximumFractionDigits: 0,
-    }).format(amount);
+    }).format(amount)
   } catch {
-    return `${amount} ${currency || "AFN"}`;
+    return `${amount} ${currency || 'AFN'}`
   }
 }
 
 // ─── Sub-components ─────────────────────────────────────────────────────────
 
-const StatusBadge = memo(function StatusBadge({
-  status,
-}: {
-  status: string;
-}) {
-  const colorClass = statusColors[status] || "text-gray-500 bg-gray-500/10";
-  const labelKey = statusLabels[status] || status;
+const StatusBadge = memo(function StatusBadge({ status }: { status: string }) {
+  const colorClass = statusColors[status] || 'text-gray-500 bg-gray-500/10'
+  const labelKey = statusLabels[status] || status
 
   return (
-    <span className={cn("text-[10px] font-medium px-1.5 py-0.5 rounded", colorClass)}>
+    <span className={cn('text-[10px] font-medium px-1.5 py-0.5 rounded', colorClass)}>
       {labelKey}
     </span>
-  );
-});
-StatusBadge.displayName = "StatusBadge";
+  )
+})
+StatusBadge.displayName = 'StatusBadge'
 
-const ActivityIcon = memo(function ActivityIcon({
-  type,
-}: {
-  type: keyof typeof activityIcons;
-}) {
-  const Icon = activityIcons[type] || CheckCircle2;
+const ActivityIcon = memo(function ActivityIcon({ type }: { type: string }) {
+  const Icon = activityIcons[type] || CheckCircle2
   return (
     <div className="w-6 h-6 rounded-full bg-[hsl(var(--surface-muted))] flex items-center justify-center group-hover:bg-[hsl(var(--surface-muted)/0.8)] transition-colors">
       <Icon className="w-3.5 h-3.5 text-[hsl(var(--fg-tertiary))]" />
     </div>
-  );
-});
-ActivityIcon.displayName = "ActivityIcon";
+  )
+})
+ActivityIcon.displayName = 'ActivityIcon'
 
 // ─── Skeleton ────────────────────────────────────────────────────────────────
 
@@ -158,9 +151,9 @@ const CardSkeleton = memo(function CardSkeleton() {
         </div>
       </div>
     </div>
-  );
-});
-CardSkeleton.displayName = "CardSkeleton";
+  )
+})
+CardSkeleton.displayName = 'CardSkeleton'
 
 const TimelineSkeleton = memo(function TimelineSkeleton() {
   return (
@@ -175,26 +168,20 @@ const TimelineSkeleton = memo(function TimelineSkeleton() {
         </div>
       ))}
     </div>
-  );
-});
-TimelineSkeleton.displayName = "TimelineSkeleton";
+  )
+})
+TimelineSkeleton.displayName = 'TimelineSkeleton'
 
 // ─── Empty Timeline ─────────────────────────────────────────────────────────
 
-const EmptyTimeline = memo(function EmptyTimeline({
-  t,
-}: {
-  t: (key: string) => string;
-}) {
+const EmptyTimeline = memo(function EmptyTimeline({ t }: { t: (key: string) => string }) {
   return (
     <div className="py-4 text-center">
-      <p className="text-sm text-[hsl(var(--fg-tertiary))]">
-        {t("entity.activity.empty")}
-      </p>
+      <p className="text-sm text-[hsl(var(--fg-tertiary))]">{t('entity.activity.empty')}</p>
     </div>
-  );
-});
-EmptyTimeline.displayName = "EmptyTimeline";
+  )
+})
+EmptyTimeline.displayName = 'EmptyTimeline'
 
 // ─── Main Component ─────────────────────────────────────────────────────────
 
@@ -204,28 +191,31 @@ export const EntityActivityCard = memo(function EntityActivityCard({
   hasUnread,
   onActivityClick,
 }: EntityActivityCardProps) {
-  const t = useTranslations();
-  const [isOpen, setIsOpen] = useState(false);
+  const t = useTranslations()
+  const [isOpen, setIsOpen] = useState(false)
 
-  const { data: summary, isLoading: summaryLoading } = useEntitySummary(entityType, entityId);
-  const { data: activities, isLoading: activitiesLoading } = useEntityActivities(entityType, entityId);
+  const { data: summary, isLoading: summaryLoading } = useEntitySummary(entityType, entityId)
+  const { data: activities, isLoading: activitiesLoading } = useEntityActivities(
+    entityType,
+    entityId,
+  )
 
-  const toggle = useCallback(() => setIsOpen((p) => !p), []);
+  const toggle = useCallback(() => setIsOpen((p) => !p), [])
 
   if (summaryLoading) {
-    return <CardSkeleton />;
+    return <CardSkeleton />
   }
 
-  if (!summary) return null;
+  if (!summary) return null
 
   // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div
       className={cn(
-        "rounded-xl border border-[hsl(var(--border-default))] overflow-hidden",
-        "transition-all duration-200",
-        hasUnread && "border-[hsl(var(--color-primary)/0.3)] shadow-sm"
+        'rounded-xl border border-[hsl(var(--border-default))] overflow-hidden',
+        'transition-all duration-200',
+        hasUnread && 'border-[hsl(var(--color-primary)/0.3)] shadow-sm',
       )}
     >
       {/* ─── Header ─────────────────────────────────────────── */}
@@ -263,24 +253,21 @@ export const EntityActivityCard = memo(function EntityActivityCard({
               {summary.amount !== undefined && (
                 <span className="text-xs font-semibold text-[hsl(var(--fg-primary))] flex items-center gap-1">
                   <DollarSign className="w-3 h-3" aria-hidden="true" />
-                  {formatCurrency(summary.amount, summary.currency || "AFN")}
+                  {formatCurrency(summary.amount, summary.currency || 'AFN')}
                 </span>
               )}
             </div>
 
             {/* Status + Activity Count */}
             <div className="flex items-center gap-2 mt-1">
-              {summary.status && (
-                <StatusBadge status={summary.status} />
-              )}
+              {summary.status && <StatusBadge status={summary.status} />}
               <span className="text-[10px] text-[hsl(var(--fg-tertiary))] flex items-center gap-1">
                 <Clock className="w-3 h-3" aria-hidden="true" />
-                {t("entity.activity.count", { count: summary.activityCount })}
+                {t('entity.activity.count', { count: summary.activityCount })}
               </span>
               {summary.lastActivity && (
                 <span className="text-[10px] text-[hsl(var(--fg-tertiary))] flex items-center gap-1">
-                  •
-                  {timeAgo(summary.lastActivity.time, t)}
+                  •{timeAgo(summary.lastActivity, t)}
                 </span>
               )}
             </div>
@@ -289,8 +276,8 @@ export const EntityActivityCard = memo(function EntityActivityCard({
           {/* Chevron */}
           <ChevronDown
             className={cn(
-              "w-4 h-4 shrink-0 text-[hsl(var(--fg-tertiary))] transition-transform duration-200 mt-1",
-              isOpen && "rotate-180"
+              'w-4 h-4 shrink-0 text-[hsl(var(--fg-tertiary))] transition-transform duration-200 mt-1',
+              isOpen && 'rotate-180',
             )}
           />
         </div>
@@ -299,8 +286,8 @@ export const EntityActivityCard = memo(function EntityActivityCard({
       {/* ─── Timeline ───────────────────────────────────────── */}
       <div
         className={cn(
-          "grid transition-[grid-template-rows] duration-200 ease-out",
-          isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+          'grid transition-[grid-template-rows] duration-200 ease-out',
+          isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
         )}
       >
         <div className="overflow-hidden">
@@ -312,8 +299,8 @@ export const EntityActivityCard = memo(function EntityActivityCard({
             ) : (
               <div className="space-y-2">
                 {activities.map((activity, index) => {
-                  const isLast = index === activities.length - 1;
-                  const type = activity.type as keyof typeof activityIcons;
+                  const isLast = index === activities.length - 1
+                  const type = activity.action
 
                   return (
                     <button
@@ -323,9 +310,7 @@ export const EntityActivityCard = memo(function EntityActivityCard({
                     >
                       <div className="flex flex-col items-center shrink-0">
                         <ActivityIcon type={type} />
-                        {!isLast && (
-                          <div className="w-px h-3 bg-[hsl(var(--border-default))]" />
-                        )}
+                        {!isLast && <div className="w-px h-3 bg-[hsl(var(--border-default))]" />}
                       </div>
                       <div className="flex-1 pb-2">
                         <p className="text-sm text-[hsl(var(--fg-primary))] group-hover:text-[hsl(var(--color-primary))] transition-colors">
@@ -337,17 +322,14 @@ export const EntityActivityCard = memo(function EntityActivityCard({
                           </p>
                         )}
                         <p className="text-[10px] text-[hsl(var(--fg-tertiary))] mt-0.5">
-                          {new Date(activity.timestamp).toLocaleTimeString(
-                            "fa-AF",
-                            {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            }
-                          )}
+                          {new Date(activity.timestamp).toLocaleTimeString('fa-AF', {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
                         </p>
                       </div>
                     </button>
-                  );
+                  )
                 })}
               </div>
             )}
@@ -355,7 +337,7 @@ export const EntityActivityCard = memo(function EntityActivityCard({
         </div>
       </div>
     </div>
-  );
-});
+  )
+})
 
-EntityActivityCard.displayName = "EntityActivityCard";
+EntityActivityCard.displayName = 'EntityActivityCard'

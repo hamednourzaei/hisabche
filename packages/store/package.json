@@ -5,14 +5,15 @@
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "lint": "echo ok",
+    "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf node_modules"
   },
   "dependencies": {
     "crypto-js": "^4.2.0",
     "zustand": "^4.5.2",
-    "@hisabche/auth-core": "*"
+    "@hisabche/auth": "workspace:*",
+    "@hisabche/auth-core": "workspace:*"
   },
   "peerDependencies": {
     "react": "^18.2.0"

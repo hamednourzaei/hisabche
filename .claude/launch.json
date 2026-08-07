@@ -6,6 +6,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--workspace=apps/web"],
       "port": 3039
+    },
+    {
+      "name": "desktop",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--workspace=apps/desktop"],
+      "port": 5174
     }
   ]
 }

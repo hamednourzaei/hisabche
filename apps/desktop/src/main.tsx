@@ -16,20 +16,29 @@ import { initStorage } from './shared/lib/storage'
 import { useAuthStore } from './features/auth/auth.store'
 
 async function bootstrap(): Promise<void> {
-  await initStorage()
+  let locale = 'fa-IR'
+  try {
+    await initStorage()
+    const info = await bridge()?.app.info()
+    if (info?.locale) locale = info.locale
+  } catch (error) {
+    console.error('[bootstrap] non-fatal startup error:', error)
+  }
 
-  const info = await bridge()?.app.info()
-  await initDesktopI18n(info?.locale ?? 'fa-IR')
-  await useAuthStore.getState().hydrate()
+  await initDesktopI18n(locale)
+
+  try {
+    await useAuthStore.getState().hydrate()
+  } catch (error) {
+    console.error('[bootstrap] session hydrate failed:', error)
+  }
 
   const container = document.getElementById('root')
   if (!container) throw new Error('ROOT_MISSING')
-
   createRoot(container).render(
     <React.StrictMode>
       <App />
-    </React.StrictMode>
+    </React.StrictMode>,
   )
 }
-
 void bootstrap()

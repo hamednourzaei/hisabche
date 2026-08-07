@@ -31,6 +31,9 @@ export const IPC = {
   windowControl: 'window:control',
   appInfo: 'app:info',
   checkUpdates: 'app:checkUpdates',
+
+  // Outbound HTTP (main-process proxy: renders without browser CORS)
+  httpRequest: 'http:request',
 } as const
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC]
@@ -40,7 +43,11 @@ export type IpcChannel = (typeof IPC)[keyof typeof IPC]
 // ============================================
 
 export const secureKeySchema = z.object({
-  key: z.string().min(1).max(128).regex(/^[A-Za-z0-9._-]+$/),
+  key: z
+    .string()
+    .min(1)
+    .max(128)
+    .regex(/^[A-Za-z0-9._-]+$/),
 })
 
 export const secureSetSchema = secureKeySchema.extend({
@@ -120,6 +127,20 @@ export const importFileSchema = z.object({
 export const windowControlSchema = z.object({
   action: z.enum(['minimize', 'maximize', 'unmaximize', 'close', 'toggleMaximize']),
 })
+
+export const httpRequestSchema = z.object({
+  url: z.string().url().max(2048),
+  method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']),
+  headers: z.record(z.string().max(200)).optional(),
+  body: z.union([z.string().max(2_000_000), z.null()]).optional(),
+})
+
+export interface HttpRequestResponse {
+  status: number
+  statusText: string
+  headers: Record<string, string>
+  data: string
+}
 
 // ============================================
 // Response types

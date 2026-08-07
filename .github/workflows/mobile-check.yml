@@ -1,0 +1,51 @@
+name: Mobile Check
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/**'
+      - '.github/workflows/mobile-check.yml'
+  pull_request:
+    paths:
+      - 'apps/mobile/**'
+      - 'packages/**'
+
+concurrency:
+  group: mobile-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Type-check, test, expo bundle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.9.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      # The repo pins react 19 while RN 0.74 peers react 18 — pnpm needs
+      # this flag for the same reason npm did.
+      - run: pnpm install --frozen-lockfile --config.strict-peer-dependencies=false
+
+      - name: Design system type-check
+        run: pnpm --filter @hisabche/mobile-ui type-check
+
+      - name: App type-check
+        run: pnpm --filter @hisabche/mobile type-check
+
+      - name: Unit tests
+        run: pnpm --filter @hisabche/mobile test
+
+      # Proves the Metro graph resolves for a real device target.
+      - name: Bundle (Android)
+        working-directory: apps/mobile
+        run: npx expo export --platform android --no-bytecode --output-dir ../../.expo-export

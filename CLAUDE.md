@@ -1,8 +1,72 @@
 # CLAUDE.md
+
 # HISABCHE ENGINEERING MANIFEST
+
 Version: 3.0
 
 This document defines how Claude Code must work in this repository.
+
+---
+
+# PROJECT DOCUMENTATION (Source of Truth)
+
+Full engineering docs live in `documents/`:
+
+- `PRODUCT.md` — vision, personas, modules, implemented features
+- `SYSTEM_DESIGN.md` — architecture, data flow, offline-first, security
+- `DATABASE_SCHEMA.md` — Postgres tables, relations, migrations
+- `API_REFERENCE.md` — every backend route, payloads, validation rules
+- `AUTH_AND_PERMISSION.md` — roles, capabilities, per-platform auth stacks
+- `OFFLINE_SYNC.md` — local stores, queues, conflicts, retries
+- `USER_FLOWS.md` — Mermaid flows (auth, invoices, inventory, sync)
+- `PLATFORM_MATRIX.md` — web/desktop/mobile comparison
+- `RELEASE_PROCESS.md` — build/package/deploy pipelines
+- `TESTING_STRATEGY.md` — test layers, IPC tests, CI gates
+- `CODING_STANDARDS.md` — TS strict, Zod, money, i18n/RTL rules
+- `CLAUDE.md` — rules for future Claude Code sessions (this file's sibling)
+
+Consult the relevant doc before changing code; keep docs in sync when a
+documents-relevant behavior changes.
+
+---
+
+# DOCUMENTATION RULE (mandatory)
+
+Before modifying **architecture, schema, data flow, or sync behavior**,
+read the matching docs AND respect them:
+
+- `/documents/DOMAIN_MODEL.md` — entities, relations, invariants
+- `/documents/PRODUCT.md`
+- `/documents/SYSTEM_DESIGN.md`
+- `/documents/DATABASE_SCHEMA.md`
+- `/documents/AUTH_AND_PERMISSION.md`
+- `/documents/OFFLINE_SYNC.md`
+- `/documents/API_REFERENCE.md` — **docs-first**: new API = update this
+  contract BEFORE writing the route
+- `/documents/AI_RULES.md` — hard rules (no schema change without
+  migration, no removing offline support, no `any`, Zod always, i18n always)
+- `/documents/DATABASE_MIGRATION_POLICY.md` — schema change = migration +
+  rollback; never drop columns immediately
+- `/documents/ERROR_HANDLING.md` — IPC `IPC_ERROR_CODES`,
+  backend error classes, HTTP envelope
+
+Any code change must respect these documents. Deviation requires explicit
+user approval.
+
+---
+
+# CI / PRE-COMMIT
+
+- CI (`pnpm`-only, no `npm`): `.github/workflows/ci.yml`,
+  `desktop-build.yml`, `mobile-check.yml`. Backend = separate workspace; CI
+  installs it with `cd backend && pnpm install`.
+- Pre-commit gate: husky + lint-staged (`.husky/pre-commit` →
+  `.lintstagedrc.json`): eslint+prettier on staged files only.
+- Root `pnpm lint` is currently a **no-op** (every app's `lint` is `echo ok`;
+  backend also `echo ok`) — real lint is the eslint configured at root, so the
+  CI "lint" step is a stub until `lint` scripts are implemented.
+
+---
 
 These rules OVERRIDE Claude's default behavior.
 
@@ -132,7 +196,7 @@ Minimum 70%
 
 If implementation confidence
 
->=70%
+> =70%
 
 Do NOT continue searching.
 

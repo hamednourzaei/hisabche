@@ -14,6 +14,7 @@ import type {
   ImportedFile,
   LocalTable,
   QueueEntry,
+  HttpRequestResponse,
 } from '../shared/ipc-contract'
 
 export interface DesktopBridge {
@@ -43,7 +44,12 @@ export interface DesktopBridge {
     resolveQueue(clientId: string, status: 'done' | 'failed', error?: string): Promise<void>
   }
   print: {
-    html(input: { html: string; landscape?: boolean; silent?: boolean; deviceName?: string }): Promise<boolean>
+    html(input: {
+      html: string
+      landscape?: boolean
+      silent?: boolean
+      deviceName?: string
+    }): Promise<boolean>
     escPos(input: { data: string; deviceName?: string }): Promise<boolean>
   }
   files: {
@@ -56,11 +62,21 @@ export interface DesktopBridge {
     import(extensions: string[]): Promise<ImportedFile | null>
   }
   window: {
-    control(action: 'minimize' | 'maximize' | 'unmaximize' | 'close' | 'toggleMaximize'): Promise<void>
+    control(
+      action: 'minimize' | 'maximize' | 'unmaximize' | 'close' | 'toggleMaximize',
+    ): Promise<void>
   }
   app: {
     info(): Promise<AppInfo>
     checkUpdates(): Promise<void>
+  }
+  http: {
+    request(input: {
+      url: string
+      method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+      headers?: Record<string, string>
+      body?: string | null
+    }): Promise<HttpRequestResponse>
   }
 }
 
@@ -92,6 +108,9 @@ const bridge: DesktopBridge = {
   app: {
     info: () => ipcRenderer.invoke(IPC.appInfo, {}),
     checkUpdates: () => ipcRenderer.invoke(IPC.checkUpdates, {}),
+  },
+  http: {
+    request: (input) => ipcRenderer.invoke(IPC.httpRequest, input),
   },
 }
 

@@ -3,6 +3,9 @@ node_modules
 .pnp
 .pnp.js
 
+# Husky (local hooks — only _/ is generated)
+.husky/_
+
 # Turbo
 .turbo
 

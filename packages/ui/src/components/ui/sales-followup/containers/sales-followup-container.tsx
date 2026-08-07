@@ -1,38 +1,56 @@
-"use client";
+'use client'
 
-import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
-import { useState, useMemo } from "react";
-import { SalesFollowupView, type FollowUpStatus, type FollowUp } from "../sales-followup-view";
-import { useSalesFollowups, useCreateFollowup, useUpdateFollowup, useDeleteFollowup, type FollowUp as ApiFollowUp } from "@hisabche/api";
-import { useCustomers } from "@hisabche/api";
-import { useEmployees } from "@hisabche/api";
+import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
+import { useState, useMemo, useCallback } from 'react'
+import {
+  SalesFollowupView,
+  type FollowUpStatus,
+  type FollowUp,
+  type FollowUpCreateValues,
+} from '../sales-followup-view'
+import {
+  useSalesFollowups,
+  useCreateFollowup,
+  useUpdateFollowup,
+  useDeleteFollowup,
+  useCustomers,
+  useEmployees,
+  type FollowUp as ApiFollowUp,
+  type CreateFollowUpInput,
+  type UpdateFollowUpInput,
+} from '@hisabche/api'
 
 export function SalesFollowupContainer() {
-  const tOriginal = useTranslations();
-  const t = (key: string, fallback?: string): string => {
-    const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
-    return v && v !== key ? v : (fallback ?? key);
-  };
-  const router = useRouter();
-  const [statusFilter, setStatusFilter] = useState<FollowUpStatus | "all">("all");
-  const [page, setPage] = useState(1);
+  const tOriginal = useTranslations()
+  const t = useCallback(
+    (key: string, fallback?: string): string => {
+      const v = tOriginal(key as Parameters<typeof tOriginal>[0])
+      return v && v !== key ? v : (fallback ?? key)
+    },
+    [tOriginal],
+  )
+  const router = useRouter()
+  const [statusFilter, setStatusFilter] = useState<FollowUpStatus | 'all'>('all')
+  const [page, setPage] = useState(1)
 
-  const { data: followupsResponse, isLoading, refetch } = useSalesFollowups(
-    statusFilter === "all"
-      ? { page, limit: 20 }
-      : { status: statusFilter, page, limit: 20 }
-  );
+  const {
+    data: followupsResponse,
+    isLoading,
+    refetch,
+  } = useSalesFollowups(
+    statusFilter === 'all' ? { page, limit: 20 } : { status: statusFilter, page, limit: 20 },
+  )
 
-  const { data: customersData } = useCustomers();
+  const { data: customersData } = useCustomers()
 
-  const { data: employeesData } = useEmployees();
+  const { data: employeesData } = useEmployees()
 
-  const { mutateAsync: createFollowup } = useCreateFollowup();
+  const { mutateAsync: createFollowup } = useCreateFollowup()
 
-  const { mutateAsync: updateFollowup } = useUpdateFollowup();
+  const { mutateAsync: updateFollowup } = useUpdateFollowup()
 
-  const { mutateAsync: deleteFollowup } = useDeleteFollowup();
+  const { mutateAsync: deleteFollowup } = useDeleteFollowup()
 
   const followups: FollowUp[] = useMemo(
     () =>
@@ -56,57 +74,62 @@ export function SalesFollowupContainer() {
         updatedAt: f.updated_at,
         reminder: f.reminder,
       })),
-    [followupsResponse]
-  );
-  const total = followupsResponse?.total ?? 0;
+    [followupsResponse],
+  )
+  const total = followupsResponse?.total ?? 0
 
+  // Real `Customer` from @hisabche/validation uses `fullName`; the view expects
+  // a `name`. Map explicitly, no casts.
   const customers = useMemo(
     () =>
-      ((customersData?.customers ?? []) as Array<Record<string, unknown>>).map((c) => ({
-        id: String(c.id ?? ""),
-        name: String(c.name ?? (c.fullName as string) ?? ""),
-        email: (c.email as string | undefined) ?? undefined,
-        phone: (c.phone as string | undefined) ?? undefined,
+      (customersData?.customers ?? []).map((c) => ({
+        id: c.id ?? '',
+        name: c.fullName,
+        email: c.email || undefined,
+        phone: c.phone || undefined,
       })),
-    [customersData]
-  );
+    [customersData],
+  )
 
-  const employees = useMemo(
-    () =>
-      ((employeesData?.employees ?? []) as Array<Record<string, unknown>>).map((e) => ({
-        id: String(e.id ?? ""),
-        name: [e.first_name, e.last_name].filter(Boolean).join(" ") || String(e.employee_code ?? "") || "",
-      })),
-    [employeesData]
-  );
+  const employees = useMemo(() => employeesData?.employees ?? [], [employeesData])
 
-  const handleCreate = async (values: Record<string, unknown>) => {
-    await createFollowup(values as unknown as Parameters<typeof createFollowup>[0]);
-    refetch();
-  };
+  const handleCreate = async (values: FollowUpCreateValues) => {
+    const payload: CreateFollowUpInput = {
+      customer_id: values.customerId,
+      assigned_to_id: values.assignedTo,
+      type: values.type,
+      status: values.status,
+      next_action_date: values.nextActionDate,
+      notes: values.notes,
+      reminder: values.reminder,
+    }
+    await createFollowup(payload)
+    refetch()
+  }
 
   const handleUpdate = async (id: string, values: Partial<FollowUp>) => {
-    const { customer, assignedTo, ...rest } = values;
-    const payload = {
-      id,
-      ...rest,
-      customer_id: customer?.id,
-      assigned_to_id: assignedTo?.id,
-      next_action_date: values.nextActionDate,
-    };
-    await updateFollowup(payload as unknown as Parameters<typeof updateFollowup>[0]);
-    refetch();
-  };
+    const payload: UpdateFollowUpInput = {
+      ...(values.type !== undefined ? { type: values.type } : {}),
+      ...(values.status !== undefined ? { status: values.status } : {}),
+      ...(values.nextActionDate !== undefined ? { next_action_date: values.nextActionDate } : {}),
+      ...(values.notes !== undefined ? { notes: values.notes } : {}),
+      ...(values.reminder !== undefined ? { reminder: values.reminder } : {}),
+      ...(values.customer?.id !== undefined ? { customer_id: values.customer.id } : {}),
+      ...(values.assignedTo?.id !== undefined ? { assigned_to_id: values.assignedTo.id } : {}),
+    }
+    await updateFollowup({ id, ...payload })
+    refetch()
+  }
 
   const handleDelete = async (id: string) => {
-    await deleteFollowup(id);
-    refetch();
-  };
+    await deleteFollowup(id)
+    refetch()
+  }
 
   const handleFilter = () => {
     // Filter handled by API params
-    refetch();
-  };
+    refetch()
+  }
 
   return (
     <SalesFollowupView
@@ -123,5 +146,5 @@ export function SalesFollowupContainer() {
       onView={(id) => router.push(`/sales-followup/${id}`)}
       onFilter={handleFilter}
     />
-  );
+  )
 }
