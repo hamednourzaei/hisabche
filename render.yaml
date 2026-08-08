@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: hisabche-api
+    runtime: node
+    rootDir: .
+    # Render's image has a read-only /usr/bin, so `corepack enable` cannot
+    # symlink pnpm there. `npx -y pnpm@<version>` runs it from the npx cache.
+    buildCommand: npx -y pnpm@11.9.0 install --frozen-lockfile && npx -y pnpm@11.9.0 --filter @hisabche/backend exec drizzle-kit generate
+    # Start without pnpm: the workspace install already linked tsx into
+    # backend/node_modules/.bin.
+    startCommand: cd backend && ./node_modules/.bin/tsx src/index.ts
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 22.22.0
+      - key: NODE_ENV
+        value: production

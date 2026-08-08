@@ -4,10 +4,9 @@ import * as dotenv from 'dotenv'
 
 dotenv.config()
 
-const DATABASE_URL = process.env.SUPABASE_DATABASE_URL
-if (!DATABASE_URL) {
-  throw new Error('SUPABASE_DATABASE_URL is not defined in .env')
-}
+// `drizzle-kit generate` only needs the schema, not a live connection — so an
+// absent URL must not break the deploy build. push/migrate still fail loudly.
+const DATABASE_URL = process.env.SUPABASE_DATABASE_URL ?? ''
 
 export default defineConfig({
   dialect: 'postgresql',

@@ -1,11 +1,7 @@
 {
   "name": "hisabche",
   "private": true,
-  "workspaces": [
-    "apps/*",
-    "packages/*",
-    "backend"
-  ],
+  "packageManager": "pnpm@11.9.0",
   "scripts": {
     "dev": "turbo run dev",
     "build": "turbo run build",
@@ -39,8 +35,8 @@
     "zod": "^3.25.76"
   },
   "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=9.0.0"
+    "node": ">=22.13.0",
+    "pnpm": ">=11.0.0"
   },
   "overrides": {
     "react": "19.2.6",

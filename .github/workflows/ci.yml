@@ -23,7 +23,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
@@ -47,7 +47,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
 
       - run: pnpm install --frozen-lockfile
@@ -71,19 +71,15 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: pnpm
 
-      # Backend is its own workspace (backend/pnpm-workspace.yaml) — it is
-      # NOT covered by the root pnpm install.
-      - name: Install backend
-        working-directory: backend
-        run: pnpm install --frozen-lockfile
+      # Backend is a member of the root pnpm workspace (pnpm-workspace.yaml),
+      # so the root install covers it and `workspace:*` links resolve.
+      - run: pnpm install --frozen-lockfile
 
       - name: Backend type-check
-        working-directory: backend
-        run: pnpm type-check
+        run: pnpm --filter @hisabche/backend type-check
 
       - name: Backend tests
-        working-directory: backend
-        run: pnpm test
+        run: pnpm --filter @hisabche/backend test

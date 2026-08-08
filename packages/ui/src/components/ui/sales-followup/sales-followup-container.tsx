@@ -3,7 +3,11 @@
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useCallback, useState } from 'react'
-import { SalesFollowupView } from './sales-followup-view'
+import {
+  SalesFollowupView,
+  type FollowUp as ViewFollowUp,
+  type FollowUpCreateValues,
+} from './sales-followup-view'
 import {
   useSalesFollowups,
   useCreateFollowup,
@@ -11,13 +15,15 @@ import {
   useDeleteFollowup,
   useCustomers,
   useEmployees,
-  type FollowUp,
+  type FollowUp as ApiFollowUp,
+  type CreateFollowUpInput,
+  type UpdateFollowUpInput,
 } from '@hisabche/api'
 
 export function SalesFollowupContainer() {
   const t = useTranslations()
   const router = useRouter()
-  const [statusFilter, setStatusFilter] = useState<FollowUp['status'] | 'all'>('all')
+  const [statusFilter, setStatusFilter] = useState<ApiFollowUp['status'] | 'all'>('all')
   const [page, setPage] = useState(1)
 
   const {
@@ -25,7 +31,7 @@ export function SalesFollowupContainer() {
     isLoading,
     refetch,
   } = useSalesFollowups({
-    status: statusFilter === 'all' ? undefined : statusFilter,
+    ...(statusFilter === 'all' ? {} : { status: statusFilter }),
     page,
     limit: 20,
   })
@@ -60,8 +66,8 @@ export function SalesFollowupContainer() {
       id: string
       customer: { id: string; name: string }
       assignedTo: { id: string; name: string }
-      type: FollowUp['type']
-      status: FollowUp['status']
+      type: ApiFollowUp['type']
+      status: ApiFollowUp['status']
       nextActionDate: string
       notes: string
       createdAt: string
@@ -77,22 +83,14 @@ export function SalesFollowupContainer() {
       notes: f.notes,
       createdAt: f.created_at,
       updatedAt: f.updated_at,
-      reminder: f.reminder,
+      ...(f.reminder !== undefined ? { reminder: f.reminder } : {}),
     }),
   )
 
   // Create input contract comes from @hisabche/api. The view's create payload
   // is built via the view's known field names; map them explicitly.
-  const handleCreate = async (values: {
-    customerId: string
-    assignedTo: string
-    type: FollowUp['type']
-    status: FollowUp['status']
-    nextActionDate: string
-    notes: string
-    reminder: boolean
-  }) => {
-    await createFollowup({
+  const handleCreate = async (values: FollowUpCreateValues) => {
+    const payload: CreateFollowUpInput = {
       customer_id: values.customerId,
       assigned_to_id: values.assignedTo,
       type: values.type,
@@ -100,12 +98,22 @@ export function SalesFollowupContainer() {
       next_action_date: values.nextActionDate,
       notes: values.notes,
       reminder: values.reminder,
-    })
+    }
+    await createFollowup(payload)
     refetch()
   }
 
-  const handleUpdate = async (id: string, values: Partial<FollowUp>) => {
-    await updateFollowup({ id, ...values })
+  const handleUpdate = async (id: string, values: Partial<ViewFollowUp>) => {
+    const payload: UpdateFollowUpInput = {
+      ...(values.type !== undefined ? { type: values.type } : {}),
+      ...(values.status !== undefined ? { status: values.status } : {}),
+      ...(values.nextActionDate !== undefined ? { next_action_date: values.nextActionDate } : {}),
+      ...(values.notes !== undefined ? { notes: values.notes } : {}),
+      ...(values.reminder !== undefined ? { reminder: values.reminder } : {}),
+      ...(values.customer?.id !== undefined ? { customer_id: values.customer.id } : {}),
+      ...(values.assignedTo?.id !== undefined ? { assigned_to_id: values.assignedTo.id } : {}),
+    }
+    await updateFollowup({ id, ...payload })
     refetch()
   }
 
@@ -117,7 +125,7 @@ export function SalesFollowupContainer() {
   const handleFilter = (filter: {
     customerId?: string
     employeeId?: string
-    type?: FollowUp['type'] | 'all'
+    type?: ApiFollowUp['type'] | 'all'
   }) => {
     // Filter handled by API params
     refetch()
@@ -127,7 +135,12 @@ export function SalesFollowupContainer() {
     <SalesFollowupView
       t={safeT}
       followups={viewFollowups}
-      customers={customersData?.customers ?? []}
+      customers={(customersData?.customers ?? []).map((c) => ({
+        id: c.id ?? '',
+        name: c.fullName,
+        email: c.email || undefined,
+        phone: c.phone || undefined,
+      }))}
       employees={employeesData?.employees ?? []}
       isLoading={isLoading}
       statusFilter={statusFilter}
