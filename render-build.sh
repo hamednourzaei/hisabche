@@ -7,7 +7,9 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-PNPM=(npx -y pnpm@11.9.0)
+npx -y pnpm@11.9.0 install --frozen-lockfile
 
-"${PNPM[@]}" install --frozen-lockfile
-"${PNPM[@]}" --filter @hisabche/backend exec drizzle-kit generate
+# Call the binary directly: `pnpm --filter <pkg> exec` maps onto pnpm's
+# recursive mode and is rejected by pnpm 11.
+cd backend
+./node_modules/.bin/drizzle-kit generate
