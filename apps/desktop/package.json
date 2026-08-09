@@ -2,6 +2,9 @@
   "name": "@hisabche/desktop",
   "version": "0.0.1",
   "private": true,
+  "description": "Hisabche accounting and inventory desktop app",
+  "author": "Hisabche",
+  "desktopName": "hisabche.desktop",
   "packageManager": "pnpm@11.9.0",
   "pnpm": {
     "overrides": {
@@ -27,6 +30,7 @@
   },
   "dependencies": {
     "@hisabche/api": "workspace:*",
+    "@hisabche/formatting": "workspace:*",
     "@hisabche/auth-core": "workspace:*",
     "@hisabche/i18n": "workspace:*",
     "@hisabche/ui": "workspace:*",

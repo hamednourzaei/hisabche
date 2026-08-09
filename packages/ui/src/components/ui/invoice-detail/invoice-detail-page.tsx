@@ -11,17 +11,31 @@ import {
 } from './invoice-document'
 import { InvoiceSidebar, type InvoiceSidebarActions } from './invoice-sidebar'
 
+interface InvoiceItemDetail {
+  id?: string | undefined
+  title: string
+  quantity: number
+  amount: number
+  unit?: string | undefined
+  unitLabel?: string | null | undefined
+  sortOrder?: number | undefined
+}
+
 interface InvoiceItem {
   id?: string | undefined
   productName?: string | undefined
   product_name?: string | undefined
   quantity?: number | undefined
   unit?: string | undefined
+  unitLabel?: string | null | undefined
+  weightGrams?: number | null | undefined
   discount?: number | undefined
   unitPrice?: number | undefined
   unit_price?: number | undefined
   totalPrice?: number | undefined
   total_price?: number | undefined
+  /** Components of this line. Empty is valid and renders nothing. */
+  details?: InvoiceItemDetail[] | undefined
 }
 
 interface TimelineAction {
@@ -42,6 +56,8 @@ interface TimelineStep {
 
 export interface InvoiceDetailDisplay {
   id: string
+  /** sale | purchase — drives the document heading and party labels. */
+  type?: 'sale' | 'purchase' | undefined
   publicToken?: string | undefined
   invoiceNumber: string
   date: string
@@ -179,6 +195,7 @@ export function InvoiceDetailPage({
   } = invoice
 
   const documentData: InvoiceDocumentData = {
+    type: invoice.type ?? 'sale',
     invoiceId,
     publicToken,
     invoiceNumber,
@@ -203,9 +220,12 @@ export function InvoiceDetailPage({
       productName: item.productName ?? item.product_name ?? '',
       quantity: item.quantity ?? 0,
       unit: item.unit,
+      unitLabel: item.unitLabel,
+      weightGrams: item.weightGrams,
       unitPrice: item.unitPrice ?? item.unit_price ?? 0,
       discount: item.discount ?? 0,
       totalPrice: item.totalPrice ?? item.total_price ?? 0,
+      details: item.details ?? [],
     })),
     currency,
     subtotal,

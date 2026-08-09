@@ -4,13 +4,7 @@
 
 interface DesktopBundle {
   nav: Record<
-    | 'dashboard'
-    | 'sales'
-    | 'inventory'
-    | 'customers'
-    | 'accounting'
-    | 'settings'
-    | 'sync',
+    'dashboard' | 'sales' | 'inventory' | 'customers' | 'accounting' | 'settings' | 'sync',
     string
   >
   auth: Record<
@@ -35,8 +29,35 @@ interface DesktopBundle {
     string
   >
   shortcuts: Record<'title' | 'newInvoice' | 'save' | 'search' | 'print', string>
+  unit: Record<
+    'piece' | 'gram' | 'kg' | 'carton' | 'box' | 'pack' | 'meter' | 'liter' | 'custom',
+    string
+  >
   sales: Record<
-    'title' | 'invoiceNumber' | 'customer' | 'date' | 'status' | 'amount' | 'newInvoice' | 'print',
+    | 'title'
+    | 'invoiceNumber'
+    | 'customer'
+    | 'date'
+    | 'status'
+    | 'amount'
+    | 'newInvoice'
+    | 'print'
+    | 'sale'
+    | 'purchase'
+    | 'transactionType'
+    | 'newPurchase'
+    | 'supplier'
+    | 'quantity'
+    | 'unit'
+    | 'customUnit'
+    | 'customUnitPlaceholder'
+    | 'weightGrams'
+    | 'details'
+    | 'detailTitle'
+    | 'addDetail'
+    | 'removeDetail'
+    | 'componentsSum'
+    | 'detailsArePriced',
     string
   >
   inventory: Record<
@@ -90,6 +111,17 @@ const faIR: DesktopBundle = {
     search: 'جستجو',
     print: 'چاپ',
   },
+  unit: {
+    piece: 'عدد',
+    gram: 'گرم',
+    kg: 'کیلوگرم',
+    carton: 'کارتن',
+    box: 'جعبه',
+    pack: 'بسته',
+    meter: 'متر',
+    liter: 'لیتر',
+    custom: 'دلخواه',
+  },
   sales: {
     title: 'فروش',
     invoiceNumber: 'شماره',
@@ -99,6 +131,22 @@ const faIR: DesktopBundle = {
     amount: 'مبلغ',
     newInvoice: 'فاکتور جدید',
     print: 'چاپ فاکتور',
+    sale: 'فروش',
+    purchase: 'خرید',
+    transactionType: 'نوع تراکنش',
+    newPurchase: 'خرید جدید',
+    supplier: 'فروشنده',
+    quantity: 'تعداد',
+    unit: 'واحد',
+    customUnit: 'واحد دلخواه',
+    customUnitPlaceholder: 'مثلاً: مثقال',
+    weightGrams: 'وزن (گرم)',
+    details: 'جزئیات',
+    detailTitle: 'عنوان',
+    addDetail: 'افزودن جزئیات',
+    removeDetail: 'حذف جزئیات',
+    componentsSum: 'جمع اجزا',
+    detailsArePriced: 'مبلغ خط از جمع اجزا',
   },
   inventory: {
     title: 'انبار',
@@ -185,6 +233,17 @@ const en: DesktopBundle = {
     search: 'Search',
     print: 'Print',
   },
+  unit: {
+    piece: 'pcs',
+    gram: 'g',
+    kg: 'kg',
+    carton: 'carton',
+    box: 'box',
+    pack: 'pack',
+    meter: 'm',
+    liter: 'L',
+    custom: 'Custom',
+  },
   sales: {
     title: 'Sales',
     invoiceNumber: 'No.',
@@ -194,6 +253,22 @@ const en: DesktopBundle = {
     amount: 'Amount',
     newInvoice: 'New invoice',
     print: 'Print invoice',
+    sale: 'Sale',
+    purchase: 'Purchase',
+    transactionType: 'Transaction type',
+    newPurchase: 'New purchase',
+    supplier: 'Supplier',
+    quantity: 'Qty',
+    unit: 'Unit',
+    customUnit: 'Custom unit',
+    customUnitPlaceholder: 'e.g. mithqal',
+    weightGrams: 'Weight (g)',
+    details: 'Details',
+    detailTitle: 'Title',
+    addDetail: 'Add detail',
+    removeDetail: 'Remove detail',
+    componentsSum: 'Components total',
+    detailsArePriced: 'Line total from components',
   },
   inventory: {
     title: 'Inventory',

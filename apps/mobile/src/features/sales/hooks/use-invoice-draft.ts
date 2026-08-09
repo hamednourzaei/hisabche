@@ -7,6 +7,33 @@ import { useCallback, useMemo, useState } from 'react'
 import type { CreateInvoice, InvoiceItem } from '@hisabche/validation'
 import type { CurrencyCode } from '@hisabche/store'
 
+/** sale | purchase. One engine, two semantics — never two systems. */
+export type TransactionType = 'sale' | 'purchase'
+
+/** Mirrors `unitSchema` in @hisabche/validation. */
+export type DraftUnit =
+  'piece' | 'gram' | 'kg' | 'meter' | 'liter' | 'box' | 'pack' | 'carton' | 'custom'
+
+export const DRAFT_UNITS: readonly DraftUnit[] = [
+  'piece',
+  'gram',
+  'kg',
+  'carton',
+  'box',
+  'pack',
+  'meter',
+  'liter',
+  'custom',
+]
+
+/** A component of a line — "گردنبند" made of زنجیر / سنگ / اجرت. */
+export interface DraftDetail {
+  key: string
+  title: string
+  quantity: number
+  amount: number
+}
+
 export interface DraftItem {
   key: string
   productId?: string | undefined
@@ -14,10 +41,30 @@ export interface DraftItem {
   quantity: number
   unitPrice: number
   discount: number
+  unit?: DraftUnit | undefined
+  /** Free text, only when `unit === 'custom'`. */
+  unitLabel?: string | undefined
+  /** Weight, deliberately NOT the same field as `quantity`. */
+  weightGrams?: number | undefined
+  /** Optional. An empty list is a completely valid, and the default, state. */
+  details?: readonly DraftDetail[] | undefined
+  /**
+   * false — details are informational; the line total stays quantity × price.
+   * true  — the detail amounts ARE the line total and replace the base.
+   * Never base + details: that would double-count.
+   */
+  detailsArePriced?: boolean | undefined
+}
+
+/** Sum of a line's components. */
+export function detailsSum(details: readonly DraftDetail[] | undefined): number {
+  if (!details?.length) return 0
+  return details.reduce((sum, d) => sum + d.quantity * d.amount, 0)
 }
 
 export function lineTotal(item: DraftItem): number {
-  return item.quantity * item.unitPrice * (1 - item.discount / 100)
+  const base = item.detailsArePriced ? detailsSum(item.details) : item.quantity * item.unitPrice
+  return base * (1 - item.discount / 100)
 }
 
 export function subtotalOf(items: DraftItem[]): number {
@@ -28,12 +75,14 @@ export function subtotalOf(items: DraftItem[]): number {
 export function buildInvoice(
   items: DraftItem[],
   currency: CurrencyCode,
-  customerId?: string | undefined
+  customerId?: string | undefined,
+  type: TransactionType = 'sale',
 ): CreateInvoice {
   const subtotal = subtotalOf(items)
 
   return {
-    type: 'sale',
+    // Sent explicitly from form state, never inferred from the route.
+    type,
     date: new Date().toISOString(),
     customerId,
     items: items.map(toInvoiceItem),
@@ -51,6 +100,8 @@ export function buildInvoice(
 
 export interface InvoiceDraft {
   items: DraftItem[]
+  transactionType: TransactionType
+  setTransactionType: (type: TransactionType) => void
   customerId: string | undefined
   customerName: string | undefined
   subtotal: number
@@ -64,6 +115,7 @@ export interface InvoiceDraft {
 
 export function useInvoiceDraft(): InvoiceDraft {
   const [items, setItems] = useState<DraftItem[]>([])
+  const [transactionType, setTransactionType] = useState<TransactionType>('sale')
   const [customerId, setCustomerId] = useState<string | undefined>(undefined)
   const [customerName, setCustomerName] = useState<string | undefined>(undefined)
 
@@ -87,12 +139,15 @@ export function useInvoiceDraft(): InvoiceDraft {
   }, [])
 
   const build = useCallback(
-    (currency: CurrencyCode): CreateInvoice => buildInvoice(items, currency, customerId),
-    [customerId, items]
+    (currency: CurrencyCode): CreateInvoice =>
+      buildInvoice(items, currency, customerId, transactionType),
+    [customerId, items, transactionType],
   )
 
   return {
     items,
+    transactionType,
+    setTransactionType,
     customerId,
     customerName,
     subtotal,
@@ -110,8 +165,22 @@ function toInvoiceItem(item: DraftItem): InvoiceItem {
     productId: item.productId,
     productName: item.productName,
     quantity: item.quantity,
+    unit: item.unit ?? 'piece',
+    ...(item.unit === 'custom' && item.unitLabel?.trim()
+      ? { unitLabel: item.unitLabel.trim() }
+      : {}),
+    ...(item.weightGrams ? { weightGrams: item.weightGrams } : {}),
     unitPrice: item.unitPrice,
     discount: item.discount,
     totalPrice: lineTotal(item),
+    details: (item.details ?? [])
+      .filter((d) => d.title.trim())
+      .map((d, index) => ({
+        title: d.title.trim(),
+        quantity: d.quantity,
+        amount: d.amount,
+        sortOrder: index,
+      })),
+    detailsArePriced: item.detailsArePriced ?? false,
   } as InvoiceItem
 }

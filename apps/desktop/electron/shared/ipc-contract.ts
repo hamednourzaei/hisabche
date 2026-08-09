@@ -131,7 +131,9 @@ export const windowControlSchema = z.object({
 export const httpRequestSchema = z.object({
   url: z.string().url().max(2048),
   method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']),
-  headers: z.record(z.string().max(200)).optional(),
+  // 200 was too tight: a Supabase JWT in `Authorization` is ~1 KB, so every
+  // authenticated request was rejected and the UI rendered empty data.
+  headers: z.record(z.string().max(8_192)).optional(),
   body: z.union([z.string().max(2_000_000), z.null()]).optional(),
 })
 

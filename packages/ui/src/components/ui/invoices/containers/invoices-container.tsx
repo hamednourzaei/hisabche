@@ -1,10 +1,10 @@
 // packages/ui/src/containers/invoices-container.tsx
-"use client"
+'use client'
 
-import { useCallback } from "react"
-import { useRouter } from "next/navigation"
-import { useInvoicesPage } from "../../../../hooks/invoices/use-invoices-page"
-import { InvoicesView } from "../invoices-view"
+import { useCallback } from 'react'
+import { useRouter } from 'next/navigation'
+import { useInvoicesPage } from '../../../../hooks/invoices/use-invoices-page'
+import { InvoicesView } from '../invoices-view'
 
 export function InvoicesContainer() {
   const router = useRouter()
@@ -17,6 +17,8 @@ export function InvoicesContainer() {
     searchValue,
     filters,
     statusVariant,
+    typeFilter,
+    handleTypeFilterChange,
     handleSearchChange,
     handlePageChange,
     handleDeleteInvoice,
@@ -25,18 +27,16 @@ export function InvoicesContainer() {
 
   const handleNavigateInvoice = useCallback(
     (id: string) => router.push(`/invoices/${id}`),
-    [router]
+    [router],
   )
 
   const handleNavigateInvoiceAction = useCallback(
-    (id: string, action: "pdf" | "print" | "png") => router.push(`/invoices/${id}?action=${action}`),
-    [router]
+    (id: string, action: 'pdf' | 'print' | 'png') =>
+      router.push(`/invoices/${id}?action=${action}`),
+    [router],
   )
 
-  const handleNewInvoice = useCallback(
-    () => router.push("/quick-invoice"),
-    [router]
-  )
+  const handleNewInvoice = useCallback(() => router.push('/quick-invoice'), [router])
 
   return (
     <InvoicesView
@@ -54,6 +54,8 @@ export function InvoicesContainer() {
       onNewInvoice={handleNewInvoice}
       onDeleteInvoice={handleDeleteInvoice}
       statusVariant={statusVariant}
+      typeFilter={typeFilter}
+      onTypeFilterChange={handleTypeFilterChange}
     />
   )
 }

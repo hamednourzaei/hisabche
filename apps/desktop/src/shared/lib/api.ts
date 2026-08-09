@@ -17,13 +17,30 @@ export const API_BASE_URL = import.meta.env.VITE_API_URL ?? FALLBACK_API_URL
 
 apiClient.defaults.baseURL = API_BASE_URL
 
+function buildUrl(baseURL: string | undefined, path: string | undefined, params: unknown): string {
+  const relative = path ?? ''
+  const absolute = /^https?:\/\//i.test(relative)
+    ? relative
+    : `${(baseURL ?? '').replace(/\/+$/, '')}/${relative.replace(/^\/+/, '')}`
+
+  if (!params || typeof params !== 'object') return absolute
+
+  const query = new URLSearchParams()
+  for (const [key, value] of Object.entries(params as Record<string, unknown>)) {
+    if (value !== undefined && value !== null) query.append(key, String(value))
+  }
+  const search = query.toString()
+  if (!search) return absolute
+
+  return absolute + (absolute.includes('?') ? '&' : '?') + search
+}
+
 const bridgeHttp = bridge()?.http
 if (bridgeHttp) {
   apiClient.defaults.adapter = async (config) => {
-    const url =
-      config.baseURL && config.url
-        ? new URL(config.url, config.baseURL).toString()
-        : (config.url ?? '')
+    // Concatenate, don't resolve: `new URL('/auth/login', '…/api')` drops the
+    // '/api' path segment of the base URL and every request 404s.
+    const url = buildUrl(config.baseURL, config.url, config.params)
     const headers: Record<string, string> = {}
     const configHeaders = config.headers as Record<string, string> | undefined
     if (configHeaders) {

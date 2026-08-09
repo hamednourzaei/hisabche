@@ -1,20 +1,20 @@
 // packages/ui/src/hooks/use-invoices-page.ts
-"use client";
+'use client'
 
-import { useState, useCallback, useMemo } from "react";
-import { useTranslations } from "next-intl";
-import { useInvoices, useDeleteInvoice } from "@hisabche/api";
-import { mapInvoices } from "../../lib/invoices/invoices-mappers";
-import { STATUS_MAP } from "../../lib/invoices/invoices-format";
-import type { InvoicesQueryParams } from "../../lib/invoices/invoices-types";
+import { useState, useCallback, useMemo } from 'react'
+import { useTranslations } from 'next-intl'
+import { useInvoices, useDeleteInvoice } from '@hisabche/api'
+import { mapInvoices } from '../../lib/invoices/invoices-mappers'
+import { STATUS_MAP } from '../../lib/invoices/invoices-format'
+import type { InvoicesQueryParams } from '../../lib/invoices/invoices-types'
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
 const DEFAULT_FILTERS: InvoicesQueryParams = {
   page: 1,
   limit: 10,
-  sortDirection: "desc",
-};
+  sortDirection: 'desc',
+}
 
 /**
  * ✅ FIX: کارت‌های آمار قبلاً فقط روی همان صفحه‌ی جاری (۱۰ فاکتور) حساب
@@ -22,78 +22,88 @@ const DEFAULT_FILTERS: InvoicesQueryParams = {
  * سقف بالا فقط برای آمار زده می‌شود تا شمارش و مجموع‌ها کل فاکتورها را
  * پوشش دهند، بدون آن‌که اندازه‌ی صفحه‌ی جدول تغییر کند.
  */
-const STATS_LIMIT = 500;
+const STATS_LIMIT = 500
 
 // ─── Main Hook ─────────────────────────────────────────────────────────────
 
 export function useInvoicesPage() {
-  const t = useTranslations();
+  const t = useTranslations()
 
-  const [filters, setFilters] = useState<InvoicesQueryParams>(DEFAULT_FILTERS);
+  const [filters, setFilters] = useState<InvoicesQueryParams>(DEFAULT_FILTERS)
 
   // ─── Data Fetching ──────────────────────────────────────────────────────
-  const { data, isLoading, refetch } = useInvoices(filters);
+  const { data, isLoading, refetch } = useInvoices(filters)
   const { data: statsData } = useInvoices({
     page: 1,
     limit: STATS_LIMIT,
-    sortDirection: "desc",
+    sortDirection: 'desc',
     ...(filters.search ? { search: filters.search } : {}),
-  });
-  const deleteInvoice = useDeleteInvoice();
+  })
+  const deleteInvoice = useDeleteInvoice()
 
   // ─── Transformations ────────────────────────────────────────────────────
-  const invoices = useMemo(
-    () => mapInvoices(data?.invoices as any[] | undefined),
-    [data]
-  );
+  const invoices = useMemo(() => mapInvoices(data?.invoices as any[] | undefined), [data])
 
   /** همه‌ی فاکتورهای منطبق با فیلتر — فقط برای کارت‌های آمار. */
   const statsInvoices = useMemo(
     () => mapInvoices(statsData?.invoices as any[] | undefined),
-    [statsData]
-  );
+    [statsData],
+  )
 
-  const total = data?.total ?? 0;
+  const total = data?.total ?? 0
 
   // ─── Handlers ───────────────────────────────────────────────────────────
-  const statusVariant = useCallback(
-    (status: string) => STATUS_MAP[status] || "secondary",
-    []
-  );
+  const statusVariant = useCallback((status: string) => STATUS_MAP[status] || 'secondary', [])
 
   const handleSearchChange = useCallback(
     (value: string) => setFilters((prev) => ({ ...prev, search: value, page: 1 })),
-    []
-  );
+    [],
+  )
 
-  const handleClearFilters = useCallback(
-    () => setFilters(DEFAULT_FILTERS),
-    []
-  );
+  /**
+   * همه / فروش / خرید. "all" removes the key entirely rather than sending an
+   * empty string, so the backend's `if (type)` guard behaves as intended.
+   * Always resets to page 1 — staying on page 3 of a narrower result set
+   * would show an empty table.
+   */
+  const handleTypeFilterChange = useCallback(
+    (value: 'all' | 'sale' | 'purchase') =>
+      setFilters((prev) => {
+        const next = { ...prev, page: 1 }
+        if (value === 'all') {
+          delete next.type
+          return next
+        }
+        return { ...next, type: value }
+      }),
+    [],
+  )
+
+  const handleClearFilters = useCallback(() => setFilters(DEFAULT_FILTERS), [])
 
   const handlePageChange = useCallback(
     (page: number) => setFilters((prev) => ({ ...prev, page })),
-    []
-  );
+    [],
+  )
 
   const handleDeleteInvoice = useCallback(
     async (id: string) => {
       if (id) {
-        await deleteInvoice.mutateAsync(id);
-        refetch();
+        await deleteInvoice.mutateAsync(id)
+        refetch()
       }
     },
-    [deleteInvoice, refetch]
-  );
+    [deleteInvoice, refetch],
+  )
 
   // ─── Safe Translation ──────────────────────────────────────────────────
   const safeT = useCallback(
     (key: string, fallback?: string) => {
-      const v = t(key);
-      return v !== key ? v : (fallback ?? key);
+      const v = t(key)
+      return v !== key ? v : (fallback ?? key)
     },
-    [t]
-  );
+    [t],
+  )
 
   // ─── Return ────────────────────────────────────────────────────────────
   return {
@@ -101,16 +111,18 @@ export function useInvoicesPage() {
     statsInvoices,
     isLoading,
     total,
-    searchValue: filters.search ?? "",
+    searchValue: filters.search ?? '',
     filters: {
       page: filters.page,
       limit: filters.limit,
     },
     statusVariant,
+    typeFilter: (filters.type ?? 'all') as 'all' | 'sale' | 'purchase',
+    handleTypeFilterChange,
     handleSearchChange,
     handleClearFilters,
     handlePageChange,
     handleDeleteInvoice,
     safeT,
-  };
+  }
 }

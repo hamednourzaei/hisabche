@@ -7,6 +7,33 @@ import type { CreateInvoice, InvoiceItem } from '@hisabche/validation'
 
 import type { CurrencyCode } from '@/shared/lib/currency'
 
+/** sale | purchase. One engine, two semantics — never two systems. */
+export type TransactionType = 'sale' | 'purchase'
+
+/** Mirrors `unitSchema` in @hisabche/validation. */
+export type DraftUnit =
+  'piece' | 'gram' | 'kg' | 'meter' | 'liter' | 'box' | 'pack' | 'carton' | 'custom'
+
+export const DRAFT_UNITS: readonly DraftUnit[] = [
+  'piece',
+  'gram',
+  'kg',
+  'carton',
+  'box',
+  'pack',
+  'meter',
+  'liter',
+  'custom',
+]
+
+/** A component of a line — "گردنبند" made of زنجیر / سنگ / اجرت. */
+export interface DraftDetail {
+  key: string
+  title: string
+  quantity: number
+  amount: number
+}
+
 export interface DraftLine {
   key: string
   productId?: string | undefined
@@ -14,10 +41,33 @@ export interface DraftLine {
   quantity: number
   unitPrice: number
   discount: number
+  unit?: DraftUnit | undefined
+  /** Free text, only when `unit === 'custom'`. */
+  unitLabel?: string | undefined
+  /**
+   * Weight, deliberately NOT the same field as `quantity`.
+   * "1 necklace weighing 12.5 g" is quantity=1, weightGrams=12.5.
+   */
+  weightGrams?: number | undefined
+  /** Optional. An empty list is a completely valid, and the default, state. */
+  details?: readonly DraftDetail[] | undefined
+  /**
+   * false — details are informational; the line total stays quantity × price.
+   * true  — the detail amounts ARE the line total and replace the base.
+   * Never base + details: that would double-count.
+   */
+  detailsArePriced?: boolean | undefined
+}
+
+/** Sum of a line's components. */
+export function detailsSum(details: readonly DraftDetail[] | undefined): number {
+  if (!details?.length) return 0
+  return details.reduce((sum, d) => sum + d.quantity * d.amount, 0)
 }
 
 export function lineTotal(line: DraftLine): number {
-  return line.quantity * line.unitPrice * (1 - line.discount / 100)
+  const base = line.detailsArePriced ? detailsSum(line.details) : line.quantity * line.unitPrice
+  return base * (1 - line.discount / 100)
 }
 
 export function subtotalOf(lines: readonly DraftLine[]): number {
@@ -29,21 +79,37 @@ function toItem(line: DraftLine): InvoiceItem {
     productId: line.productId,
     productName: line.productName,
     quantity: line.quantity,
+    unit: line.unit ?? 'piece',
+    ...(line.unit === 'custom' && line.unitLabel?.trim()
+      ? { unitLabel: line.unitLabel.trim() }
+      : {}),
+    ...(line.weightGrams ? { weightGrams: line.weightGrams } : {}),
     unitPrice: line.unitPrice,
     discount: line.discount,
     totalPrice: lineTotal(line),
+    details: (line.details ?? [])
+      .filter((d) => d.title.trim())
+      .map((d, index) => ({
+        title: d.title.trim(),
+        quantity: d.quantity,
+        amount: d.amount,
+        sortOrder: index,
+      })),
+    detailsArePriced: line.detailsArePriced ?? false,
   } as InvoiceItem
 }
 
 export function buildInvoice(
   lines: readonly DraftLine[],
   currency: CurrencyCode,
-  customerId?: string | undefined
+  customerId?: string | undefined,
+  type: TransactionType = 'sale',
 ): CreateInvoice {
   const subtotal = subtotalOf(lines)
 
   return {
-    type: 'sale',
+    // Sent explicitly from form state, never inferred from the route.
+    type,
     date: new Date().toISOString(),
     customerId,
     items: lines.map(toItem),

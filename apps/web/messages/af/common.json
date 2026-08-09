@@ -1163,7 +1163,15 @@
     "copied": "کپی شد",
     "shareNative": "سایر",
     "qrHint": "با اسکن این کد، فاکتور بدون نیاز به ورود قابل مشاهده است",
-    "publicFooter": "این فاکتور توسط حسابچه صادر شده"
+    "publicFooter": "این فاکتور توسط حسابچه صادر شده",
+    "type": {
+      "sale": "فروش",
+      "purchase": "خرید"
+    },
+    "filterAll": "همه",
+    "saleInvoice": "فاکتور فروش",
+    "purchaseInvoice": "فاکتور خرید",
+    "supplierInfo": "اطلاعات فروشنده"
   },
   "warehouse": {
     "title": "انبار",
@@ -1559,7 +1567,26 @@
     "quantity": "تعداد",
     "unitPrice": "مبلغ واحد",
     "lineTotal": "جمع",
-    "unitPricePlaceholder": "مبلغ را وارد کنید"
+    "unitPricePlaceholder": "مبلغ را وارد کنید",
+    "whatBought": "چه چیزی خریدید؟",
+    "transactionType": "نوع تراکنش",
+    "sale": "فروش",
+    "purchase": "خرید",
+    "unit": "واحد",
+    "customUnit": "واحد دلخواه",
+    "customUnitPlaceholder": "مثلاً: مثقال",
+    "details": "جزئیات",
+    "detailTitle": "عنوان",
+    "amount": "مبلغ",
+    "addDetails": "افزودن جزئیات",
+    "hideDetails": "بستن جزئیات",
+    "addDetail": "افزودن جزئیات",
+    "removeDetail": "حذف جزئیات",
+    "componentsSum": "جمع اجزا",
+    "detailsArePriced": "مبلغ خط از جمع اجزا محاسبه شود",
+    "toWhomBought": "از چه کسی خریدید؟ (اختیاری)",
+    "supplier": "فروشنده",
+    "weightGrams": "وزن (گرم)"
   },
   "payment": {
     "record": "ثبت پرداخت",
@@ -2117,15 +2144,7 @@
       "دلو",
       "حوت"
     ],
-    "weekdaysShort": [
-      "ش",
-      "ی",
-      "د",
-      "س",
-      "چ",
-      "پ",
-      "ج"
-    ],
+    "weekdaysShort": ["ش", "ی", "د", "س", "چ", "پ", "ج"],
     "prev": "قبلی",
     "next": "بعدی"
   },
@@ -2191,7 +2210,8 @@
       "pending": "در انتظار",
       "received": "دریافت‌شده",
       "cancelled": "لغوشده"
-    }
+    },
+    "recordPurchase": "ثبت خرید"
   },
   "activity": {
     "title": "فعالیت‌ها",
@@ -2301,5 +2321,16 @@
   },
   "action": {
     "clear": "پاک کردن"
+  },
+  "unit": {
+    "piece": "عدد",
+    "gram": "گرم",
+    "kg": "کیلوگرم",
+    "carton": "کارتن",
+    "box": "جعبه",
+    "pack": "بسته",
+    "meter": "متر",
+    "liter": "لیتر",
+    "custom": "دلخواه"
   }
 }

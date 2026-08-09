@@ -1,10 +1,12 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
-const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://quxpxatopmquheoazzlj.supabase.co'
+// The Electron renderer is bundled by Vite, which does not define `process`,
+// so reading it directly makes this module throw on import there.
+const env: Record<string, string | undefined> = typeof process !== 'undefined' ? process.env : {}
+
+const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL || 'https://quxpxatopmquheoazzlj.supabase.co'
 const supabaseKey =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-  'sb_publishable_mGppZjb0DVEKLFf7f1XjmQ_iHBQVu_U'
+  env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_mGppZjb0DVEKLFf7f1XjmQ_iHBQVu_U'
 
 // ============================================
 // ✅ Singleton واقعی — فقط یک بار در کل اپلیکیشن ساخته می‌شود
@@ -14,7 +16,6 @@ const supabaseKey =
 // ============================================
 
 declare global {
-  // eslint-disable-next-line no-var
   var __hisabche_supabase_client__: SupabaseClient | undefined
 }
 
@@ -29,6 +30,6 @@ function createSupabaseClient(): SupabaseClient {
 export const supabaseClient: SupabaseClient =
   globalThis.__hisabche_supabase_client__ ?? createSupabaseClient()
 
-if (process.env.NODE_ENV !== 'production') {
+if (env.NODE_ENV !== 'production') {
   globalThis.__hisabche_supabase_client__ = supabaseClient
 }

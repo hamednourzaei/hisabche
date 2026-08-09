@@ -23,7 +23,9 @@ import { ScreenHeader } from '../../../shared/components/screen-header'
 import { currencySign, formatAmount } from '../../../shared/lib/format'
 import { useCurrency } from '../../settings/preferences.store'
 import { CustomerPickerSheet } from '../components/customer-picker-sheet'
+import { LineItemDetailEditor } from '../components/line-item-detail-editor'
 import { LineItemRow } from '../components/line-item-row'
+import { TransactionTypeSwitch } from '../components/transaction-type-switch'
 import { ProductPickerSheet } from '../components/product-picker-sheet'
 import { useSubmitInvoice } from '../hooks/use-create-invoice'
 import { useInvoiceDraft } from '../hooks/use-invoice-draft'
@@ -57,7 +59,13 @@ export function NewInvoiceScreen() {
 
   return (
     <AppScreen>
-      <ScreenHeader title={t('sales.newInvoice')} />
+      <ScreenHeader
+        title={
+          draft.transactionType === 'purchase'
+            ? t('sales.newPurchase', 'خرید جدید')
+            : t('sales.newInvoice')
+        }
+      />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -68,15 +76,26 @@ export function NewInvoiceScreen() {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
+          {/* فروش / خرید — same form, same engine, different semantics. */}
+          <TransactionTypeSwitch
+            value={draft.transactionType}
+            onChange={draft.setTransactionType}
+          />
+
           <MobileCard onPress={() => setCustomerOpen(true)} padding="lg">
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
               <Avatar name={draft.customerName ?? '?'} size={40} />
               <View style={{ flex: 1, gap: 2 }}>
                 <Text variant="legal" tone="tertiary">
-                  {t('sales.customer')}
+                  {draft.transactionType === 'purchase'
+                    ? t('sales.supplier', 'فروشنده')
+                    : t('sales.customer')}
                 </Text>
                 <Text variant="bodyStrong" numberOfLines={1}>
-                  {draft.customerName ?? t('sales.selectCustomer')}
+                  {draft.customerName ??
+                    (draft.transactionType === 'purchase'
+                      ? t('sales.selectSupplier', 'انتخاب فروشنده')
+                      : t('sales.selectCustomer'))}
                 </Text>
               </View>
               <Ionicons name="chevron-back" size={18} color={colors.fgTertiary} />
@@ -100,13 +119,17 @@ export function NewInvoiceScreen() {
             ) : (
               <View style={{ gap: spacing.sm }}>
                 {draft.items.map((item, index) => (
-                  <LineItemRow
-                    key={item.key}
-                    testID={`line-item-${index}`}
-                    item={item}
-                    currency={currency}
-                    onRemove={() => draft.removeItem(item.key)}
-                  />
+                  <View key={item.key}>
+                    <LineItemRow
+                      testID={`line-item-${index}`}
+                      item={item}
+                      currency={currency}
+                      onRemove={() => draft.removeItem(item.key)}
+                    />
+                    {/* Optional components — collapsed until asked for, so a
+                        simple sale stays a single compact row. */}
+                    <LineItemDetailEditor item={item} onChange={draft.updateItem} />
+                  </View>
                 ))}
               </View>
             )}

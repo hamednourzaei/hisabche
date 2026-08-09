@@ -1082,6 +1082,13 @@
   },
   "invoices": {
     "title": "فاکتور",
+    "type": {
+      "sale": "فروش",
+      "purchase": "خرید"
+    },
+    "filterAll": "همه",
+    "saleInvoice": "فاکتور فروش",
+    "purchaseInvoice": "فاکتور خرید",
     "newInvoice": "فاکتور جدید",
     "invoiceNumber": "شماره فاکتور",
     "invoiceDate": "تاریخ فاکتور",
@@ -1164,7 +1171,8 @@
     "copied": "کپی شد",
     "shareNative": "سایر",
     "qrHint": "با اسکن این کد، فاکتور بدون نیاز به ورود قابل مشاهده است",
-    "publicFooter": "این فاکتور توسط حسابچه صادر شده"
+    "publicFooter": "این فاکتور توسط حسابچه صادر شده",
+    "supplierInfo": "اطلاعات فروشنده"
   },
   "warehouse": {
     "title": "انبار",
@@ -1545,10 +1553,37 @@
     "warehouseValue": "ارزش کل انبار",
     "vsLastMonth": "نسبت به ماه گذشته"
   },
+  "unit": {
+    "piece": "عدد",
+    "gram": "گرم",
+    "kg": "کیلوگرم",
+    "carton": "کارتن",
+    "box": "جعبه",
+    "pack": "بسته",
+    "meter": "متر",
+    "liter": "لیتر",
+    "custom": "دلخواه"
+  },
   "quickInvoice": {
     "title": "فاکتور سریع",
     "description": "ایجاد فاکتور در چند ثانیه",
     "whatSold": "چه چیزی فروختید؟",
+    "whatBought": "چه چیزی خریدید؟",
+    "transactionType": "نوع تراکنش",
+    "sale": "فروش",
+    "purchase": "خرید",
+    "unit": "واحد",
+    "customUnit": "واحد دلخواه",
+    "customUnitPlaceholder": "مثلاً: مثقال",
+    "details": "جزئیات",
+    "detailTitle": "عنوان",
+    "amount": "مبلغ",
+    "addDetails": "افزودن جزئیات",
+    "hideDetails": "بستن جزئیات",
+    "addDetail": "افزودن جزئیات",
+    "removeDetail": "حذف جزئیات",
+    "componentsSum": "جمع اجزا",
+    "detailsArePriced": "مبلغ خط از جمع اجزا محاسبه شود",
     "toWhom": "به چه کسی فروختید؟ (اختیاری)",
     "howMuch": "چقدر فروختید؟",
     "productPlaceholder": "مثلاً: برنج، روغن، چای...",
@@ -1560,7 +1595,10 @@
     "quantity": "تعداد",
     "unitPrice": "مبلغ واحد",
     "lineTotal": "جمع",
-    "unitPricePlaceholder": "مبلغ را وارد کنید"
+    "unitPricePlaceholder": "مبلغ را وارد کنید",
+    "toWhomBought": "از چه کسی خریدید؟ (اختیاری)",
+    "supplier": "فروشنده",
+    "weightGrams": "وزن (گرم)"
   },
   "payment": {
     "record": "ثبت پرداخت",
@@ -2118,15 +2156,7 @@
       "بهمن",
       "اسفند"
     ],
-    "weekdaysShort": [
-      "ش",
-      "ی",
-      "د",
-      "س",
-      "چ",
-      "پ",
-      "ج"
-    ],
+    "weekdaysShort": ["ش", "ی", "د", "س", "چ", "پ", "ج"],
     "prev": "قبلی",
     "next": "بعدی"
   },
@@ -2180,6 +2210,7 @@
   },
   "purchasing": {
     "title": "خرید",
+    "recordPurchase": "ثبت خرید",
     "empty": "هیچ سفارش خریدی ثبت نشده",
     "supplier": "تأمین‌کننده",
     "orderDate": "تاریخ سفارش",

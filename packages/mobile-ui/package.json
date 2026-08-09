@@ -9,6 +9,9 @@
     "type-check": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "clean": "rm -rf node_modules"
   },
+  "dependencies": {
+    "@hisabche/design-tokens": "workspace:*"
+  },
   "peerDependencies": {
     "react": "*",
     "react-native": "*"

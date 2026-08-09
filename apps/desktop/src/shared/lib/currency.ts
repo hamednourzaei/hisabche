@@ -8,33 +8,37 @@
 import type { z } from 'zod'
 import { currencyCodeSchema } from '@hisabche/validation'
 
+import {
+  currencySign as canonicalSign,
+  formatMoney as canonicalMoney,
+  formatNumber,
+} from '@hisabche/formatting'
+
 import { i18n } from '@/shared/i18n'
 
 export type CurrencyCode = z.infer<typeof currencyCodeSchema>
 
 export const CURRENCY_CODES = currencyCodeSchema.options
 
-const CURRENCY_SIGN: Record<CurrencyCode, string> = {
-  AFN: '؋',
-  IRR: '﷼',
-  USD: '$',
-  PKR: '₨',
-}
-
 function localeTag(): string {
   return i18n.language || 'fa-IR'
 }
 
 export function currencySign(currency: CurrencyCode): string {
-  return CURRENCY_SIGN[currency] ?? currency
+  return canonicalSign(currency)
 }
 
+/**
+ * Grouped digits with no currency context — counts, quantities, stock levels.
+ * Money must go through `formatMoney`, which applies the per-currency decimal
+ * policy (USD keeps 2 decimals; AFN/PKR/IRR keep none).
+ */
 export function formatAmount(value: number): string {
-  return new Intl.NumberFormat(localeTag(), { maximumFractionDigits: 0 }).format(value)
+  return formatNumber(value, localeTag())
 }
 
 export function formatMoney(value: number, currency: CurrencyCode): string {
-  return `${formatAmount(value)} ${currencySign(currency)}`
+  return canonicalMoney(value, currency, localeTag())
 }
 
 export function formatDate(value: string | Date | null | undefined): string {

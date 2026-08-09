@@ -90,7 +90,26 @@ interface MobileBundle {
     | 'statusCompleted'
     | 'statusPartial'
     | 'statusOverdue'
-    | 'statusCancelled',
+    | 'statusCancelled'
+    | 'sale'
+    | 'purchase'
+    | 'transactionType'
+    | 'newPurchase'
+    | 'supplier'
+    | 'selectSupplier'
+    | 'unit'
+    | 'customUnit'
+    | 'customUnitPlaceholder'
+    | 'weightGrams'
+    | 'details'
+    | 'detailTitle'
+    | 'amount'
+    | 'addDetails'
+    | 'hideDetails'
+    | 'addDetail'
+    | 'removeDetail'
+    | 'componentsSum'
+    | 'detailsArePriced',
     string
   >
   inventory: Record<
@@ -110,12 +129,38 @@ interface MobileBundle {
     string
   >
   customers: Record<
-    'title' | 'debt' | 'credit' | 'settled' | 'transactions' | 'emptyTitle' | 'emptyDescription' | 'phone',
+    | 'title'
+    | 'debt'
+    | 'credit'
+    | 'settled'
+    | 'transactions'
+    | 'emptyTitle'
+    | 'emptyDescription'
+    | 'phone',
     string
   >
-  accounting: Record<'title' | 'transactions' | 'income' | 'expense' | 'trialBalance' | 'reports' | 'balance', string>
-  sync: Record<'title' | 'pending' | 'syncing' | 'synced' | 'failed' | 'syncNow' | 'lastSync' | 'never' | 'queueEmpty' | 'offlineBanner' | 'pendingBanner', string>
-  more: Record<'title' | 'language' | 'account' | 'accounting' | 'employees' | 'sync' | 'security', string>
+  accounting: Record<
+    'title' | 'transactions' | 'income' | 'expense' | 'trialBalance' | 'reports' | 'balance',
+    string
+  >
+  sync: Record<
+    | 'title'
+    | 'pending'
+    | 'syncing'
+    | 'synced'
+    | 'failed'
+    | 'syncNow'
+    | 'lastSync'
+    | 'never'
+    | 'queueEmpty'
+    | 'offlineBanner'
+    | 'pendingBanner',
+    string
+  >
+  more: Record<
+    'title' | 'language' | 'account' | 'accounting' | 'employees' | 'sync' | 'security',
+    string
+  >
 }
 
 const faIR: MobileBundle = {
@@ -202,6 +247,25 @@ const faIR: MobileBundle = {
     statusPartial: 'پرداخت جزئی',
     statusOverdue: 'سررسید گذشته',
     statusCancelled: 'لغو شده',
+    sale: 'فروش',
+    purchase: 'خرید',
+    transactionType: 'نوع تراکنش',
+    newPurchase: 'خرید جدید',
+    supplier: 'فروشنده',
+    selectSupplier: 'انتخاب فروشنده',
+    unit: 'واحد',
+    customUnit: 'واحد دلخواه',
+    customUnitPlaceholder: 'مثلاً: مثقال',
+    weightGrams: 'وزن (گرم)',
+    details: 'جزئیات',
+    detailTitle: 'عنوان',
+    amount: 'مبلغ',
+    addDetails: 'افزودن جزئیات',
+    hideDetails: 'بستن جزئیات',
+    addDetail: 'افزودن جزئیات',
+    removeDetail: 'حذف جزئیات',
+    componentsSum: 'جمع اجزا',
+    detailsArePriced: 'مبلغ خط از جمع اجزا محاسبه شود',
   },
   inventory: {
     title: 'انبار',
@@ -271,14 +335,31 @@ const faAF: MobileBundle = {
     failed: 'ورود ناکام شد',
   },
   common: { ...faIR.common, retry: 'دوباره کوشش کنید', empty: 'چیزی پیدا نشد', currency: 'افغانی' },
-  home: { ...faIR.home, salesTrend: 'روند فروشات', todaySales: 'فروشات امروز', totalSales: 'مجموع فروشات' },
-  sales: { ...faIR.sales, title: 'فروشات', newInvoice: 'بل جدید', invoiceNumber: 'شماره بل', created: 'بل ثبت شد' },
+  home: {
+    ...faIR.home,
+    salesTrend: 'روند فروشات',
+    todaySales: 'فروشات امروز',
+    totalSales: 'مجموع فروشات',
+  },
+  sales: {
+    ...faIR.sales,
+    title: 'فروشات',
+    newInvoice: 'بل جدید',
+    invoiceNumber: 'شماره بل',
+    created: 'بل ثبت شد',
+  },
   inventory: { ...faIR.inventory, title: 'گدام', products: 'اجناس', emptyTitle: 'جنسی ثبت نشده' },
   more: { ...faIR.more, title: 'بیشتر' },
 }
 
 const en: MobileBundle = {
-  tabs: { home: 'Home', sales: 'Sales', inventory: 'Inventory', customers: 'Customers', more: 'More' },
+  tabs: {
+    home: 'Home',
+    sales: 'Sales',
+    inventory: 'Inventory',
+    customers: 'Customers',
+    more: 'More',
+  },
   auth: {
     title: 'Sign in to Hisabche',
     subtitle: 'Take control of your business books',
@@ -361,6 +442,25 @@ const en: MobileBundle = {
     statusPartial: 'Partial',
     statusOverdue: 'Overdue',
     statusCancelled: 'Cancelled',
+    sale: 'Sale',
+    purchase: 'Purchase',
+    transactionType: 'Transaction type',
+    newPurchase: 'New purchase',
+    supplier: 'Supplier',
+    selectSupplier: 'Select supplier',
+    unit: 'Unit',
+    customUnit: 'Custom unit',
+    customUnitPlaceholder: 'e.g. mithqal',
+    weightGrams: 'Weight (g)',
+    details: 'Details',
+    detailTitle: 'Title',
+    amount: 'Amount',
+    addDetails: 'Add details',
+    hideDetails: 'Hide details',
+    addDetail: 'Add detail',
+    removeDetail: 'Remove detail',
+    componentsSum: 'Components total',
+    detailsArePriced: 'Calculate line total from components',
   },
   inventory: {
     title: 'Inventory',

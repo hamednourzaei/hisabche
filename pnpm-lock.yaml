@@ -159,6 +159,9 @@ importers:
       '@hisabche/auth-core':
         specifier: workspace:*
         version: link:../../packages/auth-core
+      '@hisabche/formatting':
+        specifier: workspace:*
+        version: link:../../packages/formatting
       '@hisabche/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
@@ -317,6 +320,9 @@ importers:
       '@hisabche/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@hisabche/formatting':
+        specifier: workspace:*
+        version: link:../../packages/formatting
       '@hisabche/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
@@ -788,6 +794,24 @@ importers:
         specifier: ^0.45.2
         version: 0.45.2(@opentelemetry/api@1.9.1)(@types/better-sqlite3@7.6.13)(@types/pg@8.20.4)(better-sqlite3@13.0.3)(pg@8.22.0)(postgres@3.4.9)
 
+  packages/design-tokens:
+    devDependencies:
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.7
+        version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@20.19.43)(jsdom@20.0.3)(vite@8.2.0(@types/node@20.19.43)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.8)(yaml@2.9.0))
+
+  packages/formatting:
+    devDependencies:
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.7
+        version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@20.19.43)(jsdom@20.0.3)(vite@8.2.0(@types/node@20.19.43)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.8)(yaml@2.9.0))
+
   packages/i18n:
     dependencies:
       i18next:
@@ -806,6 +830,9 @@ importers:
 
   packages/mobile-ui:
     dependencies:
+      '@hisabche/design-tokens':
+        specifier: workspace:*
+        version: link:../design-tokens
       react:
         specifier: '*'
         version: 19.2.6
@@ -1013,6 +1040,22 @@ importers:
       typescript:
         specifier: ^5.5.0
         version: 5.9.3
+      vitest:
+        specifier: ^4.1.7
+        version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@20.19.43)(jsdom@20.0.3)(vite@8.2.0(@types/node@20.19.43)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.8)(yaml@2.9.0))
+
+  packages/ui-contract:
+    dependencies:
+      '@hisabche/design-tokens':
+        specifier: workspace:*
+        version: link:../design-tokens
+    devDependencies:
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+      vitest:
+        specifier: ^4.1.7
+        version: 4.1.10(@opentelemetry/api@1.9.1)(@types/node@20.19.43)(jsdom@20.0.3)(vite@8.2.0(@types/node@20.19.43)(esbuild@0.28.1)(jiti@2.7.0)(terser@5.49.2)(tsx@4.23.8)(yaml@2.9.0))
 
   packages/validation:
     dependencies:

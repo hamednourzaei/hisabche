@@ -1,11 +1,21 @@
 // ============================================
-// Color tokens — derived 1:1 from the production web design system
-// (packages/ui/src/styles/globals.css v3.1, Emerald/Teal, dark-first).
+// Colour tokens for React Native.
 //
-// React Native parses `hsl()` / `hsla()` natively, so the values stay
-// character-identical to the web variables. Dark is the base theme; light
-// is the override — same as the web.
+// Brand, semantic and the entire DARK theme are now DERIVED from
+// @hisabche/design-tokens — the canonical source transcribed from
+// packages/ui/src/styles/globals.css. They are no longer hand-copied and
+// cannot drift.
+//
+// The LIGHT theme is deliberately NOT derived yet. See LEGACY_LIGHT below.
+//
+// `hslLegacy` emits the comma-separated CSS Color 3 form, because React
+// Native's colour parser is not guaranteed to accept the modern
+// space-separated syntax on every engine. Values are identical either way;
+// this keeps the rendered strings byte-for-byte what they were before the
+// migration (proved by __tests__/colors.snapshot.test.ts).
 // ============================================
+
+import { brand, brandGradientStops, darkTheme, hslLegacy, semantic } from '@hisabche/design-tokens'
 
 export interface ColorScheme {
   // ── Brand ──
@@ -55,65 +65,89 @@ export interface ColorScheme {
   gradientBrand: readonly [string, string, string, string, string]
 }
 
-const BRAND_GRADIENT = ['#37E6C3', '#24E0B0', '#1FD3A3', '#0F7F74', '#0A6664'] as const
-
 // Brand + semantic hues are theme-independent on the web; only surfaces,
-// text and lines flip. Kept in one place so the two schemes cannot drift.
+// text and lines flip. Derived from canonical — do not hardcode here.
 const constants = {
-  primary: 'hsl(165, 75%, 51%)',
-  primaryFg: 'hsl(210, 40%, 8%)',
-  primaryHover: 'hsl(164, 74%, 47%)',
-  primaryLight: 'hsl(166, 76%, 63%)',
-  secondary: 'hsl(174, 79%, 28%)',
-  accent: 'hsl(168, 78%, 56%)',
+  primary: hslLegacy(brand.primary),
+  primaryFg: hslLegacy(brand.primaryFg),
+  primaryHover: hslLegacy(brand.primaryHover),
+  primaryLight: hslLegacy(brand.primaryLight),
+  secondary: hslLegacy(brand.secondary),
+  accent: hslLegacy(brand.accent),
 
-  success: 'hsl(142, 72%, 38%)',
-  successFg: 'hsl(0, 0%, 100%)',
-  warning: 'hsl(38, 92%, 50%)',
-  warningFg: 'hsl(192, 55%, 6%)',
-  destructive: 'hsl(0, 84%, 60%)',
-  destructiveFg: 'hsl(0, 0%, 100%)',
-  info: 'hsl(199, 89%, 48%)',
-  infoFg: 'hsl(0, 0%, 100%)',
+  success: hslLegacy(semantic.success),
+  successFg: hslLegacy(semantic.successFg),
+  warning: hslLegacy(semantic.warning),
+  warningFg: hslLegacy(semantic.warningFg),
+  destructive: hslLegacy(semantic.destructive),
+  destructiveFg: hslLegacy(semantic.destructiveFg),
+  info: hslLegacy(semantic.info),
+  infoFg: hslLegacy(semantic.infoFg),
 
-  gradientBrand: BRAND_GRADIENT,
+  gradientBrand: brandGradientStops,
 } as const
 
-export const darkColors: ColorScheme = {
-  ...constants,
-
+// ── Mobile-only tokens ─────────────────────────────────────────────────────
+// The `*Soft` tints and `scrim` have no counterpart in globals.css: the web
+// composes these inline per component, mobile needs them as named values for
+// RN styles. They stay literal here until the web grows equivalents.
+const darkSoft = {
   primarySoft: 'hsla(165, 75%, 51%, 0.14)',
   successSoft: 'hsla(142, 72%, 45%, 0.16)',
   warningSoft: 'hsla(38, 92%, 50%, 0.16)',
   destructiveSoft: 'hsla(0, 84%, 60%, 0.16)',
   infoSoft: 'hsla(199, 89%, 48%, 0.16)',
-
-  surfaceBase: 'hsl(210, 33%, 9%)',
-  surfaceMuted: 'hsl(206, 28%, 15%)',
-  surfaceElevated: 'hsl(207, 30%, 12%)',
-  surfaceOverlay: 'hsl(207, 30%, 12%)',
-
-  fgPrimary: 'hsl(165, 35%, 97%)',
-  fgSecondary: 'hsl(168, 15%, 65%)',
-  fgTertiary: 'hsl(168, 10%, 50%)',
-
-  borderDefault: 'hsl(206, 26%, 19%)',
-  borderStrong: 'hsl(206, 26%, 26%)',
-
-  glassBg: 'rgba(16, 24, 32, 0.80)',
-  glassBorder: 'rgba(36, 224, 176, 0.14)',
   scrim: 'rgba(6, 10, 14, 0.72)',
-}
+} as const
 
-export const lightColors: ColorScheme = {
-  ...constants,
-
+const lightSoft = {
   primarySoft: 'hsla(165, 75%, 40%, 0.12)',
   successSoft: 'hsla(142, 72%, 38%, 0.12)',
   warningSoft: 'hsla(38, 92%, 50%, 0.14)',
   destructiveSoft: 'hsla(0, 84%, 60%, 0.12)',
   infoSoft: 'hsla(199, 89%, 48%, 0.12)',
+  scrim: 'rgba(16, 24, 32, 0.45)',
+} as const
 
+/** Fully derived from canonical — verified identical to the previous hand-copy. */
+export const darkColors: ColorScheme = {
+  ...constants,
+  ...darkSoft,
+
+  surfaceBase: hslLegacy(darkTheme.surfaceBase),
+  surfaceMuted: hslLegacy(darkTheme.surfaceMuted),
+  surfaceElevated: hslLegacy(darkTheme.surfaceElevated),
+  surfaceOverlay: hslLegacy(darkTheme.surfaceOverlay),
+
+  fgPrimary: hslLegacy(darkTheme.fgPrimary),
+  fgSecondary: hslLegacy(darkTheme.fgSecondary),
+  fgTertiary: hslLegacy(darkTheme.fgTertiary),
+
+  borderDefault: hslLegacy(darkTheme.borderDefault),
+  borderStrong: hslLegacy(darkTheme.borderStrong),
+
+  glassBg: darkTheme.glassBg,
+  glassBorder: darkTheme.glassBorder,
+}
+
+// ── LEGACY_LIGHT ───────────────────────────────────────────────────────────
+// KNOWN DIVERGENCE, PRESERVED ON PURPOSE.
+//
+// globals.css v3.1 re-tuned the web light theme to a warm, low-saturation
+// off-white (hue 40) with cool-grey text. This port predates that change and
+// still carries the older teal-tinted palette (hue ~166-168). Eight tokens
+// differ.
+//
+// It is NOT being aligned in this migration. Stage 2 is an architecture
+// change; mixing a visible palette change into it would make any later UI
+// regression impossible to attribute — migration or redesign? Aligning mobile
+// light mode is its own reviewable change.
+//
+// The divergence is enforced, not merely commented: see
+// __tests__/canonical-drift.test.ts, which fails BOTH if these drift further
+// AND once they are aligned (at which point, delete this block and derive
+// from `lightTheme` exactly as `darkColors` does above).
+const LEGACY_LIGHT = {
   surfaceBase: 'hsl(168, 25%, 98%)',
   surfaceMuted: 'hsl(166, 22%, 95%)',
   surfaceElevated: 'hsl(0, 0%, 100%)',
@@ -128,5 +162,10 @@ export const lightColors: ColorScheme = {
 
   glassBg: 'rgba(255, 255, 255, 0.82)',
   glassBorder: 'rgba(15, 127, 116, 0.12)',
-  scrim: 'rgba(16, 24, 32, 0.45)',
+} as const
+
+export const lightColors: ColorScheme = {
+  ...constants,
+  ...lightSoft,
+  ...LEGACY_LIGHT,
 }

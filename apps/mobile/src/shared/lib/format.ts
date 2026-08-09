@@ -7,31 +7,36 @@
 
 import type { CurrencyCode } from '@hisabche/store'
 
-import { i18n } from '../i18n'
+import {
+  currencySign as canonicalSign,
+  formatAmount as canonicalAmount,
+  formatMoney as canonicalMoney,
+  formatNumber as canonicalNumber,
+} from '@hisabche/formatting'
 
-const CURRENCY_SIGN: Record<CurrencyCode, string> = {
-  AFN: '؋',
-  IRR: '﷼',
-  USD: '$',
-  PKR: '₨',
-}
+import { i18n } from '../i18n'
 
 function localeTag(): string {
   return i18n.language || 'fa-IR'
 }
 
-/** Grouped digits only — no currency sign. Pair with <Money sign={...} />. */
+/**
+ * Grouped digits only — no currency sign. Pair with <Money sign={...} />.
+ * Currency-aware amounts must use `formatMoneyAmount`, which applies the
+ * per-currency decimal policy. The canonical helper already carries the
+ * Hermes fallback for Android builds with a partial Intl.
+ */
 export function formatAmount(value: number): string {
-  try {
-    return new Intl.NumberFormat(localeTag(), { maximumFractionDigits: 0 }).format(value)
-  } catch {
-    // Hermes ships a partial Intl on some Android builds.
-    return String(Math.round(value))
-  }
+  return canonicalNumber(value, localeTag())
+}
+
+/** Digits only, with the currency's decimal precision. Pair with <Money />. */
+export function formatMoneyAmount(value: number, currency: CurrencyCode): string {
+  return canonicalAmount(value, currency, localeTag())
 }
 
 export function currencySign(currency: CurrencyCode): string {
-  return CURRENCY_SIGN[currency] ?? currency
+  return canonicalSign(currency)
 }
 
 /** Hook form, so a component re-renders when the currency preference changes. */
@@ -41,7 +46,7 @@ export function useCurrencySign(currency: CurrencyCode): string {
 
 /** Single-string form for places that cannot host a two-part component. */
 export function formatCurrency(value: number, currency: CurrencyCode): string {
-  return `${formatAmount(value)} ${currencySign(currency)}`
+  return canonicalMoney(value, currency, localeTag())
 }
 
 export function formatNumber(value: number): string {

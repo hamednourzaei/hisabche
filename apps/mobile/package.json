@@ -19,6 +19,7 @@
     "@expo/metro-runtime": "~3.2.3",
     "@expo/vector-icons": "^14.0.2",
     "@hisabche/api": "workspace:*",
+    "@hisabche/formatting": "workspace:*",
     "@hisabche/db": "workspace:*",
     "@hisabche/i18n": "workspace:*",
     "@hisabche/mobile-ui": "workspace:*",
@@ -78,7 +79,8 @@
       "<rootDir>/jest.setup.js"
     ],
     "transformIgnorePatterns": [
-      "node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|expo-modules-core|@shopify/flash-list|react-navigation|@react-navigation/.*|@hisabche/.*)/)"
+      "node_modules/\\.pnpm/(?!((jest-)?react-native@|@react-native\\+|@react-native-community\\+|expo@|expo-|@expo\\+|@shopify\\+flash-list|react-navigation@|@react-navigation\\+|@hisabche\\+))",
+      "node_modules/(?!\\.pnpm/)(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|expo-modules-core|@shopify/flash-list|react-navigation|@react-navigation/.*|@hisabche/.*)/)"
     ],
     "roots": [
       "<rootDir>/src",

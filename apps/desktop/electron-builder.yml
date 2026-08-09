@@ -1,6 +1,9 @@
 appId: com.hisabche.desktop
 productName: Hisabche
 copyright: Copyright © Hisabche
+# Without this, electron-builder derives it from the package name
+# (@hisabche/desktop -> "@hisabchedesktop") and AppImage rejects the "@".
+executableName: hisabche
 
 directories:
   output: dist
@@ -46,5 +49,7 @@ linux:
       arch: [x64]
   category: Office
   artifactName: ${productName}-${version}.${ext}
+  synopsis: Hisabche accounting and inventory
+  syncDesktopName: true
 
 publish: null

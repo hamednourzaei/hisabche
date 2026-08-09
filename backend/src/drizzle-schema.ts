@@ -79,7 +79,7 @@ export const products = pgTable(
       columns: [table.workspaceId],
       foreignColumns: [workspaces.id],
     }),
-  })
+  }),
 )
 
 // ─── Customers ────────────────────────────────────────────
@@ -108,7 +108,7 @@ export const customers = pgTable(
       columns: [table.workspaceId],
       foreignColumns: [workspaces.id],
     }),
-  })
+  }),
 )
 
 // ─── Invoices ─────────────────────────────────────────────
@@ -154,7 +154,7 @@ export const invoices = pgTable(
       columns: [table.workspaceId],
       foreignColumns: [workspaces.id],
     }),
-  })
+  }),
 )
 
 // ─── Invoice Items ────────────────────────────────────────
@@ -166,6 +166,11 @@ export const invoiceItems = pgTable(
     productId: uuid('product_id').notNull(),
     productName: text('product_name').notNull(),
     quantity: numeric('quantity', { precision: 12, scale: 3 }).notNull().default('1'),
+    unit: text('unit').notNull().default('piece'),
+    // Weight is tracked separately from quantity on purpose: "1 necklace
+    // weighing 12.5 g" is quantity=1, weightGrams=12.5. Collapsing the two
+    // would make one of the numbers wrong for weight-priced trades.
+    weightGrams: numeric('weight_grams', { precision: 12, scale: 3 }),
     unitPrice: numeric('unit_price', { precision: 12, scale: 2 }).notNull().default('0'),
     discount: numeric('discount', { precision: 5, scale: 2 }).default('0'),
     totalPrice: numeric('total_price', { precision: 12, scale: 2 }).notNull().default('0'),
@@ -174,7 +179,36 @@ export const invoiceItems = pgTable(
   (table) => ({
     invoiceIdx: index('invoice_items_invoice_idx').on(table.invoiceId),
     productIdx: index('invoice_items_product_idx').on(table.productId),
-  })
+  }),
+)
+
+// ─── Invoice Item Details ─────────────────────────────────
+// Components of a parent item — "گردنبند" made of زنجیر / سنگ / اجرت.
+// A detail is never an independent invoice line; it belongs to exactly one
+// item and is deleted with it (ON DELETE CASCADE in the migration).
+export const invoiceItemDetails = pgTable(
+  'invoice_item_details',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    invoiceItemId: uuid('invoice_item_id').notNull(),
+    title: text('title').notNull(),
+    quantity: numeric('quantity', { precision: 12, scale: 3 }).notNull().default('1'),
+    amount: numeric('amount', { precision: 12, scale: 2 }).notNull().default('0'),
+    unit: text('unit').notNull().default('piece'),
+    weightGrams: numeric('weight_grams', { precision: 12, scale: 3 }),
+    /** Preserves the order the user typed the details in. */
+    sortOrder: integer('sort_order').notNull().default(0),
+    createdAt: timestamp('created_at').defaultNow(),
+    updatedAt: timestamp('updated_at').defaultNow(),
+  },
+  (table) => ({
+    itemIdx: index('invoice_item_details_item_idx').on(table.invoiceItemId),
+    orderIdx: index('invoice_item_details_order_idx').on(table.invoiceItemId, table.sortOrder),
+    itemFk: foreignKey({
+      columns: [table.invoiceItemId],
+      foreignColumns: [invoiceItems.id],
+    }),
+  }),
 )
 
 // ─── Transactions ─────────────────────────────────────────
@@ -206,7 +240,7 @@ export const transactions = pgTable(
       columns: [table.workspaceId],
       foreignColumns: [workspaces.id],
     }),
-  })
+  }),
 )
 
 // ─── Exchange Rates ───────────────────────────────────────
@@ -221,7 +255,7 @@ export const exchangeRates = pgTable(
   (table) => ({
     currencyIdx: index('exchange_rates_currency_idx').on(table.currencyCode),
     updatedAtIdx: index('exchange_rates_updated_at_idx').on(table.updatedAt),
-  })
+  }),
 )
 
 /* ═══════════════════════════════════════════════════════════════
@@ -250,7 +284,7 @@ export const workflows = pgTable(
       columns: [table.workspaceId],
       foreignColumns: [workspaces.id],
     }),
-  })
+  }),
 )
 
 // ─── Workflow Steps ────────────────────────────────────────
@@ -268,7 +302,7 @@ export const workflowSteps = pgTable(
   (table) => ({
     workflowIdx: index('workflow_steps_workflow_idx').on(table.workflowId),
     approverIdx: index('workflow_steps_approver_idx').on(table.approverUserId),
-  })
+  }),
 )
 
 // ─── Workflow Instances ────────────────────────────────────
@@ -298,7 +332,7 @@ export const workflowInstances = pgTable(
       columns: [table.workspaceId],
       foreignColumns: [workspaces.id],
     }),
-  })
+  }),
 )
 
 // ─── Workflow Actions ──────────────────────────────────────
@@ -318,7 +352,7 @@ export const workflowActions = pgTable(
     instanceIdx: index('workflow_actions_instance_idx').on(table.instanceId),
     actorIdx: index('workflow_actions_actor_idx').on(table.actorUserId),
     createdIdx: index('workflow_actions_created_idx').on(table.createdAt),
-  })
+  }),
 )
 
 // ─── Export all tables ─────────────────────────────────────

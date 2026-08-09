@@ -26,10 +26,9 @@ export const emailSchema = z
 export const phoneSchema = z
   .string()
   .optional()
-  .refine(
-    (val) => !val || val === '' || /^[\d\s\-\+\(\)]{5,20}$/.test(val),
-    { message: 'validation.phone' }
-  )
+  .refine((val) => !val || val === '' || /^[\d\s\-\+\(\)]{5,20}$/.test(val), {
+    message: 'validation.phone',
+  })
 
 /** Positive number */
 export const positiveNumberSchema = z.number().positive('validation.positiveNumber')
@@ -67,13 +66,7 @@ export const currencyCodeSchema = z.enum(['AFN', 'USD', 'PKR', 'IRR'])
 export const paymentMethodSchema = z.enum(['cash', 'credit', 'bank', 'mobile_money'])
 
 /** Transaction types */
-export const transactionTypeSchema = z.enum([
-  'sale',
-  'purchase',
-  'payment',
-  'receipt',
-  'return',
-])
+export const transactionTypeSchema = z.enum(['sale', 'purchase', 'payment', 'receipt', 'return'])
 
 /** Product categories */
 export const productCategorySchema = z.enum([
@@ -86,7 +79,31 @@ export const productCategorySchema = z.enum([
 ])
 
 /** Product units */
-export const unitSchema = z.enum(['piece', 'kg', 'meter', 'liter', 'box', 'pack'])
+/**
+ * `gram` and `carton` were added for weight-priced trades (gold, spices) and
+ * wholesale. Every previously valid unit is still valid — this is additive, so
+ * existing products and invoices keep validating unchanged.
+ */
+export const unitSchema = z.enum([
+  'piece',
+  'gram',
+  'kg',
+  'meter',
+  'liter',
+  'box',
+  'pack',
+  'carton',
+  /**
+   * User-defined. The label the user typed lives in the sibling `unitLabel`
+   * field. Kept as an enum member rather than making `unit` free text so
+   * grouping, filtering and reporting by unit still work — every custom unit
+   * aggregates under 'custom' and carries its own label for display.
+   */
+  'custom',
+])
+
+/** Free-text label, only meaningful when `unit === 'custom'`. */
+export const unitLabelSchema = z.string().trim().min(1).max(24)
 
 /** Sort direction */
 export const sortDirectionSchema = z.enum(['asc', 'desc'])

@@ -3,24 +3,20 @@
 // Data comes from the shared analytics hooks; no local business logic.
 // ============================================
 
-import React, { useCallback } from 'react'
+import React, { Suspense, lazy, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Boxes, Plus, RefreshCw, Users, Wallet } from 'lucide-react'
 import { useAIInsights, useDashboardKPIs, useDashboardSales } from '@hisabche/api'
-import {
-  Area,
-  AreaChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from 'recharts'
 
 import { Button, Card, Skeleton } from '@/components/ui/primitives'
 import { MetricTile } from '@/features/dashboard/metric-tile'
 import { formatAmount, formatMoney } from '@/shared/lib/currency'
 import { useCurrency } from '@/shared/stores/ui.store'
+
+// recharts is ~830 kB. Keeping it out of this chunk means the KPI tiles —
+// the reason the user opened the app — paint without waiting for chart code.
+const SalesChart = lazy(() => import('@/features/dashboard/sales-chart'))
 
 export default function DashboardPage() {
   const { t } = useTranslation('desktop')
@@ -33,7 +29,7 @@ export default function DashboardPage() {
 
   const money = useCallback(
     (value: number | undefined) => formatMoney(value ?? 0, currency),
-    [currency]
+    [currency],
   )
 
   const refresh = useCallback(() => {
@@ -90,39 +86,9 @@ export default function DashboardPage() {
             <Skeleton className="h-56 w-full" />
           ) : (
             <div className="h-56">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={[...(sales.data?.data ?? [])]}>
-                  <defs>
-                    <linearGradient id="salesFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="hsl(var(--color-primary))" stopOpacity={0.35} />
-                      <stop offset="100%" stopColor="hsl(var(--color-primary))" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="hsl(var(--fg-tertiary))" />
-                  <YAxis
-                    tick={{ fontSize: 11 }}
-                    stroke="hsl(var(--fg-tertiary))"
-                    tickFormatter={formatAmount}
-                    width={64}
-                  />
-                  <Tooltip
-                    formatter={(value: number) => formatMoney(value, currency)}
-                    contentStyle={{
-                      background: 'hsl(var(--surface-elevated))',
-                      border: '1px solid hsl(var(--border-default))',
-                      borderRadius: 'var(--radius-sm)',
-                      fontSize: 12,
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    stroke="hsl(var(--color-primary))"
-                    strokeWidth={2}
-                    fill="url(#salesFill)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              <Suspense fallback={<Skeleton className="h-56 w-full" />}>
+                <SalesChart data={sales.data?.data ?? []} currency={currency} />
+              </Suspense>
             </div>
           )}
         </Card>

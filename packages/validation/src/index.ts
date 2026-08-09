@@ -44,6 +44,8 @@ export {
 // ---------- Invoice ----------
 export {
   invoiceItemSchema,
+  invoiceItemDetailSchema,
+  computeItemTotal,
   invoiceSchema,
   createInvoiceSchema,
   updateInvoiceSchema,
@@ -51,6 +53,7 @@ export {
   invoiceStatusSchema,
   type InvoiceStatus,
   type InvoiceItem,
+  type InvoiceItemDetail,
   type Invoice,
   type CreateInvoice,
   type UpdateInvoice,

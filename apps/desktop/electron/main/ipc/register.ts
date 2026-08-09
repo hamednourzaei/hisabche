@@ -222,20 +222,15 @@ export function registerIpcHandlers(): void {
     }),
   )
 
-  // ─── App ──────────────────────────────────────────────── (Medium privilege)
-  handle(
-    IPC.appInfo,
-    anySchema,
-    authenticateAndAuthorize(
-      'record.read',
-      false,
-    )((_, event): AppInfo => ({
-      version: app.getVersion(),
-      platform: process.platform,
-      locale: app.getLocale(),
-      databaseReady: db.isReady(),
-    })),
-  )
+  // ─── App ──────────────────────────────────────────────── (Bootstrap)
+  // Carries no business data — the renderer reads it before the login screen
+  // renders, so it must not require a session.
+  handle(IPC.appInfo, anySchema, (_, event): AppInfo => ({
+    version: app.getVersion(),
+    platform: process.platform,
+    locale: app.getLocale(),
+    databaseReady: db.isReady(),
+  }))
   handle(
     IPC.checkUpdates,
     anySchema,

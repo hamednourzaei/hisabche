@@ -1158,7 +1158,15 @@
     "copied": "Copied",
     "shareNative": "More",
     "qrHint": "Scan this code to view the invoice without signing in",
-    "publicFooter": "This invoice was issued by Hisabche"
+    "publicFooter": "This invoice was issued by Hisabche",
+    "type": {
+      "sale": "Sale",
+      "purchase": "Purchase"
+    },
+    "filterAll": "All",
+    "saleInvoice": "Sales Invoice",
+    "purchaseInvoice": "Purchase Invoice",
+    "supplierInfo": "Supplier info"
   },
   "warehouse": {
     "title": "Warehouse",
@@ -1554,7 +1562,26 @@
     "quantity": "Qty",
     "unitPrice": "Unit price",
     "lineTotal": "Total",
-    "unitPricePlaceholder": "Enter amount"
+    "unitPricePlaceholder": "Enter amount",
+    "whatBought": "What did you buy?",
+    "transactionType": "Transaction type",
+    "sale": "Sale",
+    "purchase": "Purchase",
+    "unit": "Unit",
+    "customUnit": "Custom unit",
+    "customUnitPlaceholder": "e.g. mithqal",
+    "details": "Details",
+    "detailTitle": "Title",
+    "amount": "Amount",
+    "addDetails": "Add details",
+    "hideDetails": "Hide details",
+    "addDetail": "Add detail",
+    "removeDetail": "Remove detail",
+    "componentsSum": "Components total",
+    "detailsArePriced": "Calculate line total from components",
+    "toWhomBought": "Who did you buy from? (optional)",
+    "supplier": "Supplier",
+    "weightGrams": "Weight (g)"
   },
   "payment": {
     "record": "Record Payment",
@@ -2139,15 +2166,7 @@
       "November",
       "December"
     ],
-    "weekdaysShort": [
-      "Su",
-      "Mo",
-      "Tu",
-      "We",
-      "Th",
-      "Fr",
-      "Sa"
-    ],
+    "weekdaysShort": ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"],
     "prev": "Previous",
     "next": "Next"
   },
@@ -2213,7 +2232,8 @@
       "pending": "Pending",
       "received": "Received",
       "cancelled": "Cancelled"
-    }
+    },
+    "recordPurchase": "Record purchase"
   },
   "activity": {
     "title": "Activities",
@@ -2273,5 +2293,16 @@
   },
   "action": {
     "clear": "Clear"
+  },
+  "unit": {
+    "piece": "pcs",
+    "gram": "g",
+    "kg": "kg",
+    "carton": "carton",
+    "box": "box",
+    "pack": "pack",
+    "meter": "m",
+    "liter": "L",
+    "custom": "Custom"
   }
 }
