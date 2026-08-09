@@ -115,7 +115,6 @@ export default function NewInvoicePage() {
           discount: 0,
           unit: 'piece',
           details: [],
-          detailsArePriced: false,
         },
       ])
       setProductSearch('')

@@ -181,29 +181,6 @@ export const LineItemDetailEditor = memo(function LineItemDetailEditor({
               {formatAmount(detailsSum(details))}
             </Text>
           </View>
-
-          {/* The explicit switch that makes double counting impossible. */}
-          <Pressable
-            onPress={() => onChange(item.key, { detailsArePriced: !item.detailsArePriced })}
-            accessibilityRole="switch"
-            accessibilityState={{ checked: item.detailsArePriced ?? false }}
-            accessibilityLabel={t('sales.detailsArePriced', 'مبلغ خط از جمع اجزا محاسبه شود')}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: spacing.sm,
-              minHeight: TOUCH,
-            }}
-          >
-            <Ionicons
-              name={item.detailsArePriced ? 'checkbox' : 'square-outline'}
-              size={20}
-              color={item.detailsArePriced ? colors.primary : colors.fgTertiary}
-            />
-            <Text variant="caption" tone="secondary" style={{ flex: 1 }}>
-              {t('sales.detailsArePriced', 'مبلغ خط از جمع اجزا محاسبه شود')}
-            </Text>
-          </Pressable>
         </View>
       )}
     </View>

@@ -91,12 +91,6 @@ export interface InvoiceLineItem {
   weightGrams?: string
   /** Optional. An empty array is a completely valid, and the default, state. */
   details?: InvoiceLineDetail[]
-  /**
-   * false — details are informational; the line total stays quantity × price.
-   * true  — the detail amounts ARE the line total and replace the base.
-   * Never base + details: that would double-count.
-   */
-  detailsArePriced?: boolean
 }
 
 /** Sum of a line's detail components. */
@@ -108,10 +102,16 @@ export function detailsSum(details: readonly InvoiceLineDetail[] | undefined): n
   )
 }
 
-/** The one money rule for a line. Mirrors `computeItemTotal` in @hisabche/validation. */
+/**
+ * The one money rule for a line. Mirrors `computeItemTotal` in
+ * @hisabche/validation.
+ *
+ * Components ADD to the line: "قند ۲٬۰۰۰ + سنگ امیتیس ۱٬۰۰۰" totals 3,000.
+ * An item with no components is unchanged — base + 0.
+ */
 export function lineTotalOf(item: InvoiceLineItem): number {
-  if (item.detailsArePriced) return detailsSum(item.details)
-  return (parseFloat(item.price) || 0) * (parseFloat(item.quantity) || 0)
+  const base = (parseFloat(item.price) || 0) * (parseFloat(item.quantity) || 0)
+  return base + detailsSum(item.details)
 }
 
 /** The two transaction types. Not two systems — one engine, two semantics. */
@@ -159,7 +159,6 @@ export interface QuickInvoicePageProps {
     patch: Partial<Omit<InvoiceLineDetail, 'key'>>,
   ) => void
   onRemoveDetail: (key: string, detailKey: string) => void
-  onToggleDetailsPriced: (key: string, priced: boolean) => void
   onSelectCustomer: (c: CustomerOption | null) => void
   onPaymentTypeChange: (t: PaymentType) => void
   onPaidNowChange: (v: string) => void
@@ -288,7 +287,6 @@ const ItemRow = memo(function ItemRow({
   onAddDetail,
   onUpdateDetail,
   onRemoveDetail,
-  onToggleDetailsPriced,
   t,
 }: {
   item: InvoiceLineItem
@@ -305,7 +303,6 @@ const ItemRow = memo(function ItemRow({
     patch: Partial<Omit<InvoiceLineDetail, 'key'>>,
   ) => void
   onRemoveDetail: (key: string, detailKey: string) => void
-  onToggleDetailsPriced: (key: string, priced: boolean) => void
   t: (key: string, fallback?: string) => string
 }) {
   const details = item.details ?? []
@@ -464,18 +461,6 @@ const ItemRow = memo(function ItemRow({
             <Plus className="size-3.5" aria-hidden="true" />
             {t('quickInvoice.addDetail', 'افزودن جزئیات')}
           </button>
-
-          {/* اینجاست که double-counting جلویش گرفته می‌شود: کاربر صریحاً
-              می‌گوید جمع اجزا «جایگزین» مبلغ خط شود یا فقط توضیحی باشد. */}
-          <label className="flex cursor-pointer items-center gap-2 pt-1 text-[11px] text-[hsl(var(--fg-secondary))]">
-            <input
-              type="checkbox"
-              checked={item.detailsArePriced ?? false}
-              onChange={(e) => onToggleDetailsPriced(item.key, e.target.checked)}
-              className="size-3.5 accent-[hsl(var(--color-primary))]"
-            />
-            {t('quickInvoice.detailsArePriced', 'مبلغ خط از جمع اجزا محاسبه شود')}
-          </label>
         </div>
       )}
     </div>
@@ -549,7 +534,6 @@ const ItemsStep = memo(function ItemsStep({
   onAddDetail,
   onUpdateDetail,
   onRemoveDetail,
-  onToggleDetailsPriced,
   onNext,
   t,
 }: {
@@ -571,7 +555,6 @@ const ItemsStep = memo(function ItemsStep({
     patch: Partial<Omit<InvoiceLineDetail, 'key'>>,
   ) => void
   onRemoveDetail: (key: string, detailKey: string) => void
-  onToggleDetailsPriced: (key: string, priced: boolean) => void
   onNext: () => void
   t: (key: string, fallback?: string) => string
 }) {
@@ -619,7 +602,6 @@ const ItemsStep = memo(function ItemsStep({
                 onAddDetail={onAddDetail}
                 onUpdateDetail={onUpdateDetail}
                 onRemoveDetail={onRemoveDetail}
-                onToggleDetailsPriced={onToggleDetailsPriced}
                 t={t}
               />
             ))}
@@ -1307,7 +1289,6 @@ export const QuickInvoicePage = memo(function QuickInvoicePage({
   onAddDetail,
   onUpdateDetail,
   onRemoveDetail,
-  onToggleDetailsPriced,
   onSelectCustomer,
   onPaymentTypeChange,
   onPaidNowChange,
@@ -1359,7 +1340,6 @@ export const QuickInvoicePage = memo(function QuickInvoicePage({
             onAddDetail={onAddDetail}
             onUpdateDetail={onUpdateDetail}
             onRemoveDetail={onRemoveDetail}
-            onToggleDetailsPriced={onToggleDetailsPriced}
             onAddItem={onAddItem}
             onAddCustomItem={onAddCustomItem}
             onRemoveItem={onRemoveItem}

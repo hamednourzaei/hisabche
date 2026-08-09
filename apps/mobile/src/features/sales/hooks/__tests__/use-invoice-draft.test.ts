@@ -86,13 +86,24 @@ describe('nested details', () => {
     expect(lineTotal(item({ quantity: 2, unitPrice: 100 }))).toBe(200)
   })
 
-  it('details are informational by default', () => {
-    expect(lineTotal(necklace)).toBe(50000)
+  it('components ADD to the base — قند ۲٬۰۰۰ + سنگ ۱٬۰۰۰ = ۳٬۰۰۰', () => {
+    expect(
+      lineTotal(
+        item({
+          quantity: 1,
+          unitPrice: 2000,
+          details: [{ key: 'd', title: 'سنگ امیتیس', quantity: 1, amount: 1000 }],
+        }),
+      ),
+    ).toBe(3000)
   })
 
-  it('when priced, components REPLACE the base — no double counting', () => {
-    expect(lineTotal({ ...necklace, detailsArePriced: true })).toBe(50000)
-    expect(lineTotal({ ...necklace, unitPrice: 999999, detailsArePriced: true })).toBe(50000)
+  it('a necklace with no price of its own is the sum of its parts', () => {
+    expect(lineTotal({ ...necklace, unitPrice: 0 })).toBe(50000)
+  })
+
+  it('base plus components, both present', () => {
+    expect(lineTotal(necklace)).toBe(100000)
   })
 
   it('supports an unlimited number of components', () => {
@@ -103,7 +114,8 @@ describe('nested details', () => {
         quantity: 1,
         amount: 100,
       })),
-      detailsArePriced: true,
+      quantity: 0,
+      unitPrice: 0,
     })
     expect(lineTotal(many)).toBe(4000)
   })

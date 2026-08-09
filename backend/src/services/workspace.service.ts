@@ -4,7 +4,14 @@
 // ============================================
 
 import { supabase } from '../db'
-import { CreateWorkspace, UpdateWorkspace, UpdateMemberRole, CreateInvite, AcceptInvite, CreateMemberDirect } from '@hisabche/validation'
+import {
+  CreateWorkspace,
+  UpdateWorkspace,
+  UpdateMemberRole,
+  CreateInvite,
+  AcceptInvite,
+  CreateMemberDirect,
+} from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
 import { memoryCache } from '../utils/pagination'
 import { emailService } from './email.service'
@@ -32,12 +39,13 @@ interface WorkspaceWithRole {
   myRole: string
 }
 
-function hashToken(token: string): string { 
-  return crypto.createHash('sha256').update(token).digest('hex') 
+function hashToken(token: string): string {
+  return crypto.createHash('sha256').update(token).digest('hex')
 }
 
 // ✅ Column Selection Constants
-const WORKSPACE_COLUMNS = 'id, name, slug, description, logo_url, stamp_url, owner_id, is_active, created_at, updated_at'
+const WORKSPACE_COLUMNS =
+  'id, name, slug, description, logo_url, stamp_url, owner_id, is_active, created_at, updated_at'
 const WORKSPACE_MINIMAL = 'id, name, slug, is_active'
 
 const MEMBER_COLUMNS = 'id, user_id, role, joined_at'
@@ -47,7 +55,6 @@ const INVITE_COLUMNS = 'id, email, role, status, invited_by, expires_at, created
 const INVITE_MINIMAL = 'id, email, role, status, expires_at'
 
 export class WorkspaceService {
-
   // ─── Cache Keys ──────────────────────────────────────────────
   private getWorkspaceCacheKey(workspaceId: string) {
     return `workspace:${workspaceId}`
@@ -68,7 +75,7 @@ export class WorkspaceService {
   // ─── Workspace CRUD ──────────────────────────────────────────
   async createWorkspace(userId: string, data: CreateWorkspace) {
     const slug = data.slug || data.name.toLowerCase().replace(/\s+/g, '-')
-    
+
     const { data: workspace, error } = await supabase
       .from('workspaces')
       .insert({
@@ -81,36 +88,30 @@ export class WorkspaceService {
       })
       .select(WORKSPACE_COLUMNS)
       .single()
-      
+
     if (error || !workspace) throw new DatabaseError('Failed to create workspace', error)
-    
+
     await supabase
       .from('workspace_members')
       .insert({ workspace_id: workspace.id, user_id: userId, role: 'owner' })
-    
+
     // ✅ Invalidate cache
     await this.invalidateUserCache(userId)
-    
+
     return workspace
   }
 
   // ─── Get My Workspaces — OPTIMIZED ──────────────────────────
   async getMyWorkspaces(userId: string): Promise<WorkspaceWithRole[]> {
     const cacheKey = this.getUserWorkspacesCacheKey(userId)
-    
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached as WorkspaceWithRole[]
 
     // ✅ دو کوئری موازی
     const [membersResult, workspacesResult] = await Promise.all([
-      supabase
-        .from('workspace_members')
-        .select('workspace_id, role')
-        .eq('user_id', userId),
-      supabase
-        .from('workspaces')
-        .select(WORKSPACE_COLUMNS)
-        .in('id', []) // placeholder, با members پر می‌شود
+      supabase.from('workspace_members').select('workspace_id, role').eq('user_id', userId),
+      supabase.from('workspaces').select(WORKSPACE_COLUMNS).in('id', []), // placeholder, با members پر می‌شود
     ])
 
     const members = membersResult.data || []
@@ -120,7 +121,7 @@ export class WorkspaceService {
     }
 
     const workspaceIds = members.map((m: any) => m.workspace_id)
-    
+
     // ✅ گرفتن workspaces با workspaceIds
     const { data: workspaces } = await supabase
       .from('workspaces')
@@ -144,7 +145,7 @@ export class WorkspaceService {
   // ─── Get Workspace ──────────────────────────────────────────
   async getWorkspace(userId: string, workspaceId: string) {
     const cacheKey = this.getWorkspaceCacheKey(workspaceId)
-    
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) {
       const data = cached as any
@@ -176,9 +177,15 @@ export class WorkspaceService {
   }
 
   // ─── Update Workspace ──────────────────────────────────────
-  async updateWorkspace(userId: string, workspaceId: string, data: UpdateWorkspace) {
+  /**
+   * `data` deliberately excludes `id`: the workspace being updated is
+   * identified by `workspaceId` (from the URL), and this method never reads
+   * `data.id`. Requiring it in the payload only produced 400s on every
+   * legitimate partial update.
+   */
+  async updateWorkspace(userId: string, workspaceId: string, data: Omit<UpdateWorkspace, 'id'>) {
     await this.requireRole(userId, workspaceId, 'admin')
-    
+
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (data.name !== undefined) updates.name = data.name
     if (data.description !== undefined) updates.description = data.description
@@ -202,9 +209,9 @@ export class WorkspaceService {
   // ─── List Members ──────────────────────────────────────────
   async listMembers(userId: string, workspaceId: string) {
     await this.requireMember(userId, workspaceId)
-    
+
     const cacheKey = this.getMembersCacheKey(workspaceId)
-    
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
@@ -214,7 +221,7 @@ export class WorkspaceService {
       .eq('workspace_id', workspaceId)
 
     if (error) throw new DatabaseError('Failed to fetch members', error)
-    
+
     const result = data || []
     await memoryCache.set(cacheKey, result, 60) // 1 minute
     return result
@@ -223,7 +230,7 @@ export class WorkspaceService {
   // ─── Update Member Role ────────────────────────────────────
   async updateMemberRole(userId: string, workspaceId: string, data: UpdateMemberRole) {
     await this.requireRole(userId, workspaceId, 'owner')
-    
+
     const { error } = await supabase
       .from('workspace_members')
       .update({ role: data.role })
@@ -240,7 +247,7 @@ export class WorkspaceService {
   // ─── Remove Member ─────────────────────────────────────────
   async removeMember(userId: string, workspaceId: string, memberId: string) {
     await this.requireRole(userId, workspaceId, 'admin')
-    
+
     const { data: m } = await supabase
       .from('workspace_members')
       .select('role, user_id')
@@ -269,20 +276,20 @@ export class WorkspaceService {
       .single()
 
     if (!m || m.role === 'owner') throw new DatabaseError('Cannot leave')
-    
+
     await supabase.from('workspace_members').delete().eq('id', m.id)
 
     // ✅ Invalidate cache
     await this.invalidateWorkspaceCache(workspaceId)
     await this.invalidateUserCache(userId)
-    
+
     return { success: true }
   }
 
   // ─── Invites ────────────────────────────────────────────────
   async createInvite(userId: string, data: CreateInvite) {
     await this.requireRole(userId, data.workspaceId, 'admin')
-    
+
     const { data: ws } = await supabase
       .from('workspaces')
       .select('is_active')
@@ -317,14 +324,19 @@ export class WorkspaceService {
     await this.invalidateInviteCache(data.workspaceId)
 
     this.sendInviteEmail(userId, data.workspaceId, data.email, rawToken).catch((err) =>
-      console.error('Failed to send invite email:', err)
+      console.error('Failed to send invite email:', err),
     )
 
     return { ...invite, token: rawToken }
   }
 
   // ─── Send invite email (fire-and-forget) ───────────────────
-  private async sendInviteEmail(inviterId: string, workspaceId: string, toEmail: string, rawToken: string) {
+  private async sendInviteEmail(
+    inviterId: string,
+    workspaceId: string,
+    toEmail: string,
+    rawToken: string,
+  ) {
     const [{ data: inviter }, { data: workspace }] = await Promise.all([
       supabase.from('users').select('full_name, preferred_language').eq('id', inviterId).single(),
       supabase.from('workspaces').select('name').eq('id', workspaceId).single(),
@@ -346,16 +358,16 @@ export class WorkspaceService {
       inviter?.full_name || 'یک همکار',
       workspace.name,
       inviteLink,
-      lang
+      lang,
     )
   }
 
   // ─── List Invites ─────────────────────────────────────────
   async listInvites(userId: string, workspaceId: string) {
     await this.requireRole(userId, workspaceId, 'admin')
-    
+
     const cacheKey = this.getInvitesCacheKey(workspaceId)
-    
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
@@ -366,7 +378,7 @@ export class WorkspaceService {
       .order('created_at', { ascending: false })
 
     if (error) throw new DatabaseError('Failed to fetch invites', error)
-    
+
     const result = data || []
     await memoryCache.set(cacheKey, result, 60) // 1 minute
     return result
@@ -426,10 +438,10 @@ export class WorkspaceService {
         .insert({ workspace_id: invite.workspace_id, user_id: userId, role: invite.role }),
       supabase
         .from('workspace_invites')
-        .update({ 
-          status: 'accepted', 
-          accepted_at: new Date().toISOString(), 
-          accepted_by: userId 
+        .update({
+          status: 'accepted',
+          accepted_at: new Date().toISOString(),
+          accepted_by: userId,
         })
         .eq('id', invite.id),
     ])
@@ -445,22 +457,19 @@ export class WorkspaceService {
   // ─── Cancel Invite ─────────────────────────────────────────
   async cancelInvite(userId: string, workspaceId: string, inviteId: string) {
     await this.requireRole(userId, workspaceId, 'admin')
-    
-    await supabase
-      .from('workspace_invites')
-      .update({ status: 'cancelled' })
-      .eq('id', inviteId)
+
+    await supabase.from('workspace_invites').update({ status: 'cancelled' }).eq('id', inviteId)
 
     // ✅ Invalidate cache
     await this.invalidateInviteCache(workspaceId)
-    
+
     return { success: true }
   }
 
   // ─── Resend Invite ─────────────────────────────────────────
   async resendInvite(userId: string, workspaceId: string, inviteId: string) {
     await this.requireRole(userId, workspaceId, 'admin')
-    
+
     const { data: inv } = await supabase
       .from('workspace_invites')
       .select('id, status')
@@ -513,10 +522,9 @@ export class WorkspaceService {
       throw new DatabaseError('Failed to create account', createError)
     }
 
-    await supabase.from('profiles').upsert(
-      { id: created.user.id, full_name: data.fullName },
-      { onConflict: 'id' }
-    )
+    await supabase
+      .from('profiles')
+      .upsert({ id: created.user.id, full_name: data.fullName }, { onConflict: 'id' })
 
     const { error: memberError } = await supabase
       .from('workspace_members')
@@ -545,7 +553,7 @@ export class WorkspaceService {
   private async requireRole(userId: string, workspaceId: string, requiredRole: string) {
     const member = await this.requireMember(userId, workspaceId)
     const hierarchy: Record<string, number> = { owner: 4, admin: 3, member: 2, viewer: 1 }
-    
+
     if ((hierarchy[member.role] || 0) < (hierarchy[requiredRole] || 0)) {
       throw new DatabaseError('Insufficient permissions')
     }

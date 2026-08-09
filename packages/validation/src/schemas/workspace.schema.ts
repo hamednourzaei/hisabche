@@ -19,8 +19,13 @@ export const workspaceSchema = z.object({
   name: nonEmptyStringSchema,
   slug: nonEmptyStringSchema,
   description: optionalStringSchema,
-  logoUrl: z.string().url().optional().nullable(),
-  stampUrl: z.string().optional().nullable(),
+  // Both accept an http(s) URL or an inline `data:` URI — that is how the
+  // settings page uploads an image. `.url()` is applied to neither: Zod's
+  // `.url()` happens to accept data URIs today, but relying on that for one
+  // field and not the other was accidental, not a decision. Length is what
+  // actually needs bounding here.
+  logoUrl: z.string().max(10_000_000).optional().nullable(),
+  stampUrl: z.string().max(10_000_000).optional().nullable(),
   isActive: z.boolean().default(true),
   createdAt: isoDateSchema.optional(),
   updatedAt: isoDateSchema.optional(),

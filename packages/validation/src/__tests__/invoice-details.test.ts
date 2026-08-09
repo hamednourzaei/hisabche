@@ -22,7 +22,6 @@ describe('BACKWARD COMPATIBILITY: items written before this change', () => {
   it('an item with no details still validates', () => {
     const parsed = invoiceItemSchema.parse(legacyItem)
     expect(parsed.details).toEqual([])
-    expect(parsed.detailsArePriced).toBe(false)
     expect(parsed.unit).toBe('piece')
   })
 
@@ -73,22 +72,33 @@ describe('nested details', () => {
     expect(parsed.details.map((d) => d.sortOrder)).toEqual([0, 1, 2])
   })
 
-  it('details are INFORMATIONAL by default — the total stays quantity × unitPrice', () => {
-    expect(computeItemTotal(necklace)).toBe(50000)
+  it('THE RULE: components ADD to the base — قند ۲٬۰۰۰ + سنگ ۱٬۰۰۰ = ۳٬۰۰۰', () => {
+    expect(
+      computeItemTotal({
+        quantity: 1,
+        unitPrice: 2000,
+        details: [{ quantity: 1, amount: 1000 }],
+      }),
+    ).toBe(3000)
   })
 
-  it('when detailsArePriced, the total is the sum of the components', () => {
+  it('an item with no price of its own is just the sum of its parts', () => {
     // زنجیر 1×40000 + سنگ 2×2500 + اجرت 1×5000 = 50000
-    expect(computeItemTotal({ ...necklace, detailsArePriced: true })).toBe(50000)
+    expect(computeItemTotal({ ...necklace, unitPrice: 0 })).toBe(50000)
   })
 
-  it('never double-counts: priced details replace the base, not add to it', () => {
-    const priced = { ...necklace, unitPrice: 999999, detailsArePriced: true }
-    expect(computeItemTotal(priced)).toBe(50000)
+  it('base plus components when both are present', () => {
+    // 1×50000 base + 50000 of components
+    expect(computeItemTotal(necklace)).toBe(100000)
   })
 
-  it('applies the line discount after the detail sum', () => {
-    expect(computeItemTotal({ ...necklace, detailsArePriced: true, discount: 10 })).toBe(45000)
+  it('applies the line discount to the combined total', () => {
+    expect(computeItemTotal({ ...necklace, unitPrice: 0, discount: 10 })).toBe(45000)
+  })
+
+  it('the deprecated detailsArePriced flag no longer changes anything', () => {
+    const withFlag = { ...necklace, detailsArePriced: true }
+    expect(computeItemTotal(withFlag)).toBe(computeItemTotal(necklace))
   })
 })
 

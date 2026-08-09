@@ -82,28 +82,40 @@ describe('nested details', () => {
     expect(lineTotal(line({ quantity: 2, unitPrice: 100 }))).toBe(200)
   })
 
-  it('details are informational by default — the total is untouched', () => {
-    expect(lineTotal(necklace)).toBe(50000)
+  it('components ADD to the base — قند ۲٬۰۰۰ + سنگ ۱٬۰۰۰ = ۳٬۰۰۰', () => {
+    expect(
+      lineTotal(
+        line({
+          quantity: 1,
+          unitPrice: 2000,
+          details: [{ key: 'd', title: 'سنگ امیتیس', quantity: 1, amount: 1000 }],
+        }),
+      ),
+    ).toBe(3000)
   })
 
-  it('when priced, the components REPLACE the base — never add to it', () => {
-    expect(lineTotal({ ...necklace, detailsArePriced: true })).toBe(50000)
-    expect(lineTotal({ ...necklace, unitPrice: 999999, detailsArePriced: true })).toBe(50000)
+  it('a necklace with no price of its own is just the sum of its parts', () => {
+    expect(lineTotal({ ...necklace, unitPrice: 0 })).toBe(50000)
   })
 
-  it('applies the line discount after the component sum', () => {
-    expect(lineTotal({ ...necklace, detailsArePriced: true, discount: 10 })).toBe(45000)
+  it('base plus components, both present', () => {
+    expect(lineTotal(necklace)).toBe(100000)
+  })
+
+  it('applies the line discount to the combined total', () => {
+    expect(lineTotal({ ...necklace, unitPrice: 0, discount: 10 })).toBe(45000)
   })
 
   it('supports an unlimited number of components', () => {
     const many = line({
+      quantity: 0,
+      unitPrice: 0,
       details: Array.from({ length: 50 }, (_, i) => ({
         key: `d${i}`,
         title: `جزء ${i}`,
         quantity: 1,
         amount: 100,
       })),
-      detailsArePriced: true,
     })
     expect(lineTotal(many)).toBe(5000)
   })

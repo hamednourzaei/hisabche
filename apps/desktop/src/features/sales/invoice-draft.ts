@@ -51,12 +51,6 @@ export interface DraftLine {
   weightGrams?: number | undefined
   /** Optional. An empty list is a completely valid, and the default, state. */
   details?: readonly DraftDetail[] | undefined
-  /**
-   * false — details are informational; the line total stays quantity × price.
-   * true  — the detail amounts ARE the line total and replace the base.
-   * Never base + details: that would double-count.
-   */
-  detailsArePriced?: boolean | undefined
 }
 
 /** Sum of a line's components. */
@@ -65,9 +59,16 @@ export function detailsSum(details: readonly DraftDetail[] | undefined): number 
   return details.reduce((sum, d) => sum + d.quantity * d.amount, 0)
 }
 
+/**
+ * The one money rule for a line. Mirrors `computeItemTotal` in
+ * @hisabche/validation.
+ *
+ * Components ADD to the line: "قند ۲٬۰۰۰ + سنگ امیتیس ۱٬۰۰۰" totals 3,000.
+ * A line with no components is unchanged — base + 0.
+ */
 export function lineTotal(line: DraftLine): number {
-  const base = line.detailsArePriced ? detailsSum(line.details) : line.quantity * line.unitPrice
-  return base * (1 - line.discount / 100)
+  const gross = line.quantity * line.unitPrice + detailsSum(line.details)
+  return gross * (1 - line.discount / 100)
 }
 
 export function subtotalOf(lines: readonly DraftLine[]): number {
@@ -95,7 +96,6 @@ function toItem(line: DraftLine): InvoiceItem {
         amount: d.amount,
         sortOrder: index,
       })),
-    detailsArePriced: line.detailsArePriced ?? false,
   } as InvoiceItem
 }
 

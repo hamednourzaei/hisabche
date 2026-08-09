@@ -114,7 +114,6 @@ export const InvoiceLineRow = memo(function InvoiceLineRow({
           value={line.unitPrice}
           className="h-7 text-end"
           aria-label={t('inventory.price', 'مبلغ واحد')}
-          disabled={line.detailsArePriced === true}
           onChange={(event) =>
             onChange(line.key, { unitPrice: Math.max(0, Number(event.target.value) || 0) })
           }
@@ -215,7 +214,7 @@ export const InvoiceLineRow = memo(function InvoiceLineRow({
           ))}
 
           {/* No cap — the user adds as many components as the item has. */}
-          <div className="mt-1 flex items-center justify-between gap-3">
+          <div className="mt-1 flex items-center gap-3">
             <button
               type="button"
               onClick={addDetail}
@@ -224,18 +223,6 @@ export const InvoiceLineRow = memo(function InvoiceLineRow({
               <Plus size={12} />
               {t('sales.addDetail', 'افزودن جزئیات')}
             </button>
-
-            {/* This is what prevents double counting: the user says explicitly
-                whether the components REPLACE the line amount. */}
-            <label className="flex cursor-pointer items-center gap-1.5 text-[11px] text-[hsl(var(--fg-secondary))]">
-              <input
-                type="checkbox"
-                checked={line.detailsArePriced ?? false}
-                onChange={(event) => onChange(line.key, { detailsArePriced: event.target.checked })}
-                className="size-3 accent-[hsl(var(--color-primary))]"
-              />
-              {t('sales.detailsArePriced', 'مبلغ خط از جمع اجزا')}
-            </label>
           </div>
 
           <label className="mt-2 flex items-center gap-2 text-[11px] text-[hsl(var(--fg-secondary))]">

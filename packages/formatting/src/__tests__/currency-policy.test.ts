@@ -98,10 +98,12 @@ describe('§9 EUR is NOT an active product currency', () => {
     // currency the product rejects and omitted one it supports, so PKR
     // rendered as the bare text "PKR" instead of ₨.
     const hook = read('packages/ui/src/hooks/dashboard/use-currency.ts')
-    const union = /export type CurrencyCode = ([^;]+);/.exec(hook)![1]!
+    // Tolerant of formatter churn: the union may or may not end in a
+    // semicolon, and quote style is the linter's business, not this test's.
+    const union = /export type CurrencyCode =([^\n]+)/.exec(hook)![1]!
     expect(union).not.toContain('EUR')
     expect(union).toContain('PKR')
-    expect(hook).toContain('PKR: "₨"')
+    expect(hook).toMatch(/PKR:\s*['"]₨['"]/)
   })
 
   it('is absent from the backend drizzle schema', () => {

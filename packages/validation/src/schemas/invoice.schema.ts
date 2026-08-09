@@ -74,39 +74,42 @@ export const invoiceItemSchema = z.object({
   details: z.array(invoiceItemDetailSchema).default([]),
 
   /**
-   * How details participate in money.
-   *
-   * false (default) — details are INFORMATIONAL. The line total stays
-   *   `quantity × unitPrice`, exactly as it is today. Existing invoices and
-   *   every current total keep their meaning.
-   * true — the line total is the SUM of the detail amounts, and `unitPrice`
-   *   is derived from it. For a hand-made item priced up from its parts.
-   *
-   * Defaulting to false is what makes this change backward compatible: no
-   * existing invoice can be re-totalled by adding this field.
+   * @deprecated Components are always ADDITIVE — see `computeItemTotal`.
+   * Kept optional only so a client still sending it does not fail validation.
+   * The value is ignored.
    */
-  detailsArePriced: z.boolean().default(false),
+  detailsArePriced: z.boolean().optional(),
 })
 
 export type InvoiceItem = z.infer<typeof invoiceItemSchema>
 
 /**
- * The one place the parent/detail money rule lives. Both totals paths and any
+ * The one place the parent/detail money rule lives. Every totals path and any
  * UI preview must call this — never re-derive it inline.
+ *
+ * THE RULE — components ADD to the line:
+ *
+ *   line total = (quantity × unitPrice  +  Σ component.quantity × component.amount)
+ *                × (1 − discount%)
+ *
+ * "قند ۲٬۰۰۰ + سنگ امیتیس ۱٬۰۰۰" totals 3,000, not 2,000. A necklace with no
+ * price of its own is the same rule with a zero base: 0 + زنجیر + سنگ + اجرت.
+ *
+ * Backward compatible: an item with no components contributes an empty sum, so
+ * every pre-existing invoice totals exactly as it always did.
  */
 export function computeItemTotal(item: {
   quantity: number
   unitPrice: number
   discount?: number
   details?: readonly { quantity: number; amount: number }[]
-  detailsArePriced?: boolean
 }): number {
-  const base = item.detailsArePriced
-    ? (item.details ?? []).reduce((sum, d) => sum + d.quantity * d.amount, 0)
-    : item.quantity * item.unitPrice
+  const base = item.quantity * item.unitPrice
+  const components = (item.details ?? []).reduce((sum, d) => sum + d.quantity * d.amount, 0)
+  const gross = base + components
 
   const discount = item.discount ?? 0
-  return base - (base * discount) / 100
+  return gross - (gross * discount) / 100
 }
 
 // ============================================

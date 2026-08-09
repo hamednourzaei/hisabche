@@ -190,12 +190,6 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
     )
   }, [])
 
-  const toggleDetailsPriced = useCallback((key: string, priced: boolean) => {
-    setItems((prev) =>
-      prev.map((item) => (item.key === key ? { ...item, detailsArePriced: priced } : item)),
-    )
-  }, [])
-
   // ✅ سویچ «تسویه شده» صریح — مستقل از نوع پرداخت (نقد/نسیه)، کاربر می‌تواند
   // برای هر دو حالت وضعیت پرداخت را دستی مشخص کند
   const paidAmount = useMemo(
@@ -270,7 +264,6 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
             // never add to it.
             totalPrice: lineTotalOf(item),
             details,
-            detailsArePriced: item.detailsArePriced ?? false,
           }
         }),
       })
@@ -358,7 +351,6 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
       onAddDetail={addDetail}
       onUpdateDetail={updateDetail}
       onRemoveDetail={removeDetail}
-      onToggleDetailsPriced={toggleDetailsPriced}
       onSelectCustomer={setSelectedCustomer}
       onPaymentTypeChange={setPaymentType}
       onPaidNowChange={setPaidNow}

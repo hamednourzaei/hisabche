@@ -94,6 +94,11 @@ const server = Fastify({
         }),
   },
   connectionTimeout: 30000,
+  // Logos and stamps are sent inline as base64 data URIs, which inflate the
+  // payload by ~33%. Fastify's 1 MB default meant any photo over ~750 KB — an
+  // ordinary phone camera shot — was rejected with a bare 413 before it ever
+  // reached validation. 8 MB covers a full-resolution image with headroom.
+  bodyLimit: 8 * 1024 * 1024,
 })
 
 // ──────────────────────────────────────────────
@@ -136,7 +141,7 @@ server.addHook('onResponse', async (request, reply) => {
       userId: (request as any).userId ?? null,
       workspaceId: (request as any).workspaceId ?? null,
     },
-    '📊 perf'
+    '📊 perf',
   )
 })
 
@@ -162,12 +167,20 @@ server.addHook('preHandler', async (request, reply) => {
   const url = request.url
 
   const publicPaths = [
-    '/docs', '/live', '/ready', '/api', '/api/health', '/api/slo',
-    '/api/auth/login', '/api/auth/signup', '/api/auth/forgot-password',
-    '/api/auth/reset-password', '/api/auth/verify-email',
+    '/docs',
+    '/live',
+    '/ready',
+    '/api',
+    '/api/health',
+    '/api/slo',
+    '/api/auth/login',
+    '/api/auth/signup',
+    '/api/auth/forgot-password',
+    '/api/auth/reset-password',
+    '/api/auth/verify-email',
   ]
 
-  if (publicPaths.some(p => url.startsWith(p))) return
+  if (publicPaths.some((p) => url.startsWith(p))) return
   if (request.method === 'OPTIONS') return
 
   await authenticate(request, reply)
@@ -358,7 +371,10 @@ async function start() {
         return userId || request.ip || 'anonymous'
       },
       errorResponseBuilder: (_request, context) => {
-        const afterMs = typeof context.after === 'number' ? context.after : parseInt(String(context.after), 10) || 60000
+        const afterMs =
+          typeof context.after === 'number'
+            ? context.after
+            : parseInt(String(context.after), 10) || 60000
         return {
           success: false,
           error: 'Too many requests',
@@ -415,12 +431,13 @@ async function start() {
     console.log(`\n🚀 Server running on ${HOST}:${PORT} — v2.5`)
     console.log(`📚 Swagger UI: /docs`)
     console.log(`💚 Health: /api/health | /live | /ready`)
-    console.log(`🔍 Cache: per-route only (cacheMiddleware), global HTTP cache layer removed in v2.5`)
+    console.log(
+      `🔍 Cache: per-route only (cacheMiddleware), global HTTP cache layer removed in v2.5`,
+    )
     console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}\n`)
 
     // ─── 6.7 START SCHEDULER ──────────────────
     startScheduler()
-
   } catch (err) {
     const error = err as Error
     server.log.error(error)
