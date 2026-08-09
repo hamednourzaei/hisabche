@@ -9,9 +9,8 @@
 // Stage 2 is an architecture migration. It must not change a single rendered
 // colour. If this suite stays green across the refactor, that is proved.
 //
-// The eight stale LIGHT tokens are included deliberately. They diverge from
-// canonical (see design-tokens' drift ratchet) and that divergence is being
-// PRESERVED on purpose — fixing it is a separate, visually reviewable change.
+// The LIGHT tokens are now ALIGNED to canonical. This block records the new
+// values; the old teal-tinted ones are gone on purpose.
 // ============================================
 
 import { darkColors, lightColors } from '../colors'
@@ -69,21 +68,21 @@ const LIGHT_BASELINE = {
   destructiveSoft: 'hsla(0, 84%, 60%, 0.12)',
   infoSoft: 'hsla(199, 89%, 48%, 0.12)',
 
-  // ── The eight stale tokens. Preserved on purpose. ──
-  surfaceBase: 'hsl(168, 25%, 98%)',
-  surfaceMuted: 'hsl(166, 22%, 95%)',
-  surfaceOverlay: 'hsl(166, 22%, 95%)',
-  fgPrimary: 'hsl(210, 33%, 9%)',
-  fgSecondary: 'hsl(174, 15%, 38%)',
-  fgTertiary: 'hsl(168, 8%, 53%)',
-  borderDefault: 'hsl(166, 22%, 87%)',
-  borderStrong: 'hsl(166, 22%, 77%)',
-  glassBg: 'rgba(255, 255, 255, 0.82)',
+  // ── ALIGNED to canonical (was: the eight stale teal-tinted tokens). ──
+  surfaceBase: 'hsl(40, 16%, 97%)',
+  surfaceMuted: 'hsl(40, 12%, 94%)',
+  surfaceOverlay: 'hsl(40, 14%, 96%)',
+  fgPrimary: 'hsl(220, 18%, 13%)',
+  fgSecondary: 'hsl(220, 9%, 40%)',
+  fgTertiary: 'hsl(220, 7%, 55%)',
+  borderDefault: 'hsl(40, 10%, 88%)',
+  borderStrong: 'hsl(40, 10%, 79%)',
+  glassBg: 'rgba(255, 255, 255, 0.78)',
 
-  // ── Agrees with canonical ──
+  // ── Always agreed with canonical ──
   surfaceElevated: 'hsl(0, 0%, 100%)',
 
-  glassBorder: 'rgba(15, 127, 116, 0.12)',
+  glassBorder: 'rgba(15, 127, 116, 0.10)',
   scrim: 'rgba(16, 24, 32, 0.45)',
 }
 

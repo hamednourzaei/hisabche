@@ -1,88 +1,107 @@
 // packages/ui/src/components/ui/workflow/containers/approvals-container.tsx
-"use client";
+'use client'
 
-import { memo, useCallback, useMemo } from "react";
-import { useTranslations } from "next-intl";
+import { memo, useCallback, useMemo } from 'react'
+import { useTranslations } from 'next-intl'
 import {
   useWorkflowInstances,
   useWorkflowInstanceDetail,
   useWorkflow,
   usePerformWorkflowAction,
   type WorkflowInstance,
-} from "@hisabche/api";
-import { ApprovalCard } from "../approval-timeline";
-import { ApprovalsView } from "../approvals-view";
-import { useToast } from "../../toast-provider";
+} from '@hisabche/api'
+import { ApprovalCard } from '../approval-timeline'
+import { ApprovalsView } from '../approvals-view'
+import { useToast } from '../../toast-provider'
 
 interface ApiErrorLike {
-  status?: number;
-  message?: string;
+  status?: number
+  message?: string
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ApprovalsContainer — همه‌ی hookهای داده اینجا زندگی می‌کنند.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const NEEDS_ACTION_STATUSES = new Set(["pending", "in_progress"]);
+const NEEDS_ACTION_STATUSES = new Set(['pending', 'in_progress'])
 
 // یک instance را با جزئیات کامل (اکشن‌ها + مراحل تعریف‌شده در قالب workflow) رندر می‌کند.
 const ApprovalInstanceCard = memo(function ApprovalInstanceCard({
   instance,
   t,
 }: {
-  instance: WorkflowInstance;
-  t: (key: string, fallback?: string) => string;
+  instance: WorkflowInstance
+  t: (key: string, fallback?: string) => string
 }) {
   // ✅ FIX (N+1): قبلاً هر کارت جداگانه جزئیات نمونه را می‌گرفت — برای ۱۰
   // کارت یعنی ۱۰ درخواست موازی (در لاگ پروداکشن هرکدام ۸۰۰-۹۱۳ms). حالا
   // اکشن‌ها همراه خودِ لیست می‌آیند، پس فقط وقتی درخواست جداگانه می‌زنیم که
   // بک‌اند هنوز آن‌ها را ضمیمه نکرده باشد (سازگاری با نسخه‌ی قدیمی بک‌اند).
-  const embeddedActions = (instance as unknown as { actions?: unknown[] }).actions;
-  const hasEmbedded = Array.isArray(embeddedActions);
-  const { data: detail, isLoading: detailFetching, isError: detailError } = useWorkflowInstanceDetail(
-    hasEmbedded ? "" : instance.id
-  );
-  const detailLoading = hasEmbedded ? false : detailFetching;
+  const embeddedActions = (instance as unknown as { actions?: unknown[] }).actions
+  const hasEmbedded = Array.isArray(embeddedActions)
+  const {
+    data: detail,
+    isLoading: detailFetching,
+    isError: detailError,
+  } = useWorkflowInstanceDetail(hasEmbedded ? '' : instance.id)
+  const detailLoading = hasEmbedded ? false : detailFetching
   // منبع نهایی اکشن‌ها: ضمیمه‌ی لیست، وگرنه پاسخ درخواست جداگانه.
   const actions = (hasEmbedded ? embeddedActions : detail?.actions) as
-    | Parameters<typeof ApprovalCard>[0]["actions"]
-    | undefined;
-  const { data: workflow, isLoading: workflowLoading, isError: workflowError } = useWorkflow(instance.workflow_id);
-  const { mutateAsync: performAction } = usePerformWorkflowAction();
-  const toast = useToast();
+    Parameters<typeof ApprovalCard>[0]['actions'] | undefined
+  const {
+    data: workflow,
+    isLoading: workflowLoading,
+    isError: workflowError,
+  } = useWorkflow(instance.workflow_id)
+  const { mutateAsync: performAction } = usePerformWorkflowAction()
+  const toast = useToast()
 
   const handleAction = useCallback(
-    async (action: "approved" | "rejected" | "cancelled", comment?: string) => {
+    async (action: 'approved' | 'rejected' | 'cancelled', comment?: string) => {
       try {
-        await performAction({ instanceId: instance.id, action, ...(comment !== undefined && { comment }) });
+        await performAction({
+          instanceId: instance.id,
+          action,
+          ...(comment !== undefined && { comment }),
+        })
       } catch (err) {
-        const apiError = err as ApiErrorLike;
+        const apiError = err as ApiErrorLike
         const message =
           apiError.status === 403
-            ? t("workflow.forbiddenError", "شما اجازه‌ی انجام این اقدام را در این مرحله ندارید.")
-            : apiError.message ?? t("workflow.actionError", "انجام اقدام با خطا مواجه شد.");
-        toast.error(t("workflow.actionErrorTitle", "خطا در انجام اقدام"), message);
+            ? t('workflow.forbiddenError', 'شما اجازه‌ی انجام این اقدام را در این مرحله ندارید.')
+            : (apiError.message ?? t('workflow.actionError', 'انجام اقدام با خطا مواجه شد.'))
+        toast.error(t('workflow.actionErrorTitle', 'خطا در انجام اقدام'), message)
       }
     },
-    [performAction, instance.id, toast, t]
-  );
+    [performAction, instance.id, toast, t],
+  )
 
-  if (detailError || workflowError) {
+  // Only the instance's own actions are load-bearing. Without them there is
+  // genuinely nothing to render.
+  if (detailError) {
     return (
       <div className="h-16 rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))] flex items-center justify-center text-xs text-[hsl(var(--fg-tertiary))]">
-        {t("workflow.loadError", "بارگذاری این درخواست تأیید با خطا مواجه شد.")}
+        {t('workflow.loadError', 'بارگذاری این درخواست تأیید با خطا مواجه شد.')}
       </div>
-    );
+    )
   }
 
-  if (detailLoading || workflowLoading || !actions || !workflow) {
-    return <div className="h-32 rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />;
+  // ⚠️ FIX: a missing workflow TEMPLATE used to blank the whole card. An
+  // instance whose template was deleted still has its status, current step,
+  // total steps, entity and actions — everything the approver needs to act on.
+  // Only the step *names* are lost. Failing the entire row turned every
+  // orphaned instance into "بارگذاری این درخواست تأیید با خطا مواجه شد" and
+  // made the approvals page unusable.
+  const steps = workflowError ? [] : workflow?.steps
+
+  if (detailLoading || !actions || (!workflowError && (workflowLoading || !workflow))) {
+    return <div className="h-32 rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
   }
 
   return (
     <ApprovalCard
       actions={actions}
-      steps={workflow.steps}
+      steps={steps ?? []}
       currentStep={instance.current_step}
       status={instance.status}
       instanceId={instance.id}
@@ -94,31 +113,31 @@ const ApprovalInstanceCard = memo(function ApprovalInstanceCard({
       onAction={handleAction}
       t={t}
     />
-  );
-});
-ApprovalInstanceCard.displayName = "ApprovalInstanceCard";
+  )
+})
+ApprovalInstanceCard.displayName = 'ApprovalInstanceCard'
 
 export const ApprovalsContainer = memo(function ApprovalsContainer() {
-  const tOriginal = useTranslations();
+  const tOriginal = useTranslations()
   const t = (key: string, fallback?: string): string => {
-    const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
-    return v && v !== key ? v : (fallback ?? key);
-  };
+    const v = tOriginal(key as Parameters<typeof tOriginal>[0])
+    return v && v !== key ? v : (fallback ?? key)
+  }
 
-
-  const { data, isLoading } = useWorkflowInstances();
+  const { data, isLoading } = useWorkflowInstances()
 
   const pendingInstances = useMemo(
     () => (data?.data ?? []).filter((i) => NEEDS_ACTION_STATUSES.has(i.status)),
-    [data]
-  );
+    [data],
+  )
 
   const cards = useMemo(
-    () => pendingInstances.map((instance) => (
-      <ApprovalInstanceCard key={instance.id} instance={instance} t={t} />
-    )),
-    [pendingInstances, t]
-  );
+    () =>
+      pendingInstances.map((instance) => (
+        <ApprovalInstanceCard key={instance.id} instance={instance} t={t} />
+      )),
+    [pendingInstances, t],
+  )
 
   return (
     <ApprovalsView
@@ -127,6 +146,6 @@ export const ApprovalsContainer = memo(function ApprovalsContainer() {
       isEmpty={pendingInstances.length === 0}
       cards={cards}
     />
-  );
-});
-ApprovalsContainer.displayName = "ApprovalsContainer";
+  )
+})
+ApprovalsContainer.displayName = 'ApprovalsContainer'

@@ -15,7 +15,14 @@
 // migration (proved by __tests__/colors.snapshot.test.ts).
 // ============================================
 
-import { brand, brandGradientStops, darkTheme, hslLegacy, semantic } from '@hisabche/design-tokens'
+import {
+  brand,
+  brandGradientStops,
+  darkTheme,
+  hslLegacy,
+  lightTheme,
+  semantic,
+} from '@hisabche/design-tokens'
 
 export interface ColorScheme {
   // ── Brand ──
@@ -130,42 +137,22 @@ export const darkColors: ColorScheme = {
   glassBorder: darkTheme.glassBorder,
 }
 
-// ── LEGACY_LIGHT ───────────────────────────────────────────────────────────
-// KNOWN DIVERGENCE, PRESERVED ON PURPOSE.
-//
-// globals.css v3.1 re-tuned the web light theme to a warm, low-saturation
-// off-white (hue 40) with cool-grey text. This port predates that change and
-// still carries the older teal-tinted palette (hue ~166-168). Eight tokens
-// differ.
-//
-// It is NOT being aligned in this migration. Stage 2 is an architecture
-// change; mixing a visible palette change into it would make any later UI
-// regression impossible to attribute — migration or redesign? Aligning mobile
-// light mode is its own reviewable change.
-//
-// The divergence is enforced, not merely commented: see
-// __tests__/canonical-drift.test.ts, which fails BOTH if these drift further
-// AND once they are aligned (at which point, delete this block and derive
-// from `lightTheme` exactly as `darkColors` does above).
-const LEGACY_LIGHT = {
-  surfaceBase: 'hsl(168, 25%, 98%)',
-  surfaceMuted: 'hsl(166, 22%, 95%)',
-  surfaceElevated: 'hsl(0, 0%, 100%)',
-  surfaceOverlay: 'hsl(166, 22%, 95%)',
-
-  fgPrimary: 'hsl(210, 33%, 9%)',
-  fgSecondary: 'hsl(174, 15%, 38%)',
-  fgTertiary: 'hsl(168, 8%, 53%)',
-
-  borderDefault: 'hsl(166, 22%, 87%)',
-  borderStrong: 'hsl(166, 22%, 77%)',
-
-  glassBg: 'rgba(255, 255, 255, 0.82)',
-  glassBorder: 'rgba(15, 127, 116, 0.12)',
-} as const
-
 export const lightColors: ColorScheme = {
   ...constants,
   ...lightSoft,
-  ...LEGACY_LIGHT,
+
+  surfaceBase: hslLegacy(lightTheme.surfaceBase),
+  surfaceMuted: hslLegacy(lightTheme.surfaceMuted),
+  surfaceElevated: hslLegacy(lightTheme.surfaceElevated),
+  surfaceOverlay: hslLegacy(lightTheme.surfaceOverlay),
+
+  fgPrimary: hslLegacy(lightTheme.fgPrimary),
+  fgSecondary: hslLegacy(lightTheme.fgSecondary),
+  fgTertiary: hslLegacy(lightTheme.fgTertiary),
+
+  borderDefault: hslLegacy(lightTheme.borderDefault),
+  borderStrong: hslLegacy(lightTheme.borderStrong),
+
+  glassBg: lightTheme.glassBg,
+  glassBorder: lightTheme.glassBorder,
 }

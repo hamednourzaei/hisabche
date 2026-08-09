@@ -48,16 +48,15 @@ export const Money = memo(function Money({
   style,
 }: MoneyProps) {
   const { spacing } = useTheme()
-  const negative = signed && amount.trim().startsWith('-')
+  // ⚠️ FIX: this only tested for the ASCII hyphen, but Intl formats negatives
+  // with U+2212 MINUS SIGN, often prefixed by U+200E LEFT-TO-RIGHT MARK in RTL
+  // locales — so `signed` never once rendered a negative in red. Strip the
+  // directional marks, then accept either minus character.
+  const negative = signed && /^[-−]/.test(amount.replace(/[‎‏\s]/g, ''))
   const resolvedTone: TextTone = signed ? (negative ? 'danger' : 'success') : tone
 
   return (
-    <View
-      style={[
-        { flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs },
-        style,
-      ]}
-    >
+    <View style={[{ flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs }, style]}>
       <Text
         variant={AMOUNT_VARIANT[size]}
         tone={resolvedTone}

@@ -63,30 +63,27 @@ describe('DERIVED: the whole dark theme comes from canonical', () => {
   })
 })
 
-describe('KNOWN STALE: the light theme still diverges from canonical', () => {
+describe('ALIGNED: the light theme now comes from canonical too', () => {
   it.each([
     ['surfaceBase', lightTheme.surfaceBase],
     ['surfaceMuted', lightTheme.surfaceMuted],
+    ['surfaceElevated', lightTheme.surfaceElevated],
     ['surfaceOverlay', lightTheme.surfaceOverlay],
     ['fgPrimary', lightTheme.fgPrimary],
     ['fgSecondary', lightTheme.fgSecondary],
     ['fgTertiary', lightTheme.fgTertiary],
     ['borderDefault', lightTheme.borderDefault],
     ['borderStrong', lightTheme.borderStrong],
-  ])('%s is deliberately NOT aligned yet', (key, canonical) => {
-    expect(lightColors[key as keyof typeof lightColors]).not.toBe(hslLegacy(canonical))
+  ])('%s', (key, canonical) => {
+    expect(lightColors[key as keyof typeof lightColors]).toBe(hslLegacy(canonical))
   })
 
-  it('glassBg differs in alpha only (0.82 vs canonical 0.78)', () => {
-    expect(lightColors.glassBg).toBe('rgba(255, 255, 255, 0.82)')
-    expect(lightTheme.glassBg).toBe('rgba(255, 255, 255, 0.78)')
+  it('glass effects are passed through verbatim, like dark', () => {
+    expect(lightColors.glassBg).toBe(lightTheme.glassBg)
+    expect(lightColors.glassBorder).toBe(lightTheme.glassBorder)
   })
 
-  it('surfaceElevated is the one light token that already agrees', () => {
-    expect(lightColors.surfaceElevated).toBe(hslLegacy(lightTheme.surfaceElevated))
-  })
-
-  it('exactly 8 hue-bearing light tokens are stale — no more, no fewer', () => {
+  it('NO token is stale any more — the drift is closed', () => {
     const comparable = [
       ['surfaceBase', lightTheme.surfaceBase],
       ['surfaceMuted', lightTheme.surfaceMuted],
@@ -102,16 +99,6 @@ describe('KNOWN STALE: the light theme still diverges from canonical', () => {
     const stale = comparable.filter(
       ([key, canonical]) => lightColors[key as keyof typeof lightColors] !== hslLegacy(canonical),
     )
-
-    expect(stale.map(([k]) => k)).toEqual([
-      'surfaceBase',
-      'surfaceMuted',
-      'surfaceOverlay',
-      'fgPrimary',
-      'fgSecondary',
-      'fgTertiary',
-      'borderDefault',
-      'borderStrong',
-    ])
+    expect(stale.map(([k]) => k)).toEqual([])
   })
 })

@@ -53,21 +53,6 @@ const INVOICE_ITEM_DETAILS_COLUMNS = `
   )
 `
 
-const INVOICE_ITEMS_LIST_COLUMNS = `
-  id,
-  invoice_id,
-  product_id,
-  product_name,
-  quantity,
-  unit,
-  unit_label,
-  weight_grams,
-  unit_price,
-  discount,
-  total_price,
-  ${INVOICE_ITEM_DETAILS_COLUMNS}
-`
-
 // ============================================
 
 export class InvoiceService {
@@ -330,10 +315,14 @@ export class InvoiceService {
           product_id,
           product_name,
           quantity,
+          unit,
+          unit_label,
+          weight_grams,
           unit_price,
           discount,
           total_price,
-          notes
+          notes,
+          ${INVOICE_ITEM_DETAILS_COLUMNS}
         )
       `
 

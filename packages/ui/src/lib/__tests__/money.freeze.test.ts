@@ -118,7 +118,7 @@ describe('FREEZE: formatThousands — the INPUT path. Latin digits, decimals pre
 describe('FREEZE: unformatThousands — what actually reaches the API', () => {
   it.each([
     ['1,234,567', '1234567'],
-    ['۱۲۳', ''],
+    ['۱۲۳', '123'],
     ['1,234.56', '1234.56'],
     ['1.2.3', '1.23'],
     ['؋ 1,000', '1000'],
@@ -128,12 +128,17 @@ describe('FREEZE: unformatThousands — what actually reaches the API', () => {
     expect(unformatThousands(input as string)).toBe(expected)
   })
 
-  it('CRITICAL: Persian digits are DISCARDED, not converted', () => {
-    // If a user pastes "۱۲۳۴" into a money input, the submitted value is ""
-    // — not 1234. This is a real data-loss path and is frozen, not fixed,
-    // in Stage 0.
-    expect(unformatThousands('۱۲۳۴')).toBe('')
-    expect(unformatThousands('1۲3۴')).toBe('13')
+  it('FIXED (was Q7): Persian and Arabic-Indic digits are CONVERTED, not discarded', () => {
+    // Stage 0 froze the broken behaviour: pasting "۱۲۳۴" submitted "" and a
+    // mixed "1۲3۴" submitted "13". That is the user's own keyboard producing
+    // values the form silently threw away. Now converted before stripping.
+    expect(unformatThousands('۱۲۳۴')).toBe('1234')
+    expect(unformatThousands('1۲3۴')).toBe('1234')
+    expect(unformatThousands('١٢٣')).toBe('123')
+  })
+
+  it('the converted value still round-trips through Number()', () => {
+    expect(Number(unformatThousands('۱٬۲۳۴'))).toBe(1234)
   })
 
   it('keeps only the first decimal point', () => {

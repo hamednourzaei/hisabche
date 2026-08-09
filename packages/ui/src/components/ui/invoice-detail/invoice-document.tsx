@@ -108,6 +108,25 @@ const UNIT_LABELS: Record<string, string> = {
   liter: 'لیتر',
 }
 
+/**
+ * What the parent line contributes on its own, before its components.
+ *
+ * The item's `totalPrice` is the COMBINED figure (base + components) because
+ * that is what the invoice actually charges. But the components are printed as
+ * their own rows with their own amounts, so printing the combined figure on the
+ * parent row would show the component money twice and make the جمع look wrong:
+ *
+ *   قند       1  گرم  20,000   30,000   ← looked like the total, then…
+ *   ├─ سنگ    1        10,000   10,000   ← …10,000 again, so جمع 30,000 read as an error
+ *
+ * Printing the base instead makes the column add up: 20,000 + 10,000 = 30,000.
+ * For an item with no components base === totalPrice, so nothing changes.
+ */
+function baseTotalOf(item: InvoiceDocumentItem): number {
+  const components = (item.details ?? []).reduce((sum, d) => sum + d.quantity * d.amount, 0)
+  return item.totalPrice - components
+}
+
 /** Resolves the display unit, honouring a user-defined label. */
 export function unitText(
   unit: string | null | undefined,
@@ -433,7 +452,10 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
                         {item.discount ? `${item.discount}%` : '—'}
                       </td>
                       <td className="px-1.5 py-2 text-end font-medium tabular-nums text-[hsl(var(--fg-primary))] sm:px-2 sm:py-3">
-                        {item.totalPrice.toLocaleString()} {currency}
+                        {/* سهم خودِ این قلم — بدون اجزا. اجزا ردیف خودشان را
+                            دارند و جداگانه شمرده می‌شوند، وگرنه خواننده مبلغ
+                            جزء را دوبار می‌بیند و جمع غلط به نظر می‌رسد. */}
+                        {baseTotalOf(item).toLocaleString()} {currency}
                       </td>
                     </tr>
 
