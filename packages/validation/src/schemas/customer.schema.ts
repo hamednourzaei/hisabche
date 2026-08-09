@@ -79,6 +79,15 @@ export type UpdateSupplier = z.infer<typeof updateSupplierSchema>
 // ============================================
 
 export const customerFiltersSchema = z.object({
+  /**
+   * Filter by the party's DERIVED transaction role.
+   *
+   * Not stored on the customer:  already means payment terms
+   * (cash|credit). The role comes from whether the party appears on sale or
+   * purchase invoices, so one person is never duplicated into two records.
+   * A 'both' party matches either filter.
+   */
+  role: z.enum(['buyer', 'seller']).optional(),
   search: z.string().optional(),
   isActive: z
     .union([z.boolean(), z.string()])
@@ -102,6 +111,5 @@ export const customerFiltersSchema = z.object({
   // ✅ اضافه شد
   cursor: z.string().optional(),
 })
-
 
 export type CustomerFilters = z.infer<typeof customerFiltersSchema>
