@@ -127,6 +127,27 @@ export const invoiceStatusSchema = z.enum([
 
 export type InvoiceStatus = z.infer<typeof invoiceStatusSchema>
 
+/**
+ * When an invoice was settled — the «تاریخ تسویه» column — or `null` while it
+ * is still outstanding.
+ *
+ * The rule is that settlement is recorded by the `completed` transition, so the
+ * timestamp of that transition is the settlement date. Any other status has no
+ * settlement date, and showing `updatedAt` for one would date a settlement that
+ * has not happened.
+ *
+ * Returns the raw ISO string; each platform formats it with its own calendar
+ * helper. Lives here so the invoice list, the mobile card and any export agree
+ * on which invoices count as settled.
+ */
+export function settlementDate(invoice: {
+  status?: string | null | undefined
+  updatedAt?: string | null | undefined
+}): string | null {
+  if (invoice.status !== 'completed') return null
+  return invoice.updatedAt ?? null
+}
+
 // ============================================
 // Invoice
 // ============================================

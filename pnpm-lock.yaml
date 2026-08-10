@@ -546,6 +546,9 @@ importers:
       '@hisabche/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@hisabche/formatting':
+        specifier: workspace:*
+        version: link:../../packages/formatting
       '@hisabche/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
@@ -964,12 +967,18 @@ importers:
       '@hisabche/api':
         specifier: workspace:*
         version: link:../api
+      '@hisabche/formatting':
+        specifier: workspace:*
+        version: link:../formatting
       '@hisabche/store':
         specifier: workspace:*
         version: link:../store
       '@hisabche/ui-contract':
         specifier: workspace:*
         version: link:../ui-contract
+      '@hisabche/validation':
+        specifier: workspace:*
+        version: link:../validation
       '@hookform/resolvers':
         specifier: ^3.3.4
         version: 3.10.0(react-hook-form@7.84.0(react@19.2.6))

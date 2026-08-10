@@ -1,7 +1,7 @@
 import React, { memo } from 'react'
 import { View } from 'react-native'
 import type { InvoiceWithCustomer } from '@hisabche/api'
-import type { InvoiceStatus } from '@hisabche/validation'
+import { settlementDate, type InvoiceStatus } from '@hisabche/validation'
 import type { CurrencyCode } from '@hisabche/store'
 import {
   Avatar,
@@ -33,6 +33,11 @@ export interface InvoiceRowProps {
    * has to say which one it is; without it a purchase reads as a sale.
    */
   typeLabel: string
+  /**
+   * «تاریخ تسویه» prefix — the web table gives settlement its own column. The
+   * card has no columns, so the label travels with the value.
+   */
+  settledLabel: string
   onPress: (id: string) => void
   /** Long-press enters selection mode — the native bulk-action affordance. */
   onLongPress?: (() => void) | undefined
@@ -44,6 +49,7 @@ export const InvoiceRow = memo(function InvoiceRow({
   currency,
   statusLabel,
   typeLabel,
+  settledLabel,
   onPress,
   onLongPress,
   selected = false,
@@ -51,6 +57,9 @@ export const InvoiceRow = memo(function InvoiceRow({
   const { spacing } = useTheme()
   const status = (invoice.status ?? 'pending') as InvoiceStatus
   const isPurchase = (invoice.type ?? 'sale') === 'purchase'
+  // Same domain rule the web table's «تاریخ تسویه» column uses. Rendered only
+  // when it exists, so an outstanding invoice stays a compact row.
+  const settled = settlementDate({ status: invoice.status, updatedAt: invoice.updatedAt })
   // Every link in this chain is optional at runtime: a purchase may carry a
   // supplier rather than a customer, and an offline-queued invoice has no
   // number yet. Ending on a dash keeps the row readable instead of blank.
@@ -73,6 +82,11 @@ export const InvoiceRow = memo(function InvoiceRow({
           <Text variant="legal" tone="tertiary">
             {`${invoice.invoiceNumber} · ${formatDate(invoice.date)}`}
           </Text>
+          {settled ? (
+            <Text variant="legal" tone="tertiary">
+              {`${settledLabel}: ${formatDate(settled)}`}
+            </Text>
+          ) : null}
           <StatusChip label={typeLabel} tone={isPurchase ? 'info' : 'neutral'} />
         </View>
 

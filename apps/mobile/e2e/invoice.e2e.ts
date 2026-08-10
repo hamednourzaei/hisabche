@@ -7,7 +7,7 @@ import { by, device, element, expect, waitFor } from 'detox'
 describe('invoice creation', () => {
   beforeAll(async () => {
     await device.launchApp({ newInstance: false })
-    await element(by.id('tab-sales')).tap()
+    await element(by.id('tab-invoices')).tap()
   })
 
   it('opens the create screen from the floating button', async () => {
@@ -41,6 +41,7 @@ describe('offline sync', () => {
     await element(by.id('invoice-save')).tap()
 
     await element(by.id('tab-more')).tap()
+    await element(by.id('nav-settings')).tap()
     await element(by.id('open-sync')).tap()
     await expect(element(by.id('sync-entry-0'))).toBeVisible()
 

@@ -44,13 +44,13 @@ export function BarcodeScanScreen() {
         }
 
         await queryClient.invalidateQueries({ queryKey: productKeys.lists() })
-        router.replace(`/inventory/${product.id}`)
+        router.replace(`/warehouse/${product.id}`)
       } catch {
         setError(t('common.error'))
         handled.current = false
       }
     },
-    [queryClient, router, t]
+    [queryClient, router, t],
   )
 
   if (!permission) return <Screen />
@@ -85,7 +85,12 @@ export function BarcodeScanScreen() {
             {error}
           </Text>
         ) : null}
-        <Button label={t('common.cancel')} variant="ghost" fullWidth onPress={() => router.back()} />
+        <Button
+          label={t('common.cancel')}
+          variant="ghost"
+          fullWidth
+          onPress={() => router.back()}
+        />
       </View>
     </Screen>
   )

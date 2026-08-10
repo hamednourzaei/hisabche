@@ -17,6 +17,8 @@ export {
   type KnownCurrency,
 } from './money'
 
+export { toCSV, csvFilename, UTF8_BOM, type CsvColumn } from './csv'
+
 export {
   toPersianDigits,
   toArabicDigits,

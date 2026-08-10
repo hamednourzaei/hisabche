@@ -450,7 +450,11 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
               height={180}
               previousPeriodTotal={previousDaySalesTotal}
               currentPeriodTotal={todaySales}
-              onViewFullReport={() => onNavigate('/reports')}
+              // `/reports` was never a route — the chart's "full report" link
+              // 404'd on web and would have redirected to the dashboard on
+              // desktop's catch-all. Accounting («پول و سود») is the destination
+              // the navigation contract actually gives for revenue detail.
+              onViewFullReport={() => onNavigate('/accounting')}
             />
           </div>
         </div>

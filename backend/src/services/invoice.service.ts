@@ -53,6 +53,45 @@ const INVOICE_ITEM_DETAILS_COLUMNS = `
   )
 `
 
+/** Item columns that `docs/unified-sale-purchase-migration.sql` adds. */
+const INVOICE_ITEM_UNIT_COLUMNS = 'unit, unit_label, weight_grams,'
+
+/**
+ * Does this error mean "the schema does not have that yet" rather than "the
+ * query is wrong"?
+ *
+ *   42703   — undefined_column (Postgres)
+ *   PGRST200 — PostgREST could not find the relationship between two tables
+ *
+ * Both are what a database that has not run a migration returns for a column
+ * or embedded table the code already knows about.
+ */
+function isMissingSchemaError(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false
+  if (error.code === '42703' || error.code === 'PGRST200') return true
+  return /does not exist|could not find|schema cache/i.test(error.message ?? '')
+}
+
+/**
+ * Which optional schema pieces this database actually has.
+ *
+ * Probed once per process rather than per request: without this, every read
+ * would pay a failed round-trip before falling back. Reset is deliberately not
+ * exposed — a migration lands with a deploy, and a deploy restarts the process.
+ */
+const schemaSupport = {
+  publicToken: true,
+  itemDetails: true,
+  itemUnits: true,
+  /**
+   * Whether the customer embed can name its foreign key explicitly.
+   * `customers!fk_invoices_customer` is faster to resolve but depends on the
+   * constraint being named exactly that; falling back to the inferred
+   * relationship keeps the read working if it is not.
+   */
+  namedCustomerFk: true,
+}
+
 // ============================================
 
 export class InvoiceService {
@@ -279,9 +318,97 @@ export class InvoiceService {
     return result
   }
 
-  // ─── Get Invoice By ID ───
-  async getById(id: string, userId: string) {
-    const baseColumns = `
+  /**
+   * Turn off the one optional schema piece the error is complaining about.
+   *
+   * Returns false when there is nothing left to drop, which ends the retry
+   * loop and lets the real error surface rather than spinning.
+   */
+  private degradeSchemaSupport(error: { message?: string }): boolean {
+    const message = error.message ?? ''
+
+    if (schemaSupport.publicToken && /public_token/.test(message)) {
+      schemaSupport.publicToken = false
+      console.warn('[InvoiceService] public_token missing — run invoice-public-share-migration.sql')
+      return true
+    }
+
+    if (schemaSupport.itemDetails && /invoice_item_details/.test(message)) {
+      schemaSupport.itemDetails = false
+      console.warn(
+        '[InvoiceService] invoice_item_details missing — run unified-sale-purchase-migration.sql. ' +
+          'Nested line-item details will not be returned until it is applied.',
+      )
+      return true
+    }
+
+    if (schemaSupport.itemUnits && /unit_label|weight_grams|\bunit\b/.test(message)) {
+      schemaSupport.itemUnits = false
+      console.warn(
+        '[InvoiceService] item unit columns missing — run unified-sale-purchase-migration.sql. ' +
+          'Units and weights will not be returned until it is applied.',
+      )
+      return true
+    }
+
+    if (schemaSupport.namedCustomerFk && /fk_invoices_customer|customers/.test(message)) {
+      schemaSupport.namedCustomerFk = false
+      console.warn(
+        '[InvoiceService] fk_invoices_customer not resolvable — falling back to the inferred ' +
+          'customer relationship. Check the foreign key name on invoices.customer_id.',
+      )
+      return true
+    }
+
+    // Unrecognised schema error: drop everything optional once, then give up.
+    if (
+      schemaSupport.publicToken ||
+      schemaSupport.itemDetails ||
+      schemaSupport.itemUnits ||
+      schemaSupport.namedCustomerFk
+    ) {
+      schemaSupport.publicToken = false
+      schemaSupport.itemDetails = false
+      schemaSupport.itemUnits = false
+      schemaSupport.namedCustomerFk = false
+      console.warn(
+        '[InvoiceService] unrecognised schema error, dropping optional columns:',
+        message,
+      )
+      return true
+    }
+
+    return false
+  }
+
+  /**
+   * Column list for a single invoice, built from what this database actually
+   * has.
+   *
+   * Every optional piece here is added by a migration that may not have run on
+   * a given environment yet: `public_token` by the public-share migration,
+   * and the item unit columns plus `invoice_item_details` by the unified
+   * sale/purchase migration. Selecting a column Postgres does not have is an
+   * error, not an empty result — so an un-migrated database made this method
+   * throw NotFound for invoices that plainly exist.
+   */
+  private invoiceSelect(): string {
+    const itemColumns = `
+          id,
+          invoice_id,
+          product_id,
+          product_name,
+          quantity,
+          ${schemaSupport.itemUnits ? INVOICE_ITEM_UNIT_COLUMNS : ''}
+          unit_price,
+          discount,
+          total_price,
+          notes
+          ${schemaSupport.itemDetails ? `,${INVOICE_ITEM_DETAILS_COLUMNS}` : ''}
+    `
+
+    return `
+        ${schemaSupport.publicToken ? 'public_token,' : ''}
         id,
         invoice_number,
         type,
@@ -302,53 +429,37 @@ export class InvoiceService {
         user_id,
         created_at,
         updated_at,
-        customer:customers!fk_invoices_customer (
+        customer:customers${schemaSupport.namedCustomerFk ? '!fk_invoices_customer' : ''} (
           id,
           full_name,
           phone,
           email,
           address
         ),
-        invoice_items (
-          id,
-          invoice_id,
-          product_id,
-          product_name,
-          quantity,
-          unit,
-          unit_label,
-          weight_grams,
-          unit_price,
-          discount,
-          total_price,
-          notes,
-          ${INVOICE_ITEM_DETAILS_COLUMNS}
-        )
+        invoice_items (${itemColumns})
       `
+  }
 
-    // ✅ public_token is used to build a shareable/QR link that works
-    // without login (see invoice-public.routes.ts). Requested separately
-    // with a graceful fallback: if docs/invoice-public-share-migration.sql
-    // hasn't been run yet, the column doesn't exist (Postgres 42703) and
-    // we simply omit it — the frontend then falls back to the
-    // authenticated-route link for the QR code.
-    let data: any = null
-    let error: any = null
-
-    ;({ data, error } = await supabase
-      .from('invoices')
-      .select(`public_token,\n${baseColumns}`)
-      .eq('id', id)
-      .eq('user_id', userId)
-      .single())
-
-    if (error && (error.code === '42703' || /public_token/.test(error.message || ''))) {
-      ;({ data, error } = await supabase
+  // ─── Get Invoice By ID ───
+  async getById(id: string, userId: string) {
+    // The select string is built at runtime, so Supabase cannot infer a row
+    // type from it — same reason the previous implementation used `any` here.
+    const read = async (): Promise<{ data: any; error: any }> =>
+      supabase
         .from('invoices')
-        .select(baseColumns)
+        .select(this.invoiceSelect())
         .eq('id', id)
         .eq('user_id', userId)
-        .single())
+        .single()
+
+    let { data, error } = await read()
+
+    // A schema error means this database is behind on a migration, not that
+    // the invoice is missing. Narrow what we ask for, remember it for the rest
+    // of the process, and retry — degraded data beats a 404 on a record that
+    // exists, and beats a 500 on a create that already succeeded.
+    while (error && isMissingSchemaError(error) && this.degradeSchemaSupport(error)) {
+      ;({ data, error } = await read())
     }
 
     if (error || !data) {

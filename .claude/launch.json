@@ -3,14 +3,14 @@
   "configurations": [
     {
       "name": "web",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--workspace=apps/web"],
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@hisabche/web", "dev"],
       "port": 3039
     },
     {
       "name": "desktop",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--workspace=apps/desktop"],
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@hisabche/desktop", "dev"],
       "port": 5174
     }
   ]

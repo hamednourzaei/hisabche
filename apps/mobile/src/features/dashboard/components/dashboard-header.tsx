@@ -48,7 +48,7 @@ export const DashboardHeader = memo(function DashboardHeader() {
         pendingCount={pending}
         offlineLabel={t('sync.offlineBanner')}
         pendingLabel={t('sync.pendingBanner', { count: pending })}
-        onPress={() => router.push('/sync')}
+        onPress={() => router.push('/sync-center')}
       />
     </View>
   )

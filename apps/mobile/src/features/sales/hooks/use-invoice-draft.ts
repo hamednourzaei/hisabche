@@ -114,9 +114,14 @@ export interface InvoiceDraft {
   build: (currency: CurrencyCode) => CreateInvoice
 }
 
-export function useInvoiceDraft(): InvoiceDraft {
+/**
+ * @param initialType Seeds the sale/purchase switch. `/quick-invoice` and
+ *   `/purchasing` are the same form reached from two intents, so the entry
+ *   point picks the starting side; the user can still flip it.
+ */
+export function useInvoiceDraft(initialType: TransactionType = 'sale'): InvoiceDraft {
   const [items, setItems] = useState<DraftItem[]>([])
-  const [transactionType, setTransactionType] = useState<TransactionType>('sale')
+  const [transactionType, setTransactionType] = useState<TransactionType>(initialType)
   const [customerId, setCustomerId] = useState<string | undefined>(undefined)
   const [customerName, setCustomerName] = useState<string | undefined>(undefined)
 

@@ -20,13 +20,20 @@ describe('authentication', () => {
   })
 
   it('reaches the dashboard with valid credentials', async () => {
-    await element(by.traits(['search'])).atIndex(0).tap().catch(() => undefined)
+    await element(by.traits(['search']))
+      .atIndex(0)
+      .tap()
+      .catch(() => undefined)
 
-    await element(by.type('RCTUITextField')).atIndex(0).typeText(process.env.E2E_EMAIL ?? '')
-    await element(by.type('RCTUITextField')).atIndex(1).typeText(process.env.E2E_PASSWORD ?? '')
+    await element(by.type('RCTUITextField'))
+      .atIndex(0)
+      .typeText(process.env.E2E_EMAIL ?? '')
+    await element(by.type('RCTUITextField'))
+      .atIndex(1)
+      .typeText(process.env.E2E_PASSWORD ?? '')
     await element(by.id('login-submit')).tap()
 
-    await waitFor(element(by.id('tab-home')))
+    await waitFor(element(by.id('tab-dashboard')))
       .toBeVisible()
       .withTimeout(15_000)
   })
@@ -34,7 +41,7 @@ describe('authentication', () => {
 
 describe('navigation', () => {
   it('moves across every bottom tab', async () => {
-    for (const tab of ['tab-sales', 'tab-inventory', 'tab-customers', 'tab-more']) {
+    for (const tab of ['tab-quick-invoice', 'tab-invoices', 'tab-warehouse', 'tab-more']) {
       await element(by.id(tab)).tap()
       await expect(element(by.id(tab))).toBeVisible()
     }

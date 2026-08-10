@@ -1,4 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/no-require-imports -- CJS config file, require() is required here
 const path = require('path')
 
 /** @type {import('next').NextConfig} */
@@ -24,6 +23,8 @@ const nextConfig = {
 
   transpilePackages: [
     '@hisabche/ui',
+    '@hisabche/formatting',
+    '@hisabche/ui-contract',
     '@hisabche/i18n',
     '@hisabche/store',
     '@hisabche/validation',
@@ -85,9 +86,7 @@ const nextConfig = {
     return [
       {
         source: '/fonts/:path*',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-        ],
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
       },
       {
         source: '/images/:path*',
@@ -97,9 +96,7 @@ const nextConfig = {
       },
       {
         source: '/_next/static/:path*',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-        ],
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
       },
       {
         source: '/en',
@@ -121,14 +118,12 @@ const nextConfig = {
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=()' },
           // ✅ اضافه شد: CSP Header
-          
         ],
       },
     ]
   },
 }
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports -- CJS config file, require() is required here
 const withNextIntl = require('next-intl/plugin')('./i18n/request.ts')
 
 module.exports = withNextIntl(nextConfig)

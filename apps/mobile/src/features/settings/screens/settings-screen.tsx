@@ -1,5 +1,8 @@
 // ============================================
-// More — account, language, currency, biometrics, sync, sign out.
+// Settings — account, language, currency, biometrics, sync, sign out.
+//
+// Reached from More, the same place the web sidebar files it under «سیستم».
+// Navigation itself is not this screen's job; MoreScreen renders that.
 // ============================================
 
 import React, { useCallback } from 'react'
@@ -21,6 +24,9 @@ const CURRENCIES: readonly CurrencyCode[] = ['AFN', 'USD', 'PKR', 'IRR'] as cons
 
 export function SettingsScreen() {
   const { t, i18n } = useTranslation('mobile')
+  // Destination copy comes from the shared catalog so mobile says exactly what
+  // the web sidebar says for the same place.
+  const { t: tCommon } = useTranslation('common')
   const { spacing } = useTheme()
   const router = useRouter()
 
@@ -46,14 +52,17 @@ export function SettingsScreen() {
     if (ok) setBiometricEnabled(true)
   }, [biometricEnabled, biometrics, setBiometricEnabled, t])
 
-  const onSelectLanguage = useCallback(async (lang: SupportedLanguage) => {
-    const needsReload = await setMobileLanguage(lang)
-    if (needsReload) Alert.alert(t('common.loading'))
-  }, [t])
+  const onSelectLanguage = useCallback(
+    async (lang: SupportedLanguage) => {
+      const needsReload = await setMobileLanguage(lang)
+      if (needsReload) Alert.alert(t('common.loading'))
+    },
+    [t],
+  )
 
   return (
     <AppScreen>
-      <ScreenHeader title={t('more.title')} />
+      <ScreenHeader title={tCommon('nav.settings')} />
 
       <ScrollView contentContainerStyle={{ padding: spacing.md, gap: spacing.md }}>
         <MobileCard>
@@ -72,11 +81,10 @@ export function SettingsScreen() {
           ) : null}
         </MobileCard>
 
-        <MobileCard onPress={() => router.push('/accounting')}>
-          <Text variant="bodyStrong">{t('more.accounting')}</Text>
-        </MobileCard>
-
-        <MobileCard testID="open-sync" onPress={() => router.push('/sync')}>
+        {/* Sync keeps its shortcut here because the pending-outbox count is the
+            one thing a user checks *from* settings. Every other destination now
+            lives in More, which renders the shared navigation contract. */}
+        <MobileCard testID="open-sync" onPress={() => router.push('/sync-center')}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
             <Text variant="bodyStrong" style={{ flex: 1 }}>
               {t('more.sync')}
@@ -89,7 +97,14 @@ export function SettingsScreen() {
           <Text variant="label" tone="secondary">
             {t('more.language')}
           </Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: spacing.sm,
+              marginTop: spacing.sm,
+            }}
+          >
             {supportedLanguages.map((lang) => (
               <Button
                 key={lang.code}
@@ -106,7 +121,14 @@ export function SettingsScreen() {
           <Text variant="label" tone="secondary">
             {t('common.currency')}
           </Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.sm }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: spacing.sm,
+              marginTop: spacing.sm,
+            }}
+          >
             {CURRENCIES.map((code) => (
               <Button
                 key={code}

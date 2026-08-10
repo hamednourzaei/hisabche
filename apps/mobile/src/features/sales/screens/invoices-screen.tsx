@@ -5,11 +5,17 @@
 // ============================================
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Share } from 'react-native'
+import { Alert, Pressable, Share } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { useTranslation } from 'react-i18next'
 import { useInvoices, type InvoiceWithCustomer } from '@hisabche/api'
+import { csvFilename } from '@hisabche/formatting'
+import {
+  INVOICE_EXPORT_COLUMNS,
+  invoiceTypeLabelKey,
+  resolveExportColumns,
+} from '@hisabche/ui-contract'
 import type { InvoiceStatus } from '@hisabche/validation'
 import {
   FilterBar,
@@ -24,6 +30,8 @@ import { AppScreen } from '../../../shared/components/app-screen'
 import { QueryList } from '../../../shared/components/query-list'
 import { ScreenHeader } from '../../../shared/components/screen-header'
 import { SelectionBar } from '../../../shared/components/selection-bar'
+import { useCommonT } from '../../../shared/i18n/use-common-t'
+import { shareAsCSV } from '../../../shared/lib/export-csv'
 import { currencySign, formatAmount } from '../../../shared/lib/format'
 import { useSelectionMode } from '../../../shared/hooks/use-selection-mode'
 import { useCurrency } from '../../settings/preferences.store'
@@ -43,6 +51,9 @@ function statusKey(status: InvoiceStatus): string {
 
 export function InvoicesScreen() {
   const { t } = useTranslation('mobile')
+  // Destination copy and export headings come from the shared catalog, so this
+  // screen is titled with the same words the web page uses.
+  const tCommon = useCommonT()
   const { colors } = useTheme()
   const router = useRouter()
   const currency = useCurrency()
@@ -114,12 +125,30 @@ export function InvoicesScreen() {
         selection.toggle(id)
         return
       }
-      router.push(`/sales/${id}`)
+      router.push(`/invoices/${id}`)
     },
     [router, selection],
   )
 
-  const openCreate = useCallback(() => router.push('/sales/new'), [router])
+  const openCreate = useCallback(() => router.push('/(tabs)/quick-invoice'), [router])
+
+  // Exports what is currently filtered — the same rule the web export follows,
+  // so the user gets what they can see.
+  const exportCsv = useCallback(async () => {
+    const rows = items.map((invoice) => ({
+      ...invoice,
+      typeLabel: tCommon(invoiceTypeLabelKey(invoice.type)),
+    }))
+
+    const result = await shareAsCSV(
+      rows,
+      resolveExportColumns<(typeof rows)[number]>(INVOICE_EXPORT_COLUMNS, tCommon),
+      csvFilename('invoices', new Date()),
+    )
+
+    if (result === 'empty') Alert.alert(t('sales.emptyTitle'))
+    if (result === 'unavailable') Alert.alert(t('common.error'))
+  }, [items, t, tCommon])
 
   const shareSelected = useCallback(() => {
     const chosen = items.filter((invoice) => invoice.id && selection.isSelected(invoice.id))
@@ -163,7 +192,21 @@ export function InvoicesScreen() {
           ]}
         />
       ) : (
-        <ScreenHeader title={t('sales.title')} />
+        <ScreenHeader
+          title={tCommon('nav.getPaid')}
+          subtitle={tCommon('nav.getPaid_description')}
+          trailing={
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={tCommon('common.export', 'خروجی CSV')}
+              testID="export-invoices"
+              onPress={() => void exportCsv()}
+              hitSlop={12}
+            >
+              <Ionicons name="download-outline" size={20} color={colors.fgSecondary} />
+            </Pressable>
+          }
+        />
       )}
       <SearchBar
         value={search}
@@ -206,6 +249,7 @@ export function InvoicesScreen() {
               typeLabel={
                 (item.type ?? 'sale') === 'purchase' ? t('sales.purchase') : t('sales.sale')
               }
+              settledLabel={tCommon('invoices.paymentDate', 'تاریخ تسویه')}
               onPress={openDetail}
               onLongPress={item.id ? () => selection.begin(item.id as string) : undefined}
               selected={item.id ? selection.isSelected(item.id) : false}

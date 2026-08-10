@@ -50,6 +50,15 @@ export {
   type DialogRole,
 } from './component'
 
+export { buildInvoiceShareUrl, urlLangFromLocale } from './share-links'
+
+export {
+  INVOICE_EXPORT_COLUMNS,
+  invoiceTypeLabelKey,
+  resolveExportColumns,
+  type ExportColumn,
+} from './export-columns'
+
 export {
   NAV_CONTRACT,
   PRIMARY_CONTRACT,

@@ -1,1 +1,1 @@
-export { SettingsScreen as default } from '../../src/features/settings/screens/settings-screen'
+export { MoreScreen as default } from '../../src/features/more/screens/more-screen'

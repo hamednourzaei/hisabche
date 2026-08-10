@@ -17,7 +17,6 @@ import { ScreenHeader } from '../../../shared/components/screen-header'
 import { useCurrency } from '../../settings/preferences.store'
 import { ProductRow, type StockLevel } from '../components/product-row'
 
-
 type StockFilter = 'all' | 'lowStock' | 'outOfStock'
 
 export function ProductsScreen() {
@@ -38,8 +37,8 @@ export function ProductsScreen() {
   const query = useProducts(
     useMemo(
       () => ({ page: 1, limit: 30, search, lowStock: filter === 'lowStock' ? true : undefined }),
-      [filter, search]
-    )
+      [filter, search],
+    ),
   )
 
   const products = useMemo(() => {
@@ -49,7 +48,7 @@ export function ProductsScreen() {
   }, [filter, query.data])
 
   const stockLabel = useCallback((level: StockLevel) => t(`inventory.${level}`), [t])
-  const openDetail = useCallback((id: string) => router.push(`/inventory/${id}`), [router])
+  const openDetail = useCallback((id: string) => router.push(`/warehouse/${id}`), [router])
 
   return (
     <AppScreen>
@@ -59,7 +58,7 @@ export function ProductsScreen() {
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={t('inventory.scanBarcode')}
-            onPress={() => router.push('/inventory/scan')}
+            onPress={() => router.push('/warehouse/scan')}
             hitSlop={8}
             style={{ padding: spacing.xs }}
           >

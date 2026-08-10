@@ -6,7 +6,7 @@
 import React, { useCallback, useState } from 'react'
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { useRouter } from 'expo-router'
+import { useLocalSearchParams, useRouter } from 'expo-router'
 import { useTranslation } from 'react-i18next'
 import {
   Avatar,
@@ -36,7 +36,10 @@ export function NewInvoiceScreen() {
   const router = useRouter()
   const currency = useCurrency()
 
-  const draft = useInvoiceDraft()
+  // `?type=purchase` — the same parameter the web and desktop command palette
+  // uses, so a deep link means the same thing on every platform.
+  const { type } = useLocalSearchParams<{ type?: string }>()
+  const draft = useInvoiceDraft(type === 'purchase' ? 'purchase' : 'sale')
   const { submit, isSubmitting } = useSubmitInvoice()
 
   const [customerOpen, setCustomerOpen] = useState(false)
@@ -51,7 +54,10 @@ export function NewInvoiceScreen() {
     try {
       const result = await submit(draft.build(currency))
       Alert.alert(result.queued ? t('sales.savedOffline') : t('sales.created'))
-      router.back()
+      // Reached as a tab there is nothing to go back to, so land on the list
+      // the invoice was just added to rather than leaving a spent form on screen.
+      if (router.canGoBack()) router.back()
+      else router.replace('/(tabs)/invoices')
     } catch (error) {
       Alert.alert(t('common.error'), error instanceof Error ? error.message : undefined)
     }

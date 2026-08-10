@@ -54,6 +54,7 @@ const ICONS: Record<NavId, readonly [IconName, IconName]> = {
   approvals: ['checkmark-done-outline', 'checkmark-done'],
   settings: ['settings-outline', 'settings'],
   access: ['key-outline', 'key'],
+  history: ['time-outline', 'time'],
   events: ['notifications-outline', 'notifications'],
   sync: ['sync-outline', 'sync'],
 }

@@ -6,6 +6,12 @@ import { EmptyState } from '../empty-state'
 import { InvoicesSkeleton } from './invoices-skeleton'
 import { Plus, FileText, DollarSign, CheckCircle2, Clock, Download, Trash2 } from 'lucide-react'
 import { exportToCSV } from '../../../lib/export'
+import { csvFilename } from '@hisabche/formatting'
+import {
+  INVOICE_EXPORT_COLUMNS,
+  invoiceTypeLabelKey,
+  resolveExportColumns,
+} from '@hisabche/ui-contract'
 import { InvoiceRowActions } from './invoice-row-actions'
 import { BentoStats, type BentoStat } from '../bento-stats'
 import {
@@ -211,27 +217,17 @@ const ExportButton = memo(function ExportButton({
   const handleExport = () => {
     if (invoices.length === 0) return
 
+    // Columns come from the shared contract so the mobile export cannot drift
+    // into a different set or a different heading for the same field.
     const rows = invoices.map((inv) => ({
       ...inv,
-      typeLabel: t(`invoices.type.${inv.type || 'sale'}`, inv.type || 'sale'),
+      typeLabel: t(invoiceTypeLabelKey(inv.type), inv.type || 'sale'),
     }))
 
     exportToCSV(
       rows,
-      [
-        { key: 'typeLabel', label: t('invoices.type', 'نوع') },
-        { key: 'invoiceNumber', label: t('invoices.invoiceNumber', 'شماره فاکتور') },
-        { key: 'date', label: t('invoices.date', 'تاریخ') },
-        // Neutral, because the export mixes both directions — see the party
-        // column in the table for the same reasoning.
-        { key: 'customerName', label: t('invoices.party', 'طرف حساب') },
-        { key: 'company', label: t('invoices.company', 'شرکت') },
-        { key: 'total', label: t('invoices.total', 'مبلغ') },
-        { key: 'currency', label: t('invoices.currency', 'ارز') },
-        { key: 'status', label: t('invoices.status', 'وضعیت') },
-        { key: 'paymentDate', label: t('invoices.paymentDate', 'تاریخ تسویه') },
-      ],
-      `invoices-${new Date().toISOString().split('T')[0]}`,
+      resolveExportColumns<(typeof rows)[number]>(INVOICE_EXPORT_COLUMNS, t),
+      csvFilename('invoices', new Date()),
     )
   }
 

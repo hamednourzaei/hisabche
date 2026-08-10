@@ -5,7 +5,7 @@ import { useAuthStore } from '../../src/features/auth/auth.store'
 export default function AuthLayout() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
 
-  if (isAuthenticated) return <Redirect href="/(tabs)" />
+  if (isAuthenticated) return <Redirect href="/(tabs)/dashboard" />
 
   return <Stack screenOptions={{ headerShown: false }} />
 }

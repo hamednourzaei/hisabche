@@ -63,6 +63,8 @@ export default defineConfig({
 
         'next/image': resolve(shims, 'next-image.tsx'),
 
+        'next/dynamic': resolve(shims, 'next-dynamic.tsx'),
+
         // `@hisabche/ui` is authored against next-intl; the shim maps it onto
         // the desktop i18next instance so both read one message catalog.
         'next-intl': resolve(shims, 'next-intl.tsx'),

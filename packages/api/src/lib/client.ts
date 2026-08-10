@@ -70,6 +70,24 @@ export function normalizeBaseUrl(value: string | undefined | null): string | und
 // Mobile sets EXPO_PUBLIC_API_URL per EAS profile (staging for development and
 // preview builds). Before this was read, every mobile build — including local
 // `expo start` — talked to the production API regardless of profile.
+/**
+ * Does this URL address a collection rather than one record?
+ *
+ * A trailing id segment — uuid, or a bare number — means "one thing", and a
+ * pagination default has no meaning there. Everything else is treated as a
+ * collection, so a new list endpoint keeps the default without extra wiring.
+ */
+const ID_SEGMENT = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$|^\d+$/i
+
+export function isCollectionUrl(url: string | undefined): boolean {
+  if (!url) return false
+
+  const path = url.split('?')[0]?.replace(/\/$/, '') ?? ''
+  const lastSegment = path.split('/').pop() ?? ''
+
+  return !ID_SEGMENT.test(lastSegment)
+}
+
 const BASE_URL = publicEnv() || 'https://api.hisabche.com/api'
 const isDev = env.NODE_ENV !== 'production'
 
@@ -131,9 +149,17 @@ apiClient.interceptors.request.use(
     config.headers['Accept-Language'] = readStorage(STORAGE_KEYS.language) || 'fa-AF'
 
     // ✅ FIX: قبلاً limit=50 روی axios instance به‌صورت گلوبال ست شده بود و
-    // به تمام درخواست‌ها (حتی POST و درخواست‌های تک‌آیتمی مثل GET /:id) اضافه
-    // می‌شد. حالا فقط برای GET و فقط وقتی خودِ درخواست limit مشخص نکرده باشد.
-    if (config.method?.toLowerCase() === 'get' && config.params?.limit === undefined) {
+    // به تمام درخواست‌ها (حتی POST) اضافه می‌شد. حالا فقط برای GETِ
+    // مجموعه‌ای، و فقط وقتی خودِ درخواست limit مشخص نکرده باشد.
+    //
+    // A single-item read is not a collection: `GET /invoices/:id?limit=50` was
+    // reaching production, where the stray parameter became part of the server
+    // cache key and made an item read look like a list read.
+    if (
+      config.method?.toLowerCase() === 'get' &&
+      config.params?.limit === undefined &&
+      isCollectionUrl(config.url)
+    ) {
       config.params = { ...config.params, limit: 50 }
     }
 

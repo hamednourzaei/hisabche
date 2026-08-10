@@ -96,12 +96,16 @@ export function AnimatedTabBar({ state, descriptors, navigation }: BottomTabBarP
         return (
           <TabItem
             key={route.key}
-            testID={`tab-${route.name === 'index' ? 'home' : route.name}`}
+            testID={`tab-${route.name}`}
             focused={focused}
             label={typeof options?.title === 'string' ? options.title : route.name}
             icon={options?.tabBarIcon?.({ color, focused, size: 22 })}
             onPress={() => {
-              const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true })
+              const event = navigation.emit({
+                type: 'tabPress',
+                target: route.key,
+                canPreventDefault: true,
+              })
               if (!focused && !event.defaultPrevented) navigation.navigate(route.name)
             }}
           />

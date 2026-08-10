@@ -2,6 +2,10 @@
 
 import { Fragment, forwardRef, useEffect, useState } from 'react'
 import { Barcode, Calendar, Mail, MapPin, Phone, User } from 'lucide-react'
+import { buildInvoiceShareUrl as contractShareUrl } from '@hisabche/ui-contract'
+
+/** Used when there is no `window` — SSR and static rendering. */
+const DEFAULT_WEB_ORIGIN = 'https://hisabche.com'
 
 // ✅ QR واقعی: لینک عمومی فاکتور رو به‌صورت عکس QR تولید می‌کنه که
 // کپی/دانلود/اشتراک‌گذاری (چون داخل خروجی PDF/PNG/چاپ همین سند قرار
@@ -192,11 +196,6 @@ export interface InvoiceDocumentProps {
 }
 
 // نگاشت locale بلند (fa-AF/fa-IR/en) به پیشوند واقعی مسیر (af/fa/en)
-function urlLangFromLocale(locale: string): string {
-  if (locale.startsWith('fa-AF')) return 'af'
-  if (locale.startsWith('fa')) return 'fa'
-  return 'en'
-}
 
 // ✅ اگر public_token در دسترس باشد، لینک به مسیر عمومی (بدون نیاز به ورود)
 // اشاره می‌کند؛ در غیر این صورت (تا وقتی migration اجرا شود) به مسیر
@@ -207,11 +206,11 @@ export function buildInvoiceShareUrl(
   invoiceId?: string,
   publicToken?: string,
 ): string | null {
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://hisabche.com'
-  const lang = urlLangFromLocale(locale)
-  if (publicToken) return `${origin}/${lang}/public-invoice/${publicToken}`
-  if (invoiceId) return `${origin}/${lang}/invoices/${invoiceId}`
-  return null
+  // The URL shape lives in `@hisabche/ui-contract` so React Native builds the
+  // identical link; only the origin is a browser detail. Signature unchanged,
+  // so every existing call site keeps working.
+  const origin = typeof window !== 'undefined' ? window.location.origin : DEFAULT_WEB_ORIGIN
+  return contractShareUrl(origin, locale, invoiceId, publicToken)
 }
 
 const fmtDate = (d: string, locale: string) => {

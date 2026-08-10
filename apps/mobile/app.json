@@ -10,9 +10,7 @@
       "backgroundColor": "#059669",
       "resizeMode": "contain"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.hisabche.mobile",
@@ -26,12 +24,7 @@
         "backgroundColor": "#059669"
       },
       "package": "com.hisabche.mobile",
-      "permissions": [
-        "CAMERA",
-        "INTERNET",
-        "USE_BIOMETRIC",
-        "USE_FINGERPRINT"
-      ]
+      "permissions": ["CAMERA", "INTERNET", "USE_BIOMETRIC", "USE_FINGERPRINT"]
     },
     "web": {
       "bundler": "metro",
@@ -48,6 +41,7 @@
     ],
     "extra": {
       "apiUrl": "https://api.hisabche.com/api",
+      "webUrl": "https://hisabche.com",
       "eas": {
         "projectId": "your-project-id"
       }

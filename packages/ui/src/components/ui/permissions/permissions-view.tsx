@@ -126,7 +126,11 @@ export const PermissionsView = memo(function PermissionsView({ t }: PermissionsV
       </div>
 
       <button
-        onClick={() => router.push('/workspace')}
+        // `/workspace` is not a route on any platform — `WorkspacePage` is
+        // exported but never mounted. Workspace membership is managed from
+        // Settings, which is where this button has to land until that page is
+        // given a route in the navigation contract.
+        onClick={() => router.push('/settings')}
         className={cn(
           'inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold',
           'bg-[hsl(var(--color-primary))] text-[hsl(var(--color-primary-fg))] hover:brightness-110 transition',

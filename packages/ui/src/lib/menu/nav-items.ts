@@ -28,6 +28,7 @@ import {
   Bell,
   RefreshCw,
   EllipsisVertical,
+  History,
   type LucideIcon,
 } from 'lucide-react'
 import {
@@ -73,6 +74,9 @@ const NAV_ICONS: Record<NavId, LucideIcon> = {
   approvals: ClipboardCheck,
   settings: Settings,
   access: Key,
+  // `history` is declared in the contract's id union but has no destination
+  // yet; the map stays exhaustive so adding one needs no icon archaeology.
+  history: History,
   events: Bell,
   sync: RefreshCw,
 }

@@ -9,7 +9,13 @@
 
 import { describe, expect, it } from 'vitest'
 
-import { computeItemTotal, invoiceItemDetailSchema, invoiceItemSchema, unitSchema } from '../index'
+import {
+  computeItemTotal,
+  invoiceItemDetailSchema,
+  invoiceItemSchema,
+  settlementDate,
+  unitSchema,
+} from '../index'
 
 const legacyItem = {
   productName: 'گردنبند',
@@ -225,5 +231,36 @@ describe('units and weight — the gold case', () => {
       weightGrams: 2.4,
     })
     expect(stone.weightGrams).toBe(2.4)
+  })
+})
+
+// ============================================
+// Settlement date.
+//
+// The «تاریخ تسویه» column on web and the settled line on the mobile card read
+// this one helper. These pin the rule so one platform cannot start dating a
+// settlement that has not happened.
+// ============================================
+
+describe('settlementDate', () => {
+  it('returns the completion timestamp for a completed invoice', () => {
+    expect(settlementDate({ status: 'completed', updatedAt: '2026-08-10T09:00:00Z' })).toBe(
+      '2026-08-10T09:00:00Z',
+    )
+  })
+
+  it('returns null for every status that is not completed', () => {
+    for (const status of ['pending', 'paid', 'partial', 'overdue', 'cancelled']) {
+      expect(settlementDate({ status, updatedAt: '2026-08-10T09:00:00Z' })).toBeNull()
+    }
+  })
+
+  it('returns null when a completed invoice carries no timestamp', () => {
+    expect(settlementDate({ status: 'completed' })).toBeNull()
+    expect(settlementDate({ status: 'completed', updatedAt: null })).toBeNull()
+  })
+
+  it('treats a missing status as unsettled rather than defaulting to settled', () => {
+    expect(settlementDate({ updatedAt: '2026-08-10T09:00:00Z' })).toBeNull()
   })
 })

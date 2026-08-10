@@ -16,6 +16,7 @@
     "@base-ui/react": "^1.5.0",
     "@hisabche/api": "workspace:*",
     "@hisabche/db": "workspace:*",
+    "@hisabche/formatting": "workspace:*",
     "@hisabche/i18n": "workspace:*",
     "@hisabche/store": "workspace:*",
     "@hisabche/ui": "workspace:*",
