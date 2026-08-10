@@ -47,3 +47,13 @@ export { OfflineBanner, type OfflineBannerProps } from './components/offline-ban
 export { SectionHeader, type SectionHeaderProps } from './components/section-header'
 export { EmptyState, type EmptyStateProps } from './components/empty-state'
 export { ErrorState, type ErrorStateProps } from './components/error-state'
+
+// Adaptive layout — phone / tablet / wide, on the web app's breakpoints.
+export {
+  useLayout,
+  responsive,
+  BREAKPOINTS,
+  type Layout,
+  type DeviceClass,
+  type BreakpointKey,
+} from './hooks/use-breakpoint'

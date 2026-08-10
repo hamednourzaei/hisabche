@@ -11,7 +11,7 @@ import { FilterBar, SearchBar, type FilterOption } from '@hisabche/mobile-ui'
 
 import { AppScreen } from '../../../shared/components/app-screen'
 import { QueryList } from '../../../shared/components/query-list'
-import { ScreenHeader } from '../../../shared/components/screen-header'
+import { NavScreenHeader } from '../../../shared/components/nav-screen-header'
 import { useCurrency } from '../../settings/preferences.store'
 import { CustomerRow } from '../components/customer-row'
 
@@ -33,16 +33,13 @@ export function CustomersScreen() {
   const [filter, setFilter] = useState<BalanceFilter>('all')
 
   const query = useCustomers(
-    useMemo(() => ({ page: 1, limit: 40, sortDirection: 'desc' as const, search }), [search])
+    useMemo(() => ({ page: 1, limit: 40, sortDirection: 'desc' as const, search }), [search]),
   )
 
-  const customers = useMemo(
-    () => {
-      const list: Customer[] = query.data?.customers ?? []
-      return list.filter((c) => matchesFilter(c.openingBalance ?? 0, filter))
-    },
-    [filter, query.data]
-  )
+  const customers = useMemo(() => {
+    const list: Customer[] = query.data?.customers ?? []
+    return list.filter((c) => matchesFilter(c.openingBalance ?? 0, filter))
+  }, [filter, query.data])
 
   const options: readonly FilterOption<BalanceFilter>[] = [
     { value: 'all', label: t('common.all') },
@@ -57,14 +54,14 @@ export function CustomersScreen() {
       if (balance < 0) return t('customers.credit')
       return t('customers.settled')
     },
-    [t]
+    [t],
   )
 
   const openDetail = useCallback((id: string) => router.push(`/customers/${id}`), [router])
 
   return (
     <AppScreen>
-      <ScreenHeader title={t('customers.title')} />
+      <NavScreenHeader id="buyers" />
       <SearchBar
         value={search}
         onChangeText={setSearch}

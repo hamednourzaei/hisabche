@@ -28,7 +28,7 @@ import {
 
 import { AppScreen } from '../../../shared/components/app-screen'
 import { QueryList } from '../../../shared/components/query-list'
-import { ScreenHeader } from '../../../shared/components/screen-header'
+import { NavScreenHeader } from '../../../shared/components/nav-screen-header'
 import { SelectionBar } from '../../../shared/components/selection-bar'
 import { useCommonT } from '../../../shared/i18n/use-common-t'
 import { shareAsCSV } from '../../../shared/lib/export-csv'
@@ -192,9 +192,8 @@ export function InvoicesScreen() {
           ]}
         />
       ) : (
-        <ScreenHeader
-          title={tCommon('nav.getPaid')}
-          subtitle={tCommon('nav.getPaid_description')}
+        <NavScreenHeader
+          id="get-paid"
           trailing={
             <Pressable
               accessibilityRole="button"

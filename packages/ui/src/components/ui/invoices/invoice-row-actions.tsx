@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import type { Invoice } from '../../../lib/invoices/invoices-types'
 import { buildInvoiceShareUrl } from '../invoice-detail/invoice-document'
+import { buildInvoiceShareMessage } from '@hisabche/ui-contract'
 
 interface InvoiceRowActionsProps {
   inv: Invoice
@@ -50,7 +51,15 @@ export const InvoiceRowActions = memo(function InvoiceRowActions({
   }, [open])
 
   const shareUrl = buildInvoiceShareUrl('fa-AF', inv.id, inv.publicToken)
-  const message = `${t('invoices.title', 'فاکتور')} #${inv.invoiceNumber}\n${t('invoices.total', 'مجموع')}: ${inv.total.toLocaleString()} ${inv.currency}${shareUrl ? `\n${shareUrl}` : ''}`
+  // Shared with mobile so a customer gets the same wording either way.
+  const message = buildInvoiceShareMessage(
+    {
+      invoiceNumber: inv.invoiceNumber,
+      formattedTotal: `${inv.total.toLocaleString()} ${inv.currency}`,
+      shareUrl,
+    },
+    t,
+  )
 
   const handleCopyLink = useCallback(async () => {
     if (!shareUrl) return

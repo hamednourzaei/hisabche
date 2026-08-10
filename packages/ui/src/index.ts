@@ -13,22 +13,74 @@ export type { ButtonVariant, ButtonSize } from './components/ui/button'
 export { Input } from './components/ui/input'
 export { MoneyInput } from './components/ui/money-input'
 export type { MoneyInputProps } from './components/ui/money-input'
-export { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from './components/ui/card'
+export {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardContent,
+  CardFooter,
+} from './components/ui/card'
 export { Badge } from './components/ui/badge'
 export type { BadgeVariant, BadgeSize } from './components/ui/badge'
 export { Skeleton } from './components/ui/skeleton'
-export { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogClose } from './components/ui/dialog'
-export { Sheet, SheetTrigger, SheetContent, SheetHeader, SheetTitle, SheetClose } from './components/ui/sheet'
-export { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel, DropdownMenuGroup, DropdownMenuShortcut, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent } from './components/ui/dropdown-menu'
-export { Select, SelectTrigger, SelectValue, SelectContent, SelectItem, SelectGroup, SelectLabel, SelectSeparator } from './components/ui/select'
-export { Table, TableHeader, TableBody, TableFooter, TableRow, TableHead, TableCell, TableCaption } from './components/ui/table'
+export {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogClose,
+} from './components/ui/dialog'
+export {
+  Sheet,
+  SheetTrigger,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetClose,
+} from './components/ui/sheet'
+export {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+  DropdownMenuGroup,
+  DropdownMenuShortcut,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+} from './components/ui/dropdown-menu'
+export {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+  SelectGroup,
+  SelectLabel,
+  SelectSeparator,
+} from './components/ui/select'
+export {
+  Table,
+  TableHeader,
+  TableBody,
+  TableFooter,
+  TableRow,
+  TableHead,
+  TableCell,
+  TableCaption,
+} from './components/ui/table'
 export { Toaster } from './components/ui/sonner'
 
 // ---------- Feedback ----------
 export { SaveIndicator, type SaveIndicatorProps } from './components/ui/save-indicator'
 export { Celebration, type CelebrationProps } from './components/ui/celebration'
 export { ErrorBoundary } from './components/ui/error-boundary'
-export { AccountingPage } from "./components/ui/accounting"
+export { AccountingPage } from './components/ui/accounting'
 
 // ---------- Navigation — Dashboard ----------
 export { DashboardSidebar, BottomNav, type NavItem } from './components/ui/dashboard-sidebar'
@@ -41,10 +93,18 @@ export { NavigationProvider, useNavigation } from './hooks/menu/use-navigation-s
 export { TopNav } from './components/ui/navigation/top-nav'
 export { SideNav } from './components/ui/navigation/side-nav'
 export { NavigationRegistry } from './components/ui/navigation/navigation-registry'
-export { ActivitiesPage } from "./components/ui/activity/ActivitiesPage"
+export { ActivitiesPage } from './components/ui/activity/ActivitiesPage'
 
 // ---------- Landing ----------
-export { GlassNavbar, AnimatedCounter, Section, FeatureCard, SectionHeading, GradientMesh, ShimmerCTA } from './components/ui/landing-section'
+export {
+  GlassNavbar,
+  AnimatedCounter,
+  Section,
+  FeatureCard,
+  SectionHeading,
+  GradientMesh,
+  ShimmerCTA,
+} from './components/ui/landing-section'
 export { LandingPreview } from './components/ui/landing-preview'
 export { LivingBackground } from './components/ui/living-background'
 
@@ -110,10 +170,14 @@ export { InvoiceDetailPage } from './components/ui/invoice-detail/invoice-detail
 // ---------- Pages — Sales & Follow-up ----------
 export { SalesFollowupContainer } from './components/ui/sales-followup/containers/sales-followup-container'
 export { SalesFollowupView } from './components/ui/sales-followup/sales-followup-view'
-export type { FollowUpStatus, FollowUp, Customer } from './components/ui/sales-followup/sales-followup-view'
+export type {
+  FollowUpStatus,
+  FollowUp,
+  Customer,
+} from './components/ui/sales-followup/sales-followup-view'
 
 // ---------- Pages — Settings & Others ----------
-export { SettingsPage } from './components/ui/settings'
+export { SettingsPage, BusinessStampSection } from './components/ui/settings'
 export { QuickInvoicePage } from './components/ui/quick-invoice'
 export { SyncCenterPage } from './components/ui/sync-center'
 export { WorkspacePage } from './components/ui/workspace'
@@ -148,8 +212,14 @@ export { ApprovalsContainer as approvalsPage } from './components/ui/approvals/c
 // ---------- Team & Payroll ----------
 export { TeamAndPayrollContainer } from './components/ui/team-and-payroll/containers/team-and-payroll-container'
 export { TeamAndPayrollView } from './components/ui/team-and-payroll/team-and-payroll-view'
-export type { EmployeeStatus, PayrollStatus } from './components/ui/team-and-payroll/team-and-payroll-view'
-export type { Employee, PayrollRecord } from './components/ui/team-and-payroll/team-and-payroll-view'
+export type {
+  EmployeeStatus,
+  PayrollStatus,
+} from './components/ui/team-and-payroll/team-and-payroll-view'
+export type {
+  Employee,
+  PayrollRecord,
+} from './components/ui/team-and-payroll/team-and-payroll-view'
 
 // ---------- Projects ----------
 export { ProjectsContainer } from './components/ui/projects/containers/projects-container'
@@ -172,7 +242,10 @@ export { PublicTaskContainer } from './components/ui/crm/containers/public-task-
 
 // ---------- Manufacturing ----------
 export { ManufacturingContainer } from './components/ui/manufacturing/containers/manufacturing-container'
-export { ManufacturingView, type ManufacturingTabId } from './components/ui/manufacturing/manufacturing-view'
+export {
+  ManufacturingView,
+  type ManufacturingTabId,
+} from './components/ui/manufacturing/manufacturing-view'
 
 // ---------- Purchasing ----------
 export { PurchasingContainer } from './components/ui/purchasing/containers/purchasing-container'
@@ -206,11 +279,7 @@ export { useCurrency } from './hooks/use-currency'
 export { toPersianNumbers, toArabicNumbers, usePersianNumbers } from './lib/persian-numbers'
 
 // ---------- Types ----------
-export {
-  PricingContainer,
-  BillingContainer,
-  BillingStatusContainer,
-} from './components/ui/billing'
+export { PricingContainer, BillingContainer, BillingStatusContainer } from './components/ui/billing'
 export type SupportedLanguage = 'fa-AF' | 'fa-IR'
 
 // ─── ✅ Activity Components ──────────────────────────────────────────────────
@@ -222,8 +291,4 @@ export {
   ActivitySkeleton,
   ActivityEmptyState,
 } from './components/ui/activity'
-export type {
-  ActivityItemDto,
-  ActivityGroupDto,
-  EntitySummaryDto,
-} from '@hisabche/api'
+export type { ActivityItemDto, ActivityGroupDto, EntitySummaryDto } from '@hisabche/api'

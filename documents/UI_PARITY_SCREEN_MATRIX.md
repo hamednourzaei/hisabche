@@ -184,6 +184,39 @@ cannot turn the file into a silent no-op.
 
 ---
 
+## Verified-correct, deliberately not changed
+
+Audited against the sale/purchase requirements and found already correct. Per
+"verify → preserve → document", these were not rewritten:
+
+| Area                           | Finding                                                                                                                                                  | Evidence               |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| Dashboard revenue vs purchases | `analytics.service.ts` splits `totalSales` from `totalPurchases`; legacy null-type invoices count as sales, preserving their original meaning            | CODE-VERIFIED          |
+| Customer role                  | Derived from invoices, never from `customers.type` (which is cash/credit payment terms); `customerFiltersSchema` rejects `cash`/`credit`/`both` as roles | CODE-VERIFIED + tested |
+| Invoice party column           | Web uses neutral «طرف حساب», with a source comment explaining that «خریدار» would be wrong on a purchase row                                             | CODE-VERIFIED          |
+| Mobile invoice detail          | Already branches party label on type, and renders unit, unitLabel, weightGrams and nested details                                                        | CODE-VERIFIED          |
+| Sync centre (desktop)          | Private implementation is correct — it inspects the Electron SQLite outbox over IPC, which the shared web sync page has no concept of                    | CODE-VERIFIED          |
+
+## Share-link workflow (CODE-VERIFIED end to end)
+
+```
+mobile invoice detail
+  → buildInvoiceShareUrl(WEB_BASE_URL, locale, id, publicToken)   [ui-contract]
+  → https://<web>/{fa|af|en}/public-invoice/{token}
+  → apps/web/app/[lang]/public-invoice/[token]/page.tsx           (outside the auth group)
+  → PublicInvoiceContainer
+  → GET /api/public/invoices/:token                               (token, never id)
+```
+
+Falls back to `/{lang}/invoices/{id}` for invoices predating the public-token
+migration — the recipient is asked to log in, which is the pre-existing
+behaviour, rather than getting no link. `buildInvoiceShareMessage` gives web and
+mobile the same wording around it.
+
+`WEB_BASE_URL` reads `EXPO_PUBLIC_WEB_URL` then `expoConfig.extra.webUrl`,
+mirroring how `apiUrl` already resolves, so a staging build can retarget it. It
+is the _web_ origin and deliberately not derived from the API base URL.
+
 ## Decisions
 
 Recorded per §39 — where a platform diverges from web, what was preserved.

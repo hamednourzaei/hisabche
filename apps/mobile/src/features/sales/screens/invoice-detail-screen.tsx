@@ -7,6 +7,7 @@ import { ScrollView, Share, View } from 'react-native'
 import { useLocalSearchParams } from 'expo-router'
 import { useTranslation } from 'react-i18next'
 import { useInvoice } from '@hisabche/api'
+import { buildInvoiceShareMessage, buildInvoiceShareUrl } from '@hisabche/ui-contract'
 import type { CurrencyCode } from '@hisabche/store'
 import type { InvoiceItem, InvoiceStatus } from '@hisabche/validation'
 import {
@@ -20,12 +21,15 @@ import {
 } from '@hisabche/mobile-ui'
 
 import { AppScreen } from '../../../shared/components/app-screen'
+import { useCommonT } from '../../../shared/i18n/use-common-t'
+import { WEB_BASE_URL } from '../../../shared/lib/api'
 import { ScreenHeader } from '../../../shared/components/screen-header'
 import { formatCurrency, formatDate, formatNumber } from '../../../shared/lib/format'
 import { useCurrency } from '../../settings/preferences.store'
 
 export function InvoiceDetailScreen() {
-  const { t } = useTranslation('mobile')
+  const { t, i18n } = useTranslation('mobile')
+  const tCommon = useCommonT()
   const { spacing } = useTheme()
   const { id } = useLocalSearchParams<{ id: string }>()
   const fallbackCurrency = useCurrency()
@@ -34,15 +38,28 @@ export function InvoiceDetailScreen() {
   const invoice = query.data
   const currency = ((invoice?.currency as CurrencyCode) ?? fallbackCurrency) as CurrencyCode
 
+  // Same wording and the same public link the web list shares, so a customer
+  // receiving an invoice cannot tell which device sent it. The link opens
+  // without signing in when the invoice has a public token.
   const onShare = useCallback(() => {
     if (!invoice) return
-    const lines = [
-      `${t('sales.invoiceNumber')}: ${invoice.invoiceNumber}`,
-      `${t('sales.grandTotal')}: ${formatCurrency(invoice.total ?? 0, currency)}`,
-      formatDate(invoice.date),
-    ]
-    void Share.share({ message: lines.join('\n') })
-  }, [currency, invoice, t])
+
+    const message = buildInvoiceShareMessage(
+      {
+        invoiceNumber: invoice.invoiceNumber ?? '',
+        formattedTotal: formatCurrency(invoice.total ?? 0, currency),
+        shareUrl: buildInvoiceShareUrl(
+          WEB_BASE_URL,
+          i18n.language,
+          invoice.id,
+          (invoice as { publicToken?: string | null }).publicToken,
+        ),
+      },
+      tCommon,
+    )
+
+    void Share.share({ message })
+  }, [currency, i18n.language, invoice, tCommon])
 
   if (query.isLoading) {
     return (

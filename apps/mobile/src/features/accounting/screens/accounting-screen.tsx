@@ -11,7 +11,7 @@ import { MetricCard, MobileCard, Text, useTheme } from '@hisabche/mobile-ui'
 
 import { AppScreen } from '../../../shared/components/app-screen'
 import { QueryList } from '../../../shared/components/query-list'
-import { ScreenHeader } from '../../../shared/components/screen-header'
+import { NavScreenHeader } from '../../../shared/components/nav-screen-header'
 import { currencySign, formatAmount, formatCurrency, formatDate } from '../../../shared/lib/format'
 import { useCurrency } from '../../settings/preferences.store'
 
@@ -21,7 +21,7 @@ export function AccountingScreen() {
   const currency = useCurrency()
 
   const transactions = useTransactions(
-    useMemo(() => ({ page: 1, limit: 30, sortDirection: 'desc' as const }), [])
+    useMemo(() => ({ page: 1, limit: 30, sortDirection: 'desc' as const }), []),
   )
   // The endpoint returns one row per account — totals are summed here.
   const today = useMemo(() => new Date().toISOString().slice(0, 10), [])
@@ -58,7 +58,7 @@ export function AccountingScreen() {
 
   return (
     <AppScreen>
-      <ScreenHeader title={t('accounting.title')} />
+      <NavScreenHeader id="money" />
 
       <QueryList<Transaction>
         data={transactions.data?.transactions}

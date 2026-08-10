@@ -232,10 +232,30 @@ AccountSection.displayName = 'AccountSection'
 // آپلود مهر/امضای صاحب کسب‌وکار — یک‌بار ثبت می‌شود و طبق business.stampUrl
 // روی همه‌ی فاکتورها (InvoiceDocument) نمایش داده می‌شود.
 
+/**
+ * Turn an upload failure into something the user can act on.
+ *
+ * The one failure worth naming is a database that has not run
+ * `docs/workspace-stamp-migration.sql` — the stamp column does not exist, so no
+ * amount of retrying will help and "try again" would be a lie.
+ */
+function stampErrorMessage(error: unknown, t: (key: string, fallback?: string) => string): string {
+  const message = error instanceof Error ? error.message : String(error ?? '')
+
+  if (/stamp.*not supported|workspace-stamp-migration/i.test(message)) {
+    return t(
+      'settings.stampNotSupported',
+      'ذخیره‌ی مهر روی این سرور هنوز فعال نیست. با پشتیبانی تماس بگیرید.',
+    )
+  }
+
+  return t('settings.stampUploadFailed')
+}
+
 const ALLOWED_STAMP_TYPES = ['image/png', 'image/svg+xml']
 const MAX_STAMP_SIZE = 1024 * 1024 // 1MB — چون به‌صورت data URL در ستون متنی ذخیره می‌شود
 
-const BusinessStampSection = memo(function BusinessStampSection() {
+export const BusinessStampSection = memo(function BusinessStampSection() {
   const tOriginal = useTranslations()
   const t = (key: string, fallback?: string): string => {
     const v = tOriginal(key as Parameters<typeof tOriginal>[0])
@@ -279,7 +299,13 @@ const BusinessStampSection = memo(function BusinessStampSection() {
       const reader = new FileReader()
       reader.onload = () => {
         const dataUrl = reader.result as string
-        updateWorkspace.mutate({ id: workspaceId, stampUrl: dataUrl })
+        // Without an onError the mutation failed silently: the picker closed,
+        // nothing appeared, and the upload looked like a missing feature rather
+        // than a failed request.
+        updateWorkspace.mutate(
+          { id: workspaceId, stampUrl: dataUrl },
+          { onError: (err) => setError(stampErrorMessage(err, t)) },
+        )
       }
       reader.onerror = () => setError(t('settings.stampUploadFailed'))
       reader.readAsDataURL(file)
@@ -289,8 +315,11 @@ const BusinessStampSection = memo(function BusinessStampSection() {
 
   const handleRemove = useCallback(() => {
     if (!workspaceId) return
-    updateWorkspace.mutate({ id: workspaceId, stampUrl: null })
-  }, [workspaceId, updateWorkspace])
+    updateWorkspace.mutate(
+      { id: workspaceId, stampUrl: null },
+      { onError: (err) => setError(stampErrorMessage(err, t)) },
+    )
+  }, [workspaceId, updateWorkspace, t])
 
   if (!canEdit) return null
 

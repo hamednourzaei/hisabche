@@ -23,6 +23,7 @@ import {
   MobileCard,
   QuickAction,
   SectionHeader,
+  useLayout,
   useTheme,
 } from '@hisabche/mobile-ui'
 
@@ -42,6 +43,10 @@ export function DashboardScreen() {
   // «ارزش کل انبار» — so the same number was captioned differently per device.
   const tCommon = useCommonT()
   const { spacing, colors } = useTheme()
+  const { isWide } = useLayout()
+  // Two per row on a phone, three across on a tablet — the same widening web
+  // does at its `lg` breakpoint.
+  const tileBasis = isWide ? '30%' : '45%'
   const router = useRouter()
   const currency = useCurrency()
   const sign = useCurrencySign(currency)
@@ -129,8 +134,11 @@ export function DashboardScreen() {
           </View>
         </MobileCard>
 
-        <View style={{ flexDirection: 'row', gap: spacing.md }}>
-          <View style={{ flex: 1 }}>
+        {/* Secondary KPIs. Web renders these as `grid-cols-2 lg:grid-cols-4`;
+            a phone has room for two per row, a tablet for all three, so the row
+            wraps on a width the layout hook derives from the same breakpoints. */}
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
+          <View style={{ flexBasis: tileBasis, flexGrow: 1, minWidth: 150 }}>
             <MetricCard
               label={tCommon('dashboard.todaySales')}
               amount={amount(data?.todaySales)}
@@ -139,7 +147,7 @@ export function DashboardScreen() {
               icon={<Ionicons name="today-outline" size={15} color={colors.primary} />}
             />
           </View>
-          <View style={{ flex: 1 }}>
+          <View style={{ flexBasis: tileBasis, flexGrow: 1, minWidth: 150 }}>
             <MetricCard
               label={tCommon('dashboard.customerDebt')}
               amount={amount(data?.customerDebt)}
@@ -151,16 +159,17 @@ export function DashboardScreen() {
               icon={<Ionicons name="wallet-outline" size={15} color={colors.primary} />}
             />
           </View>
+          <View style={{ flexBasis: tileBasis, flexGrow: 1, minWidth: 150 }}>
+            <MetricCard
+              label={tCommon('dashboard.warehouseValue')}
+              amount={amount(data?.warehouseValue)}
+              sign={sign}
+              loading={kpis.isLoading}
+              onPress={() => router.push('/(tabs)/warehouse')}
+              icon={<Ionicons name="cube-outline" size={15} color={colors.primary} />}
+            />
+          </View>
         </View>
-
-        <MetricCard
-          label={tCommon('dashboard.warehouseValue')}
-          amount={amount(data?.warehouseValue)}
-          sign={sign}
-          loading={kpis.isLoading}
-          onPress={() => router.push('/(tabs)/warehouse')}
-          icon={<Ionicons name="cube-outline" size={15} color={colors.primary} />}
-        />
 
         <SalesTrendCard
           points={sales.data?.data ?? []}

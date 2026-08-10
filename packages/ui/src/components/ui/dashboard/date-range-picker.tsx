@@ -6,33 +6,17 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { CalendarDays, ChevronDown, ChevronLeft, X } from 'lucide-react'
 import { toJalaali } from 'jalaali-js'
-import { startOfDay, endOfDay } from 'date-fns' // ✅ برای جلوگیری از timezone bug
+import { presetRange, type DateRange, type PresetKey } from '@hisabche/ui-contract'
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../select'
 import { JalaliDatePicker } from '../jalali-datepicker'
 import { useMediaQuery } from '../../../hooks/dashboard/use-media-query' // ✅ استفاده از hook
 
-export interface DateRange {
-  from: Date
-  to: Date
-}
-
-export type PresetKey =
-  | 'today'
-  | 'yesterday'
-  | 'weekAgo'
-  | '7days'
-  | '14days'
-  | '30days'
-  | '60days'
-  | '90days'
-  | 'thisMonth'
-  | 'lastMonth'
-  | 'last3Months'
-  | 'last6Months'
-  | 'thisYear'
-  | 'lastYear'
-  | 'custom'
+// The range types and the preset -> dates rule live in @hisabche/ui-contract,
+// so the mobile dashboard resolves "7 days" to the same seven days this picker
+// does. Re-exported here because existing call sites import them from this
+// module.
+export type { DateRange, PresetKey }
 
 export type DateFormat = 'gregorian' | 'jalali'
 
@@ -93,78 +77,9 @@ const PRESET_GROUPS = [
 
 // ─── Helper Functions ─────────────────────────────────────────────────────
 
-// ✅ استفاده از date-fns برای جلوگیری از timezone bug
-function getPresetRange(preset: PresetKey): DateRange {
-  const now = new Date()
-  const today = startOfDay(now)
-  const todayEnd = endOfDay(now)
-
-  switch (preset) {
-    case 'today':
-      return { from: today, to: todayEnd }
-    case 'yesterday': {
-      const d = new Date(today)
-      d.setDate(d.getDate() - 1)
-      return { from: startOfDay(d), to: endOfDay(d) }
-    }
-    case 'weekAgo': {
-      const d = new Date(today)
-      d.setDate(d.getDate() - 7)
-      return { from: startOfDay(d), to: todayEnd }
-    }
-    case '7days': {
-      const d = new Date(today)
-      d.setDate(d.getDate() - 6)
-      return { from: startOfDay(d), to: todayEnd }
-    }
-    case '14days': {
-      const d = new Date(today)
-      d.setDate(d.getDate() - 13)
-      return { from: startOfDay(d), to: todayEnd }
-    }
-    case '30days': {
-      const d = new Date(today)
-      d.setDate(d.getDate() - 29)
-      return { from: startOfDay(d), to: todayEnd }
-    }
-    case '60days': {
-      const d = new Date(today)
-      d.setDate(d.getDate() - 59)
-      return { from: startOfDay(d), to: todayEnd }
-    }
-    case '90days': {
-      const d = new Date(today)
-      d.setDate(d.getDate() - 89)
-      return { from: startOfDay(d), to: todayEnd }
-    }
-    case 'thisMonth':
-      return { from: startOfDay(new Date(today.getFullYear(), today.getMonth(), 1)), to: todayEnd }
-    case 'lastMonth':
-      return {
-        from: startOfDay(new Date(today.getFullYear(), today.getMonth() - 1, 1)),
-        to: endOfDay(new Date(today.getFullYear(), today.getMonth(), 0)),
-      }
-    case 'last3Months': {
-      const d = new Date(today)
-      d.setMonth(d.getMonth() - 3)
-      return { from: startOfDay(d), to: todayEnd }
-    }
-    case 'last6Months': {
-      const d = new Date(today)
-      d.setMonth(d.getMonth() - 6)
-      return { from: startOfDay(d), to: todayEnd }
-    }
-    case 'thisYear':
-      return { from: startOfDay(new Date(today.getFullYear(), 0, 1)), to: todayEnd }
-    case 'lastYear':
-      return {
-        from: startOfDay(new Date(today.getFullYear() - 1, 0, 1)),
-        to: endOfDay(new Date(today.getFullYear() - 1, 11, 31)),
-      }
-    default:
-      return { from: today, to: todayEnd }
-  }
-}
+// The preset -> dates rule lives in @hisabche/ui-contract so the mobile
+// dashboard resolves "7 days" to the same seven days this picker does.
+const getPresetRange = (preset: PresetKey): DateRange => presetRange(preset)
 
 function formatDate(date: Date, format: DateFormat): string {
   if (format === 'jalali') {

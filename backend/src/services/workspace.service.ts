@@ -46,6 +46,24 @@ function hashToken(token: string): string {
 // ✅ Column Selection Constants
 const WORKSPACE_COLUMNS =
   'id, name, slug, description, logo_url, stamp_url, owner_id, is_active, created_at, updated_at'
+
+/** Same list without `stamp_url`, for databases that have not run the stamp migration. */
+const WORKSPACE_COLUMNS_NO_STAMP =
+  'id, name, slug, description, logo_url, owner_id, is_active, created_at, updated_at'
+
+/**
+ * Is this Postgres saying `stamp_url` does not exist?
+ *
+ * 42703 is undefined_column; PostgREST also reports unknown columns through a
+ * schema-cache message. Matching on the column name keeps this from swallowing
+ * unrelated database failures.
+ */
+function isMissingStampColumn(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false
+  const message = error.message ?? ''
+  if (!/stamp_url/.test(message)) return false
+  return error.code === '42703' || /does not exist|schema cache|could not find/i.test(message)
+}
 const WORKSPACE_MINIMAL = 'id, name, slug, is_active'
 
 const MEMBER_COLUMNS = 'id, user_id, role, joined_at'
@@ -192,14 +210,30 @@ export class WorkspaceService {
     if (data.logoUrl !== undefined) updates.logo_url = data.logoUrl
     if (data.stampUrl !== undefined) updates.stamp_url = data.stampUrl
 
-    const { data: ws, error } = await supabase
-      .from('workspaces')
-      .update(updates)
-      .eq('id', workspaceId)
-      .select(WORKSPACE_COLUMNS)
-      .single()
+    const write = async (columns: string, payload: Record<string, unknown>) =>
+      supabase.from('workspaces').update(payload).eq('id', workspaceId).select(columns).single()
 
-    if (error || !ws) throw new DatabaseError('Failed to update workspace')
+    let { data: ws, error } = await write(WORKSPACE_COLUMNS, updates)
+
+    // `stamp_url` is added by docs/workspace-stamp-migration.sql. Until that
+    // runs, both the write and the read-back reference a column Postgres does
+    // not have, so uploading a stamp failed with a bare 500 that said nothing
+    // about the cause. Retry without it so the rest of the update still lands,
+    // then tell the caller precisely what is missing.
+    if (error && isMissingStampColumn(error)) {
+      const { stamp_url: attemptedStamp, ...withoutStamp } = updates
+      ;({ data: ws, error } = await write(WORKSPACE_COLUMNS_NO_STAMP, withoutStamp))
+
+      if (!error && attemptedStamp !== undefined) {
+        // The stamp itself could not be saved. Succeeding silently would tell
+        // the user their signature was stored when it was discarded.
+        throw new DatabaseError(
+          'Workspace stamp is not supported by this database yet — run docs/workspace-stamp-migration.sql',
+        )
+      }
+    }
+
+    if (error || !ws) throw new DatabaseError('Failed to update workspace', error)
 
     // ✅ Invalidate cache
     await this.invalidateWorkspaceCache(workspaceId)

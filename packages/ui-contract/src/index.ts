@@ -50,7 +50,20 @@ export {
   type DialogRole,
 } from './component'
 
-export { buildInvoiceShareUrl, urlLangFromLocale } from './share-links'
+export {
+  presetRange,
+  COMPACT_PRESETS,
+  type DateRange,
+  type PresetKey,
+  type PresetDefinition,
+} from './date-range'
+
+export {
+  buildInvoiceShareUrl,
+  buildInvoiceShareMessage,
+  urlLangFromLocale,
+  type InvoiceShareSummary,
+} from './share-links'
 
 export {
   INVOICE_EXPORT_COLUMNS,

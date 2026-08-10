@@ -1470,7 +1470,8 @@
     "editProfile": "Edit profile",
     "businessNamePlaceholder": "e.g. Hisabche Store",
     "fullNameRequired": "Name cannot be empty",
-    "saveFailed": "Could not save. Please try again."
+    "saveFailed": "Could not save. Please try again.",
+    "stampNotSupported": "Saving a stamp is not enabled on this server yet. Please contact support."
   },
   "sync": {
     "title": "Sync",

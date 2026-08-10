@@ -18,7 +18,7 @@ import type { BadgeTone } from '@hisabche/mobile-ui'
 
 import { AppScreen } from '../../../shared/components/app-screen'
 import { QueryList } from '../../../shared/components/query-list'
-import { ScreenHeader } from '../../../shared/components/screen-header'
+import { NavScreenHeader } from '../../../shared/components/nav-screen-header'
 import { formatDate } from '../../../shared/lib/format'
 
 /** Same three states the web badge map paints, in the mobile tone vocabulary. */
@@ -89,7 +89,7 @@ export function PurchasingScreen() {
 
   return (
     <AppScreen>
-      <ScreenHeader title={t('purchasing.title')} />
+      <NavScreenHeader id="buy" />
 
       <QueryList<PurchaseOrder>
         data={data}

@@ -13,7 +13,7 @@ import { FilterBar, SearchBar, useTheme, type FilterOption } from '@hisabche/mob
 
 import { AppScreen } from '../../../shared/components/app-screen'
 import { QueryList } from '../../../shared/components/query-list'
-import { ScreenHeader } from '../../../shared/components/screen-header'
+import { NavScreenHeader } from '../../../shared/components/nav-screen-header'
 import { useCurrency } from '../../settings/preferences.store'
 import { ProductRow, type StockLevel } from '../components/product-row'
 
@@ -52,8 +52,8 @@ export function ProductsScreen() {
 
   return (
     <AppScreen>
-      <ScreenHeader
-        title={t('inventory.title')}
+      <NavScreenHeader
+        id="stock"
         trailing={
           <Pressable
             accessibilityRole="button"

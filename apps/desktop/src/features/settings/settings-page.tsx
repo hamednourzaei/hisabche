@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { LogOut } from 'lucide-react'
 
 import { Badge, Button, Card, cn } from '@/components/ui/primitives'
+import { BusinessStampSection } from '@hisabche/ui/screens'
 import { PageHeader } from '@/components/layout/page-header'
 import { useAuthStore, useCurrentUser } from '@/features/auth/auth.store'
 import { bridge } from '@/shared/lib/bridge'
@@ -48,6 +49,14 @@ export default function SettingsPage() {
       <PageHeader title={t('nav.settings')} />
 
       <div className="grid grid-cols-2 gap-4 overflow-y-auto p-4">
+        {/* The stamp/signature uploader is the shared web component, not a
+            desktop copy: it depends only on the workspace hooks, which this app
+            already uses, and the stamp it saves is the one every invoice
+            renders. Spans both columns because it is a full-width section. */}
+        <div className="col-span-2">
+          <BusinessStampSection />
+        </div>
+
         <Card>
           <h2 className="mb-3 text-sm font-bold">{t('auth.title')}</h2>
           <p className="text-sm">{user?.fullName ?? '—'}</p>

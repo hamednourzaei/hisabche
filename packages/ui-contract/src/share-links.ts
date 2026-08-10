@@ -42,3 +42,31 @@ export function buildInvoiceShareUrl(
   if (invoiceId) return `${base}/${lang}/invoices/${invoiceId}`
   return null
 }
+
+export interface InvoiceShareSummary {
+  invoiceNumber: string
+  /** Already formatted for display — this module never formats money. */
+  formattedTotal: string
+  shareUrl?: string | null
+}
+
+/**
+ * The text that goes into WhatsApp.
+ *
+ * Shared because it is the message a customer receives: a phone and a browser
+ * sending "the same invoice" must not produce two differently worded messages.
+ * Money arrives pre-formatted so currency rules stay in `@hisabche/formatting`.
+ */
+export function buildInvoiceShareMessage(
+  summary: InvoiceShareSummary,
+  t: (key: string, fallback?: string) => string,
+): string {
+  const lines = [
+    `${t('invoices.title', 'فاکتور')} #${summary.invoiceNumber}`,
+    `${t('invoices.total', 'مجموع')}: ${summary.formattedTotal}`,
+  ]
+
+  if (summary.shareUrl) lines.push(summary.shareUrl)
+
+  return lines.join('\n')
+}

@@ -38,3 +38,9 @@ export { ActivitiesPage } from './components/ui/activity/ActivitiesPage'
 
 // ---------- Sync ----------
 export { SyncCenterContainer } from './components/ui/sync-center/containers/sync-center-container'
+
+// ---------- Settings ----------
+// The stamp/signature uploader only. Desktop keeps its own settings shell for
+// the Electron-specific parts (app version, local database) and mounts this for
+// the product-wide setting, rather than growing a second uploader.
+export { BusinessStampSection } from './components/ui/settings'
