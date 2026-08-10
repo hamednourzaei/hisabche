@@ -70,7 +70,9 @@ export function RecentActivitiesCard() {
           {t('dashboard.recentActivities', 'فعالیت‌های اخیر')}
         </Text>
         <Text variant="legal" tone="brand">
-          {t('activity.showMore', 'نمایش بیشتر')}
+          {/* `showMore` uses next-intl's `{count}` placeholder, which i18next
+              leaves literal — substitute it the way web's ICU does. */}
+          {t('activity.showMore', 'نمایش بیشتر').replace('{count}', String(items.length))}
         </Text>
       </Pressable>
 
