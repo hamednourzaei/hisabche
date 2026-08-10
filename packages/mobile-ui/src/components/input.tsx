@@ -31,7 +31,7 @@ export interface InputProps extends Omit<TextInputProps, 'placeholder'> {
 
 export const Input = forwardRef<TextInput, InputProps>(function Input(
   { label, error, hint, leading, password = false, style, onFocus, onBlur, value, ...rest },
-  ref
+  ref,
 ) {
   const { colors, radius, spacing, typography } = useTheme()
   const [focused, setFocused] = useState(false)
@@ -45,7 +45,7 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
     (toValue: number) => {
       Animated.timing(progress, { toValue, duration: 140, useNativeDriver: true }).start()
     },
-    [progress]
+    [progress],
   )
 
   const handleFocus = useCallback(
@@ -54,7 +54,7 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
       animate(1)
       onFocus?.(event)
     },
-    [animate, onFocus]
+    [animate, onFocus],
   )
 
   const handleBlur = useCallback(
@@ -63,7 +63,7 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
       if (!hasValue) animate(0)
       onBlur?.(event)
     },
-    [animate, hasValue, onBlur]
+    [animate, hasValue, onBlur],
   )
 
   const labelStyle = useMemo(
@@ -74,14 +74,10 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
       ],
       opacity: progress.interpolate({ inputRange: [0, 1], outputRange: [0.75, 1] }),
     }),
-    [progress]
+    [progress],
   )
 
-  const borderColor = error
-    ? colors.destructive
-    : focused
-      ? colors.primary
-      : colors.borderDefault
+  const borderColor = error ? colors.destructive : focused ? colors.primary : colors.borderDefault
 
   return (
     <View style={{ gap: spacing.xs }}>
@@ -92,7 +88,8 @@ export const Input = forwardRef<TextInput, InputProps>(function Input(
           gap: spacing.md,
           height: FIELD_HEIGHT,
           paddingHorizontal: spacing.lg,
-          borderRadius: radius.md,
+          // `xl` (20px) — what web's `rounded-xl` field resolves to. Was `md`.
+          borderRadius: radius.xl,
           borderWidth: focused ? 2 : 1,
           borderColor,
           backgroundColor: colors.surfaceMuted,

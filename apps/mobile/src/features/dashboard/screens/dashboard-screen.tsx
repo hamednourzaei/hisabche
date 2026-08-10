@@ -4,11 +4,12 @@
 // Data comes from the shared analytics hooks; no local business logic.
 // ============================================
 
-import React, { useCallback, useMemo } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import { RefreshControl, ScrollView, View } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { useTranslation } from 'react-i18next'
+import { presetRange, type DateRange, type PresetKey } from '@hisabche/ui-contract'
 import {
   useAIInsights,
   useDashboardKPIs,
@@ -30,6 +31,7 @@ import {
 import { AppScreen } from '../../../shared/components/app-screen'
 import { useCommonT } from '../../../shared/i18n/use-common-t'
 import { DashboardHeader } from '../components/dashboard-header'
+import { DateRangeControl } from '../components/date-range-control'
 import { RecentActivitiesCard } from '../components/recent-activities-card'
 import { formatAmount, useCurrencySign } from '../../../shared/lib/format'
 import { useCurrency } from '../../settings/preferences.store'
@@ -51,8 +53,15 @@ export function DashboardScreen() {
   const currency = useCurrency()
   const sign = useCurrencySign(currency)
 
+  // Range drives the sales chart, the same thing web's picker rescopes.
+  const [preset, setPreset] = useState<PresetKey>('7days')
+  const [range, setRange] = useState<DateRange>(() => presetRange('7days'))
+
   const kpis = useDashboardKPIs()
-  const sales = useDashboardSales()
+  const sales = useDashboardSales({
+    from: range.from.toISOString().slice(0, 10),
+    to: range.to.toISOString().slice(0, 10),
+  })
   const insights = useAIInsights()
 
   const onRefresh = useCallback(() => {
@@ -170,6 +179,14 @@ export function DashboardScreen() {
             />
           </View>
         </View>
+
+        <DateRangeControl
+          value={preset}
+          onChange={(next, nextRange) => {
+            setPreset(next)
+            setRange(nextRange)
+          }}
+        />
 
         <SalesTrendCard
           points={sales.data?.data ?? []}

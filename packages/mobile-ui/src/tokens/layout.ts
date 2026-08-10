@@ -17,7 +17,8 @@ export const spacing = {
 
 export type SpacingKey = keyof typeof spacing
 
-// Matches --radius-* on the web. Cards sit at `lg` (16px).
+// Matches --radius-* on the web. Cards sit at `2xl` (24px), the same value
+// web's `rounded-2xl` card surface resolves to.
 export const radius = {
   none: 0,
   xs: 6,

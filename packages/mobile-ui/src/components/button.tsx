@@ -42,7 +42,7 @@ export const Button = memo(function Button({
     (toValue: number) => {
       Animated.spring(scale, { toValue, useNativeDriver: true, speed: 50, bounciness: 0 }).start()
     },
-    [scale]
+    [scale],
   )
 
   const surface: Record<ButtonVariant, ViewStyle> = {
@@ -61,7 +61,9 @@ export const Button = memo(function Button({
   }
 
   return (
-    <Animated.View style={{ transform: [{ scale }], alignSelf: fullWidth ? 'stretch' : 'flex-start' }}>
+    <Animated.View
+      style={{ transform: [{ scale }], alignSelf: fullWidth ? 'stretch' : 'flex-start' }}
+    >
       <Pressable
         testID={testID}
         accessibilityRole="button"
@@ -73,7 +75,10 @@ export const Button = memo(function Button({
         style={[
           {
             height: HEIGHT[size],
-            borderRadius: radius.md,
+            // Pill, matching web's `rounded-full` button. This was `md` (12px),
+            // so every button on the phone read squarer than the same button in
+            // the browser — the most repeated control in the product.
+            borderRadius: radius.full,
             paddingHorizontal: spacing.xl,
             flexDirection: 'row',
             alignItems: 'center',

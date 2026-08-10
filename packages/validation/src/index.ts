@@ -41,6 +41,9 @@ export {
   type UpdateProfileInput,
 } from './schemas/auth.schema'
 
+export { profitPerUnit, totalProfit, stockValue } from './schemas/product.schema'
+export { derivePartyRole, partyRoleLabelKey, type PartyRole } from './schemas/customer.schema'
+
 // ---------- Invoice ----------
 export {
   invoiceItemSchema,

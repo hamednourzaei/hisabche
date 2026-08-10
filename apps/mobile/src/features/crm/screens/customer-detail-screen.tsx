@@ -7,6 +7,7 @@ import { ScrollView, View } from 'react-native'
 import { useLocalSearchParams } from 'expo-router'
 import { useTranslation } from 'react-i18next'
 import { useCustomer, useLedger, useTransactions } from '@hisabche/api'
+import { derivePartyRole, partyRoleLabelKey } from '@hisabche/validation'
 import type { Transaction } from '@hisabche/validation'
 import {
   ErrorState,
@@ -16,9 +17,11 @@ import {
   Skeleton,
   Text,
   useTheme,
+  StatusChip,
 } from '@hisabche/mobile-ui'
 
 import { AppScreen } from '../../../shared/components/app-screen'
+import { useCommonT } from '../../../shared/i18n/use-common-t'
 import { ScreenHeader } from '../../../shared/components/screen-header'
 import { currencySign, formatAmount, formatDate } from '../../../shared/lib/format'
 import { useCurrency } from '../../settings/preferences.store'
@@ -26,6 +29,7 @@ import { CustomerProfileHeader } from '../components/customer-profile-header'
 
 export function CustomerDetailScreen() {
   const { t } = useTranslation('mobile')
+  const tCommon = useCommonT()
   const { spacing } = useTheme()
   const { id } = useLocalSearchParams<{ id: string }>()
   const currency = useCurrency()
@@ -33,7 +37,7 @@ export function CustomerDetailScreen() {
   const customer = useCustomer(id)
   const ledger = useLedger(id)
   const transactions = useTransactions(
-    useMemo(() => ({ page: 1, limit: 20, sortDirection: 'desc' as const, customerId: id }), [id])
+    useMemo(() => ({ page: 1, limit: 20, sortDirection: 'desc' as const, customerId: id }), [id]),
   )
 
   if (customer.isLoading) {
@@ -62,6 +66,10 @@ export function CustomerDetailScreen() {
   }
 
   const balance = ledger.data?.closingBalance ?? customer.data.openingBalance ?? 0
+  // Role is derived from the direction of this party's transactions, never from
+  // customers.type (which is payment terms). Someone who both buys and sells
+  // reads as both rather than as whichever invoice came first.
+  const role = derivePartyRole(transactions.data?.transactions ?? [])
   const items: Transaction[] = transactions.data?.transactions ?? []
 
   return (
@@ -80,6 +88,10 @@ export function CustomerDetailScreen() {
           loading={ledger.isLoading}
         />
 
+        {role !== 'none' ? (
+          <StatusChip label={tCommon(partyRoleLabelKey(role))} tone="info" />
+        ) : null}
+
         <View>
           <SectionHeader title={t('customers.transactions')} />
 
@@ -92,7 +104,12 @@ export function CustomerDetailScreen() {
           ) : (
             <View style={{ gap: spacing.sm }}>
               {items.map((item, index) => (
-                <MobileCard key={item.id ?? `tx-${index}`} variant="muted" elevated="none" padding="md">
+                <MobileCard
+                  key={item.id ?? `tx-${index}`}
+                  variant="muted"
+                  elevated="none"
+                  padding="md"
+                >
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
                     <View style={{ flex: 1, gap: 2 }}>
                       <Text variant="bodyStrong" numberOfLines={1}>

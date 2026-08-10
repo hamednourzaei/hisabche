@@ -46,7 +46,8 @@ export const HeroMetricCard = memo(function HeroMetricCard({
       padding="xl"
       style={{
         backgroundColor: colors.surfaceElevated,
-        borderRadius: radius.xl,
+        // Card surface — 2xl, same as MobileCard and web's `rounded-2xl`.
+        borderRadius: radius['2xl'],
         borderWidth: 1,
         borderColor: colors.glassBorder,
         overflow: 'hidden',

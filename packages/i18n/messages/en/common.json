@@ -1353,7 +1353,13 @@
       "statusDebtor": "Owing",
       "statusSettled": "Settled"
     },
-    "exportStatement": "Export statement"
+    "exportStatement": "Export statement",
+    "role": {
+      "buyer": "Buyer",
+      "seller": "Seller",
+      "both": "Buyer & Seller",
+      "none": "No transactions"
+    }
   },
   "crm": {
     "type": "Type",
@@ -1592,7 +1598,8 @@
     "totalSales": "Total Sales",
     "customerDebt": "Customer Debt",
     "warehouseValue": "Total Warehouse Value",
-    "vsLastMonth": "vs last month"
+    "vsLastMonth": "vs last month",
+    "dateRange": "Date range"
   },
   "quickInvoice": {
     "title": "Quick Invoice",

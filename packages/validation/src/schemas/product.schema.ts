@@ -73,31 +73,31 @@ export type UpdateProduct = z.infer<typeof updateProductSchema>
 export const productFiltersSchema = z.object({
   // ✅ FIX: استفاده از coerce برای تبدیل خودکار
   search: z.string().optional().default(''),
-  
+
   category: productCategorySchema.optional(),
-  
+
   isActive: z
     .union([z.boolean(), z.string()])
     .transform((val) => (typeof val === 'string' ? val === 'true' : val))
     .optional(),
-  
+
   lowStock: z
     .union([z.boolean(), z.string()])
     .transform((val) => (typeof val === 'string' ? val === 'true' : val))
     .optional(),
-  
+
   minPrice: z
     .union([z.number(), z.string()])
     .transform((val) => (typeof val === 'string' ? parseFloat(val) : val))
     .optional(),
-  
+
   maxPrice: z
     .union([z.number(), z.string()])
     .transform((val) => (typeof val === 'string' ? parseFloat(val) : val))
     .optional(),
-  
+
   barcode: z.string().optional(),
-  
+
   // ✅ FIX: page با default و coerce
   page: z
     .union([z.number(), z.string()])
@@ -107,7 +107,7 @@ export const productFiltersSchema = z.object({
     })
     .default(1)
     .optional(),
-  
+
   // ✅ FIX: limit با default و coerce
   limit: z
     .union([z.number(), z.string()])
@@ -117,11 +117,11 @@ export const productFiltersSchema = z.object({
     })
     .default(20)
     .optional(),
-  
+
   sortBy: z.string().optional().default('created_at'),
-  
+
   sortDirection: z.enum(['asc', 'desc']).optional().default('desc'),
-  
+
   cursor: z.string().optional(),
 })
 
@@ -142,3 +142,42 @@ export const stockTransferSchema = z.object({
 })
 
 export type StockTransfer = z.infer<typeof stockTransferSchema>
+// ============================================
+// Stock economics
+//
+// The margin and stock-value rules, in one place. Web derived them inline in
+// `warehouse-detail-container`; mobile needed the same numbers, and two
+// independent derivations of "what is this stock worth" is exactly the kind of
+// drift that shows up as two devices disagreeing about profit.
+// ============================================
+
+/** Margin on one unit. Negative when a product is sold below cost — that is a
+ *  real state worth showing, not something to clamp to zero. */
+export function profitPerUnit(product: {
+  sellPrice?: number | null
+  buyPrice?: number | null
+}): number {
+  return (product.sellPrice ?? 0) - (product.buyPrice ?? 0)
+}
+
+/** Margin across everything currently in stock. */
+export function totalProfit(product: {
+  quantity?: number | null
+  sellPrice?: number | null
+  buyPrice?: number | null
+}): number {
+  return (product.quantity ?? 0) * profitPerUnit(product)
+}
+
+/**
+ * Stock value at *selling* price, matching the web detail page.
+ *
+ * Deliberately not cost basis: this figure answers "what is this shelf worth to
+ * me", which is the question the warehouse page is built around.
+ */
+export function stockValue(product: {
+  quantity?: number | null
+  sellPrice?: number | null
+}): number {
+  return (product.quantity ?? 0) * (product.sellPrice ?? 0)
+}

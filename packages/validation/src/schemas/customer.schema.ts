@@ -113,3 +113,42 @@ export const customerFiltersSchema = z.object({
 })
 
 export type CustomerFilters = z.infer<typeof customerFiltersSchema>
+
+// ============================================
+// Party role — derived, never stored.
+//
+// `customers.type` is cash|credit — payment terms — and must not be repurposed
+// to mean buyer/seller. A party's role comes from the direction of its
+// invoices, so the same person can be both without being duplicated into two
+// records just to carry a label.
+// ============================================
+
+export type PartyRole = 'buyer' | 'seller' | 'both' | 'none'
+
+/**
+ * Which side of the ledger this party has actually been on.
+ *
+ * A sale means they bought from us (buyer); a purchase means they sold to us
+ * (seller). Doing both is common — a shop that buys gold from a jeweller and
+ * later sells them a display case — and must read as `both`, not as whichever
+ * invoice happened to come first.
+ */
+export function derivePartyRole(invoices: ReadonlyArray<{ type?: string | null }>): PartyRole {
+  let buyer = false
+  let seller = false
+
+  for (const invoice of invoices) {
+    if ((invoice.type ?? 'sale') === 'purchase') seller = true
+    else buyer = true
+    if (buyer && seller) return 'both'
+  }
+
+  if (buyer) return 'buyer'
+  if (seller) return 'seller'
+  return 'none'
+}
+
+/** Copy key for a derived role. Same words on every platform. */
+export function partyRoleLabelKey(role: PartyRole): string {
+  return `customers.role.${role}`
+}

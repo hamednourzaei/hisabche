@@ -1358,7 +1358,13 @@
       "statusDebtor": "قرضدار",
       "statusSettled": "تسویه"
     },
-    "exportStatement": "خروجی صورتحساب"
+    "exportStatement": "خروجی صورتحساب",
+    "role": {
+      "buyer": "خریدار",
+      "seller": "فروشنده",
+      "both": "خریدار و فروشنده",
+      "none": "بدون معامله"
+    }
   },
   "crm": {
     "type": "نوع",
@@ -1597,7 +1603,8 @@
     "totalSales": "فروش کل",
     "customerDebt": "قرض مشتریان",
     "warehouseValue": "ارزش کل گدام",
-    "vsLastMonth": "نسبت به ماه گذشته"
+    "vsLastMonth": "نسبت به ماه گذشته",
+    "dateRange": "بازه زمانی"
   },
   "quickInvoice": {
     "title": "فاکتور سریع",

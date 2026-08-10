@@ -65,7 +65,11 @@ export const MobileCard = memo(function MobileCard({
   }
 
   const base: ViewStyle = {
-    borderRadius: theme.radius.lg,
+    // `2xl` (24px), matching web's `rounded-2xl` card surface. This was `lg`
+    // (16px), which made every mobile card visibly squarer than the same card
+    // in the browser — the most repeated geometry difference in the product,
+    // since almost every mobile screen is a list of these.
+    borderRadius: theme.radius['2xl'],
     padding: theme.spacing[padding],
   }
 

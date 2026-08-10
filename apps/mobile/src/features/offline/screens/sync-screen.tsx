@@ -9,7 +9,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { Button, EmptyState, MobileCard, StatusChip, Text, useTheme } from '@hisabche/mobile-ui'
 
 import { AppScreen } from '../../../shared/components/app-screen'
-import { ScreenHeader } from '../../../shared/components/screen-header'
+import { NavScreenHeader } from '../../../shared/components/nav-screen-header'
 import { formatDate } from '../../../shared/lib/format'
 import { useOutboxStore, type OutboxStatus } from '../outbox.store'
 import { retryEntry, runSync } from '../sync-runner'
@@ -32,8 +32,8 @@ export function SyncScreen() {
 
   return (
     <AppScreen>
-      <ScreenHeader
-        title={t('sync.title')}
+      <NavScreenHeader
+        id="sync"
         subtitle={`${t('sync.lastSync')}: ${lastSyncedAt ? formatDate(lastSyncedAt) : t('sync.never')}`}
       />
 
@@ -59,7 +59,10 @@ export function SyncScreen() {
                       </Text>
                     ) : null}
                   </View>
-                  <StatusChip label={t(`sync.${entry.status}`, { defaultValue: entry.status })} tone={TONE[entry.status]} />
+                  <StatusChip
+                    label={t(`sync.${entry.status}`, { defaultValue: entry.status })}
+                    tone={TONE[entry.status]}
+                  />
                 </View>
 
                 {entry.status === 'failed' ? (

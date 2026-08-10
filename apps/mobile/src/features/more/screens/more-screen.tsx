@@ -59,7 +59,7 @@ export function MoreScreen() {
 
   return (
     <AppScreen>
-      <ScreenHeader title={tMobile('tabs.more')} />
+      <ScreenHeader title={t('nav.more', tMobile('tabs.more'))} />
 
       <ScrollView contentContainerStyle={{ padding: spacing.md, gap: spacing.lg }}>
         {MORE_PRIMARY.length > 0 ? (

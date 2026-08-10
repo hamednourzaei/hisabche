@@ -1,16 +1,15 @@
-"use client"
+'use client'
 
-import { useState, useCallback, useMemo } from "react"
-import { useParams, useRouter } from "next/navigation"
-import { useTranslations } from "next-intl";
-import {
-  useProduct,
-  useUpdateProduct,
-  useDeleteProduct,
-} from "@hisabche/api"
-import { ProductDetailPage } from "../warehouse-detail-page"
+import { useState, useCallback, useMemo } from 'react'
+import { useParams, useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
+// Margin and stock-value rules live in the domain layer so mobile derives the
+// same numbers rather than re-implementing them.
+import { profitPerUnit, stockValue, totalProfit } from '@hisabche/validation'
+import { useProduct, useUpdateProduct, useDeleteProduct } from '@hisabche/api'
+import { ProductDetailPage } from '../warehouse-detail-page'
 
-type UnitType = "piece" | "kg" | "liter" | "meter" | "box"
+type UnitType = 'piece' | 'kg' | 'liter' | 'meter' | 'box'
 
 interface ProductEditValues {
   name: string
@@ -27,12 +26,12 @@ const num = (v: unknown): number => {
   return Number.isFinite(n) ? n : 0
 }
 
-const fmt = (v: unknown): string => num(v).toLocaleString("fa-AF")
+const fmt = (v: unknown): string => num(v).toLocaleString('fa-AF')
 
 // Helper to convert string to valid UnitType
 const toUnitType = (unit: string): UnitType => {
-  const validUnits: UnitType[] = ["piece", "kg", "liter", "meter", "box"]
-  return validUnits.includes(unit as UnitType) ? (unit as UnitType) : "piece"
+  const validUnits: UnitType[] = ['piece', 'kg', 'liter', 'meter', 'box']
+  return validUnits.includes(unit as UnitType) ? (unit as UnitType) : 'piece'
 }
 
 interface RawProduct {
@@ -48,14 +47,11 @@ interface RawProduct {
   unit?: string
 }
 
-type StockStatus =
-  | "success"
-  | "warning"
-  | "destructive"
-  | "secondary"
+type StockStatus = 'success' | 'warning' | 'destructive' | 'secondary'
 
 export function ProductDetailContainer() {
-  const t = useTranslations();const router = useRouter()
+  const t = useTranslations()
+  const router = useRouter()
   const { id } = useParams<{ id: string }>()
 
   const { data: product, isLoading } = useProduct(id)
@@ -63,27 +59,25 @@ export function ProductDetailContainer() {
   const deleteProduct = useDeleteProduct()
 
   const [editing, setEditing] = useState(false)
-  const [editName, setName] = useState("")
-  const [editSellPrice, setSellPrice] = useState("")
-  const [editBuyPrice, setBuyPrice] = useState("")
-  const [editQuantity, setQuantity] = useState("")
-  const [editMinStock, setMinStock] = useState("")
-  const [editCategory, setCategory] = useState("general")
-  const [editUnit, setUnit] = useState<UnitType>("piece")
+  const [editName, setName] = useState('')
+  const [editSellPrice, setSellPrice] = useState('')
+  const [editBuyPrice, setBuyPrice] = useState('')
+  const [editQuantity, setQuantity] = useState('')
+  const [editMinStock, setMinStock] = useState('')
+  const [editCategory, setCategory] = useState('general')
+  const [editUnit, setUnit] = useState<UnitType>('piece')
 
   const getProduct = useCallback(
     (p: RawProduct) => ({
-      name: p.name ?? "",
+      name: p.name ?? '',
       sellPrice: num(p.sell_price ?? p.sellPrice),
       buyPrice: num(p.buy_price ?? p.buyPrice),
       quantity: num(p.quantity),
-      minStockLevel: num(
-        p.min_stock_level ?? p.minStockLevel ?? 5
-      ),
-      category: p.category ?? "general",
-      unit: toUnitType(p.unit ?? "piece"),
+      minStockLevel: num(p.min_stock_level ?? p.minStockLevel ?? 5),
+      category: p.category ?? 'general',
+      unit: toUnitType(p.unit ?? 'piece'),
     }),
-    []
+    [],
   )
 
   const startEditing = useCallback(() => {
@@ -107,7 +101,8 @@ export function ProductDetailContainer() {
       buyPrice: num(editBuyPrice),
       quantity: Math.floor(num(editQuantity)),
       minStockLevel: Math.floor(num(editMinStock)) || 5,
-      category: editCategory as "general" | "food" | "electronics" | "clothing" | "construction" | "medicine",
+      category: editCategory as
+        'general' | 'food' | 'electronics' | 'clothing' | 'construction' | 'medicine',
       unit: editUnit,
     })
     setEditing(false)
@@ -124,14 +119,9 @@ export function ProductDetailContainer() {
   ])
 
   const handleDelete = useCallback(async () => {
-    if (
-      !confirm(
-        t("warehouse.deleteConfirm")
-      )
-    )
-      return
+    if (!confirm(t('warehouse.deleteConfirm'))) return
     await deleteProduct.mutateAsync(id!)
-    router.push("/warehouse")
+    router.push('/warehouse')
   }, [id, deleteProduct, router, t])
 
   const safeT = useCallback(
@@ -139,54 +129,45 @@ export function ProductDetailContainer() {
       const v = t(key)
       return v && v !== key ? v : (fallback ?? key)
     },
-    [t]
+    [t],
   )
 
-  const productData = useMemo(
-    () => (product ? getProduct(product) : null),
-    [product, getProduct]
-  )
+  const productData = useMemo(() => (product ? getProduct(product) : null), [product, getProduct])
 
   const stockStatus: StockStatus = useMemo(() => {
-    if (!productData) return "secondary"
-    if (productData.quantity === 0) return "destructive"
-    if (productData.quantity <= productData.minStockLevel)
-      return "warning"
-    return "success"
+    if (!productData) return 'secondary'
+    if (productData.quantity === 0) return 'destructive'
+    if (productData.quantity <= productData.minStockLevel) return 'warning'
+    return 'success'
   }, [productData])
 
   const stockLabel = useMemo(() => {
-    if (!productData) return ""
-    if (productData.quantity === 0)
-      return t("warehouse.outOfStock")
-    if (productData.quantity <= productData.minStockLevel)
-      return t("warehouse.lowStock")
-    return t("warehouse.inStock")
+    if (!productData) return ''
+    if (productData.quantity === 0) return t('warehouse.outOfStock')
+    if (productData.quantity <= productData.minStockLevel) return t('warehouse.lowStock')
+    return t('warehouse.inStock')
   }, [productData, t])
 
-  const profitPerUnit = productData
-    ? productData.sellPrice - productData.buyPrice
-    : 0
+  const profit = productData ? profitPerUnit(productData) : 0
 
-  const totalProfit = productData
-    ? productData.quantity * profitPerUnit
-    : 0
+  const profitTotal = productData ? totalProfit(productData) : 0
 
-  const totalValue = productData
-    ? productData.quantity * productData.sellPrice
-    : 0
+  const totalValue = productData ? stockValue(productData) : 0
 
-  const onSave = useCallback((data: ProductEditValues) => {
-    // This will be called from ProductDetailPage with the edit values
-    setName(data.name)
-    setSellPrice(data.sellPrice.toString())
-    setBuyPrice(data.buyPrice.toString())
-    setQuantity(data.quantity.toString())
-    setMinStock(data.minStockLevel.toString())
-    setCategory(data.category)
-    setUnit(data.unit)
-    handleSave()
-  }, [handleSave])
+  const onSave = useCallback(
+    (data: ProductEditValues) => {
+      // This will be called from ProductDetailPage with the edit values
+      setName(data.name)
+      setSellPrice(data.sellPrice.toString())
+      setBuyPrice(data.buyPrice.toString())
+      setQuantity(data.quantity.toString())
+      setMinStock(data.minStockLevel.toString())
+      setCategory(data.category)
+      setUnit(data.unit)
+      handleSave()
+    },
+    [handleSave],
+  )
 
   return (
     <ProductDetailPage
@@ -198,8 +179,8 @@ export function ProductDetailContainer() {
       updatePending={updateProduct.isPending}
       stockStatus={stockStatus}
       stockLabel={stockLabel}
-      profitPerUnit={profitPerUnit}
-      totalProfit={totalProfit}
+      profitPerUnit={profit}
+      totalProfit={profitTotal}
       totalValue={totalValue}
       onBack={() => router.back()}
       onStartEditing={startEditing}

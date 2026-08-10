@@ -17,7 +17,7 @@ import type { BadgeTone } from '@hisabche/mobile-ui'
 
 import { AppScreen } from '../../../shared/components/app-screen'
 import { QueryList } from '../../../shared/components/query-list'
-import { ScreenHeader } from '../../../shared/components/screen-header'
+import { NavScreenHeader } from '../../../shared/components/nav-screen-header'
 import { formatDate } from '../../../shared/lib/format'
 import { hrefFor } from '../../../shared/navigation/nav'
 
@@ -103,8 +103,8 @@ export function ActivitiesScreen() {
 
   return (
     <AppScreen>
-      <ScreenHeader
-        title={t('activity.title')}
+      <NavScreenHeader
+        id="events"
         trailing={
           hasUnread ? (
             <Button

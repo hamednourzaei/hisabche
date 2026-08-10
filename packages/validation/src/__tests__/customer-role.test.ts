@@ -8,7 +8,7 @@
 
 import { describe, expect, it } from 'vitest'
 
-import { customerFiltersSchema } from '../index'
+import { customerFiltersSchema, derivePartyRole } from '../index'
 
 describe('the role filter is a real, bounded contract', () => {
   it.each(['buyer', 'seller'])('accepts %s', (role) => {
@@ -88,5 +88,46 @@ describe('filtering', () => {
   it('a party with no invoices matches neither filter', () => {
     expect(matchesRole('none', 'buyer')).toBe(false)
     expect(matchesRole('none', 'seller')).toBe(false)
+  })
+})
+
+// ============================================
+// Role derivation.
+//
+// A sale means the party bought from us; a purchase means they sold to us.
+// Doing both is ordinary — a shop that buys gold from a jeweller and later
+// sells them a display case — and must read as `both` rather than as whichever
+// invoice happened to be recorded first.
+// ============================================
+
+describe('derivePartyRole', () => {
+  it('reads a sale as the party having bought from us', () => {
+    expect(derivePartyRole([{ type: 'sale' }])).toBe('buyer')
+  })
+
+  it('reads a purchase as the party having sold to us', () => {
+    expect(derivePartyRole([{ type: 'purchase' }])).toBe('seller')
+  })
+
+  it('returns both when the party has been on each side', () => {
+    expect(derivePartyRole([{ type: 'sale' }, { type: 'purchase' }])).toBe('both')
+    // Order must not decide the answer.
+    expect(derivePartyRole([{ type: 'purchase' }, { type: 'sale' }])).toBe('both')
+  })
+
+  it('treats an unset type as a sale, matching the invoice list', () => {
+    expect(derivePartyRole([{}])).toBe('buyer')
+    expect(derivePartyRole([{ type: null }])).toBe('buyer')
+  })
+
+  it('returns none for a party with no invoices rather than guessing buyer', () => {
+    expect(derivePartyRole([])).toBe('none')
+  })
+
+  it('never returns a payment-terms value', () => {
+    // customers.type is cash|credit and must not leak into the role.
+    for (const invoices of [[], [{ type: 'sale' }], [{ type: 'purchase' }]]) {
+      expect(['buyer', 'seller', 'both', 'none']).toContain(derivePartyRole(invoices))
+    }
   })
 })

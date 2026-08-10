@@ -21,7 +21,8 @@ export const ScreenHeader = memo(function ScreenHeader({
         flexDirection: 'row',
         alignItems: 'center',
         gap: spacing.sm,
-        paddingHorizontal: spacing.md,
+        // 16px, the page padding web uses (`p-4`).
+        paddingHorizontal: spacing.lg,
         paddingVertical: spacing.md,
       }}
     >

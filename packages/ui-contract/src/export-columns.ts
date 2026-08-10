@@ -39,6 +39,35 @@ export const INVOICE_EXPORT_COLUMNS: readonly ExportColumn[] = [
   { key: 'paymentDate', labelKey: 'invoices.paymentDate', fallback: 'تاریخ تسویه' },
 ]
 
+/**
+ * Customer list export.
+ *
+ * `debt` carries the currency in its heading, so the label is built rather than
+ * looked up — see `customerDebtLabel`. Everything else resolves like any other
+ * column.
+ */
+export const CUSTOMER_EXPORT_COLUMNS: readonly ExportColumn[] = [
+  { key: 'name', labelKey: 'customers.export.name', fallback: 'نام' },
+  { key: 'phone', labelKey: 'customers.export.phone', fallback: 'تلفن' },
+  { key: 'debt', labelKey: 'customers.export.debt', fallback: 'بدهی' },
+  { key: 'openInvoices', labelKey: 'customers.export.openInvoices', fallback: 'فاکتور باز' },
+  { key: 'lastPurchase', labelKey: 'customers.export.lastPurchase', fallback: 'آخرین خرید' },
+  { key: 'status', labelKey: 'customers.export.status', fallback: 'وضعیت' },
+]
+
+/**
+ * Debt heading, currency included — «بدهی (AFN)».
+ *
+ * A bare "debt" column in a spreadsheet is ambiguous the moment a workspace
+ * uses more than one currency, which is why the code travels in the heading.
+ */
+export function customerDebtLabel(
+  currency: string,
+  t: (key: string, fallback?: string) => string,
+): string {
+  return `${t('customers.export.debt', 'بدهی')} (${currency})`
+}
+
 /** Translation key for a transaction type's exported label. */
 export function invoiceTypeLabelKey(type: string | null | undefined): string {
   return `invoices.type.${type || 'sale'}`

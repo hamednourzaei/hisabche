@@ -42,7 +42,8 @@ export const SearchBar = memo(function SearchBar({
           gap: spacing.md,
           height: 44,
           paddingHorizontal: spacing.lg,
-          borderRadius: radius.md,
+          // Matches the Input field and web's `rounded-xl` search box.
+          borderRadius: radius.xl,
           backgroundColor: colors.surfaceMuted,
         }}
       >

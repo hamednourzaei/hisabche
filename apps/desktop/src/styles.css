@@ -26,7 +26,9 @@ body,
 /* Desktop density: tighter than web defaults. */
 :root {
   --row-height: 40px;
-  --sidebar-width: 248px;
+  /* 224px — the width the web sidebar measures at. Desktop had 248, which
+     shifted every page's content origin relative to the browser. */
+  --sidebar-width: 224px;
   --sidebar-width-collapsed: 64px;
   --toolbar-height: 52px;
 }

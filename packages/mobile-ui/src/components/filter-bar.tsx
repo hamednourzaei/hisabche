@@ -39,7 +39,8 @@ export function FilterBar<T extends string>({ options, value, onChange }: Filter
               gap: spacing.sm,
               paddingHorizontal: spacing.lg,
               paddingVertical: spacing.sm,
-              borderRadius: radius.full,
+              // Web's filter tab measures 16px, not a full pill.
+              borderRadius: radius.lg,
               backgroundColor: active ? colors.primary : colors.surfaceMuted,
             }}
           >

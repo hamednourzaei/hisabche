@@ -67,6 +67,8 @@ export {
 
 export {
   INVOICE_EXPORT_COLUMNS,
+  CUSTOMER_EXPORT_COLUMNS,
+  customerDebtLabel,
   invoiceTypeLabelKey,
   resolveExportColumns,
   type ExportColumn,

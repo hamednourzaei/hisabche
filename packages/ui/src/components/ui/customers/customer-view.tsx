@@ -6,6 +6,11 @@ import { useState, useEffect, useMemo, useCallback, Suspense } from 'react'
 import { cn } from '../../../lib/utils'
 import { Plus, Download, User, AlertCircle } from 'lucide-react'
 import { exportToCSV } from '../../../lib/export'
+import {
+  CUSTOMER_EXPORT_COLUMNS,
+  customerDebtLabel,
+  resolveExportColumns,
+} from '@hisabche/ui-contract'
 
 // Types
 import type { CustomersViewProps } from './customer-view.types'
@@ -481,17 +486,18 @@ export function customersView(props: CustomersViewProps) {
     [t],
   )
 
-  const exportColumns = useMemo(
-    () => [
-      { key: 'name' as const, label: t('customers.export.name', 'نام') },
-      { key: 'phone' as const, label: t('customers.export.phone', 'تلفن') },
-      { key: 'debt' as const, label: `${t('customers.export.debt', 'بدهی')} (${currency})` },
-      { key: 'openInvoices' as const, label: t('customers.export.openInvoices', 'فاکتور باز') },
-      { key: 'lastPurchase' as const, label: t('customers.export.lastPurchase', 'آخرین خرید') },
-      { key: 'status' as const, label: t('customers.export.status', 'وضعیت') },
-    ],
-    [t, currency],
-  )
+  // Columns come from the shared contract so the mobile export cannot drift
+  // into a different set or a different heading for the same field.
+  const exportColumns = useMemo(() => {
+    const resolved = resolveExportColumns<ReturnType<typeof buildExportRows>[number]>(
+      CUSTOMER_EXPORT_COLUMNS,
+      t,
+    )
+    // Debt carries the currency in its heading; the rest resolve plainly.
+    return resolved.map((column) =>
+      column.key === 'debt' ? { ...column, label: customerDebtLabel(currency, t) } : column,
+    )
+  }, [t, currency])
 
   const exportCustomers = useCallback(
     (list: readonly CustomerWithDebt[]) => {

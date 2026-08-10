@@ -102,3 +102,38 @@ describe('screen headers come from the navigation contract', () => {
     expect(source).not.toMatch(/<ScreenHeader\s+title=\{t\(/)
   })
 })
+
+// ============================================
+// Card geometry.
+//
+// Web's card surface is `rounded-2xl` (24px). `MobileCard` used `radius.lg`
+// (16px), so every mobile list read visibly squarer than the same list in a
+// browser — the most repeated geometry difference in the product, since almost
+// every mobile screen is a list of cards. The scale itself is parity-tested in
+// mobile-ui; this pins which step the card reaches for.
+// ============================================
+
+describe('MobileCard uses the web card radius step', () => {
+  it('reaches for 2xl, not lg', () => {
+    const source = readFileSync(
+      join(
+        __dirname,
+        '..',
+        '..',
+        '..',
+        '..',
+        '..',
+        '..',
+        'packages',
+        'mobile-ui',
+        'src',
+        'components',
+        'mobile-card.tsx',
+      ),
+      'utf8',
+    )
+
+    expect(source).toContain("theme.radius['2xl']")
+    expect(source).not.toContain('theme.radius.lg')
+  })
+})

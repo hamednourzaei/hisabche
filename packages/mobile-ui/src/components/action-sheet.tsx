@@ -48,7 +48,8 @@ export const ActionSheet = memo(function ActionSheet({
               alignItems: 'center',
               gap: spacing.md,
               padding: spacing.lg,
-              borderRadius: radius.md,
+              // Menu surface — `xl`, matching web's dropdown.
+              borderRadius: radius.xl,
               backgroundColor: pressed ? colors.surfaceMuted : 'transparent',
             })}
           >

@@ -13,7 +13,7 @@ import { Badge, Button, MobileCard, Text, useTheme } from '@hisabche/mobile-ui'
 import type { CurrencyCode } from '@hisabche/store'
 
 import { AppScreen } from '../../../shared/components/app-screen'
-import { ScreenHeader } from '../../../shared/components/screen-header'
+import { NavScreenHeader } from '../../../shared/components/nav-screen-header'
 import { setMobileLanguage, supportedLanguages, type SupportedLanguage } from '../../../shared/i18n'
 import { useAuthStore, useCurrentUser } from '../../auth/auth.store'
 import { useBiometrics } from '../../auth/hooks/use-biometrics'
@@ -24,9 +24,6 @@ const CURRENCIES: readonly CurrencyCode[] = ['AFN', 'USD', 'PKR', 'IRR'] as cons
 
 export function SettingsScreen() {
   const { t, i18n } = useTranslation('mobile')
-  // Destination copy comes from the shared catalog so mobile says exactly what
-  // the web sidebar says for the same place.
-  const { t: tCommon } = useTranslation('common')
   const { spacing } = useTheme()
   const router = useRouter()
 
@@ -62,7 +59,7 @@ export function SettingsScreen() {
 
   return (
     <AppScreen>
-      <ScreenHeader title={tCommon('nav.settings')} />
+      <NavScreenHeader id="settings" />
 
       <ScrollView contentContainerStyle={{ padding: spacing.md, gap: spacing.md }}>
         <MobileCard>

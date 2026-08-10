@@ -191,8 +191,37 @@ export function InvoiceDetailScreen() {
           })}
         </View>
 
+        {/* Metadata, matching the web invoice sidebar's «اطلاعات فاکتور» card. */}
+        <MobileCard>
+          <View style={{ gap: spacing.sm }}>
+            <Row
+              label={tCommon('invoices.invoiceNumber', 'شماره فاکتور')}
+              value={invoice.invoiceNumber ?? '—'}
+            />
+            <Row
+              label={tCommon('invoices.createdAt', 'تاریخ ثبت')}
+              value={invoice.createdAt ? formatDate(invoice.createdAt) : '—'}
+            />
+            <Row
+              label={tCommon('invoices.updatedAt', 'آخرین بروزرسانی')}
+              value={invoice.updatedAt ? formatDate(invoice.updatedAt) : '—'}
+            />
+          </View>
+        </MobileCard>
+
         <Button label={t('common.share')} variant="ghost" fullWidth onPress={onShare} />
       </ScrollView>
     </AppScreen>
+  )
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      <Text variant="label" tone="secondary" style={{ flex: 1 }}>
+        {label}
+      </Text>
+      <Text variant="bodyStrong">{value}</Text>
+    </View>
   )
 }
