@@ -1,18 +1,24 @@
-"use client"
+'use client'
 
-import { useCallback, useMemo, useState } from "react"
-import { useTranslations } from "next-intl";
-import { useCustomers, useInvoices } from "@hisabche/api"
-import { CustomerDetailView } from "../customer-detail-view"
+import { useCallback, useMemo, useState } from 'react'
+import { useTranslations } from 'next-intl'
+import { useCustomers, useInvoices } from '@hisabche/api'
+import { CustomerDetailView } from '../customer-detail-view'
+import { exportToCSV } from '../../../../lib/export'
+import {
+  buildCustomerExportRows,
+  CUSTOMER_EXPORT_COLUMNS,
+  type ExportableInvoiceItem,
+} from '../../../../lib/customers/customer-export'
 
-const fmt = (v: number): string => v.toLocaleString("fa-AF")
+const fmt = (v: number): string => v.toLocaleString('fa-AF')
 
 const rem = (inv: { total: number; paidAmount: number }): number =>
   Math.max(0, inv.total - inv.paidAmount)
 
 const fmtDate = (d: string): string => {
   try {
-    return new Date(d).toLocaleDateString("fa-AF")
+    return new Date(d).toLocaleDateString('fa-AF')
   } catch {
     return d
   }
@@ -26,6 +32,10 @@ interface ApiInvoiceRecord {
   date: string
   status: string
   customerId: string
+  /** Legacy rows predate the split and are read as sales. */
+  type?: string
+  currency?: string
+  items?: readonly ExportableInvoiceItem[]
 }
 
 interface CustomerRecord {
@@ -42,18 +52,19 @@ export function CustomerDetailContainer({
   customerId: string
   onBack: () => void
 }) {
-  const t = useTranslations();const [payOpen, setPayOpen] = useState(false)
+  const t = useTranslations()
+  const [payOpen, setPayOpen] = useState(false)
 
   const { data: customersData } = useCustomers({
     page: 1,
     limit: 50,
-    sortDirection: "desc",
+    sortDirection: 'desc',
   })
 
   const { data: invoicesData, refetch } = useInvoices({
     page: 1,
     limit: 200,
-    sortDirection: "desc",
+    sortDirection: 'desc',
   })
 
   const customer = useMemo(() => {
@@ -62,8 +73,8 @@ export function CustomerDetailContainer({
     if (!found) return null
     return {
       id: found.id,
-      name: found.fullName || found.name || t("common.noName"),
-      phone: found.phone || "",
+      name: found.fullName || found.name || t('common.noName'),
+      phone: found.phone || '',
     }
   }, [customersData, customerId, t])
 
@@ -72,12 +83,11 @@ export function CustomerDetailContainer({
     return list
       .filter(
         (inv) =>
-          inv.customerId === customerId &&
-          (inv.status === "pending" || inv.status === "partial")
+          inv.customerId === customerId && (inv.status === 'pending' || inv.status === 'partial'),
       )
       .map((inv) => ({
         id: inv.id,
-        invoiceNumber: inv.invoiceNumber ?? "",
+        invoiceNumber: inv.invoiceNumber ?? '',
         total: inv.total,
         paidAmount: inv.paidAmount,
         remaining: rem(inv),
@@ -88,7 +98,7 @@ export function CustomerDetailContainer({
 
   const totalDebt = useMemo(
     () => openInvoices.reduce((s, inv) => s + inv.remaining, 0),
-    [openInvoices]
+    [openInvoices],
   )
 
   const safeT = useCallback(
@@ -96,11 +106,38 @@ export function CustomerDetailContainer({
       const v = t(key)
       return v && v !== key ? v : (fallback ?? key)
     },
-    [t]
+    [t],
   )
 
   const handleOpenPayment = useCallback(() => setPayOpen(true), [])
   const handleClosePayment = useCallback(() => setPayOpen(false), [])
+
+  // صورتحساب کامل — نه فقط فاکتورهای باز. خروجی باید تاریخچه‌ی کامل معامله با
+  // این طرف را نشان دهد، و خرید و فروش هر کدام با نوع خودشان می‌مانند.
+  const statementInvoices = useMemo(() => {
+    const list = (invoicesData?.invoices ?? []) as unknown as ApiInvoiceRecord[]
+    return list.filter((inv) => inv.customerId === customerId)
+  }, [invoicesData, customerId])
+
+  const handleExport = useCallback(() => {
+    if (!customer || statementInvoices.length === 0) return
+
+    const rows = buildCustomerExportRows(statementInvoices, {
+      party: customer.name,
+      unitLabel: (unit, label) => (unit === 'custom' ? (label ?? '') : safeT(`unit.${unit}`, unit)),
+    })
+
+    const columns = CUSTOMER_EXPORT_COLUMNS.map((key) => ({
+      key,
+      label: safeT(`customers.export.${key}`, key),
+    }))
+
+    exportToCSV(
+      rows,
+      columns,
+      `statement-${customer.name}-${new Date().toISOString().slice(0, 10)}`,
+    )
+  }, [customer, statementInvoices, safeT])
 
   return (
     <CustomerDetailView
@@ -114,6 +151,8 @@ export function CustomerDetailContainer({
       onOpenPayment={handleOpenPayment}
       onClosePayment={handleClosePayment}
       onPaymentSuccess={refetch}
+      onExport={handleExport}
+      canExport={statementInvoices.length > 0}
     />
   )
 }

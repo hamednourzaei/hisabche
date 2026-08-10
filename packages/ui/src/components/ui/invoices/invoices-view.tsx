@@ -1,14 +1,20 @@
 'use client'
 
-import { memo, useMemo } from 'react'
-import { cn } from '@/lib/utils'
+import { memo, useCallback, useEffect, useMemo } from 'react'
+import { cn } from '../../../lib/utils'
 import { EmptyState } from '../empty-state'
 import { InvoicesSkeleton } from './invoices-skeleton'
-import { Plus, FileText, DollarSign, CheckCircle2, Clock, Download } from 'lucide-react'
+import { Plus, FileText, DollarSign, CheckCircle2, Clock, Download, Trash2 } from 'lucide-react'
 import { exportToCSV } from '../../../lib/export'
 import { InvoiceRowActions } from './invoice-row-actions'
 import { BentoStats, type BentoStat } from '../bento-stats'
-import { DataTable, type TableColumn } from '../data-table'
+import {
+  BulkActionBar,
+  DataTable,
+  useBulkAction,
+  useRowSelection,
+  type TableColumn,
+} from '../data-table'
 import type { Invoice } from '../../../lib/invoices/invoices-types'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -29,7 +35,12 @@ interface InvoicesViewProps {
   onNavigateInvoice: (id: string) => void
   onNavigateInvoiceAction: (id: string, action: 'pdf' | 'print' | 'png') => void
   onNewInvoice: () => void
-  onDeleteInvoice: (id: string) => void
+  /**
+   * Returns a promise so bulk delete can await each call and report which
+   * invoices actually went. A `void` signature would make every item look
+   * successful the instant it was dispatched.
+   */
+  onDeleteInvoice: (id: string) => void | Promise<void>
   statusVariant: (status: string) => 'success' | 'warning' | 'destructive' | 'secondary'
   /** Filters on the canonical `invoice.type`, never on display text. */
   typeFilter?: InvoiceTypeFilter | undefined
@@ -211,7 +222,9 @@ const ExportButton = memo(function ExportButton({
         { key: 'typeLabel', label: t('invoices.type', 'نوع') },
         { key: 'invoiceNumber', label: t('invoices.invoiceNumber', 'شماره فاکتور') },
         { key: 'date', label: t('invoices.date', 'تاریخ') },
-        { key: 'customerName', label: t('invoices.customer', 'مشتری') },
+        // Neutral, because the export mixes both directions — see the party
+        // column in the table for the same reasoning.
+        { key: 'customerName', label: t('invoices.party', 'طرف حساب') },
         { key: 'company', label: t('invoices.company', 'شرکت') },
         { key: 'total', label: t('invoices.total', 'مبلغ') },
         { key: 'currency', label: t('invoices.currency', 'ارز') },
@@ -349,7 +362,7 @@ function useInvoiceColumns(
   statusVariant: InvoicesViewProps['statusVariant'],
   onNavigateInvoice: (id: string) => void,
   onNavigateInvoiceAction: (id: string, action: 'pdf' | 'print' | 'png') => void,
-  onDeleteInvoice: (id: string) => void,
+  onDeleteInvoice: InvoicesViewProps['onDeleteInvoice'],
 ): TableColumn<Invoice>[] {
   return useMemo(
     () => [
@@ -401,8 +414,12 @@ function useInvoiceColumns(
       },
       {
         id: 'customerName',
-        labelKey: 'invoices.customerName',
-        labelFallback: 'خریدار',
+        // The list mixes sales and purchases, so one column header cannot say
+        // "خریدار" — on a purchase row that party is the seller. The neutral
+        // «طرف حساب» is correct for both; the per-row direction is already
+        // carried by the type column beside it.
+        labelKey: 'invoices.party',
+        labelFallback: 'طرف حساب',
         sortValue: (inv) => inv.customerName ?? '',
         render: (inv) => (
           <span className="text-[hsl(var(--fg-primary))]">{inv.customerName || '—'}</span>
@@ -508,6 +525,27 @@ export const InvoicesView = memo(function InvoicesView({
     onDeleteInvoice,
   )
 
+  // ─── Bulk delete ───
+  // There is no bulk endpoint; this reuses the same per-invoice delete the row
+  // menu calls, so authorization and side effects (stock, ledger) are identical.
+  const selection = useRowSelection()
+  const bulkDelete = useBulkAction(
+    useCallback(async (id: string) => onDeleteInvoice(id), [onDeleteInvoice]),
+  )
+
+  const invoiceIds = useMemo(() => invoices.map((inv) => inv.id), [invoices])
+
+  // Rows that vanished (deleted, filtered out, paged away) must not stay
+  // selected — a later action would target ids that are no longer listed.
+  useEffect(() => {
+    selection.prune(invoiceIds)
+  }, [invoiceIds, selection])
+
+  const handleBulkDelete = useCallback(async () => {
+    await bulkDelete.run([...selection.selectedIds])
+    selection.clear()
+  }, [bulkDelete, selection])
+
   if (isLoading) {
     return <InvoicesSkeleton />
   }
@@ -533,6 +571,28 @@ export const InvoicesView = memo(function InvoicesView({
         searchValue={searchValue}
         onSearchChange={onSearchChange}
         minWidthClass="min-w-[420px] sm:min-w-[720px]"
+        selectedIds={selection.selectedIds}
+        onToggleRow={selection.toggleRow}
+        onToggleAll={selection.toggleAll}
+        bulkBar={
+          <BulkActionBar
+            t={t}
+            selectedCount={selection.selectedCount}
+            busy={bulkDelete.busy}
+            result={bulkDelete.result}
+            onClear={selection.clear}
+            actions={[
+              {
+                id: 'delete',
+                label: t('common.delete', 'حذف'),
+                icon: <Trash2 className="size-3.5" aria-hidden="true" />,
+                destructive: true,
+                confirmLabel: t('invoices.bulkDeleteConfirm', 'فاکتورهای انتخاب‌شده حذف شوند؟'),
+                onRun: handleBulkDelete,
+              },
+            ]}
+          />
+        }
         emptyState={
           <EmptyState
             icon="invoice"

@@ -1,24 +1,36 @@
 // apps/web/i18n/request.ts
-import { getRequestConfig } from 'next-intl/server';
-import { locales, defaultLocale, type Locale } from '../app/[lang]/i18n-config';
+import { getRequestConfig } from 'next-intl/server'
+import { locales, defaultLocale, type Locale } from '../app/[lang]/i18n-config'
+
+const loaders: Record<Locale, () => Promise<{ default: unknown }>> = {
+  fa: () => import('@hisabche/i18n/messages/fa/common.json'),
+  af: () => import('@hisabche/i18n/messages/af/common.json'),
+  en: () => import('@hisabche/i18n/messages/en/common.json'),
+}
 
 export default getRequestConfig(async ({ requestLocale }) => {
-  const requested = await requestLocale;
+  const requested = await requestLocale
   const locale: Locale = locales.includes(requested as Locale)
     ? (requested as Locale)
-    : defaultLocale;
+    : defaultLocale
 
   // ✅ FIX: قبلاً اگر بارگذاری فایل پیام یک locale به هر دلیلی (مثلاً
   // ناهماهنگی حروف کوچک/بزرگ مسیر فایل بین ویندوز dev و سرور لینوکس
   // production) شکست می‌خورد، کل route با ۵۰۰ کرش می‌کرد. حالا اگر
   // بارگذاری locale درخواستی شکست بخورد، به defaultLocale برمی‌گردیم
   // به‌جای کرش کردن کل صفحه.
-  let messages: Record<string, unknown>;
+  // پیام‌ها در `@hisabche/i18n/messages` زندگی می‌کنند تا وب، دسکتاپ و
+  // موبایل دقیقاً یک کاتالوگ را بخوانند. import ها استاتیک‌اند (نه template
+  // literal) تا باندلر بتواند هر سه locale را قطعی resolve کند.
+  let messages: Record<string, unknown>
   try {
-    messages = (await import(`../messages/${locale}/common.json`)).default;
+    messages = (await loaders[locale]()).default as Record<string, unknown>
   } catch (err) {
-    console.error(`[i18n] Failed to load messages for locale "${locale}", falling back to "${defaultLocale}"`, err);
-    messages = (await import(`../messages/${defaultLocale}/common.json`)).default;
+    console.error(
+      `[i18n] Failed to load messages for locale "${locale}", falling back to "${defaultLocale}"`,
+      err,
+    )
+    messages = (await loaders[defaultLocale]()).default as Record<string, unknown>
   }
 
   return {
@@ -42,7 +54,7 @@ export default getRequestConfig(async ({ requestLocale }) => {
     // ترجمه پیدا شده و همان متن خام کلید را به‌جای fallback فارسی درست
     // نمایش دهد.
     getMessageFallback({ key, namespace }) {
-      return namespace ? `${namespace}.${key}` : key;
+      return namespace ? `${namespace}.${key}` : key
     },
-  };
-});
+  }
+})

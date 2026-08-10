@@ -3,8 +3,8 @@
 // ============================================
 
 // ─── Core Client ──────────────────────────────────────────
-export { apiClient } from "./lib/client";
-export type { ApiResponse, ApiError } from "./lib/client";
+export { apiClient, normalizeBaseUrl } from './lib/client'
+export type { ApiResponse, ApiError } from './lib/client'
 
 // ✅ Token Provider + onUnauthorized
 export {
@@ -13,8 +13,8 @@ export {
   hasToken,
   isTokenProviderReady,
   tokenReady,
-} from "./lib/tokenProvider";
-export { setOnUnauthorized } from "./lib/client";
+} from './lib/tokenProvider'
+export { setOnUnauthorized } from './lib/client'
 
 // ─── Storage Adapter (platform agnostic) ──────────────────
 export {
@@ -25,16 +25,11 @@ export {
   removeStorage,
   STORAGE_KEYS,
   type KeyValueStorage,
-} from "./storage";
-export { createWebStorage } from "./storage/web";
+} from './storage'
+export { createWebStorage } from './storage/web'
 
 // ─── Auth Hooks ───────────────────────────────────────────
-export {
-  useLogin,
-  useSignUp,
-  useLogout,
-  useCurrentUser,
-} from "./hooks/auth";
+export { useLogin, useSignUp, useLogout, useCurrentUser } from './hooks/auth'
 
 // ─── Invoices ─────────────────────────────────────────────
 export {
@@ -45,7 +40,7 @@ export {
   useDeleteInvoice,
   invoiceKeys,
   type InvoiceWithCustomer,
-} from "./hooks/invoices";
+} from './hooks/invoices'
 
 // ─── Products ─────────────────────────────────────────────
 export {
@@ -55,7 +50,7 @@ export {
   useUpdateProduct,
   useDeleteProduct,
   productKeys,
-} from "./hooks/products";
+} from './hooks/products'
 
 // ─── Customers ────────────────────────────────────────────
 export {
@@ -64,7 +59,7 @@ export {
   useCreateCustomer,
   useUpdateCustomer,
   customerKeys,
-} from "./hooks/customers";
+} from './hooks/customers'
 
 // ─── Transactions ─────────────────────────────────────────
 export {
@@ -72,10 +67,10 @@ export {
   useCreateTransaction,
   useLedger,
   transactionKeys,
-} from "./hooks/transactions";
+} from './hooks/transactions'
 
 // ─── Realtime ─────────────────────────────────────────────
-export { useRealtime } from "./hooks/useRealtime";
+export { useRealtime } from './hooks/useRealtime'
 
 // ─── Dashboard ────────────────────────────────────────────
 export {
@@ -87,7 +82,7 @@ export {
   type AIInsight,
   type SalesDataPoint,
   type SalesChartData,
-} from "./hooks/dashboard";
+} from './hooks/dashboard'
 
 // ─── Employees ────────────────────────────────────────────
 export {
@@ -97,7 +92,7 @@ export {
   useUpdateEmployee,
   useDeleteEmployee,
   employeeKeys,
-} from "./hooks/employees";
+} from './hooks/employees'
 
 // ─── Projects ─────────────────────────────────────────────
 export {
@@ -112,7 +107,7 @@ export {
   useDeleteProjectTask,
   projectKeys,
   projectTaskKeys,
-} from "./hooks/projects";
+} from './hooks/projects'
 
 // ─── Workspace ────────────────────────────────────────────
 export {
@@ -125,15 +120,10 @@ export {
   useRemoveMember,
   useUpdateMemberRole,
   workspaceKeys,
-} from "./hooks/workspace";
+} from './hooks/workspace'
 
 // ─── Payroll ──────────────────────────────────────────────
-export {
-  usePayrolls,
-  usePayrollSummary,
-  useCreatePayroll,
-  payrollKeys,
-} from "./hooks/payroll";
+export { usePayrolls, usePayrollSummary, useCreatePayroll, payrollKeys } from './hooks/payroll'
 
 // ─── Permissions ──────────────────────────────────────────
 export {
@@ -142,15 +132,10 @@ export {
   useCreateRole,
   useDeleteRole,
   permissionKeys,
-} from "./hooks/permissions";
+} from './hooks/permissions'
 
 // ─── Audit ────────────────────────────────────────────────
-export {
-  useAuditLogs,
-  auditKeys,
-  type AuditLog,
-  type AuditResponse,
-} from "./hooks/audit";
+export { useAuditLogs, auditKeys, type AuditLog, type AuditResponse } from './hooks/audit'
 
 // ─── Sales Follow-up ──────────────────────────────────────
 export {
@@ -164,7 +149,7 @@ export {
   type CreateFollowUpInput,
   type UpdateFollowUpInput,
   type FollowUpFilters,
-} from "./hooks/sales-followup";
+} from './hooks/sales-followup'
 
 // ─── Accounting ───────────────────────────────────────────
 export {
@@ -182,7 +167,7 @@ export {
   type TrialBalance,
   type BalanceSheet,
   type IncomeStatement,
-} from "./hooks/accounting";
+} from './hooks/accounting'
 
 // ─── CRM ──────────────────────────────────────────────────
 export {
@@ -199,7 +184,7 @@ export {
   type InteractionCustomer,
   type InteractionStatusEvent,
   type Opportunity,
-} from "./hooks/crm";
+} from './hooks/crm'
 
 // ─── Manufacturing ────────────────────────────────────────
 export {
@@ -212,7 +197,7 @@ export {
   type BOM,
   type BOMItem,
   type WorkOrder,
-} from "./hooks/manufacturing";
+} from './hooks/manufacturing'
 
 // ─── Purchasing ───────────────────────────────────────────
 export {
@@ -223,7 +208,7 @@ export {
   purchasingKeys,
   type PurchaseOrder,
   type PurchaseOrderItem,
-} from "./hooks/purchasing";
+} from './hooks/purchasing'
 
 // ─── Billing & Subscription ───────────────────────────────
 export {
@@ -237,7 +222,7 @@ export {
   type BillingPlan,
   type UsageReport,
   type TrialStatus,
-} from "./hooks/billing";
+} from './hooks/billing'
 
 // ─── Notifications ─────────────────────────────────────────
 export {
@@ -247,7 +232,7 @@ export {
   useMarkAllAsRead,
   notificationKeys,
   type Notification,
-} from "./hooks/notifications";
+} from './hooks/notifications'
 
 // ═══════════════════════════════════════════════════════════
 // ─── ✅ Activity Hooks ─────────────────────────────────────
@@ -278,7 +263,7 @@ export {
   type Activity,
   type ActivityGroup,
   type EntitySummary,
-} from "./hooks/activity";
+} from './hooks/activity'
 
 // ─── Activity Types (از فایل types) ──────────────────────
 export type {
@@ -287,7 +272,7 @@ export type {
   // ActivityGroupDto, // ❌ از hooks/activity export شده
   // EntitySummaryDto, // ❌ از hooks/activity export شده
   PaginatedActivitiesResponse,
-} from "./types/activity.types";
+} from './types/activity.types'
 
 // ─── Workflow ─────────────────────────────────────────────
 export {
@@ -310,4 +295,4 @@ export {
   type WorkflowStatus,
   type WorkflowActionType,
   type ApproverRole,
-} from "./hooks/use-workflow";
+} from './hooks/use-workflow'

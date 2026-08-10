@@ -9,7 +9,15 @@ import { useTranslation } from 'react-i18next'
 import { useInvoice } from '@hisabche/api'
 import type { CurrencyCode } from '@hisabche/store'
 import type { InvoiceItem, InvoiceStatus } from '@hisabche/validation'
-import { Button, ErrorState, MobileCard, Skeleton, StatusChip, Text, useTheme } from '@hisabche/mobile-ui'
+import {
+  Button,
+  ErrorState,
+  MobileCard,
+  Skeleton,
+  StatusChip,
+  Text,
+  useTheme,
+} from '@hisabche/mobile-ui'
 
 import { AppScreen } from '../../../shared/components/app-screen'
 import { ScreenHeader } from '../../../shared/components/screen-header'
@@ -63,13 +71,24 @@ export function InvoiceDetailScreen() {
 
   const status = (invoice.status ?? 'pending') as InvoiceStatus
 
+  // On a sale the counterparty is the buyer; on a purchase it is the seller.
+  // Same field, different word — matching the web invoice document.
+  const isPurchase = (invoice.type ?? 'sale') === 'purchase'
+  const partyLabel = isPurchase ? t('sales.supplier') : t('sales.customer')
+  const partyName = invoice.customerName ?? invoice.customer?.full_name ?? ''
+
   return (
     <AppScreen>
-      <ScreenHeader title={invoice.invoiceNumber} subtitle={formatDate(invoice.date)} />
+      <ScreenHeader
+        title={invoice.invoiceNumber}
+        subtitle={`${isPurchase ? t('sales.purchase') : t('sales.sale')} · ${formatDate(invoice.date)}`}
+      />
 
       <ScrollView contentContainerStyle={{ padding: spacing.md, gap: spacing.md }}>
         <MobileCard>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+          <View
+            style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}
+          >
             <Text variant="display">{formatCurrency(invoice.total ?? 0, currency)}</Text>
             <StatusChip
               label={t(`sales.status${status.charAt(0).toUpperCase()}${status.slice(1)}`, {
@@ -81,25 +100,78 @@ export function InvoiceDetailScreen() {
           <Text variant="caption" tone="secondary" style={{ marginTop: spacing.xs }}>
             {`${t('sales.paid')}: ${formatCurrency(invoice.paidAmount ?? 0, currency)}`}
           </Text>
+          {partyName ? (
+            <Text variant="caption" tone="secondary" style={{ marginTop: spacing.xs }}>
+              {`${partyLabel}: ${partyName}`}
+            </Text>
+          ) : null}
         </MobileCard>
 
         <View style={{ gap: spacing.sm }}>
           <Text variant="heading">{t('sales.items')}</Text>
-          {((invoice.items ?? []) as InvoiceItem[]).map((item, index) => (
-            <MobileCard key={`${item.productName}-${index}`} padding="sm">
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                <View style={{ flex: 1 }}>
-                  <Text variant="bodyStrong" numberOfLines={1}>
-                    {item.productName}
-                  </Text>
-                  <Text variant="caption" tone="secondary">
-                    {`${formatNumber(item.quantity)} × ${formatCurrency(item.unitPrice, currency)}`}
-                  </Text>
+          {((invoice.items ?? []) as InvoiceItem[]).map((item, index) => {
+            // "10 گرم طلا" is quantity=10 unit=gram; "1 گردنبند، ۱۲٫۵ گرم" is
+            // quantity=1 unit=piece weightGrams=12.5. Two distinct concepts —
+            // render both rather than collapsing them.
+            const unitLabel =
+              item.unit === 'custom'
+                ? (item.unitLabel ?? '')
+                : t(`units.${item.unit ?? 'piece'}`, { defaultValue: '' })
+
+            const quantityLine = `${formatNumber(item.quantity)}${unitLabel ? ` ${unitLabel}` : ''} × ${formatCurrency(item.unitPrice, currency)}`
+            const details = item.details ?? []
+
+            return (
+              <MobileCard key={`${item.productName}-${index}`} padding="sm">
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+                  <View style={{ flex: 1 }}>
+                    <Text variant="bodyStrong" numberOfLines={1}>
+                      {item.productName}
+                    </Text>
+                    <Text variant="caption" tone="secondary">
+                      {quantityLine}
+                    </Text>
+                    {item.weightGrams ? (
+                      <Text variant="caption" tone="tertiary">
+                        {`${t('sales.weightGrams')}: ${formatNumber(item.weightGrams)}`}
+                      </Text>
+                    ) : null}
+                  </View>
+                  <Text variant="bodyStrong">{formatCurrency(item.totalPrice, currency)}</Text>
                 </View>
-                <Text variant="bodyStrong">{formatCurrency(item.totalPrice, currency)}</Text>
-              </View>
-            </MobileCard>
-          ))}
+
+                {details.length > 0 ? (
+                  <View style={{ marginTop: spacing.sm, gap: 2 }}>
+                    <Text variant="caption" tone="tertiary">
+                      {t('sales.details')}
+                    </Text>
+                    {details.map((detail, detailIndex) => (
+                      <View
+                        key={`${detail.title}-${detailIndex}`}
+                        style={{
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                          gap: spacing.sm,
+                        }}
+                      >
+                        <Text
+                          variant="caption"
+                          tone="secondary"
+                          numberOfLines={1}
+                          style={{ flex: 1 }}
+                        >
+                          {detail.title}
+                        </Text>
+                        <Text variant="caption" tone="secondary">
+                          {`${formatNumber(detail.quantity)} × ${formatCurrency(detail.amount, currency)}`}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
+              </MobileCard>
+            )
+          })}
         </View>
 
         <Button label={t('common.share')} variant="ghost" fullWidth onPress={onShare} />

@@ -3,7 +3,7 @@
 
 import { memo, useMemo } from 'react'
 import Link from 'next/link'
-import { cn } from '@/lib/utils'
+import { cn } from '../../../lib/utils'
 import { ShoppingCart, PackageCheck, Plus } from 'lucide-react'
 import type { PurchaseOrder } from '@hisabche/api'
 

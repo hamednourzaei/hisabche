@@ -48,7 +48,12 @@ function fallbackDel(key: string): boolean {
 }
 
 function fallbackDelPattern(pattern: string): number {
-  const regex = new RegExp(`^${pattern.split('*').map((p) => p.replace(/[.+?^${}()|[\]\\]/g, '\\$&')).join('.*')}$`)
+  const regex = new RegExp(
+    `^${pattern
+      .split('*')
+      .map((p) => p.replace(/[.+?^${}()|[\]\\]/g, '\\$&'))
+      .join('.*')}$`,
+  )
   let deleted = 0
   for (const key of fallbackStore.keys()) {
     if (regex.test(key)) {
@@ -79,6 +84,17 @@ class CacheService {
     errors: 0,
   }
   private isConnected: boolean = false
+  /**
+   * True once the current outage has been reported.
+   *
+   * Redis retries forever by design — if the server restarts, we want to
+   * reconnect. But every attempt fired three log lines, and against an
+   * unreachable host (REDIS_URL pointing at Render's internal hostname, which
+   * never resolves from a dev machine) that floods the console until the
+   * server output is unreadable. Report an outage once, then stay quiet until
+   * the connection actually comes back.
+   */
+  private outageReported: boolean = false
 
   constructor() {
     // ✅ FIX: سازنده صحیح Redis
@@ -86,7 +102,7 @@ class CacheService {
       // ✅ اگر URL کامل است
       this.client = new Redis(REDIS_URL, {
         maxRetriesPerRequest: 3,
-        retryStrategy: (times: number) => Math.min(times * 50, 2000),
+        retryStrategy: (times: number) => Math.min(times * 200, 30_000),
         enableReadyCheck: true,
         lazyConnect: false,
         connectTimeout: 10000,
@@ -97,29 +113,36 @@ class CacheService {
         host: REDIS_URL,
         port: 6379,
         maxRetriesPerRequest: 3,
-        retryStrategy: (times: number) => Math.min(times * 50, 2000),
+        retryStrategy: (times: number) => Math.min(times * 200, 30_000),
         enableReadyCheck: true,
         connectTimeout: 10000,
       })
     }
 
     this.client.on('error', (err) => {
-      console.error('❌ Redis Error:', err.message)
       this.isConnected = false
+
+      if (this.outageReported) return
+      this.outageReported = true
+
+      console.error(
+        `❌ Redis unavailable (${err.message}) — falling back to the in-memory cache. ` +
+          `Retrying quietly in the background; this will log again once it reconnects.`,
+      )
     })
 
     this.client.on('connect', () => {
-      console.log('✅ Redis connected')
+      // Only announce a recovery if we had actually reported an outage,
+      // otherwise a normal startup prints nothing of interest.
+      if (this.outageReported) console.log('✅ Redis reconnected')
+      else console.log('✅ Redis connected')
+
+      this.outageReported = false
       this.isConnected = true
     })
 
     this.client.on('close', () => {
-      console.log('⚠️ Redis connection closed')
       this.isConnected = false
-    })
-
-    this.client.on('reconnecting', () => {
-      console.log('🔄 Redis reconnecting...')
     })
   }
 
@@ -201,17 +224,11 @@ class CacheService {
     try {
       let deletedCount = 0
       let cursor = '0'
-      
+
       do {
-        const [nextCursor, keys] = await this.client.scan(
-          cursor,
-          'MATCH',
-          pattern,
-          'COUNT',
-          100
-        )
+        const [nextCursor, keys] = await this.client.scan(cursor, 'MATCH', pattern, 'COUNT', 100)
         cursor = nextCursor
-        
+
         if (keys.length > 0) {
           const deleted = await this.client.del(...keys)
           deletedCount += deleted
@@ -264,11 +281,7 @@ class CacheService {
   }
 
   // ─── Get or Set with function ─────────────────────────────
-  async getOrSet<T>(
-    key: string,
-    fn: () => Promise<T>,
-    ttl: number = this.defaultTTL
-  ): Promise<T> {
+  async getOrSet<T>(key: string, fn: () => Promise<T>, ttl: number = this.defaultTTL): Promise<T> {
     const cached = await this.get<T>(key)
     if (cached !== null) {
       return cached
@@ -344,12 +357,12 @@ export const cacheService = new CacheService()
 
 // ✅ Export TTL constants for use in other services
 export const TTL = {
-  SHORT: CACHE_SHORT_TTL,      // 30 seconds
-  DEFAULT: CACHE_DEFAULT_TTL,  // 60 seconds
-  LONG: CACHE_LONG_TTL,        // 300 seconds (5 minutes)
-  VERY_LONG: 600,              // 600 seconds (10 minutes)
-  HOUR: 3600,                  // 1 hour
-  DAY: 86400,                  // 24 hours
+  SHORT: CACHE_SHORT_TTL, // 30 seconds
+  DEFAULT: CACHE_DEFAULT_TTL, // 60 seconds
+  LONG: CACHE_LONG_TTL, // 300 seconds (5 minutes)
+  VERY_LONG: 600, // 600 seconds (10 minutes)
+  HOUR: 3600, // 1 hour
+  DAY: 86400, // 24 hours
 } as const
 
 // ✅ Export types

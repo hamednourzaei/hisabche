@@ -1,14 +1,15 @@
 // packages/ui/src/components/ui/customers/containers/customers-container.tsx
 // 🎯 Container — مدیریت state و ترکیب View
 
-"use client"
+'use client'
 
-import { useState, useCallback, useMemo } from "react"
-import { useTranslations } from "next-intl";
-import { customersView } from "../customer-view"
-import { fmt } from "../../../../lib/customers/customers-format"
-import type { CustomerWithDebt } from "../../../../lib/customers/customers-types"
-import { useCustomersData } from "../../../../hooks/customers/use-customers-data"
+import { useState, useCallback, useEffect, useMemo } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { useTranslations } from 'next-intl'
+import { customersView } from '../customer-view'
+import { fmt } from '../../../../lib/customers/customers-format'
+import type { CustomerWithDebt } from '../../../../lib/customers/customers-types'
+import { useCustomersData } from '../../../../hooks/customers/use-customers-data'
 
 // ============================================================
 // 📦 Typeهای محلی
@@ -23,13 +24,12 @@ type CustomerWithInvoices = CustomerWithDebt & {
 // ============================================================
 
 export function CustomersContainer() {
-  const tOriginal = useTranslations();
+  const tOriginal = useTranslations()
   // ✅ Wrapper برای تطابق signature با CustomersViewProps
   const t = (key: string, fallback?: string): string => {
-    const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
-    return v && v !== key ? v : (fallback ?? key);
-  };
-
+    const v = tOriginal(key as Parameters<typeof tOriginal>[0])
+    return v && v !== key ? v : (fallback ?? key)
+  }
 
   // ============================================================
   // 📦 داده‌ها
@@ -60,9 +60,26 @@ export function CustomersContainer() {
   // ============================================================
   // 🎯 Stateهای UI
   // ============================================================
-  const [search, setSearch] = useState("")
+  // ورودی از command palette: `?add=true` مودال افزودن را باز می‌کند و `?q=`
+  // جستجو را از قبل پر می‌کند. بدون این، دستورهای «افزودن مشتری» و «جستجوی
+  // مشتری» فقط مسیر را عوض می‌کردند و هیچ کاری انجام نمی‌دادند.
+  const searchParams = useSearchParams()
+  const addParam = searchParams?.get('add')
+  const queryParam = searchParams?.get('q')
+
+  const [search, setSearch] = useState(queryParam ?? '')
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null)
-  const [showAddModal, setShowAddModal] = useState(false)
+  const [showAddModal, setShowAddModal] = useState(addParam === 'true')
+
+  // مسیر مقصد ممکن است همین صفحه باشد؛ در آن حالت کامپوننت remount نمی‌شود و
+  // مقدار اولیه‌ی useState دوباره خوانده نمی‌شود.
+  useEffect(() => {
+    if (addParam === 'true') setShowAddModal(true)
+  }, [addParam])
+
+  useEffect(() => {
+    if (queryParam !== null && queryParam !== undefined) setSearch(queryParam)
+  }, [queryParam])
   const [showPaymentModal, setShowPaymentModal] = useState(false)
   const [paymentCustomer, setPaymentCustomer] = useState<CustomerWithInvoices | null>(null)
 
@@ -71,15 +88,13 @@ export function CustomersContainer() {
   // ============================================================
   const handleOpenPayment = useCallback(
     (customer: CustomerWithDebt) => {
-      const customerWithInvoices = customersWithOpenInvoices.find(
-        (c) => c.id === customer.id
-      )
+      const customerWithInvoices = customersWithOpenInvoices.find((c) => c.id === customer.id)
       if (customerWithInvoices) {
         setPaymentCustomer(customerWithInvoices as CustomerWithInvoices)
       }
       setShowPaymentModal(true)
     },
-    [customersWithOpenInvoices]
+    [customersWithOpenInvoices],
   )
 
   const handleClosePayment = useCallback(() => {
@@ -106,8 +121,8 @@ export function CustomersContainer() {
     const term = search.toLowerCase()
     return customersWithDebt.filter(
       (c) =>
-        (c.fullName || c.name || "").toLowerCase().includes(term) ||
-        (c.phone || "").toLowerCase().includes(term)
+        (c.fullName || c.name || '').toLowerCase().includes(term) ||
+        (c.phone || '').toLowerCase().includes(term),
     )
   }, [customersWithDebt, search])
 
@@ -136,7 +151,7 @@ export function CustomersContainer() {
     topCustomerDelta,
     isLoading,
     isError,
-    errorMessage: error?.message || "",
+    errorMessage: error?.message || '',
     onRetry: refetch,
     selectedCustomerId,
     onSelectCustomer: handleSelectCustomer,
@@ -151,7 +166,7 @@ export function CustomersContainer() {
     onClosePayment: handleClosePayment,
     onPaymentSuccess: handlePaymentSuccess,
     onNewCreditInvoice: () => {},
-    currency: "AFN",
+    currency: 'AFN',
   })
 }
 

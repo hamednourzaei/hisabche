@@ -40,9 +40,19 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
   // `?type=purchase` is what /purchasing uses to open this same form in
   // purchase mode. No type, or an unknown one, keeps the existing sale
   // default so current links and bookmarks behave exactly as before.
+  const typeParam = searchParams?.get('type')
   const [transactionType, setTransactionType] = useState<TransactionType>(
-    searchParams?.get('type') === 'purchase' ? 'purchase' : 'sale',
+    typeParam === 'purchase' ? 'purchase' : 'sale',
   )
+
+  // Command palette offers «ثبت فروش» and «ثبت خرید» as separate actions. Both
+  // land on this form, so picking one while already here changes only the query
+  // string — no remount, and the initial state above would never re-run.
+  useEffect(() => {
+    if (typeParam === 'purchase' || typeParam === 'sale') {
+      setTransactionType(typeParam)
+    }
+  }, [typeParam])
   const [selectedCustomer, setSelectedCustomer] =
     useState<QuickInvoicePageProps['selectedCustomer']>(null)
   const [paymentType, setPaymentType] = useState<QuickInvoicePageProps['paymentType']>('cash')

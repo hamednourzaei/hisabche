@@ -1,9 +1,9 @@
-"use client";
+'use client'
 
-import * as React from "react";
-import * as DropdownMenuPrimitive from "@radix-ui/react-dropdown-menu";
-import { cn } from "@/lib/utils";
-import { CheckIcon, ChevronRightIcon } from "lucide-react";
+import * as React from 'react'
+import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu'
+import { cn } from '../../lib/utils'
+import { CheckIcon, ChevronRightIcon } from 'lucide-react'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    DropdownMenu v2 — Hisabche Design Language
@@ -15,83 +15,81 @@ import { CheckIcon, ChevronRightIcon } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
-type Tone = "finance" | "filter" | "settings" | "danger";
+type Tone = 'finance' | 'filter' | 'settings' | 'danger'
 
-type ItemStatus = "synced" | "pending" | "conflict";
+type ItemStatus = 'synced' | 'pending' | 'conflict'
 
-interface MenuItemProps
-  extends React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Item> {
-  inset?: boolean;
-  variant?: "default" | "destructive";
-  status?: ItemStatus;
-  description?: string;
-  shortcut?: string;
+interface MenuItemProps extends React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Item> {
+  inset?: boolean
+  variant?: 'default' | 'destructive'
+  status?: ItemStatus
+  description?: string
+  shortcut?: string
 }
 
-interface LedgerContentProps
-  extends React.ComponentPropsWithoutRef<
-    typeof DropdownMenuPrimitive.Content
-  > {
-  tone?: Tone;
+interface LedgerContentProps extends React.ComponentPropsWithoutRef<
+  typeof DropdownMenuPrimitive.Content
+> {
+  tone?: Tone
 }
 
 // ─── Hooks ─────────────────────────────────────────────────────────────────
 
 function useIsRTL(): boolean {
-  const [isRTL, setIsRTL] = React.useState(false);
+  const [isRTL, setIsRTL] = React.useState(false)
 
   React.useEffect(() => {
-    const dir = document.documentElement.getAttribute("dir");
-    setIsRTL(dir === "rtl");
-  }, []);
+    const dir = document.documentElement.getAttribute('dir')
+    setIsRTL(dir === 'rtl')
+  }, [])
 
-  return isRTL;
+  return isRTL
 }
 
 // ─── Primitives (internal, not exported) ───────────────────────────────────
 
-const Root = DropdownMenuPrimitive.Root;
-const Portal = DropdownMenuPrimitive.Portal;
-const TriggerPrimitive = DropdownMenuPrimitive.Trigger;
-const GroupPrimitive = DropdownMenuPrimitive.Group;
-const SubPrimitive = DropdownMenuPrimitive.Sub;
-const RadioGroupPrimitive = DropdownMenuPrimitive.RadioGroup;
+const Root = DropdownMenuPrimitive.Root
+const Portal = DropdownMenuPrimitive.Portal
+const TriggerPrimitive = DropdownMenuPrimitive.Trigger
+const GroupPrimitive = DropdownMenuPrimitive.Group
+const SubPrimitive = DropdownMenuPrimitive.Sub
+const RadioGroupPrimitive = DropdownMenuPrimitive.RadioGroup
 
 // ─── LedgerDrop ────────────────────────────────────────────────────────────
 
-const LedgerDrop = Root;
-LedgerDrop.displayName = "LedgerDrop";
+const LedgerDrop = Root
+LedgerDrop.displayName = 'LedgerDrop'
 
 // ─── LedgerTrigger ─────────────────────────────────────────────────────────
 
 const LedgerTrigger = React.forwardRef<
   React.ElementRef<typeof TriggerPrimitive>,
   React.ComponentPropsWithoutRef<typeof TriggerPrimitive> & {
-    tone?: Tone;
+    tone?: Tone
   }
->(({ className, tone = "filter", children, ...props }, ref) => {
+>(({ className, tone = 'filter', children, ...props }, ref) => {
   return (
     <TriggerPrimitive
       ref={ref}
       className={cn(
         // Base
-        "inline-flex items-center justify-between gap-2",
-        "min-h-[44px] px-4 py-2",
-        "text-sm font-medium",
-        "rounded-md",
-        "bg-[var(--ledger-surface)] text-[var(--ledger-ink)]",
-        "border border-[var(--ledger-line)]",
+        'inline-flex items-center justify-between gap-2',
+        'min-h-[44px] px-4 py-2',
+        'text-sm font-medium',
+        'rounded-md',
+        'bg-[var(--ledger-surface)] text-[var(--ledger-ink)]',
+        'border border-[var(--ledger-line)]',
         // States
-        "hover:bg-[var(--ledger-surface-raised)]",
-        "focus-visible:outline-none focus-visible:ring-2",
-        "focus-visible:ring-[var(--ledger-action)] focus-visible:ring-offset-1",
-        "disabled:opacity-50 disabled:cursor-not-allowed",
+        'hover:bg-[var(--ledger-surface-raised)]',
+        'focus-visible:outline-none focus-visible:ring-2',
+        'focus-visible:ring-[var(--ledger-action)] focus-visible:ring-offset-1',
+        'disabled:opacity-50 disabled:cursor-not-allowed',
         // Reduced motion
-        "transition-colors duration-150",
-        "motion-reduce:transition-none",
+        'transition-colors duration-150',
+        'motion-reduce:transition-none',
         // RTL
-        "text-start",
-        className
+        'text-start',
+        className,
       )}
       {...props}
     >
@@ -104,9 +102,9 @@ const LedgerTrigger = React.forwardRef<
         fill="none"
         aria-hidden="true"
         className={cn(
-          "shrink-0 transition-transform duration-200",
-          "text-[var(--ledger-ink-muted)]",
-          "motion-reduce:transition-none"
+          'shrink-0 transition-transform duration-200',
+          'text-[var(--ledger-ink-muted)]',
+          'motion-reduce:transition-none',
         )}
       >
         <path
@@ -118,36 +116,36 @@ const LedgerTrigger = React.forwardRef<
         />
       </svg>
     </TriggerPrimitive>
-  );
-});
-LedgerTrigger.displayName = "LedgerTrigger";
+  )
+})
+LedgerTrigger.displayName = 'LedgerTrigger'
 
 // ─── LedgerContent ─────────────────────────────────────────────────────────
 
 const LedgerContent = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Content>,
   LedgerContentProps
->(({ className, sideOffset = 8, tone = "filter", children, ...props }, ref) => {
+>(({ className, sideOffset = 8, tone = 'filter', children, ...props }, ref) => {
   return (
     <Portal>
       {/* ── Ink Line (only for finance tone) ── */}
-      {tone === "finance" && (
+      {tone === 'finance' && (
         <div
           aria-hidden="true"
           className={cn(
-            "absolute z-[51] w-px",
-            "bg-[var(--ledger-action)]",
-            "origin-top",
-            "animate-[ledgerInkReveal_300ms_cubic-bezier(0.22,1,0.36,1)_forwards]",
-            "motion-reduce:animate-none motion-reduce:hidden"
+            'absolute z-[51] w-px',
+            'bg-[var(--ledger-action)]',
+            'origin-top',
+            'animate-[ledgerInkReveal_300ms_cubic-bezier(0.22,1,0.36,1)_forwards]',
+            'motion-reduce:animate-none motion-reduce:hidden',
           )}
           style={
             {
-              left: "var(--radix-dropdown-menu-content-transform-origin)",
-              top: "var(--radix-dropdown-menu-trigger-height)",
-              height: "var(--radix-dropdown-menu-content-available-height)",
-              "--tw-translate-y": "calc(-100% + 0px)",
-              transform: "translateY(var(--tw-translate-y))",
+              left: 'var(--radix-dropdown-menu-content-transform-origin)',
+              top: 'var(--radix-dropdown-menu-trigger-height)',
+              height: 'var(--radix-dropdown-menu-content-available-height)',
+              '--tw-translate-y': 'calc(-100% + 0px)',
+              transform: 'translateY(var(--tw-translate-y))',
             } as React.CSSProperties
           }
         />
@@ -159,99 +157,95 @@ const LedgerContent = React.forwardRef<
         sideOffset={sideOffset}
         className={cn(
           // Layout
-          "z-50 min-w-[180px] max-w-[320px]",
-          "overflow-hidden rounded-lg",
-          "p-1",
+          'z-50 min-w-[180px] max-w-[320px]',
+          'overflow-hidden rounded-lg',
+          'p-1',
           // Background & text
-          "bg-[var(--ledger-surface-raised)]",
-          "text-[var(--ledger-ink)]",
+          'bg-[var(--ledger-surface-raised)]',
+          'text-[var(--ledger-ink)]',
           // Border
-          "border border-[var(--ledger-line)]",
+          'border border-[var(--ledger-line)]',
           // Shadow
-          "shadow-[var(--ledger-shadow,0_4px_24px_rgba(0,0,0,0.08))]",
+          'shadow-[var(--ledger-shadow,0_4px_24px_rgba(0,0,0,0.08))]',
           // Animation: fade + slide
-          "data-[state=open]:animate-in",
-          "data-[state=closed]:animate-out",
-          "data-[state=closed]:fade-out-0",
-          "data-[state=open]:fade-in-0",
-          "data-[state=closed]:slide-out-to-top-1",
-          "data-[state=open]:slide-in-from-top-1",
+          'data-[state=open]:animate-in',
+          'data-[state=closed]:animate-out',
+          'data-[state=closed]:fade-out-0',
+          'data-[state=open]:fade-in-0',
+          'data-[state=closed]:slide-out-to-top-1',
+          'data-[state=open]:slide-in-from-top-1',
           // Reduced motion
-          "motion-reduce:animate-none",
+          'motion-reduce:animate-none',
           // Ink reveal: delay slightly so ink line draws first
-          tone === "finance" &&
-            "data-[state=open]:animate-[ledgerContentReveal_350ms_ease-out]",
-          className
+          tone === 'finance' && 'data-[state=open]:animate-[ledgerContentReveal_350ms_ease-out]',
+          className,
         )}
         {...props}
       >
         {children}
       </DropdownMenuPrimitive.Content>
     </Portal>
-  );
-});
-LedgerContent.displayName = "LedgerContent";
+  )
+})
+LedgerContent.displayName = 'LedgerContent'
 
 // ─── LedgerLabel ───────────────────────────────────────────────────────────
 
 const LedgerLabel = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Label>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Label> & {
-    inset?: boolean;
+    inset?: boolean
   }
 >(({ className, inset, ...props }, ref) => (
   <DropdownMenuPrimitive.Label
     ref={ref}
     className={cn(
-      "px-3 py-2",
-      "text-xs font-semibold",
-      "text-[var(--ledger-ink-muted)]",
-      "uppercase tracking-wider",
-      inset && "ps-10",
-      className
+      'px-3 py-2',
+      'text-xs font-semibold',
+      'text-[var(--ledger-ink-muted)]',
+      'uppercase tracking-wider',
+      inset && 'ps-10',
+      className,
     )}
     {...props}
   />
-));
-LedgerLabel.displayName = "LedgerLabel";
+))
+LedgerLabel.displayName = 'LedgerLabel'
 
 // ─── StatusIndicator ───────────────────────────────────────────────────────
 
 function StatusIndicator({ status }: { status: ItemStatus }) {
-  const config: Record<
-    ItemStatus,
-    { label: string; color: string; icon: string }
-  > = {
+  const config: Record<ItemStatus, { label: string; color: string; icon: string }> = {
     synced: {
-      label: "همگام‌سازی شده",
-      color: "var(--ledger-action)",
-      icon: "✓",
+      label: 'همگام‌سازی شده',
+      color: 'var(--ledger-action)',
+      icon: '✓',
     },
     pending: {
-      label: "در انتظار همگام‌سازی",
-      color: "var(--ledger-ink-muted)",
-      icon: "◌",
+      label: 'در انتظار همگام‌سازی',
+      color: 'var(--ledger-ink-muted)',
+      icon: '◌',
     },
     conflict: {
-      label: "نیاز به بررسی",
-      color: "var(--ledger-danger)",
-      icon: "!",
+      label: 'نیاز به بررسی',
+      color: 'var(--ledger-danger)',
+      icon: '!',
     },
-  };
+  }
 
-  const { label, color, icon } = config[status];
+  const { label, color, icon } = config[status]
 
   return (
     <span
       role="status"
       aria-label={label}
-      className={cn("ms-auto text-xs font-medium", "flex items-center gap-1")}
+      className={cn('ms-auto text-xs font-medium', 'flex items-center gap-1')}
       style={{ color }}
     >
       <span aria-hidden="true">{icon}</span>
       <span className="sr-only">{label}</span>
     </span>
-  );
+  )
 }
 
 // ─── LedgerItem ────────────────────────────────────────────────────────────
@@ -261,48 +255,39 @@ const LedgerItem = React.forwardRef<
   MenuItemProps
 >(
   (
-    {
-      className,
-      inset,
-      variant = "default",
-      status,
-      description,
-      shortcut,
-      children,
-      ...props
-    },
-    ref
+    { className, inset, variant = 'default', status, description, shortcut, children, ...props },
+    ref,
   ) => {
     return (
       <DropdownMenuPrimitive.Item
         ref={ref}
         className={cn(
           // Base layout
-          "relative flex items-center gap-3",
-          "min-h-[44px] px-3 py-2",
-          "rounded-sm",
-          "text-sm leading-tight",
-          "cursor-default select-none",
-          "outline-none",
+          'relative flex items-center gap-3',
+          'min-h-[44px] px-3 py-2',
+          'rounded-sm',
+          'text-sm leading-tight',
+          'cursor-default select-none',
+          'outline-none',
           // Colors
-          "text-[var(--ledger-ink)]",
-          "data-[highlighted]:bg-[var(--ledger-action)]/10 data-[highlighted]:text-[var(--ledger-ink)]",
+          'text-[var(--ledger-ink)]',
+          'data-[highlighted]:bg-[var(--ledger-action)]/10 data-[highlighted]:text-[var(--ledger-ink)]',
           // Variants
-          variant === "destructive" &&
+          variant === 'destructive' &&
             cn(
-              "text-[var(--ledger-danger)]",
-              "data-[highlighted]:bg-[var(--ledger-danger)]/10",
-              "data-[highlighted]:text-[var(--ledger-danger)]"
+              'text-[var(--ledger-danger)]',
+              'data-[highlighted]:bg-[var(--ledger-danger)]/10',
+              'data-[highlighted]:text-[var(--ledger-danger)]',
             ),
           // States
-          "data-[disabled]:pointer-events-none data-[disabled]:opacity-40",
-          "active:scale-[0.98]",
+          'data-[disabled]:pointer-events-none data-[disabled]:opacity-40',
+          'active:scale-[0.98]',
           // Transitions
-          "transition-colors duration-150",
-          "motion-reduce:transition-none motion-reduce:active:scale-100",
+          'transition-colors duration-150',
+          'motion-reduce:transition-none motion-reduce:active:scale-100',
           // Inset (for submenus)
-          inset && "ps-10",
-          className
+          inset && 'ps-10',
+          className,
         )}
         {...props}
       >
@@ -312,9 +297,9 @@ const LedgerItem = React.forwardRef<
         {description && (
           <span
             className={cn(
-              "text-xs text-[var(--ledger-ink-muted)]",
-              "block w-full truncate",
-              "mt-0.5"
+              'text-xs text-[var(--ledger-ink-muted)]',
+              'block w-full truncate',
+              'mt-0.5',
             )}
           >
             {description}
@@ -325,9 +310,9 @@ const LedgerItem = React.forwardRef<
         {shortcut && (
           <span
             className={cn(
-              "ms-auto text-xs tracking-wider",
-              "text-[var(--ledger-ink-muted)]",
-              "font-mono"
+              'ms-auto text-xs tracking-wider',
+              'text-[var(--ledger-ink-muted)]',
+              'font-mono',
             )}
           >
             {shortcut}
@@ -337,15 +322,15 @@ const LedgerItem = React.forwardRef<
         {/* Sync Status */}
         {status && <StatusIndicator status={status} />}
       </DropdownMenuPrimitive.Item>
-    );
-  }
-);
-LedgerItem.displayName = "LedgerItem";
+    )
+  },
+)
+LedgerItem.displayName = 'LedgerItem'
 
 // ─── LedgerItemWithIcon ────────────────────────────────────────────────────
 
 interface LedgerItemWithIconProps extends MenuItemProps {
-  icon: React.ElementType;
+  icon: React.ElementType
 }
 
 const LedgerItemWithIcon = React.forwardRef<
@@ -380,48 +365,44 @@ const LedgerItemWithIcon = React.forwardRef<
       </div>
     </div>
   </LedgerItem>
-));
-LedgerItemWithIcon.displayName = "LedgerItemWithIcon";
+))
+LedgerItemWithIcon.displayName = 'LedgerItemWithIcon'
 
 // ─── LedgerSubTrigger ──────────────────────────────────────────────────────
 
 const LedgerSubTrigger = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.SubTrigger>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.SubTrigger> & {
-    inset?: boolean;
+    inset?: boolean
   }
 >(({ className, inset, children, ...props }, ref) => {
   return (
     <DropdownMenuPrimitive.SubTrigger
       ref={ref}
       className={cn(
-        "flex cursor-default select-none items-center gap-3",
-        "min-h-[44px] px-3 py-2",
-        "rounded-sm text-sm",
-        "text-[var(--ledger-ink)]",
-        "data-[highlighted]:bg-[var(--ledger-action)]/10",
-        "data-[state=open]:bg-[var(--ledger-action)]/10",
-        "data-[disabled]:pointer-events-none data-[disabled]:opacity-40",
-        "transition-colors duration-150",
-        "motion-reduce:transition-none",
-        inset && "ps-10",
-        className
+        'flex cursor-default select-none items-center gap-3',
+        'min-h-[44px] px-3 py-2',
+        'rounded-sm text-sm',
+        'text-[var(--ledger-ink)]',
+        'data-[highlighted]:bg-[var(--ledger-action)]/10',
+        'data-[state=open]:bg-[var(--ledger-action)]/10',
+        'data-[disabled]:pointer-events-none data-[disabled]:opacity-40',
+        'transition-colors duration-150',
+        'motion-reduce:transition-none',
+        inset && 'ps-10',
+        className,
       )}
       {...props}
     >
       <span className="flex-1">{children}</span>
       <ChevronRightIcon
-        className={cn(
-          "size-4 shrink-0",
-          "text-[var(--ledger-ink-muted)]",
-          "rtl:rotate-180"
-        )}
+        className={cn('size-4 shrink-0', 'text-[var(--ledger-ink-muted)]', 'rtl:rotate-180')}
         aria-hidden="true"
       />
     </DropdownMenuPrimitive.SubTrigger>
-  );
-});
-LedgerSubTrigger.displayName = "LedgerSubTrigger";
+  )
+})
+LedgerSubTrigger.displayName = 'LedgerSubTrigger'
 
 // ─── LedgerSubContent ──────────────────────────────────────────────────────
 
@@ -432,27 +413,27 @@ const LedgerSubContent = React.forwardRef<
   <DropdownMenuPrimitive.SubContent
     ref={ref}
     className={cn(
-      "z-50 min-w-[180px] overflow-hidden rounded-lg",
-      "bg-[var(--ledger-surface-raised)]",
-      "text-[var(--ledger-ink)]",
-      "border border-[var(--ledger-line)]",
-      "shadow-[var(--ledger-shadow,0_4px_24px_rgba(0,0,0,0.08))]",
-      "p-1",
+      'z-50 min-w-[180px] overflow-hidden rounded-lg',
+      'bg-[var(--ledger-surface-raised)]',
+      'text-[var(--ledger-ink)]',
+      'border border-[var(--ledger-line)]',
+      'shadow-[var(--ledger-shadow,0_4px_24px_rgba(0,0,0,0.08))]',
+      'p-1',
       // Animation
-      "data-[state=open]:animate-in",
-      "data-[state=closed]:animate-out",
-      "data-[state=closed]:fade-out-0",
-      "data-[state=open]:fade-in-0",
-      "data-[state=closed]:slide-out-to-start-1",
-      "data-[state=open]:slide-in-from-start-1",
+      'data-[state=open]:animate-in',
+      'data-[state=closed]:animate-out',
+      'data-[state=closed]:fade-out-0',
+      'data-[state=open]:fade-in-0',
+      'data-[state=closed]:slide-out-to-start-1',
+      'data-[state=open]:slide-in-from-start-1',
       // Reduced motion
-      "motion-reduce:animate-none",
-      className
+      'motion-reduce:animate-none',
+      className,
     )}
     {...props}
   />
-));
-LedgerSubContent.displayName = "LedgerSubContent";
+))
+LedgerSubContent.displayName = 'LedgerSubContent'
 
 // ─── LedgerCheckboxItem ────────────────────────────────────────────────────
 
@@ -463,15 +444,15 @@ const LedgerCheckboxItem = React.forwardRef<
   <DropdownMenuPrimitive.CheckboxItem
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center",
-      "min-h-[44px] ps-10 pe-3 py-2",
-      "rounded-sm text-sm",
-      "text-[var(--ledger-ink)]",
-      "data-[highlighted]:bg-[var(--ledger-action)]/10",
-      "data-[disabled]:pointer-events-none data-[disabled]:opacity-40",
-      "transition-colors duration-150",
-      "motion-reduce:transition-none",
-      className
+      'relative flex cursor-default select-none items-center',
+      'min-h-[44px] ps-10 pe-3 py-2',
+      'rounded-sm text-sm',
+      'text-[var(--ledger-ink)]',
+      'data-[highlighted]:bg-[var(--ledger-action)]/10',
+      'data-[disabled]:pointer-events-none data-[disabled]:opacity-40',
+      'transition-colors duration-150',
+      'motion-reduce:transition-none',
+      className,
     )}
     checked={checked}
     {...props}
@@ -483,8 +464,8 @@ const LedgerCheckboxItem = React.forwardRef<
     </span>
     {children}
   </DropdownMenuPrimitive.CheckboxItem>
-));
-LedgerCheckboxItem.displayName = "LedgerCheckboxItem";
+))
+LedgerCheckboxItem.displayName = 'LedgerCheckboxItem'
 
 // ─── LedgerRadioItem ───────────────────────────────────────────────────────
 
@@ -495,15 +476,15 @@ const LedgerRadioItem = React.forwardRef<
   <DropdownMenuPrimitive.RadioItem
     ref={ref}
     className={cn(
-      "relative flex cursor-default select-none items-center",
-      "min-h-[44px] ps-10 pe-3 py-2",
-      "rounded-sm text-sm",
-      "text-[var(--ledger-ink)]",
-      "data-[highlighted]:bg-[var(--ledger-action)]/10",
-      "data-[disabled]:pointer-events-none data-[disabled]:opacity-40",
-      "transition-colors duration-150",
-      "motion-reduce:transition-none",
-      className
+      'relative flex cursor-default select-none items-center',
+      'min-h-[44px] ps-10 pe-3 py-2',
+      'rounded-sm text-sm',
+      'text-[var(--ledger-ink)]',
+      'data-[highlighted]:bg-[var(--ledger-action)]/10',
+      'data-[disabled]:pointer-events-none data-[disabled]:opacity-40',
+      'transition-colors duration-150',
+      'motion-reduce:transition-none',
+      className,
     )}
     {...props}
   >
@@ -514,8 +495,8 @@ const LedgerRadioItem = React.forwardRef<
     </span>
     {children}
   </DropdownMenuPrimitive.RadioItem>
-));
-LedgerRadioItem.displayName = "LedgerRadioItem";
+))
+LedgerRadioItem.displayName = 'LedgerRadioItem'
 
 // ─── LedgerSeparator ───────────────────────────────────────────────────────
 
@@ -525,48 +506,45 @@ const LedgerSeparator = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DropdownMenuPrimitive.Separator
     ref={ref}
-    className={cn("-mx-1 my-1 h-px", "bg-[var(--ledger-line)]", className)}
+    className={cn('-mx-1 my-1 h-px', 'bg-[var(--ledger-line)]', className)}
     {...props}
   />
-));
-LedgerSeparator.displayName = "LedgerSeparator";
+))
+LedgerSeparator.displayName = 'LedgerSeparator'
 
 // ─── LedgerShortcut ────────────────────────────────────────────────────────
 
-const LedgerShortcut = ({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLSpanElement>) => {
+const LedgerShortcut = ({ className, ...props }: React.HTMLAttributes<HTMLSpanElement>) => {
   return (
     <span
       className={cn(
-        "ms-auto text-xs tracking-wider font-mono",
-        "text-[var(--ledger-ink-muted)]",
-        className
+        'ms-auto text-xs tracking-wider font-mono',
+        'text-[var(--ledger-ink-muted)]',
+        className,
       )}
       {...props}
     />
-  );
-};
-LedgerShortcut.displayName = "LedgerShortcut";
+  )
+}
+LedgerShortcut.displayName = 'LedgerShortcut'
 
 // ─── Backward-compatible aliases (shadcn/ui API) ──────────────────────────
 
-const DropdownMenu = LedgerDrop;
-const DropdownMenuPortal = Portal;
-const DropdownMenuTrigger = LedgerTrigger;
-const DropdownMenuContent = LedgerContent;
-const DropdownMenuGroup = GroupPrimitive;
-const DropdownMenuLabel = LedgerLabel;
-const DropdownMenuItem = LedgerItem;
-const DropdownMenuCheckboxItem = LedgerCheckboxItem;
-const DropdownMenuRadioGroup = RadioGroupPrimitive;
-const DropdownMenuRadioItem = LedgerRadioItem;
-const DropdownMenuSeparator = LedgerSeparator;
-const DropdownMenuShortcut = LedgerShortcut;
-const DropdownMenuSub = SubPrimitive;
-const DropdownMenuSubTrigger = LedgerSubTrigger;
-const DropdownMenuSubContent = LedgerSubContent;
+const DropdownMenu = LedgerDrop
+const DropdownMenuPortal = Portal
+const DropdownMenuTrigger = LedgerTrigger
+const DropdownMenuContent = LedgerContent
+const DropdownMenuGroup = GroupPrimitive
+const DropdownMenuLabel = LedgerLabel
+const DropdownMenuItem = LedgerItem
+const DropdownMenuCheckboxItem = LedgerCheckboxItem
+const DropdownMenuRadioGroup = RadioGroupPrimitive
+const DropdownMenuRadioItem = LedgerRadioItem
+const DropdownMenuSeparator = LedgerSeparator
+const DropdownMenuShortcut = LedgerShortcut
+const DropdownMenuSub = SubPrimitive
+const DropdownMenuSubTrigger = LedgerSubTrigger
+const DropdownMenuSubContent = LedgerSubContent
 
 // ═══════════════════════════════════════════════════════════════════════════
 // EXPORTS
@@ -602,12 +580,6 @@ export {
   DropdownMenuSub,
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
-};
+}
 
-export type {
-  Tone,
-  ItemStatus,
-  MenuItemProps,
-  LedgerContentProps,
-  LedgerItemWithIconProps,
-};
+export type { Tone, ItemStatus, MenuItemProps, LedgerContentProps, LedgerItemWithIconProps }

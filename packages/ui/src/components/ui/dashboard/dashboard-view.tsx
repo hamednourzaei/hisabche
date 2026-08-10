@@ -3,7 +3,7 @@
 
 import { memo, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
-import { cn } from '@/lib/utils'
+import { cn } from '../../../lib/utils'
 import {
   Sparkles,
   TrendingUp,

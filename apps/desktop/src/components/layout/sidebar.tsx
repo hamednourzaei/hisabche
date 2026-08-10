@@ -5,19 +5,9 @@
 
 import React, { memo, useCallback } from 'react'
 import { NavLink } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import {
-  BarChart3,
-  Boxes,
-  ChevronsLeft,
-  ChevronsRight,
-  LayoutDashboard,
-  RefreshCw,
-  Receipt,
-  Settings,
-  Users,
-  type LucideIcon,
-} from 'lucide-react'
+import { useTranslations } from 'next-intl'
+import { ChevronsLeft, ChevronsRight, type LucideIcon } from 'lucide-react'
+import { PRIMARY_ITEMS, MORE_GROUPS, type NavItem as SharedNavItem } from '@hisabche/ui/menu'
 
 import { cn } from '@/components/ui/primitives'
 import { useUiStore } from '@/shared/stores/ui.store'
@@ -33,27 +23,38 @@ interface NavSection {
   items: readonly NavItem[]
 }
 
+// Sections come from the shared navigation contract, so desktop and web offer
+// the same destinations under the same labels. Only the routes desktop actually
+// mounts are shown — the rest of the web surface has no desktop screen yet, and
+// listing a dead link is worse than omitting it.
+const DESKTOP_ROUTES = new Set([
+  '/dashboard',
+  '/quick-invoice',
+  '/invoices',
+  '/warehouse',
+  '/purchasing',
+  '/accounting',
+  '/customers',
+  '/activities',
+  '/sync-center',
+  '/settings',
+])
+
+/** Desktop mounts the dashboard at `/`; the shared contract calls it `/dashboard`. */
+function toDesktopPath(path: string): string {
+  return path === '/dashboard' ? '/' : path
+}
+
+function toNavItem(item: SharedNavItem): NavItem {
+  return { to: toDesktopPath(item.path), labelKey: item.labelKey, icon: item.icon }
+}
+
 const SECTIONS: readonly NavSection[] = [
-  {
-    id: 'operations',
-    items: [
-      { to: '/', labelKey: 'nav.dashboard', icon: LayoutDashboard },
-      { to: '/sales', labelKey: 'nav.sales', icon: Receipt },
-      { to: '/inventory', labelKey: 'nav.inventory', icon: Boxes },
-      { to: '/customers', labelKey: 'nav.customers', icon: Users },
-    ],
-  },
-  {
-    id: 'finance',
-    items: [{ to: '/accounting', labelKey: 'nav.accounting', icon: BarChart3 }],
-  },
-  {
-    id: 'system',
-    items: [
-      { to: '/sync', labelKey: 'nav.sync', icon: RefreshCw },
-      { to: '/settings', labelKey: 'nav.settings', icon: Settings },
-    ],
-  },
+  { id: 'primary', items: PRIMARY_ITEMS.filter((i) => DESKTOP_ROUTES.has(i.path)).map(toNavItem) },
+  ...MORE_GROUPS.map((group) => ({
+    id: group.id,
+    items: group.items.filter((i) => DESKTOP_ROUTES.has(i.path)).map(toNavItem),
+  })).filter((section) => section.items.length > 0),
 ]
 
 const SidebarLink = memo(function SidebarLink({
@@ -63,7 +64,7 @@ const SidebarLink = memo(function SidebarLink({
   item: NavItem
   collapsed: boolean
 }) {
-  const { t } = useTranslation('desktop')
+  const t = useTranslations()
   const label = t(item.labelKey)
   const Icon = item.icon
 
@@ -78,7 +79,7 @@ const SidebarLink = memo(function SidebarLink({
           isActive
             ? 'bg-[hsl(var(--color-primary)/0.14)] text-[hsl(var(--color-primary))]'
             : 'text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]',
-          collapsed && 'justify-center px-0'
+          collapsed && 'justify-center px-0',
         )
       }
     >

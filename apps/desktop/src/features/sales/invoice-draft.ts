@@ -3,7 +3,7 @@
 // The payload is shaped by the shared createInvoiceSchema.
 // ============================================
 
-import type { CreateInvoice, InvoiceItem } from '@hisabche/validation'
+import { computeItemTotal, type CreateInvoice, type InvoiceItem } from '@hisabche/validation'
 
 import type { CurrencyCode } from '@/shared/lib/currency'
 
@@ -60,15 +60,23 @@ export function detailsSum(details: readonly DraftDetail[] | undefined): number 
 }
 
 /**
- * The one money rule for a line. Mirrors `computeItemTotal` in
- * @hisabche/validation.
+ * The one money rule for a line.
+ *
+ * Delegates to `computeItemTotal` in @hisabche/validation rather than
+ * restating it. This used to be a second implementation of the same formula —
+ * correct at the time, but a place where desktop could silently drift from the
+ * server and every other renderer on how components affect a line total.
  *
  * Components ADD to the line: "قند ۲٬۰۰۰ + سنگ امیتیس ۱٬۰۰۰" totals 3,000.
  * A line with no components is unchanged — base + 0.
  */
 export function lineTotal(line: DraftLine): number {
-  const gross = line.quantity * line.unitPrice + detailsSum(line.details)
-  return gross * (1 - line.discount / 100)
+  return computeItemTotal({
+    quantity: line.quantity,
+    unitPrice: line.unitPrice,
+    discount: line.discount,
+    details: line.details ?? [],
+  })
 }
 
 export function subtotalOf(lines: readonly DraftLine[]): number {

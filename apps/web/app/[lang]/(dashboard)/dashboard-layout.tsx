@@ -1,14 +1,10 @@
 // packages/ui/src/components/ui/dashboard/dashboard-layout.tsx
-"use client";
+'use client'
 
-import type { ReactNode } from "react";
-import { useRouter, usePathname } from "next/navigation";
-import {
-  useAuthStore,
-  useThemeStore,
-  useOnboardingStore,
-} from "@hisabche/store";
-import { useTranslations, useLocale } from "next-intl";
+import type { ReactNode } from 'react'
+import { useRouter, usePathname } from 'next/navigation'
+import { useAuthStore, useThemeStore, useOnboardingStore } from '@hisabche/store'
+import { useTranslations, useLocale } from 'next-intl'
 import {
   DashboardHeader,
   DashboardSidebar,
@@ -16,18 +12,11 @@ import {
   CommandPalette,
   Breadcrumb,
   GlobalSearch,
-} from "@hisabche/ui";
-import {
-  useEffect,
-  useRef,
-  useCallback,
-  useMemo,
-  useState,
-  memo,
-} from "react";
-import { NAV_ITEMS, PRIMARY_ITEMS, MORE_GROUPS, MORE_ICON, COMMAND_ITEMS } from "./constants/nav-items";
-import { cn } from "@/lib/utils";
-import "@hisabche/ui/globals.css";
+} from '@hisabche/ui'
+import { useEffect, useRef, useCallback, useMemo, useState, memo } from 'react'
+import { NAV_ITEMS, PRIMARY_ITEMS, MORE_GROUPS, MORE_ICON, COMMAND_ITEMS } from '@hisabche/ui/menu'
+import { cn } from '@/lib/utils'
+import '@hisabche/ui/globals.css'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    DashboardLayout v2 — Memoized · Performance Optimized · SaaS-Level
@@ -37,114 +26,110 @@ import "@hisabche/ui/globals.css";
 // ─── Hook: Prefetch Routes ─────────────────────────────────────────────────
 
 function usePrefetchRoutes(pathname: string) {
-  const router = useRouter();
+  const router = useRouter()
 
   useEffect(() => {
-    const currentPath = pathname.replace(/^\/(af|en)(?=\/|$)/, "") || "/";
+    const currentPath = pathname.replace(/^\/(af|en)(?=\/|$)/, '') || '/'
 
     const relevantItems = NAV_ITEMS.filter((item) => {
       return (
         currentPath.startsWith(item.path) ||
         item.path.startsWith(currentPath) ||
-        currentPath.split("/").length === item.path.split("/").length
-      );
-    });
+        currentPath.split('/').length === item.path.split('/').length
+      )
+    })
 
     for (const item of relevantItems.slice(0, 3)) {
-      router.prefetch(item.path);
+      router.prefetch(item.path)
     }
-  }, [router, pathname]);
+  }, [router, pathname])
 }
 
 // ─── Hook: Redirect Guard ──────────────────────────────────────────────────
 
 function useRedirectGuard() {
-  const router = useRouter();
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const hasHydrated = useAuthStore((s) => s.hasHydrated);
-  const isOnboardingComplete = useOnboardingStore((s) => s.isCompleted);
-  const redirected = useRef(false);
+  const router = useRouter()
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
+  const hasHydrated = useAuthStore((s) => s.hasHydrated)
+  const isOnboardingComplete = useOnboardingStore((s) => s.isCompleted)
+  const redirected = useRef(false)
 
   useEffect(() => {
-    if (!hasHydrated) return;
+    if (!hasHydrated) return
 
     if (!isAuthenticated && !redirected.current) {
-      redirected.current = true;
-      router.replace("/login");
-      return;
+      redirected.current = true
+      router.replace('/login')
+      return
     }
 
     if (isAuthenticated && !isOnboardingComplete && !redirected.current) {
-      redirected.current = true;
-      router.replace("/onboarding");
-      return;
+      redirected.current = true
+      router.replace('/onboarding')
+      return
     }
 
     if (isAuthenticated && isOnboardingComplete) {
-      redirected.current = false;
+      redirected.current = false
     }
-  }, [hasHydrated, isAuthenticated, isOnboardingComplete, router]);
+  }, [hasHydrated, isAuthenticated, isOnboardingComplete, router])
 }
 
 // ─── Main Component ─────────────────────────────────────────────────────────
 
-const DashboardLayout = memo(function DashboardLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
-  const t = useTranslations();
-  const locale = useLocale();
-  const router = useRouter();
-  const pathname = usePathname();
-  const isDark = useThemeStore((s) => s.isDark);
-  const toggle = useThemeStore((s) => s.toggle);
-  const [optimisticPath, setOptimisticPath] = useState<string | null>(null);
-  const lastSyncedAt = useRef(Date.now());
+const DashboardLayout = memo(function DashboardLayout({ children }: { children: ReactNode }) {
+  const t = useTranslations()
+  const locale = useLocale()
+  const router = useRouter()
+  const pathname = usePathname()
+  const isDark = useThemeStore((s) => s.isDark)
+  const toggle = useThemeStore((s) => s.toggle)
+  const [optimisticPath, setOptimisticPath] = useState<string | null>(null)
+  const lastSyncedAt = useRef(Date.now())
 
-  usePrefetchRoutes(pathname);
-  useRedirectGuard();
+  usePrefetchRoutes(pathname)
+  useRedirectGuard()
 
-  const activeNav = optimisticPath ?? pathname;
+  const activeNav = optimisticPath ?? pathname
 
   useEffect(() => {
     if (optimisticPath) {
-      setOptimisticPath(null);
+      setOptimisticPath(null)
     }
-  }, [pathname]);
+  }, [pathname])
 
-  const currentLang = locale;
+  const currentLang = locale
 
   // ✅ FIX: مسیرهای واقعی af/fa/en هستن، نه fa-IR/fa-AF (که فرمت
   // قدیمی locale JSON هاست) — قبلاً این regex هیچ‌وقت match
   // نمی‌شد و مسیر جدید دوباره‌پیشونددار می‌شد (مثلاً /fa/af/...)
   const withLocale = useCallback(
     (path: string, lang: string = currentLang) => {
-      const pathWithoutLocale = path.replace(/^\/(fa|af|en)(?=\/|$)/, "") || "/";
+      const pathWithoutLocale = path.replace(/^\/(fa|af|en)(?=\/|$)/, '') || '/'
       // ✅ localePrefix: 'always' — همه‌ی زبان‌ها از جمله fa پیشوند می‌گیرند.
-      return `/${lang}${pathWithoutLocale}`;
+      return `/${lang}${pathWithoutLocale}`
     },
-    [currentLang]
-  );
+    [currentLang],
+  )
 
   const toggleLang = useCallback(
     (lang: string) => {
-      if (lang === currentLang) return;
+      if (lang === currentLang) return
 
-      const newPath = withLocale(pathname, lang);
+      const newPath = withLocale(pathname, lang)
 
       // ✅ FIX: middleware با localeDetection:true کوکی NEXT_LOCALE را می‌خواند.
       // چون فارسی (locale پیش‌فرض) بدون پیشوند سرو می‌شود، مسیر «/dashboard»
       // توسط کوکی قدیمی (مثلاً af) دوباره به «/af/dashboard» ریدایرکت می‌شد و
       // انتخاب فارسی هیچ‌وقت نمی‌گرفت. با به‌روزرسانی کوکی، تشخیص زبان با
       // انتخاب کاربر هم‌راستا می‌شود.
-      document.cookie = `NEXT_LOCALE=${lang};path=/;max-age=31536000;samesite=lax`;
+      document.cookie = `NEXT_LOCALE=${lang};path=/;max-age=31536000;samesite=lax`
 
-      router.push(newPath);
-      router.refresh();
+      router.push(newPath)
+      router.refresh()
     },
-    [pathname, currentLang, router, withLocale]
-  );
+    [pathname, currentLang, router, withLocale],
+  )
 
   const handleNavigate = useCallback(
     (_id: string, path: string) => {
@@ -152,19 +137,19 @@ const DashboardLayout = memo(function DashboardLayout({
       // (e.g. "/dashboard") — re-prefix with the current locale so the
       // user isn't silently switched back to the default locale, and so
       // isPathActive() stays consistent with the resulting pathname.
-      const localizedPath = withLocale(path);
-      setOptimisticPath(localizedPath);
-      router.push(localizedPath);
+      const localizedPath = withLocale(path)
+      setOptimisticPath(localizedPath)
+      router.push(localizedPath)
     },
-    [router, withLocale]
-  );
+    [router, withLocale],
+  )
 
   const handleLogout = useCallback(() => {
-    useAuthStore.getState().logout();
-    router.replace("/login");
-  }, [router]);
+    useAuthStore.getState().logout()
+    router.replace('/login')
+  }, [router])
 
-  const handleNavigateLogin = useCallback(() => router.push("/login"), [router]);
+  const handleNavigateLogin = useCallback(() => router.push('/login'), [router])
 
   const primaryItems = useMemo(
     () =>
@@ -174,8 +159,8 @@ const DashboardLayout = memo(function DashboardLayout({
         label: t(item.labelKey),
         path: item.path,
       })),
-    [t]
-  );
+    [t],
+  )
 
   const moreGroups = useMemo(
     () =>
@@ -190,8 +175,8 @@ const DashboardLayout = memo(function DashboardLayout({
           path: item.path,
         })),
       })),
-    [t]
-  );
+    [t],
+  )
 
   // ✅ صفحه‌های قابل جستجو — از همان NAV_ITEMS ساخته می‌شوند تا با منو
   // هم‌خوان بمانند و جای دیگری نگهداری نشوند.
@@ -202,17 +187,17 @@ const DashboardLayout = memo(function DashboardLayout({
         label: t(item.labelKey),
         path: item.path,
       })),
-    [t]
-  );
+    [t],
+  )
 
   const handleSearchNavigate = useCallback(
     (path: string) => {
-      const localizedPath = withLocale(path);
-      setOptimisticPath(localizedPath);
-      router.push(localizedPath);
+      const localizedPath = withLocale(path)
+      setOptimisticPath(localizedPath)
+      router.push(localizedPath)
     },
-    [router, withLocale]
-  );
+    [router, withLocale],
+  )
   const commands = useMemo(
     () =>
       COMMAND_ITEMS.map((cmd) => ({
@@ -222,28 +207,28 @@ const DashboardLayout = memo(function DashboardLayout({
         icon: cmd.icon,
         ...(cmd.shortcut ? { shortcut: cmd.shortcut } : {}),
         onSelect: () => {
-          const localizedPath = withLocale(cmd.path);
-          setOptimisticPath(localizedPath);
-          router.push(localizedPath);
+          const localizedPath = withLocale(cmd.path)
+          setOptimisticPath(localizedPath)
+          router.push(localizedPath)
         },
       })),
-    [router, t, withLocale]
-  );
+    [router, t, withLocale],
+  )
 
-  const hasHydrated = useAuthStore((s) => s.hasHydrated);
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const hasHydrated = useAuthStore((s) => s.hasHydrated)
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
 
-  if (hasHydrated && !isAuthenticated) return null;
+  if (hasHydrated && !isAuthenticated) return null
 
-  const isRtl = currentLang === "fa" || currentLang === "af";
+  const isRtl = currentLang === 'fa' || currentLang === 'af'
 
   return (
     <div
-      dir={isRtl ? "rtl" : "ltr"}
+      dir={isRtl ? 'rtl' : 'ltr'}
       className={cn(
-        "flex min-h-screen",
-        "bg-[hsl(var(--surface-base))]",
-        "text-[hsl(var(--fg-primary))]"
+        'flex min-h-screen',
+        'bg-[hsl(var(--surface-base))]',
+        'text-[hsl(var(--fg-primary))]',
       )}
     >
       <CommandPalette commands={commands} />
@@ -265,16 +250,16 @@ const DashboardLayout = memo(function DashboardLayout({
       <div className="flex min-h-screen min-w-0 flex-1 flex-col">
         <DashboardHeader
           variant="dashboard"
-          appName={t("app.name")}
-          businessName={t("app.businessName")}
+          appName={t('app.name')}
+          businessName={t('app.businessName')}
           lastSyncedAt={lastSyncedAt.current}
           isOnline={true}
           isSyncing={false}
           pendingCount={0}
           currentLang={currentLang}
           isDark={isDark}
-          signInLabel={t("auth.signIn")}
-          signOutLabel={t("auth.signOut")}
+          signInLabel={t('auth.signIn')}
+          signOutLabel={t('auth.signOut')}
           onToggleTheme={toggle}
           onToggleLang={toggleLang}
           onLogout={handleLogout}
@@ -285,8 +270,8 @@ const DashboardLayout = memo(function DashboardLayout({
               pages={searchablePages}
               onNavigate={handleSearchNavigate}
               t={(key, fallback) => {
-                const v = t(key as Parameters<typeof t>[0]);
-                return v && v !== key ? v : (fallback ?? key);
+                const v = t(key as Parameters<typeof t>[0])
+                return v && v !== key ? v : (fallback ?? key)
               }}
             />
           }
@@ -306,9 +291,9 @@ const DashboardLayout = memo(function DashboardLayout({
         />
       </div>
     </div>
-  );
-});
+  )
+})
 
-DashboardLayout.displayName = "DashboardLayout";
+DashboardLayout.displayName = 'DashboardLayout'
 
-export default DashboardLayout;
+export default DashboardLayout

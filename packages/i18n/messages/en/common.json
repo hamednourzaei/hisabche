@@ -904,7 +904,17 @@
     "manufacturing": "Make & Produce",
     "manufacturing_description": "Work orders and required materials",
     "purchasing": "Buy",
-    "purchasing_description": "Order goods from a supplier"
+    "purchasing_description": "Order goods from a supplier",
+    "recordSale": "Record sale",
+    "recordSale_description": "Create a new sales invoice",
+    "recordPurchase": "Record purchase",
+    "recordPurchase_description": "Create a new purchase invoice",
+    "addProduct": "Add product",
+    "addProduct_description": "Add a new item to stock",
+    "searchCustomer": "Search customer",
+    "searchCustomer_description": "Find a customer in your contacts",
+    "searchProduct": "Search product",
+    "searchProduct_description": "Find an item in stock"
   },
   "dateRange": {
     "today": "Today",
@@ -1072,7 +1082,14 @@
     "zero": "0",
     "loading": "Searching...",
     "optional": "Optional",
-    "required": "Required"
+    "required": "Required",
+    "loadError": "Failed to load",
+    "selectAll": "Select all",
+    "selectRow": "Select row",
+    "selectedCount": "{count} selected",
+    "clearSelection": "Clear selection",
+    "confirmAction": "Are you sure?",
+    "bulkPartialFailure": "{failed} could not be completed"
   },
   "invoices": {
     "title": "Invoice",
@@ -1166,7 +1183,9 @@
     "filterAll": "All",
     "saleInvoice": "Sales Invoice",
     "purchaseInvoice": "Purchase Invoice",
-    "supplierInfo": "Supplier info"
+    "supplierInfo": "Supplier info",
+    "bulkDeleteConfirm": "Delete the selected invoices?",
+    "party": "Party"
   },
   "warehouse": {
     "title": "Warehouse",
@@ -1215,7 +1234,8 @@
       "liter": "Liter",
       "box": "Box",
       "pack": "Pack"
-    }
+    },
+    "bulkDeleteConfirm": "Delete the selected products?"
   },
   "customers": {
     "title": "Customers",
@@ -1308,7 +1328,32 @@
     "addOpportunity": "Add",
     "ofTotal": "of {total}",
     "pay": "Pay",
-    "noInvoices": "No invoices found"
+    "noInvoices": "No invoices found",
+    "export": {
+      "invoiceNumber": "Invoice number",
+      "date": "Date",
+      "type": "Type",
+      "party": "Party",
+      "status": "Status",
+      "productName": "Product",
+      "quantity": "Quantity",
+      "unit": "Unit",
+      "weightGrams": "Weight (g)",
+      "unitPrice": "Unit price",
+      "lineTotal": "Line total",
+      "details": "Details",
+      "invoiceTotal": "Invoice total",
+      "paidAmount": "Paid",
+      "remaining": "Remaining",
+      "name": "Name",
+      "phone": "Phone",
+      "debt": "Debt",
+      "openInvoices": "Open invoices",
+      "lastPurchase": "Last purchase",
+      "statusDebtor": "Owing",
+      "statusSettled": "Settled"
+    },
+    "exportStatement": "Export statement"
   },
   "crm": {
     "type": "Type",
@@ -1465,7 +1510,8 @@
     "connected": "Connected",
     "serverStatus": "Server status",
     "stable": "Stable",
-    "localStorage": "Local storage"
+    "localStorage": "Local storage",
+    "syncNow_description": "Synchronize your data right away"
   },
   "validation": {
     "required": "This field is required",
@@ -1908,9 +1954,35 @@
     "trialDescription": "You are on a 7-day trial",
     "activePlan": "Your active plan",
     "plans": {
-      "free": "Free",
-      "pro": "Pro",
-      "enterprise": "Enterprise"
+      "free": {
+        "name": "Free",
+        "features": {
+          "invoices_10": "Up to 10 invoices",
+          "user_1": "1 user",
+          "business_1": "1 business",
+          "basic_reports": "Basic reports"
+        }
+      },
+      "pro": {
+        "name": "Pro",
+        "features": {
+          "unlimited_invoices": "Unlimited invoices",
+          "advanced_reports": "Advanced reports",
+          "users_10": "10 users",
+          "businesses_5": "5 businesses",
+          "priority_support": "Priority support"
+        }
+      },
+      "enterprise": {
+        "name": "Enterprise",
+        "features": {
+          "all_features": "All features",
+          "sso": "SSO",
+          "unlimited_teams": "Unlimited teams",
+          "dedicated_support": "Dedicated support",
+          "sla": "SLA"
+        }
+      }
     },
     "usage": {
       "title": "Your Usage",

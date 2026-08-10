@@ -12,6 +12,7 @@
   "dependencies": {
     "crypto-js": "^4.2.0",
     "zustand": "^4.5.2",
+    "@hisabche/api": "workspace:*",
     "@hisabche/auth": "workspace:*",
     "@hisabche/auth-core": "workspace:*"
   },

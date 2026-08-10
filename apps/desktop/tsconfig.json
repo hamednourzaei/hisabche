@@ -19,8 +19,16 @@
       "@hisabche/api": ["../../packages/api/src"],
       "@hisabche/auth-core": ["../../packages/auth-core/src"],
       "@hisabche/i18n": ["../../packages/i18n/src"],
+      "@hisabche/i18n/messages": ["../../packages/i18n/src/messages.ts"],
+      "@hisabche/ui": ["../../packages/ui/src"],
+      "@hisabche/ui/screens": ["../../packages/ui/src/screens.ts"],
+      "@hisabche/ui/menu": ["../../packages/ui/src/lib/menu/nav-items.ts"],
       "@hisabche/validation": ["../../packages/validation/src"],
-      "@hisabche/store": ["../../packages/store/src"]
+      "@hisabche/store": ["../../packages/store/src"],
+      "next/link": ["./src/shims/next-link.tsx"],
+      "next/navigation": ["./src/shims/next-navigation.ts"],
+      "next/image": ["./src/shims/next-image.tsx"],
+      "next-intl": ["./src/shims/next-intl.tsx"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx", "electron/shared/**/*.ts"],

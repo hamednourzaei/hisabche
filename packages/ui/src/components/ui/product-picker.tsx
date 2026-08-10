@@ -1,106 +1,89 @@
-"use client";
+'use client'
 
-import {
-  useState,
-  useCallback,
-  useMemo,
-  forwardRef,
-  useEffect,
-} from "react";
-import { useTranslations } from "next-intl";
-import { Package, Loader2, Search } from "lucide-react";
-import { useProducts } from "@hisabche/api";
-import { cn } from "@/lib/utils";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./select";
+import { useState, useCallback, useMemo, forwardRef, useEffect } from 'react'
+import { useTranslations } from 'next-intl'
+import { Package, Loader2, Search } from 'lucide-react'
+import { useProducts } from '@hisabche/api'
+import { cn } from '../../lib/utils'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './select'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ProductPicker v3 — FIXED: search parameter type
    ═══════════════════════════════════════════════════════════════════════════ */
 
 interface ProductOption {
-  id: string;
-  name: string;
-  sellPrice: number;
-  unit: string;
+  id: string
+  name: string
+  sellPrice: number
+  unit: string
 }
 
 interface ProductPickerProps {
-  value: ProductOption | null;
-  onChange: (product: ProductOption | null) => void;
-  placeholder?: string;
-  disabled?: boolean;
-  className?: string;
+  value: ProductOption | null
+  onChange: (product: ProductOption | null) => void
+  placeholder?: string
+  disabled?: boolean
+  className?: string
 }
 
 export const ProductPicker = forwardRef<HTMLButtonElement, ProductPickerProps>(
   ({ value, onChange, placeholder, disabled = false, className }, _ref) => {
-    const t = useTranslations();
-    const [open, setOpen] = useState(false);
-    const [search, setSearch] = useState("");
-    const [debouncedSearch, setDebouncedSearch] = useState("");
+    const t = useTranslations()
+    const [open, setOpen] = useState(false)
+    const [search, setSearch] = useState('')
+    const [debouncedSearch, setDebouncedSearch] = useState('')
 
     // Debounce search — 300ms
     useEffect(() => {
       const timer = setTimeout(() => {
-        setDebouncedSearch(search);
-      }, 300);
-      return () => clearTimeout(timer);
-    }, [search]);
+        setDebouncedSearch(search)
+      }, 300)
+      return () => clearTimeout(timer)
+    }, [search])
 
     // ✅ FIX: ارسال search به عنوان string خالی
     const { data, isLoading } = useProducts({
       page: 1,
       limit: 25,
-      sortDirection: "desc",
-      search: debouncedSearch || "", // ← به جای undefined
-    });
+      sortDirection: 'desc',
+      search: debouncedSearch || '', // ← به جای undefined
+    })
 
-    const products = useMemo(() => data?.products ?? [], [data]);
+    const products = useMemo(() => data?.products ?? [], [data])
 
     const handleSelect = useCallback(
       (productId: string) => {
-        const product = products.find((p) => p.id === productId);
-        if (!product) return;
+        const product = products.find((p) => p.id === productId)
+        if (!product) return
 
         onChange({
-          id: product.id ?? "",
+          id: product.id ?? '',
           name: product.name,
           sellPrice: product.sellPrice ?? 0,
-          unit: product.unit ?? "piece",
-        });
+          unit: product.unit ?? 'piece',
+        })
 
-        setOpen(false);
-        setSearch("");
+        setOpen(false)
+        setSearch('')
       },
       [products, onChange],
-    );
+    )
 
     return (
       <Select
         open={open}
         onOpenChange={setOpen}
-        value={value?.id ?? ""}
+        value={value?.id ?? ''}
         onValueChange={handleSelect}
         disabled={disabled}
       >
-        <SelectTrigger className={cn("w-full", className)}>
+        <SelectTrigger className={cn('w-full', className)}>
           <div className="flex items-center gap-2 truncate">
             <Package
               className="size-4 shrink-0 text-[hsl(var(--fg-tertiary))]"
               aria-hidden="true"
             />
-            <SelectValue
-              placeholder={
-                placeholder ||
-                t("warehouse.pickProduct")
-              }
-            />
+            <SelectValue placeholder={placeholder || t('warehouse.pickProduct')} />
           </div>
         </SelectTrigger>
 
@@ -116,15 +99,15 @@ export const ProductPicker = forwardRef<HTMLButtonElement, ProductPickerProps>(
                 autoFocus
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder={t("action.search") + "..."}
+                placeholder={t('action.search') + '...'}
                 className={cn(
-                  "w-full rounded-lg ps-9 pe-3 py-2",
-                  "text-sm",
-                  "border border-[hsl(var(--border-default))]",
-                  "bg-[hsl(var(--surface-base))]",
-                  "text-[hsl(var(--fg-primary))]",
-                  "placeholder:text-[hsl(var(--fg-tertiary))]",
-                  "focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]",
+                  'w-full rounded-lg ps-9 pe-3 py-2',
+                  'text-sm',
+                  'border border-[hsl(var(--border-default))]',
+                  'bg-[hsl(var(--surface-base))]',
+                  'text-[hsl(var(--fg-primary))]',
+                  'placeholder:text-[hsl(var(--fg-tertiary))]',
+                  'focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]',
                 )}
                 onClick={(e) => e.stopPropagation()}
               />
@@ -141,21 +124,16 @@ export const ProductPicker = forwardRef<HTMLButtonElement, ProductPickerProps>(
             </div>
           ) : products.length === 0 ? (
             <p className="p-4 text-center text-sm text-[hsl(var(--fg-tertiary))]">
-              {t("warehouse.noProducts")}
+              {t('warehouse.noProducts')}
             </p>
           ) : (
             products.map((product) => (
-              <SelectItem
-                key={product.id}
-                value={product.id ?? ""}
-              >
+              <SelectItem key={product.id} value={product.id ?? ''}>
                 <div className="flex flex-col gap-0.5">
-                  <span className="font-medium text-[hsl(var(--fg-primary))]">
-                    {product.name}
-                  </span>
+                  <span className="font-medium text-[hsl(var(--fg-primary))]">{product.name}</span>
                   <span className="text-xs text-[hsl(var(--fg-tertiary))]">
-                    {(product.sellPrice ?? 0).toLocaleString()} AFN /{" "}
-                    {product.unit ?? t("warehouse.units.piece")}
+                    {(product.sellPrice ?? 0).toLocaleString()} AFN /{' '}
+                    {product.unit ?? t('warehouse.units.piece')}
                   </span>
                 </div>
               </SelectItem>
@@ -163,8 +141,8 @@ export const ProductPicker = forwardRef<HTMLButtonElement, ProductPickerProps>(
           )}
         </SelectContent>
       </Select>
-    );
+    )
   },
-);
+)
 
-ProductPicker.displayName = "ProductPicker";
+ProductPicker.displayName = 'ProductPicker'

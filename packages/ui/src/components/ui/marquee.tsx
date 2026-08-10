@@ -1,7 +1,7 @@
 // packages/ui/src/components/ui/marquee.tsx
-"use client";
+'use client'
 
-import { cn } from "@/lib/utils";
+import { cn } from '../../lib/utils'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    Marquee — adapted from Magic UI (https://magicui.design/docs/components/marquee)
@@ -31,16 +31,16 @@ import { cn } from "@/lib/utils";
    ═══════════════════════════════════════════════════════════════════════════ */
 
 interface MarqueeProps extends React.HTMLAttributes<HTMLDivElement> {
-  className?: string;
+  className?: string
   /** Reverse scroll direction. Note: in RTL layouts the "natural" forward
    *  direction is already flipped, so try without `reverse` first. */
-  reverse?: boolean;
-  pauseOnHover?: boolean;
-  children?: React.ReactNode;
-  vertical?: boolean;
+  reverse?: boolean
+  pauseOnHover?: boolean
+  children?: React.ReactNode
+  vertical?: boolean
   /** How many times to repeat the children — needs to be enough copies to
    *  fill the track with no visible gap; increase for short content. */
-  repeat?: number;
+  repeat?: number
 }
 
 export function Marquee({
@@ -56,8 +56,8 @@ export function Marquee({
     <div
       {...props}
       className={cn(
-        "group flex overflow-hidden p-2 [--duration:40s] [--gap:1rem] [gap:var(--gap)]",
-        vertical ? "flex-col" : "flex-row",
+        'group flex overflow-hidden p-2 [--duration:40s] [--gap:1rem] [gap:var(--gap)]',
+        vertical ? 'flex-col' : 'flex-row',
         className,
       )}
     >
@@ -66,9 +66,9 @@ export function Marquee({
           key={i}
           aria-hidden={i > 0}
           className={cn(
-            "flex shrink-0 justify-around [gap:var(--gap)]",
-            vertical ? "animate-marquee-vertical flex-col" : "animate-marquee flex-row",
-            pauseOnHover && "group-hover:[animation-play-state:paused]",
+            'flex shrink-0 justify-around [gap:var(--gap)]',
+            vertical ? 'animate-marquee-vertical flex-col' : 'animate-marquee flex-row',
+            pauseOnHover && 'group-hover:[animation-play-state:paused]',
             // ✅ FIX (RTL): کی‌فریم مارکی جهت‌ثابت است (translateX منفی). در
             // چیدمان RTL محتوای ردیفِ بدون reverse از دید خارج می‌شد و ردیف
             // خالی به‌نظر می‌رسید — دقیقاً چیزی که در فارسی/دری دیده می‌شد و
@@ -76,15 +76,15 @@ export function Marquee({
             // LTR یکسان بماند.
             !vertical &&
               (reverse
-                ? "[animation-direction:reverse] rtl:[animation-direction:normal]"
-                : "rtl:[animation-direction:reverse]"),
-            vertical && reverse && "[animation-direction:reverse]",
-            "motion-reduce:animate-none",
+                ? '[animation-direction:reverse] rtl:[animation-direction:normal]'
+                : 'rtl:[animation-direction:reverse]'),
+            vertical && reverse && '[animation-direction:reverse]',
+            'motion-reduce:animate-none',
           )}
         >
           {children}
         </div>
       ))}
     </div>
-  );
+  )
 }

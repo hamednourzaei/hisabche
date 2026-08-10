@@ -1,9 +1,9 @@
 // packages/ui/src/components/ui/money-input.tsx
-"use client";
+'use client'
 
-import * as React from "react";
-import { cn } from "@/lib/utils";
-import { formatThousands, unformatThousands } from "../../lib/thousands";
+import * as React from 'react'
+import { cn } from '../../lib/utils'
+import { formatThousands, unformatThousands } from '../../lib/thousands'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    MoneyInput — thousand-separator formatted number input
@@ -13,30 +13,32 @@ import { formatThousands, unformatThousands } from "../../lib/thousands";
    doing `Number(raw)` / `parseFloat(raw)` exactly as before.
    ═══════════════════════════════════════════════════════════════════════════ */
 
-export interface MoneyInputProps
-  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "type"> {
-  value: string | number | null | undefined;
-  onChange: (raw: string) => void;
-  label?: string;
-  startIcon?: React.ReactNode;
-  endIcon?: React.ReactNode;
+export interface MoneyInputProps extends Omit<
+  React.InputHTMLAttributes<HTMLInputElement>,
+  'value' | 'onChange' | 'type'
+> {
+  value: string | number | null | undefined
+  onChange: (raw: string) => void
+  label?: string
+  startIcon?: React.ReactNode
+  endIcon?: React.ReactNode
 }
 
 const MoneyInput = React.forwardRef<HTMLInputElement, MoneyInputProps>(
   ({ value, onChange, className, label, startIcon, endIcon, ...props }, ref) => {
-    const [display, setDisplay] = React.useState(() => formatThousands(value));
+    const [display, setDisplay] = React.useState(() => formatThousands(value))
 
     // Keep the on-screen text in sync when `value` changes from outside
     // (reset, initial load, editing a different record, etc.).
     React.useEffect(() => {
-      setDisplay(formatThousands(value));
-    }, [value]);
+      setDisplay(formatThousands(value))
+    }, [value])
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const raw = unformatThousands(e.target.value);
-      setDisplay(formatThousands(raw));
-      onChange(raw);
-    };
+      const raw = unformatThousands(e.target.value)
+      setDisplay(formatThousands(raw))
+      onChange(raw)
+    }
 
     const input = (
       <div className="relative">
@@ -53,16 +55,16 @@ const MoneyInput = React.forwardRef<HTMLInputElement, MoneyInputProps>(
           value={display}
           onChange={handleChange}
           className={cn(
-            "flex h-10 w-full rounded-xl px-3 py-2 text-sm text-end",
-            "border border-[hsl(var(--border-default))]",
-            "bg-[hsl(var(--surface-base))]",
-            "text-[hsl(var(--fg-primary))]",
-            "placeholder:text-[hsl(var(--fg-tertiary))]",
-            "focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]",
-            "disabled:cursor-not-allowed disabled:opacity-40",
-            "transition-colors duration-200",
-            startIcon && "ps-10",
-            endIcon && "pe-10",
+            'flex h-10 w-full rounded-xl px-3 py-2 text-sm text-end',
+            'border border-[hsl(var(--border-default))]',
+            'bg-[hsl(var(--surface-base))]',
+            'text-[hsl(var(--fg-primary))]',
+            'placeholder:text-[hsl(var(--fg-tertiary))]',
+            'focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]',
+            'disabled:cursor-not-allowed disabled:opacity-40',
+            'transition-colors duration-200',
+            startIcon && 'ps-10',
+            endIcon && 'pe-10',
             className,
           )}
           {...props}
@@ -73,19 +75,19 @@ const MoneyInput = React.forwardRef<HTMLInputElement, MoneyInputProps>(
           </div>
         )}
       </div>
-    );
+    )
 
-    if (!label) return input;
+    if (!label) return input
 
     return (
       <div className="space-y-1.5">
         <label className="text-sm font-medium text-[hsl(var(--fg-primary))]">{label}</label>
         {input}
       </div>
-    );
+    )
   },
-);
+)
 
-MoneyInput.displayName = "MoneyInput";
+MoneyInput.displayName = 'MoneyInput'
 
-export { MoneyInput };
+export { MoneyInput }

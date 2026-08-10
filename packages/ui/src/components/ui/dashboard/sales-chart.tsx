@@ -1,41 +1,41 @@
 // packages/ui/src/components/ui/dashboard/sales-chart.tsx
-"use client";
+'use client'
 
-import { memo, useMemo, useId, useState } from "react";
-import { useTranslations } from "next-intl";
-import { cn } from "@/lib/utils";
-import dynamic from "next/dynamic";
-import { ArrowUp, ArrowDown, FileText } from "lucide-react";
+import { memo, useMemo, useId, useState } from 'react'
+import { useTranslations } from 'next-intl'
+import { cn } from '../../../lib/utils'
+import dynamic from 'next/dynamic'
+import { ArrowUp, ArrowDown, FileText } from 'lucide-react'
 import {
   useMediaQuery,
   useIsMobile,
   useIsReducedMotion,
-} from "../../../hooks/dashboard/use-media-query";
+} from '../../../hooks/dashboard/use-media-query'
 
 // Types
 export interface ChartDataPoint {
-  label: string;
-  value: number;
-  date: string;
-  invoiceCount?: number;
-  customerCount?: number;
+  label: string
+  value: number
+  date: string
+  invoiceCount?: number
+  customerCount?: number
 }
 
 interface SalesChartProps {
-  data: ChartDataPoint[];
-  isLoading: boolean;
-  fmt: (v: number) => string;
-  height?: number;
-  previousPeriodTotal?: number;
-  currentPeriodTotal?: number;
-  onViewFullReport?: () => void;
+  data: ChartDataPoint[]
+  isLoading: boolean
+  fmt: (v: number) => string
+  height?: number
+  previousPeriodTotal?: number
+  currentPeriodTotal?: number
+  onViewFullReport?: () => void
 }
 
 // Lazy-load Recharts (بدون suspense)
-const DynamicAreaChart = dynamic(() => import("./sales-chart-internal"), {
+const DynamicAreaChart = dynamic(() => import('./sales-chart-internal'), {
   ssr: false,
   loading: () => <ChartSkeleton height={200} />,
-});
+})
 
 // ============= Skeleton =============
 const ChartSkeleton = memo(function ChartSkeleton({ height }: { height: number }) {
@@ -45,9 +45,9 @@ const ChartSkeleton = memo(function ChartSkeleton({ height }: { height: number }
       style={{ height }}
       aria-hidden="true"
     />
-  );
-});
-ChartSkeleton.displayName = "ChartSkeleton";
+  )
+})
+ChartSkeleton.displayName = 'ChartSkeleton'
 
 // ============= Main Component =============
 export const SalesChart = memo(function SalesChart({
@@ -59,65 +59,65 @@ export const SalesChart = memo(function SalesChart({
   currentPeriodTotal = 0,
   onViewFullReport,
 }: SalesChartProps) {
-  const tOriginal = useTranslations();
+  const tOriginal = useTranslations()
   const t = (key: string, fallback?: string) => {
     try {
-      const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
-      return v && v !== key ? v : (fallback ?? key);
+      const v = tOriginal(key as Parameters<typeof tOriginal>[0])
+      return v && v !== key ? v : (fallback ?? key)
     } catch (err) {
-      console.error("[DEBUG dashboard] t() threw for key:", key, err);
-      return fallback ?? key;
+      console.error('[DEBUG dashboard] t() threw for key:', key, err)
+      return fallback ?? key
     }
-  };
+  }
   const tCount = (key: string, values: Record<string, unknown>, fallback?: string) => {
     try {
-      return tOriginal(key as Parameters<typeof tOriginal>[0], values as never);
+      return tOriginal(key as Parameters<typeof tOriginal>[0], values as never)
     } catch (err) {
-      console.error("[DEBUG dashboard] tOriginal() threw for key:", key, err);
-      return fallback ?? key;
+      console.error('[DEBUG dashboard] tOriginal() threw for key:', key, err)
+      return fallback ?? key
     }
-  };
-  const descriptionId = useId();
-  const isMobile = useIsMobile();
-  const isReducedMotion = useIsReducedMotion();
-  const [showInvoices, setShowInvoices] = useState(true);
-  const [showCustomers, setShowCustomers] = useState(true);
+  }
+  const descriptionId = useId()
+  const isMobile = useIsMobile()
+  const isReducedMotion = useIsReducedMotion()
+  const [showInvoices, setShowInvoices] = useState(true)
+  const [showCustomers, setShowCustomers] = useState(true)
 
   // ✅ FIX (باگ toggle): اگر پاسخ API این سری‌ها را نداشته باشد، تیک زدن هیچ
   // خطی اضافه نمی‌کرد و کاربر فکر می‌کرد کنترل خراب است. حالا تیک غیرفعال
   // می‌شود و علتش در tooltip گفته می‌شود.
   const hasInvoiceSeries = useMemo(
-    () => (data ?? []).some((d) => typeof d.invoiceCount === "number"),
-    [data]
-  );
+    () => (data ?? []).some((d) => typeof d.invoiceCount === 'number'),
+    [data],
+  )
   const hasCustomerSeries = useMemo(
-    () => (data ?? []).some((d) => typeof d.customerCount === "number"),
-    [data]
-  );
-  const noSeriesHint = "این داده در پاسخ سرور موجود نیست";
+    () => (data ?? []).some((d) => typeof d.customerCount === 'number'),
+    [data],
+  )
+  const noSeriesHint = 'این داده در پاسخ سرور موجود نیست'
 
   // Calculate insights with safe percentage
   const { percentageChange, isPositive, allZero, hasData } = useMemo(() => {
-    const hasData = data && data.length > 0;
+    const hasData = data && data.length > 0
     const allZero =
-      hasData && data.every((d) => d.value === 0 || d.value === null || d.value === undefined);
+      hasData && data.every((d) => d.value === 0 || d.value === null || d.value === undefined)
 
-    let percentageChange = 0;
-    let isPositive = false;
+    let percentageChange = 0
+    let isPositive = false
 
     if (previousPeriodTotal > 0) {
-      percentageChange = ((currentPeriodTotal - previousPeriodTotal) / previousPeriodTotal) * 100;
-      isPositive = percentageChange >= 0;
+      percentageChange = ((currentPeriodTotal - previousPeriodTotal) / previousPeriodTotal) * 100
+      isPositive = percentageChange >= 0
     }
 
-    percentageChange = Number.isFinite(percentageChange) ? percentageChange : 0;
+    percentageChange = Number.isFinite(percentageChange) ? percentageChange : 0
 
-    return { percentageChange, isPositive, allZero, hasData };
-  }, [data, currentPeriodTotal, previousPeriodTotal]);
+    return { percentageChange, isPositive, allZero, hasData }
+  }, [data, currentPeriodTotal, previousPeriodTotal])
 
   // Loading state
   if (isLoading) {
-    return <ChartSkeleton height={height} />;
+    return <ChartSkeleton height={height} />
   }
 
   // Empty state with motivation
@@ -126,17 +126,17 @@ export const SalesChart = memo(function SalesChart({
       <section
         className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-8"
         style={{ height }}
-        aria-label={t("dashboard.salesChart.emptyAria")}
+        aria-label={t('dashboard.salesChart.emptyAria')}
       >
         <div className="rounded-full bg-[hsl(var(--color-primary)/0.1)] p-4">
           <FileText className="h-8 w-8 text-[hsl(var(--color-primary))]" />
         </div>
         <div className="text-center">
           <p className="text-sm font-medium text-[hsl(var(--fg-primary))]">
-            {t("dashboard.noSalesYet")}
+            {t('dashboard.noSalesYet')}
           </p>
           <p className="text-xs text-[hsl(var(--fg-tertiary))] mt-1">
-            {t("dashboard.startSelling")}
+            {t('dashboard.startSelling')}
           </p>
         </div>
         <button
@@ -144,27 +144,27 @@ export const SalesChart = memo(function SalesChart({
           onClick={onViewFullReport}
           className="mt-2 text-sm font-medium text-[hsl(var(--color-primary))] hover:underline focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))] rounded-md px-2 py-1"
         >
-          {t("dashboard.createInvoice")}
+          {t('dashboard.createInvoice')}
         </button>
       </section>
-    );
+    )
   }
 
   // Determine animation duration based on device and preference
-  const animationDuration = isMobile ? 0 : isReducedMotion ? 0 : 200;
+  const animationDuration = isMobile ? 0 : isReducedMotion ? 0 : 200
 
   // ✅ اصلاح: استفاده از کلیدهای ترجمه‌ی صحیح
-  const ariaLabel = t("dashboard.salesChart.ariaLabel");
+  const ariaLabel = t('dashboard.salesChart.ariaLabel')
   // ✅ FIX: این wrapper فقط رشته برمی‌گرداند و مقادیر ICU را جای‌گذاری نمی‌کند،
   // برای همین «{total}» و «{change}» عیناً نمایش داده می‌شدند.
-  const description = t("dashboard.salesChart.description")
-    .replace("{total}", fmt(currentPeriodTotal))
+  const description = t('dashboard.salesChart.description')
+    .replace('{total}', fmt(currentPeriodTotal))
     .replace(
-      "{change}",
+      '{change}',
       previousPeriodTotal > 0
-        ? `${percentageChange >= 0 ? "+" : ""}${percentageChange.toFixed(1)}٪`
-        : "—"
-    );
+        ? `${percentageChange >= 0 ? '+' : ''}${percentageChange.toFixed(1)}٪`
+        : '—',
+    )
 
   return (
     <section
@@ -180,14 +180,14 @@ export const SalesChart = memo(function SalesChart({
         {/* Header: Context + Hero Metric */}
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-medium text-[hsl(var(--fg-secondary))]">
-            {t("dashboard.todaySales")}
+            {t('dashboard.todaySales')}
           </h3>
           <button
             type="button"
             onClick={onViewFullReport}
             className="text-xs text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--fg-primary))] transition-colors focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))] rounded-md px-2 py-1"
           >
-            {t("dashboard.viewReport")} →
+            {t('dashboard.viewReport')} →
           </button>
         </div>
 
@@ -199,8 +199,10 @@ export const SalesChart = memo(function SalesChart({
           {previousPeriodTotal > 0 && (
             <span
               className={cn(
-                "flex items-center gap-1 text-sm font-medium",
-                isPositive ? "text-[hsl(var(--status-positive))]" : "text-[hsl(var(--status-negative))]"
+                'flex items-center gap-1 text-sm font-medium',
+                isPositive
+                  ? 'text-[hsl(var(--status-positive))]'
+                  : 'text-[hsl(var(--status-negative))]',
               )}
             >
               {isPositive ? (
@@ -210,7 +212,7 @@ export const SalesChart = memo(function SalesChart({
               )}
               {Math.abs(percentageChange).toFixed(1)}%
               <span className="text-xs text-[hsl(var(--fg-tertiary))] font-normal">
-                {t("dashboard.vsYesterday")}
+                {t('dashboard.vsYesterday')}
               </span>
             </span>
           )}
@@ -230,16 +232,22 @@ export const SalesChart = memo(function SalesChart({
 
         {/* Contextual footer — سویچ‌های فعال/غیرفعال کردن هر خط (فروش همیشه روشن است) */}
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[hsl(var(--fg-tertiary))] pt-1 border-t border-[hsl(var(--border-default)/0.5)]">
-          <span>{tCount("dashboard.dataRange", { count: data?.length ?? 0 }, `Last ${data?.length ?? 0} periods`)}</span>
+          <span>
+            {tCount(
+              'dashboard.dataRange',
+              { count: data?.length ?? 0 },
+              `Last ${data?.length ?? 0} periods`,
+            )}
+          </span>
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1">
               <span className="inline-block h-2 w-2 rounded-full bg-[hsl(var(--color-primary))]" />
-              {t("dashboard.salesTrend")}
+              {t('dashboard.salesTrend')}
             </span>
             <label
               className={cn(
-                "flex items-center gap-1 select-none",
-                hasInvoiceSeries ? "cursor-pointer" : "cursor-not-allowed opacity-40"
+                'flex items-center gap-1 select-none',
+                hasInvoiceSeries ? 'cursor-pointer' : 'cursor-not-allowed opacity-40',
               )}
               title={hasInvoiceSeries ? undefined : noSeriesHint}
             >
@@ -251,12 +259,12 @@ export const SalesChart = memo(function SalesChart({
                 className="size-3 accent-[hsl(var(--status-info))]"
               />
               <span className="inline-block h-2 w-2 rounded-full bg-[hsl(var(--status-info))]" />
-              {t("dashboard.invoicesLine", "فاکتورها")}
+              {t('dashboard.invoicesLine', 'فاکتورها')}
             </label>
             <label
               className={cn(
-                "flex items-center gap-1 select-none",
-                hasCustomerSeries ? "cursor-pointer" : "cursor-not-allowed opacity-40"
+                'flex items-center gap-1 select-none',
+                hasCustomerSeries ? 'cursor-pointer' : 'cursor-not-allowed opacity-40',
               )}
               title={hasCustomerSeries ? undefined : noSeriesHint}
             >
@@ -268,13 +276,13 @@ export const SalesChart = memo(function SalesChart({
                 className="size-3 accent-[hsl(var(--color-warning))]"
               />
               <span className="inline-block h-2 w-2 rounded-full bg-[hsl(var(--color-warning))]" />
-              {t("dashboard.customersLine", "مشتریان")}
+              {t('dashboard.customersLine', 'مشتریان')}
             </label>
           </div>
         </div>
       </div>
     </section>
-  );
-});
+  )
+})
 
-SalesChart.displayName = "SalesChart";
+SalesChart.displayName = 'SalesChart'

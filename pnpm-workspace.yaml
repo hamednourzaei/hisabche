@@ -2,6 +2,39 @@ packages:
   - 'apps/*'
   - 'packages/*'
   - 'backend'
+
+# ============================================
+# Metro (React Native's bundler) resolves modules by walking node_modules
+# directories rather than following pnpm's symlinked store. React Native and
+# react-native-web pull in a long tail of helpers — invariant, nullthrows,
+# styleq, fbjs and friends — that the mobile app never imports directly, so
+# pnpm keeps them nested where Metro cannot see them and bundling fails with
+# "Unable to resolve ...".
+#
+# Hoisting just this set into the root node_modules fixes resolution without
+# switching the workspace to node-linker=hoisted, which would give up pnpm's
+# strictness for web, desktop and backend too.
+#
+# Note: this belongs here, not in .npmrc — pnpm 10+ reads these settings from
+# pnpm-workspace.yaml and silently ignores the .npmrc form.
+# ============================================
+publicHoistPattern:
+  - '@react-native/*'
+  - '@react-native-community/*'
+  - '@babel/runtime'
+  - 'invariant'
+  - 'nullthrows'
+  - 'warn-once'
+  - 'memoize-one'
+  - 'whatwg-fetch'
+  - 'base64-js'
+  - 'pretty-format'
+  - 'styleq'
+  - 'inline-style-prefixer'
+  - 'fbjs'
+  - 'use-sync-external-store'
+  - 'abort-controller'
+  - 'event-target-shim'
 allowBuilds:
   bcrypt: false
   '@parcel/watcher': true

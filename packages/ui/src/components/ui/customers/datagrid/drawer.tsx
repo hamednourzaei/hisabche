@@ -1,8 +1,8 @@
 // packages/ui/src/components/ui/customers/datagrid/drawer.tsx
-"use client"
+'use client'
 
-import { X } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { X } from 'lucide-react'
+import { cn } from '../../../../lib/utils'
 
 interface DrawerProps {
   t: (key: string, fallback?: string) => string
@@ -13,7 +13,7 @@ interface DrawerProps {
   width?: string
 }
 
-export function Drawer({ t, open, onClose, title, children, width = "w-[480px]" }: DrawerProps) {
+export function Drawer({ t, open, onClose, title, children, width = 'w-[480px]' }: DrawerProps) {
   if (!open) return null
 
   return (
@@ -27,11 +27,11 @@ export function Drawer({ t, open, onClose, title, children, width = "w-[480px]" 
       {/* Panel */}
       <div
         className={cn(
-          "fixed top-0 right-0 z-[var(--z-modal)] h-full",
-          "bg-[hsl(var(--surface-elevated))]",
-          "border-l border-[hsl(var(--border-default))]",
-          "shadow-[var(--shadow-premium)]",
-          "animate-fade-in-up",
+          'fixed top-0 right-0 z-[var(--z-modal)] h-full',
+          'bg-[hsl(var(--surface-elevated))]',
+          'border-l border-[hsl(var(--border-default))]',
+          'shadow-[var(--shadow-premium)]',
+          'animate-fade-in-up',
           width,
         )}
         style={{ animationDuration: '200ms' }}
@@ -43,16 +43,14 @@ export function Drawer({ t, open, onClose, title, children, width = "w-[480px]" 
             type="button"
             onClick={onClose}
             className="rounded-full p-1.5 text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors"
-            aria-label={t("common.close", "بستن")}
+            aria-label={t('common.close', 'بستن')}
           >
             <X className="size-5" aria-hidden="true" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="overflow-y-auto p-5 h-[calc(100%-73px)]">
-          {children}
-        </div>
+        <div className="overflow-y-auto p-5 h-[calc(100%-73px)]">{children}</div>
       </div>
     </>
   )

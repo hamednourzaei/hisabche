@@ -17,6 +17,7 @@
       "@hisabche/store": ["../../packages/store/src"],
       "@hisabche/validation": ["../../packages/validation/src"],
       "@hisabche/api": ["../../packages/api/src"],
+      "@hisabche/ui-contract": ["../../packages/ui-contract/src"],
       "@hisabche/db": ["../../packages/db/src"]
     }
   },

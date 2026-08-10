@@ -1,25 +1,11 @@
-"use client";
+'use client'
 
-import {
-  useState,
-  useCallback,
-  useMemo,
-  forwardRef,
-  useEffect,
-  useRef,
-  memo,
-} from "react";
-import { useTranslations } from "next-intl";
-import * as Select from "@radix-ui/react-select";
-import {
-  Check,
-  ChevronsUpDown,
-  Plus,
-  User,
-  Loader2,
-} from "lucide-react";
-import { useCustomers, useCreateCustomer } from "@hisabche/api";
-import { cn } from "@/lib/utils";
+import { useState, useCallback, useMemo, forwardRef, useEffect, useRef, memo } from 'react'
+import { useTranslations } from 'next-intl'
+import * as Select from '@radix-ui/react-select'
+import { Check, ChevronsUpDown, Plus, User, Loader2 } from 'lucide-react'
+import { useCustomers, useCreateCustomer } from '@hisabche/api'
+import { cn } from '../../lib/utils'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    CustomerPicker v3 — Memoized · Performance Optimized
@@ -27,139 +13,123 @@ import { cn } from "@/lib/utils";
    ═══════════════════════════════════════════════════════════════════════════ */
 
 interface CustomerOption {
-  id: string;
-  name: string;
-  phone: string;
+  id: string
+  name: string
+  phone: string
 }
 
 interface CustomerPickerProps {
-  value: CustomerOption | null;
-  onChange: (customer: CustomerOption | null) => void;
-  onQuickCreate?: (customer: CustomerOption) => void;
-  placeholder?: string;
-  disabled?: boolean;
-  className?: string;
+  value: CustomerOption | null
+  onChange: (customer: CustomerOption | null) => void
+  onQuickCreate?: (customer: CustomerOption) => void
+  placeholder?: string
+  disabled?: boolean
+  className?: string
 }
 
 export const CustomerPicker = memo(
   forwardRef<HTMLButtonElement, CustomerPickerProps>(
-    (
-      {
-        value,
-        onChange,
-        onQuickCreate,
-        placeholder,
-        disabled,
-        className,
-      },
-      _ref,
-    ) => {
-      const tOriginal = useTranslations();
+    ({ value, onChange, onQuickCreate, placeholder, disabled, className }, _ref) => {
+      const tOriginal = useTranslations()
 
       const t = (key: string, fallback?: string): string => {
+        const v = tOriginal(key as Parameters<typeof tOriginal>[0])
 
-        const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
-
-        return v && v !== key ? v : (fallback ?? key);
-
-      };
+        return v && v !== key ? v : (fallback ?? key)
+      }
 
       // ✅ safeT wrapper
 
-
-      const [open, setOpen] = useState(false);
-      const [search, setSearch] = useState("");
-      const [debouncedSearch, setDebouncedSearch] = useState("");
-      const [quickName, setQuickName] = useState("");
-      const [quickPhone, setQuickPhone] = useState("");
-      const [createError, setCreateError] = useState<string | null>(null);
-      const phoneInputRef = useRef<HTMLInputElement>(null);
+      const [open, setOpen] = useState(false)
+      const [search, setSearch] = useState('')
+      const [debouncedSearch, setDebouncedSearch] = useState('')
+      const [quickName, setQuickName] = useState('')
+      const [quickPhone, setQuickPhone] = useState('')
+      const [createError, setCreateError] = useState<string | null>(null)
+      const phoneInputRef = useRef<HTMLInputElement>(null)
 
       // Debounce search
       useEffect(() => {
-        const timer = setTimeout(() => setDebouncedSearch(search), 300);
-        return () => clearTimeout(timer);
-      }, [search]);
+        const timer = setTimeout(() => setDebouncedSearch(search), 300)
+        return () => clearTimeout(timer)
+      }, [search])
 
       const { data, isLoading } = useCustomers({
         page: 1,
         limit: 25,
-        sortDirection: "desc",
+        sortDirection: 'desc',
         search: debouncedSearch || undefined,
-      });
-      const createCustomer = useCreateCustomer();
+      })
+      const createCustomer = useCreateCustomer()
 
-      const filtered = useMemo(
-        () => (data?.customers || []).slice(0, 25),
-        [data],
-      );
+      const filtered = useMemo(() => (data?.customers || []).slice(0, 25), [data])
 
       const handleSelect = useCallback(
         (customerId: string) => {
-          const customer = filtered.find((c) => c.id === customerId);
+          const customer = filtered.find((c) => c.id === customerId)
           if (customer) {
             onChange({
-              id: customer.id ?? "",
+              id: customer.id ?? '',
               name: customer.fullName,
-              phone: customer.phone ?? "",
-            });
-            setOpen(false);
-            setSearch("");
-            setCreateError(null);
+              phone: customer.phone ?? '',
+            })
+            setOpen(false)
+            setSearch('')
+            setCreateError(null)
           }
         },
         [filtered, onChange],
-      );
+      )
 
       const handleQuickCreate = useCallback(async () => {
-        const trimmed = quickName.trim();
-        if (!trimmed) return;
-        setCreateError(null);
+        const trimmed = quickName.trim()
+        if (!trimmed) return
+        setCreateError(null)
         try {
           const nc = await createCustomer.mutateAsync({
-            type: "cash",
+            type: 'cash',
             fullName: trimmed,
             ...(quickPhone.trim() && { phone: quickPhone.trim() }),
             openingBalance: 0,
             isActive: true,
-          });
+          })
           const opt: CustomerOption = {
-            id: nc.id ?? "",
+            id: nc.id ?? '',
             name: nc.fullName,
-            phone: nc.phone ?? "",
-          };
-          onQuickCreate?.(opt);
-          onChange(opt);
-          setQuickName("");
-          setQuickPhone("");
-          setOpen(false);
+            phone: nc.phone ?? '',
+          }
+          onQuickCreate?.(opt)
+          onChange(opt)
+          setQuickName('')
+          setQuickPhone('')
+          setOpen(false)
         } catch {
-          setCreateError(t("customer.createError", "خطا در ایجاد مشتری"));
+          setCreateError(t('customer.createError', 'خطا در ایجاد مشتری'))
         }
-      }, [quickName, quickPhone, createCustomer, onChange, onQuickCreate, t]);
+      }, [quickName, quickPhone, createCustomer, onChange, onQuickCreate, t])
 
       const handleNameKeyDown = useCallback(
         (e: React.KeyboardEvent<HTMLInputElement>) => {
-          if (e.key === "Enter" && quickName.trim()) {
-            e.preventDefault();
-            phoneInputRef.current?.focus();
+          if (e.key === 'Enter' && quickName.trim()) {
+            e.preventDefault()
+            phoneInputRef.current?.focus()
           }
         },
-        [quickName]
-      );
+        [quickName],
+      )
 
       const handlePhoneKeyDown = useCallback(
         (e: React.KeyboardEvent<HTMLInputElement>) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            handleQuickCreate();
+          if (e.key === 'Enter') {
+            e.preventDefault()
+            handleQuickCreate()
           }
         },
-        [handleQuickCreate]
-      );
+        [handleQuickCreate],
+      )
 
       return (
-        <div className={cn("relative", className)}>
+        <div className={cn('relative', className)}>
           <Select.Root
             open={open}
             onOpenChange={setOpen}
@@ -170,17 +140,17 @@ export const CustomerPicker = memo(
             {/* Trigger */}
             <Select.Trigger
               className={cn(
-                "flex w-full items-center justify-between gap-2 rounded-xl px-4 py-3 text-sm",
-                "border border-[hsl(var(--border-default))]",
-                "bg-[hsl(var(--surface-base))]",
-                "text-[hsl(var(--fg-primary))]",
-                "hover:border-[hsl(var(--color-primary)/0.4)]",
-                "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary)/0.3)]",
-                "transition-colors duration-200",
-                "motion-reduce:transition-none",
-                disabled && "cursor-not-allowed opacity-40",
+                'flex w-full items-center justify-between gap-2 rounded-xl px-4 py-3 text-sm',
+                'border border-[hsl(var(--border-default))]',
+                'bg-[hsl(var(--surface-base))]',
+                'text-[hsl(var(--fg-primary))]',
+                'hover:border-[hsl(var(--color-primary)/0.4)]',
+                'focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary)/0.3)]',
+                'transition-colors duration-200',
+                'motion-reduce:transition-none',
+                disabled && 'cursor-not-allowed opacity-40',
               )}
-              aria-label={t("customer.pickPlaceholder", "انتخاب مشتری")}
+              aria-label={t('customer.pickPlaceholder', 'انتخاب مشتری')}
             >
               <span className="flex items-center gap-2 truncate text-start">
                 <User
@@ -191,8 +161,7 @@ export const CustomerPicker = memo(
                   <span className="font-medium">{value.name}</span>
                 ) : (
                   <span className="text-[hsl(var(--fg-tertiary))]">
-                    {placeholder ||
-                      t("customer.pickPlaceholder", "انتخاب مشتری...")}
+                    {placeholder || t('customer.pickPlaceholder', 'انتخاب مشتری...')}
                   </span>
                 )}
               </span>
@@ -207,14 +176,14 @@ export const CustomerPicker = memo(
                 position="popper"
                 sideOffset={8}
                 className={cn(
-                  "z-50 w-[var(--radix-select-trigger-width)] overflow-hidden rounded-2xl",
-                  "border border-[hsl(var(--border-strong))]",
-                  "bg-[hsl(var(--surface-elevated))]",
-                  "shadow-lg",
-                  "data-[state=open]:animate-in data-[state=closed]:animate-out",
-                  "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-                  "data-[state=closed]:slide-out-to-top-1 data-[state=open]:slide-in-from-top-1",
-                  "motion-reduce:animate-none",
+                  'z-50 w-[var(--radix-select-trigger-width)] overflow-hidden rounded-2xl',
+                  'border border-[hsl(var(--border-strong))]',
+                  'bg-[hsl(var(--surface-elevated))]',
+                  'shadow-lg',
+                  'data-[state=open]:animate-in data-[state=closed]:animate-out',
+                  'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+                  'data-[state=closed]:slide-out-to-top-1 data-[state=open]:slide-in-from-top-1',
+                  'motion-reduce:animate-none',
                 )}
               >
                 <Select.Viewport className="p-2">
@@ -224,14 +193,14 @@ export const CustomerPicker = memo(
                       autoFocus
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
-                      placeholder={t("action.search", "جستجو") + "..."}
+                      placeholder={t('action.search', 'جستجو') + '...'}
                       className={cn(
-                        "w-full rounded-lg px-3 py-2 text-sm",
-                        "border border-[hsl(var(--border-default))]",
-                        "bg-[hsl(var(--surface-base))]",
-                        "text-[hsl(var(--fg-primary))]",
-                        "placeholder:text-[hsl(var(--fg-tertiary))]",
-                        "focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]",
+                        'w-full rounded-lg px-3 py-2 text-sm',
+                        'border border-[hsl(var(--border-default))]',
+                        'bg-[hsl(var(--surface-base))]',
+                        'text-[hsl(var(--fg-primary))]',
+                        'placeholder:text-[hsl(var(--fg-tertiary))]',
+                        'focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]',
                       )}
                       onClick={(e) => e.stopPropagation()}
                     />
@@ -247,20 +216,20 @@ export const CustomerPicker = memo(
                     </div>
                   ) : filtered.length === 0 ? (
                     <p className="p-4 text-center text-sm text-[hsl(var(--fg-tertiary))]">
-                      {t("customer.noCustomers", "مشتری‌ای پیدا نشد")}
+                      {t('customer.noCustomers', 'مشتری‌ای پیدا نشد')}
                     </p>
                   ) : (
                     filtered.map((customer) => (
                       <Select.Item
                         key={customer.id}
-                        value={customer.id ?? ""}
+                        value={customer.id ?? ''}
                         className={cn(
-                          "relative flex cursor-pointer select-none items-center justify-between rounded-lg px-3 py-2.5 text-sm outline-none",
-                          "min-h-[44px]",
-                          "text-[hsl(var(--fg-primary))]",
-                          "data-[highlighted]:bg-[hsl(var(--color-primary)/0.08)]",
-                          "transition-colors duration-100",
-                          "motion-reduce:transition-none",
+                          'relative flex cursor-pointer select-none items-center justify-between rounded-lg px-3 py-2.5 text-sm outline-none',
+                          'min-h-[44px]',
+                          'text-[hsl(var(--fg-primary))]',
+                          'data-[highlighted]:bg-[hsl(var(--color-primary)/0.08)]',
+                          'transition-colors duration-100',
+                          'motion-reduce:transition-none',
                         )}
                       >
                         <Select.ItemText>
@@ -283,10 +252,7 @@ export const CustomerPicker = memo(
                   {/* Quick create */}
                   <div className="border-t border-[hsl(var(--border-default))] pt-3 mt-2">
                     {createError && (
-                      <p
-                        className="mb-2 text-xs text-[hsl(var(--color-destructive))]"
-                        role="alert"
-                      >
+                      <p className="mb-2 text-xs text-[hsl(var(--color-destructive))]" role="alert">
                         {createError}
                       </p>
                     )}
@@ -295,20 +261,17 @@ export const CustomerPicker = memo(
                         <input
                           value={quickName}
                           onChange={(e) => {
-                            setQuickName(e.target.value);
-                            setCreateError(null);
+                            setQuickName(e.target.value)
+                            setCreateError(null)
                           }}
-                          placeholder={t(
-                            "customer.quickCreate",
-                            "ایجاد سریع مشتری"
-                          )}
+                          placeholder={t('customer.quickCreate', 'ایجاد سریع مشتری')}
                           className={cn(
-                            "flex-1 rounded-lg px-3 py-2 text-sm",
-                            "border border-[hsl(var(--border-default))]",
-                            "bg-[hsl(var(--surface-base))]",
-                            "text-[hsl(var(--fg-primary))]",
-                            "placeholder:text-[hsl(var(--fg-tertiary))]",
-                            "focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]",
+                            'flex-1 rounded-lg px-3 py-2 text-sm',
+                            'border border-[hsl(var(--border-default))]',
+                            'bg-[hsl(var(--surface-base))]',
+                            'text-[hsl(var(--fg-primary))]',
+                            'placeholder:text-[hsl(var(--fg-tertiary))]',
+                            'focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]',
                           )}
                           onKeyDown={handleNameKeyDown}
                         />
@@ -319,14 +282,14 @@ export const CustomerPicker = memo(
                           type="tel"
                           value={quickPhone}
                           onChange={(e) => setQuickPhone(e.target.value)}
-                          placeholder={t("customer.phoneOptional", "شماره تماس (اختیاری)")}
+                          placeholder={t('customer.phoneOptional', 'شماره تماس (اختیاری)')}
                           className={cn(
-                            "rounded-lg px-3 py-2 text-sm",
-                            "border border-[hsl(var(--border-default))]",
-                            "bg-[hsl(var(--surface-base))]",
-                            "text-[hsl(var(--fg-primary))]",
-                            "placeholder:text-[hsl(var(--fg-tertiary))]",
-                            "focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]",
+                            'rounded-lg px-3 py-2 text-sm',
+                            'border border-[hsl(var(--border-default))]',
+                            'bg-[hsl(var(--surface-base))]',
+                            'text-[hsl(var(--fg-primary))]',
+                            'placeholder:text-[hsl(var(--fg-tertiary))]',
+                            'focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]',
                           )}
                           onKeyDown={handlePhoneKeyDown}
                         />
@@ -336,24 +299,21 @@ export const CustomerPicker = memo(
                         onClick={handleQuickCreate}
                         disabled={!quickName.trim() || createCustomer.isPending}
                         className={cn(
-                          "flex shrink-0 items-center gap-1 rounded-lg px-3 py-2",
-                          "text-sm font-medium text-white",
-                          "bg-[var(--gradient-brand)]",
-                          "transition-all duration-200",
-                          "hover:brightness-110",
-                          "disabled:opacity-40 disabled:cursor-not-allowed",
-                          "motion-reduce:transition-none",
+                          'flex shrink-0 items-center gap-1 rounded-lg px-3 py-2',
+                          'text-sm font-medium text-white',
+                          'bg-[var(--gradient-brand)]',
+                          'transition-all duration-200',
+                          'hover:brightness-110',
+                          'disabled:opacity-40 disabled:cursor-not-allowed',
+                          'motion-reduce:transition-none',
                         )}
                       >
                         {createCustomer.isPending ? (
-                          <Loader2
-                            className="size-4 animate-spin"
-                            aria-hidden="true"
-                          />
+                          <Loader2 className="size-4 animate-spin" aria-hidden="true" />
                         ) : (
                           <Plus className="size-4" aria-hidden="true" />
                         )}
-                        {t("action.add", "افزودن")}
+                        {t('action.add', 'افزودن')}
                       </button>
                     </div>
                   </div>
@@ -362,9 +322,9 @@ export const CustomerPicker = memo(
             </Select.Portal>
           </Select.Root>
         </div>
-      );
-    }
-  )
-);
+      )
+    },
+  ),
+)
 
-CustomerPicker.displayName = "CustomerPicker";
+CustomerPicker.displayName = 'CustomerPicker'

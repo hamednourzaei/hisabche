@@ -1,8 +1,8 @@
-"use client";
+'use client'
 
-import { cn } from "@/lib/utils";
+import { cn } from '../../../lib/utils'
 
-const CARD_ITEMS = [1, 2, 3, 4, 5, 6] as const;
+const CARD_ITEMS = [1, 2, 3, 4, 5, 6] as const
 
 /* ═══════════════════════════════════════════════════════════════════════════
    InvoicesSkeleton v2.2 — Pixel-Perfect Match with InvoicesView
@@ -19,7 +19,7 @@ function HeaderSkeleton() {
       </div>
       <div className="skeleton-shimmer h-[44px] w-full rounded-full sm:h-10 sm:w-36" />
     </div>
-  );
+  )
 }
 
 function SearchSkeleton() {
@@ -28,16 +28,16 @@ function SearchSkeleton() {
       <div className="skeleton-shimmer h-[44px] w-full rounded-xl sm:h-10 sm:max-w-sm" />
       <div className="skeleton-shimmer h-[44px] w-full rounded-full sm:h-10 sm:w-24" />
     </div>
-  );
+  )
 }
 
 function CardSkeleton() {
   return (
     <div
       className={cn(
-        "rounded-2xl border border-[hsl(var(--border-default))]",
-        "bg-[hsl(var(--surface-elevated))]",
-        "p-4 sm:p-5 space-y-3 sm:space-y-4",
+        'rounded-2xl border border-[hsl(var(--border-default))]',
+        'bg-[hsl(var(--surface-elevated))]',
+        'p-4 sm:p-5 space-y-3 sm:space-y-4',
       )}
     >
       {/* Header row */}
@@ -64,7 +64,7 @@ function CardSkeleton() {
         <div className="skeleton-shimmer h-[44px] w-[44px] rounded-full sm:h-10 sm:w-10" />
       </div>
     </div>
-  );
+  )
 }
 
 function PaginationSkeleton() {
@@ -74,7 +74,7 @@ function PaginationSkeleton() {
       <div className="skeleton-shimmer h-5 w-14 rounded-md" />
       <div className="skeleton-shimmer h-[44px] w-20 rounded-full sm:h-10 sm:w-20" />
     </div>
-  );
+  )
 }
 
 export function InvoicesSkeleton() {
@@ -91,5 +91,5 @@ export function InvoicesSkeleton() {
 
       <PaginationSkeleton />
     </div>
-  );
+  )
 }

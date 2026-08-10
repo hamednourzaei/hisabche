@@ -1,9 +1,23 @@
 // Shim: maps the next/navigation API surface onto react-router.
-import { useLocation, useNavigate, useParams as useRouterParams, useSearchParams as useRouterSearchParams } from 'react-router-dom'
+import {
+  useLocation,
+  useNavigate,
+  useParams as useRouterParams,
+  useSearchParams as useRouterSearchParams,
+} from 'react-router-dom'
+
+/**
+ * Next accepts a second options argument (`{ scroll }`). Shared screens pass it
+ * — accounting's tab switch does — so the shim must too, even though desktop
+ * has nothing to scroll: the app shell owns its own scroll containers.
+ */
+export interface NavigateOptions {
+  scroll?: boolean
+}
 
 export interface AppRouter {
-  push(href: string): void
-  replace(href: string): void
+  push(href: string, options?: NavigateOptions): void
+  replace(href: string, options?: NavigateOptions): void
   back(): void
   forward(): void
   refresh(): void

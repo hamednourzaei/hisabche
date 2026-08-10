@@ -1,119 +1,97 @@
-"use client";
+'use client'
 
-import { useCallback, useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { useTranslations } from "next-intl";
-import { useCreateCustomer, useCreateInvoice } from "@hisabche/api";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "../dialog";
-import { ProductPicker } from "../product-picker";
-import { PhoneInput } from "../phone-input";
-import { MoneyInput } from "../money-input";
-import { useSyncStore, useBackupStore } from "@hisabche/store";
-import { cn } from "@/lib/utils";
-import {
-  AlertTriangle,
-  RefreshCw,
-  User,
-  Package,
-  DollarSign,
-  Check,
-  Loader2,
-} from "lucide-react";
+import { useCallback, useMemo, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { useTranslations } from 'next-intl'
+import { useCreateCustomer, useCreateInvoice } from '@hisabche/api'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../dialog'
+import { ProductPicker } from '../product-picker'
+import { PhoneInput } from '../phone-input'
+import { MoneyInput } from '../money-input'
+import { useSyncStore, useBackupStore } from '@hisabche/store'
+import { cn } from '../../../lib/utils'
+import { AlertTriangle, RefreshCw, User, Package, DollarSign, Check, Loader2 } from 'lucide-react'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    AddCustomerModal v4 — PhoneInput International
    ═══════════════════════════════════════════════════════════════════════════ */
 
-type ProductOption = NonNullable<
-  Parameters<typeof ProductPicker>[0]["value"]
->;
+type ProductOption = NonNullable<Parameters<typeof ProductPicker>[0]['value']>
 
 const toNum = (v: string): number => {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : 0;
-};
+  const n = Number(v)
+  return Number.isFinite(n) ? n : 0
+}
 
-const fmt = (v: number): string => v.toLocaleString("fa-AF");
+const fmt = (v: number): string => v.toLocaleString('fa-AF')
 
 const customerSchema = z.object({
-  name: z.string().min(1, "customer.nameRequired"),
-  phone: z.string().optional().or(z.literal("")),
-});
+  name: z.string().min(1, 'customer.nameRequired'),
+  phone: z.string().optional().or(z.literal('')),
+})
 
-type CustomerFormValues = z.infer<typeof customerSchema>;
+type CustomerFormValues = z.infer<typeof customerSchema>
 
 interface AddCustomerModalProps {
-  open: boolean;
-  onClose: () => void;
-  onCreated?: () => void;
+  open: boolean
+  onClose: () => void
+  onCreated?: () => void
 }
 
 const inputBase =
-  "w-full rounded-xl ps-9 pe-3 py-2.5 text-sm border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))] focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)] transition-colors duration-200 motion-reduce:transition-none";
+  'w-full rounded-xl ps-9 pe-3 py-2.5 text-sm border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))] focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)] transition-colors duration-200 motion-reduce:transition-none'
 const outlineBtn =
-  "inline-flex items-center justify-center rounded-full px-4 py-2.5 text-sm font-medium border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors duration-150 motion-reduce:transition-none disabled:opacity-40 disabled:cursor-not-allowed";
+  'inline-flex items-center justify-center rounded-full px-4 py-2.5 text-sm font-medium border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors duration-150 motion-reduce:transition-none disabled:opacity-40 disabled:cursor-not-allowed'
 const primaryBtn =
-  "inline-flex items-center justify-center rounded-full px-4 py-2.5 text-sm font-bold text-white bg-[hsl(var(--color-primary))] shadow-sm shadow-[hsl(var(--color-primary)/0.15)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed motion-reduce:transition-none";
+  'inline-flex items-center justify-center rounded-full px-4 py-2.5 text-sm font-bold text-white bg-[hsl(var(--color-primary))] shadow-sm shadow-[hsl(var(--color-primary)/0.15)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed motion-reduce:transition-none'
 
-export function AddCustomerModal({
-  open,
-  onClose,
-  onCreated,
-}: AddCustomerModalProps) {
-  const t = useTranslations();
-  const createCustomer = useCreateCustomer();
-  const createInvoice = useCreateInvoice();
-  const { setSaveStatus } = useSyncStore();
-  const { addAuditEntry } = useBackupStore();
+export function AddCustomerModal({ open, onClose, onCreated }: AddCustomerModalProps) {
+  const t = useTranslations()
+  const createCustomer = useCreateCustomer()
+  const createInvoice = useCreateInvoice()
+  const { setSaveStatus } = useSyncStore()
+  const { addAuditEntry } = useBackupStore()
 
-  const [withDebt, setWithDebt] = useState(false);
-  const [product, setProduct] = useState<ProductOption | null>(null);
-  const [qty, setQty] = useState("1");
-  const [unitPrice, setUnitPrice] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [showSaved, setShowSaved] = useState(false);
-  const [phoneValue, setPhoneValue] = useState("");
+  const [withDebt, setWithDebt] = useState(false)
+  const [product, setProduct] = useState<ProductOption | null>(null)
+  const [qty, setQty] = useState('1')
+  const [unitPrice, setUnitPrice] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [showSaved, setShowSaved] = useState(false)
+  const [phoneValue, setPhoneValue] = useState('')
 
-  const total = useMemo(
-    () => toNum(unitPrice) * Math.max(1, toNum(qty)),
-    [unitPrice, qty],
-  );
+  const total = useMemo(() => toNum(unitPrice) * Math.max(1, toNum(qty)), [unitPrice, qty])
 
-  const pending = createCustomer.isPending || createInvoice.isPending;
+  const pending = createCustomer.isPending || createInvoice.isPending
 
   const form = useForm<CustomerFormValues>({
     resolver: zodResolver(customerSchema),
-    defaultValues: { name: "", phone: "" },
-  });
+    defaultValues: { name: '', phone: '' },
+  })
 
   const {
     register,
     handleSubmit,
     reset,
     formState: { errors },
-  } = form;
+  } = form
 
   const close = useCallback(() => {
-    reset();
-    setWithDebt(false);
-    setProduct(null);
-    setQty("1");
-    setUnitPrice("");
-    setError(null);
-    setPhoneValue("");
-    onClose();
-  }, [reset, onClose]);
+    reset()
+    setWithDebt(false)
+    setProduct(null)
+    setQty('1')
+    setUnitPrice('')
+    setError(null)
+    setPhoneValue('')
+    onClose()
+  }, [reset, onClose])
 
   const onSubmit = async (data: CustomerFormValues) => {
-    setError(null);
-    setSaveStatus("saving");
+    setError(null)
+    setSaveStatus('saving')
 
     try {
       const customer = await createCustomer.mutateAsync({
@@ -122,28 +100,28 @@ export function AddCustomerModal({
         phone: phoneValue || undefined,
         openingBalance: 0,
         isActive: true,
-      });
+      })
 
       addAuditEntry({
-        action: "create",
-        entity: "customer",
-        entityId: customer.id || "",
-        details: `${t("customers.newCustomerDetails")}: ${data.name}`,
-      });
+        action: 'create',
+        entity: 'customer',
+        entityId: customer.id || '',
+        details: `${t('customers.newCustomerDetails')}: ${data.name}`,
+      })
 
       if (withDebt && product && total > 0) {
         await createInvoice.mutateAsync({
-          type: "sale",
+          type: 'sale',
           date: new Date().toISOString(),
           subtotal: total,
           discountTotal: 0,
-          discountType: "fixed",
+          discountType: 'fixed',
           taxRate: 0,
           taxTotal: 0,
           total,
           paidAmount: 0,
-          paymentMethod: "credit",
-          currency: "AFN",
+          paymentMethod: 'credit',
+          currency: 'AFN',
           customerId: customer.id,
           items: [
             {
@@ -155,28 +133,28 @@ export function AddCustomerModal({
               totalPrice: total,
             },
           ],
-        });
+        })
       }
 
-      setSaveStatus("saved");
-      setShowSaved(true);
+      setSaveStatus('saved')
+      setShowSaved(true)
       setTimeout(() => {
-        setSaveStatus("idle");
-        setShowSaved(false);
-      }, 2000);
+        setSaveStatus('idle')
+        setShowSaved(false)
+      }, 2000)
 
-      onCreated?.();
-      close();
+      onCreated?.()
+      close()
     } catch {
-      setSaveStatus("error");
-      setError(t("common.saveError"));
-      setTimeout(() => setSaveStatus("idle"), 2000);
+      setSaveStatus('error')
+      setError(t('common.saveError'))
+      setTimeout(() => setSaveStatus('idle'), 2000)
     }
-  };
+  }
 
   const retrySubmit = () => {
-    handleSubmit(onSubmit)();
-  };
+    handleSubmit(onSubmit)()
+  }
 
   return (
     <Dialog open={open} onOpenChange={(isOpen) => !isOpen && close()}>
@@ -188,14 +166,12 @@ export function AddCustomerModal({
             className="absolute top-3 end-3 flex items-center gap-2 text-sm text-[hsl(var(--color-success))]"
           >
             <Check className="size-4" aria-hidden="true" />
-            <span>{t("common.saved")}</span>
+            <span>{t('common.saved')}</span>
           </div>
         )}
 
         <DialogHeader>
-          <DialogTitle>
-            {t("customers.addCustomer")}
-          </DialogTitle>
+          <DialogTitle>{t('customers.addCustomer')}</DialogTitle>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -207,15 +183,15 @@ export function AddCustomerModal({
                 aria-hidden="true"
               />
               <input
-                {...register("name")}
-                placeholder={t("customers.form.namePlaceholder")}
+                {...register('name')}
+                placeholder={t('customers.form.namePlaceholder')}
                 autoFocus
-                className={cn(inputBase, errors.name && "border-[hsl(var(--color-destructive))]")}
+                className={cn(inputBase, errors.name && 'border-[hsl(var(--color-destructive))]')}
               />
             </div>
             {errors.name && (
               <p className="mt-1 text-sm text-[hsl(var(--color-destructive))]" role="alert">
-                {t(errors.name.message || "نام الزامی است")}
+                {t(errors.name.message || 'نام الزامی است')}
               </p>
             )}
           </div>
@@ -225,7 +201,7 @@ export function AddCustomerModal({
             <PhoneInput
               value={phoneValue}
               onChange={setPhoneValue}
-              placeholder={t("customers.form.phonePlaceholder")}
+              placeholder={t('customers.form.phonePlaceholder')}
               defaultCountry="+98"
             />
           </div>
@@ -236,25 +212,21 @@ export function AddCustomerModal({
               type="button"
               onClick={() => setWithDebt(false)}
               className={cn(
-                "flex-1 rounded-full px-4 py-2.5 text-sm font-bold transition-all duration-200 motion-reduce:transition-none",
-                !withDebt
-                  ? "bg-[hsl(var(--color-primary))] text-white shadow-sm"
-                  : outlineBtn,
+                'flex-1 rounded-full px-4 py-2.5 text-sm font-bold transition-all duration-200 motion-reduce:transition-none',
+                !withDebt ? 'bg-[hsl(var(--color-primary))] text-white shadow-sm' : outlineBtn,
               )}
             >
-              {t("customers.form.newCustomer")}
+              {t('customers.form.newCustomer')}
             </button>
             <button
               type="button"
               onClick={() => setWithDebt(true)}
               className={cn(
-                "flex-1 rounded-full px-4 py-2.5 text-sm font-bold transition-all duration-200 motion-reduce:transition-none",
-                withDebt
-                  ? "bg-[hsl(var(--color-destructive))] text-white shadow-sm"
-                  : outlineBtn,
+                'flex-1 rounded-full px-4 py-2.5 text-sm font-bold transition-all duration-200 motion-reduce:transition-none',
+                withDebt ? 'bg-[hsl(var(--color-destructive))] text-white shadow-sm' : outlineBtn,
               )}
             >
-              {t("customers.form.hasDebt")}
+              {t('customers.form.hasDebt')}
             </button>
           </div>
 
@@ -264,7 +236,7 @@ export function AddCustomerModal({
               <ProductPicker
                 value={product}
                 onChange={setProduct}
-                placeholder={t("customers.form.whichProduct")}
+                placeholder={t('customers.form.whichProduct')}
               />
 
               <div className="grid grid-cols-2 gap-2">
@@ -276,8 +248,8 @@ export function AddCustomerModal({
                   <MoneyInput
                     value={unitPrice}
                     onChange={(raw) => setUnitPrice(raw)}
-                    placeholder={t("customers.form.unitPrice")}
-                    className={cn(inputBase, "h-auto")}
+                    placeholder={t('customers.form.unitPrice')}
+                    className={cn(inputBase, 'h-auto')}
                   />
                 </div>
                 <div className="relative">
@@ -289,7 +261,7 @@ export function AddCustomerModal({
                     type="number"
                     value={qty}
                     onChange={(e) => setQty(e.target.value)}
-                    placeholder={t("customers.form.qty")}
+                    placeholder={t('customers.form.qty')}
                     className={inputBase}
                   />
                 </div>
@@ -297,7 +269,7 @@ export function AddCustomerModal({
 
               {total > 0 && (
                 <p className="text-center text-lg font-bold tabular-nums text-[hsl(var(--color-primary))]">
-                  {t("customers.form.total")}: {fmt(total)} AFN
+                  {t('customers.form.total')}: {fmt(total)} AFN
                 </p>
               )}
             </div>
@@ -323,26 +295,16 @@ export function AddCustomerModal({
 
           {/* Actions */}
           <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={close}
-              className={cn(outlineBtn, "w-full")}
-            >
-              {t("common.cancel")}
+            <button type="button" onClick={close} className={cn(outlineBtn, 'w-full')}>
+              {t('common.cancel')}
             </button>
-            <button
-              type="submit"
-              disabled={pending}
-              className={cn(primaryBtn, "w-full")}
-            >
-              {pending && (
-                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-              )}
-              {t("common.save")}
+            <button type="submit" disabled={pending} className={cn(primaryBtn, 'w-full')}>
+              {pending && <Loader2 className="size-4 animate-spin" aria-hidden="true" />}
+              {t('common.save')}
             </button>
           </div>
         </form>
       </DialogContent>
     </Dialog>
-  );
+  )
 }

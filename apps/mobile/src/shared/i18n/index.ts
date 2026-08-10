@@ -2,7 +2,17 @@
 // Mobile i18n bootstrap
 //
 // Reuses the shared i18next instance (@hisabche/i18n) and its locale
-// files, then layers the mobile-only `mobile` namespace on top.
+// files, then layers two more namespaces on top:
+//
+//   `mobile` — mobile-only copy
+//   `common` — the *same* catalogs web and desktop render through next-intl
+//
+// `common` is what makes navigation copy portable: the shared navigation
+// contract names keys like `nav.today`, and registering the catalogs here means
+// mobile resolves them from the same file web does instead of keeping a second
+// spelling of every destination. It is registered on mobile rather than inside
+// `@hisabche/i18n` so web does not ship the catalogs twice.
+//
 // The shared `changeLanguage()` helper touches `document`, which does not
 // exist on device — so language switching is handled here instead.
 // ============================================
@@ -11,13 +21,18 @@ import { I18nManager } from 'react-native'
 import { getLocales } from 'expo-localization'
 import { readStorage, writeStorage, STORAGE_KEYS } from '@hisabche/api'
 import i18n, { supportedLanguages, type SupportedLanguage } from '@hisabche/i18n'
+import { getMessages } from '@hisabche/i18n/messages'
 
 import { mobileStrings } from './mobile-strings'
 
 const NAMESPACE = 'mobile'
 
+/** Navigation and other copy shared verbatim with web/desktop. */
+export const COMMON_NAMESPACE = 'common'
+
 supportedLanguages.forEach(({ code }) => {
   i18n.addResourceBundle(code, NAMESPACE, mobileStrings[code], true, true)
+  i18n.addResourceBundle(code, COMMON_NAMESPACE, getMessages(code), true, true)
 })
 
 export function directionOf(lang: SupportedLanguage): 'rtl' | 'ltr' {

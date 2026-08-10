@@ -1,7 +1,13 @@
-"use client";
+'use client'
 
-import { useTranslations } from "next-intl";
-import { useSubscription, useTrialStatus, useUsage, useUpgrade, useCancelSubscription } from '@hisabche/api'
+import { useTranslations } from 'next-intl'
+import {
+  useSubscription,
+  useTrialStatus,
+  useUsage,
+  useUpgrade,
+  useCancelSubscription,
+} from '@hisabche/api'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../card'
 import { Button } from '../../button'
 import { Badge } from '../../badge'
@@ -9,7 +15,8 @@ import { Progress } from '../../progress'
 import { Loader2, Check, X } from 'lucide-react'
 
 export function BillingContainer() {
-  const t = useTranslations();const { data: subscription, isLoading: subLoading } = useSubscription()
+  const t = useTranslations()
+  const { data: subscription, isLoading: subLoading } = useSubscription()
   const { data: trialStatus, isLoading: trialLoading } = useTrialStatus()
   const { data: usage, isLoading: usageLoading } = useUsage()
   const upgrade = useUpgrade()
@@ -27,8 +34,12 @@ export function BillingContainer() {
 
   if (!subscription) return null
 
-  const planName = subscription.plan === 'free' ? t('billing.plans.free') :
-                    subscription.plan === 'pro' ? t('billing.plans.pro') : t('billing.plans.enterprise')
+  const planName =
+    subscription.plan === 'free'
+      ? t('billing.plans.free.name')
+      : subscription.plan === 'pro'
+        ? t('billing.plans.pro.name')
+        : t('billing.plans.enterprise.name')
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto p-6">
@@ -49,7 +60,10 @@ export function BillingContainer() {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <Badge variant={subscription.isTrial ? 'warning' : 'default'} className="text-lg px-4 py-1">
+              <Badge
+                variant={subscription.isTrial ? 'warning' : 'default'}
+                className="text-lg px-4 py-1"
+              >
                 {subscription.isTrial ? `⭐ ${t('billing.trial')}` : planName}
               </Badge>
               {subscription.isTrial && trialStatus && (
@@ -96,16 +110,30 @@ export function BillingContainer() {
               <div>
                 <div className="flex justify-between text-sm">
                   <span>{t('billing.usage.invoices')}</span>
-                  <span>{usage.usage.invoices} / {usage.limits.invoices ?? '∞'}</span>
+                  <span>
+                    {usage.usage.invoices} / {usage.limits.invoices ?? '∞'}
+                  </span>
                 </div>
-                <Progress value={usage.limits.invoices ? (usage.usage.invoices / usage.limits.invoices) * 100 : 100} className="h-2" />
+                <Progress
+                  value={
+                    usage.limits.invoices
+                      ? (usage.usage.invoices / usage.limits.invoices) * 100
+                      : 100
+                  }
+                  className="h-2"
+                />
               </div>
               <div>
                 <div className="flex justify-between text-sm">
                   <span>{t('billing.usage.users')}</span>
-                  <span>{usage.usage.users} / {usage.limits.users ?? '∞'}</span>
+                  <span>
+                    {usage.usage.users} / {usage.limits.users ?? '∞'}
+                  </span>
                 </div>
-                <Progress value={usage.limits.users ? (usage.usage.users / usage.limits.users) * 100 : 100} className="h-2" />
+                <Progress
+                  value={usage.limits.users ? (usage.usage.users / usage.limits.users) * 100 : 100}
+                  className="h-2"
+                />
               </div>
             </div>
           </CardContent>

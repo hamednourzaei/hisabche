@@ -1,41 +1,52 @@
 // packages/ui/src/components/ui/warehouse/warehouse-product-list.tsx
-"use client";
+'use client'
 
-import { memo, useMemo, type ReactNode } from "react";
-import { cn } from "@/lib/utils";
-import { Pencil } from "lucide-react";
-import { DataTable, type TableColumn } from "../data-table";
-import type { Product } from "../../../lib/warehouse/warehouse-types";
+import { memo, useCallback, useEffect, useMemo, type ReactNode } from 'react'
+import { cn } from '../../../lib/utils'
+import { Pencil, Trash2 } from 'lucide-react'
+import {
+  BulkActionBar,
+  DataTable,
+  useBulkAction,
+  useRowSelection,
+  type TableColumn,
+} from '../data-table'
+import type { Product } from '../../../lib/warehouse/warehouse-types'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    WarehouseProductList v7 — shared DataTable
    collapsible search · column settings · sortable headers · responsive columns
    ═══════════════════════════════════════════════════════════════════════════ */
 
-type StockStatus = "success" | "warning" | "destructive" | "secondary";
+type StockStatus = 'success' | 'warning' | 'destructive' | 'secondary'
 
 interface WarehouseProductListProps {
-  t: (key: string, fallback?: string) => string;
-  fmt: (v: number) => string;
-  products: Product[];
-  stockStatus: (qty: number, min: number) => StockStatus;
-  stockLabel: (qty: number, min: number) => string;
-  onNavigate: (id: string) => void;
-  onDelete: (product: Product) => void;
-  deletingId: string | null;
-  search: string;
-  onSearchChange: (value: string) => void;
+  t: (key: string, fallback?: string) => string
+  fmt: (v: number) => string
+  products: Product[]
+  stockStatus: (qty: number, min: number) => StockStatus
+  stockLabel: (qty: number, min: number) => string
+  onNavigate: (id: string) => void
+  /** Awaited by bulk delete so partial failures are reported accurately. */
+  onDelete: (product: Product) => void | Promise<void>
+  deletingId: string | null
+  search: string
+  onSearchChange: (value: string) => void
   /** Export controls, rendered beside the search and column icons. */
-  actions?: ReactNode;
-  emptyState?: ReactNode;
+  actions?: ReactNode
+  emptyState?: ReactNode
 }
 
 const statusBadgeStyles: Record<string, string> = {
-  success: "bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))] border-[hsl(var(--color-success)/0.2)]",
-  warning: "bg-[hsl(var(--color-warning)/0.12)] text-[hsl(var(--color-warning))] border-[hsl(var(--color-warning)/0.2)]",
-  destructive: "bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))] border-[hsl(var(--color-destructive)/0.2)]",
-  secondary: "bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))] border-[hsl(var(--border-default))]",
-};
+  success:
+    'bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))] border-[hsl(var(--color-success)/0.2)]',
+  warning:
+    'bg-[hsl(var(--color-warning)/0.12)] text-[hsl(var(--color-warning))] border-[hsl(var(--color-warning)/0.2)]',
+  destructive:
+    'bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))] border-[hsl(var(--color-destructive)/0.2)]',
+  secondary:
+    'bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))] border-[hsl(var(--border-default))]',
+}
 
 function useProductColumns(
   t: (key: string, fallback?: string) => string,
@@ -46,9 +57,9 @@ function useProductColumns(
   return useMemo(
     () => [
       {
-        id: "name",
-        labelKey: "warehouse.name",
-        labelFallback: "نام",
+        id: 'name',
+        labelKey: 'warehouse.name',
+        labelFallback: 'نام',
         locked: true,
         sortValue: (product) => product.name,
         render: (product) => (
@@ -56,44 +67,50 @@ function useProductColumns(
         ),
       },
       {
-        id: "unit",
-        labelKey: "warehouse.unit",
-        labelFallback: "واحد",
-        showFrom: "md",
+        id: 'unit',
+        labelKey: 'warehouse.unit',
+        labelFallback: 'واحد',
+        showFrom: 'md',
         sortValue: (product) => product.unit,
-        render: (product) => <span className="text-[hsl(var(--fg-secondary))]">{product.unit}</span>,
+        render: (product) => (
+          <span className="text-[hsl(var(--fg-secondary))]">{product.unit}</span>
+        ),
       },
       {
-        id: "buyPrice",
-        labelKey: "warehouse.buyPrice",
-        labelFallback: "قیمت خرید",
-        showFrom: "sm",
-        align: "end",
+        id: 'buyPrice',
+        labelKey: 'warehouse.buyPrice',
+        labelFallback: 'قیمت خرید',
+        showFrom: 'sm',
+        align: 'end',
         sortValue: (product) => product.buyPrice,
         render: (product) => (
-          <span className="tabular-nums text-[hsl(var(--fg-secondary))]">{fmt(product.buyPrice)}</span>
+          <span className="tabular-nums text-[hsl(var(--fg-secondary))]">
+            {fmt(product.buyPrice)}
+          </span>
         ),
       },
       {
-        id: "sellPrice",
-        labelKey: "warehouse.sellPrice",
-        labelFallback: "قیمت فروش",
-        align: "end",
+        id: 'sellPrice',
+        labelKey: 'warehouse.sellPrice',
+        labelFallback: 'قیمت فروش',
+        align: 'end',
         sortValue: (product) => product.sellPrice,
         render: (product) => (
-          <span className="tabular-nums text-[hsl(var(--fg-primary))]">{fmt(product.sellPrice)}</span>
+          <span className="tabular-nums text-[hsl(var(--fg-primary))]">
+            {fmt(product.sellPrice)}
+          </span>
         ),
       },
       {
-        id: "quantity",
-        labelKey: "warehouse.quantity",
-        labelFallback: "تعداد",
-        align: "end",
+        id: 'quantity',
+        labelKey: 'warehouse.quantity',
+        labelFallback: 'تعداد',
+        align: 'end',
         sortValue: (product) => product.quantity,
         render: (product) => (
           <span
             className={cn(
-              "inline-flex items-center whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-semibold tabular-nums",
+              'inline-flex items-center whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-semibold tabular-nums',
               statusBadgeStyles[stockStatus(product.quantity, product.minStockLevel)] ??
                 statusBadgeStyles.secondary,
             )}
@@ -103,21 +120,21 @@ function useProductColumns(
         ),
       },
       {
-        id: "category",
-        labelKey: "warehouse.category",
-        labelFallback: "دسته‌بندی",
-        showFrom: "md",
-        sortValue: (product) => product.category ?? "",
+        id: 'category',
+        labelKey: 'warehouse.category',
+        labelFallback: 'دسته‌بندی',
+        showFrom: 'md',
+        sortValue: (product) => product.category ?? '',
         render: (product) => (
-          <span className="text-[hsl(var(--fg-secondary))]">{product.category || "—"}</span>
+          <span className="text-[hsl(var(--fg-secondary))]">{product.category || '—'}</span>
         ),
       },
       {
-        id: "itemValue",
-        labelKey: "warehouse.itemValue",
-        labelFallback: "ارزش",
-        showFrom: "sm",
-        align: "end",
+        id: 'itemValue',
+        labelKey: 'warehouse.itemValue',
+        labelFallback: 'ارزش',
+        showFrom: 'sm',
+        align: 'end',
         sortValue: (product) => product.quantity * product.buyPrice,
         render: (product) => (
           <span className="font-semibold tabular-nums text-[hsl(var(--fg-primary))]">
@@ -126,19 +143,19 @@ function useProductColumns(
         ),
       },
       {
-        id: "actions",
-        labelKey: "invoices.actions",
-        labelFallback: "عملیات",
+        id: 'actions',
+        labelKey: 'invoices.actions',
+        labelFallback: 'عملیات',
         locked: true,
-        align: "end",
+        align: 'end',
         render: (product) => (
           <button
             type="button"
             onClick={(event) => {
-              event.stopPropagation();
-              onNavigate(product.id);
+              event.stopPropagation()
+              onNavigate(product.id)
             }}
-            aria-label={t("action.edit", "ویرایش")}
+            aria-label={t('action.edit', 'ویرایش')}
             className="inline-flex min-h-[36px] min-w-[36px] items-center justify-center rounded-full text-[hsl(var(--fg-secondary))] transition-colors duration-150 hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]"
           >
             <Pencil className="size-4" aria-hidden="true" />
@@ -147,7 +164,7 @@ function useProductColumns(
       },
     ],
     [fmt, onNavigate, stockStatus, t],
-  );
+  )
 }
 
 export const WarehouseProductList = memo(function WarehouseProductList({
@@ -156,12 +173,42 @@ export const WarehouseProductList = memo(function WarehouseProductList({
   products,
   stockStatus,
   onNavigate,
+  onDelete,
   search,
   onSearchChange,
   actions,
   emptyState,
 }: WarehouseProductListProps) {
-  const columns = useProductColumns(t, fmt, stockStatus, onNavigate);
+  const columns = useProductColumns(t, fmt, stockStatus, onNavigate)
+
+  // Bulk delete reuses the same per-product delete the row menu calls, so the
+  // stock and authorization side effects are identical to deleting one by one.
+  const selection = useRowSelection()
+  const byId = useMemo(() => new Map(products.map((product) => [product.id, product])), [products])
+
+  const bulkDelete = useBulkAction(
+    useCallback(
+      async (id: string) => {
+        const product = byId.get(id)
+        // The row disappeared between selection and confirmation — treat it as
+        // a failure rather than silently counting it as deleted.
+        if (!product) throw new Error(`product ${id} is no longer listed`)
+        await onDelete(product)
+      },
+      [byId, onDelete],
+    ),
+  )
+
+  const productIds = useMemo(() => products.map((p) => p.id), [products])
+
+  useEffect(() => {
+    selection.prune(productIds)
+  }, [productIds, selection])
+
+  const handleBulkDelete = useCallback(async () => {
+    await bulkDelete.run([...selection.selectedIds])
+    selection.clear()
+  }, [bulkDelete, selection])
 
   return (
     <DataTable
@@ -176,8 +223,30 @@ export const WarehouseProductList = memo(function WarehouseProductList({
       minWidthClass="min-w-[420px] sm:min-w-[680px]"
       actions={actions}
       emptyState={emptyState}
+      selectedIds={selection.selectedIds}
+      onToggleRow={selection.toggleRow}
+      onToggleAll={selection.toggleAll}
+      bulkBar={
+        <BulkActionBar
+          t={t}
+          selectedCount={selection.selectedCount}
+          busy={bulkDelete.busy}
+          result={bulkDelete.result}
+          onClear={selection.clear}
+          actions={[
+            {
+              id: 'delete',
+              label: t('common.delete', 'حذف'),
+              icon: <Trash2 className="size-3.5" aria-hidden="true" />,
+              destructive: true,
+              confirmLabel: t('warehouse.bulkDeleteConfirm', 'کالاهای انتخاب‌شده حذف شوند؟'),
+              onRun: handleBulkDelete,
+            },
+          ]}
+        />
+      }
     />
-  );
-});
+  )
+})
 
-WarehouseProductList.displayName = "WarehouseProductList";
+WarehouseProductList.displayName = 'WarehouseProductList'

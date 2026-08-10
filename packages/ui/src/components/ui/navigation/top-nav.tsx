@@ -1,11 +1,11 @@
-"use client";
+'use client'
 
-import { useEffect, useRef, useState, useCallback, memo } from "react";
-import { useTranslations } from "next-intl";
-import { usePathname } from "next/navigation";
-import { useNavigation } from "../../../hooks/menu/use-navigation-state";
-import { useAuthStore } from "@hisabche/store";
-import { cn } from "@/lib/utils";
+import { useEffect, useRef, useState, useCallback, memo } from 'react'
+import { useTranslations } from 'next-intl'
+import { usePathname } from 'next/navigation'
+import { useNavigation } from '../../../hooks/menu/use-navigation-state'
+import { useAuthStore } from '@hisabche/store'
+import { cn } from '../../../lib/utils'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    TopNav v4 — Memoized · Performance Optimized
@@ -13,16 +13,16 @@ import { cn } from "@/lib/utils";
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface TopNavProps {
-  variant?: "landing" | "dashboard";
-  onNavigateLogin?: () => void;
-  onNavigateCta?: () => void;
-  onLogout?: () => void;
-  businessName?: string;
+  variant?: 'landing' | 'dashboard'
+  onNavigateLogin?: () => void
+  onNavigateCta?: () => void
+  onLogout?: () => void
+  businessName?: string
 }
 
 function getLocaleFromPathname(pathname: string): string {
-  const match = pathname.match(/^\/(fa-IR|fa-AF|en)/);
-  return match?.[1] ?? "fa-IR";
+  const match = pathname.match(/^\/(fa-IR|fa-AF|en)/)
+  return match?.[1] ?? 'fa-IR'
 }
 
 // ─── NavItem Component ─────────────────────────────────────────────────────
@@ -33,12 +33,12 @@ const NavItem = memo(function NavItem({
   isActive,
   onClick,
 }: {
-  id: string;
-  label: string;
-  isActive: boolean;
-  onClick: (id: string) => void;
+  id: string
+  label: string
+  isActive: boolean
+  onClick: (id: string) => void
 }) {
-  const handleClick = useCallback(() => onClick(id), [id, onClick]);
+  const handleClick = useCallback(() => onClick(id), [id, onClick])
 
   return (
     <li className="shrink-0">
@@ -46,108 +46,105 @@ const NavItem = memo(function NavItem({
         type="button"
         data-section-id={id}
         className={cn(
-          "relative z-10 px-2 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-colors",
+          'relative z-10 px-2 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-colors',
           isActive
-            ? "text-[hsl(var(--fg-primary))] font-semibold"
-            : "text-[hsl(var(--fg-primary)/0.55)] hover:text-[hsl(var(--fg-primary)/0.85)]"
+            ? 'text-[hsl(var(--fg-primary))] font-semibold'
+            : 'text-[hsl(var(--fg-primary)/0.55)] hover:text-[hsl(var(--fg-primary)/0.85)]',
         )}
         onClick={handleClick}
       >
         {label}
       </button>
     </li>
-  );
-});
-NavItem.displayName = "NavItem";
+  )
+})
+NavItem.displayName = 'NavItem'
 
 // ─── Main Component ─────────────────────────────────────────────────────────
 
 export const TopNav = memo(function TopNav({
-  variant = "landing",
+  variant = 'landing',
   onNavigateLogin,
   onNavigateCta,
   onLogout,
   businessName,
 }: TopNavProps) {
-  const tOriginal = useTranslations();
+  const tOriginal = useTranslations()
   const t = (key: string, fallback?: string): string => {
-    const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
-    return v && v !== key ? v : (fallback ?? key);
-  };
-  const pathname = usePathname();
-  const { sections, setSection, activeSection, scrollProgress, narrativeState } = useNavigation();
-  const user = useAuthStore((s) => s.user);
-  const navListRef = useRef<HTMLUListElement>(null);
-  const [indicatorStyle, setIndicatorStyle] = useState({ width: 0, offset: 0 });
+    const v = tOriginal(key as Parameters<typeof tOriginal>[0])
+    return v && v !== key ? v : (fallback ?? key)
+  }
+  const pathname = usePathname()
+  const { sections, setSection, activeSection, scrollProgress, narrativeState } = useNavigation()
+  const user = useAuthStore((s) => s.user)
+  const navListRef = useRef<HTMLUListElement>(null)
+  const [indicatorStyle, setIndicatorStyle] = useState({ width: 0, offset: 0 })
 
-  const locale = getLocaleFromPathname(pathname);
-  const isRTL = locale === "fa-IR" || locale === "fa-AF";
+  const locale = getLocaleFromPathname(pathname)
+  const isRTL = locale === 'fa-IR' || locale === 'fa-AF'
 
-  const displayName = businessName || user?.businessName || user?.fullName || t("app.name");
+  const displayName = businessName || user?.businessName || user?.fullName || t('app.name')
 
   useEffect(() => {
-    if (typeof document !== "undefined") {
-      document.body.setAttribute("data-narrative-state", narrativeState);
+    if (typeof document !== 'undefined') {
+      document.body.setAttribute('data-narrative-state', narrativeState)
     }
-  }, [narrativeState]);
+  }, [narrativeState])
 
   const updateIndicator = useCallback(() => {
-    if (!navListRef.current) return;
+    if (!navListRef.current) return
     const activeBtn = navListRef.current.querySelector(
-      `[data-section-id="${activeSection}"]`
-    ) as HTMLElement;
-    if (!activeBtn) return;
+      `[data-section-id="${activeSection}"]`,
+    ) as HTMLElement
+    if (!activeBtn) return
 
-    const listRect = navListRef.current.getBoundingClientRect();
-    const btnRect = activeBtn.getBoundingClientRect();
+    const listRect = navListRef.current.getBoundingClientRect()
+    const btnRect = activeBtn.getBoundingClientRect()
 
     setIndicatorStyle({
       width: btnRect.width,
       offset: btnRect.left - listRect.left,
-    });
-  }, [activeSection]);
+    })
+  }, [activeSection])
 
   useEffect(() => {
-    updateIndicator();
-    window.addEventListener("resize", updateIndicator);
-    return () => window.removeEventListener("resize", updateIndicator);
-  }, [updateIndicator]);
+    updateIndicator()
+    window.addEventListener('resize', updateIndicator)
+    return () => window.removeEventListener('resize', updateIndicator)
+  }, [updateIndicator])
 
-  const handleSetSection = useCallback(
-    (id: string) => setSection(id),
-    [setSection]
-  );
+  const handleSetSection = useCallback((id: string) => setSection(id), [setSection])
 
-  const firstSectionId = sections[0]?.id || "";
+  const firstSectionId = sections[0]?.id || ''
 
   const handleLogoClick = useCallback(() => {
-    handleSetSection(firstSectionId);
-  }, [handleSetSection, firstSectionId]);
+    handleSetSection(firstSectionId)
+  }, [handleSetSection, firstSectionId])
 
-  const ctaText = t("landing.cta", locale === "en" ? "Start Free" : "شروع رایگان");
-  const signOutText = t("auth.signOut", locale === "en" ? "Sign Out" : "خروج");
+  const ctaText = t('landing.cta', locale === 'en' ? 'Start Free' : 'شروع رایگان')
+  const signOutText = t('auth.signOut', locale === 'en' ? 'Sign Out' : 'خروج')
 
   return (
     <header
       className={cn(
-        "sticky top-0 z-[var(--z-sticky)] w-full",
-        "bg-[hsl(var(--surface-base)/0.6)] backdrop-blur-md",
-        "border-b border-transparent",
-        "transition-all duration-300",
-        "lg:top-4 lg:w-[90%] lg:mx-auto lg:rounded-full lg:py-0.5",
-        "lg:bg-[hsl(var(--surface-base)/0.7)] lg:backdrop-blur-xl",
-        "lg:border-[hsl(var(--border-default))]",
-        "max-lg:py-3 max-lg:bg-[hsl(var(--surface-base))] max-lg:backdrop-blur-none",
-        "max-lg:border-b max-lg:border-[hsl(var(--border-default))]"
+        'sticky top-0 z-[var(--z-sticky)] w-full',
+        'bg-[hsl(var(--surface-base)/0.6)] backdrop-blur-md',
+        'border-b border-transparent',
+        'transition-all duration-300',
+        'lg:top-4 lg:w-[90%] lg:mx-auto lg:rounded-full lg:py-0.5',
+        'lg:bg-[hsl(var(--surface-base)/0.7)] lg:backdrop-blur-xl',
+        'lg:border-[hsl(var(--border-default))]',
+        'max-lg:py-3 max-lg:bg-[hsl(var(--surface-base))] max-lg:backdrop-blur-none',
+        'max-lg:border-b max-lg:border-[hsl(var(--border-default))]',
       )}
-      dir={isRTL ? "rtl" : "ltr"}
+      dir={isRTL ? 'rtl' : 'ltr'}
     >
       <div
         className={cn(
-          "mx-auto flex items-center justify-between",
-          "h-14 px-4",
-          "lg:h-[52px] lg:px-0 lg:w-[90%]",
-          "max-lg:h-14"
+          'mx-auto flex items-center justify-between',
+          'h-14 px-4',
+          'lg:h-[52px] lg:px-0 lg:w-[90%]',
+          'max-lg:h-14',
         )}
       >
         {/* Logo */}
@@ -188,19 +185,19 @@ export const TopNav = memo(function TopNav({
         </nav>
 
         {/* CTA button — Desktop (Landing) */}
-        {variant === "landing" && (
+        {variant === 'landing' && (
           <button
             type="button"
             className="hidden lg:inline-flex items-center gap-1 rounded-full px-5 py-2 text-sm font-bold text-white bg-[var(--gradient-brand)] hover:brightness-110 transition-all shrink-0"
             onClick={onNavigateCta ?? onNavigateLogin}
           >
             <span className="cta-text">{ctaText}</span>
-            <span>{isRTL ? "←" : "→"}</span>
+            <span>{isRTL ? '←' : '→'}</span>
           </button>
         )}
 
         {/* Logout button — Desktop (Dashboard) */}
-        {variant === "dashboard" && (
+        {variant === 'dashboard' && (
           <button
             type="button"
             onClick={onLogout}
@@ -219,7 +216,7 @@ export const TopNav = memo(function TopNav({
         />
       </div>
     </header>
-  );
-});
+  )
+})
 
-TopNav.displayName = "TopNav";
+TopNav.displayName = 'TopNav'

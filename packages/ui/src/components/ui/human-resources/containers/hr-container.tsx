@@ -1,8 +1,8 @@
 // packages/ui/src/components/ui/human-resources/containers/hr-container.tsx
-"use client";
+'use client'
 
-import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useRouter } from 'next/navigation'
+import { useTranslations } from 'next-intl'
 import {
   useEmployees,
   useCreateEmployee,
@@ -10,55 +10,55 @@ import {
   usePayrollSummary,
   useCreateMemberDirect,
   useWorkspaces,
-} from "@hisabche/api";
-import { HumanResourcesView } from "../hr-view";
-import { WorkspaceContainer } from "../../workspace/containers/workspace-container";
-import { useState } from "react";
-import { Users, Building2 } from "lucide-react";
-import { cn } from "@/lib/utils";
+} from '@hisabche/api'
+import { HumanResourcesView } from '../hr-view'
+import { WorkspaceContainer } from '../../workspace/containers/workspace-container'
+import { useState } from 'react'
+import { Users, Building2 } from 'lucide-react'
+import { cn } from '../../../../lib/utils'
 
 export function HumanResourcesContainer() {
-  const t = useTranslations();
-  const router = useRouter();
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
-  const [tab, setTab] = useState<"employees" | "team">("employees");
+  const t = useTranslations()
+  const router = useRouter()
+  const [page, setPage] = useState(1)
+  const [search, setSearch] = useState('')
+  const [tab, setTab] = useState<'employees' | 'team'>('employees')
 
-  const { data, isLoading } = useEmployees({ page, limit: 20 });
-  const { data: payrollSummary } = usePayrollSummary();
-  const { data: workspaces } = useWorkspaces();
-  const createEmployee = useCreateEmployee();
-  const deleteEmployee = useDeleteEmployee();
-  const createMemberDirect = useCreateMemberDirect();
+  const { data, isLoading } = useEmployees({ page, limit: 20 })
+  const { data: payrollSummary } = usePayrollSummary()
+  const { data: workspaces } = useWorkspaces()
+  const createEmployee = useCreateEmployee()
+  const deleteEmployee = useDeleteEmployee()
+  const createMemberDirect = useCreateMemberDirect()
 
-  const workspaceId = workspaces?.[0]?.id as string | undefined;
+  const workspaceId = workspaces?.[0]?.id as string | undefined
 
   // Wrapper برای سازگاری با exactOptionalPropertyTypes
   const safeT = (key: string, fallback?: string) => {
-    const result = t(key);
-    return result !== key ? result : (fallback ?? key);
-  };
+    const result = t(key)
+    return result !== key ? result : (fallback ?? key)
+  }
 
   const handleCreate = async (
     values: Record<string, unknown>,
-    access?: { email: string; password: string; role: "admin" | "member" }
+    access?: { email: string; password: string; role: 'admin' | 'member' },
   ) => {
-    await createEmployee.mutateAsync(values);
+    await createEmployee.mutateAsync(values)
 
     if (access && workspaceId) {
       await createMemberDirect.mutateAsync({
         workspaceId,
         email: access.email,
         password: access.password,
-        fullName: `${values.firstName ?? ""} ${values.lastName ?? ""}`.trim(),
+        fullName: `${values.firstName ?? ''} ${values.lastName ?? ''}`.trim(),
         role: access.role,
-      });
+      })
     }
-  };
+  }
 
   const handleDelete = async (id: string) => {
-    await deleteEmployee.mutateAsync(id);
-  };
+    await deleteEmployee.mutateAsync(id)
+  }
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -66,33 +66,33 @@ export function HumanResourcesContainer() {
       <div className="flex items-center gap-1 rounded-full border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-1 w-fit">
         <button
           type="button"
-          onClick={() => setTab("employees")}
+          onClick={() => setTab('employees')}
           className={cn(
-            "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors",
-            tab === "employees"
-              ? "bg-[hsl(var(--color-primary))] text-[hsl(var(--color-primary-fg))]"
-              : "text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]"
+            'inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors',
+            tab === 'employees'
+              ? 'bg-[hsl(var(--color-primary))] text-[hsl(var(--color-primary-fg))]'
+              : 'text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]',
           )}
         >
           <Users className="size-4" />
-          {safeT("nav.team", "تیم و حقوق")}
+          {safeT('nav.team', 'تیم و حقوق')}
         </button>
         <button
           type="button"
-          onClick={() => setTab("team")}
+          onClick={() => setTab('team')}
           className={cn(
-            "inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors",
-            tab === "team"
-              ? "bg-[hsl(var(--color-primary))] text-[hsl(var(--color-primary-fg))]"
-              : "text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]"
+            'inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors',
+            tab === 'team'
+              ? 'bg-[hsl(var(--color-primary))] text-[hsl(var(--color-primary-fg))]'
+              : 'text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]',
           )}
         >
           <Building2 className="size-4" />
-          {safeT("nav.coworkers", "فضای کاری")}
+          {safeT('nav.coworkers', 'فضای کاری')}
         </button>
       </div>
 
-      {tab === "employees" ? (
+      {tab === 'employees' ? (
         <HumanResourcesView
           t={safeT}
           employees={data?.employees ?? []}
@@ -111,5 +111,5 @@ export function HumanResourcesContainer() {
         <WorkspaceContainer />
       )}
     </div>
-  );
+  )
 }

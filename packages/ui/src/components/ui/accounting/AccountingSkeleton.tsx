@@ -1,12 +1,12 @@
 // packages/ui/src/components/ui/accounting/AccountingSkeleton.tsx
-"use client";
+'use client'
 
-import { memo } from "react";
-import { cn } from "@/lib/utils";
+import { memo } from 'react'
+import { cn } from '../../../lib/utils'
 
 interface AccountingSkeletonProps {
-  rows?: number;
-  className?: string;
+  rows?: number
+  className?: string
 }
 
 export const AccountingSkeleton = memo(function AccountingSkeleton({
@@ -14,7 +14,11 @@ export const AccountingSkeleton = memo(function AccountingSkeleton({
   className,
 }: AccountingSkeletonProps) {
   return (
-    <div className={cn("space-y-1.5 md:space-y-2 p-2 md:p-3", className)} role="status" aria-label="در حال بارگذاری">
+    <div
+      className={cn('space-y-1.5 md:space-y-2 p-2 md:p-3', className)}
+      role="status"
+      aria-label="در حال بارگذاری"
+    >
       {Array.from({ length: rows }).map((_, i) => (
         <div
           key={i}
@@ -23,5 +27,5 @@ export const AccountingSkeleton = memo(function AccountingSkeleton({
         />
       ))}
     </div>
-  );
-});
+  )
+})

@@ -45,6 +45,7 @@ interface MobileBundle {
     | 'currency'
     | 'seeAll'
     | 'share'
+    | 'selectedCount'
     | 'unit',
     string
   >
@@ -161,6 +162,40 @@ interface MobileBundle {
     'title' | 'language' | 'account' | 'accounting' | 'employees' | 'sync' | 'security',
     string
   >
+  /**
+   * Unit labels, keyed by the `unitSchema` enum in `@hisabche/validation`.
+   * Mirrors the shared catalog's `unit.*` so a gram reads the same on every
+   * platform. `custom` is the escape hatch — the user's own label lives in the
+   * item's `unitLabel`, so this entry is only a placeholder in pickers.
+   */
+  units: Record<
+    'piece' | 'gram' | 'kg' | 'meter' | 'liter' | 'box' | 'pack' | 'carton' | 'custom',
+    string
+  >
+}
+
+const UNITS_FA: MobileBundle['units'] = {
+  piece: 'عدد',
+  gram: 'گرم',
+  kg: 'کیلوگرم',
+  meter: 'متر',
+  liter: 'لیتر',
+  box: 'جعبه',
+  pack: 'بسته',
+  carton: 'کارتن',
+  custom: 'دلخواه',
+}
+
+const UNITS_EN: MobileBundle['units'] = {
+  piece: 'pcs',
+  gram: 'g',
+  kg: 'kg',
+  meter: 'm',
+  liter: 'L',
+  box: 'box',
+  pack: 'pack',
+  carton: 'carton',
+  custom: 'Custom',
 }
 
 const faIR: MobileBundle = {
@@ -203,6 +238,7 @@ const faIR: MobileBundle = {
     currency: 'افغانی',
     seeAll: 'مشاهده همه',
     share: 'اشتراک‌گذاری',
+    selectedCount: '{{count}} مورد انتخاب شد',
     unit: 'عدد',
   },
   home: {
@@ -323,6 +359,7 @@ const faIR: MobileBundle = {
     sync: 'همگام‌سازی',
     security: 'امنیت',
   },
+  units: UNITS_FA,
 }
 
 const faAF: MobileBundle = {
@@ -350,6 +387,7 @@ const faAF: MobileBundle = {
   },
   inventory: { ...faIR.inventory, title: 'گدام', products: 'اجناس', emptyTitle: 'جنسی ثبت نشده' },
   more: { ...faIR.more, title: 'بیشتر' },
+  units: UNITS_FA,
 }
 
 const en: MobileBundle = {
@@ -398,6 +436,7 @@ const en: MobileBundle = {
     currency: 'AFN',
     seeAll: 'See all',
     share: 'Share',
+    selectedCount: '{{count}} selected',
     unit: 'pcs',
   },
   home: {
@@ -518,6 +557,7 @@ const en: MobileBundle = {
     sync: 'Sync',
     security: 'Security',
   },
+  units: UNITS_EN,
 }
 
 export const mobileStrings: Record<'fa-IR' | 'fa-AF' | 'en', MobileBundle> = {

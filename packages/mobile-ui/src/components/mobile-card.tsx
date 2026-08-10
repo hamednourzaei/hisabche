@@ -16,6 +16,13 @@ export interface MobileCardProps extends ViewProps {
   padding?: SpacingKey | undefined
   elevated?: ElevationKey | undefined
   onPress?: (() => void) | undefined
+  /**
+   * Long-press is the native equivalent of a checkbox column: it is how a list
+   * enters selection mode without a permanent control taking up row space.
+   */
+  onLongPress?: (() => void) | undefined
+  /** Tints the card and exposes selected state to assistive tech. */
+  selected?: boolean | undefined
   accessibilityLabel?: string | undefined
 }
 
@@ -26,6 +33,8 @@ export const MobileCard = memo(function MobileCard({
   padding = 'lg',
   elevated,
   onPress,
+  onLongPress,
+  selected = false,
   style,
   children,
   ...rest
@@ -37,7 +46,7 @@ export const MobileCard = memo(function MobileCard({
     (toValue: number) => {
       Animated.spring(scale, { toValue, useNativeDriver: true, speed: 40, bounciness: 0 }).start()
     },
-    [scale]
+    [scale],
   )
 
   const surface: Record<CardVariant, ViewStyle> = {
@@ -59,9 +68,20 @@ export const MobileCard = memo(function MobileCard({
     borderRadius: theme.radius.lg,
     padding: theme.spacing[padding],
   }
-  const composed = [base, surface[variant], theme.elevation[elevated ?? 'sm'], style]
 
-  if (!onPress) {
+  // Selection reads as a border plus a tint rather than a checkbox — colour
+  // alone would not survive a greyscale display or colour-blind vision.
+  const selectedStyle: ViewStyle | null = selected
+    ? {
+        borderWidth: 2,
+        borderColor: theme.colors.primary,
+        backgroundColor: theme.colors.surfaceMuted,
+      }
+    : null
+
+  const composed = [base, surface[variant], theme.elevation[elevated ?? 'sm'], selectedStyle, style]
+
+  if (!onPress && !onLongPress) {
     return (
       <View {...rest} style={composed}>
         {children}
@@ -73,7 +93,9 @@ export const MobileCard = memo(function MobileCard({
     <Animated.View style={{ transform: [{ scale }] }}>
       <Pressable
         accessibilityRole="button"
+        accessibilityState={{ selected }}
         onPress={onPress}
+        onLongPress={onLongPress}
         onPressIn={() => animate(PRESSED_SCALE)}
         onPressOut={() => animate(1)}
         style={composed}

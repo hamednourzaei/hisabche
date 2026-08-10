@@ -1,46 +1,49 @@
 // packages/ui/src/components/ui/accounting/components/JournalEntryRow.tsx
-"use client";
+'use client'
 
-import { memo, useState, useCallback, useMemo } from "react";
-import { useTranslations } from "next-intl";
-import { ChevronDown } from "lucide-react";
-import { cn } from "@/lib/utils";
-import type { JournalEntry, Account } from "@hisabche/api";
+import { memo, useState, useCallback, useMemo } from 'react'
+import { useTranslations } from 'next-intl'
+import { ChevronDown } from 'lucide-react'
+import { cn } from '../../../../lib/utils'
+import type { JournalEntry, Account } from '@hisabche/api'
 
 interface JournalEntryRowProps {
-  entry: JournalEntry;
-  accounts: Account[];
+  entry: JournalEntry
+  accounts: Account[]
 }
 
 function formatDate(date: string): string {
   try {
-    return new Date(date).toLocaleDateString("fa-AF", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
+    return new Date(date).toLocaleDateString('fa-AF', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    })
   } catch {
-    return date;
+    return date
   }
 }
 
-export const JournalEntryRow = memo(function JournalEntryRow({ entry, accounts }: JournalEntryRowProps) {
-  const t = useTranslations();
-  const [isOpen, setIsOpen] = useState(false);
+export const JournalEntryRow = memo(function JournalEntryRow({
+  entry,
+  accounts,
+}: JournalEntryRowProps) {
+  const t = useTranslations()
+  const [isOpen, setIsOpen] = useState(false)
 
-  const toggle = useCallback(() => setIsOpen((prev) => !prev), []);
+  const toggle = useCallback(() => setIsOpen((prev) => !prev), [])
 
   const accountMap = useMemo(() => {
-    const map = new Map<string, Account>();
-    for (const acc of accounts) map.set(acc.id, acc);
-    return map;
-  }, [accounts]);
+    const map = new Map<string, Account>()
+    for (const acc of accounts) map.set(acc.id, acc)
+    return map
+  }, [accounts])
 
   const totals = useMemo(() => {
-    const debit = entry.lines.reduce((sum, l) => sum + l.debit, 0);
-    const credit = entry.lines.reduce((sum, l) => sum + l.credit, 0);
-    return { debit, credit };
-  }, [entry.lines]);
+    const debit = entry.lines.reduce((sum, l) => sum + l.debit, 0)
+    const credit = entry.lines.reduce((sum, l) => sum + l.credit, 0)
+    return { debit, credit }
+  }, [entry.lines])
 
   return (
     <div className="border-b border-[hsl(var(--border-default)/0.5)] last:border-0">
@@ -69,8 +72,8 @@ export const JournalEntryRow = memo(function JournalEntryRow({ entry, accounts }
           </span>
           <ChevronDown
             className={cn(
-              "size-3.5 md:size-4 text-[hsl(var(--fg-tertiary))] transition-transform duration-200",
-              isOpen && "rotate-180"
+              'size-3.5 md:size-4 text-[hsl(var(--fg-tertiary))] transition-transform duration-200',
+              isOpen && 'rotate-180',
             )}
             aria-hidden="true"
           />
@@ -82,32 +85,32 @@ export const JournalEntryRow = memo(function JournalEntryRow({ entry, accounts }
           <table className="w-full">
             <thead>
               <tr className="text-[9px] md:text-[10px] lg:text-xs text-[hsl(var(--fg-tertiary))]">
-                <th className="text-start font-medium py-1">{t("accounting.journal.account")}</th>
-                <th className="text-end font-medium py-1">{t("accounting.journal.debit")}</th>
-                <th className="text-end font-medium py-1">{t("accounting.journal.credit")}</th>
+                <th className="text-start font-medium py-1">{t('accounting.journal.account')}</th>
+                <th className="text-end font-medium py-1">{t('accounting.journal.debit')}</th>
+                <th className="text-end font-medium py-1">{t('accounting.journal.credit')}</th>
               </tr>
             </thead>
             <tbody>
               {entry.lines.map((line) => {
-                const account = accountMap.get(line.accountId);
+                const account = accountMap.get(line.accountId)
                 return (
                   <tr key={line.id} className="text-[10px] md:text-xs lg:text-sm">
                     <td className="py-1 text-[hsl(var(--fg-secondary))]">
                       {account ? `${account.code} - ${account.name}` : line.accountId}
                     </td>
                     <td className="py-1 text-end text-[hsl(var(--fg-primary))]">
-                      {line.debit > 0 ? line.debit.toLocaleString() : "—"}
+                      {line.debit > 0 ? line.debit.toLocaleString() : '—'}
                     </td>
                     <td className="py-1 text-end text-[hsl(var(--fg-primary))]">
-                      {line.credit > 0 ? line.credit.toLocaleString() : "—"}
+                      {line.credit > 0 ? line.credit.toLocaleString() : '—'}
                     </td>
                   </tr>
-                );
+                )
               })}
             </tbody>
           </table>
         </div>
       )}
     </div>
-  );
-});
+  )
+})

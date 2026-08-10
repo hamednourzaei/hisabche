@@ -12,13 +12,20 @@
 //   touching any other route's registration pattern.
 // ============================================
 
+// MUST be first: `./db` reads SUPABASE_URL at import time, and imports are
+// evaluated before any statement in this module's body. The `dotenv.config()`
+// call further down therefore ran *after* db.ts had already thrown, so the
+// server could never start from a local .env file — only from real environment
+// variables, as on Render. Importing for side effects here loads .env before
+// any other module is evaluated.
+import 'dotenv/config'
+
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import rateLimit from '@fastify/rate-limit'
 import compress from '@fastify/compress'
 import swagger from '@fastify/swagger'
 import swaggerUi from '@fastify/swagger-ui'
-import dotenv from 'dotenv'
 
 // ──────────────────────────────────────────────
 // Middleware
@@ -67,9 +74,9 @@ import { getMetrics, enterMetricsContext } from './utils/request-metrics'
 // ──────────────────────────────────────────────
 // Environment
 // ──────────────────────────────────────────────
-if (process.env.NODE_ENV !== 'production') {
-  dotenv.config()
-}
+// .env is loaded by the `import 'dotenv/config'` at the top of this file — it
+// has to happen before any other import, so it cannot live here. dotenv does
+// nothing when no .env file exists, which is the case on Render.
 
 const PORT = Number(process.env.PORT || 10000)
 const HOST = '0.0.0.0'
@@ -80,7 +87,9 @@ const isProduction = process.env.NODE_ENV === 'production'
 // ──────────────────────────────────────────────
 const server = Fastify({
   logger: {
-    level: isProduction ? 'info' : 'debug',
+    // Tests drive the whole app through inject(); debug-level request logs
+    // would bury the actual assertion output.
+    level: process.env.VITEST ? 'silent' : isProduction ? 'info' : 'debug',
     ...(isProduction
       ? {}
       : {
@@ -285,145 +294,169 @@ server.setErrorHandler((error, request, reply) => {
 // ──────────────────────────────────────────────
 // 6. START SERVER
 // ──────────────────────────────────────────────
+/**
+ * Register every plugin and route on the server, without listening.
+ *
+ * Split out of `start()` so tests can build the real application in-process
+ * and drive it with `server.inject()`. The previous smoke tests fetched
+ * https://hisabche.onrender.com over the network, which made a unit-test run
+ * depend on production being up and turned ordinary latency into flaky
+ * failures.
+ *
+ * Registration order is unchanged — plugin order is behaviour in Fastify.
+ */
+export async function buildServer(): Promise<typeof server> {
+  // ─── 6.1 COMPRESSION ──────────────────────
+  await server.register(compress, {
+    global: true,
+    threshold: 1024,
+    encodings: ['gzip', 'deflate'],
+  })
+
+  // ─── 6.2 CORS ─────────────────────────────
+  await server.register(cors, {
+    origin: isProduction
+      ? [
+          'https://hisabche.com',
+          'https://www.hisabche.com',
+          'https://app.hisabche.com',
+          process.env.FRONTEND_URL || 'https://project-ro4vn-hisabche-s-projects.vercel.app',
+        ].filter(Boolean)
+      : [
+          'https://project-ro4vn-hisabche-s-projects.vercel.app',
+          'https://project-ro4vn.vercel.app',
+          'http://localhost:3000',
+          'http://localhost:3001',
+          // Expo's web dev server. Only the browser preview needs this — a
+          // real device running through Expo Go is not a browser origin and
+          // is never subject to CORS. Metro shifts to 8082/8083 when the
+          // default port is busy, so the neighbours are listed too.
+          'http://localhost:8081',
+          'http://localhost:8082',
+          'http://localhost:8083',
+          'https://hisabche.com',
+          'https://www.hisabche.com',
+        ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-client-id', 'Accept'],
+    // ✅ FIX (کندی): بدون maxAge مرورگر برای هر درخواست یک OPTIONS جداگانه
+    // می‌فرستد (در لاگ‌ها به‌وضوح دیده می‌شود). خود OPTIONS سریع است، اما
+    // یک رفت‌وبرگشت شبکه‌ی کامل تا سرور اضافه می‌کند. با کش ۲۴ ساعته‌ی
+    // preflight، این رفت‌وبرگشت از مسیر تمام درخواست‌های بعدی حذف می‌شود.
+    maxAge: 86400,
+  })
+
+  // ─── 6.3 SWAGGER ──────────────────────────
+  await server.register(swagger, {
+    openapi: {
+      info: {
+        title: 'Hisabche API',
+        description: 'Business Operating System API v2.5',
+        version: '2.5.0',
+        contact: {
+          name: 'Hisabche Team',
+          email: 'support@hisabche.com',
+        },
+      },
+      servers: [
+        {
+          url: isProduction ? 'https://api.hisabche.com' : 'http://localhost:10000',
+          description: isProduction ? 'Production Server' : 'Development Server',
+        },
+      ],
+      components: {
+        securitySchemes: {
+          bearerAuth: {
+            type: 'http',
+            scheme: 'bearer',
+            bearerFormat: 'JWT',
+          },
+        },
+      },
+      security: [{ bearerAuth: [] }],
+    },
+  })
+
+  await server.register(swaggerUi, {
+    routePrefix: '/docs',
+    uiConfig: {
+      docExpansion: 'list',
+      deepLinking: false,
+      persistAuthorization: true,
+    },
+    staticCSP: true,
+  })
+
+  // ─── 6.4 RATE LIMIT ────────────────────────
+  await server.register(rateLimit, {
+    max: 100,
+    timeWindow: '1 minute',
+    keyGenerator: (request) => {
+      const userId = (request as any).userId
+      return userId || request.ip || 'anonymous'
+    },
+    errorResponseBuilder: (_request, context) => {
+      const afterMs =
+        typeof context.after === 'number'
+          ? context.after
+          : parseInt(String(context.after), 10) || 60000
+      return {
+        success: false,
+        error: 'Too many requests',
+        retryAfter: Math.ceil(afterMs / 1000),
+        limit: context.max,
+      }
+    },
+  })
+
+  // ─── 6.5 REGISTER ROUTES ──────────────────
+  server.log.info('📦 Registering routes...')
+
+  await server.register(authRoutes)
+  await server.register(syncRoutes)
+  await server.register(invoiceRoutes)
+  await server.register(invoicePdfRoutes)
+  await server.register(invoicePublicRoutes)
+  await server.register(productRoutes)
+  await server.register(customerRoutes)
+  await server.register(transactionRoutes)
+  await server.register(warehouseRoutes)
+  await server.register(humanResourcesRoutes)
+  await server.register(projectRoutes)
+  await server.register(workspaceRoutes)
+  await server.register(permissionRoutes)
+  await server.register(auditRoutes)
+  await server.register(eventRoutes)
+  await server.register(analyticsRoutes)
+  await server.register(aiRoutes)
+  // ✅ FIXED (v2.6): accountingRoutes با prefix ثبت می‌شود
+  await server.register(accountingRoutes, { prefix: '/api/accounting' })
+  await server.register(crmRoutes)
+  await server.register(manufacturingRoutes)
+  await server.register(purchasingRoutes)
+  await server.register(workflowRoutes)
+
+  // ✅ ثبت Route‌های دیباگ (فقط برای دیباگ)
+  await server.register(debugRoutes)
+
+  // ✅ ثبت Route‌های Notification
+  await server.register(notificationRoutes)
+
+  // ✅ ثبت Route‌های Activity
+  await server.register(activityRoutes)
+
+  await server.register(jobSchedulerPlugin)
+  await server.register(billingRoutes)
+
+  server.log.info('✅ All routes registered successfully')
+
+  return server
+}
+
 async function start() {
   try {
-    // ─── 6.1 COMPRESSION ──────────────────────
-    await server.register(compress, {
-      global: true,
-      threshold: 1024,
-      encodings: ['gzip', 'deflate'],
-    })
-
-    // ─── 6.2 CORS ─────────────────────────────
-    await server.register(cors, {
-      origin: isProduction
-        ? [
-            'https://hisabche.com',
-            'https://www.hisabche.com',
-            'https://app.hisabche.com',
-            process.env.FRONTEND_URL || 'https://project-ro4vn-hisabche-s-projects.vercel.app',
-          ].filter(Boolean)
-        : [
-            'https://project-ro4vn-hisabche-s-projects.vercel.app',
-            'https://project-ro4vn.vercel.app',
-            'http://localhost:3000',
-            'http://localhost:3001',
-            'https://hisabche.com',
-            'https://www.hisabche.com',
-          ],
-      credentials: true,
-      methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-      allowedHeaders: ['Content-Type', 'Authorization', 'x-client-id', 'Accept'],
-      // ✅ FIX (کندی): بدون maxAge مرورگر برای هر درخواست یک OPTIONS جداگانه
-      // می‌فرستد (در لاگ‌ها به‌وضوح دیده می‌شود). خود OPTIONS سریع است، اما
-      // یک رفت‌وبرگشت شبکه‌ی کامل تا سرور اضافه می‌کند. با کش ۲۴ ساعته‌ی
-      // preflight، این رفت‌وبرگشت از مسیر تمام درخواست‌های بعدی حذف می‌شود.
-      maxAge: 86400,
-    })
-
-    // ─── 6.3 SWAGGER ──────────────────────────
-    await server.register(swagger, {
-      openapi: {
-        info: {
-          title: 'Hisabche API',
-          description: 'Business Operating System API v2.5',
-          version: '2.5.0',
-          contact: {
-            name: 'Hisabche Team',
-            email: 'support@hisabche.com',
-          },
-        },
-        servers: [
-          {
-            url: isProduction ? 'https://api.hisabche.com' : 'http://localhost:10000',
-            description: isProduction ? 'Production Server' : 'Development Server',
-          },
-        ],
-        components: {
-          securitySchemes: {
-            bearerAuth: {
-              type: 'http',
-              scheme: 'bearer',
-              bearerFormat: 'JWT',
-            },
-          },
-        },
-        security: [{ bearerAuth: [] }],
-      },
-    })
-
-    await server.register(swaggerUi, {
-      routePrefix: '/docs',
-      uiConfig: {
-        docExpansion: 'list',
-        deepLinking: false,
-        persistAuthorization: true,
-      },
-      staticCSP: true,
-    })
-
-    // ─── 6.4 RATE LIMIT ────────────────────────
-    await server.register(rateLimit, {
-      max: 100,
-      timeWindow: '1 minute',
-      keyGenerator: (request) => {
-        const userId = (request as any).userId
-        return userId || request.ip || 'anonymous'
-      },
-      errorResponseBuilder: (_request, context) => {
-        const afterMs =
-          typeof context.after === 'number'
-            ? context.after
-            : parseInt(String(context.after), 10) || 60000
-        return {
-          success: false,
-          error: 'Too many requests',
-          retryAfter: Math.ceil(afterMs / 1000),
-          limit: context.max,
-        }
-      },
-    })
-
-    // ─── 6.5 REGISTER ROUTES ──────────────────
-    server.log.info('📦 Registering routes...')
-
-    await server.register(authRoutes)
-    await server.register(syncRoutes)
-    await server.register(invoiceRoutes)
-    await server.register(invoicePdfRoutes)
-    await server.register(invoicePublicRoutes)
-    await server.register(productRoutes)
-    await server.register(customerRoutes)
-    await server.register(transactionRoutes)
-    await server.register(warehouseRoutes)
-    await server.register(humanResourcesRoutes)
-    await server.register(projectRoutes)
-    await server.register(workspaceRoutes)
-    await server.register(permissionRoutes)
-    await server.register(auditRoutes)
-    await server.register(eventRoutes)
-    await server.register(analyticsRoutes)
-    await server.register(aiRoutes)
-    // ✅ FIXED (v2.6): accountingRoutes با prefix ثبت می‌شود
-    await server.register(accountingRoutes, { prefix: '/api/accounting' })
-    await server.register(crmRoutes)
-    await server.register(manufacturingRoutes)
-    await server.register(purchasingRoutes)
-    await server.register(workflowRoutes)
-
-    // ✅ ثبت Route‌های دیباگ (فقط برای دیباگ)
-    await server.register(debugRoutes)
-
-    // ✅ ثبت Route‌های Notification
-    await server.register(notificationRoutes)
-
-    // ✅ ثبت Route‌های Activity
-    await server.register(activityRoutes)
-
-    await server.register(jobSchedulerPlugin)
-    await server.register(billingRoutes)
-
-    server.log.info('✅ All routes registered successfully')
+    await buildServer()
 
     // ─── 6.6 START LISTENING ──────────────────
     await server.listen({ port: PORT, host: HOST })
@@ -464,6 +497,11 @@ process.on('SIGTERM', () => shutdown('SIGTERM'))
 process.on('SIGINT', () => shutdown('SIGINT'))
 
 // ─── Start ────────────────────────────────────
-start()
+// Tests import this module to build the app and drive it with `inject()`;
+// binding a port and starting the scheduler there would be both unnecessary and
+// flaky. Production is untouched — `VITEST` is only ever set by the test runner.
+if (!process.env.VITEST) {
+  start()
+}
 
 export default server

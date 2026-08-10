@@ -1,6 +1,6 @@
-"use client";
+'use client'
 
-import { cn } from "@/lib/utils";
+import { cn } from '../../../lib/utils'
 import {
   Cloud,
   CloudOff,
@@ -15,7 +15,7 @@ import {
   Activity,
   HardDrive,
   Wifi,
-} from "lucide-react";
+} from 'lucide-react'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    SyncCenterPage v2 — Hisabche Design Language
@@ -24,35 +24,35 @@ import {
    ═══════════════════════════════════════════════════════════════════════════ */
 
 interface BackupItem {
-  id: string;
-  timestamp: number;
-  size: string;
-  type: "auto" | "manual";
-  status: "completed" | "failed";
+  id: string
+  timestamp: number
+  size: string
+  type: 'auto' | 'manual'
+  status: 'completed' | 'failed'
 }
 
 interface AuditItem {
-  id: string;
-  action: string;
-  entity: string;
-  timestamp: number;
+  id: string
+  action: string
+  entity: string
+  timestamp: number
 }
 
 export interface SyncCenterPageProps {
-  t: (key: string, fallback?: string) => string;
-  timeAgo: (ts: number) => string;
-  isOnline: boolean;
-  isSyncing: boolean;
-  pendingCount: number;
-  lastSyncedAt: number | null;
-  autoBackupEnabled: boolean;
-  backups: BackupItem[];
-  auditLog: AuditItem[];
+  t: (key: string, fallback?: string) => string
+  timeAgo: (ts: number) => string
+  isOnline: boolean
+  isSyncing: boolean
+  pendingCount: number
+  lastSyncedAt: number | null
+  autoBackupEnabled: boolean
+  backups: BackupItem[]
+  auditLog: AuditItem[]
   /** اندازه‌ی واقعی داده‌ی محلی (hisabche-* در localStorage)، نه عدد ساختگی. */
-  localStorageSize: string;
-  onSync: () => void;
-  onBackup: () => void;
-  onToggleAutoBackup: () => void;
+  localStorageSize: string
+  onSync: () => void
+  onBackup: () => void
+  onToggleAutoBackup: () => void
 }
 
 export function SyncCenterPage({
@@ -76,10 +76,10 @@ export function SyncCenterPage({
       <div className="space-y-1.5">
         <h1 className="flex items-center gap-3 text-3xl font-bold text-[hsl(var(--fg-primary))]">
           <Shield className="size-8 text-[hsl(var(--color-primary))]" aria-hidden="true" />
-          {t("nav.sync", "همگام‌سازی")}
+          {t('nav.sync', 'همگام‌سازی')}
         </h1>
         <p className="text-sm text-[hsl(var(--fg-secondary))]">
-          {t("sync.description", "مدیریت امنیت، بکاپ و وضعیت اتصال برنامه")}
+          {t('sync.description', 'مدیریت امنیت، بکاپ و وضعیت اتصال برنامه')}
         </p>
       </div>
 
@@ -90,10 +90,10 @@ export function SyncCenterPage({
           <div className="flex items-center gap-4">
             <div
               className={cn(
-                "flex h-14 w-14 items-center justify-center rounded-2xl shrink-0",
+                'flex h-14 w-14 items-center justify-center rounded-2xl shrink-0',
                 isOnline
-                  ? "bg-[hsl(var(--color-success)/0.1)]"
-                  : "bg-[hsl(var(--color-warning)/0.1)]",
+                  ? 'bg-[hsl(var(--color-success)/0.1)]'
+                  : 'bg-[hsl(var(--color-warning)/0.1)]',
               )}
             >
               {isOnline ? (
@@ -104,10 +104,10 @@ export function SyncCenterPage({
             </div>
             <div>
               <p className="text-xl font-bold tabular-nums text-[hsl(var(--fg-primary))]">
-                {isOnline ? t("sync.online", "آنلاین") : t("sync.offline", "آفلاین")}
+                {isOnline ? t('sync.online', 'آنلاین') : t('sync.offline', 'آفلاین')}
               </p>
               <p className="text-xs text-[hsl(var(--fg-tertiary))]">
-                {t("sync.connectionStatus", "وضعیت اتصال")}
+                {t('sync.connectionStatus', 'وضعیت اتصال')}
               </p>
             </div>
           </div>
@@ -123,9 +123,7 @@ export function SyncCenterPage({
               <p className="text-xl font-bold tabular-nums text-[hsl(var(--fg-primary))]">
                 {backups.length}
               </p>
-              <p className="text-xs text-[hsl(var(--fg-tertiary))]">
-                {t("sync.backups", "بکاپ")}
-              </p>
+              <p className="text-xs text-[hsl(var(--fg-tertiary))]">{t('sync.backups', 'بکاپ')}</p>
             </div>
           </div>
         </div>
@@ -135,18 +133,18 @@ export function SyncCenterPage({
           <div className="flex items-center gap-4">
             <div
               className={cn(
-                "flex h-14 w-14 items-center justify-center rounded-2xl shrink-0",
+                'flex h-14 w-14 items-center justify-center rounded-2xl shrink-0',
                 pendingCount > 0
-                  ? "bg-[hsl(var(--color-warning)/0.1)]"
-                  : "bg-[hsl(var(--color-success)/0.1)]",
+                  ? 'bg-[hsl(var(--color-warning)/0.1)]'
+                  : 'bg-[hsl(var(--color-success)/0.1)]',
               )}
             >
               <AlertTriangle
                 className={cn(
-                  "size-7",
+                  'size-7',
                   pendingCount > 0
-                    ? "text-[hsl(var(--color-warning))]"
-                    : "text-[hsl(var(--color-success))]",
+                    ? 'text-[hsl(var(--color-warning))]'
+                    : 'text-[hsl(var(--color-success))]',
                 )}
                 aria-hidden="true"
               />
@@ -156,7 +154,7 @@ export function SyncCenterPage({
                 {pendingCount}
               </p>
               <p className="text-xs text-[hsl(var(--fg-tertiary))]">
-                {t("sync.pending", "عملیات معلق")}
+                {t('sync.pending', 'عملیات معلق')}
               </p>
             </div>
           </div>
@@ -169,9 +167,11 @@ export function SyncCenterPage({
               <HardDrive className="size-7 text-[hsl(var(--fg-secondary))]" aria-hidden="true" />
             </div>
             <div>
-              <p className="text-xl font-bold tabular-nums text-[hsl(var(--fg-primary))]">{localStorageSize}</p>
+              <p className="text-xl font-bold tabular-nums text-[hsl(var(--fg-primary))]">
+                {localStorageSize}
+              </p>
               <p className="text-xs text-[hsl(var(--fg-tertiary))]">
-                {t("sync.localStorage", "حافظه محلی")}
+                {t('sync.localStorage', 'حافظه محلی')}
               </p>
             </div>
           </div>
@@ -184,7 +184,7 @@ export function SyncCenterPage({
           <div className="flex items-center gap-2">
             <Activity className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
             <h2 className="text-lg font-bold text-[hsl(var(--fg-primary))]">
-              {t("sync.quickActions", "عملیات سریع")}
+              {t('sync.quickActions', 'عملیات سریع')}
             </h2>
           </div>
 
@@ -194,60 +194,57 @@ export function SyncCenterPage({
               onClick={onSync}
               disabled={isSyncing}
               className={cn(
-                "inline-flex items-center gap-2 rounded-full px-4 py-2.5",
-                "text-sm font-bold text-white",
-                "bg-[var(--gradient-brand)]",
-                "shadow-sm shadow-[hsl(var(--color-primary)/0.15)]",
-                "transition-all duration-200 hover:brightness-110 active:scale-[0.98]",
-                "disabled:opacity-40 disabled:cursor-not-allowed",
-                "motion-reduce:transition-none",
+                'inline-flex items-center gap-2 rounded-full px-4 py-2.5',
+                'text-sm font-bold text-white',
+                'bg-[var(--gradient-brand)]',
+                'shadow-sm shadow-[hsl(var(--color-primary)/0.15)]',
+                'transition-all duration-200 hover:brightness-110 active:scale-[0.98]',
+                'disabled:opacity-40 disabled:cursor-not-allowed',
+                'motion-reduce:transition-none',
               )}
             >
-              <RefreshCw
-                className={cn("size-4", isSyncing && "animate-spin")}
-                aria-hidden="true"
-              />
-              {t("sync.syncNow", "به‌روزرسانی اطلاعات")}
+              <RefreshCw className={cn('size-4', isSyncing && 'animate-spin')} aria-hidden="true" />
+              {t('sync.syncNow', 'به‌روزرسانی اطلاعات')}
             </button>
 
             <button
               type="button"
               onClick={onBackup}
               className={cn(
-                "inline-flex items-center gap-2 rounded-full px-4 py-2.5",
-                "text-sm font-medium",
-                "border border-[hsl(var(--border-default))]",
-                "text-[hsl(var(--fg-secondary))]",
-                "hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]",
-                "transition-colors duration-150",
-                "motion-reduce:transition-none",
+                'inline-flex items-center gap-2 rounded-full px-4 py-2.5',
+                'text-sm font-medium',
+                'border border-[hsl(var(--border-default))]',
+                'text-[hsl(var(--fg-secondary))]',
+                'hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
+                'transition-colors duration-150',
+                'motion-reduce:transition-none',
               )}
             >
               <Download className="size-4" aria-hidden="true" />
-              {t("sync.manualBackup", "بکاپ دستی")}
+              {t('sync.manualBackup', 'بکاپ دستی')}
             </button>
 
             <button
               type="button"
               onClick={onToggleAutoBackup}
               className={cn(
-                "inline-flex items-center gap-2 rounded-full px-4 py-2.5",
-                "text-sm font-medium transition-all duration-200",
-                "motion-reduce:transition-none",
+                'inline-flex items-center gap-2 rounded-full px-4 py-2.5',
+                'text-sm font-medium transition-all duration-200',
+                'motion-reduce:transition-none',
                 autoBackupEnabled
-                  ? "bg-[var(--gradient-brand)] text-white shadow-sm"
-                  : "border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]",
+                  ? 'bg-[var(--gradient-brand)] text-white shadow-sm'
+                  : 'border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]',
               )}
             >
               <Database className="size-4" aria-hidden="true" />
-              {t("sync.autoBackup", "بکاپ خودکار")}
+              {t('sync.autoBackup', 'بکاپ خودکار')}
             </button>
           </div>
 
           {lastSyncedAt && (
             <div className="flex items-center gap-2 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] p-4 text-sm text-[hsl(var(--fg-secondary))]">
               <Clock className="size-4 text-[hsl(var(--color-success))]" aria-hidden="true" />
-              {t("sync.lastSynced", "آخرین همگام‌سازی")}: {timeAgo(lastSyncedAt)}
+              {t('sync.lastSynced', 'آخرین همگام‌سازی')}: {timeAgo(lastSyncedAt)}
             </div>
           )}
         </div>
@@ -259,15 +256,18 @@ export function SyncCenterPage({
           <div className="flex items-center gap-2">
             <History className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
             <h2 className="text-lg font-bold text-[hsl(var(--fg-primary))]">
-              {t("sync.backupHistory", "تاریخچه بکاپ")}
+              {t('sync.backupHistory', 'تاریخچه بکاپ')}
             </h2>
           </div>
 
           {backups.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-[hsl(var(--border-default))] py-10 text-center">
-              <Database className="mx-auto mb-3 size-10 text-[hsl(var(--fg-tertiary))]" aria-hidden="true" />
+              <Database
+                className="mx-auto mb-3 size-10 text-[hsl(var(--fg-tertiary))]"
+                aria-hidden="true"
+              />
               <p className="text-sm text-[hsl(var(--fg-tertiary))]">
-                {t("sync.noBackups", "هنوز بکاپی ثبت نشده")}
+                {t('sync.noBackups', 'هنوز بکاپی ثبت نشده')}
               </p>
             </div>
           ) : (
@@ -280,23 +280,29 @@ export function SyncCenterPage({
                   <div className="flex items-center gap-4">
                     <div
                       className={cn(
-                        "flex h-10 w-10 items-center justify-center rounded-full shrink-0",
-                        backup.status === "completed"
-                          ? "bg-[hsl(var(--color-success)/0.1)]"
-                          : "bg-[hsl(var(--color-destructive)/0.1)]",
+                        'flex h-10 w-10 items-center justify-center rounded-full shrink-0',
+                        backup.status === 'completed'
+                          ? 'bg-[hsl(var(--color-success)/0.1)]'
+                          : 'bg-[hsl(var(--color-destructive)/0.1)]',
                       )}
                     >
-                      {backup.status === "completed" ? (
-                        <Check className="size-5 text-[hsl(var(--color-success))]" aria-hidden="true" />
+                      {backup.status === 'completed' ? (
+                        <Check
+                          className="size-5 text-[hsl(var(--color-success))]"
+                          aria-hidden="true"
+                        />
                       ) : (
-                        <AlertTriangle className="size-5 text-[hsl(var(--color-destructive))]" aria-hidden="true" />
+                        <AlertTriangle
+                          className="size-5 text-[hsl(var(--color-destructive))]"
+                          aria-hidden="true"
+                        />
                       )}
                     </div>
                     <div>
                       <p className="font-medium text-[hsl(var(--fg-primary))]">
-                        {backup.type === "auto"
-                          ? t("sync.autoBackup", "بکاپ خودکار")
-                          : t("sync.manualBackup", "بکاپ دستی")}
+                        {backup.type === 'auto'
+                          ? t('sync.autoBackup', 'بکاپ خودکار')
+                          : t('sync.manualBackup', 'بکاپ دستی')}
                       </p>
                       <p className="text-xs text-[hsl(var(--fg-tertiary))]">
                         {timeAgo(backup.timestamp)} • {backup.size}
@@ -305,15 +311,15 @@ export function SyncCenterPage({
                   </div>
                   <span
                     className={cn(
-                      "rounded-full px-2.5 py-0.5 text-xs font-semibold shrink-0",
-                      backup.status === "completed"
-                        ? "bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))] border border-[hsl(var(--color-success)/0.2)]"
-                        : "bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))] border border-[hsl(var(--color-destructive)/0.2)]",
+                      'rounded-full px-2.5 py-0.5 text-xs font-semibold shrink-0',
+                      backup.status === 'completed'
+                        ? 'bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))] border border-[hsl(var(--color-success)/0.2)]'
+                        : 'bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))] border border-[hsl(var(--color-destructive)/0.2)]',
                     )}
                   >
-                    {backup.status === "completed"
-                      ? t("sync.success", "موفق")
-                      : t("sync.error", "خطا")}
+                    {backup.status === 'completed'
+                      ? t('sync.success', 'موفق')
+                      : t('sync.error', 'خطا')}
                   </span>
                 </div>
               ))}
@@ -328,15 +334,18 @@ export function SyncCenterPage({
           <div className="flex items-center gap-2">
             <Shield className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
             <h2 className="text-lg font-bold text-[hsl(var(--fg-primary))]">
-              {t("sync.recentActivity", "فعالیت‌های اخیر")}
+              {t('sync.recentActivity', 'فعالیت‌های اخیر')}
             </h2>
           </div>
 
           {auditLog.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-[hsl(var(--border-default))] py-10 text-center">
-              <History className="mx-auto mb-3 size-10 text-[hsl(var(--fg-tertiary))]" aria-hidden="true" />
+              <History
+                className="mx-auto mb-3 size-10 text-[hsl(var(--fg-tertiary))]"
+                aria-hidden="true"
+              />
               <p className="text-sm text-[hsl(var(--fg-tertiary))]">
-                {t("sync.noActivity", "هنوز فعالیتی ثبت نشده")}
+                {t('sync.noActivity', 'هنوز فعالیتی ثبت نشده')}
               </p>
             </div>
           ) : (
@@ -371,7 +380,7 @@ export function SyncCenterPage({
           <div className="flex items-center gap-2">
             <Wifi className="size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
             <h2 className="text-lg font-bold text-[hsl(var(--fg-primary))]">
-              {t("sync.networkStatus", "وضعیت شبکه")}
+              {t('sync.networkStatus', 'وضعیت شبکه')}
             </h2>
           </div>
           {/* ✅ FIX: کارت «وضعیت سرور: پایدار» حذف شد — این یک متن hardcoded
@@ -379,23 +388,19 @@ export function SyncCenterPage({
               نشان می‌داد، حتی اگر سرور واقعاً پایین بود. */}
           <div className="rounded-2xl border border-[hsl(var(--border-default))] p-4 text-start">
             <p className="mb-1 text-sm text-[hsl(var(--fg-secondary))]">
-              {t("sync.internet", "اینترنت")}
+              {t('sync.internet', 'اینترنت')}
             </p>
             <p
               className={cn(
-                "font-semibold",
-                isOnline
-                  ? "text-[hsl(var(--color-success))]"
-                  : "text-[hsl(var(--color-warning))]",
+                'font-semibold',
+                isOnline ? 'text-[hsl(var(--color-success))]' : 'text-[hsl(var(--color-warning))]',
               )}
             >
-              {isOnline
-                ? t("sync.connected", "متصل")
-                : t("sync.disconnected", "قطع")}
+              {isOnline ? t('sync.connected', 'متصل') : t('sync.disconnected', 'قطع')}
             </p>
           </div>
         </div>
       </div>
     </div>
-  );
+  )
 }

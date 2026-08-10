@@ -2,10 +2,7 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "target": "ESNext",
-    "lib": [
-      "ES2022",
-      "DOM"
-    ],
+    "lib": ["ES2022", "DOM"],
     "jsx": "react-native",
     "module": "commonjs",
     "moduleResolution": "node",
@@ -16,41 +13,18 @@
     "strict": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./*"
-      ],
-      "@hisabche/ui": [
-        "../../packages/ui/src"
-      ],
-      "@hisabche/ui/*": [
-        "../../packages/ui/src/*"
-      ],
-      "@hisabche/i18n": [
-        "../../packages/i18n/src"
-      ],
-      "@hisabche/store": [
-        "../../packages/store/src"
-      ],
-      "@hisabche/validation": [
-        "../../packages/validation/src"
-      ],
-      "@hisabche/api": [
-        "../../packages/api/src"
-      ],
-      "@hisabche/mobile-ui": [
-        "../../packages/mobile-ui/src"
-      ],
-      "@hisabche/mobile-ui/*": [
-        "../../packages/mobile-ui/src/*"
-      ]
+      "@/*": ["./*"],
+      "@hisabche/ui": ["../../packages/ui/src"],
+      "@hisabche/ui/*": ["../../packages/ui/src/*"],
+      "@hisabche/ui-contract": ["../../packages/ui-contract/src"],
+      "@hisabche/i18n": ["../../packages/i18n/src"],
+      "@hisabche/store": ["../../packages/store/src"],
+      "@hisabche/validation": ["../../packages/validation/src"],
+      "@hisabche/api": ["../../packages/api/src"],
+      "@hisabche/mobile-ui": ["../../packages/mobile-ui/src"],
+      "@hisabche/mobile-ui/*": ["../../packages/mobile-ui/src/*"]
     }
   },
-  "include": [
-    "**/*.ts",
-    "**/*.tsx"
-  ],
-  "exclude": [
-    "node_modules",
-    "e2e"
-  ]
+  "include": ["**/*.ts", "**/*.tsx"],
+  "exclude": ["node_modules", "e2e"]
 }

@@ -1,9 +1,9 @@
-"use client";
+'use client'
 
-import * as React from "react";
-import * as SheetPrimitive from "@radix-ui/react-dialog";
-import { cn } from "@/lib/utils";
-import { X } from "lucide-react";
+import * as React from 'react'
+import * as SheetPrimitive from '@radix-ui/react-dialog'
+import { cn } from '../../lib/utils'
+import { X } from 'lucide-react'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    Sheet v2 — Hisabche Design Language
@@ -12,10 +12,10 @@ import { X } from "lucide-react";
    Optimized for Redmi 9: no backdrop-blur, no zoom, only opacity + transform
    ═══════════════════════════════════════════════════════════════════════════ */
 
-const Sheet = SheetPrimitive.Root;
-const SheetTrigger = SheetPrimitive.Trigger;
-const SheetPortal = SheetPrimitive.Portal;
-const SheetClose = SheetPrimitive.Close;
+const Sheet = SheetPrimitive.Root
+const SheetTrigger = SheetPrimitive.Trigger
+const SheetPortal = SheetPrimitive.Portal
+const SheetClose = SheetPrimitive.Close
 
 // ─── Overlay ───────────────────────────────────────────────────────────────
 
@@ -26,135 +26,113 @@ const SheetOverlay = React.forwardRef<
   <SheetPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50",
-      "bg-[hsl(var(--ledger-ink)/0.3)]",
-      "data-[state=open]:animate-in data-[state=closed]:animate-out",
-      "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-      "motion-reduce:animate-none",
+      'fixed inset-0 z-50',
+      'bg-[hsl(var(--ledger-ink)/0.3)]',
+      'data-[state=open]:animate-in data-[state=closed]:animate-out',
+      'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+      'motion-reduce:animate-none',
       className,
     )}
     {...props}
   />
-));
-SheetOverlay.displayName = "SheetOverlay";
+))
+SheetOverlay.displayName = 'SheetOverlay'
 
 // ─── Content ───────────────────────────────────────────────────────────────
 
-type SheetSide = "top" | "bottom" | "start" | "end";
+type SheetSide = 'top' | 'bottom' | 'start' | 'end'
 
-interface SheetContentProps
-  extends React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content> {
-  side?: SheetSide;
-  showCloseButton?: boolean;
+interface SheetContentProps extends React.ComponentPropsWithoutRef<typeof SheetPrimitive.Content> {
+  side?: SheetSide
+  showCloseButton?: boolean
 }
 
 const sideStyles: Record<SheetSide, string> = {
   top: [
-    "inset-x-0 top-0 border-b",
-    "data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top",
-  ].join(" "),
+    'inset-x-0 top-0 border-b',
+    'data-[state=closed]:slide-out-to-top data-[state=open]:slide-in-from-top',
+  ].join(' '),
   bottom: [
-    "inset-x-0 bottom-0 border-t",
-    "data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom",
-  ].join(" "),
+    'inset-x-0 bottom-0 border-t',
+    'data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom',
+  ].join(' '),
   start: [
-    "inset-y-0 start-0 h-full w-3/4 border-e sm:max-w-sm",
-    "data-[state=closed]:slide-out-to-start data-[state=open]:slide-in-from-start",
-  ].join(" "),
+    'inset-y-0 start-0 h-full w-3/4 border-e sm:max-w-sm',
+    'data-[state=closed]:slide-out-to-start data-[state=open]:slide-in-from-start',
+  ].join(' '),
   end: [
-    "inset-y-0 end-0 h-full w-3/4 border-s sm:max-w-sm",
-    "data-[state=closed]:slide-out-to-end data-[state=open]:slide-in-from-end",
-  ].join(" "),
-};
+    'inset-y-0 end-0 h-full w-3/4 border-s sm:max-w-sm',
+    'data-[state=closed]:slide-out-to-end data-[state=open]:slide-in-from-end',
+  ].join(' '),
+}
 
 const SheetContent = React.forwardRef<
   React.ElementRef<typeof SheetPrimitive.Content>,
   SheetContentProps
->(
-  (
-    { side = "end", className, children, showCloseButton = true, ...props },
-    ref,
-  ) => (
-    <SheetPortal>
-      <SheetOverlay />
-      <SheetPrimitive.Content
-        ref={ref}
-        className={cn(
-          // Base
-          "fixed z-50 gap-4 p-6",
-          "shadow-lg",
-          // Colors — zero hardcoded
-          "bg-[hsl(var(--surface-elevated))] text-[hsl(var(--fg-primary))]",
-          "border-[hsl(var(--border-default))]",
-          // Animation
-          "transition ease-in-out",
-          "data-[state=open]:duration-300 data-[state=closed]:duration-200",
-          "data-[state=open]:animate-in data-[state=closed]:animate-out",
-          // Reduced motion
-          "motion-reduce:transition-none motion-reduce:animate-none",
-          // Side-specific
-          sideStyles[side],
-          className,
-        )}
-        {...props}
-      >
-        {children}
+>(({ side = 'end', className, children, showCloseButton = true, ...props }, ref) => (
+  <SheetPortal>
+    <SheetOverlay />
+    <SheetPrimitive.Content
+      ref={ref}
+      className={cn(
+        // Base
+        'fixed z-50 gap-4 p-6',
+        'shadow-lg',
+        // Colors — zero hardcoded
+        'bg-[hsl(var(--surface-elevated))] text-[hsl(var(--fg-primary))]',
+        'border-[hsl(var(--border-default))]',
+        // Animation
+        'transition ease-in-out',
+        'data-[state=open]:duration-300 data-[state=closed]:duration-200',
+        'data-[state=open]:animate-in data-[state=closed]:animate-out',
+        // Reduced motion
+        'motion-reduce:transition-none motion-reduce:animate-none',
+        // Side-specific
+        sideStyles[side],
+        className,
+      )}
+      {...props}
+    >
+      {children}
 
-        {showCloseButton && (
-          <SheetPrimitive.Close
-            className={cn(
-              "absolute end-4 top-4",
-              "rounded-full p-1.5",
-              "text-[hsl(var(--fg-secondary))]",
-              "hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]",
-              "focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring-color)/0.5)]",
-              "transition-colors duration-150",
-              "motion-reduce:transition-none",
-              "min-h-[44px] min-w-[44px] flex items-center justify-center",
-            )}
-            aria-label="بستن"
-          >
-            <X className="size-4" aria-hidden="true" />
-          </SheetPrimitive.Close>
-        )}
-      </SheetPrimitive.Content>
-    </SheetPortal>
-  ),
-);
-SheetContent.displayName = "SheetContent";
+      {showCloseButton && (
+        <SheetPrimitive.Close
+          className={cn(
+            'absolute end-4 top-4',
+            'rounded-full p-1.5',
+            'text-[hsl(var(--fg-secondary))]',
+            'hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
+            'focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring-color)/0.5)]',
+            'transition-colors duration-150',
+            'motion-reduce:transition-none',
+            'min-h-[44px] min-w-[44px] flex items-center justify-center',
+          )}
+          aria-label="بستن"
+        >
+          <X className="size-4" aria-hidden="true" />
+        </SheetPrimitive.Close>
+      )}
+    </SheetPrimitive.Content>
+  </SheetPortal>
+))
+SheetContent.displayName = 'SheetContent'
 
 // ─── Header ────────────────────────────────────────────────────────────────
 
-const SheetHeader = ({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) => (
-  <div
-    className={cn(
-      "flex flex-col space-y-2 pb-4",
-      "text-start",
-      className,
-    )}
-    {...props}
-  />
-);
-SheetHeader.displayName = "SheetHeader";
+const SheetHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
+  <div className={cn('flex flex-col space-y-2 pb-4', 'text-start', className)} {...props} />
+)
+SheetHeader.displayName = 'SheetHeader'
 
 // ─── Footer ────────────────────────────────────────────────────────────────
 
-const SheetFooter = ({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLDivElement>) => (
+const SheetFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
-    className={cn(
-      "flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4",
-      className,
-    )}
+    className={cn('flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-4', className)}
     {...props}
   />
-);
-SheetFooter.displayName = "SheetFooter";
+)
+SheetFooter.displayName = 'SheetFooter'
 
 // ─── Title ─────────────────────────────────────────────────────────────────
 
@@ -164,16 +142,11 @@ const SheetTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SheetPrimitive.Title
     ref={ref}
-    className={cn(
-      "text-lg font-bold",
-      "text-[hsl(var(--fg-primary))]",
-      "leading-tight",
-      className,
-    )}
+    className={cn('text-lg font-bold', 'text-[hsl(var(--fg-primary))]', 'leading-tight', className)}
     {...props}
   />
-));
-SheetTitle.displayName = "SheetTitle";
+))
+SheetTitle.displayName = 'SheetTitle'
 
 // ─── Description ───────────────────────────────────────────────────────────
 
@@ -183,15 +156,11 @@ const SheetDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SheetPrimitive.Description
     ref={ref}
-    className={cn(
-      "text-sm",
-      "text-[hsl(var(--fg-secondary))]",
-      className,
-    )}
+    className={cn('text-sm', 'text-[hsl(var(--fg-secondary))]', className)}
     {...props}
   />
-));
-SheetDescription.displayName = "SheetDescription";
+))
+SheetDescription.displayName = 'SheetDescription'
 
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -206,6 +175,6 @@ export {
   SheetFooter,
   SheetTitle,
   SheetDescription,
-};
+}
 
-export type { SheetSide, SheetContentProps };
+export type { SheetSide, SheetContentProps }

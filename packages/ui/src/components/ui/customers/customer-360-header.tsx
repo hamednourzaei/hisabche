@@ -1,8 +1,8 @@
 // packages/ui/src/components/ui/customers/customer-360-header.tsx
-"use client"
+'use client'
 
-import { Phone, Star, TrendingUp, Wallet, Clock, MoreHorizontal } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { Phone, Star, TrendingUp, Wallet, Clock, MoreHorizontal } from 'lucide-react'
+import { cn } from '../../../lib/utils'
 
 interface Customer360HeaderProps {
   t: (key: string, fallback?: string) => string
@@ -34,19 +34,18 @@ const healthColor = (score: number) => {
 }
 
 const actionBtn = cn(
-  "inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-medium",
-  "border border-[hsl(var(--border-default))]",
-  "text-[hsl(var(--fg-secondary))]",
-  "hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]",
-  "hover:border-[hsl(var(--color-primary)/0.3)]",
-  "transition-all duration-200 motion-reduce:transition-none",
+  'inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-medium',
+  'border border-[hsl(var(--border-default))]',
+  'text-[hsl(var(--fg-secondary))]',
+  'hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
+  'hover:border-[hsl(var(--color-primary)/0.3)]',
+  'transition-all duration-200 motion-reduce:transition-none',
 )
 
 export function Customer360Header({ t, customer, fmt, onQuickAction }: Customer360HeaderProps) {
   return (
     <div className="glass-card animate-fade-in-up">
       <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-        
         {/* Identity */}
         <div className="flex items-center gap-4 min-w-0">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--color-primary)/0.15)]">
@@ -60,7 +59,10 @@ export function Customer360Header({ t, customer, fmt, onQuickAction }: Customer3
                 {customer.name}
               </h2>
               {customer.tags.includes('vip') && (
-                <Star className="size-4 shrink-0 text-yellow-500 fill-yellow-500" aria-hidden="true" />
+                <Star
+                  className="size-4 shrink-0 text-yellow-500 fill-yellow-500"
+                  aria-hidden="true"
+                />
               )}
             </div>
             {customer.phone && (
@@ -72,11 +74,11 @@ export function Customer360Header({ t, customer, fmt, onQuickAction }: Customer3
         {/* KPIs */}
         <div className="flex flex-wrap gap-4 sm:gap-6">
           <div className="text-center">
-            <p className={cn("text-lg font-bold tabular-nums", healthColor(customer.healthScore))}>
+            <p className={cn('text-lg font-bold tabular-nums', healthColor(customer.healthScore))}>
               {customer.healthScore}%
             </p>
             <p className="text-xs text-[hsl(var(--fg-tertiary))]">
-              {t("customers.health", "سلامت")}
+              {t('customers.health', 'سلامت')}
             </p>
           </div>
           {customer.type === 'credit' && (
@@ -85,7 +87,7 @@ export function Customer360Header({ t, customer, fmt, onQuickAction }: Customer3
                 {fmt(customer.totalDebt)}
               </p>
               <p className="text-xs text-[hsl(var(--fg-tertiary))]">
-                {t("customers.debt", "بدهی")}
+                {t('customers.debt', 'بدهی')}
               </p>
             </div>
           )}
@@ -94,14 +96,14 @@ export function Customer360Header({ t, customer, fmt, onQuickAction }: Customer3
               {fmt(customer.lifetimeValue)}
             </p>
             <p className="text-xs text-[hsl(var(--fg-tertiary))]">
-              {t("customers.lifetimeValue", "ارزش کل")}
+              {t('customers.lifetimeValue', 'ارزش کل')}
             </p>
           </div>
         </div>
 
         {/* Quick Actions */}
         <div className="flex gap-1.5 flex-wrap">
-          {quickActions.map(action => (
+          {quickActions.map((action) => (
             <button
               key={action.id}
               type="button"
@@ -112,11 +114,14 @@ export function Customer360Header({ t, customer, fmt, onQuickAction }: Customer3
               {t(action.labelKey, action.fallback)}
             </button>
           ))}
-          <button type="button" className={cn(actionBtn, "px-2")} aria-label={t("common.more", "بیشتر")}>
+          <button
+            type="button"
+            className={cn(actionBtn, 'px-2')}
+            aria-label={t('common.more', 'بیشتر')}
+          >
             <MoreHorizontal className="size-4" aria-hidden="true" />
           </button>
         </div>
-
       </div>
     </div>
   )

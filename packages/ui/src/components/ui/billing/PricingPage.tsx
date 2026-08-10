@@ -1,6 +1,6 @@
-"use client";
+'use client'
 
-import { useTranslations } from "next-intl";
+import { useTranslations } from 'next-intl'
 import { usePlans, useUpgrade } from '@hisabche/api'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../card'
 import { Button } from '../button'
@@ -8,7 +8,8 @@ import { Badge } from '../badge'
 import { Check } from 'lucide-react'
 
 export function PricingPage() {
-  const t = useTranslations();const { data: plans, isLoading } = usePlans()
+  const t = useTranslations()
+  const { data: plans, isLoading } = usePlans()
   const upgrade = useUpgrade()
 
   if (isLoading) return <div>{t('billing.loading')}</div>
@@ -22,16 +23,16 @@ export function PricingPage() {
     <div className="container py-12">
       <div className="text-center mb-10">
         <h1 className="text-4xl font-bold">{t('billing.pricing.title')}</h1>
-        <p className="text-muted-fg mt-2">
-          {t('billing.pricing.subtitle')}
-        </p>
+        <p className="text-muted-fg mt-2">{t('billing.pricing.subtitle')}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
         {plans.map((plan) => {
-          const planKey = `billing.plans.${plan.plan}`
+          // `billing.plans.<plan>` is an object holding `name` and `features`;
+          // reading the object node itself rendered the raw key path.
+          const planKey = `billing.plans.${plan.plan}.name`
           const featuresKey = `billing.plans.${plan.plan}.features`
-          
+
           return (
             <Card key={plan.plan} className="relative">
               {plan.plan === 'pro' && (
@@ -66,7 +67,7 @@ export function PricingPage() {
               </CardContent>
 
               <CardFooter>
-                <Button 
+                <Button
                   className="w-full"
                   onClick={() => {
                     if (plan.plan === 'free') return
@@ -74,9 +75,7 @@ export function PricingPage() {
                   }}
                   disabled={plan.plan === 'free'}
                 >
-                  {plan.plan === 'free' 
-                    ? t('billing.startFree') 
-                    : t('billing.startPro')}
+                  {plan.plan === 'free' ? t('billing.startFree') : t('billing.startPro')}
                 </Button>
               </CardFooter>
             </Card>

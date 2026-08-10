@@ -1,29 +1,29 @@
 // packages/ui/src/components/ui/dashboard/ai-insights.tsx
-"use client";
+'use client'
 
-import { memo, useMemo } from "react";
-import { useTranslations } from "next-intl";
-import { cn } from "@/lib/utils";
-import { Sparkles, AlertTriangle, Info, Lightbulb, TrendingUp } from "lucide-react";
+import { memo, useMemo } from 'react'
+import { useTranslations } from 'next-intl'
+import { cn } from '../../../lib/utils'
+import { Sparkles, AlertTriangle, Info, Lightbulb, TrendingUp } from 'lucide-react'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    AIInsights v4 — Mobile-optimized · Desktop pixel-perfect
    ═══════════════════════════════════════════════════════════════════════════ */
 
 interface Insight {
-  type: "warning" | "info" | "success" | "tip";
-  title: string;
-  description: string;
-  action?: string;
-  actionLabel?: string;
-  metric?: number;
-  metricLabel?: string;
+  type: 'warning' | 'info' | 'success' | 'tip'
+  title: string
+  description: string
+  action?: string
+  actionLabel?: string
+  metric?: number
+  metricLabel?: string
 }
 
 interface AIInsightsProps {
-  insights: Insight[];
-  isLoading: boolean;
-  onAction?: (action: string) => void;
+  insights: Insight[]
+  isLoading: boolean
+  onAction?: (action: string) => void
 }
 
 const iconMap = {
@@ -31,32 +31,32 @@ const iconMap = {
   info: Info,
   success: TrendingUp,
   tip: Lightbulb,
-} as const;
+} as const
 
 const toneStyles = {
   warning: {
-    border: "border-[hsl(var(--status-warning)/0.3)]",
-    bg: "bg-[hsl(var(--status-warning)/0.05)]",
-    icon: "text-[hsl(var(--status-warning))]",
+    border: 'border-[hsl(var(--status-warning)/0.3)]',
+    bg: 'bg-[hsl(var(--status-warning)/0.05)]',
+    icon: 'text-[hsl(var(--status-warning))]',
   },
   info: {
-    border: "border-[hsl(var(--status-info)/0.3)]",
-    bg: "bg-[hsl(var(--status-info)/0.05)]",
-    icon: "text-[hsl(var(--status-info))]",
+    border: 'border-[hsl(var(--status-info)/0.3)]',
+    bg: 'bg-[hsl(var(--status-info)/0.05)]',
+    icon: 'text-[hsl(var(--status-info))]',
   },
   success: {
-    border: "border-[hsl(var(--status-positive)/0.3)]",
-    bg: "bg-[hsl(var(--status-positive)/0.05)]",
-    icon: "text-[hsl(var(--status-positive))]",
+    border: 'border-[hsl(var(--status-positive)/0.3)]',
+    bg: 'bg-[hsl(var(--status-positive)/0.05)]',
+    icon: 'text-[hsl(var(--status-positive))]',
   },
   tip: {
-    border: "border-[hsl(var(--color-primary)/0.3)]",
-    bg: "bg-[hsl(var(--color-primary)/0.05)]",
-    icon: "text-[hsl(var(--color-primary))]",
+    border: 'border-[hsl(var(--color-primary)/0.3)]',
+    bg: 'bg-[hsl(var(--color-primary)/0.05)]',
+    icon: 'text-[hsl(var(--color-primary))]',
   },
-} as const;
+} as const
 
-type InsightType = keyof typeof toneStyles;
+type InsightType = keyof typeof toneStyles
 
 // ─── Loading Skeleton ──────────────────────────────────────────────────────
 
@@ -69,28 +69,31 @@ const InsightsSkeleton = memo(function InsightsSkeleton() {
       </div>
       <div className="grid grid-cols-2 gap-2 sm:gap-3">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="h-14 sm:h-16 rounded-xl bg-[hsl(var(--surface-muted))] animate-pulse" />
+          <div
+            key={i}
+            className="h-14 sm:h-16 rounded-xl bg-[hsl(var(--surface-muted))] animate-pulse"
+          />
         ))}
       </div>
     </div>
-  );
-});
-InsightsSkeleton.displayName = "InsightsSkeleton";
+  )
+})
+InsightsSkeleton.displayName = 'InsightsSkeleton'
 
 // ─── Empty State ────────────────────────────────────────────────────────────
 
 const InsightsEmpty = memo(function InsightsEmpty() {
-  const t = useTranslations();
+  const t = useTranslations()
   return (
     <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-4 sm:p-6 text-center">
       <Sparkles className="size-6 sm:size-8 mx-auto mb-1.5 sm:mb-2 text-[hsl(var(--fg-tertiary))]" />
       <p className="text-xs sm:text-sm text-[hsl(var(--fg-secondary))]">
-        {t("dashboard.noInsights")}
+        {t('dashboard.noInsights')}
       </p>
     </div>
-  );
-});
-InsightsEmpty.displayName = "InsightsEmpty";
+  )
+})
+InsightsEmpty.displayName = 'InsightsEmpty'
 
 // ─── Insight Item ──────────────────────────────────────────────────────────
 
@@ -98,21 +101,21 @@ const InsightItem = memo(function InsightItem({
   insight,
   onAction,
 }: {
-  insight: Insight;
-  onAction: (action: string) => void;
+  insight: Insight
+  onAction: (action: string) => void
 }) {
-  const Icon = iconMap[insight.type as InsightType];
-  const tone = toneStyles[insight.type as InsightType];
+  const Icon = iconMap[insight.type as InsightType]
+  const tone = toneStyles[insight.type as InsightType]
 
   return (
     <div
       className={cn(
-        "flex items-start gap-2.5 sm:gap-3 p-3 sm:p-4 rounded-xl border",
+        'flex items-start gap-2.5 sm:gap-3 p-3 sm:p-4 rounded-xl border',
         tone.border,
-        tone.bg
+        tone.bg,
       )}
     >
-      <div className={cn("shrink-0 mt-0.5", tone.icon)}>
+      <div className={cn('shrink-0 mt-0.5', tone.icon)}>
         <Icon className="size-4 sm:size-5" aria-hidden="true" />
       </div>
 
@@ -141,9 +144,9 @@ const InsightItem = memo(function InsightItem({
         </span>
       )}
     </div>
-  );
-});
-InsightItem.displayName = "InsightItem";
+  )
+})
+InsightItem.displayName = 'InsightItem'
 
 // ─── Main Component ─────────────────────────────────────────────────────────
 
@@ -152,39 +155,38 @@ export const AIInsights = memo(function AIInsights({
   isLoading,
   onAction,
 }: AIInsightsProps) {
-  const t = useTranslations();
+  const t = useTranslations()
 
   const insightItems = useMemo(
     () =>
       insights.map((insight, i) => (
-        <InsightItem
-          key={i}
-          insight={insight}
-          onAction={onAction || (() => {})}
-        />
+        <InsightItem key={i} insight={insight} onAction={onAction || (() => {})} />
       )),
-    [insights, onAction]
-  );
+    [insights, onAction],
+  )
 
   if (isLoading) {
-    return <InsightsSkeleton />;
+    return <InsightsSkeleton />
   }
 
   if (!insights || insights.length === 0) {
-    return <InsightsEmpty />;
+    return <InsightsEmpty />
   }
 
   return (
     <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-4 sm:p-6">
       <div className="flex items-center gap-1.5 sm:gap-2 mb-3 sm:mb-4">
-        <Sparkles className="size-4 sm:size-5 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+        <Sparkles
+          className="size-4 sm:size-5 text-[hsl(var(--color-primary))]"
+          aria-hidden="true"
+        />
         <h2 className="text-sm sm:text-base font-semibold text-[hsl(var(--fg-primary))]">
-          {t("dashboard.smartInsights")}
+          {t('dashboard.smartInsights')}
         </h2>
       </div>
       <div className="grid grid-cols-2 gap-2 sm:gap-3">{insightItems}</div>
     </div>
-  );
-});
+  )
+})
 
-AIInsights.displayName = "AIInsights";
+AIInsights.displayName = 'AIInsights'

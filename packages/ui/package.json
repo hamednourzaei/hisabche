@@ -13,7 +13,7 @@
   "dependencies": {
     "@hisabche/api": "workspace:*",
     "@hisabche/store": "workspace:*",
-    "@tanstack/react-query": "^5.45.0",
+    "@hisabche/ui-contract": "workspace:*",
     "@hookform/resolvers": "^3.3.4",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-avatar": "^1.1.11",
@@ -29,6 +29,7 @@
     "@radix-ui/react-switch": "^1.2.6",
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-tooltip": "^1.2.8",
+    "@tanstack/react-query": "^5.45.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -63,7 +64,9 @@
     "react-dom": "^19.2.6",
     "tailwindcss": "^3.4.4",
     "tailwindcss-animate": "^1.0.7",
-    "typescript": "^5.5.0"
+    "typescript": "^5.5.0",
+    "@testing-library/react": "^16.1.0",
+    "jsdom": "^25.0.1"
   },
   "peerDependencies": {
     "react": "^18.2.0",
@@ -71,6 +74,8 @@
   },
   "exports": {
     ".": "./src/index.ts",
+    "./screens": "./src/screens.ts",
+    "./menu": "./src/lib/menu/nav-items.ts",
     "./globals.css": "./src/styles/globals.css",
     "./landing/landing-page": "./src/components/ui/landing/landing-page.tsx",
     "./landing/site-footer": "./src/components/ui/landing/site-footer.tsx",

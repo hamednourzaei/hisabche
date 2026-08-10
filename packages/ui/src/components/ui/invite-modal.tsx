@@ -1,15 +1,15 @@
 // ============================================
 // packages/ui/src/components/ui/invite-modal.tsx
 // ============================================
-"use client";
+'use client'
 
-import { useState, useCallback, memo } from "react";
-import { useTranslations } from "next-intl";
-import * as Dialog from "@radix-ui/react-dialog";
-import { X, Check, ChevronDown, Copy } from "lucide-react";
-import { type WorkspaceRole } from "@hisabche/store";
-import { useInviteMember } from "@hisabche/api";
-import { cn } from "@/lib/utils";
+import { useState, useCallback, memo } from 'react'
+import { useTranslations } from 'next-intl'
+import * as Dialog from '@radix-ui/react-dialog'
+import { X, Check, ChevronDown, Copy } from 'lucide-react'
+import { type WorkspaceRole } from '@hisabche/store'
+import { useInviteMember } from '@hisabche/api'
+import { cn } from '../../lib/utils'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    InviteModal v2 — Memoized · Performance Optimized
@@ -17,123 +17,110 @@ import { cn } from "@/lib/utils";
    ═══════════════════════════════════════════════════════════════════════════ */
 
 interface Props {
-  open: boolean;
-  onClose: () => void;
-  workspaceId: string;
+  open: boolean
+  onClose: () => void
+  workspaceId: string
 }
 
-export const InviteModal = memo(function InviteModal({
-  open,
-  onClose,
-  workspaceId,
-}: Props) {
-  const tOriginal = useTranslations();
+export const InviteModal = memo(function InviteModal({ open, onClose, workspaceId }: Props) {
+  const tOriginal = useTranslations()
 
   const t = (key: string, fallback?: string): string => {
+    const v = tOriginal(key as Parameters<typeof tOriginal>[0])
 
-    const v = tOriginal(key as Parameters<typeof tOriginal>[0]);
-
-    return v && v !== key ? v : (fallback ?? key);
-
-  };
+    return v && v !== key ? v : (fallback ?? key)
+  }
 
   // ✅ safeT wrapper
 
-
-  const inviteMember = useInviteMember();
-  const [email, setEmail] = useState("");
-  const [role, setRole] = useState<WorkspaceRole>("member");
-  const [sent, setSent] = useState(false);
-  const [inviteLink, setInviteLink] = useState("");
-  const [error, setError] = useState("");
-  const [copied, setCopied] = useState(false);
+  const inviteMember = useInviteMember()
+  const [email, setEmail] = useState('')
+  const [role, setRole] = useState<WorkspaceRole>('member')
+  const [sent, setSent] = useState(false)
+  const [inviteLink, setInviteLink] = useState('')
+  const [error, setError] = useState('')
+  const [copied, setCopied] = useState(false)
 
   const handleInvite = useCallback(async () => {
-    if (!email.trim() || !workspaceId) return;
-    setError("");
+    if (!email.trim() || !workspaceId) return
+    setError('')
     try {
       const response = await inviteMember.mutateAsync({
         workspaceId,
         email: email.trim(),
         role,
-      });
+      })
       // ✅ FIX: بدون پیشوند زبان، لینک به مسیر اشتباه می‌رفت (صفحه فقط
       // زیر app/[lang]/accept-invite وجود دارد)
-      const currentLangSegment = window.location.pathname.split("/")[1] || "af";
-      const link = `${window.location.origin}/${currentLangSegment}/accept-invite?token=${response?.token ?? ""}`;
-      setInviteLink(link);
-      setSent(true);
+      const currentLangSegment = window.location.pathname.split('/')[1] || 'af'
+      const link = `${window.location.origin}/${currentLangSegment}/accept-invite?token=${response?.token ?? ''}`
+      setInviteLink(link)
+      setSent(true)
     } catch (err: any) {
-      setError(err?.message || t("workspace.inviteError", "خطا در ارسال دعوت"));
+      setError(err?.message || t('workspace.inviteError', 'خطا در ارسال دعوت'))
     }
-  }, [email, workspaceId, role, inviteMember, t]);
+  }, [email, workspaceId, role, inviteMember, t])
 
   const handleCopy = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(inviteLink);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      await navigator.clipboard.writeText(inviteLink)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
     } catch {
-      document.getElementById("invite-link-input")?.focus();
+      document.getElementById('invite-link-input')?.focus()
     }
-  }, [inviteLink]);
+  }, [inviteLink])
 
   const handleClose = useCallback(() => {
-    setSent(false);
-    setInviteLink("");
-    setEmail("");
-    setError("");
-    setCopied(false);
-    onClose();
-  }, [onClose]);
+    setSent(false)
+    setInviteLink('')
+    setEmail('')
+    setError('')
+    setCopied(false)
+    onClose()
+  }, [onClose])
 
-  const handleEmailChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      setEmail(e.target.value);
-      setError("");
-    },
-    []
-  );
+  const handleEmailChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setEmail(e.target.value)
+    setError('')
+  }, [])
 
-  const handleRoleChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
-      setRole(e.target.value as WorkspaceRole);
-    },
-    []
-  );
+  const handleRoleChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    setRole(e.target.value as WorkspaceRole)
+  }, [])
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        handleInvite();
+      if (e.key === 'Enter') {
+        e.preventDefault()
+        handleInvite()
       }
     },
-    [handleInvite]
-  );
+    [handleInvite],
+  )
 
-  const isPending = inviteMember.isPending;
+  const isPending = inviteMember.isPending
 
   return (
     <Dialog.Root open={open} onOpenChange={(isOpen) => !isOpen && handleClose()}>
       <Dialog.Portal>
         <Dialog.Overlay
           className={cn(
-            "fixed inset-0 z-50 bg-[hsl(var(--surface-base)/0.6)] backdrop-blur-md",
-            "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+            'fixed inset-0 z-50 bg-[hsl(var(--surface-base)/0.6)] backdrop-blur-md',
+            'data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
           )}
         />
         <Dialog.Content
           className={cn(
-            "fixed z-50 w-[calc(100%-32px)] max-w-sm left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-[hsl(var(--border-strong))] bg-[hsl(var(--surface-elevated))] shadow-xl p-6",
-            "data-[state=open]:animate-in data-[state=closed]:animate-out"
+            'fixed z-50 w-[calc(100%-32px)] max-w-sm left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-[hsl(var(--border-strong))] bg-[hsl(var(--surface-elevated))] shadow-xl p-6',
+            'data-[state=open]:animate-in data-[state=closed]:animate-out',
           )}
         >
           <div className="flex items-center justify-between mb-4">
             <Dialog.Title className="text-lg font-bold text-[hsl(var(--fg-primary))]">
               {sent
-                ? t("workspace.invited", "دعوت شد")
-                : t("workspace.inviteMember", "دعوت عضو جدید")}
+                ? t('workspace.invited', 'دعوت شد')
+                : t('workspace.inviteMember', 'دعوت عضو جدید')}
             </Dialog.Title>
             <Dialog.Close asChild>
               <button
@@ -150,13 +137,13 @@ export const InviteModal = memo(function InviteModal({
               <div className="flex items-center gap-2 p-3 rounded-xl bg-[hsl(var(--color-success)/0.08)] border border-[hsl(var(--color-success)/0.2)]">
                 <Check className="size-5 text-[hsl(var(--color-success))] shrink-0" />
                 <p className="text-sm text-[hsl(var(--color-success))]">
-                  {t("workspace.inviteSent", "ایمیل دعوت برای کاربر ارسال شد")}
+                  {t('workspace.inviteSent', 'ایمیل دعوت برای کاربر ارسال شد')}
                 </p>
               </div>
 
               <div>
                 <p className="text-xs text-[hsl(var(--fg-secondary))] mb-1.5">
-                  {t("workspace.inviteLinkLabel", "یا لینک دعوت را مستقیم ارسال کنید:")}
+                  {t('workspace.inviteLinkLabel', 'یا لینک دعوت را مستقیم ارسال کنید:')}
                 </p>
                 <div className="flex items-center gap-2 p-3 rounded-xl bg-[hsl(var(--surface-base))] border border-[hsl(var(--border-default))]">
                   <input
@@ -174,20 +161,20 @@ export const InviteModal = memo(function InviteModal({
                     {copied ? (
                       <>
                         <Check className="size-3.5" />
-                        {t("workspace.copied", "کپی شد")}
+                        {t('workspace.copied', 'کپی شد')}
                       </>
                     ) : (
                       <>
                         <Copy className="size-3.5" />
-                        {t("workspace.copy", "کپی")}
+                        {t('workspace.copy', 'کپی')}
                       </>
                     )}
                   </button>
                 </div>
                 <p className="text-[10px] text-[hsl(var(--fg-tertiary))] mt-1.5">
                   {t(
-                    "workspace.inviteLinkHint",
-                    "این لینک را برای کاربر ارسال کنید. لینک تا ۷ روز معتبر است."
+                    'workspace.inviteLinkHint',
+                    'این لینک را برای کاربر ارسال کنید. لینک تا ۷ روز معتبر است.',
                   )}
                 </p>
               </div>
@@ -196,7 +183,7 @@ export const InviteModal = memo(function InviteModal({
                 onClick={handleClose}
                 className="w-full rounded-full px-4 py-2.5 text-sm font-bold text-white bg-[hsl(var(--color-primary))]"
               >
-                {t("action.done", "تمام")}
+                {t('action.done', 'تمام')}
               </button>
             </div>
           ) : (
@@ -206,7 +193,7 @@ export const InviteModal = memo(function InviteModal({
                 value={email}
                 onChange={handleEmailChange}
                 onKeyDown={handleKeyDown}
-                placeholder={t("auth.email", "ایمیل")}
+                placeholder={t('auth.email', 'ایمیل')}
                 autoFocus
                 className="w-full rounded-xl px-4 py-3 text-sm border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))] focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)]"
               />
@@ -217,23 +204,21 @@ export const InviteModal = memo(function InviteModal({
                   onChange={handleRoleChange}
                   className="w-full rounded-xl px-4 py-3 pe-10 text-sm appearance-none cursor-pointer border-2 border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))]"
                 >
-                  <option value="admin">{t("workspace.admin", "مدیر")}</option>
-                  <option value="member">{t("workspace.employee", "کارمند")}</option>
-                  <option value="viewer">{t("workspace.viewer", "ناظر")}</option>
+                  <option value="admin">{t('workspace.admin', 'مدیر')}</option>
+                  <option value="member">{t('workspace.employee', 'کارمند')}</option>
+                  <option value="viewer">{t('workspace.viewer', 'ناظر')}</option>
                 </select>
                 <ChevronDown className="absolute end-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))] pointer-events-none" />
               </div>
 
-              {error && (
-                <p className="text-xs text-[hsl(var(--color-destructive))]">{error}</p>
-              )}
+              {error && <p className="text-xs text-[hsl(var(--color-destructive))]">{error}</p>}
 
               <div className="flex gap-3 pt-2">
                 <button
                   onClick={handleClose}
                   className="w-full rounded-full px-4 py-2.5 text-sm border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))]"
                 >
-                  {t("action.cancel", "انصراف")}
+                  {t('action.cancel', 'انصراف')}
                 </button>
                 <button
                   onClick={handleInvite}
@@ -241,8 +226,8 @@ export const InviteModal = memo(function InviteModal({
                   className="w-full rounded-full px-4 py-2.5 text-sm font-bold text-white bg-[hsl(var(--color-primary))] disabled:opacity-40"
                 >
                   {isPending
-                    ? t("app.loading", "در حال ارسال...")
-                    : t("workspace.sendInvite", "ارسال دعوت")}
+                    ? t('app.loading', 'در حال ارسال...')
+                    : t('workspace.sendInvite', 'ارسال دعوت')}
                 </button>
               </div>
             </div>
@@ -250,7 +235,7 @@ export const InviteModal = memo(function InviteModal({
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
-  );
-});
+  )
+})
 
-InviteModal.displayName = "InviteModal";
+InviteModal.displayName = 'InviteModal'

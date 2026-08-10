@@ -28,7 +28,49 @@ export interface ApiError {
 // `process`, so this package must not crash on import there. Host apps that
 // need a different base URL re-point `apiClient.defaults.baseURL` after import.
 const env: Record<string, string | undefined> = typeof process !== 'undefined' ? process.env : {}
-const BASE_URL = env.NEXT_PUBLIC_API_URL || 'https://api.hisabche.com/api'
+
+/**
+ * Read a build-time public env var.
+ *
+ * Both bundlers substitute these by matching the *literal* text
+ * `process.env.NEXT_PUBLIC_…` / `process.env.EXPO_PUBLIC_…` in the source, so
+ * each one has to be written out in full. Reading them through the `env` object
+ * above would leave the value `undefined` in any browser or native bundle,
+ * where there is no real `process` to fall back on.
+ *
+ * The `typeof process` guard keeps this safe in the Electron renderer, which
+ * has no Node globals.
+ */
+function publicEnv(): string | undefined {
+  const fromNext = typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_API_URL : undefined
+  const fromExpo = typeof process !== 'undefined' ? process.env.EXPO_PUBLIC_API_URL : undefined
+
+  return normalizeBaseUrl(fromNext || fromExpo)
+}
+
+/**
+ * Clean a base URL coming from configuration.
+ *
+ * Exported because host apps re-point `apiClient.defaults.baseURL` from their
+ * own config sources; each one has to sanitise the same way or the fix only
+ * covers whichever path happens to run.
+ *
+ * Trims surrounding whitespace: `set VAR=http://host/api && cmd` in Windows
+ * cmd.exe swallows the space before `&&` into the value, which turns every
+ * request path into `/api%20/auth/login`. A trailing slash is stripped for the
+ * same class of reason — it produces `//auth/login`.
+ */
+export function normalizeBaseUrl(value: string | undefined | null): string | undefined {
+  const trimmed = value?.trim()
+  if (!trimmed) return undefined
+
+  return trimmed.replace(/\/+$/, '')
+}
+
+// Mobile sets EXPO_PUBLIC_API_URL per EAS profile (staging for development and
+// preview builds). Before this was read, every mobile build — including local
+// `expo start` — talked to the production API regardless of profile.
+const BASE_URL = publicEnv() || 'https://api.hisabche.com/api'
 const isDev = env.NODE_ENV !== 'production'
 
 // حداکثر زمانی که یک درخواست منتظر آماده شدن Auth Store می‌ماند (میلی‌ثانیه)

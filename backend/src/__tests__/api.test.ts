@@ -1,39 +1,167 @@
-// backend/src/__tests__/api.test.ts
-import { describe, it, expect } from 'vitest';
+// ============================================
+// API surface tests.
+//
+// These build the real Fastify application in-process and drive it with
+// `inject()`. They previously fetched https://hisabche.onrender.com over the
+// network, which made every local and CI run depend on production being
+// reachable — ordinary latency showed up as a failing unit test, and a genuine
+// regression would have been indistinguishable from a slow deploy.
+//
+// Nothing here touches Supabase: the assertions cover the routing table, the
+// public-path allowlist and the auth guard, all of which run before any
+// handler reaches the database.
+// ============================================
 
-const BASE_URL = 'https://hisabche.onrender.com';
+import type { FastifyInstance } from 'fastify'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 
-describe('API Health', () => {
-  it('GET /docs returns Swagger UI', async () => {
-    const res = await fetch(`${BASE_URL}/docs`);
-    expect(res.status).toBe(200);
-  });
-});
+// The auth guard calls `supabase.auth.getUser()` to validate a bearer token.
+// Stubbing it keeps the suite off the network entirely and makes rejection
+// deterministic: an unverifiable token yields no user, so the guard must 401.
+vi.mock('../db', () => {
+  const rejectToken = async () => ({ data: { user: null }, error: { message: 'invalid token' } })
 
-describe('Auth Endpoints', () => {
-  it('POST /auth/login — invalid credentials returns 401', async () => {
-    const res = await fetch(`${BASE_URL}/auth/login`, {
+  const query = {
+    select: () => query,
+    eq: () => query,
+    order: () => query,
+    limit: () => query,
+    maybeSingle: async () => ({ data: null, error: null }),
+    single: async () => ({ data: null, error: null }),
+    then: (resolve: (value: { data: never[]; error: null }) => unknown) =>
+      resolve({ data: [], error: null }),
+  }
+
+  const supabase = {
+    auth: { getUser: rejectToken },
+    from: () => query,
+  }
+
+  return {
+    supabase,
+    default: supabase,
+    checkDatabaseConnection: async () => true,
+    dbStats: { queries: 0, errors: 0 },
+    withConnection: async <T>(fn: () => Promise<T>) => fn(),
+  }
+})
+
+let app: FastifyInstance
+
+beforeAll(async () => {
+  // Importing the module registers routes; the `VITEST` guard in index.ts keeps
+  // it from binding a port or starting the job scheduler.
+  const { buildServer } = await import('../index')
+  app = await buildServer()
+  await app.ready()
+}, 60_000)
+
+afterAll(async () => {
+  await app?.close()
+})
+
+describe('API health', () => {
+  it('GET /api/health reports ok', async () => {
+    const res = await app.inject({ method: 'GET', url: '/api/health' })
+
+    expect(res.statusCode).toBe(200)
+    expect(res.json()).toMatchObject({ status: 'ok' })
+  })
+
+  it('GET /live is public', async () => {
+    const res = await app.inject({ method: 'GET', url: '/live' })
+    expect(res.statusCode).toBe(200)
+  })
+
+  it('GET /docs serves the Swagger UI', async () => {
+    const res = await app.inject({ method: 'GET', url: '/docs' })
+
+    // Swagger UI answers the bare path with a redirect to /docs/static/index.html.
+    expect([200, 302]).toContain(res.statusCode)
+  })
+})
+
+describe('auth guard', () => {
+  // Every one of these must be rejected before the handler runs. If the
+  // preHandler allowlist ever grows a wildcard, these turn red.
+  it.each([
+    ['/api/products'],
+    ['/api/invoices'],
+    ['/api/customers'],
+    ['/api/warehouses'],
+    ['/api/accounting/accounts'],
+  ])('GET %s without a token is rejected', async (url) => {
+    const res = await app.inject({ method: 'GET', url })
+
+    expect(res.statusCode).toBe(401)
+  })
+
+  it('rejects a malformed bearer token', async () => {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/api/invoices',
+      headers: { authorization: 'Bearer not-a-real-token' },
+    })
+
+    expect(res.statusCode).toBe(401)
+  })
+
+  it('does not leak a stack trace on rejection', async () => {
+    const res = await app.inject({ method: 'GET', url: '/api/invoices' })
+
+    expect(res.body).not.toContain('at ')
+    expect(res.body.toLowerCase()).not.toContain('supabase')
+  })
+})
+
+describe('public auth routes', () => {
+  it('POST /api/auth/login is reachable without a token', async () => {
+    // An empty body must fail validation (400), not authentication (401) —
+    // that is what proves the route is on the public allowlist.
+    const res = await app.inject({
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'fake@test.com', password: 'wrong' }),
-    });
-    expect(res.status).toBe(401);
-  });
-});
+      url: '/api/auth/login',
+      payload: {},
+    })
 
-describe('Protected Endpoints', () => {
-  it('GET /products returns 401 without auth', async () => {
-    const res = await fetch(`${BASE_URL}/products`);
-    expect(res.status).toBe(401);
-  });
+    expect(res.statusCode).not.toBe(401)
+    expect(res.statusCode).toBeGreaterThanOrEqual(400)
+    expect(res.statusCode).toBeLessThan(500)
+  })
 
-  it('GET /invoices returns 401 without auth', async () => {
-    const res = await fetch(`${BASE_URL}/invoices`);
-    expect(res.status).toBe(401);
-  });
+  it('rejects a login payload with an invalid email before touching the database', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: { email: 'not-an-email', password: 'whatever123' },
+    })
 
-  it('GET /customers returns 401 without auth', async () => {
-    const res = await fetch(`${BASE_URL}/customers`);
-    expect(res.status).toBe(401);
-  });
-});
+    expect(res.statusCode).toBe(400)
+  })
+
+  it('serializes a validation failure instead of collapsing into a 500', async () => {
+    // Regression: the hand-rolled zod→JSON-schema converter listed every field
+    // as required, including `.optional()` ones. The 400 response schema
+    // declares an optional `details`, so fast-json-stringify threw when the
+    // error handler omitted it — turning every bad-input 400 into a 500 and
+    // hiding the validation message from the client.
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/auth/login',
+      payload: { email: 'not-an-email', password: 'x' },
+    })
+
+    expect(res.statusCode).toBe(400)
+    expect(res.statusCode).not.toBe(500)
+    // The body must still be readable JSON, not a serializer failure page.
+    expect(() => res.json()).not.toThrow()
+  })
+})
+
+describe('unknown routes', () => {
+  it('returns 404 rather than 401 for a path that does not exist', async () => {
+    const res = await app.inject({ method: 'GET', url: '/api/definitely-not-a-route' })
+
+    expect(res.statusCode).toBe(404)
+  })
+})

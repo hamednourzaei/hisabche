@@ -1,72 +1,69 @@
 // packages/ui/src/components/ui/breadcrumb.tsx
-"use client";
+'use client'
 
-import { usePathname } from "next/navigation";
-import { useTranslations } from "next-intl";
-import { cn } from "@/lib/utils";
-import { ChevronLeft, Home } from "lucide-react";
-import Link from "next/link";
+import { usePathname } from 'next/navigation'
+import { useTranslations } from 'next-intl'
+import { cn } from '../../lib/utils'
+import { ChevronLeft, Home } from 'lucide-react'
+import Link from 'next/link'
 
 // ─── Route label mapping (i18n keys) ────────────────────────
 const ROUTE_LABELS: Record<string, { key: string; fallback: string }> = {
-  dashboard: { key: "nav.dashboard", fallback: "داشبورد" },
-warehouse: { key: "nav.warehouse", fallback: "انبار" },
-invoices: { key: "nav.invoices", fallback: "فاکتورها" },
-  customers: { key: "nav.customers", fallback: "باقی‌داری" },
-  hr: { key: "nav.human-resources", fallback: "منابع انسانی" },
-  projects: { key: "nav.projects", fallback: "پروژه‌ها" },
-  permissions: { key: "nav.permissions", fallback: "دسترسی‌ها" },
-  audit: { key: "nav.audit", fallback: "حسابرسی" },
-  workspace: { key: "workspace.title", fallback: "فضای کاری" },
-  settings: { key: "nav.settings", fallback: "تنظیمات" },
-  "quick-invoice": { key: "quickInvoice.title", fallback: "فاکتور سریع" },
-  "sync-center": { key: "sync.title", fallback: "همگام‌سازی" },
-  onboarding: { key: "onboarding.title", fallback: "راه‌اندازی" },
-};
+  dashboard: { key: 'nav.dashboard', fallback: 'داشبورد' },
+  warehouse: { key: 'nav.warehouse', fallback: 'انبار' },
+  invoices: { key: 'nav.invoices', fallback: 'فاکتورها' },
+  customers: { key: 'nav.customers', fallback: 'باقی‌داری' },
+  hr: { key: 'nav.human-resources', fallback: 'منابع انسانی' },
+  projects: { key: 'nav.projects', fallback: 'پروژه‌ها' },
+  permissions: { key: 'nav.permissions', fallback: 'دسترسی‌ها' },
+  audit: { key: 'nav.audit', fallback: 'حسابرسی' },
+  workspace: { key: 'workspace.title', fallback: 'فضای کاری' },
+  settings: { key: 'nav.settings', fallback: 'تنظیمات' },
+  'quick-invoice': { key: 'quickInvoice.title', fallback: 'فاکتور سریع' },
+  'sync-center': { key: 'sync.title', fallback: 'همگام‌سازی' },
+  onboarding: { key: 'onboarding.title', fallback: 'راه‌اندازی' },
+}
 
 export function Breadcrumb({ className }: { className?: string }) {
-  const pathname = usePathname();
-  const t = useTranslations();
+  const pathname = usePathname()
+  const t = useTranslations()
 
   // حذف locale prefix و split
   const segments = pathname
-    .replace(/^\/(af|en)(?=\/|$)/, "")
-    .split("/")
-    .filter(Boolean);
+    .replace(/^\/(af|en)(?=\/|$)/, '')
+    .split('/')
+    .filter(Boolean)
 
   // ساختن breadcrumb items
   const items = segments.map((segment, index) => {
-    const isLast = index === segments.length - 1;
-    const href = "/" + segments.slice(0, index + 1).join("/");
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(segment);
+    const isLast = index === segments.length - 1
+    const href = '/' + segments.slice(0, index + 1).join('/')
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(segment)
 
     // اگه UUID هست، "جزئیات" نشون بده
     if (isUUID) {
       return {
         href,
-        label: t("common.details"),
+        label: t('common.details'),
         isLast,
         isClickable: false,
-      };
+      }
     }
 
-    const routeLabel = ROUTE_LABELS[segment];
+    const routeLabel = ROUTE_LABELS[segment]
     return {
       href,
       label: routeLabel ? t(routeLabel.key) : segment,
       isLast,
       isClickable: !isLast,
-    };
-  });
+    }
+  })
 
   // اگه فقط dashboard هست، نشون نده
-  if (items.length <= 1) return null;
+  if (items.length <= 1) return null
 
   return (
-    <nav
-      aria-label="Breadcrumb"
-      className={cn("flex items-center gap-1.5 text-sm", className)}
-    >
+    <nav aria-label="Breadcrumb" className={cn('flex items-center gap-1.5 text-sm', className)}>
       {/* Home icon */}
       <Link
         href="/dashboard"
@@ -100,5 +97,5 @@ export function Breadcrumb({ className }: { className?: string }) {
         </span>
       ))}
     </nav>
-  );
+  )
 }

@@ -1,5 +1,5 @@
-import * as React from "react";
-import { cn } from "@/lib/utils";
+import * as React from 'react'
+import { cn } from '../../lib/utils'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    Input v2 — Hisabche Design Language
@@ -7,11 +7,10 @@ import { cn } from "@/lib/utils";
    Full RTL via logical CSS (start/end)
    ═══════════════════════════════════════════════════════════════════════════ */
 
-export interface InputProps
-  extends React.InputHTMLAttributes<HTMLInputElement> {
-  label?: string;
-  startIcon?: React.ReactNode;
-  endIcon?: React.ReactNode;
+export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  label?: string
+  startIcon?: React.ReactNode
+  endIcon?: React.ReactNode
 }
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
@@ -19,9 +18,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="space-y-1.5">
         {label && (
-          <label className="text-sm font-medium text-[hsl(var(--fg-primary))]">
-            {label}
-          </label>
+          <label className="text-sm font-medium text-[hsl(var(--fg-primary))]">{label}</label>
         )}
         <div className="relative">
           {/* Start icon (logical start = right in RTL) */}
@@ -33,18 +30,18 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           <input
             type={type}
             className={cn(
-              "flex h-10 w-full rounded-xl px-3 py-2 text-sm",
-              "border border-[hsl(var(--border-default))]",
-              "bg-[hsl(var(--surface-base))]",
-              "text-[hsl(var(--fg-primary))]",
-              "placeholder:text-[hsl(var(--fg-tertiary))]",
-              "file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-[hsl(var(--fg-primary))]",
-              "focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]",
-              "disabled:cursor-not-allowed disabled:opacity-40",
-              "transition-colors duration-200",
-              "motion-reduce:transition-none",
-              startIcon && "ps-10",
-              endIcon && "pe-10",
+              'flex h-10 w-full rounded-xl px-3 py-2 text-sm',
+              'border border-[hsl(var(--border-default))]',
+              'bg-[hsl(var(--surface-base))]',
+              'text-[hsl(var(--fg-primary))]',
+              'placeholder:text-[hsl(var(--fg-tertiary))]',
+              'file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-[hsl(var(--fg-primary))]',
+              'focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)]',
+              'disabled:cursor-not-allowed disabled:opacity-40',
+              'transition-colors duration-200',
+              'motion-reduce:transition-none',
+              startIcon && 'ps-10',
+              endIcon && 'pe-10',
               className,
             )}
             ref={ref}
@@ -58,10 +55,10 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           )}
         </div>
       </div>
-    );
+    )
   },
-);
+)
 
-Input.displayName = "Input";
+Input.displayName = 'Input'
 
-export { Input };
+export { Input }
