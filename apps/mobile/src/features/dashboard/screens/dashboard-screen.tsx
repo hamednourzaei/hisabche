@@ -15,7 +15,6 @@
 import React, { useCallback, useMemo, useState } from 'react'
 import { RefreshControl, ScrollView, View } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
-import { TrendingUp, Wallet, CreditCard, Boxes } from 'lucide-react'
 import { useRouter } from 'expo-router'
 import { useTranslation } from 'react-i18next'
 import { presetRange, type DateRange, type PresetKey } from '@hisabche/ui-contract'
@@ -112,47 +111,45 @@ export function DashboardScreen() {
     )
   }
 
-  // 4 KPI cards matching web's Level 2 — same labels, same icons, same trend logic
+  // 4 KPI cards matching web's Level 2 — same labels, same Ionicons, same trend logic.
+  // Icon mapping mirrors web's lucide set: TrendingUp→trending-up, Wallet→wallet,
+  // CreditCard→card, Boxes→cube.
   const kpiCards = [
     {
-      icon: TrendingUp,
+      icon: 'trending-up' as const,
       label: tCommon('dashboard.totalSales', 'فروش کل'),
       value: amount(data?.totalSales),
       trend: data?.monthlyGrowth ?? undefined,
       trendLabel: tCommon('dashboard.vsLastMonth', 'نسبت به ماه گذشته'),
       loading: kpis.isLoading,
       onPress: undefined,
-      tone: 'primary' as const,
     },
     {
-      icon: Wallet,
+      icon: 'wallet-outline' as const,
       label: tCommon('dashboard.todaySales', 'فروش امروز'),
       value: amount(data?.todaySales),
       trend: undefined, // web computes this from chart data; acceptable gap
       trendLabel: undefined,
       loading: kpis.isLoading,
       onPress: undefined,
-      tone: 'primary' as const,
     },
     {
-      icon: CreditCard,
+      icon: 'card-outline' as const,
       label: tCommon('dashboard.customerDebt', 'بدهی مشتریان'),
       value: amount(data?.customerDebt),
       trend: undefined,
       trendLabel: undefined,
       loading: kpis.isLoading,
       onPress: () => router.push('/customers'),
-      tone: 'primary' as const,
     },
     {
-      icon: Boxes,
+      icon: 'cube-outline' as const,
       label: tCommon('dashboard.warehouseValue', 'ارزش کل انبار'),
       value: amount(data?.warehouseValue),
       trend: undefined,
       trendLabel: undefined,
       loading: kpis.isLoading,
       onPress: () => router.push('/(tabs)/warehouse'),
-      tone: 'primary' as const,
     },
   ]
 
@@ -177,7 +174,6 @@ export function DashboardScreen() {
             a phone renders two per row exactly as the browser does. */}
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
           {kpiCards.map((card) => {
-            const Icon = card.icon
             return (
               <View
                 key={card.label}
@@ -189,7 +185,7 @@ export function DashboardScreen() {
               >
                 <MobileCard onPress={card.onPress} padding="md" variant="outlined" elevated="none">
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                    <Icon size={16} color={colors.primary} />
+                    <Ionicons name={card.icon} size={16} color={colors.primary} />
                     <View style={{ flex: 1 }}>
                       <Text variant="caption" tone="secondary" numberOfLines={1}>
                         {card.label}
@@ -235,7 +231,7 @@ export function DashboardScreen() {
               }}
             >
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-                <TrendingUp size={16} color={colors.primary} />
+                <Ionicons name="trending-up" size={16} color={colors.primary} />
                 <Text variant="label">{tCommon('dashboard.salesChartTitle', 'نمودار فروش')}</Text>
               </View>
               <DateRangeControl
