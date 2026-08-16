@@ -30,7 +30,7 @@ import { useCurrency } from '../../settings/preferences.store'
 export function InvoiceDetailScreen() {
   const { t, i18n } = useTranslation('mobile')
   const tCommon = useCommonT()
-  const { spacing } = useTheme()
+  const { spacing, colors } = useTheme()
   const { id } = useLocalSearchParams<{ id: string }>()
   const fallbackCurrency = useCurrency()
 
@@ -191,6 +191,61 @@ export function InvoiceDetailScreen() {
           })}
         </View>
 
+        {/* Totals — mirrors web's invoice document tfoot. Subtotals are shown
+            only when present (exactly like web's conditional rows), and the
+            remaining balance is derived from total − paid. */}
+        <MobileCard>
+          <View style={{ gap: spacing.sm }}>
+            <Row
+              label={tCommon('invoices.subtotal', 'جمع')}
+              value={formatCurrency(invoice.subtotal ?? 0, currency)}
+              strong
+            />
+            {(invoice.discountTotal ?? 0) > 0 ? (
+              <Row
+                label={tCommon('invoices.discount', 'تخفیف')}
+                value={`-${formatCurrency(invoice.discountTotal ?? 0, currency)}`}
+                destructive
+              />
+            ) : null}
+            {(invoice.taxTotal ?? 0) > 0 ? (
+              <Row
+                label={tCommon('invoices.tax', 'مالیات')}
+                value={formatCurrency(invoice.taxTotal ?? 0, currency)}
+              />
+            ) : null}
+            <View
+              style={{
+                borderTopWidth: 2,
+                borderTopColor: colors.borderDefault,
+                paddingTop: spacing.xs,
+              }}
+            >
+              <Row
+                label={tCommon('invoices.total', 'مجموع')}
+                value={formatCurrency(invoice.total ?? 0, currency)}
+                strong
+                large
+              />
+            </View>
+            {(invoice.paidAmount ?? 0) > 0 ? (
+              <Row
+                label={tCommon('invoices.paid', 'پرداخت شده')}
+                value={`-${formatCurrency(invoice.paidAmount ?? 0, currency)}`}
+                success
+              />
+            ) : null}
+            {(invoice.total ?? 0) - (invoice.paidAmount ?? 0) > 0 ? (
+              <Row
+                label={tCommon('invoices.remaining', 'باقیمانده')}
+                value={formatCurrency((invoice.total ?? 0) - (invoice.paidAmount ?? 0), currency)}
+                destructive
+                strong
+              />
+            ) : null}
+          </View>
+        </MobileCard>
+
         {/* Metadata, matching the web invoice sidebar's «اطلاعات فاکتور» card. */}
         <MobileCard>
           <View style={{ gap: spacing.sm }}>
@@ -198,6 +253,13 @@ export function InvoiceDetailScreen() {
               label={tCommon('invoices.invoiceNumber', 'شماره فاکتور')}
               value={invoice.invoiceNumber ?? '—'}
             />
+            <Row label={tCommon('invoices.date', 'تاریخ')} value={formatDate(invoice.date)} />
+            {invoice.dueDate ? (
+              <Row
+                label={tCommon('invoices.dueDate', 'سررسید')}
+                value={formatDate(invoice.dueDate)}
+              />
+            ) : null}
             <Row
               label={tCommon('invoices.createdAt', 'تاریخ ثبت')}
               value={invoice.createdAt ? formatDate(invoice.createdAt) : '—'}
@@ -215,13 +277,31 @@ export function InvoiceDetailScreen() {
   )
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({
+  label,
+  value,
+  strong = false,
+  large = false,
+  destructive = false,
+  success = false,
+}: {
+  label: string
+  value: string
+  strong?: boolean
+  large?: boolean
+  destructive?: boolean
+  success?: boolean
+}) {
+  const { colors } = useTheme()
+  const tone = destructive ? colors.destructive : success ? colors.success : colors.fgPrimary
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
       <Text variant="label" tone="secondary" style={{ flex: 1 }}>
         {label}
       </Text>
-      <Text variant="bodyStrong">{value}</Text>
+      <Text variant={large ? 'heading' : strong ? 'bodyStrong' : 'body'} style={{ color: tone }}>
+        {value}
+      </Text>
     </View>
   )
 }

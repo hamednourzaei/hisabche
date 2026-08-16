@@ -52,6 +52,14 @@ interface CrmViewProps {
     content: string
   }) => Promise<void>
   onUpdateStatus: (id: string, status: TaskStatus) => Promise<void>
+  /** Records how one customer on a task went. */
+  onRecordOutcome: (
+    taskId: string,
+    input: { customerId: string; outcome: 'done' | 'failed'; note?: string },
+  ) => Promise<void>
+  pendingCustomerId?: string | null | undefined
+  /** Subjects already used by this user, for the autocomplete. */
+  subjectSuggestions: readonly string[]
   getPublicTaskUrl: (token: string) => string
 }
 
@@ -92,6 +100,9 @@ export const CrmView = memo(function CrmView({
   error,
   isCreatingInteraction,
   isUpdatingStatus,
+  onRecordOutcome,
+  pendingCustomerId = null,
+  subjectSuggestions,
   onCreateInteraction,
   onUpdateStatus,
   getPublicTaskUrl,
@@ -246,13 +257,25 @@ export const CrmView = memo(function CrmView({
                 </option>
               ))}
             </select>
+            {/* Free text, but backed by the subjects this user has already
+                used. A recurring campaign keeps one spelling instead of
+                fragmenting into near-duplicates that split the stats. A native
+                datalist keeps typing unrestricted — a new subject is still
+                just typed. */}
             <input
               type="text"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
+              list="crm-subject-suggestions"
+              autoComplete="off"
               placeholder={t('crm.interactions.subject', 'موضوع')}
               className="w-full rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 py-2.5 text-sm text-[hsl(var(--fg-primary))]"
             />
+            <datalist id="crm-subject-suggestions">
+              {subjectSuggestions.map((suggestion) => (
+                <option key={suggestion} value={suggestion} />
+              ))}
+            </datalist>
           </div>
           <textarea
             value={content}
@@ -465,6 +488,8 @@ export const CrmView = memo(function CrmView({
           isUpdating={isUpdatingStatus}
           onClose={() => setSelectedTaskId(null)}
           onUpdateStatus={(status) => onUpdateStatus(selectedTask.id, status)}
+          onRecordOutcome={(input) => void onRecordOutcome(selectedTask.id, input)}
+          pendingCustomerId={pendingCustomerId}
         />
       )}
     </div>

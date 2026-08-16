@@ -69,7 +69,6 @@ const NAV_ICONS: Record<NavId, LucideIcon> = {
   buyers: BookOpen,
   'follow-up': Handshake,
   team: Users,
-  projects: Kanban,
   production: Factory,
   approvals: ClipboardCheck,
   settings: Settings,

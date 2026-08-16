@@ -12,6 +12,29 @@ directories:
 files:
   - out/**/*
   - package.json
+  # Runtime window icon — the installer icon comes from win.icon, but the
+  # BrowserWindow reads this one at runtime.
+  - resources/icon.png
+
+  # ── Keep node_modules out of the asar ──────────────────────────────────
+  # Vite bundles the renderer, so every React/Radix/recharts package in
+  # `dependencies` was shipping twice: once inside out/renderer, once as a raw
+  # node_modules tree. That put the asar at 187 MB, and compressing it left a
+  # long window in which the NSIS .7z was still being written when
+  # electron-builder stat'd it — the ENOENT that failed the build.
+  #
+  # main/ and preload/ are externalised (externalizeDepsPlugin), so they DO
+  # need real modules — but only these. The list is what the sources actually
+  # import; re-derive it with:
+  #   grep -rhoE "from '[^.]...'" apps/desktop/electron --include=*.ts
+  - '!node_modules/**'
+  - 'node_modules/better-sqlite3/**'
+  - 'node_modules/bindings/**'
+  - 'node_modules/file-uri-to-path/**'
+  - 'node_modules/electron-updater/**'
+  - 'node_modules/@sentry/**'
+  - 'node_modules/zod/**'
+  - 'node_modules/@hisabche/auth-core/**'
 
 # better-sqlite3 is a native module — it must stay unpacked so the
 # .node binding can be dlopen'd from inside the asar.
@@ -21,6 +44,11 @@ asarUnpack:
 npmRebuild: true
 
 win:
+  # NOTE: no `icon:` yet. electron-builder needs a SQUARE .ico/.png of at least
+  # 256x256; every brand asset in apps/web/public is non-square (logo-icon.png is
+  # 1536x1024) and favicon.ico is actually a PNG with the wrong extension.
+  # Pointing at either makes the packaging step hang. Add a real square icon at
+  # resources/icon.ico and restore this line.
   target:
     - target: nsis
       arch: [x64]

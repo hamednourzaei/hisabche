@@ -118,9 +118,11 @@ function resolveEntityUrl(n: Notification): string {
       return id ? `/warehouse/${id}` : '/warehouse'
     case 'payment':
       return '/invoices?filter=pending'
+    // The projects module was removed. Historical notifications still exist in
+    // the feed, so they point at the activity log rather than a dead route.
     case 'project':
     case 'task':
-      return id ? `/projects/${id}` : '/projects'
+      return '/activities'
     case 'purchase_order':
       return '/purchasing'
     case 'workflow_instance':

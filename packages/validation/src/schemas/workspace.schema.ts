@@ -115,12 +115,50 @@ export type AcceptInvite = z.infer<typeof acceptInviteSchema>
 // بدون فرآیند دعوت/پذیرش ایمیلی — چون خودِ مالک پسورد را وارد می‌کند.
 // ============================================
 
-export const createMemberDirectSchema = z.object({
-  workspaceId: uuidSchema,
-  email: z.string().email(),
-  password: z.string().min(8),
-  fullName: nonEmptyStringSchema,
-  role: z.enum(['admin', 'member']).default('member'),
+/**
+ * Adding a colleague directly — no invite round-trip.
+ *
+ * `hasAccess` decides whether an auth account is created at all. Someone on the
+ * payroll who never opens the software needs a record, not a login, and
+ * requiring credentials for them was the source of most invite failures. When
+ * it is false, email and password are not read.
+ */
+/**
+ * Request body. `workspaceId` is not part of it — the workspace comes from the
+ * URL. Kept separate because the cross-field rules below are `.refine()`s, and
+ * a refined schema can no longer be `.omit()`ed.
+ */
+export const createMemberDirectBodySchema = z
+  .object({
+    fullName: nonEmptyStringSchema,
+    jobTitle: z.string().trim().max(120).optional(),
+    phone: z.string().trim().max(32).optional(),
+    role: z.enum(['admin', 'member', 'viewer']).default('member'),
+    hasAccess: z.boolean().default(true),
+    email: z.string().email().optional(),
+    password: z.string().min(8).optional(),
+  })
+  .refine((value) => !value.hasAccess || Boolean(value.email), {
+    message: 'An email is required when the member can sign in',
+    path: ['email'],
+  })
+  .refine((value) => !value.hasAccess || Boolean(value.password), {
+    message: 'A password is required when the member can sign in',
+    path: ['password'],
+  })
+
+export type CreateMemberDirectBody = z.infer<typeof createMemberDirectBodySchema>
+
+/** What the service receives: the validated body plus the workspace from the URL. */
+export type CreateMemberDirect = CreateMemberDirectBody & { workspaceId: string }
+
+/** Suspending keeps the row and its history; deleting removes the account. */
+export const setMemberSuspensionSchema = z.object({
+  memberId: uuidSchema,
+  suspended: z.boolean(),
 })
 
-export type CreateMemberDirect = z.infer<typeof createMemberDirectSchema>
+export type SetMemberSuspension = z.infer<typeof setMemberSuspensionSchema>
+
+/** Hard ceiling on colleagues per workspace, enforced server-side. */
+export const MAX_WORKSPACE_MEMBERS = 10

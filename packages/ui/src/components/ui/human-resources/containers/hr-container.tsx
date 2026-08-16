@@ -41,16 +41,21 @@ export function HumanResourcesContainer() {
 
   const handleCreate = async (
     values: Record<string, unknown>,
-    access?: { email: string; password: string; role: 'admin' | 'member' },
+    access?: { email: string; password: string; role: 'admin' | 'member' | 'viewer' },
   ) => {
     await createEmployee.mutateAsync(values)
 
+    // No `access` means the owner did not switch on sign-in for this person —
+    // they exist on the payroll and nowhere else, so no auth account is made.
     if (access && workspaceId) {
       await createMemberDirect.mutateAsync({
         workspaceId,
+        hasAccess: true,
         email: access.email,
         password: access.password,
         fullName: `${values.firstName ?? ''} ${values.lastName ?? ''}`.trim(),
+        jobTitle: typeof values.position === 'string' ? values.position : undefined,
+        phone: typeof values.phone === 'string' ? values.phone : undefined,
         role: access.role,
       })
     }

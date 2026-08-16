@@ -5,7 +5,7 @@
 // ============================================
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
-import { Alert, Pressable, Share } from 'react-native'
+import { Alert, Pressable, Share, View } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { useTranslation } from 'react-i18next'
@@ -20,8 +20,11 @@ import type { InvoiceStatus } from '@hisabche/validation'
 import {
   FilterBar,
   FloatingButton,
+  MetricCard,
   SearchBar,
   SwipeRow,
+  Text,
+  useLayout,
   useTheme,
   type FilterOption,
 } from '@hisabche/mobile-ui'
@@ -49,12 +52,110 @@ function statusKey(status: InvoiceStatus): string {
   return `sales.status${status.charAt(0).toUpperCase()}${status.slice(1)}`
 }
 
+// ─── Bento stats — same semantics as web's InvoicesView ───────────────────
+// Web shows 4 cards computed from the *filtered* invoices (never paginated):
+// مجموع مبلغ / تعداد فاکتورها / در انتظار پرداخت / تسویه‌شده, each with a
+// month-over-month delta pill. Cancelled invoices are excluded everywhere.
+// The compact formatter mirrors web's `compactAmount` thresholds.
+
+const PAID_STATUSES = new Set(['paid', 'completed'])
+
+function monthOffset(value: string | undefined, now: Date): number | null {
+  if (!value) return null
+  const d = new Date(value)
+  if (isNaN(d.getTime())) return null
+  return (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth())
+}
+
+function percentChange(current: number, previous: number): number | null {
+  if (previous === 0) return current === 0 ? null : 100
+  return ((current - previous) / Math.abs(previous)) * 100
+}
+
+function compactAmount(v: number): string {
+  const abs = Math.abs(v)
+  const n = (x: number, d = 0) =>
+    x.toLocaleString('fa-AF', { minimumFractionDigits: d, maximumFractionDigits: d })
+  if (abs >= 1e9) return `${n(v / 1e9, abs >= 1e10 ? 0 : 1)} میلیارد`
+  if (abs >= 1e6) return `${n(v / 1e6, abs >= 1e7 ? 0 : 1)} میلیون`
+  return n(v)
+}
+
+interface InvoiceStat {
+  id: string
+  icon: 'cash-outline' | 'document-text-outline' | 'time-outline' | 'checkmark-circle-outline'
+  label: string
+  value: string
+  delta: number | null
+  /** Web's `invertDelta` — an increase here is bad (pending amount). */
+  invert: boolean
+}
+
+function useInvoiceStats(
+  invoices: InvoiceWithCustomer[],
+  tCommon: ReturnType<typeof useCommonT>,
+): InvoiceStat[] {
+  return React.useMemo<InvoiceStat[]>(() => {
+    const now = new Date()
+    const active = invoices.filter((inv) => inv.status !== 'cancelled')
+    const inMonth = (offset: number) =>
+      active.filter((inv) => monthOffset(inv.date ?? inv.createdAt, now) === offset)
+    const sum = (list: InvoiceWithCustomer[]) =>
+      list.reduce((acc, inv) => acc + (inv.total ?? 0), 0)
+    const paid = (list: InvoiceWithCustomer[]) =>
+      list.filter((inv) => PAID_STATUSES.has(inv.status ?? ''))
+    const pending = (list: InvoiceWithCustomer[]) =>
+      list.filter((inv) => !PAID_STATUSES.has(inv.status ?? ''))
+
+    const cur = inMonth(0)
+    const prev = inMonth(1)
+    const currency = active[0]?.currency ?? 'AFN'
+    const monthly = tCommon('common.vsLastMonth', 'نسبت به ماه قبل')
+
+    // Same order as web: amount first, count second, pending before paid.
+    return [
+      {
+        id: 'amount',
+        icon: 'cash-outline',
+        label: tCommon('invoices.totalAmount', 'مجموع مبلغ'),
+        value: `${compactAmount(sum(active))} ${currency}`,
+        delta: percentChange(sum(cur), sum(prev)),
+        invert: false,
+      },
+      {
+        id: 'count',
+        icon: 'document-text-outline',
+        label: tCommon('invoices.totalCount', 'تعداد فاکتورها'),
+        value: compactAmount(active.length),
+        delta: percentChange(cur.length, prev.length),
+        invert: false,
+      },
+      {
+        id: 'pending',
+        icon: 'time-outline',
+        label: tCommon('invoices.pendingAmount', 'در انتظار پرداخت'),
+        value: `${compactAmount(sum(pending(active)))} ${currency}`,
+        delta: percentChange(sum(pending(cur)), sum(pending(prev))),
+        invert: true,
+      },
+      {
+        id: 'paid',
+        icon: 'checkmark-circle-outline',
+        label: tCommon('invoices.paidAmount', 'تسویه‌شده'),
+        value: `${compactAmount(sum(paid(active)))} ${currency}`,
+        delta: percentChange(sum(paid(cur)), sum(paid(prev))),
+        invert: false,
+      },
+    ]
+  }, [invoices, tCommon])
+}
+
 export function InvoicesScreen() {
   const { t } = useTranslation('mobile')
   // Destination copy and export headings come from the shared catalog, so this
   // screen is titled with the same words the web page uses.
   const tCommon = useCommonT()
-  const { colors } = useTheme()
+  const { colors, spacing } = useTheme()
   const router = useRouter()
   const currency = useCurrency()
 
@@ -78,6 +179,7 @@ export function InvoicesScreen() {
 
   const query = useInvoices(filters)
   const pending = usePendingInvoices()
+  const { isWide } = useLayout()
 
   const items = useMemo<InvoiceWithCustomer[]>(() => {
     // Queued invoices have not reached the server, so the server-side filter
@@ -90,6 +192,11 @@ export function InvoicesScreen() {
 
     return [...queued, ...(query.data?.invoices ?? [])]
   }, [pending, query.data, status, type])
+
+  // Web's BentoStats reads the *filtered* set (never paginated). The mobile
+  // list is one fetch of the filtered page, so `items` is the closest match —
+  // pending-queued rows included, exactly like web counts its own list.
+  const stats = useInvoiceStats(items, tCommon)
 
   const options: readonly FilterOption<StatusFilter>[] = [
     { value: 'all', label: t('common.all'), count: items.length },
@@ -215,6 +322,68 @@ export function InvoicesScreen() {
       />
       <FilterBar options={typeOptions} value={type} onChange={setType} />
       <FilterBar options={options} value={status} onChange={setStatus} />
+
+      {/* Bento stats — web renders its 4 cards between the toolbar and the
+          table; mobile shows the same cards in a 2×2 (4-across on wide) grid.
+          Each tile: icon chip + label, compact value, month-over-month pill. */}
+      {items.length > 0 ? (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md }}>
+          {stats.map((stat) => {
+            const good = stat.delta === null || (stat.invert ? stat.delta < 0 : stat.delta >= 0)
+            return (
+              <View
+                key={stat.id}
+                style={{
+                  flexBasis: isWide ? '22%' : '47%',
+                  flexGrow: 1,
+                  minWidth: isWide ? 0 : 150,
+                }}
+              >
+                <MetricCard
+                  label={stat.label}
+                  amount={stat.value}
+                  icon={<Ionicons name={stat.icon} size={15} color={colors.primary} />}
+                  loading={false}
+                />
+                {stat.delta !== null ? (
+                  <View style={{ marginTop: spacing.xs, paddingHorizontal: spacing.sm }}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        alignSelf: 'flex-start',
+                        gap: spacing.xs,
+                        borderRadius: 999,
+                        paddingHorizontal: spacing.sm,
+                        paddingVertical: 2,
+                        backgroundColor: good ? colors.successSoft : colors.destructiveSoft,
+                      }}
+                    >
+                      <Ionicons
+                        name={stat.delta >= 0 ? 'trending-up' : 'trending-down'}
+                        size={12}
+                        color={good ? colors.success : colors.destructive}
+                      />
+                      <Text
+                        variant="legal"
+                        style={{ color: good ? colors.success : colors.destructive }}
+                      >
+                        {Math.abs(stat.delta).toLocaleString('fa-AF', {
+                          maximumFractionDigits: Math.abs(stat.delta) < 10 ? 1 : 0,
+                        })}
+                        ٪
+                      </Text>
+                      <Text variant="legal" tone="tertiary">
+                        {tCommon('common.vsLastMonth', 'نسبت به ماه قبل')}
+                      </Text>
+                    </View>
+                  </View>
+                ) : null}
+              </View>
+            )
+          })}
+        </View>
+      ) : null}
 
       <QueryList<InvoiceWithCustomer>
         data={items}

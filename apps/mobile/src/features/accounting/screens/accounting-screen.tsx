@@ -1,91 +1,267 @@
 // ============================================
-// Accounting — transaction feed plus the trial balance summary.
+// Accounting — five-tab screen matching the canonical Web accounting page.
+//
+// Web anatomy (packages/ui/components/ui/accounting/):
+//   Header: «پول و سود» + subtitle
+//   Tabs:  حساب‌ها / دفتر روزنامه / تراز آزمایشی / ترازنامه / سود و زیان
+//   Body: the active tab's data table inside a bordered elevated container.
+//
+// Mobile renders the same header, the same 5 pills (FilterBar), and the same
+// tab content as native list/card rows — one tab at a time on the phone.
 // ============================================
 
-import React, { useMemo } from 'react'
-import { View } from 'react-native'
+import React, { useMemo, useState } from 'react'
+import { ScrollView, View } from 'react-native'
 import { useTranslation } from 'react-i18next'
-import { useTransactions, useTrialBalance, type TrialBalance } from '@hisabche/api'
-import type { Transaction } from '@hisabche/validation'
-import { MetricCard, MobileCard, Text, useTheme } from '@hisabche/mobile-ui'
+import {
+  useAccounts,
+  useJournalEntries,
+  useTrialBalance,
+  useBalanceSheet,
+  useIncomeStatement,
+  type Account,
+  type JournalEntry,
+  type TrialBalance,
+} from '@hisabche/api'
+import { FilterBar, MobileCard, Text, useTheme, type FilterOption } from '@hisabche/mobile-ui'
 
 import { AppScreen } from '../../../shared/components/app-screen'
-import { QueryList } from '../../../shared/components/query-list'
 import { NavScreenHeader } from '../../../shared/components/nav-screen-header'
-import { currencySign, formatAmount, formatCurrency, formatDate } from '../../../shared/lib/format'
+import { useCommonT } from '../../../shared/i18n/use-common-t'
+import { currencySign, formatAmount, formatDate } from '../../../shared/lib/format'
 import { useCurrency } from '../../settings/preferences.store'
+
+type TabId = 'accounts' | 'journal' | 'trialBalance' | 'balanceSheet' | 'incomeStatement'
 
 export function AccountingScreen() {
   const { t } = useTranslation('mobile')
+  const tCommon = useCommonT()
   const { spacing } = useTheme()
   const currency = useCurrency()
+  const [tab, setTab] = useState<TabId>('accounts')
 
-  const transactions = useTransactions(
-    useMemo(() => ({ page: 1, limit: 30, sortDirection: 'desc' as const }), []),
-  )
-  // The endpoint returns one row per account — totals are summed here.
+  const accounts = useAccounts()
+  const journal = useJournalEntries()
   const today = useMemo(() => new Date().toISOString().slice(0, 10), [])
+  const monthStart = useMemo(() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`
+  }, [])
   const trialBalance = useTrialBalance(today)
+  const balanceSheet = useBalanceSheet(today)
+  const incomeStatement = useIncomeStatement(monthStart, today)
 
-  const totals = useMemo(() => {
-    const rows: TrialBalance[] = trialBalance.data ?? []
-    return {
-      credit: rows.reduce((sum, row) => sum + (row.credit ?? 0), 0),
-      debit: rows.reduce((sum, row) => sum + (row.debit ?? 0), 0),
-    }
-  }, [trialBalance.data])
+  const TABS: readonly FilterOption<TabId>[] = [
+    { value: 'accounts', label: tCommon('accounting.tabs.accounts', 'حساب‌ها') },
+    { value: 'journal', label: tCommon('accounting.tabs.journal', 'دفتر روزنامه') },
+    { value: 'trialBalance', label: tCommon('accounting.tabs.trialBalance', 'تراز آزمایشی') },
+    { value: 'balanceSheet', label: tCommon('accounting.tabs.balanceSheet', 'ترازنامه') },
+    { value: 'incomeStatement', label: tCommon('accounting.tabs.incomeStatement', 'سود و زیان') },
+  ]
 
-  const header = (
-    <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.md }}>
-      <View style={{ flex: 1 }}>
-        <MetricCard
-          label={t('accounting.income')}
-          amount={formatAmount(totals.credit)}
-          sign={currencySign(currency)}
-          loading={trialBalance.isLoading}
-        />
-      </View>
-      <View style={{ flex: 1 }}>
-        <MetricCard
-          label={t('accounting.expense')}
-          amount={formatAmount(totals.debit)}
-          sign={currencySign(currency)}
-          loading={trialBalance.isLoading}
-        />
-      </View>
-    </View>
-  )
+  const sign = currencySign(currency)
 
   return (
     <AppScreen>
       <NavScreenHeader id="money" />
 
-      <QueryList<Transaction>
-        data={transactions.data?.transactions}
-        estimatedItemSize={76}
-        isLoading={transactions.isLoading}
-        isRefetching={transactions.isRefetching}
-        error={transactions.error}
-        onRetry={transactions.refetch}
-        keyExtractor={(item, index) => item.id ?? `tx-${index}`}
-        emptyTitle={t('common.empty')}
-        header={header}
-        renderItem={({ item }) => (
-          <MobileCard padding="sm">
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-              <View style={{ flex: 1 }}>
-                <Text variant="bodyStrong" numberOfLines={1}>
-                  {item.description ?? item.type}
-                </Text>
-                <Text variant="caption" tone="secondary">
-                  {formatDate(item.date)}
-                </Text>
-              </View>
-              <Text variant="bodyStrong">{formatCurrency(item.amount, currency)}</Text>
-            </View>
-          </MobileCard>
-        )}
-      />
+      <ScrollView
+        contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg, paddingBottom: 110 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Tabs — same 5 pills as web, horizontally scrollable on a phone. */}
+        <FilterBar options={TABS} value={tab} onChange={setTab} />
+
+        {/* Body — the active tab inside a bordered elevated surface. */}
+        {tab === 'accounts' ? (
+          <AccountsList
+            data={accounts.data ?? []}
+            loading={accounts.isLoading}
+            sign={sign}
+            currency={currency}
+          />
+        ) : null}
+        {tab === 'journal' ? (
+          <JournalList data={journal.data ?? []} loading={journal.isLoading} />
+        ) : null}
+        {tab === 'trialBalance' ? (
+          <TrialBalanceList
+            data={trialBalance.data ?? []}
+            loading={trialBalance.isLoading}
+            sign={sign}
+            currency={currency}
+          />
+        ) : null}
+        {tab === 'balanceSheet' ? (
+          <BalanceSheetList data={balanceSheet.data} loading={balanceSheet.isLoading} />
+        ) : null}
+        {tab === 'incomeStatement' ? (
+          <IncomeStatementList data={incomeStatement.data} loading={incomeStatement.isLoading} />
+        ) : null}
+      </ScrollView>
     </AppScreen>
+  )
+}
+
+// ─── حساب‌ها — code · name · type ────────────────────────────────────────────
+
+function AccountsList({
+  data,
+  loading,
+  sign,
+  currency,
+}: {
+  data: Account[]
+  loading: boolean
+  sign: string
+  currency: string
+}) {
+  const { spacing } = useTheme()
+  return (
+    <View style={{ gap: spacing.sm }}>
+      {data.length === 0 && loading ? <Text tone="tertiary">{'…'}</Text> : null}
+      {data.map((account) => (
+        <MobileCard key={account.id} padding="md">
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <View style={{ flex: 1 }}>
+              <Text variant="bodyStrong" numberOfLines={1}>
+                {account.name}
+              </Text>
+              <Text variant="legal" tone="tertiary">
+                {`${account.code} · ${account.type}`}
+              </Text>
+            </View>
+          </View>
+        </MobileCard>
+      ))}
+    </View>
+  )
+}
+
+// ─── دفتر روزنامه — each entry's date, reference, description, lines ────────
+
+function JournalList({ data, loading }: { data: JournalEntry[]; loading: boolean }) {
+  const { spacing } = useTheme()
+  return (
+    <View style={{ gap: spacing.sm }}>
+      {data.map((entry) => (
+        <MobileCard key={entry.id} padding="md">
+          <View style={{ gap: spacing.xs }}>
+            <Text variant="bodyStrong" numberOfLines={1}>
+              {formatDate(entry.date)}
+            </Text>
+            <Text variant="caption" tone="secondary">
+              {entry.description}
+            </Text>
+            {(entry.lines ?? []).map((line) => (
+              <Text key={line.id} variant="legal" tone="tertiary">
+                {`${line.debit ? `بدهکار ${line.debit}` : ''}${line.debit && line.credit ? ' · ' : ''}${line.credit ? `بستانکار ${line.credit}` : ''}`}
+              </Text>
+            ))}
+          </View>
+        </MobileCard>
+      ))}
+    </View>
+  )
+}
+
+// ─── تراز آزمایشی — account code · name · balance ───────────────────────────
+
+function TrialBalanceList({
+  data,
+  loading,
+  sign,
+  currency,
+}: {
+  data: TrialBalance[]
+  loading: boolean
+  sign: string
+  currency: string
+}) {
+  const { spacing, colors } = useTheme()
+  return (
+    <View style={{ gap: spacing.sm }}>
+      {data.map((row) => (
+        <MobileCard key={row.accountId} padding="md">
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <View style={{ flex: 1 }}>
+              <Text variant="bodyStrong" numberOfLines={1}>
+                {row.accountName}
+              </Text>
+              <Text variant="legal" tone="tertiary">
+                {row.accountCode}
+              </Text>
+            </View>
+            <Text variant="bodyStrong" style={{ color: colors.primary }}>
+              {`${formatAmount(row.balance)} ${sign}`}
+            </Text>
+          </View>
+        </MobileCard>
+      ))}
+    </View>
+  )
+}
+
+// ─── ترازنامه — assets / liabilities / equity sections ──────────────────────
+
+function BalanceSheetList({
+  data,
+  loading,
+}: {
+  data: Awaited<ReturnType<typeof useBalanceSheet>>['data']
+  loading: boolean
+}) {
+  const { spacing, colors } = useTheme()
+  const { t } = useTranslation('mobile')
+  const sections = [
+    { label: t('accounting.income'), value: data?.assets?.total },
+    { label: t('accounting.expense'), value: data?.liabilities?.total },
+    { label: t('accounting.balance'), value: data?.equity?.total },
+  ]
+  return (
+    <View style={{ gap: spacing.sm }}>
+      {sections.map((section) => (
+        <MobileCard key={section.label} padding="md">
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <Text variant="bodyStrong">{section.label}</Text>
+            <Text variant="bodyStrong" style={{ color: colors.primary }}>
+              {formatAmount(section.value ?? 0)}
+            </Text>
+          </View>
+        </MobileCard>
+      ))}
+    </View>
+  )
+}
+
+// ─── سود و زیان — revenue · expenses · net income ───────────────────────────
+
+function IncomeStatementList({
+  data,
+  loading,
+}: {
+  data: Awaited<ReturnType<typeof useIncomeStatement>>['data']
+  loading: boolean
+}) {
+  const { spacing, colors } = useTheme()
+  const { t } = useTranslation('mobile')
+  const rows = [
+    { label: t('accounting.income'), value: data?.revenue },
+    { label: t('accounting.expense'), value: data?.expenses },
+    { label: t('accounting.balance'), value: data?.netIncome },
+  ]
+  return (
+    <View style={{ gap: spacing.sm }}>
+      {rows.map((row) => (
+        <MobileCard key={row.label} padding="md">
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+            <Text variant="bodyStrong">{row.label}</Text>
+            <Text variant="bodyStrong" style={{ color: colors.primary }}>
+              {formatAmount(row.value ?? 0)}
+            </Text>
+          </View>
+        </MobileCard>
+      ))}
+    </View>
   )
 }

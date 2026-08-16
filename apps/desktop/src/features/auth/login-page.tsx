@@ -1,100 +1,140 @@
 // ============================================
-// Login — validated with the shared Zod schema (@hisabche/validation).
+// Desktop authentication — canonical UI, desktop session.
+//
+// The visual layer is `AuthShell` from `@hisabche/ui`, the same component the
+// web login renders. This file used to hand-build its own email/password form;
+// that was a second auth UI to keep in step with the web one by hand.
+//
+// What stays desktop-owned is everything below the surface, because it is not
+// interchangeable with web's:
+//
+//   * `useAuthStore` here writes the session to the **OS credential store**
+//     through the preload bridge. The web store persists to localStorage, so
+//     mounting the canonical `AuthContainer` would have moved desktop
+//     credentials into the renderer — a security regression, not a refactor.
+//   * navigation is react-router, not Next.
+//
+// Hence: canonical presentation, desktop orchestration.
 // ============================================
 
-import React, { useCallback, useState, type FormEvent } from 'react'
-import { Navigate } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import { loginSchema } from '@hisabche/validation'
+import React, { useCallback, useState } from 'react'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useTranslations } from 'next-intl'
+import { AuthShell } from '@hisabche/ui'
+import { loginSchema, signUpSchema, type LoginInput, type SignUpInput } from '@hisabche/validation'
 
-import { Button, Card, Input } from '@/components/ui/primitives'
 import { useAuthStore } from './auth.store'
 
-interface FieldErrors {
-  email?: string
-  password?: string
+/**
+ * `AuthShell` resolves copy through a `safeT`: a key lookup that falls back to
+ * the supplied default rather than rendering the raw key.
+ */
+function useSafeT() {
+  const t = useTranslations()
+
+  return useCallback(
+    (key: string, fallback?: string): string => {
+      try {
+        const value = t(key as Parameters<typeof t>[0])
+        return value && value !== key ? value : (fallback ?? key)
+      } catch {
+        return fallback ?? key
+      }
+    },
+    [t],
+  )
 }
 
 export function LoginPage() {
-  const { t } = useTranslation('desktop')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
+  const st = useSafeT()
+  const navigate = useNavigate()
+  const location = useLocation()
 
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
-  const login = useAuthStore((s) => s.login)
   const isLoading = useAuthStore((s) => s.isLoading)
-  const error = useAuthStore((s) => s.error)
+  const serverError = useAuthStore((s) => s.error)
   const clearError = useAuthStore((s) => s.clearError)
+  const login = useAuthStore((s) => s.login)
+  const signup = useAuthStore((s) => s.signup)
 
-  const onSubmit = useCallback(
-    async (event: FormEvent) => {
-      event.preventDefault()
-      clearError()
+  const [flipped, setFlipped] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
-      const parsed = loginSchema.safeParse({ email: email.trim(), password })
-      if (!parsed.success) {
-        const flat = parsed.error.flatten().fieldErrors
-        setFieldErrors({
-          ...(flat.email ? { email: t('auth.invalidEmail') } : {}),
-          ...(flat.password ? { password: t('auth.invalidPassword') } : {}),
-        })
-        return
-      }
+  const loginForm = useForm<LoginInput>({ resolver: zodResolver(loginSchema) })
+  const signupForm = useForm<SignUpInput>({ resolver: zodResolver(signUpSchema) })
 
-      setFieldErrors({})
-      await login(parsed.data).catch(() => undefined)
-    },
-    [clearError, email, login, password, t]
-  )
+  /**
+   * Honour `?redirect=` the way web does, so an invite link that bounces
+   * through login still lands where it meant to instead of the dashboard.
+   */
+  const redirectTarget = new URLSearchParams(location.search).get('redirect') || '/'
 
-  if (isAuthenticated) return <Navigate to="/" replace />
+  if (isAuthenticated) return <Navigate to={redirectTarget} replace />
+
+  const submitLogin = loginForm.handleSubmit(async (data) => {
+    clearError()
+    try {
+      await login({ email: data.email, password: data.password })
+      navigate(redirectTarget, { replace: true })
+    } catch {
+      // The store already holds the message; AuthShell renders `serverError`.
+    }
+  })
+
+  const submitSignup = signupForm.handleSubmit(async (data) => {
+    clearError()
+    try {
+      await signup(data)
+      navigate(redirectTarget, { replace: true })
+    } catch {
+      // Same: surfaced through `serverError`.
+    }
+  })
+
+  const switchMode = useCallback(() => {
+    clearError()
+    setFlipped((value) => !value)
+  }, [clearError])
+
+  const togglePassword = useCallback(() => setShowPassword((value) => !value), [])
 
   return (
-    <div className="flex h-full items-center justify-center bg-[hsl(var(--surface-base))] p-8">
-      <Card className="w-full max-w-sm">
-        <div className="mb-6 flex flex-col items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-[var(--radius-md)] bg-[hsl(var(--color-primary))] text-[hsl(var(--color-primary-fg))]">
-            <span className="text-xl font-bold">ح</span>
-          </div>
-          <h1 className="text-lg font-bold">{t('auth.title')}</h1>
-          <p className="text-sm text-[hsl(var(--fg-secondary))]">{t('auth.tagline')}</p>
-        </div>
-
-        <form className="flex flex-col gap-3" onSubmit={onSubmit}>
-          <label className="flex flex-col gap-1 text-xs text-[hsl(var(--fg-secondary))]">
-            {t('auth.email')}
-            <Input
-              type="email"
-              autoComplete="email"
-              value={email}
-              invalid={Boolean(fieldErrors.email)}
-              onChange={(event) => setEmail(event.target.value)}
-            />
-          </label>
-
-          <label className="flex flex-col gap-1 text-xs text-[hsl(var(--fg-secondary))]">
-            {t('auth.password')}
-            <Input
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              invalid={Boolean(fieldErrors.password)}
-              onChange={(event) => setPassword(event.target.value)}
-            />
-          </label>
-
-          {(fieldErrors.email || fieldErrors.password || error) && (
-            <p className="text-xs text-[hsl(var(--color-destructive))]">
-              {fieldErrors.email ?? fieldErrors.password ?? error}
-            </p>
-          )}
-
-          <Button type="submit" variant="primary" size="lg" disabled={isLoading} className="mt-2">
-            {isLoading ? t('common.loading') : t('auth.submit')}
-          </Button>
-        </form>
-      </Card>
-    </div>
+    <AuthShell
+      flipped={flipped}
+      st={st}
+      onSwitchMode={switchMode}
+      loginProps={{
+        st,
+        serverError,
+        isLoading,
+        errors: loginForm.formState.errors,
+        register: loginForm.register,
+        watch: loginForm.watch,
+        handleSubmit: loginForm.handleSubmit,
+        showPassword,
+        togglePassword,
+        onSwitchMode: switchMode,
+        onSubmit: submitLogin,
+        // Demo sign-in is a marketing affordance on the public site; a desktop
+        // install is already a deliberate download, so it has no place here.
+        onDemoLogin: () => undefined,
+      }}
+      signupProps={{
+        st,
+        serverError,
+        isLoading,
+        errors: signupForm.formState.errors,
+        register: signupForm.register,
+        watch: signupForm.watch,
+        handleSubmit: signupForm.handleSubmit,
+        showPassword,
+        togglePassword,
+        onSwitchMode: switchMode,
+        onSubmit: submitSignup,
+        translateError: (key?: string) => (key ? st(key, key) : undefined),
+      }}
+    />
   )
 }

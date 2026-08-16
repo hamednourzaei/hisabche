@@ -7,7 +7,16 @@ import { useTranslation } from 'react-i18next'
 import { RefreshCw } from 'lucide-react'
 
 import { Badge, Button, Card } from '@/components/ui/primitives'
-import { DataTable, type Column } from '@/components/ui/data-table'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@hisabche/ui'
+
+/** Column shape for this screen's queue table. Local because it describes the
+ *  IPC outbox rows, not a product entity. */
+interface Column<T> {
+  key: string
+  header: string
+  align?: 'end' | undefined
+  render: (row: T) => React.ReactNode
+}
 import { PageHeader } from '@/components/layout/page-header'
 import { bridge } from '@/shared/lib/bridge'
 import { formatDate } from '@/shared/lib/currency'
@@ -31,13 +40,18 @@ export default function SyncPage() {
       await sync()
       await queue.refetch()
     },
-    [queue, sync]
+    [queue, sync],
   )
 
   const columns = useMemo<readonly Column<QueueEntry>[]>(
     () => [
       { key: 'entity', header: t('accounting.title'), width: '160px', render: (row) => row.entity },
-      { key: 'operation', header: t('sales.status'), width: '120px', render: (row) => row.operation },
+      {
+        key: 'operation',
+        header: t('sales.status'),
+        width: '120px',
+        render: (row) => row.operation,
+      },
       {
         key: 'status',
         header: t('sync.title'),
@@ -48,7 +62,12 @@ export default function SyncPage() {
           </Badge>
         ),
       },
-      { key: 'error', header: t('common.error'), width: '1fr', render: (row) => row.lastError ?? '—' },
+      {
+        key: 'error',
+        header: t('common.error'),
+        width: '1fr',
+        render: (row) => row.lastError ?? '—',
+      },
       {
         key: 'created',
         header: t('sales.date'),
@@ -68,14 +87,20 @@ export default function SyncPage() {
           ) : null,
       },
     ],
-    [retry, t]
+    [retry, t],
   )
 
+  // The queue inspector is desktop-only — it reads the Electron SQLite outbox
+  // over IPC — but its table is not: it renders the canonical Table primitives
+  // web uses, rather than a private desktop table.
   const entries = queue.data ?? []
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <PageHeader title={t('sync.title')} subtitle={failedCount > 0 ? `${failedCount} ${t('sync.failed')}` : undefined}>
+      <PageHeader
+        title={t('sync.title')}
+        subtitle={failedCount > 0 ? `${failedCount} ${t('sync.failed')}` : undefined}
+      >
         <Button size="sm" variant="primary" disabled={isSyncing} onClick={() => void sync()}>
           <RefreshCw size={14} className={isSyncing ? 'animate-spin' : undefined} />
           {t('sync.syncNow')}
@@ -85,17 +110,42 @@ export default function SyncPage() {
       {entries.length === 0 ? (
         <div className="p-4">
           <Card>
-            <p className="text-center text-sm text-[hsl(var(--fg-secondary))]">{t('sync.queueEmpty')}</p>
+            <p className="text-center text-sm text-[hsl(var(--fg-secondary))]">
+              {t('sync.queueEmpty')}
+            </p>
           </Card>
         </div>
       ) : (
-        <DataTable
-          rows={entries}
-          columns={columns}
-          rowKey={(row) => row.clientId}
-          loading={queue.isLoading}
-          emptyLabel={t('sync.queueEmpty')}
-        />
+        <div className="overflow-x-auto p-4">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {columns.map((column) => (
+                  <TableHead
+                    key={column.key}
+                    className={column.align === 'end' ? 'text-end' : undefined}
+                  >
+                    {column.header}
+                  </TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {entries.map((row) => (
+                <TableRow key={row.clientId}>
+                  {columns.map((column) => (
+                    <TableCell
+                      key={column.key}
+                      className={column.align === 'end' ? 'text-end' : undefined}
+                    >
+                      {column.render(row)}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
     </div>
   )

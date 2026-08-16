@@ -17,6 +17,8 @@ export {
   type KnownCurrency,
 } from './money'
 
+export { resolveIntlLocale, usesLatinDigits, type UiLanguage } from './locale'
+
 export { toCSV, csvFilename, UTF8_BOM, type CsvColumn } from './csv'
 
 export {

@@ -4,7 +4,7 @@
 'use client'
 
 import { useState, useCallback, useEffect, useMemo } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { customersView } from '../customer-view'
 import { fmt } from '../../../../lib/customers/customers-format'
@@ -24,6 +24,7 @@ type CustomerWithInvoices = CustomerWithDebt & {
 // ============================================================
 
 export function CustomersContainer() {
+  const router = useRouter()
   const tOriginal = useTranslations()
   // ✅ Wrapper برای تطابق signature با CustomersViewProps
   const t = (key: string, fallback?: string): string => {
@@ -107,9 +108,13 @@ export function CustomersContainer() {
     refetch()
   }, [handleClosePayment, refetch])
 
-  const handleSelectCustomer = useCallback((id: string) => {
-    setSelectedCustomerId(id)
-  }, [])
+  // Each customer gets its own address. Rendering the profile inline left the
+  // URL on /customers, so the record could not be linked, bookmarked, or
+  // reopened with the browser's back button.
+  const handleSelectCustomer = useCallback(
+    (id: string) => router.push(`/customers/${id}`),
+    [router],
+  )
 
   const handleClearSelection = useCallback(() => {
     setSelectedCustomerId(null)

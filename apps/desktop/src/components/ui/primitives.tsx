@@ -1,127 +1,117 @@
 // ============================================
-// Desktop primitives.
+// Desktop primitives — thin adapters over the shared web components.
 //
-// Styling comes entirely from the web design tokens (globals.css v3.1) via
-// Tailwind classes — no colour, spacing or radius is written by hand here.
-// Dense by default: desktop rows are 40px, not mobile's 56px.
+// These used to be private reimplementations of Button / Input / Card / Badge /
+// Skeleton. They looked close but were not: the desktop button was
+// `rounded-[var(--radius-sm)]` (8px) where the web button is a pill, and its
+// sizes were h-7/h-9/h-11 against web's h-9/h-10/h-11. Every desktop screen
+// therefore rendered visibly squarer, smaller controls than the same screen in
+// a browser.
+//
+// Now every one of them renders `packages/ui`, so desktop inherits web geometry
+// by construction. What is left here is only a vocabulary adapter: desktop call
+// sites say `variant="primary"` / `variant="danger"` / `tone="success"`, which
+// the shared components spell `default` / `destructive` / `success`. Translating
+// in one place beat editing eight call sites and leaves the desktop wording
+// intact.
 // ============================================
 
-import React, { forwardRef, type ButtonHTMLAttributes, type InputHTMLAttributes, type ReactNode } from 'react'
-import { cva, type VariantProps } from 'class-variance-authority'
-import { twMerge } from 'tailwind-merge'
-import clsx, { type ClassValue } from 'clsx'
+import React, {
+  forwardRef,
+  type ButtonHTMLAttributes,
+  type InputHTMLAttributes,
+  type ReactNode,
+} from 'react'
+import {
+  Badge as SharedBadge,
+  Button as SharedButton,
+  Card as SharedCard,
+  Input as SharedInput,
+  Skeleton as SharedSkeleton,
+} from '@hisabche/ui'
 
-export function cn(...inputs: ClassValue[]): string {
-  return twMerge(clsx(inputs))
+export { cn } from '@hisabche/ui'
+
+// ─── Button ───────────────────────────────────────────────────────────────
+
+/** Desktop's variant words. `primary` and `danger` are desktop spellings of the
+ *  shared `default` and `destructive`. */
+export type DesktopButtonVariant = 'primary' | 'secondary' | 'ghost' | 'outline' | 'danger'
+export type DesktopButtonSize = 'sm' | 'md' | 'lg' | 'icon'
+
+const VARIANT: Record<
+  DesktopButtonVariant,
+  'default' | 'secondary' | 'ghost' | 'outline' | 'destructive'
+> = {
+  primary: 'default',
+  secondary: 'secondary',
+  ghost: 'ghost',
+  outline: 'outline',
+  danger: 'destructive',
 }
 
-// ─── Button ───────────────────────────────────────────────
-const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 rounded-[var(--radius-sm)] font-medium ' +
-    'transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))] ' +
-    'disabled:pointer-events-none disabled:opacity-50 whitespace-nowrap',
-  {
-    variants: {
-      variant: {
-        primary:
-          'bg-[hsl(var(--color-primary))] text-[hsl(var(--color-primary-fg))] hover:bg-[hsl(var(--color-primary-hover))]',
-        secondary:
-          'bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-primary))] hover:bg-[hsl(var(--surface-overlay))]',
-        ghost: 'text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]',
-        outline:
-          'border border-[hsl(var(--border-default))] text-[hsl(var(--fg-primary))] hover:border-[hsl(var(--border-strong))]',
-        danger:
-          'bg-[hsl(var(--color-destructive))] text-[hsl(var(--color-destructive-fg))] hover:opacity-90',
-      },
-      size: {
-        sm: 'h-7 px-2.5 text-xs',
-        md: 'h-9 px-3.5 text-sm',
-        lg: 'h-11 px-5 text-sm',
-        icon: 'h-9 w-9',
-      },
-    },
-    defaultVariants: { variant: 'secondary', size: 'md' },
-  }
-)
+/** `md` is desktop's name for the shared default size. */
+const SIZE: Record<DesktopButtonSize, 'default' | 'sm' | 'lg' | 'icon'> = {
+  sm: 'sm',
+  md: 'default',
+  lg: 'lg',
+  icon: 'icon',
+}
 
-export interface ButtonProps
-  extends ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {}
+export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: DesktopButtonVariant | undefined
+  size?: DesktopButtonSize | undefined
+}
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
-  { className, variant, size, ...props },
-  ref
+  { variant = 'secondary', size = 'md', ...props },
+  ref,
 ) {
-  return <button ref={ref} className={cn(buttonVariants({ variant, size }), className)} {...props} />
+  return <SharedButton ref={ref} variant={VARIANT[variant]} size={SIZE[size]} {...props} />
 })
 
-// ─── Input ────────────────────────────────────────────────
+// ─── Input ────────────────────────────────────────────────────────────────
+
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
-  invalid?: boolean
+  /** Desktop call sites mark a failed field with this; the shared Input carries
+   *  the same state on `aria-invalid`, which its styles already key off. */
+  invalid?: boolean | undefined
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
-  { className, invalid, ...props },
-  ref
+  { invalid, ...props },
+  ref,
 ) {
-  return (
-    <input
-      ref={ref}
-      aria-invalid={invalid}
-      className={cn(
-        'h-9 w-full rounded-[var(--radius-sm)] bg-[hsl(var(--surface-muted))] px-3 text-sm',
-        'text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))]',
-        'border border-[hsl(var(--border-default))] outline-none',
-        'focus:border-[hsl(var(--color-primary))]',
-        invalid && 'border-[hsl(var(--color-destructive))]',
-        className
-      )}
-      {...props}
-    />
-  )
+  return <SharedInput ref={ref} aria-invalid={invalid || undefined} {...props} />
 })
 
-// ─── Card ─────────────────────────────────────────────────
+// ─── Card ─────────────────────────────────────────────────────────────────
+
 export function Card({ className, children }: { className?: string; children: ReactNode }) {
-  return (
-    <div
-      className={cn(
-        'rounded-[var(--radius-md)] border border-[hsl(var(--border-default))]',
-        'bg-[hsl(var(--surface-elevated))] p-4',
-        className
-      )}
-    >
-      {children}
-    </div>
-  )
+  return <SharedCard className={className}>{children}</SharedCard>
 }
 
-// ─── Badge ────────────────────────────────────────────────
+// ─── Badge ────────────────────────────────────────────────────────────────
+
 export type BadgeTone = 'neutral' | 'success' | 'warning' | 'danger' | 'info' | 'brand'
 
-const BADGE_TONE: Record<BadgeTone, string> = {
-  neutral: 'bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))]',
-  success: 'bg-[hsl(var(--color-success)/0.15)] text-[hsl(var(--color-success))]',
-  warning: 'bg-[hsl(var(--color-warning)/0.15)] text-[hsl(var(--color-warning))]',
-  danger: 'bg-[hsl(var(--color-destructive)/0.15)] text-[hsl(var(--color-destructive))]',
-  info: 'bg-[hsl(var(--color-info)/0.15)] text-[hsl(var(--color-info))]',
-  brand: 'bg-[hsl(var(--color-primary)/0.15)] text-[hsl(var(--color-primary))]',
+/** Desktop tones onto shared variants. `info` has no shared equivalent and
+ *  reads closest to `secondary`; `brand` is the default gradient badge. */
+const TONE: Record<BadgeTone, 'default' | 'secondary' | 'destructive' | 'success' | 'warning'> = {
+  neutral: 'secondary',
+  success: 'success',
+  warning: 'warning',
+  danger: 'destructive',
+  info: 'secondary',
+  brand: 'default',
 }
 
 export function Badge({ tone = 'neutral', children }: { tone?: BadgeTone; children: ReactNode }) {
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium',
-        BADGE_TONE[tone]
-      )}
-    >
-      {children}
-    </span>
-  )
+  return <SharedBadge variant={TONE[tone]}>{children}</SharedBadge>
 }
 
-// ─── Skeleton ─────────────────────────────────────────────
+// ─── Skeleton ─────────────────────────────────────────────────────────────
+
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn('animate-pulse rounded-[var(--radius-xs)] bg-[hsl(var(--surface-muted))]', className)} />
+  return <SharedSkeleton className={className} />
 }

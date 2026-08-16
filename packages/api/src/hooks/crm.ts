@@ -16,28 +16,59 @@ import { useRealtime } from './useRealtime'
 export type TaskStatus = 'pending' | 'in_progress' | 'completed'
 
 export interface InteractionCustomer {
-  id: string; name: string; phone: string | null;
+  id: string
+  name: string
+  phone: string | null
 }
 
 export interface InteractionStatusEvent {
-  status: TaskStatus; changedAt: string; changedBy?: string;
+  status: TaskStatus
+  changedAt: string
+  changedBy?: string
+}
+
+/**
+ * How one customer on a task turned out.
+ *
+ * A customer with no entry has not been attempted yet — that is not the same
+ * as a recorded failure, and progress counts must keep them apart.
+ */
+export interface CustomerOutcome {
+  customerId: string
+  outcome: 'done' | 'failed'
+  recordedAt: string
+  recordedBy: 'owner' | 'employee'
+  /** Always present on a failure — the schema rejects ❌ without a reason. */
+  note?: string
 }
 
 export interface Interaction {
-  id: string; customerId: string; type: string; subject: string;
-  content: string; interactionDate: string; createdAt: string;
-  status: TaskStatus;
-  publicToken?: string | null;
-  employeeId?: string | null;
-  employeeName?: string | null;
-  customers?: InteractionCustomer[];
-  statusHistory?: InteractionStatusEvent[];
+  id: string
+  customerId: string
+  type: string
+  subject: string
+  content: string
+  interactionDate: string
+  createdAt: string
+  status: TaskStatus
+  publicToken?: string | null
+  employeeId?: string | null
+  employeeName?: string | null
+  customers?: InteractionCustomer[]
+  statusHistory?: InteractionStatusEvent[]
+  customerOutcomes?: CustomerOutcome[]
 }
 
 export interface Opportunity {
-  id: string; customerId: string; title: string; description: string;
-  stage: string; value: number; probability: number;
-  expectedCloseDate?: string; createdAt: string;
+  id: string
+  customerId: string
+  title: string
+  description: string
+  stage: string
+  value: number
+  probability: number
+  expectedCloseDate?: string
+  createdAt: string
 }
 
 // ═══ Query Keys ═══
@@ -71,8 +102,13 @@ export function useInteractions(customerId?: string) {
 }
 
 export interface CreateInteractionInput {
-  customerId: string; customerIds?: string[]; type: string; subject: string;
-  content?: string; employeeId?: string; employeeName?: string;
+  customerId: string
+  customerIds?: string[]
+  type: string
+  subject: string
+  content?: string
+  employeeId?: string
+  employeeName?: string
 }
 
 export function useCreateInteraction() {
@@ -100,6 +136,46 @@ export function useUpdateInteractionStatus() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: crmKeys.all })
     },
+  })
+}
+
+export interface RecordCustomerOutcomeInput {
+  customerId: string
+  outcome: 'done' | 'failed'
+  note?: string
+}
+
+/** Owner-side record of how one customer on a task went. */
+export function useRecordCustomerOutcome() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, ...input }: RecordCustomerOutcomeInput & { id: string }) => {
+      const { data } = await apiClient.patch(`/interactions/${id}/customer-outcome`, input)
+      return data as Interaction
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: crmKeys.all })
+    },
+  })
+}
+
+/**
+ * Subjects this user has already used, newest first.
+ *
+ * Long-lived: the list only grows when a task is created, and a stale entry
+ * costs nothing but a missing suggestion.
+ */
+export function useSubjectSuggestions() {
+  const authReady = useAuthReady()
+
+  return useQuery({
+    queryKey: [...crmKeys.all, 'subjects'] as const,
+    queryFn: async () => {
+      const { data } = await apiClient.get('/interactions/subjects')
+      return (data ?? []) as string[]
+    },
+    enabled: authReady,
+    staleTime: 5 * 60 * 1000,
   })
 }
 

@@ -5,8 +5,23 @@
 // and navigation locked to the app's own origin.
 // ============================================
 
-import { BrowserWindow, shell } from 'electron'
+import { BrowserWindow, app, shell } from 'electron'
+import { existsSync } from 'node:fs'
 import { join } from 'node:path'
+
+/**
+ * Runtime window icon. Windows and Linux read it from the BrowserWindow; macOS
+ * takes it from the app bundle instead, so it is only set where it applies.
+ * Without this Electron falls back to its own default icon.
+ */
+function resolveIcon(): string | undefined {
+  const candidates = app.isPackaged
+    ? [join(process.resourcesPath, 'resources/icon.png'), join(process.resourcesPath, 'icon.png')]
+    : [join(__dirname, '../../resources/icon.png')]
+
+  // A missing icon must not be fatal — Electron falls back to its default.
+  return candidates.find((path) => existsSync(path))
+}
 
 const MIN_WIDTH = 1024
 const MIN_HEIGHT = 680
@@ -20,6 +35,11 @@ export function createMainWindow(): BrowserWindow {
     // Paint nothing until the renderer is ready — avoids a white flash.
     show: false,
     backgroundColor: '#101820',
+    ...(() => {
+      if (process.platform === 'darwin') return {}
+      const icon = resolveIcon()
+      return icon ? { icon } : {}
+    })(),
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),

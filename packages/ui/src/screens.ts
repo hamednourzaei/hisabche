@@ -40,7 +40,39 @@ export { ActivitiesPage } from './components/ui/activity/ActivitiesPage'
 export { SyncCenterContainer } from './components/ui/sync-center/containers/sync-center-container'
 
 // ---------- Settings ----------
-// The stamp/signature uploader only. Desktop keeps its own settings shell for
-// the Electron-specific parts (app version, local database) and mounts this for
-// the product-wide setting, rather than growing a second uploader.
-export { BusinessStampSection } from './components/ui/settings'
+export { SettingsPage, BusinessStampSection } from './components/ui/settings'
+
+// ---------- CRM ----------
+export { CrmContainer } from './components/ui/crm/containers/crm-container'
+export { PublicTaskContainer } from './components/ui/crm/containers/public-task-container'
+
+// ---------- Workflow / Approvals ----------
+export { ApprovalsContainer } from './components/ui/workflow/containers/approvals-container'
+export { WorkflowTemplatesContainer } from './components/ui/workflow/containers/workflow-templates-container'
+
+// ---------- Billing ----------
+export { BillingContainer } from './components/ui/billing'
+
+// ---------- Onboarding ----------
+export { OnboardingContainer } from './components/ui/onboarding/containers/onboarding-container'
+
+// ---------- Manufacturing ----------
+export { ManufacturingContainer } from './components/ui/manufacturing/containers/manufacturing-container'
+
+// ---------- Permissions ----------
+export { PermissionsContainer } from './components/ui/permissions/containers/permissions-container'
+
+// ---------- Human Resources ----------
+export { HumanResourcesContainer } from './components/ui/human-resources/containers/hr-container'
+
+// ---------- Team & Payroll ----------
+export { TeamAndPayrollContainer } from './components/ui/team-and-payroll/containers/team-and-payroll-container'
+
+// ---------- Sales Follow-up ----------
+export { SalesFollowupContainer } from './components/ui/sales-followup/containers/sales-followup-container'
+
+// ---------- Audit ----------
+export { AuditContainer } from './components/ui/audit/containers/audit-container'
+
+// ---------- Public (no-auth) ----------
+export { PublicInvoiceContainer } from './components/ui/invoice-detail/containers/public-invoice-container'

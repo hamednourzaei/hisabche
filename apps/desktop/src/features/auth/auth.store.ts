@@ -8,6 +8,7 @@
 
 import { create } from 'zustand'
 import { registerTokenGetter, setOnUnauthorized, type ApiError } from '@hisabche/api'
+import { signUpSchema, type SignUpInput } from '@hisabche/validation'
 import {
   isSession,
   sessionCan,
@@ -29,6 +30,7 @@ export interface AuthState {
 
   hydrate: () => Promise<void>
   login: (input: LoginCredentials) => Promise<void>
+  signup: (input: SignUpInput) => Promise<void>
   logout: () => Promise<void>
   validateSession: () => Promise<boolean>
   refreshToken: () => Promise<void>
@@ -77,7 +79,7 @@ function hydrateUserFromToken(
   } as Session['user']
 }
 
-async function postLogin(body: LoginCredentials): Promise<Session> {
+async function postAuth(path: string, body: unknown): Promise<Session> {
   const response = await apiClient.post<
     | Session
     | {
@@ -86,7 +88,7 @@ async function postLogin(body: LoginCredentials): Promise<Session> {
         token?: string
         access_token?: string
       }
-  >('/auth/login', body)
+  >(path, body)
 
   const payload = response.data
 
@@ -130,6 +132,15 @@ async function postLogin(body: LoginCredentials): Promise<Session> {
 
   throw new Error('INVALID_SESSION_RESPONSE')
 }
+/**
+ * Sign-up posts to the same envelope-shaped endpoint login does, so it reuses
+ * the same normalisation rather than duplicating the three response shapes the
+ * backend can return.
+ */
+async function postSignup(body: SignUpInput): Promise<Session> {
+  return postAuth('/auth/signup', body)
+}
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   session: null,
   isAuthenticated: false,
@@ -239,7 +250,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         throw new Error('INVALID_PASSWORD_REQUIREMENTS')
       }
 
-      const session = await postLogin({ email, password: input.password })
+      const session = await postAuth('/auth/login', { email, password: input.password })
 
       if (!isSession(session)) {
         throw new Error('INVALID_SESSION_RESPONSE')
@@ -258,6 +269,42 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isLoading: false,
         error: toMessage(error),
       })
+      throw error
+    }
+  },
+
+  // Validated with the shared `signUpSchema` — the same contract the backend
+  // route and the web store use — then persisted through the same OS
+  // credential store login writes to. No second token store.
+  signup: async (input) => {
+    set({ isLoading: true, error: null })
+    try {
+      const parsed = signUpSchema.safeParse({
+        ...input,
+        email: input.email.trim(),
+        fullName: input.fullName.trim(),
+      })
+
+      if (!parsed.success) {
+        throw new Error(parsed.error.issues[0]?.message ?? 'INVALID_SIGNUP_INPUT')
+      }
+
+      const session = await postSignup(parsed.data)
+
+      if (!isSession(session)) {
+        throw new Error('INVALID_SESSION_RESPONSE')
+      }
+
+      await sessionStore.write(session)
+      set({
+        session,
+        isAuthenticated: true,
+        isLoading: false,
+        isSessionValid: true,
+        error: null,
+      })
+    } catch (error) {
+      set({ isLoading: false, error: toMessage(error) })
       throw error
     }
   },

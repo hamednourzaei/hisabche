@@ -51,6 +51,12 @@ export default defineConfig({
   renderer: {
     root: resolve(__dirname, 'src'),
 
+    // Canonical UI references brand assets by absolute path (`/logo-icon.png`
+    // in DashboardSidebar), which web serves from its `public/`. Without the
+    // same directory here those requests 404 and the sidebar shows a broken
+    // image where the logo belongs.
+    publicDir: resolve(__dirname, 'src/public'),
+
     plugins: [react()],
 
     resolve: {

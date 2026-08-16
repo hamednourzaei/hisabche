@@ -34,6 +34,20 @@ import { RecentActivitiesCard } from '../components/recent-activities-card'
 import { formatAmount } from '../../../shared/lib/format'
 import { InsightCard } from '../components/insight-card'
 
+// ─── Shared catalog keys ─────────────────────────────────────────────────
+// `tCommon` reads the same message catalogs the web app renders through, so
+// every label here is the exact string web shows. Fallbacks are for the rare
+// key the catalog lacks.
+
+// ─── Percent change vs. previous day — mirrors web's SalesChart ──────────
+function percentChange(series: readonly SalesDataPoint[]): number | null {
+  if (!series || series.length < 2) return null
+  const prev = series[series.length - 2]?.value ?? 0
+  if (prev <= 0) return null
+  const last = series[series.length - 1]?.value ?? 0
+  return ((last - prev) / prev) * 100
+}
+
 // ─── Greeting — matches web's Level 1 ────────────────────────────────────
 
 function GreetingHeader() {
@@ -96,6 +110,13 @@ export function DashboardScreen() {
     () => (sales.data?.data ?? []).map((point: SalesDataPoint) => point.value),
     [sales.data],
   )
+  // Web's SalesChart computes today's change against the previous point in the
+  // series; the greeting header and KPI grid use the same data.
+  const todayChange = useMemo(() => percentChange(sales.data?.data ?? []), [sales.data])
+  const salesEmpty = useMemo(
+    () => !sales.data?.data || sales.data.data.length === 0 || series.every((v: number) => v === 0),
+    [sales.data, series],
+  )
 
   if (kpis.isError && !data) {
     return (
@@ -128,9 +149,10 @@ export function DashboardScreen() {
       icon: 'wallet-outline' as const,
       label: tCommon('dashboard.todaySales', 'فروش امروز'),
       value: amount(data?.todaySales),
-      trend: undefined, // web computes this from chart data; acceptable gap
-      trendLabel: undefined,
-      loading: kpis.isLoading,
+      // Same source as web's chart footer: today vs. the previous period.
+      trend: todayChange ?? undefined,
+      trendLabel: tCommon('dashboard.vsYesterday', 'نسبت به دیروز'),
+      loading: kpis.isLoading || sales.isLoading,
       onPress: undefined,
     },
     {
@@ -216,11 +238,12 @@ export function DashboardScreen() {
           })}
         </View>
 
-        {/* Level 3: Sales chart card + AI Insights */}
+        {/* Level 3: Sales chart card + AI Insights —
+            mirrors web's SalesChart section semantics exactly. */}
         <View style={{ gap: spacing.lg }}>
-          {/* Sales chart — equivalent to web's Level 3 left column */}
+          {/* Sales chart — web's `rounded-2xl border surface-elevated p-4` */}
           <MobileCard padding="md" variant="outlined" elevated="none">
-            {/* Header with title + date range picker */}
+            {/* Header: title + date range picker (web's header row) */}
             <View
               style={{
                 flexDirection: 'row',
@@ -243,31 +266,135 @@ export function DashboardScreen() {
               />
             </View>
 
-            {/* Total amount */}
-            <View style={{ marginBottom: spacing.md }}>
-              <Text variant="caption" tone="secondary">
-                {tCommon('dashboard.totalSales', 'فروش کل')}
-              </Text>
-              <Text variant="title">{amount(sales.data?.total ?? 0)}</Text>
-            </View>
-
-            {/* Sparkline */}
-            {series.length > 1 ? (
-              <Sparkline values={series} height={56} />
-            ) : (
+            {salesEmpty && !sales.isLoading ? (
+              /* Empty state — web shows a FileText hero + noSalesYet +
+                 بگیرید action; /report redirects to پول و سود like web. */
               <View
                 style={{
-                  height: 56,
-                  borderRadius: 12,
-                  backgroundColor: colors.surfaceMuted,
                   alignItems: 'center',
-                  justifyContent: 'center',
+                  gap: spacing.md,
+                  paddingVertical: spacing.xl,
                 }}
               >
-                <Text variant="caption" tone="tertiary">
-                  {tCommon('dashboard.noSalesData', 'هنوز داده‌ی فروشی موجود نیست')}
+                <View
+                  style={{
+                    borderRadius: 999,
+                    backgroundColor: colors.primarySoft,
+                    padding: spacing.lg,
+                  }}
+                >
+                  <Ionicons name="document-text-outline" size={28} color={colors.primary} />
+                </View>
+                <View style={{ alignItems: 'center', gap: spacing.xs }}>
+                  <Text variant="bodyStrong">
+                    {tCommon('dashboard.noSalesYet', 'هنوز فروشی ثبت نشده است')}
+                  </Text>
+                  <Text variant="caption" tone="tertiary" style={{ textAlign: 'center' }}>
+                    {tCommon('dashboard.startSelling', 'اولین فروش خود را ثبت کنید')}
+                  </Text>
+                </View>
+                <Text
+                  variant="label"
+                  tone="brand"
+                  onPress={() => router.push('/(tabs)/quick-invoice')}
+                >
+                  {tCommon('dashboard.createInvoice', 'ایجاد فاکتور')}
                 </Text>
               </View>
+            ) : (
+              <>
+                {/* Header: فروش امروز + مشاهده گزارش ← (web's chart header row) */}
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    marginBottom: spacing.xs,
+                  }}
+                >
+                  <Text variant="caption" tone="secondary">
+                    {tCommon('dashboard.todaySales', 'فروش امروز')}
+                  </Text>
+                  <Text variant="label" tone="tertiary" onPress={() => router.push('/accounting')}>
+                    {tCommon('dashboard.viewReport', 'مشاهده گزارش')} ←
+                  </Text>
+                </View>
+
+                {/* Hero metric + % change (web's text-3xl hero + vs yesterday pill) */}
+                <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: spacing.sm }}>
+                  <Text variant="heading" style={{ fontSize: 28 }}>
+                    {amount(data?.todaySales ?? 0)}
+                  </Text>
+                  {todayChange !== null ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                      <Ionicons
+                        name={todayChange >= 0 ? 'arrow-up' : 'arrow-down'}
+                        size={13}
+                        color={todayChange >= 0 ? colors.success : colors.destructive}
+                      />
+                      <Text
+                        variant="caption"
+                        style={{
+                          color: todayChange >= 0 ? colors.success : colors.destructive,
+                        }}
+                      >
+                        {Math.abs(todayChange).toFixed(1)}%
+                      </Text>
+                      <Text variant="legal" tone="tertiary">
+                        {tCommon('dashboard.vsYesterday', 'نسبت به دیروز')}
+                      </Text>
+                    </View>
+                  ) : null}
+                </View>
+
+                <View style={{ height: spacing.md }} />
+
+                {/* Chart footer metadata — web's `dataRange` line ("Last N periods").
+                    `invoiceCount`/`customerCount` series are not in the mobile
+                    hook payload, so only the always-on sales legend renders. */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                    <View
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: 4,
+                        backgroundColor: colors.primary,
+                      }}
+                    />
+                    <Text variant="legal" tone="tertiary">
+                      {tCommon('dashboard.salesTrend', 'روند فروش')}
+                    </Text>
+                  </View>
+                  <Text variant="legal" tone="tertiary">
+                    {tCommon('dashboard.dataRange', `Last ${series.length} periods`).replace(
+                      '{count}',
+                      String(series.length),
+                    )}
+                  </Text>
+                </View>
+
+                <View style={{ height: spacing.md }} />
+
+                {/* Sparkline — the chart body itself */}
+                {series.length > 1 ? (
+                  <Sparkline values={series} height={72} />
+                ) : (
+                  <View
+                    style={{
+                      height: 72,
+                      borderRadius: 12,
+                      backgroundColor: colors.surfaceMuted,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <Text variant="caption" tone="tertiary">
+                      {tCommon('dashboard.noSalesYet', 'هنوز فروشی ثبت نشده است')}
+                    </Text>
+                  </View>
+                )}
+              </>
             )}
           </MobileCard>
 

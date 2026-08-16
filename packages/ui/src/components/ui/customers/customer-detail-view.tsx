@@ -106,8 +106,19 @@ export function CustomerDetailView({
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <button type="button" onClick={onBack} aria-label={t('common.back')} className={ghostBtn}>
-            <ChevronRight className="size-5" aria-hidden="true" />
+          {/* A bare chevron gave no clue where it led. The visible label names
+              the destination; it collapses to the icon alone on narrow screens
+              where the customer's name needs the room. */}
+          <button
+            type="button"
+            onClick={onBack}
+            aria-label={t('customers.backToList', 'بازگشت به طرف حساب‌ها')}
+            className={cn(ghostBtn, 'gap-1.5 rounded-full sm:px-3')}
+          >
+            <ChevronRight className="size-5 shrink-0" aria-hidden="true" />
+            <span className="hidden text-sm font-medium sm:inline">
+              {t('customers.backToList', 'بازگشت به طرف حساب‌ها')}
+            </span>
           </button>
           <div>
             <h1 className="text-2xl font-bold text-[hsl(var(--fg-primary))]">{customer.name}</h1>

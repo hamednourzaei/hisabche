@@ -33,7 +33,8 @@ export type NavId =
   | 'follow-up'
   | 'team'
   // secondary — work
-  | 'projects'
+  // `production` keeps its id so the route stays addressable while hidden from
+  // navigation. `projects` is gone: the module was deleted, not hidden.
   | 'production'
   | 'approvals'
   // secondary — system
@@ -100,14 +101,10 @@ export const NAV_CONTRACT: readonly NavItemContract[] = [
     path: '/warehouse',
     group: 'primary',
   },
-  {
-    id: 'buy',
-    emoji: '🛒',
-    labelKey: 'nav.buy',
-    descriptionKey: 'nav.buy_description',
-    path: '/purchasing',
-    group: 'primary',
-  },
+  // `buy` (/purchasing) is intentionally absent from the navigation: purchases
+  // are recorded through the unified transaction form, so a separate
+  // destination duplicated the entry point. The route and its screens stay in
+  // the codebase and remain reachable by URL.
   {
     id: 'money',
     emoji: '📈',
@@ -144,22 +141,8 @@ export const NAV_CONTRACT: readonly NavItemContract[] = [
   },
 
   // ─── کارها ───
-  {
-    id: 'projects',
-    emoji: '📋',
-    labelKey: 'nav.projects',
-    descriptionKey: 'nav.projects_description',
-    path: '/projects',
-    group: 'work',
-  },
-  {
-    id: 'production',
-    emoji: '🏭',
-    labelKey: 'nav.production',
-    descriptionKey: 'nav.production_description',
-    path: '/manufacturing',
-    group: 'work',
-  },
+  // `production` (/manufacturing) is hidden from navigation for now; its route
+  // and screens remain. `projects` was removed outright — module deleted.
   {
     id: 'approvals',
     emoji: '✅',

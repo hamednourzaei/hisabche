@@ -879,8 +879,8 @@
     "buy_description": "سفارش جنس از فروشنده",
     "money": "پول و سود",
     "money_description": "درآمد، خرج و سود شما",
-    "buyers": "خریدارها",
-    "buyers_description": "مشتری‌ها و باقی‌داری‌شان",
+    "buyers": "طرف حساب‌ها",
+    "buyers_description": "مشتری‌ها و تأمین‌کننده‌ها",
     "followUp": "پیگیری فروش",
     "followUp_description": "گفت‌وگوها و فروش‌های احتمالی",
     "team": "تیم و حقوق",
@@ -1364,7 +1364,8 @@
       "seller": "فروشنده",
       "both": "خریدار و فروشنده",
       "none": "بدون معامله"
-    }
+    },
+    "backToList": "بازگشت به طرف حساب‌ها"
   },
   "crm": {
     "type": "نوع",
@@ -1390,8 +1391,16 @@
     "interactions": {
       "empty": "هیچ تعاملی ثبت نشده",
       "subject": "موضوع",
-      "type": "نوع",
-      "date": "تاریخ"
+      "type": {
+        "call": "تماس",
+        "meeting": "جلسه",
+        "email": "ایمیل",
+        "note": "یادداشت"
+      },
+      "date": "تاریخ",
+      "new": "وظیفه جدید",
+      "create": "ثبت وظیفه",
+      "contentPlaceholder": "توضیحات (اختیاری)"
     },
     "opportunities": {
       "empty": "هیچ فرصت فروشی ثبت نشده",
@@ -1400,6 +1409,46 @@
       "value": "ارزش",
       "probability": "احتمال",
       "expectedCloseDate": "تاریخ تخمینی"
+    },
+    "employee": "نام پرسنل",
+    "customerCount": "تعداد مشتری",
+    "customerPhone": "شماره مشتری",
+    "process": "فرایند",
+    "unassigned": "بدون تخصیص",
+    "pickEmployeePlaceholder": "انتخاب پرسنل...",
+    "pickCustomersPlaceholder": "انتخاب مشتری‌ها...",
+    "selectedCustomers": "مشتری‌های انتخاب‌شده",
+    "statusTimeline": "تاریخچه وضعیت",
+    "changeStatus": "تغییر دستی وضعیت",
+    "byEmployee": "توسط پرسنل",
+    "byOwner": "توسط شما",
+    "sendToEmployee": "ارسال لینک به پرسنل",
+    "linkCopied": "لینک کپی شد",
+    "status": {
+      "pending": "در حال انتظار",
+      "inProgress": "در حال انجام",
+      "completed": "کامل شد"
+    },
+    "stats": {
+      "total": "مجموع وظایف"
+    },
+    "outcomes": {
+      "title": "مشتری‌های انتخاب‌شده",
+      "customer": "مشتری",
+      "phone": "شماره تماس",
+      "result": "نتیجه",
+      "recordedAt": "تاریخ و ساعت",
+      "note": "توضیحات",
+      "actions": "ثبت",
+      "pending": "انجام نشده",
+      "done": "انجام شد",
+      "failed": "انجام نشد",
+      "markDone": "ثبت انجام شد",
+      "markFailed": "ثبت انجام نشد",
+      "whyFailed": "چرا انجام نشد؟",
+      "notePlaceholder": "مثلاً: شماره خاموش بود",
+      "empty": "مشتری‌ای پیدا نشد",
+      "summary": "{done} انجام شد · {failed} انجام نشد · {total} کل"
     }
   },
   "payments": {

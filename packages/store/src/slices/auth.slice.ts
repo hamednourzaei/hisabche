@@ -9,8 +9,13 @@ import { useWorkspaceStore } from './workspace.slice'
 // ============================================
 // ENCRYPTION
 // ============================================
+// Guarded: the Electron renderer has no `process`, and an unguarded read here
+// threw at module scope — which took the whole app down before it rendered.
+// The literal `process.env.NEXT_PUBLIC_…` text must stay intact so Next can
+// still substitute it at build time.
 const ENCRYPTION_KEY =
-  process.env.NEXT_PUBLIC_ENCRYPTION_KEY || 'hisabche-dev-key-32-chars!!'
+  (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_ENCRYPTION_KEY : undefined) ||
+  'hisabche-dev-key-32-chars!!'
 
 const encryptedStorage = {
   getItem: (key: string): string | null => {
@@ -81,7 +86,8 @@ export interface AuthState {
 // API BASE URL
 // ============================================
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:10000'
+  (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_API_URL : undefined) ||
+  'http://localhost:10000'
 
 // ============================================
 // API calls
@@ -128,7 +134,7 @@ async function apiLogout(token: string) {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: '{}',  // ✅ بدنه خالی ولی معتبر
+    body: '{}', // ✅ بدنه خالی ولی معتبر
   }).catch(() => {})
 }
 
@@ -177,7 +183,7 @@ export const useAuthStore = create<AuthState>()(
           // پاسخ سرور ممکن است کاربر کامل را برنگرداند؛ مقادیر ارسالی را
           // روی کاربر فعلی merge می‌کنیم تا UI بلافاصله به‌روز شود.
           const payload = await res.json().catch(() => null)
-          const updated = (payload && payload.user) ? payload.user : {}
+          const updated = payload && payload.user ? payload.user : {}
           set({
             user: { ...user, ...input, ...updated },
             isLoading: false,
@@ -218,10 +224,7 @@ export const useAuthStore = create<AuthState>()(
             return
           }
 
-          const result = await apiLogin(
-            credentials.email.trim(),
-            credentials.password
-          )
+          const result = await apiLogin(credentials.email.trim(), credentials.password)
 
           set({
             user: result.user,
@@ -232,8 +235,7 @@ export const useAuthStore = create<AuthState>()(
             error: null,
           })
         } catch (err: unknown) {
-          const message =
-            err instanceof Error ? err.message : 'ورود ناموفق بود'
+          const message = err instanceof Error ? err.message : 'ورود ناموفق بود'
           set({
             user: null,
             token: null,
@@ -264,8 +266,7 @@ export const useAuthStore = create<AuthState>()(
             error: null,
           })
         } catch (err: unknown) {
-          const message =
-            err instanceof Error ? err.message : 'ثبت‌نام ناموفق بود'
+          const message = err instanceof Error ? err.message : 'ثبت‌نام ناموفق بود'
           set({
             user: null,
             token: null,
@@ -293,7 +294,13 @@ export const useAuthStore = create<AuthState>()(
           // قبلی اشاره می‌کرد (باعث خطای "Access denied" هنگام دعوت
           // عضو جدید می‌شد).
           useWorkspaceStore.persist.clearStorage()
-          useWorkspaceStore.setState({ workspaceId: null, workspaceName: '', members: [], invites: [], currentUserRole: 'member' })
+          useWorkspaceStore.setState({
+            workspaceId: null,
+            workspaceName: '',
+            members: [],
+            invites: [],
+            currentUserRole: 'member',
+          })
 
           set({
             user: null,
@@ -309,9 +316,7 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'hisabche-auth',
       storage:
-        typeof window !== 'undefined'
-          ? createJSONStorage(() => encryptedStorage)
-          : undefined,
+        typeof window !== 'undefined' ? createJSONStorage(() => encryptedStorage) : undefined,
       partialize: (s) => ({
         user: s.user,
         token: s.token,
@@ -322,8 +327,8 @@ export const useAuthStore = create<AuthState>()(
           useAuthStore.getState().initAuth()
         })
       },
-    }
-  )
+    },
+  ),
 )
 
 // ============================================

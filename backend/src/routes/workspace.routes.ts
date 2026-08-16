@@ -10,7 +10,8 @@ import {
   updateMemberRoleSchema,
   createInviteSchema,
   acceptInviteSchema,
-  createMemberDirectSchema,
+  createMemberDirectBodySchema,
+  setMemberSuspensionSchema,
 } from '@hisabche/validation'
 import { WorkspaceService } from '../services/workspace.service'
 import { authenticate } from '../middleware/auth.middleware'
@@ -265,12 +266,12 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
     '/api/workspaces/:id/members/direct',
     {
       preHandler: [authenticate],
-      schema: { body: toJsonSchema(createMemberDirectSchema.omit({ workspaceId: true })) },
+      schema: { body: toJsonSchema(createMemberDirectBodySchema) },
     },
     async (req, reply) => {
       try {
         const { id } = req.params as any
-        const data = createMemberDirectSchema.omit({ workspaceId: true }).parse(req.body)
+        const data = createMemberDirectBodySchema.parse(req.body)
         const result = await svc.createMemberDirect(req.userId, id, { ...data, workspaceId: id })
         await clearCache(`workspace-members:${id}:*`)
         return reply.code(201).send(result)
@@ -287,6 +288,39 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
         }
         fastify.log.error(e)
         return reply.code(500).send({ error: 'Failed to create member' })
+      }
+    },
+  )
+
+  // Suspending keeps the member row, its payroll history and its attribution
+  // on past records; only sign-in stops. Deleting the member is the separate,
+  // irreversible action.
+  fastify.patch(
+    '/api/workspaces/:id/members/suspension',
+    {
+      preHandler: [authenticate],
+      schema: { body: toJsonSchema(setMemberSuspensionSchema) },
+    },
+    async (req, reply) => {
+      try {
+        const { id } = req.params as any
+        const { memberId, suspended } = setMemberSuspensionSchema.parse(req.body)
+        const result = await svc.setMemberSuspension(req.userId, id, memberId, suspended)
+        await clearCache(`workspace-members:${id}:*`)
+        return reply.send(result)
+      } catch (e) {
+        if (e instanceof z.ZodError)
+          return reply.code(400).send({ error: 'Validation', details: e.errors })
+        const clientErrors = [
+          'Insufficient permissions',
+          'Access denied',
+          'You cannot suspend your own account',
+        ]
+        if (e instanceof Error && clientErrors.includes(e.message)) {
+          return reply.code(400).send({ error: e.message })
+        }
+        fastify.log.error(e)
+        return reply.code(500).send({ error: 'Failed to update member suspension' })
       }
     },
   )

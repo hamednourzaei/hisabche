@@ -5,6 +5,7 @@ import { useState, useMemo, useCallback, useRef } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { ChevronUp, ChevronDown } from 'lucide-react'
 import { cn } from '../../../../lib/utils'
+import { useIntlLocale } from '../../../../hooks/use-intl-locale'
 
 // ═══ Types ═══
 export interface ColumnDef<T> {
@@ -35,13 +36,15 @@ interface DataGridProps<T extends { id: string }> {
   emptyMessage?: string
 }
 
-function formatCurrency(value: number, currency?: string): string {
-  return `${new Intl.NumberFormat('fa-IR').format(value)} ${currency || 'AFN'}`
+// The currency code is intentionally omitted: the user picks their currency
+// once at onboarding, so repeating it in every cell is noise.
+function formatCurrency(value: number, locale: string): string {
+  return new Intl.NumberFormat(locale).format(value)
 }
 
-function formatDate(value: string): string {
+function formatDate(value: string, locale: string): string {
   try {
-    return new Date(value).toLocaleDateString('fa-IR')
+    return new Date(value).toLocaleDateString(locale)
   } catch {
     return value || '-'
   }
@@ -60,7 +63,7 @@ function getBadgeClass(status: string): string {
   return map[status] || 'bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))]'
 }
 
-function renderCell<T>(column: ColumnDef<T>, row: T, currency?: string): React.ReactNode {
+function renderCell<T>(column: ColumnDef<T>, row: T, locale: string): React.ReactNode {
   const value = column.accessor(row)
   if (column.render) return column.render(value, row)
 
@@ -68,11 +71,11 @@ function renderCell<T>(column: ColumnDef<T>, row: T, currency?: string): React.R
     case 'currency':
       return (
         <span className="tabular-nums font-medium">
-          {formatCurrency(Number(value) || 0, currency)}
+          {formatCurrency(Number(value) || 0, locale)}
         </span>
       )
     case 'date':
-      return <span className="text-sm">{value ? formatDate(String(value)) : '-'}</span>
+      return <span className="text-sm">{value ? formatDate(String(value), locale) : '-'}</span>
     case 'badge':
       return (
         <span
@@ -91,6 +94,7 @@ function renderCell<T>(column: ColumnDef<T>, row: T, currency?: string): React.R
 
 export function DataGrid<T extends { id: string }>(props: DataGridProps<T>) {
   const { t, columns, data, isLoading, onRowClick, bulkActions, emptyMessage } = props
+  const locale = useIntlLocale()
 
   const [sortKey, setSortKey] = useState<string | null>(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
@@ -268,7 +272,7 @@ export function DataGrid<T extends { id: string }>(props: DataGridProps<T>) {
                           col.align === 'center' && 'text-center',
                         )}
                       >
-                        {renderCell(col, row)}
+                        {renderCell(col, row, locale)}
                       </div>
                     ))}
                   </div>

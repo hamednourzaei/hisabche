@@ -11,6 +11,7 @@ import {
   CreateInvite,
   AcceptInvite,
   CreateMemberDirect,
+  MAX_WORKSPACE_MEMBERS,
 } from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
 import { memoryCache } from '../utils/pagination'
@@ -542,33 +543,100 @@ export class WorkspaceService {
   async createMemberDirect(ownerUserId: string, workspaceId: string, data: CreateMemberDirect) {
     await this.requireRole(ownerUserId, workspaceId, 'owner')
 
-    const { data: created, error: createError } = await supabase.auth.admin.createUser({
-      email: data.email,
-      password: data.password,
-      email_confirm: true,
-      user_metadata: { full_name: data.fullName },
-    })
+    // Enforced here, not only in the UI — the endpoint is reachable directly.
+    const { count } = await supabase
+      .from('workspace_members')
+      .select('user_id', { count: 'exact', head: true })
+      .eq('workspace_id', workspaceId)
 
-    if (createError || !created.user) {
-      if (createError?.message?.includes('already')) {
-        throw new DatabaseError('Email already registered')
-      }
-      throw new DatabaseError('Failed to create account', createError)
+    if ((count ?? 0) >= MAX_WORKSPACE_MEMBERS) {
+      throw new DatabaseError(`A workspace can have at most ${MAX_WORKSPACE_MEMBERS} members`)
     }
 
-    await supabase
-      .from('profiles')
-      .upsert({ id: created.user.id, full_name: data.fullName }, { onConflict: 'id' })
+    const memberRow: Record<string, unknown> = {
+      workspace_id: workspaceId,
+      role: data.role,
+      job_title: data.jobTitle ?? null,
+      phone: data.phone ?? null,
+      has_access: data.hasAccess,
+    }
 
-    const { error: memberError } = await supabase
-      .from('workspace_members')
-      .insert({ workspace_id: workspaceId, user_id: created.user.id, role: data.role })
+    let userId: string | null = null
 
-    if (memberError) throw new DatabaseError('Failed to add member', memberError)
+    // Only mint an auth account when the owner actually wants this person to
+    // sign in. A payroll-only colleague gets a row and nothing else, which is
+    // what removed most of the old invite flow's failure modes.
+    if (data.hasAccess) {
+      const { data: created, error: createError } = await supabase.auth.admin.createUser({
+        email: data.email as string,
+        password: data.password as string,
+        email_confirm: true,
+        user_metadata: { full_name: data.fullName },
+      })
+
+      if (createError || !created.user) {
+        if (createError?.message?.includes('already')) {
+          throw new DatabaseError('Email already registered')
+        }
+        throw new DatabaseError('Failed to create account', createError)
+      }
+
+      userId = created.user.id
+
+      await supabase
+        .from('profiles')
+        .upsert({ id: userId, full_name: data.fullName }, { onConflict: 'id' })
+
+      memberRow['user_id'] = userId
+    } else {
+      // No auth user, so no id to key on — the row carries the name itself.
+      memberRow['full_name'] = data.fullName
+    }
+
+    const { error: memberError } = await supabase.from('workspace_members').insert(memberRow)
+
+    if (memberError) {
+      // The auth user is already created at this point; leaving it orphaned
+      // would block the owner from retrying with the same email.
+      if (userId) await supabase.auth.admin.deleteUser(userId).catch(() => undefined)
+      throw new DatabaseError('Failed to add member', memberError)
+    }
 
     await this.invalidateWorkspaceCache(workspaceId)
 
-    return { success: true, userId: created.user.id }
+    return { success: true, userId }
+  }
+
+  /**
+   * Suspend or restore a member.
+   *
+   * Distinct from removal: the row, its payroll history and its attribution on
+   * past records all survive. Only the ability to sign in goes away, and it
+   * comes back by clearing the same field.
+   */
+  async setMemberSuspension(
+    ownerUserId: string,
+    workspaceId: string,
+    memberId: string,
+    suspended: boolean,
+  ) {
+    await this.requireRole(ownerUserId, workspaceId, 'owner')
+
+    // An owner suspending themselves would lock the workspace with no way back.
+    if (memberId === ownerUserId) {
+      throw new DatabaseError('You cannot suspend your own account')
+    }
+
+    const { error } = await supabase
+      .from('workspace_members')
+      .update({ suspended_at: suspended ? new Date().toISOString() : null })
+      .eq('workspace_id', workspaceId)
+      .eq('user_id', memberId)
+
+    if (error) throw new DatabaseError('Failed to update member suspension', error)
+
+    await this.invalidateWorkspaceCache(workspaceId)
+    return { success: true, suspended }
   }
 
   // ─── Permission Helpers ─────────────────────────────────────

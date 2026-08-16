@@ -113,6 +113,35 @@ interface MobileBundle {
     | 'detailsArePriced',
     string
   >
+  quickInvoice: Record<
+    | 'stepProduct'
+    | 'stepCustomer'
+    | 'stepPrice'
+    | 'stepPreview'
+    | 'stepDone'
+    | 'previewTitle'
+    | 'previewDesc'
+    | 'confirmCreate'
+    | 'backToEdit'
+    | 'created'
+    | 'createdDesc'
+    | 'viewInvoice'
+    | 'createAnother'
+    | 'backToInvoices'
+    | 'next'
+    | 'back'
+    | 'customItem'
+    | 'customItemName'
+    | 'noItems'
+    | 'elapsedTime'
+    | 'items'
+    | 'type'
+    | 'paymentMethod'
+    | 'cash'
+    | 'credit'
+    | 'clickToView',
+    string
+  >
   inventory: Record<
     | 'title'
     | 'products'
@@ -303,6 +332,34 @@ const faIR: MobileBundle = {
     componentsSum: 'جمع اجزا',
     detailsArePriced: 'مبلغ خط از جمع اجزا محاسبه شود',
   },
+  quickInvoice: {
+    stepProduct: 'محصول',
+    stepCustomer: 'مشتری',
+    stepPrice: 'قیمت',
+    stepPreview: 'پیش‌نمایش',
+    stepDone: 'پایان',
+    previewTitle: 'پیش‌نمایش فاکتور',
+    previewDesc: 'قبل از ثبت نهایی، فاکتور را بررسی کنید',
+    confirmCreate: 'تأیید و ساخت فاکتور',
+    backToEdit: 'بازگشت و ویرایش',
+    created: 'فاکتور ثبت شد',
+    createdDesc: 'فاکتور شما با موفقیت ثبت شد',
+    viewInvoice: 'مشاهده فاکتور',
+    createAnother: 'فاکتور جدید',
+    backToInvoices: 'بازگشت به فاکتورها',
+    next: 'ادامه',
+    back: 'برگشت',
+    customItem: 'با نام دلخواه پر کن',
+    customItemName: 'نام دلخواه (مثلاً: کرایه تاکسی)',
+    noItems: 'حداقل یک کالا اضافه کنید',
+    items: '{{count}} کالا',
+    elapsedTime: '{{m}}:{{s}}',
+    type: 'نوع',
+    paymentMethod: 'نوع پرداخت',
+    cash: 'نقد',
+    credit: 'نسیه',
+    clickToView: 'کلیک کنید تا فاکتور را ببینید',
+  },
   inventory: {
     title: 'انبار',
     products: 'کالاها',
@@ -386,6 +443,14 @@ const faAF: MobileBundle = {
     created: 'بل ثبت شد',
   },
   inventory: { ...faIR.inventory, title: 'گدام', products: 'اجناس', emptyTitle: 'جنسی ثبت نشده' },
+  quickInvoice: {
+    ...faIR.quickInvoice,
+    stepProduct: 'جنس',
+    stepCustomer: 'مشتری',
+    stepPrice: 'قیمت',
+    stepPreview: 'پیش‌نمایش',
+    stepDone: 'پایان',
+  },
   more: { ...faIR.more, title: 'بیشتر' },
   units: UNITS_FA,
 }
@@ -500,6 +565,34 @@ const en: MobileBundle = {
     removeDetail: 'Remove detail',
     componentsSum: 'Components total',
     detailsArePriced: 'Calculate line total from components',
+  },
+  quickInvoice: {
+    stepProduct: 'Product',
+    stepCustomer: 'Customer',
+    stepPrice: 'Price',
+    stepPreview: 'Preview',
+    stepDone: 'Done',
+    previewTitle: 'Invoice preview',
+    previewDesc: 'Review the invoice before final confirmation',
+    confirmCreate: 'Confirm & create invoice',
+    backToEdit: 'Back to edit',
+    created: 'Invoice created',
+    createdDesc: 'Your invoice has been created successfully',
+    viewInvoice: 'View invoice',
+    createAnother: 'Create another',
+    backToInvoices: 'Back to invoices',
+    next: 'Next',
+    back: 'Back',
+    customItem: 'Create custom item',
+    customItemName: 'Custom item name',
+    noItems: 'Add at least one item',
+    items: '{{count}} items',
+    elapsedTime: '{{m}}:{{s}}',
+    type: 'Type',
+    paymentMethod: 'Payment method',
+    cash: 'Cash',
+    credit: 'Credit',
+    clickToView: 'Tap to view the invoice',
   },
   inventory: {
     title: 'Inventory',

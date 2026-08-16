@@ -31,8 +31,21 @@ const CustomersPage = lazy(() => import('@/features/crm/customers-page'))
 const CustomerDetailPage = lazy(() => import('@/features/crm/customer-detail-page'))
 const AccountingPage = lazy(() => import('@/features/accounting/accounting-page'))
 const ActivitiesPage = lazy(() => import('@/features/activity/activities-page'))
-const SyncPage = lazy(() => import('@/features/sync/sync-page'))
+const CrmPage = lazy(() => import('@/features/crm/crm-page'))
 const SettingsPage = lazy(() => import('@/features/settings/settings-page'))
+const SyncCenterPage = lazy(() => import('@/features/sync/sync-page'))
+const ApprovalsPage = lazy(() => import('@/features/approvals/approvals-page'))
+const BillingPage = lazy(() => import('@/features/billing/billing-page'))
+const OnboardingPage = lazy(() => import('@/features/onboarding/onboarding-page'))
+const ManufacturingPage = lazy(() => import('@/features/manufacturing/manufacturing-page'))
+const PermissionsPage = lazy(() => import('@/features/permissions/permissions-page'))
+const HumanResourcesPage = lazy(() => import('@/features/human-resources/hr-page'))
+const TeamAndPayrollPage = lazy(() => import('@/features/team-and-payroll/tap-page'))
+const WorkflowPage = lazy(() => import('@/features/workflow/workflow-page'))
+const SalesFollowupPage = lazy(() => import('@/features/sales-followup/sales-followup-page'))
+const AuditPage = lazy(() => import('@/features/audit/audit-page'))
+const PublicTaskPage = lazy(() => import('@/features/public/public-task-page'))
+const PublicInvoicePage = lazy(() => import('@/features/public/public-invoice-page'))
 
 /** Carries the invoice id across the `/sales/:id` → `/invoices/:id` rename. */
 function LegacyInvoiceRedirect() {
@@ -67,8 +80,21 @@ const router = createHashRouter([
 
       { path: 'accounting', element: <AccountingPage /> },
       { path: 'activities', element: <ActivitiesPage /> },
-      { path: 'sync-center', element: <SyncPage /> },
+      { path: 'crm', element: <CrmPage /> },
+      { path: 'sync-center', element: <SyncCenterPage /> },
       { path: 'settings', element: <SettingsPage /> },
+      { path: 'approvals', element: <ApprovalsPage /> },
+      { path: 'billing', element: <BillingPage /> },
+      { path: 'onboarding', element: <OnboardingPage /> },
+      { path: 'manufacturing', element: <ManufacturingPage /> },
+      { path: 'permissions', element: <PermissionsPage /> },
+      { path: 'human-resources', element: <HumanResourcesPage /> },
+      { path: 'team-and-payroll', element: <TeamAndPayrollPage /> },
+      { path: 'workflow', element: <WorkflowPage /> },
+      { path: 'sales-followup', element: <SalesFollowupPage /> },
+      { path: 'audit', element: <AuditPage /> },
+      { path: 'public-task/:token', element: <PublicTaskPage /> },
+      { path: 'public-invoice/:token', element: <PublicInvoicePage /> },
 
       // Legacy desktop paths. Existing windows, deep links and the pinned
       // shortcuts users already have keep working rather than bouncing to the

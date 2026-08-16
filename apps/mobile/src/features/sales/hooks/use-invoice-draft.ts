@@ -78,8 +78,21 @@ export function buildInvoice(
   currency: CurrencyCode,
   customerId?: string | undefined,
   type: TransactionType = 'sale',
+  extra?: {
+    paymentMethod?: 'cash' | 'credit'
+    discountType?: 'fixed' | 'percentage'
+    discountValue?: number
+    paidAmount?: number
+  },
 ): CreateInvoice {
   const subtotal = subtotalOf(items)
+  const discountType = extra?.discountType ?? 'fixed'
+  const discountValue = extra?.discountValue ?? 0
+  const priceToSet = (type: 'fixed' | 'percentage', value: number): number =>
+    type === 'fixed' ? value : Math.round((subtotal * value) / 100)
+  const discountTotal = Math.min(priceToSet(discountType, discountValue), subtotal)
+  const total = subtotal - discountTotal
+  const paid = Math.min(extra?.paidAmount ?? 0, total)
 
   return {
     // Sent explicitly from form state, never inferred from the route.
@@ -88,16 +101,22 @@ export function buildInvoice(
     customerId,
     items: items.map(toInvoiceItem),
     subtotal,
-    discountTotal: 0,
-    discountType: 'fixed',
+    discountTotal,
+    discountType,
     taxRate: 0,
     taxTotal: 0,
-    total: subtotal,
-    paidAmount: 0,
-    paymentMethod: 'cash',
+    total,
+    paidAmount: paid,
+    paymentMethod: extra?.paymentMethod ?? 'cash',
     currency,
   } as CreateInvoice
 }
+
+/** Discount unit — mirrors web's PriceStep fixed/percentage toggle. */
+export type DiscountType = 'fixed' | 'percentage'
+
+/** Payment side — mirrors web's PriceStep cash/credit choice. */
+export type PaymentMethod = 'cash' | 'credit'
 
 export interface InvoiceDraft {
   items: DraftItem[]
@@ -106,11 +125,25 @@ export interface InvoiceDraft {
   customerId: string | undefined
   customerName: string | undefined
   subtotal: number
+  discountType: DiscountType
+  setDiscountType: (type: DiscountType) => void
+  discountValue: string
+  setDiscountValue: (value: string) => void
+  discountTotal: number
   total: number
+  paymentMethod: PaymentMethod
+  setPaymentMethod: (method: PaymentMethod) => void
+  isPaid: boolean
+  setIsPaid: (paid: boolean) => void
+  paidNow: string
+  setPaidNow: (value: string) => void
+  paidAmount: number
+  remaining: number
   addItem: (item: Omit<DraftItem, 'key'>) => void
   updateItem: (key: string, patch: Partial<DraftItem>) => void
   removeItem: (key: string) => void
   setCustomer: (id: string | undefined, name: string | undefined) => void
+  reset: () => void
   build: (currency: CurrencyCode) => CreateInvoice
 }
 
@@ -124,8 +157,25 @@ export function useInvoiceDraft(initialType: TransactionType = 'sale'): InvoiceD
   const [transactionType, setTransactionType] = useState<TransactionType>(initialType)
   const [customerId, setCustomerId] = useState<string | undefined>(undefined)
   const [customerName, setCustomerName] = useState<string | undefined>(undefined)
+  const [discountType, setDiscountType] = useState<DiscountType>('fixed')
+  const [discountValue, setDiscountValue] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash')
+  const [isPaid, setIsPaid] = useState(false)
+  const [paidNow, setPaidNow] = useState('')
 
   const subtotal = useMemo(() => subtotalOf(items), [items])
+
+  // Same money rule as web's PriceStep: fixed amount, or percentage of subtotal.
+  const discountTotal = useMemo(() => {
+    const value = parseFloat(discountValue) || 0
+    if (value <= 0) return 0
+    if (discountType === 'percentage') return Math.round((subtotal * value) / 100)
+    return Math.min(value, subtotal)
+  }, [discountType, discountValue, subtotal])
+
+  const total = Math.max(0, subtotal - discountTotal)
+  const paidAmount = Math.min(parseFloat(paidNow) || 0, total)
+  const remaining = Math.max(0, total - paidAmount)
 
   const addItem = useCallback((item: Omit<DraftItem, 'key'>) => {
     setItems((prev) => [...prev, { ...item, key: `${Date.now()}-${prev.length}` }])
@@ -144,10 +194,37 @@ export function useInvoiceDraft(initialType: TransactionType = 'sale'): InvoiceD
     setCustomerName(name)
   }, [])
 
+  // «فاکتور جدید» — start a fresh draft without leaving the screen.
+  const reset = useCallback(() => {
+    setItems([])
+    setCustomerId(undefined)
+    setCustomerName(undefined)
+    setDiscountType('fixed')
+    setDiscountValue('')
+    setPaymentMethod('cash')
+    setIsPaid(false)
+    setPaidNow('')
+  }, [])
+
   const build = useCallback(
     (currency: CurrencyCode): CreateInvoice =>
-      buildInvoice(items, currency, customerId, transactionType),
-    [customerId, items, transactionType],
+      buildInvoice(items, currency, customerId, transactionType, {
+        paymentMethod,
+        discountType,
+        discountValue: parseFloat(discountValue) || 0,
+        paidAmount: isPaid ? total : paidAmount,
+      }),
+    [
+      customerId,
+      discountType,
+      discountValue,
+      isPaid,
+      items,
+      paidAmount,
+      paymentMethod,
+      total,
+      transactionType,
+    ],
   )
 
   return {
@@ -157,11 +234,25 @@ export function useInvoiceDraft(initialType: TransactionType = 'sale'): InvoiceD
     customerId,
     customerName,
     subtotal,
-    total: subtotal,
+    discountType,
+    setDiscountType,
+    discountValue,
+    setDiscountValue,
+    discountTotal,
+    total,
+    paymentMethod,
+    setPaymentMethod,
+    isPaid,
+    setIsPaid,
+    paidNow,
+    setPaidNow,
+    paidAmount,
+    remaining,
     addItem,
     updateItem,
     removeItem,
     setCustomer,
+    reset,
     build,
   }
 }

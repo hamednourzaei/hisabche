@@ -4,6 +4,7 @@ import { useState, useCallback, memo } from 'react'
 import { cn } from '../../../lib/utils'
 import { X, User, Phone, Clock, CheckCircle2, Loader2, Share2, Check } from 'lucide-react'
 import type { Interaction, TaskStatus } from '@hisabche/api'
+import { TaskCustomerOutcomes } from './task-customer-outcomes'
 
 interface TaskDetailModalProps {
   t: (key: string, fallback?: string) => string
@@ -12,6 +13,10 @@ interface TaskDetailModalProps {
   isUpdating: boolean
   onClose: () => void
   onUpdateStatus: (status: TaskStatus) => Promise<void>
+  /** Omit to render the customer table read-only. */
+  onRecordOutcome?:
+    ((input: { customerId: string; outcome: 'done' | 'failed'; note?: string }) => void) | undefined
+  pendingCustomerId?: string | null | undefined
 }
 
 const STATUS_LABEL_KEY: Record<TaskStatus, [string, string]> = {
@@ -48,6 +53,8 @@ export const TaskDetailModal = memo(function TaskDetailModal({
   isUpdating,
   onClose,
   onUpdateStatus,
+  onRecordOutcome,
+  pendingCustomerId = null,
 }: TaskDetailModalProps) {
   const [copied, setCopied] = useState(false)
 
@@ -127,33 +134,16 @@ export const TaskDetailModal = memo(function TaskDetailModal({
           </div>
         )}
 
-        {/* Customers */}
-        <div>
-          <p className="text-xs text-[hsl(var(--fg-tertiary))] mb-2">
-            {t('crm.selectedCustomers', 'مشتری‌های انتخاب‌شده')} ({customers.length})
-          </p>
-          <div className="space-y-1.5 max-h-32 overflow-y-auto">
-            {customers.length === 0 ? (
-              <p className="text-sm text-[hsl(var(--fg-tertiary))]">-</p>
-            ) : (
-              customers.map((c) => (
-                <div
-                  key={c.id}
-                  className="flex items-center gap-2 text-sm text-[hsl(var(--fg-primary))]"
-                >
-                  <User className="size-3.5 text-[hsl(var(--fg-tertiary))]" />
-                  <span>{c.name}</span>
-                  {c.phone && (
-                    <span className="flex items-center gap-1 text-xs text-[hsl(var(--fg-tertiary))]">
-                      <Phone className="size-3" />
-                      {c.phone}
-                    </span>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
-        </div>
+        {/* Customers — searchable, paginated, with each one's recorded result.
+            The owner can also record on their behalf (a customer who called
+            back directly), which is why `onRecordOutcome` is passed through. */}
+        <TaskCustomerOutcomes
+          t={t}
+          customers={customers}
+          outcomes={task.customerOutcomes ?? []}
+          onRecord={onRecordOutcome}
+          pendingCustomerId={pendingCustomerId}
+        />
 
         {/* Timeline */}
         <div>

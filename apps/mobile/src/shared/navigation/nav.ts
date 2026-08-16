@@ -49,7 +49,6 @@ const ICONS: Record<NavId, readonly [IconName, IconName]> = {
   buyers: ['people-outline', 'people'],
   'follow-up': ['chatbubbles-outline', 'chatbubbles'],
   team: ['briefcase-outline', 'briefcase'],
-  projects: ['list-outline', 'list'],
   production: ['construct-outline', 'construct'],
   approvals: ['checkmark-done-outline', 'checkmark-done'],
   settings: ['settings-outline', 'settings'],
@@ -67,7 +66,7 @@ const ICONS: Record<NavId, readonly [IconName, IconName]> = {
  * keeps the two platforms describable by one document and means a new screen
  * lights up in navigation by adding one id, not by re-deriving the menu.
  *
- * Still to build on mobile: `follow-up` (/crm), `team` (/human-resources),
+ * Still to build on mobile: `team` (/human-resources),
  * `projects`, `production` (/manufacturing), `approvals`, `access`
  * (/permissions). Tracked in documents/UI_PARITY_EXECUTION.md.
  */
@@ -79,6 +78,7 @@ const IMPLEMENTED: ReadonlySet<NavId> = new Set<NavId>([
   'buy',
   'money',
   'buyers',
+  'follow-up',
   'settings',
   'events',
   'sync',

@@ -5,24 +5,30 @@ import { useTranslations } from 'next-intl'
 import { useCustomers, useInvoices } from '@hisabche/api'
 import { CustomerDetailView } from '../customer-detail-view'
 import { exportToCSV } from '../../../../lib/export'
+import { useIntlLocale } from '../../../../hooks/use-intl-locale'
 import {
   buildCustomerExportRows,
   CUSTOMER_EXPORT_COLUMNS,
   type ExportableInvoiceItem,
 } from '../../../../lib/customers/customer-export'
 
-const fmt = (v: number): string => v.toLocaleString('fa-AF')
+const makeFmt =
+  (locale: string) =>
+  (v: number): string =>
+    v.toLocaleString(locale)
 
 const rem = (inv: { total: number; paidAmount: number }): number =>
   Math.max(0, inv.total - inv.paidAmount)
 
-const fmtDate = (d: string): string => {
-  try {
-    return new Date(d).toLocaleDateString('fa-AF')
-  } catch {
-    return d
+const makeFmtDate =
+  (locale: string) =>
+  (d: string): string => {
+    try {
+      return new Date(d).toLocaleDateString(locale)
+    } catch {
+      return d
+    }
   }
-}
 
 interface ApiInvoiceRecord {
   id: string
@@ -53,6 +59,9 @@ export function CustomerDetailContainer({
   onBack: () => void
 }) {
   const t = useTranslations()
+  const locale = useIntlLocale()
+  const fmt = useMemo(() => makeFmt(locale), [locale])
+  const fmtDate = useMemo(() => makeFmtDate(locale), [locale])
   const [payOpen, setPayOpen] = useState(false)
 
   const { data: customersData } = useCustomers({
@@ -94,7 +103,7 @@ export function CustomerDetailContainer({
         date: fmtDate(inv.date),
         status: inv.status,
       }))
-  }, [invoicesData, customerId])
+  }, [invoicesData, customerId, fmtDate])
 
   const totalDebt = useMemo(
     () => openInvoices.reduce((s, inv) => s + inv.remaining, 0),

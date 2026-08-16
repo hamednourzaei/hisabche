@@ -7,6 +7,7 @@
 
 import React, { useCallback } from 'react'
 import { Alert, ScrollView, View } from 'react-native'
+import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { useTranslation } from 'react-i18next'
 import { Badge, Button, MobileCard, Text, useTheme } from '@hisabche/mobile-ui'
@@ -15,6 +16,7 @@ import type { CurrencyCode } from '@hisabche/store'
 import { AppScreen } from '../../../shared/components/app-screen'
 import { NavScreenHeader } from '../../../shared/components/nav-screen-header'
 import { setMobileLanguage, supportedLanguages, type SupportedLanguage } from '../../../shared/i18n'
+import { useCommonT } from '../../../shared/i18n/use-common-t'
 import { useAuthStore, useCurrentUser } from '../../auth/auth.store'
 import { useBiometrics } from '../../auth/hooks/use-biometrics'
 import { usePendingCount } from '../../offline/use-outbox'
@@ -24,7 +26,8 @@ const CURRENCIES: readonly CurrencyCode[] = ['AFN', 'USD', 'PKR', 'IRR'] as cons
 
 export function SettingsScreen() {
   const { t, i18n } = useTranslation('mobile')
-  const { spacing } = useTheme()
+  const tCommon = useCommonT()
+  const { spacing, colors } = useTheme()
   const router = useRouter()
 
   const user = useCurrentUser()
@@ -153,6 +156,46 @@ export function SettingsScreen() {
             </View>
           </MobileCard>
         ) : null}
+
+        {/* Safety — mirrors web's SettingsPage SafetySection: the same four
+            reassurance checks, each with a check icon, in a 2×2 grid. */}
+        <MobileCard>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <Ionicons name="shield-checkmark-outline" size={18} color={colors.primary} />
+            <Text variant="heading">{tCommon('settings.safety', 'امنیت داده‌ها')}</Text>
+          </View>
+          <View
+            style={{
+              flexDirection: 'row',
+              flexWrap: 'wrap',
+              gap: spacing.sm,
+              marginTop: spacing.md,
+            }}
+          >
+            {['safety1', 'safety2', 'safety3', 'safety4'].map((key) => (
+              <View
+                key={key}
+                style={{
+                  flexBasis: '47%',
+                  flexGrow: 1,
+                  minWidth: 140,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: spacing.sm,
+                  borderRadius: 16,
+                  borderWidth: 1,
+                  borderColor: colors.borderDefault,
+                  padding: spacing.sm,
+                }}
+              >
+                <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+                <Text variant="caption" style={{ flex: 1 }}>
+                  {tCommon(`settings.${key}`, '')}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </MobileCard>
 
         <Button
           label={t('common.logout')}

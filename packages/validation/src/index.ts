@@ -148,6 +148,8 @@ export {
   createInteractionSchema,
   updateInteractionStatusSchema,
   publicUpdateTaskStatusSchema,
+  recordCustomerOutcomeSchema,
+  customerOutcomeSchema,
   opportunitySchema,
   createOpportunitySchema,
   updateOpportunitySchema,
@@ -155,6 +157,8 @@ export {
   type CreateInteraction,
   type UpdateInteractionStatus,
   type PublicUpdateTaskStatus,
+  type RecordCustomerOutcome,
+  type CustomerOutcome,
   type Opportunity,
   type CreateOpportunity,
   type UpdateOpportunity,
@@ -261,7 +265,9 @@ export {
   workspaceInviteSchema,
   createInviteSchema,
   acceptInviteSchema,
-  createMemberDirectSchema,
+  createMemberDirectBodySchema,
+  setMemberSuspensionSchema,
+  MAX_WORKSPACE_MEMBERS,
   type Workspace,
   type CreateWorkspace,
   type UpdateWorkspace,
@@ -272,6 +278,8 @@ export {
   type CreateInvite,
   type AcceptInvite,
   type CreateMemberDirect,
+  type CreateMemberDirectBody,
+  type SetMemberSuspension,
 } from './schemas/workspace.schema'
 
 // ---------- Permissions ----------

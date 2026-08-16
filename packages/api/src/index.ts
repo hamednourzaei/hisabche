@@ -117,9 +117,11 @@ export {
   useUpdateWorkspace,
   useInviteMember,
   useCreateMemberDirect,
+  useSetMemberSuspension,
   useRemoveMember,
   useUpdateMemberRole,
   workspaceKeys,
+  type CreateMemberDirectInput,
 } from './hooks/workspace'
 
 // ─── Payroll ──────────────────────────────────────────────
@@ -174,6 +176,8 @@ export {
   useInteractions,
   useCreateInteraction,
   useUpdateInteractionStatus,
+  useRecordCustomerOutcome,
+  useSubjectSuggestions,
   useOpportunities,
   useCreateOpportunity,
   useUpdateOpportunity,
@@ -183,6 +187,8 @@ export {
   type TaskStatus,
   type InteractionCustomer,
   type InteractionStatusEvent,
+  type CustomerOutcome,
+  type RecordCustomerOutcomeInput,
   type Opportunity,
 } from './hooks/crm'
 

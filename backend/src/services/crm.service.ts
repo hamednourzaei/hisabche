@@ -6,6 +6,7 @@
 import { supabase } from '../db'
 import { CreateInteraction, CreateOpportunity, UpdateOpportunity } from '@hisabche/validation'
 import { DatabaseError, NotFoundError } from '../errors/database.error'
+import { ValidationError } from '../errors/validation.error'
 import { memoryCache } from '../utils/pagination'
 import { logBusinessEvent } from './event-log.service'
 
@@ -15,12 +16,16 @@ import { logBusinessEvent } from './event-log.service'
 // migration runs, selecting them raises Postgres 42703 (undefined_column) —
 // callers that need to work before/after the migration use the same
 // graceful-fallback pattern as invoice.service.ts's public_token handling.
-const INTERACTION_COLUMNS = 'id, customer_id, type, subject, content, interaction_date, created_at, status, public_token, employee_id, employee_name, customers_snapshot, status_history'
+const INTERACTION_COLUMNS =
+  'id, customer_id, type, subject, content, interaction_date, created_at, status, public_token, employee_id, employee_name, customers_snapshot, status_history, customer_outcomes'
 const INTERACTION_MINIMAL_COLUMNS = INTERACTION_COLUMNS
-const INTERACTION_LEGACY_COLUMNS = 'id, customer_id, type, subject, content, interaction_date, created_at'
+const INTERACTION_LEGACY_COLUMNS =
+  'id, customer_id, type, subject, content, interaction_date, created_at'
 
-const OPPORTUNITY_COLUMNS = 'id, customer_id, title, description, stage, value, expected_close_date, probability, created_at, updated_at'
-const OPPORTUNITY_MINIMAL_COLUMNS = 'id, customer_id, title, stage, value, probability, expected_close_date'
+const OPPORTUNITY_COLUMNS =
+  'id, customer_id, title, description, stage, value, expected_close_date, probability, created_at, updated_at'
+const OPPORTUNITY_MINIMAL_COLUMNS =
+  'id, customer_id, title, stage, value, probability, expected_close_date'
 
 // ✅ Mapper — snake_case (DB) -> camelCase (frontend). Missing this mapper
 // was the root cause of the CRM "date column doesn't show a date" bug:
@@ -41,11 +46,13 @@ function mapInteraction(raw: Record<string, any>) {
     employeeName: raw.employee_name ?? null,
     customers: Array.isArray(raw.customers_snapshot) ? raw.customers_snapshot : [],
     statusHistory: Array.isArray(raw.status_history) ? raw.status_history : [],
+    // Per-customer results. An absent entry means "not attempted yet", which is
+    // deliberately distinct from a recorded failure so progress stays honest.
+    customerOutcomes: Array.isArray(raw.customer_outcomes) ? raw.customer_outcomes : [],
   }
 }
 
 export class CrmService {
-
   // ─── Cache Keys ────────────────────────────────────────────
   private getInteractionsCacheKey(userId: string, customerId?: string) {
     return `crm:interactions:${userId}:${customerId || 'all'}`
@@ -59,7 +66,7 @@ export class CrmService {
   async listInteractions(
     userId: string,
     customerId?: string,
-    options?: { limit?: number; page?: number }
+    options?: { limit?: number; page?: number },
   ) {
     const limit = Math.min(options?.limit || 50, 100)
     const page = options?.page || 1
@@ -69,7 +76,13 @@ export class CrmService {
 
     // ✅ کش کردن با پارامترهای صفحه‌بندی
     const paginatedCacheKey = `${cacheKey}:${page}:${limit}`
-    const cached = await memoryCache.get<{ interactions: any[]; total: number; page: number; limit: number; totalPages: number }>(paginatedCacheKey)
+    const cached = await memoryCache.get<{
+      interactions: any[]
+      total: number
+      page: number
+      limit: number
+      totalPages: number
+    }>(paginatedCacheKey)
     if (cached) return cached
 
     const runQuery = (columns: string) => {
@@ -103,7 +116,8 @@ export class CrmService {
   }
 
   async createInteraction(userId: string, data: CreateInteraction) {
-    const customerIds = data.customerIds && data.customerIds.length > 0 ? data.customerIds : [data.customerId]
+    const customerIds =
+      data.customerIds && data.customerIds.length > 0 ? data.customerIds : [data.customerId]
 
     let customersSnapshot: Array<{ id: string; name: string; phone: string | null }> = []
     if (customerIds.length > 0) {
@@ -112,7 +126,11 @@ export class CrmService {
         .select('id, full_name, phone')
         .in('id', customerIds)
         .eq('user_id', userId)
-      customersSnapshot = (customers || []).map((c: any) => ({ id: c.id, name: c.full_name, phone: c.phone ?? null }))
+      customersSnapshot = (customers || []).map((c: any) => ({
+        id: c.id,
+        name: c.full_name,
+        phone: c.phone ?? null,
+      }))
     }
 
     const now = new Date().toISOString()
@@ -161,7 +179,12 @@ export class CrmService {
   }
 
   // ─── Update task status (owner, authenticated) ─────────────
-  async updateInteractionStatus(userId: string, id: string, status: 'pending' | 'in_progress' | 'completed', changedBy = 'owner') {
+  async updateInteractionStatus(
+    userId: string,
+    id: string,
+    status: 'pending' | 'in_progress' | 'completed',
+    changedBy = 'owner',
+  ) {
     return this.applyStatusChange({ id, userId }, status, changedBy)
   }
 
@@ -187,15 +210,135 @@ export class CrmService {
     return this.applyStatusChange({ publicToken: token }, status, 'employee')
   }
 
+  // ─── Per-customer outcome ──────────────────────────────────
+  // A task covers many customers; this records the result for exactly one of
+  // them. Called both by the owner (authenticated) and by an assigned employee
+  // through the unauthenticated public-token view.
+  async recordCustomerOutcome(
+    lookup: { id: string; userId: string } | { publicToken: string },
+    input: { customerId: string; outcome: 'done' | 'failed'; note?: string | undefined },
+    recordedBy: 'owner' | 'employee',
+  ) {
+    const note = input.note?.trim() ?? ''
+
+    // A failure without a reason is useless to whoever created the task —
+    // the whole point of the ❌ path is capturing why.
+    if (input.outcome === 'failed' && !note) {
+      throw new ValidationError('A note is required when marking a customer as failed')
+    }
+
+    let existingQuery = supabase
+      .from('interactions')
+      .select('id, user_id, customer_id, customers_snapshot, customer_outcomes')
+    existingQuery =
+      'id' in lookup
+        ? existingQuery.eq('id', lookup.id).eq('user_id', lookup.userId)
+        : existingQuery.eq('public_token', lookup.publicToken)
+
+    const { data: existing, error: fetchError } = await existingQuery.single()
+    if (fetchError || !existing) throw new NotFoundError('Task')
+
+    // The public endpoint is unauthenticated, so the customer id arriving in
+    // the body is untrusted. Only ids already on this task's own snapshot may
+    // be written — otherwise a token holder could attach notes to arbitrary
+    // customers belonging to the owner.
+    const snapshot: Array<{ id: string }> = Array.isArray(existing.customers_snapshot)
+      ? existing.customers_snapshot
+      : []
+
+    if (!snapshot.some((c) => c.id === input.customerId)) {
+      throw new NotFoundError('Customer on this task')
+    }
+
+    const current: Array<Record<string, unknown>> = Array.isArray(existing.customer_outcomes)
+      ? existing.customer_outcomes
+      : []
+
+    // Re-recording replaces the previous entry: an employee who reached someone
+    // on a second attempt must be able to correct an earlier ❌.
+    const next = [
+      ...current.filter((entry) => entry['customerId'] !== input.customerId),
+      {
+        customerId: input.customerId,
+        outcome: input.outcome,
+        recordedAt: new Date().toISOString(),
+        recordedBy,
+        ...(note ? { note } : {}),
+      },
+    ]
+
+    let updateQuery = supabase
+      .from('interactions')
+      .update({ customer_outcomes: next })
+      .eq('id', existing.id)
+    updateQuery = 'id' in lookup ? updateQuery.eq('user_id', lookup.userId) : updateQuery
+
+    const { data, error } = await updateQuery.select(INTERACTION_COLUMNS).single()
+
+    if (error) {
+      // Migration not run yet — see docs/task-customer-outcomes-migration.sql.
+      if (error.code === '42703' || /column/.test(error.message || '')) {
+        throw new DatabaseError(
+          'Per-customer outcomes require the task-customer-outcomes migration',
+          error,
+        )
+      }
+      throw new DatabaseError('Failed to record customer outcome', error)
+    }
+
+    await this.invalidateInteractionCache(existing.user_id, existing.customer_id)
+    return mapInteraction(data)
+  }
+
+  /**
+   * Distinct subjects this user has already used, most recent first.
+   *
+   * Feeds the subject autocomplete so a recurring campaign is typed once and
+   * picked thereafter, rather than re-typed with slightly different wording
+   * each time (which fragments the stats).
+   */
+  async listSubjectSuggestions(userId: string, limit = 20): Promise<string[]> {
+    const { data, error } = await supabase
+      .from('interactions')
+      .select('subject, created_at')
+      .eq('user_id', userId)
+      .not('subject', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(200)
+
+    if (error) throw new DatabaseError('Failed to load subject suggestions', error)
+
+    const seen = new Set<string>()
+    const suggestions: string[] = []
+
+    for (const row of data || []) {
+      const subject = String((row as Record<string, unknown>)['subject'] ?? '').trim()
+      if (!subject) continue
+
+      // Case-insensitive dedupe, but keep the casing the user actually typed.
+      const key = subject.toLowerCase()
+      if (seen.has(key)) continue
+
+      seen.add(key)
+      suggestions.push(subject)
+      if (suggestions.length >= limit) break
+    }
+
+    return suggestions
+  }
+
   private async applyStatusChange(
     lookup: { id: string; userId: string } | { publicToken: string },
     status: 'pending' | 'in_progress' | 'completed',
-    changedBy: string
+    changedBy: string,
   ) {
-    let existingQuery = supabase.from('interactions').select('id, user_id, customer_id, status_history')
-    existingQuery = 'id' in lookup
-      ? existingQuery.eq('id', lookup.id).eq('user_id', lookup.userId)
-      : existingQuery.eq('public_token', lookup.publicToken)
+    let existingQuery = supabase
+      .from('interactions')
+      .select('id, user_id, customer_id, status_history')
+    existingQuery =
+      'id' in lookup
+        ? existingQuery.eq('id', lookup.id).eq('user_id', lookup.userId)
+        : existingQuery.eq('public_token', lookup.publicToken)
 
     const { data: existing, error: fetchError } = await existingQuery.single()
     if (fetchError || !existing) throw new NotFoundError('Task')
@@ -218,9 +361,9 @@ export class CrmService {
 
   // ─── Opportunities ────────────────────────────────────────
   async listOpportunities(
-    userId: string, 
+    userId: string,
     customerId?: string,
-    options?: { limit?: number; page?: number }
+    options?: { limit?: number; page?: number },
   ) {
     const limit = Math.min(options?.limit || 50, 100)
     const page = options?.page || 1
@@ -229,7 +372,13 @@ export class CrmService {
     const cacheKey = this.getOpportunitiesCacheKey(userId, customerId)
     const paginatedCacheKey = `${cacheKey}:${page}:${limit}`
 
-    const cached = await memoryCache.get<{ opportunities: any[]; total: number; page: number; limit: number; totalPages: number }>(paginatedCacheKey)
+    const cached = await memoryCache.get<{
+      opportunities: any[]
+      total: number
+      page: number
+      limit: number
+      totalPages: number
+    }>(paginatedCacheKey)
     if (cached) return cached
 
     let query = supabase
@@ -327,9 +476,10 @@ export class CrmService {
         entityType: 'opportunity',
         entityId: opportunity.id,
         action: 'stage_changed',
-        title: data.stage === 'won'
-          ? `فرصت فروش «${opportunity.title}» برنده شد 🎉`
-          : `فرصت فروش «${opportunity.title}» از دست رفت`,
+        title:
+          data.stage === 'won'
+            ? `فرصت فروش «${opportunity.title}» برنده شد 🎉`
+            : `فرصت فروش «${opportunity.title}» از دست رفت`,
         notifyType: data.stage === 'won' ? 'success' : 'warning',
         actionUrl: '/crm',
       }).catch((err) => console.error('[CrmService] logBusinessEvent failed:', err))
@@ -341,7 +491,7 @@ export class CrmService {
   // ─── Get Opportunity by ID ─────────────────────────────────
   async getOpportunity(userId: string, id: string) {
     const cacheKey = `crm:opportunity:${userId}:${id}`
-    
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
@@ -361,7 +511,7 @@ export class CrmService {
   // ─── Get Customer Interactions ────────────────────────────
   async getCustomerInteractions(userId: string, customerId: string) {
     const cacheKey = `crm:customer:interactions:${userId}:${customerId}`
-    
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
@@ -383,7 +533,7 @@ export class CrmService {
   // ─── Get Opportunity Pipeline ──────────────────────────────
   async getOpportunityPipeline(userId: string) {
     const cacheKey = `crm:pipeline:${userId}`
-    
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 

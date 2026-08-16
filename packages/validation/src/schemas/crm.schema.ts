@@ -3,13 +3,13 @@
 // ============================================
 
 import { z } from 'zod'
-import { 
-  uuidSchema, 
-  nonEmptyStringSchema, 
-  optionalStringSchema, 
+import {
+  uuidSchema,
+  nonEmptyStringSchema,
+  optionalStringSchema,
   positiveNumberSchema,
   isoDateSchema,
-  nonNegativeNumberSchema
+  nonNegativeNumberSchema,
 } from './common.schema'
 
 // ============================================
@@ -51,6 +51,37 @@ export const publicUpdateTaskStatusSchema = z.object({
 })
 
 export type PublicUpdateTaskStatus = z.infer<typeof publicUpdateTaskStatusSchema>
+
+/**
+ * The result of contacting one customer on a task.
+ *
+ * A ❌ must carry a reason — that note is the only thing the task's creator has
+ * to act on, so the schema refuses a failure without one rather than leaving
+ * the check to the UI.
+ */
+export const recordCustomerOutcomeSchema = z
+  .object({
+    customerId: z.string().uuid(),
+    outcome: z.enum(['done', 'failed']),
+    note: z.string().trim().max(1000).optional(),
+  })
+  .refine((value) => value.outcome !== 'failed' || Boolean(value.note?.trim()), {
+    message: 'A note is required when marking a customer as failed',
+    path: ['note'],
+  })
+
+export type RecordCustomerOutcome = z.infer<typeof recordCustomerOutcomeSchema>
+
+/** One recorded result, as stored in `interactions.customer_outcomes`. */
+export const customerOutcomeSchema = z.object({
+  customerId: z.string(),
+  outcome: z.enum(['done', 'failed']),
+  recordedAt: z.string(),
+  recordedBy: z.enum(['owner', 'employee']),
+  note: z.string().optional(),
+})
+
+export type CustomerOutcome = z.infer<typeof customerOutcomeSchema>
 
 // ============================================
 // Opportunity (فرصت فروش)

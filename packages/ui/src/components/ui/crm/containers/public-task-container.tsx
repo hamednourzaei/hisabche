@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 import { Loader2, ClipboardList, User, Phone, Check, PlayCircle } from 'lucide-react'
 import { cn } from '../../../../lib/utils'
+import { TaskCustomerOutcomes } from '../task-customer-outcomes'
 
 /* ═══════════════════════════════════════════════════════════
    PublicTaskContainer — read-only-except-status, no-login task
@@ -13,7 +14,9 @@ import { cn } from '../../../../lib/utils'
    modeled on public-invoice-container.tsx.
    ═══════════════════════════════════════════════════════════ */
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.hisabche.com/api'
+const BASE_URL =
+  (typeof process !== 'undefined' ? process.env.NEXT_PUBLIC_API_URL : undefined) ||
+  'https://api.hisabche.com/api'
 
 type TaskStatus = 'pending' | 'in_progress' | 'completed'
 
@@ -26,6 +29,13 @@ interface PublicTaskResponse {
   interactionDate: string
   employeeName?: string | null
   customers?: Array<{ id: string; name: string; phone: string | null }>
+  customerOutcomes?: Array<{
+    customerId: string
+    outcome: 'done' | 'failed'
+    recordedAt: string
+    recordedBy: 'owner' | 'employee'
+    note?: string
+  }>
 }
 
 const STATUS_LABEL: Record<TaskStatus, string> = {
@@ -45,6 +55,7 @@ export function PublicTaskContainer({ token }: { token: string }) {
   const [error, setError] = useState(false)
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState(false)
+  const [pendingCustomerId, setPendingCustomerId] = useState<string | null>(null)
 
   const load = useCallback(() => {
     setLoading(true)
@@ -79,6 +90,30 @@ export function PublicTaskContainer({ token }: { token: string }) {
         /* keep prior state; user can retry */
       } finally {
         setUpdating(false)
+      }
+    },
+    [token],
+  )
+
+  const recordOutcome = useCallback(
+    async (input: { customerId: string; outcome: 'done' | 'failed'; note?: string }) => {
+      setPendingCustomerId(input.customerId)
+      try {
+        const res = await fetch(`${BASE_URL}/public/tasks/${token}/customer-outcome`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(input),
+        })
+        if (!res.ok) throw new Error('not ok')
+
+        // The response carries the whole task, so the table re-renders from
+        // the server's copy rather than a locally guessed one.
+        const json: PublicTaskResponse = await res.json()
+        setData(json)
+      } catch {
+        /* keep prior state; the row returns to its buttons so it can be retried */
+      } finally {
+        setPendingCustomerId(null)
       }
     },
     [token],
@@ -136,25 +171,16 @@ export function PublicTaskContainer({ token }: { token: string }) {
         )}
 
         {customers.length > 0 && (
-          <div className="space-y-1.5 border-t border-[hsl(var(--border-default))] pt-3">
-            <p className="text-xs text-[hsl(var(--fg-tertiary))]">
-              {safeT('crm.selectedCustomers', 'مشتری‌های انتخاب‌شده')} ({customers.length})
-            </p>
-            {customers.map((c) => (
-              <div
-                key={c.id}
-                className="flex items-center gap-2 text-sm text-[hsl(var(--fg-primary))]"
-              >
-                <User className="size-3.5 text-[hsl(var(--fg-tertiary))]" />
-                {c.name}
-                {c.phone && (
-                  <span className="flex items-center gap-1 text-xs text-[hsl(var(--fg-tertiary))]">
-                    <Phone className="size-3" />
-                    {c.phone}
-                  </span>
-                )}
-              </div>
-            ))}
+          <div className="border-t border-[hsl(var(--border-default))] pt-3">
+            {/* The employee marks each customer individually here. Same panel
+                the owner sees, so both read the same table. */}
+            <TaskCustomerOutcomes
+              t={safeT}
+              customers={customers}
+              outcomes={data.customerOutcomes ?? []}
+              onRecord={recordOutcome}
+              pendingCustomerId={pendingCustomerId}
+            />
           </div>
         )}
 

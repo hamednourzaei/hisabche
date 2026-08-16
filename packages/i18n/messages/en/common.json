@@ -872,8 +872,8 @@
     "buy_description": "Order goods from a supplier",
     "money": "Money & Profit",
     "money_description": "Your income, spending and profit",
-    "buyers": "Buyers",
-    "buyers_description": "Your customers and their balances",
+    "buyers": "Customers",
+    "buyers_description": "Buyers and suppliers",
     "followUp": "Follow Up",
     "followUp_description": "Conversations and likely sales",
     "team": "Team & Pay",
@@ -1359,7 +1359,8 @@
       "seller": "Seller",
       "both": "Buyer & Seller",
       "none": "No transactions"
-    }
+    },
+    "backToList": "Back to customers"
   },
   "crm": {
     "type": "Type",
@@ -1385,8 +1386,16 @@
     "interactions": {
       "empty": "No interactions recorded",
       "subject": "Subject",
-      "type": "Type",
-      "date": "Date"
+      "type": {
+        "call": "Call",
+        "meeting": "Meeting",
+        "email": "Email",
+        "note": "Note"
+      },
+      "date": "Date",
+      "new": "New task",
+      "create": "Create task",
+      "contentPlaceholder": "Notes (optional)"
     },
     "opportunities": {
       "empty": "No sales opportunities recorded",
@@ -1395,6 +1404,46 @@
       "value": "Value",
       "probability": "Probability",
       "expectedCloseDate": "Expected close date"
+    },
+    "employee": "Employee",
+    "customerCount": "Customers",
+    "customerPhone": "Customer phone",
+    "process": "Process",
+    "unassigned": "Unassigned",
+    "pickEmployeePlaceholder": "Select employee...",
+    "pickCustomersPlaceholder": "Select customers...",
+    "selectedCustomers": "Selected customers",
+    "statusTimeline": "Status history",
+    "changeStatus": "Change status",
+    "byEmployee": "by employee",
+    "byOwner": "by you",
+    "sendToEmployee": "Send link to employee",
+    "linkCopied": "Link copied",
+    "status": {
+      "pending": "Pending",
+      "inProgress": "In progress",
+      "completed": "Completed"
+    },
+    "stats": {
+      "total": "Total tasks"
+    },
+    "outcomes": {
+      "title": "Selected customers",
+      "customer": "Customer",
+      "phone": "Phone",
+      "result": "Result",
+      "recordedAt": "Date and time",
+      "note": "Notes",
+      "actions": "Record",
+      "pending": "Not attempted",
+      "done": "Done",
+      "failed": "Not done",
+      "markDone": "Mark as done",
+      "markFailed": "Mark as not done",
+      "whyFailed": "Why was it not done?",
+      "notePlaceholder": "e.g. the phone was switched off",
+      "empty": "No customer found",
+      "summary": "{done} done · {failed} not done · {total} total"
     }
   },
   "payments": {

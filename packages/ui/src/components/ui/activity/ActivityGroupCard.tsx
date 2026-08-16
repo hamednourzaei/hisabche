@@ -12,6 +12,7 @@ import { ChevronDown, Clock, User } from 'lucide-react'
 import { cn } from '../../../lib/utils'
 import type { ActivityGroupDto, ActivityItemDto } from '@hisabche/api'
 import { entityRegistry, type EntityType } from '../../../lib/activity/entity-registry'
+import { useIntlLocale } from '../../../hooks/use-intl-locale'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -39,9 +40,9 @@ function timeAgo(iso: string, t: (key: string) => string): string {
   return t('time.yearsAgo')
 }
 
-function formatAmount(amount: number, currency?: string): string {
+function formatAmount(amount: number, currency: string | undefined, locale: string): string {
   try {
-    return new Intl.NumberFormat('fa-AF', {
+    return new Intl.NumberFormat(locale, {
       style: 'currency',
       currency: currency || 'AFN',
       maximumFractionDigits: 0,
@@ -121,6 +122,7 @@ export const ActivityGroupCard = memo(function ActivityGroupCard({
   className,
 }: ActivityGroupCardProps) {
   const t = useTranslations()
+  const locale = useIntlLocale()
   const [isOpen, setIsOpen] = useState(false)
 
   const config = getEntityConfig(group.entityType)
@@ -250,7 +252,7 @@ export const ActivityGroupCard = memo(function ActivityGroupCard({
             )}
             {entitySummary.amount !== undefined && (
               <span className="font-medium text-[hsl(var(--fg-secondary))]">
-                {formatAmount(entitySummary.amount, entitySummary.currency)}
+                {formatAmount(entitySummary.amount, entitySummary.currency, locale)}
               </span>
             )}
             <span className="inline-flex items-center gap-1">

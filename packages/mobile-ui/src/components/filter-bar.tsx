@@ -23,7 +23,16 @@ export function FilterBar<T extends string>({ options, value, onChange }: Filter
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={{ gap: spacing.sm, paddingHorizontal: spacing.lg }}
+      // `flexGrow: 0` stops the bar claiming vertical space, and `alignItems:
+      // center` stops each chip stretching to the container height — without it a
+      // filter row rendered as tall blocks instead of chips wherever the parent
+      // gave the ScrollView a height (Expo Web showed this clearly).
+      style={{ flexGrow: 0, flexShrink: 0 }}
+      contentContainerStyle={{
+        gap: spacing.sm,
+        paddingHorizontal: spacing.lg,
+        alignItems: 'center',
+      }}
     >
       {options.map((option) => {
         const active = option.value === value
@@ -39,6 +48,8 @@ export function FilterBar<T extends string>({ options, value, onChange }: Filter
               gap: spacing.sm,
               paddingHorizontal: spacing.lg,
               paddingVertical: spacing.sm,
+              // Web's filter tab measures 32px tall.
+              minHeight: 32,
               // Web's filter tab measures 16px, not a full pill.
               borderRadius: radius.lg,
               backgroundColor: active ? colors.primary : colors.surfaceMuted,

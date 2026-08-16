@@ -183,6 +183,7 @@ export { SyncCenterPage } from './components/ui/sync-center'
 export { WorkspacePage } from './components/ui/workspace'
 export { OnboardingPage } from './components/ui/onboarding/onboarding-page'
 export { CustomerDetailView } from './components/ui/customers'
+export { CustomerDetailContainer } from './components/ui/customers/containers/customer-detail-container'
 
 // ---------- Containers ----------
 export { DashboardContainer } from './components/ui/dashboard/containers/dashboard-container'
@@ -220,12 +221,6 @@ export type {
   Employee,
   PayrollRecord,
 } from './components/ui/team-and-payroll/team-and-payroll-view'
-
-// ---------- Projects ----------
-export { ProjectsContainer } from './components/ui/projects/containers/projects-container'
-export { ProjectsView } from './components/ui/projects/projects-view'
-export { ProjectDetailContainer } from './components/ui/projects/containers/project-detail-container'
-export { ProjectDetailView } from './components/ui/projects/project-detail-view'
 
 // ---------- Permissions ----------
 export { PermissionsContainer } from './components/ui/permissions/containers/permissions-container'

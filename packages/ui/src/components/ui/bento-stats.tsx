@@ -4,6 +4,7 @@
 
 import { cn } from '../../lib/utils'
 import { TrendingUp, TrendingDown, type LucideIcon } from 'lucide-react'
+import { useIntlLocale } from '../../hooks/use-intl-locale'
 
 // ============================================================
 // 🔢 قالب‌بندی عدد — کوتاه‌سازی میلیون/میلیارد + اندازه‌ی خودکار فونت
@@ -11,9 +12,9 @@ import { TrendingUp, TrendingDown, type LucideIcon } from 'lucide-react'
 
 type Translate = (key: string, fallback?: string) => string
 
-function localeNumber(v: number, decimals = 0): string {
+function localeNumber(v: number, locale: string, decimals = 0): string {
   try {
-    return new Intl.NumberFormat('fa-AF', {
+    return new Intl.NumberFormat(locale, {
       minimumFractionDigits: decimals,
       maximumFractionDigits: decimals,
     }).format(v)
@@ -22,18 +23,23 @@ function localeNumber(v: number, decimals = 0): string {
   }
 }
 
-/** عدد بزرگ را به «میلیون/میلیارد» کوتاه می‌کند */
-export function compactAmount(v: number, t?: Translate): string {
-  const tr = t ?? ((_k: string, f?: string) => f ?? '')
-  const abs = Math.abs(v)
+/**
+ * Full grouped digits — never abbreviated.
+ *
+ * KPI cards used to collapse large sums to "۱۲ میلیون", which hides the exact
+ * figure a bookkeeper is checking. The card shrinks its font instead (see
+ * `valueFontClass`), so the whole number stays readable without overflowing.
+ */
+export function fullAmount(v: number, locale: string): string {
+  return localeNumber(v, locale)
+}
 
-  if (abs >= 1e9) {
-    return `${localeNumber(v / 1e9, abs >= 1e10 ? 0 : 1)} ${tr('common.billion', 'میلیارد')}`
-  }
-  if (abs >= 1e6) {
-    return `${localeNumber(v / 1e6, abs >= 1e7 ? 0 : 1)} ${tr('common.million', 'میلیون')}`
-  }
-  return localeNumber(v)
+/**
+ * @deprecated Kept so existing imports keep compiling. Returns the full number;
+ * abbreviation was removed deliberately — see `fullAmount`.
+ */
+export function compactAmount(v: number, _t?: Translate, locale = 'fa-IR'): string {
+  return fullAmount(v, locale)
 }
 
 /**
@@ -45,19 +51,25 @@ function amountTone(amount: number | undefined): string {
   return amount < 0 ? 'text-[hsl(var(--color-destructive))]' : 'text-[hsl(var(--color-success))]'
 }
 
-/** هرچه متن بلندتر، فونت کوچک‌تر — جلوگیری از سرریز در کارت */
+/**
+ * هرچه متن بلندتر، فونت کوچک‌تر — جلوگیری از سرریز در کارت.
+ *
+ * Now that amounts are never abbreviated, this is what keeps a nine-figure sum
+ * inside its box, so the steps run further down than they used to.
+ */
 function valueFontClass(text: string): string {
   const len = text.length
   if (len <= 7) return 'text-lg sm:text-2xl'
   if (len <= 11) return 'text-base sm:text-xl'
   if (len <= 16) return 'text-sm sm:text-lg'
-  if (len <= 24) return 'text-xs sm:text-base'
-  return 'text-[11px] sm:text-sm'
+  if (len <= 20) return 'text-xs sm:text-base'
+  if (len <= 26) return 'text-[11px] sm:text-sm'
+  return 'text-[10px] sm:text-xs'
 }
 
-function formatPercent(delta: number): string {
+function formatPercent(delta: number, locale: string): string {
   const abs = Math.abs(delta)
-  return `${localeNumber(abs, abs < 10 ? 1 : 0)}٪`
+  return `${localeNumber(abs, locale, abs < 10 ? 1 : 0)}٪`
 }
 
 // ============================================================
@@ -98,6 +110,8 @@ const INNER_BORDERS = ['border-b border-e', 'border-b', 'border-e', ''] as const
 // ============================================================
 
 export function BentoStats({ t, stats, className }: BentoStatsProps) {
+  const locale = useIntlLocale()
+
   return (
     <div
       className={cn(
@@ -112,8 +126,11 @@ export function BentoStats({ t, stats, className }: BentoStatsProps) {
       )}
     >
       {stats.slice(0, 4).map((stat, i) => {
-        const raw = stat.text ?? (stat.amount !== undefined ? compactAmount(stat.amount, t) : '—')
-        const value = stat.suffix ? `${raw} ${stat.suffix}` : raw
+        // `suffix` (the currency code) is deliberately not rendered: the user
+        // picks their currency once during onboarding, so repeating it on every
+        // card is noise that only costs horizontal room.
+        const value =
+          stat.text ?? (stat.amount !== undefined ? fullAmount(stat.amount, locale) : '—')
         const hasDelta = stat.delta !== undefined && stat.delta !== null
         const isUp = hasDelta && (stat.delta as number) >= 0
         const isGood = stat.invertDelta ? !isUp : isUp
@@ -168,7 +185,7 @@ export function BentoStats({ t, stats, className }: BentoStatsProps) {
                   )}
                 >
                   <TrendIcon className="size-3" aria-hidden="true" />
-                  {formatPercent(stat.delta as number)}
+                  {formatPercent(stat.delta as number, locale)}
                 </span>
                 {stat.deltaLabel && (
                   <span className="truncate text-[10px] text-[hsl(var(--fg-tertiary))]">

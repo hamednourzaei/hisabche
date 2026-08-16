@@ -1,71 +1,112 @@
 // ============================================
-// Toolbar — page title, sync indicator, quick actions.
-// Doubles as the drag region on frameless macOS windows.
+// Toolbar — the canonical web header, mounted in Electron.
+//
+// This was a 247-line reimplementation whose own header comment read "Matches
+// Web header": it redrew the sync pill, the language selector, the theme toggle
+// and the sign-out control that `DashboardHeader` already contains. Two
+// renderings of one header, kept in step by hand.
+//
+// `DashboardHeader` takes all of that through props, so desktop passes its own
+// state and renders the same component the browser does. What remains here is
+// platform wiring only:
+//
+//   * the Electron drag region — a window affordance, not product UI, so it
+//     wraps the header rather than being pushed into the canonical component
+//   * react-router for sign-out navigation
+//   * the desktop language store, which persists across Electron restarts
+//   * the IPC-backed sync status
 // ============================================
 
-import React, { memo } from 'react'
+import React, { memo, useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import { CloudOff, Plus, RefreshCw, Search } from 'lucide-react'
+import { useTranslations } from 'next-intl'
+import { useTheme } from 'next-themes'
+import { Search } from 'lucide-react'
+import { DashboardHeader } from '@hisabche/ui'
 
-import { Badge, Button } from '@/components/ui/primitives'
-import { accelerator } from '@/shared/hooks/use-shortcuts'
+import { useAuthStore, useCurrentUser } from '@/features/auth/auth.store'
 import { useSyncStatus } from '@/features/sync/use-sync'
+import { i18n, setDesktopLanguage, supportedLanguages, type SupportedLanguage } from '@/shared/i18n'
 import { useUiStore } from '@/shared/stores/ui.store'
-import { usePlatform } from '@/shared/hooks/use-platform'
 
-export const Toolbar = memo(function Toolbar({ title }: { title: string }) {
-  const { t } = useTranslation('desktop')
-  const navigate = useNavigate()
-  const platform = usePlatform()
-
+/**
+ * Search entry point.
+ *
+ * Web opens a global search overlay; desktop opens its command palette, which
+ * is the same intent through the desktop idiom. Passed as the header's
+ * `searchSlot` so the button sits exactly where web puts it.
+ */
+const SearchTrigger = memo(function SearchTrigger() {
+  const t = useTranslations()
   const setPaletteOpen = useUiStore((s) => s.setPaletteOpen)
-  const { pendingCount, isOffline, isSyncing, sync } = useSyncStatus()
 
   return (
-    <header
-      className="flex h-[var(--toolbar-height)] shrink-0 items-center gap-2 border-b border-[hsl(var(--border-default))] px-4"
-      style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+    <button
+      type="button"
+      onClick={() => setPaletteOpen(true)}
+      aria-label={t('search.placeholder' as never)}
+      className="inline-flex size-9 items-center justify-center rounded-xl border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] transition-colors hover:text-[hsl(var(--fg-primary))]"
     >
-      <h1 className="truncate text-sm font-bold">{title}</h1>
+      <Search className="size-4" aria-hidden="true" />
+    </button>
+  )
+})
 
-      <div className="flex-1" />
+export const Toolbar = memo(function Toolbar({ title }: { title: string }) {
+  const t = useTranslations()
+  const navigate = useNavigate()
 
-      <div className="flex items-center gap-2" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
-        {isOffline && (
-          <Badge tone="warning">
-            <CloudOff size={12} className="me-1" />
-            {t('common.offline')}
-          </Badge>
-        )}
+  const { pendingCount, isOffline, isSyncing } = useSyncStatus()
+  const user = useCurrentUser()
+  const logout = useAuthStore((s) => s.logout)
 
-        {pendingCount > 0 && (
-          <Button size="sm" variant="ghost" onClick={() => void sync()} disabled={isSyncing}>
-            <RefreshCw size={14} className={isSyncing ? 'animate-spin' : undefined} />
-            {t('sync.pending')} ({pendingCount})
-          </Button>
-        )}
+  const { theme, setTheme } = useTheme()
+  const isDark = theme === 'dark'
+  const toggleTheme = useCallback(() => setTheme(isDark ? 'light' : 'dark'), [isDark, setTheme])
 
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => setPaletteOpen(true)}
-          title={accelerator('commandPalette', platform)}
-        >
-          <Search size={14} />
-          {t('common.search')}
-        </Button>
+  const [lang, setLang] = useState<SupportedLanguage>(() => {
+    // Read the active language on mount so the selector shows the value
+    // initDesktopI18n() restored, before any user interaction.
+    const initial = i18n.language as SupportedLanguage
+    return initial && supportedLanguages.some((l) => l.code === initial) ? initial : 'fa-IR'
+  })
 
-        <Button
-          size="sm"
-          variant="primary"
-          onClick={() => navigate('/sales/new')}
-          title={accelerator('newInvoice', platform)}
-        >
-          <Plus size={14} />
-          {t('sales.newInvoice')}
-        </Button>
-      </div>
-    </header>
+  const handleLangChange = useCallback((next: string) => {
+    const code = next as SupportedLanguage
+    setLang(code)
+    void setDesktopLanguage(code)
+  }, [])
+
+  const handleLogout = useCallback(() => {
+    logout()
+    navigate('/login')
+  }, [logout, navigate])
+
+  return (
+    // The drag region is window chrome, so it wraps the canonical header
+    // instead of leaking `WebkitAppRegion` into shared UI. Children re-enable
+    // pointer interaction via `no-drag`, or every control would be unclickable.
+    <div
+      style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
+      className="shrink-0 [&_button]:![-webkit-app-region:no-drag] [&_a]:![-webkit-app-region:no-drag]"
+    >
+      <DashboardHeader
+        variant="dashboard"
+        appName={title}
+        businessName={user?.businessName ?? ''}
+        isOnline={!isOffline}
+        isSyncing={isSyncing}
+        pendingCount={pendingCount}
+        currentLang={lang}
+        isDark={isDark}
+        signInLabel={t('auth.signIn' as never)}
+        signOutLabel={t('auth.signOut' as never)}
+        onToggleTheme={toggleTheme}
+        onToggleLang={handleLangChange}
+        onLogout={handleLogout}
+        onNavigateLogin={() => navigate('/login')}
+        searchSlot={<SearchTrigger />}
+      />
+    </div>
   )
 })
