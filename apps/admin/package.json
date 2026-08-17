@@ -1,0 +1,50 @@
+{
+  "name": "@hisabche/admin",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3040",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf .next node_modules",
+    "test": "echo \"no tests yet\""
+  },
+  "dependencies": {
+    "@hisabche/api": "workspace:*",
+    "@hisabche/auth": "workspace:*",
+    "@hisabche/auth-core": "workspace:*",
+    "@hisabche/formatting": "workspace:*",
+    "@hisabche/i18n": "workspace:*",
+    "@hisabche/store": "workspace:*",
+    "@hisabche/ui": "workspace:*",
+    "@hisabche/validation": "workspace:*",
+    "@hookform/resolvers": "^5.2.2",
+    "@supabase/ssr": "^0.5.2",
+    "@supabase/supabase-js": "^2.106.0",
+    "@tanstack/react-query": "^5.101.2",
+    "axios": "^1.7.2",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.395.0",
+    "next": "16.2.6",
+    "next-intl": "^4.13.2",
+    "react": "19.2.6",
+    "react-dom": "19.2.6",
+    "react-hook-form": "^7.75.0",
+    "tailwind-merge": "^3.6.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "autoprefixer": "^10.4.19",
+    "eslint": "^9.39.4",
+    "eslint-config-next": "^16.2.6",
+    "postcss": "^8.4.38",
+    "tailwindcss": "^3.4.4",
+    "typescript": "^5.5.0"
+  }
+}

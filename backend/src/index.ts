@@ -63,6 +63,7 @@ import { notificationRoutes } from './routes/notification.routes'
 import { debugRoutes } from './routes/debug.routes'
 // ✅ اضافه کردن Activity Routes
 import { activityRoutes } from './routes/activity.routes'
+import adminRoutes from './routes/admin.routes'
 
 // ──────────────────────────────────────────────
 // Plugins & Scheduler
@@ -448,6 +449,7 @@ export async function buildServer(): Promise<typeof server> {
 
   await server.register(jobSchedulerPlugin)
   await server.register(billingRoutes)
+  await server.register(adminRoutes)
 
   server.log.info('✅ All routes registered successfully')
 

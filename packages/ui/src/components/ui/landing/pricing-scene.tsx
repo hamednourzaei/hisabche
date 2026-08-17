@@ -52,7 +52,9 @@ const PLANS: Plan[] = [
   {
     key: 'business',
     fallbackName: 'تجاری',
-    fallbackWho: 'برای شرکت‌ها',
+    // Enterprise is quoted, not listed: the plan is assembled per customer, so
+    // the invitation to ask for items added, removed or changed IS the offer.
+    fallbackWho: 'اگر درخواست افزودن، کم کردن یا اصلاح موردی دارید، بگویید',
     fallbackBestIf: 'چند شعبه',
     price: null,
     ctaFallback: 'تماس با فروش',
@@ -106,7 +108,7 @@ const FEATURE_GROUPS: FeatureGroup[] = [
       {
         labelKey: 'advancedReports',
         fallback: 'گزارش‌های پیشرفته',
-        values: ['dash', 'check', 'check'],
+        values: ['check', 'check', 'check'],
       },
       { labelKey: 'export', fallback: 'خروجی Excel و PDF', values: ['check', 'check', 'check'] },
     ],
@@ -116,10 +118,10 @@ const FEATURE_GROUPS: FeatureGroup[] = [
     fallbackGroup: 'پلتفرم',
     rows: [
       { labelKey: 'offline', fallback: 'آفلاین کامل', values: ['check', 'check', 'check'] },
-      { labelKey: 'backup', fallback: 'بک‌آپ خودکار', values: ['dash', 'check', 'check'] },
-      { labelKey: 'users', fallback: 'تعداد کاربران', values: ['۱', '۵', 'نامحدود'] },
+      { labelKey: 'backup', fallback: 'بک‌آپ خودکار', values: ['check', 'check', 'check'] },
+      { labelKey: 'users', fallback: 'تعداد کاربران', values: ['۵', '۵', 'نامحدود'] },
       { labelKey: 'branches', fallback: 'چند شعبه', values: ['dash', 'dash', 'check'] },
-      { labelKey: 'api', fallback: 'دسترسی API', values: ['dash', 'check', 'check'] },
+      { labelKey: 'api', fallback: 'دسترسی API', values: ['check', 'check', 'check'] },
     ],
   },
   {
@@ -130,7 +132,7 @@ const FEATURE_GROUPS: FeatureGroup[] = [
       {
         labelKey: 'prioritySupport',
         fallback: 'پشتیبانی اولویت‌دار',
-        values: ['dash', 'check', 'check'],
+        values: ['check', 'check', 'check'],
       },
       {
         labelKey: 'dedicatedManager',
@@ -277,20 +279,31 @@ export default function PricingScene(props: PricingSceneProps) {
                     <p className="text-xs text-[hsl(var(--fg-tertiary))]">
                       {st(`landing.pricing.${plan.key}.bestIf`, plan.fallbackBestIf)}
                     </p>
+                    {/* `who` was declared on every plan but never rendered. It
+                        carries the enterprise offer — "tell us what to add,
+                        remove or change" — which is the whole pitch for a plan
+                        that has no listed price. */}
+                    <p className="mt-1 text-[11px] leading-snug text-[hsl(var(--fg-secondary))]">
+                      {st(`landing.pricing.${plan.key}.who`, plan.fallbackWho)}
+                    </p>
                   </div>
 
                   <div className="min-h-[2rem] flex items-end gap-1">
                     {plan.price === null ? (
-                      <span className="text-lg font-bold">تماس بگیرید</span>
+                      <span className="text-lg font-bold">
+                        {st('landing.pricing.contactUs', 'تماس بگیرید')}
+                      </span>
                     ) : plan.price === 0 ? (
-                      <span className="text-2xl font-extrabold">رایگان</span>
+                      <span className="text-2xl font-extrabold">
+                        {st('landing.pricing.free', 'رایگان')}
+                      </span>
                     ) : (
                       <>
                         <span className="text-2xl font-extrabold tabular-nums">
                           {plan.price.toLocaleString('fa-AF')}
                         </span>
                         <span className="text-[10px] text-[hsl(var(--fg-tertiary))] mb-0.5">
-                          افغانی / ماه
+                          {st('landing.pricing.perMonth', 'افغانی / ماه')}
                         </span>
                       </>
                     )}
@@ -412,11 +425,11 @@ export default function PricingScene(props: PricingSceneProps) {
                     >
                       {plan.price === null ? (
                         <span className="text-base sm:text-xl font-bold text-[hsl(var(--fg-primary))]">
-                          تماس بگیرید
+                          {st('landing.pricing.contactUs', 'تماس بگیرید')}
                         </span>
                       ) : plan.price === 0 ? (
                         <span className="text-xl sm:text-2xl font-extrabold text-[hsl(var(--fg-primary))]">
-                          رایگان
+                          {st('landing.pricing.free', 'رایگان')}
                         </span>
                       ) : (
                         <div className="flex items-baseline justify-center gap-1">
@@ -424,7 +437,7 @@ export default function PricingScene(props: PricingSceneProps) {
                             {plan.price.toLocaleString('fa-AF')}
                           </span>
                           <span className="text-[10px] sm:text-xs text-[hsl(var(--fg-tertiary))]">
-                            افغانی / ماه
+                            {st('landing.pricing.perMonth', 'افغانی / ماه')}
                           </span>
                         </div>
                       )}

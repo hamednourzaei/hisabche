@@ -15,7 +15,16 @@ import {
   Building2 as BuildingIcon,
   ShoppingBag,
 } from 'lucide-react'
-import { memo, useCallback } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
+import {
+  BUSINESS_MODELS,
+  BUSINESS_TYPE_OTHER,
+  CURRENCIES,
+  filterBusinessTypes,
+  primaryCurrencies,
+} from '@hisabche/ui-contract'
+
+import { SearchableOptionList } from './searchable-option-list'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    OnboardingPage v4 — Memoized · Performance Optimized
@@ -26,7 +35,11 @@ export interface OnboardingPageProps {
   step: number
   businessType: string | null
   storeSize: string | null
+  /** Optional free text; never gates progress. */
+  businessNote: string
   defaultCurrency: string
+  /** Interface language, for the currency cards. */
+  lang: string
   t: (key: string, fallback?: string) => string
   businessTypeLabel: string
   storeSizeLabel: string
@@ -35,6 +48,7 @@ export interface OnboardingPageProps {
   onSetBusinessType: (type: string) => void
   onSetStoreSize: (size: string) => void
   onSetCurrency: (currency: string) => void
+  onSetBusinessNote: (note: string) => void
   onComplete: () => void
 }
 
@@ -115,40 +129,82 @@ const BusinessTypeStep = memo(function BusinessTypeStep({
   onNext: () => void
   t: (key: string, fallback?: string) => string
 }) {
-  const businessTypes = [
-    { id: 'retail', icon: Store, labelKey: 'onboarding.retail' },
-    { id: 'wholesale', icon: Building2, labelKey: 'onboarding.wholesale' },
-    { id: 'restaurant', icon: Utensils, labelKey: 'onboarding.restaurant' },
-    { id: 'service', icon: Wrench, labelKey: 'onboarding.service' },
-    { id: 'other', icon: MoreHorizontal, labelKey: 'onboarding.other' },
-  ]
+  // Selection is a set: someone may genuinely run more than one business.
+  // `businessType` stays a single string on the workspace, so the parent keeps
+  // the primary choice and this step reports the whole selection.
+  const selectedIds = useMemo(
+    () => new Set(businessType ? businessType.split(',').filter(Boolean) : []),
+    [businessType],
+  )
+
+  const trades = useMemo(
+    () =>
+      filterBusinessTypes('', t).map((option) => ({
+        id: option.id,
+        label: t(option.labelKey, option.labelFa),
+      })),
+    [t],
+  )
+
+  const handleToggle = useCallback(
+    (id: string) => {
+      const next = new Set(selectedIds)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      onSetBusinessType([...next].join(','))
+    },
+    [selectedIds, onSetBusinessType],
+  )
 
   return (
     <div className="mx-auto w-full max-w-3xl">
       <h2 className="mb-5 text-center text-xl font-bold text-[hsl(var(--fg-primary))] sm:mb-8 sm:text-2xl">
         {t('onboarding.businessType', 'نوع کسب و کار')}
       </h2>
+      {/* Sales model: two cards, side by side at every width. Almost every
+          business is one of the two, so they stay cards rather than list rows. */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4">
-        {businessTypes.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => onSetBusinessType(item.id)}
-            className={cn(
-              'rounded-2xl border-2 p-4 transition-all duration-200 sm:p-6',
-              'motion-reduce:transition-none',
-              businessType === item.id ? selectedClasses : unselectedClasses,
-            )}
-          >
-            <item.icon
-              className="mb-2 size-7 text-[hsl(var(--color-primary))] sm:mb-4 sm:size-10"
-              aria-hidden="true"
-            />
-            <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))] sm:text-base">
-              {t(item.labelKey, item.id)}
-            </h3>
-          </button>
-        ))}
+        {BUSINESS_MODELS.map((item) => {
+          const Icon = item.id === 'wholesale' ? Building2 : Store
+          return (
+            <button
+              key={item.id}
+              type="button"
+              role="checkbox"
+              aria-checked={selectedIds.has(item.id)}
+              onClick={() => handleToggle(item.id)}
+              className={cn(
+                'rounded-2xl border-2 p-4 transition-all duration-200 sm:p-6',
+                'motion-reduce:transition-none',
+                selectedIds.has(item.id) ? selectedClasses : unselectedClasses,
+              )}
+            >
+              <Icon
+                className="mb-2 size-7 text-[hsl(var(--color-primary))] sm:mb-4 sm:size-10"
+                aria-hidden="true"
+              />
+              <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))] sm:text-base">
+                {t(item.labelKey, item.labelFa)}
+              </h3>
+            </button>
+          )
+        })}
+      </div>
+
+      {/* The actual trade, searchable. The old five-card set forced most shops
+          to answer "other", which told us nothing about them. */}
+      <div className="mt-4">
+        <SearchableOptionList
+          options={trades}
+          selected={selectedIds}
+          onToggle={handleToggle}
+          placeholder={t('onboarding.searchBusiness', 'کسب‌وکارت را جست‌وجو کن')}
+          emptyLabel={t('onboarding.noBusinessMatch', 'موردی پیدا نشد')}
+          fallbackOption={{
+            id: BUSINESS_TYPE_OTHER.id,
+            label: t(BUSINESS_TYPE_OTHER.labelKey, BUSINESS_TYPE_OTHER.labelFa),
+          }}
+        />
       </div>
       <div className="mt-6 flex justify-between sm:mt-8">
         <button
@@ -191,12 +247,16 @@ BusinessTypeStep.displayName = 'BusinessTypeStep'
 const StoreSizeStep = memo(function StoreSizeStep({
   storeSize,
   onSetStoreSize,
+  businessNote,
+  onSetBusinessNote,
   onBack,
   onNext,
   t,
 }: {
   storeSize: string | null
   onSetStoreSize: (size: string) => void
+  businessNote: string
+  onSetBusinessNote: (note: string) => void
   onBack: () => void
   onNext: () => void
   t: (key: string, fallback?: string) => string
@@ -227,7 +287,9 @@ const StoreSizeStep = memo(function StoreSizeStep({
       <h2 className="mb-5 text-center text-xl font-bold text-[hsl(var(--fg-primary))] sm:mb-8 sm:text-2xl">
         {t('onboarding.storeSize', 'اندازه کسب و کار')}
       </h2>
-      <div className="space-y-3 sm:space-y-4">
+      {/* Two per row rather than a vertical stack, so the three sizes and the
+          free-text card below form one 2x2 block instead of a long column. */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
         {storeSizes.map((item) => (
           <button
             key={item.id}
@@ -259,6 +321,38 @@ const StoreSizeStep = memo(function StoreSizeStep({
             )}
           </button>
         ))}
+
+        {/* Fourth cell: free text, completing the 2x2 block. Purely optional —
+            it never gates the Next button, so leaving it blank costs nothing. */}
+        <div
+          className={cn(
+            'flex flex-col rounded-2xl border-2 p-3.5 sm:p-5',
+            'border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))]',
+          )}
+        >
+          <label
+            htmlFor="onboarding-business-note"
+            className="mb-1.5 text-sm font-semibold text-[hsl(var(--fg-primary))]"
+          >
+            {t('onboarding.aboutBusiness', 'درباره کسب‌وکارت')}
+          </label>
+          <textarea
+            id="onboarding-business-note"
+            value={businessNote}
+            onChange={(event) => onSetBusinessNote(event.target.value)}
+            rows={3}
+            placeholder={t(
+              'onboarding.aboutBusinessPlaceholder',
+              'اگر دوست داشتی بیشتر درمورد کسب‌وکارت بنویس',
+            )}
+            className={cn(
+              'w-full flex-1 resize-none rounded-xl border p-2.5 text-sm outline-none',
+              'border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]',
+              'text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))]',
+              'focus:border-[hsl(var(--color-primary))]',
+            )}
+          />
+        </div>
       </div>
       <div className="mt-6 flex justify-between sm:mt-8">
         <button
@@ -300,23 +394,40 @@ StoreSizeStep.displayName = 'StoreSizeStep'
 
 const CurrencyStep = memo(function CurrencyStep({
   defaultCurrency,
+  lang,
   onSetCurrency,
   onBack,
   onNext,
   t,
 }: {
   defaultCurrency: string
+  /** Interface language — decides which two currencies are offered as cards. */
+  lang: string
   onSetCurrency: (currency: string) => void
   onBack: () => void
   onNext: () => void
   t: (key: string, fallback?: string) => string
 }) {
-  const currencies = [
-    { code: 'AFN', labelKey: 'currency.afn', flag: '🇦🇫' },
-    { code: 'USD', labelKey: 'currency.usd', flag: '🇺🇸' },
-    { code: 'PKR', labelKey: 'currency.pkr', flag: '🇵🇰' },
-    { code: 'IRR', labelKey: 'currency.irr', flag: '🇮🇷' },
-  ]
+  // Two cards, chosen by interface language: toman-first for Persian,
+  // afghani-first for Dari, dollar second in both. Everything else — including
+  // precious metals, which are priced by weight — is found by searching.
+  const primary = useMemo(() => primaryCurrencies(lang), [lang])
+  const primaryCodes = useMemo(() => new Set(primary.map((c) => c.code)), [primary])
+
+  const searchable = useMemo(
+    () =>
+      CURRENCIES.filter((c) => !primaryCodes.has(c.code)).map((c) => ({
+        id: c.code,
+        label: t(c.labelKey, c.labelFa),
+        prefix: c.flag,
+      })),
+    [primaryCodes, t],
+  )
+
+  const selectedCurrency = useMemo(
+    () => new Set(defaultCurrency ? [defaultCurrency] : []),
+    [defaultCurrency],
+  )
 
   return (
     <div className="mx-auto w-full max-w-3xl">
@@ -324,7 +435,7 @@ const CurrencyStep = memo(function CurrencyStep({
         {t('onboarding.defaultCurrency', 'ارز پیشفرض')}
       </h2>
       <div className="grid grid-cols-2 gap-3 sm:gap-4">
-        {currencies.map((cur) => (
+        {primary.map((cur) => (
           <button
             key={cur.code}
             type="button"
@@ -337,10 +448,22 @@ const CurrencyStep = memo(function CurrencyStep({
           >
             <div className="mb-1.5 text-2xl sm:mb-2 sm:text-3xl">{cur.flag}</div>
             <div className="text-sm font-medium text-[hsl(var(--fg-primary))] sm:text-base">
-              {t(cur.labelKey, cur.code)}
+              {t(cur.labelKey, cur.labelFa)}
             </div>
           </button>
         ))}
+      </div>
+
+      {/* Only reached if neither card is the user's unit. Same control as the
+          business-type step, so the interaction is learned once. */}
+      <div className="mt-4">
+        <SearchableOptionList
+          options={searchable}
+          selected={selectedCurrency}
+          onToggle={onSetCurrency}
+          placeholder={t('onboarding.searchCurrency', 'واحد پولت را جست‌وجو کن')}
+          emptyLabel={t('onboarding.noCurrencyMatch', 'موردی پیدا نشد')}
+        />
       </div>
       <div className="mt-6 flex justify-between sm:mt-8">
         <button
@@ -442,7 +565,9 @@ export const OnboardingPage = memo(function OnboardingPage({
   step,
   businessType,
   storeSize,
+  businessNote,
   defaultCurrency,
+  lang,
   t,
   businessTypeLabel,
   storeSizeLabel,
@@ -451,6 +576,7 @@ export const OnboardingPage = memo(function OnboardingPage({
   onSetBusinessType,
   onSetStoreSize,
   onSetCurrency,
+  onSetBusinessNote,
   onComplete,
 }: OnboardingPageProps) {
   const handleStart = useCallback(() => onSetStep(1), [onSetStep])
@@ -490,6 +616,8 @@ export const OnboardingPage = memo(function OnboardingPage({
           <StoreSizeStep
             storeSize={storeSize}
             onSetStoreSize={onSetStoreSize}
+            businessNote={businessNote}
+            onSetBusinessNote={onSetBusinessNote}
             onBack={handleBack2}
             onNext={handleNext2}
             t={t}
@@ -498,6 +626,7 @@ export const OnboardingPage = memo(function OnboardingPage({
         {step === 3 && (
           <CurrencyStep
             defaultCurrency={defaultCurrency}
+            lang={lang}
             onSetCurrency={onSetCurrency}
             onBack={handleBack3}
             onNext={handleNext3}

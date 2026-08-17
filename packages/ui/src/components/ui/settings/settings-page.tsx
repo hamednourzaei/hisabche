@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { useBackupStore, useDeviceStore, useAuthStore } from '@hisabche/store'
 import { useWorkspaces, useUpdateWorkspace } from '@hisabche/api'
 import { cn } from '../../../lib/utils'
+import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { Switch } from '../switch'
 import {
   Shield,
@@ -52,6 +53,7 @@ const PERFORMANCE_MODES = [
 
 const AccountSection = memo(function AccountSection() {
   const tOriginal = useTranslations()
+  const intlLocale = useIntlLocale()
   const t = (key: string, fallback?: string): string => {
     const v = tOriginal(key as Parameters<typeof tOriginal>[0])
     return v && v !== key ? v : (fallback ?? key)
@@ -192,7 +194,7 @@ const AccountSection = memo(function AccountSection() {
                 {t('settings.memberSince')}
               </p>
               <p className="font-medium text-[hsl(var(--fg-primary))]">
-                {user?.createdAt ? new Date(user.createdAt).toLocaleDateString('fa-AF') : '-'}
+                {user?.createdAt ? new Date(user.createdAt).toLocaleDateString(intlLocale) : '-'}
               </p>
             </div>
           </div>
@@ -403,6 +405,7 @@ BusinessStampSection.displayName = 'BusinessStampSection'
 
 const BackupSection = memo(function BackupSection() {
   const tOriginal = useTranslations()
+  const intlLocale = useIntlLocale()
   const t = (key: string, fallback?: string): string => {
     const v = tOriginal(key as Parameters<typeof tOriginal>[0])
     return v && v !== key ? v : (fallback ?? key)
@@ -521,7 +524,7 @@ const BackupSection = memo(function BackupSection() {
               </p>
               <p>
                 {t('settings.backupDate')}:{' '}
-                {new Date(latestBackup.timestamp).toLocaleDateString('fa-AF')}
+                {new Date(latestBackup.timestamp).toLocaleDateString(intlLocale)}
               </p>
               <p>
                 {t('settings.backupSize')}: {latestBackup.size}

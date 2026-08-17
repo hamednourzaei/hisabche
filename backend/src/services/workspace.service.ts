@@ -599,6 +599,20 @@ export class WorkspaceService {
       // The auth user is already created at this point; leaving it orphaned
       // would block the owner from retrying with the same email.
       if (userId) await supabase.auth.admin.deleteUser(userId).catch(() => undefined)
+
+      // 42501 = row-level security denied the insert. The backend connects with
+      // the service_role key, which bypasses RLS — so seeing this in production
+      // means that deployment is NOT running with a service_role key. Say so,
+      // because "Failed to add member" sends people looking in the wrong place.
+      if (memberError.code === '42501') {
+        throw new DatabaseError(
+          'Row-level security blocked adding the member. The deployment is not using a ' +
+            "service_role Supabase key (check SUPABASE_SERVICE_KEY and the boot log's role " +
+            'claim), and docs/workspace-members-rls-migration.sql has not been applied.',
+          memberError,
+        )
+      }
+
       throw new DatabaseError('Failed to add member', memberError)
     }
 

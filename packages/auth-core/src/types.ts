@@ -10,6 +10,16 @@ export interface AuthUser {
   businessName?: string
   avatarUrl?: string
   createdAt: string
+  /**
+   * Authoritative onboarding state from the server.
+   *
+   * Optional because a cached user from before this shipped will not have it;
+   * absent is treated as "unknown", not as "not completed".
+   */
+  onboardingCompleted?: boolean
+  businessTypes?: string[]
+  storeSize?: string | null
+  businessNote?: string | null
 }
 
 /** Workspace-level role. Ordering is meaningful — see ROLE_RANK. */

@@ -14,6 +14,7 @@ import {
   setMemberSuspensionSchema,
 } from '@hisabche/validation'
 import { WorkspaceService } from '../services/workspace.service'
+import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 
@@ -36,6 +37,9 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
         return reply.send(await svc.getMyWorkspaces(req.userId))
       } catch (e) {
         fastify.log.error(e)
+        if (e instanceof BaseError && e.isOperational) {
+          return reply.code(e.statusCode).send({ error: e.message })
+        }
         return reply.code(500).send({ error: 'Failed' })
       }
     },
@@ -56,6 +60,9 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
         if (e instanceof z.ZodError)
           return reply.code(400).send({ error: 'Validation', details: e.errors })
         fastify.log.error(e)
+        if (e instanceof BaseError && e.isOperational) {
+          return reply.code(e.statusCode).send({ error: e.message })
+        }
         return reply.code(500).send({ error: 'Failed' })
       }
     },
@@ -71,6 +78,9 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
         return reply.send(await svc.getWorkspace(req.userId, (req.params as any).id))
       } catch (e) {
         fastify.log.error(e)
+        if (e instanceof BaseError && e.isOperational) {
+          return reply.code(e.statusCode).send({ error: e.message })
+        }
         return reply.code(500).send({ error: 'Failed' })
       }
     },
@@ -108,6 +118,9 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
         if (e instanceof z.ZodError)
           return reply.code(400).send({ error: 'Validation', details: e.errors })
         fastify.log.error(e)
+        if (e instanceof BaseError && e.isOperational) {
+          return reply.code(e.statusCode).send({ error: e.message })
+        }
         return reply.code(500).send({ error: 'Failed' })
       }
     },
@@ -123,6 +136,9 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
         return reply.send(await svc.listMembers(req.userId, (req.params as any).id))
       } catch (e) {
         fastify.log.error(e)
+        if (e instanceof BaseError && e.isOperational) {
+          return reply.code(e.statusCode).send({ error: e.message })
+        }
         return reply.code(500).send({ error: 'Failed' })
       }
     },
@@ -147,6 +163,9 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
         if (e instanceof z.ZodError)
           return reply.code(400).send({ error: 'Validation', details: e.errors })
         fastify.log.error(e)
+        if (e instanceof BaseError && e.isOperational) {
+          return reply.code(e.statusCode).send({ error: e.message })
+        }
         return reply.code(500).send({ error: 'Failed' })
       }
     },
@@ -165,6 +184,9 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
         return reply.send(result)
       } catch (e) {
         fastify.log.error(e)
+        if (e instanceof BaseError && e.isOperational) {
+          return reply.code(e.statusCode).send({ error: e.message })
+        }
         return reply.code(500).send({ error: 'Failed' })
       }
     },
@@ -183,6 +205,9 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
         return reply.send(result)
       } catch (e) {
         fastify.log.error(e)
+        if (e instanceof BaseError && e.isOperational) {
+          return reply.code(e.statusCode).send({ error: e.message })
+        }
         return reply.code(500).send({ error: 'Failed' })
       }
     },
@@ -198,6 +223,9 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
         return reply.send(await svc.listInvites(req.userId, (req.params as any).id))
       } catch (e) {
         fastify.log.error(e)
+        if (e instanceof BaseError && e.isOperational) {
+          return reply.code(e.statusCode).send({ error: e.message })
+        }
         return reply.code(500).send({ error: 'Failed' })
       }
     },
@@ -257,6 +285,9 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
           return reply.code(400).send({ error: e.message })
         }
         fastify.log.error(e)
+        if (e instanceof BaseError && e.isOperational) {
+          return reply.code(e.statusCode).send({ error: e.message })
+        }
         return reply.code(500).send({ error: 'Failed' })
       }
     },
@@ -338,6 +369,9 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
         return reply.send(result)
       } catch (e) {
         fastify.log.error(e)
+        if (e instanceof BaseError && e.isOperational) {
+          return reply.code(e.statusCode).send({ error: e.message })
+        }
         return reply.code(500).send({ error: 'Failed' })
       }
     },

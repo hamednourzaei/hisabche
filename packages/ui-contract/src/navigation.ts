@@ -31,6 +31,8 @@ export type NavId =
   // secondary — people
   | 'buyers'
   | 'follow-up'
+  // 'team' keeps its id so /human-resources stays addressable, but it is no
+  // longer a navigation destination — see NAV_CONTRACT.
   | 'team'
   // secondary — work
   // `production` keeps its id so the route stays addressable while hidden from
@@ -131,14 +133,9 @@ export const NAV_CONTRACT: readonly NavItemContract[] = [
     path: '/crm',
     group: 'people',
   },
-  {
-    id: 'team',
-    emoji: '👥',
-    labelKey: 'nav.team',
-    descriptionKey: 'nav.team_description',
-    path: '/human-resources',
-    group: 'people',
-  },
+  // team (/human-resources) is gone from navigation: colleagues and payroll
+  // are one section now (/team-and-payroll), and having both entries meant two
+  // places to add the same person. The route still resolves.
 
   // ─── کارها ───
   // `production` (/manufacturing) is hidden from navigation for now; its route

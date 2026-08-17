@@ -2,7 +2,7 @@
 // 🎯 Control Center v7 — Production-Ready, Mobile-First, RTL, Offline-Ready
 'use client'
 
-import { useState, useEffect, useMemo, useCallback, Suspense } from 'react'
+import { memo, useState, useEffect, useMemo, useCallback, Suspense } from 'react'
 import { cn } from '../../../lib/utils'
 import { Plus, Download, User, AlertCircle } from 'lucide-react'
 import { exportToCSV } from '../../../lib/export'
@@ -83,6 +83,64 @@ function filterCustomers(customers: CustomerWithDebt[], search: string): Custome
 // ============================================================
 // 🧩 Sub-components (هر کدام < ۲۰ خط)
 // ============================================================
+
+export type PartyRoleFilterValue = 'all' | 'buyer' | 'seller'
+
+/**
+ * همه / مشتری / تأمین‌کننده.
+ *
+ * Deliberately the same control as the invoice list's type filter: both answer
+ * "which direction of trade am I looking at", and giving them different shapes
+ * would make the same question look like two different features.
+ */
+const PartyRoleFilter = memo(function PartyRoleFilter({
+  t,
+  value,
+  onChange,
+}: {
+  t: (key: string, fallback?: string) => string
+  value: PartyRoleFilterValue
+  onChange?: ((value: PartyRoleFilterValue) => void) | undefined
+}) {
+  if (!onChange) return null
+
+  const options: { key: PartyRoleFilterValue; label: string }[] = [
+    { key: 'all', label: t('customers.role.all', 'همه') },
+    { key: 'buyer', label: t('customers.role.buyer', 'مشتری') },
+    { key: 'seller', label: t('customers.role.seller', 'تأمین‌کننده') },
+  ]
+
+  return (
+    <div
+      role="radiogroup"
+      aria-label={t('customers.role.label', 'نوع طرف حساب')}
+      className="flex w-fit gap-1 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))] p-1"
+    >
+      {options.map((option) => {
+        const active = value === option.key
+        return (
+          <button
+            key={option.key}
+            type="button"
+            role="radio"
+            aria-checked={active}
+            onClick={() => onChange(option.key)}
+            className={cn(
+              'rounded-lg px-4 py-1.5 text-sm font-medium transition-colors',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))]',
+              active
+                ? 'bg-[hsl(var(--color-primary))] text-[hsl(var(--color-primary-fg))]'
+                : 'text-[hsl(var(--fg-secondary))] hover:text-[hsl(var(--fg-primary))]',
+            )}
+          >
+            {option.label}
+          </button>
+        )
+      })}
+    </div>
+  )
+})
+PartyRoleFilter.displayName = 'PartyRoleFilter'
 
 /** هدر صفحه */
 function CustomersHeader({
@@ -449,6 +507,8 @@ export function customersView(props: CustomersViewProps) {
     onClosePayment,
     onPaymentSuccess,
     onNewCreditInvoice,
+    roleFilter = 'all',
+    onRoleFilterChange,
     currency = 'AFN',
     customersDelta = null,
     salesDelta = null,
@@ -566,6 +626,11 @@ export function customersView(props: CustomersViewProps) {
         debtDelta,
         topCustomerDelta,
       })}
+
+      {/* همه / مشتری / تأمین‌کننده — همان الگوی سوییچ صفحه‌ی فاکتورها.
+          نقش از جهت فاکتورها مشتق می‌شود، نه از یک ستون در دیتابیس، پس یک
+          طرف حساب که هم می‌خرد هم می‌فروشد در هر دو فیلتر دیده می‌شود. */}
+      <PartyRoleFilter t={t} value={roleFilter} onChange={onRoleFilterChange} />
 
       {/* محتوای اصلی */}
       <CustomersContent

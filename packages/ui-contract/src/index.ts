@@ -100,3 +100,15 @@ export {
   areSomeSelected,
   type SelectionState,
 } from './selection'
+
+// ---------- Onboarding: business types ----------
+export {
+  BUSINESS_MODELS,
+  BUSINESS_TYPES,
+  BUSINESS_TYPE_OTHER,
+  filterBusinessTypes,
+  type BusinessTypeOption,
+} from './business-types'
+
+// ---------- Onboarding: currencies and metals ----------
+export { CURRENCIES, primaryCurrencies, type CurrencyOption } from './currencies'

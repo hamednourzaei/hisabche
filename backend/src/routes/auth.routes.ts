@@ -13,7 +13,7 @@ import {
   resetPasswordSchema,
   updateProfileSchema,
 } from '@hisabche/validation'
-import { supabase } from '../db'
+import { createAuthClient, supabase } from '../db'
 import { authenticate } from '../middleware/auth.middleware'
 import { passwordResetService } from '../services/password-reset.service'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
@@ -28,6 +28,10 @@ interface SanitizedUser {
   businessName: string | null
   avatarUrl: string | null
   createdAt: string
+  onboardingCompleted: boolean
+  businessTypes: string[]
+  storeSize: string | null
+  businessNote: string | null
 }
 
 // ─── Helper: toJsonSchema (دستی) ────────────────────────────
@@ -42,11 +46,22 @@ function unwrap(schema: any): { inner: any; optional: boolean } {
   let inner = schema
   let optional = false
 
+  // `ZodEffects` wraps a schema carrying `.transform()`. Without unwrapping it,
+  // the typeName is `ZodEffects`, `jsonTypeOf` returns undefined and the field
+  // ends up unconstrained — harmless, but it also hid the union underneath, so
+  // a nullable field was typed `string` and ajv rejected `null` with a 400
+  // before the handler ever ran.
   while (
     inner?._def?.typeName === 'ZodOptional' ||
     inner?._def?.typeName === 'ZodNullable' ||
-    inner?._def?.typeName === 'ZodDefault'
+    inner?._def?.typeName === 'ZodDefault' ||
+    inner?._def?.typeName === 'ZodEffects'
   ) {
+    if (inner._def.typeName === 'ZodEffects') {
+      inner = inner._def.schema
+      continue
+    }
+
     // A field with a default is always present in the output, so it is not
     // optional for serialization purposes — but it must still be unwrapped.
     if (inner._def.typeName !== 'ZodDefault') optional = true
@@ -110,10 +125,19 @@ async function getProfile(userId: string): Promise<{
   full_name: string | null
   business_name: string | null
   avatar_url: string | null
+  onboarding_completed_at?: string | null
+  business_types?: string[] | null
+  store_size?: string | null
+  business_note?: string | null
 } | null> {
   const { data } = await supabase
     .from('profiles')
-    .select('full_name, business_name, avatar_url')
+    // The onboarding columns come from docs/onboarding-server-state-migration.sql.
+    // Selected together so a single round-trip answers 'has this account
+    // finished setup', which the dashboard gate asks on every load.
+    .select(
+      'full_name, business_name, avatar_url, onboarding_completed_at, business_types, store_size, business_note',
+    )
     .eq('id', userId)
     .single()
 
@@ -127,6 +151,10 @@ function sanitizeUser(
     full_name: string | null
     business_name: string | null
     avatar_url: string | null
+    onboarding_completed_at?: string | null
+    business_types?: string[] | null
+    store_size?: string | null
+    business_note?: string | null
   } | null,
 ): SanitizedUser {
   return {
@@ -136,6 +164,12 @@ function sanitizeUser(
     businessName: profile?.business_name || authUser.user_metadata?.business_name || null,
     avatarUrl: profile?.avatar_url || null,
     createdAt: authUser.created_at,
+    // Authoritative onboarding state. The client used to keep this in
+    // localStorage only, so clearing site data replayed the wizard.
+    onboardingCompleted: Boolean(profile?.onboarding_completed_at),
+    businessTypes: profile?.business_types ?? [],
+    storeSize: profile?.store_size ?? null,
+    businessNote: profile?.business_note ?? null,
   }
 }
 
@@ -205,10 +239,11 @@ export async function authRoutes(fastify: FastifyInstance) {
         )
 
         // ۳. لاگین خودکار — دریافت توکن
-        const { data: session, error: loginError } = await supabase.auth.signInWithPassword({
-          email: body.email,
-          password: body.password,
-        })
+        const { data: session, error: loginError } =
+          await createAuthClient().auth.signInWithPassword({
+            email: body.email,
+            password: body.password,
+          })
 
         if (loginError || !session.session) {
           fastify.log.error(loginError)
@@ -267,7 +302,7 @@ export async function authRoutes(fastify: FastifyInstance) {
       try {
         const body = loginSchema.parse(request.body)
 
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await createAuthClient().auth.signInWithPassword({
           email: body.email,
           password: body.password,
         })
@@ -484,9 +519,42 @@ export async function authRoutes(fastify: FastifyInstance) {
         if (body.businessName !== undefined) profileUpdate.business_name = body.businessName
         if (body.avatarUrl !== undefined) profileUpdate.avatar_url = body.avatarUrl
 
-        await supabase
+        // ─── Onboarding ───
+        // Written once and never cleared: `onboardingCompleted: false` is not a
+        // request to replay the wizard, and treating it as one would undo the
+        // whole point of moving this off localStorage.
+        if (body.onboardingCompleted === true) {
+          profileUpdate.onboarding_completed_at = new Date().toISOString()
+        }
+        if (body.businessTypes !== undefined) profileUpdate.business_types = body.businessTypes
+        if (body.storeSize !== undefined) profileUpdate.store_size = body.storeSize
+        if (body.businessNote !== undefined) profileUpdate.business_note = body.businessNote
+
+        const { error: profileError } = await supabase
           .from('profiles')
           .upsert({ id: userId, ...profileUpdate }, { onConflict: 'id' })
+
+        // Until the migration runs these columns do not exist. Retry without
+        // them so an ordinary name/avatar edit still saves, rather than failing
+        // with a bare "ذخیره نشد".
+        if (
+          profileError &&
+          (profileError.code === '42703' || /column/.test(profileError.message || ''))
+        ) {
+          const {
+            onboarding_completed_at: _a,
+            business_types: _b,
+            store_size: _c,
+            business_note: _d,
+            ...withoutOnboarding
+          } = profileUpdate
+
+          await supabase
+            .from('profiles')
+            .upsert({ id: userId, ...withoutOnboarding }, { onConflict: 'id' })
+        } else if (profileError) {
+          throw profileError
+        }
 
         // ۳. گرفتن user به‌روزشده
         const { data: authUser } = await supabase.auth.admin.getUserById(userId)

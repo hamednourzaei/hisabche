@@ -1,0 +1,44 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "lib": ["dom", "dom.iterable", "es2022"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": false,
+    "noEmit": true,
+    "incremental": true,
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"],
+      "@hisabche/ui": ["../../packages/ui/src/index.ts"],
+      "@hisabche/ui/menu": ["../../packages/ui/src/lib/menu/nav-items.ts"],
+      "@hisabche/ui/screens": ["../../packages/ui/src/screens.ts"],
+      "@hisabche/api": ["../../packages/api/src/index.ts"],
+      "@hisabche/auth": ["../../packages/auth/src/index.ts"],
+      "@hisabche/auth-core": ["../../packages/auth-core/src/index.ts"],
+      "@hisabche/formatting": ["../../packages/formatting/src/index.ts"],
+      "@hisabche/validation": ["../../packages/validation/src/index.ts"],
+      "@hisabche/i18n": ["../../packages/i18n/src/index.ts"]
+    },
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
+}

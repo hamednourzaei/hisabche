@@ -25,6 +25,10 @@ type CustomerWithInvoices = CustomerWithDebt & {
 
 export function CustomersContainer() {
   const router = useRouter()
+
+  // همه / مشتری / تأمین‌کننده. Sent to the server rather than filtered here:
+  // the role is derived from invoice history, which the client does not hold.
+  const [roleFilter, setRoleFilter] = useState<'all' | 'buyer' | 'seller'>('all')
   const tOriginal = useTranslations()
   // ✅ Wrapper برای تطابق signature با CustomersViewProps
   const t = (key: string, fallback?: string): string => {
@@ -56,7 +60,7 @@ export function CustomersContainer() {
     isError,
     error,
     refetch,
-  } = useCustomersData()
+  } = useCustomersData(roleFilter === 'all' ? {} : { role: roleFilter })
 
   // ============================================================
   // 🎯 Stateهای UI
@@ -159,6 +163,8 @@ export function CustomersContainer() {
     errorMessage: error?.message || '',
     onRetry: refetch,
     selectedCustomerId,
+    roleFilter,
+    onRoleFilterChange: setRoleFilter,
     onSelectCustomer: handleSelectCustomer,
     onClearSelection: handleClearSelection,
     showAddModal,

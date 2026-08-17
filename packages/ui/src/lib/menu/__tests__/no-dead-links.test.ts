@@ -24,13 +24,28 @@ import { NAV_ITEMS } from '../nav-items'
 const COMPONENTS_DIR = join(__dirname, '..', '..', '..', 'components', 'ui')
 
 /**
- * Destinations outside the dashboard navigation.
+ * Real routes that carry no navigation entry.
  *
- * Auth pages are deliberately not in the nav contract — they are reached when
- * signed out, so they have no sidebar entry. They are still real routes
- * (`apps/web/app/[lang]/login`, `.../signup`).
+ * Being absent from the sidebar is not the same as not existing. Two reasons a
+ * served route is missing from `NAV_ITEMS`:
+ *
+ *   - reached while signed out, so there is no sidebar at all (login, signup)
+ *   - deliberately hidden but still addressable: purchases are recorded
+ *     through the unified transaction form rather than their own destination,
+ *     manufacturing is parked, and colleagues moved under team-and-payroll —
+ *     each keeps its page so existing links and deep links still resolve.
+ *
+ * This list is what makes the assertion "the route exists" rather than "the
+ * route is in the menu".
  */
-const NON_NAV_ROUTES = new Set(['/login', '/signup'])
+const NON_NAV_ROUTES = new Set([
+  '/login',
+  '/signup',
+  '/purchasing',
+  '/manufacturing',
+  '/human-resources',
+  '/team-and-payroll',
+])
 
 const KNOWN_PATHS = new Set([...NAV_ITEMS.map((item) => item.path), ...NON_NAV_ROUTES])
 

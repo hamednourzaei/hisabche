@@ -77,7 +77,16 @@ export interface AuthState {
   logout: () => Promise<void>
   // ✅ ویرایش پروفایل — endpoint سمت سرور (PATCH /api/auth/profile) از قبل
   // وجود داشت ولی هیچ‌جای فرانت صدایش نمی‌زد، پس فیلدها فقط خواندنی بودند.
-  updateProfile: (input: { fullName?: string; businessName?: string }) => Promise<void>
+  updateProfile: (input: {
+    fullName?: string
+    businessName?: string
+    avatarUrl?: string
+    /** Written once on completion; see docs/onboarding-server-state-migration.sql. */
+    onboardingCompleted?: boolean
+    businessTypes?: string[]
+    storeSize?: string
+    businessNote?: string
+  }) => Promise<void>
   initAuth: () => void
   clearError: () => void
 }
@@ -158,6 +167,37 @@ export const useAuthStore = create<AuthState>()(
           hasHydrated: true,
           isAuthenticated: !!state.user && !!state.token,
         })
+
+        // Refresh the stored user from the server.
+        //
+        // The whole user object is persisted, so a session created before a
+        // field existed keeps a blob without it — and nothing ever filled the
+        // gap, because logging in was the only place the user was written. That
+        // is why "تاریخ عضویت" showed "-" indefinitely: `createdAt` was simply
+        // absent from an old cached user, and no amount of reloading helped.
+        //
+        // Deliberately not awaited: hydration must not block the first paint.
+        // A failure leaves the cached user alone — being offline should not look
+        // like being signed out.
+        if (!state.token) return
+
+        void fetch(`${API_BASE}/auth/me`, {
+          headers: { Authorization: `Bearer ${state.token}` },
+        })
+          .then((res) => (res.ok ? res.json() : null))
+          .then((payload: { user?: User } | null) => {
+            const fresh = payload?.user
+            if (!fresh) return
+
+            // Merge rather than replace: local-only fields set elsewhere in the
+            // session should survive a refresh.
+            set((current) => ({
+              user: current.user ? { ...current.user, ...fresh } : fresh,
+            }))
+          })
+          .catch(() => {
+            /* offline or transient — keep the cached user */
+          })
       },
 
       updateProfile: async (input) => {

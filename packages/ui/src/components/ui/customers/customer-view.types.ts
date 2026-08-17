@@ -1,7 +1,7 @@
 // packages/ui/src/components/ui/customers/customer-view.types.ts
 // 🎯 Types for Customer View Component
 
-import type { CustomerWithDebt, InvoiceForDebt } from "../../../lib/customers/customers-types"
+import type { CustomerWithDebt, InvoiceForDebt } from '../../../lib/customers/customers-types'
 
 export interface CustomersViewProps {
   // i18n
@@ -56,9 +56,12 @@ export interface CustomersViewProps {
 
   // Actions
   onNewCreditInvoice: () => void
+  /** همه / مشتری / تأمین‌کننده — نقش از جهت فاکتورها مشتق می‌شود. */
+  roleFilter?: 'all' | 'buyer' | 'seller' | undefined
+  onRoleFilterChange?: ((value: 'all' | 'buyer' | 'seller') => void) | undefined
 
   // Configuration
   currency?: string
 }
 
-export type FilterId = "all" | "debtors" | "vip" | "overdue"
+export type FilterId = 'all' | 'debtors' | 'vip' | 'overdue'

@@ -15,6 +15,8 @@ export interface PainSceneProps {
 
 interface PainItem {
   number: string
+  /** Translation key for the timeline chip; the literal below is the fa fallback. */
+  timelineKey: string
   timelineLabel: string
   headlineKey: string
   headlineFallback: string
@@ -27,6 +29,7 @@ interface PainItem {
 const PAIN_POINTS: PainItem[] = [
   {
     number: '۰۱',
+    timelineKey: 'landing.painTimeline1',
     timelineLabel: 'امروز صبح',
     headlineKey: 'landing.pain1Title',
     headlineFallback: 'دفتر گم می‌شود',
@@ -37,6 +40,7 @@ const PAIN_POINTS: PainItem[] = [
   },
   {
     number: '۰۲',
+    timelineKey: 'landing.painTimeline2',
     timelineLabel: 'آخر شب',
     headlineKey: 'landing.pain2Title',
     headlineFallback: 'اشتباه‌های آخر شب',
@@ -47,6 +51,7 @@ const PAIN_POINTS: PainItem[] = [
   },
   {
     number: '۰۳',
+    timelineKey: 'landing.painTimeline3',
     timelineLabel: 'یک هفته بعد',
     headlineKey: 'landing.pain3Title',
     headlineFallback: 'نسیه‌هایی که فراموش می‌شوند',
@@ -57,6 +62,7 @@ const PAIN_POINTS: PainItem[] = [
   },
   {
     number: '۰۴',
+    timelineKey: 'landing.painTimeline4',
     timelineLabel: 'آخر ماه',
     headlineKey: 'landing.pain4Title',
     headlineFallback: 'سود واقعی نامشخص است',
@@ -67,6 +73,7 @@ const PAIN_POINTS: PainItem[] = [
   },
   {
     number: '۰۵',
+    timelineKey: 'landing.painTimeline5',
     timelineLabel: 'وسط هفته',
     headlineKey: 'landing.pain5Title',
     headlineFallback: 'موجودی ناگهان تمام می‌شود',
@@ -77,6 +84,7 @@ const PAIN_POINTS: PainItem[] = [
   },
   {
     number: '۰۶',
+    timelineKey: 'landing.painTimeline6',
     timelineLabel: 'هر روز',
     headlineKey: 'landing.pain6Title',
     headlineFallback: 'کارمندها شفاهی گزارش می‌دهند',
@@ -87,6 +95,7 @@ const PAIN_POINTS: PainItem[] = [
   },
   {
     number: '۰۷',
+    timelineKey: 'landing.painTimeline7',
     timelineLabel: 'هر روز',
     headlineKey: 'landing.pain7Title',
     headlineFallback: 'ساعت‌ها صرف نوشتن می‌شود',
@@ -97,6 +106,7 @@ const PAIN_POINTS: PainItem[] = [
   },
   {
     number: '۰۸',
+    timelineKey: 'landing.painTimeline8',
     timelineLabel: 'همیشه در نگرانی',
     headlineKey: 'landing.pain8Title',
     headlineFallback: 'ترس از نابودی همه اطلاعات',
@@ -208,7 +218,7 @@ export default function PainScene({ t }: PainSceneProps) {
                   {/* Node: left-aligned on mobile, centred on desktop */}
                   <div className="absolute left-4 sm:left-1/2 sm:-translate-x-1/2 z-10 flex flex-col items-center gap-0.5 sm:gap-1">
                     <span className="hidden sm:block text-[8px] sm:text-[10px] font-semibold uppercase tracking-[0.15em] text-[hsl(var(--fg-tertiary))] whitespace-nowrap leading-none">
-                      {item.timelineLabel}
+                      {t(item.timelineKey, item.timelineLabel)}
                     </span>
                     <div
                       className={cn(
@@ -246,7 +256,7 @@ export default function PainScene({ t }: PainSceneProps) {
                         {item.number}
                       </span>
                       <span className="text-[9px] font-medium text-[hsl(var(--fg-tertiary))] uppercase tracking-wider">
-                        {item.timelineLabel}
+                        {t(item.timelineKey, item.timelineLabel)}
                       </span>
                     </div>
 

@@ -1,9 +1,9 @@
 // packages/ui/src/components/ui/customers/hooks/use-customers-data.ts
 // 🎯 Custom hook for customers data fetching & computation
 
-import { useMemo } from "react"
-import { useCustomers, useInvoices } from "@hisabche/api"
-import type { CustomerWithDebt, InvoiceForDebt } from "../../lib/customers/customers-types"
+import { useMemo } from 'react'
+import { useCustomers, useInvoices } from '@hisabche/api'
+import type { CustomerWithDebt, InvoiceForDebt } from '../../lib/customers/customers-types'
 
 // ============================================================
 // 📦 Typeهای توسعه‌یافته (محلی - بدون تغییر فایل اصلی)
@@ -22,7 +22,7 @@ type ExtendedCustomer = CustomerWithDebt & {
   totalPurchases?: number
   invoices?: InvoiceForDebt[]
   lastInvoiceDate?: string | null
-  paidAmount?: number  // ✅ اضافه شد
+  paidAmount?: number // ✅ اضافه شد
   createdAt?: string
   created_at?: string
 }
@@ -42,9 +42,7 @@ function monthOffset(value: string | undefined | null, now: Date): number | null
   if (!value) return null
   const d = new Date(value)
   if (isNaN(d.getTime())) return null
-  return (
-    (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth())
-  )
+  return (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth())
 }
 
 /** اختلاف روز نسبت به امروز: 0 = امروز، 1 = دیروز */
@@ -52,7 +50,8 @@ function dayOffset(value: string | undefined | null, now: Date): number | null {
   if (!value) return null
   const d = new Date(value)
   if (isNaN(d.getTime())) return null
-  const ms = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() -
+  const ms =
+    new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() -
     new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
   return Math.round(ms / 86_400_000)
 }
@@ -65,6 +64,14 @@ type CustomerWithOpenInvoices = ExtendedCustomer & {
 interface UseCustomersDataOptions {
   customerLimit?: number
   invoiceLimit?: number
+  /**
+   * Narrow to parties who bought from us (buyer) or sold to us (seller).
+   *
+   * Derived server-side from invoice direction, not stored on the customer —
+   * `customers.type` already means payment terms. A party that does both
+   * matches either filter and is never split into two records.
+   */
+  role?: 'buyer' | 'seller' | undefined
 }
 
 interface UseCustomersDataResult {
@@ -97,10 +104,8 @@ interface UseCustomersDataResult {
 // 🎯 هوک اصلی
 // ============================================================
 
-export function useCustomersData(
-  options: UseCustomersDataOptions = {}
-): UseCustomersDataResult {
-  const { customerLimit = 500, invoiceLimit = 500 } = options
+export function useCustomersData(options: UseCustomersDataOptions = {}): UseCustomersDataResult {
+  const { customerLimit = 500, invoiceLimit = 500, role } = options
 
   const {
     data: customersData,
@@ -111,7 +116,8 @@ export function useCustomersData(
   } = useCustomers({
     page: 1,
     limit: customerLimit,
-    sortDirection: "desc",
+    sortDirection: 'desc',
+    ...(role ? { role } : {}),
   })
 
   const {
@@ -123,7 +129,7 @@ export function useCustomersData(
   } = useInvoices({
     page: 1,
     limit: invoiceLimit,
-    sortDirection: "desc",
+    sortDirection: 'desc',
   })
 
   const isLoading = customersLoading || invoicesLoading
@@ -149,14 +155,12 @@ export function useCustomersData(
     const enrichedCustomers = customers.map((customer): CustomerWithOpenInvoices => {
       // پیدا کردن فاکتورهای این مشتری
       const customerInvoices = invoices.filter(
-        (inv) =>
-          inv.customerId === customer.id ||
-          inv.customer_id === customer.id
+        (inv) => inv.customerId === customer.id || inv.customer_id === customer.id,
       )
 
       // فاکتورهای باز (پرداخت نشده)
       const openInvoices = customerInvoices.filter(
-        (inv) => inv.status !== "paid" && inv.status !== "cancelled"
+        (inv) => inv.status !== 'paid' && inv.status !== 'cancelled',
       )
 
       // محاسبه‌ی کل بدهی
@@ -166,43 +170,38 @@ export function useCustomersData(
       }, 0)
 
       // کل خریدها
-      const totalPurchases = customerInvoices.reduce(
-        (sum, inv) => sum + (inv.total || 0),
-        0
-      )
+      const totalPurchases = customerInvoices.reduce((sum, inv) => sum + (inv.total || 0), 0)
 
       // آخرین فاکتور (با `date`)
       const sortedInvoices = [...customerInvoices].sort(
-        (a, b) =>
-          new Date(b.date || 0).getTime() -
-          new Date(a.date || 0).getTime()
+        (a, b) => new Date(b.date || 0).getTime() - new Date(a.date || 0).getTime(),
       )
       const lastInvoice = sortedInvoices[0]
 
       // ✅ وضعیت عقب‌افتادگی (فقط از `due_date` استفاده کن)
       const now = new Date()
       const isOverdue = openInvoices.some((inv) => {
-        const dueDate = inv.due_date  // ✅ فقط due_date
+        const dueDate = inv.due_date // ✅ فقط due_date
         return dueDate ? new Date(dueDate) < now : false
       })
 
       // محاسبه‌ی VIP
       const tags = [...(customer.tags || [])]
-      if (totalPurchases > 100000 && !tags.includes("vip")) {
-        tags.push("vip")
+      if (totalPurchases > 100000 && !tags.includes('vip')) {
+        tags.push('vip')
       }
 
       // ✅ بازگشت با تمام فیلدهای موردنیاز
       return {
         ...customer,
         id: customer.id,
-        fullName: customer.fullName || (customer as any).full_name || "",
-        name: customer.fullName || (customer as any).full_name || "",
-        phone: customer.phone || "",
+        fullName: customer.fullName || (customer as any).full_name || '',
+        name: customer.fullName || (customer as any).full_name || '',
+        phone: customer.phone || '',
         totalDebt,
         openCount: openInvoices.length,
         totalPurchases,
-        lastInvoiceDate: lastInvoice?.date || null,  // ✅ حالا در type وجود دارد
+        lastInvoiceDate: lastInvoice?.date || null, // ✅ حالا در type وجود دارد
         isOverdue,
         tags,
         invoices: openInvoices,
@@ -215,38 +214,28 @@ export function useCustomersData(
     // ============================================================
 
     const totalCustomers = enrichedCustomers.length
-    const totalDebt = enrichedCustomers.reduce(
-      (sum, c) => sum + (c.totalDebt || 0),
-      0
-    )
+    const totalDebt = enrichedCustomers.reduce((sum, c) => sum + (c.totalDebt || 0), 0)
     const debtorCount = enrichedCustomers.filter((c) => (c.totalDebt || 0) > 0).length
-    const openDealsCount = enrichedCustomers.reduce(
-      (sum, c) => sum + (c.openCount || 0),
-      0
-    )
+    const openDealsCount = enrichedCustomers.reduce((sum, c) => sum + (c.openCount || 0), 0)
     const overdueCount = enrichedCustomers.filter((c) => c.isOverdue).length
-    const vipCount = enrichedCustomers.filter((c) => c.tags?.includes("vip")).length
+    const vipCount = enrichedCustomers.filter((c) => c.tags?.includes('vip')).length
 
     // فروش امروز
     const today = new Date().toISOString().slice(0, 10)
     const todaySales = invoices
       .filter((inv) => {
-        const invDate = (inv.date || "").slice(0, 10)
-        return invDate === today && inv.status !== "cancelled"
+        const invDate = (inv.date || '').slice(0, 10)
+        return invDate === today && inv.status !== 'cancelled'
       })
       .reduce((sum, inv) => sum + (inv.total || 0), 0)
 
     // کل فروش (مجموع خرید همه‌ی مشتریان)
-    const totalSales = enrichedCustomers.reduce(
-      (sum, c) => sum + (c.totalPurchases || 0),
-      0
-    )
+    const totalSales = enrichedCustomers.reduce((sum, c) => sum + (c.totalPurchases || 0), 0)
 
     // پرخریدترین مشتری
     const topCustomer = enrichedCustomers.reduce<ExtendedCustomer | null>(
-      (top, c) =>
-        (c.totalPurchases || 0) > (top?.totalPurchases || 0) ? c : top,
-      null
+      (top, c) => ((c.totalPurchases || 0) > (top?.totalPurchases || 0) ? c : top),
+      null,
     )
     const topCustomerName =
       topCustomer && (topCustomer.totalPurchases || 0) > 0
@@ -258,7 +247,7 @@ export function useCustomersData(
     // 📈 درصد تغییر (ماهانه / روزانه)
     // ============================================================
     const now = new Date()
-    const activeInvoices = invoices.filter((inv) => inv.status !== "cancelled")
+    const activeInvoices = invoices.filter((inv) => inv.status !== 'cancelled')
     const invoiceDate = (inv: ExtendedInvoice) => inv.date || inv.created_at
 
     const salesByMonth = (offset: number) =>
@@ -268,20 +257,15 @@ export function useCustomersData(
 
     const debtByMonth = (offset: number) =>
       activeInvoices
-        .filter(
-          (inv) =>
-            inv.status !== "paid" && monthOffset(invoiceDate(inv), now) === offset
-        )
+        .filter((inv) => inv.status !== 'paid' && monthOffset(invoiceDate(inv), now) === offset)
         .reduce(
           (sum, inv) =>
             sum + Math.max(0, (inv.total || 0) - (inv.paidAmount || inv.paid_amount || 0)),
-          0
+          0,
         )
 
     const customersByMonth = (offset: number) =>
-      customers.filter(
-        (c) => monthOffset(c.createdAt || c.created_at, now) === offset
-      ).length
+      customers.filter((c) => monthOffset(c.createdAt || c.created_at, now) === offset).length
 
     const topCustomerByMonth = (offset: number) =>
       topCustomer
@@ -289,7 +273,7 @@ export function useCustomersData(
             .filter(
               (inv) =>
                 (inv.customerId === topCustomer.id || inv.customer_id === topCustomer.id) &&
-                monthOffset(invoiceDate(inv), now) === offset
+                monthOffset(invoiceDate(inv), now) === offset,
             )
             .reduce((sum, inv) => sum + (inv.total || 0), 0)
         : 0

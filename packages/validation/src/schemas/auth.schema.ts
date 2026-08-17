@@ -75,8 +75,38 @@ export type PinCodeInput = z.infer<typeof pinCodeSchema>
 
 export const updateProfileSchema = z.object({
   fullName: nonEmptyStringSchema.optional(),
-  businessName: z.string().max(200).optional(),
-  avatarUrl: z.string().url().optional().or(z.literal('')),
+  /**
+   * `null` means "clear it", and is accepted rather than rejected.
+   *
+   * A PATCH form that has never had a business name sends `null` for the field,
+   * and `z.string()` refused it — so every profile edit by a user without a
+   * business name came back 400 "ذخیره نشد". Normalized to an empty string so
+   * the write path stays a single type.
+   */
+  businessName: z
+    .union([z.string().max(200), z.null()])
+    .transform((value) => value ?? '')
+    .optional(),
+  /**
+   * Optional must wrap the union, not sit inside it.
+   *
+   * `z.string().url().optional().or(z.literal(''))` makes the outermost type a
+   * ZodUnion, so `zodToJsonSchema` emitted `avatarUrl` as REQUIRED and Fastify
+   * rejected every profile edit that did not send an avatar with a 400 —
+   * which was every edit made from the settings form.
+   */
+  avatarUrl: z
+    .union([z.string().url(), z.literal(''), z.null()])
+    .transform((value) => value ?? '')
+    .optional(),
+
+  // ─── Onboarding, stored on the account rather than the browser ───
+  // Clearing site data used to replay the wizard to someone who had already
+  // finished it. See docs/onboarding-server-state-migration.sql.
+  onboardingCompleted: z.boolean().optional(),
+  businessTypes: z.array(z.string().max(64)).max(20).optional(),
+  storeSize: z.enum(['small', 'medium', 'large']).optional(),
+  businessNote: z.string().max(2000).optional(),
 })
 
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>
