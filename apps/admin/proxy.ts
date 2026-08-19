@@ -5,7 +5,6 @@ import { createAdminSupabaseServer } from './lib/supabase-server'
 const PUBLIC_FILE = /\.(.*)$/
 const LOCALES = ['fa', 'en'] as const
 const DEFAULT_LOCALE = 'fa'
-
 function getLocaleSegment(pathname: string): string | null {
   const firstSegment = pathname.split('/').filter(Boolean)[0]
   if (LOCALES.includes(firstSegment as (typeof LOCALES)[number])) {
@@ -13,7 +12,6 @@ function getLocaleSegment(pathname: string): string | null {
   }
   return null
 }
-
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl
 
