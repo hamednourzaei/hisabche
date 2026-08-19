@@ -111,4 +111,4 @@ export {
 } from './business-types'
 
 // ---------- Onboarding: currencies and metals ----------
-export { CURRENCIES, primaryCurrencies, type CurrencyOption } from './currencies'
+export { BILLING_CURRENCY, CURRENCIES, primaryCurrencies, type CurrencyOption } from './currencies'

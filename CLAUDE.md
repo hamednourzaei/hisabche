@@ -92,6 +92,28 @@ Per-app builds: `cd apps/web && npx next build`,
 After deleting a web route, `rm -rf apps/web/.next/types` or type-check fails on
 a stale generated file.
 
+## Running it locally
+
+`pnpm dev` at the root does **not** start the backend — `backend/` is outside
+the turbo pipeline. Run `cd backend && pnpm dev`; it listens on **10000**.
+Dev ports: web **3039**, admin **3040**, backend **10000**.
+
+- `NEXT_PUBLIC_API_URL` must already include `/api`
+  (`http://localhost:10000/api`). `packages/api` falls back to
+  `https://api.hisabche.com/api` and does not append the path — see
+  `packages/api/src/__tests__/normalize-base-url.test.ts`. Omitting it sends
+  login to `/auth/login`, a protected route that answers "Missing authorization
+  header", which reads like bad credentials but is bad config.
+- New dev origins must be added to the CORS allowlist in `backend/src/index.ts`,
+  or every browser call fails preflight.
+- Git Bash on Windows rewrites URL paths: `export MSYS_NO_PATHCONV=1` before
+  curling `/fa/about`.
+- `npx next build` has been OOM-killed (exit 137). Retry with
+  `NODE_OPTIONS=--max-old-space-size=4096`.
+
+**Never run `taskkill /F /IM node.exe /T`.** It kills the user's backend, web
+and admin servers along with yours. Kill the specific PID.
+
 ## Testing
 
 Add a regression test for every real bug you fix. Never weaken an assertion,

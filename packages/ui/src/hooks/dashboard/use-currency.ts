@@ -1,8 +1,11 @@
-// packages/ui/src/hooks/use-currency.ts
+// packages/ui/src/hooks/dashboard/use-currency.ts
 'use client'
 
 import { useMemo } from 'react'
 import { useTranslations } from 'next-intl'
+import { useCurrencyStore } from '@hisabche/store'
+
+import { useIntlLocale } from '../use-intl-locale'
 
 /**
  * Aligned with the canonical `currencyCodeSchema`
@@ -12,23 +15,37 @@ import { useTranslations } from 'next-intl'
  * which the product does not support and the backend schema rejects, and it
  * omitted PKR, which the product DOES support. A PKR workspace therefore fell
  * through `symbols[code] || code` and rendered the bare text "PKR".
- *
- * Formatting options are deliberately unchanged (min 0 / max 2, `fa-AF`,
- * Intl `style: 'currency'`) so existing web output is untouched.
  */
 export type CurrencyCode = 'AFN' | 'USD' | 'PKR' | 'IRR'
 
 interface UseCurrencyOptions {
+  /** Override the user's currency — only for a figure that carries its own. */
   code?: CurrencyCode
+  /** Override the reader's locale. Almost never correct. */
   locale?: string
   minimumFractionDigits?: number
   maximumFractionDigits?: number
 }
 
+const SYMBOLS: Record<CurrencyCode, string> = {
+  AFN: '؋',
+  USD: '$',
+  PKR: '₨',
+  IRR: '﷼',
+}
+
 export function useCurrency(options: UseCurrencyOptions = {}) {
+  // `code` defaulted to the literal 'AFN' and `locale` to the literal 'fa-AF'.
+  // Every dashboard KPI therefore rendered in افغانی with Persian digits no
+  // matter what the shopkeeper chose at onboarding or which language they read
+  // the interface in. Both now come from the user; the options remain only as
+  // explicit per-call overrides.
+  const selected = useCurrencyStore((s) => s.primaryCurrency)
+  const readerLocale = useIntlLocale()
+
   const {
-    code = 'AFN',
-    locale = 'fa-AF',
+    code = selected,
+    locale = readerLocale,
     minimumFractionDigits = 0,
     maximumFractionDigits = 2,
   } = options
@@ -59,15 +76,7 @@ export function useCurrency(options: UseCurrencyOptions = {}) {
   }, [code, locale, minimumFractionDigits, maximumFractionDigits, t])
 
   const getSymbol = useMemo(() => {
-    return (): string => {
-      const symbols: Record<CurrencyCode, string> = {
-        AFN: '؋',
-        USD: '$',
-        PKR: '₨',
-        IRR: '﷼',
-      }
-      return symbols[code] || code
-    }
+    return (): string => SYMBOLS[code] || code
   }, [code])
 
   return {

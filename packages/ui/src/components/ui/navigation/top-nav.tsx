@@ -1,28 +1,52 @@
 'use client'
 
 import { useEffect, useRef, useState, useCallback, memo } from 'react'
-import { useTranslations } from 'next-intl'
-import { usePathname } from 'next/navigation'
+import { useTranslations, useLocale } from 'next-intl'
+import Link from 'next/link'
 import { useNavigation } from '../../../hooks/menu/use-navigation-state'
 import { useAuthStore } from '@hisabche/store'
 import { cn } from '../../../lib/utils'
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   TopNav v4 — Memoized · Performance Optimized
-   ✅ memo · useCallback · useMemo
+   TopNav v5 — Memoized · Performance Optimized · CRAWLABLE
+
+   v4 emitted zero <a> elements: the logo, every nav item and the CTA were all
+   `<button onClick>`. The site header — normally the single strongest internal
+   linking surface on a site — therefore contributed nothing to Google's link
+   graph, and the header was unusable without JavaScript.
+
+   v5 emits real anchors while keeping the identical one-page-scroll UX:
+   - Section items are `<a href="#id">`. The click handler still does the smooth
+     scroll and sets the active-pill state; it only calls preventDefault so the
+     URL fragment is not pushed mid-scroll. Middle-click / ctrl-click / "copy
+     link address" and crawlers all now work.
+   - Logo and CTA are `next/link` route links, so they are prefetch-aware
+     navigations rather than imperative router.push calls.
+
+   No new state, no extra client component, no added dependency — the component
+   was already 'use client' for the scroll narrative.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface TopNavProps {
   variant?: 'landing' | 'dashboard'
-  onNavigateLogin?: () => void
+  /**
+   * Optional click interceptor for the CTA. The CTA is now a real
+   * locale-prefixed `<Link href="…/signup">`, so navigation no longer depends
+   * on a handler; this is for analytics or for a host that needs to override.
+   * The removed `onNavigateLogin` prop pointed the "Start free" CTA at /login.
+   */
   onNavigateCta?: () => void
   onLogout?: () => void
   businessName?: string
-}
-
-function getLocaleFromPathname(pathname: string): string {
-  const match = pathname.match(/^\/(fa-IR|fa-AF|en)/)
-  return match?.[1] ?? 'fa-IR'
+  /**
+   * Locale segment to prefix route links with, e.g. "fa". Same contract as
+   * SiteFooter's prop of the same name: on web, proxy.ts runs with
+   * `localePrefix: 'always'`, so a bare "/signup" is a 307 whose target is
+   * picked by Accept-Language rather than by the page being read. Desktop
+   * mounts this nav through its own router with no locale prefix, so this stays
+   * optional. When omitted it falls back to next-intl's `useLocale()`.
+   */
+  localePrefix?: string
 }
 
 // ─── NavItem Component ─────────────────────────────────────────────────────
@@ -38,15 +62,32 @@ const NavItem = memo(function NavItem({
   isActive: boolean
   onClick: (id: string) => void
 }) {
-  const handleClick = useCallback(() => onClick(id), [id, onClick])
+  const handleClick = useCallback(
+    (event: React.MouseEvent<HTMLAnchorElement>) => {
+      // Let the browser handle modified clicks (new tab, new window, download)
+      // exactly as it would for any other link.
+      if (
+        event.defaultPrevented ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey
+      )
+        return
+      event.preventDefault()
+      onClick(id)
+    },
+    [id, onClick],
+  )
 
   return (
     <li className="shrink-0">
-      <button
-        type="button"
+      <a
+        href={`#${id}`}
         data-section-id={id}
+        aria-current={isActive ? 'true' : undefined}
         className={cn(
-          'relative z-10 px-2 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-colors',
+          'relative z-10 block px-2 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-colors',
           isActive
             ? 'text-[hsl(var(--fg-primary))] font-semibold'
             : 'text-[hsl(var(--fg-primary)/0.55)] hover:text-[hsl(var(--fg-primary)/0.85)]',
@@ -54,7 +95,7 @@ const NavItem = memo(function NavItem({
         onClick={handleClick}
       >
         {label}
-      </button>
+      </a>
     </li>
   )
 })
@@ -64,24 +105,32 @@ NavItem.displayName = 'NavItem'
 
 export const TopNav = memo(function TopNav({
   variant = 'landing',
-  onNavigateLogin,
   onNavigateCta,
   onLogout,
   businessName,
+  localePrefix,
 }: TopNavProps) {
   const tOriginal = useTranslations()
   const t = (key: string, fallback?: string): string => {
     const v = tOriginal(key as Parameters<typeof tOriginal>[0])
     return v && v !== key ? v : (fallback ?? key)
   }
-  const pathname = usePathname()
   const { sections, setSection, activeSection, scrollProgress, narrativeState } = useNavigation()
   const user = useAuthStore((s) => s.user)
   const navListRef = useRef<HTMLUListElement>(null)
   const [indicatorStyle, setIndicatorStyle] = useState({ width: 0, offset: 0 })
 
-  const locale = getLocaleFromPathname(pathname)
-  const isRTL = locale === 'fa-IR' || locale === 'fa-AF'
+  // Was `getLocaleFromPathname`, matching /^\/(fa-IR|fa-AF|en)/ — segments this
+  // app has never served. The real route segments are fa | af | en (see
+  // apps/web/app/[lang]/i18n-config.ts), so every Persian and Dari page fell
+  // through to the hardcoded "fa-IR" default. next-intl already knows the
+  // active locale, and desktop's shim provides the same hook.
+  const activeLocale = useLocale()
+  const locale = localePrefix ?? activeLocale
+  const isRTL = locale !== 'en'
+  // Desktop mounts this component behind a router with no locale segment; web
+  // always has one. An empty prefix must not produce a "//signup" href.
+  const routePrefix = locale ? `/${locale}` : ''
 
   const displayName = businessName || user?.businessName || user?.fullName || t('app.name')
 
@@ -115,12 +164,6 @@ export const TopNav = memo(function TopNav({
 
   const handleSetSection = useCallback((id: string) => setSection(id), [setSection])
 
-  const firstSectionId = sections[0]?.id || ''
-
-  const handleLogoClick = useCallback(() => {
-    handleSetSection(firstSectionId)
-  }, [handleSetSection, firstSectionId])
-
   const ctaText = t('landing.cta', locale === 'en' ? 'Start Free' : 'شروع رایگان')
   const signOutText = t('auth.signOut', locale === 'en' ? 'Sign Out' : 'خروج')
 
@@ -147,15 +190,18 @@ export const TopNav = memo(function TopNav({
           'max-lg:h-14',
         )}
       >
-        {/* Logo */}
-        <button
-          type="button"
+        {/* Logo — a real link to the locale home page. Google treats the site
+            logo as the canonical "home" internal link; as a <button> it was
+            invisible to crawlers and to keyboard/no-JS users alike. */}
+        <Link
+          href={routePrefix || '/'}
           className="hidden lg:flex items-center gap-1 text-[hsl(var(--fg-primary))] font-bold text-lg shrink-0"
-          onClick={handleLogoClick}
         >
           <span>{displayName}</span>
-          <span className="text-[hsl(var(--color-primary))]">.</span>
-        </button>
+          <span className="text-[hsl(var(--color-primary))]" aria-hidden="true">
+            .
+          </span>
+        </Link>
 
         {/* Navigation menu */}
         <nav className="flex-1 flex justify-center px-2 overflow-hidden">
@@ -184,16 +230,24 @@ export const TopNav = memo(function TopNav({
           </ul>
         </nav>
 
-        {/* CTA button — Desktop (Landing) */}
+        {/* CTA — Desktop (Landing).
+            A real link to the locale-prefixed signup route. The label is
+            "Start free", so it belongs on /signup, which is where every other
+            CTA on the landing page already points; the old handler chain fell
+            back to `onNavigateLogin` (/login) whenever `onNavigateCta` was not
+            supplied, which it never was. `onNavigateCta` is still honoured for
+            callers that need to intercept (analytics, desktop). */}
         {variant === 'landing' && (
-          <button
-            type="button"
+          <Link
+            href={`${routePrefix}/signup`}
+            // Spread rather than pass `undefined`: `exactOptionalPropertyTypes`
+            // makes `onClick={undefined}` a type error on LinkProps.
+            {...(onNavigateCta ? { onClick: onNavigateCta } : {})}
             className="hidden lg:inline-flex items-center gap-1 rounded-full px-5 py-2 text-sm font-bold text-white bg-[var(--gradient-brand)] hover:brightness-110 transition-all shrink-0"
-            onClick={onNavigateCta ?? onNavigateLogin}
           >
             <span className="cta-text">{ctaText}</span>
-            <span>{isRTL ? '←' : '→'}</span>
-          </button>
+            <span aria-hidden="true">{isRTL ? '←' : '→'}</span>
+          </Link>
         )}
 
         {/* Logout button — Desktop (Dashboard) */}

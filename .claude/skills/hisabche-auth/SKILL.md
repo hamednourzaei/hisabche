@@ -76,8 +76,31 @@ for a long time.
 `initAuth` refreshes it from `/auth/me` on hydration — without that, a cached
 user never gains fields added later.
 
-Admin panel: server-side checks use `getUser()`, never `getSession()`.
-`getSession()` decodes the cookie **without verifying the JWT signature**.
+## apps/admin is Supabase-session based, end to end
+
+Two auth systems exist in this repo and they do not interoperate:
+
+| App                  | Credential                     | Carried as                    |
+| -------------------- | ------------------------------ | ----------------------------- |
+| web, desktop, mobile | backend `POST /api/auth/login` | JWT in the zustand auth store |
+| admin                | Supabase `signInWithPassword`  | Supabase session **cookie**   |
+
+`apps/admin/proxy.ts`, `lib/admin-auth.ts` and `lib/supabase-server.ts` all
+authorize from the Supabase cookie. The admin login page once rendered the
+shared `AuthContainer`, which authenticates against the backend — login
+"succeeded", set no cookie, and the proxy bounced the user back to `/login`
+forever with no error to explain it. The correct component,
+`apps/admin/app/[lang]/login/login-client.tsx`, already existed and was simply
+never imported.
+
+**Never mount a backend-JWT auth component in `apps/admin`.** A redirect loop
+straight after a successful login is the signature of this mistake.
+
+Server-side checks use `getUser()`, never `getSession()`. `getSession()` decodes
+the cookie **without verifying the JWT signature**.
+
+`ADMIN_ALLOWED_EMAILS` is read at module scope in `apps/admin/lib/admin-auth.ts`
+— editing `.env` does nothing until the server restarts.
 
 ## Secrets
 
@@ -89,6 +112,7 @@ definition — put nothing sensitive there.
 
 - Session-creating auth calls on the shared client.
 - Trusting a workspace role for platform-admin access.
+- A backend-JWT auth component rendered in `apps/admin`.
 - Trusting a body-supplied `userId` or `workspaceId`.
 - `getSession()` for a server-side authorization decision.
 - Returning 500 for what is really 403/404/409.

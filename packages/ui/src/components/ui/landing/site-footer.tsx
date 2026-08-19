@@ -91,10 +91,29 @@ const SOCIALS = [
 ]
 
 export default function SiteFooter({ t, localePrefix }: SiteFooterProps) {
-  // In-page anchors (#features, …) must stay bare — only route links get the
-  // locale segment.
-  const withLocale = (href: string) =>
-    href.startsWith('#') || !localePrefix ? href : `/${localePrefix}${href}`
+  /**
+   * `#features`, `#pricing`, `#security` and `#faq` are sections of the LANDING
+   * page, but this footer renders on all 45 public pages. A bare "#features" is
+   * therefore a dead anchor on /about, /contact and every /legal/* page — the
+   * element it names does not exist there.
+   *
+   * (It previously "worked" only by accident: the root layout carried
+   * `<base href="/">`, which rebased every fragment onto the site root. That
+   * turned each of these into a link to "/#features" — the unprefixed root,
+   * which proxy.ts 307-redirects — so on the landing page itself the link
+   * navigated away instead of scrolling. The <base> tag is gone; these are now
+   * written out explicitly.)
+   *
+   * Emitting the full "/{locale}#features" fixes both cases at once: from a
+   * legal page it is a real link to the landing section, and on the landing
+   * page the path already matches, so the browser scrolls in-page without a
+   * navigation.
+   */
+  const withLocale = (href: string) => {
+    const prefix = localePrefix ? `/${localePrefix}` : ''
+    if (href.startsWith('#')) return `${prefix || '/'}${href}`
+    return `${prefix}${href}`
+  }
 
   const year = new Date().getFullYear()
 

@@ -11,6 +11,22 @@
 // XAG silver), so nothing here is invented.
 // ============================================
 
+/**
+ * The currency Hisabche's OWN subscription plans are priced in.
+ *
+ * This is a billing fact, not a user preference: it is the currency the
+ * business quotes and collects in, and it is the same for every visitor,
+ * including anonymous ones who have not chosen anything. It is declared here
+ * so the landing pricing table and the schema.org `Offer` in
+ * `apps/web/app/[lang]/page.tsx` cannot drift apart — they already had, with
+ * the page rendering افغانی while the structured data said USD.
+ *
+ * Changing it means changing what the business charges. Do NOT convert plan
+ * prices into a visitor's currency: no exchange-rate source exists, and a
+ * converted figure would be a price the business never set.
+ */
+export const BILLING_CURRENCY = 'AFN'
+
 export interface CurrencyOption {
   code: string
   labelKey: string

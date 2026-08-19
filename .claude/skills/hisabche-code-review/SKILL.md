@@ -42,6 +42,9 @@ books; that is the finding that matters.
 - Design tokens, or raw hex?
 - New web route without the matching desktop route?
 - `@/` import inside `packages/ui`?
+- `ssr: false` or a `lazy()` boundary that the whole app tree passes through?
+- A URL, canonical or link built without the locale prefix, or `hreflang="af"`?
+- JSON-LD asserting content — counts, ratings — the page does not render?
 
 **Types**
 

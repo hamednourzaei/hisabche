@@ -20,6 +20,8 @@ import {
   Receipt,
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
+import { useCurrency } from '../../hooks/use-currency'
+import { useIntlLocale } from '../../hooks/use-intl-locale'
 import { useNotifications, useUnreadCount, useMarkAsRead, useMarkAllAsRead } from '@hisabche/api'
 import type { Notification } from '@hisabche/api'
 
@@ -138,15 +140,18 @@ function resolveEntityUrl(n: Notification): string {
   }
 }
 
-function formatCurrency(amount: number, currency: string): string {
+// The locale was pinned to 'fa-AF' and a missing currency fell back to the
+// literal 'AFN'. Digits now follow the reader's language and the fallback is
+// the currency the user actually chose — see money-display.ts.
+function formatCurrency(amount: number, currency: string, locale: string): string {
   try {
-    return new Intl.NumberFormat('fa-AF', {
+    return new Intl.NumberFormat(locale, {
       style: 'currency',
-      currency: currency || 'AFN',
+      currency,
       maximumFractionDigits: 0,
     }).format(amount)
   } catch {
-    return `${amount} ${currency || 'AFN'}`
+    return `${amount} ${currency}`
   }
 }
 
@@ -296,6 +301,8 @@ const GroupCard = memo(function GroupCard({
   onItemClick: (n: Notification) => void
 }) {
   const t = useTranslations()
+  const locale = useIntlLocale()
+  const { currency: userCurrency } = useCurrency()
   const statusColor = group.status ? statusColors[group.status] || '' : ''
   const statusLabel = group.status ? statusLabels[group.status] || group.status : ''
   const config = entityConfig[group.entityType] || entityConfig.invoice
@@ -340,7 +347,7 @@ const GroupCard = memo(function GroupCard({
               {group.total !== undefined && (
                 <span className="text-[10px] md:text-xs font-semibold text-[hsl(var(--fg-primary))] flex items-center gap-1">
                   <DollarSign className="w-2.5 h-2.5 md:w-3 md:h-3" aria-hidden="true" />
-                  {formatCurrency(group.total, group.currency || 'AFN')}
+                  {formatCurrency(group.total, group.currency || userCurrency, locale)}
                 </span>
               )}
             </div>

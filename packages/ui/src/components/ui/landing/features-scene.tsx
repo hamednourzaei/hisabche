@@ -1,6 +1,7 @@
 // packages/ui/src/components/ui/landing/features-scene.tsx
 'use client'
 
+import NextLink from 'next/link'
 import { useSceneObserver } from './use-scene-observer'
 import { cn } from '../../../lib/utils'
 import type { LucideIcon } from 'lucide-react'
@@ -25,6 +26,8 @@ import {
 
 export interface FeaturesSceneProps {
   t: (key: string, fallback?: string) => string
+  /** Locale segment for route links — same contract as SiteFooter/TopNav. */
+  localePrefix?: string
 }
 
 interface FeatureItem {
@@ -33,6 +36,18 @@ interface FeatureItem {
   title: string
   description: string
   status?: 'active' | 'active' | undefined
+  /**
+   * Route beneath the locale segment for the feature card that has a dedicated
+   * indexable page. Only two features have one — see
+   * apps/web/app/[lang]/features/[slug]/page.tsx. This is the landing page's
+   * only in-content link to them; before it, the footer was their single
+   * inbound link on the whole site, which is exactly the "orphan-ish" shape
+   * that leaves a page with no topical context around its link.
+   */
+  pageHref?: string
+  /** Message key for the link label. Reuses the footer's wording. */
+  pageLabelKey?: string
+  pageLabelFallback?: string
 }
 
 const FEATURES: FeatureItem[] = [
@@ -42,6 +57,9 @@ const FEATURES: FeatureItem[] = [
     title: 'مدیریت مشتریان',
     description: 'اطلاعات مشتری، سوابق خرید و بدهی‌ها',
     status: 'active',
+    pageHref: '/features/customer-debt',
+    pageLabelKey: 'landing.footerLink.customerDebt',
+    pageLabelFallback: 'دفتر نسیه و بدهی مشتریان',
   },
   {
     icon: FileText,
@@ -84,6 +102,9 @@ const FEATURES: FeatureItem[] = [
     title: 'آفلاین واقعی',
     description: 'کار بدون اینترنت، همگام‌سازی خودکار',
     status: 'active',
+    pageHref: '/features/offline',
+    pageLabelKey: 'landing.footerLink.offline',
+    pageLabelFallback: 'حسابداری آفلاین',
   },
   {
     icon: Sparkles,
@@ -122,7 +143,8 @@ const FEATURES: FeatureItem[] = [
   },
 ]
 
-export default function FeaturesScene({ t }: FeaturesSceneProps) {
+export default function FeaturesScene({ t, localePrefix }: FeaturesSceneProps) {
+  const routePrefix = localePrefix ? `/${localePrefix}` : ''
   const { ref, state } = useSceneObserver<HTMLDivElement>({
     threshold: 0.2,
     narrativeState: 'confidence',
@@ -193,6 +215,22 @@ export default function FeaturesScene({ t }: FeaturesSceneProps) {
                 <p className="text-[10px] sm:text-xs lg:text-sm text-[hsl(var(--fg-secondary))] leading-relaxed line-clamp-2">
                   {t(`landing.feature.${feature.key}Desc`, feature.description)}
                 </p>
+
+                {/* Contextual, in-content link to the feature's own page.
+                    Descriptive anchor text (the page's real subject), not
+                    "learn more" — the anchor is the strongest relevance signal
+                    a link carries, and a generic one wastes it. */}
+                {feature.pageHref && feature.pageLabelKey && (
+                  <NextLink
+                    href={`${routePrefix}${feature.pageHref}`}
+                    className={cn(
+                      'mt-2 inline-flex text-[10px] sm:text-xs font-medium',
+                      'text-[hsl(var(--color-primary))] hover:underline',
+                    )}
+                  >
+                    {t(feature.pageLabelKey, feature.pageLabelFallback)}
+                  </NextLink>
+                )}
               </div>
             )
           })}

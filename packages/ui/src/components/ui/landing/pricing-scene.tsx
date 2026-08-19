@@ -5,6 +5,8 @@ import React, { useEffect, useRef, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { cn } from '../../../lib/utils'
+import { useIntlLocale } from '../../../hooks/use-intl-locale'
+import { formatNumber } from '@hisabche/formatting'
 import { Check, Minus, ChevronDown } from 'lucide-react'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -168,6 +170,13 @@ function Cell({ value }: { value: 'check' | 'dash' | string }) {
 export default function PricingScene(props: PricingSceneProps) {
   const router = useRouter()
   const t = useTranslations()
+  // Plan prices used to render through `toLocaleString('fa-AF')`, so an
+  // English visitor was shown Persian digits. The digits follow the reader's
+  // language; the CURRENCY does not — see BILLING_CURRENCY. Plan prices are
+  // quoted in one currency the business sets and are deliberately never
+  // converted: there is no exchange-rate source, and a converted number would
+  // be a price nobody agreed to.
+  const locale = useIntlLocale()
 
   const st = (key: string, fallback?: string): string => {
     if (typeof t === 'function') {
@@ -300,7 +309,7 @@ export default function PricingScene(props: PricingSceneProps) {
                     ) : (
                       <>
                         <span className="text-2xl font-extrabold tabular-nums">
-                          {plan.price.toLocaleString('fa-AF')}
+                          {formatNumber(plan.price, locale)}
                         </span>
                         <span className="text-[10px] text-[hsl(var(--fg-tertiary))] mb-0.5">
                           {st('landing.pricing.perMonth', 'افغانی / ماه')}
@@ -434,7 +443,7 @@ export default function PricingScene(props: PricingSceneProps) {
                       ) : (
                         <div className="flex items-baseline justify-center gap-1">
                           <span className="text-xl sm:text-2xl font-extrabold text-[hsl(var(--fg-primary))] tabular-nums">
-                            {plan.price.toLocaleString('fa-AF')}
+                            {formatNumber(plan.price, locale)}
                           </span>
                           <span className="text-[10px] sm:text-xs text-[hsl(var(--fg-tertiary))]">
                             {st('landing.pricing.perMonth', 'افغانی / ماه')}

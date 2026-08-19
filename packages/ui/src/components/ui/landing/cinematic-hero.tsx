@@ -62,9 +62,15 @@ export default function CinematicHero({ t, onNavigateLogin }: CinematicHeroProps
                 'opacity-0 animate-[fade-in-up_0.6s_ease-out_0.1s_both]',
               )}
             >
-              {t('landing.headline', 'هر روز با خیال راحت')}{' '}
+              {/* Fallbacks mirror the fa catalogue. The old pair — «هر روز با
+                  خیال راحت» / «دکانت را ببند» — named no product category at
+                  all, so the single most important on-page element gave a
+                  crawler nothing, and «دکان» is Afghan/archaic in fa (Iranian
+                  users say مغازه / فروشگاه). af keeps دوکان; that is correct
+                  there and must not be normalised away. */}
+              {t('landing.headline', 'نرم‌افزار حسابداری ساده برای')}{' '}
               <span className="text-[hsl(var(--color-primary))]">
-                {t('landing.headlineHighlight', 'دکانت را ببند')}
+                {t('landing.headlineHighlight', 'مغازه و فروشگاه شما')}
               </span>
             </h1>
 
@@ -79,7 +85,7 @@ export default function CinematicHero({ t, onNavigateLogin }: CinematicHeroProps
             >
               {t(
                 'landing.subtitle',
-                'فروش، نسیه، موجودی و سود — خودکار حساب می‌شود. مثل یک دستیار نامرئی که هیچ‌وقت اشتباه نمی‌کند.',
+                'فروش، نسیه، موجودی و سود — خودکار حساب می‌شود. ساخته‌شده برای مغازه‌داران ایران و افغانستان.',
               )}
             </p>
 

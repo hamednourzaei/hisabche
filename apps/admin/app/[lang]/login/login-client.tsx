@@ -4,14 +4,22 @@ import { useEffect, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Button, Card, CardContent, CardHeader, CardTitle, Input } from '@/components/ui'
 import { createAdminSupabaseClient } from '@/lib/supabase-client'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 
 export function LoginClient() {
   const router = useRouter()
   const pathname = usePathname()
+  const searchParams = useSearchParams()
   const t = useTranslations()
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
+
+  // proxy.ts redirects here with `?error=admin_required` when the credentials
+  // were valid but the account is not in ADMIN_ALLOWED_EMAILS. Without this the
+  // rejection is a silent bounce back to the login form — indistinguishable
+  // from a wrong password, and the single most confusing failure mode of this
+  // panel.
+  const isNotAdmin = searchParams.get('error') === 'admin_required'
 
   const handleSignIn = async (email: string, password: string) => {
     setIsLoading(true)
@@ -49,6 +57,15 @@ export function LoginClient() {
           <CardTitle className="text-center">{t('adminPanel.access')}</CardTitle>
         </CardHeader>
         <CardContent>
+          {isNotAdmin && !error && (
+            <div
+              className="mb-4 text-sm text-[hsl(var(--color-destructive))] bg-[hsl(var(--color-destructive)/0.08)] border border-[hsl(var(--color-destructive)/0.2)] p-3 rounded-xl flex items-start gap-2"
+              role="alert"
+            >
+              <span className="shrink-0 mt-px opacity-60">⚠</span>
+              <span>{t('adminPanel.notAllowed')}</span>
+            </div>
+          )}
           {error && (
             <div
               className="mb-4 text-sm text-[hsl(var(--color-destructive))] bg-[hsl(var(--color-destructive)/0.08)] border border-[hsl(var(--color-destructive)/0.2)] p-3 rounded-xl flex items-start gap-2"

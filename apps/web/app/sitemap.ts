@@ -36,7 +36,9 @@ const routes = [
 // modified "now" on every crawl is noise, and Google discounts the signal
 // entirely. Bump this when the public pages' content actually changes — the
 // legal pages already display this same date via `landing.legalPage.lastUpdated`.
-const LAST_MODIFIED = '2026-07-28'
+// 2026-08-19: landing H1/subtitle rewritten, both /features/* pages rewritten,
+// /contact gained subheadings.
+const LAST_MODIFIED = '2026-08-19'
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const entries: MetadataRoute.Sitemap = []

@@ -69,9 +69,8 @@ export function LandingPage() {
   // برخلاف react-i18next نیازی به sync دستی (changeLanguage) یا حالت
   // "ready" برای منتظرماندن آن sync نیست.
   const locale = useLocale()
-  const navigateLogin = useCallback(() => router.push('/login'), [router])
   // دکمه‌های «شروع کن» کاربر تازه را به ثبت‌نام می‌برند، نه صفحه‌ی ورود.
-  const navigateSignup = useCallback(() => router.push('/signup'), [router])
+  const navigateSignup = useCallback(() => router.push(`/${locale}/signup`), [router, locale])
 
   const fallbacks = sectionFallbacks[locale] || sectionFallbacks.fa
 
@@ -122,7 +121,7 @@ export function LandingPage() {
   return (
     <NavigationProvider sections={NAVIGATION_SECTIONS}>
       <div className="min-h-screen bg-[hsl(var(--surface-base))]">
-        <TopNav variant="landing" onNavigateLogin={navigateLogin} />
+        <TopNav variant="landing" localePrefix={locale} />
 
         <main>
           <NavigationRegistry id="hero">
@@ -142,7 +141,7 @@ export function LandingPage() {
               nothing else references it, and it is cheap to re-add. */}
 
           <NavigationRegistry id="features">
-            <FeaturesScene t={safeT} />
+            <FeaturesScene t={safeT} localePrefix={locale} />
           </NavigationRegistry>
 
           <SecurityScene t={safeT} />

@@ -242,7 +242,18 @@ export default async function RootLayout({
       className={cn(vazirmatn.variable)}
     >
       <head>
-        <base href="/" />
+        {/* REMOVED: `<base href="/" />`.
+            It made every *relative* URL on every page resolve against the site
+            root instead of the current document. The site is full of fragment
+            links — the footer's #features/#pricing/#security/#faq on all 45
+            public pages, and FaqScene's in-page "learn more" anchors — and with
+            a <base> those resolve to `https://www.hisabche.com/#features`, i.e.
+            the UNPREFIXED root, which proxy.ts 307-redirects. So every one of
+            those links (a) navigated the reader away from the page instead of
+            scrolling, and (b) presented Google with an internal link to a
+            redirect rather than to a real section. Nothing in the app needs a
+            <base>: every other href here and in packages/ui is already a
+            root-absolute path. */}
         {/* NOTE: /favicon.svg and /favicon.ico are both 2.2MB PNG files with the
             wrong extension. The `type="image/svg+xml"` entry that used to sit
             here made browsers fetch 2.2MB and then reject it as malformed SVG.

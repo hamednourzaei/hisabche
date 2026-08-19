@@ -32,7 +32,7 @@ const SalesSummarySchema = z.object({
       period: z.string(),
       revenue: z.number(),
       count: z.number(),
-    })
+    }),
   ),
   topProducts: z.array(z.any()),
   topCustomers: z.array(z.any()),
@@ -48,7 +48,7 @@ const SalesSummarySchema = z.object({
       // (chartData: []) این فیلدها را ندارد.
       invoiceCount: z.number().optional(),
       customerCount: z.number().optional(),
-    })
+    }),
   ),
 })
 
@@ -69,6 +69,28 @@ const DashboardKPIsSchema = z.object({
   totalSales: z.number().default(0),
   customerDebt: z.number().default(0),
   warehouseValue: z.number().default(0),
+
+  // The KPIs above sum invoice totals without regard to the currency each
+  // invoice is denominated in. That is right for a single-currency workspace
+  // and wrong for a mixed one, where 100 USD + 100 AFN was reported as 200.
+  // These three carry the honest decomposition. Nothing is converted — the
+  // repo has no working exchange-rate source. `.default()` on each so a
+  // response still parses while the 60s KPI cache holds a pre-change object.
+  byCurrency: z
+    .record(
+      z.object({
+        totalSales: z.number(),
+        totalPurchases: z.number(),
+        customerDebt: z.number(),
+        supplierPayable: z.number(),
+        todaySales: z.number(),
+        monthlyRevenue: z.number(),
+        pendingPayments: z.number(),
+      }),
+    )
+    .default({}),
+  currencies: z.array(z.string()).default([]),
+  mixedCurrency: z.boolean().default(false),
 })
 
 const DateRangeSchema = z.object({
@@ -85,130 +107,151 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
   // ═══════════════════════════════════════════════════════════
 
   // ✅ FIX: کاهش TTL از 300 به 30 ثانیه
-  fastify.get('/api/analytics/dashboard', {
-    preHandler: [authenticate, cacheMiddleware({ ttl: 30, keyPrefix: 'dashboard' })],
-    schema: {
-      response: {
-        200: toJsonSchema(DashboardKPIsSchema),
+  fastify.get(
+    '/api/analytics/dashboard',
+    {
+      preHandler: [authenticate, cacheMiddleware({ ttl: 30, keyPrefix: 'dashboard' })],
+      schema: {
+        response: {
+          200: toJsonSchema(DashboardKPIsSchema),
+        },
       },
     },
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const kpis = await analyticsService.getDashboardKpis(request.userId)
-      const validated = DashboardKPIsSchema.parse(kpis)
-      return reply.send(validated)
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        fastify.log.error({ err: err.errors }, 'Dashboard validation failed')
-        return reply.code(500).send({ error: 'Data validation failed' })
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const kpis = await analyticsService.getDashboardKpis(request.userId)
+        const validated = DashboardKPIsSchema.parse(kpis)
+        return reply.send(validated)
+      } catch (err) {
+        if (err instanceof z.ZodError) {
+          fastify.log.error({ err: err.errors }, 'Dashboard validation failed')
+          return reply.code(500).send({ error: 'Data validation failed' })
+        }
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to fetch dashboard KPIs' })
       }
-      fastify.log.error(err)
-      return reply.code(500).send({ error: 'Failed to fetch dashboard KPIs' })
-    }
-  })
+    },
+  )
 
   // ═══════════════════════════════════════════════════════════
   // SALES ANALYTICS
   // ═══════════════════════════════════════════════════════════
 
   // ✅ FIX: کاهش TTL از 120 به 30 ثانیه
-  fastify.get('/api/analytics/sales', {
-    preHandler: [authenticate, cacheMiddleware({ ttl: 30, keyPrefix: 'sales' })],
-    schema: {
-      querystring: toJsonSchema(DateRangeSchema),
-      response: {
-        200: toJsonSchema(SalesSummarySchema),
+  fastify.get(
+    '/api/analytics/sales',
+    {
+      preHandler: [authenticate, cacheMiddleware({ ttl: 30, keyPrefix: 'sales' })],
+      schema: {
+        querystring: toJsonSchema(DateRangeSchema),
+        response: {
+          200: toJsonSchema(SalesSummarySchema),
+        },
       },
     },
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const query = request.query as {
-        days?: number
-        startDate?: string
-        endDate?: string
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const query = request.query as {
+          days?: number
+          startDate?: string
+          endDate?: string
+        }
+
+        const today = new Date()
+        const startDate =
+          query.startDate ||
+          new Date(today.getTime() - (query.days || 30) * 24 * 60 * 60 * 1000)
+            .toISOString()
+            .split('T')[0]
+        const endDate = query.endDate || today.toISOString().split('T')[0]
+
+        const dateRange: { startDate: string; endDate: string } = {
+          startDate: startDate as string,
+          endDate: endDate as string,
+        }
+
+        const summary = await analyticsService.getSalesSummary(request.userId, dateRange)
+        const validated = SalesSummarySchema.parse(summary)
+        return reply.send(validated)
+      } catch (err) {
+        if (err instanceof z.ZodError) {
+          fastify.log.error({ err: err.errors }, 'Sales validation failed')
+          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
+        }
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to fetch sales analytics' })
       }
-
-      const today = new Date()
-      const startDate = query.startDate || new Date(today.getTime() - (query.days || 30) * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-      const endDate = query.endDate || today.toISOString().split('T')[0]
-
-      const dateRange: { startDate: string; endDate: string } = {
-        startDate: startDate as string,
-        endDate: endDate as string,
-      }
-
-      const summary = await analyticsService.getSalesSummary(request.userId, dateRange)
-      const validated = SalesSummarySchema.parse(summary)
-      return reply.send(validated)
-
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        fastify.log.error({ err: err.errors }, 'Sales validation failed')
-        return reply.code(400).send({ error: 'Validation failed', details: err.errors })
-      }
-      fastify.log.error(err)
-      return reply.code(500).send({ error: 'Failed to fetch sales analytics' })
-    }
-  })
+    },
+  )
 
   // ═══════════════════════════════════════════════════════════
   // INVENTORY ANALYTICS
   // ═══════════════════════════════════════════════════════════
 
-  fastify.get('/api/analytics/inventory', {
-    preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'inventory' })],
-    schema: {
-      response: { 200: toJsonSchema(z.any()) },
+  fastify.get(
+    '/api/analytics/inventory',
+    {
+      preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'inventory' })],
+      schema: {
+        response: { 200: toJsonSchema(z.any()) },
+      },
     },
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const summary = await analyticsService.getInventorySummary(request.userId)
-      return reply.send(summary)
-    } catch (err) {
-      fastify.log.error(err)
-      return reply.code(500).send({ error: 'Failed to fetch inventory analytics' })
-    }
-  })
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const summary = await analyticsService.getInventorySummary(request.userId)
+        return reply.send(summary)
+      } catch (err) {
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to fetch inventory analytics' })
+      }
+    },
+  )
 
   // ═══════════════════════════════════════════════════════════
   // FINANCIAL ANALYTICS
   // ═══════════════════════════════════════════════════════════
 
-  fastify.get('/api/analytics/financial', {
-    preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'financial' })],
-    schema: {
-      querystring: toJsonSchema(
-        z.object({
-          startDate: z.string().optional(),
-          endDate: z.string().optional(),
-        })
-      ),
-      response: { 200: toJsonSchema(z.any()) },
+  fastify.get(
+    '/api/analytics/financial',
+    {
+      preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'financial' })],
+      schema: {
+        querystring: toJsonSchema(
+          z.object({
+            startDate: z.string().optional(),
+            endDate: z.string().optional(),
+          }),
+        ),
+        response: { 200: toJsonSchema(z.any()) },
+      },
     },
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const query = request.query as {
-        startDate?: string
-        endDate?: string
-      }
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const query = request.query as {
+          startDate?: string
+          endDate?: string
+        }
 
-      const today = new Date()
-      const startDate = query.startDate || new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-      const endDate = query.endDate || today.toISOString().split('T')[0]
+        const today = new Date()
+        const startDate =
+          query.startDate ||
+          new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+        const endDate = query.endDate || today.toISOString().split('T')[0]
 
-      const dateRange: { startDate: string; endDate: string } = {
-        startDate: startDate as string,
-        endDate: endDate as string,
-      }
+        const dateRange: { startDate: string; endDate: string } = {
+          startDate: startDate as string,
+          endDate: endDate as string,
+        }
 
-      const summary = await analyticsService.getFinancialSummary(request.userId, dateRange)
-      return reply.send(summary)
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        return reply.code(400).send({ error: 'Validation failed', details: err.errors })
+        const summary = await analyticsService.getFinancialSummary(request.userId, dateRange)
+        return reply.send(summary)
+      } catch (err) {
+        if (err instanceof z.ZodError) {
+          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
+        }
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to fetch financial analytics' })
       }
-      fastify.log.error(err)
-      return reply.code(500).send({ error: 'Failed to fetch financial analytics' })
-    }
-  })
+    },
+  )
 }

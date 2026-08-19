@@ -7,8 +7,22 @@
 //     vendor page dedicated to this intent; the SERP is app-store listings and
 //     generic finance blogs. It is also the workflow Hisabche genuinely models
 //     (see customerDebt in backend/src/services/analytics.service.ts).
-//   offline — the weakest SERP found in any market surveyed, and Hisabche's
-//     actual architectural differentiator.
+//   offline — CORRECTED (2026-08): the earlier note here claimed this was "the
+//     weakest SERP found in any market surveyed". That is disproven. Iranian
+//     vendors (چالاک حساب, پارمیس, چرتکه) target حسابداری آفلاین directly, and
+//     the English SERP is publisher listicles rather than product pages. What is
+//     actually defensible, and what this page is now anchored on, is
+//     offline-first WITH automatic cloud sync across phone, Windows and web —
+//     versus a Windows install whose data never leaves one machine. Do not
+//     re-derive the "uncontested offline" premise.
+//     Honesty constraint baked into the copy: the real offline write queue is
+//     mobile (apps/mobile/src/features/offline/outbox.store.ts) and desktop
+//     (apps/desktop/src/features/sync/sync-engine.ts + electron SQLite). On web,
+//     packages/store/src/slices/sync.slice.ts is only a pendingCount counter, so
+//     the pages say so explicitly instead of claiming browser offline support.
+//     The af page is framed around power cuts, انترنت cost and دوکان rather than
+//     being a translation of the fa one: "حسابداری آفلاین" is spelled identically
+//     in both locales and the two pages would otherwise cannibalise each other.
 //
 // Deliberately NOT created: pages for the head terms (نرم افزار حسابداری,
 // "small business accounting software", inventory). Those SERPs are owned by

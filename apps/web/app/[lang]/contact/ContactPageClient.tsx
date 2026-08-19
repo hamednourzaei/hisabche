@@ -77,6 +77,13 @@ export function ContactPageClient() {
           )}
         </p>
 
+        {/* This page rendered a single <h1> and no subheadings at all, so an
+            indexable page had no internal structure. These two are the real
+            sections of the page, not filler. */}
+        <h2 className="text-lg sm:text-xl font-bold text-[hsl(var(--fg-primary))] mb-3">
+          {safeT('landing.legalPage.contactChannelsTitle', 'Ways to reach us')}
+        </h2>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {CHANNELS.map(({ icon: Icon, labelKey, labelFallback, value, href }) => (
             <a
@@ -100,7 +107,10 @@ export function ContactPageClient() {
           ))}
         </div>
 
-        <p className="mt-6 text-xs text-[hsl(var(--fg-tertiary))]">
+        <h2 className="mt-10 text-lg sm:text-xl font-bold text-[hsl(var(--fg-primary))] mb-2">
+          {safeT('landing.legalPage.contactResponseTitle', 'Response time')}
+        </h2>
+        <p className="text-xs text-[hsl(var(--fg-tertiary))]">
           {safeT('landing.legalPage.contactHoursLabel', 'Response time')}:{' '}
           {safeT('landing.legalPage.contactHoursValue', 'Usually within 24 business hours')}
         </p>

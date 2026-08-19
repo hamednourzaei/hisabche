@@ -66,7 +66,12 @@ for (const loc of ['fa', 'af', 'en']) {
 ```
 
 Dari is not a copy of Persian. It differs in vocabulary: بل not فاکتور, گدام not
-انبار, انترنت not اینترنت, معلومات not اطلاعات, دکان not فروشگاه.
+انبار, انترنت not اینترنت, معلومات not اطلاعات, دکان/دوکان not فروشگاه or مغازه,
+قرض not بدهی, اسعار not ارز, مصارف not هزینه.
+
+The catalogue covers admin too. `adminPanel.*` was missing entirely, so the
+admin login page rendered raw dotted key strings to the user — a whole app's
+namespace can be absent without anything failing to compile.
 
 ## Numbers and dates
 
@@ -80,6 +85,11 @@ new Intl.NumberFormat(locale).format(value)
 ```
 
 Outside React, `resolveIntlLocale(lang)` from `@hisabche/formatting`.
+
+Our route segment `af` is **not** the BCP-47 tag for Dari — `af` is Afrikaans.
+Anywhere a real language tag is required (`<html lang>`, `hreflang`,
+schema.org `inLanguage`, `Intl`) it is `fa-AF`. On web, map it with
+`localeToBcp47` from `apps/web/app/[lang]/i18n-config.ts`.
 
 Money formatting lives in `@hisabche/formatting` (`formatAmount`, `formatMoney`,
 `currencySign`). Don't reimplement it.

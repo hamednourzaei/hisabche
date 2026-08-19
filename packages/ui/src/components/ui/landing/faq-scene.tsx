@@ -435,7 +435,9 @@ export default function FaqScene({ t }: FaqSceneProps) {
           <p className="text-xs sm:text-sm text-[hsl(var(--fg-secondary))]">
             {t('faq.supportText', 'پاسخت را پیدا نکردی؟')}{' '}
             <a
-              href="mailto:support@hisabche.af"
+              // Same address as /contact and the Organization JSON-LD. This was
+              // support@hisabche.af, which contradicted the structured data.
+              href="mailto:support@hisabche.com"
               className="text-[hsl(var(--color-primary))] font-medium underline"
             >
               {t('faq.supportLink', 'با پشتیبانی تماس بگیر')}

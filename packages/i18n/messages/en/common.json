@@ -13,9 +13,9 @@
     "heroSub": "For businesses in Iran and Afghanistan",
     "offline": "Offline",
     "badge": "340+ active businesses",
-    "headline": "Close your shop",
-    "headlineHighlight": "with peace of mind every day",
-    "subtitle": "Sales, credit, inventory, and profit — calculated automatically. Like an invisible assistant that never makes a mistake.",
+    "headline": "Simple accounting software for",
+    "headlineHighlight": "your shop",
+    "subtitle": "Sales, credit, inventory and profit — worked out automatically. Built for shopkeepers in Afghanistan and Iran.",
     "learnMore": "Learn more",
     "trustText": "No credit card · Active in 30 seconds",
     "trustOffline": "True Offline",
@@ -307,8 +307,8 @@
     "dashboardLabel": "Product",
     "dashboardTitle": "This is what you'll see every day",
     "dashboardDesc": "One glance, everything clear — today's sales, stock inventory, customer debts.",
-    "dashboardAlt": "Hisabche dashboard preview",
-    "dashboardMobileAlt": "Hisabche mobile preview",
+    "dashboardAlt": "Hisabche dashboard showing today’s sales, total customer receivables and stock value side by side",
+    "dashboardMobileAlt": "Hisabche on a phone: the invoice list and outstanding customer balances",
     "dashboardPlaceholder": "Dashboard preview coming soon",
     "dashboardChip1Title": "Today's Sales",
     "dashboardChip1Value": "12% more than yesterday",
@@ -843,7 +843,9 @@
           "heading": "Contact the team",
           "body": "For any question or suggestion, reach us at support@hisabche.com."
         }
-      ]
+      ],
+      "contactChannelsTitle": "Ways to reach us",
+      "contactResponseTitle": "Response time"
     },
     "painTimeline1": "This morning",
     "painTimeline2": "Late at night",
@@ -885,7 +887,7 @@
         "metaTitle": "Customer debt tracking",
         "metaDescription": "See what every customer still owes you, straight from your unpaid invoices. Record partial payments and know your total receivables. Works without internet.",
         "h1": "Know who owes you what",
-        "intro": "Selling on credit is normal. The problem is not the credit — it is losing track of who still owes you, and since when. Hisabche works each customer's balance out from your invoices, so there is no separate ledger to keep.",
+        "intro": "Selling on credit is normal. The problem is not the credit — it is losing track of who still owes you, and since when. Hisabche works each customer's balance out from your invoices, so there is no separate ledger to keep. To be clear: this page is about the credit you extend to your own customers — not bank loans or formal instalment finance.",
         "sections": [
           {
             "heading": "Where the balance comes from",
@@ -905,7 +907,7 @@
           },
           {
             "heading": "If you deal in more than one currency",
-            "body": "Hisabche supports AFN, USD, PKR and IRR. If part of your trade is in one currency and part in another, the balances stay separate."
+            "body": "Each invoice is recorded in its own currency — AFN, USD, PKR or IRR — and you can filter the invoice list by currency. One thing to know: the dashboard’s total receivables figure currently adds every invoice together without converting between currencies, so if you genuinely trade in more than one, check the invoice list for that currency to get an accurate figure."
           }
         ],
         "faq": [
@@ -930,32 +932,36 @@
         "ctaBody": "Create a free account and record your first credit sale today."
       },
       "offline": {
-        "metaTitle": "Offline accounting software",
-        "metaDescription": "Write invoices, adjust stock and record payments even with no internet. Everything syncs by itself once you are back online.",
-        "h1": "Losing the connection should not stop the shop",
-        "intro": "Most \"cloud\" accounting tools effectively stop working the moment the connection drops. Hisabche is built so the actual work happens on your device, with the internet needed only to sync.",
+        "metaTitle": "Offline-first accounting with cloud sync",
+        "metaDescription": "Write invoices, adjust stock and record payments with no connection on the phone and Windows apps, then have everything sync itself to your account — and see the same data on the web.",
+        "h1": "Work offline, sync when you can",
+        "intro": "Browser-based accounting tools stop working when the connection drops, and traditional installed software traps your records on one machine. Hisabche does both halves: the work happens on your device, and it syncs to your account afterwards.",
         "sections": [
           {
-            "heading": "What offline actually means here",
-            "body": "Writing an invoice, taking a payment, adding a customer, drawing stock down — all of it happens with no network and is saved on the device immediately. No spinner, nothing lost."
+            "heading": "Where offline actually works",
+            "body": "Full offline use is the phone app and the Windows app: writing an invoice, taking a payment, adding a customer and drawing stock down all happen with no network and are saved on the device. The web version is different — the browser needs a connection to save, and only shows you how many changes are still pending. If your shop’s connection is unreliable, install the phone or Windows app."
           },
           {
             "heading": "Syncing when the network returns",
-            "body": "Work done offline is queued and sent in order as soon as you reconnect. There is no button to press and nothing to re-enter."
+            "body": "Work done offline on the phone or Windows app is queued locally and sent in order as soon as you reconnect. There is no button to press and nothing to re-enter."
           },
           {
             "heading": "How this differs from old desktop software",
-            "body": "Traditional installed software is offline too, but the data lives on that one machine: you cannot reach it from a phone, and if the machine dies the records go with it. Hisabche does both — it works offline and then syncs, so an outage does not stop you and your records are not trapped on a single device."
+            "body": "Traditional installed software is offline too, but the data lives on that one machine: you cannot reach it from a phone, and if the machine dies the records go with it. That combination — offline-first plus cloud sync — is the actual difference, not offline on its own."
           },
           {
             "heading": "Several devices, one account",
-            "body": "If you are on the till and someone else is in the stockroom, you each work on your own device, and after syncing everyone sees the same stock and the same balances."
+            "body": "If you are on the till and someone else is in the stockroom, you each work on your own device, and after syncing everyone sees the same stock and the same balances — including from the browser."
           }
         ],
         "faq": [
           {
+            "q": "Does it work fully offline in the browser too?",
+            "a": "No. Full offline use is the phone app and the Windows app. The web version needs a connection to save."
+          },
+          {
             "q": "So I never need internet at all?",
-            "a": "Not for day-to-day work. You do need to connect now and then so devices can sync and your records are backed up to your account."
+            "a": "Not for day-to-day work on the phone or Windows app. You do need to connect now and then so devices can sync and your records are backed up to your account."
           },
           {
             "q": "What if I stay offline for several days?",
@@ -964,14 +970,10 @@
           {
             "q": "What if I sell the same item offline on two devices?",
             "a": "Both sales are recorded and synced, and you see the true stock level afterwards. This is why it is worth syncing devices regularly when they share stock."
-          },
-          {
-            "q": "Does it work on a slow connection?",
-            "a": "Yes. Because it does not wait on the server to respond, a slow connection does not make the app slow to use."
           }
         ],
         "ctaTitle": "Take outages off your list of worries",
-        "ctaBody": "Start free and see how it behaves with the network off."
+        "ctaBody": "Start free, and try the phone or Windows app with the network off."
       },
       "backToHome": "Back to home",
       "faqTitle": "Common questions",
@@ -2713,5 +2715,9 @@
     "wedding": "Wedding venue and services",
     "security": "Security services",
     "consulting": "Consulting and accounting"
+  },
+  "adminPanel": {
+    "access": "Admin panel access",
+    "notAllowed": "This account does not have platform admin access. Sign in with an account on the allowlist."
   }
 }

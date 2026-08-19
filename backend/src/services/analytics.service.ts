@@ -27,6 +27,86 @@ function startOfTodayISO(): string {
   return d.toISOString()
 }
 
+// ─── Per-currency KPI decomposition ─────────────────────────────────────────
+//
+// Kept as a pure exported function so the invariant it protects can be tested
+// without a database: money in different currencies must never be added.
+
+export interface CurrencyBucket {
+  totalSales: number
+  totalPurchases: number
+  customerDebt: number
+  supplierPayable: number
+  todaySales: number
+  monthlyRevenue: number
+  pendingPayments: number
+}
+
+export interface KpiInvoiceRow {
+  total?: unknown
+  paid_amount?: unknown
+  status?: string | null
+  date?: string | null
+  type?: string | null
+  currency?: string | null
+}
+
+const emptyBucket = (): CurrencyBucket => ({
+  totalSales: 0,
+  totalPurchases: 0,
+  customerDebt: 0,
+  supplierPayable: 0,
+  todaySales: 0,
+  monthlyRevenue: 0,
+  pendingPayments: 0,
+})
+
+/**
+ * Split the KPI figures by the currency each invoice is actually denominated
+ * in. Nothing is converted: the only rate table in the repo is `defaultRates`
+ * in packages/store/src/slices/currency.slice.ts, whose `fetchRates` is a stub
+ * marked "TODO: Replace with actual exchange rate API". Converting at invented
+ * rates would turn a visibly odd total into a confidently wrong one.
+ */
+export function bucketKpisByCurrency(
+  rows: readonly KpiInvoiceRow[],
+  todayStart: string,
+  firstOfThisMonth: Date,
+): Record<string, CurrencyBucket> {
+  const byCurrency: Record<string, CurrencyBucket> = {}
+
+  for (const inv of rows) {
+    // A row with no currency means the column default, exactly as a row with
+    // no `type` means 'sale'. It is not a separate currency.
+    const code = inv.currency || 'AFN'
+    let bucket = byCurrency[code]
+    if (!bucket) {
+      bucket = emptyBucket()
+      byCurrency[code] = bucket
+    }
+
+    const total = Number(inv.total) || 0
+    const paid = Number(inv.paid_amount) || 0
+
+    if (inv.type === 'purchase') {
+      bucket.totalPurchases += total
+      if (inv.status !== 'paid') bucket.supplierPayable += total - paid
+      continue
+    }
+
+    bucket.totalSales += total
+    if (inv.status !== 'paid') bucket.customerDebt += total - paid
+    if (inv.status !== 'cancelled' && total - paid > 0) bucket.pendingPayments += total - paid
+    if (inv.date) {
+      const d = new Date(inv.date)
+      if (d.toISOString() >= todayStart) bucket.todaySales += total
+      if (d >= firstOfThisMonth) bucket.monthlyRevenue += total
+    }
+  }
+
+  return byCurrency
+}
+
 export class AnalyticsService {
   // ─── Dashboard KPIs — OPTIMIZED with RPC + Parallel Queries ───
   async getDashboardKpis(userId: string) {
@@ -44,7 +124,11 @@ export class AnalyticsService {
           .eq('is_active', true),
         supabase
           .from('invoices')
-          .select('total, paid_amount, status, date, customer_id, type')
+          // `currency` is selected so the KPIs can be broken down by it. Every
+          // money figure below is a sum of `total`, and `total` is denominated
+          // in the invoice's OWN currency — a 100 USD invoice and a 100 AFN
+          // invoice were being added to 200 of nothing.
+          .select('total, paid_amount, status, date, customer_id, type, currency')
           .eq('user_id', userId),
       ])
 
@@ -146,6 +230,28 @@ export class AnalyticsService {
         if (inv.customer_id) activeCustomerIds.add(inv.customer_id)
       }
 
+      // ─── Per-currency breakdown ──────────────────────────────────────────
+      //
+      // Every flat KPI above adds `total` across invoices REGARDLESS of the
+      // currency each one is denominated in. In a single-currency workspace —
+      // which is nearly all of them — that is correct. In a mixed one it is
+      // arithmetic on incompatible units: 100 USD + 100 AFN reported as 200.
+      //
+      // The flat fields are left exactly as they were rather than silently
+      // changing what an existing dashboard card means. What is ADDED is the
+      // honest decomposition, plus a flag saying whether the flat numbers can
+      // be trusted. Deliberately NOT converted to a single currency: the only
+      // rate source in the repo is `defaultRates` in
+      // packages/store/src/slices/currency.slice.ts, whose `fetchRates` is a
+      // stub marked "TODO: Replace with actual exchange rate API". Converting
+      // at invented rates would turn a visibly odd total into a confidently
+      // wrong one.
+      const byCurrency = bucketKpisByCurrency(allInvoices, todayStart, firstOfThisMonth)
+      const currencies = Object.keys(byCurrency)
+      // True when the flat totals below add amounts in different currencies —
+      // the signal the UI needs to show the breakdown instead of one figure.
+      const mixedCurrency = currencies.length > 1
+
       const monthlyGrowth =
         prevMonthRevenue > 0
           ? Math.round(((monthlyRevenue - prevMonthRevenue) / prevMonthRevenue) * 1000) / 10
@@ -163,6 +269,11 @@ export class AnalyticsService {
         activeCustomers: activeCustomerIds.size,
         customerGrowth,
         lowStockAlerts,
+        // The flat KPIs above are only meaningful as one number when
+        // `mixedCurrency` is false. See the comment where these are built.
+        byCurrency,
+        currencies,
+        mixedCurrency,
         ...extraCards,
       }
     })

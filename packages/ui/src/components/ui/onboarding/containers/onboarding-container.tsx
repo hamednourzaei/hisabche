@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { useLocale, useTranslations } from 'next-intl'
 import {
   useOnboardingStore,
+  useCurrencyStore,
+  isSupportedCurrency,
   type BusinessType,
   type StoreSize,
   type Currency,
@@ -94,11 +96,28 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
     [setStoreSize],
   )
 
+  const setPrimaryCurrency = useCurrencyStore((s) => s.setPrimaryCurrency)
+
+  // The wizard's answer used to stop here: `defaultCurrency` was written to the
+  // onboarding store and NOTHING read it back. Every amount in the product is
+  // formatted from `useCurrencyStore.primaryCurrency`, which stayed on its
+  // 'AFN' default — so the currency step was decorative and a USD shop was
+  // shown افغانی on every screen. Propagating the answer to the store the UI
+  // actually reads is what makes the choice real.
   const handleSetCurrency = useCallback(
     (currency: string) => {
+      if (!isSupportedCurrency(currency)) {
+        // A code from the wider onboarding catalogue (IRT, TRY, XAU …) that
+        // `currencyCodeSchema` rejects and no invoice can carry. Deliberately
+        // NOT coerced to AFN — silently substituting a different currency is
+        // the exact failure this change exists to remove. See the report:
+        // reconciling the catalogue with the supported set is a product call.
+        return
+      }
       setDefaultCurrency(currency as Currency)
+      setPrimaryCurrency(currency)
     },
-    [setDefaultCurrency],
+    [setDefaultCurrency, setPrimaryCurrency],
   )
 
   return (

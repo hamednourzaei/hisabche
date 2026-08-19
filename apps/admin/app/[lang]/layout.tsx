@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import localFont from 'next/font/local'
 import { getLocale, getMessages } from 'next-intl/server'
 import { IntlProvider } from './intl-provider'
+import { Providers } from './providers'
 
 // The design system itself, not a copy of it. This file used to import an
 // 814-line byte-identical duplicate of packages/ui/src/styles/globals.css.
@@ -48,7 +49,7 @@ export default async function RootLayout({
         className={`min-h-screen antialiased font-sans bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))] ${vazirmatn.variable}`}
       >
         <IntlProvider locale={locale} messages={messages}>
-          {children}
+          <Providers>{children}</Providers>
         </IntlProvider>
       </body>
     </html>

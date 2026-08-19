@@ -19,6 +19,8 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { cn } from '../../../lib/utils'
+import { useCurrency } from '../../../hooks/use-currency'
+import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { useEntitySummary, useEntityActivities } from '@hisabche/api'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -101,15 +103,18 @@ function timeAgo(date: string, t: (key: string) => string): string {
   return t('time.yearsAgo')
 }
 
-function formatCurrency(amount: number, currency: string): string {
+// The locale was pinned to 'fa-AF' and a missing currency fell back to the
+// literal 'AFN'. Digits follow the reader's language; the fallback is the
+// currency the user chose.
+function formatCurrency(amount: number, currency: string, locale: string): string {
   try {
-    return new Intl.NumberFormat('fa-AF', {
+    return new Intl.NumberFormat(locale, {
       style: 'currency',
-      currency: currency || 'AFN',
+      currency,
       maximumFractionDigits: 0,
     }).format(amount)
   } catch {
-    return `${amount} ${currency || 'AFN'}`
+    return `${amount} ${currency}`
   }
 }
 
@@ -192,6 +197,8 @@ export const EntityActivityCard = memo(function EntityActivityCard({
   onActivityClick,
 }: EntityActivityCardProps) {
   const t = useTranslations()
+  const locale = useIntlLocale()
+  const { currency: userCurrency } = useCurrency()
   const [isOpen, setIsOpen] = useState(false)
 
   const { data: summary, isLoading: summaryLoading } = useEntitySummary(entityType, entityId)
@@ -253,7 +260,7 @@ export const EntityActivityCard = memo(function EntityActivityCard({
               {summary.amount !== undefined && (
                 <span className="text-xs font-semibold text-[hsl(var(--fg-primary))] flex items-center gap-1">
                   <DollarSign className="w-3 h-3" aria-hidden="true" />
-                  {formatCurrency(summary.amount, summary.currency || 'AFN')}
+                  {formatCurrency(summary.amount, summary.currency || userCurrency, locale)}
                 </span>
               )}
             </div>

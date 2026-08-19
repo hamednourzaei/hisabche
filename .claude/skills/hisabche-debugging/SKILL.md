@@ -44,6 +44,20 @@ before changing the code._
 absent at runtime, taking down the whole list. _Server data is optional whatever
 the type says._
 
+**A login that succeeds and bounces.** The admin page authenticated against the
+backend and got a JWT; `apps/admin/proxy.ts` authorizes from a Supabase cookie
+nobody had set, so it redirected to `/login` forever with no error. _When a
+redirect loop follows a successful sign-in, check that the thing issuing the
+credential and the thing checking it are the same system._
+
+**"Missing authorization header" on login.** `NEXT_PUBLIC_API_URL` lacked the
+`/api` suffix, so the request went to an unrelated protected route. _An auth
+error can be a routing error; print the URL that was actually requested._
+
+**A page whose `<head>` was perfect and whose `<body>` was empty.** `ssr: false`
+in the root layout. _Metadata is generated separately from the tree, so it keeps
+looking right while nothing renders. Inspect the rendered `<body>`._
+
 **A URL with `%20` in it.** Windows `set VAR=value && cmd` puts the space before
 `&&` inside the value. _Print the value, don't assume it._
 
@@ -52,6 +66,10 @@ the type says._
 ```bash
 # does this translation key exist?
 node -e "const m=require('./packages/i18n/messages/en/common.json');console.log(m.some?.key ?? 'MISSING')"
+
+# what does the page actually render? (grep -c counts lines; HTML is one line)
+export MSYS_NO_PATHCONV=1
+curl -s http://localhost:3039/fa/about | sed -n '/<body/,/<\/body>/p' | head -40
 
 # what routes does the app actually serve?
 cd apps/web && npx next build | grep -E '^[├└]'

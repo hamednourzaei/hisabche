@@ -1,6 +1,7 @@
 // apps/web/app/[lang]/page.tsx
 import { Suspense } from 'react'
 import { LandingPage } from '@hisabche/ui/landing/landing-page'
+import { BILLING_CURRENCY } from '@hisabche/ui-contract'
 import { AuthGate } from './auth-gate'
 import { cn } from '@/lib/utils'
 import type { Metadata } from 'next'
@@ -200,8 +201,10 @@ function JsonLd({ lang }: { lang: string }) {
           publisher: { '@id': 'https://www.hisabche.com/#organization' },
           // The free tier is real (see PLANS in packages/ui .../pricing-scene.tsx).
           // Currency was "USD" while every price on the page is rendered in
-          // افغانی, so the schema contradicted the visible pricing table.
-          offers: { '@type': 'Offer', price: '0', priceCurrency: 'AFN' },
+          // افغانی, so the schema contradicted the visible pricing table. The
+          // code now comes from BILLING_CURRENCY — the single declaration the
+          // pricing table also reads — so the two cannot drift apart again.
+          offers: { '@type': 'Offer', price: '0', priceCurrency: BILLING_CURRENCY },
           // REMOVED: `aggregateRating: { ratingValue: "4.9", ratingCount: "340" }`.
           // There is no review or rating system anywhere in this codebase — the
           // numbers were hardcoded marketing copy. Google requires

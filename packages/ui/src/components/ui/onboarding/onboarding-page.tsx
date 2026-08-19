@@ -23,6 +23,7 @@ import {
   filterBusinessTypes,
   primaryCurrencies,
 } from '@hisabche/ui-contract'
+import { isSupportedCurrency } from '@hisabche/store'
 
 import { SearchableOptionList } from './searchable-option-list'
 
@@ -411,16 +412,31 @@ const CurrencyStep = memo(function CurrencyStep({
   // Two cards, chosen by interface language: toman-first for Persian,
   // afghani-first for Dari, dollar second in both. Everything else — including
   // precious metals, which are priced by weight — is found by searching.
-  const primary = useMemo(() => primaryCurrencies(lang), [lang])
+  //
+  // Only the codes the product can actually honour are offered. The catalogue
+  // in `packages/ui-contract` lists 25 (IRT, TRY, XAU …) but
+  // `currencyCodeSchema` — which the backend enforces on every invoice and
+  // transaction — accepts four. Offering the other 21 meant the answer was
+  // accepted, cast with `as`, and then quietly replaced by AFN at every
+  // formatter: a shopkeeper who picked تومان was shown افغانی for the life of
+  // the account. Showing only what can be stored is the truthful behaviour;
+  // widening the supported set is a product decision (rates + precision +
+  // schema), not something to infer here.
+  const primary = useMemo(
+    () => primaryCurrencies(lang).filter((c) => isSupportedCurrency(c.code)),
+    [lang],
+  )
   const primaryCodes = useMemo(() => new Set(primary.map((c) => c.code)), [primary])
 
   const searchable = useMemo(
     () =>
-      CURRENCIES.filter((c) => !primaryCodes.has(c.code)).map((c) => ({
-        id: c.code,
-        label: t(c.labelKey, c.labelFa),
-        prefix: c.flag,
-      })),
+      CURRENCIES.filter((c) => isSupportedCurrency(c.code) && !primaryCodes.has(c.code)).map(
+        (c) => ({
+          id: c.code,
+          label: t(c.labelKey, c.labelFa),
+          prefix: c.flag,
+        }),
+      ),
     [primaryCodes, t],
   )
 
