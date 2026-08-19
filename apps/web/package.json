@@ -20,6 +20,7 @@
     "@hisabche/i18n": "workspace:*",
     "@hisabche/store": "workspace:*",
     "@hisabche/ui": "workspace:*",
+    "@hisabche/ui-contract": "workspace:*",
     "@hisabche/validation": "workspace:*",
     "@hookform/resolvers": "^5.2.2",
     "@react-pdf/renderer": "^4.5.1",
