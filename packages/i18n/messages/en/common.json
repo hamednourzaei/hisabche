@@ -417,7 +417,9 @@
       "copyright": "Copyright",
       "accessibility": "Accessibility",
       "gdpr": "Privacy Rights",
-      "dataDeletion": "Data Deletion Request"
+      "dataDeletion": "Data Deletion Request",
+      "customerDebt": "Customer debt tracking",
+      "offline": "Offline accounting"
     },
     "footerCopyright": "© {year} Hisabche. All rights reserved.",
     "valuePill": "Works without internet — always, everywhere",
@@ -877,7 +879,105 @@
       "mobileTitle": "Mobile and web",
       "mobileDesc": "Mobile app and web version"
     },
-    "pricingFooter": "No contract · cancel anytime · no bank card"
+    "pricingFooter": "No contract · cancel anytime · no bank card",
+    "featurePage": {
+      "customerDebt": {
+        "metaTitle": "Customer debt tracking",
+        "metaDescription": "See what every customer still owes you, straight from your unpaid invoices. Record partial payments and know your total receivables. Works without internet.",
+        "h1": "Know who owes you what",
+        "intro": "Selling on credit is normal. The problem is not the credit — it is losing track of who still owes you, and since when. Hisabche works each customer's balance out from your invoices, so there is no separate ledger to keep.",
+        "sections": [
+          {
+            "heading": "Where the balance comes from",
+            "body": "Any sales invoice that has not been settled in full leaves a remainder — the invoice total minus what you have actually collected — and that sits against the customer. Nothing to add up by hand. One thing paper ledgers routinely get wrong: purchase invoices never enter this figure. What customers owe you and what you owe suppliers are two separate columns, and Hisabche keeps them that way."
+          },
+          {
+            "heading": "Partial payments, not all-or-nothing",
+            "body": "A customer owes 100 and hands you 50. You record the 50 against the invoice; it stays part-paid and the rest still shows in your receivables. Same as crossing out and rewriting a figure in a notebook, except the history survives."
+          },
+          {
+            "heading": "What you are owed, at a glance",
+            "body": "The dashboard shows total receivables next to sales and stock value. It is the number most shop owners never actually know — and usually the one that explains why sales look healthy while the till is empty."
+          },
+          {
+            "heading": "When the connection drops",
+            "body": "Recording a payment or writing an invoice does not depend on the internet. You keep working offline and changes sync themselves once the network is back."
+          },
+          {
+            "heading": "If you deal in more than one currency",
+            "body": "Hisabche supports AFN, USD, PKR and IRR. If part of your trade is in one currency and part in another, the balances stay separate."
+          }
+        ],
+        "faq": [
+          {
+            "q": "Do I need a special invoice type for credit sales?",
+            "a": "No. Record the normal sales invoice and enter a received amount lower than the total. The remainder becomes the outstanding balance automatically."
+          },
+          {
+            "q": "What if a customer pays in several instalments?",
+            "a": "Record each payment separately. The balance drops each time until the invoice is settled."
+          },
+          {
+            "q": "Does this also show what I owe suppliers?",
+            "a": "As a separate figure, yes. Receivables and payables are deliberately not netted against each other, because they are two different things."
+          },
+          {
+            "q": "What happens to my records if I lose my phone?",
+            "a": "Your data syncs to your account, so you sign in on another device and the balances are still there."
+          }
+        ],
+        "ctaTitle": "Get your credit book straight",
+        "ctaBody": "Create a free account and record your first credit sale today."
+      },
+      "offline": {
+        "metaTitle": "Offline accounting software",
+        "metaDescription": "Write invoices, adjust stock and record payments even with no internet. Everything syncs by itself once you are back online.",
+        "h1": "Losing the connection should not stop the shop",
+        "intro": "Most \"cloud\" accounting tools effectively stop working the moment the connection drops. Hisabche is built so the actual work happens on your device, with the internet needed only to sync.",
+        "sections": [
+          {
+            "heading": "What offline actually means here",
+            "body": "Writing an invoice, taking a payment, adding a customer, drawing stock down — all of it happens with no network and is saved on the device immediately. No spinner, nothing lost."
+          },
+          {
+            "heading": "Syncing when the network returns",
+            "body": "Work done offline is queued and sent in order as soon as you reconnect. There is no button to press and nothing to re-enter."
+          },
+          {
+            "heading": "How this differs from old desktop software",
+            "body": "Traditional installed software is offline too, but the data lives on that one machine: you cannot reach it from a phone, and if the machine dies the records go with it. Hisabche does both — it works offline and then syncs, so an outage does not stop you and your records are not trapped on a single device."
+          },
+          {
+            "heading": "Several devices, one account",
+            "body": "If you are on the till and someone else is in the stockroom, you each work on your own device, and after syncing everyone sees the same stock and the same balances."
+          }
+        ],
+        "faq": [
+          {
+            "q": "So I never need internet at all?",
+            "a": "Not for day-to-day work. You do need to connect now and then so devices can sync and your records are backed up to your account."
+          },
+          {
+            "q": "What if I stay offline for several days?",
+            "a": "The work queues up and is sent when you reconnect. There is no time limit on it."
+          },
+          {
+            "q": "What if I sell the same item offline on two devices?",
+            "a": "Both sales are recorded and synced, and you see the true stock level afterwards. This is why it is worth syncing devices regularly when they share stock."
+          },
+          {
+            "q": "Does it work on a slow connection?",
+            "a": "Yes. Because it does not wait on the server to respond, a slow connection does not make the app slow to use."
+          }
+        ],
+        "ctaTitle": "Take outages off your list of worries",
+        "ctaBody": "Start free and see how it behaves with the network off."
+      },
+      "backToHome": "Back to home",
+      "faqTitle": "Common questions",
+      "otherFeatures": "More pages",
+      "ctaButton": "Start free"
+    }
   },
   "nav": {
     "dashboard": "Dashboard",

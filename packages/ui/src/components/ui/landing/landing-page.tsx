@@ -159,7 +159,7 @@ export function LandingPage() {
             <CTAScene t={safeT} onNavigateLogin={navigateSignup} />
           </NavigationRegistry>
 
-          <SiteFooter t={safeT} />
+          <SiteFooter t={safeT} localePrefix={locale} />
         </main>
       </div>
     </NavigationProvider>

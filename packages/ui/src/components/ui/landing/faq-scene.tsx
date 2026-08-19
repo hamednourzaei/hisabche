@@ -75,7 +75,11 @@ const FAQ_CATEGORIES: FaqCategory[] = [
         fallbackQuestion: 'آیا حتماً باید اینترنت داشته باشم؟',
         fallbackAnswer:
           'خیر. حسابچه کاملاً آفلاین کار می‌کند. می‌توانید فاکتور ثبت کنید، موجودی را بروز کنید و مشتری اضافه کنید، حتی وقتی اینترنت قطع است. به محض اتصال دوباره، همه چیز به‌طور خودکار همگام‌سازی می‌شود.',
-        relatedLink: '#business-flow',
+        // Was '#business-flow', which pointed at TransformScene — a section
+        // removed from the page (see landing-page.tsx). No element with that id
+        // exists, so the link was a dead in-page jump. #security is the section
+        // that actually covers offline storage and sync.
+        relatedLink: '#security',
         relatedLabelKey: 'faq.related.offlineFlow',
         relatedFallback: 'نحوه کار آفلاین',
       },
@@ -210,8 +214,13 @@ const FAQ_CATEGORIES: FaqCategory[] = [
         questionKey: 'faq.pay1Q',
         answerKey: 'faq.pay1A',
         fallbackQuestion: 'قیمت حسابچه چقدر است؟',
+        // This answer used to advertise a "پلن Starter با ۹ دلار در ماه" — a plan
+        // and a currency that appear nowhere in PLANS (pricing-scene.tsx), which
+        // lists رایگان / حرفه‌ای at ۴۹۹ افغانی / تجاری by quote. The wrong figure
+        // was also fed verbatim into the FAQPage structured data, so the schema
+        // contradicted the visible pricing table on the same page.
         fallbackAnswer:
-          'پلن رایگان برای یک کسب‌وکار با ۵۰ فاکتور در ماه کاملاً رایگان است. پلن Starter با ۹ دلار در ماه امکانات بیشتری دارد. تمام قیمت‌ها به افغانی و از طریق صرافی‌های معتبر قابل پرداخت است.',
+          'پلن رایگان برای شروع کاملاً رایگان است. پلن حرفه‌ای ۴۹۹ افغانی در ماه است و برای کسب‌وکارهایی مناسب است که فروش روزانه دارند. پلن تجاری برای چند شعبه به‌صورت اختصاصی قیمت‌گذاری می‌شود — با تیم فروش تماس بگیرید.',
         relatedLink: '#pricing',
         relatedLabelKey: 'faq.related.pricing',
         relatedFallback: 'مشاهده تعرفه‌ها',
@@ -297,10 +306,16 @@ function FaqJsonLd({ t }: { t: (key: string, fallback?: string) => string }) {
   // sees a mismatch between the FAQPage schema (previously always Persian) and
   // the on-page content for en/af locales, which disqualifies the page from
   // FAQ rich results.
+  // Only the questions actually present in the served HTML may appear here.
+  // This used to map ALL_ITEMS (16), but the accordion renders
+  // `ALL_ITEMS.slice(0, INITIAL_COUNT)` until the user clicks "show all" — the
+  // other 10 are not in the DOM at all, not merely collapsed. Declaring Q&As
+  // that a crawler cannot find on the page is exactly the mismatch that
+  // disqualifies a page from FAQ rich results.
   const faqData = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
-    mainEntity: ALL_ITEMS.map((item) => ({
+    mainEntity: ALL_ITEMS.slice(0, INITIAL_COUNT).map((item) => ({
       '@type': 'Question',
       name: t(item.questionKey, item.fallbackQuestion),
       acceptedAnswer: {

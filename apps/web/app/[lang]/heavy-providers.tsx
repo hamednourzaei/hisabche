@@ -1,31 +1,29 @@
 // apps/web/app/[lang]/heavy-providers.tsx
-"use client";
+'use client'
 
-import React, { useEffect, useRef, memo } from "react";
-import { useThemeStore, useAuthStore, useDeviceStore } from "@hisabche/store";
-import { syncLanguageFromStorage } from "@hisabche/i18n";
+import React, { useEffect, useRef, memo } from 'react'
+import { useThemeStore, useAuthStore, useDeviceStore } from '@hisabche/store'
+import { syncLanguageFromStorage } from '@hisabche/i18n'
 
-
-
-let analyticsLoaded = false;
+let analyticsLoaded = false
 
 function loadAnalytics() {
-  if (analyticsLoaded) return;
-  analyticsLoaded = true;
+  if (analyticsLoaded) return
+  analyticsLoaded = true
 
   const load = () => {
-    import("@hisabche/analytics")
+    import('@hisabche/analytics')
       .then((module) => {
-        module.initPostHog?.();
-        module.initSentry?.();
+        module.initPostHog?.()
+        module.initSentry?.()
       })
-      .catch(() => {});
-  };
+      .catch(() => {})
+  }
 
-  if ("requestIdleCallback" in window) {
-    requestIdleCallback(load, { timeout: 3000 });
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(load, { timeout: 3000 })
   } else {
-    setTimeout(load, 2000);
+    setTimeout(load, 2000)
   }
 }
 
@@ -33,125 +31,135 @@ function loadAnalytics() {
 
 const AdaptiveUIInitializer = memo(function AdaptiveUIInitializer() {
   useEffect(() => {
-    const root = document.documentElement;
-    const cores = navigator.hardwareConcurrency ?? 4;
-    const isLowPerf = cores <= 4;
+    const root = document.documentElement
+    const cores = navigator.hardwareConcurrency ?? 4
+    const isLowPerf = cores <= 4
 
-    root.dataset.perf = isLowPerf ? "low" : "high";
-    root.style.setProperty("--motion-scale", isLowPerf ? "0.5" : "1");
-    root.style.setProperty("--shadow-intensity", isLowPerf ? "0.6" : "1");
-    root.style.setProperty("--glass-blur-scale", isLowPerf ? "0.5" : "1");
-  }, []);
+    root.dataset.perf = isLowPerf ? 'low' : 'high'
+    root.style.setProperty('--motion-scale', isLowPerf ? '0.5' : '1')
+    root.style.setProperty('--shadow-intensity', isLowPerf ? '0.6' : '1')
+    root.style.setProperty('--glass-blur-scale', isLowPerf ? '0.5' : '1')
+  }, [])
 
-  return null;
-});
-AdaptiveUIInitializer.displayName = "AdaptiveUIInitializer";
+  return null
+})
+AdaptiveUIInitializer.displayName = 'AdaptiveUIInitializer'
 
 // ─── Theme Initializer ─────────────────────────────────────────────────────
 
 const ThemeInitializer = memo(function ThemeInitializer({
   children,
 }: {
-  children: React.ReactNode;
+  children: React.ReactNode
 }) {
-  const { mode, setMode } = useThemeStore();
-  const initialized = useRef(false);
+  const { mode, setMode } = useThemeStore()
+  const initialized = useRef(false)
 
   useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
+    if (initialized.current) return
+    initialized.current = true
 
     // ✅ FIX: کلاس‌ها را دستی ست نکن — با mode==='system' هر دو کلاس پاک می‌شدند
     // و تم به حالت پیش‌فرض تیره برمی‌گشت. applyTheme داخل setMode این کار را می‌کند.
-    setMode(mode);
+    setMode(mode)
 
-    const html = document.documentElement;
+    const html = document.documentElement
 
     // ✅ Device detection
-    const { detectDevice, performanceMode, reducedMotion, dataSaver } =
-      useDeviceStore.getState();
-    detectDevice();
+    const { detectDevice, performanceMode, reducedMotion, dataSaver } = useDeviceStore.getState()
+    detectDevice()
 
-    if (performanceMode === "lite" || reducedMotion) {
-      html.classList.add("lite-mode");
-      html.dataset.perf = "low";
+    if (performanceMode === 'lite' || reducedMotion) {
+      html.classList.add('lite-mode')
+      html.dataset.perf = 'low'
     }
     if (dataSaver) {
-      html.classList.add("data-saver");
+      html.classList.add('data-saver')
     }
-  }, [mode, setMode]);
+  }, [mode, setMode])
 
-  return <>{children}</>;
-});
-ThemeInitializer.displayName = "ThemeInitializer";
+  return <>{children}</>
+})
+ThemeInitializer.displayName = 'ThemeInitializer'
 
 // ─── Auth Initializer ──────────────────────────────────────────────────────
 
-const AuthInitializer = memo(function AuthInitializer({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const user = useAuthStore((s) => s.user);
-  const identified = useRef(false);
+const AuthInitializer = memo(function AuthInitializer({ children }: { children: React.ReactNode }) {
+  const user = useAuthStore((s) => s.user)
+  const identified = useRef(false)
 
   useEffect(() => {
-    if (!user || identified.current) return;
-    identified.current = true;
+    if (!user || identified.current) return
+    identified.current = true
 
     const timer = setTimeout(async () => {
       try {
-        const analytics = await import("@hisabche/analytics");
+        const analytics = await import('@hisabche/analytics')
         analytics.identifyUser?.(user.id, {
           email: user.email,
           businessName: user.businessName,
-        });
-        analytics.setUser?.(user.id, user.email);
+        })
+        analytics.setUser?.(user.id, user.email)
       } catch {
         // ✅ Silently fail - analytics not critical
       }
-    }, 2000);
+    }, 2000)
 
-    return () => clearTimeout(timer);
-  }, [user]);
+    return () => clearTimeout(timer)
+  }, [user])
 
-  return <>{children}</>;
-});
-AuthInitializer.displayName = "AuthInitializer";
+  return <>{children}</>
+})
+AuthInitializer.displayName = 'AuthInitializer'
 
 // ─── Language Initializer ──────────────────────────────────────────────────
 
 const LanguageInitializer = memo(function LanguageInitializer({
   children,
 }: {
-  children: React.ReactNode;
+  children: React.ReactNode
 }) {
   useEffect(() => {
-    const timer = setTimeout(() => syncLanguageFromStorage(), 100);
-    return () => clearTimeout(timer);
-  }, []);
+    const timer = setTimeout(() => syncLanguageFromStorage(), 100)
+    return () => clearTimeout(timer)
+  }, [])
 
-  return <>{children}</>;
-});
-LanguageInitializer.displayName = "LanguageInitializer";
+  return <>{children}</>
+})
+LanguageInitializer.displayName = 'LanguageInitializer'
 
 // ─── Analytics Bootstrap ───────────────────────────────────────────────────
 
 const AnalyticsBootstrap = memo(function AnalyticsBootstrap() {
   useEffect(() => {
-    loadAnalytics();
-  }, []);
+    loadAnalytics()
+  }, [])
 
-  return null;
-});
-AnalyticsBootstrap.displayName = "AnalyticsBootstrap";
+  return null
+})
+AnalyticsBootstrap.displayName = 'AnalyticsBootstrap'
 
 // ─── Main Component ────────────────────────────────────────────────────────
 
+/**
+ * Client-side bootstrap only. Every initializer above does its work in a
+ * `useEffect` and passes `children` straight through — none of them provides
+ * context or renders anything on the server.
+ *
+ * `children` is therefore optional, and Providers no longer routes the page
+ * through it. It used to: this component is `lazy()`-imported, so wrapping the
+ * app in it made React suspend the whole tree during SSR and flush
+ * `<body><div hidden><!--$--><!--/$--></div>` — an empty document. Titles,
+ * canonicals and JSON-LD were fine (those come from the Metadata API and the
+ * <head>), but no <h1>, no body copy and no internal links existed in the
+ * served HTML on any public page. Rendering children outside the lazy boundary
+ * restores real server-rendered HTML while keeping this bootstrap off the
+ * critical path.
+ */
 export const HeavyProviders = memo(function HeavyProviders({
   children,
 }: {
-  children: React.ReactNode;
+  children?: React.ReactNode
 }) {
   return (
     <>
@@ -163,7 +171,7 @@ export const HeavyProviders = memo(function HeavyProviders({
         </AuthInitializer>
       </ThemeInitializer>
     </>
-  );
-});
+  )
+})
 
-HeavyProviders.displayName = "HeavyProviders";
+HeavyProviders.displayName = 'HeavyProviders'

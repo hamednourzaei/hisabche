@@ -1,30 +1,48 @@
-import DashboardLayout from "./dashboard-layout";
+import type { Metadata } from 'next'
+import DashboardLayout from './dashboard-layout'
 
-const descriptions: Record<string, string> = {
-  "fa": "سیستم مدیریت فروش، انبار و حسابداری آنلاین برای کسب‌وکارهای کوچک و متوسط",
-  "af": "سیستم مدیریت فروش، گدام و حسابداری آنلاین برای تجارت‌های کوچک و متوسط",
-  "en": "Online sales, inventory and accounting management system for small and medium businesses",
-};
+/* ═══════════════════════════════════════════════════════════════════════════
+   Authenticated dashboard group.
 
-const keywords: Record<string, string[]> = {
-  "fa": ["داشبورد", "مدیریت", "فروش", "انبار", "حسابداری", "کسب‌وکار", "حسابچه"],
-  "af": ["داشبورد", "مدیریت", "فروش", "گدام", "حسابداری", "تجارت", "حسابچه"],
-  "en": ["dashboard", "management", "sales", "inventory", "accounting", "business", "hisabche"],
-};
+   This layout previously declared a title, a public-facing marketing
+   description and a keyword list, but NO `robots` — so every route in the group
+   inherited `robots: { index: true, follow: true }` from the root layout. Twelve
+   routes (accounting, activities, billing, crm, dashboard, human-resources,
+   human-resources/[id], manufacturing, permissions, purchasing, warehouse,
+   workflow-templates) set no robots of their own and were therefore explicitly
+   advertised as indexable, while thirteen sibling routes did set
+   `index: false` — the intent was clear, the coverage was not.
 
-export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }) {
-  const { lang } = await params;
+   Declaring noindex here makes it structural rather than something each new
+   dashboard page has to remember. Next merges metadata field-by-field, so a
+   child that sets its own `robots` still replaces this wholesale; every one of
+   those children sets `index: false`, so the group is now noindex either way.
+
+   The SEO description/keywords are gone: they targeted public search terms
+   ("حسابداری آنلاین", "accounting") on an authenticated surface, which is
+   exactly the content that should not be competing in search.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ lang: string }>
+}): Promise<Metadata> {
+  const { lang } = await params
   return {
     title: {
-      default: lang === "en" ? "Dashboard" : lang === "af" ? "داشبورد" : "داشبورد",
-      template: lang === "en" ? "%s | Hisabche" : "%s | حسابچه",
+      default: lang === 'en' ? 'Dashboard' : 'داشبورد',
+      template: lang === 'en' ? '%s | Hisabche' : '%s | حسابچه',
     },
-    description: descriptions[lang] || descriptions["fa"],
-    keywords: keywords[lang] || keywords["fa"],
-  };
+    robots: {
+      index: false,
+      follow: false,
+      nocache: true,
+      googleBot: { index: false, follow: false, noimageindex: true },
+    },
+  }
 }
 
-
 export default async function Layout({ children }: { children: React.ReactNode }) {
-  return <DashboardLayout>{children}</DashboardLayout>;
+  return <DashboardLayout>{children}</DashboardLayout>
 }

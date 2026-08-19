@@ -1,48 +1,63 @@
-"use client";
+'use client'
 
-import Link from "next/link";
-import { useTranslations } from "next-intl";
-import { cn } from "@/lib/utils";
-import SiteFooter from "@hisabche/ui/landing/site-footer";
+import Link from 'next/link'
+import { useLocale, useTranslations } from 'next-intl'
+import { cn } from '@/lib/utils'
+import SiteFooter from '@hisabche/ui/landing/site-footer'
 
 interface LegalSection {
-  heading: string;
-  body: string;
+  heading: string
+  body: string
 }
 
 export interface LegalPageClientProps {
-  titleKey: string;
-  titleFallback: string;
-  introKey: string;
-  introFallback: string;
-  sectionsKey: string;
+  titleKey: string
+  titleFallback: string
+  introKey: string
+  introFallback: string
+  sectionsKey: string
 }
 
-export function LegalPageClient({ titleKey, titleFallback, introKey, introFallback, sectionsKey }: LegalPageClientProps) {
-  const t = useTranslations();
+export function LegalPageClient({
+  titleKey,
+  titleFallback,
+  introKey,
+  introFallback,
+  sectionsKey,
+}: LegalPageClientProps) {
+  const t = useTranslations()
+  // Route links must carry the locale segment: proxy.ts runs with
+  // `localePrefix: 'always'`, so a bare "/" is a 307 whose target is decided by
+  // Accept-Language — an English reader clicking "back to home" from /en/legal
+  // could land on /fa.
+  const locale = useLocale()
+  const home = `/${locale}`
 
   const safeT = (key: string, fallback?: string) => {
-    const result = t(key);
-    return result && result !== key ? result : (fallback ?? key);
-  };
+    const result = t(key)
+    return result && result !== key ? result : (fallback ?? key)
+  }
 
-  const sectionsRaw = t.raw(sectionsKey) as unknown;
-  const sections = Array.isArray(sectionsRaw) ? (sectionsRaw as LegalSection[]) : [];
-  const lastUpdated = safeT("landing.legalPage.lastUpdated", "Last updated: {date}").replace("{date}", "2026-07-28");
+  const sectionsRaw = t.raw(sectionsKey) as unknown
+  const sections = Array.isArray(sectionsRaw) ? (sectionsRaw as LegalSection[]) : []
+  const lastUpdated = safeT('landing.legalPage.lastUpdated', 'Last updated: {date}').replace(
+    '{date}',
+    '2026-07-28',
+  )
 
   return (
     <div className="min-h-screen bg-[hsl(var(--surface-base))]">
       <header className="border-b border-[hsl(var(--border-default))]">
         <div className="container-narrow px-4 sm:px-6 py-4 flex items-center justify-between">
-          <Link href="/" className="text-lg font-bold text-[hsl(var(--fg-primary))]">
-            {safeT("app.name", "حسابچه")}
+          <Link href={home} className="text-lg font-bold text-[hsl(var(--fg-primary))]">
+            {safeT('app.name', 'حسابچه')}
             <span className="text-[hsl(var(--color-primary))]">.</span>
           </Link>
           <Link
-            href="/"
+            href={home}
             className="text-sm text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--fg-primary))] transition-colors"
           >
-            {safeT("landing.legalPage.backHome", "Back to home")}
+            {safeT('landing.legalPage.backHome', 'Back to home')}
           </Link>
         </div>
       </header>
@@ -63,7 +78,11 @@ export function LegalPageClient({ titleKey, titleFallback, introKey, introFallba
                 <h2 className="text-base sm:text-lg font-bold text-[hsl(var(--fg-primary))] mb-2">
                   {section.heading}
                 </h2>
-                <p className={cn("text-sm sm:text-base text-[hsl(var(--fg-secondary))] leading-relaxed")}>
+                <p
+                  className={cn(
+                    'text-sm sm:text-base text-[hsl(var(--fg-secondary))] leading-relaxed',
+                  )}
+                >
                   {section.body}
                 </p>
               </section>
@@ -71,7 +90,7 @@ export function LegalPageClient({ titleKey, titleFallback, introKey, introFallba
         </div>
       </main>
 
-      <SiteFooter t={safeT} />
+      <SiteFooter t={safeT} localePrefix={locale} />
     </div>
-  );
+  )
 }

@@ -1,7 +1,6 @@
 // apps/web/app/sitemap.ts
-import { type MetadataRoute } from "next";
-
-const BASE_URL = "https://www.hisabche.com";
+import { type MetadataRoute } from 'next'
+import { locales, localeUrl, localeToBcp47, defaultLocale } from './[lang]/i18n-config'
 
 // Only public, indexable pages. `/pricing`, `/login`, `/signup`, `/forgot-password`,
 // `/onboarding` and `/accept-invite` are intentionally excluded: `/pricing` has no
@@ -9,47 +8,63 @@ const BASE_URL = "https://www.hisabche.com";
 // and the rest carry `robots: { index: false }` in their own metadata — listing
 // noindex or non-existent URLs in the sitemap wastes crawl budget and can trigger
 // Search Console "Submitted URL marked noindex" / 404 errors.
+//
+// `/public-invoice/[token]` and `/public-task/[token]` must never appear here: they
+// render real customer invoice data behind an unguessable token.
 const routes = [
-  { path: "" },
-  { path: "/about" },
-  { path: "/contact" },
-  { path: "/legal/terms" },
-  { path: "/legal/privacy" },
-  { path: "/legal/cookies" },
-  { path: "/legal/disclaimer" },
-  { path: "/legal/refund" },
-  { path: "/legal/accessibility" },
-  { path: "/legal/security" },
-  { path: "/legal/data-deletion" },
-  { path: "/legal/gdpr" },
-  { path: "/legal/copyright" },
-];
+  { path: '' },
+  { path: '/about' },
+  { path: '/contact' },
+  // Feature pages — see app/[lang]/features/[slug]/page.tsx for why these two
+  // and no others.
+  { path: '/features/customer-debt' },
+  { path: '/features/offline' },
+  { path: '/legal/terms' },
+  { path: '/legal/privacy' },
+  { path: '/legal/cookies' },
+  { path: '/legal/disclaimer' },
+  { path: '/legal/refund' },
+  { path: '/legal/accessibility' },
+  { path: '/legal/security' },
+  { path: '/legal/data-deletion' },
+  { path: '/legal/gdpr' },
+  { path: '/legal/copyright' },
+]
 
-// Must match the actual locale segments served by app/[lang] (see i18n-config.ts):
-// "fa" is the default locale and is served unprefixed at "/", "af" and "en" are prefixed.
-const locales = ["fa", "af", "en"];
+// Content-change date for the public marketing/legal surface. Deliberately a
+// fixed value rather than `new Date()`: a sitemap that reports every URL as
+// modified "now" on every crawl is noise, and Google discounts the signal
+// entirely. Bump this when the public pages' content actually changes — the
+// legal pages already display this same date via `landing.legalPage.lastUpdated`.
+const LAST_MODIFIED = '2026-07-28'
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const entries: MetadataRoute.Sitemap = [];
-  const now = new Date().toISOString();
+  const entries: MetadataRoute.Sitemap = []
 
   for (const route of routes) {
+    // hreflang alternates are identical for every locale variant of a route and
+    // are what tie the three localized URLs together as true equivalents.
+    const languages: Record<string, string> = {}
     for (const locale of locales) {
-      const path = locale === "fa" ? route.path : `/${locale}${route.path}`;
+      languages[localeToBcp47[locale]] = localeUrl(locale, route.path)
+    }
+    languages['x-default'] = localeUrl(defaultLocale, route.path)
 
+    for (const locale of locales) {
       entries.push({
-        url: `${BASE_URL}${path}`,
-        lastModified: now,
-        alternates: {
-          languages: {
-            "fa": `${BASE_URL}/fa${route.path}`,
-            "fa-AF": `${BASE_URL}/af${route.path}`,
-            "en": `${BASE_URL}/en${route.path}`,
-          },
-        },
-      });
+        // Was `locale === "fa" ? route.path : ...`, i.e. unprefixed for fa —
+        // which contradicted this entry's own `hreflang="fa"` alternate and made
+        // all 13 fa URLs 307 redirects rather than the 200s a sitemap must list.
+        url: localeUrl(locale, route.path),
+        lastModified: LAST_MODIFIED,
+        alternates: { languages },
+      })
     }
   }
 
-  return entries;
+  return entries
 }
+
+// Keep the sitemap out of the per-request render path — its contents only change
+// when `routes` or `LAST_MODIFIED` change.
+export const dynamic = 'force-static'

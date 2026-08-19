@@ -15,6 +15,15 @@ import { FaInstagram, FaFacebook } from 'react-icons/fa6'
 
 export interface SiteFooterProps {
   t: (key: string, fallback?: string) => string
+  /**
+   * Locale segment to prefix route links with, e.g. "fa". On web the middleware
+   * runs with `localePrefix: 'always'`, so a bare `/about` is a 307 to
+   * `/{detected-locale}/about` — which both costs every internal link a
+   * redirect hop and lets Accept-Language override the locale the visitor is
+   * actually reading. Desktop mounts the same footer through its own router
+   * with no locale prefix, so this stays optional and defaults to no prefix.
+   */
+  localePrefix?: string
 }
 
 interface FooterLink {
@@ -38,6 +47,15 @@ const COLUMNS: FooterColumn[] = [
       { key: 'pricing', fallback: 'قیمت‌گذاری', href: '#pricing' },
       { key: 'security', fallback: 'امنیت داده', href: '#security' },
       { key: 'faq', fallback: 'سوالات متداول', href: '#faq' },
+      // Real routes, not in-page anchors — these are the site's only indexable
+      // pages targeting a specific search intent, so they need a crawlable
+      // link from every page that renders the footer.
+      {
+        key: 'customerDebt',
+        fallback: 'دفتر نسیه و بدهی مشتریان',
+        href: '/features/customer-debt',
+      },
+      { key: 'offline', fallback: 'حسابداری آفلاین', href: '/features/offline' },
     ],
   },
   {
@@ -72,7 +90,12 @@ const SOCIALS = [
   { icon: FaInstagram, label: 'Instagram', href: 'https://instagram.com/hisabche' },
 ]
 
-export default function SiteFooter({ t }: SiteFooterProps) {
+export default function SiteFooter({ t, localePrefix }: SiteFooterProps) {
+  // In-page anchors (#features, …) must stay bare — only route links get the
+  // locale segment.
+  const withLocale = (href: string) =>
+    href.startsWith('#') || !localePrefix ? href : `/${localePrefix}${href}`
+
   const year = new Date().getFullYear()
 
   return (
@@ -130,7 +153,7 @@ export default function SiteFooter({ t }: SiteFooterProps) {
                 {col.links.map((link) => (
                   <li key={link.key}>
                     <Link
-                      href={link.href}
+                      href={withLocale(link.href)}
                       className="text-[10px] sm:text-xs lg:text-sm text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--fg-primary))] transition-colors duration-200"
                     >
                       {t(`landing.footerLink.${link.key}`, link.fallback)}

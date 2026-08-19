@@ -99,15 +99,27 @@ const nextConfig = {
         headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
       },
       {
-        source: '/en',
+        // Landing pages. These were previously keyed on '/en' and '/' — but the
+        // proxy runs with `localePrefix: 'always'`, so '/' is a redirect and
+        // '/fa' and '/af' (the two highest-traffic locales) got no cache header
+        // at all. ':lang' covers every locale segment.
+        source: '/:lang(fa|af|en)',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=3600, stale-while-revalidate=86400' },
         ],
       },
       {
-        source: '/',
+        // Transport-level backstop for token-shared customer data. A meta tag
+        // only applies once the page is parsed, and only by crawlers that parse
+        // HTML; X-Robots-Tag applies to the response itself. Defence in depth
+        // alongside the per-route `robots` metadata and the Disallow in
+        // app/robots.ts. `noindex` here is safe because these pages must never
+        // be indexed under any circumstances.
+        source: '/:path*/:kind(public-invoice|public-task)/:token*',
         headers: [
-          { key: 'Cache-Control', value: 'public, max-age=3600, stale-while-revalidate=86400' },
+          { key: 'X-Robots-Tag', value: 'noindex, nofollow, noarchive, nosnippet, noimageindex' },
+          { key: 'Cache-Control', value: 'private, no-store, max-age=0' },
+          { key: 'Referrer-Policy', value: 'no-referrer' },
         ],
       },
       {
