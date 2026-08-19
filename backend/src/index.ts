@@ -326,6 +326,15 @@ export async function buildServer(): Promise<typeof server> {
       : [
           'https://project-ro4vn-hisabche-s-projects.vercel.app',
           'https://project-ro4vn.vercel.app',
+          // The two Next dev servers, per their own `dev` scripts:
+          // apps/web runs on 3039 and apps/admin on 3040. Both were missing,
+          // so every browser call from either app failed preflight with
+          // "No 'Access-Control-Allow-Origin' header is present" — including
+          // the admin login, which made a CORS problem look like a broken
+          // password. 3000/3001 are kept for any ad-hoc `next dev` that falls
+          // back to the default port.
+          'http://localhost:3039',
+          'http://localhost:3040',
           'http://localhost:3000',
           'http://localhost:3001',
           // Expo's web dev server. Only the browser preview needs this — a
