@@ -64,6 +64,10 @@ export default function robots(): MetadataRoute.Robots {
       { userAgent: 'Bingbot', allow: '/', disallow },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,
-    host: SITE_URL,
+    // No `host:` directive. It is not part of the robots.txt standard — it was a
+    // Yandex extension — and Search Console flags it as "Rule ignored by
+    // Googlebot". Canonical host is already enforced properly by the apex→www
+    // 308 redirect in next.config.js and by the self-referencing canonical tags,
+    // which is what Google actually reads.
   }
 }
