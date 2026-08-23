@@ -43,7 +43,12 @@ export interface InvoiceDraftState {
   columnsInitialised: boolean
 
   rows: InvoiceGridRow[]
-  customer: InvoiceDraftCustomer | null
+  /**
+   * Everyone on this invoice. The FIRST is the invoice's own customer — the
+   * one `customers.id` points at and the one the receivable belongs to. The
+   * rest ride along as named parties. See `customer-panel.tsx` for why.
+   */
+  customers: InvoiceDraftCustomer[]
   transactionType: 'sale' | 'purchase'
   /** ISO date the invoice is dated. */
   date: string
@@ -66,6 +71,7 @@ export interface InvoiceDraftState {
   addRow: () => void
   duplicateRow: (id: string) => void
   removeRow: (id: string) => void
+  removeLastRow: () => void
   setCell: (rowId: string, columnId: string, value: string) => void
   setRowProduct: (rowId: string, productId: string | undefined, name: string, price: string) => void
 
@@ -78,7 +84,8 @@ export interface InvoiceDraftState {
   resetColumns: (currency: CurrencyCode) => void
 
   // ---- meta ----
-  setCustomer: (customer: InvoiceDraftCustomer | null) => void
+  addCustomer: (customer: InvoiceDraftCustomer) => void
+  removeCustomer: (id: string) => void
   setField: <K extends keyof InvoiceDraftState>(key: K, value: InvoiceDraftState[K]) => void
   setRate: (currency: CurrencyCode, value: string) => void
 
@@ -114,7 +121,7 @@ const INITIAL_CURRENCY: CurrencyCode = 'AFN'
 function blankDraft(columns: InvoiceColumn[]) {
   return {
     rows: [emptyRow(nextRowId(), columns)],
-    customer: null,
+    customers: [],
     transactionType: 'sale' as const,
     date: new Date().toISOString(),
     dueDate: null,
@@ -162,6 +169,14 @@ export const useInvoiceDraftStore = create<InvoiceDraftState>()(
           const rows = state.rows.filter((r) => r.id !== id)
           // Never leave the grid with nothing to type into.
           return { rows: rows.length ? rows : [emptyRow(nextRowId(), state.columns)] }
+        }),
+
+      // The summary's item-count arrows call this. It drops the last row, and
+      // never the only one — the grid always has something to type into.
+      removeLastRow: () =>
+        set((state) => {
+          if (state.rows.length <= 1) return state
+          return { rows: state.rows.slice(0, -1) }
         }),
 
       setCell: (rowId, columnId, value) =>
@@ -246,7 +261,15 @@ export const useInvoiceDraftStore = create<InvoiceDraftState>()(
         set({ columns: defaultColumns(currency), columnsInitialised: true }),
 
       // ---- meta ----
-      setCustomer: (customer) => set({ customer }),
+      addCustomer: (customer) =>
+        set((state) =>
+          state.customers.some((c) => c.id === customer.id)
+            ? state
+            : { customers: [...state.customers, customer] },
+        ),
+
+      removeCustomer: (id) =>
+        set((state) => ({ customers: state.customers.filter((c) => c.id !== id) })),
       setField: (key, value) => set({ [key]: value } as Pick<InvoiceDraftState, typeof key>),
       setRate: (currency, value) =>
         set((state) => ({ rates: { ...state.rates, [currency]: value } })),
@@ -255,6 +278,52 @@ export const useInvoiceDraftStore = create<InvoiceDraftState>()(
     }),
     {
       name: 'hisabche-invoice-draft',
+      /**
+       * Bump whenever the persisted SHAPE changes.
+       *
+       * A draft written by an older build is still sitting in the user's
+       * localStorage when the new one loads, and zustand's default merge is
+       * shallow — a renamed key arrives as the old name and the new one is
+       * simply absent, which is how `customers.length` crashed the panel on a
+       * draft saved minutes earlier.
+       */
+      version: 2,
+      migrate: (persisted, from) => {
+        const state = (persisted ?? {}) as Record<string, unknown>
+
+        // v1 → v2: a single `customer` became an ordered `customers` list.
+        if (from < 2) {
+          const legacy = state.customer as InvoiceDraftCustomer | null | undefined
+          state.customers = legacy ? [legacy] : []
+          delete state.customer
+        }
+
+        return state
+      },
+      /**
+       * Belt and braces for a draft that predates versioning, which has no
+       * version stamp and so never reaches `migrate`. Every array and object
+       * the UI indexes into is guaranteed here.
+       */
+      merge: (persisted, current) => {
+        const saved = (persisted ?? {}) as Partial<InvoiceDraftState> & {
+          customer?: InvoiceDraftCustomer | null
+        }
+
+        return {
+          ...current,
+          ...saved,
+          columns:
+            Array.isArray(saved.columns) && saved.columns.length ? saved.columns : current.columns,
+          rows: Array.isArray(saved.rows) && saved.rows.length ? saved.rows : current.rows,
+          customers: Array.isArray(saved.customers)
+            ? saved.customers
+            : saved.customer
+              ? [saved.customer]
+              : [],
+          rates: saved.rates ?? {},
+        }
+      },
       storage: createJSONStorage(() => {
         if (typeof window !== 'undefined' && typeof localStorage !== 'undefined')
           return localStorage
@@ -264,7 +333,7 @@ export const useInvoiceDraftStore = create<InvoiceDraftState>()(
         columns: state.columns,
         columnsInitialised: state.columnsInitialised,
         rows: state.rows,
-        customer: state.customer,
+        customers: state.customers,
         transactionType: state.transactionType,
         date: state.date,
         dueDate: state.dueDate,

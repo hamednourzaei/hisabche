@@ -48,12 +48,33 @@ const IconLogout = (
   />
 )
 
-// ✅ BrandMark با memo
-const BrandMark = memo(function BrandMark() {
+/**
+ * The product mark.
+ *
+ * The same `/logo-icon.png` the sidebar shows, not a letter tile. Two marks
+ * for one product read as two products, and the tile was a placeholder that
+ * outlived the real logo. `onError` falls back to the tile so a missing file
+ * degrades to the old look instead of a broken-image icon.
+ */
+const BrandMark = memo(function BrandMark({ alt }: { alt: string }) {
+  const [failed, setFailed] = useState(false)
+
+  if (failed) {
+    return (
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--gradient-brand)]">
+        <span className="text-xs font-bold text-white">ح</span>
+      </div>
+    )
+  }
+
   return (
-    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--gradient-brand)] xs:h-8 xs:w-8">
-      <span className="text-[10px] font-bold text-white xs:text-xs">ح</span>
-    </div>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src="/logo-icon.png"
+      alt={alt}
+      onError={() => setFailed(true)}
+      className="h-8 w-8 shrink-0 object-contain"
+    />
   )
 })
 BrandMark.displayName = 'BrandMark'
@@ -244,7 +265,6 @@ LanguageSelect.displayName = 'LanguageSelect'
 interface HeaderProps {
   variant?: 'landing' | 'dashboard'
   appName: string
-  businessName?: string
   lastSyncedAt?: number | null
   isOnline?: boolean
   isSyncing?: boolean
@@ -265,7 +285,6 @@ interface HeaderProps {
 export const DashboardHeader = memo(function DashboardHeader({
   variant = 'dashboard',
   appName,
-  businessName,
   lastSyncedAt = null,
   isOnline = true,
   isSyncing = false,
@@ -293,18 +312,13 @@ export const DashboardHeader = memo(function DashboardHeader({
     >
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:h-14">
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-          <BrandMark />
+          <BrandMark alt={appName} />
           {variant === 'dashboard' && (
             <>
               <div className="hidden min-w-0 flex-col sm:flex">
                 <span className="truncate text-sm font-bold text-[hsl(var(--fg-primary))]">
                   {appName}
                 </span>
-                {businessName && (
-                  <span className="truncate text-[10px] text-[hsl(var(--fg-tertiary))]">
-                    {businessName}
-                  </span>
-                )}
               </div>
               <span className="mx-1 hidden h-6 w-px bg-[hsl(var(--border-default))] sm:block" />
               <SyncPill

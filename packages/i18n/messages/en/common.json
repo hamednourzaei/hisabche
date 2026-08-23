@@ -1706,7 +1706,11 @@
     "businessNamePlaceholder": "e.g. Hisabche Store",
     "fullNameRequired": "Name cannot be empty",
     "saveFailed": "Could not save. Please try again.",
-    "stampNotSupported": "Saving a stamp is not enabled on this server yet. Please contact support."
+    "stampNotSupported": "Saving a stamp is not enabled on this server yet. Please contact support.",
+    "stampSaved": "Stamp saved",
+    "stampRemoved": "Stamp removed",
+    "stampNoWorkspace": "Your business is still loading — try again in a moment.",
+    "profileSaved": "Your details were saved"
   },
   "sync": {
     "title": "Sync",
@@ -2771,7 +2775,11 @@
       "columnTotals": "Column totals",
       "duplicateRow": "Duplicate row",
       "removeRow": "Delete row",
-      "noRate": "No rate"
+      "noRate": "No rate",
+      "descriptionPlaceholder": "Type, or pick from stock",
+      "pickProduct": "Pick from stock",
+      "fromStock": "From stock — quantity will be reduced",
+      "noProducts": "No product found — the text will be used as typed"
     },
     "column": {
       "addTitle": "Add column",
@@ -2802,7 +2810,9 @@
       "sum": "Total",
       "hide": "Hide column",
       "show": "Show column",
-      "systemColumn": "System column — cannot be deleted"
+      "systemColumn": "System column — cannot be deleted",
+      "moveStart": "Move to start",
+      "moveEnd": "Move to end"
     },
     "customer": {
       "title": "Customer and invoice details",
@@ -2815,7 +2825,12 @@
       "rateHint": "Without a rate, amounts in this currency are reported separately and excluded from the total.",
       "date": "Invoice date",
       "dueDate": "Due date",
-      "notes": "Notes"
+      "notes": "Notes",
+      "primary": "Primary",
+      "remove": "Remove from invoice",
+      "addAnother": "Add another customer…",
+      "otherParties": "Other parties on this invoice",
+      "multiNote": "The receivable is recorded against the primary customer; the others appear on the invoice as accompanying parties."
     },
     "summary": {
       "title": "Invoice summary",

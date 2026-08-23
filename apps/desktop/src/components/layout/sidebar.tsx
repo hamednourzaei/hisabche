@@ -29,7 +29,7 @@ import { MORE_GROUPS, MORE_ICON, PRIMARY_ITEMS } from '@hisabche/ui/menu'
  */
 const DESKTOP_ROUTES = new Set([
   '/dashboard',
-  '/quick-invoice',
+  '/invoices/new',
   '/invoices',
   '/warehouse',
   '/purchasing',

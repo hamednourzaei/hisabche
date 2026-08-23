@@ -29,7 +29,7 @@ interface Action {
 /** Paths desktop mounts, matched on the segment before any query string. */
 const DESKTOP_ROUTES = new Set([
   '/dashboard',
-  '/quick-invoice',
+  '/invoices/new',
   '/invoices',
   '/warehouse',
   '/purchasing',

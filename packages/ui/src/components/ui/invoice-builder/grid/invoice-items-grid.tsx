@@ -1,19 +1,23 @@
 // ============================================
 // The invoice spreadsheet.
 //
-// Two properties this component exists to guarantee:
+// Three properties this component exists to guarantee:
 //
 //   1. It renders from the column configuration, never from a hardcoded
 //      <th> list. Adding a trade-specific field is data, not code.
-//   2. Horizontal overflow is confined to the scroller INSIDE the card. The
-//      page itself never scrolls sideways at any width — that is what makes a
-//      wide invoice usable on a 320px phone instead of broken on it.
+//   2. Columns are sized to their CONTENT, not to a fixed generous minimum.
+//      The first version gave every column ~6–13rem, so five columns needed a
+//      scrollbar on a laptop. Now the widths follow the type, the table is
+//      `w-full` with `table-auto`, and horizontal scrolling only starts when
+//      the columns genuinely cannot fit.
+//   3. Horizontal overflow is confined to the scroller INSIDE the card. The
+//      page itself never scrolls sideways at any width.
 // ============================================
 'use client'
 
 import { memo, useCallback, useMemo } from 'react'
 import type { KeyboardEvent } from 'react'
-import { Copy, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Copy, Trash2 } from 'lucide-react'
 import {
   COLUMN,
   columnTotals,
@@ -21,7 +25,6 @@ import {
   isForeignMoneyColumn,
   parseCellNumber,
   rowTotal,
-  rowUnitPrice,
   toInvoiceCurrency,
   visibleColumns,
   type GridMoneyContext,
@@ -31,6 +34,7 @@ import {
 import { formatNumber } from '@hisabche/formatting'
 
 import { cn } from '../../../../lib/utils'
+import { DescriptionCell } from './description-cell'
 import { GridCell } from './grid-cell'
 
 export interface InvoiceItemsGridProps {
@@ -42,20 +46,47 @@ export interface InvoiceItemsGridProps {
   selectedColumnId: string | null
   onSelectColumn: (id: string | null) => void
   onCellChange: (rowId: string, columnId: string, value: string) => void
+  onPickProduct: (
+    rowId: string,
+    product: { id: string; name: string; price: string; unit: string },
+  ) => void
+  onMoveColumn: (id: string, direction: -1 | 1) => void
   onRemoveRow: (rowId: string) => void
   onDuplicateRow: (rowId: string) => void
   /** Rows the user must fix before the invoice can be confirmed. */
   invalidRowIds: ReadonlySet<string>
 }
 
-/** Minimum width per column type, so a cell is never too small to tap. */
-function widthFor(column: InvoiceColumn): string {
-  if (column.id === COLUMN.description) return 'min-w-[13rem]'
-  if (column.type === 'currency' || column.type === 'computed') return 'min-w-[9rem]'
-  if (column.type === 'select' || column.type === 'date') return 'min-w-[7rem]'
-  if (column.type === 'boolean') return 'min-w-[5rem]'
-  return 'min-w-[6rem]'
+/**
+ * Width per column type.
+ *
+ * A percentage `width` on a `table-auto` layout is a HINT: the browser gives
+ * the description the slack and lets the numeric columns shrink to their
+ * content. That is why five columns now fill a laptop instead of overflowing
+ * it, and why a fourteen-column gold invoice still scrolls gracefully.
+ */
+function widthFor(column: InvoiceColumn): { className: string; width?: string } {
+  if (column.id === COLUMN.description) {
+    return { className: 'min-w-[10rem]', width: '32%' }
+  }
+  if (column.type === 'currency' || column.type === 'computed') {
+    return { className: 'min-w-[7rem] w-[1%] whitespace-nowrap' }
+  }
+  if (column.type === 'select' || column.type === 'date') {
+    return { className: 'min-w-[5.5rem] w-[1%] whitespace-nowrap' }
+  }
+  if (column.type === 'boolean') {
+    return { className: 'min-w-[3.5rem] w-[1%] whitespace-nowrap' }
+  }
+  if (column.type === 'text') {
+    return { className: 'min-w-[7rem]' }
+  }
+  return { className: 'min-w-[4.5rem] w-[1%] whitespace-nowrap' }
 }
+
+/** Vertical rule between every column, in both the head and the body. */
+const cellBorder = 'border-s border-[hsl(var(--border-default))]'
+const numericFont = 'tabular-nums [font-variant-numeric:tabular-nums] font-medium'
 
 export const InvoiceItemsGrid = memo(function InvoiceItemsGrid({
   t,
@@ -66,6 +97,8 @@ export const InvoiceItemsGrid = memo(function InvoiceItemsGrid({
   selectedColumnId,
   onSelectColumn,
   onCellChange,
+  onPickProduct,
+  onMoveColumn,
   onRemoveRow,
   onDuplicateRow,
   invalidRowIds,
@@ -80,22 +113,15 @@ export const InvoiceItemsGrid = memo(function InvoiceItemsGrid({
 
   /**
    * Keyboard movement. Tab is left to the browser — its natural order already
-   * walks the cells — so only the spreadsheet-specific keys are handled:
-   * Enter drops to the row below, arrows move up and down the column.
+   * walks the cells — so only the spreadsheet-specific keys are handled here.
+   * Arrow keys are claimed by the stepper and the select, so Enter is the one
+   * key that always moves down a row.
    */
   const handleKeyDown = useCallback(
     (event: KeyboardEvent<HTMLElement>, rowIndex: number, columnIndex: number) => {
-      // A <select> owns Arrow keys for choosing its option, so only Enter
-      // moves the caret out of one.
-      const isSelect = (event.target as HTMLElement).tagName === 'SELECT'
-
-      let target: number
-      if (event.key === 'Enter') target = rowIndex + 1
-      else if (event.key === 'ArrowDown' && !isSelect) target = rowIndex + 1
-      else if (event.key === 'ArrowUp' && !isSelect) target = rowIndex - 1
-      else return
-
-      if (target < 0 || target >= rows.length) return
+      if (event.key !== 'Enter') return
+      const target = rowIndex + 1
+      if (target >= rows.length) return
       event.preventDefault()
       const next = document.querySelector<HTMLElement>(`[data-cell="${target}-${columnIndex}"]`)
       next?.focus()
@@ -104,68 +130,97 @@ export const InvoiceItemsGrid = memo(function InvoiceItemsGrid({
   )
 
   const hasAnyTotal = shown.some((c) => totals[c.id] !== undefined)
+  const filledCount = rows.filter((r) => hasCellValue(r.values[COLUMN.description])).length
 
   return (
-    // `overflow-x-auto` here and `min-w-0` on every ancestor is the whole
-    // no-page-overflow strategy. The table may be 1400px wide; the page is not.
+    // `overflow-x-auto` here plus `min-w-0` on every ancestor is the whole
+    // no-page-overflow strategy: the table may be wide, the page never is.
     <div className="w-full min-w-0 overflow-x-auto">
-      <table className="w-full min-w-max border-collapse text-sm">
-        <thead className="sticky top-0 z-10 bg-[hsl(var(--surface-muted))]">
+      <table className="w-full table-auto border-collapse text-sm">
+        <thead className="sticky top-0 z-20 bg-[hsl(var(--surface-muted))]">
           <tr>
             <th
               scope="col"
-              className="w-12 border-b border-[hsl(var(--border-default))] px-2 py-2.5 text-center text-xs font-semibold text-[hsl(var(--fg-secondary))]"
+              className="w-[1%] whitespace-nowrap border-b border-[hsl(var(--border-default))] px-2 py-1.5 text-center text-[11px] font-semibold text-[hsl(var(--fg-secondary))]"
             >
               {t('invoiceBuilder.columns.rowNumber', 'ردیف')}
             </th>
 
-            {shown.map((column) => {
+            {shown.map((column, index) => {
               const selected = column.id === selectedColumnId
               const label = column.labelKey ? t(column.labelKey, column.label) : column.label
+              const size = widthFor(column)
               return (
                 <th
                   key={column.id}
                   scope="col"
+                  {...(size.width ? { style: { width: size.width } } : {})}
                   className={cn(
-                    'border-b border-[hsl(var(--border-default))] p-0 text-start',
-                    widthFor(column),
+                    'border-b border-[hsl(var(--border-default))] p-0 text-start align-bottom',
+                    cellBorder,
+                    size.className,
                     selected && 'bg-[hsl(var(--color-primary)/0.12)]',
                   )}
                 >
-                  {/* A button, not a click handler on the th — column
-                      selection has to work by tap and by keyboard, not only
-                      by mouse. */}
-                  <button
-                    type="button"
-                    aria-pressed={selected}
-                    onClick={() => onSelectColumn(selected ? null : column.id)}
-                    className={cn(
-                      'w-full px-2 py-2.5 text-start text-xs font-semibold',
-                      'text-[hsl(var(--fg-secondary))] hover:text-[hsl(var(--fg-primary))]',
-                      'transition-colors duration-150 motion-reduce:transition-none',
-                      selected && 'text-[hsl(var(--color-primary))]',
-                    )}
-                  >
-                    <span className="block truncate">{label}</span>
-                    {column.currency || column.suffix ? (
-                      <span className="mt-0.5 block truncate text-[10px] font-normal text-[hsl(var(--fg-tertiary))]">
-                        {column.suffix ??
-                          (column.currency
-                            ? t(
-                                `currency.${(column.currency ?? '').toLowerCase()}`,
-                                column.currency,
-                              )
-                            : '')}
-                      </span>
-                    ) : null}
-                  </button>
+                  <div className="flex items-center gap-0.5 px-1 py-1">
+                    {/* Reorder, right here on the header — the settings dialog
+                        can do it too, but moving a column is a direct-
+                        manipulation gesture, not a settings trip. */}
+                    <button
+                      type="button"
+                      onClick={() => onMoveColumn(column.id, -1)}
+                      disabled={index === 0}
+                      aria-label={t('invoiceBuilder.settings.moveStart', 'انتقال به ابتدا')}
+                      className="shrink-0 rounded p-0.5 text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--color-primary))] disabled:opacity-20"
+                    >
+                      <ChevronRight className="size-3 rtl:rotate-180" aria-hidden="true" />
+                    </button>
+
+                    {/* A button, not a click handler on the th — column
+                        selection has to work by tap and by keyboard. */}
+                    <button
+                      type="button"
+                      aria-pressed={selected}
+                      onClick={() => onSelectColumn(selected ? null : column.id)}
+                      className={cn(
+                        'min-w-0 flex-1 rounded px-1 py-0.5 text-start text-[11px] font-semibold leading-tight',
+                        'text-[hsl(var(--fg-secondary))] hover:text-[hsl(var(--fg-primary))]',
+                        'transition-colors duration-150 motion-reduce:transition-none',
+                        selected && 'text-[hsl(var(--color-primary))]',
+                      )}
+                    >
+                      <span className="block truncate">{label}</span>
+                      {column.currency || column.suffix ? (
+                        <span className="block truncate text-[10px] font-normal text-[hsl(var(--fg-tertiary))]">
+                          {column.suffix ??
+                            (column.currency
+                              ? t(`currency.${column.currency.toLowerCase()}`, column.currency)
+                              : '')}
+                        </span>
+                      ) : null}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => onMoveColumn(column.id, 1)}
+                      disabled={index === shown.length - 1}
+                      aria-label={t('invoiceBuilder.settings.moveEnd', 'انتقال به انتها')}
+                      className="shrink-0 rounded p-0.5 text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--color-primary))] disabled:opacity-20"
+                    >
+                      <ChevronLeft className="size-3 rtl:rotate-180" aria-hidden="true" />
+                    </button>
+                  </div>
                 </th>
               )
             })}
 
             <th
               scope="col"
-              className="w-20 border-b border-[hsl(var(--border-default))] px-2 py-2.5 text-center text-xs font-semibold text-[hsl(var(--fg-secondary))]"
+              className={cn(
+                'w-[1%] whitespace-nowrap border-b border-[hsl(var(--border-default))] px-2 py-1.5',
+                'text-center text-[11px] font-semibold text-[hsl(var(--fg-secondary))]',
+                cellBorder,
+              )}
             >
               {t('invoiceBuilder.columns.actions', 'عملیات')}
             </th>
@@ -180,20 +235,22 @@ export const InvoiceItemsGrid = memo(function InvoiceItemsGrid({
                 key={row.id}
                 className={cn(
                   'border-b border-[hsl(var(--border-default))]',
-                  'hover:bg-[hsl(var(--surface-muted)/0.5)]',
+                  'hover:bg-[hsl(var(--surface-muted)/0.4)]',
                   invalid && 'bg-[hsl(var(--color-destructive)/0.06)]',
                 )}
               >
-                <td className="px-2 py-1 text-center text-xs tabular-nums text-[hsl(var(--fg-tertiary))]">
+                <td
+                  className={cn(
+                    'px-2 py-1 text-center text-[11px] text-[hsl(var(--fg-tertiary))]',
+                    numericFont,
+                  )}
+                >
                   {formatNumber(rowIndex + 1, locale, 0)}
                 </td>
 
                 {shown.map((column, columnIndex) => {
                   const value = row.values[column.id] ?? ''
 
-                  // The computed column shows the line total; a foreign-money
-                  // cell shows what it is worth in the invoice currency, so
-                  // no conversion is ever invisible.
                   let computedText: string | undefined
                   let hint: string | undefined
 
@@ -204,6 +261,8 @@ export const InvoiceItemsGrid = memo(function InvoiceItemsGrid({
                     isForeignMoneyColumn(column, ctx) &&
                     hasCellValue(value)
                   ) {
+                    // A foreign amount always shows what it is worth here, so
+                    // no conversion is ever invisible.
                     const converted = toInvoiceCurrency(
                       parseCellNumber(value),
                       column.currency ?? ctx.currency,
@@ -220,6 +279,7 @@ export const InvoiceItemsGrid = memo(function InvoiceItemsGrid({
                       key={column.id}
                       className={cn(
                         'p-0 align-middle',
+                        cellBorder,
                         column.id === selectedColumnId && 'bg-[hsl(var(--color-primary)/0.05)]',
                       )}
                     >
@@ -233,18 +293,37 @@ export const InvoiceItemsGrid = memo(function InvoiceItemsGrid({
                         columnIndex={columnIndex}
                         onChange={(next) => onCellChange(row.id, column.id, next)}
                         onKeyDown={handleKeyDown}
+                        {...(column.id === COLUMN.description
+                          ? {
+                              slot: (
+                                <DescriptionCell
+                                  t={t}
+                                  locale={locale}
+                                  value={value}
+                                  productId={row.productId}
+                                  rowIndex={rowIndex}
+                                  columnIndex={columnIndex}
+                                  onChange={(next) =>
+                                    onCellChange(row.id, COLUMN.description, next)
+                                  }
+                                  onPickProduct={(product) => onPickProduct(row.id, product)}
+                                  onKeyDown={handleKeyDown}
+                                />
+                              ),
+                            }
+                          : {})}
                       />
                     </td>
                   )
                 })}
 
-                <td className="px-1 py-1">
+                <td className={cn('px-1 py-0.5', cellBorder)}>
                   <div className="flex items-center justify-center gap-0.5">
                     <button
                       type="button"
                       onClick={() => onDuplicateRow(row.id)}
                       aria-label={t('invoiceBuilder.grid.duplicateRow', 'تکرار ردیف')}
-                      className="rounded p-1.5 text-[hsl(var(--fg-tertiary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]"
+                      className="rounded p-1 text-[hsl(var(--fg-tertiary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]"
                     >
                       <Copy className="size-3.5" aria-hidden="true" />
                     </button>
@@ -252,7 +331,7 @@ export const InvoiceItemsGrid = memo(function InvoiceItemsGrid({
                       type="button"
                       onClick={() => onRemoveRow(row.id)}
                       aria-label={t('invoiceBuilder.grid.removeRow', 'حذف ردیف')}
-                      className="rounded p-1.5 text-[hsl(var(--fg-tertiary))] hover:bg-[hsl(var(--color-destructive)/0.1)] hover:text-[hsl(var(--color-destructive))]"
+                      className="rounded p-1 text-[hsl(var(--fg-tertiary))] hover:bg-[hsl(var(--color-destructive)/0.1)] hover:text-[hsl(var(--color-destructive))]"
                     >
                       <Trash2 className="size-3.5" aria-hidden="true" />
                     </button>
@@ -265,14 +344,14 @@ export const InvoiceItemsGrid = memo(function InvoiceItemsGrid({
 
         {hasAnyTotal ? (
           <tfoot>
-            <tr className="bg-[hsl(var(--surface-muted))] font-semibold">
-              <td className="px-2 py-2.5 text-center text-xs text-[hsl(var(--fg-secondary))]">
-                {/* The count of rows that will actually become invoice items. */}
-                {formatNumber(
-                  rows.filter((r) => hasCellValue(r.values[COLUMN.description])).length,
-                  locale,
-                  0,
-                )}
+            <tr className="border-t-2 border-[hsl(var(--border-strong),var(--border-default))] bg-[hsl(var(--surface-muted))] font-semibold">
+              {/* The row-number column carries the LABEL here, not a number.
+                  It used to print "۱", which read as a sixth invoice line. */}
+              <td
+                className="whitespace-nowrap px-2 py-2 text-center text-[11px] text-[hsl(var(--fg-secondary))]"
+                title={t('invoiceBuilder.grid.columnTotals', 'جمع ستون‌ها')}
+              >
+                Σ
               </td>
               {shown.map((column, index) => {
                 const total = totals[column.id]
@@ -280,19 +359,21 @@ export const InvoiceItemsGrid = memo(function InvoiceItemsGrid({
                   <td
                     key={column.id}
                     className={cn(
-                      'px-2 py-2.5 text-xs',
+                      'px-2 py-2 text-[11px]',
+                      cellBorder,
                       column.id === selectedColumnId && 'bg-[hsl(var(--color-primary)/0.08)]',
                     )}
                   >
-                    {index === 0 && total === undefined ? (
-                      <span className="text-[hsl(var(--fg-secondary))]">
-                        {t('invoiceBuilder.grid.columnTotals', 'جمع ستون‌ها')}
-                      </span>
-                    ) : total === undefined ? null : (
+                    {total === undefined ? (
+                      index === 0 ? (
+                        <span className="text-[hsl(var(--fg-secondary))]">
+                          {t('invoiceBuilder.grid.columnTotals', 'جمع ستون‌ها')}
+                        </span>
+                      ) : null
+                    ) : (
                       <span
                         dir="ltr"
-                        className="block tabular-nums text-[hsl(var(--fg-primary))]"
-                        style={{ textAlign: 'end' }}
+                        className={cn('block text-end text-[hsl(var(--fg-primary))]', numericFont)}
                       >
                         {fmt(total, column.precision)}
                       </span>
@@ -300,7 +381,14 @@ export const InvoiceItemsGrid = memo(function InvoiceItemsGrid({
                   </td>
                 )
               })}
-              <td />
+              <td
+                className={cn(
+                  'px-2 py-2 text-center text-[11px] text-[hsl(var(--fg-tertiary))]',
+                  cellBorder,
+                )}
+              >
+                {formatNumber(filledCount, locale, 0)}
+              </td>
             </tr>
           </tfoot>
         ) : null}
@@ -310,14 +398,3 @@ export const InvoiceItemsGrid = memo(function InvoiceItemsGrid({
 })
 
 InvoiceItemsGrid.displayName = 'InvoiceItemsGrid'
-
-/** Exposed for the summary panel so it never re-derives the line rule. */
-export function lineTotal(
-  row: InvoiceGridRow,
-  columns: readonly InvoiceColumn[],
-  ctx: GridMoneyContext,
-): number {
-  return rowTotal(row, columns, ctx)
-}
-
-export { rowUnitPrice }

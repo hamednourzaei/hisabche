@@ -5,10 +5,13 @@
 // the grid generic: adding «IMEI» or «ساعت کار» needs no code here, because
 // they are just a `text` and a `decimal` column.
 //
+// Every control is the project's own — the shared Select, the shared date
+// picker, the shared stepper. A native <select> inside a dark table renders a
+// white popup with invisible items, which is exactly what it did here before.
+//
 // Typing writes the raw string straight through to the draft. Parsing and
 // rounding happen once, in `@hisabche/validation`'s grid model, so a
-// half-typed «12.» never becomes NaN in a total and the number the user sees
-// is the number they typed.
+// half-typed «12.» never becomes NaN in a total.
 // ============================================
 'use client'
 
@@ -17,6 +20,9 @@ import type { KeyboardEvent } from 'react'
 import { COLUMN, type InvoiceColumn } from '@hisabche/validation'
 
 import { cn } from '../../../../lib/utils'
+import { JalaliDatePicker } from '../../jalali-datepicker'
+import { NumberStepper } from '../../number-stepper'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../select'
 
 /** The unit choices offered by the built-in واحد column. */
 export const UNIT_CHOICES = [
@@ -43,22 +49,38 @@ export interface GridCellProps {
   t: (key: string, fallback?: string) => string
   onChange: (value: string) => void
   onKeyDown: (event: KeyboardEvent<HTMLElement>, rowIndex: number, columnIndex: number) => void
+  /** Replaces the plain input for the description column. */
+  slot?: React.ReactNode
 }
 
-/** `inputMode` drives the on-screen keyboard a phone shows. */
-function inputModeFor(type: InvoiceColumn['type']): 'text' | 'numeric' | 'decimal' {
-  if (type === 'integer') return 'numeric'
-  if (type === 'decimal' || type === 'currency' || type === 'percent') return 'decimal'
-  return 'text'
-}
-
-const cellInputClass = cn(
-  'w-full bg-transparent px-2 py-2 text-sm',
+/**
+ * The focus treatment.
+ *
+ * `inset` rather than an outline ring: an outline is painted OUTSIDE the
+ * element's box, so on a table cell it bled up over the sticky header and the
+ * row above. An inset shadow stays inside the cell, always.
+ */
+const cellBase = cn(
+  'h-9 w-full min-w-0 bg-transparent px-2 text-sm',
   'text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))]',
-  'outline-none focus:bg-[hsl(var(--color-primary)/0.06)]',
-  'rounded-[var(--radius-sm)]',
+  'outline-none',
+  'focus:bg-[hsl(var(--color-primary)/0.07)]',
+  'focus:shadow-[inset_0_0_0_1.5px_hsl(var(--color-primary))]',
   'transition-colors duration-150 motion-reduce:transition-none',
 )
+
+/** Every numeric column shares one font stack so columns line up visually. */
+const numericFont = 'tabular-nums [font-variant-numeric:tabular-nums] font-medium'
+
+function isNumericType(type: InvoiceColumn['type']): boolean {
+  return (
+    type === 'integer' ||
+    type === 'decimal' ||
+    type === 'currency' ||
+    type === 'percent' ||
+    type === 'computed'
+  )
+}
 
 export const GridCell = memo(function GridCell({
   column,
@@ -71,40 +93,35 @@ export const GridCell = memo(function GridCell({
   t,
   onChange,
   onKeyDown,
+  slot,
 }: GridCellProps) {
   const handleKey = useCallback(
     (event: KeyboardEvent<HTMLElement>) => onKeyDown(event, rowIndex, columnIndex),
     [onKeyDown, rowIndex, columnIndex],
   )
 
-  // Numbers read left-to-right even inside an RTL invoice — that is how a
-  // shopkeeper reads a price. The label columns stay RTL.
-  const numeric =
-    column.type === 'integer' ||
-    column.type === 'decimal' ||
-    column.type === 'currency' ||
-    column.type === 'percent' ||
-    column.type === 'computed'
-
+  // ── computed ───────────────────────────────────────────────────────────
   if (column.type === 'computed') {
     return (
       <div
-        className="px-2 py-2 text-sm font-semibold tabular-nums text-[hsl(var(--fg-primary))]"
         dir="ltr"
-        style={{ textAlign: 'end' }}
+        className={cn('px-2 py-2 text-end text-sm text-[hsl(var(--fg-primary))]', numericFont)}
       >
         {computedText ?? '—'}
       </div>
     )
   }
 
+  // ── description (product picker lives here) ────────────────────────────
+  if (slot) return <div className="px-1 py-0.5">{slot}</div>
+
+  // ── boolean ────────────────────────────────────────────────────────────
   if (column.type === 'boolean') {
-    const checked = value === 'true'
     return (
-      <div className="flex items-center justify-center px-2 py-2">
+      <div className="flex h-9 items-center justify-center px-2">
         <input
           type="checkbox"
-          checked={checked}
+          checked={value === 'true'}
           disabled={disabled}
           data-cell={`${rowIndex}-${columnIndex}`}
           onKeyDown={handleKey}
@@ -116,61 +133,106 @@ export const GridCell = memo(function GridCell({
     )
   }
 
-  if (column.type === 'select') {
-    // The built-in واحد column offers translated units; a user-defined select
-    // offers exactly the options they typed.
-    const options =
-      column.id === COLUMN.unit
-        ? UNIT_CHOICES.map((u) => ({
-            value: u,
-            label: t(`unit.${u}`, u),
-          }))
-        : (column.options ?? []).map((o) => ({ value: o, label: o }))
-
+  // ── date ───────────────────────────────────────────────────────────────
+  if (column.type === 'date') {
     return (
-      <select
-        value={value}
-        disabled={disabled}
-        data-cell={`${rowIndex}-${columnIndex}`}
-        onKeyDown={handleKey}
-        onChange={(e) => onChange(e.target.value)}
-        aria-label={column.label}
-        className={cn(cellInputClass, 'cursor-pointer appearance-none')}
-      >
-        <option value="">—</option>
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
+      <div className="px-1 py-0.5">
+        <JalaliDatePicker
+          value={value}
+          onChange={onChange}
+          disabled={disabled}
+          className="h-9 min-h-0 rounded-[var(--radius-sm)] px-2 text-xs"
+        />
+      </div>
     )
   }
 
-  return (
-    <div className="relative">
-      <input
-        type={column.type === 'date' ? 'date' : 'text'}
-        value={value}
-        disabled={disabled}
-        inputMode={inputModeFor(column.type)}
-        data-cell={`${rowIndex}-${columnIndex}`}
-        onKeyDown={handleKey}
-        onChange={(e) => onChange(e.target.value)}
-        aria-label={column.label}
-        dir={numeric ? 'ltr' : undefined}
-        style={numeric ? { textAlign: 'end' } : undefined}
-        className={cn(cellInputClass, numeric && 'tabular-nums', hint && 'pb-4')}
-      />
-      {hint ? (
-        <span
-          dir="ltr"
-          className="pointer-events-none absolute bottom-0.5 end-2 text-[10px] tabular-nums text-[hsl(var(--fg-tertiary))]"
+  // ── select (units, or the user's own choice list) ──────────────────────
+  if (column.type === 'select') {
+    const options =
+      column.id === COLUMN.unit
+        ? UNIT_CHOICES.map((u) => ({ value: u, label: t(`unit.${u}`, u) }))
+        : (column.options ?? []).map((o) => ({ value: o, label: o }))
+
+    // Radix treats "" as uncontrolled, so an empty cell omits `value`
+    // entirely rather than passing undefined through a required prop.
+    return (
+      <Select {...(value ? { value } : {})} onValueChange={onChange} disabled={disabled}>
+        <SelectTrigger
+          data-cell={`${rowIndex}-${columnIndex}`}
+          onKeyDown={handleKey}
+          aria-label={column.label}
+          className={cn(
+            'h-9 min-h-0 w-full rounded-none border-0 bg-transparent px-2 text-sm',
+            'focus:bg-[hsl(var(--color-primary)/0.07)]',
+            'focus:shadow-[inset_0_0_0_1.5px_hsl(var(--color-primary))]',
+          )}
         >
-          {hint}
-        </span>
-      ) : null}
-    </div>
+          <SelectValue placeholder="—" />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value} className="min-h-0 py-2">
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    )
+  }
+
+  // ── numbers and money ──────────────────────────────────────────────────
+  if (isNumericType(column.type)) {
+    return (
+      <div className="relative">
+        <NumberStepper
+          value={value}
+          onValueChange={onChange}
+          disabled={disabled}
+          // Money moves in useful jumps; a weight or a count moves by one.
+          step={column.type === 'currency' ? 1000 : column.type === 'percent' ? 1 : 1}
+          precision={column.precision}
+          {...(typeof column.precision === 'number' && column.type === 'percent'
+            ? { min: 0, max: 100 }
+            : { min: 0 })}
+          groupThousands={column.type === 'currency'}
+          {...(column.suffix ? { suffix: column.suffix } : {})}
+          data-cell={`${rowIndex}-${columnIndex}`}
+          onKeyDown={handleKey}
+          aria-label={column.label}
+          className={cn(
+            'h-9 px-1',
+            'focus-within:bg-[hsl(var(--color-primary)/0.07)]',
+            'focus-within:shadow-[inset_0_0_0_1.5px_hsl(var(--color-primary))]',
+            'transition-colors duration-150 motion-reduce:transition-none',
+            hint && 'pb-3',
+          )}
+          inputClassName={cn('text-sm', numericFont)}
+        />
+        {hint ? (
+          <span
+            dir="ltr"
+            className="pointer-events-none absolute bottom-0 end-6 text-[10px] tabular-nums text-[hsl(var(--fg-tertiary))]"
+          >
+            {hint}
+          </span>
+        ) : null}
+      </div>
+    )
+  }
+
+  // ── text ───────────────────────────────────────────────────────────────
+  return (
+    <input
+      type="text"
+      value={value}
+      disabled={disabled}
+      data-cell={`${rowIndex}-${columnIndex}`}
+      onKeyDown={handleKey}
+      onChange={(e) => onChange(e.target.value)}
+      aria-label={column.label}
+      className={cellBase}
+    />
   )
 })
 

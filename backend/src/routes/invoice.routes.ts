@@ -100,14 +100,35 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
           notes: body.notes ?? '',
           reference: body.reference ?? '',
           invoiceNumber: body.invoiceNumber,
+          // This mapping normalises camelCase/snake_case, so every field the
+          // service persists must be listed. It previously stopped at
+          // totalPrice, which silently dropped `unit`, `unitLabel`,
+          // `weightGrams`, `notes` and the whole `details` array on the way in
+          // — the columns existed, the service wrote them, and nothing ever
+          // arrived. A gram-priced line came back as a plain "piece" and every
+          // line component vanished.
           items:
             body.items?.map((item: any) => ({
               productId: item.productId ?? item.product_id,
               productName: item.productName ?? item.product_name ?? '',
               quantity: item.quantity ?? 1,
+              unit: item.unit ?? 'piece',
+              unitLabel: item.unitLabel ?? item.unit_label,
+              weightGrams: item.weightGrams ?? item.weight_grams,
               unitPrice: item.unitPrice ?? item.unit_price ?? 0,
               discount: item.discount ?? 0,
               totalPrice: item.totalPrice ?? item.total_price ?? 0,
+              notes: item.notes ?? '',
+              details:
+                item.details?.map((detail: any, index: number) => ({
+                  title: detail.title ?? '',
+                  quantity: detail.quantity ?? 1,
+                  amount: detail.amount ?? 0,
+                  unit: detail.unit ?? 'piece',
+                  unitLabel: detail.unitLabel ?? detail.unit_label,
+                  weightGrams: detail.weightGrams ?? detail.weight_grams,
+                  sortOrder: detail.sortOrder ?? detail.sort_order ?? index,
+                })) ?? [],
             })) ?? [],
         }
 

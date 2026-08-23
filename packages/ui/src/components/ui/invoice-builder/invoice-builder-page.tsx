@@ -48,7 +48,7 @@ export interface InvoiceBuilderPageProps {
   /** Blocking problems, already translated. */
   issues: string[]
 
-  customer: InvoiceDraftCustomer | null
+  customers: readonly InvoiceDraftCustomer[]
   transactionType: 'sale' | 'purchase'
   currency: CurrencyCode
   rates: Partial<Record<CurrencyCode, string>>
@@ -63,6 +63,11 @@ export interface InvoiceBuilderPageProps {
   onAddRow: () => void
   onRemoveRow: (rowId: string) => void
   onDuplicateRow: (rowId: string) => void
+  onRemoveLastRow: () => void
+  onPickProduct: (
+    rowId: string,
+    product: { id: string; name: string; price: string; unit: string },
+  ) => void
   onAddColumn: (column: InvoiceColumn) => void
   onUpdateColumn: (id: string, patch: Partial<InvoiceColumn>) => void
   onReplaceColumn: (column: InvoiceColumn) => void
@@ -70,7 +75,8 @@ export interface InvoiceBuilderPageProps {
   onMoveColumn: (id: string, direction: -1 | 1) => void
   onResetColumns: () => void
 
-  onCustomerChange: (customer: InvoiceDraftCustomer | null) => void
+  onAddCustomer: (customer: InvoiceDraftCustomer) => void
+  onRemoveCustomer: (id: string) => void
   onTransactionTypeChange: (type: 'sale' | 'purchase') => void
   onCurrencyChange: (currency: CurrencyCode) => void
   onRateChange: (currency: CurrencyCode, value: string) => void
@@ -96,7 +102,7 @@ export const InvoiceBuilderPage = memo(function InvoiceBuilderPage({
   summary,
   invalidRowIds,
   issues,
-  customer,
+  customers,
   transactionType,
   currency,
   rates,
@@ -110,13 +116,16 @@ export const InvoiceBuilderPage = memo(function InvoiceBuilderPage({
   onAddRow,
   onRemoveRow,
   onDuplicateRow,
+  onRemoveLastRow,
+  onPickProduct,
   onAddColumn,
   onUpdateColumn,
   onReplaceColumn,
   onRemoveColumn,
   onMoveColumn,
   onResetColumns,
-  onCustomerChange,
+  onAddCustomer,
+  onRemoveCustomer,
   onTransactionTypeChange,
   onCurrencyChange,
   onRateChange,
@@ -185,7 +194,7 @@ export const InvoiceBuilderPage = memo(function InvoiceBuilderPage({
   return (
     // `min-w-0` on the page wrapper and on every flex/grid child is what stops
     // the wide grid from stretching the page. The scroller is inside the card.
-    <div className="mx-auto w-full min-w-0 max-w-[100rem] space-y-4 pb-24 lg:pb-6">
+    <div className="mx-auto w-full min-w-0 max-w-[100rem] space-y-4 pb-6">
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
@@ -213,15 +222,40 @@ export const InvoiceBuilderPage = memo(function InvoiceBuilderPage({
           </h1>
         </div>
 
-        {/* On a phone these move to the sticky bar at the bottom. */}
-        <div className="hidden items-center gap-2 lg:flex">
-          <Button variant="outline" onClick={onSaveDraft} loading={savingDraft} className="gap-1.5">
+        {/* Always visible. These were `hidden lg:flex`, which took the two
+            primary actions away on every tablet and small laptop and left the
+            page with no way forward until it was widened. They shrink instead:
+            below `sm` the draft button becomes its icon and the CTA takes the
+            short label. */}
+        <div className="flex shrink-0 items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={onSaveDraft}
+            loading={savingDraft}
+            className="gap-1.5 px-3 sm:px-4"
+            aria-label={t('invoiceBuilder.saveDraft', 'ذخیره پیش‌نویس')}
+          >
             <Save className="size-4" aria-hidden="true" />
-            {t('invoiceBuilder.saveDraft', 'ذخیره پیش‌نویس')}
+            <span className="hidden sm:inline">
+              {t('invoiceBuilder.saveDraft', 'ذخیره پیش‌نویس')}
+            </span>
           </Button>
-          <Button onClick={onContinue} disabled={blocked} className="gap-1.5">
-            {t('invoiceBuilder.continue', 'مرحله بعدی: پیش‌نمایش و تأیید')}
-            <ChevronLeft className="size-4 rtl:rotate-180" aria-hidden="true" />
+          <Button
+            variant="success"
+            onClick={onContinue}
+            disabled={blocked}
+            className="gap-1.5 px-3 sm:px-5"
+          >
+            <span className="hidden lg:inline">
+              {t('invoiceBuilder.continue', 'مرحله بعدی: پیش‌نمایش و تأیید')}
+            </span>
+            <span className="lg:hidden">
+              {t('invoiceBuilder.continueShort', 'پیش‌نمایش و تأیید')}
+            </span>
+            {/* Last in the DOM, so in RTL it lands on the LEFT edge — where
+                the reader's eye exits and where "forward" lives. It points
+                left for the same reason, so it is NOT mirrored. */}
+            <ChevronLeft className="size-4" aria-hidden="true" />
           </Button>
         </div>
       </div>
@@ -259,6 +293,8 @@ export const InvoiceBuilderPage = memo(function InvoiceBuilderPage({
             selectedColumnId={selectedColumnId}
             onSelectColumn={setSelectedColumnId}
             onCellChange={onCellChange}
+            onPickProduct={onPickProduct}
+            onMoveColumn={onMoveColumn}
             onRemoveRow={onRemoveRow}
             onDuplicateRow={onDuplicateRow}
             invalidRowIds={invalidRowIds}
@@ -268,8 +304,9 @@ export const InvoiceBuilderPage = memo(function InvoiceBuilderPage({
         <div className="min-w-0 space-y-4">
           <CustomerPanel
             t={t}
-            customer={customer}
-            onCustomerChange={onCustomerChange}
+            customers={customers}
+            onAddCustomer={onAddCustomer}
+            onRemoveCustomer={onRemoveCustomer}
             transactionType={transactionType}
             onTransactionTypeChange={onTransactionTypeChange}
             currency={currency}
@@ -297,6 +334,8 @@ export const InvoiceBuilderPage = memo(function InvoiceBuilderPage({
             onDiscountTypeChange={onDiscountTypeChange}
             taxRate={taxRate}
             onTaxRateChange={onTaxRateChange}
+            onAddRow={onAddRow}
+            onRemoveLastRow={onRemoveLastRow}
           />
 
           {issues.length ? (
@@ -310,23 +349,6 @@ export const InvoiceBuilderPage = memo(function InvoiceBuilderPage({
             </ul>
           ) : null}
         </div>
-      </div>
-
-      {/* ── Sticky actions, phone and tablet ───────────────────────────── */}
-      <div
-        className={cn(
-          'fixed inset-x-0 bottom-0 z-30 flex items-center gap-2 lg:hidden',
-          'border-t border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-3',
-        )}
-      >
-        <Button variant="outline" onClick={onSaveDraft} loading={savingDraft} className="shrink-0">
-          <Save className="size-4" aria-hidden="true" />
-          <span className="sr-only">{t('invoiceBuilder.saveDraft', 'ذخیره پیش‌نویس')}</span>
-        </Button>
-        <Button onClick={onContinue} disabled={blocked} fullWidth className="gap-1.5">
-          {t('invoiceBuilder.continueShort', 'پیش‌نمایش و تأیید')}
-          <ChevronLeft className="size-4 rtl:rotate-180" aria-hidden="true" />
-        </Button>
       </div>
 
       {/* ── Dialogs ────────────────────────────────────────────────────── */}

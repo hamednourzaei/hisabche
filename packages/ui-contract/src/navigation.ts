@@ -84,7 +84,10 @@ export const NAV_CONTRACT: readonly NavItemContract[] = [
     emoji: '➕',
     labelKey: 'nav.sell',
     descriptionKey: 'nav.sell_description',
-    path: '/quick-invoice',
+    // The two-stage builder replaced quick-invoice as the way to record a
+    // sale. `/quick-invoice` still resolves for existing bookmarks, but it is
+    // no longer offered anywhere in the navigation.
+    path: '/invoices/new',
     group: 'primary',
   },
   {
@@ -247,7 +250,7 @@ const COMMAND_ACTIONS: readonly CommandItemContract[] = [
     descriptionKey: 'nav.recordSale_description',
     icon: '🧾',
     shortcut: '',
-    path: '/quick-invoice?type=sale',
+    path: '/invoices/new?type=sale',
   },
   {
     id: 'record-purchase',
@@ -255,7 +258,7 @@ const COMMAND_ACTIONS: readonly CommandItemContract[] = [
     descriptionKey: 'nav.recordPurchase_description',
     icon: '🛍️',
     shortcut: '',
-    path: '/quick-invoice?type=purchase',
+    path: '/invoices/new?type=purchase',
   },
   {
     id: 'add-buyer',

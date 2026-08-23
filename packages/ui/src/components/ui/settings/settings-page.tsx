@@ -9,6 +9,7 @@ import { useWorkspaces, useUpdateWorkspace } from '@hisabche/api'
 import { cn } from '../../../lib/utils'
 import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { Switch } from '../switch'
+import { useToast } from '../toast-provider'
 import {
   Shield,
   Monitor,
@@ -59,6 +60,25 @@ const AccountSection = memo(function AccountSection() {
     return v && v !== key ? v : (fallback ?? key)
   }
   const { user, logout, updateProfile } = useAuthStore()
+  const { data: workspaces } = useWorkspaces()
+  const updateWorkspace = useUpdateWorkspace()
+  const toast = useToast()
+
+  /**
+   * The workspace whose name the sidebar and the invoice document show.
+   *
+   * «نام کسب‌وکار» is presented as ONE field, but it lives in two records:
+   * `profiles.business_name` (the account) and `workspaces.name` (what every
+   * document and the sidebar actually render). Editing only the profile looked
+   * like the change had been discarded, because the name on screen never moved
+   * and came back unchanged after a re-login. Saving writes both.
+   */
+  const workspace = useMemo(
+    () =>
+      (Array.isArray(workspaces) ? workspaces[0] : undefined) as
+        { id: string; name?: string; myRole?: string } | undefined,
+    [workspaces],
+  )
 
   // ✅ این فیلدها قبلاً فقط خواندنی بودند («تنظیم نشده» / «-») در حالی که
   // endpoint PATCH /api/auth/profile از قبل وجود داشت و هیچ‌جا استفاده
@@ -87,17 +107,35 @@ const AccountSection = memo(function AccountSection() {
       setProfileError(t('settings.fullNameRequired', 'نام نمی‌تواند خالی باشد'))
       return
     }
+    const businessName = businessNameDraft.trim()
+
     setIsSavingProfile(true)
     setProfileError(null)
     try {
-      await updateProfile({ fullName, businessName: businessNameDraft.trim() })
+      await updateProfile({ fullName, businessName })
+
+      // Keep the workspace name in step — see the note on `workspace` above.
+      // Only an owner/admin may rename it, so a member's profile edit still
+      // succeeds instead of failing on a permission they were never offered.
+      const canRenameWorkspace =
+        workspace?.id && (workspace.myRole === 'owner' || workspace.myRole === 'admin')
+
+      if (canRenameWorkspace && businessName && businessName !== workspace?.name) {
+        await updateWorkspace.mutateAsync({ id: workspace!.id, name: businessName })
+      }
+
       setIsEditingProfile(false)
-    } catch {
-      setProfileError(t('settings.saveFailed', 'ذخیره نشد. دوباره تلاش کنید.'))
+      toast.success(t('settings.profileSaved', 'اطلاعات ذخیره شد'))
+    } catch (err) {
+      setProfileError(
+        err instanceof Error && err.message
+          ? err.message
+          : t('settings.saveFailed', 'ذخیره نشد. دوباره تلاش کنید.'),
+      )
     } finally {
       setIsSavingProfile(false)
     }
-  }, [fullNameDraft, businessNameDraft, updateProfile, t])
+  }, [fullNameDraft, businessNameDraft, updateProfile, updateWorkspace, workspace, toast, t])
   const handleLogout = useCallback(() => {
     logout()
   }, [logout])
@@ -267,6 +305,7 @@ export const BusinessStampSection = memo(function BusinessStampSection() {
   const updateWorkspace = useUpdateWorkspace()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null)
+  const toast = useToast()
 
   // ✅ فرض تک-workspace: اولین workspace کاربر (فعلاً هیچ workspace-switcher‌ای در برنامه نیست)
   const workspace = useMemo(
@@ -286,14 +325,22 @@ export const BusinessStampSection = memo(function BusinessStampSection() {
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0]
       e.target.value = ''
-      if (!file || !workspaceId) return
+      if (!file) return
+      if (!workspaceId) {
+        // Picking a file before the workspace query resolves used to do
+        // nothing at all, with no explanation.
+        setError(
+          t('settings.stampNoWorkspace', 'کسب‌وکار هنوز بارگذاری نشده — کمی بعد دوباره تلاش کنید.'),
+        )
+        return
+      }
 
       if (!ALLOWED_STAMP_TYPES.includes(file.type)) {
-        setError(t('settings.stampInvalidType'))
+        setError(t('settings.stampInvalidType', 'فقط تصویر PNG یا SVG پذیرفته می‌شود.'))
         return
       }
       if (file.size > MAX_STAMP_SIZE) {
-        setError(t('settings.stampTooLarge'))
+        setError(t('settings.stampTooLarge', 'حجم تصویر باید کمتر از ۱ مگابایت باشد.'))
         return
       }
       setError(null)
@@ -301,27 +348,51 @@ export const BusinessStampSection = memo(function BusinessStampSection() {
       const reader = new FileReader()
       reader.onload = () => {
         const dataUrl = reader.result as string
-        // Without an onError the mutation failed silently: the picker closed,
-        // nothing appeared, and the upload looked like a missing feature rather
-        // than a failed request.
+        // Both branches report. Silence on either one is what made this read
+        // as a missing feature rather than a request that succeeded or failed.
         updateWorkspace.mutate(
           { id: workspaceId, stampUrl: dataUrl },
-          { onError: (err) => setError(stampErrorMessage(err, t)) },
+          {
+            onSuccess: (updated) => {
+              setError(null)
+              // A server without the stamp column answers 200 and drops the
+              // field. That is a FAILURE from the user's side, and saying
+              // "saved" while nothing was saved is the worse of the two lies.
+              const saved = (updated as { stamp_url?: string | null } | undefined)?.stamp_url
+              if (saved) {
+                toast.success(t('settings.stampSaved', 'مهر با موفقیت ذخیره شد'))
+              } else {
+                setError(
+                  t(
+                    'settings.stampNotSupported',
+                    'ذخیره‌ی مهر روی این سرور هنوز فعال نیست. با پشتیبانی تماس بگیرید.',
+                  ),
+                )
+              }
+            },
+            onError: (err) => setError(stampErrorMessage(err, t)),
+          },
         )
       }
-      reader.onerror = () => setError(t('settings.stampUploadFailed'))
+      reader.onerror = () => setError(t('settings.stampUploadFailed', 'بارگذاری تصویر ناموفق بود.'))
       reader.readAsDataURL(file)
     },
-    [workspaceId, updateWorkspace, t],
+    [workspaceId, updateWorkspace, t, toast],
   )
 
   const handleRemove = useCallback(() => {
     if (!workspaceId) return
     updateWorkspace.mutate(
       { id: workspaceId, stampUrl: null },
-      { onError: (err) => setError(stampErrorMessage(err, t)) },
+      {
+        onSuccess: () => {
+          setError(null)
+          toast.success(t('settings.stampRemoved', 'مهر حذف شد'))
+        },
+        onError: (err) => setError(stampErrorMessage(err, t)),
+      },
     )
-  }, [workspaceId, updateWorkspace, t])
+  }, [workspaceId, updateWorkspace, t, toast])
 
   if (!canEdit) return null
 

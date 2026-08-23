@@ -12,6 +12,7 @@ import {
   CommandPalette,
   Breadcrumb,
   GlobalSearch,
+  RouteProgress,
 } from '@hisabche/ui'
 import { useEffect, useRef, useCallback, useMemo, useState, memo } from 'react'
 import { NAV_ITEMS, PRIMARY_ITEMS, MORE_GROUPS, MORE_ICON, COMMAND_ITEMS } from '@hisabche/ui/menu'
@@ -231,6 +232,10 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
         'text-[hsl(var(--fg-primary))]',
       )}
     >
+      {/* Answers the click immediately, even before the route's `loading.tsx`
+          takes over — and covers cached transitions that never suspend. */}
+      <RouteProgress pathname={pathname ?? ''} />
+
       <CommandPalette commands={commands} />
 
       <DashboardSidebar
@@ -251,7 +256,6 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
         <DashboardHeader
           variant="dashboard"
           appName={t('app.name')}
-          businessName={t('app.businessName')}
           lastSyncedAt={lastSyncedAt.current}
           isOnline={true}
           isSyncing={false}

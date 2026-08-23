@@ -61,8 +61,8 @@ describe('command palette contract', () => {
   // The product brief names these verbs explicitly. Each must resolve to a real
   // route, not a placeholder.
   it.each([
-    ['record-sale', '/quick-invoice?type=sale'],
-    ['record-purchase', '/quick-invoice?type=purchase'],
+    ['record-sale', '/invoices/new?type=sale'],
+    ['record-purchase', '/invoices/new?type=purchase'],
     ['add-buyer', '/customers?add=true'],
     ['add-product', '/warehouse?add=true'],
     ['search-customer', '/customers?q='],

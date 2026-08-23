@@ -8,7 +8,7 @@
 // ============================================
 'use client'
 
-import { memo, useCallback, useEffect, useMemo, useState } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check, Pencil, Printer } from 'lucide-react'
 import { useCreateInvoice, useWorkspaces } from '@hisabche/api'
@@ -51,10 +51,23 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
   const [display, setDisplay] = useState<InvoiceDocumentDisplaySettings>(DEFAULT_DISPLAY)
   const [error, setError] = useState<string | null>(null)
 
+  /**
+   * Set the moment the invoice is created, and never unset.
+   *
+   * Confirming clears the draft, which empties `items` — and the guard below
+   * would then fire `replace('/invoices/new')` into the same tick as the
+   * `push('/invoices/:id')` that just succeeded. The two navigations raced:
+   * sometimes the user landed back on an empty builder, sometimes the router
+   * wedged between the two. This flag makes the guard stand down once the
+   * invoice exists, so the push is the only navigation in flight.
+   */
+  const submittedRef = useRef(false)
+
   // Reaching the preview with nothing to preview means the draft was cleared
   // in another tab or the URL was opened directly. Go back rather than
   // rendering an empty document.
   useEffect(() => {
+    if (submittedRef.current) return
     if (items.length === 0) router.replace('/invoices/new')
   }, [items.length, router])
 
@@ -71,6 +84,12 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
         | undefined)
     : undefined
 
+  const primaryCustomer = draft.customers[0] ?? null
+  const otherCustomerNames = draft.customers
+    .slice(1)
+    .map((c) => c.name)
+    .join('، ')
+
   const documentData: InvoiceDocumentData = useMemo(
     () => ({
       // Not saved yet, so there is no invoice number and none is invented.
@@ -85,12 +104,17 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
         phone: workspace?.phone ?? null,
         address: workspace?.address ?? null,
       },
-      customer: draft.customer
+      customer: primaryCustomer
         ? {
-            name: draft.customer.name,
-            phone: draft.customer.phone ?? null,
-            email: draft.customer.email ?? null,
-            address: draft.customer.address ?? null,
+            // Additional parties are named next to the primary one, so the
+            // printed document shows everyone the invoice was issued to even
+            // though only the first carries the receivable.
+            name: otherCustomerNames
+              ? `${primaryCustomer.name} + ${otherCustomerNames}`
+              : primaryCustomer.name,
+            phone: primaryCustomer.phone ?? null,
+            email: primaryCustomer.email ?? null,
+            address: primaryCustomer.address ?? null,
           }
         : null,
       // The document's own table is replaced by `itemsSlot`; these carry the
@@ -112,8 +136,17 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
       paidAmount: draft.isPaid ? summary.total : 0,
       notes: draft.notes,
     }),
-    [draft, workspace, items, currency, summary, t],
+    [draft, primaryCustomer, otherCustomerNames, workspace, items, currency, summary, t],
   )
+
+  const invoiceNotes = [
+    draft.notes.trim(),
+    otherCustomerNames
+      ? `${t('invoiceBuilder.customer.otherParties', 'سایر طرف‌های فاکتور')}: ${otherCustomerNames}`
+      : '',
+  ]
+    .filter(Boolean)
+    .join('\n')
 
   const handleConfirm = useCallback(async () => {
     if (issues.length || items.length === 0) return
@@ -135,13 +168,15 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
         paidAmount: draft.isPaid ? summary.total : Number(draft.paidNow) || 0,
         paymentMethod: draft.paymentMethod,
         currency,
-        ...(draft.customer?.id ? { customerId: draft.customer.id } : {}),
-        ...(draft.notes ? { notes: draft.notes } : {}),
+        ...(primaryCustomer?.id ? { customerId: primaryCustomer.id } : {}),
+        // The companions are kept on the invoice's own notes — the only place
+        // the current schema can hold them without inventing a relationship.
+        ...(invoiceNotes ? { notes: invoiceNotes } : {}),
         items,
       })
 
-      if (draft.customer) {
-        preferences.setLastCustomer(draft.customer.name, draft.customer.id)
+      if (primaryCustomer) {
+        preferences.setLastCustomer(primaryCustomer.name, primaryCustomer.id)
       }
       preferences.setLastCurrency(currency)
       markInvoiceCreated()
@@ -156,9 +191,13 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
       setSaveStatus('saved')
       setTimeout(() => setSaveStatus('idle'), 2000)
 
-      // Only now is the draft safe to discard — the column layout survives it.
-      clearDraft()
+      // Order matters. Claim the guard first, navigate second, clear third:
+      // clearing empties `items`, and any re-render between the clear and the
+      // push would otherwise bounce back to the builder.
+      submittedRef.current = true
       router.push(created.id ? `/invoices/${created.id}` : '/invoices')
+      // The column layout deliberately survives this — see the draft slice.
+      clearDraft()
     } catch (cause) {
       setSaveStatus('idle')
       setError(
@@ -171,6 +210,8 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
     issues.length,
     items,
     draft,
+    primaryCustomer,
+    invoiceNotes,
     summary,
     currency,
     createInvoice,

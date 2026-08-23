@@ -93,7 +93,6 @@ export const Toolbar = memo(function Toolbar({ title }: { title: string }) {
       <DashboardHeader
         variant="dashboard"
         appName={title}
-        businessName={user?.businessName ?? ''}
         isOnline={!isOffline}
         isSyncing={isSyncing}
         pendingCount={pendingCount}

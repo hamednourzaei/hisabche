@@ -9,8 +9,10 @@
 // ============================================
 
 import { Suspense, useCallback } from 'react'
-import { Outlet, useNavigate } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslations } from 'next-intl'
+
+import { RouteProgress } from '@hisabche/ui'
 
 import { CommandPalette } from '@/components/layout/command-palette'
 import { Sidebar } from '@/components/layout/sidebar'
@@ -31,13 +33,14 @@ function RouteFallback() {
 export function AppShell() {
   const t = useTranslations()
   const navigate = useNavigate()
+  const location = useLocation()
 
   const setPaletteOpen = useUiStore((s) => s.setPaletteOpen)
   const requestSearchFocus = useUiStore((s) => s.requestSearchFocus)
 
-  // Matches web's primary «فاکتور جدید» affordance, which now opens the
-  // two-stage builder. `/quick-invoice` is still the fast one-line path and
-  // stays reachable from the command palette.
+  // Matches web's primary «فاکتور جدید» affordance: the two-stage builder.
+  // `/quick-invoice` is suspended — its route still resolves so existing
+  // shortcuts and deep links do not break, but nothing points at it.
   const onNewInvoice = useCallback(() => navigate('/invoices/new'), [navigate])
 
   useShortcuts({
@@ -49,6 +52,10 @@ export function AppShell() {
 
   return (
     <div className="flex h-full w-full bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))]">
+      {/* Same navigation feedback web gives — desktop's lazy routes have the
+          same gap between the click and the chunk arriving. */}
+      <RouteProgress pathname={location.pathname} />
+
       {/* Sidebar — matches canonical DashboardSidebar */}
       <Sidebar />
 

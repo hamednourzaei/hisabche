@@ -4,21 +4,37 @@
 // Selecting a customer used to be its own step in the wizard. It is a field,
 // not a stage — so it lives beside the table where the user can see the
 // invoice they are building while they pick.
+//
+// MULTIPLE CUSTOMERS
+//
+// The invoice table has ONE `customer_id`. That is the party the receivable
+// belongs to, and it is what every statement, ageing report and balance in the
+// product is derived from. So the first selected customer is the invoice's
+// customer — really, relationally — and any further ones are recorded on the
+// invoice as additional named parties. They are shown on the document and kept
+// with the record, but they do not each get their own receivable, because the
+// schema has no join table to hang one on. Splitting a balance across parties
+// needs a real migration; inventing it in the UI would put a number in front of
+// a shopkeeper that no ledger backs.
 // ============================================
 'use client'
 
 import { memo } from 'react'
-import { User } from 'lucide-react'
+import { User, X } from 'lucide-react'
 import { SUPPORTED_CURRENCIES, type CurrencyCode, type InvoiceDraftCustomer } from '@hisabche/store'
 
 import { CustomerPicker } from '../customer-picker'
-import { Input } from '../input'
+import { JalaliDatePicker } from '../jalali-datepicker'
+import { NumberStepper } from '../number-stepper'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../select'
 import { cn } from '../../../lib/utils'
 
 export interface CustomerPanelProps {
   t: (key: string, fallback?: string) => string
-  customer: InvoiceDraftCustomer | null
-  onCustomerChange: (customer: InvoiceDraftCustomer | null) => void
+  /** First entry is the invoice's own customer — see the file header. */
+  customers: readonly InvoiceDraftCustomer[]
+  onAddCustomer: (customer: InvoiceDraftCustomer) => void
+  onRemoveCustomer: (id: string) => void
   transactionType: 'sale' | 'purchase'
   onTransactionTypeChange: (type: 'sale' | 'purchase') => void
   currency: CurrencyCode
@@ -36,23 +52,25 @@ export interface CustomerPanelProps {
 }
 
 const fieldLabel = 'mb-1.5 block text-xs font-medium text-[hsl(var(--fg-secondary))]'
-const selectClass = cn(
-  'h-10 w-full rounded-[var(--radius-md)] border border-[hsl(var(--border-default))]',
-  'bg-[hsl(var(--surface-base))] px-3 text-sm text-[hsl(var(--fg-primary))]',
-  'outline-none focus:border-[hsl(var(--color-primary))]',
-)
 
-/** `<input type="date">` wants `YYYY-MM-DD`; the draft stores full ISO. */
-function toDateInput(iso: string | null): string {
+/** The date picker speaks Gregorian `YYYY-MM-DD`; the draft keeps full ISO. */
+function toDateValue(iso: string | null): string {
   if (!iso) return ''
   const parsed = new Date(iso)
   return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString().slice(0, 10)
 }
 
+function fromDateValue(value: string): string | null {
+  if (!value) return null
+  const parsed = new Date(`${value}T00:00:00`)
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString()
+}
+
 export const CustomerPanel = memo(function CustomerPanel({
   t,
-  customer,
-  onCustomerChange,
+  customers,
+  onAddCustomer,
+  onRemoveCustomer,
   transactionType,
   onTransactionTypeChange,
   currency,
@@ -67,6 +85,8 @@ export const CustomerPanel = memo(function CustomerPanel({
   notes,
   onNotesChange,
 }: CustomerPanelProps) {
+  const isPurchase = transactionType === 'purchase'
+
   return (
     <div className="rounded-[var(--radius-lg)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
       <div className="flex items-center gap-2 border-b border-[hsl(var(--border-default))] px-4 py-3">
@@ -106,52 +126,106 @@ export const CustomerPanel = memo(function CustomerPanel({
 
         <div>
           <span className={fieldLabel}>
-            {transactionType === 'purchase'
+            {isPurchase
               ? t('invoiceBuilder.customer.supplier', 'انتخاب تأمین‌کننده')
               : t('invoiceBuilder.customer.select', 'انتخاب مشتری')}
           </span>
-          {/* The picker's option type requires a phone string; the draft
-              keeps it nullable because server data often omits it. */}
+
+          {/* Chips for everyone already on the invoice. The first is marked,
+              because the first is the one the receivable belongs to. */}
+          {customers.length ? (
+            <ul className="mb-2 flex flex-wrap gap-1.5">
+              {customers.map((customer, index) => (
+                <li
+                  key={customer.id}
+                  className={cn(
+                    'flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs',
+                    index === 0
+                      ? 'border-[hsl(var(--color-primary)/0.4)] bg-[hsl(var(--color-primary)/0.1)] text-[hsl(var(--color-primary))]'
+                      : 'border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))]',
+                  )}
+                >
+                  <span className="max-w-[9rem] truncate">{customer.name}</span>
+                  {index === 0 ? (
+                    <span className="text-[10px] opacity-80">
+                      {t('invoiceBuilder.customer.primary', 'اصلی')}
+                    </span>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => onRemoveCustomer(customer.id)}
+                    aria-label={t('invoiceBuilder.customer.remove', 'حذف از فاکتور')}
+                    className="rounded-full p-0.5 hover:bg-[hsl(var(--surface-muted))]"
+                  >
+                    <X className="size-3" aria-hidden="true" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          {/* The same shared picker used everywhere else in the product. It
+              stays on "nothing selected" so it always reads as "add another". */}
           <CustomerPicker
-            value={customer ? { ...customer, phone: customer.phone ?? '' } : null}
-            onChange={(next) =>
-              onCustomerChange(next ? { id: next.id, name: next.name, phone: next.phone } : null)
+            value={null}
+            onChange={(next) => {
+              if (!next) return
+              onAddCustomer({ id: next.id, name: next.name, phone: next.phone })
+            }}
+            placeholder={
+              customers.length
+                ? t('invoiceBuilder.customer.addAnother', 'افزودن مشتری دیگر…')
+                : t('invoiceBuilder.customer.select', 'انتخاب مشتری')
             }
           />
+
+          {customers.length > 1 ? (
+            <p className="mt-1.5 text-[11px] leading-relaxed text-[hsl(var(--fg-tertiary))]">
+              {t(
+                'invoiceBuilder.customer.multiNote',
+                'حساب این فاکتور به نام مشتری «اصلی» ثبت می‌شود؛ بقیه به‌عنوان طرف‌های همراه روی فاکتور می‌آیند.',
+              )}
+            </p>
+          ) : null}
         </div>
 
         <div>
-          <label htmlFor="invoice-currency" className={fieldLabel}>
-            {t('invoiceBuilder.customer.currency', 'ارز فاکتور')}
-          </label>
-          <select
-            id="invoice-currency"
-            value={currency}
-            onChange={(e) => onCurrencyChange(e.target.value as CurrencyCode)}
-            className={selectClass}
-          >
-            {SUPPORTED_CURRENCIES.map((code) => (
-              <option key={code} value={code}>
-                {t(`currency.${code.toLowerCase()}`, code)}
-              </option>
-            ))}
-          </select>
+          <span className={fieldLabel}>{t('invoiceBuilder.customer.currency', 'ارز فاکتور')}</span>
+          <Select value={currency} onValueChange={(v) => onCurrencyChange(v as CurrencyCode)}>
+            <SelectTrigger aria-label={t('invoiceBuilder.customer.currency', 'ارز فاکتور')}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {SUPPORTED_CURRENCIES.map((code) => (
+                <SelectItem key={code} value={code}>
+                  {t(`currency.${code.toLowerCase()}`, code)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {/* One rate field per foreign currency actually in use. Shown, not
             hidden — a conversion the user cannot see is a lie about money. */}
         {foreignCurrencies.map((code) => (
           <div key={code}>
-            <label htmlFor={`rate-${code}`} className={fieldLabel}>
+            <span className={fieldLabel}>
               {t('invoiceBuilder.customer.rate', 'نرخ تبدیل')} —{' '}
               {`1 ${t(`currency.${code.toLowerCase()}`, code)}`}
-            </label>
-            <Input
-              id={`rate-${code}`}
-              inputMode="decimal"
+            </span>
+            <NumberStepper
               value={rates[code] ?? ''}
-              onChange={(e) => onRateChange(code, e.target.value)}
+              onValueChange={(v) => onRateChange(code, v)}
+              step={500}
+              min={0}
+              groupThousands
+              aria-label={t('invoiceBuilder.customer.rate', 'نرخ تبدیل')}
               placeholder={t('invoiceBuilder.customer.ratePlaceholder', 'مثلاً ۵۹۵۰۰')}
+              className={cn(
+                'h-11 rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] px-2',
+                'bg-[hsl(var(--surface-base))]',
+                'focus-within:border-[hsl(var(--color-primary))]',
+              )}
             />
             <p className="mt-1 text-[11px] text-[hsl(var(--fg-tertiary))]">
               {t(
@@ -164,33 +238,19 @@ export const CustomerPanel = memo(function CustomerPanel({
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label htmlFor="invoice-date" className={fieldLabel}>
-              {t('invoiceBuilder.customer.date', 'تاریخ فاکتور')}
-            </label>
-            <Input
-              id="invoice-date"
-              type="date"
-              value={toDateInput(date)}
-              onChange={(e) =>
-                onDateChange(
-                  e.target.value
-                    ? new Date(e.target.value).toISOString()
-                    : new Date().toISOString(),
-                )
-              }
+            <span className={fieldLabel}>{t('invoiceBuilder.customer.date', 'تاریخ فاکتور')}</span>
+            <JalaliDatePicker
+              value={toDateValue(date)}
+              onChange={(v) => onDateChange(fromDateValue(v) ?? new Date().toISOString())}
             />
           </div>
           <div>
-            <label htmlFor="invoice-due-date" className={fieldLabel}>
+            <span className={fieldLabel}>
               {t('invoiceBuilder.customer.dueDate', 'تاریخ سررسید')}
-            </label>
-            <Input
-              id="invoice-due-date"
-              type="date"
-              value={toDateInput(dueDate)}
-              onChange={(e) =>
-                onDueDateChange(e.target.value ? new Date(e.target.value).toISOString() : null)
-              }
+            </span>
+            <JalaliDatePicker
+              value={toDateValue(dueDate)}
+              onChange={(v) => onDueDateChange(fromDateValue(v))}
             />
           </div>
         </div>
@@ -208,6 +268,7 @@ export const CustomerPanel = memo(function CustomerPanel({
               'w-full rounded-[var(--radius-md)] border border-[hsl(var(--border-default))]',
               'bg-[hsl(var(--surface-base))] p-3 text-sm text-[hsl(var(--fg-primary))]',
               'outline-none focus:border-[hsl(var(--color-primary))]',
+              'transition-colors duration-150 motion-reduce:transition-none',
             )}
           />
         </div>
