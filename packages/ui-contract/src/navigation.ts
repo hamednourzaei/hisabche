@@ -79,17 +79,11 @@ export const NAV_CONTRACT: readonly NavItemContract[] = [
     path: '/dashboard',
     group: 'primary',
   },
-  {
-    id: 'sell',
-    emoji: '➕',
-    labelKey: 'nav.sell',
-    descriptionKey: 'nav.sell_description',
-    // The two-stage builder replaced quick-invoice as the way to record a
-    // sale. `/quick-invoice` still resolves for existing bookmarks, but it is
-    // no longer offered anywhere in the navigation.
-    path: '/invoices/new',
-    group: 'primary',
-  },
+  // «فروش» used to sit here, pointing first at /quick-invoice and then at the
+  // invoice builder. It is gone from the navigation at every width: creating an
+  // invoice is something you do FROM the invoice list («دریافت پول» → فاکتور
+  // جدید), not a destination of its own. `/invoices/new` is still a real route
+  // and still reachable from the list, the command palette and any bookmark.
   {
     id: 'get-paid',
     emoji: '💰',
@@ -220,7 +214,9 @@ export const MORE_GROUPS_CONTRACT: readonly NavGroupContract[] = [
  * to the top of the More screen — still primary, still first thing seen there,
  * one tap deeper. Nothing is removed and the vocabulary is unchanged.
  */
-export const MOBILE_TAB_IDS: readonly NavId[] = ['today', 'sell', 'get-paid', 'stock']
+// Three tabs plus «بیشتر». «فروش» was the fourth until invoice creation
+// stopped being a destination of its own — see the note where it was removed.
+export const MOBILE_TAB_IDS: readonly NavId[] = ['today', 'get-paid', 'stock']
 
 /** Primary intents that the bottom bar could not seat. Rendered first under More. */
 export const MOBILE_OVERFLOW_PRIMARY: readonly NavItemContract[] = PRIMARY_CONTRACT.filter(

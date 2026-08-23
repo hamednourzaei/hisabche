@@ -72,7 +72,6 @@ const ICONS: Record<NavId, readonly [IconName, IconName]> = {
  */
 const IMPLEMENTED: ReadonlySet<NavId> = new Set<NavId>([
   'today',
-  'sell',
   'get-paid',
   'stock',
   'buy',

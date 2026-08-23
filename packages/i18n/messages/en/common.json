@@ -2488,7 +2488,9 @@
     ],
     "weekdaysShort": ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"],
     "prev": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "selectMonth": "Select month",
+    "selectYear": "Select year"
   },
   "manufacturing": {
     "title": "Manufacturing",

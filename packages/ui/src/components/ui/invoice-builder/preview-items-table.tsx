@@ -64,7 +64,16 @@ export const PreviewItemsTable = memo(function PreviewItemsTable({
   const hasTotals = shown.some((c) => totals[c.id] !== undefined)
 
   return (
-    <div className="touch-pan-y overflow-x-auto rounded-lg border border-[hsl(var(--border-default))]">
+    // `touch-pan-y` alone told the browser this element only handles VERTICAL
+    // panning, so a horizontal drag inside it was swallowed and the wide table
+    // could not be scrolled by finger at all. `pan-x pan-y` lets the scroller
+    // take horizontal drags and still pass vertical ones up to the page.
+    <div
+      className="overflow-x-auto rounded-lg border border-[hsl(var(--border-default))] [touch-action:pan-x_pan-y] [-webkit-overflow-scrolling:touch]"
+      tabIndex={0}
+      role="region"
+      aria-label={t('invoiceBuilder.mobile.itemsTitle', 'اقلام فاکتور')}
+    >
       <table className="w-full min-w-max border-collapse text-[11px] sm:text-sm">
         <thead>
           <tr className="border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))]">

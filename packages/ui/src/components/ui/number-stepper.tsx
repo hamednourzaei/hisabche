@@ -79,6 +79,7 @@ export const NumberStepper = React.forwardRef<HTMLInputElement, NumberStepperPro
     ref,
   ) {
     const [focused, setFocused] = React.useState(false)
+    const [hovered, setHovered] = React.useState(false)
 
     const clamp = React.useCallback(
       (n: number) => {
@@ -121,10 +122,26 @@ export const NumberStepper = React.forwardRef<HTMLInputElement, NumberStepperPro
       'disabled:opacity-30 disabled:hover:text-[hsl(var(--fg-tertiary))]',
     )
 
+    /**
+     * The arrows are an affordance for the field you are working in, not
+     * permanent furniture.
+     *
+     * Shown on hover, on focus, and while the field has a value being edited.
+     * Otherwise they are hidden AND take no width, so a narrow grid cell is
+     * not permanently 20px shorter for a control nobody is using — which is
+     * what pushed them outside the cell on small screens.
+     *
+     * `pointer:coarse` keeps them permanently visible on touch, where there is
+     * no hover to reveal them with.
+     */
+    const arrowsShown = focused || hovered
+
     return (
       <div
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
         className={cn(
-          'group/stepper relative flex items-stretch',
+          'group/stepper relative flex items-stretch overflow-hidden',
           disabled && 'opacity-50',
           className,
         )}
@@ -159,8 +176,17 @@ export const NumberStepper = React.forwardRef<HTMLInputElement, NumberStepperPro
           </span>
         ) : null}
 
-        {/* Always rendered, never hover-gated — a touch device has no hover. */}
-        <div className="flex w-5 shrink-0 flex-col self-stretch">
+        {/* Width collapses to zero when idle, so the arrows can never overflow
+            the cell they live in. Always visible on touch — see above. */}
+        <div
+          aria-hidden="true"
+          className={cn(
+            'flex shrink-0 flex-col self-stretch overflow-hidden',
+            'transition-[width,opacity] duration-150 motion-reduce:transition-none',
+            arrowsShown ? 'w-5 opacity-100' : 'w-0 opacity-0',
+            '[@media(pointer:coarse)]:w-5 [@media(pointer:coarse)]:opacity-100',
+          )}
+        >
           <button
             type="button"
             tabIndex={-1}

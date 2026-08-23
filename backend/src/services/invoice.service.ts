@@ -916,10 +916,38 @@ export class InvoiceService {
     if (rows.length === 0) return
 
     const { error } = await supabase.from('invoice_item_details').insert(rows)
-    if (error) {
-      await supabase.from('invoices').delete().eq('id', invoiceId)
-      throw new DatabaseError('Failed to create invoice item details', error)
+    if (!error) return
+
+    /**
+     * A server whose `unified-sale-purchase-migration.sql` has not been applied
+     * has the details table but not its optional columns, and PostgREST answers
+     * PGRST204 "Could not find the 'unit_label' column".
+     *
+     * That must not take the whole invoice down. `unit_label` and
+     * `weight_grams` decorate a component; `title`, `quantity` and `amount`
+     * ARE the component. So the optional pair is dropped and the insert is
+     * retried, which keeps every figure on the invoice intact and loses only
+     * two labels that the schema has nowhere to put yet.
+     *
+     * A failure of the retry is a real failure and still rolls the invoice
+     * back — a line whose components vanished is worse than no invoice.
+     */
+    const missingColumn =
+      error.code === 'PGRST204' || error.code === '42703' || /column/i.test(error.message ?? '')
+
+    if (missingColumn) {
+      console.warn(
+        '[InvoiceService] invoice_item_details is missing unit_label/weight_grams — ' +
+          'run unified-sale-purchase-migration.sql. Saving components without them.',
+      )
+
+      const reduced = rows.map(({ unit_label: _label, weight_grams: _weight, ...rest }) => rest)
+      const retry = await supabase.from('invoice_item_details').insert(reduced)
+      if (!retry.error) return
     }
+
+    await supabase.from('invoices').delete().eq('id', invoiceId)
+    throw new DatabaseError('Failed to create invoice item details', error)
   }
 
   /**

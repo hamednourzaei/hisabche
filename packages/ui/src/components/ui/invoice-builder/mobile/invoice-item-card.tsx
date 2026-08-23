@@ -129,10 +129,14 @@ export const InvoiceItemCard = memo(function InvoiceItemCard({
   return (
     <li
       className={cn(
-        'rounded-[var(--radius-lg)] border bg-[hsl(var(--surface-elevated))]',
+        // A visible edge and a little lift: on a phone the cards sit directly
+        // on the page background, and a 1px hairline alone left them reading
+        // as one long undifferentiated column.
+        'overflow-hidden rounded-[var(--radius-lg)] border bg-[hsl(var(--surface-elevated))]',
+        'shadow-sm',
         invalid
-          ? 'border-[hsl(var(--color-destructive)/0.5)]'
-          : 'border-[hsl(var(--border-default))]',
+          ? 'border-[hsl(var(--color-destructive)/0.6)] ring-1 ring-[hsl(var(--color-destructive)/0.25)]'
+          : 'border-[hsl(var(--border-strong,var(--border-default)))]',
       )}
     >
       <div className="flex items-start gap-2 p-3 pb-2">

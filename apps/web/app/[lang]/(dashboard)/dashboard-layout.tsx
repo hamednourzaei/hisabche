@@ -299,6 +299,11 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
             bars leave a phone with almost no form visible, and the global nav
             would sit on top of the CTA. So it stands down for the duration of
             the workflow — the builder's own back arrow is the way out. */}
+        {/* Published so a sticky in-page action bar can sit ON TOP of the nav
+            instead of under it. The nav is a floating pill: 1rem of offset,
+            3.5rem tall, plus the safe area. Zero while it is stood down. */}
+        <style>{`:root{--bottom-nav-h:${isFullscreenWorkflow ? '0px' : 'calc(4.5rem + env(safe-area-inset-bottom,0px))'}}`}</style>
+
         {isFullscreenWorkflow ? null : (
           <BottomNav
             primaryItems={primaryItems}

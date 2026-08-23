@@ -270,7 +270,9 @@ export function JalaliDatePicker({
   const [selectedDay, setSelectedDay] = useState<number | null>(null)
   // "days" = normal calendar grid, "jump" = month/year quick-jump grid so
   // users don't have to click prev/next repeatedly to reach a far-off date.
-  const [pickerMode, setPickerMode] = useState<'days' | 'jump'>('days')
+  // 'days' is the calendar grid; 'months' and 'years' are the two quick-jump
+  // lists, each opened by its own header button.
+  const [pickerMode, setPickerMode] = useState<'days' | 'months' | 'years'>('days')
   const [jumpYear, setJumpYear] = useState(year)
   const panelRef = useRef<HTMLDivElement>(null)
   const btnRef = useRef<HTMLButtonElement>(null)
@@ -351,10 +353,6 @@ export function JalaliDatePicker({
     } else setMonth((m) => m + 1)
   }
 
-  const openJumpMode = () => {
-    setJumpYear(year)
-    setPickerMode('jump')
-  }
   const selectJumpMonth = (m: number) => {
     setYear(jumpYear)
     setMonth(m)
@@ -400,35 +398,97 @@ export function JalaliDatePicker({
           <div className="flex items-center justify-between px-3 py-2 border-b border-[hsl(var(--border-default))]">
             <button
               type="button"
-              onClick={pickerMode === 'days' ? prevMonth : () => setJumpYear((y) => y - 1)}
+              onClick={
+                pickerMode === 'days'
+                  ? prevMonth
+                  : () => setJumpYear((y) => y - (pickerMode === 'years' ? 12 : 1))
+              }
               aria-label={t('calendar.prev', 'قبلی')}
               className="p-1 rounded-lg hover:bg-[hsl(var(--surface-muted))]"
             >
               <ChevronRight className="size-4" />
             </button>
+            {/* Month and year are two SEPARATE targets with a gap between
+                them. They used to be one button that always opened the month
+                grid, so reaching a distant year meant tapping the arrow once
+                per year. Now each opens its own list. */}
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setJumpYear(year)
+                  setPickerMode(pickerMode === 'months' ? 'days' : 'months')
+                }}
+                aria-label={t('calendar.selectMonth', 'انتخاب ماه')}
+                aria-expanded={pickerMode === 'months'}
+                className={cn(
+                  'min-h-[36px] rounded-lg px-2 text-sm font-semibold',
+                  'transition-colors duration-100 hover:bg-[hsl(var(--surface-muted))]',
+                  pickerMode === 'months'
+                    ? 'bg-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))]'
+                    : 'text-[hsl(var(--fg-primary))]',
+                )}
+              >
+                {months[month - 1] ?? ''}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setJumpYear(year)
+                  setPickerMode(pickerMode === 'years' ? 'days' : 'years')
+                }}
+                aria-label={t('calendar.selectYear', 'انتخاب سال')}
+                aria-expanded={pickerMode === 'years'}
+                className={cn(
+                  'min-h-[36px] rounded-lg px-2 text-sm font-semibold tabular-nums',
+                  'transition-colors duration-100 hover:bg-[hsl(var(--surface-muted))]',
+                  pickerMode === 'years'
+                    ? 'bg-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))]'
+                    : 'text-[hsl(var(--fg-primary))]',
+                )}
+              >
+                {pickerMode === 'years' ? jumpYear : year}
+              </button>
+            </div>
             <button
               type="button"
-              onClick={openJumpMode}
-              className="text-sm font-semibold text-[hsl(var(--fg-primary))] rounded-lg px-2 py-0.5 hover:bg-[hsl(var(--surface-muted))] transition-colors duration-100"
-            >
-              {pickerMode === 'days' ? (
-                <>
-                  {months[month - 1] ?? ''} {year}
-                </>
-              ) : (
-                jumpYear
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={pickerMode === 'days' ? nextMonth : () => setJumpYear((y) => y + 1)}
+              onClick={
+                pickerMode === 'days'
+                  ? nextMonth
+                  : () => setJumpYear((y) => y + (pickerMode === 'years' ? 12 : 1))
+              }
               aria-label={t('calendar.next', 'بعدی')}
               className="p-1 rounded-lg hover:bg-[hsl(var(--surface-muted))]"
             >
               <ChevronLeft className="size-4" />
             </button>
           </div>
-          {pickerMode === 'jump' ? (
+          {pickerMode === 'years' ? (
+            <div className="grid grid-cols-3 gap-1.5 p-3">
+              {/* A dozen years around the one in view, so any year is two taps
+                  away rather than N presses of an arrow. */}
+              {Array.from({ length: 12 }, (_, i) => jumpYear - 5 + i).map((candidate) => (
+                <button
+                  key={candidate}
+                  type="button"
+                  onClick={() => {
+                    setYear(candidate)
+                    setJumpYear(candidate)
+                    setPickerMode('days')
+                  }}
+                  className={cn(
+                    'min-h-[40px] rounded-lg px-2 text-xs font-medium tabular-nums',
+                    'transition-colors duration-100 hover:bg-[hsl(var(--surface-muted))]',
+                    candidate === year
+                      ? 'bg-[hsl(var(--color-primary))] text-white hover:bg-[hsl(var(--color-primary))]'
+                      : 'text-[hsl(var(--fg-primary))]',
+                  )}
+                >
+                  {candidate}
+                </button>
+              ))}
+            </div>
+          ) : pickerMode === 'months' ? (
             <div className="grid grid-cols-3 gap-1.5 p-3">
               {months.map((m, i) => (
                 <button

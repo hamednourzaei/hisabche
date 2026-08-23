@@ -19,15 +19,7 @@ import { Input } from '../../input'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../../sheet'
 import { Skeleton } from '../../skeleton'
 import { cn } from '../../../../lib/utils'
-
-interface ProductRow {
-  id: string
-  name: string
-  sell_price?: number | null
-  sellPrice?: number | null
-  unit?: string | null
-  quantity?: number | null
-}
+import { productPrice, readProducts, type PickerProduct } from '../../../../lib/invoices/products'
 
 export interface ProductSearchSheetProps {
   t: (key: string, fallback?: string) => string
@@ -60,9 +52,7 @@ export const ProductSearchSheet = memo(function ProductSearchSheet({
     limit: 30,
   })
 
-  const raw = (data as { data?: unknown[] } | unknown[] | undefined) ?? []
-  const list = Array.isArray(raw) ? raw : ((raw as { data?: unknown[] }).data ?? [])
-  const products = list as ProductRow[]
+  const products: PickerProduct[] = readProducts(data)
 
   return (
     <>
@@ -149,7 +139,7 @@ export const ProductSearchSheet = memo(function ProductSearchSheet({
             ) : (
               <ul>
                 {products.map((product) => {
-                  const price = product.sellPrice ?? product.sell_price ?? 0
+                  const price = productPrice(product)
                   return (
                     <li key={product.id}>
                       <button

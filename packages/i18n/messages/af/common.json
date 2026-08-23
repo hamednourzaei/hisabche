@@ -2447,7 +2447,9 @@
     ],
     "weekdaysShort": ["ش", "ی", "د", "س", "چ", "پ", "ج"],
     "prev": "قبلی",
-    "next": "بعدی"
+    "next": "بعدی",
+    "selectMonth": "انتخاب ماه",
+    "selectYear": "انتخاب سال"
   },
   "manufacturing": {
     "title": "تولید",

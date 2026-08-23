@@ -294,7 +294,7 @@ export const InvoiceBuilderMobile = memo(function InvoiceBuilderMobile({
           </div>
         ) : (
           <>
-            <ul className="space-y-2.5">
+            <ul className="space-y-3">
               {items.map((row, index) => (
                 <InvoiceItemCard
                   key={row.id}
@@ -611,8 +611,15 @@ export const InvoiceBuilderMobile = memo(function InvoiceBuilderMobile({
       {/* ── Sticky total + forward action, in the thumb zone ─────────── */}
       <div
         className={cn(
-          'fixed inset-x-0 bottom-0 z-40 border-t md:hidden',
-          'border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]',
+          'fixed inset-x-0 z-40 border md:hidden',
+          // Sits ON TOP of the global bottom nav rather than under it. The bar
+          // is offset by the nav's own height so the two stack instead of
+          // overlapping, and it keeps its bottom corners square where it meets
+          // the nav — only the top is rounded, so it reads as a sheet rising
+          // from the bar rather than a floating rectangle.
+          'bottom-[var(--bottom-nav-h,0px)]',
+          'rounded-t-[var(--radius-lg)] border-[hsl(var(--border-default))]',
+          'bg-[hsl(var(--surface-elevated))] shadow-[0_-4px_16px_hsl(var(--surface-base)/0.6)]',
           'px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]',
         )}
       >

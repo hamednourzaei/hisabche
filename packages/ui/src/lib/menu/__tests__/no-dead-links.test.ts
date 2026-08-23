@@ -41,8 +41,11 @@ const COMPONENTS_DIR = join(__dirname, '..', '..', '..', 'components', 'ui')
 const NON_NAV_ROUTES = new Set([
   '/login',
   '/signup',
-  // Step 2 of invoice creation. It is only ever reached from the builder, so
-  // it has no menu entry — but it is a real route on web and on desktop.
+  // Invoice creation, both steps. Reached from the invoice list, the command
+  // palette and the builder itself — never from a sidebar entry, because
+  // creating an invoice is an action on the invoice list rather than a
+  // destination of its own.
+  '/invoices/new',
   '/invoices/new/preview',
   '/purchasing',
   '/manufacturing',

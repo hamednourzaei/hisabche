@@ -19,15 +19,7 @@ import { Package, Search } from 'lucide-react'
 import { useProducts } from '@hisabche/api'
 
 import { cn } from '../../../../lib/utils'
-
-interface ProductRow {
-  id: string
-  name: string
-  sell_price?: number | null
-  sellPrice?: number | null
-  unit?: string | null
-  quantity?: number | null
-}
+import { productPrice, readProducts, type PickerProduct } from '../../../../lib/invoices/products'
 
 export interface DescriptionCellProps {
   value: string
@@ -73,11 +65,7 @@ export const DescriptionCell = memo(function DescriptionCell({
     limit: 20,
   })
 
-  const products = useMemo<ProductRow[]>(() => {
-    const raw = (data as { data?: unknown[] } | unknown[] | undefined) ?? []
-    const list = Array.isArray(raw) ? raw : ((raw as { data?: unknown[] }).data ?? [])
-    return list as ProductRow[]
-  }, [data])
+  const products = useMemo<PickerProduct[]>(() => readProducts(data), [data])
 
   useEffect(() => {
     if (!open) return
@@ -164,7 +152,7 @@ export const DescriptionCell = memo(function DescriptionCell({
             </p>
           ) : (
             products.map((product) => {
-              const price = product.sellPrice ?? product.sell_price ?? 0
+              const price = productPrice(product)
               return (
                 <button
                   key={product.id}

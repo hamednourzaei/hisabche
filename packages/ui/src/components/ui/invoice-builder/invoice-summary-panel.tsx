@@ -8,7 +8,6 @@
 'use client'
 
 import { memo } from 'react'
-import { ChevronDown, ChevronUp } from 'lucide-react'
 import type { CurrencyCode } from '@hisabche/store'
 import type { InvoiceSummary } from '@hisabche/validation'
 import { formatNumber } from '@hisabche/formatting'
@@ -28,9 +27,6 @@ export interface InvoiceSummaryPanelProps {
   onDiscountTypeChange: (type: 'fixed' | 'percentage') => void
   taxRate: string
   onTaxRateChange: (value: string) => void
-  /** The item count is derived, so its stepper adds and removes ROWS. */
-  onAddRow: () => void
-  onRemoveLastRow: () => void
 }
 
 const rowClass = 'flex items-center justify-between gap-3 py-2 text-sm'
@@ -57,18 +53,9 @@ export const InvoiceSummaryPanel = memo(function InvoiceSummaryPanel({
   onDiscountTypeChange,
   taxRate,
   onTaxRateChange,
-  onAddRow,
-  onRemoveLastRow,
 }: InvoiceSummaryPanelProps) {
   const fmt = (value: number, decimals = precision) => formatNumber(value, locale, decimals)
   const currencyName = t(`currency.${currency.toLowerCase()}`, currency)
-
-  const countArrow = cn(
-    'flex h-1/2 items-center justify-center px-1',
-    'text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--color-primary))]',
-    'transition-colors duration-150 motion-reduce:transition-none',
-    'disabled:opacity-30 disabled:hover:text-[hsl(var(--fg-tertiary))]',
-  )
 
   return (
     <div className="rounded-[var(--radius-lg)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
@@ -81,31 +68,19 @@ export const InvoiceSummaryPanel = memo(function InvoiceSummaryPanel({
       <div className="divide-y divide-[hsl(var(--border-default))] px-4 py-1">
         <div className={rowClass}>
           <span className={labelClass}>{t('invoiceBuilder.summary.itemCount', 'تعداد اقلام')}</span>
-          {/* The count itself is derived, so the arrows act on the grid: up
-              adds a row to type into, down drops the last one. */}
-          <div className="flex items-center gap-1.5">
-            <span className={valueClass} dir="ltr">
-              {fmt(summary.itemCount, 0)}
-            </span>
-            <div className="flex h-9 flex-col rounded-[var(--radius-sm)] border border-[hsl(var(--border-default))]">
-              <button
-                type="button"
-                onClick={onAddRow}
-                aria-label={t('invoiceBuilder.toolbar.addRow', 'افزودن ردیف')}
-                className={countArrow}
-              >
-                <ChevronUp className="size-3" aria-hidden="true" />
-              </button>
-              <button
-                type="button"
-                onClick={onRemoveLastRow}
-                aria-label={t('invoiceBuilder.grid.removeRow', 'حذف ردیف')}
-                className={countArrow}
-              >
-                <ChevronDown className="size-3" aria-hidden="true" />
-              </button>
-            </div>
-          </div>
+          {/*
+            Read-only, deliberately.
+
+            It briefly had stepper arrows that added and removed grid rows, but
+            a line is not a unit of "how many items" — one product can be one
+            line carrying ten components. Letting an arrow next to a COUNT
+            delete a row the user had filled in was destructive and surprising.
+            Rows are added and removed where rows live: the grid, and the card
+            list.
+          */}
+          <span className={valueClass} dir="ltr">
+            {fmt(summary.itemCount, 0)}
+          </span>
         </div>
 
         <div className={rowClass}>

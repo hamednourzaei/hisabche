@@ -88,6 +88,17 @@ function widthFor(column: InvoiceColumn): { className: string; width?: string } 
 const cellBorder = 'border-s border-[hsl(var(--border-default))]'
 const numericFont = 'tabular-nums [font-variant-numeric:tabular-nums] font-medium'
 
+/** Reveal-on-intent, so an idle header row is only labels. */
+const headArrow = cn(
+  'shrink-0 rounded p-0.5 text-[hsl(var(--fg-tertiary))]',
+  'opacity-0 group-hover/head:opacity-100 focus-visible:opacity-100',
+  'hover:text-[hsl(var(--color-primary))]',
+  'disabled:opacity-0 disabled:group-hover/head:opacity-20',
+  'transition-opacity duration-150 motion-reduce:transition-none',
+  // No hover on touch, so the affordance has to be permanently available.
+  '[@media(pointer:coarse)]:opacity-100',
+)
+
 export const InvoiceItemsGrid = memo(function InvoiceItemsGrid({
   t,
   locale,
@@ -162,18 +173,32 @@ export const InvoiceItemsGrid = memo(function InvoiceItemsGrid({
                     selected && 'bg-[hsl(var(--color-primary)/0.12)]',
                   )}
                 >
-                  <div className="flex items-center gap-0.5 px-1 py-1">
-                    {/* Reorder, right here on the header — the settings dialog
-                        can do it too, but moving a column is a direct-
-                        manipulation gesture, not a settings trip. */}
+                  <div className="group/head flex items-center gap-0.5 px-1 py-1">
+                    {/*
+                      Reorder, right on the header — moving a column is a
+                      direct-manipulation gesture, not a settings trip.
+
+                      DIRECTION: these move a column toward the START or the
+                      END of the row, which in RTL is visually right and left
+                      respectively — the opposite of LTR. `ChevronRight` was
+                      being mirrored by `rtl:rotate-180`, which cancelled that
+                      out and left both arrows pointing the wrong way in
+                      Persian. Rendering the glyph that already points the
+                      right way per direction, with no rotation, makes the two
+                      languages behave identically.
+
+                      VISIBILITY: shown on hover, on keyboard focus, and while
+                      the column is selected. Idle headers are just labels.
+                    */}
                     <button
                       type="button"
                       onClick={() => onMoveColumn(column.id, -1)}
                       disabled={index === 0}
                       aria-label={t('invoiceBuilder.settings.moveStart', 'انتقال به ابتدا')}
-                      className="shrink-0 rounded p-0.5 text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--color-primary))] disabled:opacity-20"
+                      className={cn(headArrow, selected && 'opacity-100')}
                     >
-                      <ChevronRight className="size-3 rtl:rotate-180" aria-hidden="true" />
+                      <ChevronRight className="size-3 hidden ltr:block" aria-hidden="true" />
+                      <ChevronLeft className="size-3 hidden rtl:block" aria-hidden="true" />
                     </button>
 
                     {/* A button, not a click handler on the th — column
@@ -205,9 +230,10 @@ export const InvoiceItemsGrid = memo(function InvoiceItemsGrid({
                       onClick={() => onMoveColumn(column.id, 1)}
                       disabled={index === shown.length - 1}
                       aria-label={t('invoiceBuilder.settings.moveEnd', 'انتقال به انتها')}
-                      className="shrink-0 rounded p-0.5 text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--color-primary))] disabled:opacity-20"
+                      className={cn(headArrow, selected && 'opacity-100')}
                     >
-                      <ChevronLeft className="size-3 rtl:rotate-180" aria-hidden="true" />
+                      <ChevronLeft className="size-3 hidden ltr:block" aria-hidden="true" />
+                      <ChevronRight className="size-3 hidden rtl:block" aria-hidden="true" />
                     </button>
                   </div>
                 </th>

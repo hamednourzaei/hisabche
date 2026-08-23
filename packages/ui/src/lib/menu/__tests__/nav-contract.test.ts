@@ -78,7 +78,12 @@ describe('command palette contract', () => {
   it('every command targets a route the app actually serves', () => {
     // Query strings carry intent (`?add=true`, `?type=purchase`); the pathname
     // is what has to exist.
-    const navPaths = new Set(NAV_ITEMS.map((i) => i.path))
+    //
+    // A served route need not be IN the menu. Invoice creation is reached from
+    // the invoice list and the palette, not from its own sidebar entry, so it
+    // is declared here rather than being forced back into the navigation just
+    // to satisfy this assertion.
+    const navPaths = new Set([...NAV_ITEMS.map((i) => i.path), '/invoices/new'])
 
     for (const command of COMMAND_ITEMS) {
       const pathname = command.path.split('?')[0]

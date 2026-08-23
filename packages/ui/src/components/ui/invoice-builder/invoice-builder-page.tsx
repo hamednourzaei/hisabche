@@ -417,8 +417,6 @@ export const InvoiceBuilderPage = memo(function InvoiceBuilderPage({
               onDiscountTypeChange={onDiscountTypeChange}
               taxRate={taxRate}
               onTaxRateChange={onTaxRateChange}
-              onAddRow={onAddRow}
-              onRemoveLastRow={onRemoveLastRow}
             />
 
             {issues.length ? (
