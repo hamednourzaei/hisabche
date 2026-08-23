@@ -87,6 +87,12 @@ export const CustomerPanel = memo(function CustomerPanel({
 }: CustomerPanelProps) {
   const isPurchase = transactionType === 'purchase'
 
+  // A persisted draft written by an older build has no `customers` key at all,
+  // and a rehydrating store can hand this component that shape for one render.
+  // Defaulting here means a stale draft degrades to "no customer selected"
+  // instead of taking the whole builder down with it.
+  const parties = customers ?? []
+
   return (
     <div className="rounded-[var(--radius-lg)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
       <div className="flex items-center gap-2 border-b border-[hsl(var(--border-default))] px-4 py-3">
@@ -133,9 +139,9 @@ export const CustomerPanel = memo(function CustomerPanel({
 
           {/* Chips for everyone already on the invoice. The first is marked,
               because the first is the one the receivable belongs to. */}
-          {customers.length ? (
+          {parties.length ? (
             <ul className="mb-2 flex flex-wrap gap-1.5">
-              {customers.map((customer, index) => (
+              {parties.map((customer, index) => (
                 <li
                   key={customer.id}
                   className={cn(
@@ -173,13 +179,13 @@ export const CustomerPanel = memo(function CustomerPanel({
               onAddCustomer({ id: next.id, name: next.name, phone: next.phone })
             }}
             placeholder={
-              customers.length
+              parties.length
                 ? t('invoiceBuilder.customer.addAnother', 'افزودن مشتری دیگر…')
                 : t('invoiceBuilder.customer.select', 'انتخاب مشتری')
             }
           />
 
-          {customers.length > 1 ? (
+          {parties.length > 1 ? (
             <p className="mt-1.5 text-[11px] leading-relaxed text-[hsl(var(--fg-tertiary))]">
               {t(
                 'invoiceBuilder.customer.multiNote',

@@ -2742,7 +2742,7 @@
     "continue": "مرحله بعدی: پیش‌نمایش و تایید",
     "continueShort": "پیش‌نمایش و تایید",
     "previewTitle": "پیش‌نمایش و تایید بل",
-    "confirmCreate": "تایید و ساخت بل",
+    "confirmCreate": "تایید و ثبت بل",
     "backToEdit": "بازگشت به ویرایش",
     "columns": {
       "rowNumber": "ردیف",
@@ -2858,6 +2858,24 @@
       "totalRequired": "مبلغ ردیف باید بزرگ‌تر از صفر باشد",
       "noItems": "حداقل یک ردیف ضرور است",
       "createFailed": "ثبت بل ناکام شد"
+    },
+    "mobile": {
+      "itemsTitle": "اقلام بل",
+      "addItem": "افزودن جنس یا خدمت",
+      "emptyTitle": "هنوز قلمی به بل اضافه نشده",
+      "emptyDescription": "برای شروع، اولین جنس یا خدمت را اضافه کنید.",
+      "untitledItem": "بدون عنوان",
+      "itemActions": "عملیات این قلم",
+      "moreDetails": "معلومات بیشتر",
+      "editItem": "ویرایش قلم",
+      "otherFields": "سایر معلومات",
+      "manageColumns": "مدیریت ستون‌ها",
+      "addCustomColumn": "افزودن ستون سفارشی",
+      "searchProduct": "جستجوی جنس یا خدمت…",
+      "customerTitle": "معلومات مشتری",
+      "customerOptional": "انتخاب مشتری اختیاری است",
+      "settingsTitle": "تنظیمات بل",
+      "continue": "پیش‌نمایش و ادامه"
     }
   }
 }

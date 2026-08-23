@@ -2738,7 +2738,7 @@
     "continue": "مرحله بعدی: پیش‌نمایش و تأیید",
     "continueShort": "پیش‌نمایش و تأیید",
     "previewTitle": "پیش‌نمایش و تأیید فاکتور",
-    "confirmCreate": "تأیید و ساخت فاکتور",
+    "confirmCreate": "تأیید و ثبت فاکتور",
     "backToEdit": "بازگشت به ویرایش",
     "columns": {
       "rowNumber": "ردیف",
@@ -2854,6 +2854,24 @@
       "totalRequired": "مبلغ ردیف باید بزرگ‌تر از صفر باشد",
       "noItems": "حداقل یک ردیف لازم است",
       "createFailed": "ثبت فاکتور ناموفق بود"
+    },
+    "mobile": {
+      "itemsTitle": "اقلام فاکتور",
+      "addItem": "افزودن کالا یا خدمت",
+      "emptyTitle": "هنوز قلمی به فاکتور اضافه نشده",
+      "emptyDescription": "برای شروع، اولین کالا یا خدمت را اضافه کنید.",
+      "untitledItem": "بدون عنوان",
+      "itemActions": "عملیات این قلم",
+      "moreDetails": "اطلاعات بیشتر",
+      "editItem": "ویرایش قلم",
+      "otherFields": "سایر اطلاعات",
+      "manageColumns": "مدیریت ستون‌ها",
+      "addCustomColumn": "افزودن ستون سفارشی",
+      "searchProduct": "جستجوی کالا یا خدمت…",
+      "customerTitle": "اطلاعات مشتری",
+      "customerOptional": "انتخاب مشتری اختیاری است",
+      "settingsTitle": "تنظیمات فاکتور",
+      "continue": "پیش‌نمایش و ادامه"
     }
   }
 }

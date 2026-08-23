@@ -83,6 +83,14 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
   const locale = useLocale()
   const router = useRouter()
   const pathname = usePathname()
+
+  /**
+   * Routes that take over the whole phone screen.
+   *
+   * Only invoice creation so far. Matched on the path rather than a flag on
+   * the page, because the layout renders above the page and cannot read it.
+   */
+  const isFullscreenWorkflow = /\/invoices\/new(\/|$)/.test(pathname ?? '')
   const isDark = useThemeStore((s) => s.isDark)
   const toggle = useThemeStore((s) => s.toggle)
   const [optimisticPath, setOptimisticPath] = useState<string | null>(null)
@@ -286,13 +294,20 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
           {children}
         </main>
 
-        <BottomNav
-          primaryItems={primaryItems}
-          moreGroups={moreGroups}
-          moreIcon={MORE_ICON}
-          activeNav={activeNav}
-          onNavigate={handleNavigate}
-        />
+        {/* The invoice builder owns the bottom of the screen on mobile: it
+            has its own sticky total and forward action there. Two stacked
+            bars leave a phone with almost no form visible, and the global nav
+            would sit on top of the CTA. So it stands down for the duration of
+            the workflow — the builder's own back arrow is the way out. */}
+        {isFullscreenWorkflow ? null : (
+          <BottomNav
+            primaryItems={primaryItems}
+            moreGroups={moreGroups}
+            moreIcon={MORE_ICON}
+            activeNav={activeNav}
+            onNavigate={handleNavigate}
+          />
+        )}
       </div>
     </div>
   )

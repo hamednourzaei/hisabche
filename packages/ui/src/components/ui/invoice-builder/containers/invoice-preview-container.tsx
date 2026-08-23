@@ -225,7 +225,7 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
   ])
 
   return (
-    <div className="mx-auto w-full min-w-0 max-w-6xl space-y-4 pb-24 lg:pb-6">
+    <div className="mx-auto w-full min-w-0 max-w-6xl space-y-4 pb-40 lg:pb-6">
       <div className="min-w-0">
         <h1 className="text-xl font-bold text-[hsl(var(--fg-primary))]">
           {t('invoiceBuilder.previewTitle', 'پیش‌نمایش و تأیید فاکتور')}
@@ -302,7 +302,7 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
               className="gap-1.5"
             >
               <Check className="size-4" aria-hidden="true" />
-              {t('invoiceBuilder.confirmCreate', 'تأیید و ساخت فاکتور')}
+              {t('invoiceBuilder.confirmCreate', 'تأیید و ثبت فاکتور')}
             </Button>
             <Button
               variant="outline"
@@ -327,27 +327,39 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
         </div>
       </div>
 
-      {/* Phone and tablet keep the two decisions within thumb reach. */}
-      <div className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-2 border-t border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-3 lg:hidden print:hidden">
-        <Button
-          variant="outline"
-          onClick={() => router.push('/invoices/new')}
-          disabled={createInvoice.isPending}
-          className="shrink-0"
-        >
-          <Pencil className="size-4" aria-hidden="true" />
-          <span className="sr-only">{t('invoiceBuilder.backToEdit', 'بازگشت به ویرایش')}</span>
-        </Button>
-        <Button
-          onClick={handleConfirm}
-          loading={createInvoice.isPending}
-          disabled={issues.length > 0}
-          fullWidth
-          className="gap-1.5"
-        >
-          <Check className="size-4" aria-hidden="true" />
-          {t('invoiceBuilder.confirmCreate', 'تأیید و ساخت فاکتور')}
-        </Button>
+      {/* Phone and tablet: the amount being committed sits directly above the
+          button that commits it, both inside the safe area. */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden print:hidden">
+        <div className="mb-2 flex items-baseline justify-between gap-2">
+          <span className="text-sm text-[hsl(var(--fg-secondary))]">
+            {t('invoiceBuilder.summary.payable', 'مبلغ قابل پرداخت')}
+          </span>
+          <span dir="ltr" className="text-xl font-bold tabular-nums text-[hsl(var(--fg-primary))]">
+            {`${summary.total.toLocaleString(locale)} ${t(`currency.${currency.toLowerCase()}`, currency)}`}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => router.push('/invoices/new')}
+            disabled={createInvoice.isPending}
+            className="h-12 shrink-0 px-4"
+          >
+            <Pencil className="size-4" aria-hidden="true" />
+            <span className="sr-only">{t('invoiceBuilder.backToEdit', 'بازگشت به ویرایش')}</span>
+          </Button>
+          <Button
+            variant="success"
+            onClick={handleConfirm}
+            loading={createInvoice.isPending}
+            disabled={issues.length > 0}
+            fullWidth
+            className="h-12 gap-1.5 text-base"
+          >
+            <Check className="size-4" aria-hidden="true" />
+            {t('invoiceBuilder.confirmCreate', 'تأیید و ثبت فاکتور')}
+          </Button>
+        </div>
       </div>
     </div>
   )

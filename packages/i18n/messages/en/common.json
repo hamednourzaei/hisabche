@@ -2849,6 +2849,24 @@
       "totalRequired": "The line total must be greater than zero",
       "noItems": "At least one line is required",
       "createFailed": "Could not create the invoice"
+    },
+    "mobile": {
+      "itemsTitle": "Invoice items",
+      "addItem": "Add item or service",
+      "emptyTitle": "No items yet",
+      "emptyDescription": "Add the first item or service to get started.",
+      "untitledItem": "Untitled",
+      "itemActions": "Actions for this item",
+      "moreDetails": "More details",
+      "editItem": "Edit item",
+      "otherFields": "Other details",
+      "manageColumns": "Manage columns",
+      "addCustomColumn": "Add a custom column",
+      "searchProduct": "Search items or services…",
+      "customerTitle": "Customer",
+      "customerOptional": "A customer is optional",
+      "settingsTitle": "Invoice settings",
+      "continue": "Preview and continue"
     }
   }
 }
