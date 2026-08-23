@@ -36,7 +36,10 @@ export function InvoicesContainer() {
     [router],
   )
 
-  const handleNewInvoice = useCallback(() => router.push('/quick-invoice'), [router])
+  // «فاکتور جدید» opens the two-stage builder. `/quick-invoice` still exists
+  // and still works — it is the fast path for a one-line cash sale, reachable
+  // from the command palette and the FAB, and every bookmark to it is intact.
+  const handleNewInvoice = useCallback(() => router.push('/invoices/new'), [router])
 
   return (
     <InvoicesView

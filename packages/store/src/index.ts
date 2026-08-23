@@ -25,6 +25,11 @@ export { useWarehouseStore } from './slices/warehouse.slice'
 export * from './slices/onboarding.slice'
 export type { BusinessType, StoreSize, Currency, Language } from './slices/onboarding.slice'
 export { usePreferencesStore } from './slices/preferences.slice'
+export {
+  useInvoiceDraftStore,
+  type InvoiceDraftState,
+  type InvoiceDraftCustomer,
+} from './slices/invoice-draft.slice'
 export { useSyncStore } from './slices/sync.slice'
 export { useDeviceStore } from './slices/device.slice'
 export type { PerformanceMode } from './slices/device.slice'

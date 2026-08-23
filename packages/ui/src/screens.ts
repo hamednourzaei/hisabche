@@ -22,6 +22,8 @@ export { DashboardContainer } from './components/ui/dashboard/containers/dashboa
 export { InvoicesContainer } from './components/ui/invoices/containers/invoices-container'
 export { InvoiceDetailContainer } from './components/ui/invoice-detail/containers/invoice-detail-container'
 export { QuickInvoiceContainer } from './components/ui/quick-invoice/containers/quick-invoice-container'
+export { InvoiceBuilderContainer } from './components/ui/invoice-builder/containers/invoice-builder-container'
+export { InvoicePreviewContainer } from './components/ui/invoice-builder/containers/invoice-preview-container'
 export { PurchasingContainer } from './components/ui/purchasing/containers/purchasing-container'
 
 // ---------- Customers ----------

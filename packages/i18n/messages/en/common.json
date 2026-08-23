@@ -2719,5 +2719,121 @@
   "adminPanel": {
     "access": "Admin panel access",
     "notAllowed": "This account does not have platform admin access. Sign in with an account on the allowlist."
+  },
+  "invoiceBuilder": {
+    "new": "New Invoice",
+    "breadcrumb": "Breadcrumb",
+    "stepOne": "Step 1: Details and line items",
+    "stepTwo": "Step 2: Review and confirm",
+    "saveDraft": "Save draft",
+    "continue": "Next: preview and confirm",
+    "continueShort": "Preview and confirm",
+    "previewTitle": "Preview and confirm invoice",
+    "confirmCreate": "Confirm and create invoice",
+    "backToEdit": "Back to editing",
+    "columns": {
+      "rowNumber": "No.",
+      "description": "Item / service",
+      "quantity": "Qty",
+      "unit": "Unit",
+      "unitPrice": "Unit price",
+      "discount": "Discount (%)",
+      "tax": "Tax (%)",
+      "lineTotal": "Line total",
+      "weight": "Weight (g)",
+      "notes": "Notes",
+      "actions": "Actions"
+    },
+    "columnType": {
+      "text": "Text",
+      "integer": "Whole number",
+      "decimal": "Decimal",
+      "currency": "Money",
+      "percent": "Percentage",
+      "date": "Date",
+      "select": "Choice",
+      "boolean": "Yes / No",
+      "computed": "Calculated"
+    },
+    "toolbar": {
+      "addRow": "Add row",
+      "rowShort": "Row",
+      "addColumn": "Add column",
+      "columnShort": "Column",
+      "deleteColumn": "Delete column",
+      "settings": "Table settings",
+      "columnOps": "Column operations",
+      "resetColumns": "Restore default columns",
+      "selected": "Selected column:",
+      "selectHint": "Select a column header to edit or delete it"
+    },
+    "grid": {
+      "columnTotals": "Column totals",
+      "duplicateRow": "Duplicate row",
+      "removeRow": "Delete row",
+      "noRate": "No rate"
+    },
+    "column": {
+      "addTitle": "Add column",
+      "editTitle": "Edit column",
+      "description": "Build the column your business needs — the system does not care what it means.",
+      "title": "Column title",
+      "titlePlaceholder": "e.g. Net weight",
+      "titleRequired": "A column title is required",
+      "duplicateTitle": "A column with this title already exists",
+      "type": "Column type",
+      "currency": "Column currency",
+      "foreignCurrencyNote": "This column uses another currency. Its total is reported separately and, without an exchange rate, is not included in the invoice total.",
+      "options": "Options (one per line)",
+      "optionsRequired": "A choice column needs at least one option",
+      "precision": "Decimal places",
+      "suffix": "Display unit",
+      "suffixPlaceholder": "g, hour, metre",
+      "defaultValue": "Default value",
+      "aggregate": "Total this column",
+      "aggregateHint": "Shown in the column totals row",
+      "deleteConfirm": "Delete this column?"
+    },
+    "settings": {
+      "title": "Table settings",
+      "description": "Set the order, visibility and totals of each column. The preview uses this same order.",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "sum": "Total",
+      "hide": "Hide column",
+      "show": "Show column",
+      "systemColumn": "System column — cannot be deleted"
+    },
+    "customer": {
+      "title": "Customer and invoice details",
+      "type": "Invoice type",
+      "select": "Select customer",
+      "supplier": "Select supplier",
+      "currency": "Invoice currency",
+      "rate": "Exchange rate",
+      "ratePlaceholder": "e.g. 59500",
+      "rateHint": "Without a rate, amounts in this currency are reported separately and excluded from the total.",
+      "date": "Invoice date",
+      "dueDate": "Due date",
+      "notes": "Notes"
+    },
+    "summary": {
+      "title": "Invoice summary",
+      "itemCount": "Items",
+      "subtotal": "Subtotal",
+      "foreignTotal": "Total",
+      "foreignSection": "Other currency totals",
+      "discount": "Total discount",
+      "taxRate": "Tax (%)",
+      "taxTotal": "Tax amount",
+      "payable": "Amount payable"
+    },
+    "errors": {
+      "descriptionRequired": "An item description is required",
+      "priceRequired": "Unit price must be greater than zero",
+      "totalRequired": "The line total must be greater than zero",
+      "noItems": "At least one line is required",
+      "createFailed": "Could not create the invoice"
+    }
   }
 }

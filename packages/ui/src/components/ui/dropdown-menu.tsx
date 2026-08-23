@@ -68,6 +68,18 @@ const LedgerTrigger = React.forwardRef<
     tone?: Tone
   }
 >(({ className, tone = 'filter', children, ...props }, ref) => {
+  // `asChild` means the caller supplies the whole trigger element — an icon
+  // button, a table header, a card. Radix's Slot requires exactly ONE child,
+  // so the wrapper span and caret below would break it. Rendering the child
+  // untouched is the only thing `asChild` can honestly mean.
+  if (props.asChild) {
+    return (
+      <TriggerPrimitive ref={ref} className={className} {...props}>
+        {children}
+      </TriggerPrimitive>
+    )
+  }
+
   return (
     <TriggerPrimitive
       ref={ref}

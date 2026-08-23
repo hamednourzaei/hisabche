@@ -24,6 +24,8 @@ const DashboardPage = lazy(() => import('@/features/dashboard/dashboard-page'))
 const InvoicesPage = lazy(() => import('@/features/sales/invoices-page'))
 const QuickInvoicePage = lazy(() => import('@/features/sales/quick-invoice-page'))
 const InvoiceDetailPage = lazy(() => import('@/features/sales/invoice-detail-page'))
+const InvoiceBuilderPage = lazy(() => import('@/features/sales/invoice-builder-page'))
+const InvoicePreviewPage = lazy(() => import('@/features/sales/invoice-preview-page'))
 const PurchasingPage = lazy(() => import('@/features/sales/purchasing-page'))
 const ProductsPage = lazy(() => import('@/features/inventory/products-page'))
 const ProductDetailPage = lazy(() => import('@/features/inventory/product-detail-page'))
@@ -68,6 +70,9 @@ const router = createHashRouter([
       { path: 'dashboard', element: <Navigate to="/" replace /> },
 
       { path: 'invoices', element: <InvoicesPage /> },
+      // Before `:id` — otherwise `new` would be read as an invoice id.
+      { path: 'invoices/new', element: <InvoiceBuilderPage /> },
+      { path: 'invoices/new/preview', element: <InvoicePreviewPage /> },
       { path: 'invoices/:id', element: <InvoiceDetailPage /> },
       { path: 'quick-invoice', element: <QuickInvoicePage /> },
       { path: 'purchasing', element: <PurchasingPage /> },

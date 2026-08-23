@@ -35,7 +35,10 @@ export function AppShell() {
   const setPaletteOpen = useUiStore((s) => s.setPaletteOpen)
   const requestSearchFocus = useUiStore((s) => s.requestSearchFocus)
 
-  const onNewInvoice = useCallback(() => navigate('/quick-invoice'), [navigate])
+  // Matches web's primary «فاکتور جدید» affordance, which now opens the
+  // two-stage builder. `/quick-invoice` is still the fast one-line path and
+  // stays reachable from the command palette.
+  const onNewInvoice = useCallback(() => navigate('/invoices/new'), [navigate])
 
   useShortcuts({
     newInvoice: onNewInvoice,

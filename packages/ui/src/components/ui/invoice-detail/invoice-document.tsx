@@ -193,6 +193,16 @@ export interface InvoiceDocumentProps {
   data: InvoiceDocumentData
   display: InvoiceDocumentDisplaySettings
   locale?: string
+  /**
+   * Replaces the built-in items table.
+   *
+   * The invoice builder renders the columns the user configured, which the
+   * fixed seven-column table here cannot express. Everything else about the
+   * document — the header, the party blocks, the notes, the stamp, the QR —
+   * is identical, so the preview genuinely IS this document rather than a
+   * lookalike. Omitting it leaves every existing caller untouched.
+   */
+  itemsSlot?: React.ReactNode
 }
 
 // نگاشت locale بلند (fa-AF/fa-IR/en) به پیشوند واقعی مسیر (af/fa/en)
@@ -222,7 +232,7 @@ const fmtDate = (d: string, locale: string) => {
 }
 
 export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
-  function InvoiceDocument({ t, data, display, locale = 'fa-AF' }, ref) {
+  function InvoiceDocument({ t, data, display, locale = 'fa-AF', itemsSlot }, ref) {
     const {
       type = 'sale',
       invoiceId,
@@ -395,176 +405,190 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
               this table — otherwise a touch that begins here can get
               captured by the horizontal scroller and the rest of the
               invoice becomes hard to reach on mobile. */}
-          <div className="overflow-x-auto touch-pan-y rounded-lg border border-[hsl(var(--border-default))]">
-            <table className="w-full min-w-[520px] border-collapse text-[11px] sm:min-w-0 sm:text-sm">
-              <thead>
-                <tr className="border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))]">
-                  <th className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-start font-medium text-[hsl(var(--fg-secondary))] sm:px-2 sm:py-3">
-                    #
-                  </th>
-                  <th className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-start font-medium text-[hsl(var(--fg-secondary))] sm:px-2 sm:py-3">
-                    {t('warehouse.productName', 'نام محصول')}
-                  </th>
-                  <th className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-center font-medium text-[hsl(var(--fg-secondary))] sm:px-2 sm:py-3">
-                    {t('invoices.quantity', 'تعداد')}
-                  </th>
-                  <th className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-center font-medium text-[hsl(var(--fg-secondary))] sm:px-2 sm:py-3">
-                    {t('invoices.unit', 'واحد')}
-                  </th>
-                  <th className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-end font-medium text-[hsl(var(--fg-secondary))] sm:px-2 sm:py-3">
-                    {t('invoices.unitPrice', 'قیمت واحد')}
-                  </th>
-                  <th className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-end font-medium text-[hsl(var(--fg-secondary))] sm:px-2 sm:py-3">
-                    {t('invoices.discount', 'تخفیف')}
-                  </th>
-                  <th className="px-1.5 py-2 text-end font-medium text-[hsl(var(--fg-secondary))] sm:px-2 sm:py-3">
-                    {t('invoices.totalPrice', 'قیمت کل')}
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item, i) => (
-                  <Fragment key={item.id || i}>
-                    <tr className="border-b border-[hsl(var(--border-default))]">
-                      <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-[hsl(var(--fg-tertiary))] sm:px-2 sm:py-3">
-                        {i + 1}
-                      </td>
-                      <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 font-medium text-[hsl(var(--fg-primary))] sm:px-2 sm:py-3">
-                        {item.productName}
-                        {/* وزن جدا از تعداد است: «۱ عدد، ۱۲٫۵ گرم» */}
-                        {item.weightGrams ? (
-                          <span className="ms-1 text-[10px] font-normal text-[hsl(var(--fg-tertiary))]">
-                            ({item.weightGrams.toLocaleString()} {t('unit.gram', 'گرم')})
-                          </span>
-                        ) : null}
-                      </td>
-                      <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-center text-[hsl(var(--fg-primary))] sm:px-2 sm:py-3">
-                        {item.quantity}
-                      </td>
-                      <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-center text-[hsl(var(--fg-tertiary))] sm:px-2 sm:py-3">
-                        {unitText(item.unit, item.unitLabel)}
-                      </td>
-                      <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-end tabular-nums text-[hsl(var(--fg-primary))] sm:px-2 sm:py-3">
-                        {item.unitPrice.toLocaleString()} {currency}
-                      </td>
-                      <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-end tabular-nums text-[hsl(var(--fg-tertiary))] sm:px-2 sm:py-3">
-                        {item.discount ? `${item.discount}%` : '—'}
-                      </td>
-                      <td className="px-1.5 py-2 text-end font-medium tabular-nums text-[hsl(var(--fg-primary))] sm:px-2 sm:py-3">
-                        {/* سهم خودِ این قلم — بدون اجزا. اجزا ردیف خودشان را
+          {itemsSlot ?? (
+            <div className="overflow-x-auto touch-pan-y rounded-lg border border-[hsl(var(--border-default))]">
+              <table className="w-full min-w-[520px] border-collapse text-[11px] sm:min-w-0 sm:text-sm">
+                <thead>
+                  <tr className="border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))]">
+                    <th className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-start font-medium text-[hsl(var(--fg-secondary))] sm:px-2 sm:py-3">
+                      #
+                    </th>
+                    <th className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-start font-medium text-[hsl(var(--fg-secondary))] sm:px-2 sm:py-3">
+                      {t('warehouse.productName', 'نام محصول')}
+                    </th>
+                    <th className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-center font-medium text-[hsl(var(--fg-secondary))] sm:px-2 sm:py-3">
+                      {t('invoices.quantity', 'تعداد')}
+                    </th>
+                    <th className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-center font-medium text-[hsl(var(--fg-secondary))] sm:px-2 sm:py-3">
+                      {t('invoices.unit', 'واحد')}
+                    </th>
+                    <th className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-end font-medium text-[hsl(var(--fg-secondary))] sm:px-2 sm:py-3">
+                      {t('invoices.unitPrice', 'قیمت واحد')}
+                    </th>
+                    <th className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-end font-medium text-[hsl(var(--fg-secondary))] sm:px-2 sm:py-3">
+                      {t('invoices.discount', 'تخفیف')}
+                    </th>
+                    <th className="px-1.5 py-2 text-end font-medium text-[hsl(var(--fg-secondary))] sm:px-2 sm:py-3">
+                      {t('invoices.totalPrice', 'قیمت کل')}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item, i) => (
+                    <Fragment key={item.id || i}>
+                      <tr className="border-b border-[hsl(var(--border-default))]">
+                        <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-[hsl(var(--fg-tertiary))] sm:px-2 sm:py-3">
+                          {i + 1}
+                        </td>
+                        <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 font-medium text-[hsl(var(--fg-primary))] sm:px-2 sm:py-3">
+                          {item.productName}
+                          {/* وزن جدا از تعداد است: «۱ عدد، ۱۲٫۵ گرم» */}
+                          {item.weightGrams ? (
+                            <span className="ms-1 text-[10px] font-normal text-[hsl(var(--fg-tertiary))]">
+                              ({item.weightGrams.toLocaleString()} {t('unit.gram', 'گرم')})
+                            </span>
+                          ) : null}
+                        </td>
+                        <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-center text-[hsl(var(--fg-primary))] sm:px-2 sm:py-3">
+                          {item.quantity}
+                        </td>
+                        <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-center text-[hsl(var(--fg-tertiary))] sm:px-2 sm:py-3">
+                          {unitText(item.unit, item.unitLabel)}
+                        </td>
+                        <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-end tabular-nums text-[hsl(var(--fg-primary))] sm:px-2 sm:py-3">
+                          {item.unitPrice.toLocaleString()} {currency}
+                        </td>
+                        <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-2 text-end tabular-nums text-[hsl(var(--fg-tertiary))] sm:px-2 sm:py-3">
+                          {item.discount ? `${item.discount}%` : '—'}
+                        </td>
+                        <td className="px-1.5 py-2 text-end font-medium tabular-nums text-[hsl(var(--fg-primary))] sm:px-2 sm:py-3">
+                          {/* سهم خودِ این قلم — بدون اجزا. اجزا ردیف خودشان را
                             دارند و جداگانه شمرده می‌شوند، وگرنه خواننده مبلغ
                             جزء را دوبار می‌بیند و جمع غلط به نظر می‌رسد. */}
-                        {baseTotalOf(item).toLocaleString()} {currency}
-                      </td>
-                    </tr>
-
-                    {/* اجزای این قلم. اگر جزئیاتی نباشد، هیچ چیز رندر نمی‌شود. */}
-                    {(item.details ?? []).map((detail, d) => (
-                      <tr
-                        key={detail.id || `${i}-${d}`}
-                        className="border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))]"
-                      >
-                        <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-1 sm:px-2" />
-                        <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-1 ps-5 text-[11px] text-[hsl(var(--fg-secondary))] sm:px-2 sm:ps-6">
-                          ├─ {detail.title}
-                        </td>
-                        <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-1 text-center text-[11px] text-[hsl(var(--fg-secondary))] sm:px-2">
-                          {detail.quantity}
-                        </td>
-                        <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-1 text-center text-[11px] text-[hsl(var(--fg-tertiary))] sm:px-2">
-                          {unitText(detail.unit, detail.unitLabel)}
-                        </td>
-                        <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-1 text-end text-[11px] tabular-nums text-[hsl(var(--fg-secondary))] sm:px-2">
-                          {detail.amount.toLocaleString()} {currency}
-                        </td>
-                        <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-1 sm:px-2" />
-                        <td className="px-1.5 py-1 text-end text-[11px] tabular-nums text-[hsl(var(--fg-tertiary))] sm:px-2">
-                          {(detail.quantity * detail.amount).toLocaleString()} {currency}
+                          {baseTotalOf(item).toLocaleString()} {currency}
                         </td>
                       </tr>
-                    ))}
-                  </Fragment>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr>
-                  <td
-                    colSpan={6}
-                    className="px-1.5 py-2 text-end font-medium text-[hsl(var(--fg-primary))] sm:px-2 sm:py-3"
-                  >
-                    {t('invoices.subtotal', 'جمع')}
-                  </td>
-                  <td className="px-1.5 py-2 text-end font-medium tabular-nums text-[hsl(var(--fg-primary))] sm:px-2 sm:py-3">
-                    {subtotal.toLocaleString()} {currency}
-                  </td>
-                </tr>
-                {discountTotal > 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-2 py-2 text-end text-[hsl(var(--fg-secondary))]">
-                      {t('invoices.discount', 'تخفیف')}
-                    </td>
-                    <td className="px-2 py-2 text-end text-[hsl(var(--color-destructive))] tabular-nums">
-                      -{discountTotal.toLocaleString()} {currency}
-                    </td>
-                  </tr>
-                )}
-                {taxTotal > 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-2 py-2 text-end text-[hsl(var(--fg-secondary))]">
-                      {t('invoices.tax', 'مالیات')}
-                    </td>
-                    <td className="px-2 py-2 text-end tabular-nums text-[hsl(var(--fg-primary))]">
-                      {taxTotal.toLocaleString()} {currency}
-                    </td>
-                  </tr>
-                )}
-                {shippingTotal > 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-2 py-2 text-end text-[hsl(var(--fg-secondary))]">
-                      {t('invoices.shipping', 'هزینه ارسال')}
-                    </td>
-                    <td className="px-2 py-2 text-end tabular-nums text-[hsl(var(--fg-primary))]">
-                      {shippingTotal.toLocaleString()} {currency}
-                    </td>
-                  </tr>
-                )}
-                <tr className="border-t-2 border-[hsl(var(--border-default))]">
-                  <td
-                    colSpan={6}
-                    className="px-2 py-3 text-end text-lg font-bold text-[hsl(var(--fg-primary))]"
-                  >
-                    {t('invoices.total', 'مجموع')}
-                  </td>
-                  <td className="px-2 py-3 text-end text-lg font-bold text-[hsl(var(--color-primary))] tabular-nums">
-                    {total.toLocaleString()} {currency}
-                  </td>
-                </tr>
-                {paidAmount > 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-2 py-2 text-end text-[hsl(var(--fg-secondary))]">
-                      {t('invoices.paid', 'پرداخت شده')}
-                    </td>
-                    <td className="px-2 py-2 text-end text-[hsl(var(--color-success))] tabular-nums">
-                      -{paidAmount.toLocaleString()} {currency}
-                    </td>
-                  </tr>
-                )}
-                {remaining > 0 && (
+
+                      {/* اجزای این قلم. اگر جزئیاتی نباشد، هیچ چیز رندر نمی‌شود. */}
+                      {(item.details ?? []).map((detail, d) => (
+                        <tr
+                          key={detail.id || `${i}-${d}`}
+                          className="border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))]"
+                        >
+                          <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-1 sm:px-2" />
+                          <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-1 ps-5 text-[11px] text-[hsl(var(--fg-secondary))] sm:px-2 sm:ps-6">
+                            ├─ {detail.title}
+                          </td>
+                          <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-1 text-center text-[11px] text-[hsl(var(--fg-secondary))] sm:px-2">
+                            {detail.quantity}
+                          </td>
+                          <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-1 text-center text-[11px] text-[hsl(var(--fg-tertiary))] sm:px-2">
+                            {unitText(detail.unit, detail.unitLabel)}
+                          </td>
+                          <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-1 text-end text-[11px] tabular-nums text-[hsl(var(--fg-secondary))] sm:px-2">
+                            {detail.amount.toLocaleString()} {currency}
+                          </td>
+                          <td className="border-e border-[hsl(var(--border-default))] px-1.5 py-1 sm:px-2" />
+                          <td className="px-1.5 py-1 text-end text-[11px] tabular-nums text-[hsl(var(--fg-tertiary))] sm:px-2">
+                            {(detail.quantity * detail.amount).toLocaleString()} {currency}
+                          </td>
+                        </tr>
+                      ))}
+                    </Fragment>
+                  ))}
+                </tbody>
+                <tfoot>
                   <tr>
                     <td
                       colSpan={6}
-                      className="px-2 py-2 text-end font-medium text-[hsl(var(--color-destructive))]"
+                      className="px-1.5 py-2 text-end font-medium text-[hsl(var(--fg-primary))] sm:px-2 sm:py-3"
                     >
-                      {t('invoices.remaining', 'باقیمانده')}
+                      {t('invoices.subtotal', 'جمع')}
                     </td>
-                    <td className="px-2 py-2 text-end font-medium text-[hsl(var(--color-destructive))] tabular-nums">
-                      {remaining.toLocaleString()} {currency}
+                    <td className="px-1.5 py-2 text-end font-medium tabular-nums text-[hsl(var(--fg-primary))] sm:px-2 sm:py-3">
+                      {subtotal.toLocaleString()} {currency}
                     </td>
                   </tr>
-                )}
-              </tfoot>
-            </table>
-          </div>
+                  {discountTotal > 0 && (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="px-2 py-2 text-end text-[hsl(var(--fg-secondary))]"
+                      >
+                        {t('invoices.discount', 'تخفیف')}
+                      </td>
+                      <td className="px-2 py-2 text-end text-[hsl(var(--color-destructive))] tabular-nums">
+                        -{discountTotal.toLocaleString()} {currency}
+                      </td>
+                    </tr>
+                  )}
+                  {taxTotal > 0 && (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="px-2 py-2 text-end text-[hsl(var(--fg-secondary))]"
+                      >
+                        {t('invoices.tax', 'مالیات')}
+                      </td>
+                      <td className="px-2 py-2 text-end tabular-nums text-[hsl(var(--fg-primary))]">
+                        {taxTotal.toLocaleString()} {currency}
+                      </td>
+                    </tr>
+                  )}
+                  {shippingTotal > 0 && (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="px-2 py-2 text-end text-[hsl(var(--fg-secondary))]"
+                      >
+                        {t('invoices.shipping', 'هزینه ارسال')}
+                      </td>
+                      <td className="px-2 py-2 text-end tabular-nums text-[hsl(var(--fg-primary))]">
+                        {shippingTotal.toLocaleString()} {currency}
+                      </td>
+                    </tr>
+                  )}
+                  <tr className="border-t-2 border-[hsl(var(--border-default))]">
+                    <td
+                      colSpan={6}
+                      className="px-2 py-3 text-end text-lg font-bold text-[hsl(var(--fg-primary))]"
+                    >
+                      {t('invoices.total', 'مجموع')}
+                    </td>
+                    <td className="px-2 py-3 text-end text-lg font-bold text-[hsl(var(--color-primary))] tabular-nums">
+                      {total.toLocaleString()} {currency}
+                    </td>
+                  </tr>
+                  {paidAmount > 0 && (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="px-2 py-2 text-end text-[hsl(var(--fg-secondary))]"
+                      >
+                        {t('invoices.paid', 'پرداخت شده')}
+                      </td>
+                      <td className="px-2 py-2 text-end text-[hsl(var(--color-success))] tabular-nums">
+                        -{paidAmount.toLocaleString()} {currency}
+                      </td>
+                    </tr>
+                  )}
+                  {remaining > 0 && (
+                    <tr>
+                      <td
+                        colSpan={6}
+                        className="px-2 py-2 text-end font-medium text-[hsl(var(--color-destructive))]"
+                      >
+                        {t('invoices.remaining', 'باقیمانده')}
+                      </td>
+                      <td className="px-2 py-2 text-end font-medium text-[hsl(var(--color-destructive))] tabular-nums">
+                        {remaining.toLocaleString()} {currency}
+                      </td>
+                    </tr>
+                  )}
+                </tfoot>
+              </table>
+            </div>
+          )}
 
           {/* Notes */}
           {display.showNotes && notes && (

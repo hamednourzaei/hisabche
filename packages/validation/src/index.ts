@@ -64,6 +64,47 @@ export {
   type InvoiceFilters,
 } from './schemas/invoice.schema'
 
+// ---------- Invoice builder grid (generic, trade-agnostic) ----------
+export {
+  COLUMN,
+  COLUMN_TYPES,
+  canAggregate,
+  canDeleteColumn,
+  columnTotals,
+  currencyPrecision,
+  customColumnId,
+  defaultColumns,
+  emptyRow,
+  hasCellValue,
+  isBuiltinColumn,
+  isForeignMoneyColumn,
+  isRowFilled,
+  isRowSubmittable,
+  moveColumn,
+  parseCellNumber,
+  roundTo,
+  rowDiscountPercent,
+  rowExtraMoney,
+  rowQuantity,
+  rowTaxPercent,
+  rowToInvoiceItem,
+  rowTotal,
+  rowUnitPrice,
+  summarize,
+  toInvoiceCurrency,
+  validateGrid,
+  visibleColumns,
+  type BuiltinColumnId,
+  type GridMoneyContext,
+  type GridValidationIssue,
+  type InvoiceColumn,
+  type InvoiceColumnType,
+  type InvoiceGridRow,
+  type InvoiceSummary,
+  type InvoiceSummaryInput,
+  type MappedInvoiceItem,
+} from './schemas/invoice-grid'
+
 // ---------- Product ----------
 export {
   productSchema,
