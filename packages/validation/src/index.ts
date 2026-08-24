@@ -105,6 +105,40 @@ export {
   type MappedInvoiceItem,
 } from './schemas/invoice-grid'
 
+// ---------- Sync protocol (local-first push/pull) ----------
+export {
+  syncEntitySchema,
+  syncOperationSchema,
+  syncCursorSchema,
+  syncMutationSchema,
+  syncPushRequestSchema,
+  syncPushResponseSchema,
+  syncMutationResultSchema,
+  syncErrorCodeSchema,
+  syncPullRequestSchema,
+  syncPullResponseSchema,
+  syncChangeSchema,
+  syncLeaseRequestSchema,
+  syncLeaseResponseSchema,
+  isRetryable,
+  RETRYABLE_ERRORS,
+  MAX_PUSH_BATCH,
+  MAX_PULL_PAGE,
+  LEASE_TTL_SECONDS,
+  type SyncEntity,
+  type SyncOperation,
+  type SyncMutation,
+  type SyncPushRequest,
+  type SyncPushResponse,
+  type SyncMutationResult,
+  type SyncErrorCode,
+  type SyncPullRequest,
+  type SyncPullResponse,
+  type SyncChange,
+  type SyncLeaseRequest,
+  type SyncLeaseResponse,
+} from './schemas/sync-protocol.schema'
+
 // ---------- Product ----------
 export {
   productSchema,
