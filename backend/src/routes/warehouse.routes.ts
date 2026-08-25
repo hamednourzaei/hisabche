@@ -25,138 +25,168 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
   const warehouseService = new WarehouseService()
 
   // ─── GET /api/warehouses ──────────────────────────────────────
-  fastify.get('/api/warehouses', {
-    preHandler: [authenticate, cacheMiddleware({ ttl: 120, keyPrefix: 'warehouses' })],
-    schema: {
-      response: {
-        200: toJsonSchema(z.array(z.any())),
+  fastify.get(
+    '/api/warehouses',
+    {
+      preHandler: [
+        authenticate,
+        cacheMiddleware({ scope: 'user', ttl: 120, keyPrefix: 'warehouses' }),
+      ],
+      schema: {
+        response: {
+          200: toJsonSchema(z.array(z.any())),
+        },
       },
     },
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      // ✅ FIX: listwarehouses → listWarehouses
-      const warehouses = await warehouseService.listWarehouses(request.userId)
-      return reply.send(warehouses)
-    } catch (err) {
-      fastify.log.error(err)
-      return reply.code(500).send({ error: 'Failed to fetch warehouses' })
-    }
-  })
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        // ✅ FIX: listwarehouses → listWarehouses
+        const warehouses = await warehouseService.listWarehouses(request.userId)
+        return reply.send(warehouses)
+      } catch (err) {
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to fetch warehouses' })
+      }
+    },
+  )
 
   // ─── POST /api/warehouses ─────────────────────────────────────
-  fastify.post('/api/warehouses', {
-    preHandler: [authenticate],
-    schema: {
-      body: toJsonSchema(createwarehouseSchema),
-      response: {
-        201: toJsonSchema(z.any()),
+  fastify.post(
+    '/api/warehouses',
+    {
+      preHandler: [authenticate],
+      schema: {
+        body: toJsonSchema(createwarehouseSchema),
+        response: {
+          201: toJsonSchema(z.any()),
+        },
       },
     },
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const data = createwarehouseSchema.parse(request.body)
-      const warehouse = await warehouseService.createWarehouse(request.userId, data)
-      await clearCache('warehouses:*')
-      return reply.code(201).send(warehouse)
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        return reply.code(400).send({ error: 'Validation failed', details: err.errors })
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const data = createwarehouseSchema.parse(request.body)
+        const warehouse = await warehouseService.createWarehouse(request.userId, data)
+        await clearCache('warehouses:*')
+        return reply.code(201).send(warehouse)
+      } catch (err) {
+        if (err instanceof z.ZodError) {
+          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
+        }
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to create warehouse' })
       }
-      fastify.log.error(err)
-      return reply.code(500).send({ error: 'Failed to create warehouse' })
-    }
-  })
+    },
+  )
 
   // ─── PATCH /api/warehouses/:id ───────────────────────────────
-  fastify.patch('/api/warehouses/:id', {
-    preHandler: [authenticate],
-    schema: {
-      params: toJsonSchema(z.object({ id: z.string().uuid() })),
-      body: toJsonSchema(updatewarehouseSchema),
-      response: {
-        200: toJsonSchema(z.any()),
+  fastify.patch(
+    '/api/warehouses/:id',
+    {
+      preHandler: [authenticate],
+      schema: {
+        params: toJsonSchema(z.object({ id: z.string().uuid() })),
+        body: toJsonSchema(updatewarehouseSchema),
+        response: {
+          200: toJsonSchema(z.any()),
+        },
       },
     },
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const { id } = request.params as { id: string }
-      const data = updatewarehouseSchema.parse(request.body)
-      const warehouse = await warehouseService.updateWarehouse(request.userId, id, data)
-      await clearCache(`warehouse:${id}`)
-      await clearCache('warehouses:*')
-      return reply.send(warehouse)
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        return reply.code(400).send({ error: 'Validation failed', details: err.errors })
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        const data = updatewarehouseSchema.parse(request.body)
+        const warehouse = await warehouseService.updateWarehouse(request.userId, id, data)
+        await clearCache(`warehouse:${id}`)
+        await clearCache('warehouses:*')
+        return reply.send(warehouse)
+      } catch (err) {
+        if (err instanceof z.ZodError) {
+          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
+        }
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to update warehouse' })
       }
-      fastify.log.error(err)
-      return reply.code(500).send({ error: 'Failed to update warehouse' })
-    }
-  })
+    },
+  )
 
   // ─── DELETE /api/warehouses/:id ──────────────────────────────
-  fastify.delete('/api/warehouses/:id', {
-    preHandler: [authenticate],
-    schema: {
-      params: toJsonSchema(z.object({ id: z.string().uuid() })),
+  fastify.delete(
+    '/api/warehouses/:id',
+    {
+      preHandler: [authenticate],
+      schema: {
+        params: toJsonSchema(z.object({ id: z.string().uuid() })),
+      },
     },
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const { id } = request.params as { id: string }
-      await warehouseService.deleteWarehouse(request.userId, id)
-      await clearCache(`warehouse:${id}`)
-      await clearCache('warehouses:*')
-      return reply.code(204).send()
-    } catch (err) {
-      fastify.log.error(err)
-      return reply.code(500).send({ error: 'Failed to delete warehouse' })
-    }
-  })
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        await warehouseService.deleteWarehouse(request.userId, id)
+        await clearCache(`warehouse:${id}`)
+        await clearCache('warehouses:*')
+        return reply.code(204).send()
+      } catch (err) {
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to delete warehouse' })
+      }
+    },
+  )
 
   // ─── POST /api/stock-transfers ───────────────────────────────
-  fastify.post('/api/stock-transfers', {
-    preHandler: [authenticate],
-    schema: {
-      body: toJsonSchema(stockTransferSchema),
-      response: {
-        200: toJsonSchema(z.any()),
+  fastify.post(
+    '/api/stock-transfers',
+    {
+      preHandler: [authenticate],
+      schema: {
+        body: toJsonSchema(stockTransferSchema),
+        response: {
+          200: toJsonSchema(z.any()),
+        },
       },
     },
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const data = stockTransferSchema.parse(request.body)
-      const result = await warehouseService.transferStock(request.userId, data)
-      await clearCache('warehouses:*')
-      await clearCache('stock:*')
-      return reply.send(result)
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        return reply.code(400).send({ error: 'Validation failed', details: err.errors })
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const data = stockTransferSchema.parse(request.body)
+        const result = await warehouseService.transferStock(request.userId, data)
+        await clearCache('warehouses:*')
+        await clearCache('stock:*')
+        return reply.send(result)
+      } catch (err) {
+        if (err instanceof z.ZodError) {
+          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
+        }
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to transfer stock' })
       }
-      fastify.log.error(err)
-      return reply.code(500).send({ error: 'Failed to transfer stock' })
-    }
-  })
+    },
+  )
 
   // ─── GET /api/warehouses/:id/stock ───────────────────────────
-  fastify.get('/api/warehouses/:id/stock', {
-    preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'warehouse-stock' })],
-    schema: {
-      params: toJsonSchema(z.object({ id: z.string().uuid() })),
-      response: {
-        200: toJsonSchema(z.array(z.any())),
+  fastify.get(
+    '/api/warehouses/:id/stock',
+    {
+      preHandler: [
+        authenticate,
+        cacheMiddleware({ scope: 'user', ttl: 60, keyPrefix: 'warehouse-stock' }),
+      ],
+      schema: {
+        params: toJsonSchema(z.object({ id: z.string().uuid() })),
+        response: {
+          200: toJsonSchema(z.array(z.any())),
+        },
       },
     },
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const { id } = request.params as { id: string }
-      const stock = await warehouseService.getStockByWarehouse(request.userId, id)
-      return reply.send(stock)
-    } catch (err) {
-      fastify.log.error(err)
-      return reply.code(500).send({ error: 'Failed to fetch stock' })
-    }
-  })
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        const stock = await warehouseService.getStockByWarehouse(request.userId, id)
+        return reply.send(stock)
+      } catch (err) {
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to fetch stock' })
+      }
+    },
+  )
 }
 
 export default warehouseRoutes

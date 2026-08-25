@@ -4,6 +4,7 @@
 // ============================================
 
 import { supabase } from '../db'
+import type { TenancyContext } from './tenancy.service'
 import { DateRange } from '@hisabche/validation'
 import { CacheKeys, withCacheKey } from '../utils/cache'
 import { memoryCache } from '../utils/pagination'
@@ -109,8 +110,9 @@ export function bucketKpisByCurrency(
 
 export class AnalyticsService {
   // ─── Dashboard KPIs — OPTIMIZED with RPC + Parallel Queries ───
-  async getDashboardKpis(userId: string) {
-    const cacheKey = `dashboard:v2:${userId}`
+  async getDashboardKpis(ctx: TenancyContext) {
+    const { workspaceId } = ctx
+    const cacheKey = `dashboard:v2:${workspaceId}`
 
     return withCacheKey(cacheKey, 60_000, async () => {
       // ✅ فراخوانی RPC حذف شد: خروجی‌اش دیگر استفاده نمی‌شود چون همه‌ی
@@ -120,7 +122,7 @@ export class AnalyticsService {
         supabase
           .from('products')
           .select('quantity, min_stock_level, buy_price')
-          .eq('user_id', userId)
+          .eq('workspace_id', workspaceId)
           .eq('is_active', true),
         supabase
           .from('invoices')
@@ -129,7 +131,7 @@ export class AnalyticsService {
           // in the invoice's OWN currency — a 100 USD invoice and a 100 AFN
           // invoice were being added to 200 of nothing.
           .select('total, paid_amount, status, date, customer_id, type, currency')
-          .eq('user_id', userId),
+          .eq('workspace_id', workspaceId),
       ])
 
       // محاسبه lowStockAlerts + ارزش کل انبار از productsResult
@@ -259,7 +261,10 @@ export class AnalyticsService {
             ? 100
             : 0
 
-      const customerGrowth = await this.getCustomerGrowth(userId, firstOfThisMonth.toISOString())
+      const customerGrowth = await this.getCustomerGrowth(
+        workspaceId,
+        firstOfThisMonth.toISOString(),
+      )
 
       return {
         monthlyRevenue: Math.round(monthlyRevenue * 100) / 100,
@@ -283,17 +288,17 @@ export class AnalyticsService {
   // ✅ درآمد ماهانه، رشد ماهانه و شمارش «در انتظار پرداخت» از این‌جا حذف
   // شدند چون حالا در getDashboardKpis از روی همان آرایه‌ی invoices محاسبه
   // می‌شوند (سه کوئری کمتر). فقط رشد مشتریان به جدول customers نیاز دارد.
-  private async getCustomerGrowth(userId: string, firstOfThisMonth: string) {
+  private async getCustomerGrowth(workspaceId: string, firstOfThisMonth: string) {
     const [customersThisMonth, customersBeforeThisMonth] = await Promise.all([
       supabase
         .from('customers')
         .select('id', { count: 'exact', head: true })
-        .eq('user_id', userId)
+        .eq('workspace_id', workspaceId)
         .gte('created_at', firstOfThisMonth),
       supabase
         .from('customers')
         .select('id', { count: 'exact', head: true })
-        .eq('user_id', userId)
+        .eq('workspace_id', workspaceId)
         .lt('created_at', firstOfThisMonth),
     ])
 
@@ -308,11 +313,12 @@ export class AnalyticsService {
   }
 
   // ─── Sales Summary — OPTIMIZED ───
-  async getSalesSummary(userId: string, dateRange: DateRange) {
+  async getSalesSummary(ctx: TenancyContext, dateRange: DateRange) {
+    const { workspaceId } = ctx
     const { startDate, endDate } = dateRange
-    if (!userId || !startDate || !endDate) return this.emptySalesSummary()
+    if (!workspaceId || !startDate || !endDate) return this.emptySalesSummary()
 
-    const cacheKey = CacheKeys.salesSummary(userId, startDate, endDate)
+    const cacheKey = CacheKeys.salesSummary(workspaceId, startDate, endDate)
 
     return withCacheKey(cacheKey, 120_000, async () => {
       const { data: invoices, error } = await supabase
@@ -332,7 +338,7 @@ export class AnalyticsService {
           )
         `,
         )
-        .eq('user_id', userId)
+        .eq('workspace_id', workspaceId)
         // ⚠️ FIX: این خلاصه «فروش» است — نمودار درآمد و رتبه‌بندی مشتریان از
         // همین می‌آید. بدون این فیلتر، هر فاکتور خرید هم به‌عنوان درآمد در
         // نمودار می‌نشست و تأمین‌کننده در فهرست «بهترین مشتریان» ظاهر می‌شد.
@@ -467,12 +473,13 @@ export class AnalyticsService {
   }
 
   // ─── Inventory Summary ───
-  async getInventorySummary(userId: string) {
-    return withCacheKey(CacheKeys.products(userId), 120_000, async () => {
+  async getInventorySummary(ctx: TenancyContext) {
+    const { workspaceId } = ctx
+    return withCacheKey(CacheKeys.products(workspaceId), 120_000, async () => {
       const { data: products } = await supabase
         .from('products')
         .select('id, name, quantity, buy_price, min_stock_level, category')
-        .eq('user_id', userId)
+        .eq('workspace_id', workspaceId)
         .eq('is_active', true)
 
       if (!products || products.length === 0) {
@@ -503,7 +510,7 @@ export class AnalyticsService {
       const { data: topMovements } = await supabase
         .from('stock_movements')
         .select('product_id, type, quantity, created_at')
-        .eq('user_id', userId)
+        .eq('workspace_id', workspaceId)
         .order('created_at', { ascending: false })
         .limit(10)
 
@@ -529,14 +536,15 @@ export class AnalyticsService {
   }
 
   // ─── Financial Summary ───
-  async getFinancialSummary(userId: string, dateRange: DateRange) {
+  async getFinancialSummary(ctx: TenancyContext, dateRange: DateRange) {
+    const { workspaceId } = ctx
     const { startDate, endDate } = dateRange
-    if (!userId || !startDate || !endDate) return this.emptyFinancialSummary()
+    if (!workspaceId || !startDate || !endDate) return this.emptyFinancialSummary()
 
     const { data: entries } = await supabase
       .from('ledger_entries_view')
       .select('debit, credit, account_id, entry_date')
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
       .gte('entry_date', startDate)
       .lte('entry_date', endDate)
 

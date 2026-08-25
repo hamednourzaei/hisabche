@@ -1,3 +1,6 @@
+// These batch loaders fetch SHARED business entities by id. The workspace
+// filter is what makes accepting a caller-supplied id list safe — `.in('id', …)`
+// alone would happily return another business's rows.
 // ============================================
 // backend/src/utils/batch.ts
 // Hisabche v2.0 — N+1 Query Eliminator
@@ -11,7 +14,7 @@ import { supabase } from '../db'
 
 export async function batchGetProducts(
   productIds: string[],
-  userId: string
+  workspaceId: string,
 ): Promise<Record<string, any>> {
   if (!productIds.length) return {}
 
@@ -19,7 +22,7 @@ export async function batchGetProducts(
     .from('products')
     .select('id, name, sell_price, buy_price, quantity, unit, sku, barcode')
     .in('id', productIds)
-    .eq('user_id', userId)
+    .eq('workspace_id', workspaceId)
 
   if (error) throw error
 
@@ -32,7 +35,7 @@ export async function batchGetProducts(
 
 export async function batchGetCustomers(
   customerIds: string[],
-  userId: string
+  workspaceId: string,
 ): Promise<Record<string, any>> {
   if (!customerIds.length) return {}
 
@@ -40,7 +43,7 @@ export async function batchGetCustomers(
     .from('customers')
     .select('id, full_name, phone, email, opening_balance, is_active, type')
     .in('id', customerIds)
-    .eq('user_id', userId)
+    .eq('workspace_id', workspaceId)
 
   if (error) throw error
 
@@ -53,7 +56,7 @@ export async function batchGetCustomers(
 
 export async function batchGetInvoices(
   invoiceIds: string[],
-  userId: string
+  workspaceId: string,
 ): Promise<Record<string, any>> {
   if (!invoiceIds.length) return {}
 
@@ -61,7 +64,7 @@ export async function batchGetInvoices(
     .from('invoices')
     .select('id, invoice_number, total, status, customer_id, date')
     .in('id', invoiceIds)
-    .eq('user_id', userId)
+    .eq('workspace_id', workspaceId)
 
   if (error) throw error
 
@@ -77,13 +80,13 @@ export async function batchGetInvoices(
 // ═══════════════════════════════════════════
 
 export async function parallelQueries<T extends Record<string, Promise<any>>>(
-  queries: T
+  queries: T,
 ): Promise<{ [K in keyof T]: Awaited<T[K]> }> {
   const keys = Object.keys(queries) as (keyof T)[]
   const values = Object.values(queries)
-  
+
   const results = await Promise.allSettled(values)
-  
+
   const output: any = {}
   results.forEach((result, index) => {
     if (result.status === 'fulfilled') {
@@ -93,6 +96,6 @@ export async function parallelQueries<T extends Record<string, Promise<any>>>(
       output[keys[index]] = null
     }
   })
-  
+
   return output
 }

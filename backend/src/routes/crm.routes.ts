@@ -15,6 +15,7 @@ import {
 } from '@hisabche/validation'
 import { CrmService } from '../services/crm.service'
 import { authenticate } from '../middleware/auth.middleware'
+import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 
 const toJsonSchema = (schema: any) => {
@@ -30,7 +31,10 @@ export async function crmRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/interactions',
     {
-      preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'interactions' })],
+      preHandler: [
+        authenticate,
+        cacheMiddleware({ scope: 'user', ttl: 60, keyPrefix: 'interactions' }),
+      ],
       schema: {
         querystring: toJsonSchema(
           z.object({
@@ -58,7 +62,7 @@ export async function crmRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/interactions',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         body: toJsonSchema(createInteractionSchema),
         response: {
@@ -69,7 +73,7 @@ export async function crmRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const data = createInteractionSchema.parse(request.body)
-        const interaction = await crmService.createInteraction(request.userId, data)
+        const interaction = await crmService.createInteraction(request.tenancy, data)
         await clearCache('interactions:*')
         return reply.code(201).send(interaction)
       } catch (err) {
@@ -263,7 +267,10 @@ export async function crmRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/opportunities',
     {
-      preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'opportunities' })],
+      preHandler: [
+        authenticate,
+        cacheMiddleware({ scope: 'user', ttl: 60, keyPrefix: 'opportunities' }),
+      ],
       schema: {
         querystring: toJsonSchema(
           z.object({

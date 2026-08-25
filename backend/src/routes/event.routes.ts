@@ -22,111 +22,134 @@ export async function eventRoutes(fastify: FastifyInstance) {
   // ═══════════════════════════════════════════════════════════
 
   // ─── POST /api/events/emit ────────────────────────────────
-  fastify.post('/api/events/emit', {
-    preHandler: [authenticate],
-    schema: {
-      body: toJsonSchema(createEventLogSchema),
-      response: { 201: toJsonSchema(z.object({ id: z.string() })) },
+  fastify.post(
+    '/api/events/emit',
+    {
+      preHandler: [authenticate],
+      schema: {
+        body: toJsonSchema(createEventLogSchema),
+        response: { 201: toJsonSchema(z.object({ id: z.string() })) },
+      },
     },
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const data = createEventLogSchema.parse(request.body)
-      const eventId = await eventService.emit(data)
-      await clearCache('events:*')
-      await clearCache('event-stats:*')
-      return reply.code(201).send({ id: eventId })
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        return reply.code(400).send({ error: 'Validation failed', details: err.errors })
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const data = createEventLogSchema.parse(request.body)
+        const eventId = await eventService.emit(data)
+        await clearCache('events:*')
+        await clearCache('event-stats:*')
+        return reply.code(201).send({ id: eventId })
+      } catch (err) {
+        if (err instanceof z.ZodError) {
+          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
+        }
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to emit event' })
       }
-      fastify.log.error(err)
-      return reply.code(500).send({ error: 'Failed to emit event' })
-    }
-  })
+    },
+  )
 
   // ═══════════════════════════════════════════════════════════
   // PROCESS PENDING
   // ═══════════════════════════════════════════════════════════
 
   // ─── POST /api/events/process ─────────────────────────────
-  fastify.post('/api/events/process', {
-    preHandler: [authenticate],
-    schema: {
-      response: { 200: toJsonSchema(z.object({ processed: z.number(), failed: z.number() })) },
+  fastify.post(
+    '/api/events/process',
+    {
+      preHandler: [authenticate],
+      schema: {
+        response: { 200: toJsonSchema(z.object({ processed: z.number(), failed: z.number() })) },
+      },
     },
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const result = await eventService.processPending()
-      await clearCache('events:*')
-      await clearCache('event-stats:*')
-      return reply.send(result)
-    } catch (err) {
-      fastify.log.error(err)
-      return reply.code(500).send({ error: 'Failed to process events' })
-    }
-  })
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const result = await eventService.processPending()
+        await clearCache('events:*')
+        await clearCache('event-stats:*')
+        return reply.send(result)
+      } catch (err) {
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to process events' })
+      }
+    },
+  )
 
   // ═══════════════════════════════════════════════════════════
   // SEED
   // ═══════════════════════════════════════════════════════════
 
   // ─── POST /api/events/seed ────────────────────────────────
-  fastify.post('/api/events/seed', {
-    preHandler: [authenticate],
-    schema: {
-      response: { 200: toJsonSchema(z.object({ success: z.boolean() })) },
+  fastify.post(
+    '/api/events/seed',
+    {
+      preHandler: [authenticate],
+      schema: {
+        response: { 200: toJsonSchema(z.object({ success: z.boolean() })) },
+      },
     },
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      await eventService.seedEventTypes()
-      await clearCache('events:*')
-      return reply.send({ success: true })
-    } catch (err) {
-      fastify.log.error(err)
-      return reply.code(500).send({ error: 'Failed to seed event types' })
-    }
-  })
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        await eventService.seedEventTypes()
+        await clearCache('events:*')
+        return reply.send({ success: true })
+      } catch (err) {
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to seed event types' })
+      }
+    },
+  )
 
   // ═══════════════════════════════════════════════════════════
   // STATS
   // ═══════════════════════════════════════════════════════════
 
   // ─── GET /api/events/stats ────────────────────────────────
-  fastify.get('/api/events/stats', {
-    preHandler: [authenticate, cacheMiddleware({ ttl: 120, keyPrefix: 'event-stats' })],
-    schema: {
-      response: { 200: toJsonSchema(z.any()) },
+  fastify.get(
+    '/api/events/stats',
+    {
+      preHandler: [
+        authenticate,
+        cacheMiddleware({ scope: 'user', ttl: 120, keyPrefix: 'event-stats' }),
+      ],
+      schema: {
+        response: { 200: toJsonSchema(z.any()) },
+      },
     },
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const stats = await eventService.getStats()
-      return reply.send(stats)
-    } catch (err) {
-      fastify.log.error(err)
-      return reply.code(500).send({ error: 'Failed to fetch event stats' })
-    }
-  })
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const stats = await eventService.getStats()
+        return reply.send(stats)
+      } catch (err) {
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to fetch event stats' })
+      }
+    },
+  )
 
   // ═══════════════════════════════════════════════════════════
   // CLEANUP
   // ═══════════════════════════════════════════════════════════
 
   // ─── POST /api/events/cleanup ─────────────────────────────
-  fastify.post('/api/events/cleanup', {
-    preHandler: [authenticate],
-    schema: {
-      body: toJsonSchema(z.object({ daysToKeep: z.number().int().min(7).default(30) })),
-      response: { 200: toJsonSchema(z.object({ deleted: z.number() })) },
+  fastify.post(
+    '/api/events/cleanup',
+    {
+      preHandler: [authenticate],
+      schema: {
+        body: toJsonSchema(z.object({ daysToKeep: z.number().int().min(7).default(30) })),
+        response: { 200: toJsonSchema(z.object({ deleted: z.number() })) },
+      },
     },
-  }, async (request: FastifyRequest, reply: FastifyReply) => {
-    try {
-      const { daysToKeep } = request.body as { daysToKeep: number }
-      const result = await eventService.cleanupProcessed(daysToKeep)
-      await clearCache('event-stats:*')
-      return reply.send(result)
-    } catch (err) {
-      fastify.log.error(err)
-      return reply.code(500).send({ error: 'Failed to cleanup events' })
-    }
-  })
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { daysToKeep } = request.body as { daysToKeep: number }
+        const result = await eventService.cleanupProcessed(daysToKeep)
+        await clearCache('event-stats:*')
+        return reply.send(result)
+      } catch (err) {
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to cleanup events' })
+      }
+    },
+  )
 }

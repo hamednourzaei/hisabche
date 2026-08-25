@@ -4,7 +4,19 @@
 import React, { useEffect, useMemo } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ToastProvider } from '@hisabche/ui'
+import { bindActiveWorkspace } from '@hisabche/store'
 import { initAdminApiAuth } from '@/lib/admin-api-token'
+
+// Publish the active workspace into @hisabche/api so realtime is scoped.
+//
+// The admin panel is a SEPARATE security domain and its operator is not a
+// member of any customer workspace — so in practice this binds `null` here and
+// the panel subscribes to nothing. That is the correct outcome, and binding it
+// anyway keeps the three apps identical rather than relying on the admin panel
+// happening never to mount a workspace hook.
+if (typeof window !== 'undefined') {
+  bindActiveWorkspace()
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    Admin providers.

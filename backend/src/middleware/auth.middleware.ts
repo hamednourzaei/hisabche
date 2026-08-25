@@ -21,14 +21,17 @@ declare module 'fastify' {
   interface FastifyRequest {
     user: any
     userId: string
-    workspaceId: string
     userRole: string
+    // NOTE: there is deliberately no ambient `workspaceId` here. It used to
+    // exist and had to be `''` when the user had none or had several, which is
+    // a fail-open tenancy value. The authorized workspace lives on
+    // `request.tenancy`, set only by requireWorkspaceContext — see
+    // middleware/workspace.middleware.ts.
   }
 }
 
 interface CachedAuth {
   user: any
-  workspaceId: string
   role: string
 }
 
@@ -101,31 +104,59 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
   if (cached) {
     request.user = cached.user
     request.userId = cached.user.id
-    request.workspaceId = cached.workspaceId
     request.userRole = cached.role
     return
   }
 
   // ✅ کوئری ۱: verify توکن
-  const { data: { user }, error } = await supabase.auth.getUser(token)
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser(token)
 
   if (error || !user) {
     return reply.status(401).send({ error: 'Invalid or expired token' })
   }
 
   // ✅ کوئری ۲: گرفتن workspace/role
-  // نکته: این کوئری با ایندکس idx_workspace_members_user_id سریع میشه
-  const { data: membership } = await supabase
+  //
+  // ⚠️ SECURITY — this used to read:
+  //
+  //     .select('workspace_id, role').eq('user_id', user.id).limit(1).single()
+  //     workspaceId: membership?.workspace_id || '',
+  //     role:        membership?.role || 'admin',
+  //
+  // Three defects, all of which fail OPEN:
+  //
+  //   1. `|| 'admin'` gave a user with NO membership the 'admin' role. That is
+  //      not inert: workflow.service.ts:452 accepts `userRole === 'admin'` as
+  //      an approver override, so having no workspace granted approval rights.
+  //   2. `.limit(1)` with no ORDER BY let PostgreSQL pick any membership, so a
+  //      multi-workspace user could resolve to a different book per request.
+  //   3. `has_access` and `suspended_at` were ignored — a suspended member
+  //      still resolved to a workspace.
+  //
+  // Now: real role or none, deterministic order, revoked members excluded.
+  // This hook still does not reject unauthenticated-but-workspaceless users —
+  // signup, billing and workspace creation legitimately have no workspace yet.
+  // Enforcement belongs to requireWorkspace() in tenancy.service.ts, which
+  // fails closed at the point the data is actually touched.
+  const { data: memberships } = await supabase
     .from('workspace_members')
     .select('workspace_id, role')
     .eq('user_id', user.id)
-    .limit(1)
-    .single()
+    .eq('has_access', true)
+    .is('suspended_at', null)
+    .order('joined_at', { ascending: true })
+
+  // Only populated when it is unambiguous. With several memberships the active
+  // workspace must be chosen explicitly and verified by requireWorkspace();
+  // picking one here would be the arbitrary choice defect (2) above.
+  const sole = memberships?.length === 1 ? memberships[0] : undefined
 
   const result: CachedAuth = {
     user,
-    workspaceId: membership?.workspace_id || '',
-    role: membership?.role || 'admin',
+    role: sole?.role ?? '',
   }
 
   // ✅ FIX: ذخیره در کش برای درخواست‌های بعدی همین کاربر — await اضافه شد
@@ -133,7 +164,6 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
 
   request.user = user
   request.userId = user.id
-  request.workspaceId = result.workspaceId
   request.userRole = result.role
 }
 

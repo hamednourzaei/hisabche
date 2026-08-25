@@ -42,6 +42,17 @@ export interface DesktopBridge {
     }): Promise<void>
     queue(): Promise<QueueEntry[]>
     resolveQueue(clientId: string, status: 'done' | 'failed', error?: string): Promise<void>
+    /**
+     * Point the local cache at a workspace, discarding another workspace's
+     * cached rows first.
+     *
+     * Refuses (and reports `blockedByPendingMutations`) when unsynced offline
+     * mutations are queued — those exist nowhere but this device.
+     */
+    setWorkspace(workspaceId: string): Promise<{
+      purged: boolean
+      blockedByPendingMutations: number
+    }>
   }
   print: {
     html(input: {
@@ -93,6 +104,7 @@ const bridge: DesktopBridge = {
     queue: () => ipcRenderer.invoke(IPC.dbQueue, {}),
     resolveQueue: (clientId, status, error) =>
       ipcRenderer.invoke(IPC.dbResolveQueue, { clientId, status, error }),
+    setWorkspace: (workspaceId) => ipcRenderer.invoke(IPC.dbSetWorkspace, { workspaceId }),
   },
   print: {
     html: (input) => ipcRenderer.invoke(IPC.printHtml, input),

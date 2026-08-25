@@ -6,6 +6,7 @@
 // ============================================
 
 import { supabase } from '../db'
+import type { TenancyContext } from './tenancy.service'
 import { DatabaseError } from '../errors/database.error'
 import { memoryCache } from '../utils/pagination'
 
@@ -178,8 +179,18 @@ export class ActivityService {
   }
 
   // ─── Get Activities ─────────────────────────────────────────────────────────────
+  /**
+   * The feed itself stays keyed to `actor_id` — it is "what I did", and
+   * `activities` is not one of the four shared entities.
+   *
+   * The ENTITY SUMMARIES attached to each row are shared business data, so
+   * they are resolved against the authorized workspace. Those ids come from
+   * the caller's own activity rows and so are already theirs, but a summary
+   * lookup that trusts an id because of where it came from is one refactor
+   * away from being an IDOR. It is filtered explicitly.
+   */
   async getActivities(
-    userId: string,
+    ctx: TenancyContext,
     filters?: {
       type?: string | undefined
       unread?: boolean | undefined
@@ -189,6 +200,7 @@ export class ActivityService {
       page?: number | undefined
     },
   ): Promise<PaginatedActivitiesResponse> {
+    const { workspaceId, userId } = ctx
     const cacheKey = `activities:${userId}:${JSON.stringify(filters)}`
 
     try {
@@ -276,7 +288,7 @@ export class ActivityService {
         Array.from(groups.keys()).map(async (key) => {
           const [entityType, entityId] = key.split(':') as [string, string]
           try {
-            summaryByKey.set(key, await this.getEntitySummary(entityType, entityId, userId))
+            summaryByKey.set(key, await this.getEntitySummary(entityType, entityId, workspaceId))
           } catch (summaryError) {
             console.warn(`⚠️ Failed to get summary for ${key}`, summaryError)
             summaryByKey.set(key, null)
@@ -381,7 +393,7 @@ export class ActivityService {
   private async getEntitySummary(
     entityType: string,
     entityId: string,
-    userId: string,
+    workspaceId: string,
   ): Promise<Partial<EntitySummaryDto> | null> {
     try {
       // ✅ اگر entityType یا entityId خالی بود، null برگردان
@@ -407,7 +419,7 @@ export class ActivityService {
             `,
             )
             .eq('id', entityId)
-            .eq('user_id', userId)
+            .eq('workspace_id', workspaceId)
             .maybeSingle()
 
           if (error || !data) {
@@ -439,7 +451,7 @@ export class ActivityService {
             .from('customers')
             .select('full_name, phone, email, opening_balance')
             .eq('id', entityId)
-            .eq('user_id', userId)
+            .eq('workspace_id', workspaceId)
             .maybeSingle()
 
           if (error || !data) {
@@ -465,7 +477,7 @@ export class ActivityService {
             .from('products')
             .select('name, sku, quantity, sell_price, currency')
             .eq('id', entityId)
-            .eq('user_id', userId)
+            .eq('workspace_id', workspaceId)
             .maybeSingle()
 
           if (error || !data) {
@@ -491,7 +503,7 @@ export class ActivityService {
             .from('transactions')
             .select('amount, currency, description, reference')
             .eq('id', entityId)
-            .eq('user_id', userId)
+            .eq('workspace_id', workspaceId)
             .maybeSingle()
 
           if (error || !data) {

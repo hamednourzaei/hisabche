@@ -5,19 +5,20 @@
 
 import { supabase } from '../db'
 import { CreatePurchaseOrder, UpdatePurchaseOrder } from '@hisabche/validation'
+import type { TenancyContext } from './tenancy.service'
 import { DatabaseError } from '../errors/database.error'
 import { memoryCache } from '../utils/pagination'
 import { logBusinessEvent } from './event-log.service'
 
 // ✅ Column Selection Constants
-const PO_LIST_COLUMNS = 'id, supplier_id, order_date, expected_delivery_date, status, notes, received_at, created_at, updated_at'
+const PO_LIST_COLUMNS =
+  'id, supplier_id, order_date, expected_delivery_date, status, notes, received_at, created_at, updated_at'
 const PO_MINIMAL = 'id, supplier_id, status, order_date'
 
 const PO_ITEM_COLUMNS = 'id, purchase_order_id, product_id, quantity, unit_price, total_price'
 const PO_ITEM_MINIMAL = 'id, product_id, quantity, unit_price'
 
 export class PurchasingService {
-
   // ─── Cache Keys ──────────────────────────────────────────────
   private getPurchaseOrdersCacheKey(userId: string) {
     return `purchasing:orders:${userId}`
@@ -30,22 +31,24 @@ export class PurchasingService {
   // ─── List Purchase Orders ────────────────────────────────────
   async listPurchaseOrders(userId: string) {
     const cacheKey = this.getPurchaseOrdersCacheKey(userId)
-    
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
     const { data, error } = await supabase
       .from('purchase_orders')
-      .select(`
+      .select(
+        `
         ${PO_MINIMAL},
         supplier:suppliers(id, name, phone, email),
         items:purchase_order_items(${PO_ITEM_MINIMAL}, product:products(id, name, unit))
-      `)
+      `,
+      )
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
 
     if (error) throw new DatabaseError('Failed to fetch purchase orders', error)
-    
+
     const result = data || []
     await memoryCache.set(cacheKey, result, 120)
     return result
@@ -76,14 +79,12 @@ export class PurchasingService {
         product_id: item.productId,
         quantity: item.quantity,
         unit_price: item.unitPrice,
-        total_price: item.totalPrice || (item.quantity * item.unitPrice),
+        total_price: item.totalPrice || item.quantity * item.unitPrice,
         user_id: userId,
       }))
 
-      const { error: itemsError } = await supabase
-        .from('purchase_order_items')
-        .insert(orderItems)
-      
+      const { error: itemsError } = await supabase.from('purchase_order_items').insert(orderItems)
+
       if (itemsError) {
         await supabase.from('purchase_orders').delete().eq('id', order.id)
         throw new DatabaseError('Failed to create purchase order items', itemsError)
@@ -108,23 +109,25 @@ export class PurchasingService {
   // ─── Get Purchase Order ──────────────────────────────────────
   async getPurchaseOrder(id: string, userId: string) {
     const cacheKey = this.getPurchaseOrderCacheKey(userId, id)
-    
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
     const { data, error } = await supabase
       .from('purchase_orders')
-      .select(`
+      .select(
+        `
         ${PO_LIST_COLUMNS},
         supplier:suppliers(id, name, phone, email),
         items:purchase_order_items(${PO_ITEM_COLUMNS}, product:products(id, name, unit))
-      `)
+      `,
+      )
       .eq('id', id)
       .eq('user_id', userId)
       .single()
 
     if (error || !data) throw new DatabaseError('Purchase order not found', error)
-    
+
     await memoryCache.set(cacheKey, data, 300)
     return data
   }
@@ -134,7 +137,8 @@ export class PurchasingService {
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (data.supplierId !== undefined) updates.supplier_id = data.supplierId
     if (data.status !== undefined) updates.status = data.status
-    if (data.expectedDeliveryDate !== undefined) updates.expected_delivery_date = data.expectedDeliveryDate
+    if (data.expectedDeliveryDate !== undefined)
+      updates.expected_delivery_date = data.expectedDeliveryDate
     if (data.notes !== undefined) updates.notes = data.notes
 
     const { data: order, error } = await supabase
@@ -148,18 +152,27 @@ export class PurchasingService {
     if (error || !order) throw new DatabaseError('Failed to update purchase order', error)
 
     await this.invalidatePurchaseOrderCache(userId, id)
-    
+
     return order
   }
 
   // ─── Receive Goods — FULLY FIXED ────────────────────────────
-  async receiveGoods(userId: string, id: string) {
+  /**
+   * `purchase_orders` is not yet a workspace-scoped table, so its own queries
+   * still key on user_id. The PRODUCT reads and writes below are shared
+   * business data and must be workspace-scoped regardless — receiving goods
+   * against another shop's product id would move their inventory.
+   */
+  async receiveGoods(ctx: TenancyContext, id: string) {
+    const { workspaceId, userId } = ctx
     const { data: order, error } = await supabase
       .from('purchase_orders')
-      .select(`
+      .select(
+        `
         id,
         items:purchase_order_items(product_id, quantity)
-      `)
+      `,
+      )
       .eq('id', id)
       .eq('user_id', userId)
       .single()
@@ -167,14 +180,14 @@ export class PurchasingService {
     if (error || !order) throw new DatabaseError('Purchase order not found', error)
 
     const items = (order as any).items || []
-    
+
     if (items.length === 0) {
       const { data: updated, error: updateError } = await supabase
         .from('purchase_orders')
-        .update({ 
-          status: 'received', 
-          received_at: new Date().toISOString(), 
-          updated_at: new Date().toISOString() 
+        .update({
+          status: 'received',
+          received_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
         })
         .eq('id', id)
         .eq('user_id', userId)
@@ -195,7 +208,7 @@ export class PurchasingService {
       .from('products')
       .select('id, quantity')
       .in('id', productIds)
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
 
     if (productsError) {
       throw new DatabaseError('Failed to fetch products', productsError)
@@ -212,16 +225,16 @@ export class PurchasingService {
     for (const item of items) {
       const currentQuantity = productMap.get(item.product_id) || 0
       const newQuantity = currentQuantity + item.quantity
-      
+
       updatePromises.push(
         (async () => {
           const result = await supabase
             .from('products')
             .update({ quantity: newQuantity })
             .eq('id', item.product_id)
-            .eq('user_id', userId)
+            .eq('workspace_id', workspaceId)
           return result
-        })()
+        })(),
       )
     }
 
@@ -230,15 +243,15 @@ export class PurchasingService {
       (async () => {
         const result = await supabase
           .from('purchase_orders')
-          .update({ 
-            status: 'received', 
-            received_at: new Date().toISOString(), 
-            updated_at: new Date().toISOString() 
+          .update({
+            status: 'received',
+            received_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
           })
           .eq('id', id)
           .eq('user_id', userId)
         return result
-      })()
+      })(),
     )
 
     // ✅ اجرای همه به‌روزرسانی‌ها به صورت موازی
@@ -292,21 +305,34 @@ export class PurchasingService {
   // ─── Get Purchase Order Stats ────────────────────────────────
   async getPurchaseOrderStats(userId: string) {
     const cacheKey = `purchasing:stats:${userId}`
-    
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
     const [pendingResult, receivedResult, cancelledResult] = await Promise.all([
-      supabase.from('purchase_orders').select('id', { count: 'estimated', head: true }).eq('user_id', userId).eq('status', 'pending'),
-      supabase.from('purchase_orders').select('id', { count: 'estimated', head: true }).eq('user_id', userId).eq('status', 'received'),
-      supabase.from('purchase_orders').select('id', { count: 'estimated', head: true }).eq('user_id', userId).eq('status', 'cancelled'),
+      supabase
+        .from('purchase_orders')
+        .select('id', { count: 'estimated', head: true })
+        .eq('user_id', userId)
+        .eq('status', 'pending'),
+      supabase
+        .from('purchase_orders')
+        .select('id', { count: 'estimated', head: true })
+        .eq('user_id', userId)
+        .eq('status', 'received'),
+      supabase
+        .from('purchase_orders')
+        .select('id', { count: 'estimated', head: true })
+        .eq('user_id', userId)
+        .eq('status', 'cancelled'),
     ])
 
     const result = {
       pending: pendingResult.count || 0,
       received: receivedResult.count || 0,
       cancelled: cancelledResult.count || 0,
-      total: (pendingResult.count || 0) + (receivedResult.count || 0) + (cancelledResult.count || 0),
+      total:
+        (pendingResult.count || 0) + (receivedResult.count || 0) + (cancelledResult.count || 0),
     }
 
     await memoryCache.set(cacheKey, result, 60)

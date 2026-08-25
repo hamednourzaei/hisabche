@@ -19,6 +19,8 @@ import { CreateInvoice, UpdateInvoice, InvoiceFilters } from '@hisabche/validati
 import { DatabaseError, NotFoundError } from '../errors/database.error'
 import { memoryCache } from '../utils/pagination'
 import { ActivityService } from './activity.service'
+import type { TenancyContext } from './tenancy.service'
+import { requireWorkspace } from './tenancy.service'
 
 // ============================================
 // ✅ OPTIMIZED: فقط ستون‌های مورد نیاز
@@ -145,26 +147,28 @@ export class InvoiceService {
   }
 
   // ─── ✅ دریافت workspaceId ──────────────────────────────────────────────
+  //
+  // ⚠️ SECURITY — this used to end `?? userId`, handing back the USER's id as
+  // a workspace id. That is a fabricated tenancy boundary living in the same
+  // UUID space as real workspace ids, and it was written onto activity and
+  // notification rows.
+  //
+  // It now delegates to requireWorkspace(), the single resolver, which fails
+  // closed: no membership throws rather than inventing one, revoked and
+  // suspended members are excluded, and a multi-workspace user is refused
+  // rather than silently assigned whichever row PostgreSQL returned first.
+  //
+  // This private helper remains only for the call sites in this file that
+  // still take a bare userId. As each is converted to accept a TenancyContext
+  // from the route, it goes away.
   private async resolveWorkspaceId(userId: string): Promise<string> {
-    const { data: membership, error: membershipError } = await supabase
-      .from('workspace_members')
-      .select('workspace_id')
-      .eq('user_id', userId)
-      .limit(1)
-      .maybeSingle()
-
-    if (membershipError) {
-      console.error(
-        `[InvoiceService] Failed to fetch workspace membership for user ${userId}:`,
-        membershipError,
-      )
-    }
-
-    return membership?.workspace_id ?? userId
+    const ctx = await requireWorkspace(userId)
+    return ctx.workspaceId
   }
 
   // ─── List Invoices — با JOIN customers ───
-  async list(userId: string, filters: InvoiceFilters) {
+  async list(ctx: TenancyContext, filters: InvoiceFilters) {
+    const { workspaceId } = ctx
     const {
       search,
       type,
@@ -183,7 +187,7 @@ export class InvoiceService {
       sortDirection = 'desc',
     } = filters
 
-    const cacheKey = `invoices:${userId}:${JSON.stringify(filters)}`
+    const cacheKey = `invoices:${workspaceId}:${JSON.stringify(filters)}`
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
@@ -221,7 +225,7 @@ export class InvoiceService {
         invoice_items ( quantity )
       `,
       )
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
       .order(sortBy, { ascending: sortDirection === 'asc' })
 
     // ✅ FIX: رابط کاربری فاکتورها صفحه‌محور است (قبلی/بعدی + «۱ / ۳») و
@@ -271,7 +275,7 @@ export class InvoiceService {
     let countQuery = supabase
       .from('invoices')
       .select('id', { count: hasFilters ? 'exact' : 'estimated', head: true })
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
 
     if (search) countQuery = countQuery.ilike('invoice_number', `%${search}%`)
     if (type) countQuery = countQuery.eq('type', type)
@@ -441,7 +445,8 @@ export class InvoiceService {
   }
 
   // ─── Get Invoice By ID ───
-  async getById(id: string, userId: string) {
+  async getById(id: string, ctx: TenancyContext) {
+    const { workspaceId } = ctx
     // The select string is built at runtime, so Supabase cannot infer a row
     // type from it — same reason the previous implementation used `any` here.
     const read = async (): Promise<{ data: any; error: any }> =>
@@ -449,7 +454,7 @@ export class InvoiceService {
         .from('invoices')
         .select(this.invoiceSelect())
         .eq('id', id)
-        .eq('user_id', userId)
+        .eq('workspace_id', workspaceId)
         .single()
 
     let { data, error } = await read()
@@ -518,12 +523,24 @@ export class InvoiceService {
       .single())
 
     if (error && (error.code === '42703' || /public_token/.test(error.message || ''))) {
-      // Column not migrated yet — fall back to raw id lookup.
-      ;({ data, error } = await supabase
-        .from('invoices')
-        .select(columns.replace('public_token,\n      ', ''))
-        .eq('id', token)
-        .single())
+      // ⚠️ SECURITY — there was a fallback here that retried the lookup as
+      // `.eq('id', token)` when the `public_token` column was missing.
+      //
+      // This route is UNAUTHENTICATED by design. Its entire safety argument is
+      // that an invoice can only be reached through an unguessable share
+      // token — invoice-public.routes.ts says so in its header. The fallback
+      // turned it into "any invoice, by its id, with no authentication and no
+      // workspace": exactly the enumeration the design claims to prevent. A
+      // database that had not run the migration silently published every
+      // invoice on the platform.
+      //
+      // It now fails closed. An unmigrated database serves no public invoices,
+      // which is the right outcome — the feature is unavailable, not unsafe.
+      console.error(
+        '[InvoiceService] public_token column is missing — public invoice links are ' +
+          'disabled until the migration runs. Refusing to fall back to id lookup.',
+      )
+      throw new NotFoundError('Invoice')
     }
 
     if (error || !data) {
@@ -549,7 +566,8 @@ export class InvoiceService {
   }
 
   // ─── Create Invoice ──────────────────────────────────────────────────────
-  async create(userId: string, data: CreateInvoice) {
+  async create(ctx: TenancyContext, data: CreateInvoice) {
+    const { workspaceId, userId } = ctx
     const invoiceNumber = await this.generateInvoiceNumber()
 
     const { data: invoice, error: invoiceError } = await supabase
@@ -574,6 +592,8 @@ export class InvoiceService {
           data.paidAmount && data.total && data.paidAmount >= data.total ? 'completed' : 'pending',
         notes: data.notes || '',
         reference: data.reference || '',
+        // workspace_id is the tenancy boundary; user_id records the actor.
+        workspace_id: workspaceId,
         user_id: userId,
       })
       .select(INVOICE_LIST_COLUMNS)
@@ -606,32 +626,50 @@ export class InvoiceService {
         .select('id')
 
       if (itemsError || !insertedItems) {
-        await supabase.from('invoices').delete().eq('id', invoice.id)
+        await supabase
+          .from('invoices')
+          .delete()
+          .eq('id', invoice.id)
+          .eq('workspace_id', workspaceId)
         throw new DatabaseError('Failed to create invoice items', itemsError)
       }
 
-      await this.insertItemDetails(data.items, insertedItems, invoice.id)
+      await this.insertItemDetails(data.items, insertedItems, invoice.id, workspaceId)
 
       // A purchase moves stock too — it just moves it the other way. Guarding
       // this on `type === "sale"` meant every purchase left inventory
       // untouched, which is why bought goods never appeared in the warehouse.
-      await this.batchUpdateStock(data.items, userId, data.type === 'purchase' ? 1 : -1)
+      await this.batchUpdateStock(data.items, ctx, data.type === 'purchase' ? 1 : -1)
     }
 
     // ─── ✅ دریافت نام مشتری ──────────────────────────────────────────────
     let customerName: string | null = null
     if (data.customerId) {
+      // ⚠️ SECURITY — this lookup had no tenancy filter, so a client could put
+      // ANY customer id in the body and have it attached to its invoice: a
+      // cross-workspace write that also leaked the other shop's customer name
+      // back in the activity feed. The customer must be in the same book.
       const { data: customer } = await supabase
         .from('customers')
         .select('full_name')
         .eq('id', data.customerId)
+        .eq('workspace_id', workspaceId)
         .maybeSingle()
-      customerName = customer?.full_name || null
+
+      if (!customer) {
+        await supabase
+          .from('invoices')
+          .delete()
+          .eq('id', invoice.id)
+          .eq('workspace_id', workspaceId)
+        throw new NotFoundError('Customer')
+      }
+
+      customerName = customer.full_name || null
     }
 
     // ─── ✅ دریافت نام کاربر و workspace ────────────────────────────────
     const actorName = await this.getUserDisplayName(userId)
-    const workspaceId = await this.resolveWorkspaceId(userId)
 
     // ─── ✅ ایجاد Activity ──────────────────────────────────────────────────
     const isPurchaseInvoice = invoice.type === 'purchase'
@@ -693,6 +731,7 @@ export class InvoiceService {
           .from('customers')
           .select('user_id')
           .eq('id', data.customerId)
+          .eq('workspace_id', workspaceId)
           .maybeSingle()
 
         if (customerError) {
@@ -722,24 +761,25 @@ export class InvoiceService {
     }
 
     // ─── پس‌زمینه ──────────────────────────────────────────────────────────
-    this.invalidateUserCache(userId)
+    this.invalidateWorkspaceCache(workspaceId)
 
-    this.createAccountingEntries(userId, invoice.id, {
+    this.createAccountingEntries(ctx, invoice.id, {
       ...data,
       invoiceNumber,
       total: data.total || 0,
     }).catch((err) => console.error('Accounting entry failed:', err))
 
-    this.tryStartWorkflow(userId, invoice.id, Number(data.total || 0)).catch((err) =>
+    this.tryStartWorkflow(ctx, invoice.id, Number(data.total || 0)).catch((err) =>
       console.error('Workflow failed:', err),
     )
 
-    return this.getById(invoice.id, userId)
+    return this.getById(invoice.id, ctx)
   }
 
   // ─── Update Invoice ──────────────────────────────────────────────────────
-  async update(id: string, userId: string, data: UpdateInvoice) {
-    const currentInvoice = await this.getById(id, userId)
+  async update(id: string, ctx: TenancyContext, data: UpdateInvoice) {
+    const { workspaceId, userId } = ctx
+    const currentInvoice = await this.getById(id, ctx)
 
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (data.status !== undefined) updates.status = data.status
@@ -752,7 +792,7 @@ export class InvoiceService {
       .from('invoices')
       .update(updates)
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
       .select(INVOICE_LIST_COLUMNS)
       .single()
 
@@ -767,7 +807,7 @@ export class InvoiceService {
       await this.replaceInvoiceItems(
         id,
         (data as { items: any[] }).items,
-        userId,
+        ctx,
         String(invoice.type ?? 'sale'),
       )
     }
@@ -783,8 +823,6 @@ export class InvoiceService {
 
     if (isNowPaid || isFullyPaid) {
       try {
-        const workspaceId = await this.resolveWorkspaceId(userId)
-
         console.log(
           `[InvoiceService] Creating payment notification for invoice ${invoice.id} with workspaceId: ${workspaceId}`,
         )
@@ -808,30 +846,36 @@ export class InvoiceService {
       }
     }
 
-    this.invalidateUserCache(userId)
+    this.invalidateWorkspaceCache(workspaceId)
     return invoice
   }
 
   // ─── Delete Invoice ──────────────────────────────────────────────────────
-  async delete(id: string, userId: string): Promise<void> {
+  async delete(id: string, ctx: TenancyContext): Promise<void> {
+    const { workspaceId } = ctx
     await supabase.from('invoice_items').delete().eq('invoice_id', id)
-    const { error } = await supabase.from('invoices').delete().eq('id', id).eq('user_id', userId)
+    const { error } = await supabase
+      .from('invoices')
+      .delete()
+      .eq('id', id)
+      .eq('workspace_id', workspaceId)
     if (error) throw new DatabaseError('Failed to delete invoice', error)
-    this.invalidateUserCache(userId)
+    this.invalidateWorkspaceCache(workspaceId)
   }
 
   // ─── Invalidate Cache ────────────────────────────────────────────────────
-  private invalidateUserCache(userId: string) {
-    memoryCache.invalidate(`dashboard:v2:${userId}`)
-    memoryCache.invalidate(`sales:${userId}`)
-    memoryCache.invalidate(`insights:${userId}`)
-    memoryCache.invalidate(`invoices:${userId}`)
-    memoryCache.invalidate(`customers:${userId}`)
-    memoryCache.invalidate(`products:${userId}`)
+  private invalidateWorkspaceCache(workspaceId: string) {
+    memoryCache.invalidate(`dashboard:v2:${workspaceId}`)
+    memoryCache.invalidate(`sales:${workspaceId}`)
+    memoryCache.invalidate(`insights:${workspaceId}`)
+    memoryCache.invalidate(`invoices:${workspaceId}`)
+    memoryCache.invalidate(`customers:${workspaceId}`)
+    memoryCache.invalidate(`products:${workspaceId}`)
   }
 
   // ─── Get Summary ─────────────────────────────────────────────────────────
-  async getSummary(userId: string) {
+  async getSummary(ctx: TenancyContext) {
+    const { workspaceId } = ctx
     const today = new Date()
     today.setHours(0, 0, 0, 0)
     const tomorrow = new Date(today)
@@ -840,12 +884,12 @@ export class InvoiceService {
     const { data: allInvoices } = await supabase
       .from('invoices')
       .select('total, paid_amount, status, created_at, type')
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
 
     const { data: products } = await supabase
       .from('products')
       .select('quantity, min_stock_level')
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
 
     // «فروش امروز» و «بدهی» فقط از فروش می‌آیند. فاکتور خرید نه فروش است و نه
     // طلب ما از مشتری. فاکتورهای قدیمیِ بدون type فروش در نظر گرفته می‌شوند تا
@@ -895,6 +939,7 @@ export class InvoiceService {
     items: any[],
     insertedItems: { id: string }[],
     invoiceId: string,
+    workspaceId: string,
   ): Promise<void> {
     const rows = items.flatMap((item, index) => {
       const parentId = insertedItems[index]?.id
@@ -946,7 +991,11 @@ export class InvoiceService {
       if (!retry.error) return
     }
 
-    await supabase.from('invoices').delete().eq('id', invoiceId)
+    // Scoped even though this id came from the insert we just performed. A
+    // DELETE on a financial table with `.eq('id', …)` alone is exactly the
+    // shape that becomes an IDOR the moment the id starts arriving from a
+    // caller instead of from the line above.
+    await supabase.from('invoices').delete().eq('id', invoiceId).eq('workspace_id', workspaceId)
     throw new DatabaseError('Failed to create invoice item details', error)
   }
 
@@ -961,9 +1010,10 @@ export class InvoiceService {
   private async replaceInvoiceItems(
     invoiceId: string,
     items: any[],
-    userId: string,
+    ctx: TenancyContext,
     type: string,
   ): Promise<void> {
+    const { userId } = ctx
     // Reverse the OLD items' stock effect before deleting them, then apply the
     // new ones below. Skipping this would silently drift inventory on every
     // edit — the stock of the removed lines would never come back.
@@ -978,7 +1028,7 @@ export class InvoiceService {
         productId: row.product_id,
         quantity: Number(row.quantity) || 0,
       }))
-      await this.batchUpdateStock(reversal, userId, (direction * -1) as 1 | -1)
+      await this.batchUpdateStock(reversal, ctx, (direction * -1) as 1 | -1)
     }
 
     await supabase.from('invoice_items').delete().eq('invoice_id', invoiceId)
@@ -1004,8 +1054,8 @@ export class InvoiceService {
       throw new DatabaseError('Failed to replace invoice items', error)
     }
 
-    await this.insertItemDetails(items, inserted, invoiceId)
-    await this.batchUpdateStock(items, userId, direction)
+    await this.insertItemDetails(items, inserted, invoiceId, ctx.workspaceId)
+    await this.batchUpdateStock(items, ctx, direction)
   }
 
   // ─── Batch Update Stock ──────────────────────────────────────────────────
@@ -1016,16 +1066,23 @@ export class InvoiceService {
    * leaves). It is the ONLY thing that differs between the two transaction
    * types — the lookup, the movement rows and the write path are shared.
    */
-  private async batchUpdateStock(items: any[], userId: string, direction: 1 | -1 = -1) {
+  private async batchUpdateStock(items: any[], ctx: TenancyContext, direction: 1 | -1 = -1) {
+    const { workspaceId, userId } = ctx
     if (!items || items.length === 0) return
 
     const productIds = items.filter((item) => item.productId).map((item) => item.productId)
 
     if (productIds.length === 0) return
 
+    // ⚠️ SECURITY — scoped to the workspace. Without this filter an invoice
+    // could name another shop's product id and move THEIR inventory: the
+    // update below writes a new quantity keyed only by product id. Products
+    // outside this workspace simply do not enter productMap, so the filtered
+    // map below silently skips them.
     const { data: products, error: productsError } = await supabase
       .from('products')
       .select('id, quantity')
+      .eq('workspace_id', workspaceId)
       .in('id', productIds)
 
     if (productsError) {
@@ -1044,7 +1101,11 @@ export class InvoiceService {
         const delta = direction * (Number(item.quantity) || 0)
         // Stock can never go negative; a purchase is always additive.
         const newQuantity = Math.max(0, currentQuantity + delta)
-        await supabase.from('products').update({ quantity: newQuantity }).eq('id', item.productId)
+        await supabase
+          .from('products')
+          .update({ quantity: newQuantity })
+          .eq('id', item.productId)
+          .eq('workspace_id', workspaceId)
       })
 
     await Promise.all(updatePromises)
@@ -1058,6 +1119,7 @@ export class InvoiceService {
         type: direction === 1 ? 'purchase' : 'sale',
         quantity: direction * (Number(item.quantity) || 0),
         reference_type: 'invoice',
+        workspace_id: workspaceId,
         user_id: userId,
       }))
 
@@ -1068,16 +1130,17 @@ export class InvoiceService {
 
   // ─── Accounting Entries ──────────────────────────────────────────────────
   private async createAccountingEntries(
-    userId: string,
+    ctx: TenancyContext,
     invoiceId: string,
     data: { type: string; total: number; items?: any[]; invoiceNumber?: string; date?: string },
   ): Promise<void> {
+    const { workspaceId, userId } = ctx
     try {
       const { data: accounts } = await supabase
         .from('accounts')
         .select('id, code, type')
         .in('code', ['1200', '4000', '5000', '1000'])
-        .eq('user_id', userId)
+        .eq('workspace_id', workspaceId)
 
       if (!accounts || accounts.length < 4) return
 
@@ -1156,9 +1219,13 @@ export class InvoiceService {
 
       if (data.type === 'sale' && data.items?.length) {
         const productIds = data.items.map((item) => item.productId)
+        // Scoped: cost of goods must come from THIS workspace's products, or
+        // a foreign product id in the payload would price the journal entry
+        // off another shop's buy price.
         const { data: products } = await supabase
           .from('products')
           .select('id, buy_price')
+          .eq('workspace_id', workspaceId)
           .in('id', productIds)
 
         const productPriceMap = new Map()
@@ -1212,7 +1279,12 @@ export class InvoiceService {
   }
 
   // ─── Try Start Workflow ──────────────────────────────────────────────────
-  private async tryStartWorkflow(userId: string, invoiceId: string, total: number): Promise<void> {
+  private async tryStartWorkflow(
+    ctx: TenancyContext,
+    invoiceId: string,
+    total: number,
+  ): Promise<void> {
+    const { workspaceId } = ctx
     try {
       const { data: workflows } = await supabase
         .from('workflows')
@@ -1225,16 +1297,8 @@ export class InvoiceService {
       const workflow = workflows?.[0]
       if (!workflow) return
 
-      const { data: membership } = await supabase
-        .from('workspace_members')
-        .select('workspace_id')
-        .eq('user_id', userId)
-        .limit(1)
-        .maybeSingle()
-
-      const workspaceId = membership?.workspace_id
-      if (!workspaceId) return
-
+      // The workspace is already authorized in `ctx`; re-reading
+      // workspace_members here would only re-derive what the caller proved.
       await this.workflowService.startWorkflow(workspaceId, {
         workflow_id: workflow.id,
         entity_type: 'invoice',

@@ -20,6 +20,8 @@ export const IPC = {
   dbEnqueue: 'db:enqueue',
   dbQueue: 'db:queue',
   dbResolveQueue: 'db:resolveQueue',
+  /** Point the local cache at a workspace, purging another workspace's rows. */
+  dbSetWorkspace: 'db:setWorkspace',
 
   // Native capabilities
   printHtml: 'print:html',
@@ -94,6 +96,28 @@ export const dbResolveQueueSchema = z.object({
   clientId: z.string().min(1).max(64),
   status: z.enum(['done', 'failed']),
   error: z.string().max(500).optional(),
+})
+
+/**
+ * The cached tables carry no workspace column — they are filled from REST
+ * endpoints already scoped to the caller's authorized workspace. That holds
+ * until the active workspace changes, at which point the cache holds one
+ * business's books while the app believes it is showing another's. This tells
+ * the main process which workspace the cache is for, so it can purge.
+ */
+export const dbSetWorkspaceSchema = z.object({
+  workspaceId: z.string().min(1).max(64),
+})
+
+export const dbSetWorkspaceResultSchema = z.object({
+  /** True when another workspace's cached rows were discarded. */
+  purged: z.boolean(),
+  /**
+   * Non-zero when the switch was REFUSED because unsynced offline mutations
+   * are queued. Those exist nowhere but this device, so they are never
+   * silently dropped — flush them, then switch.
+   */
+  blockedByPendingMutations: z.number().int().min(0),
 })
 
 export const printHtmlSchema = z.object({

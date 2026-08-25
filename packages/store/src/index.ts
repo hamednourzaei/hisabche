@@ -45,3 +45,7 @@ export {
   type WorkspaceMember,
   type WorkspaceInvite,
 } from './slices/workspace.slice'
+
+// Mirrors the active workspace into @hisabche/api so realtime can scope its
+// subscriptions. Call once at app start-up.
+export { bindActiveWorkspace } from './bind-active-workspace'

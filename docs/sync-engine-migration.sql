@@ -28,6 +28,71 @@
 -- or roll back together, by construction rather than by discipline.
 -- ============================================================================
 
+-- ─── 0. PREFLIGHT — fail closed ────────────────────────────────────────────
+--
+-- This migration installs a trigger that reads NEW.workspace_id on invoices,
+-- customers, products and transactions. If that column does not exist, the
+-- trigger raises `record "new" has no field "workspace_id"` on EVERY INSERT —
+-- which would take invoice creation down completely on a live financial
+-- system.
+--
+-- Those columns genuinely were absent: tenancy for those four tables was
+-- `user_id`, and documents/DATABASE_SCHEMA.md was wrong about it. So this
+-- refuses to proceed rather than half-applying and leaving the database in a
+-- state where writes fail.
+--
+-- Run docs/tenancy-workspace-migration.sql first.
+
+DO $$
+DECLARE
+  v_missing TEXT[] := ARRAY[]::TEXT[];
+  v_table   TEXT;
+BEGIN
+  FOREACH v_table IN ARRAY ARRAY['invoices', 'customers', 'products', 'transactions'] LOOP
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public'
+         AND table_name = v_table
+         AND column_name = 'workspace_id'
+    ) THEN
+      v_missing := array_append(v_missing, v_table);
+    END IF;
+  END LOOP;
+
+  IF array_length(v_missing, 1) > 0 THEN
+    RAISE EXCEPTION
+      E'PREFLIGHT FAILED — workspace_id is missing from: %\n'
+      '\n'
+      'This migration would install triggers that break every INSERT into '
+      'those tables.\n'
+      '\n'
+      'Run docs/tenancy-workspace-migration.sql first, confirm its PART 3 '
+      'reports READY for every entity, then re-run this file.',
+      array_to_string(v_missing, ', ')
+      USING ERRCODE = 'feature_not_supported';
+  END IF;
+
+  -- A workspace_id that is still nullable means the backfill has not finished.
+  -- The trigger tolerates NULL (it skips logging), but a row that never
+  -- reaches the change log is a change no client will ever receive — silent
+  -- data divergence, which is worse than a loud failure.
+  FOREACH v_table IN ARRAY ARRAY['invoices', 'customers', 'products', 'transactions'] LOOP
+    IF EXISTS (
+      SELECT 1 FROM information_schema.columns
+       WHERE table_schema = 'public' AND table_name = v_table
+         AND column_name = 'workspace_id' AND is_nullable = 'YES'
+    ) THEN
+      RAISE WARNING
+        'workspace_id on % is still NULLABLE. Rows with a NULL workspace will '
+        'never appear in any client''s delta. Enforce NOT NULL before relying '
+        'on sync.', v_table;
+    END IF;
+  END LOOP;
+
+  RAISE NOTICE 'preflight ok — workspace_id present on all four synced tables';
+END $$;
+
+
 -- ─── 1. The change log and its cursor ──────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS sync_change_log (

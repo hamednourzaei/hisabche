@@ -4,6 +4,7 @@
 // ============================================
 
 import { supabase } from '../db'
+import type { TenancyContext } from './tenancy.service'
 import { Plan } from '@hisabche/validation'
 import { BillingService } from './billing.service'
 import { memoryCache } from '../utils/pagination'
@@ -41,13 +42,16 @@ export interface Limits {
 // ✅ Action Result Type — با string | null
 export interface ActionResult {
   allowed: boolean
-  reason?: string | null  // ✅ تغییر به string | null
+  reason?: string | null // ✅ تغییر به string | null
   limit?: number | null
 }
 
 // ✅ Errors
 export class EntitlementError extends Error {
-  constructor(message: string, public entitlement: string) {
+  constructor(
+    message: string,
+    public entitlement: string,
+  ) {
     super(message)
     this.name = 'EntitlementError'
   }
@@ -76,7 +80,7 @@ export class EntitlementService {
   // ─── Get all entitlements (with cache) ──────────────────────
   async getEntitlements(userId: string): Promise<Entitlements> {
     const cacheKey = this.getEntitlementsCacheKey(userId)
-    
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached as Entitlements
 
@@ -98,7 +102,7 @@ export class EntitlementService {
   async hasEntitlement(userId: string, key: keyof Entitlements): Promise<boolean> {
     const entitlements = await this.getEntitlements(userId)
     const value = entitlements[key]
-    
+
     if (typeof value === 'boolean') return value
     if (typeof value === 'number') return value === null || value > 0
     return false
@@ -106,7 +110,7 @@ export class EntitlementService {
 
   // ─── Get entitlements for a specific plan ───────────────────
   private getEntitlementsForPlan(plan: Plan): Entitlements {
-    switch(plan) {
+    switch (plan) {
       case 'free':
         return {
           canUseAI: false,
@@ -162,7 +166,7 @@ export class EntitlementService {
     if (!has) {
       throw new EntitlementError(
         `Missing entitlement: ${key}. Please upgrade your plan to access this feature.`,
-        key
+        key,
       )
     }
     return true
@@ -171,12 +175,12 @@ export class EntitlementService {
   // ─── Get feature flags for frontend (with cache) ────────────
   async getFeatureFlags(userId: string): Promise<FeatureFlags> {
     const cacheKey = this.getFeatureFlagsCacheKey(userId)
-    
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached as FeatureFlags
 
     const entitlements = await this.getEntitlements(userId)
-    
+
     const flags: FeatureFlags = {
       AI: entitlements.canUseAI,
       EXPORT_PDF: entitlements.canExportPDF,
@@ -194,12 +198,12 @@ export class EntitlementService {
   // ─── Get limits for frontend (with cache) ──────────────────
   async getLimits(userId: string): Promise<Limits> {
     const cacheKey = this.getLimitsCacheKey(userId)
-    
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached as Limits
 
     const entitlements = await this.getEntitlements(userId)
-    
+
     const limits: Limits = {
       users: entitlements.maxUsers,
       workspaces: entitlements.maxWorkspaces,
@@ -211,88 +215,109 @@ export class EntitlementService {
   }
 
   // ─── Check if user can perform an action ────────────────────
+  /**
+   * Quota checks.
+   *
+   * `ctx` is the authorized workspace. Entitlements themselves stay keyed to
+   * the USER, because a subscription is bought by a person — but anything
+   * counted against a limit that lives in the shared book (invoices) is
+   * counted per WORKSPACE, since those rows belong to the business, not to
+   * whichever member happened to create them.
+   */
   async canPerformAction(
-    userId: string, 
-    action: 'create_invoice' | 'create_user' | 'create_workspace' | 'use_ai' | 'export_data'
+    ctx: TenancyContext,
+    action: 'create_invoice' | 'create_user' | 'create_workspace' | 'use_ai' | 'export_data',
   ): Promise<ActionResult> {
+    const { workspaceId, userId } = ctx
     const entitlements = await this.getEntitlements(userId)
-    
+
     switch (action) {
       case 'create_invoice': {
         const limit = entitlements.maxInvoices
         if (limit === null) return { allowed: true, reason: null }
-        
+
+        // Per workspace: the invoice limit applies to the business's book.
+        // Counting per user would let a three-member shop write three times
+        // the plan's invoices.
         const { count } = await supabase
           .from('invoices')
           .select('id', { count: 'estimated', head: true })
-          .eq('user_id', userId)
-        
+          .eq('workspace_id', workspaceId)
+
         const current = count || 0
         if (current >= limit) {
-          return { 
-            allowed: false, 
+          return {
+            allowed: false,
             reason: `You have reached the limit of ${limit} invoices. Please upgrade your plan.`,
-            limit 
+            limit,
           }
         }
         return { allowed: true, reason: null, limit }
       }
-      
+
       case 'create_user': {
         const limit = entitlements.maxUsers
         if (limit === null) return { allowed: true, reason: null }
-        
+
         const { count } = await supabase
           .from('workspace_members')
           .select('id', { count: 'estimated', head: true })
           .eq('user_id', userId)
-        
+
         const current = count || 0
         if (current >= limit) {
-          return { 
-            allowed: false, 
+          return {
+            allowed: false,
             reason: `You have reached the limit of ${limit} users. Please upgrade your plan.`,
-            limit 
+            limit,
           }
         }
         return { allowed: true, reason: null, limit }
       }
-      
+
       case 'create_workspace': {
         const limit = entitlements.maxWorkspaces
         if (limit === null) return { allowed: true, reason: null }
-        
+
+        // ⚠️ BUG — this filtered `.eq('user_id', userId)`, but `workspaces`
+        // has no `user_id` column; ownership is `owner_id`. PostgREST returned
+        // no rows, so `current` was always 0 and this quota has never been
+        // enforced. Corrected to the real column.
         const { count } = await supabase
           .from('workspaces')
           .select('id', { count: 'estimated', head: true })
-          .eq('user_id', userId)
-        
+          .eq('owner_id', userId)
+
         const current = count || 0
         if (current >= limit) {
-          return { 
-            allowed: false, 
+          return {
+            allowed: false,
             reason: `You have reached the limit of ${limit} workspaces. Please upgrade your plan.`,
-            limit 
+            limit,
           }
         }
         return { allowed: true, reason: null, limit }
       }
-      
+
       case 'use_ai':
-        return { 
+        return {
           allowed: entitlements.canUseAI,
-          reason: entitlements.canUseAI ? null : 'AI features are not available on your current plan.',
+          reason: entitlements.canUseAI
+            ? null
+            : 'AI features are not available on your current plan.',
         }
-      
+
       case 'export_data':
-        return { 
+        return {
           allowed: entitlements.canExportData,
-          reason: entitlements.canExportData ? null : 'Data export is not available on your current plan.',
+          reason: entitlements.canExportData
+            ? null
+            : 'Data export is not available on your current plan.',
         }
-      
+
       default:
-        return { 
-          allowed: false, 
+        return {
+          allowed: false,
           reason: `Unknown action: ${action}`,
         }
     }
@@ -300,15 +325,17 @@ export class EntitlementService {
 
   // ─── Check multiple actions at once ────────────────────────
   async checkPermissions(
-    userId: string, 
-    actions: Array<'create_invoice' | 'create_user' | 'create_workspace' | 'use_ai' | 'export_data'>
+    ctx: TenancyContext,
+    actions: Array<
+      'create_invoice' | 'create_user' | 'create_workspace' | 'use_ai' | 'export_data'
+    >,
   ): Promise<Record<string, ActionResult>> {
     const results: Record<string, ActionResult> = {}
-    
+
     for (const action of actions) {
-      results[action] = await this.canPerformAction(userId, action)
+      results[action] = await this.canPerformAction(ctx, action)
     }
-    
+
     return results
   }
 

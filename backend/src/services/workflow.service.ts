@@ -447,14 +447,21 @@ export class WorkflowService {
     // viewer، ...) می‌توانست هر مرحله‌ی approval را تأیید/رد کند.
     // "owner"/"admin" (نقش‌های workspace) همیشه override دارند؛ در غیر
     // این صورت نقش کاربر باید دقیقاً همان approver_role مرحله باشد.
-    const canAct =
-      userRole === 'owner' ||
-      userRole === 'admin' ||
-      userRole === (currentStep.approver_role as string)
+    // ⚠️ SECURITY — `userRole === 'admin'` used to be a third branch here.
+    //
+    // 'admin' is not a workspace role: the model is owner | manager | seller,
+    // and a census of workspace_members found zero rows carrying it. The only
+    // way to hold it was auth.middleware.ts's `membership?.role || 'admin'`,
+    // which handed it to users with NO membership at all — so the branch was
+    // unreachable for legitimate members and an approval bypass for strangers.
+    // The default is gone; so is the branch that made it dangerous.
+    //
+    // Owner keeps its override because owner IS a real workspace role.
+    const canAct = userRole === 'owner' || userRole === (currentStep.approver_role as string)
 
     if (!canAct) {
       throw new ForbiddenError(
-        `Only a "${currentStep.approver_role}" (or workspace admin/owner) can act on this step`,
+        `Only a "${currentStep.approver_role}" (or the workspace owner) can act on this step`,
       )
     }
 

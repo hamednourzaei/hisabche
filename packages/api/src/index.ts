@@ -70,7 +70,16 @@ export {
 } from './hooks/transactions'
 
 // ─── Realtime ─────────────────────────────────────────────
-export { useRealtime } from './hooks/useRealtime'
+export { useRealtime, useActiveWorkspaceId } from './hooks/useRealtime'
+
+// The workspace registry. `@hisabche/store` calls `setActiveWorkspaceId`,
+// because it depends on this package and not the reverse — see
+// lib/active-workspace.ts for why the value is pushed rather than pulled.
+export {
+  getActiveWorkspaceId,
+  setActiveWorkspaceId,
+  onActiveWorkspaceChange,
+} from './lib/active-workspace'
 
 // ─── Dashboard ────────────────────────────────────────────
 export {

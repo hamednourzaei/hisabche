@@ -25,15 +25,27 @@ import {
 import { z } from 'zod'
 
 import { authenticate } from '../middleware/auth.middleware'
+import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { syncService, SyncError } from '../services/sync.service'
 
 /** The device header. Optional, but a client that sends one gets echo-skip. */
 const DEVICE_HEADER = 'x-hisabche-device'
 
+/**
+ * The actor for a sync operation.
+ *
+ * Both ids come from `request.tenancy`, which requireWorkspaceContext produced
+ * by verifying membership. The workspace read here used to come from the
+ * ambient `request.workspaceId`, which was `''` for a user with none OR with
+ * several — so a multi-workspace member's sync silently targeted the empty
+ * workspace. The route-level `if (!actor.workspaceId) 403` was the only thing
+ * standing between that and a cross-workspace pull; now the preHandler answers
+ * 403 before the handler runs at all.
+ */
 function actorFrom(request: FastifyRequest, deviceId: string) {
   return {
-    userId: (request as FastifyRequest & { userId: string }).userId,
-    workspaceId: (request as FastifyRequest & { workspaceId: string }).workspaceId,
+    userId: request.tenancy.userId,
+    workspaceId: request.tenancy.workspaceId,
     deviceId,
   }
 }
@@ -44,7 +56,7 @@ export async function syncRoutes(fastify: FastifyInstance) {
      ═══════════════════════════════════════════════════════════════════════ */
   fastify.post(
     '/api/sync/push',
-    { preHandler: [authenticate] },
+    { preHandler: [authenticate, requireWorkspaceContext] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const parsed = syncPushRequestSchema.safeParse(request.body)
       if (!parsed.success) {
@@ -104,7 +116,7 @@ export async function syncRoutes(fastify: FastifyInstance) {
      ═══════════════════════════════════════════════════════════════════════ */
   fastify.get(
     '/api/sync/pull',
-    { preHandler: [authenticate] },
+    { preHandler: [authenticate, requireWorkspaceContext] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const parsed = syncPullRequestSchema.safeParse({
         ...(request.query as Record<string, unknown>),
@@ -120,7 +132,7 @@ export async function syncRoutes(fastify: FastifyInstance) {
       }
 
       const { cursor, limit, deviceId } = parsed.data
-      const workspaceId = (request as FastifyRequest & { workspaceId: string }).workspaceId
+      const workspaceId = request.tenancy.workspaceId
 
       if (!workspaceId) return reply.code(403).send({ error: 'no_workspace' })
 
@@ -159,9 +171,9 @@ export async function syncRoutes(fastify: FastifyInstance) {
      ═══════════════════════════════════════════════════════════════════════ */
   fastify.get(
     '/api/sync/cursor',
-    { preHandler: [authenticate] },
+    { preHandler: [authenticate, requireWorkspaceContext] },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const workspaceId = (request as FastifyRequest & { workspaceId: string }).workspaceId
+      const workspaceId = request.tenancy.workspaceId
       if (!workspaceId) return reply.code(403).send({ error: 'no_workspace' })
 
       return reply.send({ cursor: await syncService.currentCursor(workspaceId) })
@@ -175,7 +187,7 @@ export async function syncRoutes(fastify: FastifyInstance) {
 
   fastify.post(
     '/api/sync/lease',
-    { preHandler: [authenticate] },
+    { preHandler: [authenticate, requireWorkspaceContext] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const parsed = leaseBody.safeParse(request.body)
       if (!parsed.success) {
@@ -201,7 +213,7 @@ export async function syncRoutes(fastify: FastifyInstance) {
 
   fastify.delete(
     '/api/sync/lease',
-    { preHandler: [authenticate] },
+    { preHandler: [authenticate, requireWorkspaceContext] },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const parsed = leaseBody.safeParse(request.body)
       if (!parsed.success) {
@@ -224,9 +236,9 @@ export async function syncRoutes(fastify: FastifyInstance) {
 
   fastify.get(
     '/api/sync/health',
-    { preHandler: [authenticate] },
+    { preHandler: [authenticate, requireWorkspaceContext] },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const workspaceId = (request as FastifyRequest & { workspaceId: string }).workspaceId
+      const workspaceId = request.tenancy.workspaceId
       if (!workspaceId) return reply.code(403).send({ error: 'no_workspace' })
 
       const { since } = healthQuery.parse(request.query)

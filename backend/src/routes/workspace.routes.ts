@@ -30,7 +30,10 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/workspaces',
     {
-      preHandler: [authenticate, cacheMiddleware({ ttl: 120, keyPrefix: 'workspaces' })],
+      preHandler: [
+        authenticate,
+        cacheMiddleware({ scope: 'user', ttl: 120, keyPrefix: 'workspaces' }),
+      ],
     },
     async (req, reply) => {
       try {
@@ -71,7 +74,10 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/workspaces/:id',
     {
-      preHandler: [authenticate, cacheMiddleware({ ttl: 120, keyPrefix: 'workspace' })],
+      preHandler: [
+        authenticate,
+        cacheMiddleware({ scope: 'user', ttl: 120, keyPrefix: 'workspace' }),
+      ],
     },
     async (req, reply) => {
       try {
@@ -129,7 +135,10 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/workspaces/:id/members',
     {
-      preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'workspace-members' })],
+      preHandler: [
+        authenticate,
+        cacheMiddleware({ scope: 'user', ttl: 60, keyPrefix: 'workspace-members' }),
+      ],
     },
     async (req, reply) => {
       try {
@@ -216,7 +225,10 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/workspaces/:id/invites',
     {
-      preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'workspace-invites' })],
+      preHandler: [
+        authenticate,
+        cacheMiddleware({ scope: 'user', ttl: 60, keyPrefix: 'workspace-invites' }),
+      ],
     },
     async (req, reply) => {
       try {

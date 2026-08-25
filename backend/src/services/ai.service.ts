@@ -7,6 +7,7 @@ import { supabase } from '../db'
 import { AIQuery, AIInsight } from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
 import { CacheKeys, withCacheKey } from '../utils/cache'
+import type { TenancyContext } from './tenancy.service'
 
 // ✅ Type for response
 interface AIResponse {
@@ -19,20 +20,32 @@ interface AIResponse {
 
 export class AIService {
   // ─── Process Query ──────────────────────────────────────
-  async processQuery(userId: string, query: AIQuery): Promise<AIResponse> {
+  /**
+   * The AI answers questions ABOUT the shared book, so every figure it quotes
+   * must come from the authorized workspace. An unscoped handler here is a
+   * particularly bad leak: it does not return rows, it returns a sentence
+   * summarising another business's revenue.
+   *
+   * `ledger_entries` is not yet a workspace-scoped table, so the financial
+   * and expense handlers still key on user_id and are marked below.
+   */
+  async processQuery(ctx: TenancyContext, query: AIQuery): Promise<AIResponse> {
+    const { workspaceId, userId } = ctx
     const { question } = query
     const lowerQuestion = question.toLowerCase()
 
     try {
       // ✅ بهتر: تشخیص با کلمات کلیدی
       if (this.hasKeywords(lowerQuestion, ['فروش', 'sale', 'درآمد', 'revenue', 'فروخته'])) {
-        return await this.handleSalesQuery(userId)
+        return await this.handleSalesQuery(workspaceId)
       }
-      if (this.hasKeywords(lowerQuestion, ['موجودی', 'stock', 'کمبود', 'انبار', 'warehouse', 'محصول'])) {
-        return await this.handleInventoryQuery(userId)
+      if (
+        this.hasKeywords(lowerQuestion, ['موجودی', 'stock', 'کمبود', 'انبار', 'warehouse', 'محصول'])
+      ) {
+        return await this.handleInventoryQuery(workspaceId)
       }
       if (this.hasKeywords(lowerQuestion, ['مشتری', 'customer', 'بدهکار', 'debtor', 'حساب'])) {
-        return await this.handleCustomerQuery(userId)
+        return await this.handleCustomerQuery(workspaceId)
       }
       if (this.hasKeywords(lowerQuestion, ['سود', 'profit', 'زیان', 'loss', 'مالی', 'financial'])) {
         return await this.handleFinancialQuery(userId)
@@ -56,32 +69,36 @@ export class AIService {
 
   // ─── Helper: Check keywords ──────────────────────────────
   private hasKeywords(text: string, keywords: string[]): boolean {
-    return keywords.some(keyword => text.includes(keyword))
+    return keywords.some((keyword) => text.includes(keyword))
   }
 
   // ─── Sales Query ──────────────────────────────────────────
-  private async handleSalesQuery(userId: string): Promise<AIResponse> {
+  private async handleSalesQuery(workspaceId: string): Promise<AIResponse> {
     const today = new Date().toISOString().split('T')[0]
     const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
-    const firstOfLastMonth = new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).toISOString()
+    const firstOfLastMonth = new Date(
+      new Date().getFullYear(),
+      new Date().getMonth() - 1,
+      1,
+    ).toISOString()
 
     // ✅ سه کوئری موازی
     const [todayResult, monthResult, lastMonthResult] = await Promise.all([
       supabase
         .from('invoices')
         .select('total, status')
-        .eq('user_id', userId)
+        .eq('workspace_id', workspaceId)
         .gte('date', today),
       supabase
         .from('invoices')
         .select('total')
-        .eq('user_id', userId)
+        .eq('workspace_id', workspaceId)
         .gte('date', firstOfMonth)
         .eq('status', 'paid'),
       supabase
         .from('invoices')
         .select('total')
-        .eq('user_id', userId)
+        .eq('workspace_id', workspaceId)
         .gte('date', firstOfLastMonth)
         .lt('date', firstOfMonth)
         .eq('status', 'paid'),
@@ -92,13 +109,20 @@ export class AIService {
     const lastMonthInvoices = lastMonthResult.data || []
 
     const todayTotal = todayInvoices.reduce((s: number, i: any) => s + Number(i.total), 0)
-    const todayPaid = todayInvoices.filter((i: any) => i.status === 'paid').reduce((s: number, i: any) => s + Number(i.total), 0)
+    const todayPaid = todayInvoices
+      .filter((i: any) => i.status === 'paid')
+      .reduce((s: number, i: any) => s + Number(i.total), 0)
     const monthTotal = monthInvoices.reduce((s: number, i: any) => s + Number(i.total), 0)
     const lastMonthTotal = lastMonthInvoices.reduce((s: number, i: any) => s + Number(i.total), 0)
 
     // ✅ محاسبه رشد
     const growth = lastMonthTotal > 0 ? ((monthTotal - lastMonthTotal) / lastMonthTotal) * 100 : 0
-    const growthText = growth > 0 ? `⬆️ ${growth.toFixed(1)}% رشد` : growth < 0 ? `⬇️ ${Math.abs(growth).toFixed(1)}% کاهش` : 'بدون تغییر'
+    const growthText =
+      growth > 0
+        ? `⬆️ ${growth.toFixed(1)}% رشد`
+        : growth < 0
+          ? `⬇️ ${Math.abs(growth).toFixed(1)}% کاهش`
+          : 'بدون تغییر'
 
     let answer = `فروش امروز: ${todayTotal.toLocaleString()} افغانی (${todayPaid.toLocaleString()} پرداخت شده). `
     answer += `فروش این ماه: ${monthTotal.toLocaleString()} افغانی. `
@@ -108,22 +132,18 @@ export class AIService {
       answer,
       confidence: 0.95,
       sources: [{ type: 'invoices', description: 'فاکتورهای امروز و ماه جاری' }],
-      suggestions: [
-        'مشاهده گزارش فروش کامل',
-        'مقایسه با ماه گذشته',
-        'بهترین محصولات فروش',
-      ],
+      suggestions: ['مشاهده گزارش فروش کامل', 'مقایسه با ماه گذشته', 'بهترین محصولات فروش'],
       data: { todayTotal, todayPaid, monthTotal, lastMonthTotal, growth },
     }
   }
 
   // ─── Inventory Query ──────────────────────────────────────
-  private async handleInventoryQuery(userId: string): Promise<AIResponse> {
+  private async handleInventoryQuery(workspaceId: string): Promise<AIResponse> {
     // ✅ فقط ستون‌های ضروری
     const { data: products, error } = await supabase
       .from('products')
       .select('name, quantity, min_stock_level, category') // ✅ اضافه کردن category
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
       .eq('is_active', true)
 
     if (error || !products || products.length === 0) {
@@ -159,31 +179,32 @@ export class AIService {
       answer,
       confidence: 0.9,
       sources: [{ type: 'products', description: 'لیست محصولات فعال' }],
-      suggestions: lowStock.length > 0 
-        ? ['ثبت سفارش خرید', 'مشاهده گزارش موجودی'] 
-        : ['مشاهده گزارش موجودی', 'بررسی محصولات جدید'],
-      data: { 
-        totalProducts: products.length, 
+      suggestions:
+        lowStock.length > 0
+          ? ['ثبت سفارش خرید', 'مشاهده گزارش موجودی']
+          : ['مشاهده گزارش موجودی', 'بررسی محصولات جدید'],
+      data: {
+        totalProducts: products.length,
         totalQuantity,
-        lowStockCount: lowStock.length, 
-        outOfStockCount: outOfStock.length 
+        lowStockCount: lowStock.length,
+        outOfStockCount: outOfStock.length,
       },
     }
   }
 
   // ─── Customer Query ──────────────────────────────────────
-  private async handleCustomerQuery(userId: string): Promise<AIResponse> {
+  private async handleCustomerQuery(workspaceId: string): Promise<AIResponse> {
     // ✅ دو کوئری همزمان
     const [customersResult, unpaidResult] = await Promise.all([
       supabase
         .from('customers')
         .select('id, full_name, opening_balance, phone')
-        .eq('user_id', userId)
+        .eq('workspace_id', workspaceId)
         .eq('is_active', true),
       supabase
         .from('invoices')
         .select('customer_id, total, paid_amount')
-        .eq('user_id', userId)
+        .eq('workspace_id', workspaceId)
         .neq('status', 'paid'),
     ])
 
@@ -191,13 +212,14 @@ export class AIService {
     const unpaidInvoices = unpaidResult.data || []
 
     const totalCustomers = customers.length
-    
+
     // ✅ محاسبه دقیق بدهی هر مشتری
     const debtMap: Record<string, number> = {}
     for (const inv of unpaidInvoices) {
       const customerId = inv.customer_id
       if (customerId) {
-        debtMap[customerId] = (debtMap[customerId] || 0) + Number(inv.total) - Number(inv.paid_amount)
+        debtMap[customerId] =
+          (debtMap[customerId] || 0) + Number(inv.total) - Number(inv.paid_amount)
       }
     }
 
@@ -210,7 +232,7 @@ export class AIService {
         openingBalance: Number(c.opening_balance) || 0,
       }))
       .filter((c: any) => c.totalDebt > 0 || c.openingBalance > 0)
-      .sort((a: any, b: any) => (b.totalDebt + b.openingBalance) - (a.totalDebt + a.openingBalance))
+      .sort((a: any, b: any) => b.totalDebt + b.openingBalance - (a.totalDebt + a.openingBalance))
       .slice(0, 5)
 
     let answer = `تعداد مشتریان فعال: ${totalCustomers}. `
@@ -218,9 +240,9 @@ export class AIService {
       answer += `مجموع مطالبات پرداخت‌نشده: ${totalUnpaid.toLocaleString()} افغانی. `
     }
     if (topDebtors.length > 0) {
-      const names = topDebtors.map((c: any) => 
-        `${c.full_name} (${(c.totalDebt + c.openingBalance).toLocaleString()})`
-      ).join('، ')
+      const names = topDebtors
+        .map((c: any) => `${c.full_name} (${(c.totalDebt + c.openingBalance).toLocaleString()})`)
+        .join('، ')
       answer += `بیشترین بدهکاران: ${names}.`
     } else {
       answer += '✅ هیچ مشتری بدهکاری وجود ندارد.'
@@ -245,12 +267,12 @@ export class AIService {
       supabase
         .from('ledger_entries')
         .select('debit, credit, entry_date')
-        .eq('user_id', userId)
+        .eq('user_id', userId) // ledger_entries is not workspace-scoped yet
         .gte('entry_date', firstOfMonth),
       supabase
         .from('ledger_entries')
         .select('debit, credit')
-        .eq('user_id', userId)
+        .eq('user_id', userId) // ledger_entries is not workspace-scoped yet
         .gte('entry_date', today),
     ])
 
@@ -292,7 +314,7 @@ export class AIService {
     const { data: expenses } = await supabase
       .from('ledger_entries')
       .select('debit, description, entry_date')
-      .eq('user_id', userId)
+      .eq('user_id', userId) // ledger_entries is not workspace-scoped yet
       .gte('entry_date', firstOfMonth)
       .order('debit', { ascending: false })
       .limit(10)
@@ -301,7 +323,8 @@ export class AIService {
 
     let answer = `مجموع هزینه‌های این ماه: ${totalExpenses.toLocaleString()} افغانی. `
     if (expenses && expenses.length > 0) {
-      const topExpenses = expenses.slice(0, 5)
+      const topExpenses = expenses
+        .slice(0, 5)
         .map((e: any) => `${e.description || 'بدون توضیح'}: ${Number(e.debit).toLocaleString()}`)
         .join('، ')
       answer += `بزرگترین هزینه‌ها: ${topExpenses}.`
@@ -341,14 +364,15 @@ export class AIService {
   }
 
   // ─── Get Insights ──────────────────────────────────────
-  async getInsights(userId: string): Promise<AIInsight[]> {
-    return withCacheKey(CacheKeys.insights(userId), 120_000, async () => {
+  async getInsights(ctx: TenancyContext): Promise<AIInsight[]> {
+    const { workspaceId } = ctx
+    return withCacheKey(CacheKeys.insights(workspaceId), 120_000, async () => {
       // ✅ count: "estimated" به جای "exact"
       const [productsResult, unpaidResult, weekResult] = await Promise.all([
         supabase
           .from('products')
           .select('name, quantity, min_stock_level, buy_price')
-          .eq('user_id', userId)
+          .eq('workspace_id', workspaceId)
           .eq('is_active', true),
         // ✅ FIX: قبلاً هر فاکتوری که status آن دقیقاً 'paid' نبود «پرداخت‌نشده»
         // شمرده می‌شد؛ ولی وضعیت واقعی فاکتورهای پرداخت‌شده 'completed' است،
@@ -357,12 +381,12 @@ export class AIService {
         supabase
           .from('invoices')
           .select('total, paid_amount, status')
-          .eq('user_id', userId)
+          .eq('workspace_id', workspaceId)
           .neq('status', 'cancelled'),
         supabase
           .from('invoices')
           .select('total')
-          .eq('user_id', userId)
+          .eq('workspace_id', workspaceId)
           // ✅ FIX: فیلتر status === 'paid' حذف شد — وضعیت واقعی فاکتورهای
           // پرداخت‌شده 'completed' است، پس این کوئری همیشه خالی برمی‌گشت و
           // پیشنهاد «فروش هفته گذشته» هرگز نمایش داده نمی‌شد.
@@ -389,7 +413,7 @@ export class AIService {
 
       // ✅ فاکتورهای پرداخت‌نشده
       const unpaidCount = (unpaidResult.data || []).filter(
-        (inv: any) => (Number(inv.total) || 0) - (Number(inv.paid_amount) || 0) > 0
+        (inv: any) => (Number(inv.total) || 0) - (Number(inv.paid_amount) || 0) > 0,
       ).length
       if (unpaidCount > 0) {
         insights.push({
@@ -404,7 +428,10 @@ export class AIService {
       }
 
       // ✅ فروش هفته گذشته
-      const weekSales = (weekResult.data || []).reduce((s: number, i: any) => s + Number(i.total), 0)
+      const weekSales = (weekResult.data || []).reduce(
+        (s: number, i: any) => s + Number(i.total),
+        0,
+      )
       if (weekSales > 0) {
         insights.push({
           type: 'tip',
@@ -425,7 +452,7 @@ export class AIService {
       const outstanding = invoiceRows.reduce(
         (sum: number, inv: any) =>
           sum + Math.max(0, (Number(inv.total) || 0) - (Number(inv.paid_amount) || 0)),
-        0
+        0,
       )
       if (outstanding > 0) {
         insights.push({
@@ -442,7 +469,10 @@ export class AIService {
       // محصولات تمام‌شده — متفاوت از هشدار «موجودی کم»
       const outOfStock = products.filter((p: any) => Number(p.quantity) <= 0)
       if (outOfStock.length > 0) {
-        const names = outOfStock.slice(0, 3).map((p: any) => p.name).join('، ')
+        const names = outOfStock
+          .slice(0, 3)
+          .map((p: any) => p.name)
+          .join('، ')
         insights.push({
           type: 'warning',
           title: 'محصولات تمام‌شده',
@@ -457,7 +487,7 @@ export class AIService {
       // سرمایه‌ی خوابیده در انبار
       const stockValue = products.reduce(
         (sum: number, p: any) => sum + Number(p.quantity || 0) * Number(p.buy_price || 0),
-        0
+        0,
       )
       if (stockValue > 0) {
         insights.push({
@@ -491,7 +521,8 @@ export class AIService {
       insights.push({
         type: 'tip',
         title: '💡 نکته روز',
-        description: 'می‌توانید با ثبت هزینه‌ها در بخش حسابداری، گزارش سود و زیان دقیق‌تری داشته باشید.',
+        description:
+          'می‌توانید با ثبت هزینه‌ها در بخش حسابداری، گزارش سود و زیان دقیق‌تری داشته باشید.',
         action: '/accounting',
         actionLabel: 'رفتن به حسابداری',
       })

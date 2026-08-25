@@ -369,7 +369,7 @@ export async function authRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/auth/me',
     {
-      preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'auth-me' })],
+      preHandler: [authenticate, cacheMiddleware({ scope: 'user', ttl: 60, keyPrefix: 'auth-me' })],
       schema: {
         response: {
           200: toJsonSchema(

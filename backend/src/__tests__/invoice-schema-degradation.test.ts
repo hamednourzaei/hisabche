@@ -53,6 +53,13 @@ const invoiceRow = {
   invoice_items: [{ id: 'item-1', product_name: 'گردنبند', quantity: 1 }],
 }
 
+/**
+ * The service now takes an authorized TenancyContext rather than a bare user
+ * id — the workspace is the tenancy boundary, and the type is what stops a
+ * route from calling in without having resolved one.
+ */
+const CTX = { workspaceId: 'workspace-1', userId: 'user-1', role: 'owner' } as const
+
 describe('getById on a database behind on migrations', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -66,7 +73,7 @@ describe('getById on a database behind on migrations', () => {
       .mockResolvedValueOnce({ data: invoiceRow, error: null })
 
     const service = new InvoiceService()
-    const invoice = await service.getById('inv-1', 'user-1')
+    const invoice = await service.getById('inv-1', CTX)
 
     expect(invoice.id).toBe('inv-1')
     expect(invoice.customerName).toBe('مجید طلافروش')
@@ -78,7 +85,7 @@ describe('getById on a database behind on migrations', () => {
     single.mockResolvedValue({ data: invoiceRow, error: null })
 
     const service = new InvoiceService()
-    await service.getById('inv-2', 'user-1')
+    await service.getById('inv-2', CTX)
 
     expect(select).toHaveBeenCalledTimes(1)
     expect(select.mock.calls[0]?.[0]).not.toContain('invoice_item_details')
@@ -90,15 +97,15 @@ describe('getById on a database behind on migrations', () => {
       .mockResolvedValueOnce({ data: invoiceRow, error: null })
 
     const service = new InvoiceService()
-    await expect(service.getById('inv-3', 'user-1')).resolves.toMatchObject({ id: 'inv-1' })
+    await expect(service.getById('inv-3', CTX)).resolves.toMatchObject({ id: 'inv-1' })
   })
 
   it('still reports NotFound when the invoice genuinely does not exist', async () => {
     // Degradation must not swallow a real miss — an id belonging to another
-    // user has to stay a 404, or the tenant boundary reads as a server bug.
+    // workspace has to stay a 404, or the tenant boundary reads as a server bug.
     single.mockResolvedValue({ data: null, error: { code: 'PGRST116', message: 'no rows' } })
 
     const service = new InvoiceService()
-    await expect(service.getById('nope', 'user-1')).rejects.toThrow()
+    await expect(service.getById('nope', CTX)).rejects.toThrow()
   })
 })

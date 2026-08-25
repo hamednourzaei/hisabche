@@ -9,12 +9,7 @@
 import { app } from 'electron'
 import { join } from 'node:path'
 
-import {
-  CREATE_STATEMENTS,
-  SCHEMA_VERSION,
-  SEARCHABLE_COLUMNS,
-  WRITABLE_COLUMNS,
-} from './schema'
+import { CREATE_STATEMENTS, SCHEMA_VERSION, SEARCHABLE_COLUMNS, WRITABLE_COLUMNS } from './schema'
 import type { LocalTable, QueueEntry } from '../../shared/ipc-contract'
 
 type SqliteDatabase = {
@@ -34,13 +29,51 @@ let db: SqliteDatabase | null = null
 /** Quote an identifier we have already validated against an allow-list. */
 const ident = (name: string): string => `"${name.replace(/"/g, '')}"`
 
+/**
+ * Open a database with a caller-supplied driver.
+ *
+ * ⚠️ TEST SEAM — production always uses `initDatabase()`, which passes
+ * better-sqlite3. This exists because better-sqlite3 is a NATIVE module built
+ * against Electron's Node ABI (NODE_MODULE_VERSION 125), while jest runs on the
+ * system Node (127), so requiring it under test throws. The alternative was a
+ * suite whose every test silently early-returned and asserted nothing while
+ * reporting green — a worse outcome than no test at all.
+ *
+ * The seam is a constructor, not a mock: tests pass Node's built-in
+ * `node:sqlite`, so the SQL, the transaction and the DELETEs below are really
+ * executed against a real SQLite. Only the binding differs.
+ */
+export function initDatabaseWith(
+  Driver: new (path: string) => SqliteDatabase,
+  path: string,
+): boolean {
+  if (db) return true
+
+  try {
+    db = new Driver(path)
+    db.pragma('journal_mode = WAL')
+    db.pragma('foreign_keys = ON')
+
+    CREATE_STATEMENTS.forEach((statement) => db?.exec(statement))
+    db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(
+      'schema_version',
+      String(SCHEMA_VERSION),
+    )
+    return true
+  } catch (error) {
+    console.error('[db] SQLite unavailable, running online-only:', error)
+    db = null
+    return false
+  }
+}
+
 export function initDatabase(): boolean {
   if (db) return true
 
   try {
     // Required at runtime so a missing native binding degrades instead of
     // breaking the module graph at import time.
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
+
     const Database = require('better-sqlite3') as new (path: string) => SqliteDatabase
 
     db = new Database(join(app.getPath('userData'), 'hisabche.db'))
@@ -50,7 +83,7 @@ export function initDatabase(): boolean {
     CREATE_STATEMENTS.forEach((statement) => db?.exec(statement))
     db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run(
       'schema_version',
-      String(SCHEMA_VERSION)
+      String(SCHEMA_VERSION),
     )
     return true
   } catch (error) {
@@ -126,7 +159,9 @@ export function upsertMany(table: LocalTable, rows: Array<Record<string, unknown
       const columns = Object.keys(row).filter((key) => allowed.includes(key))
       if (columns.length === 0 || !columns.includes('id')) continue
 
-      const assignments = columns.filter((c) => c !== 'id').map((c) => `${ident(c)} = excluded.${ident(c)}`)
+      const assignments = columns
+        .filter((c) => c !== 'id')
+        .map((c) => `${ident(c)} = excluded.${ident(c)}`)
       const sql =
         `INSERT INTO ${ident(table)} (${columns.map(ident).join(', ')}) ` +
         `VALUES (${columns.map(() => '?').join(', ')}) ` +
@@ -164,13 +199,13 @@ export function enqueue(input: {
   db.prepare(
     `INSERT OR REPLACE INTO sync_queue
       (client_id, entity, operation, payload, attempts, status, last_error, created_at)
-     VALUES (?, ?, ?, ?, 0, 'pending', NULL, ?)`
+     VALUES (?, ?, ?, ?, 0, 'pending', NULL, ?)`,
   ).run(
     input.clientId,
     input.entity,
     input.operation,
     JSON.stringify(input.payload),
-    new Date().toISOString()
+    new Date().toISOString(),
   )
 }
 
@@ -188,9 +223,7 @@ interface QueueRow {
 export function readQueue(): QueueEntry[] {
   if (!db) return []
 
-  const rows = db
-    .prepare(`SELECT * FROM sync_queue ORDER BY created_at ASC`)
-    .all() as QueueRow[]
+  const rows = db.prepare(`SELECT * FROM sync_queue ORDER BY created_at ASC`).all() as QueueRow[]
 
   return rows.map((row) => ({
     clientId: row.client_id,
@@ -214,7 +247,7 @@ export function resolveQueue(clientId: string, status: 'done' | 'failed', error?
 
   db.prepare(
     `UPDATE sync_queue SET status = 'failed', attempts = attempts + 1, last_error = ?
-     WHERE client_id = ?`
+     WHERE client_id = ?`,
   ).run(error ?? null, clientId)
 }
 
@@ -224,15 +257,100 @@ export function resolveQueue(clientId: string, status: 'done' | 'failed', error?
 
 export function getCursor(entity: LocalTable): string | null {
   if (!db) return null
-  const row = db
-    .prepare(`SELECT last_pulled_at FROM sync_cursor WHERE entity = ?`)
-    .get(entity) as { last_pulled_at: string } | undefined
+  const row = db.prepare(`SELECT last_pulled_at FROM sync_cursor WHERE entity = ?`).get(entity) as
+    { last_pulled_at: string } | undefined
   return row?.last_pulled_at ?? null
 }
 
 export function setCursor(entity: LocalTable, value: string): void {
   if (!db) return
-  db.prepare(
-    `INSERT OR REPLACE INTO sync_cursor (entity, last_pulled_at) VALUES (?, ?)`
-  ).run(entity, value)
+  db.prepare(`INSERT OR REPLACE INTO sync_cursor (entity, last_pulled_at) VALUES (?, ?)`).run(
+    entity,
+    value,
+  )
 }
+
+// ============================================
+// Workspace switching
+// ============================================
+
+/**
+ * The workspace this local cache currently holds, or null on a fresh install.
+ *
+ * The cached tables carry no `workspace_id` of their own: they are filled from
+ * REST endpoints that are already scoped to the caller's authorized workspace,
+ * so every row in them belongs to whichever workspace was active at pull time.
+ * That is sound right up until the active workspace CHANGES — at which point
+ * the cache holds one business's books while the app believes it is showing
+ * another's. Recording which one it is makes that detectable.
+ */
+export function getCachedWorkspace(): string | null {
+  if (!db) return null
+  const row = db.prepare(`SELECT value FROM meta WHERE key = 'workspace_id'`).get() as
+    { value: string } | undefined
+  return row?.value ?? null
+}
+
+/**
+ * Point the cache at a workspace, clearing it first if it held another one.
+ *
+ * Returns true when a purge happened.
+ *
+ * ⚠️ WHAT IS AND IS NOT DELETED
+ *
+ * The cached entity tables are discarded: they are a copy of server state and
+ * are refetched on the next pull, so losing them costs a round-trip and
+ * nothing else.
+ *
+ * `sync_queue` is NOT discarded. It holds mutations the user made offline that
+ * the server has never seen — deleting them destroys work that exists nowhere
+ * else. If any are pending, this refuses to switch and reports the count so
+ * the caller can flush them first. A shopkeeper who wrote three invoices on a
+ * plane must not lose them by tapping a workspace switcher on landing.
+ */
+export function setCachedWorkspace(workspaceId: string): {
+  purged: boolean
+  blockedByPendingMutations: number
+} {
+  if (!db) return { purged: false, blockedByPendingMutations: 0 }
+
+  const current = getCachedWorkspace()
+  if (current === workspaceId) return { purged: false, blockedByPendingMutations: 0 }
+
+  if (current !== null) {
+    const pending = db
+      .prepare(`SELECT count(*) AS n FROM sync_queue WHERE status <> 'failed'`)
+      .get() as { n: number }
+
+    if (pending.n > 0) {
+      return { purged: false, blockedByPendingMutations: pending.n }
+    }
+  }
+
+  // One transaction: a half-cleared cache mixing two businesses' rows is worse
+  // than either a full one or an empty one.
+  const purge = db.transaction(() => {
+    for (const table of CACHED_TABLES) {
+      db!.prepare(`DELETE FROM ${table === 'transaction' ? '"transaction"' : table}`).run()
+    }
+    db!.prepare(`DELETE FROM sync_cursor`).run()
+    db!
+      .prepare(`INSERT OR REPLACE INTO meta (key, value) VALUES ('workspace_id', ?)`)
+      .run(workspaceId)
+  })
+
+  purge()
+
+  return { purged: current !== null, blockedByPendingMutations: 0 }
+}
+
+/** Server-derived tables only. `sync_queue` is deliberately absent. */
+const CACHED_TABLES: readonly LocalTable[] = [
+  'product',
+  'customer',
+  'invoice',
+  'invoice_item',
+  'transaction',
+  'inventory_movement',
+  'employee',
+]

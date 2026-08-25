@@ -5,7 +5,8 @@
 
 import { supabase } from '../db'
 import { CreateCustomer, UpdateCustomer, CustomerFilters } from '@hisabche/validation'
-import { DatabaseError } from '../errors/database.error'
+import { DatabaseError, NotFoundError } from '../errors/database.error'
+import type { TenancyContext } from './tenancy.service'
 import { memoryCache } from '../utils/pagination'
 import { logBusinessEvent } from './event-log.service'
 
@@ -75,20 +76,27 @@ const DETAIL_COLUMNS =
 
 export class CustomerService {
   // ─── Cache Keys ────────────────────────────────────────────
-  private getListCacheKey(userId: string, filters: CustomerFilters) {
-    return `customers:${userId}:${JSON.stringify(filters)}`
+  //
+  // ⚠️ Keyed by WORKSPACE, not by user. These used to be `customers:${userId}`,
+  // which was correct while each user had a private set of customers. Under
+  // the shared-book model it is a bug in both directions: a customer added by
+  // the owner would be missing from the manager's list until the TTL expired,
+  // and each member would pay for their own copy of identical data.
+  private getListCacheKey(workspaceId: string, filters: CustomerFilters) {
+    return `customers:${workspaceId}:${JSON.stringify(filters)}`
   }
 
-  private getDetailCacheKey(userId: string, id: string) {
-    return `customer:${userId}:${id}`
+  private getDetailCacheKey(workspaceId: string, id: string) {
+    return `customer:${workspaceId}:${id}`
   }
 
-  private getBalanceCacheKey(userId: string, customerId: string) {
-    return `customer:balance:${userId}:${customerId}`
+  private getBalanceCacheKey(workspaceId: string, customerId: string) {
+    return `customer:balance:${workspaceId}:${customerId}`
   }
 
   // ─── List — Cursor-based Pagination ──────────────────────
-  async list(userId: string, filters: CustomerFilters) {
+  async list(ctx: TenancyContext, filters: CustomerFilters) {
+    const { workspaceId } = ctx
     const {
       search,
       isActive,
@@ -102,7 +110,7 @@ export class CustomerService {
     } = filters
 
     // ✅ کش کردن
-    const cacheKey = this.getListCacheKey(userId, filters)
+    const cacheKey = this.getListCacheKey(workspaceId, filters)
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
@@ -112,7 +120,7 @@ export class CustomerService {
     let query = supabase
       .from('customers')
       .select(LIST_COLUMNS)
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
       .order(sortBy, { ascending: sortDirection === 'asc' })
       .limit(fetchLimit)
 
@@ -137,7 +145,7 @@ export class CustomerService {
       supabase
         .from('customers')
         .select('id', { count: 'estimated', head: true })
-        .eq('user_id', userId),
+        .eq('workspace_id', workspaceId),
     ])
 
     const { data, error } = queryResult
@@ -148,7 +156,7 @@ export class CustomerService {
     const nextCursor = hasMore && items.length > 0 ? items[items.length - 1]?.id : null
 
     const roles = await this.resolveRoles(
-      userId,
+      workspaceId,
       (items || []).map((row) => (row as { id: string }).id),
     )
 
@@ -182,7 +190,7 @@ export class CustomerService {
    * One query for the whole page, not one per customer.
    */
   private async resolveRoles(
-    userId: string,
+    workspaceId: string,
     customerIds: string[],
   ): Promise<Map<string, PartyRole>> {
     const roles = new Map<string, PartyRole>()
@@ -191,7 +199,7 @@ export class CustomerService {
     const { data } = await supabase
       .from('invoices')
       .select('customer_id, type')
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
       .in('customer_id', customerIds)
 
     for (const row of data ?? []) {
@@ -207,16 +215,22 @@ export class CustomerService {
   }
 
   // ─── Get By ID ──────────────────────────────────────────
-  async getById(id: string, userId: string): Promise<CustomerWithBalance> {
-    const cacheKey = this.getDetailCacheKey(userId, id)
+  async getById(id: string, ctx: TenancyContext): Promise<CustomerWithBalance> {
+    const { workspaceId } = ctx
+    const cacheKey = this.getDetailCacheKey(workspaceId, id)
 
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached as CustomerWithBalance
 
     // ✅ موازی‌سازی: گرفتن customer + balance
     const [customerResult, balanceResult] = await Promise.all([
-      supabase.from('customers').select(DETAIL_COLUMNS).eq('id', id).eq('user_id', userId).single(),
-      this.getBalance(id, userId),
+      supabase
+        .from('customers')
+        .select(DETAIL_COLUMNS)
+        .eq('id', id)
+        .eq('workspace_id', workspaceId)
+        .single(),
+      this.getBalance(id, ctx),
     ])
 
     const { data: customer, error } = customerResult
@@ -232,7 +246,8 @@ export class CustomerService {
   }
 
   // ─── Create ──────────────────────────────────────────────
-  async create(userId: string, data: CreateCustomer): Promise<Customer> {
+  async create(ctx: TenancyContext, data: CreateCustomer): Promise<Customer> {
+    const { workspaceId, userId } = ctx
     const { data: customer, error } = await supabase
       .from('customers')
       .insert({
@@ -244,6 +259,9 @@ export class CustomerService {
         opening_balance: data.openingBalance || 0,
         is_active: data.isActive !== false,
         type: data.type || 'cash',
+        // workspace_id scopes the row; user_id records who created it. Both
+        // are written, and only the first is ever a filter.
+        workspace_id: workspaceId,
         user_id: userId,
       })
       .select(DETAIL_COLUMNS)
@@ -258,6 +276,7 @@ export class CustomerService {
         amount: data.openingBalance || 0,
         currency: 'AFN',
         description: 'Credit sale - opening balance',
+        workspace_id: workspaceId,
         user_id: userId,
       })
       if (txError) {
@@ -267,10 +286,11 @@ export class CustomerService {
     }
 
     // ✅ Clear cache
-    await this.invalidateCache(userId, customer.id)
+    await this.invalidateCache(workspaceId, customer.id)
 
     logBusinessEvent({
       userId,
+      workspaceId,
       entityType: 'customer',
       entityId: customer.id,
       action: 'created',
@@ -283,7 +303,8 @@ export class CustomerService {
   }
 
   // ─── Update ──────────────────────────────────────────────
-  async update(id: string, userId: string, data: UpdateCustomer): Promise<Customer> {
+  async update(id: string, ctx: TenancyContext, data: UpdateCustomer): Promise<Customer> {
+    const { workspaceId } = ctx
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (data.fullName !== undefined) updates.full_name = data.fullName
     if (data.phone !== undefined) updates.phone = data.phone
@@ -297,7 +318,7 @@ export class CustomerService {
       .from('customers')
       .update(updates)
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
       .select(DETAIL_COLUMNS)
       .single()
 
@@ -305,44 +326,66 @@ export class CustomerService {
     if (!customer) throw new DatabaseError('Customer not found')
 
     // ✅ Clear cache
-    await this.invalidateCache(userId, id)
+    await this.invalidateCache(workspaceId, id)
 
     return mapCustomer(customer)
   }
 
   // ─── Delete ──────────────────────────────────────────────
-  async delete(id: string, userId: string): Promise<void> {
+  async delete(id: string, ctx: TenancyContext): Promise<void> {
+    const { workspaceId } = ctx
+
     // ✅ count: estimated
     const { count } = await supabase
       .from('transactions')
       .select('id', { count: 'estimated', head: true })
       .eq('customer_id', id)
+      .eq('workspace_id', workspaceId)
 
     if (count && count > 0) {
       throw new DatabaseError('Customer has transactions, cannot delete')
     }
 
-    const { error } = await supabase.from('customers').delete().eq('id', id).eq('user_id', userId)
+    const { error } = await supabase
+      .from('customers')
+      .delete()
+      .eq('id', id)
+      .eq('workspace_id', workspaceId)
 
     if (error) throw new DatabaseError('Failed to delete customer', error)
 
     // ✅ Clear cache
-    await this.invalidateCache(userId, id)
+    await this.invalidateCache(workspaceId, id)
   }
 
   // ─── Get Balance ─────────────────────────────────────────
-  async getBalance(customerId: string, userId: string): Promise<BalanceResult> {
-    const cacheKey = this.getBalanceCacheKey(userId, customerId)
+  async getBalance(customerId: string, ctx: TenancyContext): Promise<BalanceResult> {
+    const { workspaceId } = ctx
+    const cacheKey = this.getBalanceCacheKey(workspaceId, customerId)
 
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached as BalanceResult
+
+    // The customer must belong to this workspace before its transactions are
+    // summed. `transactions_view` is a VIEW, and whether it exposes
+    // workspace_id is not something this service can assume — so tenancy is
+    // established on the `customers` table, which certainly has the column,
+    // and the sum then follows the verified customer id.
+    const { data: owned, error: ownerError } = await supabase
+      .from('customers')
+      .select('id')
+      .eq('id', customerId)
+      .eq('workspace_id', workspaceId)
+      .maybeSingle()
+
+    if (ownerError) throw new DatabaseError('Failed to verify customer', ownerError)
+    if (!owned) throw new NotFoundError('Customer')
 
     // ✅ فقط ستون‌های مورد نیاز + limit
     const { data: transactions, error } = await supabase
       .from('transactions_view')
       .select('type, amount')
       .eq('customer_id', customerId)
-      .eq('user_id', userId)
       .limit(10000)
 
     if (error) {
@@ -371,12 +414,12 @@ export class CustomerService {
   }
 
   // ─── Invalidate Cache ─────────────────────────────────────
-  private async invalidateCache(userId: string, customerId?: string) {
-    await memoryCache.invalidate(`customers:${userId}:*`)
-    await memoryCache.invalidate(`dashboard:${userId}`)
+  private async invalidateCache(workspaceId: string, customerId?: string) {
+    await memoryCache.invalidate(`customers:${workspaceId}:*`)
+    await memoryCache.invalidate(`dashboard:${workspaceId}`)
     if (customerId) {
-      await memoryCache.invalidate(`customer:${userId}:${customerId}`)
-      await memoryCache.invalidate(`customer:balance:${userId}:${customerId}`)
+      await memoryCache.invalidate(`customer:${workspaceId}:${customerId}`)
+      await memoryCache.invalidate(`customer:balance:${workspaceId}:${customerId}`)
     }
   }
 }

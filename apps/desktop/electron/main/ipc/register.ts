@@ -15,6 +15,7 @@ import {
   dbEnqueueSchema,
   dbQuerySchema,
   dbResolveQueueSchema,
+  dbSetWorkspaceSchema,
   dbUpsertSchema,
   exportFileSchema,
   importFileSchema,
@@ -161,6 +162,17 @@ export function registerIpcHandlers(): void {
       'record.delete',
       true,
     )(({ clientId, status, error }, event) => db.resolveQueue(clientId, status, error)),
+  )
+  handle(
+    IPC.dbSetWorkspace,
+    dbSetWorkspaceSchema,
+    // `record.delete`: this can discard the whole cached dataset, so it is
+    // gated at the same level as any other destructive local operation rather
+    // than treated as a settings write.
+    authenticateAndAuthorize(
+      'record.delete',
+      true,
+    )(({ workspaceId }, event) => db.setCachedWorkspace(workspaceId)),
   )
 
   // ─── Printing ─────────────────────────────────────────── (High privilege)

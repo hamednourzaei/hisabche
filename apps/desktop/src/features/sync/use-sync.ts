@@ -84,3 +84,50 @@ export function useBackgroundSync(): void {
     }
   }, [queryClient])
 }
+
+/**
+ * Keep the local SQLite cache pointed at the active workspace.
+ *
+ * The cached tables hold no workspace column of their own — they are filled
+ * from REST endpoints already scoped to the caller's authorized workspace. So
+ * every row is correct for whichever workspace was active AT PULL TIME, and
+ * stays on disk when the user switches to another one. Without this, switching
+ * workspace shows the previous business's invoices, offline and with no
+ * network involved at all.
+ *
+ * The purge is refused while unsynced mutations are queued: those exist
+ * nowhere but this device, and discarding them would destroy work a shopkeeper
+ * did offline. In that case this reports and leaves the cache alone — the
+ * caller should flush the queue and try again.
+ */
+export function useWorkspaceCache(workspaceId: string | null): {
+  blockedByPendingMutations: number
+} {
+  const queryClient = useQueryClient()
+  const [blocked, setBlocked] = useState(0)
+
+  useEffect(() => {
+    if (!workspaceId) return
+
+    let cancelled = false
+
+    void (async () => {
+      const result = await bridge()?.db.setWorkspace(workspaceId)
+      if (cancelled || !result) return
+
+      setBlocked(result.blockedByPendingMutations)
+
+      // A purge empties every cached table, so anything already rendered from
+      // the old workspace is now stale in React Query's cache too.
+      if (result.purged) {
+        await queryClient.invalidateQueries()
+      }
+    })()
+
+    return () => {
+      cancelled = true
+    }
+  }, [workspaceId, queryClient])
+
+  return { blockedByPendingMutations: blocked }
+}

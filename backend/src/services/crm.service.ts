@@ -5,6 +5,7 @@
 
 import { supabase } from '../db'
 import { CreateInteraction, CreateOpportunity, UpdateOpportunity } from '@hisabche/validation'
+import type { TenancyContext } from './tenancy.service'
 import { DatabaseError, NotFoundError } from '../errors/database.error'
 import { ValidationError } from '../errors/validation.error'
 import { memoryCache } from '../utils/pagination'
@@ -115,7 +116,14 @@ export class CrmService {
     return result
   }
 
-  async createInteraction(userId: string, data: CreateInteraction) {
+  /**
+   * `crm_interactions` is not yet workspace-scoped; its own rows still key on
+   * user_id. The CUSTOMER snapshot below is shared business data — without a
+   * workspace filter, a foreign customer id in the payload would copy another
+   * shop's customer name and phone into this interaction record.
+   */
+  async createInteraction(ctx: TenancyContext, data: CreateInteraction) {
+    const { workspaceId, userId } = ctx
     const customerIds =
       data.customerIds && data.customerIds.length > 0 ? data.customerIds : [data.customerId]
 
@@ -125,7 +133,7 @@ export class CrmService {
         .from('customers')
         .select('id, full_name, phone')
         .in('id', customerIds)
-        .eq('user_id', userId)
+        .eq('workspace_id', workspaceId)
       customersSnapshot = (customers || []).map((c: any) => ({
         id: c.id,
         name: c.full_name,

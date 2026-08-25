@@ -4,6 +4,21 @@
 import React, { Suspense, lazy, useMemo } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { ToastProvider } from '@hisabche/ui'
+import { bindActiveWorkspace } from '@hisabche/store'
+
+// Publish the active workspace into @hisabche/api, which scopes every realtime
+// subscription to one business. Without it, realtime resolves no workspace and
+// subscribes to nothing — a safe failure (missed wake-ups, not a cross-tenant
+// subscription), but the app would silently lose live updates.
+//
+// At module scope, not in an effect: React runs child effects BEFORE parent
+// ones, so a `useEffect` here would fire after the realtime hooks below it had
+// already looked for a workspace. Binding on import happens before the first
+// render, and the store rehydrates from localStorage synchronously, so a
+// returning user is bound with their real workspace from the very first pass.
+if (typeof window !== 'undefined') {
+  bindActiveWorkspace()
+}
 
 /* ═══════════════════════════════════════════════════════════════════════════
    Providers v2 — Memoized · Optimized

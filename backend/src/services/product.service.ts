@@ -8,6 +8,7 @@ import { CreateProduct, UpdateProduct, ProductFilters } from '@hisabche/validati
 import { DatabaseError, NotFoundError } from '../errors/database.error'
 import { mapProduct } from '../utils/product.mapper'
 import { memoryCache } from '../utils/pagination'
+import type { TenancyContext } from './tenancy.service'
 import { logBusinessEvent } from './event-log.service'
 
 // ✅ Column Selection Constants
@@ -22,33 +23,51 @@ const PRODUCT_MINIMAL = `
 `
 
 const SORT_BY_MAP: Record<string, string> = {
-  createdAt: 'created_at', updatedAt: 'updated_at',
-  sellPrice: 'sell_price', buyPrice: 'buy_price', minStockLevel: 'min_stock_level',
+  createdAt: 'created_at',
+  updatedAt: 'updated_at',
+  sellPrice: 'sell_price',
+  buyPrice: 'buy_price',
+  minStockLevel: 'min_stock_level',
 }
 
 export class ProductService {
-
   // ─── Cache Keys ──────────────────────────────────────────────
-  private getListCacheKey(userId: string, filters: ProductFilters) {
-    return `products:${userId}:${JSON.stringify(filters)}`
+  //
+  // ⚠️ Keyed by WORKSPACE. These were `products:${userId}`, which under the
+  // shared-book model hides a product one member added from every other
+  // member until the TTL expires. There is no userId fallback: a cache key is
+  // a tenancy identity, and a narrower one here would mask a route that never
+  // resolved a workspace.
+  private getListCacheKey(workspaceId: string, filters: ProductFilters) {
+    return `products:${workspaceId}:${JSON.stringify(filters)}`
   }
 
-  private getProductCacheKey(userId: string, id: string) {
-    return `product:${userId}:${id}`
+  private getProductCacheKey(workspaceId: string, id: string) {
+    return `product:${workspaceId}:${id}`
   }
 
-  private getLowStockCacheKey(userId: string) {
-    return `products:low_stock:${userId}`
+  private getLowStockCacheKey(workspaceId: string) {
+    return `products:low_stock:${workspaceId}`
   }
 
   // ─── List ────────────────────────────────────────────────────
-  async list(userId: string, filters: ProductFilters) {
+  async list(ctx: TenancyContext, filters: ProductFilters) {
+    const { workspaceId } = ctx
     const {
-      search, category, isActive, lowStock, minPrice, maxPrice, barcode,
-      limit = 20, cursor, sortBy = 'created_at', sortDirection = 'desc'
+      search,
+      category,
+      isActive,
+      lowStock,
+      minPrice,
+      maxPrice,
+      barcode,
+      limit = 20,
+      cursor,
+      sortBy = 'created_at',
+      sortDirection = 'desc',
     } = filters
 
-    const cacheKey = this.getListCacheKey(userId, filters)
+    const cacheKey = this.getListCacheKey(workspaceId, filters)
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
@@ -59,7 +78,7 @@ export class ProductService {
     let query = supabase
       .from('products')
       .select(PRODUCT_LIST_COLUMNS)
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
       .order(dbSortBy, { ascending: sortDirection === 'asc' })
       .limit(fetchLimit)
 
@@ -83,7 +102,7 @@ export class ProductService {
       supabase
         .from('products')
         .select('id', { count: 'estimated', head: true })
-        .eq('user_id', userId),
+        .eq('workspace_id', workspaceId),
     ])
 
     if (error) throw new DatabaseError('Failed to fetch products', error)
@@ -112,8 +131,9 @@ export class ProductService {
   }
 
   // ─── Get By ID ──────────────────────────────────────────────
-  async getById(id: string, userId: string) {
-    const cacheKey = this.getProductCacheKey(userId, id)
+  async getById(id: string, ctx: TenancyContext) {
+    const { workspaceId } = ctx
+    const cacheKey = this.getProductCacheKey(workspaceId, id)
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
@@ -121,7 +141,7 @@ export class ProductService {
       .from('products')
       .select(PRODUCT_LIST_COLUMNS)
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
       .single()
 
     if (error || !product) throw new NotFoundError('Product')
@@ -132,7 +152,8 @@ export class ProductService {
   }
 
   // ─── Create ──────────────────────────────────────────────────
-  async create(userId: string, data: CreateProduct) {
+  async create(ctx: TenancyContext, data: CreateProduct) {
+    const { workspaceId, userId } = ctx
     const { data: product, error } = await supabase
       .from('products')
       .insert({
@@ -149,6 +170,7 @@ export class ProductService {
         sell_price: data.sellPrice || 0,
         wholesale_price: data.wholesalePrice || null,
         is_active: data.isActive !== false,
+        workspace_id: workspaceId,
         user_id: userId,
       })
       .select(PRODUCT_LIST_COLUMNS)
@@ -156,10 +178,11 @@ export class ProductService {
 
     if (error) throw new DatabaseError('Failed to create product', error)
 
-    await this.invalidateUserCache(userId)
+    await this.invalidateWorkspaceCache(workspaceId)
 
     logBusinessEvent({
       userId,
+      workspaceId,
       entityType: 'product',
       entityId: product.id,
       action: 'created',
@@ -172,7 +195,8 @@ export class ProductService {
   }
 
   // ─── Update ──────────────────────────────────────────────────
-  async update(id: string, userId: string, data: UpdateProduct) {
+  async update(id: string, ctx: TenancyContext, data: UpdateProduct) {
+    const { workspaceId } = ctx
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (data.name !== undefined) updates.name = data.name
     if (data.barcode !== undefined) updates.barcode = data.barcode
@@ -192,20 +216,38 @@ export class ProductService {
       .from('products')
       .update(updates)
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
       .select(PRODUCT_LIST_COLUMNS)
       .single()
 
     if (error) throw new DatabaseError('Failed to update product', error)
     if (!product) throw new NotFoundError('Product')
 
-    await this.invalidateUserCache(userId)
+    await this.invalidateWorkspaceCache(workspaceId)
 
     return mapProduct(product)
   }
 
   // ─── Delete ──────────────────────────────────────────────────
-  async delete(id: string, userId: string): Promise<void> {
+  async delete(id: string, ctx: TenancyContext): Promise<void> {
+    const { workspaceId } = ctx
+
+    // Establish tenancy BEFORE probing the child tables. `invoice_items` and
+    // `stock_movements` carry no workspace_id — they are reached through the
+    // product — so without this a caller could learn whether some other
+    // workspace's product id has invoice items by reading which error came
+    // back. The delete below is workspace-scoped either way; this closes the
+    // existence oracle in front of it.
+    const { data: owned, error: ownedError } = await supabase
+      .from('products')
+      .select('id')
+      .eq('id', id)
+      .eq('workspace_id', workspaceId)
+      .maybeSingle()
+
+    if (ownedError) throw new DatabaseError('Failed to verify product', ownedError)
+    if (!owned) throw new NotFoundError('Product')
+
     const [{ count }, { count: stockCount }] = await Promise.all([
       supabase
         .from('invoice_items')
@@ -228,23 +270,24 @@ export class ProductService {
       .from('products')
       .delete()
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
 
     if (error) throw new DatabaseError('Failed to delete product', error)
 
-    await this.invalidateUserCache(userId)
+    await this.invalidateWorkspaceCache(workspaceId)
   }
 
   // ─── Get Low Stock ───────────────────────────────────────────
-  async getLowStock(userId: string) {
-    const cacheKey = this.getLowStockCacheKey(userId)
+  async getLowStock(ctx: TenancyContext) {
+    const { workspaceId } = ctx
+    const cacheKey = this.getLowStockCacheKey(workspaceId)
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
     const { data, error } = await supabase
       .from('products')
       .select(PRODUCT_MINIMAL)
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
       .eq('is_active', true)
       .order('quantity', { ascending: true })
 
@@ -259,15 +302,16 @@ export class ProductService {
   }
 
   // ─── Get Product by Barcode ──────────────────────────────────
-  async getByBarcode(userId: string, barcode: string) {
-    const cacheKey = `product:barcode:${userId}:${barcode}`
+  async getByBarcode(ctx: TenancyContext, barcode: string) {
+    const { workspaceId } = ctx
+    const cacheKey = `product:barcode:${workspaceId}:${barcode}`
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
     const { data, error } = await supabase
       .from('products')
       .select(PRODUCT_LIST_COLUMNS)
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
       .eq('barcode', barcode)
       .single()
 
@@ -279,15 +323,16 @@ export class ProductService {
   }
 
   // ─── Get Products by Category ────────────────────────────────
-  async getByCategory(userId: string, category: string) {
-    const cacheKey = `products:category:${userId}:${category}`
+  async getByCategory(ctx: TenancyContext, category: string) {
+    const { workspaceId } = ctx
+    const cacheKey = `products:category:${workspaceId}:${category}`
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
     const { data, error } = await supabase
       .from('products')
       .select(PRODUCT_MINIMAL)
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
       .eq('category', category)
       .eq('is_active', true)
       .order('name')
@@ -300,8 +345,9 @@ export class ProductService {
   }
 
   // ─── Get Product Stats — FIXED ──────────────────────────────
-  async getStats(userId: string) {
-    const cacheKey = `products:stats:${userId}`
+  async getStats(ctx: TenancyContext) {
+    const { workspaceId } = ctx
+    const cacheKey = `products:stats:${workspaceId}`
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
@@ -310,23 +356,23 @@ export class ProductService {
       supabase
         .from('products')
         .select('id', { count: 'estimated', head: true })
-        .eq('user_id', userId),
+        .eq('workspace_id', workspaceId),
       supabase
         .from('products')
         .select('id', { count: 'estimated', head: true })
-        .eq('user_id', userId)
+        .eq('workspace_id', workspaceId)
         .eq('is_active', true),
       supabase
         .from('products')
         .select('quantity, min_stock_level')
-        .eq('user_id', userId)
+        .eq('workspace_id', workspaceId)
         .eq('is_active', true),
     ])
 
     // ✅ محاسبه lowStock در JavaScript
-    const lowStockCount = (productsResult.data || [])
-      .filter((p: any) => Number(p.quantity) < Number(p.min_stock_level))
-      .length
+    const lowStockCount = (productsResult.data || []).filter(
+      (p: any) => Number(p.quantity) < Number(p.min_stock_level),
+    ).length
 
     const result = {
       total: totalResult.count || 0,
@@ -339,14 +385,14 @@ export class ProductService {
   }
 
   // ─── Invalidate Cache ────────────────────────────────────────
-  private async invalidateUserCache(userId: string) {
-    await memoryCache.invalidate(`products:${userId}:*`)
-    await memoryCache.invalidate(this.getLowStockCacheKey(userId))
-    await memoryCache.invalidate(`products:category:${userId}:*`)
-    await memoryCache.invalidate(`products:stats:${userId}`)
-    await memoryCache.invalidate(`product:${userId}:*`)
-    await memoryCache.invalidate(`product:barcode:${userId}:*`)
-    await memoryCache.invalidate(`dashboard:${userId}`)
+  private async invalidateWorkspaceCache(workspaceId: string) {
+    await memoryCache.invalidate(`products:${workspaceId}:*`)
+    await memoryCache.invalidate(this.getLowStockCacheKey(workspaceId))
+    await memoryCache.invalidate(`products:category:${workspaceId}:*`)
+    await memoryCache.invalidate(`products:stats:${workspaceId}`)
+    await memoryCache.invalidate(`product:${workspaceId}:*`)
+    await memoryCache.invalidate(`product:barcode:${workspaceId}:*`)
+    await memoryCache.invalidate(`dashboard:${workspaceId}`)
   }
 }
 

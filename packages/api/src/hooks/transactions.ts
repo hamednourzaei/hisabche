@@ -16,7 +16,13 @@ import { useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
-import type { Transaction, CreateTransaction, TransactionFilters, LedgerSummary } from '@hisabche/validation'
+import { useActiveWorkspaceId } from './useRealtime'
+import type {
+  Transaction,
+  CreateTransaction,
+  TransactionFilters,
+  LedgerSummary,
+} from '@hisabche/validation'
 
 export const transactionKeys = {
   all: ['transactions'] as const,
@@ -25,9 +31,15 @@ export const transactionKeys = {
   ledger: (customerId?: string) => ['ledger', customerId] as const,
 }
 
-export function useTransactions(filters: TransactionFilters = { page: 1, limit: 20, sortDirection: 'desc' }) {
+export function useTransactions(
+  filters: TransactionFilters = { page: 1, limit: 20, sortDirection: 'desc' },
+) {
   const authReady = useAuthReady()
   const queryClient = useQueryClient()
+  // Scopes the realtime subscription to this business's book — see
+  // subscribeToChannel(). Without it the client woke on every transaction
+  // written by any shop on the platform.
+  const workspaceId = useActiveWorkspaceId()
   const channelRef = useRef<{ unsubscribe: () => void } | null>(null)
 
   // ✅ FIX: تنها subscription realtime برای جدول transactions —
@@ -38,13 +50,16 @@ export function useTransactions(filters: TransactionFilters = { page: 1, limit: 
   useEffect(() => {
     if (typeof window === 'undefined') return
     if (!authReady) return
+    // No workspace yet (signing in, or still loading): subscribe to nothing
+    // rather than to everything. The effect re-runs when it arrives.
+    if (!workspaceId) return
 
     channelRef.current?.unsubscribe()
     let cancelled = false
 
     import('../supabase/realtime')
       .then(({ subscribeToChannel }) => {
-        subscribeToChannel('transactions', () => {
+        subscribeToChannel('transactions', workspaceId, () => {
           queryClient.invalidateQueries({ queryKey: transactionKeys.all })
           queryClient.invalidateQueries({ queryKey: ['ledger'] })
         })
@@ -68,13 +83,20 @@ export function useTransactions(filters: TransactionFilters = { page: 1, limit: 
       channelRef.current?.unsubscribe()
       channelRef.current = null
     }
+    // `workspaceId` MUST stay in this list. Without it, switching workspace
+    // leaves the previous workspace's channel subscribed for the life of the
+    // tab — still receiving wake-ups for a book the user no longer has open,
+    // and after leaving that workspace, for one they are no longer a member of.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authReady])
+  }, [authReady, workspaceId])
 
   return useQuery({
     queryKey: transactionKeys.list(filters),
     queryFn: async () => {
-      const response = await apiClient.get<{ transactions: Transaction[]; total: number }>('/transactions', { params: filters })
+      const response = await apiClient.get<{ transactions: Transaction[]; total: number }>(
+        '/transactions',
+        { params: filters },
+      )
       return (response as any).data || response
     },
     enabled: authReady,

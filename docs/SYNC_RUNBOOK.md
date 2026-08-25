@@ -24,11 +24,51 @@ psql "$SUPABASE_DATABASE_URL" -c "select current_database(), current_user;"
 
 ---
 
-## Step 1 — Apply the migration (staging first)
+## Step 0 — Tenancy correction (REQUIRED FIRST)
+
+> **Do not skip this.** `invoices`, `customers`, `products` and `transactions`
+> have no `workspace_id` — their tenancy is `user_id`, and
+> `documents/DATABASE_SCHEMA.md` is wrong about it. The sync triggers read
+> `NEW.workspace_id`, so applying Step 1 against that schema would raise
+> `record "new" has no field "workspace_id"` on **every insert** and take
+> invoice creation down.
+>
+> Step 1 now refuses to run until this is done. That guard is the only thing
+> standing between the old file and a production outage.
+
+`docs/tenancy-workspace-migration.sql` is in four parts. Run them **one at a
+time** and read the output of each.
+
+| Part       | What it does                                                          | Reversible |
+| ---------- | --------------------------------------------------------------------- | ---------- |
+| 1 ANALYSE  | Read-only. Reports mappable / orphaned / ambiguous per entity.        | n/a        |
+| 2 ADD      | Nullable `workspace_id` + `NOT VALID` FK + indexes.                   | yes        |
+| 3 BACKFILL | Fills only rows mapping to exactly one workspace, then validates FKs. | yes        |
+| 4 NOT NULL | Commented out. Human decision, after the app writes the column.       | no         |
+
+**Part 1 is the gate.** Its `verdict` column must read `SAFE` for all four
+entities before you continue. If any row is:
+
+- **ORPHANED** — its creator belongs to no workspace. Add the missing
+  `workspace_members` row; do not invent a workspace for the invoice.
+- **AMBIGUOUS** — its creator belongs to several workspaces, so which book the
+  row belongs to is genuinely unknowable from the data. Only someone who knows
+  the business can decide. The migration leaves these NULL rather than guessing.
+
+Nothing in Step 0 deletes, merges or overwrites a row.
+
+---
+
+## Step 1 — Apply the sync migration (staging first)
 
 ```bash
 psql "$SUPABASE_DATABASE_URL" -f docs/sync-engine-migration.sql
 ```
+
+It begins with a preflight that **fails closed** if `workspace_id` is missing
+from any of the four tables, and warns if the column is still nullable — a NULL
+workspace means the row never reaches any client's delta, which is silent
+divergence.
 
 The script is idempotent — every statement is `IF NOT EXISTS` or
 `CREATE OR REPLACE` — so re-running it is safe.
@@ -62,15 +102,50 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS sync_change_log_workspace_version_idx
 
 ## Step 2 — Verify on staging
 
-**Automated.** One command, exits non-zero on any failure:
+**Automated.** Two ways to run it — the script works in both.
+
+From the CLI, where it exits non-zero on any failure:
 
 ```bash
 psql "$SUPABASE_DATABASE_URL" -f scripts/verify-sync-migration.sql
 ```
 
-It covers all ten checks below, including the atomicity proof. Everything that
-follows is the manual equivalent, for when you want to inspect a single
-property by hand.
+Or paste the whole file into the **Supabase SQL editor**. It contains no psql
+backslash meta-commands (`\set`, `\timing`), because those are consumed by the
+psql CLI and never reach the server — any other client reports
+`syntax error at or near "\"`.
+
+**Reading the result.** Progress is reported twice, because `RAISE NOTICE`
+output is usually hidden in the Supabase editor:
+
+- psql prints a notice per check;
+- every client gets a final result table, one row per check.
+
+A pass looks like this:
+
+| check_name                           | status | detail              |
+| ------------------------------------ | ------ | ------------------- |
+| objects exist                        | ok     |                     |
+| columns added                        | ok     |                     |
+| existing data initialised            | ok     |                     |
+| no invoice wrongly finalized         | ok     |                     |
+| indexes present                      | ok     |                     |
+| change log written in-transaction    | ok     |                     |
+| change log rolls back with data      | ok     | THE atomicity proof |
+| version bumps on update              | ok     |                     |
+| finalized invoice is immutable       | ok     |                     |
+| sync columns writable when finalized | ok     |                     |
+| duplicate mutation_id refused        | ok     |                     |
+| cursor is monotonic                  | ok     |                     |
+
+Any failure raises an exception before reaching the `SELECT`, so **a short or
+empty result table is itself a failure** — read the error, do not proceed.
+
+The script is read-mostly: its few writes happen inside subtransactions that
+roll back, so it leaves no residue on the database.
+
+Everything that follows is the manual equivalent, for when you want to inspect
+a single property by hand.
 
 ```sql
 -- 1. Objects exist

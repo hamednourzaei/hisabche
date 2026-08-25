@@ -8,6 +8,7 @@ import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { InvoiceService } from '../services/invoice.service'
 import { ActivityService } from '../services/activity.service'
 import { authenticate } from '../middleware/auth.middleware'
+import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 
 const invoiceService = new InvoiceService()
@@ -18,7 +19,11 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/invoices',
     {
-      preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'invoices' })],
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'workspace', ttl: 60, keyPrefix: 'invoices' }),
+      ],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
@@ -40,8 +45,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
           sortDirection: (q.sortDirection as 'asc' | 'desc') ?? 'desc',
         }
 
-        const userId = (request as any).userId
-        const result = await invoiceService.list(userId, filters as any)
+        const result = await invoiceService.list(request.tenancy, filters as any)
         return reply.send(result)
       } catch (err: any) {
         fastify.log.error(err)
@@ -54,13 +58,16 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/invoices/:id',
     {
-      preHandler: [authenticate, cacheMiddleware({ ttl: 120, keyPrefix: 'invoice' })],
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'workspace', ttl: 120, keyPrefix: 'invoice' }),
+      ],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string }
-        const userId = (request as any).userId
-        const invoice = await invoiceService.getById(id, userId)
+        const invoice = await invoiceService.getById(id, request.tenancy)
         return reply.send(invoice)
       } catch (err: any) {
         fastify.log.error(err)
@@ -75,12 +82,12 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/invoices',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const body = request.body as any
-        const userId = (request as any).userId
+        const { workspaceId, userId } = request.tenancy
 
         const data = {
           type: body.type ?? 'sale',
@@ -132,13 +139,13 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
             })) ?? [],
         }
 
-        const invoice = await invoiceService.create(userId, data)
+        const invoice = await invoiceService.create(request.tenancy, data)
 
         // ✅ FIX: Invalidate all related caches
-        await clearCache(`invoices:${userId}:*`)
-        await clearCache(`dashboard:v2:${userId}`)
-        await clearCache(`sales:${userId}:*`)
-        await clearCache(`insights:${userId}`)
+        await clearCache(`invoices:${workspaceId}:*`)
+        await clearCache(`dashboard:v2:${workspaceId}`)
+        await clearCache(`sales:${workspaceId}:*`)
+        await clearCache(`insights:${workspaceId}`)
 
         // ⚠️ FIX (duplicate activity): this route used to create a SECOND
         // activity record for an invoice that `invoiceService.create` had
@@ -151,8 +158,8 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
         // resolved customer/supplier name, the workspace id and the
         // transaction type. This route only invalidates the caches.
         try {
-          await clearCache(`activities:${userId}:*`)
-          await clearCache(`activities-unread:${userId}`)
+          await clearCache(`activities:${workspaceId}:*`)
+          await clearCache(`activities-unread:${workspaceId}`)
         } catch (activityErr) {
           fastify.log.error(activityErr, 'Failed to clear activity cache after invoice create')
         }
@@ -171,28 +178,28 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/invoices/:id',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string }
         const body = request.body as any
-        const userId = (request as any).userId
-        const invoice = await invoiceService.update(id, userId, body)
+        const { workspaceId, userId } = request.tenancy
+        const invoice = await invoiceService.update(id, request.tenancy, body)
 
         // ✅ FIX: Invalidate all related caches
-        await clearCache(`invoice:${userId}:${id}`)
-        await clearCache(`invoices:${userId}:*`)
-        await clearCache(`dashboard:v2:${userId}`)
-        await clearCache(`sales:${userId}:*`)
-        await clearCache(`insights:${userId}`)
+        await clearCache(`invoice:${workspaceId}:${id}`)
+        await clearCache(`invoices:${workspaceId}:*`)
+        await clearCache(`dashboard:v2:${workspaceId}`)
+        await clearCache(`sales:${workspaceId}:*`)
+        await clearCache(`insights:${workspaceId}`)
 
         // ✅ FIX: Create activity record
         try {
           await activityService.createActivity({
             actorId: userId,
             actorName: (request as any).user?.email ?? '',
-            workspaceId: (request as any).workspaceId,
+            workspaceId,
             entityType: 'invoice',
             entityId: id,
             action: 'updated',
@@ -205,8 +212,8 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
             },
             importance: 1,
           })
-          await clearCache(`activities:${userId}:*`)
-          await clearCache(`activities-unread:${userId}`)
+          await clearCache(`activities:${workspaceId}:*`)
+          await clearCache(`activities-unread:${workspaceId}`)
         } catch (activityErr) {
           fastify.log.error(activityErr, 'Failed to create activity for invoice update')
         }
@@ -225,35 +232,35 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
   fastify.delete(
     '/api/invoices/:id',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string }
-        const userId = (request as any).userId
-        await invoiceService.delete(id, userId)
+        const { workspaceId, userId } = request.tenancy
+        await invoiceService.delete(id, request.tenancy)
 
         // ✅ FIX: Invalidate all related caches
-        await clearCache(`invoice:${userId}:${id}`)
-        await clearCache(`invoices:${userId}:*`)
-        await clearCache(`dashboard:v2:${userId}`)
-        await clearCache(`sales:${userId}:*`)
-        await clearCache(`insights:${userId}`)
+        await clearCache(`invoice:${workspaceId}:${id}`)
+        await clearCache(`invoices:${workspaceId}:*`)
+        await clearCache(`dashboard:v2:${workspaceId}`)
+        await clearCache(`sales:${workspaceId}:*`)
+        await clearCache(`insights:${workspaceId}`)
 
         // ✅ FIX: Create activity record
         try {
           await activityService.createActivity({
             actorId: userId,
             actorName: (request as any).user?.email ?? '',
-            workspaceId: (request as any).workspaceId,
+            workspaceId,
             entityType: 'invoice',
             entityId: id,
             action: 'deleted',
             title: 'فاکتور حذف شد',
             importance: 2,
           })
-          await clearCache(`activities:${userId}:*`)
-          await clearCache(`activities-unread:${userId}`)
+          await clearCache(`activities:${workspaceId}:*`)
+          await clearCache(`activities-unread:${workspaceId}`)
         } catch (activityErr) {
           fastify.log.error(activityErr, 'Failed to create activity for invoice delete')
         }

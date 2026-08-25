@@ -8,6 +8,7 @@ import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import { AnalyticsService } from '../services/analytics.service'
 import { authenticate } from '../middleware/auth.middleware'
+import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware } from '../middleware/cache.middleware'
 
 const toJsonSchema = (schema: any) => {
@@ -110,7 +111,11 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/analytics/dashboard',
     {
-      preHandler: [authenticate, cacheMiddleware({ ttl: 30, keyPrefix: 'dashboard' })],
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'workspace', ttl: 30, keyPrefix: 'dashboard' }),
+      ],
       schema: {
         response: {
           200: toJsonSchema(DashboardKPIsSchema),
@@ -119,7 +124,7 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const kpis = await analyticsService.getDashboardKpis(request.userId)
+        const kpis = await analyticsService.getDashboardKpis(request.tenancy)
         const validated = DashboardKPIsSchema.parse(kpis)
         return reply.send(validated)
       } catch (err) {
@@ -141,7 +146,11 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/analytics/sales',
     {
-      preHandler: [authenticate, cacheMiddleware({ ttl: 30, keyPrefix: 'sales' })],
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'workspace', ttl: 30, keyPrefix: 'sales' }),
+      ],
       schema: {
         querystring: toJsonSchema(DateRangeSchema),
         response: {
@@ -170,7 +179,7 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
           endDate: endDate as string,
         }
 
-        const summary = await analyticsService.getSalesSummary(request.userId, dateRange)
+        const summary = await analyticsService.getSalesSummary(request.tenancy, dateRange)
         const validated = SalesSummarySchema.parse(summary)
         return reply.send(validated)
       } catch (err) {
@@ -191,14 +200,18 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/analytics/inventory',
     {
-      preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'inventory' })],
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'workspace', ttl: 60, keyPrefix: 'inventory' }),
+      ],
       schema: {
         response: { 200: toJsonSchema(z.any()) },
       },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const summary = await analyticsService.getInventorySummary(request.userId)
+        const summary = await analyticsService.getInventorySummary(request.tenancy)
         return reply.send(summary)
       } catch (err) {
         fastify.log.error(err)
@@ -214,7 +227,11 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/analytics/financial',
     {
-      preHandler: [authenticate, cacheMiddleware({ ttl: 60, keyPrefix: 'financial' })],
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'workspace', ttl: 60, keyPrefix: 'financial' }),
+      ],
       schema: {
         querystring: toJsonSchema(
           z.object({
@@ -243,7 +260,7 @@ export default async function analyticsRoutes(fastify: FastifyInstance) {
           endDate: endDate as string,
         }
 
-        const summary = await analyticsService.getFinancialSummary(request.userId, dateRange)
+        const summary = await analyticsService.getFinancialSummary(request.tenancy, dateRange)
         return reply.send(summary)
       } catch (err) {
         if (err instanceof z.ZodError) {

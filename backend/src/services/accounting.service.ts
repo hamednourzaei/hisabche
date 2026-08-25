@@ -4,11 +4,8 @@
 // ============================================
 
 import { supabase } from '../db'
-import { 
-  CreateAccount, 
-  UpdateAccount, 
-  CreateJournalEntry,
-} from '@hisabche/validation'
+import type { TenancyContext } from './tenancy.service'
+import { CreateAccount, UpdateAccount, CreateJournalEntry } from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
 import { memoryCache } from '../utils/pagination'
 
@@ -31,7 +28,6 @@ interface TrialBalanceAccount {
 }
 
 export class AccountingService {
-  
   // ─── Cache Keys ───────────────────────────────────────────
   private getAccountsCacheKey(userId: string) {
     return `accounts:${userId}`
@@ -52,7 +48,7 @@ export class AccountingService {
   // ─── Account Management ──────────────────────────────────
   async listAccounts(userId: string) {
     const cacheKey = this.getAccountsCacheKey(userId)
-    
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
@@ -64,7 +60,7 @@ export class AccountingService {
       .order('code')
 
     if (error) throw new DatabaseError('Failed to fetch accounts', error)
-    
+
     const result = data || []
     await memoryCache.set(cacheKey, result, 300) // 5 دقیقه
     return result
@@ -85,9 +81,9 @@ export class AccountingService {
       .single()
 
     if (error) throw new DatabaseError('Failed to create account', error)
-    
+
     await memoryCache.invalidate(this.getAccountsCacheKey(userId))
-    
+
     return account
   }
 
@@ -108,32 +104,34 @@ export class AccountingService {
       .single()
 
     if (error) throw new DatabaseError('Failed to update account', error)
-    
+
     await memoryCache.invalidate(this.getAccountsCacheKey(userId))
-    
+
     return account
   }
 
   // ─── Journal Entries ─────────────────────────────────────
   async listJournalEntries(userId: string) {
     const cacheKey = `journal_entries:${userId}`
-    
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
     const { data, error } = await supabase
       .from('journal_entries')
-      .select(`
+      .select(
+        `
         ${JOURNAL_ENTRY_LIST_COLUMNS},
         lines:journal_lines(${JOURNAL_LINE_LIST_COLUMNS})
-      `)
+      `,
+      )
       .eq('user_id', userId)
       .is('deleted_at', null)
       .order('date', { ascending: false })
       .limit(50)
 
     if (error) throw new DatabaseError('Failed to fetch journal entries', error)
-    
+
     const result = data || []
     await memoryCache.set(cacheKey, result, 60) // 1 دقیقه
     return result
@@ -162,7 +160,7 @@ export class AccountingService {
       throw new DatabaseError('Failed to create journal entry', entryError)
     }
 
-    const lines = data.lines.map(line => ({
+    const lines = data.lines.map((line) => ({
       journal_id: entry.id,
       account_id: line.accountId,
       debit: line.debit,
@@ -185,19 +183,21 @@ export class AccountingService {
 
   async getJournalEntry(id: string, userId: string) {
     const cacheKey = `journal_entry:${userId}:${id}`
-    
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
     const { data, error } = await supabase
       .from('journal_entries')
-      .select(`
+      .select(
+        `
         id, date, description, reference, created_at, updated_at,
         lines:journal_lines(
           id, debit, credit,
           account:accounts(${ACCOUNT_MINIMAL_COLUMNS})
         )
-      `)
+      `,
+      )
       .eq('id', id)
       .eq('user_id', userId)
       .single()
@@ -205,7 +205,7 @@ export class AccountingService {
     if (error || !data) {
       throw new DatabaseError('Journal entry not found', error)
     }
-    
+
     await memoryCache.set(cacheKey, data, 300) // 5 دقیقه
     return data
   }
@@ -214,16 +214,18 @@ export class AccountingService {
 
   async getTrialBalance(userId: string, date: string): Promise<TrialBalanceAccount[]> {
     const cacheKey = this.getTrialBalanceCacheKey(userId, date)
-    
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached as TrialBalanceAccount[]
 
     const { data, error } = await supabase
       .from('journal_lines')
-      .select(`
+      .select(
+        `
         debit, credit, account_id,
         account:accounts!inner(id, code, name, type)
-      `)
+      `,
+      )
       .eq('user_id', userId)
       .eq('account.user_id', userId)
       .lte('created_at', date)
@@ -264,7 +266,7 @@ export class AccountingService {
       entry.credit += Number(line.credit) || 0
     }
 
-    const result: TrialBalanceAccount[] = Array.from(accountMap.values()).map(a => ({
+    const result: TrialBalanceAccount[] = Array.from(accountMap.values()).map((a) => ({
       ...a,
       balance: a.debit - a.credit,
     }))
@@ -275,7 +277,7 @@ export class AccountingService {
 
   async getBalanceSheet(userId: string, date: string) {
     const cacheKey = this.getBalanceSheetCacheKey(userId, date)
-    
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
@@ -283,8 +285,16 @@ export class AccountingService {
     const trialBalance = await this.getTrialBalance(userId, date)
     const accounts = Array.isArray(trialBalance) ? trialBalance : []
 
-    let assetsTotal = 0, liabilitiesTotal = 0, equityTotal = 0, revenueTotal = 0, expensesTotal = 0
-    const assets: any[] = [], liabilities: any[] = [], equity: any[] = [], revenue: any[] = [], expenses: any[] = []
+    let assetsTotal = 0,
+      liabilitiesTotal = 0,
+      equityTotal = 0,
+      revenueTotal = 0,
+      expensesTotal = 0
+    const assets: any[] = [],
+      liabilities: any[] = [],
+      equity: any[] = [],
+      revenue: any[] = [],
+      expenses: any[] = []
 
     for (const account of accounts) {
       switch (account.accountType) {
@@ -335,7 +345,7 @@ export class AccountingService {
 
   async getIncomeStatement(userId: string, fromDate: string, toDate: string) {
     const cacheKey = this.getIncomeStatementCacheKey(userId, fromDate, toDate)
-    
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
@@ -343,7 +353,8 @@ export class AccountingService {
     const trialBalance = await this.getTrialBalance(userId, toDate)
     const accounts = Array.isArray(trialBalance) ? trialBalance : []
 
-    let revenue = 0, expenses = 0
+    let revenue = 0,
+      expenses = 0
     for (const account of accounts) {
       if (account.accountType === 'revenue') {
         revenue += Math.abs(account.balance)
@@ -365,16 +376,22 @@ export class AccountingService {
   }
 
   // ─── Cash Flow Report ────────────────────────────────────
-  async getCashFlow(userId: string, startDate: string, endDate: string) {
-    const cacheKey = `cash_flow:${userId}:${startDate}:${endDate}`
-    
+  /**
+   * `accounts` and `journal_entries` are not yet workspace-scoped tables; they
+   * still key on user_id. `transactions` IS shared business data, so it is
+   * workspace-scoped here — and the cache key follows the data it holds.
+   */
+  async getCashFlow(ctx: TenancyContext, startDate: string, endDate: string) {
+    const { workspaceId } = ctx
+    const cacheKey = `cash_flow:${workspaceId}:${startDate}:${endDate}`
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
     const { data: transactions, error } = await supabase
       .from('transactions')
       .select('type, amount, description, date')
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
       .gte('date', startDate)
       .lte('date', endDate)
       .order('date', { ascending: true })
@@ -399,9 +416,13 @@ export class AccountingService {
       }
     }
 
-    const netChange = operating.inflow - operating.outflow +
-                      investing.inflow - investing.outflow +
-                      financing.inflow - financing.outflow
+    const netChange =
+      operating.inflow -
+      operating.outflow +
+      investing.inflow -
+      investing.outflow +
+      financing.inflow -
+      financing.outflow
 
     const result = {
       operating: {
@@ -431,9 +452,12 @@ export class AccountingService {
   }
 
   // ─── Customer Debt Report ──────────────────────────────────
-  async getCustomerDebtReport(userId: string) {
-    const cacheKey = `customer_debt:${userId}`
-    
+  async getCustomerDebtReport(ctx: TenancyContext) {
+    const { workspaceId } = ctx
+    // A debt report is built entirely from shared business data, so both its
+    // queries and its cache identity are the workspace.
+    const cacheKey = `customer_debt:${workspaceId}`
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
@@ -441,20 +465,20 @@ export class AccountingService {
       supabase
         .from('customers')
         .select('id, full_name, opening_balance')
-        .eq('user_id', userId)
+        .eq('workspace_id', workspaceId)
         .eq('is_active', true),
       supabase
         .from('invoices')
         .select('customer_id, total, paid_amount')
-        .eq('user_id', userId)
-        .neq('status', 'paid')
+        .eq('workspace_id', workspaceId)
+        .neq('status', 'paid'),
     ])
 
     const customers = customersResult.data || []
     const invoices = invoicesResult.data || []
 
     const debtMap: Record<string, { name: string; balance: number; totalInvoices: number }> = {}
-    
+
     for (const c of customers) {
       debtMap[c.id] = {
         name: c.full_name,
@@ -472,11 +496,11 @@ export class AccountingService {
     }
 
     const debtors = Object.values(debtMap)
-      .filter(d => d.balance > 0)
+      .filter((d) => d.balance > 0)
       .sort((a, b) => b.balance - a.balance)
 
     const creditors = Object.values(debtMap)
-      .filter(d => d.balance < 0)
+      .filter((d) => d.balance < 0)
       .sort((a, b) => a.balance - b.balance)
 
     const result = {
