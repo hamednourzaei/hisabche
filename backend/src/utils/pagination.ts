@@ -47,7 +47,7 @@ export async function keysetPaginate<T>(
   table: string,
   columns: string,
   userId: string,
-  params: PaginationParams = {}
+  params: PaginationParams = {},
 ): Promise<PaginatedResponse<T>> {
   const { limit = 20, cursor } = params
 
@@ -68,13 +68,14 @@ export async function keysetPaginate<T>(
   if (error) throw error
 
   const hasMore = (data?.length || 0) > limit
-  const items = hasMore ? data!.slice(0, limit) : (data || [])
+  const items = hasMore ? data!.slice(0, limit) : data || []
 
   // ✅ Fix: Cast to any برای دسترسی به created_at
   const lastItem = items.length > 0 ? (items[items.length - 1] as any) : null
-  const nextCursor = hasMore && lastItem && lastItem.created_at
-    ? Buffer.from(lastItem.created_at).toString('base64')
-    : undefined
+  const nextCursor =
+    hasMore && lastItem && lastItem.created_at
+      ? Buffer.from(lastItem.created_at).toString('base64')
+      : undefined
 
   return {
     data: items as T[],
@@ -82,7 +83,7 @@ export async function keysetPaginate<T>(
       hasMore,
       nextCursor,
       total: count !== null ? count : undefined,
-    }
+    },
   }
 }
 
@@ -108,7 +109,10 @@ const l1 = new Map<string, { value: unknown; expiresAt: number }>()
 function l1Get<T>(key: string): T | null {
   const hit = l1.get(key)
   if (!hit) return null
-  if (Date.now() > hit.expiresAt) { l1.delete(key); return null }
+  if (Date.now() > hit.expiresAt) {
+    l1.delete(key)
+    return null
+  }
   return hit.value as T
 }
 
@@ -134,17 +138,22 @@ class MemoryCache {
     await cacheService.set(key, data, ttlSeconds ?? DEFAULT_TTL_SECONDS)
   }
 
-  // ✅ FIX: قبلاً با پیمایش دستی روی Map و key.includes(pattern)
-  // کار می‌کرد. الان از delPattern واقعی Redis (که با SCAN،
-  // نه KEYS، پیاده شده — همان چیزی که در cache.service.ts دیدیم)
-  // استفاده می‌کند. ورودی این متد در فراخوانی‌های فعلی پروژه گاهی
-  // یک substring ساده است (نه glob pattern با *) — چون
-  // cacheService.delPattern از MATCH با glob استفاده می‌کند، اگر
-  // ورودی خودش * نداشته باشد، به صورت خودکار با *...* پوشانده
-  // می‌شود تا رفتار قبلی (شامل‌بودن substring) حفظ شود.
+  // D5 — a bare key invalidates its PREFIX family (`key*`), never an
+  // arbitrary SUBSTRING (`*key*`).
+  //
+  // The previous wrapper turned every invalidate into `*…key…*`: it matched
+  // unrelated keys that merely contained the fragment, and it made each key
+  // trivially self-matching, which hid the fact that SIBLING keys carrying the
+  // same subject (e.g. `usage:<uid>:<feature>` next to `usage:<uid>`) were
+  // never being cleared together. Prefix matching clears the family and
+  // nothing else; callers wanting a narrower or wider sweep pass their own
+  // glob (several services already pass explicit `…:*` patterns).
+  //
+  // The L1 is small and short-lived (5s TTL), so it is cleared wholesale —
+  // preserving the original behaviour — rather than pattern-matched.
   async invalidate(pattern: string): Promise<void> {
     l1.clear()
-    const globPattern = pattern.includes('*') ? pattern : `*${pattern}*`
+    const globPattern = pattern.includes('*') ? pattern : `${pattern}*`
     await cacheService.delPattern(globPattern)
   }
 
@@ -163,7 +172,7 @@ export const memoryCache = new MemoryCache()
 export async function withCache<T>(
   key: string,
   ttlSeconds: number,
-  fetcher: () => Promise<T>
+  fetcher: () => Promise<T>,
 ): Promise<T> {
   const cached = await memoryCache.get<T>(key)
   if (cached !== null) {

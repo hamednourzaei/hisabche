@@ -6,6 +6,7 @@
 import { Plan } from '@hisabche/validation'
 import { BillingService } from './billing.service'
 import { DatabaseError } from '../errors/database.error'
+import { ForbiddenError } from '../errors/auth.error'
 import { supabase } from '../db'
 import { memoryCache } from '../utils/pagination'
 import { logBusinessEvent } from './event-log.service'
@@ -15,8 +16,10 @@ const CHECKOUT_SESSION_TTL = 30 * 60 // 30 minutes
 const CHECKOUT_CACHE_TTL = 60 // 1 minute
 
 // ─── Column Selection ──────────────────────────────────────
-const CHECKOUT_SESSION_COLUMNS = 'id, user_id, plan, interval, status, stripe_session_id, checkout_url, idempotency_key, created_at, expires_at, updated_at'
-const CHECKOUT_MINIMAL_COLUMNS = 'id, user_id, plan, interval, status, stripe_session_id, checkout_url, idempotency_key'
+const CHECKOUT_SESSION_COLUMNS =
+  'id, user_id, plan, interval, status, stripe_session_id, checkout_url, idempotency_key, created_at, expires_at, updated_at'
+const CHECKOUT_MINIMAL_COLUMNS =
+  'id, user_id, plan, interval, status, stripe_session_id, checkout_url, idempotency_key'
 
 // ─── Interface for Payment Provider ────────────────────────
 export interface PaymentProvider {
@@ -61,12 +64,15 @@ interface SaveCheckoutSessionData {
 export class CheckoutService {
   private billingService: BillingService
   private paymentProvider: PaymentProvider | null = null
-  private pendingCheckouts: Map<string, { 
-    userId: string; 
-    plan: Plan; 
-    interval: 'month' | 'year';
-    timeout: NodeJS.Timeout;
-  }> = new Map()
+  private pendingCheckouts: Map<
+    string,
+    {
+      userId: string
+      plan: Plan
+      interval: 'month' | 'year'
+      timeout: NodeJS.Timeout
+    }
+  > = new Map()
 
   constructor() {
     this.billingService = new BillingService()
@@ -102,7 +108,7 @@ export class CheckoutService {
 
     // ۳. ایجاد Checkout Session
     const session = await this.paymentProvider.createCheckoutSession(params)
-    
+
     // ۴. ذخیره checkout_id در دیتابیس
     await this.saveCheckoutSession({
       id: session.checkoutId,
@@ -147,6 +153,16 @@ export class CheckoutService {
     if (checkout.status === 'completed') {
       console.log(`ℹ️ Checkout ${checkoutId} already completed`)
       return
+    }
+
+    // ۲.۵ ✅ OWNERSHIP GUARD — the checkout session belongs to a specific
+    // buyer. `userId` here is the ACTING caller (from the auth token); a
+    // checkout created by another user must never be finalized by this one.
+    // Before this guard, any authenticated user who could name (or guess) a
+    // pending checkout id could hand themselves whatever plan that session
+    // was bought for.
+    if (checkout.user_id !== userId) {
+      throw new ForbiddenError('Checkout session does not belong to this user')
     }
 
     // ۳. ارتقا اشتراک
@@ -206,7 +222,7 @@ export class CheckoutService {
   // ─── Private: Simulate Checkout ──────────────────────────
   private async simulateCheckout(params: CheckoutParams): Promise<CheckoutResult> {
     const checkoutId = `checkout_${Date.now()}_${params.userId.slice(0, 8)}`
-    
+
     const timeout = setTimeout(async () => {
       try {
         await this.handleCheckoutSuccess(params.userId, checkoutId)
@@ -302,7 +318,9 @@ export class CheckoutService {
   }
 
   // ─── Private: Get by Idempotency Key ─────────────────────
-  private async getCheckoutByIdempotencyKey(idempotencyKey: string): Promise<CheckoutResult | null> {
+  private async getCheckoutByIdempotencyKey(
+    idempotencyKey: string,
+  ): Promise<CheckoutResult | null> {
     const { data, error } = await supabase
       .from('checkout_sessions')
       .select(CHECKOUT_SESSION_COLUMNS)
@@ -323,7 +341,7 @@ export class CheckoutService {
   private async cacheCheckoutSession(checkoutId: string, data: any): Promise<void> {
     const cacheKey = this.getCheckoutCacheKey(checkoutId)
     await memoryCache.set(cacheKey, data, CHECKOUT_CACHE_TTL)
-    
+
     const userCacheKey = this.getCheckoutByUserCacheKey(data.userId)
     await memoryCache.set(userCacheKey, { checkoutId, data }, CHECKOUT_CACHE_TTL)
   }

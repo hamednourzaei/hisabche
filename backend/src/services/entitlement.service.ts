@@ -8,6 +8,7 @@ import type { TenancyContext } from './tenancy.service'
 import { Plan } from '@hisabche/validation'
 import { BillingService } from './billing.service'
 import { memoryCache } from '../utils/pagination'
+import { DatabaseError } from '../errors/database.error'
 
 // ✅ Types
 export interface Entitlements {
@@ -239,12 +240,20 @@ export class EntitlementService {
         // Per workspace: the invoice limit applies to the business's book.
         // Counting per user would let a three-member shop write three times
         // the plan's invoices.
-        const { count } = await supabase
+        //
+        // D4 — fail closed. A count error here used to read as `count: 0`,
+        // i.e. "plenty of room", so a database hiccup silently lifted the
+        // plan's cap. An unreadable count must not widen the quota.
+        const { count, error } = await supabase
           .from('invoices')
           .select('id', { count: 'estimated', head: true })
           .eq('workspace_id', workspaceId)
 
-        const current = count || 0
+        if (error) {
+          throw new DatabaseError(`Failed to count invoices for usage limit`, error)
+        }
+
+        const current = count ?? 0
         if (current >= limit) {
           return {
             allowed: false,
@@ -259,12 +268,19 @@ export class EntitlementService {
         const limit = entitlements.maxUsers
         if (limit === null) return { allowed: true, reason: null }
 
-        const { count } = await supabase
+        // D2 — members of THIS workspace only. Filtering by the acting user
+        // alone counted seats across every workspace they belong to and let a
+        // seat freed in another business block this one; the limit is per shop.
+        const { count, error } = await supabase
           .from('workspace_members')
           .select('id', { count: 'estimated', head: true })
-          .eq('user_id', userId)
+          .eq('workspace_id', workspaceId)
 
-        const current = count || 0
+        if (error) {
+          throw new DatabaseError(`Failed to count workspace members for usage limit`, error)
+        }
+
+        const current = count ?? 0
         if (current >= limit) {
           return {
             allowed: false,
@@ -279,16 +295,28 @@ export class EntitlementService {
         const limit = entitlements.maxWorkspaces
         if (limit === null) return { allowed: true, reason: null }
 
-        // ⚠️ BUG — this filtered `.eq('user_id', userId)`, but `workspaces`
-        // has no `user_id` column; ownership is `owner_id`. PostgREST returned
-        // no rows, so `current` was always 0 and this quota has never been
-        // enforced. Corrected to the real column.
-        const { count } = await supabase
+        // D3 — ownership is `workspaces.owner_id`. This filtered
+        // `.eq('user_id', userId)` against a column that does not exist;
+        // PostgREST returned an error, `count` came back undefined, and the
+        // workspace quota has never been enforced. Corrected to the real
+        // column — workspaces are counted by owner, not by membership, since
+        // being a seller in someone else's shop is not running a business.
+        // D3 — ownership is `workspaces.owner_id`. This filtered
+        // `.eq('user_id', userId)` against a column that does not exist;
+        // PostgREST returned an error, `count` came back undefined, and the
+        // workspace quota has never been enforced. Corrected to the real
+        // column — workspaces are counted by owner, not by membership, since
+        // being a seller in someone else's shop is not running a business.
+        const { count, error } = await supabase
           .from('workspaces')
           .select('id', { count: 'estimated', head: true })
           .eq('owner_id', userId)
 
-        const current = count || 0
+        if (error) {
+          throw new DatabaseError(`Failed to count owned workspaces for usage limit`, error)
+        }
+
+        const current = count ?? 0
         if (current >= limit) {
           return {
             allowed: false,

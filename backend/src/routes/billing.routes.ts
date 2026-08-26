@@ -8,6 +8,7 @@ import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import { BillingService, PLANS } from '../services/billing.service'
 import { authenticate } from '../middleware/auth.middleware'
+import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 import { Plan } from '@hisabche/validation'
 
@@ -109,13 +110,21 @@ export async function billingRoutes(fastify: FastifyInstance) {
   )
 
   // ─── GET /api/billing/usage ──────────────────────────────────
+  // Usage meters count WORKSPACE-owned rows (invoices, transactions, seats),
+  // so the response is workspace-scoped data: membership is enforced and the
+  // cache is keyed by the workspace, not by whichever member asked.
   fastify.get(
     '/api/billing/usage',
     {
-      preHandler: [authenticate, cacheMiddleware({ scope: 'user', ttl: 120, keyPrefix: 'usage' })],
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'workspace', ttl: 120, keyPrefix: 'usage' }),
+      ],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const usage = await billingService.getUsageReport(request.userId)
+      const { workspaceId } = request.tenancy
+      const usage = await billingService.getUsageReport(request.userId, workspaceId)
       const subscription = await billingService.getCurrentSubscription(request.userId)
       const plan = PLANS[subscription.plan as Plan]
       return reply.send({ usage, limits: plan.limits })

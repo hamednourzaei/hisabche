@@ -1,17 +1,36 @@
 // ============================================
-// backend/src/services/webhook.service.ts — Optimized v2.2
-// FIXED: Removed supabase.raw(), use standard queries
+// backend/src/services/webhook.service.ts — v2.3
+//
+// D1 — webhook events are resolved to OUR subscription row by STRIPE
+// identifiers, then mutated BY PRIMARY KEY. The previous code trusted
+// `client_reference_id` as a user id and updated `.eq('user_id', …)`, which
+// meant any event whose payload we didn't control could retarget whichever
+// subscription belonged to that user — and `setSubscriptionStatus` wrote the
+// raw Stripe status string through `as any`, bypassing our status enum.
+//
+// Resolution order (see resolveSubscriptionRow):
+//   1. subscriptions.stripe_subscription_id  ← written by upgrade()
+//   2. subscriptions.stripe_customer_id      ← written by upgrade()
+//   3. LEGACY-ONLY: client_reference_id treated as the buyer's user id,
+//      pinned to that user's OLDEST subscription row. This exists solely for
+//      events produced before Stripe ids were persisted (i.e. every live
+//      subscription until the first renewal after this deploy). It is covered
+//      by a dedicated test and can only ever land on a row the buyer already
+//      owns — it never widens what a webhook may touch.
+// An event that resolves to NOTHING fails with success:false so Stripe
+// retries; it is never logged as processed and never reported as handled.
 // ============================================
 
 import { supabase } from '../db'
-import { BillingService } from './billing.service'
+import { planEnum } from '@hisabche/validation'
+import { BillingService, mapStripeStatus } from './billing.service'
 import { DatabaseError } from '../errors/database.error'
 import { memoryCache } from '../utils/pagination'
 
 export interface WebhookEvent {
   id: string
   type: string
-  data: any
+  data: Record<string, unknown>
   timestamp: Date
 }
 
@@ -19,6 +38,40 @@ export interface WebhookResult {
   success: boolean
   action: string
   error?: string
+}
+
+/** The parts of a Stripe event object this service reads. */
+interface StripeEventObject {
+  subscription?: string | null
+  customer?: string | null
+  client_reference_id?: string | null
+  status?: string | null
+  metadata?: Record<string, string> | null
+}
+
+/** The columns resolution needs back from our own row. */
+const SUBSCRIPTION_ROW_COLUMNS = 'id, user_id, workspace_id'
+
+interface SubscriptionRowRef {
+  id: string
+  user_id: string | null
+  workspace_id: string | null
+}
+
+const CHECKOUT_INTERVALS = ['month', 'year'] as const
+type CheckoutInterval = (typeof CHECKOUT_INTERVALS)[number]
+
+function parseInterval(raw: unknown): CheckoutInterval {
+  if (typeof raw === 'string' && (CHECKOUT_INTERVALS as readonly string[]).includes(raw)) {
+    return raw as CheckoutInterval
+  }
+  return 'month'
+}
+
+/** Narrow the event payload's `object` defensively — it crosses a trust boundary. */
+function objectOf(data: Record<string, unknown>): StripeEventObject {
+  const raw = data.object
+  return (typeof raw === 'object' && raw !== null ? raw : {}) as StripeEventObject
 }
 
 export class WebhookService {
@@ -54,27 +107,27 @@ export class WebhookService {
 
       let result: WebhookResult
 
-      switch(event.type) {
+      switch (event.type) {
         case 'checkout.session.completed':
           result = await this.handleCheckoutCompleted(event)
           break
-        
+
         case 'invoice.paid':
           result = await this.handleInvoicePaid(event)
           break
-        
+
         case 'invoice.payment_failed':
           result = await this.handlePaymentFailed(event)
           break
-        
+
         case 'customer.subscription.deleted':
           result = await this.handleSubscriptionDeleted(event)
           break
-        
+
         case 'customer.subscription.updated':
           result = await this.handleSubscriptionUpdated(event)
           break
-        
+
         default:
           result = { success: true, action: 'ignored' }
       }
@@ -95,72 +148,157 @@ export class WebhookService {
     }
   }
 
-  // ─── Handle: Checkout Completed ──────────────────────────────────
-  private async handleCheckoutCompleted(event: WebhookEvent): Promise<WebhookResult> {
-    const session = event.data.object
-    const userId = session.client_reference_id
-    const plan = session.metadata?.plan || 'pro'
-    const interval = session.metadata?.interval || 'month'
-
-    if (!userId) {
-      throw new DatabaseError('Missing user_id in webhook')
+  // ─── Resolve OUR subscription row from the Stripe object ────
+  //
+  // Every branch ends in the same place: a primary key of OUR row. Nothing
+  // here lets the payload name a workspace or another user's subscription.
+  private async resolveSubscriptionRow(
+    object: StripeEventObject,
+  ): Promise<SubscriptionRowRef | null> {
+    // 1. Our row stamped with the Stripe subscription id (post-upgrade events).
+    if (object.subscription) {
+      const { data } = await supabase
+        .from('subscriptions')
+        .select(SUBSCRIPTION_ROW_COLUMNS)
+        .eq('stripe_subscription_id', object.subscription)
+        .maybeSingle()
+      if (data) return data
     }
 
-    await this.billingService.upgrade(userId, plan, interval)
-    await this.invalidateUserCache(userId)
+    // 2. Our row stamped with the Stripe customer id (renewals that omit the
+    //    subscription reference). Oldest wins for determinism, mirroring how
+    //    user-shaped subscription reads disambiguate.
+    if (object.customer) {
+      const { data } = await supabase
+        .from('subscriptions')
+        .select(SUBSCRIPTION_ROW_COLUMNS)
+        .eq('stripe_customer_id', object.customer)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle()
+      if (data) return data
+    }
+
+    // 3. LEGACY COMPATIBILITY ONLY — see header. Events emitted before
+    //    upgrade() began persisting Stripe ids carry only the buyer's user id
+    //    in client_reference_id. Restricted to that buyer's OWN oldest row;
+    //    a webhook can still never reach a subscription belonging to anyone
+    //    else. Once all live rows carry Stripe ids this branch is dead code
+    //    kept for replayed historical events.
+    if (object.client_reference_id) {
+      const { data } = await supabase
+        .from('subscriptions')
+        .select(SUBSCRIPTION_ROW_COLUMNS)
+        .eq('user_id', object.client_reference_id)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle()
+      if (data) return data
+    }
+
+    return null
+  }
+
+  // ─── Handle: Checkout Completed ──────────────────────────────────
+  private async handleCheckoutCompleted(event: WebhookEvent): Promise<WebhookResult> {
+    const session = objectOf(event.data)
+    const planRaw = session.metadata?.plan
+    const interval = parseInterval(session.metadata?.interval)
+
+    // Metadata crosses an external boundary — validate it like one. An
+    // unrecognized plan used to fall back to 'pro', letting a malformed event
+    // hand out the paid tier.
+    const parsedPlan = planEnum.safeParse(planRaw)
+    if (!parsedPlan.success) {
+      throw new DatabaseError(`Unrecognized plan in webhook metadata: ${String(planRaw)}`)
+    }
+
+    const row = await this.resolveSubscriptionRow(session)
+    if (!row) {
+      // Not reported as handled: Stripe will retry while we (or a human) figure
+      // out which subscription this belongs to.
+      throw new DatabaseError(
+        `No subscription row resolved for checkout session (event ${event.id})`,
+      )
+    }
+
+    // exactOptionalPropertyTypes: properties are assigned only when present,
+    // never set to explicit undefined.
+    const stripeIds: { customerId?: string; subscriptionId?: string } = {}
+    if (session.customer) stripeIds.customerId = session.customer
+    if (session.subscription) stripeIds.subscriptionId = session.subscription
+
+    await this.billingService.upgradeSubscriptionRow(row.id, parsedPlan.data, interval, stripeIds)
+    await this.invalidateUserCache(row)
 
     return { success: true, action: 'upgraded' }
   }
 
   // ─── Handle: Invoice Paid ──────────────────────────────────────
   private async handleInvoicePaid(event: WebhookEvent): Promise<WebhookResult> {
-    const invoice = event.data.object
-    const userId = invoice.client_reference_id
+    const invoice = objectOf(event.data)
 
-    if (userId) {
-      await this.extendSubscription(userId)
-      await this.invalidateUserCache(userId)
+    const row = await this.resolveSubscriptionRow(invoice)
+    if (!row) {
+      throw new DatabaseError(`No subscription row resolved for invoice.paid (event ${event.id})`)
     }
+
+    await this.billingService.extendSubscriptionRow(row.id)
+    await this.invalidateUserCache(row)
 
     return { success: true, action: 'invoice_paid' }
   }
 
   // ─── Handle: Payment Failed ─────────────────────────────────────
   private async handlePaymentFailed(event: WebhookEvent): Promise<WebhookResult> {
-    const invoice = event.data.object
-    const userId = invoice.client_reference_id
+    const invoice = objectOf(event.data)
 
-    if (userId) {
-      await this.setSubscriptionStatus(userId, 'past_due')
-      await this.invalidateUserCache(userId)
+    const row = await this.resolveSubscriptionRow(invoice)
+    if (!row) {
+      throw new DatabaseError(
+        `No subscription row resolved for invoice.payment_failed (event ${event.id})`,
+      )
     }
+
+    await this.billingService.setSubscriptionRowStatus(row.id, 'past_due')
+    await this.invalidateUserCache(row)
 
     return { success: true, action: 'payment_failed' }
   }
 
   // ─── Handle: Subscription Deleted ──────────────────────────────
   private async handleSubscriptionDeleted(event: WebhookEvent): Promise<WebhookResult> {
-    const subscription = event.data.object
-    const userId = subscription.client_reference_id
+    const subscription = objectOf(event.data)
 
-    if (userId) {
-      await this.setSubscriptionStatus(userId, 'cancelled')
-      await this.invalidateUserCache(userId)
+    const row = await this.resolveSubscriptionRow(subscription)
+    if (!row) {
+      throw new DatabaseError(
+        `No subscription row resolved for subscription deletion (event ${event.id})`,
+      )
     }
+
+    await this.billingService.setSubscriptionRowStatus(row.id, 'cancelled')
+    await this.invalidateUserCache(row)
 
     return { success: true, action: 'subscription_deleted' }
   }
 
   // ─── Handle: Subscription Updated ─────────────────────────────
   private async handleSubscriptionUpdated(event: WebhookEvent): Promise<WebhookResult> {
-    const subscription = event.data.object
-    const userId = subscription.client_reference_id
-    const status = subscription.status
+    const subscription = objectOf(event.data)
 
-    if (userId) {
-      await this.setSubscriptionStatus(userId, status)
-      await this.invalidateUserCache(userId)
+    const row = await this.resolveSubscriptionRow(subscription)
+    if (!row) {
+      throw new DatabaseError(
+        `No subscription row resolved for subscription update (event ${event.id})`,
+      )
     }
+
+    // Stripe statuses are mapped through our enum; anything unmapped THROWS
+    // rather than being written verbatim (the old `as any` behaviour).
+    const status = mapStripeStatus(subscription.status)
+    await this.billingService.setSubscriptionRowStatus(row.id, status)
+    await this.invalidateUserCache(row)
 
     return { success: true, action: 'subscription_updated' }
   }
@@ -173,86 +311,43 @@ export class WebhookService {
       .eq('id', eventId)
       .single()
 
-    return !!data
+    return !error && !!data
   }
 
   // ─── Private: Log Webhook ──────────────────────────────────────
   private async logWebhook(event: WebhookEvent): Promise<void> {
-    const { error } = await supabase
-      .from('webhook_events')
-      .upsert({
+    const { error } = await supabase.from('webhook_events').upsert(
+      {
         id: event.id,
         type: event.type,
         payload: event.data,
         processed_at: new Date().toISOString(),
-      }, {
+      },
+      {
         onConflict: 'id',
         ignoreDuplicates: true,
-      })
+      },
+    )
 
     if (error) {
       console.error('Failed to log webhook:', error)
     }
   }
 
-  // ─── Private: Extend Subscription — FIXED ──────────────────────
-  private async extendSubscription(userId: string): Promise<void> {
-    // ✅ FIX: گرفتن subscription فعلی و به‌روزرسانی
-    const { data: subscription, error: fetchError } = await supabase
-      .from('subscriptions')
-      .select('period_end')
-      .eq('user_id', userId)
-      .single()
-
-    if (fetchError || !subscription) {
-      console.error('Failed to fetch subscription:', fetchError)
-      throw new DatabaseError('Failed to fetch subscription', fetchError)
-    }
-
-    // ✅ محاسبه period_end جدید
-    const currentPeriodEnd = new Date(subscription.period_end)
-    const newPeriodEnd = new Date(currentPeriodEnd)
-    newPeriodEnd.setMonth(newPeriodEnd.getMonth() + 1)
-
-    // ✅ به‌روزرسانی با مقدار جدید
-    const { error: updateError } = await supabase
-      .from('subscriptions')
-      .update({
-        period_end: newPeriodEnd.toISOString(),
-        status: 'active',
-        updated_at: new Date().toISOString(),
-      })
-      .eq('user_id', userId)
-
-    if (updateError) {
-      console.error('Failed to extend subscription:', updateError)
-      throw new DatabaseError('Failed to extend subscription', updateError)
-    }
-  }
-
-  // ─── Private: Set Subscription Status ──────────────────────────
-  private async setSubscriptionStatus(userId: string, status: string): Promise<void> {
-    const { error } = await supabase
-      .from('subscriptions')
-      .update({
-        status: status as any,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('user_id', userId)
-
-    if (error) {
-      console.error('Failed to set subscription status:', error)
-      throw new DatabaseError('Failed to set subscription status', error)
-    }
-  }
-
   // ─── Private: Invalidate User Cache ────────────────────────────
-  private async invalidateUserCache(userId: string): Promise<void> {
-    await memoryCache.invalidate(this.getSubscriptionCacheKey(userId))
-    await memoryCache.invalidate(`dashboard:v2:${userId}`)
-    await memoryCache.invalidate(`entitlements:${userId}`)
-    await memoryCache.invalidate(`feature_flags:${userId}`)
-    await memoryCache.invalidate(`limits:${userId}`)
+  // Flushes the user-shaped keys always, plus the workspace-shaped twin when
+  // the resolved row carries a workspace (DECISION A readers).
+  private async invalidateUserCache(row: SubscriptionRowRef): Promise<void> {
+    if (row.user_id) {
+      await memoryCache.invalidate(this.getSubscriptionCacheKey(row.user_id))
+      await memoryCache.invalidate(`dashboard:v2:${row.user_id}`)
+      await memoryCache.invalidate(`entitlements:${row.user_id}`)
+      await memoryCache.invalidate(`feature_flags:${row.user_id}`)
+      await memoryCache.invalidate(`limits:${row.user_id}`)
+    }
+    if (row.workspace_id) {
+      await memoryCache.invalidate(`subscription:ws:${row.workspace_id}`)
+    }
   }
 
   // ─── Get Webhook Stats ──────────────────────────────────────────
