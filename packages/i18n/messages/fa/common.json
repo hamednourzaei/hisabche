@@ -2875,5 +2875,25 @@
       "settingsTitle": "تنظیمات فاکتور",
       "continue": "پیش‌نمایش و ادامه"
     }
+  },
+  "admin": {
+    "dashboard": {
+      "title": "داشبورد پلتفرم",
+      "planMix": "توزیع پلن‌ها",
+      "ofTotal": "از {total} اشتراک"
+    },
+    "kpi": {
+      "totalWorkspaces": "کل کسب‌وکارها",
+      "activeWorkspaces": "کسب‌وکارهای فعال",
+      "newThisMonth": "جدید در این ماه",
+      "totalMembers": "کل اعضا",
+      "activeSubscriptions": "اشتراک‌های فعال",
+      "expiredSubscriptions": "اشتراک‌های منقضی",
+      "expiringSoon": "انقضا تا ۷ روز",
+      "trialSubscriptions": "دوره آزمایشی"
+    },
+    "notice": {
+      "migrationInProgress": "مهاجرت اشتراک‌ها در جریان است — {percent}٪ به کسب‌وکار نسبت داده شده‌اند. توزیع پلن‌ها هنوز همه را پوشش نمی‌دهد."
+    }
   }
 }

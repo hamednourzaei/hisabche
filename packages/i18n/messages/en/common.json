@@ -2870,5 +2870,25 @@
       "settingsTitle": "Invoice settings",
       "continue": "Preview and continue"
     }
+  },
+  "admin": {
+    "dashboard": {
+      "title": "Platform dashboard",
+      "planMix": "Plan mix",
+      "ofTotal": "of {total} subscriptions"
+    },
+    "kpi": {
+      "totalWorkspaces": "Total workspaces",
+      "activeWorkspaces": "Active workspaces",
+      "newThisMonth": "New this month",
+      "totalMembers": "Total members",
+      "activeSubscriptions": "Active subscriptions",
+      "expiredSubscriptions": "Expired subscriptions",
+      "expiringSoon": "Expiring in 7 days",
+      "trialSubscriptions": "On trial"
+    },
+    "notice": {
+      "migrationInProgress": "Subscription migration in progress — {percent}% attributed to a workspace. The plan mix below does not yet cover every business."
+    }
   }
 }

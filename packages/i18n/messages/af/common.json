@@ -2879,5 +2879,25 @@
       "settingsTitle": "تنظیمات بل",
       "continue": "پیش‌نمایش و ادامه"
     }
+  },
+  "admin": {
+    "dashboard": {
+      "title": "دشبورد پلتفورم",
+      "planMix": "ویش پلان‌ها",
+      "ofTotal": "از {total} اشتراک"
+    },
+    "kpi": {
+      "totalWorkspaces": "ټول سوداګرۍ",
+      "activeWorkspaces": "فعالې سوداګرۍ",
+      "newThisMonth": "پدې میاشت کې نوي",
+      "totalMembers": "ټول غړي",
+      "activeSubscriptions": "فعال اشتراکونه",
+      "expiredSubscriptions": "پای ته رسېدلي اشتراکونه",
+      "expiringSoon": "په ۷ ورځو کې پای",
+      "trialSubscriptions": "آزمایښتي دوره"
+    },
+    "notice": {
+      "migrationInProgress": "د اشتراکونو لېږد روان دی — {percent}٪ سوداګرۍ ته منسوب شوي. د پلان ویش لا ټول نه پوښي."
+    }
   }
 }

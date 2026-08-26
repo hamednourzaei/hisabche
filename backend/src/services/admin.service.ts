@@ -25,7 +25,7 @@
 
 import { supabase } from '../db'
 import { AuditService } from './audit.service'
-import { BillingService } from './billing.service'
+import { BillingService, PLANS } from './billing.service'
 import { Plan, SubscriptionStatus, planEnum, subscriptionStatusEnum } from '@hisabche/validation'
 import { DatabaseError, NotFoundError } from '../errors/database.error'
 
@@ -50,9 +50,19 @@ const WEBHOOK_EVENT_COLUMNS = 'id, type, processed_at'
 /** Hard ceiling shared by every listing route. */
 export const ADMIN_MAX_PAGE_SIZE = 100
 
+/**
+ * `| undefined` is explicit because this repo runs with
+ * `exactOptionalPropertyTypes: true`, where `limit?: number` means "may be
+ * absent, but never the value undefined". Zod's `.optional()` produces exactly
+ * that value, so the route could not pass its own parsed query through.
+ *
+ * Widening here rather than loosening tsconfig: `clampPage` below already
+ * handles undefined with `?? 50`, so this makes the type honest about the
+ * values the function has always accepted.
+ */
 interface PageOpts {
-  limit?: number
-  offset?: number
+  limit?: number | undefined
+  offset?: number | undefined
 }
 
 function clampPage(opts: PageOpts): { limit: number; offset: number } {
@@ -68,7 +78,7 @@ export interface AdminActorContext {
   ipAddress?: string | null
   userAgent?: string | null
   /** Business justification — stored inside the audit record's new_data. */
-  reason?: string
+  reason?: string | undefined
 }
 
 interface SubscriptionRow {
@@ -112,33 +122,117 @@ export class AdminService {
     }
   }
 
+  /**
+   * Platform KPIs.
+   *
+   * Every field names the query that produces it. Nothing is estimated and
+   * nothing is hardcoded — the previous version returned `activeUsers: 1`
+   * with the comment "Minimum current platform admin session", which is not a
+   * measurement of anything.
+   *
+   * ⚠️ DELIBERATELY ABSENT: MRR, ARR, monthly revenue, revenue charts.
+   *
+   * There is no authoritative pricing source in this database. `PLANS` carries
+   * name/limits/featureKeys and NO price; `checkout_sessions` carries no amount
+   * and no currency. Any revenue figure here would be invented — and an
+   * invented revenue number on the control panel of a financial SaaS is worse
+   * than an absent one. When a real billing ledger exists, add it here; never
+   * infer it from plan names.
+   *
+   * Performance: every count is `head: true` with `count: 'exact'`, so
+   * PostgREST returns a count and zero rows. Nothing is loaded into memory and
+   * there is no per-workspace query — a fixed number of round-trips however
+   * many workspaces exist.
+   */
   async getMetrics() {
-    // Count workspaces (businesses)
-    const { count: businessesCount } = await supabase
-      .from('workspaces')
-      .select('*', { count: 'exact', head: true })
+    const now = new Date()
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString()
+    const inSevenDays = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()
 
-    // Count products as a proxy for inventory size
-    const { count: productsCount } = await supabase
-      .from('products')
-      .select('*', { count: 'exact', head: true })
-
-    // Count subscriptions if table exists
-    let subscriptionsCount = 0
-    try {
-      const { count } = await supabase
-        .from('subscriptions')
-        .select('*', { count: 'exact', head: true })
-      subscriptionsCount = count ?? 0
-    } catch {
-      subscriptionsCount = 0
+    /** Count only, never rows. Returns 0 rather than throwing on a missing table. */
+    const countOf = async (table: string, build: (q: any) => any = (q) => q): Promise<number> => {
+      try {
+        const { count, error } = await build(
+          supabase.from(table).select('id', { count: 'exact', head: true }),
+        )
+        return error ? 0 : (count ?? 0)
+      } catch {
+        return 0
+      }
     }
 
+    const [
+      totalWorkspaces,
+      activeWorkspaces,
+      newWorkspacesToday,
+      newWorkspacesThisMonth,
+      totalMembers,
+      subscriptionsTotal,
+      activeSubscriptions,
+      expiredSubscriptions,
+      expiringInSevenDays,
+      trialSubscriptions,
+      subscriptionsWithWorkspace,
+    ] = await Promise.all([
+      countOf('workspaces'),
+      countOf('workspaces', (q) => q.eq('is_active', true)),
+      countOf('workspaces', (q) => q.gte('created_at', startOfToday)),
+      countOf('workspaces', (q) => q.gte('created_at', startOfMonth)),
+
+      // Active seats, not raw rows: a suspended or access-revoked member is not
+      // a member for any purpose that matters.
+      countOf('workspace_members', (q) => q.eq('has_access', true).is('suspended_at', null)),
+
+      countOf('subscriptions'),
+      countOf('subscriptions', (q) => q.eq('status', 'active')),
+      countOf('subscriptions', (q) => q.lt('period_end', now.toISOString())),
+      countOf('subscriptions', (q) =>
+        q.gte('period_end', now.toISOString()).lte('period_end', inSevenDays),
+      ),
+      countOf('subscriptions', (q) => q.eq('is_trial', true)),
+      countOf('subscriptions', (q) => q.not('workspace_id', 'is', null)),
+    ])
+
+    // Plan mix, read from the real `plan` column. Keys come from PLANS, so a
+    // plan added there appears here without touching this file.
+    const planKeys = Object.keys(PLANS)
+    const planCounts = await Promise.all(
+      planKeys.map((plan) => countOf('subscriptions', (q) => q.eq('plan', plan))),
+    )
+    const byPlan: Record<string, number> = {}
+    planKeys.forEach((plan, i) => {
+      byPlan[plan] = planCounts[i] ?? 0
+    })
+
     return {
-      totalBusinesses: businessesCount ?? 0,
-      totalProducts: productsCount ?? 0,
-      totalSubscriptions: subscriptionsCount,
-      activeUsers: 1, // Minimum current platform admin session
+      workspaces: {
+        total: totalWorkspaces,
+        active: activeWorkspaces,
+        newToday: newWorkspacesToday,
+        newThisMonth: newWorkspacesThisMonth,
+      },
+      members: { total: totalMembers },
+      subscriptions: {
+        total: subscriptionsTotal,
+        active: activeSubscriptions,
+        expired: expiredSubscriptions,
+        expiringInSevenDays,
+        trial: trialSubscriptions,
+        byPlan,
+        /**
+         * Migration progress: 100 once every subscription carries a
+         * workspace_id. Below 100 while
+         * docs/subscription-workspace-migration.sql is mid-flight, and the UI
+         * must be able to say so rather than quietly showing a plan mix that
+         * does not cover every business.
+         */
+        workspaceAttributedPercent:
+          subscriptionsTotal === 0
+            ? 100
+            : Math.round((subscriptionsWithWorkspace / subscriptionsTotal) * 100),
+      },
+      generatedAt: now.toISOString(),
     }
   }
 
@@ -168,7 +262,7 @@ export class AdminService {
 
   // ─── Workspaces ──────────────────────────────────────────────
 
-  async listWorkspaces(opts: PageOpts & { search?: string }) {
+  async listWorkspaces(opts: PageOpts & { search?: string | undefined }) {
     const { limit, offset } = clampPage(opts)
 
     let query = supabase.from('workspaces').select(WORKSPACE_COLUMNS, { count: 'exact' })
@@ -212,7 +306,14 @@ export class AdminService {
 
     // Limits are shown only for a RECOGNIZED plan — a legacy/garbage value
     // must not crash the detail view.
-    const parsedPlan = subscription?.plan ? planEnum.safeParse(subscription.plan) : null
+    //
+    // The cast is needed because the column list is built from a runtime
+    // string constant, so Supabase cannot infer a row type and widens the
+    // result to include its error shape. `safeParse` below is the real guard:
+    // whatever `plan` actually holds, an unrecognised value yields no limits
+    // rather than an exception.
+    const subscriptionRow = subscription as { plan?: unknown } | null
+    const parsedPlan = subscriptionRow?.plan ? planEnum.safeParse(subscriptionRow.plan) : null
     const planLimits = parsedPlan?.success
       ? this.billingService.getPlanFeatures(parsedPlan.data).limits
       : null
@@ -242,7 +343,7 @@ export class AdminService {
 
   // ─── Users (relationship views — NOT a tenancy boundary) ────
 
-  async searchUsers(opts: PageOpts & { search?: string }) {
+  async searchUsers(opts: PageOpts & { search?: string | undefined }) {
     const { limit, offset } = clampPage(opts)
 
     let query = supabase.from('users').select(USER_COLUMNS, { count: 'exact' })
@@ -317,7 +418,9 @@ export class AdminService {
 
   // ─── Subscriptions ───────────────────────────────────────────
 
-  async listSubscriptions(opts: PageOpts & { plan?: Plan; status?: SubscriptionStatus }) {
+  async listSubscriptions(
+    opts: PageOpts & { plan?: Plan | undefined; status?: SubscriptionStatus | undefined },
+  ) {
     const { limit, offset } = clampPage(opts)
 
     let query = supabase.from('subscriptions').select(SUBSCRIPTION_COLUMNS, { count: 'exact' })
@@ -425,8 +528,12 @@ export class AdminService {
         ...snapshot(after),
         ...(actor.reason !== undefined && { reason: actor.reason }),
       },
-      ipAddress: actor.ipAddress ?? null,
-      userAgent: actor.userAgent ?? null,
+      // `undefined`, not `null`: CreateAuditLog marks these optional, and
+      // audit.service.log() already coalesces to NULL on the way into the
+      // column (`data.ipAddress || null`). Passing null here only fights the
+      // schema without changing what is stored.
+      ipAddress: actor.ipAddress ?? undefined,
+      userAgent: actor.userAgent ?? undefined,
     })
 
     return { subscription: after, previous: snapshot(before) }
@@ -440,7 +547,10 @@ export class AdminService {
       .maybeSingle()
 
     if (error) throw new DatabaseError('Failed to fetch subscription', error)
-    return (data as SubscriptionRow) ?? null
+    // Via `unknown`: the column list is a runtime string, so Supabase widens
+    // the result to include its error shape and refuses a direct cast. The
+    // `error` check above is what actually establishes this is a row.
+    return (data as unknown as SubscriptionRow) ?? null
   }
 
   // ─── Billing visibility (read-only) ──────────────────────────
