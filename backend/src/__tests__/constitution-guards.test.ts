@@ -87,12 +87,37 @@ describe('laws 32 & 33 — one engine per domain truth', () => {
     // Every other resolver that ever existed failed open — `?? userId`, `|| ''`
     // — and each was a fabricated tenancy boundary. There is now exactly one,
     // and it fails closed.
+    // Reading `workspace_members` is not automatically a violation — some
+    // domains legitimately OWN that table. The law is about deriving REQUEST
+    // TENANCY from it, which is what the three fail-open resolvers used to do.
+    // Each exemption names why it is not that.
+    const OWNS_MEMBERSHIP_DATA = new Map([
+      ['backend/src/services/tenancy.service.ts', 'the one sanctioned resolver'],
+      ['backend/src/middleware/auth.middleware.ts', 'reads role for display, not tenancy'],
+      [
+        'backend/src/services/workspace.service.ts',
+        'the membership domain owner — CRUD on its own table',
+      ],
+      [
+        'backend/src/services/admin.service.ts',
+        'platform-admin domain, separately guarded; lists memberships as data',
+      ],
+      [
+        'backend/src/services/event-log.service.ts',
+        'stamps activity rows; fails closed, never falls back to a user id',
+      ],
+      ['backend/src/services/password-reset.service.ts', 'notifies workspace members of a reset'],
+      [
+        'backend/src/plugins/job-scheduler.plugin.ts',
+        'background jobs iterate workspaces; there is no request tenancy',
+      ],
+    ])
+
     const offenders: string[] = []
 
     for (const file of backendFiles) {
       const name = rel(file)
-      if (name.endsWith('services/tenancy.service.ts')) continue
-      if (name.endsWith('middleware/auth.middleware.ts')) continue // reads role, not tenancy
+      if (OWNS_MEMBERSHIP_DATA.has(name)) continue
 
       const code = stripComments(readFileSync(file, 'utf8'))
       // A membership query that SELECTS workspace_id is a tenancy resolution.
@@ -153,6 +178,41 @@ describe('laws 1 & 14 — financial history is not deletable from a service', ()
     // §12.18: every financial state transition must be auditable. A service
     // that can delete the audit trail can erase the evidence of its own
     // actions. Corrections go through reversal/adjustment (§12.15), never DELETE.
+    //
+    // Two deletion shapes are legitimate, named here so the guard stays sharp
+    // instead of being switched off wholesale:
+    //
+    //   COMPENSATING ROLLBACK — a journal header whose lines failed to insert
+    //   is not history, it is a half-write. An entry with no lines can never
+    //   balance, so removing it RESTORES the SUM(DEBIT)=SUM(CREDIT) invariant
+    //   rather than breaking it.
+    //
+    //   RETENTION — audit.service.cleanup() is behind platformAdminGuard and
+    //   writes its own audit marker BEFORE deleting, so the deletion is itself
+    //   recorded and the marker outlives the cutoff.
+    const ALLOWED_DELETES = new Map([
+      [
+        'backend/src/services/accounting.service.ts -> journal_entries',
+        'compensating rollback of a failed lines insert',
+      ],
+      [
+        'backend/src/services/accounting.service.ts -> journal_lines',
+        'compensating rollback of a failed lines insert',
+      ],
+      [
+        'backend/src/services/invoice.service.ts -> journal_entries',
+        'compensating rollback of a failed lines insert',
+      ],
+      [
+        'backend/src/services/invoice.service.ts -> journal_lines',
+        'compensating rollback of a failed lines insert',
+      ],
+      [
+        'backend/src/services/audit.service.ts -> audit_logs',
+        'gated retention; writes its own audit marker first',
+      ],
+    ])
+
     const offenders: string[] = []
 
     for (const file of backendFiles) {
@@ -160,7 +220,8 @@ describe('laws 1 & 14 — financial history is not deletable from a service', ()
 
       for (const table of ['audit_logs', 'journal_entries', 'journal_lines', 'ledger_entries']) {
         const chain = new RegExp(`from\\(['"\`]${table}['"\`]\\)[\\s\\S]{0,200}\\.delete\\(`)
-        if (chain.test(code)) offenders.push(`${rel(file)} -> ${table}`)
+        const key = `${rel(file)} -> ${table}`
+        if (chain.test(code) && !ALLOWED_DELETES.has(key)) offenders.push(key)
       }
     }
 
@@ -226,20 +287,37 @@ describe('law 16 — retryable mutations are idempotent', () => {
    ═══════════════════════════════════════════════════════════════════════════ */
 
 describe('law 7 — the UI is not a security boundary', () => {
-  it('every admin route is guarded server-side', () => {
-    // The admin panel hides what a non-admin should not see. That is UX. The
-    // guard is what makes it security, and it must be on every route without
-    // exception — one unguarded handler is the whole surface.
-    const routes = readFileSync(join(SRC, 'routes', 'admin.routes.ts'), 'utf8')
-    const code = stripComments(routes)
+  /**
+   * Route files whose data is PLATFORM-WIDE — the underlying tables carry no
+   * `workspace_id`, so no query against them can be scoped to one business.
+   * Every handler in these files must therefore be admin-guarded.
+   *
+   * `audit.routes.ts` is here because of a real defect this guard missed on
+   * its first version: it checked only `admin.routes.ts`, so the whole audit
+   * surface sat behind bare `authenticate`. Any authenticated user — a seller
+   * in one shop — could read every workspace's financial actions, export them,
+   * forge entries, and DELETE the platform's audit trail.
+   */
+  const PLATFORM_WIDE_ROUTES = ['admin.routes.ts', 'audit.routes.ts']
 
-    const handlers = code.match(/fastify\.(get|post|patch|delete|put)\(/g) ?? []
+  it.each(PLATFORM_WIDE_ROUTES)('every handler in %s is guarded server-side', (fileName) => {
+    // The admin panel hides what a non-admin should not see. That is UX. The
+    // guard is what makes it security, and it must be on every handler without
+    // exception — one unguarded route is the whole surface.
+    const code = stripComments(readFileSync(join(SRC, 'routes', fileName), 'utf8'))
+
+    const handlers = code.match(/fastify\.(get|post|patch|delete|put)[<(]/g) ?? []
     const guards = code.match(/platformAdminGuard/g) ?? []
 
-    expect(handlers.length).toBeGreaterThan(0)
+    expect(
+      handlers.length,
+      `no handlers found in ${fileName} — did the file move?`,
+    ).toBeGreaterThan(0)
     expect(
       guards.length,
-      `${handlers.length} admin handlers but only ${guards.length} guards — every route needs one`,
+      `${fileName}: ${handlers.length} handlers but ${guards.length} guards. ` +
+        'These tables have no workspace_id, so an unguarded handler is a cross-tenant read ' +
+        'or a platform-wide write.',
     ).toBeGreaterThanOrEqual(handlers.length)
   })
 })
@@ -260,6 +338,11 @@ describe('law 22 — status claims are evidence-backed', () => {
   it('uses only the §18 status vocabulary', () => {
     const text = readFileSync(STATE, 'utf8')
 
+    // Only the capability sections. The document's own header QUOTES these
+    // phrases in order to forbid them, and a guard that fails on its own rule
+    // statement teaches people to delete the guard rather than obey it.
+    const body = text.slice(text.indexOf('## Capability status')).toLowerCase()
+
     // §18 forbids these precisely because they sound like progress while
     // asserting nothing measurable.
     for (const banned of [
@@ -268,7 +351,9 @@ describe('law 22 — status claims are evidence-backed', () => {
       'mostly finished',
       'probably safe',
     ]) {
-      expect(text.toLowerCase()).not.toContain(banned)
+      expect(body, `"${banned}" is not a status (§18) — use the evidence vocabulary`).not.toContain(
+        banned,
+      )
     }
   })
 

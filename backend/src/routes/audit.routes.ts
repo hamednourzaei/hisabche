@@ -116,6 +116,7 @@ export default async function auditRoutes(fastify: FastifyInstance) {
     {
       preHandler: [
         authenticate,
+        platformAdminGuard,
         cacheMiddleware({ scope: 'user', ttl: 60, keyPrefix: 'audit-entity' }),
       ],
       schema: {
@@ -146,6 +147,7 @@ export default async function auditRoutes(fastify: FastifyInstance) {
     {
       preHandler: [
         authenticate,
+        platformAdminGuard,
         cacheMiddleware({ scope: 'user', ttl: 60, keyPrefix: 'audit-user' }),
       ],
       schema: {
@@ -179,6 +181,7 @@ export default async function auditRoutes(fastify: FastifyInstance) {
     {
       preHandler: [
         authenticate,
+        platformAdminGuard,
         cacheMiddleware({ scope: 'user', ttl: 300, keyPrefix: 'audit-stats' }),
       ],
       schema: {
