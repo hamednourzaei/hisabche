@@ -13,13 +13,28 @@
 // ============================================
 
 import { FastifyRequest, FastifyReply } from 'fastify'
+import type { User as SupabaseUser } from '@supabase/supabase-js'
 import { supabase } from '../db'
 import { memoryCache } from '../utils/pagination'
+
+/**
+ * The authenticated user IS Supabase's `User` — this middleware puts the
+ * result of `supabase.auth.getUser()` on the request unchanged.
+ *
+ * An earlier hand-rolled shape declared `email: string` (required) plus an
+ * index signature, and neither matched: Supabase's email is optional (a
+ * phone-only signup has none) and its User has no index signature, so the real
+ * value could not be assigned to the type meant to describe it.
+ *
+ * Downstream reads only `.id` and `.email`; platformAdminGuard handles a
+ * missing email at runtime, which is where it actually has to be handled.
+ */
+type AuthenticatedUser = SupabaseUser
 
 // ✅ Declaration merging برای تایپ‌دهی صحیح
 declare module 'fastify' {
   interface FastifyRequest {
-    user: any
+    user: AuthenticatedUser
     userId: string
     userRole: string
     // NOTE: there is deliberately no ambient `workspaceId` here. It used to
@@ -31,7 +46,7 @@ declare module 'fastify' {
 }
 
 interface CachedAuth {
-  user: any
+  user: AuthenticatedUser
   role: string
 }
 

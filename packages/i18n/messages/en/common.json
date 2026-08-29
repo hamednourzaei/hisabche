@@ -2875,7 +2875,10 @@
     "dashboard": {
       "title": "Platform dashboard",
       "planMix": "Plan mix",
-      "ofTotal": "of {total} subscriptions"
+      "ofTotal": "of {total} subscriptions",
+      "description": "Platform status overview",
+      "generatedAt": "Updated: {time}",
+      "planShare": "{plan} plan share: {percent}%"
     },
     "kpi": {
       "totalWorkspaces": "Total workspaces",
@@ -2889,6 +2892,142 @@
     },
     "notice": {
       "migrationInProgress": "Subscription migration in progress — {percent}% attributed to a workspace. The plan mix below does not yet cover every business."
+    },
+    "workspaces": {
+      "title": "Workspaces",
+      "description": "Manage businesses, owners and members",
+      "search": "Search workspaces…",
+      "owner": "Owner",
+      "plan": "Plan",
+      "status": "Status",
+      "members": "Members",
+      "created": "Created",
+      "actions": "Actions",
+      "expand": "Show members of {name}",
+      "collapse": "Hide members of {name}",
+      "noOwner": "No owner",
+      "active": "Active",
+      "inactive": "Inactive",
+      "noSubscription": "No subscription"
+    },
+    "member": {
+      "name": "Name",
+      "email": "Email",
+      "role": "Role",
+      "status": "Status",
+      "joined": "Joined",
+      "unknown": "Unknown",
+      "noProfile": "No profile on record",
+      "editRole": "Edit role",
+      "remove": "Remove member",
+      "ownerProtected": "The owner cannot be removed",
+      "statusActive": "Active",
+      "statusSuspended": "Suspended",
+      "statusNoAccess": "No access",
+      "roleOwner": "Owner",
+      "roleManager": "Manager",
+      "roleSeller": "Seller"
+    },
+    "removeDialog": {
+      "title": "Remove membership",
+      "body": "{name} will be removed from “{workspace}”.",
+      "consequence": "Only the membership is removed. The user account is not deleted and they can be invited again.",
+      "confirm": "Remove",
+      "cancel": "Cancel"
+    },
+    "empty": {
+      "noWorkspaces": "No workspaces yet.",
+      "noMembers": "This workspace has no members yet.",
+      "noResults": "Nothing found for “{search}”.",
+      "noWorkspacesHint": "The first business to sign up will appear here.",
+      "noneOnPage": "Nothing on this page matches that filter.",
+      "noneOnPageHint": "This filter applies to the current page only. Go to the next page to see more."
+    },
+    "error": {
+      "loadWorkspaces": "Could not load workspaces.",
+      "loadMembers": "Could not load members.",
+      "updateRole": "Could not change the role.",
+      "removeMember": "Could not remove the member.",
+      "retry": "Try again"
+    },
+    "pagination": {
+      "showing": "{from}–{to} of {total}",
+      "previous": "Previous",
+      "next": "Next",
+      "label": "Pagination"
+    },
+    "subscriptions": {
+      "title": "Subscriptions",
+      "description": "Manage each business plan and subscription status",
+      "workspace": "Workspace",
+      "plan": "Plan",
+      "status": "Status",
+      "periodEnd": "Period ends",
+      "trial": "Trial",
+      "noPeriod": "No period",
+      "allPlans": "All plans",
+      "allStatuses": "All statuses",
+      "expiresIn": "{days} days left",
+      "expiredAgo": "{days} days ago",
+      "expiringSoon": "Expiring soon",
+      "expired": "Expired",
+      "changePlan": "Change plan",
+      "changeStatus": "Change status",
+      "reason": "Reason",
+      "reasonHint": "Recorded in the audit log",
+      "apply": "Apply",
+      "empty": "No subscriptions match these filters.",
+      "loadError": "Could not load subscriptions.",
+      "updateError": "The change failed.",
+      "noDateBuckets": "Date-based expiry buckets are not implemented in the backend yet; filtering is by status."
+    },
+    "plan": {
+      "free": "Free",
+      "pro": "Pro",
+      "enterprise": "Enterprise"
+    },
+    "status": {
+      "active": "Active",
+      "trial": "Trial",
+      "expired": "Expired",
+      "cancelled": "Cancelled",
+      "past_due": "Past due"
+    },
+    "shell": {
+      "consoleLabel": "Admin console",
+      "superAdmin": "Super Admin",
+      "mainNav": "Main navigation",
+      "openMenu": "Open menu",
+      "closeMenu": "Close menu",
+      "darkMode": "Dark mode",
+      "lightMode": "Light mode",
+      "searchLabel": "Search businesses",
+      "searchPlaceholder": "Search businesses…",
+      "alertsNone": "No alerts",
+      "alertsWithCount": "{count} past-due subscriptions"
+    },
+    "filters": {
+      "all": "All",
+      "groupLabel": "Status filter"
+    },
+    "users": {
+      "title": "Users",
+      "description": "Platform user directory",
+      "search": "Search by name…",
+      "searchScopeNotice": "Search matches NAME only. Email lives in the auth table and cannot be queried, but it is resolved and shown for the results on this page.",
+      "empty": "No users yet.",
+      "loadError": "Failed to load users."
+    },
+    "auditLogs": {
+      "title": "Audit log",
+      "description": "Recorded platform changes",
+      "action": "Action",
+      "entity": "Entity",
+      "when": "When",
+      "noEntity": "No entity",
+      "empty": "No events recorded yet.",
+      "emptyHint": "Only successful changes are recorded; a refused request writes nothing.",
+      "loadError": "Failed to load the audit log."
     }
   }
 }

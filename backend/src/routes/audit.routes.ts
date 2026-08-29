@@ -2,12 +2,37 @@
 // backend/src/routes/api/audit.routes.ts
 // ============================================
 
+// ⚠️ AUTHORIZATION — read this before adding a route here.
+//
+// `audit_logs` has NO `workspace_id` column, so a query against it is
+// PLATFORM-WIDE by construction. There is no way to scope it to one business
+// without a migration.
+//
+// That makes every read here a cross-tenant read and every write a
+// platform-wide write, which is why the whole file sits behind
+// `platformAdminGuard` rather than `authenticate` alone. Before this guard
+// existed, any authenticated user — a seller in one shop — could:
+//
+//   GET  /api/audit/logs     read every workspace's financial actions
+//   GET  /api/audit/export   export them
+//   POST /api/audit/log      forge an entry attributing an action to anyone
+//   POST /api/audit/cleanup  DELETE the platform's audit trail
+//
+// Constitution §12.1 (never delete business data), §12.6 (never weaken
+// authorization) and §12.18 (every financial transition must be auditable).
+// An audit log an attacker can erase is not an audit log.
+//
+// A workspace-scoped audit feed for ordinary members is a SEPARATE capability
+// and needs `audit_logs.workspace_id` first. Do not approximate it by
+// loosening this guard.
+
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import { createAuditLogSchema, auditFiltersSchema, type AuditFilters } from '@hisabche/validation'
 import { AuditService } from '../services/audit.service'
 import { authenticate } from '../middleware/auth.middleware'
+import { platformAdminGuard } from '../middleware/platform-admin.middleware'
 import { cacheMiddleware } from '../middleware/cache.middleware'
 
 const toJsonSchema = (schema: any) => {
@@ -27,7 +52,7 @@ export default async function auditRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/audit/log',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, platformAdminGuard],
       schema: {
         body: toJsonSchema(createAuditLogSchema),
         response: { 201: toJsonSchema(z.object({ success: z.boolean() })) },
@@ -62,6 +87,7 @@ export default async function auditRoutes(fastify: FastifyInstance) {
     {
       preHandler: [
         authenticate,
+        platformAdminGuard,
         cacheMiddleware({ scope: 'user', ttl: 60, keyPrefix: 'audit-logs' }),
       ],
       schema: {
@@ -185,7 +211,7 @@ export default async function auditRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/audit/export',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, platformAdminGuard],
       schema: {
         querystring: toJsonSchema(auditFiltersSchema.omit({ page: true, limit: true })),
         response: { 200: toJsonSchema(z.array(z.any())) },
@@ -214,7 +240,7 @@ export default async function auditRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/audit/cleanup',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, platformAdminGuard],
       schema: {
         body: toJsonSchema(z.object({ daysToKeep: z.number().int().min(30).default(90) })),
         response: { 200: toJsonSchema(z.any()) },
@@ -223,7 +249,7 @@ export default async function auditRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { daysToKeep } = request.body as { daysToKeep: number }
-        const result = await auditService.cleanup(daysToKeep)
+        const result = await auditService.cleanup(daysToKeep, request.userId)
         return reply.send(result)
       } catch (err) {
         fastify.log.error(err)

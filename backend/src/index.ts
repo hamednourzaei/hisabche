@@ -180,7 +180,6 @@ server.addHook('preHandler', async (request, reply) => {
     '/docs',
     '/live',
     '/ready',
-    '/api',
     '/api/health',
     '/api/slo',
     '/api/auth/login',

@@ -3,6 +3,7 @@ import localFont from 'next/font/local'
 import { getLocale, getMessages } from 'next-intl/server'
 import { IntlProvider } from './intl-provider'
 import { Providers } from './providers'
+import { THEME_INIT_SCRIPT } from '@/components/admin-shell/use-admin-theme'
 
 // The design system itself, not a copy of it. This file used to import an
 // 814-line byte-identical duplicate of packages/ui/src/styles/globals.css.
@@ -45,6 +46,16 @@ export default async function RootLayout({
       suppressHydrationWarning
       className={vazirmatn.variable}
     >
+      <head>
+        {/*
+          Dark is the DEFAULT here: `:root` in the design system carries the
+          dark surfaces and only `[data-theme='light']` overrides them. So this
+          script runs for the light-mode minority, before first paint, to stop
+          a dark flash. Inline and synchronous on purpose — a deferred script
+          would run after the first frame, which is the whole problem.
+        */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body
         className={`min-h-screen antialiased font-sans bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))] ${vazirmatn.variable}`}
       >

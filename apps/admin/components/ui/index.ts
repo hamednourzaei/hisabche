@@ -27,6 +27,31 @@ export {
   DashboardHeader,
   TopNav,
   NotificationBell,
+
+  // Added for the workspace-membership screen. Re-exported, never
+  // reimplemented: the historical Admin drift was a LOCAL Button that dropped
+  // @radix-ui/react-slot and silently ignored `asChild`, so composed buttons
+  // rendered the wrong element and the Admin login diverged visually from the
+  // main app. Every primitive below already exists in @hisabche/ui.
+  Skeleton,
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogClose,
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
 } from '@hisabche/ui'
 
 export type { ButtonVariant, ButtonSize, NavItem } from '@hisabche/ui'

@@ -1,10 +1,23 @@
 'use client'
 
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui'
 import { useTranslations } from 'next-intl'
+import { usePathname, useRouter } from 'next/navigation'
+import {
+  AlertTriangle,
+  Building2,
+  CalendarClock,
+  CheckCircle2,
+  CreditCard,
+  Sparkles,
+  TrendingUp,
+  Users,
+  type LucideIcon,
+} from 'lucide-react'
+import { Button, Skeleton } from '@/components/ui'
+import { ErrorState, Panel } from '@/components/admin-shell/admin-ui'
 import { useAdminSession } from '@/hooks/use-admin-session'
 import { useAdminMetrics } from '@/hooks/use-admin-api'
-import { usePathname, useRouter } from 'next/navigation'
+import { cn } from '@/lib/utils'
 
 /**
  * Platform KPI cards.
@@ -24,8 +37,9 @@ interface Kpi {
   /** i18n key under `admin.kpi`. */
   key: string
   value: number
-  /** Rendered smaller, beneath the number. */
-  hint?: string
+  icon: LucideIcon
+  /** Accent applied to the icon tile only — never to the number itself. */
+  accent: string
 }
 
 export function DashboardClient() {
@@ -33,71 +47,112 @@ export function DashboardClient() {
   const pathname = usePathname()
   const t = useTranslations()
   const { loading: authLoading, error: authError } = useAdminSession()
-  const { data: metrics, isLoading: metricsLoading, error: metricsError } = useAdminMetrics()
+  const {
+    data: metrics,
+    isLoading: metricsLoading,
+    isError: metricsError,
+    refetch,
+  } = useAdminMetrics()
 
   const localePrefix = pathname.split('/').filter(Boolean)[0] || 'fa'
 
-  if (authLoading || metricsLoading) {
+  if (authError) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6">
-        <span className="text-lg animate-pulse">{t('app.loading')}</span>
+      <div className="space-y-4">
+        <ErrorState
+          message={authError === 'NO_SESSION' ? t('auth.sessionExpired') : t('app.error')}
+          onRetry={() => router.replace(`/${localePrefix}/login`)}
+        />
+        <Button variant="outline" onClick={() => router.replace(`/${localePrefix}/login`)}>
+          {t('auth.signIn')}
+        </Button>
       </div>
     )
   }
 
-  if (authError) {
+  if (authLoading || metricsLoading) {
     return (
-      <div className="min-h-screen p-6">
-        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded mb-4">
-          {authError === 'NO_SESSION' ? t('auth.sessionExpired') : t('app.error')}
-        </div>
-        <button
-          type="button"
-          onClick={() => router.replace(`/${localePrefix}/login`)}
-          className="underline text-red-700"
-        >
-          {t('common.back')}
-        </button>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 8 }, (_, index) => (
+          <Skeleton key={index} className="h-32 w-full rounded-2xl" />
+        ))}
       </div>
     )
   }
 
   if (metricsError || !metrics) {
-    return (
-      <div className="min-h-screen p-6">
-        <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded mb-4">
-          {t('app.error')}
-        </div>
-      </div>
-    )
+    return <ErrorState message={t('app.error')} onRetry={() => void refetch()} />
   }
 
   const { workspaces, members, subscriptions } = metrics
 
   const kpis: Kpi[] = [
-    { key: 'totalWorkspaces', value: workspaces.total },
-    { key: 'activeWorkspaces', value: workspaces.active },
-    { key: 'newThisMonth', value: workspaces.newThisMonth },
-    { key: 'totalMembers', value: members.total },
-    { key: 'activeSubscriptions', value: subscriptions.active },
-    { key: 'expiredSubscriptions', value: subscriptions.expired },
-    { key: 'expiringSoon', value: subscriptions.expiringInSevenDays },
-    { key: 'trialSubscriptions', value: subscriptions.trial },
+    {
+      key: 'totalWorkspaces',
+      value: workspaces.total,
+      icon: Building2,
+      accent: 'bg-blue-500/15 text-blue-400',
+    },
+    {
+      key: 'activeWorkspaces',
+      value: workspaces.active,
+      icon: CheckCircle2,
+      accent: 'bg-success/15 text-success',
+    },
+    {
+      key: 'newThisMonth',
+      value: workspaces.newThisMonth,
+      icon: TrendingUp,
+      accent: 'bg-violet-500/15 text-violet-400',
+    },
+    {
+      key: 'totalMembers',
+      value: members.total,
+      icon: Users,
+      accent: 'bg-blue-500/15 text-blue-400',
+    },
+    {
+      key: 'activeSubscriptions',
+      value: subscriptions.active,
+      icon: CreditCard,
+      accent: 'bg-success/15 text-success',
+    },
+    {
+      key: 'expiredSubscriptions',
+      value: subscriptions.expired,
+      icon: AlertTriangle,
+      accent: 'bg-destructive/15 text-destructive',
+    },
+    {
+      key: 'expiringSoon',
+      value: subscriptions.expiringInSevenDays,
+      icon: CalendarClock,
+      accent: 'bg-warning/15 text-warning',
+    },
+    {
+      key: 'trialSubscriptions',
+      value: subscriptions.trial,
+      icon: Sparkles,
+      accent: 'bg-violet-500/15 text-violet-400',
+    },
   ]
 
   // Plan mix comes straight from the `plan` column, never from a plan name.
   const planEntries = Object.entries(subscriptions.byPlan)
+  const planTotal = planEntries.reduce((sum, [, count]) => sum + count, 0)
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{t('admin.dashboard.title')}</h1>
+    <div className="space-y-8">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">{t('admin.dashboard.description')}</p>
         <time
-          className="text-sm text-muted-foreground"
+          className="text-xs text-muted-foreground tabular-nums"
           dateTime={metrics.generatedAt}
           suppressHydrationWarning
         >
-          {new Date(metrics.generatedAt).toLocaleString()}
+          {t('admin.dashboard.generatedAt', {
+            time: new Date(metrics.generatedAt).toLocaleString(),
+          })}
         </time>
       </div>
 
@@ -108,50 +163,74 @@ export function DashboardClient() {
         decisions. Shown only when it is actually incomplete.
       */}
       {subscriptions.workspaceAttributedPercent < 100 && (
-        <div className="rounded border-l-4 border-amber-500 bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
-          {t('admin.notice.migrationInProgress', {
-            percent: subscriptions.workspaceAttributedPercent,
-          })}
+        <div className="flex items-start gap-3 rounded-2xl border border-warning/40 bg-warning/10 p-4 text-sm">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-warning" aria-hidden="true" />
+          <p className="min-w-0">
+            {t('admin.notice.migrationInProgress', {
+              percent: subscriptions.workspaceAttributedPercent,
+            })}
+          </p>
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-        {kpis.map((kpi) => (
-          <Card key={kpi.key}>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{t(`admin.kpi.${kpi.key}`)}</CardTitle>
-            </CardHeader>
-            <CardContent>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {kpis.map((kpi) => {
+          const Icon = kpi.icon
+          return (
+            <Panel key={kpi.key} className="p-5 transition-colors hover:border-border-strong">
+              <span
+                className={cn(
+                  'mb-4 flex h-11 w-11 items-center justify-center rounded-xl',
+                  kpi.accent,
+                )}
+              >
+                <Icon className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <p className="text-sm text-muted-foreground">{t(`admin.kpi.${kpi.key}`)}</p>
               {/*
                 `toLocaleString()` so Persian and Dari get their own digits —
                 a platform console for Afghan and Iranian shops should not show
                 Latin numerals in a Persian UI.
               */}
-              <div className="text-2xl font-bold tabular-nums">{kpi.value.toLocaleString()}</div>
-            </CardContent>
-          </Card>
-        ))}
+              <p className="mt-1 text-3xl font-bold tabular-nums">{kpi.value.toLocaleString()}</p>
+            </Panel>
+          )
+        })}
       </div>
 
       {planEntries.length > 0 && (
-        <section aria-labelledby="plan-mix-heading" className="space-y-3">
-          <h2 id="plan-mix-heading" className="text-lg font-semibold">
+        <section aria-labelledby="plan-mix-heading" className="space-y-4">
+          <h2 id="plan-mix-heading" className="text-lg font-bold">
             {t('admin.dashboard.planMix')}
           </h2>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-            {planEntries.map(([plan, count]) => (
-              <Card key={plan}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium capitalize">{plan}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold tabular-nums">{count.toLocaleString()}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {t('admin.dashboard.ofTotal', { total: subscriptions.total })}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {planEntries.map(([plan, count]) => {
+              // Share of the plan mix, not of every subscription: the
+              // denominator is the sum of the buckets actually returned, so
+              // the bars add up to what is drawn.
+              const share = planTotal === 0 ? 0 : Math.round((count / planTotal) * 100)
+              return (
+                <Panel key={plan} className="p-5">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <p className="truncate text-sm font-medium capitalize">{plan}</p>
+                    <p className="text-2xl font-bold tabular-nums">{count.toLocaleString()}</p>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
+                  <div
+                    className="mt-3 h-2 w-full overflow-hidden rounded-full bg-accent"
+                    role="img"
+                    aria-label={t('admin.dashboard.planShare', { plan, percent: share })}
+                  >
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-blue-500 to-violet-500 rtl:bg-gradient-to-l"
+                      style={{ width: `${share}%` }}
+                    />
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {t('admin.dashboard.ofTotal', { total: subscriptions.total })}
+                  </p>
+                </Panel>
+              )
+            })}
           </div>
         </section>
       )}

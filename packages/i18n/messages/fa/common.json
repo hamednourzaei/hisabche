@@ -2880,7 +2880,10 @@
     "dashboard": {
       "title": "داشبورد پلتفرم",
       "planMix": "توزیع پلن‌ها",
-      "ofTotal": "از {total} اشتراک"
+      "ofTotal": "از {total} اشتراک",
+      "description": "نمای کلی وضعیت پلتفرم",
+      "generatedAt": "به‌روزرسانی: {time}",
+      "planShare": "سهم پلن {plan}: {percent}٪"
     },
     "kpi": {
       "totalWorkspaces": "کل کسب‌وکارها",
@@ -2894,6 +2897,142 @@
     },
     "notice": {
       "migrationInProgress": "مهاجرت اشتراک‌ها در جریان است — {percent}٪ به کسب‌وکار نسبت داده شده‌اند. توزیع پلن‌ها هنوز همه را پوشش نمی‌دهد."
+    },
+    "workspaces": {
+      "title": "کسب‌وکارها",
+      "description": "مدیریت کسب‌وکارها، مالکان و اعضا",
+      "search": "جستجوی کسب‌وکار…",
+      "owner": "مالک",
+      "plan": "پلن",
+      "status": "وضعیت",
+      "members": "اعضا",
+      "created": "تاریخ ایجاد",
+      "actions": "عملیات",
+      "expand": "نمایش اعضای {name}",
+      "collapse": "بستن اعضای {name}",
+      "noOwner": "بدون مالک",
+      "active": "فعال",
+      "inactive": "غیرفعال",
+      "noSubscription": "بدون اشتراک"
+    },
+    "member": {
+      "name": "نام",
+      "email": "ایمیل",
+      "role": "نقش",
+      "status": "وضعیت",
+      "joined": "تاریخ عضویت",
+      "unknown": "نامشخص",
+      "noProfile": "پروفایل ثبت نشده",
+      "editRole": "ویرایش نقش",
+      "remove": "حذف عضو",
+      "ownerProtected": "مالک قابل حذف نیست",
+      "statusActive": "فعال",
+      "statusSuspended": "معلق",
+      "statusNoAccess": "بدون دسترسی",
+      "roleOwner": "مالک",
+      "roleManager": "مدیر",
+      "roleSeller": "فروشنده"
+    },
+    "removeDialog": {
+      "title": "حذف عضویت",
+      "body": "{name} از کسب‌وکار «{workspace}» حذف می‌شود.",
+      "consequence": "فقط عضویت حذف می‌شود. حساب کاربری پاک نمی‌شود و کاربر می‌تواند دوباره دعوت شود.",
+      "confirm": "حذف",
+      "cancel": "انصراف"
+    },
+    "empty": {
+      "noWorkspaces": "هنوز هیچ کسب‌وکاری ثبت نشده است.",
+      "noMembers": "این کسب‌وکار هنوز عضوی ندارد.",
+      "noResults": "نتیجه‌ای برای «{search}» پیدا نشد.",
+      "noWorkspacesHint": "به‌محض ثبت اولین کسب‌وکار، اینجا نمایش داده می‌شود.",
+      "noneOnPage": "در این صفحه موردی با این فیلتر نیست.",
+      "noneOnPageHint": "این فیلتر فقط روی همین صفحه اعمال می‌شود. برای دیدن بقیه، به صفحهٔ بعد بروید."
+    },
+    "error": {
+      "loadWorkspaces": "بارگذاری کسب‌وکارها ناموفق بود.",
+      "loadMembers": "بارگذاری اعضا ناموفق بود.",
+      "updateRole": "تغییر نقش ناموفق بود.",
+      "removeMember": "حذف عضو ناموفق بود.",
+      "retry": "تلاش دوباره"
+    },
+    "pagination": {
+      "showing": "{from} تا {to} از {total}",
+      "previous": "قبلی",
+      "next": "بعدی",
+      "label": "صفحه‌بندی"
+    },
+    "subscriptions": {
+      "title": "اشتراک‌ها",
+      "description": "مدیریت پلن و وضعیت اشتراک کسب‌وکارها",
+      "workspace": "کسب‌وکار",
+      "plan": "پلن",
+      "status": "وضعیت",
+      "periodEnd": "پایان دوره",
+      "trial": "آزمایشی",
+      "noPeriod": "بدون دوره",
+      "allPlans": "همه پلن‌ها",
+      "allStatuses": "همه وضعیت‌ها",
+      "expiresIn": "{days} روز مانده",
+      "expiredAgo": "{days} روز گذشته",
+      "expiringSoon": "نزدیک انقضا",
+      "expired": "منقضی",
+      "changePlan": "تغییر پلن",
+      "changeStatus": "تغییر وضعیت",
+      "reason": "دلیل تغییر",
+      "reasonHint": "در گزارش حسابرسی ثبت می‌شود",
+      "apply": "اعمال",
+      "empty": "اشتراکی با این فیلترها پیدا نشد.",
+      "loadError": "بارگذاری اشتراک‌ها ناموفق بود.",
+      "updateError": "تغییر ناموفق بود.",
+      "noDateBuckets": "دسته‌بندی بر اساس تاریخ انقضا هنوز در بک‌اند پیاده نشده؛ فیلتر بر اساس وضعیت است."
+    },
+    "plan": {
+      "free": "رایگان",
+      "pro": "حرفه‌ای",
+      "enterprise": "سازمانی"
+    },
+    "status": {
+      "active": "فعال",
+      "trial": "آزمایشی",
+      "expired": "منقضی",
+      "cancelled": "لغو شده",
+      "past_due": "معوق"
+    },
+    "shell": {
+      "consoleLabel": "کنسول مدیریت",
+      "superAdmin": "مدیر سیستم",
+      "mainNav": "ناوبری اصلی",
+      "openMenu": "باز کردن منو",
+      "closeMenu": "بستن منو",
+      "darkMode": "حالت تاریک",
+      "lightMode": "حالت روشن",
+      "searchLabel": "جستجوی کسب‌وکار",
+      "searchPlaceholder": "جستجوی کسب‌وکار…",
+      "alertsNone": "هشداری وجود ندارد",
+      "alertsWithCount": "{count} اشتراک معوق"
+    },
+    "filters": {
+      "all": "همه",
+      "groupLabel": "فیلتر وضعیت"
+    },
+    "users": {
+      "title": "کاربران",
+      "description": "فهرست کاربران پلتفرم",
+      "search": "جستجوی نام کاربر…",
+      "searchScopeNotice": "جستجو فقط روی «نام» انجام می‌شود. ایمیل در جدول احراز هویت نگهداری می‌شود و قابل جستجو نیست، اما برای نتایج همین صفحه نمایش داده می‌شود.",
+      "empty": "هنوز کاربری ثبت نشده است.",
+      "loadError": "بارگذاری کاربران ناموفق بود."
+    },
+    "auditLogs": {
+      "title": "گزارش حسابرسی",
+      "description": "تاریخچه تغییرات ثبت‌شده در پلتفرم",
+      "action": "عملیات",
+      "entity": "موضوع",
+      "when": "زمان",
+      "noEntity": "بدون موضوع",
+      "empty": "هنوز رویدادی ثبت نشده است.",
+      "emptyHint": "فقط تغییرات موفق ثبت می‌شوند؛ درخواست‌های ردشده چیزی نمی‌نویسند.",
+      "loadError": "بارگذاری گزارش حسابرسی ناموفق بود."
     }
   }
 }

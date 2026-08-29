@@ -27,7 +27,8 @@ import { supabase } from '../db'
 import { AuditService } from './audit.service'
 import { BillingService, PLANS } from './billing.service'
 import { Plan, SubscriptionStatus, planEnum, subscriptionStatusEnum } from '@hisabche/validation'
-import { DatabaseError, NotFoundError } from '../errors/database.error'
+import { DatabaseError, NotFoundError, ConflictError } from '../errors/database.error'
+import { ForbiddenError } from '../errors/auth.error'
 
 // ─── Column projections ──────────────────────────────────────
 // Deliberate exclusions: workspaces.logo_url / stamp_url (multi-MB data URIs),
@@ -35,8 +36,35 @@ import { DatabaseError, NotFoundError } from '../errors/database.error'
 // to the two Stripe identifiers the spec explicitly requires admins to see.
 
 const WORKSPACE_COLUMNS = 'id, name, slug, description, owner_id, is_active, created_at, updated_at'
-const MEMBER_COLUMNS = 'workspace_id, user_id, role, has_access, suspended_at, joined_at'
-const USER_COLUMNS = 'id, email, full_name, preferred_language'
+const MEMBER_COLUMNS = 'id, workspace_id, user_id, role, has_access, suspended_at, joined_at'
+/**
+ * ⚠️ THERE IS NO `public.users` TABLE.
+ *
+ * This service used to select 'id, email, full_name, preferred_language' from
+ * `users`, and every one of those queries failed in production with
+ * PGRST205 "Could not find the table 'public.users' in the schema cache". The
+ * constant existing in the code was not evidence that the table existed.
+ *
+ * Identity actually lives in two places, and neither is `public.users`:
+ *
+ *   NAME   `public.profiles` — id, full_name, business_name, avatar_url.
+ *          This is what auth.routes.ts reads, and login works in production,
+ *          so it is proven to exist. It has NO email column.
+ *   EMAIL  `auth.users`, reachable only through supabase.auth.admin.
+ *
+ * PROFILE_COLUMNS is therefore name-only; email is resolved separately.
+ */
+const PROFILE_COLUMNS = 'id, full_name'
+
+interface MemberView {
+  id: string
+  userId: string
+  name: string | null
+  email: string | null
+  role: string
+  status: 'suspended' | 'no-access' | 'active'
+  joinedAt: string | null
+}
 const SUBSCRIPTION_COLUMNS =
   'id, user_id, workspace_id, plan, status, is_trial, trial_used, ' +
   'trial_started_at, trial_ends_at, period_start, period_end, ' +
@@ -49,6 +77,13 @@ const WEBHOOK_EVENT_COLUMNS = 'id, type, processed_at'
 
 /** Hard ceiling shared by every listing route. */
 export const ADMIN_MAX_PAGE_SIZE = 100
+
+/**
+ * How much of the Supabase auth directory one identity resolution reads.
+ * Emails for users beyond this page resolve to null — honest, rather than
+ * silently wrong.
+ */
+const AUTH_DIRECTORY_PAGE = 1000
 
 /**
  * `| undefined` is explicit because this repo runs with
@@ -262,6 +297,83 @@ export class AdminService {
 
   // ─── Workspaces ──────────────────────────────────────────────
 
+  /**
+   * Resolve display identity for a set of user ids — the ONE place that knows
+   * where identity lives.
+   *
+   * Two calls total, never one-per-user:
+   *   1. `profiles` filtered with .in(ids)          -> full_name
+   *   2. supabase.auth.admin.listUsers() once        -> email
+   *
+   * Degrades instead of failing. A missing profile row, a missing auth user,
+   * or an auth-admin outage yields null name/email for that person — it must
+   * never take down the workspace list, because an admin who cannot see the
+   * console during an identity outage cannot fix anything.
+   *
+   * ⚠️ SCALE BOUND: listUsers() pages the auth directory, and this reads one
+   * page of `AUTH_DIRECTORY_PAGE`. Beyond that, emails resolve to null rather
+   * than silently wrong — a null is honest, a mismatched email is not. When
+   * the directory outgrows one page, this needs a different strategy.
+   */
+  private async resolveIdentities(
+    userIds: string[],
+  ): Promise<Map<string, { name: string | null; email: string | null }>> {
+    const identities = new Map<string, { name: string | null; email: string | null }>()
+    if (userIds.length === 0) return identities
+
+    for (const id of userIds) identities.set(id, { name: null, email: null })
+
+    const [profilesResult, authResult] = await Promise.allSettled([
+      supabase.from('profiles').select(PROFILE_COLUMNS).in('id', userIds),
+      supabase.auth.admin.listUsers({ page: 1, perPage: AUTH_DIRECTORY_PAGE }),
+    ])
+
+    if (profilesResult.status === 'fulfilled' && !profilesResult.value.error) {
+      for (const row of (profilesResult.value.data ?? []) as Array<{
+        id: string
+        full_name: string | null
+      }>) {
+        const entry = identities.get(row.id)
+        if (entry) entry.name = row.full_name ?? null
+      }
+    } else {
+      console.warn('[AdminService] profile lookup failed; names will be null')
+    }
+
+    if (authResult.status === 'fulfilled' && !authResult.value.error) {
+      const wanted = new Set(userIds)
+      for (const user of authResult.value.data.users) {
+        if (!wanted.has(user.id)) continue
+        const entry = identities.get(user.id)
+        if (entry) entry.email = user.email ?? null
+      }
+    } else {
+      console.warn('[AdminService] auth directory lookup failed; emails will be null')
+    }
+
+    return identities
+  }
+
+  /**
+   * One page of workspaces, enriched with owner identity, plan and member
+   * count — everything the admin table's parent row shows.
+   *
+   * FOUR queries total, regardless of page size:
+   *
+   *   1. the workspaces page          (paged + counted)
+   *   2. owner identities             .in('id', ownerIds)
+   *   3. subscriptions for the page   .in('workspace_id', ids)
+   *   4. memberships for the page     .in('workspace_id', ids)
+   *
+   * Not 1 + 3N. A 20-row page costs 4 round-trips, a 100-row page also costs
+   * 4. The enrichment queries are only issued when the page is non-empty.
+   *
+   * Everything here is REAL: owner name/email come from the users projection,
+   * plan from subscriptions.plan, member count from actual membership rows.
+   * A workspace with no owner profile or no subscription reports null, which
+   * the UI renders as "no owner" / "no subscription" — never a placeholder and
+   * never a truncated uuid, which would look like data while meaning nothing.
+   */
   async listWorkspaces(opts: PageOpts & { search?: string | undefined }) {
     const { limit, offset } = clampPage(opts)
 
@@ -276,7 +388,74 @@ export class AdminService {
 
     if (error) throw new DatabaseError('Failed to list workspaces', error)
 
-    return { workspaces: data ?? [], total: count ?? 0, limit, offset }
+    const rows = (data ?? []) as Array<{ id: string; owner_id: string | null }>
+    if (rows.length === 0) {
+      return { workspaces: [], total: count ?? 0, limit, offset }
+    }
+
+    const workspaceIds = rows.map((w) => w.id)
+    const ownerIds = [...new Set(rows.map((w) => w.owner_id).filter((id): id is string => !!id))]
+
+    const [ownersResult, subscriptionsResult, membersResult] = await Promise.all([
+      this.resolveIdentities(ownerIds),
+      supabase
+        .from('subscriptions')
+        .select('workspace_id, plan, status, period_end')
+        .in('workspace_id', workspaceIds),
+      // Only the columns needed to COUNT and to identify active seats — never
+      // the whole membership row for every workspace on the page.
+      supabase
+        .from('workspace_members')
+        .select('workspace_id, has_access, suspended_at')
+        .in('workspace_id', workspaceIds),
+    ])
+
+    const ownerById = ownersResult
+
+    const subscriptionByWorkspace = new Map(
+      (
+        (subscriptionsResult.data ?? []) as Array<{
+          workspace_id: string | null
+          plan: string | null
+          status: string | null
+          period_end: string | null
+        }>
+      )
+        .filter((s) => s.workspace_id)
+        .map((s) => [s.workspace_id as string, s]),
+    )
+
+    // Active seats only: a suspended or access-revoked row is not a member for
+    // any purpose the admin cares about.
+    const memberCountByWorkspace = new Map<string, number>()
+    for (const m of (membersResult.data ?? []) as Array<{
+      workspace_id: string
+      has_access: boolean | null
+      suspended_at: string | null
+    }>) {
+      if (m.has_access === false || m.suspended_at !== null) continue
+      memberCountByWorkspace.set(
+        m.workspace_id,
+        (memberCountByWorkspace.get(m.workspace_id) ?? 0) + 1,
+      )
+    }
+
+    const workspaces = rows.map((w) => {
+      const owner = w.owner_id ? ownerById.get(w.owner_id) : undefined
+      const subscription = subscriptionByWorkspace.get(w.id)
+
+      return {
+        ...w,
+        ownerName: owner?.name ?? null,
+        ownerEmail: owner?.email ?? null,
+        plan: subscription?.plan ?? null,
+        subscriptionStatus: subscription?.status ?? null,
+        subscriptionPeriodEnd: subscription?.period_end ?? null,
+        memberCount: memberCountByWorkspace.get(w.id) ?? 0,
+      }
+    })
+
+    return { workspaces, total: count ?? 0, limit, offset }
   }
 
   /** Workspace-scoped detail: row, members, subscription, usage. */
@@ -346,32 +525,55 @@ export class AdminService {
   async searchUsers(opts: PageOpts & { search?: string | undefined }) {
     const { limit, offset } = clampPage(opts)
 
-    let query = supabase.from('users').select(USER_COLUMNS, { count: 'exact' })
+    // Searches `profiles`, not a `users` table — that table does not exist
+    // (PGRST205). Email cannot be part of the WHERE clause because it lives in
+    // `auth.users`, which PostgREST does not expose; it is resolved for the
+    // matched page afterwards. So this searches by NAME, and says so rather
+    // than pretending to search a field it cannot reach.
+    let query = supabase.from('profiles').select(PROFILE_COLUMNS, { count: 'exact' })
 
     const search = opts.search?.trim()
-    if (search) {
-      query = query.or(`email.ilike.%${search}%,full_name.ilike.%${search}%`)
-    }
+    if (search) query = query.ilike('full_name', `%${search}%`)
 
     const { data, error, count } = await query
-      .order('email', { ascending: true })
+      .order('full_name', { ascending: true })
       .range(offset, offset + limit - 1)
 
     if (error) throw new DatabaseError('Failed to search users', error)
 
-    return { users: data ?? [], total: count ?? 0, limit, offset }
+    const rows = (data ?? []) as Array<{ id: string; full_name: string | null }>
+    const identities = await this.resolveIdentities(rows.map((r) => r.id))
+
+    const users = rows.map((r) => ({
+      id: r.id,
+      full_name: r.full_name,
+      email: identities.get(r.id)?.email ?? null,
+    }))
+
+    return { users, total: count ?? 0, limit, offset }
   }
 
   /** A user's profile, workspace memberships and ownership footprint. */
   async getUserDetail(userId: string) {
-    const { data: user, error } = await supabase
-      .from('users')
-      .select(USER_COLUMNS)
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select(PROFILE_COLUMNS)
       .eq('id', userId)
       .maybeSingle()
 
     if (error) throw new DatabaseError('Failed to fetch user', error)
-    if (!user) throw new NotFoundError('User')
+
+    const identity = (await this.resolveIdentities([userId])).get(userId)
+
+    // A user with memberships but no profile row is a real state, not a 404 —
+    // refusing to show them would hide someone who genuinely has access.
+    if (!profile && !identity?.email) throw new NotFoundError('User')
+
+    const user = {
+      id: userId,
+      full_name: (profile as { full_name?: string | null } | null)?.full_name ?? null,
+      email: identity?.email ?? null,
+    }
 
     const { data: memberships, error: memberError } = await supabase
       .from('workspace_members')
@@ -416,10 +618,147 @@ export class AdminService {
     return count ?? 0
   }
 
-  // ─── Subscriptions ───────────────────────────────────────────
+  async listWorkspaceMembers(workspaceId: string) {
+    const { data: members, error } = await supabase
+      .from('workspace_members')
+      .select(MEMBER_COLUMNS)
+      .eq('workspace_id', workspaceId)
 
+    if (error) throw new DatabaseError('Failed to list members', error)
+    if (!members || members.length === 0) return []
+
+    const userIds = [...new Set(members.map((m) => m.user_id))]
+    const userMap = await this.resolveIdentities(userIds)
+
+    return members.map((m) => {
+      const user = userMap.get(m.user_id)
+      return {
+        id: m.id,
+        userId: m.user_id,
+        name: user?.name ?? null,
+        email: user?.email ?? null,
+        role: m.role,
+        status: m.suspended_at ? 'suspended' : m.has_access === false ? 'no-access' : 'active',
+        joinedAt: m.joined_at,
+      }
+    })
+  }
+
+  async updateMemberRole(
+    actor: AdminActorContext,
+    membershipId: string,
+    role: 'owner' | 'manager' | 'seller',
+  ) {
+    const { data: membership, error } = await supabase
+      .from('workspace_members')
+      .select('id, workspace_id, role')
+      .eq('id', membershipId)
+      .single()
+
+    if (error || !membership) throw new NotFoundError('Membership')
+    if (membership.role === role) return this.getMemberView(membershipId)
+
+    if (role === 'owner') {
+      const { count } = await supabase
+        .from('workspace_members')
+        .select('id', { count: 'exact', head: true })
+        .eq('workspace_id', membership.workspace_id)
+        .eq('role', 'owner')
+      if (count && count > 0) throw new ConflictError('Workspace already has an owner')
+    } else if (membership.role === 'owner') {
+      throw new ForbiddenError('Cannot demote owner')
+    }
+
+    const { error: updateError } = await supabase
+      .from('workspace_members')
+      .update({ role })
+      .eq('id', membershipId)
+    if (updateError) throw new DatabaseError('Failed to update role', updateError)
+
+    // Audit log
+    await this.auditService.log({
+      userId: actor.adminUserId,
+      action: 'update',
+      entityType: 'workspace_member',
+      entityId: membershipId,
+      oldData: { role: membership.role },
+      newData: { role },
+      ipAddress: actor.ipAddress ?? undefined,
+      userAgent: actor.userAgent ?? undefined,
+    })
+
+    return this.getMemberView(membershipId)
+  }
+
+  async removeMember(actor: AdminActorContext, membershipId: string) {
+    const { data: membership, error } = await supabase
+      .from('workspace_members')
+      .select('id, role')
+      .eq('id', membershipId)
+      .single()
+
+    if (error || !membership) throw new NotFoundError('Membership')
+    if (membership.role === 'owner') throw new ForbiddenError('Cannot remove owner')
+
+    const { error: deleteError } = await supabase
+      .from('workspace_members')
+      .delete()
+      .eq('id', membershipId)
+    if (deleteError) throw new DatabaseError('Failed to remove member', deleteError)
+
+    // Audit log
+    await this.auditService.log({
+      userId: actor.adminUserId,
+      action: 'delete',
+      entityType: 'workspace_member',
+      entityId: membershipId,
+      oldData: { role: membership.role },
+      newData: null,
+      ipAddress: actor.ipAddress ?? undefined,
+      userAgent: actor.userAgent ?? undefined,
+    })
+  }
+
+  private async getMemberView(membershipId: string): Promise<MemberView> {
+    const { data: m, error } = await supabase
+      .from('workspace_members')
+      .select(MEMBER_COLUMNS)
+      .eq('id', membershipId)
+      .single()
+    if (error || !m) throw new NotFoundError('Membership')
+
+    const user = (await this.resolveIdentities([m.user_id])).get(m.user_id)
+    return {
+      id: m.id,
+      userId: m.user_id,
+      name: user?.name ?? null,
+      email: user?.email ?? null,
+      role: m.role as any,
+      status: m.suspended_at ? 'suspended' : m.has_access === false ? 'no-access' : 'active',
+      joinedAt: m.joined_at,
+    }
+  }
+
+  /**
+   * Subscriptions, filtered by plan, status, and/or an expiry WINDOW.
+   *
+   * `expiringBefore` / `expiringAfter` bound `period_end`. They exist because
+   * an expiration centre cannot be built honestly without them: bucketing a
+   * PAGED list in the browser only buckets the page in front of you, so an
+   * admin looking at "3 expiring this week" would be reading the first 20 rows
+   * and not the other 200. The filter has to run where the whole set is.
+   *
+   * Both bounds are ISO timestamps and both are optional; supplying only one
+   * gives an open-ended window, which is what "already expired" (before=now)
+   * and "expires eventually" (after=now) need.
+   */
   async listSubscriptions(
-    opts: PageOpts & { plan?: Plan | undefined; status?: SubscriptionStatus | undefined },
+    opts: PageOpts & {
+      plan?: Plan | undefined
+      status?: SubscriptionStatus | undefined
+      expiringBefore?: string | undefined
+      expiringAfter?: string | undefined
+    },
   ) {
     const { limit, offset } = clampPage(opts)
 
@@ -428,13 +767,27 @@ export class AdminService {
     if (opts.plan) query = query.eq('plan', opts.plan)
     if (opts.status) query = query.eq('status', opts.status)
 
+    // A row with no period_end has no expiry and must not appear in an expiry
+    // window — PostgREST would exclude it from a range filter anyway, but
+    // being explicit stops a future `.or(period_end.is.null)` from quietly
+    // dragging never-expiring rows into an "expires soon" list.
+    if (opts.expiringBefore) query = query.lte('period_end', opts.expiringBefore)
+    if (opts.expiringAfter) query = query.gte('period_end', opts.expiringAfter)
+
+    const askingAboutExpiry = Boolean(opts.expiringBefore || opts.expiringAfter)
+
     const { data, error, count } = await query
-      .order('created_at', { ascending: false })
+      .order(askingAboutExpiry ? 'period_end' : 'created_at', { ascending: askingAboutExpiry })
       .range(offset, offset + limit - 1)
 
     if (error) throw new DatabaseError('Failed to list subscriptions', error)
 
-    return { subscriptions: data ?? [], total: count ?? 0, limit, offset }
+    // Via `unknown`: the column list is a runtime string constant, so Supabase
+    // cannot infer a row type and widens the result to include its error
+    // shape. The `error` check above is what establishes these are rows.
+    const subscriptions = (data ?? []) as unknown as SubscriptionRow[]
+
+    return { subscriptions, total: count ?? 0, limit, offset }
   }
 
   async getSubscriptionDetail(subscriptionId: string) {

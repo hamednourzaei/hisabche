@@ -159,8 +159,25 @@ describe('public auth routes', () => {
 })
 
 describe('unknown routes', () => {
-  it('returns 404 rather than 401 for a path that does not exist', async () => {
+  it('answers 401, not 404, for an unauthenticated unknown path', async () => {
+    // ⚠️ This test used to assert 404, and passed only because '/api' was in
+    // the public-paths list in index.ts. That list is matched with
+    // `url.startsWith(p)`, so '/api' made EVERY /api/* route public — a
+    // global authentication bypass, not an API-hygiene nicety.
+    //
+    // With the entry removed, an unknown path now falls through to
+    // authenticate() and answers 401. That is also the better behaviour on its
+    // own merits: an unauthenticated caller learning which /api paths exist
+    // from the 404-vs-401 difference is route enumeration.
     const res = await app.inject({ method: 'GET', url: '/api/definitely-not-a-route' })
+
+    expect(res.statusCode).toBe(401)
+  })
+
+  it('still answers 404 for an unknown path that is genuinely public', async () => {
+    // The counterweight: authentication must not have swallowed routing
+    // entirely. A public prefix still resolves to a real 404.
+    const res = await app.inject({ method: 'GET', url: '/api/health/not-a-real-subpath' })
 
     expect(res.statusCode).toBe(404)
   })

@@ -23,18 +23,22 @@ const config: Config = {
         primary: {
           DEFAULT: 'hsl(var(--hisab-primary))',
           fg: 'hsl(var(--hisab-primary-fg))',
+          foreground: 'hsl(var(--hisab-primary-fg))',
         },
         destructive: {
           DEFAULT: 'hsl(var(--hisab-destructive))',
           fg: 'hsl(var(--hisab-destructive-fg))',
+          foreground: 'hsl(var(--hisab-destructive-fg))',
         },
         success: {
           DEFAULT: 'hsl(var(--hisab-success))',
           fg: 'hsl(var(--hisab-success-fg))',
+          foreground: 'hsl(var(--hisab-success-fg))',
         },
         warning: {
           DEFAULT: 'hsl(var(--hisab-warning))',
           fg: 'hsl(var(--hisab-warning-fg))',
+          foreground: 'hsl(var(--hisab-warning-fg))',
         },
         purple: {
           DEFAULT: 'hsl(var(--color-purple))',
@@ -65,9 +69,38 @@ const config: Config = {
           DEFAULT: 'hsl(0 84% 60%)',
           500: 'hsl(0 84% 60%)',
         },
+        // ── Admin accent scales ──────────────────────────────────────────
+        // The admin console's accent pair is blue #3b82f6 + violet #8b5cf6.
+        // They are declared here, once, because the shared token set has no
+        // equivalent: `--color-purple` is aliased to the brand TEAL, and the
+        // shared `blue` had only a single shade, so `blue-500/10`, `blue-400`
+        // and `violet-*` all silently emitted nothing. These are the tokens —
+        // no component may write the hex itself.
         blue: {
-          DEFAULT: 'hsl(210 90% 55%)',
-          500: 'hsl(210 90% 55%)',
+          DEFAULT: '#3b82f6',
+          50: '#eff6ff',
+          100: '#dbeafe',
+          200: '#bfdbfe',
+          300: '#93c5fd',
+          400: '#60a5fa',
+          500: '#3b82f6',
+          600: '#2563eb',
+          700: '#1d4ed8',
+          800: '#1e40af',
+          900: '#1e3a8a',
+        },
+        violet: {
+          DEFAULT: '#8b5cf6',
+          50: '#f5f3ff',
+          100: '#ede9fe',
+          200: '#ddd6fe',
+          300: '#c4b5fd',
+          400: '#a78bfa',
+          500: '#8b5cf6',
+          600: '#7c3aed',
+          700: '#6d28d9',
+          800: '#5b21b6',
+          900: '#4c1d95',
         },
         teal: {
           DEFAULT: 'hsl(var(--color-secondary))',
@@ -78,12 +111,35 @@ const config: Config = {
         card: {
           DEFAULT: 'hsl(var(--hisab-card))',
           fg: 'hsl(var(--hisab-foreground))',
+          // `card-foreground` is the shadcn spelling @hisabche/ui emits.
+          foreground: 'hsl(var(--hisab-foreground))',
         },
         muted: {
           DEFAULT: 'hsl(var(--hisab-muted))',
           fg: 'hsl(var(--hisab-muted-fg))',
+          // ⚠️ REAL DEFECT, not a nicety. Admin pages and @hisabche/ui alike
+          // are full of `text-muted-foreground`, but only `muted.fg` was
+          // declared — so Tailwind emitted NO rule and every "secondary" line
+          // rendered at full foreground contrast. Secondary text has been
+          // indistinguishable from primary text in this app for its whole
+          // life. Same story for accent / popover / secondary / input below.
+          foreground: 'hsl(var(--hisab-muted-fg))',
         },
+        accent: {
+          DEFAULT: 'hsl(var(--surface-muted))',
+          foreground: 'hsl(var(--fg-primary))',
+        },
+        secondary: {
+          DEFAULT: 'hsl(var(--surface-muted))',
+          foreground: 'hsl(var(--fg-secondary))',
+        },
+        popover: {
+          DEFAULT: 'hsl(var(--surface-overlay))',
+          foreground: 'hsl(var(--fg-primary))',
+        },
+        input: 'hsl(var(--hisab-border))',
         border: 'hsl(var(--hisab-border))',
+        'border-strong': 'hsl(var(--border-strong))',
         ring: 'hsl(var(--hisab-ring))',
         surface: {
           base: 'hsl(var(--surface-base))',

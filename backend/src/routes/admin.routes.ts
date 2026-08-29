@@ -45,10 +45,30 @@ const userListQuery = listQuery.extend({
 const subscriptionListQuery = listQuery.extend({
   plan: planEnum.optional(),
   status: subscriptionStatusEnum.optional(),
+  // Expiry window bounds on period_end. Datetime-validated so a malformed
+  // value is a 400 from Zod rather than a PostgREST error, and so a caller
+  // cannot smuggle a filter expression through a string parameter.
+  expiringBefore: z.string().datetime().optional(),
+  expiringAfter: z.string().datetime().optional(),
 })
 
 const updatePlanBody = z.object({
   plan: planEnum,
+  reason: z.string().max(1000).optional(),
+})
+
+/**
+ * Workspace roles are a CLOSED vocabulary: owner | manager | seller.
+ *
+ * Not a free string, and deliberately not the legacy value 'admin' — a census
+ * of workspace_members found zero rows carrying it, and auth.middleware.ts used
+ * to fabricate it for users with no membership at all, which workflow.service
+ * then accepted as an approver override.
+ */
+const memberRoleEnum = z.enum(['owner', 'manager', 'seller'])
+
+const updateMemberRoleBody = z.object({
+  role: memberRoleEnum,
   reason: z.string().max(1000).optional(),
 })
 
@@ -157,6 +177,75 @@ export default async function adminRoutes(fastify: FastifyInstance) {
         return reply.code(400).send({ error: 'Invalid workspace id', code: 'INVALID_PARAM' })
       }
       return send(request, reply, () => adminService.getWorkspaceDetail(parsed.data))
+    },
+  )
+
+  // ─── GET /api/admin/workspaces/:workspaceId/members ─────────
+  //
+  // Membership + identity in ONE response. AdminService issues exactly two
+  // queries — the memberships, then a single batched `.in('id', userIds)` for
+  // identity — so a workspace with 50 members costs 2 round-trips, not 51.
+  fastify.get(
+    '/api/admin/workspaces/:workspaceId/members',
+    { preHandler: [authenticate, platformAdminGuard] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const parsed = uuidParam.safeParse((request.params as { workspaceId: string }).workspaceId)
+      if (!parsed.success) {
+        return reply.code(400).send({ error: 'Invalid workspace id', code: 'INVALID_PARAM' })
+      }
+      return send(request, reply, async () => ({
+        members: await adminService.listWorkspaceMembers(parsed.data),
+      }))
+    },
+  )
+
+  // ─── PATCH /api/admin/memberships/:membershipId ─────────────
+  //
+  // Addressed by the membership PRIMARY KEY, never by user_id — a user may
+  // hold memberships in several workspaces and `user_id` identifies the actor,
+  // not the row.
+  //
+  // The one-owner rule is enforced in the service before the write; the live
+  // `workspace_single_owner_idx` is the backstop, not the UX.
+  fastify.patch(
+    '/api/admin/memberships/:membershipId',
+    { preHandler: [authenticate, platformAdminGuard] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const parsed = uuidParam.safeParse((request.params as { membershipId: string }).membershipId)
+      if (!parsed.success) {
+        return reply.code(400).send({ error: 'Invalid membership id', code: 'INVALID_PARAM' })
+      }
+      const body = updateMemberRoleBody.safeParse(request.body)
+      if (!body.success) {
+        return reply.code(400).send({ error: 'Invalid role', code: 'INVALID_BODY' })
+      }
+      return send(request, reply, () =>
+        adminService.updateMemberRole(actorOf(request), parsed.data, body.data.role),
+      )
+    },
+  )
+
+  // ─── DELETE /api/admin/memberships/:membershipId ────────────
+  //
+  // Removes the MEMBERSHIP only. The user account is never touched — not
+  // `auth.users`, not `users` — and no invoice, transaction or ledger row is
+  // read or written. The workspace owner cannot be removed: that is an
+  // ownership transfer, a different operation with different rules.
+  //
+  // A refused or failed removal writes NO audit row. A log of things that did
+  // not happen is worse than no log.
+  fastify.delete(
+    '/api/admin/memberships/:membershipId',
+    { preHandler: [authenticate, platformAdminGuard] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const parsed = uuidParam.safeParse((request.params as { membershipId: string }).membershipId)
+      if (!parsed.success) {
+        return reply.code(400).send({ error: 'Invalid membership id', code: 'INVALID_PARAM' })
+      }
+      return send(request, reply, async () => {
+        await adminService.removeMember(actorOf(request), parsed.data)
+        return { removed: true, membershipId: parsed.data }
+      })
     },
   )
 

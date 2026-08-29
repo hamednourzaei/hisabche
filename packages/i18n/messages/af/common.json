@@ -2884,7 +2884,10 @@
     "dashboard": {
       "title": "دشبورد پلتفورم",
       "planMix": "ویش پلان‌ها",
-      "ofTotal": "از {total} اشتراک"
+      "ofTotal": "از {total} اشتراک",
+      "description": "د پلتفورم د حالت لنډه کتنه",
+      "generatedAt": "تازه شوی: {time}",
+      "planShare": "د {plan} پلان برخه: {percent}٪"
     },
     "kpi": {
       "totalWorkspaces": "ټول سوداګرۍ",
@@ -2898,6 +2901,142 @@
     },
     "notice": {
       "migrationInProgress": "د اشتراکونو لېږد روان دی — {percent}٪ سوداګرۍ ته منسوب شوي. د پلان ویش لا ټول نه پوښي."
+    },
+    "workspaces": {
+      "title": "سوداګرۍ",
+      "description": "د سوداګرۍ، مالکانو او غړو مدیریت",
+      "search": "د سوداګرۍ لټون…",
+      "owner": "مالک",
+      "plan": "پلان",
+      "status": "حالت",
+      "members": "غړي",
+      "created": "د جوړېدو نېټه",
+      "actions": "کړنې",
+      "expand": "د {name} غړي وښایه",
+      "collapse": "د {name} غړي پټ کړه",
+      "noOwner": "بې مالکه",
+      "active": "فعال",
+      "inactive": "غیرفعال",
+      "noSubscription": "بې اشتراکه"
+    },
+    "member": {
+      "name": "نوم",
+      "email": "بریښنالیک",
+      "role": "دنده",
+      "status": "حالت",
+      "joined": "د غړیتوب نېټه",
+      "unknown": "نامعلوم",
+      "noProfile": "پروفایل نشته",
+      "editRole": "دنده بدله کړه",
+      "remove": "غړی لرې کړه",
+      "ownerProtected": "مالک نشي لرې کېدای",
+      "statusActive": "فعال",
+      "statusSuspended": "ځنډول شوی",
+      "statusNoAccess": "لاسرسی نشته",
+      "roleOwner": "مالک",
+      "roleManager": "مدیر",
+      "roleSeller": "پلورونکی"
+    },
+    "removeDialog": {
+      "title": "غړیتوب لرې کول",
+      "body": "{name} به د «{workspace}» له سوداګرۍ لرې شي.",
+      "consequence": "یوازې غړیتوب لرې کېږي. د کارن حساب نه پاکېږي او بیا بلل کېدای شي.",
+      "confirm": "لرې کړه",
+      "cancel": "لغوه"
+    },
+    "empty": {
+      "noWorkspaces": "لا تر اوسه هیڅ سوداګري نشته.",
+      "noMembers": "دې سوداګرۍ لا غړي نه لري.",
+      "noResults": "د «{search}» لپاره پایله ونه موندل شوه.",
+      "noWorkspacesHint": "لومړۍ سوداګري چې ثبت شي، دلته به ښکاره شي.",
+      "noneOnPage": "پدې مخ کې د دې فلټر لپاره څه نشته.",
+      "noneOnPageHint": "دا فلټر یوازې پر همدې مخ تطبیقېږي. د نورو لپاره بل مخ ته لاړ شئ."
+    },
+    "error": {
+      "loadWorkspaces": "د سوداګرۍ راوړل ناکام شول.",
+      "loadMembers": "د غړو راوړل ناکام شول.",
+      "updateRole": "د دندې بدلون ناکام شو.",
+      "removeMember": "د غړي لرې کول ناکام شول.",
+      "retry": "بیا هڅه"
+    },
+    "pagination": {
+      "showing": "{from} تر {to} له {total}",
+      "previous": "مخکینی",
+      "next": "راتلونکی",
+      "label": "مخ ویش"
+    },
+    "subscriptions": {
+      "title": "اشتراکونه",
+      "description": "د سوداګرۍ د پلان او حالت مدیریت",
+      "workspace": "سوداګري",
+      "plan": "پلان",
+      "status": "حالت",
+      "periodEnd": "د دورې پای",
+      "trial": "آزمایښتي",
+      "noPeriod": "بې دورې",
+      "allPlans": "ټول پلانونه",
+      "allStatuses": "ټول حالتونه",
+      "expiresIn": "{days} ورځې پاتې",
+      "expiredAgo": "{days} ورځې تېرې",
+      "expiringSoon": "پای ته نږدې",
+      "expired": "پای ته رسېدلی",
+      "changePlan": "پلان بدل کړه",
+      "changeStatus": "حالت بدل کړه",
+      "reason": "د بدلون دلیل",
+      "reasonHint": "په پلټنې کې ثبتېږي",
+      "apply": "پلي کړه",
+      "empty": "په دې فلټرونو سره اشتراک ونه موندل شو.",
+      "loadError": "د اشتراکونو راوړل ناکام شول.",
+      "updateError": "بدلون ناکام شو.",
+      "noDateBuckets": "د پای نېټې پر بنسټ ډلبندي لا په بکاینډ کې نشته؛ فلټر د حالت پر بنسټ دی."
+    },
+    "plan": {
+      "free": "وړیا",
+      "pro": "مسلکي",
+      "enterprise": "سازماني"
+    },
+    "status": {
+      "active": "فعال",
+      "trial": "آزمایښتي",
+      "expired": "پای ته رسېدلی",
+      "cancelled": "لغوه شوی",
+      "past_due": "ځنډېدلی"
+    },
+    "shell": {
+      "consoleLabel": "د مدیریت کنسول",
+      "superAdmin": "د سیستم مدیر",
+      "mainNav": "اصلي ناوبري",
+      "openMenu": "مینو پرانستل",
+      "closeMenu": "مینو تړل",
+      "darkMode": "تیاره حالت",
+      "lightMode": "روښانه حالت",
+      "searchLabel": "د سوداګرۍ لټون",
+      "searchPlaceholder": "د سوداګرۍ لټون…",
+      "alertsNone": "خبرتیا نشته",
+      "alertsWithCount": "{count} ځنډېدلي اشتراکونه"
+    },
+    "filters": {
+      "all": "ټول",
+      "groupLabel": "د حالت فلټر"
+    },
+    "users": {
+      "title": "کاروونکي",
+      "description": "د پلتفورم د کاروونکو لړلیک",
+      "search": "د کاروونکي نوم ولټوئ…",
+      "searchScopeNotice": "لټون یوازې پر «نوم» ترسره کېږي. بریښنالیک د تصدیق په جدول کې ساتل کېږي او نه لټول کېږي، خو د همدې مخ د پایلو لپاره ښودل کېږي.",
+      "empty": "لا تر اوسه کوم کاروونکی نشته.",
+      "loadError": "د کاروونکو راوړل ناکام شول."
+    },
+    "auditLogs": {
+      "title": "د پلټنې راپور",
+      "description": "په پلتفورم کې د ثبت شویو بدلونونو تاریخچه",
+      "action": "کړنه",
+      "entity": "موضوع",
+      "when": "وخت",
+      "noEntity": "بې موضوعه",
+      "empty": "لا تر اوسه کومه پېښه نه ده ثبت شوې.",
+      "emptyHint": "یوازې بریالي بدلونونه ثبتېږي؛ ردې شوې غوښتنې څه نه لیکي.",
+      "loadError": "د پلټنې راپور راوړل ناکام شول."
     }
   }
 }
