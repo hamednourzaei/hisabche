@@ -375,12 +375,22 @@ export class PosService {
       'sales',
       'receivable',
       'bank',
+      'purchase',
     ])
 
     // A shop that never takes a card needs no bank account configured, so
     // `bank` is only required when there is card or transfer money to place.
     const cardAndTransferMinor = posting.cardMinor + posting.transferMinor
-    const required = missing.filter((role) => role !== 'bank' || cardAndTransferMinor !== 0)
+
+    // A role is only REQUIRED when there is money that needs it. A shop that
+    // never takes a card needs no bank account, and one whose sellers never
+    // take cash out needs no purchases account — demanding either would refuse
+    // to book a perfectly ordinary day.
+    const required = missing.filter((role) => {
+      if (role === 'bank') return cardAndTransferMinor !== 0
+      if (role === 'purchase') return posting.movementsMinor !== 0
+      return true
+    })
 
     if (required.length > 0) {
       console.warn(`[POS] session ${session.id} not booked: no account for ${required.join(', ')}`)
@@ -409,6 +419,32 @@ export class PosService {
 
     if (posting.creditMinor > 0) {
       lines.push({ accountId: accounts.receivable!, debit: posting.creditMinor / 100, credit: 0 })
+    }
+
+    // Cash put in or taken out during the session.
+    //
+    // Missing too, and its absence broke the same way the card takings did: a
+    // seller takes 3,000 out for a delivery fare, the drawer counts 3,000
+    // lighter, the debits come up short by exactly that, and the ledger
+    // refuses the entry — so the day never books.
+    //
+    // It is neither a shortage nor revenue. The money left the drawer for a
+    // stated reason, so it is a payment: cash is already reduced by the count,
+    // and the other side goes to purchases.
+    //
+    // `purchase` is the closest role the chart defines. A dedicated expense
+    // role would name it better, and until there is one this is the honest
+    // approximation rather than a silent imbalance.
+    if (posting.movementsMinor !== 0) {
+      const amount = Math.abs(posting.movementsMinor) / 100
+
+      lines.push(
+        posting.movementsMinor < 0
+          ? // Money out: an expense the shop incurred.
+            { accountId: accounts.purchase!, debit: amount, credit: 0 }
+          : // Money in: the owner topping up the float.
+            { accountId: accounts.purchase!, debit: 0, credit: amount },
+      )
     }
 
     // The variance balances the entry. Without it, a drawer that is short

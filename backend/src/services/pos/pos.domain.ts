@@ -144,6 +144,15 @@ export interface SessionTotals {
    * Null until somebody has counted.
    */
   varianceMinor: number | null
+  /**
+   * Net of cash put in and taken out during the session, signed.
+   *
+   * Money a seller takes out for a delivery fare has LEFT the drawer, so the
+   * count is legitimately lower by that amount. It is not a shortage and it is
+   * not revenue — it is a payment, and the ledger has to say so or the entry
+   * does not balance.
+   */
+  movementsMinor: number
 }
 
 export function summarise(
@@ -173,6 +182,7 @@ export function summarise(
   return {
     orderCount: completed.length,
     voidedCount: orders.length - completed.length,
+    movementsMinor: movementsNetMinor(movements),
     grossSalesMinor: completed.reduce((sum, order) => sum + order.totalMinor, 0),
     byMethod,
     expectedCashMinor: expected,
@@ -361,6 +371,15 @@ export interface SessionPosting {
    */
   varianceMinor: number
   revenueMinor: number
+  /**
+   * Net cash movements, signed. Negative means money left the drawer.
+   *
+   * This was MISSING, and its absence produced an unbalanced entry on any day
+   * a seller took money out: the counted cash was lower by the withdrawal, the
+   * debits were short by exactly that, and the ledger refused the posting —
+   * so the day never booked and the cashier saw a generic failure.
+   */
+  movementsMinor: number
 }
 
 /**
@@ -384,5 +403,6 @@ export function buildPosting(session: PosSession, totals: SessionTotals): Sessio
     creditMinor: totals.byMethod.credit,
     varianceMinor: totals.varianceMinor ?? 0,
     revenueMinor: totals.grossSalesMinor,
+    movementsMinor: totals.movementsMinor,
   }
 }
