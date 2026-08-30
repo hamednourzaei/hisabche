@@ -32,7 +32,26 @@
 //   node scripts/run-migrations.mjs --apply --only tax-engine-migration.sql
 //
 // ENVIRONMENT
-//   DATABASE_URL   required. A direct Postgres connection string.
+//   DATABASE_URL   required to apply. A Postgres connection string.
+//                  Read from the shell, or from `.env.migrate` / `.env.local`
+//                  in the repository root if it is not already set.
+//
+//   WHICH SUPABASE HOST TO USE
+//
+//   On the free plan the DIRECT host (`db.<ref>.supabase.co`) resolves to an
+//   IPv6 address only — a dedicated IPv4 address is a paid add-on. On a
+//   network without IPv6 that fails as ENETUNREACH or ENOTFOUND, which reads
+//   like a wrong password and is not.
+//
+//   Use the SESSION pooler instead:
+//
+//     aws-0-<region>.pooler.supabase.com:5432   session mode — IPv4, full SQL
+//     aws-0-<region>.pooler.supabase.com:6543   transaction mode — DO NOT USE
+//
+//   Session mode holds one connection for the whole session, so multi-statement
+//   DDL, `BEGIN … COMMIT` and `CREATE FUNCTION` all behave normally.
+//   Transaction mode hands the connection back between statements and will
+//   leave a migration half-applied.
 // ============================================================================
 
 import { createHash } from 'node:crypto'
@@ -40,7 +59,10 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-const DOCS = join(dirname(fileURLToPath(import.meta.url)), '..', 'docs')
+import { loadEnv } from './lib/load-env.mjs'
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
+const DOCS = join(ROOT, 'docs')
 
 const args = process.argv.slice(2)
 const APPLY = args.includes('--apply')
@@ -57,6 +79,10 @@ const ONLY = args.includes('--only') ? args[args.indexOf('--only') + 1] : null
  * Files not listed here run last, in name order, and are reported as such.
  */
 const ORDER = [
+  // FIRST. It creates `exchange_rates`, which `schema-drift-fix` ALTERs and no
+  // other file creates, and it scopes a dozen pre-existing tables to a
+  // workspace before anything else builds on them.
+  'live-reconciliation-migration.sql',
   'tenancy-workspace-migration.sql',
   'tenancy-rls.sql',
   'unified-sale-purchase-migration.sql',
@@ -75,12 +101,31 @@ const ORDER = [
   'traceability-migration.sql',
   'finance-gaps-migration.sql',
   'tier2-gaps-migration.sql',
+  // Adds columns three services already query. Must run after every CREATE
+  // TABLE it alters, which is why it is last of the schema files.
+  'schema-drift-fix-migration.sql',
+  // Needs `time_entries` (tier2-gaps) AND the sync trigger functions
+  // (sync-engine). Listed rather than left to name order, because the name
+  // order that happens to work today is not a guarantee.
+  'sync-engine-migration.sql',
+  'timesheet-sync-migration.sql',
+  // LAST, deliberately. It rewrites policies that the earlier files create, so
+  // it has to run after all of them or its work is overwritten.
+  'rls-recursion-fix-migration.sql',
 ]
+
+loadEnv()
 
 const DATABASE_URL = process.env.DATABASE_URL
 
 function listMigrations() {
-  const present = readdirSync(DOCS).filter((file) => file.endsWith('.sql'))
+  // A leading underscore means "generated, not a migration".
+  //
+  // `_bundle.sql` is every migration concatenated for pasting into the SQL
+  // Editor. Without this filter the runner treats it as a thirty-first
+  // migration and applies the whole set a second time — after the individual
+  // files have already run.
+  const present = readdirSync(DOCS).filter((file) => file.endsWith('.sql') && !file.startsWith('_'))
 
   const ordered = ORDER.filter((name) => present.includes(name))
   const extra = present.filter((name) => !ORDER.includes(name)).sort()
@@ -127,9 +172,43 @@ if (!DATABASE_URL) {
 
 // `pg` is imported lazily so a dry run works with no driver installed.
 const { default: pg } = await import('pg')
-const client = new pg.Client({ connectionString: DATABASE_URL })
 
-await client.connect()
+// Supabase requires TLS and presents a certificate chain Node does not carry a
+// root for by default, so a plain connection fails with SELF_SIGNED_CERT_IN_CHAIN.
+//
+// The transport is still encrypted; what is skipped is verifying the server's
+// identity. That is acceptable for a one-off migration run to a host the
+// operator typed themselves, and NOT acceptable for the application — which is
+// why this is here and not in `src/db.ts`.
+const client = new pg.Client({
+  connectionString: DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
+})
+
+try {
+  await client.connect()
+} catch (error) {
+  console.error(`\nCould not connect: ${error.message}\n`)
+
+  if (error.code === 'ENOTFOUND' || error.code === 'ENETUNREACH') {
+    console.error(
+      'That host did not resolve, or resolved to an address this network cannot reach.\n' +
+        'On the Supabase free plan the direct host is IPv6-only. Use the SESSION\n' +
+        'pooler instead — Project Settings → Database → Connection string →\n' +
+        'Session pooler (port 5432, host aws-0-<region>.pooler.supabase.com).\n' +
+        'Do not use port 6543: transaction mode leaves DDL half-applied.',
+    )
+  }
+
+  if (error.code === '28P01') {
+    console.error(
+      'The password was rejected. Reset it under Project Settings → Database,\n' +
+        'and URL-encode any @ : / ? # characters in it.',
+    )
+  }
+
+  process.exit(1)
+}
 
 // The ledger of what has run. Created first, outside any migration, because
 // every other decision depends on being able to read it.

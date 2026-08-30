@@ -31,6 +31,8 @@ dist/
 # Environment
 .env
 .env.local
+# Holds a database password with DDL rights over every table. Never committed.
+.env.migrate
 .env.*.local
 !.env.example
 

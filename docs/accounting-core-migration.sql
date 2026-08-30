@@ -78,11 +78,59 @@ CREATE INDEX IF NOT EXISTS journal_lines_workspace_account_idx
   ON journal_lines (workspace_id, account_id);
 
 -- A line is one side or the other, never both and never neither.
+--
+-- Added NOT VALID deliberately.
+--
+-- `NOT VALID` means: enforce this on every row written from now on, and do not
+-- re-check the rows that are already there. Postgres refuses to add a CHECK
+-- over data that breaks it, and a live database was found holding two lines
+-- with neither a debit nor a credit — so the strict form aborts the whole
+-- migration and NOTHING gets applied, including the tenant isolation below.
+--
+-- Refusing to install any control because two old rows are wrong is the worse
+-- outcome. This way the ledger is protected from today, and the two rows stay
+-- visible instead of being silently deleted — which is the right order for a
+-- financial record: a person decides what an old entry should have said, not a
+-- migration.
+--
+-- To find them, and to promote the constraint once they are dealt with, see
+-- docs/live-reconciliation-migration.sql.
 ALTER TABLE journal_lines DROP CONSTRAINT IF EXISTS journal_lines_one_sided_check;
 ALTER TABLE journal_lines ADD CONSTRAINT journal_lines_one_sided_check CHECK (
   COALESCE(debit, 0) >= 0 AND COALESCE(credit, 0) >= 0
   AND (COALESCE(debit, 0) = 0) <> (COALESCE(credit, 0) = 0)
-);
+) NOT VALID;
+
+-- Promote it to fully enforced, but only if the ledger is actually clean.
+--
+-- NOT VALID is the safe way to ADD the constraint; it is not a good place to
+-- leave it. An unvalidated constraint is a promise about new rows only, and
+-- the next person reading the schema cannot tell whether the history behind it
+-- was ever checked.
+--
+-- `live-reconciliation-migration.sql` archives and removes the amount-less
+-- lines before this file runs, so on a database that has been through the full
+-- sequence this validates and the constraint becomes a real guarantee. On one
+-- that has not, it stays NOT VALID and says so rather than aborting.
+DO $$
+DECLARE
+  bad_rows bigint;
+BEGIN
+  SELECT count(*) INTO bad_rows
+    FROM journal_lines
+   WHERE NOT (
+     COALESCE(debit, 0) >= 0 AND COALESCE(credit, 0) >= 0
+     AND (COALESCE(debit, 0) = 0) <> (COALESCE(credit, 0) = 0)
+   );
+
+  IF bad_rows = 0 THEN
+    ALTER TABLE journal_lines VALIDATE CONSTRAINT journal_lines_one_sided_check;
+  ELSE
+    RAISE NOTICE
+      'journal_lines_one_sided_check left NOT VALID: % existing row(s) break it. New writes are still enforced.',
+      bad_rows;
+  END IF;
+END $$;
 
 -- ─── 3. Period lock ─────────────────────────────────────────────────────────
 -- One row per workspace. Nothing may be posted, edited or reversed with an

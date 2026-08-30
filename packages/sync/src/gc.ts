@@ -66,6 +66,10 @@ export const DEFAULT_RETENTION: Record<SyncEntity, RetentionPolicy> = {
   customer: { keepDays: 3650, maxRows: 5000 },
   product: { keepDays: 3650, maxRows: 5000 },
   transaction: { keepDays: 90, maxRows: 5000 },
+  // Kept as long as invoices: unbilled hours from three months ago are still
+  // owed, and a timesheet evicted before it is billed is money written off by
+  // a cache policy.
+  time_entry: { keepDays: 90, maxRows: 5000 },
 }
 
 export interface GcOptions {

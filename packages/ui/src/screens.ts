@@ -89,3 +89,11 @@ export { BankContainer } from './components/ui/bank/containers/bank-container'
 export { BudgetsContainer } from './components/ui/budgets/containers/budgets-container'
 export { TimesheetsContainer } from './components/ui/timesheets/containers/timesheets-container'
 export { ExpiryContainer } from './components/ui/expiry/containers/expiry-container'
+
+// ---------- Offline conflicts ----------
+// The review queue for offline writes the server refused. For an offline-first
+// product this is not an admin screen — it is where unrecorded money waits.
+export { ConflictsContainer } from './components/ui/conflicts/containers/conflicts-container'
+
+// ---------- Separation of duties ----------
+export { GovernanceContainer } from './components/ui/governance/containers/governance-container'

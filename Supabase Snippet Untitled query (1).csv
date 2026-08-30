@@ -1,0 +1,1793 @@
+schema_dump
+"TABLE accounts (8 rows, RLS on)
+  id uuid NOT NULL
+  code text NOT NULL
+  name text NOT NULL
+  type text NOT NULL
+  is_active boolean
+  created_at timestamp with time zone
+  user_id uuid NOT NULL
+  parent_id uuid
+  deleted_at timestamp without time zone
+TABLE activities (24 rows, RLS on)
+  id uuid NOT NULL
+  workspace_id uuid NOT NULL
+  actor_id uuid
+  entity_type text NOT NULL
+  entity_id uuid NOT NULL
+  action text NOT NULL
+  title text NOT NULL
+  description text
+  reference_number text
+  icon text
+  metadata jsonb NOT NULL
+  entity_snapshot jsonb
+  importance smallint NOT NULL
+  is_read boolean NOT NULL
+  is_pinned boolean NOT NULL
+  is_archived boolean NOT NULL
+  created_at timestamp with time zone NOT NULL
+  updated_at timestamp with time zone NOT NULL
+  actor_name text
+TABLE attendance (0 rows, RLS on)
+  id uuid NOT NULL
+  employee_id uuid NOT NULL
+  date date NOT NULL
+  check_in time without time zone
+  check_out time without time zone
+  status text
+  notes text
+  user_id uuid NOT NULL
+  created_at timestamp without time zone
+  updated_at timestamp without time zone
+TABLE audit_logs (235 rows, RLS on)
+  id uuid NOT NULL
+  user_id uuid NOT NULL
+  action text NOT NULL
+  entity_type text NOT NULL
+  entity_id uuid
+  old_data jsonb
+  new_data jsonb
+  ip_address text
+  created_at timestamp with time zone
+  user_agent text
+TABLE background_jobs (2 rows, RLS on)
+  id uuid NOT NULL
+  job_type text NOT NULL
+  status text NOT NULL
+  payload jsonb
+  scheduled_at timestamp with time zone NOT NULL
+  started_at timestamp with time zone
+  completed_at timestamp with time zone
+  last_error text
+  retry_count integer
+  max_retries integer
+  created_at timestamp with time zone NOT NULL
+TABLE billing_plans (0 rows, RLS on)
+  id uuid NOT NULL
+  key text NOT NULL
+  name text NOT NULL
+  description text
+  price_monthly integer
+  price_yearly integer
+  is_active boolean
+  features jsonb NOT NULL
+  limits jsonb NOT NULL
+  created_at timestamp with time zone
+  updated_at timestamp with time zone
+TABLE bom_items (0 rows, RLS on)
+  id uuid NOT NULL
+  bom_id uuid
+  raw_material_id uuid
+  quantity numeric NOT NULL
+  unit_cost numeric
+  user_id uuid
+TABLE boms (0 rows, RLS on)
+  id uuid NOT NULL
+  product_id uuid
+  version integer
+  is_active boolean
+  user_id uuid
+  created_at timestamp without time zone
+  updated_at timestamp without time zone
+TABLE checkout_sessions (0 rows, RLS on)
+  id text NOT NULL
+  user_id uuid NOT NULL
+  plan text NOT NULL
+  interval text NOT NULL
+  status text NOT NULL
+  stripe_session_id text
+  created_at timestamp with time zone
+  updated_at timestamp with time zone
+  workspace_id uuid NOT NULL
+TABLE customers (26 rows, RLS on)
+  id uuid NOT NULL
+  full_name text NOT NULL
+  phone text
+  email text
+  address text
+  opening_balance numeric(12,2)
+  is_active boolean
+  created_at timestamp with time zone
+  updated_at timestamp with time zone
+  synced_at timestamp with time zone
+  user_id uuid
+  notes text
+  type text
+  search_vector tsvector
+  version bigint NOT NULL
+  workspace_id uuid
+TABLE departments (2 rows, RLS on)
+  id uuid NOT NULL
+  name text NOT NULL
+  name_en text
+  parent_id uuid
+  manager_id uuid
+  description text
+  is_active boolean
+  user_id uuid NOT NULL
+  created_at timestamp without time zone
+  updated_at timestamp without time zone
+TABLE employees (7 rows, RLS on)
+  id uuid NOT NULL
+  employee_code text NOT NULL
+  first_name text NOT NULL
+  last_name text NOT NULL
+  father_name text
+  national_id text
+  passport_number text
+  date_of_birth date
+  gender text
+  marital_status text
+  email text
+  phone text
+  emergency_contact text
+  address text
+  city text
+  province text
+  photo_url text
+  department_id uuid
+  position text
+  employment_type text
+  hire_date date NOT NULL
+  termination_date date
+  status text
+  salary numeric
+  salary_currency text
+  bank_account text
+  bank_name text
+  user_id uuid
+  notes text
+  created_at timestamp without time zone
+  updated_at timestamp without time zone
+TABLE event_log (65 rows, RLS on)
+  id uuid NOT NULL
+  event_type text NOT NULL
+  entity_type text NOT NULL
+  entity_id uuid NOT NULL
+  payload jsonb
+  processed boolean
+  created_at timestamp with time zone
+  user_id uuid NOT NULL
+  retry_count integer
+  max_retries integer
+  next_retry_at timestamp with time zone
+  error_message text
+  completed_at timestamp with time zone
+  idempotency_key text
+  sequence_number bigint NOT NULL
+  tenant_id uuid
+  realtime_sent boolean
+  sync_sent boolean
+  webhook_sent boolean
+  correlation_id uuid
+TABLE event_types (25 rows, RLS on)
+  type text NOT NULL
+  description text
+  schema_version integer
+TABLE interactions (4 rows, RLS on)
+  id uuid NOT NULL
+  customer_id uuid
+  type text
+  subject text
+  content text
+  interaction_date timestamp without time zone
+  user_id uuid
+  created_at timestamp without time zone
+  status text NOT NULL
+  public_token uuid NOT NULL
+  employee_id uuid
+  employee_name text
+  customers_snapshot jsonb NOT NULL
+  status_history jsonb NOT NULL
+  customer_outcomes jsonb NOT NULL
+TABLE invoice_item_details (1 rows, RLS on)
+  id uuid NOT NULL
+  invoice_item_id uuid NOT NULL
+  title text NOT NULL
+  quantity numeric(12,3) NOT NULL
+  amount numeric(12,2) NOT NULL
+  unit text NOT NULL
+  weight_grams numeric(12,3)
+  sort_order integer NOT NULL
+  created_at timestamp with time zone
+  updated_at timestamp with time zone
+TABLE invoice_items (85 rows, RLS on)
+  id uuid NOT NULL
+  invoice_id uuid NOT NULL
+  product_id uuid
+  product_name text
+  quantity numeric(12,3)
+  unit_price numeric(12,2)
+  discount numeric(5,2)
+  total_price numeric(12,2)
+  created_at timestamp with time zone
+  user_id uuid
+  notes text
+  unit text NOT NULL
+  weight_grams numeric(12,3)
+  unit_label text
+TABLE invoice_pdf_cache (0 rows, RLS on)
+  invoice_id uuid NOT NULL
+  storage_path text NOT NULL
+  version_key text NOT NULL
+  generated_at timestamp with time zone NOT NULL
+TABLE invoices (80 rows, RLS on)
+  id uuid NOT NULL
+  invoice_number text NOT NULL
+  type text NOT NULL
+  customer_id uuid
+  supplier_id uuid
+  date timestamp with time zone NOT NULL
+  due_date timestamp with time zone
+  subtotal numeric(12,2)
+  discount_total numeric(12,2)
+  tax_total numeric(12,2)
+  total numeric(12,2) NOT NULL
+  paid_amount numeric(12,2)
+  currency text
+  payment_method text
+  status text
+  notes text
+  created_at timestamp with time zone
+  updated_at timestamp with time zone
+  synced_at timestamp with time zone
+  user_id uuid
+  discount_type text
+  reference text
+  tax_rate numeric
+  search_vector tsvector
+  purchase_order_id uuid
+  public_token uuid NOT NULL
+  version bigint NOT NULL
+  locked_by_user_id uuid
+  lock_expires_at timestamp with time zone
+  finalized_at timestamp with time zone
+  workspace_id uuid
+TABLE journal_entries (10 rows, RLS on)
+  id uuid NOT NULL
+  date date NOT NULL
+  description text
+  reference text
+  user_id uuid
+  created_at timestamp without time zone
+  updated_at timestamp without time zone
+  deleted_at timestamp without time zone
+TABLE journal_lines (40 rows, RLS on)
+  id uuid NOT NULL
+  journal_id uuid
+  account_id uuid
+  debit numeric(19,4) NOT NULL
+  credit numeric(19,4) NOT NULL
+  user_id uuid
+  created_at timestamp without time zone
+TABLE leaves (0 rows, RLS on)
+  id uuid NOT NULL
+  employee_id uuid NOT NULL
+  leave_type text NOT NULL
+  start_date date NOT NULL
+  end_date date NOT NULL
+  total_days integer NOT NULL
+  reason text
+  status text
+  approved_by uuid
+  approved_at timestamp without time zone
+  notes text
+  user_id uuid NOT NULL
+  created_at timestamp without time zone
+  updated_at timestamp without time zone
+TABLE ledger_entries (218 rows, RLS on)
+  id uuid NOT NULL
+  account_id uuid NOT NULL
+  debit numeric
+  credit numeric
+  reference_type text NOT NULL
+  reference_id uuid NOT NULL
+  description text
+  entry_date timestamp with time zone
+  created_at timestamp with time zone
+  user_id uuid NOT NULL
+TABLE notifications (154 rows, RLS on)
+  id uuid NOT NULL
+  workspace_id uuid NOT NULL
+  user_id uuid NOT NULL
+  title text NOT NULL
+  body text
+  type text NOT NULL
+  action_url text
+  entity_type text
+  entity_id uuid
+  is_read boolean NOT NULL
+  metadata jsonb
+  created_at timestamp with time zone NOT NULL
+  workflow_instance_id uuid
+  read_at timestamp with time zone
+TABLE opportunities (0 rows, RLS on)
+  id uuid NOT NULL
+  customer_id uuid
+  title text NOT NULL
+  description text
+  stage text
+  value numeric(19,4)
+  expected_close_date date
+  probability integer
+  user_id uuid
+  created_at timestamp without time zone
+  updated_at timestamp without time zone
+TABLE password_reset_tokens (8 rows, RLS on)
+  id uuid NOT NULL
+  workspace_id uuid
+  user_id uuid NOT NULL
+  token_hash text NOT NULL
+  expires_at timestamp with time zone NOT NULL
+  used_at timestamp with time zone
+  revoked_at timestamp with time zone
+  requested_ip inet
+  requested_user_agent text
+  created_at timestamp with time zone
+  updated_at timestamp with time zone
+  deleted_at timestamp with time zone
+TABLE payment_allocations (0 rows, RLS on)
+  id uuid NOT NULL
+  workspace_id uuid NOT NULL
+  payment_id uuid NOT NULL
+  invoice_id uuid NOT NULL
+  amount numeric(18,2) NOT NULL
+  created_at timestamp with time zone NOT NULL
+TABLE payments (0 rows, RLS on)
+  id uuid NOT NULL
+  workspace_id uuid NOT NULL
+  payment_number text
+  direction text NOT NULL
+  party_type text NOT NULL
+  party_id uuid
+  amount numeric(18,2) NOT NULL
+  currency text NOT NULL
+  method text NOT NULL
+  entry_date date NOT NULL
+  reference text NOT NULL
+  notes text NOT NULL
+  status text NOT NULL
+  journal_entry_id uuid
+  created_at timestamp with time zone NOT NULL
+  updated_at timestamp with time zone NOT NULL
+  created_by uuid
+TABLE payrolls (4 rows, RLS on)
+  id uuid NOT NULL
+  employee_id uuid NOT NULL
+  period_start date NOT NULL
+  period_end date NOT NULL
+  base_salary numeric NOT NULL
+  bonuses numeric
+  deductions numeric
+  overtime_hours numeric
+  overtime_rate numeric
+  overtime_amount numeric
+  tax_amount numeric
+  net_salary numeric NOT NULL
+  currency text
+  status text
+  payment_date timestamp without time zone
+  notes text
+  user_id uuid NOT NULL
+  created_at timestamp without time zone
+  updated_at timestamp without time zone
+TABLE permissions (33 rows, RLS on)
+  id uuid NOT NULL
+  code text NOT NULL
+  name text NOT NULL
+  description text
+  resource text NOT NULL
+  action text NOT NULL
+  created_at timestamp without time zone
+TABLE products (26 rows, RLS on)
+  id uuid NOT NULL
+  name text NOT NULL
+  barcode text
+  sku text
+  category text
+  quantity integer
+  unit text
+  buy_price numeric
+  sell_price numeric
+  wholesale_price numeric
+  min_stock_level integer
+  description text
+  is_active boolean
+  created_at timestamp without time zone
+  updated_at timestamp without time zone
+  synced_at timestamp without time zone
+  user_id uuid
+  image_url text
+  search_vector tsvector
+  version bigint NOT NULL
+  workspace_id uuid
+TABLE profiles (6 rows, RLS on)
+  id uuid NOT NULL
+  full_name text NOT NULL
+  business_name text
+  avatar_url text
+  created_at timestamp with time zone
+  updated_at timestamp with time zone
+  preferred_language text
+  onboarding_completed_at timestamp with time zone
+  business_types text[] NOT NULL
+  store_size text
+  business_note text
+TABLE project_members (3 rows, RLS on)
+  id uuid NOT NULL
+  project_id uuid NOT NULL
+  employee_id uuid
+  user_id uuid
+  role text
+  user_id_owner uuid NOT NULL
+  joined_at timestamp without time zone
+  created_at timestamp without time zone
+TABLE project_tasks (5 rows, RLS on)
+  id uuid NOT NULL
+  project_id uuid NOT NULL
+  title text NOT NULL
+  description text
+  assignee_id uuid
+  parent_task_id uuid
+  status text
+  priority text
+  estimated_hours numeric
+  actual_hours numeric
+  due_date date
+  completed_at timestamp without time zone
+  order_index integer
+  tags text[]
+  user_id uuid NOT NULL
+  created_at timestamp without time zone
+  updated_at timestamp without time zone
+TABLE project_time_entries (0 rows, RLS on)
+  id uuid NOT NULL
+  project_id uuid NOT NULL
+  task_id uuid
+  employee_id uuid NOT NULL
+  date date NOT NULL
+  hours numeric NOT NULL
+  description text
+  billable boolean
+  hourly_rate numeric
+  user_id uuid NOT NULL
+  created_at timestamp without time zone
+  updated_at timestamp without time zone
+TABLE projects (5 rows, RLS on)
+  id uuid NOT NULL
+  name text NOT NULL
+  description text
+  client_id uuid
+  start_date date
+  end_date date
+  budget numeric
+  currency text
+  status text
+  priority text
+  progress integer
+  tags text[]
+  user_id uuid NOT NULL
+  created_at timestamp without time zone
+  updated_at timestamp without time zone
+TABLE purchase_order_items (0 rows, RLS on)
+  id uuid NOT NULL
+  purchase_order_id uuid
+  product_id uuid
+  quantity numeric NOT NULL
+  unit_price numeric NOT NULL
+  total_price numeric NOT NULL
+  user_id uuid
+  created_at timestamp without time zone
+TABLE purchase_orders (0 rows, RLS on)
+  id uuid NOT NULL
+  supplier_id uuid
+  order_date timestamp without time zone
+  expected_delivery_date timestamp without time zone
+  status text
+  notes text
+  user_id uuid
+  created_at timestamp without time zone
+  updated_at timestamp without time zone
+  received_at timestamp without time zone
+  invoice_id uuid
+TABLE role_permissions (128 rows, RLS on)
+  id uuid NOT NULL
+  role_id uuid NOT NULL
+  permission_id uuid NOT NULL
+  created_at timestamp without time zone
+TABLE roles (9 rows, RLS on)
+  id uuid NOT NULL
+  name text NOT NULL
+  description text
+  is_system boolean
+  created_at timestamp without time zone
+  updated_at timestamp without time zone
+TABLE sod_actions (0 rows, RLS on)
+  id uuid NOT NULL
+  workspace_id uuid NOT NULL
+  entity_type text NOT NULL
+  entity_id uuid NOT NULL
+  capability text NOT NULL
+  actor_id uuid NOT NULL
+  actor_role text
+  created_at timestamp with time zone NOT NULL
+TABLE sod_overrides (0 rows, RLS on)
+  id uuid NOT NULL
+  workspace_id uuid NOT NULL
+  rule_id text NOT NULL
+  entity_type text NOT NULL
+  entity_id uuid NOT NULL
+  capability text NOT NULL
+  actor_id uuid NOT NULL
+  reason text NOT NULL
+  created_at timestamp with time zone NOT NULL
+TABLE sod_settings (0 rows, RLS on)
+  workspace_id uuid NOT NULL
+  mode text NOT NULL
+  disabled_rules jsonb NOT NULL
+  updated_by uuid
+  updated_at timestamp with time zone NOT NULL
+TABLE stock_movements (65 rows, RLS on)
+  id uuid NOT NULL
+  product_id uuid NOT NULL
+  type text NOT NULL
+  quantity numeric NOT NULL
+  reference_type text
+  reference_id uuid
+  notes text
+  created_at timestamp with time zone
+  user_id uuid NOT NULL
+  from_warehouse_id uuid
+  to_warehouse_id uuid
+TABLE subscriptions (1 rows, RLS on)
+  id uuid NOT NULL
+  user_id uuid NOT NULL
+  plan text NOT NULL
+  status text NOT NULL
+  trial_started_at timestamp with time zone NOT NULL
+  trial_ends_at timestamp with time zone NOT NULL
+  period_start timestamp with time zone NOT NULL
+  period_end timestamp with time zone NOT NULL
+  cancel_at_period_end boolean
+  stripe_customer_id text
+  stripe_subscription_id text
+  created_at timestamp with time zone
+  updated_at timestamp with time zone
+  is_trial boolean
+  trial_used boolean
+  workspace_id uuid NOT NULL
+TABLE suppliers (0 rows, RLS on)
+  id uuid NOT NULL
+  name text NOT NULL
+  phone text
+  email text
+  address jsonb
+  user_id uuid
+  is_active boolean
+  created_at timestamp without time zone
+  updated_at timestamp without time zone
+TABLE sync_change_log (14 rows, RLS on)
+  sync_version bigint NOT NULL
+  workspace_id uuid NOT NULL
+  entity_type text NOT NULL
+  entity_id uuid NOT NULL
+  operation text NOT NULL
+  entity_version bigint NOT NULL
+  origin_device text
+  created_at timestamp with time zone NOT NULL
+TABLE sync_conflicts (0 rows, RLS on)
+  id uuid NOT NULL
+  workspace_id uuid NOT NULL
+  entity_type text NOT NULL
+  entity_id uuid NOT NULL
+  mutation_id text NOT NULL
+  operation text NOT NULL
+  server_version integer
+  server_row jsonb NOT NULL
+  client_version integer
+  client_payload jsonb NOT NULL
+  divergences jsonb NOT NULL
+  has_financial_divergence boolean NOT NULL
+  status text NOT NULL
+  resolution text
+  resolution_reason text
+  resolved_row jsonb
+  resolved_by uuid
+  resolved_at timestamp with time zone
+  detected_by uuid
+  created_at timestamp with time zone NOT NULL
+TABLE sync_logs (0 rows, RLS on)
+  id uuid NOT NULL
+  user_id uuid NOT NULL
+  started_at timestamp without time zone NOT NULL
+  completed_at timestamp without time zone
+  status text
+  items_processed integer
+  items_failed integer
+  items_total integer
+  error_message text
+  created_at timestamp without time zone
+TABLE sync_mutations (0 rows, RLS on)
+  mutation_id uuid NOT NULL
+  workspace_id uuid NOT NULL
+  user_id uuid NOT NULL
+  device_id text
+  entity_type text NOT NULL
+  entity_id uuid
+  operation text NOT NULL
+  status text NOT NULL
+  result jsonb
+  error_code text
+  sync_version bigint
+  created_at timestamp with time zone NOT NULL
+TABLE sync_queue (0 rows, RLS on)
+  id uuid NOT NULL
+  user_id uuid NOT NULL
+  entity_type text NOT NULL
+  entity_id uuid
+  action text NOT NULL
+  payload jsonb NOT NULL
+  status text
+  priority integer
+  retry_count integer
+  max_retries integer
+  error_message text
+  created_at timestamp without time zone
+  processed_at timestamp without time zone
+TABLE transactions (22 rows, RLS on)
+  id uuid NOT NULL
+  customer_id uuid
+  supplier_id uuid
+  type text NOT NULL
+  amount numeric(12,2) NOT NULL
+  currency text
+  description text
+  reference text
+  date timestamp with time zone
+  created_at timestamp with time zone
+  synced_at timestamp with time zone
+  user_id uuid
+  invoice_id uuid
+  workspace_id uuid
+TABLE ui_visibility_profiles (0 rows, RLS on)
+  workspace_id uuid NOT NULL
+  user_id uuid NOT NULL
+  modules jsonb NOT NULL
+  pages jsonb NOT NULL
+  widgets jsonb NOT NULL
+  advanced_fields jsonb NOT NULL
+  updated_at timestamp with time zone NOT NULL
+TABLE ui_visibility_suggestions (0 rows, RLS on)
+  id uuid NOT NULL
+  workspace_id uuid NOT NULL
+  user_id uuid NOT NULL
+  level text NOT NULL
+  key text NOT NULL
+  kind text NOT NULL
+  reason text NOT NULL
+  answer text NOT NULL
+  created_at timestamp with time zone NOT NULL
+  answered_at timestamp with time zone
+TABLE user_roles (2 rows, RLS on)
+  id uuid NOT NULL
+  user_id uuid NOT NULL
+  role_id uuid NOT NULL
+  created_at timestamp without time zone
+  workspace_id uuid
+TABLE warehouse_stock (0 rows, RLS on)
+  id uuid NOT NULL
+  warehouse_id uuid NOT NULL
+  product_id uuid NOT NULL
+  quantity numeric NOT NULL
+  user_id uuid NOT NULL
+  created_at timestamp with time zone NOT NULL
+  updated_at timestamp with time zone NOT NULL
+TABLE warehouses (0 rows, RLS on)
+  id uuid NOT NULL
+  name text NOT NULL
+  location text
+  is_active boolean
+  user_id uuid
+  created_at timestamp without time zone
+  updated_at timestamp without time zone
+  deleted_at timestamp without time zone
+TABLE webhook_events (0 rows, RLS on)
+  id text NOT NULL
+  type text NOT NULL
+  payload jsonb NOT NULL
+  processed_at timestamp with time zone
+TABLE work_orders (0 rows, RLS on)
+  id uuid NOT NULL
+  product_id uuid
+  quantity integer NOT NULL
+  bom_id uuid
+  status text
+  start_date timestamp without time zone
+  end_date timestamp without time zone
+  user_id uuid
+  created_at timestamp without time zone
+  updated_at timestamp without time zone
+TABLE workflow_actions (44 rows, RLS on)
+  id uuid NOT NULL
+  instance_id uuid NOT NULL
+  step_order integer NOT NULL
+  action workflow_action NOT NULL
+  actor_user_id uuid NOT NULL
+  actor_role text
+  comment text
+  created_at timestamp with time zone NOT NULL
+TABLE workflow_instances (41 rows, RLS on)
+  id uuid NOT NULL
+  workflow_id uuid NOT NULL
+  workspace_id uuid NOT NULL
+  entity_type text NOT NULL
+  entity_id uuid NOT NULL
+  status workflow_status NOT NULL
+  current_step integer NOT NULL
+  total_steps integer NOT NULL
+  started_at timestamp with time zone NOT NULL
+  completed_at timestamp with time zone
+  created_at timestamp with time zone NOT NULL
+  updated_at timestamp with time zone NOT NULL
+TABLE workflow_steps (2 rows, RLS on)
+  id uuid NOT NULL
+  workflow_id uuid NOT NULL
+  step_order integer NOT NULL
+  approver_role text NOT NULL
+  approver_user_id uuid
+  is_final boolean NOT NULL
+  created_at timestamp with time zone NOT NULL
+TABLE workflows (1 rows, RLS on)
+  id uuid NOT NULL
+  workspace_id uuid NOT NULL
+  name text NOT NULL
+  description text
+  entity_type text NOT NULL
+  is_active boolean NOT NULL
+  created_at timestamp with time zone NOT NULL
+  updated_at timestamp with time zone NOT NULL
+  deleted_at timestamp with time zone
+TABLE workspace_invites (23 rows, RLS on)
+  id uuid NOT NULL
+  workspace_id uuid NOT NULL
+  email text NOT NULL
+  role text
+  invited_by uuid NOT NULL
+  token text
+  status text
+  expires_at timestamp without time zone NOT NULL
+  created_at timestamp without time zone
+  token_hash text
+  accepted_at timestamp with time zone
+  accepted_by uuid
+TABLE workspace_members (6 rows, RLS on)
+  id uuid NOT NULL
+  workspace_id uuid NOT NULL
+  user_id uuid NOT NULL
+  role text
+  joined_at timestamp without time zone
+  created_at timestamp without time zone
+  job_title text
+  phone text
+  has_access boolean NOT NULL
+  suspended_at timestamp with time zone
+TABLE workspaces (6 rows, RLS on)
+  id uuid NOT NULL
+  name text NOT NULL
+  slug text NOT NULL
+  description text
+  logo_url text
+  owner_id uuid NOT NULL
+  is_active boolean
+  created_at timestamp without time zone
+  updated_at timestamp without time zone
+  stamp_url text
+CONSTRAINT accounts_code_key ON accounts: UNIQUE (code)
+CONSTRAINT accounts_parent_id_fkey ON accounts: FOREIGN KEY (parent_id) REFERENCES accounts(id)
+CONSTRAINT accounts_pkey ON accounts: PRIMARY KEY (id)
+CONSTRAINT accounts_type_check ON accounts: CHECK ((type = ANY (ARRAY['asset'::text, 'liability'::text, 'equity'::text, 'revenue'::text, 'expense'::text])))
+CONSTRAINT accounts_user_id_fkey ON accounts: FOREIGN KEY (user_id) REFERENCES auth.users(id)
+CONSTRAINT activities_actor_id_fkey ON activities: FOREIGN KEY (actor_id) REFERENCES profiles(id) ON DELETE SET NULL
+CONSTRAINT activities_importance_check ON activities: CHECK (((importance >= 0) AND (importance <= 3)))
+CONSTRAINT activities_pkey ON activities: PRIMARY KEY (id)
+CONSTRAINT activities_workspace_id_fkey ON activities: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+CONSTRAINT attendance_employee_id_fkey ON attendance: FOREIGN KEY (employee_id) REFERENCES employees(id)
+CONSTRAINT attendance_pkey ON attendance: PRIMARY KEY (id)
+CONSTRAINT attendance_status_check ON attendance: CHECK ((status = ANY (ARRAY['present'::text, 'absent'::text, 'late'::text, 'half_day'::text, 'holiday'::text, 'weekend'::text])))
+CONSTRAINT attendance_user_id_fkey ON attendance: FOREIGN KEY (user_id) REFERENCES auth.users(id)
+CONSTRAINT audit_logs_pkey ON audit_logs: PRIMARY KEY (id)
+CONSTRAINT audit_logs_user_id_fkey ON audit_logs: FOREIGN KEY (user_id) REFERENCES auth.users(id)
+CONSTRAINT background_jobs_pkey ON background_jobs: PRIMARY KEY (id)
+CONSTRAINT background_jobs_status_check ON background_jobs: CHECK ((status = ANY (ARRAY['pending'::text, 'processing'::text, 'completed'::text, 'failed'::text])))
+CONSTRAINT billing_plans_key_key ON billing_plans: UNIQUE (key)
+CONSTRAINT billing_plans_pkey ON billing_plans: PRIMARY KEY (id)
+CONSTRAINT bom_items_bom_id_fkey ON bom_items: FOREIGN KEY (bom_id) REFERENCES boms(id) ON DELETE CASCADE
+CONSTRAINT bom_items_pkey ON bom_items: PRIMARY KEY (id)
+CONSTRAINT bom_items_raw_material_id_fkey ON bom_items: FOREIGN KEY (raw_material_id) REFERENCES products(id)
+CONSTRAINT bom_items_user_id_fkey ON bom_items: FOREIGN KEY (user_id) REFERENCES auth.users(id)
+CONSTRAINT boms_pkey ON boms: PRIMARY KEY (id)
+CONSTRAINT boms_product_id_fkey ON boms: FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+CONSTRAINT boms_user_id_fkey ON boms: FOREIGN KEY (user_id) REFERENCES auth.users(id)
+CONSTRAINT check_plan ON subscriptions: CHECK ((plan = ANY (ARRAY['free'::text, 'pro'::text, 'enterprise'::text])))
+CONSTRAINT checkout_sessions_pkey ON checkout_sessions: PRIMARY KEY (id)
+CONSTRAINT checkout_sessions_user_id_fkey ON checkout_sessions: FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+CONSTRAINT checkout_sessions_workspace_id_fkey ON checkout_sessions: FOREIGN KEY (workspace_id) REFERENCES workspaces(id)
+CONSTRAINT chk_debit_credit ON ledger_entries: CHECK ((((debit > (0)::numeric) AND (credit = (0)::numeric)) OR ((credit > (0)::numeric) AND (debit = (0)::numeric))))
+CONSTRAINT chk_paid_le_total ON invoices: CHECK ((paid_amount <= total))
+CONSTRAINT chk_price_not_negative ON invoice_items: CHECK (((unit_price >= (0)::numeric) AND (total_price >= (0)::numeric)))
+CONSTRAINT chk_qty_positive ON invoice_items: CHECK ((quantity > (0)::numeric))
+CONSTRAINT chk_sell_price ON products: CHECK (((sell_price >= (0)::numeric) AND (buy_price >= (0)::numeric)))
+CONSTRAINT chk_stock_not_negative ON products: CHECK ((quantity >= 0))
+CONSTRAINT chk_total_not_negative ON invoices: CHECK ((total >= (0)::numeric))
+CONSTRAINT customers_pkey ON customers: PRIMARY KEY (id)
+CONSTRAINT customers_type_check ON customers: CHECK ((type = ANY (ARRAY['cash'::text, 'credit'::text])))
+CONSTRAINT customers_user_id_fkey ON customers: FOREIGN KEY (user_id) REFERENCES auth.users(id)
+CONSTRAINT customers_workspace_fk ON customers: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE RESTRICT
+CONSTRAINT departments_pkey ON departments: PRIMARY KEY (id)
+CONSTRAINT departments_user_id_fkey ON departments: FOREIGN KEY (user_id) REFERENCES auth.users(id)
+CONSTRAINT employees_department_id_fkey ON employees: FOREIGN KEY (department_id) REFERENCES departments(id)
+CONSTRAINT employees_employment_type_check ON employees: CHECK ((employment_type = ANY (ARRAY['full_time'::text, 'part_time'::text, 'contractor'::text, 'intern'::text, 'consultant'::text])))
+CONSTRAINT employees_gender_check ON employees: CHECK ((gender = ANY (ARRAY['male'::text, 'female'::text, 'other'::text])))
+CONSTRAINT employees_marital_status_check ON employees: CHECK ((marital_status = ANY (ARRAY['single'::text, 'married'::text, 'divorced'::text, 'widowed'::text])))
+CONSTRAINT employees_pkey ON employees: PRIMARY KEY (id)
+CONSTRAINT employees_salary_currency_check ON employees: CHECK ((salary_currency = ANY (ARRAY['AFN'::text, 'USD'::text, 'PKR'::text, 'IRR'::text])))
+CONSTRAINT employees_status_check ON employees: CHECK ((status = ANY (ARRAY['active'::text, 'inactive'::text, 'terminated'::text, 'suspended'::text, 'on_leave'::text])))
+CONSTRAINT employees_user_id_fkey ON employees: FOREIGN KEY (user_id) REFERENCES auth.users(id)
+CONSTRAINT event_log_pkey ON event_log: PRIMARY KEY (id)
+CONSTRAINT event_log_user_id_fkey ON event_log: FOREIGN KEY (user_id) REFERENCES auth.users(id)
+CONSTRAINT event_types_pkey ON event_types: PRIMARY KEY (type)
+CONSTRAINT fk_activity_actor ON activities: FOREIGN KEY (actor_id) REFERENCES profiles(id) ON DELETE SET NULL
+CONSTRAINT fk_event_log_type ON event_log: FOREIGN KEY (event_type) REFERENCES event_types(type)
+CONSTRAINT fk_invoice_items_invoice ON invoice_items: FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
+CONSTRAINT fk_invoice_items_product ON invoice_items: FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT
+CONSTRAINT fk_invoices_customer ON invoices: FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE SET NULL
+CONSTRAINT fk_invoices_supplier ON invoices: FOREIGN KEY (supplier_id) REFERENCES suppliers(id) ON DELETE SET NULL
+CONSTRAINT interactions_customer_id_fkey ON interactions: FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
+CONSTRAINT interactions_pkey ON interactions: PRIMARY KEY (id)
+CONSTRAINT interactions_type_check ON interactions: CHECK ((type = ANY (ARRAY['call'::text, 'email'::text, 'meeting'::text, 'note'::text, 'task'::text])))
+CONSTRAINT interactions_user_id_fkey ON interactions: FOREIGN KEY (user_id) REFERENCES auth.users(id)
+CONSTRAINT invoice_item_details_amount_check ON invoice_item_details: CHECK (((amount >= (0)::numeric) AND (quantity > (0)::numeric)))
+CONSTRAINT invoice_item_details_invoice_item_id_fkey ON invoice_item_details: FOREIGN KEY (invoice_item_id) REFERENCES invoice_items(id) ON DELETE CASCADE
+CONSTRAINT invoice_item_details_pkey ON invoice_item_details: PRIMARY KEY (id)
+CONSTRAINT invoice_item_details_title_check ON invoice_item_details: CHECK ((length(TRIM(BOTH FROM title)) > 0))
+CONSTRAINT invoice_items_pkey ON invoice_items: PRIMARY KEY (id)
+CONSTRAINT invoice_items_unit_check ON invoice_items: CHECK ((unit = ANY (ARRAY['piece'::text, 'gram'::text, 'kg'::text, 'meter'::text, 'liter'::text, 'box'::text, 'pack'::text, 'carton'::text])))
+CONSTRAINT invoice_items_unit_label_check ON invoice_items: CHECK (((unit <> 'custom'::text) OR ((unit_label IS NOT NULL) AND (length(TRIM(BOTH FROM unit_label)) > 0))))
+CONSTRAINT invoice_items_user_id_fkey ON invoice_items: FOREIGN KEY (user_id) REFERENCES auth.users(id)
+CONSTRAINT invoice_pdf_cache_invoice_id_fkey ON invoice_pdf_cache: FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
+CONSTRAINT invoice_pdf_cache_pkey ON invoice_pdf_cache: PRIMARY KEY (invoice_id)
+CONSTRAINT invoices_pkey ON invoices: PRIMARY KEY (id)
+CONSTRAINT invoices_purchase_order_id_fkey ON invoices: FOREIGN KEY (purchase_order_id) REFERENCES purchase_orders(id)
+CONSTRAINT invoices_type_check ON invoices: CHECK ((type = ANY (ARRAY['sale'::text, 'purchase'::text])))
+CONSTRAINT invoices_user_id_fkey ON invoices: FOREIGN KEY (user_id) REFERENCES auth.users(id)
+CONSTRAINT invoices_workspace_fk ON invoices: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE RESTRICT
+CONSTRAINT journal_entries_pkey ON journal_entries: PRIMARY KEY (id)
+CONSTRAINT journal_entries_user_id_fkey ON journal_entries: FOREIGN KEY (user_id) REFERENCES auth.users(id)
+CONSTRAINT journal_lines_account_id_fkey ON journal_lines: FOREIGN KEY (account_id) REFERENCES accounts(id)
+CONSTRAINT journal_lines_journal_id_fkey ON journal_lines: FOREIGN KEY (journal_id) REFERENCES journal_entries(id) ON DELETE CASCADE
+CONSTRAINT journal_lines_pkey ON journal_lines: PRIMARY KEY (id)
+CONSTRAINT journal_lines_user_id_fkey ON journal_lines: FOREIGN KEY (user_id) REFERENCES auth.users(id)
+CONSTRAINT leaves_employee_id_fkey ON leaves: FOREIGN KEY (employee_id) REFERENCES employees(id)
+CONSTRAINT leaves_leave_type_check ON leaves: CHECK ((leave_type = ANY (ARRAY['annual'::text, 'sick'::text, 'maternity'::text, 'paternity'::text, 'unpaid'::text, 'bereavement'::text, 'other'::text])))
+CONSTRAINT leaves_pkey ON leaves: PRIMARY KEY (id)
+CONSTRAINT leaves_status_check ON leaves: CHECK ((status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text, 'cancelled'::text])))
+CONSTRAINT leaves_total_days_check ON leaves: CHECK ((total_days > 0))
+CONSTRAINT leaves_user_id_fkey ON leaves: FOREIGN KEY (user_id) REFERENCES auth.users(id)
+CONSTRAINT ledger_entries_account_id_fkey ON ledger_entries: FOREIGN KEY (account_id) REFERENCES accounts(id)
+CONSTRAINT ledger_entries_credit_check ON ledger_entries: CHECK ((credit >= (0)::numeric))
+CONSTRAINT ledger_entries_debit_check ON ledger_entries: CHECK ((debit >= (0)::numeric))
+CONSTRAINT ledger_entries_pkey ON ledger_entries: PRIMARY KEY (id)
+CONSTRAINT ledger_entries_user_id_fkey ON ledger_entries: FOREIGN KEY (user_id) REFERENCES auth.users(id)
+CONSTRAINT notifications_pkey ON notifications: PRIMARY KEY (id)
+CONSTRAINT notifications_type_check ON notifications: CHECK ((type = ANY (ARRAY['info'::text, 'success'::text, 'warning'::text, 'approval_required'::text])))
+CONSTRAINT notifications_workflow_instance_id_fkey ON notifications: FOREIGN KEY (workflow_instance_id) REFERENCES workflow_instances(id)
+CONSTRAINT opportunities_customer_id_fkey ON opportunities: FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
+CONSTRAINT opportunities_pkey ON opportunities: PRIMARY KEY (id)
+CONSTRAINT opportunities_probability_check ON opportunities: CHECK (((probability >= 0) AND (probability <= 100)))
+CONSTRAINT opportunities_stage_check ON opportunities: CHECK ((stage = ANY (ARRAY['lead'::text, 'qualified'::text, 'proposal'::text, 'negotiation'::text, 'won'::text, 'lost'::text])))
+CONSTRAINT opportunities_user_id_fkey ON opportunities: FOREIGN KEY (user_id) REFERENCES auth.users(id)
+CONSTRAINT password_reset_tokens_pkey ON password_reset_tokens: PRIMARY KEY (id)
+CONSTRAINT payment_allocations_amount_check ON payment_allocations: CHECK ((amount <> (0)::numeric))
+CONSTRAINT payment_allocations_payment_id_fkey ON payment_allocations: FOREIGN KEY (payment_id) REFERENCES payments(id) ON DELETE CASCADE
+CONSTRAINT payment_allocations_pkey ON payment_allocations: PRIMARY KEY (id)
+CONSTRAINT payments_amount_check ON payments: CHECK ((amount > (0)::numeric))
+CONSTRAINT payments_direction_check ON payments: CHECK ((direction = ANY (ARRAY['in'::text, 'out'::text])))
+CONSTRAINT payments_party_check ON payments: CHECK ((party_type = ANY (ARRAY['customer'::text, 'supplier'::text])))
+CONSTRAINT payments_pkey ON payments: PRIMARY KEY (id)
+CONSTRAINT payments_status_check ON payments: CHECK ((status = ANY (ARRAY['draft'::text, 'posted'::text, 'cancelled'::text])))
+CONSTRAINT payrolls_currency_check ON payrolls: CHECK ((currency = ANY (ARRAY['AFN'::text, 'USD'::text, 'PKR'::text, 'IRR'::text])))
+CONSTRAINT payrolls_employee_id_fkey ON payrolls: FOREIGN KEY (employee_id) REFERENCES employees(id)
+CONSTRAINT payrolls_pkey ON payrolls: PRIMARY KEY (id)
+CONSTRAINT payrolls_status_check ON payrolls: CHECK ((status = ANY (ARRAY['draft'::text, 'approved'::text, 'paid'::text, 'cancelled'::text])))
+CONSTRAINT payrolls_user_id_fkey ON payrolls: FOREIGN KEY (user_id) REFERENCES auth.users(id)
+CONSTRAINT permissions_action_check ON permissions: CHECK ((action = ANY (ARRAY['create'::text, 'read'::text, 'update'::text, 'delete'::text, 'export'::text, 'manage'::text])))
+CONSTRAINT permissions_code_key ON permissions: UNIQUE (code)
+CONSTRAINT permissions_pkey ON permissions: PRIMARY KEY (id)
+CONSTRAINT products_pkey ON products: PRIMARY KEY (id)
+CONSTRAINT products_user_id_fkey ON products: FOREIGN KEY (user_id) REFERENCES auth.users(id)
+CONSTRAINT products_workspace_fk ON products: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE RESTRICT
+CONSTRAINT profiles_id_fkey ON profiles: FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
+CONSTRAINT profiles_pkey ON profiles: PRIMARY KEY (id)
+CONSTRAINT project_members_employee_id_fkey ON project_members: FOREIGN KEY (employee_id) REFERENCES employees(id)
+CONSTRAINT project_members_pkey ON project_members: PRIMARY KEY (id)
+CONSTRAINT project_members_project_id_fkey ON project_members: FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+CONSTRAINT project_members_role_check ON project_members: CHECK ((role = ANY (ARRAY['manager'::text, 'member'::text, 'viewer'::text])))
+CONSTRAINT project_members_user_id_fkey ON project_members: FOREIGN KEY (user_id) REFERENCES auth.users(id)
+CONSTRAINT project_tasks_pkey ON project_tasks: PRIMARY KEY (id)
+CONSTRAINT project_tasks_priority_check ON project_tasks: CHECK ((priority = ANY (ARRAY['low'::text, 'medium'::text, 'high'::text, 'urgent'::text])))
+CONSTRAINT project_tasks_project_id_fkey ON project_tasks: FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+CONSTRAINT project_tasks_status_check ON project_tasks: CHECK ((status = ANY (ARRAY['todo'::text, 'in_progress'::text, 'review'::text, 'done'::text, 'cancelled'::text])))
+CONSTRAINT project_tasks_user_id_fkey ON project_tasks: FOREIGN KEY (user_id) REFERENCES auth.users(id)
+CONSTRAINT project_time_entries_employee_id_fkey ON project_time_entries: FOREIGN KEY (employee_id) REFERENCES employees(id)
+CONSTRAINT project_time_entries_hours_check ON project_time_entries: CHECK ((hours > (0)::numeric))
+CONSTRAINT project_time_entries_pkey ON project_time_entries: PRIMARY KEY (id)
+CONSTRAINT project_time_entries_project_id_fkey ON project_time_entries: FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+CONSTRAINT project_time_entries_task_id_fkey ON project_time_entries: FOREIGN KEY (task_id) REFERENCES project_tasks(id)
+CONSTRAINT project_time_entries_user_id_fkey ON project_time_entries: FOREIGN KEY (user_id) REFERENCES auth.users(id)
+CONSTRAINT projects_currency_check ON projects: CHECK ((currency = ANY (ARRAY['AFN'::text, 'USD'::text, 'PKR'::text, 'IRR'::text])))
+CONSTRAINT projects_pkey ON projects: PRIMARY KEY (id)
+CONSTRAINT projects_priority_check ON projects: CHECK ((priority = ANY (ARRAY['low'::text, 'medium'::text, 'high'::text, 'urgent'::text])))
+CONSTRAINT projects_progress_check ON projects: CHECK (((progress >= 0) AND (progress <= 100)))
+CONSTRAINT projects_status_check ON projects: CHECK ((status = ANY (ARRAY['planning'::text, 'in_progress'::text, 'on_hold'::text, 'completed'::text, 'cancelled'::text])))
+CONSTRAINT projects_user_id_fkey ON projects: FOREIGN KEY (user_id) REFERENCES auth.users(id)
+CONSTRAINT purchase_order_items_pkey ON purchase_order_items: PRIMARY KEY (id)
+CONSTRAINT purchase_order_items_product_id_fkey ON purchase_order_items: FOREIGN KEY (product_id) REFERENCES products(id)
+CONSTRAINT purchase_order_items_purchase_order_id_fkey ON purchase_order_items: FOREIGN KEY (purchase_order_id) REFERENCES purchase_orders(id) ON DELETE CASCADE
+CONSTRAINT purchase_order_items_user_id_fkey ON purchase_order_items: FOREIGN KEY (user_id) REFERENCES auth.users(id)
+CONSTRAINT purchase_orders_invoice_id_fkey ON purchase_orders: FOREIGN KEY (invoice_id) REFERENCES invoices(id)
+CONSTRAINT purchase_orders_pkey ON purchase_orders: PRIMARY KEY (id)
+CONSTRAINT purchase_orders_status_check ON purchase_orders: CHECK ((status = ANY (ARRAY['pending'::text, 'approved'::text, 'shipped'::text, 'received'::text, 'cancelled'::text])))
+CONSTRAINT purchase_orders_supplier_id_fkey ON purchase_orders: FOREIGN KEY (supplier_id) REFERENCES suppliers(id)
+CONSTRAINT purchase_orders_user_id_fkey ON purchase_orders: FOREIGN KEY (user_id) REFERENCES auth.users(id)
+CONSTRAINT role_permissions_permission_id_fkey ON role_permissions: FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE
+CONSTRAINT role_permissions_pkey ON role_permissions: PRIMARY KEY (id)
+CONSTRAINT role_permissions_role_id_fkey ON role_permissions: FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
+CONSTRAINT role_permissions_role_id_permission_id_key ON role_permissions: UNIQUE (role_id, permission_id)
+CONSTRAINT roles_pkey ON roles: PRIMARY KEY (id)
+CONSTRAINT sod_actions_pkey ON sod_actions: PRIMARY KEY (id)
+CONSTRAINT sod_overrides_pkey ON sod_overrides: PRIMARY KEY (id)
+CONSTRAINT sod_overrides_reason_check ON sod_overrides: CHECK ((length(btrim(reason)) > 0))
+CONSTRAINT sod_settings_mode_check ON sod_settings: CHECK ((mode = ANY (ARRAY['off'::text, 'warn'::text, 'strict'::text])))
+CONSTRAINT sod_settings_pkey ON sod_settings: PRIMARY KEY (workspace_id)
+CONSTRAINT stock_movements_from_warehouse_id_fkey ON stock_movements: FOREIGN KEY (from_warehouse_id) REFERENCES warehouses(id)
+CONSTRAINT stock_movements_pkey ON stock_movements: PRIMARY KEY (id)
+CONSTRAINT stock_movements_product_id_fkey ON stock_movements: FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+CONSTRAINT stock_movements_quantity_check ON stock_movements: CHECK ((quantity <> (0)::numeric))
+CONSTRAINT stock_movements_to_warehouse_id_fkey ON stock_movements: FOREIGN KEY (to_warehouse_id) REFERENCES warehouses(id)
+CONSTRAINT stock_movements_type_check ON stock_movements: CHECK ((type = ANY (ARRAY['in'::text, 'out'::text, 'sale'::text, 'adjustment'::text, 'return'::text])))
+CONSTRAINT stock_movements_user_id_fkey ON stock_movements: FOREIGN KEY (user_id) REFERENCES auth.users(id)
+CONSTRAINT subscriptions_pkey ON subscriptions: PRIMARY KEY (id)
+CONSTRAINT subscriptions_plan_check ON subscriptions: CHECK ((plan = ANY (ARRAY['trial'::text, 'pro'::text, 'enterprise'::text])))
+CONSTRAINT subscriptions_status_check ON subscriptions: CHECK ((status = ANY (ARRAY['active'::text, 'trial'::text, 'expired'::text, 'cancelled'::text, 'past_due'::text])))
+CONSTRAINT subscriptions_user_id_fkey ON subscriptions: FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+CONSTRAINT subscriptions_workspace_fk ON subscriptions: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE RESTRICT NOT VALID
+CONSTRAINT subscriptions_workspace_id_fkey ON subscriptions: FOREIGN KEY (workspace_id) REFERENCES workspaces(id)
+CONSTRAINT suppliers_pkey ON suppliers: PRIMARY KEY (id)
+CONSTRAINT suppliers_user_id_fkey ON suppliers: FOREIGN KEY (user_id) REFERENCES auth.users(id)
+CONSTRAINT sync_change_log_operation_check ON sync_change_log: CHECK ((operation = ANY (ARRAY['create'::text, 'update'::text, 'delete'::text])))
+CONSTRAINT sync_change_log_pkey ON sync_change_log: PRIMARY KEY (sync_version)
+CONSTRAINT sync_conflicts_pkey ON sync_conflicts: PRIMARY KEY (id)
+CONSTRAINT sync_conflicts_resolution_check ON sync_conflicts: CHECK (((resolution IS NULL) OR (resolution = ANY (ARRAY['keep_server'::text, 'keep_client'::text, 'merge'::text, 'auto_merge'::text]))))
+CONSTRAINT sync_conflicts_status_check ON sync_conflicts: CHECK ((status = ANY (ARRAY['open'::text, 'resolved'::text, 'superseded'::text])))
+CONSTRAINT sync_logs_pkey ON sync_logs: PRIMARY KEY (id)
+CONSTRAINT sync_logs_status_check ON sync_logs: CHECK ((status = ANY (ARRAY['running'::text, 'completed'::text, 'failed'::text, 'cancelled'::text])))
+CONSTRAINT sync_logs_user_id_fkey ON sync_logs: FOREIGN KEY (user_id) REFERENCES auth.users(id)
+CONSTRAINT sync_mutations_pkey ON sync_mutations: PRIMARY KEY (mutation_id)
+CONSTRAINT sync_mutations_status_check ON sync_mutations: CHECK ((status = ANY (ARRAY['applied'::text, 'rejected'::text])))
+CONSTRAINT sync_queue_action_check ON sync_queue: CHECK ((action = ANY (ARRAY['create'::text, 'update'::text, 'delete'::text])))
+CONSTRAINT sync_queue_pkey ON sync_queue: PRIMARY KEY (id)
+CONSTRAINT sync_queue_priority_check ON sync_queue: CHECK (((priority >= 0) AND (priority <= 10)))
+CONSTRAINT sync_queue_status_check ON sync_queue: CHECK ((status = ANY (ARRAY['pending'::text, 'processing'::text, 'completed'::text, 'failed'::text])))
+CONSTRAINT sync_queue_user_id_fkey ON sync_queue: FOREIGN KEY (user_id) REFERENCES auth.users(id)
+CONSTRAINT transactions_invoice_id_fkey ON transactions: FOREIGN KEY (invoice_id) REFERENCES invoices(id)
+CONSTRAINT transactions_pkey ON transactions: PRIMARY KEY (id)
+CONSTRAINT transactions_user_id_fkey ON transactions: FOREIGN KEY (user_id) REFERENCES auth.users(id)
+CONSTRAINT transactions_workspace_fk ON transactions: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE RESTRICT
+CONSTRAINT ui_visibility_profiles_pkey ON ui_visibility_profiles: PRIMARY KEY (workspace_id, user_id)
+CONSTRAINT ui_visibility_suggestions_answer_check ON ui_visibility_suggestions: CHECK ((answer = ANY (ARRAY['pending'::text, 'accepted'::text, 'dismissed'::text, 'muted'::text])))
+CONSTRAINT ui_visibility_suggestions_kind_check ON ui_visibility_suggestions: CHECK ((kind = ANY (ARRAY['hide'::text, 'show'::text])))
+CONSTRAINT ui_visibility_suggestions_level_check ON ui_visibility_suggestions: CHECK ((level = ANY (ARRAY['module'::text, 'page'::text, 'widget'::text, 'field'::text])))
+CONSTRAINT ui_visibility_suggestions_pkey ON ui_visibility_suggestions: PRIMARY KEY (id)
+CONSTRAINT unique_step_order ON workflow_steps: UNIQUE (workflow_id, step_order)
+CONSTRAINT user_roles_pkey ON user_roles: PRIMARY KEY (id)
+CONSTRAINT user_roles_role_id_fkey ON user_roles: FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
+CONSTRAINT user_roles_user_id_fkey ON user_roles: FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+CONSTRAINT user_roles_user_id_role_id_key ON user_roles: UNIQUE (user_id, role_id)
+CONSTRAINT user_roles_workspace_id_fkey ON user_roles: FOREIGN KEY (workspace_id) REFERENCES workspaces(id)
+CONSTRAINT warehouse_stock_pkey ON warehouse_stock: PRIMARY KEY (id)
+CONSTRAINT warehouse_stock_product_id_fkey ON warehouse_stock: FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+CONSTRAINT warehouse_stock_warehouse_id_fkey ON warehouse_stock: FOREIGN KEY (warehouse_id) REFERENCES warehouses(id) ON DELETE CASCADE
+CONSTRAINT warehouse_stock_warehouse_id_product_id_key ON warehouse_stock: UNIQUE (warehouse_id, product_id)
+CONSTRAINT warehouses_pkey ON warehouses: PRIMARY KEY (id)
+CONSTRAINT warehouses_user_id_fkey ON warehouses: FOREIGN KEY (user_id) REFERENCES auth.users(id)
+CONSTRAINT webhook_events_pkey ON webhook_events: PRIMARY KEY (id)
+CONSTRAINT work_orders_bom_id_fkey ON work_orders: FOREIGN KEY (bom_id) REFERENCES boms(id)
+CONSTRAINT work_orders_pkey ON work_orders: PRIMARY KEY (id)
+CONSTRAINT work_orders_product_id_fkey ON work_orders: FOREIGN KEY (product_id) REFERENCES products(id)
+CONSTRAINT work_orders_status_check ON work_orders: CHECK ((status = ANY (ARRAY['planned'::text, 'in_progress'::text, 'completed'::text, 'cancelled'::text])))
+CONSTRAINT work_orders_user_id_fkey ON work_orders: FOREIGN KEY (user_id) REFERENCES auth.users(id)
+CONSTRAINT workflow_actions_instance_id_fkey ON workflow_actions: FOREIGN KEY (instance_id) REFERENCES workflow_instances(id) ON DELETE CASCADE
+CONSTRAINT workflow_actions_pkey ON workflow_actions: PRIMARY KEY (id)
+CONSTRAINT workflow_instances_pkey ON workflow_instances: PRIMARY KEY (id)
+CONSTRAINT workflow_instances_workflow_id_fkey ON workflow_instances: FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE RESTRICT
+CONSTRAINT workflow_instances_workspace_id_fkey ON workflow_instances: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+CONSTRAINT workflow_steps_pkey ON workflow_steps: PRIMARY KEY (id)
+CONSTRAINT workflow_steps_workflow_id_fkey ON workflow_steps: FOREIGN KEY (workflow_id) REFERENCES workflows(id) ON DELETE CASCADE
+CONSTRAINT workflows_pkey ON workflows: PRIMARY KEY (id)
+CONSTRAINT workflows_workspace_id_fkey ON workflows: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+CONSTRAINT workspace_invites_invited_by_fkey ON workspace_invites: FOREIGN KEY (invited_by) REFERENCES auth.users(id)
+CONSTRAINT workspace_invites_pkey ON workspace_invites: PRIMARY KEY (id)
+CONSTRAINT workspace_invites_role_check ON workspace_invites: CHECK ((role = ANY (ARRAY['admin'::text, 'member'::text, 'viewer'::text])))
+CONSTRAINT workspace_invites_status_check ON workspace_invites: CHECK ((status = ANY (ARRAY['pending'::text, 'accepted'::text, 'rejected'::text, 'expired'::text, 'cancelled'::text])))
+CONSTRAINT workspace_invites_token_key ON workspace_invites: UNIQUE (token)
+CONSTRAINT workspace_invites_workspace_id_fkey ON workspace_invites: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+CONSTRAINT workspace_members_pkey ON workspace_members: PRIMARY KEY (id)
+CONSTRAINT workspace_members_role_check ON workspace_members: CHECK ((role = ANY (ARRAY['owner'::text, 'admin'::text, 'member'::text, 'viewer'::text])))
+CONSTRAINT workspace_members_user_id_fkey ON workspace_members: FOREIGN KEY (user_id) REFERENCES auth.users(id)
+CONSTRAINT workspace_members_workspace_id_fkey ON workspace_members: FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE CASCADE
+CONSTRAINT workspace_members_workspace_id_user_id_key ON workspace_members: UNIQUE (workspace_id, user_id)
+CONSTRAINT workspaces_owner_id_fkey ON workspaces: FOREIGN KEY (owner_id) REFERENCES auth.users(id)
+CONSTRAINT workspaces_pkey ON workspaces: PRIMARY KEY (id)
+CONSTRAINT workspaces_slug_key ON workspaces: UNIQUE (slug)
+POLICY Users can insert their own accounts ON accounts FOR INSERT TO public
+  USING (none)
+  CHECK (user_id = auth.uid())
+POLICY Users can update their own ledger_entries ON ledger_entries FOR UPDATE TO public
+  USING (user_id = auth.uid())
+  CHECK (user_id = auth.uid())
+POLICY Users can view their own invoices ON invoices FOR SELECT TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY Users can view their own notifications ON notifications FOR SELECT TO public
+  USING (auth.uid() = user_id)
+  CHECK (none)
+POLICY Users can view their own suppliers ON suppliers FOR SELECT TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY accounts_delete ON accounts FOR DELETE TO public
+  USING (auth.uid() = user_id)
+  CHECK (none)
+POLICY accounts_insert_policy ON accounts FOR INSERT TO public
+  USING (none)
+  CHECK (user_id = auth.uid())
+POLICY accounts_select_policy ON accounts FOR SELECT TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY accounts_update_policy ON accounts FOR UPDATE TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY activities_owner_access ON activities FOR ALL TO public
+  USING (actor_id = auth.uid())
+  CHECK (actor_id = auth.uid())
+POLICY allow_all_steps ON workflow_steps FOR SELECT TO public
+  USING true
+  CHECK (none)
+POLICY attendance_delete ON attendance FOR DELETE TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY attendance_insert ON attendance FOR INSERT TO public
+  USING (none)
+  CHECK (user_id = auth.uid())
+POLICY attendance_select ON attendance FOR SELECT TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY attendance_update ON attendance FOR UPDATE TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY audit_logs_insert ON audit_logs FOR INSERT TO public
+  USING (none)
+  CHECK (auth.uid() = user_id)
+POLICY audit_logs_select ON audit_logs FOR SELECT TO public
+  USING (auth.uid() = user_id)
+  CHECK (none)
+POLICY bom_items_select ON bom_items FOR SELECT TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY boms_select ON boms FOR SELECT TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY checkout_sessions_insert_policy ON checkout_sessions FOR INSERT TO public
+  USING (none)
+  CHECK (workspace_id IN ( SELECT workspace_members.workspace_id
+   FROM workspace_members
+  WHERE (workspace_members.user_id = auth.uid())))
+POLICY checkout_sessions_select_policy ON checkout_sessions FOR SELECT TO public
+  USING (workspace_id IN ( SELECT workspace_members.workspace_id
+   FROM workspace_members
+  WHERE (workspace_members.user_id = auth.uid())))
+  CHECK (none)
+POLICY checkout_sessions_update_policy ON checkout_sessions FOR UPDATE TO public
+  USING (workspace_id IN ( SELECT workspace_members.workspace_id
+   FROM workspace_members
+  WHERE (workspace_members.user_id = auth.uid())))
+  CHECK (none)
+POLICY customers_delete_policy ON customers FOR DELETE TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY customers_insert_policy ON customers FOR INSERT TO public
+  USING (none)
+  CHECK (user_id = auth.uid())
+POLICY customers_select_policy ON customers FOR SELECT TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY customers_update_policy ON customers FOR UPDATE TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY customers_ws_delete ON customers FOR DELETE TO authenticated
+  USING (workspace_id IN ( SELECT auth_workspace_ids() AS auth_workspace_ids))
+  CHECK (none)
+POLICY customers_ws_insert ON customers FOR INSERT TO authenticated
+  USING (none)
+  CHECK (workspace_id IN ( SELECT auth_workspace_ids() AS auth_workspace_ids))
+POLICY customers_ws_select ON customers FOR SELECT TO authenticated
+  USING (workspace_id IN ( SELECT auth_workspace_ids() AS auth_workspace_ids))
+  CHECK (none)
+POLICY customers_ws_update ON customers FOR UPDATE TO authenticated
+  USING (workspace_id IN ( SELECT auth_workspace_ids() AS auth_workspace_ids))
+  CHECK (workspace_id IN ( SELECT auth_workspace_ids() AS auth_workspace_ids))
+POLICY departments_delete ON departments FOR DELETE TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY departments_insert ON departments FOR INSERT TO public
+  USING (none)
+  CHECK (user_id = auth.uid())
+POLICY departments_select ON departments FOR SELECT TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY departments_update ON departments FOR UPDATE TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY employees_delete ON employees FOR DELETE TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY employees_insert ON employees FOR INSERT TO public
+  USING (none)
+  CHECK (user_id = auth.uid())
+POLICY employees_select ON employees FOR SELECT TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY employees_update ON employees FOR UPDATE TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY event_log_insert ON event_log FOR INSERT TO public
+  USING (none)
+  CHECK (auth.uid() = user_id)
+POLICY event_log_select ON event_log FOR SELECT TO public
+  USING (auth.uid() = user_id)
+  CHECK (none)
+POLICY interactions_delete ON interactions FOR DELETE TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY interactions_insert ON interactions FOR INSERT TO public
+  USING (none)
+  CHECK (user_id = auth.uid())
+POLICY interactions_select ON interactions FOR SELECT TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY interactions_update ON interactions FOR UPDATE TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY invoice_item_details_workspace_members ON invoice_item_details FOR ALL TO authenticated
+  USING (EXISTS ( SELECT 1
+   FROM (invoice_items ii
+     JOIN invoices i ON ((i.id = ii.invoice_id)))
+  WHERE ((ii.id = invoice_item_details.invoice_item_id) AND (i.workspace_id IN ( SELECT workspace_members.workspace_id
+           FROM workspace_members
+          WHERE ((workspace_members.user_id = auth.uid()) AND (workspace_members.has_access = true) AND (workspace_members.suspended_at IS NULL)))))))
+  CHECK (EXISTS ( SELECT 1
+   FROM (invoice_items ii
+     JOIN invoices i ON ((i.id = ii.invoice_id)))
+  WHERE ((ii.id = invoice_item_details.invoice_item_id) AND (i.workspace_id IN ( SELECT workspace_members.workspace_id
+           FROM workspace_members
+          WHERE ((workspace_members.user_id = auth.uid()) AND (workspace_members.has_access = true) AND (workspace_members.suspended_at IS NULL)))))))
+POLICY invoice_items_delete ON invoice_items FOR DELETE TO public
+  USING (auth.uid() = user_id)
+  CHECK (none)
+POLICY invoice_items_insert ON invoice_items FOR INSERT TO public
+  USING (none)
+  CHECK (auth.uid() = user_id)
+POLICY invoice_items_select ON invoice_items FOR SELECT TO public
+  USING (auth.uid() = user_id)
+  CHECK (none)
+POLICY invoice_items_update ON invoice_items FOR UPDATE TO public
+  USING (auth.uid() = user_id)
+  CHECK (none)
+POLICY invoice_items_workspace_members ON invoice_items FOR ALL TO authenticated
+  USING (EXISTS ( SELECT 1
+   FROM invoices i
+  WHERE ((i.id = invoice_items.invoice_id) AND (i.workspace_id IN ( SELECT workspace_members.workspace_id
+           FROM workspace_members
+          WHERE ((workspace_members.user_id = auth.uid()) AND (workspace_members.has_access = true) AND (workspace_members.suspended_at IS NULL)))))))
+  CHECK (EXISTS ( SELECT 1
+   FROM invoices i
+  WHERE ((i.id = invoice_items.invoice_id) AND (i.workspace_id IN ( SELECT workspace_members.workspace_id
+           FROM workspace_members
+          WHERE ((workspace_members.user_id = auth.uid()) AND (workspace_members.has_access = true) AND (workspace_members.suspended_at IS NULL)))))))
+POLICY invoices_delete ON invoices FOR DELETE TO public
+  USING (auth.uid() = user_id)
+  CHECK (none)
+POLICY invoices_insert ON invoices FOR INSERT TO public
+  USING (none)
+  CHECK (auth.uid() = user_id)
+POLICY invoices_select ON invoices FOR SELECT TO public
+  USING (auth.uid() = user_id)
+  CHECK (none)
+POLICY invoices_update ON invoices FOR UPDATE TO public
+  USING (auth.uid() = user_id)
+  CHECK (none)
+POLICY invoices_ws_delete ON invoices FOR DELETE TO authenticated
+  USING (workspace_id IN ( SELECT auth_workspace_ids() AS auth_workspace_ids))
+  CHECK (none)
+POLICY invoices_ws_insert ON invoices FOR INSERT TO authenticated
+  USING (none)
+  CHECK (workspace_id IN ( SELECT auth_workspace_ids() AS auth_workspace_ids))
+POLICY invoices_ws_select ON invoices FOR SELECT TO authenticated
+  USING (workspace_id IN ( SELECT auth_workspace_ids() AS auth_workspace_ids))
+  CHECK (none)
+POLICY invoices_ws_update ON invoices FOR UPDATE TO authenticated
+  USING (workspace_id IN ( SELECT auth_workspace_ids() AS auth_workspace_ids))
+  CHECK (workspace_id IN ( SELECT auth_workspace_ids() AS auth_workspace_ids))
+POLICY journal_entries_select_policy ON journal_entries FOR SELECT TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY journal_lines_delete ON journal_lines FOR DELETE TO public
+  USING (journal_id IN ( SELECT journal_entries.id
+   FROM journal_entries
+  WHERE (journal_entries.user_id = auth.uid())))
+  CHECK (none)
+POLICY journal_lines_insert ON journal_lines FOR INSERT TO public
+  USING (none)
+  CHECK (journal_id IN ( SELECT journal_entries.id
+   FROM journal_entries
+  WHERE (journal_entries.user_id = auth.uid())))
+POLICY journal_lines_select_policy ON journal_lines FOR SELECT TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY journal_lines_update ON journal_lines FOR UPDATE TO public
+  USING (journal_id IN ( SELECT journal_entries.id
+   FROM journal_entries
+  WHERE (journal_entries.user_id = auth.uid())))
+  CHECK (none)
+POLICY leaves_delete ON leaves FOR DELETE TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY leaves_insert ON leaves FOR INSERT TO public
+  USING (none)
+  CHECK (user_id = auth.uid())
+POLICY leaves_select ON leaves FOR SELECT TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY leaves_update ON leaves FOR UPDATE TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY ledger_entries_select_policy ON ledger_entries FOR SELECT TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY member_access ON workflow_actions FOR SELECT TO public
+  USING (instance_id IN ( SELECT workflow_instances.id
+   FROM workflow_instances
+  WHERE (workflow_instances.workspace_id IN ( SELECT workspace_members.workspace_id
+           FROM workspace_members
+          WHERE (workspace_members.user_id = auth.uid())))))
+  CHECK (none)
+POLICY member_access ON workflow_instances FOR SELECT TO public
+  USING (workspace_id IN ( SELECT get_user_workspace_ids.workspace_id
+   FROM get_user_workspace_ids(auth.uid()) get_user_workspace_ids(workspace_id, role)))
+  CHECK (none)
+POLICY notifications_insert_own ON notifications FOR INSERT TO public
+  USING (none)
+  CHECK (user_id = auth.uid())
+POLICY opportunities_select ON opportunities FOR SELECT TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY owner can view own invoice pdf cache ON invoice_pdf_cache FOR SELECT TO public
+  USING (EXISTS ( SELECT 1
+   FROM invoices
+  WHERE ((invoices.id = invoice_pdf_cache.invoice_id) AND (invoices.user_id = auth.uid()))))
+  CHECK (none)
+POLICY owner_access ON notifications FOR ALL TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY payment_allocations_workspace_members ON payment_allocations FOR ALL TO authenticated
+  USING (workspace_id IN ( SELECT workspace_members.workspace_id
+   FROM workspace_members
+  WHERE ((workspace_members.user_id = auth.uid()) AND (workspace_members.has_access = true) AND (workspace_members.suspended_at IS NULL))))
+  CHECK (workspace_id IN ( SELECT workspace_members.workspace_id
+   FROM workspace_members
+  WHERE ((workspace_members.user_id = auth.uid()) AND (workspace_members.has_access = true) AND (workspace_members.suspended_at IS NULL))))
+POLICY payments_workspace_members ON payments FOR ALL TO authenticated
+  USING (workspace_id IN ( SELECT workspace_members.workspace_id
+   FROM workspace_members
+  WHERE ((workspace_members.user_id = auth.uid()) AND (workspace_members.has_access = true) AND (workspace_members.suspended_at IS NULL))))
+  CHECK (workspace_id IN ( SELECT workspace_members.workspace_id
+   FROM workspace_members
+  WHERE ((workspace_members.user_id = auth.uid()) AND (workspace_members.has_access = true) AND (workspace_members.suspended_at IS NULL))))
+POLICY payrolls_delete ON payrolls FOR DELETE TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY payrolls_insert ON payrolls FOR INSERT TO public
+  USING (none)
+  CHECK (user_id = auth.uid())
+POLICY payrolls_select ON payrolls FOR SELECT TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY payrolls_update ON payrolls FOR UPDATE TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY permissions_select ON permissions FOR SELECT TO public
+  USING (auth.uid() IS NOT NULL)
+  CHECK (none)
+POLICY products_delete ON products FOR DELETE TO public
+  USING (auth.uid() = user_id)
+  CHECK (none)
+POLICY products_insert ON products FOR INSERT TO public
+  USING (none)
+  CHECK (auth.uid() = user_id)
+POLICY products_select ON products FOR SELECT TO public
+  USING (auth.uid() = user_id)
+  CHECK (none)
+POLICY products_update ON products FOR UPDATE TO public
+  USING (auth.uid() = user_id)
+  CHECK (none)
+POLICY products_ws_delete ON products FOR DELETE TO authenticated
+  USING (workspace_id IN ( SELECT auth_workspace_ids() AS auth_workspace_ids))
+  CHECK (none)
+POLICY products_ws_insert ON products FOR INSERT TO authenticated
+  USING (none)
+  CHECK (workspace_id IN ( SELECT auth_workspace_ids() AS auth_workspace_ids))
+POLICY products_ws_select ON products FOR SELECT TO authenticated
+  USING (workspace_id IN ( SELECT auth_workspace_ids() AS auth_workspace_ids))
+  CHECK (none)
+POLICY products_ws_update ON products FOR UPDATE TO authenticated
+  USING (workspace_id IN ( SELECT auth_workspace_ids() AS auth_workspace_ids))
+  CHECK (workspace_id IN ( SELECT auth_workspace_ids() AS auth_workspace_ids))
+POLICY project_members_select ON project_members FOR SELECT TO public
+  USING ((user_id = auth.uid()) OR (user_id_owner = auth.uid()))
+  CHECK (none)
+POLICY project_tasks_delete ON project_tasks FOR DELETE TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY project_tasks_insert ON project_tasks FOR INSERT TO public
+  USING (none)
+  CHECK (user_id = auth.uid())
+POLICY project_tasks_select ON project_tasks FOR SELECT TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY project_tasks_update ON project_tasks FOR UPDATE TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY projects_delete ON projects FOR DELETE TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY projects_insert ON projects FOR INSERT TO public
+  USING (none)
+  CHECK (user_id = auth.uid())
+POLICY projects_select ON projects FOR SELECT TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY projects_update ON projects FOR UPDATE TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY reset_tokens_delete_own ON password_reset_tokens FOR DELETE TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY reset_tokens_insert_own ON password_reset_tokens FOR INSERT TO public
+  USING (none)
+  CHECK (user_id = auth.uid())
+POLICY reset_tokens_select_own ON password_reset_tokens FOR SELECT TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY reset_tokens_update_own ON password_reset_tokens FOR UPDATE TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY role_permissions_select ON role_permissions FOR SELECT TO public
+  USING (auth.uid() IS NOT NULL)
+  CHECK (none)
+POLICY roles_select ON roles FOR SELECT TO public
+  USING (auth.uid() IS NOT NULL)
+  CHECK (none)
+POLICY sod_actions_workspace_members ON sod_actions FOR ALL TO authenticated
+  USING (workspace_id IN ( SELECT workspace_members.workspace_id
+   FROM workspace_members
+  WHERE ((workspace_members.user_id = auth.uid()) AND (workspace_members.has_access = true) AND (workspace_members.suspended_at IS NULL))))
+  CHECK (workspace_id IN ( SELECT workspace_members.workspace_id
+   FROM workspace_members
+  WHERE ((workspace_members.user_id = auth.uid()) AND (workspace_members.has_access = true) AND (workspace_members.suspended_at IS NULL))))
+POLICY sod_overrides_workspace_members ON sod_overrides FOR ALL TO authenticated
+  USING (workspace_id IN ( SELECT workspace_members.workspace_id
+   FROM workspace_members
+  WHERE ((workspace_members.user_id = auth.uid()) AND (workspace_members.has_access = true) AND (workspace_members.suspended_at IS NULL))))
+  CHECK (workspace_id IN ( SELECT workspace_members.workspace_id
+   FROM workspace_members
+  WHERE ((workspace_members.user_id = auth.uid()) AND (workspace_members.has_access = true) AND (workspace_members.suspended_at IS NULL))))
+POLICY sod_settings_workspace_members ON sod_settings FOR ALL TO authenticated
+  USING (workspace_id IN ( SELECT workspace_members.workspace_id
+   FROM workspace_members
+  WHERE ((workspace_members.user_id = auth.uid()) AND (workspace_members.has_access = true) AND (workspace_members.suspended_at IS NULL))))
+  CHECK (workspace_id IN ( SELECT workspace_members.workspace_id
+   FROM workspace_members
+  WHERE ((workspace_members.user_id = auth.uid()) AND (workspace_members.has_access = true) AND (workspace_members.suspended_at IS NULL))))
+POLICY stock_movements_insert ON stock_movements FOR INSERT TO public
+  USING (none)
+  CHECK (auth.uid() = user_id)
+POLICY stock_movements_select ON stock_movements FOR SELECT TO public
+  USING (auth.uid() = user_id)
+  CHECK (none)
+POLICY subscriptions_insert_policy ON subscriptions FOR INSERT TO public
+  USING (none)
+  CHECK (workspace_id IN ( SELECT workspace_members.workspace_id
+   FROM workspace_members
+  WHERE (workspace_members.user_id = auth.uid())))
+POLICY subscriptions_select_policy ON subscriptions FOR SELECT TO public
+  USING (workspace_id IN ( SELECT workspace_members.workspace_id
+   FROM workspace_members
+  WHERE (workspace_members.user_id = auth.uid())))
+  CHECK (none)
+POLICY subscriptions_update_policy ON subscriptions FOR UPDATE TO public
+  USING (workspace_id IN ( SELECT workspace_members.workspace_id
+   FROM workspace_members
+  WHERE (workspace_members.user_id = auth.uid())))
+  CHECK (none)
+POLICY suppliers_delete_policy ON suppliers FOR DELETE TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY suppliers_insert_policy ON suppliers FOR INSERT TO public
+  USING (none)
+  CHECK (user_id = auth.uid())
+POLICY suppliers_update_policy ON suppliers FOR UPDATE TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY sync_conflicts_workspace_members ON sync_conflicts FOR ALL TO authenticated
+  USING (workspace_id IN ( SELECT workspace_members.workspace_id
+   FROM workspace_members
+  WHERE ((workspace_members.user_id = auth.uid()) AND (workspace_members.has_access = true) AND (workspace_members.suspended_at IS NULL))))
+  CHECK (workspace_id IN ( SELECT workspace_members.workspace_id
+   FROM workspace_members
+  WHERE ((workspace_members.user_id = auth.uid()) AND (workspace_members.has_access = true) AND (workspace_members.suspended_at IS NULL))))
+POLICY transactions_insert_policy ON transactions FOR INSERT TO public
+  USING (none)
+  CHECK (user_id = auth.uid())
+POLICY transactions_select_policy ON transactions FOR SELECT TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY transactions_update_policy ON transactions FOR UPDATE TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY transactions_ws_delete ON transactions FOR DELETE TO authenticated
+  USING (workspace_id IN ( SELECT auth_workspace_ids() AS auth_workspace_ids))
+  CHECK (none)
+POLICY transactions_ws_insert ON transactions FOR INSERT TO authenticated
+  USING (none)
+  CHECK (workspace_id IN ( SELECT auth_workspace_ids() AS auth_workspace_ids))
+POLICY transactions_ws_select ON transactions FOR SELECT TO authenticated
+  USING (workspace_id IN ( SELECT auth_workspace_ids() AS auth_workspace_ids))
+  CHECK (none)
+POLICY transactions_ws_update ON transactions FOR UPDATE TO authenticated
+  USING (workspace_id IN ( SELECT auth_workspace_ids() AS auth_workspace_ids))
+  CHECK (workspace_id IN ( SELECT auth_workspace_ids() AS auth_workspace_ids))
+POLICY ui_visibility_profiles_own ON ui_visibility_profiles FOR ALL TO authenticated
+  USING ((user_id = auth.uid()) AND (workspace_id IN ( SELECT workspace_members.workspace_id
+   FROM workspace_members
+  WHERE ((workspace_members.user_id = auth.uid()) AND (workspace_members.has_access = true) AND (workspace_members.suspended_at IS NULL)))))
+  CHECK ((user_id = auth.uid()) AND (workspace_id IN ( SELECT workspace_members.workspace_id
+   FROM workspace_members
+  WHERE ((workspace_members.user_id = auth.uid()) AND (workspace_members.has_access = true) AND (workspace_members.suspended_at IS NULL)))))
+POLICY ui_visibility_suggestions_own ON ui_visibility_suggestions FOR ALL TO authenticated
+  USING ((user_id = auth.uid()) AND (workspace_id IN ( SELECT workspace_members.workspace_id
+   FROM workspace_members
+  WHERE ((workspace_members.user_id = auth.uid()) AND (workspace_members.has_access = true) AND (workspace_members.suspended_at IS NULL)))))
+  CHECK ((user_id = auth.uid()) AND (workspace_id IN ( SELECT workspace_members.workspace_id
+   FROM workspace_members
+  WHERE ((workspace_members.user_id = auth.uid()) AND (workspace_members.has_access = true) AND (workspace_members.suspended_at IS NULL)))))
+POLICY user_roles_delete ON user_roles FOR DELETE TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY user_roles_insert ON user_roles FOR INSERT TO public
+  USING (none)
+  CHECK (user_id = auth.uid())
+POLICY user_roles_select ON user_roles FOR SELECT TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY warehouse_stock_owner_access ON warehouse_stock FOR ALL TO public
+  USING (user_id = auth.uid())
+  CHECK (user_id = auth.uid())
+POLICY warehouses_delete ON warehouses FOR DELETE TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY warehouses_insert ON warehouses FOR INSERT TO public
+  USING (none)
+  CHECK (user_id = auth.uid())
+POLICY warehouses_select ON warehouses FOR SELECT TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY warehouses_update ON warehouses FOR UPDATE TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY work_orders_select ON work_orders FOR SELECT TO public
+  USING (user_id = auth.uid())
+  CHECK (none)
+POLICY workflow_actions_write ON workflow_actions FOR ALL TO public
+  USING (instance_id IN ( SELECT i.id
+   FROM (workflow_instances i
+     JOIN workflows w ON ((w.id = i.workflow_id)))
+  WHERE (w.workspace_id IN ( SELECT workspace_members.workspace_id
+           FROM workspace_members
+          WHERE (workspace_members.user_id = auth.uid())))))
+  CHECK (none)
+POLICY workflows_all ON workflows FOR ALL TO public
+  USING (workspace_id IN ( SELECT workspace_members.workspace_id
+   FROM workspace_members
+  WHERE (workspace_members.user_id = auth.uid())))
+  CHECK (workspace_id IN ( SELECT workspace_members.workspace_id
+   FROM workspace_members
+  WHERE (workspace_members.user_id = auth.uid())))
+POLICY workspace members can view members ON workspace_members FOR SELECT TO public
+  USING is_workspace_member(workspace_id, auth.uid())
+  CHECK (none)
+POLICY workspace_invites_all ON workspace_invites FOR ALL TO public
+  USING (workspace_id IN ( SELECT workspace_members.workspace_id
+   FROM workspace_members
+  WHERE (workspace_members.user_id = auth.uid())))
+  CHECK (workspace_id IN ( SELECT workspace_members.workspace_id
+   FROM workspace_members
+  WHERE (workspace_members.user_id = auth.uid())))
+POLICY workspace_members_delete ON workspace_members FOR DELETE TO public
+  USING (workspace_id IN ( SELECT workspaces.id
+   FROM workspaces
+  WHERE (workspaces.owner_id = auth.uid())))
+  CHECK (none)
+POLICY workspace_members_insert ON workspace_members FOR INSERT TO public
+  USING (none)
+  CHECK (workspace_id IN ( SELECT workspaces.id
+   FROM workspaces
+  WHERE (workspaces.owner_id = auth.uid())))
+POLICY workspace_members_select ON workspace_members FOR SELECT TO public
+  USING (workspace_id IN ( SELECT workspace_members_1.workspace_id
+   FROM workspace_members workspace_members_1
+  WHERE (workspace_members_1.user_id = auth.uid())))
+  CHECK (none)
+POLICY workspace_members_select_policy ON workspace_members FOR SELECT TO public
+  USING ((user_id = auth.uid()) OR (workspace_id IN ( SELECT get_user_workspace_ids.workspace_id
+   FROM get_user_workspace_ids(auth.uid()) get_user_workspace_ids(workspace_id, role)
+  WHERE (get_user_workspace_ids.role = ANY (ARRAY['owner'::text, 'admin'::text])))))
+  CHECK (none)
+POLICY workspace_members_update ON workspace_members FOR UPDATE TO public
+  USING (workspace_id IN ( SELECT workspaces.id
+   FROM workspaces
+  WHERE (workspaces.owner_id = auth.uid())))
+  CHECK (none)
+POLICY workspaces_select_policy ON workspaces FOR SELECT TO public
+  USING (id IN ( SELECT workspace_members.workspace_id
+   FROM workspace_members
+  WHERE (workspace_members.user_id = auth.uid())))
+  CHECK (none)
+FUNCTION audit_customers() RETURNS trigger
+FUNCTION audit_invoices() RETURNS trigger
+FUNCTION audit_products() RETURNS trigger
+FUNCTION auth_workspace_ids() RETURNS SETOF uuid
+FUNCTION complete_event(p_event_id uuid, p_success boolean, p_error text DEFAULT NULL::text) RETURNS void
+FUNCTION create_trial_subscription() RETURNS trigger
+FUNCTION customers_search_update() RETURNS trigger
+FUNCTION get_dashboard_kpis(p_user_id uuid) RETURNS TABLE(today_sales numeric, today_invoices integer, monthly_revenue numeric, pending_total numeric, active_customers integer, low_stock integer)
+FUNCTION get_low_stock_products(p_user_id uuid) RETURNS SETOF products
+FUNCTION get_next_invoice_number() RETURNS integer
+FUNCTION get_pending_events(p_limit integer DEFAULT 10) RETURNS SETOF event_log
+FUNCTION get_user_workspace_ids(_user_id uuid) RETURNS TABLE(workspace_id uuid, role text)
+FUNCTION handle_invoice_created() RETURNS trigger
+FUNCTION handle_new_user() RETURNS trigger
+FUNCTION insert_event(p_event_type text, p_entity_type text, p_entity_id uuid, p_payload jsonb, p_user_id uuid, p_idempotency_key text DEFAULT NULL::text) RETURNS uuid
+FUNCTION invoices_guard_finalized() RETURNS trigger
+FUNCTION invoices_search_update() RETURNS trigger
+FUNCTION is_workspace_member(_workspace_id uuid, _user_id uuid) RETURNS boolean
+FUNCTION payments_cancel(p_workspace_id uuid, p_payment_id uuid) RETURNS jsonb
+FUNCTION payments_record(p_workspace_id uuid, p_user_id uuid, p_payment jsonb, p_allocations jsonb) RETURNS uuid
+FUNCTION process_invoice_events() RETURNS integer
+FUNCTION products_search_update() RETURNS trigger
+FUNCTION refresh_dashboard_summary() RETURNS void
+FUNCTION refresh_materialized_views() RETURNS void
+FUNCTION reset_user_password(p_user_id uuid, p_password_hash text, p_token_id uuid, p_ip text) RETURNS void
+FUNCTION rls_isolation_report() RETURNS TABLE(seq integer, check_name text, expected text, observed text, verdict text)
+FUNCTION set_updated_at() RETURNS trigger
+FUNCTION sync_bump_version() RETURNS trigger
+FUNCTION sync_record_change() RETURNS trigger
+FUNCTION update_updated_at_column() RETURNS trigger
+FUNCTION upgrade_subscription(p_user_id uuid, p_plan text) RETURNS jsonb
+INDEX CREATE INDEX customers_workspace_idx ON public.customers USING btree (workspace_id)
+INDEX CREATE INDEX idx_account_balances_user ON public.account_balances USING btree (user_id)
+INDEX CREATE INDEX idx_accounts_parent ON public.accounts USING btree (parent_id)
+INDEX CREATE INDEX idx_accounts_user_code ON public.accounts USING btree (user_id, code) WHERE (deleted_at IS NULL)
+INDEX CREATE INDEX idx_accounts_user_id ON public.accounts USING btree (user_id)
+INDEX CREATE INDEX idx_activities_actor ON public.activities USING btree (actor_id)
+INDEX CREATE INDEX idx_activities_archive ON public.activities USING btree (workspace_id, is_archived)
+INDEX CREATE INDEX idx_activities_created ON public.activities USING btree (created_at DESC)
+INDEX CREATE INDEX idx_activities_entity ON public.activities USING btree (entity_type, entity_id)
+INDEX CREATE INDEX idx_activities_feed ON public.activities USING btree (workspace_id, is_archived, created_at DESC)
+INDEX CREATE INDEX idx_activities_metadata ON public.activities USING gin (metadata)
+INDEX CREATE INDEX idx_activities_pinned ON public.activities USING btree (workspace_id, is_pinned)
+INDEX CREATE INDEX idx_activities_snapshot ON public.activities USING gin (entity_snapshot)
+INDEX CREATE INDEX idx_activities_unread ON public.activities USING btree (workspace_id, is_read)
+INDEX CREATE INDEX idx_activities_workspace ON public.activities USING btree (workspace_id)
+INDEX CREATE INDEX idx_audit_entity ON public.audit_logs USING btree (entity_type, entity_id)
+INDEX CREATE INDEX idx_audit_logs_created_at ON public.audit_logs USING btree (created_at)
+INDEX CREATE INDEX idx_audit_logs_user_id ON public.audit_logs USING btree (user_id)
+INDEX CREATE INDEX idx_audit_user ON public.audit_logs USING btree (user_id)
+INDEX CREATE INDEX idx_bom_items_bom_id ON public.bom_items USING btree (bom_id)
+INDEX CREATE INDEX idx_boms_product_id ON public.boms USING btree (product_id)
+INDEX CREATE INDEX idx_checkout_sessions_user_id ON public.checkout_sessions USING btree (user_id)
+INDEX CREATE INDEX idx_customers_phone ON public.customers USING btree (phone)
+INDEX CREATE INDEX idx_customers_search ON public.customers USING gin (search_vector)
+INDEX CREATE INDEX idx_customers_user_active ON public.customers USING btree (user_id, is_active, created_at DESC)
+INDEX CREATE INDEX idx_customers_user_id ON public.customers USING btree (user_id)
+INDEX CREATE INDEX idx_customers_user_name ON public.customers USING btree (user_id, full_name)
+INDEX CREATE INDEX idx_employees_department_id ON public.employees USING btree (department_id)
+INDEX CREATE INDEX idx_employees_user_id ON public.employees USING btree (user_id)
+INDEX CREATE INDEX idx_employees_user_status ON public.employees USING btree (user_id, status)
+INDEX CREATE INDEX idx_event_log_entity ON public.event_log USING btree (entity_type, entity_id)
+INDEX CREATE INDEX idx_event_log_outbox ON public.event_log USING btree (processed, next_retry_at) WHERE (processed = false)
+INDEX CREATE INDEX idx_event_log_pending_recovery ON public.event_log USING btree (created_at) WHERE (processed = false)
+INDEX CREATE INDEX idx_event_log_processed ON public.event_log USING btree (processed)
+INDEX CREATE INDEX idx_event_log_type ON public.event_log USING btree (event_type)
+INDEX CREATE INDEX idx_event_log_user_seq ON public.event_log USING btree (user_id, sequence_number)
+INDEX CREATE INDEX idx_invoice_items_invoice_id ON public.invoice_items USING btree (invoice_id)
+INDEX CREATE INDEX idx_invoice_items_invoice_product ON public.invoice_items USING btree (invoice_id, product_id)
+INDEX CREATE INDEX idx_invoice_items_product_id ON public.invoice_items USING btree (product_id)
+INDEX CREATE INDEX idx_invoice_items_user_id ON public.invoice_items USING btree (user_id)
+INDEX CREATE INDEX idx_invoices_customer ON public.invoices USING btree (customer_id, user_id)
+INDEX CREATE INDEX idx_invoices_customer_id ON public.invoices USING btree (customer_id)
+INDEX CREATE INDEX idx_invoices_date ON public.invoices USING btree (date)
+INDEX CREATE INDEX idx_invoices_purchase_order ON public.invoices USING btree (purchase_order_id)
+INDEX CREATE INDEX idx_invoices_search ON public.invoices USING gin (search_vector)
+INDEX CREATE INDEX idx_invoices_status_date ON public.invoices USING btree (status, created_at)
+INDEX CREATE INDEX idx_invoices_supplier_id ON public.invoices USING btree (supplier_id)
+INDEX CREATE INDEX idx_invoices_updated_at ON public.invoices USING btree (updated_at)
+INDEX CREATE INDEX idx_invoices_user_created ON public.invoices USING btree (user_id, created_at DESC)
+INDEX CREATE INDEX idx_invoices_user_date ON public.invoices USING btree (user_id, date DESC)
+INDEX CREATE INDEX idx_invoices_user_id ON public.invoices USING btree (user_id)
+INDEX CREATE INDEX idx_invoices_user_id_date ON public.invoices USING btree (user_id, created_at DESC)
+INDEX CREATE INDEX idx_invoices_user_id_status ON public.invoices USING btree (user_id, status)
+INDEX CREATE INDEX idx_invoices_user_status ON public.invoices USING btree (user_id, status, created_at DESC)
+INDEX CREATE INDEX idx_jobs_pending ON public.background_jobs USING btree (status, scheduled_at) WHERE (status = 'pending'::text)
+INDEX CREATE INDEX idx_journal_entries_date ON public.journal_entries USING btree (date)
+INDEX CREATE INDEX idx_journal_entries_user_date ON public.journal_entries USING btree (user_id, date DESC) WHERE (deleted_at IS NULL)
+INDEX CREATE INDEX idx_journal_entries_user_id ON public.journal_entries USING btree (user_id)
+INDEX CREATE INDEX idx_journal_lines_account_id ON public.journal_lines USING btree (account_id)
+INDEX CREATE INDEX idx_journal_lines_journal ON public.journal_lines USING btree (journal_id)
+INDEX CREATE INDEX idx_journal_lines_journal_id ON public.journal_lines USING btree (journal_id)
+INDEX CREATE INDEX idx_ledger_account ON public.ledger_entries USING btree (account_id)
+INDEX CREATE INDEX idx_ledger_date ON public.ledger_entries USING btree (entry_date)
+INDEX CREATE INDEX idx_ledger_entries_user_date ON public.ledger_entries USING btree (user_id, entry_date)
+INDEX CREATE INDEX idx_ledger_ref ON public.ledger_entries USING btree (reference_type, reference_id)
+INDEX CREATE INDEX idx_ledger_user ON public.ledger_entries USING btree (user_id)
+INDEX CREATE INDEX idx_notifications_user_id ON public.notifications USING btree (user_id)
+INDEX CREATE INDEX idx_notifications_user_read ON public.notifications USING btree (user_id, is_read, created_at DESC)
+INDEX CREATE INDEX idx_notifications_user_unread ON public.notifications USING btree (user_id, is_read, created_at DESC) WHERE (is_read = false)
+INDEX CREATE INDEX idx_notifications_workflow_instance ON public.notifications USING btree (workflow_instance_id)
+INDEX CREATE INDEX idx_notifications_workspace ON public.notifications USING btree (workspace_id, created_at DESC)
+INDEX CREATE INDEX idx_password_reset_tokens_hash ON public.password_reset_tokens USING btree (token_hash)
+INDEX CREATE INDEX idx_password_reset_tokens_user ON public.password_reset_tokens USING btree (user_id)
+INDEX CREATE INDEX idx_products_barcode ON public.products USING btree (barcode)
+INDEX CREATE INDEX idx_products_category ON public.products USING btree (category)
+INDEX CREATE INDEX idx_products_search ON public.products USING gin (search_vector)
+INDEX CREATE INDEX idx_products_user_active ON public.products USING btree (user_id, is_active, created_at DESC)
+INDEX CREATE INDEX idx_products_user_id ON public.products USING btree (user_id)
+INDEX CREATE INDEX idx_products_user_name ON public.products USING btree (user_id, name)
+INDEX CREATE INDEX idx_project_members_project_id ON public.project_members USING btree (project_id)
+INDEX CREATE INDEX idx_project_members_user_id ON public.project_members USING btree (user_id)
+INDEX CREATE INDEX idx_projects_status ON public.projects USING btree (status)
+INDEX CREATE INDEX idx_projects_user_id ON public.projects USING btree (user_id)
+INDEX CREATE INDEX idx_projects_user_status ON public.projects USING btree (user_id, status, created_at DESC)
+INDEX CREATE INDEX idx_purchase_order_items_order_id ON public.purchase_order_items USING btree (purchase_order_id)
+INDEX CREATE INDEX idx_purchase_orders_invoice ON public.purchase_orders USING btree (invoice_id)
+INDEX CREATE INDEX idx_purchase_orders_status ON public.purchase_orders USING btree (status)
+INDEX CREATE INDEX idx_purchase_orders_supplier_id ON public.purchase_orders USING btree (supplier_id)
+INDEX CREATE INDEX idx_stock_movements_created_at ON public.stock_movements USING btree (created_at)
+INDEX CREATE INDEX idx_stock_movements_from_warehouse ON public.stock_movements USING btree (from_warehouse_id)
+INDEX CREATE INDEX idx_stock_movements_product ON public.stock_movements USING btree (product_id)
+INDEX CREATE INDEX idx_stock_movements_product_id ON public.stock_movements USING btree (product_id)
+INDEX CREATE INDEX idx_stock_movements_ref ON public.stock_movements USING btree (reference_type, reference_id)
+INDEX CREATE INDEX idx_stock_movements_to_warehouse ON public.stock_movements USING btree (to_warehouse_id)
+INDEX CREATE INDEX idx_stock_movements_type ON public.stock_movements USING btree (type)
+INDEX CREATE INDEX idx_stock_movements_user ON public.stock_movements USING btree (user_id)
+INDEX CREATE INDEX idx_stock_movements_user_id ON public.stock_movements USING btree (user_id)
+INDEX CREATE INDEX idx_stock_movements_warehouse ON public.stock_movements USING btree (from_warehouse_id, to_warehouse_id)
+INDEX CREATE INDEX idx_subscriptions_plan ON public.subscriptions USING btree (plan)
+INDEX CREATE INDEX idx_subscriptions_status ON public.subscriptions USING btree (status)
+INDEX CREATE INDEX idx_subscriptions_user_id ON public.subscriptions USING btree (user_id)
+INDEX CREATE INDEX idx_suppliers_user_id ON public.suppliers USING btree (user_id)
+INDEX CREATE INDEX idx_sync_logs_user_id ON public.sync_logs USING btree (user_id)
+INDEX CREATE INDEX idx_sync_queue_user_id ON public.sync_queue USING btree (user_id)
+INDEX CREATE INDEX idx_sync_queue_user_status ON public.sync_queue USING btree (user_id, status, priority DESC)
+INDEX CREATE INDEX idx_transactions_customer ON public.transactions USING btree (customer_id, user_id, type, amount)
+INDEX CREATE INDEX idx_transactions_customer_date ON public.transactions USING btree (customer_id, date)
+INDEX CREATE INDEX idx_transactions_customer_id ON public.transactions USING btree (customer_id)
+INDEX CREATE INDEX idx_transactions_date ON public.transactions USING btree (date)
+INDEX CREATE INDEX idx_transactions_invoice ON public.transactions USING btree (invoice_id)
+INDEX CREATE INDEX idx_transactions_supplier_id ON public.transactions USING btree (supplier_id)
+INDEX CREATE INDEX idx_transactions_type ON public.transactions USING btree (type)
+INDEX CREATE INDEX idx_transactions_user_date ON public.transactions USING btree (user_id, date)
+INDEX CREATE INDEX idx_transactions_user_id ON public.transactions USING btree (user_id)
+INDEX CREATE INDEX idx_user_roles_workspace ON public.user_roles USING btree (workspace_id)
+INDEX CREATE INDEX idx_warehouses_user_active ON public.warehouses USING btree (user_id, is_active) WHERE (deleted_at IS NULL)
+INDEX CREATE INDEX idx_webhook_events_id ON public.webhook_events USING btree (id)
+INDEX CREATE INDEX idx_workflow_actions_instance ON public.workflow_actions USING btree (instance_id, created_at DESC)
+INDEX CREATE INDEX idx_workflow_instances_entity ON public.workflow_instances USING btree (entity_type, entity_id)
+INDEX CREATE INDEX idx_workflow_instances_status ON public.workflow_instances USING btree (status)
+INDEX CREATE INDEX idx_workflow_instances_workflow_id ON public.workflow_instances USING btree (workflow_id)
+INDEX CREATE INDEX idx_workflow_instances_workspace_status ON public.workflow_instances USING btree (workspace_id, status)
+INDEX CREATE INDEX idx_workflow_steps_workflow ON public.workflow_steps USING btree (workflow_id, step_order)
+INDEX CREATE INDEX idx_workflows_entity_active ON public.workflows USING btree (entity_type, is_active) WHERE (deleted_at IS NULL)
+INDEX CREATE INDEX idx_workflows_entity_type ON public.workflows USING btree (entity_type)
+INDEX CREATE INDEX idx_workflows_is_active ON public.workflows USING btree (is_active)
+INDEX CREATE INDEX idx_workflows_workspace ON public.workflows USING btree (workspace_id, entity_type) WHERE (deleted_at IS NULL)
+INDEX CREATE INDEX idx_workspace_members_user_id ON public.workspace_members USING btree (user_id)
+INDEX CREATE INDEX idx_workspace_members_workspace_id ON public.workspace_members USING btree (workspace_id)
+INDEX CREATE INDEX interactions_employee_id_idx ON public.interactions USING btree (employee_id)
+INDEX CREATE INDEX interactions_user_subject_idx ON public.interactions USING btree (user_id, subject)
+INDEX CREATE INDEX invoice_item_details_item_idx ON public.invoice_item_details USING btree (invoice_item_id)
+INDEX CREATE INDEX invoice_item_details_order_idx ON public.invoice_item_details USING btree (invoice_item_id, sort_order)
+INDEX CREATE INDEX invoice_items_invoice_idx ON public.invoice_items USING btree (invoice_id)
+INDEX CREATE INDEX invoices_lock_idx ON public.invoices USING btree (locked_by_user_id, lock_expires_at) WHERE (locked_by_user_id IS NOT NULL)
+INDEX CREATE INDEX invoices_type_idx ON public.invoices USING btree (type)
+INDEX CREATE INDEX invoices_user_type_idx ON public.invoices USING btree (user_id, type)
+INDEX CREATE INDEX invoices_workspace_date_idx ON public.invoices USING btree (workspace_id, date DESC)
+INDEX CREATE INDEX invoices_workspace_idx ON public.invoices USING btree (workspace_id)
+INDEX CREATE INDEX payment_allocations_invoice_idx ON public.payment_allocations USING btree (workspace_id, invoice_id)
+INDEX CREATE INDEX payment_allocations_payment_idx ON public.payment_allocations USING btree (payment_id)
+INDEX CREATE INDEX payments_party_idx ON public.payments USING btree (workspace_id, party_type, party_id)
+INDEX CREATE INDEX payments_workspace_date_idx ON public.payments USING btree (workspace_id, entry_date DESC)
+INDEX CREATE INDEX products_workspace_idx ON public.products USING btree (workspace_id)
+INDEX CREATE INDEX profiles_onboarding_completed_idx ON public.profiles USING btree (onboarding_completed_at)
+INDEX CREATE INDEX sod_actions_entity_idx ON public.sod_actions USING btree (workspace_id, entity_type, entity_id)
+INDEX CREATE INDEX sod_overrides_workspace_idx ON public.sod_overrides USING btree (workspace_id, created_at DESC)
+INDEX CREATE INDEX subscriptions_workspace_idx ON public.subscriptions USING btree (workspace_id)
+INDEX CREATE INDEX sync_change_log_created_at_idx ON public.sync_change_log USING btree (created_at)
+INDEX CREATE INDEX sync_change_log_entity_idx ON public.sync_change_log USING btree (entity_type, entity_id)
+INDEX CREATE INDEX sync_change_log_workspace_version_idx ON public.sync_change_log USING btree (workspace_id, sync_version)
+INDEX CREATE INDEX sync_conflicts_entity_idx ON public.sync_conflicts USING btree (workspace_id, entity_type, entity_id)
+INDEX CREATE INDEX sync_conflicts_open_idx ON public.sync_conflicts USING btree (workspace_id, created_at DESC) WHERE (status = 'open'::text)
+INDEX CREATE INDEX sync_mutations_workspace_idx ON public.sync_mutations USING btree (workspace_id, created_at)
+INDEX CREATE INDEX transactions_workspace_idx ON public.transactions USING btree (workspace_id)
+INDEX CREATE INDEX workspace_members_workspace_suspended_idx ON public.workspace_members USING btree (workspace_id, suspended_at)
+INDEX CREATE UNIQUE INDEX accounts_code_key ON public.accounts USING btree (code)
+INDEX CREATE UNIQUE INDEX billing_plans_key_key ON public.billing_plans USING btree (key)
+INDEX CREATE UNIQUE INDEX idx_account_balances_id ON public.account_balances USING btree (account_id)
+INDEX CREATE UNIQUE INDEX idx_customer_balances_id ON public.customer_balances USING btree (customer_id)
+INDEX CREATE UNIQUE INDEX idx_dashboard_summary_user ON public.dashboard_summary USING btree (user_id)
+INDEX CREATE UNIQUE INDEX idx_event_log_idempotency ON public.event_log USING btree (user_id, idempotency_key) WHERE (idempotency_key IS NOT NULL)
+INDEX CREATE UNIQUE INDEX idx_stock_summary_id ON public.stock_summary USING btree (product_id)
+INDEX CREATE UNIQUE INDEX interactions_public_token_idx ON public.interactions USING btree (public_token)
+INDEX CREATE UNIQUE INDEX invoices_public_token_idx ON public.invoices USING btree (public_token)
+INDEX CREATE UNIQUE INDEX payments_number_key ON public.payments USING btree (workspace_id, payment_number) WHERE (payment_number IS NOT NULL)
+INDEX CREATE UNIQUE INDEX permissions_code_key ON public.permissions USING btree (code)
+INDEX CREATE UNIQUE INDEX role_permissions_role_id_permission_id_key ON public.role_permissions USING btree (role_id, permission_id)
+INDEX CREATE UNIQUE INDEX subscriptions_one_per_workspace_idx ON public.subscriptions USING btree (workspace_id) WHERE (workspace_id IS NOT NULL)
+INDEX CREATE UNIQUE INDEX sync_conflicts_mutation_key ON public.sync_conflicts USING btree (workspace_id, mutation_id)
+INDEX CREATE UNIQUE INDEX ui_visibility_suggestions_key ON public.ui_visibility_suggestions USING btree (workspace_id, user_id, level, key, kind) WHERE (answer = 'pending'::text)
+INDEX CREATE UNIQUE INDEX unique_step_order ON public.workflow_steps USING btree (workflow_id, step_order)
+INDEX CREATE UNIQUE INDEX user_roles_user_id_role_id_key ON public.user_roles USING btree (user_id, role_id)
+INDEX CREATE UNIQUE INDEX warehouse_stock_warehouse_id_product_id_key ON public.warehouse_stock USING btree (warehouse_id, product_id)
+INDEX CREATE UNIQUE INDEX workspace_invites_token_key ON public.workspace_invites USING btree (token)
+INDEX CREATE UNIQUE INDEX workspace_members_workspace_id_user_id_key ON public.workspace_members USING btree (workspace_id, user_id)
+INDEX CREATE UNIQUE INDEX workspace_single_owner_idx ON public.workspace_members USING btree (workspace_id) WHERE (role = 'owner'::text)
+INDEX CREATE UNIQUE INDEX workspaces_slug_key ON public.workspaces USING btree (slug)"

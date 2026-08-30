@@ -55,6 +55,8 @@ const BankPage = lazy(() => import('@/features/finance/bank-page'))
 const BudgetsPage = lazy(() => import('@/features/finance/budgets-page'))
 const TimesheetsPage = lazy(() => import('@/features/operations/timesheets-page'))
 const ExpiryPage = lazy(() => import('@/features/operations/expiry-page'))
+const ConflictsPage = lazy(() => import('@/features/sync/conflicts-page'))
+const GovernancePage = lazy(() => import('@/features/permissions/governance-page'))
 const PublicTaskPage = lazy(() => import('@/features/public/public-task-page'))
 const PublicInvoicePage = lazy(() => import('@/features/public/public-invoice-page'))
 
@@ -116,6 +118,13 @@ const router = createHashRouter([
       { path: 'budgets', element: <BudgetsPage /> },
       { path: 'timesheets', element: <TimesheetsPage /> },
       { path: 'expiry', element: <ExpiryPage /> },
+      { path: 'conflicts', element: <ConflictsPage /> },
+      { path: 'governance', element: <GovernancePage /> },
+
+      // Web serves this at `/workflow-templates` and desktop only had
+      // `/workflow`. The contract names one path, so desktop answers to it —
+      // the old path stays as a redirect below rather than breaking a shortcut.
+      { path: 'workflow-templates', element: <WorkflowPage /> },
       { path: 'public-task/:token', element: <PublicTaskPage /> },
       { path: 'public-invoice/:token', element: <PublicInvoicePage /> },
 

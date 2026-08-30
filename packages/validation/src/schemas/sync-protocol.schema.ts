@@ -31,12 +31,39 @@ import { uuidSchema } from './common.schema'
 /**
  * Entities that participate in sync.
  *
+ * `time_entry` is here and the rest of the Tier 2 sweep is NOT, deliberately.
+ *
+ * Offline write is not a feature to grant every module. It is correct exactly
+ * where the work genuinely happens away from a signal, and wrong where the
+ * record is configuration or a bulk server operation:
+ *
+ *   time_entry   YES. A worker on a site logs hours with no signal. This is
+ *                the case offline-first exists for.
+ *   budget       No. A spending limit is the owner's configuration. Two
+ *                devices editing it offline produce two contradictory ceilings
+ *                and no way to say which is meant.
+ *   dimension    No. Same — configuration, not a day's work.
+ *   bank
+ *     statement  No. It is imported from a file. An offline import that syncs
+ *                later doubles a bank account's apparent movements.
+ *   exchange_rate No, not for WRITING. Rates are reference data, and the rate
+ *                that matters is the one frozen onto the document — see
+ *                `tax.snapshot.ts` for the same rule applied to tax.
+ *   fixed_asset  No. Depreciation is derived by the server from a schedule;
+ *                a device deriving its own would disagree with the books.
+ *
  * A closed enum on purpose. The endpoint this replaced took a table name from
  * the request body and passed it to the database, so any authenticated client
  * could read or write ANY table. A client can now only name something on this
  * list, and each name maps to a handler that knows that entity's rules.
  */
-export const syncEntitySchema = z.enum(['invoice', 'customer', 'product', 'transaction'])
+export const syncEntitySchema = z.enum([
+  'invoice',
+  'customer',
+  'product',
+  'transaction',
+  'time_entry',
+])
 export type SyncEntity = z.infer<typeof syncEntitySchema>
 
 export const syncOperationSchema = z.enum(['create', 'update', 'delete'])

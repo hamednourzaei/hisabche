@@ -34,6 +34,8 @@
 
 import { createClient } from '@supabase/supabase-js'
 
+import { loadEnv, requireEnv } from './lib/load-env.mjs'
+
 const TENANT_TABLES = [
   'invoices',
   'customers',
@@ -53,13 +55,19 @@ const TENANT_TABLES = [
   'accounting_period_locks',
 ]
 
+loadEnv()
+
 const SUPABASE_URL = process.env.SUPABASE_URL
 const ANON_KEY = process.env.SUPABASE_ANON_KEY
 const EMAIL = process.env.RLS_TEST_EMAIL
 const PASSWORD = process.env.RLS_TEST_PASSWORD
 
-if (!SUPABASE_URL || !ANON_KEY) {
-  console.error('SUPABASE_URL and SUPABASE_ANON_KEY are required.')
+if (!requireEnv(['SUPABASE_URL', 'SUPABASE_ANON_KEY'])) {
+  console.error('SUPABASE_URL is the Project URL, and SUPABASE_ANON_KEY is the')
+  console.error('publishable anon key — both under Project Settings → API.\n')
+  console.error('The ANON key is the right one here, deliberately: this script')
+  console.error('proves what an ordinary logged-in user can reach. A service key')
+  console.error('bypasses RLS entirely and would make every check pass.\n')
   process.exit(2)
 }
 

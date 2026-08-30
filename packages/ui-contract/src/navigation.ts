@@ -31,14 +31,16 @@ export type NavId =
   // secondary — people
   | 'buyers'
   | 'follow-up'
-  // 'team' keeps its id so /human-resources stays addressable, but it is no
-  // longer a navigation destination — see NAV_CONTRACT.
   | 'team'
+  | 'coworkers'
+  | 'sales-followup'
   // secondary — work
-  // `production` keeps its id so the route stays addressable while hidden from
-  // navigation. `projects` is gone: the module was deleted, not hidden.
+  // `projects` is gone: the module was deleted, not hidden.
   | 'production'
   | 'approvals'
+  | 'workflow-templates'
+  | 'billing'
+  | 'governance'
   // The till. Somewhere a person STANDS, which is why it is primary and the
   // rest of this batch is not.
   | 'till'
@@ -48,6 +50,7 @@ export type NavId =
   | 'timesheets'
   | 'assets'
   | 'bank'
+  | 'conflicts'
   // secondary — system
   | 'settings'
   | 'access'
@@ -243,6 +246,97 @@ export const NAV_CONTRACT: readonly NavItemContract[] = [
     descriptionKey: 'nav.bank_description',
     path: '/bank',
     group: 'work',
+  },
+
+  // Offline conflicts.
+  //
+  // Next to sync, because that is what it is about: a row here is a sale or a
+  // payment that has NOT been recorded, waiting on a decision, and there is
+  // nowhere else to make it. Not a notification — a destination.
+  //
+  // For an offline-first product this is the screen that says whether the
+  // books can be trusted.
+  {
+    id: 'conflicts',
+    emoji: '⚖️',
+    labelKey: 'nav.conflicts',
+    descriptionKey: 'nav.conflicts_description',
+    path: '/conflicts',
+    group: 'system',
+  },
+
+  // ── Destinations that had a page and no way to reach it ──
+  //
+  // Each of these has existed under `apps/web/app/[lang]/(dashboard)/` the
+  // whole time and was absent from this list, so the only way in was to type
+  // the URL. A page nobody can navigate to is a page nobody uses.
+  //
+  // `nav-destinations.test.ts` checks the other direction — that every entry
+  // here HAS a page. Nothing checked this direction until these were found by
+  // listing both and comparing.
+  {
+    id: 'team',
+    emoji: '👷',
+    labelKey: 'nav.team',
+    descriptionKey: 'nav.team_description',
+    path: '/human-resources',
+    group: 'people',
+  },
+  {
+    id: 'coworkers',
+    emoji: '💵',
+    labelKey: 'nav.coworkers',
+    descriptionKey: 'nav.coworkers_description',
+    path: '/team-and-payroll',
+    group: 'people',
+  },
+  {
+    id: 'sales-followup',
+    emoji: '📞',
+    labelKey: 'nav.sales_followup',
+    descriptionKey: 'nav.sales_followup_description',
+    path: '/sales-followup',
+    group: 'people',
+  },
+  {
+    id: 'production',
+    emoji: '🏭',
+    labelKey: 'nav.production',
+    descriptionKey: 'nav.production_description',
+    path: '/manufacturing',
+    group: 'work',
+  },
+  {
+    id: 'buy',
+    emoji: '🧺',
+    labelKey: 'nav.buy',
+    descriptionKey: 'nav.buy_description',
+    path: '/purchasing',
+    group: 'work',
+  },
+  {
+    id: 'workflow-templates',
+    emoji: '🧭',
+    labelKey: 'nav.workflow_templates',
+    descriptionKey: 'nav.workflow_templates_description',
+    path: '/workflow-templates',
+    group: 'work',
+  },
+  {
+    id: 'billing',
+    emoji: '💳',
+    labelKey: 'nav.billing',
+    descriptionKey: 'nav.billing_description',
+    path: '/billing',
+    group: 'system',
+  },
+  {
+    id: 'governance',
+    emoji: '⚖️',
+    labelKey: 'nav.governance',
+    descriptionKey: 'nav.governance_description',
+    path: '/governance',
+    group: 'system',
   },
 ]
 

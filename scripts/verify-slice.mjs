@@ -34,6 +34,10 @@
 //                        than silently passing.
 // ============================================================================
 
+import { loadEnv } from './lib/load-env.mjs'
+
+loadEnv()
+
 const API_URL = process.env.API_URL
 const TOKEN = process.env.API_TOKEN
 const OTHER_TOKEN = process.env.API_TOKEN_OTHER

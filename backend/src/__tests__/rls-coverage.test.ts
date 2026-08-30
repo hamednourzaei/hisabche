@@ -94,10 +94,18 @@ const TENANT_TABLES = [
 ]
 
 function allMigrationSql(): string {
-  return readdirSync(DOCS)
-    .filter((file) => file.endsWith('.sql'))
-    .map((file) => readFileSync(join(DOCS, file), 'utf8'))
-    .join('\n')
+  return (
+    readdirSync(DOCS)
+      .filter((file) => file.endsWith('.sql'))
+      // A leading underscore means generated or diagnostic, not a migration:
+      // `_bundle.sql` is every migration concatenated for the SQL Editor, and
+      // `_verify-rls.sql` is a read-only test. Reading them here double-counts
+      // every policy and — worse — keeps reporting problems from a stale
+      // generated copy long after the source file was fixed.
+      .filter((file) => !file.startsWith('_'))
+      .map((file) => readFileSync(join(DOCS, file), 'utf8'))
+      .join('\n')
+  )
 }
 
 const sql = allMigrationSql()
@@ -170,6 +178,24 @@ describe('the policies restrict by workspace membership, not by nothing', () => 
     // boundary, so a policy only offends if it has no workspace scope at all.
     const policies = code.match(/CREATE\s+POLICY[\s\S]*?;/gi) ?? []
 
+    /**
+     * `workspace_members` is the one table where `user_id = auth.uid()` is the
+     * only correct answer.
+     *
+     * It IS the membership table. A policy on it that scopes by workspace has
+     * to ask which workspaces the user belongs to — by reading
+     * `workspace_members` — which re-enters this policy and loops. That is not
+     * theoretical: `workspace_members_select` did exactly that in the live
+     * database and failed with `42P17: infinite recursion` on the first query
+     * ever made as a logged-in user.
+     *
+     * A member reading their own membership row leaks nothing: the row is
+     * about them. Reading OTHER members of a shared workspace is a separate
+     * policy that goes through `is_workspace_member()`, a SECURITY DEFINER
+     * function, which is how that side avoids the loop.
+     */
+    const SELF_REFERENTIAL_BY_NECESSITY = new Set(['workspace_members'])
+
     const offenders = policies
       .filter(
         (policy) =>
@@ -178,8 +204,36 @@ describe('the policies restrict by workspace membership, not by nothing', () => 
           !/auth_workspace_ids\s*\(/i.test(policy),
       )
       .map((policy) => /ON\s+(\w+)/i.exec(policy)?.[1] ?? policy.slice(0, 60))
+      .filter((table) => !SELF_REFERENTIAL_BY_NECESSITY.has(table))
 
     expect(offenders, 'these policies scope by creator instead of by workspace').toEqual([])
+  })
+
+  it('no policy on workspace_members or workspaces subqueries the other', () => {
+    // The recursion that cost an afternoon.
+    //
+    //   workspaces_select_policy  → SELECT ... FROM workspace_members
+    //   workspace_members_select  → SELECT ... FROM workspace_members
+    //
+    // Querying either table ran a policy that queried the other, and Postgres
+    // aborted with `42P17`. It had been that way from the beginning and was
+    // invisible because the backend connects with the service role, which
+    // bypasses RLS — nothing had ever read those tables as a logged-in user.
+    //
+    // The rule that prevents it: policies on these two tables reach membership
+    // ONLY through a SECURITY DEFINER function, which executes as its owner
+    // and so does not re-enter the policy.
+    const policies = code.match(/CREATE\s+POLICY[\s\S]*?;/gi) ?? []
+
+    const offenders = policies
+      .filter((policy) => /\bON\s+(workspace_members|workspaces)\b/i.test(policy))
+      .filter((policy) => /FROM\s+(workspace_members|workspaces)\b/i.test(policy))
+      .map((policy) => /CREATE\s+POLICY\s+(\S+)/i.exec(policy)?.[1] ?? policy.slice(0, 60))
+
+    expect(
+      offenders,
+      'these policies read a table whose own policy reads them back — 42P17 infinite recursion',
+    ).toEqual([])
   })
 
   it('the membership check excludes revoked and suspended members', () => {

@@ -413,3 +413,31 @@ export {
   type AllocationPlan,
   type AllocationStrategy,
 } from './hooks/expiry'
+
+// ─── Offline conflicts ────────────────────────────────────
+// The review queue for offline writes the server refused, and the only place
+// a decision about one can be applied.
+export {
+  conflictKeys,
+  useConflicts,
+  useConflict,
+  useOpenConflictCount,
+  useResolveConflict,
+  type Conflict,
+  type ConflictEntity,
+  type FieldDivergence,
+  type ResolutionChoice,
+  type ResolveConflictInput,
+} from './hooks/conflicts'
+
+// ─── Separation of duties ─────────────────────────────────
+export {
+  governanceKeys,
+  useSoD,
+  useSoDOverrides,
+  useSaveSoD,
+  type SoDMode,
+  type SoDRule,
+  type SoDSettings,
+  type SoDOverride,
+} from './hooks/governance'

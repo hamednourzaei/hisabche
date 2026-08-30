@@ -368,14 +368,22 @@ export class PosService {
   ): Promise<boolean> {
     const posting = buildPosting(session, totals)
 
+    // `bank` is asked for alongside the rest because card and transfer takings
+    // are money the shop has, and cash is not where it sits.
     const { accounts, missing } = await ledger.resolveAccountsByRole(ctx, [
       'cash',
       'sales',
       'receivable',
+      'bank',
     ])
 
-    if (missing.length > 0) {
-      console.warn(`[POS] session ${session.id} not booked: no account for ${missing.join(', ')}`)
+    // A shop that never takes a card needs no bank account configured, so
+    // `bank` is only required when there is card or transfer money to place.
+    const cardAndTransferMinor = posting.cardMinor + posting.transferMinor
+    const required = missing.filter((role) => role !== 'bank' || cardAndTransferMinor !== 0)
+
+    if (required.length > 0) {
+      console.warn(`[POS] session ${session.id} not booked: no account for ${required.join(', ')}`)
       return false
     }
 
@@ -383,6 +391,21 @@ export class PosService {
       { accountId: accounts.cash!, debit: posting.cashMinor / 100, credit: 0 },
       { accountId: accounts.sales!, debit: 0, credit: posting.revenueMinor / 100 },
     ]
+
+    // Card and transfer takings.
+    //
+    // These were absent from the entry entirely. `buildPosting` has always
+    // reported them and this method used only cash, receivable and sales — so
+    // every session that took a single card payment produced debits short by
+    // exactly the card total, the ledger correctly refused the unbalanced
+    // entry, and the close failed. The day's takings never reached the books,
+    // and the cashier saw a generic error rather than the reason.
+    //
+    // Debited to BANK, not to cash: the money exists but is not in the drawer,
+    // and putting it in cash would make every count look short by that amount.
+    if (cardAndTransferMinor > 0) {
+      lines.push({ accountId: accounts.bank!, debit: cardAndTransferMinor / 100, credit: 0 })
+    }
 
     if (posting.creditMinor > 0) {
       lines.push({ accountId: accounts.receivable!, debit: posting.creditMinor / 100, credit: 0 })

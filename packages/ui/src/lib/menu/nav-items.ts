@@ -35,6 +35,11 @@ import {
   Timer,
   Building2,
   Landmark,
+  Scale,
+  PhoneCall,
+  Workflow,
+  CreditCard,
+  ShieldCheck,
   type LucideIcon,
 } from 'lucide-react'
 import {
@@ -90,6 +95,12 @@ const NAV_ICONS: Record<NavId, LucideIcon> = {
   timesheets: Timer,
   assets: Building2,
   bank: Landmark,
+  conflicts: Scale,
+  coworkers: Wallet,
+  'sales-followup': PhoneCall,
+  'workflow-templates': Workflow,
+  billing: CreditCard,
+  governance: ShieldCheck,
 }
 
 const GROUP_ICONS: Record<Exclude<NavGroupId, 'primary'>, LucideIcon> = {

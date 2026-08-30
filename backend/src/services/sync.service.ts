@@ -47,6 +47,7 @@ const ENTITY_TABLE: Record<SyncEntity, string> = {
   customer: 'customers',
   product: 'products',
   transaction: 'transactions',
+  time_entry: 'time_entries',
 }
 
 /**
@@ -105,6 +106,21 @@ const WRITABLE: Record<SyncEntity, readonly string[]> = {
     'payment_method',
     'date',
     'notes',
+  ],
+  // Note what is ABSENT: `invoice_id`. Its presence is the lock that says
+  // these hours are already on a bill, and it is the SERVER's to set when the
+  // invoice is raised. A device that could send it could un-bill hours that
+  // have been paid for, or claim hours somebody else already invoiced.
+  time_entry: [
+    'id',
+    'project_id',
+    'task_id',
+    'employee_id',
+    'on_date',
+    'minutes',
+    'billable',
+    'rate_minor',
+    'description',
   ],
 }
 

@@ -62,6 +62,12 @@ const ICONS: Record<NavId, readonly [IconName, IconName]> = {
   timesheets: ['stopwatch-outline', 'stopwatch'],
   assets: ['business-outline', 'business'],
   bank: ['card-outline', 'card'],
+  conflicts: ['git-compare-outline', 'git-compare'],
+  coworkers: ['wallet-outline', 'wallet'],
+  'sales-followup': ['call-outline', 'call'],
+  'workflow-templates': ['git-branch-outline', 'git-branch'],
+  billing: ['pricetag-outline', 'pricetag'],
+  governance: ['shield-checkmark-outline', 'shield-checkmark'],
 }
 
 /**
@@ -103,6 +109,11 @@ const IMPLEMENTED: ReadonlySet<NavId> = new Set<NavId>([
   'timesheets',
   'assets',
   'bank',
+
+  // The offline conflict queue. The phone is where the offline writes came
+  // from, so it is where the person most likely to explain them is standing.
+  'conflicts',
+  'governance',
 ])
 
 function toMobile(item: NavItemContract): MobileNavItem {

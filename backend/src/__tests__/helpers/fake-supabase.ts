@@ -102,10 +102,32 @@ export class FakeDatabase {
 }
 
 let idCounter = 0
-/** Deterministic and obviously synthetic. Never mistaken for a real uuid. */
+
+/**
+ * A deterministic id in real UUID SHAPE.
+ *
+ * It has to be a valid uuid, not a readable label: the zod schemas on the
+ * routes use `uuidSchema`, so an id like `account-00000001` is rejected at the
+ * boundary and the test never reaches the code it is about — which looks
+ * exactly like a validation bug in the service.
+ *
+ * The prefix survives as a hex-encoded tag in the first block, so a row is
+ * still traceable to what created it while remaining a legal uuid.
+ */
 export function fakeId(prefix = 'row'): string {
   idCounter += 1
-  return `${prefix}-${String(idCounter).padStart(8, '0')}`
+
+  const tag = [...prefix]
+    .map((character) => character.charCodeAt(0).toString(16).padStart(2, '0'))
+    .join('')
+    .slice(0, 8)
+    .padEnd(8, '0')
+
+  const counter = String(idCounter).padStart(12, '0')
+
+  // Version 4 nibble and a valid variant, so anything that inspects the shape
+  // rather than just the format still sees a well-formed uuid.
+  return `${tag}-0000-4000-8000-${counter}`
 }
 
 class QueryBuilder implements PromiseLike<{ data: any; error: any }> {
