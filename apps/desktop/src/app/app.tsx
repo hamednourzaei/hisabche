@@ -46,6 +46,15 @@ const TeamAndPayrollPage = lazy(() => import('@/features/team-and-payroll/tap-pa
 const WorkflowPage = lazy(() => import('@/features/workflow/workflow-page'))
 const SalesFollowupPage = lazy(() => import('@/features/sales-followup/sales-followup-page'))
 const AuditPage = lazy(() => import('@/features/audit/audit-page'))
+
+// Tier 1/2 capabilities. Same containers the web routes mount — desktop owns
+// the route, never a second copy of the screen.
+const TillPage = lazy(() => import('@/features/finance/till-page'))
+const AssetsPage = lazy(() => import('@/features/finance/assets-page'))
+const BankPage = lazy(() => import('@/features/finance/bank-page'))
+const BudgetsPage = lazy(() => import('@/features/finance/budgets-page'))
+const TimesheetsPage = lazy(() => import('@/features/operations/timesheets-page'))
+const ExpiryPage = lazy(() => import('@/features/operations/expiry-page'))
 const PublicTaskPage = lazy(() => import('@/features/public/public-task-page'))
 const PublicInvoicePage = lazy(() => import('@/features/public/public-invoice-page'))
 
@@ -98,6 +107,15 @@ const router = createHashRouter([
       { path: 'workflow', element: <WorkflowPage /> },
       { path: 'sales-followup', element: <SalesFollowupPage /> },
       { path: 'audit', element: <AuditPage /> },
+
+      // Paths mirror the web routes exactly, so no container needs a
+      // per-platform branch — see NAV_CONTRACT for the same six paths.
+      { path: 'till', element: <TillPage /> },
+      { path: 'assets', element: <AssetsPage /> },
+      { path: 'bank', element: <BankPage /> },
+      { path: 'budgets', element: <BudgetsPage /> },
+      { path: 'timesheets', element: <TimesheetsPage /> },
+      { path: 'expiry', element: <ExpiryPage /> },
       { path: 'public-task/:token', element: <PublicTaskPage /> },
       { path: 'public-invoice/:token', element: <PublicInvoicePage /> },
 

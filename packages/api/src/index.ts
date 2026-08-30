@@ -173,9 +173,12 @@ export {
   useIncomeStatement,
   accountingKeys,
   type Account,
+  type AccountRootType,
   type JournalEntry,
+  type JournalEntryStatus,
   type JournalLine,
   type TrialBalance,
+  type TrialBalanceResult,
   type BalanceSheet,
   type IncomeStatement,
 } from './hooks/accounting'
@@ -311,3 +314,102 @@ export {
   type WorkflowActionType,
   type ApproverRole,
 } from './hooks/use-workflow'
+
+// ─── Tier 1/2 capabilities ────────────────────────────────
+// Six destinations, six hook modules. Exported by name rather than with a
+// star so a future collision is a compile error here, not a silently shadowed
+// hook at a call site.
+export {
+  tillKeys,
+  useCurrentSession,
+  useSession,
+  useAbandonedSessions,
+  useOpenSession,
+  useRecordOrder,
+  useRecordCashMovement,
+  useCloseSession,
+  useVoidOrder,
+  type PosSession,
+  type PosPaymentMethod,
+  type SessionTotals,
+  type AbandonedSession,
+  type RecordOrderInput,
+} from './hooks/till'
+
+export {
+  assetKeys,
+  useAssets,
+  useAssetSchedule,
+  useCreateAsset,
+  usePostDepreciation,
+  useDisposeAsset,
+  type FixedAsset,
+  type ScheduleRow,
+  type CreateAssetInput,
+  type DepreciationMethod,
+  type DepreciationRunResult,
+  type DisposalResult,
+} from './hooks/assets'
+
+export {
+  bankKeys,
+  useBankStatements,
+  useMatchSuggestions,
+  useReconciliation,
+  useImportStatement,
+  useReconcileLine,
+  useUnmatchLine,
+  type BankStatement,
+  type MatchSuggestion,
+  type MatchReason,
+  type ReconciliationSummary,
+  type ImportStatementInput,
+} from './hooks/bank'
+
+export {
+  budgetKeys,
+  useBudgets,
+  useBudgetVariance,
+  useSaveBudget,
+  useCheckSpend,
+  type Budget,
+  type BudgetAction,
+  type BudgetPeriod,
+  type BudgetStatus,
+  type BudgetCheck,
+  type VarianceRow,
+} from './hooks/budgets'
+
+export {
+  timesheetKeys,
+  useTimesheetSummary,
+  useBillingPreview,
+  useProjectProfitability,
+  useLogTime,
+  useSaveBillingConfig,
+  type BillingMethod,
+  type ProjectBillingConfig,
+  type TimeTotals,
+  type BillableLine,
+  type ProjectProfitability,
+  type LogTimeInput,
+} from './hooks/timesheets'
+
+export {
+  expiryKeys,
+  useBatches,
+  useSerials,
+  useExpiryReport,
+  useLotTrail,
+  usePlanIssue,
+  useReceiveBatch,
+  useReceiveSerials,
+  type StockBatch,
+  type SerialUnit,
+  type SerialStatus,
+  type ExpiryState,
+  type ExpiryBucket,
+  type ExpiryReport,
+  type AllocationPlan,
+  type AllocationStrategy,
+} from './hooks/expiry'

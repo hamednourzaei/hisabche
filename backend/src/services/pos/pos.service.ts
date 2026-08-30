@@ -1,0 +1,450 @@
+// ============================================
+// backend/src/services/pos/pos.service.ts
+//
+// Running a till: open a drawer, take orders, count it, close it.
+//
+// The arithmetic is all in pos.domain.ts and is pure. What is here is the
+// part that touches rows, and the two things that only matter once rows are
+// involved: idempotency and the ledger posting.
+// ============================================
+
+import { supabase } from '../../db'
+import { ConflictError, DatabaseError, NotFoundError } from '../../errors/database.error'
+import { ValidationError } from '../../errors/validation.error'
+import { memoryCache } from '../../utils/pagination'
+import type { TenancyContext } from '../tenancy.service'
+import { ledger } from '../accounting'
+
+import {
+  buildPosting,
+  findAbandoned,
+  summarise,
+  validateClose,
+  validateMovement,
+  validateOrder,
+  type CashMovement,
+  type PaymentMethod,
+  type PosOrder,
+  type PosSession,
+  type SessionTotals,
+} from './pos.domain'
+
+const SESSION_COLUMNS =
+  'id, branch_id, status, opening_float_minor, opened_at, opened_by, counted_cash_minor, variance_reason, closed_at, closed_by, was_forced, journal_entry_id'
+
+function mapSession(raw: Record<string, any>): PosSession {
+  return {
+    id: raw.id,
+    status: raw.status,
+    openingFloatMinor: Number(raw.opening_float_minor) || 0,
+    openedAt: raw.opened_at,
+    openedBy: raw.opened_by,
+    closedAt: raw.closed_at ?? null,
+    closedBy: raw.closed_by ?? null,
+    countedCashMinor: raw.counted_cash_minor === null ? null : Number(raw.counted_cash_minor),
+  }
+}
+
+function mapOrder(raw: Record<string, any>): PosOrder {
+  return {
+    id: raw.id,
+    orderRef: raw.order_ref,
+    totalMinor: Number(raw.total_minor) || 0,
+    changeMinor: Number(raw.change_minor) || 0,
+    status: raw.status,
+    createdAt: raw.created_at,
+    payments: (raw.payments ?? []).map((p: Record<string, any>) => ({
+      method: p.method as PaymentMethod,
+      amountMinor: Number(p.amount_minor) || 0,
+    })),
+  }
+}
+
+function mapMovement(raw: Record<string, any>): CashMovement {
+  return {
+    id: raw.id,
+    kind: raw.kind,
+    amountMinor: Number(raw.amount_minor) || 0,
+    reason: raw.reason,
+    createdAt: raw.created_at,
+  }
+}
+
+export class PosService {
+  private async invalidate(workspaceId: string) {
+    await memoryCache.invalidate(`pos:${workspaceId}`)
+  }
+
+  // ─── Session lifecycle ────────────────────────────────────────────────────
+
+  /**
+   * Open a drawer.
+   *
+   * A partial unique index refuses a second open session for the same person
+   * in the same branch. Two open drawers for one till is two counts that can
+   * never be reconciled against one another, and the database says so rather
+   * than this method hoping.
+   */
+  async openSession(
+    ctx: TenancyContext,
+    input: { openingFloatMinor: number; branchId?: string | null | undefined },
+  ): Promise<PosSession> {
+    if (input.openingFloatMinor < 0) throw new ValidationError('POS_COUNT_NEGATIVE')
+
+    const { data, error } = await supabase
+      .from('pos_sessions')
+      .insert({
+        workspace_id: ctx.workspaceId,
+        branch_id: input.branchId ?? null,
+        status: 'open',
+        opening_float_minor: input.openingFloatMinor,
+        opened_by: ctx.userId,
+      })
+      .select(SESSION_COLUMNS)
+      .single()
+
+    if (error) {
+      if (error.code === '23505') throw new ConflictError('POS_SESSION_ALREADY_OPEN')
+      throw new DatabaseError('Failed to open the till session', error)
+    }
+
+    await this.invalidate(ctx.workspaceId)
+    return mapSession(data)
+  }
+
+  async getSession(ctx: TenancyContext, sessionId: string): Promise<PosSession> {
+    const { data, error } = await supabase
+      .from('pos_sessions')
+      .select(SESSION_COLUMNS)
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('id', sessionId)
+      .maybeSingle()
+
+    if (error) throw new DatabaseError('Failed to fetch the till session', error)
+    if (!data) throw new NotFoundError('Till session')
+    return mapSession(data)
+  }
+
+  /** The caller's own open session, if they have one. */
+  async getOpenSession(ctx: TenancyContext): Promise<PosSession | null> {
+    const { data, error } = await supabase
+      .from('pos_sessions')
+      .select(SESSION_COLUMNS)
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('opened_by', ctx.userId)
+      .eq('status', 'open')
+      .maybeSingle()
+
+    if (error) throw new DatabaseError('Failed to fetch the open session', error)
+    return data ? mapSession(data) : null
+  }
+
+  private async loadContents(
+    ctx: TenancyContext,
+    sessionId: string,
+  ): Promise<{ orders: PosOrder[]; movements: CashMovement[] }> {
+    const [orders, movements] = await Promise.all([
+      supabase
+        .from('pos_orders')
+        .select(
+          'id, order_ref, total_minor, change_minor, status, created_at, payments:pos_order_payments(method, amount_minor)',
+        )
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('session_id', sessionId)
+        .limit(5000),
+      supabase
+        .from('pos_cash_movements')
+        .select('id, kind, amount_minor, reason, created_at')
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('session_id', sessionId)
+        .limit(1000),
+    ])
+
+    if (orders.error) throw new DatabaseError('Failed to fetch till orders', orders.error)
+    if (movements.error) throw new DatabaseError('Failed to fetch cash movements', movements.error)
+
+    return {
+      orders: (orders.data ?? []).map(mapOrder),
+      movements: (movements.data ?? []).map(mapMovement),
+    }
+  }
+
+  async getTotals(ctx: TenancyContext, sessionId: string): Promise<SessionTotals> {
+    const session = await this.getSession(ctx, sessionId)
+    const { orders, movements } = await this.loadContents(ctx, sessionId)
+    return summarise(session, orders, movements)
+  }
+
+  // ─── Orders ───────────────────────────────────────────────────────────────
+
+  /**
+   * Record a sale at the till.
+   *
+   * `orderRef` is generated ONCE on the device and never regenerated, and a
+   * unique index enforces it. That is what makes a retry after a lost response
+   * idempotent rather than a second sale — the case a till hits constantly on
+   * a bad connection.
+   */
+  async recordOrder(
+    ctx: TenancyContext,
+    sessionId: string,
+    input: {
+      orderRef: string
+      totalMinor: number
+      changeMinor: number
+      payments: Array<{ method: PaymentMethod; amountMinor: number }>
+      invoiceId?: string | null | undefined
+    },
+  ): Promise<PosOrder> {
+    const session = await this.getSession(ctx, sessionId)
+
+    const problems = validateOrder(session, input)
+    if (problems.length > 0) throw new ValidationError(problems.join(', '))
+
+    // One transaction, in the database.
+    //
+    // This was two statements with a manual DELETE if the second failed —
+    // exactly what `.claude/lessons-learned.md` #3 forbids. If the process
+    // dies between them the compensating delete never runs, and the drawer
+    // holds an order with no payment rows: cash the session expects at close
+    // and cannot explain.
+    //
+    // The function also re-checks that the session is still open, under a row
+    // lock. Checking it out here leaves a window where a close lands between
+    // the check and the insert, and the order joins a session that has
+    // already posted.
+    const { data, error } = await supabase.rpc('pos_record_order', {
+      p_workspace_id: ctx.workspaceId,
+      p_session_id: sessionId,
+      p_payload: {
+        order_ref: input.orderRef,
+        invoice_id: input.invoiceId ?? null,
+        total_minor: input.totalMinor,
+        change_minor: input.changeMinor,
+        payments: input.payments.map((payment) => ({
+          method: payment.method,
+          amount_minor: payment.amountMinor,
+        })),
+      },
+    })
+
+    if (error) {
+      const code = /\b([A-Z][A-Z_]{6,})\b/.exec(error.message ?? '')?.[1]
+      if (code === 'POS_SESSION_NOT_OPEN' || code === 'POS_SESSION_NOT_FOUND') {
+        throw new ConflictError(code)
+      }
+      throw new DatabaseError('Failed to record the order', error)
+    }
+
+    const result = (data ?? {}) as { id?: string; status?: string }
+    if (!result.id) throw new DatabaseError('Failed to record the order')
+
+    await this.invalidate(ctx.workspaceId)
+
+    // `already_recorded` is a SUCCESS: the device is retrying something that
+    // worked, and the order it gets back is the one that exists.
+    const { data: stored } = await supabase
+      .from('pos_orders')
+      .select(
+        'id, order_ref, total_minor, change_minor, status, created_at, payments:pos_order_payments(method, amount_minor)',
+      )
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('id', result.id)
+      .single()
+
+    return stored ? mapOrder(stored) : { ...mapOrder(result), payments: input.payments }
+  }
+
+  /**
+   * Void an order.
+   *
+   * Marked voided, never deleted. A sale that was rung up and cancelled is two
+   * facts, and a till whose voids leave no trace is a till nobody can audit.
+   */
+  async voidOrder(ctx: TenancyContext, orderId: string): Promise<void> {
+    const { error } = await supabase
+      .from('pos_orders')
+      .update({ status: 'voided' })
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('id', orderId)
+
+    if (error) throw new DatabaseError('Failed to void the order', error)
+    await this.invalidate(ctx.workspaceId)
+  }
+
+  async recordMovement(
+    ctx: TenancyContext,
+    sessionId: string,
+    input: { kind: 'cash_in' | 'cash_out'; amountMinor: number; reason: string },
+  ): Promise<CashMovement> {
+    const session = await this.getSession(ctx, sessionId)
+
+    const problems = validateMovement(session, input)
+    if (problems.length > 0) throw new ValidationError(problems.join(', '))
+
+    const { data, error } = await supabase
+      .from('pos_cash_movements')
+      .insert({
+        workspace_id: ctx.workspaceId,
+        session_id: sessionId,
+        kind: input.kind,
+        amount_minor: input.amountMinor,
+        reason: input.reason,
+        created_by: ctx.userId,
+      })
+      .select('id, kind, amount_minor, reason, created_at')
+      .single()
+
+    if (error) throw new DatabaseError('Failed to record the cash movement', error)
+
+    await this.invalidate(ctx.workspaceId)
+    return mapMovement(data)
+  }
+
+  // ─── Closing ──────────────────────────────────────────────────────────────
+
+  /**
+   * Count the drawer and close.
+   *
+   * The ledger posting is idempotent per session, so a close that is retried
+   * after a lost response does not post the day's takings twice.
+   */
+  async closeSession(
+    ctx: TenancyContext,
+    sessionId: string,
+    input: {
+      countedCashMinor: number
+      varianceReason?: string | undefined
+      force?: boolean | undefined
+    },
+  ): Promise<{ session: PosSession; totals: SessionTotals; posted: boolean }> {
+    const session = await this.getSession(ctx, sessionId)
+    const { orders, movements } = await this.loadContents(ctx, sessionId)
+    const totals = summarise(session, orders, movements)
+
+    const problems = validateClose(session, totals, { ...input, role: ctx.role })
+    if (problems.length > 0) throw new ValidationError(problems.join(', '))
+
+    const closed: PosSession = { ...session, countedCashMinor: input.countedCashMinor }
+    const finalTotals = summarise(closed, orders, movements)
+
+    const { data, error } = await supabase
+      .from('pos_sessions')
+      .update({
+        status: input.force ? 'force_closed' : 'closed',
+        counted_cash_minor: input.countedCashMinor,
+        variance_reason: input.varianceReason ?? null,
+        closed_at: new Date().toISOString(),
+        closed_by: ctx.userId,
+        was_forced: input.force === true,
+      })
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('id', sessionId)
+      // Only an OPEN session closes. Two devices closing at once means the
+      // second finds nothing to update rather than posting a second time.
+      .in('status', ['open', 'closing'])
+      .select(SESSION_COLUMNS)
+      .single()
+
+    if (error) throw new DatabaseError('Failed to close the till session', error)
+
+    const posted = await this.postSession(ctx, closed, finalTotals)
+
+    await this.invalidate(ctx.workspaceId)
+    return { session: mapSession(data), totals: finalTotals, posted }
+  }
+
+  /**
+   * Book the session in the ledger.
+   *
+   * Cash is debited at what was COUNTED; the variance goes to its own account
+   * with the session id on it. Netting the variance into sales would quietly
+   * change the reported revenue of a day nobody would think to question.
+   */
+  private async postSession(
+    ctx: TenancyContext,
+    session: PosSession,
+    totals: SessionTotals,
+  ): Promise<boolean> {
+    const posting = buildPosting(session, totals)
+
+    const { accounts, missing } = await ledger.resolveAccountsByRole(ctx, [
+      'cash',
+      'sales',
+      'receivable',
+    ])
+
+    if (missing.length > 0) {
+      console.warn(`[POS] session ${session.id} not booked: no account for ${missing.join(', ')}`)
+      return false
+    }
+
+    const lines = [
+      { accountId: accounts.cash!, debit: posting.cashMinor / 100, credit: 0 },
+      { accountId: accounts.sales!, debit: 0, credit: posting.revenueMinor / 100 },
+    ]
+
+    if (posting.creditMinor > 0) {
+      lines.push({ accountId: accounts.receivable!, debit: posting.creditMinor / 100, credit: 0 })
+    }
+
+    // The variance balances the entry. Without it, a drawer that is short
+    // produces an unbalanced posting that the ledger correctly refuses — which
+    // is how the shortage would come to light as a crash instead of a figure.
+    if (posting.varianceMinor !== 0) {
+      const amount = Math.abs(posting.varianceMinor) / 100
+      lines.push(
+        posting.varianceMinor < 0
+          ? { accountId: accounts.sales!, debit: amount, credit: 0 }
+          : { accountId: accounts.sales!, debit: 0, credit: amount },
+      )
+    }
+
+    const outcome = await ledger.postDocument(ctx, {
+      sourceType: 'pos_session',
+      sourceId: session.id,
+      date: new Date().toISOString().slice(0, 10),
+      description: `بستن صندوق ${session.id.slice(0, 8)}`,
+      reference: session.id,
+      lines,
+    })
+
+    if (outcome.status === 'posted' || outcome.status === 'already_posted') {
+      await supabase
+        .from('pos_sessions')
+        .update({ journal_entry_id: outcome.entryId })
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('id', session.id)
+      return true
+    }
+
+    return false
+  }
+
+  /**
+   * Sessions open far longer than a shift.
+   *
+   * Surfaced, never auto-closed: closing decides where the money went, and
+   * that is a person's call.
+   */
+  async findAbandonedSessions(ctx: TenancyContext, staleAfterHours = 24) {
+    const { data, error } = await supabase
+      .from('pos_sessions')
+      .select(SESSION_COLUMNS)
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('status', 'open')
+      .limit(200)
+
+    if (error) throw new DatabaseError('Failed to look for abandoned sessions', error)
+
+    const sessions = await Promise.all(
+      (data ?? []).map(async (row) => {
+        const session = mapSession(row)
+        const contents = await this.loadContents(ctx, session.id)
+        return { session, ...contents }
+      }),
+    )
+
+    return findAbandoned(sessions, new Date().toISOString(), staleAfterHours)
+  }
+}

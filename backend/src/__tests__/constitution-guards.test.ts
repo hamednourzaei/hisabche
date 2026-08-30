@@ -179,34 +179,19 @@ describe('laws 1 & 14 — financial history is not deletable from a service', ()
     // that can delete the audit trail can erase the evidence of its own
     // actions. Corrections go through reversal/adjustment (§12.15), never DELETE.
     //
-    // Two deletion shapes are legitimate, named here so the guard stays sharp
+    // ONE deletion shape is legitimate, named here so the guard stays sharp
     // instead of being switched off wholesale:
-    //
-    //   COMPENSATING ROLLBACK — a journal header whose lines failed to insert
-    //   is not history, it is a half-write. An entry with no lines can never
-    //   balance, so removing it RESTORES the SUM(DEBIT)=SUM(CREDIT) invariant
-    //   rather than breaking it.
     //
     //   RETENTION — audit.service.cleanup() is behind platformAdminGuard and
     //   writes its own audit marker BEFORE deleting, so the deletion is itself
     //   recorded and the marker outlives the cutoff.
+    //
+    // The COMPENSATING ROLLBACK exemption is gone. It covered a journal header
+    // whose lines failed to insert — a half-write that only existed because
+    // the header and its lines were two separate round trips. They are now one
+    // transaction inside accounting_post_journal_entry, so a failed entry is
+    // never written at all and nothing needs deleting afterwards.
     const ALLOWED_DELETES = new Map([
-      [
-        'backend/src/services/accounting.service.ts -> journal_entries',
-        'compensating rollback of a failed lines insert',
-      ],
-      [
-        'backend/src/services/accounting.service.ts -> journal_lines',
-        'compensating rollback of a failed lines insert',
-      ],
-      [
-        'backend/src/services/invoice.service.ts -> journal_entries',
-        'compensating rollback of a failed lines insert',
-      ],
-      [
-        'backend/src/services/invoice.service.ts -> journal_lines',
-        'compensating rollback of a failed lines insert',
-      ],
       [
         'backend/src/services/audit.service.ts -> audit_logs',
         'gated retention; writes its own audit marker first',

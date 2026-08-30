@@ -13,6 +13,7 @@ import {
 } from '@hisabche/validation'
 import { ManufacturingService } from '../services/manufacturing.service'
 import { authenticate } from '../middleware/auth.middleware'
+import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 
 const toJsonSchema = (schema: any) => {
@@ -28,7 +29,10 @@ export async function manufacturingRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/boms',
     {
-      preHandler: [authenticate, cacheMiddleware({ scope: 'user', ttl: 120, keyPrefix: 'boms' })],
+      preHandler: [
+        authenticate,
+        cacheMiddleware({ scope: 'workspace', ttl: 120, keyPrefix: 'boms' }),
+      ],
       schema: {
         querystring: toJsonSchema(z.object({ productId: z.string().uuid().optional() })),
         response: {
@@ -39,7 +43,7 @@ export async function manufacturingRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { productId } = request.query as { productId?: string }
-        const boms = await manufacturingService.listBoms(request.userId, productId)
+        const boms = await manufacturingService.listBoms(request.tenancy, productId)
         return reply.send(boms)
       } catch (err) {
         fastify.log.error(err)
@@ -52,7 +56,7 @@ export async function manufacturingRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/boms',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         body: toJsonSchema(createBomSchema),
         response: {
@@ -63,7 +67,7 @@ export async function manufacturingRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const data = createBomSchema.parse(request.body)
-        const bom = await manufacturingService.createBom(request.userId, data)
+        const bom = await manufacturingService.createBom(request.tenancy, data)
         await clearCache('boms:*')
         return reply.code(201).send(bom)
       } catch (err) {
@@ -80,7 +84,7 @@ export async function manufacturingRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/boms/:id',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         body: toJsonSchema(updateBomSchema),
@@ -93,7 +97,7 @@ export async function manufacturingRoutes(fastify: FastifyInstance) {
       try {
         const { id } = request.params as { id: string }
         const data = updateBomSchema.parse(request.body)
-        const bom = await manufacturingService.updateBom(request.userId, id, data)
+        const bom = await manufacturingService.updateBom(request.tenancy, id, data)
         await clearCache(`bom:${id}`)
         await clearCache('boms:*')
         return reply.send(bom)
@@ -113,7 +117,8 @@ export async function manufacturingRoutes(fastify: FastifyInstance) {
     {
       preHandler: [
         authenticate,
-        cacheMiddleware({ scope: 'user', ttl: 60, keyPrefix: 'work-orders' }),
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'workspace', ttl: 60, keyPrefix: 'work-orders' }),
       ],
       schema: {
         querystring: toJsonSchema(
@@ -129,7 +134,7 @@ export async function manufacturingRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { status } = request.query as { status?: string }
-        const workOrders = await manufacturingService.listWorkOrders(request.userId, status)
+        const workOrders = await manufacturingService.listWorkOrders(request.tenancy, status)
         return reply.send(workOrders)
       } catch (err) {
         fastify.log.error(err)
@@ -142,7 +147,7 @@ export async function manufacturingRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/work-orders',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         body: toJsonSchema(createWorkOrderSchema),
         response: {
@@ -153,7 +158,7 @@ export async function manufacturingRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const data = createWorkOrderSchema.parse(request.body)
-        const workOrder = await manufacturingService.createWorkOrder(request.userId, data)
+        const workOrder = await manufacturingService.createWorkOrder(request.tenancy, data)
         await clearCache('work-orders:*')
         return reply.code(201).send(workOrder)
       } catch (err) {
@@ -170,7 +175,7 @@ export async function manufacturingRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/work-orders/:id',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         body: toJsonSchema(updateWorkOrderSchema),
@@ -183,7 +188,7 @@ export async function manufacturingRoutes(fastify: FastifyInstance) {
       try {
         const { id } = request.params as { id: string }
         const data = updateWorkOrderSchema.parse(request.body)
-        const workOrder = await manufacturingService.updateWorkOrder(request.userId, id, data)
+        const workOrder = await manufacturingService.updateWorkOrder(request.tenancy, id, data)
         await clearCache(`work-order:${id}`)
         await clearCache('work-orders:*')
         return reply.send(workOrder)
@@ -201,7 +206,7 @@ export async function manufacturingRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/work-orders/:id/complete',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         response: {
@@ -212,7 +217,7 @@ export async function manufacturingRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string }
-        const result = await manufacturingService.completeWorkOrder(request.userId, id)
+        const result = await manufacturingService.completeWorkOrder(request.tenancy, id)
         await clearCache(`work-order:${id}`)
         await clearCache('work-orders:*')
         return reply.send(result)

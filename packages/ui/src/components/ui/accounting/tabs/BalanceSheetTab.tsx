@@ -4,7 +4,7 @@
 import { memo, useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { cn } from '../../../../lib/utils'
-import { useBalanceSheet } from '@hisabche/api'
+import { useBalanceSheet, type TrialBalance } from '@hisabche/api'
 import { SingleDatePicker } from '../components/DateRangePicker'
 import { ExportButton, type ExportColumn } from '../components/ExportButton'
 import { AccountingSkeleton } from '../AccountingSkeleton'
@@ -30,7 +30,7 @@ function SectionBlock({
 }: {
   title: string
   total: number
-  details: any[]
+  details: TrialBalance[]
   accentClass: string
 }) {
   return (
@@ -47,13 +47,16 @@ function SectionBlock({
             —
           </p>
         ) : (
-          details.map((d: any, i: number) => (
-            <div key={i} className="flex items-center justify-between px-3 md:px-4 py-2 md:py-2.5">
+          details.map((d) => (
+            <div
+              key={d.accountId}
+              className="flex items-center justify-between px-3 md:px-4 py-2 md:py-2.5"
+            >
               <span className="text-[11px] md:text-sm text-[hsl(var(--fg-secondary))]">
-                {d.name || d.label}
+                {d.accountName}
               </span>
               <span className="text-[11px] md:text-sm font-medium text-[hsl(var(--fg-primary))]">
-                {(d.amount ?? d.balance ?? 0).toLocaleString()}
+                {d.balance.toLocaleString()}
               </span>
             </div>
           ))
@@ -71,20 +74,23 @@ export const BalanceSheetTab = memo(function BalanceSheetTab() {
   const exportData = useMemo<DetailRow[]>(() => {
     if (!data) return []
     const rows: DetailRow[] = []
-    for (const d of data.assets.details)
-      rows.push({ section: 'دارایی', label: d.name || d.label, amount: d.amount ?? d.balance ?? 0 })
-    for (const d of data.liabilities.details)
-      rows.push({ section: 'بدهی', label: d.name || d.label, amount: d.amount ?? d.balance ?? 0 })
-    for (const d of data.equity.details)
-      rows.push({
-        section: 'حقوق صاحبان سهام',
-        label: d.name || d.label,
-        amount: d.amount ?? d.balance ?? 0,
-      })
+    for (const d of data.assets)
+      rows.push({ section: 'دارایی', label: d.accountName, amount: d.balance })
+    for (const d of data.liabilities)
+      rows.push({ section: 'بدهی', label: d.accountName, amount: d.balance })
+    for (const d of data.equity)
+      rows.push({ section: 'حقوق صاحبان سهام', label: d.accountName, amount: d.balance })
+    rows.push({
+      section: 'حقوق صاحبان سهام',
+      label: 'سود (زیان) دوره',
+      amount: data.currentYearEarnings,
+    })
     return rows
   }, [data])
 
-  const isBalanced = data ? data.assets.total === data.liabilities.total + data.equity.total : false
+  // The server reports the gap; the screen does not recompute it. A sheet that
+  // adds up its own visible rows always balances, even when rows are missing.
+  const isBalanced = data ? data.outOfBalanceBy === 0 : false
 
   return (
     <div className="flex flex-col h-full">
@@ -116,20 +122,20 @@ export const BalanceSheetTab = memo(function BalanceSheetTab() {
           <div className="space-y-3 md:space-y-4 lg:space-y-5">
             <SectionBlock
               title={t('accounting.balanceSheet.assets')}
-              total={data.assets.total}
-              details={data.assets.details}
+              total={data.totalAssets}
+              details={data.assets}
               accentClass="bg-blue-500/10 text-blue-500"
             />
             <SectionBlock
               title={t('accounting.balanceSheet.liabilities')}
-              total={data.liabilities.total}
-              details={data.liabilities.details}
+              total={data.totalLiabilities}
+              details={data.liabilities}
               accentClass="bg-rose-500/10 text-rose-500"
             />
             <SectionBlock
               title={t('accounting.balanceSheet.equity')}
-              total={data.equity.total}
-              details={data.equity.details}
+              total={data.totalEquity}
+              details={data.equity}
               accentClass="bg-purple-500/10 text-purple-500"
             />
 
@@ -147,8 +153,8 @@ export const BalanceSheetTab = memo(function BalanceSheetTab() {
                   : t('accounting.balanceSheet.unbalanced')}
               </span>
               <span>
-                {data.assets.total.toLocaleString()} ={' '}
-                {(data.liabilities.total + data.equity.total).toLocaleString()}
+                {data.totalAssets.toLocaleString()} ={' '}
+                {(data.totalLiabilities + data.totalEquity).toLocaleString()}
               </span>
             </div>
           </div>

@@ -9,6 +9,7 @@ import { InvoiceService } from '../services/invoice.service'
 import { ActivityService } from '../services/activity.service'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
+import { resolveBranchContext } from '../middleware/branch.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 
 const invoiceService = new InvoiceService()
@@ -82,7 +83,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/invoices',
     {
-      preHandler: [authenticate, requireWorkspaceContext],
+      preHandler: [authenticate, requireWorkspaceContext, resolveBranchContext],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
@@ -139,7 +140,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
             })) ?? [],
         }
 
-        const invoice = await invoiceService.create(request.tenancy, data)
+        const invoice = await invoiceService.create(request.tenancy, data, request.branchId)
 
         // ✅ FIX: Invalidate all related caches
         await clearCache(`invoices:${workspaceId}:*`)

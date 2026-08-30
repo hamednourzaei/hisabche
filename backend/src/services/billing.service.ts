@@ -155,20 +155,61 @@ export class BillingService {
   // lands, and `.single()` turned that from "pick deterministically" into a
   // hard PGRST116 error on every read. Oldest row wins, matching the
   // joined_at-first convention in tenancy resolution.
-  async getOrCreateSubscription(userId: string): Promise<Subscription> {
-    const cacheKey = this.getSubscriptionCacheKey(userId)
+  /**
+   * The subscription row for this business, preferring the workspace.
+   *
+   * DECISION A (docs/subscription-workspace-migration.sql) says a subscription
+   * belongs to a WORKSPACE, not to a user — otherwise handing the shop to a
+   * new owner hands them a different subscription, or none.
+   *
+   * The user_id lookup remains as a FALLBACK, not as an equal path: the
+   * migration's backfill deliberately leaves ambiguous rows NULL rather than
+   * guessing, so some subscriptions still have no workspace and must still
+   * resolve. Once every live row carries one, this fallback is dead code and
+   * can go.
+   */
+  private async findSubscriptionRow(userId: string, workspaceId?: string) {
+    if (workspaceId) {
+      const { data, error } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('workspace_id', workspaceId)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle()
 
-    // ✅ ابتدا از کش بخوان
-    const cached = await memoryCache.get(cacheKey)
-    if (cached) return cached as Subscription
+      if (error && !/column .*workspace_id.* does not exist/i.test(error.message ?? '')) {
+        throw new DatabaseError('Failed to fetch subscription', error)
+      }
+      if (data) return data
+    }
 
-    const { data: existing } = await supabase
+    const { data, error } = await supabase
       .from('subscriptions')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: true })
       .limit(1)
       .maybeSingle()
+
+    if (error) throw new DatabaseError('Failed to fetch subscription', error)
+    return data
+  }
+
+  async getOrCreateSubscription(userId: string, workspaceId?: string): Promise<Subscription> {
+    // Two DIFFERENT keys, never `workspaceId ?? userId`. Workspace ids and user
+    // ids live in the same UUID space, so one shared key shape can collide —
+    // and the bare `??` is the fail-open pattern the tenancy guard forbids
+    // elsewhere, which should not be normalised just because this is a cache.
+    const cacheKey = workspaceId
+      ? this.getWorkspaceSubscriptionCacheKey(workspaceId)
+      : this.getSubscriptionCacheKey(userId)
+
+    // ✅ ابتدا از کش بخوان
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached as Subscription
+
+    const existing = await this.findSubscriptionRow(userId, workspaceId)
 
     if (existing) {
       const subscription = this.mapSubscription(existing)
@@ -184,6 +225,8 @@ export class BillingService {
       .from('subscriptions')
       .insert({
         user_id: userId,
+        // Stamped when we know it, so new rows never need the backfill.
+        ...(workspaceId ? { workspace_id: workspaceId } : {}),
         plan: 'pro',
         status: 'active',
         is_trial: true,
@@ -206,24 +249,22 @@ export class BillingService {
   // ✅ FIX: هر کاربری که هنوز رکورد subscription ندارد (مثلاً race condition
   // در ثبت‌نام) دیگر باعث 500 نمی‌شود — به همان مسیر getOrCreateSubscription
   // برمی‌گردد که یک اشتراک آزمایشی می‌سازد.
-  async getCurrentSubscription(userId: string): Promise<Subscription> {
-    const cacheKey = this.getSubscriptionCacheKey(userId)
+  async getCurrentSubscription(userId: string, workspaceId?: string): Promise<Subscription> {
+    // Two DIFFERENT keys, never `workspaceId ?? userId`. Workspace ids and user
+    // ids live in the same UUID space, so one shared key shape can collide —
+    // and the bare `??` is the fail-open pattern the tenancy guard forbids
+    // elsewhere, which should not be normalised just because this is a cache.
+    const cacheKey = workspaceId
+      ? this.getWorkspaceSubscriptionCacheKey(workspaceId)
+      : this.getSubscriptionCacheKey(userId)
 
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached as Subscription
 
-    const { data, error } = await supabase
-      .from('subscriptions')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .maybeSingle()
-
-    if (error) throw new DatabaseError('Failed to fetch subscription', error)
+    const data = await this.findSubscriptionRow(userId, workspaceId)
 
     if (!data) {
-      return this.getOrCreateSubscription(userId)
+      return this.getOrCreateSubscription(userId, workspaceId)
     }
 
     const subscription = this.mapSubscription(data)

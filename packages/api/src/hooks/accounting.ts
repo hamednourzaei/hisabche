@@ -19,33 +19,95 @@ import { useAuthReady } from './useAuthReady'
 import { useRealtime } from './useRealtime'
 
 // ═══ Types ═══
+export type AccountRootType = 'asset' | 'liability' | 'equity' | 'revenue' | 'expense'
+
 export interface Account {
-  id: string; code: string; name: string; type: string;
-  parentId?: string; isActive: boolean; createdAt: string;
+  id: string
+  code: string
+  name: string
+  type: AccountRootType
+  /** What automatic posting uses this account FOR. Null for ordinary accounts. */
+  role: string | null
+  parentId: string | null
+  /** A group organises the tree and can never carry a posting of its own. */
+  isGroup: boolean
+  isActive: boolean
+  createdAt: string | null
 }
 
+export type JournalEntryStatus = 'draft' | 'posted' | 'reversed' | 'cancelled'
+
 export interface JournalEntry {
-  id: string; date: string; description: string; reference?: string;
-  lines: JournalLine[];
+  id: string
+  entryNumber: string | null
+  date: string
+  description: string
+  reference: string
+  /** Only a 'posted' entry is in the books. A draft shows in no report. */
+  status: JournalEntryStatus
+  sourceType: string | null
+  sourceId: string | null
+  reversalOf: string | null
+  postedAt: string | null
+  lines: JournalLine[]
 }
 
 export interface JournalLine {
-  id: string; accountId: string; debit: number; credit: number;
+  id: string
+  accountId: string
+  accountCode?: string
+  accountName?: string
+  debit: number
+  credit: number
 }
 
 export interface TrialBalance {
-  accountId: string; accountCode: string; accountName: string;
-  accountType: string; debit: number; credit: number; balance: number;
+  accountId: string
+  accountCode: string
+  accountName: string
+  accountType: AccountRootType
+  debit: number
+  credit: number
+  /** Signed on the account's natural side: negative is a real reversed balance. */
+  balance: number
+}
+
+/**
+ * The trial balance now arrives with its own totals. `difference` is the one
+ * number that says the ledger is intact — anything but zero is damage, and the
+ * screen shows it rather than adding the columns up again itself.
+ */
+export interface TrialBalanceResult {
+  rows: TrialBalance[]
+  totalDebit: number
+  totalCredit: number
+  difference: number
+  fromDate: string | null
+  toDate: string
 }
 
 export interface BalanceSheet {
-  assets: { total: number; details: any[] };
-  liabilities: { total: number; details: any[] };
-  equity: { total: number; details: any[] };
+  asOf: string
+  assets: TrialBalance[]
+  liabilities: TrialBalance[]
+  equity: TrialBalance[]
+  totalAssets: number
+  totalLiabilities: number
+  totalEquity: number
+  /** Revenue less expenses, carried into equity. Not a balance sheet line. */
+  currentYearEarnings: number
+  /** assets − (liabilities + equity). Anything but 0 is a bug, not a figure. */
+  outOfBalanceBy: number
 }
 
 export interface IncomeStatement {
-  revenue: number; expenses: number; netIncome: number;
+  fromDate: string
+  toDate: string
+  revenue: TrialBalance[]
+  expenses: TrialBalance[]
+  totalRevenue: number
+  totalExpenses: number
+  netIncome: number
 }
 
 // ═══ Query Keys ═══
@@ -55,7 +117,8 @@ export const accountingKeys = {
   journalEntries: () => [...accountingKeys.all, 'journal'] as const,
   trialBalance: (date: string) => [...accountingKeys.all, 'trialBalance', date] as const,
   balanceSheet: (date: string) => [...accountingKeys.all, 'balanceSheet', date] as const,
-  incomeStatement: (from: string, to: string) => [...accountingKeys.all, 'income', from, to] as const,
+  incomeStatement: (from: string, to: string) =>
+    [...accountingKeys.all, 'income', from, to] as const,
 }
 
 // ═══ Hooks ═══
@@ -135,7 +198,7 @@ export function useTrialBalance(date: string) {
 
   return useQuery({
     queryKey: accountingKeys.trialBalance(date),
-    queryFn: async (): Promise<TrialBalance[]> => {
+    queryFn: async (): Promise<TrialBalanceResult> => {
       const { data } = await apiClient.get('/accounting/trial-balance', { params: { date } })
       return data
     },

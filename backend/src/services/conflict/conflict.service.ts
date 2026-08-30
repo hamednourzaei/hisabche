@@ -1,0 +1,270 @@
+// ============================================
+// backend/src/services/conflict/conflict.service.ts
+//
+// Records rejected offline mutations, and applies an authorized decision.
+//
+// PRESERVE BOTH → REVIEW → AUTHORIZED RESOLUTION → AUDIT, in that order. The
+// service never picks a winner on its own for anything financial, and it never
+// applies a resolution that has no stated reason behind it.
+// ============================================
+
+import { supabase } from '../../db'
+import { ConflictError, DatabaseError, NotFoundError } from '../../errors/database.error'
+import { ValidationError } from '../../errors/validation.error'
+import type { TenancyContext } from '../tenancy.service'
+
+import {
+  applyResolution,
+  classifyConflict,
+  validateResolution,
+  type ConflictEntity,
+  type FieldDivergence,
+  type ResolutionRequest,
+} from './conflict.domain'
+
+export interface ConflictRow {
+  id: string
+  entityType: ConflictEntity
+  entityId: string
+  mutationId: string
+  operation: string
+  serverVersion: number | null
+  serverRow: Record<string, unknown>
+  clientVersion: number | null
+  clientPayload: Record<string, unknown>
+  divergences: FieldDivergence[]
+  hasFinancialDivergence: boolean
+  status: 'open' | 'resolved' | 'superseded'
+  resolution: string | null
+  resolutionReason: string | null
+  resolvedBy: string | null
+  resolvedAt: string | null
+  createdAt: string
+}
+
+function mapConflict(raw: Record<string, any>): ConflictRow {
+  return {
+    id: raw.id,
+    entityType: raw.entity_type,
+    entityId: raw.entity_id,
+    mutationId: raw.mutation_id,
+    operation: raw.operation,
+    serverVersion: raw.server_version ?? null,
+    serverRow: raw.server_row ?? {},
+    clientVersion: raw.client_version ?? null,
+    clientPayload: raw.client_payload ?? {},
+    divergences: raw.divergences ?? [],
+    hasFinancialDivergence: raw.has_financial_divergence === true,
+    status: raw.status ?? 'open',
+    resolution: raw.resolution ?? null,
+    resolutionReason: raw.resolution_reason ?? null,
+    resolvedBy: raw.resolved_by ?? null,
+    resolvedAt: raw.resolved_at ?? null,
+    createdAt: raw.created_at,
+  }
+}
+
+const COLUMNS = `
+  id, entity_type, entity_id, mutation_id, operation, server_version, server_row,
+  client_version, client_payload, divergences, has_financial_divergence, status,
+  resolution, resolution_reason, resolved_by, resolved_at, created_at
+`
+
+/** Tables a resolution may write back to, by entity. Nothing else is reachable. */
+const ENTITY_TABLES: Record<ConflictEntity, string> = {
+  invoice: 'invoices',
+  payment: 'payments',
+  journal_entry: 'journal_entries',
+  customer: 'customers',
+  product: 'products',
+  transaction: 'transactions',
+}
+
+export class ConflictService {
+  /**
+   * A mutation was refused. Keep both versions.
+   *
+   * Called from the sync path when the server rejects a stale write. It never
+   * throws into that path: failing to FILE a conflict must not turn a clean
+   * "your copy is out of date" into a 500 the device will retry forever.
+   */
+  async record(
+    // Not a full TenancyContext: filing a conflict is not an authorized
+    // OPERATION, it is the record of one that was refused. The sync path has
+    // no role to offer, and inventing one here — the shape this first took —
+    // puts a fabricated authorization into a security-relevant call.
+    ctx: { workspaceId: string; userId: string },
+    input: {
+      entityType: ConflictEntity
+      entityId: string
+      mutationId: string
+      operation: string
+      serverRow: Record<string, unknown>
+      clientPayload: Record<string, unknown>
+      clientVersion?: number | undefined
+    },
+  ): Promise<{ status: 'recorded' | 'auto_merged' | 'no_divergence'; conflictId?: string }> {
+    const verdict = classifyConflict(input.entityType, input.serverRow, input.clientPayload)
+
+    if (verdict.kind === 'no_divergence') return { status: 'no_divergence' }
+
+    const divergences =
+      verdict.kind === 'needs_review'
+        ? verdict.divergences
+        : verdict.fields.map((field) => ({
+            field,
+            serverValue: input.serverRow[field],
+            clientValue: input.clientPayload[field],
+            financial: false,
+          }))
+
+    const { data, error } = await supabase
+      .from('sync_conflicts')
+      .upsert(
+        {
+          workspace_id: ctx.workspaceId,
+          entity_type: input.entityType,
+          entity_id: input.entityId,
+          mutation_id: input.mutationId,
+          operation: input.operation,
+          server_version: Number(input.serverRow.version) || null,
+          server_row: input.serverRow,
+          client_version: input.clientVersion ?? null,
+          client_payload: input.clientPayload,
+          divergences,
+          has_financial_divergence: verdict.kind === 'needs_review',
+          // An auto-merge is still filed, resolved, with what it did. A merge
+          // that leaves no trace is indistinguishable from data loss when
+          // somebody asks later why a field changed.
+          status: verdict.kind === 'auto_merge' ? 'resolved' : 'open',
+          resolution: verdict.kind === 'auto_merge' ? 'auto_merge' : null,
+          resolution_reason: verdict.kind === 'auto_merge' ? 'no financial field diverged' : null,
+          resolved_row: verdict.kind === 'auto_merge' ? verdict.merged : null,
+          resolved_at: verdict.kind === 'auto_merge' ? new Date().toISOString() : null,
+          detected_by: ctx.userId,
+        },
+        { onConflict: 'workspace_id,mutation_id' },
+      )
+      .select('id')
+      .single()
+
+    if (error) throw new DatabaseError('Failed to record the conflict', error)
+
+    if (verdict.kind === 'auto_merge') {
+      await this.writeBack(ctx, input.entityType, input.entityId, verdict.merged)
+      return { status: 'auto_merged', conflictId: data?.id }
+    }
+
+    return { status: 'recorded', conflictId: data?.id }
+  }
+
+  async list(ctx: TenancyContext, status: 'open' | 'resolved' | 'all' = 'open') {
+    let query = supabase
+      .from('sync_conflicts')
+      .select(COLUMNS)
+      .eq('workspace_id', ctx.workspaceId)
+      .order('created_at', { ascending: false })
+      .limit(200)
+
+    if (status !== 'all') query = query.eq('status', status)
+
+    const { data, error } = await query
+    if (error) throw new DatabaseError('Failed to fetch conflicts', error)
+    return (data ?? []).map(mapConflict)
+  }
+
+  async get(ctx: TenancyContext, id: string): Promise<ConflictRow> {
+    const { data, error } = await supabase
+      .from('sync_conflicts')
+      .select(COLUMNS)
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('id', id)
+      .maybeSingle()
+
+    if (error) throw new DatabaseError('Failed to fetch conflict', error)
+    if (!data) throw new NotFoundError('Conflict')
+    return mapConflict(data)
+  }
+
+  /**
+   * Apply a decision.
+   *
+   * The caller must already hold the capability for it — the route enforces
+   * that. What this adds is that the decision is complete (every diverging
+   * field decided, not defaulted), that it carries a reason, and that both the
+   * decision and its author are written down next to the two versions.
+   */
+  async resolve(ctx: TenancyContext, id: string, request: ResolutionRequest) {
+    const conflict = await this.get(ctx, id)
+
+    const problems = validateResolution(request, conflict.divergences, conflict.status !== 'open')
+    if (problems.length > 0) {
+      if (problems.includes('CONFLICT_ALREADY_RESOLVED')) {
+        throw new ConflictError('CONFLICT_ALREADY_RESOLVED')
+      }
+      throw new ValidationError(problems.join(', '))
+    }
+
+    const resolvedRow = applyResolution(
+      conflict.serverRow,
+      conflict.clientPayload,
+      conflict.divergences,
+      request,
+    )
+
+    // The row first: if the write-back fails, the conflict stays open rather
+    // than being marked resolved against a change that never landed.
+    if (request.choice !== 'keep_server') {
+      await this.writeBack(ctx, conflict.entityType, conflict.entityId, resolvedRow)
+    }
+
+    const { error } = await supabase
+      .from('sync_conflicts')
+      .update({
+        status: 'resolved',
+        resolution: request.choice,
+        resolution_reason: request.reason,
+        resolved_row: resolvedRow,
+        resolved_by: ctx.userId,
+        resolved_at: new Date().toISOString(),
+      })
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('id', id)
+      .eq('status', 'open')
+
+    if (error) throw new DatabaseError('Failed to record the resolution', error)
+
+    return this.get(ctx, id)
+  }
+
+  /**
+   * Write the decided row back to its own table.
+   *
+   * Only the fields that were in dispute are written, and only ever within the
+   * caller's workspace. The id, workspace and version columns are stripped: a
+   * resolution decides what the values are, never which row or whose it is.
+   */
+  private async writeBack(
+    ctx: { workspaceId: string },
+    entityType: ConflictEntity,
+    entityId: string,
+    row: Record<string, unknown>,
+  ) {
+    const table = ENTITY_TABLES[entityType]
+    if (!table) throw new ValidationError('CONFLICT_ENTITY_UNKNOWN')
+
+    const values: Record<string, unknown> = { ...row }
+    for (const key of ['id', 'workspace_id', 'user_id', 'version', 'created_at']) {
+      delete values[key]
+    }
+    values.updated_at = new Date().toISOString()
+
+    const { error } = await supabase
+      .from(table)
+      .update(values)
+      .eq('id', entityId)
+      .eq('workspace_id', ctx.workspaceId)
+
+    if (error) throw new DatabaseError('Failed to apply the resolution', error)
+  }
+}

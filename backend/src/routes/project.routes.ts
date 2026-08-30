@@ -16,6 +16,7 @@ import {
 } from '@hisabche/validation'
 import { ProjectService } from '../services/project.service'
 import { authenticate } from '../middleware/auth.middleware'
+import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 
 const toJsonSchema = (schema: any) => {
@@ -37,7 +38,8 @@ export async function projectRoutes(fastify: FastifyInstance) {
     {
       preHandler: [
         authenticate,
-        cacheMiddleware({ scope: 'user', ttl: 60, keyPrefix: 'projects' }),
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'workspace', ttl: 60, keyPrefix: 'projects' }),
       ],
       schema: {
         querystring: toJsonSchema(
@@ -53,7 +55,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { status } = request.query as { status?: string }
-        const projects = await projectService.listProjects(request.userId, status)
+        const projects = await projectService.listProjects(request.tenancy, status)
         return reply.send(projects)
       } catch (err) {
         fastify.log.error(err)
@@ -66,7 +68,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/projects',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         body: toJsonSchema(createProjectSchema),
         response: { 201: toJsonSchema(z.any()) },
@@ -75,7 +77,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const data = createProjectSchema.parse(request.body)
-        const project = await projectService.createProject(request.userId, data)
+        const project = await projectService.createProject(request.tenancy, data)
         await clearCache('projects:*')
         return reply.code(201).send(project)
       } catch (err) {
@@ -94,7 +96,8 @@ export async function projectRoutes(fastify: FastifyInstance) {
     {
       preHandler: [
         authenticate,
-        cacheMiddleware({ scope: 'user', ttl: 120, keyPrefix: 'project' }),
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'workspace', ttl: 120, keyPrefix: 'project' }),
       ],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
@@ -104,7 +107,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string }
-        const project = await projectService.getProject(id, request.userId)
+        const project = await projectService.getProject(id, request.tenancy)
         return reply.send(project)
       } catch (err) {
         fastify.log.error(err)
@@ -117,7 +120,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/projects/:id',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         body: toJsonSchema(updateProjectSchema),
@@ -128,7 +131,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
       try {
         const { id } = request.params as { id: string }
         const data = updateProjectSchema.parse(request.body)
-        const project = await projectService.updateProject(request.userId, id, data)
+        const project = await projectService.updateProject(request.tenancy, id, data)
         await clearCache(`project:${id}`)
         await clearCache('projects:*')
         return reply.send(project)
@@ -146,7 +149,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
   fastify.delete(
     '/api/projects/:id',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         response: { 200: toJsonSchema(z.any()) },
@@ -155,7 +158,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string }
-        const result = await projectService.deleteProject(request.userId, id)
+        const result = await projectService.deleteProject(request.tenancy, id)
         await clearCache(`project:${id}`)
         await clearCache('projects:*')
         return reply.send(result)
@@ -176,7 +179,8 @@ export async function projectRoutes(fastify: FastifyInstance) {
     {
       preHandler: [
         authenticate,
-        cacheMiddleware({ scope: 'user', ttl: 60, keyPrefix: 'project-tasks' }),
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'workspace', ttl: 60, keyPrefix: 'project-tasks' }),
       ],
       schema: {
         params: toJsonSchema(z.object({ projectId: z.string().uuid() })),
@@ -192,7 +196,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
       try {
         const { projectId } = request.params as { projectId: string }
         const { status } = request.query as { status?: string }
-        const tasks = await projectService.listTasks(request.userId, projectId, status)
+        const tasks = await projectService.listTasks(request.tenancy, projectId, status)
         return reply.send(tasks)
       } catch (err) {
         fastify.log.error(err)
@@ -205,7 +209,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/projects/:projectId/tasks',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         params: toJsonSchema(z.object({ projectId: z.string().uuid() })),
         body: toJsonSchema(createProjectTaskSchema),
@@ -215,7 +219,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const data = createProjectTaskSchema.parse(request.body)
-        const task = await projectService.createTask(request.userId, data)
+        const task = await projectService.createTask(request.tenancy, data)
         // ✅ اصلاح: data.projectId (با camelCase)
         await clearCache(`project-tasks:${data.projectId}:*`)
         return reply.code(201).send(task)
@@ -233,7 +237,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/tasks/:id',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         body: toJsonSchema(updateProjectTaskSchema),
@@ -244,7 +248,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
       try {
         const { id } = request.params as { id: string }
         const data = updateProjectTaskSchema.parse(request.body)
-        const task = await projectService.updateTask(request.userId, id, data)
+        const task = await projectService.updateTask(request.tenancy, id, data)
         await clearCache(`task:${id}`)
         // ✅ اصلاح: task.project_id (با underscore - چون خروجی سرویس است)
         await clearCache(`project-tasks:${task.project_id}:*`)
@@ -263,7 +267,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
   fastify.delete(
     '/api/tasks/:id',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         response: { 200: toJsonSchema(z.any()) },
@@ -272,7 +276,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string }
-        const result = await projectService.deleteTask(request.userId, id)
+        const result = await projectService.deleteTask(request.tenancy, id)
         await clearCache(`task:${id}`)
         await clearCache('project-tasks:*')
         return reply.send(result)
@@ -293,7 +297,8 @@ export async function projectRoutes(fastify: FastifyInstance) {
     {
       preHandler: [
         authenticate,
-        cacheMiddleware({ scope: 'user', ttl: 60, keyPrefix: 'project-members' }),
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'workspace', ttl: 60, keyPrefix: 'project-members' }),
       ],
       schema: {
         params: toJsonSchema(z.object({ projectId: z.string().uuid() })),
@@ -303,7 +308,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { projectId } = request.params as { projectId: string }
-        const members = await projectService.listMembers(request.userId, projectId)
+        const members = await projectService.listMembers(request.tenancy, projectId)
         return reply.send(members)
       } catch (err) {
         fastify.log.error(err)
@@ -316,7 +321,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/projects/:projectId/members',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         body: toJsonSchema(createProjectMemberSchema),
         response: { 201: toJsonSchema(z.any()) },
@@ -325,7 +330,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const data = createProjectMemberSchema.parse(request.body)
-        const member = await projectService.addMember(request.userId, data)
+        const member = await projectService.addMember(request.tenancy, data)
         // ✅ اصلاح: data.projectId (با camelCase)
         await clearCache(`project-members:${data.projectId}:*`)
         return reply.code(201).send(member)
@@ -343,7 +348,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
   fastify.delete(
     '/api/projects/:projectId/members/:memberId',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         params: toJsonSchema(
           z.object({ projectId: z.string().uuid(), memberId: z.string().uuid() }),
@@ -354,7 +359,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { projectId, memberId } = request.params as { projectId: string; memberId: string }
-        const result = await projectService.removeMember(request.userId, projectId, memberId)
+        const result = await projectService.removeMember(request.tenancy, projectId, memberId)
         await clearCache(`project-members:${projectId}:*`)
         return reply.send(result)
       } catch (err) {
@@ -374,7 +379,8 @@ export async function projectRoutes(fastify: FastifyInstance) {
     {
       preHandler: [
         authenticate,
-        cacheMiddleware({ scope: 'user', ttl: 60, keyPrefix: 'project-time-entries' }),
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'workspace', ttl: 60, keyPrefix: 'project-time-entries' }),
       ],
       schema: {
         params: toJsonSchema(z.object({ projectId: z.string().uuid() })),
@@ -384,7 +390,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { projectId } = request.params as { projectId: string }
-        const entries = await projectService.listTimeEntries(request.userId, projectId)
+        const entries = await projectService.listTimeEntries(request.tenancy, projectId)
         return reply.send(entries)
       } catch (err) {
         fastify.log.error(err)
@@ -397,7 +403,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/projects/:projectId/time-entries',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         body: toJsonSchema(createTimeEntrySchema),
         response: { 201: toJsonSchema(z.any()) },
@@ -406,7 +412,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const data = createTimeEntrySchema.parse(request.body)
-        const entry = await projectService.createTimeEntry(request.userId, data)
+        const entry = await projectService.createTimeEntry(request.tenancy, data)
         // ✅ اصلاح: data.projectId (با camelCase)
         await clearCache(`project-time-entries:${data.projectId}:*`)
         return reply.code(201).send(entry)
@@ -424,7 +430,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/time-entries/:id',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         body: toJsonSchema(updateTimeEntrySchema),
@@ -435,7 +441,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
       try {
         const { id } = request.params as { id: string }
         const data = updateTimeEntrySchema.parse(request.body)
-        const entry = await projectService.updateTimeEntry(request.userId, id, data)
+        const entry = await projectService.updateTimeEntry(request.tenancy, id, data)
         await clearCache(`time-entry:${id}`)
         // ✅ اصلاح: entry.project_id (با underscore - چون خروجی سرویس است)
         await clearCache(`project-time-entries:${entry.project_id}:*`)
@@ -454,7 +460,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
   fastify.delete(
     '/api/time-entries/:id',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         response: { 200: toJsonSchema(z.any()) },
@@ -463,7 +469,7 @@ export async function projectRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string }
-        const result = await projectService.deleteTimeEntry(request.userId, id)
+        const result = await projectService.deleteTimeEntry(request.tenancy, id)
         await clearCache(`time-entry:${id}`)
         await clearCache('project-time-entries:*')
         return reply.send(result)

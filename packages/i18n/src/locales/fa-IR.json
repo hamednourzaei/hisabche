@@ -386,24 +386,66 @@
       "termsTitle": "شرایط استفاده",
       "termsIntro": "با استفاده از حسابچه، شما با شرایط زیر موافقت می‌کنید. لطفاً پیش از استفاده آن‌ها را با دقت مطالعه کنید.",
       "termsSections": [
-        { "heading": "۱. درباره خدمات", "body": "حسابچه یک نرم‌افزار حسابداری و مدیریت کسب‌وکار است که امکاناتی مانند صدور فاکتور، مدیریت موجودی گدام، پیگیری بدهی مشتریان، مدیریت پروژه، خرید، تولید و منابع انسانی را ارائه می‌دهد. بخشی از امکانات به‌صورت آفلاین و بخشی با اتصال به سرورهای ما کار می‌کند." },
-        { "heading": "۲. حساب کاربری", "body": "شما مسئول حفظ محرمانگی اطلاعات ورود حساب خود و تمام فعالیت‌هایی هستید که زیر حساب شما انجام می‌شود. لطفاً در صورت مشاهده هرگونه استفاده غیرمجاز، فوراً با ما تماس بگیرید." },
-        { "heading": "۳. داده‌های شما", "body": "اطلاعات کسب‌وکاری که وارد می‌کنید (فاکتورها، موجودی، مشتریان و مانند آن) متعلق به شماست. ما از این داده‌ها فقط برای ارائه خدمات به شما استفاده می‌کنیم و آن‌ها را به اشخاص ثالث نمی‌فروشیم." },
-        { "heading": "۴. استفاده مجاز", "body": "استفاده از حسابچه برای فعالیت‌های غیرقانونی، نقض حقوق دیگران، یا تلاش برای دسترسی غیرمجاز به سامانه ممنوع است." },
-        { "heading": "۵. در دسترس بودن خدمات", "body": "تلاش می‌کنیم خدمات همیشه در دسترس باشد، اما ممکن است به دلیل نگهداری، به‌روزرسانی یا مسائل فنی، وقفه‌های کوتاهی پیش بیاید. نسخه آفلاین برنامه در این مواقع همچنان قابل استفاده است." },
-        { "heading": "۶. تغییرات", "body": "ممکن است این شرایط را در آینده به‌روزرسانی کنیم. تغییرات مهم از طریق برنامه یا ایمیل به اطلاع شما خواهد رسید." },
-        { "heading": "۷. تماس", "body": "برای هرگونه پرسش درباره این شرایط، از طریق support@hisabche.com با ما در تماس باشید." }
+        {
+          "heading": "۱. درباره خدمات",
+          "body": "حسابچه یک نرم‌افزار حسابداری و مدیریت کسب‌وکار است که امکاناتی مانند صدور فاکتور، مدیریت موجودی گدام، پیگیری بدهی مشتریان، مدیریت پروژه، خرید، تولید و منابع انسانی را ارائه می‌دهد. بخشی از امکانات به‌صورت آفلاین و بخشی با اتصال به سرورهای ما کار می‌کند."
+        },
+        {
+          "heading": "۲. حساب کاربری",
+          "body": "شما مسئول حفظ محرمانگی اطلاعات ورود حساب خود و تمام فعالیت‌هایی هستید که زیر حساب شما انجام می‌شود. لطفاً در صورت مشاهده هرگونه استفاده غیرمجاز، فوراً با ما تماس بگیرید."
+        },
+        {
+          "heading": "۳. داده‌های شما",
+          "body": "اطلاعات کسب‌وکاری که وارد می‌کنید (فاکتورها، موجودی، مشتریان و مانند آن) متعلق به شماست. ما از این داده‌ها فقط برای ارائه خدمات به شما استفاده می‌کنیم و آن‌ها را به اشخاص ثالث نمی‌فروشیم."
+        },
+        {
+          "heading": "۴. استفاده مجاز",
+          "body": "استفاده از حسابچه برای فعالیت‌های غیرقانونی، نقض حقوق دیگران، یا تلاش برای دسترسی غیرمجاز به سامانه ممنوع است."
+        },
+        {
+          "heading": "۵. در دسترس بودن خدمات",
+          "body": "تلاش می‌کنیم خدمات همیشه در دسترس باشد، اما ممکن است به دلیل نگهداری، به‌روزرسانی یا مسائل فنی، وقفه‌های کوتاهی پیش بیاید. نسخه آفلاین برنامه در این مواقع همچنان قابل استفاده است."
+        },
+        {
+          "heading": "۶. تغییرات",
+          "body": "ممکن است این شرایط را در آینده به‌روزرسانی کنیم. تغییرات مهم از طریق برنامه یا ایمیل به اطلاع شما خواهد رسید."
+        },
+        {
+          "heading": "۷. تماس",
+          "body": "برای هرگونه پرسش درباره این شرایط، از طریق support@hisabche.com با ما در تماس باشید."
+        }
       ],
       "privacyTitle": "سیاست حفظ حریم خصوصی",
       "privacyIntro": "حریم خصوصی شما برای ما مهم است. این صفحه توضیح می‌دهد که چه اطلاعاتی جمع‌آوری می‌کنیم و چگونه از آن‌ها استفاده می‌کنیم.",
       "privacySections": [
-        { "heading": "۱. چه اطلاعاتی جمع‌آوری می‌کنیم", "body": "اطلاعات حساب (نام، ایمیل، شماره تماس)، اطلاعات کسب‌وکار که خودتان وارد می‌کنید (فاکتور، موجودی، مشتریان، تراکنش‌ها) و داده‌های فنی محدود (نوع دستگاه، لاگ‌های خطا) برای بهبود عملکرد برنامه." },
-        { "heading": "۲. چگونه از اطلاعات استفاده می‌کنیم", "body": "این اطلاعات صرفاً برای ارائه و بهبود خدمات حسابچه، پشتیبانی مشتری و امنیت حساب شما استفاده می‌شود. ما اطلاعات شما را به شرکت‌های تبلیغاتی نمی‌فروشیم." },
-        { "heading": "۳. ذخیره‌سازی و امنیت", "body": "داده‌های شما روی زیرساخت ابری امن (Supabase) با رمزنگاری نگهداری می‌شود. نسخه آفلاین برنامه، داده‌ها را به‌صورت محلی روی دستگاه شما نیز ذخیره می‌کند." },
-        { "heading": "۴. اشتراک‌گذاری با اشخاص ثالث", "body": "ما اطلاعات شما را جز برای ارائه‌دهندگان زیرساخت ضروری (مانند سرویس ابری میزبانی) که تحت تعهد محرمانگی هستند، با هیچ شخص ثالثی به اشتراک نمی‌گذاریم." },
-        { "heading": "۵. حقوق شما", "body": "شما می‌توانید هر زمان درخواست دسترسی، اصلاح، خروجی گرفتن یا حذف کامل اطلاعات حساب خود را از طریق پشتیبانی ارسال کنید." },
-        { "heading": "۶. کوکی‌ها", "body": "ما فقط از کوکی‌های ضروری برای نگهداری نشست ورود شما استفاده می‌کنیم؛ هیچ کوکی ردیابی تبلیغاتی استفاده نمی‌شود." },
-        { "heading": "۷. تماس", "body": "برای پرسش درباره حریم خصوصی، با support@hisabche.com تماس بگیرید." }
+        {
+          "heading": "۱. چه اطلاعاتی جمع‌آوری می‌کنیم",
+          "body": "اطلاعات حساب (نام، ایمیل، شماره تماس)، اطلاعات کسب‌وکار که خودتان وارد می‌کنید (فاکتور، موجودی، مشتریان، تراکنش‌ها) و داده‌های فنی محدود (نوع دستگاه، لاگ‌های خطا) برای بهبود عملکرد برنامه."
+        },
+        {
+          "heading": "۲. چگونه از اطلاعات استفاده می‌کنیم",
+          "body": "این اطلاعات صرفاً برای ارائه و بهبود خدمات حسابچه، پشتیبانی مشتری و امنیت حساب شما استفاده می‌شود. ما اطلاعات شما را به شرکت‌های تبلیغاتی نمی‌فروشیم."
+        },
+        {
+          "heading": "۳. ذخیره‌سازی و امنیت",
+          "body": "داده‌های شما روی زیرساخت ابری امن (Supabase) با رمزنگاری نگهداری می‌شود. نسخه آفلاین برنامه، داده‌ها را به‌صورت محلی روی دستگاه شما نیز ذخیره می‌کند."
+        },
+        {
+          "heading": "۴. اشتراک‌گذاری با اشخاص ثالث",
+          "body": "ما اطلاعات شما را جز برای ارائه‌دهندگان زیرساخت ضروری (مانند سرویس ابری میزبانی) که تحت تعهد محرمانگی هستند، با هیچ شخص ثالثی به اشتراک نمی‌گذاریم."
+        },
+        {
+          "heading": "۵. حقوق شما",
+          "body": "شما می‌توانید هر زمان درخواست دسترسی، اصلاح، خروجی گرفتن یا حذف کامل اطلاعات حساب خود را از طریق پشتیبانی ارسال کنید."
+        },
+        {
+          "heading": "۶. کوکی‌ها",
+          "body": "ما فقط از کوکی‌های ضروری برای نگهداری نشست ورود شما استفاده می‌کنیم؛ هیچ کوکی ردیابی تبلیغاتی استفاده نمی‌شود."
+        },
+        {
+          "heading": "۷. تماس",
+          "body": "برای پرسش درباره حریم خصوصی، با support@hisabche.com تماس بگیرید."
+        }
       ],
       "contactTitle": "تماس با ما",
       "contactIntro": "سوالی دارید یا به پشتیبانی نیاز دارید؟ خوشحال می‌شویم کمک کنیم.",
@@ -428,47 +470,26 @@
       "start1Q": "آیا حسابچه رایگان است؟",
       "start1A": "بله، نسخه رایگان حسابچه برای یک کسب‌وکار و ویژگی‌های اصلی کاملاً رایگان است. می‌توانید نسخه کسب‌وکار را برای ویژگی‌های پیشرفته خریداری کنید.",
       "related": {
-        "pricing": "مشاهده قیمت‌گذاری"
+        "access": "مدیریت کاربران"
       },
       "start2Q": "چگونه با حسابچه شروع کنم؟",
       "start2A": "فقط روی دکمه «رایگان شروع کنید» کلیک کنید و شماره موبایلتان را وارد کنید. نیازی به کارت اعتباری نیست. بعد از تأیید شماره، حسابچه بلافاصله آماده است.",
-      "related": {
-        "signup": "رایگان شروع کنید"
-      },
       "offline1Q": "آیا حتماً به اینترنت نیاز دارم؟",
       "offline1A": "خیر. حسابچه کاملاً آفلاین کار می‌کند. حتی وقتی اینترنت قطع است می‌توانید صورت‌حساب صادر کنید، موجودی را به‌روزرسانی کنید و مشتری اضافه کنید. به محض اتصال، همه چیز خودکار همگام‌سازی می‌شود.",
-      "related": {
-        "offlineFlow": "آفلاین چگونه کار می‌کند"
-      },
       "offline2Q": "اگر گوشی‌ام خراب شود، داده‌هایم را از دست می‌دهم؟",
       "offline2A": "خیر. همه داده‌هایتان روی سرورهای امن حسابچه پشتیبان‌گیری شده. یک نسخه امن هم روی خود گوشی ذخیره می‌شود. پس با خیال راحت کار کنید.",
-      "related": {
-        "security": "اطلاعات بیشتر درباره امنیت"
-      },
       "offline3Q": "روی چند گوشی می‌توانم استفاده کنم؟",
       "offline3A": "با یک حساب می‌توانید همزمان روی چند دستگاه (موبایل، تبلت، لپ‌تاپ) وارد شوید. همگام‌سازی بین دستگاه‌ها خودکار انجام می‌شود.",
       "acc1Q": "چگونه اعتبار (بدهی مشتری) ثبت کنم؟",
       "acc1A": "هنگام ثبت فروش، گزینه «نسیه» را انتخاب کنید. حسابچه بدهی مشتری را خودکار ثبت می‌کند و هنگام سررسید به شما یادآوری می‌کند.",
-      "related": {
-        "debt": "ویژگی بدهکاران"
-      },
       "acc2Q": "آیا می‌توانم موجودی انبار را مدیریت کنم؟",
       "acc2A": "بله. برای هر محصولی که تعریف کنید، با هر فروش موجودی آن به صورت خودکار کم می‌شود. همچنین قبل از تمام شدن موجودی هشدار می‌دهد.",
-      "related": {
-        "inventory": "مدیریت موجودی"
-      },
       "acc3Q": "چگونه سود و زیانم را ببینم؟",
       "acc3A": "در داشبورد حسابچه، نمودار سود و زیان به صورت لحظه‌ای قابل مشاهده است. سود روزانه، هفتگی و ماهانه را ببینید.",
-      "related": {
-        "reports": "گزارش‌های لحظه‌ای"
-      },
       "sec1Q": "داده‌هایم چقدر امن است؟",
       "sec1A": "همه داده‌ها در حال انتقال و در حال ذخیره رمزنگاری شده‌اند. پشتیبان‌گیری روزانه انجام می‌شود و شما مالک کامل داده‌هایتان هستید.",
       "sec2Q": "چند کاربر می‌توانند همزمان کار کنند؟",
       "sec2A": "بسته به طرح، می‌توانید کاربران متعدد با سطوح دسترسی متفاوت اضافه کنید. حتی در طرح رایگان می‌توانید یک حسابدار اضافی اضافه کنید.",
-      "related": {
-        "access": "مدیریت کاربران"
-      },
       "dev1Q": "روی گوشی‌های قدیمی اندروید کار می‌کند؟",
       "dev1A": "بله. حسابچه برای گوشی‌های اندروید ۷+ با ۲ گیگ رم طراحی شده. حتی روی دستگاه‌های ارزان‌قیمت.",
       "dev2Q": "نسخه ویندوز دارد؟",
@@ -640,45 +661,66 @@
     },
     "mainNav": "ناوبری اصلی",
     "mobileNav": "ناوبری موبایل",
-    "more": "بیشتر"
+    "more": "بیشتر",
+    "billing_description": "طرح فعلی، ارتقا و صورتحساب اشتراک",
+    "money_description": "درآمد، هزینه و سود شما",
+    "approvals_empty": "چیزی در انتظار تأیید نیست",
+    "getPaid_description": "چه کسی چقدر باید بپردازد",
+    "stock_description": "چه چیزی داریم و چه چیزی کم است",
+    "teamPayroll": "تیم و حقوق"
   },
   "dateRange": {
     "today": "امروز",
     "yesterday": "دیروز",
     "7days": "۷ روز گذشته",
-    "14days": "۱۴ روز",
+    "14days": "۱۴ روز گذشته",
     "30days": "۳۰ روز گذشته",
-    "60days": "۶۰ روز",
-    "90days": "۹۰ روز",
+    "60days": "۶۰ روز گذشته",
+    "90days": "۹۰ روز گذشته",
     "thisMonth": "این ماه",
     "lastMonth": "ماه گذشته",
-    "last3Months": "۳ ماه",
-    "last6Months": "۶ ماه",
+    "last3Months": "۳ ماه گذشته",
+    "last6Months": "۶ ماه گذشته",
     "thisYear": "امسال",
     "lastYear": "سال گذشته",
-    "custom": "بازه سفارشی",
-    "apply": "اعمال",
-    "pickDate": "انتخاب...",
-    "selectPeriod": "انتخاب دوره",
+    "custom": "دلخواه",
     "from": "از",
     "to": "تا",
+    "apply": "اعمال",
+    "selectPeriod": "انتخاب بازه",
+    "presetsAria": "بازه‌های زمانی از پیش تعیین‌شده",
     "jalali": "شمسی",
     "gregorian": "میلادی",
-    "presetsAria": "پیش‌تنظیمات زمان",
     "group": {
       "todayYesterday": "امروز و دیروز",
       "weekMonth": "هفته و ماه",
-      "longer": "طولانی‌تر",
+      "longer": "دوره‌های طولانی‌تر",
       "monthYear": "ماه و سال",
       "yearly": "سالانه"
-    }
+    },
+    "pickDate": "انتخاب تاریخ"
   },
   "calendar": {
     "system": "شمسی",
-    "months": ["فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"],
+    "months": [
+      "فروردین",
+      "اردیبهشت",
+      "خرداد",
+      "تیر",
+      "مرداد",
+      "شهریور",
+      "مهر",
+      "آبان",
+      "آذر",
+      "دی",
+      "بهمن",
+      "اسفند"
+    ],
     "weekdaysShort": ["ش", "ی", "د", "س", "چ", "پ", "ج"],
     "prev": "قبلی",
-    "next": "بعدی"
+    "next": "بعدی",
+    "selectMonth": "انتخاب ماه",
+    "selectYear": "انتخاب سال"
   },
   "auth": {
     "signIn": "ورود",
@@ -713,7 +755,17 @@
     "enterNewPassword": "رمز عبور جدید را وارد کنید",
     "invalidToken": "لینک نامعتبر یا منقضی شده",
     "tokenExpired": "این لینک منقضی شده یا قبلاً استفاده شده",
-    "passwordMismatch": "رمزهای عبور مطابقت ندارند"
+    "passwordMismatch": "رمزهای عبور مطابقت ندارند",
+    "brand": "حسابچه",
+    "legal": "شرایط و حریم خصوصی",
+    "submit": "ارسال",
+    "tagline": "سیستم مدیریت کسب‌وکار",
+    "title": "تنظیمات",
+    "biometricEnable": "فعال‌سازی ورود بیومتریک",
+    "biometricPrompt": "احراز هویت با بیومتریک",
+    "biometricUnlock": "باز کردن قفل با بیومتریک",
+    "invalidEmail": "ایمیل نامعتبر",
+    "invalidPassword": "رمز عبور نامعتبر"
   },
   "signup": {
     "fullName": "نام کامل",
@@ -733,81 +785,62 @@
     "demoLogin": "ورود آزمایشی"
   },
   "common": {
-    "yes": "بله",
-    "no": "خیر",
-    "ok": "تأیید",
-    "or": "یا",
-    "and": "و",
-    "all": "همه",
-    "none": "هیچ‌کدام",
-    "selected": "انتخاب‌شده",
-    "today": "امروز",
-    "yesterday": "دیروز",
-    "tomorrow": "فردا",
-    "thisWeek": "این هفته",
-    "thisMonth": "این ماه",
-    "thisYear": "امسال",
-    "fromDate": "از",
-    "toDate": "تا",
-    "status": "وضعیت",
-    "active": "فعال",
-    "inactive": "غیرفعال",
-    "pending": "در انتظار",
-    "completed": "تکمیل‌شده",
-    "cancelled": "لغو شده",
-    "total": "مجموع",
-    "sum": "جمع",
-    "average": "میانگین",
-    "count": "تعداد",
-    "undo": "بازگرداندن",
-    "noName": "کاربر",
-    "saved": "ذخیره شد ✅",
-    "saveError": "خطا در ذخیره داده",
-    "cancel": "لغو",
-    "save": "ذخیره",
-    "back": "بازگشت",
-    "retry": "دوباره تلاش کنید",
-    "saving": "در حال ذخیره...",
-    "search": "جستجو",
-    "filter": "فیلتر",
-    "export": "خروجی",
-    "print": "چاپ",
-    "share": "اشتراک‌گذاری",
-    "confirm": "تأیید",
-    "next": "بعدی",
-    "previous": "قبلی",
-    "submit": "ارسال",
-    "clear": "پاک کردن",
-    "refresh": "تازه‌سازی",
-    "upload": "آپلود",
-    "download": "دانلود",
-    "copy": "کپی",
+    "noName": "بدون نام",
+    "zero": "۰",
     "close": "بستن",
-    "open": "باز کردن",
-    "view": "مشاهده",
-    "archive": "بایگانی",
-    "done": "انجام شد",
-    "actions": "...",
-    "delete": "حذف",
-    "edit": "ویرایش",
-    "add": "اضافه کردن",
-    "columns": "ستون‌ها",
-    "more": "بیشتر",
-    "less": "کمتر",
-    "records": "رکوردها",
-    "noData": "داده‌ای یافت نشد",
-    "event": "رویداد",
-    "description": "توضیحات",
-    "amount": "مبلغ",
-    "date": "تاریخ",
-    "sms": "پیامک",
-    "tag": "برچسب",
+    "clear": "پاک کردن",
     "increase": "افزایش",
     "decrease": "کاهش",
+    "loading": "در حال بارگذاری...",
+    "retry": "تلاش مجدد",
+    "save": "ذخیره",
+    "cancel": "انصراف",
+    "delete": "حذف",
+    "edit": "ویرایش",
+    "view": "مشاهده",
+    "all": "همه",
+    "none": "هیچ",
+    "yes": "بله",
+    "no": "خیر",
+    "optional": "اختیاری",
+    "required": "الزامی",
+    "active": "فعال",
+    "back": "بازگشت",
+    "currency": "ارز",
+    "details": "جزئیات",
+    "empty": "خالی",
+    "error": "خطا",
+    "logout": "خروج",
+    "refresh": "بازخوانی",
+    "saved": "ذخیره شد",
+    "saving": "در حال ذخیره...",
+    "search": "جستجو",
+    "share": "اشتراک",
+    "total": "مجموع",
+    "unit": "واحد",
+    "add": "اضافه کردن",
+    "amount": "مبلغ",
+    "bulkPartialFailure": "برخی اقلام قابل حذف نبودند",
+    "clearSelection": "لغو انتخاب",
+    "confirmAction": "تأیید عملیات",
+    "date": "تاریخ",
+    "description": "توضیحات",
+    "event": "رویداد",
+    "export": "خروجی",
+    "more": "بیشتر",
+    "moreItems": "مورد بیشتر",
+    "next": "بعدی",
     "noCustomer": "مشتری ناشناس",
-    "moreItems": "موارد بیشتر",
-    "alert": "هشدار",
-    "viewDetails": "مشاهده جزئیات"
+    "noData": "داده‌ای یافت نشد",
+    "previous": "قبلی",
+    "print": "چاپ",
+    "records": "رکوردها",
+    "select": "انتخاب",
+    "selectAll": "انتخاب همه",
+    "selectRow": "انتخاب ردیف",
+    "selectedCount": "{{count}} انتخاب شده",
+    "status": "وضعیت",
+    "vsLastMonth": "نسبت به ماه قبل"
   },
   "invoices": {
     "title": "صورت‌حساب",
@@ -942,7 +975,17 @@
       "liter": "لیتر",
       "box": "جعبه",
       "pack": "بسته"
-    }
+    },
+    "addProductDescription": "محصول جدید به موجودی اضافه کنید",
+    "bulkDeleteConfirm": "آیا مطمئن هستید که می‌خواهید محصولات انتخاب شده را حذف کنید؟",
+    "currentStock": "موجودی فعلی",
+    "deleteConfirm": "آیا مطمئن هستید که می‌خواهید این محصول را حذف کنید؟",
+    "noProductsDesc": "اولین محصول خود را اضافه کنید",
+    "notFound": "محصول یافت نشد",
+    "productNamePlaceholder": "نام محصول را وارد کنید",
+    "profitPerUnit": "سود هر واحد",
+    "totalProfit": "سود کل",
+    "totalValue": "ارزش کل"
   },
   "customers": {
     "title": "مشتریان",
@@ -1035,24 +1078,114 @@
     "addOpportunity": "اضافه کردن",
     "ofTotal": "از {{total}}",
     "pay": "پرداخت",
-    "noInvoices": "صورت‌حسابی یافت نشد"
+    "noInvoices": "صورت‌حسابی یافت نشد",
+    "transactions": "تراکنش‌ها",
+    "backToList": "بازگشت به لیست",
+    "emptyDescription": "اولین مشتری خود را اضافه کنید",
+    "emptyTitle": "هنوز مشتری وجود ندارد",
+    "export": {
+      "statusDebtor": "بدهکار",
+      "statusSettled": "تسویه شده"
+    },
+    "exportStatement": "خروجی صورت‌حساب",
+    "health": "وضعیت",
+    "lifetimeValue": "ارزش مادام‌العمر",
+    "newCustomerDetails": "جزئیات مشتری جدید",
+    "noOpenDealsDesc": "ثبت پرداخت برای این مشتری",
+    "notFoundDesc": "مشتری مورد نظر شما وجود ندارد",
+    "openInvoicesCount": "{{count}} صورت‌حساب باز",
+    "payInvoice": "پرداخت صورت‌حساب",
+    "paymentDetails": "جزئیات پرداخت",
+    "recordPaymentFor": "ثبت پرداخت برای {{name}}",
+    "role": {
+      "all": "همه",
+      "buyer": "خریدار",
+      "label": "نقش",
+      "seller": "فروشنده"
+    },
+    "topCustomer": "بهترین مشتری",
+    "totalSales": "فروش کل"
   },
   "crm": {
-    "type": "نوع",
-    "subject": "موضوع",
-    "description": "توضیحات",
-    "date": "تاریخ",
-    "opportunity": "فرصت",
-    "stage": "مرحله",
-    "value": "ارزش",
-    "probability": "احتمال",
+    "title": "ارتباط با مشتریان",
+    "tabs": {
+      "interactions": "تعاملات",
+      "opportunities": "فرصت‌های فروش",
+      "stats": "آمار"
+    },
+    "interactions": {
+      "empty": "هیچ تعاملی ثبت نشده",
+      "subject": "موضوع",
+      "type": "نوع",
+      "date": "تاریخ",
+      "contentPlaceholder": "یادداشت اضافه کنید...",
+      "create": "تعامل جدید",
+      "new": "جدید"
+    },
+    "opportunities": {
+      "empty": "هیچ فرصت فروشی ثبت نشده",
+      "title": "عنوان",
+      "stage": "مرحله",
+      "value": "ارزش",
+      "probability": "احتمال",
+      "expectedCloseDate": "تاریخ تخمینی"
+    },
+    "stage": {
+      "lead": "سرنخ",
+      "qualified": "واجد شرایط",
+      "proposal": "پیشنهاد",
+      "negotiation": "مذاکره",
+      "closedWon": "موفق",
+      "closedLost": "ناموفق"
+    },
+    "byEmployee": "بر اساس کارمند",
+    "byOwner": "بر اساس مالک",
+    "changeStatus": "تغییر وضعیت",
     "closeDate": "تاریخ بسته شدن",
+    "customerCount": "تعداد مشتریان",
+    "customerPhone": "تلفن مشتری",
+    "customersSelectedCount": "{{count}} مشتری انتخاب شده",
+    "date": "تاریخ",
+    "description": "توضیحات",
+    "employee": "کارمند",
+    "linkCopied": "لینک کپی شد",
+    "opportunity": "فرصت",
+    "outcomes": {
+      "done": "انجام شده",
+      "empty": "نتیجه‌ای ثبت نشده",
+      "failed": "ناموفق",
+      "markDone": "علامت انجام شده",
+      "markFailed": "علامت ناموفق",
+      "notePlaceholder": "یادداشت اضافه کنید...",
+      "pending": "در انتظار",
+      "summary": "خلاصه",
+      "title": "نتایج",
+      "whyFailed": "دلیل ناموفقی"
+    },
+    "pickCustomersPlaceholder": "مشتریان را انتخاب کنید...",
+    "pickEmployeePlaceholder": "کارمند را انتخاب کنید...",
+    "probability": "احتمال",
+    "process": "پردازش",
+    "sendToEmployee": "ارسال به کارمند",
     "stageLead": "سرنخ",
-    "stageQualified": "واجد شرایط",
-    "stageProposal": "پیشنهاد",
+    "stageLost": "باخت",
     "stageNegotiation": "مذاکره",
+    "stageProposal": "پیشنهاد",
+    "stageQualified": "واجد شرایط",
     "stageWon": "برد",
-    "stageLost": "باخت"
+    "stats": {
+      "total": "مجموع"
+    },
+    "status": {
+      "completed": "تکمیل شده",
+      "inProgress": "در حال انجام",
+      "pending": "در انتظار"
+    },
+    "statusTimeline": "تاریخچه وضعیت",
+    "subject": "موضوع",
+    "type": "نوع",
+    "unassigned": "بدون مسئول",
+    "value": "ارزش"
   },
   "payments": {
     "amount": "مبلغ",
@@ -1168,7 +1301,15 @@
     "connected": "متصل",
     "serverStatus": "وضعیت سرور",
     "stable": "پایدار",
-    "localStorage": "ذخیره محلی"
+    "localStorage": "ذخیره محلی",
+    "failed": "همگام‌سازی ناموفق",
+    "never": "هرگز همگام نشده",
+    "lastSync": "آخرین همگام‌سازی",
+    "localOnly": "فقط محلی",
+    "offlineBanner": "شما آفلاین هستید",
+    "pendingBanner": "{{count}} عملیات در انتظار",
+    "queueEmpty": "صف خالی است",
+    "syncNow_description": "همگام‌سازی حالا"
   },
   "validation": {
     "required": "این فیلد الزامی است",
@@ -1186,7 +1327,9 @@
     "pickPlaceholder": "انتخاب مشتری...",
     "noCustomers": "مشتری یافت نشد",
     "quickCreate": "نام مشتری جدید",
-    "createError": "خطا در ایجاد مشتری. لطفاً دوباره تلاش کنید."
+    "createError": "خطا در ایجاد مشتری. لطفاً دوباره تلاش کنید.",
+    "phoneOptional": "تلفن (اختیاری)",
+    "pickSupplierPlaceholder": "تأمین‌کننده را انتخاب کنید..."
   },
   "dashboard": {
     "welcome": "خوش آمدید",
@@ -1238,58 +1381,18 @@
     "aiInsight": {
       "aria": "بینش هوش مصنوعی برای کسب‌وکارتان",
       "action": "اقدام کنید"
-    }
-  },
-  "common": {
-    "noName": "بدون نام",
-    "zero": "۰",
-    "close": "بستن",
-    "clear": "پاک کردن",
-    "increase": "افزایش",
-    "decrease": "کاهش",
-    "loading": "در حال بارگذاری...",
-    "retry": "تلاش مجدد",
-    "save": "ذخیره",
-    "cancel": "انصراف",
-    "delete": "حذف",
-    "edit": "ویرایش",
-    "view": "مشاهده",
-    "all": "همه",
-    "none": "هیچ",
-    "yes": "بله",
-    "no": "خیر",
-    "optional": "اختیاری",
-    "required": "الزامی"
-  },
-  "dateRange": {
-    "today": "امروز",
-    "yesterday": "دیروز",
-    "7days": "۷ روز گذشته",
-    "14days": "۱۴ روز گذشته",
-    "30days": "۳۰ روز گذشته",
-    "60days": "۶۰ روز گذشته",
-    "90days": "۹۰ روز گذشته",
-    "thisMonth": "این ماه",
-    "lastMonth": "ماه گذشته",
-    "last3Months": "۳ ماه گذشته",
-    "last6Months": "۶ ماه گذشته",
-    "thisYear": "امسال",
-    "lastYear": "سال گذشته",
-    "custom": "دلخواه",
-    "from": "از",
-    "to": "تا",
-    "apply": "اعمال",
-    "selectPeriod": "انتخاب بازه",
-    "presetsAria": "بازه‌های زمانی از پیش تعیین‌شده",
-    "jalali": "شمسی",
-    "gregorian": "میلادی",
-    "group": {
-      "todayYesterday": "امروز و دیروز",
-      "weekMonth": "هفته و ماه",
-      "longer": "دوره‌های طولانی‌تر",
-      "monthYear": "ماه و سال",
-      "yearly": "سالانه"
-    }
+    },
+    "aiInsights": "بینش هوش مصنوعی",
+    "customerDebt": "بدهی مشتریان",
+    "customersLine": "مشتریان",
+    "dateRange": "بازه زمانی",
+    "invoicesLine": "صورت‌حساب‌ها",
+    "noActivities": "هنوز فعالیتی ثبت نشده",
+    "recentActivities": "فعالیت‌های اخیر",
+    "salesChartTitle": "روند فروش",
+    "totalSales": "فروش کل",
+    "vsLastMonth": "نسبت به ماه قبل",
+    "warehouseValue": "ارزش انبار"
   },
   "quickInvoice": {
     "title": "صورت‌حساب سریع",
@@ -1317,11 +1420,76 @@
   },
   "accounting": {
     "title": "حسابداری",
-    "accounts": "حساب‌ها",
-    "journal": "ثبت‌های روزنامه",
-    "trialBalance": "تراز آزمایشی",
-    "balanceSheet": "ترازنامه",
-    "incomeStatement": "صورت سود و زیان",
+    "accounts": {
+      "title": "حساب‌ها",
+      "code": "کد حساب",
+      "name": "نام حساب",
+      "type": "نوع حساب",
+      "parent": "حساب والد",
+      "status": "وضعیت",
+      "active": "فعال",
+      "inactive": "غیرفعال",
+      "create": "ایجاد حساب",
+      "empty": {
+        "title": "حسابی وجود ندارد",
+        "subtitle": "اولین حساب خود را ایجاد کنید"
+      },
+      "createTitle": "ایجاد حساب جدید",
+      "namePlaceholder": "نام حساب را وارد کنید",
+      "noParent": "بدون والد (سطح بالا)"
+    },
+    "journal": {
+      "title": "ورودی‌های دفتر کل",
+      "account": "حساب",
+      "date": "تاریخ",
+      "description": "توضیحات",
+      "credit": "بدهکار",
+      "debit": "بستانکار",
+      "balanced": "متعادل",
+      "unbalanced": "نامتعادل",
+      "create": "ورودی جدید دفتر کل",
+      "lines": "سطرها",
+      "reference": "مرجع",
+      "empty": {
+        "title": "ورودی دفتر کلی وجود ندارد",
+        "subtitle": "اولین ورودی دفتر کل را ایجاد کنید"
+      },
+      "addLine": "اضافه کردن ردیف",
+      "createTitle": "ثبت روزنامه جدید",
+      "selectAccount": "حساب را انتخاب کنید",
+      "totalCredit": "جمع بستانکار",
+      "totalDebit": "جمع بدهکار"
+    },
+    "trialBalance": {
+      "title": "تراز آزمایشی",
+      "asOf": "تا تاریخ",
+      "balance": "تراز",
+      "empty": {
+        "title": "داده تراز آزمایشی موجود نیست"
+      },
+      "total": "مجموع"
+    },
+    "balanceSheet": {
+      "title": "ترازنامه",
+      "asOf": "تا تاریخ",
+      "assets": "دارایی‌ها",
+      "balanced": "تراز شده",
+      "empty": {
+        "title": "داده ترازنامه موجود نیست"
+      },
+      "equity": "حقوق صاحبان سهام",
+      "liabilities": "بدهی‌ها",
+      "unbalanced": "تراز نشده"
+    },
+    "incomeStatement": {
+      "title": "صورت سود و زیان",
+      "empty": {
+        "title": "داده صورت سود و زیان موجود نیست"
+      },
+      "expenses": "هزینه‌ها",
+      "netIncome": "سود خالص",
+      "revenue": "درآمد"
+    },
     "cashFlow": "جریان وجوه نقد",
     "addAccount": "اضافه کردن حساب",
     "accountCode": "کد حساب",
@@ -1333,9 +1501,28 @@
     "totalDebit": "جمع بدهکار",
     "totalCredit": "جمع بستانکار",
     "balance": "تراز",
+    "assets": "دارایی‌ها",
+    "liabilities": "بدهی‌ها",
+    "equity": "حقوق صاحبان سهام",
+    "currentYearEarnings": "سود (زیان) دوره",
+    "netIncome": "سود خالص",
     "date": "تاریخ",
     "description": "توضیحات",
-    "reference": "مرجع"
+    "reference": "مرجع",
+    "tabs": {
+      "label": "تب‌ها"
+    },
+    "export": {
+      "button": "خروجی",
+      "label": "خروجی داده‌ها"
+    },
+    "income": "درآمد",
+    "expense": "هزینه",
+    "dateRange": {
+      "date": "تاریخ",
+      "from": "از",
+      "to": "تا"
+    }
   },
   "hr": {
     "title": "منابع انسانی",
@@ -1397,7 +1584,17 @@
     "sonOf": "پسر {name}",
     "changeStatus": "تغییر وضعیت:",
     "activityHistory": "تاریخچه فعالیت",
-    "noActivity": "هیچ فعالیتی وجود ندارد"
+    "noActivity": "هیچ فعالیتی وجود ندارد",
+    "accessEmail": "ایمیل دسترسی",
+    "accessPassword": "رمز عبور دسترسی",
+    "addPayment": "اضافه کردن پرداخت",
+    "grantAccess": "اعطای دسترسی",
+    "noPayments": "پرداخت حقوقی ثبت نشده",
+    "paymentAmount": "مبلغ پرداخت",
+    "paymentDate": "تاریخ پرداخت",
+    "salaryPayments": "پرداخت‌های حقوق",
+    "totalEmployees": "تعداد کل کارمندان",
+    "totalPayroll": "مجموع حقوق"
   },
   "projects": {
     "title": "پروژه‌ها",
@@ -1487,7 +1684,9 @@
     "inviteAccepted": "دعوت پذیرفته شد! در حال انتقال به فضای کاری...",
     "inviteExpired": "لینک دعوت منقضی شده یا نامعتبر است.",
     "inviteChecking": "در حال بررسی دعوت...",
-    "goToWorkspace": "رفتن به فضای کاری"
+    "goToWorkspace": "رفتن به فضای کاری",
+    "employee": "کارمند",
+    "redirecting": "در حال انتقال..."
   },
   "permissions": {
     "title": "نقش‌ها و مجوزها",
@@ -1497,7 +1696,16 @@
     "description": "توضیحات",
     "forRole": "مجوزها برای",
     "selectRole": "یک نقش انتخاب کنید",
-    "selectRoleHint": "یک نقش انتخاب کنید تا مجوزهای آن را ببینید"
+    "selectRoleHint": "یک نقش انتخاب کنید تا مجوزهای آن را ببینید",
+    "cap": {
+      "changeRole": "تغییر نقش",
+      "deleteWorkspace": "حذف فضای کاری",
+      "invite": "دعوت اعضا",
+      "removeMember": "حذف اعضا",
+      "useAllModules": "استفاده از همه ماژول‌ها"
+    },
+    "honestNote": "نکته صادقانه: مجوزها بر اساس اعتماد شماست",
+    "manageMembers": "مدیریت اعضا"
   },
   "audit": {
     "title": "حسابرسی",
@@ -1517,35 +1725,6 @@
     "fromDate": "از تاریخ",
     "toDate": "تا تاریخ",
     "dateRangeSeparator": "تا"
-  },
-  "crm": {
-    "title": "ارتباط با مشتریان",
-    "tabs": {
-      "interactions": "تعاملات",
-      "opportunities": "فرصت‌های فروش"
-    },
-    "interactions": {
-      "empty": "هیچ تعاملی ثبت نشده",
-      "subject": "موضوع",
-      "type": "نوع",
-      "date": "تاریخ"
-    },
-    "opportunities": {
-      "empty": "هیچ فرصت فروشی ثبت نشده",
-      "title": "عنوان",
-      "stage": "مرحله",
-      "value": "ارزش",
-      "probability": "احتمال",
-      "expectedCloseDate": "تاریخ تخمینی"
-    },
-    "stage": {
-      "lead": "سرنخ",
-      "qualified": "واجد شرایط",
-      "proposal": "پیشنهاد",
-      "negotiation": "مذاکره",
-      "closedWon": "موفق",
-      "closedLost": "ناموفق"
-    }
   },
   "manufacturing": {
     "title": "تولید",
@@ -1609,7 +1788,8 @@
       "pending": "در انتظار",
       "received": "دریافت‌شده",
       "cancelled": "لغوشده"
-    }
+    },
+    "recordPurchase": "ثبت خرید"
   },
   "billing": {
     "loading": "در حال بارگذاری...",
@@ -1633,9 +1813,18 @@
     "trialDescription": "شما در دوره آزمایشی ۷ روزه هستید",
     "activePlan": "طرح فعال شما",
     "plans": {
-      "free": "رایگان",
-      "pro": "حرفه‌ای",
-      "enterprise": "سازمانی"
+      "free": {
+        "title": "رایگان",
+        "name": "رایگان"
+      },
+      "pro": {
+        "title": "حرفه‌ای",
+        "name": "حرفه‌ای"
+      },
+      "enterprise": {
+        "title": "سازمانی",
+        "name": "سازمانی"
+      }
     },
     "usage": {
       "title": "استفاده شما",
@@ -1700,7 +1889,11 @@
     "bell": "اعلان‌ها",
     "title": "اعلان‌ها",
     "empty": "هیچ اعلانی وجود ندارد",
-    "many": "۹۹+"
+    "many": "۹۹+",
+    "activities": "فعالیت‌ها",
+    "emptyHint": "همه چیز به‌روز است",
+    "markAllRead": "علامت‌گذاری همه به‌عنوان خوانده شده",
+    "viewAll": "مشاهده همه"
   },
   "time": {
     "justNow": "همین الان",
@@ -1772,7 +1965,13 @@
     "mediumStore": "فروشگاه متوسط",
     "mediumStoreDesc": "۳-۱۰ کارمند",
     "largeStore": "کسب‌وکار بزرگ",
-    "largeStoreDesc": "۱۰+ کارمند"
+    "largeStoreDesc": "۱۰+ کارمند",
+    "aboutBusiness": "درباره کسب‌کار شما",
+    "aboutBusinessPlaceholder": "کسب‌کارتان را در چند کلمه توصیف کنید",
+    "noBusinessMatch": "نوع کسب‌کار مطابقی یافت نشد",
+    "noCurrencyMatch": "ارز مطابقی یافت نشد",
+    "searchBusiness": "جستجوی نوع کسب‌کار...",
+    "searchCurrency": "جستجوی ارز..."
   },
   "status": {
     "excellent": "عالی",
@@ -1898,5 +2097,364 @@
       "reports": "گزارش‌های زنده",
       "invoice": "صورت‌حساب هوشمند"
     }
+  },
+  "action": {
+    "back": "بازگشت",
+    "cancel": "لغو",
+    "clear": "پاک کردن",
+    "close": "بستن",
+    "create": "ایجاد",
+    "open": "باز کردن",
+    "remove": "حذف",
+    "retry": "تلاش مجدد",
+    "save": "ذخیره",
+    "search": "جستجو",
+    "actions": "عملیات",
+    "add": "اضافه کردن",
+    "backToEdit": "بازگشت به ویرایش",
+    "confirmCreate": "تأیید ایجاد",
+    "delete": "حذف",
+    "done": "انجام شد",
+    "edit": "ویرایش",
+    "email": "ایمیل",
+    "export": "خروجی",
+    "next": "بعدی",
+    "previewInvoice": "پیش‌نمایش فاکتور",
+    "previous": "قبلی",
+    "print": "چاپ",
+    "share": "اشتراک‌گذاری",
+    "view": "مشاهده"
+  },
+  "admin": {
+    "dashboard": {
+      "description": "داشبورد مدیریت",
+      "generatedAt": "تولید شده در",
+      "ofTotal": "از مجموع",
+      "planMix": "ترکیب طرح‌ها",
+      "planShare": "سهم طرح"
+    },
+    "error": {
+      "retry": "تلاش مجدد",
+      "loadMembers": "بارگذاری اعضا ناموفق بود",
+      "loadWorkspaces": "بارگذاری فضاهای کاری ناموفق بود",
+      "removeMember": "حذف عضو ناموفق بود",
+      "updateRole": "به‌روزرسانی نقش ناموفق بود"
+    },
+    "filters": {
+      "all": "همه",
+      "groupLabel": "فیلترها"
+    },
+    "member": {
+      "email": "ایمیل",
+      "joined": "عضویت",
+      "name": "نام",
+      "remove": "حذف",
+      "unknown": "ناشناخته",
+      "editRole": "ویرایش نقش",
+      "noProfile": "پروفایلی ثبت نشده",
+      "ownerProtected": "مالک (محافظت شده)",
+      "statusNoAccess": "بدون دسترسی",
+      "statusSuspended": "معلق"
+    },
+    "pagination": {
+      "label": "صفحه",
+      "next": "بعدی",
+      "previous": "قبلی",
+      "showing": "نمایش"
+    },
+    "subscriptions": {
+      "empty": "اشتراکی وجود ندارد",
+      "expired": "منقضی",
+      "plan": "طرح",
+      "reason": "دلیل",
+      "status": "وضعیت",
+      "trial": "آزمایشی",
+      "allPlans": "همه طرح‌ها",
+      "allStatuses": "همه وضعیت‌ها",
+      "changePlan": "تغییر طرح",
+      "changeStatus": "تغییر وضعیت",
+      "expiredAgo": "{{time}} پیش منقضی شده",
+      "expiresIn": "{{time}} دیگر منقضی می‌شود",
+      "expiringSoon": "به زودی منقضی می‌شود",
+      "loadError": "بارگذاری اشتراک‌ها ناموفق بود",
+      "noDateBuckets": "بازه زمانی وجود ندارد",
+      "noPeriod": "دوره‌ای ثبت نشده",
+      "periodEnd": "پایان دوره",
+      "reasonHint": "دلیل اختیاری برای تغییر وضعیت",
+      "updateError": "به‌روزرسانی اشتراک ناموفق بود"
+    },
+    "users": {
+      "empty": "کاربری وجود ندارد",
+      "search": "جستجوی کاربران",
+      "loadError": "بارگذاری کاربران ناموفق بود",
+      "searchScopeNotice": "جستجو محدود به کاربران نمایش داده شده"
+    },
+    "workspaces": {
+      "active": "فعال",
+      "inactive": "غیرفعال",
+      "members": "اعضا",
+      "owner": "مالک",
+      "search": "جستجوی فضاها",
+      "collapse": "جمع کردن",
+      "expand": "باز کردن",
+      "noOwner": "بدون مالک",
+      "noSubscription": "بدون اشتراک"
+    },
+    "auditLogs": {
+      "action": "عملیات",
+      "empty": "لاگ حسابرسی وجود ندارد",
+      "emptyHint": "فعالیت‌ها اینجا نمایش داده می‌شوند",
+      "entity": "موجودیت",
+      "loadError": "بارگذاری لاگ‌های حسابرسی ناموفق بود",
+      "noEntity": "موجودیتی ثبت نشده",
+      "when": "چه زمانی"
+    },
+    "empty": {
+      "noMembers": "عضوی یافت نشد",
+      "noneOnPage": "چیزی در این صفحه نیست",
+      "noneOnPageHint": "فضای کاری مطابق فیلترهای شما یافت نشد",
+      "noResults": "نتیجه‌ای یافت نشد",
+      "noWorkspaces": "فضای کاری وجود ندارد",
+      "noWorkspacesHint": "هنوز فضای کاری ایجاد نشده"
+    },
+    "notice": {
+      "migrationInProgress": "مهاجرت در حال انجام"
+    },
+    "removeDialog": {
+      "body": "آیا مطمئن هستید که می‌خواهید این عضو را حذف کنید؟",
+      "cancel": "لغو",
+      "confirm": "تأیید",
+      "consequence": "این عمل قابل بازگشت نیست",
+      "title": "حذف عضو"
+    },
+    "shell": {
+      "alertsNone": "بدون هشدار",
+      "alertsWithCount": "{{count}} هشدار",
+      "closeMenu": "بستن منو",
+      "consoleLabel": "کنسول مدیریت",
+      "mainNav": "ناوبری اصلی",
+      "openMenu": "باز کردن منو",
+      "searchLabel": "جستجو",
+      "searchPlaceholder": "جستجو...",
+      "superAdmin": "مدیر کل"
+    }
+  },
+  "entity": {
+    "activity": {
+      "empty": "فعالیتی نیست",
+      "count": "{{count}} فعالیت"
+    }
+  },
+  "home": {
+    "greeting": "سلام",
+    "title": "داشبورد",
+    "salesTrend": "روند فروش"
+  },
+  "inventory": {
+    "price": "قیمت",
+    "product": "محصول",
+    "sku": "کد کالا",
+    "stock": "موجودی",
+    "title": "انبار"
+  },
+  "invoice": {
+    "open": "باز"
+  },
+  "more": {
+    "account": "حساب",
+    "language": "زبان",
+    "security": "امنیت",
+    "sync": "همگام‌سازی"
+  },
+  "sales": {
+    "amount": "مبلغ",
+    "customer": "مشتری",
+    "date": "تاریخ",
+    "details": "جزئیات",
+    "discount": "تخفیف",
+    "items": "اقلام",
+    "paid": "پرداخت شده",
+    "print": "چاپ",
+    "purchase": "خرید",
+    "sale": "فروش",
+    "status": "وضعیت",
+    "subtotal": "جمع جزئی",
+    "supplier": "تأمین‌کننده",
+    "title": "فروش",
+    "unit": "واحد",
+    "addDetail": "اضافه کردن جزئیات",
+    "addDetails": "اضافه کردن جزئیات",
+    "addItem": "اضافه کردن قلم",
+    "componentsSum": "مجموع اجزا",
+    "credit": "نسیه",
+    "detailTitle": "جزئیات",
+    "emptyDescription": "اولین صورت‌حساب خود را ایجاد کنید",
+    "emptyTitle": "هنوز صورت‌حسابی وجود ندارد",
+    "grandTotal": "مجموع کل",
+    "hideDetails": "مخفی کردن جزئیات",
+    "invoiceNumber": "شماره صورت‌حساب",
+    "newInvoice": "صورت‌حساب جدید",
+    "newPurchase": "خرید جدید",
+    "noItems": "بدون اقلام",
+    "quantity": "تعداد",
+    "removeDetail": "حذف جزئیات",
+    "selectCustomer": "انتخاب مشتری",
+    "selectSupplier": "انتخاب تأمین‌کننده",
+    "statusOverdue": "سررسید گذشته",
+    "statusPaid": "پرداخت شده",
+    "statusPartial": "جزئی",
+    "statusPending": "در انتظار",
+    "transactionType": "نوع تراکنش",
+    "weightGrams": "وزن (گرم)"
+  },
+  "workflow": {
+    "templates": {
+      "title": "قالب‌های گردش کار",
+      "description": "مدیریت قالب‌های گردش کار",
+      "active": "فعال",
+      "approver": "تأییدکننده",
+      "create": "قالب جدید",
+      "empty": "قالب جریان کاری وجود ندارد",
+      "entityType": "نوع موجودیت",
+      "inactive": "غیرفعال",
+      "name": "نام",
+      "namePlaceholder": "نام قالب",
+      "new": "قالب جدید",
+      "status": "وضعیت"
+    },
+    "action": "عملیات",
+    "actionError": "اجرای عملیات ناموفق بود",
+    "actionErrorTitle": "عملیات ناموفق",
+    "approve": "تأیید",
+    "confirmReject": "تأیید رد؟",
+    "final": "نهایی",
+    "forbiddenError": "شما اجازه ندارید",
+    "inProgress": "در حال انجام",
+    "loadError": "بارگذاری تأییدها ناموفق بود",
+    "pending": "در انتظار",
+    "reject": "رد",
+    "rejectDescription": "دلیل رد",
+    "rejectPlaceholder": "دلیل را توضیح دهید...",
+    "rejectReason": "دلیل رد",
+    "startedAt": "شروع شده در",
+    "stepProgress": "مرحله {{current}} از {{total}}",
+    "title": "جریان کاری"
+  },
+  "active": "Active",
+  "actor_id": "Actor Id",
+  "actor_name": "Actor Name",
+  "actor_role": "Actor Role",
+  "add": "Add",
+  "address": "Address",
+  "approver_role": "Approver Role",
+  "barcode": "Barcode",
+  "cash": "Cash",
+  "category": "Category",
+  "client_wins": "Client Wins",
+  "comment": "Comment",
+  "components": "Components",
+  "created_at": "Created At",
+  "currency_code": "Currency Code",
+  "custom": "Custom",
+  "customer_id": "Customer Id",
+  "desc": "Desc",
+  "description": "Description",
+  "draft": "Draft",
+  "electron-updater": "Electron-Updater",
+  "email": "Email",
+  "employee_id": "Employee Id",
+  "entity_id": "Entity Id",
+  "entity_type": "Entity Type",
+  "fixed": "Fixed",
+  "focus": "Focus",
+  "full_name": "Full Name",
+  "full_time": "Full Time",
+  "general": "General",
+  "hex": "Hex",
+  "html2canvas": "Html2canvas",
+  "in_progress": "In Progress",
+  "info": "Info",
+  "invoice_number": "Invoice Number",
+  "is_active": "Is Active",
+  "is_platform_admin": "Is Platform Admin",
+  "is_system": "Is System",
+  "logo": "Logo",
+  "medium": "Medium",
+  "member": "Member",
+  "month": "Month",
+  "name": "Name",
+  "nobody": "Nobody",
+  "notes": "Notes",
+  "online": "Online",
+  "order_index": "Order Index",
+  "payment_method": "Payment Method",
+  "pending": "Pending",
+  "period_end": "Period End",
+  "phone": "Phone",
+  "piece": "Piece",
+  "planned": "Planned",
+  "planning": "Planning",
+  "posthog-js": "Posthog-Js",
+  "preferred_language": "Preferred Language",
+  "present": "Present",
+  "product_name": "Product Name",
+  "products": "Products",
+  "project_id": "Project Id",
+  "qrcode": "Qrcode",
+  "quantity": "Quantity",
+  "redirect": "Redirect",
+  "reference": "Reference",
+  "role": "Role",
+  "role_id": "Role Id",
+  "running": "Running",
+  "sale": "Sale",
+  "sku": "Sku",
+  "slug": "Slug",
+  "sync_change_log": "Sync Change Log",
+  "sync_version": "Sync Version",
+  "tab": "Tab",
+  "title": "Title",
+  "todo": "Todo",
+  "token": "Token",
+  "total": "Total",
+  "transactions": "Transactions",
+  "type": "Type",
+  "unit": {
+    "title": "Unit",
+    "gram": "گرم"
+  },
+  "unknown": "Unknown",
+  "user_id": "User Id",
+  "utf8": "Utf8",
+  "version": "Version",
+  "visibilitychange": "Visibilitychange",
+  "window": "Window",
+  "workspace_id": "Workspace Id",
+  "adminPanel": {
+    "access": "دسترسی مدیریت",
+    "notAllowed": "شما دسترسی مدیریت ندارید"
+  },
+  "product": {
+    "nameRequired": "نام محصول الزامی است"
+  },
+  "table": {
+    "columns": "ستون‌ها"
+  },
+  "team": {
+    "addEmployee": "اضافه کردن کارمند",
+    "addNewEmployee": "ایجاد کارمند جدید",
+    "employees": "کارمندان",
+    "firstName": "نام",
+    "hireDate": "تاریخ استخدام",
+    "lastName": "نام خانوادگی",
+    "noEmployees": "کارمندی یافت نشد",
+    "noEmployeesHint": "اولین کارمند خود را اضافه کنید",
+    "noPayroll": "سوابق حقوقی وجود ندارد",
+    "noPayrollHint": "هنوز پرداخت حقوقی ثبت نشده",
+    "payroll": "حقوق و دستمزد",
+    "position": "سمت",
+    "salary": "حقوق",
+    "totalEmployees": "تعداد کارمندان",
+    "totalPayroll": "مجموع حقوق"
   }
 }

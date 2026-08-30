@@ -19,6 +19,7 @@ import {
 } from '@hisabche/validation'
 import { HumanResourcesService } from '../services/human-resources.service'
 import { authenticate } from '../middleware/auth.middleware'
+import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 
 const toJsonSchema = (schema: any) => {
@@ -40,7 +41,8 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
     {
       preHandler: [
         authenticate,
-        cacheMiddleware({ scope: 'user', ttl: 120, keyPrefix: 'departments' }),
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'workspace', ttl: 120, keyPrefix: 'departments' }),
       ],
       schema: {
         response: { 200: toJsonSchema(z.array(z.any())) },
@@ -48,7 +50,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const depts = await humanResourcesService.listDepartments(request.userId)
+        const depts = await humanResourcesService.listDepartments(request.tenancy)
         return reply.send(depts)
       } catch (err) {
         fastify.log.error(err)
@@ -61,7 +63,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/departments',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         body: toJsonSchema(createDepartmentSchema),
         response: { 201: toJsonSchema(z.any()) },
@@ -70,7 +72,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const data = createDepartmentSchema.parse(request.body)
-        const dept = await humanResourcesService.createDepartment(request.userId, data)
+        const dept = await humanResourcesService.createDepartment(request.tenancy, data)
         await clearCache('departments:*')
         return reply.code(201).send(dept)
       } catch (err) {
@@ -87,7 +89,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/departments/:id',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         body: toJsonSchema(updateDepartmentSchema),
@@ -98,7 +100,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
       try {
         const { id } = request.params as { id: string }
         const data = updateDepartmentSchema.parse(request.body)
-        const dept = await humanResourcesService.updateDepartment(request.userId, id, data)
+        const dept = await humanResourcesService.updateDepartment(request.tenancy, id, data)
         await clearCache(`department:${id}`)
         await clearCache('departments:*')
         return reply.send(dept)
@@ -122,7 +124,8 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
     {
       preHandler: [
         authenticate,
-        cacheMiddleware({ scope: 'user', ttl: 60, keyPrefix: 'employees' }),
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'workspace', ttl: 60, keyPrefix: 'employees' }),
       ],
       schema: {
         querystring: toJsonSchema(z.object({ departmentId: z.string().uuid().optional() })),
@@ -135,7 +138,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
       try {
         const { departmentId } = request.query as { departmentId?: string }
         const employees = (await humanResourcesService.listEmployees(
-          request.userId,
+          request.tenancy,
           departmentId,
         )) as unknown[]
         return reply.send({ employees, total: employees.length })
@@ -150,7 +153,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/employees',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         body: toJsonSchema(createEmployeeSchema),
         response: { 201: toJsonSchema(z.any()) },
@@ -159,7 +162,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const data = createEmployeeSchema.parse(request.body)
-        const emp = await humanResourcesService.createEmployee(request.userId, data)
+        const emp = await humanResourcesService.createEmployee(request.tenancy, data)
         await clearCache('employees:*')
         return reply.code(201).send(emp)
       } catch (err) {
@@ -178,7 +181,8 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
     {
       preHandler: [
         authenticate,
-        cacheMiddleware({ scope: 'user', ttl: 120, keyPrefix: 'employee' }),
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'workspace', ttl: 120, keyPrefix: 'employee' }),
       ],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
@@ -188,7 +192,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string }
-        const emp = await humanResourcesService.getEmployee(id, request.userId)
+        const emp = await humanResourcesService.getEmployee(id, request.tenancy)
         return reply.send(emp)
       } catch (err) {
         fastify.log.error(err)
@@ -201,7 +205,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/employees/:id',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         body: toJsonSchema(updateEmployeeSchema),
@@ -212,7 +216,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
       try {
         const { id } = request.params as { id: string }
         const data = updateEmployeeSchema.parse(request.body)
-        const emp = await humanResourcesService.updateEmployee(request.userId, id, data)
+        const emp = await humanResourcesService.updateEmployee(request.tenancy, id, data)
         await clearCache(`employee:${id}`)
         await clearCache('employees:*')
         return reply.send(emp)
@@ -236,7 +240,8 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
     {
       preHandler: [
         authenticate,
-        cacheMiddleware({ scope: 'user', ttl: 60, keyPrefix: 'attendance' }),
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'workspace', ttl: 60, keyPrefix: 'attendance' }),
       ],
       schema: {
         params: toJsonSchema(z.object({ employeeId: z.string().uuid() })),
@@ -249,7 +254,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
         const { employeeId } = request.params as { employeeId: string }
         const { month } = request.query as { month?: string }
         const records = await humanResourcesService.listAttendance(
-          request.userId,
+          request.tenancy,
           employeeId,
           month,
         )
@@ -265,7 +270,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/attendance',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         body: toJsonSchema(createAttendanceSchema),
         response: { 201: toJsonSchema(z.any()) },
@@ -274,7 +279,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const data = createAttendanceSchema.parse(request.body)
-        const att = await humanResourcesService.createAttendance(request.userId, data)
+        const att = await humanResourcesService.createAttendance(request.tenancy, data)
         await clearCache('attendance:*')
         return reply.code(201).send(att)
       } catch (err) {
@@ -291,7 +296,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/attendance/:id',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         body: toJsonSchema(updateAttendanceSchema),
@@ -302,7 +307,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
       try {
         const { id } = request.params as { id: string }
         const data = updateAttendanceSchema.parse(request.body)
-        const att = await humanResourcesService.updateAttendance(request.userId, id, data)
+        const att = await humanResourcesService.updateAttendance(request.tenancy, id, data)
         await clearCache('attendance:*')
         return reply.send(att)
       } catch (err) {
@@ -325,7 +330,8 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
     {
       preHandler: [
         authenticate,
-        cacheMiddleware({ scope: 'user', ttl: 60, keyPrefix: 'payrolls-summary' }),
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'workspace', ttl: 60, keyPrefix: 'payrolls-summary' }),
       ],
       schema: {
         response: {
@@ -335,7 +341,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const summary = await humanResourcesService.getPayrollSummary(request.userId)
+        const summary = await humanResourcesService.getPayrollSummary(request.tenancy)
         return reply.send(summary)
       } catch (err) {
         fastify.log.error(err)
@@ -350,7 +356,8 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
     {
       preHandler: [
         authenticate,
-        cacheMiddleware({ scope: 'user', ttl: 60, keyPrefix: 'payrolls' }),
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'workspace', ttl: 60, keyPrefix: 'payrolls' }),
       ],
       schema: {
         querystring: toJsonSchema(z.object({ employeeId: z.string().uuid().optional() })),
@@ -360,7 +367,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { employeeId } = request.query as { employeeId?: string }
-        const payrolls = await humanResourcesService.listPayrolls(request.userId, employeeId)
+        const payrolls = await humanResourcesService.listPayrolls(request.tenancy, employeeId)
         return reply.send(payrolls)
       } catch (err) {
         fastify.log.error(err)
@@ -373,7 +380,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/payrolls',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         body: toJsonSchema(createPayrollSchema),
         response: { 201: toJsonSchema(z.any()) },
@@ -382,7 +389,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const data = createPayrollSchema.parse(request.body)
-        const payroll = await humanResourcesService.createPayroll(request.userId, data)
+        const payroll = await humanResourcesService.createPayroll(request.tenancy, data)
         await clearCache('payrolls:*')
         return reply.code(201).send(payroll)
       } catch (err) {
@@ -399,7 +406,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/payrolls/:id',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         body: toJsonSchema(updatePayrollSchema),
@@ -410,7 +417,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
       try {
         const { id } = request.params as { id: string }
         const data = updatePayrollSchema.parse(request.body)
-        const payroll = await humanResourcesService.updatePayrollStatus(request.userId, id, data)
+        const payroll = await humanResourcesService.updatePayrollStatus(request.tenancy, id, data)
         await clearCache('payrolls:*')
         return reply.send(payroll)
       } catch (err) {
@@ -431,7 +438,10 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/leaves',
     {
-      preHandler: [authenticate, cacheMiddleware({ scope: 'user', ttl: 60, keyPrefix: 'leaves' })],
+      preHandler: [
+        authenticate,
+        cacheMiddleware({ scope: 'workspace', ttl: 60, keyPrefix: 'leaves' }),
+      ],
       schema: {
         querystring: toJsonSchema(z.object({ employeeId: z.string().uuid().optional() })),
         response: { 200: toJsonSchema(z.array(z.any())) },
@@ -440,7 +450,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { employeeId } = request.query as { employeeId?: string }
-        const leaves = await humanResourcesService.listLeaves(request.userId, employeeId)
+        const leaves = await humanResourcesService.listLeaves(request.tenancy, employeeId)
         return reply.send(leaves)
       } catch (err) {
         fastify.log.error(err)
@@ -453,7 +463,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/leaves',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         body: toJsonSchema(createLeaveSchema),
         response: { 201: toJsonSchema(z.any()) },
@@ -462,7 +472,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const data = createLeaveSchema.parse(request.body)
-        const leave = await humanResourcesService.createLeave(request.userId, data)
+        const leave = await humanResourcesService.createLeave(request.tenancy, data)
         await clearCache('leaves:*')
         return reply.code(201).send(leave)
       } catch (err) {
@@ -479,7 +489,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/leaves/:id',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         body: toJsonSchema(updateLeaveSchema),
@@ -490,7 +500,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
       try {
         const { id } = request.params as { id: string }
         const data = updateLeaveSchema.parse(request.body)
-        const leave = await humanResourcesService.updateLeaveStatus(request.userId, id, data)
+        const leave = await humanResourcesService.updateLeaveStatus(request.tenancy, id, data)
         await clearCache('leaves:*')
         return reply.send(leave)
       } catch (err) {

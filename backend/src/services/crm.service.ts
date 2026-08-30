@@ -55,25 +55,26 @@ function mapInteraction(raw: Record<string, any>) {
 
 export class CrmService {
   // ─── Cache Keys ────────────────────────────────────────────
-  private getInteractionsCacheKey(userId: string, customerId?: string) {
-    return `crm:interactions:${userId}:${customerId || 'all'}`
+  private getInteractionsCacheKey(workspaceId: string, customerId?: string) {
+    return `crm:interactions:${workspaceId}:${customerId || 'all'}`
   }
 
-  private getOpportunitiesCacheKey(userId: string, customerId?: string) {
-    return `crm:opportunities:${userId}:${customerId || 'all'}`
+  private getOpportunitiesCacheKey(workspaceId: string, customerId?: string) {
+    return `crm:opportunities:${workspaceId}:${customerId || 'all'}`
   }
 
   // ─── Interactions (a.k.a. Tasks) ───────────────────────────
   async listInteractions(
-    userId: string,
+    ctx: TenancyContext,
     customerId?: string,
     options?: { limit?: number; page?: number },
   ) {
+    const { workspaceId, userId } = ctx
     const limit = Math.min(options?.limit || 50, 100)
     const page = options?.page || 1
     const offset = (page - 1) * limit
 
-    const cacheKey = this.getInteractionsCacheKey(userId, customerId)
+    const cacheKey = this.getInteractionsCacheKey(workspaceId, customerId)
 
     // ✅ کش کردن با پارامترهای صفحه‌بندی
     const paginatedCacheKey = `${cacheKey}:${page}:${limit}`
@@ -90,7 +91,7 @@ export class CrmService {
       let query = supabase
         .from('interactions')
         .select(columns, { count: 'estimated' })
-        .eq('user_id', userId)
+        .eq('workspace_id', workspaceId)
         .order('interaction_date', { ascending: false })
         .range(offset, offset + limit - 1)
       if (customerId) query = query.eq('customer_id', customerId)
@@ -148,6 +149,7 @@ export class CrmService {
       subject: data.subject || '',
       content: data.content || '',
       interaction_date: data.interactionDate || now,
+      workspace_id: workspaceId,
       user_id: userId,
       status: 'pending',
       employee_id: data.employeeId || null,
@@ -172,6 +174,7 @@ export class CrmService {
           subject: data.subject || '',
           content: data.content || '',
           interaction_date: data.interactionDate || now,
+          workspace_id: workspaceId,
           user_id: userId,
         })
         .select(INTERACTION_LEGACY_COLUMNS)
@@ -181,19 +184,20 @@ export class CrmService {
     if (error || !interaction) throw new DatabaseError('Failed to create interaction', error)
 
     // ✅ Clear cache
-    await this.invalidateInteractionCache(userId, data.customerId)
+    await this.invalidateInteractionCache(workspaceId, data.customerId)
 
     return mapInteraction(interaction)
   }
 
   // ─── Update task status (owner, authenticated) ─────────────
   async updateInteractionStatus(
-    userId: string,
+    ctx: TenancyContext,
     id: string,
     status: 'pending' | 'in_progress' | 'completed',
     changedBy = 'owner',
   ) {
-    return this.applyStatusChange({ id, userId }, status, changedBy)
+    const { workspaceId, userId } = ctx
+    return this.applyStatusChange({ id, workspaceId }, status, changedBy)
   }
 
   // ─── Get task for public (unauthenticated) view ────────────
@@ -223,7 +227,10 @@ export class CrmService {
   // them. Called both by the owner (authenticated) and by an assigned employee
   // through the unauthenticated public-token view.
   async recordCustomerOutcome(
-    lookup: { id: string; userId: string } | { publicToken: string },
+    // The authenticated branch identifies the row by workspace, not by the
+    // actor: a task belongs to the shop, not to whoever typed it. The
+    // public-token branch is untouched — there the token IS the authorization.
+    lookup: { id: string; workspaceId: string } | { publicToken: string },
     input: { customerId: string; outcome: 'done' | 'failed'; note?: string | undefined },
     recordedBy: 'owner' | 'employee',
   ) {
@@ -240,7 +247,7 @@ export class CrmService {
       .select('id, user_id, customer_id, customers_snapshot, customer_outcomes')
     existingQuery =
       'id' in lookup
-        ? existingQuery.eq('id', lookup.id).eq('user_id', lookup.userId)
+        ? existingQuery.eq('id', lookup.id).eq('workspace_id', lookup.workspaceId)
         : existingQuery.eq('public_token', lookup.publicToken)
 
     const { data: existing, error: fetchError } = await existingQuery.single()
@@ -279,7 +286,7 @@ export class CrmService {
       .from('interactions')
       .update({ customer_outcomes: next })
       .eq('id', existing.id)
-    updateQuery = 'id' in lookup ? updateQuery.eq('user_id', lookup.userId) : updateQuery
+    updateQuery = 'id' in lookup ? updateQuery.eq('workspace_id', lookup.workspaceId) : updateQuery
 
     const { data, error } = await updateQuery.select(INTERACTION_COLUMNS).single()
 
@@ -305,11 +312,12 @@ export class CrmService {
    * picked thereafter, rather than re-typed with slightly different wording
    * each time (which fragments the stats).
    */
-  async listSubjectSuggestions(userId: string, limit = 20): Promise<string[]> {
+  async listSubjectSuggestions(ctx: TenancyContext, limit = 20): Promise<string[]> {
+    const { workspaceId, userId } = ctx
     const { data, error } = await supabase
       .from('interactions')
       .select('subject, created_at')
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
       .not('subject', 'is', null)
       .order('created_at', { ascending: false })
       .limit(200)
@@ -336,7 +344,10 @@ export class CrmService {
   }
 
   private async applyStatusChange(
-    lookup: { id: string; userId: string } | { publicToken: string },
+    // The authenticated branch identifies the row by workspace, not by the
+    // actor: a task belongs to the shop, not to whoever typed it. The
+    // public-token branch is untouched — there the token IS the authorization.
+    lookup: { id: string; workspaceId: string } | { publicToken: string },
     status: 'pending' | 'in_progress' | 'completed',
     changedBy: string,
   ) {
@@ -345,7 +356,7 @@ export class CrmService {
       .select('id, user_id, customer_id, status_history')
     existingQuery =
       'id' in lookup
-        ? existingQuery.eq('id', lookup.id).eq('user_id', lookup.userId)
+        ? existingQuery.eq('id', lookup.id).eq('workspace_id', lookup.workspaceId)
         : existingQuery.eq('public_token', lookup.publicToken)
 
     const { data: existing, error: fetchError } = await existingQuery.single()
@@ -358,7 +369,7 @@ export class CrmService {
       .from('interactions')
       .update({ status, status_history: updatedHistory })
       .eq('id', existing.id)
-    updateQuery = 'id' in lookup ? updateQuery.eq('user_id', lookup.userId) : updateQuery
+    updateQuery = 'id' in lookup ? updateQuery.eq('workspace_id', lookup.workspaceId) : updateQuery
 
     const { data, error } = await updateQuery.select(INTERACTION_COLUMNS).single()
     if (error) throw new DatabaseError('Failed to update task status', error)
@@ -369,15 +380,16 @@ export class CrmService {
 
   // ─── Opportunities ────────────────────────────────────────
   async listOpportunities(
-    userId: string,
+    ctx: TenancyContext,
     customerId?: string,
     options?: { limit?: number; page?: number },
   ) {
+    const { workspaceId, userId } = ctx
     const limit = Math.min(options?.limit || 50, 100)
     const page = options?.page || 1
     const offset = (page - 1) * limit
 
-    const cacheKey = this.getOpportunitiesCacheKey(userId, customerId)
+    const cacheKey = this.getOpportunitiesCacheKey(workspaceId, customerId)
     const paginatedCacheKey = `${cacheKey}:${page}:${limit}`
 
     const cached = await memoryCache.get<{
@@ -392,7 +404,7 @@ export class CrmService {
     let query = supabase
       .from('opportunities')
       .select(OPPORTUNITY_MINIMAL_COLUMNS, { count: 'estimated' })
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)
 
@@ -413,7 +425,8 @@ export class CrmService {
     return result
   }
 
-  async createOpportunity(userId: string, data: CreateOpportunity) {
+  async createOpportunity(ctx: TenancyContext, data: CreateOpportunity) {
+    const { workspaceId, userId } = ctx
     const { data: opportunity, error } = await supabase
       .from('opportunities')
       .insert({
@@ -424,6 +437,7 @@ export class CrmService {
         value: data.value || 0,
         expected_close_date: data.expectedCloseDate || null,
         probability: data.probability || 0,
+        workspace_id: workspaceId,
         user_id: userId,
       })
       .select(OPPORTUNITY_COLUMNS)
@@ -432,7 +446,7 @@ export class CrmService {
     if (error) throw new DatabaseError('Failed to create opportunity', error)
 
     // ✅ Clear cache
-    await this.invalidateOpportunityCache(userId, data.customerId)
+    await this.invalidateOpportunityCache(workspaceId, data.customerId)
 
     logBusinessEvent({
       userId,
@@ -446,7 +460,8 @@ export class CrmService {
     return opportunity
   }
 
-  async updateOpportunity(userId: string, id: string, data: UpdateOpportunity) {
+  async updateOpportunity(ctx: TenancyContext, id: string, data: UpdateOpportunity) {
+    const { workspaceId, userId } = ctx
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (data.title !== undefined) updates.title = data.title
     if (data.description !== undefined) updates.description = data.description
@@ -460,14 +475,14 @@ export class CrmService {
       .from('opportunities')
       .select('customer_id')
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
       .single()
 
     const { data: opportunity, error } = await supabase
       .from('opportunities')
       .update(updates)
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
       .select(OPPORTUNITY_COLUMNS)
       .single()
 
@@ -475,7 +490,7 @@ export class CrmService {
 
     // ✅ Clear cache
     if (existing) {
-      await this.invalidateOpportunityCache(userId, existing.customer_id)
+      await this.invalidateOpportunityCache(workspaceId, existing.customer_id)
     }
 
     if (data.stage === 'won' || data.stage === 'lost') {
@@ -497,7 +512,8 @@ export class CrmService {
   }
 
   // ─── Get Opportunity by ID ─────────────────────────────────
-  async getOpportunity(userId: string, id: string) {
+  async getOpportunity(ctx: TenancyContext, id: string) {
+    const { workspaceId, userId } = ctx
     const cacheKey = `crm:opportunity:${userId}:${id}`
 
     const cached = await memoryCache.get(cacheKey)
@@ -507,7 +523,7 @@ export class CrmService {
       .from('opportunities')
       .select(OPPORTUNITY_COLUMNS)
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
       .single()
 
     if (error) throw new DatabaseError('Failed to fetch opportunity', error)
@@ -517,7 +533,8 @@ export class CrmService {
   }
 
   // ─── Get Customer Interactions ────────────────────────────
-  async getCustomerInteractions(userId: string, customerId: string) {
+  async getCustomerInteractions(ctx: TenancyContext, customerId: string) {
+    const { workspaceId, userId } = ctx
     const cacheKey = `crm:customer:interactions:${userId}:${customerId}`
 
     const cached = await memoryCache.get(cacheKey)
@@ -526,7 +543,7 @@ export class CrmService {
     const { data, error } = await supabase
       .from('interactions')
       .select(INTERACTION_COLUMNS)
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
       .eq('customer_id', customerId)
       .order('interaction_date', { ascending: false })
       .limit(20)
@@ -539,8 +556,9 @@ export class CrmService {
   }
 
   // ─── Get Opportunity Pipeline ──────────────────────────────
-  async getOpportunityPipeline(userId: string) {
-    const cacheKey = `crm:pipeline:${userId}`
+  async getOpportunityPipeline(ctx: TenancyContext) {
+    const { workspaceId, userId } = ctx
+    const cacheKey = `crm:pipeline:${workspaceId}`
 
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
@@ -548,7 +566,7 @@ export class CrmService {
     const { data, error } = await supabase
       .from('opportunities')
       .select('stage, value, probability, id, title')
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
       .eq('is_active', true)
 
     if (error) throw new DatabaseError('Failed to fetch pipeline', error)
@@ -574,17 +592,17 @@ export class CrmService {
   }
 
   // ─── Invalidate Cache ──────────────────────────────────────
-  async invalidateInteractionCache(userId: string, customerId?: string) {
-    await memoryCache.invalidate(this.getInteractionsCacheKey(userId, customerId))
-    await memoryCache.invalidate(this.getInteractionsCacheKey(userId))
-    await memoryCache.invalidate(`crm:customer:interactions:${userId}:${customerId || '*'}`)
+  async invalidateInteractionCache(workspaceId: string, customerId?: string) {
+    await memoryCache.invalidate(this.getInteractionsCacheKey(workspaceId, customerId))
+    await memoryCache.invalidate(this.getInteractionsCacheKey(workspaceId))
+    await memoryCache.invalidate(`crm:customer:interactions:${workspaceId}:${customerId || '*'}`)
   }
 
-  async invalidateOpportunityCache(userId: string, customerId?: string) {
-    await memoryCache.invalidate(this.getOpportunitiesCacheKey(userId, customerId))
-    await memoryCache.invalidate(this.getOpportunitiesCacheKey(userId))
-    await memoryCache.invalidate(`crm:pipeline:${userId}`)
-    await memoryCache.invalidate(`crm:opportunity:${userId}:*`)
+  async invalidateOpportunityCache(workspaceId: string, customerId?: string) {
+    await memoryCache.invalidate(this.getOpportunitiesCacheKey(workspaceId, customerId))
+    await memoryCache.invalidate(this.getOpportunitiesCacheKey(workspaceId))
+    await memoryCache.invalidate(`crm:pipeline:${workspaceId}`)
+    await memoryCache.invalidate(`crm:opportunity:${workspaceId}:*`)
   }
 }
 

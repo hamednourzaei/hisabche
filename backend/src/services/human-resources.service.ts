@@ -5,18 +5,25 @@
 
 import { supabase } from '../db'
 import {
-  CreateDepartment, UpdateDepartment,
-  CreateEmployee, UpdateEmployee,
-  CreateAttendance, UpdateAttendance,
-  CreatePayroll, UpdatePayroll,
-  CreateLeave, UpdateLeave,
+  CreateDepartment,
+  UpdateDepartment,
+  CreateEmployee,
+  UpdateEmployee,
+  CreateAttendance,
+  UpdateAttendance,
+  CreatePayroll,
+  UpdatePayroll,
+  CreateLeave,
+  UpdateLeave,
 } from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
+import type { TenancyContext } from './tenancy.service'
 import { memoryCache } from '../utils/pagination'
 import { logBusinessEvent } from './event-log.service'
 
 // ✅ Column Selection Constants
-const DEPARTMENT_COLUMNS = 'id, name, name_en, parent_id, manager_id, description, is_active, created_at'
+const DEPARTMENT_COLUMNS =
+  'id, name, name_en, parent_id, manager_id, description, is_active, created_at'
 const DEPARTMENT_MINIMAL = 'id, name, is_active'
 
 const EMPLOYEE_LIST_COLUMNS = `
@@ -38,7 +45,8 @@ const PAYROLL_COLUMNS = `
   overtime_hours, overtime_rate, overtime_amount, tax_amount, net_salary,
   currency, status, payment_date, notes, created_at
 `
-const PAYROLL_MINIMAL = 'id, employee_id, period_start, period_end, net_salary, status, payment_date, currency'
+const PAYROLL_MINIMAL =
+  'id, employee_id, period_start, period_end, net_salary, status, payment_date, currency'
 
 const LEAVE_COLUMNS = `
   id, employee_id, leave_type, start_date, end_date, total_days,
@@ -47,53 +55,54 @@ const LEAVE_COLUMNS = `
 const LEAVE_MINIMAL = 'id, employee_id, leave_type, start_date, end_date, status'
 
 export class HumanResourcesService {
-
   // ─── Cache Keys ──────────────────────────────────────────────
-  private getDepartmentsCacheKey(userId: string) {
-    return `hr:departments:${userId}`
+  private getDepartmentsCacheKey(workspaceId: string) {
+    return `hr:departments:${workspaceId}`
   }
 
-  private getEmployeesCacheKey(userId: string, departmentId?: string) {
-    return `hr:employees:${userId}:${departmentId || 'all'}`
+  private getEmployeesCacheKey(workspaceId: string, departmentId?: string) {
+    return `hr:employees:${workspaceId}:${departmentId || 'all'}`
   }
 
-  private getEmployeeCacheKey(userId: string, id: string) {
-    return `hr:employee:${userId}:${id}`
+  private getEmployeeCacheKey(workspaceId: string, id: string) {
+    return `hr:employee:${workspaceId}:${id}`
   }
 
-  private getAttendanceCacheKey(userId: string, employeeId: string, month?: string) {
-    return `hr:attendance:${userId}:${employeeId}:${month || 'all'}`
+  private getAttendanceCacheKey(workspaceId: string, employeeId: string, month?: string) {
+    return `hr:attendance:${workspaceId}:${employeeId}:${month || 'all'}`
   }
 
-  private getPayrollsCacheKey(userId: string, employeeId?: string) {
-    return `hr:payrolls:${userId}:${employeeId || 'all'}`
+  private getPayrollsCacheKey(workspaceId: string, employeeId?: string) {
+    return `hr:payrolls:${workspaceId}:${employeeId || 'all'}`
   }
 
-  private getLeavesCacheKey(userId: string, employeeId?: string) {
-    return `hr:leaves:${userId}:${employeeId || 'all'}`
+  private getLeavesCacheKey(workspaceId: string, employeeId?: string) {
+    return `hr:leaves:${workspaceId}:${employeeId || 'all'}`
   }
 
   // ─── Departments ─────────────────────────────────────────────
-  async listDepartments(userId: string) {
-    const cacheKey = this.getDepartmentsCacheKey(userId)
-    
+  async listDepartments(ctx: TenancyContext) {
+    const { workspaceId, userId } = ctx
+    const cacheKey = this.getDepartmentsCacheKey(workspaceId)
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
     const { data, error } = await supabase
       .from('departments')
       .select(DEPARTMENT_COLUMNS)
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
       .order('name')
 
     if (error) throw new DatabaseError('Failed to fetch departments', error)
-    
+
     const result = data || []
     await memoryCache.set(cacheKey, result, 300) // 5 minutes
     return result
   }
 
-  async createDepartment(userId: string, data: CreateDepartment) {
+  async createDepartment(ctx: TenancyContext, data: CreateDepartment) {
+    const { workspaceId, userId } = ctx
     const { data: dept, error } = await supabase
       .from('departments')
       .insert({
@@ -103,18 +112,20 @@ export class HumanResourcesService {
         manager_id: data.managerId || null,
         description: data.description || null,
         is_active: data.isActive,
+        workspace_id: workspaceId,
         user_id: userId,
       })
       .select(DEPARTMENT_COLUMNS)
       .single()
 
     if (error) throw new DatabaseError('Failed to create department', error)
-    
-    await memoryCache.invalidate(this.getDepartmentsCacheKey(userId))
+
+    await memoryCache.invalidate(this.getDepartmentsCacheKey(workspaceId))
     return dept
   }
 
-  async updateDepartment(userId: string, id: string, data: UpdateDepartment) {
+  async updateDepartment(ctx: TenancyContext, id: string, data: UpdateDepartment) {
+    const { workspaceId, userId } = ctx
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (data.name !== undefined) updates.name = data.name
     if (data.nameEn !== undefined) updates.name_en = data.nameEn
@@ -127,41 +138,43 @@ export class HumanResourcesService {
       .from('departments')
       .update(updates)
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
       .select(DEPARTMENT_COLUMNS)
       .single()
 
     if (error) throw new DatabaseError('Failed to update department', error)
-    
-    await memoryCache.invalidate(this.getDepartmentsCacheKey(userId))
+
+    await memoryCache.invalidate(this.getDepartmentsCacheKey(workspaceId))
     return dept
   }
 
   // ─── Employees ──────────────────────────────────────────────
-  async listEmployees(userId: string, departmentId?: string) {
-    const cacheKey = this.getEmployeesCacheKey(userId, departmentId)
-    
+  async listEmployees(ctx: TenancyContext, departmentId?: string) {
+    const { workspaceId, userId } = ctx
+    const cacheKey = this.getEmployeesCacheKey(workspaceId, departmentId)
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
     let query = supabase
       .from('employees')
       .select(`${EMPLOYEE_LIST_COLUMNS}, department:departments(${DEPARTMENT_MINIMAL})`)
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
 
     if (departmentId) query = query.eq('department_id', departmentId)
 
     const { data, error } = await query.order('first_name')
     if (error) throw new DatabaseError('Failed to fetch employees', error)
-    
+
     const result = data || []
     await memoryCache.set(cacheKey, result, 120) // 2 minutes
     return result
   }
 
-  async getEmployee(id: string, userId: string) {
-    const cacheKey = this.getEmployeeCacheKey(userId, id)
-    
+  async getEmployee(id: string, ctx: TenancyContext) {
+    const { workspaceId, userId } = ctx
+    const cacheKey = this.getEmployeeCacheKey(workspaceId, id)
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
@@ -169,16 +182,17 @@ export class HumanResourcesService {
       .from('employees')
       .select(`${EMPLOYEE_DETAIL_COLUMNS}, department:departments(${DEPARTMENT_COLUMNS})`)
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
       .single()
 
     if (error || !data) throw new DatabaseError('Employee not found', error)
-    
+
     await memoryCache.set(cacheKey, data, 300) // 5 minutes
     return data
   }
 
-  async createEmployee(userId: string, data: CreateEmployee) {
+  async createEmployee(ctx: TenancyContext, data: CreateEmployee) {
+    const { workspaceId, userId } = ctx
     const { data: emp, error } = await supabase
       .from('employees')
       .insert({
@@ -206,6 +220,7 @@ export class HumanResourcesService {
         bank_account: data.bankAccount || null,
         bank_name: data.bankName || null,
         notes: data.notes || null,
+        workspace_id: workspaceId,
         user_id: userId,
       })
       .select(EMPLOYEE_LIST_COLUMNS)
@@ -213,7 +228,7 @@ export class HumanResourcesService {
 
     if (error) throw new DatabaseError('Failed to create employee', error)
 
-    await this.invalidateEmployeeCache(userId)
+    await this.invalidateEmployeeCache(workspaceId)
 
     logBusinessEvent({
       userId,
@@ -228,7 +243,8 @@ export class HumanResourcesService {
     return emp
   }
 
-  async updateEmployee(userId: string, id: string, data: UpdateEmployee) {
+  async updateEmployee(ctx: TenancyContext, id: string, data: UpdateEmployee) {
+    const { workspaceId, userId } = ctx
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (data.firstName !== undefined) updates.first_name = data.firstName
     if (data.lastName !== undefined) updates.last_name = data.lastName
@@ -245,27 +261,28 @@ export class HumanResourcesService {
       .from('employees')
       .update(updates)
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
       .select(EMPLOYEE_LIST_COLUMNS)
       .single()
 
     if (error) throw new DatabaseError('Failed to update employee', error)
-    
-    await this.invalidateEmployeeCache(userId, id)
+
+    await this.invalidateEmployeeCache(workspaceId, id)
     return emp
   }
 
   // ─── Attendance ─────────────────────────────────────────────
-  async listAttendance(userId: string, employeeId: string, month?: string) {
-    const cacheKey = this.getAttendanceCacheKey(userId, employeeId, month)
-    
+  async listAttendance(ctx: TenancyContext, employeeId: string, month?: string) {
+    const { workspaceId, userId } = ctx
+    const cacheKey = this.getAttendanceCacheKey(workspaceId, employeeId, month)
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
     let query = supabase
       .from('attendance')
       .select(ATTENDANCE_MINIMAL)
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
       .eq('employee_id', employeeId)
 
     if (month) {
@@ -274,13 +291,14 @@ export class HumanResourcesService {
 
     const { data, error } = await query.order('date', { ascending: false })
     if (error) throw new DatabaseError('Failed to fetch attendance', error)
-    
+
     const result = data || []
     await memoryCache.set(cacheKey, result, 60) // 1 minute
     return result
   }
 
-  async createAttendance(userId: string, data: CreateAttendance) {
+  async createAttendance(ctx: TenancyContext, data: CreateAttendance) {
+    const { workspaceId, userId } = ctx
     const { data: att, error } = await supabase
       .from('attendance')
       .insert({
@@ -290,24 +308,26 @@ export class HumanResourcesService {
         check_out: data.checkOut || null,
         status: data.status,
         notes: data.notes || null,
+        workspace_id: workspaceId,
         user_id: userId,
       })
       .select(ATTENDANCE_COLUMNS)
       .single()
 
     if (error) throw new DatabaseError('Failed to record attendance', error)
-    
-    await this.invalidateAttendanceCache(userId, data.employeeId)
+
+    await this.invalidateAttendanceCache(workspaceId, data.employeeId)
     return att
   }
 
-  async updateAttendance(userId: string, id: string, data: UpdateAttendance) {
+  async updateAttendance(ctx: TenancyContext, id: string, data: UpdateAttendance) {
+    const { workspaceId, userId } = ctx
     // ✅ ابتدا employeeId را برای invalidate کش بگیر
     const { data: existing } = await supabase
       .from('attendance')
       .select('employee_id')
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
       .single()
 
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
@@ -320,43 +340,46 @@ export class HumanResourcesService {
       .from('attendance')
       .update(updates)
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
       .select(ATTENDANCE_COLUMNS)
       .single()
 
     if (error) throw new DatabaseError('Failed to update attendance', error)
-    
+
     if (existing) {
-      await this.invalidateAttendanceCache(userId, existing.employee_id)
+      await this.invalidateAttendanceCache(workspaceId, existing.employee_id)
     }
     return att
   }
 
   // ─── Payroll ────────────────────────────────────────────────
-  async listPayrolls(userId: string, employeeId?: string) {
-    const cacheKey = this.getPayrollsCacheKey(userId, employeeId)
-    
+  async listPayrolls(ctx: TenancyContext, employeeId?: string) {
+    const { workspaceId, userId } = ctx
+    const cacheKey = this.getPayrollsCacheKey(workspaceId, employeeId)
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
     let query = supabase
       .from('payrolls')
       .select(`${PAYROLL_MINIMAL}, employee:employees(first_name, last_name)`)
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
 
     if (employeeId) query = query.eq('employee_id', employeeId)
 
     const { data, error } = await query.order('period_start', { ascending: false })
     if (error) throw new DatabaseError('Failed to fetch payrolls', error)
-    
+
     const result = data || []
     await memoryCache.set(cacheKey, result, 120) // 2 minutes
     return result
   }
 
-  async createPayroll(userId: string, data: CreatePayroll) {
+  async createPayroll(ctx: TenancyContext, data: CreatePayroll) {
+    const { workspaceId, userId } = ctx
     const overtimeAmount = data.overtimeHours * data.overtimeRate
-    const netSalary = data.baseSalary + data.bonuses + overtimeAmount - data.deductions - data.taxAmount
+    const netSalary =
+      data.baseSalary + data.bonuses + overtimeAmount - data.deductions - data.taxAmount
 
     const { data: payroll, error } = await supabase
       .from('payrolls')
@@ -375,18 +398,20 @@ export class HumanResourcesService {
         currency: data.currency,
         status: 'draft',
         notes: data.notes || null,
+        workspace_id: workspaceId,
         user_id: userId,
       })
       .select(PAYROLL_COLUMNS)
       .single()
 
     if (error) throw new DatabaseError('Failed to create payroll', error)
-    
-    await this.invalidatePayrollCache(userId, data.employeeId)
+
+    await this.invalidatePayrollCache(workspaceId, data.employeeId)
     return payroll
   }
 
-  async updatePayrollStatus(userId: string, id: string, data: UpdatePayroll) {
+  async updatePayrollStatus(ctx: TenancyContext, id: string, data: UpdatePayroll) {
+    const { workspaceId, userId } = ctx
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (data.status !== undefined) updates.status = data.status
     if (data.paymentDate !== undefined) updates.payment_date = data.paymentDate
@@ -395,24 +420,25 @@ export class HumanResourcesService {
       .from('payrolls')
       .update(updates)
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
       .select(PAYROLL_COLUMNS)
       .single()
 
     if (error) throw new DatabaseError('Failed to update payroll', error)
-    
-    await this.invalidatePayrollCache(userId)
+
+    await this.invalidatePayrollCache(workspaceId)
     return payroll
   }
 
   // ─── Payroll Summary (جمع حقوق) ──────────────────────────────
   // aggregate سمت سرور — جمع کل پرداختی‌ها و جمع هر کارمند، برای
   // کارت‌های KPI و ستون «جمع حقوق» بدون محاسبه‌ی سنگین سمت کلاینت.
-  async getPayrollSummary(userId: string) {
+  async getPayrollSummary(ctx: TenancyContext) {
+    const { workspaceId, userId } = ctx
     const { data, error } = await supabase
       .from('payrolls')
       .select('employee_id, net_salary')
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
 
     if (error) throw new DatabaseError('Failed to fetch payroll summary', error)
 
@@ -428,28 +454,30 @@ export class HumanResourcesService {
   }
 
   // ─── Leaves ─────────────────────────────────────────────────
-  async listLeaves(userId: string, employeeId?: string) {
-    const cacheKey = this.getLeavesCacheKey(userId, employeeId)
-    
+  async listLeaves(ctx: TenancyContext, employeeId?: string) {
+    const { workspaceId, userId } = ctx
+    const cacheKey = this.getLeavesCacheKey(workspaceId, employeeId)
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
     let query = supabase
       .from('leaves')
       .select(`${LEAVE_MINIMAL}, employee:employees(first_name, last_name)`)
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
 
     if (employeeId) query = query.eq('employee_id', employeeId)
 
     const { data, error } = await query.order('start_date', { ascending: false })
     if (error) throw new DatabaseError('Failed to fetch leaves', error)
-    
+
     const result = data || []
     await memoryCache.set(cacheKey, result, 120) // 2 minutes
     return result
   }
 
-  async createLeave(userId: string, data: CreateLeave) {
+  async createLeave(ctx: TenancyContext, data: CreateLeave) {
+    const { workspaceId, userId } = ctx
     const start = new Date(data.startDate)
     const end = new Date(data.endDate)
     const totalDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
@@ -465,18 +493,20 @@ export class HumanResourcesService {
         reason: data.reason || null,
         status: 'pending',
         notes: data.notes || null,
+        workspace_id: workspaceId,
         user_id: userId,
       })
       .select(LEAVE_COLUMNS)
       .single()
 
     if (error) throw new DatabaseError('Failed to create leave', error)
-    
-    await this.invalidateLeaveCache(userId, data.employeeId)
+
+    await this.invalidateLeaveCache(workspaceId, data.employeeId)
     return leave
   }
 
-  async updateLeaveStatus(userId: string, id: string, data: UpdateLeave) {
+  async updateLeaveStatus(ctx: TenancyContext, id: string, data: UpdateLeave) {
+    const { workspaceId, userId } = ctx
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (data.status !== undefined) {
       updates.status = data.status
@@ -490,41 +520,41 @@ export class HumanResourcesService {
       .from('leaves')
       .update(updates)
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('workspace_id', workspaceId)
       .select(LEAVE_COLUMNS)
       .single()
 
     if (error) throw new DatabaseError('Failed to update leave', error)
-    
-    await this.invalidateLeaveCache(userId)
+
+    await this.invalidateLeaveCache(workspaceId)
     return leave
   }
 
   // ─── Invalidate Cache ───────────────────────────────────────
-  private async invalidateEmployeeCache(userId: string, employeeId?: string) {
-    await memoryCache.invalidate(this.getEmployeesCacheKey(userId))
+  private async invalidateEmployeeCache(workspaceId: string, employeeId?: string) {
+    await memoryCache.invalidate(this.getEmployeesCacheKey(workspaceId))
     if (employeeId) {
-      await memoryCache.invalidate(this.getEmployeeCacheKey(userId, employeeId))
+      await memoryCache.invalidate(this.getEmployeeCacheKey(workspaceId, employeeId))
     }
   }
 
-  private async invalidateAttendanceCache(userId: string, employeeId?: string) {
+  private async invalidateAttendanceCache(workspaceId: string, employeeId?: string) {
     if (employeeId) {
-      await memoryCache.invalidate(this.getAttendanceCacheKey(userId, employeeId))
+      await memoryCache.invalidate(this.getAttendanceCacheKey(workspaceId, employeeId))
     }
   }
 
-  private async invalidatePayrollCache(userId: string, employeeId?: string) {
-    await memoryCache.invalidate(this.getPayrollsCacheKey(userId))
+  private async invalidatePayrollCache(workspaceId: string, employeeId?: string) {
+    await memoryCache.invalidate(this.getPayrollsCacheKey(workspaceId))
     if (employeeId) {
-      await memoryCache.invalidate(this.getPayrollsCacheKey(userId, employeeId))
+      await memoryCache.invalidate(this.getPayrollsCacheKey(workspaceId, employeeId))
     }
   }
 
-  private async invalidateLeaveCache(userId: string, employeeId?: string) {
-    await memoryCache.invalidate(this.getLeavesCacheKey(userId))
+  private async invalidateLeaveCache(workspaceId: string, employeeId?: string) {
+    await memoryCache.invalidate(this.getLeavesCacheKey(workspaceId))
     if (employeeId) {
-      await memoryCache.invalidate(this.getLeavesCacheKey(userId, employeeId))
+      await memoryCache.invalidate(this.getLeavesCacheKey(workspaceId, employeeId))
     }
   }
 }

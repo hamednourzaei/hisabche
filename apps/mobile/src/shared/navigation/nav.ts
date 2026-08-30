@@ -56,6 +56,12 @@ const ICONS: Record<NavId, readonly [IconName, IconName]> = {
   history: ['time-outline', 'time'],
   events: ['notifications-outline', 'notifications'],
   sync: ['sync-outline', 'sync'],
+  till: ['calculator-outline', 'calculator'],
+  expiry: ['hourglass-outline', 'hourglass'],
+  budgets: ['flag-outline', 'flag'],
+  timesheets: ['stopwatch-outline', 'stopwatch'],
+  assets: ['business-outline', 'business'],
+  bank: ['card-outline', 'card'],
 }
 
 /**
@@ -66,9 +72,15 @@ const ICONS: Record<NavId, readonly [IconName, IconName]> = {
  * keeps the two platforms describable by one document and means a new screen
  * lights up in navigation by adding one id, not by re-deriving the menu.
  *
- * Still to build on mobile: `team` (/human-resources),
- * `projects`, `production` (/manufacturing), `approvals`, `access`
- * (/permissions). Tracked in documents/UI_PARITY_EXECUTION.md.
+ * Still to build on mobile: `team` (/human-resources), `projects`,
+ * `production` (/manufacturing), `approvals` and `access` (/permissions).
+ * They stay out of IMPLEMENTED and out of the menu rather than appearing and
+ * going nowhere. Tracked in documents/UI_PARITY_EXECUTION.md.
+ *
+ * The six destinations from the Tier 1/2 sweep — `till`, `expiry`, `budgets`,
+ * `timesheets`, `assets`, `bank` — now have screens under
+ * `src/features/<id>/screens/` and routes under `app/<id>.tsx`, so they are
+ * listed below.
  */
 const IMPLEMENTED: ReadonlySet<NavId> = new Set<NavId>([
   'today',
@@ -81,6 +93,16 @@ const IMPLEMENTED: ReadonlySet<NavId> = new Set<NavId>([
   'settings',
   'events',
   'sync',
+
+  // Tier 1/2 sweep. Each has a screen and a route on mobile; the containers
+  // behind web and desktop are different code, but the hooks, the money
+  // contract and the wording are the same.
+  'till',
+  'expiry',
+  'budgets',
+  'timesheets',
+  'assets',
+  'bank',
 ])
 
 function toMobile(item: NavItemContract): MobileNavItem {

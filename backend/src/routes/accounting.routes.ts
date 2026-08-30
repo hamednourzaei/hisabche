@@ -1,24 +1,37 @@
 // ============================================
 // backend/src/routes/accounting.routes.ts
-// FIXED: Removed /api prefix — now registered with
-// prefix: '/api/accounting' in index.ts, matching
-// what the frontend hooks request.
-// Also fixed query schemas to accept limit & date
-// params that the frontend actually sends.
+//
+// Registered with prefix '/api/accounting' in index.ts.
+//
+// EVERY route here now runs `requireWorkspaceContext` and passes
+// `request.tenancy` to the service. Before this change the chart of accounts,
+// the journal and all three statements were fetched with `request.userId`
+// alone: a second member of the same shop saw an empty ledger, and the
+// automatic entries the invoice poster wrote against the workspace were
+// invisible to the very screens meant to show them.
+//
+// Cache scope moved with it. `scope: 'user'` on a workspace's books hands one
+// member's cached statements to a request that should have produced another's.
 // ============================================
 
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
+import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import {
   createAccountSchema,
-  updateAccountSchema,
   createJournalEntrySchema,
+  periodLockSchema,
+  reverseJournalEntrySchema,
+  updateAccountSchema,
 } from '@hisabche/validation'
-import { AccountingService } from '../services/accounting.service'
+
+import { AccountingService } from '../services/accounting'
+import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
-import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
+import { requireCapability } from '../middleware/authorize.middleware'
+import { branches } from '../services/branch'
+import { cacheMiddleware } from '../middleware/cache.middleware'
 
 const toJsonSchema = (schema: any) => {
   const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
@@ -26,14 +39,15 @@ const toJsonSchema = (schema: any) => {
   return result
 }
 
-// ✅ Common query params that frontend sends
 const listQuerySchema = z.object({
   limit: z.string().optional(),
+  status: z.enum(['draft', 'posted', 'reversed', 'cancelled']).optional(),
   cursor: z.string().optional(),
 })
 
 const dateQuerySchema = z.object({
-  date: z.string().default(new Date().toISOString()),
+  date: z.string().optional(),
+  fromDate: z.string().optional(),
   limit: z.string().optional(),
 })
 
@@ -43,12 +57,60 @@ const dateRangeQuerySchema = z.object({
 })
 
 const incomeStatementQuerySchema = z.object({
-  fromDate: z.string(),
-  toDate: z.string(),
+  from: z.string(),
+  to: z.string(),
+  limit: z.string().optional(),
 })
+
+const today = () => new Date().toISOString().slice(0, 10)
+
+/**
+ * Which branches a statement covers.
+ *
+ * `null` is the consolidated business — what every request without a branch
+ * asks for, and what a member with no branch restriction always gets. A
+ * restricted member is narrowed to their own branches whether they asked to be
+ * or not.
+ */
+async function reportingBranches(request: FastifyRequest): Promise<string[] | null> {
+  const header = request.headers['x-branch-id']
+  const query = (request.query as Record<string, unknown> | undefined)?.branchId
+  const requested =
+    typeof header === 'string' && header.trim()
+      ? header.trim()
+      : typeof query === 'string' && query.trim()
+        ? query.trim()
+        : null
+
+  return branches.reportingScope(request.tenancy, requested)
+}
 
 export async function accountingRoutes(fastify: FastifyInstance) {
   const accountingService = new AccountingService()
+
+  /**
+   * A refused posting is the user's problem to fix — an unbalanced entry, a
+   * closed period, a group account — and it must say which. Collapsing all of
+   * them into 500 "Failed to create journal entry" is what made the old ledger
+   * impossible to work with.
+   */
+  const fail = (reply: FastifyReply, err: unknown, fallback: string) => {
+    if (err instanceof z.ZodError) {
+      return reply.code(400).send({ error: 'Validation failed', details: err.errors })
+    }
+    if (err instanceof BaseError && err.statusCode < 500) {
+      // The domain refuses with a CODE (JOURNAL_ENTRY_UNBALANCED,
+      // ACCOUNTING_PERIOD_LOCKED, …), never with a sentence. The client turns
+      // that code into a message in the user's own language; a string built
+      // here would be untranslatable by the time it reached the screen.
+      const domainCode = /^[A-Z][A-Z_]{6,}/.exec(err.message)?.[0]
+      return reply
+        .code(err.statusCode)
+        .send({ error: err.message, code: domainCode ?? err.name, detail: err.message })
+    }
+    fastify.log.error(err)
+    return reply.code(500).send({ error: fallback })
+  }
 
   // ─── GET /accounts ─────────────────────────────────────
   fastify.get(
@@ -56,7 +118,9 @@ export async function accountingRoutes(fastify: FastifyInstance) {
     {
       preHandler: [
         authenticate,
-        cacheMiddleware({ scope: 'user', ttl: 120, keyPrefix: 'accounts' }),
+        requireWorkspaceContext,
+        requireCapability('ledger.read'),
+        cacheMiddleware({ scope: 'workspace', ttl: 120, keyPrefix: 'accounts' }),
       ],
       schema: {
         querystring: toJsonSchema(listQuerySchema),
@@ -65,11 +129,9 @@ export async function accountingRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const accounts = await accountingService.listAccounts(request.userId)
-        return reply.send(accounts)
+        return reply.send(await accountingService.listAccounts(request.tenancy))
       } catch (err) {
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to fetch accounts' })
+        return fail(reply, err, 'Failed to fetch accounts')
       }
     },
   )
@@ -78,7 +140,7 @@ export async function accountingRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/accounts',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('account.manage')],
       schema: {
         body: toJsonSchema(createAccountSchema),
         response: { 201: toJsonSchema(z.any()) },
@@ -87,15 +149,28 @@ export async function accountingRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const data = createAccountSchema.parse(request.body)
-        const account = await accountingService.createAccount(request.userId, data)
-        await clearCache('accounts:*')
+        const account = await accountingService.createAccount(request.tenancy, data)
         return reply.code(201).send(account)
       } catch (err) {
-        if (err instanceof z.ZodError) {
-          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
-        }
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to create account' })
+        return fail(reply, err, 'Failed to create account')
+      }
+    },
+  )
+
+  // ─── PATCH /accounts/:id ───────────────────────────────
+  fastify.patch(
+    '/accounts/:id',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('account.manage')],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        const data = updateAccountSchema.parse({ ...(request.body as object), id })
+        return reply.send(await accountingService.updateAccount(request.tenancy, id, data))
+      } catch (err) {
+        return fail(reply, err, 'Failed to update account')
       }
     },
   )
@@ -104,7 +179,12 @@ export async function accountingRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/journal',
     {
-      preHandler: [authenticate, cacheMiddleware({ scope: 'user', ttl: 60, keyPrefix: 'journal' })],
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        requireCapability('ledger.read'),
+        cacheMiddleware({ scope: 'workspace', ttl: 60, keyPrefix: 'journal' }),
+      ],
       schema: {
         querystring: toJsonSchema(listQuerySchema),
         response: { 200: toJsonSchema(z.array(z.any())) },
@@ -112,11 +192,31 @@ export async function accountingRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const entries = await accountingService.listJournalEntries(request.userId)
+        const { limit, status } = request.query as { limit?: string; status?: string }
+        const entries = await accountingService.listJournalEntries(request.tenancy, {
+          limit: limit ? Number(limit) : undefined,
+          status,
+        })
         return reply.send(entries)
       } catch (err) {
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to fetch journal entries' })
+        return fail(reply, err, 'Failed to fetch journal entries')
+      }
+    },
+  )
+
+  // ─── GET /journal/:id ──────────────────────────────────
+  fastify.get(
+    '/journal/:id',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('ledger.read')],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        return reply.send(await accountingService.getJournalEntry(request.tenancy, id))
+      } catch (err) {
+        return fail(reply, err, 'Failed to fetch journal entry')
       }
     },
   )
@@ -125,7 +225,7 @@ export async function accountingRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/journal',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('ledger.post')],
       schema: {
         body: toJsonSchema(createJournalEntrySchema),
         response: { 201: toJsonSchema(z.any()) },
@@ -134,15 +234,95 @@ export async function accountingRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const data = createJournalEntrySchema.parse(request.body)
-        const entry = await accountingService.createJournalEntry(request.userId, data)
-        await clearCache('journal:*')
+        const { status } = request.query as { status?: 'draft' | 'posted' }
+        const entry = await accountingService.createJournalEntry(request.tenancy, data, { status })
         return reply.code(201).send(entry)
       } catch (err) {
-        if (err instanceof z.ZodError) {
-          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
-        }
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to create journal entry' })
+        return fail(reply, err, 'Failed to create journal entry')
+      }
+    },
+  )
+
+  // ─── POST /journal/:id/post ────────────────────────────
+  fastify.post(
+    '/journal/:id/post',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('ledger.post')],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        return reply.send(await accountingService.postDraft(request.tenancy, id))
+      } catch (err) {
+        return fail(reply, err, 'Failed to post journal entry')
+      }
+    },
+  )
+
+  // ─── POST /journal/:id/reverse ─────────────────────────
+  // There is deliberately no PATCH or DELETE for a posted entry.
+  fastify.post(
+    '/journal/:id/reverse',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('ledger.reverse')],
+      schema: {
+        body: toJsonSchema(reverseJournalEntrySchema),
+        response: { 201: toJsonSchema(z.any()) },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        const body = reverseJournalEntrySchema.parse(request.body)
+        const { sodOverrideReason } = (request.body ?? {}) as { sodOverrideReason?: string }
+        const entry = await accountingService.reverseJournalEntry(request.tenancy, id, {
+          ...body,
+          ...(sodOverrideReason ? { override: { reason: sodOverrideReason } } : {}),
+        })
+        return reply.code(201).send(entry)
+      } catch (err) {
+        return fail(reply, err, 'Failed to reverse journal entry')
+      }
+    },
+  )
+
+  // ─── GET/PUT /period-lock ──────────────────────────────
+  fastify.get(
+    '/period-lock',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('ledger.read')],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        return reply.send((await accountingService.getPeriodLock(request.tenancy)) ?? null)
+      } catch (err) {
+        return fail(reply, err, 'Failed to read the period lock')
+      }
+    },
+  )
+
+  fastify.put(
+    '/period-lock',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('ledger.lock_period')],
+      schema: {
+        body: toJsonSchema(periodLockSchema),
+        response: { 200: toJsonSchema(z.any()) },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { lockedUntil, reason } = periodLockSchema.parse(request.body)
+        const lock = await accountingService.setPeriodLock(
+          request.tenancy,
+          lockedUntil,
+          reason ?? '',
+        )
+        return reply.send(lock)
+      } catch (err) {
+        return fail(reply, err, 'Failed to set the period lock')
       }
     },
   )
@@ -153,21 +333,26 @@ export async function accountingRoutes(fastify: FastifyInstance) {
     {
       preHandler: [
         authenticate,
-        cacheMiddleware({ scope: 'user', ttl: 300, keyPrefix: 'trial-balance' }),
+        requireWorkspaceContext,
+        requireCapability('ledger.read'),
+        cacheMiddleware({ scope: 'workspace', ttl: 120, keyPrefix: 'trial-balance' }),
       ],
       schema: {
         querystring: toJsonSchema(dateQuerySchema),
-        response: { 200: toJsonSchema(z.array(z.any())) },
+        response: { 200: toJsonSchema(z.any()) },
       },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const { date } = request.query as { date: string }
-        const trialBalance = await accountingService.getTrialBalance(request.userId, date)
-        return reply.send(trialBalance)
+        const { date, fromDate } = request.query as { date?: string; fromDate?: string }
+        const result = await accountingService.getTrialBalance(request.tenancy, {
+          fromDate,
+          toDate: date ?? today(),
+          branchIds: await reportingBranches(request),
+        })
+        return reply.send(result)
       } catch (err) {
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to fetch trial balance' })
+        return fail(reply, err, 'Failed to fetch trial balance')
       }
     },
   )
@@ -178,7 +363,9 @@ export async function accountingRoutes(fastify: FastifyInstance) {
     {
       preHandler: [
         authenticate,
-        cacheMiddleware({ scope: 'user', ttl: 300, keyPrefix: 'balance-sheet' }),
+        requireWorkspaceContext,
+        requireCapability('ledger.read'),
+        cacheMiddleware({ scope: 'workspace', ttl: 120, keyPrefix: 'balance-sheet' }),
       ],
       schema: {
         querystring: toJsonSchema(dateQuerySchema),
@@ -187,12 +374,16 @@ export async function accountingRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const { date } = request.query as { date: string }
-        const balanceSheet = await accountingService.getBalanceSheet(request.userId, date)
-        return reply.send(balanceSheet)
+        const { date } = request.query as { date?: string }
+        return reply.send(
+          await accountingService.getBalanceSheet(
+            request.tenancy,
+            date ?? today(),
+            await reportingBranches(request),
+          ),
+        )
       } catch (err) {
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to fetch balance sheet' })
+        return fail(reply, err, 'Failed to fetch balance sheet')
       }
     },
   )
@@ -203,27 +394,28 @@ export async function accountingRoutes(fastify: FastifyInstance) {
     {
       preHandler: [
         authenticate,
-        cacheMiddleware({ scope: 'user', ttl: 300, keyPrefix: 'income-statement' }),
+        requireWorkspaceContext,
+        requireCapability('ledger.read'),
+        cacheMiddleware({ scope: 'workspace', ttl: 120, keyPrefix: 'income-statement' }),
       ],
       schema: {
-        querystring: toJsonSchema(
-          z.object({
-            from: z.string(),
-            to: z.string(),
-            limit: z.string().optional(),
-          }),
-        ),
+        querystring: toJsonSchema(incomeStatementQuerySchema),
         response: { 200: toJsonSchema(z.any()) },
       },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { from, to } = request.query as { from: string; to: string }
-        const incomeStatement = await accountingService.getIncomeStatement(request.userId, from, to)
-        return reply.send(incomeStatement)
+        return reply.send(
+          await accountingService.getIncomeStatement(
+            request.tenancy,
+            from,
+            to,
+            await reportingBranches(request),
+          ),
+        )
       } catch (err) {
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to fetch income statement' })
+        return fail(reply, err, 'Failed to fetch income statement')
       }
     },
   )
@@ -235,6 +427,7 @@ export async function accountingRoutes(fastify: FastifyInstance) {
       preHandler: [
         authenticate,
         requireWorkspaceContext,
+        requireCapability('report.financial.read'),
         cacheMiddleware({ scope: 'workspace', ttl: 120, keyPrefix: 'cash-flow' }),
       ],
       schema: {
@@ -245,11 +438,9 @@ export async function accountingRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { startDate, endDate } = request.query as { startDate: string; endDate: string }
-        const result = await accountingService.getCashFlow(request.tenancy, startDate, endDate)
-        return reply.send(result)
+        return reply.send(await accountingService.getCashFlow(request.tenancy, startDate, endDate))
       } catch (err) {
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to fetch cash flow' })
+        return fail(reply, err, 'Failed to fetch cash flow')
       }
     },
   )
@@ -261,19 +452,16 @@ export async function accountingRoutes(fastify: FastifyInstance) {
       preHandler: [
         authenticate,
         requireWorkspaceContext,
+        requireCapability('report.operational.read'),
         cacheMiddleware({ scope: 'workspace', ttl: 60, keyPrefix: 'customer-debt' }),
       ],
-      schema: {
-        response: { 200: toJsonSchema(z.any()) },
-      },
+      schema: { response: { 200: toJsonSchema(z.any()) } },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const result = await accountingService.getCustomerDebtReport(request.tenancy)
-        return reply.send(result)
+        return reply.send(await accountingService.getCustomerDebtReport(request.tenancy))
       } catch (err) {
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to fetch customer debt report' })
+        return fail(reply, err, 'Failed to fetch customer debt report')
       }
     },
   )

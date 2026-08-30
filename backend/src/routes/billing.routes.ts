@@ -56,16 +56,23 @@ export async function billingRoutes(fastify: FastifyInstance) {
   )
 
   // ─── GET /api/billing/subscription ───────────────────────────
+  // A subscription belongs to the WORKSPACE (DECISION A), so the route resolves
+  // one and the cache is keyed by it. Keyed by user, two members of the same
+  // shop were served two different answers about the same subscription.
   fastify.get(
     '/api/billing/subscription',
     {
       preHandler: [
         authenticate,
-        cacheMiddleware({ scope: 'user', ttl: 60, keyPrefix: 'subscription' }),
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'workspace', ttl: 60, keyPrefix: 'subscription' }),
       ],
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const subscription = await billingService.getCurrentSubscription(request.userId)
+      const subscription = await billingService.getCurrentSubscription(
+        request.userId,
+        request.tenancy.workspaceId,
+      )
       const trial = await billingService.checkTrialStatus(request.userId)
       return reply.send({ ...subscription, trial })
     },
@@ -125,7 +132,7 @@ export async function billingRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       const { workspaceId } = request.tenancy
       const usage = await billingService.getUsageReport(request.userId, workspaceId)
-      const subscription = await billingService.getCurrentSubscription(request.userId)
+      const subscription = await billingService.getCurrentSubscription(request.userId, workspaceId)
       const plan = PLANS[subscription.plan as Plan]
       return reply.send({ usage, limits: plan.limits })
     },

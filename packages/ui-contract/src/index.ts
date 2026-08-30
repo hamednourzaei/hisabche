@@ -87,6 +87,9 @@ export {
   type NavItemContract,
   type NavGroupContract,
   type CommandItemContract,
+  visibleNavItems,
+  visibleNavGroups,
+  splitForBudget,
 } from './navigation'
 
 export {
@@ -112,3 +115,23 @@ export {
 
 // ---------- Onboarding: currencies and metals ----------
 export { BILLING_CURRENCY, CURRENCIES, primaryCurrencies, type CurrencyOption } from './currencies'
+
+// ---------- Adaptive runtime: what the client may spend ----------
+//
+// A device class decides page sizes, prefetching and how much is rendered at
+// once. It NEVER decides a permission or a financial figure — see
+// `assertPolicyIsPresentationOnly`, which the test suite enforces.
+export {
+  FINANCIAL_OR_SECURITY_KEYS,
+  applyPerformanceMode,
+  assertPolicyIsPresentationOnly,
+  classifyDevice,
+  runtimePolicy,
+  sessionCost,
+  type DeviceClass,
+  type DeviceSignals,
+  type NetworkQuality,
+  type PerformanceMode,
+  type Platform,
+  type RuntimePolicy,
+} from './runtime-policy'

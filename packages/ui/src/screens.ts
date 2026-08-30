@@ -78,3 +78,14 @@ export { AuditContainer } from './components/ui/audit/containers/audit-container
 
 // ---------- Public (no-auth) ----------
 export { PublicInvoiceContainer } from './components/ui/invoice-detail/containers/public-invoice-container'
+
+// ---------- Tier 1/2 capabilities ----------
+// One container per NAV_CONTRACT destination. Web mounts these from its route
+// segments and desktop mounts the same modules from react-router — neither owns
+// a private copy.
+export { TillContainer } from './components/ui/till/containers/till-container'
+export { AssetsContainer } from './components/ui/assets/containers/assets-container'
+export { BankContainer } from './components/ui/bank/containers/bank-container'
+export { BudgetsContainer } from './components/ui/budgets/containers/budgets-container'
+export { TimesheetsContainer } from './components/ui/timesheets/containers/timesheets-container'
+export { ExpiryContainer } from './components/ui/expiry/containers/expiry-container'

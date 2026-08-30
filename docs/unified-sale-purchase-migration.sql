@@ -127,21 +127,33 @@ BEGIN
 END $$;
 
 -- ─── 4. Row Level Security ──────────────────────────────────────────────────
--- Details inherit access from their invoice. A user may touch a detail only
--- if they own the invoice it ultimately belongs to.
+-- Details inherit access from their invoice — from the WORKSPACE that invoice
+-- belongs to, not from whoever created it.
+--
+-- This policy was written as `i.user_id = auth.uid()`. Two things followed:
+-- a manager could open an invoice a seller had raised and see its header with
+-- the line details missing, and user_id was back as a tenancy boundary in the
+-- database, which is the thing the workspace policies removed everywhere else.
+--
+-- `docs/child-table-rls-fix.sql` applies the same correction to databases that
+-- already ran the old version of this file.
 
 ALTER TABLE invoice_item_details ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS invoice_item_details_owner ON invoice_item_details;
-CREATE POLICY invoice_item_details_owner ON invoice_item_details
-  FOR ALL
+DROP POLICY IF EXISTS invoice_item_details_workspace_members ON invoice_item_details;
+CREATE POLICY invoice_item_details_workspace_members ON invoice_item_details
+  FOR ALL TO authenticated
   USING (
     EXISTS (
       SELECT 1
       FROM invoice_items ii
       JOIN invoices i ON i.id = ii.invoice_id
       WHERE ii.id = invoice_item_details.invoice_item_id
-        AND i.user_id = auth.uid()
+        AND i.workspace_id IN (
+          SELECT workspace_id FROM workspace_members
+          WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+        )
     )
   )
   WITH CHECK (
@@ -150,7 +162,10 @@ CREATE POLICY invoice_item_details_owner ON invoice_item_details
       FROM invoice_items ii
       JOIN invoices i ON i.id = ii.invoice_id
       WHERE ii.id = invoice_item_details.invoice_item_id
-        AND i.user_id = auth.uid()
+        AND i.workspace_id IN (
+          SELECT workspace_id FROM workspace_members
+          WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+        )
     )
   );
 

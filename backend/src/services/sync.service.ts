@@ -27,6 +27,7 @@
 // why that is a trigger and not application code.
 // ============================================
 
+import { conflicts, type ConflictEntity } from './conflict'
 import {
   LEASE_TTL_SECONDS,
   isRetryable,
@@ -325,6 +326,18 @@ export class SyncService {
     ) {
       // The whole point of optimistic concurrency: refuse, and hand back the
       // server's row so the client can merge rather than guess.
+      //
+      // Before refusing, FILE the attempt. Until this existed the rejected
+      // payload survived only in that device's outbox: clear the app, reinstall
+      // it, or tap discard, and an hour of offline work was gone with no record
+      // that it had ever been attempted.
+      //
+      // Filing also decides whether a person needs to look at it at all. Two
+      // people editing a customer's notes are not in conflict; two people
+      // disagreeing about an invoice total are, and that one is never settled
+      // by whichever device reconnected second.
+      await this.fileConflict(actor, mutation, current)
+
       throw new SyncError(
         'version_conflict',
         `expected version ${mutation.expectedVersion}, server has ${current.version}`,
@@ -353,6 +366,37 @@ export class SyncService {
     }
 
     return { entityVersion: Number(data?.version ?? 1) }
+  }
+
+  /**
+   * Preserve both versions of a refused write.
+   *
+   * Deliberately swallows its own failures. Being unable to FILE a conflict
+   * must not turn a clean "your copy is out of date" into a 500 that the
+   * device retries forever — the refusal itself is still correct and is still
+   * reported to the client.
+   */
+  private async fileConflict(
+    actor: SyncActor,
+    mutation: SyncMutation,
+    current: Record<string, unknown>,
+  ): Promise<void> {
+    try {
+      await conflicts.record(
+        { workspaceId: actor.workspaceId, userId: actor.userId },
+        {
+          entityType: mutation.entityType as ConflictEntity,
+          entityId: mutation.entityId,
+          mutationId: mutation.mutationId,
+          operation: mutation.operation,
+          serverRow: current,
+          clientPayload: mutation.payload,
+          clientVersion: mutation.expectedVersion,
+        },
+      )
+    } catch (err) {
+      console.error('[SyncService] failed to file a conflict:', err)
+    }
   }
 
   private leaseHeldByOther(row: Record<string, unknown>, userId: string): boolean {

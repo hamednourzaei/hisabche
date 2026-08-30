@@ -26,7 +26,8 @@ export async function purchasingRoutes(fastify: FastifyInstance) {
     {
       preHandler: [
         authenticate,
-        cacheMiddleware({ scope: 'user', ttl: 60, keyPrefix: 'purchase-orders' }),
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'workspace', ttl: 60, keyPrefix: 'purchase-orders' }),
       ],
       schema: {
         response: {
@@ -36,7 +37,7 @@ export async function purchasingRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const orders = await purchasingService.listPurchaseOrders(request.userId)
+        const orders = await purchasingService.listPurchaseOrders(request.tenancy)
         return reply.send(orders)
       } catch (err) {
         fastify.log.error(err)
@@ -49,7 +50,7 @@ export async function purchasingRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/purchase-orders',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         body: toJsonSchema(createPurchaseOrderSchema),
         response: {
@@ -60,7 +61,7 @@ export async function purchasingRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const data = createPurchaseOrderSchema.parse(request.body)
-        const order = await purchasingService.createPurchaseOrder(request.userId, data)
+        const order = await purchasingService.createPurchaseOrder(request.tenancy, data)
         await clearCache('purchase-orders:*')
         return reply.code(201).send(order)
       } catch (err) {
@@ -77,7 +78,7 @@ export async function purchasingRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/purchase-orders/:id',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         body: toJsonSchema(updatePurchaseOrderSchema),
@@ -90,7 +91,7 @@ export async function purchasingRoutes(fastify: FastifyInstance) {
       try {
         const { id } = request.params as { id: string }
         const data = updatePurchaseOrderSchema.parse(request.body)
-        const order = await purchasingService.updatePurchaseOrder(request.userId, id, data)
+        const order = await purchasingService.updatePurchaseOrder(request.tenancy, id, data)
         await clearCache(`purchase-order:${id}`)
         await clearCache('purchase-orders:*')
         return reply.send(order)

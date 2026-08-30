@@ -9,6 +9,7 @@ import { DatabaseError, NotFoundError } from '../errors/database.error'
 import type { TenancyContext } from './tenancy.service'
 import { memoryCache } from '../utils/pagination'
 import { logBusinessEvent } from './event-log.service'
+import { partyBalance } from './payments'
 
 // ✅ Types
 interface Customer {
@@ -392,16 +393,30 @@ export class CustomerService {
       throw new DatabaseError('Failed to fetch transactions', error)
     }
 
-    const balance = (transactions || []).reduce((acc, tx) => {
-      const amount = Number(tx.amount)
-      if (tx.type === 'sale' || tx.type === 'receipt') {
-        return acc + amount
-      }
-      if (tx.type === 'payment' || tx.type === 'return') {
-        return acc - amount
-      }
-      return acc
-    }, 0)
+    // ⚠️ SIGN — this used to read `sale || receipt` on the PLUS side, so money
+    // RECEIVED from a customer increased what they were recorded as owing. A
+    // shopkeeper who took 500 from a debtor saw the debt go up by 500.
+    //
+    // What each movement means for "how much does this party owe us":
+    //   sale     we billed them            → owes more
+    //   receipt  money arrived from them   → owes less
+    //   payment  money we paid out to them → owes more (we settled our side)
+    //   return   we credited them          → owes less
+    const balance = partyBalance(
+      (transactions ?? []).map((tx) => ({
+        date: '',
+        reference: '',
+        amount: Number(tx.amount) || 0,
+        kind:
+          tx.type === 'sale'
+            ? ('sale' as const)
+            : tx.type === 'receipt'
+              ? ('payment_in' as const)
+              : tx.type === 'payment'
+                ? ('payment_out' as const)
+                : ('return' as const),
+      })),
+    )
 
     const result: BalanceResult = {
       customerId,

@@ -6,6 +6,7 @@
 import { supabase } from '../db'
 import { CreateAuditLog, AuditFilters } from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
+import type { TenancyContext } from './tenancy.service'
 import { memoryCache } from '../utils/pagination'
 
 // ✅ Column Selection Constants (بهینه‌شده)
@@ -118,17 +119,55 @@ export class AuditService {
     return result
   }
 
+  /**
+   * Every workspace's record of what one person did — for PLATFORM SUPPORT.
+   *
+   * Deliberately a separate method with a name that says what it does. The
+   * danger this codebase guards against is an IMPLICIT cross-tenant read that
+   * looks like an ordinary one; an explicit, admin-guarded, differently-named
+   * call is a decision somebody made and can be found in review.
+   *
+   * Callers must be behind `platformAdminGuard`. It returns metadata about
+   * actions — never the financial rows those actions touched.
+   */
+  async getUserActivityAcrossWorkspaces(userId: string, limit = 50) {
+    const { data, error } = await supabase
+      .from('audit_logs')
+      .select(AUDIT_MINIMAL_COLUMNS)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(limit)
+
+    if (error) throw new DatabaseError('Failed to fetch cross-workspace activity', error)
+    return data ?? []
+  }
+
   // ─── Get User Activity ──────────────────────────────────
-  async getUserActivity(userId: string, limit = 50) {
-    const cacheKey = this.getUserActivityCacheKey(userId, limit)
+  /**
+   * What this person has done IN THIS WORKSPACE.
+   *
+   * The workspace is the boundary and the user is a filter inside it. Scoped
+   * by `user_id` alone, this answered "everything this person has ever done"
+   * across every book they have touched — so a bookkeeper who helps in two
+   * shops saw one shop's activity while looking at the other.
+   */
+  async getUserActivity(ctx: TenancyContext, limit = 50) {
+    const { workspaceId, userId } = ctx
+    const cacheKey = this.getUserActivityCacheKey(`${workspaceId}:${userId}`, limit)
 
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
     // ✅ فقط ستون‌های ضروری
+    // Scoped to the workspace AND the actor. `user_id` alone answered "what
+    // has this person done" across every book they have ever touched — so a
+    // bookkeeper who helps in two shops saw one shop's activity while looking
+    // at the other. The workspace is the boundary; the user is a filter
+    // INSIDE it.
     const { data, error } = await supabase
       .from('audit_logs')
       .select(AUDIT_MINIMAL_COLUMNS)
+      .eq('workspace_id', workspaceId)
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(limit)

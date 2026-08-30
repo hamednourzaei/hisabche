@@ -29,6 +29,12 @@ import {
   RefreshCw,
   EllipsisVertical,
   History,
+  Calculator,
+  Hourglass,
+  Target,
+  Timer,
+  Building2,
+  Landmark,
   type LucideIcon,
 } from 'lucide-react'
 import {
@@ -78,6 +84,12 @@ const NAV_ICONS: Record<NavId, LucideIcon> = {
   history: History,
   events: Bell,
   sync: RefreshCw,
+  till: Calculator,
+  expiry: Hourglass,
+  budgets: Target,
+  timesheets: Timer,
+  assets: Building2,
+  bank: Landmark,
 }
 
 const GROUP_ICONS: Record<Exclude<NavGroupId, 'primary'>, LucideIcon> = {

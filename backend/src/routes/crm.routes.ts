@@ -33,7 +33,8 @@ export async function crmRoutes(fastify: FastifyInstance) {
     {
       preHandler: [
         authenticate,
-        cacheMiddleware({ scope: 'user', ttl: 60, keyPrefix: 'interactions' }),
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'workspace', ttl: 60, keyPrefix: 'interactions' }),
       ],
       schema: {
         querystring: toJsonSchema(
@@ -49,7 +50,7 @@ export async function crmRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { customerId } = request.query as { customerId?: string }
-        const result = await crmService.listInteractions(request.userId, customerId)
+        const result = await crmService.listInteractions(request.tenancy, customerId)
         return reply.send(result.interactions)
       } catch (err) {
         fastify.log.error(err)
@@ -92,7 +93,7 @@ export async function crmRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/interactions/:id/status',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         body: toJsonSchema(updateInteractionStatusSchema),
@@ -103,7 +104,7 @@ export async function crmRoutes(fastify: FastifyInstance) {
       try {
         const { id } = request.params as { id: string }
         const { status } = updateInteractionStatusSchema.parse(request.body)
-        const interaction = await crmService.updateInteractionStatus(request.userId, id, status)
+        const interaction = await crmService.updateInteractionStatus(request.tenancy, id, status)
         await clearCache('interactions:*')
         return reply.send(interaction)
       } catch (err) {
@@ -123,12 +124,12 @@ export async function crmRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/interactions/subjects',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: { response: { 200: toJsonSchema(z.array(z.string())) } },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        const subjects = await crmService.listSubjectSuggestions(request.userId)
+        const subjects = await crmService.listSubjectSuggestions(request.tenancy)
         return reply.send(subjects)
       } catch (err) {
         fastify.log.error(err)
@@ -142,7 +143,7 @@ export async function crmRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/interactions/:id/customer-outcome',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         body: toJsonSchema(recordCustomerOutcomeSchema),
@@ -154,7 +155,7 @@ export async function crmRoutes(fastify: FastifyInstance) {
         const { id } = request.params as { id: string }
         const input = recordCustomerOutcomeSchema.parse(request.body)
         const task = await crmService.recordCustomerOutcome(
-          { id, userId: request.userId },
+          { id, workspaceId: request.tenancy.workspaceId },
           input,
           'owner',
         )
@@ -269,7 +270,8 @@ export async function crmRoutes(fastify: FastifyInstance) {
     {
       preHandler: [
         authenticate,
-        cacheMiddleware({ scope: 'user', ttl: 60, keyPrefix: 'opportunities' }),
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'workspace', ttl: 60, keyPrefix: 'opportunities' }),
       ],
       schema: {
         querystring: toJsonSchema(
@@ -285,7 +287,7 @@ export async function crmRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { customerId } = request.query as { customerId?: string }
-        const result = await crmService.listOpportunities(request.userId, customerId)
+        const result = await crmService.listOpportunities(request.tenancy, customerId)
         return reply.send(result.opportunities)
       } catch (err) {
         fastify.log.error(err)
@@ -298,7 +300,7 @@ export async function crmRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/opportunities',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         body: toJsonSchema(createOpportunitySchema),
         response: {
@@ -309,7 +311,7 @@ export async function crmRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const data = createOpportunitySchema.parse(request.body)
-        const opportunity = await crmService.createOpportunity(request.userId, data)
+        const opportunity = await crmService.createOpportunity(request.tenancy, data)
         await clearCache('opportunities:*')
         return reply.code(201).send(opportunity)
       } catch (err) {
@@ -326,7 +328,7 @@ export async function crmRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/opportunities/:id',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         body: toJsonSchema(updateOpportunitySchema),
@@ -339,7 +341,7 @@ export async function crmRoutes(fastify: FastifyInstance) {
       try {
         const { id } = request.params as { id: string }
         const data = updateOpportunitySchema.parse(request.body)
-        const opportunity = await crmService.updateOpportunity(request.userId, id, data)
+        const opportunity = await crmService.updateOpportunity(request.tenancy, id, data)
         await clearCache('opportunities:*')
         return reply.send(opportunity)
       } catch (err) {

@@ -1,78 +1,97 @@
-﻿// ============================================
-// backend/src/services/warehouse.service.ts — Optimized v2.3
-// FIXED: Proper Promise conversion for PostgrestFilterBuilder
+// ============================================
+// backend/src/services/warehouse.service.ts
+//
+// Warehouses, per-warehouse stock, and transfers between them.
+//
+// ---------------------------------------------------------------------------
+// WHAT WAS WRONG WITH THE VERSION THIS REPLACES
+//
+// Every query filtered on `user_id`. A warehouse is shared business data — the
+// same shop's manager and seller must see the same warehouses — so a second
+// member saw an empty warehouse list and their transfers were invisible to
+// everyone else.
+//
+// Two cache keys carried no tenancy at all: `warehouse:product:<productId>`
+// and `warehouse:stock:<warehouseId>`. Whoever asked first filled the cache
+// and everybody else was served that answer, across workspaces.
+//
+// `listWarehouses` filtered `.eq('deleted_at', null)`, which PostgREST sends
+// as `deleted_at=eq.null` and which matches NOTHING. The list was empty for
+// every user, always. The correct operator is `.is('deleted_at', null)`.
+//
+// `transferStock` read both sides' quantities, then wrote them back from Node.
+// Two transfers of the same stock both read the same starting quantity and the
+// second overwrote the first — stock created out of nothing. It also wrote no
+// workspace onto the movement row.
 // ============================================
 
 import { supabase } from '../db'
-import {
-  createwarehouseSchema,
-  updatewarehouseSchema,
-  stockTransferSchema,
-} from '@hisabche/validation'
-import { DatabaseError } from '../errors/database.error'
+import { ConflictError, DatabaseError, NotFoundError } from '../errors/database.error'
+import { ValidationError } from '../errors/validation.error'
 import { memoryCache } from '../utils/pagination'
+import type { TenancyContext } from './tenancy.service'
 
 type CreateWarehouse = any
 type UpdateWarehouse = any
 
+const WAREHOUSE_COLUMNS = 'id, name, location, is_active, created_at, updated_at'
+
 export class WarehouseService {
+  // ─── Cache ────────────────────────────────────────────────────
+  // Every key is prefixed with the workspace, and invalidation drops the whole
+  // prefix. A key without the workspace in it is a cross-tenant read waiting
+  // for the right pair of requests.
 
-  // ─── Cache Keys ──────────────────────────────────────────────
-  private getWarehousesCacheKey(userId: string) {
-    return `warehouses:${userId}`
+  private key(workspaceId: string, ...parts: (string | number)[]) {
+    return `warehouse:${workspaceId}:${parts.join(':')}`
   }
 
-  private getWarehouseStockCacheKey(warehouseId: string) {
-    return `warehouse:stock:${warehouseId}`
+  private async invalidate(workspaceId: string) {
+    await memoryCache.invalidate(`warehouse:${workspaceId}`)
   }
 
-  private getWarehouseCacheKey(userId: string, id: string) {
-    return `warehouse:${userId}:${id}`
-  }
+  // ─── Warehouses ───────────────────────────────────────────────
 
-  // ─── List warehouses ──────────────────────────────────────────
-  async listWarehouses(userId: string) {
-    const cacheKey = this.getWarehousesCacheKey(userId)
-    
+  async listWarehouses(ctx: TenancyContext) {
+    const cacheKey = this.key(ctx.workspaceId, 'list')
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
     const { data, error } = await supabase
       .from('warehouses')
-      .select('id, name, location, is_active, created_at')
-      .eq('user_id', userId)
-      .eq('deleted_at', null)
+      .select(WAREHOUSE_COLUMNS)
+      .eq('workspace_id', ctx.workspaceId)
+      .is('deleted_at', null)
       .order('created_at', { ascending: false })
 
     if (error) throw new DatabaseError('Failed to fetch warehouses', error)
-    
-    const result = data || []
+
+    const result = data ?? []
     await memoryCache.set(cacheKey, result, 120)
     return result
   }
 
-  // ─── Create warehouse ─────────────────────────────────────────
-  async createWarehouse(userId: string, data: CreateWarehouse) {
+  async createWarehouse(ctx: TenancyContext, data: CreateWarehouse) {
     const { data: warehouse, error } = await supabase
       .from('warehouses')
       .insert({
         name: data.name,
         location: data.location || '',
         is_active: data.isActive !== false,
-        user_id: userId,
+        workspace_id: ctx.workspaceId,
+        user_id: ctx.userId,
       })
-      .select('id, name, location, is_active, created_at')
+      .select(WAREHOUSE_COLUMNS)
       .single()
 
     if (error) throw new DatabaseError('Failed to create warehouse', error)
 
-    await memoryCache.invalidate(this.getWarehousesCacheKey(userId))
-    
+    await this.invalidate(ctx.workspaceId)
     return warehouse
   }
 
-  // ─── Update warehouse ─────────────────────────────────────────
-  async updateWarehouse(userId: string, id: string, data: UpdateWarehouse) {
+  async updateWarehouse(ctx: TenancyContext, id: string, data: UpdateWarehouse) {
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (data.name !== undefined) updates.name = data.name
     if (data.location !== undefined) updates.location = data.location
@@ -82,273 +101,229 @@ export class WarehouseService {
       .from('warehouses')
       .update(updates)
       .eq('id', id)
-      .eq('user_id', userId)
-      .select('id, name, location, is_active, created_at, updated_at')
+      .eq('workspace_id', ctx.workspaceId)
+      .select(WAREHOUSE_COLUMNS)
       .single()
 
     if (error) throw new DatabaseError('Failed to update warehouse', error)
 
-    await this.invalidateWarehouseCache(userId, id)
-    
+    await this.invalidate(ctx.workspaceId)
     return warehouse
   }
 
-  // ─── Delete warehouse (soft delete) ──────────────────────────
-  async deleteWarehouse(userId: string, id: string): Promise<void> {
+  async deleteWarehouse(ctx: TenancyContext, id: string): Promise<void> {
     const { error } = await supabase
       .from('warehouses')
       .update({ deleted_at: new Date().toISOString() })
       .eq('id', id)
-      .eq('user_id', userId)
+      .eq('workspace_id', ctx.workspaceId)
 
     if (error) throw new DatabaseError('Failed to delete warehouse', error)
 
-    await this.invalidateWarehouseCache(userId, id)
+    await this.invalidate(ctx.workspaceId)
   }
 
-  // ─── Get Warehouse by ID ──────────────────────────────────────
-  async getWarehouse(userId: string, id: string) {
-    const cacheKey = this.getWarehouseCacheKey(userId, id)
-    
+  async getWarehouse(ctx: TenancyContext, id: string) {
+    const cacheKey = this.key(ctx.workspaceId, 'one', id)
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
     const { data, error } = await supabase
       .from('warehouses')
-      .select('id, name, location, is_active, created_at, updated_at')
+      .select(WAREHOUSE_COLUMNS)
       .eq('id', id)
-      .eq('user_id', userId)
-      .eq('deleted_at', null)
-      .single()
+      .eq('workspace_id', ctx.workspaceId)
+      .is('deleted_at', null)
+      .maybeSingle()
 
-    if (error) throw new DatabaseError('Warehouse not found', error)
+    if (error) throw new DatabaseError('Failed to fetch warehouse', error)
+    if (!data) throw new NotFoundError('Warehouse')
 
     await memoryCache.set(cacheKey, data, 300)
     return data
   }
 
-  // ─── Stock Transfer — FULLY FIXED ────────────────────────────
-  async transferStock(userId: string, data: any) {
-    // ✅ گرفتن موجودی از مبدأ و مقصد به صورت موازی
-    const [fromStockResult, toStockResult] = await Promise.all([
-      supabase
-        .from('warehouse_stock')
-        .select('quantity')
-        .eq('warehouse_id', data.fromWarehouseId)
-        .eq('product_id', data.productId)
-        .single(),
-      supabase
-        .from('warehouse_stock')
-        .select('quantity')
-        .eq('warehouse_id', data.toWarehouseId)
-        .eq('product_id', data.productId)
-        .single(),
-    ])
+  /**
+   * Both warehouses must be in THIS workspace before anything moves.
+   *
+   * Without it, a transfer naming another shop's warehouse id would read and
+   * write that shop's stock: the update below is keyed by warehouse and
+   * product, and neither of those ids is proof of anything on its own.
+   */
+  private async assertWarehousesInWorkspace(ctx: TenancyContext, ids: string[]): Promise<void> {
+    const unique = [...new Set(ids.filter(Boolean))]
+    if (unique.length === 0) return
 
-    const fromStock = fromStockResult.data
-    const toStock = toStockResult.data
+    const { data, error } = await supabase
+      .from('warehouses')
+      .select('id')
+      .eq('workspace_id', ctx.workspaceId)
+      .is('deleted_at', null)
+      .in('id', unique)
 
-    if (fromStockResult.error || !fromStock || fromStock.quantity < data.quantity) {
-      throw new DatabaseError('Insufficient stock in source warehouse')
-    }
-
-    // ✅ FIX: استفاده از async IIFE برای تبدیل به Promise
-    const operations: Promise<any>[] = []
-
-    // 1. کاهش موجودی مبدأ
-    operations.push(
-      (async () => {
-        const result = await supabase
-          .from('warehouse_stock')
-          .update({ quantity: fromStock.quantity - data.quantity })
-          .eq('warehouse_id', data.fromWarehouseId)
-          .eq('product_id', data.productId)
-        return result
-      })()
-    )
-
-    // 2. افزایش موجودی مقصد
-    if (toStock) {
-      operations.push(
-        (async () => {
-          const result = await supabase
-            .from('warehouse_stock')
-            .update({ quantity: toStock.quantity + data.quantity })
-            .eq('warehouse_id', data.toWarehouseId)
-            .eq('product_id', data.productId)
-          return result
-        })()
-      )
-    } else {
-      operations.push(
-        (async () => {
-          const result = await supabase
-            .from('warehouse_stock')
-            .insert({
-              warehouse_id: data.toWarehouseId,
-              product_id: data.productId,
-              quantity: data.quantity,
-              user_id: userId,
-            })
-          return result
-        })()
-      )
-    }
-
-    // 3. ثبت حرکت
-    operations.push(
-      (async () => {
-        const result = await supabase
-          .from('stock_movements')
-          .insert({
-            product_id: data.productId,
-            type: 'transfer',
-            quantity: data.quantity,
-            from_warehouse_id: data.fromWarehouseId,
-            to_warehouse_id: data.toWarehouseId,
-            notes: data.notes || '',
-            user_id: userId,
-            reference_type: 'transfer',
-          })
-        return result
-      })()
-    )
-
-    // ✅ اجرای همه عملیات‌ها به صورت موازی
-    const results = await Promise.all(operations)
-
-    for (const result of results) {
-      if (result.error) {
-        console.error('Stock transfer error:', result.error)
-        throw new DatabaseError('Failed to transfer stock', result.error)
-      }
-    }
-
-    await this.invalidateStockCache(data.fromWarehouseId, data.toWarehouseId)
-
-    return { success: true, transferred: data.quantity }
+    if (error) throw new DatabaseError('Failed to verify warehouses', error)
+    if ((data ?? []).length !== unique.length) throw new NotFoundError('Warehouse')
   }
 
-  // ─── Get Stock by warehouse ──────────────────────────────────
-  async getStockByWarehouse(userId: string, warehouseId: string) {
-    const cacheKey = this.getWarehouseStockCacheKey(warehouseId)
-    
+  // ─── Transfers ────────────────────────────────────────────────
+
+  /**
+   * Move stock between two warehouses of the same business.
+   *
+   * The arithmetic happens inside `warehouse_transfer_stock`, in one
+   * transaction, with the source row locked. Doing it here — read both sides,
+   * subtract, write back — lets two transfers of the last unit both read it as
+   * available, and the second write silently recreates stock the first spent.
+   *
+   * A transfer does NOT touch cost layers: the goods have not been consumed,
+   * they have only changed shelf. Their cost travels with them.
+   */
+  async transferStock(ctx: TenancyContext, data: any) {
+    const quantity = Number(data.quantity) || 0
+    if (quantity <= 0) throw new ValidationError('WAREHOUSE_TRANSFER_QUANTITY_INVALID')
+    if (data.fromWarehouseId === data.toWarehouseId) {
+      throw new ValidationError('WAREHOUSE_TRANSFER_SAME_WAREHOUSE')
+    }
+
+    await this.assertWarehousesInWorkspace(ctx, [data.fromWarehouseId, data.toWarehouseId])
+
+    const { data: result, error } = await supabase.rpc('warehouse_transfer_stock', {
+      p_workspace_id: ctx.workspaceId,
+      p_user_id: ctx.userId,
+      p_payload: {
+        product_id: data.productId,
+        from_warehouse_id: data.fromWarehouseId,
+        to_warehouse_id: data.toWarehouseId,
+        quantity,
+        notes: data.notes || '',
+      },
+    })
+
+    if (error) {
+      const code = /\b([A-Z][A-Z_]{6,})\b/.exec(error.message ?? '')?.[1]
+      if (code === 'WAREHOUSE_INSUFFICIENT_STOCK') throw new ConflictError(code)
+      if (code?.startsWith('WAREHOUSE_')) throw new ValidationError(code)
+      throw new DatabaseError('Failed to transfer stock', error)
+    }
+
+    await this.invalidate(ctx.workspaceId)
+
+    return { success: true, transferred: quantity, ...(result as object) }
+  }
+
+  // ─── Stock reads ──────────────────────────────────────────────
+
+  async getStockByWarehouse(ctx: TenancyContext, warehouseId: string) {
+    await this.assertWarehousesInWorkspace(ctx, [warehouseId])
+
+    const cacheKey = this.key(ctx.workspaceId, 'stock', warehouseId)
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
     const { data, error } = await supabase
       .from('warehouse_stock')
-      .select(`
+      .select(
+        `
         quantity,
         product:products(id, name, sku, sell_price, quantity, unit)
-      `)
+      `,
+      )
       .eq('warehouse_id', warehouseId)
-      .eq('user_id', userId)
+      .eq('workspace_id', ctx.workspaceId)
 
     if (error) throw new DatabaseError('Failed to fetch stock', error)
-    
-    const result = data || []
+
+    const result = data ?? []
     await memoryCache.set(cacheKey, result, 60)
     return result
   }
 
-  // ─── Get Product Stock in all warehouses ─────────────────────
-  async getProductStock(userId: string, productId: string) {
-    const cacheKey = `warehouse:product:${productId}`
-    
+  async getProductStock(ctx: TenancyContext, productId: string) {
+    const cacheKey = this.key(ctx.workspaceId, 'product', productId)
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
     const { data, error } = await supabase
       .from('warehouse_stock')
-      .select(`
+      .select(
+        `
         quantity,
         warehouse:warehouses(id, name, location)
-      `)
+      `,
+      )
       .eq('product_id', productId)
-      .eq('user_id', userId)
+      .eq('workspace_id', ctx.workspaceId)
 
     if (error) throw new DatabaseError('Failed to fetch product stock', error)
 
-    const result = data || []
+    const result = data ?? []
     await memoryCache.set(cacheKey, result, 120)
     return result
   }
 
-  // ─── Get Low Stock Items ──────────────────────────────────────
-  async getLowStockItems(userId: string, threshold: number = 10) {
-    const cacheKey = `warehouse:low_stock:${userId}:${threshold}`
-    
+  async getLowStockItems(ctx: TenancyContext, threshold: number = 10) {
+    const cacheKey = this.key(ctx.workspaceId, 'low-stock', threshold)
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
     const { data, error } = await supabase
       .from('warehouse_stock')
-      .select(`
+      .select(
+        `
         quantity,
         product:products(id, name, sku, min_stock_level),
         warehouse:warehouses(id, name)
-      `)
-      .eq('user_id', userId)
+      `,
+      )
+      .eq('workspace_id', ctx.workspaceId)
       .lt('quantity', threshold)
       .order('quantity', { ascending: true })
 
     if (error) throw new DatabaseError('Failed to fetch low stock items', error)
 
-    const result = data || []
+    const result = data ?? []
     await memoryCache.set(cacheKey, result, 300)
     return result
   }
 
-  // ─── Get Stock Movement History ──────────────────────────────
-  async getStockMovements(userId: string, productId?: string, limit: number = 50) {
-    const cacheKey = `warehouse:movements:${userId}:${productId || 'all'}:${limit}`
-    
+  /**
+   * The movement history for the workspace.
+   *
+   * Read by `user_id` before, so a shopkeeper could not see the movements
+   * their own staff had made — in a warehouse both of them share.
+   */
+  async getStockMovements(ctx: TenancyContext, productId?: string, limit: number = 50) {
+    const cacheKey = this.key(ctx.workspaceId, 'movements', productId ?? 'all', limit)
+
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
     let query = supabase
       .from('stock_movements')
-      .select(`
-        id, type, quantity, notes, created_at,
+      .select(
+        `
+        id, type, quantity, notes, unit_cost, total_cost, created_at,
         from_warehouse:warehouses!from_warehouse_id(id, name),
         to_warehouse:warehouses!to_warehouse_id(id, name),
         product:products(id, name, sku)
-      `)
-      .eq('user_id', userId)
+      `,
+      )
+      .eq('workspace_id', ctx.workspaceId)
       .order('created_at', { ascending: false })
       .limit(Math.min(limit, 100))
 
-    if (productId) {
-      query = query.eq('product_id', productId)
-    }
+    if (productId) query = query.eq('product_id', productId)
 
     const { data, error } = await query
 
     if (error) throw new DatabaseError('Failed to fetch stock movements', error)
 
-    const result = data || []
+    const result = data ?? []
     await memoryCache.set(cacheKey, result, 60)
     return result
   }
-
-  // ─── Invalidate Cache ─────────────────────────────────────────
-  private async invalidateWarehouseCache(userId: string, warehouseId?: string) {
-    await memoryCache.invalidate(this.getWarehousesCacheKey(userId))
-    if (warehouseId) {
-      await memoryCache.invalidate(this.getWarehouseCacheKey(userId, warehouseId))
-      await memoryCache.invalidate(this.getWarehouseStockCacheKey(warehouseId))
-    }
-  }
-
-  private async invalidateStockCache(...warehouseIds: string[]) {
-    for (const id of warehouseIds) {
-      await memoryCache.invalidate(this.getWarehouseStockCacheKey(id))
-    }
-    await memoryCache.invalidate('warehouse:product:*')
-    await memoryCache.invalidate('warehouse:low_stock:*')
-    await memoryCache.invalidate('warehouse:movements:*')
-  }
 }
-
-export default WarehouseService

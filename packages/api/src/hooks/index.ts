@@ -21,3 +21,12 @@ export {
   type UpdateFollowUpInput,
   type FollowUpFilters,
 } from './sales-followup'
+
+// ─── Tier 1/2 capabilities ───────────────────────────────────────────────────
+// Each of these backs exactly one destination in NAV_CONTRACT.
+export * from './till'
+export * from './assets'
+export * from './bank'
+export * from './budgets'
+export * from './timesheets'
+export * from './expiry'

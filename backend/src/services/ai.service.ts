@@ -4,6 +4,8 @@
 // ============================================
 
 import { supabase } from '../db'
+import { AccountingService } from './accounting'
+import { InsightsService } from './insights'
 import { AIQuery, AIInsight } from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
 import { CacheKeys, withCacheKey } from '../utils/cache'
@@ -19,6 +21,9 @@ interface AIResponse {
 }
 
 export class AIService {
+  private readonly accounting = new AccountingService()
+  private readonly insights = new InsightsService()
+
   // ─── Process Query ──────────────────────────────────────
   /**
    * The AI answers questions ABOUT the shared book, so every figure it quotes
@@ -48,10 +53,10 @@ export class AIService {
         return await this.handleCustomerQuery(workspaceId)
       }
       if (this.hasKeywords(lowerQuestion, ['سود', 'profit', 'زیان', 'loss', 'مالی', 'financial'])) {
-        return await this.handleFinancialQuery(userId)
+        return await this.handleFinancialQuery(ctx)
       }
       if (this.hasKeywords(lowerQuestion, ['هزینه', 'cost', 'expense', 'خرج'])) {
-        return await this.handleExpenseQuery(userId)
+        return await this.handleExpenseQuery(ctx)
       }
 
       return this.handleGeneralQuery(userId, question)
@@ -258,84 +263,138 @@ export class AIService {
   }
 
   // ─── Financial Query ──────────────────────────────────────
-  private async handleFinancialQuery(userId: string): Promise<AIResponse> {
-    const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
-    const today = new Date().toISOString().split('T')[0]
+  /**
+   * "How am I doing this month?"
+   *
+   * ⚠️ WHAT THIS REPLACES, AND WHY IT MATTERED
+   *
+   * This read `ledger_entries` — a LEGACY table that is not the accounting
+   * core's ledger and is not workspace-scoped — filtered by `user_id`. Three
+   * things followed, each worse than the last:
+   *
+   *   1. The figure disagreed with the income statement, because it came from
+   *      a different set of rows than the one the reports read.
+   *   2. It was scoped to the ACTOR, so two members of the same shop got two
+   *      different answers to "what did WE earn".
+   *   3. It presented both as fact, with `confidence: 0.85` attached to a
+   *      number nobody could reconcile.
+   *
+   * The figures now come from the same cores the statements read: the income
+   * statement for revenue and expense, the insights core for profit and
+   * margin. The AI layer PHRASES them. It does not compute them, and the
+   * evidence it was given travels back with the answer so the claim can be
+   * checked rather than believed.
+   */
+  private async handleFinancialQuery(ctx: TenancyContext): Promise<AIResponse> {
+    const now = new Date()
+    const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
+    const today = now.toISOString().slice(0, 10)
 
-    // ✅ دو کوئری موازی: ماه جاری و امروز
-    const [monthResult, todayResult] = await Promise.all([
-      supabase
-        .from('ledger_entries')
-        .select('debit, credit, entry_date')
-        .eq('user_id', userId) // ledger_entries is not workspace-scoped yet
-        .gte('entry_date', firstOfMonth),
-      supabase
-        .from('ledger_entries')
-        .select('debit, credit')
-        .eq('user_id', userId) // ledger_entries is not workspace-scoped yet
-        .gte('entry_date', today),
+    const [statement, summary] = await Promise.all([
+      this.accounting.getIncomeStatement(ctx, firstOfMonth, today),
+      this.insights.getPeriodSummary(ctx, firstOfMonth, today),
     ])
 
-    const monthEntries = monthResult.data || []
-    const todayEntries = todayResult.data || []
+    // The statement's own field names, not guessed ones: `revenue` and
+    // `expenses` are ARRAYS of accounts; the totals are named separately.
+    const revenue = statement.totalRevenue
+    const expenses = statement.totalExpenses
+    const netProfit = statement.netIncome
 
-    const totalRevenue = monthEntries.reduce((s: number, e: any) => s + Number(e.credit), 0)
-    const totalExpenses = monthEntries.reduce((s: number, e: any) => s + Number(e.debit), 0)
-    const netProfit = totalRevenue - totalExpenses
-
-    const todayRevenue = todayEntries.reduce((s: number, e: any) => s + Number(e.credit), 0)
-    const todayExpenses = todayEntries.reduce((s: number, e: any) => s + Number(e.debit), 0)
+    const grossProfit = summary.grossProfit
+    const marginPercent = summary.grossMarginPercent
 
     const statusEmoji = netProfit >= 0 ? '🟢' : '🔴'
     const statusText = netProfit >= 0 ? 'سود' : 'زیان'
 
-    let answer = `${statusEmoji} ${statusText} این ماه: ${Math.abs(netProfit).toLocaleString()} افغانی. `
-    answer += `درآمد: ${totalRevenue.toLocaleString()}، هزینه: ${totalExpenses.toLocaleString()}. `
-    answer += `درآمد امروز: ${todayRevenue.toLocaleString()}، هزینه امروز: ${todayExpenses.toLocaleString()}.`
+    let answer = `${statusEmoji} ${statusText} خالص این ماه: ${Math.abs(netProfit).toLocaleString()} افغانی. `
+    answer += `درآمد: ${revenue.toLocaleString()}، هزینه: ${expenses.toLocaleString()}. `
+    answer += `سود ناخالص: ${grossProfit.toLocaleString()}`
+    // A margin is genuinely absent on zero revenue. Rendering it as 0% would
+    // invite the wrong conclusion, so it is simply not claimed.
+    answer += marginPercent === null ? '.' : ` (حاشیه ${marginPercent}٪).`
 
     return {
       answer,
-      confidence: 0.85,
-      sources: [{ type: 'ledger_entries', description: 'ثبت‌های حسابداری ماه جاری' }],
+      // Not a guess dressed as a probability: these figures are the same ones
+      // the income statement shows, so the answer is exactly as certain as
+      // the statement is.
+      confidence: 1,
+      sources: [
+        { type: 'income_statement', description: `صورت سود و زیان ${firstOfMonth} تا ${today}` },
+        { type: 'cost_consumptions', description: 'بهای تمام‌شده از لایه‌های مصرف‌شده' },
+      ],
       suggestions: [
         'مشاهده صورت سود و زیان',
         'مشاهده ترازنامه',
-        'گزارش گردش نقدی',
+        'چرا سود تغییر کرد؟',
         'مشاهده هزینه‌ها',
       ],
-      data: { totalRevenue, totalExpenses, netProfit, todayRevenue, todayExpenses },
+      data: {
+        period: { from: firstOfMonth, to: today },
+        revenue,
+        expenses,
+        netProfit,
+        grossProfit,
+        grossMarginPercent: marginPercent,
+        /** Where each number came from, so the answer is checkable. */
+        evidence: {
+          revenue: 'accounting.getIncomeStatement',
+          expenses: 'accounting.getIncomeStatement',
+          grossProfit: 'insights.getPeriodSummary (revenue − consumed cost layers)',
+        },
+      },
     }
   }
 
   // ─── Expense Query ──────────────────────────────────────
-  private async handleExpenseQuery(userId: string): Promise<AIResponse> {
-    const firstOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
+  /**
+   * "What did I spend this month?"
+   *
+   * Same correction as the profit answer: the expense lines come from the
+   * workspace's POSTED journal entries against expense accounts, not from a
+   * legacy per-user table. An expense the shop's bookkeeper entered is the
+   * shop's expense, whoever asks.
+   */
+  private async handleExpenseQuery(ctx: TenancyContext): Promise<AIResponse> {
+    const now = new Date()
+    const firstOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
+    const today = now.toISOString().slice(0, 10)
 
-    const { data: expenses } = await supabase
-      .from('ledger_entries')
-      .select('debit, description, entry_date')
-      .eq('user_id', userId) // ledger_entries is not workspace-scoped yet
-      .gte('entry_date', firstOfMonth)
-      .order('debit', { ascending: false })
-      .limit(10)
+    const statement = await this.accounting.getIncomeStatement(ctx, firstOfMonth, today)
 
-    const totalExpenses = expenses?.reduce((s: number, e: any) => s + Number(e.debit), 0) || 0
+    // `statement.expenses` is the list of expense ACCOUNTS with their period
+    // balance — the same rows the income statement renders.
+    const lines = statement.expenses
+      .map((row) => ({ label: row.accountName, amount: row.balance }))
+      .filter((row) => row.amount > 0)
+      .sort((a, b) => b.amount - a.amount)
+
+    const totalExpenses = statement.totalExpenses
 
     let answer = `مجموع هزینه‌های این ماه: ${totalExpenses.toLocaleString()} افغانی. `
-    if (expenses && expenses.length > 0) {
-      const topExpenses = expenses
+    if (lines.length > 0) {
+      answer += `بزرگ‌ترین سرفصل‌ها: ${lines
         .slice(0, 5)
-        .map((e: any) => `${e.description || 'بدون توضیح'}: ${Number(e.debit).toLocaleString()}`)
-        .join('، ')
-      answer += `بزرگترین هزینه‌ها: ${topExpenses}.`
+        .map((row) => `${row.label}: ${row.amount.toLocaleString()}`)
+        .join('، ')}.`
+    } else {
+      // Said plainly rather than reported as zero: "no expense accounts have
+      // been posted to" and "you spent nothing" are different facts.
+      answer += 'هنوز هیچ سندی روی حساب‌های هزینه ثبت نشده است.'
     }
 
     return {
       answer,
-      confidence: 0.85,
-      sources: [{ type: 'ledger_entries', description: 'هزینه‌های ماه جاری' }],
+      confidence: 1,
+      sources: [{ type: 'income_statement', description: `هزینه‌های ${firstOfMonth} تا ${today}` }],
       suggestions: ['مشاهده همه هزینه‌ها', 'دسته‌بندی هزینه‌ها', 'گزارش هزینه'],
-      data: { totalExpenses, topExpenses: expenses?.slice(0, 5) || [] },
+      data: {
+        period: { from: firstOfMonth, to: today },
+        totalExpenses,
+        topExpenses: lines.slice(0, 5),
+        evidence: { totalExpenses: 'accounting.getIncomeStatement' },
+      },
     }
   }
 

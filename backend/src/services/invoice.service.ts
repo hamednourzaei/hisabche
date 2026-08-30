@@ -15,7 +15,16 @@
 import { supabase } from '../db'
 import { WorkflowService } from '../services/workflow.service'
 import { NotificationService } from '../services/notification.service'
-import { CreateInvoice, UpdateInvoice, InvoiceFilters } from '@hisabche/validation'
+import {
+  CreateInvoice,
+  UpdateInvoice,
+  InvoiceFilters,
+  type AccountRole,
+} from '@hisabche/validation'
+import { ledger, type DraftLine } from './accounting'
+import { costing } from './inventory-costing'
+import { rules } from './rules'
+import { tax } from './tax'
 import { DatabaseError, NotFoundError } from '../errors/database.error'
 import { memoryCache } from '../utils/pagination'
 import { ActivityService } from './activity.service'
@@ -566,7 +575,13 @@ export class InvoiceService {
   }
 
   // ─── Create Invoice ──────────────────────────────────────────────────────
-  async create(ctx: TenancyContext, data: CreateInvoice) {
+  /**
+   * `branchId` is the branch the request resolved to, or null for a business
+   * with no branches — which is most of them. It is stamped on the invoice so
+   * a two-shop business can ask how each shop did; it is NOT a security
+   * boundary, and it never widens what the workspace already authorized.
+   */
+  async create(ctx: TenancyContext, data: CreateInvoice, branchId: string | null = null) {
     const { workspaceId, userId } = ctx
     const invoiceNumber = await this.generateInvoiceNumber()
 
@@ -574,6 +589,7 @@ export class InvoiceService {
       .from('invoices')
       .insert({
         invoice_number: invoiceNumber,
+        branch_id: branchId,
         type: data.type,
         date: data.date || new Date().toISOString(),
         due_date: data.dueDate || null,
@@ -582,6 +598,9 @@ export class InvoiceService {
         subtotal: data.subtotal || 0,
         discount_total: data.discountTotal || 0,
         discount_type: data.discountType || 'fixed',
+        // The flat rate the client sent is kept for backward compatibility with
+        // screens that still show it, but it decides nothing: the tax core
+        // computes the real figures below and they overwrite these.
         tax_rate: data.taxRate || 0,
         tax_total: data.taxTotal || 0,
         total: data.total || 0,
@@ -763,15 +782,37 @@ export class InvoiceService {
     // ─── پس‌زمینه ──────────────────────────────────────────────────────────
     this.invalidateWorkspaceCache(workspaceId)
 
-    this.createAccountingEntries(ctx, invoice.id, {
-      ...data,
-      invoiceNumber,
-      total: data.total || 0,
-    }).catch((err) => console.error('Accounting entry failed:', err))
-
-    this.tryStartWorkflow(ctx, invoice.id, Number(data.total || 0)).catch((err) =>
-      console.error('Workflow failed:', err),
+    // Tax, computed by the tax core and FROZEN onto the document.
+    //
+    // Not `total × rate`: that cannot express a per-item rate, a tax-inclusive
+    // retail price, a compound charge or withholding — and it gives a
+    // different answer than the tax return does. The snapshot is what lets an
+    // invoice written offline reproduce its own figures at sync instead of
+    // being silently re-rated.
+    this.applyTax(ctx, invoice.id, data).catch((err) =>
+      console.error(`[InvoiceService] tax computation failed for ${invoice.id}:`, err),
     )
+
+    // Costing FIRST, then the ledger: the journal entry needs the cost that
+    // was actually consumed, and only the costing core can say what that was.
+    // Chaining them also stops a failed costing run from booking a sale with
+    // a made-up cost of goods.
+    this.applyCosting(ctx, invoice.id, String(data.type ?? 'sale'), data.items ?? [], data.date)
+      .then((cogs) =>
+        this.createAccountingEntries(ctx, invoice.id, {
+          ...data,
+          invoiceNumber,
+          total: data.total || 0,
+          costOfGoodsSold: cogs,
+        }),
+      )
+      .catch((err) => console.error('Accounting entry failed:', err))
+
+    this.tryStartWorkflow(ctx, invoice.id, Number(data.total || 0), {
+      type: data.type,
+      currency: data.currency,
+      customerId: data.customerId ?? null,
+    }).catch((err) => console.error('Workflow failed:', err))
 
     return this.getById(invoice.id, ctx)
   }
@@ -1029,6 +1070,22 @@ export class InvoiceService {
         quantity: Number(row.quantity) || 0,
       }))
       await this.batchUpdateStock(reversal, ctx, (direction * -1) as 1 | -1)
+
+      // Give the consumed cost layers their quantities back before the old
+      // lines are deleted. Without this an edited sale keeps holding stock it
+      // no longer sells, and the layers it drew from stay short for good.
+      if (direction === -1) {
+        await costing
+          .releaseDocument(ctx, 'invoice', invoiceId)
+          .catch((err) => console.error('[InvoiceService] cost release failed:', err))
+      } else {
+        // A purchase edit would have to unwind layers that later sales may
+        // already have consumed. That is a revaluation, not a release, and it
+        // belongs with the backdated-entry work rather than being faked here.
+        console.warn(
+          `[InvoiceService] purchase ${invoiceId} edited: existing cost layers were left as they are`,
+        )
+      }
     }
 
     await supabase.from('invoice_items').delete().eq('invoice_id', invoiceId)
@@ -1056,6 +1113,11 @@ export class InvoiceService {
 
     await this.insertItemDetails(items, inserted, invoiceId, ctx.workspaceId)
     await this.batchUpdateStock(items, ctx, direction)
+
+    // The new lines carry new ids, so the costing keys differ from the ones
+    // just released and the goods move again rather than being deduplicated
+    // against the old document.
+    await this.applyCosting(ctx, invoiceId, type, items)
   }
 
   // ─── Batch Update Stock ──────────────────────────────────────────────────
@@ -1128,138 +1190,270 @@ export class InvoiceService {
     }
   }
 
+  // ─── Tax ─────────────────────────────────────────────────────────────────
+  /**
+   * Compute the document's tax and freeze what produced it.
+   *
+   * Writes three things: the money figures in MINOR UNITS (so a hundred-line
+   * invoice foots exactly), one `invoice_tax_lines` row per component (which
+   * is what a return is filed from, written once and never recomputed on
+   * read), and the snapshot itself.
+   */
+  private async applyTax(
+    ctx: TenancyContext,
+    invoiceId: string,
+    data: {
+      type?: string | undefined
+      date?: string | undefined
+      items?: any[] | undefined
+      customerId?: string | null | undefined
+    },
+  ): Promise<void> {
+    const items = (data.items ?? []).filter((item) => Number(item?.quantity) > 0)
+    if (items.length === 0) return
+
+    const entryDate = (data.date ? String(data.date) : new Date().toISOString()).slice(0, 10)
+
+    const { computed, snapshot } = await tax.computeAndFreeze(ctx, {
+      date: entryDate,
+      lines: items.map((item, index) => ({
+        lineId: String(item.id ?? index),
+        productId: item.productId ?? null,
+        categoryId: item.categoryId ?? null,
+        quantity: Number(item.quantity) || 0,
+        unitPrice: Number(item.unitPrice) || 0,
+        discount: Number(item.discount) || 0,
+      })),
+    })
+
+    // No rule matched any line: this workspace has not configured tax. That is
+    // a legitimate state — not every shop here is registered — and it must not
+    // write empty rows that would appear on a return as zero-rated turnover.
+    const hasTax = computed.summary.length > 0
+    if (!hasTax) return
+
+    const { error } = await supabase
+      .from('invoices')
+      .update({
+        net_minor: computed.netMinor,
+        tax_minor: computed.taxMinor,
+        withholding_minor: computed.withholdingMinor,
+        total_minor: computed.totalMinor,
+        rounding_residual_minor: computed.roundingResidualMinor,
+        tax_snapshot: snapshot,
+        tax_config_version: snapshot.configVersion,
+      })
+      .eq('id', invoiceId)
+      .eq('workspace_id', ctx.workspaceId)
+
+    if (error) throw new DatabaseError('Failed to store the computed tax', error)
+
+    const direction = data.type === 'purchase' ? 'purchase' : 'sale'
+
+    // Upserted on (invoice, component, rate) so a retry rewrites the same rows
+    // rather than doubling the turnover on a tax return.
+    const { error: linesError } = await supabase.from('invoice_tax_lines').upsert(
+      computed.summary.map((row) => ({
+        workspace_id: ctx.workspaceId,
+        invoice_id: invoiceId,
+        component_id: row.componentId,
+        label_key: row.labelKey,
+        treatment: row.treatment,
+        rate: row.rate,
+        base_minor: row.baseMinor,
+        amount_minor: row.amountMinor,
+        direction,
+        entry_date: entryDate,
+      })),
+      { onConflict: 'workspace_id,invoice_id,component_id,rate' },
+    )
+
+    if (linesError) throw new DatabaseError('Failed to store the tax breakdown', linesError)
+  }
+
+  // ─── Costing ─────────────────────────────────────────────────────────────
+  /**
+   * Move the invoice's goods through the costing core and return what the sale
+   * cost.
+   *
+   * A purchase RECEIVES: each line becomes a cost layer holding what was paid
+   * for it, so a later sale can be priced from the purchase it actually drew
+   * from.
+   *
+   * A sale ISSUES: the costing core consumes the oldest layers first and says
+   * what they were worth. That figure — and nothing else — is the cost of
+   * goods sold.
+   *
+   * Both directions are idempotent per invoice line, so a retry does not
+   * receive the same goods twice or sell the same units twice.
+   */
+  private async applyCosting(
+    ctx: TenancyContext,
+    invoiceId: string,
+    type: string,
+    items: any[],
+    date?: string,
+  ): Promise<number> {
+    const entryDate = date ? String(date).slice(0, 10) : new Date().toISOString().slice(0, 10)
+    // Lines without a product are services; they hold no stock and cost
+    // nothing to deliver from inventory.
+    const stocked = (items ?? []).filter((item) => item?.productId && Number(item.quantity) > 0)
+    if (stocked.length === 0) return 0
+
+    let costOfGoodsSold = 0
+
+    for (const [index, item] of stocked.entries()) {
+      const quantity = Number(item.quantity) || 0
+      // The line index makes two lines of the same product on one invoice
+      // distinct, which is what keeps the idempotency key honest.
+      const line = String(item.id ?? index)
+
+      try {
+        if (type === 'purchase') {
+          const lineTotal = Number(item.totalPrice) || quantity * (Number(item.unitPrice) || 0)
+          await costing.recordReceipt(ctx, {
+            productId: item.productId,
+            warehouseId: item.warehouseId ?? null,
+            quantity,
+            // What was actually paid per unit, after the line discount. The
+            // list price would overstate the layer and every profit drawn
+            // from it.
+            unitCost: quantity > 0 ? lineTotal / quantity : 0,
+            entryDate,
+            sourceType: 'invoice',
+            sourceId: invoiceId,
+            sourceLine: line,
+          })
+        } else {
+          const result = await costing.recordIssue(ctx, {
+            productId: item.productId,
+            warehouseId: item.warehouseId ?? null,
+            quantity,
+            entryDate,
+            consumerType: 'invoice',
+            consumerId: invoiceId,
+            consumerLine: line,
+          })
+          costOfGoodsSold += result.totalCost
+        }
+      } catch (err) {
+        // One line failing must not silently cost the whole invoice nothing.
+        // The invoice already exists; what is reported here is that its books
+        // are incomplete, which is a fact somebody has to see.
+        console.error(`[InvoiceService] costing failed for invoice ${invoiceId} line ${line}:`, err)
+        throw err
+      }
+    }
+
+    return Math.round(costOfGoodsSold * 100) / 100
+  }
+
   // ─── Accounting Entries ──────────────────────────────────────────────────
+  /**
+   * Book the invoice in the ledger, through the accounting core's port.
+   *
+   * What this method used to do, and no longer does:
+   *
+   *   It looked accounts up by the literal codes '1000', '1200', '2000',
+   *   '4000' and '5000'. A shop that numbered its chart of accounts any other
+   *   way got no entries at all, and was never told.
+   *
+   *   It stamped `user_id` on the journal rows and no workspace, so the very
+   *   entries it wrote were invisible to the accounting screens, which read
+   *   the ledger by workspace.
+   *
+   *   It inserted the header, inserted the lines, and DELETED the header if
+   *   the second insert failed. A crash in between left a header with no lines
+   *   in the books permanently.
+   *
+   *   It had no idempotency: posting the same invoice twice booked its revenue
+   *   twice.
+   *
+   * All four are now the ledger's problem, which is where they belong. This
+   * method only says what happened in accounting terms.
+   */
   private async createAccountingEntries(
     ctx: TenancyContext,
     invoiceId: string,
-    data: { type: string; total: number; items?: any[]; invoiceNumber?: string; date?: string },
+    data: {
+      type: string
+      total: number
+      items?: any[]
+      invoiceNumber?: string
+      date?: string
+      /**
+       * What the goods actually cost, from the consumed cost layers. Passed in
+       * rather than computed here: this method has no business deciding which
+       * purchase a sale drew from, and when it tried, it used the product's
+       * CURRENT buy price for goods bought at a different one.
+       */
+      costOfGoodsSold?: number
+    },
   ): Promise<void> {
-    const { workspaceId, userId } = ctx
-    try {
-      const { data: accounts } = await supabase
-        .from('accounts')
-        .select('id, code, type')
-        .in('code', ['1200', '4000', '5000', '1000'])
-        .eq('workspace_id', workspaceId)
+    const isPurchase = data.type === 'purchase'
+    const total = Number(data.total) || 0
+    if (total <= 0) return
 
-      if (!accounts || accounts.length < 4) return
+    const needed: AccountRole[] = isPurchase
+      ? ['inventory', 'payable']
+      : ['receivable', 'sales', 'cogs', 'inventory']
 
-      const accountMap: Record<string, string> = {}
-      for (const acc of accounts) accountMap[acc.code] = acc.id
+    const { accounts, missing } = await ledger.resolveAccountsByRole(ctx, needed)
 
-      const receivableId = accountMap['1200']
-      const revenueId = accountMap['4000']
-      const cogsId = accountMap['5000']
-      const inventoryId = accountMap['1000']
-      // 2000 = حساب‌های پرداختنی. اگر در چارت حساب‌ها نباشد، خرید به‌جای آن
-      // روی حساب‌های دریافتنی نمی‌نشیند — بلکه هیچ سند حسابداری ساخته
-      // نمی‌شود، که بهتر از ثبت غلط است.
-      const payableId = accountMap['2000']
+    if (missing.length > 0) {
+      // Not an error the shopkeeper caused, and not a reason to refuse the
+      // invoice — but it is not silence either. Their books will have a gap
+      // until the chart of accounts names these roles.
+      console.warn(
+        `[InvoiceService] invoice ${invoiceId} not booked: no account for ${missing.join(', ')}`,
+      )
+      return
+    }
 
-      if (!receivableId || !revenueId || !cogsId || !inventoryId) return
-      if (data.type === 'purchase' && !payableId) return
+    const lines: DraftLine[] = isPurchase
+      ? [
+          // Goods arrived and we owe the supplier. No revenue is involved —
+          // the version before this booked one, which inflated the income
+          // statement by the value of every purchase.
+          { accountId: accounts.inventory!, debit: total, credit: 0 },
+          { accountId: accounts.payable!, debit: 0, credit: total },
+        ]
+      : [
+          { accountId: accounts.receivable!, debit: total, credit: 0 },
+          { accountId: accounts.sales!, debit: 0, credit: total },
+        ]
 
-      const isPurchase = data.type === 'purchase'
-
-      const { data: journalEntry, error: journalError } = await supabase
-        .from('journal_entries')
-        .insert({
-          date: data.date ? data.date.split('T')[0] : new Date().toISOString().split('T')[0],
-          description: `${isPurchase ? 'فاکتور خرید' : 'فاکتور فروش'} ${
-            data.invoiceNumber || invoiceId.substring(0, 8)
-          }`,
-          reference: invoiceId,
-          user_id: userId,
-        })
-        .select()
-        .single()
-
-      if (journalError || !journalEntry) return
-
-      // ⚠️ FIX: این دو خط برای هر فاکتوری زده می‌شد، از جمله خرید — یعنی هر
-      // خرید یک ردیف «درآمد» در دفتر کل می‌ساخت و صورت سود و زیان را خراب
-      // می‌کرد.
-      //
-      // فروش: بدهکار حساب‌های دریافتنی / بستانکار درآمد.
-      // خرید: بدهکار موجودی کالا / بستانکار حساب‌های پرداختنی — کالا وارد
-      //        انبار شده و ما به تأمین‌کننده بدهکاریم. هیچ درآمدی در کار نیست.
-      const journalLines: any[] = isPurchase
-        ? [
-            {
-              journal_id: journalEntry.id,
-              account_id: inventoryId,
-              debit: data.total,
-              credit: 0,
-              user_id: userId,
-            },
-            {
-              journal_id: journalEntry.id,
-              account_id: payableId,
-              debit: 0,
-              credit: data.total,
-              user_id: userId,
-            },
-          ]
-        : [
-            {
-              journal_id: journalEntry.id,
-              account_id: receivableId,
-              debit: data.total,
-              credit: 0,
-              user_id: userId,
-            },
-            {
-              journal_id: journalEntry.id,
-              account_id: revenueId,
-              debit: 0,
-              credit: data.total,
-              user_id: userId,
-            },
-          ]
-
-      if (data.type === 'sale' && data.items?.length) {
-        const productIds = data.items.map((item) => item.productId)
-        // Scoped: cost of goods must come from THIS workspace's products, or
-        // a foreign product id in the payload would price the journal entry
-        // off another shop's buy price.
-        const { data: products } = await supabase
-          .from('products')
-          .select('id, buy_price')
-          .eq('workspace_id', workspaceId)
-          .in('id', productIds)
-
-        const productPriceMap = new Map()
-        for (const product of products || []) {
-          productPriceMap.set(product.id, product.buy_price || 0)
-        }
-
-        for (const item of data.items) {
-          const itemCost = (productPriceMap.get(item.productId) || 0) * item.quantity
-          journalLines.push(
-            {
-              journal_id: journalEntry.id,
-              account_id: cogsId,
-              debit: itemCost,
-              credit: 0,
-              user_id: userId,
-            },
-            {
-              journal_id: journalEntry.id,
-              account_id: inventoryId,
-              debit: 0,
-              credit: itemCost,
-              user_id: userId,
-            },
-          )
-        }
+    // Cost of goods sold, as the costing core actually consumed it.
+    //
+    // This block used to price the goods at `products.buy_price` — the CURRENT
+    // buy price. A phone bought at 10,000,000 and later restocked at 9,000,000
+    // had both of its sales reported at 9,000,000, overstating the profit on
+    // the first by a million with nothing in the system able to say so.
+    if (!isPurchase) {
+      const cost = Number(data.costOfGoodsSold) || 0
+      if (cost > 0) {
+        lines.push(
+          { accountId: accounts.cogs!, debit: cost, credit: 0 },
+          { accountId: accounts.inventory!, debit: 0, credit: cost },
+        )
       }
+    }
 
-      const { error: linesError } = await supabase.from('journal_lines').insert(journalLines)
-      if (linesError) {
-        await supabase.from('journal_entries').delete().eq('id', journalEntry.id)
-      }
-    } catch (err) {
-      console.error('❌ Error in createAccountingEntries:', err)
+    const outcome = await ledger.postDocument(ctx, {
+      sourceType: 'invoice',
+      sourceId: invoiceId,
+      date: data.date ? data.date.slice(0, 10) : new Date().toISOString().slice(0, 10),
+      description: `${isPurchase ? 'فاکتور خرید' : 'فاکتور فروش'} ${
+        data.invoiceNumber || invoiceId.slice(0, 8)
+      }`,
+      reference: data.invoiceNumber || invoiceId,
+      lines,
+    })
+
+    if (outcome.status === 'skipped') {
+      console.warn(
+        `[InvoiceService] invoice ${invoiceId} not booked: ${outcome.missing.join(', ')}`,
+      )
     }
   }
 
@@ -1283,29 +1477,56 @@ export class InvoiceService {
     ctx: TenancyContext,
     invoiceId: string,
     total: number,
+    data?: {
+      type?: string | undefined
+      currency?: string | undefined
+      customerId?: string | null | undefined
+    },
   ): Promise<void> {
     const { workspaceId } = ctx
     try {
-      const { data: workflows } = await supabase
-        .from('workflows')
-        .select('id')
-        .eq('entity_type', 'invoice')
-        .eq('is_active', true)
-        .is('deleted_at', null)
-        .limit(1)
-
-      const workflow = workflows?.[0]
-      if (!workflow) return
-
-      // The workspace is already authorized in `ctx`; re-reading
-      // workspace_members here would only re-derive what the caller proved.
-      await this.workflowService.startWorkflow(workspaceId, {
-        workflow_id: workflow.id,
-        entity_type: 'invoice',
-        entity_id: invoiceId,
+      // ⚠️ TWO DEFECTS THIS REPLACES.
+      //
+      // The `workflows` query had NO WORKSPACE FILTER, so the first active
+      // invoice workflow in the entire database started approvals on every
+      // shop's invoices.
+      //
+      // And it was unconditional: `total` was accepted as an argument and then
+      // never read, so "invoices over 5,000,000 need the manager" was
+      // impossible to express — every invoice, of every size, went to
+      // approval. Which chain, and whether one is needed at all, is now a
+      // RULE the business writes, not a hardcoded "the first one we find".
+      const decision = await rules.evaluate(ctx, 'invoice', {
+        invoice: { total, type: data?.type, currency: data?.currency },
+        customer: { id: data?.customerId },
       })
-    } catch {
-      /* silent — never block invoice creation */
+
+      if (!decision.requiresApproval) return
+
+      for (const workflowId of decision.workflowIds) {
+        // Scoped: a workflow id a rule names must belong to THIS workspace.
+        const { data: workflows } = await supabase
+          .from('workflows')
+          .select('id')
+          .eq('id', workflowId)
+          .eq('workspace_id', workspaceId)
+          .eq('entity_type', 'invoice')
+          .eq('is_active', true)
+          .is('deleted_at', null)
+          .limit(1)
+
+        if (!workflows?.[0]) continue
+
+        await this.workflowService.startWorkflow(workspaceId, {
+          workflow_id: workflows[0].id,
+          entity_type: 'invoice',
+          entity_id: invoiceId,
+        })
+      }
+    } catch (err) {
+      // Never blocks invoice creation — but no longer silent either. An
+      // approval that failed to start is an approval nobody is waiting on.
+      console.error(`[InvoiceService] approval routing failed for ${invoiceId}:`, err)
     }
   }
 }

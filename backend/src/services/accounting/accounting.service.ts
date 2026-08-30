@@ -1,0 +1,651 @@
+// ============================================
+// backend/src/services/accounting/accounting.service.ts
+//
+// The accounting core's orchestration: it holds the rules from
+// accounting.domain, the statements from accounting.reports and the storage in
+// accounting.repository together, and it is the only object the rest of the
+// backend talks to.
+//
+// It also implements LedgerPort, so invoicing and, later, payments and
+// inventory can book entries without knowing a single account code.
+// ============================================
+
+import {
+  type AccountRole,
+  type CreateAccount,
+  type CreateJournalEntry,
+  type UpdateAccount,
+} from '@hisabche/validation'
+
+import { ConflictError, NotFoundError } from '../../errors/database.error'
+import { ValidationError } from '../../errors/validation.error'
+import { memoryCache } from '../../utils/pagination'
+import type { TenancyContext } from '../tenancy.service'
+import { sod } from '../authorization'
+
+import {
+  collapseLines,
+  dateOnly,
+  isPeriodLocked,
+  nextEntryNumber,
+  normaliseLines,
+  reverseLines,
+  validateAccountPlacement,
+  validateEntryLines,
+  type AccountNode,
+  type DraftLine,
+  type LedgerAccountFacts,
+} from './accounting.domain'
+import {
+  AccountingRepository,
+  domainErrorCode,
+  type AccountRow,
+  type JournalEntryRow,
+} from './accounting.repository'
+import type { BalanceSheet, IncomeStatement } from '@hisabche/validation'
+import {
+  toBalanceSheet,
+  toIncomeStatement,
+  toTrialBalance,
+  trialBalanceTotals,
+} from './accounting.reports'
+import { getCashFlow, getCustomerDebtReport } from './operational-reports'
+import type {
+  LedgerPort,
+  LedgerPostingOutcome,
+  LedgerPostingRequest,
+  LedgerSourceType,
+} from './ledger.port'
+
+/**
+ * Roles inferred from the account codes the old invoice poster hard-coded.
+ *
+ * Only a fallback, and only while `accounts.role` is still being filled in:
+ * a workspace that already had a chart of accounts keeps working after this
+ * change instead of quietly losing its automatic entries. A role set
+ * explicitly on the account always wins.
+ */
+const LEGACY_CODE_ROLES: Record<string, AccountRole> = {
+  '1000': 'inventory',
+  '1200': 'receivable',
+  '2000': 'payable',
+  '4000': 'sales',
+  '5000': 'cogs',
+}
+
+function roleOf(account: AccountRow): AccountRole | null {
+  if (account.role) return account.role as AccountRole
+  return LEGACY_CODE_ROLES[account.code] ?? null
+}
+
+function toFacts(accounts: AccountRow[]): Map<string, LedgerAccountFacts> {
+  return new Map(
+    accounts.map((a) => [
+      a.id,
+      { id: a.id, type: a.type, isGroup: a.isGroup, isActive: a.isActive },
+    ]),
+  )
+}
+
+function toNodes(accounts: AccountRow[]): AccountNode[] {
+  return accounts.map((a) => ({
+    id: a.id,
+    code: a.code,
+    type: a.type,
+    parentId: a.parentId,
+    isGroup: a.isGroup,
+  }))
+}
+
+const REPORT_TTL_SECONDS = 120
+const ACCOUNTS_TTL_SECONDS = 300
+
+export class AccountingService implements LedgerPort {
+  private readonly repo: AccountingRepository
+
+  constructor(repo: AccountingRepository = new AccountingRepository()) {
+    this.repo = repo
+  }
+
+  // ─── Cache ────────────────────────────────────────────────────────────────
+  //
+  // Every key starts `accounting:<workspaceId>:`, and invalidation drops that
+  // whole prefix. The service this replaced built keys like
+  // `trial_balance:<user>:<date>` but invalidated `trial_balance:<user>` with
+  // no date, so a report cached after a posting was never cleared again.
+
+  private key(workspaceId: string, ...parts: (string | number | null)[]) {
+    return `accounting:${workspaceId}:${parts.map((p) => p ?? '-').join(':')}`
+  }
+
+  private async invalidateWorkspace(workspaceId: string) {
+    await memoryCache.invalidate(`accounting:${workspaceId}`)
+  }
+
+  // ─── Chart of accounts ────────────────────────────────────────────────────
+
+  async listAccounts(ctx: TenancyContext): Promise<AccountRow[]> {
+    const cacheKey = this.key(ctx.workspaceId, 'accounts')
+    const cached = await memoryCache.get<AccountRow[]>(cacheKey)
+    if (cached) return cached
+
+    const accounts = await this.repo.listAccounts(ctx.workspaceId)
+    await memoryCache.set(cacheKey, accounts, ACCOUNTS_TTL_SECONDS)
+    return accounts
+  }
+
+  async createAccount(ctx: TenancyContext, data: CreateAccount): Promise<AccountRow> {
+    const existing = await this.repo.listAccounts(ctx.workspaceId)
+
+    const problems = validateAccountPlacement(
+      {
+        id: '',
+        code: data.code,
+        type: data.type,
+        parentId: data.parentId ?? null,
+        isGroup: data.isGroup ?? false,
+      },
+      toNodes(existing),
+    )
+    if (problems.length > 0) throw new ValidationError(problems.join(', '))
+
+    const account = await this.repo.insertAccount(ctx, {
+      code: data.code,
+      name: data.name,
+      type: data.type,
+      role: data.role ?? null,
+      parent_id: data.parentId ?? null,
+      is_group: data.isGroup ?? false,
+      is_active: data.isActive !== false,
+    })
+
+    await this.invalidateWorkspace(ctx.workspaceId)
+    return account
+  }
+
+  /**
+   * What may still be changed about an account once it is in use is narrow on
+   * purpose. Its name can always be corrected. Its ROOT TYPE cannot once
+   * anything is posted to it: moving an account from expense to asset
+   * retroactively rewrites every statement the business has already filed.
+   */
+  async updateAccount(ctx: TenancyContext, id: string, data: UpdateAccount): Promise<AccountRow> {
+    const existing = await this.repo.listAccounts(ctx.workspaceId)
+    const current = existing.find((a) => a.id === id)
+    if (!current) throw new NotFoundError('Account')
+
+    const nextType = data.type ?? current.type
+    const nextIsGroup = data.isGroup ?? current.isGroup
+
+    if (nextType !== current.type || nextIsGroup !== current.isGroup) {
+      if (await this.repo.accountHasPostings(ctx.workspaceId, id)) {
+        throw new ConflictError('ACCOUNT_HAS_POSTINGS')
+      }
+    }
+
+    // A group that still has children cannot become a posting account: its
+    // children would keep rolling up into a total that now also holds money
+    // of its own, and the subtotal would count it twice.
+    if (current.isGroup && !nextIsGroup) {
+      if (await this.repo.accountHasChildren(ctx.workspaceId, id)) {
+        throw new ConflictError('ACCOUNT_HAS_CHILDREN')
+      }
+    }
+
+    const problems = validateAccountPlacement(
+      {
+        id,
+        code: data.code ?? current.code,
+        type: nextType,
+        parentId: data.parentId === undefined ? current.parentId : (data.parentId ?? null),
+        isGroup: nextIsGroup,
+      },
+      toNodes(existing),
+    )
+    if (problems.length > 0) throw new ValidationError(problems.join(', '))
+
+    const values: Record<string, unknown> = {}
+    if (data.code !== undefined) values.code = data.code
+    if (data.name !== undefined) values.name = data.name
+    if (data.type !== undefined) values.type = data.type
+    if (data.role !== undefined) values.role = data.role ?? null
+    if (data.parentId !== undefined) values.parent_id = data.parentId ?? null
+    if (data.isGroup !== undefined) values.is_group = data.isGroup
+    if (data.isActive !== undefined) values.is_active = data.isActive
+
+    const account = await this.repo.updateAccount(ctx.workspaceId, id, values)
+    await this.invalidateWorkspace(ctx.workspaceId)
+    return account
+  }
+
+  async resolveAccountsByRole(
+    ctx: TenancyContext,
+    roles: AccountRole[],
+  ): Promise<{ accounts: Partial<Record<AccountRole, string>>; missing: AccountRole[] }> {
+    const all = await this.listAccounts(ctx)
+    const found: Partial<Record<AccountRole, string>> = {}
+
+    for (const account of all) {
+      if (account.isGroup || !account.isActive) continue
+      const role = roleOf(account)
+      // First by code order, so a chart with two receivable accounts resolves
+      // to the same one on every posting rather than whichever row came back.
+      if (role && roles.includes(role) && !found[role]) found[role] = account.id
+    }
+
+    return { accounts: found, missing: roles.filter((role) => !found[role]) }
+  }
+
+  // ─── Period lock ──────────────────────────────────────────────────────────
+
+  async getPeriodLock(ctx: TenancyContext) {
+    return this.repo.getPeriodLock(ctx.workspaceId)
+  }
+
+  /**
+   * Closing a period is an owner's decision — it is what makes filed figures
+   * un-editable — so a seller may not move the boundary.
+   */
+  async setPeriodLock(ctx: TenancyContext, lockedUntil: string, reason: string) {
+    if (ctx.role !== 'owner' && ctx.role !== 'manager') {
+      throw new ConflictError('ACCOUNTING_PERIOD_LOCK_FORBIDDEN')
+    }
+    await this.repo.setPeriodLock(ctx, dateOnly(lockedUntil), reason)
+    await this.invalidateWorkspace(ctx.workspaceId)
+    return this.repo.getPeriodLock(ctx.workspaceId)
+  }
+
+  private async assertPeriodOpen(ctx: TenancyContext, date: string) {
+    const lock = await this.repo.getPeriodLock(ctx.workspaceId)
+    if (isPeriodLocked(date, lock?.lockedUntil ?? null)) {
+      throw new ConflictError('ACCOUNTING_PERIOD_LOCKED')
+    }
+  }
+
+  // ─── Journal entries ──────────────────────────────────────────────────────
+
+  async listJournalEntries(
+    ctx: TenancyContext,
+    options: { limit?: number | undefined; status?: string | undefined } = {},
+  ): Promise<JournalEntryRow[]> {
+    const limit = Math.min(Math.max(options.limit ?? 50, 1), 200)
+    const cacheKey = this.key(ctx.workspaceId, 'entries', limit, options.status ?? 'all')
+
+    const cached = await memoryCache.get<JournalEntryRow[]>(cacheKey)
+    if (cached) return cached
+
+    const entries = await this.repo.listEntries(ctx.workspaceId, {
+      limit,
+      ...(options.status ? { status: options.status } : {}),
+    })
+    await memoryCache.set(cacheKey, entries, 60)
+    return entries
+  }
+
+  async getJournalEntry(ctx: TenancyContext, id: string): Promise<JournalEntryRow> {
+    const entry = await this.repo.getEntry(ctx.workspaceId, id)
+    if (!entry) throw new NotFoundError('Journal entry')
+    return entry
+  }
+
+  /**
+   * A manual entry. `status` decides whether it lands in the ledger or waits
+   * as a draft; a draft is invisible to every report until it is posted.
+   */
+  async createJournalEntry(
+    ctx: TenancyContext,
+    data: CreateJournalEntry,
+    options: { status?: 'draft' | 'posted' | undefined } = {},
+  ) {
+    const status = options.status ?? 'posted'
+    const date = dateOnly(data.date)
+    const lines = normaliseLines(data.lines as DraftLine[])
+
+    await this.assertPeriodOpen(ctx, date)
+    await this.assertLinesPostable(ctx, lines)
+
+    const entryId = await this.writeEntry(ctx, {
+      date,
+      description: data.description ?? '',
+      reference: data.reference ?? '',
+      status,
+      sourceType: 'manual',
+      sourceId: null,
+      reversalOf: null,
+      lines,
+    })
+
+    await sod.recordAction(ctx, 'ledger.post', 'journal_entry', entryId)
+    await this.invalidateWorkspace(ctx.workspaceId)
+    return this.getJournalEntry(ctx, entryId)
+  }
+
+  /**
+   * Reverse a posted entry.
+   *
+   * The original is left exactly as it was and marked `reversed`; a new entry
+   * with the sides exchanged carries the correction. This is the ONLY way to
+   * undo something in the ledger — there is no update and no delete, because
+   * a record that can be rewritten after the fact is not evidence of anything.
+   */
+  async reverseJournalEntry(
+    ctx: TenancyContext,
+    id: string,
+    options: { date?: string | undefined; reason: string; override?: { reason: string } },
+  ) {
+    const original = await this.getJournalEntry(ctx, id)
+
+    if (original.status !== 'posted') throw new ConflictError('JOURNAL_ENTRY_NOT_POSTED')
+
+    // Posting an entry and reversing it unobserved leaves no net trace of
+    // either. Enforced only where the workspace has asked for it.
+    await sod.assertAllowed(ctx, 'ledger.reverse', 'journal_entry', id, options.override)
+
+    const reversalDate = dateOnly(options.date ?? new Date())
+    // Both dates matter: reversing INTO a closed period reopens filed figures,
+    // and reversing an entry that itself sits in one does the same.
+    await this.assertPeriodOpen(ctx, reversalDate)
+    await this.assertPeriodOpen(ctx, original.date)
+
+    const lines = reverseLines(
+      original.lines.map((line) => ({
+        accountId: line.accountId,
+        debit: line.debit,
+        credit: line.credit,
+      })),
+    )
+
+    await this.assertLinesPostable(ctx, lines)
+
+    const entryId = await this.writeEntry(ctx, {
+      date: reversalDate,
+      description: `برگشت سند ${original.entryNumber ?? original.id.slice(0, 8)} — ${options.reason}`,
+      reference: original.entryNumber ?? original.id,
+      status: 'posted',
+      sourceType: 'reversal',
+      sourceId: original.id,
+      reversalOf: original.id,
+      lines,
+    })
+
+    await this.repo.markReversed(ctx.workspaceId, original.id)
+    await sod.recordAction(ctx, 'ledger.reverse', 'journal_entry', original.id)
+    await this.invalidateWorkspace(ctx.workspaceId)
+
+    return this.getJournalEntry(ctx, entryId)
+  }
+
+  /** Move a draft into the ledger. Re-checks everything at posting time. */
+  async postDraft(ctx: TenancyContext, id: string) {
+    const entry = await this.getJournalEntry(ctx, id)
+    if (entry.status !== 'draft') throw new ConflictError('JOURNAL_ENTRY_NOT_DRAFT')
+
+    await this.assertPeriodOpen(ctx, entry.date)
+    await this.assertLinesPostable(
+      ctx,
+      entry.lines.map((l) => ({ accountId: l.accountId, debit: l.debit, credit: l.credit })),
+    )
+
+    const year = Number(entry.date.slice(0, 4))
+    const sequence = await this.repo.lastEntrySequence(ctx.workspaceId, year)
+
+    const moved = await this.repo.setEntryStatus(ctx.workspaceId, id, 'draft', 'posted', {
+      entry_number: entry.entryNumber ?? nextEntryNumber(year, sequence),
+      posted_at: new Date().toISOString(),
+      posted_by: ctx.userId,
+    })
+    if (!moved) throw new ConflictError('JOURNAL_ENTRY_NOT_DRAFT')
+
+    await this.invalidateWorkspace(ctx.workspaceId)
+    return this.getJournalEntry(ctx, id)
+  }
+
+  // ─── LedgerPort ───────────────────────────────────────────────────────────
+
+  async postDocument(
+    ctx: TenancyContext,
+    request: LedgerPostingRequest,
+  ): Promise<LedgerPostingOutcome> {
+    const date = dateOnly(request.date)
+    const lines = collapseLines(normaliseLines(request.lines))
+
+    if (request.sourceId) {
+      const existing = await this.repo.findEntryBySource(
+        ctx.workspaceId,
+        request.sourceType,
+        request.sourceId,
+      )
+      // Re-saving an invoice must not book its revenue a second time. The
+      // database enforces this too, with a unique index on the source pair.
+      if (existing) return { status: 'already_posted', entryId: existing.id }
+    }
+
+    await this.assertPeriodOpen(ctx, date)
+    await this.assertLinesPostable(ctx, lines)
+
+    const year = Number(date.slice(0, 4))
+    const sequence = await this.repo.lastEntrySequence(ctx.workspaceId, year)
+    const entryNumber = nextEntryNumber(year, sequence)
+
+    const entryId = await this.writeEntry(ctx, {
+      date,
+      description: request.description,
+      reference: request.reference ?? '',
+      status: 'posted',
+      sourceType: request.sourceType,
+      sourceId: request.sourceId,
+      reversalOf: null,
+      entryNumber,
+      lines,
+    })
+
+    await sod.recordAction(ctx, 'ledger.post', 'journal_entry', entryId)
+    await this.invalidateWorkspace(ctx.workspaceId)
+    return { status: 'posted', entryId, entryNumber }
+  }
+
+  async reverseDocument(
+    ctx: TenancyContext,
+    sourceType: LedgerSourceType,
+    sourceId: string,
+    options: { date?: string | undefined; reason: string },
+  ) {
+    const existing = await this.repo.findEntryBySource(ctx.workspaceId, sourceType, sourceId)
+    if (!existing || existing.status !== 'posted') return { status: 'nothing_to_reverse' as const }
+
+    const reversal = await this.reverseJournalEntry(ctx, existing.id, options)
+    return {
+      status: 'posted' as const,
+      entryId: reversal.id,
+      entryNumber: reversal.entryNumber ?? '',
+    }
+  }
+
+  // ─── Reports ──────────────────────────────────────────────────────────────
+
+  async getTrialBalance(
+    ctx: TenancyContext,
+    options: {
+      fromDate?: string | undefined
+      toDate?: string | undefined
+      /** Branches to include. Omit or null for the consolidated statement. */
+      branchIds?: string[] | null | undefined
+    } = {},
+  ) {
+    const fromDate = options.fromDate ? dateOnly(options.fromDate) : null
+    const toDate = dateOnly(options.toDate ?? new Date())
+    const branchIds = options.branchIds ?? null
+    // The branch filter is part of the cache identity. Without it, a member
+    // pinned to one shop would be served the whole chain's figures because
+    // somebody else asked first.
+    const cacheKey = this.key(
+      ctx.workspaceId,
+      'trial',
+      fromDate,
+      toDate,
+      branchIds?.join(',') ?? 'all',
+    )
+
+    const cached = await memoryCache.get<ReturnType<typeof trialBalanceTotals> & { rows: unknown }>(
+      cacheKey,
+    )
+    if (cached) return cached as any
+
+    const rows = toTrialBalance(
+      await this.repo.ledgerTotals(ctx.workspaceId, fromDate, toDate, branchIds),
+    )
+    const result = { rows, ...trialBalanceTotals(rows), fromDate, toDate, branchIds }
+
+    await memoryCache.set(cacheKey, result, REPORT_TTL_SECONDS)
+    return result
+  }
+
+  async getBalanceSheet(
+    ctx: TenancyContext,
+    date: string,
+    branchIds: string[] | null = null,
+  ): Promise<BalanceSheet> {
+    const asOf = dateOnly(date ?? new Date())
+    const cacheKey = this.key(ctx.workspaceId, 'balance-sheet', asOf, branchIds?.join(',') ?? 'all')
+
+    const cached = await memoryCache.get<BalanceSheet>(cacheKey)
+    if (cached) return cached
+
+    // From the day the books opened up to `asOf` — a balance sheet is a
+    // position, not a period, so it has no start date.
+    const result = toBalanceSheet(
+      await this.repo.ledgerTotals(ctx.workspaceId, null, asOf, branchIds),
+      asOf,
+    )
+
+    await memoryCache.set(cacheKey, result, REPORT_TTL_SECONDS)
+    return result
+  }
+
+  async getIncomeStatement(
+    ctx: TenancyContext,
+    fromDate: string,
+    toDate: string,
+    branchIds: string[] | null = null,
+  ): Promise<IncomeStatement> {
+    const from = dateOnly(fromDate)
+    const to = dateOnly(toDate)
+    const cacheKey = this.key(ctx.workspaceId, 'income', from, to, branchIds?.join(',') ?? 'all')
+
+    // Typed on the way OUT of the cache. An untyped read collapses the return
+    // type to `{}` and pushes a cast onto every caller — which is how the AI
+    // service ended up reading field names that did not exist.
+    const cached = await memoryCache.get<IncomeStatement>(cacheKey)
+    if (cached) return cached
+
+    const result = toIncomeStatement(
+      await this.repo.ledgerTotals(ctx.workspaceId, from, to, branchIds),
+      from,
+      to,
+    )
+
+    await memoryCache.set(cacheKey, result, REPORT_TTL_SECONDS)
+    return result
+  }
+
+  /** Receivables and treasury reports. See operational-reports.ts. */
+  async getCashFlow(ctx: TenancyContext, startDate: string, endDate: string) {
+    return getCashFlow(ctx, startDate, endDate)
+  }
+
+  async getCustomerDebtReport(ctx: TenancyContext) {
+    return getCustomerDebtReport(ctx)
+  }
+
+  // ─── Internals ────────────────────────────────────────────────────────────
+
+  /**
+   * The domain rules, checked against THIS workspace's chart of accounts.
+   *
+   * The same checks run again inside the posting function, in the transaction
+   * that does the write. That is not redundancy for its own sake: this pass
+   * produces a readable message listing everything wrong at once, and the
+   * database pass is the one that cannot be raced.
+   */
+  private async assertLinesPostable(ctx: TenancyContext, lines: DraftLine[]) {
+    const accounts = toFacts(await this.listAccounts(ctx))
+    const violations = validateEntryLines(lines, accounts)
+    if (violations.length > 0) {
+      throw new ValidationError(violations.map((v) => `${v.code} (${v.detail})`).join('; '))
+    }
+  }
+
+  private async writeEntry(
+    ctx: TenancyContext,
+    entry: {
+      date: string
+      description: string
+      reference: string
+      status: 'draft' | 'posted'
+      sourceType: string | null
+      sourceId: string | null
+      reversalOf: string | null
+      entryNumber?: string | undefined
+      lines: DraftLine[]
+    },
+  ): Promise<string> {
+    const year = Number(entry.date.slice(0, 4))
+    let entryNumber =
+      entry.entryNumber ??
+      (entry.status === 'posted'
+        ? nextEntryNumber(year, await this.repo.lastEntrySequence(ctx.workspaceId, year))
+        : null)
+
+    // The number is unique per workspace and year in the database, so two
+    // simultaneous posts can compute the same one and one of them loses. That
+    // is a numbering collision, not a failed posting: take the next number and
+    // try again rather than telling the user their entry was rejected.
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        return await this.repo.postEntry(
+          ctx,
+          {
+            date: entry.date,
+            description: entry.description,
+            reference: entry.reference,
+            status: entry.status,
+            entryNumber,
+            sourceType: entry.sourceType,
+            sourceId: entry.sourceId,
+            reversalOf: entry.reversalOf,
+          },
+          entry.lines,
+        )
+      } catch (error) {
+        const code = domainErrorCode(error)
+        if (code === 'ACCOUNTING_PERIOD_LOCKED') throw new ConflictError('ACCOUNTING_PERIOD_LOCKED')
+        if (code && code.startsWith('JOURNAL_')) throw new ValidationError(code)
+
+        const isDuplicate = (error as { code?: string } | null)?.code === '23505'
+        if (!isDuplicate) throw error
+
+        // The other unique index on this table is the one source document may
+        // only be booked once. Losing that race means somebody else posted the
+        // same document a moment ago, which is the outcome we wanted anyway.
+        if (entry.sourceId && entry.sourceType) {
+          const existing = await this.repo.findEntryBySource(
+            ctx.workspaceId,
+            entry.sourceType,
+            entry.sourceId,
+          )
+          if (existing) return existing.id
+        }
+
+        if (!entryNumber || attempt === 2) throw error
+
+        entryNumber = nextEntryNumber(
+          year,
+          await this.repo.lastEntrySequence(ctx.workspaceId, year),
+        )
+      }
+    }
+
+    /* istanbul ignore next — the loop either returns or throws */
+    throw new ConflictError('JOURNAL_ENTRY_NUMBER_CONFLICT')
+  }
+}

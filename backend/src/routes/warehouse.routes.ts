@@ -13,6 +13,7 @@ import {
 } from '@hisabche/validation'
 import { WarehouseService } from '../services/warehouse.service'
 import { authenticate } from '../middleware/auth.middleware'
+import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 
 const toJsonSchema = (schema: any) => {
@@ -30,7 +31,8 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
     {
       preHandler: [
         authenticate,
-        cacheMiddleware({ scope: 'user', ttl: 120, keyPrefix: 'warehouses' }),
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'workspace', ttl: 120, keyPrefix: 'warehouses' }),
       ],
       schema: {
         response: {
@@ -41,7 +43,7 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         // ✅ FIX: listwarehouses → listWarehouses
-        const warehouses = await warehouseService.listWarehouses(request.userId)
+        const warehouses = await warehouseService.listWarehouses(request.tenancy)
         return reply.send(warehouses)
       } catch (err) {
         fastify.log.error(err)
@@ -54,7 +56,7 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/warehouses',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         body: toJsonSchema(createwarehouseSchema),
         response: {
@@ -65,7 +67,7 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const data = createwarehouseSchema.parse(request.body)
-        const warehouse = await warehouseService.createWarehouse(request.userId, data)
+        const warehouse = await warehouseService.createWarehouse(request.tenancy, data)
         await clearCache('warehouses:*')
         return reply.code(201).send(warehouse)
       } catch (err) {
@@ -82,7 +84,7 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/warehouses/:id',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
         body: toJsonSchema(updatewarehouseSchema),
@@ -95,7 +97,7 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
       try {
         const { id } = request.params as { id: string }
         const data = updatewarehouseSchema.parse(request.body)
-        const warehouse = await warehouseService.updateWarehouse(request.userId, id, data)
+        const warehouse = await warehouseService.updateWarehouse(request.tenancy, id, data)
         await clearCache(`warehouse:${id}`)
         await clearCache('warehouses:*')
         return reply.send(warehouse)
@@ -113,7 +115,7 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
   fastify.delete(
     '/api/warehouses/:id',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
       },
@@ -121,7 +123,7 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string }
-        await warehouseService.deleteWarehouse(request.userId, id)
+        await warehouseService.deleteWarehouse(request.tenancy, id)
         await clearCache(`warehouse:${id}`)
         await clearCache('warehouses:*')
         return reply.code(204).send()
@@ -136,7 +138,7 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/stock-transfers',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireWorkspaceContext],
       schema: {
         body: toJsonSchema(stockTransferSchema),
         response: {
@@ -147,7 +149,7 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const data = stockTransferSchema.parse(request.body)
-        const result = await warehouseService.transferStock(request.userId, data)
+        const result = await warehouseService.transferStock(request.tenancy, data)
         await clearCache('warehouses:*')
         await clearCache('stock:*')
         return reply.send(result)
@@ -167,7 +169,8 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
     {
       preHandler: [
         authenticate,
-        cacheMiddleware({ scope: 'user', ttl: 60, keyPrefix: 'warehouse-stock' }),
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'workspace', ttl: 60, keyPrefix: 'warehouse-stock' }),
       ],
       schema: {
         params: toJsonSchema(z.object({ id: z.string().uuid() })),
@@ -179,7 +182,7 @@ export async function warehouseRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { id } = request.params as { id: string }
-        const stock = await warehouseService.getStockByWarehouse(request.userId, id)
+        const stock = await warehouseService.getStockByWarehouse(request.tenancy, id)
         return reply.send(stock)
       } catch (err) {
         fastify.log.error(err)

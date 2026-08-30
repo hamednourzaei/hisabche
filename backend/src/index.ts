@@ -54,6 +54,19 @@ import { eventRoutes } from './routes/event.routes'
 import analyticsRoutes from './routes/analytics.routes'
 import { aiRoutes } from './routes/ai.routes'
 import { accountingRoutes } from './routes/accounting.routes'
+import { inventoryCostingRoutes } from './routes/inventory-costing.routes'
+import { paymentsRoutes } from './routes/payments.routes'
+import { conflictRoutes } from './routes/conflict.routes'
+import { governanceRoutes } from './routes/governance.routes'
+import { branchRoutes } from './routes/branch.routes'
+import { supplierRoutes } from './routes/supplier.routes'
+import { personalizationRoutes } from './routes/personalization.routes'
+import { rulesRoutes } from './routes/rules.routes'
+import { intelligenceRoutes } from './routes/intelligence.routes'
+import { taxRoutes } from './routes/tax.routes'
+import { posRoutes } from './routes/pos.routes'
+import { financeOpsRoutes } from './routes/finance-ops.routes'
+import { operationsRoutes } from './routes/operations.routes'
 import { crmRoutes } from './routes/crm.routes'
 import { manufacturingRoutes } from './routes/manufacturing.routes'
 import { purchasingRoutes } from './routes/purchasing.routes'
@@ -441,6 +454,19 @@ export async function buildServer(): Promise<typeof server> {
   await server.register(aiRoutes)
   // ✅ FIXED (v2.6): accountingRoutes با prefix ثبت می‌شود
   await server.register(accountingRoutes, { prefix: '/api/accounting' })
+  await server.register(inventoryCostingRoutes, { prefix: '/api/inventory' })
+  await server.register(paymentsRoutes, { prefix: '/api/payments' })
+  await server.register(conflictRoutes, { prefix: '/api/conflicts' })
+  await server.register(governanceRoutes, { prefix: '/api/governance' })
+  await server.register(branchRoutes, { prefix: '/api/branches' })
+  await server.register(supplierRoutes, { prefix: '/api/suppliers' })
+  await server.register(personalizationRoutes, { prefix: '/api/personalization' })
+  await server.register(rulesRoutes, { prefix: '/api/rules' })
+  await server.register(intelligenceRoutes, { prefix: '/api/intelligence' })
+  await server.register(taxRoutes, { prefix: '/api/tax' })
+  await server.register(posRoutes, { prefix: '/api/pos' })
+  await server.register(financeOpsRoutes, { prefix: '/api/finance' })
+  await server.register(operationsRoutes, { prefix: '/api/operations' })
   await server.register(crmRoutes)
   await server.register(manufacturingRoutes)
   await server.register(purchasingRoutes)

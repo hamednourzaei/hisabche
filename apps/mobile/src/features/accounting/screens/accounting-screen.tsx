@@ -86,7 +86,7 @@ export function AccountingScreen() {
         ) : null}
         {tab === 'trialBalance' ? (
           <TrialBalanceList
-            data={trialBalance.data ?? []}
+            data={trialBalance.data?.rows ?? []}
             loading={trialBalance.isLoading}
             sign={sign}
             currency={currency}
@@ -213,10 +213,17 @@ function BalanceSheetList({
 }) {
   const { spacing, colors } = useTheme()
   const { t } = useTranslation('mobile')
+  // These three were labelled income / expense / balance, which is not what a
+  // balance sheet has in it. They are the sheet's own three sections, and the
+  // period result is shown separately because it sits inside equity.
   const sections = [
-    { label: t('accounting.income'), value: data?.assets?.total },
-    { label: t('accounting.expense'), value: data?.liabilities?.total },
-    { label: t('accounting.balance'), value: data?.equity?.total },
+    { label: t('accounting.assets', 'دارایی‌ها'), value: data?.totalAssets },
+    { label: t('accounting.liabilities', 'بدهی‌ها'), value: data?.totalLiabilities },
+    { label: t('accounting.equity', 'حقوق صاحبان سهام'), value: data?.totalEquity },
+    {
+      label: t('accounting.currentYearEarnings', 'سود (زیان) دوره'),
+      value: data?.currentYearEarnings,
+    },
   ]
   return (
     <View style={{ gap: spacing.sm }}>
@@ -246,9 +253,9 @@ function IncomeStatementList({
   const { spacing, colors } = useTheme()
   const { t } = useTranslation('mobile')
   const rows = [
-    { label: t('accounting.income'), value: data?.revenue },
-    { label: t('accounting.expense'), value: data?.expenses },
-    { label: t('accounting.balance'), value: data?.netIncome },
+    { label: t('accounting.income'), value: data?.totalRevenue },
+    { label: t('accounting.expense'), value: data?.totalExpenses },
+    { label: t('accounting.netIncome', 'سود خالص'), value: data?.netIncome },
   ]
   return (
     <View style={{ gap: spacing.sm }}>

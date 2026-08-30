@@ -290,3 +290,17 @@ export {
   ActivityEmptyState,
 } from './components/ui/activity'
 export type { ActivityItemDto, ActivityGroupDto, EntitySummaryDto } from '@hisabche/api'
+
+// ---------- Tier 1/2 capabilities ----------
+export { TillContainer } from './components/ui/till/containers/till-container'
+export { TillView } from './components/ui/till/till-view'
+export { AssetsContainer } from './components/ui/assets/containers/assets-container'
+export { AssetsView } from './components/ui/assets/assets-view'
+export { BankContainer } from './components/ui/bank/containers/bank-container'
+export { BankView } from './components/ui/bank/bank-view'
+export { BudgetsContainer } from './components/ui/budgets/containers/budgets-container'
+export { BudgetsView } from './components/ui/budgets/budgets-view'
+export { TimesheetsContainer } from './components/ui/timesheets/containers/timesheets-container'
+export { TimesheetsView } from './components/ui/timesheets/timesheets-view'
+export { ExpiryContainer } from './components/ui/expiry/containers/expiry-container'
+export { ExpiryView } from './components/ui/expiry/expiry-view'

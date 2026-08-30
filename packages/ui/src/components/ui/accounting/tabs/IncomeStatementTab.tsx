@@ -39,8 +39,10 @@ export const IncomeStatementTab = memo(function IncomeStatementTab() {
   const exportData = useMemo<SummaryRow[]>(() => {
     if (!data) return []
     return [
-      { label: 'درآمد', value: data.revenue },
-      { label: 'هزینه‌ها', value: data.expenses },
+      ...data.revenue.map((r) => ({ label: r.accountName, value: r.balance })),
+      ...data.expenses.map((r) => ({ label: r.accountName, value: r.balance })),
+      { label: 'جمع درآمد', value: data.totalRevenue },
+      { label: 'جمع هزینه‌ها', value: data.totalExpenses },
       { label: 'سود خالص', value: data.netIncome },
     ]
   }, [data])
@@ -74,7 +76,7 @@ export const IncomeStatementTab = memo(function IncomeStatementTab() {
                 </span>
               </div>
               <p className="text-lg md:text-xl lg:text-2xl font-bold text-[hsl(var(--fg-primary))]">
-                {data.revenue.toLocaleString()}
+                {data.totalRevenue.toLocaleString()}
               </p>
             </div>
 
@@ -86,7 +88,7 @@ export const IncomeStatementTab = memo(function IncomeStatementTab() {
                 </span>
               </div>
               <p className="text-lg md:text-xl lg:text-2xl font-bold text-[hsl(var(--fg-primary))]">
-                {data.expenses.toLocaleString()}
+                {data.totalExpenses.toLocaleString()}
               </p>
             </div>
 

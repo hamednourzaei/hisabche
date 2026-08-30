@@ -26,7 +26,100 @@ import { describe, expect, it } from 'vitest'
 const SRC = join(__dirname, '..')
 
 /** The shared business entities. Their tenancy is workspace_id, always. */
-const SHARED_TABLES = ['invoices', 'customers', 'products', 'transactions']
+const SHARED_TABLES = [
+  'invoices',
+  'customers',
+  'products',
+  'transactions',
+  // The books. Added when the accounting core moved off user_id: the ledger
+  // was filtered by creator while the chart of accounts it posted to was
+  // filtered by workspace, so the two never saw each other and a second member
+  // of a shop saw an empty ledger.
+  'accounts',
+  'journal_entries',
+  'journal_lines',
+  // The warehouse. Added when the costing core landed: warehouses, their
+  // stock and every stock movement were read by user_id, so a shop's staff
+  // could not see the shelves they share — and two of the cache keys carried
+  // no workspace at all, serving one business's stock to another.
+  'warehouses',
+  'warehouse_stock',
+  'stock_movements',
+  'cost_layers',
+  'cost_consumptions',
+  // Money in and out, and which invoice each part of it settled.
+  'payments',
+  'payment_allocations',
+  // Rejected offline writes hold a full copy of a financial record, so they
+  // are scoped exactly as strictly as the record they came from.
+  'sync_conflicts',
+  // Segregation of duties: what is enforced, who did what, and every bypass.
+  'sod_settings',
+  'sod_actions',
+  'sod_overrides',
+  // Added when the tenant-isolation gate was closed. All five were scoping
+  // SHARED business data by the actor: an employee one member entered was
+  // invisible to the rest of the shop, and the CRM cache keys carried the
+  // user too, so two colleagues held two different pipelines.
+  'employees',
+  'departments',
+  'attendance',
+  'projects',
+  'project_tasks',
+  'interactions',
+  'opportunities',
+  // `audit_logs` is deliberately NOT here. Every route that reads it runs
+  // `platformAdminGuard`: it is a platform-support surface that crosses
+  // workspaces on purpose, and the one cross-workspace read is named
+  // `getUserActivityAcrossWorkspaces` so review can see it. The
+  // member-facing `getUserActivity(ctx)` beside it IS workspace-scoped.
+  'budgets',
+  'budget_commitments',
+  'budget_breaches',
+  'cost_reposts',
+  'cost_repost_adjustments',
+  'landed_costs',
+  'landed_cost_allocations',
+  'project_billing_config',
+  'time_entries',
+  'pos_sessions',
+  'pos_orders',
+  'pos_order_payments',
+  'pos_cash_movements',
+  'fixed_assets',
+  'asset_depreciation_schedule',
+  'bank_statements',
+  'bank_statement_lines',
+  'fx_revaluations',
+  'fx_revaluation_lines',
+  'accounting_dimensions',
+  'dimension_values',
+  'dimension_requirements',
+  'stock_batches',
+  'stock_serials',
+  'lot_allocations',
+  'tax_settings',
+  'tax_components',
+  'tax_rules',
+  'invoice_tax_lines',
+  'business_rules',
+  'rule_decisions',
+  'mdm_merges',
+  // `ui_visibility_profiles` and `ui_visibility_suggestions` are deliberately
+  // NOT here, for the same reason as `member_branches`: a visibility profile is
+  // ONE PERSON's preference and user_id is half its primary key. Both queries
+  // filter on workspace_id first — the workspace is still the boundary — but
+  // "what has this person hidden" cannot be asked without naming the person.
+  'branches',
+  'suppliers',
+  'purchase_orders',
+  'purchase_order_items',
+  // `member_branches` is deliberately NOT here. Like `workspace_members`, it is
+  // a membership table whose natural key IS (workspace, user): "which branches
+  // is this person assigned to" cannot be asked without naming the person.
+  // It is still workspace-scoped — both of its queries filter on workspace_id
+  // first — but user_id there is a key, not a tenancy boundary.
+]
 
 /**
  * Files exempt from the query rule, each for a stated reason. This list may

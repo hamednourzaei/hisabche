@@ -162,7 +162,9 @@ export default async function auditRoutes(fastify: FastifyInstance) {
       try {
         const { userId } = request.params as { userId: string }
         const { limit } = request.query as { limit?: number }
-        const activity = await auditService.getUserActivity(userId, limit)
+        // Platform support path: crosses workspaces on purpose, behind
+        // platformAdminGuard, and named so the review can see it.
+        const activity = await auditService.getUserActivityAcrossWorkspaces(userId, limit)
         return reply.send(activity)
       } catch (err) {
         fastify.log.error(err)

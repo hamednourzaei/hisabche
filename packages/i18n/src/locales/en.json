@@ -386,24 +386,66 @@
       "termsTitle": "Terms of Use",
       "termsIntro": "By using Hisabche, you agree to the terms below. Please read them carefully before using the service.",
       "termsSections": [
-        { "heading": "1. About the service", "body": "Hisabche is an accounting and business-management app offering invoicing, warehouse/inventory management, customer debt tracking, project management, purchasing, manufacturing, and HR tools. Some features work fully offline; others require a connection to our servers." },
-        { "heading": "2. Your account", "body": "You are responsible for keeping your account credentials confidential and for all activity under your account. Contact us immediately if you notice any unauthorized use." },
-        { "heading": "3. Your data", "body": "Business data you enter (invoices, inventory, customers, and similar records) belongs to you. We use it only to provide the service to you and do not sell it to third parties." },
-        { "heading": "4. Acceptable use", "body": "You may not use Hisabche for unlawful activity, to infringe on others' rights, or to attempt unauthorized access to our systems." },
-        { "heading": "5. Availability", "body": "We aim to keep the service available at all times, but brief interruptions may occur for maintenance, updates, or technical issues. The offline app remains usable during these periods." },
-        { "heading": "6. Changes", "body": "We may update these terms from time to time. Material changes will be communicated through the app or by email." },
-        { "heading": "7. Contact", "body": "For questions about these terms, reach us at support@hisabche.com." }
+        {
+          "heading": "1. About the service",
+          "body": "Hisabche is an accounting and business-management app offering invoicing, warehouse/inventory management, customer debt tracking, project management, purchasing, manufacturing, and HR tools. Some features work fully offline; others require a connection to our servers."
+        },
+        {
+          "heading": "2. Your account",
+          "body": "You are responsible for keeping your account credentials confidential and for all activity under your account. Contact us immediately if you notice any unauthorized use."
+        },
+        {
+          "heading": "3. Your data",
+          "body": "Business data you enter (invoices, inventory, customers, and similar records) belongs to you. We use it only to provide the service to you and do not sell it to third parties."
+        },
+        {
+          "heading": "4. Acceptable use",
+          "body": "You may not use Hisabche for unlawful activity, to infringe on others' rights, or to attempt unauthorized access to our systems."
+        },
+        {
+          "heading": "5. Availability",
+          "body": "We aim to keep the service available at all times, but brief interruptions may occur for maintenance, updates, or technical issues. The offline app remains usable during these periods."
+        },
+        {
+          "heading": "6. Changes",
+          "body": "We may update these terms from time to time. Material changes will be communicated through the app or by email."
+        },
+        {
+          "heading": "7. Contact",
+          "body": "For questions about these terms, reach us at support@hisabche.com."
+        }
       ],
       "privacyTitle": "Privacy Policy",
       "privacyIntro": "Your privacy matters to us. This page explains what information we collect and how we use it.",
       "privacySections": [
-        { "heading": "1. Information we collect", "body": "Account details (name, email, phone), business data you enter yourself (invoices, inventory, customers, transactions), and limited technical data (device type, error logs) used to improve app performance." },
-        { "heading": "2. How we use it", "body": "This information is used solely to provide and improve the Hisabche service, offer customer support, and secure your account. We do not sell your information to advertisers." },
-        { "heading": "3. Storage and security", "body": "Your data is stored on secure cloud infrastructure (Supabase) with encryption. The offline app also stores data locally on your device." },
-        { "heading": "4. Sharing with third parties", "body": "We do not share your information with third parties, except essential infrastructure providers (such as our cloud hosting service) bound by confidentiality obligations." },
-        { "heading": "5. Your rights", "body": "You may request access to, correction of, export of, or full deletion of your account data at any time by contacting support." },
-        { "heading": "6. Cookies", "body": "We use only essential cookies to maintain your login session; no advertising or tracking cookies are used." },
-        { "heading": "7. Contact", "body": "For privacy questions, contact support@hisabche.com." }
+        {
+          "heading": "1. Information we collect",
+          "body": "Account details (name, email, phone), business data you enter yourself (invoices, inventory, customers, transactions), and limited technical data (device type, error logs) used to improve app performance."
+        },
+        {
+          "heading": "2. How we use it",
+          "body": "This information is used solely to provide and improve the Hisabche service, offer customer support, and secure your account. We do not sell your information to advertisers."
+        },
+        {
+          "heading": "3. Storage and security",
+          "body": "Your data is stored on secure cloud infrastructure (Supabase) with encryption. The offline app also stores data locally on your device."
+        },
+        {
+          "heading": "4. Sharing with third parties",
+          "body": "We do not share your information with third parties, except essential infrastructure providers (such as our cloud hosting service) bound by confidentiality obligations."
+        },
+        {
+          "heading": "5. Your rights",
+          "body": "You may request access to, correction of, export of, or full deletion of your account data at any time by contacting support."
+        },
+        {
+          "heading": "6. Cookies",
+          "body": "We use only essential cookies to maintain your login session; no advertising or tracking cookies are used."
+        },
+        {
+          "heading": "7. Contact",
+          "body": "For privacy questions, contact support@hisabche.com."
+        }
       ],
       "contactTitle": "Contact Us",
       "contactIntro": "Have a question or need support? We'd be happy to help.",
@@ -428,47 +470,26 @@
       "start1Q": "Is Hisabche free?",
       "start1A": "Yes, the free version of Hisabche is completely free for one business and core features. You can purchase the business version for advanced features.",
       "related": {
-        "pricing": "View Pricing"
+        "access": "User Management"
       },
       "start2Q": "How do I start with Hisabche?",
       "start2A": "Just click the 'Start Free' button and enter your mobile number. No credit card is needed. After verifying your number, Hisabche is ready immediately.",
-      "related": {
-        "signup": "Start Free"
-      },
       "offline1Q": "Do I absolutely need internet?",
       "offline1A": "No. Hisabche works completely offline. You can create invoices, update inventory, and add customers even when the internet is down. As soon as you reconnect, everything syncs automatically.",
-      "related": {
-        "offlineFlow": "How Offline Works"
-      },
       "offline2Q": "If my phone breaks, will I lose my data?",
       "offline2A": "No. All your data is backed up on Hisabche's secure servers. A secure copy is also saved on your phone itself. So you can work with peace of mind.",
-      "related": {
-        "security": "More About Security"
-      },
       "offline3Q": "How many phones can I use it on?",
       "offline3A": "With one account, you can log in simultaneously on multiple devices (mobile, tablet, laptop). Synchronization between devices happens automatically.",
       "acc1Q": "How do I record credit (customer debt)?",
       "acc1A": "When recording a sale, select the 'Credit' option. Hisabche automatically records the customer's debt and sends you a reminder when it's due.",
-      "related": {
-        "debt": "Debtors Feature"
-      },
       "acc2Q": "Can I manage my warehouse inventory?",
       "acc2A": "Yes. For every product you define, its inventory decreases automatically with each sale. You'll also be alerted before an item runs out.",
-      "related": {
-        "inventory": "Inventory Management"
-      },
       "acc3Q": "How can I see my profit and loss?",
       "acc3A": "On the Hisabche dashboard, the profit and loss chart is visible in real-time. You can see your daily, weekly, and monthly profits.",
-      "related": {
-        "reports": "Real-time Reports"
-      },
       "sec1Q": "How secure is my data?",
       "sec1A": "All data is encrypted in transit and at rest. Daily backups are also taken, and you are the complete owner of your data.",
       "sec2Q": "How many users can work simultaneously?",
       "sec2A": "Depending on the plan, you can add multiple users with different access levels. Even in the free plan, you can add an additional accountant.",
-      "related": {
-        "access": "User Management"
-      },
       "dev1Q": "Does it work on older Android phones?",
       "dev1A": "Yes. Hisabche is designed to run smoothly on Android 7+ phones with 2GB of RAM. Even on budget devices.",
       "dev2Q": "Is there a Windows version?",
@@ -640,45 +661,66 @@
     },
     "mainNav": "Main navigation",
     "mobileNav": "Mobile navigation",
-    "more": "More"
+    "more": "More",
+    "billing_description": "Current plan, upgrades and subscription billing",
+    "money_description": "Your income, spending and profit",
+    "approvals_empty": "Nothing awaiting approval",
+    "getPaid_description": "Who owes you how much",
+    "stock_description": "What you have and what is running low",
+    "teamPayroll": "Team & Pay"
   },
   "dateRange": {
     "today": "Today",
     "yesterday": "Yesterday",
-    "7days": "Last 7 Days",
-    "14days": "14 Days",
-    "30days": "Last 30 Days",
-    "60days": "60 Days",
-    "90days": "90 Days",
+    "7days": "Last 7 days",
+    "14days": "Last 14 days",
+    "30days": "Last 30 days",
+    "60days": "Last 60 days",
+    "90days": "Last 90 days",
     "thisMonth": "This Month",
     "lastMonth": "Last Month",
-    "last3Months": "3 Months",
-    "last6Months": "6 Months",
+    "last3Months": "Last 3 Months",
+    "last6Months": "Last 6 Months",
     "thisYear": "This Year",
     "lastYear": "Last Year",
-    "custom": "Custom Range",
-    "apply": "Apply",
-    "pickDate": "Pick...",
-    "selectPeriod": "Select period",
+    "custom": "Custom",
     "from": "From",
     "to": "To",
+    "apply": "Apply",
+    "selectPeriod": "Select Period",
+    "presetsAria": "Preset time periods",
     "jalali": "Jalali",
     "gregorian": "Gregorian",
-    "presetsAria": "Time presets",
     "group": {
       "todayYesterday": "Today & Yesterday",
       "weekMonth": "Week & Month",
-      "longer": "Longer",
+      "longer": "Longer Periods",
       "monthYear": "Month & Year",
       "yearly": "Yearly"
-    }
+    },
+    "pickDate": "Pick date"
   },
   "calendar": {
     "system": "Gregorian",
-    "months": ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+    "months": [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December"
+    ],
     "weekdaysShort": ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"],
     "prev": "Previous",
-    "next": "Next"
+    "next": "Next",
+    "selectMonth": "Select month",
+    "selectYear": "Select year"
   },
   "auth": {
     "signIn": "Sign In",
@@ -713,7 +755,17 @@
     "enterNewPassword": "Enter your new password",
     "invalidToken": "Invalid or expired link",
     "tokenExpired": "This link has expired or has already been used",
-    "passwordMismatch": "Passwords do not match"
+    "passwordMismatch": "Passwords do not match",
+    "brand": "Hisabche",
+    "legal": "Terms & Privacy",
+    "submit": "Submit",
+    "tagline": "Business Management System",
+    "title": "Settings",
+    "biometricEnable": "Enable Biometric Login",
+    "biometricPrompt": "Authenticate with biometrics",
+    "biometricUnlock": "Unlock with biometrics",
+    "invalidEmail": "Invalid email",
+    "invalidPassword": "Invalid password"
   },
   "signup": {
     "fullName": "Full Name",
@@ -733,81 +785,62 @@
     "demoLogin": "Demo Login"
   },
   "common": {
-    "yes": "Yes",
-    "no": "No",
-    "ok": "OK",
-    "or": "or",
-    "and": "and",
-    "all": "All",
-    "none": "None",
-    "selected": "Selected",
-    "today": "Today",
-    "yesterday": "Yesterday",
-    "tomorrow": "Tomorrow",
-    "thisWeek": "This Week",
-    "thisMonth": "This Month",
-    "thisYear": "This Year",
-    "fromDate": "From",
-    "toDate": "To",
-    "status": "Status",
-    "active": "Active",
-    "inactive": "Inactive",
-    "pending": "Pending",
-    "completed": "Completed",
-    "cancelled": "Cancelled",
-    "total": "Total",
-    "sum": "Sum",
-    "average": "Average",
-    "count": "Count",
-    "undo": "Undo",
-    "noName": "User",
-    "saved": "Saved ✅",
-    "saveError": "Error saving data",
-    "cancel": "Cancel",
-    "save": "Save",
-    "back": "Back",
-    "retry": "Retry",
-    "saving": "Saving...",
-    "search": "Search",
-    "filter": "Filter",
-    "export": "Export",
-    "print": "Print",
-    "share": "Share",
-    "confirm": "Confirm",
-    "next": "Next",
-    "previous": "Previous",
-    "submit": "Submit",
-    "clear": "Clear",
-    "refresh": "Refresh",
-    "upload": "Upload",
-    "download": "Download",
-    "copy": "Copy",
+    "noName": "No name",
+    "zero": "0",
     "close": "Close",
-    "open": "Open",
-    "view": "View",
-    "archive": "Archive",
-    "done": "Done",
-    "actions": "...",
+    "clear": "Clear",
+    "increase": "Increase",
+    "decrease": "Decrease",
+    "loading": "Loading...",
+    "retry": "Retry",
+    "save": "Save",
+    "cancel": "Cancel",
     "delete": "Delete",
     "edit": "Edit",
+    "view": "View",
+    "all": "All",
+    "none": "None",
+    "yes": "Yes",
+    "no": "No",
+    "optional": "Optional",
+    "required": "Required",
+    "active": "Active",
+    "back": "Back",
+    "currency": "Currency",
+    "details": "Details",
+    "empty": "Empty",
+    "error": "Error",
+    "logout": "Logout",
+    "refresh": "Refresh",
+    "saved": "Saved",
+    "saving": "Saving...",
+    "search": "Search",
+    "share": "Share",
+    "total": "Total",
+    "unit": "Unit",
     "add": "Add",
-    "columns": "Columns",
-    "more": "More",
-    "less": "Less",
-    "records": "Records",
-    "noData": "No data found",
-    "event": "Event",
-    "description": "Description",
     "amount": "Amount",
+    "bulkPartialFailure": "Some items could not be deleted",
+    "clearSelection": "Clear Selection",
+    "confirmAction": "Confirm Action",
     "date": "Date",
-    "sms": "SMS",
-    "tag": "Tag",
-    "increase": "increase",
-    "decrease": "decrease",
-    "noCustomer": "Unknown Customer",
+    "description": "Description",
+    "event": "Event",
+    "export": "Export",
+    "more": "More",
     "moreItems": "more items",
-    "alert": "Alert",
-    "viewDetails": "View Details"
+    "next": "Next",
+    "noCustomer": "Unknown Customer",
+    "noData": "No data found",
+    "previous": "Previous",
+    "print": "Print",
+    "records": "Records",
+    "select": "Select",
+    "selectAll": "Select All",
+    "selectRow": "Select row",
+    "selectedCount": "{{count}} selected",
+    "status": "Status",
+    "vsLastMonth": "vs last month"
   },
   "invoices": {
     "title": "Invoice",
@@ -942,7 +975,17 @@
       "liter": "Liter",
       "box": "Box",
       "pack": "Pack"
-    }
+    },
+    "addProductDescription": "Add a new product to inventory",
+    "bulkDeleteConfirm": "Are you sure you want to delete selected products?",
+    "currentStock": "Current Stock",
+    "deleteConfirm": "Are you sure you want to delete this product?",
+    "noProductsDesc": "Add your first product to get started",
+    "notFound": "Product not found",
+    "productNamePlaceholder": "Enter product name",
+    "profitPerUnit": "Profit per Unit",
+    "totalProfit": "Total Profit",
+    "totalValue": "Total Value"
   },
   "customers": {
     "title": "Customers",
@@ -1035,24 +1078,114 @@
     "addOpportunity": "Add",
     "ofTotal": "of {{total}}",
     "pay": "Pay",
-    "noInvoices": "No invoices found"
+    "noInvoices": "No invoices found",
+    "transactions": "Transactions",
+    "backToList": "Back to list",
+    "emptyDescription": "Add your first customer to get started",
+    "emptyTitle": "No customers yet",
+    "export": {
+      "statusDebtor": "Debtor",
+      "statusSettled": "Settled"
+    },
+    "exportStatement": "Export Statement",
+    "health": "Health",
+    "lifetimeValue": "Lifetime Value",
+    "newCustomerDetails": "New Customer Details",
+    "noOpenDealsDesc": "Record payment for this customer",
+    "notFoundDesc": "The customer you are looking for does not exist",
+    "openInvoicesCount": "{{count}} open invoices",
+    "payInvoice": "Pay Invoice",
+    "paymentDetails": "Payment Details",
+    "recordPaymentFor": "Record payment for {{name}}",
+    "role": {
+      "all": "All",
+      "buyer": "Buyer",
+      "label": "Role",
+      "seller": "Seller"
+    },
+    "topCustomer": "Top Customer",
+    "totalSales": "Total Sales"
   },
   "crm": {
-    "type": "Type",
-    "subject": "Subject",
-    "description": "Description",
-    "date": "Date",
-    "opportunity": "Opportunity",
-    "stage": "Stage",
-    "value": "Value",
-    "probability": "Probability",
+    "title": "CRM",
+    "tabs": {
+      "interactions": "Interactions",
+      "opportunities": "Opportunities",
+      "stats": "Stats"
+    },
+    "interactions": {
+      "empty": "No interactions recorded",
+      "subject": "Subject",
+      "type": "Type",
+      "date": "Date",
+      "contentPlaceholder": "Add a note...",
+      "create": "New Interaction",
+      "new": "New"
+    },
+    "opportunities": {
+      "empty": "No sales opportunities recorded",
+      "title": "Title",
+      "stage": "Stage",
+      "value": "Value",
+      "probability": "Probability",
+      "expectedCloseDate": "Expected close date"
+    },
+    "stage": {
+      "lead": "Lead",
+      "qualified": "Qualified",
+      "proposal": "Proposal",
+      "negotiation": "Negotiation",
+      "closedWon": "Closed won",
+      "closedLost": "Closed lost"
+    },
+    "byEmployee": "By Employee",
+    "byOwner": "By Owner",
+    "changeStatus": "Change Status",
     "closeDate": "Close Date",
+    "customerCount": "Customer Count",
+    "customerPhone": "Customer Phone",
+    "customersSelectedCount": "{{count}} customers selected",
+    "date": "Date",
+    "description": "Description",
+    "employee": "Employee",
+    "linkCopied": "Link copied",
+    "opportunity": "Opportunity",
+    "outcomes": {
+      "done": "Done",
+      "empty": "No outcomes recorded",
+      "failed": "Failed",
+      "markDone": "Mark as Done",
+      "markFailed": "Mark as Failed",
+      "notePlaceholder": "Add a note...",
+      "pending": "Pending",
+      "summary": "Summary",
+      "title": "Outcomes",
+      "whyFailed": "Why it failed"
+    },
+    "pickCustomersPlaceholder": "Pick customers...",
+    "pickEmployeePlaceholder": "Pick employee...",
+    "probability": "Probability",
+    "process": "Process",
+    "sendToEmployee": "Send to Employee",
     "stageLead": "Lead",
-    "stageQualified": "Qualified",
-    "stageProposal": "Proposal",
+    "stageLost": "Lost",
     "stageNegotiation": "Negotiation",
+    "stageProposal": "Proposal",
+    "stageQualified": "Qualified",
     "stageWon": "Won",
-    "stageLost": "Lost"
+    "stats": {
+      "total": "Total"
+    },
+    "status": {
+      "completed": "Completed",
+      "inProgress": "In Progress",
+      "pending": "Pending"
+    },
+    "statusTimeline": "Status Timeline",
+    "subject": "Subject",
+    "type": "Type",
+    "unassigned": "Unassigned",
+    "value": "Value"
   },
   "payments": {
     "amount": "Amount",
@@ -1168,7 +1301,15 @@
     "connected": "Connected",
     "serverStatus": "Server status",
     "stable": "Stable",
-    "localStorage": "Local storage"
+    "localStorage": "Local storage",
+    "failed": "Sync failed",
+    "never": "Never synced",
+    "lastSync": "Last Sync",
+    "localOnly": "Local only",
+    "offlineBanner": "You are offline",
+    "pendingBanner": "{{count}} pending operations",
+    "queueEmpty": "Queue is empty",
+    "syncNow_description": "Synchronize now"
   },
   "validation": {
     "required": "This field is required",
@@ -1186,7 +1327,9 @@
     "pickPlaceholder": "Select customer...",
     "noCustomers": "No customers found",
     "quickCreate": "New customer name",
-    "createError": "Error creating customer. Please try again."
+    "createError": "Error creating customer. Please try again.",
+    "phoneOptional": "Phone (optional)",
+    "pickSupplierPlaceholder": "Select supplier..."
   },
   "dashboard": {
     "welcome": "Welcome",
@@ -1238,58 +1381,18 @@
     "aiInsight": {
       "aria": "AI insight for your business",
       "action": "Take action"
-    }
-  },
-  "common": {
-    "noName": "No name",
-    "zero": "0",
-    "close": "Close",
-    "clear": "Clear",
-    "increase": "Increase",
-    "decrease": "Decrease",
-    "loading": "Loading...",
-    "retry": "Retry",
-    "save": "Save",
-    "cancel": "Cancel",
-    "delete": "Delete",
-    "edit": "Edit",
-    "view": "View",
-    "all": "All",
-    "none": "None",
-    "yes": "Yes",
-    "no": "No",
-    "optional": "Optional",
-    "required": "Required"
-  },
-  "dateRange": {
-    "today": "Today",
-    "yesterday": "Yesterday",
-    "7days": "Last 7 days",
-    "14days": "Last 14 days",
-    "30days": "Last 30 days",
-    "60days": "Last 60 days",
-    "90days": "Last 90 days",
-    "thisMonth": "This Month",
-    "lastMonth": "Last Month",
-    "last3Months": "Last 3 Months",
-    "last6Months": "Last 6 Months",
-    "thisYear": "This Year",
-    "lastYear": "Last Year",
-    "custom": "Custom",
-    "from": "From",
-    "to": "To",
-    "apply": "Apply",
-    "selectPeriod": "Select Period",
-    "presetsAria": "Preset time periods",
-    "jalali": "Jalali",
-    "gregorian": "Gregorian",
-    "group": {
-      "todayYesterday": "Today & Yesterday",
-      "weekMonth": "Week & Month",
-      "longer": "Longer Periods",
-      "monthYear": "Month & Year",
-      "yearly": "Yearly"
-    }
+    },
+    "aiInsights": "AI Insights",
+    "customerDebt": "Customer Debt",
+    "customersLine": "Customers",
+    "dateRange": "Date Range",
+    "invoicesLine": "Invoices",
+    "noActivities": "No activities yet",
+    "recentActivities": "Recent Activities",
+    "salesChartTitle": "Sales Trend",
+    "totalSales": "Total Sales",
+    "vsLastMonth": "vs last month",
+    "warehouseValue": "Warehouse Value"
   },
   "quickInvoice": {
     "title": "Quick Invoice",
@@ -1317,11 +1420,76 @@
   },
   "accounting": {
     "title": "Accounting",
-    "accounts": "Accounts",
-    "journal": "Journal Entries",
-    "trialBalance": "Trial Balance",
-    "balanceSheet": "Balance Sheet",
-    "incomeStatement": "Income Statement",
+    "accounts": {
+      "title": "Accounts",
+      "code": "Account Code",
+      "name": "Account Name",
+      "type": "Account Type",
+      "parent": "Parent Account",
+      "status": "Status",
+      "active": "Active",
+      "inactive": "Inactive",
+      "create": "Create Account",
+      "empty": {
+        "title": "No accounts",
+        "subtitle": "Create your first account"
+      },
+      "createTitle": "Create New Account",
+      "namePlaceholder": "Enter account name",
+      "noParent": "No parent (top-level)"
+    },
+    "journal": {
+      "title": "Journal Entries",
+      "account": "Account",
+      "date": "Date",
+      "description": "Description",
+      "credit": "Credit",
+      "debit": "Debit",
+      "balanced": "Balanced",
+      "unbalanced": "Unbalanced",
+      "create": "New Journal Entry",
+      "lines": "Lines",
+      "reference": "Reference",
+      "empty": {
+        "title": "No journal entries",
+        "subtitle": "Create your first journal entry"
+      },
+      "addLine": "Add Line",
+      "createTitle": "New Journal Entry",
+      "selectAccount": "Select account",
+      "totalCredit": "Total Credit",
+      "totalDebit": "Total Debit"
+    },
+    "trialBalance": {
+      "title": "Trial Balance",
+      "asOf": "As of",
+      "balance": "Balance",
+      "empty": {
+        "title": "No trial balance data"
+      },
+      "total": "Total"
+    },
+    "balanceSheet": {
+      "title": "Balance Sheet",
+      "asOf": "As of",
+      "assets": "Assets",
+      "balanced": "Balanced",
+      "empty": {
+        "title": "No balance sheet data"
+      },
+      "equity": "Equity",
+      "liabilities": "Liabilities",
+      "unbalanced": "Unbalanced"
+    },
+    "incomeStatement": {
+      "title": "Income Statement",
+      "empty": {
+        "title": "No income statement data"
+      },
+      "expenses": "Expenses",
+      "netIncome": "Net Income",
+      "revenue": "Revenue"
+    },
     "cashFlow": "Cash Flow",
     "addAccount": "Add Account",
     "accountCode": "Account Code",
@@ -1333,9 +1501,28 @@
     "totalDebit": "Total Debit",
     "totalCredit": "Total Credit",
     "balance": "Balance",
+    "assets": "Assets",
+    "liabilities": "Liabilities",
+    "equity": "Equity",
+    "currentYearEarnings": "Current period result",
+    "netIncome": "Net income",
     "date": "Date",
     "description": "Description",
-    "reference": "Reference"
+    "reference": "Reference",
+    "tabs": {
+      "label": "Tabs"
+    },
+    "export": {
+      "button": "Export",
+      "label": "Export Data"
+    },
+    "income": "Income",
+    "expense": "Expense",
+    "dateRange": {
+      "date": "Date",
+      "from": "From",
+      "to": "To"
+    }
   },
   "hr": {
     "title": "Human Resources",
@@ -1397,7 +1584,17 @@
     "sonOf": "Son of {name}",
     "changeStatus": "Change status:",
     "activityHistory": "Activity History",
-    "noActivity": "No activity"
+    "noActivity": "No activity",
+    "accessEmail": "Access Email",
+    "accessPassword": "Access Password",
+    "addPayment": "Add Payment",
+    "grantAccess": "Grant Access",
+    "noPayments": "No salary payments recorded",
+    "paymentAmount": "Payment Amount",
+    "paymentDate": "Payment Date",
+    "salaryPayments": "Salary Payments",
+    "totalEmployees": "Total Employees",
+    "totalPayroll": "Total Payroll"
   },
   "projects": {
     "title": "Projects",
@@ -1487,7 +1684,9 @@
     "inviteAccepted": "Invitation accepted! Redirecting to workspace...",
     "inviteExpired": "Invite link has expired or is invalid.",
     "inviteChecking": "Checking invitation...",
-    "goToWorkspace": "Go to Workspace"
+    "goToWorkspace": "Go to Workspace",
+    "employee": "Employee",
+    "redirecting": "Redirecting..."
   },
   "permissions": {
     "title": "Roles & Permissions",
@@ -1497,36 +1696,16 @@
     "description": "Description",
     "forRole": "Permissions for",
     "selectRole": "Select a role",
-    "selectRoleHint": "Select a role to view its permissions"
-  },
-  "crm": {
-    "title": "CRM",
-    "tabs": {
-      "interactions": "Interactions",
-      "opportunities": "Opportunities"
+    "selectRoleHint": "Select a role to view its permissions",
+    "cap": {
+      "changeRole": "Change Role",
+      "deleteWorkspace": "Delete Workspace",
+      "invite": "Invite Members",
+      "removeMember": "Remove Members",
+      "useAllModules": "Use All Modules"
     },
-    "interactions": {
-      "empty": "No interactions recorded",
-      "subject": "Subject",
-      "type": "Type",
-      "date": "Date"
-    },
-    "opportunities": {
-      "empty": "No sales opportunities recorded",
-      "title": "Title",
-      "stage": "Stage",
-      "value": "Value",
-      "probability": "Probability",
-      "expectedCloseDate": "Expected close date"
-    },
-    "stage": {
-      "lead": "Lead",
-      "qualified": "Qualified",
-      "proposal": "Proposal",
-      "negotiation": "Negotiation",
-      "closedWon": "Closed won",
-      "closedLost": "Closed lost"
-    }
+    "honestNote": "Honest note: permissions are based on your trust",
+    "manageMembers": "Manage Members"
   },
   "manufacturing": {
     "title": "Manufacturing",
@@ -1590,7 +1769,8 @@
       "pending": "Pending",
       "received": "Received",
       "cancelled": "Cancelled"
-    }
+    },
+    "recordPurchase": "Record Purchase"
   },
   "audit": {
     "title": "Audit",
@@ -1633,9 +1813,18 @@
     "trialDescription": "You are on a 7-day trial",
     "activePlan": "Your active plan",
     "plans": {
-      "free": "Free",
-      "pro": "Pro",
-      "enterprise": "Enterprise"
+      "free": {
+        "title": "Free",
+        "name": "Free"
+      },
+      "pro": {
+        "title": "Pro",
+        "name": "Pro"
+      },
+      "enterprise": {
+        "title": "Enterprise",
+        "name": "Enterprise"
+      }
     },
     "usage": {
       "title": "Your Usage",
@@ -1700,7 +1889,11 @@
     "bell": "Notifications",
     "title": "Notifications",
     "empty": "No notifications",
-    "many": "99+"
+    "many": "99+",
+    "activities": "Activities",
+    "emptyHint": "You are all caught up",
+    "markAllRead": "Mark all as read",
+    "viewAll": "View All"
   },
   "time": {
     "justNow": "Just now",
@@ -1772,7 +1965,13 @@
     "mediumStore": "Medium Store",
     "mediumStoreDesc": "3-10 employees",
     "largeStore": "Large Business",
-    "largeStoreDesc": "10+ employees"
+    "largeStoreDesc": "10+ employees",
+    "aboutBusiness": "About your business",
+    "aboutBusinessPlaceholder": "Describe your business in a few words",
+    "noBusinessMatch": "No matching business type",
+    "noCurrencyMatch": "No matching currency",
+    "searchBusiness": "Search business type...",
+    "searchCurrency": "Search currency..."
   },
   "status": {
     "excellent": "Excellent",
@@ -1898,5 +2097,364 @@
       "reports": "Live Reports",
       "invoice": "Smart Invoice"
     }
+  },
+  "action": {
+    "back": "Back",
+    "cancel": "Cancel",
+    "clear": "Clear",
+    "close": "Close",
+    "create": "Create",
+    "open": "Open",
+    "remove": "Remove",
+    "retry": "Retry",
+    "save": "Save",
+    "search": "Search",
+    "actions": "Actions",
+    "add": "Add",
+    "backToEdit": "Back to Edit",
+    "confirmCreate": "Confirm Create",
+    "delete": "Delete",
+    "done": "Done",
+    "edit": "Edit",
+    "email": "Email",
+    "export": "Export",
+    "next": "Next",
+    "previewInvoice": "Preview Invoice",
+    "previous": "Previous",
+    "print": "Print",
+    "share": "Share",
+    "view": "View"
+  },
+  "admin": {
+    "dashboard": {
+      "description": "Admin dashboard",
+      "generatedAt": "Generated at",
+      "ofTotal": "of total",
+      "planMix": "Plan Mix",
+      "planShare": "Plan Share"
+    },
+    "error": {
+      "retry": "Retry",
+      "loadMembers": "Failed to load members",
+      "loadWorkspaces": "Failed to load workspaces",
+      "removeMember": "Failed to remove member",
+      "updateRole": "Failed to update role"
+    },
+    "filters": {
+      "all": "All",
+      "groupLabel": "Filters"
+    },
+    "member": {
+      "email": "Email",
+      "joined": "Joined",
+      "name": "Name",
+      "remove": "Remove",
+      "unknown": "Unknown",
+      "editRole": "Edit Role",
+      "noProfile": "No profile",
+      "ownerProtected": "Owner (protected)",
+      "statusNoAccess": "No Access",
+      "statusSuspended": "Suspended"
+    },
+    "pagination": {
+      "label": "Page",
+      "next": "Next",
+      "previous": "Previous",
+      "showing": "Showing"
+    },
+    "subscriptions": {
+      "empty": "No subscriptions",
+      "expired": "Expired",
+      "plan": "Plan",
+      "reason": "Reason",
+      "status": "Status",
+      "trial": "Trial",
+      "allPlans": "All Plans",
+      "allStatuses": "All Statuses",
+      "changePlan": "Change Plan",
+      "changeStatus": "Change Status",
+      "expiredAgo": "Expired {{time}} ago",
+      "expiresIn": "Expires in {{time}}",
+      "expiringSoon": "Expiring Soon",
+      "loadError": "Failed to load subscriptions",
+      "noDateBuckets": "No date range",
+      "noPeriod": "No period",
+      "periodEnd": "Period End",
+      "reasonHint": "Optional reason for status change",
+      "updateError": "Failed to update subscription"
+    },
+    "users": {
+      "empty": "No users",
+      "search": "Search users",
+      "loadError": "Failed to load users",
+      "searchScopeNotice": "Search limited to displayed users"
+    },
+    "workspaces": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "members": "Members",
+      "owner": "Owner",
+      "search": "Search workspaces",
+      "collapse": "Collapse",
+      "expand": "Expand",
+      "noOwner": "No owner",
+      "noSubscription": "No subscription"
+    },
+    "auditLogs": {
+      "action": "Action",
+      "empty": "No audit logs",
+      "emptyHint": "Activity will appear here",
+      "entity": "Entity",
+      "loadError": "Failed to load audit logs",
+      "noEntity": "No entity",
+      "when": "When"
+    },
+    "empty": {
+      "noMembers": "No members found",
+      "noneOnPage": "Nothing on this page",
+      "noneOnPageHint": "No workspaces match your filters",
+      "noResults": "No results found",
+      "noWorkspaces": "No workspaces",
+      "noWorkspacesHint": "No workspaces have been created yet"
+    },
+    "notice": {
+      "migrationInProgress": "Migration in progress"
+    },
+    "removeDialog": {
+      "body": "Are you sure you want to remove this member?",
+      "cancel": "Cancel",
+      "confirm": "Confirm",
+      "consequence": "This action cannot be undone",
+      "title": "Remove Member"
+    },
+    "shell": {
+      "alertsNone": "No alerts",
+      "alertsWithCount": "{{count}} alerts",
+      "closeMenu": "Close menu",
+      "consoleLabel": "Admin Console",
+      "mainNav": "Main navigation",
+      "openMenu": "Open menu",
+      "searchLabel": "Search",
+      "searchPlaceholder": "Search...",
+      "superAdmin": "Super Admin"
+    }
+  },
+  "entity": {
+    "activity": {
+      "empty": "No activity",
+      "count": "{{count}} activities"
+    }
+  },
+  "home": {
+    "greeting": "Hello",
+    "title": "Dashboard",
+    "salesTrend": "Sales Trend"
+  },
+  "inventory": {
+    "price": "Price",
+    "product": "Product",
+    "sku": "SKU",
+    "stock": "Stock",
+    "title": "Inventory"
+  },
+  "invoice": {
+    "open": "Open"
+  },
+  "more": {
+    "account": "Account",
+    "language": "Language",
+    "security": "Security",
+    "sync": "Sync"
+  },
+  "sales": {
+    "amount": "Amount",
+    "customer": "Customer",
+    "date": "Date",
+    "details": "Details",
+    "discount": "Discount",
+    "items": "Items",
+    "paid": "Paid",
+    "print": "Print",
+    "purchase": "Purchase",
+    "sale": "Sale",
+    "status": "Status",
+    "subtotal": "Subtotal",
+    "supplier": "Supplier",
+    "title": "Sales",
+    "unit": "Unit",
+    "addDetail": "Add Detail",
+    "addDetails": "Add Details",
+    "addItem": "Add Item",
+    "componentsSum": "Components Sum",
+    "credit": "Credit",
+    "detailTitle": "Detail",
+    "emptyDescription": "Create your first invoice to get started",
+    "emptyTitle": "No invoices yet",
+    "grandTotal": "Grand Total",
+    "hideDetails": "Hide Details",
+    "invoiceNumber": "Invoice Number",
+    "newInvoice": "New Invoice",
+    "newPurchase": "New Purchase",
+    "noItems": "No items",
+    "quantity": "Quantity",
+    "removeDetail": "Remove Detail",
+    "selectCustomer": "Select Customer",
+    "selectSupplier": "Select Supplier",
+    "statusOverdue": "Overdue",
+    "statusPaid": "Paid",
+    "statusPartial": "Partial",
+    "statusPending": "Pending",
+    "transactionType": "Transaction Type",
+    "weightGrams": "Weight (grams)"
+  },
+  "workflow": {
+    "templates": {
+      "title": "Workflow Templates",
+      "description": "Manage workflow templates",
+      "active": "Active",
+      "approver": "Approver",
+      "create": "New Template",
+      "empty": "No workflow templates",
+      "entityType": "Entity Type",
+      "inactive": "Inactive",
+      "name": "Name",
+      "namePlaceholder": "Template name",
+      "new": "New Template",
+      "status": "Status"
+    },
+    "action": "Action",
+    "actionError": "Failed to perform action",
+    "actionErrorTitle": "Action Failed",
+    "approve": "Approve",
+    "confirmReject": "Confirm rejection?",
+    "final": "Final",
+    "forbiddenError": "You don't have permission",
+    "inProgress": "In Progress",
+    "loadError": "Failed to load approvals",
+    "pending": "Pending",
+    "reject": "Reject",
+    "rejectDescription": "Reason for rejection",
+    "rejectPlaceholder": "Describe the reason...",
+    "rejectReason": "Rejection Reason",
+    "startedAt": "Started at",
+    "stepProgress": "Step {{current}} of {{total}}",
+    "title": "Workflow"
+  },
+  "active": "Active",
+  "actor_id": "Actor Id",
+  "actor_name": "Actor Name",
+  "actor_role": "Actor Role",
+  "add": "Add",
+  "address": "Address",
+  "approver_role": "Approver Role",
+  "barcode": "Barcode",
+  "cash": "Cash",
+  "category": "Category",
+  "client_wins": "Client Wins",
+  "comment": "Comment",
+  "components": "Components",
+  "created_at": "Created At",
+  "currency_code": "Currency Code",
+  "custom": "Custom",
+  "customer_id": "Customer Id",
+  "desc": "Desc",
+  "description": "Description",
+  "draft": "Draft",
+  "electron-updater": "Electron-Updater",
+  "email": "Email",
+  "employee_id": "Employee Id",
+  "entity_id": "Entity Id",
+  "entity_type": "Entity Type",
+  "fixed": "Fixed",
+  "focus": "Focus",
+  "full_name": "Full Name",
+  "full_time": "Full Time",
+  "general": "General",
+  "hex": "Hex",
+  "html2canvas": "Html2canvas",
+  "in_progress": "In Progress",
+  "info": "Info",
+  "invoice_number": "Invoice Number",
+  "is_active": "Is Active",
+  "is_platform_admin": "Is Platform Admin",
+  "is_system": "Is System",
+  "logo": "Logo",
+  "medium": "Medium",
+  "member": "Member",
+  "month": "Month",
+  "name": "Name",
+  "nobody": "Nobody",
+  "notes": "Notes",
+  "online": "Online",
+  "order_index": "Order Index",
+  "payment_method": "Payment Method",
+  "pending": "Pending",
+  "period_end": "Period End",
+  "phone": "Phone",
+  "piece": "Piece",
+  "planned": "Planned",
+  "planning": "Planning",
+  "posthog-js": "Posthog-Js",
+  "preferred_language": "Preferred Language",
+  "present": "Present",
+  "product_name": "Product Name",
+  "products": "Products",
+  "project_id": "Project Id",
+  "qrcode": "Qrcode",
+  "quantity": "Quantity",
+  "redirect": "Redirect",
+  "reference": "Reference",
+  "role": "Role",
+  "role_id": "Role Id",
+  "running": "Running",
+  "sale": "Sale",
+  "sku": "Sku",
+  "slug": "Slug",
+  "sync_change_log": "Sync Change Log",
+  "sync_version": "Sync Version",
+  "tab": "Tab",
+  "title": "Title",
+  "todo": "Todo",
+  "token": "Token",
+  "total": "Total",
+  "transactions": "Transactions",
+  "type": "Type",
+  "unit": {
+    "title": "Unit",
+    "gram": "Gram"
+  },
+  "unknown": "Unknown",
+  "user_id": "User Id",
+  "utf8": "Utf8",
+  "version": "Version",
+  "visibilitychange": "Visibilitychange",
+  "window": "Window",
+  "workspace_id": "Workspace Id",
+  "adminPanel": {
+    "access": "Admin Access",
+    "notAllowed": "You do not have admin access"
+  },
+  "product": {
+    "nameRequired": "Product name is required"
+  },
+  "table": {
+    "columns": "Columns"
+  },
+  "team": {
+    "addEmployee": "Add Employee",
+    "addNewEmployee": "Add New Employee",
+    "employees": "Employees",
+    "firstName": "First Name",
+    "hireDate": "Hire Date",
+    "lastName": "Last Name",
+    "noEmployees": "No employees found",
+    "noEmployeesHint": "Add your first employee to get started",
+    "noPayroll": "No payroll records",
+    "noPayrollHint": "No salary payments recorded yet",
+    "payroll": "Payroll",
+    "position": "Position",
+    "salary": "Salary",
+    "totalEmployees": "Total Employees",
+    "totalPayroll": "Total Payroll"
   }
 }

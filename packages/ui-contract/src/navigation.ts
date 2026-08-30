@@ -39,6 +39,15 @@ export type NavId =
   // navigation. `projects` is gone: the module was deleted, not hidden.
   | 'production'
   | 'approvals'
+  // The till. Somewhere a person STANDS, which is why it is primary and the
+  // rest of this batch is not.
+  | 'till'
+  // Month-end work. Real destinations, but nobody opens them daily.
+  | 'expiry'
+  | 'budgets'
+  | 'timesheets'
+  | 'assets'
+  | 'bank'
   // secondary — system
   | 'settings'
   | 'access'
@@ -179,6 +188,62 @@ export const NAV_CONTRACT: readonly NavItemContract[] = [
     path: '/sync-center',
     group: 'system',
   },
+
+  // ── Destinations added by the Tier 1 and Tier 2 sweep ──
+  //
+  // Six, not eighteen. Tax rates, exchange rates and accounting dimensions
+  // have services and routes but are NOT here: they configure areas that
+  // already exist and are reached from settings. Nobody "goes to" a tax rate
+  // the way they go to a till, and one nav entry per backend capability is
+  // how a sidebar becomes a list nobody reads.
+  {
+    id: 'till',
+    emoji: '🧾',
+    labelKey: 'nav.till',
+    descriptionKey: 'nav.till_description',
+    path: '/till',
+    group: 'primary',
+  },
+  {
+    id: 'expiry',
+    emoji: '⏳',
+    labelKey: 'nav.expiry',
+    descriptionKey: 'nav.expiry_description',
+    path: '/expiry',
+    group: 'work',
+  },
+  {
+    id: 'budgets',
+    emoji: '🎯',
+    labelKey: 'nav.budgets',
+    descriptionKey: 'nav.budgets_description',
+    path: '/budgets',
+    group: 'work',
+  },
+  {
+    id: 'timesheets',
+    emoji: '⏱️',
+    labelKey: 'nav.timesheets',
+    descriptionKey: 'nav.timesheets_description',
+    path: '/timesheets',
+    group: 'work',
+  },
+  {
+    id: 'assets',
+    emoji: '🏗️',
+    labelKey: 'nav.assets',
+    descriptionKey: 'nav.assets_description',
+    path: '/assets',
+    group: 'work',
+  },
+  {
+    id: 'bank',
+    emoji: '🏦',
+    labelKey: 'nav.bank',
+    descriptionKey: 'nav.bank_description',
+    path: '/bank',
+    group: 'work',
+  },
 ]
 
 /** Always-visible destinations — a seller's every-day work. */
@@ -301,3 +366,63 @@ export const COMMAND_CONTRACT: readonly CommandItemContract[] = [
   })),
   ...COMMAND_ACTIONS,
 ]
+
+// ============================================================================
+// Applying a user's visibility profile to the navigation.
+//
+// The ORDER these two arguments are applied in is the whole point, and it is
+// the same order the server uses:
+//
+//   1. `authorized` — what the person MAY reach. Comes from the server's
+//      authorization core and is the gate.
+//   2. `hidden` — what they have chosen not to see. A preference.
+//
+// `hidden` can only ever REMOVE from `authorized`. There is deliberately no
+// parameter that adds a destination: un-hiding something the server did not
+// authorize must not make it appear, or a UI preference becomes a way around
+// authorization.
+// ============================================================================
+
+/**
+ * The destinations to render, given what the server authorized and what the
+ * user has hidden.
+ *
+ * Contract order is preserved: navigation that reshuffles itself as people
+ * hide things is navigation nobody can build muscle memory for.
+ */
+export function visibleNavItems(
+  items: readonly NavItemContract[],
+  authorized: readonly NavId[],
+  hidden: readonly NavId[] = [],
+): NavItemContract[] {
+  const allowed = new Set(authorized)
+  const suppressed = new Set(hidden)
+
+  return items.filter((item) => allowed.has(item.id) && !suppressed.has(item.id))
+}
+
+/** The same, for the grouped "more" menu. Empty groups drop out entirely. */
+export function visibleNavGroups(
+  groups: readonly NavGroupContract[],
+  authorized: readonly NavId[],
+  hidden: readonly NavId[] = [],
+): NavGroupContract[] {
+  return groups
+    .map((group) => ({ ...group, items: visibleNavItems(group.items, authorized, hidden) }))
+    .filter((group) => group.items.length > 0)
+}
+
+/**
+ * How many destinations a device should render at once, given its budget.
+ *
+ * The overflow is NOT dropped — it moves into the "more" menu. A destination
+ * that silently disappeared on a slow phone would be indistinguishable from a
+ * permission the user does not have.
+ */
+export function splitForBudget<T>(
+  items: readonly T[],
+  maxVisible: number,
+): { visible: T[]; overflow: T[] } {
+  if (maxVisible <= 0) return { visible: [], overflow: [...items] }
+  return { visible: items.slice(0, maxVisible), overflow: items.slice(maxVisible) }
+}
