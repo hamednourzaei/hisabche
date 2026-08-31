@@ -157,12 +157,31 @@ server.addHook('onResponse', async (request, reply) => {
       totalMs: total,
       dbMs: m?.dbTimeMs ?? null,
       queries: m?.queryCount ?? null,
-      // زمانی که در دیتابیس نگذشته: middleware، سریال‌سازی، شبکه‌ی داخلی
-      overheadMs: m ? total - m.dbTimeMs : null,
+
+      // `overheadMs` is only meaningful when the database time is measured.
+      //
+      // Nearly every read in this codebase goes through supabase-js, which is
+      // an HTTP call to PostgREST and is NOT counted by `getMetrics()`. So a
+      // request reporting `queries: 0` has not necessarily avoided the
+      // database — it has avoided the INSTRUMENTED one.
+      //
+      // The old line subtracted zero and reported the whole 2,043 ms of
+      // `GET /api/workspaces` as overhead, which reads as "the time is in
+      // middleware or serialisation" and sends whoever acts on it to optimise
+      // the wrong layer. Null says "not known", which is the truth.
+      overheadMs: m && m.queryCount > 0 ? total - m.dbTimeMs : null,
+      dbInstrumented: m ? m.queryCount > 0 : false,
+
       cacheHits: m?.cacheHits ?? null,
       cacheMisses: m?.cacheMisses ?? null,
       userId: (request as any).userId ?? null,
-      workspaceId: (request as any).workspaceId ?? null,
+
+      // The resolved workspace lives on `request.tenancy`, set by
+      // `requireWorkspaceContext`. Reading `request.workspaceId` — a property
+      // nothing assigns — logged null on every request ever made, so the logs
+      // could never show whether tenancy resolved or which shop a slow query
+      // belonged to.
+      workspaceId: (request as any).tenancy?.workspaceId ?? null,
     },
     '📊 perf',
   )

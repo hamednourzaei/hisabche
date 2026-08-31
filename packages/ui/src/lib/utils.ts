@@ -25,6 +25,10 @@ export function formatCurrency(
   currency: 'AFN' | 'USD' | 'PKR' | 'IRR',
   locale: 'fa-AF' | 'en' = 'fa-AF',
 ): string {
+  // `NaN` and `Infinity` do not throw here, but they render as "NaN ؋" beside
+  // real figures, which reads like a number rather than like missing data.
+  if (!Number.isFinite(amount)) return '—'
+
   return new Intl.NumberFormat(locale, {
     style: 'currency',
     currency,
@@ -37,14 +41,26 @@ export function formatCurrency(
  * Formats a date string to Jalali (Shamsi) or Gregorian.
  */
 export function formatDate(
-  date: string | Date,
+  date: string | Date | null | undefined,
   options?: Intl.DateTimeFormatOptions,
 ): string {
-  const d = typeof date === 'string' ? new Date(date) : date
+  // `Intl.DateTimeFormat().format()` THROWS on an invalid date — it does not
+  // return a placeholder. So a null `closed_at`, an empty string from an
+  // optional column, or a malformed timestamp crashed the whole page with
+  // `RangeError: Invalid time value`, and the error boundary swallowed the
+  // screen. That is what took down /till and /team-and-payroll.
+  //
+  // A missing date is an ordinary fact about a record that has not reached
+  // that stage yet. It renders as a dash, and nothing else stops working.
+  if (date === null || date === undefined || date === '') return '—'
+
+  const parsed = typeof date === 'string' ? new Date(date) : date
+  if (Number.isNaN(parsed.getTime())) return '—'
+
   return new Intl.DateTimeFormat('fa-AF', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
     ...options,
-  }).format(d)
+  }).format(parsed)
 }

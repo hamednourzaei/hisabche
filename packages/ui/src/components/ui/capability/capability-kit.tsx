@@ -3,33 +3,52 @@
 // ============================================
 // packages/ui/src/components/ui/capability/capability-kit.tsx
 //
-// The small shared surface behind the six Tier 1/2 screens — till, assets,
-// bank, budgets, timesheets, expiry.
+// The shared surface behind the Tier 1/2 screens — till, assets, bank,
+// budgets, timesheets, expiry, conflicts, governance.
 //
 // ---------------------------------------------------------------------------
-// WHY THESE SIX SHARE A KIT
+// THIS IS A THIN ADAPTER, NOT A DESIGN SYSTEM
 //
-// They are all money screens built on the same server contract: integers in
-// minor units, a state that is one of a fixed few, and a figure that is only
-// meaningful next to the figure it is being compared against. Six private
-// copies of `amountMinor / 100` is six chances for one of them to round.
+// The first version of this file declared its own `Panel`, `ActionButton`,
+// `Badge` and a hand-written `inputClass`, with colours spelled out in
+// Tailwind arbitrary values. That was a mistake: it built a SECOND design
+// system alongside the project's own, so these eight screens drifted from
+// every other screen in the product — different corner radii, different
+// focus rings, different disabled states, and none of it inheriting a future
+// change to the real components.
 //
-// `Money` and `MinorInput` are the only places in these screens that cross
-// between minor and major units. Nothing else sees a float.
+// Everything here now composes `Card`, `Button`, `Badge`, `Input`, `Table`,
+// `Skeleton` and `EmptyState` from this package. What is left is only the part
+// that is genuinely specific to these screens:
+//
+//   · money that arrives as an integer in MINOR units,
+//   · durations that arrive as whole minutes,
+//   · a vocabulary of tones ("this figure is bad news") mapped onto the
+//     project's variant names in ONE place rather than in eight views.
+//
+// If a screen needs something not here, it should reach for the project
+// component directly — not add a new primitive to this file.
 // ============================================
 
 import React from 'react'
+
 import { cn } from '../../../lib/utils'
 import { formatSelectedMoney, formatSelectedAmount } from '../../../lib/money-display'
+import { Badge as UiBadge } from '../badge'
+import { Button } from '../button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../card'
+import { Input } from '../input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../select'
+import { Skeleton } from '../skeleton'
 
 /* ─── Money ───────────────────────────────────────────────────────────────── */
 
 /**
- * A figure the server sent in minor units.
+ * A figure the server sent in MINOR units.
  *
- * `signed` shows an explicit + on positives — used where the sign IS the
- * meaning (a variance, a gain or loss, a reconciliation difference), and left
- * off where a bare amount reads better.
+ * This and `MinorInput` are the only two places in these screens that cross
+ * between minor and major units. Eight private `/ 100` expressions would be
+ * eight chances for one of them to round differently.
  */
 export const Money = React.memo(function Money({
   minor,
@@ -38,6 +57,7 @@ export const Money = React.memo(function Money({
   className,
 }: {
   minor: number
+  /** Show an explicit + on positives, where the sign IS the meaning. */
   signed?: boolean
   /** 'auto' colours by sign; otherwise say it explicitly. */
   tone?: 'auto' | 'good' | 'bad' | 'muted'
@@ -52,7 +72,7 @@ export const Money = React.memo(function Money({
         'tabular-nums font-medium',
         resolved === 'good' && 'text-[hsl(var(--color-success))]',
         resolved === 'bad' && 'text-[hsl(var(--color-destructive))]',
-        resolved === 'muted' && 'text-[hsl(var(--muted-foreground))]',
+        resolved === 'muted' && 'text-[hsl(var(--fg-tertiary))]',
         className,
       )}
     >
@@ -64,15 +84,18 @@ export const Money = React.memo(function Money({
 
 /** Minutes as the server stores them, shown as hours and minutes. */
 export function formatMinutes(minutes: number): string {
+  if (!Number.isFinite(minutes)) return '—'
+
   const whole = Math.trunc(Math.abs(minutes))
   const hours = Math.floor(whole / 60)
   const rest = whole % 60
-  const sign = minutes < 0 ? '-' : ''
-  return `${sign}${formatSelectedAmount(hours)}:${String(rest).padStart(2, '0')}`
+
+  return `${minutes < 0 ? '-' : ''}${formatSelectedAmount(hours)}:${String(rest).padStart(2, '0')}`
 }
 
 /* ─── Layout ──────────────────────────────────────────────────────────────── */
 
+/** A section. `Card` underneath, so it matches every other panel in the app. */
 export function Panel({
   title,
   description,
@@ -87,23 +110,16 @@ export function Panel({
   className?: string
 }) {
   return (
-    <section
-      className={cn(
-        'rounded-2xl border border-[hsl(var(--border))] bg-[hsl(var(--card))] p-5',
-        className,
-      )}
-    >
-      <header className="mb-4 flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-base font-semibold text-[hsl(var(--foreground))]">{title}</h2>
-          {description ? (
-            <p className="mt-0.5 text-sm text-[hsl(var(--muted-foreground))]">{description}</p>
-          ) : null}
+    <Card className={className}>
+      <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+        <div className="space-y-1">
+          <CardTitle>{title}</CardTitle>
+          {description ? <CardDescription>{description}</CardDescription> : null}
         </div>
         {action}
-      </header>
-      {children}
-    </section>
+      </CardHeader>
+      <CardContent>{children}</CardContent>
+    </Card>
   )
 }
 
@@ -118,12 +134,10 @@ export function Stat({
   hint?: React.ReactNode
 }) {
   return (
-    <div className="rounded-xl bg-[hsl(var(--muted)/0.4)] px-4 py-3">
-      <div className="text-xs text-[hsl(var(--muted-foreground))]">{label}</div>
-      <div className="mt-1 text-lg">{value}</div>
-      {hint ? (
-        <div className="mt-0.5 text-xs text-[hsl(var(--muted-foreground))]">{hint}</div>
-      ) : null}
+    <div className="rounded-xl bg-[hsl(var(--bg-subtle))] px-4 py-3">
+      <div className="text-xs text-[hsl(var(--fg-tertiary))]">{label}</div>
+      <div className="mt-1 text-lg text-[hsl(var(--fg-primary))]">{value}</div>
+      {hint ? <div className="mt-0.5 text-xs text-[hsl(var(--fg-tertiary))]">{hint}</div> : null}
     </div>
   )
 }
@@ -134,9 +148,19 @@ export function StatGrid({ children }: { children: React.ReactNode }) {
 
 /* ─── States ──────────────────────────────────────────────────────────────── */
 
-export function Loading({ label }: { label: string }) {
+/**
+ * Loading, as the shape of what is coming.
+ *
+ * `Skeleton` rather than the word "loading": the row heights are the row
+ * heights of the table that is about to arrive, so the page does not jump.
+ */
+export function Loading({ label, rows = 3 }: { label?: string; rows?: number }) {
   return (
-    <div className="py-10 text-center text-sm text-[hsl(var(--muted-foreground))]">{label}</div>
+    <div className="space-y-2" role="status" aria-label={label ?? 'loading'}>
+      {Array.from({ length: rows }, (_, index) => (
+        <Skeleton key={index} className="h-10 w-full" />
+      ))}
+    </div>
   )
 }
 
@@ -145,7 +169,7 @@ export function Loading({ label }: { label: string }) {
  *
  * These screens read from and post to a ledger. An error that renders as an
  * empty table reads as "there is nothing here", which is the one answer that
- * is never safe to give by accident.
+ * must never be given by accident.
  */
 export function ErrorNote({
   message,
@@ -157,24 +181,36 @@ export function ErrorNote({
   retryLabel?: string
 }) {
   return (
-    <div className="rounded-xl border border-[hsl(var(--color-destructive)/0.3)] bg-[hsl(var(--color-destructive)/0.08)] px-4 py-3 text-sm text-[hsl(var(--color-destructive))]">
+    <div
+      role="alert"
+      className="rounded-xl border border-[hsl(var(--color-destructive)/0.3)] bg-[hsl(var(--color-destructive)/0.08)] px-4 py-3 text-sm text-[hsl(var(--color-destructive))]"
+    >
       <p>{message}</p>
       {onRetry ? (
-        <button type="button" onClick={onRetry} className="mt-2 underline underline-offset-4">
+        <Button variant="ghost" size="sm" className="mt-2" onClick={onRetry}>
           {retryLabel}
-        </button>
+        </Button>
       ) : null}
     </div>
   )
 }
 
-const BADGE_TONES: Record<string, string> = {
-  neutral: 'bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]',
-  good: 'bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))]',
-  warn: 'bg-[hsl(var(--color-warning)/0.14)] text-[hsl(var(--color-warning))]',
-  bad: 'bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))]',
-  info: 'bg-[hsl(var(--color-info)/0.12)] text-[hsl(var(--color-info))]',
-}
+/* ─── Vocabulary ──────────────────────────────────────────────────────────── */
+
+/**
+ * These screens talk about money, so they say "good" and "bad", not
+ * "success" and "destructive". The translation to the project's variant names
+ * lives here once instead of in every view.
+ */
+const BADGE_VARIANT = {
+  neutral: 'outline',
+  good: 'success',
+  warn: 'warning',
+  bad: 'destructive',
+  info: 'secondary',
+} as const
+
+export type Tone = keyof typeof BADGE_VARIANT
 
 export function Badge({
   tone = 'neutral',
@@ -183,19 +219,14 @@ export function Badge({
   tone?: string
   children: React.ReactNode
 }) {
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium',
-        BADGE_TONES[tone] ?? BADGE_TONES.neutral,
-      )}
-    >
-      {children}
-    </span>
-  )
+  return <UiBadge variant={BADGE_VARIANT[tone as Tone] ?? 'outline'}>{children}</UiBadge>
 }
 
-/* ─── Actions ─────────────────────────────────────────────────────────────── */
+const BUTTON_VARIANT = {
+  primary: 'default',
+  quiet: 'outline',
+  danger: 'destructive',
+} as const
 
 export function ActionButton({
   children,
@@ -203,31 +234,23 @@ export function ActionButton({
   className,
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: 'primary' | 'quiet' | 'danger'
+  variant?: keyof typeof BUTTON_VARIANT
 }) {
   return (
-    <button
-      type="button"
-      {...props}
-      className={cn(
-        'rounded-xl px-4 py-2 text-sm font-medium transition disabled:opacity-50',
-        variant === 'primary' &&
-          'bg-[hsl(var(--primary))] text-[hsl(var(--primary-foreground))] hover:opacity-90',
-        variant === 'quiet' &&
-          'border border-[hsl(var(--border))] text-[hsl(var(--foreground))] hover:bg-[hsl(var(--muted)/0.5)]',
-        variant === 'danger' && 'bg-[hsl(var(--color-destructive))] text-white hover:opacity-90',
-        className,
-      )}
-    >
+    <Button variant={BUTTON_VARIANT[variant]} className={className} {...props}>
       {children}
-    </button>
+    </Button>
   )
 }
 
-export const inputClass =
-  'w-full rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--background))] px-3 py-2 text-sm'
+/* ─── Fields ──────────────────────────────────────────────────────────────── */
 
-/** A money field. Holds minor units; the person types major ones. */
+/**
+ * A money field. Holds MINOR units; the person types major ones.
+ *
+ * The conversion happens once, here, on the way in — so nothing downstream
+ * ever holds a fraction of an afghani.
+ */
 export function MinorInput({
   value,
   onChange,
@@ -240,36 +263,143 @@ export function MinorInput({
   disabled?: boolean
 }) {
   return (
-    <label className="block">
-      <span className="text-xs text-[hsl(var(--muted-foreground))]">{label}</span>
-      <input
-        type="number"
-        inputMode="decimal"
-        dir="ltr"
-        disabled={disabled}
-        value={Number.isFinite(value) ? value / 100 : 0}
-        onChange={(event) => {
-          const major = Number(event.target.value)
-          // Rounded here, once, on the way in. Everything downstream is an
-          // integer, so nothing accumulates a fraction of an afghani.
-          onChange(Number.isFinite(major) ? Math.round(major * 100) : 0)
-        }}
-        className={cn(inputClass, 'mt-1 tabular-nums')}
-      />
-    </label>
+    <Input
+      label={label}
+      type="number"
+      inputMode="decimal"
+      dir="ltr"
+      disabled={disabled}
+      className="tabular-nums"
+      value={Number.isFinite(value) ? value / 100 : 0}
+      onChange={(event) => {
+        const major = Number(event.target.value)
+        onChange(Number.isFinite(major) ? Math.round(major * 100) : 0)
+      }}
+    />
   )
 }
 
-export function Field({ label, children }: { label: string; children: React.ReactNode }) {
+/**
+ * A choice, on the project's own Select.
+ *
+ * Not a bare `<select>`. The native element cannot be styled consistently
+ * across browsers, ignores the app's focus ring and dropdown treatment, and
+ * on RTL renders its arrow on the wrong side — which is exactly the drift
+ * this kit exists to stop.
+ */
+export function SelectField({
+  label,
+  value,
+  onChange,
+  options,
+  placeholder,
+  disabled,
+}: {
+  label?: string
+  value: string
+  onChange: (value: string) => void
+  options: Array<{ value: string; label: string }>
+  placeholder?: string
+  disabled?: boolean
+}) {
   return (
-    <label className="block">
-      <span className="text-xs text-[hsl(var(--muted-foreground))]">{label}</span>
-      <div className="mt-1">{children}</div>
-    </label>
+    <div className="space-y-1.5">
+      {label ? (
+        <label className="text-sm font-medium text-[hsl(var(--fg-primary))]">{label}</label>
+      ) : null}
+      {/* `exactOptionalPropertyTypes` is on: an explicit `undefined` is not the
+          same as an absent prop, so `disabled` is spread only when it is set. */}
+      <Select value={value} onValueChange={onChange} {...(disabled ? { disabled } : {})}>
+        <SelectTrigger>
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
   )
 }
 
-/** A page heading shared by all six screens. */
+/**
+ * A whole-number field — a quantity, an hour count, a number of periods.
+ *
+ * Clamping happens here rather than in each view, because the clamp is the
+ * rule: a quantity below `min` is not a smaller quantity, it is a typo, and
+ * eight views clamping it their own way is eight chances for one of them to
+ * let a negative through into a stock movement.
+ */
+export function NumberField({
+  label,
+  value,
+  onChange,
+  min = 0,
+  max,
+  disabled,
+}: {
+  label: string
+  value: number
+  onChange: (value: number) => void
+  min?: number
+  max?: number
+  disabled?: boolean
+}) {
+  return (
+    <Input
+      label={label}
+      type="number"
+      inputMode="numeric"
+      dir="ltr"
+      min={min}
+      max={max}
+      disabled={disabled}
+      className="tabular-nums"
+      value={Number.isFinite(value) ? value : min}
+      onChange={(event) => {
+        const parsed = Number(event.target.value)
+        if (!Number.isFinite(parsed)) return onChange(min)
+
+        const floored = Math.max(min, Math.trunc(parsed))
+        onChange(max === undefined ? floored : Math.min(max, floored))
+      }}
+    />
+  )
+}
+
+/** A plain text field, so a view never hand-rolls an input. */
+export function Field({
+  label,
+  value,
+  onChange,
+  disabled,
+  type = 'text',
+  dir,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  disabled?: boolean
+  type?: string
+  dir?: 'ltr' | 'rtl'
+}) {
+  return (
+    <Input
+      label={label}
+      type={type}
+      dir={dir}
+      disabled={disabled}
+      value={value}
+      onChange={(event) => onChange(event.target.value)}
+    />
+  )
+}
+
+/* ─── Page shell ──────────────────────────────────────────────────────────── */
+
 export function CapabilityHeader({
   title,
   description,
@@ -282,8 +412,8 @@ export function CapabilityHeader({
   return (
     <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
       <div>
-        <h1 className="text-2xl font-semibold text-[hsl(var(--foreground))]">{title}</h1>
-        <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">{description}</p>
+        <h1 className="text-2xl font-semibold text-[hsl(var(--fg-primary))]">{title}</h1>
+        <p className="mt-1 text-sm text-[hsl(var(--fg-tertiary))]">{description}</p>
       </div>
       {action}
     </header>
@@ -293,3 +423,12 @@ export function CapabilityHeader({
 export function CapabilityPage({ children }: { children: React.ReactNode }) {
   return <div className="mx-auto w-full max-w-5xl space-y-5 p-4 sm:p-6">{children}</div>
 }
+
+/* ─── Re-exports ──────────────────────────────────────────────────────────── */
+//
+// So a view importing from this kit reaches the PROJECT's table and empty
+// state rather than writing a bare `<table>`. One import site, and every
+// screen gets the same header treatment, hover state and RTL handling.
+
+export { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../table'
+export { EmptyState } from '../empty-state'

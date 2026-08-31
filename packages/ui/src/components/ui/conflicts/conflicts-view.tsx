@@ -47,7 +47,12 @@ import {
   Panel,
   Stat,
   StatGrid,
-  inputClass,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '../capability/capability-kit'
 
 export interface ConflictsViewProps {
@@ -259,79 +264,73 @@ export const ConflictsView = memo(function ConflictsView({
               'فقط فیلدهایی که دستگاه فرستاده مقایسه می‌شوند.',
             )}
           >
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[36rem] text-sm">
-                <thead className="text-xs text-[hsl(var(--muted-foreground))]">
-                  <tr>
-                    <th className="py-2 text-start">{t('conflicts.field', 'فیلد')}</th>
-                    <th className="py-2 text-start">
-                      {t('conflicts.server_value', 'نسخه‌ی سرور')}
-                    </th>
-                    <th className="py-2 text-start">
-                      {t('conflicts.client_value', 'نسخه‌ی دستگاه')}
-                    </th>
-                    {choice === 'merge' ? (
-                      <th className="py-2 text-start">{t('conflicts.pick', 'انتخاب')}</th>
-                    ) : null}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[hsl(var(--border))]">
-                  {divergences.map((divergence: FieldDivergence) => (
-                    <tr key={divergence.field}>
-                      <td className="py-2 align-top">
-                        <span className="font-mono text-xs" dir="ltr">
-                          {divergence.field}
-                        </span>
-                        {divergence.financial ? (
-                          <div className="mt-1">
-                            <Badge tone="bad">{t('conflicts.financial', 'اختلاف مالی')}</Badge>
-                          </div>
-                        ) : null}
-                      </td>
-                      <td className="py-2 align-top">
-                        <pre
-                          className="max-w-[16rem] overflow-x-auto whitespace-pre-wrap break-words text-xs"
-                          dir="ltr"
-                        >
-                          {renderValue(divergence.serverValue)}
-                        </pre>
-                      </td>
-                      <td className="py-2 align-top">
-                        <pre
-                          className="max-w-[16rem] overflow-x-auto whitespace-pre-wrap break-words text-xs"
-                          dir="ltr"
-                        >
-                          {renderValue(divergence.clientValue)}
-                        </pre>
-                      </td>
-                      {choice === 'merge' ? (
-                        <td className="py-2 align-top">
-                          <div className="flex gap-1">
-                            {(['server', 'client'] as const).map((side) => (
-                              <ActionButton
-                                key={side}
-                                variant={
-                                  fieldChoices[divergence.field] === side ? 'primary' : 'quiet'
-                                }
-                                disabled={isBusy}
-                                onClick={() =>
-                                  setFieldChoices((current) => ({
-                                    ...current,
-                                    [divergence.field]: side,
-                                  }))
-                                }
-                              >
-                                {t(`conflicts.side_${side}`, side)}
-                              </ActionButton>
-                            ))}
-                          </div>
-                        </td>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('conflicts.field', 'فیلد')}</TableHead>
+                  <TableHead>{t('conflicts.server_value', 'نسخه‌ی سرور')}</TableHead>
+                  <TableHead>{t('conflicts.client_value', 'نسخه‌ی دستگاه')}</TableHead>
+                  {choice === 'merge' ? (
+                    <TableHead>{t('conflicts.pick', 'انتخاب')}</TableHead>
+                  ) : null}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {divergences.map((divergence: FieldDivergence) => (
+                  <TableRow key={divergence.field}>
+                    <TableCell>
+                      <span className="font-mono text-xs" dir="ltr">
+                        {divergence.field}
+                      </span>
+                      {divergence.financial ? (
+                        <div className="mt-1">
+                          <Badge tone="bad">{t('conflicts.financial', 'اختلاف مالی')}</Badge>
+                        </div>
                       ) : null}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                    </TableCell>
+                    <TableCell>
+                      <pre
+                        className="max-w-[16rem] overflow-x-auto whitespace-pre-wrap break-words text-xs"
+                        dir="ltr"
+                      >
+                        {renderValue(divergence.serverValue)}
+                      </pre>
+                    </TableCell>
+                    <TableCell>
+                      <pre
+                        className="max-w-[16rem] overflow-x-auto whitespace-pre-wrap break-words text-xs"
+                        dir="ltr"
+                      >
+                        {renderValue(divergence.clientValue)}
+                      </pre>
+                    </TableCell>
+                    {choice === 'merge' ? (
+                      <TableCell>
+                        <div className="flex gap-1">
+                          {(['server', 'client'] as const).map((side) => (
+                            <ActionButton
+                              key={side}
+                              variant={
+                                fieldChoices[divergence.field] === side ? 'primary' : 'quiet'
+                              }
+                              disabled={isBusy}
+                              onClick={() =>
+                                setFieldChoices((current) => ({
+                                  ...current,
+                                  [divergence.field]: side,
+                                }))
+                              }
+                            >
+                              {t(`conflicts.side_${side}`, side)}
+                            </ActionButton>
+                          ))}
+                        </div>
+                      </TableCell>
+                    ) : null}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </Panel>
 
           {selected.status === 'open' ? (
@@ -371,14 +370,12 @@ export const ConflictsView = memo(function ConflictsView({
               ) : null}
 
               <div className="mt-3">
-                <Field label={t('conflicts.reason', 'دلیل')}>
-                  <input
-                    className={inputClass}
-                    value={reason}
-                    disabled={isBusy || !canResolve}
-                    onChange={(event) => setReason(event.target.value)}
-                  />
-                </Field>
+                <Field
+                  label={t('conflicts.reason', 'دلیل')}
+                  value={reason}
+                  onChange={setReason}
+                  disabled={isBusy || !canResolve}
+                />
               </div>
 
               <ActionButton

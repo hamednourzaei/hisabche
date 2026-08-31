@@ -20,6 +20,7 @@
 
 import { memo, useState } from 'react'
 import type { Budget, BudgetCheck, VarianceRow } from '@hisabche/api'
+
 import {
   ActionButton,
   Badge,
@@ -31,7 +32,12 @@ import {
   MinorInput,
   Money,
   Panel,
-  inputClass,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '../capability/capability-kit'
 
 export interface BudgetsViewProps {
@@ -103,52 +109,50 @@ export const BudgetsView = memo(function BudgetsView({
 
       {budgets.length > 0 ? (
         <Panel title={t('budgets.list', 'بودجه‌ها')}>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[32rem] text-sm">
-              <thead className="text-xs text-[hsl(var(--muted-foreground))]">
-                <tr>
-                  <th className="py-2 text-start">{t('budgets.account', 'حساب')}</th>
-                  <th className="py-2 text-start">{t('budgets.period', 'دوره')}</th>
-                  <th className="py-2 text-start">{t('budgets.amount', 'سقف هر دوره')}</th>
-                  <th className="py-2 text-start">{t('budgets.action', 'رفتار')}</th>
-                  <th className="py-2 text-start">{t('common.status', 'وضعیت')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[hsl(var(--border))]">
-                {budgets.map((budget) => (
-                  <tr key={budget.id}>
-                    <td className="py-2 font-mono text-xs" dir="ltr">
-                      {budget.accountId.slice(0, 8)}
-                    </td>
-                    <td className="py-2">{t(`budgets.period_${budget.period}`, budget.period)}</td>
-                    <td className="py-2">
-                      <Money minor={budget.amountMinor} />
-                    </td>
-                    <td className="py-2">
-                      <Badge
-                        tone={
-                          budget.action === 'block'
-                            ? 'bad'
-                            : budget.action === 'warn'
-                              ? 'warn'
-                              : 'neutral'
-                        }
-                      >
-                        {t(`budgets.action_${budget.action}`, budget.action)}
-                      </Badge>
-                    </td>
-                    <td className="py-2">
-                      {budget.isActive ? (
-                        <Badge tone="good">{t('common.active', 'فعال')}</Badge>
-                      ) : (
-                        <Badge tone="neutral">{t('common.inactive', 'غیرفعال')}</Badge>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('budgets.account', 'حساب')}</TableHead>
+                <TableHead>{t('budgets.period', 'دوره')}</TableHead>
+                <TableHead>{t('budgets.amount', 'سقف هر دوره')}</TableHead>
+                <TableHead>{t('budgets.action', 'رفتار')}</TableHead>
+                <TableHead>{t('common.status', 'وضعیت')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {budgets.map((budget) => (
+                <TableRow key={budget.id}>
+                  <TableCell className="py-2 font-mono text-xs" dir="ltr">
+                    {budget.accountId.slice(0, 8)}
+                  </TableCell>
+                  <TableCell>{t(`budgets.period_${budget.period}`, budget.period)}</TableCell>
+                  <TableCell>
+                    <Money minor={budget.amountMinor} />
+                  </TableCell>
+                  <TableCell>
+                    <Badge
+                      tone={
+                        budget.action === 'block'
+                          ? 'bad'
+                          : budget.action === 'warn'
+                            ? 'warn'
+                            : 'neutral'
+                      }
+                    >
+                      {t(`budgets.action_${budget.action}`, budget.action)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {budget.isActive ? (
+                      <Badge tone="good">{t('common.active', 'فعال')}</Badge>
+                    ) : (
+                      <Badge tone="neutral">{t('common.inactive', 'غیرفعال')}</Badge>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </Panel>
       ) : null}
 
@@ -157,15 +161,13 @@ export const BudgetsView = memo(function BudgetsView({
         description={t('budgets.check_hint', 'پیش از تعهد پول پرسیده می‌شود، نه بعد از آن.')}
       >
         <div className="grid gap-3 sm:grid-cols-[1fr_12rem_auto]">
-          <Field label={t('budgets.account', 'حساب')}>
-            <input
-              className={inputClass}
-              dir="ltr"
-              value={accountId}
-              disabled={isBusy}
-              onChange={(event) => setAccountId(event.target.value)}
-            />
-          </Field>
+          <Field
+            label={t('budgets.account', 'حساب')}
+            value={accountId}
+            onChange={setAccountId}
+            disabled={isBusy}
+            dir="ltr"
+          />
           <MinorInput
             label={t('budgets.amount_to_spend', 'مبلغ')}
             value={amountMinor}
@@ -249,47 +251,45 @@ export const BudgetsView = memo(function BudgetsView({
           title={t('budgets.variance', 'انحراف از بودجه')}
           description={t('budgets.variance_hint', 'گذشته‌نگر — تعهدها در این جدول نیستند.')}
         >
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[32rem] text-sm">
-              <thead className="text-xs text-[hsl(var(--muted-foreground))]">
-                <tr>
-                  <th className="py-2 text-start">{t('budgets.period_start', 'آغاز دوره')}</th>
-                  <th className="py-2 text-start">{t('budgets.budget', 'بودجه')}</th>
-                  <th className="py-2 text-start">{t('budgets.actual', 'خرج‌شده')}</th>
-                  <th className="py-2 text-start">{t('budgets.variance_amount', 'انحراف')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[hsl(var(--border))]">
-                {variance.map((row) => (
-                  <tr key={`${row.budgetId}-${row.periodStart}`}>
-                    <td className="py-2 tabular-nums" dir="ltr">
-                      {row.periodStart.slice(0, 10)}
-                    </td>
-                    <td className="py-2">
-                      <Money minor={row.budgetMinor} tone="muted" />
-                    </td>
-                    <td className="py-2">
-                      <Money minor={row.actualMinor} />
-                    </td>
-                    <td className="py-2">
-                      {/* Positive is overspend, so the sign is inverted for tone:
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('budgets.period_start', 'آغاز دوره')}</TableHead>
+                <TableHead>{t('budgets.budget', 'بودجه')}</TableHead>
+                <TableHead>{t('budgets.actual', 'خرج‌شده')}</TableHead>
+                <TableHead>{t('budgets.variance_amount', 'انحراف')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {variance.map((row) => (
+                <TableRow key={`${row.budgetId}-${row.periodStart}`}>
+                  <TableCell className="py-2 tabular-nums" dir="ltr">
+                    {row.periodStart.slice(0, 10)}
+                  </TableCell>
+                  <TableCell>
+                    <Money minor={row.budgetMinor} tone="muted" />
+                  </TableCell>
+                  <TableCell>
+                    <Money minor={row.actualMinor} />
+                  </TableCell>
+                  <TableCell>
+                    {/* Positive is overspend, so the sign is inverted for tone:
                           more than budgeted is the bad direction. */}
-                      <Money
-                        minor={row.varianceMinor}
-                        signed
-                        tone={row.varianceMinor > 0 ? 'bad' : 'good'}
-                      />
-                      {row.variancePercent != null ? (
-                        <span className="ms-2 text-xs text-[hsl(var(--muted-foreground))]">
-                          {Math.round(row.variancePercent)}%
-                        </span>
-                      ) : null}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    <Money
+                      minor={row.varianceMinor}
+                      signed
+                      tone={row.varianceMinor > 0 ? 'bad' : 'good'}
+                    />
+                    {row.variancePercent != null ? (
+                      <span className="ms-2 text-xs text-[hsl(var(--muted-foreground))]">
+                        {Math.round(row.variancePercent)}%
+                      </span>
+                    ) : null}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </Panel>
       ) : null}
     </CapabilityPage>

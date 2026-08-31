@@ -38,7 +38,6 @@ import {
   Panel,
   Stat,
   StatGrid,
-  inputClass,
 } from '../capability/capability-kit'
 
 export interface TillViewProps {
@@ -195,14 +194,12 @@ export const TillView = memo(function TillView({
                 onChange={setMovementMinor}
                 disabled={isBusy}
               />
-              <Field label={t('till.reason', 'دلیل')}>
-                <input
-                  className={inputClass}
-                  value={movementReason}
-                  disabled={isBusy}
-                  onChange={(event) => setMovementReason(event.target.value)}
-                />
-              </Field>
+              <Field
+                label={t('till.reason', 'دلیل')}
+                value={movementReason}
+                onChange={setMovementReason}
+                disabled={isBusy}
+              />
               <ActionButton
                 variant="quiet"
                 className="self-end"
@@ -261,14 +258,12 @@ export const TillView = memo(function TillView({
 
             {previewVariance != null && previewVariance !== 0 ? (
               <div className="mt-3">
-                <Field label={t('till.variance_reason', 'توضیح اختلاف')}>
-                  <input
-                    className={inputClass}
-                    value={varianceReason}
-                    disabled={isBusy}
-                    onChange={(event) => setVarianceReason(event.target.value)}
-                  />
-                </Field>
+                <Field
+                  label={t('till.variance_reason', 'توضیح اختلاف')}
+                  value={varianceReason}
+                  onChange={setVarianceReason}
+                  disabled={isBusy}
+                />
               </div>
             ) : null}
 

@@ -43,7 +43,8 @@ import {
   Stat,
   StatGrid,
   formatMinutes,
-  inputClass,
+  NumberField,
+  SelectField,
 } from '../capability/capability-kit'
 
 export interface TimesheetProjectOption {
@@ -136,18 +137,12 @@ export const TimesheetsView = memo(function TimesheetsView({
 
       {projects.length > 0 ? (
         <Panel title={t('timesheets.project', 'پروژه')}>
-          <select
-            className={inputClass}
+          <SelectField
             value={selectedProjectId ?? ''}
-            onChange={(event) => onSelectProject(event.target.value)}
-          >
-            <option value="">{t('timesheets.select_project', 'یک پروژه انتخاب کنید')}</option>
-            {projects.map((project) => (
-              <option key={project.id} value={project.id}>
-                {project.name}
-              </option>
-            ))}
-          </select>
+            onChange={onSelectProject}
+            placeholder={t('timesheets.select_project', 'یک پروژه انتخاب کنید')}
+            options={projects.map((project) => ({ value: project.id, label: project.name }))}
+          />
         </Panel>
       ) : null}
 
@@ -192,61 +187,52 @@ export const TimesheetsView = memo(function TimesheetsView({
           description={t('timesheets.log_hint', 'ساعت و دقیقه — به دقیقه‌ی صحیح ذخیره می‌شود.')}
         >
           <div className="grid gap-3 sm:grid-cols-3">
-            <Field label={t('timesheets.employee', 'کارمند')}>
-              <input
-                className={inputClass}
-                dir="ltr"
-                value={employeeId}
+            <Field
+              label={t('timesheets.employee', 'کارمند')}
+              value={employeeId}
+              onChange={setEmployeeId}
+              disabled={isBusy}
+              dir="ltr"
+            />
+            <Field
+              label={t('common.date', 'تاریخ')}
+              value={onDate}
+              onChange={setOnDate}
+              disabled={isBusy}
+              type="date"
+              dir="ltr"
+            />
+            {/* Two fields, each labelled, rather than one labelled pair: a
+                screen reader reading "duration" over two anonymous numbers
+                cannot say which is hours. `max={59}` is the field's rule —
+                60 minutes is an hour, and typing it should not silently
+                become an extra hour nobody entered. */}
+            <div className="flex gap-2" dir="ltr">
+              <NumberField
+                label={t('timesheets.hours', 'ساعت')}
+                value={hours}
+                onChange={setHours}
+                min={0}
                 disabled={isBusy}
-                onChange={(event) => setEmployeeId(event.target.value)}
               />
-            </Field>
-            <Field label={t('common.date', 'تاریخ')}>
-              <input
-                type="date"
-                dir="ltr"
-                className={inputClass}
-                value={onDate}
+              <NumberField
+                label={t('timesheets.minutes', 'دقیقه')}
+                value={minutes}
+                onChange={setMinutes}
+                min={0}
+                max={59}
                 disabled={isBusy}
-                onChange={(event) => setOnDate(event.target.value)}
               />
-            </Field>
-            <Field label={t('timesheets.duration', 'مدت')}>
-              <div className="flex gap-2" dir="ltr">
-                <input
-                  type="number"
-                  min={0}
-                  className={inputClass}
-                  value={hours}
-                  disabled={isBusy}
-                  onChange={(event) => setHours(Math.max(0, Number(event.target.value) || 0))}
-                  aria-label={t('timesheets.hours', 'ساعت')}
-                />
-                <input
-                  type="number"
-                  min={0}
-                  max={59}
-                  className={inputClass}
-                  value={minutes}
-                  disabled={isBusy}
-                  onChange={(event) =>
-                    setMinutes(Math.min(59, Math.max(0, Number(event.target.value) || 0)))
-                  }
-                  aria-label={t('timesheets.minutes', 'دقیقه')}
-                />
-              </div>
-            </Field>
+            </div>
           </div>
 
           <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_auto_auto]">
-            <Field label={t('common.description', 'شرح')}>
-              <input
-                className={inputClass}
-                value={description}
-                disabled={isBusy}
-                onChange={(event) => setDescription(event.target.value)}
-              />
-            </Field>
+            <Field
+              label={t('common.description', 'شرح')}
+              value={description}
+              onChange={setDescription}
+              disabled={isBusy}
+            />
             <label className="flex items-end gap-2 pb-2 text-sm">
               <input
                 type="checkbox"

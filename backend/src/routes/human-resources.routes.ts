@@ -438,8 +438,11 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/leaves',
     {
+      // Same omission as `/api/boms`: a workspace-scoped cache with no
+      // workspace resolved, so the route answered 500 on every call.
       preHandler: [
         authenticate,
+        requireWorkspaceContext,
         cacheMiddleware({ scope: 'workspace', ttl: 60, keyPrefix: 'leaves' }),
       ],
       schema: {

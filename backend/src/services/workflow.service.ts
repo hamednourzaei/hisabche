@@ -4,6 +4,7 @@
 // ============================================
 
 import { supabase } from '../db'
+import type { TenancyContext } from './tenancy.service'
 import { NotificationService } from './notification.service'
 import { memoryCache } from '../utils/pagination'
 import type {
@@ -387,14 +388,35 @@ export class WorkflowService {
   }
 
   /* ─── Approve or reject a step ─── */
+  /**
+   * Approve or reject the current step.
+   *
+   * Takes a `TenancyContext`, not a bare `userId` + `userRole`.
+   *
+   * TWO DEFECTS THAT CAME FROM THE OLD SIGNATURE
+   *
+   * 1. `userRole` arrived from `request.userRole`, which `auth.middleware.ts`
+   *    populates ONLY when the caller belongs to exactly one workspace — with
+   *    two or more it is the empty string, deliberately, because there is no
+   *    single answer. So `canAct` below compared '' against the step's
+   *    approver role, every approve and every reject was refused, and anyone
+   *    working across two shops simply could not approve anything.
+   *
+   * 2. The instance was fetched by id with NO workspace filter, so an id from
+   *    another business resolved and was acted on. `ctx.workspaceId` closes
+   *    that, and it is the same boundary every other service uses.
+   */
   async performAction(
-    userId: string,
-    userRole: string,
+    ctx: TenancyContext,
     input: CreateWorkflowActionInput,
   ): Promise<{ instance: WorkflowInstance; action: WorkflowActionRecord }> {
+    const userId = ctx.userId
+    const userRole = ctx.role
+
     const { data: instance, error: instanceError } = await supabase
       .from('workflow_instances')
       .select(INSTANCE_COLUMNS)
+      .eq('workspace_id', ctx.workspaceId)
       .eq('id', input.instance_id)
       .single()
 

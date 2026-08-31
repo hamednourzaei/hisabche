@@ -278,7 +278,14 @@ export async function workflowRoutes(fastify: FastifyInstance) {
         const { id } = request.params as { id: string }
         const body = createWorkflowActionSchema.omit({ instance_id: true }).parse(request.body)
 
-        const result = await workflowService.performAction(request.userId, request.userRole, {
+        // `request.tenancy`, not `request.userId` + `request.userRole`.
+        //
+        // `userRole` is empty whenever the caller belongs to more than one
+        // workspace — the auth middleware refuses to guess which one — so
+        // passing it here refused every approval for anyone working across two
+        // shops. `tenancy.role` is the role IN the resolved workspace, which
+        // is the only role that can answer "may this person approve this".
+        const result = await workflowService.performAction(request.tenancy, {
           ...body,
           instance_id: id,
         })

@@ -35,6 +35,12 @@ import {
   Panel,
   Stat,
   StatGrid,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '../capability/capability-kit'
 
 export interface GovernanceViewProps {
@@ -202,34 +208,35 @@ export const GovernanceView = memo(function GovernanceView({
                 {t('governance.no_overrides', 'موردی ثبت نشده.')}
               </p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[36rem] text-sm">
-                  <thead className="text-xs text-[hsl(var(--muted-foreground))]">
-                    <tr>
-                      <th className="py-2 text-start">{t('common.date', 'تاریخ')}</th>
-                      <th className="py-2 text-start">{t('governance.rule', 'قاعده')}</th>
-                      <th className="py-2 text-start">{t('governance.record', 'رکورد')}</th>
-                      <th className="py-2 text-start">{t('governance.reason', 'دلیل')}</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[hsl(var(--border))]">
-                    {overrides.map((override) => (
-                      <tr key={override.id}>
-                        <td className="py-2 tabular-nums" dir="ltr">
-                          {override.created_at?.slice(0, 16).replace('T', ' ')}
-                        </td>
-                        <td className="py-2 font-mono text-xs" dir="ltr">
-                          {override.rule_id}
-                        </td>
-                        <td className="py-2 text-xs text-[hsl(var(--muted-foreground))]" dir="ltr">
-                          {override.entity_type} {override.entity_id?.slice(0, 8)}
-                        </td>
-                        <td className="py-2">{override.reason}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t('common.date', 'تاریخ')}</TableHead>
+                    <TableHead>{t('governance.rule', 'قاعده')}</TableHead>
+                    <TableHead>{t('governance.record', 'رکورد')}</TableHead>
+                    <TableHead>{t('governance.reason', 'دلیل')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {overrides.map((override) => (
+                    <TableRow key={override.id}>
+                      <TableCell className="py-2 tabular-nums" dir="ltr">
+                        {override.created_at?.slice(0, 16).replace('T', ' ')}
+                      </TableCell>
+                      <TableCell className="py-2 font-mono text-xs" dir="ltr">
+                        {override.rule_id}
+                      </TableCell>
+                      <TableCell
+                        className="py-2 text-xs text-[hsl(var(--muted-foreground))]"
+                        dir="ltr"
+                      >
+                        {override.entity_type} {override.entity_id?.slice(0, 8)}
+                      </TableCell>
+                      <TableCell>{override.reason}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             )}
           </Panel>
         </>

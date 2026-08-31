@@ -31,6 +31,12 @@ import {
   Panel,
   Stat,
   StatGrid,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '../capability/capability-kit'
 
 export interface AssetsViewProps {
@@ -132,47 +138,43 @@ export const AssetsView = memo(function AssetsView({
 
       {assets.length > 0 ? (
         <Panel title={t('assets.register', 'دفتر دارایی')}>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[36rem] text-sm">
-              <thead className="text-xs text-[hsl(var(--muted-foreground))]">
-                <tr className="text-start">
-                  <th className="py-2 text-start">{t('assets.name', 'نام')}</th>
-                  <th className="py-2 text-start">{t('assets.cost', 'بهای تمام‌شده')}</th>
-                  <th className="py-2 text-start">{t('assets.method', 'روش')}</th>
-                  <th className="py-2 text-start">{t('assets.periods', 'دوره‌ها')}</th>
-                  <th className="py-2 text-start">{t('common.status', 'وضعیت')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[hsl(var(--border))]">
-                {assets.map((asset) => (
-                  <tr
-                    key={asset.id}
-                    onClick={() => onSelect(asset.id)}
-                    className={
-                      'cursor-pointer transition hover:bg-[hsl(var(--muted)/0.4)] ' +
-                      (asset.id === selectedId ? 'bg-[hsl(var(--muted)/0.5)]' : '')
-                    }
-                  >
-                    <td className="py-2">{asset.name}</td>
-                    <td className="py-2">
-                      <Money minor={asset.costMinor} />
-                    </td>
-                    <td className="py-2 text-[hsl(var(--muted-foreground))]">
-                      {t(`assets.method_${asset.method}`, asset.method)}
-                    </td>
-                    <td className="py-2 tabular-nums">{asset.periods}</td>
-                    <td className="py-2">
-                      {asset.disposedOn ? (
-                        <Badge tone="neutral">{t('assets.disposed', 'واگذارشده')}</Badge>
-                      ) : (
-                        <Badge tone="good">{t('assets.active', 'فعال')}</Badge>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('assets.name', 'نام')}</TableHead>
+                <TableHead>{t('assets.cost', 'بهای تمام‌شده')}</TableHead>
+                <TableHead>{t('assets.method', 'روش')}</TableHead>
+                <TableHead>{t('assets.periods', 'دوره‌ها')}</TableHead>
+                <TableHead>{t('common.status', 'وضعیت')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {assets.map((asset) => (
+                <TableRow
+                  key={asset.id}
+                  onClick={() => onSelect(asset.id)}
+                  className={
+                    'cursor-pointer transition hover:bg-[hsl(var(--muted)/0.4)] ' +
+                    (asset.id === selectedId ? 'bg-[hsl(var(--muted)/0.5)]' : '')
+                  }
+                >
+                  <TableCell>{asset.name}</TableCell>
+                  <TableCell>
+                    <Money minor={asset.costMinor} />
+                  </TableCell>
+                  <TableCell>{t(`assets.method_${asset.method}`, asset.method)}</TableCell>
+                  <TableCell>{asset.periods}</TableCell>
+                  <TableCell>
+                    {asset.disposedOn ? (
+                      <Badge tone="neutral">{t('assets.disposed', 'واگذارشده')}</Badge>
+                    ) : (
+                      <Badge tone="good">{t('assets.active', 'فعال')}</Badge>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </Panel>
       ) : null}
 
@@ -204,30 +206,30 @@ export const AssetsView = memo(function AssetsView({
           {isScheduleLoading ? <Loading label={t('common.loading', 'در حال بارگذاری…')} /> : null}
 
           <div className="mt-4 overflow-x-auto">
-            <table className="w-full min-w-[32rem] text-sm">
-              <thead className="text-xs text-[hsl(var(--muted-foreground))]">
-                <tr>
-                  <th className="py-2 text-start">{t('assets.period', 'دوره')}</th>
-                  <th className="py-2 text-start">{t('common.date', 'تاریخ')}</th>
-                  <th className="py-2 text-start">{t('assets.amount', 'مبلغ')}</th>
-                  <th className="py-2 text-start">{t('assets.book_value', 'ارزش دفتری')}</th>
-                  <th className="py-2 text-start">{t('common.status', 'وضعیت')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[hsl(var(--border))]">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('assets.period', 'دوره')}</TableHead>
+                  <TableHead>{t('common.date', 'تاریخ')}</TableHead>
+                  <TableHead>{t('assets.amount', 'مبلغ')}</TableHead>
+                  <TableHead>{t('assets.book_value', 'ارزش دفتری')}</TableHead>
+                  <TableHead>{t('common.status', 'وضعیت')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {schedule.map((row) => (
-                  <tr key={row.period}>
-                    <td className="py-2 tabular-nums">{row.period}</td>
-                    <td className="py-2 tabular-nums" dir="ltr">
+                  <TableRow key={row.period}>
+                    <TableCell>{row.period}</TableCell>
+                    <TableCell className="py-2 tabular-nums" dir="ltr">
                       {row.on_date?.slice(0, 10)}
-                    </td>
-                    <td className="py-2">
+                    </TableCell>
+                    <TableCell>
                       <Money minor={row.amount_minor} />
-                    </td>
-                    <td className="py-2">
+                    </TableCell>
+                    <TableCell>
                       <Money minor={row.book_value_minor} tone="muted" />
-                    </td>
-                    <td className="py-2">
+                    </TableCell>
+                    <TableCell>
                       {row.cancelled_at ? (
                         <Badge tone="neutral">{t('assets.cancelled', 'لغوشده')}</Badge>
                       ) : row.posted_at ? (
@@ -235,11 +237,11 @@ export const AssetsView = memo(function AssetsView({
                       ) : (
                         <Badge tone="warn">{t('assets.pending', 'در انتظار')}</Badge>
                       )}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           </div>
         </Panel>
       ) : null}

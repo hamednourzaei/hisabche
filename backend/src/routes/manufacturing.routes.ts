@@ -29,8 +29,18 @@ export async function manufacturingRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/boms',
     {
+      // `requireWorkspaceContext` was missing, and its absence was not a
+      // subtle one: the cache middleware is scoped by workspace, so it looked
+      // for a `request.tenancy` nothing had set and the route answered 500 on
+      // every call. The handler below reads `request.tenancy` too, so even
+      // without the cache it had no workspace to scope by.
+      //
+      // Order is load-bearing: authenticate -> workspace -> cache. The cache
+      // key contains the workspace id, so it cannot be built before the
+      // workspace is resolved.
       preHandler: [
         authenticate,
+        requireWorkspaceContext,
         cacheMiddleware({ scope: 'workspace', ttl: 120, keyPrefix: 'boms' }),
       ],
       schema: {

@@ -35,7 +35,13 @@ import {
   Panel,
   Stat,
   StatGrid,
-  inputClass,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  NumberField,
 } from '../capability/capability-kit'
 
 export interface ExpiryViewProps {
@@ -142,46 +148,42 @@ export const ExpiryView = memo(function ExpiryView({
               <Badge tone={STATE_TONE[bucket.state] ?? 'neutral'}>{bucket.totalQuantity}</Badge>
             }
           >
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[30rem] text-sm">
-                <thead className="text-xs text-[hsl(var(--muted-foreground))]">
-                  <tr>
-                    <th className="py-2 text-start">{t('expiry.batch', 'بچ')}</th>
-                    <th className="py-2 text-start">{t('expiry.quantity', 'مقدار')}</th>
-                    <th className="py-2 text-start">{t('expiry.expiry_date', 'تاریخ انقضا')}</th>
-                    <th className="py-2 text-start">
-                      {t('expiry.days_remaining', 'روز باقی‌مانده')}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[hsl(var(--border))]">
-                  {bucket.batches.map((batch) => (
-                    <tr key={batch.batchId}>
-                      <td className="py-2 font-mono text-xs" dir="ltr">
-                        {batch.batchNumber}
-                      </td>
-                      <td className="py-2 tabular-nums">{batch.quantity}</td>
-                      <td className="py-2 tabular-nums" dir="ltr">
-                        {batch.expiryDate ?? '—'}
-                      </td>
-                      <td className="py-2 tabular-nums">
-                        {batch.daysRemaining == null ? (
-                          '—'
-                        ) : (
-                          <span
-                            className={
-                              batch.daysRemaining < 0 ? 'text-[hsl(var(--color-destructive))]' : ''
-                            }
-                          >
-                            {batch.daysRemaining}
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t('expiry.batch', 'بچ')}</TableHead>
+                  <TableHead>{t('expiry.quantity', 'مقدار')}</TableHead>
+                  <TableHead>{t('expiry.expiry_date', 'تاریخ انقضا')}</TableHead>
+                  <TableHead>{t('expiry.days_remaining', 'روز باقی‌مانده')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {bucket.batches.map((batch) => (
+                  <TableRow key={batch.batchId}>
+                    <TableCell className="py-2 font-mono text-xs" dir="ltr">
+                      {batch.batchNumber}
+                    </TableCell>
+                    <TableCell>{batch.quantity}</TableCell>
+                    <TableCell className="py-2 tabular-nums" dir="ltr">
+                      {batch.expiryDate ?? '—'}
+                    </TableCell>
+                    <TableCell>
+                      {batch.daysRemaining == null ? (
+                        '—'
+                      ) : (
+                        <span
+                          className={
+                            batch.daysRemaining < 0 ? 'text-[hsl(var(--color-destructive))]' : ''
+                          }
+                        >
+                          {batch.daysRemaining}
+                        </span>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </Panel>
         ))}
 
@@ -193,26 +195,20 @@ export const ExpiryView = memo(function ExpiryView({
         )}
       >
         <div className="grid gap-3 sm:grid-cols-[1fr_10rem_auto]">
-          <Field label={t('expiry.product', 'کالا')}>
-            <input
-              className={inputClass}
-              dir="ltr"
-              value={productId}
-              disabled={isBusy}
-              onChange={(event) => setProductId(event.target.value)}
-            />
-          </Field>
-          <Field label={t('expiry.quantity', 'مقدار')}>
-            <input
-              type="number"
-              min={1}
-              dir="ltr"
-              className={inputClass}
-              value={quantity}
-              disabled={isBusy}
-              onChange={(event) => setQuantity(Math.max(0, Number(event.target.value) || 0))}
-            />
-          </Field>
+          <Field
+            label={t('expiry.product', 'کالا')}
+            value={productId}
+            onChange={setProductId}
+            disabled={isBusy}
+            dir="ltr"
+          />
+          <NumberField
+            label={t('expiry.quantity', 'مقدار')}
+            value={quantity}
+            onChange={setQuantity}
+            min={1}
+            disabled={isBusy}
+          />
           <ActionButton
             className="self-end"
             disabled={isBusy || productId.trim() === '' || quantity <= 0}
