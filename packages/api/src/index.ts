@@ -381,6 +381,29 @@ export {
 } from './hooks/budgets'
 
 export {
+  migrationKeys,
+  useMigrations,
+  useMigration,
+  useScanMigration,
+  useSaveMapping,
+  useDryRun,
+  useCommitMigration,
+  useCancelMigration,
+  type MigrationEntity,
+  type MigrationSourceType,
+  type MigrationStatus,
+  type MigrationJob,
+  type MigrationDiscovery,
+  type MappingStatus,
+  type MappingSuggestion,
+  type SourceGuess,
+  type Finding,
+  type FindingSeverity,
+  type DryRunSummary,
+  type ReconciliationLine,
+} from './hooks/migrations'
+
+export {
   timesheetKeys,
   useTimesheetSummary,
   useBillingPreview,

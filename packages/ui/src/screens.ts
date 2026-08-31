@@ -87,6 +87,8 @@ export { TillContainer } from './components/ui/till/containers/till-container'
 export { AssetsContainer } from './components/ui/assets/containers/assets-container'
 export { BankContainer } from './components/ui/bank/containers/bank-container'
 export { BudgetsContainer } from './components/ui/budgets/containers/budgets-container'
+export { DataMigrationContainer } from './components/ui/data-migration/containers/data-migration-container'
+export { DataAndSyncContainer } from './components/ui/data-and-sync/containers/data-and-sync-container'
 export { TimesheetsContainer } from './components/ui/timesheets/containers/timesheets-container'
 export { ExpiryContainer } from './components/ui/expiry/containers/expiry-container'
 

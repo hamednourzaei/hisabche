@@ -432,3 +432,8 @@ export function CapabilityPage({ children }: { children: React.ReactNode }) {
 
 export { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../table'
 export { EmptyState } from '../empty-state'
+
+// The ten mandatory states of §5, resolved by the contract package so every
+// screen says the same thing when several are true at once. A view that needs
+// 'forbidden', 'offline' or 'conflict' reaches for this rather than inventing
+// a fifth vocabulary for them.

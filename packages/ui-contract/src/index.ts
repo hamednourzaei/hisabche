@@ -25,6 +25,87 @@ export {
 } from './color-roles'
 
 export {
+  DOMAINS,
+  DOMAIN_SPECS,
+  breadcrumbsFor,
+  domainFor,
+  domainOf,
+  domainDestinations,
+  type Crumb,
+  type DomainId,
+  type DomainSpec,
+} from './shell'
+
+export {
+  DENSITIES,
+  FILTER_OPERATORS,
+  PAGE_SIZES,
+  DEFAULT_PAGE_SIZE,
+  MAX_PAGE_SIZE,
+  initialListState,
+  listReducer,
+  toQuery,
+  pageCount,
+  isPageOutOfRange,
+  toSavedView,
+  applySavedView,
+  isFiltered,
+  type ListState,
+  type ListAction,
+  type ListQuery,
+  type FilterClause,
+  type FilterOperator,
+  type SortDirection,
+  type Density,
+  type SavedView,
+} from './list-engine'
+
+export {
+  VIEW_KINDS,
+  ENTITY_KINDS,
+  ENTITY_VIEWS,
+  DETAIL_SECTIONS,
+  ENTITY_SECTIONS,
+  viewsFor,
+  hasView,
+  sectionsFor,
+  sectionRequiresCapability,
+  visibleSections,
+  type ViewKind,
+  type EntityKind,
+  type DetailSection,
+} from './entity-views'
+
+export {
+  WORK_ITEMS,
+  WORK_ITEM_KINDS,
+  buildWorkQueue,
+  hasWork,
+  mostPressing,
+  urgencyRank,
+  type WorkItem,
+  type WorkItemKind,
+  type WorkItemSpec,
+  type WorkItemUrgency,
+  type WorkCounts,
+} from './work-queue'
+
+export {
+  WORK_STATES,
+  WORK_STATE_PRESENTATION,
+  resolveWorkState,
+  describeWorkState,
+  isWorthShowing,
+  statePrecedence,
+  type WorkState,
+  type WorkStateInput,
+  type WorkStateTone,
+  type WorkStatePresentation,
+  type WorkStateMessage,
+  type Announcement,
+} from './work-state'
+
+export {
   A11Y_CONTRACT,
   type A11yContract,
   type InteractionState,

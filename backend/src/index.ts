@@ -67,6 +67,7 @@ import { taxRoutes } from './routes/tax.routes'
 import { posRoutes } from './routes/pos.routes'
 import { financeOpsRoutes } from './routes/finance-ops.routes'
 import { operationsRoutes } from './routes/operations.routes'
+import { migrationRoutes } from './routes/migration.routes'
 import { crmRoutes } from './routes/crm.routes'
 import { manufacturingRoutes } from './routes/manufacturing.routes'
 import { purchasingRoutes } from './routes/purchasing.routes'
@@ -486,6 +487,7 @@ export async function buildServer(): Promise<typeof server> {
   await server.register(posRoutes, { prefix: '/api/pos' })
   await server.register(financeOpsRoutes, { prefix: '/api/finance' })
   await server.register(operationsRoutes, { prefix: '/api/operations' })
+  await server.register(migrationRoutes, { prefix: '/api/migrations' })
   await server.register(crmRoutes)
   await server.register(manufacturingRoutes)
   await server.register(purchasingRoutes)

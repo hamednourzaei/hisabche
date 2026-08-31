@@ -8,6 +8,13 @@
       "port": 3039
     },
     {
+      "//": "The API. Not a preview surface itself, but the web dev server is not drivable without it — the onboarding gate reads server state, so every dashboard route redirects while this is down.",
+      "name": "backend",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@hisabche/backend", "dev"],
+      "port": 10000
+    },
+    {
       "name": "desktop",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "@hisabche/desktop", "dev"],

@@ -63,6 +63,12 @@ const ICONS: Record<NavId, readonly [IconName, IconName]> = {
   assets: ['business-outline', 'business'],
   bank: ['card-outline', 'card'],
   conflicts: ['git-compare-outline', 'git-compare'],
+  // The icon exists because the map is exhaustive over NavId. The DESTINATION
+  // does not exist on mobile yet, and 'data-migration' is deliberately absent
+  // from IMPLEMENTED below — importing a spreadsheet needs a document picker
+  // and a file the phone can actually reach, which is its own slice.
+  'data-and-sync': ['server-outline', 'server'],
+  'data-migration': ['download-outline', 'download'],
   coworkers: ['wallet-outline', 'wallet'],
   'sales-followup': ['call-outline', 'call'],
   'workflow-templates': ['git-branch-outline', 'git-branch'],

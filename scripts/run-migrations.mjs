@@ -109,6 +109,10 @@ const ORDER = [
   // order that happens to work today is not a guarantee.
   'sync-engine-migration.sql',
   'timesheet-sync-migration.sql',
+  // The migration centre. Last of the schema files: it references nothing the
+  // earlier ones create, but it is the newest capability and keeping new work
+  // at the end makes the order readable as a history.
+  'data-migration-center-migration.sql',
   // LAST, deliberately. It rewrites policies that the earlier files create, so
   // it has to run after all of them or its work is overwritten.
   'rls-recursion-fix-migration.sql',

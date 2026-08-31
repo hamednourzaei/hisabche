@@ -119,8 +119,33 @@ const ItemIcon = memo(function ItemIcon({
   size?: number
 }) {
   if (ICON_PATHS[item.id]) return <SidebarIcon id={item.id} active={active} size={size} />
+
+  // A destination whose icon did not resolve must not take the whole shell
+  // down with it. React renders `undefined` as "Element type is invalid" and
+  // the error boundary swallows the entire sidebar — so one missing glyph
+  // becomes a blank application, on every page, with a message that names no
+  // destination. Falling back keeps the app usable and says which id is at
+  // fault, which is the difference between a five-minute fix and an hour.
+  // `typeof === 'object'` is not enough. Next's package-import optimizer
+  // rewrites a named lucide import into a deep import, and for some names it
+  // hands back the MODULE NAMESPACE rather than the component — an object,
+  // truthy, and rejected by React with a message that names no destination.
+  // A real component is a function, or an object carrying `$$typeof`
+  // (memo/forwardRef).
+  const Icon = item.icon as unknown
+  const isRenderable =
+    typeof Icon === 'function' || (typeof Icon === 'object' && Icon !== null && '$$typeof' in Icon)
+
+  if (!isRenderable) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.warn(`[nav] no icon resolved for destination "${item.id}"`)
+    }
+    return <span aria-hidden="true" style={{ width: size, height: size }} />
+  }
+
+  const Render = Icon as ElementType
   return (
-    <item.icon
+    <Render
       className={cn(
         'shrink-0 transition-colors duration-200 motion-reduce:transition-none',
         active

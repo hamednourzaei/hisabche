@@ -41,6 +41,7 @@ import {
   CreditCard,
   ShieldCheck,
   type LucideIcon,
+  DatabaseZap,
 } from 'lucide-react'
 import {
   COMMAND_CONTRACT,
@@ -96,6 +97,12 @@ const NAV_ICONS: Record<NavId, LucideIcon> = {
   assets: Building2,
   bank: Landmark,
   conflicts: Scale,
+  // NOT `Database`: Next's package-import optimizer resolves that particular
+  // lucide name to a module namespace rather than the component, and React
+  // rejects it — taking the whole sidebar down on every page. `DatabaseZap`
+  // and the rest resolve correctly; this one does not.
+  'data-and-sync': RefreshCw,
+  'data-migration': DatabaseZap,
   coworkers: Wallet,
   'sales-followup': PhoneCall,
   'workflow-templates': Workflow,

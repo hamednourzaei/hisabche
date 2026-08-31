@@ -54,3 +54,12 @@ import { SoDService } from './sod.service'
  * — the document is not known until the handler has one.
  */
 export const sod = new SoDService()
+
+export {
+  authorize,
+  branchFilterFor,
+  mayWriteToBranch,
+  type ActorScope,
+  type ResourceScope,
+  type ScopeDecision,
+} from './scope.domain'

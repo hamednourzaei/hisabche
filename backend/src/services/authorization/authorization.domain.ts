@@ -75,6 +75,8 @@ export const CAPABILITIES = [
   // Reporting
   'report.operational.read',
   'report.financial.read',
+  // Bringing an existing business in
+  'data.import',
   // The workspace itself
   'member.manage',
   'workspace.manage',
@@ -119,6 +121,11 @@ const MIN_ROLE: Record<Capability, WorkspaceRole> = {
 
   'report.operational.read': 'seller',
   'report.financial.read': 'manager',
+
+  // An import creates thousands of rows with opening balances in one act. A
+  // seller creates customers one at a time at a counter; this is a different
+  // operation with a different blast radius.
+  'data.import': 'manager',
 
   'member.manage': 'owner',
   'workspace.manage': 'owner',

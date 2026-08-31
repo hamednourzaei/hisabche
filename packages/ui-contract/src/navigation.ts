@@ -52,6 +52,8 @@ export type NavId =
   | 'bank'
   | 'conflicts'
   // secondary — system
+  | 'data-and-sync'
+  | 'data-migration'
   | 'settings'
   | 'access'
   | 'history'
@@ -262,6 +264,31 @@ export const NAV_CONTRACT: readonly NavItemContract[] = [
     labelKey: 'nav.conflicts',
     descriptionKey: 'nav.conflicts_description',
     path: '/conflicts',
+    group: 'system',
+  },
+
+  // The hub §20 asks for. It does NOT replace sync-center, conflicts or
+  // data-migration — those are six distinct areas that fail differently, and
+  // merging them into one page with one spinner is the mistake. This is the
+  // way in, and each area keeps working when reached directly.
+  {
+    id: 'data-and-sync',
+    emoji: '🗄️',
+    labelKey: 'nav.data_and_sync',
+    descriptionKey: 'nav.data_and_sync_description',
+    path: '/data-and-sync',
+    group: 'system',
+  },
+
+  // Bringing an existing business in. Sits beside conflicts rather than in
+  // 'work' because it is something a shop does once, near the start, not part
+  // of anybody's week.
+  {
+    id: 'data-migration',
+    emoji: '📥',
+    labelKey: 'nav.data_migration',
+    descriptionKey: 'nav.data_migration_description',
+    path: '/data-migration',
     group: 'system',
   },
 

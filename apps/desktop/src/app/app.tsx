@@ -53,6 +53,8 @@ const TillPage = lazy(() => import('@/features/finance/till-page'))
 const AssetsPage = lazy(() => import('@/features/finance/assets-page'))
 const BankPage = lazy(() => import('@/features/finance/bank-page'))
 const BudgetsPage = lazy(() => import('@/features/finance/budgets-page'))
+const DataMigrationPage = lazy(() => import('@/features/sync/data-migration-page'))
+const DataAndSyncPage = lazy(() => import('@/features/sync/data-and-sync-page'))
 const TimesheetsPage = lazy(() => import('@/features/operations/timesheets-page'))
 const ExpiryPage = lazy(() => import('@/features/operations/expiry-page'))
 const ConflictsPage = lazy(() => import('@/features/sync/conflicts-page'))
@@ -119,6 +121,8 @@ const router = createHashRouter([
       { path: 'timesheets', element: <TimesheetsPage /> },
       { path: 'expiry', element: <ExpiryPage /> },
       { path: 'conflicts', element: <ConflictsPage /> },
+      { path: 'data-migration', element: <DataMigrationPage /> },
+      { path: 'data-and-sync', element: <DataAndSyncPage /> },
       { path: 'governance', element: <GovernancePage /> },
 
       // Web serves this at `/workflow-templates` and desktop only had
