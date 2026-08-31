@@ -10,12 +10,25 @@
 // what makes stock move: the backend's invoice service decrements (sale) or
 // increments (purchase) stock for every item that has one, so the accounting
 // happens server-side where it belongs, not here.
+//
+// ---------------------------------------------------------------------------
+// WHY THE LIST IS IN A PORTAL
+//
+// It used to be an `absolute` panel inside the cell. A table cell sits inside
+// the grid's horizontal scroll container, and an absolutely positioned child
+// is CLIPPED by that container — so the list appeared to open "inside" the
+// table, sliding under the rows below it and cut off at the table's edge. No
+// z-index fixes that; clipping happens before stacking is considered.
+//
+// Rendered into `document.body` with fixed coordinates, it floats above
+// everything and can be as tall as the screen allows.
 // ============================================
 'use client'
 
-import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { KeyboardEvent } from 'react'
-import { Package, Search } from 'lucide-react'
+import { ChevronDown, Package, Search } from 'lucide-react'
 import { useProducts } from '@hisabche/api'
 
 import { cn } from '../../../../lib/utils'
@@ -35,6 +48,19 @@ export interface DescriptionCellProps {
   onKeyDown: (event: KeyboardEvent<HTMLElement>, rowIndex: number, columnIndex: number) => void
 }
 
+/** Where the floating list sits, in viewport coordinates. */
+interface Anchor {
+  top: number
+  left: number
+  width: number
+  /** Opening upward when there is more room above than below. */
+  flipped: boolean
+}
+
+const PANEL_MAX_HEIGHT = 288
+const GAP = 4
+const MIN_WIDTH = 260
+
 export const DescriptionCell = memo(function DescriptionCell({
   value,
   productId,
@@ -49,7 +75,11 @@ export const DescriptionCell = memo(function DescriptionCell({
 }: DescriptionCellProps) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState('')
+  const [anchor, setAnchor] = useState<Anchor | null>(null)
+
   const boxRef = useRef<HTMLDivElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const searchRef = useRef<HTMLInputElement>(null)
 
   // Debounced so a fast typist does not fire a query per keystroke. Every row
   // with the same search shares one React Query cache entry, so a hundred-row
@@ -67,14 +97,87 @@ export const DescriptionCell = memo(function DescriptionCell({
 
   const products = useMemo<PickerProduct[]>(() => readProducts(data), [data])
 
+  /**
+   * Measure the cell and decide which way the list opens.
+   *
+   * A row near the bottom of a long invoice has no room below it, and a list
+   * that opens downward there is a list nobody can read. Flipping is decided
+   * per open, from the space actually available.
+   */
+  const measure = useCallback(() => {
+    const cell = boxRef.current
+    if (!cell) return
+
+    const rect = cell.getBoundingClientRect()
+    const below = window.innerHeight - rect.bottom
+    const above = rect.top
+    const flipped = below < PANEL_MAX_HEIGHT && above > below
+
+    const width = Math.max(rect.width, MIN_WIDTH)
+    // Kept inside the viewport on a narrow screen, where a cell can sit close
+    // enough to the edge that an aligned panel would hang off it.
+    const left = Math.min(Math.max(8, rect.left), window.innerWidth - width - 8)
+
+    setAnchor({
+      top: flipped ? rect.top - GAP : rect.bottom + GAP,
+      left,
+      width,
+      flipped,
+    })
+  }, [])
+
+  useLayoutEffect(() => {
+    if (!open) return
+    measure()
+  }, [open, measure])
+
   useEffect(() => {
     if (!open) return
+
     const onDown = (event: MouseEvent) => {
-      if (!boxRef.current?.contains(event.target as Node)) setOpen(false)
+      const target = event.target as Node
+      if (boxRef.current?.contains(target)) return
+      if (panelRef.current?.contains(target)) return
+      setOpen(false)
     }
+
+    const onKey = (event: globalThis.KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+
+    // The panel is fixed to the viewport, so it has to follow the cell when
+    // anything moves — including the grid's own horizontal scroll, which is
+    // why this listens in the CAPTURE phase rather than on window alone.
     document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    window.addEventListener('resize', measure)
+    document.addEventListener('scroll', measure, true)
+
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+      window.removeEventListener('resize', measure)
+      document.removeEventListener('scroll', measure, true)
+    }
+  }, [open, measure])
+
+  // Focus lands in the panel's own search box, so typing filters the catalogue
+  // instead of overwriting the description the person may have already typed.
+  useEffect(() => {
+    if (open) searchRef.current?.focus()
   }, [open])
+
+  const pick = (product: PickerProduct) => {
+    const price = productPrice(product)
+    onPickProduct({
+      id: product.id,
+      name: product.name,
+      price: String(price ?? 0),
+      unit: product.unit ?? 'piece',
+    })
+    setOpen(false)
+    setSearch('')
+  }
 
   return (
     <div ref={boxRef} className="relative">
@@ -92,10 +195,7 @@ export const DescriptionCell = memo(function DescriptionCell({
           disabled={disabled}
           data-cell={`${rowIndex}-${columnIndex}`}
           onKeyDown={(e) => onKeyDown(e, rowIndex, columnIndex)}
-          onChange={(e) => {
-            onChange(e.target.value)
-            setSearch(e.target.value)
-          }}
+          onChange={(e) => onChange(e.target.value)}
           aria-label={t('invoiceBuilder.columns.description', 'شرح کالا / خدمت')}
           placeholder={t(
             'invoiceBuilder.grid.descriptionPlaceholder',
@@ -117,75 +217,129 @@ export const DescriptionCell = memo(function DescriptionCell({
           </span>
         ) : null}
 
+        {/*
+          A chevron, not a magnifier.
+
+          It points DOWN when closed and UP when open, which is the one
+          convention every dropdown on every platform shares — a person knows
+          what it will do before pressing it. The magnifier said "search",
+          which is what the panel does, not what the button does.
+        */}
         <button
           type="button"
           disabled={disabled}
           onClick={() => setOpen((v) => !v)}
           aria-label={t('invoiceBuilder.grid.pickProduct', 'انتخاب از انبار')}
           aria-expanded={open}
+          aria-haspopup="listbox"
           className={cn(
             'shrink-0 rounded-[var(--radius-sm)] p-1',
             'text-[hsl(var(--fg-tertiary))] hover:bg-[hsl(var(--surface-muted))]',
             'hover:text-[hsl(var(--color-primary))]',
             'transition-colors duration-150 motion-reduce:transition-none',
+            open && 'text-[hsl(var(--color-primary))] bg-[hsl(var(--surface-muted))]',
           )}
         >
-          <Search className="size-3.5" aria-hidden="true" />
+          <ChevronDown
+            className={cn(
+              'size-4 transition-transform duration-150 motion-reduce:transition-none',
+              open && 'rotate-180',
+            )}
+            aria-hidden="true"
+          />
         </button>
       </div>
 
-      {open ? (
-        <div
-          className={cn(
-            'absolute z-50 mt-1 max-h-64 w-72 max-w-[80vw] overflow-y-auto',
-            'rounded-[var(--radius-md)] border border-[hsl(var(--border-default))]',
-            'bg-[hsl(var(--surface-elevated))] p-1 shadow-lg',
-          )}
-        >
-          {isLoading ? (
-            <p className="p-3 text-xs text-[hsl(var(--fg-tertiary))]">
-              {t('common.loading', 'در حال بارگذاری…')}
-            </p>
-          ) : products.length === 0 ? (
-            <p className="p-3 text-xs text-[hsl(var(--fg-tertiary))]">
-              {t('invoiceBuilder.grid.noProducts', 'کالایی پیدا نشد — همین متن ثبت می‌شود')}
-            </p>
-          ) : (
-            products.map((product) => {
-              const price = productPrice(product)
-              return (
-                <button
-                  key={product.id}
-                  type="button"
-                  onClick={() => {
-                    onPickProduct({
-                      id: product.id,
-                      name: product.name,
-                      price: String(price ?? 0),
-                      unit: product.unit ?? 'piece',
-                    })
-                    setOpen(false)
-                  }}
-                  className={cn(
-                    'flex w-full items-center justify-between gap-2 rounded-[var(--radius-sm)]',
-                    'px-2.5 py-2 text-start text-sm',
-                    'text-[hsl(var(--fg-primary))] hover:bg-[hsl(var(--surface-muted))]',
-                    'transition-colors duration-150 motion-reduce:transition-none',
-                  )}
-                >
-                  <span className="min-w-0 truncate">{product.name}</span>
-                  <span className="shrink-0 text-[11px] tabular-nums text-[hsl(var(--fg-tertiary))]">
-                    {/* Stock on hand, so the user sees what they are drawing down. */}
-                    {typeof product.quantity === 'number'
-                      ? product.quantity.toLocaleString(locale)
-                      : ''}
-                  </span>
-                </button>
-              )
-            })
-          )}
-        </div>
-      ) : null}
+      {open && anchor && typeof document !== 'undefined'
+        ? createPortal(
+            <div
+              ref={panelRef}
+              role="listbox"
+              style={{
+                position: 'fixed',
+                top: anchor.flipped ? undefined : anchor.top,
+                bottom: anchor.flipped ? window.innerHeight - anchor.top : undefined,
+                left: anchor.left,
+                width: anchor.width,
+                maxHeight: PANEL_MAX_HEIGHT,
+                zIndex: 9999,
+              }}
+              className={cn(
+                'flex flex-col overflow-hidden',
+                'rounded-[var(--radius-md)] border border-[hsl(var(--border-default))]',
+                'bg-[hsl(var(--surface-elevated))] shadow-xl shadow-black/20',
+              )}
+            >
+              {/*
+                The panel's own search box.
+
+                Separate from the cell's input on purpose: the cell holds the
+                DESCRIPTION that will be printed on the invoice, and typing to
+                find a product used to overwrite it. Two boxes, two jobs.
+              */}
+              <div className="shrink-0 border-b border-[hsl(var(--border-default))] p-2">
+                <div className="flex items-center gap-2 rounded-[var(--radius-sm)] bg-[hsl(var(--surface-muted))] px-2">
+                  <Search
+                    className="size-3.5 shrink-0 text-[hsl(var(--fg-tertiary))]"
+                    aria-hidden="true"
+                  />
+                  <input
+                    ref={searchRef}
+                    type="text"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder={t('invoiceBuilder.grid.searchProduct', 'جستجوی کالا…')}
+                    aria-label={t('invoiceBuilder.grid.searchProduct', 'جستجوی کالا…')}
+                    className={cn(
+                      'h-8 w-full min-w-0 bg-transparent text-sm outline-none',
+                      'text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))]',
+                    )}
+                  />
+                </div>
+              </div>
+
+              {/* `overscroll-contain`: reaching the end of this list must not
+                  start scrolling the invoice behind it. */}
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-1">
+                {isLoading ? (
+                  <p className="p-3 text-xs text-[hsl(var(--fg-tertiary))]">
+                    {t('common.loading', 'در حال بارگذاری…')}
+                  </p>
+                ) : products.length === 0 ? (
+                  <p className="p-3 text-xs text-[hsl(var(--fg-tertiary))]">
+                    {t('invoiceBuilder.grid.noProducts', 'کالایی پیدا نشد — همین متن ثبت می‌شود')}
+                  </p>
+                ) : (
+                  products.map((product) => (
+                    <button
+                      key={product.id}
+                      type="button"
+                      role="option"
+                      onClick={() => pick(product)}
+                      className={cn(
+                        'flex w-full items-center justify-between gap-2 rounded-[var(--radius-sm)]',
+                        // 44px: a finger target, not a mouse target. These rows
+                        // are picked on a phone at a counter.
+                        'min-h-11 px-2.5 py-2 text-start text-sm',
+                        'text-[hsl(var(--fg-primary))] hover:bg-[hsl(var(--surface-muted))]',
+                        'transition-colors duration-150 motion-reduce:transition-none',
+                      )}
+                    >
+                      <span className="min-w-0 truncate">{product.name}</span>
+                      <span className="shrink-0 text-[11px] tabular-nums text-[hsl(var(--fg-tertiary))]">
+                        {/* Stock on hand, so the user sees what they are drawing down. */}
+                        {typeof product.quantity === 'number'
+                          ? product.quantity.toLocaleString(locale)
+                          : ''}
+                      </span>
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   )
 })

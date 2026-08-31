@@ -2,6 +2,7 @@
 'use client'
 
 import { cn } from '../../../lib/utils'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../select'
 import {
   Plus,
   Trash2,
@@ -507,14 +508,18 @@ export const HumanResourcesView = memo(function HumanResourcesView({
             {grantAccess && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="relative">
-                  <select
+                  <Select
                     value={accessRole}
-                    onChange={(e) => setAccessRole(e.target.value as 'admin' | 'member')}
-                    className={cn(inputClass, 'appearance-none w-full pe-10')}
+                    onValueChange={(value) => setAccessRole(value as 'admin' | 'member')}
                   >
-                    <option value="admin">{t('workspace.admin', 'مدیر')}</option>
-                    <option value="member">{t('workspace.employee', 'کارمند')}</option>
-                  </select>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="admin">{t('workspace.admin', 'مدیر')}</SelectItem>
+                      <SelectItem value="member">{t('workspace.employee', 'کارمند')}</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <ChevronDown className="absolute end-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))] pointer-events-none" />
                 </div>
                 <div />

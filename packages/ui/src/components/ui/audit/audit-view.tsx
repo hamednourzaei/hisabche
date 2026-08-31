@@ -2,6 +2,7 @@
 'use client'
 
 import { memo, useState, useEffect, useCallback, useMemo } from 'react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../select'
 import { useLocale } from 'next-intl'
 import { cn } from '../../../lib/utils'
 import {
@@ -260,35 +261,47 @@ export const AuditView = memo(function AuditView({
           />
         </div>
 
-        <select
-          value={filters.action || ''}
-          onChange={(e) =>
-            onFiltersChange({ ...filters, action: e.target.value || undefined, page: 1 })
+        <Select
+          value={filters.action || '__all'}
+          onValueChange={(value) =>
+            onFiltersChange({ ...filters, action: value === '__all' ? undefined : value, page: 1 })
           }
-          className="rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] px-3 py-2 text-xs"
         >
-          <option value="">{t('common.all', 'همه عملیات‌ها')}</option>
-          {ACTIONS.map((a) => (
-            <option key={a} value={a}>
-              {t(`audit.${a}`, a)}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all">{t('common.all', 'همه عملیات‌ها')}</SelectItem>
+            {ACTIONS.map((a) => (
+              <SelectItem key={a} value={a}>
+                {t(`audit.${a}`, a)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-        <select
-          value={filters.entityType || ''}
-          onChange={(e) =>
-            onFiltersChange({ ...filters, entityType: e.target.value || undefined, page: 1 })
+        <Select
+          value={filters.entityType || '__all'}
+          onValueChange={(value) =>
+            onFiltersChange({
+              ...filters,
+              entityType: value === '__all' ? undefined : value,
+              page: 1,
+            })
           }
-          className="rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] px-3 py-2 text-xs"
         >
-          <option value="">{t('common.all', 'همه موجودیت‌ها')}</option>
-          {ENTITIES.map((e) => (
-            <option key={e} value={e}>
-              {t(`audit.${e}`, e)}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all">{t('common.all', 'همه موجودیت‌ها')}</SelectItem>
+            {ENTITIES.map((e) => (
+              <SelectItem key={e} value={e}>
+                {t(`audit.${e}`, e)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         <div className="flex items-center gap-1.5">
           <JalaliDatePicker

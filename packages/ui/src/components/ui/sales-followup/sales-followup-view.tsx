@@ -1,6 +1,7 @@
 'use client'
 
 import { cn } from '../../../lib/utils'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../select'
 import {
   Plus,
   MessageCircle,
@@ -230,18 +231,21 @@ const FollowUpCard = memo(function FollowUpCard({
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <select
+            <Select
               value={followUp.status}
-              onChange={(e) => handleStatusChange(e.target.value as FollowUpStatus)}
-              onClick={(e) => e.stopPropagation()}
-              className="text-xs border border-[hsl(var(--border-default))] rounded px-2 py-1 bg-[hsl(var(--surface-base))]"
+              onValueChange={(value) => handleStatusChange(value as FollowUpStatus)}
             >
-              {STATUSES.map((status) => (
-                <option key={status.value} value={status.value}>
-                  {status.label}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {STATUSES.map((status) => (
+                  <SelectItem key={status.value} value={status.value}>
+                    {status.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>
@@ -298,70 +302,84 @@ const FollowUpForm = memo(function FollowUpForm({
           <label className="block text-sm font-medium text-[hsl(var(--fg-primary))] mb-2">
             {t('sales.followup.customer', 'مشتری')}
           </label>
-          <select
+          <Select
             value={form.customerId}
-            onChange={(e) => handleFieldChange('customerId', e.target.value)}
-            className={cn(inputClass, 'w-full')}
+            onValueChange={(value) => handleFieldChange('customerId', value)}
           >
-            <option value="">{t('common.select', 'انتخاب کنید')}</option>
-            {customers.map((customer) => (
-              <option key={customer.id} value={customer.id}>
-                {customer.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger>
+              <SelectValue placeholder={t('common.select', 'انتخاب کنید')} />
+            </SelectTrigger>
+            <SelectContent>
+              {customers.map((customer) => (
+                <SelectItem key={customer.id} value={customer.id}>
+                  {customer.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="sm:col-span-2">
           <label className="block text-sm font-medium text-[hsl(var(--fg-primary))] mb-2">
             {t('sales.followup.assignedTo', 'مسئول')}
           </label>
-          <select
+          <Select
             value={form.assignedTo}
-            onChange={(e) => handleFieldChange('assignedTo', e.target.value)}
-            className={cn(inputClass, 'w-full')}
+            onValueChange={(value) => handleFieldChange('assignedTo', value)}
           >
-            <option value="">{t('common.select', 'انتخاب کنید')}</option>
-            {employees.map((employee) => (
-              <option key={employee.id} value={employee.id}>
-                {employee.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger>
+              <SelectValue placeholder={t('common.select', 'انتخاب کنید')} />
+            </SelectTrigger>
+            <SelectContent>
+              {employees.map((employee) => (
+                <SelectItem key={employee.id} value={employee.id}>
+                  {employee.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-[hsl(var(--fg-primary))] mb-2">
             {t('sales.followup.type', 'نوع')}
           </label>
-          <select
+          <Select
             value={form.type}
-            onChange={(e) => handleFieldChange('type', e.target.value as FollowUp['type'])}
-            className={cn(inputClass, 'w-full')}
+            onValueChange={(value) => handleFieldChange('type', value as FollowUp['type'])}
           >
-            {TYPES.map((type) => (
-              <option key={type.value} value={type.value}>
-                {type.label}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {TYPES.map((type) => (
+                <SelectItem key={type.value} value={type.value}>
+                  {type.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-[hsl(var(--fg-primary))] mb-2">
             {t('sales.followup.status', 'وضعیت')}
           </label>
-          <select
+          <Select
             value={form.status}
-            onChange={(e) => handleFieldChange('status', e.target.value as FollowUpStatus)}
-            className={cn(inputClass, 'w-full')}
+            onValueChange={(value) => handleFieldChange('status', value as FollowUpStatus)}
           >
-            {STATUSES.map((status) => (
-              <option key={status.value} value={status.value}>
-                {status.label}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUSES.map((status) => (
+                <SelectItem key={status.value} value={status.value}>
+                  {status.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="sm:col-span-2">
@@ -547,65 +565,75 @@ export const SalesFollowupView = memo(function SalesFollowupView({
           {t('sales.followup.filters', 'فیلترها')}
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <select
+          <Select
             value={filterCustomer}
-            onChange={(e) => {
-              setFilterCustomer(e.target.value)
+            onValueChange={(value) => {
+              setFilterCustomer(value)
               onFilter?.({
-                customerId: e.target.value,
+                customerId: value,
                 employeeId: filterEmployee,
                 type: filterType,
               })
             }}
-            className="rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-4 py-2.5 text-sm"
           >
-            <option value="">{t('sales.followup.allCustomers', 'همه مشتریان')}</option>
-            {customers.map((customer) => (
-              <option key={customer.id} value={customer.id}>
-                {customer.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger>
+              <SelectValue placeholder={t('sales.followup.allCustomers', 'همه مشتریان')} />
+            </SelectTrigger>
+            <SelectContent>
+              {customers.map((customer) => (
+                <SelectItem key={customer.id} value={customer.id}>
+                  {customer.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-          <select
+          <Select
             value={filterEmployee}
-            onChange={(e) => {
-              setFilterEmployee(e.target.value)
+            onValueChange={(value) => {
+              setFilterEmployee(value)
               onFilter?.({
                 customerId: filterCustomer,
-                employeeId: e.target.value,
+                employeeId: value,
                 type: filterType,
               })
             }}
-            className="rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-4 py-2.5 text-sm"
           >
-            <option value="">{t('sales.followup.allEmployees', 'همه کارمندان')}</option>
-            {employees.map((employee) => (
-              <option key={employee.id} value={employee.id}>
-                {employee.name}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger>
+              <SelectValue placeholder={t('sales.followup.allEmployees', 'همه کارمندان')} />
+            </SelectTrigger>
+            <SelectContent>
+              {employees.map((employee) => (
+                <SelectItem key={employee.id} value={employee.id}>
+                  {employee.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-          <select
+          <Select
             value={filterType}
-            onChange={(e) => {
-              setFilterType(e.target.value as FollowUp['type'] | 'all')
+            onValueChange={(value) => {
+              setFilterType(value as FollowUp['type'] | 'all')
               onFilter?.({
                 customerId: filterCustomer,
                 employeeId: filterEmployee,
-                type: e.target.value as FollowUp['type'] | 'all',
+                type: value as FollowUp['type'] | 'all',
               })
             }}
-            className="rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-4 py-2.5 text-sm"
           >
-            <option value="all">{t('sales.followup.allTypes', 'همه انواع')}</option>
-            {TYPES.map((type) => (
-              <option key={type.value} value={type.value}>
-                {type.label}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('sales.followup.allTypes', 'همه انواع')}</SelectItem>
+              {TYPES.map((type) => (
+                <SelectItem key={type.value} value={type.value}>
+                  {type.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

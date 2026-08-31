@@ -94,7 +94,10 @@ export function useSaveSoD() {
 
   return useMutation({
     mutationFn: async (input: { mode?: SoDMode; disabledRules?: string[] }) => {
-      const { data } = await apiClient.post('/governance/sod', input)
+      // PUT, not POST. The route is `fastify.put('/sod', ...)` — settings are
+      // replaced, not appended — and POST matched nothing, so every attempt to
+      // change the mode answered 404 and the switch silently did nothing.
+      const { data } = await apiClient.put('/governance/sod', input)
       return data as SoDSettings
     },
     retry: false,

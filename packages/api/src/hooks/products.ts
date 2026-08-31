@@ -18,12 +18,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
 import { useRealtime } from './useRealtime'
-import type {
-  Product,
-  CreateProduct,
-  UpdateProduct,
-  ProductFilters,
-} from '@hisabche/validation'
+import type { Product, CreateProduct, UpdateProduct, ProductFilters } from '@hisabche/validation'
 
 // ============================================
 // Query Keys
@@ -113,7 +108,10 @@ export function useUpdateProduct() {
 
   return useMutation({
     mutationFn: async ({ id, ...input }: UpdateProduct) => {
-      const { data } = await apiClient.put<Product>(`/products/${id}`, input)
+      // PATCH, not PUT: the route is `fastify.patch('/api/products/:id')`, so
+      // a PUT matched nothing and every product edit answered 404 while the
+      // form reported success.
+      const { data } = await apiClient.patch<Product>(`/products/${id}`, input)
       return data
     },
     onSuccess: (_data, { id }) => {

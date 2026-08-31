@@ -12,7 +12,7 @@
 'use client'
 
 import { memo, useEffect, useState } from 'react'
-import { ChevronLeft, Package, Search } from 'lucide-react'
+import { ChevronDown, Package, Search } from 'lucide-react'
 import { useProducts } from '@hisabche/api'
 
 import { Input } from '../../input'
@@ -80,6 +80,8 @@ export const ProductSearchSheet = memo(function ProductSearchSheet({
           type="button"
           onClick={() => setOpen(true)}
           aria-label={t('invoiceBuilder.grid.pickProduct', 'انتخاب از انبار')}
+          aria-expanded={open}
+          aria-haspopup="dialog"
           className={cn(
             'inline-flex size-11 shrink-0 items-center justify-center rounded-[var(--radius-md)]',
             'text-[hsl(var(--fg-tertiary))] hover:bg-[hsl(var(--surface-muted))]',
@@ -87,7 +89,22 @@ export const ProductSearchSheet = memo(function ProductSearchSheet({
             'transition-colors duration-150 motion-reduce:transition-none',
           )}
         >
-          <ChevronLeft className="size-5 rtl:rotate-180" aria-hidden="true" />
+          {/*
+            A chevron pointing DOWN, flipping UP while the sheet is open.
+
+            It was a `<` — a "go somewhere else" arrow, which is what a
+            navigation chevron means everywhere else in this app. This control
+            does not navigate: it reveals a list in place. Down-then-up is the
+            one convention every dropdown shares, so a person knows what the
+            button will do before they press it.
+          */}
+          <ChevronDown
+            className={cn(
+              'size-5 transition-transform duration-150 motion-reduce:transition-none',
+              open && 'rotate-180',
+            )}
+            aria-hidden="true"
+          />
         </button>
       </div>
 
@@ -119,7 +136,7 @@ export const ProductSearchSheet = memo(function ProductSearchSheet({
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
             {isLoading ? (
               <div className="space-y-2 p-2">
                 {Array.from({ length: 5 }, (_, i) => (

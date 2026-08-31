@@ -377,9 +377,25 @@ export const DashboardSidebar = memo(function DashboardSidebar({
               'bg-[hsl(var(--surface-elevated)/0.99)] backdrop-blur-xl',
               'shadow-xl shadow-black/10',
               'animate-in slide-in-from-top-1 fade-in-0 duration-150 motion-reduce:animate-none',
+              // Same defect as the mobile panel, opening the other way: this
+              // one grows DOWNWARD from a button partway down the sidebar, so
+              // on a short laptop screen the last groups fell past the bottom
+              // and the sidebar's own scroll could not reach them — the panel
+              // is absolutely positioned, so it does not extend its parent's
+              // scrollable area.
+              //
+              // The cap is an INLINE STYLE, not `max-h-[60vh]`. Tailwind
+              // generates arbitrary-value classes by scanning source, and this
+              // package is not in the web app's content globs — the class was
+              // emitted into the markup and no rule ever existed for it, so
+              // the computed `max-height` stayed `none` and the panel still
+              // ran 529px past the bottom of an 800px screen. Verified in the
+              // browser before and after.
+              'flex flex-col',
             )}
+            style={{ maxHeight: '60vh' }}
           >
-            <div className="py-2 px-1">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-2 px-1">
               {moreGroups.map((group, idx) => (
                 <div key={group.id}>
                   <div className="flex items-center gap-2 px-2 pt-2 pb-1">
@@ -431,6 +447,19 @@ const NAV_OFFSET_PX = 16
 const NAV_GAP_PX = 8
 const POPOVER_BOTTOM = `calc(${NAV_HEIGHT_PX + NAV_OFFSET_PX + NAV_GAP_PX}px + env(safe-area-inset-bottom, 0px))`
 const BACKDROP_BOTTOM = `calc(${NAV_HEIGHT_PX + NAV_OFFSET_PX}px + env(safe-area-inset-bottom, 0px))`
+
+/**
+ * How tall the "more" panel may grow.
+ *
+ * `100dvh` — the DYNAMIC viewport height — because on mobile Safari and Chrome
+ * the address bar shrinks and grows, and `100vh` is the LARGEST it ever gets.
+ * Sizing to `vh` means the bottom of the panel sits under the browser chrome
+ * exactly when the bar is showing.
+ *
+ * The subtraction leaves room for the nav bar the panel sits above, its gap,
+ * and a margin at the top so the panel never looks welded to the status bar.
+ */
+const MORE_PANEL_MAX_HEIGHT = `calc(100dvh - ${NAV_HEIGHT_PX + NAV_OFFSET_PX + NAV_GAP_PX + 24}px - env(safe-area-inset-bottom, 0px) - env(safe-area-inset-top, 0px))`
 
 export const BottomNav = memo(function BottomNav({
   primaryItems,
@@ -636,9 +665,18 @@ export const BottomNav = memo(function BottomNav({
                 'border border-[hsl(var(--border-default))]',
                 'bg-[hsl(var(--surface-elevated)/0.99)] backdrop-blur-xl',
                 'shadow-xl shadow-black/10',
+                // The panel is anchored to the BOTTOM and grows upward. With no
+                // ceiling it grew past the top of the screen on a phone, and
+                // the first groups — the ones a person scrolled for — were
+                // simply unreachable.
+                //
+                // A column with a capped height and a scrolling body keeps the
+                // header and the close button pinned while the list moves.
+                'flex flex-col',
               )}
+              style={{ maxHeight: MORE_PANEL_MAX_HEIGHT }}
             >
-              <div className="flex items-center justify-between px-4 py-2.5 border-b border-[hsl(var(--border-default))] opacity-70">
+              <div className="shrink-0 flex items-center justify-between px-4 py-2.5 border-b border-[hsl(var(--border-default))] opacity-70">
                 <span className="text-xs font-semibold text-[hsl(var(--fg-secondary))]">
                   {t('nav.more')}
                 </span>
@@ -661,7 +699,10 @@ export const BottomNav = memo(function BottomNav({
                   </svg>
                 </button>
               </div>
-              <div className="py-1.5">
+              {/* `overscroll-contain` stops a flick at the end of this list
+                  from scrolling the page behind it, which on a phone reads as
+                  the menu dragging the whole screen. */}
+              <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-1.5">
                 {moreGroups.map((group, idx) => (
                   <div key={group.id}>
                     <div className="flex items-center gap-2 px-4 pt-2 pb-1">

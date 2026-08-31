@@ -2,6 +2,7 @@
 'use client'
 
 import { memo, useMemo, useState, useCallback } from 'react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../select'
 import { cn } from '../../../lib/utils'
 import {
   Handshake,
@@ -226,18 +227,18 @@ export const CrmView = memo(function CrmView({
       {/* New Task Form */}
       {activeTab === 'interactions' && isFormOpen && (
         <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-5 space-y-4">
-          <select
-            value={employeeId}
-            onChange={(e) => setEmployeeId(e.target.value)}
-            className="w-full rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 py-2.5 text-sm text-[hsl(var(--fg-primary))]"
-          >
-            <option value="">{t('crm.pickEmployeePlaceholder', 'انتخاب پرسنل...')}</option>
-            {employees.map((emp) => (
-              <option key={emp.id} value={emp.id}>
-                {emp.name}
-              </option>
-            ))}
-          </select>
+          <Select value={employeeId} onValueChange={setEmployeeId}>
+            <SelectTrigger>
+              <SelectValue placeholder={t('crm.pickEmployeePlaceholder', 'انتخاب پرسنل...')} />
+            </SelectTrigger>
+            <SelectContent>
+              {employees.map((emp) => (
+                <SelectItem key={emp.id} value={emp.id}>
+                  {emp.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
           <CustomerMultiPicker
             value={customers}
@@ -246,17 +247,18 @@ export const CrmView = memo(function CrmView({
           />
 
           <div className="grid grid-cols-2 gap-3">
-            <select
-              value={type}
-              onChange={(e) => setType(e.target.value)}
-              className="w-full rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 py-2.5 text-sm text-[hsl(var(--fg-primary))]"
-            >
-              {INTERACTION_TYPES.map((it) => (
-                <option key={it} value={it}>
-                  {t(`crm.interactions.type.${it}`, it)}
-                </option>
-              ))}
-            </select>
+            <Select value={type} onValueChange={setType}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {INTERACTION_TYPES.map((it) => (
+                  <SelectItem key={it} value={it}>
+                    {t(`crm.interactions.type.${it}`, it)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {/* Free text, but backed by the subjects this user has already
                 used. A recurring campaign keeps one spelling instead of
                 fragmenting into near-duplicates that split the stats. A native

@@ -2,6 +2,7 @@
 'use client'
 
 import { memo, useState, useCallback } from 'react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../select'
 import { cn } from '../../../lib/utils'
 import { ListChecks, Plus, X } from 'lucide-react'
 import type { Workflow, WorkflowEntityType, ApproverRole, WorkflowStep } from '@hisabche/api'
@@ -96,34 +97,46 @@ export const WorkflowTemplatesView = memo(function WorkflowTemplatesView({
               <label className="text-sm font-medium text-[hsl(var(--fg-primary))]">
                 {t('workflow.templates.entityType', 'روی چه چیزی اعمال شود')}
               </label>
-              <select
+              {/* The project's Select, not the native element: `<select>`
+                  cannot be styled consistently across browsers, ignores the
+                  app's focus ring, and in RTL puts its arrow on the wrong
+                  side. */}
+              <Select
                 value={entityType}
-                onChange={(e) => setEntityType(e.target.value as WorkflowEntityType)}
-                className="w-full rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 py-2.5 text-sm text-[hsl(var(--fg-primary))]"
+                onValueChange={(value) => setEntityType(value as WorkflowEntityType)}
               >
-                {ENTITY_TYPES.map((et) => (
-                  <option key={et} value={et}>
-                    {t(`workflow.entityType.${et}`, et)}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ENTITY_TYPES.map((et) => (
+                    <SelectItem key={et} value={et}>
+                      {t(`workflow.entityType.${et}`, et)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-1.5">
               <label className="text-sm font-medium text-[hsl(var(--fg-primary))]">
                 {t('workflow.templates.approver', 'تأییدکننده')}
               </label>
-              <select
+              <Select
                 value={approverRole}
-                onChange={(e) => setApproverRole(e.target.value as ApproverRole)}
-                className="w-full rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 py-2.5 text-sm text-[hsl(var(--fg-primary))]"
+                onValueChange={(value) => setApproverRole(value as ApproverRole)}
               >
-                {APPROVER_ROLES.map((r) => (
-                  <option key={r} value={r}>
-                    {t(`roles.${r}`, r)}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {APPROVER_ROLES.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {t(`roles.${r}`, r)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
