@@ -1,6 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import { usePathname } from 'next/navigation'
 import { ErrorBoundary } from '@hisabche/ui'
 
 /**
@@ -21,5 +22,15 @@ import { ErrorBoundary } from '@hisabche/ui'
  * runtime error handling while restoring real HTML for crawlers.
  */
 export function ClientErrorBoundary({ children }: { children: ReactNode }) {
-  return <ErrorBoundary>{children}</ErrorBoundary>
+  const pathname = usePathname()
+
+  // ⚠️ The pathname is passed as a reset key.
+  //
+  // Without it, a boundary that catches on one screen stays in its error state
+  // for the rest of the session: the user navigates away, the new page renders
+  // fine underneath, and they are still looking at a crash report for a screen
+  // they have left. The only way out was a manual reload.
+  //
+  // Since this wraps the WHOLE application, that was every route.
+  return <ErrorBoundary resetKeys={[pathname]}>{children}</ErrorBoundary>
 }

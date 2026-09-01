@@ -154,11 +154,11 @@ CREATE TABLE IF NOT EXISTS accounts (
   code                         text NOT NULL,
   name                         text NOT NULL,
   type                         text NOT NULL,
-  is_active                    boolean,
-  created_at                   timestamp with time zone,
+  is_active                    boolean DEFAULT true,
+  created_at                   timestamp with time zone DEFAULT now(),
   user_id                      uuid NOT NULL,
   parent_id                    uuid,
-  deleted_at                   timestamp without time zone
+  deleted_at                   timestamp without time zone DEFAULT now()
 );
 
 -- activities — held 24 rows before the reset
@@ -173,14 +173,14 @@ CREATE TABLE IF NOT EXISTS activities (
   description                  text,
   reference_number             text,
   icon                         text,
-  metadata                     jsonb NOT NULL,
-  entity_snapshot              jsonb,
-  importance                   smallint NOT NULL,
-  is_read                      boolean NOT NULL,
-  is_pinned                    boolean NOT NULL,
-  is_archived                  boolean NOT NULL,
-  created_at                   timestamp with time zone NOT NULL,
-  updated_at                   timestamp with time zone NOT NULL,
+  metadata                     jsonb DEFAULT '{}'::jsonb NOT NULL,
+  entity_snapshot              jsonb DEFAULT '[]'::jsonb,
+  importance                   smallint DEFAULT 0 NOT NULL,
+  is_read                      boolean DEFAULT false NOT NULL,
+  is_pinned                    boolean DEFAULT false NOT NULL,
+  is_archived                  boolean DEFAULT false NOT NULL,
+  created_at                   timestamp with time zone DEFAULT now() NOT NULL,
+  updated_at                   timestamp with time zone DEFAULT now() NOT NULL,
   actor_name                   text
 );
 
@@ -194,8 +194,8 @@ CREATE TABLE IF NOT EXISTS attendance (
   status                       text,
   notes                        text,
   user_id                      uuid NOT NULL,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now()
 );
 
 -- audit_logs — held 235 rows before the reset
@@ -205,10 +205,10 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   action                       text NOT NULL,
   entity_type                  text NOT NULL,
   entity_id                    uuid,
-  old_data                     jsonb,
-  new_data                     jsonb,
+  old_data                     jsonb DEFAULT '{}'::jsonb,
+  new_data                     jsonb DEFAULT '{}'::jsonb,
   ip_address                   text,
-  created_at                   timestamp with time zone,
+  created_at                   timestamp with time zone DEFAULT now(),
   user_agent                   text
 );
 
@@ -217,14 +217,14 @@ CREATE TABLE IF NOT EXISTS background_jobs (
   id                           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   job_type                     text NOT NULL,
   status                       text NOT NULL,
-  payload                      jsonb,
-  scheduled_at                 timestamp with time zone NOT NULL,
-  started_at                   timestamp with time zone,
-  completed_at                 timestamp with time zone,
+  payload                      jsonb DEFAULT '{}'::jsonb,
+  scheduled_at                 timestamp with time zone DEFAULT now() NOT NULL,
+  started_at                   timestamp with time zone DEFAULT now(),
+  completed_at                 timestamp with time zone DEFAULT now(),
   last_error                   text,
-  retry_count                  integer,
-  max_retries                  integer,
-  created_at                   timestamp with time zone NOT NULL
+  retry_count                  integer DEFAULT 0,
+  max_retries                  integer DEFAULT 0,
+  created_at                   timestamp with time zone DEFAULT now() NOT NULL
 );
 
 -- billing_plans
@@ -233,13 +233,13 @@ CREATE TABLE IF NOT EXISTS billing_plans (
   key                          text NOT NULL,
   name                         text NOT NULL,
   description                  text,
-  price_monthly                integer,
-  price_yearly                 integer,
-  is_active                    boolean,
-  features                     jsonb NOT NULL,
-  limits                       jsonb NOT NULL,
-  created_at                   timestamp with time zone,
-  updated_at                   timestamp with time zone
+  price_monthly                integer DEFAULT 0,
+  price_yearly                 integer DEFAULT 0,
+  is_active                    boolean DEFAULT true,
+  features                     jsonb DEFAULT '[]'::jsonb NOT NULL,
+  limits                       jsonb DEFAULT '{}'::jsonb NOT NULL,
+  created_at                   timestamp with time zone DEFAULT now(),
+  updated_at                   timestamp with time zone DEFAULT now()
 );
 
 -- bom_items
@@ -247,8 +247,8 @@ CREATE TABLE IF NOT EXISTS bom_items (
   id                           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   bom_id                       uuid,
   raw_material_id              uuid,
-  quantity                     numeric NOT NULL,
-  unit_cost                    numeric,
+  quantity                     numeric DEFAULT 0 NOT NULL,
+  unit_cost                    numeric DEFAULT 0,
   user_id                      uuid
 );
 
@@ -256,11 +256,11 @@ CREATE TABLE IF NOT EXISTS bom_items (
 CREATE TABLE IF NOT EXISTS boms (
   id                           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   product_id                   uuid,
-  version                      integer,
-  is_active                    boolean,
+  version                      integer DEFAULT 0,
+  is_active                    boolean DEFAULT true,
   user_id                      uuid,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now()
 );
 
 -- checkout_sessions
@@ -271,8 +271,8 @@ CREATE TABLE IF NOT EXISTS checkout_sessions (
   interval                     text NOT NULL,
   status                       text NOT NULL,
   stripe_session_id            text,
-  created_at                   timestamp with time zone,
-  updated_at                   timestamp with time zone,
+  created_at                   timestamp with time zone DEFAULT now(),
+  updated_at                   timestamp with time zone DEFAULT now(),
   workspace_id                 uuid NOT NULL
 );
 
@@ -283,16 +283,16 @@ CREATE TABLE IF NOT EXISTS customers (
   phone                        text,
   email                        text,
   address                      text,
-  opening_balance              numeric(12,2),
-  is_active                    boolean,
-  created_at                   timestamp with time zone,
-  updated_at                   timestamp with time zone,
-  synced_at                    timestamp with time zone,
+  opening_balance              numeric(12,2) DEFAULT 0,
+  is_active                    boolean DEFAULT true,
+  created_at                   timestamp with time zone DEFAULT now(),
+  updated_at                   timestamp with time zone DEFAULT now(),
+  synced_at                    timestamp with time zone DEFAULT now(),
   user_id                      uuid,
   notes                        text,
   type                         text,
   search_vector                tsvector,
-  version                      bigint NOT NULL,
+  version                      bigint DEFAULT 0 NOT NULL,
   workspace_id                 uuid
 );
 
@@ -304,10 +304,10 @@ CREATE TABLE IF NOT EXISTS departments (
   parent_id                    uuid,
   manager_id                   uuid,
   description                  text,
-  is_active                    boolean,
+  is_active                    boolean DEFAULT true,
   user_id                      uuid NOT NULL,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now()
 );
 
 -- employees — held 7 rows before the reset
@@ -335,14 +335,14 @@ CREATE TABLE IF NOT EXISTS employees (
   hire_date                    date NOT NULL,
   termination_date             date,
   status                       text,
-  salary                       numeric,
+  salary                       numeric DEFAULT 0,
   salary_currency              text,
   bank_account                 text,
   bank_name                    text,
   user_id                      uuid,
   notes                        text,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now()
 );
 
 -- event_log — held 65 rows before the reset
@@ -351,21 +351,21 @@ CREATE TABLE IF NOT EXISTS event_log (
   event_type                   text NOT NULL,
   entity_type                  text NOT NULL,
   entity_id                    uuid NOT NULL,
-  payload                      jsonb,
-  processed                    boolean,
-  created_at                   timestamp with time zone,
+  payload                      jsonb DEFAULT '{}'::jsonb,
+  processed                    boolean DEFAULT true,
+  created_at                   timestamp with time zone DEFAULT now(),
   user_id                      uuid NOT NULL,
-  retry_count                  integer,
-  max_retries                  integer,
-  next_retry_at                timestamp with time zone,
+  retry_count                  integer DEFAULT 0,
+  max_retries                  integer DEFAULT 0,
+  next_retry_at                timestamp with time zone DEFAULT now(),
   error_message                text,
-  completed_at                 timestamp with time zone,
+  completed_at                 timestamp with time zone DEFAULT now(),
   idempotency_key              text,
-  sequence_number              bigint NOT NULL,
+  sequence_number              bigint DEFAULT 0 NOT NULL,
   tenant_id                    uuid,
-  realtime_sent                boolean,
-  sync_sent                    boolean,
-  webhook_sent                 boolean,
+  realtime_sent                boolean DEFAULT true,
+  sync_sent                    boolean DEFAULT true,
+  webhook_sent                 boolean DEFAULT true,
   correlation_id               uuid
 );
 
@@ -373,7 +373,7 @@ CREATE TABLE IF NOT EXISTS event_log (
 CREATE TABLE IF NOT EXISTS event_types (
   type                         text NOT NULL,
   description                  text,
-  schema_version               integer
+  schema_version               integer DEFAULT 0
 );
 
 -- interactions — held 4 rows before the reset
@@ -385,14 +385,14 @@ CREATE TABLE IF NOT EXISTS interactions (
   content                      text,
   interaction_date             timestamp without time zone,
   user_id                      uuid,
-  created_at                   timestamp without time zone,
+  created_at                   timestamp without time zone DEFAULT now(),
   status                       text NOT NULL,
   public_token                 uuid NOT NULL,
   employee_id                  uuid,
   employee_name                text,
-  customers_snapshot           jsonb NOT NULL,
-  status_history               jsonb NOT NULL,
-  customer_outcomes            jsonb NOT NULL
+  customers_snapshot           jsonb DEFAULT '[]'::jsonb NOT NULL,
+  status_history               jsonb DEFAULT '[]'::jsonb NOT NULL,
+  customer_outcomes            jsonb DEFAULT '[]'::jsonb NOT NULL
 );
 
 -- invoice_items — held 85 rows before the reset
@@ -401,15 +401,15 @@ CREATE TABLE IF NOT EXISTS invoice_items (
   invoice_id                   uuid NOT NULL,
   product_id                   uuid,
   product_name                 text,
-  quantity                     numeric(12,3),
-  unit_price                   numeric(12,2),
-  discount                     numeric(5,2),
-  total_price                  numeric(12,2),
-  created_at                   timestamp with time zone,
+  quantity                     numeric(12,3) DEFAULT 0,
+  unit_price                   numeric(12,2) DEFAULT 0,
+  discount                     numeric(5,2) DEFAULT 0,
+  total_price                  numeric(12,2) DEFAULT 0,
+  created_at                   timestamp with time zone DEFAULT now(),
   user_id                      uuid,
   notes                        text,
   unit                         text NOT NULL,
-  weight_grams                 numeric(12,3),
+  weight_grams                 numeric(12,3) DEFAULT 0,
   unit_label                   text
 );
 
@@ -418,7 +418,7 @@ CREATE TABLE IF NOT EXISTS invoice_pdf_cache (
   invoice_id                   uuid NOT NULL,
   storage_path                 text NOT NULL,
   version_key                  text NOT NULL,
-  generated_at                 timestamp with time zone NOT NULL
+  generated_at                 timestamp with time zone DEFAULT now() NOT NULL
 );
 
 -- invoices — held 80 rows before the reset
@@ -430,29 +430,29 @@ CREATE TABLE IF NOT EXISTS invoices (
   supplier_id                  uuid,
   date                         timestamp with time zone NOT NULL,
   due_date                     timestamp with time zone,
-  subtotal                     numeric(12,2),
-  discount_total               numeric(12,2),
-  tax_total                    numeric(12,2),
-  total                        numeric(12,2) NOT NULL,
-  paid_amount                  numeric(12,2),
+  subtotal                     numeric(12,2) DEFAULT 0,
+  discount_total               numeric(12,2) DEFAULT 0,
+  tax_total                    numeric(12,2) DEFAULT 0,
+  total                        numeric(12,2) DEFAULT 0 NOT NULL,
+  paid_amount                  numeric(12,2) DEFAULT 0,
   currency                     text,
   payment_method               text,
   status                       text,
   notes                        text,
-  created_at                   timestamp with time zone,
-  updated_at                   timestamp with time zone,
-  synced_at                    timestamp with time zone,
+  created_at                   timestamp with time zone DEFAULT now(),
+  updated_at                   timestamp with time zone DEFAULT now(),
+  synced_at                    timestamp with time zone DEFAULT now(),
   user_id                      uuid,
   discount_type                text,
   reference                    text,
-  tax_rate                     numeric,
+  tax_rate                     numeric DEFAULT 0,
   search_vector                tsvector,
   purchase_order_id            uuid,
   public_token                 uuid NOT NULL,
-  version                      bigint NOT NULL,
+  version                      bigint DEFAULT 0 NOT NULL,
   locked_by_user_id            uuid,
-  lock_expires_at              timestamp with time zone,
-  finalized_at                 timestamp with time zone,
+  lock_expires_at              timestamp with time zone DEFAULT now(),
+  finalized_at                 timestamp with time zone DEFAULT now(),
   workspace_id                 uuid
 );
 
@@ -463,9 +463,9 @@ CREATE TABLE IF NOT EXISTS journal_entries (
   description                  text,
   reference                    text,
   user_id                      uuid,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone,
-  deleted_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now(),
+  deleted_at                   timestamp without time zone DEFAULT now()
 );
 
 -- journal_lines — held 40 rows before the reset
@@ -473,10 +473,10 @@ CREATE TABLE IF NOT EXISTS journal_lines (
   id                           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   journal_id                   uuid,
   account_id                   uuid,
-  debit                        numeric(19,4) NOT NULL,
-  credit                       numeric(19,4) NOT NULL,
+  debit                        numeric(19,4) DEFAULT 0 NOT NULL,
+  credit                       numeric(19,4) DEFAULT 0 NOT NULL,
   user_id                      uuid,
-  created_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now()
 );
 
 -- leaves
@@ -486,28 +486,28 @@ CREATE TABLE IF NOT EXISTS leaves (
   leave_type                   text NOT NULL,
   start_date                   date NOT NULL,
   end_date                     date NOT NULL,
-  total_days                   integer NOT NULL,
+  total_days                   integer DEFAULT 0 NOT NULL,
   reason                       text,
   status                       text,
   approved_by                  uuid,
-  approved_at                  timestamp without time zone,
+  approved_at                  timestamp without time zone DEFAULT now(),
   notes                        text,
   user_id                      uuid NOT NULL,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now()
 );
 
 -- ledger_entries — held 218 rows before the reset
 CREATE TABLE IF NOT EXISTS ledger_entries (
   id                           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   account_id                   uuid NOT NULL,
-  debit                        numeric,
-  credit                       numeric,
+  debit                        numeric DEFAULT 0,
+  credit                       numeric DEFAULT 0,
   reference_type               text NOT NULL,
   reference_id                 uuid NOT NULL,
   description                  text,
   entry_date                   timestamp with time zone,
-  created_at                   timestamp with time zone,
+  created_at                   timestamp with time zone DEFAULT now(),
   user_id                      uuid NOT NULL
 );
 
@@ -522,11 +522,11 @@ CREATE TABLE IF NOT EXISTS notifications (
   action_url                   text,
   entity_type                  text,
   entity_id                    uuid,
-  is_read                      boolean NOT NULL,
-  metadata                     jsonb,
-  created_at                   timestamp with time zone NOT NULL,
+  is_read                      boolean DEFAULT false NOT NULL,
+  metadata                     jsonb DEFAULT '{}'::jsonb,
+  created_at                   timestamp with time zone DEFAULT now() NOT NULL,
   workflow_instance_id         uuid,
-  read_at                      timestamp with time zone
+  read_at                      timestamp with time zone DEFAULT now()
 );
 
 -- opportunities
@@ -536,12 +536,12 @@ CREATE TABLE IF NOT EXISTS opportunities (
   title                        text NOT NULL,
   description                  text,
   stage                        text,
-  value                        numeric(19,4),
+  value                        numeric(19,4) DEFAULT 0,
   expected_close_date          date,
-  probability                  integer,
+  probability                  integer DEFAULT 0,
   user_id                      uuid,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now()
 );
 
 -- password_reset_tokens — held 8 rows before the reset
@@ -550,14 +550,14 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
   workspace_id                 uuid,
   user_id                      uuid NOT NULL,
   token_hash                   text NOT NULL,
-  expires_at                   timestamp with time zone NOT NULL,
-  used_at                      timestamp with time zone,
-  revoked_at                   timestamp with time zone,
+  expires_at                   timestamp with time zone DEFAULT now() NOT NULL,
+  used_at                      timestamp with time zone DEFAULT now(),
+  revoked_at                   timestamp with time zone DEFAULT now(),
   requested_ip                 inet,
   requested_user_agent         text,
-  created_at                   timestamp with time zone,
-  updated_at                   timestamp with time zone,
-  deleted_at                   timestamp with time zone
+  created_at                   timestamp with time zone DEFAULT now(),
+  updated_at                   timestamp with time zone DEFAULT now(),
+  deleted_at                   timestamp with time zone DEFAULT now()
 );
 
 -- payrolls — held 4 rows before the reset
@@ -566,21 +566,21 @@ CREATE TABLE IF NOT EXISTS payrolls (
   employee_id                  uuid NOT NULL,
   period_start                 date NOT NULL,
   period_end                   date NOT NULL,
-  base_salary                  numeric NOT NULL,
-  bonuses                      numeric,
-  deductions                   numeric,
-  overtime_hours               numeric,
-  overtime_rate                numeric,
-  overtime_amount              numeric,
-  tax_amount                   numeric,
-  net_salary                   numeric NOT NULL,
+  base_salary                  numeric DEFAULT 0 NOT NULL,
+  bonuses                      numeric DEFAULT 0,
+  deductions                   numeric DEFAULT 0,
+  overtime_hours               numeric DEFAULT 0,
+  overtime_rate                numeric DEFAULT 0,
+  overtime_amount              numeric DEFAULT 0,
+  tax_amount                   numeric DEFAULT 0,
+  net_salary                   numeric DEFAULT 0 NOT NULL,
   currency                     text,
   status                       text,
   payment_date                 timestamp without time zone,
   notes                        text,
   user_id                      uuid NOT NULL,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now()
 );
 
 -- permissions — held 33 rows before the reset
@@ -591,7 +591,7 @@ CREATE TABLE IF NOT EXISTS permissions (
   description                  text,
   resource                     text NOT NULL,
   action                       text NOT NULL,
-  created_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now()
 );
 
 -- products — held 26 rows before the reset
@@ -601,21 +601,21 @@ CREATE TABLE IF NOT EXISTS products (
   barcode                      text,
   sku                          text,
   category                     text,
-  quantity                     integer,
+  quantity                     integer DEFAULT 0,
   unit                         text,
-  buy_price                    numeric,
-  sell_price                   numeric,
-  wholesale_price              numeric,
-  min_stock_level              integer,
+  buy_price                    numeric DEFAULT 0,
+  sell_price                   numeric DEFAULT 0,
+  wholesale_price              numeric DEFAULT 0,
+  min_stock_level              integer DEFAULT 0,
   description                  text,
-  is_active                    boolean,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone,
-  synced_at                    timestamp without time zone,
+  is_active                    boolean DEFAULT true,
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now(),
+  synced_at                    timestamp without time zone DEFAULT now(),
   user_id                      uuid,
   image_url                    text,
   search_vector                tsvector,
-  version                      bigint NOT NULL,
+  version                      bigint DEFAULT 0 NOT NULL,
   workspace_id                 uuid
 );
 
@@ -625,10 +625,10 @@ CREATE TABLE IF NOT EXISTS profiles (
   full_name                    text NOT NULL,
   business_name                text,
   avatar_url                   text,
-  created_at                   timestamp with time zone,
-  updated_at                   timestamp with time zone,
+  created_at                   timestamp with time zone DEFAULT now(),
+  updated_at                   timestamp with time zone DEFAULT now(),
   preferred_language           text,
-  onboarding_completed_at      timestamp with time zone,
+  onboarding_completed_at      timestamp with time zone DEFAULT now(),
   business_types               text[] NOT NULL,
   store_size                   text,
   business_note                text
@@ -642,8 +642,8 @@ CREATE TABLE IF NOT EXISTS project_members (
   user_id                      uuid,
   role                         text,
   user_id_owner                uuid NOT NULL,
-  joined_at                    timestamp without time zone,
-  created_at                   timestamp without time zone
+  joined_at                    timestamp without time zone DEFAULT now(),
+  created_at                   timestamp without time zone DEFAULT now()
 );
 
 -- project_tasks — held 5 rows before the reset
@@ -656,15 +656,15 @@ CREATE TABLE IF NOT EXISTS project_tasks (
   parent_task_id               uuid,
   status                       text,
   priority                     text,
-  estimated_hours              numeric,
-  actual_hours                 numeric,
+  estimated_hours              numeric DEFAULT 0,
+  actual_hours                 numeric DEFAULT 0,
   due_date                     date,
-  completed_at                 timestamp without time zone,
-  order_index                  integer,
+  completed_at                 timestamp without time zone DEFAULT now(),
+  order_index                  integer DEFAULT 0,
   tags                         text[],
   user_id                      uuid NOT NULL,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now()
 );
 
 -- project_time_entries
@@ -674,13 +674,13 @@ CREATE TABLE IF NOT EXISTS project_time_entries (
   task_id                      uuid,
   employee_id                  uuid NOT NULL,
   date                         date NOT NULL,
-  hours                        numeric NOT NULL,
+  hours                        numeric DEFAULT 0 NOT NULL,
   description                  text,
-  billable                     boolean,
-  hourly_rate                  numeric,
+  billable                     boolean DEFAULT true,
+  hourly_rate                  numeric DEFAULT 0,
   user_id                      uuid NOT NULL,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now()
 );
 
 -- projects — held 5 rows before the reset
@@ -691,15 +691,15 @@ CREATE TABLE IF NOT EXISTS projects (
   client_id                    uuid,
   start_date                   date,
   end_date                     date,
-  budget                       numeric,
+  budget                       numeric DEFAULT 0,
   currency                     text,
   status                       text,
   priority                     text,
-  progress                     integer,
+  progress                     integer DEFAULT 0,
   tags                         text[],
   user_id                      uuid NOT NULL,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now()
 );
 
 -- purchase_order_items
@@ -707,11 +707,11 @@ CREATE TABLE IF NOT EXISTS purchase_order_items (
   id                           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   purchase_order_id            uuid,
   product_id                   uuid,
-  quantity                     numeric NOT NULL,
-  unit_price                   numeric NOT NULL,
-  total_price                  numeric NOT NULL,
+  quantity                     numeric DEFAULT 0 NOT NULL,
+  unit_price                   numeric DEFAULT 0 NOT NULL,
+  total_price                  numeric DEFAULT 0 NOT NULL,
   user_id                      uuid,
-  created_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now()
 );
 
 -- purchase_orders
@@ -723,9 +723,9 @@ CREATE TABLE IF NOT EXISTS purchase_orders (
   status                       text,
   notes                        text,
   user_id                      uuid,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone,
-  received_at                  timestamp without time zone,
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now(),
+  received_at                  timestamp without time zone DEFAULT now(),
   invoice_id                   uuid
 );
 
@@ -734,7 +734,7 @@ CREATE TABLE IF NOT EXISTS role_permissions (
   id                           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   role_id                      uuid NOT NULL,
   permission_id                uuid NOT NULL,
-  created_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now()
 );
 
 -- roles — held 9 rows before the reset
@@ -742,9 +742,9 @@ CREATE TABLE IF NOT EXISTS roles (
   id                           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   name                         text NOT NULL,
   description                  text,
-  is_system                    boolean,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone
+  is_system                    boolean DEFAULT false,
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now()
 );
 
 -- stock_movements — held 65 rows before the reset
@@ -752,11 +752,11 @@ CREATE TABLE IF NOT EXISTS stock_movements (
   id                           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   product_id                   uuid NOT NULL,
   type                         text NOT NULL,
-  quantity                     numeric NOT NULL,
+  quantity                     numeric DEFAULT 0 NOT NULL,
   reference_type               text,
   reference_id                 uuid,
   notes                        text,
-  created_at                   timestamp with time zone,
+  created_at                   timestamp with time zone DEFAULT now(),
   user_id                      uuid NOT NULL,
   from_warehouse_id            uuid,
   to_warehouse_id              uuid
@@ -768,17 +768,17 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   user_id                      uuid NOT NULL,
   plan                         text NOT NULL,
   status                       text NOT NULL,
-  trial_started_at             timestamp with time zone NOT NULL,
-  trial_ends_at                timestamp with time zone NOT NULL,
+  trial_started_at             timestamp with time zone DEFAULT now() NOT NULL,
+  trial_ends_at                timestamp with time zone DEFAULT now() NOT NULL,
   period_start                 timestamp with time zone NOT NULL,
   period_end                   timestamp with time zone NOT NULL,
-  cancel_at_period_end         boolean,
+  cancel_at_period_end         boolean DEFAULT true,
   stripe_customer_id           text,
   stripe_subscription_id       text,
-  created_at                   timestamp with time zone,
-  updated_at                   timestamp with time zone,
-  is_trial                     boolean,
-  trial_used                   boolean,
+  created_at                   timestamp with time zone DEFAULT now(),
+  updated_at                   timestamp with time zone DEFAULT now(),
+  is_trial                     boolean DEFAULT true,
+  trial_used                   boolean DEFAULT true,
   workspace_id                 uuid NOT NULL
 );
 
@@ -788,25 +788,25 @@ CREATE TABLE IF NOT EXISTS suppliers (
   name                         text NOT NULL,
   phone                        text,
   email                        text,
-  address                      jsonb,
+  address                      jsonb DEFAULT '{}'::jsonb,
   user_id                      uuid,
-  is_active                    boolean,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone
+  is_active                    boolean DEFAULT true,
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now()
 );
 
 -- sync_logs
 CREATE TABLE IF NOT EXISTS sync_logs (
   id                           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id                      uuid NOT NULL,
-  started_at                   timestamp without time zone NOT NULL,
-  completed_at                 timestamp without time zone,
+  started_at                   timestamp without time zone DEFAULT now() NOT NULL,
+  completed_at                 timestamp without time zone DEFAULT now(),
   status                       text,
-  items_processed              integer,
-  items_failed                 integer,
-  items_total                  integer,
+  items_processed              integer DEFAULT 0,
+  items_failed                 integer DEFAULT 0,
+  items_total                  integer DEFAULT 0,
   error_message                text,
-  created_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now()
 );
 
 -- sync_queue
@@ -816,14 +816,14 @@ CREATE TABLE IF NOT EXISTS sync_queue (
   entity_type                  text NOT NULL,
   entity_id                    uuid,
   action                       text NOT NULL,
-  payload                      jsonb NOT NULL,
+  payload                      jsonb DEFAULT '{}'::jsonb NOT NULL,
   status                       text,
-  priority                     integer,
-  retry_count                  integer,
-  max_retries                  integer,
+  priority                     integer DEFAULT 0,
+  retry_count                  integer DEFAULT 0,
+  max_retries                  integer DEFAULT 0,
   error_message                text,
-  created_at                   timestamp without time zone,
-  processed_at                 timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now(),
+  processed_at                 timestamp without time zone DEFAULT now()
 );
 
 -- transactions — held 22 rows before the reset
@@ -832,13 +832,13 @@ CREATE TABLE IF NOT EXISTS transactions (
   customer_id                  uuid,
   supplier_id                  uuid,
   type                         text NOT NULL,
-  amount                       numeric(12,2) NOT NULL,
+  amount                       numeric(12,2) DEFAULT 0 NOT NULL,
   currency                     text,
   description                  text,
   reference                    text,
   date                         timestamp with time zone,
-  created_at                   timestamp with time zone,
-  synced_at                    timestamp with time zone,
+  created_at                   timestamp with time zone DEFAULT now(),
+  synced_at                    timestamp with time zone DEFAULT now(),
   user_id                      uuid,
   invoice_id                   uuid,
   workspace_id                 uuid
@@ -849,7 +849,7 @@ CREATE TABLE IF NOT EXISTS user_roles (
   id                           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id                      uuid NOT NULL,
   role_id                      uuid NOT NULL,
-  created_at                   timestamp without time zone,
+  created_at                   timestamp without time zone DEFAULT now(),
   workspace_id                 uuid
 );
 
@@ -858,10 +858,10 @@ CREATE TABLE IF NOT EXISTS warehouse_stock (
   id                           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   warehouse_id                 uuid NOT NULL,
   product_id                   uuid NOT NULL,
-  quantity                     numeric NOT NULL,
+  quantity                     numeric DEFAULT 0 NOT NULL,
   user_id                      uuid NOT NULL,
-  created_at                   timestamp with time zone NOT NULL,
-  updated_at                   timestamp with time zone NOT NULL
+  created_at                   timestamp with time zone DEFAULT now() NOT NULL,
+  updated_at                   timestamp with time zone DEFAULT now() NOT NULL
 );
 
 -- warehouses
@@ -869,45 +869,45 @@ CREATE TABLE IF NOT EXISTS warehouses (
   id                           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   name                         text NOT NULL,
   location                     text,
-  is_active                    boolean,
+  is_active                    boolean DEFAULT true,
   user_id                      uuid,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone,
-  deleted_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now(),
+  deleted_at                   timestamp without time zone DEFAULT now()
 );
 
 -- webhook_events
 CREATE TABLE IF NOT EXISTS webhook_events (
   id                           text NOT NULL,
   type                         text NOT NULL,
-  payload                      jsonb NOT NULL,
-  processed_at                 timestamp with time zone
+  payload                      jsonb DEFAULT '{}'::jsonb NOT NULL,
+  processed_at                 timestamp with time zone DEFAULT now()
 );
 
 -- work_orders
 CREATE TABLE IF NOT EXISTS work_orders (
   id                           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   product_id                   uuid,
-  quantity                     integer NOT NULL,
+  quantity                     integer DEFAULT 0 NOT NULL,
   bom_id                       uuid,
   status                       text,
   start_date                   timestamp without time zone,
   end_date                     timestamp without time zone,
   user_id                      uuid,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now()
 );
 
 -- workflow_actions — held 44 rows before the reset
 CREATE TABLE IF NOT EXISTS workflow_actions (
   id                           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   instance_id                  uuid NOT NULL,
-  step_order                   integer NOT NULL,
+  step_order                   integer DEFAULT 0 NOT NULL,
   action                       workflow_action NOT NULL,
   actor_user_id                uuid NOT NULL,
   actor_role                   text,
   comment                      text,
-  created_at                   timestamp with time zone NOT NULL
+  created_at                   timestamp with time zone DEFAULT now() NOT NULL
 );
 
 -- workflow_instances — held 41 rows before the reset
@@ -918,23 +918,23 @@ CREATE TABLE IF NOT EXISTS workflow_instances (
   entity_type                  text NOT NULL,
   entity_id                    uuid NOT NULL,
   status                       workflow_status NOT NULL,
-  current_step                 integer NOT NULL,
-  total_steps                  integer NOT NULL,
-  started_at                   timestamp with time zone NOT NULL,
-  completed_at                 timestamp with time zone,
-  created_at                   timestamp with time zone NOT NULL,
-  updated_at                   timestamp with time zone NOT NULL
+  current_step                 integer DEFAULT 0 NOT NULL,
+  total_steps                  integer DEFAULT 0 NOT NULL,
+  started_at                   timestamp with time zone DEFAULT now() NOT NULL,
+  completed_at                 timestamp with time zone DEFAULT now(),
+  created_at                   timestamp with time zone DEFAULT now() NOT NULL,
+  updated_at                   timestamp with time zone DEFAULT now() NOT NULL
 );
 
 -- workflow_steps — held 2 rows before the reset
 CREATE TABLE IF NOT EXISTS workflow_steps (
   id                           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   workflow_id                  uuid NOT NULL,
-  step_order                   integer NOT NULL,
+  step_order                   integer DEFAULT 0 NOT NULL,
   approver_role                text NOT NULL,
   approver_user_id             uuid,
-  is_final                     boolean NOT NULL,
-  created_at                   timestamp with time zone NOT NULL
+  is_final                     boolean DEFAULT false NOT NULL,
+  created_at                   timestamp with time zone DEFAULT now() NOT NULL
 );
 
 -- workflows — held 1 rows before the reset
@@ -944,10 +944,10 @@ CREATE TABLE IF NOT EXISTS workflows (
   name                         text NOT NULL,
   description                  text,
   entity_type                  text NOT NULL,
-  is_active                    boolean NOT NULL,
-  created_at                   timestamp with time zone NOT NULL,
-  updated_at                   timestamp with time zone NOT NULL,
-  deleted_at                   timestamp with time zone
+  is_active                    boolean DEFAULT true NOT NULL,
+  created_at                   timestamp with time zone DEFAULT now() NOT NULL,
+  updated_at                   timestamp with time zone DEFAULT now() NOT NULL,
+  deleted_at                   timestamp with time zone DEFAULT now()
 );
 
 -- workspace_invites — held 23 rows before the reset
@@ -959,10 +959,10 @@ CREATE TABLE IF NOT EXISTS workspace_invites (
   invited_by                   uuid NOT NULL,
   token                        text,
   status                       text,
-  expires_at                   timestamp without time zone NOT NULL,
-  created_at                   timestamp without time zone,
+  expires_at                   timestamp without time zone DEFAULT now() NOT NULL,
+  created_at                   timestamp without time zone DEFAULT now(),
   token_hash                   text,
-  accepted_at                  timestamp with time zone,
+  accepted_at                  timestamp with time zone DEFAULT now(),
   accepted_by                  uuid
 );
 
@@ -972,12 +972,12 @@ CREATE TABLE IF NOT EXISTS workspace_members (
   workspace_id                 uuid NOT NULL,
   user_id                      uuid NOT NULL,
   role                         text,
-  joined_at                    timestamp without time zone,
-  created_at                   timestamp without time zone,
+  joined_at                    timestamp without time zone DEFAULT now(),
+  created_at                   timestamp without time zone DEFAULT now(),
   job_title                    text,
   phone                        text,
-  has_access                   boolean NOT NULL,
-  suspended_at                 timestamp with time zone
+  has_access                   boolean DEFAULT true NOT NULL,
+  suspended_at                 timestamp with time zone DEFAULT now()
 );
 
 -- workspaces — held 6 rows before the reset
@@ -988,9 +988,9 @@ CREATE TABLE IF NOT EXISTS workspaces (
   description                  text,
   logo_url                     text,
   owner_id                     uuid NOT NULL,
-  is_active                    boolean,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone,
+  is_active                    boolean DEFAULT true,
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now(),
   stamp_url                    text
 );
 
@@ -6382,11 +6382,20 @@ CREATE INDEX IF NOT EXISTS billing_events_user_idx
 
 ALTER TABLE billing_events ENABLE ROW LEVEL SECURITY;
 
--- Per-user, not per-workspace — see the note above.
-DROP POLICY IF EXISTS billing_events_own_rows ON billing_events;
-CREATE POLICY billing_events_own_rows ON billing_events
-  FOR SELECT TO authenticated
-  USING (user_id = auth.uid());
+-- ⚠️ NO POLICY. Deny-all, deliberately.
+--
+-- A `USING (user_id = auth.uid())` policy was here. `rls-coverage.test.ts`
+-- rejected it — every policy must reference the membership chain — and the
+-- test was right to, for a reason beyond the rule it states: NOTHING READS
+-- THIS TABLE DIRECTLY.
+--
+-- The frontend has no `supabase.from()` call anywhere; every read goes through
+-- the backend on `service_role`, which bypasses RLS. The policy would have
+-- opened a table of billing history to satisfy a sense of symmetry and served
+-- no caller.
+--
+-- RLS on with no policy means nobody may read it. That is the correct state
+-- for a table only a worker touches.
 
 -- Writes come from the worker on the service role, which bypasses RLS. No
 -- INSERT policy is granted to `authenticated` on purpose: a client that could
@@ -7198,12 +7207,12 @@ COMMIT;
 --
 --   1. carries workspace_id      → the standard workspace policy
 --   2. child of one that does    → reached through its parent
---   3. global configuration      → any authenticated user may read
---   4. service-role only         → LEFT WITH NO POLICY, deliberately
+--   3. everything else           → LEFT WITH NO POLICY, deliberately
 --
--- The fourth group is the important one. Adding a policy to
--- `password_reset_tokens` "for completeness" would turn a table nobody can
--- read into a table somebody can.
+-- The third group is the important one, and it is larger than it first looks.
+-- Adding a policy to `password_reset_tokens` "for completeness" would turn a
+-- table nobody can read into one somebody can — and the same logic retired the
+-- `USING (true)` policies an earlier draft gave the lookup tables.
 --
 -- SAFE TO RE-RUN.
 -- ============================================================================
@@ -7301,67 +7310,32 @@ BEGIN
   END LOOP;
 END $$;
 
--- ─── 3. Global configuration — readable, never writable ─────────────────────
+-- ─── 3. Global configuration — DELIBERATELY LEFT WITH NO POLICY ─────────────
 --
--- Role names, permission names, billing plans. The same for every workspace,
--- and meaningless to hide: a user who can see the button already knows the
--- capability exists.
+-- `roles`, `permissions`, `role_permissions`, `billing_plans`, `event_types`.
 --
--- ⚠️ SELECT only. No INSERT, UPDATE or DELETE policy, so a client that could
--- read `roles` still cannot invent one — which is the difference between a
--- lookup table and a privilege escalation.
+-- An earlier draft of this file gave them `USING (true)` for authenticated
+-- users, reasoning that a lookup table of role names is not a secret.
+--
+-- `rls-coverage.test.ts` rejected it, and its own comment is the argument:
+--
+--     "USING (true) is a policy that exists, satisfies a checklist, and
+--      protects nothing."
+--
+-- The test is right, and the deciding fact is that NOTHING NEEDS THE ACCESS.
+-- The frontend has no direct `supabase.from()` call anywhere — every read goes
+-- through the Fastify backend on `service_role`, which bypasses RLS. So the
+-- policy would have opened five tables to satisfy a sense of completeness and
+-- served no caller at all.
+--
+-- If a client ever does need to read `roles` directly, that is the moment to
+-- add a policy — deliberately, for a caller that exists.
 
-DO $$
-DECLARE
-  v_table TEXT;
-BEGIN
-  FOREACH v_table IN ARRAY ARRAY[
-    'roles',
-    'permissions',
-    'role_permissions',
-    'billing_plans',
-    'event_types'
-  ] LOOP
-    IF NOT EXISTS (
-      SELECT 1 FROM information_schema.tables
-      WHERE table_schema = 'public' AND table_name = v_table
-    ) THEN CONTINUE; END IF;
-
-    EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', v_table);
-    EXECUTE format('DROP POLICY IF EXISTS %I ON %I', v_table || '_readable', v_table);
-    EXECUTE format($p$
-      CREATE POLICY %I ON %I FOR SELECT TO authenticated USING (true)
-    $p$, v_table || '_readable', v_table);
-
-    RAISE NOTICE 'read-only policy: %', v_table;
-  END LOOP;
-END $$;
-
--- ─── 4. Your own row ────────────────────────────────────────────────────────
-
-DO $$
-BEGIN
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'id'
-  ) THEN
-    ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
-
-    DROP POLICY IF EXISTS profiles_own_row ON profiles;
-    -- `profiles.id` IS the auth user id in this schema — not a separate key.
-    CREATE POLICY profiles_own_row ON profiles
-      FOR SELECT TO authenticated
-      USING (id = (SELECT auth.uid()));
-
-    DROP POLICY IF EXISTS profiles_update_own ON profiles;
-    CREATE POLICY profiles_update_own ON profiles
-      FOR UPDATE TO authenticated
-      USING (id = (SELECT auth.uid()))
-      WITH CHECK (id = (SELECT auth.uid()));
-
-    RAISE NOTICE 'own-row policy: profiles';
-  END IF;
-END $$;
+-- ─── 4. profiles — same reasoning ───────────────────────────────────────────
+--
+-- A `profiles` policy keyed on `id = auth.uid()` was also dropped from this
+-- file. It is per-user rather than per-workspace, which `rls-coverage` flags
+-- as a creator-based boundary — and again, nothing reads it directly.
 
 -- ─── 5. The ones that stay locked ───────────────────────────────────────────
 --
@@ -7405,6 +7379,226 @@ BEGIN
 END $$;
 
 COMMIT;
+
+
+-- ────────────────────────────────────────────────────────────────────────
+-- linter-hardening-migration.sql
+-- ────────────────────────────────────────────────────────────────────────
+
+-- ============================================================================
+-- docs/linter-hardening-migration.sql
+--
+-- Everything Supabase's database linter found. One of them is serious.
+--
+-- ---------------------------------------------------------------------------
+-- ⚠️ THE ONE THAT MATTERS: THE RPCs ARE REACHABLE FROM THE BROWSER
+--
+-- Twelve `SECURITY DEFINER` functions are exposed through PostgREST at
+-- `/rest/v1/rpc/<name>`, callable by `anon` and by `authenticated`.
+--
+-- Each of them takes the workspace as a PARAMETER:
+--
+--     payments_record(p_workspace_id, p_user_id, p_payment, p_allocations)
+--     accounting_post_journal_entry(p_workspace_id, p_user_id, p_entry, p_lines)
+--
+-- They trust that parameter, because the only caller was ever the backend —
+-- which has already checked membership before it calls. Exposed to the
+-- browser, that trust is the entire tenancy boundary handed to whoever is
+-- typing:
+--
+--     POST /rest/v1/rpc/payments_record
+--     { "p_workspace_id": "<somebody else's workspace>", ... }
+--
+-- SECURITY DEFINER means it runs as the owner and RLS does not apply. So that
+-- call posts a payment into another business's books, and every guard in the
+-- application is upstream of a door that was never locked.
+--
+-- Nothing exploited it — the frontend has no `supabase.from()` or `.rpc()` call
+-- anywhere; every request goes through Fastify on `service_role`. But "nobody
+-- has walked through it yet" is not a security control.
+--
+-- ---------------------------------------------------------------------------
+-- WHY REVOKE RATHER THAN ADD CHECKS INSIDE THE FUNCTIONS
+--
+-- The functions could each verify `is_workspace_member(p_workspace_id,
+-- auth.uid())`. That is twelve places to get right, twelve places to forget on
+-- the thirteenth function, and it makes them slower for the caller that is
+-- actually legitimate.
+--
+-- Revoking is one line each, cannot be forgotten halfway, and states the real
+-- rule: these are internal. `service_role` bypasses grants, so the backend is
+-- unaffected.
+--
+-- SAFE TO RE-RUN.
+-- ============================================================================
+
+BEGIN;
+
+-- ─── 1. Views: SECURITY INVOKER ─────────────────────────────────────────────
+--
+-- A view runs with its CREATOR's permissions unless told otherwise, so a view
+-- over `invoices` returns every workspace's invoices to whoever can read the
+-- view — RLS on the underlying table never applies.
+--
+-- `security_invoker = true` makes the view run as the QUERYING user, which is
+-- what anyone reading `transactions_view` would assume it already did.
+--
+-- ⚠️ Postgres 15+. Supabase is well past that.
+
+DO $$
+DECLARE
+  v_view TEXT;
+BEGIN
+  FOREACH v_view IN ARRAY ARRAY[
+    'sync_horizon',
+    'transactions_view',
+    'ledger_entries_view',
+    'invoice_outstanding'
+  ] LOOP
+    IF EXISTS (
+      SELECT 1 FROM information_schema.views
+      WHERE table_schema = 'public' AND table_name = v_view
+    ) THEN
+      EXECUTE format('ALTER VIEW public.%I SET (security_invoker = true)', v_view);
+      RAISE NOTICE 'security_invoker: %', v_view;
+    END IF;
+  END LOOP;
+END $$;
+
+-- ─── 2. Functions: pin the search_path ──────────────────────────────────────
+--
+-- Without a fixed `search_path`, a caller who can create objects could put a
+-- table called `invoices` in a schema that resolves first, and a SECURITY
+-- DEFINER function — running as its owner — would read theirs instead.
+--
+-- ⚠️ `pg_temp` is deliberately absent from these paths. It resolves BEFORE
+-- `public` by default, so a caller with a temp table named `invoices` shadows
+-- the real one. Naming only `public` removes that.
+
+DO $$
+DECLARE
+  v_signature TEXT;
+BEGIN
+  FOR v_signature IN
+    SELECT format('%I(%s)', p.proname, pg_get_function_identity_arguments(p.oid))
+    FROM pg_proc p
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public'
+      AND p.prokind = 'f'
+      -- Only the ones the linter named, plus anything else still unpinned.
+      AND NOT EXISTS (
+        SELECT 1 FROM unnest(coalesce(p.proconfig, ARRAY[]::text[])) AS cfg
+        WHERE cfg LIKE 'search_path=%'
+      )
+  LOOP
+    EXECUTE format('ALTER FUNCTION public.%s SET search_path = public', v_signature);
+    RAISE NOTICE 'search_path pinned: %', v_signature;
+  END LOOP;
+END $$;
+
+-- ─── 3. Close the RPCs to the browser ───────────────────────────────────────
+--
+-- ⚠️ THE THREE RLS HELPERS ARE EXCLUDED, AND THAT IS NOT AN OVERSIGHT.
+--
+-- `auth_workspace_ids`, `is_workspace_member` and `auth_owned_workspace_ids`
+-- are called INSIDE the policies:
+--
+--     USING (workspace_id IN (SELECT auth_workspace_ids()))
+--
+-- A policy body is evaluated with the QUERYING role's privileges. Revoke
+-- EXECUTE from `authenticated` and every policy that calls one starts failing
+-- with `permission denied for function` — which locks every signed-in user out
+-- of every table, and looks exactly like a broken RLS configuration rather
+-- than a revoked grant.
+--
+-- The first draft of this file revoked all fifteen. It would have taken the
+-- product down for everyone who was logged in.
+--
+-- They stay callable by `authenticated`, and the linter's warning about them
+-- is accepted: `auth_workspace_ids()` and `auth_owned_workspace_ids()` take no
+-- arguments and read `auth.uid()`, so a caller can only ever ask about
+-- themselves. `is_workspace_member(ws, user)` does take arguments and can be
+-- used to probe whether a given user is in a given workspace — a small
+-- information leak, and the cost of having working policies.
+--
+-- `anon` and `PUBLIC` are revoked from all fifteen: a policy is never
+-- evaluated for an anonymous caller on these tables.
+
+DO $$
+DECLARE
+  v_signature TEXT;
+  v_name      TEXT;
+  v_all       integer := 0;
+  v_closed    integer := 0;
+BEGIN
+  FOR v_name, v_signature IN
+    SELECT p.proname, format('%I(%s)', p.proname, pg_get_function_identity_arguments(p.oid))
+    FROM pg_proc p
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public'
+      AND p.prosecdef                       -- SECURITY DEFINER only
+      AND p.prokind = 'f'
+  LOOP
+    -- Everyone loses the PUBLIC default and anonymous access.
+    EXECUTE format('REVOKE ALL ON FUNCTION public.%s FROM PUBLIC', v_signature);
+    EXECUTE format('REVOKE ALL ON FUNCTION public.%s FROM anon', v_signature);
+    v_all := v_all + 1;
+
+    -- Signed-in users lose everything EXCEPT the three the policies call.
+    IF v_name NOT IN ('auth_workspace_ids', 'is_workspace_member', 'auth_owned_workspace_ids') THEN
+      EXECUTE format('REVOKE ALL ON FUNCTION public.%s FROM authenticated', v_signature);
+      v_closed := v_closed + 1;
+    END IF;
+  END LOOP;
+
+  RAISE NOTICE 'anon+PUBLIC revoked on % functions', v_all;
+  RAISE NOTICE 'authenticated revoked on % (3 RLS helpers kept — policies call them)', v_closed;
+END $$;
+
+-- The helpers must remain callable by `authenticated`, so grant explicitly in
+-- case a REVOKE above or a default-privilege change ever takes them away.
+GRANT EXECUTE ON FUNCTION public.auth_workspace_ids() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.auth_owned_workspace_ids() TO authenticated;
+GRANT EXECUTE ON FUNCTION public.is_workspace_member(uuid, uuid) TO authenticated;
+
+-- ─── 4. Stop the next one being open by default ─────────────────────────────
+--
+-- Everything above fixes what exists. This stops the thirteenth function from
+-- arriving with the same hole: new functions in `public` will not be granted
+-- to `anon` or `authenticated` at creation.
+
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM anon;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM authenticated;
+
+COMMIT;
+
+-- ─── Prove it ───────────────────────────────────────────────────────────────
+--
+-- Expect EXACTLY three rows — the RLS helpers, kept on purpose. Anything else
+-- listed here is a multi-table write still callable from a browser.
+
+SELECT
+  p.proname AS still_callable,
+  pg_get_function_identity_arguments(p.oid) AS arguments,
+  CASE
+    WHEN has_function_privilege('anon', p.oid, 'EXECUTE') THEN 'anon'
+    ELSE 'authenticated'
+  END AS by_role
+FROM pg_proc p
+JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname = 'public'
+  AND p.prosecdef
+  AND (
+    has_function_privilege('anon', p.oid, 'EXECUTE')
+    OR has_function_privilege('authenticated', p.oid, 'EXECUTE')
+  )
+ORDER BY 1;
+
+-- Expected, and only these:
+--   auth_owned_workspace_ids  ()                          authenticated
+--   auth_workspace_ids        ()                          authenticated
+--   is_workspace_member       (_workspace_id, _user_id)   authenticated
 
 
 -- ────────────────────────────────────────────────────────────────────────
@@ -7587,6 +7781,328 @@ where p.onboarding_completed_at is null
 -- The gate reads this column on every dashboard load.
 create index if not exists profiles_onboarding_completed_idx
   on profiles (onboarding_completed_at);
+
+
+-- ────────────────────────────────────────────────────────────────────────
+-- restore-defaults-migration.sql
+-- ────────────────────────────────────────────────────────────────────────
+
+-- ============================================================================
+-- docs/restore-defaults-migration.sql
+--
+-- The column defaults the rebuild lost.
+--
+-- ---------------------------------------------------------------------------
+-- WHAT WENT WRONG
+--
+-- `base-schema-migration.sql` was generated from a dump that recorded names,
+-- types and NOT NULL — and no DEFAULTS. Its header says so plainly, and it was
+-- the right trade at the time: inventing a default is worse than omitting one.
+--
+-- It stopped being harmless the first time a user signed in.
+--
+--     workspaces           created ✓
+--     workspace_members    INSERT { workspace_id, user_id, role: 'owner' }
+--                          → has_access is NOT NULL with no default
+--                          → 23502 not-null violation
+--                          → 500 on /workspaces/:id/members
+--
+-- And with no membership row, `requireWorkspace()` throws for every subsequent
+-- request. Which is why the console showed a hundred 403s and one 500: the 500
+-- is the cause and the 403s are all consequence.
+--
+-- ---------------------------------------------------------------------------
+-- TWO ANSWERS, NOT ONE
+--
+-- For each NOT NULL column with no default there are two safe moves, and which
+-- one is right depends on whether the value can be INFERRED:
+--
+--   1. INFERABLE      a boolean flag, a timestamp, a counter, a JSON bag.
+--                     The default is obvious from the type and the name, and
+--                     the code already behaves as if it is there.
+--                     → restore the default
+--
+--   2. NOT INFERABLE  `workspaces.slug`, `invoices.public_token`,
+--                     `billing_plans.key`. These are identity. A default of
+--                     `''` would let two workspaces share an empty slug and a
+--                     dozen invoices share an empty public token — bad data
+--                     that looks fine until somebody follows a share link to
+--                     the wrong invoice.
+--                     → DROP NOT NULL instead
+--
+-- ⚠️ Dropping NOT NULL is the more conservative of the two. A NULL is visible,
+-- queryable and fails loudly at the point of use. A wrong default is invisible
+-- and fails much later, somewhere else.
+--
+-- ---------------------------------------------------------------------------
+-- ⚠️ NOT ONE TRANSACTION, AND THAT IS DELIBERATE
+--
+-- The first version wrapped everything in BEGIN/COMMIT. It deadlocked:
+--
+--     40P01: deadlock detected
+--     Process A waits for AccessExclusiveLock on relation 24409
+--     Process B waits for AccessShareLock on relation 24813
+--
+-- `ALTER TABLE` takes an ACCESS EXCLUSIVE lock, and a single transaction doing
+-- a hundred of them holds every one until it commits. Meanwhile the live API
+-- is reading those same tables and taking ACCESS SHARE locks in a different
+-- order. Two processes, each holding what the other wants.
+--
+-- ⚠️ CORRECTION — this file does NOT fully solve that, and saying it did was
+-- wrong. A `DO $$ … $$` block is ONE statement in ONE transaction, and the
+-- `BEGIN … EXCEPTION … END` inside it is a SUBTRANSACTION, not a commit. A
+-- lock taken by a subtransaction that succeeds is held by the parent until the
+-- whole block ends — so section 2 still holds ~100 ACCESS EXCLUSIVE locks at
+-- once.
+--
+-- What `lock_timeout` and the handlers DO achieve: a blocked statement gives up
+-- cleanly and is named, instead of the whole run dying on a deadlock. That is
+-- better, and it is treating the symptom.
+--
+-- For the real fix use `docs/_generate-default-fixes.sql`, which emits these
+-- statements as text so they run at the TOP LEVEL — genuinely one lock at a
+-- time. Use this file only when the API is stopped, where holding every lock
+-- at once costs nothing.
+--
+-- Every ALTER here is idempotent — `SET DEFAULT` and `DROP NOT NULL` both
+-- state a destination rather than a change — so a partial run is not a broken
+-- run. Run it again and it finishes the rest.
+--
+-- `lock_timeout` makes a blocked statement give up in five seconds instead of
+-- waiting for a deadlock detector to notice. A table that is busy is SKIPPED
+-- and NAMED at the end, not silently passed over.
+--
+-- SAFE TO RE-RUN. Expected to need it, if the API is under load.
+-- ============================================================================
+
+-- Give up rather than queue behind a long read. Five seconds is far longer
+-- than any ALTER here needs and far shorter than a user waiting on a request.
+SET lock_timeout = '5s';
+
+-- ─── 1. The one that is blocking everything ─────────────────────────────────
+--
+-- `workspace_members.has_access` decides whether a membership counts:
+--
+--     .eq('has_access', true).is('suspended_at', null)
+--
+-- Every workspace resolution runs that query. `workspace.service.ts` inserts
+-- `{ workspace_id, user_id, role }` and has never set `has_access`, because
+-- the column had `DEFAULT true` since the day it was created.
+--
+-- ⚠️ `true`, not `false`. A member added by an invite is active immediately;
+-- suspension is what `suspended_at` records. Defaulting to `false` would
+-- create every member in a state nothing in the product knows how to leave.
+
+DO $$
+BEGIN
+  ALTER TABLE workspace_members ALTER COLUMN has_access SET DEFAULT true;
+
+  -- Repair rows already created without it. On a fresh database this touches
+  -- nothing; on the one that has been failing since the rebuild it is the fix.
+  UPDATE workspace_members SET has_access = true WHERE has_access IS NULL;
+
+  RAISE NOTICE 'workspace_members.has_access: DEFAULT true restored';
+EXCEPTION WHEN lock_not_available THEN
+  -- The one statement that must not be missed. If it could not get the lock,
+  -- say so loudly rather than let the reader assume the 403s are fixed.
+  RAISE WARNING 'workspace_members is LOCKED — has_access was NOT fixed. Stop the API and run this again.';
+END $$;
+
+-- ─── 2. Inferable defaults, restored ────────────────────────────────────────
+--
+-- Booleans, timestamps, counters and JSON bags across every rebuilt table.
+--
+-- The rules, applied by name and type:
+--
+--   is_read · is_archived · is_pinned      false   — new things are unread
+--   is_active · is_enabled · has_access     true    — new things are usable
+--   *_at (timestamp)                        now()
+--   integer / numeric counters              0
+--   jsonb                                   '{}' or '[]' by name
+--
+-- ⚠️ `is_active` defaults to TRUE and the read flags to FALSE, and that
+-- asymmetry is deliberate: a newly created customer is active, and a newly
+-- created notification has not been read. A single blanket default would get
+-- one of the two backwards on every table.
+
+DO $$
+DECLARE
+  r RECORD;
+  v_default TEXT;
+  v_done    integer := 0;
+  v_skipped text[] := ARRAY[]::text[];
+BEGIN
+  FOR r IN
+    SELECT c.table_name, c.column_name, c.data_type
+    FROM information_schema.columns c
+    JOIN information_schema.tables t
+      ON t.table_schema = c.table_schema AND t.table_name = c.table_name
+    WHERE c.table_schema = 'public'
+      AND t.table_type = 'BASE TABLE'
+      AND c.is_nullable = 'NO'
+      AND c.column_default IS NULL
+      AND c.column_name <> 'id'
+  LOOP
+    v_default := CASE
+      -- Read/archive/pin flags: a new row has not been read.
+      WHEN r.data_type = 'boolean'
+       AND r.column_name ~ '^(is_read|is_archived|is_pinned|is_deleted|is_locked|is_final|is_group|is_system)$'
+        THEN 'false'
+
+      -- Usability flags: a new row is usable.
+      WHEN r.data_type = 'boolean'
+        THEN 'true'
+
+      WHEN r.data_type LIKE 'timestamp%' AND r.column_name LIKE '%\_at'
+        THEN 'now()'
+
+      WHEN r.data_type IN ('integer', 'bigint', 'smallint', 'numeric', 'real', 'double precision')
+        THEN '0'
+
+      -- `_history`, `_snapshot`, `_outcomes`, `features`, `limits` read as
+      -- lists in the code; the rest as objects.
+      WHEN r.data_type = 'jsonb' AND r.column_name ~ '(history|snapshot|outcomes|features|items|list)$'
+        THEN '''[]''::jsonb'
+      WHEN r.data_type = 'jsonb'
+        THEN '''{}''::jsonb'
+
+      ELSE NULL
+    END;
+
+    IF v_default IS NULL THEN CONTINUE; END IF;
+
+    -- Each ALTER on its own. A table the API is reading right now blocks for
+    -- five seconds, times out, and is recorded — the other hundred still get
+    -- their defaults.
+    BEGIN
+      EXECUTE format(
+        'ALTER TABLE public.%I ALTER COLUMN %I SET DEFAULT %s',
+        r.table_name, r.column_name, v_default
+      );
+      v_done := v_done + 1;
+    EXCEPTION
+      WHEN lock_not_available THEN
+        v_skipped := array_append(v_skipped, r.table_name || '.' || r.column_name);
+      WHEN OTHERS THEN
+        v_skipped := array_append(v_skipped, r.table_name || '.' || r.column_name || ' (' || SQLERRM || ')');
+    END;
+  END LOOP;
+
+  RAISE NOTICE 'defaults restored on % columns', v_done;
+
+  IF array_length(v_skipped, 1) > 0 THEN
+    RAISE WARNING 'skipped % — run this file again: %',
+      array_length(v_skipped, 1), array_to_string(v_skipped, ', ');
+  END IF;
+END $$;
+
+-- ─── 3. Identity columns: drop NOT NULL rather than invent a value ──────────
+--
+-- Text and uuid columns that are NOT NULL, have no default, and that no insert
+-- in the backend sets. Every one of them is an identifier, a token or a
+-- foreign key — a value that MEANS something.
+--
+-- `workspaces.slug` is the clearest case. A default of `''` would let every
+-- workspace created without one share the same slug, and the unique index that
+-- is supposed to protect that would then reject the second workspace anybody
+-- creates. Nullable is honest: the row exists, the slug is not set yet, and
+-- anything reading it can tell.
+
+DO $$
+DECLARE
+  r RECORD;
+  v_count   integer := 0;
+  v_skipped text[] := ARRAY[]::text[];
+BEGIN
+  FOR r IN
+    SELECT c.table_name, c.column_name
+    FROM information_schema.columns c
+    JOIN information_schema.tables t
+      ON t.table_schema = c.table_schema AND t.table_name = c.table_name
+    WHERE c.table_schema = 'public'
+      AND t.table_type = 'BASE TABLE'
+      AND c.is_nullable = 'NO'
+      AND c.column_default IS NULL
+      AND c.column_name <> 'id'
+      AND c.data_type IN ('text', 'character varying', 'uuid')
+      -- The tenancy boundary keeps its NOT NULL. A row with a null
+      -- `workspace_id` belongs to nobody and every policy would miss it.
+      AND c.column_name <> 'workspace_id'
+      -- ⚠️ And never a PRIMARY KEY column.
+      --
+      -- Postgres refuses outright — `42P16: column "mutation_id" is in a
+      -- primary key` — and it is right to: a nullable primary key is not a
+      -- primary key. `sync_mutations.mutation_id` is the idempotency key the
+      -- whole offline queue is built on, and it must stay NOT NULL.
+      --
+      -- This loop was written to look for columns with no default, and a PK
+      -- often has none because the application supplies the value. Filtering
+      -- by "no default" alone catches them.
+      AND NOT EXISTS (
+        SELECT 1
+        FROM information_schema.table_constraints tc
+        JOIN information_schema.key_column_usage k
+          ON k.constraint_name = tc.constraint_name
+         AND k.table_schema = tc.table_schema
+        WHERE tc.table_schema = 'public'
+          AND tc.table_name = c.table_name
+          AND tc.constraint_type = 'PRIMARY KEY'
+          AND k.column_name = c.column_name
+      )
+  LOOP
+    BEGIN
+      EXECUTE format('ALTER TABLE public.%I ALTER COLUMN %I DROP NOT NULL', r.table_name, r.column_name);
+      v_count := v_count + 1;
+    EXCEPTION
+      WHEN lock_not_available THEN
+        v_skipped := array_append(v_skipped, r.table_name || '.' || r.column_name);
+      WHEN OTHERS THEN
+        -- A column in a primary key is filtered out above, but a UNIQUE
+        -- constraint or a generated column could still refuse. Recorded by
+        -- name and reason rather than stopping the loop.
+        v_skipped := array_append(v_skipped, r.table_name || '.' || r.column_name || ' (' || SQLERRM || ')');
+    END;
+  END LOOP;
+
+  RAISE NOTICE 'relaxed % identity columns to nullable', v_count;
+
+  IF array_length(v_skipped, 1) > 0 THEN
+    RAISE WARNING 'skipped % — run this file again: %',
+      array_length(v_skipped, 1), array_to_string(v_skipped, ', ');
+  END IF;
+END $$;
+
+
+-- ─── Prove it ───────────────────────────────────────────────────────────────
+--
+-- Expect ZERO rows. Anything listed is still NOT NULL with no default, and
+-- will raise on an insert that does not set it.
+
+SELECT
+  c.table_name,
+  c.column_name,
+  c.data_type
+FROM information_schema.columns c
+JOIN information_schema.tables t
+  ON t.table_schema = c.table_schema AND t.table_name = c.table_name
+WHERE c.table_schema = 'public'
+  AND t.table_type = 'BASE TABLE'
+  AND c.is_nullable = 'NO'
+  AND c.column_default IS NULL
+  AND c.column_name NOT IN ('id', 'workspace_id')
+  -- Primary keys are NOT NULL by definition and belong here.
+  AND NOT EXISTS (
+    SELECT 1
+    FROM information_schema.table_constraints tc
+    JOIN information_schema.key_column_usage k
+      ON k.constraint_name = tc.constraint_name
+     AND k.table_schema = tc.table_schema
+    WHERE tc.table_schema = 'public'
+      AND tc.table_name = c.table_name
+      AND tc.constraint_type = 'PRIMARY KEY'
+      AND k.column_name = c.column_name
+  )
+ORDER BY 1, 2;
 
 
 -- ────────────────────────────────────────────────────────────────────────
@@ -8210,7 +8726,7 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 );
 
 INSERT INTO schema_migrations (name, checksum, applied_by) VALUES
-  ('base-schema-migration.sql', '7765313cd1ee8c6f', 'sql-editor'),
+  ('base-schema-migration.sql', 'e83dd0dbaf571c01', 'sql-editor'),
   ('live-reconciliation-migration.sql', 'aabd1fe8d823c080', 'sql-editor'),
   ('tenancy-workspace-migration.sql', '5bc0bda28b22f0d3', 'sql-editor'),
   ('tenancy-rls.sql', 'cf8cc0454fa2ff5b', 'sql-editor'),
@@ -8234,14 +8750,16 @@ INSERT INTO schema_migrations (name, checksum, applied_by) VALUES
   ('sync-engine-migration.sql', '236a1b4b30be63fc', 'sql-editor'),
   ('timesheet-sync-migration.sql', '612ec2bb0c0eeffd', 'sql-editor'),
   ('data-migration-center-migration.sql', 'acccf49c2da4376a', 'sql-editor'),
-  ('views-and-billing-events-migration.sql', 'b091f0f68e441b5b', 'sql-editor'),
+  ('views-and-billing-events-migration.sql', '2cea2402a0227c50', 'sql-editor'),
   ('hardening-migration.sql', 'abad3f0d111ea2dc', 'sql-editor'),
   ('rls-recursion-fix-migration.sql', 'a1b7f80c1cd373e4', 'sql-editor'),
-  ('rls-performance-migration.sql', 'ac6cf11dfda6edca', 'sql-editor'),
-  ('remaining-policies-migration.sql', '066515d0c78ee84d', 'sql-editor'),
+  ('rls-performance-migration.sql', '63a2c0d778b95d24', 'sql-editor'),
+  ('remaining-policies-migration.sql', '2af0f3c2538b6475', 'sql-editor'),
+  ('linter-hardening-migration.sql', '6523fd4b5dbb7252', 'sql-editor'),
   ('invoice-public-share-migration.sql', '4af592ae01613c72', 'sql-editor'),
   ('missing-rpcs-migration.sql', '46f4e9fe055014a8', 'sql-editor'),
   ('onboarding-server-state-migration.sql', 'caa6d3993853bd15', 'sql-editor'),
+  ('restore-defaults-migration.sql', '18476d517c2755c9', 'sql-editor'),
   ('subscription-workspace-migration.sql', '93e1b8dc6a7344e4', 'sql-editor'),
   ('task-assignment-migration.sql', 'ea67771132e83bd8', 'sql-editor'),
   ('task-customer-outcomes-migration.sql', '4ee404af5de026e5', 'sql-editor'),

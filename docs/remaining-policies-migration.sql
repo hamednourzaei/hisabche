@@ -33,12 +33,12 @@
 --
 --   1. carries workspace_id      → the standard workspace policy
 --   2. child of one that does    → reached through its parent
---   3. global configuration      → any authenticated user may read
---   4. service-role only         → LEFT WITH NO POLICY, deliberately
+--   3. everything else           → LEFT WITH NO POLICY, deliberately
 --
--- The fourth group is the important one. Adding a policy to
--- `password_reset_tokens` "for completeness" would turn a table nobody can
--- read into a table somebody can.
+-- The third group is the important one, and it is larger than it first looks.
+-- Adding a policy to `password_reset_tokens` "for completeness" would turn a
+-- table nobody can read into one somebody can — and the same logic retired the
+-- `USING (true)` policies an earlier draft gave the lookup tables.
 --
 -- SAFE TO RE-RUN.
 -- ============================================================================
@@ -136,67 +136,32 @@ BEGIN
   END LOOP;
 END $$;
 
--- ─── 3. Global configuration — readable, never writable ─────────────────────
+-- ─── 3. Global configuration — DELIBERATELY LEFT WITH NO POLICY ─────────────
 --
--- Role names, permission names, billing plans. The same for every workspace,
--- and meaningless to hide: a user who can see the button already knows the
--- capability exists.
+-- `roles`, `permissions`, `role_permissions`, `billing_plans`, `event_types`.
 --
--- ⚠️ SELECT only. No INSERT, UPDATE or DELETE policy, so a client that could
--- read `roles` still cannot invent one — which is the difference between a
--- lookup table and a privilege escalation.
+-- An earlier draft of this file gave them `USING (true)` for authenticated
+-- users, reasoning that a lookup table of role names is not a secret.
+--
+-- `rls-coverage.test.ts` rejected it, and its own comment is the argument:
+--
+--     "USING (true) is a policy that exists, satisfies a checklist, and
+--      protects nothing."
+--
+-- The test is right, and the deciding fact is that NOTHING NEEDS THE ACCESS.
+-- The frontend has no direct `supabase.from()` call anywhere — every read goes
+-- through the Fastify backend on `service_role`, which bypasses RLS. So the
+-- policy would have opened five tables to satisfy a sense of completeness and
+-- served no caller at all.
+--
+-- If a client ever does need to read `roles` directly, that is the moment to
+-- add a policy — deliberately, for a caller that exists.
 
-DO $$
-DECLARE
-  v_table TEXT;
-BEGIN
-  FOREACH v_table IN ARRAY ARRAY[
-    'roles',
-    'permissions',
-    'role_permissions',
-    'billing_plans',
-    'event_types'
-  ] LOOP
-    IF NOT EXISTS (
-      SELECT 1 FROM information_schema.tables
-      WHERE table_schema = 'public' AND table_name = v_table
-    ) THEN CONTINUE; END IF;
-
-    EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', v_table);
-    EXECUTE format('DROP POLICY IF EXISTS %I ON %I', v_table || '_readable', v_table);
-    EXECUTE format($p$
-      CREATE POLICY %I ON %I FOR SELECT TO authenticated USING (true)
-    $p$, v_table || '_readable', v_table);
-
-    RAISE NOTICE 'read-only policy: %', v_table;
-  END LOOP;
-END $$;
-
--- ─── 4. Your own row ────────────────────────────────────────────────────────
-
-DO $$
-BEGIN
-  IF EXISTS (
-    SELECT 1 FROM information_schema.columns
-    WHERE table_schema = 'public' AND table_name = 'profiles' AND column_name = 'id'
-  ) THEN
-    ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
-
-    DROP POLICY IF EXISTS profiles_own_row ON profiles;
-    -- `profiles.id` IS the auth user id in this schema — not a separate key.
-    CREATE POLICY profiles_own_row ON profiles
-      FOR SELECT TO authenticated
-      USING (id = (SELECT auth.uid()));
-
-    DROP POLICY IF EXISTS profiles_update_own ON profiles;
-    CREATE POLICY profiles_update_own ON profiles
-      FOR UPDATE TO authenticated
-      USING (id = (SELECT auth.uid()))
-      WITH CHECK (id = (SELECT auth.uid()));
-
-    RAISE NOTICE 'own-row policy: profiles';
-  END IF;
-END $$;
+-- ─── 4. profiles — same reasoning ───────────────────────────────────────────
+--
+-- A `profiles` policy keyed on `id = auth.uid()` was also dropped from this
+-- file. It is per-user rather than per-workspace, which `rls-coverage` flags
+-- as a creator-based boundary — and again, nothing reads it directly.
 
 -- ─── 5. The ones that stay locked ───────────────────────────────────────────
 --

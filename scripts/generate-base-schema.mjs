@@ -117,18 +117,70 @@ for (const raw of lines) {
 const needed = tables.filter((table) => !alreadyCreated.has(table.name) && table.columns.length > 0)
 
 /**
- * `id` gets a default even though the dump does not record one.
+ * Defaults the dump did not record, restored by inference.
  *
- * Every table in this schema uses `uuid PRIMARY KEY DEFAULT gen_random_uuid()`
- * — it is the one default that can be inferred safely, and without it every
- * INSERT in the application fails on a null primary key. Anything else is left
- * alone.
+ * ⚠️ THIS IS THE FIX FOR A FULL-DAY OUTAGE, AND IT IS WORTH THE LENGTH.
+ *
+ * The dump recorded names, types and NOT NULL — no defaults. The first version
+ * of this generator left it that way, reasoning that inventing a default is
+ * worse than omitting one. That is true for SOME columns and catastrophic for
+ * others, and the difference is whether the value can be INFERRED.
+ *
+ * What omitting them actually cost:
+ *
+ *     workspace.service.ts   .insert({ workspace_id, user_id, role: 'owner' })
+ *     schema                 has_access boolean NOT NULL     ← no DEFAULT
+ *                            → 23502 not-null violation
+ *                            → no membership row
+ *                            → every later request 403, with `userId` set and
+ *                              `workspaceId` null in the logs
+ *
+ * Which reads like a broken authorization system, not a missing default. It
+ * took a day and three wrong hypotheses to find.
+ *
+ * The rule:
+ *
+ *   INFERABLE     boolean, timestamp, counter, jsonb. The default follows from
+ *                 the type and the name, and the application already behaves
+ *                 as though it is there.            → emit a default
+ *
+ *   NOT INFERABLE `slug`, `public_token`, `key`. These are IDENTITY. A default
+ *                 of `''` lets two workspaces share an empty slug, and the
+ *                 unique index meant to prevent that then rejects the second
+ *                 workspace anybody creates.        → emit nothing
+ *
+ * ⚠️ `is_active` defaults TRUE and the read flags FALSE. The asymmetry is
+ * deliberate: a newly created customer is active, a newly created notification
+ * has not been read. A single blanket boolean rule gets one of the two
+ * backwards on every table in the schema.
  */
+const UNREAD_FLAGS =
+  /^(is_read|is_archived|is_pinned|is_deleted|is_locked|is_final|is_group|is_system)$/
+const LIST_SHAPED = /(history|snapshot|outcomes|features|items|list)$/
+
+function inferredDefault(column) {
+  const { name, type } = column
+
+  // Every table here uses `uuid PRIMARY KEY DEFAULT gen_random_uuid()`. Without
+  // it every INSERT fails on a null primary key.
+  if (name === 'id' && type === 'uuid') return 'gen_random_uuid()'
+
+  if (type.startsWith('boolean')) return UNREAD_FLAGS.test(name) ? 'false' : 'true'
+  if (type.startsWith('timestamp') && name.endsWith('_at')) return 'now()'
+  if (/^(integer|bigint|smallint|numeric|real|double precision)/.test(type)) return '0'
+  if (type.startsWith('jsonb')) return LIST_SHAPED.test(name) ? "'[]'::jsonb" : "'{}'::jsonb"
+
+  // text, uuid, varchar — identity. Left alone on purpose.
+  return null
+}
+
 function columnDdl(column) {
   const parts = [`  ${column.name.padEnd(28)} ${column.type}`]
+  const fallback = inferredDefault(column)
+
+  if (fallback) parts.push(`DEFAULT ${fallback}`)
 
   if (column.name === 'id' && column.type === 'uuid') {
-    parts.push('DEFAULT gen_random_uuid()')
     parts.push('PRIMARY KEY')
   } else if (column.notNull) {
     parts.push('NOT NULL')

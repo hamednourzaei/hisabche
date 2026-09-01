@@ -110,9 +110,43 @@ export class WorkspaceService {
 
     if (error || !workspace) throw new DatabaseError('Failed to create workspace', error)
 
-    await supabase
+    // ⚠️ THE RESULT IS CHECKED, AND THAT IS THE WHOLE POINT.
+    //
+    // supabase-js NEVER throws — it returns `{ error }`. The previous version
+    // was `await supabase.from(...).insert(...)` with nothing destructured, so
+    // a failure here was silently discarded.
+    //
+    // That is exactly what happened when `workspace_members.has_access` lost
+    // its `DEFAULT true` in the schema rebuild:
+    //
+    //     workspaces        created ✓
+    //     workspace_members 23502 not-null violation — SWALLOWED
+    //     → a workspace whose owner is not a member of it
+    //     → every later request 403, hours later, with no log line to connect
+    //       it to onboarding
+    //
+    // Checking it turns a day of debugging into one clear error at the moment
+    // the thing actually goes wrong.
+    const { error: membershipError } = await supabase
       .from('workspace_members')
       .insert({ workspace_id: workspace.id, user_id: userId, role: 'owner' })
+
+    if (membershipError) {
+      // ⚠️ The workspace row already exists at this point and is NOT deleted.
+      //
+      // supabase-js has no transactions, and a compensating DELETE is its own
+      // failure mode: it can fail too, and then the caller is told the create
+      // failed while the row survives. An orphaned workspace is recoverable —
+      // `docs/_repair-owner-memberships.sql` derives the missing membership
+      // from `owner_id`. A half-deleted one is not.
+      //
+      // So it is left in place and reported loudly.
+      throw new DatabaseError(
+        'Workspace was created but its owner membership could not be. ' +
+          'The owner cannot access it until a membership row exists.',
+        membershipError,
+      )
+    }
 
     // ✅ Invalidate cache
     await this.invalidateUserCache(userId)

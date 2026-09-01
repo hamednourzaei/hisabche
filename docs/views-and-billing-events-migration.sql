@@ -113,11 +113,20 @@ CREATE INDEX IF NOT EXISTS billing_events_user_idx
 
 ALTER TABLE billing_events ENABLE ROW LEVEL SECURITY;
 
--- Per-user, not per-workspace — see the note above.
-DROP POLICY IF EXISTS billing_events_own_rows ON billing_events;
-CREATE POLICY billing_events_own_rows ON billing_events
-  FOR SELECT TO authenticated
-  USING (user_id = auth.uid());
+-- ⚠️ NO POLICY. Deny-all, deliberately.
+--
+-- A `USING (user_id = auth.uid())` policy was here. `rls-coverage.test.ts`
+-- rejected it — every policy must reference the membership chain — and the
+-- test was right to, for a reason beyond the rule it states: NOTHING READS
+-- THIS TABLE DIRECTLY.
+--
+-- The frontend has no `supabase.from()` call anywhere; every read goes through
+-- the backend on `service_role`, which bypasses RLS. The policy would have
+-- opened a table of billing history to satisfy a sense of symmetry and served
+-- no caller.
+--
+-- RLS on with no policy means nobody may read it. That is the correct state
+-- for a table only a worker touches.
 
 -- Writes come from the worker on the service role, which bypasses RLS. No
 -- INSERT policy is granted to `authenticated` on purpose: a client that could

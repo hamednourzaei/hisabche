@@ -1,6 +1,6 @@
 'use client'
 
-import { memo, useState, useEffect, useRef } from 'react'
+import { memo, useState, useEffect, useRef, useSyncExternalStore } from 'react'
 import { cn } from '../../lib/utils'
 import { NotificationBell } from './notification-bell'
 import { useTranslations } from 'next-intl'
@@ -80,6 +80,15 @@ const BrandMark = memo(function BrandMark({ alt }: { alt: string }) {
 BrandMark.displayName = 'BrandMark'
 
 // ✅ SyncPill با memo
+/**
+ * A subscription that never fires.
+ *
+ * `useSyncExternalStore` needs one, and "has the client mounted yet" never
+ * changes after it flips. Module-level so the identity is stable: a new
+ * function on each render would make the hook resubscribe every time.
+ */
+const subscribeToNothing = () => () => {}
+
 const SyncPill = memo(function SyncPill({
   lastSyncedAt,
   isOnline,
@@ -93,6 +102,15 @@ const SyncPill = memo(function SyncPill({
   pendingCount: number
   t: (key: string) => string
 }) {
+  // True only after the first client render. `useSyncExternalStore` is the
+  // sanctioned way to ask this: it returns the server snapshot during SSR and
+  // the client snapshot afterwards, with no effect and no extra render pass.
+  const mounted = useSyncExternalStore(
+    subscribeToNothing,
+    () => true,
+    () => false,
+  )
+
   if (!isOnline) {
     return (
       <span
@@ -125,7 +143,19 @@ const SyncPill = memo(function SyncPill({
       </span>
     )
   }
-  if (lastSyncedAt) {
+  // ⚠️ Nothing time-relative renders before hydration.
+  //
+  // `Date.now()` during render is a hydration mismatch waiting to happen: the
+  // server renders "just now", the client renders a fraction of a second later
+  // and may produce "1 minute ago". React sees two different strings for the
+  // same node and throws #418 — `args[]=text`, a TEXT mismatch, which is
+  // exactly what the production console reported.
+  //
+  // Returning null until mounted means the server and the first client render
+  // agree (both empty), and the pill appears on the second render with a value
+  // computed entirely on the client. A shifting timestamp is client state; it
+  // was never server-renderable.
+  if (lastSyncedAt && mounted) {
     const s = Math.floor((Date.now() - lastSyncedAt) / 1000)
     const label =
       s < 60 ? t('sync.justNow') : t('sync.minutesAgo').replace('{m}', String(Math.floor(s / 60)))

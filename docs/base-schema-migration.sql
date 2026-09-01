@@ -64,11 +64,11 @@ CREATE TABLE IF NOT EXISTS accounts (
   code                         text NOT NULL,
   name                         text NOT NULL,
   type                         text NOT NULL,
-  is_active                    boolean,
-  created_at                   timestamp with time zone,
+  is_active                    boolean DEFAULT true,
+  created_at                   timestamp with time zone DEFAULT now(),
   user_id                      uuid NOT NULL,
   parent_id                    uuid,
-  deleted_at                   timestamp without time zone
+  deleted_at                   timestamp without time zone DEFAULT now()
 );
 
 -- activities — held 24 rows before the reset
@@ -83,14 +83,14 @@ CREATE TABLE IF NOT EXISTS activities (
   description                  text,
   reference_number             text,
   icon                         text,
-  metadata                     jsonb NOT NULL,
-  entity_snapshot              jsonb,
-  importance                   smallint NOT NULL,
-  is_read                      boolean NOT NULL,
-  is_pinned                    boolean NOT NULL,
-  is_archived                  boolean NOT NULL,
-  created_at                   timestamp with time zone NOT NULL,
-  updated_at                   timestamp with time zone NOT NULL,
+  metadata                     jsonb DEFAULT '{}'::jsonb NOT NULL,
+  entity_snapshot              jsonb DEFAULT '[]'::jsonb,
+  importance                   smallint DEFAULT 0 NOT NULL,
+  is_read                      boolean DEFAULT false NOT NULL,
+  is_pinned                    boolean DEFAULT false NOT NULL,
+  is_archived                  boolean DEFAULT false NOT NULL,
+  created_at                   timestamp with time zone DEFAULT now() NOT NULL,
+  updated_at                   timestamp with time zone DEFAULT now() NOT NULL,
   actor_name                   text
 );
 
@@ -104,8 +104,8 @@ CREATE TABLE IF NOT EXISTS attendance (
   status                       text,
   notes                        text,
   user_id                      uuid NOT NULL,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now()
 );
 
 -- audit_logs — held 235 rows before the reset
@@ -115,10 +115,10 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   action                       text NOT NULL,
   entity_type                  text NOT NULL,
   entity_id                    uuid,
-  old_data                     jsonb,
-  new_data                     jsonb,
+  old_data                     jsonb DEFAULT '{}'::jsonb,
+  new_data                     jsonb DEFAULT '{}'::jsonb,
   ip_address                   text,
-  created_at                   timestamp with time zone,
+  created_at                   timestamp with time zone DEFAULT now(),
   user_agent                   text
 );
 
@@ -127,14 +127,14 @@ CREATE TABLE IF NOT EXISTS background_jobs (
   id                           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   job_type                     text NOT NULL,
   status                       text NOT NULL,
-  payload                      jsonb,
-  scheduled_at                 timestamp with time zone NOT NULL,
-  started_at                   timestamp with time zone,
-  completed_at                 timestamp with time zone,
+  payload                      jsonb DEFAULT '{}'::jsonb,
+  scheduled_at                 timestamp with time zone DEFAULT now() NOT NULL,
+  started_at                   timestamp with time zone DEFAULT now(),
+  completed_at                 timestamp with time zone DEFAULT now(),
   last_error                   text,
-  retry_count                  integer,
-  max_retries                  integer,
-  created_at                   timestamp with time zone NOT NULL
+  retry_count                  integer DEFAULT 0,
+  max_retries                  integer DEFAULT 0,
+  created_at                   timestamp with time zone DEFAULT now() NOT NULL
 );
 
 -- billing_plans
@@ -143,13 +143,13 @@ CREATE TABLE IF NOT EXISTS billing_plans (
   key                          text NOT NULL,
   name                         text NOT NULL,
   description                  text,
-  price_monthly                integer,
-  price_yearly                 integer,
-  is_active                    boolean,
-  features                     jsonb NOT NULL,
-  limits                       jsonb NOT NULL,
-  created_at                   timestamp with time zone,
-  updated_at                   timestamp with time zone
+  price_monthly                integer DEFAULT 0,
+  price_yearly                 integer DEFAULT 0,
+  is_active                    boolean DEFAULT true,
+  features                     jsonb DEFAULT '[]'::jsonb NOT NULL,
+  limits                       jsonb DEFAULT '{}'::jsonb NOT NULL,
+  created_at                   timestamp with time zone DEFAULT now(),
+  updated_at                   timestamp with time zone DEFAULT now()
 );
 
 -- bom_items
@@ -157,8 +157,8 @@ CREATE TABLE IF NOT EXISTS bom_items (
   id                           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   bom_id                       uuid,
   raw_material_id              uuid,
-  quantity                     numeric NOT NULL,
-  unit_cost                    numeric,
+  quantity                     numeric DEFAULT 0 NOT NULL,
+  unit_cost                    numeric DEFAULT 0,
   user_id                      uuid
 );
 
@@ -166,11 +166,11 @@ CREATE TABLE IF NOT EXISTS bom_items (
 CREATE TABLE IF NOT EXISTS boms (
   id                           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   product_id                   uuid,
-  version                      integer,
-  is_active                    boolean,
+  version                      integer DEFAULT 0,
+  is_active                    boolean DEFAULT true,
   user_id                      uuid,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now()
 );
 
 -- checkout_sessions
@@ -181,8 +181,8 @@ CREATE TABLE IF NOT EXISTS checkout_sessions (
   interval                     text NOT NULL,
   status                       text NOT NULL,
   stripe_session_id            text,
-  created_at                   timestamp with time zone,
-  updated_at                   timestamp with time zone,
+  created_at                   timestamp with time zone DEFAULT now(),
+  updated_at                   timestamp with time zone DEFAULT now(),
   workspace_id                 uuid NOT NULL
 );
 
@@ -193,16 +193,16 @@ CREATE TABLE IF NOT EXISTS customers (
   phone                        text,
   email                        text,
   address                      text,
-  opening_balance              numeric(12,2),
-  is_active                    boolean,
-  created_at                   timestamp with time zone,
-  updated_at                   timestamp with time zone,
-  synced_at                    timestamp with time zone,
+  opening_balance              numeric(12,2) DEFAULT 0,
+  is_active                    boolean DEFAULT true,
+  created_at                   timestamp with time zone DEFAULT now(),
+  updated_at                   timestamp with time zone DEFAULT now(),
+  synced_at                    timestamp with time zone DEFAULT now(),
   user_id                      uuid,
   notes                        text,
   type                         text,
   search_vector                tsvector,
-  version                      bigint NOT NULL,
+  version                      bigint DEFAULT 0 NOT NULL,
   workspace_id                 uuid
 );
 
@@ -214,10 +214,10 @@ CREATE TABLE IF NOT EXISTS departments (
   parent_id                    uuid,
   manager_id                   uuid,
   description                  text,
-  is_active                    boolean,
+  is_active                    boolean DEFAULT true,
   user_id                      uuid NOT NULL,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now()
 );
 
 -- employees — held 7 rows before the reset
@@ -245,14 +245,14 @@ CREATE TABLE IF NOT EXISTS employees (
   hire_date                    date NOT NULL,
   termination_date             date,
   status                       text,
-  salary                       numeric,
+  salary                       numeric DEFAULT 0,
   salary_currency              text,
   bank_account                 text,
   bank_name                    text,
   user_id                      uuid,
   notes                        text,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now()
 );
 
 -- event_log — held 65 rows before the reset
@@ -261,21 +261,21 @@ CREATE TABLE IF NOT EXISTS event_log (
   event_type                   text NOT NULL,
   entity_type                  text NOT NULL,
   entity_id                    uuid NOT NULL,
-  payload                      jsonb,
-  processed                    boolean,
-  created_at                   timestamp with time zone,
+  payload                      jsonb DEFAULT '{}'::jsonb,
+  processed                    boolean DEFAULT true,
+  created_at                   timestamp with time zone DEFAULT now(),
   user_id                      uuid NOT NULL,
-  retry_count                  integer,
-  max_retries                  integer,
-  next_retry_at                timestamp with time zone,
+  retry_count                  integer DEFAULT 0,
+  max_retries                  integer DEFAULT 0,
+  next_retry_at                timestamp with time zone DEFAULT now(),
   error_message                text,
-  completed_at                 timestamp with time zone,
+  completed_at                 timestamp with time zone DEFAULT now(),
   idempotency_key              text,
-  sequence_number              bigint NOT NULL,
+  sequence_number              bigint DEFAULT 0 NOT NULL,
   tenant_id                    uuid,
-  realtime_sent                boolean,
-  sync_sent                    boolean,
-  webhook_sent                 boolean,
+  realtime_sent                boolean DEFAULT true,
+  sync_sent                    boolean DEFAULT true,
+  webhook_sent                 boolean DEFAULT true,
   correlation_id               uuid
 );
 
@@ -283,7 +283,7 @@ CREATE TABLE IF NOT EXISTS event_log (
 CREATE TABLE IF NOT EXISTS event_types (
   type                         text NOT NULL,
   description                  text,
-  schema_version               integer
+  schema_version               integer DEFAULT 0
 );
 
 -- interactions — held 4 rows before the reset
@@ -295,14 +295,14 @@ CREATE TABLE IF NOT EXISTS interactions (
   content                      text,
   interaction_date             timestamp without time zone,
   user_id                      uuid,
-  created_at                   timestamp without time zone,
+  created_at                   timestamp without time zone DEFAULT now(),
   status                       text NOT NULL,
   public_token                 uuid NOT NULL,
   employee_id                  uuid,
   employee_name                text,
-  customers_snapshot           jsonb NOT NULL,
-  status_history               jsonb NOT NULL,
-  customer_outcomes            jsonb NOT NULL
+  customers_snapshot           jsonb DEFAULT '[]'::jsonb NOT NULL,
+  status_history               jsonb DEFAULT '[]'::jsonb NOT NULL,
+  customer_outcomes            jsonb DEFAULT '[]'::jsonb NOT NULL
 );
 
 -- invoice_items — held 85 rows before the reset
@@ -311,15 +311,15 @@ CREATE TABLE IF NOT EXISTS invoice_items (
   invoice_id                   uuid NOT NULL,
   product_id                   uuid,
   product_name                 text,
-  quantity                     numeric(12,3),
-  unit_price                   numeric(12,2),
-  discount                     numeric(5,2),
-  total_price                  numeric(12,2),
-  created_at                   timestamp with time zone,
+  quantity                     numeric(12,3) DEFAULT 0,
+  unit_price                   numeric(12,2) DEFAULT 0,
+  discount                     numeric(5,2) DEFAULT 0,
+  total_price                  numeric(12,2) DEFAULT 0,
+  created_at                   timestamp with time zone DEFAULT now(),
   user_id                      uuid,
   notes                        text,
   unit                         text NOT NULL,
-  weight_grams                 numeric(12,3),
+  weight_grams                 numeric(12,3) DEFAULT 0,
   unit_label                   text
 );
 
@@ -328,7 +328,7 @@ CREATE TABLE IF NOT EXISTS invoice_pdf_cache (
   invoice_id                   uuid NOT NULL,
   storage_path                 text NOT NULL,
   version_key                  text NOT NULL,
-  generated_at                 timestamp with time zone NOT NULL
+  generated_at                 timestamp with time zone DEFAULT now() NOT NULL
 );
 
 -- invoices — held 80 rows before the reset
@@ -340,29 +340,29 @@ CREATE TABLE IF NOT EXISTS invoices (
   supplier_id                  uuid,
   date                         timestamp with time zone NOT NULL,
   due_date                     timestamp with time zone,
-  subtotal                     numeric(12,2),
-  discount_total               numeric(12,2),
-  tax_total                    numeric(12,2),
-  total                        numeric(12,2) NOT NULL,
-  paid_amount                  numeric(12,2),
+  subtotal                     numeric(12,2) DEFAULT 0,
+  discount_total               numeric(12,2) DEFAULT 0,
+  tax_total                    numeric(12,2) DEFAULT 0,
+  total                        numeric(12,2) DEFAULT 0 NOT NULL,
+  paid_amount                  numeric(12,2) DEFAULT 0,
   currency                     text,
   payment_method               text,
   status                       text,
   notes                        text,
-  created_at                   timestamp with time zone,
-  updated_at                   timestamp with time zone,
-  synced_at                    timestamp with time zone,
+  created_at                   timestamp with time zone DEFAULT now(),
+  updated_at                   timestamp with time zone DEFAULT now(),
+  synced_at                    timestamp with time zone DEFAULT now(),
   user_id                      uuid,
   discount_type                text,
   reference                    text,
-  tax_rate                     numeric,
+  tax_rate                     numeric DEFAULT 0,
   search_vector                tsvector,
   purchase_order_id            uuid,
   public_token                 uuid NOT NULL,
-  version                      bigint NOT NULL,
+  version                      bigint DEFAULT 0 NOT NULL,
   locked_by_user_id            uuid,
-  lock_expires_at              timestamp with time zone,
-  finalized_at                 timestamp with time zone,
+  lock_expires_at              timestamp with time zone DEFAULT now(),
+  finalized_at                 timestamp with time zone DEFAULT now(),
   workspace_id                 uuid
 );
 
@@ -373,9 +373,9 @@ CREATE TABLE IF NOT EXISTS journal_entries (
   description                  text,
   reference                    text,
   user_id                      uuid,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone,
-  deleted_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now(),
+  deleted_at                   timestamp without time zone DEFAULT now()
 );
 
 -- journal_lines — held 40 rows before the reset
@@ -383,10 +383,10 @@ CREATE TABLE IF NOT EXISTS journal_lines (
   id                           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   journal_id                   uuid,
   account_id                   uuid,
-  debit                        numeric(19,4) NOT NULL,
-  credit                       numeric(19,4) NOT NULL,
+  debit                        numeric(19,4) DEFAULT 0 NOT NULL,
+  credit                       numeric(19,4) DEFAULT 0 NOT NULL,
   user_id                      uuid,
-  created_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now()
 );
 
 -- leaves
@@ -396,28 +396,28 @@ CREATE TABLE IF NOT EXISTS leaves (
   leave_type                   text NOT NULL,
   start_date                   date NOT NULL,
   end_date                     date NOT NULL,
-  total_days                   integer NOT NULL,
+  total_days                   integer DEFAULT 0 NOT NULL,
   reason                       text,
   status                       text,
   approved_by                  uuid,
-  approved_at                  timestamp without time zone,
+  approved_at                  timestamp without time zone DEFAULT now(),
   notes                        text,
   user_id                      uuid NOT NULL,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now()
 );
 
 -- ledger_entries — held 218 rows before the reset
 CREATE TABLE IF NOT EXISTS ledger_entries (
   id                           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   account_id                   uuid NOT NULL,
-  debit                        numeric,
-  credit                       numeric,
+  debit                        numeric DEFAULT 0,
+  credit                       numeric DEFAULT 0,
   reference_type               text NOT NULL,
   reference_id                 uuid NOT NULL,
   description                  text,
   entry_date                   timestamp with time zone,
-  created_at                   timestamp with time zone,
+  created_at                   timestamp with time zone DEFAULT now(),
   user_id                      uuid NOT NULL
 );
 
@@ -432,11 +432,11 @@ CREATE TABLE IF NOT EXISTS notifications (
   action_url                   text,
   entity_type                  text,
   entity_id                    uuid,
-  is_read                      boolean NOT NULL,
-  metadata                     jsonb,
-  created_at                   timestamp with time zone NOT NULL,
+  is_read                      boolean DEFAULT false NOT NULL,
+  metadata                     jsonb DEFAULT '{}'::jsonb,
+  created_at                   timestamp with time zone DEFAULT now() NOT NULL,
   workflow_instance_id         uuid,
-  read_at                      timestamp with time zone
+  read_at                      timestamp with time zone DEFAULT now()
 );
 
 -- opportunities
@@ -446,12 +446,12 @@ CREATE TABLE IF NOT EXISTS opportunities (
   title                        text NOT NULL,
   description                  text,
   stage                        text,
-  value                        numeric(19,4),
+  value                        numeric(19,4) DEFAULT 0,
   expected_close_date          date,
-  probability                  integer,
+  probability                  integer DEFAULT 0,
   user_id                      uuid,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now()
 );
 
 -- password_reset_tokens — held 8 rows before the reset
@@ -460,14 +460,14 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
   workspace_id                 uuid,
   user_id                      uuid NOT NULL,
   token_hash                   text NOT NULL,
-  expires_at                   timestamp with time zone NOT NULL,
-  used_at                      timestamp with time zone,
-  revoked_at                   timestamp with time zone,
+  expires_at                   timestamp with time zone DEFAULT now() NOT NULL,
+  used_at                      timestamp with time zone DEFAULT now(),
+  revoked_at                   timestamp with time zone DEFAULT now(),
   requested_ip                 inet,
   requested_user_agent         text,
-  created_at                   timestamp with time zone,
-  updated_at                   timestamp with time zone,
-  deleted_at                   timestamp with time zone
+  created_at                   timestamp with time zone DEFAULT now(),
+  updated_at                   timestamp with time zone DEFAULT now(),
+  deleted_at                   timestamp with time zone DEFAULT now()
 );
 
 -- payrolls — held 4 rows before the reset
@@ -476,21 +476,21 @@ CREATE TABLE IF NOT EXISTS payrolls (
   employee_id                  uuid NOT NULL,
   period_start                 date NOT NULL,
   period_end                   date NOT NULL,
-  base_salary                  numeric NOT NULL,
-  bonuses                      numeric,
-  deductions                   numeric,
-  overtime_hours               numeric,
-  overtime_rate                numeric,
-  overtime_amount              numeric,
-  tax_amount                   numeric,
-  net_salary                   numeric NOT NULL,
+  base_salary                  numeric DEFAULT 0 NOT NULL,
+  bonuses                      numeric DEFAULT 0,
+  deductions                   numeric DEFAULT 0,
+  overtime_hours               numeric DEFAULT 0,
+  overtime_rate                numeric DEFAULT 0,
+  overtime_amount              numeric DEFAULT 0,
+  tax_amount                   numeric DEFAULT 0,
+  net_salary                   numeric DEFAULT 0 NOT NULL,
   currency                     text,
   status                       text,
   payment_date                 timestamp without time zone,
   notes                        text,
   user_id                      uuid NOT NULL,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now()
 );
 
 -- permissions — held 33 rows before the reset
@@ -501,7 +501,7 @@ CREATE TABLE IF NOT EXISTS permissions (
   description                  text,
   resource                     text NOT NULL,
   action                       text NOT NULL,
-  created_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now()
 );
 
 -- products — held 26 rows before the reset
@@ -511,21 +511,21 @@ CREATE TABLE IF NOT EXISTS products (
   barcode                      text,
   sku                          text,
   category                     text,
-  quantity                     integer,
+  quantity                     integer DEFAULT 0,
   unit                         text,
-  buy_price                    numeric,
-  sell_price                   numeric,
-  wholesale_price              numeric,
-  min_stock_level              integer,
+  buy_price                    numeric DEFAULT 0,
+  sell_price                   numeric DEFAULT 0,
+  wholesale_price              numeric DEFAULT 0,
+  min_stock_level              integer DEFAULT 0,
   description                  text,
-  is_active                    boolean,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone,
-  synced_at                    timestamp without time zone,
+  is_active                    boolean DEFAULT true,
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now(),
+  synced_at                    timestamp without time zone DEFAULT now(),
   user_id                      uuid,
   image_url                    text,
   search_vector                tsvector,
-  version                      bigint NOT NULL,
+  version                      bigint DEFAULT 0 NOT NULL,
   workspace_id                 uuid
 );
 
@@ -535,10 +535,10 @@ CREATE TABLE IF NOT EXISTS profiles (
   full_name                    text NOT NULL,
   business_name                text,
   avatar_url                   text,
-  created_at                   timestamp with time zone,
-  updated_at                   timestamp with time zone,
+  created_at                   timestamp with time zone DEFAULT now(),
+  updated_at                   timestamp with time zone DEFAULT now(),
   preferred_language           text,
-  onboarding_completed_at      timestamp with time zone,
+  onboarding_completed_at      timestamp with time zone DEFAULT now(),
   business_types               text[] NOT NULL,
   store_size                   text,
   business_note                text
@@ -552,8 +552,8 @@ CREATE TABLE IF NOT EXISTS project_members (
   user_id                      uuid,
   role                         text,
   user_id_owner                uuid NOT NULL,
-  joined_at                    timestamp without time zone,
-  created_at                   timestamp without time zone
+  joined_at                    timestamp without time zone DEFAULT now(),
+  created_at                   timestamp without time zone DEFAULT now()
 );
 
 -- project_tasks — held 5 rows before the reset
@@ -566,15 +566,15 @@ CREATE TABLE IF NOT EXISTS project_tasks (
   parent_task_id               uuid,
   status                       text,
   priority                     text,
-  estimated_hours              numeric,
-  actual_hours                 numeric,
+  estimated_hours              numeric DEFAULT 0,
+  actual_hours                 numeric DEFAULT 0,
   due_date                     date,
-  completed_at                 timestamp without time zone,
-  order_index                  integer,
+  completed_at                 timestamp without time zone DEFAULT now(),
+  order_index                  integer DEFAULT 0,
   tags                         text[],
   user_id                      uuid NOT NULL,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now()
 );
 
 -- project_time_entries
@@ -584,13 +584,13 @@ CREATE TABLE IF NOT EXISTS project_time_entries (
   task_id                      uuid,
   employee_id                  uuid NOT NULL,
   date                         date NOT NULL,
-  hours                        numeric NOT NULL,
+  hours                        numeric DEFAULT 0 NOT NULL,
   description                  text,
-  billable                     boolean,
-  hourly_rate                  numeric,
+  billable                     boolean DEFAULT true,
+  hourly_rate                  numeric DEFAULT 0,
   user_id                      uuid NOT NULL,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now()
 );
 
 -- projects — held 5 rows before the reset
@@ -601,15 +601,15 @@ CREATE TABLE IF NOT EXISTS projects (
   client_id                    uuid,
   start_date                   date,
   end_date                     date,
-  budget                       numeric,
+  budget                       numeric DEFAULT 0,
   currency                     text,
   status                       text,
   priority                     text,
-  progress                     integer,
+  progress                     integer DEFAULT 0,
   tags                         text[],
   user_id                      uuid NOT NULL,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now()
 );
 
 -- purchase_order_items
@@ -617,11 +617,11 @@ CREATE TABLE IF NOT EXISTS purchase_order_items (
   id                           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   purchase_order_id            uuid,
   product_id                   uuid,
-  quantity                     numeric NOT NULL,
-  unit_price                   numeric NOT NULL,
-  total_price                  numeric NOT NULL,
+  quantity                     numeric DEFAULT 0 NOT NULL,
+  unit_price                   numeric DEFAULT 0 NOT NULL,
+  total_price                  numeric DEFAULT 0 NOT NULL,
   user_id                      uuid,
-  created_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now()
 );
 
 -- purchase_orders
@@ -633,9 +633,9 @@ CREATE TABLE IF NOT EXISTS purchase_orders (
   status                       text,
   notes                        text,
   user_id                      uuid,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone,
-  received_at                  timestamp without time zone,
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now(),
+  received_at                  timestamp without time zone DEFAULT now(),
   invoice_id                   uuid
 );
 
@@ -644,7 +644,7 @@ CREATE TABLE IF NOT EXISTS role_permissions (
   id                           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   role_id                      uuid NOT NULL,
   permission_id                uuid NOT NULL,
-  created_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now()
 );
 
 -- roles — held 9 rows before the reset
@@ -652,9 +652,9 @@ CREATE TABLE IF NOT EXISTS roles (
   id                           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   name                         text NOT NULL,
   description                  text,
-  is_system                    boolean,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone
+  is_system                    boolean DEFAULT false,
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now()
 );
 
 -- stock_movements — held 65 rows before the reset
@@ -662,11 +662,11 @@ CREATE TABLE IF NOT EXISTS stock_movements (
   id                           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   product_id                   uuid NOT NULL,
   type                         text NOT NULL,
-  quantity                     numeric NOT NULL,
+  quantity                     numeric DEFAULT 0 NOT NULL,
   reference_type               text,
   reference_id                 uuid,
   notes                        text,
-  created_at                   timestamp with time zone,
+  created_at                   timestamp with time zone DEFAULT now(),
   user_id                      uuid NOT NULL,
   from_warehouse_id            uuid,
   to_warehouse_id              uuid
@@ -678,17 +678,17 @@ CREATE TABLE IF NOT EXISTS subscriptions (
   user_id                      uuid NOT NULL,
   plan                         text NOT NULL,
   status                       text NOT NULL,
-  trial_started_at             timestamp with time zone NOT NULL,
-  trial_ends_at                timestamp with time zone NOT NULL,
+  trial_started_at             timestamp with time zone DEFAULT now() NOT NULL,
+  trial_ends_at                timestamp with time zone DEFAULT now() NOT NULL,
   period_start                 timestamp with time zone NOT NULL,
   period_end                   timestamp with time zone NOT NULL,
-  cancel_at_period_end         boolean,
+  cancel_at_period_end         boolean DEFAULT true,
   stripe_customer_id           text,
   stripe_subscription_id       text,
-  created_at                   timestamp with time zone,
-  updated_at                   timestamp with time zone,
-  is_trial                     boolean,
-  trial_used                   boolean,
+  created_at                   timestamp with time zone DEFAULT now(),
+  updated_at                   timestamp with time zone DEFAULT now(),
+  is_trial                     boolean DEFAULT true,
+  trial_used                   boolean DEFAULT true,
   workspace_id                 uuid NOT NULL
 );
 
@@ -698,25 +698,25 @@ CREATE TABLE IF NOT EXISTS suppliers (
   name                         text NOT NULL,
   phone                        text,
   email                        text,
-  address                      jsonb,
+  address                      jsonb DEFAULT '{}'::jsonb,
   user_id                      uuid,
-  is_active                    boolean,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone
+  is_active                    boolean DEFAULT true,
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now()
 );
 
 -- sync_logs
 CREATE TABLE IF NOT EXISTS sync_logs (
   id                           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id                      uuid NOT NULL,
-  started_at                   timestamp without time zone NOT NULL,
-  completed_at                 timestamp without time zone,
+  started_at                   timestamp without time zone DEFAULT now() NOT NULL,
+  completed_at                 timestamp without time zone DEFAULT now(),
   status                       text,
-  items_processed              integer,
-  items_failed                 integer,
-  items_total                  integer,
+  items_processed              integer DEFAULT 0,
+  items_failed                 integer DEFAULT 0,
+  items_total                  integer DEFAULT 0,
   error_message                text,
-  created_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now()
 );
 
 -- sync_queue
@@ -726,14 +726,14 @@ CREATE TABLE IF NOT EXISTS sync_queue (
   entity_type                  text NOT NULL,
   entity_id                    uuid,
   action                       text NOT NULL,
-  payload                      jsonb NOT NULL,
+  payload                      jsonb DEFAULT '{}'::jsonb NOT NULL,
   status                       text,
-  priority                     integer,
-  retry_count                  integer,
-  max_retries                  integer,
+  priority                     integer DEFAULT 0,
+  retry_count                  integer DEFAULT 0,
+  max_retries                  integer DEFAULT 0,
   error_message                text,
-  created_at                   timestamp without time zone,
-  processed_at                 timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now(),
+  processed_at                 timestamp without time zone DEFAULT now()
 );
 
 -- transactions — held 22 rows before the reset
@@ -742,13 +742,13 @@ CREATE TABLE IF NOT EXISTS transactions (
   customer_id                  uuid,
   supplier_id                  uuid,
   type                         text NOT NULL,
-  amount                       numeric(12,2) NOT NULL,
+  amount                       numeric(12,2) DEFAULT 0 NOT NULL,
   currency                     text,
   description                  text,
   reference                    text,
   date                         timestamp with time zone,
-  created_at                   timestamp with time zone,
-  synced_at                    timestamp with time zone,
+  created_at                   timestamp with time zone DEFAULT now(),
+  synced_at                    timestamp with time zone DEFAULT now(),
   user_id                      uuid,
   invoice_id                   uuid,
   workspace_id                 uuid
@@ -759,7 +759,7 @@ CREATE TABLE IF NOT EXISTS user_roles (
   id                           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id                      uuid NOT NULL,
   role_id                      uuid NOT NULL,
-  created_at                   timestamp without time zone,
+  created_at                   timestamp without time zone DEFAULT now(),
   workspace_id                 uuid
 );
 
@@ -768,10 +768,10 @@ CREATE TABLE IF NOT EXISTS warehouse_stock (
   id                           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   warehouse_id                 uuid NOT NULL,
   product_id                   uuid NOT NULL,
-  quantity                     numeric NOT NULL,
+  quantity                     numeric DEFAULT 0 NOT NULL,
   user_id                      uuid NOT NULL,
-  created_at                   timestamp with time zone NOT NULL,
-  updated_at                   timestamp with time zone NOT NULL
+  created_at                   timestamp with time zone DEFAULT now() NOT NULL,
+  updated_at                   timestamp with time zone DEFAULT now() NOT NULL
 );
 
 -- warehouses
@@ -779,45 +779,45 @@ CREATE TABLE IF NOT EXISTS warehouses (
   id                           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   name                         text NOT NULL,
   location                     text,
-  is_active                    boolean,
+  is_active                    boolean DEFAULT true,
   user_id                      uuid,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone,
-  deleted_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now(),
+  deleted_at                   timestamp without time zone DEFAULT now()
 );
 
 -- webhook_events
 CREATE TABLE IF NOT EXISTS webhook_events (
   id                           text NOT NULL,
   type                         text NOT NULL,
-  payload                      jsonb NOT NULL,
-  processed_at                 timestamp with time zone
+  payload                      jsonb DEFAULT '{}'::jsonb NOT NULL,
+  processed_at                 timestamp with time zone DEFAULT now()
 );
 
 -- work_orders
 CREATE TABLE IF NOT EXISTS work_orders (
   id                           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   product_id                   uuid,
-  quantity                     integer NOT NULL,
+  quantity                     integer DEFAULT 0 NOT NULL,
   bom_id                       uuid,
   status                       text,
   start_date                   timestamp without time zone,
   end_date                     timestamp without time zone,
   user_id                      uuid,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now()
 );
 
 -- workflow_actions — held 44 rows before the reset
 CREATE TABLE IF NOT EXISTS workflow_actions (
   id                           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   instance_id                  uuid NOT NULL,
-  step_order                   integer NOT NULL,
+  step_order                   integer DEFAULT 0 NOT NULL,
   action                       workflow_action NOT NULL,
   actor_user_id                uuid NOT NULL,
   actor_role                   text,
   comment                      text,
-  created_at                   timestamp with time zone NOT NULL
+  created_at                   timestamp with time zone DEFAULT now() NOT NULL
 );
 
 -- workflow_instances — held 41 rows before the reset
@@ -828,23 +828,23 @@ CREATE TABLE IF NOT EXISTS workflow_instances (
   entity_type                  text NOT NULL,
   entity_id                    uuid NOT NULL,
   status                       workflow_status NOT NULL,
-  current_step                 integer NOT NULL,
-  total_steps                  integer NOT NULL,
-  started_at                   timestamp with time zone NOT NULL,
-  completed_at                 timestamp with time zone,
-  created_at                   timestamp with time zone NOT NULL,
-  updated_at                   timestamp with time zone NOT NULL
+  current_step                 integer DEFAULT 0 NOT NULL,
+  total_steps                  integer DEFAULT 0 NOT NULL,
+  started_at                   timestamp with time zone DEFAULT now() NOT NULL,
+  completed_at                 timestamp with time zone DEFAULT now(),
+  created_at                   timestamp with time zone DEFAULT now() NOT NULL,
+  updated_at                   timestamp with time zone DEFAULT now() NOT NULL
 );
 
 -- workflow_steps — held 2 rows before the reset
 CREATE TABLE IF NOT EXISTS workflow_steps (
   id                           uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   workflow_id                  uuid NOT NULL,
-  step_order                   integer NOT NULL,
+  step_order                   integer DEFAULT 0 NOT NULL,
   approver_role                text NOT NULL,
   approver_user_id             uuid,
-  is_final                     boolean NOT NULL,
-  created_at                   timestamp with time zone NOT NULL
+  is_final                     boolean DEFAULT false NOT NULL,
+  created_at                   timestamp with time zone DEFAULT now() NOT NULL
 );
 
 -- workflows — held 1 rows before the reset
@@ -854,10 +854,10 @@ CREATE TABLE IF NOT EXISTS workflows (
   name                         text NOT NULL,
   description                  text,
   entity_type                  text NOT NULL,
-  is_active                    boolean NOT NULL,
-  created_at                   timestamp with time zone NOT NULL,
-  updated_at                   timestamp with time zone NOT NULL,
-  deleted_at                   timestamp with time zone
+  is_active                    boolean DEFAULT true NOT NULL,
+  created_at                   timestamp with time zone DEFAULT now() NOT NULL,
+  updated_at                   timestamp with time zone DEFAULT now() NOT NULL,
+  deleted_at                   timestamp with time zone DEFAULT now()
 );
 
 -- workspace_invites — held 23 rows before the reset
@@ -869,10 +869,10 @@ CREATE TABLE IF NOT EXISTS workspace_invites (
   invited_by                   uuid NOT NULL,
   token                        text,
   status                       text,
-  expires_at                   timestamp without time zone NOT NULL,
-  created_at                   timestamp without time zone,
+  expires_at                   timestamp without time zone DEFAULT now() NOT NULL,
+  created_at                   timestamp without time zone DEFAULT now(),
   token_hash                   text,
-  accepted_at                  timestamp with time zone,
+  accepted_at                  timestamp with time zone DEFAULT now(),
   accepted_by                  uuid
 );
 
@@ -882,12 +882,12 @@ CREATE TABLE IF NOT EXISTS workspace_members (
   workspace_id                 uuid NOT NULL,
   user_id                      uuid NOT NULL,
   role                         text,
-  joined_at                    timestamp without time zone,
-  created_at                   timestamp without time zone,
+  joined_at                    timestamp without time zone DEFAULT now(),
+  created_at                   timestamp without time zone DEFAULT now(),
   job_title                    text,
   phone                        text,
-  has_access                   boolean NOT NULL,
-  suspended_at                 timestamp with time zone
+  has_access                   boolean DEFAULT true NOT NULL,
+  suspended_at                 timestamp with time zone DEFAULT now()
 );
 
 -- workspaces — held 6 rows before the reset
@@ -898,9 +898,9 @@ CREATE TABLE IF NOT EXISTS workspaces (
   description                  text,
   logo_url                     text,
   owner_id                     uuid NOT NULL,
-  is_active                    boolean,
-  created_at                   timestamp without time zone,
-  updated_at                   timestamp without time zone,
+  is_active                    boolean DEFAULT true,
+  created_at                   timestamp without time zone DEFAULT now(),
+  updated_at                   timestamp without time zone DEFAULT now(),
   stamp_url                    text
 );
 

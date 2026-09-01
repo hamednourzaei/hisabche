@@ -7,7 +7,8 @@
   "scripts": {
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
-    "clean": "rm -rf node_modules"
+    "clean": "rm -rf node_modules",
+    "test": "vitest run"
   },
   "dependencies": {
     "crypto-js": "^4.2.0",
@@ -22,8 +23,10 @@
   },
   "devDependencies": {
     "@types/crypto-js": "^4.2.2",
+    "jsdom": "^25.0.1",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.7"
   }
 }

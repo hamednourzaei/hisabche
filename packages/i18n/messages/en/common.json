@@ -2655,7 +2655,8 @@
     }
   },
   "action": {
-    "clear": "Clear"
+    "clear": "Clear",
+    "reload": "Reload the page"
   },
   "unit": {
     "piece": "pcs",

@@ -143,6 +143,10 @@ const ORDER = [
   // Policies for the tables that had RLS on and nothing else. After the
   // helpers exist, since every policy here calls `auth_workspace_ids()`.
   'remaining-policies-migration.sql',
+  // ABSOLUTELY LAST. It revokes grants on every SECURITY DEFINER function that
+  // exists, so it has to run after the last one is created — and it pins
+  // search_path on whatever is still unpinned by then.
+  'linter-hardening-migration.sql',
 ]
 
 loadEnv()
