@@ -67,6 +67,12 @@ const ICONS: Record<NavId, readonly [IconName, IconName]> = {
   // does not exist on mobile yet, and 'data-migration' is deliberately absent
   // from IMPLEMENTED below — importing a spreadsheet needs a document picker
   // and a file the phone can actually reach, which is its own slice.
+  'customer-list': ['search-outline', 'search'],
+  'product-list': ['cube-outline', 'cube'],
+  'accounting-workspace': ['calculator-outline', 'calculator'],
+  'sales-workspace': ['cart-outline', 'cart'],
+  'inventory-workspace': ['cube-outline', 'cube'],
+  'people-workspace': ['people-outline', 'people'],
   'data-and-sync': ['server-outline', 'server'],
   'data-migration': ['download-outline', 'download'],
   coworkers: ['wallet-outline', 'wallet'],

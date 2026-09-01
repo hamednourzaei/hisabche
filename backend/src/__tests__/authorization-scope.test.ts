@@ -12,8 +12,10 @@ import {
   authorize,
   branchFilterFor,
   mayWriteToBranch,
+  scopeOf,
   type ActorScope,
 } from '../services/authorization/scope.domain'
+import { mayUseBranch } from '../services/branch/branch.domain'
 
 const SHOP = 'ws-1'
 const OTHER = 'ws-2'
@@ -97,12 +99,34 @@ describe('branch scope', () => {
     })
   })
 
-  it('lets a scoped actor see rows that belong to no branch', () => {
-    // Workspace-level settings, and everything created before branches
-    // existed. Hiding them would hide the shop's own history.
+  it('REFUSES a scoped actor a row that belongs to no branch', () => {
+    // This is `mayUseBranch`'s rule, not a new one. A row with no branch
+    // belongs to the workspace as a whole, and a member restricted to specific
+    // branches does not own it — so it must not appear in their figures.
+    //
+    // An earlier draft of scope.domain.ts answered the opposite here. Two
+    // answers to one question is how a security rule quietly stops being a
+    // rule, so this case is pinned deliberately.
     expect(ask(actor({ branchIds: [KABUL] }), resource({ branchId: null }))).toEqual({
-      allowed: true,
+      allowed: false,
+      reason: 'OUT_OF_BRANCH_SCOPE',
     })
+  })
+
+  it('lets an UNRESTRICTED actor see a row with no branch', () => {
+    expect(ask(actor({ branchIds: [] }), resource({ branchId: null }))).toEqual({ allowed: true })
+  })
+
+  it('agrees with branch.domain rather than restating it', () => {
+    // The guard against the contradiction returning: if `mayUseBranch` ever
+    // changes its mind about null-branch rows, this fails rather than leaving
+    // two modules disagreeing in production.
+    const scoped = actor({ branchIds: [KABUL] })
+    for (const branchId of [KABUL, HERAT, KANDAHAR, null]) {
+      const viaBranchDomain = mayUseBranch(scopeOf(scoped), branchId)
+      const viaAuthorize = ask(scoped, resource({ branchId })).allowed
+      expect(viaAuthorize, `branchId=${branchId}`).toBe(viaBranchDomain)
+    }
   })
 })
 
@@ -162,7 +186,10 @@ describe('writing into a branch', () => {
     expect(mayWriteToBranch(actor({ branchIds: [] }), HERAT)).toBe(true)
   })
 
-  it('allows a workspace-level write', () => {
+  it('allows a workspace-level write even from a scoped member', () => {
+    // Deliberately looser than READING a null-branch row: writing one exposes
+    // no other branch's data, and refusing it would stop a Kabul-scoped
+    // manager from ever creating a customer.
     expect(mayWriteToBranch(actor({ branchIds: [KABUL] }), null)).toBe(true)
   })
 })

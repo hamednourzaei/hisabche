@@ -7,6 +7,11 @@ import { supabase } from '../db'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
+import {
+  summarise,
+  type LedgerTxn,
+  type PartySide,
+} from '../services/accounting/party-ledger.domain'
 
 // ─── Types ────────────────────────────────────────────────
 interface CreateTransactionBody {
@@ -22,6 +27,90 @@ interface CreateTransactionBody {
 
 // ─── Routes ───────────────────────────────────────────────
 export async function transactionRoutes(fastify: FastifyInstance) {
+  // ─── GET /api/transactions/ledger ────────────────────────
+  //
+  // A running account for one customer or one supplier.
+  //
+  // ⚠️ Registered BEFORE `/:id` in this file, because Fastify would otherwise
+  // be free to read "ledger" as a transaction id.
+  //
+  // Was in KNOWN_MISSING — `useLedger()` has called this address since it was
+  // written and got a 404, so every party statement rendered empty. The
+  // arithmetic lives in `party-ledger.domain.ts` so the direction rule (a sale
+  // debits a customer; a purchase CREDITS a supplier) is testable without a
+  // database. Getting that backwards produces no error — only a statement that
+  // is wrong by twice the amount.
+  fastify.get(
+    '/api/transactions/ledger',
+    { preHandler: [authenticate, requireWorkspaceContext] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { customerId, supplierId } = request.query as {
+          customerId?: string
+          supplierId?: string
+        }
+
+        // Exactly one. Both would sum two unrelated accounts into a statement
+        // that balances to nothing meaningful; neither has no subject at all.
+        if ((customerId && supplierId) || (!customerId && !supplierId)) {
+          return reply.code(400).send({ error: 'LEDGER_ONE_PARTY_REQUIRED' })
+        }
+
+        const side: PartySide = customerId ? 'customer' : 'supplier'
+        const column = customerId ? 'customer_id' : 'supplier_id'
+        const partyId = (customerId ?? supplierId) as string
+
+        const { data, error } = await supabase
+          .from('transactions')
+          .select('type, amount, created_at')
+          .eq('workspace_id', request.tenancy.workspaceId)
+          .eq(column, partyId)
+          .order('created_at', { ascending: true })
+          .limit(10_000)
+
+        if (error) throw error
+
+        // `transactions.amount` is stored in MAJOR units. The domain works in
+        // minor units so a few hundred rows do not drift by cents — a customer
+        // statement that disagrees with the invoice by one afghani is a phone
+        // call. Converted here and converted back at the response edge.
+        const transactions: LedgerTxn[] = (data ?? []).map((row: Record<string, any>) => ({
+          type: row.type,
+          amountMinor: Math.round((Number(row.amount) || 0) * 100),
+          at: String(row.created_at ?? ''),
+        }))
+
+        // What the party carried in before any of these. `customers` records
+        // it; a supplier has no such column, so it starts at zero rather than
+        // being invented.
+        let openingMinor = 0
+        if (customerId) {
+          const { data: customer } = await supabase
+            .from('customers')
+            .select('opening_balance')
+            .eq('workspace_id', request.tenancy.workspaceId)
+            .eq('id', customerId)
+            .maybeSingle()
+
+          openingMinor = Math.round((Number(customer?.opening_balance) || 0) * 100)
+        }
+
+        const summary = summarise(side, openingMinor, transactions)
+
+        return reply.send({
+          ...(customerId ? { customerId } : { supplierId }),
+          openingBalance: summary.openingBalanceMinor / 100,
+          totalDebit: summary.totalDebitMinor / 100,
+          totalCredit: summary.totalCreditMinor / 100,
+          closingBalance: summary.closingBalanceMinor / 100,
+        })
+      } catch (err) {
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to build the ledger' })
+      }
+    },
+  )
+
   // GET /api/transactions
   fastify.get(
     '/api/transactions',

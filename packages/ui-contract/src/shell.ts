@@ -27,14 +27,17 @@ import { NAV_CONTRACT, type NavId } from './navigation'
 /* ─── Breadcrumbs ─────────────────────────────────────────────────────────── */
 
 export interface Crumb {
-  /** i18n key, never text. */
+  /** i18n key, never text. Empty when the contract does not know this path. */
   labelKey: string
+  /** The raw URL segment, so a renderer can fall back without re-splitting the
+   *  path and re-deriving which segment this crumb came from. */
+  segment: string
   /** Absent on the last crumb: you do not link to where you already are. */
   path?: string
 }
 
 /** The root of every trail. */
-const HOME: Crumb = { labelKey: 'nav.today', path: '/today' }
+const HOME: Crumb = { labelKey: 'nav.today', segment: '', path: '/dashboard' }
 
 /**
  * The trail for a path.
@@ -47,7 +50,7 @@ const HOME: Crumb = { labelKey: 'nav.today', path: '/today' }
  */
 export function breadcrumbsFor(path: string, localeCodes: readonly string[] = []): Crumb[] {
   const cleaned = stripLocale(path, localeCodes)
-  if (cleaned === '' || cleaned === '/today') return [{ labelKey: HOME.labelKey }]
+  if (cleaned === '' || cleaned === '/dashboard') return [{ labelKey: HOME.labelKey, segment: '' }]
 
   const segments = cleaned.split('/').filter(Boolean)
   const crumbs: Crumb[] = [HOME]
@@ -60,6 +63,7 @@ export function breadcrumbsFor(path: string, localeCodes: readonly string[] = []
 
     crumbs.push({
       labelKey: destination?.labelKey ?? '',
+      segment,
       // The last crumb is where you are, so it is not a link.
       ...(isLast ? {} : { path: walked }),
     })

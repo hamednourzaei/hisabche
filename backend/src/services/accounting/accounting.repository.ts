@@ -390,6 +390,72 @@ export class AccountingRepository {
    * for last month appeared in this month's figures and never in last month's,
    * and it pulled every journal line into Node to add them up with no limit.
    */
+  /**
+   * Every posted line on one account, oldest first.
+   *
+   * ⚠️ `journal_lines.journal_id` — NOT `entry_id`. The column has been
+   * guessed wrong more than once in this codebase.
+   *
+   * ⚠️ Only POSTED entries. A draft is not part of the ledger, and a drill-down
+   * that included drafts would not add up to the trial balance beside it —
+   * which is precisely the number the user clicked to get here.
+   */
+  async ledgerLines(
+    workspaceId: string,
+    accountId: string,
+    fromDate: string | null,
+    toDate: string | null,
+  ): Promise<
+    Array<{
+      lineId: string
+      entryId: string
+      date: string
+      description: string
+      reference: string
+      debit: number
+      credit: number
+    }>
+  > {
+    let query = supabase
+      .from('journal_lines')
+      .select(
+        'id, journal_id, debit, credit, journal_entries!inner(id, date, description, reference, status, workspace_id)',
+      )
+      .eq('workspace_id', workspaceId)
+      .eq('account_id', accountId)
+      .eq('journal_entries.status', 'posted')
+      .order('id', { ascending: true })
+      .limit(5_000)
+
+    if (fromDate) query = query.gte('journal_entries.date', fromDate)
+    if (toDate) query = query.lte('journal_entries.date', toDate)
+
+    const { data, error } = await query
+    if (error) throw new DatabaseError('Failed to read the general ledger', error)
+
+    return (
+      (data ?? [])
+        .map((row: Record<string, any>) => {
+          const entry = Array.isArray(row.journal_entries)
+            ? row.journal_entries[0]
+            : row.journal_entries
+          return {
+            lineId: row.id,
+            entryId: row.journal_id,
+            date: String(entry?.date ?? '').slice(0, 10),
+            description: String(entry?.description ?? ''),
+            reference: String(entry?.reference ?? ''),
+            debit: Number(row.debit) || 0,
+            credit: Number(row.credit) || 0,
+          }
+        })
+        // Ordered by DATE, then by the id that broke the tie in SQL. Ordering by
+        // id alone puts a backdated entry in the wrong place and the running
+        // balance then reads as nonsense to anybody checking it by hand.
+        .sort((left, right) => (left.date === right.date ? 0 : left.date < right.date ? -1 : 1))
+    )
+  }
+
   async ledgerTotals(
     workspaceId: string,
     fromDate: string | null,

@@ -25,6 +25,30 @@ export {
 } from './color-roles'
 
 export {
+  EVENT_STORES,
+  EVENT_MODEL,
+  SEPARATE_BY_DESIGN,
+  SINGLE_IMPLEMENTATION,
+  isSeparateByDesign,
+  type EventStore,
+  type EventStoreSpec,
+} from './consolidation'
+
+export {
+  SUGGESTION_KINDS,
+  FORBIDDEN_DECISIONS,
+  isPresentable,
+  mayAutoApply,
+  mayDecide,
+  gate,
+  type Suggestion,
+  type SuggestionKind,
+  type ForbiddenDecision,
+  type Confidence,
+  type IntelligenceRefusal,
+} from './intelligence'
+
+export {
   DOMAINS,
   DOMAIN_SPECS,
   breadcrumbsFor,

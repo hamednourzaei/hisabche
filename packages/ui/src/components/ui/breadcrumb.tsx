@@ -1,101 +1,102 @@
 // packages/ui/src/components/ui/breadcrumb.tsx
 'use client'
 
-import { usePathname } from 'next/navigation'
-import { useTranslations } from 'next-intl'
-import { cn } from '../../lib/utils'
-import { ChevronLeft, Home } from 'lucide-react'
-import Link from 'next/link'
+// ============================================
+// The trail, derived from NAV_CONTRACT rather than from a second list.
+//
+// ---------------------------------------------------------------------------
+// TWO BUGS THIS REPLACES
+//
+// 1. The locale was stripped for `af` and `en` but NOT for `fa`. Persian is the
+//    default locale and the one nearly everybody uses, so on almost every page
+//    the trail read `🏠 › fa › بودجه` — the language code rendered as if it
+//    were a place you could visit.
+//
+// 2. Labels came from a hand-written map that had to be updated by hand
+//    whenever a destination was added. It knew `warehouse` and `invoices` and
+//    had never heard of `bank`, `budgets`, `till` or `expiry`, so those pages
+//    showed the raw URL segment as their name.
+//
+// Both are the same mistake: a second source of truth for something
+// NAV_CONTRACT already knows. `breadcrumbsFor` reads the contract, so a
+// renamed destination renames its own crumb and a new one needs no work here.
+// ============================================
 
-// ─── Route label mapping (i18n keys) ────────────────────────
-const ROUTE_LABELS: Record<string, { key: string; fallback: string }> = {
-  dashboard: { key: 'nav.dashboard', fallback: 'داشبورد' },
-  warehouse: { key: 'nav.warehouse', fallback: 'انبار' },
-  invoices: { key: 'nav.invoices', fallback: 'فاکتورها' },
-  customers: { key: 'nav.customers', fallback: 'باقی‌داری' },
-  hr: { key: 'nav.human-resources', fallback: 'منابع انسانی' },
-  projects: { key: 'nav.projects', fallback: 'پروژه‌ها' },
-  permissions: { key: 'nav.permissions', fallback: 'دسترسی‌ها' },
-  audit: { key: 'nav.audit', fallback: 'حسابرسی' },
-  workspace: { key: 'workspace.title', fallback: 'فضای کاری' },
-  settings: { key: 'nav.settings', fallback: 'تنظیمات' },
-  'quick-invoice': { key: 'quickInvoice.title', fallback: 'فاکتور سریع' },
-  'sync-center': { key: 'sync.title', fallback: 'همگام‌سازی' },
-  onboarding: { key: 'onboarding.title', fallback: 'راه‌اندازی' },
-}
+import Link from 'next/link'
+import { useParams, usePathname } from 'next/navigation'
+import { useTranslations } from 'next-intl'
+import { ChevronLeft, Home } from 'lucide-react'
+
+import { breadcrumbsFor } from '@hisabche/ui-contract'
+import { cn } from '../../lib/utils'
+
+/** Kept in step with `apps/web/app/[lang]/i18n-config.ts`. */
+const LOCALES = ['fa', 'af', 'en'] as const
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export function Breadcrumb({ className }: { className?: string }) {
   const pathname = usePathname()
+  const params = useParams<{ lang?: string }>()
   const t = useTranslations()
 
-  // حذف locale prefix و split
-  const segments = pathname
-    .replace(/^\/(af|en)(?=\/|$)/, '')
-    .split('/')
-    .filter(Boolean)
+  const lang = typeof params?.lang === 'string' ? params.lang : 'fa'
 
-  // ساختن breadcrumb items
-  const items = segments.map((segment, index) => {
-    const isLast = index === segments.length - 1
-    const href = '/' + segments.slice(0, index + 1).join('/')
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(segment)
+  // Every link has to carry the locale back. A bare `/invoices` bounces the
+  // user through the locale redirect and loses their place.
+  const withLocale = (path: string) => `/${lang}${path}`
 
-    // اگه UUID هست، "جزئیات" نشون بده
-    if (isUUID) {
-      return {
-        href,
-        label: t('common.details'),
-        isLast,
-        isClickable: false,
-      }
+  const crumbs = breadcrumbsFor(pathname ?? '', LOCALES)
+
+  // One crumb means we are at the root; the home icon already says that.
+  if (crumbs.length <= 1) return null
+
+  const label = (crumb: { labelKey: string; segment: string }): string => {
+    // A crumb the contract does not recognise. An id in the path is a record,
+    // not a place — showing the raw UUID would be noise nobody can read.
+    if (crumb.labelKey === '') {
+      return UUID.test(crumb.segment) ? t('common.details') : crumb.segment
     }
-
-    const routeLabel = ROUTE_LABELS[segment]
-    return {
-      href,
-      label: routeLabel ? t(routeLabel.key) : segment,
-      isLast,
-      isClickable: !isLast,
-    }
-  })
-
-  // اگه فقط dashboard هست، نشون نده
-  if (items.length <= 1) return null
+    const translated = t(crumb.labelKey as Parameters<typeof t>[0])
+    return translated && translated !== crumb.labelKey ? translated : crumb.labelKey
+  }
 
   return (
     <nav aria-label="Breadcrumb" className={cn('flex items-center gap-1.5 text-sm', className)}>
-      {/* Home icon */}
       <Link
-        href="/dashboard"
-        className="text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--fg-primary))] transition-colors"
+        href={withLocale('/dashboard')}
+        className="text-[hsl(var(--fg-tertiary))] transition-colors hover:text-[hsl(var(--fg-primary))]"
       >
         <Home className="size-4" />
+        <span className="sr-only">{t('nav.today')}</span>
       </Link>
 
-      {items.map((item, index) => (
-        <span key={item.href} className="flex items-center gap-1.5">
-          {/* Separator */}
-          <ChevronLeft className="size-3.5 text-[hsl(var(--fg-tertiary))]" />
+      {crumbs.slice(1).map((crumb, index) => {
+        const text = label(crumb)
 
-          {/* Item */}
-          {item.isLast ? (
-            <span className="text-[hsl(var(--fg-primary))] font-medium truncate max-w-[200px]">
-              {item.label}
-            </span>
-          ) : item.isClickable ? (
-            <Link
-              href={item.href}
-              className="text-[hsl(var(--fg-secondary))] hover:text-[hsl(var(--fg-primary))] transition-colors truncate max-w-[150px]"
-            >
-              {item.label}
-            </Link>
-          ) : (
-            <span className="text-[hsl(var(--fg-secondary))] truncate max-w-[200px]">
-              {item.label}
-            </span>
-          )}
-        </span>
-      ))}
+        return (
+          <span key={`${crumb.labelKey}-${index}`} className="flex items-center gap-1.5">
+            <ChevronLeft className="size-3.5 text-[hsl(var(--fg-tertiary))]" aria-hidden="true" />
+
+            {crumb.path ? (
+              <Link
+                href={withLocale(crumb.path)}
+                className="max-w-[150px] truncate text-[hsl(var(--fg-secondary))] transition-colors hover:text-[hsl(var(--fg-primary))]"
+              >
+                {text}
+              </Link>
+            ) : (
+              // The last crumb is where you already are, so it is not a link.
+              <span
+                aria-current="page"
+                className="max-w-[200px] truncate font-medium text-[hsl(var(--fg-primary))]"
+              >
+                {text}
+              </span>
+            )}
+          </span>
+        )
+      })}
     </nav>
   )
 }

@@ -4,6 +4,7 @@
 // ============================================
 
 import { supabase } from '../db'
+import { scopes } from './authorization/scope.service'
 import { CreateProduct, UpdateProduct, ProductFilters } from '@hisabche/validation'
 import { DatabaseError, NotFoundError } from '../errors/database.error'
 import { mapProduct } from '../utils/product.mapper'
@@ -196,6 +197,12 @@ export class ProductService {
 
   // ─── Update ──────────────────────────────────────────────────
   async update(id: string, ctx: TenancyContext, data: UpdateProduct) {
+    // Workspace alone is not enough on a row addressed by id. Before this, any
+    // member of the workspace could mutate any row in it by knowing an id —
+    // including one raised by a colleague in a branch they do not hold.
+    // `assertMay` reads the row's own branch and creator and refuses on either.
+    await scopes.assertMay(ctx, 'product', id, 'product.write')
+
     const { workspaceId } = ctx
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (data.name !== undefined) updates.name = data.name
@@ -230,6 +237,12 @@ export class ProductService {
 
   // ─── Delete ──────────────────────────────────────────────────
   async delete(id: string, ctx: TenancyContext): Promise<void> {
+    // Workspace alone is not enough on a row addressed by id. Before this, any
+    // member of the workspace could mutate any row in it by knowing an id —
+    // including one raised by a colleague in a branch they do not hold.
+    // `assertMay` reads the row's own branch and creator and refuses on either.
+    await scopes.assertMay(ctx, 'product', id, 'product.write')
+
     const { workspaceId } = ctx
 
     // Establish tenancy BEFORE probing the child tables. `invoice_items` and

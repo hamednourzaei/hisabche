@@ -79,6 +79,16 @@ const ONLY = args.includes('--only') ? args[args.indexOf('--only') + 1] : null
  * Files not listed here run last, in name order, and are reported as such.
  */
 const ORDER = [
+  // ⚠️ ABSOLUTELY FIRST.
+  //
+  // The ~55 tables that were created by hand in the Supabase dashboard before
+  // `docs/*.sql` existed. Every other file in this list ALTERs them, and none
+  // of them creates them — which stayed invisible for as long as the database
+  // was alive, and became a rebuild that produced eleven tables out of
+  // sixty-five the moment the schema was dropped.
+  //
+  // Generated from a dump by `scripts/generate-base-schema.mjs`.
+  'base-schema-migration.sql',
   // FIRST. It creates `exchange_rates`, which `schema-drift-fix` ALTERs and no
   // other file creates, and it scopes a dozen pre-existing tables to a
   // workspace before anything else builds on them.
@@ -113,9 +123,26 @@ const ORDER = [
   // earlier ones create, but it is the newest capability and keeping new work
   // at the end makes the order readable as a history.
   'data-migration-center-migration.sql',
+  // Views over tables the files above create, plus the one table the dump
+  // never reached. Must come after those tables exist and before the policy
+  // rewrite below.
+  'views-and-billing-events-migration.sql',
+  // Foreign keys and indexes the dump could not carry. After every CREATE
+  // TABLE, before the policy work that depends on the indexes.
+  'hardening-migration.sql',
   // LAST, deliberately. It rewrites policies that the earlier files create, so
   // it has to run after all of them or its work is overwritten.
   'rls-recursion-fix-migration.sql',
+  // ABSOLUTELY LAST.
+  //
+  // It rewrites the same policies `rls-recursion-fix` creates, wrapping
+  // `auth.uid()` as `(select auth.uid())` so the planner evaluates it once per
+  // statement rather than once per row. Running it EARLIER means the recursion
+  // fix overwrites this work and the per-row evaluation comes back.
+  'rls-performance-migration.sql',
+  // Policies for the tables that had RLS on and nothing else. After the
+  // helpers exist, since every policy here calls `auth_workspace_ids()`.
+  'remaining-policies-migration.sql',
 ]
 
 loadEnv()

@@ -515,4 +515,25 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
       }
     },
   )
+
+  // ─── DELETE /api/employees/:id ───────────────────────────
+  //
+  // A soft delete. The verb is DELETE because that is what the person clicking
+  // means; the effect is `is_active = false` because payroll, leave and
+  // timesheet rows point at this employee and orphaning them would put a hole
+  // in the books. Was in KNOWN_MISSING — the client called it and it 404'd.
+  fastify.delete(
+    '/api/employees/:id',
+    { preHandler: [authenticate, requireWorkspaceContext] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        return reply.send(await humanResourcesService.deactivateEmployee(request.tenancy, id))
+      } catch (err) {
+        fastify.log.error(err)
+        const status = (err as { statusCode?: number })?.statusCode ?? 500
+        return reply.code(status).send({ error: 'Failed to deactivate the employee' })
+      }
+    },
+  )
 }

@@ -54,7 +54,19 @@ if (!orderBlock) {
 
 const ORDER = [...orderBlock[1].matchAll(/'([^']+\.sql)'/g)].map((match) => match[1])
 
-const present = readdirSync(DOCS).filter((file) => file.endsWith('.sql') && !file.startsWith('_'))
+/**
+ * Files in `docs/` that are OUTPUT of this pipeline, not input to it.
+ *
+ * ⚠️ `SETUP-COMPLETE.sql` is this bundle plus a header, and it lives in
+ * `docs/` without a leading underscore. A filter that only skipped `_` files
+ * folded it back in — every table appeared twice and the bundle doubled in
+ * size on each run. A generator that reads its own output compounds.
+ */
+const GENERATED = new Set(['SETUP-COMPLETE.sql'])
+
+const present = readdirSync(DOCS).filter(
+  (file) => file.endsWith('.sql') && !file.startsWith('_') && !GENERATED.has(file),
+)
 
 const ordered = [
   ...ORDER.filter((file) => present.includes(file)),

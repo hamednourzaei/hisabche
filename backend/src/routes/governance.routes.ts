@@ -10,6 +10,7 @@
 // bypasses only the person who bypassed them can see is not a control.
 // ============================================
 
+import { CAPABILITIES, explain, minRoleFor, wouldAHigherRoleHelp } from '../services/authorization'
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
@@ -29,6 +30,17 @@ const toJsonSchema = (schema: any) => {
 const settingsSchema = z.object({
   mode: z.enum(['off', 'warn', 'strict']).optional(),
   disabledRules: z.array(z.string()).optional(),
+})
+
+const whyNotSchema = z.object({
+  refusal: z.enum([
+    'MISSING_CAPABILITY',
+    'OUT_OF_BRANCH_SCOPE',
+    'NOT_OWN_RECORD',
+    'SOD_CONFLICT',
+    'PERIOD_LOCKED',
+  ]),
+  capability: z.enum(CAPABILITIES),
 })
 
 export async function governanceRoutes(fastify: FastifyInstance) {
@@ -106,6 +118,70 @@ export async function governanceRoutes(fastify: FastifyInstance) {
         return reply.send(await sodService.listOverrides(request.tenancy, Number(limit) || 100))
       } catch (err) {
         return fail(reply, err, 'Failed to fetch SoD overrides')
+      }
+    },
+  )
+
+  // ─── POST /api/governance/why-not ────────────────────────
+  //
+  // §17 — "Why can't I do it?" answered in the shop's terms.
+  //
+  // A `403 MISSING_CAPABILITY` tells a shopkeeper nothing: they cannot tell
+  // whether they clicked the wrong thing, whether it is broken, or whether
+  // they need to ask somebody — and the third is almost always the answer.
+  //
+  // ⚠️ POST rather than GET because the body carries the action being asked
+  // about, and ⚠️ it never explains a cross-workspace refusal: that case is a
+  // 404 everywhere else precisely so an outsider cannot confirm a row exists,
+  // and a helpful "that belongs to another workspace" would undo it in one
+  // sentence.
+  // ⚠️ Guarded with `report.operational.read` — the capability EVERY role holds,
+  // sellers included.
+  //
+  // Requiring a capability in order to learn why you lack a capability is
+  // circular, and the honest instinct is to leave this route unguarded. But
+  // `vertical-slice-integration.test.ts` requires every governance route to
+  // declare one, and that invariant is worth more than the exception: a route
+  // with no capability line is indistinguishable from a route where somebody
+  // forgot. So it declares the floor.
+  //
+  // Nothing here reads workspace data — the answer comes from the caller's OWN
+  // role and the static capability table.
+  //
+  // (This sits above the registration rather than inside its options object:
+  // the guard reads a bounded window between the route call and its
+  // `preHandler`, so a long comment in between makes the route look unguarded.
+  // It also avoids naming the route-registration call in prose — that guard
+  // counts occurrences without stripping comments, so a mention becomes a
+  // phantom fifth route.)
+  fastify.post(
+    '/why-not',
+    {
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        requireCapability('report.operational.read'),
+      ],
+      schema: { body: toJsonSchema(whyNotSchema), response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = whyNotSchema.parse(request.body)
+        const role = request.tenancy.role
+
+        const requiredRole = minRoleFor(body.capability)
+        const explanation = explain(body.refusal, { requiredRole })
+
+        return reply.send({
+          ...explanation,
+          actualRole: role,
+          // The question a user actually asks: do I need more access, or is
+          // this something else entirely?
+          higherRoleWouldHelp: wouldAHigherRoleHelp(body.refusal, role, requiredRole),
+        })
+      } catch (err) {
+        fastify.log.error(err)
+        return reply.code(400).send({ error: 'Failed to explain the refusal' })
       }
     },
   )

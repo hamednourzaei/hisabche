@@ -131,25 +131,20 @@ describe('the client and the server agree on the API surface', () => {
    * Fixing one means building the endpoint, which is a separate change with
    * its own tests. Deleting the line is how it leaves this list.
    */
-  const KNOWN_MISSING = new Set([
-    // Activity and entity summaries: the routes were never written.
-    'activity.ts: GET /v1/activities/entity/:param/:param',
-    'activity.ts: GET /v1/activities/entity/:param/:param/summary',
-    'entity.ts: GET /api/v1/entities/:param/:param/summary',
-    'entity.ts: GET /api/v1/entities/:param/:param/activities',
-    'useEntityActivities.ts: GET /v1/entities/:param/:param/activities',
-    'useEntitySummary.ts: GET /api/v1/entities/:param/:param/summary',
-
-    // The server has GET and PATCH on an employee, and no DELETE. Removing a
-    // person is a soft delete through PATCH; this call has never worked.
-    'employees.ts: DELETE /employees/:param',
-
-    // Only PATCH exists on a purchase order. There is no way to open one.
-    'purchasing.ts: GET /purchase-orders/:param',
-
-    // No ledger route on transactions at all.
-    'transactions.ts: GET /transactions/ledger',
-  ])
+  /**
+   * ⚠️ EMPTY, and it must stay that way.
+   *
+   * This set once held seven addresses the client called and nobody was at.
+   * Every one of them 404'd, and the screen behind it quietly showed nothing —
+   * an empty party statement, a purchase order that could not be opened, a
+   * delete button that did not delete.
+   *
+   * They are all built now. The set stays here rather than being deleted so
+   * that the next person who wants to ship a hook against a route that does
+   * not exist has to write their excuse down, in this file, where a reviewer
+   * will see it.
+   */
+  const KNOWN_MISSING = new Set<string>([])
 
   it('every path a hook calls is served, with that method', () => {
     // `apiClient` has `baseURL` ending in `/api`, so a hook's `/governance/sod`

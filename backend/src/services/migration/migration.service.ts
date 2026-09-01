@@ -57,6 +57,17 @@ import {
   type MappingSuggestion,
 } from './migration.entities'
 import {
+  EXPORT_COLUMNS,
+  applyProfile,
+  planRollback,
+  toCsvRow,
+  toProfile,
+  type ImportProfile,
+  type ProfileFit,
+  type RollbackCandidate,
+  type RollbackPlan,
+} from './migration.recovery'
+import {
   dryRun,
   reconcile,
   validateRows,
@@ -421,6 +432,257 @@ export class MigrationService {
       reconciliation: result,
       completed_at: new Date().toISOString(),
     })
+  }
+
+  /* ─── §39 Rollback ──────────────────────────────────────────────────────── */
+
+  /**
+   * What undoing this migration would do — WITHOUT doing it.
+   *
+   * The same preview-then-commit shape as the import itself. §39 forbids a
+   * blanket delete, and the reason is visible in the plan: a row the import
+   * created that a real business has since built on cannot go, and the plan
+   * names it rather than deleting it and breaking the invoice that references
+   * it.
+   */
+  async planRollback(ctx: TenancyContext, id: string): Promise<RollbackPlan> {
+    this.assertMayImport(ctx)
+    const job = await this.get(ctx, id)
+
+    const { data, error } = await supabase
+      .from('migration_records')
+      .select('target_id, outcome')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('migration_id', id)
+      .limit(50_000)
+
+    if (error) throw new DatabaseError('Failed to read the migration ledger', error)
+
+    const rows = data ?? []
+    const createdIds = rows
+      .filter((row) => row.outcome === 'created')
+      .map((row) => row.target_id as string)
+
+    const dependents = await this.dependentCounts(ctx, job.entity, createdIds)
+
+    const candidates: RollbackCandidate[] = rows.map((row) => ({
+      targetId: row.target_id as string,
+      outcome: row.outcome as 'created' | 'updated' | 'skipped',
+      dependentCount: dependents.get(row.target_id as string) ?? 0,
+    }))
+
+    return planRollback(job.entity, candidates)
+  }
+
+  /**
+   * Delete exactly the rows the plan says are free, and nothing else.
+   *
+   * The plan is RECOMPUTED here rather than accepted from the client: a plan
+   * posted back could name a row that has acquired an invoice in the seconds
+   * since, and trusting it would delete a customer somebody is billing.
+   */
+  async rollback(ctx: TenancyContext, id: string): Promise<RollbackPlan> {
+    this.assertMayImport(ctx)
+
+    // Only the owner may undo an import. Creating rows and destroying them are
+    // not the same act — this mirrors `invoice.delete` being owner-only.
+    if (ctx.role !== 'owner') throw new ConflictError('MIGRATION_ROLLBACK_FORBIDDEN')
+
+    const job = await this.get(ctx, id)
+    const plan = await this.planRollback(ctx, id)
+
+    if (plan.deletable.length > 0) {
+      const { error } = await supabase
+        .from(job.entity === 'customer' ? 'customers' : 'products')
+        .delete()
+        .eq('workspace_id', ctx.workspaceId)
+        .in('id', plan.deletable)
+
+      if (error) throw new DatabaseError('Failed to roll back the migration', error)
+
+      // The ledger entries go with the rows. Leaving them would make a second
+      // rollback try to delete ids that no longer exist, and would leave the
+      // identity map claiming a source row still points somewhere.
+      await supabase
+        .from('migration_records')
+        .delete()
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('migration_id', id)
+        .in('target_id', plan.deletable)
+    }
+
+    await this.update(ctx, id, {
+      status: 'cancelled',
+      rows_created: Math.max(0, job.rowsCreated - plan.deletable.length),
+      completed_at: new Date().toISOString(),
+    })
+
+    return plan
+  }
+
+  /**
+   * How many live rows point at each of these.
+   *
+   * ⚠️ A failed read counts as ONE dependent, not zero. Reporting zero because
+   * the query broke would green-light a delete on the strength of a failure —
+   * the quiet direction of wrong. "Cannot prove it is free" must behave like
+   * "not free".
+   */
+  private async dependentCounts(
+    ctx: TenancyContext,
+    entity: MigrationEntity,
+    ids: string[],
+  ): Promise<Map<string, number>> {
+    const counts = new Map<string, number>()
+    if (ids.length === 0) return counts
+
+    const sources =
+      entity === 'customer'
+        ? ([
+            ['invoices', 'customer_id'],
+            ['transactions', 'customer_id'],
+          ] as const)
+        : ([
+            ['stock_movements', 'product_id'],
+            ['invoice_items', 'product_id'],
+          ] as const)
+
+    for (const [table, column] of sources) {
+      const { data, error } = await supabase
+        .from(table)
+        .select(column)
+        .eq('workspace_id', ctx.workspaceId)
+        .in(column, ids)
+        .limit(50_000)
+
+      if (error) {
+        for (const id of ids) counts.set(id, (counts.get(id) ?? 0) + 1)
+        continue
+      }
+
+      for (const row of data ?? []) {
+        const id = (row as Record<string, string>)[column]
+        if (id) counts.set(id, (counts.get(id) ?? 0) + 1)
+      }
+    }
+
+    return counts
+  }
+
+  /* ─── §40 Import profiles ───────────────────────────────────────────────── */
+
+  async saveProfile(ctx: TenancyContext, id: string, name: string): Promise<ImportProfile> {
+    this.assertMayImport(ctx)
+    const job = await this.get(ctx, id)
+    if (!job.discovery) throw new ConflictError('MIGRATION_NOT_SCANNED')
+
+    const profile = toProfile(
+      id,
+      name.slice(0, 120),
+      job.entity,
+      job.discovery.headers,
+      job.mapping,
+    )
+
+    const { data, error } = await supabase
+      .from('migration_profiles')
+      .upsert(
+        {
+          workspace_id: ctx.workspaceId,
+          created_by: ctx.userId,
+          name: profile.name,
+          entity: profile.entity,
+          columns_by_name: profile.columnsByName,
+          signature: profile.signature,
+        },
+        { onConflict: 'workspace_id,entity,name' },
+      )
+      .select('id')
+      .single()
+
+    if (error) throw new DatabaseError('Failed to save the import profile', error)
+    return { ...profile, id: (data?.id as string) ?? profile.id }
+  }
+
+  async listProfiles(ctx: TenancyContext, entity: MigrationEntity): Promise<ImportProfile[]> {
+    const { data, error } = await supabase
+      .from('migration_profiles')
+      .select('id, name, entity, columns_by_name, signature')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('entity', entity)
+      .limit(100)
+
+    if (error) throw new DatabaseError('Failed to read import profiles', error)
+
+    return (data ?? []).map((row) => ({
+      id: row.id as string,
+      name: row.name as string,
+      entity: row.entity as MigrationEntity,
+      columnsByName: (row.columns_by_name as Record<string, string>) ?? {},
+      signature: (row.signature as string[]) ?? [],
+    }))
+  }
+
+  /**
+   * Apply a saved profile to this job.
+   *
+   * A drifted profile is applied AND reported. §40 forbids applying a stale
+   * mapping silently, so the caller receives the columns that have gone
+   * missing and is expected to show them.
+   */
+  async useProfile(
+    ctx: TenancyContext,
+    id: string,
+    profileId: string,
+  ): Promise<{ job: MigrationJob; fit: ProfileFit }> {
+    this.assertMayImport(ctx)
+    const job = await this.get(ctx, id)
+    this.assertOpen(job)
+    if (!job.discovery) throw new ConflictError('MIGRATION_NOT_SCANNED')
+
+    const profiles = await this.listProfiles(ctx, job.entity)
+    const profile = profiles.find((candidate) => candidate.id === profileId)
+    if (!profile) throw new NotFoundError('Import profile')
+
+    const fit = applyProfile(profile, job.entity, job.discovery.headers)
+    if (!fit.fits) return { job, fit }
+
+    return { job: await this.setMapping(ctx, id, fit.mapping), fit }
+  }
+
+  /* ─── §41 Export symmetry ───────────────────────────────────────────────── */
+
+  /**
+   * Export in the shape this importer reads back.
+   *
+   * The first column is Hisabche's own id as `externalId`, which is what makes
+   * a round trip MATCH existing rows instead of creating twins. Without it,
+   * export-then-import is a duplication machine.
+   */
+  async exportCsv(ctx: TenancyContext, entity: MigrationEntity): Promise<string> {
+    const columns = EXPORT_COLUMNS[entity]
+
+    const { data, error } = await supabase
+      .from(entity === 'customer' ? 'customers' : 'products')
+      .select('*')
+      .eq('workspace_id', ctx.workspaceId)
+      .limit(20_000)
+
+    if (error) throw new DatabaseError('Failed to export', error)
+
+    const snake = (field: string) => field.replace(/[A-Z]/g, (letter) => '_' + letter.toLowerCase())
+
+    const rows = (data ?? []).map((row: Record<string, unknown>) =>
+      toCsvRow(
+        columns.map((field) => {
+          if (field === 'externalId') return String(row['id'] ?? '')
+          const value = row[snake(field)]
+          return value === null || value === undefined ? '' : String(value)
+        }),
+      ),
+    )
+
+    return [toCsvRow([...columns]), ...rows].join('\n')
   }
 
   async cancel(ctx: TenancyContext, id: string): Promise<MigrationJob> {

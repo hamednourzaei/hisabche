@@ -14,6 +14,7 @@ export {
   CAPABILITIES,
   ROLE_RANK,
   can,
+  minRoleFor,
   capabilitiesOf,
   deniedFields,
   maskForRead,
@@ -63,3 +64,12 @@ export {
   type ResourceScope,
   type ScopeDecision,
 } from './scope.domain'
+
+export { ScopeService, scopes } from './scope.service'
+
+export {
+  explain,
+  wouldAHigherRoleHelp,
+  type Explanation,
+  type ExplainableRefusal,
+} from './explain.domain'

@@ -171,3 +171,60 @@ BEGIN
 END $$;
 
 COMMIT;
+
+-- ============================================================================
+-- §40 — import profiles.
+--
+-- A profile stores column NAMES, never indexes. An index is a fact about one
+-- file: the next export from the same system has the same columns in a
+-- different order the moment somebody adds one, and a saved index would then
+-- map `phone` onto `openingBalance` — silently, into a financial field.
+--
+-- `signature` keeps the headers the profile was built against, so drift can be
+-- reported rather than applied quietly (§40 forbids the quiet version).
+--
+-- SAFE TO RE-RUN.
+-- ============================================================================
+
+BEGIN;
+
+CREATE TABLE IF NOT EXISTS migration_profiles (
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id    uuid NOT NULL,
+  created_by      uuid NOT NULL,
+
+  name            text NOT NULL,
+  entity          text NOT NULL,
+  -- target field -> source column NAME
+  columns_by_name jsonb NOT NULL DEFAULT '{}'::jsonb,
+  -- the headers this profile was built against, in order
+  signature       jsonb NOT NULL DEFAULT '[]'::jsonb,
+
+  created_at      timestamptz NOT NULL DEFAULT now()
+);
+
+ALTER TABLE migration_profiles DROP CONSTRAINT IF EXISTS migration_profiles_entity_check;
+ALTER TABLE migration_profiles ADD CONSTRAINT migration_profiles_entity_check
+  CHECK (entity IN ('customer', 'product'));
+
+-- One profile per name per entity per workspace: saving twice under the same
+-- name updates rather than accumulating near-identical profiles nobody can
+-- tell apart.
+CREATE UNIQUE INDEX IF NOT EXISTS migration_profiles_name_key
+  ON migration_profiles (workspace_id, entity, name);
+
+ALTER TABLE migration_profiles ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS migration_profiles_workspace_members ON migration_profiles;
+CREATE POLICY migration_profiles_workspace_members ON migration_profiles
+  FOR ALL TO authenticated
+  USING (workspace_id IN (
+    SELECT workspace_id FROM workspace_members
+    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+  ))
+  WITH CHECK (workspace_id IN (
+    SELECT workspace_id FROM workspace_members
+    WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL
+  ));
+
+COMMIT;

@@ -1,110 +1,102 @@
 -- ============================================================================
--- docs/_inspect.sql — READ ONLY. Nothing here writes, alters or drops.
+-- docs/_inspect.sql
 --
--- Run this in the Supabase SQL Editor BEFORE applying any migration, and send
--- the result back. It answers the four questions that decide what to do next:
+-- READ-ONLY. Changes nothing. Run it whenever you want to know what is
+-- actually in the database.
 --
---   1. which tables already exist, and do they hold data?
---   2. which of them have Row Level Security switched on?
---   3. which tables the migrations expect are missing?
---   4. exactly which existing rows would violate the new constraints?
+-- ---------------------------------------------------------------------------
+-- WHY YOU NEED THIS AFTER A FAILED SETUP
 --
--- Question 4 is the one that stopped the run: `journal_lines` already holds
--- rows that are neither a debit nor a credit, and a CHECK constraint cannot be
--- added over data that breaks it. What to do about those rows is an accounting
--- decision, not a technical one, which is why this script only reports them.
+-- `SETUP-COMPLETE.sql` is thirty transactions, not one. When it failed at the
+-- missing enum, every `COMMIT` before that point had already happened — so the
+-- database is now neither empty nor complete. It is somewhere in between, and
+-- guessing which is how the next run fails differently.
+--
+-- Run this, read the five results, then decide.
 -- ============================================================================
 
--- ─── 1. What exists now, with RLS state and live row counts ─────────────────
-
-select
-  '1. tables' as section,
-  t.tablename as name,
-  case when t.rowsecurity then 'RLS on' else 'RLS OFF' end as detail,
-  (
-    select n_live_tup
-    from pg_stat_user_tables s
-    where s.relname = t.tablename and s.schemaname = 'public'
-  )::text as value
-from pg_tables t
-where t.schemaname = 'public'
-
-union all
-
--- ─── 2. Tables the migrations expect that are not there yet ─────────────────
+-- ─── 1. The headline ────────────────────────────────────────────────────────
 --
--- Missing is fine and expected — that is what the migrations create. It is
--- listed so the run can be judged afterwards: anything still missing then did
--- not get created, and that is a failure worth seeing.
+-- Empty database:  0, 0, 0, 0, 0
+-- Complete setup:  ~116 tables, ~20 functions, 2 types, 47+ policies
+-- Anything else:   partially applied — drop and start again
 
-select
-  '2. missing' as section,
-  expected.name,
-  'not created yet' as detail,
-  '' as value
-from (
-  values
-    ('accounts'), ('journal_entries'), ('journal_lines'),
-    ('accounting_period_locks'), ('payments'), ('payment_allocations'),
-    ('cost_layers'), ('stock_batches'), ('serial_units'),
-    ('pos_sessions'), ('pos_orders'), ('pos_order_payments'),
-    ('pos_cash_movements'), ('fixed_assets'), ('asset_depreciation_schedule'),
-    ('bank_statements'), ('bank_statement_lines'), ('exchange_rates'),
-    ('budgets'), ('time_entries'), ('sync_conflicts'), ('sync_change_log'),
-    ('schema_migrations'), ('sod_overrides'), ('branches')
-) as expected(name)
-where not exists (
-  select 1 from pg_tables t
-  where t.schemaname = 'public' and t.tablename = expected.name
-)
+SELECT
+  (SELECT count(*) FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_type = 'BASE TABLE')       AS tables,
+  (SELECT count(*) FROM information_schema.views
+    WHERE table_schema = 'public')                                      AS views,
+  (SELECT count(*) FROM pg_proc p
+     JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.prokind = 'f')                     AS functions,
+  (SELECT count(*) FROM pg_type t
+     JOIN pg_namespace n ON n.oid = t.typnamespace
+    WHERE n.nspname = 'public' AND t.typtype = 'e')                     AS enum_types,
+  (SELECT count(*) FROM pg_policies WHERE schemaname = 'public')        AS policies,
+  (SELECT count(*) FROM pg_class c
+     JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relkind = 'S')                     AS sequences,
+  (SELECT count(*) FROM auth.users)                                     AS auth_users;
 
-union all
-
--- ─── 3. The rows that blocked the migration ─────────────────────────────────
+-- ─── 2. Which tables exist, and do they hold anything ───────────────────────
 --
--- A journal line is one side or the other: a debit OR a credit, never both and
--- never neither. These rows are neither, so the books they belong to do not
--- balance and never did.
+-- `live_rows` is an estimate from the planner's statistics, not a count. It
+-- can read 0 on a table that has rows if ANALYZE has not run since they were
+-- inserted — so treat a zero here as "probably empty", not as proof.
 
-select
-  '3. bad journal lines' as section,
-  case
-    when coalesce(debit, 0) = 0 and coalesce(credit, 0) = 0 then 'both zero'
-    when coalesce(debit, 0) <> 0 and coalesce(credit, 0) <> 0 then 'both non-zero'
-    else 'negative amount'
-  end as name,
-  'violates journal_lines_one_sided_check' as detail,
-  count(*)::text as value
-from journal_lines
-where not (
-  coalesce(debit, 0) >= 0 and coalesce(credit, 0) >= 0
-  and (coalesce(debit, 0) = 0) <> (coalesce(credit, 0) = 0)
-)
-group by 1, 2, 3
+SELECT
+  c.relname                                    AS table_name,
+  c.reltuples::bigint                          AS live_rows_estimate,
+  CASE WHEN c.relrowsecurity THEN 'on' ELSE 'OFF' END AS rls,
+  (SELECT count(*) FROM pg_policies p
+    WHERE p.schemaname = 'public' AND p.tablename = c.relname) AS policies
+FROM pg_class c
+JOIN pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname = 'public' AND c.relkind = 'r'
+ORDER BY c.relname;
 
-union all
-
--- ─── 4. How much of the ledger is affected ──────────────────────────────────
+-- ─── 3. Tenant tables left open ─────────────────────────────────────────────
 --
--- The ratio is what decides the next step. A handful of rows is a data fix; a
--- large share means the ledger was written by something that never enforced
--- the rule, and the constraint should go on as NOT VALID so new writes are
--- correct while the history is dealt with separately.
+-- A table with `workspace_id` and RLS off is readable by anyone holding the
+-- anon key. Expect zero rows. Any row here is a live data leak.
 
-select
-  '4. ledger size' as section,
-  'journal_lines total' as name,
-  '' as detail,
-  count(*)::text as value
-from journal_lines
+SELECT t.tablename AS tenant_table_with_rls_off
+FROM pg_tables t
+WHERE t.schemaname = 'public'
+  AND NOT t.rowsecurity
+  AND EXISTS (
+    SELECT 1 FROM information_schema.columns c
+    WHERE c.table_schema = 'public'
+      AND c.table_name = t.tablename
+      AND c.column_name = 'workspace_id'
+  )
+ORDER BY 1;
 
-union all
+-- ─── 4. Functions and types ─────────────────────────────────────────────────
+--
+-- The three SECURITY DEFINER helpers must be present and must say `definer`.
+-- Without them every workspace policy fails to compile.
 
-select
-  '4. ledger size' as section,
-  'journal_entries total' as name,
-  '' as detail,
-  count(*)::text as value
-from journal_entries
+SELECT
+  p.proname                                          AS function_name,
+  CASE WHEN p.prosecdef THEN 'definer' ELSE 'invoker' END AS security,
+  pg_get_function_identity_arguments(p.oid)          AS arguments
+FROM pg_proc p
+JOIN pg_namespace n ON n.oid = p.pronamespace
+WHERE n.nspname = 'public' AND p.prokind = 'f'
+ORDER BY p.proname;
 
-order by section, name;
+-- ─── 5. Enum types ──────────────────────────────────────────────────────────
+--
+-- Expect exactly two: `workflow_status` and `workflow_action`. A missing one
+-- is what stopped the last run at line 883.
+
+SELECT
+  t.typname AS enum_type,
+  string_agg(e.enumlabel, ', ' ORDER BY e.enumsortorder) AS values
+FROM pg_type t
+JOIN pg_namespace n ON n.oid = t.typnamespace
+JOIN pg_enum e ON e.enumtypid = t.oid
+WHERE n.nspname = 'public'
+GROUP BY t.typname
+ORDER BY t.typname;

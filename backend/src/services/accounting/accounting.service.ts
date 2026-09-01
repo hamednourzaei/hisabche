@@ -35,6 +35,9 @@ import {
   type AccountNode,
   type DraftLine,
   type LedgerAccountFacts,
+  naturalBalance,
+  naturalSide,
+  type AccountRootType,
 } from './accounting.domain'
 import {
   AccountingRepository,
@@ -50,6 +53,7 @@ import {
   trialBalanceTotals,
 } from './accounting.reports'
 import { getCashFlow, getCustomerDebtReport } from './operational-reports'
+import { carryForward, planClosing, type AccountBalance } from './year-end.domain'
 import type {
   LedgerPort,
   LedgerPostingOutcome,
@@ -546,6 +550,158 @@ export class AccountingService implements LedgerPort {
 
     await memoryCache.set(cacheKey, result, REPORT_TTL_SECONDS)
     return result
+  }
+
+  // ═══════════════════════════════════════════════ GENERAL LEDGER
+
+  /**
+   * The lines behind one number.
+   *
+   * ---------------------------------------------------------------------------
+   * WHY A REPORT WITHOUT THIS IS HALF A REPORT
+   *
+   * A trial balance says an account holds 412,900. The only useful next
+   * question is "made up of what", and until now the answer required somebody
+   * to open the journal and filter it by hand. Every serious ledger has this
+   * and it is the difference between a figure you can defend and a figure you
+   * can only recite.
+   *
+   * ⚠️ The running balance is computed HERE rather than in SQL, because it
+   * depends on the account's natural side: an asset's balance rises on a debit
+   * and a liability's rises on a credit. Doing it in the query would mean the
+   * direction rule lived in two places.
+   */
+  async generalLedger(
+    ctx: TenancyContext,
+    accountId: string,
+    fromDate: string | null,
+    toDate: string | null,
+  ) {
+    const from = fromDate ? dateOnly(fromDate) : null
+    const to = toDate ? dateOnly(toDate) : null
+
+    const account = (await this.listAccounts(ctx)).find((row) => row.id === accountId)
+    if (!account) throw new NotFoundError('Account')
+
+    const lines = await this.repo.ledgerLines(ctx.workspaceId, accountId, from, to)
+
+    // What the account held before this window opened. Without it the first
+    // row's running balance starts at zero and every figure below it is wrong
+    // by the opening amount — while still looking perfectly self-consistent.
+    const opening = from
+      ? (await this.repo.ledgerTotals(ctx.workspaceId, null, from, null)).find(
+          (row) => row.accountId === accountId,
+        )
+      : undefined
+
+    const side = naturalSide(account.type as AccountRootType)
+
+    let runningMinor = opening
+      ? Math.round(
+          naturalBalance(account.type as AccountRootType, opening.debit, opening.credit) * 100,
+        )
+      : 0
+
+    const rows = lines.map((line) => {
+      const movementMinor =
+        side === 'debit'
+          ? Math.round(line.debit * 100) - Math.round(line.credit * 100)
+          : Math.round(line.credit * 100) - Math.round(line.debit * 100)
+
+      runningMinor += movementMinor
+
+      return { ...line, balance: runningMinor / 100 }
+    })
+
+    return {
+      accountId,
+      accountCode: account.code,
+      accountName: account.name,
+      from,
+      to,
+      openingBalance:
+        (opening
+          ? Math.round(
+              naturalBalance(account.type as AccountRootType, opening.debit, opening.credit) * 100,
+            )
+          : 0) / 100,
+      closingBalance: runningMinor / 100,
+      lines: rows,
+    }
+  }
+
+  // ═══════════════════════════════════════════════ YEAR END
+
+  /**
+   * What closing this year WOULD post — without posting it.
+   *
+   * Same preview-then-commit shape as everything else that moves money. An
+   * accountant asked to approve a closing entry needs to see the lines, and a
+   * "close year" button that goes straight to the ledger is a button nobody
+   * presses twice.
+   */
+  async planYearEndClose(ctx: TenancyContext, fromDate: string, toDate: string) {
+    const from = dateOnly(fromDate)
+    const to = dateOnly(toDate)
+
+    // Read through the SAME date-bounded aggregate the income statement uses.
+    // A second query shaped slightly differently is how a closing entry comes
+    // to disagree with the statement it is supposed to close.
+    const totals = await this.repo.ledgerTotals(ctx.workspaceId, from, to, null)
+
+    const balances: AccountBalance[] = totals.map((row) => ({
+      accountId: row.accountId,
+      code: row.accountCode,
+      type: row.accountType,
+      debit: row.debit,
+      credit: row.credit,
+    }))
+
+    // Resolved through the SAME role lookup every posting uses, so the year
+    // closes into the account the rest of the ledger already calls retained
+    // earnings — not a second one found by a different rule.
+    const { accounts } = await this.resolveAccountsByRole(ctx, ['retained_earnings'])
+
+    const result = planClosing(balances, accounts.retained_earnings ?? null)
+
+    if (!result.ok) return { ok: false as const, reason: result.reason, from, to }
+
+    return {
+      ok: true as const,
+      from,
+      to,
+      ...result.plan,
+      // Shown beside the entry so the new year's opening figures can be
+      // reconciled against the closing ones — which is what an accountant
+      // actually asks for.
+      carriedForward: carryForward(balances),
+    }
+  }
+
+  /**
+   * Post the closing entry.
+   *
+   * ⚠️ Goes through `postJournalEntry` like any other entry. A "close" that
+   * mutated balances directly would be a second way for money to move — the
+   * thing the whole architecture exists to prevent — and it could not be
+   * reversed, audited or explained by the tools that already exist.
+   *
+   * The plan is RECOMPUTED here rather than accepted from the client: a plan
+   * posted back could be minutes stale, and a closing entry built from stale
+   * balances leaves the year open by exactly the amount that moved since.
+   */
+  async postYearEndClose(ctx: TenancyContext, fromDate: string, toDate: string) {
+    const plan = await this.planYearEndClose(ctx, fromDate, toDate)
+    if (!plan.ok) throw new ValidationError(`YEAR_END_${plan.reason}`)
+
+    // `createJournalEntry` — the same door every other posting uses. It runs
+    // the period lock and the postable-lines checks, which a closing entry
+    // needs at least as much as an ordinary one.
+    return this.createJournalEntry(ctx, {
+      date: plan.to,
+      description: `Year-end close ${plan.from} — ${plan.to}`,
+      lines: plan.lines,
+    } as CreateJournalEntry)
   }
 
   /** Receivables and treasury reports. See operational-reports.ts. */

@@ -19,7 +19,7 @@ const ALL_NAV = NAV_CONTRACT.map((item) => item.id)
 
 describe('breadcrumbs are derived from the contract', () => {
   it('gives the root a single, unlinked crumb', () => {
-    const crumbs = breadcrumbsFor('/today', LOCALES)
+    const crumbs = breadcrumbsFor('/dashboard', LOCALES)
     expect(crumbs).toHaveLength(1)
     expect(crumbs[0]?.path).toBeUndefined()
   })
@@ -28,6 +28,20 @@ describe('breadcrumbs are derived from the contract', () => {
     // Web serves `/fa/invoices`, desktop serves `/invoices`. A trail that
     // differed between them would be two trails to maintain.
     expect(breadcrumbsFor('/fa/invoices', LOCALES)).toEqual(breadcrumbsFor('/invoices', LOCALES))
+  })
+
+  it('strips fa, the DEFAULT locale — the bug that shipped', () => {
+    // The old breadcrumb stripped af and en but not fa. Persian is the locale
+    // nearly everybody uses, so on almost every page the trail read
+    // `home > fa > budgets` — a language code rendered as a place.
+    const crumbs = breadcrumbsFor('/fa/budgets', LOCALES)
+    expect(crumbs.map((c) => c.segment)).not.toContain('fa')
+    expect(crumbs).toHaveLength(2)
+  })
+
+  it('carries the raw segment so a renderer can fall back without re-splitting', () => {
+    const crumbs = breadcrumbsFor('/fa/invoices/9f1c2d3e', LOCALES)
+    expect(crumbs.at(-1)?.segment).toBe('9f1c2d3e')
   })
 
   it('does not mistake a real segment for a locale', () => {
@@ -41,7 +55,7 @@ describe('breadcrumbs are derived from the contract', () => {
   it('never links the last crumb — you are already there', () => {
     const crumbs = breadcrumbsFor('/fa/budgets', LOCALES)
     expect(crumbs.at(-1)?.path).toBeUndefined()
-    expect(crumbs[0]?.path).toBe('/today')
+    expect(crumbs[0]?.path).toBe('/dashboard')
   })
 
   it('takes its labels from NAV_CONTRACT, so a rename cannot drift', () => {

@@ -1,0 +1,716 @@
+<title>Hisabche Architecture Map</title>
+<style>
+  :root {
+    --bg: #070b12;
+    --panel: #0d1420;
+    --panel-2: #111a28;
+    --line: #1e2c40;
+    --fg: #e8eef7;
+    --fg-2: #9fb0c6;
+    --fg-3: #6b7f99;
+
+    --amber: #f5b342;
+    --green: #45d483;
+    --violet: #a77dfb;
+    --blue: #4fa8ff;
+    --cyan: #3ed6d0;
+    --pink: #ff6fae;
+    --red: #ff6b6b;
+    --orange: #ff9f43;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+    padding: 28px;
+  }
+
+  h1 {
+    margin: 0 0 4px;
+    font-size: 26px;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+  }
+  h1 span { color: var(--amber); }
+
+  .sub { color: var(--fg-2); margin-bottom: 6px; font-size: 14px; }
+
+  .stamp {
+    color: var(--fg-3);
+    font-size: 11.5px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    margin-bottom: 22px;
+  }
+
+  .grid { display: grid; gap: 14px; }
+  .cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+  @media (max-width: 1100px) {
+    .cols-3, .cols-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 700px) {
+    .cols-2, .cols-3, .cols-4 { grid-template-columns: 1fr; }
+    body { padding: 14px; }
+  }
+
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+
+  .card h3 {
+    margin: 0 0 8px;
+    font-size: 12px;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    color: var(--fg-2);
+    font-weight: 700;
+  }
+
+  .card.accent { border-color: color-mix(in srgb, var(--c) 45%, var(--line)); }
+  .card.accent h3 { color: var(--c); }
+  .card.accent::before {
+    content: "";
+    display: block;
+    height: 2px;
+    width: 34px;
+    background: var(--c);
+    border-radius: 2px;
+    margin-bottom: 9px;
+    box-shadow: 0 0 12px var(--c);
+  }
+
+  code, .mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11.5px;
+  }
+
+  ul { margin: 0; padding: 0; list-style: none; }
+  li { padding: 1.5px 0; color: var(--fg); }
+  li .n { color: var(--fg-3); }
+
+  .tag {
+    display: inline-block;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 5px;
+    padding: 1px 6px;
+    margin: 2px 3px 2px 0;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    color: var(--fg-2);
+  }
+  .tag.hot { border-color: var(--amber); color: var(--amber); }
+  .tag.new { border-color: var(--green); color: var(--green); }
+
+  .section {
+    margin: 26px 0 12px;
+    font-size: 13px;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: var(--fg-3);
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 7px;
+    font-weight: 700;
+  }
+
+  .note {
+    background: var(--panel-2);
+    border-left: 3px solid var(--amber);
+    border-radius: 0 8px 8px 0;
+    padding: 9px 12px;
+    color: var(--fg-2);
+    margin: 12px 0;
+    font-size: 12.5px;
+  }
+  .note b { color: var(--fg); }
+  .note.warn { border-left-color: var(--red); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th, td { text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--fg-3); font-weight: 600; text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.7px; }
+  td.mono { color: var(--fg-2); }
+  .scroll { overflow-x: auto; }
+
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+  }
+  .flow .step {
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 5px 12px;
+    white-space: nowrap;
+  }
+  .flow .step.hub { border-color: var(--amber); color: var(--amber); font-weight: 700; }
+  .flow .arr { color: var(--fg-3); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12px; color: var(--fg-2); }
+  .legend i { display: inline-block; width: 16px; height: 2px; vertical-align: middle; margin-inline-end: 6px; border-radius: 2px; }
+</style>
+
+<h1>HISABCHE — ARCHITECTURE MAP <span>· derived from source</span></h1>
+<div class="sub">Offline-first Business OS — backend · database · frontend</div>
+<div class="stamp">
+  Generated from the repository, not from a design document. Every table, route, core and destination
+  below was read out of the code. Counts are exact at the commit this was produced from.
+</div>
+
+<div class="note">
+  <b>How this differs from an aspirational diagram.</b> Table names come from
+  <code>grep "from('…')"</code> across <code>backend/src</code>; endpoint counts from
+  <code>fastify.get|post|put|patch|delete</code>; destinations from <code>NAV_CONTRACT</code>.
+  Anything the code does not contain is marked <b>NOT BUILT</b> rather than drawn.
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ HUB ── -->
+
+<div class="section">The hub — measured, not assumed</div>
+
+<div class="grid cols-2">
+  <div class="card accent" style="--c: var(--amber)">
+    <h3>Most-referenced tables in backend code</h3>
+    <table>
+      <tr><th>Table</th><th>Distinct query sites</th></tr>
+      <tr><td class="mono">invoices</td><td class="mono">31</td></tr>
+      <tr><td class="mono">workspace_members</td><td class="mono">30</td></tr>
+      <tr><td class="mono">products</td><td class="mono">26</td></tr>
+      <tr><td class="mono">subscriptions</td><td class="mono">18</td></tr>
+      <tr><td class="mono">customers</td><td class="mono">17</td></tr>
+      <tr><td class="mono">workspaces</td><td class="mono">13</td></tr>
+      <tr><td class="mono">event_log</td><td class="mono">13</td></tr>
+    </table>
+  </div>
+
+  <div class="card accent" style="--c: var(--green)">
+    <h3>What that means</h3>
+    <p style="margin:0 0 8px; color: var(--fg-2)">
+      <b style="color:var(--amber)">invoices</b> really is the operational hub — it is the single
+      most-queried table in the codebase. But it is <b>not</b> the root of the model.
+    </p>
+    <p style="margin:0; color: var(--fg-2)">
+      <b style="color:var(--green)">workspace_id</b> is. It appears on every tenant table and is the
+      <b>only</b> security boundary. <code>user_id</code> records who acted and is
+      <b>never</b> a filter — a manager must see an invoice a seller raised.
+    </p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ SCOPE ── -->
+
+<div class="section">Organization scope — the wrapper around everything</div>
+
+<div class="flow" style="margin-bottom:14px">
+  <span class="step">workspaces</span><span class="arr">→</span>
+  <span class="step">workspace_members <span style="color:var(--fg-3)">(role: owner|manager|seller)</span></span><span class="arr">→</span>
+  <span class="step">branches</span><span class="arr">→</span>
+  <span class="step">member_branches</span><span class="arr">→</span>
+  <span class="step hub">every tenant row</span>
+</div>
+
+<div class="note warn">
+  <b>Empty branch assignment = UNRESTRICTED, not locked out.</b> Settled decision: the alternative
+  was that every existing member in every existing workspace lost access the day branch scoping
+  shipped. Enforced by <code>branchScopeFor()</code>; a scoped member sees <b>only</b> their
+  branches and <b>not</b> rows with no branch.
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ DB ── -->
+
+<div class="section">Database — 97 tables the code actually queries</div>
+
+<div class="grid cols-4">
+  <div class="card accent" style="--c: var(--amber)">
+    <h3>Invoicing &amp; sales</h3>
+    <span class="tag hot">invoices</span><span class="tag">invoice_items</span>
+    <span class="tag">invoice_item_details</span><span class="tag">invoice_tax_lines</span>
+    <span class="tag">invoice_outstanding</span><span class="tag">transactions</span>
+    <span class="tag">transactions_view</span><span class="tag">customers</span>
+    <span class="tag">interactions</span><span class="tag">opportunities</span>
+  </div>
+
+  <div class="card accent" style="--c: var(--blue)">
+    <h3>Accounting &amp; ledger</h3>
+    <span class="tag">accounts</span><span class="tag">journal_entries</span>
+    <span class="tag">journal_lines</span><span class="tag">journal_lines_archive</span>
+    <span class="tag">ledger_entries_view</span><span class="tag">accounting_period_locks</span>
+    <span class="tag">accounting_dimensions</span><span class="tag">dimension_values</span>
+    <span class="tag">dimension_requirements</span><span class="tag">exchange_rates</span>
+    <span class="tag">fx_revaluations</span><span class="tag">fx_revaluation_lines</span>
+  </div>
+
+  <div class="card accent" style="--c: var(--orange)">
+    <h3>Inventory &amp; costing</h3>
+    <span class="tag">products</span><span class="tag">warehouses</span>
+    <span class="tag">warehouse_stock</span><span class="tag">stock_movements</span>
+    <span class="tag">cost_layers</span><span class="tag">cost_consumptions</span>
+    <span class="tag">cost_reposts</span><span class="tag">cost_repost_adjustments</span>
+    <span class="tag">landed_costs</span><span class="tag">landed_cost_allocations</span>
+    <span class="tag">stock_batches</span><span class="tag">stock_serials</span>
+    <span class="tag">lot_allocations</span><span class="tag">inventory_settings</span>
+  </div>
+
+  <div class="card accent" style="--c: var(--violet)">
+    <h3>Payments &amp; banking</h3>
+    <span class="tag">payments</span><span class="tag">payment_allocations</span>
+    <span class="tag">bank_statements</span><span class="tag">bank_statement_lines</span>
+    <span class="tag">fixed_assets</span><span class="tag">asset_depreciation_schedule</span>
+    <span class="tag">budgets</span><span class="tag">budget_commitments</span>
+    <span class="tag">budget_breaches</span>
+  </div>
+
+  <div class="card accent" style="--c: var(--cyan)">
+    <h3>POS</h3>
+    <span class="tag">pos_sessions</span><span class="tag">pos_orders</span>
+    <span class="tag">pos_order_payments</span><span class="tag">pos_cash_movements</span>
+  </div>
+
+  <div class="card accent" style="--c: var(--pink)">
+    <h3>People &amp; projects</h3>
+    <span class="tag">employees</span><span class="tag">departments</span>
+    <span class="tag">payrolls</span><span class="tag">leaves</span><span class="tag">attendance</span>
+    <span class="tag">projects</span><span class="tag">project_tasks</span>
+    <span class="tag">project_members</span><span class="tag">project_time_entries</span>
+    <span class="tag">project_billing_config</span><span class="tag">time_entries</span>
+  </div>
+
+  <div class="card accent" style="--c: var(--green)">
+    <h3>Purchasing &amp; production</h3>
+    <span class="tag">suppliers</span><span class="tag">purchase_orders</span>
+    <span class="tag">purchase_order_items</span><span class="tag">boms</span>
+    <span class="tag">bom_items</span><span class="tag">work_orders</span>
+  </div>
+
+  <div class="card accent" style="--c: var(--red)">
+    <h3>Governance &amp; audit</h3>
+    <span class="tag">audit_logs</span><span class="tag">activities</span>
+    <span class="tag">event_log</span><span class="tag">event_types</span>
+    <span class="tag">sod_settings</span><span class="tag">sod_actions</span>
+    <span class="tag">sod_overrides</span><span class="tag">business_rules</span>
+    <span class="tag">rule_decisions</span><span class="tag">workflows</span>
+    <span class="tag">workflow_steps</span><span class="tag">workflow_instances</span>
+    <span class="tag">workflow_actions</span>
+  </div>
+
+  <div class="card accent" style="--c: var(--blue)">
+    <h3>Tenancy &amp; access</h3>
+    <span class="tag hot">workspaces</span><span class="tag hot">workspace_members</span>
+    <span class="tag">workspace_invites</span><span class="tag">branches</span>
+    <span class="tag">member_branches</span><span class="tag">users</span>
+    <span class="tag">profiles</span><span class="tag">roles</span>
+    <span class="tag">user_roles</span><span class="tag">permissions</span>
+    <span class="tag">role_permissions</span><span class="tag">password_reset_tokens</span>
+  </div>
+
+  <div class="card accent" style="--c: var(--cyan)">
+    <h3>Sync &amp; conflicts</h3>
+    <span class="tag">sync_change_log</span><span class="tag">sync_mutations</span>
+    <span class="tag">sync_conflicts</span>
+    <div style="margin-top:7px; color:var(--fg-3); font-size:11.5px">
+      RLS on, <b>zero policies</b> on the first two — service-role endpoints only.
+      Strictest setting, not an omission.
+    </div>
+  </div>
+
+  <div class="card accent" style="--c: var(--green)">
+    <h3>Migration centre <span style="color:var(--green)">(new)</span></h3>
+    <span class="tag new">migration_jobs</span><span class="tag new">migration_records</span>
+    <span class="tag new">migration_profiles</span>
+    <div style="margin-top:7px; color:var(--fg-3); font-size:11.5px">
+      <code>migration_records</code> is the source→target identity ledger. Its unique index on
+      (workspace, entity, source_identity) is what makes a re-run update instead of duplicating.
+    </div>
+  </div>
+
+  <div class="card accent" style="--c: var(--violet)">
+    <h3>Tax, billing, personalization</h3>
+    <span class="tag">tax_settings</span><span class="tag">tax_rules</span>
+    <span class="tag">tax_components</span><span class="tag">subscriptions</span>
+    <span class="tag">checkout_sessions</span><span class="tag">webhook_events</span>
+    <span class="tag">ui_visibility_profiles</span><span class="tag">ui_visibility_suggestions</span>
+    <span class="tag">mdm_merges</span><span class="tag">schema_migrations</span>
+  </div>
+</div>
+
+<div class="note warn">
+  <b>Column names that are guessed wrong every time.</b>
+  <code>journal_lines.journal_id</code> — <b>not</b> <code>entry_id</code>.
+  Serials live in <code>stock_serials</code> — <b>not</b> <code>serial_units</code>.
+  Posting finds an account by <code>accounts.role</code>, not by <code>code</code>.
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ RPC ── -->
+
+<div class="section">Postgres functions — because supabase-js has no transactions</div>
+
+<div class="grid cols-3">
+  <div class="card accent" style="--c: var(--amber)">
+    <h3>Ledger &amp; money</h3>
+    <ul>
+      <li class="mono">accounting_post_journal_entry</li>
+      <li class="mono">accounting_trial_balance</li>
+      <li class="mono">payments_record</li>
+      <li class="mono">payments_cancel</li>
+      <li class="mono">pos_record_order</li>
+      <li class="mono">get_next_invoice_number</li>
+    </ul>
+  </div>
+  <div class="card accent" style="--c: var(--orange)">
+    <h3>Inventory</h3>
+    <ul>
+      <li class="mono">inventory_receive_layer</li>
+      <li class="mono">inventory_consume_layers</li>
+      <li class="mono">inventory_release_consumption</li>
+      <li class="mono">inventory_valuation</li>
+      <li class="mono">traceability_consume_batch</li>
+      <li class="mono">warehouse_transfer_stock</li>
+    </ul>
+  </div>
+  <div class="card accent" style="--c: var(--red)">
+    <h3>RLS helpers — SECURITY DEFINER</h3>
+    <ul>
+      <li class="mono">auth_workspace_ids()</li>
+      <li class="mono">is_workspace_member(ws, user)</li>
+      <li class="mono">auth_owned_workspace_ids()</li>
+    </ul>
+    <div style="margin-top:7px; color:var(--fg-3); font-size:11.5px">
+      Must stay SECURITY DEFINER. Without it the policy on
+      <code>workspace_members</code> calls itself → <code>42P17</code>.
+    </div>
+  </div>
+</div>
+
+<div class="note">
+  <b>Multi-table writes go through these, never through several client calls.</b>
+  A compensating <code>DELETE</code> after a partial failure is forbidden — it deletes rows a person
+  may have edited in between. Errors are raised as SCREAMING_CASE codes
+  (<code>RAISE EXCEPTION 'POS_SESSION_NOT_OPEN'</code>) because the client parses them out of the
+  message.
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ BACKEND ── -->
+
+<div class="section">Backend — 40 route files · 22 cores</div>
+
+<div class="grid cols-2">
+  <div class="card accent" style="--c: var(--blue)">
+    <h3>Routes by endpoint count</h3>
+    <div class="scroll">
+      <table>
+        <tr><th>File</th><th>Endpoints</th><th>Prefix</th></tr>
+        <tr><td class="mono">finance-ops</td><td>20</td><td class="mono">/api/finance</td></tr>
+        <tr><td class="mono">admin</td><td>18</td><td class="mono">—</td></tr>
+        <tr><td class="mono">human-resources</td><td>17</td><td class="mono">—</td></tr>
+        <tr><td class="mono">project</td><td>16</td><td class="mono">—</td></tr>
+        <tr><td class="mono">operations</td><td>16</td><td class="mono">/api/operations</td></tr>
+        <tr><td class="mono">accounting</td><td>15</td><td class="mono">/api/accounting</td></tr>
+        <tr><td class="mono">workspace</td><td>14</td><td class="mono">—</td></tr>
+        <tr><td class="mono">migration</td><td>13</td><td class="mono">/api/migrations</td></tr>
+        <tr><td class="mono">permission</td><td>12</td><td class="mono">—</td></tr>
+        <tr><td class="mono">crm</td><td>11</td><td class="mono">—</td></tr>
+        <tr><td class="mono">workflow</td><td>9</td><td class="mono">—</td></tr>
+        <tr><td class="mono">pos</td><td>8</td><td class="mono">/api/pos</td></tr>
+        <tr><td class="mono">payments · manufacturing · intelligence · auth · audit</td><td>7</td><td class="mono">mixed</td></tr>
+        <tr><td class="mono">…22 more files</td><td>2–6</td><td class="mono">mixed</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="card accent" style="--c: var(--green)">
+    <h3>22 cores — <code>domain / service / repository / port</code></h3>
+    <span class="tag">accounting</span><span class="tag">assets</span>
+    <span class="tag">authorization</span><span class="tag">banking</span>
+    <span class="tag">branch</span><span class="tag">budgeting</span>
+    <span class="tag">conflict</span><span class="tag">currency</span>
+    <span class="tag">dimensions</span><span class="tag">insights</span>
+    <span class="tag">inventory-costing</span><span class="tag">mdm</span>
+    <span class="tag new">migration</span><span class="tag">payments</span>
+    <span class="tag">personalization</span><span class="tag">plugins</span>
+    <span class="tag">pos</span><span class="tag">rules</span>
+    <span class="tag">supplier</span><span class="tag">tax</span>
+    <span class="tag">timesheets</span><span class="tag">traceability</span>
+
+    <div style="margin-top:12px">
+      <h3>Guard order — not negotiable</h3>
+      <div class="flow">
+        <span class="step">authenticate</span><span class="arr">→</span>
+        <span class="step">requireWorkspaceContext</span><span class="arr">→</span>
+        <span class="step">requireCapability(…)</span><span class="arr">→</span>
+        <span class="step">cacheMiddleware</span>
+      </div>
+      <div style="margin-top:7px; color:var(--fg-3); font-size:11.5px">
+        A workspace-scoped cache <b>before</b> the context returns 500 about the cache, sending you
+        to the wrong file. In handlers read <code>request.tenancy</code> — <code>request.userRole</code>
+        is empty for a multi-workspace user.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card accent" style="--c: var(--red)">
+    <h3>Capabilities — 24, by minimum role</h3>
+    <table>
+      <tr><th>Role</th><th>Holds</th></tr>
+      <tr><td style="color:var(--cyan)">seller</td><td class="mono">payment.read · payment.record · inventory.read · invoice.read/create/update · customer.read/write · product.read · report.operational.read</td></tr>
+      <tr><td style="color:var(--amber)">manager</td><td class="mono">+ ledger.read · ledger.post · account.manage · payment.cancel · inventory.cost.read · product.write · report.financial.read</td></tr>
+      <tr><td style="color:var(--red)">owner</td><td class="mono">+ ledger.reverse · ledger.lock_period · inventory.configure · invoice.delete · member.manage · workspace.manage</td></tr>
+    </table>
+    <div style="margin-top:7px; color:var(--fg-3); font-size:11.5px">
+      <b>'admin' is not a workspace role.</b> <code>packages/auth-core</code> carries a different,
+      display-only set (owner|admin|member|viewer) that decides nothing.
+    </div>
+  </div>
+
+  <div class="card accent" style="--c: var(--violet)">
+    <h3>Authorization asks four questions, in order</h3>
+    <div class="flow" style="margin-bottom:8px">
+      <span class="step">1 · workspace</span><span class="arr">→</span>
+      <span class="step">2 · capability</span><span class="arr">→</span>
+      <span class="step">3 · branch</span><span class="arr">→</span>
+      <span class="step">4 · record owner</span>
+    </div>
+    <ul>
+      <li><span class="n">1</span> <code>TenancyContext</code> — the only security boundary</li>
+      <li><span class="n">2</span> <code>can(role, capability)</code></li>
+      <li><span class="n">3</span> <code>mayUseBranch(scope, branchId)</code></li>
+      <li><span class="n">4</span> seller sees only invoices/payments they raised</li>
+    </ul>
+    <div style="margin-top:7px; color:var(--fg-3); font-size:11.5px">
+      Composed in <code>scope.domain.ts</code>, called via <code>scopes.assertMay()</code>.
+      A wrong workspace is reported as <b>NOT FOUND</b>, never FORBIDDEN — "forbidden" confirms the
+      row exists.
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ FRONTEND ── -->
+
+<div class="section">Frontend — 17 packages · 4 apps</div>
+
+<div class="grid cols-3">
+  <div class="card accent" style="--c: var(--cyan)">
+    <h3>Packages</h3>
+    <ul>
+      <li><code>api</code> <span class="n">— TanStack hooks; the only way to the backend</span></li>
+      <li><code>ui</code> <span class="n">— shared web + desktop components</span></li>
+      <li><code>ui-contract</code> <span class="n">— pure policy, no DOM</span></li>
+      <li><code>validation</code> <span class="n">— zod + sync protocol</span></li>
+      <li><code>i18n</code> <span class="n">— fa / af / en</span></li>
+      <li><code>offline</code> · <code>sync</code> · <code>store</code></li>
+      <li><code>auth-core</code> · <code>formatting</code> · <code>mobile-ui</code></li>
+      <li><code>analytics</code> · <code>config</code> · <code>db</code> · <code>db-schema</code></li>
+      <li><code>design-tokens</code> · <code>auth</code></li>
+    </ul>
+  </div>
+
+  <div class="card accent" style="--c: var(--blue)">
+    <h3>Apps</h3>
+    <ul>
+      <li><code>web</code> <span class="n">— Next.js; thin pages, logic in packages/ui</span></li>
+      <li><code>desktop</code> <span class="n">— Electron; same containers via @hisabche/ui/screens</span></li>
+      <li><code>mobile</code> <span class="n">— Expo; native screens, same hooks</span></li>
+      <li><code>admin</code> <span class="n">— platform operator panel</span></li>
+    </ul>
+    <div style="margin-top:10px">
+      <h3>Vertical slice — all seven or it is not done</h3>
+      <ul>
+        <li class="mono">domain.ts → service.ts → routes.ts</li>
+        <li class="mono">→ migration.sql → hooks → container → page</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card accent" style="--c: var(--green)">
+    <h3>ui-contract — the shared brain</h3>
+    <ul>
+      <li><code>navigation</code> <span class="n">— 33 destinations</span></li>
+      <li><code>work-state</code> <span class="n">— 10 states + precedence</span></li>
+      <li><code>list-engine</code> <span class="n">— search/sort/page reducer</span></li>
+      <li><code>entity-views</code> <span class="n">— which views each entity has</span></li>
+      <li><code>work-queue</code> <span class="n">— what needs doing</span></li>
+      <li><code>shell</code> <span class="n">— breadcrumbs + 4 domains</span></li>
+      <li><code>consolidation</code> <span class="n">— one truth per question</span></li>
+      <li><code>intelligence</code> <span class="n">— the AI fence</span></li>
+      <li><code>color-roles</code> · <code>state</code> · <code>selection</code></li>
+    </ul>
+  </div>
+</div>
+
+<div class="card accent" style="--c: var(--amber); margin-top:14px">
+  <h3>Navigation — 33 destinations in 4 groups</h3>
+  <div class="grid cols-4" style="gap:10px">
+    <div>
+      <div style="color:var(--amber); font-size:11px; letter-spacing:1px; margin-bottom:5px">PRIMARY (5)</div>
+      <span class="tag">today</span><span class="tag">get-paid</span><span class="tag">stock</span>
+      <span class="tag">money</span><span class="tag">till</span>
+    </div>
+    <div>
+      <div style="color:var(--pink); font-size:11px; letter-spacing:1px; margin-bottom:5px">PEOPLE (5)</div>
+      <span class="tag">buyers</span><span class="tag">follow-up</span><span class="tag">team</span>
+      <span class="tag">coworkers</span><span class="tag">sales-followup</span>
+    </div>
+    <div>
+      <div style="color:var(--green); font-size:11px; letter-spacing:1px; margin-bottom:5px">WORK (14)</div>
+      <span class="tag">approvals</span><span class="tag">expiry</span><span class="tag">budgets</span>
+      <span class="tag">timesheets</span><span class="tag">assets</span><span class="tag">bank</span>
+      <span class="tag new">customer-list</span><span class="tag new">accounting-workspace</span>
+      <span class="tag new">sales-workspace</span><span class="tag new">inventory-workspace</span>
+      <span class="tag new">people-workspace</span><span class="tag">production</span>
+      <span class="tag">buy</span><span class="tag">workflow-templates</span>
+    </div>
+    <div>
+      <div style="color:var(--violet); font-size:11px; letter-spacing:1px; margin-bottom:5px">SYSTEM (9)</div>
+      <span class="tag">settings</span><span class="tag">access</span><span class="tag">events</span>
+      <span class="tag">sync</span><span class="tag">conflicts</span>
+      <span class="tag new">data-and-sync</span><span class="tag new">data-migration</span>
+      <span class="tag">billing</span><span class="tag">governance</span>
+    </div>
+  </div>
+  <div style="margin-top:9px; color:var(--fg-3); font-size:11.5px">
+    <b>Every one of these has a real page on web and desktop</b> — proved by
+    <code>nav-destinations.test.ts</code>, which reads the filesystem. Mobile is judged against its
+    own <code>IMPLEMENTED</code> list, which is the honest statement of how far behind it is.
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ FLOWS ── -->
+
+<div class="section">The two flows that define the product</div>
+
+<div class="card accent" style="--c: var(--amber)">
+  <h3>Invoice → ledger (money)</h3>
+  <div class="flow">
+    <span class="step">customer</span><span class="arr">→</span>
+    <span class="step">products / price</span><span class="arr">→</span>
+    <span class="step hub">INVOICE</span><span class="arr">→</span>
+    <span class="step">tax freeze</span><span class="arr">→</span>
+    <span class="step">stock_movements + cost_layers</span><span class="arr">→</span>
+    <span class="step">payments + allocations</span><span class="arr">→</span>
+    <span class="step">journal_entries / journal_lines</span><span class="arr">→</span>
+    <span class="step">reports</span>
+  </div>
+  <div style="margin-top:9px; color:var(--fg-3); font-size:11.5px">
+    Money is <b>integer minor units</b> everywhere; <code>/100</code> only at the display edge.
+    The tax rate is <b>frozen onto the document</b> so an offline invoice is not re-priced when it syncs.
+  </div>
+</div>
+
+<div class="card accent" style="--c: var(--cyan); margin-top:12px">
+  <h3>Offline → sync → conflict</h3>
+  <div class="flow">
+    <span class="step">local write</span><span class="arr">→</span>
+    <span class="step">sync_mutations</span><span class="arr">→</span>
+    <span class="step">sync_change_log</span><span class="arr">→</span>
+    <span class="step">server</span><span class="arr">→</span>
+    <span class="step">sync_conflicts</span><span class="arr">→</span>
+    <span class="step">human decision</span>
+  </div>
+  <div style="margin-top:9px; color:var(--fg-3); font-size:11.5px">
+    Only <b>5 entities</b> sync: <code>invoice · customer · product · transaction · time_entry</code>.
+    Budgets, dimensions, bank statements, exchange rates and fixed assets are deliberately outside —
+    each reason recorded in <code>offline-contract.test.ts</code>.
+    <br><br>
+    <code>invoice_id</code> on <code>time_entry</code> is a <b>billing lock</b> the device may not
+    write; on <code>transaction</code> the same field is allowed, because a payment taken at the
+    counter knows which invoice it pays.
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ NOT BUILT ── -->
+
+<div class="section">Deliberately NOT built — so nobody looks for it</div>
+
+<div class="grid cols-2">
+  <div class="card accent" style="--c: var(--red)">
+    <h3>Absent, with reason</h3>
+    <table>
+      <tr><th>Thing</th><th>Why</th></tr>
+      <tr><td>XLSX / SQL-dump import</td><td>No safe parser. Restoring a Postgres dump can execute the author's code.</td></tr>
+      <tr><td>Invoice/payment import</td><td>A spreadsheet row is not a journal entry. Would create a second financial truth.</td></tr>
+      <tr><td>Board / calendar / timeline views</td><td>No component renders them. Naming them in the contract would be a lie.</td></tr>
+      <tr><td>Central export page</td><td>Export lives per-list today. <code>/api/migrations/export</code> exists for round trips.</td></tr>
+      <tr><td>Client capability endpoint</td><td>Nothing reports what the server granted, so the work queue under-shows rather than guesses.</td></tr>
+    </table>
+  </div>
+
+  <div class="card accent" style="--c: var(--orange)">
+    <h3>Known-missing endpoints the client calls</h3>
+    <ul>
+      <li class="mono">GET /v1/activities/entity/:type/:id</li>
+      <li class="mono">GET /v1/activities/entity/:type/:id/summary</li>
+      <li class="mono">GET /api/v1/entities/:type/:id/summary</li>
+      <li class="mono">GET /api/v1/entities/:type/:id/activities</li>
+      <li class="mono">DELETE /employees/:id</li>
+      <li class="mono">GET /purchase-orders/:id</li>
+      <li class="mono">GET /transactions/ledger</li>
+    </ul>
+    <div style="margin-top:7px; color:var(--fg-3); font-size:11.5px">
+      Listed in <code>KNOWN_MISSING</code> inside <code>client-route-contract.test.ts</code>.
+      Each returns 404 today. <b>The list only shrinks.</b>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ GUARDS ── -->
+
+<div class="section">Guards — the tests that hold the shape</div>
+
+<div class="card">
+  <div class="scroll">
+    <table>
+      <tr><th>Test</th><th>What it catches</th></tr>
+      <tr><td class="mono">tenancy-idor</td><td>A query on a shared table with no <code>workspace_id</code> filter</td></tr>
+      <tr><td class="mono">tenancy-static-guard</td><td>Filtering by <code>user_id</code> as if it were a boundary</td></tr>
+      <tr><td class="mono">rls-coverage</td><td>Tenant table with no RLS; a policy on workspaces/members subquerying the other</td></tr>
+      <tr><td class="mono">workspace-guard-order</td><td>Guards out of order; authorization read from <code>request.userRole</code></td></tr>
+      <tr><td class="mono">client-route-contract</td><td>A client path/method the server does not have</td></tr>
+      <tr><td class="mono">nav-destinations</td><td>A menu entry with no page file (reads the filesystem)</td></tr>
+      <tr><td class="mono">scope-wiring-guard</td><td>A security rule that exists, is tested, and is <b>never called</b></td></tr>
+      <tr><td class="mono">consolidation</td><td>A <b>fifth</b> event store; two nav paths to one destination</td></tr>
+      <tr><td class="mono">design-system-guard</td><td>Raw colour, motion with no <code>motion-reduce</code>, prose in the contract layer</td></tr>
+      <tr><td class="mono">migration-recovery</td><td>A rollback that would delete a row something depends on</td></tr>
+      <tr><td class="mono">offline-contract</td><td>A module that syncs without a recorded reason</td></tr>
+      <tr><td class="mono">http-e2e-business-day</td><td>The ledger failing to balance after each step of a working day</td></tr>
+    </table>
+  </div>
+</div>
+
+<div class="note warn">
+  <b>Green tests are not proof.</b> 1064 passing tests once hid three missing columns and an infinite
+  RLS recursion. <code>scope.domain.ts</code> was correct, fully tested, and called by nothing for an
+  entire session — while a seller could still edit another seller's invoice. Proof is real HTTP or a
+  real database.
+</div>
+
+<div class="legend" style="margin-top:20px">
+  <span><i style="background:var(--amber)"></i>Direct financial impact</span>
+  <span><i style="background:var(--green)"></i>Master data</span>
+  <span><i style="background:var(--blue)"></i>Transaction flow</span>
+  <span><i style="background:var(--cyan)"></i>Operational link</span>
+  <span><i style="background:var(--red)"></i>Governance / audit</span>
+  <span><i style="background:var(--violet)"></i>Supporting</span>
+  <span><span class="tag new" style="margin:0">green tag</span> = added this session</span>
+</div>
+
+<div class="stamp" style="margin-top:22px; border-top:1px solid var(--line); padding-top:12px">
+  Verified at generation: 1239 backend tests · 424 ui-contract tests · type-check clean across 17
+  packages · web and desktop builds green · 0 lint errors.
+  <br>
+  <b style="color:var(--fg-2)">Not verified:</b> nothing on this page has been confirmed in a running
+  browser this session.
+</div>

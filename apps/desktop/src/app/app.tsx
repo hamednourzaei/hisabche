@@ -55,6 +55,9 @@ const BankPage = lazy(() => import('@/features/finance/bank-page'))
 const BudgetsPage = lazy(() => import('@/features/finance/budgets-page'))
 const DataMigrationPage = lazy(() => import('@/features/sync/data-migration-page'))
 const DataAndSyncPage = lazy(() => import('@/features/sync/data-and-sync-page'))
+const DomainWorkspacePage = lazy(() => import('@/features/domain/domain-workspace-page'))
+const CustomerListPage = lazy(() => import('@/features/customers/customer-list-page'))
+const ProductListPage = lazy(() => import('@/features/products/product-list-page'))
 const TimesheetsPage = lazy(() => import('@/features/operations/timesheets-page'))
 const ExpiryPage = lazy(() => import('@/features/operations/expiry-page'))
 const ConflictsPage = lazy(() => import('@/features/sync/conflicts-page'))
@@ -123,6 +126,12 @@ const router = createHashRouter([
       { path: 'conflicts', element: <ConflictsPage /> },
       { path: 'data-migration', element: <DataMigrationPage /> },
       { path: 'data-and-sync', element: <DataAndSyncPage /> },
+      { path: 'customer-list', element: <CustomerListPage /> },
+      { path: 'product-list', element: <ProductListPage /> },
+      { path: 'accounting-workspace', element: <DomainWorkspacePage /> },
+      { path: 'sales-workspace', element: <DomainWorkspacePage /> },
+      { path: 'inventory-workspace', element: <DomainWorkspacePage /> },
+      { path: 'people-workspace', element: <DomainWorkspacePage /> },
       { path: 'governance', element: <GovernancePage /> },
 
       // Web serves this at `/workflow-templates` and desktop only had

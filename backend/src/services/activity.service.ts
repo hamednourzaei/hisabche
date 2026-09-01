@@ -387,10 +387,74 @@ export class ActivityService {
     }
   }
 
+  /**
+   * Everything that happened to ONE business object.
+   *
+   * ---------------------------------------------------------------------------
+   * NOT `getActivities` WITH A FILTER
+   *
+   * `getActivities` is a PERSONAL feed: it filters by `actor_id`, because "my
+   * notifications" means the things I did or that were addressed to me. Reusing
+   * it here would show an invoice's history as only the parts THIS user
+   * performed — so a manager opening an invoice a seller raised would see an
+   * empty timeline and conclude nothing had happened to it.
+   *
+   * An entity's history is a workspace fact, not a personal one. So the filter
+   * is `workspace_id` + the entity, and the actor is a column you read rather
+   * than a filter you apply. That is the same rule as everywhere else:
+   * `workspace_id` is the boundary, `user_id` records who acted.
+   */
+  async getEntityActivities(
+    ctx: TenancyContext,
+    entityType: string,
+    entityId: string,
+    options: { limit?: number | undefined; cursor?: string | undefined } = {},
+  ): Promise<{ activities: ActivityItemDto[]; nextCursor: string | null; hasMore: boolean }> {
+    const limit = Math.min(options.limit || 20, 100)
+
+    let query = supabase
+      .from('activities')
+      .select('*')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('entity_type', entityType)
+      .eq('entity_id', entityId)
+      .order('created_at', { ascending: false })
+      // One extra row, purely to answer "is there another page" without a
+      // second COUNT query over a table that only grows.
+      .limit(limit + 1)
+
+    if (options.cursor) query = query.lt('created_at', options.cursor)
+
+    const { data, error } = await query
+    if (error) throw new DatabaseError('Failed to fetch entity activities', error)
+
+    const rows = data ?? []
+    const hasMore = rows.length > limit
+    const page = hasMore ? rows.slice(0, limit) : rows
+
+    return {
+      activities: page as unknown as ActivityItemDto[],
+      nextCursor: hasMore ? ((page[page.length - 1] as any)?.created_at ?? null) : null,
+      hasMore,
+    }
+  }
+
   // ─── Get Entity Summary ──────────────────────────────────────────────────
   // NOTE: Only one implementation now (previously duplicated — TS2393).
   // This is the more complete version, covering invoice/customer/product/payment.
-  private async getEntitySummary(
+  /**
+   * A 360 summary of one business object.
+   *
+   * ⚠️ Was `private` while four client hooks called an endpoint that would have
+   * exposed it — so the screens showed nothing and the requests 404'd. The
+   * computation was always here; only the door was missing.
+   *
+   * `workspaceId` is a parameter rather than read from a context because the
+   * activity feed calls it in a loop for ids that came from its own rows. It
+   * is filtered explicitly every time: a summary lookup that trusts an id
+   * because of where it came from is one refactor away from being an IDOR.
+   */
+  async getEntitySummary(
     entityType: string,
     entityId: string,
     workspaceId: string,

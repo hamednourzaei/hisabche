@@ -52,6 +52,12 @@ export type NavId =
   | 'bank'
   | 'conflicts'
   // secondary — system
+  | 'customer-list'
+  | 'product-list'
+  | 'accounting-workspace'
+  | 'sales-workspace'
+  | 'inventory-workspace'
+  | 'people-workspace'
   | 'data-and-sync'
   | 'data-migration'
   | 'settings'
@@ -265,6 +271,65 @@ export const NAV_CONTRACT: readonly NavItemContract[] = [
     descriptionKey: 'nav.conflicts_description',
     path: '/conflicts',
     group: 'system',
+  },
+
+  // PHASE 5's first real consumer — the same customers, on the shared list
+  // engine. It stands beside the existing screen rather than replacing it:
+  // that one works and people use it daily.
+  {
+    id: 'customer-list',
+    emoji: '🔍',
+    labelKey: 'nav.customer_list',
+    descriptionKey: 'nav.customer_list_description',
+    path: '/customer-list',
+    group: 'work',
+  },
+
+  // The list engine's SECOND consumer. Two consumers is the rule: one can
+  // pass by accident when a component is shaped around its only caller.
+  {
+    id: 'product-list',
+    emoji: '🔎',
+    labelKey: 'nav.product_list',
+    descriptionKey: 'nav.product_list_description',
+    path: '/product-list',
+    group: 'work',
+  },
+
+  // PHASE 7 — a way into each business domain. These are not new features;
+  // each is a map of destinations that already exist, in a fixed order, so
+  // "somewhere in the menu" becomes muscle memory.
+  {
+    id: 'accounting-workspace',
+    emoji: '📒',
+    labelKey: 'domain.accounting',
+    descriptionKey: 'domain.accounting_description',
+    path: '/accounting-workspace',
+    group: 'work',
+  },
+  {
+    id: 'sales-workspace',
+    emoji: '🧾',
+    labelKey: 'domain.sales',
+    descriptionKey: 'domain.sales_description',
+    path: '/sales-workspace',
+    group: 'work',
+  },
+  {
+    id: 'inventory-workspace',
+    emoji: '📦',
+    labelKey: 'domain.inventory',
+    descriptionKey: 'domain.inventory_description',
+    path: '/inventory-workspace',
+    group: 'work',
+  },
+  {
+    id: 'people-workspace',
+    emoji: '👥',
+    labelKey: 'domain.people',
+    descriptionKey: 'domain.people_description',
+    path: '/people-workspace',
+    group: 'work',
   },
 
   // The hub §20 asks for. It does NOT replace sync-center, conflicts or

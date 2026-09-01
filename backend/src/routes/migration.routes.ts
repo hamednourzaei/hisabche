@@ -65,6 +65,10 @@ const mappingSchema = z.object({
   mapping: z.record(z.string(), z.number().int().min(0)),
 })
 
+const profileNameSchema = z.object({ name: z.string().min(1).max(120) })
+const profileIdSchema = z.object({ profileId: z.string().uuid() })
+const entitySchema = z.enum(MIGRATION_ENTITIES)
+
 const contentBodySchema = z.object({ content: contentSchema })
 
 export async function migrationRoutes(fastify: FastifyInstance) {
@@ -187,6 +191,109 @@ export async function migrationRoutes(fastify: FastifyInstance) {
         return reply.send(await service.cancel(request.tenancy, id))
       } catch (err) {
         return fail(reply, err, 'Failed to cancel the migration')
+      }
+    },
+  )
+
+  /* ─── §39 Rollback ──────────────────────────────────────────────────────── */
+
+  // GET, not POST: asking what a rollback WOULD do must be free of side
+  // effects, so a nervous user can look as many times as they like.
+  fastify.get(
+    '/:id/rollback-plan',
+    { preHandler: guarded, schema: { response: { 200: toJsonSchema(z.any()) } } },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        return reply.send(await service.planRollback(request.tenancy, id))
+      } catch (err) {
+        return fail(reply, err, 'Failed to plan the rollback')
+      }
+    },
+  )
+
+  fastify.post(
+    '/:id/rollback',
+    { preHandler: guarded, schema: { response: { 200: toJsonSchema(z.any()) } } },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        return reply.send(await service.rollback(request.tenancy, id))
+      } catch (err) {
+        return fail(reply, err, 'Failed to roll back the migration')
+      }
+    },
+  )
+
+  /* ─── §40 Import profiles ───────────────────────────────────────────────── */
+
+  fastify.get(
+    '/profiles',
+    { preHandler: guarded, schema: { response: { 200: toJsonSchema(z.any()) } } },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { entity } = request.query as { entity?: string }
+        const parsed = entitySchema.parse(entity ?? 'customer')
+        return reply.send(await service.listProfiles(request.tenancy, parsed))
+      } catch (err) {
+        return fail(reply, err, 'Failed to read import profiles')
+      }
+    },
+  )
+
+  fastify.post(
+    '/:id/profile',
+    {
+      preHandler: guarded,
+      schema: { body: toJsonSchema(profileNameSchema), response: { 201: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        const body = profileNameSchema.parse(request.body)
+        return reply.code(201).send(await service.saveProfile(request.tenancy, id, body.name))
+      } catch (err) {
+        return fail(reply, err, 'Failed to save the import profile')
+      }
+    },
+  )
+
+  fastify.post(
+    '/:id/apply-profile',
+    {
+      preHandler: guarded,
+      schema: { body: toJsonSchema(profileIdSchema), response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        const body = profileIdSchema.parse(request.body)
+        return reply.send(await service.useProfile(request.tenancy, id, body.profileId))
+      } catch (err) {
+        return fail(reply, err, 'Failed to apply the import profile')
+      }
+    },
+  )
+
+  /* ─── §41 Export symmetry ───────────────────────────────────────────────── */
+
+  // text/csv rather than JSON: the point of this endpoint is a file the user
+  // can keep and hand back to the importer unchanged.
+  fastify.get(
+    '/export',
+    { preHandler: guarded },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { entity } = request.query as { entity?: string }
+        const parsed = entitySchema.parse(entity ?? 'customer')
+        const csv = await service.exportCsv(request.tenancy, parsed)
+
+        return reply
+          .header('content-type', 'text/csv; charset=utf-8')
+          .header('content-disposition', `attachment; filename="hisabche-${parsed}.csv"`)
+          .send(csv)
+      } catch (err) {
+        return fail(reply, err, 'Failed to export')
       }
     },
   )

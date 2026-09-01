@@ -13,6 +13,7 @@
 // ============================================
 
 import { supabase } from '../db'
+import { scopes } from './authorization/scope.service'
 import { WorkflowService } from '../services/workflow.service'
 import { NotificationService } from '../services/notification.service'
 import {
@@ -819,6 +820,12 @@ export class InvoiceService {
 
   // ─── Update Invoice ──────────────────────────────────────────────────────
   async update(id: string, ctx: TenancyContext, data: UpdateInvoice) {
+    // Workspace alone is not enough here. Before this call, a seller could
+    // edit an invoice another seller raised, and a member pinned to one branch
+    // could edit another branch's — both by knowing an id. `assertMay` reads
+    // the row's own branch and creator and refuses on either.
+    await scopes.assertMay(ctx, 'invoice', id, 'invoice.update')
+
     const { workspaceId, userId } = ctx
     const currentInvoice = await this.getById(id, ctx)
 
@@ -894,6 +901,12 @@ export class InvoiceService {
   // ─── Delete Invoice ──────────────────────────────────────────────────────
   async delete(id: string, ctx: TenancyContext): Promise<void> {
     const { workspaceId } = ctx
+
+    // Checked BEFORE the line items go. Deleting the children first and then
+    // discovering the actor may not have the parent would leave an invoice
+    // with no lines and no way back.
+    await scopes.assertMay(ctx, 'invoice', id, 'invoice.delete')
+
     await supabase.from('invoice_items').delete().eq('invoice_id', id)
     const { error } = await supabase
       .from('invoices')

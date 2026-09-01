@@ -131,6 +131,17 @@ const MIN_ROLE: Record<Capability, WorkspaceRole> = {
   'workspace.manage': 'owner',
 }
 
+/**
+ * The lowest role that holds this capability.
+ *
+ * Exposed so a refusal can be explained as "a manager can do this" rather than
+ * as `MISSING_CAPABILITY` — nobody outside this codebase knows what
+ * `ledger.post` is, and a name they cannot act on is not an explanation.
+ */
+export function minRoleFor(capability: Capability): WorkspaceRole {
+  return MIN_ROLE[capability]
+}
+
 export function can(role: WorkspaceRole, capability: Capability): boolean {
   return roleAtLeast(role, MIN_ROLE[capability])
 }

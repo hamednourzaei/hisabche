@@ -46,6 +46,30 @@ export async function purchasingRoutes(fastify: FastifyInstance) {
     },
   )
 
+  // ─── GET /api/purchase-orders/:id ────────────────────────
+  //
+  // `getPurchaseOrder` existed in the service from the start; only the door was
+  // missing, so `usePurchaseOrder(id)` 404'd and no purchase order could be
+  // opened. Listed in KNOWN_MISSING until now.
+  fastify.get(
+    '/api/purchase-orders/:id',
+    {
+      preHandler: [authenticate, requireWorkspaceContext],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        return reply.send(await purchasingService.getPurchaseOrder(id, request.tenancy))
+      } catch (err) {
+        fastify.log.error(err)
+        // NotFound carries its own status; anything else is ours.
+        const status = (err as { statusCode?: number })?.statusCode ?? 500
+        return reply.code(status).send({ error: 'Failed to fetch the purchase order' })
+      }
+    },
+  )
+
   // ─── POST /api/purchase-orders ───────────────────────────
   fastify.post(
     '/api/purchase-orders',

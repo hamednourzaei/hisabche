@@ -16,7 +16,7 @@ import {
   CreateLeave,
   UpdateLeave,
 } from '@hisabche/validation'
-import { DatabaseError } from '../errors/database.error'
+import { DatabaseError, NotFoundError } from '../errors/database.error'
 import type { TenancyContext } from './tenancy.service'
 import { memoryCache } from '../utils/pagination'
 import { logBusinessEvent } from './event-log.service'
@@ -149,6 +149,38 @@ export class HumanResourcesService {
   }
 
   // ─── Employees ──────────────────────────────────────────────
+
+  /**
+   * Remove a person from the roster — by DEACTIVATING them, never by deleting.
+   *
+   * ---------------------------------------------------------------------------
+   * WHY THIS IS NOT A DELETE
+   *
+   * An employee is referenced by payroll runs, leave records, timesheets and
+   * every activity row they generated. Deleting the row orphans all of it, and
+   * a payroll for a person who no longer exists is a hole in the books that
+   * cannot be audited.
+   *
+   * The client has always called `DELETE /employees/:id` — it 404'd, so the
+   * button did nothing. This makes the verb honest: the HTTP method is DELETE
+   * because that is what the user means, and the effect is a soft delete
+   * because that is what the books require.
+   */
+  async deactivateEmployee(ctx: TenancyContext, id: string): Promise<{ id: string }> {
+    const { data, error } = await supabase
+      .from('employees')
+      .update({ is_active: false })
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('id', id)
+      .select('id')
+      .maybeSingle()
+
+    if (error) throw new DatabaseError('Failed to deactivate the employee', error)
+    if (!data) throw new NotFoundError('Employee')
+
+    return { id: data.id as string }
+  }
+
   async listEmployees(ctx: TenancyContext, departmentId?: string) {
     const { workspaceId, userId } = ctx
     const cacheKey = this.getEmployeesCacheKey(workspaceId, departmentId)

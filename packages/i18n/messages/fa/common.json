@@ -1102,7 +1102,11 @@
     "data_migration": "انتقال داده",
     "data_migration_description": "وارد کردن مشتریان و کالاها از فایل موجود",
     "data_and_sync": "داده و همگام‌سازی",
-    "data_and_sync_description": "همگام‌سازی، تعارض‌ها، ورود و خروج داده"
+    "data_and_sync_description": "همگام‌سازی، تعارض‌ها، ورود و خروج داده",
+    "customer_list": "فهرست مشتریان",
+    "customer_list_description": "جست‌وجو، مرتب‌سازی و صفحه‌بندی مشتریان",
+    "product_list": "فهرست کالاها",
+    "product_list_description": "جست‌وجو، مرتب‌سازی و صفحه‌بندی کالاها"
   },
   "dateRange": {
     "today": "امروز",
@@ -1275,7 +1279,8 @@
     "selectedCount": "{count} مورد انتخاب شد",
     "clearSelection": "پاک کردن انتخاب",
     "confirmAction": "مطمئن هستید؟",
-    "bulkPartialFailure": "{failed} مورد انجام نشد"
+    "bulkPartialFailure": "{failed} مورد انجام نشد",
+    "page_size": "تعداد در صفحه"
   },
   "invoices": {
     "title": "فاکتور",
@@ -1446,7 +1451,7 @@
     "openingBalance": "موجودی اولیه",
     "closingBalance": "موجودی نهایی",
     "debit": "بدهکار",
-    "credit": "بستانکار",
+    "credit": "نسیه",
     "balance": "مانده",
     "paidAmount": "مبلغ پرداختی",
     "transactionDate": "تاریخ معامله",
@@ -1548,7 +1553,15 @@
       "all": "همه",
       "label": "نوع طرف حساب"
     },
-    "backToList": "بازگشت به طرف حساب‌ها"
+    "backToList": "بازگشت به طرف حساب‌ها",
+    "terms": "شرایط",
+    "cash": "نقدی",
+    "search_label": "نام یا شماره",
+    "no_match": "مشتری‌ای با این جست‌وجو پیدا نشد",
+    "no_match_hint": "جست‌وجو را تغییر دهید یا پاکش کنید.",
+    "empty_hint": "اولین مشتری را از صفحه‌ی مشتریان اضافه کنید.",
+    "list": "فهرست",
+    "address": "آدرس"
   },
   "crm": {
     "type": "نوع",
@@ -2627,10 +2640,14 @@
     "ariaLabel": "پنل نمای کلی کسب‌وکار"
   },
   "entity": {
-    "activity": {
-      "empty": "هیچ فعالیتی ثبت نشده است",
-      "count": "{count} فعالیت"
-    }
+    "activity": "رویدادها",
+    "sections": "بخش‌ها",
+    "overview": "نمای کلی",
+    "lines": "اقلام",
+    "financial": "مالی",
+    "relations": "ارتباط‌ها",
+    "documents": "اسناد",
+    "audit": "حسابرسی"
   },
   "workflow": {
     "stepProgress": "مرحله",
@@ -3514,6 +3531,47 @@
     "accounting": "حسابداری",
     "sales": "فروش",
     "inventory": "انبار",
-    "people": "کارکنان"
+    "people": "کارکنان",
+    "destinations": "بخش‌ها",
+    "no_access": "دسترسی به این بخش ندارید",
+    "no_access_hint": "از مالک کارگاه بخواهید دسترسی این بخش را برای شما باز کند.",
+    "accounting_description": "دفتر، بانک، بودجه و دارایی‌ها",
+    "sales_description": "صندوق، فاکتورها، مشتریان و پیگیری",
+    "inventory_description": "موجودی، خرید، انقضا و تولید",
+    "people_description": "کارکنان، حقوق، ساعت کاری و دسترسی‌ها"
+  },
+  "products": {
+    "title": "کالاها",
+    "subtitle": "فهرست کالاها با جست‌وجو و مرتب‌سازی",
+    "name": "نام کالا",
+    "sku": "کد",
+    "quantity": "موجودی",
+    "list": "فهرست",
+    "search_label": "نام یا کد کالا",
+    "low_stock": "رو به اتمام",
+    "no_match": "کالایی با این جست‌وجو پیدا نشد",
+    "no_match_hint": "جست‌وجو را تغییر دهید یا پاکش کنید.",
+    "empty": "هنوز کالایی ثبت نشده",
+    "empty_hint": "اولین کالا را از صفحه‌ی موجودی اضافه کنید."
+  },
+  "ledger": {
+    "opening": "مانده‌ی ابتدای دوره",
+    "debit": "بدهکار",
+    "credit": "بستانکار",
+    "closing": "مانده‌ی نهایی",
+    "we_owe": "ما بدهکاریم",
+    "they_owe": "مشتری بدهکار است"
+  },
+  "authz": {
+    "ask_owner": "از مالک کارگاه بخواهید",
+    "ask_manager": "از مدیر بخواهید این کار را انجام دهد",
+    "nobody_can": "این محدودیت با تغییر دسترسی برداشته نمی‌شود",
+    "reason": {
+      "missing_capability": "نقش شما اجازه‌ی این کار را ندارد.",
+      "out_of_branch": "این رکورد به شعبه‌ای تعلق دارد که به آن دسترسی ندارید.",
+      "not_own_record": "این رکورد را همکار دیگری ثبت کرده است.",
+      "sod_conflict": "همان شخص نمی‌تواند هر دو مرحله را انجام دهد — این یک کنترل عمدی است.",
+      "period_locked": "این دوره‌ی مالی بسته شده است."
+    }
   }
 }

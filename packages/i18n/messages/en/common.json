@@ -1095,7 +1095,11 @@
     "data_migration": "Data migration",
     "data_migration_description": "Import customers and products from a file you already have",
     "data_and_sync": "Data & sync",
-    "data_and_sync_description": "Sync, conflicts, import and export"
+    "data_and_sync_description": "Sync, conflicts, import and export",
+    "customer_list": "Customer list",
+    "customer_list_description": "Search, sort and page through customers",
+    "product_list": "Product list",
+    "product_list_description": "Search, sort and page through products"
   },
   "dateRange": {
     "today": "Today",
@@ -1270,7 +1274,8 @@
     "selectedCount": "{count} selected",
     "clearSelection": "Clear selection",
     "confirmAction": "Are you sure?",
-    "bulkPartialFailure": "{failed} could not be completed"
+    "bulkPartialFailure": "{failed} could not be completed",
+    "page_size": "Per page"
   },
   "invoices": {
     "title": "Invoice",
@@ -1543,7 +1548,15 @@
       "all": "All",
       "label": "Party type"
     },
-    "backToList": "Back to customers"
+    "backToList": "Back to customers",
+    "terms": "Terms",
+    "cash": "Cash",
+    "search_label": "Name or number",
+    "no_match": "No customer matches that search",
+    "no_match_hint": "Change the search or clear it.",
+    "empty_hint": "Add your first customer from the customers page.",
+    "list": "List",
+    "address": "Address"
   },
   "crm": {
     "type": "Type",
@@ -2611,10 +2624,14 @@
     }
   },
   "entity": {
-    "activity": {
-      "empty": "No activity recorded yet",
-      "count": "{count} activities"
-    }
+    "activity": "Activity",
+    "sections": "Sections",
+    "overview": "Overview",
+    "lines": "Lines",
+    "financial": "Financial",
+    "relations": "Related",
+    "documents": "Documents",
+    "audit": "Audit"
   },
   "workflow": {
     "stepProgress": "Step",
@@ -3509,6 +3526,47 @@
     "accounting": "Accounting",
     "sales": "Sales",
     "inventory": "Inventory",
-    "people": "People"
+    "people": "People",
+    "destinations": "Sections",
+    "no_access": "You do not have access here",
+    "no_access_hint": "Ask the workspace owner to open this section for you.",
+    "accounting_description": "Ledger, bank, budgets and assets",
+    "sales_description": "Till, invoices, customers and follow-ups",
+    "inventory_description": "Stock, purchasing, expiry and production",
+    "people_description": "Staff, payroll, timesheets and access"
+  },
+  "products": {
+    "title": "Products",
+    "subtitle": "Products, with search and sorting",
+    "name": "Product",
+    "sku": "Code",
+    "quantity": "In stock",
+    "list": "List",
+    "search_label": "Name or code",
+    "low_stock": "Running low",
+    "no_match": "No product matches that search",
+    "no_match_hint": "Change the search or clear it.",
+    "empty": "No products yet",
+    "empty_hint": "Add your first product from the stock page."
+  },
+  "ledger": {
+    "opening": "Opening balance",
+    "debit": "Debit",
+    "credit": "Credit",
+    "closing": "Closing balance",
+    "we_owe": "We owe them",
+    "they_owe": "They owe us"
+  },
+  "authz": {
+    "ask_owner": "Ask the workspace owner",
+    "ask_manager": "Ask a manager to do it",
+    "nobody_can": "Changing access will not lift this",
+    "reason": {
+      "missing_capability": "Your role does not allow this.",
+      "out_of_branch": "This record belongs to a branch you cannot reach.",
+      "not_own_record": "A colleague raised this record.",
+      "sod_conflict": "The same person cannot do both steps — this control is deliberate.",
+      "period_locked": "This accounting period is closed."
+    }
   }
 }

@@ -85,6 +85,11 @@ async function reportingBranches(request: FastifyRequest): Promise<string[] | nu
   return branches.reportingScope(request.tenancy, requested)
 }
 
+const yearEndSchema = z.object({
+  fromDate: z.string().min(8),
+  toDate: z.string().min(8),
+})
+
 export async function accountingRoutes(fastify: FastifyInstance) {
   const accountingService = new AccountingService()
 
@@ -462,6 +467,100 @@ export async function accountingRoutes(fastify: FastifyInstance) {
         return reply.send(await accountingService.getCustomerDebtReport(request.tenancy))
       } catch (err) {
         return fail(reply, err, 'Failed to fetch customer debt report')
+      }
+    },
+  )
+
+  // ─── GET /general-ledger ─────────────────────────────────
+  //
+  // The lines behind one number. A trial balance that says an account holds
+  // 412,900 is only half a report until you can ask "made up of what" — and
+  // until now that meant opening the journal and filtering it by hand.
+  fastify.get(
+    '/general-ledger',
+    {
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        requireCapability('report.financial.read'),
+      ],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { accountId, fromDate, toDate } = request.query as {
+          accountId?: string
+          fromDate?: string
+          toDate?: string
+        }
+
+        if (!accountId) return reply.code(400).send({ error: 'ACCOUNT_ID_REQUIRED' })
+
+        return reply.send(
+          await accountingService.generalLedger(
+            request.tenancy,
+            accountId,
+            fromDate ?? null,
+            toDate ?? null,
+          ),
+        )
+      } catch (err) {
+        return fail(reply, err, 'Failed to read the general ledger')
+      }
+    },
+  )
+
+  // ─── GET /year-end/plan ──────────────────────────────────
+  //
+  // What closing the year WOULD post. GET, and free of side effects, so an
+  // accountant can look as often as they like before approving it.
+  fastify.get(
+    '/year-end/plan',
+    {
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        requireCapability('report.financial.read'),
+      ],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { fromDate, toDate } = request.query as { fromDate?: string; toDate?: string }
+        if (!fromDate || !toDate) return reply.code(400).send({ error: 'DATE_RANGE_REQUIRED' })
+
+        return reply.send(
+          await accountingService.planYearEndClose(request.tenancy, fromDate, toDate),
+        )
+      } catch (err) {
+        return fail(reply, err, 'Failed to plan the year-end close')
+      }
+    },
+  )
+
+  // ─── POST /year-end/close ────────────────────────────────
+  //
+  // ⚠️ Guarded with `ledger.lock_period`, not `ledger.post`.
+  //
+  // Closing a year is the same kind of act as locking a period: it decides
+  // that a year's figures are final. A manager posts entries all day; only an
+  // owner declares a year over.
+  fastify.post(
+    '/year-end/close',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('ledger.lock_period')],
+      schema: { body: toJsonSchema(yearEndSchema), response: { 201: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = yearEndSchema.parse(request.body)
+        return reply
+          .code(201)
+          .send(
+            await accountingService.postYearEndClose(request.tenancy, body.fromDate, body.toDate),
+          )
+      } catch (err) {
+        return fail(reply, err, 'Failed to close the year')
       }
     },
   )

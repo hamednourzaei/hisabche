@@ -7,18 +7,21 @@
 
 ## پیدا کردن جواب — جدول مسیریابی
 
-| سوال                                               | فایل                                                                     |
-| -------------------------------------------------- | ------------------------------------------------------------------------ |
-| «الان چه چیزی کار می‌کند و چه چیزی نه؟»            | [STATE.md](STATE.md)                                                     |
-| «چرا این‌طوری نوشته شده؟» / «قبلاً چه اشتباهی شد؟» | [lessons-learned.md](lessons-learned.md) — ۵۰ درس                        |
-| «کد جدید را کجا بگذارم؟»                           | [architecture/core-modules.md](architecture/core-modules.md)             |
-| «چه روتی هست؟ کدام hook به کدام endpoint می‌زند؟»  | [architecture/api-surface.md](architecture/api-surface.md)               |
-| «جدول‌ها چه شکلی‌اند؟ RLS چطور کار می‌کند؟»        | [architecture/data-model.md](architecture/data-model.md)                 |
-| «چطور migration بزنم / تست کنم / commit کنم؟»      | [WORKFLOW.md](WORKFLOW.md)                                               |
-| «سشن قبل چه شد؟»                                   | [SESSION-2026-08-31.md](SESSION-2026-08-31.md)                           |
-| «کندی، بودجه‌ی عملکرد»                             | [architecture/performance-policy.md](architecture/performance-policy.md) |
-| «مقایسه با ERPNext/Odoo»                           | [research/](research/)                                                   |
-| محصول، خواسته‌های اصلی                             | [detail.md](detail.md)                                                   |
+| سوال                                                 | فایل                                                                                 |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| **به باگ خوردم / چطور وریفای کنم؟**                  | [DEBUG-PLAYBOOK.md](DEBUG-PLAYBOOK.md) — اول این                                     |
+| «الان چه چیزی کار می‌کند و چه چیزی نه؟»              | [STATE.md](STATE.md)                                                                 |
+| «چرا این‌طوری نوشته شده؟» / «قبلاً چه اشتباهی شد؟»   | [lessons-learned.md](lessons-learned.md) — ۵۰ درس                                    |
+| «کد جدید را کجا بگذارم؟»                             | [architecture/core-modules.md](architecture/core-modules.md)                         |
+| «چه روتی هست؟ کدام hook به کدام endpoint می‌زند؟»    | [architecture/api-surface.md](architecture/api-surface.md)                           |
+| «جدول‌ها چه شکلی‌اند؟ RLS چطور کار می‌کند؟»          | [architecture/data-model.md](architecture/data-model.md)                             |
+| «چطور migration بزنم / تست کنم / commit کنم؟»        | [WORKFLOW.md](WORKFLOW.md)                                                           |
+| «سشن قبل چه شد؟»                                     | [SESSION-2026-08-31.md](SESSION-2026-08-31.md)                                       |
+| «فازهای نقشه‌راه UX چه شد؟ چه چیزی عمداً ساخته نشد؟» | [SESSION-2026-08-31-PHASES.md](SESSION-2026-08-31-PHASES.md)                         |
+| «قرارداد وضعیت / فهرست / نما / صف کار کجاست؟»        | `packages/ui-contract/src/{work-state,list-engine,entity-views,work-queue,shell}.ts` |
+| «کندی، بودجه‌ی عملکرد»                               | [architecture/performance-policy.md](architecture/performance-policy.md)             |
+| «مقایسه با ERPNext/Odoo»                             | [research/](research/)                                                               |
+| محصول، خواسته‌های اصلی                               | [detail.md](detail.md)                                                               |
 
 ---
 

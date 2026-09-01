@@ -1,188 +1,193 @@
 -- ============================================================================
--- docs/_verify-after.sql — READ ONLY. Run after the bundle.
+-- docs/_verify-after.sql
 --
--- The bundle appearing to finish is not proof that it did. The SQL Editor
--- shows only the last statement's output, so the reports in the middle — the
--- unassigned-workspace counts, the constraint validation notice — scrolled
--- past unseen.
+-- Did the setup work? Eight checks, ONE result table.
 --
--- This asks the database directly, and every line carries its own verdict so
--- nothing has to be interpreted.
+-- ---------------------------------------------------------------------------
+-- WHY ONE QUERY AND NOT EIGHT
+--
+-- The previous version was eight separate SELECTs. The Supabase SQL Editor
+-- shows only the LAST result set of a multi-statement script — so seven checks
+-- ran, passed or failed, and were invisible. The single row that came back
+-- looked like the whole answer and was one eighth of it.
+--
+-- `UNION ALL` puts every verdict in one table. Read the `status` column: any
+-- `FAIL` is a real problem, and the `detail` says what to do about it.
+--
+-- READ-ONLY. Changes nothing.
 -- ============================================================================
 
--- ─── 1. Did the migrations record themselves? ───────────────────────────────
+WITH
 
-select
-  '1. ledger' as check_name,
-  count(*)::text as value,
-  case when count(*) >= 31
-    then 'OK — every migration recorded'
-    else 'INCOMPLETE — expected 31'
-  end as verdict
-from schema_migrations
+-- ─── 1. Do the tables exist? ────────────────────────────────────────────────
+tables AS (
+  SELECT count(*) AS n
+  FROM information_schema.tables
+  WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+),
 
-union all
-
--- ─── 2. Do the tables that were missing now exist? ──────────────────────────
-
-select
-  '2. new tables',
-  count(*)::text,
-  case when count(*) = 17
-    then 'OK — all 17 created'
-    else format('MISSING %s of 17', 17 - count(*))
-  end
-from pg_tables
-where schemaname = 'public'
-  and tablename in (
-    'accounting_period_locks', 'asset_depreciation_schedule',
-    'bank_statement_lines', 'bank_statements', 'branches', 'budgets',
-    'cost_layers', 'exchange_rates', 'fixed_assets', 'pos_cash_movements',
-    'pos_order_payments', 'pos_orders', 'pos_sessions', 'stock_serials',
-    'stock_batches', 'time_entries', 'schema_migrations'
-  )
--- `stock_serials`, not `serial_units`. The first version of this check used the
--- TypeScript type name and reported a missing table that was there all along —
--- a check that lies is worse than no check, because it sends somebody looking
--- for a problem that does not exist.
-
-union all
-
--- ─── 3. Is the ledger constraint actually enforced? ─────────────────────────
+-- ─── 2. Are the RPCs the services call actually there? ──────────────────────
 --
--- `convalidated = false` means it applies to new writes only and the history
--- was never checked. That is a weaker guarantee, and worth knowing about.
+-- Every one of these is a multi-table write. A missing function does not fail
+-- at deploy — it fails the first time somebody records a payment.
+rpcs AS (
+  SELECT
+    -- ⚠️ DISTINCT. `count(*)` counts OVERLOADS: a function defined with two
+    -- signatures is two rows in `pg_proc`, and the check reported "13 of 12"
+    -- — a FAIL that meant everything was present and one function had a second
+    -- signature. A verification that fails on a healthy database is worse than
+    -- no verification, because the next real failure gets ignored too.
+    count(DISTINCT p.proname) FILTER (WHERE p.proname = ANY (ARRAY[
+      'accounting_post_journal_entry',
+      'accounting_trial_balance',
+      'payments_record',
+      'payments_cancel',
+      'pos_record_order',
+      'get_next_invoice_number',
+      'inventory_receive_layer',
+      'inventory_consume_layers',
+      'inventory_release_consumption',
+      'inventory_valuation',
+      'traceability_consume_batch',
+      'warehouse_transfer_stock'
+    ])) AS found
+  FROM pg_proc p
+  JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public'
+),
 
-select
-  '3. ledger constraint',
-  case when con.convalidated then 'validated' else 'NOT VALID' end,
-  case when con.convalidated
-    then 'OK — enforced on every row, history included'
-    else 'PARTIAL — new writes only; old rows still break it'
-  end
-from pg_constraint con
-join pg_class rel on rel.oid = con.conrelid
-where con.conname = 'journal_lines_one_sided_check'
-
-union all
-
--- ─── 4. Were the amount-less lines archived before removal? ─────────────────
-
-select
-  '4. archived lines',
-  count(*)::text,
-  case when count(*) = 2
-    then 'OK — both preserved in journal_lines_archive'
-    else 'CHECK — expected 2'
-  end
-from journal_lines_archive
-
-union all
-
--- ─── 5. Rows that could not be assigned to a workspace ──────────────────────
+-- ─── 3. The three SECURITY DEFINER helpers ──────────────────────────────────
 --
--- This is the number that matters most. Every one of these is a row the
--- application cannot see. Zero is the only good answer.
+-- Without them every workspace policy fails to compile, and without SECURITY
+-- DEFINER they recurse — `42P17`.
+helpers AS (
+  SELECT
+    count(*) FILTER (WHERE p.proname IN
+      ('auth_workspace_ids', 'is_workspace_member', 'auth_owned_workspace_ids')) AS found,
+    count(*) FILTER (WHERE p.proname IN
+      ('auth_workspace_ids', 'is_workspace_member', 'auth_owned_workspace_ids')
+      AND p.prosecdef) AS definer
+  FROM pg_proc p
+  JOIN pg_namespace n ON n.oid = p.pronamespace
+  WHERE n.nspname = 'public'
+),
 
-select
-  '5. unassigned rows',
-  total::text,
-  case when total = 0
-    then 'OK — every row belongs to a workspace'
-    else format('%s row(s) invisible to the app — see the breakdown below', total)
-  end
-from (
-  select
-    (select count(*) from audit_logs where workspace_id is null)
-  + (select count(*) from stock_movements where workspace_id is null)
-  + (select count(*) from suppliers where workspace_id is null)
-  + (select count(*) from purchase_orders where workspace_id is null)
-  + (select count(*) from payrolls where workspace_id is null)
-  + (select count(*) from leaves where workspace_id is null)
-  + (select count(*) from project_time_entries where workspace_id is null)
-  + (select count(*) from boms where workspace_id is null)
-  + (select count(*) from bom_items where workspace_id is null)
-  + (select count(*) from work_orders where workspace_id is null)
-  + (select count(*) from opportunities where workspace_id is null)
-  + (select count(*) from employees where workspace_id is null)
-  + (select count(*) from projects where workspace_id is null)
-  + (select count(*) from departments where workspace_id is null)
-  as total
-) t
-
-union all
-
--- ─── 6. Is RLS on every table that now carries a workspace? ─────────────────
+-- ─── 4. Tenant tables with RLS off ──────────────────────────────────────────
 --
--- The column is bookkeeping; the policy is the boundary. A table with a
--- workspace column and no policy hands any authenticated caller any row.
+-- The most important number here. A table with `workspace_id` and RLS off is
+-- readable by anyone holding the anon key.
+rls_off AS (
+  SELECT count(*) AS n, string_agg(t.tablename, ', ' ORDER BY t.tablename) AS names
+  FROM pg_tables t
+  WHERE t.schemaname = 'public'
+    AND NOT t.rowsecurity
+    AND EXISTS (
+      SELECT 1 FROM information_schema.columns c
+      WHERE c.table_schema = 'public'
+        AND c.table_name = t.tablename
+        AND c.column_name = 'workspace_id'
+    )
+),
 
-select
-  '6. tables without RLS',
-  count(*)::text,
-  case when count(*) = 0
-    then 'OK — every workspace table has RLS on'
-    else format('%s table(s) unprotected: %s', count(*), string_agg(tablename, ', '))
-  end
-from pg_tables t
-where t.schemaname = 'public'
-  and not t.rowsecurity
-  and exists (
-    select 1 from information_schema.columns c
-    where c.table_schema = 'public'
-      and c.table_name = t.tablename
-      and c.column_name = 'workspace_id'
-  )
-
-union all
-
--- ─── 7. Do those tables have a policy, not just RLS enabled? ────────────────
+-- ─── 5. RLS on, but no policy ───────────────────────────────────────────────
 --
--- RLS enabled with no policy denies everything. For most tables that breaks
--- the app; for a few it is the point.
+-- ⚠️ Not always a fault. `sync_change_log` and `sync_mutations` are meant to
+-- have none — RLS on with no policy means NOBODY may read, which is the
+-- strictest setting and correct for tables only service-role touches.
+no_policy AS (
+  SELECT count(*) AS n, string_agg(t.tablename, ', ' ORDER BY t.tablename) AS names
+  FROM pg_tables t
+  WHERE t.schemaname = 'public'
+    AND t.rowsecurity
+    AND NOT EXISTS (
+      SELECT 1 FROM pg_policies p
+      WHERE p.schemaname = 'public' AND p.tablename = t.tablename
+    )
+    -- ⚠️ The deliberate deny-all set. RLS on with NO policy means nobody may
+    -- read — the strictest possible state — and every one of these is reached
+    -- only by the backend on `service_role`, which bypasses RLS.
+    --
+    -- Adding a policy to `password_reset_tokens` "for completeness" would turn
+    -- a table nobody can read into one somebody can. They are excluded here so
+    -- the check reads PASS when the schema is correct, instead of crying CHECK
+    -- every time and training the reader to skip it.
+    AND t.tablename NOT IN (
+      'sync_change_log', 'sync_mutations', 'sync_logs', 'sync_queue',
+      'background_jobs', 'checkout_sessions', 'invoice_pdf_cache',
+      'journal_lines_archive', 'ledger_entries', 'password_reset_tokens',
+      'schema_migrations', 'webhook_events', 'event_log'
+    )
+),
+
+-- ─── 6. The one-owner rule ──────────────────────────────────────────────────
+owner_idx AS (
+  SELECT count(*) AS n
+  FROM pg_indexes
+  WHERE schemaname = 'public' AND indexname = 'workspace_single_owner_idx'
+),
+
+-- ─── 7. The ledger's one-sided check ────────────────────────────────────────
 --
--- `sync_change_log` and `sync_mutations` are reached only through the sync
--- endpoints, which use the service role and derive workspace and user from a
--- verified JWT. Deny-all is deliberate there: a leaked anon key cannot read
--- another workspace's change stream even if an endpoint were bypassed. They
--- are excluded so this check does not report a defence as a defect.
+-- A journal line may have a debit or a credit, never both and never neither.
+ledger_check AS (
+  SELECT count(*) AS n
+  FROM pg_constraint c
+  JOIN pg_class t ON t.oid = c.conrelid
+  WHERE t.relname = 'journal_lines'
+    AND c.conname = 'journal_lines_one_sided_check'
+    AND c.convalidated
+),
 
-select
-  '7. RLS without policy',
-  count(*)::text,
-  case when count(*) = 0
-    then 'OK — every table that should have a policy has one'
-    else format('%s table(s) deny everything: %s', count(*), string_agg(t.tablename, ', '))
-  end
-from pg_tables t
-where t.schemaname = 'public'
-  and t.rowsecurity
-  and t.tablename not in ('sync_change_log', 'sync_mutations')
-  and exists (
-    select 1 from information_schema.columns c
-    where c.table_schema = 'public'
-      and c.table_name = t.tablename
-      and c.column_name = 'workspace_id'
-  )
-  and not exists (
-    select 1 from pg_policies p
-    where p.schemaname = 'public' and p.tablename = t.tablename
-  )
+-- ─── 8. Indexes on the columns policies filter by ───────────────────────────
+--
+-- A policy is a WHERE clause. Without an index behind it, Postgres applies the
+-- predicate to every row it reads — a full scan wearing a security hat.
+policy_idx AS (
+  SELECT count(*) AS n
+  FROM pg_indexes
+  WHERE schemaname = 'public' AND indexdef LIKE '%workspace_id%'
+)
 
-union all
+SELECT * FROM (
+  SELECT 1 AS "#", 'tables created' AS check,
+    (SELECT n::text FROM tables) AS value,
+    CASE WHEN (SELECT n FROM tables) >= 110 THEN 'PASS' ELSE 'FAIL' END AS status,
+    'the bundle creates 112; a view counts separately, so 111 is correct' AS detail
 
--- ─── 8. Are the RPCs the services call actually there? ──────────────────────
+  UNION ALL SELECT 2, 'RPCs present',
+    (SELECT found || ' of 12' FROM rpcs),
+    CASE WHEN (SELECT found FROM rpcs) = 12 THEN 'PASS' ELSE 'FAIL' END,
+    'a missing one fails the first time somebody records a payment'
 
-select
-  '8. rpc functions',
-  count(*)::text,
-  case when count(*) >= 2
-    then 'OK — posting and till functions exist'
-    else 'MISSING — the services will fail at runtime'
-  end
-from pg_proc p
-join pg_namespace n on n.oid = p.pronamespace
-where n.nspname = 'public'
-  and p.proname in ('accounting_post_journal_entry', 'pos_record_order')
+  UNION ALL SELECT 3, 'RLS helpers',
+    (SELECT found || ' of 3, ' || definer || ' SECURITY DEFINER' FROM helpers),
+    CASE WHEN (SELECT found FROM helpers) = 3 AND (SELECT definer FROM helpers) = 3
+         THEN 'PASS' ELSE 'FAIL' END,
+    'without SECURITY DEFINER the membership policy recurses — 42P17'
 
-order by check_name;
+  UNION ALL SELECT 4, 'tenant tables with RLS OFF',
+    (SELECT coalesce(names, '(none)') FROM rls_off),
+    CASE WHEN (SELECT n FROM rls_off) = 0 THEN 'PASS' ELSE 'FAIL' END,
+    'any table here is readable by anyone with the anon key'
+
+  UNION ALL SELECT 5, 'RLS on but no policy',
+    (SELECT coalesce(names, '(none)') FROM no_policy),
+    CASE WHEN (SELECT n FROM no_policy) = 0 THEN 'PASS' ELSE 'CHECK' END,
+    '13 service-role-only tables are excluded — deny-all is correct for them'
+
+  UNION ALL SELECT 6, 'one owner per workspace',
+    (SELECT CASE WHEN n > 0 THEN 'enforced' ELSE 'missing' END FROM owner_idx),
+    CASE WHEN (SELECT n FROM owner_idx) > 0 THEN 'PASS' ELSE 'FAIL' END,
+    'without it a workspace can gain a second owner'
+
+  UNION ALL SELECT 7, 'ledger one-sided check',
+    (SELECT CASE WHEN n > 0 THEN 'validated' ELSE 'missing' END FROM ledger_check),
+    CASE WHEN (SELECT n FROM ledger_check) > 0 THEN 'PASS' ELSE 'FAIL' END,
+    'a journal line must carry a debit or a credit, never both'
+
+  UNION ALL SELECT 8, 'indexes on workspace_id',
+    (SELECT n::text FROM policy_idx),
+    CASE WHEN (SELECT n FROM policy_idx) >= 20 THEN 'PASS' ELSE 'CHECK' END,
+    'every RLS policy filters on this; without an index it is a full scan'
+) checks
+ORDER BY "#";

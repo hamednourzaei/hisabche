@@ -36,6 +36,7 @@ const DOCS = join(__dirname, '..', '..', '..', 'docs')
  */
 const TENANT_TABLES = [
   'migration_jobs',
+  'migration_profiles',
   'migration_records',
   'invoices',
   'customers',

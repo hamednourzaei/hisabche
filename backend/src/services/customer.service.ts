@@ -4,6 +4,7 @@
 // ============================================
 
 import { supabase } from '../db'
+import { scopes } from './authorization/scope.service'
 import { CreateCustomer, UpdateCustomer, CustomerFilters } from '@hisabche/validation'
 import { DatabaseError, NotFoundError } from '../errors/database.error'
 import type { TenancyContext } from './tenancy.service'
@@ -305,6 +306,12 @@ export class CustomerService {
 
   // ─── Update ──────────────────────────────────────────────
   async update(id: string, ctx: TenancyContext, data: UpdateCustomer): Promise<Customer> {
+    // Workspace alone is not enough on a row addressed by id. Before this, any
+    // member of the workspace could mutate any row in it by knowing an id —
+    // including one raised by a colleague in a branch they do not hold.
+    // `assertMay` reads the row's own branch and creator and refuses on either.
+    await scopes.assertMay(ctx, 'customer', id, 'customer.write')
+
     const { workspaceId } = ctx
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (data.fullName !== undefined) updates.full_name = data.fullName
@@ -334,6 +341,12 @@ export class CustomerService {
 
   // ─── Delete ──────────────────────────────────────────────
   async delete(id: string, ctx: TenancyContext): Promise<void> {
+    // Workspace alone is not enough on a row addressed by id. Before this, any
+    // member of the workspace could mutate any row in it by knowing an id —
+    // including one raised by a colleague in a branch they do not hold.
+    // `assertMay` reads the row's own branch and creator and refuses on either.
+    await scopes.assertMay(ctx, 'customer', id, 'customer.write')
+
     const { workspaceId } = ctx
 
     // ✅ count: estimated
