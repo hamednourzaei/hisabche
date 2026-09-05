@@ -21,6 +21,22 @@ import type { TenancyContext } from './tenancy.service'
 import { memoryCache } from '../utils/pagination'
 import { logBusinessEvent } from './event-log.service'
 
+/**
+ * G2 — does this error mean `employee_branch_assignments` has not been created
+ * yet, rather than that the write was wrong?
+ *
+ *   42P01    — undefined_table (Postgres)
+ *   PGRST205 — PostgREST could not find the table in its schema cache
+ *
+ * Both are what a database that has not run phase-d-01 returns for a table the
+ * code already knows about.
+ */
+function isMissingAssignmentsTable(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false
+  if (error.code === '42P01' || error.code === 'PGRST205') return true
+  return /employee_branch_assignments/i.test(error.message ?? '')
+}
+
 // ✅ Column Selection Constants
 const DEPARTMENT_COLUMNS =
   'id, name, name_en, parent_id, manager_id, description, is_active, created_at'
@@ -260,6 +276,16 @@ export class HumanResourcesService {
 
     if (error) throw new DatabaseError('Failed to create employee', error)
 
+    // G2 — the branch, if one was chosen on the form.
+    //
+    // Written to `employee_branch_assignments`, NOT to a column on `employees`.
+    // A column would say "this person is at this branch, forever, with no
+    // record of when that started" — and would be overwritten on transfer, so
+    // last quarter's payroll could no longer say where they actually worked.
+    if (data.branchId) {
+      await this.assignPrimaryBranch(ctx, emp.id, data.branchId)
+    }
+
     await this.invalidateEmployeeCache(workspaceId)
 
     logBusinessEvent({
@@ -273,6 +299,72 @@ export class HumanResourcesService {
     }).catch((err) => console.error('[HumanResourcesService] logBusinessEvent failed:', err))
 
     return emp
+  }
+
+  /**
+   * G2 — post an employee to their home branch.
+   *
+   * Opens a PRIMARY assignment starting today. Any open primary the employee
+   * already has is closed first: `employee_branch_assignments_one_primary` is a
+   * partial unique index over open primaries, so a second one is not merely
+   * wrong, it is refused by the database.
+   *
+   * ⚠️ Fails LOUDLY if the assignments table is missing. The alternative —
+   * creating the employee and swallowing the branch — tells the user their
+   * choice was saved when it was discarded, which is the silent-failure shape
+   * the database skill forbids on any write that specifically needed a column.
+   */
+  private async assignPrimaryBranch(ctx: TenancyContext, employeeId: string, branchId: string) {
+    const { workspaceId, userId } = ctx
+
+    // The branch must be ours. `branch_id` has a foreign key to `branches`,
+    // which proves the branch exists — not that it belongs to this business
+    // (lesson 17).
+    const { data: branch, error: branchError } = await supabase
+      .from('branches')
+      .select('id')
+      .eq('id', branchId)
+      .eq('workspace_id', workspaceId)
+      .is('deleted_at', null)
+      .maybeSingle()
+
+    if (branchError) throw new DatabaseError('Failed to verify branch', branchError)
+    if (!branch) throw new NotFoundError('Branch')
+
+    const today = new Date().toISOString().slice(0, 10)
+
+    const { error: closeError } = await supabase
+      .from('employee_branch_assignments')
+      .update({ ends_at: today })
+      .eq('workspace_id', workspaceId)
+      .eq('employee_id', employeeId)
+      .eq('is_primary', true)
+      .is('ends_at', null)
+
+    if (closeError && !isMissingAssignmentsTable(closeError)) {
+      throw new DatabaseError('Failed to close the previous branch assignment', closeError)
+    }
+
+    const { error: insertError } = await supabase.from('employee_branch_assignments').insert({
+      workspace_id: workspaceId,
+      employee_id: employeeId,
+      branch_id: branchId,
+      is_primary: true,
+      starts_at: today,
+      created_by: userId,
+    })
+
+    if (insertError) {
+      if (isMissingAssignmentsTable(insertError)) {
+        throw new DatabaseError(
+          'EMPLOYEE_BRANCH_NOT_MIGRATED: employee_branch_assignments does not exist. Run docs/phase-d-01-employee-branch-assignments-migration.sql.',
+          insertError,
+        )
+      }
+      throw new DatabaseError('Failed to assign the employee to a branch', insertError)
+    }
+
+    await memoryCache.invalidate(`branch:${workspaceId}`)
   }
 
   async updateEmployee(ctx: TenancyContext, id: string, data: UpdateEmployee) {

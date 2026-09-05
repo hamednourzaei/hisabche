@@ -11,7 +11,7 @@
 | ---------------------------------------------------- | ------------------------------------------------------------------------------------ |
 | **به باگ خوردم / چطور وریفای کنم؟**                  | [DEBUG-PLAYBOOK.md](DEBUG-PLAYBOOK.md) — اول این                                     |
 | «الان چه چیزی کار می‌کند و چه چیزی نه؟»              | [STATE.md](STATE.md)                                                                 |
-| «چرا این‌طوری نوشته شده؟» / «قبلاً چه اشتباهی شد؟»   | [lessons-learned.md](lessons-learned.md) — ۵۵ درس                                    |
+| «چرا این‌طوری نوشته شده؟» / «قبلاً چه اشتباهی شد؟»   | [lessons-learned.md](lessons-learned.md) — ۵۸ درس                                    |
 | «کد جدید را کجا بگذارم؟»                             | [architecture/core-modules.md](architecture/core-modules.md)                         |
 | «چه روتی هست؟ کدام hook به کدام endpoint می‌زند؟»    | [architecture/api-surface.md](architecture/api-surface.md)                           |
 | «جدول‌ها چه شکلی‌اند؟ RLS چطور کار می‌کند؟»          | [architecture/data-model.md](architecture/data-model.md)                             |

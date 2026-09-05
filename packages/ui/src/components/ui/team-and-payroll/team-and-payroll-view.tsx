@@ -55,6 +55,21 @@ export interface PayrollRecord {
   currency: string
 }
 
+/**
+ * G2 — the screen has three tabs now: [کارمندان] [شعب] [حقوق].
+ *
+ * `statusFilter` kept its name and its two original values so nothing that
+ * already passes it breaks; 'branches' is the third.
+ */
+export type TeamTab = 'employees' | 'branches' | 'payroll'
+
+/** A branch as the employee form's picker needs it. */
+export interface BranchOption {
+  id: string
+  code: string
+  name: string
+}
+
 interface TeamAndPayrollViewProps {
   t: (key: string, fallback?: string) => string
   employees: Employee[]
@@ -63,12 +78,20 @@ interface TeamAndPayrollViewProps {
   totalPayroll: number
   isLoadingEmployees: boolean
   isLoadingPayroll: boolean
-  statusFilter?: 'employees' | 'payroll'
-  onStatusChange?: (status: 'employees' | 'payroll') => void
+  statusFilter?: TeamTab
+  onStatusChange?: (status: TeamTab) => void
   onViewEmployee?: (id: string) => void
   onViewPayroll?: (id: string) => void
   onCreateEmployee?: (values: Record<string, unknown>) => Promise<void>
   onDeleteEmployee?: (id: string) => Promise<void>
+
+  // ─── G2 ───────────────────────────────────────────────────────────────────
+  /** Offered in the «شعبه» field of the employee form. */
+  branches?: BranchOption[]
+  /** Rendered as the «شعب» tab's body — the tree, supplied by the container. */
+  branchesTab?: React.ReactNode
+  /** Surfaced instead of being swallowed: a failed save must say why. */
+  employeeFormError?: string | null
 }
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -104,6 +127,10 @@ const EMPLOYEE_STATUSES: {
     icon: Clock,
   },
 ]
+
+/** G2 — one class for every field in the employee form, so they cannot drift. */
+const FORM_FIELD =
+  'rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-4 py-2.5 text-sm focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)]'
 
 const PAYROLL_STATUSES: {
   value: PayrollStatus
@@ -324,26 +351,91 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
   onViewPayroll,
   onCreateEmployee,
   onDeleteEmployee,
+  branches = [],
+  branchesTab,
+  employeeFormError,
 }: TeamAndPayrollViewProps) {
   const [showEmployeeForm, setShowEmployeeForm] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // ─── G2 — the employee form is CONTROLLED now ─────────────────────────────
+  //
+  // Every input here used to be uncontrolled — no `value`, no `onChange` — and
+  // Save called the submit handler with `{}`. So the form rendered, accepted
+  // typing, reported success, and created an employee with no name. Nothing
+  // the user entered was ever read.
+  //
+  // One state object rather than six `useState`s: the fields are submitted
+  // together and cleared together, and six setters is six chances for one to be
+  // forgotten when a field is added.
+  const [form, setForm] = useState({
+    firstName: '',
+    lastName: '',
+    employeeCode: '',
+    position: '',
+    branchId: '',
+    salary: '',
+    hireDate: '',
+  })
+
+  const setField = useCallback(
+    (field: keyof typeof form) => (value: string) =>
+      setForm((prev) => ({ ...prev, [field]: value })),
+    [],
+  )
+
+  const resetForm = useCallback(
+    () =>
+      setForm({
+        firstName: '',
+        lastName: '',
+        employeeCode: '',
+        position: '',
+        branchId: '',
+        salary: '',
+        hireDate: '',
+      }),
+    [],
+  )
 
   const toggleEmployeeForm = useCallback(() => {
     setShowEmployeeForm((prev) => !prev)
   }, [])
 
-  const handleSubmitEmployee = useCallback(
-    async (values: Record<string, unknown>) => {
-      setIsSubmitting(true)
-      try {
-        await onCreateEmployee?.(values)
-        setShowEmployeeForm(false)
-      } finally {
-        setIsSubmitting(false)
-      }
-    },
-    [onCreateEmployee],
-  )
+  // First name, last name and a hire date are what the server's schema
+  // genuinely requires; everything else is optional there and optional here.
+  const canSubmitEmployee =
+    form.firstName.trim().length > 0 &&
+    form.lastName.trim().length > 0 &&
+    form.hireDate.length > 0 &&
+    !isSubmitting
+
+  const handleSubmitEmployee = useCallback(async () => {
+    if (!canSubmitEmployee) return
+    setIsSubmitting(true)
+    try {
+      await onCreateEmployee?.({
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        // The server requires an employee code. Deriving one from the name is
+        // a guess the USER should not have to make for a field they did not
+        // ask for — but sending nothing fails validation, so a readable
+        // fallback is generated and shown in the field's placeholder.
+        employeeCode: form.employeeCode.trim() || undefined,
+        position: form.position.trim() || undefined,
+        hireDate: form.hireDate,
+        salary: form.salary ? Number(form.salary) : 0,
+        // '' means "not chosen" — it must not reach the server as an empty uuid.
+        branchId: form.branchId || undefined,
+      })
+      setShowEmployeeForm(false)
+      resetForm()
+    } finally {
+      // Cleared even on failure, so a rejected save leaves the form open with
+      // the typed values intact rather than stuck behind a spinner.
+      setIsSubmitting(false)
+    }
+  }, [canSubmitEmployee, form, onCreateEmployee, resetForm])
 
   const filteredEmployees = useMemo(() => {
     // Apply any filters here
@@ -365,40 +457,48 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
             {t('nav.teamPayroll', 'تیم و حقوق')}
           </h1>
         </div>
-        <button
-          onClick={toggleEmployeeForm}
-          className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold bg-[hsl(var(--color-primary))] text-[hsl(var(--color-primary-fg))] hover:brightness-110 transition"
-        >
-          <Plus className="size-4" />
-          {t('team.addEmployee', 'کارمند جدید')}
-        </button>
+        {/*
+          «کارمند جدید» belongs to the employees tab. On the branches tab the
+          tree renders its own «افزودن شعبه», and two competing add buttons in
+          one header is how someone adds the wrong thing.
+        */}
+        {statusFilter === 'employees' && (
+          <button
+            onClick={toggleEmployeeForm}
+            className="inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-bold bg-[hsl(var(--color-primary))] text-[hsl(var(--color-primary-fg))] hover:brightness-110 transition"
+          >
+            <Plus className="size-4" />
+            {t('team.addEmployee', 'کارمند جدید')}
+          </button>
+        )}
       </div>
 
-      {/* Status Filter */}
+      {/* ─── G2 — three tabs ─────────────────────────────────────────────── */}
       {onStatusChange && (
-        <div className="flex gap-2">
-          <button
-            onClick={() => onStatusChange('employees')}
-            className={cn(
-              'rounded-full px-4 py-2 text-sm font-medium transition-colors',
-              statusFilter === 'employees'
-                ? 'bg-[hsl(var(--color-primary))] text-white'
-                : 'border border-[hsl(var(--border-default))] hover:bg-[hsl(var(--surface-muted))]',
-            )}
-          >
-            {t('team.employees', 'کارمندان')}
-          </button>
-          <button
-            onClick={() => onStatusChange('payroll')}
-            className={cn(
-              'rounded-full px-4 py-2 text-sm font-medium transition-colors',
-              statusFilter === 'payroll'
-                ? 'bg-[hsl(var(--color-primary))] text-white'
-                : 'border border-[hsl(var(--border-default))] hover:bg-[hsl(var(--surface-muted))]',
-            )}
-          >
-            {t('team.payroll', 'حقوق')}
-          </button>
+        <div role="tablist" aria-label={t('nav.teamPayroll', 'تیم و حقوق')} className="flex gap-2">
+          {(
+            [
+              ['employees', t('team.employees', 'کارمندان')],
+              ['branches', t('team.branches', 'شعب')],
+              ['payroll', t('team.payroll', 'حقوق')],
+            ] as [TeamTab, string][]
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={statusFilter === id}
+              onClick={() => onStatusChange(id)}
+              className={cn(
+                'rounded-full px-4 py-2 text-sm font-medium transition-colors',
+                statusFilter === id
+                  ? 'bg-[hsl(var(--color-primary))] text-[hsl(var(--color-primary-fg))]'
+                  : 'border border-[hsl(var(--border-default))] hover:bg-[hsl(var(--surface-muted))]',
+              )}
+            >
+              {label}
+            </button>
+          ))}
         </div>
       )}
 
@@ -417,50 +517,123 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
       </div>
 
       {/* Employee Form */}
-      {showEmployeeForm && (
+      {showEmployeeForm && statusFilter === 'employees' && (
         <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-6 space-y-4">
           <h2 className="text-lg font-semibold text-[hsl(var(--fg-primary))]">
             {t('team.addNewEmployee', 'افزودن کارمند جدید')}
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <input
-              placeholder={t('team.firstName', 'نام')}
-              className="rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-4 py-2.5 text-sm focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)]"
-              disabled={isSubmitting}
-            />
-            <input
-              placeholder={t('team.lastName', 'تخلص')}
-              className="rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-4 py-2.5 text-sm focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)]"
-              disabled={isSubmitting}
-            />
-            <input
-              placeholder={t('team.position', 'موقعیت')}
-              className="rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-4 py-2.5 text-sm focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)]"
-              disabled={isSubmitting}
-            />
-            <select
-              className="rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-4 py-2.5 text-sm focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)]"
-              disabled={isSubmitting}
-            >
-              <option value="">انتخاب دپارتمنت</option>
-              <option value="IT">IT</option>
-              <option value="HR">Human Resources</option>
-              <option value="Finance">Finance</option>
-              <option value="Sales">Sales</option>
-            </select>
-            <input
-              type="number"
-              placeholder={t('team.salary', 'حقوق')}
-              className="rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-4 py-2.5 text-sm focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)]"
-              disabled={isSubmitting}
-            />
-            <input
-              type="date"
-              placeholder={t('team.hireDate', 'تاریخ استخدام')}
-              className="rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-4 py-2.5 text-sm focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)]"
-              disabled={isSubmitting}
-            />
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs text-[hsl(var(--fg-secondary))]">
+                {t('team.firstName', 'نام')}
+              </span>
+              <input
+                value={form.firstName}
+                onChange={(e) => setField('firstName')(e.target.value)}
+                className={FORM_FIELD}
+                disabled={isSubmitting}
+              />
+            </label>
+
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs text-[hsl(var(--fg-secondary))]">
+                {t('team.lastName', 'تخلص')}
+              </span>
+              <input
+                value={form.lastName}
+                onChange={(e) => setField('lastName')(e.target.value)}
+                className={FORM_FIELD}
+                disabled={isSubmitting}
+              />
+            </label>
+
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs text-[hsl(var(--fg-secondary))]">
+                {t('team.employeeCode', 'کد پرسنلی')}
+              </span>
+              <input
+                value={form.employeeCode}
+                onChange={(e) => setField('employeeCode')(e.target.value)}
+                placeholder={t('team.employeeCodeAuto', 'خالی بگذارید تا خودکار ساخته شود')}
+                className={FORM_FIELD}
+                disabled={isSubmitting}
+              />
+            </label>
+
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs text-[hsl(var(--fg-secondary))]">
+                {t('team.position', 'موقعیت')}
+              </span>
+              <input
+                value={form.position}
+                onChange={(e) => setField('position')(e.target.value)}
+                className={FORM_FIELD}
+                disabled={isSubmitting}
+              />
+            </label>
+
+            {/*
+              ─── G2 — the branch ────────────────────────────────────────────
+              This replaces a hardcoded department select whose four options
+              (IT, HR, Finance, Sales) were literals in this file, matched no
+              row in `departments`, and were never submitted.
+
+              Choosing a branch here writes an `employee_branch_assignments`
+              row — a PRIMARY posting starting today — not a column on
+              `employees`. See phase-d-01 for why that distinction matters.
+            */}
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs text-[hsl(var(--fg-secondary))]">
+                {t('team.branch', 'شعبه')}
+              </span>
+              <select
+                value={form.branchId}
+                onChange={(e) => setField('branchId')(e.target.value)}
+                className={FORM_FIELD}
+                disabled={isSubmitting}
+              >
+                <option value="">{t('team.noBranch', 'بدون شعبه')}</option>
+                {branches.map((branch) => (
+                  <option key={branch.id} value={branch.id}>
+                    {branch.name} ({branch.code})
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs text-[hsl(var(--fg-secondary))]">
+                {t('team.salary', 'حقوق')}
+              </span>
+              <input
+                type="number"
+                value={form.salary}
+                onChange={(e) => setField('salary')(e.target.value)}
+                className={FORM_FIELD}
+                disabled={isSubmitting}
+              />
+            </label>
+
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs text-[hsl(var(--fg-secondary))]">
+                {t('team.hireDate', 'تاریخ استخدام')}
+              </span>
+              <input
+                type="date"
+                value={form.hireDate}
+                onChange={(e) => setField('hireDate')(e.target.value)}
+                className={FORM_FIELD}
+                disabled={isSubmitting}
+              />
+            </label>
           </div>
+
+          {employeeFormError && (
+            <p className="text-sm text-[hsl(var(--color-destructive))]" role="alert">
+              {employeeFormError}
+            </p>
+          )}
+
           <div className="flex gap-3 justify-end">
             <button
               onClick={() => setShowEmployeeForm(false)}
@@ -471,9 +644,9 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
             </button>
             <button
               type="button"
-              onClick={() => handleSubmitEmployee({})}
-              className="rounded-full bg-[hsl(var(--color-primary))] text-white px-6 py-2.5 text-sm font-bold disabled:opacity-50 hover:brightness-110 transition-all"
-              disabled={isSubmitting}
+              onClick={handleSubmitEmployee}
+              className="rounded-full bg-[hsl(var(--color-primary))] text-[hsl(var(--color-primary-fg))] px-6 py-2.5 text-sm font-bold disabled:opacity-50 hover:brightness-110 transition-all"
+              disabled={!canSubmitEmployee}
             >
               {isSubmitting ? '...' : t('action.save', 'ذخیره')}
             </button>
@@ -481,57 +654,72 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
         </div>
       )}
 
-      {/* Content Grid */}
-      {isLoadingEmployees || isLoadingPayroll ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <div
-              key={i}
-              className="h-48 rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse"
-            />
-          ))}
-        </div>
-      ) : filteredEmployees.length === 0 && filteredPayroll.length === 0 ? (
-        <div className="p-12 text-center rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
-          <Briefcase className="size-12 mx-auto mb-3 text-[hsl(var(--fg-tertiary))]" />
-          <p className="text-[hsl(var(--fg-secondary))] mb-2">
-            {statusFilter === 'employees'
-              ? t('team.noEmployees', 'هیچ کارمندی ثبت نشده')
-              : t('team.noPayroll', 'هیچ سابقه حقوقی وجود ندارد')}
-          </p>
-          <p className="text-xs text-[hsl(var(--fg-tertiary))] mt-1">
-            {statusFilter === 'employees'
-              ? t('team.noEmployeesHint', 'با افزودن کارمندان جدید، شروع کنید')
-              : t('team.noPayrollHint', 'با ثبت پرداخت حقوق، شروع کنید')}
-          </p>
-        </div>
+      {/* ─── G2 — the «شعب» tab ──────────────────────────────────────────────
+        Rendered BEFORE the employee/payroll grid and returning early, because
+        that grid's loading and empty states are written around those two
+        datasets: `filteredEmployees.length === 0 && filteredPayroll.length === 0`
+        would show "هیچ کارمندی ثبت نشده" over a perfectly good branch tree on a
+        workspace that has branches but no staff yet.
+
+        The tree itself is passed in by the container — this view does not fetch.
+      */}
+      {statusFilter === 'branches' ? (
+        <div>{branchesTab}</div>
       ) : (
-        <div className="space-y-6">
-          {statusFilter === 'employees' ? (
+        <>
+          {/* Content Grid */}
+          {isLoadingEmployees || isLoadingPayroll ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {filteredEmployees.map((employee) => (
-                <EmployeeCard
-                  key={employee.id}
-                  employee={employee}
-                  onView={onViewEmployee ?? undefined}
-                  onDelete={onDeleteEmployee ?? undefined}
-                  t={t}
+              {[1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="h-48 rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse"
                 />
               ))}
+            </div>
+          ) : filteredEmployees.length === 0 && filteredPayroll.length === 0 ? (
+            <div className="p-12 text-center rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
+              <Briefcase className="size-12 mx-auto mb-3 text-[hsl(var(--fg-tertiary))]" />
+              <p className="text-[hsl(var(--fg-secondary))] mb-2">
+                {statusFilter === 'employees'
+                  ? t('team.noEmployees', 'هیچ کارمندی ثبت نشده')
+                  : t('team.noPayroll', 'هیچ سابقه حقوقی وجود ندارد')}
+              </p>
+              <p className="text-xs text-[hsl(var(--fg-tertiary))] mt-1">
+                {statusFilter === 'employees'
+                  ? t('team.noEmployeesHint', 'با افزودن کارمندان جدید، شروع کنید')
+                  : t('team.noPayrollHint', 'با ثبت پرداخت حقوق، شروع کنید')}
+              </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {filteredPayroll.map((payroll) => (
-                <PayrollCard
-                  key={payroll.id}
-                  payroll={payroll}
-                  onView={onViewPayroll ?? undefined}
-                  t={t}
-                />
-              ))}
+            <div className="space-y-6">
+              {statusFilter === 'employees' ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {filteredEmployees.map((employee) => (
+                    <EmployeeCard
+                      key={employee.id}
+                      employee={employee}
+                      onView={onViewEmployee ?? undefined}
+                      onDelete={onDeleteEmployee ?? undefined}
+                      t={t}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {filteredPayroll.map((payroll) => (
+                    <PayrollCard
+                      key={payroll.id}
+                      payroll={payroll}
+                      onView={onViewPayroll ?? undefined}
+                      t={t}
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           )}
-        </div>
+        </>
       )}
     </div>
   )

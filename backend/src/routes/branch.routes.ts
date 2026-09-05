@@ -28,6 +28,8 @@ const createSchema = z.object({
   code: z.string().min(1).max(20),
   name: z.string().min(1).max(120),
   parentBranchId: z.string().uuid().optional(),
+  /** G2 — the employee who runs it. Optional: a branch starts with nobody named. */
+  managerEmployeeId: z.string().uuid().nullable().optional(),
 })
 
 const updateSchema = z.object({
@@ -35,6 +37,8 @@ const updateSchema = z.object({
   name: z.string().min(1).max(120).optional(),
   parentBranchId: z.string().uuid().nullable().optional(),
   isActive: z.boolean().optional(),
+  /** G2. null clears the manager; omitting it leaves the current one. */
+  managerEmployeeId: z.string().uuid().nullable().optional(),
 })
 
 const assignSchema = z.object({
@@ -83,6 +87,35 @@ export async function branchRoutes(fastify: FastifyInstance) {
         return reply.send({ branches: visible, scope })
       } catch (err) {
         return fail(reply, err, 'Failed to fetch branches')
+      }
+    },
+  )
+
+  // ─── GET /tree ─────────────────────────────────────────
+  //
+  // G2 — the branch tree with its people, for the «شعب» tab.
+  //
+  // ⚠️ Registered BEFORE any `/:id` route in this file, or Fastify would be
+  // free to read "tree" as a branch id — the same ordering trap the ledger
+  // route documents in transaction.routes.ts.
+  //
+  // Same capability as GET /: reading the org chart is reading the org chart.
+  // Editing it needs `workspace.manage`, which the POST below requires.
+  fastify.get(
+    '/tree',
+    {
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        requireCapability('report.operational.read'),
+      ],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        return reply.send({ tree: await branchService.tree(request.tenancy) })
+      } catch (err) {
+        return fail(reply, err, 'Failed to build the branch tree')
       }
     },
   )

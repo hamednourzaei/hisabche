@@ -14,12 +14,18 @@ export {
   branchAndDescendants,
   branchScopeFor,
   mayUseBranch,
+  // G2: nesting a flat branch list is pure, so the rule is tested without a
+  // database — including the case that is easy to get wrong (an orphan whose
+  // parent is out of scope must still appear).
+  nestBranches,
   reportingBranchIds,
   resolveActiveBranch,
   validateBranchPlacement,
   type Branch,
+  type BranchEmployee,
   type BranchRuleCode,
   type BranchScope,
+  type BranchTreeNode,
 } from './branch.domain'
 
 import { BranchService } from './branch.service'

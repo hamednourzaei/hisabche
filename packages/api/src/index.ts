@@ -69,6 +69,20 @@ export {
   transactionKeys,
 } from './hooks/transactions'
 
+// ─── Branches ─────────────────────────────────────────────
+// G2: /api/branches existed since the branch migration with no client hook,
+// so the product could not show or pick a branch anywhere.
+export {
+  useBranches,
+  useBranchTree,
+  useCreateBranch,
+  branchKeys,
+  type Branch,
+  type BranchEmployee,
+  type BranchTreeNode,
+  type CreateBranchInput,
+} from './hooks/branches'
+
 // ─── Payments (AR / AP) ───────────────────────────────────
 // The one client-side path for money moving between the business and a party.
 // `useCreateTransaction` is NOT that path — see hooks/payments.ts.

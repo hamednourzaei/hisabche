@@ -14,8 +14,10 @@ import {
   mayUseBranch,
   reportingBranchIds,
   resolveActiveBranch,
+  nestBranches,
   validateBranchPlacement,
   type Branch,
+  type BranchTreeNode,
 } from '../services/branch'
 
 const branch = (
@@ -30,6 +32,9 @@ const branch = (
   name: code,
   parentBranchId,
   isActive,
+  // G2: branches created in tests have no manager — the field is optional in
+  // the product and must be explicit in the type.
+  managerEmployeeId: null,
 })
 
 const kabul = branch('b-kabul', 'KBL')
@@ -201,5 +206,85 @@ describe('branch placement', () => {
     expect(
       validateBranchPlacement({ id: '', code: 'MZR', parentBranchId: 'b-kabul' }, all),
     ).toEqual([])
+  })
+})
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   G2 — nesting the branch tree
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+describe('nestBranches', () => {
+  const node = (
+    id: string,
+    code: string,
+    parentBranchId: string | null = null,
+  ): BranchTreeNode => ({
+    id,
+    workspaceId: 'ws-1',
+    code,
+    name: code,
+    parentBranchId,
+    isActive: true,
+    managerEmployeeId: null,
+    managerName: null,
+    headCount: 0,
+    employees: [],
+    children: [],
+  })
+
+  it('nests children under their parent', () => {
+    const tree = nestBranches([
+      node('b-kabul', 'KBL'),
+      node('b-shop-1', 'KBL-1', 'b-kabul'),
+      node('b-shop-2', 'KBL-2', 'b-kabul'),
+    ])
+
+    expect(tree).toHaveLength(1)
+    expect(tree[0]?.id).toBe('b-kabul')
+    expect(tree[0]?.children.map((c) => c.id)).toEqual(['b-shop-1', 'b-shop-2'])
+  })
+
+  it('keeps an orphan at the top level rather than dropping it', () => {
+    // The parent is soft-deleted, or outside this member's branch scope. The
+    // branch itself is still visible to them — and dropping it would hide
+    // every employee posted to it with no error anywhere.
+    const tree = nestBranches([node('b-orphan', 'ORP', 'b-gone')])
+
+    expect(tree).toHaveLength(1)
+    expect(tree[0]?.id).toBe('b-orphan')
+  })
+
+  it('orders siblings by code at every depth', () => {
+    const tree = nestBranches([
+      node('b-root', 'AAA'),
+      node('b-z', 'ZZZ', 'b-root'),
+      node('b-m', 'MMM', 'b-root'),
+    ])
+
+    expect(tree[0]?.children.map((c) => c.code)).toEqual(['MMM', 'ZZZ'])
+  })
+
+  it('does not lose a branch to a cycle', () => {
+    // Two branches naming each other as parent. `validateBranchPlacement`
+    // refuses to create this, but a tree read must not hang or silently drop
+    // rows if one ever exists — neither becomes a root, and both stay reachable
+    // from the other.
+    const tree = nestBranches([node('b-a', 'AAA', 'b-b'), node('b-b', 'BBB', 'b-a')])
+
+    const reachable = new Set<string>()
+    const walk = (nodes: BranchTreeNode[], depth = 0) => {
+      if (depth > 5) return
+      for (const n of nodes) {
+        reachable.add(n.id)
+        walk(n.children, depth + 1)
+      }
+    }
+    walk(tree)
+
+    // Both survive: a cycle makes every node in it a root rather than making
+    // all of them disappear.
+    expect(tree.length).toBeGreaterThan(0)
+    expect(reachable.has('b-a')).toBe(true)
+    expect(reachable.has('b-b')).toBe(true)
   })
 })

@@ -76,6 +76,10 @@ export { EmployeeDetailContainer } from './components/ui/human-resources/contain
 
 // ---------- Team & Payroll ----------
 export { TeamAndPayrollContainer } from './components/ui/team-and-payroll/containers/team-and-payroll-container'
+// G2: the branch tree and its form — exported so a second caller (a branch
+// picker elsewhere, a department tree) can reuse them.
+export { BranchTreeView } from './components/ui/team-and-payroll/branch-tree-view'
+export { BranchForm } from './components/ui/team-and-payroll/branch-form'
 
 // ---------- Sales Follow-up ----------
 export { SalesFollowupContainer } from './components/ui/sales-followup/containers/sales-followup-container'

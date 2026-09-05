@@ -9,7 +9,7 @@ import {
   optionalStringSchema,
   positiveNumberSchema,
   isoDateSchema,
-  nonNegativeNumberSchema
+  nonNegativeNumberSchema,
 } from './common.schema'
 
 // ============================================
@@ -70,7 +70,9 @@ export const employeeSchema = z.object({
   // Employment
   departmentId: uuidSchema.nullable().optional(),
   position: optionalStringSchema,
-  employmentType: z.enum(['full_time', 'part_time', 'contractor', 'intern', 'consultant']).default('full_time'),
+  employmentType: z
+    .enum(['full_time', 'part_time', 'contractor', 'intern', 'consultant'])
+    .default('full_time'),
   hireDate: isoDateSchema,
   terminationDate: isoDateSchema.optional().nullable(),
   status: z.enum(['active', 'inactive', 'terminated', 'suspended', 'on_leave']).default('active'),
@@ -80,6 +82,20 @@ export const employeeSchema = z.object({
   salaryCurrency: z.enum(['AFN', 'USD', 'PKR', 'IRR']).default('AFN'),
   bankAccount: optionalStringSchema,
   bankName: optionalStringSchema,
+
+  /**
+   * G2 — the branch this person works at.
+   *
+   * ⚠️ NOT a column on `employees`. It is written to
+   * `employee_branch_assignments` as the primary posting, because an employee
+   * has a home branch AND can be temporarily posted elsewhere, and an
+   * assignment has a start date that a column would silently overwrite on
+   * transfer. See docs/phase-d-01-employee-branch-assignments-migration.sql.
+   *
+   * Optional: an unassigned employee is "not yet assigned", and refusing to
+   * create one would block hiring before the branch exists.
+   */
+  branchId: uuidSchema.nullable().optional(),
 
   // System
   userId: uuidSchema.optional().nullable(),
@@ -114,7 +130,9 @@ export const attendanceSchema = z.object({
   date: isoDateSchema,
   checkIn: z.string().optional(),
   checkOut: z.string().optional(),
-  status: z.enum(['present', 'absent', 'late', 'half_day', 'holiday', 'weekend']).default('present'),
+  status: z
+    .enum(['present', 'absent', 'late', 'half_day', 'holiday', 'weekend'])
+    .default('present'),
   notes: optionalStringSchema,
   createdAt: isoDateSchema.optional(),
   updatedAt: isoDateSchema.optional(),

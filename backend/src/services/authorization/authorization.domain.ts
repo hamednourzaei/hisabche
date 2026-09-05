@@ -298,3 +298,136 @@ export function rejectedWriteFields(
   if (denied.size === 0) return []
   return Object.keys(payload).filter((key) => denied.has(key))
 }
+
+// ─── Modules — the Permission Matrix's rows (G3) ────────────────────────────
+//
+// A capability like `ledger.lock_period` is the right unit for a route guard
+// and the wrong unit for a screen: nobody administers a business by ticking
+// twenty-four boxes. The matrix groups them into eight MODULES, each with an
+// access LADDER — none → read → write → full — and each rung naming the
+// capabilities it adds to the rungs below it.
+//
+// ⚠️ THE LADDER IS CUMULATIVE. `write` means read's capabilities PLUS write's;
+// `full` means all three rungs. `capabilitiesForLevel` is the one place that
+// expands it, so a screen cannot disagree with a guard about what "write"
+// means.
+//
+// ⚠️ THE MODULES ARE DISJOINT. Every capability appears in exactly one module,
+// checked by `authorization-rules.test.ts`. A capability in two modules would
+// let one module's cell silently undo another's.
+//
+// Two groupings are deliberate rather than obvious:
+//
+//   `costing` is its own module holding only `inventory.cost.read`. It could
+//   sit under inventory as a read, but the cost of stock IS the shop's margin
+//   — a seller reads inventory all day and has no reason to know what it was
+//   bought for. Burying it as a rung would hand it out with ordinary stock
+//   access.
+//
+//   `products` is folded INTO inventory rather than standing alone, matching
+//   G1's decision that the catalogue is a view of the inventory domain rather
+//   than a destination of its own.
+
+export type AccessLevel = 'none' | 'read' | 'write' | 'full'
+
+export const ACCESS_LEVELS: readonly AccessLevel[] = ['none', 'read', 'write', 'full'] as const
+
+export interface ModuleSpec {
+  key: string
+  /** Persian label. The UI may translate by key; this is the fallback. */
+  label: string
+  read: Capability[]
+  write: Capability[]
+  full: Capability[]
+}
+
+export const PERMISSION_MODULES: readonly ModuleSpec[] = [
+  {
+    key: 'invoices',
+    label: 'فاکتورها',
+    read: ['invoice.read'],
+    write: ['invoice.create', 'invoice.update'],
+    full: ['invoice.delete'],
+  },
+  {
+    key: 'payments',
+    label: 'پرداخت‌ها',
+    read: ['payment.read'],
+    write: ['payment.record'],
+    full: ['payment.cancel'],
+  },
+  {
+    key: 'accounting',
+    label: 'حسابداری',
+    read: ['ledger.read'],
+    write: ['ledger.post', 'account.manage'],
+    full: ['ledger.reverse', 'ledger.lock_period'],
+  },
+  {
+    key: 'inventory',
+    label: 'انبار و کالا',
+    read: ['inventory.read', 'product.read'],
+    write: ['product.write'],
+    full: ['inventory.configure'],
+  },
+  {
+    key: 'costing',
+    label: 'بهای تمام‌شده',
+    read: ['inventory.cost.read'],
+    write: [],
+    full: [],
+  },
+  {
+    key: 'parties',
+    label: 'مشتریان و تأمین‌کنندگان',
+    read: ['customer.read'],
+    write: ['customer.write'],
+    full: [],
+  },
+  {
+    key: 'reports',
+    label: 'گزارش‌ها',
+    read: ['report.operational.read'],
+    write: [],
+    full: ['report.financial.read'],
+  },
+  {
+    key: 'workspace',
+    label: 'کسب‌وکار و اعضا',
+    read: [],
+    write: ['data.import'],
+    full: ['member.manage', 'workspace.manage'],
+  },
+] as const
+
+/** Every capability a module grants at this level, cumulatively. */
+export function capabilitiesForLevel(module: ModuleSpec, level: AccessLevel): Capability[] {
+  if (level === 'none') return []
+  if (level === 'read') return [...module.read]
+  if (level === 'write') return [...module.read, ...module.write]
+  return [...module.read, ...module.write, ...module.full]
+}
+
+/**
+ * The highest rung this capability set fully satisfies.
+ *
+ * A set that holds SOME of a rung's capabilities does not reach it — reporting
+ * 'write' for a role that can create invoices but not update them would be a
+ * screen that lies about what someone can do. Rungs with no capabilities are
+ * skipped rather than counting as satisfied.
+ */
+export function levelOfCapabilities(module: ModuleSpec, held: Set<string>): AccessLevel {
+  const satisfies = (codes: Capability[]) => codes.length > 0 && codes.every((c) => held.has(c))
+
+  if (
+    module.full.length > 0 &&
+    satisfies(module.full) &&
+    satisfies([...module.read, ...module.write].filter(Boolean) as Capability[])
+  ) {
+    return 'full'
+  }
+  if (satisfies(module.write) && (module.read.length === 0 || satisfies(module.read)))
+    return 'write'
+  if (satisfies(module.read)) return 'read'
+  return 'none'
+}

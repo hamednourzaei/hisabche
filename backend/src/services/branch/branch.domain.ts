@@ -37,6 +37,99 @@ export interface Branch {
   name: string
   parentBranchId: string | null
   isActive: boolean
+  /**
+   * G2 — the employee who runs this branch. NULL is normal and means nobody is
+   * named yet.
+   *
+   * An EMPLOYEE, not a user: most branch managers have no login. `member_branches`
+   * stays what it was — which branches a signed-in user may SEE, which is
+   * authorization, not the org chart.
+   */
+  managerEmployeeId: string | null
+}
+
+/**
+ * G2 — one branch as the «شعب» tab draws it: the branch, who runs it, and how
+ * many people call it home.
+ */
+export interface BranchTreeNode extends Branch {
+  managerName: string | null
+  /** People whose PRIMARY posting is this branch. A temporary posting is not counted twice. */
+  headCount: number
+  children: BranchTreeNode[]
+  employees: BranchEmployee[]
+}
+
+export interface BranchEmployee {
+  id: string
+  employeeCode: string | null
+  firstName: string
+  lastName: string
+  position: string | null
+  isPrimary: boolean
+}
+
+/**
+ * Nest a flat branch list by `parentBranchId`.
+ *
+ * Pure, so the nesting rule is testable without a database — and it has one
+ * case that is easy to get wrong: a branch whose parent is not in the list
+ * (soft-deleted, or outside this member's scope) must still appear, at the top
+ * level. Dropping it would hide every employee under it with no error.
+ */
+export function nestBranches(nodes: BranchTreeNode[]): BranchTreeNode[] {
+  const byId = new Map(nodes.map((n) => [n.id, { ...n, children: [] as BranchTreeNode[] }]))
+
+  /**
+   * Does walking up from this node reach a node with no parent in the set?
+   *
+   * A cycle — A's parent is B and B's parent is A — makes every node in it a
+   * CHILD, so none becomes a root and the whole cycle disappears from the tree
+   * with no error. `validateBranchPlacement` refuses to create one, but a tree
+   * read is not the place to assume that held: a branch that exists must be
+   * visible, and an invisible branch takes every employee posted to it with it.
+   *
+   * A node in a cycle is treated as a root, so it and its subtree stay
+   * reachable. The visit set also bounds the walk, so a cycle cannot hang.
+   */
+  const reachesRoot = (start: BranchTreeNode): boolean => {
+    const seen = new Set<string>([start.id])
+    let current = start
+
+    for (;;) {
+      const parentId = current.parentBranchId
+      if (!parentId) return true
+
+      const parent = byId.get(parentId)
+      // Parent outside the set — soft-deleted, or out of this member's scope.
+      // The node is an orphan, which is a root.
+      if (!parent) return true
+
+      if (seen.has(parent.id)) return false
+      seen.add(parent.id)
+      current = parent
+    }
+  }
+
+  const roots: BranchTreeNode[] = []
+
+  for (const node of byId.values()) {
+    const parent = node.parentBranchId ? byId.get(node.parentBranchId) : undefined
+    if (parent && reachesRoot(node)) parent.children.push(node)
+    else roots.push(node)
+  }
+
+  // `depth` bounds the recursion. Every node in a cycle is now a root, so the
+  // remaining child links cannot loop — but a sort that recurses without a
+  // bound is one schema change away from a stack overflow on a live read.
+  const sort = (list: BranchTreeNode[], depth = 0): BranchTreeNode[] =>
+    depth > 32
+      ? list
+      : list
+          .sort((a, b) => a.code.localeCompare(b.code))
+          .map((n) => ({ ...n, children: sort(n.children, depth + 1) }))
+
+  return sort(roots)
 }
 
 export type BranchScope =
