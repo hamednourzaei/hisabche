@@ -110,7 +110,8 @@ export function HumanResourcesContainer() {
           onSearch={setSearch}
           onCreate={handleCreate}
           onDelete={handleDelete}
-          onView={(id) => router.push(`/human-resources/${id}`)}
+          // G1: canonical people route — see notification-bell.
+          onView={(id) => router.push(`/team-and-payroll/${id}`)}
         />
       ) : (
         <WorkspaceContainer />

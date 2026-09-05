@@ -49,8 +49,16 @@ const NON_NAV_ROUTES = new Set([
   '/invoices/new/preview',
   '/purchasing',
   '/manufacturing',
+  // G1: /human-resources is now a 308 to /team-and-payroll and is no longer a
+  // push target anywhere. It stays listed because the ROUTE still resolves —
+  // this set is "reachable paths that are not menu entries", and a redirect
+  // that answers is still reachable.
   '/human-resources',
   '/team-and-payroll',
+  // G1: canonical destinations that are no longer their own menu entries.
+  // /customer-list and /product-list redirect into these two.
+  '/customers',
+  '/warehouse',
 ])
 
 const KNOWN_PATHS = new Set([...NAV_ITEMS.map((item) => item.path), ...NON_NAV_ROUTES])

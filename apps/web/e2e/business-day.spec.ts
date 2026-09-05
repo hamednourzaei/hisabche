@@ -106,7 +106,11 @@ test('a working day: the shell, the lists, the ledger and the data hub all rende
   }
 
   // ─── The list engine, on two different entities ──────────────────────────
-  for (const path of ['/customer-list', '/product-list']) {
+  // G1: the engine's two consumers moved. /customers renders the customer
+  // screen and /warehouse?tab=products the catalogue; the old paths still 308
+  // here, but the spec walks the canonical addresses so a broken redirect
+  // fails on its own rather than hiding behind this check.
+  for (const path of ['/customers', '/warehouse?tab=products']) {
     await open(page, path)
 
     // Search is the engine's most visible behaviour: typing must not throw and
@@ -147,7 +151,7 @@ test('no page in the shell logs a React element-type error', async ({ page }) =>
 
   await signIn(page)
 
-  for (const path of ['/dashboard', '/customer-list', '/data-and-sync', '/accounting-workspace']) {
+  for (const path of ['/dashboard', '/customers', '/data-and-sync', '/accounting-workspace']) {
     await open(page, path)
   }
 

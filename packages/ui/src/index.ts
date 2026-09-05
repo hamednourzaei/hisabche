@@ -190,6 +190,7 @@ export { CustomerDetailContainer } from './components/ui/customers/containers/cu
 // ---------- Containers ----------
 export { DashboardContainer } from './components/ui/dashboard/containers/dashboard-container'
 export { warehouseContainer } from './components/ui/warehouse/containers/Warehouse-container'
+export { WarehouseTabsContainer } from './components/ui/warehouse/containers/warehouse-tabs-container'
 export { ProductDetailContainer } from './components/ui/warehouse-detail/containers/warehouse-detail-container'
 export { InvoiceDetailContainer } from './components/ui/invoice-detail/containers/invoice-detail-container'
 export { PublicInvoiceContainer } from './components/ui/invoice-detail/containers/public-invoice-container'

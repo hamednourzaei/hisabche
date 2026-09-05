@@ -468,6 +468,13 @@ describe('a foreign id supplied as a relationship is refused', () => {
     const after = rowsOf('products').find((r) => r.id === B_PRODUCT)?.quantity
     expect(after).toBe(before)
     expect(after).toBe(100)
+
+    // PHASE C — and no movement was written against their product either.
+    //
+    // This is now the load-bearing half of the guard: the quantity is a
+    // projection of the movements, so a movement naming B_PRODUCT would move
+    // their stock no matter what this workspace's product rows say.
+    expect(rowsOf('stock_movements').filter((r) => r.product_id === B_PRODUCT)).toEqual([])
   })
 
   it('own-workspace relationships still work', async () => {
@@ -480,7 +487,22 @@ describe('a foreign id supplied as a relationship is refused', () => {
     } as never)
 
     expect(invoice).toBeTruthy()
-    expect(rowsOf('products').find((r) => r.id === 'product-of-a')?.quantity).toBe(8)
+
+    // PHASE C — the sale is asserted on the MOVEMENT, not on products.quantity.
+    //
+    // `products.quantity` is now a projection maintained by a database trigger
+    // (stock_movements_project), so it does not move in a test that has no
+    // database. Asserting it here would be asserting the fake's behaviour.
+    //
+    // The movement is what the service is now responsible for, and it is the
+    // stronger assertion anyway: a sale of 2 leaves a −2 row naming this
+    // workspace's product.
+    const movements = rowsOf('stock_movements').filter(
+      (r) => r.product_id === 'product-of-a' && r.workspace_id === WS_A,
+    )
+    expect(movements).toHaveLength(1)
+    expect(movements[0]?.quantity).toBe(-2)
+    expect(movements[0]?.type).toBe('sale')
   })
 })
 

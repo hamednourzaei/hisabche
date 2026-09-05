@@ -27,6 +27,7 @@ import { costing } from './inventory-costing'
 import { rules } from './rules'
 import { tax } from './tax'
 import { DatabaseError, NotFoundError } from '../errors/database.error'
+import { ValidationError } from '../errors/validation.error'
 import { memoryCache } from '../utils/pagination'
 import { ActivityService } from './activity.service'
 import type { TenancyContext } from './tenancy.service'
@@ -831,7 +832,26 @@ export class InvoiceService {
 
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (data.status !== undefined) updates.status = data.status
-    if (data.paidAmount !== undefined) updates.paid_amount = data.paidAmount
+
+    // ─── PHASE F — `paidAmount` is no longer accepted from a PATCH ───────────
+    //
+    // It used to be written straight through: `updates.paid_amount =
+    // data.paidAmount`. That let any client mark an invoice fully paid without
+    // a single payment existing — no `payments` row, no allocation, no journal
+    // entry, and a receivables report that disagreed with the cash.
+    //
+    // `paid_amount` is now a projection of `SUM(payment_allocations)`,
+    // recomputed by a database trigger. Accepting it here would put a second
+    // writer on a derived figure, which is the whole defect class Phases B–F
+    // exist to close.
+    //
+    // Refused loudly rather than ignored: silently dropping a field the caller
+    // sent tells them the money was recorded when it was discarded.
+    if (data.paidAmount !== undefined) {
+      throw new ValidationError(
+        'INVOICE_PAID_AMOUNT_IS_DERIVED: record a payment through POST /api/payments; paid_amount is computed from payment allocations and cannot be set directly.',
+      )
+    }
     if (data.total !== undefined) updates.total = data.total
     if (data.notes !== undefined) updates.notes = data.notes
     if (data.reference !== undefined) updates.reference = data.reference
@@ -1169,24 +1189,35 @@ export class InvoiceService {
       productMap.set(product.id, product.quantity)
     }
 
-    const updatePromises = items
-      .filter((item) => item.productId && productMap.has(item.productId))
-      .map(async (item) => {
-        const currentQuantity = Number(productMap.get(item.productId)) || 0
-        const delta = direction * (Number(item.quantity) || 0)
-        // Stock can never go negative; a purchase is always additive.
-        const newQuantity = Math.max(0, currentQuantity + delta)
-        await supabase
-          .from('products')
-          .update({ quantity: newQuantity })
-          .eq('id', item.productId)
-          .eq('workspace_id', workspaceId)
-      })
-
-    await Promise.all(updatePromises)
+    // ─── PHASE C — the movement IS the update ────────────────────────────────
+    //
+    // This used to read each product's quantity, add the delta in Node, and
+    // write the result back. Three defects in four lines, none of which raised
+    // an error:
+    //
+    //   * read-then-write (lesson 14). Two concurrent sales of the last unit
+    //     both read "1 available" and both wrote "0", so one unit was sold
+    //     twice and the shortfall never appeared anywhere.
+    //   * `Math.max(0, …)` clamped a shortfall to zero (lesson 15), destroying
+    //     the only evidence that stock had been oversold.
+    //   * it made `products.quantity` a fourth writer of a figure that
+    //     purchasing and manufacturing were separately overwriting from the
+    //     cost layers. Whichever ran last won.
+    //
+    // `stock_movements` is now the source of truth and the projection trigger
+    // maintains `products.quantity` and `warehouse_stock` from it — inside the
+    // database, so the increment is atomic and cannot be raced. Nothing here
+    // needs to know the current quantity at all.
+    //
+    // A shortfall is no longer clamped: if a sale takes stock below zero, the
+    // movement records that truthfully and the negative figure is visible.
+    // That is information, not corruption — and it is how someone finds out
+    // their count was wrong.
 
     const movements = items
-      .filter((item) => item.productId)
+      // Products outside this workspace never entered productMap, so naming
+      // another shop's product id moves nothing (lesson 17).
+      .filter((item) => item.productId && productMap.has(item.productId))
       .map((item) => ({
         product_id: item.productId,
         // The movement must name the transaction that caused it. Hardcoding
@@ -1199,7 +1230,15 @@ export class InvoiceService {
       }))
 
     if (movements.length > 0) {
-      await supabase.from('stock_movements').insert(movements)
+      const { error: movementError } = await supabase.from('stock_movements').insert(movements)
+
+      // This insert used to be fire-and-forget, which was survivable while
+      // `products.quantity` was written separately. It is not survivable now:
+      // the movement is the only thing that moves stock, so swallowing the
+      // error means the invoice exists and the goods never left (lesson 4).
+      if (movementError) {
+        throw new DatabaseError('Failed to record stock movements', movementError)
+      }
     }
   }
 

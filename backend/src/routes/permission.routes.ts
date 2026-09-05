@@ -13,6 +13,7 @@ import {
 } from '@hisabche/validation'
 import { PermissionService } from '../services/permission.service'
 import { authenticate } from '../middleware/auth.middleware'
+import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 
 const toJsonSchema = (schema: any) => {
@@ -282,9 +283,13 @@ export async function permissionRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/api/users/:userId/permissions',
     {
+      // ⚠️ PHASE E — requireWorkspaceContext added. A permission set is
+      // meaningless without naming the workspace it applies in, and the
+      // service now refuses to answer without one.
       preHandler: [
         authenticate,
-        cacheMiddleware({ scope: 'user', ttl: 60, keyPrefix: 'user-permissions' }),
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'workspace', ttl: 60, keyPrefix: 'user-permissions' }),
       ],
       schema: {
         params: toJsonSchema(z.object({ userId: z.string().uuid() })),
@@ -294,7 +299,10 @@ export async function permissionRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { userId } = request.params as { userId: string }
-        const permissions = await permissionService.getUserPermissions(userId)
+        const permissions = await permissionService.getUserPermissions(
+          request.tenancy.workspaceId,
+          userId,
+        )
         return reply.send(permissions)
       } catch (err) {
         fastify.log.error(err)
@@ -307,9 +315,12 @@ export async function permissionRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/permissions/check',
     {
+      // ⚠️ PHASE E — see below. The workspace is taken from the verified
+      // context, never from the body.
       preHandler: [
         authenticate,
-        cacheMiddleware({ scope: 'user', ttl: 30, keyPrefix: 'permission-check' }),
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'workspace', ttl: 30, keyPrefix: 'permission-check' }),
       ],
       schema: {
         body: toJsonSchema(
@@ -327,7 +338,13 @@ export async function permissionRoutes(fastify: FastifyInstance) {
           userId: string
           permissionCode: string
         }
-        const hasPermission = await permissionService.hasPermission(userId, permissionCode)
+        // The answer is scoped to the workspace this request established, not
+        // to whatever the caller's other memberships happen to grant.
+        const hasPermission = await permissionService.hasPermission(
+          request.tenancy.workspaceId,
+          userId,
+          permissionCode,
+        )
         return reply.send({ hasPermission })
       } catch (err) {
         fastify.log.error(err)

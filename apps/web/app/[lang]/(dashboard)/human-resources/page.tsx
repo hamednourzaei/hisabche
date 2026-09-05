@@ -1,66 +1,28 @@
 // apps/web/app/[lang]/(dashboard)/human-resources/page.tsx
-import { HumanResourcesContainer } from "@hisabche/ui";
+//
+// ─── G1 — DEPRECATED ROUTE, KEPT AS A REDIRECT ──────────────────────────────
+//
+// Canonical: /team-and-payroll.
+//
+// Two entries existed for the same people: `nav.team` → /human-resources and
+// `nav.coworkers` → /team-and-payroll. NAV_CONTRACT already carried a note that
+// "colleagues and payroll are one section now" — the menu entry had been
+// removed, but the route and every link into it stayed.
+//
+// The route is NOT deleted, so notification deep-links written before this
+// change keep resolving.
+//
+// `HumanResourcesContainer` is untouched: /team-and-payroll renders the same
+// screens, and the employee detail route beside this file now redirects into
+// the canonical prefix rather than being orphaned.
 
-const titles: Record<string, string> = {
-  "fa": "منابع انسانی",
-  "af": "منابع بشری",
-  "en": "Human Resources",
-};
+import { permanentRedirect } from 'next/navigation'
 
-const descriptions: Record<string, string> = {
-  "fa": "مدیریت کارمندان، حقوق و دستمزد، حضور و غیاب و مرخصی‌ها در حسابچه. سیستم کامل منابع انسانی.",
-  "af": "مدیریت کارمندان، حقوق و دستمزد، حضور و غیاب و مرخصی‌ها در حسابچه. سیستم کامل منابع بشری.",
-  "en": "Manage employees, payroll, attendance and leaves in Hisabche. Complete human resources system.",
-};
-
-const keywords: Record<string, string[]> = {
-  "fa": [
-    "منابع انسانی",
-    "مدیریت کارمندان",
-    "حقوق و دستمزد",
-    "حضور و غیاب",
-    "مرخصی",
-    "کارمند",
-    "استخدام",
-    "حقوق ماهانه",
-    "حسابچه",
-    "مدیریت پرسنل",
-  ],
-  "af": [
-    "منابع بشری",
-    "مدیریت کارمندان",
-    "حقوق و دستمزد",
-    "حضور و غیاب",
-    "مرخصی",
-    "کارمند",
-    "استخدام",
-    "حقوق ماهانه",
-    "حسابچه",
-    "مدیریت پرسنل",
-  ],
-  "en": [
-    "human resources",
-    "employee management",
-    "payroll",
-    "attendance",
-    "leaves",
-    "employee",
-    "hiring",
-    "monthly salary",
-    "hisabche",
-    "personnel management",
-  ],
-};
-
-export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }) {
-  const { lang } = await params;
-  return {
-    title: titles[lang] || titles["fa"],
-    description: descriptions[lang] || descriptions["fa"],
-    keywords: keywords[lang] || keywords["fa"],
-  };
-}
-
-export default function HrPage() {
-  return <HumanResourcesContainer />;
+export default async function HumanResourcesRedirect({
+  params,
+}: {
+  params: Promise<{ lang: string }>
+}) {
+  const { lang } = await params
+  permanentRedirect(`/${lang}/team-and-payroll`)
 }

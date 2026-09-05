@@ -41,7 +41,6 @@ const BillingPage = lazy(() => import('@/features/billing/billing-page'))
 const OnboardingPage = lazy(() => import('@/features/onboarding/onboarding-page'))
 const ManufacturingPage = lazy(() => import('@/features/manufacturing/manufacturing-page'))
 const PermissionsPage = lazy(() => import('@/features/permissions/permissions-page'))
-const HumanResourcesPage = lazy(() => import('@/features/human-resources/hr-page'))
 const TeamAndPayrollPage = lazy(() => import('@/features/team-and-payroll/tap-page'))
 const WorkflowPage = lazy(() => import('@/features/workflow/workflow-page'))
 const SalesFollowupPage = lazy(() => import('@/features/sales-followup/sales-followup-page'))
@@ -56,8 +55,7 @@ const BudgetsPage = lazy(() => import('@/features/finance/budgets-page'))
 const DataMigrationPage = lazy(() => import('@/features/sync/data-migration-page'))
 const DataAndSyncPage = lazy(() => import('@/features/sync/data-and-sync-page'))
 const DomainWorkspacePage = lazy(() => import('@/features/domain/domain-workspace-page'))
-const CustomerListPage = lazy(() => import('@/features/customers/customer-list-page'))
-const ProductListPage = lazy(() => import('@/features/products/product-list-page'))
+const EmployeeDetailPage = lazy(() => import('@/features/human-resources/employee-detail-page'))
 const TimesheetsPage = lazy(() => import('@/features/operations/timesheets-page'))
 const ExpiryPage = lazy(() => import('@/features/operations/expiry-page'))
 const ConflictsPage = lazy(() => import('@/features/sync/conflicts-page'))
@@ -69,6 +67,16 @@ const PublicInvoicePage = lazy(() => import('@/features/public/public-invoice-pa
 function LegacyInvoiceRedirect() {
   const { id } = useParams<{ id: string }>()
   return <Navigate to={id ? `/invoices/${id}` : '/invoices'} replace />
+}
+
+/**
+ * G1 — carries the employee id across `/human-resources/:id` →
+ * `/team-and-payroll/:id`. Dropping the id and landing on the list would look
+ * to the user like the employee record had been deleted.
+ */
+function LegacyEmployeeRedirect() {
+  const { id } = useParams<{ id: string }>()
+  return <Navigate to={id ? `/team-and-payroll/${id}` : '/team-and-payroll'} replace />
 }
 
 // Hash routing: file:// URLs in a packaged app have no server to rewrite paths.
@@ -109,8 +117,10 @@ const router = createHashRouter([
       { path: 'onboarding', element: <OnboardingPage /> },
       { path: 'manufacturing', element: <ManufacturingPage /> },
       { path: 'permissions', element: <PermissionsPage /> },
-      { path: 'human-resources', element: <HumanResourcesPage /> },
+      // G1: /human-resources folded into /team-and-payroll — see the legacy
+      // block at the bottom of this list, where the redirect lives.
       { path: 'team-and-payroll', element: <TeamAndPayrollPage /> },
+      { path: 'team-and-payroll/:id', element: <EmployeeDetailPage /> },
       { path: 'workflow', element: <WorkflowPage /> },
       { path: 'sales-followup', element: <SalesFollowupPage /> },
       { path: 'audit', element: <AuditPage /> },
@@ -126,8 +136,9 @@ const router = createHashRouter([
       { path: 'conflicts', element: <ConflictsPage /> },
       { path: 'data-migration', element: <DataMigrationPage /> },
       { path: 'data-and-sync', element: <DataAndSyncPage /> },
-      { path: 'customer-list', element: <CustomerListPage /> },
-      { path: 'product-list', element: <ProductListPage /> },
+      // G1: `customer-list` and `product-list` are no longer destinations —
+      // see the legacy block below. The lazy imports stay because nothing
+      // deleted the pages; only their place in the menu changed.
       { path: 'accounting-workspace', element: <DomainWorkspacePage /> },
       { path: 'sales-workspace', element: <DomainWorkspacePage /> },
       { path: 'inventory-workspace', element: <DomainWorkspacePage /> },
@@ -149,6 +160,17 @@ const router = createHashRouter([
       { path: 'sales/:id', element: <LegacyInvoiceRedirect /> },
       { path: 'inventory', element: <Navigate to="/warehouse" replace /> },
       { path: 'sync', element: <Navigate to="/sync-center" replace /> },
+
+      // G1 — the three route pairs that were two features over one dataset.
+      // Same shape as the redirects above: the old path still answers, so a
+      // pinned window or an old deep link opens the record rather than the
+      // dashboard.
+      { path: 'human-resources', element: <Navigate to="/team-and-payroll" replace /> },
+      { path: 'human-resources/:id', element: <LegacyEmployeeRedirect /> },
+      { path: 'customer-list', element: <Navigate to="/customers" replace /> },
+      // The catalogue is a tab on the warehouse screen now, selected by the
+      // query string — the same address the web app redirects to.
+      { path: 'product-list', element: <Navigate to="/warehouse?tab=products" replace /> },
 
       { path: '*', element: <Navigate to="/" replace /> },
     ],

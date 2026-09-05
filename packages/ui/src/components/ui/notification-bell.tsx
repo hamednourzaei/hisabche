@@ -134,7 +134,10 @@ function resolveEntityUrl(n: Notification): string {
     case 'interaction':
       return '/crm'
     case 'employee':
-      return id ? `/human-resources/${id}` : '/human-resources'
+      // G1: canonical people route. /human-resources 308s here, but a
+      // notification should link to the destination directly rather than
+      // spending a redirect on every tap.
+      return id ? `/team-and-payroll/${id}` : '/team-and-payroll'
     default:
       return '/activities'
   }

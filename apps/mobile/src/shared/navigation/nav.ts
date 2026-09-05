@@ -48,7 +48,7 @@ const ICONS: Record<NavId, readonly [IconName, IconName]> = {
   money: ['trending-up-outline', 'trending-up'],
   buyers: ['people-outline', 'people'],
   'follow-up': ['chatbubbles-outline', 'chatbubbles'],
-  team: ['briefcase-outline', 'briefcase'],
+  // G1: 'team' removed with the /human-resources entry.
   production: ['construct-outline', 'construct'],
   approvals: ['checkmark-done-outline', 'checkmark-done'],
   settings: ['settings-outline', 'settings'],
@@ -67,8 +67,8 @@ const ICONS: Record<NavId, readonly [IconName, IconName]> = {
   // does not exist on mobile yet, and 'data-migration' is deliberately absent
   // from IMPLEMENTED below — importing a spreadsheet needs a document picker
   // and a file the phone can actually reach, which is its own slice.
-  'customer-list': ['search-outline', 'search'],
-  'product-list': ['cube-outline', 'cube'],
+  // G1: 'customer-list' and 'product-list' removed from NavId — their routes
+  // redirect to /customers and /warehouse?tab=products.
   'accounting-workspace': ['calculator-outline', 'calculator'],
   'sales-workspace': ['cart-outline', 'cart'],
   'inventory-workspace': ['cube-outline', 'cube'],

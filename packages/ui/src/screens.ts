@@ -32,6 +32,10 @@ export { CustomerDetailContainer } from './components/ui/customers/containers/cu
 
 // ---------- Inventory ----------
 export { warehouseContainer as WarehouseContainer } from './components/ui/warehouse/containers/Warehouse-container'
+// G1: the warehouse destination now carries two tabs — stock and the product
+// catalogue. Both renderers mount this, so neither gets the tab and the other
+// not.
+export { WarehouseTabsContainer } from './components/ui/warehouse/containers/warehouse-tabs-container'
 export { ProductDetailContainer } from './components/ui/warehouse-detail/containers/warehouse-detail-container'
 
 // ---------- Accounting & activity ----------
@@ -66,6 +70,9 @@ export { PermissionsContainer } from './components/ui/permissions/containers/per
 
 // ---------- Human Resources ----------
 export { HumanResourcesContainer } from './components/ui/human-resources/containers/hr-container'
+// G1: desktop routes the employee detail screen too now, at
+// /team-and-payroll/:id — the same path web uses.
+export { EmployeeDetailContainer } from './components/ui/human-resources/containers/employee-detail-container'
 
 // ---------- Team & Payroll ----------
 export { TeamAndPayrollContainer } from './components/ui/team-and-payroll/containers/team-and-payroll-container'

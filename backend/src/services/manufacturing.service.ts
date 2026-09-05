@@ -386,25 +386,59 @@ export class ManufacturingService {
 
     if (updateError) throw new DatabaseError('Failed to update work order', updateError)
 
-    // The on-hand figure on the product is a display cache. Refreshed FROM the
-    // layers rather than incremented, so a retry cannot double it — and
-    // scoped to the workspace, which the version this replaces was not.
-    const valuations = await costing.getValuation(ctx)
-    const byProduct = new Map(valuations.map((row) => [row.productId, row.onHand]))
-    const touched = [
-      workOrder.product_id,
-      ...components.map((component) => component.raw_material_id),
-    ].filter(Boolean)
+    // ─── PHASE C — production is two stock movements, not a recount ──────────
+    //
+    // This used to read the cost layers' on-hand figure and copy it onto
+    // `products.quantity`. Like the purchase-receipt path, it wrote NO movement
+    // row, so `stock_movements` — the source of truth for inventory — knew
+    // nothing about anything ever being manufactured or consumed.
+    //
+    // Production is two movements per run, and they must both exist or the
+    // value in the warehouse changes out of nothing (lesson 16): the raw
+    // materials LEAVE, and the finished goods ARRIVE.
+    //
+    // `products.quantity` is not written here any more; the projection trigger
+    // maintains it from these rows.
+    const movements: Record<string, unknown>[] = []
 
-    await Promise.all(
-      [...new Set(touched)].map((productId) =>
-        supabase
-          .from('products')
-          .update({ quantity: byProduct.get(productId) ?? 0 })
-          .eq('id', productId)
-          .eq('workspace_id', workspaceId),
-      ),
-    )
+    if (workOrder.product_id) {
+      movements.push({
+        product_id: workOrder.product_id,
+        type: 'production',
+        quantity: produced,
+        reference_type: 'work_order',
+        reference_id: id,
+        workspace_id: workspaceId,
+        user_id: ctx.userId,
+      })
+    }
+
+    for (const component of components) {
+      // Same guard and same arithmetic as the costing loop above — a component
+      // that was issued must be a component that moved, and the two figures
+      // disagreeing is exactly the drift this phase exists to remove.
+      const required = (Number(component.quantity) || 0) * produced
+      if (!component.raw_material_id || required <= 0) continue
+
+      movements.push({
+        product_id: component.raw_material_id,
+        type: 'consumption',
+        // Negative: these left the shelf to become the product above.
+        quantity: -required,
+        reference_type: 'work_order',
+        reference_id: id,
+        workspace_id: workspaceId,
+        user_id: ctx.userId,
+      })
+    }
+
+    if (movements.length > 0) {
+      const { error: movementError } = await supabase.from('stock_movements').insert(movements)
+
+      if (movementError) {
+        throw new DatabaseError('Failed to record stock movements for work order', movementError)
+      }
+    }
 
     await this.invalidate(workspaceId)
 

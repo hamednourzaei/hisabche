@@ -127,8 +127,11 @@ export const DOMAIN_SPECS: readonly DomainSpec[] = [
   {
     id: 'people',
     labelKey: 'domain.people',
-    destinations: ['team', 'coworkers', 'timesheets', 'access'],
-    primaryActions: ['team'],
+    // G1: 'team' (/human-resources) folded into 'coworkers'
+    // (/team-and-payroll). They listed the same people twice, and the People
+    // workspace showed both as separate destinations.
+    destinations: ['coworkers', 'timesheets', 'access'],
+    primaryActions: ['coworkers'],
   },
 ]
 

@@ -147,6 +147,25 @@ const ORDER = [
   // exists, so it has to run after the last one is created — and it pins
   // search_path on whatever is still unpinned by then.
   'linter-hardening-migration.sql',
+
+  // ─── The consolidation phases (A–D) are DELIBERATELY NOT LISTED ───────────
+  //
+  // `phase-a-*` … `phase-d-*` are left to `extra`, which sorts by name and runs
+  // AFTER everything in this array. That is not laziness — it is the only
+  // correct position, and listing them here would break the rebuild:
+  //
+  //   * `SETUP-COMPLETE.sql` is also an extra, and it re-creates
+  //     `warehouse_transfer_stock` and `transactions_view` in their
+  //     pre-consolidation form. Anything in ORDER runs before every extra, so
+  //     promoting the phase files would let SETUP-COMPLETE overwrite Phase B
+  //     and Phase C on every rebuild — silently, since both statements are
+  //     CREATE OR REPLACE and neither errors.
+  //   * uppercase sorts before lowercase, so `SETUP-COMPLETE.sql` already runs
+  //     before `phase-a-01…`, and `a < b < c < d` gives the phases their own
+  //     order for free.
+  //
+  // If a phase file ever needs to run before an extra, promote BOTH — do not
+  // promote the phase alone.
 ]
 
 loadEnv()

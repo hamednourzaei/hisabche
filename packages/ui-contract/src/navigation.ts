@@ -31,7 +31,6 @@ export type NavId =
   // secondary — people
   | 'buyers'
   | 'follow-up'
-  | 'team'
   | 'coworkers'
   | 'sales-followup'
   // secondary — work
@@ -52,8 +51,8 @@ export type NavId =
   | 'bank'
   | 'conflicts'
   // secondary — system
-  | 'customer-list'
-  | 'product-list'
+  // G1: 'customer-list', 'product-list' and 'team' removed — their routes now
+  // redirect to /customers, /warehouse?tab=products and /team-and-payroll.
   | 'accounting-workspace'
   | 'sales-workspace'
   | 'inventory-workspace'
@@ -273,28 +272,21 @@ export const NAV_CONTRACT: readonly NavItemContract[] = [
     group: 'system',
   },
 
-  // PHASE 5's first real consumer — the same customers, on the shared list
-  // engine. It stands beside the existing screen rather than replacing it:
-  // that one works and people use it daily.
-  {
-    id: 'customer-list',
-    emoji: '🔍',
-    labelKey: 'nav.customer_list',
-    descriptionKey: 'nav.customer_list_description',
-    path: '/customer-list',
-    group: 'work',
-  },
-
-  // The list engine's SECOND consumer. Two consumers is the rule: one can
-  // pass by accident when a component is shaped around its only caller.
-  {
-    id: 'product-list',
-    emoji: '🔎',
-    labelKey: 'nav.product_list',
-    descriptionKey: 'nav.product_list_description',
-    path: '/product-list',
-    group: 'work',
-  },
+  // ─── G1 — `customer-list` and `product-list` removed from the contract ────
+  //
+  // Both were the shared list engine's proving grounds, standing beside the
+  // real screens rather than replacing them. That was the right call while the
+  // engine was new; as permanent menu entries they were two more places to
+  // look for the same customer and the same product.
+  //
+  // Where they went:
+  //   /customer-list → 308 → /customers
+  //   /product-list  → 308 → /warehouse?tab=products  (a tab, not a route)
+  //
+  // ⚠️ The CONTAINERS are untouched. `contract-consumers.test.ts` requires the
+  // list engine to have two real consumers, and `CustomerListContainer` /
+  // `ProductListContainer` are both of them. Deleting either to tidy a menu
+  // would drop that guard to one without the guard noticing.
 
   // PHASE 7 — a way into each business domain. These are not new features;
   // each is a map of destinations that already exist, in a fixed order, so
@@ -366,14 +358,15 @@ export const NAV_CONTRACT: readonly NavItemContract[] = [
   // `nav-destinations.test.ts` checks the other direction — that every entry
   // here HAS a page. Nothing checked this direction until these were found by
   // listing both and comparing.
-  {
-    id: 'team',
-    emoji: '👷',
-    labelKey: 'nav.team',
-    descriptionKey: 'nav.team_description',
-    path: '/human-resources',
-    group: 'people',
-  },
+  // ─── G1 — `team` (/human-resources) removed from the contract ─────────────
+  //
+  // It pointed at the same people as `coworkers` (/team-and-payroll) below.
+  // The comment further up already said the entry was gone; it was not — it
+  // was still here, still rendered, and still the target of every deep link in
+  // notification-bell.
+  //
+  // /human-resources now 308s to /team-and-payroll, so removing it from the
+  // contract removes the DUPLICATE MENU ENTRY, not the route.
   {
     id: 'coworkers',
     emoji: '💵',

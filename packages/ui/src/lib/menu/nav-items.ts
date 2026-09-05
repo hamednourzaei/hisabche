@@ -80,7 +80,8 @@ const NAV_ICONS: Record<NavId, LucideIcon> = {
   money: TrendingUp,
   buyers: BookOpen,
   'follow-up': Handshake,
-  team: Users,
+  // G1: 'team' removed with the /human-resources entry — 'coworkers' below
+  // is the People destination now.
   production: Factory,
   approvals: ClipboardCheck,
   settings: Settings,
@@ -101,8 +102,7 @@ const NAV_ICONS: Record<NavId, LucideIcon> = {
   // lucide name to a module namespace rather than the component, and React
   // rejects it — taking the whole sidebar down on every page. `DatabaseZap`
   // and the rest resolve correctly; this one does not.
-  'customer-list': Users,
-  'product-list': Boxes,
+  // G1: 'customer-list' and 'product-list' removed with their nav entries.
   'accounting-workspace': Landmark,
   'sales-workspace': Wallet,
   'inventory-workspace': Boxes,

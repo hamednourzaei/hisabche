@@ -4,7 +4,13 @@
 // ============================================
 
 import { supabase } from '../db'
-import { CreatePermission, CreateRole, UpdateRole, AssignRole, RemoveRole } from '@hisabche/validation'
+import {
+  CreatePermission,
+  CreateRole,
+  UpdateRole,
+  AssignRole,
+  RemoveRole,
+} from '@hisabche/validation'
 import { DatabaseError } from '../errors/database.error'
 import { memoryCache } from '../utils/pagination'
 
@@ -34,7 +40,12 @@ const DEFAULT_PERMISSIONS: any[] = [
   { code: 'inventory.read', name: 'مشاهده موجودی', resource: 'inventory', action: 'read' },
   { code: 'inventory.update', name: 'ویرایش موجودی', resource: 'inventory', action: 'update' },
   { code: 'inventory.delete', name: 'حذف موجودی', resource: 'inventory', action: 'delete' },
-  { code: 'accounting.create', name: 'ایجاد سند حسابداری', resource: 'accounting', action: 'create' },
+  {
+    code: 'accounting.create',
+    name: 'ایجاد سند حسابداری',
+    resource: 'accounting',
+    action: 'create',
+  },
   { code: 'accounting.read', name: 'مشاهده حسابداری', resource: 'accounting', action: 'read' },
   { code: 'accounting.update', name: 'ویرایش حسابداری', resource: 'accounting', action: 'update' },
   { code: 'accounting.delete', name: 'حذف سند حسابداری', resource: 'accounting', action: 'delete' },
@@ -54,7 +65,6 @@ const DEFAULT_PERMISSIONS: any[] = [
 ]
 
 export class PermissionService {
-
   // ─── Cache Keys ──────────────────────────────────────────────
   private getPermissionsCacheKey() {
     return `permissions:all`
@@ -72,12 +82,19 @@ export class PermissionService {
     return `user:roles:${userId}`
   }
 
-  private getUserPermissionsCacheKey(userId: string) {
-    return `user:permissions:${userId}`
+  // ⚠️ PHASE E — every key below starts with the WORKSPACE.
+  //
+  // They were keyed by user alone. A user who belongs to two businesses got one
+  // cached answer covering both, and the first request to arrive decided what
+  // every later one saw (lessons 11 and 18). A permission cache is the worst
+  // possible place for that: the stale answer is an authorization decision.
+
+  private getUserPermissionsCacheKey(workspaceId: string, userId: string) {
+    return `permissions:${workspaceId}:user:${userId}`
   }
 
-  private getHasPermissionCacheKey(userId: string, permissionCode: string) {
-    return `user:has_permission:${userId}:${permissionCode}`
+  private getHasPermissionCacheKey(workspaceId: string, userId: string, permissionCode: string) {
+    return `permissions:${workspaceId}:has:${userId}:${permissionCode}`
   }
 
   // ─── Seed Default Permissions ────────────────────────────────
@@ -219,18 +236,11 @@ export class PermissionService {
   }
 
   async deleteRole(id: string) {
-    const { data: role } = await supabase
-      .from('roles')
-      .select('is_system')
-      .eq('id', id)
-      .single()
+    const { data: role } = await supabase.from('roles').select('is_system').eq('id', id).single()
 
     if (role?.is_system) throw new DatabaseError('Cannot delete system role')
 
-    const { error } = await supabase
-      .from('roles')
-      .delete()
-      .eq('id', id)
+    const { error } = await supabase.from('roles').delete().eq('id', id)
 
     if (error) throw new DatabaseError('Failed to delete role', error)
 
@@ -299,15 +309,34 @@ export class PermissionService {
   }
 
   // ─── Permissions Check — OPTIMIZED ────────────────────────────
-  async hasPermission(userId: string, permissionCode: string): Promise<boolean> {
-    const cacheKey = this.getHasPermissionCacheKey(userId, permissionCode)
+  /**
+   * Does this user hold this permission IN THIS WORKSPACE?
+   *
+   * ⚠️ PHASE E — `workspaceId` is new and is not optional.
+   *
+   * This filtered on `user_id` alone. `user_roles.workspace_id` has existed
+   * since the base schema and was ignored, so a person who is an Accountant in
+   * one business carried that permission into every other business they belong
+   * to. `workspace_id` is the only tenancy boundary in this codebase and
+   * `user_id` is never a filter on its own (rule 1).
+   *
+   * It was not on the enforcement path, which is the only reason this was not
+   * an active breach. Phase E is the change that puts it there.
+   */
+  async hasPermission(
+    workspaceId: string,
+    userId: string,
+    permissionCode: string,
+  ): Promise<boolean> {
+    const cacheKey = this.getHasPermissionCacheKey(workspaceId, userId, permissionCode)
     const cached = await memoryCache.get(cacheKey)
     if (cached !== null) return cached as boolean
 
     // ✅ یک کوئری با JOIN به جای ۳ کوئری
     const { data, error } = await supabase
       .from('user_roles')
-      .select(`
+      .select(
+        `
         role_id,
         role_permissions!inner (
           permission_id,
@@ -315,7 +344,9 @@ export class PermissionService {
             code
           )
         )
-      `)
+      `,
+      )
+      .eq('workspace_id', workspaceId)
       .eq('user_id', userId)
 
     if (error || !data || data.length === 0) {
@@ -341,15 +372,17 @@ export class PermissionService {
     return hasPermission
   }
 
-  async getUserPermissions(userId: string) {
-    const cacheKey = this.getUserPermissionsCacheKey(userId)
+  /** Every permission this user holds in this workspace. Scoped, as above. */
+  async getUserPermissions(workspaceId: string, userId: string) {
+    const cacheKey = this.getUserPermissionsCacheKey(workspaceId, userId)
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached
 
     // ✅ یک کوئری با JOIN به جای ۳ کوئری
     const { data, error } = await supabase
       .from('user_roles')
-      .select(`
+      .select(
+        `
         role_id,
         role_permissions!inner (
           permission_id,
@@ -357,7 +390,9 @@ export class PermissionService {
             ${PERMISSION_COLUMNS}
           )
         )
-      `)
+      `,
+      )
+      .eq('workspace_id', workspaceId)
       .eq('user_id', userId)
 
     if (error || !data) {
@@ -377,22 +412,24 @@ export class PermissionService {
       }
     }
 
-    const result = Array.from(permissionMap.values())
-      .sort((a, b) => (a.resource || '').localeCompare(b.resource || ''))
+    const result = Array.from(permissionMap.values()).sort((a, b) =>
+      (a.resource || '').localeCompare(b.resource || ''),
+    )
 
     await memoryCache.set(cacheKey, result, 120) // 2 minutes
     return result
   }
 
   // ─── Get User Role IDs ────────────────────────────────────────
-  async getUserRoleIds(userId: string): Promise<string[]> {
-    const cacheKey = `user:role_ids:${userId}`
+  async getUserRoleIds(workspaceId: string, userId: string): Promise<string[]> {
+    const cacheKey = `permissions:${workspaceId}:role_ids:${userId}`
     const cached = await memoryCache.get(cacheKey)
     if (cached) return cached as string[]
 
     const { data, error } = await supabase
       .from('user_roles')
       .select('role_id')
+      .eq('workspace_id', workspaceId)
       .eq('user_id', userId)
 
     if (error || !data) return []
@@ -405,9 +442,16 @@ export class PermissionService {
   // ─── Invalidate Cache ─────────────────────────────────────────
   private async invalidateUserCache(userId: string) {
     await memoryCache.invalidate(this.getUserRolesCacheKey(userId))
-    await memoryCache.invalidate(this.getUserPermissionsCacheKey(userId))
-    await memoryCache.invalidate(`user:role_ids:${userId}`)
-    await memoryCache.invalidate(`user:has_permission:${userId}:*`)
+
+    // ⚠️ PHASE E — the permission keys now start with the workspace, so this
+    // clears the whole `permissions:` prefix rather than naming each key.
+    //
+    // Building the exact keys here would mean knowing every workspace the user
+    // belongs to, and getting that list wrong leaves a stale AUTHORIZATION
+    // answer cached — the precise mismatch between key construction and
+    // invalidation that lesson 5 records. A broader invalidation costs a few
+    // cache misses; a missed one grants a permission that was revoked.
+    await memoryCache.invalidate('permissions')
   }
 }
 

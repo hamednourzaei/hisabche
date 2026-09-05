@@ -192,7 +192,7 @@ export class PurchasingService {
    * does not receive the same goods twice.
    */
   async receiveGoods(ctx: TenancyContext, id: string) {
-    const { workspaceId } = ctx
+    const { workspaceId, userId } = ctx
 
     const { data: order, error } = await supabase
       .from('purchase_orders')
@@ -238,22 +238,40 @@ export class PurchasingService {
       })
     }
 
-    // The on-hand figure on the product is a display cache; the layers are the
-    // truth. It is refreshed from them rather than incremented, so a retry
-    // cannot double it.
+    // ─── PHASE C — record the arrival as a stock movement ────────────────────
+    //
+    // Receiving a purchase order used to write NO movement row at all. It
+    // recorded a cost layer and then copied the layer's on-hand figure onto
+    // `products.quantity`. So `stock_movements` — which the architecture calls
+    // the source of truth for inventory — did not contain purchase receipts,
+    // and any report built from it was missing every arrival of goods.
+    //
+    // The cost layer still records what the goods COST; that is the costing
+    // core's job and it keeps it. This records that they ARRIVED, which is a
+    // different fact and now has exactly one home.
+    //
+    // `products.quantity` is no longer written here: the projection trigger
+    // maintains it from these rows. Writing both would add the arrival twice.
     if (items.length > 0) {
-      const valuations = await costing.getValuation(ctx)
-      const byProduct = new Map(valuations.map((row) => [row.productId, row.onHand]))
+      const movements = items
+        .filter((item) => item.product_id)
+        .map((item) => ({
+          product_id: item.product_id,
+          type: 'purchase',
+          quantity: Number(item.quantity) || 0,
+          reference_type: 'purchase_order',
+          reference_id: id,
+          workspace_id: workspaceId,
+          user_id: userId,
+        }))
 
-      await Promise.all(
-        [...new Set(items.map((item) => item.product_id))].filter(Boolean).map((productId) =>
-          supabase
-            .from('products')
-            .update({ quantity: byProduct.get(productId) ?? 0 })
-            .eq('id', productId)
-            .eq('workspace_id', workspaceId),
-        ),
-      )
+      if (movements.length > 0) {
+        const { error: movementError } = await supabase.from('stock_movements').insert(movements)
+
+        if (movementError) {
+          throw new DatabaseError('Failed to record stock movements for receipt', movementError)
+        }
+      }
     }
 
     const { data: updated, error: updateError } = await supabase

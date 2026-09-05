@@ -1,67 +1,20 @@
 // apps/web/app/[lang]/(dashboard)/human-resources/[id]/page.tsx
-import { EmployeeDetailContainer } from "@hisabche/ui";
+//
+// ─── G1 — DEPRECATED ROUTE, KEPT AS A REDIRECT ──────────────────────────────
+//
+// Canonical: /team-and-payroll/[id].
+//
+// This one carries an id, so the redirect must carry it too — dropping the
+// employee and landing on the list would look like the record had been
+// deleted. Notification deep-links written before this change point here.
 
-const titles: Record<string, string> = {
-  "fa": "جزئیات کارمند",
-  "af": "جزئیات کارمند",
-  "en": "Employee Details",
-};
+import { permanentRedirect } from 'next/navigation'
 
-const descriptions: Record<string, string> = {
-  "fa": "مشاهده و ویرایش اطلاعات کارمند، حقوق، حضور و غیاب، مرخصی‌ها و سوابق کاری در حسابچه.",
-  "af": "مشاهده و ویرایش اطلاعات کارمند، حقوق، حضور و غیاب، مرخصی‌ها و سوابق کاری در حسابچه.",
-  "en": "View and edit employee info, salary, attendance, leaves and work history in Hisabche.",
-};
-
-const keywords: Record<string, string[]> = {
-  "fa": [
-    "جزئیات کارمند",
-    "اطلاعات کارمند",
-    "حقوق کارمند",
-    "حضور و غیاب",
-    "مرخصی کارمند",
-    "ویرایش کارمند",
-    "سوابق کاری",
-    "حسابچه",
-    "مدیریت کارمند",
-    "پرسنل",
-  ],
-  "af": [
-    "جزئیات کارمند",
-    "اطلاعات کارمند",
-    "حقوق کارمند",
-    "حضور و غیاب",
-    "مرخصی کارمند",
-    "ویرایش کارمند",
-    "سوابق کاری",
-    "حسابچه",
-    "مدیریت کارمند",
-    "پرسنل",
-  ],
-  "en": [
-    "employee details",
-    "employee info",
-    "employee salary",
-    "attendance",
-    "employee leave",
-    "edit employee",
-    "work history",
-    "hisabche",
-    "employee management",
-    "personnel",
-  ],
-};
-
-export async function generateMetadata({ params }: { params: Promise<{ lang: string; id: string }> }) {
-  const { lang } = await params;
-  return {
-    title: titles[lang] || titles["fa"],
-    description: descriptions[lang] || descriptions["fa"],
-    keywords: keywords[lang] || keywords["fa"],
-  };
-}
-
-export default async function EmployeeDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  return <EmployeeDetailContainer id={id} />;
+export default async function EmployeeDetailRedirect({
+  params,
+}: {
+  params: Promise<{ lang: string; id: string }>
+}) {
+  const { lang, id } = await params
+  permanentRedirect(`/${lang}/team-and-payroll/${id}`)
 }
