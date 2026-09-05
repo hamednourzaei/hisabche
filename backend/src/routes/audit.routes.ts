@@ -4,14 +4,34 @@
 
 // ⚠️ AUTHORIZATION — read this before adding a route here.
 //
-// `audit_logs` has NO `workspace_id` column, so a query against it is
-// PLATFORM-WIDE by construction. There is no way to scope it to one business
-// without a migration.
+// ---------------------------------------------------------------------------
+// THIS FILE NOW HAS TWO KINDS OF ROUTE. Know which one you are adding.
 //
-// That makes every read here a cross-tenant read and every write a
-// platform-wide write, which is why the whole file sits behind
-// `platformAdminGuard` rather than `authenticate` alone. Before this guard
-// existed, any authenticated user — a seller in one shop — could:
+//   PLATFORM SUPPORT — `platformAdminGuard`. Calls `AuditService.list()`,
+//   `getStats()`, `exportLogs()`, `cleanup()`, `getEntityHistory()`,
+//   `getUserActivityAcrossWorkspaces()`. These cross workspaces ON PURPOSE and
+//   must never be reachable by an ordinary member.
+//
+//   MEMBER-FACING (G4) — `requireWorkspaceContext` + a capability. Calls only
+//   `listForWorkspace()` / `getEntityHistoryForWorkspace()`, which take a
+//   TenancyContext and filter on it. This is the «سابقه تغییرات» tab.
+//
+// `constitution-guards.test.ts` enforces the split PER HANDLER: an unguarded
+// handler fails, and so does a merely workspace-scoped handler that calls a
+// cross-workspace method — because `requireWorkspaceContext` would make it
+// LOOK scoped while the query read every business.
+//
+// ---------------------------------------------------------------------------
+// WHY THE PLATFORM ROUTES EXIST AT ALL
+//
+// `audit_logs` DOES have a `workspace_id` column — added by
+// live-reconciliation-migration.sql. But `AuditService.log()` did not write it
+// until G4, so every historical row has it NULL and cannot be attributed to a
+// business. The platform routes read that history; the member-facing ones read
+// what has been written since.
+//
+// Before `platformAdminGuard` existed, any authenticated user — a seller in
+// one shop — could:
 //
 //   GET  /api/audit/logs     read every workspace's financial actions
 //   GET  /api/audit/export   export them
@@ -22,9 +42,11 @@
 // authorization) and §12.18 (every financial transition must be auditable).
 // An audit log an attacker can erase is not an audit log.
 //
-// A workspace-scoped audit feed for ordinary members is a SEPARATE capability
-// and needs `audit_logs.workspace_id` first. Do not approximate it by
-// loosening this guard.
+// A workspace-scoped audit feed for ordinary members was called out here as a
+// SEPARATE capability needing `audit_logs.workspace_id` first. G4 built it that
+// way: the column is now written, the scoped read is its own service method,
+// and the two member-facing routes are at the top of this file. The guard was
+// not loosened to get there — it was made per-handler and stricter.
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
@@ -33,6 +55,8 @@ import { createAuditLogSchema, auditFiltersSchema, type AuditFilters } from '@hi
 import { AuditService } from '../services/audit.service'
 import { authenticate } from '../middleware/auth.middleware'
 import { platformAdminGuard } from '../middleware/platform-admin.middleware'
+import { requireWorkspaceContext } from '../middleware/workspace.middleware'
+import { requireCapability } from '../middleware/authorize.middleware'
 import { cacheMiddleware } from '../middleware/cache.middleware'
 
 const toJsonSchema = (schema: any) => {
@@ -41,8 +65,101 @@ const toJsonSchema = (schema: any) => {
   return result
 }
 
+/**
+ * G4 — what the member-facing audit tab may filter on.
+ *
+ * ⚠️ There is no `workspaceId` here, and there must never be. The workspace
+ * comes from `request.tenancy`, which the middleware verified. A workspace
+ * accepted from the client is not a boundary — it is a suggestion.
+ */
+const workspaceAuditFiltersSchema = z.object({
+  entityType: z.string().max(60).optional(),
+  entityId: z.string().uuid().optional(),
+  userId: z.string().uuid().optional(),
+  branchId: z.string().uuid().optional(),
+  action: z.string().max(30).optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  page: z.coerce.number().int().positive().optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+})
+
 export default async function auditRoutes(fastify: FastifyInstance) {
   const auditService = new AuditService()
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // G4 — THE MEMBER-FACING AUDIT TRAIL
+  //
+  // Every other route in this file runs `platformAdminGuard`, because
+  // `AuditService.list()` crosses workspaces on purpose for platform support.
+  // These two do not: they are workspace-scoped reads for the «سابقه تغییرات»
+  // tab, and they call `listForWorkspace`, which filters on the verified
+  // context.
+  //
+  // Guarded with `report.operational.read` rather than a new capability: seeing
+  // who changed what in your own business is reading a report about it.
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  // ─── GET /api/audit/workspace ─────────────────────────────────────────────
+  fastify.get(
+    '/api/audit/workspace',
+    {
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        requireCapability('report.operational.read'),
+      ],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const filters = workspaceAuditFiltersSchema.parse(request.query ?? {})
+        return reply.send(await auditService.listForWorkspace(request.tenancy, filters))
+      } catch (err) {
+        if (err instanceof z.ZodError) {
+          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
+        }
+        if (err instanceof Error && /AUDIT_BRANCH_NOT_MIGRATED/.test(err.message)) {
+          return reply.code(409).send({ error: err.message, code: 'AUDIT_BRANCH_NOT_MIGRATED' })
+        }
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to fetch the audit trail' })
+      }
+    },
+  )
+
+  // ─── GET /api/audit/workspace/:entityType/:entityId ────────────────────────
+  //
+  // H6 — the "history of this record" panel on a document's own screen.
+  fastify.get(
+    '/api/audit/workspace/:entityType/:entityId',
+    {
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        requireCapability('report.operational.read'),
+      ],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { entityType, entityId } = request.params as {
+          entityType: string
+          entityId: string
+        }
+        return reply.send({
+          history: await auditService.getEntityHistoryForWorkspace(
+            request.tenancy,
+            entityType,
+            entityId,
+          ),
+        })
+      } catch (err) {
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to fetch the record history' })
+      }
+    },
+  )
 
   // ═══════════════════════════════════════════════════════════════════════════
   // WRITE LOG

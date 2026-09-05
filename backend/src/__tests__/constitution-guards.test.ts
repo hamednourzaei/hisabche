@@ -285,25 +285,99 @@ describe('law 7 — the UI is not a security boundary', () => {
    */
   const PLATFORM_WIDE_ROUTES = ['admin.routes.ts', 'audit.routes.ts']
 
+  /**
+   * Service methods on these files' services that are CROSS-WORKSPACE by
+   * construction. A handler calling one of these is a platform surface no
+   * matter what middleware it carries, so it must be admin-guarded.
+   *
+   * Their workspace-scoped counterparts (`listForWorkspace`,
+   * `getEntityHistoryForWorkspace`, `getUserActivity`) take a TenancyContext
+   * and filter on it — those are safe behind `requireWorkspaceContext`.
+   */
+  const CROSS_WORKSPACE_CALLS = [
+    'auditService.list(',
+    'auditService.getEntityHistory(',
+    'auditService.getUserActivityAcrossWorkspaces(',
+    'auditService.getStats(',
+    'auditService.exportLogs(',
+    'auditService.cleanup(',
+    'auditService.log(',
+  ]
+
   it.each(PLATFORM_WIDE_ROUTES)('every handler in %s is guarded server-side', (fileName) => {
     // The admin panel hides what a non-admin should not see. That is UX. The
     // guard is what makes it security, and it must be on every handler without
     // exception — one unguarded route is the whole surface.
+    //
+    // ⚠️ G4 WIDENED WHAT COUNTS AS GUARDED — and narrowed what counts as safe.
+    //
+    // The original rule was "every handler must have platformAdminGuard",
+    // justified by "audit_logs has no workspace_id". That justification is no
+    // longer true: the column exists, `AuditService.log()` now writes it, and
+    // `listForWorkspace` filters on it for the member-facing «سابقه تغییرات»
+    // tab.
+    //
+    // So a handler is now acceptable if EITHER:
+    //   · it is admin-guarded (the platform-support surface), OR
+    //   · it is workspace-scoped AND calls no cross-workspace service method.
+    //
+    // The second clause is the important half. Without it this would have
+    // become "any handler with requireWorkspaceContext is fine" — and a
+    // handler could carry that middleware while calling the cross-workspace
+    // `auditService.list()`, which reads every business's audit trail. The
+    // middleware would make it LOOK scoped and the query would not be.
     const code = stripComments(readFileSync(join(SRC, 'routes', fileName), 'utf8'))
 
-    const handlers = code.match(/fastify\.(get|post|patch|delete|put)[<(]/g) ?? []
-    const guards = code.match(/platformAdminGuard/g) ?? []
+    // ⚠️ PER-HANDLER, not counted across the file.
+    //
+    // The first draft of this compared totals — "as many guards as handlers".
+    // That has SLACK: this file has 11 guard mentions for 9 handlers, so a
+    // tenth handler with no guard at all still satisfied it, and pointing a
+    // workspace-scoped handler at the cross-workspace `list()` did not fail
+    // the test when it was deliberately tried. A totals check cannot say WHICH
+    // handler is unguarded, which is the only thing worth knowing.
+    //
+    // Each block runs from one `fastify.<method>(` to the next.
+    const blocks = code.split(/fastify\.(?:get|post|patch|delete|put)[<(]/).slice(1)
+
+    expect(blocks.length, `no handlers found in ${fileName} — did the file move?`).toBeGreaterThan(
+      0,
+    )
+
+    const unguarded: string[] = []
+    const leaking: string[] = []
+
+    for (const block of blocks) {
+      // The route path is the first string literal in the block.
+      const path = /['"`]([^'"`]+)['"`]/.exec(block)?.[1] ?? '(unknown path)'
+
+      const isAdminGuarded = block.includes('platformAdminGuard')
+      const isWorkspaceScoped = block.includes('requireWorkspaceContext')
+
+      if (!isAdminGuarded && !isWorkspaceScoped) {
+        unguarded.push(`${fileName} ${path}`)
+        continue
+      }
+
+      // A handler that is only workspace-scoped must not reach a
+      // cross-workspace service method. `requireWorkspaceContext` would make
+      // it LOOK scoped while the query read every business.
+      if (!isAdminGuarded) {
+        const call = CROSS_WORKSPACE_CALLS.find((needle) => block.includes(needle))
+        if (call) leaking.push(`${fileName} ${path} → ${call}`)
+      }
+    }
 
     expect(
-      handlers.length,
-      `no handlers found in ${fileName} — did the file move?`,
-    ).toBeGreaterThan(0)
+      unguarded,
+      'an unguarded handler here is a cross-tenant read or a platform-wide write',
+    ).toEqual([])
+
     expect(
-      guards.length,
-      `${fileName}: ${handlers.length} handlers but ${guards.length} guards. ` +
-        'These tables have no workspace_id, so an unguarded handler is a cross-tenant read ' +
-        'or a platform-wide write.',
-    ).toBeGreaterThanOrEqual(handlers.length)
+      leaking,
+      'a cross-workspace query behind requireWorkspaceContext reads every business ' +
+        'while looking scoped',
+    ).toEqual([])
   })
 })
 

@@ -69,6 +69,18 @@ export {
   transactionKeys,
 } from './hooks/transactions'
 
+// ─── Audit trail (G4) ─────────────────────────────────────
+// The COMPLIANCE record — `audit_logs`. Deliberately separate from
+// `useActivities`, which is the interface's feed over `activities`.
+export {
+  useAuditTrail,
+  useRecordHistory,
+  auditTrailKeys,
+  type AuditEntry,
+  type AuditPage,
+  type AuditTrailFilters,
+} from './hooks/audit-trail'
+
 // ─── Permission Matrix (G3) ───────────────────────────────
 export {
   usePermissionMatrix,

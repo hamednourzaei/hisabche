@@ -9,6 +9,18 @@ import { DatabaseError } from '../errors/database.error'
 import type { TenancyContext } from './tenancy.service'
 import { memoryCache } from '../utils/pagination'
 
+/**
+ * G4 — does this error mean `audit_logs.branch_id` has not been created yet,
+ * rather than that the query is wrong?
+ *
+ *   42703    — undefined_column (Postgres)
+ *   PGRST204 — PostgREST could not find the column in its schema cache
+ */
+function isMissingBranchColumn(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false
+  if (error.code === '42703' || error.code === 'PGRST204') return true
+  return /branch_id/i.test(error.message ?? '')
+}
 // ✅ Column Selection Constants (بهینه‌شده)
 const AUDIT_LOG_COLUMNS =
   'id, user_id, action, entity_type, entity_id, old_data, new_data, ip_address, user_agent, created_at'
@@ -119,6 +131,110 @@ export class AuditService {
     // ✅ ذخیره در کش با TTL 30 ثانیه (چون داده‌های لحظه‌ای است)
     await memoryCache.set(cacheKey, result, 30)
     return result
+  }
+
+  /**
+   * G4 — the audit trail as a MEMBER of one workspace may read it.
+   *
+   * ⚠️ A SEPARATE METHOD, not a filter added to `list()` above.
+   *
+   * `list()` is deliberately cross-workspace: every route that calls it runs
+   * `platformAdminGuard`, and `tenancy-static-guard.test.ts` documents
+   * `audit_logs` as an intentional exclusion on exactly that basis. Adding a
+   * workspace filter to it would quietly narrow a platform-support surface;
+   * adding a scoped read beside it leaves both honest.
+   *
+   * The workspace comes from the verified context. It is never a parameter a
+   * caller can supply, because that is the whole boundary.
+   */
+  async listForWorkspace(
+    ctx: TenancyContext,
+    filters: {
+      entityType?: string | undefined
+      entityId?: string | undefined
+      userId?: string | undefined
+      branchId?: string | undefined
+      action?: string | undefined
+      startDate?: string | undefined
+      endDate?: string | undefined
+      page?: number | undefined
+      limit?: number | undefined
+    } = {},
+  ) {
+    const page = Math.max(1, filters.page ?? 1)
+    const limit = Math.min(Math.max(filters.limit ?? 50, 1), 100)
+
+    // ⚠️ The cache key starts with the workspace. Keyed by filters alone — as
+    // `list()` above is — one business's audit page would be served to another
+    // (lessons 11 and 18), and on an audit trail that is the worst possible
+    // cache to get wrong.
+    const cacheKey = `audit:${ctx.workspaceId}:list:${JSON.stringify({ ...filters, page, limit })}`
+    const cached = await memoryCache.get(cacheKey)
+    if (cached) return cached
+
+    const build = (withBranch: boolean) => {
+      let query = supabase
+        .from('audit_logs')
+        .select(AUDIT_MINIMAL_COLUMNS, { count: 'estimated' })
+        .eq('workspace_id', ctx.workspaceId)
+
+      if (filters.entityType) query = query.eq('entity_type', filters.entityType)
+      if (filters.entityId) query = query.eq('entity_id', filters.entityId)
+      if (filters.userId) query = query.eq('user_id', filters.userId)
+      if (filters.action) query = query.eq('action', filters.action)
+      if (filters.startDate) query = query.gte('created_at', filters.startDate)
+      if (filters.endDate) query = query.lte('created_at', filters.endDate)
+      if (withBranch && filters.branchId) query = query.eq('branch_id', filters.branchId)
+
+      return query
+        .order('created_at', { ascending: false })
+        .range((page - 1) * limit, page * limit - 1)
+    }
+
+    let { data, error, count } = await build(true)
+
+    if (error && isMissingBranchColumn(error)) {
+      // ⚠️ The branch filter is DROPPED, not silently ignored — the caller is
+      // told. Returning every branch's rows to someone who asked for one
+      // branch's would be an answer to a different question.
+      if (filters.branchId) {
+        throw new DatabaseError(
+          'AUDIT_BRANCH_NOT_MIGRATED: audit_logs.branch_id does not exist. Run docs/phase-g-03-audit-branch-migration.sql.',
+          error,
+        )
+      }
+      ;({ data, error, count } = await build(false))
+    }
+
+    if (error) throw new DatabaseError('Failed to fetch the audit trail', error)
+
+    const result = {
+      data: data ?? [],
+      total: count ?? 0,
+      page,
+      limit,
+      totalPages: count ? Math.ceil(count / limit) : 0,
+    }
+
+    await memoryCache.set(cacheKey, result, 30)
+    return result
+  }
+
+  /**
+   * G4 / H6 — every recorded change to ONE record, for the history panel on a
+   * document's own screen.
+   *
+   * Workspace-scoped, unlike `getEntityHistory` below, which is the
+   * platform-admin one.
+   */
+  async getEntityHistoryForWorkspace(ctx: TenancyContext, entityType: string, entityId: string) {
+    const result = (await this.listForWorkspace(ctx, {
+      entityType,
+      entityId,
+      limit: 100,
+    })) as { data: unknown[] }
+
+    return result.data
   }
 
   // ─── Get Entity History ──────────────────────────────────
