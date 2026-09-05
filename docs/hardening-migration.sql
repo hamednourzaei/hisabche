@@ -295,3 +295,34 @@ CREATE INDEX IF NOT EXISTS activities_workspace_id_entity_type_entity_id_idx ON 
 CREATE INDEX IF NOT EXISTS workspace_members_user_id_workspace_id_idx ON workspace_members (user_id, workspace_id);
 
 COMMIT;
+
+
+-- ─── The foreign key a query HINT depends on ────────────────────────────────
+--
+-- ⚠️ This one is not about integrity. `invoice.service.ts` embeds the customer
+-- through PostgREST with an explicit hint:
+--
+--     .select('…, customers!fk_invoices_customer(…)')
+--
+-- PostgREST resolves that against the CONSTRAINT NAME. Without a constraint
+-- called exactly this, every invoice list fails with PGRST200 — an API-layer
+-- error about a "schema cache", which reads nothing like a missing foreign
+-- key and sent the first hour of debugging in the wrong direction.
+--
+-- ⚠️ The NAME is part of the contract. Same columns under a different name
+-- does not satisfy the hint.
+--
+-- No CASCADE: deleting a customer must not silently delete their invoices.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_invoices_customer') THEN
+    ALTER TABLE invoices
+      ADD CONSTRAINT fk_invoices_customer
+      FOREIGN KEY (customer_id) REFERENCES customers(id)
+      NOT VALID;
+  END IF;
+END $$;
+
+-- PostgREST answers from a cached schema; without this it keeps returning
+-- PGRST200 after the constraint exists.
+NOTIFY pgrst, 'reload schema';

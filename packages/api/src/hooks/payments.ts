@@ -1,0 +1,158 @@
+// ============================================
+// packages/api/src/hooks/payments.ts
+//
+// The payments core, from the client side.
+//
+// WHY THIS FILE EXISTS (Phase B)
+//
+// `/api/payments` has existed on the backend since the AR/AP migration: it
+// records a payment, allocates it against that party's open invoices, and books
+// the journal entry. No client hook ever called it.
+//
+// So the web PaymentModal did the only thing it could reach — `POST
+// /transactions` with `type: 'payment'` — which wrote a single-sided row that
+//
+//   * settled no invoice, so `invoice_outstanding` never moved,
+//   * reached no journal entry, so the trial balance never saw the cash, and
+//   * used 'payment', which in the party-ledger vocabulary means money paid
+//     OUT. Taking 500 from a debtor increased their debt by 500.
+//
+// The address was right there. Nothing pointed at it.
+// ============================================
+
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+
+import { apiClient } from '../lib/client'
+import { useAuthReady } from './useAuthReady'
+
+export type PaymentDirection = 'in' | 'out'
+export type PaymentPartyType = 'customer' | 'supplier'
+
+export interface RecordPaymentInput {
+  /** 'in' — received from a customer. 'out' — paid to a supplier. */
+  direction: PaymentDirection
+  partyType: PaymentPartyType
+  partyId: string
+  amount: number
+  /** ISO date (YYYY-MM-DD). Defaults to today on the server. */
+  entryDate?: string
+  currency?: string
+  method?: string
+  reference?: string
+  notes?: string
+  /**
+   * Which invoices this settles. OMIT to let the server settle the oldest open
+   * invoices first — what a shopkeeper means by "he paid me 500". Anything left
+   * over stays on the payment as an advance rather than being refused.
+   */
+  allocations?: { invoiceId: string; amount: number }[]
+}
+
+export interface PaymentRecord {
+  id: string
+  paymentNumber: string | null
+  direction: PaymentDirection
+  partyType: PaymentPartyType
+  partyId: string | null
+  amount: number
+  currency: string
+  method: string
+  entryDate: string
+  reference: string
+  notes: string
+  status: 'draft' | 'posted' | 'cancelled'
+  /** Amount that settled no invoice — an advance on the party's account. */
+  unallocated?: number
+}
+
+export interface OpenInvoice {
+  id: string
+  invoiceNumber: string
+  date: string
+  dueDate: string | null
+  total: number
+  allocated: number
+  outstanding: number
+}
+
+export const paymentKeys = {
+  all: ['payments'] as const,
+  lists: () => [...paymentKeys.all, 'list'] as const,
+  list: (filters: Record<string, unknown> = {}) => [...paymentKeys.lists(), filters] as const,
+  openInvoices: (partyType: string, partyId?: string) =>
+    [...paymentKeys.all, 'open-invoices', partyType, partyId] as const,
+}
+
+/**
+ * The api client sometimes hands back the axios response and sometimes the
+ * payload itself, depending on the interceptor path. Both shapes are unwrapped
+ * here rather than at each call site.
+ */
+const unwrap = <T>(response: unknown): T => {
+  if (response && typeof response === 'object' && 'data' in response) {
+    return (response as { data: T }).data
+  }
+  return response as T
+}
+
+export function usePayments(
+  filters: { partyId?: string; direction?: PaymentDirection; limit?: number } = {},
+) {
+  const authReady = useAuthReady()
+
+  return useQuery({
+    queryKey: paymentKeys.list(filters),
+    queryFn: async () =>
+      unwrap<PaymentRecord[]>(await apiClient.get('/payments', { params: filters })),
+    enabled: authReady,
+    staleTime: 1000 * 30,
+  })
+}
+
+/** What this party still owes, invoice by invoice — the allocation targets. */
+export function useOpenInvoices(partyType: PaymentPartyType, partyId?: string) {
+  const authReady = useAuthReady()
+
+  return useQuery({
+    queryKey: paymentKeys.openInvoices(partyType, partyId),
+    queryFn: async () =>
+      unwrap<OpenInvoice[]>(
+        // Path parameters, not a query string — the route is
+        // GET /payments/open-invoices/:partyType/:partyId.
+        //
+        // `partyId` is non-null here: `enabled` below keeps the query from
+        // running without one. Interpolated plainly rather than with a `??`
+        // fallback so `client-route-contract.test.ts` can still read the path
+        // out of the source — a guard that cannot parse the address it is
+        // meant to check is a guard that passes by accident.
+        await apiClient.get(`/payments/open-invoices/${partyType}/${partyId}`),
+      ),
+    enabled: authReady && !!partyId,
+  })
+}
+
+/**
+ * Record money moving.
+ *
+ * Everything downstream of a payment changes: the invoice's outstanding amount,
+ * the party's balance, the ledger, and the dashboard's cash figure. All four are
+ * invalidated here, because a payment that shows on one screen and not the next
+ * is the shape of bug people stop trusting the app over.
+ */
+export function useRecordPayment() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (input: RecordPaymentInput) =>
+      unwrap<PaymentRecord>(await apiClient.post('/payments', input)),
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: paymentKeys.all })
+      queryClient.invalidateQueries({ queryKey: ['invoices'] })
+      queryClient.invalidateQueries({ queryKey: ['customers'] })
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      queryClient.invalidateQueries({ queryKey: ['ledger'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+    },
+  })
+}

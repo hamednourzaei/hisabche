@@ -170,7 +170,26 @@ function inferredDefault(column) {
   if (/^(integer|bigint|smallint|numeric|real|double precision)/.test(type)) return '0'
   if (type.startsWith('jsonb')) return LIST_SHAPED.test(name) ? "'[]'::jsonb" : "'{}'::jsonb"
 
-  // text, uuid, varchar — identity. Left alone on purpose.
+  // ⚠️ Share tokens are the ONE text column that IS inferable.
+  //
+  // `invoices.public_token` and `interactions.public_token` are read by the
+  // application and never written by it — the database always supplied them.
+  // Without a default the insert raises 23502 and no invoice can be created.
+  //
+  // A RANDOM default, not an empty string and not a relaxed NOT NULL: these
+  // columns exist so a share link cannot be guessed by walking sequential ids.
+  // A null token matches nothing; a shared constant matches everything.
+  // ⚠️ The cast has to match the column. `gen_random_uuid()::text` on a `uuid`
+  // column round-trips through text for nothing, and on a `text` column the
+  // bare function would need an implicit cast that reads as an accident.
+  if (/_token$/.test(name)) {
+    if (type === 'uuid') return 'gen_random_uuid()'
+    if (type === 'text') return 'gen_random_uuid()::text'
+  }
+
+  // Every other text, uuid and varchar — identity. Left alone on purpose:
+  // `slug`, `invoice_number`, `code`, and the foreign keys. The code sets
+  // those, and inventing a value for them creates bad data that looks fine.
   return null
 }
 

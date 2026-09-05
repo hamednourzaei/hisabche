@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>فاکتورها | حسابچه</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Vazirmatn', 'system-ui', 'sans-serif'] },
+          colors: {
+            primary: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' },
+            success: { 50: '#f0fdf4', 100: '#dcfce7', 600: '#16a34a', 700: '#15803d' },
+            warning: { 50: '#fffbeb', 100: '#fef3c7', 600: '#d97706', 700: '#b45309' },
+            danger:  { 50: '#fef2f2', 100: '#fee2e2', 600: '#dc2626', 700: '#b91c1c' }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { font-family: 'Vazirmatn', system-ui, sans-serif; }
+    body { background: #f8fafc; }
+    .skeleton {
+      background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+    @keyframes shimmer {
+      0% { background-position: -200% 0; }
+      100% { background-position: 200% 0; }
+    }
+    .badge { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium; }
+    .table-scroll::-webkit-scrollbar { height: 6px; }
+    .table-scroll::-webkit-scrollbar-track { background: #f1f5f9; }
+    .table-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    /* Drawer animation */
+    .drawer-enter { transform: translateX(100%); }
+    .drawer-enter-active { transform: translateX(0); transition: transform 0.25s ease-out; }
+    .drawer-exit { transform: translateX(0); }
+    .drawer-exit-active { transform: translateX(100%); transition: transform 0.2s ease-in; }
+    /* Focus ring */
+    *:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+
+  <!-- ============================================================
+       MAIN CONTENT AREA ONLY
+       ============================================================ -->
+  <main class="p-4 md:p-6 lg:p-8 max-w-[1400px] mx-auto" id="main-content">
+
+    <!-- Demo State Switcher -->
+    <div class="mb-6 flex flex-wrap gap-2 items-center bg-white border border-slate-200 rounded-lg p-3 shadow-sm">
+      <span class="text-sm font-medium text-slate-500 ml-2">نمایش حالت:</span>
+      <button onclick="setState('ready')" class="state-btn px-3 py-1.5 text-sm rounded-md bg-primary-600 text-white font-medium" data-state="ready">آماده</button>
+      <button onclick="setState('empty')" class="state-btn px-3 py-1.5 text-sm rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200" data-state="empty">خالی</button>
+      <button onclick="setState('loading')" class="state-btn px-3 py-1.5 text-sm rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200" data-state="loading">بارگذاری</button>
+      <button onclick="setState('error')" class="state-btn px-3 py-1.5 text-sm rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200" data-state="error">خطا</button>
+      <button onclick="setState('offline')" class="state-btn px-3 py-1.5 text-sm rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200" data-state="offline">آفلاین</button>
+      <span class="text-xs text-slate-400 mr-auto">میانبرها: / جستجو · N ایجاد · Esc بستن</span>
+    </div>
+
+    <!-- ========== 1. PAGE HEADER ========== -->
+    <div class="flex flex-col sm:flex-row-reverse sm:items-center sm:justify-between gap-4 mb-6">
+      <div>
+        <h1 class="text-2xl md:text-3xl font-bold text-slate-900">فاکتورها</h1>
+        <p class="text-sm text-slate-500 mt-1">مدیریت و پیگیری تمام فاکتورهای صادرشده</p>
+      </div>
+      <button id="btn-create" onclick="openCreate()" 
+              class="inline-flex items-center justify-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-medium px-4 py-2.5 rounded-lg shadow-sm transition-colors self-start sm:self-auto"
+              aria-label="ایجاد فاکتور جدید">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+        </svg>
+        ایجاد فاکتور جدید
+      </button>
+    </div>
+
+    <!-- ========== 2. SUMMARY CARDS ========== -->
+    <div id="summary-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-slate-500">تعداد کل فاکتورها</p>
+            <p class="text-2xl font-bold text-slate-900 mt-1" id="stat-total">۰</p>
+          </div>
+          <div class="w-10 h-10 rounded-lg bg-primary-50 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-slate-500">مبلغ کل پرداخت‌نشده</p>
+            <p class="text-2xl font-bold text-slate-900 mt-1" id="stat-unpaid">۰ <span class="text-sm font-normal text-slate-500">تومان</span></p>
+          </div>
+          <div class="w-10 h-10 rounded-lg bg-warning-50 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-warning-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-slate-500">مبلغ کل سررسیدشده</p>
+            <p class="text-2xl font-bold text-slate-900 mt-1" id="stat-overdue">۰ <span class="text-sm font-normal text-slate-500">تومان</span></p>
+          </div>
+          <div class="w-10 h-10 rounded-lg bg-danger-50 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-danger-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-medium text-slate-500">میانگین روزانه</p>
+            <p class="text-2xl font-bold text-slate-900 mt-1" id="stat-avg">۰ <span class="text-sm font-normal text-slate-500">فاکتور</span></p>
+          </div>
+          <div class="w-10 h-10 rounded-lg bg-success-50 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-success-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== 3. TOOLBAR ========== -->
+    <div id="toolbar" class="bg-white rounded-xl border border-slate-200 p-3 md:p-4 mb-4 shadow-sm">
+      <div class="flex flex-col lg:flex-row lg:items-center gap-3">
+        <div class="relative flex-1 max-w-md">
+          <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <input type="search" id="searchInput" placeholder="جستجوی شماره، مشتری، ..."
+                 class="w-full pr-10 pl-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors"
+                 aria-label="جستجوی فاکتورها"
+                 oninput="applyFilters()" />
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="flex flex-wrap gap-1.5" id="filter-toggles" role="group" aria-label="فیلتر وضعیت">
+            <button class="filter-btn active px-3 py-1.5 text-sm rounded-full border border-primary-600 bg-primary-50 text-primary-700 font-medium" data-filter="all" onclick="setFilter('all')">همه</button>
+            <button class="filter-btn px-3 py-1.5 text-sm rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50" data-filter="paid" onclick="setFilter('paid')">پرداخت‌شده</button>
+            <button class="filter-btn px-3 py-1.5 text-sm rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50" data-filter="unpaid" onclick="setFilter('unpaid')">پرداخت‌نشده</button>
+            <button class="filter-btn px-3 py-1.5 text-sm rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50" data-filter="debtor" onclick="setFilter('debtor')">بدهکار</button>
+            <button class="filter-btn px-3 py-1.5 text-sm rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50" data-filter="draft" onclick="setFilter('draft')">پیش‌نویس</button>
+          </div>
+          <button class="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 font-medium" onclick="alert('فیلتر پیشرفته (در نسخه واقعی Drawer باز می‌شود)')">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+            </svg>
+            فیلتر پیشرفته
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== BULK ACTION BAR ========== -->
+    <div id="bulk-bar" class="hidden mb-4 bg-primary-50 border border-primary-200 rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-3 shadow-sm">
+      <div class="flex items-center gap-3">
+        <span class="text-sm font-medium text-primary-800">
+          <span id="bulk-count">۰</span> فاکتور انتخاب شده
+        </span>
+        <button onclick="clearSelection()" class="text-sm text-primary-600 hover:underline">لغو انتخاب</button>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button onclick="bulkAction('pay')" class="px-3 py-1.5 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 font-medium">ثبت پرداخت</button>
+        <button onclick="bulkAction('send')" class="px-3 py-1.5 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 font-medium">ارسال</button>
+        <button onclick="bulkAction('status')" class="px-3 py-1.5 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 font-medium">تغییر وضعیت</button>
+        <button onclick="bulkAction('delete')" class="px-3 py-1.5 text-sm bg-danger-50 text-danger-700 border border-danger-200 rounded-lg hover:bg-danger-100 font-medium">حذف</button>
+      </div>
+    </div>
+
+    <!-- ========== 4. CONTENT AREA ========== -->
+    <div id="content-area" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+
+      <!-- READY STATE -->
+      <div id="state-ready" class="block">
+        <!-- Desktop Table -->
+        <div class="hidden md:block overflow-x-auto table-scroll">
+          <table class="w-full text-sm text-right" role="table" aria-label="لیست فاکتورها">
+            <thead class="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th class="px-3 py-3 w-10">
+                  <input type="checkbox" id="select-all" class="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                         onchange="toggleSelectAll(this.checked)" aria-label="انتخاب همه">
+                </th>
+                <th class="px-4 py-3 font-semibold text-slate-600 whitespace-nowrap">شماره فاکتور</th>
+                <th class="px-4 py-3 font-semibold text-slate-600 whitespace-nowrap">مشتری</th>
+                <th class="px-4 py-3 font-semibold text-slate-600 whitespace-nowrap">تاریخ</th>
+                <th class="px-4 py-3 font-semibold text-slate-600 whitespace-nowrap">مبلغ نهایی (تومان)</th>
+                <th class="px-4 py-3 font-semibold text-slate-600 whitespace-nowrap">وضعیت</th>
+                <th class="px-4 py-3 font-semibold text-slate-600 whitespace-nowrap text-center">عملیات</th>
+              </tr>
+            </thead>
+            <tbody id="table-body" class="divide-y divide-slate-100">
+              <!-- Rows injected by JS -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Mobile Cards -->
+        <div id="mobile-cards" class="md:hidden divide-y divide-slate-100">
+          <!-- Cards injected by JS -->
+        </div>
+
+        <!-- Pagination -->
+        <div id="pagination" class="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-200 bg-slate-50">
+          <p id="pagination-info" class="text-sm text-slate-600">نمایش <span class="font-medium">۰</span> تا <span class="font-medium">۰</span> از <span class="font-medium">۰</span> فاکتور</p>
+          <div class="flex items-center gap-1">
+            <button id="prev-page" class="px-3 py-1.5 text-sm rounded-md border border-slate-200 bg-white text-slate-400 cursor-not-allowed" disabled aria-label="صفحه قبلی">قبلی</button>
+            <button id="page-indicator" class="px-3 py-1.5 text-sm rounded-md border border-primary-600 bg-primary-50 text-primary-700 font-medium" aria-current="page">۱</button>
+            <button id="next-page" class="px-3 py-1.5 text-sm rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-50" aria-label="صفحه بعدی">بعدی</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- EMPTY STATE -->
+      <div id="state-empty" class="hidden py-16 px-6 text-center">
+        <div class="mx-auto w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+        </div>
+        <h3 class="text-lg font-semibold text-slate-900 mb-1">هیچ فاکتوری ثبت نشده است</h3>
+        <p class="text-sm text-slate-500 mb-6 max-w-sm mx-auto">برای شروع، اولین فاکتور خود را ایجاد کنید و مدیریت مالی را ساده کنید.</p>
+        <button onclick="openCreate()" class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-medium px-5 py-2.5 rounded-lg shadow-sm transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          ایجاد اولین فاکتور
+        </button>
+      </div>
+
+      <!-- NO RESULTS (search/filter) -->
+      <div id="state-no-results" class="hidden py-16 px-6 text-center">
+        <div class="mx-auto w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+        <h3 class="text-lg font-semibold text-slate-900 mb-1">نتیجه‌ای یافت نشد</h3>
+        <p class="text-sm text-slate-500 mb-6 max-w-sm mx-auto">هیچ فاکتوری با این فیلتر یا جستجو مطابقت ندارد.</p>
+        <button onclick="clearFilters()" class="inline-flex items-center gap-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium px-5 py-2.5 rounded-lg shadow-sm transition-colors">
+          پاک کردن فیلترها
+        </button>
+      </div>
+
+      <!-- LOADING STATE -->
+      <div id="state-loading" class="hidden">
+        <div class="hidden md:block">
+          <div class="px-4 py-3 bg-slate-50 border-b border-slate-200 flex gap-4">
+            <div class="h-4 w-6 skeleton rounded"></div>
+            <div class="h-4 w-24 skeleton rounded"></div>
+            <div class="h-4 w-32 skeleton rounded"></div>
+            <div class="h-4 w-20 skeleton rounded"></div>
+            <div class="h-4 w-28 skeleton rounded"></div>
+            <div class="h-4 w-20 skeleton rounded"></div>
+            <div class="h-4 w-16 skeleton rounded"></div>
+          </div>
+          <div class="divide-y divide-slate-100">
+            <div class="px-4 py-4 flex items-center gap-4"><div class="h-4 w-6 skeleton rounded"></div><div class="h-4 w-28 skeleton rounded"></div><div class="flex items-center gap-2 flex-1"><div class="w-8 h-8 rounded-full skeleton"></div><div class="h-4 w-36 skeleton rounded"></div></div><div class="h-4 w-24 skeleton rounded"></div><div class="h-4 w-28 skeleton rounded"></div><div class="h-6 w-20 skeleton rounded-full"></div><div class="h-4 w-16 skeleton rounded"></div></div>
+            <div class="px-4 py-4 flex items-center gap-4"><div class="h-4 w-6 skeleton rounded"></div><div class="h-4 w-28 skeleton rounded"></div><div class="flex items-center gap-2 flex-1"><div class="w-8 h-8 rounded-full skeleton"></div><div class="h-4 w-32 skeleton rounded"></div></div><div class="h-4 w-24 skeleton rounded"></div><div class="h-4 w-24 skeleton rounded"></div><div class="h-6 w-20 skeleton rounded-full"></div><div class="h-4 w-16 skeleton rounded"></div></div>
+            <div class="px-4 py-4 flex items-center gap-4"><div class="h-4 w-6 skeleton rounded"></div><div class="h-4 w-28 skeleton rounded"></div><div class="flex items-center gap-2 flex-1"><div class="w-8 h-8 rounded-full skeleton"></div><div class="h-4 w-40 skeleton rounded"></div></div><div class="h-4 w-24 skeleton rounded"></div><div class="h-4 w-32 skeleton rounded"></div><div class="h-6 w-20 skeleton rounded-full"></div><div class="h-4 w-16 skeleton rounded"></div></div>
+            <div class="px-4 py-4 flex items-center gap-4"><div class="h-4 w-6 skeleton rounded"></div><div class="h-4 w-28 skeleton rounded"></div><div class="flex items-center gap-2 flex-1"><div class="w-8 h-8 rounded-full skeleton"></div><div class="h-4 w-28 skeleton rounded"></div></div><div class="h-4 w-24 skeleton rounded"></div><div class="h-4 w-20 skeleton rounded"></div><div class="h-6 w-20 skeleton rounded-full"></div><div class="h-4 w-16 skeleton rounded"></div></div>
+            <div class="px-4 py-4 flex items-center gap-4"><div class="h-4 w-6 skeleton rounded"></div><div class="h-4 w-28 skeleton rounded"></div><div class="flex items-center gap-2 flex-1"><div class="w-8 h-8 rounded-full skeleton"></div><div class="h-4 w-36 skeleton rounded"></div></div><div class="h-4 w-24 skeleton rounded"></div><div class="h-4 w-28 skeleton rounded"></div><div class="h-6 w-20 skeleton rounded-full"></div><div class="h-4 w-16 skeleton rounded"></div></div>
+          </div>
+        </div>
+        <div class="md:hidden divide-y divide-slate-100">
+          <div class="p-4 space-y-3"><div class="flex justify-between"><div class="h-5 w-28 skeleton rounded"></div><div class="h-6 w-20 skeleton rounded-full"></div></div><div class="h-4 w-40 skeleton rounded"></div><div class="flex justify-between"><div class="h-4 w-24 skeleton rounded"></div><div class="h-4 w-28 skeleton rounded"></div></div><div class="flex gap-2 pt-2"><div class="h-9 flex-1 skeleton rounded-lg"></div><div class="h-9 flex-1 skeleton rounded-lg"></div></div></div>
+          <div class="p-4 space-y-3"><div class="flex justify-between"><div class="h-5 w-28 skeleton rounded"></div><div class="h-6 w-20 skeleton rounded-full"></div></div><div class="h-4 w-32 skeleton rounded"></div><div class="flex justify-between"><div class="h-4 w-24 skeleton rounded"></div><div class="h-4 w-24 skeleton rounded"></div></div><div class="flex gap-2 pt-2"><div class="h-9 flex-1 skeleton rounded-lg"></div><div class="h-9 flex-1 skeleton rounded-lg"></div></div></div>
+          <div class="p-4 space-y-3"><div class="flex justify-between"><div class="h-5 w-28 skeleton rounded"></div><div class="h-6 w-20 skeleton rounded-full"></div></div><div class="h-4 w-36 skeleton rounded"></div><div class="flex justify-between"><div class="h-4 w-24 skeleton rounded"></div><div class="h-4 w-32 skeleton rounded"></div></div><div class="flex gap-2 pt-2"><div class="h-9 flex-1 skeleton rounded-lg"></div><div class="h-9 flex-1 skeleton rounded-lg"></div></div></div>
+        </div>
+      </div>
+
+      <!-- ERROR STATE -->
+      <div id="state-error" class="hidden py-16 px-6 text-center">
+        <div class="mx-auto w-16 h-16 rounded-full bg-danger-50 flex items-center justify-center mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-danger-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <h3 class="text-lg font-semibold text-slate-900 mb-1">خطا در بارگذاری اطلاعات</h3>
+        <p class="text-sm text-slate-500 mb-6 max-w-sm mx-auto">متأسفانه مشکلی در دریافت لیست فاکتورها پیش آمد. لطفاً دوباره تلاش کنید.</p>
+        <button onclick="setState('ready')" class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-medium px-5 py-2.5 rounded-lg shadow-sm transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          تلاش مجدد
+        </button>
+      </div>
+
+      <!-- OFFLINE STATE -->
+      <div id="state-offline" class="hidden py-16 px-6 text-center">
+        <div class="mx-auto w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a5 5 0 00-1.414-2.83" />
+          </svg>
+        </div>
+        <h3 class="text-lg font-semibold text-slate-900 mb-1">اتصال به اینترنت برقرار نیست</h3>
+        <p class="text-sm text-slate-500 mb-6 max-w-sm mx-auto">برای مشاهده و مدیریت فاکتورها، اتصال خود را بررسی کنید.</p>
+        <button onclick="setState('ready')" class="inline-flex items-center gap-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium px-5 py-2.5 rounded-lg shadow-sm transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          بررسی مجدد اتصال
+        </button>
+      </div>
+    </div>
+  </main>
+
+  <!-- ========== DETAIL DRAWER ========== -->
+  <div id="drawer-overlay" class="fixed inset-0 bg-black/40 z-40 hidden" onclick="closeDrawer()"></div>
+  <aside id="detail-drawer" class="fixed top-0 left-0 h-full w-full max-w-md bg-white shadow-2xl z-50 transform translate-x-full transition-transform duration-250 ease-out overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="drawer-title" hidden>
+    <div class="sticky top-0 bg-white border-b border-slate-200 px-5 py-4 flex items-center justify-between z-10">
+      <h2 id="drawer-title" class="text-lg font-bold text-slate-900">جزئیات فاکتور</h2>
+      <button onclick="closeDrawer()" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="بستن">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+    <div id="drawer-content" class="p-5 space-y-5">
+      <!-- Content injected by JS -->
+    </div>
+    <div class="sticky bottom-0 bg-white border-t border-slate-200 px-5 py-4 flex gap-3">
+      <button onclick="closeDrawer()" class="flex-1 py-2.5 border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50">بستن</button>
+      <button class="flex-1 py-2.5 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700">ویرایش</button>
+    </div>
+  </aside>
+
+  <!-- Toast -->
+  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-5 py-3 rounded-lg shadow-lg text-sm font-medium opacity-0 pointer-events-none transition-opacity duration-300 z-50" role="status" aria-live="polite"></div>
+
+  <script>
+    // ============================================================
+    // DATA
+    // ============================================================
+    const mockInvoices = [
+      { id: 1, number: 'INV-1403-0892', customer: 'شرکت آریا تجارت', date: '۱۴۰۳/۰۶/۱۲', amount: 12500000, status: 'paid', label: 'پرداخت‌شده' },
+      { id: 2, number: 'INV-1403-0891', customer: 'محمد رضایی', date: '۱۴۰۳/۰۶/۱۱', amount: 8750000, status: 'unpaid', label: 'در انتظار' },
+      { id: 3, number: 'INV-1403-0890', customer: 'پارس نوین', date: '۱۴۰۳/۰۶/۱۰', amount: 23400000, status: 'debtor', label: 'بدهکار' },
+      { id: 4, number: 'INV-1403-0889', customer: 'سارا کریمی', date: '۱۴۰۳/۰۶/۰۹', amount: 5200000, status: 'draft', label: 'پیش‌نویس' },
+      { id: 5, number: 'INV-1403-0888', customer: 'توسعه سامان', date: '۱۴۰۳/۰۶/۰۸', amount: 15800000, status: 'paid', label: 'پرداخت‌شده' },
+      { id: 6, number: 'INV-1403-0887', customer: 'علی محمدی', date: '۱۴۰۳/۰۶/۰۷', amount: 9300000, status: 'debtor', label: 'سررسیدشده' },
+      { id: 7, number: 'INV-1403-0886', customer: 'نسترن احمدی', date: '۱۴۰۳/۰۶/۰۶', amount: 4100000, status: 'unpaid', label: 'در انتظار' },
+      { id: 8, number: 'INV-1403-0885', customer: 'گروه صنعتی کیمیا', date: '۱۴۰۳/۰۶/۰۵', amount: 28700000, status: 'paid', label: 'پرداخت‌شده' },
+    ];
+
+    let currentData = [...mockInvoices];
+    let currentFilter = 'all';
+    let currentPage = 1;
+    const pageSize = 5;
+    let selectedIds = new Set();
+
+    // ============================================================
+    // HELPERS
+    // ============================================================
+    function formatAmount(amount) {
+      return amount.toLocaleString('fa-IR');
+    }
+
+    function getBadgeClass(status) {
+      const map = {
+        paid: 'bg-success-100 text-success-700',
+        unpaid: 'bg-warning-100 text-warning-700',
+        debtor: 'bg-danger-100 text-danger-700',
+        draft: 'bg-slate-100 text-slate-600'
+      };
+      return map[status] || 'bg-slate-100 text-slate-600';
+    }
+
+    function getAvatar(name) {
+      return name.slice(0, 2);
+    }
+
+    function showToast(message, duration = 3000) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.remove('opacity-0', 'pointer-events-none');
+      toast.classList.add('opacity-100');
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'pointer-events-none');
+        toast.classList.remove('opacity-100');
+      }, duration);
+    }
+
+    // ============================================================
+    // RENDER
+    // ============================================================
+    function render() {
+      // Filter
+      let filtered = currentData;
+      if (currentFilter !== 'all') {
+        filtered = filtered.filter(inv => inv.status === currentFilter);
+      }
+
+      // Search
+      const searchTerm = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
+      if (searchTerm) {
+        filtered = filtered.filter(inv =>
+          inv.number.toLowerCase().includes(searchTerm) ||
+          inv.customer.toLowerCase().includes(searchTerm) ||
+          inv.label.includes(searchTerm)
+        );
+      }
+
+      // Stats (always from full data)
+      const unpaid = currentData.filter(i => i.status === 'unpaid' || i.status === 'debtor').reduce((s, i) => s + i.amount, 0);
+      const overdue = currentData.filter(i => i.status === 'debtor').reduce((s, i) => s + i.amount, 0);
+      const avg = currentData.length > 0 ? (currentData.length / 30).toFixed(1) : 0;
+
+      document.getElementById('stat-total').textContent = currentData.length.toLocaleString('fa-IR');
+      document.getElementById('stat-unpaid').innerHTML = `${formatAmount(unpaid)} <span class="text-sm font-normal text-slate-500">تومان</span>`;
+      document.getElementById('stat-overdue').innerHTML = `${formatAmount(overdue)} <span class="text-sm font-normal text-slate-500">تومان</span>`;
+      document.getElementById('stat-avg').innerHTML = `${avg} <span class="text-sm font-normal text-slate-500">فاکتور</span>`;
+
+      // Empty / No Results handling
+      const total = filtered.length;
+      if (currentData.length === 0) {
+        showOnlyState('empty');
+        return;
+      }
+      if (total === 0) {
+        showOnlyState('no-results');
+        return;
+      }
+
+      showOnlyState('ready');
+
+      // Pagination
+      const totalPages = Math.ceil(total / pageSize) || 1;
+      if (currentPage > totalPages) currentPage = totalPages;
+      const start = (currentPage - 1) * pageSize;
+      const end = Math.min(start + pageSize, total);
+      const pageItems = filtered.slice(start, end);
+
+      // Table rows
+      const tbody = document.getElementById('table-body');
+      tbody.innerHTML = pageItems.map(inv => {
+        const checked = selectedIds.has(inv.id) ? 'checked' : '';
+        return `
+          <tr class="hover:bg-slate-50 transition-colors ${selectedIds.has(inv.id) ? 'bg-primary-50/40' : ''}" data-id="${inv.id}">
+            <td class="px-3 py-3.5">
+              <input type="checkbox" class="row-checkbox rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                     ${checked} onchange="toggleRow(${inv.id}, this.checked)" aria-label="انتخاب فاکتور ${inv.number}">
+            </td>
+            <td class="px-4 py-3.5 font-medium text-primary-600">
+              <button onclick="openDrawer(${inv.id})" class="hover:underline focus:outline-none">${inv.number}</button>
+            </td>
+            <td class="px-4 py-3.5">
+              <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-medium text-slate-600">${getAvatar(inv.customer)}</div>
+                <span>${inv.customer}</span>
+              </div>
+            </td>
+            <td class="px-4 py-3.5 text-slate-600">${inv.date}</td>
+            <td class="px-4 py-3.5 font-medium">${formatAmount(inv.amount)}</td>
+            <td class="px-4 py-3.5"><span class="badge ${getBadgeClass(inv.status)}">${inv.label}</span></td>
+            <td class="px-4 py-3.5">
+              <div class="flex items-center justify-center gap-1">
+                <button onclick="openDrawer(${inv.id})" class="p-1.5 rounded-md text-slate-500 hover:bg-slate-100 hover:text-primary-600" title="مشاهده" aria-label="مشاهده">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                </button>
+                <button class="p-1.5 rounded-md text-slate-500 hover:bg-slate-100 hover:text-primary-600" title="ویرایش" aria-label="ویرایش">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      // Mobile cards
+      const mobileContainer = document.getElementById('mobile-cards');
+      mobileContainer.innerHTML = pageItems.map(inv => `
+        <div class="p-4 ${selectedIds.has(inv.id) ? 'bg-primary-50/30' : ''}">
+          <div class="flex items-start gap-3">
+            <input type="checkbox" class="mt-1 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+                   ${selectedIds.has(inv.id) ? 'checked' : ''} onchange="toggleRow(${inv.id}, this.checked)">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-start justify-between mb-1">
+                <div>
+                  <button onclick="openDrawer(${inv.id})" class="font-semibold text-primary-600 hover:underline">${inv.number}</button>
+                  <p class="text-sm text-slate-700 mt-0.5">${inv.customer}</p>
+                </div>
+                <span class="badge ${getBadgeClass(inv.status)} shrink-0">${inv.label}</span>
+              </div>
+              <div class="flex items-center justify-between text-sm text-slate-500 mt-2">
+                <span>${inv.date}</span>
+                <span class="font-medium text-slate-800">${formatAmount(inv.amount)} تومان</span>
+              </div>
+              <div class="flex gap-2 mt-3 pt-3 border-t border-slate-100">
+                <button onclick="openDrawer(${inv.id})" class="flex-1 flex items-center justify-center gap-1.5 py-2 text-sm text-slate-600 bg-slate-50 rounded-lg hover:bg-slate-100">
+                  مشاهده
+                </button>
+                <button class="flex-1 flex items-center justify-center gap-1.5 py-2 text-sm text-slate-600 bg-slate-50 rounded-lg hover:bg-slate-100">
+                  ویرایش
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      // Pagination info
+      document.getElementById('pagination-info').innerHTML =
+        `نمایش <span class="font-medium">${total === 0 ? 0 : start + 1}</span> تا <span class="font-medium">${end}</span> از <span class="font-medium">${total}</span> فاکتور`;
+      document.getElementById('page-indicator').textContent = currentPage.toLocaleString('fa-IR');
+      document.getElementById('prev-page').disabled = currentPage === 1;
+      document.getElementById('next-page').disabled = currentPage === totalPages || totalPages === 0;
+
+      // Select all checkbox state
+      const allOnPageSelected = pageItems.length > 0 && pageItems.every(i => selectedIds.has(i.id));
+      document.getElementById('select-all').checked = allOnPageSelected;
+      document.getElementById('select-all').indeterminate = !allOnPageSelected && pageItems.some(i => selectedIds.has(i.id));
+
+      updateBulkBar();
+    }
+
+    function showOnlyState(stateName) {
+      ['ready', 'empty', 'loading', 'error', 'offline', 'no-results'].forEach(s => {
+        const el = document.getElementById('state-' + s);
+        if (el) el.classList.toggle('hidden', s !== stateName);
+      });
+    }
+
+    // ============================================================
+    // SELECTION & BULK
+    // ============================================================
+    function toggleRow(id, checked) {
+      if (checked) selectedIds.add(id);
+      else selectedIds.delete(id);
+      render();
+    }
+
+    function toggleSelectAll(checked) {
+      const filtered = getFiltered();
+      const start = (currentPage - 1) * pageSize;
+      const pageItems = filtered.slice(start, start + pageSize);
+      pageItems.forEach(inv => {
+        if (checked) selectedIds.add(inv.id);
+        else selectedIds.delete(inv.id);
+      });
+      render();
+    }
+
+    function clearSelection() {
+      selectedIds.clear();
+      render();
+    }
+
+    function updateBulkBar() {
+      const bar = document.getElementById('bulk-bar');
+      const count = selectedIds.size;
+      if (count > 0) {
+        bar.classList.remove('hidden');
+        document.getElementById('bulk-count').textContent = count.toLocaleString('fa-IR');
+      } else {
+        bar.classList.add('hidden');
+      }
+    }
+
+    function bulkAction(action) {
+      const count = selectedIds.size;
+      if (action === 'delete') {
+        if (confirm(`آیا از حذف ${count} فاکتور انتخاب‌شده مطمئن هستید؟`)) {
+          currentData = currentData.filter(i => !selectedIds.has(i.id));
+          selectedIds.clear();
+          showToast(`${count} فاکتور حذف شد. امکان بازگردانی وجود دارد.`);
+          render();
+        }
+      } else {
+        showToast(`عملیات «${action}» روی ${count} فاکتور انجام شد (دمو).`);
+        selectedIds.clear();
+        render();
+      }
+    }
+
+    function getFiltered() {
+      let filtered = currentData;
+      if (currentFilter !== 'all') filtered = filtered.filter(i => i.status === currentFilter);
+      const term = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
+      if (term) {
+        filtered = filtered.filter(i =>
+          i.number.toLowerCase().includes(term) ||
+          i.customer.toLowerCase().includes(term) ||
+          i.label.includes(term)
+        );
+      }
+      return filtered;
+    }
+
+    // ============================================================
+    // FILTERS
+    // ============================================================
+    function setFilter(filter) {
+      currentFilter = filter;
+      currentPage = 1;
+      document.querySelectorAll('.filter-btn').forEach(b => {
+        b.classList.remove('active', 'border-primary-600', 'bg-primary-50', 'text-primary-700');
+        b.classList.add('border-slate-200', 'bg-white', 'text-slate-600');
+      });
+      const activeBtn = document.querySelector(`.filter-btn[data-filter="${filter}"]`);
+      if (activeBtn) {
+        activeBtn.classList.add('active', 'border-primary-600', 'bg-primary-50', 'text-primary-700');
+        activeBtn.classList.remove('border-slate-200', 'bg-white', 'text-slate-600');
+      }
+      render();
+    }
+
+    function applyFilters() {
+      currentPage = 1;
+      render();
+    }
+
+    function clearFilters() {
+      document.getElementById('searchInput').value = '';
+      setFilter('all');
+    }
+
+    // ============================================================
+    // DRAWER
+    // ============================================================
+    function openDrawer(id) {
+      const inv = currentData.find(i => i.id === id);
+      if (!inv) return;
+
+      document.getElementById('drawer-content').innerHTML = `
+        <div class="space-y-4">
+          <div>
+            <p class="text-sm text-slate-500">شماره فاکتور</p>
+            <p class="text-lg font-bold text-primary-600">${inv.number}</p>
+          </div>
+          <div>
+            <p class="text-sm text-slate-500">مشتری</p>
+            <p class="font-medium">${inv.customer}</p>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <p class="text-sm text-slate-500">تاریخ</p>
+              <p class="font-medium">${inv.date}</p>
+            </div>
+            <div>
+              <p class="text-sm text-slate-500">وضعیت</p>
+              <span class="badge ${getBadgeClass(inv.status)} mt-1">${inv.label}</span>
+            </div>
+          </div>
+          <div>
+            <p class="text-sm text-slate-500">مبلغ نهایی</p>
+            <p class="text-xl font-bold">${formatAmount(inv.amount)} <span class="text-sm font-normal text-slate-500">تومان</span></p>
+          </div>
+          <div class="pt-4 border-t border-slate-100">
+            <p class="text-sm text-slate-500 mb-2">عملیات سریع</p>
+            <div class="flex flex-wrap gap-2">
+              <button class="px-3 py-1.5 text-sm border border-slate-200 rounded-lg hover:bg-slate-50">ثبت پرداخت</button>
+              <button class="px-3 py-1.5 text-sm border border-slate-200 rounded-lg hover:bg-slate-50">ارسال ایمیل</button>
+              <button class="px-3 py-1.5 text-sm border border-slate-200 rounded-lg hover:bg-slate-50">دانلود PDF</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      const drawer = document.getElementById('detail-drawer');
+      const overlay = document.getElementById('drawer-overlay');
+      drawer.hidden = false;
+      overlay.classList.remove('hidden');
+      requestAnimationFrame(() => {
+        drawer.classList.remove('translate-x-full');
+      });
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeDrawer() {
+      const drawer = document.getElementById('detail-drawer');
+      const overlay = document.getElementById('drawer-overlay');
+      drawer.classList.add('translate-x-full');
+      setTimeout(() => {
+        drawer.hidden = true;
+        overlay.classList.add('hidden');
+        document.body.style.overflow = '';
+      }, 200);
+    }
+
+    // ============================================================
+    // STATE SWITCHER
+    // ============================================================
+    function setState(state) {
+      ['ready', 'empty', 'loading', 'error', 'offline', 'no-results'].forEach(s => {
+        const el = document.getElementById('state-' + s);
+        if (el) el.classList.add('hidden');
+      });
+
+      if (state === 'ready') {
+        document.getElementById('state-ready').classList.remove('hidden');
+        render();
+      } else {
+        document.getElementById('state-' + state).classList.remove('hidden');
+      }
+
+      const showMeta = (state === 'ready' || state === 'loading');
+      document.getElementById('summary-cards').style.display = showMeta ? '' : 'none';
+      document.getElementById('toolbar').style.display = showMeta ? '' : 'none';
+      document.getElementById('bulk-bar').classList.add('hidden');
+
+      document.querySelectorAll('.state-btn').forEach(btn => {
+        if (btn.dataset.state === state) {
+          btn.className = 'state-btn px-3 py-1.5 text-sm rounded-md bg-primary-600 text-white font-medium';
+        } else {
+          btn.className = 'state-btn px-3 py-1.5 text-sm rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200';
+        }
+      });
+    }
+
+    function openCreate() {
+      showToast('فرم ایجاد فاکتور جدید باز می‌شود (در نسخه واقعی Modal یا صفحه جدید)');
+    }
+
+    // ============================================================
+    // KEYBOARD SHORTCUTS
+    // ============================================================
+    document.addEventListener('keydown', (e) => {
+      // Ignore if typing in input
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        if (e.key === 'Escape') {
+          e.target.blur();
+          closeDrawer();
+        }
+        return;
+      }
+
+      if (e.key === '/' ) {
+        e.preventDefault();
+        document.getElementById('searchInput').focus();
+      }
+      if (e.key === 'n' || e.key === 'N') {
+        e.preventDefault();
+        openCreate();
+      }
+      if (e.key === 'Escape') {
+        closeDrawer();
+        clearSelection();
+      }
+    });
+
+    // Pagination listeners
+    document.getElementById('prev-page').addEventListener('click', () => {
+      if (currentPage > 1) { currentPage--; render(); }
+    });
+    document.getElementById('next-page').addEventListener('click', () => {
+      const total = getFiltered().length;
+      const totalPages = Math.ceil(total / pageSize) || 1;
+      if (currentPage < totalPages) { currentPage++; render(); }
+    });
+
+    // Init
+    setState('ready');
+  </script>
+</body>
+</html>

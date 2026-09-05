@@ -9,7 +9,7 @@ import { useWorkspaceStore } from '../workspace.slice'
  *
  *   1. the database was reset — every workspace dropped
  *   2. `workspaceId` survived in localStorage, because the store persists it
- *   3. `loadWorkspaces` got back `[]` and did `set({ loading: false })`,
+ *   3. `fetchWorkspace` got back `[]` and did `set({ loading: false })`,
  *      leaving the dead id exactly where it was
  *   4. every request carried a workspace that no longer existed → 403
  *
@@ -58,7 +58,7 @@ describe('workspace store — stale persisted id', () => {
     // The exact shape after a database reset: authenticated, zero workspaces.
     mockFetch(() => ({ ok: true, body: [] }))
 
-    await useWorkspaceStore.getState().loadWorkspaces?.('2a51e3d6-e3c9-4947-ab4f-5bbc54a8ec8e')
+    await useWorkspaceStore.getState().fetchWorkspace('2a51e3d6-e3c9-4947-ab4f-5bbc54a8ec8e')
 
     const state = useWorkspaceStore.getState()
 
@@ -78,7 +78,7 @@ describe('workspace store — stale persisted id', () => {
     // network drop must not log the user out of their own books.
     mockFetch(() => ({ ok: false }))
 
-    await useWorkspaceStore.getState().loadWorkspaces?.('2a51e3d6-e3c9-4947-ab4f-5bbc54a8ec8e')
+    await useWorkspaceStore.getState().fetchWorkspace('2a51e3d6-e3c9-4947-ab4f-5bbc54a8ec8e')
 
     const state = useWorkspaceStore.getState()
 
@@ -116,7 +116,7 @@ describe('workspace store — stale persisted id', () => {
       }
     })
 
-    await useWorkspaceStore.getState().loadWorkspaces?.('2a51e3d6-e3c9-4947-ab4f-5bbc54a8ec8e')
+    await useWorkspaceStore.getState().fetchWorkspace('2a51e3d6-e3c9-4947-ab4f-5bbc54a8ec8e')
 
     expect(useWorkspaceStore.getState().workspaceId, 'the user chose this one').toBe(stored)
   })

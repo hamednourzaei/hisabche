@@ -1,20 +1,28 @@
-"use client"
+'use client'
 
-import { useCallback, useEffect, useMemo, useState } from "react"
-import { useTranslations } from "next-intl";
-import { z } from "zod"
-import { useCreateTransaction } from "@hisabche/api"
-import { Button } from "../button"
-import { MoneyInput } from "../money-input"
-import { SaveIndicator } from "../save-indicator"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "../dialog"
-import { useSyncStore, useBackupStore } from "@hisabche/store"
-import { DollarSign, AlertTriangle, RefreshCw } from "lucide-react"
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslations } from 'next-intl'
+import { z } from 'zod'
+// PHASE B — this modal used `useCreateTransaction`, which POSTed a single-sided
+// row to `transactions` with `type: "payment"`. Three things were wrong with
+// that, and none of them raised an error:
+//
+//   1. no allocation — the invoice the money was for kept its full outstanding
+//      amount, so the customer stayed a debtor for something they had paid;
+//   2. no journal entry — the cash never reached the ledger, so the trial
+//      balance and the income statement did not know it arrived;
+//   3. "payment" means money paid OUT in the party-ledger vocabulary, so taking
+//      500 from a debtor increased their recorded debt by 500.
+//
+// `useRecordPayment` goes through the payments core, which allocates against
+// the party's open invoices and books the entry.
+import { useRecordPayment } from '@hisabche/api'
+import { Button } from '../button'
+import { MoneyInput } from '../money-input'
+import { SaveIndicator } from '../save-indicator'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../dialog'
+import { useSyncStore, useBackupStore } from '@hisabche/store'
+import { DollarSign, AlertTriangle, RefreshCw } from 'lucide-react'
 
 interface InvoiceRecord {
   id: string
@@ -38,7 +46,7 @@ const toNum = (v: string): number => {
   return Number.isFinite(n) ? n : 0
 }
 
-const fmt = (v: number): string => v.toLocaleString("fa-AF")
+const fmt = (v: number): string => v.toLocaleString('fa-AF')
 
 const remaining = (inv: InvoiceRecord): number => Math.max(0, inv.total - inv.paidAmount)
 
@@ -57,18 +65,19 @@ interface PaymentModalProps {
 }
 
 export function PaymentModal({ open, onClose, onPaid, customer, openInvoices }: PaymentModalProps) {
-  const t = useTranslations();const createTx = useCreateTransaction()
+  const t = useTranslations()
+  const recordPayment = useRecordPayment()
   const { setSaveStatus } = useSyncStore()
   const { addAuditEntry } = useBackupStore()
-  const [amount, setAmount] = useState("")
-  const [invoiceId, setInvoiceId] = useState("")
+  const [amount, setAmount] = useState('')
+  const [invoiceId, setInvoiceId] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [showSaved, setShowSaved] = useState(false)
 
   useEffect(() => {
     if (!open) return
-    setInvoiceId(openInvoices.length === 1 ? (openInvoices[0]?.id ?? "") : "")
-    setAmount("")
+    setInvoiceId(openInvoices.length === 1 ? (openInvoices[0]?.id ?? '') : '')
+    setAmount('')
     setError(null)
     setShowSaved(false)
   }, [open, customer?.id, openInvoices])
@@ -78,7 +87,9 @@ export function PaymentModal({ open, onClose, onPaid, customer, openInvoices }: 
     if (inv) return remaining(inv)
     // ✅ FIX: spread با Math.min برای لیست‌های بزرگ می‌تواند Call Stack را پر
     // کند و تب مرورگر را کرش کند؛ reduce امن است صرف‌نظر از طول آرایه.
-    return openInvoices.length ? openInvoices.reduce((min, i) => Math.min(min, remaining(i)), Infinity) : 0
+    return openInvoices.length
+      ? openInvoices.reduce((min, i) => Math.min(min, remaining(i)), Infinity)
+      : 0
   }, [openInvoices, invoiceId])
 
   const handleClose = useCallback(() => {
@@ -90,7 +101,7 @@ export function PaymentModal({ open, onClose, onPaid, customer, openInvoices }: 
     if (!customer?.id) return
 
     const payAmount = toNum(amount) || suggested
-    const targetInvoice = invoiceId || openInvoices[0]?.id || ""
+    const targetInvoice = invoiceId || openInvoices[0]?.id || ''
 
     const parsed = paymentSchema.safeParse({
       amount: payAmount,
@@ -99,46 +110,52 @@ export function PaymentModal({ open, onClose, onPaid, customer, openInvoices }: 
     })
 
     if (!parsed.success) {
-      setError(t("customers.form.invalidPayment"))
+      setError(t('customers.form.invalidPayment'))
       return
     }
 
     setError(null)
-    setSaveStatus("saving")
+    setSaveStatus('saving')
 
     try {
-      await createTx.mutateAsync({
-        customerId: parsed.data.customerId,
-        type: "payment",
+      await recordPayment.mutateAsync({
+        // Money arriving from a customer.
+        direction: 'in',
+        partyType: 'customer',
+        partyId: parsed.data.customerId,
         amount: parsed.data.amount,
-        currency: "AFN",
-        date: new Date().toISOString(),
+        currency: 'AFN',
+        entryDate: new Date().toISOString().slice(0, 10),
+        // The invoice the shopkeeper picked, settled explicitly. Without this
+        // the server settles the oldest open invoices first, which is the right
+        // default but not what was chosen on screen.
+        allocations: [{ invoiceId: parsed.data.invoiceId, amount: parsed.data.amount }],
         reference: parsed.data.invoiceId,
-        description: t("customers.paymentFrom", {
-          name: customer.fullName || customer.name || "",
+        notes: t('customers.paymentFrom', {
+          name: customer.fullName || customer.name || '',
         }),
       })
 
       addAuditEntry({
-        action: "payment",
-        entity: "transaction",
+        action: 'payment',
+        entity: 'transaction',
         entityId: customer.id,
-        details: t("customers.paymentDetails"),
+        details: t('customers.paymentDetails'),
       })
 
-      setSaveStatus("saved")
+      setSaveStatus('saved')
       setShowSaved(true)
       setTimeout(() => {
-        setSaveStatus("idle")
+        setSaveStatus('idle')
         setShowSaved(false)
       }, 2000)
 
       onPaid?.()
       onClose()
     } catch {
-      setSaveStatus("error")
-      setError(t("common.saveError"))
-      setTimeout(() => setSaveStatus("idle"), 2000)
+      setSaveStatus('error')
+      setError(t('common.saveError'))
+      setTimeout(() => setSaveStatus('idle'), 2000)
     }
   }, [
     customer,
@@ -146,7 +163,7 @@ export function PaymentModal({ open, onClose, onPaid, customer, openInvoices }: 
     suggested,
     invoiceId,
     openInvoices,
-    createTx,
+    recordPayment,
     onPaid,
     onClose,
     t,
@@ -156,17 +173,17 @@ export function PaymentModal({ open, onClose, onPaid, customer, openInvoices }: 
 
   if (!customer) return null
 
-  const name = customer.fullName || customer.name || t("common.noName")
+  const name = customer.fullName || customer.name || t('common.noName')
   const canSubmit = (toNum(amount) > 0 || suggested > 0) && (invoiceId || openInvoices.length === 1)
 
   return (
     <Dialog open={open} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="max-w-md">
-        <SaveIndicator show={showSaved} message={t("common.saved")} />
+        <SaveIndicator show={showSaved} message={t('common.saved')} />
 
         <DialogHeader>
           <DialogTitle>
-            {t("customers.recordPayment")} — {name}
+            {t('customers.recordPayment')} — {name}
           </DialogTitle>
         </DialogHeader>
 
@@ -175,13 +192,13 @@ export function PaymentModal({ open, onClose, onPaid, customer, openInvoices }: 
             <select
               value={invoiceId}
               onChange={(e) => setInvoiceId(e.target.value)}
-              aria-label={t("customers.selectInvoice")}
+              aria-label={t('customers.selectInvoice')}
               className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm"
             >
-              <option value="">{t("customers.selectInvoice")}</option>
+              <option value="">{t('customers.selectInvoice')}</option>
               {openInvoices.map((inv) => (
                 <option key={inv.id} value={inv.id}>
-                  #{inv.invoiceNumber ?? ""} — {fmt(remaining(inv))} AFN
+                  #{inv.invoiceNumber ?? ''} — {fmt(remaining(inv))} AFN
                 </option>
               ))}
             </select>
@@ -193,13 +210,11 @@ export function PaymentModal({ open, onClose, onPaid, customer, openInvoices }: 
                 <AlertTriangle className="size-7 text-warning" aria-hidden />
               </div>
               <div className="space-y-1">
-                <p className="font-semibold text-foreground">{t("customers.noOpenDeals")}</p>
-                <p className="text-sm text-muted-foreground">
-                  {t("customers.noOpenDealsDesc")}
-                </p>
+                <p className="font-semibold text-foreground">{t('customers.noOpenDeals')}</p>
+                <p className="text-sm text-muted-foreground">{t('customers.noOpenDealsDesc')}</p>
               </div>
               <Button variant="outline" size="sm" onClick={handleClose}>
-                {t("common.back")}
+                {t('common.back')}
               </Button>
             </div>
           )}
@@ -209,8 +224,8 @@ export function PaymentModal({ open, onClose, onPaid, customer, openInvoices }: 
               <MoneyInput
                 value={amount}
                 onChange={(raw) => setAmount(raw)}
-                placeholder={`${t("customers.form.default")}: ${fmt(suggested)} AFN`}
-                label={t("customers.form.paymentAmount")}
+                placeholder={`${t('customers.form.default')}: ${fmt(suggested)} AFN`}
+                label={t('customers.form.paymentAmount')}
                 startIcon={<DollarSign className="size-4" aria-hidden />}
                 autoFocus
               />
@@ -233,14 +248,14 @@ export function PaymentModal({ open, onClose, onPaid, customer, openInvoices }: 
 
               <div className="flex gap-3 pt-2">
                 <Button variant="outline" className="w-full" onClick={handleClose}>
-                  {t("common.cancel")}
+                  {t('common.cancel')}
                 </Button>
                 <Button
                   className="w-full"
                   onClick={submit}
-                  disabled={!canSubmit || createTx.isPending}
+                  disabled={!canSubmit || recordPayment.isPending}
                 >
-                  {t("customers.recordPayment")}
+                  {t('customers.recordPayment')}
                 </Button>
               </div>
             </>

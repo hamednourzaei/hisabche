@@ -316,7 +316,7 @@ CREATE TABLE IF NOT EXISTS interactions (
   user_id                      uuid,
   created_at                   timestamp without time zone DEFAULT now(),
   status                       text NOT NULL,
-  public_token                 uuid NOT NULL,
+  public_token                 uuid DEFAULT gen_random_uuid() NOT NULL,
   employee_id                  uuid,
   employee_name                text,
   customers_snapshot           jsonb DEFAULT '[]'::jsonb NOT NULL,
@@ -377,7 +377,7 @@ CREATE TABLE IF NOT EXISTS invoices (
   tax_rate                     numeric DEFAULT 0,
   search_vector                tsvector,
   purchase_order_id            uuid,
-  public_token                 uuid NOT NULL,
+  public_token                 uuid DEFAULT gen_random_uuid() NOT NULL,
   version                      bigint DEFAULT 0 NOT NULL,
   locked_by_user_id            uuid,
   lock_expires_at              timestamp with time zone DEFAULT now(),
@@ -6636,6 +6636,37 @@ CREATE INDEX IF NOT EXISTS workspace_members_user_id_workspace_id_idx ON workspa
 COMMIT;
 
 
+-- ─── The foreign key a query HINT depends on ────────────────────────────────
+--
+-- ⚠️ This one is not about integrity. `invoice.service.ts` embeds the customer
+-- through PostgREST with an explicit hint:
+--
+--     .select('…, customers!fk_invoices_customer(…)')
+--
+-- PostgREST resolves that against the CONSTRAINT NAME. Without a constraint
+-- called exactly this, every invoice list fails with PGRST200 — an API-layer
+-- error about a "schema cache", which reads nothing like a missing foreign
+-- key and sent the first hour of debugging in the wrong direction.
+--
+-- ⚠️ The NAME is part of the contract. Same columns under a different name
+-- does not satisfy the hint.
+--
+-- No CASCADE: deleting a customer must not silently delete their invoices.
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_invoices_customer') THEN
+    ALTER TABLE invoices
+      ADD CONSTRAINT fk_invoices_customer
+      FOREIGN KEY (customer_id) REFERENCES customers(id)
+      NOT VALID;
+  END IF;
+END $$;
+
+-- PostgREST answers from a cached schema; without this it keeps returning
+-- PGRST200 after the constraint exists.
+NOTIFY pgrst, 'reload schema';
+
+
 -- ────────────────────────────────────────────────────────────────────────
 -- rls-recursion-fix-migration.sql
 -- ────────────────────────────────────────────────────────────────────────
@@ -7531,6 +7562,515 @@ ORDER BY 1;
 
 
 -- ────────────────────────────────────────────────────────────────────────
+-- CREATE-MY-WORKSPACE.sql
+-- ────────────────────────────────────────────────────────────────────────
+
+-- ============================================================================
+-- docs/CREATE-MY-WORKSPACE.sql
+--
+-- Creates the workspace the application cannot create for you.
+--
+-- ---------------------------------------------------------------------------
+-- WHY THIS IS NEEDED
+--
+-- The logs are unambiguous:
+--
+--     GET /api/workspaces      → 200   (an empty array)
+--     everything else          → 403   userId set, workspaceId null
+--
+-- You are signed in and belong to no workspace. `FIX-403.sql` worked —
+-- `has_access` has its default — but there was never a workspace to be a
+-- member OF. The reset dropped every table in `public`, and `auth.users`
+-- survived, so the account outlived the business.
+--
+-- ⚠️ And the application cannot fix this itself. There is no onboarding route
+-- and nothing in the entire frontend calls `createWorkspace` — the only code
+-- that creates a workspace is a backend service with no UI reaching it. A user
+-- in this state is permanently stuck: the dashboard fires a hundred requests
+-- that all 403, and there is no screen that offers to create anything.
+--
+-- That is a real product gap, not a database problem. This unblocks you now.
+--
+-- ---------------------------------------------------------------------------
+-- SAFE TO RE-RUN. It creates nothing if you already have a membership.
+-- ============================================================================
+
+DO $create$
+DECLARE
+  -- From the backend logs: the account making the requests.
+  v_user_id uuid := '2a51e3d6-e3c9-4947-ab4f-5bbc54a8ec8e';
+  v_workspace_id uuid;
+BEGIN
+  -- Already sorted? Do nothing rather than create a second business.
+  IF EXISTS (SELECT 1 FROM workspace_members WHERE user_id = v_user_id AND has_access) THEN
+    RAISE NOTICE 'membership already exists — nothing to do';
+    RETURN;
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM auth.users WHERE id = v_user_id) THEN
+    RAISE EXCEPTION 'user % does not exist in auth.users', v_user_id;
+  END IF;
+
+  INSERT INTO workspaces (name, slug, owner_id)
+  VALUES ('حسابچه', 'hisabche', v_user_id)
+  RETURNING id INTO v_workspace_id;
+
+  -- ⚠️ `has_access` is set EXPLICITLY here rather than left to the default.
+  --
+  -- The default is now correct, but this script exists precisely because that
+  -- default went missing once. A repair script that depends on the thing it is
+  -- repairing is a repair script that fails when you need it most.
+  INSERT INTO workspace_members (workspace_id, user_id, role, has_access)
+  VALUES (v_workspace_id, v_user_id, 'owner', true);
+
+  RAISE NOTICE 'workspace % created, % is its owner', v_workspace_id, v_user_id;
+END $create$;
+
+-- ============================================================================
+-- PROOF — one result set, because the editor shows only the last.
+-- ============================================================================
+
+SELECT check_name, result, detail FROM (
+
+  SELECT 1 AS ord,
+    'you have a workspace' AS check_name,
+    CASE WHEN EXISTS (
+      SELECT 1 FROM workspace_members
+      WHERE user_id = '2a51e3d6-e3c9-4947-ab4f-5bbc54a8ec8e'
+        AND has_access AND suspended_at IS NULL
+    ) THEN 'PASS' ELSE 'FAIL' END AS result,
+    -- These are the exact filters `listAuthorizedWorkspaces` applies:
+    --   .eq('user_id', …).eq('has_access', true).is('suspended_at', null)
+    -- A row that fails any of them is invisible and still produces 403.
+    'has_access true, not suspended' AS detail
+
+  UNION ALL
+  SELECT 2, 'exactly one workspace',
+    CASE WHEN (SELECT count(*) FROM workspaces) = 1 THEN 'PASS' ELSE 'CHECK' END,
+    -- ⚠️ More than one is not an error, but `requireWorkspace()` refuses to
+    -- guess between them without an explicit id — which reads as a 403 too.
+    (SELECT count(*)::text || ' workspaces' FROM workspaces)
+
+  UNION ALL
+  SELECT 3, 'workspace', 'INFO',
+    coalesce((SELECT name || '  (' || id::text || ')' FROM workspaces LIMIT 1), 'none')
+
+) checks
+ORDER BY ord;
+
+
+-- ────────────────────────────────────────────────────────────────────────
+-- FIX-403.sql
+-- ────────────────────────────────────────────────────────────────────────
+
+-- ============================================================================
+-- docs/FIX-403.sql
+--
+-- ONE script. Paste it into the Supabase SQL Editor, run it, done.
+--
+-- ---------------------------------------------------------------------------
+-- THE BUG
+--
+--     userId:      2a51e3d6-…    ← authentication succeeded
+--     workspaceId: null          ← requireWorkspaceContext refused
+--     status:      403           ← every route except /api/workspaces
+--
+-- `base-schema-migration.sql` was rebuilt from a dump that recorded names,
+-- types and NOT NULL — and no DEFAULTS.
+--
+--     workspace.service.ts   .insert({ workspace_id, user_id, role: 'owner' })
+--     schema                 has_access boolean NOT NULL     ← default lost
+--                            → 23502 not-null violation
+--                            → no membership row is ever created
+--                            → every later request 403
+--
+-- The code never sets `has_access` because the column carried `DEFAULT true`
+-- from the day it was created.
+--
+-- ---------------------------------------------------------------------------
+-- WHAT THIS DOES, AND WHAT IT DELIBERATELY DOES NOT
+--
+--   DOES      restore defaults on booleans, timestamps, counters and jsonb —
+--             columns where the value follows from the type and the name, and
+--             the application already behaves as though it is there.
+--
+--   DOES NOT  touch NOT NULL. An earlier version of this file relaxed every
+--             text/uuid NOT NULL column — about two hundred, including
+--             `invoice_items.invoice_id`, `ledger_entries.account_id` and
+--             `workspace_members.user_id`.
+--
+--             Those are foreign keys and required business fields. Making them
+--             nullable permits orphan rows in an accounting system — an
+--             invoice line belonging to no invoice, a ledger entry with no
+--             account — and fixes nothing.
+--
+--             ⚠️ The test that settles it: those columns were NOT NULL in the
+--             original database and the product ran against it for a long
+--             time, so the code sets them. A NOT NULL column with no default
+--             is only a problem when the DATABASE used to fill it in.
+--
+-- ⚠️ `is_active` defaults TRUE and the read flags FALSE. A newly created
+-- customer is active; a newly created notification has not been read. A single
+-- blanket boolean rule gets one of the two backwards on every table.
+--
+-- SAFE TO RE-RUN. Every statement states a destination, not a change.
+-- ============================================================================
+
+-- Give up rather than queue behind a long read. Without this an ALTER waits
+-- forever for its lock and the editor reports a timeout that reads exactly
+-- like the database being down.
+SET lock_timeout = '5s';
+
+DO $fix$
+DECLARE
+  r         RECORD;
+  v_default TEXT;
+  v_done    integer := 0;
+  v_skipped text[]  := ARRAY[]::text[];
+  v_access  boolean := false;
+BEGIN
+  -- ─── 1. The one that is blocking everything ───────────────────────────────
+  --
+  -- `.eq('has_access', true).is('suspended_at', null)` runs on EVERY workspace
+  -- resolution. Without the default there is no membership row to find.
+  --
+  -- ⚠️ `true`, not `false`. A member added by an invite is active immediately;
+  -- suspension is what `suspended_at` records. `false` would create every
+  -- member in a state nothing in the product knows how to leave — and the
+  -- symptom would be identical, which is what makes it worth stating.
+  BEGIN
+    ALTER TABLE workspace_members ALTER COLUMN has_access SET DEFAULT true;
+    UPDATE workspace_members SET has_access = true WHERE has_access IS NULL;
+    v_access := true;
+  EXCEPTION WHEN OTHERS THEN
+    RAISE WARNING 'has_access NOT fixed (%) — the 403s will continue', SQLERRM;
+  END;
+
+  -- ─── 2. Every other default the rebuild lost ──────────────────────────────
+  --
+  -- Reads `pg_catalog` rather than `information_schema`. The latter is a slow,
+  -- portable wrapper over these same catalogs, and joining its
+  -- `key_column_usage` view per column is quadratic on a schema this size —
+  -- slow enough that the editor gives up before it returns.
+  FOR r IN
+    SELECT
+      c.relname                            AS table_name,
+      a.attname                            AS column_name,
+      format_type(a.atttypid, a.atttypmod) AS data_type
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    JOIN pg_attribute a ON a.attrelid = c.oid
+    WHERE n.nspname = 'public'
+      AND c.relkind = 'r'
+      AND a.attnum > 0
+      AND NOT a.attisdropped
+      AND a.attnotnull
+      AND a.attname <> 'id'
+      AND NOT EXISTS (
+        SELECT 1 FROM pg_attrdef d
+        WHERE d.adrelid = a.attrelid AND d.adnum = a.attnum
+      )
+  LOOP
+    v_default := CASE
+      WHEN r.data_type = 'boolean'
+       AND r.column_name ~ '^(is_read|is_archived|is_pinned|is_deleted|is_locked|is_final|is_group|is_system)$'
+        THEN 'false'
+      WHEN r.data_type = 'boolean'
+        THEN 'true'
+      WHEN r.data_type LIKE 'timestamp%' AND r.column_name LIKE '%\_at'
+        THEN 'now()'
+      WHEN r.data_type ~ '^(integer|bigint|smallint|numeric|real|double precision)'
+        THEN '0'
+      WHEN r.data_type = 'jsonb'
+       AND r.column_name ~ '(history|snapshot|outcomes|features|items|list)$'
+        THEN '''[]''::jsonb'
+      WHEN r.data_type = 'jsonb'
+        THEN '''{}''::jsonb'
+      -- text, uuid, varchar: identity. Left alone on purpose — see the header.
+      ELSE NULL
+    END;
+
+    IF v_default IS NULL THEN CONTINUE; END IF;
+
+    BEGIN
+      EXECUTE format('ALTER TABLE public.%I ALTER COLUMN %I SET DEFAULT %s',
+                     r.table_name, r.column_name, v_default);
+      v_done := v_done + 1;
+    EXCEPTION WHEN OTHERS THEN
+      -- Named, not silently passed over. A skipped column is one to re-run,
+      -- and a run that hides them looks identical to a run that succeeded.
+      v_skipped := array_append(v_skipped, r.table_name || '.' || r.column_name);
+    END;
+  END LOOP;
+
+  RAISE NOTICE 'has_access fixed: %    defaults restored: %', v_access, v_done;
+
+  IF array_length(v_skipped, 1) > 0 THEN
+    RAISE WARNING 'skipped % — run this again: %',
+      array_length(v_skipped, 1), array_to_string(v_skipped, ', ');
+  END IF;
+END $fix$;
+
+-- ============================================================================
+-- PROOF
+--
+-- ⚠️ ONE result set, deliberately. The Supabase SQL Editor displays only the
+-- LAST one, so three separate SELECTs would show as a single check and hide
+-- the other two — which is how a half-finished run comes to look complete.
+--
+-- Every row must read PASS.
+-- ============================================================================
+
+SELECT check_name, result, detail FROM (
+
+  SELECT 1 AS ord,
+    'has_access has a default' AS check_name,
+    CASE WHEN EXISTS (
+      SELECT 1
+      FROM pg_attrdef d
+      JOIN pg_class c     ON c.oid = d.adrelid
+      JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum = d.adnum
+      WHERE c.relname = 'workspace_members' AND a.attname = 'has_access'
+    ) THEN 'PASS' ELSE 'FAIL' END AS result,
+    'the column that causes the 403s' AS detail
+
+  UNION ALL
+  SELECT 2,
+    'no NULL memberships',
+    CASE WHEN (SELECT count(*) FROM workspace_members WHERE has_access IS NULL) = 0
+      THEN 'PASS' ELSE 'FAIL' END,
+    (SELECT count(*)::text || ' rows still NULL'
+     FROM workspace_members WHERE has_access IS NULL)
+
+  UNION ALL
+  SELECT 3,
+    'inferable defaults restored',
+    CASE WHEN (
+      SELECT count(*)
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      JOIN pg_attribute a ON a.attrelid = c.oid
+      WHERE n.nspname = 'public'
+        AND c.relkind = 'r'
+        AND a.attnum > 0
+        AND NOT a.attisdropped
+        AND a.attnotnull
+        AND a.attname <> 'id'
+        AND (
+          format_type(a.atttypid, a.atttypmod) IN ('boolean', 'jsonb')
+          OR format_type(a.atttypid, a.atttypmod) ~ '^(integer|bigint|smallint|numeric|real|double precision)'
+          OR (format_type(a.atttypid, a.atttypmod) LIKE 'timestamp%' AND a.attname LIKE '%\_at')
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM pg_attrdef d
+          WHERE d.adrelid = a.attrelid AND d.adnum = a.attnum
+        )
+    ) = 0 THEN 'PASS' ELSE 'FAIL' END,
+    'booleans, timestamps, counters, jsonb'
+
+  UNION ALL
+  -- Not pass/fail, and the one that decides whether signing in works RIGHT
+  -- NOW. The default fixes the NEXT insert; a user whose membership insert
+  -- already failed has no row to repair. If this reads 0, sign out and in
+  -- again — onboarding will create the membership that could not exist before.
+  SELECT 4,
+    'membership rows on record',
+    'INFO',
+    (SELECT count(*)::text || ' rows' FROM workspace_members)
+
+) checks
+ORDER BY ord;
+
+
+-- ────────────────────────────────────────────────────────────────────────
+-- FIX-INVOICES.sql
+-- ────────────────────────────────────────────────────────────────────────
+
+-- ============================================================================
+-- docs/FIX-INVOICES.sql
+--
+-- The last two things the rebuild lost. Run it once.
+--
+-- ---------------------------------------------------------------------------
+-- WHERE THINGS STAND
+--
+-- The 403s are gone — `workspaceId: 3f19d3ca-…` is in every log line now, and
+-- `/api/products` and `/api/customers` return 200. Two errors are left, and
+-- both are the same story as `has_access`: the dump recorded columns and types
+-- and nothing else.
+--
+--   1. PGRST200  no foreign key `fk_invoices_customer`
+--   2. 23502     `invoices.public_token` is NOT NULL with no default
+--
+-- ⚠️ THE SECOND ONE IS MY MISTAKE, AND IT IS WORTH NAMING.
+--
+-- An earlier version of `_generate-default-fixes.sql` emitted `DROP NOT NULL`
+-- for every text column in this state — about two hundred, including foreign
+-- keys like `invoice_items.invoice_id`. That was dangerous, so I removed the
+-- whole section.
+--
+-- Removing all of it was also wrong. `public_token` is exactly the case the
+-- section existed for: NOT NULL, no default, and NEVER set by the application
+-- because the database always supplied it. The right move was to narrow the
+-- filter to columns the code does not write, not to delete the idea.
+--
+-- And the fix is not `DROP NOT NULL` either. A null share token would make
+-- `/invoice/public/:token` match on nothing, or worse, match the wrong row —
+-- so this restores a RANDOM default instead. Unguessable per row, which is
+-- what a share token is for.
+--
+-- SAFE TO RE-RUN.
+-- ============================================================================
+
+SET lock_timeout = '5s';
+
+-- ─── 1. The foreign key PostgREST needs by name ─────────────────────────────
+--
+-- `invoice.service.ts` embeds the customer with an explicit hint:
+--
+--     .select('…, customers!fk_invoices_customer(…)')
+--
+-- PostgREST resolves that hint against the CONSTRAINT NAME. Recreating the
+-- tables without foreign keys left nothing to resolve, so every invoice list
+-- fails with PGRST200 — and it fails at the API layer, not in Postgres, which
+-- is why the error mentions a "schema cache" rather than a missing column.
+--
+-- ⚠️ The name is not cosmetic. `fk_invoices_customer` is written into the
+-- query; a constraint with the same columns under a different name would not
+-- satisfy the hint.
+--
+-- ⚠️ NOT VALID, deliberately: it enforces the constraint on new rows without
+-- scanning the existing ones, so it cannot block on a large table. Validate
+-- later with `ALTER TABLE invoices VALIDATE CONSTRAINT fk_invoices_customer`.
+--
+-- ⚠️ And no ON DELETE CASCADE. Deleting a customer must not silently delete
+-- their invoices — those are financial records, and the correct behaviour is
+-- to refuse the delete and make somebody decide.
+
+DO $fk$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'fk_invoices_customer'
+  ) THEN
+    ALTER TABLE invoices
+      ADD CONSTRAINT fk_invoices_customer
+      FOREIGN KEY (customer_id) REFERENCES customers(id)
+      NOT VALID;
+    RAISE NOTICE 'fk_invoices_customer created';
+  ELSE
+    RAISE NOTICE 'fk_invoices_customer already exists';
+  END IF;
+EXCEPTION WHEN OTHERS THEN
+  RAISE WARNING 'could not create fk_invoices_customer: %', SQLERRM;
+END $fk$;
+
+-- ⚠️ PostgREST caches the schema. Without this it keeps answering PGRST200
+-- from memory even though the constraint now exists — which reads exactly like
+-- the fix not working.
+NOTIFY pgrst, 'reload schema';
+
+-- ─── 2. Share tokens: a random default, not a relaxed constraint ────────────
+--
+-- Every `*_token` column that is NOT NULL with no default. The application
+-- reads them and never writes them:
+--
+--     invoices.public_token       the invoice share link
+--     interactions.public_token   the interaction share link
+--
+-- `gen_random_uuid()::text` gives each row an unguessable value, which is the
+-- entire security property these columns carry — they are looked up BY token
+-- precisely so a sequential id cannot be walked.
+
+DO $tokens$
+DECLARE
+  r RECORD;
+  v_count integer := 0;
+BEGIN
+  FOR r IN
+    SELECT c.relname AS table_name, a.attname AS column_name,
+           format_type(a.atttypid, a.atttypmod) AS data_type
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    JOIN pg_attribute a ON a.attrelid = c.oid
+    WHERE n.nspname = 'public'
+      AND c.relkind = 'r'
+      AND a.attnum > 0
+      AND NOT a.attisdropped
+      AND a.attnotnull
+      AND a.attname LIKE '%\_token'
+      AND format_type(a.atttypid, a.atttypmod) IN ('text', 'uuid')
+      AND NOT EXISTS (
+        SELECT 1 FROM pg_attrdef d WHERE d.adrelid = a.attrelid AND d.adnum = a.attnum
+      )
+  LOOP
+    -- ⚠️ The cast matches the column type. These are `uuid` in this schema,
+    -- and `gen_random_uuid()::text` would round-trip through text and back
+    -- for no reason — or fail outright if the assignment cast were missing.
+    EXECUTE format(
+      'ALTER TABLE public.%I ALTER COLUMN %I SET DEFAULT %s',
+      r.table_name, r.column_name,
+      CASE WHEN r.data_type = 'uuid' THEN 'gen_random_uuid()' ELSE 'gen_random_uuid()::text' END
+    );
+    v_count := v_count + 1;
+    RAISE NOTICE 'random default: %.%', r.table_name, r.column_name;
+  END LOOP;
+
+  RAISE NOTICE '% token columns given a random default', v_count;
+END $tokens$;
+
+-- ─── 3. Backfill rows that already exist without one ────────────────────────
+--
+-- A default only applies to new rows. Any invoice created before this — there
+-- should be none after the reset, but the script must not assume it — would
+-- still have a null token and a share link that matches nothing.
+
+UPDATE invoices SET public_token = gen_random_uuid() WHERE public_token IS NULL;
+
+-- ============================================================================
+-- PROOF — one result set, because the editor shows only the last.
+-- ============================================================================
+
+SELECT check_name, result, detail FROM (
+
+  SELECT 1 AS ord, 'fk_invoices_customer exists' AS check_name,
+    CASE WHEN EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_invoices_customer')
+      THEN 'PASS' ELSE 'FAIL' END AS result,
+    'the name the query hint resolves against' AS detail
+
+  UNION ALL
+  SELECT 2, 'token columns have defaults',
+    CASE WHEN (
+      SELECT count(*) FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      JOIN pg_attribute a ON a.attrelid = c.oid
+      WHERE n.nspname = 'public' AND c.relkind = 'r' AND a.attnum > 0
+        AND NOT a.attisdropped AND a.attnotnull AND a.attname LIKE '%\_token'
+        AND NOT EXISTS (SELECT 1 FROM pg_attrdef d WHERE d.adrelid = a.attrelid AND d.adnum = a.attnum)
+    ) = 0 THEN 'PASS' ELSE 'FAIL' END,
+    'invoices and interactions share links'
+
+  UNION ALL
+  -- ⚠️ NOT pass/fail. These are the remaining NOT NULL text/uuid columns with
+  -- no default. MOST are fine — foreign keys and required fields the code
+  -- sets itself. They are listed so that when one of them raises 23502, you
+  -- recognise it as this same class and fix that column with the error as
+  -- evidence, rather than relaxing two hundred constraints on a guess.
+  SELECT 3, 'columns that could raise 23502', 'INFO',
+    (SELECT count(*)::text || ' NOT NULL text/uuid columns with no default'
+     FROM pg_class c
+     JOIN pg_namespace n ON n.oid = c.relnamespace
+     JOIN pg_attribute a ON a.attrelid = c.oid
+     WHERE n.nspname = 'public' AND c.relkind = 'r' AND a.attnum > 0
+       AND NOT a.attisdropped AND a.attnotnull
+       AND a.attname NOT IN ('id', 'workspace_id')
+       AND format_type(a.atttypid, a.atttypmod) IN ('text', 'uuid')
+       AND NOT EXISTS (SELECT 1 FROM pg_attrdef d WHERE d.adrelid = a.attrelid AND d.adnum = a.attnum))
+
+) checks
+ORDER BY ord;
+
+
+-- ────────────────────────────────────────────────────────────────────────
 -- invoice-public-share-migration.sql
 -- ────────────────────────────────────────────────────────────────────────
 
@@ -7925,87 +8465,31 @@ BEGIN
   END IF;
 END $$;
 
--- ─── 3. Identity columns: drop NOT NULL rather than invent a value ──────────
+-- ─── 3. REMOVED ────────────────────────────────────────────────────────────
 --
--- Text and uuid columns that are NOT NULL, have no default, and that no insert
--- in the backend sets. Every one of them is an identifier, a token or a
--- foreign key — a value that MEANS something.
+-- ⚠️ This section emitted `DROP NOT NULL` for every text/uuid column that was
+-- NOT NULL with no default — about two hundred of them, including
+-- `invoice_items.invoice_id`, `ledger_entries.account_id` and
+-- `workspace_members.user_id`.
 --
--- `workspaces.slug` is the clearest case. A default of `''` would let every
--- workspace created without one share the same slug, and the unique index that
--- is supposed to protect that would then reject the second workspace anybody
--- creates. Nullable is honest: the row exists, the slug is not set yet, and
--- anything reading it can tell.
-
-DO $$
-DECLARE
-  r RECORD;
-  v_count   integer := 0;
-  v_skipped text[] := ARRAY[]::text[];
-BEGIN
-  FOR r IN
-    SELECT c.table_name, c.column_name
-    FROM information_schema.columns c
-    JOIN information_schema.tables t
-      ON t.table_schema = c.table_schema AND t.table_name = c.table_name
-    WHERE c.table_schema = 'public'
-      AND t.table_type = 'BASE TABLE'
-      AND c.is_nullable = 'NO'
-      AND c.column_default IS NULL
-      AND c.column_name <> 'id'
-      AND c.data_type IN ('text', 'character varying', 'uuid')
-      -- The tenancy boundary keeps its NOT NULL. A row with a null
-      -- `workspace_id` belongs to nobody and every policy would miss it.
-      AND c.column_name <> 'workspace_id'
-      -- ⚠️ And never a PRIMARY KEY column.
-      --
-      -- Postgres refuses outright — `42P16: column "mutation_id" is in a
-      -- primary key` — and it is right to: a nullable primary key is not a
-      -- primary key. `sync_mutations.mutation_id` is the idempotency key the
-      -- whole offline queue is built on, and it must stay NOT NULL.
-      --
-      -- This loop was written to look for columns with no default, and a PK
-      -- often has none because the application supplies the value. Filtering
-      -- by "no default" alone catches them.
-      AND NOT EXISTS (
-        SELECT 1
-        FROM information_schema.table_constraints tc
-        JOIN information_schema.key_column_usage k
-          ON k.constraint_name = tc.constraint_name
-         AND k.table_schema = tc.table_schema
-        WHERE tc.table_schema = 'public'
-          AND tc.table_name = c.table_name
-          AND tc.constraint_type = 'PRIMARY KEY'
-          AND k.column_name = c.column_name
-      )
-  LOOP
-    BEGIN
-      EXECUTE format('ALTER TABLE public.%I ALTER COLUMN %I DROP NOT NULL', r.table_name, r.column_name);
-      v_count := v_count + 1;
-    EXCEPTION
-      WHEN lock_not_available THEN
-        v_skipped := array_append(v_skipped, r.table_name || '.' || r.column_name);
-      WHEN OTHERS THEN
-        -- A column in a primary key is filtered out above, but a UNIQUE
-        -- constraint or a generated column could still refuse. Recorded by
-        -- name and reason rather than stopping the loop.
-        v_skipped := array_append(v_skipped, r.table_name || '.' || r.column_name || ' (' || SQLERRM || ')');
-    END;
-  END LOOP;
-
-  RAISE NOTICE 'relaxed % identity columns to nullable', v_count;
-
-  IF array_length(v_skipped, 1) > 0 THEN
-    RAISE WARNING 'skipped % — run this file again: %',
-      array_length(v_skipped, 1), array_to_string(v_skipped, ', ');
-  END IF;
-END $$;
-
+-- Those are foreign keys and required business fields. Relaxing them permits
+-- orphan rows in an accounting system: an invoice line belonging to no
+-- invoice, a ledger entry with no account. Silent, and unrecoverable.
+--
+-- The test I should have applied: these columns were NOT NULL in the original
+-- database and the product ran against it for a long time, so the code sets
+-- them. A NOT NULL column with no default only breaks when the code relies on
+-- the database to fill it in — which is knowable only because it USED to have
+-- a default that the rebuild dropped. `has_access` is that column. Sections 1
+-- and 2 are the entire fix.
 
 -- ─── Prove it ───────────────────────────────────────────────────────────────
 --
--- Expect ZERO rows. Anything listed is still NOT NULL with no default, and
--- will raise on an insert that does not set it.
+-- Lists NOT NULL columns with no default that this file did not give one.
+--
+-- ⚠️ Rows here are EXPECTED and mostly fine — they are foreign keys and
+-- required fields the application sets itself. This is a reference list, not a
+-- failure list. Act on one only when an insert actually raises `23502` on it.
 
 SELECT
   c.table_name,
@@ -8655,7 +9139,7 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 );
 
 INSERT INTO schema_migrations (name, checksum, applied_by) VALUES
-  ('base-schema-migration.sql', 'e83dd0dbaf571c01', 'sql-editor'),
+  ('base-schema-migration.sql', '90fcaf326673a0ea', 'sql-editor'),
   ('live-reconciliation-migration.sql', 'aabd1fe8d823c080', 'sql-editor'),
   ('tenancy-workspace-migration.sql', '5bc0bda28b22f0d3', 'sql-editor'),
   ('tenancy-rls.sql', 'cf8cc0454fa2ff5b', 'sql-editor'),
@@ -8680,15 +9164,18 @@ INSERT INTO schema_migrations (name, checksum, applied_by) VALUES
   ('timesheet-sync-migration.sql', '612ec2bb0c0eeffd', 'sql-editor'),
   ('data-migration-center-migration.sql', 'acccf49c2da4376a', 'sql-editor'),
   ('views-and-billing-events-migration.sql', '2cea2402a0227c50', 'sql-editor'),
-  ('hardening-migration.sql', 'abad3f0d111ea2dc', 'sql-editor'),
+  ('hardening-migration.sql', '8381bdb54179fbd6', 'sql-editor'),
   ('rls-recursion-fix-migration.sql', 'a1b7f80c1cd373e4', 'sql-editor'),
   ('rls-performance-migration.sql', '63a2c0d778b95d24', 'sql-editor'),
   ('remaining-policies-migration.sql', '2af0f3c2538b6475', 'sql-editor'),
   ('linter-hardening-migration.sql', '6523fd4b5dbb7252', 'sql-editor'),
+  ('CREATE-MY-WORKSPACE.sql', 'e0574b1eeed11846', 'sql-editor'),
+  ('FIX-403.sql', '9e6df8a97fd04854', 'sql-editor'),
+  ('FIX-INVOICES.sql', '87702006f7a4f39a', 'sql-editor'),
   ('invoice-public-share-migration.sql', '4af592ae01613c72', 'sql-editor'),
   ('missing-rpcs-migration.sql', '46f4e9fe055014a8', 'sql-editor'),
   ('onboarding-server-state-migration.sql', 'caa6d3993853bd15', 'sql-editor'),
-  ('restore-defaults-migration.sql', '18476d517c2755c9', 'sql-editor'),
+  ('restore-defaults-migration.sql', '5e70424b6db39cdb', 'sql-editor'),
   ('subscription-workspace-migration.sql', '93e1b8dc6a7344e4', 'sql-editor'),
   ('task-assignment-migration.sql', 'ea67771132e83bd8', 'sql-editor'),
   ('task-customer-outcomes-migration.sql', '4ee404af5de026e5', 'sql-editor'),

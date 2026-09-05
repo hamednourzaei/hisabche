@@ -12,6 +12,11 @@ import {
   type LedgerTxn,
   type PartySide,
 } from '../services/accounting/party-ledger.domain'
+// The payments core: the one place money moving between the business and a
+// party is recorded. `payments` is the shared instance the rest of the backend
+// books through — see services/payments/index.ts.
+import { partyBalance, payments as paymentsService } from '../services/payments'
+import { BaseError } from '../errors/base.error'
 
 // ─── Types ────────────────────────────────────────────────
 interface CreateTransactionBody {
@@ -60,8 +65,18 @@ export async function transactionRoutes(fastify: FastifyInstance) {
         const column = customerId ? 'customer_id' : 'supplier_id'
         const partyId = (customerId ?? supplierId) as string
 
+        // PHASE B — `transactions_view`, not the `transactions` table.
+        //
+        // The table contains neither the invoices nor the payments: nothing
+        // writes a row there when an invoice is issued or when money is taken
+        // through the payments core. A statement built from it was a statement
+        // of the two things that DO write there — an opening balance and a
+        // manual adjustment — presented as the party's whole account.
+        //
+        // The view is the union of posted invoices, posted payments, and the
+        // legacy rows no document stands behind. Same columns, real contents.
         const { data, error } = await supabase
-          .from('transactions')
+          .from('transactions_view')
           .select('type, amount, created_at')
           .eq('workspace_id', request.tenancy.workspaceId)
           .eq(column, partyId)
@@ -136,11 +151,16 @@ export async function transactionRoutes(fastify: FastifyInstance) {
       // business on the platform. The workspace filter is the whole fix.
       const { workspaceId } = request.tenancy
 
+      // PHASE B — the view, for the same reason as the ledger route above.
+      // Ordered by `created_at`, which the view carries; the table's `date`
+      // column does not exist on it because a payment dates itself by
+      // `entry_date` and an invoice by `date`, and the view has already picked
+      // the right one for each source.
       let query = supabase
-        .from('transactions')
+        .from('transactions_view')
         .select('*', { count: 'exact' })
         .eq('workspace_id', workspaceId)
-        .order('date', { ascending: false })
+        .order('created_at', { ascending: false })
         .range(from, to)
 
       if (customerId) query = query.eq('customer_id', customerId)
@@ -174,6 +194,74 @@ export async function transactionRoutes(fastify: FastifyInstance) {
 
       if (!body.customerId && !body.supplierId) {
         return reply.code(400).send({ error: 'مشتری یا تأمین‌کننده الزامی است' })
+      }
+
+      // ─── PHASE B — money movement is redirected to the payments core ──────
+      //
+      // 'payment' and 'receipt' used to be written straight into this table.
+      // What that produced: a row that settles no invoice, appears in no
+      // journal entry, and is therefore absent from the trial balance, the
+      // income statement and `invoice_outstanding` — while moving the number on
+      // the customer screen. Two financial truths, disagreeing.
+      //
+      // It was also getting the DIRECTION wrong. The web PaymentModal sent
+      // `type: 'payment'` for money RECEIVED from a customer, and 'payment' in
+      // the party-ledger vocabulary means money paid OUT. Every customer
+      // payment moved the balance the wrong way by twice its amount.
+      //
+      // So it is not passed through — it is RECORDED PROPERLY. The payments
+      // core allocates the amount against that party's open invoices (oldest
+      // first) and books the journal entry, both of which this route could
+      // never do. The response keeps the old shape so existing callers survive
+      // the change.
+      if (body.type === 'payment' || body.type === 'receipt') {
+        try {
+          const isCustomer = Boolean(body.customerId)
+
+          // Direction is derived from WHO the party is, not from the caller's
+          // `type` — the caller is the thing that has been getting it wrong.
+          // Money involving a customer comes in; money involving a supplier
+          // goes out.
+          const payment = await paymentsService.recordPayment(request.tenancy, {
+            direction: isCustomer ? 'in' : 'out',
+            partyType: isCustomer ? 'customer' : 'supplier',
+            partyId: (body.customerId ?? body.supplierId) as string,
+            amount: body.amount,
+            ...(body.currency ? { currency: body.currency } : {}),
+            ...(body.date ? { entryDate: body.date.slice(0, 10) } : {}),
+            ...(body.reference ? { reference: body.reference } : {}),
+            ...(body.description ? { notes: body.description } : {}),
+          })
+
+          await clearCache(`transactions:${workspaceId}:*`)
+          await clearCache(`transaction-balance:${workspaceId}:*`)
+          await clearCache(`dashboard:${workspaceId}`)
+          await clearCache(`sales:${workspaceId}:*`)
+
+          return reply.code(201).send({
+            id: payment.id,
+            customer_id: isCustomer ? body.customerId : null,
+            supplier_id: isCustomer ? null : body.supplierId,
+            type: isCustomer ? 'receipt' : 'payment',
+            amount: body.amount,
+            currency: payment.currency,
+            description: body.description ?? '',
+            reference: body.reference ?? '',
+            date: payment.entryDate,
+            workspace_id: workspaceId,
+            user_id: userId,
+            // Named so a client can tell this went through the payments core
+            // rather than landing in `transactions`.
+            source: 'payment',
+          })
+        } catch (err) {
+          if (err instanceof BaseError && err.statusCode < 500) {
+            const code = /^[A-Z][A-Z_]{6,}/.exec(err.message)?.[0]
+            return reply.code(err.statusCode).send({ error: err.message, code: code ?? err.name })
+          }
+          fastify.log.error(err)
+          return reply.code(500).send({ error: 'ثبت پرداخت ناموفق بود' })
+        }
       }
 
       const { data, error } = await supabase
@@ -223,21 +311,39 @@ export async function transactionRoutes(fastify: FastifyInstance) {
       const { workspaceId } = request.tenancy
 
       const { data, error } = await supabase
-        .from('transactions')
+        .from('transactions_view')
         .select('type, amount, currency')
         .eq('workspace_id', workspaceId)
         .eq('customer_id', customerId)
 
       if (error) return reply.code(500).send({ error: error.message })
 
-      const balance = (data ?? []).reduce((acc, tx) => {
-        const amount = Number(tx.amount)
-        if (tx.type === 'sale') return acc + amount
-        if (tx.type === 'payment') return acc - amount
-        if (tx.type === 'return') return acc - amount
-        if (tx.type === 'receipt') return acc + amount
-        return acc
-      }, 0)
+      // ⚠️ SIGN — this route had 'receipt' on the PLUS side and 'payment' on
+      // the minus side, which is both of them backwards. Money ARRIVING from a
+      // customer was recorded as increasing their debt, and money we paid OUT
+      // as reducing it. It is lesson 10 exactly, in a second place: the fix
+      // landed in `customer.service.getBalance()` and this copy was missed.
+      //
+      // The arithmetic is no longer written here at all. `partyBalance` is the
+      // one definition of what each movement means, it is unit-tested, and a
+      // third copy of these four lines is how a third disagreement starts.
+      const balance = partyBalance(
+        (data ?? []).map((tx) => ({
+          date: '',
+          reference: '',
+          amount: Number(tx.amount) || 0,
+          kind:
+            tx.type === 'sale'
+              ? ('sale' as const)
+              : tx.type === 'receipt'
+                ? ('payment_in' as const)
+                : tx.type === 'payment'
+                  ? ('payment_out' as const)
+                  : tx.type === 'purchase'
+                    ? ('purchase' as const)
+                    : ('return' as const),
+        })),
+      )
 
       return {
         customerId,

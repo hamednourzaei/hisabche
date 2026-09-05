@@ -69,6 +69,21 @@ export {
   transactionKeys,
 } from './hooks/transactions'
 
+// ─── Payments (AR / AP) ───────────────────────────────────
+// The one client-side path for money moving between the business and a party.
+// `useCreateTransaction` is NOT that path — see hooks/payments.ts.
+export {
+  usePayments,
+  useOpenInvoices,
+  useRecordPayment,
+  paymentKeys,
+  type PaymentDirection,
+  type PaymentPartyType,
+  type PaymentRecord,
+  type RecordPaymentInput,
+  type OpenInvoice,
+} from './hooks/payments'
+
 // ─── Realtime ─────────────────────────────────────────────
 export { useRealtime, useActiveWorkspaceId } from './hooks/useRealtime'
 
