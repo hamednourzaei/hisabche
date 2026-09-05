@@ -40,6 +40,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 
 import {
+  useAssignProfile,
   useBranches,
   useBranchTree,
   useCreateBranch,
@@ -47,6 +48,7 @@ import {
   useDeleteEmployee,
   useEmployees,
   usePayrolls,
+  usePermissionMatrix,
 } from '@hisabche/api'
 
 import { TeamAndPayrollView, type TeamTab } from '../team-and-payroll-view'
@@ -109,6 +111,19 @@ export function TeamAndPayrollContainer() {
   const createEmployee = useCreateEmployee()
   const deleteEmployee = useDeleteEmployee()
   const createBranch = useCreateBranch()
+  const assignProfile = useAssignProfile()
+
+  // G3 — the profiles offered in the employee form.
+  //
+  // owner/manager/seller are filtered out: they are what the enforced static
+  // table decides, and "assigning" one as a profile would add a grant that
+  // duplicates the member's own workspace role without changing anything.
+  // Profiles are the ones that widen — Accountant, Sales Manager, and so on.
+  const { data: matrix } = usePermissionMatrix()
+  const permissionProfiles = useMemo(
+    () => (matrix?.roles ?? []).filter((role) => !role.isEnforcedBase),
+    [matrix],
+  )
 
   const [employeeFormError, setEmployeeFormError] = useState<string | null>(null)
   const [branchFormError, setBranchFormError] = useState<string | null>(null)
@@ -124,8 +139,39 @@ export function TeamAndPayrollContainer() {
   const handleCreateEmployee = useCallback(
     async (values: Record<string, unknown>) => {
       setEmployeeFormError(null)
+      const { permissionProfileId, ...employeeValues } = values as Record<string, unknown> & {
+        permissionProfileId?: string
+      }
+
       try {
-        await createEmployee.mutateAsync(values)
+        const created = (await createEmployee.mutateAsync(employeeValues)) as
+          { id?: string; user_id?: string | null } | undefined
+
+        // G3 — apply the profile, but ONLY if this employee has a login.
+        //
+        // A grant is a `user_roles` row keyed to a user. An employee with no
+        // account has no user id, so there is nothing to grant to. Rather than
+        // failing the whole creation — the employee record is valid and wanted
+        // — the person is created and the caller is told the profile did not
+        // apply. Silently dropping it would tell them access was granted.
+        if (permissionProfileId) {
+          const userId = created?.user_id
+          if (userId) {
+            await assignProfile.mutateAsync({
+              userId,
+              roleId: permissionProfileId,
+              replaceExisting: true,
+            })
+          } else {
+            setEmployeeFormError(
+              t(
+                'team.profileNeedsAccount',
+                'کارمند ثبت شد، ولی پروفایل دسترسی اعمال نشد: این کارمند هنوز حساب کاربری ندارد.',
+              ),
+            )
+          }
+        }
+
         await refetchEmployees()
       } catch (error) {
         // Surfaced, not swallowed. A save that fails silently tells the user
@@ -136,7 +182,7 @@ export function TeamAndPayrollContainer() {
         throw error
       }
     },
-    [createEmployee, refetchEmployees, t],
+    [createEmployee, assignProfile, refetchEmployees, t],
   )
 
   const handleDeleteEmployee = useCallback(
@@ -238,6 +284,7 @@ export function TeamAndPayrollContainer() {
       onCreateEmployee={handleCreateEmployee}
       onDeleteEmployee={handleDeleteEmployee}
       branches={branches}
+      permissionProfiles={permissionProfiles}
       branchesTab={branchesTab}
       employeeFormError={employeeFormError}
     />

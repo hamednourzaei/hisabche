@@ -1,6 +1,7 @@
 // packages/ui/src/components/ui/accounting/components/JournalEntryRow.tsx
 'use client'
 
+import { useLedgerNumber } from './ledger-table'
 import { memo, useState, useCallback, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { ChevronDown } from 'lucide-react'
@@ -29,6 +30,7 @@ export const JournalEntryRow = memo(function JournalEntryRow({
   accounts,
 }: JournalEntryRowProps) {
   const t = useTranslations()
+  const n = useLedgerNumber()
   const [isOpen, setIsOpen] = useState(false)
 
   const toggle = useCallback(() => setIsOpen((prev) => !prev), [])
@@ -54,21 +56,21 @@ export const JournalEntryRow = memo(function JournalEntryRow({
         className="w-full flex items-center justify-between gap-2 px-2 md:px-3 lg:px-4 py-2 md:py-2.5 lg:py-3 hover:bg-[hsl(var(--surface-muted))] transition-colors text-start"
       >
         <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
-          <span className="text-[10px] md:text-xs lg:text-sm text-[hsl(var(--fg-tertiary))] shrink-0 whitespace-nowrap">
+          <span className="shrink-0 whitespace-nowrap text-xs text-[hsl(var(--fg-tertiary))]">
             {formatDate(entry.date)}
           </span>
-          <span className="text-[11px] md:text-sm text-[hsl(var(--fg-primary))] font-medium truncate">
+          <span className="truncate text-sm font-medium text-[hsl(var(--fg-primary))]">
             {entry.description}
           </span>
           {entry.reference && (
-            <span className="hidden md:inline text-[10px] md:text-xs text-[hsl(var(--fg-tertiary))] shrink-0">
+            <span className="hidden shrink-0 text-xs text-[hsl(var(--fg-tertiary))] md:inline">
               #{entry.reference}
             </span>
           )}
         </div>
         <div className="flex items-center gap-3 shrink-0">
-          <span className="text-[11px] md:text-sm font-semibold text-[hsl(var(--fg-primary))] whitespace-nowrap">
-            {totals.debit.toLocaleString()}
+          <span className="whitespace-nowrap text-sm font-semibold tabular-nums text-[hsl(var(--fg-primary))]">
+            {n(totals.debit, 'zero')}
           </span>
           <ChevronDown
             className={cn(
@@ -84,7 +86,7 @@ export const JournalEntryRow = memo(function JournalEntryRow({
         <div className="px-2 md:px-3 lg:px-4 pb-2 md:pb-3">
           <table className="w-full">
             <thead>
-              <tr className="text-[9px] md:text-[10px] lg:text-xs text-[hsl(var(--fg-tertiary))]">
+              <tr className="text-xs text-[hsl(var(--fg-tertiary))]">
                 <th className="text-start font-medium py-1">{t('accounting.journal.account')}</th>
                 <th className="text-end font-medium py-1">{t('accounting.journal.debit')}</th>
                 <th className="text-end font-medium py-1">{t('accounting.journal.credit')}</th>
@@ -94,15 +96,15 @@ export const JournalEntryRow = memo(function JournalEntryRow({
               {entry.lines.map((line) => {
                 const account = accountMap.get(line.accountId)
                 return (
-                  <tr key={line.id} className="text-[10px] md:text-xs lg:text-sm">
+                  <tr key={line.id} className="text-sm">
                     <td className="py-1 text-[hsl(var(--fg-secondary))]">
                       {account ? `${account.code} - ${account.name}` : line.accountId}
                     </td>
-                    <td className="py-1 text-end text-[hsl(var(--fg-primary))]">
-                      {line.debit > 0 ? line.debit.toLocaleString() : '—'}
+                    <td className="py-1 text-end tabular-nums text-[hsl(var(--fg-primary))]">
+                      {n(line.debit)}
                     </td>
-                    <td className="py-1 text-end text-[hsl(var(--fg-primary))]">
-                      {line.credit > 0 ? line.credit.toLocaleString() : '—'}
+                    <td className="py-1 text-end tabular-nums text-[hsl(var(--fg-primary))]">
+                      {n(line.credit)}
                     </td>
                   </tr>
                 )

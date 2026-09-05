@@ -66,7 +66,7 @@ function ExportButtonInner<T>({ data, columns, filename, className }: ExportButt
       className={cn(
         'flex items-center gap-1.5 md:gap-2 rounded-lg font-medium transition-colors',
         'px-2.5 md:px-3 lg:px-4 py-1.5 md:py-2',
-        'text-[11px] md:text-xs lg:text-sm',
+        'text-sm',
         'border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))]',
         'hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
         'disabled:opacity-40 disabled:cursor-not-allowed',

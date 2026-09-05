@@ -9,6 +9,7 @@ import { SingleDatePicker } from '../components/DateRangePicker'
 import { ExportButton, type ExportColumn } from '../components/ExportButton'
 import { AccountingSkeleton } from '../AccountingSkeleton'
 import { AccountingEmptyState } from '../AccountingEmptyState'
+import { useLedgerNumber } from '../components/ledger-table'
 
 interface DetailRow {
   section: string
@@ -22,52 +23,69 @@ const exportColumns: ExportColumn<DetailRow>[] = [
   { key: 'amount', header: 'مبلغ', accessor: (r) => r.amount },
 ]
 
+/**
+ * ⚠️ TOKENS, NOT RAW TAILWIND COLOURS.
+ *
+ * These sections were `bg-blue-500/10 text-blue-500`, `bg-rose-500/10` and
+ * `bg-purple-500/10` — three palette colours that exist in no theme file. They
+ * do not respond to the light/dark switch the rest of the app uses, and they
+ * are not in the design tokens, so nothing about the product's colour can be
+ * changed in one place while they are here.
+ *
+ * Assets / liabilities / equity is not a rainbow anyway. It is one accounting
+ * identity with two sides, so: primary for what the business HAS, destructive
+ * for what it OWES, and a neutral accent for the residual.
+ */
+const SECTION_TONE = {
+  assets: 'bg-[hsl(var(--color-primary)/0.10)] text-[hsl(var(--color-primary))]',
+  liabilities: 'bg-[hsl(var(--color-destructive)/0.10)] text-[hsl(var(--color-destructive))]',
+  equity: 'bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-primary))]',
+} as const
+
 function SectionBlock({
   title,
   total,
   details,
-  accentClass,
+  tone,
+  emptyLabel,
 }: {
   title: string
   total: number
   details: TrialBalance[]
-  accentClass: string
+  tone: keyof typeof SECTION_TONE
+  emptyLabel: string
 }) {
+  const n = useLedgerNumber()
+
   return (
-    <div className="rounded-lg md:rounded-xl border border-[hsl(var(--border-default))] overflow-hidden">
-      <div
-        className={cn('px-3 md:px-4 py-2 md:py-2.5 flex items-center justify-between', accentClass)}
-      >
-        <span className="text-xs md:text-sm lg:text-base font-semibold">{title}</span>
-        <span className="text-xs md:text-sm lg:text-base font-bold">{total.toLocaleString()}</span>
-      </div>
+    <section className="overflow-hidden rounded-xl border border-[hsl(var(--border-default))]">
+      <header className={cn('flex items-center justify-between px-4 py-3', SECTION_TONE[tone])}>
+        <h3 className="text-sm font-semibold">{title}</h3>
+        <span className="text-sm font-bold tabular-nums">{n(total, 'zero')}</span>
+      </header>
+
       <div className="divide-y divide-[hsl(var(--border-default)/0.5)]">
         {details.length === 0 ? (
-          <p className="px-3 md:px-4 py-2.5 md:py-3 text-[11px] md:text-xs text-[hsl(var(--fg-tertiary))]">
-            —
-          </p>
+          <p className="px-4 py-3 text-sm text-[hsl(var(--fg-tertiary))]">{emptyLabel}</p>
         ) : (
           details.map((d) => (
-            <div
-              key={d.accountId}
-              className="flex items-center justify-between px-3 md:px-4 py-2 md:py-2.5"
-            >
-              <span className="text-[11px] md:text-sm text-[hsl(var(--fg-secondary))]">
-                {d.accountName}
-              </span>
-              <span className="text-[11px] md:text-sm font-medium text-[hsl(var(--fg-primary))]">
-                {d.balance.toLocaleString()}
+            <div key={d.accountId} className="flex items-center justify-between gap-4 px-4 py-2.5">
+              <span className="text-sm text-[hsl(var(--fg-secondary))]">{d.accountName}</span>
+              {/* tabular-nums: without it a column of figures does not align. */}
+              <span className="text-sm font-medium tabular-nums text-[hsl(var(--fg-primary))]">
+                {n(d.balance)}
               </span>
             </div>
           ))
         )}
       </div>
-    </div>
+    </section>
   )
 }
 
 export const BalanceSheetTab = memo(function BalanceSheetTab() {
   const t = useTranslations()
+  const n = useLedgerNumber()
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
   const { data, isLoading } = useBalanceSheet(date)
 
@@ -93,12 +111,12 @@ export const BalanceSheetTab = memo(function BalanceSheetTab() {
   const isBalanced = data ? data.outOfBalanceBy === 0 : false
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 md:gap-3 px-3 md:px-4 lg:px-5 py-2.5 md:py-3 lg:py-4 border-b border-[hsl(var(--border-default))]">
-        <h2 className="text-xs md:text-sm lg:text-base font-semibold text-[hsl(var(--fg-primary))]">
+    <div className="flex h-full flex-col">
+      <header className="flex flex-col gap-3 border-b border-[hsl(var(--border-default))] px-5 py-4 sm:flex-row sm:items-end sm:justify-between">
+        <h2 className="text-base font-semibold text-[hsl(var(--fg-primary))]">
           {t('accounting.balanceSheet.title')}
         </h2>
-        <div className="flex items-center gap-2 md:gap-3">
+        <div className="flex items-center gap-3">
           <SingleDatePicker
             value={date}
             onChange={setDate}
@@ -111,40 +129,50 @@ export const BalanceSheetTab = memo(function BalanceSheetTab() {
             className="mb-0"
           />
         </div>
-      </div>
+      </header>
 
-      <div className="flex-1 overflow-y-auto p-3 md:p-4 lg:p-5">
+      <div className="flex-1 overflow-y-auto p-5">
         {isLoading ? (
           <AccountingSkeleton />
         ) : !data ? (
           <AccountingEmptyState title={t('accounting.balanceSheet.empty.title')} />
         ) : (
-          <div className="space-y-3 md:space-y-4 lg:space-y-5">
+          <div className="space-y-4">
             <SectionBlock
               title={t('accounting.balanceSheet.assets')}
               total={data.totalAssets}
               details={data.assets}
-              accentClass="bg-blue-500/10 text-blue-500"
+              tone="assets"
+              emptyLabel={t('accounting.balanceSheet.empty.title')}
             />
             <SectionBlock
               title={t('accounting.balanceSheet.liabilities')}
               total={data.totalLiabilities}
               details={data.liabilities}
-              accentClass="bg-rose-500/10 text-rose-500"
+              tone="liabilities"
+              emptyLabel={t('accounting.balanceSheet.empty.title')}
             />
             <SectionBlock
               title={t('accounting.balanceSheet.equity')}
               total={data.totalEquity}
               details={data.equity}
-              accentClass="bg-purple-500/10 text-purple-500"
+              tone="equity"
+              emptyLabel={t('accounting.balanceSheet.empty.title')}
             />
 
+            {/*
+              The accounting identity, stated. `role="alert"` when it does NOT
+              hold: a balance sheet that does not balance is the most important
+              thing this screen can say, and it used to be a line in the same
+              weight as the rest.
+            */}
             <div
+              {...(isBalanced ? {} : { role: 'alert' })}
               className={cn(
-                'flex items-center justify-between px-3 md:px-4 py-2.5 md:py-3 rounded-lg md:rounded-xl text-xs md:text-sm font-semibold',
+                'flex flex-wrap items-center justify-between gap-2 rounded-xl px-4 py-3 text-sm font-semibold',
                 isBalanced
-                  ? 'bg-[hsl(var(--color-success)/0.1)] text-[hsl(var(--color-success))]'
-                  : 'bg-[hsl(var(--color-warning)/0.1)] text-[hsl(var(--color-warning))]',
+                  ? 'bg-[hsl(var(--color-success)/0.10)] text-[hsl(var(--color-success))]'
+                  : 'bg-[hsl(var(--color-destructive)/0.10)] text-[hsl(var(--color-destructive))]',
               )}
             >
               <span>
@@ -152,9 +180,9 @@ export const BalanceSheetTab = memo(function BalanceSheetTab() {
                   ? t('accounting.balanceSheet.balanced')
                   : t('accounting.balanceSheet.unbalanced')}
               </span>
-              <span>
-                {data.totalAssets.toLocaleString()} ={' '}
-                {(data.totalLiabilities + data.totalEquity).toLocaleString()}
+              <span className="tabular-nums">
+                {n(data.totalAssets, 'zero')} ={' '}
+                {n(data.totalLiabilities + data.totalEquity, 'zero')}
               </span>
             </div>
           </div>

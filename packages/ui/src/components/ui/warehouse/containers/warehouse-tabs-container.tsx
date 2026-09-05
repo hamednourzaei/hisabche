@@ -43,6 +43,33 @@ import { warehouseContainer } from './Warehouse-container'
 
 export type WarehouseTab = 'stock' | 'products'
 
+/**
+ * ⚠️ A COMPONENT, not an inline call. This crashed production.
+ *
+ * `warehouseContainer` is written as a plain function that calls a dozen hooks
+ * — useTranslations, useRouter, useQueryClient, useState, useEffect, useMemo.
+ * Calling it inline, as `warehouseContainer()`, runs those hooks as part of the
+ * CALLER's hook list.
+ *
+ * The first version of this file did exactly that, conditionally:
+ *
+ *     active === 'products' ? <ProductListContainer /> : warehouseContainer()
+ *
+ * On the stock tab the parent rendered ~12 hooks; on the products tab it
+ * rendered 3. Switching tabs therefore changed the hook count between renders,
+ * which is React error #300 — "rendered fewer hooks than during the previous
+ * render" — and it took the whole page down through the error boundary.
+ *
+ * Wrapping it in a component gives those hooks their own instance, so the
+ * parent's hook list is the same on every render no matter which tab is up.
+ * Declared at module scope, not inside the parent: a component defined during
+ * render is a NEW type each time, which remounts the subtree and loses its
+ * state on every keystroke.
+ */
+function WarehouseStockTab() {
+  return warehouseContainer()
+}
+
 /** Anything that is not the catalogue is stock — what «انبار» means by default. */
 export function warehouseTabFrom(value: string | null | undefined): WarehouseTab {
   return value === 'products' ? 'products' : 'stock'
@@ -104,12 +131,8 @@ export function WarehouseTabsContainer() {
         ))}
       </div>
 
-      {/*
-        `warehouseContainer` is a plain function component called inline — the
-        shape it already had. `ProductListContainer` is a memo component, so it
-        is rendered as an element.
-      */}
-      {active === 'products' ? <ProductListContainer /> : warehouseContainer()}
+      {/* Both branches are ELEMENTS. See WarehouseStockTab above for why. */}
+      {active === 'products' ? <ProductListContainer /> : <WarehouseStockTab />}
     </div>
   )
 }

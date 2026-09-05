@@ -11,8 +11,12 @@
 // ============================================
 
 export {
+  ACCESS_LEVELS,
   CAPABILITIES,
+  PERMISSION_MODULES,
   ROLE_RANK,
+  capabilitiesForLevel,
+  levelOfCapabilities,
   can,
   minRoleFor,
   capabilitiesOf,
@@ -23,8 +27,10 @@ export {
   recordScope,
   rejectedWriteFields,
   roleAtLeast,
+  type AccessLevel,
   type Capability,
   type FieldMode,
+  type ModuleSpec,
   type RecordScope,
   type ScopedEntity,
   type WorkspaceRole,

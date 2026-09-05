@@ -56,8 +56,20 @@ export const AccountingTabs = memo(function AccountingTabs({
   const t = useTranslations()
 
   return (
+    // Underline, not filled pills.
+    //
+    // Five solid primary-coloured chips with drop shadows put the loudest
+    // element on the screen on the NAVIGATION, which is the part a person looks
+    // at once and then ignores. The figures underneath are what the screen is
+    // for. An underline marks the current tab without competing with them —
+    // and it is the same tab treatment the warehouse and people screens use, so
+    // a tab looks like a tab everywhere in the product.
+    //
+    // Sizes are one value, not three breakpoints on every property: the
+    // previous `text-[11px] md:text-xs lg:text-sm` plus four more triples said
+    // nothing except that nobody had chosen.
     <div
-      className="flex items-center gap-1 md:gap-1.5 lg:gap-2 overflow-x-auto pb-0.5 scrollbar-hide"
+      className="scrollbar-hide flex items-center gap-1 overflow-x-auto border-b border-[hsl(var(--border-default))]"
       role="tablist"
       aria-label={t('accounting.tabs.label')}
     >
@@ -72,17 +84,23 @@ export const AccountingTabs = memo(function AccountingTabs({
             aria-selected={isActive}
             onClick={() => onTabChange(tab.id)}
             className={cn(
-              'shrink-0 flex items-center gap-1.5 md:gap-2 rounded-lg md:rounded-xl font-medium transition-all duration-200',
-              'px-2.5 md:px-3.5 lg:px-4 py-1.5 md:py-2 lg:py-2.5',
-              'text-[11px] md:text-xs lg:text-sm',
-              'min-h-[36px] md:min-h-[40px] lg:min-h-[44px]',
+              'flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors',
+              // -mb-px so the tab's own border sits ON the container's, rather
+              // than a pixel below it.
+              '-mb-px min-h-[44px]',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))]',
               isActive
-                ? 'bg-[hsl(var(--color-primary))] text-white shadow-sm shadow-[hsl(var(--color-primary)/0.3)]'
-                : 'bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted)/0.8)] hover:text-[hsl(var(--fg-primary))]',
-              'focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))] focus:ring-offset-2',
+                ? 'border-[hsl(var(--color-primary))] font-semibold text-[hsl(var(--fg-primary))]'
+                : 'border-transparent text-[hsl(var(--fg-secondary))] hover:text-[hsl(var(--fg-primary))]',
             )}
           >
-            <Icon className="size-3.5 md:size-4 lg:size-[18px]" aria-hidden="true" />
+            <Icon
+              className={cn(
+                'size-4',
+                isActive ? 'text-[hsl(var(--color-primary))]' : 'text-[hsl(var(--fg-tertiary))]',
+              )}
+              aria-hidden="true"
+            />
             <span>{t(tab.labelKey)}</span>
           </button>
         )

@@ -16,8 +16,23 @@ import { supabase } from '../../db'
 import { DatabaseError } from '../../errors/database.error'
 import type { TenancyContext } from '../tenancy.service'
 
-import type { AccountRootType, DraftLine } from './accounting.domain'
+import type { AccountRootType, DraftLine, PeriodLock } from './accounting.domain'
 import type { LedgerTotals } from './accounting.reports'
+/**
+ * J1 — does this error mean `accounting_period_locks.branch_id` has not been
+ * created yet, rather than that the query is wrong?
+ *
+ *   42703    — undefined_column (Postgres)
+ *   PGRST204 — PostgREST could not find the column in its schema cache
+ *
+ * The period lock sits on the posting path of every financial document, so it
+ * must keep working — and keep REFUSING — either side of the migration.
+ */
+function isMissingBranchColumn(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false
+  if (error.code === '42703' || error.code === 'PGRST204') return true
+  return /branch_id/i.test(error.message ?? '')
+}
 
 const ACCOUNT_COLUMNS = 'id, code, name, type, role, parent_id, is_group, is_active, created_at'
 
@@ -352,33 +367,115 @@ export class AccountingRepository {
 
   // ─── Period lock ──────────────────────────────────────────────────────────
 
+  /**
+   * The company lock — `branch_id IS NULL`.
+   *
+   * Kept with its original name and shape because several callers read it as
+   * "the" lock. J1 added branch locks beside it; `listPeriodLocks` below is the
+   * one that sees all of them.
+   */
   async getPeriodLock(
     workspaceId: string,
   ): Promise<{ lockedUntil: string; reason: string } | null> {
-    const { data, error } = await supabase
-      .from('accounting_period_locks')
-      .select('locked_until, reason')
-      .eq('workspace_id', workspaceId)
-      .maybeSingle()
+    const read = (scoped: boolean) => {
+      const query = supabase
+        .from('accounting_period_locks')
+        .select('locked_until, reason')
+        .eq('workspace_id', workspaceId)
+
+      // Before phase-j-01 there is no branch_id column and exactly one row per
+      // workspace, so the unscoped read is the correct fallback.
+      return scoped ? query.is('branch_id', null).maybeSingle() : query.maybeSingle()
+    }
+
+    let { data, error } = await read(true)
+    if (error && isMissingBranchColumn(error)) ({ data, error } = await read(false))
 
     if (error) throw new DatabaseError('Failed to read the period lock', error)
     if (!data) return null
     return { lockedUntil: String(data.locked_until).slice(0, 10), reason: data.reason ?? '' }
   }
 
-  async setPeriodLock(ctx: TenancyContext, lockedUntil: string, reason: string): Promise<void> {
-    const { error } = await supabase.from('accounting_period_locks').upsert(
-      {
-        workspace_id: ctx.workspaceId,
-        locked_until: lockedUntil,
-        reason,
-        locked_by: ctx.userId,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'workspace_id' },
-    )
+  /**
+   * J1 — every lock for the workspace: the company one and each branch's.
+   *
+   * One read, not one per branch. `evaluatePeriodLock` decides from the whole
+   * set, so the precedence rule lives in one pure function rather than in a
+   * query that has to be got right at every call site.
+   */
+  async listPeriodLocks(workspaceId: string): Promise<PeriodLock[]> {
+    const { data, error } = await supabase
+      .from('accounting_period_locks')
+      .select('branch_id, locked_until, reason')
+      .eq('workspace_id', workspaceId)
 
-    if (error) throw new DatabaseError('Failed to set the period lock', error)
+    if (error) {
+      // Pre-migration: no branch_id column. Fall back to the single company
+      // lock so posting keeps working — and keeps being CHECKED — either side
+      // of the migration.
+      if (isMissingBranchColumn(error)) {
+        const company = await this.getPeriodLock(workspaceId)
+        return company ? [{ branchId: null, ...company }] : []
+      }
+      throw new DatabaseError('Failed to read the period locks', error)
+    }
+
+    return (data ?? []).map((row: Record<string, any>) => ({
+      branchId: row.branch_id ?? null,
+      lockedUntil: String(row.locked_until).slice(0, 10),
+      reason: row.reason ?? '',
+    }))
+  }
+
+  /**
+   * Set one lock. `branchId === null` sets the company lock.
+   *
+   * The conflict target differs per scope because the uniqueness is expressed
+   * by two PARTIAL indexes — a company lock conflicts on workspace alone, a
+   * branch lock on the pair.
+   */
+  async setPeriodLock(
+    ctx: TenancyContext,
+    lockedUntil: string,
+    reason: string,
+    branchId: string | null = null,
+  ): Promise<void> {
+    const row = {
+      workspace_id: ctx.workspaceId,
+      branch_id: branchId,
+      locked_until: lockedUntil,
+      reason,
+      locked_by: ctx.userId,
+      updated_at: new Date().toISOString(),
+    }
+
+    const { error } = await supabase
+      .from('accounting_period_locks')
+      .upsert(row, { onConflict: branchId ? 'workspace_id,branch_id' : 'workspace_id' })
+
+    if (!error) return
+
+    if (isMissingBranchColumn(error)) {
+      // A BRANCH lock cannot be stored before the migration, and quietly
+      // storing it as a company lock would close every branch instead of one.
+      // Refused loudly; the company lock still works.
+      if (branchId) {
+        throw new DatabaseError(
+          'ACCOUNTING_BRANCH_LOCK_NOT_MIGRATED: accounting_period_locks.branch_id does not exist. Run docs/phase-j-01-branch-period-lock-migration.sql.',
+          error,
+        )
+      }
+
+      const { branch_id: _ignored, ...companyRow } = row
+      const { error: fallbackError } = await supabase
+        .from('accounting_period_locks')
+        .upsert(companyRow, { onConflict: 'workspace_id' })
+
+      if (fallbackError) throw new DatabaseError('Failed to set the period lock', fallbackError)
+      return
+    }
+
+    throw new DatabaseError('Failed to set the period lock', error)
   }
 
   // ─── Aggregation ──────────────────────────────────────────────────────────

@@ -35,7 +35,7 @@ export const AccountingEmptyState = memo(function AccountingEmptyState({
         {title}
       </p>
       {subtitle && (
-        <p className="text-[11px] md:text-xs lg:text-sm text-[hsl(var(--fg-tertiary))] mt-1 max-w-xs md:max-w-sm">
+        <p className="text-sm text-[hsl(var(--fg-tertiary))] mt-1 max-w-xs md:max-w-sm">
           {subtitle}
         </p>
       )}

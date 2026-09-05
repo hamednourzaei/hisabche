@@ -155,7 +155,7 @@ export const CreateJournalEntryDialog = memo(function CreateJournalEntryDialog({
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
                 required
-                className="w-full h-9 md:h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-3 text-xs md:text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
+                className="w-full h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-3 text-xs md:text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
               />
             </div>
             <div className="space-y-1 md:space-y-1.5">
@@ -170,7 +170,7 @@ export const CreateJournalEntryDialog = memo(function CreateJournalEntryDialog({
                 type="text"
                 value={reference}
                 onChange={(e) => setReference(e.target.value)}
-                className="w-full h-9 md:h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-3 text-xs md:text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
+                className="w-full h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-3 text-xs md:text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
               />
             </div>
           </div>
@@ -188,7 +188,7 @@ export const CreateJournalEntryDialog = memo(function CreateJournalEntryDialog({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               required
-              className="w-full h-9 md:h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-3 text-xs md:text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
+              className="w-full h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-3 text-xs md:text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
             />
           </div>
 
@@ -200,7 +200,7 @@ export const CreateJournalEntryDialog = memo(function CreateJournalEntryDialog({
               <button
                 type="button"
                 onClick={handleAddLine}
-                className="flex items-center gap-1 text-[11px] md:text-xs font-medium text-[hsl(var(--color-primary))] hover:underline"
+                className="flex items-center gap-1 text-xs font-medium text-[hsl(var(--color-primary))] hover:underline"
               >
                 <Plus className="size-3 md:size-3.5" aria-hidden="true" />
                 {t('accounting.journal.addLine')}
@@ -213,7 +213,7 @@ export const CreateJournalEntryDialog = memo(function CreateJournalEntryDialog({
                   <select
                     value={line.accountId}
                     onChange={(e) => handleLineChange(index, 'accountId', e.target.value)}
-                    className="flex-1 min-w-0 h-9 md:h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-2 text-[11px] md:text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
+                    className="flex-1 min-w-0 h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-2 text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
                   >
                     <option value="">{t('accounting.journal.selectAccount')}</option>
                     {accounts.map((acc) => (
@@ -226,13 +226,13 @@ export const CreateJournalEntryDialog = memo(function CreateJournalEntryDialog({
                     placeholder={t('accounting.journal.debit')}
                     value={line.debit}
                     onChange={(raw) => handleLineChange(index, 'debit', raw)}
-                    className="w-20 md:w-28 h-9 md:h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-2 text-[11px] md:text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
+                    className="w-20 md:w-28 h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-2 text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
                   />
                   <MoneyInput
                     placeholder={t('accounting.journal.credit')}
                     value={line.credit}
                     onChange={(raw) => handleLineChange(index, 'credit', raw)}
-                    className="w-20 md:w-28 h-9 md:h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-2 text-[11px] md:text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
+                    className="w-20 md:w-28 h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-2 text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
                   />
                   <button
                     type="button"
@@ -249,7 +249,7 @@ export const CreateJournalEntryDialog = memo(function CreateJournalEntryDialog({
 
             <div
               className={cn(
-                'flex items-center justify-between text-[11px] md:text-xs font-medium px-2 md:px-3 py-1.5 md:py-2 rounded-lg',
+                'flex items-center justify-between text-xs font-medium px-2 md:px-3 py-1.5 md:py-2 rounded-lg',
                 totals.isBalanced
                   ? 'bg-[hsl(var(--color-success)/0.1)] text-[hsl(var(--color-success))]'
                   : 'bg-[hsl(var(--color-warning)/0.1)] text-[hsl(var(--color-warning))]',
@@ -273,14 +273,14 @@ export const CreateJournalEntryDialog = memo(function CreateJournalEntryDialog({
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 h-9 md:h-10 rounded-lg text-xs md:text-sm font-medium border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] transition-colors"
+              className="flex-1 h-10 rounded-lg text-xs md:text-sm font-medium border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] transition-colors"
             >
               {t('action.cancel')}
             </button>
             <button
               type="submit"
               disabled={isSubmitting || !description.trim() || !totals.isBalanced}
-              className="flex-1 h-9 md:h-10 rounded-lg text-xs md:text-sm font-medium bg-[hsl(var(--color-primary))] text-white hover:opacity-90 disabled:opacity-40 transition-opacity flex items-center justify-center gap-2"
+              className="flex-1 h-10 rounded-lg text-xs md:text-sm font-medium bg-[hsl(var(--color-primary))] text-white hover:opacity-90 disabled:opacity-40 transition-opacity flex items-center justify-center gap-2"
             >
               {isSubmitting && (
                 <Loader2 className="size-3.5 md:size-4 animate-spin" aria-hidden="true" />

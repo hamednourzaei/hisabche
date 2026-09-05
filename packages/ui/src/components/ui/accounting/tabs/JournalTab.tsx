@@ -56,7 +56,7 @@ export const JournalTab = memo(function JournalTab() {
             className={cn(
               'flex items-center gap-1.5 rounded-lg font-medium transition-opacity',
               'px-2.5 md:px-3 lg:px-4 py-1.5 md:py-2',
-              'text-[11px] md:text-xs lg:text-sm',
+              'text-sm',
               'bg-[hsl(var(--color-primary))] text-white hover:opacity-90',
             )}
           >

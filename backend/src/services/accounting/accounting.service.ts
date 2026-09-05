@@ -22,11 +22,12 @@ import { ValidationError } from '../../errors/validation.error'
 import { memoryCache } from '../../utils/pagination'
 import type { TenancyContext } from '../tenancy.service'
 import { sod } from '../authorization'
+import { logBusinessEvent } from '../event-log.service'
 
 import {
   collapseLines,
   dateOnly,
-  isPeriodLocked,
+  evaluatePeriodLock,
   nextEntryNumber,
   normaliseLines,
   reverseLines,
@@ -246,23 +247,95 @@ export class AccountingService implements LedgerPort {
     return this.repo.getPeriodLock(ctx.workspaceId)
   }
 
+  /** J1 — every lock in the workspace: the company one and each branch's. */
+  async listPeriodLocks(ctx: TenancyContext) {
+    return this.repo.listPeriodLocks(ctx.workspaceId)
+  }
+
   /**
    * Closing a period is an owner's decision — it is what makes filed figures
    * un-editable — so a seller may not move the boundary.
+   *
+   * J1: `branchId` closes ONE branch. Omitting it closes the company, which is
+   * every branch and the original behaviour.
    */
-  async setPeriodLock(ctx: TenancyContext, lockedUntil: string, reason: string) {
+  async setPeriodLock(
+    ctx: TenancyContext,
+    lockedUntil: string,
+    reason: string,
+    branchId: string | null = null,
+  ) {
     if (ctx.role !== 'owner' && ctx.role !== 'manager') {
       throw new ConflictError('ACCOUNTING_PERIOD_LOCK_FORBIDDEN')
     }
-    await this.repo.setPeriodLock(ctx, dateOnly(lockedUntil), reason)
+
+    const nextUntil = dateOnly(lockedUntil)
+
+    // Read the whole set BEFORE the write, so the audit event can say what the
+    // boundary was as well as what it became. "Locked until 1404-06-31" alone
+    // does not tell you whether a period was closed or REOPENED — and reopening
+    // a closed period is the more serious of the two.
+    const before = await this.repo.listPeriodLocks(ctx.workspaceId)
+    const previous = before.find((lock) => lock.branchId === branchId)
+
+    await this.repo.setPeriodLock(ctx, nextUntil, reason, branchId)
     await this.invalidateWorkspace(ctx.workspaceId)
+
+    // J1.5 — every lock and unlock is an audit event.
+    //
+    // A period lock decides whether the books can still be changed. Moving it
+    // silently is exactly the change an audit trail exists to record, and it
+    // had none.
+    const reopened = Boolean(previous && nextUntil < previous.lockedUntil)
+
+    logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+      entityType: 'accounting_period_lock',
+      entityId: branchId ?? ctx.workspaceId,
+      action: reopened ? 'reopened' : 'locked',
+      title: reopened
+        ? `دوره حسابداری بازگشایی شد تا ${nextUntil}`
+        : `دوره حسابداری بسته شد تا ${nextUntil}`,
+      description: [
+        branchId ? `شعبه: ${branchId}` : 'کل کسب‌وکار',
+        previous ? `قبلاً: ${previous.lockedUntil}` : 'بدون قفل قبلی',
+        reason,
+      ]
+        .filter(Boolean)
+        .join(' · '),
+      // Reopening is the one worth telling people about: it makes filed
+      // figures editable again.
+      notify: reopened,
+      notifyType: reopened ? 'warning' : 'info',
+    }).catch((err: unknown) => console.error('[AccountingService] period lock audit failed:', err))
+
     return this.repo.getPeriodLock(ctx.workspaceId)
   }
 
-  private async assertPeriodOpen(ctx: TenancyContext, date: string) {
-    const lock = await this.repo.getPeriodLock(ctx.workspaceId)
-    if (isPeriodLocked(date, lock?.lockedUntil ?? null)) {
-      throw new ConflictError('ACCOUNTING_PERIOD_LOCKED')
+  /**
+   * J1.3, application layer.
+   *
+   * ⚠️ This is the SECOND of two checks, not the only one. The same rule runs
+   * inside `accounting_post_journal_entry`, in the posting transaction — so a
+   * direct database write is refused as well, and a check that raced between
+   * here and the insert cannot let anything through.
+   *
+   * This layer exists to fail EARLY and with a message naming which lock
+   * refused, rather than surfacing a Postgres exception from three calls deep.
+   */
+  private async assertPeriodOpen(
+    ctx: TenancyContext,
+    date: string,
+    branchId: string | null = null,
+  ) {
+    const locks = await this.repo.listPeriodLocks(ctx.workspaceId)
+    const decision = evaluatePeriodLock(date, branchId, locks)
+
+    if (decision.locked) {
+      throw new ConflictError(
+        `ACCOUNTING_PERIOD_LOCKED: ${decision.scope} lock, closed through ${decision.lockedUntil}`,
+      )
     }
   }
 

@@ -24,6 +24,20 @@ export const auditLogSchema = z.object({
   newData: z.record(z.unknown()).nullable().optional(),
   ipAddress: optionalStringSchema,
   userAgent: optionalStringSchema,
+
+  /**
+   * G4 — the tenancy boundary on the audit trail.
+   *
+   * The column has existed since live-reconciliation-migration.sql and
+   * `AuditService.log()` never wrote it, so every historical row has it NULL —
+   * which is why every read of the table runs behind `platformAdminGuard`. New
+   * rows carry it, and the member-facing read filters on it.
+   */
+  workspaceId: uuidSchema.nullable().optional(),
+
+  /** G4 — which branch the change happened at. NULL when not branch-specific. */
+  branchId: uuidSchema.nullable().optional(),
+
   createdAt: isoDateSchema.optional(),
 })
 
@@ -49,6 +63,15 @@ export const auditFiltersSchema = z.object({
   entityId: uuidSchema.optional(),
   startDate: dateOnlySchema.optional(),
   endDate: dateOnlySchema.optional(),
+  /**
+   * G4 — «فاکتور کی صادر شده از کدام شعبه»: the combined filter the audit tab
+   * is opened to ask. Composed with `entityType` and `userId` above.
+   *
+   * ⚠️ NOT a tenancy filter. The workspace is never accepted from a client —
+   * it comes from the verified request context. This narrows WITHIN it.
+   */
+  branchId: uuidSchema.optional(),
+
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().min(1).max(100).default(50),
 })

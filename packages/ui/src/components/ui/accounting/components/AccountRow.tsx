@@ -6,51 +6,85 @@ import { useTranslations } from 'next-intl'
 import { cn } from '../../../../lib/utils'
 import type { Account } from '@hisabche/api'
 
+import { LedgerRow, LedgerTd } from './ledger-table'
+
 interface AccountRowProps {
   account: Account
 }
 
-const TYPE_COLORS: Record<string, string> = {
-  asset: 'text-blue-500 bg-blue-500/10',
-  liability: 'text-rose-500 bg-rose-500/10',
-  equity: 'text-purple-500 bg-purple-500/10',
-  revenue: 'text-emerald-500 bg-emerald-500/10',
-  expense: 'text-amber-500 bg-amber-500/10',
+/**
+ * ⚠️ TOKENS, NOT RAW TAILWIND COLOURS.
+ *
+ * These were `text-blue-500 bg-blue-500/10`, rose, purple, emerald and amber —
+ * five palette colours that appear in no theme file, do not respond to the
+ * light/dark switch, and cannot be changed anywhere central.
+ *
+ * The replacement is not five tokens for five types, because the five account
+ * types are not five unrelated things. They are the two sides of the accounting
+ * identity plus the two halves of the income statement:
+ *
+ *   asset      what the business HAS        → primary
+ *   liability  what it OWES                 → destructive
+ *   equity     the residual                 → neutral
+ *   revenue    money earned                 → success
+ *   expense    money spent                  → warning
+ *
+ * Someone reading the chart of accounts learns the shape of the books from the
+ * colour, instead of learning five arbitrary hues.
+ */
+const TYPE_TONE: Record<string, string> = {
+  asset: 'bg-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))]',
+  liability: 'bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))]',
+  equity: 'bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))]',
+  revenue: 'bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))]',
+  expense: 'bg-[hsl(var(--color-warning)/0.12)] text-[hsl(var(--color-warning))]',
 }
+
+const FALLBACK_TONE = 'bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-tertiary))]'
 
 export const AccountRow = memo(function AccountRow({ account }: AccountRowProps) {
   const t = useTranslations()
-  const typeColor = TYPE_COLORS[account.type] || 'text-gray-500 bg-gray-500/10'
+  const tone = TYPE_TONE[account.type] ?? FALLBACK_TONE
 
   return (
-    <tr className="border-b border-[hsl(var(--border-default)/0.5)] last:border-0 hover:bg-[hsl(var(--surface-muted))] transition-colors">
-      <td className="px-2 md:px-3 lg:px-4 py-2 md:py-2.5 lg:py-3 text-[11px] md:text-sm text-[hsl(var(--fg-tertiary))] font-mono whitespace-nowrap">
+    <LedgerRow>
+      <LedgerTd mono muted>
         {account.code}
-      </td>
-      <td className="px-2 md:px-3 lg:px-4 py-2 md:py-2.5 lg:py-3 text-[11px] md:text-sm font-medium text-[hsl(var(--fg-primary))]">
-        {account.name}
-      </td>
-      <td className="px-2 md:px-3 lg:px-4 py-2 md:py-2.5 lg:py-3">
-        <span
-          className={cn(
-            'text-[9px] md:text-[10px] lg:text-xs font-medium px-1.5 md:px-2 py-0.5 rounded whitespace-nowrap',
-            typeColor,
-          )}
-        >
+      </LedgerTd>
+
+      <LedgerTd strong>{account.name}</LedgerTd>
+
+      <LedgerTd>
+        <span className={cn('whitespace-nowrap rounded-md px-2 py-0.5 text-xs font-medium', tone)}>
           {t(`accounting.accountTypes.${account.type}`)}
         </span>
-      </td>
-      <td className="px-2 md:px-3 lg:px-4 py-2 md:py-2.5 lg:py-3 text-[11px] md:text-sm text-center">
-        <span
-          className={cn(
-            'inline-block w-2 h-2 rounded-full',
-            account.isActive ? 'bg-[hsl(var(--color-success))]' : 'bg-[hsl(var(--fg-tertiary))]',
+      </LedgerTd>
+
+      <LedgerTd>
+        {/*
+          A dot alone carried the active/inactive state, with the meaning only
+          in an aria-label. Colour is not information on its own — someone who
+          cannot distinguish these two sees an identical dot either way — so the
+          inactive state now says so in text.
+        */}
+        <span className="inline-flex items-center gap-1.5">
+          <span
+            aria-hidden
+            className={cn(
+              'inline-block size-2 rounded-full',
+              account.isActive ? 'bg-[hsl(var(--color-success))]' : 'bg-[hsl(var(--fg-tertiary))]',
+            )}
+          />
+          {!account.isActive && (
+            <span className="text-xs text-[hsl(var(--fg-tertiary))]">
+              {t('accounting.accounts.inactive')}
+            </span>
           )}
-          aria-label={
-            account.isActive ? t('accounting.accounts.active') : t('accounting.accounts.inactive')
-          }
-        />
-      </td>
-    </tr>
+          <span className="sr-only">
+            {account.isActive ? t('accounting.accounts.active') : t('accounting.accounts.inactive')}
+          </span>
+        </span>
+      </LedgerTd>
+    </LedgerRow>
   )
 })

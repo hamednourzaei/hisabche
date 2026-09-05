@@ -3,13 +3,13 @@
 
 import { memo, useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
-import { TrendingUp, TrendingDown } from 'lucide-react'
 import { cn } from '../../../../lib/utils'
-import { useIncomeStatement } from '@hisabche/api'
+import { useIncomeStatement, type TrialBalance } from '@hisabche/api'
 import { DateRangePicker } from '../components/DateRangePicker'
 import { ExportButton, type ExportColumn } from '../components/ExportButton'
 import { AccountingSkeleton } from '../AccountingSkeleton'
 import { AccountingEmptyState } from '../AccountingEmptyState'
+import { useLedgerNumber } from '../components/ledger-table'
 
 interface SummaryRow {
   label: string
@@ -30,8 +30,69 @@ function getToday(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
+/**
+ * One block of the statement: a heading, its accounts, and its total.
+ *
+ * ⚠️ WHY THIS REPLACED THREE KPI CARDS
+ *
+ * Revenue, expenses and net income were rendered as three cards side by side.
+ * They are not three independent figures — they are ONE SUBTRACTION:
+ *
+ *     revenue − expenses = net income
+ *
+ * Laid out horizontally with equal weight, nothing on the screen says that. A
+ * reader had to know the arithmetic already to see it, and the accounts making
+ * up each total were not shown at all — they were computed for the CSV export
+ * and then thrown away.
+ *
+ * A statement reads top to bottom and shows its own working.
+ */
+function StatementSection({
+  title,
+  total,
+  accounts,
+  emptyLabel,
+}: {
+  title: string
+  total: number
+  accounts: TrialBalance[]
+  emptyLabel: string
+}) {
+  const n = useLedgerNumber()
+
+  return (
+    <section className="overflow-hidden rounded-xl border border-[hsl(var(--border-default))]">
+      <header className="flex items-center justify-between border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted)/0.5)] px-4 py-3">
+        <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">{title}</h3>
+        <span className="text-sm font-bold tabular-nums text-[hsl(var(--fg-primary))]">
+          {n(total, 'zero')}
+        </span>
+      </header>
+
+      <div className="divide-y divide-[hsl(var(--border-default)/0.5)]">
+        {accounts.length === 0 ? (
+          <p className="px-4 py-3 text-sm text-[hsl(var(--fg-tertiary))]">{emptyLabel}</p>
+        ) : (
+          accounts.map((account) => (
+            <div
+              key={account.accountId}
+              className="flex items-center justify-between gap-4 px-4 py-2.5"
+            >
+              <span className="text-sm text-[hsl(var(--fg-secondary))]">{account.accountName}</span>
+              <span className="text-sm font-medium tabular-nums text-[hsl(var(--fg-primary))]">
+                {n(account.balance)}
+              </span>
+            </div>
+          ))
+        )}
+      </div>
+    </section>
+  )
+}
+
 export const IncomeStatementTab = memo(function IncomeStatementTab() {
   const t = useTranslations()
+  const n = useLedgerNumber()
   const [from, setFrom] = useState(getFirstDayOfMonth)
   const [to, setTo] = useState(getToday)
   const { data, isLoading } = useIncomeStatement(from, to)
@@ -43,84 +104,73 @@ export const IncomeStatementTab = memo(function IncomeStatementTab() {
       ...data.expenses.map((r) => ({ label: r.accountName, value: r.balance })),
       { label: 'جمع درآمد', value: data.totalRevenue },
       { label: 'جمع هزینه‌ها', value: data.totalExpenses },
-      { label: 'سود خالص', value: data.netIncome },
+      { label: 'سود (زیان) خالص', value: data.netIncome },
     ]
   }, [data])
 
   const isProfit = (data?.netIncome ?? 0) >= 0
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 md:gap-3 px-3 md:px-4 lg:px-5 py-2.5 md:py-3 lg:py-4 border-b border-[hsl(var(--border-default))]">
-        <h2 className="text-xs md:text-sm lg:text-base font-semibold text-[hsl(var(--fg-primary))]">
+    <div className="flex h-full flex-col">
+      <header className="flex flex-col gap-3 border-b border-[hsl(var(--border-default))] px-5 py-4 sm:flex-row sm:items-end sm:justify-between">
+        <h2 className="text-base font-semibold text-[hsl(var(--fg-primary))]">
           {t('accounting.incomeStatement.title')}
         </h2>
-        <div className="flex items-end gap-2 md:gap-3">
+        <div className="flex items-end gap-3">
           <DateRangePicker from={from} to={to} onFromChange={setFrom} onToChange={setTo} />
           <ExportButton data={exportData} columns={exportColumns} filename="income-statement" />
         </div>
-      </div>
+      </header>
 
-      <div className="flex-1 overflow-y-auto p-3 md:p-4 lg:p-5">
+      <div className="flex-1 overflow-y-auto p-5">
         {isLoading ? (
           <AccountingSkeleton rows={3} />
         ) : !data ? (
           <AccountingEmptyState title={t('accounting.incomeStatement.empty.title')} />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 md:gap-3 lg:gap-4">
-            <div className="rounded-lg md:rounded-xl border border-[hsl(var(--border-default))] p-3 md:p-4 lg:p-5 bg-[hsl(var(--surface-elevated))]">
-              <div className="flex items-center gap-2 text-[hsl(var(--color-success))] mb-1.5 md:mb-2">
-                <TrendingUp className="size-4 md:size-5" aria-hidden="true" />
-                <span className="text-[11px] md:text-xs lg:text-sm font-medium">
-                  {t('accounting.incomeStatement.revenue')}
-                </span>
-              </div>
-              <p className="text-lg md:text-xl lg:text-2xl font-bold text-[hsl(var(--fg-primary))]">
-                {data.totalRevenue.toLocaleString()}
-              </p>
-            </div>
+          <div className="mx-auto max-w-2xl space-y-4">
+            <StatementSection
+              title={t('accounting.incomeStatement.revenue')}
+              total={data.totalRevenue}
+              accounts={data.revenue}
+              emptyLabel={t('accounting.incomeStatement.empty.title')}
+            />
 
-            <div className="rounded-lg md:rounded-xl border border-[hsl(var(--border-default))] p-3 md:p-4 lg:p-5 bg-[hsl(var(--surface-elevated))]">
-              <div className="flex items-center gap-2 text-[hsl(var(--color-destructive))] mb-1.5 md:mb-2">
-                <TrendingDown className="size-4 md:size-5" aria-hidden="true" />
-                <span className="text-[11px] md:text-xs lg:text-sm font-medium">
-                  {t('accounting.incomeStatement.expenses')}
-                </span>
-              </div>
-              <p className="text-lg md:text-xl lg:text-2xl font-bold text-[hsl(var(--fg-primary))]">
-                {data.totalExpenses.toLocaleString()}
-              </p>
-            </div>
+            <StatementSection
+              title={t('accounting.incomeStatement.expenses')}
+              total={data.totalExpenses}
+              accounts={data.expenses}
+              emptyLabel={t('accounting.incomeStatement.empty.title')}
+            />
 
-            <div
+            {/*
+              The result, given the weight of a result. Loss and profit are
+              distinguished by colour AND by the parenthesised figure — the
+              accounting convention for a negative — so the sign does not
+              depend on being able to tell green from red.
+            */}
+            <section
               className={cn(
-                'rounded-lg md:rounded-xl border p-3 md:p-4 lg:p-5',
+                'flex flex-wrap items-center justify-between gap-3 rounded-xl border-2 px-4 py-4',
                 isProfit
-                  ? 'border-[hsl(var(--color-success)/0.3)] bg-[hsl(var(--color-success)/0.05)]'
-                  : 'border-[hsl(var(--color-destructive)/0.3)] bg-[hsl(var(--color-destructive)/0.05)]',
+                  ? 'border-[hsl(var(--color-success)/0.35)] bg-[hsl(var(--color-success)/0.06)]'
+                  : 'border-[hsl(var(--color-destructive)/0.35)] bg-[hsl(var(--color-destructive)/0.06)]',
               )}
             >
-              <div
+              <h3 className="text-base font-semibold text-[hsl(var(--fg-primary))]">
+                {t('accounting.incomeStatement.netIncome')}
+              </h3>
+              <p
                 className={cn(
-                  'flex items-center gap-2 mb-1.5 md:mb-2',
+                  'text-2xl font-bold tabular-nums',
                   isProfit
                     ? 'text-[hsl(var(--color-success))]'
                     : 'text-[hsl(var(--color-destructive))]',
                 )}
               >
-                {isProfit ? (
-                  <TrendingUp className="size-4 md:size-5" aria-hidden="true" />
-                ) : (
-                  <TrendingDown className="size-4 md:size-5" aria-hidden="true" />
-                )}
-                <span className="text-[11px] md:text-xs lg:text-sm font-medium">
-                  {t('accounting.incomeStatement.netIncome')}
-                </span>
-              </div>
-              <p className="text-lg md:text-xl lg:text-2xl font-bold text-[hsl(var(--fg-primary))]">
-                {data.netIncome.toLocaleString()}
+                {isProfit ? n(data.netIncome, 'zero') : `(${n(Math.abs(data.netIncome), 'zero')})`}
               </p>
-            </div>
+            </section>
           </div>
         )}
       </div>

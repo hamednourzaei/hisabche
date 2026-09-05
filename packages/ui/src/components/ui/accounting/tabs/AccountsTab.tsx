@@ -7,6 +7,7 @@ import { Plus } from 'lucide-react'
 import { cn } from '../../../../lib/utils'
 import { useAccounts, useCreateAccount } from '@hisabche/api'
 import { AccountRow } from '../components/AccountRow'
+import { LedgerHead, LedgerTable, LedgerTh } from '../components/ledger-table'
 import { CreateAccountDialog, type CreateAccountInput } from '../components/CreateAccountDialog'
 import { ExportButton, type ExportColumn } from '../components/ExportButton'
 import { AccountingSkeleton } from '../AccountingSkeleton'
@@ -57,7 +58,7 @@ export const AccountsTab = memo(function AccountsTab() {
             className={cn(
               'flex items-center gap-1.5 rounded-lg font-medium transition-opacity',
               'px-2.5 md:px-3 lg:px-4 py-1.5 md:py-2',
-              'text-[11px] md:text-xs lg:text-sm',
+              'text-sm',
               'bg-[hsl(var(--color-primary))] text-white hover:opacity-90',
             )}
           >
@@ -76,29 +77,19 @@ export const AccountsTab = memo(function AccountsTab() {
             subtitle={t('accounting.accounts.empty.subtitle')}
           />
         ) : (
-          <table className="w-full">
-            <thead className="sticky top-0 bg-[hsl(var(--surface-elevated))] z-10">
-              <tr className="border-b border-[hsl(var(--border-default))] text-[9px] md:text-[10px] lg:text-xs text-[hsl(var(--fg-tertiary))]">
-                <th className="px-2 md:px-3 lg:px-4 py-2 text-start font-medium">
-                  {t('accounting.accounts.code')}
-                </th>
-                <th className="px-2 md:px-3 lg:px-4 py-2 text-start font-medium">
-                  {t('accounting.accounts.name')}
-                </th>
-                <th className="px-2 md:px-3 lg:px-4 py-2 text-start font-medium">
-                  {t('accounting.accounts.type')}
-                </th>
-                <th className="px-2 md:px-3 lg:px-4 py-2 text-center font-medium">
-                  {t('accounting.accounts.status')}
-                </th>
-              </tr>
-            </thead>
+          <LedgerTable caption={t('accounting.tabs.accounts')}>
+            <LedgerHead>
+              <LedgerTh>{t('accounting.accounts.code')}</LedgerTh>
+              <LedgerTh>{t('accounting.accounts.name')}</LedgerTh>
+              <LedgerTh>{t('accounting.accounts.type')}</LedgerTh>
+              <LedgerTh>{t('accounting.accounts.status')}</LedgerTh>
+            </LedgerHead>
             <tbody>
               {accounts.map((account) => (
                 <AccountRow key={account.id} account={account} />
               ))}
             </tbody>
-          </table>
+          </LedgerTable>
         )}
       </div>
 

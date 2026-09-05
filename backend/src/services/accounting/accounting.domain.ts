@@ -228,6 +228,79 @@ export function isPeriodLocked(entryDate: string, lockedUntil: string | null): b
   return dateOnly(entryDate) <= dateOnly(lockedUntil)
 }
 
+// ─── J1 — branch-aware period locks ─────────────────────────────────────────
+
+/**
+ * One lock. `branchId === null` means the COMPANY lock, which covers every
+ * branch; a non-null branchId locks that branch alone.
+ */
+export interface PeriodLock {
+  branchId: string | null
+  lockedUntil: string
+  reason: string
+}
+
+export type PeriodLockScope = 'company' | 'branch'
+
+export interface PeriodLockDecision {
+  locked: boolean
+  /** Which lock refused it — for an error message a person can act on. */
+  scope: PeriodLockScope | null
+  lockedUntil: string | null
+  reason: string
+}
+
+/**
+ * J1.2 — COMPANY LOCK **OR** BRANCH LOCK REFUSES THE POSTING.
+ *
+ * The precedence rule, written once and stated plainly because getting it
+ * backwards is silent:
+ *
+ *   · A company lock covers everything. Closing the company's January closes
+ *     January at every branch, including branches that have no lock row.
+ *   · A branch lock covers that branch only. One shop can close early — it
+ *     finished counting — without closing the others.
+ *   · They are OR-ed, never overridden. A branch CANNOT unlock a period the
+ *     company has closed: if it could, "the year is closed" would mean "the
+ *     year is closed unless a branch manager disagrees", and the filed figures
+ *     would not be final.
+ *
+ * ⚠️ A posting with NO branch (branchId null) is checked against the company
+ * lock only. There is no branch to consult, and refusing it because SOME branch
+ * is locked would make one shop's month-end block head-office entries.
+ */
+export function evaluatePeriodLock(
+  entryDate: string,
+  branchId: string | null,
+  locks: PeriodLock[],
+): PeriodLockDecision {
+  const open: PeriodLockDecision = { locked: false, scope: null, lockedUntil: null, reason: '' }
+
+  const company = locks.find((lock) => lock.branchId === null)
+  if (company && isPeriodLocked(entryDate, company.lockedUntil)) {
+    return {
+      locked: true,
+      scope: 'company',
+      lockedUntil: dateOnly(company.lockedUntil),
+      reason: company.reason,
+    }
+  }
+
+  if (!branchId) return open
+
+  const branch = locks.find((lock) => lock.branchId === branchId)
+  if (branch && isPeriodLocked(entryDate, branch.lockedUntil)) {
+    return {
+      locked: true,
+      scope: 'branch',
+      lockedUntil: dateOnly(branch.lockedUntil),
+      reason: branch.reason,
+    }
+  }
+
+  return open
+}
+
 /** The ledger stores accounting dates, never instants. */
 export function dateOnly(value: string | Date): string {
   if (value instanceof Date) return value.toISOString().slice(0, 10)

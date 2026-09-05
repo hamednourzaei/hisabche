@@ -34,7 +34,7 @@ export class AuditService {
 
   // ─── Write Audit Log ──────────────────────────────────────
   async log(data: CreateAuditLog) {
-    const { error } = await supabase.from('audit_logs').insert({
+    const row: Record<string, unknown> = {
       user_id: data.userId,
       action: data.action,
       entity_type: data.entityType,
@@ -43,7 +43,32 @@ export class AuditService {
       new_data: data.newData || null,
       ip_address: data.ipAddress || null,
       user_agent: data.userAgent || null,
-    })
+
+      // ⚠️ G4 — the workspace, which this method never wrote.
+      //
+      // `audit_logs.workspace_id` has existed since
+      // live-reconciliation-migration.sql, and every row inserted since then
+      // has it NULL because it was not in this object. That is the whole
+      // reason the table is treated as a platform-support surface: it cannot
+      // be filtered by workspace when the column is empty.
+      //
+      // Written now, so the member-facing read has something to scope to.
+      // Historical rows stay NULL — see the migration for why they are not
+      // guessed.
+      workspace_id: data.workspaceId ?? null,
+      branch_id: data.branchId ?? null,
+    }
+
+    let { error } = await supabase.from('audit_logs').insert(row)
+
+    // Before phase-g-03 there is no branch_id column. An audit row is worth
+    // writing without it — losing the evidence entirely because one attribute
+    // is not migrated yet is the worse failure.
+    if (error && isMissingBranchColumn(error)) {
+      delete row.branch_id
+      ;({ error } = await supabase.from('audit_logs').insert(row))
+    }
+
     if (error) throw new DatabaseError('Failed to write audit log', error)
 
     // ✅ Invalidate cache after new log

@@ -12,8 +12,11 @@ import {
   removeRoleSchema,
 } from '@hisabche/validation'
 import { PermissionService } from '../services/permission.service'
+import { permissionMatrix } from '../services/authorization/permission-matrix.service'
+import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
+import { requireCapability } from '../middleware/authorize.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 
 const toJsonSchema = (schema: any) => {
@@ -22,8 +25,44 @@ const toJsonSchema = (schema: any) => {
   return result
 }
 
+// ─── G3 — Permission Matrix ─────────────────────────────────────────────────
+
+const setCellSchema = z.object({
+  roleId: z.string().uuid(),
+  moduleKey: z.string().min(1).max(40),
+  level: z.enum(['none', 'read', 'write', 'full']),
+})
+
+const assignProfileSchema = z.object({
+  /**
+   * A USER id, not an employee id. Grants live in `user_roles`, which is about
+   * someone who signs in — see the header of permission-matrix.service.ts.
+   */
+  userId: z.string().uuid(),
+  roleId: z.string().uuid(),
+  /** Clear the person's other profile roles first. Their base role is kept. */
+  replaceExisting: z.boolean().optional(),
+})
+
 export async function permissionRoutes(fastify: FastifyInstance) {
   const permissionService = new PermissionService()
+
+  /**
+   * Domain refusals carry a CODE the client translates — PERMISSION_MATRIX_
+   * FORBIDDEN, PERMISSION_CATALOGUE_INCOMPLETE. Passing them through as a 500
+   * would turn "the migration has not run" into "something went wrong".
+   */
+  const failMatrix = (reply: FastifyReply, err: unknown, fallback: string) => {
+    if (err instanceof z.ZodError) {
+      return reply.code(400).send({ error: 'Validation failed', details: err.errors })
+    }
+    if (err instanceof BaseError && err.statusCode < 500) {
+      const code = /^[A-Z][A-Z_]{6,}/.exec(err.message)?.[0]
+      return reply.code(err.statusCode).send({ error: err.message, code: code ?? err.name })
+    }
+    fastify.log.error(err)
+    return reply.code(500).send({ error: fallback })
+  }
 
   // ═══════════════════════════════════════════════════════════
   // PERMISSIONS
@@ -349,6 +388,96 @@ export async function permissionRoutes(fastify: FastifyInstance) {
       } catch (err) {
         fastify.log.error(err)
         return reply.code(500).send({ error: 'Failed to check permission' })
+      }
+    },
+  )
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // G3 — the Permission Matrix
+  //
+  // Workspace-scoped, unlike the older /api/roles routes above, which predate
+  // roles having a workspace at all. These three are the ones the matrix
+  // screen uses; the older ones are left alone rather than rewritten.
+  // ═══════════════════════════════════════════════════════════════════════
+
+  // ─── GET /api/permissions/matrix ────────────────────────
+  fastify.get(
+    '/api/permissions/matrix',
+    {
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        // Reading who can do what is reading the org chart. Changing it needs
+        // member.manage, which the mutations below require.
+        requireCapability('member.manage'),
+      ],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        return reply.send(await permissionMatrix.matrix(request.tenancy))
+      } catch (err) {
+        return failMatrix(reply, err, 'Failed to build the permission matrix')
+      }
+    },
+  )
+
+  // ─── PUT /api/permissions/matrix/cell ───────────────────
+  fastify.put(
+    '/api/permissions/matrix/cell',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('member.manage')],
+      schema: {
+        body: toJsonSchema(setCellSchema),
+        response: { 200: toJsonSchema(z.any()) },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = setCellSchema.parse(request.body)
+        return reply.send(await permissionMatrix.setCell(request.tenancy, body))
+      } catch (err) {
+        return failMatrix(reply, err, 'Failed to change the permission')
+      }
+    },
+  )
+
+  // ─── POST /api/permissions/profiles/assign ──────────────
+  fastify.post(
+    '/api/permissions/profiles/assign',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('member.manage')],
+      schema: {
+        body: toJsonSchema(assignProfileSchema),
+        response: { 200: toJsonSchema(z.any()) },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const body = assignProfileSchema.parse(request.body)
+        return reply.send(await permissionMatrix.assignProfile(request.tenancy, body))
+      } catch (err) {
+        return failMatrix(reply, err, 'Failed to assign the profile')
+      }
+    },
+  )
+
+  // ─── GET /api/permissions/roles/:roleId/members ─────────
+  // H5 will link a matrix column to the people who hold it.
+  fastify.get(
+    '/api/permissions/roles/:roleId/members',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('member.manage')],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { roleId } = request.params as { roleId: string }
+        return reply.send({
+          members: await permissionMatrix.membersOfRole(request.tenancy, roleId),
+        })
+      } catch (err) {
+        return failMatrix(reply, err, 'Failed to fetch role members')
       }
     },
   )

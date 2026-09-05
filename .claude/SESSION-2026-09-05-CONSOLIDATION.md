@@ -249,3 +249,78 @@ enumerate کند).
 `packages/api/src/hooks/payments.ts` (جدید), `packages/api/src/index.ts`,
 `packages/ui/src/components/ui/customers/PaymentModal.tsx`,
 `scripts/find-missing-fks.mjs`, `scripts/run-migrations.mjs`
+
+---
+
+# فازهای G و J — ادامه‌ی همان سشن
+
+## وضعیت اجرا (تکمیل جدول بالا)
+
+| فاز | فایل‌ها                          | روی دیتابیس اجرا شد؟ |
+| --- | -------------------------------- | -------------------- |
+| G1  | — (فقط کد)                       | —                    |
+| G2  | `phase-g-01-branch-manager`      | ⛔ هنوز نه           |
+| G3  | `phase-g-02-permission-profiles` | ⛔ هنوز نه           |
+| J1  | `phase-j-01-branch-period-lock`  | ⛔ هنوز نه           |
+
+## 🔴 کرشی که به production رسید
+
+`/fa/warehouse?tab=products` با React #300 کاملاً پایین آمد. علتش تب کاتالوگی
+بود که در G1 اضافه کردم: `warehouseContainer()` را **شرطی** صدا می‌زدم و آن تابع
+دوازده هوک دارد. درس ۵۹ و گارد ایستا
+`packages/ui/src/__tests__/conditional-hook-call.test.ts`.
+
+## J0 — یافته‌ی اصلی که نقشه را عوض کرد
+
+**قفل دوره از قبل پیاده بود** و — مهم‌تر — **داخل خودِ RPC ثبت** اعمال می‌شود، نه
+فقط در سرویس. یعنی نوشتن مستقیم روی دیتابیس هم رد می‌شود. اسمش
+`accounting_period_locks` است، نه `accounting_periods`.
+
+اگر J1 را طبق متن اولیه از صفر می‌ساختم، یک لایه‌ی موازی روی یک enforcement کارکن
+می‌گذاشتم — روی تنها کنترلی که تعیین می‌کند آیا ارقام بایگانی‌شده نهایی‌اند.
+
+**Gapهای واقعی که J0 پیدا کرد:**
+
+- `branch_id` روی **هدر** سند است (`journal_entries`)، نه روی خطوط. **K1 باید
+  دقیقاً از همین استفاده کند** و ستون به `journal_lines` اضافه نکند.
+- **Payroll و Stock Adjustment اصلاً سند حسابداری نمی‌زنند** — دو رویداد مالی
+  خارج از دفتر.
+- **Approval سند را نگه نمی‌دارد.** `invoice.service.ts` صراحتاً کامنت دارد
+  «Never blocks invoice creation». یعنی «در انتظار تأیید» یک برچسب است، نه گیت.
+- Credit Note وجود ندارد.
+- Reconciliation فقط `payments` را کاندید match می‌گیرد؛ `reconciliation_sessions`
+  و `reconciliation_matches` جدولِ بی‌خواننده‌اند.
+- `unmatch` هیچ Audit Event نمی‌نویسد.
+
+**محیط تست:** دیتابیس mock است (`setup.ts` به دامنه‌ی رزرو IANA اشاره می‌کند).
+پس تست‌های DB-level فقط به‌صورت Verification Script و `PENDING HUMAN CONFIRMATION`.
+
+## J1 — قفل دوره‌ی شعبه‌آگاه
+
+`workspace_id PRIMARY KEY` اجازه‌ی سطر دوم نمی‌داد. کلید مرکب
+`(workspace_id, branch_id)` هم کار نمی‌کند چون **ستون PK نمی‌تواند NULL باشد** و
+NULL دقیقاً همان چیزی است که قفل شرکتی را بیان می‌کند. راه‌حل: `id` جانشین + دو
+ایندکس یکتای جزئی.
+
+قاعده‌ی precedence در `evaluatePeriodLock` (خالص، ۱۶ تست): **قفل شرکت یا قفل شعبه
+رد می‌کند** — و شعبه هرگز نمی‌تواند چیزی را که شرکت بسته باز کند.
+
+## G3 — ماتریس دسترسی
+
+خانه‌های owner/manager/seller **قفل‌اند**، چون Phase E حل قابلیت را افزایشی گذاشت:
+برداشتن تیک `ledger.post` برای مدیر هیچ اثری نداشت. کنترلی که بی‌صدا شکست
+می‌خورد از نبودنش بدتر است.
+
+## ریفکتور UI حسابداری
+
+سه نقص واقعی، نه ظاهری:
+
+1. **`toLocaleString()` بدون locale** در همه‌ی تب‌ها → دو نفر در یک مغازه یک عدد
+   را «۱۲٬۵۰۰» و "12,500" می‌دیدند. پکیج `@hisabche/formatting` از قبل بود و این
+   ماژول هیچ‌وقت صدایش نزده بود.
+2. **بدون `tabular-nums`** → ستون اعداد راست‌چین اصلاً تراز نمی‌شد.
+3. **خانه‌ی اختلاف تراز آزمایشی وقتی صفر بود خالی می‌ماند** و وقتی صفر نبود با
+   همان وزن بقیه رندر می‌شد. تنها عددی که باید داد بزند، شبیه بقیه بود.
+
+به‌علاوه: رنگ‌های خام تیلویند (`bg-blue-500/10`, rose, purple, emerald, amber) که
+به هیچ توکن تمی وصل نبودند و به سوییچ light/dark جواب نمی‌دادند.

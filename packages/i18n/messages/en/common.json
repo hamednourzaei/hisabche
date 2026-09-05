@@ -1971,6 +1971,8 @@
     "trialBalance": {
       "title": "Trial Balance",
       "asOf": "As of",
+      "balanced": "Balanced",
+      "outOfBalance": "Out of balance by",
       "total": "Total",
       "balance": "Balance",
       "empty": {

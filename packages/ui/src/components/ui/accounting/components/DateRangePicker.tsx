@@ -25,16 +25,14 @@ export const SingleDatePicker = memo(function SingleDatePicker({
   return (
     <div className={cn('flex flex-col gap-1 md:gap-1.5', className)}>
       {label && (
-        <label className="text-[10px] md:text-xs lg:text-sm text-[hsl(var(--fg-secondary))] font-medium">
-          {label}
-        </label>
+        <label className="text-sm text-[hsl(var(--fg-secondary))] font-medium">{label}</label>
       )}
       <JalaliDatePicker
         value={value}
         onChange={onChange}
         locale={locale}
         placeholder={label || t('accounting.dateRange.date')}
-        className="h-8 md:h-9 lg:h-10 text-[11px] md:text-xs lg:text-sm"
+        className="h-10 text-sm"
       />
     </div>
   )

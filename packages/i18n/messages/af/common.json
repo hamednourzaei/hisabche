@@ -1980,6 +1980,8 @@
     "trialBalance": {
       "title": "تراز آزمایشی",
       "asOf": "تا تاریخ",
+      "balanced": "متوازن است",
+      "outOfBalance": "اختلاف",
       "total": "جمع",
       "balance": "مانده",
       "empty": {

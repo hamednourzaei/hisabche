@@ -8,6 +8,16 @@ import { SingleDatePicker } from '../components/DateRangePicker'
 import { ExportButton, type ExportColumn } from '../components/ExportButton'
 import { AccountingSkeleton } from '../AccountingSkeleton'
 import { AccountingEmptyState } from '../AccountingEmptyState'
+import {
+  LedgerDifference,
+  LedgerFoot,
+  LedgerHead,
+  LedgerRow,
+  LedgerTable,
+  LedgerTd,
+  LedgerTh,
+  useLedgerNumber,
+} from '../components/ledger-table'
 import type { TrialBalance } from '@hisabche/api'
 
 const exportColumns: ExportColumn<TrialBalance>[] = [
@@ -20,6 +30,7 @@ const exportColumns: ExportColumn<TrialBalance>[] = [
 
 export const TrialBalanceTab = memo(function TrialBalanceTab() {
   const t = useTranslations()
+  const n = useLedgerNumber()
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
   const { data, isLoading } = useTrialBalance(date)
 
@@ -35,14 +46,29 @@ export const TrialBalanceTab = memo(function TrialBalanceTab() {
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 md:gap-3 px-3 md:px-4 lg:px-5 py-2.5 md:py-3 lg:py-4 border-b border-[hsl(var(--border-default))]">
-        <div className="flex items-center justify-between sm:justify-start gap-2">
-          <h2 className="text-xs md:text-sm lg:text-base font-semibold text-[hsl(var(--fg-primary))]">
+    <div className="flex h-full flex-col">
+      <header className="flex flex-col gap-3 border-b border-[hsl(var(--border-default))] px-5 py-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="text-base font-semibold text-[hsl(var(--fg-primary))]">
             {t('accounting.trialBalance.title')}
           </h2>
+          {/*
+            The difference, in the header rather than only in the last row of a
+            table someone has to scroll to. It is the answer to the question the
+            report is opened to ask.
+          */}
+          {!isLoading && rows.length > 0 && (
+            <div className="mt-1.5">
+              <LedgerDifference
+                value={totals.difference}
+                balancedLabel={t('accounting.trialBalance.balanced')}
+                outOfBalanceLabel={t('accounting.trialBalance.outOfBalance')}
+              />
+            </div>
+          )}
         </div>
-        <div className="flex items-center gap-2 md:gap-3">
+
+        <div className="flex items-center gap-3">
           <SingleDatePicker
             value={date}
             onChange={setDate}
@@ -55,7 +81,7 @@ export const TrialBalanceTab = memo(function TrialBalanceTab() {
             className="mb-0"
           />
         </div>
-      </div>
+      </header>
 
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
@@ -63,67 +89,50 @@ export const TrialBalanceTab = memo(function TrialBalanceTab() {
         ) : rows.length === 0 ? (
           <AccountingEmptyState title={t('accounting.trialBalance.empty.title')} />
         ) : (
-          <table className="w-full">
-            <thead className="sticky top-0 bg-[hsl(var(--surface-elevated))] z-10">
-              <tr className="border-b border-[hsl(var(--border-default))] text-[9px] md:text-[10px] lg:text-xs text-[hsl(var(--fg-tertiary))]">
-                <th className="px-2 md:px-3 lg:px-4 py-2 text-start font-medium">
-                  {t('accounting.accounts.code')}
-                </th>
-                <th className="px-2 md:px-3 lg:px-4 py-2 text-start font-medium">
-                  {t('accounting.accounts.name')}
-                </th>
-                <th className="px-2 md:px-3 lg:px-4 py-2 text-end font-medium">
-                  {t('accounting.journal.debit')}
-                </th>
-                <th className="px-2 md:px-3 lg:px-4 py-2 text-end font-medium">
-                  {t('accounting.journal.credit')}
-                </th>
-                <th className="px-2 md:px-3 lg:px-4 py-2 text-end font-medium">
-                  {t('accounting.trialBalance.balance')}
-                </th>
-              </tr>
-            </thead>
+          <LedgerTable caption={t('accounting.trialBalance.title')}>
+            <LedgerHead>
+              <LedgerTh>{t('accounting.accounts.code')}</LedgerTh>
+              <LedgerTh>{t('accounting.accounts.name')}</LedgerTh>
+              <LedgerTh numeric>{t('accounting.journal.debit')}</LedgerTh>
+              <LedgerTh numeric>{t('accounting.journal.credit')}</LedgerTh>
+              <LedgerTh numeric>{t('accounting.trialBalance.balance')}</LedgerTh>
+            </LedgerHead>
+
             <tbody>
               {rows.map((row) => (
-                <tr
-                  key={row.accountId}
-                  className="border-b border-[hsl(var(--border-default)/0.5)] last:border-0 hover:bg-[hsl(var(--surface-muted))] transition-colors"
-                >
-                  <td className="px-2 md:px-3 lg:px-4 py-2 md:py-2.5 text-[11px] md:text-sm text-[hsl(var(--fg-tertiary))] font-mono">
+                <LedgerRow key={row.accountId}>
+                  <LedgerTd mono muted>
                     {row.accountCode}
-                  </td>
-                  <td className="px-2 md:px-3 lg:px-4 py-2 md:py-2.5 text-[11px] md:text-sm font-medium text-[hsl(var(--fg-primary))]">
-                    {row.accountName}
-                  </td>
-                  <td className="px-2 md:px-3 lg:px-4 py-2 md:py-2.5 text-[11px] md:text-sm text-end text-[hsl(var(--fg-primary))]">
-                    {row.debit > 0 ? row.debit.toLocaleString() : '—'}
-                  </td>
-                  <td className="px-2 md:px-3 lg:px-4 py-2 md:py-2.5 text-[11px] md:text-sm text-end text-[hsl(var(--fg-primary))]">
-                    {row.credit > 0 ? row.credit.toLocaleString() : '—'}
-                  </td>
-                  <td className="px-2 md:px-3 lg:px-4 py-2 md:py-2.5 text-[11px] md:text-sm text-end font-semibold text-[hsl(var(--fg-primary))]">
-                    {row.balance.toLocaleString()}
-                  </td>
-                </tr>
+                  </LedgerTd>
+                  <LedgerTd strong>{row.accountName}</LedgerTd>
+                  <LedgerTd numeric>{n(row.debit)}</LedgerTd>
+                  <LedgerTd numeric>{n(row.credit)}</LedgerTd>
+                  <LedgerTd numeric strong>
+                    {n(row.balance)}
+                  </LedgerTd>
+                </LedgerRow>
               ))}
             </tbody>
-            <tfoot>
-              <tr className="border-t-2 border-[hsl(var(--border-default))] font-semibold text-[11px] md:text-sm">
-                <td className="px-2 md:px-3 lg:px-4 py-2 md:py-2.5" colSpan={2}>
-                  {t('accounting.trialBalance.total')}
-                </td>
-                <td className="px-2 md:px-3 lg:px-4 py-2 md:py-2.5 text-end">
-                  {totals.debit.toLocaleString()}
-                </td>
-                <td className="px-2 md:px-3 lg:px-4 py-2 md:py-2.5 text-end">
-                  {totals.credit.toLocaleString()}
-                </td>
-                <td className="px-2 md:px-3 lg:px-4 py-2 md:py-2.5 text-end">
-                  {totals.difference !== 0 ? totals.difference.toLocaleString() : ''}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
+
+            <LedgerFoot>
+              <LedgerTd strong colSpan={2}>
+                {t('accounting.trialBalance.total')}
+              </LedgerTd>
+              {/*
+                `'zero'`, not the default dash: in a TOTAL row a zero is a real
+                figure and an em dash would read as "not computed".
+              */}
+              <LedgerTd numeric strong>
+                {n(totals.debit, 'zero')}
+              </LedgerTd>
+              <LedgerTd numeric strong>
+                {n(totals.credit, 'zero')}
+              </LedgerTd>
+              <LedgerTd numeric strong>
+                {n(totals.difference, 'zero')}
+              </LedgerTd>
+            </LedgerFoot>
+          </LedgerTable>
         )}
       </div>
     </div>

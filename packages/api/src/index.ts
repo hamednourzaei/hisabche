@@ -69,6 +69,21 @@ export {
   transactionKeys,
 } from './hooks/transactions'
 
+// ─── Permission Matrix (G3) ───────────────────────────────
+export {
+  usePermissionMatrix,
+  useSetPermissionCell,
+  useAssignProfile,
+  useRoleMembers,
+  permissionMatrixKeys,
+  type AccessLevel,
+  type MatrixModule,
+  type MatrixRole,
+  type MatrixCell,
+  type PermissionMatrix,
+  type RoleMember,
+} from './hooks/permission-matrix'
+
 // ─── Branches ─────────────────────────────────────────────
 // G2: /api/branches existed since the branch migration with no client hook,
 // so the product could not show or pick a branch anywhere.

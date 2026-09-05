@@ -92,6 +92,17 @@ interface TeamAndPayrollViewProps {
   branchesTab?: React.ReactNode
   /** Surfaced instead of being swallowed: a failed save must say why. */
   employeeFormError?: string | null
+
+  // ─── G3 ───────────────────────────────────────────────────────────────────
+  /**
+   * Permission profiles offered in the employee form.
+   *
+   * ⚠️ Only applied when the new employee is linked to a USER account. A grant
+   * lives in `user_roles`, and most employees have no login at all — so this
+   * field is disabled with an explanation rather than silently doing nothing
+   * for the majority of the people entered here.
+   */
+  permissionProfiles?: { id: string; name: string }[]
 }
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -354,6 +365,7 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
   branches = [],
   branchesTab,
   employeeFormError,
+  permissionProfiles = [],
 }: TeamAndPayrollViewProps) {
   const [showEmployeeForm, setShowEmployeeForm] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -374,6 +386,7 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
     employeeCode: '',
     position: '',
     branchId: '',
+    permissionProfileId: '',
     salary: '',
     hireDate: '',
   })
@@ -392,6 +405,7 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
         employeeCode: '',
         position: '',
         branchId: '',
+        permissionProfileId: '',
         salary: '',
         hireDate: '',
       }),
@@ -427,6 +441,9 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
         salary: form.salary ? Number(form.salary) : 0,
         // '' means "not chosen" — it must not reach the server as an empty uuid.
         branchId: form.branchId || undefined,
+        // G3. The container decides what to do with it: a profile is a grant on
+        // `user_roles`, so it only applies once this employee has a login.
+        permissionProfileId: form.permissionProfileId || undefined,
       })
       setShowEmployeeForm(false)
       resetForm()
@@ -599,6 +616,38 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
                   </option>
                 ))}
               </select>
+            </label>
+
+            {/*
+              ─── G3 — the permission profile ────────────────────────────────
+              Disabled when no profiles are loaded rather than rendered as an
+              empty dropdown, and labelled with what it actually does: a
+              profile is a grant in `user_roles`, which only means something
+              once the person has a login. Most employees do not.
+            */}
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs text-[hsl(var(--fg-secondary))]">
+                {t('team.permissionProfile', 'پروفایل دسترسی')}
+              </span>
+              <select
+                value={form.permissionProfileId}
+                onChange={(e) => setField('permissionProfileId')(e.target.value)}
+                className={FORM_FIELD}
+                disabled={isSubmitting || permissionProfiles.length === 0}
+              >
+                <option value="">{t('team.noProfile', 'بدون پروفایل')}</option>
+                {permissionProfiles.map((profile) => (
+                  <option key={profile.id} value={profile.id}>
+                    {profile.name}
+                  </option>
+                ))}
+              </select>
+              <span className="text-xs text-[hsl(var(--fg-tertiary))]">
+                {t(
+                  'team.permissionProfileHint',
+                  'فقط برای کارمندی اعمال می‌شود که حساب کاربری دارد.',
+                )}
+              </span>
             </label>
 
             <label className="flex flex-col gap-1.5">

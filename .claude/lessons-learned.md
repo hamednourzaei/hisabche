@@ -451,3 +451,42 @@ const handleCreateEmployee = async (values) => {
 - ترمینال این پروژه با heredoc طولانی در Bash مشکل دارد؛ برای فایل‌های بزرگ از ابزار
   Write استفاده کن. رشته‌های حاوی backtick را هم داخل `python -c "..."` نگذار — bash
   آن‌ها را اجرا می‌کند.
+
+### ۵۹. تابعی که هوک صدا می‌زند را «رندر» کن، نه «صدا»
+
+این یکی به production رسید و صفحه‌ی `/warehouse?tab=products` را کاملاً پایین
+آورد (React #300).
+
+`warehouseContainer` یک تابع ساده است که دوازده هوک صدا می‌زند
+(`useTranslations`, `useRouter`, `useQueryClient`, `useState`, `useEffect`…).
+صدا زدنش به‌صورت inline یعنی آن هوک‌ها جزو لیست هوک‌های **صدازننده** حساب می‌شوند
+— که وقتی بی‌قید و شرط باشد مشکلی ندارد و وقتی شرطی باشد کشنده است:
+
+```tsx
+active === 'products' ? <ProductListContainer /> : warehouseContainer()
+```
+
+روی یک تب والد ~۱۲ هوک رندر می‌کرد، روی تب دیگر ۳ تا. عوض کردن تب یعنی تغییر
+تعداد هوک بین دو رندر → «rendered fewer hooks than during the previous render».
+
+**نه TypeScript این را می‌گیرد** (صدا زدن تابعی که JSX برمی‌گرداند کاملاً
+type-safe است) **و نه `eslint-plugin-react-hooks`** (چون نام با حرف کوچک شروع
+می‌شود، آن را کامپوننت نمی‌شناسد).
+
+راه‌حل: در یک کامپوننت بپیچانش تا هوک‌ها instance خودشان را بگیرند — و آن
+کامپوننت را در **module scope** تعریف کن، نه داخل رندر (کامپوننتِ تعریف‌شده حین
+رندر هر بار یک type جدید است و زیردرخت را remount می‌کند).
+
+گارد ایستا: `packages/ui/src/__tests__/conditional-hook-call.test.ts`.
+
+### ۶۰. اگر search param تصمیم بگیرد چه چیزی رندر شود، صفحه باید dynamic باشد
+
+`?tab=products` تعیین می‌کرد کدام زیردرخت رندر شود. shell پیش‌رندرشده query
+string ندارد، پس سرور تب موجودی را می‌ساخت و کلاینت کاتالوگ را — و hydration دو
+درخت متفاوت می‌دید (React #418).
+
+روی یک صفحه‌ی داشبورد احرازهویت‌شده `export const dynamic = 'force-dynamic'`
+هیچ هزینه‌ای ندارد: آن صفحه هیچ‌وقت به‌صورت HTML ایستا قابل کش نبود.
+
+استفاده از search param برای **seed کردن state** (`useState(q ?? '')`) این مشکل
+را ندارد؛ استفاده از آن برای **انتخاب زیردرخت** دارد.
