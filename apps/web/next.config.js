@@ -76,7 +76,7 @@ const nextConfig = {
         // URL — breaking hreflang targets and any inbound links to the apex domain.
         source: '/:path*',
         has: [{ type: 'host', value: 'hisabche.com' }],
-        destination: 'https://www.hisabche.com/:path*',
+        destination: 'https://hisabche.com/:path*',
         permanent: true,
       },
     ]
