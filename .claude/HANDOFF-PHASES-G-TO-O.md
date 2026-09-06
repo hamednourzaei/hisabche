@@ -35,8 +35,15 @@ migration اجرا شده، کد کامل، تست‌ها سبز. جزئیات �
 | `phase-l-01-units`                       | ✅ (خروجی V1–V6 گزارش نشده) |
 | `phase-l-02-product-units`               | ✅ (خروجی V1–V5 گزارش نشده) |
 | `phase-l-03-cycle-counts`                | ✅ (خروجی V1–V5 گزارش نشده) |
-| **`phase-m-01-shift-handover`**          | ⛔ **هنوز نه**              |
-| **`phase-n-01-reconciliation-memory`**   | ⛔ **هنوز نه**              |
+| `phase-m-01-shift-handover`              | ✅ تأییدشده                 |
+| `phase-n-01-reconciliation-memory`       | ✅ تأییدشده                 |
+| `phase-o-01-reporting-layer`             | ✅ ساختار تأیید شد¹         |
+| `phase-o-02-catalog-and-query-log`       | ✅ تأییدشده                 |
+
+¹ **ساختار** تأیید شد (هر ۴ View `security_invoker`، صفر تابع با آرگومان
+workspace، صفر امتیاز نوشتن برای نقش کاربری، هر ۴ View کامپایل می‌شوند).
+**رفتار ایزولاسیون هنوز `PENDING`** — تستش به کاربر لاگین‌شده نیاز دارد و تا
+بعد از دیپلوی ممکن نیست. اسکریپت: `docs/verify-phases-m-n-o.sql` بخش سوم.
 
 **کد هیچ‌کدام هنوز دیپلوی نشده.**
 
@@ -90,10 +97,18 @@ migration اجرا شده، کد کامل، تست‌ها سبز. جزئیات �
 | N2  | **OUT OF SCOPE** — طبق خود اسپک (Provider/Storage/Queue نیست)          |
 | N3  | پیش‌بینی نقدینگی ۷/۳۰ روزه — کاملاً Derived                            |
 | N4  | فرصت‌های راکد — Read Model با پیش‌فرض ۱۴ روز                           |
+| O1  | کاتالوگ معنایی — کدام جدول منبع حقیقت، کدام Projection، کدام Frozen    |
+| O2  | لایه‌ی گزارش AI-safe — **هیچ View پارامتر workspace نمی‌گیرد**         |
+| O3  | `ai_query_log` — فقط زیرساخت، هیچ Provider وصل نیست                    |
+| O4  | `docs/ai-integration-readme.md` — مرز Raw SQL صریح و برجسته            |
 
-### ⛔ باقی‌مانده — ۴ زیرفاز (از ۵۱)
+### ✅ هر ۵۱ زیرفاز تمام شد
 
-- **O1–O4** زیرساخت دسترسی داده برای AI — تنها فاز باقی‌مانده
+هیچ زیرفازی باقی نمانده. آنچه باز است:
+
+- **۴ migration اجرا نشده** (جدول بالا)
+- **هیچ کدی از این سشن دیپلوی نشده**
+- **۵ Stop Condition** که تصمیم محصولی می‌خواهند (پایین‌تر)
 
 ---
 
@@ -210,7 +225,7 @@ npx eslint src 2>&1 | grep -cE "^\s+[0-9]+:[0-9]+\s+error"
 
 **تست مرورگر را صاحب پروژه خودش انجام می‌دهد** — dev server بالا نیاور.
 
-**آخرین وضعیت سبز:** backend ۱۶۲۶ تست · ui ۱۶۲ · ui-contract ۴۳۲ · `eslint`
+**آخرین وضعیت سبز:** backend ۱۶۴۹ تست · ui ۱۶۲ · ui-contract ۴۳۲ · `eslint`
 صفر error.
 
 ---
