@@ -6,13 +6,16 @@
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { InvoiceService } from '../services/invoice.service'
+import { InvoiceRelatedService } from '../services/invoices/invoice-related.service'
 import { ActivityService } from '../services/activity.service'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { resolveBranchContext } from '../middleware/branch.middleware'
+import { BaseError } from '../errors/base.error'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 
 const invoiceService = new InvoiceService()
+const invoiceRelatedService = new InvoiceRelatedService()
 const activityService = new ActivityService()
 
 export async function invoiceRoutes(fastify: FastifyInstance) {
@@ -33,6 +36,12 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
           search: q.search ?? '',
           type: (q.type as 'sale' | 'purchase') || undefined,
           status: q.status || undefined,
+          // H1 — the dashboard's «بدهی مشتریان» card links here. Read as a
+          // string: `?outstanding=false` must not switch the filter ON, which
+          // is what a plain truthiness check on a query string would do.
+          outstanding: ['true', '1', 'yes'].includes(String(q.outstanding).toLowerCase())
+            ? true
+            : undefined,
           customerId: q.customerId || undefined,
           supplierId: q.supplierId || undefined,
           currency: (q.currency as 'AFN' | 'USD' | 'PKR' | 'IRR') || undefined,
@@ -49,6 +58,37 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
         const result = await invoiceService.list(request.tenancy, filters as any)
         return reply.send(result)
       } catch (err: any) {
+        fastify.log.error(err)
+        return reply.code(500).send({ error: err.message })
+      }
+    },
+  )
+
+  // ─── GET /api/invoices/:id/related ──────────────────────
+  //
+  // H2 — the payments that make up `paid_amount`, and the journal entry the
+  // invoice produced. Neither was reachable from anywhere before this.
+  //
+  // ⚠️ Declared BEFORE `/api/invoices/:id`. Fastify's router is not
+  // order-sensitive for static segments, but keeping the more specific route
+  // first keeps it obvious that `related` is not an invoice id.
+  //
+  // Deliberately NOT behind `cacheMiddleware`: recording a payment changes
+  // this answer, and a two-minute cache would show an invoice as unpaid right
+  // after the user recorded the payment that settled it.
+  fastify.get(
+    '/api/invoices/:id/related',
+    {
+      preHandler: [authenticate, requireWorkspaceContext],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        return reply.send(await invoiceRelatedService.get(request.tenancy, id))
+      } catch (err: any) {
+        if (err instanceof BaseError && err.statusCode < 500) {
+          return reply.code(err.statusCode).send({ error: err.message })
+        }
         fastify.log.error(err)
         return reply.code(500).send({ error: err.message })
       }
@@ -239,7 +279,18 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
       try {
         const { id } = request.params as { id: string }
         const { workspaceId, userId } = request.tenancy
-        await invoiceService.delete(id, request.tenancy)
+
+        // J5 — only honoured when segregation of duties actually offers an
+        // override (`warn` mode, and an owner). Sending it otherwise changes
+        // nothing, which is why it is read leniently rather than validated.
+        const overrideReason = (request.body as { sodOverrideReason?: unknown } | null)
+          ?.sodOverrideReason
+        const override =
+          typeof overrideReason === 'string' && overrideReason.trim().length > 0
+            ? { reason: overrideReason.trim() }
+            : undefined
+
+        await invoiceService.delete(id, request.tenancy, { override })
 
         // ✅ FIX: Invalidate all related caches
         await clearCache(`invoice:${workspaceId}:${id}`)
@@ -268,6 +319,16 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
 
         return reply.code(204).send()
       } catch (err: any) {
+        // J5 — a refusal is not a server fault.
+        //
+        // This returned 500 for everything, so `SOD_BLOCKED:...` and
+        // `INVOICE_DELETE_FORBIDDEN` both reached the client as «خطای سرور».
+        // The client cannot offer an override for an error it is told is a
+        // crash, and the person refused never learns which rule refused them.
+        if (err instanceof BaseError && err.statusCode < 500) {
+          const code = /^[A-Z][A-Z_]{6,}(?::[a-z0-9.-]+)?/.exec(err.message)?.[0]
+          return reply.code(err.statusCode).send({ error: err.message, code: code ?? err.name })
+        }
         fastify.log.error(err)
         return reply.code(500).send({ error: err.message })
       }

@@ -95,6 +95,9 @@ export interface InvoiceDetailPageProps {
   onExportPNG?: () => void
   exportingPNG?: boolean
   pdfDownloadSlot?: React.ReactNode
+  /** H2 — the payments and journal entry behind this invoice. Rendered under
+   *  the sidebar; the container owns the query. */
+  relatedSlot?: React.ReactNode
   documentRef?: RefObject<HTMLDivElement | null>
   statusVariant: (status: string) => 'success' | 'warning' | 'destructive' | 'secondary'
   workflowInstance?: {
@@ -136,6 +139,7 @@ export function InvoiceDetailPage({
   onExportPNG,
   exportingPNG,
   pdfDownloadSlot,
+  relatedSlot,
   documentRef,
   statusVariant,
   workflowInstance,
@@ -292,6 +296,13 @@ export function InvoiceDetailPage({
             display={display}
             onDisplayChange={(key, value) => setDisplay((prev) => ({ ...prev, [key]: value }))}
           />
+
+          {/* H2 — the payments behind «پرداخت‌شده» and the entry this invoice
+              produced. A slot, following `pdfDownloadSlot`: the container owns
+              the query, so this component stays free of data hooks and the
+              quick-invoice preview — which reuses the sidebar above for an
+              invoice that does not exist yet — is unaffected. */}
+          {relatedSlot ? <div className="mt-6">{relatedSlot}</div> : null}
         </div>
       </div>
     </div>

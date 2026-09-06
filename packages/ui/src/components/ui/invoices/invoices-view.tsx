@@ -39,6 +39,9 @@ interface InvoicesViewProps {
   onSearchChange: (value: string) => void
   onPageChange: (page: number) => void
   onNavigateInvoice: (id: string) => void
+  /** H2 — open the party behind an invoice. Optional: a renderer that has no
+   *  customer route passes nothing and the name stays plain text. */
+  onNavigateParty?: ((id: string) => void) | undefined
   onNavigateInvoiceAction: (id: string, action: 'pdf' | 'print' | 'png') => void
   onNewInvoice: () => void
   /**
@@ -359,6 +362,7 @@ function useInvoiceColumns(
   onNavigateInvoice: (id: string) => void,
   onNavigateInvoiceAction: (id: string, action: 'pdf' | 'print' | 'png') => void,
   onDeleteInvoice: InvoicesViewProps['onDeleteInvoice'],
+  onNavigateParty: InvoicesViewProps['onNavigateParty'],
 ): TableColumn<Invoice>[] {
   return useMemo(
     () => [
@@ -417,9 +421,29 @@ function useInvoiceColumns(
         labelKey: 'invoices.party',
         labelFallback: 'طرف حساب',
         sortValue: (inv) => inv.customerName ?? '',
-        render: (inv) => (
-          <span className="text-[hsl(var(--fg-primary))]">{inv.customerName || '—'}</span>
-        ),
+        // H2 — the party's name reaches the party.
+        //
+        // A link ONLY when there is an id to go to. A walk-in cash sale has a
+        // name and no customer record; rendering it as a link would send the
+        // user to a page that does not exist, which is worse than plain text.
+        render: (inv) =>
+          inv.customerId && inv.customerName ? (
+            <button
+              type="button"
+              // The row itself opens the invoice. Without this the click
+              // bubbles and the user lands on the invoice they were trying to
+              // navigate AWAY from.
+              onClick={(event) => {
+                event.stopPropagation()
+                onNavigateParty?.(inv.customerId!)
+              }}
+              className="text-start text-[hsl(var(--color-primary))] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))] rounded"
+            >
+              {inv.customerName}
+            </button>
+          ) : (
+            <span className="text-[hsl(var(--fg-primary))]">{inv.customerName || '—'}</span>
+          ),
       },
       {
         id: 'company',
@@ -483,7 +507,14 @@ function useInvoiceColumns(
         ),
       },
     ],
-    [onDeleteInvoice, onNavigateInvoice, onNavigateInvoiceAction, statusVariant, t],
+    [
+      onDeleteInvoice,
+      onNavigateInvoice,
+      onNavigateInvoiceAction,
+      onNavigateParty,
+      statusVariant,
+      t,
+    ],
   )
 }
 
@@ -500,6 +531,7 @@ export const InvoicesView = memo(function InvoicesView({
   onSearchChange,
   onPageChange,
   onNavigateInvoice,
+  onNavigateParty,
   onNavigateInvoiceAction,
   onNewInvoice,
   onDeleteInvoice,
@@ -519,6 +551,7 @@ export const InvoicesView = memo(function InvoicesView({
     onNavigateInvoice,
     onNavigateInvoiceAction,
     onDeleteInvoice,
+    onNavigateParty,
   )
 
   // ─── Bulk delete ───

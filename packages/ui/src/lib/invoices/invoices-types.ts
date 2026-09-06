@@ -15,7 +15,11 @@ export interface RawInvoice {
   currency?: string
   type?: string
   customerName?: string | null
-  customer?: { full_name?: string; company?: string | null } | null
+  /** H2 — the API selects `customer_id`; both spellings are accepted because
+   *  the list and the detail endpoint disagree about casing. */
+  customerId?: string | null
+  customer_id?: string | null
+  customer?: { id?: string; full_name?: string; company?: string | null } | null
   paid_amount?: number
   itemsSent?: number
   publicToken?: string
@@ -34,6 +38,8 @@ export interface Invoice {
   currency: string
   type: string
   customerName: string
+  /** H2 — present when the invoice has a real party; drives the link in the table. */
+  customerId?: string | undefined
   /** Business/company name for the customer — blank until customers.company exists in the schema */
   company: string
   paymentDate: string
@@ -45,16 +51,18 @@ export interface Invoice {
 export interface InvoicesQueryParams {
   page: number
   limit: number
-  sortDirection: "asc" | "desc"  // required
+  sortDirection: 'asc' | 'desc' // required
   search?: string
-  type?: "sale" | "purchase"
-  status?: "pending" | "completed" | "cancelled" | "partial"
-  customerId?: string
+  type?: 'sale' | 'purchase'
+  status?: 'pending' | 'completed' | 'cancelled' | 'partial'
+  customerId?: string | undefined
   supplierId?: string
-  currency?: "AFN" | "USD" | "PKR" | "IRR"
-  fromDate?: string
-  toDate?: string
+  currency?: 'AFN' | 'USD' | 'PKR' | 'IRR'
+  dateFrom?: string
+  dateTo?: string
   minTotal?: number
   maxTotal?: number
   sortBy?: string
+  /** H1 — «anything still owed». See invoice-filter-link.ts. */
+  outstanding?: boolean
 }

@@ -44,7 +44,10 @@ describe('mutations on a specific invoice check more than the workspace', () => 
 
   it.each([
     ['update', '  async update(id: string, ctx: TenancyContext, data: UpdateInvoice) {'],
-    ['delete', '  async delete(id: string, ctx: TenancyContext): Promise<void> {'],
+    // J5 widened this to take an SoD override, so the signature wraps. Pinned
+    // to the opening line only — the guard is about what the body does, and a
+    // full signature makes it break every time a parameter is added.
+    ['delete', '  async delete(\n'],
   ])('%s calls assertMay', (_name, signature) => {
     // Without this, `.eq('workspace_id', …)` alone lets any member of the
     // workspace edit any row in it by id — including one raised by a colleague
@@ -55,11 +58,12 @@ describe('mutations on a specific invoice check more than the workspace', () => 
   it('checks BEFORE deleting the line items', () => {
     // Deleting children first and then refusing the parent leaves an invoice
     // with no lines and no way back.
-    const body = methodBody(
-      invoice,
-      '  async delete(id: string, ctx: TenancyContext): Promise<void> {',
-    )
+    const body = methodBody(invoice, '  async delete(\n')
     expect(body.indexOf('scopes.assertMay')).toBeLessThan(body.indexOf("from('invoice_items')"))
+
+    // J5 — same reasoning for the SoD refusal: blocked after the line items
+    // are gone is an invoice destroyed by a check that said no.
+    expect(body.indexOf('sod.assertAllowed')).toBeLessThan(body.indexOf("from('invoice_items')"))
   })
 })
 

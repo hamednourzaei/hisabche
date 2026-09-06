@@ -181,6 +181,54 @@ describe('posting and reversing the same entry', () => {
   })
 })
 
+describe('raising a document and removing it', () => {
+  // J5 — this rule existed from the start and had never fired: nothing
+  // recorded `invoice.create`, so `priorActions` was always empty and the
+  // check always returned `allowed`. The wiring is proven by
+  // `sod-rule-coverage.test.ts`; these are the decisions once it is wired.
+  const created = (actorId: string): PriorAction[] => [{ capability: 'invoice.create', actorId }]
+
+  it('blocks the same person deleting the invoice they raised', () => {
+    const verdict = checkSoD(
+      { capability: 'invoice.delete', actorId: 'u1', role: 'manager', priorActions: created('u1') },
+      strict,
+    )
+    expect(verdict).toMatchObject({ kind: 'blocked', ruleId: 'invoice.create-then-delete' })
+  })
+
+  it('lets someone else delete it', () => {
+    // The whole point: a second pair of eyes is exactly what the rule is for,
+    // so it must not block the reviewer as well as the author.
+    const verdict = checkSoD(
+      { capability: 'invoice.delete', actorId: 'u2', role: 'manager', priorActions: created('u1') },
+      strict,
+    )
+    expect(verdict).toEqual({ kind: 'allowed' })
+  })
+
+  it('offers an owner an override in warn mode', () => {
+    const verdict = checkSoD(
+      { capability: 'invoice.delete', actorId: 'u1', role: 'owner', priorActions: created('u1') },
+      warn,
+    )
+    expect(verdict).toMatchObject({ kind: 'requires_override' })
+    expect(validateOverride(verdict, '')).toContain('SOD_OVERRIDE_REASON_REQUIRED')
+    expect(validateOverride(verdict, 'duplicate entry, confirmed with the customer')).toEqual([])
+  })
+})
+
+describe('no rule spans two entity types', () => {
+  it('states the entity both halves are filed under', () => {
+    // `SoDService.priorActions` looks up by (entity_type, entity_id). A rule
+    // whose halves live on different entities is filed under a key the check
+    // never queries — allowed forever, silently. Two of the original five
+    // rules were that shape; see the note in sod.domain.ts.
+    for (const rule of SOD_RULES) {
+      expect(rule.entityType).toMatch(/^[a-z_]+$/)
+    }
+  })
+})
+
 describe('a workspace can switch off one rule without switching off the rest', () => {
   const partial: SoDSettings = {
     mode: 'strict',

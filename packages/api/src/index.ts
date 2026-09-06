@@ -125,6 +125,27 @@ export {
   type OpenInvoice,
 } from './hooks/payments'
 
+// ─── Invoice ↔ payments ↔ journal (H2) ────────────────────
+// What an invoice's `paid_amount` is actually made of, and the entry it
+// produced. Both lived in the database with nothing able to reach them.
+export {
+  useInvoiceRelated,
+  invoiceRelatedKeys,
+  type InvoiceRelated,
+  type InvoicePaymentLink,
+  type InvoiceJournalLink,
+} from './hooks/invoice-related'
+
+// ─── Stock history (H4) ───────────────────────────────────
+// The movements behind a product's on-hand figure. Phase C made them the
+// source of truth for quantity and nothing could read them.
+export {
+  useStockHistory,
+  stockHistoryKeys,
+  type StockHistory,
+  type StockMovementRecord,
+} from './hooks/stock-history'
+
 // ─── Realtime ─────────────────────────────────────────────
 export { useRealtime, useActiveWorkspaceId } from './hooks/useRealtime'
 
@@ -225,6 +246,7 @@ export {
   useJournalEntries,
   useCreateJournalEntry,
   useTrialBalance,
+  useGeneralLedger,
   useBalanceSheet,
   useIncomeStatement,
   accountingKeys,
@@ -234,6 +256,8 @@ export {
   type JournalEntryStatus,
   type JournalLine,
   type TrialBalance,
+  type GeneralLedgerLine,
+  type GeneralLedgerResult,
   type TrialBalanceResult,
   type BalanceSheet,
   type IncomeStatement,

@@ -3,6 +3,7 @@
 
 import { memo, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
+import { invoiceListHref } from '../../../lib/invoices/invoice-filter-link'
 import { cn } from '../../../lib/utils'
 import {
   Sparkles,
@@ -104,6 +105,8 @@ const KpiCard = memo(function KpiCard({
   change,
   changeLabel,
   isLoading,
+  onOpen,
+  openLabel,
 }: {
   icon: typeof TrendingUp
   label: string
@@ -114,13 +117,46 @@ const KpiCard = memo(function KpiCard({
   change: number | null
   changeLabel?: string | undefined
   isLoading: boolean
+  /**
+   * H1 — where this number lives.
+   *
+   * Optional, and a card without one stays a plain `<div>`. «ارزش کل انبار»
+   * has a destination; a card whose figure has no list behind it must not
+   * pretend to, because a control that looks pressable and does nothing reads
+   * as a broken app rather than as a card with no drill-down.
+   */
+  onOpen?: (() => void) | undefined
+  /** What the drill-down shows, for a screen reader and the tooltip. */
+  openLabel?: string | undefined
 }) {
   if (isLoading) {
     return <div className="h-[104px] rounded-2xl bg-[hsl(var(--surface-muted))] animate-pulse" />
   }
   const positive = (change ?? 0) >= 0
+
+  // A real <button> when it acts like one: keyboard focus, Enter and Space,
+  // and an accessible name — none of which an onClick on a div provides.
+  const Tag = onOpen ? 'button' : 'div'
+
   return (
-    <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-4 space-y-2">
+    <Tag
+      {...(onOpen
+        ? {
+            type: 'button' as const,
+            onClick: onOpen,
+            title: openLabel ?? label,
+            'aria-label': openLabel ? `${label} — ${openLabel}` : label,
+          }
+        : {})}
+      className={cn(
+        'rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-4 space-y-2',
+        // RTL-safe: `text-start`, never `text-left`. A button element
+        // centre-aligns its content by default, which would silently
+        // re-align every figure the moment a card became clickable.
+        onOpen &&
+          'w-full text-start cursor-pointer transition-colors hover:border-[hsl(var(--color-primary)/0.5)] hover:bg-[hsl(var(--surface-muted))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))]',
+      )}
+    >
       <div className="flex items-center gap-2">
         <Icon className="size-4 text-[hsl(var(--color-primary))]" aria-hidden="true" />
         <span className="text-xs text-[hsl(var(--fg-secondary))]">{label}</span>
@@ -157,7 +193,7 @@ const KpiCard = memo(function KpiCard({
           ) : null}
         </p>
       )}
-    </div>
+    </Tag>
   )
 })
 KpiCard.displayName = 'KpiCard'
@@ -384,6 +420,10 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
         {/* ✅ این دو کارت روندشان را از داده‌ی نمودار می‌گیرند، پس تا وقتی آن
             کوئری کامل نشده باید skeleton نشان دهند؛ وگرنه یک لحظه با
             trend=null رندر می‌شوند و خط خنثی (نه اسپارک‌لاین) دیده می‌شود. */}
+        {/* H1 — every figure opens the rows it was computed from.
+            `invoiceListHref` and the list's own parser come from one table
+            (invoice-filter-link.ts), so a card cannot link to a filter the
+            list ignores. */}
         <KpiCard
           icon={TrendingUp}
           label={t('dashboard.totalSales', 'فروش کل')}
@@ -391,6 +431,8 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
           change={monthlyGrowth ?? null}
           changeLabel={t('dashboard.vsLastMonth', 'نسبت به ماه گذشته')}
           isLoading={kpiLoading}
+          onOpen={() => onNavigate(invoiceListHref('totalSales'))}
+          openLabel={t('dashboard.openSalesInvoices', 'فاکتورهای فروش')}
         />
         <KpiCard
           icon={Wallet}
@@ -399,6 +441,8 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
           change={todayChange}
           changeLabel={t('dashboard.vsYesterday', 'نسبت به دیروز')}
           isLoading={kpiLoading || chartLoading}
+          onOpen={() => onNavigate(invoiceListHref('todaySales'))}
+          openLabel={t('dashboard.openTodayInvoices', 'فاکتورهای امروز')}
         />
         <KpiCard
           icon={CreditCard}
@@ -406,6 +450,8 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
           value={fmt(customerDebt)}
           change={null}
           isLoading={kpiLoading}
+          onOpen={() => onNavigate(invoiceListHref('customerDebt'))}
+          openLabel={t('dashboard.openUnpaidInvoices', 'فاکتورهای تسویه‌نشده')}
         />
         <KpiCard
           icon={Boxes}
@@ -413,6 +459,8 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
           value={fmt(warehouseValue)}
           change={null}
           isLoading={kpiLoading}
+          onOpen={() => onNavigate('/warehouse')}
+          openLabel={t('dashboard.openWarehouse', 'انبار')}
         />
       </div>
 

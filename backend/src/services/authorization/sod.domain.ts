@@ -54,6 +54,22 @@ export interface SoDRule {
    * as capabilities so the two halves speak the same vocabulary.
    */
   conflictsWith: Capability[]
+  /**
+   * ⚠️ J5 — the entity both halves are recorded against.
+   *
+   * `SoDService.priorActions` looks up by `(entity_type, entity_id)`, so a
+   * rule whose two halves live on DIFFERENT entities can never fire: the
+   * prior action is filed under a key the check never queries.
+   *
+   * Two of the original five rules were exactly that — `account.manage` on an
+   * account paired with `ledger.post` on a journal entry, and `invoice.update`
+   * on an invoice paired with `ledger.reverse` on a journal entry. Both read
+   * as real controls and neither had ever been capable of blocking anything.
+   *
+   * Naming the entity here makes that shape impossible to write again, and
+   * `sod-rule-coverage.test.ts` checks every rule against its real call sites.
+   */
+  entityType: string
   /** Why, in one sentence, for the person who is refused. */
   rationale: string
 }
@@ -71,35 +87,54 @@ export const SOD_RULES: SoDRule[] = [
     id: 'payment.record-then-cancel',
     capability: 'payment.cancel',
     conflictsWith: ['payment.record'],
+    entityType: 'payment',
     rationale: 'The person who took the money should not be the one who erases the record of it.',
   },
   {
     id: 'invoice.create-then-delete',
     capability: 'invoice.delete',
     conflictsWith: ['invoice.create'],
+    entityType: 'invoice',
     rationale: 'Raising a document and removing it are the two halves of hiding a sale.',
   },
   {
     id: 'ledger.post-then-reverse',
     capability: 'ledger.reverse',
     conflictsWith: ['ledger.post'],
+    entityType: 'journal_entry',
     rationale: 'Posting an entry and reversing it unobserved leaves no net trace of either.',
   },
-  {
-    id: 'account.manage-then-post',
-    capability: 'ledger.post',
-    conflictsWith: ['account.manage'],
-    rationale:
-      'Creating the account and posting into it in one move means nobody else ever saw the account.',
-  },
-  {
-    id: 'conflict.raise-then-resolve',
-    capability: 'ledger.reverse',
-    conflictsWith: ['invoice.update'],
-    rationale:
-      'The device that caused a conflict should not be the one that decides which version wins.',
-  },
 ]
+
+// ---------------------------------------------------------------------------
+// TWO RULES REMOVED IN J5 — and why removing them changed nothing
+//
+//   account.manage-then-post   ledger.post   conflictsWith account.manage
+//   conflict.raise-then-resolve ledger.reverse conflictsWith invoice.update
+//
+// Neither could ever have produced a verdict other than `allowed`:
+//
+//   1. `priorActions` is keyed by (entity_type, entity_id). `account.manage`
+//      would be filed against an ACCOUNT; the check for `ledger.post` queries
+//      a JOURNAL ENTRY. The two keys never meet.
+//   2. Nothing called `assertAllowed` for `ledger.post` at all, and nothing
+//      ever recorded `account.manage` or `invoice.update`. Both halves of both
+//      rules were absent.
+//
+// So no workspace ever had these enforced, no override was ever taken against
+// them, and no behaviour changes by their removal. They read as controls in
+// `GET /api/governance/sod` — which is worse than not having them, because a
+// workspace owner reviewing that list would believe the separation was held.
+//
+// The INTENT of the first is real (whoever invents an account should not be
+// the only person who ever posts to it) but it needs cross-document SoD, which
+// this model does not have and for which no policy is defined. G4: not built
+// on a guess. Recorded in HANDOFF-PHASES-G-TO-O.md instead.
+//
+// The second describes conflict resolution between offline devices — a feature
+// (G8) that does not exist yet. Its rationale and its mechanics did not even
+// describe the same thing.
+// ---------------------------------------------------------------------------
 
 export interface PriorAction {
   capability: Capability

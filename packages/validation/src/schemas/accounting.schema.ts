@@ -44,6 +44,10 @@ export const accountRoles = [
   'purchase',
   'retained_earnings',
   'current_year_earnings',
+  // J4 — wages. Deliberately NOT folded into `cogs`: putting salaries into
+  // cost of goods sold corrupts gross margin, which is the one figure a
+  // shopkeeper checks daily.
+  'salary_expense',
 ] as const
 
 export type AccountRole = (typeof accountRoles)[number]

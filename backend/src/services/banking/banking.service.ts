@@ -19,6 +19,19 @@ import {
   type StatementLine,
 } from './reconciliation.domain'
 
+/**
+ * J2 — does this error mean `bank_statement_lines.matched_kind` has not been
+ * created yet, rather than that the write is wrong?
+ *
+ *   42703    — undefined_column (Postgres)
+ *   PGRST204 — PostgREST could not find the column in its schema cache
+ */
+function isMissingMatchedKind(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false
+  if (error.code === '42703' || error.code === 'PGRST204') return true
+  return /matched_kind/i.test(error.message ?? '')
+}
+
 function mapLine(raw: Record<string, any>): StatementLine {
   return {
     id: raw.id,
@@ -163,18 +176,47 @@ export class BankingService {
     from: string,
     to: string,
   ): Promise<BookEntry[]> {
-    const { data, error } = await supabase
-      .from('payments')
-      .select('id, payment_number, direction, amount, entry_date, party_id')
-      .eq('workspace_id', ctx.workspaceId)
-      .eq('status', 'posted')
-      .gte('entry_date', from)
-      .lte('entry_date', to)
-      .limit(2000)
+    // ─── J2.2 — TWO candidate sources, not one ───────────────────────────────
+    //
+    // This read `payments` alone. Not because payments are the right scope —
+    // `reconciliation.domain.ts` has modelled `kind: 'payment' | 'invoice' |
+    // 'journal'` and scored all three since it was written — but because
+    // `bank_statement_lines.matched_to` was a bare uuid with no kind, so a
+    // match to anything else could never be resolved back.
+    //
+    // phase-j-02 adds `matched_kind`, which is what makes a second source
+    // safe. Journal entries are added first because they are what a bank fee,
+    // an interest credit or a manual adjustment actually IS in this system —
+    // the very lines a statement carries and `payments` never explains.
+    const [payments, journals] = await Promise.all([
+      supabase
+        .from('payments')
+        .select('id, payment_number, direction, amount, entry_date, party_id')
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('status', 'posted')
+        .gte('entry_date', from)
+        .lte('entry_date', to)
+        .limit(2000),
 
-    if (error) throw new DatabaseError('Failed to fetch payments', error)
+      // Only entries touching THIS bank account, and only posted ones. A draft
+      // is not money that moved, and an entry on an unrelated account is noise
+      // that makes every suggestion worse.
+      supabase
+        .from('journal_entries')
+        .select(
+          'id, entry_number, date, description, journal_lines!inner(account_id, debit, credit)',
+        )
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('status', 'posted')
+        .eq('journal_lines.account_id', accountId)
+        .gte('date', from)
+        .lte('date', to)
+        .limit(2000),
+    ])
 
-    return (data ?? []).map((row) => ({
+    if (payments.error) throw new DatabaseError('Failed to fetch payments', payments.error)
+
+    const entries: BookEntry[] = (payments.data ?? []).map((row) => ({
       id: row.id,
       kind: 'payment' as const,
       onDate: String(row.entry_date ?? '').slice(0, 10),
@@ -183,6 +225,46 @@ export class BankingService {
       reference: row.payment_number ?? row.id,
       partyName: null,
     }))
+
+    if (journals.error) {
+      // Degraded, not broken: the payment candidates are still worth offering.
+      // Reported rather than swallowed — a matcher quietly showing half its
+      // candidates looks like "no match found" (lesson 4).
+      console.warn(
+        '[BankingService] journal candidates unavailable; suggesting payments only.',
+        journals.error.message,
+      )
+      return entries
+    }
+
+    for (const row of (journals.data ?? []) as Record<string, any>[]) {
+      const lines = (row.journal_lines ?? []) as Record<string, any>[]
+
+      // The entry's effect ON THIS ACCOUNT, not its total. A four-line entry
+      // that moves 500 through the bank and 500 through two other accounts
+      // must offer 500 as a candidate, not its gross.
+      //
+      // Debit on a bank (asset) account is money IN — the same sign the
+      // statement uses.
+      const netMinor = lines.reduce(
+        (sum, line) =>
+          sum + Math.round(((Number(line.debit) || 0) - (Number(line.credit) || 0)) * 100),
+        0,
+      )
+
+      if (netMinor === 0) continue
+
+      entries.push({
+        id: row.id,
+        kind: 'journal',
+        onDate: String(row.date ?? '').slice(0, 10),
+        amountMinor: netMinor,
+        reference: row.entry_number ?? row.id,
+        partyName: row.description ?? null,
+      })
+    }
+
+    return entries
   }
 
   async getSuggestions(ctx: TenancyContext, statementId: string) {
@@ -235,60 +317,180 @@ export class BankingService {
     if (error) throw new DatabaseError('Failed to fetch the statement line', error)
     if (!line) throw new NotFoundError('Statement line')
 
-    const { data: payment, error: paymentError } = await supabase
-      .from('payments')
-      .select('id, payment_number, direction, amount, entry_date')
-      .eq('workspace_id', ctx.workspaceId)
-      .eq('id', input.bookEntryId)
-      .maybeSingle()
-
-    if (paymentError) throw new DatabaseError('Failed to fetch the payment', paymentError)
-    if (!payment) throw new NotFoundError('Payment')
-
-    const entry: BookEntry = {
-      id: payment.id,
-      kind: 'payment',
-      onDate: String(payment.entry_date ?? '').slice(0, 10),
-      amountMinor:
-        Math.round((Number(payment.amount) || 0) * 100) * (payment.direction === 'in' ? 1 : -1),
-      reference: payment.payment_number ?? payment.id,
-    }
+    // J2.2 — the target may be a payment OR a journal entry. Which one it is
+    // gets recorded, because `matched_to` alone cannot say.
+    const entry = await this.resolveBookEntry(ctx, input.bookEntryId)
+    if (!entry) throw new NotFoundError('Book entry')
 
     const problems = validateReconcile(mapLine(line), entry, {
       ...(input.differenceReason ? { differenceReason: input.differenceReason } : {}),
     })
     if (problems.length > 0) throw new ValidationError(problems.join(', '))
 
-    const { error: updateError } = await supabase
-      .from('bank_statement_lines')
-      .update({
-        matched_to: input.bookEntryId,
-        matched_at: new Date().toISOString(),
-        matched_by: ctx.userId,
-        difference_reason: input.differenceReason ?? null,
-      })
-      .eq('workspace_id', ctx.workspaceId)
-      .eq('id', input.statementLineId)
-      // Only an UNMATCHED line matches. Two people confirming at once means
-      // the second finds nothing to update rather than overwriting the first.
-      .is('matched_to', null)
+    const values: Record<string, unknown> = {
+      matched_to: input.bookEntryId,
+      matched_kind: entry.kind,
+      matched_at: new Date().toISOString(),
+      matched_by: ctx.userId,
+      difference_reason: input.differenceReason ?? null,
+    }
+
+    const write = (payload: Record<string, unknown>) =>
+      supabase
+        .from('bank_statement_lines')
+        .update(payload)
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('id', input.statementLineId)
+        // Only an UNMATCHED line matches. Two people confirming at once means
+        // the second finds nothing to update rather than overwriting the first.
+        .is('matched_to', null)
+
+    let { error: updateError } = await write(values)
+
+    if (updateError && isMissingMatchedKind(updateError)) {
+      // ⚠️ A JOURNAL match is REFUSED before the migration, not silently
+      // downgraded. Writing it without the kind puts back the exact ambiguity
+      // phase-j-02 exists to remove — and a later reader would resolve it as a
+      // payment id that does not exist.
+      if (entry.kind !== 'payment') {
+        throw new ConflictError(
+          'BANK_MATCH_KIND_NOT_MIGRATED: bank_statement_lines.matched_kind does not exist. Run docs/phase-j-02-reconciliation-hardening-migration.sql.',
+        )
+      }
+      delete values.matched_kind
+      ;({ error: updateError } = await write(values))
+    }
 
     if (updateError) throw new DatabaseError('Failed to record the match', updateError)
+
+    // J2 — reconciling is a financial control decision and is auditable.
+    // It had no audit event at all.
+    this.audit(ctx, 'reconcile', input.statementLineId, {
+      matchedTo: input.bookEntryId,
+      matchedKind: entry.kind,
+      amountMinor: entry.amountMinor,
+      differenceReason: input.differenceReason ?? null,
+    })
 
     await this.invalidate(ctx.workspaceId)
     return { statementLineId: input.statementLineId, bookEntryId: input.bookEntryId }
   }
 
+  /**
+   * J2.2 — resolve a candidate id to the book entry it names.
+   *
+   * Tries a payment first, then a journal entry. The id space is shared, so
+   * "which table" cannot be inferred from the value — but both reads are
+   * workspace-scoped, so an id belonging to another business resolves to
+   * nothing rather than to their record (lesson 17).
+   */
+  private async resolveBookEntry(
+    ctx: TenancyContext,
+    bookEntryId: string,
+  ): Promise<BookEntry | null> {
+    const { data: payment, error: paymentError } = await supabase
+      .from('payments')
+      .select('id, payment_number, direction, amount, entry_date')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('id', bookEntryId)
+      .maybeSingle()
+
+    if (paymentError) throw new DatabaseError('Failed to fetch the payment', paymentError)
+
+    if (payment) {
+      return {
+        id: payment.id,
+        kind: 'payment',
+        onDate: String(payment.entry_date ?? '').slice(0, 10),
+        amountMinor:
+          Math.round((Number(payment.amount) || 0) * 100) * (payment.direction === 'in' ? 1 : -1),
+        reference: payment.payment_number ?? payment.id,
+      }
+    }
+
+    const { data: journal, error: journalError } = await supabase
+      .from('journal_entries')
+      .select('id, entry_number, date, description, journal_lines(account_id, debit, credit)')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('id', bookEntryId)
+      .eq('status', 'posted')
+      .maybeSingle()
+
+    if (journalError) throw new DatabaseError('Failed to fetch the journal entry', journalError)
+    if (!journal) return null
+
+    const lines = ((journal as Record<string, any>).journal_lines ?? []) as Record<string, any>[]
+
+    const netMinor = lines.reduce(
+      (sum, line) =>
+        sum + Math.round(((Number(line.debit) || 0) - (Number(line.credit) || 0)) * 100),
+      0,
+    )
+
+    return {
+      id: journal.id,
+      kind: 'journal',
+      onDate: String((journal as Record<string, any>).date ?? '').slice(0, 10),
+      amountMinor: netMinor,
+      reference: (journal as Record<string, any>).entry_number ?? journal.id,
+      partyName: (journal as Record<string, any>).description ?? null,
+    }
+  }
+
+  /**
+   * Record a reconciliation decision.
+   *
+   * Fire-and-forget on purpose: a failed audit write must not roll back a
+   * reconciliation the user already confirmed. It is logged, never swallowed.
+   */
+  private audit(
+    ctx: TenancyContext,
+    action: string,
+    statementLineId: string,
+    detail: Record<string, unknown>,
+  ) {
+    void supabase
+      .from('audit_logs')
+      .insert({
+        workspace_id: ctx.workspaceId,
+        user_id: ctx.userId,
+        action: action === 'reconcile' ? 'update' : 'update',
+        entity_type: 'bank_statement_line',
+        entity_id: statementLineId,
+        new_data: { action, ...detail },
+      })
+      .then(({ error }) => {
+        if (error) console.error('[BankingService] audit write failed:', error.message)
+      })
+  }
+
   async unmatch(ctx: TenancyContext, statementLineId: string) {
     if (ctx.role === 'seller') throw new ConflictError('BANK_RECONCILE_FORBIDDEN')
 
+    // What it WAS matched to, read before the match is removed — an audit
+    // event saying only "unmatched" does not say what was undone.
+    const { data: before } = await supabase
+      .from('bank_statement_lines')
+      .select('matched_to, matched_kind')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('id', statementLineId)
+      .maybeSingle()
+
     const { error } = await supabase
       .from('bank_statement_lines')
-      .update({ matched_to: null, matched_at: null, matched_by: null })
+      .update({ matched_to: null, matched_kind: null, matched_at: null, matched_by: null })
       .eq('workspace_id', ctx.workspaceId)
       .eq('id', statementLineId)
 
     if (error) throw new DatabaseError('Failed to unmatch', error)
+
+    // J2.6 — un-matching is the documented way to release a reconciled line,
+    // and it is exactly the act that must leave a trace. It had none.
+    this.audit(ctx, 'unreconcile', statementLineId, {
+      previousMatchedTo: (before as Record<string, any>)?.matched_to ?? null,
+      previousMatchedKind: (before as Record<string, any>)?.matched_kind ?? null,
+    })
+
     await this.invalidate(ctx.workspaceId)
   }
 

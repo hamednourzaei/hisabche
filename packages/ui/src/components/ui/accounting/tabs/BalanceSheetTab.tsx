@@ -1,7 +1,7 @@
 // packages/ui/src/components/ui/accounting/tabs/BalanceSheetTab.tsx
 'use client'
 
-import { memo, useState, useMemo } from 'react'
+import { memo, useCallback, useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { cn } from '../../../../lib/utils'
 import { useBalanceSheet, type TrialBalance } from '@hisabche/api'
@@ -10,6 +10,7 @@ import { ExportButton, type ExportColumn } from '../components/ExportButton'
 import { AccountingSkeleton } from '../AccountingSkeleton'
 import { AccountingEmptyState } from '../AccountingEmptyState'
 import { useLedgerNumber } from '../components/ledger-table'
+import { useAccountDrilldown } from '../components/use-account-drilldown'
 
 interface DetailRow {
   section: string
@@ -48,10 +49,13 @@ function SectionBlock({
   details,
   tone,
   emptyLabel,
+  onOpenAccount,
 }: {
   title: string
   total: number
   details: TrialBalance[]
+  /** H3 — drill into the lines behind one line of the sheet. */
+  onOpenAccount: (account: { id: string; code: string; name: string }) => void
   tone: keyof typeof SECTION_TONE
   emptyLabel: string
 }) {
@@ -70,7 +74,16 @@ function SectionBlock({
         ) : (
           details.map((d) => (
             <div key={d.accountId} className="flex items-center justify-between gap-4 px-4 py-2.5">
-              <span className="text-sm text-[hsl(var(--fg-secondary))]">{d.accountName}</span>
+              {/* H3 — the account opens its own lines, as at this same date. */}
+              <button
+                type="button"
+                onClick={() =>
+                  onOpenAccount({ id: d.accountId, code: d.accountCode, name: d.accountName })
+                }
+                className="rounded text-start text-sm text-[hsl(var(--color-primary))] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))]"
+              >
+                {d.accountName}
+              </button>
               {/* tabular-nums: without it a column of figures does not align. */}
               <span className="text-sm font-medium tabular-nums text-[hsl(var(--fg-primary))]">
                 {n(d.balance)}
@@ -88,6 +101,19 @@ export const BalanceSheetTab = memo(function BalanceSheetTab() {
   const n = useLedgerNumber()
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
   const { data, isLoading } = useBalanceSheet(date)
+
+  const safeT = useCallback(
+    (key: string, fallback?: string) => {
+      const v = t(key as never)
+      return v && v !== key ? v : (fallback ?? key)
+    },
+    [t],
+  )
+
+  // H3 — a balance sheet is stated AS AT a date, over all time up to it. The
+  // drill-down opens the same unbounded window, or it would show fewer lines
+  // than the figure was built from.
+  const drilldown = useAccountDrilldown('', date, safeT)
 
   const exportData = useMemo<DetailRow[]>(() => {
     if (!data) return []
@@ -144,6 +170,7 @@ export const BalanceSheetTab = memo(function BalanceSheetTab() {
               details={data.assets}
               tone="assets"
               emptyLabel={t('accounting.balanceSheet.empty.title')}
+              onOpenAccount={drilldown.open}
             />
             <SectionBlock
               title={t('accounting.balanceSheet.liabilities')}
@@ -151,6 +178,7 @@ export const BalanceSheetTab = memo(function BalanceSheetTab() {
               details={data.liabilities}
               tone="liabilities"
               emptyLabel={t('accounting.balanceSheet.empty.title')}
+              onOpenAccount={drilldown.open}
             />
             <SectionBlock
               title={t('accounting.balanceSheet.equity')}
@@ -158,6 +186,7 @@ export const BalanceSheetTab = memo(function BalanceSheetTab() {
               details={data.equity}
               tone="equity"
               emptyLabel={t('accounting.balanceSheet.empty.title')}
+              onOpenAccount={drilldown.open}
             />
 
             {/*
@@ -188,6 +217,8 @@ export const BalanceSheetTab = memo(function BalanceSheetTab() {
           </div>
         )}
       </div>
+
+      {drilldown.drawer}
     </div>
   )
 })

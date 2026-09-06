@@ -10,9 +10,11 @@ import {
   useWorkflowInstanceDetail,
   useWorkflow,
   usePerformWorkflowAction,
+  useInvoiceRelated,
 } from '@hisabche/api'
 import { InvoiceDetailPage, type InvoiceDetailDisplay } from '../invoice-detail-page'
 import InvoicePDFDownload from '../InvoicePDFDownload'
+import { InvoiceRelatedPanel } from '../invoice-related-panel'
 import { useQueryClient } from '@tanstack/react-query'
 
 /* ═══════════════════════════════════════════════════════════
@@ -63,6 +65,18 @@ export function InvoiceDetailContainer() {
   const [exportingPNG, setExportingPNG] = useState(false)
 
   const { data: invoice, isLoading } = useInvoice(id)
+
+  // H2 — the payments behind `paid_amount`, and the journal entry this invoice
+  // produced. Both lived in the database with nothing able to reach them.
+  const { data: related, isLoading: relatedLoading } = useInvoiceRelated(id)
+
+  // The journal has no per-entry screen yet, so this opens the accounting
+  // ledger with the entry named in the URL rather than pretending a detail
+  // route exists. H3 gives entries their own page; this link moves with it.
+  const handleOpenJournalEntry = useCallback(
+    (entryId: string) => router.push(`/accounting?tab=journal&entry=${entryId}`),
+    [router],
+  )
 
   // ✅ فرض تک-workspace: اولین workspace کاربر — برای نمایش لوگو/مهر کسب‌وکار روی فاکتور
   const { data: workspaces } = useWorkspaces()
@@ -295,6 +309,25 @@ export function InvoiceDetailContainer() {
       onExportPNG={handleExportPNG}
       exportingPNG={exportingPNG}
       pdfDownloadSlot={invoice ? <InvoicePDFDownload invoice={invoice} /> : null}
+      // H2 — rendered only once the invoice itself has loaded. Fetching the
+      // related records for an id that turns out not to exist would show an
+      // empty payments panel beside a «فاکتور پیدا نشد» message.
+      relatedSlot={
+        display ? (
+          <InvoiceRelatedPanel
+            t={safeT}
+            fmtMoney={(value) => value.toLocaleString('fa-AF')}
+            fmtDate={(value) => new Date(value).toLocaleDateString('fa-AF')}
+            currency={display.currency}
+            isLoading={relatedLoading}
+            payments={related?.payments ?? []}
+            journalEntry={related?.journalEntry ?? null}
+            allocatedTotal={related?.allocatedTotal ?? 0}
+            storedPaidAmount={display.paidAmount}
+            onOpenJournalEntry={handleOpenJournalEntry}
+          />
+        ) : null
+      }
       documentRef={documentRef}
       statusVariant={statusVariant}
       workflowInstance={workflowData?.instance ?? null}

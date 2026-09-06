@@ -4,8 +4,10 @@
 import { useLedgerNumber } from './ledger-table'
 import { memo, useState, useCallback, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
+import { useRouter } from 'next/navigation'
 import { ChevronDown } from 'lucide-react'
 import { cn } from '../../../../lib/utils'
+import { routeForEntity } from '../../../../lib/entity-route'
 import type { JournalEntry, Account } from '@hisabche/api'
 
 interface JournalEntryRowProps {
@@ -30,10 +32,29 @@ export const JournalEntryRow = memo(function JournalEntryRow({
   accounts,
 }: JournalEntryRowProps) {
   const t = useTranslations()
+  const router = useRouter()
   const n = useLedgerNumber()
   const [isOpen, setIsOpen] = useState(false)
 
   const toggle = useCallback(() => setIsOpen((prev) => !prev), [])
+
+  // next-intl's `t` takes VALUES as its second argument, not a fallback — a
+  // missing key returns the key itself. The source labels below are new, so
+  // they need a real fallback or an untranslated locale shows «entity.invoice».
+  const safeT = useCallback(
+    (key: string, fallback: string) => {
+      const value = t(key as never)
+      return value && value !== key ? value : fallback
+    },
+    [t],
+  )
+
+  // H3 — where the document that produced this entry lives, or `null`.
+  const sourceRoute = useMemo(
+    () =>
+      entry.sourceType && entry.sourceId ? routeForEntity(entry.sourceType, entry.sourceId) : null,
+    [entry.sourceType, entry.sourceId],
+  )
 
   const accountMap = useMemo(() => {
     const map = new Map<string, Account>()
@@ -111,6 +132,31 @@ export const JournalEntryRow = memo(function JournalEntryRow({
               })}
             </tbody>
           </table>
+
+          {/* H3 — the source document.
+              `sourceType`/`sourceId` have been on this entry since the ledger
+              port was written and were never rendered, so an expanded entry
+              showed its arithmetic and not what caused it. `routeForEntity`
+              answers `null` for a manual entry, which then correctly shows a
+              label instead of a link. */}
+          {entry.sourceType && entry.sourceType !== 'manual' ? (
+            <div className="mt-2 border-t border-[hsl(var(--border-default)/0.5)] pt-2">
+              {sourceRoute ? (
+                <button
+                  type="button"
+                  onClick={() => router.push(sourceRoute)}
+                  className="rounded text-xs text-[hsl(var(--color-primary))] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))]"
+                >
+                  {safeT('accounting.journal.openSource', 'مشاهده سند مبدأ')} —{' '}
+                  {safeT(`entity.${entry.sourceType}`, entry.sourceType)}
+                </button>
+              ) : (
+                <span className="text-xs text-[hsl(var(--fg-tertiary))]">
+                  {safeT('accounting.journal.source', 'مبدأ')}: {entry.sourceType}
+                </span>
+              )}
+            </div>
+          ) : null}
         </div>
       )}
     </div>

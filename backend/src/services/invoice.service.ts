@@ -13,7 +13,9 @@
 // ============================================
 
 import { supabase } from '../db'
+import { sod } from './authorization'
 import { scopes } from './authorization/scope.service'
+import { OUTSTANDING_OR_FILTER } from './invoices/outstanding.domain'
 import { WorkflowService } from '../services/workflow.service'
 import { NotificationService } from '../services/notification.service'
 import {
@@ -28,6 +30,12 @@ import { rules } from './rules'
 import { tax } from './tax'
 import { DatabaseError, NotFoundError } from '../errors/database.error'
 import { ValidationError } from '../errors/validation.error'
+import {
+  AWAITING_APPROVAL_STATUS,
+  decideApproval,
+  mayPostDocument,
+  type ApprovalOutcome,
+} from './workflow/approval-gate.domain'
 import { memoryCache } from '../utils/pagination'
 import { ActivityService } from './activity.service'
 import type { TenancyContext } from './tenancy.service'
@@ -189,6 +197,7 @@ export class InvoiceService {
       currency,
       dateFrom,
       dateTo,
+      outstanding,
       minTotal,
       maxTotal,
       limit = 20,
@@ -255,6 +264,11 @@ export class InvoiceService {
     if (search) query = query.ilike('invoice_number', `%${search}%`)
     if (type) query = query.eq('type', type)
     if (status) query = query.eq('status', status)
+
+    // H1 — «بدهی مشتریان» on the dashboard is now clickable and lands here.
+    // The rule is imported, not restated, so the list returns exactly the
+    // invoices the card summed. See outstanding.domain.ts.
+    if (outstanding) query = query.or(OUTSTANDING_OR_FILTER)
     if (customerId) query = query.eq('customer_id', customerId)
     if (supplierId) query = query.eq('supplier_id', supplierId)
     if (currency) query = query.eq('currency', currency)
@@ -278,7 +292,15 @@ export class InvoiceService {
     // (estimated) برای زیرمجموعه‌های فیلترشده قابل اتکا نیست.
     const hasFilters =
       Boolean(
-        search || type || status || customerId || supplierId || currency || dateFrom || dateTo,
+        search ||
+        type ||
+        status ||
+        outstanding ||
+        customerId ||
+        supplierId ||
+        currency ||
+        dateFrom ||
+        dateTo,
       ) ||
       minTotal !== undefined ||
       maxTotal !== undefined
@@ -291,6 +313,8 @@ export class InvoiceService {
     if (search) countQuery = countQuery.ilike('invoice_number', `%${search}%`)
     if (type) countQuery = countQuery.eq('type', type)
     if (status) countQuery = countQuery.eq('status', status)
+    // Same filter on the count, or the pager offers pages the list cannot fill.
+    if (outstanding) countQuery = countQuery.or(OUTSTANDING_OR_FILTER)
     if (customerId) countQuery = countQuery.eq('customer_id', customerId)
     if (supplierId) countQuery = countQuery.eq('supplier_id', supplierId)
     if (currency) countQuery = countQuery.eq('currency', currency)
@@ -609,10 +633,36 @@ export class InvoiceService {
         paid_amount: data.paidAmount || 0,
         payment_method: data.paymentMethod || 'cash',
         currency: data.currency || 'AFN',
+        // ⚠️ J3 — THIS LINE IS THE CONFLATION, and it is kept deliberately.
+        //
+        // `completed` is a DOCUMENT word being set by whether the invoice was
+        // PAID at creation. `settlementDate()` then reads `status ===
+        // 'completed'` to decide when it settled, which works only because of
+        // that accident.
+        //
+        // It stays because every screen, filter and export reads this column,
+        // and the deprecation flow is three releases: add beside → move
+        // readers → remove. Changing it now would move a value under readers
+        // that have not been converted.
+        //
+        // `document_status` below is the correct answer, written alongside.
         status:
           data.paidAmount && data.total && data.paidAmount >= data.total ? 'completed' : 'pending',
         notes: data.notes || '',
         reference: data.reference || '',
+
+        // ⚠️ J3 — `document_status` is deliberately NOT written here.
+        //
+        // Two reasons. The column defaults to NULL and `invoice_state` reads
+        // NULL as `draft`, which is correct at insert time — nothing has been
+        // posted yet.
+        //
+        // And putting it in this insert would make the ENTIRE create path fail
+        // with 42703 on a database that has not run phase-j-03. Invoice
+        // creation is the one thing that must never depend on an optional
+        // column; it is set in a separate, tolerant write once the ledger has
+        // actually been written (see `markPosted` below).
+
         // workspace_id is the tenancy boundary; user_id records the actor.
         workspace_id: workspaceId,
         user_id: userId,
@@ -660,7 +710,7 @@ export class InvoiceService {
       // A purchase moves stock too — it just moves it the other way. Guarding
       // this on `type === "sale"` meant every purchase left inventory
       // untouched, which is why bought goods never appeared in the warehouse.
-      await this.batchUpdateStock(data.items, ctx, data.type === 'purchase' ? 1 : -1)
+      await this.batchUpdateStock(data.items, ctx, data.type === 'purchase' ? 1 : -1, invoice.id)
     }
 
     // ─── ✅ دریافت نام مشتری ──────────────────────────────────────────────
@@ -784,6 +834,14 @@ export class InvoiceService {
     // ─── پس‌زمینه ──────────────────────────────────────────────────────────
     this.invalidateWorkspaceCache(workspaceId)
 
+    // J5 — the half of `invoice.create-then-delete` that was missing.
+    //
+    // The rule has existed since SoD shipped and could never fire, because
+    // nothing ever wrote down that this person raised this invoice. Awaited,
+    // unlike the costing chain below: the index has to be in place before the
+    // same request could conceivably come back to delete the row.
+    await sod.recordAction(ctx, 'invoice.create', 'invoice', invoice.id)
+
     // Tax, computed by the tax core and FROZEN onto the document.
     //
     // Not `total × rate`: that cannot express a per-item rate, a tax-inclusive
@@ -795,26 +853,55 @@ export class InvoiceService {
       console.error(`[InvoiceService] tax computation failed for ${invoice.id}:`, err),
     )
 
-    // Costing FIRST, then the ledger: the journal entry needs the cost that
-    // was actually consumed, and only the costing core can say what that was.
-    // Chaining them also stops a failed costing run from booking a sale with
-    // a made-up cost of goods.
-    this.applyCosting(ctx, invoice.id, String(data.type ?? 'sale'), data.items ?? [], data.date)
-      .then((cogs) =>
-        this.createAccountingEntries(ctx, invoice.id, {
-          ...data,
-          invoiceNumber,
-          total: data.total || 0,
-          costOfGoodsSold: cogs,
-        }),
-      )
-      .catch((err) => console.error('Accounting entry failed:', err))
-
-    this.tryStartWorkflow(ctx, invoice.id, Number(data.total || 0), {
+    // ─── G6 — APPROVAL DECIDES BEFORE ANYTHING IS BOOKED ─────────────────────
+    //
+    // AWAITED, and ordered before the ledger. These two used to run side by
+    // side as unawaited chains: the journal entry was booked while the workflow
+    // instance was still at step one, so «در انتظار تأیید» described a document
+    // that had already had its full financial effect. Approving it changed a
+    // status column; rejecting it changed a status column.
+    const approval = await this.routeForApproval(ctx, invoice.id, Number(data.total || 0), {
       type: data.type,
       currency: data.currency,
       customerId: data.customerId ?? null,
-    }).catch((err) => console.error('Workflow failed:', err))
+    })
+
+    if (mayPostDocument(approval)) {
+      // Costing FIRST, then the ledger: the journal entry needs the cost that
+      // was actually consumed, and only the costing core can say what that was.
+      // Chaining them also stops a failed costing run from booking a sale with
+      // a made-up cost of goods.
+      this.applyCosting(ctx, invoice.id, String(data.type ?? 'sale'), data.items ?? [], data.date)
+        .then((cogs) =>
+          this.createAccountingEntries(ctx, invoice.id, {
+            ...data,
+            invoiceNumber,
+            total: data.total || 0,
+            costOfGoodsSold: cogs,
+          }),
+        )
+        // J3 — `posted` is written HERE and nowhere earlier, because this is
+        // the first moment it is true. An invoice marked posted whose ledger
+        // write then failed would be a document claiming an effect it does not
+        // have, which is exactly the drift V3 in the migration checks for.
+        .then(() => this.markPosted(ctx, invoice.id))
+        .catch((err) => console.error('Accounting entry failed:', err))
+    } else {
+      // Held. The invoice exists and is visible — it is a draft, not a hidden
+      // row — but nothing irreversible has happened to it. `postApprovedInvoice`
+      // runs the costing, the ledger and the stock when the workflow approves.
+      //
+      // Rejection therefore needs no reversal: nothing was ever booked.
+      await supabase
+        .from('invoices')
+        .update({ status: AWAITING_APPROVAL_STATUS })
+        .eq('id', invoice.id)
+        .eq('workspace_id', workspaceId)
+
+      console.info(
+        `[InvoiceService] invoice ${invoice.id} held for approval; ledger and stock deferred.`,
+      )
+    }
 
     return this.getById(invoice.id, ctx)
   }
@@ -832,6 +919,18 @@ export class InvoiceService {
 
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() }
     if (data.status !== undefined) updates.status = data.status
+
+    // J3 — cancellation is the one status change that is unambiguously about
+    // the DOCUMENT, so it is mirrored onto the document dimension.
+    //
+    // The other values are not mirrored, and that is the point of the split:
+    // `completed` and `paid` describe settlement and are already derived from
+    // `payment_allocations`; translating them here would put the conflation
+    // back into the new column.
+    //
+    // Written through a separate tolerant call rather than added to `updates`,
+    // so a database without the column does not fail the whole update.
+    const cancelling = data.status === 'cancelled'
 
     // ─── PHASE F — `paidAmount` is no longer accepted from a PATCH ───────────
     //
@@ -866,6 +965,8 @@ export class InvoiceService {
 
     if (error) throw new DatabaseError('Failed to update invoice', error)
     if (!invoice) throw new NotFoundError('Invoice')
+
+    if (cancelling) await this.markCancelled(ctx, id)
 
     // ─── آیتم‌ها و جزئیات ─────────────────────────────────────────────────
     // Only when the caller actually sends items. Omitting `items` keeps this
@@ -919,13 +1020,27 @@ export class InvoiceService {
   }
 
   // ─── Delete Invoice ──────────────────────────────────────────────────────
-  async delete(id: string, ctx: TenancyContext): Promise<void> {
+  async delete(
+    id: string,
+    ctx: TenancyContext,
+    options: { override?: { reason: string } | undefined } = {},
+  ): Promise<void> {
     const { workspaceId } = ctx
 
     // Checked BEFORE the line items go. Deleting the children first and then
     // discovering the actor may not have the parent would leave an invoice
     // with no lines and no way back.
     await scopes.assertMay(ctx, 'invoice', id, 'invoice.delete')
+
+    // J5 — raising a document and removing it are the two halves of hiding a
+    // sale. Same ordering rule as above: refused before anything is destroyed,
+    // not after. Silent unless the workspace turned SoD on.
+    await sod.assertAllowed(ctx, 'invoice.delete', 'invoice', id, options.override)
+
+    // Written down BEFORE the delete succeeds, so a second attempt by the same
+    // person is still seen even if the first half-failed. `recordAction` never
+    // throws — a missing index weakens a future check, it does not fail work.
+    await sod.recordAction(ctx, 'invoice.delete', 'invoice', id)
 
     await supabase.from('invoice_items').delete().eq('invoice_id', id)
     const { error } = await supabase
@@ -1102,7 +1217,7 @@ export class InvoiceService {
         productId: row.product_id,
         quantity: Number(row.quantity) || 0,
       }))
-      await this.batchUpdateStock(reversal, ctx, (direction * -1) as 1 | -1)
+      await this.batchUpdateStock(reversal, ctx, (direction * -1) as 1 | -1, invoiceId)
 
       // Give the consumed cost layers their quantities back before the old
       // lines are deleted. Without this an edited sale keeps holding stock it
@@ -1145,7 +1260,7 @@ export class InvoiceService {
     }
 
     await this.insertItemDetails(items, inserted, invoiceId, ctx.workspaceId)
-    await this.batchUpdateStock(items, ctx, direction)
+    await this.batchUpdateStock(items, ctx, direction, invoiceId)
 
     // The new lines carry new ids, so the costing keys differ from the ones
     // just released and the goods move again rather than being deduplicated
@@ -1160,8 +1275,25 @@ export class InvoiceService {
    * `direction` is +1 for a purchase (stock arrives) and -1 for a sale (stock
    * leaves). It is the ONLY thing that differs between the two transaction
    * types — the lookup, the movement rows and the write path are shared.
+   *
+   * ⚠️ `invoiceId` — H4.
+   *
+   * These rows were written with `reference_type: 'invoice'` and NO
+   * `reference_id`. Every sale movement said it came from an invoice and could
+   * not say which one. `purchasing.service` and `manufacturing.service` both
+   * write their reference id; this was the only writer that did not, so a
+   * product's stock history had a hole exactly where sales are.
+   *
+   * That matters more since Phase C: `stock_movements` IS the quantity now, so
+   * when an on-hand figure looks wrong these rows are the only place the answer
+   * lives — and half of them named no document.
    */
-  private async batchUpdateStock(items: any[], ctx: TenancyContext, direction: 1 | -1 = -1) {
+  private async batchUpdateStock(
+    items: any[],
+    ctx: TenancyContext,
+    direction: 1 | -1 = -1,
+    invoiceId?: string | undefined,
+  ) {
     const { workspaceId, userId } = ctx
     if (!items || items.length === 0) return
 
@@ -1225,6 +1357,14 @@ export class InvoiceService {
         type: direction === 1 ? 'purchase' : 'sale',
         quantity: direction * (Number(item.quantity) || 0),
         reference_type: 'invoice',
+        // H4 — WHICH invoice. Omitted before, so `reference_type` named a kind
+        // of document and nothing could reach the document itself.
+        //
+        // `?? null` rather than dropping the key: an explicit null records
+        // «this movement has no document» honestly, and is what the column
+        // already holds for every historical row. Guessing one would be worse
+        // (§12) — old rows stay unknown.
+        reference_id: invoiceId ?? null,
         workspace_id: workspaceId,
         user_id: userId,
       }))
@@ -1525,7 +1665,17 @@ export class InvoiceService {
   }
 
   // ─── Try Start Workflow ──────────────────────────────────────────────────
-  private async tryStartWorkflow(
+  /**
+   * G6 — route for approval, and say whether the document is HELD.
+   *
+   * ⚠️ RETURNS A DECISION NOW. It used to return `void` and be called
+   * fire-and-forget beside the ledger chain, so the journal entry was booked
+   * while the workflow instance was still at step one — «در انتظار تأیید» was a
+   * label on a document that had already had its full financial effect.
+   *
+   * The caller awaits this and does not post when it says `hold`.
+   */
+  private async routeForApproval(
     ctx: TenancyContext,
     invoiceId: string,
     total: number,
@@ -1534,7 +1684,7 @@ export class InvoiceService {
       currency?: string | undefined
       customerId?: string | null | undefined
     },
-  ): Promise<void> {
+  ): Promise<ApprovalOutcome> {
     const { workspaceId } = ctx
     try {
       // ⚠️ TWO DEFECTS THIS REPLACES.
@@ -1553,10 +1703,14 @@ export class InvoiceService {
         customer: { id: data?.customerId },
       })
 
-      if (!decision.requiresApproval) return
+      if (!decision.requiresApproval) return { kind: 'post_now' }
+
+      // Only templates that actually exist, in THIS workspace, and are active.
+      // A rule naming a deleted or foreign template must not hold a document
+      // hostage to an approval nobody can grant — see `decideApproval`.
+      const startable: string[] = []
 
       for (const workflowId of decision.workflowIds) {
-        // Scoped: a workflow id a rule names must belong to THIS workspace.
         const { data: workflows } = await supabase
           .from('workflows')
           .select('id')
@@ -1567,19 +1721,162 @@ export class InvoiceService {
           .is('deleted_at', null)
           .limit(1)
 
-        if (!workflows?.[0]) continue
+        if (workflows?.[0]) startable.push(workflows[0].id)
+      }
 
+      const outcome = decideApproval({
+        requiresApproval: decision.requiresApproval,
+        workflowIds: startable,
+      })
+
+      if (outcome.kind === 'post_now') {
+        // A rule demanded approval and named nothing that can grant it. Posting
+        // is the safer failure — holding would strand the document with no
+        // route out — but it IS a misconfiguration and is said out loud.
+        console.warn(
+          `[InvoiceService] invoice ${invoiceId}: a rule required approval but no active workflow matched. Posting without approval.`,
+        )
+        return outcome
+      }
+
+      for (const workflowId of outcome.workflowIds) {
         await this.workflowService.startWorkflow(workspaceId, {
-          workflow_id: workflows[0].id,
+          workflow_id: workflowId,
           entity_type: 'invoice',
           entity_id: invoiceId,
         })
       }
+
+      return outcome
     } catch (err) {
-      // Never blocks invoice creation — but no longer silent either. An
-      // approval that failed to start is an approval nobody is waiting on.
+      // ⚠️ POSTS ON FAILURE, LOUDLY.
+      //
+      // If the approval routing itself breaks — the rules engine is down, the
+      // workflow insert fails — the choice is between an invoice that posts
+      // without the approval it should have had, and an invoice frozen forever
+      // with no workflow instance and therefore no way for anyone to release
+      // it.
+      //
+      // The second is worse: it is indistinguishable from "waiting on a
+      // colleague" and there is no screen anywhere that would show the
+      // difference. Posting leaves a wrong entry that CAN be reversed; the
+      // freeze leaves a shop unable to invoice.
       console.error(`[InvoiceService] approval routing failed for ${invoiceId}:`, err)
+      return { kind: 'post_now' }
     }
+  }
+
+  /**
+   * J3 — record that this document is now POSTED.
+   *
+   * Called only after the journal entry has actually been written. `posted` is
+   * a claim about the ledger, and a document claiming it without an entry
+   * behind it is the drift the migration's V3 query looks for.
+   *
+   * ⚠️ Tolerates the column being absent. On a database that has not run
+   * phase-j-03 this is a no-op rather than an error: the invoice is posted
+   * either way, and `invoice_state` falls back to reading the ledger directly.
+   * Failing here would turn a missing optional column into a failed sale.
+   */
+  private async markPosted(ctx: TenancyContext, invoiceId: string): Promise<void> {
+    await this.setDocumentStatus(ctx, invoiceId, 'posted')
+  }
+
+  /** J3 — a cancelled document, on the dimension that means it. */
+  private async markCancelled(ctx: TenancyContext, invoiceId: string): Promise<void> {
+    await this.setDocumentStatus(ctx, invoiceId, 'cancelled')
+  }
+
+  private async setDocumentStatus(
+    ctx: TenancyContext,
+    invoiceId: string,
+    value: 'draft' | 'posted' | 'cancelled',
+  ): Promise<void> {
+    const { error } = await supabase
+      .from('invoices')
+      .update({ document_status: value })
+      .eq('id', invoiceId)
+      .eq('workspace_id', ctx.workspaceId)
+
+    if (!error) return
+
+    if (isMissingSchemaError(error)) {
+      console.warn(
+        '[InvoiceService] invoices.document_status not migrated; skipping. Run docs/phase-j-03-document-status-migration.sql.',
+      )
+      return
+    }
+
+    // Not fatal — the money is booked and that is what matters — but not
+    // silent either: the column now disagrees with the ledger.
+    console.error(
+      `[InvoiceService] failed to set document_status=${value} on ${invoiceId}:`,
+      error.message,
+    )
+  }
+
+  /**
+   * G6 — post a document whose approval has just completed.
+   *
+   * Called by the workflow service when an instance reaches `approved`. This is
+   * the other half of the gate: without it, approving a document would move a
+   * status column and still never book anything.
+   *
+   * Idempotent by construction — the ledger port is idempotent per
+   * (sourceType, sourceId), so a replayed approval books nothing twice.
+   */
+  async postApprovedInvoice(ctx: TenancyContext, invoiceId: string): Promise<void> {
+    const invoice = await this.getById(invoiceId, ctx)
+    if (!invoice) throw new NotFoundError('Invoice')
+
+    const raw = invoice as Record<string, any>
+
+    // ⚠️ `invoice_items`, and mapped to camelCase.
+    //
+    // `getById` returns the embed under its DATABASE name with database column
+    // names, while `applyCosting` and `batchUpdateStock` both read
+    // `item.productId`. Passing the rows through unmapped type-checks fine and
+    // silently does nothing: every row fails the `item?.productId` filter, so
+    // the costing consumes no layers and the stock never moves — an approved
+    // invoice with no effect, which is the exact failure this whole gate
+    // exists to prevent.
+    const items = ((raw.invoice_items ?? raw.items ?? []) as Record<string, any>[]).map((item) => ({
+      ...item,
+      productId: item.productId ?? item.product_id,
+      quantity: Number(item.quantity) || 0,
+      unitPrice: item.unitPrice ?? item.unit_price,
+      totalPrice: item.totalPrice ?? item.total_price,
+    }))
+
+    const cogs = await this.applyCosting(
+      ctx,
+      invoiceId,
+      String(raw.type ?? 'sale'),
+      items,
+      raw.date,
+    )
+
+    await this.createAccountingEntries(ctx, invoiceId, {
+      invoiceNumber: raw.invoice_number ?? raw.invoiceNumber,
+      total: Number(raw.total) || 0,
+      type: raw.type,
+      date: raw.date,
+      currency: raw.currency,
+      customerId: raw.customer_id ?? raw.customerId,
+      supplierId: raw.supplier_id ?? raw.supplierId,
+      items,
+      costOfGoodsSold: cogs,
+    } as never)
+
+    // Purchase adds, sale removes — the same direction rule `batchUpdateStock`
+    // documents, applied at approval time instead of at creation time.
+    await this.batchUpdateStock(items, ctx, raw.type === 'purchase' ? 1 : -1, invoiceId)
+
+    // J3 — the document is posted now, and only now. Before approval it was a
+    // draft with no ledger entry behind it, which is what made rejection free.
+    await this.markPosted(ctx, invoiceId)
+
+    this.invalidateWorkspaceCache(ctx.workspaceId)
   }
 }
 

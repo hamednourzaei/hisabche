@@ -119,6 +119,50 @@ export const accountingKeys = {
   balanceSheet: (date: string) => [...accountingKeys.all, 'balanceSheet', date] as const,
   incomeStatement: (from: string, to: string) =>
     [...accountingKeys.all, 'income', from, to] as const,
+  /**
+   * H3 — the lines behind one account, for one window.
+   *
+   * The dates are part of the key: the same account over two periods is two
+   * different answers, and sharing a key would show a figure drilled from
+   * January under a March heading.
+   */
+  generalLedger: (accountId: string, from: string, to: string) =>
+    [...accountingKeys.all, 'generalLedger', accountId, from, to] as const,
+}
+
+/** One posted line in an account's ledger. */
+export interface GeneralLedgerLine {
+  lineId: string
+  entryId: string
+  entryNumber: string
+  date: string
+  description: string
+  reference: string
+  /** What produced this line — 'invoice', 'payment', 'manual'… */
+  sourceType: string | null
+  sourceId: string | null
+  debit: number
+  credit: number
+  /** Running balance in the account's natural direction, INCLUDING opening. */
+  balance: number
+}
+
+export interface GeneralLedgerResult {
+  accountId: string
+  accountCode: string
+  accountName: string
+  from: string | null
+  to: string | null
+  /**
+   * What the account held before the window opened.
+   *
+   * Not decoration: without it the first row's running balance starts at zero
+   * and every figure below it is wrong by the opening amount — while still
+   * looking perfectly self-consistent.
+   */
+  openingBalance: number
+  closingBalance: number
+  lines: GeneralLedgerLine[]
 }
 
 // ═══ Hooks ═══
@@ -203,6 +247,34 @@ export function useTrialBalance(date: string) {
       return data
     },
     enabled: authReady && !!date,
+    staleTime: 60_000,
+  })
+}
+
+/**
+ * H3 — the journal lines behind one account, for the period on screen.
+ *
+ * `GET /accounting/general-ledger` has existed since the accounting module was
+ * written and had **no callers at all**: the drill-down data was there and no
+ * screen could reach it. Every figure in the Trial Balance, the Balance Sheet
+ * and the Income Statement was a dead end.
+ *
+ * ⚠️ `enabled` gates on `accountId`, so mounting the drawer closed costs
+ * nothing. The dates are passed through as given — an empty `from` means «from
+ * the beginning», which the server reads as an opening balance of zero.
+ */
+export function useGeneralLedger(accountId: string | undefined, fromDate: string, toDate: string) {
+  const authReady = useAuthReady()
+
+  return useQuery({
+    queryKey: accountingKeys.generalLedger(accountId ?? '', fromDate, toDate),
+    queryFn: async (): Promise<GeneralLedgerResult> => {
+      const { data } = await apiClient.get('/accounting/general-ledger', {
+        params: { accountId, fromDate: fromDate || undefined, toDate: toDate || undefined },
+      })
+      return data
+    },
+    enabled: authReady && Boolean(accountId),
     staleTime: 60_000,
   })
 }

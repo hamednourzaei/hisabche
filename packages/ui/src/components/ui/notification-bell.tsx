@@ -20,6 +20,7 @@ import {
   Receipt,
 } from 'lucide-react'
 import { cn } from '../../lib/utils'
+import { routeForEntityOrList } from '../../lib/entity-route'
 import { useCurrency } from '../../hooks/use-currency'
 import { useIntlLocale } from '../../hooks/use-intl-locale'
 import { useNotifications, useUnreadCount, useMarkAsRead, useMarkAllAsRead } from '@hisabche/api'
@@ -109,38 +110,17 @@ function timeAgo(d: string, t: (key: string) => string): string {
 // هم هیچ‌وقت ساخته نشده) — یعنی همیشه ۴۰۴ می‌دادند.
 function resolveEntityUrl(n: Notification): string {
   if (n.action_url) return n.action_url
-  const id = n.entity_id
-  switch (n.entity_type) {
-    case 'invoice':
-      return id ? `/invoices/${id}` : '/invoices'
-    case 'customer':
-      return '/customers'
-    case 'product':
-    case 'inventory':
-      return id ? `/warehouse/${id}` : '/warehouse'
-    case 'payment':
-      return '/invoices?filter=pending'
-    // The projects module was removed. Historical notifications still exist in
-    // the feed, so they point at the activity log rather than a dead route.
-    case 'project':
-    case 'task':
-      return '/activities'
-    case 'purchase_order':
-      return '/purchasing'
-    case 'workflow_instance':
-    case 'workflow':
-      return '/approvals'
-    case 'opportunity':
-    case 'interaction':
-      return '/crm'
-    case 'employee':
-      // G1: canonical people route. /human-resources 308s here, but a
-      // notification should link to the destination directly rather than
-      // spending a redirect on every tap.
-      return id ? `/team-and-payroll/${id}` : '/team-and-payroll'
-    default:
-      return '/activities'
-  }
+
+  // H6 — the SHARED mapper, not a copy.
+  //
+  // This switch was that copy, and it went stale: it kept pointing employees
+  // at `/human-resources/:id` after G1 moved that route, and nothing caught it
+  // because a second mapping has nothing to disagree with until someone taps.
+  //
+  // `OrList` because a notification must always land somewhere: the person
+  // already tapped it, so an unknown type going to the activity feed beats
+  // going nowhere.
+  return routeForEntityOrList(n.entity_type ?? '', n.entity_id)
 }
 
 // The locale was pinned to 'fa-AF' and a missing currency fell back to the

@@ -20,6 +20,9 @@ import { DatabaseError, NotFoundError } from '../errors/database.error'
 import type { TenancyContext } from './tenancy.service'
 import { memoryCache } from '../utils/pagination'
 import { logBusinessEvent } from './event-log.service'
+import { ledger, type DraftLine } from './accounting'
+import type { AccountRole } from '@hisabche/validation'
+import { linesBalance, payrollLines } from './payroll/payroll-ledger.domain'
 
 /**
  * G2 — does this error mean `employee_branch_assignments` has not been created
@@ -550,8 +553,99 @@ export class HumanResourcesService {
 
     if (error) throw new DatabaseError('Failed to update payroll', error)
 
+    // ─── J4 — A PAID SALARY REACHES THE BOOKS ────────────────────────────────
+    //
+    // This method used to end here. A payroll moved to `paid` and nothing was
+    // written to the ledger: a salary expense and a cash outflow, both real and
+    // both material, happened entirely outside the books. Every income
+    // statement was short by exactly the payroll, every month, and nothing
+    // reported an error because nothing knew an entry was owed.
+    if (data.status === 'paid') {
+      await this.bookPayroll(ctx, payroll as Record<string, unknown>)
+    }
+
     await this.invalidatePayrollCache(workspaceId)
     return payroll
+  }
+
+  /**
+   * J4 — the journal entry behind a paid payroll.
+   *
+   * Booked through the ledger port, so it is idempotent per (sourceType,
+   * sourceId): marking the same payroll paid twice books once.
+   *
+   * ⚠️ A chart of accounts that cannot express it leaves the payroll RECORDED
+   * and says so, rather than refusing to pay someone's wages. That is the same
+   * choice `payments.service.bookPayment` makes for the same reason — and it is
+   * why `payroll_posting_readiness` exists, so the gap is visible rather than
+   * only in a log line.
+   */
+  private async bookPayroll(ctx: TenancyContext, payroll: Record<string, unknown>): Promise<void> {
+    const toMinor = (value: unknown) => Math.round((Number(value) || 0) * 100)
+
+    const amounts = {
+      // Gross is what the business BEARS: base plus bonuses plus overtime.
+      // `net_salary` is what the employee receives and is not the expense.
+      grossMinor:
+        toMinor(payroll.base_salary) + toMinor(payroll.bonuses) + toMinor(payroll.overtime_amount),
+      taxMinor: toMinor(payroll.tax_amount),
+      deductionsMinor: toMinor(payroll.deductions),
+      netMinor: toMinor(payroll.net_salary),
+    }
+
+    // Cash unless the business keeps no cash account. A shop paying wages by
+    // transfer and one paying from the till book the same entry with a
+    // different credit side.
+    const { accounts: available } = await ledger.resolveAccountsByRole(ctx, ['cash', 'bank'])
+    const cashRole: 'cash' | 'bank' = available.cash ? 'cash' : 'bank'
+
+    const lines = payrollLines(amounts, cashRole)
+
+    if (lines.length === 0) {
+      // A payroll of zero. Not booked — `accounting_post_journal_entry` refuses
+      // a zero entry, and a zero payroll is a data problem to look at rather
+      // than an entry to file.
+      console.warn(
+        `[HumanResources] payroll ${String(payroll.id)} has no gross amount; not booked.`,
+      )
+      return
+    }
+
+    if (!linesBalance(lines)) {
+      // Refused here rather than discovered as a Postgres exception three
+      // layers down. If this ever fires, the payroll's own figures do not add
+      // up and the row is the thing to fix.
+      console.error(
+        `[HumanResources] payroll ${String(payroll.id)} produced unbalanced lines; not booked.`,
+      )
+      return
+    }
+
+    const needed = [...new Set(lines.map((line) => line.role))] as AccountRole[]
+    const { accounts, missing } = await ledger.resolveAccountsByRole(ctx, needed)
+
+    if (missing.length > 0) {
+      console.warn(
+        `[HumanResources] payroll ${String(payroll.id)} not booked: no account for ${missing.join(', ')}. See payroll_posting_readiness.`,
+      )
+      return
+    }
+
+    const entryDate = String(payroll.payment_date ?? payroll.period_end ?? '').slice(0, 10)
+
+    await ledger.postDocument(ctx, {
+      sourceType: 'payroll',
+      sourceId: String(payroll.id),
+      // Lesson 7: the ACCOUNTING date, not created_at. A payroll for last month
+      // paid today belongs to last month's figures.
+      date: entryDate || new Date().toISOString().slice(0, 10),
+      description: `حقوق — ${String(payroll.period_start ?? '')} تا ${String(payroll.period_end ?? '')}`,
+      lines: lines.map((line) => ({
+        accountId: accounts[line.role as AccountRole] as string,
+        debit: line.debitMinor / 100,
+        credit: line.creditMinor / 100,
+      })) as DraftLine[],
+    })
   }
 
   // ─── Payroll Summary (جمع حقوق) ──────────────────────────────

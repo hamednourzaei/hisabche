@@ -1,7 +1,7 @@
 // packages/ui/src/components/ui/accounting/tabs/TrialBalanceTab.tsx
 'use client'
 
-import { memo, useState, useMemo } from 'react'
+import { memo, useCallback, useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { useTrialBalance } from '@hisabche/api'
 import { SingleDatePicker } from '../components/DateRangePicker'
@@ -18,6 +18,7 @@ import {
   LedgerTh,
   useLedgerNumber,
 } from '../components/ledger-table'
+import { useAccountDrilldown } from '../components/use-account-drilldown'
 import type { TrialBalance } from '@hisabche/api'
 
 const exportColumns: ExportColumn<TrialBalance>[] = [
@@ -33,6 +34,19 @@ export const TrialBalanceTab = memo(function TrialBalanceTab() {
   const n = useLedgerNumber()
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
   const { data, isLoading } = useTrialBalance(date)
+
+  const safeT = useCallback(
+    (key: string, fallback?: string) => {
+      const v = t(key as never)
+      return v && v !== key ? v : (fallback ?? key)
+    },
+    [t],
+  )
+
+  // H3 — `''` as the start: a trial balance is stated AS AT a date, over all
+  // time up to it, so the drill-down must open the same unbounded window. A
+  // start date here would show fewer lines than the figure was built from.
+  const drilldown = useAccountDrilldown('', date, safeT)
 
   // The totals come from the server, which summed them in the same query that
   // produced the rows. Re-adding the visible rows here would agree with itself
@@ -104,7 +118,24 @@ export const TrialBalanceTab = memo(function TrialBalanceTab() {
                   <LedgerTd mono muted>
                     {row.accountCode}
                   </LedgerTd>
-                  <LedgerTd strong>{row.accountName}</LedgerTd>
+                  {/* H3 — the account name opens the lines behind it, for the
+                      SAME date this report is stated as at. Every figure here
+                      used to be a dead end. */}
+                  <LedgerTd strong>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        drilldown.open({
+                          id: row.accountId,
+                          code: row.accountCode,
+                          name: row.accountName,
+                        })
+                      }
+                      className="rounded text-start text-[hsl(var(--color-primary))] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))]"
+                    >
+                      {row.accountName}
+                    </button>
+                  </LedgerTd>
                   <LedgerTd numeric>{n(row.debit)}</LedgerTd>
                   <LedgerTd numeric>{n(row.credit)}</LedgerTd>
                   <LedgerTd numeric strong>
@@ -135,6 +166,8 @@ export const TrialBalanceTab = memo(function TrialBalanceTab() {
           </LedgerTable>
         )}
       </div>
+
+      {drilldown.drawer}
     </div>
   )
 })

@@ -30,6 +30,9 @@ export function InvoicesContainer() {
     [router],
   )
 
+  // H2 — the party's name in the table reaches the party's profile.
+  const handleNavigateParty = useCallback((id: string) => router.push(`/customers/${id}`), [router])
+
   const handleNavigateInvoiceAction = useCallback(
     (id: string, action: 'pdf' | 'print' | 'png') =>
       router.push(`/invoices/${id}?action=${action}`),
@@ -53,6 +56,7 @@ export function InvoicesContainer() {
       onSearchChange={handleSearchChange}
       onPageChange={handlePageChange}
       onNavigateInvoice={handleNavigateInvoice}
+      onNavigateParty={handleNavigateParty}
       onNavigateInvoiceAction={handleNavigateInvoiceAction}
       onNewInvoice={handleNewInvoice}
       onDeleteInvoice={handleDeleteInvoice}

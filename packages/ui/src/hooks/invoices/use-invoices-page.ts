@@ -2,11 +2,13 @@
 'use client'
 
 import { useState, useCallback, useMemo } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useInvoices, useDeleteInvoice } from '@hisabche/api'
 import { mapInvoices } from '../../lib/invoices/invoices-mappers'
 import { STATUS_MAP } from '../../lib/invoices/invoices-format'
 import type { InvoicesQueryParams } from '../../lib/invoices/invoices-types'
+import { parseInvoiceFilters } from '../../lib/invoices/invoice-filter-link'
 
 // ─── Constants ──────────────────────────────────────────────────────────────
 
@@ -29,7 +31,25 @@ const STATS_LIMIT = 500
 export function useInvoicesPage() {
   const t = useTranslations()
 
-  const [filters, setFilters] = useState<InvoicesQueryParams>(DEFAULT_FILTERS)
+  // ─── H1 — the URL is where a dashboard card puts its filter ───────────────
+  //
+  // Before this, the list read no query parameters, so every card that linked
+  // here would have landed on the same unfiltered table — a number you can
+  // click that shows you something else.
+  //
+  // Seeded as the INITIAL state rather than kept in sync with the URL: once
+  // the page is open the filter controls own the state, and re-reading the URL
+  // on every render would fight the user's own selection. Arriving at
+  // `?type=sale&outstanding=true` and then pressing «همه» must show everything.
+  const searchParams = useSearchParams()
+  const initialFilters = useMemo(
+    () => ({ ...DEFAULT_FILTERS, ...parseInvoiceFilters(searchParams) }),
+    // Deliberately once. See above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  )
+
+  const [filters, setFilters] = useState<InvoicesQueryParams>(initialFilters)
 
   // ─── Data Fetching ──────────────────────────────────────────────────────
   const { data, isLoading, refetch } = useInvoices(filters)

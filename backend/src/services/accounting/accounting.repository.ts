@@ -506,9 +506,22 @@ export class AccountingRepository {
     Array<{
       lineId: string
       entryId: string
+      /** H3 — shown instead of a raw uuid, so a line is identifiable by eye. */
+      entryNumber: string
       date: string
       description: string
       reference: string
+      /**
+       * H3 — what PRODUCED this line: 'invoice', 'payment', 'payroll',
+       * 'manual'…, and the id of that document.
+       *
+       * Selected so a drill-down can send someone from a figure in the Trial
+       * Balance to the invoice behind it. Without these the general ledger is
+       * a list of amounts whose origin is unreachable — which is most of why
+       * the endpoint went unused.
+       */
+      sourceType: string | null
+      sourceId: string | null
       debit: number
       credit: number
     }>
@@ -516,7 +529,7 @@ export class AccountingRepository {
     let query = supabase
       .from('journal_lines')
       .select(
-        'id, journal_id, debit, credit, journal_entries!inner(id, date, description, reference, status, workspace_id)',
+        'id, journal_id, debit, credit, journal_entries!inner(id, entry_number, date, description, reference, status, source_type, source_id, workspace_id)',
       )
       .eq('workspace_id', workspaceId)
       .eq('account_id', accountId)
@@ -539,9 +552,16 @@ export class AccountingRepository {
           return {
             lineId: row.id,
             entryId: row.journal_id,
+            entryNumber: String(entry?.entry_number ?? ''),
             date: String(entry?.date ?? '').slice(0, 10),
             description: String(entry?.description ?? ''),
             reference: String(entry?.reference ?? ''),
+            // `null`, not `''`. A drill-down must be able to tell «this line
+            // came from no document» (a manual entry) from «this line came
+            // from a document whose type we failed to read» — the first is
+            // normal and gets no link, the second is a defect.
+            sourceType: entry?.source_type ?? null,
+            sourceId: entry?.source_id ?? null,
             debit: Number(row.debit) || 0,
             credit: Number(row.credit) || 0,
           }

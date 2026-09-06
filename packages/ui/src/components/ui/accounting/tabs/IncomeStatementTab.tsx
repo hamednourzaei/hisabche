@@ -1,7 +1,7 @@
 // packages/ui/src/components/ui/accounting/tabs/IncomeStatementTab.tsx
 'use client'
 
-import { memo, useState, useMemo } from 'react'
+import { memo, useCallback, useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { cn } from '../../../../lib/utils'
 import { useIncomeStatement, type TrialBalance } from '@hisabche/api'
@@ -10,6 +10,7 @@ import { ExportButton, type ExportColumn } from '../components/ExportButton'
 import { AccountingSkeleton } from '../AccountingSkeleton'
 import { AccountingEmptyState } from '../AccountingEmptyState'
 import { useLedgerNumber } from '../components/ledger-table'
+import { useAccountDrilldown } from '../components/use-account-drilldown'
 
 interface SummaryRow {
   label: string
@@ -52,11 +53,14 @@ function StatementSection({
   total,
   accounts,
   emptyLabel,
+  onOpenAccount,
 }: {
   title: string
   total: number
   accounts: TrialBalance[]
   emptyLabel: string
+  /** H3 — drill into the lines behind one line of the statement. */
+  onOpenAccount: (account: { id: string; code: string; name: string }) => void
 }) {
   const n = useLedgerNumber()
 
@@ -78,7 +82,23 @@ function StatementSection({
               key={account.accountId}
               className="flex items-center justify-between gap-4 px-4 py-2.5"
             >
-              <span className="text-sm text-[hsl(var(--fg-secondary))]">{account.accountName}</span>
+              {/* H3 — opens this account's lines for the SAME from/to window
+                  the statement is showing. An income statement is a PERIOD
+                  report, so an unbounded drill-down would list lines from
+                  outside it and not add up to the figure clicked. */}
+              <button
+                type="button"
+                onClick={() =>
+                  onOpenAccount({
+                    id: account.accountId,
+                    code: account.accountCode,
+                    name: account.accountName,
+                  })
+                }
+                className="rounded text-start text-sm text-[hsl(var(--color-primary))] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))]"
+              >
+                {account.accountName}
+              </button>
               <span className="text-sm font-medium tabular-nums text-[hsl(var(--fg-primary))]">
                 {n(account.balance)}
               </span>
@@ -96,6 +116,19 @@ export const IncomeStatementTab = memo(function IncomeStatementTab() {
   const [from, setFrom] = useState(getFirstDayOfMonth)
   const [to, setTo] = useState(getToday)
   const { data, isLoading } = useIncomeStatement(from, to)
+
+  const safeT = useCallback(
+    (key: string, fallback?: string) => {
+      const v = t(key as never)
+      return v && v !== key ? v : (fallback ?? key)
+    },
+    [t],
+  )
+
+  // H3 — BOTH ends of the window, unlike the two «as at» reports. An income
+  // statement covers a period, and a drill-down that ignored `from` would list
+  // lines from before it and disagree with the figure that opened it.
+  const drilldown = useAccountDrilldown(from, to, safeT)
 
   const exportData = useMemo<SummaryRow[]>(() => {
     if (!data) return []
@@ -134,6 +167,7 @@ export const IncomeStatementTab = memo(function IncomeStatementTab() {
               total={data.totalRevenue}
               accounts={data.revenue}
               emptyLabel={t('accounting.incomeStatement.empty.title')}
+              onOpenAccount={drilldown.open}
             />
 
             <StatementSection
@@ -141,6 +175,7 @@ export const IncomeStatementTab = memo(function IncomeStatementTab() {
               total={data.totalExpenses}
               accounts={data.expenses}
               emptyLabel={t('accounting.incomeStatement.empty.title')}
+              onOpenAccount={drilldown.open}
             />
 
             {/*
@@ -174,6 +209,8 @@ export const IncomeStatementTab = memo(function IncomeStatementTab() {
           </div>
         )}
       </div>
+
+      {drilldown.drawer}
     </div>
   )
 })

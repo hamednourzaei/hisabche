@@ -8,6 +8,7 @@ import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import { createProductSchema, updateProductSchema } from '@hisabche/validation'
 import { ProductService } from '../services/product.service'
+import { StockHistoryService } from '../services/inventory/stock-history.service'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { NotFoundError } from '../errors/database.error'
@@ -22,6 +23,7 @@ const toJsonSchema = (schema: any) => {
 
 export async function productRoutes(fastify: FastifyInstance) {
   const productService = new ProductService()
+  const stockHistoryService = new StockHistoryService()
 
   // ─── GET /api/products ──────────────────────────────────
   fastify.get(
@@ -179,6 +181,36 @@ export async function productRoutes(fastify: FastifyInstance) {
         }
         fastify.log.error(err)
         return reply.code(500).send({ error: 'Failed to delete product' })
+      }
+    },
+  )
+
+  // ─── GET /api/products/:id/stock-history ────────────────
+  //
+  // H4 — how this product's on-hand figure got to be what it is.
+  //
+  // Phase C made `stock_movements` the source of truth for quantity, and
+  // nothing exposed them: the number users argue with most had no explanation
+  // anywhere in the product.
+  //
+  // Uncached. An arrival or a sale changes this answer, and a stale history is
+  // worse than a slow one when someone is checking why a count is wrong.
+  fastify.get(
+    '/api/products/:id/stock-history',
+    {
+      preHandler: [authenticate, requireWorkspaceContext],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        const { limit } = request.query as { limit?: string }
+        return reply.send(await stockHistoryService.get(request.tenancy, id, Number(limit) || 200))
+      } catch (err) {
+        if (err instanceof NotFoundError) {
+          return reply.code(404).send({ error: 'Product not found' })
+        }
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to fetch the stock history' })
       }
     },
   )

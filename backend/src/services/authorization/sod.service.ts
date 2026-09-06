@@ -9,6 +9,7 @@
 // ============================================
 
 import { supabase } from '../../db'
+import { AuditService } from '../audit.service'
 import { ConflictError, DatabaseError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
 import type { TenancyContext } from '../tenancy.service'
@@ -24,6 +25,24 @@ import {
   type SoDSettings,
   type SoDVerdict,
 } from './sod.domain'
+
+/**
+ * What an overridden action IS, in the audit trail's own vocabulary.
+ *
+ * `audit_logs.action` is a closed enum and none of its values is «override» —
+ * so the row records the action that was permitted, and `newData.sodOverride`
+ * says it was permitted by an override. Mapped explicitly rather than guessed
+ * from the capability's suffix: `payment.cancel` is a deletion in this
+ * vocabulary and `ledger.reverse` is not, and a suffix rule gets one of them
+ * wrong.
+ */
+const OVERRIDE_AUDIT_ACTION: Partial<Record<Capability, 'update' | 'delete'>> = {
+  'payment.cancel': 'delete',
+  'invoice.delete': 'delete',
+  'ledger.reverse': 'update',
+}
+
+const audit = new AuditService()
 
 export class SoDService {
   async getSettings(workspaceId: string): Promise<SoDSettings> {
@@ -176,6 +195,39 @@ export class SoDService {
     // down, the override does not happen. An unrecorded bypass of a control is
     // indistinguishable from no control.
     if (error) throw new DatabaseError('Failed to record the SoD override', error)
+
+    // ─── J5 — and where somebody will actually see it ───────────────────────
+    //
+    // `sod_overrides` had exactly one reader: `GET /api/governance/sod/
+    // overrides`, behind a hook no screen calls. So the record of a person
+    // bypassing a separation of duties existed and was, in practice, unread.
+    //
+    // The audit centre (G4) is where a workspace owner already goes to ask who
+    // did what, so the override is written there too — on the ENTITY it was
+    // taken against, so it appears in that record's own history next to the
+    // action it permitted, rather than in a governance page of its own.
+    //
+    // Deliberately after the insert above and deliberately not fatal: the
+    // authoritative record is `sod_overrides`, and this is the copy that makes
+    // it visible. Losing the visible copy must not undo a completed override.
+    try {
+      await audit.log({
+        userId: ctx.userId,
+        workspaceId: ctx.workspaceId,
+        action: OVERRIDE_AUDIT_ACTION[capability] ?? 'update',
+        entityType,
+        entityId,
+        newData: {
+          sodOverride: true,
+          ruleId: verdict.ruleId,
+          capability,
+          reason: override.reason,
+          actorRole: ctx.role,
+        },
+      })
+    } catch (auditError) {
+      console.error('[SoD] override recorded but not audited:', auditError)
+    }
 
     return verdict
   }

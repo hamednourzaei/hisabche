@@ -547,6 +547,31 @@ export class WorkflowService {
       throw new DatabaseError('Failed to update instance', updateError)
     }
 
+    // ─── G6 — AN APPROVAL THAT APPROVES SOMETHING ────────────────────────────
+    //
+    // This used to end here: the instance moved to `approved` and nothing was
+    // done to the document. Approval changed a status column, and the ledger
+    // entry had already been booked at creation time anyway — so the whole
+    // feature was decorative.
+    //
+    // Now creation HOLDS the financial effect (see approval-gate.domain.ts) and
+    // this is where it is released.
+    //
+    // ⚠️ AWAITED, and its failure is reported to the caller rather than logged
+    // and dropped. An instance marked `approved` whose document never posted is
+    // the worst outcome available: it looks complete on every screen and the
+    // money is not in the books. Better to fail the approve action so the
+    // person can retry — the posting is idempotent per (sourceType, sourceId),
+    // so a retry books nothing twice.
+    if (newStatus === 'approved') {
+      await this.postApprovedDocument(
+        instance.workspace_id as string,
+        action.actor_user_id as string,
+        updated.entity_type as string,
+        updated.entity_id as string,
+      )
+    }
+
     this.sendNotification(updated, action).catch((err) =>
       console.error('Notification failed:', err),
     )
@@ -557,6 +582,43 @@ export class WorkflowService {
       instance: this.mapInstance(updated),
       action: this.mapAction(action),
     }
+  }
+
+  /**
+   * G6 — release the financial effect a document has been holding.
+   *
+   * ⚠️ IMPORTED LAZILY, on purpose.
+   *
+   * `InvoiceService` already imports `WorkflowService` at the top of its file.
+   * Importing it back statically closes the cycle, and a circular import
+   * between two service modules resolves to `undefined` at construction time
+   * depending on which is loaded first — a crash that appears only in
+   * production, only sometimes, and reads as "workflowService is not a
+   * constructor".
+   *
+   * The dynamic import defers resolution to call time, by which point both
+   * modules are fully evaluated.
+   */
+  private async postApprovedDocument(
+    workspaceId: string,
+    actorId: string,
+    entityType: string,
+    entityId: string,
+  ): Promise<void> {
+    // Only the document kinds that actually hold something. An approval on
+    // anything else is a workflow with no financial effect to release, which is
+    // fine — it is not an error.
+    if (entityType !== 'invoice') return
+
+    const { InvoiceService } = await import('./invoice.service')
+
+    // The approver's own tenancy. `role` is not read by the posting path, but
+    // the context shape requires it; `manager` is the least privilege that can
+    // post, and anyone who reached a final approval step holds at least that.
+    await new InvoiceService().postApprovedInvoice(
+      { workspaceId, userId: actorId, role: 'manager' },
+      entityId,
+    )
   }
 
   /* ─── Notification Hook ─── */

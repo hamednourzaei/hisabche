@@ -142,8 +142,27 @@ export type InvoiceStatus = z.infer<typeof invoiceStatusSchema>
  */
 export function settlementDate(invoice: {
   status?: string | null | undefined
+  /** J3 — the settlement dimension, derived from payment_allocations. */
+  settlementStatus?: string | null | undefined
   updatedAt?: string | null | undefined
 }): string | null {
+  // ⚠️ J3 — `settlementStatus` FIRST, `status` only as a fallback.
+  //
+  // This read `status === 'completed'`, which worked by accident:
+  // `invoice.service.create()` writes `completed` when `paidAmount >= total`,
+  // so a DOCUMENT word was standing in for a settlement fact. Any invoice that
+  // became fully paid LATER — through a payment allocation rather than at
+  // creation — never got `completed`, and this returned null for it. A
+  // settled invoice with no settlement date.
+  //
+  // `settlement_status` is maintained by trigger from the allocations
+  // themselves (Phase F), so it is right whenever the money arrived.
+  //
+  // The old branch stays because rows written before Phase F have no
+  // `settlement_status`, and dropping it would lose their date entirely.
+  if (invoice.settlementStatus === 'paid') return invoice.updatedAt ?? null
+  if (invoice.settlementStatus) return null
+
   if (invoice.status !== 'completed') return null
   return invoice.updatedAt ?? null
 }
@@ -242,6 +261,26 @@ export const invoiceFiltersSchema = z.object({
   currency: currencyCodeSchema.optional(),
   dateFrom: isoDateSchema.optional(),
   dateTo: isoDateSchema.optional(),
+
+  /**
+   * H1 — «still owed on», the predicate behind the «بدهی مشتریان» KPI.
+   *
+   * Not expressible with `status` alone: the rule is a NEGATION («anything but
+   * fully paid»), and a status added later must fall on the outstanding side
+   * automatically. The rule itself lives in
+   * `backend/src/services/invoices/outstanding.domain.ts`, shared with the KPI
+   * so the list and the number that opens it cannot drift apart.
+   *
+   * ⚠️ Parsed from a STRING, not `z.coerce.boolean()`. Coercion makes the
+   * string "false" truthy, so `?outstanding=false` would filter — the opposite
+   * of what it says. Only the affirmative spellings turn it on.
+   */
+  outstanding: z
+    .union([z.boolean(), z.string()])
+    .transform((value) =>
+      typeof value === 'boolean' ? value : ['true', '1', 'yes'].includes(value.toLowerCase()),
+    )
+    .optional(),
   minTotal: z
     .union([z.number(), z.string()])
     .transform((val) => (typeof val === 'string' ? parseFloat(val) : val))

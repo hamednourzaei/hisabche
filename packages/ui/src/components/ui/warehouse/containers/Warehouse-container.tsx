@@ -32,6 +32,28 @@ export function warehouseContainer() {
   const [showAddModal, setShowAddModal] = useState(addParam === 'true')
   const [deletingId, setDeletingId] = useState<string | null>(null)
 
+  // ─── H4 — stock history and reorder ──────────────────────────────────────
+  const [historyProduct, setHistoryProduct] = useState<Product | null>(null)
+  const { data: history, isLoading: historyLoading } = useStockHistory(historyProduct?.id)
+
+  const handleOpenHistory = useCallback((product: Product) => setHistoryProduct(product), [])
+
+  // ⚠️ H4 — «سفارش خرید» FOR A LOW-STOCK PRODUCT IS NOT WIRED, DELIBERATELY.
+  //
+  // The spec asks for a button that opens purchasing with the product filled
+  // in. `POST /api/purchase-orders` exists, `useCreatePurchaseOrder` exists —
+  // and `/purchasing` has NO create UI at all. It lists orders and receives
+  // goods; there is no form to prefill.
+  //
+  // So the button would navigate to a screen that cannot act on what it was
+  // sent: a control that looks like it starts an order and does nothing. That
+  // is the theater G1 forbids, and it is worse than the absence, because a
+  // shopkeeper would believe the order had been started.
+  //
+  // Building the form is a FEATURE, not an interconnection — it needs a
+  // supplier, lines, dates and a decision about approval. Recorded as a gap in
+  // .claude/HANDOFF-PHASES-G-TO-O.md instead of half-built here.
+
   useEffect(() => {
     if (addParam === 'true') setShowAddModal(true)
   }, [addParam])
@@ -104,6 +126,7 @@ export function warehouseContainer() {
     outOfStock,
     currencies: CURRENCIES,
     onNavigate: handleNavigate,
+    onOpenHistory: handleOpenHistory,
     onDelete,
     stockStatus,
     stockLabel,
@@ -117,6 +140,25 @@ export function warehouseContainer() {
         onCreated={handleProductCreated}
       />
       <WarehouseView {...viewProps} />
+
+      {/* H4 — the movements behind an on-hand figure. */}
+      <StockHistoryDrawer
+        t={safeT}
+        product={historyProduct}
+        isLoading={historyLoading}
+        movements={history?.movements ?? []}
+        movementTotal={history?.movementTotal ?? 0}
+        storedQuantity={history?.storedQuantity ?? historyProduct?.quantity ?? 0}
+        // The server caps at 200. A full page means there is more history than
+        // was returned, so the totals below it are partial — and the drift
+        // warning has to stay quiet rather than fire on every busy product.
+        truncated={(history?.movements.length ?? 0) >= HISTORY_LIMIT}
+        onClose={() => setHistoryProduct(null)}
+        onNavigate={(route) => {
+          setHistoryProduct(null)
+          router.push(route)
+        }}
+      />
     </>
   )
 }

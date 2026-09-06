@@ -3,7 +3,7 @@
 
 import { memo, useCallback, useEffect, useMemo, type ReactNode } from 'react'
 import { cn } from '../../../lib/utils'
-import { Pencil, Trash2 } from 'lucide-react'
+import { History, Pencil, Trash2 } from 'lucide-react'
 import {
   BulkActionBar,
   DataTable,
@@ -27,6 +27,14 @@ interface WarehouseProductListProps {
   stockStatus: (qty: number, min: number) => StockStatus
   stockLabel: (qty: number, min: number) => string
   onNavigate: (id: string) => void
+  /** H4 — open the movements behind this product's on-hand figure. */
+  onOpenHistory?: ((product: Product) => void) | undefined
+  /**
+   * ⚠️ NOT WIRED — see Warehouse-container.tsx.  has no create
+   * form, so a reorder button would navigate somewhere that cannot act on it.
+   * The prop stays declared for when that form exists.
+   */
+  onReorder?: ((product: Product) => void) | undefined
   /** Awaited by bulk delete so partial failures are reported accurately. */
   onDelete: (product: Product) => void | Promise<void>
   deletingId: string | null
@@ -53,6 +61,7 @@ function useProductColumns(
   fmt: (v: number) => string,
   stockStatus: (qty: number, min: number) => StockStatus,
   onNavigate: (id: string) => void,
+  onOpenHistory: WarehouseProductListProps['onOpenHistory'],
 ): TableColumn<Product>[] {
   return useMemo(
     () => [
@@ -149,21 +158,39 @@ function useProductColumns(
         locked: true,
         align: 'end',
         render: (product) => (
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation()
-              onNavigate(product.id)
-            }}
-            aria-label={t('action.edit', 'ویرایش')}
-            className="inline-flex min-h-[36px] min-w-[36px] items-center justify-center rounded-full text-[hsl(var(--fg-secondary))] transition-colors duration-150 hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]"
-          >
-            <Pencil className="size-4" aria-hidden="true" />
-          </button>
+          <div className="inline-flex items-center gap-1">
+            {/* H4 — the movements behind this product's on-hand figure.
+                A separate control, not the row click: the row already opens
+                the editor, and «why is this number wrong» is a different
+                question from «change this number». */}
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation()
+                onOpenHistory?.(product)
+              }}
+              aria-label={t('warehouse.stockHistory', 'تاریخچه‌ی موجودی')}
+              title={t('warehouse.stockHistory', 'تاریخچه‌ی موجودی')}
+              className="inline-flex min-h-[36px] min-w-[36px] items-center justify-center rounded-full text-[hsl(var(--fg-secondary))] transition-colors duration-150 hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]"
+            >
+              <History className="size-4" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation()
+                onNavigate(product.id)
+              }}
+              aria-label={t('action.edit', 'ویرایش')}
+              className="inline-flex min-h-[36px] min-w-[36px] items-center justify-center rounded-full text-[hsl(var(--fg-secondary))] transition-colors duration-150 hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]"
+            >
+              <Pencil className="size-4" aria-hidden="true" />
+            </button>
+          </div>
         ),
       },
     ],
-    [fmt, onNavigate, stockStatus, t],
+    [fmt, onNavigate, onOpenHistory, stockStatus, t],
   )
 }
 
@@ -173,13 +200,14 @@ export const WarehouseProductList = memo(function WarehouseProductList({
   products,
   stockStatus,
   onNavigate,
+  onOpenHistory,
   onDelete,
   search,
   onSearchChange,
   actions,
   emptyState,
 }: WarehouseProductListProps) {
-  const columns = useProductColumns(t, fmt, stockStatus, onNavigate)
+  const columns = useProductColumns(t, fmt, stockStatus, onNavigate, onOpenHistory)
 
   // Bulk delete reuses the same per-product delete the row menu calls, so the
   // stock and authorization side effects are identical to deleting one by one.

@@ -8,6 +8,7 @@ import type { TenancyContext } from './tenancy.service'
 import { DateRange } from '@hisabche/validation'
 import { CacheKeys, withCacheKey } from '../utils/cache'
 import { memoryCache } from '../utils/pagination'
+import { isOutstanding } from './invoices/outstanding.domain'
 
 // ستون invoices.date از نوع timestamptz است. مقایسه‌ی مستقیم با یک رشته‌ی
 // تاریخِ بدون ساعت («2026-08-02») یعنی «تا ساعت ۰۰:۰۰ آن روز»، که کل آن روز
@@ -91,12 +92,12 @@ export function bucketKpisByCurrency(
 
     if (inv.type === 'purchase') {
       bucket.totalPurchases += total
-      if (inv.status !== 'paid') bucket.supplierPayable += total - paid
+      if (isOutstanding(inv)) bucket.supplierPayable += total - paid
       continue
     }
 
     bucket.totalSales += total
-    if (inv.status !== 'paid') bucket.customerDebt += total - paid
+    if (isOutstanding(inv)) bucket.customerDebt += total - paid
     if (inv.status !== 'cancelled' && total - paid > 0) bucket.pendingPayments += total - paid
     if (inv.date) {
       const d = new Date(inv.date)
@@ -163,14 +164,18 @@ export class AnalyticsService {
       )
 
       // بدهی مشتریان فقط از فروش می‌آید.
+      // H1 — the shared predicate, not an inline status comparison. The card is
+      // now clickable and opens the invoice list filtered by `?outstanding=1`;
+      // the two must select the same invoices or the list will not add up to
+      // the number that opened it. One rule, imported by both.
       const customerDebt = invoices.reduce((sum, inv) => {
-        if (inv.status === 'paid') return sum
+        if (!isOutstanding(inv)) return sum
         return sum + (Number(inv.total) || 0) - (Number(inv.paid_amount) || 0)
       }, 0)
 
       // قرینه‌ی آن سمت خرید: چیزی که ما به تأمین‌کننده بدهکاریم.
       const supplierPayable = purchaseInvoices.reduce((sum, inv) => {
-        if (inv.status === 'paid') return sum
+        if (!isOutstanding(inv)) return sum
         return sum + (Number(inv.total) || 0) - (Number(inv.paid_amount) || 0)
       }, 0)
       // ✅ FIX: «فروش امروز» از RPC (get_dashboard_kpis) می‌آمد و همیشه صفر
@@ -373,7 +378,7 @@ export class AnalyticsService {
         const month = inv.date?.slice(0, 7) || ''
 
         totalRevenue += total
-        if (inv.status === 'paid') totalPaid += total
+        if (!isOutstanding(inv)) totalPaid += total
 
         byCurrency[currency] = (byCurrency[currency] || 0) + total
 
