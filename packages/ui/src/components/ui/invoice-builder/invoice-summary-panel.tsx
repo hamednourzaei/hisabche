@@ -9,7 +9,7 @@
 
 import { memo } from 'react'
 import type { CurrencyCode } from '@hisabche/store'
-import type { InvoiceSummary } from '@hisabche/validation'
+import { currencyPrecision, type InvoiceSummary } from '@hisabche/validation'
 import { formatNumber } from '@hisabche/formatting'
 
 import { NumberStepper } from '../number-stepper'
@@ -101,7 +101,7 @@ export const InvoiceSummaryPanel = memo(function InvoiceSummaryPanel({
               {t(`currency.${entry.currency.toLowerCase()}`, entry.currency)})
             </span>
             <span className={cn(valueClass, 'text-[hsl(var(--fg-secondary))]')} dir="ltr">
-              {formatNumber(entry.amount, locale, entry.currency === 'USD' ? 2 : 0)}
+              {formatNumber(entry.amount, locale, currencyPrecision(entry.currency))}
             </span>
           </div>
         ))}

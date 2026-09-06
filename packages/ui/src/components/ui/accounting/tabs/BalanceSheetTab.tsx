@@ -11,6 +11,7 @@ import { AccountingSkeleton } from '../AccountingSkeleton'
 import { AccountingEmptyState } from '../AccountingEmptyState'
 import { useLedgerNumber } from '../components/ledger-table'
 import { useAccountDrilldown } from '../components/use-account-drilldown'
+import { BranchSwitcher, useBranchScope } from '../../branch/branch-scope'
 
 interface DetailRow {
   section: string
@@ -100,7 +101,8 @@ export const BalanceSheetTab = memo(function BalanceSheetTab() {
   const t = useTranslations()
   const n = useLedgerNumber()
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
-  const { data, isLoading } = useBalanceSheet(date)
+  const { branchId } = useBranchScope()
+  const { data, isLoading } = useBalanceSheet(date, branchId)
 
   const safeT = useCallback(
     (key: string, fallback?: string) => {
@@ -143,6 +145,7 @@ export const BalanceSheetTab = memo(function BalanceSheetTab() {
           {t('accounting.balanceSheet.title')}
         </h2>
         <div className="flex items-center gap-3">
+          <BranchSwitcher t={safeT} />
           <SingleDatePicker
             value={date}
             onChange={setDate}

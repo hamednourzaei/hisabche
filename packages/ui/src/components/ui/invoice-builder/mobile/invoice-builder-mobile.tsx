@@ -31,6 +31,7 @@ import {
   type InvoiceColumn,
   type InvoiceGridRow,
   type InvoiceSummary,
+  currencyPrecision,
 } from '@hisabche/validation'
 import { formatNumber } from '@hisabche/formatting'
 import { SUPPORTED_CURRENCIES, type CurrencyCode, type InvoiceDraftCustomer } from '@hisabche/store'
@@ -590,7 +591,7 @@ export const InvoiceBuilderMobile = memo(function InvoiceBuilderMobile({
                 {t(`currency.${entry.currency.toLowerCase()}`, entry.currency)})
               </dt>
               <dd dir="ltr" className="tabular-nums text-[hsl(var(--fg-secondary))]">
-                {formatNumber(entry.amount, locale, entry.currency === 'USD' ? 2 : 0)}
+                {formatNumber(entry.amount, locale, currencyPrecision(entry.currency))}
               </dd>
             </div>
           ))}

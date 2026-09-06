@@ -166,7 +166,32 @@ export interface InvoiceGridRow {
   values: Record<string, string>
 }
 
-/** Decimals a currency is normally written with. */
+/**
+ * Decimals a currency is normally written with.
+ *
+ * ---------------------------------------------------------------------------
+ * ⚠️ L0 — THIS WAS `currency === 'USD' ? 2 : 0`, WRITTEN OUT IN FIVE FILES.
+ *
+ * And it was a SECOND implementation of a rule that already existed:
+ * `FRACTION_DIGITS` in @hisabche/formatting is the precision contract, tested
+ * by `currency-policy.test.ts` («STAGE 4 §8») against every active currency
+ * and every locale.
+ *
+ * Two implementations of one money rule agree until one of them is edited.
+ * This one now delegates, so there is a single answer — G2.
+ *
+ * ⚠️ IT DOES NOT IMPORT `fractionDigits`, AND THAT IS DELIBERATE.
+ *
+ * `@hisabche/validation` and `@hisabche/formatting` are both LEAF packages —
+ * neither depends on the other. Importing one into the other to save four
+ * lines would add a dependency edge to the workspace graph for a rule that is
+ * two branches long.
+ *
+ * Instead the two are kept in step by a test: `currency-policy.test.ts` reads
+ * this function's source and checks it agrees with `FRACTION_DIGITS` for every
+ * active currency. Duplication that a guard holds together is safer than an
+ * architectural edge added in passing (G2 is about MODELS, not about lines).
+ */
 export function currencyPrecision(currency: CurrencyCode): number {
   return currency === 'USD' ? 2 : 0
 }

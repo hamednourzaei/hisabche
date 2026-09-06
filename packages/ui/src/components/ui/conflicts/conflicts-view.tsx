@@ -54,6 +54,7 @@ import {
   TableHeader,
   TableRow,
 } from '../capability/capability-kit'
+import { routeForEntity } from '../../../lib/entity-route'
 
 export interface ConflictsViewProps {
   t: (key: string, fallback?: string) => string
@@ -67,6 +68,8 @@ export interface ConflictsViewProps {
   canResolve: boolean
   onStatusChange: (status: 'open' | 'resolved' | 'all') => void
   onSelect: (conflictId: string) => void
+  /** H8 — open the record a conflict is about. */
+  onOpenRecord?: ((route: string) => void) | undefined
   onResolve: (input: {
     choice: ResolutionChoice
     fieldChoices?: Record<string, 'server' | 'client'>
@@ -103,11 +106,19 @@ export const ConflictsView = memo(function ConflictsView({
   onStatusChange,
   onSelect,
   onResolve,
+  onOpenRecord,
   onRefresh,
 }: ConflictsViewProps) {
   const [choice, setChoice] = useState<ResolutionChoice>('keep_server')
   const [fieldChoices, setFieldChoices] = useState<Record<string, 'server' | 'client'>>({})
   const [reason, setReason] = useState('')
+
+  // H8 — where the record in conflict lives, or null for a type with no
+  // detail screen. Computed once per render; no hook, so no ordering concern.
+  const recordRoute =
+    selected?.entityType && selected?.entityId
+      ? routeForEntity(selected.entityType, selected.entityId)
+      : null
 
   const divergences = selected?.divergences ?? []
   const financialCount = divergences.filter((d) => d.financial).length
@@ -255,6 +266,21 @@ export const ConflictsView = memo(function ConflictsView({
                 }
               />
             </StatGrid>
+
+            {/* H8 — the record in conflict, openable.
+                A person deciding which version wins needs to see what the row
+                looks like now. `routeForEntity` returns null for a type with
+                no detail screen, and then nothing is offered rather than a
+                link to a list that answers a different question. */}
+            {recordRoute && onOpenRecord ? (
+              <button
+                type="button"
+                onClick={() => onOpenRecord(recordRoute)}
+                className="mt-3 rounded text-sm text-[hsl(var(--color-primary))] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))]"
+              >
+                {t('conflicts.openRecord', 'مشاهده‌ی رکورد')}
+              </button>
+            ) : null}
           </Panel>
 
           <Panel

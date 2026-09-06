@@ -59,7 +59,30 @@ export const optionalStringSchema = z
 // Business-specific
 // ============================================
 
-/** Currency codes supported */
+/**
+ * Currency codes supported.
+ *
+ * ⚠️ L0.1 — THIS LIST IS DELIBERATE AND TESTED. DO NOT WIDEN IT CASUALLY.
+ *
+ * `packages/formatting/src/__tests__/currency-policy.test.ts` («STAGE 4 §8/§9»)
+ * pins this exact enum and asserts one specific inactive currency stays absent
+ * from SEVEN files. It is a product policy, not leftover hardcoding.
+ *
+ * ⚠️ That test greps this file for the inactive code as a literal, so naming
+ * it here — even inside a comment explaining the policy — turns the guard red.
+ * Which is why it is not named.
+ *
+ * Widening it also breaks money formatting: `FRACTION_DIGITS` in
+ * @hisabche/formatting covers exactly these four, and §9 requires that an
+ * unknown code resolve to `undefined` rather than silently borrowing another
+ * currency's precision. A fifth code would format with no precision contract
+ * at all.
+ *
+ * Adding a currency therefore means: this enum, the store union, the web hook,
+ * FRACTION_DIGITS, CURRENCY_SIGN, the mobile and desktop selectors, and the
+ * policy test — together, deliberately. See the stop-condition note in
+ * .claude/HANDOFF-PHASES-G-TO-O.md.
+ */
 export const currencyCodeSchema = z.enum(['AFN', 'USD', 'PKR', 'IRR'])
 
 /** Payment methods */

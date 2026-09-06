@@ -3,14 +3,23 @@
 
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { useEmployee, useUpdateEmployee, usePayrolls, useCreatePayroll } from '@hisabche/api'
+import {
+  useEmployee,
+  useUpdateEmployee,
+  usePayrolls,
+  useCreatePayroll,
+  useRecordHistory,
+} from '@hisabche/api'
 import { EmployeeDetailView } from '../employee-detail-view'
+import { EmployeeBranchesPanel, type EmployeeBranch } from '../employee-branches-panel'
+import { RecordHistoryPanel } from '../../activity/record-history-panel'
 
 export function EmployeeDetailContainer({ id }: { id: string }) {
   const t = useTranslations()
   const router = useRouter()
   const { data: employee, isLoading } = useEmployee(id)
   const { data: payrolls, isLoading: isLoadingPayrolls } = usePayrolls(id)
+  const { data: recordHistory, isLoading: historyLoading } = useRecordHistory('employee', id)
   const updateEmployee = useUpdateEmployee()
   const createPayroll = useCreatePayroll()
 
@@ -58,6 +67,31 @@ export function EmployeeDetailContainer({ id }: { id: string }) {
       onUpdate={handleUpdate}
       onAddPayment={handleAddPayment}
       onBack={() => router.push('/team-and-payroll')} // G1: canonical people route
+      extraSlot={
+        <div className="mt-6 space-y-4">
+          {/* H5 — read back from `employee_branch_assignments`, which G2's form
+              has been writing to with nothing able to read it. */}
+          <EmployeeBranchesPanel
+            t={safeT}
+            branches={
+              ((employee as { branches?: EmployeeBranch[] } | undefined)?.branches ??
+                []) as EmployeeBranch[]
+            }
+            onOpenBranch={() => router.push('/team-and-payroll?tab=branches')}
+          />
+          {/* H6 — the audit trail for this employee record. */}
+          <RecordHistoryPanel
+            t={safeT}
+            isLoading={historyLoading}
+            entries={(recordHistory ?? []).map((entry) => ({
+              id: entry.id,
+              action: entry.action,
+              createdAt: entry.created_at,
+              userId: entry.user_id ?? null,
+            }))}
+          />
+        </div>
+      }
     />
   )
 }

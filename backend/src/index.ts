@@ -45,6 +45,9 @@ import { productRoutes } from './routes/product.routes'
 import { customerRoutes } from './routes/customer.routes'
 import { transactionRoutes } from './routes/transaction.routes'
 import { warehouseRoutes } from './routes/warehouse.routes'
+import { cycleCountRoutes } from './routes/cycle-count.routes'
+import { inventoryInsightsRoutes } from './routes/inventory-insights.routes'
+import { intelligenceForecastRoutes } from './routes/intelligence-forecast.routes'
 import { humanResourcesRoutes } from './routes/human-resources.routes'
 import { projectRoutes } from './routes/project.routes'
 import { workspaceRoutes } from './routes/workspace.routes'
@@ -464,6 +467,9 @@ export async function buildServer(): Promise<typeof server> {
   await server.register(customerRoutes)
   await server.register(transactionRoutes)
   await server.register(warehouseRoutes)
+  await server.register(cycleCountRoutes)
+  await server.register(inventoryInsightsRoutes)
+  await server.register(intelligenceForecastRoutes)
   await server.register(humanResourcesRoutes)
   await server.register(projectRoutes)
   await server.register(workspaceRoutes)

@@ -7,9 +7,21 @@ import { useTranslations } from 'next-intl'
 import { useWarehouse } from '../../../../hooks/warehouse/use-warehouse'
 import { WarehouseView } from '../warehouse-view'
 import { AddProductModal } from '../../add-product-modal'
+import { StockHistoryDrawer } from '../stock-history-drawer'
 import { fmt } from '../../../../lib/warehouse/warehouse-format'
+import type { Product } from '../../../../lib/warehouse/warehouse-types'
 import { useQueryClient } from '@tanstack/react-query'
-import { productKeys } from '@hisabche/api'
+import { productKeys, useStockHistory } from '@hisabche/api'
+
+/**
+ * H4 — the server's own cap on `GET /products/:id/stock-history`.
+ *
+ * Stated here as well so the drawer can tell «this is the whole history» from
+ * «this is the last 200 movements». It matters: a truncated history never sums
+ * to the stored quantity, and without knowing which case it is the drawer would
+ * warn about projection drift on every busy product.
+ */
+const HISTORY_LIMIT = 200
 
 const CURRENCIES = [
   { code: 'AFN', label: 'افغانی', rate: 1 },

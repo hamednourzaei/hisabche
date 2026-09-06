@@ -2,6 +2,7 @@
 'use client'
 
 import { memo, useCallback, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import {
   useWorkflowInstances,
@@ -55,6 +56,7 @@ const ApprovalInstanceCard = memo(function ApprovalInstanceCard({
   } = useWorkflow(instance.workflow_id)
   const { mutateAsync: performAction } = usePerformWorkflowAction()
   const toast = useToast()
+  const router = useRouter()
 
   const handleAction = useCallback(
     async (action: 'approved' | 'rejected' | 'cancelled', comment?: string) => {
@@ -107,6 +109,7 @@ const ApprovalInstanceCard = memo(function ApprovalInstanceCard({
       instanceId={instance.id}
       entityType={instance.entity_type}
       entityId={instance.entity_id}
+      onOpenDocument={(route) => router.push(route)}
       totalSteps={instance.total_steps}
       startedAt={instance.started_at}
       isPending={NEEDS_ACTION_STATUSES.has(instance.status)}

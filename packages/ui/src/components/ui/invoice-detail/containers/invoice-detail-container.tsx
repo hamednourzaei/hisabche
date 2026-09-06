@@ -11,10 +11,12 @@ import {
   useWorkflow,
   usePerformWorkflowAction,
   useInvoiceRelated,
+  useRecordHistory,
 } from '@hisabche/api'
 import { InvoiceDetailPage, type InvoiceDetailDisplay } from '../invoice-detail-page'
 import InvoicePDFDownload from '../InvoicePDFDownload'
 import { InvoiceRelatedPanel } from '../invoice-related-panel'
+import { RecordHistoryPanel } from '../../activity/record-history-panel'
 import { useQueryClient } from '@tanstack/react-query'
 
 /* ═══════════════════════════════════════════════════════════
@@ -69,6 +71,9 @@ export function InvoiceDetailContainer() {
   // H2 — the payments behind `paid_amount`, and the journal entry this invoice
   // produced. Both lived in the database with nothing able to reach them.
   const { data: related, isLoading: relatedLoading } = useInvoiceRelated(id)
+
+  // H6 — every recorded change to THIS invoice.
+  const { data: recordHistory, isLoading: historyLoading } = useRecordHistory('invoice', id)
 
   // The journal has no per-entry screen yet, so this opens the accounting
   // ledger with the entry named in the URL rather than pretending a detail
@@ -325,6 +330,22 @@ export function InvoiceDetailContainer() {
             allocatedTotal={related?.allocatedTotal ?? 0}
             storedPaidAmount={display.paidAmount}
             onOpenJournalEntry={handleOpenJournalEntry}
+          />
+        ) : null
+      }
+      /* H6 — «تاریخچه‌ی تغییرات این رکورد». `useRecordHistory` was written in
+         G4 and had zero consumers; this is the first place it renders. */
+      historySlot={
+        display ? (
+          <RecordHistoryPanel
+            t={safeT}
+            isLoading={historyLoading}
+            entries={(recordHistory ?? []).map((entry) => ({
+              id: entry.id,
+              action: entry.action,
+              createdAt: entry.created_at,
+              userId: entry.user_id ?? null,
+            }))}
           />
         ) : null
       }

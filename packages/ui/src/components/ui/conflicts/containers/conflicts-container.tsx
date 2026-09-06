@@ -8,6 +8,7 @@
 // ============================================
 
 import { memo, useCallback, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { useConflict, useConflicts, useResolveConflict, type ResolutionChoice } from '@hisabche/api'
 import { ConflictsView } from '../conflicts-view'
@@ -18,6 +19,8 @@ export const ConflictsContainer = memo(function ConflictsContainer() {
     const value = translate(key as Parameters<typeof translate>[0])
     return value && value !== key ? value : (fallback ?? key)
   }
+
+  const router = useRouter()
 
   const [status, setStatus] = useState<'open' | 'resolved' | 'all'>('open')
   const [chosenId, setChosenId] = useState<string | null>(null)
@@ -99,6 +102,7 @@ export const ConflictsContainer = memo(function ConflictsContainer() {
       onStatusChange={handleStatusChange}
       onSelect={setChosenId}
       onResolve={handleResolve}
+      onOpenRecord={(route) => router.push(route)}
       onRefresh={handleRefresh}
     />
   )

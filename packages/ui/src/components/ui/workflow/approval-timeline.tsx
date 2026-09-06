@@ -9,6 +9,7 @@
 
 import { useState, useCallback, useMemo, memo } from 'react'
 import { cn } from '../../../lib/utils'
+import { routeForEntity } from '../../../lib/entity-route'
 import { Check, X, Forward, Clock, User, Loader2 } from 'lucide-react'
 
 /* ═══════════════════════════════════════════════════════════════
@@ -48,6 +49,8 @@ interface ApprovalCardProps {
   // تأیید است. این داده‌ها از قبل در instance موجود بودند، فقط رندر نمی‌شدند.
   entityType?: string | undefined
   entityId?: string | undefined
+  /** H7 — open the document under approval. Omit and the id stays plain text. */
+  onOpenDocument?: ((route: string) => void) | undefined
   totalSteps?: number | undefined
   startedAt?: string | undefined
 }
@@ -180,6 +183,7 @@ export const ApprovalCard = memo(function ApprovalCard({
   disabled = false,
   entityType,
   entityId,
+  onOpenDocument,
   totalSteps,
   startedAt,
 }: ApprovalCardProps) {
@@ -211,6 +215,11 @@ export const ApprovalCard = memo(function ApprovalCard({
 
   const isDisabled = disabled || !isPending || loading !== null
 
+  // H7 — where the document under approval lives, or null when its type has no
+  // detail screen. Same strict mapper the audit table uses: it refuses to
+  // fabricate a destination rather than landing the approver on a list.
+  const documentRoute = entityType && entityId ? routeForEntity(entityType, entityId) : null
+
   return (
     <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-4 sm:p-5 space-y-4">
       {/* Header — چه چیزی در انتظار تأیید است */}
@@ -219,13 +228,29 @@ export const ApprovalCard = memo(function ApprovalCard({
           {entityType
             ? t(`workflow.entity.${entityType}`, entityType)
             : t('workflow.title', 'فرآیند تأیید')}
+          {/* H7 — the document itself, not a truncated uuid.
+              An approver was shown «فاکتور #a3f19c2b» and had no way to open
+              the thing they were being asked to approve. `routeForEntity`
+              answers null for a type with no detail screen (a purchase order —
+              gap 13), and then this stays exactly what it was: plain text. */}
           {entityId ? (
-            <span
-              className="ms-1.5 font-mono text-[11px] font-normal text-[hsl(var(--fg-tertiary))]"
-              dir="ltr"
-            >
-              #{entityId.slice(0, 8)}
-            </span>
+            documentRoute && onOpenDocument ? (
+              <button
+                type="button"
+                onClick={() => onOpenDocument(documentRoute)}
+                className="ms-1.5 rounded font-mono text-[11px] font-normal text-[hsl(var(--color-primary))] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))]"
+                dir="ltr"
+              >
+                #{entityId.slice(0, 8)}
+              </button>
+            ) : (
+              <span
+                className="ms-1.5 font-mono text-[11px] font-normal text-[hsl(var(--fg-tertiary))]"
+                dir="ltr"
+              >
+                #{entityId.slice(0, 8)}
+              </span>
+            )
           ) : null}
         </h4>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[hsl(var(--fg-secondary))]">

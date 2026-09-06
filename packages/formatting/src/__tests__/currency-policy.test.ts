@@ -117,6 +117,33 @@ describe('§9 EUR is NOT an active product currency', () => {
   })
 })
 
+describe('L0 — the grid’s precision rule agrees with the contract', () => {
+  /**
+   * `currencyPrecision` in @hisabche/validation is a SECOND expression of
+   * `FRACTION_DIGITS`. It is not imported, because validation and formatting
+   * are both leaf packages and neither depends on the other — see the note on
+   * the function.
+   *
+   * Duplication is acceptable only while something holds the two together.
+   * This is that something.
+   */
+  const source = read('packages/validation/src/schemas/invoice-grid.ts')
+  const body = /export function currencyPrecision\([^)]*\)[^{]*\{([\s\S]*?)\n\}/.exec(source)?.[1]
+
+  it('is still a two-branch rule this test can reason about', () => {
+    // If it grows a lookup table or a fallback, this test must be rewritten
+    // rather than silently passing on a rule it no longer understands.
+    expect(body).toBeDefined()
+    expect(body).toContain("currency === 'USD' ? 2 : 0")
+  })
+
+  it.each(ACTIVE)('agrees with FRACTION_DIGITS for %s', (code) => {
+    // The rule the grid applies, evaluated the same way the source states it.
+    const gridAnswer = code === 'USD' ? 2 : 0
+    expect(gridAnswer).toBe(FRACTION_DIGITS[code])
+  })
+})
+
 describe('§9 no silent fallback to another currency', () => {
   it('an unknown code cannot resolve to USD precision', () => {
     // The type forbids this; the runtime must not paper over it either.

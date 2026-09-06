@@ -12,6 +12,12 @@ import { supabase } from '../../db'
 import { ConflictError, DatabaseError, NotFoundError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
 import type { TenancyContext } from '../tenancy.service'
+import {
+  NEGATIVE_STOCK_RESOLUTIONS,
+  breachDivergences,
+  breachKey,
+  type NegativeStockBreach,
+} from '../pos/negative-stock.domain'
 
 import {
   applyResolution,
@@ -156,6 +162,98 @@ export class ConflictService {
     }
 
     return { status: 'recorded', conflictId: data?.id }
+  }
+
+  /**
+   * M2 — file an oversell: two offline sales that together took stock below
+   * zero.
+   *
+   * ---------------------------------------------------------------------------
+   * ⚠️ WHY THIS IS A SIBLING OF `record()` AND NOT A CALL TO IT
+   *
+   * `record()` runs `classifyConflict`, which compares a server row against a
+   * client payload field by field. That is the right model for «the same record
+   * was edited in two places».
+   *
+   * An oversell is not that. BOTH sales are correct, neither row is wrong, and
+   * there is no field on which they disagree — the invariant was broken by
+   * their SUM. Feeding synthetic rows to `classifyConflict` to make it fit
+   * would produce a divergence report that describes a disagreement nobody had.
+   *
+   * So the classification differs and everything else is shared: the same
+   * table, the same `/conflicts` screen, the same resolution audit trail. That
+   * is extending the model, not building a second one (G2).
+   *
+   * ---------------------------------------------------------------------------
+   * ⚠️ IT IS FILED, NEVER ACTED ON
+   *
+   * M2.4 forbids silent reject, overwrite, delete and stock correction. This
+   * method writes a row and returns. It does not touch stock, does not reverse
+   * a sale, and does not clamp anything — the negative on-hand stays visible,
+   * which Phase C already treats as information rather than corruption.
+   */
+  async recordStockBreach(
+    // Same shape as `record()`: filing a conflict is the record of a refused
+    // or broken operation, not an authorized one, and the sync path has no
+    // role to offer.
+    ctx: { workspaceId: string; userId: string },
+    input: {
+      productId: string
+      /** The sync mutation that tipped it negative. */
+      mutationId: string
+      breach: NegativeStockBreach
+    },
+  ): Promise<{ conflictId: string | undefined }> {
+    const { breach } = input
+
+    const { data, error } = await supabase
+      .from('sync_conflicts')
+      .upsert(
+        {
+          workspace_id: ctx.workspaceId,
+          entity_type: 'product',
+          entity_id: input.productId,
+          // Keyed by mutation AND product — one mutation can oversell several,
+          // and `(workspace_id, mutation_id)` is unique, so a bare mutation id
+          // would let the second product overwrite the first's conflict.
+          //
+          // This also gives replay-idempotency for free (M2.5): re-sending the
+          // mutation upserts the same row instead of filing a second conflict.
+          mutation_id: breachKey(input.mutationId, input.productId),
+          operation: 'negative_stock',
+          server_version: null,
+          server_row: {
+            product_id: input.productId,
+            on_hand_after: breach.onHandAfter,
+            shortfall: breach.shortfall,
+          },
+          client_version: null,
+          client_payload: {
+            quantity_sold: breach.quantitySold,
+            device_believed_on_hand: breach.deviceBelievedOnHand,
+            sold_beyond_own_belief: breach.soldBeyondOwnBelief,
+            // What a person may do about it, and which of those the product
+            // can currently carry out. Two of the three do not exist yet.
+            resolutions: NEGATIVE_STOCK_RESOLUTIONS,
+          },
+          divergences: breachDivergences(breach),
+          // ALWAYS. Stock sold that did not exist is money and goods, and it
+          // goes to a person — there is no automatic side to take.
+          has_financial_divergence: true,
+          status: 'open',
+          resolution: null,
+          resolution_reason: null,
+          resolved_row: null,
+          resolved_at: null,
+          detected_by: ctx.userId,
+        },
+        { onConflict: 'workspace_id,mutation_id' },
+      )
+      .select('id')
+      .single()
+
+    if (error) throw new DatabaseError('Failed to record the stock conflict', error)
+    return { conflictId: data?.id }
   }
 
   async list(ctx: TenancyContext, status: 'open' | 'resolved' | 'all' = 'open') {

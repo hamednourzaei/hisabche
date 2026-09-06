@@ -16,6 +16,9 @@ import { supabase } from '../db'
 import { sod } from './authorization'
 import { scopes } from './authorization/scope.service'
 import { OUTSTANDING_OR_FILTER } from './invoices/outstanding.domain'
+import { toBaseQuantity, type ProductUnitOption } from './inventory/unit-conversion.domain'
+import { conflicts } from './conflict'
+import { detectBreaches } from './pos/negative-stock.domain'
 import { WorkflowService } from '../services/workflow.service'
 import { NotificationService } from '../services/notification.service'
 import {
@@ -1321,6 +1324,20 @@ export class InvoiceService {
       productMap.set(product.id, product.quantity)
     }
 
+    // ─── L1 — MULTI-UOM: the line's unit becomes the BASE quantity ──────────
+    //
+    // «2 cartons» must reach `stock_movements` as «48 pieces». The conversion
+    // is here, in the service, and NOT in the UI — the spec's own warning. A
+    // conversion enforced on screen is absent from the API, the importer, the
+    // mobile app and every offline write that syncs in later.
+    //
+    // ⚠️ A product with NO declared units converts by 1, which is every
+    // product that existed before L1. See unit-conversion.domain.ts: driving
+    // this off `units.conversion_factor` instead would re-read every
+    // historical «5 kg» line as 5000 and corrupt the source of truth for every
+    // weighed product.
+    const unitOptions = await this.loadProductUnits(workspaceId, productIds)
+
     // ─── PHASE C — the movement IS the update ────────────────────────────────
     //
     // This used to read each product's quantity, add the delta in Node, and
@@ -1350,24 +1367,41 @@ export class InvoiceService {
       // Products outside this workspace never entered productMap, so naming
       // another shop's product id moves nothing (lesson 17).
       .filter((item) => item.productId && productMap.has(item.productId))
-      .map((item) => ({
-        product_id: item.productId,
-        // The movement must name the transaction that caused it. Hardcoding
-        // "sale" made every stock movement look like a sale in reports.
-        type: direction === 1 ? 'purchase' : 'sale',
-        quantity: direction * (Number(item.quantity) || 0),
-        reference_type: 'invoice',
-        // H4 — WHICH invoice. Omitted before, so `reference_type` named a kind
-        // of document and nothing could reach the document itself.
+      .map((item) => {
+        // L1 — the line's own unit, converted to the product's base.
         //
-        // `?? null` rather than dropping the key: an explicit null records
-        // «this movement has no document» honestly, and is what the column
-        // already holds for every historical row. Guessing one would be worse
-        // (§12) — old rows stay unknown.
-        reference_id: invoiceId ?? null,
-        workspace_id: workspaceId,
-        user_id: userId,
-      }))
+        // ⚠️ REFUSED, not silently passed through, when the unit is not one
+        // the product declares: storing a carton count as a piece count is a
+        // wrong quantity in the source of truth that nothing would flag.
+        const converted = toBaseQuantity(
+          Number(item.quantity) || 0,
+          item.unit ?? null,
+          unitOptions.get(item.productId) ?? [],
+        )
+
+        if (!converted.ok) {
+          throw new ValidationError(`${converted.code}: product ${item.productId}`)
+        }
+
+        return {
+          product_id: item.productId,
+          // The movement must name the transaction that caused it. Hardcoding
+          // "sale" made every stock movement look like a sale in reports.
+          type: direction === 1 ? 'purchase' : 'sale',
+          quantity: direction * converted.baseQuantity,
+          reference_type: 'invoice',
+          // H4 — WHICH invoice. Omitted before, so `reference_type` named a kind
+          // of document and nothing could reach the document itself.
+          //
+          // `?? null` rather than dropping the key: an explicit null records
+          // «this movement has no document» honestly, and is what the column
+          // already holds for every historical row. Guessing one would be worse
+          // (§12) — old rows stay unknown.
+          reference_id: invoiceId ?? null,
+          workspace_id: workspaceId,
+          user_id: userId,
+        }
+      })
 
     if (movements.length > 0) {
       const { error: movementError } = await supabase.from('stock_movements').insert(movements)
@@ -1379,7 +1413,129 @@ export class InvoiceService {
       if (movementError) {
         throw new DatabaseError('Failed to record stock movements', movementError)
       }
+
+      // ─── M2 — did this sale take stock below zero? ────────────────────────
+      //
+      // Two tills selling the last units concurrently, or one sale exceeding
+      // what is on the shelf. BOTH sales stay recorded: M2.4 forbids silent
+      // reject, overwrite, delete and stock correction. The negative on-hand
+      // stays visible — Phase C already treats it as information — and a
+      // conflict goes to a person.
+      //
+      // Read back rather than predicted: the quantity is maintained by the
+      // projection trigger, and computing it here would be the read-modify-
+      // write Phase C removed.
+      if (direction === -1 && invoiceId) {
+        await this.flagNegativeStock(ctx, invoiceId, movements)
+      }
     }
+  }
+
+  /**
+   * M2 — file a conflict for every product this sale pushed below zero.
+   *
+   * ⚠️ NEVER THROWS. The sale is already recorded and the money is already
+   * taken; failing to FILE the conflict must not undo it. A swallowed error
+   * here costs the warning, not the record — the negative stock is still
+   * visible in the product list and in H4's movement history either way.
+   */
+  private async flagNegativeStock(
+    ctx: TenancyContext,
+    invoiceId: string,
+    movements: { product_id: string; quantity: number }[],
+  ): Promise<void> {
+    try {
+      const productIds = [...new Set(movements.map((m) => m.product_id))]
+
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, quantity')
+        .eq('workspace_id', ctx.workspaceId)
+        .in('id', productIds)
+        .lt('quantity', 0)
+
+      if (error || !data || data.length === 0) return
+
+      const soldByProduct = new Map<string, number>()
+      for (const movement of movements) {
+        soldByProduct.set(
+          movement.product_id,
+          (soldByProduct.get(movement.product_id) ?? 0) + Math.abs(movement.quantity),
+        )
+      }
+
+      const breaches = detectBreaches(
+        data.map((product) => ({
+          productId: String(product.id),
+          onHandAfter: Number(product.quantity) || 0,
+          quantitySold: soldByProduct.get(String(product.id)) ?? 0,
+          // The online path has no «what the device believed» — it read the
+          // live figure. Left null rather than filled with the current
+          // quantity, which would be a fabricated belief (§12).
+          deviceBelievedOnHand: null,
+        })),
+      )
+
+      for (const breach of breaches) {
+        // Keyed by the INVOICE, so re-saving the same invoice updates the same
+        // conflict instead of filing another (M2.5).
+        await conflicts.recordStockBreach(
+          { workspaceId: ctx.workspaceId, userId: ctx.userId },
+          { productId: breach.productId, mutationId: invoiceId, breach },
+        )
+      }
+    } catch (err) {
+      console.error('[Invoice] negative stock detected but the conflict was not filed:', err)
+    }
+  }
+
+  /**
+   * L1 — the units each product may be traded in.
+   *
+   * ⚠️ AN EMPTY MAP IS THE CORRECT ANSWER, NOT A FAILURE.
+   *
+   * `product_units` is opt-in: no rows means the product is single-unit and
+   * its quantity is already the base, which is every product that existed
+   * before L1. A missing TABLE means the same thing on a database that has not
+   * run phase-l-02 — so a 42P01 returns an empty map rather than failing the
+   * invoice. Refusing to sell because a units table is absent would be a far
+   * worse failure than not converting.
+   */
+  private async loadProductUnits(
+    workspaceId: string,
+    productIds: string[],
+  ): Promise<Map<string, ProductUnitOption[]>> {
+    const byProduct = new Map<string, ProductUnitOption[]>()
+    if (productIds.length === 0) return byProduct
+
+    const { data, error } = await supabase
+      .from('product_unit_options')
+      .select(
+        'product_id, unit_id, unit_code, conversion_factor_to_base, is_base_unit, is_purchase_default, is_sale_default',
+      )
+      .eq('workspace_id', workspaceId)
+      .in('product_id', productIds)
+
+    if (error) {
+      const missing = error.code === '42P01' || error.code === 'PGRST205' || error.code === '42703'
+      if (missing) return byProduct
+      throw new DatabaseError('Failed to load product units', error)
+    }
+
+    for (const row of data ?? []) {
+      const list = byProduct.get(row.product_id) ?? []
+      list.push({
+        unitId: String(row.unit_id),
+        unitCode: String(row.unit_code),
+        conversionFactorToBase: Number(row.conversion_factor_to_base) || 1,
+        isBaseUnit: Boolean(row.is_base_unit),
+        isPurchaseDefault: Boolean(row.is_purchase_default),
+        isSaleDefault: Boolean(row.is_sale_default),
+      })
+      byProduct.set(row.product_id, list)
+    }
+
+    return byProduct
   }
 
   // ─── Tax ─────────────────────────────────────────────────────────────────

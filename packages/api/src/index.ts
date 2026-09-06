@@ -146,6 +146,11 @@ export {
   type StockMovementRecord,
 } from './hooks/stock-history'
 
+// ─── Workspace backup (G7) ────────────────────────────────
+// The real rows, not the localStorage list of backups that never contained
+// anything.
+export { useWorkspaceBackup, type WorkspaceBackup, type WorkspaceBackupMeta } from './hooks/backup'
+
 // ─── Realtime ─────────────────────────────────────────────
 export { useRealtime, useActiveWorkspaceId } from './hooks/useRealtime'
 

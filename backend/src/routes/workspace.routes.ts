@@ -14,8 +14,10 @@ import {
   setMemberSuspensionSchema,
 } from '@hisabche/validation'
 import { WorkspaceService } from '../services/workspace.service'
+import { BackupService } from '../services/workspace/backup.service'
 import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
+import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 
 const toJsonSchema = (schema: any) => {
@@ -26,6 +28,51 @@ const toJsonSchema = (schema: any) => {
 
 export async function workspaceRoutes(fastify: FastifyInstance) {
   const svc = new WorkspaceService()
+  const backupSvc = new BackupService()
+
+  // ─── GET /api/workspaces/backup ─────────────────────────
+  //
+  // G7 — a backup that contains the business's actual data.
+  //
+  // The settings button used to download `useBackupStore().exportData()`: the
+  // LIST OF PREVIOUS BACKUP ENTRIES from localStorage, plus a client-side
+  // audit log. No invoices, no customers, no products. It would have been
+  // discovered worthless at the moment someone needed it.
+  //
+  // ⚠️ `requireWorkspaceContext`, so the workspace comes from the verified
+  // context and never from the request — a backup addressed by a workspace id
+  // in the URL would be the widest possible IDOR in the product.
+  //
+  // Uncached, and declared BEFORE `/api/workspaces/:id` so `backup` is never
+  // read as a workspace id.
+  fastify.get(
+    '/api/workspaces/backup',
+    {
+      preHandler: [authenticate, requireWorkspaceContext],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const backup = await backupSvc.export(request.tenancy)
+
+        // Sent as an attachment with a dated filename, so the browser saves it
+        // instead of rendering a wall of JSON.
+        const stamp = new Date().toISOString().slice(0, 10)
+        return reply
+          .header('Content-Type', 'application/json; charset=utf-8')
+          .header('Content-Disposition', `attachment; filename="hisabche-backup-${stamp}.json"`)
+          .send(backup)
+      } catch (err) {
+        // `ForbiddenError` is a 403 and lands here — a member who is not the
+        // owner is refused, not told the server crashed.
+        if (err instanceof BaseError && err.statusCode < 500) {
+          const code = /^[A-Z][A-Z_]{6,}/.exec(err.message)?.[0]
+          return reply.code(err.statusCode).send({ error: err.message, code: code ?? err.name })
+        }
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to export the workspace backup' })
+      }
+    },
+  )
 
   fastify.get(
     '/api/workspaces',

@@ -9,6 +9,7 @@ import { ConflictError, DatabaseError, NotFoundError } from '../../errors/databa
 import { ValidationError } from '../../errors/validation.error'
 import { memoryCache } from '../../utils/pagination'
 import type { TenancyContext } from '../tenancy.service'
+import { learnPatterns, learnedBonus } from './match-learning.domain'
 
 import {
   statementLineKey,
@@ -287,7 +288,69 @@ export class BankingService {
 
     const entries = await this.loadBookEntries(ctx, statement.account_id, windowStart, windowEnd)
 
-    return { statementId, suggestions: suggestMatches(lines, entries) }
+    // ─── N1 — what previous reconciliations teach this one ─────────────────
+    //
+    // `suggestMatches` already scores reference, amount, date and party. The
+    // signal it lacked is HISTORY: a bill arriving every month as «DABS KABUL
+    // 4471» has been matched to the same supplier eleven times and was still
+    // scored from scratch.
+    //
+    // The hint only ever RAISES a score, is capped below the exact-reference
+    // signal, and reconciles nothing — a person still confirms every match.
+    const learned = await this.learnedPatterns(ctx)
+
+    const suggestions = suggestMatches(lines, entries).map((suggestion) => {
+      const line = lines.find((candidate) => candidate.id === suggestion.statementLineId)
+      const entry = entries.find((candidate) => candidate.id === suggestion.bookEntryId)
+      if (!line || !entry) return suggestion
+
+      // Keyed on the PARTY NAME, not the entry id: an entry id is unique to one
+      // month's payment and would make every pattern unlearnable.
+      const { bonus, pattern } = learnedBonus(line.description, entry.partyName ?? null, learned)
+      if (bonus <= 0) return suggestion
+
+      // Capped at 1: a bonus that pushed a score past certainty would make a
+      // habit look like a fact.
+      const score = Math.min(1, suggestion.score + bonus)
+
+      return {
+        ...suggestion,
+        score,
+        reasons: [...suggestion.reasons, 'learned_pattern' as const],
+        learnedPattern: pattern,
+      }
+    })
+
+    return { statementId, suggestions }
+  }
+
+  /**
+   * N1 — the confirmed matches this workspace has already made.
+   *
+   * Read from lines that a person actually reconciled. Unconfirmed suggestions
+   * are deliberately NOT included: learning from the system's own guesses is
+   * how one early mistake becomes self-reinforcing.
+   */
+  private async learnedPatterns(ctx: TenancyContext) {
+    const { data, error } = await supabase
+      .from('bank_statement_lines')
+      .select('description, matched_party')
+      .eq('workspace_id', ctx.workspaceId)
+      .not('matched_party', 'is', null)
+      .order('on_date', { ascending: false })
+      .limit(2000)
+
+    // History is an enhancement. Without it the suggestions are exactly what
+    // they were before N1, which is a working feature — failing the whole
+    // reconciliation screen over it would be a worse trade.
+    if (error || !data) return new Map()
+
+    return learnPatterns(
+      data.map((row: Record<string, any>) => ({
+        description: String(row.description ?? ''),
+        counterpartyId: String(row.matched_party),
+      })),
+    )
   }
 
   /**
@@ -333,6 +396,12 @@ export class BankingService {
       matched_at: new Date().toISOString(),
       matched_by: ctx.userId,
       difference_reason: input.differenceReason ?? null,
+      // N1 — the stable fact, kept so the scorer can learn from it.
+      //
+      // `matched_to` is the ENTRY id: unique to this month's payment, and
+      // therefore useless as a pattern. The party name is what repeats, and it
+      // is discarded the moment this method returns unless it is written here.
+      matched_party: entry.partyName ?? null,
     }
 
     const write = (payload: Record<string, unknown>) =>
@@ -478,7 +547,15 @@ export class BankingService {
 
     const { error } = await supabase
       .from('bank_statement_lines')
-      .update({ matched_to: null, matched_kind: null, matched_at: null, matched_by: null })
+      // N1 — `matched_party` is cleared too. A match somebody UNDID must stop
+      // teaching the scorer, or a corrected mistake reinforces itself.
+      .update({
+        matched_to: null,
+        matched_kind: null,
+        matched_at: null,
+        matched_by: null,
+        matched_party: null,
+      })
       .eq('workspace_id', ctx.workspaceId)
       .eq('id', statementLineId)
 

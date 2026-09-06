@@ -115,10 +115,19 @@ export const accountingKeys = {
   all: ['accounting'] as const,
   accounts: () => [...accountingKeys.all, 'accounts'] as const,
   journalEntries: () => [...accountingKeys.all, 'journal'] as const,
-  trialBalance: (date: string) => [...accountingKeys.all, 'trialBalance', date] as const,
-  balanceSheet: (date: string) => [...accountingKeys.all, 'balanceSheet', date] as const,
-  incomeStatement: (from: string, to: string) =>
-    [...accountingKeys.all, 'income', from, to] as const,
+  /**
+   * K4 — the branch is part of every report key.
+   *
+   * `null` is the consolidated business. A branch figure and the consolidated
+   * one are different answers to the same question, so sharing a key would
+   * render one under the other's heading.
+   */
+  trialBalance: (date: string, branchId: string | null = null) =>
+    [...accountingKeys.all, 'trialBalance', date, branchId ?? 'all'] as const,
+  balanceSheet: (date: string, branchId: string | null = null) =>
+    [...accountingKeys.all, 'balanceSheet', date, branchId ?? 'all'] as const,
+  incomeStatement: (from: string, to: string, branchId: string | null = null) =>
+    [...accountingKeys.all, 'income', from, to, branchId ?? 'all'] as const,
   /**
    * H3 — the lines behind one account, for one window.
    *
@@ -231,7 +240,7 @@ export function useCreateJournalEntry() {
   })
 }
 
-export function useTrialBalance(date: string) {
+export function useTrialBalance(date: string, branchId: string | null = null) {
   const authReady = useAuthReady()
 
   // ✅ FIX: subscription realtime برای journal_lines — چون
@@ -241,9 +250,17 @@ export function useTrialBalance(date: string) {
   useRealtime({ table: 'journal_lines', queryKey: accountingKeys.all as unknown as string[] })
 
   return useQuery({
-    queryKey: accountingKeys.trialBalance(date),
+    // K4 — the branch is part of the KEY. A trial balance for one branch and
+    // the consolidated one are two different answers; sharing a cache key
+    // would show the branch figure under an «all branches» heading.
+    queryKey: accountingKeys.trialBalance(date, branchId),
     queryFn: async (): Promise<TrialBalanceResult> => {
-      const { data } = await apiClient.get('/accounting/trial-balance', { params: { date } })
+      const { data } = await apiClient.get('/accounting/trial-balance', {
+        // `undefined`, not `null` — axios drops an undefined param and
+        // serialises a null one as the string "null", which the server would
+        // then treat as a branch id and match nothing.
+        params: { date, branchId: branchId ?? undefined },
+      })
       return data
     },
     enabled: authReady && !!date,
@@ -285,13 +302,15 @@ export function useGeneralLedger(accountId: string | undefined, fromDate: string
 // useAccounts/useJournalEntries/useTrialBalance پوشش داده شده‌اند؛
 // اگر این صفحات بدون هیچ‌کدام از آن هوک‌ها در همان صفحه استفاده
 // شوند، به‌روزرسانی realtime نخواهند داشت.
-export function useBalanceSheet(date: string) {
+export function useBalanceSheet(date: string, branchId: string | null = null) {
   const authReady = useAuthReady()
 
   return useQuery({
-    queryKey: accountingKeys.balanceSheet(date),
+    queryKey: accountingKeys.balanceSheet(date, branchId),
     queryFn: async (): Promise<BalanceSheet> => {
-      const { data } = await apiClient.get('/accounting/balance-sheet', { params: { date } })
+      const { data } = await apiClient.get('/accounting/balance-sheet', {
+        params: { date, branchId: branchId ?? undefined },
+      })
       return data
     },
     enabled: authReady && !!date,
@@ -299,13 +318,15 @@ export function useBalanceSheet(date: string) {
   })
 }
 
-export function useIncomeStatement(from: string, to: string) {
+export function useIncomeStatement(from: string, to: string, branchId: string | null = null) {
   const authReady = useAuthReady()
 
   return useQuery({
-    queryKey: accountingKeys.incomeStatement(from, to),
+    queryKey: accountingKeys.incomeStatement(from, to, branchId),
     queryFn: async (): Promise<IncomeStatement> => {
-      const { data } = await apiClient.get('/accounting/income-statement', { params: { from, to } })
+      const { data } = await apiClient.get('/accounting/income-statement', {
+        params: { from, to, branchId: branchId ?? undefined },
+      })
       return data
     },
     enabled: authReady && !!from && !!to,

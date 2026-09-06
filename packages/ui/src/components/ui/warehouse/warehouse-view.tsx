@@ -27,6 +27,9 @@ interface WarehouseViewProps {
   outOfStock: number
   currencies: Currency[]
   onNavigate: (id: string) => void
+  /** H4 — open the movements behind a product's on-hand figure. */
+  onOpenHistory?:
+    ((product: import('../../../lib/warehouse/warehouse-types').Product) => void) | undefined
   onDelete: (product: Product) => void
   stockStatus: (qty: number, min: number) => 'success' | 'warning' | 'destructive' | 'secondary'
   stockLabel: (qty: number, min: number) => string
@@ -149,6 +152,7 @@ export const WarehouseView = memo(function WarehouseView({
   outOfStock,
   currencies,
   onNavigate,
+  onOpenHistory,
   onDelete,
   stockStatus,
   stockLabel,
@@ -217,6 +221,7 @@ export const WarehouseView = memo(function WarehouseView({
           stockStatus={stockStatus}
           stockLabel={stockLabel}
           onNavigate={onNavigate}
+          onOpenHistory={onOpenHistory}
           onDelete={onDelete}
           deletingId={deletingId}
           search={search}

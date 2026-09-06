@@ -98,6 +98,8 @@ export interface InvoiceDetailPageProps {
   /** H2 — the payments and journal entry behind this invoice. Rendered under
    *  the sidebar; the container owns the query. */
   relatedSlot?: React.ReactNode
+  /** H6 — the audit trail for this record. */
+  historySlot?: React.ReactNode
   documentRef?: RefObject<HTMLDivElement | null>
   statusVariant: (status: string) => 'success' | 'warning' | 'destructive' | 'secondary'
   workflowInstance?: {
@@ -140,6 +142,7 @@ export function InvoiceDetailPage({
   exportingPNG,
   pdfDownloadSlot,
   relatedSlot,
+  historySlot,
   documentRef,
   statusVariant,
   workflowInstance,
@@ -303,6 +306,7 @@ export function InvoiceDetailPage({
               quick-invoice preview — which reuses the sidebar above for an
               invoice that does not exist yet — is unaffected. */}
           {relatedSlot ? <div className="mt-6">{relatedSlot}</div> : null}
+          {historySlot ? <div className="mt-6">{historySlot}</div> : null}
         </div>
       </div>
     </div>

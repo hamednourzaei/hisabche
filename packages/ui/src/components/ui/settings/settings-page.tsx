@@ -5,7 +5,7 @@ import { useState, useCallback, useMemo, useRef, memo } from 'react'
 import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useBackupStore, useDeviceStore, useAuthStore } from '@hisabche/store'
-import { useWorkspaces, useUpdateWorkspace } from '@hisabche/api'
+import { useWorkspaces, useUpdateWorkspace, useWorkspaceBackup } from '@hisabche/api'
 import { cn } from '../../../lib/utils'
 import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { Switch } from '../switch'
@@ -481,15 +481,31 @@ const BackupSection = memo(function BackupSection() {
     const v = tOriginal(key as Parameters<typeof tOriginal>[0])
     return v && v !== key ? v : (fallback ?? key)
   }
-  const { autoBackupEnabled, setAutoBackup, addBackup, exportData, backups } = useBackupStore()
+  // G7 — `exportData` is no longer read: it returned localStorage metadata,
+  // not the business's data. The store still owns the local history list.
+  const { autoBackupEnabled, setAutoBackup, addBackup, backups } = useBackupStore()
+  const fetchBackup = useWorkspaceBackup()
 
   const [isExporting, setIsExporting] = useState(false)
+  const [exportError, setExportError] = useState<string | null>(null)
 
+  // ─── G7 — the backup now contains the business's data ────────────────────
+  //
+  // This used to download `useBackupStore().exportData()`, which returns
+  // `{ backups, auditLog }` FROM LOCALSTORAGE — the list of previous backup
+  // entries, and a client-side log. No invoices, no customers, no products.
+  //
+  // The file downloaded, it was named `hisabche-backup-<date>.json`, and it
+  // would have been discovered worthless at the moment someone needed it.
+  //
+  // It now fetches the real export from the server. `useBackupStore` is kept
+  // ONLY for the local history list below — that part was always honest about
+  // what it is.
   const handleExportJSON = useCallback(async () => {
     setIsExporting(true)
     try {
-      const data = exportData()
-      const blob = new Blob([data], { type: 'application/json' })
+      const backup = await fetchBackup()
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
@@ -504,10 +520,26 @@ const BackupSection = memo(function BackupSection() {
         type: 'manual',
         status: 'completed',
       })
+    } catch (err) {
+      // Recorded as FAILED, and not silently. A backup history that shows a
+      // green tick for a download that errored is how someone comes to believe
+      // they have a backup they do not have — the same defect one level up.
+      addBackup({
+        id: `backup-${Date.now()}`,
+        timestamp: Date.now(),
+        size: '—',
+        type: 'manual',
+        status: 'failed',
+      })
+      setExportError(
+        err instanceof Error
+          ? err.message
+          : t('settings.backupFailed', 'دانلود پشتیبان ناموفق بود'),
+      )
     } finally {
       setIsExporting(false)
     }
-  }, [exportData, addBackup])
+  }, [fetchBackup, addBackup, t])
 
   const latestBackup = backups?.[0]
 
@@ -582,6 +614,18 @@ const BackupSection = memo(function BackupSection() {
             {t('settings.sync')}
           </button>
         </div>
+
+        {exportError && (
+          // A failed export must SAY so. The previous version could not fail —
+          // it serialised localStorage — so this path is new, and silence here
+          // would leave someone believing they had downloaded their data.
+          <p
+            role="alert"
+            className="rounded-xl border border-[hsl(var(--color-destructive)/0.2)] bg-[hsl(var(--color-destructive)/0.06)] p-3 text-sm text-[hsl(var(--color-destructive))]"
+          >
+            {exportError}
+          </p>
+        )}
 
         {latestBackup && (
           <div className="rounded-xl border border-[hsl(var(--color-success)/0.2)] bg-[hsl(var(--color-success)/0.05)] p-4 text-start">

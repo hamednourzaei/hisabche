@@ -85,6 +85,8 @@ interface EmployeeDetailViewProps {
   onUpdate: (values: Record<string, unknown>) => Promise<void>
   onAddPayment: (values: { amount: number; date: string }) => Promise<void>
   onBack: () => void
+  /** H5 & H6 — branch postings and this record's audit trail. */
+  extraSlot?: React.ReactNode
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -345,6 +347,7 @@ export const EmployeeDetailView = memo(function EmployeeDetailView({
   onUpdate,
   onAddPayment,
   onBack,
+  extraSlot,
 }: EmployeeDetailViewProps) {
   const [isEditing, setIsEditing] = useState(false)
   const [form, setForm] = useState<Partial<EmployeeData>>({})
@@ -716,6 +719,11 @@ export const EmployeeDetailView = memo(function EmployeeDetailView({
             </div>
           </div>
         )}
+
+        {/* H5 & H6 — where this person works, and what has been recorded
+            about this record. Owned by the container, which holds the
+            queries. */}
+        {extraSlot}
       </div>
     </div>
   )

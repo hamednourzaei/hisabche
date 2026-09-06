@@ -238,8 +238,62 @@ export class HumanResourcesService {
 
     if (error || !data) throw new DatabaseError('Employee not found', error)
 
-    await memoryCache.set(cacheKey, data, 300) // 5 minutes
-    return data
+    // ─── H5 — which branch(es) this person actually works at ────────────────
+    //
+    // `employee_branch_assignments` was created in Phase D and the
+    // `employee_current_branches` view over it had ZERO readers: the
+    // assignment was written by G2's form and could not be read back
+    // anywhere. An employee profile showed a department and no branch.
+    //
+    // ⚠️ A SEPARATE QUERY, NOT AN EMBED. Adding it to the select above would
+    // make the WHOLE employee read fail with 42P01 on a database that has not
+    // run phase-d — the same reasoning that kept `document_status` out of the
+    // invoice insert (lesson 65). Here the profile still loads; it just shows
+    // no branches.
+    const branches = await this.currentBranches(workspaceId, id)
+
+    const enriched = { ...data, branches }
+    await memoryCache.set(cacheKey, enriched, 300) // 5 minutes
+    return enriched
+  }
+
+  /**
+   * The branches this employee is currently assigned to, primary first.
+   *
+   * Returns `[]` rather than throwing when the table does not exist — the
+   * caller is a profile screen, and a missing migration should cost the branch
+   * section, not the whole page.
+   */
+  private async currentBranches(workspaceId: string, employeeId: string) {
+    const { data, error } = await supabase
+      .from('employee_branch_assignments')
+      .select('branch_id, is_primary, started_at, branch:branches(id, name, code)')
+      .eq('workspace_id', workspaceId)
+      .eq('employee_id', employeeId)
+      // An assignment that has ended is history, not a current posting.
+      .is('ended_at', null)
+      .order('is_primary', { ascending: false })
+
+    if (error) {
+      if (isMissingAssignmentsTable(error)) return []
+      console.error('[HR] failed to read branch assignments:', error)
+      return []
+    }
+
+    return (data ?? []).map((row: Record<string, any>) => {
+      // PostgREST hands back an embedded to-one as an ARRAY when it cannot
+      // prove the relationship — a missing FK, which this schema has several
+      // of. Both shapes are handled or the branch name renders blank on
+      // exactly the databases with that problem.
+      const branch = Array.isArray(row.branch) ? row.branch[0] : row.branch
+      return {
+        branchId: row.branch_id,
+        branchName: branch?.name ?? null,
+        branchCode: branch?.code ?? null,
+        isPrimary: Boolean(row.is_primary),
+        startedAt: row.started_at ?? null,
+      }
+    })
   }
 
   async createEmployee(ctx: TenancyContext, data: CreateEmployee) {

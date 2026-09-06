@@ -6,7 +6,7 @@
 
 import { memo, useCallback, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { COLUMN, moveColumn, type InvoiceColumn } from '@hisabche/validation'
+import { COLUMN, currencyPrecision, moveColumn, type InvoiceColumn } from '@hisabche/validation'
 import {
   useCurrencyStore,
   useInvoiceDraftStore,
@@ -75,9 +75,9 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
       draft.setColumns(
         draft.columns.map((column) =>
           column.type === 'currency' && column.currency === currency
-            ? { ...column, currency: next, precision: next === 'USD' ? 2 : 0 }
+            ? { ...column, currency: next, precision: currencyPrecision(next) }
             : column.type === 'computed'
-              ? { ...column, currency: next, precision: next === 'USD' ? 2 : 0 }
+              ? { ...column, currency: next, precision: currencyPrecision(next) }
               : column,
         ),
       )

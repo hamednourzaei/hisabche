@@ -19,6 +19,7 @@ import {
   useLedgerNumber,
 } from '../components/ledger-table'
 import { useAccountDrilldown } from '../components/use-account-drilldown'
+import { BranchSwitcher, useBranchScope } from '../../branch/branch-scope'
 import type { TrialBalance } from '@hisabche/api'
 
 const exportColumns: ExportColumn<TrialBalance>[] = [
@@ -33,7 +34,8 @@ export const TrialBalanceTab = memo(function TrialBalanceTab() {
   const t = useTranslations()
   const n = useLedgerNumber()
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
-  const { data, isLoading } = useTrialBalance(date)
+  const { branchId } = useBranchScope()
+  const { data, isLoading } = useTrialBalance(date, branchId)
 
   const safeT = useCallback(
     (key: string, fallback?: string) => {
@@ -83,6 +85,7 @@ export const TrialBalanceTab = memo(function TrialBalanceTab() {
         </div>
 
         <div className="flex items-center gap-3">
+          <BranchSwitcher t={safeT} />
           <SingleDatePicker
             value={date}
             onChange={setDate}

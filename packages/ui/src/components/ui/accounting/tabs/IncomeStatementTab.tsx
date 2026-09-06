@@ -11,6 +11,7 @@ import { AccountingSkeleton } from '../AccountingSkeleton'
 import { AccountingEmptyState } from '../AccountingEmptyState'
 import { useLedgerNumber } from '../components/ledger-table'
 import { useAccountDrilldown } from '../components/use-account-drilldown'
+import { BranchSwitcher, useBranchScope } from '../../branch/branch-scope'
 
 interface SummaryRow {
   label: string
@@ -115,7 +116,8 @@ export const IncomeStatementTab = memo(function IncomeStatementTab() {
   const n = useLedgerNumber()
   const [from, setFrom] = useState(getFirstDayOfMonth)
   const [to, setTo] = useState(getToday)
-  const { data, isLoading } = useIncomeStatement(from, to)
+  const { branchId } = useBranchScope()
+  const { data, isLoading } = useIncomeStatement(from, to, branchId)
 
   const safeT = useCallback(
     (key: string, fallback?: string) => {
@@ -150,6 +152,7 @@ export const IncomeStatementTab = memo(function IncomeStatementTab() {
           {t('accounting.incomeStatement.title')}
         </h2>
         <div className="flex items-end gap-3">
+          <BranchSwitcher t={safeT} />
           <DateRangePicker from={from} to={to} onFromChange={setFrom} onToChange={setTo} />
           <ExportButton data={exportData} columns={exportColumns} filename="income-statement" />
         </div>

@@ -29,8 +29,11 @@ import {
   type SessionTotals,
 } from './pos.domain'
 
+// M3 — the frozen handover columns are selected too. They are NULL on any
+// session closed before phase-m-01, and the history read falls back to
+// recomputing for those rather than showing blanks.
 const SESSION_COLUMNS =
-  'id, branch_id, status, opening_float_minor, opened_at, opened_by, counted_cash_minor, variance_reason, closed_at, closed_by, was_forced, journal_entry_id'
+  'id, branch_id, status, opening_float_minor, opened_at, opened_by, counted_cash_minor, variance_reason, closed_at, closed_by, was_forced, journal_entry_id, expected_cash_minor, cash_sales_minor, cash_in_minor, cash_out_minor, variance_minor'
 
 function mapSession(raw: Record<string, any>): PosSession {
   return {
@@ -173,6 +176,76 @@ export class PosService {
     const session = await this.getSession(ctx, sessionId)
     const { orders, movements } = await this.loadContents(ctx, sessionId)
     return summarise(session, orders, movements)
+  }
+
+  /**
+   * M3 — past shifts, with the handover each one was signed off against.
+   *
+   * ⚠️ THE FROZEN FIGURES ARE RETURNED AS STORED, NOT RECOMPUTED.
+   *
+   * Recomputing would let a later void silently change a handover somebody
+   * already signed. `expectedCashMinor` is null on sessions closed before
+   * phase-m-01 — the caller is told the figure was never frozen rather than
+   * shown a number pretending to be historical.
+   */
+  async sessionHistory(
+    ctx: TenancyContext,
+    limit = 50,
+  ): Promise<
+    Array<{
+      id: string
+      status: string
+      openedAt: string | null
+      closedAt: string | null
+      openedBy: string | null
+      closedBy: string | null
+      openingFloatMinor: number
+      cashSalesMinor: number | null
+      cashInMinor: number | null
+      cashOutMinor: number | null
+      expectedCashMinor: number | null
+      countedCashMinor: number | null
+      varianceMinor: number | null
+      varianceReason: string | null
+      wasForced: boolean
+      /** False for a shift closed before the handover was frozen. */
+      handoverFrozen: boolean
+    }>
+  > {
+    const { data, error } = await supabase
+      .from('pos_sessions')
+      .select(SESSION_COLUMNS)
+      .eq('workspace_id', ctx.workspaceId)
+      .in('status', ['closed', 'force_closed'])
+      .order('closed_at', { ascending: false })
+      .limit(Math.min(limit, 200))
+
+    if (error) throw new DatabaseError('Failed to read the shift history', error)
+
+    return (data ?? []).map((raw: Record<string, any>) => {
+      const num = (value: unknown) => (value === null || value === undefined ? null : Number(value))
+
+      return {
+        id: String(raw.id),
+        status: String(raw.status),
+        openedAt: raw.opened_at ?? null,
+        closedAt: raw.closed_at ?? null,
+        openedBy: raw.opened_by ?? null,
+        // Recorded separately from `opened_by`: «did one person both run and
+        // sign off the shift» is the question a handover exists to answer.
+        closedBy: raw.closed_by ?? null,
+        openingFloatMinor: Number(raw.opening_float_minor) || 0,
+        cashSalesMinor: num(raw.cash_sales_minor),
+        cashInMinor: num(raw.cash_in_minor),
+        cashOutMinor: num(raw.cash_out_minor),
+        expectedCashMinor: num(raw.expected_cash_minor),
+        countedCashMinor: num(raw.counted_cash_minor),
+        varianceMinor: num(raw.variance_minor),
+        varianceReason: raw.variance_reason ?? null,
+        wasForced: raw.was_forced === true,
+        handoverFrozen: raw.expected_cash_minor !== null && raw.expected_cash_minor !== undefined,
+      }
+    })
   }
 
   // ─── Orders ───────────────────────────────────────────────────────────────
@@ -337,6 +410,24 @@ export class PosService {
         closed_at: new Date().toISOString(),
         closed_by: ctx.userId,
         was_forced: input.force === true,
+
+        // ─── M3 — FREEZE THE HANDOVER ────────────────────────────────────
+        //
+        // These were computed by `summarise()` at read time, which meant the
+        // handover changed after it was signed: voiding one order from a
+        // closed session silently moved that shift's expected cash, and the
+        // person who counted the drawer and signed off a variance of 200 could
+        // be shown 900 a week later with nothing recording the change.
+        //
+        // A handover is a statement about a moment. Stored as of that moment.
+        expected_cash_minor: finalTotals.expectedCashMinor,
+        cash_sales_minor: finalTotals.byMethod.cash ?? 0,
+        // Split by sign rather than stored as one net figure: «took 500 out and
+        // put 500 in» and «nothing happened» are different shifts, and a net of
+        // zero cannot tell them apart.
+        cash_in_minor: Math.max(0, finalTotals.movementsMinor),
+        cash_out_minor: Math.max(0, -finalTotals.movementsMinor),
+        variance_minor: finalTotals.varianceMinor,
       })
       .eq('workspace_id', ctx.workspaceId)
       .eq('id', sessionId)

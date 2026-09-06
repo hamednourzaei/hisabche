@@ -29,12 +29,14 @@ interface WarehouseProductListProps {
   onNavigate: (id: string) => void
   /** H4 — open the movements behind this product's on-hand figure. */
   onOpenHistory?: ((product: Product) => void) | undefined
-  /**
-   * ⚠️ NOT WIRED — see Warehouse-container.tsx.  has no create
-   * form, so a reorder button would navigate somewhere that cannot act on it.
-   * The prop stays declared for when that form exists.
-   */
-  onReorder?: ((product: Product) => void) | undefined
+  // ⚠️ H4 — there is deliberately NO `onReorder` here.
+  //
+  // The spec asks for a «سفارش خرید» button on a low-stock row. `/purchasing`
+  // has no create form at all — it lists orders and receives goods — so the
+  // button would lead somewhere that cannot act on it. A declared-but-unwired
+  // prop is the same theater one indirection further back. See
+  // Warehouse-container.tsx for the full reasoning.
+
   /** Awaited by bulk delete so partial failures are reported accurately. */
   onDelete: (product: Product) => void | Promise<void>
   deletingId: string | null

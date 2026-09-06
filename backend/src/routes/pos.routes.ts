@@ -101,6 +101,31 @@ export async function posRoutes(fastify: FastifyInstance) {
     },
   )
 
+  // ─── GET /sessions/history ─────────────────────────────
+  //
+  // M3 — past shifts with the handover each was signed off against.
+  //
+  // Declared BEFORE `/sessions/:id` so `history` is never read as a session id.
+  fastify.get(
+    '/sessions/history',
+    {
+      // A read, so `invoice.read` — the same capability `/sessions/:id` uses.
+      // The vertical-slice guard requires every POS endpoint to name one, and
+      // it caught this when it was left off.
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('invoice.read')],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { limit } = request.query as { limit?: string }
+        return reply.send(await posService.sessionHistory(request.tenancy, Number(limit) || 50))
+      } catch (err) {
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to read the shift history' })
+      }
+    },
+  )
+
   // ─── POST /sessions ────────────────────────────────────
   fastify.post(
     '/sessions',
