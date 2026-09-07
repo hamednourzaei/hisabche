@@ -169,7 +169,7 @@ export const ConflictsView = memo(function ConflictsView({
 
       {!isLoading && conflicts.length === 0 ? (
         <Panel title={t('conflicts.empty_title', 'تعارضی در انتظار نیست')}>
-          <p className="text-sm text-[hsl(var(--muted-foreground))]">
+          <p className="text-sm text-[hsl(var(--fg-tertiary))]">
             {t(
               'conflicts.empty_hint',
               'هر نوشته‌ی آفلاینی که سرور نپذیرد اینجا می‌آید و تا تصمیم شما اعمال نمی‌شود.',
@@ -183,15 +183,15 @@ export const ConflictsView = memo(function ConflictsView({
           title={t('conflicts.queue', 'صف تعارض')}
           description={t('conflicts.queue_hint', 'هیچ‌کدام هنوز اعمال نشده‌اند.')}
         >
-          <ul className="divide-y divide-[hsl(var(--border))]">
+          <ul className="divide-y divide-[hsl(var(--border-default))]">
             {conflicts.map((conflict) => (
               <li key={conflict.id}>
                 <button
                   type="button"
                   onClick={() => onSelect(conflict.id)}
                   className={
-                    'flex w-full flex-wrap items-center justify-between gap-2 py-3 text-start text-sm transition hover:bg-[hsl(var(--muted)/0.4)] ' +
-                    (conflict.id === selected?.id ? 'bg-[hsl(var(--muted)/0.5)]' : '')
+                    'flex w-full flex-wrap items-center justify-between gap-2 py-3 text-start text-sm transition hover:bg-[hsl(var(--surface-muted)/0.4)] ' +
+                    (conflict.id === selected?.id ? 'bg-[hsl(var(--surface-muted)/0.5)]' : '')
                   }
                 >
                   <span className="flex flex-wrap items-center gap-2">
@@ -201,7 +201,7 @@ export const ConflictsView = memo(function ConflictsView({
                     {conflict.hasFinancialDivergence ? (
                       <Badge tone="bad">{t('conflicts.financial', 'اختلاف مالی')}</Badge>
                     ) : null}
-                    <span className="text-[hsl(var(--muted-foreground))]">
+                    <span className="text-[hsl(var(--fg-tertiary))]">
                       {conflict.divergences.length} {t('conflicts.fields', 'فیلد')}
                     </span>
                   </span>
@@ -214,10 +214,7 @@ export const ConflictsView = memo(function ConflictsView({
                     ) : (
                       <Badge tone="warn">{t('conflicts.open', 'باز')}</Badge>
                     )}
-                    <span
-                      className="tabular-nums text-xs text-[hsl(var(--muted-foreground))]"
-                      dir="ltr"
-                    >
+                    <span className="tabular-nums text-xs text-[hsl(var(--fg-tertiary))]" dir="ltr">
                       {conflict.createdAt?.slice(0, 16).replace('T', ' ')}
                     </span>
                   </span>

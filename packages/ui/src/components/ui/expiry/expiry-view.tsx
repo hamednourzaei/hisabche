@@ -224,7 +224,7 @@ export const ExpiryView = memo(function ExpiryView({
               <ErrorNote message={`${t('expiry.shortfall', 'کسری')}: ${plan.shortfall}`} />
             ) : null}
 
-            <ul className="divide-y divide-[hsl(var(--border))]">
+            <ul className="divide-y divide-[hsl(var(--border-default))]">
               {plan.allocations.map((allocation) => (
                 <li
                   key={allocation.batchId}
@@ -244,7 +244,7 @@ export const ExpiryView = memo(function ExpiryView({
                 <p className="mb-1 text-xs text-[hsl(var(--color-destructive))]">
                   {t('expiry.blocked', 'به دلیل انقضا کنار گذاشته شد')}
                 </p>
-                <ul className="text-xs text-[hsl(var(--muted-foreground))]">
+                <ul className="text-xs text-[hsl(var(--fg-tertiary))]">
                   {plan.blockedByExpiry.map((blocked) => (
                     <li key={blocked.batchId} dir="ltr" className="font-mono">
                       {blocked.batchNumber} · {blocked.quantity}
@@ -259,7 +259,7 @@ export const ExpiryView = memo(function ExpiryView({
 
       {!isLoading && batches.length === 0 && !report ? (
         <Panel title={t('expiry.empty_title', 'بچی ثبت نشده')}>
-          <p className="text-sm text-[hsl(var(--muted-foreground))]">
+          <p className="text-sm text-[hsl(var(--fg-tertiary))]">
             {t('expiry.empty_hint', 'بچ هنگام دریافت کالای تاریخ‌دار ثبت می‌شود.')}
           </p>
         </Panel>

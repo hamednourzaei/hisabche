@@ -112,16 +112,56 @@ export class PaymentsService {
     const amount = round2(input.amount)
     const entryDate = (input.entryDate ?? today()).slice(0, 10)
 
-    const invoices = await this.repo.openInvoicesFor(
-      ctx.workspaceId,
-      input.partyType,
-      input.partyId,
-    )
+    const explicit = input.allocations && input.allocations.length > 0
 
-    const allocations =
-      input.allocations && input.allocations.length > 0
-        ? input.allocations.map((a) => ({ invoiceId: a.invoiceId, amount: round2(a.amount) }))
-        : autoAllocate(amount, invoices).allocations
+    // ─── T9 — WHERE THE CANDIDATE INVOICES COME FROM ────────────────────────
+    //
+    // Two different questions, and they need two different reads:
+    //
+    //   no allocations  «what does this party still owe» → oldest first
+    //   allocations     «settle THESE invoices»          → by id
+    //
+    // It used to be only the first. So an explicit allocation to an invoice
+    // with no customer — an ordinary walk-in cash sale — was checked against a
+    // party list that filters `customer_id = null`, matched nothing, and was
+    // refused as PAYMENT_ALLOCATION_INVOICE_UNKNOWN. With no working path,
+    // invoice creation wrote `paid_amount` directly instead, and that is the
+    // second writer that produced «مبلغ پرداخت‌شده با مجموع پرداخت‌ها یکی
+    // نیست» on a real sale.
+    const invoices = explicit
+      ? await this.repo.openInvoicesByIds(
+          ctx.workspaceId,
+          input.allocations!.map((a) => a.invoiceId),
+        )
+      : await this.repo.openInvoicesFor(ctx.workspaceId, input.partyType, input.partyId)
+
+    // ⚠️ AN INVOICE ADDRESSED BY ID MUST BELONG TO THE PARTY BEING CREDITED.
+    //
+    // `openInvoicesByIds` is scoped by workspace, which stops cross-tenant
+    // settlement. It does NOT stop settling one customer's debt with another
+    // customer's money inside the same workspace — both rows are legitimately
+    // visible. Nothing else in the chain checks this, so it is checked here.
+    if (explicit) {
+      for (const invoice of invoices as Array<
+        (typeof invoices)[number] & { customerId?: string | null; supplierId?: string | null }
+      >) {
+        const owner =
+          input.partyType === 'customer'
+            ? (invoice.customerId ?? null)
+            : (invoice.supplierId ?? null)
+        const payer = input.partyId ?? null
+
+        // Both null is the walk-in cash sale — the case this change exists to
+        // support. A mismatch either way is refused.
+        if (owner !== payer) {
+          throw new ValidationError('PAYMENT_ALLOCATION_PARTY_MISMATCH')
+        }
+      }
+    }
+
+    const allocations = explicit
+      ? input.allocations!.map((a) => ({ invoiceId: a.invoiceId, amount: round2(a.amount) }))
+      : autoAllocate(amount, invoices).allocations
 
     const problems = validateAllocations(amount, allocations, invoices)
     if (problems.length > 0) throw new ValidationError(problems.join(', '))

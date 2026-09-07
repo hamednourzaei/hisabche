@@ -129,7 +129,7 @@ export const TimesheetsView = memo(function TimesheetsView({
 
       {!isLoading && projects.length === 0 ? (
         <Panel title={t('timesheets.no_projects', 'پروژه‌ای وجود ندارد')}>
-          <p className="text-sm text-[hsl(var(--muted-foreground))]">
+          <p className="text-sm text-[hsl(var(--fg-tertiary))]">
             {t('timesheets.no_projects_hint', 'زمان روی یک پروژه ثبت می‌شود. ابتدا پروژه بسازید.')}
           </p>
         </Panel>
@@ -277,14 +277,14 @@ export const TimesheetsView = memo(function TimesheetsView({
             </ul>
           ) : null}
 
-          <ul className="divide-y divide-[hsl(var(--border))] text-sm">
+          <ul className="divide-y divide-[hsl(var(--border-default))] text-sm">
             {previewLines.map((line) => (
               <li
                 key={line.entryIds.join('-')}
                 className="flex items-center justify-between gap-3 py-2"
               >
                 <span>
-                  <span className="text-[hsl(var(--muted-foreground))]">{line.description}</span>
+                  <span className="text-[hsl(var(--fg-tertiary))]">{line.description}</span>
                   <span className="ms-2 tabular-nums">{formatMinutes(line.minutes)}</span>
                 </span>
                 <Money minor={line.amountMinor} />
@@ -327,7 +327,7 @@ export const TimesheetsView = memo(function TimesheetsView({
           </StatGrid>
 
           {profitability.unbillableMinutes > 0 ? (
-            <p className="mt-3 text-sm text-[hsl(var(--muted-foreground))]">
+            <p className="mt-3 text-sm text-[hsl(var(--fg-tertiary))]">
               {t('timesheets.unbillable', 'کارکرد غیرقابل صورتحساب')}:{' '}
               {formatMinutes(profitability.unbillableMinutes)}
             </p>

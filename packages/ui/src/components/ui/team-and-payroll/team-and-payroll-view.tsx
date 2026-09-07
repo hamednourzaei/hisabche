@@ -1,5 +1,6 @@
 'use client'
 
+import { SelectField } from '../select-field'
 import { cn } from '../../../lib/utils'
 import {
   Users,
@@ -603,19 +604,19 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
               <span className="text-xs text-[hsl(var(--fg-secondary))]">
                 {t('team.branch', 'شعبه')}
               </span>
-              <select
+              <SelectField
                 value={form.branchId}
-                onChange={(e) => setField('branchId')(e.target.value)}
+                onChange={(value) => setField('branchId')(value)}
+                options={[
+                  { value: '', label: t('team.noBranch', 'بدون شعبه') },
+                  ...branches.map((branch) => ({
+                    value: branch.id,
+                    label: `${branch.name} (${branch.code})`,
+                  })),
+                ]}
                 className={FORM_FIELD}
                 disabled={isSubmitting}
-              >
-                <option value="">{t('team.noBranch', 'بدون شعبه')}</option>
-                {branches.map((branch) => (
-                  <option key={branch.id} value={branch.id}>
-                    {branch.name} ({branch.code})
-                  </option>
-                ))}
-              </select>
+              />
             </label>
 
             {/*
@@ -629,19 +630,19 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
               <span className="text-xs text-[hsl(var(--fg-secondary))]">
                 {t('team.permissionProfile', 'پروفایل دسترسی')}
               </span>
-              <select
+              <SelectField
                 value={form.permissionProfileId}
-                onChange={(e) => setField('permissionProfileId')(e.target.value)}
+                onChange={(value) => setField('permissionProfileId')(value)}
+                options={[
+                  { value: '', label: t('team.noProfile', 'بدون پروفایل') },
+                  ...permissionProfiles.map((profile) => ({
+                    value: profile.id,
+                    label: profile.name,
+                  })),
+                ]}
                 className={FORM_FIELD}
                 disabled={isSubmitting || permissionProfiles.length === 0}
-              >
-                <option value="">{t('team.noProfile', 'بدون پروفایل')}</option>
-                {permissionProfiles.map((profile) => (
-                  <option key={profile.id} value={profile.id}>
-                    {profile.name}
-                  </option>
-                ))}
-              </select>
+              />
               <span className="text-xs text-[hsl(var(--fg-tertiary))]">
                 {t(
                   'team.permissionProfileHint',

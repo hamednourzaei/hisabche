@@ -128,7 +128,7 @@ export const GovernanceView = memo(function GovernanceView({
               ))}
             </div>
 
-            <p className="mt-3 text-sm text-[hsl(var(--muted-foreground))]">
+            <p className="mt-3 text-sm text-[hsl(var(--fg-tertiary))]">
               {t(`governance.mode_${mode}_explains`, '')}
             </p>
 
@@ -151,7 +151,7 @@ export const GovernanceView = memo(function GovernanceView({
             title={t('governance.rules', 'قواعد')}
             description={t('governance.rules_hint', 'هر قاعده جدا خاموش می‌شود، نه همه با هم.')}
           >
-            <ul className="divide-y divide-[hsl(var(--border))]">
+            <ul className="divide-y divide-[hsl(var(--border-default))]">
               {rules.map((rule) => {
                 const enabled = !disabled.has(rule.id)
 
@@ -174,11 +174,11 @@ export const GovernanceView = memo(function GovernanceView({
 
                       {/* The reason, always — a rule a person cannot justify is
                           a rule they switch off at the first inconvenience. */}
-                      <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))]">
+                      <p className="mt-1 text-sm text-[hsl(var(--fg-tertiary))]">
                         {t(`governance.rule_${rule.id}`, rule.rationale)}
                       </p>
 
-                      <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]" dir="ltr">
+                      <p className="mt-1 text-xs text-[hsl(var(--fg-tertiary))]" dir="ltr">
                         {rule.capability} ⟂ {rule.conflictsWith.join(', ')}
                       </p>
                     </div>
@@ -204,7 +204,7 @@ export const GovernanceView = memo(function GovernanceView({
             )}
           >
             {overrides.length === 0 ? (
-              <p className="text-sm text-[hsl(var(--muted-foreground))]">
+              <p className="text-sm text-[hsl(var(--fg-tertiary))]">
                 {t('governance.no_overrides', 'موردی ثبت نشده.')}
               </p>
             ) : (
@@ -226,10 +226,7 @@ export const GovernanceView = memo(function GovernanceView({
                       <TableCell className="py-2 font-mono text-xs" dir="ltr">
                         {override.rule_id}
                       </TableCell>
-                      <TableCell
-                        className="py-2 text-xs text-[hsl(var(--muted-foreground))]"
-                        dir="ltr"
-                      >
+                      <TableCell className="py-2 text-xs text-[hsl(var(--fg-tertiary))]" dir="ltr">
                         {override.entity_type} {override.entity_id?.slice(0, 8)}
                       </TableCell>
                       <TableCell>{override.reason}</TableCell>

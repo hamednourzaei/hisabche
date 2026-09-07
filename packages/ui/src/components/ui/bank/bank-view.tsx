@@ -100,7 +100,7 @@ export const BankView = memo(function BankView({
 
       {!isLoading && statements.length === 0 ? (
         <Panel title={t('bank.empty_title', 'صورتحسابی وارد نشده')}>
-          <p className="text-sm text-[hsl(var(--muted-foreground))]">
+          <p className="text-sm text-[hsl(var(--fg-tertiary))]">
             {t('bank.empty_hint', 'صورتحساب بانک را وارد کنید تا تطبیق آغاز شود.')}
           </p>
         </Panel>
@@ -108,15 +108,15 @@ export const BankView = memo(function BankView({
 
       {statements.length > 0 ? (
         <Panel title={t('bank.statements', 'صورتحساب‌ها')}>
-          <ul className="divide-y divide-[hsl(var(--border))]">
+          <ul className="divide-y divide-[hsl(var(--border-default))]">
             {statements.map((statement) => (
               <li key={statement.id}>
                 <button
                   type="button"
                   onClick={() => onSelect(statement.id)}
                   className={
-                    'flex w-full items-center justify-between gap-3 py-2.5 text-start text-sm transition hover:bg-[hsl(var(--muted)/0.4)] ' +
-                    (statement.id === selectedId ? 'bg-[hsl(var(--muted)/0.5)]' : '')
+                    'flex w-full items-center justify-between gap-3 py-2.5 text-start text-sm transition hover:bg-[hsl(var(--surface-muted)/0.4)] ' +
+                    (statement.id === selectedId ? 'bg-[hsl(var(--surface-muted)/0.5)]' : '')
                   }
                 >
                   <span className="tabular-nums" dir="ltr">
@@ -158,7 +158,7 @@ export const BankView = memo(function BankView({
           </StatGrid>
 
           {reconciliation.reconcilingItems.length > 0 ? (
-            <ul className="mt-4 divide-y divide-[hsl(var(--border))] text-sm">
+            <ul className="mt-4 divide-y divide-[hsl(var(--border-default))] text-sm">
               {reconciliation.reconcilingItems.map((item) => (
                 <li
                   key={`${item.side}-${item.id}`}
@@ -168,7 +168,7 @@ export const BankView = memo(function BankView({
                     <Badge tone={item.side === 'statement' ? 'info' : 'neutral'}>
                       {t(`bank.side_${item.side}`, item.side)}
                     </Badge>{' '}
-                    <span className="text-[hsl(var(--muted-foreground))]">{item.description}</span>
+                    <span className="text-[hsl(var(--fg-tertiary))]">{item.description}</span>
                   </span>
                   <Money minor={item.amountMinor} signed tone="auto" />
                 </li>
@@ -187,7 +187,7 @@ export const BankView = memo(function BankView({
           )}
         >
           {suggestions.length === 0 ? (
-            <p className="text-sm text-[hsl(var(--muted-foreground))]">
+            <p className="text-sm text-[hsl(var(--fg-tertiary))]">
               {t('bank.no_suggestions', 'پیشنهادی نیست.')}
             </p>
           ) : (
@@ -195,7 +195,7 @@ export const BankView = memo(function BankView({
               {suggestions.map((suggestion) => (
                 <li
                   key={`${suggestion.statementLineId}-${suggestion.bookEntryId}`}
-                  className="rounded-xl border border-[hsl(var(--border))] p-3"
+                  className="rounded-xl border border-[hsl(var(--border-default))] p-3"
                 >
                   <div className="flex flex-wrap items-center gap-2 text-sm">
                     <Badge tone={CONFIDENCE_TONE[suggestion.confidence] ?? 'neutral'}>
@@ -210,12 +210,12 @@ export const BankView = memo(function BankView({
                         <Money minor={suggestion.differenceMinor} signed tone="auto" />
                       </span>
                     ) : null}
-                    <span className="text-[hsl(var(--muted-foreground))]">
+                    <span className="text-[hsl(var(--fg-tertiary))]">
                       {suggestion.daysApart} {t('bank.days_apart', 'روز فاصله')}
                     </span>
                   </div>
 
-                  <p className="mt-1 text-xs text-[hsl(var(--muted-foreground))]">
+                  <p className="mt-1 text-xs text-[hsl(var(--fg-tertiary))]">
                     {suggestion.reasons
                       .map((reason) => t(`bank.reason_${reason}`, reason))
                       .join(' · ')}

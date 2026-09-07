@@ -169,9 +169,9 @@ export const TillView = memo(function TillView({
               {METHOD_ORDER.map((method) => (
                 <div
                   key={method}
-                  className="rounded-xl border border-[hsl(var(--border))] px-3 py-2 text-sm"
+                  className="rounded-xl border border-[hsl(var(--border-default))] px-3 py-2 text-sm"
                 >
-                  <div className="text-xs text-[hsl(var(--muted-foreground))]">
+                  <div className="text-xs text-[hsl(var(--fg-tertiary))]">
                     {t(`till.method_${method}`, method)}
                   </div>
                   <Money minor={totals.byMethod?.[method] ?? 0} tone="muted" />
@@ -244,8 +244,8 @@ export const TillView = memo(function TillView({
                 onChange={setCountedMinor}
                 disabled={isBusy}
               />
-              <div className="self-end rounded-xl bg-[hsl(var(--muted)/0.4)] px-4 py-3 text-sm">
-                <span className="text-[hsl(var(--muted-foreground))]">
+              <div className="self-end rounded-xl bg-[hsl(var(--surface-muted)/0.4)] px-4 py-3 text-sm">
+                <span className="text-[hsl(var(--fg-tertiary))]">
                   {t('till.variance', 'اختلاف')}:{' '}
                 </span>
                 {previewVariance == null ? (
@@ -294,13 +294,13 @@ export const TillView = memo(function TillView({
           title={t('till.abandoned_title', 'صندوق‌های رها شده')}
           description={t('till.abandoned_hint', 'پولی که در صندوقی است که کسی به آن دسترسی ندارد.')}
         >
-          <ul className="divide-y divide-[hsl(var(--border))]">
+          <ul className="divide-y divide-[hsl(var(--border-default))]">
             {abandoned.map((item) => (
               <li
                 key={item.sessionId}
                 className="flex items-center justify-between gap-3 py-2 text-sm"
               >
-                <span className="text-[hsl(var(--muted-foreground))]">
+                <span className="text-[hsl(var(--fg-tertiary))]">
                   {item.openedAt.slice(0, 10)} · {Math.round(item.hoursOpen)}
                   {t('till.hours_short', 'س')} · {item.orderCount}
                 </span>

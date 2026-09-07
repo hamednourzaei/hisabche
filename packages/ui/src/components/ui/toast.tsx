@@ -22,7 +22,7 @@ const toastIcons: Record<ToastVariant, React.ReactNode> = {
   success: <CheckCircle className="size-5 text-[var(--hisab-success)]" aria-hidden />,
   error: <AlertCircle className="size-5 text-[var(--hisab-destructive)]" aria-hidden />,
   warning: <AlertTriangle className="size-5 text-[var(--hisab-warning)]" aria-hidden />,
-  info: <Info className="size-5 text-[var(--hisab-info)]" aria-hidden />,
+  info: <Info className="size-5 text-[hsl(var(--color-info))]" aria-hidden />,
 }
 
 // ═══ Styles ═══
@@ -31,7 +31,7 @@ const toastStyles: Record<ToastVariant, string> = {
   success: 'border-[var(--hisab-success)]/30 bg-[var(--hisab-success)]/5',
   error: 'border-[var(--hisab-destructive)]/30 bg-[var(--hisab-destructive)]/5',
   warning: 'border-[var(--hisab-warning)]/30 bg-[var(--hisab-warning)]/5',
-  info: 'border-[var(--hisab-info)]/30 bg-[var(--hisab-info)]/5',
+  info: 'border-[hsl(var(--color-info))]/30 bg-[hsl(var(--color-info))]/5',
 }
 
 // ═══ Toast Component ═══
@@ -80,9 +80,9 @@ const Toast = React.forwardRef<HTMLDivElement, ToastProps & React.HTMLAttributes
         aria-live="polite"
         className={cn(
           'flex w-full max-w-sm items-start gap-3',
-          'rounded-[var(--hisab-radius-lg)]',
+          'rounded-[var(--radius-lg)]',
           'border bg-[var(--hisab-background)]',
-          'p-4 shadow-[var(--hisab-shadow-lg)]',
+          'p-4 shadow-[var(--shadow-premium)]',
           'animate-slide-up',
           isLeaving && 'animate-fade-out opacity-0',
           toastStyles[variant],

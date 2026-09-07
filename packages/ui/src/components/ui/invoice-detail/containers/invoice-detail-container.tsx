@@ -12,6 +12,8 @@ import {
   usePerformWorkflowAction,
   useInvoiceRelated,
   useRecordHistory,
+  useRecordPayment,
+  useCancelPayment,
 } from '@hisabche/api'
 import { InvoiceDetailPage, type InvoiceDetailDisplay } from '../invoice-detail-page'
 import InvoicePDFDownload from '../InvoicePDFDownload'
@@ -109,6 +111,15 @@ export function InvoiceDetailContainer() {
     }
   }, [workflowInstanceBase, workflowTemplate, workflowDetail])
 
+  // ─── T9 — recording money against this invoice ────────────────────────
+  //
+  // `POST /api/payments` with allocations already existed and had no caller
+  // from this screen. Without one, the only way an invoice got a paid amount
+  // was the create form writing `paid_amount` onto the row — the drift the
+  // owner reported on a real sale.
+  const recordPayment = useRecordPayment()
+  const cancelPayment = useCancelPayment()
+
   // ✅ FIX: استفاده از unknown به عنوان واسط
   const display: InvoiceDetailDisplay | null = useMemo(() => {
     if (!invoice) return null
@@ -133,6 +144,11 @@ export function InvoiceDetailContainer() {
       discountTotal: (getField(inv.discountTotal, inv.discount_total) as number) ?? 0,
       taxTotal: (getField(inv.taxTotal, inv.tax_total) as number) ?? 0,
       paidAmount: (getField(inv.paidAmount, inv.paid_amount) as number) ?? 0,
+      // T9 — who the money is from or to. Null on a walk-in cash sale, which
+      // is a supported case: the payment is recorded with no party and
+      // allocated to this invoice by id.
+      customerId: (getField(inv.customerId, inv.customer_id) as string | undefined) ?? null,
+      supplierId: (getField(inv.supplierId, inv.supplier_id) as string | undefined) ?? null,
       createdAt: (getField(inv.createdAt, inv.created_at) as string) ?? (inv.date as string),
       updatedAt: (getField(inv.updatedAt, inv.updated_at) as string | undefined) ?? undefined,
       notes: (inv.notes as string | undefined) ?? null,
@@ -330,6 +346,39 @@ export function InvoiceDetailContainer() {
             allocatedTotal={related?.allocatedTotal ?? 0}
             storedPaidAmount={display.paidAmount}
             onOpenJournalEntry={handleOpenJournalEntry}
+            invoiceTotal={display.total}
+            isRecordingPayment={recordPayment.isPending}
+            recordPaymentError={
+              recordPayment.error ? String((recordPayment.error as Error).message) : null
+            }
+            onRecordPayment={(input) => {
+              const isPurchase = display.type === 'purchase'
+              recordPayment.mutate({
+                // A purchase pays OUT to a supplier; a sale takes money IN.
+                // Reversed, this lands on the wrong side of the ledger.
+                direction: isPurchase ? 'out' : 'in',
+                partyType: isPurchase ? 'supplier' : 'customer',
+                partyId: (isPurchase ? display.supplierId : display.customerId) as string,
+                amount: input.amount,
+                method: input.method,
+                reference: input.reference,
+                entryDate: input.date,
+                currency: display.currency,
+                // Explicit, always. Auto-allocation settles the OLDEST open
+                // invoice first — so paying here would quietly clear a
+                // different invoice and leave this one untouched.
+                allocations: [{ invoiceId: display.id, amount: input.amount }],
+              })
+            }}
+            onCancelPayment={(paymentId) => {
+              // The server requires a reason and refuses without one: a
+              // cancelled payment nobody explained is unauditable.
+              const reason = window.prompt(
+                safeT('invoiceDetail.cancelPaymentReason', 'دلیل حذف این پرداخت؟'),
+              )
+              if (!reason || !reason.trim()) return
+              cancelPayment.mutate({ paymentId, reason: reason.trim() })
+            }}
           />
         ) : null
       }

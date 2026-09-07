@@ -26,6 +26,12 @@ import {
   type InvoiceDocumentData,
   type InvoiceDocumentDisplaySettings,
 } from '../../invoice-detail/invoice-document'
+import {
+  InvoicePaymentSection,
+  emptyPaymentValue,
+  paidAmountOf,
+  type InvoicePaymentValue,
+} from '../invoice-payment-section'
 import { InvoiceSidebar } from '../../invoice-detail/invoice-sidebar'
 import { useInvoiceDraft } from '../../../../hooks/invoices/use-invoice-draft'
 import { PreviewItemsTable } from '../preview-items-table'
@@ -133,11 +139,24 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
       discountTotal: summary.discountTotal,
       taxTotal: summary.taxTotal,
       total: summary.total,
-      paidAmount: draft.isPaid ? summary.total : 0,
+      paidAmount,
       notes: draft.notes,
     }),
     [draft, primaryCustomer, otherCustomerNames, workspace, items, currency, summary, t],
   )
+
+  // ─── T9 — how this invoice was paid ─────────────────────────────────
+  //
+  // `draft.isPaid` defaulted to TRUE and no UI ever set it, so every invoice
+  // was submitted claiming the full amount had been received. That is the
+  // reported defect at its source: `paidAmount: summary.total` on a sale where
+  // nothing had been handed over.
+  //
+  // Held in local state rather than the draft slice because it describes an
+  // EVENT at submission, not a property of the document being edited — and
+  // because a persisted default is exactly what caused the bug.
+  const [payment, setPayment] = useState<InvoicePaymentValue>(emptyPaymentValue)
+  const paidAmount = paidAmountOf(payment, summary.total)
 
   const invoiceNotes = [
     draft.notes.trim(),
@@ -165,8 +184,24 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
         taxRate: Number(draft.taxRate) || 0,
         taxTotal: summary.taxTotal,
         total: summary.total,
-        paidAmount: draft.isPaid ? summary.total : Number(draft.paidNow) || 0,
-        paymentMethod: draft.paymentMethod,
+        // ⚠️ The server turns these into REAL `payments` +
+        // `payment_allocations` rows. It no longer stamps `paid_amount` — see
+        // `recordCreationPayments` in invoice.service.ts.
+        paidAmount,
+        paymentMethod: payment.method,
+        // Split: one payment record per method. A single row carrying a
+        // blended method would make the till count and the bank
+        // reconciliation both wrong, and neither repairable afterwards.
+        ...(payment.mode === 'split'
+          ? {
+              payments: payment.tranches
+                .filter((tranche) => (Number(tranche.amount) || 0) > 0)
+                .map((tranche) => ({
+                  method: tranche.method,
+                  amount: Number(tranche.amount),
+                })),
+            }
+          : {}),
         currency,
         ...(primaryCustomer?.id ? { customerId: primaryCustomer.id } : {}),
         // The companions are kept on the invoice's own notes — the only place
@@ -255,11 +290,20 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
         </div>
 
         <div className="min-w-0 space-y-3">
+          <InvoicePaymentSection
+            t={t}
+            fmtMoney={(value) => value.toLocaleString('fa-AF')}
+            currency={currency}
+            total={summary.total}
+            value={payment}
+            onChange={setPayment}
+          />
+
           <InvoiceSidebar
             t={t}
             summary={{
               total: summary.total,
-              paidAmount: draft.isPaid ? summary.total : 0,
+              paidAmount,
               currency,
             }}
             display={display}

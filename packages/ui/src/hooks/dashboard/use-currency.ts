@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl'
 import { useCurrencyStore } from '@hisabche/store'
 
 import { useIntlLocale } from '../use-intl-locale'
+import { CURRENCY_SIGN, type KnownCurrency } from '@hisabche/formatting'
 
 /**
  * Aligned with the canonical `currencyCodeSchema`
@@ -16,7 +17,17 @@ import { useIntlLocale } from '../use-intl-locale'
  * omitted PKR, which the product DOES support. A PKR workspace therefore fell
  * through `symbols[code] || code` and rendered the bare text "PKR".
  */
-export type CurrencyCode = 'AFN' | 'USD' | 'PKR' | 'IRR'
+/**
+ * ⚠️ Derived from the formatting contract, not restated.
+ *
+ * This was a fourth hand-maintained copy of the currency list, and it had
+ * already drifted once — it listed a currency the product rejected and omitted
+ * PKR, which it supported, so a PKR workspace rendered the bare text "PKR".
+ *
+ * `KnownCurrency` and `CURRENCY_SIGN` in @hisabche/formatting are the source
+ * for both the codes and their symbols.
+ */
+export type CurrencyCode = KnownCurrency
 
 interface UseCurrencyOptions {
   /** Override the user's currency — only for a figure that carries its own. */
@@ -27,12 +38,13 @@ interface UseCurrencyOptions {
   maximumFractionDigits?: number
 }
 
-const SYMBOLS: Record<CurrencyCode, string> = {
-  AFN: '؋',
-  USD: '$',
-  PKR: '₨',
-  IRR: '﷼',
-}
+/**
+ * The symbols, straight from the formatting contract.
+ *
+ * A local table here is how the previous drift happened: two lists of the same
+ * thing, one of them edited.
+ */
+const SYMBOLS: Record<CurrencyCode, string> = CURRENCY_SIGN
 
 export function useCurrency(options: UseCurrencyOptions = {}) {
   // `code` defaulted to the literal 'AFN' and `locale` to the literal 'fa-AF'.

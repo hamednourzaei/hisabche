@@ -48,7 +48,7 @@ function Switch({ className, size = 'default', ...props }: SwitchProps) {
         'data-[state=checked]:bg-[hsl(var(--color-success))]',
         'data-[state=checked]:border-[hsl(var(--color-success))]',
         // Focus
-        'focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring-color)/0.5)] focus-visible:ring-offset-1',
+        'focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary)/0.5)] focus-visible:ring-offset-1',
         // Disabled
         'disabled:cursor-not-allowed disabled:opacity-40',
         // Invalid

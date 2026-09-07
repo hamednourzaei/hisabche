@@ -73,6 +73,14 @@ export interface InvoiceDetailDisplay {
   discountTotal: number
   taxTotal: number
   paidAmount: number
+  /**
+   * T9 — the party a payment recorded from this screen belongs to.
+   *
+   * Null on a walk-in cash sale, which is supported: the payment carries no
+   * party and is allocated to the invoice by id.
+   */
+  customerId?: string | null
+  supplierId?: string | null
   createdAt: string
   updatedAt?: string | undefined
   notes?: string | null | undefined

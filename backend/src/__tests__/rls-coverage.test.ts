@@ -147,12 +147,61 @@ describe('row level security is enabled on every tenant table', () => {
   })
 })
 
+/**
+ * Tables that hold NO tenant data at all, and therefore have nothing to scope.
+ *
+ * ⚠️ THIS LIST IS A LOADED GUN. Every entry is a table where `USING (true)` is
+ * permitted, so adding one wrongly disables the workspace check for it.
+ *
+ * A table qualifies only if ALL of these hold:
+ *   1. It has no `workspace_id` column — there is literally nothing to filter.
+ *   2. Its rows are identical for every customer (a gram is a gram).
+ *   3. It is READ-ONLY to users: no INSERT/UPDATE/DELETE policy exists, so
+ *      only the service role can write it. This is asserted below, not assumed.
+ *
+ * `units` (phase-l-01, RLS added in T2) is the whole list. If a second entry
+ * is ever proposed, check condition 3 first: a globally readable table that
+ * users can also WRITE lets one customer change every other customer's
+ * conversion factors.
+ */
+const GLOBAL_REFERENCE_TABLES = ['units']
+
+const isGlobalReference = (policy: string): boolean =>
+  GLOBAL_REFERENCE_TABLES.some((table) => new RegExp(`\\bON\\s+${table}\\b`, 'i').test(policy))
+
 describe('the policies restrict by workspace membership, not by nothing', () => {
   it('never grants unconditional access', () => {
     // `USING (true)` is a policy that exists, satisfies a checklist, and
     // protects nothing.
+    //
+    // Checked per-policy rather than across the whole file, so one justified
+    // exemption cannot blind the test to every other table.
     const unconditional = /USING\s*\(\s*true\s*\)/i
-    expect(unconditional.test(code)).toBe(false)
+    const policies = code.match(/CREATE\s+POLICY[\s\S]*?;/gi) ?? []
+
+    for (const policy of policies) {
+      if (isGlobalReference(policy)) continue
+      expect(unconditional.test(policy), `unconditional policy:\n${policy.slice(0, 200)}`).toBe(
+        false,
+      )
+    }
+  })
+
+  it('a globally-readable table is readable ONLY — never writable by a user', () => {
+    // The condition that makes the exemption safe. A reference table any
+    // authenticated user can rewrite is a way to change every conversion
+    // factor in the product, for every customer at once.
+    const policies = code.match(/CREATE\s+POLICY[\s\S]*?;/gi) ?? []
+    const exempted = policies.filter(isGlobalReference)
+
+    expect(exempted.length, 'the exemption list names a table with no policy').toBeGreaterThan(0)
+
+    for (const policy of exempted) {
+      expect(/FOR\s+SELECT/i.test(policy), `not SELECT-only:\n${policy.slice(0, 200)}`).toBe(true)
+      for (const write of ['INSERT', 'UPDATE', 'DELETE', 'ALL']) {
+        expect(new RegExp(`FOR\\s+${write}\\b`, 'i').test(policy), `${write} policy`).toBe(false)
+      }
+    }
   })
 
   it('every policy body references the membership chain', () => {
@@ -160,6 +209,11 @@ describe('the policies restrict by workspace membership, not by nothing', () => 
     expect(policies.length).toBeGreaterThan(0)
 
     for (const policy of policies) {
+      // A table with no workspace column has no membership chain to
+      // reference. See GLOBAL_REFERENCE_TABLES — the exemption is paid for by
+      // the SELECT-only assertion above.
+      if (isGlobalReference(policy)) continue
+
       const scoped =
         /workspace_members/i.test(policy) ||
         /auth_workspace_ids\s*\(/i.test(policy) ||

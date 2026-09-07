@@ -35,19 +35,19 @@ const iconMap = {
 
 const toneStyles = {
   warning: {
-    border: 'border-[hsl(var(--status-warning)/0.3)]',
-    bg: 'bg-[hsl(var(--status-warning)/0.05)]',
-    icon: 'text-[hsl(var(--status-warning))]',
+    border: 'border-[hsl(var(--color-warning)/0.3)]',
+    bg: 'bg-[hsl(var(--color-warning)/0.05)]',
+    icon: 'text-[hsl(var(--color-warning))]',
   },
   info: {
-    border: 'border-[hsl(var(--status-info)/0.3)]',
-    bg: 'bg-[hsl(var(--status-info)/0.05)]',
-    icon: 'text-[hsl(var(--status-info))]',
+    border: 'border-[hsl(var(--color-info)/0.3)]',
+    bg: 'bg-[hsl(var(--color-info)/0.05)]',
+    icon: 'text-[hsl(var(--color-info))]',
   },
   success: {
-    border: 'border-[hsl(var(--status-positive)/0.3)]',
-    bg: 'bg-[hsl(var(--status-positive)/0.05)]',
-    icon: 'text-[hsl(var(--status-positive))]',
+    border: 'border-[hsl(var(--color-success)/0.3)]',
+    bg: 'bg-[hsl(var(--color-success)/0.05)]',
+    icon: 'text-[hsl(var(--color-success))]',
   },
   tip: {
     border: 'border-[hsl(var(--color-primary)/0.3)]',

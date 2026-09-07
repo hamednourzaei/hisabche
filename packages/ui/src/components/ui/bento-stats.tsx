@@ -2,6 +2,7 @@
 // 🍱 Bento Grid + Soft UI — KPI box (mobile: یک باکس نامتقارن ۲×۲ / دسکتاپ: کارت‌های مجزا)
 'use client'
 
+import { STAT_CARD_SURFACE_DESKTOP, STAT_LABEL, STAT_PADDING } from './stat-surface'
 import { cn } from '../../lib/utils'
 import { TrendingUp, TrendingDown, type LucideIcon } from 'lucide-react'
 import { useIntlLocale } from '../../hooks/use-intl-locale'
@@ -140,15 +141,15 @@ export function BentoStats({ t, stats, className }: BentoStatsProps) {
           <div
             key={stat.id}
             className={cn(
-              'min-w-0 p-3 sm:p-4',
+              STAT_PADDING,
               SPANS[i],
               INNER_BORDERS[i],
               'border-[hsl(var(--border-default))]',
-              // دسکتاپ: هر خانه یک کارت مستقل
-              'sm:col-span-1 sm:rounded-2xl sm:border',
-              'sm:bg-[hsl(var(--surface-elevated))]',
-              'sm:shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_-14px_rgba(0,0,0,0.16)]',
-              'transition-colors duration-150',
+              // دسکتاپ: هر خانه یک کارت مستقل — همان ظاهری که
+              // `stat-surface` تعریف می‌کند و capability-kit هم از آن
+              // استفاده می‌کند، تا دو زبان بصری نداشته باشیم (T3).
+              'sm:col-span-1',
+              STAT_CARD_SURFACE_DESKTOP,
             )}
           >
             <div className="flex items-center gap-1.5 sm:gap-2">
@@ -156,9 +157,7 @@ export function BentoStats({ t, stats, className }: BentoStatsProps) {
                 className="size-3.5 shrink-0 text-[hsl(var(--color-primary))] sm:size-4"
                 aria-hidden="true"
               />
-              <span className="truncate text-[10px] text-[hsl(var(--fg-secondary))] sm:text-xs">
-                {stat.label}
-              </span>
+              <span className={STAT_LABEL}>{stat.label}</span>
             </div>
 
             <p

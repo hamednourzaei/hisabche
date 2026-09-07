@@ -1,6 +1,7 @@
 // packages/ui/src/components/ui/quick-invoice/quick-invoice-page.tsx
 'use client'
 
+import { SelectField } from '../select-field'
 import { cn } from '../../../lib/utils'
 import {
   ArrowRight,
@@ -385,18 +386,20 @@ const ItemRow = memo(function ItemRow({
         <label htmlFor={`unit-${item.key}`} className="text-[10px] text-[hsl(var(--fg-tertiary))]">
           {t('quickInvoice.unit', 'واحد')}
         </label>
-        <select
-          id={`unit-${item.key}`}
+        <SelectField
           value={item.unit ?? 'piece'}
-          onChange={(e) => onUpdateUnit(item.key, e.target.value as InvoiceUnit)}
-          className="rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] px-2 py-1 text-xs text-[hsl(var(--fg-primary))] focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)]"
-        >
-          {UNIT_OPTIONS.map((unit) => (
-            <option key={unit} value={unit}>
-              {t(`unit.${unit}`, UNIT_FALLBACK[unit])}
-            </option>
-          ))}
-        </select>
+          onChange={(value) => onUpdateUnit(item.key, value as InvoiceUnit)}
+          options={[
+            ...UNIT_OPTIONS.map((unit) => ({
+              value: unit,
+              label: t(`unit.${unit}`, UNIT_FALLBACK[unit]),
+            })),
+          ]}
+          className={
+            'rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] px-2 py-1 text-xs text-[hsl(var(--fg-primary))] focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)]'
+          }
+          id={`unit-${item.key}`}
+        />
 
         {/* وزن — مستقل از تعداد. «۱ گردنبند ۱۲٫۵ گرمی» یعنی تعداد=۱، وزن=۱۲٫۵ */}
         <label

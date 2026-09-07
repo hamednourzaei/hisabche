@@ -195,7 +195,65 @@ export const invoiceSchema = z.object({
   total: positiveNumberSchema,
 
   // Payment
+  /**
+   * ⚠️ THIS IS AN INSTRUCTION, NOT A STORED VALUE (T9).
+   *
+   * `invoices.paid_amount` is DERIVED from `SUM(payment_allocations)`. Phase F
+   * closed the PATCH path that wrote it directly, but the CREATE path kept
+   * writing `paid_amount: data.paidAmount || 0` — a second writer on a derived
+   * number. The result showed up on a real sale as:
+   *
+   *   «مبلغ پرداخت‌شده‌ی ثبت‌شده روی فاکتور با مجموع پرداخت‌ها یکی نیست»
+   *
+   * with `paid_amount` set and not one `payment_allocations` row behind it.
+   *
+   * The field is kept because clients send it and it expresses a real
+   * intention — «this was paid at the counter». What changed is what the
+   * server does with it: it now RECORDS A PAYMENT and lets `paid_amount`
+   * follow, instead of stamping the number.
+   */
   paidAmount: nonNegativeNumberSchema.default(0),
+
+  /**
+   * How the money arrived, when it was more than one way — «۵۰۰ نقد، بقیه
+   * کارت». Omit it for a single method and `paymentMethod` covers it.
+   *
+   * Each entry becomes its OWN payment record. One payment row carrying a
+   * blended method would make the cash-drawer and bank reconciliations both
+   * wrong, and neither could be repaired from the data afterwards.
+   */
+  payments: z
+    .array(
+      z.object({
+        method: paymentMethodSchema,
+        amount: positiveNumberSchema,
+        reference: z.string().max(120).optional(),
+      }),
+    )
+    .optional(),
+
+  /**
+   * ⚠️ INSTALMENTS ARE NOT ACCEPTED HERE, DELIBERATELY (T9 — STOP CONDITION).
+   *
+   * The owner asked for «قسطی». There is nowhere to put it: no instalments
+   * table, no due-schedule column, nothing in the codebase that stores a
+   * payment plan. `invoices.due_date` holds ONE date, which is a single
+   * deadline and not a schedule.
+   *
+   * A field accepted here and dropped on the floor — or a picker on
+   * /invoices/new that saves nothing — is the UI-theatre guardrail exactly.
+   * The person would enter a plan, see it accepted, and it would not exist.
+   *
+   * What it needs first is a product decision, not code:
+   *   · does an instalment generate its own receivable, or is it a view of
+   *     one invoice's balance?
+   *   · does a missed instalment change the invoice's status?
+   *   · is a late fee charged, and does it post to the ledger?
+   *
+   * Until those are answered, PARTIAL PAYMENT covers the real case: record
+   * what was actually paid, and the remainder stays outstanding.
+   */
+
   paymentMethod: paymentMethodSchema.default('cash'),
   currency: currencyCodeSchema.default('AFN'),
 

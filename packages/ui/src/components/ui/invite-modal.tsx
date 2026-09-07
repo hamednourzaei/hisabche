@@ -3,6 +3,7 @@
 // ============================================
 'use client'
 
+import { SelectField } from './select-field'
 import { useState, useCallback, memo } from 'react'
 import { useTranslations } from 'next-intl'
 import * as Dialog from '@radix-ui/react-dialog'
@@ -85,8 +86,8 @@ export const InviteModal = memo(function InviteModal({ open, onClose, workspaceI
     setError('')
   }, [])
 
-  const handleRoleChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    setRole(e.target.value as WorkspaceRole)
+  const handleRoleChange = useCallback((value: string) => {
+    setRole(value as WorkspaceRole)
   }, [])
 
   const handleKeyDown = useCallback(
@@ -199,15 +200,18 @@ export const InviteModal = memo(function InviteModal({ open, onClose, workspaceI
               />
 
               <div className="relative">
-                <select
+                <SelectField
                   value={role}
                   onChange={handleRoleChange}
-                  className="w-full rounded-xl px-4 py-3 pe-10 text-sm appearance-none cursor-pointer border-2 border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))]"
-                >
-                  <option value="admin">{t('workspace.admin', 'مدیر')}</option>
-                  <option value="member">{t('workspace.employee', 'کارمند')}</option>
-                  <option value="viewer">{t('workspace.viewer', 'ناظر')}</option>
-                </select>
+                  options={[
+                    { value: 'admin', label: t('workspace.admin', 'مدیر') },
+                    { value: 'member', label: t('workspace.employee', 'کارمند') },
+                    { value: 'viewer', label: t('workspace.viewer', 'ناظر') },
+                  ]}
+                  className={
+                    'w-full rounded-xl px-4 py-3 pe-10 text-sm appearance-none cursor-pointer border-2 border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))]'
+                  }
+                />
                 <ChevronDown className="absolute end-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))] pointer-events-none" />
               </div>
 

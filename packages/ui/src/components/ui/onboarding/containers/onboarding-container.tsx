@@ -107,11 +107,18 @@ export const OnboardingContainer = memo(function OnboardingContainer() {
   const handleSetCurrency = useCallback(
     (currency: string) => {
       if (!isSupportedCurrency(currency)) {
-        // A code from the wider onboarding catalogue (IRT, TRY, XAU …) that
-        // `currencyCodeSchema` rejects and no invoice can carry. Deliberately
-        // NOT coerced to AFN — silently substituting a different currency is
-        // the exact failure this change exists to remove. See the report:
-        // reconciling the catalogue with the supported set is a product call.
+        // ⚠️ UNREACHABLE FROM THE PICKER, AND A TEST KEEPS IT THAT WAY.
+        //
+        // This used to fire constantly: the catalogue offered 25 codes while
+        // `currencyCodeSchema` accepted four, so choosing طلا or تومان hit
+        // this branch and the wizard silently did NOTHING. Task T1 opened the
+        // schema to all 25, and `currency-catalogue-parity.test.ts` asserts
+        // the two lists stay equal — so nothing the user can click lands here.
+        //
+        // The branch stays for a code arriving from anywhere else (a restored
+        // draft, a stale persisted store). It refuses rather than coercing:
+        // silently substituting a different currency is the failure this whole
+        // change exists to remove.
         return
       }
       setDefaultCurrency(currency as Currency)

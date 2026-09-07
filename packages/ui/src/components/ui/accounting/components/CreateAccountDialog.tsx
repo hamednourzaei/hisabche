@@ -1,6 +1,7 @@
 // packages/ui/src/components/ui/accounting/components/CreateAccountDialog.tsx
 'use client'
 
+import { SelectField } from '../../select-field'
 import { memo, useState, useCallback, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import { X, Loader2 } from 'lucide-react'
@@ -140,18 +141,20 @@ export const CreateAccountDialog = memo(function CreateAccountDialog({
             >
               {t('accounting.accounts.type')}
             </label>
-            <select
-              id="account-type"
+            <SelectField
               value={type}
-              onChange={(e) => setType(e.target.value)}
-              className="w-full h-9 md:h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-3 text-xs md:text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
-            >
-              {ACCOUNT_TYPES.map((accType) => (
-                <option key={accType} value={accType}>
-                  {t(`accounting.accountTypes.${accType}`)}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => setType(value)}
+              options={[
+                ...ACCOUNT_TYPES.map((accType) => ({
+                  value: accType,
+                  label: t(`accounting.accountTypes.${accType}`),
+                })),
+              ]}
+              className={
+                'w-full h-9 md:h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-3 text-xs md:text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]'
+              }
+              id={'account-type'}
+            />
           </div>
 
           {parentOptions.length > 0 && (
@@ -162,19 +165,18 @@ export const CreateAccountDialog = memo(function CreateAccountDialog({
               >
                 {t('accounting.accounts.parent')}
               </label>
-              <select
-                id="account-parent"
+              <SelectField
                 value={parentId}
-                onChange={(e) => setParentId(e.target.value)}
-                className="w-full h-9 md:h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-3 text-xs md:text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
-              >
-                <option value="">{t('accounting.accounts.noParent')}</option>
-                {parentOptions.map((opt) => (
-                  <option key={opt.id} value={opt.id}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => setParentId(value)}
+                options={[
+                  { value: '', label: t('accounting.accounts.noParent') },
+                  ...parentOptions.map((opt) => ({ value: opt.id, label: opt.label })),
+                ]}
+                className={
+                  'w-full h-9 md:h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-3 text-xs md:text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]'
+                }
+                id={'account-parent'}
+              />
             </div>
           )}
 

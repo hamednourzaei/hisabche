@@ -101,7 +101,7 @@ export const BudgetsView = memo(function BudgetsView({
 
       {!isLoading && budgets.length === 0 ? (
         <Panel title={t('budgets.empty_title', 'بودجه‌ای تعریف نشده')}>
-          <p className="text-sm text-[hsl(var(--muted-foreground))]">
+          <p className="text-sm text-[hsl(var(--fg-tertiary))]">
             {t('budgets.empty_hint', 'بودجه از تنظیمات حسابداری، روی یک حساب، تعریف می‌شود.')}
           </p>
         </Panel>
@@ -186,7 +186,7 @@ export const BudgetsView = memo(function BudgetsView({
         </div>
 
         {checkResult ? (
-          <div className="mt-4 rounded-xl bg-[hsl(var(--muted)/0.4)] p-4 text-sm">
+          <div className="mt-4 rounded-xl bg-[hsl(var(--surface-muted)/0.4)] p-4 text-sm">
             {/* The state carries more than allowed/refused: a spend can be
                 permitted and still cross the warning threshold, and hiding
                 that is how a budget is discovered only once it is broken. */}
@@ -201,7 +201,7 @@ export const BudgetsView = memo(function BudgetsView({
                 : t('budgets.blocked', 'از سقف عبور می‌کند')}
             </Badge>
             {checkResult.code ? (
-              <span className="ms-2 text-[hsl(var(--muted-foreground))]">
+              <span className="ms-2 text-[hsl(var(--fg-tertiary))]">
                 {t(`budgets.code_${checkResult.code}`, checkResult.code)}
               </span>
             ) : null}
@@ -209,7 +209,7 @@ export const BudgetsView = memo(function BudgetsView({
             {checkResult.status ? (
               <dl className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
                 <div>
-                  <dt className="text-xs text-[hsl(var(--muted-foreground))]">
+                  <dt className="text-xs text-[hsl(var(--fg-tertiary))]">
                     {t('budgets.budget', 'بودجه')}
                   </dt>
                   <dd>
@@ -217,7 +217,7 @@ export const BudgetsView = memo(function BudgetsView({
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-[hsl(var(--muted-foreground))]">
+                  <dt className="text-xs text-[hsl(var(--fg-tertiary))]">
                     {t('budgets.actual', 'خرج‌شده')}
                   </dt>
                   <dd>
@@ -225,7 +225,7 @@ export const BudgetsView = memo(function BudgetsView({
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-[hsl(var(--muted-foreground))]">
+                  <dt className="text-xs text-[hsl(var(--fg-tertiary))]">
                     {t('budgets.committed', 'تعهدشده')}
                   </dt>
                   <dd>
@@ -233,7 +233,7 @@ export const BudgetsView = memo(function BudgetsView({
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-xs text-[hsl(var(--muted-foreground))]">
+                  <dt className="text-xs text-[hsl(var(--fg-tertiary))]">
                     {t('budgets.available', 'قابل استفاده')}
                   </dt>
                   <dd>
@@ -281,7 +281,7 @@ export const BudgetsView = memo(function BudgetsView({
                       tone={row.varianceMinor > 0 ? 'bad' : 'good'}
                     />
                     {row.variancePercent != null ? (
-                      <span className="ms-2 text-xs text-[hsl(var(--muted-foreground))]">
+                      <span className="ms-2 text-xs text-[hsl(var(--fg-tertiary))]">
                         {Math.round(row.variancePercent)}%
                       </span>
                     ) : null}

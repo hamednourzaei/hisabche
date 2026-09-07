@@ -63,7 +63,7 @@ function AccordionTrigger({
           'text-[hsl(var(--fg-primary))]',
           'hover:text-[hsl(var(--color-primary))]',
           // Focus
-          'focus:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring-color)/0.5)] focus-visible:ring-offset-1',
+          'focus:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary)/0.5)] focus-visible:ring-offset-1',
           // Disabled
           'disabled:pointer-events-none disabled:opacity-40',
           className,

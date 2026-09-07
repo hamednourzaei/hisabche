@@ -1,5 +1,6 @@
 'use client'
 
+import { toValidUnit } from '../../units/unit-select'
 import { useState, useCallback, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
@@ -9,7 +10,16 @@ import { profitPerUnit, stockValue, totalProfit } from '@hisabche/validation'
 import { useProduct, useUpdateProduct, useDeleteProduct } from '@hisabche/api'
 import { ProductDetailPage } from '../warehouse-detail-page'
 
-type UnitType = 'piece' | 'kg' | 'liter' | 'meter' | 'box'
+/**
+ * ⚠️ WAS `'piece' | 'kg' | 'liter' | 'meter' | 'box'` — FIVE OF FIFTEEN.
+ *
+ * `units` (phase-l-01) seeds fifteen codes and `unitSchema` accepts all of
+ * them. Narrowing to five here did not merely hide options: `toUnitType`
+ * coerced everything else to 'piece', so a product measured in grams opened
+ * as «عدد» and SAVING the form wrote 'piece' over the real unit — a silent
+ * data change, structurally the T1 currency-to-AFN defect. See T2.
+ */
+type UnitType = string
 
 interface ProductEditValues {
   name: string
@@ -28,11 +38,16 @@ const num = (v: unknown): number => {
 
 const fmt = (v: unknown): string => num(v).toLocaleString('fa-AF')
 
-// Helper to convert string to valid UnitType
-const toUnitType = (unit: string): UnitType => {
-  const validUnits: UnitType[] = ['piece', 'kg', 'liter', 'meter', 'box']
-  return validUnits.includes(unit as UnitType) ? (unit as UnitType) : 'piece'
-}
+/**
+ * ⚠️ THIS USED TO REWRITE THE PRODUCT'S UNIT.
+ *
+ * It checked the value against five hardcoded codes and returned 'piece' for
+ * everything else — so a gram, tonne or dozen product was loaded into the edit
+ * form as «عدد», and the next save persisted that. Identity now: the stored
+ * unit is carried through untouched and `<UnitSelect>` renders an unknown code
+ * as itself. See T2.
+ */
+const toUnitType = (unit: string): UnitType => unit
 
 interface RawProduct {
   name?: string
@@ -103,7 +118,8 @@ export function ProductDetailContainer() {
       minStockLevel: Math.floor(num(editMinStock)) || 5,
       category: editCategory as
         'general' | 'food' | 'electronics' | 'clothing' | 'construction' | 'medicine',
-      unit: editUnit,
+      // Refused rather than defaulted — see toValidUnit (T2).
+      unit: toValidUnit(editUnit) ?? undefined,
     })
     setEditing(false)
   }, [

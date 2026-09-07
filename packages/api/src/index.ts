@@ -117,6 +117,7 @@ export {
   usePayments,
   useOpenInvoices,
   useRecordPayment,
+  useCancelPayment,
   paymentKeys,
   type PaymentDirection,
   type PaymentPartyType,
@@ -549,3 +550,13 @@ export {
   type SoDSettings,
   type SoDOverride,
 } from './hooks/governance'
+
+// ─── Units of measure (T2) ───
+export {
+  unitKeys,
+  useUnits,
+  useUnitsByDimension,
+  type Unit,
+  type UnitDimension,
+  type UnitsResponse,
+} from './hooks/units'

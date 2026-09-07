@@ -62,7 +62,7 @@ const Celebration: React.FC<CelebrationProps> = ({
         <Dialog.Overlay
           className={cn(
             'fixed inset-0 z-50',
-            'bg-[hsl(var(--ledger-ink)/0.2)]',
+            'bg-[hsl(var(--fg-primary)/0.2)]',
             'data-[state=open]:animate-in data-[state=closed]:animate-out',
             'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
             'motion-reduce:animate-none',

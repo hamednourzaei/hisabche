@@ -30,6 +30,10 @@
 // component directly — not add a new primitive to this file.
 // ============================================
 
+import type { LucideIcon } from 'lucide-react'
+
+import { STAT_CARD_SURFACE, STAT_HINT, STAT_LABEL, STAT_PADDING, STAT_VALUE } from '../stat-surface'
+import { SelectField as SharedSelectField } from '../select-field'
 import React from 'react'
 
 import { cn } from '../../../lib/utils'
@@ -38,7 +42,6 @@ import { Badge as UiBadge } from '../badge'
 import { Button } from '../button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../card'
 import { Input } from '../input'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../select'
 import { Skeleton } from '../skeleton'
 
 /* ─── Money ───────────────────────────────────────────────────────────────── */
@@ -124,25 +127,57 @@ export function Panel({
 }
 
 /** A labelled figure. `hint` carries the comparison the figure needs. */
+/**
+ * One figure, drawn the way the dashboard draws figures.
+ *
+ * ---------------------------------------------------------------------------
+ * T3 — WHAT CHANGED AND WHY
+ *
+ * This was a flat tinted box: `rounded-xl bg-[hsl(var(--bg-subtle))]`, a
+ * regular-weight number, no border, no elevation. The dashboard's KPI is an
+ * elevated card with bold tabular numerals. Sixteen screens used this one, so
+ * a third of the product looked like a different application — which is the
+ * owner's report, «ظاهرشان با بقیه‌ی داشبورد یکی نیست».
+ *
+ * The classes come from `stat-surface`, shared with `BentoStats`. Neither
+ * component hardcodes the treatment any more, so the two cannot drift.
+ *
+ * `icon` is optional and new: the dashboard cards carry one, and a screen that
+ * has a sensible icon can now match completely.
+ */
 export function Stat({
   label,
   value,
   hint,
+  icon: Icon,
 }: {
   label: string
   value: React.ReactNode
   hint?: React.ReactNode
+  icon?: LucideIcon
 }) {
   return (
-    <div className="rounded-xl bg-[hsl(var(--bg-subtle))] px-4 py-3">
-      <div className="text-xs text-[hsl(var(--fg-tertiary))]">{label}</div>
-      <div className="mt-1 text-lg text-[hsl(var(--fg-primary))]">{value}</div>
-      {hint ? <div className="mt-0.5 text-xs text-[hsl(var(--fg-tertiary))]">{hint}</div> : null}
+    <div className={cn(STAT_CARD_SURFACE, STAT_PADDING)}>
+      <div className="flex items-center gap-1.5 sm:gap-2">
+        {Icon ? (
+          <Icon
+            className="size-3.5 shrink-0 text-[hsl(var(--color-primary))] sm:size-4"
+            aria-hidden="true"
+          />
+        ) : null}
+        <span className={STAT_LABEL}>{label}</span>
+      </div>
+      {/* `text-lg sm:text-xl` rather than the bento's automatic sizing: these
+          screens pass formatted strings, not raw numbers, so there is no
+          magnitude to size against. */}
+      <p className={cn('mt-1.5 text-lg sm:mt-2 sm:text-xl', STAT_VALUE)}>{value}</p>
+      {hint ? <div className={cn('mt-0.5', STAT_HINT)}>{hint}</div> : null}
     </div>
   )
 }
 
 export function StatGrid({ children }: { children: React.ReactNode }) {
+  // Matches the dashboard's desktop row: four across, two on mobile.
   return <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{children}</div>
 }
 
@@ -280,12 +315,20 @@ export function MinorInput({
 }
 
 /**
- * A choice, on the project's own Select.
+ * A choice, on the project's own Select, with a label above it.
  *
- * Not a bare `<select>`. The native element cannot be styled consistently
- * across browsers, ignores the app's focus ring and dropdown treatment, and
- * on RTL renders its arrow on the wrong side — which is exactly the drift
- * this kit exists to stop.
+ * ---------------------------------------------------------------------------
+ * ⚠️ THE CONTROL ITSELF LIVES IN `../select-field`. THIS IS THE LABEL WRAPPER.
+ *
+ * It used to render its own Radix structure. That was a second implementation
+ * of the same control, and it had a defect the shared one exists to fix:
+ * Radix throws on a `SelectItem` whose value is the empty string, and `''` is
+ * what every filter dropdown in this product uses for «همه». Passing such an
+ * option here crashed the page when the list opened.
+ *
+ * Two components with one purpose is the parallel-architecture guardrail, so
+ * this one keeps only what is actually its own — the label — and delegates
+ * the control.
  */
 export function SelectField({
   label,
@@ -307,20 +350,13 @@ export function SelectField({
       {label ? (
         <label className="text-sm font-medium text-[hsl(var(--fg-primary))]">{label}</label>
       ) : null}
-      {/* `exactOptionalPropertyTypes` is on: an explicit `undefined` is not the
-          same as an absent prop, so `disabled` is spread only when it is set. */}
-      <Select value={value} onValueChange={onChange} {...(disabled ? { disabled } : {})}>
-        <SelectTrigger>
-          <SelectValue placeholder={placeholder} />
-        </SelectTrigger>
-        <SelectContent>
-          {options.map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <SharedSelectField
+        value={value}
+        onChange={onChange}
+        options={options}
+        {...(placeholder ? { placeholder } : {})}
+        {...(disabled ? { disabled } : {})}
+      />
     </div>
   )
 }
@@ -420,8 +456,33 @@ export function CapabilityHeader({
   )
 }
 
+/**
+ * The outer shell of a capability screen.
+ *
+ * ---------------------------------------------------------------------------
+ * ⚠️ T3 — THIS USED TO ADD ITS OWN WIDTH AND PADDING, AND THAT WAS THE
+ * MISMATCH THE OWNER REPORTED.
+ *
+ * It was:
+ *
+ *     mx-auto w-full max-w-5xl space-y-5 p-4 sm:p-6
+ *
+ * Two problems, both structural rather than stylistic:
+ *
+ *   · `p-4 sm:p-6` sat INSIDE `<main className="... p-4 ...">`, so every
+ *     capability screen carried double padding and started further from the
+ *     edge than every other page.
+ *   · `max-w-5xl mx-auto` centred the content in a narrow column while
+ *     /invoices, /warehouse and the rest run the full width of the shell. On a
+ *     wide monitor the difference is unmissable, and it is what «ظاهرشان با
+ *     بقیه‌ی داشبورد یکی نیست» describes.
+ *
+ * The spacing now matches what the mainstream pages use — `invoices-view` and
+ * `warehouse-view` both open with exactly this — so the layout owns the frame
+ * and the page owns its rhythm.
+ */
 export function CapabilityPage({ children }: { children: React.ReactNode }) {
-  return <div className="mx-auto w-full max-w-5xl space-y-5 p-4 sm:p-6">{children}</div>
+  return <div className="space-y-5 sm:space-y-6">{children}</div>
 }
 
 /* ─── Re-exports ──────────────────────────────────────────────────────────── */

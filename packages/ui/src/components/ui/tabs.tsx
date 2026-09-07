@@ -46,7 +46,7 @@ const TabsTrigger = React.forwardRef<
       'data-[state=active]:bg-[hsl(var(--surface-elevated))]',
       'data-[state=active]:text-[hsl(var(--fg-primary))]',
       'data-[state=active]:shadow-sm',
-      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring-color)/0.4)] focus-visible:ring-offset-1',
+      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary)/0.4)] focus-visible:ring-offset-1',
       'disabled:pointer-events-none disabled:opacity-40',
       'motion-reduce:transition-none',
       className,

@@ -12,7 +12,8 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "zod": "^3.25.76"
+    "zod": "^3.25.76",
+    "@hisabche/formatting": "workspace:*"
   },
   "devDependencies": {
     "react": "^19.2.6",

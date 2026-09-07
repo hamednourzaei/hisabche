@@ -7,9 +7,11 @@
 // ============================================
 'use client'
 
+import { SelectField } from '../select-field'
 import { memo, useEffect, useState } from 'react'
 import {
   canAggregate,
+  columnCountsInTotal,
   currencyPrecision,
   customColumnId,
   type InvoiceColumn,
@@ -72,8 +74,10 @@ export const ColumnDialog = memo(function ColumnDialog({
   const [type, setType] = useState<InvoiceColumnType>('text')
   const [currency, setCurrency] = useState<CurrencyCode>(invoiceCurrency)
   const [suffix, setSuffix] = useState('')
+  const [typeLabel, setTypeLabel] = useState('')
   const [precision, setPrecision] = useState('2')
   const [aggregate, setAggregate] = useState(false)
+  const [includeInTotal, setIncludeInTotal] = useState(false)
   const [optionsText, setOptionsText] = useState('')
   const [defaultValue, setDefaultValue] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -87,13 +91,23 @@ export const ColumnDialog = memo(function ColumnDialog({
     setType(column?.type ?? 'text')
     setCurrency(column?.currency ?? invoiceCurrency)
     setSuffix(column?.suffix ?? '')
+    setTypeLabel(column?.typeLabel ?? '')
     setPrecision(String(column?.precision ?? 2))
     setAggregate(column?.aggregate ?? false)
+    // ⚠️ Read through `columnCountsInTotal`, never as `column?.includeInTotal
+    // ?? false`. An older column has no flag, and «no flag» means «what it did
+    // before T8» — true for money, false for percent. Reading it as false
+    // would show the switch OFF for a money column that IS being counted, and
+    // saving the dialog unchanged would then silently drop it from the total.
+    setIncludeInTotal(column ? columnCountsInTotal(column) : false)
     setOptionsText((column?.options ?? []).join('\n'))
     setDefaultValue(column?.defaultValue ?? '')
   }, [open, column, invoiceCurrency])
 
   const numeric = canAggregate(type)
+  // Only these two carry money into the line. A weight or a count column is
+  // summable in the footer but must never be added to what is owed.
+  const chargeable = type === 'currency' || type === 'percent'
 
   const handleSubmit = () => {
     const title = label.trim()
@@ -135,9 +149,15 @@ export const ColumnDialog = memo(function ColumnDialog({
       system: column?.system ?? false,
       visible: column?.visible ?? true,
       aggregate: numeric && aggregate,
+      // Written explicitly for every chargeable column — including `false`.
+      // Leaving it undefined would fall back to the compatibility rule, so a
+      // user switching a money column OFF would have it silently switched
+      // back on the next time the invoice was opened.
+      ...(chargeable ? { includeInTotal } : {}),
       precision: resolvedPrecision,
       ...(type === 'currency' ? { currency } : {}),
       ...(suffix.trim() ? { suffix: suffix.trim() } : {}),
+      ...(typeLabel.trim() ? { typeLabel: typeLabel.trim() } : {}),
       ...(type === 'select' ? { options } : {}),
       ...(defaultValue.trim() ? { defaultValue: defaultValue.trim() } : {}),
       ...(column?.labelKey ? { labelKey: column.labelKey } : {}),
@@ -183,24 +203,47 @@ export const ColumnDialog = memo(function ColumnDialog({
             <label htmlFor="column-type" className={fieldLabel}>
               {t('invoiceBuilder.column.type', 'نوع ستون')}
             </label>
-            <select
-              id="column-type"
+            <SelectField
               value={type}
-              onChange={(e) => setType(e.target.value as InvoiceColumnType)}
-              disabled={editing && column?.system}
+              onChange={(value) => setType(value as InvoiceColumnType)}
+              options={[
+                ...AUTHORABLE_TYPES.map((value) => ({
+                  value: value,
+                  label: t(`invoiceBuilder.columnType.${value}`, TYPE_FALLBACK[value]),
+                })),
+              ]}
               className={cn(
                 'h-10 w-full rounded-[var(--radius-md)] border border-[hsl(var(--border-default))]',
                 'bg-[hsl(var(--surface-base))] px-3 text-sm text-[hsl(var(--fg-primary))]',
                 'outline-none focus:border-[hsl(var(--color-primary))]',
                 'disabled:opacity-50',
               )}
-            >
-              {AUTHORABLE_TYPES.map((value) => (
-                <option key={value} value={value}>
-                  {t(`invoiceBuilder.columnType.${value}`, TYPE_FALLBACK[value])}
-                </option>
-              ))}
-            </select>
+              disabled={editing && column?.system}
+              id={'column-type'}
+            />
+          </div>
+
+          {/* T8 — the trade's own word for this kind of column. The BEHAVIOUR
+              is still the type chosen above; this names it for the reader. */}
+          <div>
+            <label htmlFor="column-type-label" className={fieldLabel}>
+              {t('invoiceBuilder.column.typeLabel', 'نام دلخواه نوع (اختیاری)')}
+            </label>
+            <Input
+              id="column-type-label"
+              value={typeLabel}
+              onChange={(e) => setTypeLabel(e.target.value)}
+              placeholder={t(
+                'invoiceBuilder.column.typeLabelPlaceholder',
+                'اجرت، کرایه حمل، کارمزد',
+              )}
+            />
+            <p className="mt-1 text-[11px] text-[hsl(var(--fg-tertiary))]">
+              {t(
+                'invoiceBuilder.column.typeLabelHint',
+                'فقط برای نمایش است — نحوه‌ی محاسبه همان «نوع ستون» بالا می‌ماند',
+              )}
+            </p>
           </div>
 
           {type === 'currency' ? (
@@ -208,22 +251,22 @@ export const ColumnDialog = memo(function ColumnDialog({
               <label htmlFor="column-currency" className={fieldLabel}>
                 {t('invoiceBuilder.column.currency', 'ارز ستون')}
               </label>
-              <select
-                id="column-currency"
+              <SelectField
                 value={currency}
-                onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
+                onChange={(value) => setCurrency(value as CurrencyCode)}
+                options={[
+                  ...SUPPORTED_CURRENCIES.map((code) => ({
+                    value: code,
+                    label: t(`currency.${code.toLowerCase()}`, code),
+                  })),
+                ]}
                 className={cn(
                   'h-10 w-full rounded-[var(--radius-md)] border border-[hsl(var(--border-default))]',
                   'bg-[hsl(var(--surface-base))] px-3 text-sm text-[hsl(var(--fg-primary))]',
                   'outline-none focus:border-[hsl(var(--color-primary))]',
                 )}
-              >
-                {SUPPORTED_CURRENCIES.map((code) => (
-                  <option key={code} value={code}>
-                    {t(`currency.${code.toLowerCase()}`, code)}
-                  </option>
-                ))}
-              </select>
+                id={'column-currency'}
+              />
               {currency !== invoiceCurrency ? (
                 <p className="mt-1.5 text-[11px] leading-relaxed text-[hsl(var(--fg-tertiary))]">
                   {t(
@@ -291,6 +334,28 @@ export const ColumnDialog = memo(function ColumnDialog({
                   onChange={(e) => setDefaultValue(e.target.value)}
                 />
               </div>
+            </div>
+          ) : null}
+
+          {chargeable ? (
+            <div className="flex items-center justify-between rounded-[var(--radius-md)] border border-[hsl(var(--border-default))] px-3 py-2.5">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-[hsl(var(--fg-primary))]">
+                  {t('invoiceBuilder.column.includeInTotal', 'در جمع کل حساب شود')}
+                </p>
+                <p className="text-[11px] text-[hsl(var(--fg-tertiary))]">
+                  {type === 'percent'
+                    ? t(
+                        'invoiceBuilder.column.includeInTotalPercentHint',
+                        'درصدی از مبلغ کالا به فاکتور اضافه می‌شود — مثل ۱۸٪ اجرت',
+                      )
+                    : t(
+                        'invoiceBuilder.column.includeInTotalHint',
+                        'مبلغ این ستون به مبلغ قابل پرداخت اضافه می‌شود',
+                      )}
+                </p>
+              </div>
+              <Switch checked={includeInTotal} onCheckedChange={setIncludeInTotal} />
             </div>
           ) : null}
 

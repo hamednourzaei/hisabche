@@ -2,6 +2,7 @@
 // ============================================
 'use client'
 
+import { SelectField } from '../select-field'
 import { useState, useEffect, useCallback, useMemo, memo } from 'react'
 import { useTranslations } from 'next-intl'
 import { cn } from '../../../lib/utils'
@@ -72,15 +73,18 @@ const MemberRow = memo(function MemberRow({
 
       <div className="flex items-center gap-2">
         {isOwner && member.role !== 'owner' ? (
-          <select
+          <SelectField
             value={member.role}
-            onChange={(e) => onRoleChange(member.id, e.target.value as WorkspaceRole)}
-            className="text-xs rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))] px-2 py-1 cursor-pointer"
-          >
-            <option value="admin">{t('workspace.admin')}</option>
-            <option value="member">{t('workspace.employee')}</option>
-            <option value="viewer">{t('workspace.viewer')}</option>
-          </select>
+            onChange={(value) => onRoleChange(member.id, value as WorkspaceRole)}
+            options={[
+              { value: 'admin', label: t('workspace.admin') },
+              { value: 'member', label: t('workspace.employee') },
+              { value: 'viewer', label: t('workspace.viewer') },
+            ]}
+            className={
+              'text-xs rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))] px-2 py-1 cursor-pointer'
+            }
+          />
         ) : (
           <span
             className={cn(

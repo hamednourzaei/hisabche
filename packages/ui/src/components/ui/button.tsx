@@ -77,7 +77,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           'inline-flex items-center justify-center gap-2',
           'whitespace-nowrap text-sm font-bold',
           'transition-all duration-200',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring-color)/0.5)] focus-visible:ring-offset-1',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary)/0.5)] focus-visible:ring-offset-1',
           'disabled:pointer-events-none disabled:opacity-40',
           'active:scale-[0.98]',
           'motion-reduce:transition-none motion-reduce:active:scale-100',

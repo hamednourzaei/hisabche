@@ -27,7 +27,7 @@ const SheetOverlay = React.forwardRef<
     ref={ref}
     className={cn(
       'fixed inset-0 z-50',
-      'bg-[hsl(var(--ledger-ink)/0.3)]',
+      'bg-[hsl(var(--fg-primary)/0.3)]',
       'data-[state=open]:animate-in data-[state=closed]:animate-out',
       'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
       'motion-reduce:animate-none',
@@ -102,7 +102,7 @@ const SheetContent = React.forwardRef<
             'rounded-full p-1.5',
             'text-[hsl(var(--fg-secondary))]',
             'hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
-            'focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring-color)/0.5)]',
+            'focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary)/0.5)]',
             'transition-colors duration-150',
             'motion-reduce:transition-none',
             'min-h-[44px] min-w-[44px] flex items-center justify-center',

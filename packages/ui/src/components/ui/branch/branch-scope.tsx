@@ -28,6 +28,7 @@
 // So it is safe for this to live in client state and in the URL.
 // ============================================
 
+import { SelectField } from '../select-field'
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
 import { useBranches } from '@hisabche/api'
 
@@ -92,21 +93,17 @@ export function BranchSwitcher({ t, className }: BranchSwitcherProps) {
   return (
     <label className={cn('flex items-center gap-2 text-sm', className)}>
       <span className="text-[hsl(var(--fg-secondary))]">{t('branch.scope', 'شعبه')}</span>
-      <select
+      <SelectField
         value={branchId ?? ''}
-        onChange={(event) => onChange(event.target.value)}
-        className="rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-2 py-1.5 text-sm text-[hsl(var(--fg-primary))] focus:border-[hsl(var(--color-primary)/0.5)] focus:outline-none"
-      >
-        {/* «همه‌ی شعب» is the CONSOLIDATED business, and it is the default —
-            the figure a report has always shown. Selecting it must produce
-            exactly what the screen produced before this control existed. */}
-        <option value="">{t('branch.allBranches', 'همه‌ی شعب')}</option>
-        {options.map((branch) => (
-          <option key={branch.id} value={branch.id}>
-            {branch.name}
-          </option>
-        ))}
-      </select>
+        onChange={(value) => onChange(value)}
+        options={[
+          { value: '', label: t('branch.allBranches', 'همه‌ی شعب') },
+          ...options.map((branch) => ({ value: branch.id, label: branch.name })),
+        ]}
+        className={
+          'rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-2 py-1.5 text-sm text-[hsl(var(--fg-primary))] focus:border-[hsl(var(--color-primary)/0.5)] focus:outline-none'
+        }
+      />
     </label>
   )
 }

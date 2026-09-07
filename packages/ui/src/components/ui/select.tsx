@@ -23,7 +23,7 @@ const SelectTrigger = React.forwardRef<
       'border border-[hsl(var(--border-default))]',
       'bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))]',
       'hover:border-[hsl(var(--border-strong))] hover:bg-[hsl(var(--surface-muted))]',
-      'focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring-color)/0.4)] focus:ring-offset-1',
+      'focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary)/0.4)] focus:ring-offset-1',
       'disabled:cursor-not-allowed disabled:opacity-40',
       'transition-colors duration-200',
       'motion-reduce:transition-none',

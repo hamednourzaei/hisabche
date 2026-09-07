@@ -1,10 +1,15 @@
 // packages/store/src/slices/onboarding.slice.ts
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
+import { CURRENCY_CODES } from '@hisabche/validation'
 
 export type BusinessType = 'retail' | 'wholesale' | 'service' | 'restaurant' | 'other'
 export type StoreSize = 'small' | 'medium' | 'large'
-export type Currency = 'AFN' | 'USD' | 'PKR' | 'IRR'
+/**
+ * ⚠️ Derived, not restated. Same reasoning as `CurrencyCode` in
+ * currency.slice.ts — a second copy of a list is a list that will disagree.
+ */
+export type Currency = (typeof CURRENCY_CODES)[number]
 export type Language = 'fa-AF' | 'en'
 
 export interface OnboardingState {
@@ -30,18 +35,21 @@ export interface OnboardingState {
   reset: () => void
 }
 
-const initialState: Omit<OnboardingState, keyof {
-  setStep: any
-  setBusinessType: any
-  setStoreSize: any
-  setDefaultCurrency: any
-  setLanguage: any
-  completeOnboarding: any
-  markProductAdded: any
-  markCustomerAdded: any
-  markInvoiceCreated: any
-  reset: any
-}> = {
+const initialState: Omit<
+  OnboardingState,
+  keyof {
+    setStep: any
+    setBusinessType: any
+    setStoreSize: any
+    setDefaultCurrency: any
+    setLanguage: any
+    completeOnboarding: any
+    markProductAdded: any
+    markCustomerAdded: any
+    markInvoiceCreated: any
+    reset: any
+  }
+> = {
   isCompleted: false,
   step: 0,
   businessType: null,

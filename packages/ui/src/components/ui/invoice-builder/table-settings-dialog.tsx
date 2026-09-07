@@ -10,7 +10,12 @@
 
 import { memo } from 'react'
 import { ArrowDown, ArrowUp, Eye, EyeOff, Pencil, Trash2 } from 'lucide-react'
-import { canAggregate, canDeleteColumn, type InvoiceColumn } from '@hisabche/validation'
+import {
+  canAggregate,
+  columnCountsInTotal,
+  canDeleteColumn,
+  type InvoiceColumn,
+} from '@hisabche/validation'
 
 import { Button } from '../button'
 import {
@@ -31,6 +36,14 @@ export interface TableSettingsDialogProps {
   columns: readonly InvoiceColumn[]
   onToggleVisible: (id: string, visible: boolean) => void
   onToggleAggregate: (id: string, aggregate: boolean) => void
+  /**
+   * «در جمع کل حساب شود؟» (T8) — distinct from the footer sum above.
+   *
+   * `aggregate` shows a total for the column in the footer row; this decides
+   * whether the column is part of what the CUSTOMER PAYS. A weight column
+   * wants the first and must never have the second.
+   */
+  onToggleIncludeInTotal: (id: string, includeInTotal: boolean) => void
   onMove: (id: string, direction: -1 | 1) => void
   onEdit: (column: InvoiceColumn) => void
   onDelete: (column: InvoiceColumn) => void
@@ -44,6 +57,7 @@ export const TableSettingsDialog = memo(function TableSettingsDialog({
   columns,
   onToggleVisible,
   onToggleAggregate,
+  onToggleIncludeInTotal,
   onMove,
   onEdit,
   onDelete,
@@ -97,12 +111,28 @@ export const TableSettingsDialog = memo(function TableSettingsDialog({
                   {column.labelKey ? t(column.labelKey, column.label) : column.label}
                 </p>
                 <p className="text-[11px] text-[hsl(var(--fg-tertiary))]">
-                  {t(`invoiceBuilder.columnType.${column.type}`, column.type)}
+                  {column.typeLabel ?? t(`invoiceBuilder.columnType.${column.type}`, column.type)}
                   {column.currency
                     ? ` · ${t(`currency.${(column.currency ?? '').toLowerCase()}`, column.currency)}`
                     : ''}
                 </p>
               </div>
+
+              {column.type === 'currency' || column.type === 'percent' ? (
+                <label className="flex shrink-0 items-center gap-1.5 text-[11px] text-[hsl(var(--fg-secondary))]">
+                  <span className="hidden sm:inline">
+                    {t('invoiceBuilder.settings.inTotal', 'در جمع کل')}
+                  </span>
+                  <Switch
+                    // Read through the compatibility rule, not as
+                    // `column.includeInTotal ?? false` — an older column has
+                    // no flag, and «no flag» means «what it did before T8».
+                    checked={columnCountsInTotal(column)}
+                    onCheckedChange={(v) => onToggleIncludeInTotal(column.id, v)}
+                    aria-label={t('invoiceBuilder.settings.inTotal', 'در جمع کل')}
+                  />
+                </label>
+              ) : null}
 
               {canAggregate(column.type) ? (
                 <label className="flex shrink-0 items-center gap-1.5 text-[11px] text-[hsl(var(--fg-secondary))]">

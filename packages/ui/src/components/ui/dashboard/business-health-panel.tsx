@@ -74,25 +74,25 @@ const StatusBadge = memo(function StatusBadge({
         icon: CheckCircle,
         label: t('status.excellent'),
         className:
-          'bg-[hsl(var(--status-positive)/0.1)] text-[hsl(var(--status-positive))] border-[hsl(var(--status-positive)/0.2)]',
+          'bg-[hsl(var(--color-success)/0.1)] text-[hsl(var(--color-success))] border-[hsl(var(--color-success)/0.2)]',
       },
       good: {
         icon: TrendingUp,
         label: t('status.good'),
         className:
-          'bg-[hsl(var(--status-info)/0.1)] text-[hsl(var(--status-info))] border-[hsl(var(--status-info)/0.2)]',
+          'bg-[hsl(var(--color-info)/0.1)] text-[hsl(var(--color-info))] border-[hsl(var(--color-info)/0.2)]',
       },
       neutral: {
         icon: Clock,
         label: t('status.neutral'),
         className:
-          'bg-[hsl(var(--status-warning)/0.1)] text-[hsl(var(--status-warning))] border-[hsl(var(--status-warning)/0.2)]',
+          'bg-[hsl(var(--color-warning)/0.1)] text-[hsl(var(--color-warning))] border-[hsl(var(--color-warning)/0.2)]',
       },
       attention: {
         icon: AlertTriangle,
         label: t('status.attention'),
         className:
-          'bg-[hsl(var(--status-negative)/0.1)] text-[hsl(var(--status-negative))] border-[hsl(var(--status-negative)/0.2)]',
+          'bg-[hsl(var(--color-destructive)/0.1)] text-[hsl(var(--color-destructive))] border-[hsl(var(--color-destructive)/0.2)]',
       },
     }),
     [t],
@@ -227,8 +227,8 @@ const BusinessHealthHero = memo(function BusinessHealthHero({
                 className={cn(
                   'text-base sm:text-lg font-bold',
                   monthlyGrowth >= 0
-                    ? 'text-[hsl(var(--status-positive))]'
-                    : 'text-[hsl(var(--status-negative))]',
+                    ? 'text-[hsl(var(--color-success))]'
+                    : 'text-[hsl(var(--color-destructive))]',
                 )}
               >
                 {monthlyGrowth >= 0 ? '+' : ''}
@@ -282,8 +282,8 @@ const PerformanceSnapshot = memo(function PerformanceSnapshot({
           {formatCurrency(monthlyRevenue)}
         </p>
         <div className="flex items-center gap-0.5 sm:gap-1 mt-0.5 sm:mt-1">
-          <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-[hsl(var(--status-positive))]" />
-          <span className="text-[9px] sm:text-xs text-[hsl(var(--status-positive))]">
+          <TrendingUp className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-[hsl(var(--color-success))]" />
+          <span className="text-[9px] sm:text-xs text-[hsl(var(--color-success))]">
             +{monthlyGrowth.toFixed(1)}% {t('performance.growthLabel')}
           </span>
         </div>
@@ -297,8 +297,8 @@ const PerformanceSnapshot = memo(function PerformanceSnapshot({
           {activeCustomers}
         </p>
         <div className="flex items-center gap-0.5 sm:gap-1 mt-0.5 sm:mt-1">
-          <Users className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-[hsl(var(--status-info))]" />
-          <span className="text-[9px] sm:text-xs text-[hsl(var(--status-info))]">
+          <Users className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-[hsl(var(--color-info))]" />
+          <span className="text-[9px] sm:text-xs text-[hsl(var(--color-info))]">
             +{customerGrowth.toFixed(1)}% {t('performance.thisMonth')}
           </span>
         </div>
@@ -343,7 +343,7 @@ const AttentionPanel = memo(function AttentionPanel({
   if (!hasAlerts) {
     return (
       <div className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-3 sm:p-4 text-center">
-        <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 text-[hsl(var(--status-positive))] mx-auto mb-1.5 sm:mb-2" />
+        <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 text-[hsl(var(--color-success))] mx-auto mb-1.5 sm:mb-2" />
         <p className="text-xs sm:text-sm text-[hsl(var(--fg-secondary))]">
           {t('attention.allGood')}
         </p>
@@ -355,7 +355,7 @@ const AttentionPanel = memo(function AttentionPanel({
     <div className="space-y-1.5 sm:space-y-2">
       <div className="flex items-center gap-1.5 sm:gap-2">
         <AlertTriangle
-          className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[hsl(var(--status-negative))]"
+          className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[hsl(var(--color-destructive))]"
           aria-hidden="true"
         />
         <h3 className="text-xs sm:text-sm font-medium text-[hsl(var(--fg-primary))]">
@@ -369,9 +369,9 @@ const AttentionPanel = memo(function AttentionPanel({
             onClick={() => onAction('payments')}
             className={cn(
               'relative rounded-2xl p-2.5 sm:p-3 text-start transition-all duration-200',
-              'border border-[hsl(var(--status-negative)/0.3)] bg-[hsl(var(--status-negative)/0.05)]',
-              'hover:border-[hsl(var(--status-negative)/0.6)] hover:shadow-md',
-              'focus-visible:ring-4 focus-visible:ring-[hsl(var(--status-negative)/0.3)] focus-visible:outline-none',
+              'border border-[hsl(var(--color-destructive)/0.3)] bg-[hsl(var(--color-destructive)/0.05)]',
+              'hover:border-[hsl(var(--color-destructive)/0.6)] hover:shadow-md',
+              'focus-visible:ring-4 focus-visible:ring-[hsl(var(--color-destructive)/0.3)] focus-visible:outline-none',
             )}
             aria-label={t('attention.paymentsAria', {
               count: pendingPaymentsCount,
@@ -380,11 +380,11 @@ const AttentionPanel = memo(function AttentionPanel({
           >
             <div className="flex items-center gap-1.5 sm:gap-2">
               <Receipt
-                className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[hsl(var(--status-negative))]"
+                className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[hsl(var(--color-destructive))]"
                 aria-hidden="true"
               />
               <div className="min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-[hsl(var(--status-negative))] truncate">
+                <p className="text-xs sm:text-sm font-medium text-[hsl(var(--color-destructive))] truncate">
                   {t('attention.pendingPayments')}
                 </p>
                 <p className="text-[9px] sm:text-xs text-[hsl(var(--fg-tertiary))] line-clamp-1">
@@ -403,19 +403,19 @@ const AttentionPanel = memo(function AttentionPanel({
             onClick={() => onAction('warehouse')}
             className={cn(
               'relative rounded-2xl p-2.5 sm:p-3 text-start transition-all duration-200',
-              'border border-[hsl(var(--status-warning)/0.3)] bg-[hsl(var(--status-warning)/0.05)]',
-              'hover:border-[hsl(var(--status-warning)/0.6)] hover:shadow-md',
-              'focus-visible:ring-4 focus-visible:ring-[hsl(var(--status-warning)/0.3)] focus-visible:outline-none',
+              'border border-[hsl(var(--color-warning)/0.3)] bg-[hsl(var(--color-warning)/0.05)]',
+              'hover:border-[hsl(var(--color-warning)/0.6)] hover:shadow-md',
+              'focus-visible:ring-4 focus-visible:ring-[hsl(var(--color-warning)/0.3)] focus-visible:outline-none',
             )}
             aria-label={t('attention.stockAria', { count: lowStockAlerts })}
           >
             <div className="flex items-center gap-1.5 sm:gap-2">
               <Package
-                className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[hsl(var(--status-warning))]"
+                className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[hsl(var(--color-warning))]"
                 aria-hidden="true"
               />
               <div className="min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-[hsl(var(--status-warning))] truncate">
+                <p className="text-xs sm:text-sm font-medium text-[hsl(var(--color-warning))] truncate">
                   {t('attention.lowStock')}
                 </p>
                 <p className="text-[9px] sm:text-xs text-[hsl(var(--fg-tertiary))] line-clamp-1">
@@ -459,21 +459,21 @@ const QuickActions = memo(function QuickActions({
         label: t('actions.viewPayments'),
         icon: Receipt,
         description: t('actions.viewPaymentsDesc'),
-        color: 'text-[hsl(var(--status-negative))] bg-[hsl(var(--status-negative)/0.1)]',
+        color: 'text-[hsl(var(--color-destructive))] bg-[hsl(var(--color-destructive)/0.1)]',
       },
       {
         id: 'warehouse' as const,
         label: t('actions.manageStock'),
         icon: Package,
         description: t('actions.manageStockDesc'),
-        color: 'text-[hsl(var(--status-warning))] bg-[hsl(var(--status-warning)/0.1)]',
+        color: 'text-[hsl(var(--color-warning))] bg-[hsl(var(--color-warning)/0.1)]',
       },
       {
         id: 'buy' as const,
         label: t('actions.buyStock'),
         icon: ShoppingCart,
         description: t('actions.buyStockDesc'),
-        color: 'text-[hsl(var(--status-info))] bg-[hsl(var(--status-info)/0.1)]',
+        color: 'text-[hsl(var(--color-info))] bg-[hsl(var(--color-info)/0.1)]',
       },
     ],
     [t],

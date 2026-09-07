@@ -88,7 +88,7 @@ const DialogContent = React.forwardRef<
             'rounded-full p-1.5',
             'text-[hsl(var(--fg-tertiary))]',
             'hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
-            'focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring-color)/0.5)]',
+            'focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary)/0.5)]',
             'transition-colors duration-150',
             'motion-reduce:transition-none',
             'min-h-[44px] min-w-[44px] flex items-center justify-center',

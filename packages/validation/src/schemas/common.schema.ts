@@ -62,28 +62,61 @@ export const optionalStringSchema = z
 /**
  * Currency codes supported.
  *
- * ⚠️ L0.1 — THIS LIST IS DELIBERATE AND TESTED. DO NOT WIDEN IT CASUALLY.
+ * ---------------------------------------------------------------------------
+ * ⚠️ THIS IS THE SINGLE SOURCE FOR THE LIST. `packages/store` imports it.
  *
- * `packages/formatting/src/__tests__/currency-policy.test.ts` («STAGE 4 §8/§9»)
- * pins this exact enum and asserts one specific inactive currency stays absent
- * from SEVEN files. It is a product policy, not leftover hardcoding.
+ * It was four codes until the owner opened it (task T1). That was a deliberate
+ * policy, not leftover hardcoding — `currency-policy.test.ts` pinned this exact
+ * enum, and lesson 81 records why it held so long.
  *
- * ⚠️ That test greps this file for the inactive code as a literal, so naming
- * it here — even inside a comment explaining the policy — turns the guard red.
- * Which is why it is not named.
+ * It was opened because the business trades metals, `packages/ui-contract`
+ * already catalogued 25 codes including the ISO 4217 metal codes, and
+ * onboarding filtered all but four of them out. Rows added to the database
+ * changed nothing: the filter was this list.
  *
- * Widening it also breaks money formatting: `FRACTION_DIGITS` in
- * @hisabche/formatting covers exactly these four, and §9 requires that an
- * unknown code resolve to `undefined` rather than silently borrowing another
- * currency's precision. A fifth code would format with no precision contract
- * at all.
+ * ---------------------------------------------------------------------------
+ * ⚠️ ADDING A CODE HERE IS NOT ENOUGH ON ITS OWN.
  *
- * Adding a currency therefore means: this enum, the store union, the web hook,
- * FRACTION_DIGITS, CURRENCY_SIGN, the mobile and desktop selectors, and the
- * policy test — together, deliberately. See the stop-condition note in
- * .claude/HANDOFF-PHASES-G-TO-O.md.
+ * `FRACTION_DIGITS` in @hisabche/formatting must gain it too, or money in that
+ * currency formats with NO precision contract — §9 requires an unknown code to
+ * resolve to `undefined` rather than borrow another currency's precision, so
+ * the failure is a WRONG AMOUNT, not a missing option.
+ *
+ * `currency-policy.test.ts` enforces that the two lists agree. If it goes red
+ * after a change here, extend the precision table — do not relax the test.
  */
-export const currencyCodeSchema = z.enum(['AFN', 'USD', 'PKR', 'IRR'])
+export const CURRENCY_CODES = [
+  // ─── Region ───
+  'AFN',
+  'IRT',
+  'IRR',
+  'PKR',
+  'INR',
+  'TRY',
+  'AED',
+  'SAR',
+  'IQD',
+  'TJS',
+  'UZS',
+  'TMT',
+  'CNY',
+  'RUB',
+  // ─── Major ───
+  'USD',
+  'EUR',
+  'GBP',
+  'CHF',
+  'JPY',
+  'CAD',
+  'AUD',
+  // ─── Precious metals (ISO 4217 X-codes), priced by weight ───
+  'XAU',
+  'XAG',
+  'XPT',
+  'XPD',
+] as const
+
+export const currencyCodeSchema = z.enum(CURRENCY_CODES)
 
 /** Payment methods */
 export const paymentMethodSchema = z.enum(['cash', 'credit', 'bank', 'mobile_money'])
@@ -103,24 +136,48 @@ export const productCategorySchema = z.enum([
 
 /** Product units */
 /**
- * `gram` and `carton` were added for weight-priced trades (gold, spices) and
- * wholesale. Every previously valid unit is still valid — this is additive, so
- * existing products and invoices keep validating unchanged.
+ * ⚠️ THIS LIST MIRRORS THE `units` TABLE (`phase-l-01`). A guard test compares
+ * them, and `GET /api/units` is what the UI actually renders.
+ *
+ * It was nine codes while the table held fourteen — so `ton`, `mg`, `cm`,
+ * `km`, `ml` and `dozen` were seeded, ran, and were then rejected by
+ * validation. A metals trader could not record a tonne, which is precisely
+ * what L0.2 was asked for. Rows in the database changed nothing because the
+ * filter was here (task T2 — the same shape as the currency defect in T1).
+ *
+ * ADDITIVE: every previously valid unit is still valid, so existing products
+ * and invoices keep validating unchanged.
+ *
+ * ⚠️ ADDING A CODE HERE IS NOT ENOUGH. It must exist in `units` with a
+ * dimension and a conversion factor, or L1 has nothing to convert by.
  */
 export const unitSchema = z.enum([
-  'piece',
+  // ─── weight ───
+  'mg',
   'gram',
   'kg',
+  'ton',
+  // ─── length ───
+  'cm',
   'meter',
+  'km',
+  // ─── volume ───
+  'ml',
   'liter',
+  // ─── count ───
+  'piece',
   'box',
   'pack',
   'carton',
+  'dozen',
   /**
    * User-defined. The label the user typed lives in the sibling `unitLabel`
    * field. Kept as an enum member rather than making `unit` free text so
    * grouping, filtering and reporting by unit still work — every custom unit
    * aggregates under 'custom' and carries its own label for display.
+   *
+   * Deliberately NOT a row in `units`: it has no dimension and no conversion
+   * factor, and inventing one would let the converter use it.
    */
   'custom',
 ])

@@ -201,8 +201,8 @@ export const SalesChart = memo(function SalesChart({
               className={cn(
                 'flex items-center gap-1 text-sm font-medium',
                 isPositive
-                  ? 'text-[hsl(var(--status-positive))]'
-                  : 'text-[hsl(var(--status-negative))]',
+                  ? 'text-[hsl(var(--color-success))]'
+                  : 'text-[hsl(var(--color-destructive))]',
               )}
             >
               {isPositive ? (
@@ -256,9 +256,9 @@ export const SalesChart = memo(function SalesChart({
                 checked={showInvoices && hasInvoiceSeries}
                 disabled={!hasInvoiceSeries}
                 onChange={(e) => setShowInvoices(e.target.checked)}
-                className="size-3 accent-[hsl(var(--status-info))]"
+                className="size-3 accent-[hsl(var(--color-info))]"
               />
-              <span className="inline-block h-2 w-2 rounded-full bg-[hsl(var(--status-info))]" />
+              <span className="inline-block h-2 w-2 rounded-full bg-[hsl(var(--color-info))]" />
               {t('dashboard.invoicesLine', 'فاکتورها')}
             </label>
             <label

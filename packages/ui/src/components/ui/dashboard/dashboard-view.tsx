@@ -184,7 +184,7 @@ const KpiCard = memo(function KpiCard({
         <p
           className={cn(
             'flex items-center gap-1 text-[11px] tabular-nums',
-            positive ? 'text-[hsl(var(--status-positive))]' : 'text-[hsl(var(--status-negative))]',
+            positive ? 'text-[hsl(var(--color-success))]' : 'text-[hsl(var(--color-destructive))]',
           )}
         >
           {positive ? '▲' : '▼'} {Math.abs(change).toFixed(1)}٪

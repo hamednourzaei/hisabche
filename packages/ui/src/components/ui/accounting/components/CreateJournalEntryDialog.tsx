@@ -1,6 +1,7 @@
 // packages/ui/src/components/ui/accounting/components/CreateJournalEntryDialog.tsx
 'use client'
 
+import { SelectField } from '../../select-field'
 import { memo, useState, useCallback, useEffect, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { X, Loader2, Plus, Trash2 } from 'lucide-react'
@@ -210,18 +211,20 @@ export const CreateJournalEntryDialog = memo(function CreateJournalEntryDialog({
             <div className="space-y-2">
               {lines.map((line, index) => (
                 <div key={index} className="flex items-center gap-1.5 md:gap-2">
-                  <select
+                  <SelectField
                     value={line.accountId}
-                    onChange={(e) => handleLineChange(index, 'accountId', e.target.value)}
-                    className="flex-1 min-w-0 h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-2 text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
-                  >
-                    <option value="">{t('accounting.journal.selectAccount')}</option>
-                    {accounts.map((acc) => (
-                      <option key={acc.id} value={acc.id}>
-                        {acc.code} - {acc.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(value) => handleLineChange(index, 'accountId', value)}
+                    options={[
+                      { value: '', label: t('accounting.journal.selectAccount') },
+                      ...accounts.map((acc) => ({
+                        value: acc.id,
+                        label: `${acc.code} - ${acc.name}`,
+                      })),
+                    ]}
+                    className={
+                      'flex-1 min-w-0 h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-2 text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]'
+                    }
+                  />
                   <MoneyInput
                     placeholder={t('accounting.journal.debit')}
                     value={line.debit}

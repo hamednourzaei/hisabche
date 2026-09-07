@@ -143,37 +143,55 @@ export default function CinematicHero({ t, onNavigateLogin }: CinematicHeroProps
                 'opacity-0 animate-[fade-in-up_0.6s_ease-out_0.4s_both]',
               )}
             >
+              {/*
+                ⚠️ THESE WERE FOUR INVENTED METRICS, IN THE MOST PROMINENT
+                PLACE ON THE SITE.
+
+                    ۳۴۰+     کسب‌وکار فعال      no counter exists
+                    ۱۲,۰۰۰+  تراکنش روزانه      no counter exists
+                    ۱۰۰٪     آفلاین کار می‌کند   an uptime claim, unmeasured
+                    ۴.۹      رضایت کاربران      no rating source exists
+
+                A visitor reads these as measurements. They were placeholder
+                copy. «۱۰۰٪ uptime» is the worst of the four: it is a promise
+                about availability that nothing monitors, made to people
+                deciding whether to trust their books to it.
+
+                What replaces them are FACTS ABOUT THE SOFTWARE — each one
+                checkable inside the product, none of them a number nobody
+                counted. The layout, weight and animation are unchanged.
+              */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
                 <div className="text-center lg:text-start">
                   <span className="block text-base sm:text-xl lg:text-2xl font-bold text-[hsl(var(--color-primary))]">
-                    {t('landing.statStores', '۳۴۰+')}
+                    {t('landing.factOffline', 'آفلاین')}
                   </span>
                   <span className="text-[10px] sm:text-xs lg:text-sm text-[hsl(var(--fg-tertiary))]">
-                    {t('landing.statStoresLabel', 'کسب‌وکار فعال')}
+                    {t('landing.factOfflineLabel', 'بدون اینترنت هم ثبت می‌کنید')}
                   </span>
                 </div>
                 <div className="text-center lg:text-start">
                   <span className="block text-base sm:text-xl lg:text-2xl font-bold text-[hsl(var(--color-primary))]">
-                    {t('landing.statTransactions', '۱۲,۰۰۰+')}
+                    {t('landing.factLedger', 'دوطرفه')}
                   </span>
                   <span className="text-[10px] sm:text-xs lg:text-sm text-[hsl(var(--fg-tertiary))]">
-                    {t('landing.statTransactionsLabel', 'تراکنش روزانه')}
+                    {t('landing.factLedgerLabel', 'حسابداری استاندارد، نه دفترچه')}
                   </span>
                 </div>
                 <div className="text-center lg:text-start">
                   <span className="block text-base sm:text-xl lg:text-2xl font-bold text-[hsl(var(--color-primary))]">
-                    {t('landing.statUptime', '۱۰۰٪')}
+                    {t('landing.factMulti', 'چندشعبه')}
                   </span>
                   <span className="text-[10px] sm:text-xs lg:text-sm text-[hsl(var(--fg-tertiary))]">
-                    {t('landing.statUptimeLabel', 'آفلاین کار می‌کند')}
+                    {t('landing.factMultiLabel', 'تفکیک‌شده یا تجمیعی')}
                   </span>
                 </div>
                 <div className="text-center lg:text-start">
                   <span className="block text-base sm:text-xl lg:text-2xl font-bold text-[hsl(var(--color-primary))]">
-                    {t('landing.statRating', '۴.۹')}
+                    {t('landing.factRtl', 'فارسی/دری')}
                   </span>
                   <span className="text-[10px] sm:text-xs lg:text-sm text-[hsl(var(--fg-tertiary))]">
-                    {t('landing.statRatingLabel', 'رضایت کاربران')}
+                    {t('landing.factRtlLabel', 'راست‌به‌چپ، با تقویم شمسی')}
                   </span>
                 </div>
               </div>

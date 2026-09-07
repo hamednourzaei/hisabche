@@ -38,6 +38,69 @@ const WORK_ORDER_COLUMNS =
   'id, product_id, quantity, bom_id, status, start_date, end_date, created_at, updated_at'
 const WORK_ORDER_MINIMAL = 'id, product_id, quantity, status, start_date'
 
+// ---------------------------------------------------------------------------
+// T4 — WHY /manufacturing RETURNED 500
+//
+// `GET /api/boms` and `GET /api/work-orders` both failed in production with a
+// 500. The cause is in the schema, not in these queries:
+//
+//     CREATE TABLE work_orders ( ... product_id uuid, ... )   -- no REFERENCES
+//     CREATE TABLE boms        ( ... product_id uuid, ... )   -- no REFERENCES
+//
+// The column holds a product id but carries no FOREIGN KEY. PostgREST builds
+// its embeds (`product:products(...)`) from the FK graph, so with no
+// constraint it cannot resolve the relationship and answers PGRST200. The
+// service wrapped that in DatabaseError and Fastify returned 500 — so the
+// whole page died on a missing constraint.
+//
+// TWO THINGS FIX IT, AND BOTH ARE HERE:
+//
+//   1. `docs/phase-t4-manufacturing-fk-migration.sql` adds the real FKs. That
+//      is the actual repair and it needs a human to run it — and it reports
+//      orphan rows rather than silently deleting them (guardrail 13).
+//
+//   2. This fallback, so the page works on databases where the migration has
+//      not been applied. It re-queries flat and joins in memory.
+//
+// THE FALLBACK MUST FILTER `products` BY WORKSPACE ITSELF.
+//
+// The embed inherited the parent's workspace filter. A hand-written join does
+// not: fetching products by `id IN (...)` alone would happily return another
+// tenant's product name for an id that leaked into a row. `workspace_id` is
+// the only security boundary and it is re-applied explicitly below.
+// ---------------------------------------------------------------------------
+
+/** PostgREST cannot resolve an embed — almost always a missing FK. */
+const EMBED_UNRESOLVED = new Set(['PGRST200', 'PGRST201'])
+
+interface NamedProduct {
+  id: string
+  name: string
+  unit?: string | null
+}
+
+/**
+ * Products by id, WITHIN one workspace. Ids from another tenant simply do not
+ * come back, so an unresolvable id renders as null rather than as a name that
+ * belongs to somebody else.
+ */
+async function productsByIdInWorkspace(
+  workspaceId: string,
+  ids: readonly string[],
+): Promise<Map<string, NamedProduct>> {
+  const unique = [...new Set(ids.filter(Boolean))]
+  if (unique.length === 0) return new Map()
+
+  const { data, error } = await supabase
+    .from('products')
+    .select('id, name, unit')
+    .eq('workspace_id', workspaceId)
+    .in('id', unique)
+
+  if (error) throw new DatabaseError('Failed to fetch products for manufacturing', error)
+  return new Map((data ?? []).map((prod: NamedProduct) => [prod.id, prod]))
+}
+
 export class ManufacturingService {
   private key(workspaceId: string, ...parts: string[]) {
     return `manufacturing:${workspaceId}:${parts.join(':')}`
@@ -70,11 +133,68 @@ export class ManufacturingService {
     if (productId) query = query.eq('product_id', productId)
 
     const { data, error } = await query
-    if (error) throw new DatabaseError('Failed to fetch bills of materials', error)
+    if (error) {
+      if (!EMBED_UNRESOLVED.has(error.code)) {
+        throw new DatabaseError('Failed to fetch bills of materials', error)
+      }
+      const result = await this.listBomsWithoutEmbeds(ctx, productId)
+      await memoryCache.set(cacheKey, result, 120)
+      return result
+    }
 
     const result = data ?? []
     await memoryCache.set(cacheKey, result, 120)
     return result
+  }
+
+  /**
+   * The same shape as the embedded query, assembled by hand.
+   *
+   * The RESPONSE SHAPE IS IDENTICAL on purpose — `product` and
+   * `items[].raw_material` are present either way, so no client can tell which
+   * path served it and nothing downstream needs a branch.
+   */
+  private async listBomsWithoutEmbeds(ctx: TenancyContext, productId?: string) {
+    let bomQuery = supabase
+      .from('boms')
+      .select(BOM_COLUMNS)
+      .eq('workspace_id', ctx.workspaceId)
+      .order('created_at', { ascending: false })
+
+    if (productId) bomQuery = bomQuery.eq('product_id', productId)
+
+    const { data: boms, error: bomError } = await bomQuery
+    if (bomError) throw new DatabaseError('Failed to fetch bills of materials', bomError)
+    if (!boms || boms.length === 0) return []
+
+    const { data: items, error: itemError } = await supabase
+      .from('bom_items')
+      .select(BOM_ITEM_COLUMNS)
+      .eq('workspace_id', ctx.workspaceId)
+      .in(
+        'bom_id',
+        boms.map((bom: { id: string }) => bom.id),
+      )
+    if (itemError) throw new DatabaseError('Failed to fetch BOM items', itemError)
+
+    const rows = items ?? []
+    const products = await productsByIdInWorkspace(ctx.workspaceId, [
+      ...boms.map((bom: { product_id: string }) => bom.product_id),
+      ...rows.map((item: { raw_material_id: string }) => item.raw_material_id),
+    ])
+
+    return boms.map((bom: { id: string; product_id: string }) => ({
+      ...bom,
+      // null, not a placeholder name: a component whose product is missing or
+      // belongs to another workspace must read as absent.
+      product: products.get(bom.product_id) ?? null,
+      items: rows
+        .filter((item: { bom_id: string }) => item.bom_id === bom.id)
+        .map((item: { raw_material_id: string }) => ({
+          ...item,
+          raw_material: products.get(item.raw_material_id) ?? null,
+        })),
+    }))
   }
 
   async createBom(ctx: TenancyContext, data: any) {
@@ -203,11 +323,59 @@ export class ManufacturingService {
     if (status) query = query.eq('status', status)
 
     const { data, error } = await query
-    if (error) throw new DatabaseError('Failed to fetch work orders', error)
+    if (error) {
+      if (!EMBED_UNRESOLVED.has(error.code)) {
+        throw new DatabaseError('Failed to fetch work orders', error)
+      }
+      const result = await this.listWorkOrdersWithoutEmbeds(ctx, status)
+      await memoryCache.set(cacheKey, result, 60)
+      return result
+    }
 
     const result = data ?? []
     await memoryCache.set(cacheKey, result, 60)
     return result
+  }
+
+  /** Same shape as the embedded query. See listBomsWithoutEmbeds. */
+  private async listWorkOrdersWithoutEmbeds(ctx: TenancyContext, status?: string) {
+    let orderQuery = supabase
+      .from('work_orders')
+      .select('id, product_id, quantity, status, start_date, bom_id')
+      .eq('workspace_id', ctx.workspaceId)
+      .order('created_at', { ascending: false })
+
+    if (status) orderQuery = orderQuery.eq('status', status)
+
+    const { data: orders, error } = await orderQuery
+    if (error) throw new DatabaseError('Failed to fetch work orders', error)
+    if (!orders || orders.length === 0) return []
+
+    const products = await productsByIdInWorkspace(
+      ctx.workspaceId,
+      orders.map((order: { product_id: string }) => order.product_id),
+    )
+
+    const bomIds = [
+      ...new Set(orders.map((order: { bom_id: string | null }) => order.bom_id).filter(Boolean)),
+    ] as string[]
+
+    const bomVersions = new Map<string, { id: string; version: number }>()
+    if (bomIds.length > 0) {
+      const { data: boms, error: bomError } = await supabase
+        .from('boms')
+        .select('id, version')
+        .eq('workspace_id', ctx.workspaceId)
+        .in('id', bomIds)
+      if (bomError) throw new DatabaseError('Failed to fetch BOM versions', bomError)
+      for (const bom of boms ?? []) bomVersions.set(bom.id, bom)
+    }
+
+    return orders.map((order: { product_id: string; bom_id: string | null }) => ({
+      ...order,
+      product: products.get(order.product_id) ?? null,
+      bom: order.bom_id ? (bomVersions.get(order.bom_id) ?? null) : null,
+    }))
   }
 
   async createWorkOrder(ctx: TenancyContext, data: any) {

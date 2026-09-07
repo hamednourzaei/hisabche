@@ -1,6 +1,7 @@
 // packages/ui/src/components/ui/manufacturing/components/CreateWorkOrderDialog.tsx
 'use client'
 
+import { SelectField } from '../../select-field'
 import { memo, useState, useCallback, useEffect, useMemo } from 'react'
 import { X, Loader2 } from 'lucide-react'
 import { cn } from '../../../../lib/utils'
@@ -133,22 +134,24 @@ export const CreateWorkOrderDialog = memo(function CreateWorkOrderDialog({
             >
               {t('manufacturing.workOrders.selectProduct', 'انتخاب محصول')}
             </label>
-            <select
-              id="wo-product"
+            <SelectField
               value={productId}
-              onChange={(e) => setProductId(e.target.value)}
-              required
-              className="w-full h-9 md:h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-3 text-xs md:text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
-            >
-              <option value="">
-                {t('manufacturing.workOrders.selectProductPlaceholder', '-- انتخاب محصول --')}
-              </option>
-              {products.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => setProductId(value)}
+              options={[
+                {
+                  value: '',
+                  label: t(
+                    'manufacturing.workOrders.selectProductPlaceholder',
+                    '-- انتخاب محصول --',
+                  ),
+                },
+                ...products.map((p) => ({ value: p.id, label: p.name })),
+              ]}
+              className={
+                'w-full h-9 md:h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-3 text-xs md:text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]'
+              }
+              id={'wo-product'}
+            />
           </div>
 
           <div className="space-y-1 md:space-y-1.5">
@@ -158,23 +161,22 @@ export const CreateWorkOrderDialog = memo(function CreateWorkOrderDialog({
             >
               {t('manufacturing.workOrders.selectBom', 'انتخاب فرمول ساخت')}
             </label>
-            <select
-              id="wo-bom"
+            <SelectField
               value={bomId}
-              onChange={(e) => setBomId(e.target.value)}
-              required
+              onChange={(value) => setBomId(value)}
+              options={[
+                {
+                  value: '',
+                  label: t('manufacturing.workOrders.selectBomPlaceholder', '-- انتخاب فرمول --'),
+                },
+                ...bomsForProduct.map((b) => ({ value: b.id, label: `v${b.version}` })),
+              ]}
+              className={
+                'w-full h-9 md:h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-3 text-xs md:text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))] disabled:opacity-50'
+              }
               disabled={!productId || bomsForProduct.length === 0}
-              className="w-full h-9 md:h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-3 text-xs md:text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))] disabled:opacity-50"
-            >
-              <option value="">
-                {t('manufacturing.workOrders.selectBomPlaceholder', '-- انتخاب فرمول --')}
-              </option>
-              {bomsForProduct.map((b) => (
-                <option key={b.id} value={b.id}>
-                  v{b.version}
-                </option>
-              ))}
-            </select>
+              id={'wo-bom'}
+            />
             {productId && bomsForProduct.length === 0 && (
               <p className="text-[11px] text-[hsl(var(--color-destructive))]">
                 {t(

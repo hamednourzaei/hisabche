@@ -34,6 +34,24 @@ export async function billingRoutes(fastify: FastifyInstance) {
                 name: z.string(),
                 priceMonthly: z.number().nullable(),
                 priceYearly: z.number().nullable(),
+                /**
+                 * ⚠️ MAKING AN EXISTING ASSUMPTION EXPLICIT, NOT A NEW DECISION.
+                 *
+                 * The prices below are bare numbers with no currency attached,
+                 * and the pricing UI rendered them as `${plan.priceMonthly}` —
+                 * a hardcoded dollar sign in the component. So the product has
+                 * always charged in dollars; it just never said so anywhere a
+                 * reader could check.
+                 *
+                 * Declaring it here means the client stops asserting a currency
+                 * of its own. It does NOT change what is charged.
+                 *
+                 * ⚠️ The owner should confirm this is right. Everything else in
+                 * this product prices in the workspace's own currency, and
+                 * subscription pricing being in USD is a business decision that
+                 * is nowhere written down.
+                 */
+                currency: z.string(),
                 limits: z.any(),
                 featureKeys: z.array(z.string()), // ✅ تغییر: features → featureKeys
               }),
@@ -48,6 +66,8 @@ export async function billingRoutes(fastify: FastifyInstance) {
         name: value.name,
         priceMonthly: key === 'pro' ? 12 : key === 'enterprise' ? null : null,
         priceYearly: key === 'pro' ? 99 : key === 'enterprise' ? null : null,
+        // See the schema note above: this records what the UI already showed.
+        currency: 'USD',
         limits: value.limits,
         featureKeys: value.featureKeys, // ✅ تغییر: features → featureKeys
       }))

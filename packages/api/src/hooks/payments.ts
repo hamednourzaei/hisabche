@@ -156,3 +156,48 @@ export function useRecordPayment() {
     },
   })
 }
+
+/**
+ * Cancel a payment — T9's «حذف پرداخت».
+ *
+ * ---------------------------------------------------------------------------
+ * ⚠️ THIS IS A CANCELLATION, NOT A DELETE, AND THE DIFFERENCE IS THE POINT
+ *
+ * `POST /payments/:id/cancel` reopens the invoices the payment settled and
+ * REVERSES its journal entry. The row stays, marked cancelled. Deleting it
+ * would erase the fact that money was recorded and then unrecorded — and a
+ * ledger you can quietly remove entries from is not a ledger.
+ *
+ * The reason is required by the server, not decorated on by the client: a
+ * cancelled payment with no explanation is unauditable.
+ */
+export function useCancelPayment() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      paymentId,
+      reason,
+      sodOverrideReason,
+    }: {
+      paymentId: string
+      reason: string
+      sodOverrideReason?: string
+    }) =>
+      unwrap<PaymentRecord>(
+        await apiClient.post(`/payments/${paymentId}/cancel`, { reason, sodOverrideReason }),
+      ),
+
+    onSuccess: () => {
+      // The same fan-out as recording one. A cancellation moves exactly the
+      // same numbers in the opposite direction — the invoice's outstanding
+      // balance, the customer's debt, the ledger and the dashboard.
+      queryClient.invalidateQueries({ queryKey: paymentKeys.all })
+      queryClient.invalidateQueries({ queryKey: ['invoices'] })
+      queryClient.invalidateQueries({ queryKey: ['customers'] })
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      queryClient.invalidateQueries({ queryKey: ['ledger'] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+    },
+  })
+}

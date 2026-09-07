@@ -14,7 +14,12 @@
 
 import { memo } from 'react'
 import { ArrowDown, ArrowUp, Lock, Pencil, Plus, Trash2 } from 'lucide-react'
-import { canAggregate, canDeleteColumn, type InvoiceColumn } from '@hisabche/validation'
+import {
+  canAggregate,
+  canDeleteColumn,
+  columnCountsInTotal,
+  type InvoiceColumn,
+} from '@hisabche/validation'
 
 import { Button } from '../../button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../../sheet'
@@ -28,6 +33,14 @@ export interface ColumnsSheetProps {
   columns: readonly InvoiceColumn[]
   onToggleVisible: (id: string, visible: boolean) => void
   onToggleAggregate: (id: string, aggregate: boolean) => void
+  /**
+   * «در جمع کل حساب شود؟» (T8) — distinct from the footer sum above.
+   *
+   * `aggregate` shows a total for the column in the footer row; this decides
+   * whether the column is part of what the CUSTOMER PAYS. A weight column
+   * wants the first and must never have the second.
+   */
+  onToggleIncludeInTotal: (id: string, includeInTotal: boolean) => void
   onMove: (id: string, direction: -1 | 1) => void
   onEdit: (column: InvoiceColumn) => void
   onDelete: (column: InvoiceColumn) => void
@@ -50,6 +63,7 @@ export const ColumnsSheet = memo(function ColumnsSheet({
   columns,
   onToggleVisible,
   onToggleAggregate,
+  onToggleIncludeInTotal,
   onMove,
   onEdit,
   onDelete,
@@ -113,11 +127,26 @@ export const ColumnsSheet = memo(function ColumnsSheet({
                     )}
                   </p>
                   <p className="truncate text-[11px] text-[hsl(var(--fg-tertiary))]">
-                    {t(`invoiceBuilder.columnType.${column.type}`, column.type)}
+                    {column.typeLabel ?? t(`invoiceBuilder.columnType.${column.type}`, column.type)}
                     {column.currency
                       ? ` · ${t(`currency.${column.currency.toLowerCase()}`, column.currency)}`
                       : ''}
                   </p>
+
+                  {column.type === 'currency' || column.type === 'percent' ? (
+                    <label className="mt-1 flex items-center gap-2 text-[11px] text-[hsl(var(--fg-secondary))]">
+                      <Switch
+                        // Read through the compatibility rule, not as
+                        // `column.includeInTotal ?? false`: a column saved
+                        // before T8 has no flag, and «no flag» means «what it
+                        // did before» — true for money, false for percent.
+                        checked={columnCountsInTotal(column)}
+                        onCheckedChange={(v) => onToggleIncludeInTotal(column.id, v)}
+                        aria-label={`${t('invoiceBuilder.settings.inTotal', 'در جمع کل')} — ${name}`}
+                      />
+                      {t('invoiceBuilder.column.includeInTotal', 'در جمع کل حساب شود')}
+                    </label>
+                  ) : null}
 
                   {canAggregate(column.type) ? (
                     <label className="mt-1 flex items-center gap-2 text-[11px] text-[hsl(var(--fg-secondary))]">

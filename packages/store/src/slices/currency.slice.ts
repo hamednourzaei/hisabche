@@ -4,29 +4,35 @@
 
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
+import { CURRENCY_CODES } from '@hisabche/validation'
 
 // ============================================
 // Types
 // ============================================
-export type CurrencyCode = 'AFN' | 'USD' | 'PKR' | 'IRR'
+/**
+ * ⚠️ IMPORTED, NOT RESTATED.
+ *
+ * This was its own union — `'AFN' | 'USD' | 'PKR' | 'IRR'` — kept in step with
+ * `currencyCodeSchema` by hand. `@hisabche/store` already depends on
+ * `@hisabche/validation`, so there was never a reason for a second copy, and a
+ * second copy of a list is a list that will disagree.
+ *
+ * The schema is the single source. Everything here derives from it.
+ */
+export type CurrencyCode = (typeof CURRENCY_CODES)[number]
 
 /**
- * The codes the product can actually honour end-to-end — they match
- * `currencyCodeSchema` in `packages/validation`, which the backend enforces on
- * every invoice and transaction.
+ * The codes the product can honour end-to-end.
  *
- * The onboarding step offers a much wider catalogue (`CURRENCIES` in
- * `packages/ui-contract`: IRT, TRY, INR, XAU …). Those extra codes cannot be
- * stored on an invoice today. Selecting one used to be written straight into
- * this store through an unchecked `as CurrencyCode` cast, and every formatter
- * then fell through `CONFIG[code] || CONFIG.AFN` — so a shopkeeper who chose
- * تومان was shown افغانی. Narrowing through this guard makes the mismatch
- * explicit instead of silent.
+ * Onboarding filters `CURRENCIES` (the 25-entry catalogue in
+ * `packages/ui-contract`) through `isSupportedCurrency`. Until task T1 that
+ * filter reduced 25 to 4, which is why currencies added to the DATABASE never
+ * appeared: the filter was a hardcoded array, not a query.
  */
-export const SUPPORTED_CURRENCIES = ['AFN', 'USD', 'PKR', 'IRR'] as const
+export const SUPPORTED_CURRENCIES = CURRENCY_CODES
 
 export function isSupportedCurrency(code: string): code is CurrencyCode {
-  return (SUPPORTED_CURRENCIES as readonly string[]).includes(code)
+  return (CURRENCY_CODES as readonly string[]).includes(code)
 }
 
 export interface ExchangeRate {
@@ -39,7 +45,14 @@ export interface CurrencyState {
   // State
   primaryCurrency: CurrencyCode
   secondaryCurrency: CurrencyCode | null
-  rates: Record<CurrencyCode, ExchangeRate>
+  /**
+   * ⚠️ PARTIAL, AND THAT IS THE TRUTH.
+   *
+   * The product has rates for four currencies and knows nothing about the
+   * other twenty-one. Typing this as a full Record claimed otherwise and only
+   * held while the currency list was four long.
+   */
+  rates: Partial<Record<CurrencyCode, ExchangeRate>>
   isLoadingRates: boolean
   ratesError: string | null
 
@@ -47,13 +60,24 @@ export interface CurrencyState {
   setPrimaryCurrency: (code: CurrencyCode) => void
   setSecondaryCurrency: (code: CurrencyCode | null) => void
   fetchRates: () => Promise<void>
-  convertAmount: (amount: number, from: CurrencyCode, to: CurrencyCode) => number
+  /** `null` when either rate is unknown. Never a guess. */
+  convertAmount: (amount: number, from: CurrencyCode, to: CurrencyCode) => number | null
 }
 
 // ============================================
 // Default rates (offline fallback)
 // ============================================
-const defaultRates: Record<CurrencyCode, ExchangeRate> = {
+/**
+ * ⚠️ THESE ARE THE ONLY RATES THAT EXIST, AND THEY ARE A STUB.
+ *
+ * `fetchRates` below is still a TODO with a hardcoded delay — no rate API is
+ * called. So these four are offline placeholders, and the other twenty-one
+ * currencies have no rate at all.
+ *
+ * Nothing is invented for the rest. A made-up rate turns a visibly missing
+ * conversion into a confidently wrong amount, which is far harder to notice.
+ */
+const defaultRates: Partial<Record<CurrencyCode, ExchangeRate>> = {
   AFN: { code: 'AFN', rate: 1, lastUpdated: new Date().toISOString() },
   USD: { code: 'USD', rate: 0.014, lastUpdated: new Date().toISOString() },
   PKR: { code: 'PKR', rate: 3.9, lastUpdated: new Date().toISOString() },
@@ -110,15 +134,21 @@ export const useCurrencyStore = create<CurrencyState>()(
       },
 
       // Convert amount between currencies
-      convertAmount: (amount: number, from: CurrencyCode, to: CurrencyCode): number => {
+      convertAmount: (amount: number, from: CurrencyCode, to: CurrencyCode): number | null => {
         const rates = get().rates
         const fromRate = rates[from]?.rate
         const toRate = rates[to]?.rate
 
-        if (!fromRate || !toRate) {
-          console.warn(`Missing exchange rate for ${from} or ${to}`)
-          return amount
-        }
+        // ⚠️ REFUSES, rather than returning the amount unconverted.
+        //
+        // This used to `return amount` with a console warning — so 100 USD
+        // came back as 100 and was then displayed as 100 AFN. A wrong figure
+        // that looks like a right one.
+        //
+        // It never fired while the product had four currencies and rates for
+        // all four. Opening the list to twenty-five made it reachable for
+        // twenty-one of them, which is why it is fixed here rather than left.
+        if (!fromRate || !toRate) return null
 
         // Convert to AFN first (base), then to target
         const amountInAFN = amount / fromRate

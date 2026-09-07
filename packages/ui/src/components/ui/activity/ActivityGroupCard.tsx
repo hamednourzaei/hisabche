@@ -75,7 +75,7 @@ const ActivityRow = memo(function ActivityRow({
       className={cn(
         'w-full text-start rounded-lg px-2 py-1.5 md:px-2.5 md:py-2',
         'hover:bg-[hsl(var(--surface-muted))] transition-colors duration-150',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring-color)/0.4)]',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary)/0.4)]',
       )}
     >
       <div className="flex items-start justify-between gap-2">
@@ -175,7 +175,7 @@ export const ActivityGroupCard = memo(function ActivityGroupCard({
           'w-full text-start flex items-start gap-2.5 md:gap-3 p-2.5 md:p-3 lg:p-3.5',
           'cursor-pointer rounded-xl',
           'hover:bg-[hsl(var(--surface-muted))] transition-colors duration-150',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring-color)/0.4)]',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary)/0.4)]',
         )}
         aria-label={t('activity.itemLabel', {
           title: entitySummary.label,
@@ -273,7 +273,7 @@ export const ActivityGroupCard = memo(function ActivityGroupCard({
               'shrink-0 rounded-lg p-1 md:p-1.5 mt-0.5',
               'text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--fg-primary))]',
               'hover:bg-[hsl(var(--surface-muted))] transition-colors duration-150',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring-color)/0.4)]',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary)/0.4)]',
             )}
           >
             <ChevronDown

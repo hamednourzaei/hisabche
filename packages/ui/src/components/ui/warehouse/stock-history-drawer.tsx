@@ -128,7 +128,7 @@ export function StockHistoryDrawer({
         {drifted ? (
           <p
             role="alert"
-            className="flex items-start gap-2 border-b border-[hsl(var(--border-default))] bg-[hsl(var(--status-warning)/0.12)] px-5 py-3 text-xs text-[hsl(var(--status-warning))]"
+            className="flex items-start gap-2 border-b border-[hsl(var(--border-default))] bg-[hsl(var(--color-warning)/0.12)] px-5 py-3 text-xs text-[hsl(var(--color-warning))]"
           >
             <AlertTriangle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
             <span>
@@ -218,8 +218,8 @@ export function StockHistoryDrawer({
                         className={cn(
                           'px-2 py-2 text-end tabular-nums',
                           movement.quantity < 0
-                            ? 'text-[hsl(var(--status-negative))]'
-                            : 'text-[hsl(var(--status-positive))]',
+                            ? 'text-[hsl(var(--color-destructive))]'
+                            : 'text-[hsl(var(--color-success))]',
                         )}
                       >
                         {movement.quantity > 0 ? `+${movement.quantity}` : movement.quantity}
@@ -245,7 +245,7 @@ export function StockHistoryDrawer({
             className={cn(
               'font-semibold tabular-nums',
               storedQuantity < 0
-                ? 'text-[hsl(var(--status-negative))]'
+                ? 'text-[hsl(var(--color-destructive))]'
                 : 'text-[hsl(var(--fg-primary))]',
             )}
           >

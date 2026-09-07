@@ -3,7 +3,7 @@
 // Billing Hooks — TanStack Query
 // ============================================
 
-"use client";
+'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
@@ -17,6 +17,15 @@ export interface BillingPlan {
   name: string
   priceMonthly: number | null
   priceYearly: number | null
+  /**
+   * The currency the plan prices are in — declared by the server (ISO 4217).
+   *
+   * ⚠️ Optional only so a client built against an older server keeps working.
+   * When it is absent the UI must NOT substitute a currency of its own: a
+   * hardcoded `$` in the pricing component is how this went undeclared for so
+   * long, and a wrong currency on a price is worse than a missing one.
+   */
+  currency?: string
   limits: any
   featureKeys: string[]
 }

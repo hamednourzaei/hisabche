@@ -1,8 +1,8 @@
 // packages/ui/src/components/ui/dashboard/sales-chart-internal.tsx
-"use client";
+'use client'
 
-import { memo, useMemo, useId } from "react";
-import { ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid } from "recharts";
+import { memo, useMemo, useId } from 'react'
+import { ComposedChart, Area, Line, XAxis, YAxis, CartesianGrid } from 'recharts'
 
 import {
   ChartContainer,
@@ -11,42 +11,42 @@ import {
   ChartLegend,
   ChartLegendContent,
   type ChartConfig,
-} from "../chart";
+} from '../chart'
 
 interface ChartDataPoint {
-  label: string;
-  value: number;
-  date: string;
-  invoiceCount?: number;
-  customerCount?: number;
+  label: string
+  value: number
+  date: string
+  invoiceCount?: number
+  customerCount?: number
 }
 
 interface InternalChartProps {
-  data: ChartDataPoint[];
-  fmt: (v: number) => string;
-  height: number;
-  animationDuration: number;
-  showInvoices?: boolean;
-  showCustomers?: boolean;
+  data: ChartDataPoint[]
+  fmt: (v: number) => string
+  height: number
+  animationDuration: number
+  showInvoices?: boolean
+  showCustomers?: boolean
 }
 
 // ✅ تابع aggregate با بررسی کامل TypeScript
 function aggregateDataPoints(data: ChartDataPoint[], maxPoints: number): ChartDataPoint[] {
-  if (data.length <= maxPoints) return data;
+  if (data.length <= maxPoints) return data
 
-  const step = Math.ceil(data.length / maxPoints);
-  const result: ChartDataPoint[] = [];
+  const step = Math.ceil(data.length / maxPoints)
+  const result: ChartDataPoint[] = []
 
   for (let i = 0; i < data.length; i += step) {
-    const chunk = data.slice(i, i + step);
+    const chunk = data.slice(i, i + step)
 
-    const first = chunk[0];
-    if (!first) continue;
+    const first = chunk[0]
+    if (!first) continue
 
-    const total = chunk.reduce((sum, d) => sum + d.value, 0);
-    const avg = Math.round(total / chunk.length);
-    const hasInvoice = chunk.some((d) => d.invoiceCount !== undefined);
-    const hasCustomer = chunk.some((d) => d.customerCount !== undefined);
+    const total = chunk.reduce((sum, d) => sum + d.value, 0)
+    const avg = Math.round(total / chunk.length)
+    const hasInvoice = chunk.some((d) => d.invoiceCount !== undefined)
+    const hasCustomer = chunk.some((d) => d.customerCount !== undefined)
 
     result.push({
       label: first.label,
@@ -54,23 +54,21 @@ function aggregateDataPoints(data: ChartDataPoint[], maxPoints: number): ChartDa
       date: first.date,
       // ✅ اگر داده‌ی اصلی این فیلد را نداشته باشد، نباید صفرِ ساختگی بسازیم؛
       // در غیر این صورت خطی با مقدار صفر رسم می‌شود که گمراه‌کننده است.
-      ...(hasInvoice
-        ? { invoiceCount: chunk.reduce((s, d) => s + (d.invoiceCount ?? 0), 0) }
-        : {}),
+      ...(hasInvoice ? { invoiceCount: chunk.reduce((s, d) => s + (d.invoiceCount ?? 0), 0) } : {}),
       ...(hasCustomer
         ? { customerCount: chunk.reduce((s, d) => s + (d.customerCount ?? 0), 0) }
         : {}),
-    });
+    })
   }
 
-  return result;
+  return result
 }
 
 const chartConfig = {
-  value: { label: "فروش", color: "hsl(var(--color-primary))" },
-  invoiceCount: { label: "فاکتور", color: "hsl(var(--status-info))" },
-  customerCount: { label: "مشتری", color: "hsl(var(--color-warning))" },
-} satisfies ChartConfig;
+  value: { label: 'فروش', color: 'hsl(var(--color-primary))' },
+  invoiceCount: { label: 'فاکتور', color: 'hsl(var(--color-info))' },
+  customerCount: { label: 'مشتری', color: 'hsl(var(--color-warning))' },
+} satisfies ChartConfig
 
 export default memo(function InternalSalesChart({
   data,
@@ -80,38 +78,36 @@ export default memo(function InternalSalesChart({
   showInvoices = true,
   showCustomers = true,
 }: InternalChartProps) {
-  const gradientId = useId();
+  const gradientId = useId()
 
   const aggregatedData = useMemo(() => {
-    if (!data || data.length === 0) return [];
-    return data.length > 12 ? aggregateDataPoints(data, 12) : data;
-  }, [data]);
+    if (!data || data.length === 0) return []
+    return data.length > 12 ? aggregateDataPoints(data, 12) : data
+  }, [data])
 
   // ✅ FIX (باگ toggle): خط فقط وقتی رسم می‌شود که داده‌اش واقعاً موجود باشد.
   // بک‌اند این فیلدها را می‌سازد، ولی تا وقتی نسخه‌ی جدید دیپلوی نشده باشد
   // پاسخ فقط {label,value,date} دارد و <Line> چیزی برای کشیدن ندارد — یعنی
   // تیک روشن/خاموش می‌شد بدون این‌که خطی اضافه شود.
   const hasInvoiceSeries = useMemo(
-    () => aggregatedData.some((d) => typeof d.invoiceCount === "number"),
-    [aggregatedData]
-  );
+    () => aggregatedData.some((d) => typeof d.invoiceCount === 'number'),
+    [aggregatedData],
+  )
   const hasCustomerSeries = useMemo(
-    () => aggregatedData.some((d) => typeof d.customerCount === "number"),
-    [aggregatedData]
-  );
+    () => aggregatedData.some((d) => typeof d.customerCount === 'number'),
+    [aggregatedData],
+  )
 
-  const renderInvoices = showInvoices && hasInvoiceSeries;
-  const renderCustomers = showCustomers && hasCustomerSeries;
-  const hasRightAxis = renderInvoices || renderCustomers;
+  const renderInvoices = showInvoices && hasInvoiceSeries
+  const renderCustomers = showCustomers && hasCustomerSeries
+  const hasRightAxis = renderInvoices || renderCustomers
 
   if (!data || data.length === 0) {
     return (
       <div className="w-full flex items-center justify-center" style={{ height }}>
-        <p className="text-sm text-[hsl(var(--fg-tertiary))]">
-          هیچ داده‌ای برای نمایش وجود ندارد
-        </p>
+        <p className="text-sm text-[hsl(var(--fg-tertiary))]">هیچ داده‌ای برای نمایش وجود ندارد</p>
       </div>
-    );
+    )
   }
 
   return (
@@ -166,7 +162,7 @@ export default memo(function InternalSalesChart({
             <ChartTooltipContent
               labelKey="label"
               formatter={(value: any, name: any) =>
-                name === "value" ? fmt(Number(value)) : String(value)
+                name === 'value' ? fmt(Number(value)) : String(value)
               }
             />
           }
@@ -186,8 +182,8 @@ export default memo(function InternalSalesChart({
           dot={false}
           activeDot={{
             r: 5,
-            fill: "var(--color-value)",
-            stroke: "hsl(var(--surface-elevated))",
+            fill: 'var(--color-value)',
+            stroke: 'hsl(var(--surface-elevated))',
             strokeWidth: 3,
             tabIndex: 0,
           }}
@@ -225,5 +221,5 @@ export default memo(function InternalSalesChart({
         )}
       </ComposedChart>
     </ChartContainer>
-  );
-});
+  )
+})

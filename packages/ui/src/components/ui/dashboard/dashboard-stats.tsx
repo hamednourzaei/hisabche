@@ -49,28 +49,28 @@ interface InsightCardProps {
 
 const STATUS_STYLES = {
   success: {
-    bg: 'from-[hsl(var(--status-positive)/0.12)] to-[hsl(var(--status-positive)/0.04)]',
-    border: 'border-[hsl(var(--status-positive)/0.2)]',
-    icon: 'bg-[hsl(var(--status-positive)/0.15)] text-[hsl(var(--status-positive))]',
-    text: 'text-[hsl(var(--status-positive))]',
+    bg: 'from-[hsl(var(--color-success)/0.12)] to-[hsl(var(--color-success)/0.04)]',
+    border: 'border-[hsl(var(--color-success)/0.2)]',
+    icon: 'bg-[hsl(var(--color-success)/0.15)] text-[hsl(var(--color-success))]',
+    text: 'text-[hsl(var(--color-success))]',
   },
   warning: {
-    bg: 'from-[hsl(var(--status-warning)/0.12)] to-[hsl(var(--status-warning)/0.04)]',
-    border: 'border-[hsl(var(--status-warning)/0.2)]',
-    icon: 'bg-[hsl(var(--status-warning)/0.15)] text-[hsl(var(--status-warning))]',
-    text: 'text-[hsl(var(--status-warning))]',
+    bg: 'from-[hsl(var(--color-warning)/0.12)] to-[hsl(var(--color-warning)/0.04)]',
+    border: 'border-[hsl(var(--color-warning)/0.2)]',
+    icon: 'bg-[hsl(var(--color-warning)/0.15)] text-[hsl(var(--color-warning))]',
+    text: 'text-[hsl(var(--color-warning))]',
   },
   danger: {
-    bg: 'from-[hsl(var(--status-negative)/0.12)] to-[hsl(var(--status-negative)/0.04)]',
-    border: 'border-[hsl(var(--status-negative)/0.2)]',
-    icon: 'bg-[hsl(var(--status-negative)/0.15)] text-[hsl(var(--status-negative))]',
-    text: 'text-[hsl(var(--status-negative))]',
+    bg: 'from-[hsl(var(--color-destructive)/0.12)] to-[hsl(var(--color-destructive)/0.04)]',
+    border: 'border-[hsl(var(--color-destructive)/0.2)]',
+    icon: 'bg-[hsl(var(--color-destructive)/0.15)] text-[hsl(var(--color-destructive))]',
+    text: 'text-[hsl(var(--color-destructive))]',
   },
   info: {
-    bg: 'from-[hsl(var(--status-info)/0.12)] to-[hsl(var(--status-info)/0.04)]',
-    border: 'border-[hsl(var(--status-info)/0.2)]',
-    icon: 'bg-[hsl(var(--status-info)/0.15)] text-[hsl(var(--status-info))]',
-    text: 'text-[hsl(var(--status-info))]',
+    bg: 'from-[hsl(var(--color-info)/0.12)] to-[hsl(var(--color-info)/0.04)]',
+    border: 'border-[hsl(var(--color-info)/0.2)]',
+    icon: 'bg-[hsl(var(--color-info)/0.15)] text-[hsl(var(--color-info))]',
+    text: 'text-[hsl(var(--color-info))]',
   },
 } as const
 
@@ -121,7 +121,7 @@ const ProgressBar = memo(function ProgressBar({
       </div>
       <div className="h-1 sm:h-1.5 w-full rounded-full bg-[hsl(var(--surface-muted))]">
         <div
-          className="h-full rounded-full bg-[hsl(var(--status-info))] transition-all duration-500"
+          className="h-full rounded-full bg-[hsl(var(--color-info))] transition-all duration-500"
           style={{ width: `${percentage}%` }}
         />
       </div>
@@ -140,9 +140,9 @@ const AlertBadge = memo(function AlertBadge({
   severity: 'low' | 'medium' | 'high'
 }) {
   const severityStyles = {
-    low: 'bg-[hsl(var(--status-warning)/0.2)] text-[hsl(var(--status-warning))]',
-    medium: 'bg-[hsl(var(--status-negative)/0.2)] text-[hsl(var(--status-negative))]',
-    high: 'bg-[hsl(var(--status-negative)/0.3)] text-[hsl(var(--status-negative))] animate-pulse',
+    low: 'bg-[hsl(var(--color-warning)/0.2)] text-[hsl(var(--color-warning))]',
+    medium: 'bg-[hsl(var(--color-destructive)/0.2)] text-[hsl(var(--color-destructive))]',
+    high: 'bg-[hsl(var(--color-destructive)/0.3)] text-[hsl(var(--color-destructive))] animate-pulse',
   }
 
   return (
@@ -206,7 +206,7 @@ export const InsightCard = memo(function InsightCard({
         onClick && [
           'cursor-pointer',
           'hover:shadow-lg hover:-translate-y-0.5',
-          'focus-visible:ring-4 focus-visible:ring-[hsl(var(--status-info)/0.3)] focus-visible:outline-none',
+          'focus-visible:ring-4 focus-visible:ring-[hsl(var(--color-info)/0.3)] focus-visible:outline-none',
         ],
         sizeStyles.container,
         className,
@@ -253,8 +253,8 @@ export const InsightCard = memo(function InsightCard({
               className={cn(
                 'flex items-center gap-0.5 text-[9px] sm:text-xs font-medium',
                 comparison.isPositive
-                  ? 'text-[hsl(var(--status-positive))]'
-                  : 'text-[hsl(var(--status-negative))]',
+                  ? 'text-[hsl(var(--color-success))]'
+                  : 'text-[hsl(var(--color-destructive))]',
               )}
             >
               {comparison.isPositive ? (
@@ -287,7 +287,7 @@ export const InsightCard = memo(function InsightCard({
       {/* Action Footer */}
       {onClick && (
         <div className="flex items-center justify-end pt-1 sm:pt-1.5 border-t border-[hsl(var(--border-default)/0.5)]">
-          <span className="flex items-center gap-0.5 sm:gap-1 text-[9px] sm:text-xs font-medium text-[hsl(var(--status-info))]">
+          <span className="flex items-center gap-0.5 sm:gap-1 text-[9px] sm:text-xs font-medium text-[hsl(var(--color-info))]">
             {actionLabel}
             <ArrowUpRight className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
           </span>

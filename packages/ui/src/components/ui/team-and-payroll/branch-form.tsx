@@ -11,6 +11,7 @@
 // repeat: every field here is bound to state and every field is submitted.
 // ============================================
 
+import { SelectField } from '../select-field'
 import { memo, useCallback, useState } from 'react'
 
 interface BranchOption {
@@ -112,38 +113,38 @@ export const BranchForm = memo(function BranchForm({
           <span className="text-xs text-[hsl(var(--fg-secondary))]">
             {t('branch.parent', 'شعبه والد (اختیاری)')}
           </span>
-          <select
+          <SelectField
             value={parentBranchId}
-            onChange={(e) => setParentBranchId(e.target.value)}
+            onChange={(value) => setParentBranchId(value)}
+            options={[
+              { value: '', label: t('branch.noParent', 'بدون والد — شعبه اصلی') },
+              ...branches.map((branch) => ({
+                value: branch.id,
+                label: `${branch.name} (${branch.code})`,
+              })),
+            ]}
             className={FIELD}
             disabled={isSubmitting}
-          >
-            <option value="">{t('branch.noParent', 'بدون والد — شعبه اصلی')}</option>
-            {branches.map((branch) => (
-              <option key={branch.id} value={branch.id}>
-                {branch.name} ({branch.code})
-              </option>
-            ))}
-          </select>
+          />
         </label>
 
         <label className="flex flex-col gap-1.5">
           <span className="text-xs text-[hsl(var(--fg-secondary))]">
             {t('branch.manager', 'مدیر شعبه (اختیاری)')}
           </span>
-          <select
+          <SelectField
             value={managerEmployeeId}
-            onChange={(e) => setManagerEmployeeId(e.target.value)}
+            onChange={(value) => setManagerEmployeeId(value)}
+            options={[
+              { value: '', label: t('branch.noManager', 'هنوز مشخص نشده') },
+              ...employees.map((employee) => ({
+                value: employee.id,
+                label: `${employee.firstName} ${employee.lastName}`,
+              })),
+            ]}
             className={FIELD}
             disabled={isSubmitting}
-          >
-            <option value="">{t('branch.noManager', 'هنوز مشخص نشده')}</option>
-            {employees.map((employee) => (
-              <option key={employee.id} value={employee.id}>
-                {employee.firstName} {employee.lastName}
-              </option>
-            ))}
-          </select>
+          />
         </label>
       </div>
 

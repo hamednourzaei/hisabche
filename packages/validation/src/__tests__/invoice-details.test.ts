@@ -7,6 +7,9 @@
 // defaults to false precisely so that is true.
 // ============================================
 
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
+
 import { describe, expect, it } from 'vitest'
 
 import {
@@ -130,19 +133,48 @@ describe('detail validation', () => {
   })
 })
 
-describe('CONTRACT: the UI unit list must not drift from the schema', () => {
-  // packages/ui cannot import this package, so it mirrors the union as a
-  // literal. This test is what keeps the two honest.
-  const UI_UNITS = ['piece', 'gram', 'kg', 'carton', 'box', 'pack', 'meter', 'liter', 'custom']
+describe('CONTRACT: the unit enum must not drift from the `units` table', () => {
+  /**
+   * ⚠️ THIS CONTRACT USED TO POINT AT A HARDCODED UI ARRAY.
+   *
+   * It mirrored nine literals with the note «packages/ui cannot import this
+   * package, so it mirrors the union». Both halves have since stopped being
+   * true: packages/ui depends on this package, and — since T2 — it has no unit
+   * list of its own at all. It renders whatever `GET /api/units` returns.
+   *
+   * So the thing worth pinning moved. The authority is now the `units` table
+   * created and seeded by `phase-l-01`, and the failure this guards is the one
+   * the owner actually hit: fifteen units were seeded, the enum listed nine,
+   * and a tonne could not be saved.
+   */
+  const seededCodes = (): string[] => {
+    const sql = readFileSync(
+      resolve(__dirname, '../../../..', 'docs/phase-l-01-units-migration.sql'),
+      'utf8',
+    )
+    const insert = /INSERT INTO units \([^)]*\) VALUES([\s\S]*?)ON CONFLICT/.exec(sql)?.[1]
+    expect(insert, 'the seed INSERT was not found').toBeDefined()
+    // Comments stripped first: the seed block discusses units in prose, and
+    // matching that prose instead of the rows is a mistake made before.
+    return [...insert!.replace(/--[^\n]*/g, '').matchAll(/\(\s*'([a-z]+)'/g)].map((m) => m[1]!)
+  }
 
-  it('every unit offered in the UI is accepted by the schema', () => {
-    for (const unit of UI_UNITS) {
-      expect(unitSchema.safeParse(unit).success).toBe(true)
+  it('every seeded unit is accepted by the schema', () => {
+    for (const unit of seededCodes()) {
+      expect(unitSchema.safeParse(unit).success, `${unit} is seeded but rejected`).toBe(true)
     }
   })
 
-  it('the schema declares exactly the units the UI offers — no more, no fewer', () => {
-    expect([...unitSchema.options].sort()).toEqual([...UI_UNITS].sort())
+  it('the schema adds nothing beyond the table except `custom`', () => {
+    // `custom` has no row on purpose: it means «the user typed their own
+    // word», it has no dimension and no conversion factor, and giving it one
+    // would let the converter use it.
+    const extra = unitSchema.options.filter((code) => !seededCodes().includes(code))
+    expect(extra).toEqual(['custom'])
+  })
+
+  it('the tonne — the unit this whole change was asked for', () => {
+    expect(unitSchema.safeParse('ton').success).toBe(true)
   })
 })
 

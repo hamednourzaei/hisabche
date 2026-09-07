@@ -108,7 +108,19 @@ export default function TrustBarScene({ t }: TrustBarSceneProps) {
     >
       <div className="container-narrow mb-4 sm:mb-5 lg:mb-8 px-4 sm:px-6">
         <p className="text-center text-[9px] sm:text-[10px] lg:text-sm font-semibold uppercase tracking-[0.2em] text-[hsl(var(--fg-tertiary))]">
-          {t('landing.trustBarLabel', 'Trusted by every type of business')}
+          {/*
+            ⚠️ THIS SAID «Trusted by every type of business».
+
+            The LIST below is honest — it is business TYPES (Supermarket,
+            Pharmacy, Bakery), not named customers. The CLAIM around it was
+            not: «trusted by» asserts that businesses of every one of these
+            types use the product, which nothing in this codebase knows.
+
+            The list is a statement about what the software SUITS. The label
+            now says that, which is both true and the more useful thing for a
+            visitor deciding whether it fits their shop.
+          */}
+          {t('landing.trustBarLabel', 'Built for every type of business')}
         </p>
       </div>
 

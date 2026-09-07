@@ -1,5 +1,5 @@
 // ============================================
-// STAGE 4 §8/§9 — the precision contract, and proof EUR stays inactive.
+// STAGE 4 §8/§9 — the precision contract, and what still constrains the list.
 //
 // Precision is tested SEPARATELY from locale formatting: the contract is
 // "USD carries two fraction digits", not "USD renders with a comma". Locale
@@ -73,86 +73,90 @@ describe('§4 formatting never mutates the stored value', () => {
   })
 })
 
-describe('§9 EUR is NOT an active product currency', () => {
-  it('is absent from currencyCodeSchema', () => {
-    const schema = read('packages/validation/src/schemas/common.schema.ts')
-    expect(schema).toContain("z.enum(['AFN', 'USD', 'PKR', 'IRR'])")
-    expect(schema).not.toContain('EUR')
-  })
-
-  it('is absent from the store currency union and exchange rates', () => {
-    const slice = read('packages/store/src/slices/currency.slice.ts')
-    expect(slice).toContain("'AFN' | 'USD' | 'PKR' | 'IRR'")
-    expect(slice).not.toContain('EUR')
-  })
-
-  it('is absent from every UI currency selector', () => {
-    expect(read('apps/mobile/src/features/settings/screens/settings-screen.tsx')).not.toContain(
-      'EUR',
-    )
-    expect(read('apps/desktop/src/features/settings/settings-page.tsx')).not.toContain('EUR')
-  })
-
-  it("is absent from web's useCurrency hook, which also now carries PKR", () => {
-    // Regression guard. This union used to read AFN|USD|EUR|IRR: it listed a
-    // currency the product rejects and omitted one it supports, so PKR
-    // rendered as the bare text "PKR" instead of ₨.
-    const hook = read('packages/ui/src/hooks/dashboard/use-currency.ts')
-    // Tolerant of formatter churn: the union may or may not end in a
-    // semicolon, and quote style is the linter's business, not this test's.
-    const union = /export type CurrencyCode =([^\n]+)/.exec(hook)![1]!
-    expect(union).not.toContain('EUR')
-    expect(union).toContain('PKR')
-    expect(hook).toMatch(/PKR:\s*['"]₨['"]/)
-  })
-
-  it('is absent from the backend drizzle schema', () => {
-    expect(read('backend/src/drizzle-schema.ts')).not.toContain('EUR')
-  })
-
-  it('exists in the formatter ONLY as a future-compatibility rule', () => {
-    expect(fractionDigits('EUR')).toBe(2)
-    expect(CURRENCY_SIGN.EUR).toBe('€')
-    expect(ACTIVE).not.toContain('EUR' as never)
-  })
-})
-
-describe('L0 — the grid’s precision rule agrees with the contract', () => {
+describe('§9 the list is now open — and what still constrains it', () => {
   /**
-   * `currencyPrecision` in @hisabche/validation is a SECOND expression of
-   * `FRACTION_DIGITS`. It is not imported, because validation and formatting
-   * are both leaf packages and neither depends on the other — see the note on
-   * the function.
+   * ⚠️ THIS SECTION USED TO ASSERT THE OPPOSITE.
    *
-   * Duplication is acceptable only while something holds the two together.
-   * This is that something.
+   * It pinned `z.enum(['AFN','USD','PKR','IRR'])` and checked that EUR stayed
+   * absent from seven files. That was a real product policy and it is recorded
+   * in lesson 81 — the four-code list was a decision, not leftover hardcoding.
+   *
+   * The owner opened it (task T1): the business trades metals, and
+   * `packages/ui-contract` already catalogued 25 codes including the ISO 4217
+   * metal codes while onboarding filtered all but four of them out.
+   *
+   * The policy changed, so this test changed WITH it — deliberately, in the
+   * same commit. What survives is the part that was never about which
+   * currencies: an unknown code must not borrow another currency's precision.
    */
-  const source = read('packages/validation/src/schemas/invoice-grid.ts')
-  const body = /export function currencyPrecision\([^)]*\)[^{]*\{([\s\S]*?)\n\}/.exec(source)?.[1]
 
-  it('is still a two-branch rule this test can reason about', () => {
-    // If it grows a lookup table or a fallback, this test must be rewritten
-    // rather than silently passing on a rule it no longer understands.
-    expect(body).toBeDefined()
-    expect(body).toContain("currency === 'USD' ? 2 : 0")
+  it('every code the schema accepts has a precision', () => {
+    // THE INVARIANT THAT REPLACED THE OLD ONE. Widening the schema without
+    // extending FRACTION_DIGITS produces money with no precision contract —
+    // a wrong amount, not a missing option.
+    const schema = read('packages/validation/src/schemas/common.schema.ts')
+    const block = /export const CURRENCY_CODES = \[([\s\S]*?)\] as const/.exec(schema)?.[1]
+    expect(block, 'CURRENCY_CODES not found').toBeDefined()
+
+    const codes = [...block!.matchAll(/'([A-Z]{3})'/g)].map((m) => m[1]!)
+    expect(codes.length).toBeGreaterThan(20)
+
+    for (const code of codes) {
+      expect(
+        FRACTION_DIGITS[code as keyof typeof FRACTION_DIGITS],
+        `${code} has no precision in FRACTION_DIGITS`,
+      ).toBeDefined()
+      expect(
+        CURRENCY_SIGN[code as keyof typeof CURRENCY_SIGN],
+        `${code} has no sign in CURRENCY_SIGN`,
+      ).toBeDefined()
+    }
   })
 
-  it.each(ACTIVE)('agrees with FRACTION_DIGITS for %s', (code) => {
-    // The rule the grid applies, evaluated the same way the source states it.
-    const gridAnswer = code === 'USD' ? 2 : 0
-    expect(gridAnswer).toBe(FRACTION_DIGITS[code])
+  it('the precision tiers are the real ISO minor units', () => {
+    // Spot-checks across all three tiers. Getting one of these wrong is a
+    // rounding error of a factor of ten or a thousand on a real invoice.
+    expect(fractionDigits('AFN')).toBe(0)
+    expect(fractionDigits('JPY')).toBe(0)
+    expect(fractionDigits('USD')).toBe(2)
+    expect(fractionDigits('GBP')).toBe(2)
+    expect(fractionDigits('IQD')).toBe(3)
+  })
+
+  it('⚠️ metals are priced to the milligram, not the centigram', () => {
+    // XAU here means «one gram of gold» as the unit of account. Two decimals
+    // would round every gold invoice to 10mg.
+    for (const metal of ['XAU', 'XAG', 'XPT', 'XPD'] as const) {
+      expect(fractionDigits(metal)).toBe(3)
+    }
+  })
+
+  it('no code carries an invented symbol', () => {
+    // Metals have no currency glyph. Saying «g» is honest; borrowing a symbol
+    // that means another currency is not.
+    for (const metal of ['XAU', 'XAG', 'XPT', 'XPD'] as const) {
+      expect(CURRENCY_SIGN[metal]).toBe('g')
+    }
   })
 })
 
-describe('§9 no silent fallback to another currency', () => {
+describe('§9 no silent fallback to another currency — UNCHANGED', () => {
+  /**
+   * The part of §9 that was never about which currencies are active. A code
+   * outside the list must resolve to `undefined`, not to somebody else's
+   * precision.
+   *
+   * ⚠️ The rogue code is now 'ZZZ'. It used to be 'GBP', which is an ACTIVE
+   * currency since T1 — a test whose sentinel became real would have passed
+   * for the wrong reason.
+   */
   it('an unknown code cannot resolve to USD precision', () => {
-    // The type forbids this; the runtime must not paper over it either.
-    const rogue = 'GBP' as unknown as 'USD'
+    const rogue = 'ZZZ' as unknown as 'USD'
     expect(FRACTION_DIGITS[rogue]).toBeUndefined()
   })
 
-  it('currencySign echoes an unknown code rather than inventing a symbol', () => {
-    const rogue = 'GBP' as unknown as 'USD'
+  it('an unknown code gets no symbol', () => {
+    const rogue = 'ZZZ' as unknown as 'USD'
     expect(CURRENCY_SIGN[rogue]).toBeUndefined()
   })
 })

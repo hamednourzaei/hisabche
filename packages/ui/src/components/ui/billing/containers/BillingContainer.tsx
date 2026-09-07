@@ -12,7 +12,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Button } from '../../button'
 import { Badge } from '../../badge'
 import { Progress } from '../../progress'
-import { Loader2, Check, X } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
+
+import { PricingPage } from '../PricingPage'
 
 export function BillingContainer() {
   const t = useTranslations()
@@ -27,7 +29,7 @@ export function BillingContainer() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-fg" />
+        <Loader2 className="h-8 w-8 animate-spin text-[hsl(var(--fg-tertiary))]" />
       </div>
     )
   }
@@ -42,11 +44,11 @@ export function BillingContainer() {
         : t('billing.plans.enterprise.name')
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto p-6">
+    <div className="space-y-5 sm:space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold">{t('billing.title')}</h1>
-        <p className="text-muted-fg">{t('billing.subtitle')}</p>
+        <p className="text-[hsl(var(--fg-tertiary))]">{t('billing.subtitle')}</p>
       </div>
 
       {/* Current Plan */}
@@ -69,19 +71,31 @@ export function BillingContainer() {
               {subscription.isTrial && trialStatus && (
                 <div className="mt-2 text-sm">
                   <span>{t('billing.daysLeft', { days: trialStatus.daysLeft })}</span>
-                  <Progress value={(trialStatus.daysLeft / 7) * 100} className="h-2 mt-1" />
+                  <Progress
+                    value={Math.min(
+                      100,
+                      (trialStatus.daysLeft / (trialStatus.totalDays ?? 7)) * 100,
+                    )}
+                    className="h-2 mt-1"
+                  />
                 </div>
               )}
             </div>
-            {subscription.plan === 'free' && !subscription.isTrial && (
-              <Button onClick={() => upgrade.mutate({ plan: 'pro', interval: 'month' })}>
-                {t('billing.upgradeNow')}
-              </Button>
-            )}
+            {/* ⚠️ THIS CONDITION USED TO BE THE BUG.
+
+                It read `plan === 'free' && !subscription.isTrial`, so a person
+                ON THE TRIAL — the one most likely to be on this page because
+                they want to buy — saw no upgrade control at all. And where it
+                did show, it called `upgrade.mutate({ plan: 'pro', interval:
+                'month' })`: one hardcoded plan, one hardcoded interval, with
+                `usePlans()` and `priceYearly` both built and unreachable.
+
+                The plans now render below for anyone who is not already on a
+                paid plan, so there is nothing left for this button to do. */}
           </div>
 
           {subscription.cancelAtPeriodEnd && (
-            <div className="text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 p-2 rounded">
+            <div className="rounded-lg bg-[hsl(var(--color-warning)/0.1)] p-2 text-sm text-[hsl(var(--color-warning))]">
               ⚠️ {t('billing.cancelScheduled')}
             </div>
           )}
@@ -94,6 +108,15 @@ export function BillingContainer() {
         </CardContent>
       </Card>
 
+      {/* ─── Plans ───────────────────────────────────────────────────
+          The answer to «هیچ گزینه ارتقایی در اینجا نیست». Shown to anyone on
+          the free plan AND to anyone on the trial, which is the case the old
+          condition excluded. Someone already paying sees their plan marked as
+          current rather than a wall of buy buttons. */}
+      {subscription.plan === 'free' || subscription.isTrial ? (
+        <PricingPage currentPlan={subscription.plan} isTrial={subscription.isTrial} />
+      ) : null}
+
       {/* Usage */}
       {usage && (
         <Card>
@@ -102,7 +125,7 @@ export function BillingContainer() {
           </CardHeader>
           <CardContent className="space-y-4">
             {!subscription.isTrial && subscription.plan === 'free' && (
-              <div className="text-xs text-muted-fg bg-amber-50 dark:bg-amber-950/30 p-2 rounded">
+              <div className="rounded-lg bg-[hsl(var(--color-warning)/0.1)] p-2 text-xs text-[hsl(var(--fg-secondary))]">
                 ⚠️ {t('billing.usage.freeWarning')}
               </div>
             )}

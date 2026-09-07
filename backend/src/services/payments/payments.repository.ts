@@ -131,6 +131,63 @@ export class PaymentsRepository {
     }))
   }
 
+  /**
+   * Open invoices addressed BY ID, with the party each one belongs to.
+   *
+   * ---------------------------------------------------------------------
+   * T9 — WHY THIS EXISTS ALONGSIDE `openInvoicesFor`
+   *
+   * `openInvoicesFor` answers «what does this customer still owe», which is
+   * the right question when a shopkeeper says «he paid me 500». It cannot
+   * answer «settle THIS invoice», because it filters by party — and a cash
+   * sale to a walk-in has `customer_id IS NULL`, so `.eq('customer_id', null)`
+   * matches nothing and the allocation is refused as unknown.
+   *
+   * That is why recording payment at invoice creation had no working path,
+   * and why `paid_amount` was being written directly instead — the defect
+   * behind «مبلغ پرداخت‌شده با مجموع پرداخت‌ها یکی نیست».
+   *
+   * ⚠️ `customerId` / `supplierId` COME BACK ON PURPOSE. The caller must
+   * check that an invoice addressed by id actually belongs to the party being
+   * credited. Without that check, an explicit allocation could apply one
+   * customer's money to another customer's debt — inside the same workspace,
+   * so RLS would never see it.
+   */
+  async openInvoicesByIds(
+    workspaceId: string,
+    invoiceIds: readonly string[],
+  ): Promise<
+    Array<OpenInvoice & { customerId: string | null; supplierId: string | null; type: string }>
+  > {
+    const unique = [...new Set(invoiceIds.filter(Boolean))]
+    if (unique.length === 0) return []
+
+    const { data, error } = await supabase
+      .from('invoice_outstanding')
+      .select(
+        'invoice_id, invoice_number, total, allocated, due_date, invoice_date, type, customer_id, supplier_id',
+      )
+      // The tenancy boundary. An id from another workspace simply does not
+      // come back, so it is reported as unknown rather than settled.
+      .eq('workspace_id', workspaceId)
+      .in('invoice_id', unique)
+      .gt('outstanding', 0)
+
+    if (error) throw new DatabaseError('Failed to fetch invoices for allocation', error)
+
+    return (data ?? []).map((row) => ({
+      invoiceId: row.invoice_id,
+      invoiceNumber: row.invoice_number ?? '',
+      total: Number(row.total) || 0,
+      allocated: Number(row.allocated) || 0,
+      dueDate: String(row.due_date ?? '').slice(0, 10),
+      invoiceDate: String(row.invoice_date ?? '').slice(0, 10),
+      customerId: row.customer_id ?? null,
+      supplierId: row.supplier_id ?? null,
+      type: String(row.type ?? ''),
+    }))
+  }
+
   /** Every open invoice in the workspace, for the aging report. */
   async allOpenInvoices(workspaceId: string, invoiceType: 'sale' | 'purchase') {
     const { data, error } = await supabase

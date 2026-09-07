@@ -33,6 +33,7 @@ import type { z } from 'zod'
 
 import { computeItemTotal } from './invoice.schema'
 import type { currencyCodeSchema, unitSchema } from './common.schema'
+import { fractionDigits } from '@hisabche/formatting'
 
 type CurrencyCode = z.infer<typeof currencyCodeSchema>
 
@@ -146,12 +147,53 @@ export interface InvoiceColumn {
   visible: boolean
   /** Numeric columns may contribute a total to the bottom row. */
   aggregate: boolean
+  /**
+   * Whether this column's value is added to the LINE TOTAL — «در جمع کل حساب
+   * شود؟» (task T8).
+   *
+   * ---------------------------------------------------------------------
+   * ⚠️ THIS IS NOT `aggregate`, AND CONFLATING THE TWO IS THE BUG.
+   *
+   *   aggregate       show a sum for this column in the FOOTER row
+   *   includeInTotal  add this column into what the CUSTOMER PAYS
+   *
+   * A weight column is worth summing in the footer («۴۲۰ گرم in total») and
+   * must never be added to the money. A مالیات column is the reverse.
+   *
+   * ---------------------------------------------------------------------
+   * ⚠️ `undefined` IS NOT `false`. It means «the behaviour before T8», and it
+   * differs by type — see `columnCountsInTotal`. Defaulting it to false would
+   * silently drop every existing invoice's extra money columns out of its
+   * total; defaulting it to true would silently add every percent column that
+   * has never been counted. Both would change saved documents' meaning.
+   */
+  includeInTotal?: boolean
   /** Only meaningful for `currency`. Chosen by the user, per column. */
   currency?: CurrencyCode
   /** Decimals used for display AND for rounding this column's total. */
   precision: number
   /** Shown next to the header — «گرم», «ساعت», «متر». Free text, any trade. */
   suffix?: string
+  /**
+   * The user's own name for what KIND of column this is — «اجرت», «کرایه
+   * حمل», «کارمزد» (task T8).
+   *
+   * ---------------------------------------------------------------------
+   * ⚠️ THIS IS A LABEL. IT IS NOT A NEW `type`, AND THE DIFFERENCE MATTERS.
+   *
+   * The owner asked for an input to add their own column type. A type the
+   * system does not recognise has no arithmetic — nothing would know whether
+   * to add it, multiply it, or charge a percentage of it, so a column of that
+   * type could only ever be inert text. Offering it would be the
+   * undefined-policy guardrail: a setting that looks like it does something.
+   *
+   * So the BEHAVIOUR stays one of the defined types (currency, percent, …)
+   * and this names the column's kind for the people reading the invoice. The
+   * trade gets its own vocabulary; the totals stay computable.
+   *
+   * Displayed instead of the technical type wherever the type is shown.
+   */
+  typeLabel?: string
   /** Only for `select` — the choices the user defined. */
   options?: string[]
   /** Pre-filled into a new row. */
@@ -170,30 +212,27 @@ export interface InvoiceGridRow {
  * Decimals a currency is normally written with.
  *
  * ---------------------------------------------------------------------------
- * ⚠️ L0 — THIS WAS `currency === 'USD' ? 2 : 0`, WRITTEN OUT IN FIVE FILES.
+ * ⚠️ THIS NOW DELEGATES, AND THE REASON IT DID NOT BEFORE HAS EXPIRED.
  *
- * And it was a SECOND implementation of a rule that already existed:
- * `FRACTION_DIGITS` in @hisabche/formatting is the precision contract, tested
- * by `currency-policy.test.ts` («STAGE 4 §8») against every active currency
- * and every locale.
+ * It used to be `currency === 'USD' ? 2 : 0`, mirrored here rather than
+ * imported because `@hisabche/validation` and `@hisabche/formatting` were both
+ * leaf packages and an edge between them was not worth saving four lines
+ * (lesson 83). A guard kept the two in step.
  *
- * Two implementations of one money rule agree until one of them is edited.
- * This one now delegates, so there is a single answer — G2.
+ * That reasoning held for a two-branch rule over four currencies. It does not
+ * hold for twenty-five codes across three precision tiers: the two-branch rule
+ * is now WRONG — it gives GBP zero decimals — and a hand-mirrored 25-entry
+ * table is a drift risk, not a saved line.
  *
- * ⚠️ IT DOES NOT IMPORT `fractionDigits`, AND THAT IS DELIBERATE.
+ * So `@hisabche/formatting` is a dependency now, deliberately. It has no
+ * hisabche dependencies of its own, so this adds an edge and not a cycle.
  *
- * `@hisabche/validation` and `@hisabche/formatting` are both LEAF packages —
- * neither depends on the other. Importing one into the other to save four
- * lines would add a dependency edge to the workspace graph for a rule that is
- * two branches long.
- *
- * Instead the two are kept in step by a test: `currency-policy.test.ts` reads
- * this function's source and checks it agrees with `FRACTION_DIGITS` for every
- * active currency. Duplication that a guard holds together is safer than an
- * architectural edge added in passing (G2 is about MODELS, not about lines).
+ * ⚠️ NO FALLBACK. §9 requires an unknown code to resolve to `undefined` rather
+ * than borrow another currency's precision, and `fractionDigits` preserves
+ * that. The codes are exhaustive by `currencyCodeSchema`.
  */
 export function currencyPrecision(currency: CurrencyCode): number {
-  return currency === 'USD' ? 2 : 0
+  return fractionDigits(currency)
 }
 
 /**
@@ -433,6 +472,47 @@ export function rowTaxPercent(row: InvoiceGridRow): number {
 }
 
 /**
+ * Whether a column joins the line total.
+ *
+ * ---------------------------------------------------------------------------
+ * THE DEFECT THIS ANSWERS (T8)
+ *
+ * A gold trader adds a «اجرت» column of type `percent` and puts 18 in it. The
+ * old rule was one line inside `rowExtraMoney`:
+ *
+ *     if (column.type !== 'currency') return sum
+ *
+ * so the percent column contributed NOTHING. The invoice showed a total the
+ * customer does not actually pay. That is an accounting defect, not a display
+ * one — the figure is wrong on the printed invoice, in the ledger, and in the
+ * customer's balance.
+ *
+ * ---------------------------------------------------------------------------
+ * ⚠️ THE UNDEFINED CASE IS A COMPATIBILITY RULE, NOT A DEFAULT
+ *
+ * Columns saved before T8 have no `includeInTotal`. They must keep behaving
+ * exactly as they did, or reopening an old invoice silently changes its total:
+ *
+ *   currency, undefined → true   every money column already counted
+ *   percent,  undefined → false  no percent column has ever counted
+ *
+ * A user who wants the percent counted turns it on, once, deliberately.
+ */
+export function columnCountsInTotal(column: InvoiceColumn): boolean {
+  // The built-ins that are already applied by name in `rowTotal`. Counting
+  // them here would apply the discount twice and the tax twice.
+  if (column.id === COLUMN.unitPrice) return false
+  if (column.id === COLUMN.discount) return false
+  if (column.id === COLUMN.tax) return false
+  if (column.id === COLUMN.lineTotal) return false
+
+  if (column.type !== 'currency' && column.type !== 'percent') return false
+
+  if (column.includeInTotal !== undefined) return column.includeInTotal
+  return column.type === 'currency'
+}
+
+/**
  * Every user-added money column that adds to this line, in the invoice
  * currency. A column in a foreign currency with no rate is excluded and
  * reported separately — adding a USD figure into a Toman total is exactly the
@@ -445,7 +525,7 @@ export function rowExtraMoney(
 ): number {
   return columns.reduce((sum, column) => {
     if (column.type !== 'currency') return sum
-    if (column.id === COLUMN.unitPrice) return sum
+    if (!columnCountsInTotal(column)) return sum
     if (!hasCellValue(row.values[column.id])) return sum
 
     const converted = toInvoiceCurrency(
@@ -454,6 +534,30 @@ export function rowExtraMoney(
       ctx,
     )
     return converted === null ? sum : sum + converted
+  }, 0)
+}
+
+/**
+ * The percent columns the user has switched into the total, as a fraction.
+ *
+ * «۱۸٪ اجرت» means eighteen percent OF THE GOODS — the base plus the flat
+ * money columns, before discount and before tax. Two consequences that are
+ * deliberate:
+ *
+ *   · Applied to base + flat extras, not to the base alone. A necklace priced
+ *     as «زنجیر + سنگ» has its making charge on the whole piece.
+ *   · Applied BEFORE the discount, so a discount discounts the making charge
+ *     too — which is what a shopkeeper means by «۱۰٪ تخفیف دادم».
+ *
+ * Several percent columns add: 18% + 2% is 20% of the base, not 18% compounded
+ * with 2%. Compounding would make the order of the columns change the price.
+ */
+export function rowExtraPercent(row: InvoiceGridRow, columns: readonly InvoiceColumn[]): number {
+  return columns.reduce((sum, column) => {
+    if (column.type !== 'percent') return sum
+    if (!columnCountsInTotal(column)) return sum
+    if (!hasCellValue(row.values[column.id])) return sum
+    return sum + parseCellNumber(row.values[column.id])
   }, 0)
 }
 
@@ -470,7 +574,15 @@ export function rowTotal(
   columns: readonly InvoiceColumn[],
   ctx: GridMoneyContext,
 ): number {
-  const extras = rowExtraMoney(row, columns, ctx)
+  const flat = rowExtraMoney(row, columns, ctx)
+
+  // T8 — «۱۸٪ اجرت» is money the customer pays, and it used to be worth zero.
+  // Charged on the goods plus the flat extras, before discount and tax.
+  const percent = rowExtraPercent(row, columns)
+  const base = rowQuantity(row) * rowUnitPrice(row, columns, ctx)
+  const surcharge = ((base + flat) * percent) / 100
+
+  const extras = flat + surcharge
   const net = computeItemTotal({
     quantity: rowQuantity(row),
     unitPrice: rowUnitPrice(row, columns, ctx),
@@ -655,6 +767,23 @@ export function rowToInvoiceItem(
   const noteParts: string[] = []
   let sortOrder = 0
 
+  // ─── T8 — what a percent column is worth, in money ────────────────────
+  //
+  // ⚠️ WITHOUT THIS THE GRID AND THE SERVER DISAGREE.
+  //
+  // The server totals an item with `computeItemTotal`, which sums
+  // `detail.quantity × detail.amount`. A percent column used to be persisted
+  // as `{ quantity: 18, amount: 0 }` — eighteen times nothing. So the grid
+  // would show the اجرت in the total and the SAVED invoice would not, and the
+  // printed document, the ledger and the customer's balance would all carry
+  // the lower figure.
+  //
+  // It is therefore stored as the AMOUNT it came to, on the same base
+  // `rowTotal` uses. The percentage stays visible in the title, so the detail
+  // still reads «اجرت (۱۸٪)» rather than an unexplained number.
+  const percentBase =
+    rowQuantity(row) * rowUnitPrice(row, columns, ctx) + rowExtraMoney(row, columns, ctx)
+
   for (const column of columns) {
     // Built-ins have their own dedicated fields below.
     if (isBuiltinColumn(column.id)) continue
@@ -676,7 +805,28 @@ export function rowToInvoiceItem(
     // simply not persisted — no data is lost, nothing invalid is sent.
     if (value === 0) continue
 
-    const isOwnCurrencyMoney = column.type === 'currency' && !isForeignMoneyColumn(column, ctx)
+    const isOwnCurrencyMoney =
+      column.type === 'currency' &&
+      !isForeignMoneyColumn(column, ctx) &&
+      columnCountsInTotal(column)
+
+    // A percent column the user switched into the total — «۱۸٪ اجرت».
+    const isCountedPercent = column.type === 'percent' && columnCountsInTotal(column)
+
+    if (isCountedPercent) {
+      const surcharge = roundTo((percentBase * value) / 100, ctx.precision)
+      details.push({
+        // The rate is kept in the label so the detail explains itself. An
+        // amount with no rate beside it cannot be checked by the customer or
+        // by whoever reads the invoice next year.
+        title: `${column.label} (${value}%)`,
+        quantity: 1,
+        amount: surcharge,
+        unit: 'piece',
+        sortOrder: sortOrder++,
+      })
+      continue
+    }
 
     details.push({
       title: column.label,

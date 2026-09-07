@@ -127,7 +127,7 @@ export const AssetsView = memo(function AssetsView({
 
       {!isLoading && assets.length === 0 ? (
         <Panel title={t('assets.empty_title', 'هنوز دارایی ثابتی ثبت نشده')}>
-          <p className="text-sm text-[hsl(var(--muted-foreground))]">
+          <p className="text-sm text-[hsl(var(--fg-tertiary))]">
             {t(
               'assets.empty_hint',
               'دارایی ثابت از فاکتور خرید یا از تنظیمات حسابداری ثبت می‌شود.',
@@ -154,8 +154,8 @@ export const AssetsView = memo(function AssetsView({
                   key={asset.id}
                   onClick={() => onSelect(asset.id)}
                   className={
-                    'cursor-pointer transition hover:bg-[hsl(var(--muted)/0.4)] ' +
-                    (asset.id === selectedId ? 'bg-[hsl(var(--muted)/0.5)]' : '')
+                    'cursor-pointer transition hover:bg-[hsl(var(--surface-muted)/0.4)] ' +
+                    (asset.id === selectedId ? 'bg-[hsl(var(--surface-muted)/0.5)]' : '')
                   }
                 >
                   <TableCell>{asset.name}</TableCell>

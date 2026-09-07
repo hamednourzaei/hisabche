@@ -1,5 +1,6 @@
 'use client'
 
+import { SelectField } from '../select-field'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { z } from 'zod'
@@ -189,19 +190,19 @@ export function PaymentModal({ open, onClose, onPaid, customer, openInvoices }: 
 
         <div className="space-y-4">
           {openInvoices.length > 1 && (
-            <select
+            <SelectField
               value={invoiceId}
-              onChange={(e) => setInvoiceId(e.target.value)}
+              onChange={(value) => setInvoiceId(value)}
+              options={[
+                { value: '', label: t('customers.selectInvoice') },
+                ...openInvoices.map((inv) => ({
+                  value: inv.id,
+                  label: `#${inv.invoiceNumber ?? ''} — ${fmt(remaining(inv))} AFN`,
+                })),
+              ]}
+              className={'w-full rounded-xl border border-border bg-background px-4 py-3 text-sm'}
               aria-label={t('customers.selectInvoice')}
-              className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm"
-            >
-              <option value="">{t('customers.selectInvoice')}</option>
-              {openInvoices.map((inv) => (
-                <option key={inv.id} value={inv.id}>
-                  #{inv.invoiceNumber ?? ''} — {fmt(remaining(inv))} AFN
-                </option>
-              ))}
-            </select>
+            />
           )}
 
           {openInvoices.length === 0 && (

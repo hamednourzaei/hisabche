@@ -12,6 +12,7 @@
 // party name, the workspace id and the transaction type (sale | purchase).
 // ============================================
 
+import { PaymentsService } from './payments/payments.service'
 import { supabase } from '../db'
 import { sod } from './authorization'
 import { scopes } from './authorization/scope.service'
@@ -122,11 +123,17 @@ export class InvoiceService {
   private workflowService: WorkflowService
   private notificationService: NotificationService
   private activityService: ActivityService
+  /**
+   * T9 — the only writer of settlement. Invoice creation asks THIS to record
+   * money; it never writes `paid_amount` itself.
+   */
+  private payments: PaymentsService
 
   constructor() {
     this.workflowService = new WorkflowService()
     this.notificationService = new NotificationService()
     this.activityService = new ActivityService()
+    this.payments = new PaymentsService()
   }
 
   // ─── ✅ تابع دریافت نام نمایشی کاربر ──────────────────────────────────
@@ -633,7 +640,21 @@ export class InvoiceService {
         tax_rate: data.taxRate || 0,
         tax_total: data.taxTotal || 0,
         total: data.total || 0,
-        paid_amount: data.paidAmount || 0,
+        // ⚠️ T9 — ALWAYS ZERO AT INSERT, AND THAT IS THE FIX.
+        //
+        // This line used to read `paid_amount: data.paidAmount || 0`. Phase F
+        // made `paid_amount` a projection of `SUM(payment_allocations)` and
+        // closed the PATCH that wrote it — but this insert kept writing it, so
+        // creation remained a second writer on a derived number.
+        //
+        // A real sale showed the consequence: `paid_amount` was ۱۸٬۰۰۰٬۰۰۰
+        // with no payment behind it, and the drift warning built in H2 caught
+        // it. The invoice claimed to be paid and the ledger had never seen a
+        // rial of it.
+        //
+        // The money is recorded as an actual payment below, and this column
+        // follows from the allocations the way every other screen expects.
+        paid_amount: 0,
         payment_method: data.paymentMethod || 'cash',
         currency: data.currency || 'AFN',
         // ⚠️ J3 — THIS LINE IS THE CONFLATION, and it is kept deliberately.
@@ -906,7 +927,89 @@ export class InvoiceService {
       )
     }
 
+    // ─── T9 — the money, recorded as money ──────────────────────────────
+    await this.recordCreationPayments(ctx, invoice.id, data)
+
     return this.getById(invoice.id, ctx)
+  }
+
+  /**
+   * Turn «this was paid at the counter» into real payment records.
+   *
+   * ---------------------------------------------------------------------
+   * WHY THIS IS A SEPARATE STEP AND NOT PART OF THE INSERT
+   *
+   * A payment is its own document with its own ledger entry. Writing
+   * `paid_amount` on the invoice row said the money existed without any
+   * record of it arriving — no payment, no allocation, no journal entry, and
+   * nothing to reverse if it turned out to be wrong.
+   *
+   * ---------------------------------------------------------------------
+   * ⚠️ A FAILURE HERE DOES NOT DELETE THE INVOICE
+   *
+   * supabase-js has no transactions and a compensating DELETE is forbidden.
+   * It is also the wrong thing: the invoice is real, the goods moved, the
+   * ledger was written. What failed is the RECEIPT.
+   *
+   * So the error is raised to the caller with the invoice left in its true
+   * state — created and unpaid. That is honest and repairable: the payment
+   * can be added from the invoice's own payments panel. Swallowing the error
+   * would put us back where we started, with an invoice whose paid amount
+   * nobody can account for.
+   */
+  private async recordCreationPayments(
+    ctx: TenancyContext,
+    invoiceId: string,
+    data: CreateInvoice,
+  ): Promise<void> {
+    // Each entry becomes its own payment: one row carrying a blended method
+    // would make the till and the bank reconciliation both wrong.
+    const tranches =
+      data.payments && data.payments.length > 0
+        ? data.payments.map((p) => ({
+            method: p.method,
+            amount: p.amount,
+            reference: p.reference ?? data.reference ?? '',
+          }))
+        : data.paidAmount && data.paidAmount > 0
+          ? [
+              {
+                method: data.paymentMethod ?? 'cash',
+                amount: data.paidAmount,
+                reference: data.reference ?? '',
+              },
+            ]
+          : []
+
+    if (tranches.length === 0) return
+
+    // A purchase is money going OUT to a supplier; a sale is money coming IN.
+    // Getting this backwards would put the payment on the wrong side of the
+    // ledger and invert the party's balance.
+    const isPurchase = data.type === 'purchase'
+    const partyType = isPurchase ? ('supplier' as const) : ('customer' as const)
+    const partyId = (isPurchase ? data.supplierId : data.customerId) ?? null
+
+    for (const tranche of tranches) {
+      await this.payments.recordPayment(ctx, {
+        direction: isPurchase ? 'out' : 'in',
+        partyType,
+        // null for a walk-in cash sale. `openInvoicesByIds` is what makes this
+        // work — the party-based lookup filters `customer_id = null` and
+        // matches nothing, which is why there was no working path before.
+        partyId: partyId as string,
+        amount: tranche.amount,
+        entryDate: (data.date ?? new Date().toISOString()).slice(0, 10),
+        currency: data.currency ?? 'AFN',
+        method: tranche.method,
+        reference: tranche.reference,
+        notes: '',
+        // Explicit: this money settles THIS invoice. Without it the payment
+        // would auto-allocate oldest-first and could land on a different
+        // invoice entirely.
+        allocations: [{ invoiceId, amount: tranche.amount }],
+      })
+    }
   }
 
   // ─── Update Invoice ──────────────────────────────────────────────────────

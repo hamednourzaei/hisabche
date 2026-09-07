@@ -31,7 +31,7 @@ const ModalOverlay = React.forwardRef<
       // Layout
       'fixed inset-0 z-50',
       // Color — zero hardcoded
-      'bg-[var(--ledger-ink)]/40',
+      'bg-[hsl(var(--fg-primary))]/40',
       // Animation: fade only
       'data-[state=open]:animate-in',
       'data-[state=closed]:animate-out',
@@ -78,8 +78,8 @@ const ModalContent = React.forwardRef<
           'p-6',
           // Colors — zero hardcoded
           'rounded-xl',
-          'border border-[var(--ledger-line)]',
-          'bg-[var(--ledger-surface)] text-[var(--ledger-ink)]',
+          'border border-[hsl(var(--border-default))]',
+          'bg-[hsl(var(--surface-elevated))] text-[hsl(var(--fg-primary))]',
           // Shadow
           'shadow-[var(--ledger-shadow,0_4px_24px_rgba(0,0,0,0.12))]',
           // Animation: fade + slide (no zoom)
@@ -120,7 +120,7 @@ const ModalTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className={cn('text-lg font-bold', 'text-[var(--ledger-ink)]', 'leading-tight', className)}
+    className={cn('text-lg font-bold', 'text-[hsl(var(--fg-primary))]', 'leading-tight', className)}
     {...props}
   />
 ))
@@ -134,7 +134,7 @@ const ModalDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
-    className={cn('text-sm', 'text-[var(--ledger-ink-muted)]', className)}
+    className={cn('text-sm', 'text-[hsl(var(--fg-tertiary))]', className)}
     {...props}
   />
 ))
@@ -152,10 +152,10 @@ const ModalCloseButton = React.forwardRef<
       // Base
       'rounded-full p-1.5',
       // Colors
-      'text-[var(--ledger-ink-muted)]',
-      'hover:bg-[var(--ledger-ink)]/5 hover:text-[var(--ledger-ink)]',
+      'text-[hsl(var(--fg-tertiary))]',
+      'hover:bg-[hsl(var(--fg-primary))]/5 hover:text-[hsl(var(--fg-primary))]',
       // Focus
-      'focus:outline-none focus:ring-2 focus:ring-[var(--ledger-action)]',
+      'focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]',
       // Transition
       'transition-colors duration-150',
       'motion-reduce:transition-none',

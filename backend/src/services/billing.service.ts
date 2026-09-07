@@ -478,6 +478,15 @@ export class BillingService {
   async checkTrialStatus(userId: string): Promise<{
     isTrial: boolean
     daysLeft: number
+    /**
+     * How long the trial is in total.
+     *
+     * Reported so the client can draw «۳ روز از ۷» without keeping its own
+     * copy of the number. `BillingContainer` had a hardcoded `/ 7` in its
+     * progress bar: changing TRIAL_DAYS here would have left that bar reading
+     * over 100% on day one of a longer trial, and nothing would have failed.
+     */
+    totalDays: number
     ended: boolean
     graceDaysLeft: number
     isInGracePeriod: boolean
@@ -485,7 +494,14 @@ export class BillingService {
     const subscription = await this.getCurrentSubscription(userId)
 
     if (!subscription.isTrial || subscription.trialUsed) {
-      return { isTrial: false, daysLeft: 0, ended: true, graceDaysLeft: 0, isInGracePeriod: false }
+      return {
+        isTrial: false,
+        daysLeft: 0,
+        totalDays: TRIAL_DAYS,
+        ended: true,
+        graceDaysLeft: 0,
+        isInGracePeriod: false,
+      }
     }
 
     const now = new Date()
@@ -507,6 +523,7 @@ export class BillingService {
         return {
           isTrial: false,
           daysLeft: 0,
+          totalDays: TRIAL_DAYS,
           ended: false,
           graceDaysLeft,
           isInGracePeriod: true,
@@ -517,6 +534,7 @@ export class BillingService {
       return {
         isTrial: false,
         daysLeft: 0,
+        totalDays: TRIAL_DAYS,
         ended: true,
         graceDaysLeft: 0,
         isInGracePeriod: false,
@@ -526,6 +544,7 @@ export class BillingService {
     return {
       isTrial: true,
       daysLeft,
+      totalDays: TRIAL_DAYS,
       ended: false,
       graceDaysLeft: 0,
       isInGracePeriod: false,

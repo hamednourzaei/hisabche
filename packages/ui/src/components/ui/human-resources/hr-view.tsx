@@ -1,6 +1,7 @@
 // packages/ui/src/components/ui/human-resources/hr-view.tsx
 'use client'
 
+import { SelectField } from '../select-field'
 import { cn } from '../../../lib/utils'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../select'
 import {
@@ -259,6 +260,10 @@ export const HumanResourcesView = memo(function HumanResourcesView({
   const { field: hireDateField } = useController({ name: 'hireDate', control })
   const { field: dateOfBirthField } = useController({ name: 'dateOfBirth', control })
   const { field: salaryField } = useController({ name: 'salary', control })
+  // T7 — `register()` returns a native-element handler (an event), and
+  // SelectField hands back the value. `useController` is the shape that fits,
+  // and it is what every other non-native field in this form already uses.
+  const { field: genderField } = useController({ name: 'gender', control })
 
   const accessInvalid = grantAccess && (!accessEmail.trim() || accessPassword.trim().length < 8)
 
@@ -417,11 +422,17 @@ export const HumanResourcesView = memo(function HumanResourcesView({
               />
             </div>
 
-            <select {...register('gender')} className={cn(inputClass, 'appearance-none w-full')}>
-              <option value="">{t('hr.gender', 'جنسیت')}</option>
-              <option value="male">{t('hr.male', 'مرد')}</option>
-              <option value="female">{t('hr.female', 'زن')}</option>
-            </select>
+            <SelectField
+              value={(genderField.value as string) ?? ''}
+              onChange={genderField.onChange}
+              placeholder={t('hr.gender', 'جنسیت')}
+              options={[
+                { value: '', label: t('hr.gender', 'جنسیت') },
+                { value: 'male', label: t('hr.male', 'مرد') },
+                { value: 'female', label: t('hr.female', 'زن') },
+              ]}
+              className={cn(inputClass, 'appearance-none w-full')}
+            />
 
             <div>
               <PhoneInput

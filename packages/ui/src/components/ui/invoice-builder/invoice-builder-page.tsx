@@ -269,6 +269,7 @@ export const InvoiceBuilderPage = memo(function InvoiceBuilderPage({
           columns={columns}
           onToggleVisible={(id, visible) => onUpdateColumn(id, { visible })}
           onToggleAggregate={(id, aggregate) => onUpdateColumn(id, { aggregate })}
+          onToggleIncludeInTotal={(id, includeInTotal) => onUpdateColumn(id, { includeInTotal })}
           onMove={onMoveColumn}
           onEdit={openEditColumn}
           onDelete={requestDeleteColumn}
@@ -451,6 +452,7 @@ export const InvoiceBuilderPage = memo(function InvoiceBuilderPage({
         columns={columns}
         onToggleVisible={(id, visible) => onUpdateColumn(id, { visible })}
         onToggleAggregate={(id, aggregate) => onUpdateColumn(id, { aggregate })}
+        onToggleIncludeInTotal={(id, includeInTotal) => onUpdateColumn(id, { includeInTotal })}
         onMove={onMoveColumn}
         onEdit={openEditColumn}
         onDelete={requestDeleteColumn}

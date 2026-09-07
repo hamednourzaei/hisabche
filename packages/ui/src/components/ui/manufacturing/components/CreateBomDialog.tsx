@@ -1,6 +1,7 @@
 // packages/ui/src/components/ui/manufacturing/components/CreateBomDialog.tsx
 'use client'
 
+import { SelectField } from '../../select-field'
 import { memo, useState, useCallback, useEffect } from 'react'
 import { X, Loader2, Plus, Trash2 } from 'lucide-react'
 import { cn } from '../../../../lib/utils'
@@ -146,22 +147,21 @@ export const CreateBomDialog = memo(function CreateBomDialog({
             >
               {t('manufacturing.boms.selectProduct', 'انتخاب محصول')}
             </label>
-            <select
-              id="bom-product"
+            <SelectField
               value={productId}
-              onChange={(e) => setProductId(e.target.value)}
-              required
-              className="w-full h-9 md:h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-3 text-xs md:text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
-            >
-              <option value="">
-                {t('manufacturing.boms.selectProductPlaceholder', '-- انتخاب محصول --')}
-              </option>
-              {products.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => setProductId(value)}
+              options={[
+                {
+                  value: '',
+                  label: t('manufacturing.boms.selectProductPlaceholder', '-- انتخاب محصول --'),
+                },
+                ...products.map((p) => ({ value: p.id, label: p.name })),
+              ]}
+              className={
+                'w-full h-9 md:h-10 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-3 text-xs md:text-sm text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]'
+              }
+              id={'bom-product'}
+            />
           </div>
 
           <div className="space-y-2">
@@ -182,18 +182,17 @@ export const CreateBomDialog = memo(function CreateBomDialog({
             <div className="space-y-2">
               {items.map((item) => (
                 <div key={item.key} className="flex items-center gap-1.5 md:gap-2">
-                  <select
+                  <SelectField
                     value={item.rawMaterialId}
-                    onChange={(e) => handleItemChange(item.key, 'rawMaterialId', e.target.value)}
-                    className="flex-1 min-w-0 h-9 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-2 text-xs text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]"
-                  >
-                    <option value="">{t('manufacturing.boms.rawMaterial', 'ماده اولیه')}</option>
-                    {products.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(value) => handleItemChange(item.key, 'rawMaterialId', value)}
+                    options={[
+                      { value: '', label: t('manufacturing.boms.rawMaterial', 'ماده اولیه') },
+                      ...products.map((p) => ({ value: p.id, label: p.name })),
+                    ]}
+                    className={
+                      'flex-1 min-w-0 h-9 rounded-lg border border-[hsl(var(--border-default))] bg-transparent px-2 text-xs text-[hsl(var(--fg-primary))] focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary))]'
+                    }
+                  />
                   <input
                     type="number"
                     min="0"

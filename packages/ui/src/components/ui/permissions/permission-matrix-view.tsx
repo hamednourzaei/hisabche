@@ -29,6 +29,7 @@
 // its own container so a wide role list never makes the page scroll sideways.
 // ============================================
 
+import { SelectField } from '../select-field'
 import { memo, useCallback, useMemo, useState } from 'react'
 import { Info, Lock, Shield, Users } from 'lucide-react'
 
@@ -252,23 +253,23 @@ export const PermissionMatrixView = memo(function PermissionMatrixView({
                           )}
                         </span>
                       ) : (
-                        <select
+                        <SelectField
                           value={cell.grantedLevel}
-                          disabled={isSaving}
-                          onChange={(e) =>
-                            handleChange(role.id, module.key, e.target.value as AccessLevel)
+                          onChange={(value) =>
+                            handleChange(role.id, module.key, value as AccessLevel)
                           }
+                          options={[
+                            ...module.levels.map((level) => ({
+                              value: level,
+                              label: t(`permissions.level.${level}`, LEVEL_LABEL[level]),
+                            })),
+                          ]}
                           className={cn(
                             'rounded-full border-0 px-2.5 py-1 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary)/0.4)] disabled:opacity-50',
                             LEVEL_STYLE[cell.grantedLevel],
                           )}
-                        >
-                          {module.levels.map((level) => (
-                            <option key={level} value={level}>
-                              {t(`permissions.level.${level}`, LEVEL_LABEL[level])}
-                            </option>
-                          ))}
-                        </select>
+                          disabled={isSaving}
+                        />
                       )}
                     </td>
                   )

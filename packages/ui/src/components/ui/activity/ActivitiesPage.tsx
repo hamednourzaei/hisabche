@@ -141,7 +141,7 @@ export function ActivitiesPage() {
               'text-[11px] md:text-xs lg:text-sm',
               'text-[hsl(var(--color-primary))] hover:bg-[hsl(var(--color-primary)/0.1)]',
               'transition-colors disabled:opacity-40',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--ring-color)/0.4)]',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary)/0.4)]',
               'min-h-[28px] md:min-h-[36px] lg:min-h-[40px]',
             )}
           >
@@ -181,7 +181,7 @@ export function ActivitiesPage() {
                   'ps-8 md:ps-9 lg:ps-10 pe-3 md:pe-4 lg:pe-5',
                   'text-xs md:text-sm lg:text-base text-[hsl(var(--fg-primary))]',
                   'placeholder:text-[hsl(var(--fg-tertiary))]',
-                  'focus:outline-none focus:ring-2 focus:ring-[hsl(var(--ring-color)/0.4)]',
+                  'focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary)/0.4)]',
                 )}
               />
             </div>

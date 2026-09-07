@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { UnitSelect } from '../units/unit-select'
 import { cn } from '../../../lib/utils'
 import {
   ArrowRight,
@@ -22,7 +23,16 @@ import { MoneyInput } from '../money-input'
    No external component dependencies
    ═══════════════════════════════════════════════════════════════════════════ */
 
-type UnitType = 'piece' | 'kg' | 'liter' | 'meter' | 'box'
+/**
+ * ⚠️ WAS `'piece' | 'kg' | 'liter' | 'meter' | 'box'` — FIVE OF FIFTEEN.
+ *
+ * `units` (phase-l-01) seeds fifteen codes and `unitSchema` accepts all of
+ * them. Narrowing to five here did not merely hide options: `toUnitType`
+ * coerced everything else to 'piece', so a product measured in grams opened
+ * as «عدد» and SAVING the form wrote 'piece' over the real unit — a silent
+ * data change, structurally the T1 currency-to-AFN defect. See T2.
+ */
+type UnitType = string
 
 interface ProductData {
   name: string
@@ -44,18 +54,16 @@ interface ProductEditValues {
   unit: UnitType
 }
 
-const UNIT_OPTIONS = [
-  { value: 'piece' as const, labelKey: 'warehouse.units.piece', fallback: 'عدد' },
-  { value: 'kg' as const, labelKey: 'warehouse.units.kg', fallback: 'کیلوگرم' },
-  { value: 'liter' as const, labelKey: 'warehouse.units.liter', fallback: 'لیتر' },
-  { value: 'meter' as const, labelKey: 'warehouse.units.meter', fallback: 'متر' },
-  { value: 'box' as const, labelKey: 'warehouse.units.box', fallback: 'کارتن' },
-] as const
-
-const toUnitType = (unit: string): UnitType => {
-  if (UNIT_OPTIONS.some((opt) => opt.value === unit)) return unit as UnitType
-  return 'piece'
-}
+/**
+ * ⚠️ NO LONGER A LIST, AND NO LONGER A COERCION.
+ *
+ * `UNIT_OPTIONS` held five hardcoded units and `toUnitType` mapped anything
+ * else to 'piece'. The list now comes from the `units` table through
+ * `<UnitSelect>`, and an unrecognised unit is displayed as itself rather than
+ * replaced. `toUnitType` is kept only as identity so the display call sites
+ * below read unchanged — it deliberately no longer substitutes anything.
+ */
+const toUnitType = (unit: string): UnitType => unit
 
 // Shared style constants
 const outlineBtn =
@@ -361,17 +369,14 @@ export function ProductDetailPage({
                   <label className="block text-sm font-medium text-[hsl(var(--fg-primary))] mb-1.5">
                     {t('warehouse.unit', 'واحد')}
                   </label>
-                  <select
+                  {/* Was a native <select> over five hardcoded units. Now the
+                      shared picker, fed by the `units` table (T2). */}
+                  <UnitSelect
                     value={editValues.unit}
-                    onChange={(e) => handleEditChange('unit', e.target.value as UnitType)}
+                    onChange={(unit) => handleEditChange('unit', unit)}
                     className={cn(inputBase, 'appearance-none')}
-                  >
-                    {UNIT_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {t(opt.labelKey, opt.fallback)}
-                      </option>
-                    ))}
-                  </select>
+                    t={t}
+                  />
                 </div>
               </div>
             </div>

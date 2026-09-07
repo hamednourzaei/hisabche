@@ -31,6 +31,14 @@
 
 import { AlertCircle, BookOpen, Receipt } from 'lucide-react'
 
+import * as React from 'react'
+
+import {
+  AddPaymentButton,
+  CancelPaymentButton,
+  RecordPaymentForm,
+  type PaymentMethod,
+} from './record-payment-form'
 import { cn } from '../../../lib/utils'
 
 export interface InvoiceRelatedPayment {
@@ -69,6 +77,25 @@ export interface InvoiceRelatedPanelProps {
    */
   storedPaidAmount: number
   onOpenJournalEntry?: ((id: string) => void) | undefined
+
+  // ─── T9 — recording and unrecording money ─────────────────────────────
+  //
+  // All optional. The panel is used in read-only contexts (the public invoice
+  // view, the PDF preview) where offering an «افزودن پرداخت» button would be
+  // an action nobody there can take. Omit the handlers and the controls are
+  // not rendered at all — they are not rendered-and-disabled, which reads as
+  // «you lack permission» rather than «not applicable here».
+
+  /** The invoice total, so the form can cap a payment at what is still owed. */
+  invoiceTotal?: number | undefined
+  /** Provide to show «افزودن پرداخت». */
+  onRecordPayment?:
+    | ((input: { amount: number; method: string; reference: string; date: string }) => void)
+    | undefined
+  /** Provide to show the per-row remove control. */
+  onCancelPayment?: ((paymentId: string) => void) | undefined
+  isRecordingPayment?: boolean | undefined
+  recordPaymentError?: string | null | undefined
 }
 
 const card =
@@ -85,7 +112,13 @@ export function InvoiceRelatedPanel({
   allocatedTotal,
   storedPaidAmount,
   onOpenJournalEntry,
+  invoiceTotal,
+  onRecordPayment,
+  onCancelPayment,
+  isRecordingPayment,
+  recordPaymentError,
 }: InvoiceRelatedPanelProps) {
+  const [adding, setAdding] = React.useState(false)
   if (isLoading) {
     return <div className={cn(card, 'h-40 animate-pulse bg-[hsl(var(--surface-muted))]')} />
   }
@@ -94,6 +127,13 @@ export function InvoiceRelatedPanel({
   // of 0.0000001 as drift and hides a real one of half a cent (lesson 9).
   const drifted = Math.round(allocatedTotal * 100) !== Math.round(storedPaidAmount * 100)
 
+  // ⚠️ FROM THE ALLOCATIONS, NEVER FROM `storedPaidAmount`.
+  //
+  // `paid_amount` is the cached projection, and this panel exists precisely
+  // because it can drift. Capping a new payment against the drifted number
+  // would let the drift decide how much more the customer may pay.
+  const outstanding = Math.max(0, (invoiceTotal ?? 0) - allocatedTotal)
+
   return (
     <div className="space-y-4">
       {/* ─── Payments ─────────────────────────────────────────────────── */}
@@ -101,7 +141,37 @@ export function InvoiceRelatedPanel({
         <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-[hsl(var(--fg-primary))]">
           <Receipt className="size-4 text-[hsl(var(--color-primary))]" aria-hidden="true" />
           {t('invoiceDetail.payments', 'پرداخت‌های این فاکتور')}
+          {onRecordPayment && !adding ? (
+            <span className="ms-auto">
+              <AddPaymentButton
+                t={t}
+                onClick={() => setAdding(true)}
+                // Nothing left to pay is not an error state, so the control is
+                // simply unavailable rather than offering a form that the
+                // server would refuse.
+                disabled={outstanding <= 0}
+              />
+            </span>
+          ) : null}
         </h2>
+
+        {onRecordPayment && adding ? (
+          <div className="mb-3">
+            <RecordPaymentForm
+              t={t}
+              fmtMoney={fmtMoney}
+              currency={currency}
+              outstanding={outstanding}
+              isSubmitting={Boolean(isRecordingPayment)}
+              error={recordPaymentError ?? null}
+              onCancel={() => setAdding(false)}
+              onSubmit={(input) => {
+                onRecordPayment(input)
+                setAdding(false)
+              }}
+            />
+          </div>
+        ) : null}
 
         {payments.length === 0 ? (
           <p className="text-sm text-[hsl(var(--fg-tertiary))]">
@@ -131,6 +201,16 @@ export function InvoiceRelatedPanel({
                   <span className="shrink-0 text-sm font-semibold tabular-nums text-[hsl(var(--fg-primary))]">
                     {fmtMoney(payment.amount)} {currency}
                   </span>
+
+                  {onCancelPayment ? (
+                    <CancelPaymentButton
+                      t={t}
+                      // An already-cancelled payment cannot be cancelled
+                      // again; the server answers PAYMENT_NOT_CANCELLABLE.
+                      disabled={payment.status === 'cancelled'}
+                      onClick={() => onCancelPayment(payment.paymentId)}
+                    />
+                  ) : null}
                 </li>
               ))}
             </ul>
@@ -150,7 +230,7 @@ export function InvoiceRelatedPanel({
           // Phase F made `paid_amount` a projection of these rows. If the two
           // disagree the trigger did not run — silence here would leave a
           // receivables report that quietly contradicts the payments.
-          <p className="mt-3 flex items-start gap-2 rounded-xl bg-[hsl(var(--status-warning)/0.12)] px-3 py-2 text-xs text-[hsl(var(--status-warning))]">
+          <p className="mt-3 flex items-start gap-2 rounded-xl bg-[hsl(var(--color-warning)/0.12)] px-3 py-2 text-xs text-[hsl(var(--color-warning))]">
             <AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
             <span>
               {t(

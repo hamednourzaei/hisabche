@@ -37,6 +37,7 @@
 // The empty state says so, rather than implying nothing has happened.
 // ============================================
 
+import { SelectField } from '../select-field'
 import { Fragment, memo, useMemo, useState } from 'react'
 import { ChevronDown, ShieldCheck } from 'lucide-react'
 
@@ -201,47 +202,38 @@ export const AuditTrailTab = memo(function AuditTrailTab({
     <div className="space-y-4">
       {/* The combined filter the tab exists to answer. */}
       <div className="flex flex-wrap items-center gap-3">
-        <select
+        <SelectField
           value={entityType}
-          onChange={(e) => onEntityTypeChange(e.target.value)}
+          onChange={(value) => onEntityTypeChange(value)}
+          options={[
+            { value: '', label: t('audit.allEntityTypes', 'همه‌ی رکوردها') },
+            ...entityTypes.map((option) => ({ value: option.value, label: option.label })),
+          ]}
           className={select}
           aria-label={t('audit.entityType', 'نوع رکورد')}
-        >
-          <option value="">{t('audit.allEntityTypes', 'همه‌ی رکوردها')}</option>
-          {entityTypes.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        />
 
-        <select
+        <SelectField
           value={branchId}
-          onChange={(e) => onBranchChange(e.target.value)}
+          onChange={(value) => onBranchChange(value)}
+          options={[
+            { value: '', label: t('audit.allBranches', 'همه‌ی شعب') },
+            ...branches.map((option) => ({ value: option.value, label: option.label })),
+          ]}
           className={select}
           aria-label={t('audit.branch', 'شعبه')}
-        >
-          <option value="">{t('audit.allBranches', 'همه‌ی شعب')}</option>
-          {branches.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        />
 
-        <select
+        <SelectField
           value={actorId}
-          onChange={(e) => onActorChange(e.target.value)}
+          onChange={(value) => onActorChange(value)}
+          options={[
+            { value: '', label: t('audit.allActors', 'همه‌ی کاربران') },
+            ...actors.map((option) => ({ value: option.value, label: option.label })),
+          ]}
           className={select}
           aria-label={t('audit.actor', 'کاربر')}
-        >
-          <option value="">{t('audit.allActors', 'همه‌ی کاربران')}</option>
-          {actors.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        />
 
         <span className="ms-auto text-sm text-[hsl(var(--fg-tertiary))]">
           {t('audit.total', 'تعداد')}: <span className="tabular-nums">{total}</span>

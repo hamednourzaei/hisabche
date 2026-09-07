@@ -89,12 +89,12 @@ const LedgerTrigger = React.forwardRef<
         'min-h-[44px] px-4 py-2',
         'text-sm font-medium',
         'rounded-md',
-        'bg-[var(--ledger-surface)] text-[var(--ledger-ink)]',
-        'border border-[var(--ledger-line)]',
+        'bg-[hsl(var(--surface-elevated))] text-[hsl(var(--fg-primary))]',
+        'border border-[hsl(var(--border-default))]',
         // States
-        'hover:bg-[var(--ledger-surface-raised)]',
+        'hover:bg-[hsl(var(--surface-overlay))]',
         'focus-visible:outline-none focus-visible:ring-2',
-        'focus-visible:ring-[var(--ledger-action)] focus-visible:ring-offset-1',
+        'focus-visible:ring-[hsl(var(--color-primary))] focus-visible:ring-offset-1',
         'disabled:opacity-50 disabled:cursor-not-allowed',
         // Reduced motion
         'transition-colors duration-150',
@@ -115,7 +115,7 @@ const LedgerTrigger = React.forwardRef<
         aria-hidden="true"
         className={cn(
           'shrink-0 transition-transform duration-200',
-          'text-[var(--ledger-ink-muted)]',
+          'text-[hsl(var(--fg-tertiary))]',
           'motion-reduce:transition-none',
         )}
       >
@@ -146,7 +146,7 @@ const LedgerContent = React.forwardRef<
           aria-hidden="true"
           className={cn(
             'absolute z-[51] w-px',
-            'bg-[var(--ledger-action)]',
+            'bg-[hsl(var(--color-primary))]',
             'origin-top',
             'animate-[ledgerInkReveal_300ms_cubic-bezier(0.22,1,0.36,1)_forwards]',
             'motion-reduce:animate-none motion-reduce:hidden',
@@ -173,10 +173,10 @@ const LedgerContent = React.forwardRef<
           'overflow-hidden rounded-lg',
           'p-1',
           // Background & text
-          'bg-[var(--ledger-surface-raised)]',
-          'text-[var(--ledger-ink)]',
+          'bg-[hsl(var(--surface-overlay))]',
+          'text-[hsl(var(--fg-primary))]',
           // Border
-          'border border-[var(--ledger-line)]',
+          'border border-[hsl(var(--border-default))]',
           // Shadow
           'shadow-[var(--ledger-shadow,0_4px_24px_rgba(0,0,0,0.08))]',
           // Animation: fade + slide
@@ -214,7 +214,7 @@ const LedgerLabel = React.forwardRef<
     className={cn(
       'px-3 py-2',
       'text-xs font-semibold',
-      'text-[var(--ledger-ink-muted)]',
+      'text-[hsl(var(--fg-tertiary))]',
       'uppercase tracking-wider',
       inset && 'ps-10',
       className,
@@ -230,17 +230,17 @@ function StatusIndicator({ status }: { status: ItemStatus }) {
   const config: Record<ItemStatus, { label: string; color: string; icon: string }> = {
     synced: {
       label: 'همگام‌سازی شده',
-      color: 'var(--ledger-action)',
+      color: 'hsl(var(--color-primary))',
       icon: '✓',
     },
     pending: {
       label: 'در انتظار همگام‌سازی',
-      color: 'var(--ledger-ink-muted)',
+      color: 'hsl(var(--fg-tertiary))',
       icon: '◌',
     },
     conflict: {
       label: 'نیاز به بررسی',
-      color: 'var(--ledger-danger)',
+      color: 'hsl(var(--color-destructive))',
       icon: '!',
     },
   }
@@ -282,14 +282,14 @@ const LedgerItem = React.forwardRef<
           'cursor-default select-none',
           'outline-none',
           // Colors
-          'text-[var(--ledger-ink)]',
-          'data-[highlighted]:bg-[var(--ledger-action)]/10 data-[highlighted]:text-[var(--ledger-ink)]',
+          'text-[hsl(var(--fg-primary))]',
+          'data-[highlighted]:bg-[hsl(var(--color-primary))]/10 data-[highlighted]:text-[hsl(var(--fg-primary))]',
           // Variants
           variant === 'destructive' &&
             cn(
-              'text-[var(--ledger-danger)]',
-              'data-[highlighted]:bg-[var(--ledger-danger)]/10',
-              'data-[highlighted]:text-[var(--ledger-danger)]',
+              'text-[hsl(var(--color-destructive))]',
+              'data-[highlighted]:bg-[hsl(var(--color-destructive))]/10',
+              'data-[highlighted]:text-[hsl(var(--color-destructive))]',
             ),
           // States
           'data-[disabled]:pointer-events-none data-[disabled]:opacity-40',
@@ -309,7 +309,7 @@ const LedgerItem = React.forwardRef<
         {description && (
           <span
             className={cn(
-              'text-xs text-[var(--ledger-ink-muted)]',
+              'text-xs text-[hsl(var(--fg-tertiary))]',
               'block w-full truncate',
               'mt-0.5',
             )}
@@ -323,7 +323,7 @@ const LedgerItem = React.forwardRef<
           <span
             className={cn(
               'ms-auto text-xs tracking-wider',
-              'text-[var(--ledger-ink-muted)]',
+              'text-[hsl(var(--fg-tertiary))]',
               'font-mono',
             )}
           >
@@ -352,7 +352,7 @@ const LedgerItemWithIcon = React.forwardRef<
   <LedgerItem ref={ref} {...props}>
     <div className="flex items-start gap-3 w-full">
       {/* Icon slot */}
-      <span className="shrink-0 mt-0.5 text-[var(--ledger-ink-muted)]">
+      <span className="shrink-0 mt-0.5 text-[hsl(var(--fg-tertiary))]">
         <Icon className="size-5" />
       </span>
 
@@ -360,7 +360,7 @@ const LedgerItemWithIcon = React.forwardRef<
       <div className="flex-1 min-w-0">
         <span className="block text-sm font-medium truncate">{children}</span>
         {description && (
-          <span className="block text-xs text-[var(--ledger-ink-muted)] mt-0.5 truncate">
+          <span className="block text-xs text-[hsl(var(--fg-tertiary))] mt-0.5 truncate">
             {description}
           </span>
         )}
@@ -369,7 +369,7 @@ const LedgerItemWithIcon = React.forwardRef<
       {/* Shortcut + Status */}
       <div className="flex items-center gap-2 shrink-0">
         {shortcut && (
-          <span className="text-xs tracking-wider text-[var(--ledger-ink-muted)] font-mono">
+          <span className="text-xs tracking-wider text-[hsl(var(--fg-tertiary))] font-mono">
             {shortcut}
           </span>
         )}
@@ -395,9 +395,9 @@ const LedgerSubTrigger = React.forwardRef<
         'flex cursor-default select-none items-center gap-3',
         'min-h-[44px] px-3 py-2',
         'rounded-sm text-sm',
-        'text-[var(--ledger-ink)]',
-        'data-[highlighted]:bg-[var(--ledger-action)]/10',
-        'data-[state=open]:bg-[var(--ledger-action)]/10',
+        'text-[hsl(var(--fg-primary))]',
+        'data-[highlighted]:bg-[hsl(var(--color-primary))]/10',
+        'data-[state=open]:bg-[hsl(var(--color-primary))]/10',
         'data-[disabled]:pointer-events-none data-[disabled]:opacity-40',
         'transition-colors duration-150',
         'motion-reduce:transition-none',
@@ -408,7 +408,7 @@ const LedgerSubTrigger = React.forwardRef<
     >
       <span className="flex-1">{children}</span>
       <ChevronRightIcon
-        className={cn('size-4 shrink-0', 'text-[var(--ledger-ink-muted)]', 'rtl:rotate-180')}
+        className={cn('size-4 shrink-0', 'text-[hsl(var(--fg-tertiary))]', 'rtl:rotate-180')}
         aria-hidden="true"
       />
     </DropdownMenuPrimitive.SubTrigger>
@@ -426,9 +426,9 @@ const LedgerSubContent = React.forwardRef<
     ref={ref}
     className={cn(
       'z-50 min-w-[180px] overflow-hidden rounded-lg',
-      'bg-[var(--ledger-surface-raised)]',
-      'text-[var(--ledger-ink)]',
-      'border border-[var(--ledger-line)]',
+      'bg-[hsl(var(--surface-overlay))]',
+      'text-[hsl(var(--fg-primary))]',
+      'border border-[hsl(var(--border-default))]',
       'shadow-[var(--ledger-shadow,0_4px_24px_rgba(0,0,0,0.08))]',
       'p-1',
       // Animation
@@ -459,8 +459,8 @@ const LedgerCheckboxItem = React.forwardRef<
       'relative flex cursor-default select-none items-center',
       'min-h-[44px] ps-10 pe-3 py-2',
       'rounded-sm text-sm',
-      'text-[var(--ledger-ink)]',
-      'data-[highlighted]:bg-[var(--ledger-action)]/10',
+      'text-[hsl(var(--fg-primary))]',
+      'data-[highlighted]:bg-[hsl(var(--color-primary))]/10',
       'data-[disabled]:pointer-events-none data-[disabled]:opacity-40',
       'transition-colors duration-150',
       'motion-reduce:transition-none',
@@ -471,7 +471,7 @@ const LedgerCheckboxItem = React.forwardRef<
   >
     <span className="absolute start-3 flex size-5 items-center justify-center">
       <DropdownMenuPrimitive.ItemIndicator>
-        <CheckIcon className="size-4 text-[var(--ledger-action)]" />
+        <CheckIcon className="size-4 text-[hsl(var(--color-primary))]" />
       </DropdownMenuPrimitive.ItemIndicator>
     </span>
     {children}
@@ -491,8 +491,8 @@ const LedgerRadioItem = React.forwardRef<
       'relative flex cursor-default select-none items-center',
       'min-h-[44px] ps-10 pe-3 py-2',
       'rounded-sm text-sm',
-      'text-[var(--ledger-ink)]',
-      'data-[highlighted]:bg-[var(--ledger-action)]/10',
+      'text-[hsl(var(--fg-primary))]',
+      'data-[highlighted]:bg-[hsl(var(--color-primary))]/10',
       'data-[disabled]:pointer-events-none data-[disabled]:opacity-40',
       'transition-colors duration-150',
       'motion-reduce:transition-none',
@@ -502,7 +502,7 @@ const LedgerRadioItem = React.forwardRef<
   >
     <span className="absolute start-3 flex size-5 items-center justify-center">
       <DropdownMenuPrimitive.ItemIndicator>
-        <CheckIcon className="size-4 fill-[var(--ledger-action)] text-[var(--ledger-action)]" />
+        <CheckIcon className="size-4 fill-[hsl(var(--color-primary))] text-[hsl(var(--color-primary))]" />
       </DropdownMenuPrimitive.ItemIndicator>
     </span>
     {children}
@@ -518,7 +518,7 @@ const LedgerSeparator = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DropdownMenuPrimitive.Separator
     ref={ref}
-    className={cn('-mx-1 my-1 h-px', 'bg-[var(--ledger-line)]', className)}
+    className={cn('-mx-1 my-1 h-px', 'bg-[hsl(var(--border-default))]', className)}
     {...props}
   />
 ))
@@ -531,7 +531,7 @@ const LedgerShortcut = ({ className, ...props }: React.HTMLAttributes<HTMLSpanEl
     <span
       className={cn(
         'ms-auto text-xs tracking-wider font-mono',
-        'text-[var(--ledger-ink-muted)]',
+        'text-[hsl(var(--fg-tertiary))]',
         className,
       )}
       {...props}
