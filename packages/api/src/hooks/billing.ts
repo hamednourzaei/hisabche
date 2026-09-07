@@ -45,6 +45,17 @@ export interface UsageReport {
 export interface TrialStatus {
   isTrial: boolean
   daysLeft: number
+  /**
+   * Total trial length, reported by the server so the client keeps no copy.
+   *
+   * `BillingContainer` drew its progress bar as `daysLeft / 7`. That 7 was a
+   * second copy of `TRIAL_DAYS` in the billing service — changing the trial
+   * length there would have left the bar reading over 100% on day one, and
+   * nothing would have failed.
+   *
+   * Optional so a client built against an older server still renders.
+   */
+  totalDays?: number
   ended: boolean
   graceDaysLeft: number
   isInGracePeriod: boolean
