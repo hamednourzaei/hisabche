@@ -159,12 +159,16 @@ describe('row level security is enabled on every tenant table', () => {
  *   3. It is READ-ONLY to users: no INSERT/UPDATE/DELETE policy exists, so
  *      only the service role can write it. This is asserted below, not assumed.
  *
- * `units` (phase-l-01, RLS added in T2) is the whole list. If a second entry
- * is ever proposed, check condition 3 first: a globally readable table that
- * users can also WRITE lets one customer change every other customer's
- * conversion factors.
+ * `units` (phase-l-01, RLS added in T2) and `currencies` (Patch 1) are the
+ * list. Both satisfy all three: no workspace column, identical rows for every
+ * customer, and no write policy at all.
+ *
+ * If a third is ever proposed, check condition 3 first: a globally readable
+ * table that users can also WRITE lets one customer change every other
+ * customer's conversion factors — or, for currencies, how every amount in the
+ * product is formatted.
  */
-const GLOBAL_REFERENCE_TABLES = ['units']
+const GLOBAL_REFERENCE_TABLES = ['units', 'currencies']
 
 const isGlobalReference = (policy: string): boolean =>
   GLOBAL_REFERENCE_TABLES.some((table) => new RegExp(`\\bON\\s+${table}\\b`, 'i').test(policy))

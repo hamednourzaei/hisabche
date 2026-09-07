@@ -160,3 +160,137 @@ describe('§9 no silent fallback to another currency — UNCHANGED', () => {
     expect(CURRENCY_SIGN[rogue]).toBeUndefined()
   })
 })
+
+// ============================================
+// PATCH 1 / L0.1 — the `currencies` table and the code must agree.
+//
+// ⚠️ THE TABLE HOLDS 162 CURRENCIES. THE PRODUCT CAN FORMAT 25.
+//
+// `currencies.is_active` marks which ones this build supports. If that set
+// ever drifts from `CURRENCY_CODES` — someone activates a row without adding
+// its precision to `FRACTION_DIGITS` — the picker starts offering a code the
+// formatter cannot honour, and rule 9 makes that a WRONG AMOUNT rather than a
+// missing option.
+//
+// The migration's UPDATE is the database half of this contract. This is the
+// code half.
+// ============================================
+
+describe('the currencies migration activates exactly what the code supports', () => {
+  const migration = read('docs/patch-01-currencies-migration.sql')
+
+  /** The codes the migration marks active. */
+  const activated = (): string[] => {
+    const block = /SET is_active = true\s*\n\s*WHERE code IN \(([\s\S]*?)\);/.exec(migration)?.[1]
+    expect(block, 'the activation UPDATE was not found').toBeDefined()
+    return [...block!.matchAll(/'([A-Z]{3})'/g)].map((m) => m[1]!)
+  }
+
+  it('the migration seeds a full reference list', () => {
+    // A table with only the 25 active codes would not be a reference table —
+    // the point is that the other 137 exist and can be activated later.
+    const seeded = [...migration.matchAll(/^ {2}\('([A-Z]{3})',/gm)].map((m) => m[1]!)
+    expect(seeded.length).toBeGreaterThan(150)
+    expect(new Set(seeded).size, 'duplicate code in the seed').toBe(seeded.length)
+  })
+
+  it('⚠️ the activated set is exactly CURRENCY_CODES', () => {
+    const schema = read('packages/validation/src/schemas/common.schema.ts')
+    const block = /export const CURRENCY_CODES = \[([\s\S]*?)\] as const/.exec(schema)?.[1]
+    const codes = [...block!.matchAll(/'([A-Z]{3})'/g)].map((m) => m[1]!)
+
+    expect([...activated()].sort()).toEqual([...codes].sort())
+  })
+
+  it('every activated code has a precision AND a sign', () => {
+    // The same invariant as the section above, checked from the migration's
+    // side: activating a code the formatter does not know produces money with
+    // no precision contract.
+    for (const code of activated()) {
+      expect(
+        FRACTION_DIGITS[code as keyof typeof FRACTION_DIGITS],
+        `${code} is activated but has no precision`,
+      ).toBeDefined()
+      expect(
+        CURRENCY_SIGN[code as keyof typeof CURRENCY_SIGN],
+        `${code} is activated but has no sign`,
+      ).toBeDefined()
+    }
+  })
+
+  /**
+   * ⚠️ THE FOUR CODES WHERE THE PRODUCT DELIBERATELY DEPARTS FROM ISO.
+   *
+   * ISO is right that the afghani has 100 pul and the rupee 100 paisa. Nobody
+   * prices in them, so the product writes these four without minor units —
+   * the DECIMAL POLICY note in money.ts — and that is what every screen and
+   * every invoice uses.
+   *
+   * The table keeps the ISO value because a reference table that lies is
+   * useless for anything else. This list is what makes the divergence
+   * reviewable rather than accidental: any OTHER mismatch still fails.
+   */
+  const ISO_OVERRIDES: Record<string, { iso: number; product: number }> = {
+    AFN: { iso: 2, product: 0 },
+    IRR: { iso: 2, product: 0 },
+    IRT: { iso: 2, product: 0 },
+    PKR: { iso: 2, product: 0 },
+  }
+
+  it('the seeded precision matches the code, except the four stated overrides', () => {
+    const rows = [...migration.matchAll(/^ {2}\('([A-Z]{3})',(?:[^\n]*?), (\d)\),?$/gm)]
+    const seeded = new Map(rows.map((m) => [m[1]!, Number(m[2])]))
+
+    for (const code of activated()) {
+      const inTable = seeded.get(code)
+      const inCode = FRACTION_DIGITS[code as keyof typeof FRACTION_DIGITS]
+      expect(inTable, `${code} not found in the seed`).toBeDefined()
+
+      const override = ISO_OVERRIDES[code]
+      if (override) {
+        // The divergence must be exactly the one documented — not merely
+        // "different", which would let a typo pass as an override.
+        expect(inTable, `${code} table value changed`).toBe(override.iso)
+        expect(inCode, `${code} product value changed`).toBe(override.product)
+        continue
+      }
+
+      expect(inTable, `${code}: table says ${inTable}, code says ${inCode}`).toBe(inCode)
+    }
+  })
+
+  it('the migration documents every override it takes', () => {
+    // An override that is real but undocumented is how the next reader
+    // concludes the table is simply wrong and "fixes" it.
+    for (const code of Object.keys(ISO_OVERRIDES)) {
+      expect(migration, `${code} override is not explained`).toContain(code)
+    }
+    expect(migration).toContain('DELIBERATELY DEPARTS')
+  })
+
+  it('the metals carry 3 in the table, matching the product decision', () => {
+    // ISO records "N.A." for these. The product prices them by weight and
+    // uses a milligram; two decimals would round every gold invoice to the
+    // centigram. The table follows the code, and the migration says so.
+    const rows = [...migration.matchAll(/^ {2}\('(X[A-Z]{2})',(?:[^\n]*?), (\d)\),?$/gm)]
+    const seeded = new Map(rows.map((m) => [m[1]!, Number(m[2])]))
+
+    for (const metal of ['XAU', 'XAG', 'XPT', 'XPD']) {
+      expect(seeded.get(metal), `${metal} precision in the table`).toBe(3)
+    }
+  })
+
+  it('⚠️ no foreign key is added in the migration itself', () => {
+    // G3: existing rows may hold currency values that predate any list, and a
+    // FK added blind fails on exactly those. The statements are present but
+    // commented, to be run only after the orphan count comes back zero.
+    const live = migration
+      .split('\n')
+      .filter((line) => !line.trim().startsWith('--'))
+      .join('\n')
+
+    expect(live).not.toMatch(/ADD CONSTRAINT \w*currency\w*_fkey/i)
+    // …and they ARE present as commented statements, so the operator has them.
+    expect(migration).toContain('products_currency_fkey')
+  })
+})

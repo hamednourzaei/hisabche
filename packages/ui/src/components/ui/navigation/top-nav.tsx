@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback, memo } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, useCallback, memo } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import Link from 'next/link'
 import { useNavigation } from '../../../hooks/menu/use-navigation-state'
@@ -152,11 +152,40 @@ export const TopNav = memo(function TopNav({
 
     setIndicatorStyle({
       width: btnRect.width,
-      offset: btnRect.left - listRect.left,
+      // ⚠️ `+ scrollLeft` MATTERS, AND ONLY ON NARROW SCREENS.
+      //
+      // The indicator is absolutely positioned inside the list, so `left` is
+      // measured against the list's SCROLLED CONTENT. Both rects come from
+      // `getBoundingClientRect`, which reports VIEWPORT positions — their
+      // difference is how far the button is from the list's visible edge, not
+      // from its content origin.
+      //
+      // The list is `overflow-x-auto`. On a desktop the pills fit, scrollLeft
+      // is 0, and the two happen to agree. On a phone they do not fit, and the
+      // pill highlight lands under the wrong pill by exactly the scroll
+      // distance.
+      offset: btnRect.left - listRect.left + navListRef.current.scrollLeft,
     })
   }, [activeSection])
 
-  useEffect(() => {
+  /**
+   * ⚠️ LAYOUT EFFECT, NOT EFFECT — this is a visible flash, not a preference.
+   *
+   * `indicatorStyle` starts at `{ width: 0, offset: 0 }`. A plain `useEffect`
+   * runs AFTER the browser has painted, so the first frame shows the highlight
+   * collapsed at the start of the bar and the second frame shows it jump to
+   * the active pill. On a phone, where the bar is also horizontally scrolled,
+   * that jump is the width of the whole bar.
+   *
+   * `useLayoutEffect` measures and sets before paint, so the first frame is
+   * already correct.
+   *
+   * Guarded for SSR: `useLayoutEffect` warns during server rendering, and this
+   * component is server-rendered on the landing page.
+   */
+  const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
+
+  useIsomorphicLayoutEffect(() => {
     updateIndicator()
     window.addEventListener('resize', updateIndicator)
     return () => window.removeEventListener('resize', updateIndicator)
@@ -193,9 +222,13 @@ export const TopNav = memo(function TopNav({
         {/* Logo — a real link to the locale home page. Google treats the site
             logo as the canonical "home" internal link; as a <button> it was
             invisible to crawlers and to keyboard/no-JS users alike. */}
+        {/* ⚠️ WAS `hidden lg:flex`, SO A PHONE SAW NO BRAND AT ALL.
+            On the landing page that is the first thing a visitor should see,
+            and as the site's canonical internal "home" link it is also the
+            strongest link in the header. It is smaller on mobile, not absent. */}
         <Link
           href={routePrefix || '/'}
-          className="hidden lg:flex items-center gap-1 text-[hsl(var(--fg-primary))] font-bold text-lg shrink-0"
+          className="flex items-center gap-1 text-[hsl(var(--fg-primary))] font-bold text-base lg:text-lg shrink-0"
         >
           <span>{displayName}</span>
           <span className="text-[hsl(var(--color-primary))]" aria-hidden="true">
@@ -237,16 +270,24 @@ export const TopNav = memo(function TopNav({
             back to `onNavigateLogin` (/login) whenever `onNavigateCta` was not
             supplied, which it never was. `onNavigateCta` is still honoured for
             callers that need to intercept (analytics, desktop). */}
+        {/* ⚠️ WAS `hidden lg:inline-flex` — SO ON A PHONE THE LANDING PAGE'S
+            NAVIGATION OFFERED NO WAY TO SIGN UP.
+            A landing page exists to get a visitor to one action, and on the
+            device most visitors arrive on, the header's only content was the
+            section pills. Compact on mobile (no arrow, tighter padding), full
+            size from `lg` up. */}
         {variant === 'landing' && (
           <Link
             href={`${routePrefix}/signup`}
             // Spread rather than pass `undefined`: `exactOptionalPropertyTypes`
             // makes `onClick={undefined}` a type error on LinkProps.
             {...(onNavigateCta ? { onClick: onNavigateCta } : {})}
-            className="hidden lg:inline-flex items-center gap-1 rounded-full px-5 py-2 text-sm font-bold text-white bg-[var(--gradient-brand)] hover:brightness-110 transition-all shrink-0"
+            className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold text-white bg-[var(--gradient-brand)] hover:brightness-110 transition-all shrink-0 lg:px-5 lg:py-2 lg:text-sm"
           >
             <span className="cta-text">{ctaText}</span>
-            <span aria-hidden="true">{isRTL ? '←' : '→'}</span>
+            <span aria-hidden="true" className="hidden lg:inline">
+              {isRTL ? '←' : '→'}
+            </span>
           </Link>
         )}
 

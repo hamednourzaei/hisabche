@@ -1,8 +1,8 @@
 import type { LucideIcon } from 'lucide-react'
-import { Building2, CreditCard, LayoutDashboard, ScrollText, Users } from 'lucide-react'
+import { Building2, CreditCard, LayoutDashboard, ScrollText, Sparkles, Users } from 'lucide-react'
 
 /**
- * The admin navigation — five destinations, each backed by an endpoint that
+ * The admin navigation — six destinations, each backed by an endpoint that
  * exists today.
  *
  * DELIBERATELY ABSENT: tickets, reports, settings. There is no
@@ -59,6 +59,16 @@ export const ADMIN_NAV: readonly AdminNavItem[] = [
     titleKey: 'admin.subscriptions.title',
     descriptionKey: 'admin.subscriptions.description',
     endpoint: 'GET /admin/subscriptions',
+  },
+  {
+    // Added in T13, when `GET/PUT /ai/config` landed. The rule in this file is
+    // that an entry appears only once its endpoint exists — see above.
+    id: 'ai',
+    path: '/ai',
+    icon: Sparkles,
+    titleKey: 'admin.ai.title',
+    descriptionKey: 'admin.ai.description',
+    endpoint: 'GET /ai/config',
   },
   {
     id: 'auditLogs',

@@ -134,11 +134,14 @@ const MODULES = [
 
 const routeSource = (file: string) => readFileSync(join(ROUTES, file), 'utf8')
 
-const serviceSources = (dir: string) => {
+const serviceSources = (dir: string) => serviceSourceEntries(dir).map(([, source]) => source)
+
+/** Each service file with its NAME, so a guard can exempt one by name. */
+const serviceSourceEntries = (dir: string): [string, string][] => {
   const path = join(SERVICES, dir)
   return readdirSync(path)
     .filter((file) => file.endsWith('.service.ts'))
-    .map((file) => readFileSync(join(path, file), 'utf8'))
+    .map((file) => [file, readFileSync(join(path, file), 'utf8')] as [string, string])
 }
 
 const allSql = readdirSync(DOCS)
@@ -286,10 +289,39 @@ describe('every service takes a verified context, never a bare id', () => {
     },
   )
 
+  /**
+   * Services that read GLOBAL REFERENCE DATA and legitimately never filter by
+   * workspace.
+   *
+   * ⚠️ AN EXPLICIT LIST, BECAUSE THE ALTERNATIVE WAS AN ACCIDENT.
+   *
+   * `units.service.ts` passed this guard only because the string
+   * `workspace_id` appears in one of its COMMENTS — the comment explaining
+   * that the table has no workspace column. Reword that comment and a real
+   * exemption silently becomes a real failure; write the same comment in a
+   * service that SHOULD filter, and a real failure silently passes.
+   *
+   * A service qualifies only if its table has no `workspace_id` column at all
+   * and its rows are identical for every customer. It must also be on
+   * GLOBAL_REFERENCE_TABLES in rls-coverage.test.ts, which additionally proves
+   * the table is read-only to users.
+   *
+   * ⚠️ `units.service.ts` IS ALSO GLOBAL REFERENCE DATA BUT IS NOT LISTED —
+   * because it lives in `services/inventory/`, and MODULES below covers
+   * `inventory-costing` but not `inventory`. This guard has never scanned it.
+   * That is a real gap in this suite's coverage, not something Patch 1
+   * introduced; recorded here so the next person widening MODULES knows to
+   * add `units.service.ts` to this list at the same time, rather than
+   * discovering a confusing failure.
+   */
+  const REFERENCE_DATA_SERVICES = ['currencies.service.ts']
+
   it.each(MODULES.map((m) => [m.name, m.service] as const))(
     '%s scopes every query by workspace',
     (_name, dir) => {
-      for (const source of serviceSources(dir)) {
+      for (const [file, source] of serviceSourceEntries(dir)) {
+        if (REFERENCE_DATA_SERVICES.includes(file)) continue
+
         const reads = source.match(/\.from\('[a-z_]+'\)/g) ?? []
         if (reads.length === 0) continue
 
@@ -302,6 +334,20 @@ describe('every service takes a verified context, never a bare id', () => {
       }
     },
   )
+
+  it('every exempted service really is global reference data', () => {
+    // The exemption is only safe while these tables have no workspace column.
+    // If one ever gains tenant data, this fails and the exemption has to be
+    // reconsidered rather than quietly protecting a leak.
+    for (const file of REFERENCE_DATA_SERVICES) {
+      const found = MODULES.flatMap((m) => serviceSourceEntries(m.service)).find(
+        ([name]) => name === file,
+      )
+      expect(found, `${file} is exempted but does not exist`).toBeDefined()
+      // It must not be reading anything workspace-scoped.
+      expect(found![1]).not.toMatch(/\.eq\('workspace_id'/)
+    }
+  })
 })
 
 // ══════════════════════════════════════════════ RLS

@@ -37,6 +37,18 @@ declare module 'fastify' {
     user: AuthenticatedUser
     userId: string
     userRole: string
+    /**
+     * The caller's raw access token.
+     *
+     * ⚠️ Kept so a handler can build a USER-SCOPED database client — see
+     * `createUserScopedClient`. Phase O's reporting views isolate through
+     * `auth_workspace_ids()`, which needs a real session; the shared service
+     * client bypasses RLS and would read every workspace.
+     *
+     * It is never logged, never returned in a response, and never passed to a
+     * third party (an AI provider included).
+     */
+    accessToken: string
     // NOTE: there is deliberately no ambient `workspaceId` here. It used to
     // exist and had to be `''` when the user had none or had several, which is
     // a fail-open tenancy value. The authorized workspace lives on
@@ -119,6 +131,7 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
   if (cached) {
     request.user = cached.user
     request.userId = cached.user.id
+    request.accessToken = token
     request.userRole = cached.role
     return
   }
@@ -180,6 +193,7 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
   request.user = user
   request.userId = user.id
   request.userRole = result.role
+  request.accessToken = token
 }
 
 export const authPreHandler = authenticate

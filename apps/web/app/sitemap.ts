@@ -1,5 +1,7 @@
 // apps/web/app/sitemap.ts
 import { type MetadataRoute } from 'next'
+import { DOCS_ARTICLES } from '@hisabche/ui'
+
 import { locales, localeUrl, localeToBcp47, defaultLocale } from './[lang]/i18n-config'
 
 // Only public, indexable pages. `/pricing`, `/login`, `/signup`, `/forgot-password`,
@@ -29,6 +31,12 @@ const routes = [
   { path: '/legal/data-deletion' },
   { path: '/legal/gdpr' },
   { path: '/legal/copyright' },
+
+  // T12 — public documentation. Listed rather than hand-maintained: the
+  // article set is data, and a hardcoded copy here would silently stop
+  // matching the moment an article is added.
+  { path: '/docs' },
+  ...DOCS_ARTICLES.map((article) => ({ path: `/docs/${article.slug}` })),
 ]
 
 // Content-change date for the public marketing/legal surface. Deliberately a

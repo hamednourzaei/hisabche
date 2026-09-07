@@ -130,19 +130,46 @@ describe('O1 — the catalogue tells the truth about this database', () => {
   })
 })
 
-describe('⚠️ O3 — no AI provider is connected', () => {
+describe('⚠️ O3 — the provider is connected, and how it is connected is fixed', () => {
+  /**
+   * ⚠️ THIS BLOCK WAS «no AI provider is connected». IT WAS UPDATED
+   * DELIBERATELY IN T13, WHICH IS WHAT PHASE O ASKED FOR.
+   *
+   * Phase O shipped the infrastructure with no provider and left this as a
+   * tripwire so that connecting one would be a decision rather than a drift.
+   * T13 connected Anthropic and OpenAI.
+   *
+   * The SDK assertion below SURVIVED that change, and is not a leftover: the
+   * integration is a plain `fetch` against the documented HTTP endpoint, on
+   * purpose. An SDK brings a dependency tree into the process that handles
+   * every customer's books, and it hides the request body — which is exactly
+   * what a reviewer of «what leaves this server» needs to see.
+   *
+   * So the rule is now sharper than «no provider»: the provider is reached by
+   * `fetch`, in one file, or not at all.
+   *
+   * The behaviour of the connected layer is guarded in
+   * `ai-provider-boundary.test.ts` — user-scoped reads, closed view list, and
+   * the key never leaving the server.
+   */
   it('the query log is infrastructure only', () => {
     expect(sql(CATALOG)).toContain('CREATE TABLE IF NOT EXISTS ai_query_log')
     expect(sql(CATALOG)).toContain('ENABLE ROW LEVEL SECURITY')
   })
 
-  it('no provider SDK is a dependency', () => {
-    // The tripwire for the phase. O3 states plainly that no provider is
-    // contacted; the day one is added, this fails and somebody has to decide
-    // deliberately rather than drifting into it.
+  it('no provider SDK is a dependency — the call is a plain fetch', () => {
     const pkg = read('backend/package.json')
     for (const sdk of ['@anthropic-ai/', 'openai', '@google/generative-ai', 'langchain']) {
       expect(pkg).not.toContain(sdk)
+    }
+  })
+
+  it('exactly one file talks to a provider', () => {
+    // Concentrating it means «what do we send to a third party» has one
+    // answer, in one place, that can be read in full.
+    const callers = ['backend/src/services/ai/ai-chat.service.ts']
+    for (const caller of callers) {
+      expect(read(caller)).toContain('api.anthropic.com')
     }
   })
 

@@ -30,6 +30,7 @@
 // component directly — not add a new primitive to this file.
 // ============================================
 
+import { DocsHelpLink } from '../docs/docs-help-link'
 import type { LucideIcon } from 'lucide-react'
 
 import { STAT_CARD_SURFACE, STAT_HINT, STAT_LABEL, STAT_PADDING, STAT_VALUE } from '../stat-surface'
@@ -436,6 +437,21 @@ export function Field({
 
 /* ─── Page shell ──────────────────────────────────────────────────────────── */
 
+/**
+ * A capability screen's title, with a link to its documentation.
+ *
+ * ⚠️ THE «?» IS DETECTED, NOT DECLARED.
+ *
+ * Thirty screens render through this header and NONE of them had to change:
+ * `DocsHelpLink` reads the route and the locale itself and looks the article
+ * up in one table. Threading props through thirty callers would have been
+ * thirty chances to forget one, and a permanent invitation for a new screen to
+ * ship without the link. A route with no article shows no icon at all.
+ *
+ * The link is contextual: `/docs/inventory` from the warehouse screen, never
+ * a generic `/docs`. A help hub makes the reader search for their own question
+ * again on arrival.
+ */
 export function CapabilityHeader({
   title,
   description,
@@ -448,7 +464,12 @@ export function CapabilityHeader({
   return (
     <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
       <div>
-        <h1 className="text-2xl font-semibold text-[hsl(var(--fg-primary))]">{title}</h1>
+        <h1 className="flex items-center gap-1.5 text-2xl font-semibold text-[hsl(var(--fg-primary))]">
+          {title}
+          {/* Reads the route itself — see DocsHelpLink. A route with no
+              documentation article renders nothing. */}
+          <DocsHelpLink />
+        </h1>
         <p className="mt-1 text-sm text-[hsl(var(--fg-tertiary))]">{description}</p>
       </div>
       {action}

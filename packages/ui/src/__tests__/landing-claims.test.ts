@@ -127,3 +127,48 @@ describe('no metric nobody measured', () => {
     expect(trust).toContain('Built for')
   })
 })
+
+// ============================================
+// T5.3 (continued) — the landing page does not quote a price of its own.
+//
+// THE DEFECT: `pricing-scene.tsx` carried `price: 499` in a local table, under
+// a hardcoded label «افغانی / ماه». `GET /api/billing/plans` charges 12 USD for
+// the same plan. So the public page advertised a figure that was wrong in the
+// AMOUNT and in the CURRENCY, and nothing linked the two — changing the real
+// price would have left this page quoting the old one indefinitely.
+//
+// Same class as the fabricated testimonials this file was written for: stating
+// something as fact that no source backs.
+// ============================================
+
+describe('the landing page prices from billing, not from itself', () => {
+  const pricingScene = readFileSync(join(LANDING, 'pricing-scene.tsx'), 'utf8')
+
+  /** Comments stripped — this file documents the numbers it forbids. */
+  const code = pricingScene
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\{\/\*[\s\S]*?\*\/\}/g, '')
+    .replace(/\/\/[^\n]*/g, '')
+
+  it('reads the real plan list', () => {
+    expect(code).toContain('usePlans')
+  })
+
+  it('the plan table carries no price of its own', () => {
+    // A `price:` field on the local table is the defect returning. The table
+    // may hold copy — names, who it is for — but never a number.
+    expect(code).not.toMatch(/\bprice:\s*\d/)
+  })
+
+  it('no hardcoded currency label sits under the amount', () => {
+    // «افغانی / ماه» named a currency the product does not bill in. Naming the
+    // wrong currency beside a number is worse than naming none.
+    expect(code).not.toContain('افغانی / ماه')
+  })
+
+  it('an unloaded price renders no number at all', () => {
+    // The loading state must not fall back to a remembered figure — that is
+    // precisely how a stale price stays on screen.
+    expect(code).toContain('price === undefined')
+  })
+})

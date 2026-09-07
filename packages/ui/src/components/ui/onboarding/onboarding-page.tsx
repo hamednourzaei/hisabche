@@ -24,6 +24,7 @@ import {
   primaryCurrencies,
 } from '@hisabche/ui-contract'
 import { isSupportedCurrency } from '@hisabche/store'
+import { useCurrencies, type CurrencyRecord } from '@hisabche/api'
 
 import { SearchableOptionList } from './searchable-option-list'
 
@@ -413,15 +414,36 @@ const CurrencyStep = memo(function CurrencyStep({
   // afghani-first for Dari, dollar second in both. Everything else — including
   // precious metals, which are priced by weight — is found by searching.
   //
-  // Only the codes the product can actually honour are offered. The catalogue
-  // in `packages/ui-contract` lists 25 (IRT, TRY, XAU …) but
-  // `currencyCodeSchema` — which the backend enforces on every invoice and
-  // transaction — accepts four. Offering the other 21 meant the answer was
-  // accepted, cast with `as`, and then quietly replaced by AFN at every
-  // formatter: a shopkeeper who picked تومان was shown افغانی for the life of
-  // the account. Showing only what can be stored is the truthful behaviour;
-  // widening the supported set is a product decision (rates + precision +
-  // schema), not something to infer here.
+  // Only the codes the product can actually honour are offered.
+  //
+  // ⚠️ THE COMMENT HERE USED TO SAY «accepts four». That was true before T1
+  // and is not now — `currencyCodeSchema` accepts 25, including the metals.
+  // The defect it described was real and is worth keeping in view: the
+  // catalogue offered codes the schema rejected, the answer was cast through
+  // `as`, and every formatter then quietly replaced it with AFN. A shopkeeper
+  // who picked تومان was shown افغانی for the life of the account.
+  //
+  // ⚠️ THE LIST IS INTERSECTED WITH `isSupportedCurrency`, NOT TAKEN FROM THE
+  // SERVER WHOLESALE (Patch 1).
+  //
+  // `currencies.is_active` and `CURRENCY_CODES` are meant to be the same 25,
+  // and a verification query checks it. But if someone activates a row in the
+  // database WITHOUT adding its precision to `FRACTION_DIGITS`, the server
+  // would start offering a code this build cannot format — amounts with no
+  // precision contract, which is a wrong number rather than a missing option
+  // (rule 9). Intersecting means the database can never widen the picker past
+  // what the code can honour; it can only ever narrow it.
+  //
+  // What the server DOES contribute is the reference data itself: the name,
+  // the Persian name and the symbol, which is exactly what a reference table
+  // is for.
+  const { data: currencyData } = useCurrencies()
+
+  const serverCurrencies = useMemo(() => {
+    const rows = currencyData?.currencies ?? []
+    return new Map<string, CurrencyRecord>(rows.map((row) => [row.code, row]))
+  }, [currencyData])
+
   const primary = useMemo(
     () => primaryCurrencies(lang).filter((c) => isSupportedCurrency(c.code)),
     [lang],
@@ -431,13 +453,19 @@ const CurrencyStep = memo(function CurrencyStep({
   const searchable = useMemo(
     () =>
       CURRENCIES.filter((c) => isSupportedCurrency(c.code) && !primaryCodes.has(c.code)).map(
-        (c) => ({
-          id: c.code,
-          label: t(c.labelKey, c.labelFa),
-          prefix: c.flag,
-        }),
+        (c) => {
+          // The server's name wins when it has one — it is the reference
+          // table. The catalogue's label is the fallback, so a database that
+          // has not run the migration still renders proper names.
+          const fromTable = serverCurrencies.get(c.code)
+          return {
+            id: c.code,
+            label: fromTable?.nameFa ?? t(c.labelKey, c.labelFa),
+            prefix: c.flag,
+          }
+        },
       ),
-    [primaryCodes, t],
+    [primaryCodes, t, serverCurrencies],
   )
 
   const selectedCurrency = useMemo(

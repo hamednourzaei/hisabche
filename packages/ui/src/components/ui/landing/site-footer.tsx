@@ -62,6 +62,9 @@ const COLUMNS: FooterColumn[] = [
     titleKey: 'landing.footerColCompany',
     titleFallback: 'شرکت',
     links: [
+      // T12 — the docs are public; a visitor evaluating the product should be
+      // able to read them before signing up.
+      { key: 'docs', fallback: 'راهنما', href: '/docs' },
       { key: 'about', fallback: 'درباره ما', href: '/about' },
       { key: 'contact', fallback: 'تماس با ما', href: '/contact' },
     ],

@@ -120,7 +120,23 @@ export function LandingPage() {
 
   return (
     <NavigationProvider sections={NAVIGATION_SECTIONS}>
-      <div className="min-h-screen bg-[hsl(var(--surface-base))]">
+      {/* ⚠️ `overflow-x-hidden` — T5.2, «صفحه اول به راست می‌پرد».
+
+          Nothing on this page is meant to scroll sideways, and nothing here
+          previously stopped it. The document had no `overflow-x` guard, so any
+          decorative element that reached past the viewport for one frame —
+          a scene animating in from a translate, an absolutely positioned
+          connector, a marquee before its clamp applies — made the whole
+          document horizontally scrollable. In RTL that reads as the page
+          starting off to one side and then settling.
+
+          ⚠️ THIS IS CONTAINMENT, NOT A DIAGNOSIS. I could not pin it to one
+          element by reading: the two elements wide enough to do it
+          (`pricing-scene`'s 800px table, `pain-scene`'s translate-x-full
+          connector) are both `hidden sm:block` and so are not on a phone at
+          all. What this guarantees is that no element CAN cause it, which for
+          a landing page is the correct rule regardless of which one did. */}
+      <div className="min-h-screen overflow-x-hidden bg-[hsl(var(--surface-base))]">
         <TopNav variant="landing" localePrefix={locale} />
 
         <main>

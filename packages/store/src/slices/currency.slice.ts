@@ -57,6 +57,20 @@ export interface CurrencyState {
   ratesError: string | null
 
   // Actions
+  /**
+   * What amounts are DISPLAYED in — null means «the workspace's own currency».
+   *
+   * ⚠️ Distinct from `primaryCurrency`, and conflating them would be a data
+   * bug rather than a display one. `primaryCurrency` is what the books are
+   * kept in: it decides what a new invoice is denominated in and what a stored
+   * amount MEANS. This decides only what the screen renders, and changing it
+   * must never change a stored figure.
+   *
+   * A jeweller reads today's takings in grams and still invoices in afghanis.
+   * See `useDisplayBasis` (T10).
+   */
+  displayBasis: CurrencyCode | null
+  setDisplayBasis: (code: CurrencyCode | null) => void
   setPrimaryCurrency: (code: CurrencyCode) => void
   setSecondaryCurrency: (code: CurrencyCode | null) => void
   fetchRates: () => Promise<void>
@@ -93,6 +107,10 @@ export const useCurrencyStore = create<CurrencyState>()(
       // Initial state
       primaryCurrency: 'AFN',
       secondaryCurrency: 'USD',
+      // Null, not a copy of `primaryCurrency`: «not chosen» must stay
+      // distinguishable from «chose their own currency», or a later change to
+      // the workspace currency would leave the display pinned to the old one.
+      displayBasis: null,
       rates: defaultRates,
       isLoadingRates: false,
       ratesError: null,
@@ -100,6 +118,10 @@ export const useCurrencyStore = create<CurrencyState>()(
       // Set primary currency
       setPrimaryCurrency: (code: CurrencyCode) => {
         set({ primaryCurrency: code })
+      },
+
+      setDisplayBasis: (code: CurrencyCode | null) => {
+        set({ displayBasis: code })
       },
 
       // Set secondary currency
@@ -162,6 +184,7 @@ export const useCurrencyStore = create<CurrencyState>()(
         primaryCurrency: state.primaryCurrency,
         secondaryCurrency: state.secondaryCurrency,
         rates: state.rates,
+        displayBasis: state.displayBasis,
       }),
     },
   ),

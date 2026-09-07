@@ -42,6 +42,15 @@
 import { supabase } from '../../db'
 
 export interface UnitRecord {
+  /**
+   * ⚠️ Needed by `product_units.unit_id`, which is a FOREIGN KEY to
+   * `units(id)`. It was absent at first and the product-units form had no way
+   * to name a unit the write endpoint would accept — every save would have
+   * been a 400 on a uuid that was actually a code.
+   *
+   * Null only in the seeded fallback, where no row exists to have an id.
+   */
+  id: string | null
   code: string
   name: string
   nameFa: string | null
@@ -62,6 +71,10 @@ export interface UnitRecord {
  */
 export const SEEDED_UNITS: readonly UnitRecord[] = [
   {
+    // No id: the seed is a fallback for a database where the table
+    // does not exist, so there is no row to have one. `product_units`
+    // cannot be written in that state anyway.
+    id: null,
     code: 'gram',
     name: 'Gram',
     nameFa: 'گرم',
@@ -71,6 +84,7 @@ export const SEEDED_UNITS: readonly UnitRecord[] = [
     isBase: true,
   },
   {
+    id: null,
     code: 'kg',
     name: 'Kilogram',
     nameFa: 'کیلوگرم',
@@ -80,6 +94,7 @@ export const SEEDED_UNITS: readonly UnitRecord[] = [
     isBase: false,
   },
   {
+    id: null,
     code: 'ton',
     name: 'Tonne',
     nameFa: 'تن',
@@ -89,6 +104,7 @@ export const SEEDED_UNITS: readonly UnitRecord[] = [
     isBase: false,
   },
   {
+    id: null,
     code: 'mg',
     name: 'Milligram',
     nameFa: 'میلی‌گرم',
@@ -99,6 +115,7 @@ export const SEEDED_UNITS: readonly UnitRecord[] = [
   },
 
   {
+    id: null,
     code: 'meter',
     name: 'Metre',
     nameFa: 'متر',
@@ -108,6 +125,7 @@ export const SEEDED_UNITS: readonly UnitRecord[] = [
     isBase: true,
   },
   {
+    id: null,
     code: 'cm',
     name: 'Centimetre',
     nameFa: 'سانتی‌متر',
@@ -117,6 +135,7 @@ export const SEEDED_UNITS: readonly UnitRecord[] = [
     isBase: false,
   },
   {
+    id: null,
     code: 'km',
     name: 'Kilometre',
     nameFa: 'کیلومتر',
@@ -127,6 +146,7 @@ export const SEEDED_UNITS: readonly UnitRecord[] = [
   },
 
   {
+    id: null,
     code: 'liter',
     name: 'Litre',
     nameFa: 'لیتر',
@@ -136,6 +156,7 @@ export const SEEDED_UNITS: readonly UnitRecord[] = [
     isBase: true,
   },
   {
+    id: null,
     code: 'ml',
     name: 'Millilitre',
     nameFa: 'میلی‌لیتر',
@@ -146,6 +167,7 @@ export const SEEDED_UNITS: readonly UnitRecord[] = [
   },
 
   {
+    id: null,
     code: 'piece',
     name: 'Piece',
     nameFa: 'عدد',
@@ -155,6 +177,7 @@ export const SEEDED_UNITS: readonly UnitRecord[] = [
     isBase: true,
   },
   {
+    id: null,
     code: 'box',
     name: 'Box',
     nameFa: 'جعبه',
@@ -164,6 +187,7 @@ export const SEEDED_UNITS: readonly UnitRecord[] = [
     isBase: false,
   },
   {
+    id: null,
     code: 'pack',
     name: 'Pack',
     nameFa: 'بسته',
@@ -173,6 +197,7 @@ export const SEEDED_UNITS: readonly UnitRecord[] = [
     isBase: false,
   },
   {
+    id: null,
     code: 'carton',
     name: 'Carton',
     nameFa: 'کارتن',
@@ -182,6 +207,7 @@ export const SEEDED_UNITS: readonly UnitRecord[] = [
     isBase: false,
   },
   {
+    id: null,
     code: 'dozen',
     name: 'Dozen',
     nameFa: 'دوجین',
@@ -196,6 +222,7 @@ export const SEEDED_UNITS: readonly UnitRecord[] = [
 const SCHEMA_ABSENT = new Set(['42P01', 'PGRST205', '42703', 'PGRST204'])
 
 interface UnitRow {
+  id: string
   code: string
   name: string
   name_fa: string | null
@@ -209,7 +236,7 @@ export class UnitsService {
   async list(): Promise<{ units: readonly UnitRecord[]; source: 'table' | 'seed' }> {
     const { data, error } = await supabase
       .from('units')
-      .select('code, name, name_fa, symbol, dimension, conversion_factor, is_base')
+      .select('id, code, name, name_fa, symbol, dimension, conversion_factor, is_base')
       .eq('is_active', true)
       // Dimension then factor: within a dimension the list reads smallest to
       // largest (mg · gram · kg · tonne), which is how a person scans it.
@@ -231,6 +258,7 @@ export class UnitsService {
 
     return {
       units: (data as UnitRow[]).map((row) => ({
+        id: row.id,
         code: row.code,
         name: row.name,
         nameFa: row.name_fa,

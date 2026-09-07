@@ -54,8 +54,12 @@ import {
  * four base units only — deliberately too short to be mistaken for the real
  * list, so nobody is tempted to maintain it in parallel.
  */
+// `id: null` — these are a LOADING placeholder, not rows from the table, so
+// there is no id to carry. Anything needing one (the product-units form)
+// treats a null id as «not selectable yet».
 const BASE_UNITS: Unit[] = [
   {
+    id: null,
     code: 'piece',
     name: 'Piece',
     nameFa: 'عدد',
@@ -65,6 +69,7 @@ const BASE_UNITS: Unit[] = [
     isBase: true,
   },
   {
+    id: null,
     code: 'gram',
     name: 'Gram',
     nameFa: 'گرم',
@@ -74,6 +79,7 @@ const BASE_UNITS: Unit[] = [
     isBase: true,
   },
   {
+    id: null,
     code: 'meter',
     name: 'Metre',
     nameFa: 'متر',
@@ -83,6 +89,7 @@ const BASE_UNITS: Unit[] = [
     isBase: true,
   },
   {
+    id: null,
     code: 'liter',
     name: 'Litre',
     nameFa: 'لیتر',

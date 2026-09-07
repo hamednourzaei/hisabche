@@ -7,6 +7,7 @@ import { useTranslations } from 'next-intl'
 import { cn } from '../../../lib/utils'
 import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { formatNumber } from '@hisabche/formatting'
+import { usePlans } from '@hisabche/api'
 import { Check, Minus, ChevronDown } from 'lucide-react'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -28,7 +29,24 @@ interface Plan {
   fallbackName: string
   fallbackWho: string
   fallbackBestIf: string
-  price: number | null
+  /**
+   * The plan this row is priced from, in `GET /api/billing/plans`.
+   *
+   * ⚠️ THIS TABLE NO LONGER CARRIES A PRICE, AND THAT IS THE POINT.
+   *
+   * It used to say `price: 499` next to the label «افغانی / ماه». The billing
+   * API charges 12 USD for the same plan. So the public page advertised a
+   * figure that was wrong in the amount AND in the currency, and nothing
+   * connected the two — changing the real price would have left the landing
+   * page quoting the old one forever.
+   *
+   * Same class of defect as the fabricated testimonials removed in T5.3: the
+   * page was stating something as fact that no source backed.
+   *
+   * The marketing COPY still lives here — names, who it is for, the feature
+   * matrix. Only the number comes from the server.
+   */
+  billingPlan: 'free' | 'pro' | 'enterprise'
   ctaFallback: string
   popular?: boolean
 }
@@ -39,7 +57,7 @@ const PLANS: Plan[] = [
     fallbackName: 'رایگان',
     fallbackWho: 'برای شروع',
     fallbackBestIf: 'تازه‌کار',
-    price: 0,
+    billingPlan: 'free',
     ctaFallback: 'شروع رایگان',
   },
   {
@@ -47,7 +65,7 @@ const PLANS: Plan[] = [
     fallbackName: 'حرفه‌ای',
     fallbackWho: 'برای اکثر کسب‌وکارها',
     fallbackBestIf: 'فروش روزانه',
-    price: 499,
+    billingPlan: 'pro',
     ctaFallback: 'ارتقا به حرفه‌ای',
     popular: true,
   },
@@ -58,7 +76,9 @@ const PLANS: Plan[] = [
     // the invitation to ask for items added, removed or changed IS the offer.
     fallbackWho: 'اگر درخواست افزودن، کم کردن یا اصلاح موردی دارید، بگویید',
     fallbackBestIf: 'چند شعبه',
-    price: null,
+    // The landing calls this «تجاری»; billing calls it `enterprise`. The names
+    // are allowed to differ — the mapping is what stops them drifting apart.
+    billingPlan: 'enterprise',
     ctaFallback: 'تماس با فروش',
   },
 ]
@@ -167,6 +187,61 @@ function Cell({ value }: { value: 'check' | 'dash' | string }) {
   )
 }
 
+/**
+ * One plan's price, in the three states it can actually be in.
+ *
+ * Written once and used by both the card grid and the comparison table: the
+ * two used to carry their own copy of the ternary, so a fix to one silently
+ * left the other quoting differently on the same page.
+ */
+function PlanPrice({
+  price,
+  locale,
+  st,
+  perMonth,
+  amountClassName,
+  contactClassName,
+}: {
+  price: { amount: number; currency?: string } | null | undefined
+  locale: string
+  st: (key: string, fallback?: string) => string
+  perMonth: (currency?: string) => string
+  amountClassName: string
+  contactClassName: string
+}) {
+  // Not loaded. A placeholder holds the height so the card does not jump, and
+  // — critically — no number is shown. Showing a remembered price while the
+  // real one loads is exactly how the wrong figure got onto this page.
+  if (price === undefined) {
+    return (
+      <span
+        className="inline-block h-7 w-20 animate-pulse rounded bg-[hsl(var(--surface-muted))]"
+        aria-hidden="true"
+      />
+    )
+  }
+
+  // Quoted per customer.
+  if (price === null) {
+    return (
+      <span className={contactClassName}>{st('landing.pricing.contactUs', 'تماس بگیرید')}</span>
+    )
+  }
+
+  if (price.amount === 0) {
+    return <span className={amountClassName}>{st('landing.pricing.free', 'رایگان')}</span>
+  }
+
+  return (
+    <>
+      <span className={amountClassName}>{formatNumber(price.amount, locale)}</span>
+      <span className="mb-0.5 text-[10px] text-[hsl(var(--fg-tertiary))]">
+        {perMonth(price.currency)}
+      </span>
+    </>
+  )
+}
+
 export default function PricingScene(props: PricingSceneProps) {
   const router = useRouter()
   const t = useTranslations()
@@ -177,6 +252,39 @@ export default function PricingScene(props: PricingSceneProps) {
   // converted: there is no exchange-rate source, and a converted number would
   // be a price nobody agreed to.
   const locale = useIntlLocale()
+
+  // ─── T5.3 — the price comes from billing, or it is not stated ─────────
+  //
+  // `usePlans()` is deliberately not auth-gated (see the hook), so the public
+  // landing page can read the same list `/billing` shows a signed-in customer.
+  // One source, so the two can never quote different figures.
+  const { data: apiPlans } = usePlans()
+
+  const priceOf = (plan: Plan): { amount: number; currency?: string } | null | undefined => {
+    // `undefined` = not known yet (or the request failed). `null` = this plan
+    // genuinely has no list price and is quoted per customer. The difference
+    // matters: one means «wait», the other means «ask us», and rendering the
+    // first as the second would tell a visitor to phone about the free plan.
+    if (!apiPlans) return undefined
+    const match = apiPlans.find((candidate) => candidate.plan === plan.billingPlan)
+    if (!match) return null
+    if (match.priceMonthly === null) return null
+    return match.currency
+      ? { amount: match.priceMonthly, currency: match.currency }
+      : { amount: match.priceMonthly }
+  }
+
+  /**
+   * The unit under the amount — «USD / ماه», not a hardcoded «افغانی / ماه».
+   *
+   * The old label named a currency the product does not bill in. Naming the
+   * wrong currency beside a number is worse than naming none, so when the
+   * server does not declare one this says only «/ ماه».
+   */
+  const perMonth = (currency?: string): string =>
+    currency
+      ? `${currency} / ${st('landing.pricing.month', 'ماه')}`
+      : `/ ${st('landing.pricing.month', 'ماه')}`
 
   const st = (key: string, fallback?: string): string => {
     if (typeof t === 'function') {
@@ -298,24 +406,14 @@ export default function PricingScene(props: PricingSceneProps) {
                   </div>
 
                   <div className="min-h-[2rem] flex items-end gap-1">
-                    {plan.price === null ? (
-                      <span className="text-lg font-bold">
-                        {st('landing.pricing.contactUs', 'تماس بگیرید')}
-                      </span>
-                    ) : plan.price === 0 ? (
-                      <span className="text-2xl font-extrabold">
-                        {st('landing.pricing.free', 'رایگان')}
-                      </span>
-                    ) : (
-                      <>
-                        <span className="text-2xl font-extrabold tabular-nums">
-                          {formatNumber(plan.price, locale)}
-                        </span>
-                        <span className="text-[10px] text-[hsl(var(--fg-tertiary))] mb-0.5">
-                          {st('landing.pricing.perMonth', 'افغانی / ماه')}
-                        </span>
-                      </>
-                    )}
+                    <PlanPrice
+                      price={priceOf(plan)}
+                      locale={locale}
+                      st={st}
+                      perMonth={perMonth}
+                      amountClassName="text-2xl font-extrabold tabular-nums"
+                      contactClassName="text-lg font-bold"
+                    />
                   </div>
 
                   <button
@@ -432,24 +530,14 @@ export default function PricingScene(props: PricingSceneProps) {
                         plan.popular && POPULAR_BG,
                       )}
                     >
-                      {plan.price === null ? (
-                        <span className="text-base sm:text-xl font-bold text-[hsl(var(--fg-primary))]">
-                          {st('landing.pricing.contactUs', 'تماس بگیرید')}
-                        </span>
-                      ) : plan.price === 0 ? (
-                        <span className="text-xl sm:text-2xl font-extrabold text-[hsl(var(--fg-primary))]">
-                          {st('landing.pricing.free', 'رایگان')}
-                        </span>
-                      ) : (
-                        <div className="flex items-baseline justify-center gap-1">
-                          <span className="text-xl sm:text-2xl font-extrabold text-[hsl(var(--fg-primary))] tabular-nums">
-                            {formatNumber(plan.price, locale)}
-                          </span>
-                          <span className="text-[10px] sm:text-xs text-[hsl(var(--fg-tertiary))]">
-                            {st('landing.pricing.perMonth', 'افغانی / ماه')}
-                          </span>
-                        </div>
-                      )}
+                      <PlanPrice
+                        price={priceOf(plan)}
+                        locale={locale}
+                        st={st}
+                        perMonth={perMonth}
+                        amountClassName="text-xl font-extrabold tabular-nums"
+                        contactClassName="text-base font-bold"
+                      />
                     </td>
                   ))}
                 </tr>

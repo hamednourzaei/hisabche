@@ -326,3 +326,26 @@ export { ConflictsView } from './components/ui/conflicts/conflicts-view'
 export { GovernanceContainer } from './components/ui/governance/containers/governance-container'
 export { GovernanceView } from './components/ui/governance/governance-view'
 export { ExpiryView } from './components/ui/expiry/expiry-view'
+
+// ─── AI assistant (T13) ───
+export { AiAssistantLauncher } from './components/ui/ai/ai-assistant-launcher'
+export { AiAssistantPanel } from './components/ui/ai/ai-assistant-panel'
+
+// ─── T11 — screens for backend that had no UI ───
+export {
+  ProductUnitsPanel,
+  newUnitRow,
+  unitSetProblems,
+} from './components/ui/warehouse/product-units-panel'
+export { InventoryOpsView } from './components/ui/inventory-ops/inventory-ops-view'
+
+// ─── T12 — public documentation ───
+export { DocsView } from './components/ui/docs/docs-view'
+export { DOCS_ARTICLES, DOCS_GROUPS, findArticle, docsMessageKeys } from './lib/docs/docs-content'
+export type { DocsArticleDef, DocsSectionDef, DocsGroupId } from './lib/docs/docs-content'
+
+// ─── T11 / L2 — stock counting ───
+export { CycleCountView } from './components/ui/cycle-count/cycle-count-view'
+export { CycleCountContainer } from './components/ui/cycle-count/containers/cycle-count-container'
+export { InventoryOpsContainer } from './components/ui/inventory-ops/containers/inventory-ops-container'
+export { DocsHelpLink, ROUTE_DOCS_MAP, docsSlugForPath } from './components/ui/docs/docs-help-link'

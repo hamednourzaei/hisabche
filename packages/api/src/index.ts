@@ -560,3 +560,64 @@ export {
   type UnitDimension,
   type UnitsResponse,
 } from './hooks/units'
+
+// ─── Exchange rates (T10) ───
+export {
+  rateKeys,
+  useExchangeRates,
+  useSetExchangeRate,
+  rateOn,
+  convertVia,
+  type RateQuote,
+} from './hooks/currency-rates'
+
+// ─── AI assistant (T13) ───
+export {
+  aiKeys,
+  useAiAvailability,
+  useAskAi,
+  useAiConfig,
+  useSaveAiConfig,
+  useSetAiQuota,
+  type AiQuota,
+  type AiAvailability,
+  type AiAnswer,
+  type AiQuotaExceeded,
+  type AiConfigStatus,
+} from './hooks/ai-chat'
+
+// ─── Inventory & intelligence operations (T11) ───
+export {
+  inventoryOpsKeys,
+  useProductUnits,
+  useSaveProductUnits,
+  useCycleCounts,
+  useCycleCount,
+  useCancelCycleCount,
+  useCreateCycleCount,
+  useRecordCount,
+  useCompleteCycleCount,
+  useReorderSuggestions,
+  useDeadStock,
+  useShiftHistory,
+  useCashForecast,
+  useStaleOpportunities,
+  type ProductUnit,
+  type ProductUnitInput,
+  type CycleCount,
+  type CycleCountStatus,
+  type CycleCountLine,
+  type ReorderSuggestion,
+  type DeadStockItem,
+  type ShiftHistoryEntry,
+  type CashForecast,
+  type StaleOpportunity,
+} from './hooks/inventory-operations'
+
+// ─── Currency reference data (Patch 1 / L0.1) ───
+export {
+  currencyRefKeys,
+  useCurrencies,
+  type CurrencyRecord,
+  type CurrenciesResponse,
+} from './hooks/currencies'

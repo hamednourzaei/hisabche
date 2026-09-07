@@ -419,7 +419,8 @@
       "gdpr": "Privacy Rights",
       "dataDeletion": "Data Deletion Request",
       "customerDebt": "Customer debt tracking",
-      "offline": "Offline accounting"
+      "offline": "Offline accounting",
+      "docs": "Documentation"
     },
     "footerCopyright": "© {year} Hisabche. All rights reserved.",
     "valuePill": "Works without internet — always, everywhere",
@@ -979,7 +980,10 @@
       "faqTitle": "Common questions",
       "otherFeatures": "More pages",
       "ctaButton": "Start free"
-    }
+    },
+    "builtFor": "Built for businesses in Afghanistan",
+    "capabilitiesDesc": "You can try every one of these right now",
+    "capabilitiesTitle": "What it does for you"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -1275,7 +1279,9 @@
     "clearSelection": "Clear selection",
     "confirmAction": "Are you sure?",
     "bulkPartialFailure": "{failed} could not be completed",
-    "page_size": "Per page"
+    "page_size": "Per page",
+    "remove": "Remove",
+    "unknownDate": "Date unknown"
   },
   "invoices": {
     "title": "Invoice",
@@ -1419,7 +1425,8 @@
       "meter": "Meter",
       "liter": "Liter",
       "box": "Box",
-      "pack": "Pack"
+      "pack": "Pack",
+      "unknown": "Unknown unit"
     },
     "bulkDeleteConfirm": "Delete the selected products?"
   },
@@ -2029,7 +2036,8 @@
     "balance": "Balance",
     "date": "Date",
     "description": "Description",
-    "reference": "Reference"
+    "reference": "Reference",
+    "unnumberedEntry": "Unnumbered entry"
   },
   "hr": {
     "title": "Human Resources",
@@ -2276,7 +2284,14 @@
     "pricing": {
       "title": "Choose the right plan",
       "subtitle": "Manage your accounting in one place from today"
-    }
+    },
+    "contactUs": "Contact us",
+    "currentPlanLabel": "Your current plan",
+    "interval": "Billing period",
+    "monthly": "Monthly",
+    "savePercent": "{percent}% less",
+    "year": "year",
+    "yearly": "Yearly"
   },
   "pricing": {
     "title": "Simple & Transparent Pricing",
@@ -2846,7 +2861,13 @@
       "defaultValue": "Default value",
       "aggregate": "Total this column",
       "aggregateHint": "Shown in the column totals row",
-      "deleteConfirm": "Delete this column?"
+      "deleteConfirm": "Delete this column?",
+      "includeInTotal": "Count toward the total",
+      "includeInTotalHint": "This column is added to what the customer pays",
+      "includeInTotalPercentHint": "A percentage of the goods is added to the invoice — a making charge, say",
+      "typeLabel": "Your own name for the type (optional)",
+      "typeLabelHint": "For display only — how it is calculated still follows the column type above",
+      "typeLabelPlaceholder": "Making charge, freight, commission"
     },
     "settings": {
       "title": "Table settings",
@@ -2858,7 +2879,8 @@
       "show": "Show column",
       "systemColumn": "System column — cannot be deleted",
       "moveStart": "Move to start",
-      "moveEnd": "Move to end"
+      "moveEnd": "Move to end",
+      "inTotal": "In total"
     },
     "customer": {
       "title": "Customer and invoice details",
@@ -2913,7 +2935,15 @@
       "customerOptional": "A customer is optional",
       "settingsTitle": "Invoice settings",
       "continue": "Preview and continue"
-    }
+    },
+    "addMethod": "Add a method",
+    "amount": "Amount",
+    "method": "Method",
+    "overpaid": "The payments add up to more than the invoice",
+    "paidNow": "Amount received",
+    "payment": "Payment",
+    "willBePaid": "Paid",
+    "willRemain": "Remaining"
   },
   "admin": {
     "dashboard": {
@@ -3072,6 +3102,28 @@
       "empty": "No events recorded yet.",
       "emptyHint": "Only successful changes are recorded; a refused request writes nothing.",
       "loadError": "Failed to load the audit log."
+    },
+    "ai": {
+      "title": "AI Assistant",
+      "description": "Provider, key and question limits",
+      "provider": "Provider",
+      "providerName": "Service",
+      "model": "Model",
+      "baseUrl": "Base URL (optional)",
+      "apiKey": "Private key",
+      "keyStored": "A key is stored — enter a new one to replace it",
+      "keyMissing": "No key stored yet",
+      "keyHint": "The key is never read back. Leaving this blank means \"do not change it\".",
+      "systemPrompt": "Assistant task",
+      "systemPromptHint": "Appended to the safety instructions, never replacing them.",
+      "topupContact": "Top-up contact",
+      "enabled": "Enabled",
+      "quota": "Per-account question limit",
+      "workspaceId": "Workspace id",
+      "monthlyLimit": "Monthly limit",
+      "limitFromPlan": "Blank = from the plan",
+      "note": "Note",
+      "quotaHint": "Blank means \"follow the plan\". Zero means \"none\". They are not the same."
     }
   },
   "till": {
@@ -3317,7 +3369,8 @@
     "entity_transaction": "Transaction",
     "op_create": "Create",
     "op_update": "Update",
-    "op_delete": "Delete"
+    "op_delete": "Delete",
+    "openRecord": "Open record"
   },
   "governance": {
     "title": "Separation of duties",
@@ -3571,5 +3624,296 @@
       "sod_conflict": "The same person cannot do both steps — this control is deliberate.",
       "period_locked": "This accounting period is closed."
     }
+  },
+  "docs": {
+    "title": "Documentation",
+    "subtitle": "Every part of Hisabche, briefly and practically.",
+    "group": {
+      "start": "Getting started",
+      "sell": "Sales and customers",
+      "stock": "Inventory",
+      "money": "Money and accounting",
+      "team": "Team and access",
+      "platform": "Platform"
+    },
+    "getting-started": {
+      "title": "Getting started",
+      "summary": "From creating an account to your first invoice.",
+      "setup": {
+        "heading": "What you set up first",
+        "body1": "You are asked a few short questions: your business name, your language, and the currency your books are kept in.",
+        "body2": "Choose the currency carefully. Every amount is stored in the currency it was recorded in. You can change what you are shown later without anything in the books changing.",
+        "step1": "Create an account and confirm your email.",
+        "step2": "Set your business name and your books’ currency.",
+        "step3": "Add a few products or services.",
+        "step4": "Create your first invoice."
+      },
+      "existing": {
+        "heading": "If you already have data",
+        "body1": "Coming from paper or another program, the data-migration screen takes your file and shows a preview before anything is saved. Nothing enters your books until you confirm."
+      },
+      "seoTitle": "Getting started with Hisabche accounting software"
+    },
+    "invoices": {
+      "title": "Invoices",
+      "summary": "Sales and purchase invoices, your own columns, and recording payment.",
+      "kinds": {
+        "heading": "Sales and purchases",
+        "body1": "Sales and purchase invoices are made from the same screen. What differs is the direction: a sale reduces stock and creates a receivable, a purchase increases stock and creates a payable.",
+        "body2": "Saving an invoice updates both your stock and your accounts. There is nothing to post separately."
+      },
+      "columns": {
+        "heading": "Your own columns",
+        "body1": "The invoice table has ready-made columns, and you can add your own — weight, purity, making charge, freight, or whatever your trade needs.",
+        "body2": "For every numeric column you decide whether it counts toward the total. A column that is on is added to what the customer pays; a column that is off is recorded for reference only.",
+        "body3": "A percentage column — a making charge, say — adds a percentage of the goods to the invoice. Several percentage columns add together.",
+        "step1": "On the invoice screen, open the table settings.",
+        "step2": "Add a column and choose its type.",
+        "step3": "If it should be charged, switch on “count toward the total”."
+      },
+      "payment": {
+        "heading": "Recording payment",
+        "body1": "When you create an invoice you say how it was paid: in full, in part, by several methods — some cash and some by transfer — or not at all.",
+        "body2": "You can add or remove payments later from the invoice itself. Removing one cancels it and reverses its effect; the record stays for audit.",
+        "body3": "The paid amount on an invoice is always read from the actual payments, so the two cannot disagree."
+      },
+      "seoTitle": "Invoicing guide — sales and purchase invoices in Hisabche"
+    },
+    "customers": {
+      "title": "Customers and debt",
+      "summary": "Customer records, outstanding balances, and chasing what is overdue.",
+      "balance": {
+        "heading": "What each customer owes",
+        "body1": "A customer’s balance comes from their invoices and the payments applied to them. No separate figure is kept that could drift.",
+        "body2": "When a customer pays, you can say which invoice it settles, or let it clear the oldest debt first."
+      },
+      "overdue": {
+        "heading": "Overdue",
+        "body1": "A list of unsettled invoices with their age shows which debts have been waiting longest."
+      },
+      "seoTitle": "Customer accounts and credit — Hisabche guide"
+    },
+    "inventory": {
+      "title": "Inventory",
+      "summary": "Stock on hand, multiple units, stock counts, and dead stock.",
+      "source": {
+        "heading": "Where the stock figure comes from",
+        "body1": "Stock on hand comes from what actually moved — sales, purchases, returns, adjustments. It cannot be typed over, because then it would no longer match its own history.",
+        "body2": "If a figure is wrong, the way to fix it is a stock count, not an edit. The count records the difference as an adjustment, so what happened stays visible."
+      },
+      "units": {
+        "heading": "Multiple units",
+        "body1": "If you buy or sell something in more than one unit — pieces and cartons, grams and kilos — you can define those units for that product and say how many base units each one is.",
+        "body2": "One unit is the base, and everything is stored in it. You can also say which unit purchases default to and which sales default to.",
+        "body3": "This is optional. A product with no units defined stays single-unit.",
+        "step1": "Open the product and find the units section.",
+        "step2": "Add the units and mark one as the base.",
+        "step3": "For each other unit, enter how many base units it is."
+      },
+      "insights": {
+        "heading": "Reordering and dead stock",
+        "body1": "Hisabche suggests what to reorder based on your real sales.",
+        "body2": "The dead-stock list shows what has not moved for a while and how much money is tied up in it."
+      },
+      "seoTitle": "Inventory guide — stock, units and stock counts"
+    },
+    "accounting": {
+      "title": "Accounting",
+      "summary": "The ledger, entries, and where every figure came from.",
+      "automatic": {
+        "heading": "Posted for you",
+        "body1": "You do not post entries by hand. Every sale, purchase and payment writes its own double-entry record.",
+        "body2": "Every figure in a report can be traced to the entry behind it. Click a number to open the rows that produced it."
+      },
+      "closing": {
+        "heading": "Closing a period",
+        "body1": "Closing a period locks its entries, so a report you have already taken does not change underneath you."
+      },
+      "currency": {
+        "heading": "More than one currency",
+        "body1": "If you deal in more than one currency you can record the day’s rate. A rate belongs to its day, so past figures are read at the rate of that day rather than today’s.",
+        "body2": "You can switch what currency amounts are displayed in. That is display only — your books and invoices are untouched."
+      },
+      "seoTitle": "Accounting and the general ledger — Hisabche guide"
+    },
+    "pos": {
+      "title": "Till and shifts",
+      "summary": "Quick sales, opening and closing the till, and cash differences.",
+      "shift": {
+        "heading": "The shift",
+        "body1": "At the start of a shift you enter the opening cash, and at the end the cash you counted. If there is a difference, you are asked why.",
+        "body2": "The reason is required. A till that comes up short with no explanation is a shortfall nobody can account for later.",
+        "body3": "A closed shift is fixed and does not change afterwards."
+      },
+      "seoTitle": "Point of sale and shifts — Hisabche guide"
+    },
+    "offline": {
+      "title": "Working offline",
+      "summary": "What works without a connection, and when it syncs.",
+      "devices": {
+        "heading": "On mobile and Windows",
+        "body1": "On the mobile app and the Windows version you can work with no connection. What you record stays on the device and syncs by itself once you are back online.",
+        "body2": "If the same record also changed elsewhere, you are shown the conflict and choose — rather than one silently overwriting the other."
+      },
+      "browser": {
+        "heading": "In the browser",
+        "body1": "The web version needs a connection to work. If your power or connection comes and goes, the mobile app or the Windows version is the better choice."
+      },
+      "seoTitle": "Offline accounting — working without a connection"
+    },
+    "branches": {
+      "title": "Multiple branches",
+      "summary": "Running more than one branch, and reporting per branch.",
+      "branches": {
+        "heading": "Branches",
+        "body1": "You can run more than one branch and tie each employee to theirs. Reports can be seen per branch or combined.",
+        "body2": "A branch is a reporting boundary, not a separate security boundary — all branches of one business share one set of books."
+      },
+      "seoTitle": "Multi-branch accounting — Hisabche guide"
+    },
+    "permissions": {
+      "title": "Staff access",
+      "summary": "Who is allowed to do what.",
+      "roles": {
+        "heading": "Roles",
+        "body1": "Each employee has a role, and the role decides what is open to them. A seller can sell but does not see the cost price; a manager sees financial reports; the owner sees everything.",
+        "body2": "You can see and change every permission in the access matrix."
+      },
+      "sod": {
+        "heading": "Separation of duties",
+        "body1": "You can require that one person does not do both halves of a task — whoever raises an invoice does not also record its payment.",
+        "body2": "For a one-person shop, leaving this off is the right answer. A control that refuses the owner their own till teaches them to share a login, and that destroys every other control at once."
+      },
+      "seoTitle": "Staff permissions and access levels — Hisabche guide"
+    },
+    "assistant": {
+      "title": "The assistant",
+      "summary": "Asking questions about your books, and what it can see.",
+      "what": {
+        "heading": "What it does",
+        "body1": "You can ask about your business in your own words — who owes the most, what needs reordering, what this month’s sales came to.",
+        "body2": "Answers are built only from the data in your own account."
+      },
+      "limits": {
+        "heading": "What it cannot see",
+        "body1": "The assistant has no access to any other business’s data, and there is no way to ask it for any.",
+        "body2": "It cannot see your customers’ phone numbers, emails or addresses.",
+        "body3": "If the answer is not in your data it says so. It does not guess a number."
+      },
+      "quota": {
+        "heading": "How many questions",
+        "body1": "Each account has a monthly allowance of questions. When it runs out, you are shown how to get in touch for more."
+      },
+      "seoTitle": "The AI accounting assistant — Hisabche guide"
+    },
+    "data-and-backup": {
+      "title": "Data and backups",
+      "summary": "Exports, backups, and your data being yours.",
+      "backup": {
+        "heading": "Backups",
+        "body1": "You can take a full backup of your data whenever you want. The file is your actual data, not a list of headings."
+      },
+      "export": {
+        "heading": "Exports",
+        "body1": "Reports and lists can be exported to use elsewhere."
+      },
+      "seoTitle": "Backups and data export — Hisabche guide"
+    },
+    "related": "Read next",
+    "breadcrumbHome": "Home",
+    "helpFor": "Documentation for",
+    "openInApp": "Open in the app"
+  },
+  "ai": {
+    "emptyHint": "For example: who owes the most? · what has reached its reorder point?",
+    "emptyTitle": "Ask about your books",
+    "error": "I could not answer. Please try again.",
+    "launch": "Ask the assistant",
+    "placeholder": "Type your question…",
+    "quotaExceeded": "This month’s question allowance is used up.",
+    "send": "Send",
+    "title": "Hisabche assistant",
+    "topupHint": "To raise the limit, get in touch:"
+  },
+  "display": {
+    "basis": "Show amounts in",
+    "convertedNotice": "These figures are converted for display only — your books and invoices are unchanged.",
+    "noRate": "No rate set",
+    "noRateHint": "No rate has been recorded for this currency",
+    "ownCurrency": "your books’ currency",
+    "rateCurrency": "Currency",
+    "rateDate": "Rate date",
+    "rateHint": "A rate belongs to its day — past figures use that day’s rate, not today’s.",
+    "ratePerUnit": "How many per one unit",
+    "setRate": "Set a rate"
+  },
+  "invoiceDetail": {
+    "addPayment": "Add payment",
+    "amount": "Amount",
+    "amountTooLarge": "The amount must be more than zero and no more than the outstanding balance",
+    "date": "Date",
+    "method": "Payment method",
+    "outstanding": "Outstanding",
+    "reference": "Reference (optional)",
+    "referenceHint": "Transfer number, receipt, cheque…",
+    "removePayment": "Remove payment",
+    "savePayment": "Save payment",
+    "payments": "Payments on this invoice",
+    "noPayments": "No payment has been recorded for this invoice yet.",
+    "allocatedTotal": "Total allocated",
+    "journalEntry": "Accounting entry",
+    "noJournalEntry": "This invoice has not been posted to the ledger yet.",
+    "paidAmountDrift": "The paid amount recorded on the invoice does not match the sum of its payments"
+  },
+  "ops": {
+    "cashForecast": "Cash forecast",
+    "closed": "Closed",
+    "counted": "Counted",
+    "customer": "Customer",
+    "daysOfCover": "Days of cover",
+    "daysProjected": "Days projected",
+    "daysStale": "Days idle",
+    "deadStock": "Dead stock",
+    "deadStockEmpty": "No dead stock",
+    "deadStockEmptyHint": "Everything has moved recently.",
+    "expected": "Expected cash",
+    "firstShortfall": "First shortfall",
+    "lastMovement": "Last movement",
+    "neverMoved": "Never moved",
+    "noForecast": "Not enough data to forecast",
+    "noShortfall": "No shortfall",
+    "onHand": "On hand",
+    "opened": "Opened",
+    "openingBalance": "Current balance",
+    "opportunity": "Opportunity",
+    "product": "Product",
+    "reorder": "Reorder suggestions",
+    "reorderEmpty": "Nothing has reached its reorder point",
+    "reorderEmptyHint": "Every product is above its set level.",
+    "reorderLevel": "Reorder point",
+    "shiftHistory": "Shift history",
+    "shiftsEmpty": "No shift has been closed yet",
+    "stage": "Stage",
+    "staleEmpty": "No stale opportunities",
+    "staleOpportunities": "Stale opportunities",
+    "stillOpen": "Still open",
+    "stockValue": "Value (at cost)",
+    "suggested": "Suggested",
+    "value": "Value",
+    "variance": "Variance"
+  },
+  "productUnits": {
+    "add": "Add a unit",
+    "empty": "This product is single-unit — quantities are recorded exactly as entered.",
+    "factor": "How many base units?",
+    "factorBase": "Factor (base unit = 1)",
+    "factorHint": "e.g. 24",
+    "hint": "If you sell this in more than one unit, define them here. Leaving it empty means single-unit.",
+    "isBase": "Base unit",
+    "pickUnit": "Choose a unit",
+    "purchaseDefault": "Default for purchases",
+    "saleDefault": "Default for sales",
+    "title": "Units for this product",
+    "unit": "Unit"
   }
 }

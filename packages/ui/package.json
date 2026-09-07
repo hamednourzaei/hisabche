@@ -11,6 +11,8 @@
     "clean": "rm -rf node_modules"
   },
   "dependencies": {
+    "@assistant-ui/react": "^0.15.18",
+    "@assistant-ui/react-markdown": "^0.14.14",
     "@hisabche/api": "workspace:*",
     "@hisabche/formatting": "workspace:*",
     "@hisabche/store": "workspace:*",
@@ -51,15 +53,16 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "vitest": "^4.1.7",
     "@base-ui/react": "^1.7.0",
     "@tanstack/react-virtual": "^3.14.9",
+    "@testing-library/react": "^16.1.0",
     "@types/jalaali-js": "^1.2.0",
     "@types/moment-jalaali": "^0.7.9",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^18.3.0",
     "autoprefixer": "^10.4.19",
+    "jsdom": "^25.0.1",
     "next": "16.2.6",
     "postcss": "^8.4.38",
     "react": "^19.2.6",
@@ -67,8 +70,7 @@
     "tailwindcss": "^3.4.4",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.5.0",
-    "@testing-library/react": "^16.1.0",
-    "jsdom": "^25.0.1"
+    "vitest": "^4.1.7"
   },
   "peerDependencies": {
     "react": "^18.2.0",

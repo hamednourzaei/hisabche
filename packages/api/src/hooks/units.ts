@@ -29,6 +29,13 @@ import { useAuthReady } from './useAuthReady'
 export type UnitDimension = 'weight' | 'length' | 'volume' | 'count'
 
 export interface Unit {
+  /**
+   * ⚠️ Needed to write `product_units.unit_id`, which is a FOREIGN KEY to
+   * `units(id)` — a code will not do. Null only when the server served its
+   * seeded fallback, where no row exists to have an id; the product-units
+   * form treats that as «cannot save yet» rather than sending a code.
+   */
+  id: string | null
   code: string
   name: string
   /** Persian/Dari label. Null on a row seeded before the column existed. */

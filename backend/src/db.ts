@@ -154,3 +154,50 @@ export const withConnection = async <T>(fn: () => Promise<T>, queryName?: string
 }
 
 export default supabase
+
+/**
+ * A client that acts AS THE SIGNED-IN USER, with RLS applied.
+ *
+ * ---------------------------------------------------------------------------
+ * ⚠️ THE ENTIRE AI ISOLATION GUARANTEE RESTS ON THIS FUNCTION (T13).
+ *
+ * Phase O's reporting views isolate by calling `auth_workspace_ids()`, which
+ * reads `auth.uid()` from the verified session. That works only if the query
+ * arrives WITH a session.
+ *
+ * The shared `supabase` client above is the SERVICE ROLE. It bypasses RLS. So
+ * reading `reporting.inventory_summary` through it returns every workspace in
+ * the database — every customer's stock, every customer's debtors — and the
+ * views cannot defend themselves, because they deliberately expose no
+ * `workspace_id` column to filter on afterwards.
+ *
+ * That is not a hypothetical: it is what a straightforward implementation of
+ * the AI chat would do, and the failure is silent. The answer would look
+ * perfectly normal and would be assembled from other people's books.
+ *
+ * This client uses the ANON key plus the caller's own access token, so
+ * PostgreSQL sees the real user, RLS runs, and the views return exactly the
+ * workspaces that user belongs to.
+ *
+ * ⚠️ Requires SUPABASE_ANON_KEY in the environment. It throws rather than
+ * falling back to the service key: a fallback here would silently turn the
+ * isolation boundary off, which is the one failure mode this exists to
+ * prevent.
+ */
+export function createUserScopedClient(accessToken: string) {
+  const anonKey = process.env.SUPABASE_ANON_KEY
+  if (!anonKey) {
+    throw new Error(
+      'SUPABASE_ANON_KEY is required for user-scoped queries. Refusing to fall back to the service key, which would disable row level security.',
+    )
+  }
+  if (!accessToken) {
+    throw new Error('A user access token is required for a user-scoped client.')
+  }
+
+  return createClient(SUPABASE_URL_CHECKED, anonKey, {
+    ...clientOptions,
+    global: { headers: { Authorization: `Bearer ${accessToken}` } },
+    auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
+  })
+}
