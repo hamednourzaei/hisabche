@@ -1,43 +1,32 @@
 // apps/web/app/[lang]/docs/page.tsx
 //
-// T12 — public documentation.
+// ⚠️ THERE IS NO DOCS INDEX PAGE. This route is a permanent redirect.
 //
-// ⚠️ PUBLIC ON PURPOSE. This route sits OUTSIDE the (dashboard) group, so it
-// is readable without logging in — the owner asked for exactly that («با لاگین
-// و بدون لاگین قابل دیدن باشد»), and someone evaluating the product needs to
-// read it before they have an account.
+// The index was a page whose entire content was a list of links to the real
+// pages — a reader arriving at `/docs` had to make one more choice before
+// reading a single sentence, and every article was one click further away than
+// it needed to be. The article list is in the sidebar (and in a menu on a
+// phone) on every article page, so the index had nothing the destination does
+// not already have.
 //
-// It is therefore also indexable, unlike the dashboard group which is noindex.
+// `permanentRedirect` is a 308, deliberately: `/docs` has been linked and
+// indexed, and a temporary redirect would leave the ranking on a URL that no
+// longer renders anything. `apps/web/app/sitemap.ts` no longer lists `/docs`
+// for the same reason — a sitemap should not advertise a redirect.
+//
+// The docs stay PUBLIC. This route sits outside the (dashboard) group, so it
+// is readable without logging in, which is what the owner asked for and what
+// someone evaluating the product needs.
 
-import type { Metadata } from 'next'
-import { getMessages } from 'next-intl/server'
+import { permanentRedirect } from 'next/navigation'
 
-import { DocsClient } from './docs-client'
-import { buildLegalMetadata } from '../legal/legal-metadata'
+import { DOCS_ENTRY_SLUG } from '@hisabche/ui'
+
 import { resolveLocale } from '../i18n-config'
-
-export const revalidate = 3600
-
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ lang: string }>
-}): Promise<Metadata> {
-  const { lang } = await params
-  // See the note in [slug]/page.tsx: `getMessages` throws on an unknown
-  // locale, and a throw here is a 500 rather than a 404.
-  const messages = (await getMessages({ locale: resolveLocale(lang) })) as Record<string, any>
-  const docs = messages?.docs ?? {}
-
-  return buildLegalMetadata({
-    lang,
-    path: '/docs',
-    title: `${docs.title ?? 'Documentation'} — Hisabche`,
-    description: docs.subtitle ?? '',
-  })
-}
 
 export default async function DocsIndexPage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params
-  return <DocsClient lang={lang} />
+  // Resolved, not passed through: `/xx/docs` must land on a real locale rather
+  // than build a redirect to a URL that then 404s.
+  permanentRedirect(`/${resolveLocale(lang)}/docs/${DOCS_ENTRY_SLUG}`)
 }

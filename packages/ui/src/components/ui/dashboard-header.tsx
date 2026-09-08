@@ -2,7 +2,16 @@
 
 import { memo, useState, useEffect, useRef, useSyncExternalStore } from 'react'
 import { cn } from '../../lib/utils'
+import { ChevronDown } from 'lucide-react'
 import { NotificationBell } from './notification-bell'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from './dropdown-menu'
 import { useTranslations } from 'next-intl'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -295,6 +304,31 @@ LanguageSelect.displayName = 'LanguageSelect'
 interface HeaderProps {
   variant?: 'landing' | 'dashboard'
   appName: string
+  /**
+   * What the app calls itself under its own name — «پنل مدیریت».
+   *
+   * A separate prop rather than a literal because the header is rendered by
+   * web, desktop and the docs shell, and this package holds no strings.
+   */
+  // `| undefined` throughout this block: `exactOptionalPropertyTypes` is on,
+  // so `prop?: string` REJECTS an explicitly-passed `undefined` — and every
+  // one of these is passed as `value || undefined` by the caller, which is
+  // how it says «there is no business name» rather than inventing one.
+  appSubtitle?: string | undefined
+  /** The business, from real data. Absent means it is not known — not «—». */
+  organizationName?: string | undefined
+  /** The signed-in person's address, shown in the account menu. */
+  userEmail?: string | undefined
+  userName?: string | undefined
+  /**
+   * People in this workspace, for the organization menu.
+   *
+   * ⚠️ NOT A PERMISSION CHECK. Passing an empty list is what hides the list;
+   * the caller decides who may see it, and the SERVER decides who may fetch
+   * it. A header is never a security boundary — see `packages/ui`'s rule that
+   * the workspace is the only boundary and it is enforced server-side.
+   */
+  organizationMembers?: { id: string; name: string; role?: string }[] | undefined
   lastSyncedAt?: number | null
   isOnline?: boolean
   isSyncing?: boolean
@@ -311,10 +345,159 @@ interface HeaderProps {
   onNavigateLogin: () => void
 }
 
+/** Initials for an avatar, from whatever identity is actually known. */
+function initialsOf(name?: string, email?: string): string {
+  const source = (name ?? '').trim() || (email ?? '').trim()
+  if (!source) return '؟'
+  // An email has no meaningful second word — «h.nourzaei@gmail.com» would give
+  // «HG» from the domain, which names nothing.
+  if (!name?.trim() && source.includes('@')) return source[0]!.toUpperCase()
+  const parts = source.split(/\s+/).filter(Boolean)
+  return parts
+    .slice(0, 2)
+    .map((part) => part[0]!)
+    .join('')
+    .toUpperCase()
+}
+
+/**
+ * «سازمان: نام شرکت», and the people in it.
+ *
+ * ⚠️ THE LIST IS NOT AN ACCESS CONTROL. It renders whatever `members` holds;
+ * an empty list simply shows the organization name with no menu. Who is
+ * allowed to READ that list is decided by the endpoint that produces it, on
+ * the server, where it cannot be bypassed by opening devtools. A header that
+ * hides a control is a courtesy, never a boundary.
+ */
+const OrganizationMenu = memo(function OrganizationMenu({
+  organizationName,
+  members,
+  t,
+}: {
+  organizationName: string
+  members: { id: string; name: string; role?: string }[]
+  t: (key: string) => string
+}) {
+  const label = (
+    <>
+      <span className="hidden text-[hsl(var(--fg-tertiary))] sm:inline">
+        {t('nav.organization')}
+      </span>
+      <span className="truncate font-medium text-[hsl(var(--fg-primary))]">{organizationName}</span>
+    </>
+  )
+
+  const shell = cn(
+    'inline-flex h-9 max-w-[10rem] items-center gap-1.5 rounded-xl px-2.5 text-xs',
+    'border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]',
+    'transition-colors motion-reduce:transition-none',
+  )
+
+  // Nothing to open. A dropdown arrow on a menu with no items is a promise the
+  // control cannot keep, so it is not rendered.
+  if (members.length === 0) {
+    return <div className={shell}>{label}</div>
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        className={cn(
+          shell,
+          'hover:border-[hsl(var(--border-strong))] hover:bg-[hsl(var(--surface-muted))]',
+        )}
+      >
+        {label}
+        <ChevronDown
+          className="size-3.5 shrink-0 text-[hsl(var(--fg-tertiary))]"
+          aria-hidden="true"
+        />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-60">
+        <DropdownMenuLabel>{t('nav.teamMembers')}</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {members.map((member) => (
+          <DropdownMenuItem key={member.id} className="flex items-center justify-between gap-3">
+            <span className="min-w-0 truncate">{member.name}</span>
+            {member.role ? (
+              <span className="shrink-0 text-[10px] text-[hsl(var(--fg-tertiary))]">
+                {member.role}
+              </span>
+            ) : null}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+})
+OrganizationMenu.displayName = 'OrganizationMenu'
+
+/** The avatar, the address behind it, and sign-out. */
+const AccountMenu = memo(function AccountMenu({
+  userName,
+  userEmail,
+  signOutLabel,
+  onLogout,
+  t,
+}: {
+  // `| undefined` explicitly: `exactOptionalPropertyTypes` is on, so an
+  // optional prop and a prop that may be `undefined` are different types.
+  userName?: string | undefined
+  userEmail?: string | undefined
+  signOutLabel: string
+  onLogout?: (() => void) | undefined
+  t: (key: string) => string
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label={t('nav.account')}
+        className={cn(
+          // 40px — a touch target, not a 24px circle.
+          'flex size-10 items-center justify-center rounded-full',
+          'text-xs font-semibold',
+          'bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))]',
+          'transition-colors hover:bg-[hsl(var(--color-primary)/0.12)]',
+          'hover:text-[hsl(var(--color-primary))] motion-reduce:transition-none',
+        )}
+      >
+        {initialsOf(userName, userEmail)}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-64">
+        <div className="px-2 py-1.5">
+          {userName ? (
+            <p className="truncate text-sm font-medium text-[hsl(var(--fg-primary))]">{userName}</p>
+          ) : null}
+          {userEmail ? (
+            // `dir="ltr"` — an address is Latin text and renders in the wrong
+            // visual order inside an RTL block.
+            <p dir="ltr" className="truncate text-start text-xs text-[hsl(var(--fg-tertiary))]">
+              {userEmail}
+            </p>
+          ) : null}
+        </div>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onClick={onLogout}
+          className="text-[hsl(var(--color-destructive))] focus:text-[hsl(var(--color-destructive))]"
+        >
+          {signOutLabel}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+})
+AccountMenu.displayName = 'AccountMenu'
+
 // ✅ DashboardHeader با memo
 export const DashboardHeader = memo(function DashboardHeader({
   variant = 'dashboard',
   appName,
+  appSubtitle,
+  organizationName,
+  userEmail,
+  userName,
+  organizationMembers,
   lastSyncedAt = null,
   isOnline = true,
   isSyncing = false,
@@ -340,32 +523,63 @@ export const DashboardHeader = memo(function DashboardHeader({
         'motion-reduce:backdrop-blur-none',
       )}
     >
-      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:h-14">
-        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+      {/* ⚠️ THREE REGIONS, NOT TWO.
+          The search used to sit in the right-hand cluster with the language,
+          theme and sign-out controls, which made a five-item row where the one
+          thing people reach for most was the narrowest. It is its own region
+          now and takes the space that is left. `max-w-6xl` is gone with it —
+          the header spans the window, because the sidebar beside it does. */}
+      <div className="flex h-16 items-center gap-2 px-3 sm:gap-3 sm:px-5">
+        {/* ── Identity ── */}
+        <div className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-2.5">
           <BrandMark alt={appName} />
           {variant === 'dashboard' && (
             <>
-              <div className="hidden min-w-0 flex-col sm:flex">
-                <span className="truncate text-sm font-bold text-[hsl(var(--fg-primary))]">
+              <div className="hidden min-w-0 flex-col leading-tight sm:flex">
+                <span className="truncate text-sm font-semibold text-[hsl(var(--fg-primary))]">
                   {appName}
                 </span>
+                {appSubtitle ? (
+                  <span className="truncate text-[11px] text-[hsl(var(--fg-tertiary))]">
+                    {appSubtitle}
+                  </span>
+                ) : null}
               </div>
-              <span className="mx-1 hidden h-6 w-px bg-[hsl(var(--border-default))] sm:block" />
-              <SyncPill
-                lastSyncedAt={lastSyncedAt}
-                isOnline={isOnline}
-                isSyncing={isSyncing}
-                pendingCount={pendingCount}
-                t={t}
-              />
+
+              {/* Real data only: with no business name there is no control,
+                  rather than a button reading «سازمان: —». */}
+              {organizationName ? (
+                <OrganizationMenu
+                  organizationName={organizationName}
+                  members={organizationMembers ?? []}
+                  t={t}
+                />
+              ) : null}
+
+              <span className="mx-0.5 hidden h-6 w-px bg-[hsl(var(--border-default))] xl:block" />
+              <div className="hidden xl:block">
+                <SyncPill
+                  lastSyncedAt={lastSyncedAt}
+                  isOnline={isOnline}
+                  isSyncing={isSyncing}
+                  pendingCount={pendingCount}
+                  t={t}
+                />
+              </div>
             </>
           )}
           {variant === 'landing' && (
             <span className="text-sm font-bold text-[hsl(var(--fg-primary))]">{appName}</span>
           )}
         </div>
-        <div className="flex items-center gap-1 sm:gap-2">
-          {searchSlot}
+
+        {/* ── Search ──
+            `min-w-0` so the flex item may shrink below its content instead of
+            pushing the controls off the end of a narrow window. */}
+        <div className="flex min-w-0 flex-1 justify-center">{searchSlot}</div>
+
+        {/* ── Controls ── */}
+        <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
           <LanguageSelect currentLang={currentLang} onChange={onToggleLang} />
           <button
             type="button"
@@ -385,21 +599,19 @@ export const DashboardHeader = memo(function DashboardHeader({
           </button>
           {variant === 'dashboard' && <NotificationBell />}
           {variant === 'dashboard' && (
-            <button
-              type="button"
-              onClick={onLogout}
-              aria-label={t('auth.signOut')}
-              className={cn(
-                'inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5',
-                'text-[hsl(var(--fg-secondary))]',
-                'hover:bg-[hsl(var(--color-destructive)/0.1)] hover:text-[hsl(var(--color-destructive))]',
-                'transition-colors duration-150',
-                'motion-reduce:transition-none',
-              )}
-            >
-              {IconLogout}
-              <span className="hidden text-[11px] lg:inline">{signOutLabel}</span>
-            </button>
+            /* ⚠️ SIGN-OUT IS NO LONGER A BARE BUTTON IN THE BAR.
+               It sat one mis-aimed click from the theme toggle, with only an
+               icon and a label that appeared at `lg`. Behind the avatar it
+               takes a deliberate two steps, and the menu is also where the
+               signed-in address belongs — there was previously nowhere at all
+               to see which account you were in. */
+            <AccountMenu
+              userName={userName}
+              userEmail={userEmail}
+              signOutLabel={signOutLabel}
+              onLogout={onLogout}
+              t={t}
+            />
           )}
           {variant === 'landing' && (
             <button

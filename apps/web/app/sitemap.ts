@@ -35,7 +35,9 @@ const routes = [
   // T12 — public documentation. Listed rather than hand-maintained: the
   // article set is data, and a hardcoded copy here would silently stop
   // matching the moment an article is added.
-  { path: '/docs' },
+  // `/docs` is deliberately absent: it is a 308 to the first article, and a
+  // sitemap that lists a redirect spends crawl budget to be told to go
+  // somewhere else. The articles themselves are listed on the next line.
   ...DOCS_ARTICLES.map((article) => ({ path: `/docs/${article.slug}` })),
 ]
 

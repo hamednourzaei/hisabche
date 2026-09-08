@@ -94,6 +94,7 @@ export { GlobalSearch, type SearchPageItem } from './components/ui/global-search
 // ---------- Navigation — Enterprise ----------
 export { NavigationProvider, useNavigation } from './hooks/menu/use-navigation-state'
 export { TopNav } from './components/ui/navigation/top-nav'
+export { default as SiteFooter } from './components/ui/landing/site-footer'
 export { SideNav } from './components/ui/navigation/side-nav'
 export { NavigationRegistry } from './components/ui/navigation/navigation-registry'
 export { ActivitiesPage } from './components/ui/activity/ActivitiesPage'
@@ -342,7 +343,13 @@ export { InventoryOpsView } from './components/ui/inventory-ops/inventory-ops-vi
 
 // ─── T12 — public documentation ───
 export { DocsView } from './components/ui/docs/docs-view'
-export { DOCS_ARTICLES, DOCS_GROUPS, findArticle, docsMessageKeys } from './lib/docs/docs-content'
+export {
+  DOCS_ARTICLES,
+  DOCS_GROUPS,
+  DOCS_ENTRY_SLUG,
+  findArticle,
+  docsMessageKeys,
+} from './lib/docs/docs-content'
 export type { DocsArticleDef, DocsSectionDef, DocsGroupId } from './lib/docs/docs-content'
 
 // ─── T11 / L2 — stock counting ───

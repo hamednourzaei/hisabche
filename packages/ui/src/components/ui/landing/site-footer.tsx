@@ -64,7 +64,9 @@ const COLUMNS: FooterColumn[] = [
     links: [
       // T12 — the docs are public; a visitor evaluating the product should be
       // able to read them before signing up.
-      { key: 'docs', fallback: 'راهنما', href: '/docs' },
+      // Straight to the article — `/docs` is a redirect, and making every reader
+      // in the footer take an extra hop is pointless.
+      { key: 'docs', fallback: 'راهنما', href: '/docs/getting-started' },
       { key: 'about', fallback: 'درباره ما', href: '/about' },
       { key: 'contact', fallback: 'تماس با ما', href: '/contact' },
     ],
@@ -194,7 +196,22 @@ export default function SiteFooter({ t, localePrefix }: SiteFooterProps) {
             'flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-3 lg:gap-4',
           )}
         >
-          <p className="text-[9px] sm:text-[10px] lg:text-xs text-[hsl(var(--fg-tertiary))] order-2 sm:order-1">
+          {/* ⚠️ `suppressHydrationWarning` — THE YEAR IS THE ONE THING HERE
+              THAT CAN LEGITIMATELY DIFFER.
+
+              These pages are cached (`revalidate = 3600` on the docs, ISR
+              elsewhere), so on the 1st of January the served HTML still says
+              last year while the browser computes this one. React treats that
+              as a corrupt tree and throws error #418 — «text content does not
+              match» — discarding and re-rendering the whole subtree.
+
+              This is React's own escape hatch for exactly this case: a value
+              derived from the clock. It suppresses the warning for this
+              element only, and the client's value wins on the next render. */}
+          <p
+            suppressHydrationWarning
+            className="text-[9px] sm:text-[10px] lg:text-xs text-[hsl(var(--fg-tertiary))] order-2 sm:order-1"
+          >
             {t('landing.footerCopyright', `© ${year} حسابچه. تمامی حقوق محفوظ است.`).replace(
               '{year}',
               String(year),

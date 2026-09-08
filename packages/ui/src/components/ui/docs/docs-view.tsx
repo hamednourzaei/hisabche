@@ -33,7 +33,7 @@
 
 import * as React from 'react'
 
-import { ArrowLeft, BookOpen } from 'lucide-react'
+import { ArrowLeft, ExternalLink } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 import {
@@ -54,8 +54,14 @@ export interface DocsViewProps {
   t: (key: string) => string
   /** Builds an href for an article, so the host owns locale prefixing. */
   hrefFor: (slug: string) => string
-  /** When set, that one article is shown; otherwise the index. */
-  activeSlug?: string | undefined
+  /**
+   * The article to show.
+   *
+   * ⚠️ REQUIRED. `/docs` is a permanent redirect to the first article, so
+   * there is no state in which this view renders «the index» — the list of
+   * articles is the sidebar (and the menu on a phone), not a page.
+   */
+  activeSlug: string
   /**
    * Builds a link to the product screen an article documents.
    *
@@ -68,52 +74,13 @@ export interface DocsViewProps {
 export function DocsView({ t, hrefFor, activeSlug, appHrefFor }: DocsViewProps) {
   const router = useRouter()
 
-  const active = activeSlug
-    ? DOCS_ARTICLES.find((article) => article.slug === activeSlug)
-    : undefined
-
-  // `hrefFor('')` would leave a trailing slash, which is a redirect rather
-  // than the canonical index URL.
-  const indexHref = hrefFor('').replace(/\/$/, '')
+  const active = DOCS_ARTICLES.find((article) => article.slug === activeSlug)
 
   return (
     <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:py-12">
-      <header className="mb-5 sm:mb-6">
-        {/* ⚠️ THE SET TITLE IS AN <h1> ONLY ON THE INDEX.
-            An article supplies its own <h1> below. Rendering this one as an
-            <h1> too gave every article page two of them, and the one that
-            would win is «Docs» — the word every article shares. */}
-        {active ? (
-          <a
-            href={indexHref}
-            className="inline-flex items-center gap-1.5 text-sm text-[hsl(var(--fg-tertiary))] transition-colors hover:text-[hsl(var(--color-primary))]"
-          >
-            <BookOpen className="size-4" aria-hidden="true" />
-            {t('docs.title')}
-          </a>
-        ) : (
-          <>
-            <h1 className="flex items-center gap-2 text-xl font-bold text-[hsl(var(--fg-primary))] sm:text-2xl lg:text-3xl">
-              <BookOpen
-                className="size-5 shrink-0 text-[hsl(var(--color-primary))] sm:size-6"
-                aria-hidden="true"
-              />
-              {t('docs.title')}
-            </h1>
-            <p className="mt-1.5 text-sm text-[hsl(var(--fg-secondary))] sm:mt-2 sm:text-base">
-              {t('docs.subtitle')}
-            </p>
-          </>
-        )}
-      </header>
-
-      {/* ── The menu, below lg ── */}
-      {/* `exactOptionalPropertyTypes` is on, so `value={undefined}` is a type
-          error rather than «uncontrolled» — the prop has to be absent. */}
-      <Select
-        {...(activeSlug ? { value: activeSlug } : {})}
-        onValueChange={(slug) => router.push(hrefFor(slug))}
-      >
+      {/* ── The article list ──
+          `Select` below lg, sidebar at lg and up. Never both. */}
+      <Select value={activeSlug} onValueChange={(slug) => router.push(hrefFor(slug))}>
         <SelectTrigger className="h-11 w-full text-sm lg:hidden" aria-label={t('docs.browseAll')}>
           <SelectValue placeholder={t('docs.browseAll')} />
         </SelectTrigger>
@@ -136,17 +103,24 @@ export function DocsView({ t, hrefFor, activeSlug, appHrefFor }: DocsViewProps) 
         </SelectContent>
       </Select>
 
-      {/* ⚠️ THE MENU IS NOT THE ONLY WAY IN.
-          A `Select` renders no anchors, so on its own it would leave every
-          article unreachable by a crawler and unopenable in a new tab. The
-          index below is the crawlable copy — and it is shown only when NO
-          article is selected, so the page never displays two lists at once. */}
+      {/* ⚠️ THE SIDEBAR IS WHAT MAKES THESE PAGES CRAWLABLE.
+          A `Select` renders no anchors and a `<button>` is not a link, so the
+          sidebar below carries a real `href` on every entry — see
+          `SidebarItem`'s `path`. Without it every article would be reachable
+          only by typing its URL, and each page would be an orphan to a
+          crawler and to anyone wanting to open one in a new tab. */}
       {/* ⚠️ `1fr`, NOT `minmax(0,1fr)`. Tailwind v3's JIT does not extract an
           arbitrary value containing a comma, so the track produced NO CSS at
           all and the aside rendered full width above the article. `min-w-0`
           on the content column does the job `minmax(0,…)` was there for. */}
-      <div className="mt-6 grid gap-8 lg:grid-cols-[15rem_1fr] lg:gap-10">
-        <aside className="hidden lg:block">
+      <div className="mt-6 grid gap-8 lg:grid-cols-[15rem_1fr] lg:gap-0">
+        {/* ⚠️ THE RULE IS ON THE ASIDE, NOT A GAP.
+            A column gap is empty space; two columns of text separated by air
+            read as one ragged block. A single hairline on the inline-end edge
+            is what says «this is the index, that is the article» — and it is
+            `border-e`, so it lands on the correct side in both directions
+            without a second rule for LTR. The padding is what the gap was. */}
+        <aside className="hidden lg:block lg:border-e lg:border-[hsl(var(--border-default))] lg:pe-6">
           <nav aria-label={t('docs.title')} className="sticky top-6 flex flex-col gap-4">
             {DOCS_GROUPS.map((group) => {
               const articles = DOCS_ARTICLES.filter((article) => article.group === group)
@@ -169,7 +143,23 @@ export function DocsView({ t, hrefFor, activeSlug, appHrefFor }: DocsViewProps) 
                         isActive={article.slug === activeSlug}
                         collapsed={false}
                         nested={false}
-                        onClick={() => router.push(hrefFor(article.slug))}
+                        href={hrefFor(article.slug)}
+                        onClick={(event: React.MouseEvent<HTMLElement>) => {
+                          // Let the browser handle a modified click — a new
+                          // tab, a new window, a saved link. Calling
+                          // router.push() unconditionally would swallow all
+                          // three and defeat the point of using an anchor.
+                          if (
+                            event.metaKey ||
+                            event.ctrlKey ||
+                            event.shiftKey ||
+                            event.button !== 0
+                          ) {
+                            return
+                          }
+                          event.preventDefault()
+                          router.push(hrefFor(article.slug))
+                        }}
                       />
                     ))}
                   </div>
@@ -179,54 +169,14 @@ export function DocsView({ t, hrefFor, activeSlug, appHrefFor }: DocsViewProps) 
           </nav>
         </aside>
 
-        <main className="min-w-0">
+        <main className="min-w-0 lg:ps-10">
+          {/* `findArticle` already rejected an unknown slug with a 404 before
+              this rendered, so `active` cannot be missing here. */}
           {active ? (
             <DocsArticle t={t} article={active} hrefFor={hrefFor} appHrefFor={appHrefFor} />
-          ) : (
-            <DocsIndexCards t={t} hrefFor={hrefFor} />
-          )}
+          ) : null}
         </main>
       </div>
-    </div>
-  )
-}
-
-function DocsIndexCards({ t, hrefFor }: Pick<DocsViewProps, 't' | 'hrefFor'>) {
-  return (
-    <div className="space-y-7">
-      {DOCS_GROUPS.map((group) => {
-        const articles = DOCS_ARTICLES.filter((article) => article.group === group)
-        if (articles.length === 0) return null
-
-        return (
-          <section key={group}>
-            <h2 className="mb-2.5 text-sm font-semibold text-[hsl(var(--fg-tertiary))]">
-              {t(`docs.group.${group}`)}
-            </h2>
-            <div className="grid gap-2.5 sm:grid-cols-2">
-              {articles.map((article) => (
-                <a
-                  key={article.slug}
-                  href={hrefFor(article.slug)}
-                  className={cn(
-                    'block rounded-2xl p-4 transition-colors',
-                    'border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]',
-                    'hover:border-[hsl(var(--color-primary)/0.4)] hover:bg-[hsl(var(--surface-muted))]',
-                    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))]',
-                  )}
-                >
-                  <h3 className="text-sm font-semibold text-[hsl(var(--fg-primary))]">
-                    {t(`docs.${article.slug}.title`)}
-                  </h3>
-                  <p className="mt-1 text-xs leading-relaxed text-[hsl(var(--fg-tertiary))]">
-                    {t(`docs.${article.slug}.summary`)}
-                  </p>
-                </a>
-              ))}
-            </div>
-          </section>
-        )
-      })}
     </div>
   )
 }
@@ -248,7 +198,14 @@ function DocsArticle({
     // `min-w-0` so a long unbroken string cannot widen the column and push the
     // page into horizontal scroll.
     <article className="min-w-0">
-      <h1 className="text-lg font-bold text-[hsl(var(--fg-primary))] sm:text-xl lg:text-2xl">
+      {/* ── Title block ──
+          ⚠️ THE TITLE AND THE ACTION USED TO BE INDISTINGUISHABLE.
+          The heading sat directly above a small tinted pill in the SAME accent
+          colour, with no border on either, so the pair read as two halves of
+          one control and people clicked the heading. Three things separate
+          them now: the action carries a real border and a solid surface, it
+          sits on its own row after a rule, and it says where it goes. */}
+      <h1 className="text-xl font-bold text-[hsl(var(--fg-primary))] sm:text-2xl">
         {t(`docs.${article.slug}.title`)}
       </h1>
       <p className="mt-2 text-sm leading-relaxed text-[hsl(var(--fg-secondary))]">
@@ -256,19 +213,31 @@ function DocsArticle({
       </p>
 
       {appHref ? (
-        <a
-          href={appHref}
-          className={cn(
-            'mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium',
-            'border border-[hsl(var(--color-primary)/0.3)] bg-[hsl(var(--color-primary)/0.06)]',
-            'text-[hsl(var(--color-primary))] transition-colors',
-            'hover:bg-[hsl(var(--color-primary)/0.12)]',
-          )}
-        >
-          {t('docs.openInApp')}
-          {/* `rtl:rotate-180` so the arrow points the way the reader reads. */}
-          <ArrowLeft className="size-3.5 rtl:rotate-180" aria-hidden="true" />
-        </a>
+        <div className="mt-4 border-t border-[hsl(var(--border-default))] pt-4">
+          <a
+            href={appHref}
+            className={cn(
+              'inline-flex min-h-[40px] items-center gap-2 rounded-xl px-3.5 text-sm font-medium',
+              // A real border and a real surface — the vocabulary every other
+              // button in this product uses, so it reads as one.
+              'border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]',
+              'text-[hsl(var(--fg-primary))] shadow-sm transition-colors',
+              'hover:border-[hsl(var(--color-primary)/0.5)] hover:bg-[hsl(var(--surface-muted))]',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))]',
+            )}
+          >
+            <ExternalLink
+              className="size-4 shrink-0 text-[hsl(var(--color-primary))]"
+              aria-hidden="true"
+            />
+            {t('docs.openInApp')}
+            {/* `rtl:rotate-180` so the arrow points the way the reader reads. */}
+            <ArrowLeft
+              className="size-4 shrink-0 text-[hsl(var(--fg-tertiary))] rtl:rotate-180"
+              aria-hidden="true"
+            />
+          </a>
+        </div>
       ) : null}
 
       {/* ── The article itself ──

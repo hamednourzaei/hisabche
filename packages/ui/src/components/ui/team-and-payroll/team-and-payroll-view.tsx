@@ -1,6 +1,7 @@
 'use client'
 
 import { SelectField } from '../select-field'
+import { Switch } from '../switch'
 import { cn } from '../../../lib/utils'
 import {
   Users,
@@ -83,7 +84,11 @@ interface TeamAndPayrollViewProps {
   onStatusChange?: (status: TeamTab) => void
   onViewEmployee?: (id: string) => void
   onViewPayroll?: (id: string) => void
-  onCreateEmployee?: (values: Record<string, unknown>) => Promise<void>
+  onCreateEmployee?: (
+    values: Record<string, unknown>,
+    /** Only present when the owner switched sign-in access on. */
+    access?: { email: string; password: string; role: 'admin' | 'member' | 'viewer' },
+  ) => Promise<void>
   onDeleteEmployee?: (id: string) => Promise<void>
 
   // ─── G2 ───────────────────────────────────────────────────────────────────
@@ -390,11 +395,23 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
     permissionProfileId: '',
     salary: '',
     hireDate: '',
+    // ─── Sign-in access ───
+    // `hasAccess` false is the DEFAULT and the common case: most people on a
+    // payroll never open the software. See the section in the form below.
+    hasAccess: false,
+    accessEmail: '',
+    accessPassword: '',
+    accessRole: 'member' as 'admin' | 'member' | 'viewer',
   })
 
   const setField = useCallback(
     (field: keyof typeof form) => (value: string) =>
       setForm((prev) => ({ ...prev, [field]: value })),
+    [],
+  )
+
+  const setAccess = useCallback(
+    (next: Partial<typeof form>) => setForm((prev) => ({ ...prev, ...next })),
     [],
   )
 
@@ -409,6 +426,10 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
         permissionProfileId: '',
         salary: '',
         hireDate: '',
+        hasAccess: false,
+        accessEmail: '',
+        accessPassword: '',
+        accessRole: 'member',
       }),
     [],
   )
@@ -419,33 +440,56 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
 
   // First name, last name and a hire date are what the server's schema
   // genuinely requires; everything else is optional there and optional here.
+  // ⚠️ Credentials are only required when the switch is ON. Demanding them for
+  // every employee is what made this form unusable for the majority who are on
+  // the payroll and never sign in — the server's own schema says the same
+  // thing (`createMemberDirectBodySchema` refines email/password on
+  // `hasAccess`), and the two must not disagree or the user meets a 400 they
+  // cannot act on.
+  const accessComplete =
+    !form.hasAccess ||
+    (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.accessEmail.trim()) && form.accessPassword.length >= 8)
+
   const canSubmitEmployee =
     form.firstName.trim().length > 0 &&
     form.lastName.trim().length > 0 &&
     form.hireDate.length > 0 &&
+    accessComplete &&
     !isSubmitting
 
   const handleSubmitEmployee = useCallback(async () => {
     if (!canSubmitEmployee) return
     setIsSubmitting(true)
     try {
-      await onCreateEmployee?.({
-        firstName: form.firstName.trim(),
-        lastName: form.lastName.trim(),
-        // The server requires an employee code. Deriving one from the name is
-        // a guess the USER should not have to make for a field they did not
-        // ask for — but sending nothing fails validation, so a readable
-        // fallback is generated and shown in the field's placeholder.
-        employeeCode: form.employeeCode.trim() || undefined,
-        position: form.position.trim() || undefined,
-        hireDate: form.hireDate,
-        salary: form.salary ? Number(form.salary) : 0,
-        // '' means "not chosen" — it must not reach the server as an empty uuid.
-        branchId: form.branchId || undefined,
-        // G3. The container decides what to do with it: a profile is a grant on
-        // `user_roles`, so it only applies once this employee has a login.
-        permissionProfileId: form.permissionProfileId || undefined,
-      })
+      await onCreateEmployee?.(
+        {
+          firstName: form.firstName.trim(),
+          lastName: form.lastName.trim(),
+          // The server requires an employee code. Deriving one from the name is
+          // a guess the USER should not have to make for a field they did not
+          // ask for — but sending nothing fails validation, so a readable
+          // fallback is generated and shown in the field's placeholder.
+          employeeCode: form.employeeCode.trim() || undefined,
+          position: form.position.trim() || undefined,
+          hireDate: form.hireDate,
+          salary: form.salary ? Number(form.salary) : 0,
+          // '' means "not chosen" — it must not reach the server as an empty uuid.
+          branchId: form.branchId || undefined,
+          // G3. The container decides what to do with it: a profile is a grant on
+          // `user_roles`, so it only applies once this employee has a login.
+          permissionProfileId: form.permissionProfileId || undefined,
+        },
+        // Second argument, not a field on the employee: an employee record and
+        // an auth account are two different things in two different tables, and
+        // the container calls two different endpoints for them.
+        form.hasAccess
+          ? {
+              email: form.accessEmail.trim(),
+              password: form.accessPassword,
+              role: form.accessRole,
+            }
+          : undefined,
+      )
       setShowEmployeeForm(false)
       resetForm()
     } finally {
@@ -618,6 +662,113 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
                 disabled={isSubmitting}
               />
             </label>
+
+            {/*
+              ─── Sign-in access ─────────────────────────────────────────────
+
+              ⚠️ AN EMPLOYEE AND A USER ARE NOT THE SAME THING.
+
+              Most people on a payroll never open the software: a delivery
+              driver, a part-time shop assistant, someone paid monthly and
+              recorded for the books. Creating a login for all of them would
+              mean an email address and a password for people who have neither
+              a reason nor a device to use them.
+
+              So the record is always created and the ACCOUNT is opt-in. The
+              server agrees — `createMemberDirectBodySchema` only requires
+              email and password when `hasAccess` is true — and the permission
+              profile above already said, in its own hint, that it «only
+              applies to an employee who has an account». This switch is what
+              finally makes that sentence actionable.
+
+              The two writes go to two endpoints; see the container.
+            */}
+            <div className="sm:col-span-2 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted)/0.4)] p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <label
+                    htmlFor="employee-has-access"
+                    className="text-sm font-medium text-[hsl(var(--fg-primary))]"
+                  >
+                    {t('team.hasAccessTitle', 'آیا می‌خواهید جزئی از پرسنل سایت شود؟')}
+                  </label>
+                  <p className="mt-1 text-xs leading-relaxed text-[hsl(var(--fg-tertiary))]">
+                    {t(
+                      'team.hasAccessHint',
+                      'با روشن کردن این گزینه یک حساب کاربری ساخته می‌شود و این شخص می‌تواند با ایمیل و رمزی که وارد می‌کنید وارد حسابچه شود.',
+                    )}
+                  </p>
+                </div>
+                <Switch
+                  id="employee-has-access"
+                  checked={form.hasAccess}
+                  onCheckedChange={(checked) => setAccess({ hasAccess: checked })}
+                  disabled={isSubmitting}
+                />
+              </div>
+
+              {form.hasAccess ? (
+                <div className="mt-4 grid gap-4 border-t border-[hsl(var(--border-default))] pt-4 sm:grid-cols-2">
+                  <label className="flex flex-col gap-1.5">
+                    <span className="text-xs text-[hsl(var(--fg-secondary))]">
+                      {t('team.accessEmail', 'ایمیل ورود')}
+                    </span>
+                    <input
+                      type="email"
+                      // `dir="ltr"` — an email address is Latin text, and in an
+                      // RTL field the dot-separated parts render in the wrong
+                      // visual order while the value stays correct, which
+                      // reads as the field having mangled what was typed.
+                      dir="ltr"
+                      autoComplete="off"
+                      value={form.accessEmail}
+                      onChange={(e) => setAccess({ accessEmail: e.target.value })}
+                      className={FORM_FIELD}
+                      disabled={isSubmitting}
+                    />
+                  </label>
+
+                  <label className="flex flex-col gap-1.5">
+                    <span className="text-xs text-[hsl(var(--fg-secondary))]">
+                      {t('team.accessPassword', 'رمز عبور')}
+                    </span>
+                    <input
+                      type="password"
+                      dir="ltr"
+                      // `new-password` so the browser does not offer the
+                      // OWNER's saved credentials for someone else's account.
+                      autoComplete="new-password"
+                      value={form.accessPassword}
+                      onChange={(e) => setAccess({ accessPassword: e.target.value })}
+                      className={FORM_FIELD}
+                      disabled={isSubmitting}
+                    />
+                    <span className="text-xs text-[hsl(var(--fg-tertiary))]">
+                      {t('team.accessPasswordHint', 'حداقل ۸ نویسه.')}
+                    </span>
+                  </label>
+
+                  <label className="flex flex-col gap-1.5 sm:col-span-2">
+                    <span className="text-xs text-[hsl(var(--fg-secondary))]">
+                      {t('team.accessRole', 'سطح دسترسی')}
+                    </span>
+                    <SelectField
+                      value={form.accessRole}
+                      onChange={(value) =>
+                        setAccess({ accessRole: value as 'admin' | 'member' | 'viewer' })
+                      }
+                      options={[
+                        { value: 'viewer', label: t('team.roleViewer', 'فقط مشاهده') },
+                        { value: 'member', label: t('team.roleMember', 'کارمند') },
+                        { value: 'admin', label: t('team.roleAdmin', 'مدیر') },
+                      ]}
+                      className={FORM_FIELD}
+                      disabled={isSubmitting}
+                    />
+                  </label>
+                </div>
+              ) : null}
+            </div>
 
             {/*
               ─── G3 — the permission profile ────────────────────────────────

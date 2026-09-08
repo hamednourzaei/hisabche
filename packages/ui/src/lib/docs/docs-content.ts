@@ -187,6 +187,16 @@ export const DOCS_ARTICLES: readonly DocsArticleDef[] = [
   },
 ]
 
+/**
+ * Where `/docs` sends a reader.
+ *
+ * ⚠️ THE INDEX PAGE NO LONGER EXISTS. `/docs` is a permanent redirect here, so
+ * nobody lands on a page whose only content is a list of links to the real
+ * pages. This constant is what the redirect, the sitemap and the footer all
+ * read, so they cannot drift apart.
+ */
+export const DOCS_ENTRY_SLUG = 'getting-started'
+
 export function findArticle(slug: string): DocsArticleDef | undefined {
   return DOCS_ARTICLES.find((article) => article.slug === slug)
 }

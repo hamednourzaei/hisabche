@@ -45,10 +45,12 @@ import {
   useBranchTree,
   useCreateBranch,
   useCreateEmployee,
+  useCreateMemberDirect,
   useDeleteEmployee,
   useEmployees,
   usePayrolls,
   usePermissionMatrix,
+  useWorkspaces,
 } from '@hisabche/api'
 
 import { TeamAndPayrollView, type TeamTab } from '../team-and-payroll-view'
@@ -109,6 +111,11 @@ export function TeamAndPayrollContainer() {
   // ⚠️ Hooks, called during render. This is the fix for the invalid hook calls
   // described at the top of this file.
   const createEmployee = useCreateEmployee()
+  const createMemberDirect = useCreateMemberDirect()
+  // The account is created under the owner's workspace. `useWorkspaces` is
+  // already how `hr-container.tsx` resolves it; same source, same answer.
+  const { data: workspaces } = useWorkspaces()
+  const workspaceId = workspaces?.[0]?.id as string | undefined
   const deleteEmployee = useDeleteEmployee()
   const createBranch = useCreateBranch()
   const assignProfile = useAssignProfile()
@@ -137,7 +144,19 @@ export function TeamAndPayrollContainer() {
   // ─── Actions ──────────────────────────────────────────────────────────────
 
   const handleCreateEmployee = useCallback(
-    async (values: Record<string, unknown>) => {
+    async (
+      values: Record<string, unknown>,
+      /**
+       * Sign-in credentials, present only when the owner switched access on.
+       *
+       * ⚠️ A SECOND WRITE TO A SECOND ENDPOINT. An employee row and an auth
+       * account live in different tables and are created by different
+       * services; there is no single call that does both. The employee is
+       * created first because it is the thing that must exist either way — if
+       * the account fails, a person on the payroll is still on the payroll.
+       */
+      access?: { email: string; password: string; role: 'admin' | 'member' | 'viewer' },
+    ) => {
       setEmployeeFormError(null)
       const { permissionProfileId, ...employeeValues } = values as Record<string, unknown> & {
         permissionProfileId?: string
@@ -147,6 +166,40 @@ export function TeamAndPayrollContainer() {
         const created = (await createEmployee.mutateAsync(employeeValues)) as
           { id?: string; user_id?: string | null } | undefined
 
+        // ─── The account, if one was asked for ───
+        //
+        // ⚠️ ITS FAILURE MUST NOT READ AS THE EMPLOYEE FAILING. The employee
+        // row is already saved by this point. A duplicate email — by far the
+        // most likely rejection — would otherwise surface as «ذخیره ناموفق
+        // بود» beside a person who was in fact created, and the owner would
+        // add them a second time.
+        let accessUserId: string | null = null
+        if (access && workspaceId) {
+          try {
+            const member = (await createMemberDirect.mutateAsync({
+              workspaceId,
+              hasAccess: true,
+              email: access.email,
+              password: access.password,
+              role: access.role,
+              fullName: `${values.firstName ?? ''} ${values.lastName ?? ''}`.trim(),
+              jobTitle: typeof values.position === 'string' ? values.position : undefined,
+            })) as { user_id?: string | null } | undefined
+            accessUserId = member?.user_id ?? null
+          } catch (error) {
+            setEmployeeFormError(
+              `${t('team.accountFailed', 'کارمند ثبت شد، ولی ساخت حساب کاربری ناموفق بود')}: ${messageOf(error, '')}`,
+            )
+          }
+        } else if (access && !workspaceId) {
+          setEmployeeFormError(
+            t(
+              'team.accountNeedsWorkspace',
+              'کارمند ثبت شد، ولی حساب کاربری ساخته نشد: فضای کاری پیدا نشد.',
+            ),
+          )
+        }
+
         // G3 — apply the profile, but ONLY if this employee has a login.
         //
         // A grant is a `user_roles` row keyed to a user. An employee with no
@@ -155,7 +208,11 @@ export function TeamAndPayrollContainer() {
         // — the person is created and the caller is told the profile did not
         // apply. Silently dropping it would tell them access was granted.
         if (permissionProfileId) {
-          const userId = created?.user_id
+          // The account just created counts: before this existed, switching
+          // access on and choosing a profile in the same submission still
+          // reported «this employee has no account yet», because the employee
+          // row was read before the account was made.
+          const userId = created?.user_id ?? accessUserId
           if (userId) {
             await assignProfile.mutateAsync({
               userId,
@@ -182,7 +239,7 @@ export function TeamAndPayrollContainer() {
         throw error
       }
     },
-    [createEmployee, assignProfile, refetchEmployees, t],
+    [createEmployee, assignProfile, createMemberDirect, workspaceId, refetchEmployees, t],
   )
 
   const handleDeleteEmployee = useCallback(

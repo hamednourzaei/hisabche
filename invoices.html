@@ -2,12 +2,10 @@
 <html lang="fa" dir="rtl">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <title>آروان‌کلاد — Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>آروان‌کلاد — Dual Sidebar</title>
 
   <script src="https://cdn.tailwindcss.com"></script>
-
   <script>
     tailwind.config = {
       theme: {
@@ -38,22 +36,12 @@
       --rail-width: 64px;
       --rail-expanded-width: 220px;
       --product-width: 272px;
-
-      /*
-       * Mobile navigation:
-       * Parent stays visible on the right.
-       * Child occupies the remaining viewport on the left.
-       */
-      --mobile-parent-width: clamp(132px, 38vw, 174px);
+      --mobile-parent-collapsed: 72px;
+      --mobile-parent-expanded: clamp(150px, 42vw, 180px);
     }
 
-    * {
-      box-sizing: border-box;
-    }
-
-    html {
-      scroll-behavior: smooth;
-    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
 
     body {
       margin: 0;
@@ -62,15 +50,9 @@
       color: #0f172a;
     }
 
-    body.mobile-nav-open {
-      overflow: hidden;
-    }
+    body.mobile-nav-open { overflow: hidden; }
 
-    button,
-    a,
-    input {
-      -webkit-tap-highlight-color: transparent;
-    }
+    button, a, input { -webkit-tap-highlight-color: transparent; }
 
     button:focus-visible,
     a:focus-visible,
@@ -79,15 +61,8 @@
       outline-offset: 2px;
     }
 
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-      border-radius: 999px;
-    }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }
 
     .glass {
       background: rgba(255, 255, 255, .92);
@@ -95,72 +70,45 @@
       -webkit-backdrop-filter: blur(16px);
     }
 
-    /* ========================================================= */
-    /* DESKTOP LAYOUT */
-    /* ========================================================= */
-
-    .main-shell {
-      transition:
-        margin-right .25s ease,
-        width .25s ease;
-    }
-
+    /* Desktop */
     .rail {
       width: var(--rail-width);
+      transition: width .25s cubic-bezier(.2,.8,.2,1);
     }
-
-    .rail-expanded {
-      width: var(--rail-expanded-width);
-    }
+    .rail-expanded { width: var(--rail-expanded-width); }
 
     .product-sidebar {
       width: var(--product-width);
       right: var(--rail-width);
+      transition: right .25s cubic-bezier(.2,.8,.2,1), transform .28s cubic-bezier(.2,.8,.2,1);
     }
-
     .product-sidebar.closed {
       transform: translateX(calc(100% + var(--rail-width)));
     }
-
     .rail-expanded + .product-sidebar {
       right: var(--rail-expanded-width);
     }
 
     .content-desktop {
       margin-right: calc(var(--rail-width) + var(--product-width));
+      transition: margin-right .25s cubic-bezier(.2,.8,.2,1);
     }
-
-    .content-desktop.product-closed {
-      margin-right: var(--rail-width);
-    }
-
+    .content-desktop.product-closed { margin-right: var(--rail-width); }
     .content-desktop.rail-wide {
-      margin-right: calc(
-        var(--rail-expanded-width) + var(--product-width)
-      );
+      margin-right: calc(var(--rail-expanded-width) + var(--product-width));
     }
-
     .content-desktop.rail-wide.product-closed {
       margin-right: var(--rail-expanded-width);
     }
 
-    .table-row {
-      transition: background .15s ease;
-    }
+    .table-row { transition: background .15s ease; }
+    .table-row:hover { background: #f8fafc; }
 
-    .table-row:hover {
-      background: #f8fafc;
-    }
-
-    /* ========================================================= */
-    /* MOBILE NAVIGATION */
-    /* ========================================================= */
-
+    /* Mobile */
     .mobile-navigation {
       visibility: hidden;
       pointer-events: none;
     }
-
     .mobile-navigation.is-open {
       visibility: visible;
       pointer-events: auto;
@@ -171,7 +119,6 @@
       pointer-events: none;
       transition: opacity .2s ease;
     }
-
     .mobile-navigation.is-open .mobile-navigation-backdrop {
       opacity: 1;
       pointer-events: auto;
@@ -181,24 +128,27 @@
       transform: translateX(105%);
       transition: transform .3s cubic-bezier(.2, .8, .2, 1);
     }
-
     .mobile-navigation.is-open .mobile-navigation-shell {
       transform: translateX(0);
     }
 
-    /*
-     * RTL:
-     * Parent = right side
-     * Child = left side
-     */
     .mobile-parent-pane {
-      width: var(--mobile-parent-width);
-      flex: 0 0 var(--mobile-parent-width);
+      width: var(--mobile-parent-collapsed);
+      flex: 0 0 var(--mobile-parent-collapsed);
+      transition: width .25s cubic-bezier(.2,.8,.2,1), flex-basis .25s cubic-bezier(.2,.8,.2,1);
+      overflow: hidden;
+    }
+    .mobile-parent-pane.is-expanded {
+      width: var(--mobile-parent-expanded);
+      flex: 0 0 var(--mobile-parent-expanded);
     }
 
     .mobile-child-pane {
       min-width: 0;
       flex: 1 1 auto;
+    }
+    .mobile-child-pane.is-closed {
+      display: none;
     }
 
     .mobile-parent-pane,
@@ -207,27 +157,30 @@
       min-height: 0;
     }
 
-    .mobile-parent-item {
-      min-height: 56px;
+    .mobile-parent-label {
+      opacity: 0;
+      width: 0;
+      overflow: hidden;
+      white-space: nowrap;
+      transition: opacity .2s ease, width .2s ease;
+    }
+    .mobile-parent-pane.is-expanded .mobile-parent-label {
+      opacity: 1;
+      width: auto;
     }
 
+    .mobile-parent-item { min-height: 52px; }
     .mobile-parent-item .mobile-parent-icon {
-      transition:
-        background .18s ease,
-        color .18s ease,
-        transform .18s ease;
+      transition: background .18s ease, color .18s ease;
     }
-
     .mobile-parent-item.is-active {
       background: #effcf9;
       color: #087f73;
     }
-
     .mobile-parent-item.is-active .mobile-parent-icon {
       background: #d7f7f0;
       color: #087f73;
     }
-
     .mobile-parent-item.is-active::before {
       content: "";
       position: absolute;
@@ -239,20 +192,12 @@
       background: #0f9f91;
     }
 
-    .mobile-parent-item:active .mobile-parent-icon {
-      transform: scale(.96);
-    }
-
-    .mobile-child-item {
-      min-height: 48px;
-    }
-
+    .mobile-child-item { min-height: 48px; }
     .mobile-child-item.is-active {
       background: #effcf9;
       color: #087f73;
       font-weight: 600;
     }
-
     .mobile-child-item.is-active::before {
       content: "";
       position: absolute;
@@ -270,82 +215,20 @@
       -webkit-overflow-scrolling: touch;
     }
 
-    .mobile-product-context {
-      background:
-        linear-gradient(
-          180deg,
-          rgba(248, 250, 252, .98),
-          rgba(255, 255, 255, .98)
-        );
-    }
-
-    .mobile-product-context-icon {
-      box-shadow:
-        0 1px 2px rgba(15, 23, 42, .05),
-        0 5px 14px rgba(15, 23, 42, .05);
-    }
-
     .mobile-close-button {
       min-width: 44px;
       min-height: 44px;
     }
 
-    .mobile-parent-item,
-    .mobile-child-item {
-      touch-action: manipulation;
-    }
-
-    /*
-     * Very narrow devices.
-     */
     @media (max-width: 359px) {
       :root {
-        --mobile-parent-width: 124px;
-      }
-
-      .mobile-parent-item {
-        min-height: 52px;
-      }
-
-      .mobile-parent-label {
-        font-size: 10px;
-      }
-
-      .mobile-parent-icon {
-        width: 32px !important;
-        height: 32px !important;
-      }
-    }
-
-    /*
-     * Landscape phones.
-     */
-    @media (
-      max-width: 1023px
-    ) and (
-      orientation: landscape
-    ) {
-      :root {
-        --mobile-parent-width: 150px;
-      }
-
-      .mobile-parent-pane-header {
-        height: 56px;
-      }
-
-      .mobile-parent-item {
-        min-height: 48px;
-      }
-
-      .mobile-child-pane-header {
-        height: 56px;
+        --mobile-parent-collapsed: 64px;
+        --mobile-parent-expanded: 140px;
       }
     }
 
     @media (prefers-reduced-motion: reduce) {
-      *,
-      *::before,
-      *::after {
+      *, *::before, *::after {
         scroll-behavior: auto !important;
         transition: none !important;
         animation: none !important;
@@ -365,2742 +248,597 @@
 
 <body>
 
-  <!-- ========================================================= -->
   <!-- HEADER -->
-  <!-- ========================================================= -->
-
-  <header
-    class="fixed inset-x-0 top-0 z-[70] h-16 border-b border-slate-200/80 glass"
-  >
+  <header class="fixed inset-x-0 top-0 z-[70] h-16 border-b border-slate-200/80 glass">
     <div class="flex h-full items-center justify-between px-3 sm:px-5 lg:px-6">
-
-      <!-- Right -->
       <div class="flex min-w-0 items-center gap-2">
-
-        <!-- Mobile menu -->
-        <button
-          id="mobileMenuButton"
-          type="button"
-          aria-label="باز کردن منوی محصولات"
-          aria-controls="mobileNavigation"
-          aria-expanded="false"
-          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-600 transition hover:bg-slate-100 lg:hidden"
-        >
-          <svg
-            class="h-5 w-5"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-          >
-            <path
-              stroke-width="1.8"
-              stroke-linecap="round"
-              d="M4 6h16M4 12h16M4 18h16"
-            />
+        <button id="mobileMenuButton" type="button" aria-label="باز کردن منوی محصولات" aria-controls="mobileNavigation" aria-expanded="false"
+          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-600 transition hover:bg-slate-100 lg:hidden">
+          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-width="1.8" stroke-linecap="round" d="M4 6h16M4 12h16M4 18h16"/>
           </svg>
         </button>
 
-        <!-- Brand -->
         <div class="hidden items-center gap-2 sm:flex">
-          <div
-            class="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-950 text-sm font-bold text-white"
-          >
-            ا
-          </div>
-
+          <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-950 text-sm font-bold text-white">ا</div>
           <div class="hidden leading-tight md:block">
-            <div class="text-sm font-semibold text-slate-900">
-              آروان‌کلاد
-            </div>
-
-            <div class="text-[11px] text-slate-500">
-              پنل مدیریت
-            </div>
+            <div class="text-sm font-semibold text-slate-900">آروان‌کلاد</div>
+            <div class="text-[11px] text-slate-500">پنل مدیریت</div>
           </div>
         </div>
 
-        <!-- Workspace -->
-        <button
-          type="button"
-          class="mr-1 flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
-        >
-          <span class="hidden text-slate-500 sm:inline">
-            سازمان:
-          </span>
-
-          <span class="font-medium">
-            HN Workspace
-          </span>
-
-          <svg
-            class="h-4 w-4 text-slate-400"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-          >
-            <path
-              stroke-width="1.8"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              d="m6 9 6 6 6-6"
-            />
+        <button type="button" class="mr-1 flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50">
+          <span class="hidden text-slate-500 sm:inline">سازمان:</span>
+          <span class="font-medium">HN Workspace</span>
+          <svg class="h-4 w-4 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/>
           </svg>
         </button>
-
       </div>
 
-      <!-- Center Search -->
       <div class="hidden max-w-md flex-1 px-6 lg:block">
-
-        <button
-          type="button"
-          class="flex h-10 w-full items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 text-right text-sm text-slate-400 transition hover:border-slate-300 hover:bg-white"
-        >
-          <svg
-            class="h-4 w-4 shrink-0"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-          >
+        <button type="button" class="flex h-10 w-full items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 text-right text-sm text-slate-400 transition hover:border-slate-300 hover:bg-white">
+          <svg class="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor">
             <circle cx="11" cy="11" r="6" stroke-width="1.8"/>
-            <path
-              d="m16 16 4 4"
-              stroke-width="1.8"
-              stroke-linecap="round"
-            />
+            <path d="m16 16 4 4" stroke-width="1.8" stroke-linecap="round"/>
           </svg>
-
-          <span class="flex-1">
-            جستجو در پنل...
-          </span>
-
-          <kbd
-            class="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] text-slate-400"
-          >
-            /
-          </kbd>
+          <span class="flex-1">جستجو در پنل...</span>
+          <kbd class="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] text-slate-400">/</kbd>
         </button>
-
       </div>
 
-      <!-- Left -->
       <div class="flex items-center gap-1">
-
-        <!-- Balance -->
         <div class="hidden items-center gap-2 rounded-xl px-3 py-2 md:flex">
           <div class="text-left">
-            <div class="text-[10px] text-slate-400">
-              اعتبار
-            </div>
-
-            <div class="text-sm font-semibold text-slate-800">
-              ۱۰,۸۴۲,۶۳۴ ریال
-            </div>
+            <div class="text-[10px] text-slate-400">اعتبار</div>
+            <div class="text-sm font-semibold text-slate-800">۱۰,۸۴۲,۶۳۴ ریال</div>
           </div>
         </div>
 
-        <!-- Create -->
-        <button
-          type="button"
-          class="hidden h-10 items-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800 sm:flex"
-        >
-          <svg
-            class="h-4 w-4"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-          >
-            <path
-              d="M12 5v14M5 12h14"
-              stroke-width="2"
-              stroke-linecap="round"
-            />
+        <button type="button" class="hidden h-10 items-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800 sm:flex">
+          <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M12 5v14M5 12h14" stroke-width="2" stroke-linecap="round"/>
           </svg>
-
           ایجاد
         </button>
 
-        <!-- Notification -->
-        <button
-          type="button"
-          aria-label="اعلان‌ها"
-          class="relative flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100"
-        >
-          <svg
-            class="h-5 w-5"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-          >
-            <path
-              d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"
-              stroke-width="1.7"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
+        <button type="button" aria-label="اعلان‌ها" class="relative flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100">
+          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-
-          <span
-            class="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"
-          ></span>
+          <span class="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"></span>
         </button>
 
-        <!-- Avatar -->
-        <button
-          type="button"
-          aria-label="حساب کاربری"
-          class="flex h-10 items-center gap-2 rounded-xl px-1.5 transition hover:bg-slate-100"
-        >
-          <div
-            class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700"
-          >
-            HN
-          </div>
-
-          <svg
-            class="hidden h-4 w-4 text-slate-400 sm:block"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-          >
-            <path
-              d="m6 9 6 6 6-6"
-              stroke-width="1.8"
-              stroke-linecap="round"
-            />
-          </svg>
+        <button type="button" aria-label="حساب کاربری" class="flex h-10 items-center gap-2 rounded-xl px-1.5 transition hover:bg-slate-100">
+          <div class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700">HN</div>
         </button>
-
       </div>
-
     </div>
   </header>
 
-
-  <!-- ========================================================= -->
   <!-- DESKTOP GLOBAL RAIL -->
-  <!-- ========================================================= -->
-
-  <aside
-    id="globalRail"
-    class="rail fixed bottom-0 right-0 top-16 z-50 hidden flex-col border-l border-slate-200 bg-white lg:flex"
-  >
-
-    <!-- Toggle -->
-    <div
-      class="flex h-14 items-center justify-center border-b border-slate-100"
-    >
-
-      <button
-        id="railToggle"
-        type="button"
-        aria-label="باز و بسته کردن منوی اصلی"
-        aria-expanded="false"
-        class="flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100"
-      >
-        <svg
-          id="railToggleIcon"
-          class="h-5 w-5"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-        >
-          <path
-            d="M8 6l6 6-6 6M14 6l6 6-6 6"
-            stroke-width="1.8"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
+  <aside id="globalRail" class="rail fixed bottom-0 right-0 top-16 z-50 hidden flex-col border-l border-slate-200 bg-white lg:flex">
+    <div class="flex h-14 items-center justify-center border-b border-slate-100">
+      <button id="railToggle" type="button" aria-label="باز و بسته کردن منوی اصلی" aria-expanded="false"
+        class="flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100">
+        <svg id="railToggleIcon" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M15 6l-6 6 6 6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
       </button>
-
     </div>
 
-    <!-- Products -->
-    <nav
-      class="flex-1 overflow-y-auto p-2"
-      aria-label="محصولات"
-    >
-
-      <div
-        class="mb-2 px-2 text-[10px] font-semibold text-slate-400"
-      >
-        محصولات
-      </div>
-
-      <div
-        id="railProducts"
-        class="space-y-1"
-      ></div>
-
+    <nav class="flex-1 overflow-y-auto p-2" aria-label="محصولات">
+      <div class="mb-2 px-2 text-[10px] font-semibold text-slate-400">محصولات</div>
+      <div id="railProducts" class="space-y-1"></div>
     </nav>
 
-    <!-- Bottom -->
     <div class="border-t border-slate-100 p-2">
-
-      <button
-        type="button"
-        class="rail-button group relative flex h-11 w-full items-center gap-3 rounded-xl px-2.5 text-sm text-slate-500 transition hover:bg-slate-50"
-      >
-
-        <span
-          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-        >
-          <svg
-            class="h-5 w-5"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-          >
-            <path
-              d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"
-              stroke-width="1.7"
-            />
-
-            <path
-              d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-1.7 1.7-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V20h-2.4v-.2a1.7 1.7 0 0 0-1.03-1.56 1.7 1.7 0 0 0-1.88.34l-.06.06-1.7-1.7.06-.06A1.7 1.7 0 0 0 8.46 15a1.7 1.7 0 0 0-1.56-1.03H6.7v-2.4h.2A1.7 1.7 0 0 0 8.46 10a1.7 1.7 0 0 0-.34-1.88l-.06-.06 1.7-1.7.06.06a1.7 1.7 0 0 0 1.88.34 1.7 1.7 0 0 0 1.03-1.56V5h2.4v.2A1.7 1.7 0 0 0 16.36 6.76a1.7 1.7 0 0 0 1.88-.34l.06-.06 1.7 1.7-.06.06A1.7 1.7 0 0 0 19.6 10a1.7 1.7 0 0 0 1.56 1.03h.2v2.4h-.2A1.7 1.7 0 0 0 19.4 15Z"
-              stroke-width="1.5"
-              stroke-linejoin="round"
-            />
+      <button type="button" class="group relative flex h-11 w-full items-center gap-3 rounded-xl px-2.5 text-sm text-slate-500 transition hover:bg-slate-50">
+        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
+          <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke-width="1.7"/>
+            <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-1.7 1.7-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V20h-2.4v-.2a1.7 1.7 0 0 0-1.03-1.56 1.7 1.7 0 0 0-1.88.34l-.06.06-1.7-1.7.06-.06A1.7 1.7 0 0 0 8.46 15a1.7 1.7 0 0 0-1.56-1.03H6.7v-2.4h.2A1.7 1.7 0 0 0 8.46 10a1.7 1.7 0 0 0-.34-1.88l-.06-.06 1.7-1.7.06.06a1.7 1.7 0 0 0 1.88.34 1.7 1.7 0 0 0 1.03-1.56V5h2.4v.2A1.7 1.7 0 0 0 16.36 6.76a1.7 1.7 0 0 0 1.88-.34l.06-.06 1.7 1.7-.06.06A1.7 1.7 0 0 0 19.6 10a1.7 1.7 0 0 0 1.56 1.03h.2v2.4h-.2A1.7 1.7 0 0 0 19.4 15Z" stroke-width="1.5"/>
           </svg>
         </span>
-
-        <span
-          class="rail-label whitespace-nowrap opacity-0 transition-opacity"
-        >
-          تنظیمات
-        </span>
-
+        <span class="rail-label whitespace-nowrap opacity-0 transition-opacity">تنظیمات</span>
       </button>
-
     </div>
-
   </aside>
 
-
-  <!-- ========================================================= -->
   <!-- DESKTOP PRODUCT SIDEBAR -->
-  <!-- ========================================================= -->
-
-  <aside
-    id="productSidebar"
-    class="product-sidebar fixed bottom-0 top-16 z-40 hidden flex-col border-l border-slate-200 bg-white shadow-[4px_0_20px_rgba(15,23,42,.02)] transition-[transform,right] duration-300 lg:flex"
-  >
-
-    <!-- Header -->
-    <div
-      class="flex h-14 shrink-0 items-center justify-between border-b border-slate-100 px-4"
-    >
-
+  <aside id="productSidebar" class="product-sidebar fixed bottom-0 top-16 z-40 hidden flex-col border-l border-slate-200 bg-white shadow-[4px_0_20px_rgba(15,23,42,.02)] lg:flex">
+    <div class="flex h-14 shrink-0 items-center justify-between border-b border-slate-100 px-4">
       <div>
-        <div class="text-[11px] font-medium text-slate-400">
-          محصول
-        </div>
-
-        <div
-          id="productTitleDesktop"
-          class="mt-0.5 text-sm font-semibold text-slate-900"
-        >
-          شبکه توزیع محتوا
-        </div>
+        <div class="text-[11px] font-medium text-slate-400">محصول</div>
+        <div id="productTitleDesktop" class="mt-0.5 text-sm font-semibold text-slate-900">شبکه توزیع محتوا</div>
       </div>
-
-      <button
-        id="closeProductSidebar"
-        type="button"
-        aria-label="بستن منوی محصول"
-        class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-      >
-        <svg
-          class="h-4 w-4"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-        >
-          <path
-            d="M6 6l12 12M18 6 6 18"
-            stroke-width="1.8"
-            stroke-linecap="round"
-          />
+      <button id="closeProductSidebar" type="button" aria-label="بستن منوی محصول"
+        class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M6 6l12 12M18 6 6 18" stroke-width="1.8" stroke-linecap="round"/>
         </svg>
       </button>
-
     </div>
 
-    <!-- Product Identity -->
     <div class="border-b border-slate-100 p-4">
-
-      <div
-        class="flex items-center gap-3 rounded-xl bg-slate-50 p-3"
-      >
-
-        <div
-          id="desktopProductIcon"
-          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-slate-800 shadow-sm"
-        ></div>
-
+      <div class="flex items-center gap-3 rounded-xl bg-slate-50 p-3">
+        <div id="desktopProductIcon" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-slate-800 shadow-sm"></div>
         <div class="min-w-0">
-          <div
-            id="desktopProductShort"
-            class="truncate text-sm font-semibold"
-          >
-            CDN
-          </div>
-
-          <div
-            id="desktopProductSubtitle"
-            class="mt-0.5 truncate text-[11px] text-slate-500"
-          >
-            Content Delivery Network
-          </div>
+          <div id="desktopProductShort" class="truncate text-sm font-semibold">CDN</div>
+          <div id="desktopProductSubtitle" class="mt-0.5 truncate text-[11px] text-slate-500">Content Delivery Network</div>
         </div>
-
       </div>
-
     </div>
 
-    <!-- Navigation -->
-    <nav
-      id="productNavigation"
-      class="flex-1 overflow-y-auto p-3"
-      aria-label="ناوبری محصول"
-    ></nav>
+    <nav id="productNavigation" class="flex-1 overflow-y-auto p-3" aria-label="ناوبری محصول"></nav>
 
-    <!-- Help -->
     <div class="border-t border-slate-100 p-3">
-
-      <button
-        type="button"
-        class="flex h-10 w-full items-center gap-2 rounded-xl px-3 text-sm text-slate-500 transition hover:bg-slate-50"
-      >
-        <svg
-          class="h-4 w-4"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-        >
-          <circle
-            cx="12"
-            cy="12"
-            r="9"
-            stroke-width="1.7"
-          />
-
-          <path
-            d="M9.8 9a2.3 2.3 0 1 1 3.8 1.73c-.9.72-1.6 1.18-1.6 2.27"
-            stroke-width="1.7"
-            stroke-linecap="round"
-          />
-
-          <circle
-            cx="12"
-            cy="16.5"
-            r=".8"
-            fill="currentColor"
-          />
+      <button type="button" class="flex h-10 w-full items-center gap-2 rounded-xl px-3 text-sm text-slate-500 transition hover:bg-slate-50">
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <circle cx="12" cy="12" r="9" stroke-width="1.7"/>
+          <path d="M9.8 9a2.3 2.3 0 1 1 3.8 1.73c-.9.72-1.6 1.18-1.6 2.27" stroke-width="1.7" stroke-linecap="round"/>
+          <circle cx="12" cy="16.5" r=".8" fill="currentColor"/>
         </svg>
-
         راهنما و پشتیبانی
       </button>
-
     </div>
-
   </aside>
 
-
-  <!-- ========================================================= -->
   <!-- MAIN -->
-  <!-- ========================================================= -->
-
-  <main
-    id="mainContent"
-    class="content-desktop min-h-screen pt-16 transition-[margin] duration-300"
-  >
-
-    <div
-      class="mx-auto max-w-[1600px] px-4 py-5 sm:px-6 lg:px-8 lg:py-7"
-    >
-
-      <!-- Breadcrumb / Page Header -->
+  <main id="mainContent" class="content-desktop min-h-screen pt-16">
+    <div class="mx-auto max-w-[1600px] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
       <div class="mb-6">
-
-        <div
-          class="mb-3 flex items-center gap-2 text-xs text-slate-400"
-        >
+        <div class="mb-3 flex items-center gap-2 text-xs text-slate-400">
           <span>CDN</span>
-
-          <svg
-            class="h-3.5 w-3.5"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-          >
-            <path
-              d="m9 18 6-6-6-6"
-              stroke-width="1.7"
-              stroke-linecap="round"
-            />
+          <svg class="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="m9 18 6-6-6-6" stroke-width="1.7" stroke-linecap="round"/>
           </svg>
-
-          <span class="text-slate-600">
-            دامنه‌ها
-          </span>
+          <span class="text-slate-600">دامنه‌ها</span>
         </div>
-
-        <div
-          class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
-        >
-
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1
-              class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl"
-            >
-              دامنه‌های من
-            </h1>
-
-            <p
-              class="mt-2 max-w-2xl text-sm leading-6 text-slate-500"
-            >
-              دامنه‌های متصل به سرویس CDN خود را مدیریت و وضعیت آن‌ها را بررسی کنید.
-            </p>
+            <h1 class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">دامنه‌های من</h1>
+            <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-500">دامنه‌های متصل به سرویس CDN خود را مدیریت کنید.</p>
           </div>
-
           <div class="flex items-center gap-2">
-
-            <button
-              type="button"
-              class="flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
-            >
-              <svg
-                class="h-4 w-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-              >
-                <path
-                  d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"
-                  stroke-width="1.8"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                />
-              </svg>
-
-              گزارش
-            </button>
-
-            <button
-              type="button"
-              class="flex h-10 items-center gap-2 rounded-xl bg-arvan-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-arvan-700 active:scale-[.98]"
-            >
-              <svg
-                class="h-4 w-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-              >
-                <path
-                  d="M12 5v14M5 12h14"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                />
-              </svg>
-
-              دامنه جدید
-            </button>
-
+            <button type="button" class="flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50">گزارش</button>
+            <button type="button" class="flex h-10 items-center gap-2 rounded-xl bg-arvan-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-arvan-700">+ دامنه جدید</button>
           </div>
-
         </div>
-
       </div>
 
-
-      <!-- Stats -->
       <section class="mb-5 grid grid-cols-2 gap-3 xl:grid-cols-4">
-
-        <div
-          class="rounded-2xl border border-slate-200 bg-white p-4 shadow-panel"
-        >
-          <div class="text-xs text-slate-500">
-            مجموع دامنه‌ها
-          </div>
-
-          <div class="mt-2 text-2xl font-bold text-slate-950">
-            ۲
-          </div>
+        <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-panel">
+          <div class="text-xs text-slate-500">مجموع دامنه‌ها</div>
+          <div class="mt-2 text-2xl font-bold">۲</div>
         </div>
-
-        <div
-          class="rounded-2xl border border-slate-200 bg-white p-4 shadow-panel"
-        >
-          <div class="text-xs text-slate-500">
-            فعال
-          </div>
-
+        <div class="rounded-2xl border border-slate-200 bg-white p-4 shadow-panel">
+          <div class="text-xs text-slate-500">فعال</div>
           <div class="mt-2 flex items-center gap-2">
-            <span class="text-2xl font-bold text-slate-950">
-              ۲
-            </span>
-
-            <span
-              class="rounded-full bg-arvan-50 px-2 py-0.5 text-[11px] font-medium text-arvan-700"
-            >
-              ۱۰۰٪
-            </span>
+            <span class="text-2xl font-bold">۲</span>
+            <span class="rounded-full bg-arvan-50 px-2 py-0.5 text-[11px] font-medium text-arvan-700">۱۰۰٪</span>
           </div>
         </div>
-
-        <div
-          class="hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-panel sm:block"
-        >
-          <div class="text-xs text-slate-500">
-            پلن پایه
-          </div>
-
-          <div class="mt-2 text-2xl font-bold text-slate-950">
-            ۲
-          </div>
+        <div class="hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-panel sm:block">
+          <div class="text-xs text-slate-500">پلن پایه</div>
+          <div class="mt-2 text-2xl font-bold">۲</div>
         </div>
-
-        <div
-          class="hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-panel sm:block"
-        >
-          <div class="text-xs text-slate-500">
-            آخرین بروزرسانی
-          </div>
-
-          <div class="mt-2 text-sm font-semibold text-slate-950">
-            امروز، ۱۲:۴۰
-          </div>
+        <div class="hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-panel sm:block">
+          <div class="text-xs text-slate-500">آخرین بروزرسانی</div>
+          <div class="mt-2 text-sm font-semibold">امروز، ۱۲:۴۰</div>
         </div>
-
       </section>
 
-
-      <!-- Main Panel -->
-      <section
-        class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-panel"
-      >
-
-        <!-- Panel Header -->
+      <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-panel">
         <div class="border-b border-slate-100 p-4 sm:p-5">
-
-          <div
-            class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
-          >
-
+          <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h2 class="text-base font-bold text-slate-950">
-                دامنه‌های متصل
-              </h2>
-
-              <p class="mt-1 text-xs leading-5 text-slate-500">
-                وضعیت، پلن و تنظیمات دامنه‌های خود را مشاهده کنید.
-              </p>
+              <h2 class="text-base font-semibold">دامنه‌های من</h2>
+              <p class="mt-1 text-sm text-slate-500">نخستین گام برای فعال‌سازی سرویس CDN، ثبت دامنه است.</p>
             </div>
-
-            <div class="flex flex-col gap-2 sm:flex-row">
-
-              <label class="relative block">
-
-                <span class="sr-only">
-                  جستجوی دامنه
-                </span>
-
-                <input
-                  type="search"
-                  placeholder="جستجوی دامنه..."
-                  class="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pr-10 pl-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-arvan-500 focus:bg-white focus:ring-2 focus:ring-arvan-500/10 sm:w-64"
-                />
-
-                <svg
-                  class="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                >
-                  <circle
-                    cx="11"
-                    cy="11"
-                    r="6"
-                    stroke-width="1.8"
-                  />
-
-                  <path
-                    d="m16 16 4 4"
-                    stroke-width="1.8"
-                    stroke-linecap="round"
-                  />
+            <div class="flex flex-wrap gap-2">
+              <button type="button" class="flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-600 hover:bg-slate-50">فیلتر پیشرفته</button>
+              <div class="relative">
+                <svg class="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <circle cx="11" cy="11" r="6" stroke-width="1.8"/>
+                  <path d="m16 16 4 4" stroke-width="1.8" stroke-linecap="round"/>
                 </svg>
-
-              </label>
-
-              <button
-                type="button"
-                class="flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-600 transition hover:bg-slate-50"
-              >
-                <svg
-                  class="h-4 w-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                >
-                  <path
-                    d="M4 6h16M7 12h10M10 18h4"
-                    stroke-width="1.8"
-                    stroke-linecap="round"
-                  />
-                </svg>
-
-                فیلتر
-              </button>
-
+                <input type="text" placeholder="جستجوی دامنه‌ها" class="h-9 w-full min-w-[180px] rounded-lg border border-slate-200 bg-white pr-9 pl-3 text-sm focus:border-arvan-500 focus:outline-none focus:ring-2 focus:ring-arvan-500/20" />
+              </div>
             </div>
-
           </div>
-
         </div>
-
-
-        <!-- Desktop Table -->
-        <div class="hidden overflow-x-auto md:block">
-
-          <table class="w-full min-w-[720px] text-sm">
-
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
             <thead>
-              <tr
-                class="border-b border-slate-100 bg-slate-50/70 text-xs text-slate-500"
-              >
-                <th class="w-12 px-5 py-3 text-right font-medium">
-                  #
-                </th>
-
-                <th class="px-4 py-3 text-right font-medium">
-                  دامنه
-                </th>
-
-                <th class="px-4 py-3 text-right font-medium">
-                  وضعیت
-                </th>
-
-                <th class="px-4 py-3 text-right font-medium">
-                  پلن
-                </th>
-
-                <th class="px-4 py-3 text-right font-medium">
-                  آخرین بروزرسانی
-                </th>
-
-                <th class="w-16 px-4 py-3"></th>
+              <tr class="border-b border-slate-100 bg-slate-50/80 text-slate-500">
+                <th class="w-12 py-3 pr-5 text-right font-medium"></th>
+                <th class="py-3 px-4 text-right font-medium">وضعیت</th>
+                <th class="py-3 px-4 text-right font-medium">بسته</th>
+                <th class="py-3 px-4 text-right font-medium">دامنه</th>
+                <th class="w-16 py-3 px-4 text-right font-medium">شماره</th>
               </tr>
             </thead>
-
             <tbody class="divide-y divide-slate-100">
-
-              <tr class="table-row">
-
-                <td class="px-5 py-4 text-xs text-slate-400">
-                  ۰۱
-                </td>
-
-                <td class="px-4 py-4">
-
-                  <div class="flex items-center gap-3">
-
-                    <div
-                      class="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600"
-                    >
-                      <svg
-                        class="h-4 w-4"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                      >
-                        <circle
-                          cx="12"
-                          cy="12"
-                          r="9"
-                          stroke-width="1.7"
-                        />
-
-                        <path
-                          d="M3 12h18M12 3c2.2 2.5 3.3 5.5 3.3 9s-1.1 6.5-3.3 9c-2.2-2.5-3.3-5.5-3.3-9S9.8 5.5 12 3Z"
-                          stroke-width="1.5"
-                        />
-                      </svg>
-                    </div>
-
-                    <div>
-                      <div class="font-semibold text-slate-900">
-                        mooshhoshak.life
-                      </div>
-
-                      <div class="mt-0.5 text-[11px] text-slate-400">
-                        شناسه دامنه: ۱
-                      </div>
-                    </div>
-
-                  </div>
-
-                </td>
-
-                <td class="px-4 py-4">
-                  <span
-                    class="inline-flex items-center gap-1.5 rounded-full bg-arvan-50 px-2.5 py-1 text-xs font-medium text-arvan-700"
-                  >
-                    <span
-                      class="h-1.5 w-1.5 rounded-full bg-arvan-600"
-                    ></span>
-
-                    فعال
-                  </span>
-                </td>
-
-                <td class="px-4 py-4 text-slate-600">
-                  پایه
-                </td>
-
-                <td class="px-4 py-4 text-xs text-slate-500">
-                  امروز، ۱۲:۴۰
-                </td>
-
-                <td class="px-4 py-4">
-                  <button
-                    type="button"
-                    aria-label="عملیات دامنه"
-                    class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-                  >
-                    <svg
-                      class="h-4 w-4"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                    >
-                      <circle
-                        cx="5"
-                        cy="12"
-                        r="1.3"
-                        fill="currentColor"
-                      />
-
-                      <circle
-                        cx="12"
-                        cy="12"
-                        r="1.3"
-                        fill="currentColor"
-                      />
-
-                      <circle
-                        cx="19"
-                        cy="12"
-                        r="1.3"
-                        fill="currentColor"
-                      />
-                    </svg>
-                  </button>
-                </td>
-
+              <tr class="table-row hover:bg-slate-50/70">
+                <td class="py-3.5 pr-5 text-slate-400">🗑</td>
+                <td class="py-3.5 px-4"><span class="inline-flex items-center rounded-full border border-arvan-100 bg-arvan-50 px-2.5 py-0.5 text-xs font-medium text-arvan-700">فعال</span></td>
+                <td class="py-3.5 px-4 text-slate-600">پایه</td>
+                <td class="py-3.5 px-4 font-medium">mooshhoshak.life</td>
+                <td class="py-3.5 px-4 text-slate-500">۱</td>
               </tr>
-
-              <tr class="table-row">
-
-                <td class="px-5 py-4 text-xs text-slate-400">
-                  ۰۲
-                </td>
-
-                <td class="px-4 py-4">
-
-                  <div class="flex items-center gap-3">
-
-                    <div
-                      class="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600"
-                    >
-                      <svg
-                        class="h-4 w-4"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                      >
-                        <circle
-                          cx="12"
-                          cy="12"
-                          r="9"
-                          stroke-width="1.7"
-                        />
-
-                        <path
-                          d="M3 12h18M12 3c2.2 2.5 3.3 5.5 3.3 9s-1.1 6.5-3.3 9c-2.2-2.5-3.3-5.5-3.3-9S9.8 5.5 12 3Z"
-                          stroke-width="1.5"
-                        />
-                      </svg>
-                    </div>
-
-                    <div>
-                      <div class="font-semibold text-slate-900">
-                        tangehurmoz.life
-                      </div>
-
-                      <div class="mt-0.5 text-[11px] text-slate-400">
-                        شناسه دامنه: ۲
-                      </div>
-                    </div>
-
-                  </div>
-
-                </td>
-
-                <td class="px-4 py-4">
-                  <span
-                    class="inline-flex items-center gap-1.5 rounded-full bg-arvan-50 px-2.5 py-1 text-xs font-medium text-arvan-700"
-                  >
-                    <span
-                      class="h-1.5 w-1.5 rounded-full bg-arvan-600"
-                    ></span>
-
-                    فعال
-                  </span>
-                </td>
-
-                <td class="px-4 py-4 text-slate-600">
-                  پایه
-                </td>
-
-                <td class="px-4 py-4 text-xs text-slate-500">
-                  دیروز، ۱۸:۲۲
-                </td>
-
-                <td class="px-4 py-4">
-                  <button
-                    type="button"
-                    aria-label="عملیات دامنه"
-                    class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-                  >
-                    <svg
-                      class="h-4 w-4"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                    >
-                      <circle
-                        cx="5"
-                        cy="12"
-                        r="1.3"
-                        fill="currentColor"
-                      />
-
-                      <circle
-                        cx="12"
-                        cy="12"
-                        r="1.3"
-                        fill="currentColor"
-                      />
-
-                      <circle
-                        cx="19"
-                        cy="12"
-                        r="1.3"
-                        fill="currentColor"
-                      />
-                    </svg>
-                  </button>
-                </td>
-
+              <tr class="table-row hover:bg-slate-50/70">
+                <td class="py-3.5 pr-5 text-slate-400">🗑</td>
+                <td class="py-3.5 px-4"><span class="inline-flex items-center rounded-full border border-arvan-100 bg-arvan-50 px-2.5 py-0.5 text-xs font-medium text-arvan-700">فعال</span></td>
+                <td class="py-3.5 px-4 text-slate-600">پایه</td>
+                <td class="py-3.5 px-4 font-medium">tangehurmoz.life</td>
+                <td class="py-3.5 px-4 text-slate-500">۲</td>
               </tr>
-
             </tbody>
-
           </table>
-
         </div>
-
-
-        <!-- Mobile Cards -->
-        <div class="divide-y divide-slate-100 md:hidden">
-
-          <article class="p-4">
-
-            <div class="flex items-start justify-between gap-3">
-
-              <div class="flex min-w-0 items-center gap-3">
-
-                <div
-                  class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600"
-                >
-                  <svg
-                    class="h-4 w-4"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                  >
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="9"
-                      stroke-width="1.7"
-                    />
-
-                    <path
-                      d="M3 12h18M12 3c2.2 2.5 3.3 5.5 3.3 9s-1.1 6.5-3.3 9c-2.2-2.5-3.3-5.5-3.3-9S9.8 5.5 12 3Z"
-                      stroke-width="1.5"
-                    />
-                  </svg>
-                </div>
-
-                <div class="min-w-0">
-                  <h3 class="truncate text-sm font-semibold text-slate-900">
-                    mooshhoshak.life
-                  </h3>
-
-                  <div class="mt-1 flex items-center gap-2">
-
-                    <span
-                      class="inline-flex items-center gap-1 text-[11px] font-medium text-arvan-700"
-                    >
-                      <span
-                        class="h-1.5 w-1.5 rounded-full bg-arvan-600"
-                      ></span>
-
-                      فعال
-                    </span>
-
-                    <span class="text-[11px] text-slate-400">
-                      ·
-                    </span>
-
-                    <span class="text-[11px] text-slate-500">
-                      پایه
-                    </span>
-
-                  </div>
-                </div>
-
-              </div>
-
-              <button
-                type="button"
-                aria-label="عملیات دامنه"
-                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100"
-              >
-                <svg
-                  class="h-4 w-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                >
-                  <circle
-                    cx="5"
-                    cy="12"
-                    r="1.3"
-                    fill="currentColor"
-                  />
-
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="1.3"
-                    fill="currentColor"
-                  />
-
-                  <circle
-                    cx="19"
-                    cy="12"
-                    r="1.3"
-                    fill="currentColor"
-                  />
-                </svg>
-              </button>
-
-            </div>
-
-            <div
-              class="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-3"
-            >
-
-              <div>
-                <div class="text-[10px] text-slate-400">
-                  آخرین بروزرسانی
-                </div>
-
-                <div class="mt-1 text-xs font-medium text-slate-700">
-                  امروز، ۱۲:۴۰
-                </div>
-              </div>
-
-              <div>
-                <div class="text-[10px] text-slate-400">
-                  شناسه
-                </div>
-
-                <div class="mt-1 text-xs font-medium text-slate-700">
-                  ۰۱
-                </div>
-              </div>
-
-            </div>
-
-          </article>
-
-
-          <article class="p-4">
-
-            <div class="flex items-start justify-between gap-3">
-
-              <div class="flex min-w-0 items-center gap-3">
-
-                <div
-                  class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600"
-                >
-                  <svg
-                    class="h-4 w-4"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                  >
-                    <circle
-                      cx="12"
-                      cy="12"
-                      r="9"
-                      stroke-width="1.7"
-                    />
-
-                    <path
-                      d="M3 12h18M12 3c2.2 2.5 3.3 5.5 3.3 9s-1.1 6.5-3.3 9c-2.2-2.5-3.3-5.5-3.3-9S9.8 5.5 12 3Z"
-                      stroke-width="1.5"
-                    />
-                  </svg>
-                </div>
-
-                <div class="min-w-0">
-                  <h3 class="truncate text-sm font-semibold text-slate-900">
-                    tangehurmoz.life
-                  </h3>
-
-                  <div class="mt-1 flex items-center gap-2">
-
-                    <span
-                      class="inline-flex items-center gap-1 text-[11px] font-medium text-arvan-700"
-                    >
-                      <span
-                        class="h-1.5 w-1.5 rounded-full bg-arvan-600"
-                      ></span>
-
-                      فعال
-                    </span>
-
-                    <span class="text-[11px] text-slate-400">
-                      ·
-                    </span>
-
-                    <span class="text-[11px] text-slate-500">
-                      پایه
-                    </span>
-
-                  </div>
-                </div>
-
-              </div>
-
-              <button
-                type="button"
-                aria-label="عملیات دامنه"
-                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100"
-              >
-                <svg
-                  class="h-4 w-4"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                >
-                  <circle
-                    cx="5"
-                    cy="12"
-                    r="1.3"
-                    fill="currentColor"
-                  />
-
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="1.3"
-                    fill="currentColor"
-                  />
-
-                  <circle
-                    cx="19"
-                    cy="12"
-                    r="1.3"
-                    fill="currentColor"
-                  />
-                </svg>
-              </button>
-
-            </div>
-
-            <div
-              class="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-3"
-            >
-
-              <div>
-                <div class="text-[10px] text-slate-400">
-                  آخرین بروزرسانی
-                </div>
-
-                <div class="mt-1 text-xs font-medium text-slate-700">
-                  دیروز، ۱۸:۲۲
-                </div>
-              </div>
-
-              <div>
-                <div class="text-[10px] text-slate-400">
-                  شناسه
-                </div>
-
-                <div class="mt-1 text-xs font-medium text-slate-700">
-                  ۰۲
-                </div>
-              </div>
-
-            </div>
-
-          </article>
-
-        </div>
-
-
-        <!-- Pagination -->
-        <div
-          class="flex flex-col gap-3 border-t border-slate-100 px-4 py-4 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between"
-        >
-
-          <span>
-            نمایش ۲ دامنه
-          </span>
-
-          <div class="flex items-center gap-1">
-
-            <button
-              type="button"
-              disabled
-              class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-300"
-              aria-label="صفحه قبل"
-            >
-              ‹
-            </button>
-
-            <button
-              type="button"
-              class="flex h-8 min-w-8 items-center justify-center rounded-lg bg-slate-900 px-2 text-xs font-medium text-white"
-            >
-              ۱
-            </button>
-
-            <button
-              type="button"
-              disabled
-              class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-300"
-              aria-label="صفحه بعد"
-            >
-              ›
-            </button>
-
-          </div>
-
-        </div>
-
       </section>
-
     </div>
-
   </main>
 
+  <!-- MOBILE NAVIGATION -->
+  <div id="mobileNavigation" class="mobile-navigation fixed inset-0 z-[90] lg:hidden" aria-hidden="true">
+    <div id="mobileNavigationBackdrop" class="mobile-navigation-backdrop absolute inset-0 bg-slate-950/40 backdrop-blur-[2px]"></div>
 
-  <!-- ========================================================= -->
-  <!-- MOBILE DUAL-PANE NAVIGATION -->
-  <!-- ========================================================= -->
+    <div id="mobileNavigationShell" class="mobile-navigation-shell absolute inset-y-0 right-0 flex max-w-full shadow-2xl">
 
-  <section
-    id="mobileNavigation"
-    class="mobile-navigation fixed inset-0 z-[100] lg:hidden"
-    aria-label="ناوبری محصولات"
-    aria-hidden="true"
-  >
-
-    <!-- Backdrop -->
-    <button
-      id="mobileNavigationBackdrop"
-      type="button"
-      aria-label="بستن منو"
-      class="mobile-navigation-backdrop absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]"
-      tabindex="-1"
-    ></button>
-
-
-    <!-- Navigation Shell -->
-    <div
-      id="mobileNavigationShell"
-      class="mobile-navigation-shell absolute inset-y-0 right-0 flex w-full max-w-none overflow-hidden bg-white shadow-2xl"
-    >
-
-      <!-- ===================================================== -->
-      <!-- PARENT PANE — RIGHT -->
-      <!-- ===================================================== -->
-
-      <aside
-        id="mobileParentPane"
-        class="mobile-parent-pane relative z-20 flex shrink-0 flex-col border-l border-slate-200 bg-white"
-        aria-label="محصولات"
-      >
-
-        <!-- Parent Header -->
-        <header
-          class="mobile-parent-pane-header flex h-16 shrink-0 items-center justify-between border-b border-slate-100 px-2.5"
-        >
-
-          <div class="flex min-w-0 items-center gap-2">
-
-            <div
-              class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-950 text-xs font-bold text-white"
-            >
-              ا
-            </div>
-
-            <span
-              class="mobile-parent-label truncate text-xs font-bold text-slate-900"
-            >
-              محصولات
-            </span>
-
-          </div>
-
-          <button
-            id="mobileCloseButton"
-            type="button"
-            aria-label="بستن منوی محصولات"
-            class="mobile-close-button flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
-          >
-            <svg
-              class="h-5 w-5"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-            >
-              <path
-                d="M6 6l12 12M18 6 6 18"
-                stroke-width="1.8"
-                stroke-linecap="round"
-              />
+      <!-- PARENT -->
+      <div id="mobileParentPane" class="mobile-parent-pane flex flex-col border-l border-slate-200 bg-white">
+        <div class="flex h-14 shrink-0 items-center justify-center border-b border-slate-100">
+          <button id="mobileParentToggle" type="button" aria-label="باز و بسته کردن منوی اصلی" aria-expanded="false"
+            class="flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100">
+            <svg id="mobileParentToggleIcon" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M15 6l-6 6 6 6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
           </button>
-
-        </header>
-
-
-        <!-- Parent Navigation -->
-        <div
-          class="mobile-parent-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain p-2"
-        >
-
-          <div
-            class="mb-2 px-1.5 text-[9px] font-semibold text-slate-400"
-          >
-            محصولات ابری
-          </div>
-
-          <nav
-            id="mobileParentNavigation"
-            class="space-y-1"
-            aria-label="انتخاب محصول"
-          ></nav>
-
         </div>
 
+        <div class="mobile-parent-scroll flex-1 overflow-y-auto p-2">
+          <div class="mb-2 px-1 text-[10px] font-semibold text-slate-400">محصولات</div>
+          <nav id="mobileParentNavigation" class="space-y-1" aria-label="محصولات"></nav>
+        </div>
+      </div>
 
-        <!-- Parent Footer -->
-        <footer
-          class="shrink-0 border-t border-slate-100 p-2"
-        >
-
-          <button
-            type="button"
-            class="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-1.5 text-[10px] font-medium text-slate-500 transition hover:bg-slate-50"
-          >
-            <svg
-              class="h-4 w-4 shrink-0"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-            >
-              <circle
-                cx="12"
-                cy="12"
-                r="9"
-                stroke-width="1.7"
-              />
-
-              <path
-                d="M9.8 9a2.3 2.3 0 1 1 3.8 1.73c-.9.72-1.6 1.18-1.6 2.27"
-                stroke-width="1.7"
-                stroke-linecap="round"
-              />
-
-              <circle
-                cx="12"
-                cy="16.5"
-                r=".8"
-                fill="currentColor"
-              />
+      <!-- CHILD -->
+      <div id="mobileChildPane" class="mobile-child-pane flex flex-col border-l border-slate-200 bg-white">
+        <div class="flex h-14 shrink-0 items-center justify-between border-b border-slate-100 px-3">
+          <div class="min-w-0">
+            <div class="text-[11px] text-slate-400">محصول</div>
+            <div id="mobileChildHeaderTitle" class="truncate text-sm font-semibold text-slate-900">شبکه توزیع محتوا</div>
+          </div>
+          <button id="mobileCloseChildButton" type="button" aria-label="بستن منوی محصول"
+            class="mobile-close-button flex items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+            <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M6 6l12 12M18 6 6 18" stroke-width="1.8" stroke-linecap="round"/>
             </svg>
-
-            <span class="mobile-parent-label">
-              پشتیبانی
-            </span>
           </button>
+        </div>
 
-        </footer>
-
-      </aside>
-
-
-      <!-- ===================================================== -->
-      <!-- CHILD PANE — LEFT -->
-      <!-- ===================================================== -->
-
-      <aside
-        id="mobileChildPane"
-        class="mobile-child-pane relative z-10 flex min-w-0 flex-1 flex-col bg-white"
-        aria-label="ناوبری محصول"
-      >
-
-        <!-- Child Header -->
-        <header
-          class="mobile-child-pane-header flex h-16 shrink-0 items-center border-b border-slate-100 px-3"
-        >
-
-          <div class="flex min-w-0 items-center gap-2.5">
-
-            <div
-              id="mobileChildHeaderIcon"
-              class="mobile-product-context-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-700"
-            ></div>
-
+        <div class="border-b border-slate-100 bg-slate-50 p-3">
+          <div class="flex items-center gap-3">
+            <div id="mobileChildHeaderIcon" class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white shadow-sm text-slate-800"></div>
             <div class="min-w-0">
-
-              <div
-                id="mobileChildHeaderTitle"
-                class="truncate text-sm font-bold text-slate-900"
-              >
-                شبکه توزیع محتوا
-              </div>
-
-              <div
-                id="mobileChildHeaderSubtitle"
-                class="mt-0.5 truncate text-[10px] text-slate-400"
-              >
-                Content Delivery Network
-              </div>
-
+              <div id="mobileChildHeaderSubtitle" class="truncate text-xs text-slate-500">Content Delivery Network</div>
+              <div id="mobileChildContextTitle" class="mt-0.5 truncate text-sm font-semibold text-slate-900">دامنه‌های من</div>
             </div>
-
           </div>
-
-        </header>
-
-
-        <!-- Child Context -->
-        <div
-          class="mobile-product-context shrink-0 border-b border-slate-100 px-3 py-3"
-        >
-
-          <div class="flex items-center justify-between gap-2">
-
-            <div class="min-w-0">
-
-              <div
-                class="text-[9px] font-medium uppercase tracking-wide text-slate-400"
-              >
-                بخش فعلی
-              </div>
-
-              <div
-                id="mobileChildContextTitle"
-                class="mt-0.5 truncate text-xs font-semibold text-slate-700"
-              >
-                دامنه‌های من
-              </div>
-
-            </div>
-
-            <span
-              class="shrink-0 rounded-full bg-arvan-50 px-2 py-1 text-[9px] font-medium text-arvan-700"
-            >
-              CDN
-            </span>
-
-          </div>
-
         </div>
 
-
-        <!-- Child Navigation -->
-        <div
-          class="mobile-child-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain p-3"
-        >
-
-          <nav
-            id="mobileChildNavigation"
-            aria-label="منوی محصول"
-            class="space-y-1"
-          ></nav>
-
-        </div>
-
-
-        <!-- Child Footer -->
-        <footer
-          class="shrink-0 border-t border-slate-100 p-2.5"
-        >
-
-          <button
-            type="button"
-            class="flex min-h-11 w-full items-center gap-2 rounded-xl px-3 text-xs font-medium text-slate-500 transition hover:bg-slate-50"
-          >
-            <svg
-              class="h-4 w-4"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-            >
-              <circle
-                cx="12"
-                cy="12"
-                r="9"
-                stroke-width="1.7"
-              />
-
-              <path
-                d="M9.8 9a2.3 2.3 0 1 1 3.8 1.73c-.9.72-1.6 1.18-1.6 2.27"
-                stroke-width="1.7"
-                stroke-linecap="round"
-              />
-
-              <circle
-                cx="12"
-                cy="16.5"
-                r=".8"
-                fill="currentColor"
-              />
-            </svg>
-
-            راهنما و پشتیبانی
-          </button>
-
-        </footer>
-
-      </aside>
-
+        <nav id="mobileChildNavigation" class="mobile-child-scroll flex-1 overflow-y-auto p-3" aria-label="ناوبری محصول"></nav>
+      </div>
     </div>
+  </div>
 
-  </section>
-
-
-  <!-- ========================================================= -->
   <!-- MOBILE BOTTOM NAV -->
-  <!-- ========================================================= -->
-
-  <nav
-    class="fixed inset-x-3 bottom-3 z-50 flex h-16 items-center justify-around rounded-2xl border border-slate-200 bg-white/95 px-2 shadow-xl backdrop-blur-xl lg:hidden"
-    aria-label="ناوبری اصلی"
-  >
-
-    <button
-      type="button"
-      class="flex min-w-[64px] flex-col items-center justify-center gap-1 rounded-xl text-arvan-700"
-    >
-      <svg
-        class="h-5 w-5"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-      >
-        <path
-          d="m4 10 8-6 8 6v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9Z"
-          stroke-width="1.7"
-        />
+  <nav class="fixed inset-x-3 bottom-3 z-50 flex h-16 items-center justify-around rounded-2xl border border-slate-200 bg-white/95 px-2 shadow-xl backdrop-blur-xl lg:hidden" style="padding-bottom: env(safe-area-inset-bottom, 0px);">
+    <button type="button" class="flex min-w-[64px] flex-col items-center justify-center gap-1 rounded-xl text-arvan-700">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path d="m4 10 8-6 8 6v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9Z" stroke-width="1.7"/>
       </svg>
-
-      <span class="text-[10px] font-medium">
-        خانه
-      </span>
+      <span class="text-[10px] font-medium">خانه</span>
     </button>
-
-
-    <button
-      id="mobileBottomProducts"
-      type="button"
-      aria-label="باز کردن محصولات"
-      class="flex min-w-[64px] flex-col items-center justify-center gap-1 rounded-xl text-slate-500"
-    >
-      <svg
-        class="h-5 w-5"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-      >
-        <rect
-          x="4"
-          y="4"
-          width="6"
-          height="6"
-          rx="1"
-          stroke-width="1.7"
-        />
-
-        <rect
-          x="14"
-          y="4"
-          width="6"
-          height="6"
-          rx="1"
-          stroke-width="1.7"
-        />
-
-        <rect
-          x="4"
-          y="14"
-          width="6"
-          height="6"
-          rx="1"
-          stroke-width="1.7"
-        />
-
-        <rect
-          x="14"
-          y="14"
-          width="6"
-          height="6"
-          rx="1"
-          stroke-width="1.7"
-        />
+    <button id="mobileBottomProducts" type="button" class="flex min-w-[64px] flex-col items-center justify-center gap-1 rounded-xl text-slate-500">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <rect x="4" y="4" width="6" height="6" rx="1" stroke-width="1.7"/>
+        <rect x="14" y="4" width="6" height="6" rx="1" stroke-width="1.7"/>
+        <rect x="4" y="14" width="6" height="6" rx="1" stroke-width="1.7"/>
+        <rect x="14" y="14" width="6" height="6" rx="1" stroke-width="1.7"/>
       </svg>
-
-      <span class="text-[10px] font-medium">
-        محصولات
-      </span>
+      <span class="text-[10px] font-medium">محصولات</span>
     </button>
-
-
-    <button
-      type="button"
-      class="flex min-w-[64px] flex-col items-center justify-center gap-1 rounded-xl text-slate-500"
-    >
-      <svg
-        class="h-5 w-5"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-      >
-        <path
-          d="M4 7h16M4 12h16M4 17h16"
-          stroke-width="1.7"
-          stroke-linecap="round"
-        />
+    <button type="button" class="flex min-w-[64px] flex-col items-center justify-center gap-1 rounded-xl text-slate-500">
+      <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path d="M4 7h16M4 12h16M4 17h16" stroke-width="1.7" stroke-linecap="round"/>
       </svg>
-
-      <span class="text-[10px] font-medium">
-        بیشتر
-      </span>
+      <span class="text-[10px] font-medium">بیشتر</span>
     </button>
-
   </nav>
 
-
-  <!-- ========================================================= -->
-  <!-- JAVASCRIPT -->
-  <!-- ========================================================= -->
-
   <script>
-    /*
-     * ===========================================================
-     * PRODUCT DATA
-     * ===========================================================
-     */
-
     const products = {
-      cdn: {
-        title: "شبکه توزیع محتوا",
-        short: "CDN",
-        subtitle: "Content Delivery Network",
-        icon: "cloud",
-        items: [
-          "دامنه‌های من",
-          "جابه‌جایی دامنه",
-          "لیست‌ها",
-          "متریک‌های دامنه",
-          "خرید گواهی‌نامه SSL",
-          "تنظیمات فایروال",
-          "گزارش‌ها",
-          "لاگ تغییرات پنل"
-        ]
-      },
-
-      server: {
-        title: "سرور ابری",
-        short: "Cloud Server",
-        subtitle: "Cloud Compute",
-        icon: "server",
-        items: [
-          "سرورهای من",
-          "ایجاد سرور",
-          "تصاویر",
-          "شبکه‌ها",
-          "حجم‌ها"
-        ]
-      },
-
-      storage: {
-        title: "فضای ذخیره‌سازی",
-        short: "Object Storage",
-        subtitle: "Object Storage",
-        icon: "storage",
-        items: [
-          "باکت‌ها",
-          "ایجاد باکت",
-          "دسترسی‌ها"
-        ]
-      },
-
-      container: {
-        title: "کانتینر ابری",
-        short: "Cloud Container",
-        subtitle: "Container Platform",
-        icon: "container",
-        items: [
-          "کلاسترها",
-          "ایجاد کلاستر"
-        ]
-      },
-
-      video: {
-        title: "پلتفرم ویدیو",
-        short: "Video Platform",
-        subtitle: "Video Platform",
-        icon: "video",
-        items: [
-          "کانال‌ها",
-          "ویدیوها"
-        ]
-      },
-
-      database: {
-        title: "دیتابیس مدیریت‌شده",
-        short: "Managed DB",
-        subtitle: "Managed Database",
-        icon: "database",
-        items: [
-          "اینستنس‌ها",
-          "بک‌آپ‌ها"
-        ]
-      }
+      cdn: { title: "شبکه توزیع محتوا", short: "CDN", subtitle: "Content Delivery Network", icon: "cloud", items: ["دامنه‌های من","جابه‌جایی دامنه","لیست‌ها","متریک‌های دامنه","خرید گواهی‌نامه SSL","تنظیمات فایروال","گزارش‌ها","لاگ تغییرات پنل"] },
+      server: { title: "سرور ابری", short: "Cloud Server", subtitle: "Cloud Server", icon: "server", items: ["سرورهای من","ایجاد سرور","تصاویر","شبکه‌ها","حجم‌ها"] },
+      storage: { title: "فضای ذخیره‌سازی", short: "Object Storage", subtitle: "Object Storage", icon: "storage", items: ["باکت‌ها","ایجاد باکت","دسترسی‌ها"] },
+      container: { title: "کانتینر ابری", short: "Cloud Container", subtitle: "Cloud Container", icon: "container", items: ["کلاسترها","ایجاد کلاستر"] },
+      video: { title: "پلتفرم ویدیو", short: "Video Platform", subtitle: "Video Platform", icon: "video", items: ["کانال‌ها","ویدیوها"] },
+      database: { title: "دیتابیس مدیریت‌شده", short: "Managed DB", subtitle: "Managed Database", icon: "database", items: ["اینستنس‌ها","بک‌آپ‌ها"] }
     };
-
-
-    /*
-     * ===========================================================
-     * ICONS
-     * ===========================================================
-     */
 
     const icons = {
-      cloud: `
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          class="h-5 w-5"
-          aria-hidden="true"
-        >
-          <path
-            d="M3 15a4 4 0 0 0 4 4h9a5 5 0 0 0-.1-10 5 5 0 0 0-9.78 2.1A4 4 0 0 0 3 15Z"
-            stroke-width="1.7"
-            stroke-linecap="round"
-          />
-        </svg>
-      `,
-
-      server: `
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          class="h-5 w-5"
-          aria-hidden="true"
-        >
-          <rect
-            x="3"
-            y="4"
-            width="18"
-            height="6"
-            rx="1.5"
-            stroke-width="1.7"
-          />
-
-          <rect
-            x="3"
-            y="14"
-            width="18"
-            height="6"
-            rx="1.5"
-            stroke-width="1.7"
-          />
-
-          <path
-            d="M7 7h.01M7 17h.01"
-            stroke-width="2.5"
-            stroke-linecap="round"
-          />
-        </svg>
-      `,
-
-      storage: `
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          class="h-5 w-5"
-          aria-hidden="true"
-        >
-          <path
-            d="M7 16a4 4 0 0 1-.88-7.9A5 5 0 0 1 15.9 6L16 6a5 5 0 0 1 1 9.9"
-            stroke-width="1.7"
-            stroke-linecap="round"
-          />
-
-          <path
-            d="m12 13-3 3m3-3 3 3m-3-3v8"
-            stroke-width="1.7"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
-      `,
-
-      container: `
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          class="h-5 w-5"
-          aria-hidden="true"
-        >
-          <path
-            d="m12 3 8 4-8 4-8-4 8-4Z"
-            stroke-width="1.7"
-          />
-
-          <path
-            d="m4 12 8 4 8-4M4 17l8 4 8-4"
-            stroke-width="1.7"
-          />
-        </svg>
-      `,
-
-      video: `
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          class="h-5 w-5"
-          aria-hidden="true"
-        >
-          <rect
-            x="3"
-            y="5"
-            width="12"
-            height="14"
-            rx="2"
-            stroke-width="1.7"
-          />
-
-          <path
-            d="m15 10 5-3v10l-5-3v-4Z"
-            stroke-width="1.7"
-            stroke-linejoin="round"
-          />
-        </svg>
-      `,
-
-      database: `
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          class="h-5 w-5"
-          aria-hidden="true"
-        >
-          <ellipse
-            cx="12"
-            cy="5"
-            rx="8"
-            ry="3"
-            stroke-width="1.7"
-          />
-
-          <path
-            d="M4 5v7c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12v7c0 1.7 3.6 3 8 3s8-1.3 8-3v-7"
-            stroke-width="1.7"
-          />
-        </svg>
-      `
+      cloud: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="h-5 w-5"><path d="M3 15a4 4 0 0 0 4 4h9a5 5 0 0 0-.1-10 5 5 0 0 0-9.78 2.1A4 4 0 0 0 3 15Z" stroke-width="1.7" stroke-linecap="round"/></svg>`,
+      server: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="h-5 w-5"><rect x="3" y="4" width="18" height="6" rx="1.5" stroke-width="1.7"/><rect x="3" y="14" width="18" height="6" rx="1.5" stroke-width="1.7"/><path d="M7 7h.01M7 17h.01" stroke-width="2.5" stroke-linecap="round"/></svg>`,
+      storage: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="h-5 w-5"><path d="M7 16a4 4 0 0 1-.88-7.9A5 5 0 0 1 15.9 6L16 6a5 5 0 0 1 1 9.9" stroke-width="1.7" stroke-linecap="round"/><path d="m12 13-3 3m3-3 3 3m-3-3v8" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`,
+      container: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="h-5 w-5"><path d="m12 3 8 4-8 4-8-4 8-4Z" stroke-width="1.7"/><path d="m4 12 8 4 8-4M4 17l8 4 8-4" stroke-width="1.7"/></svg>`,
+      video: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="h-5 w-5"><rect x="3" y="5" width="12" height="14" rx="2" stroke-width="1.7"/><path d="m15 10 5-3v10l-5-3v-4Z" stroke-width="1.7" stroke-linejoin="round"/></svg>`,
+      database: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="h-5 w-5"><ellipse cx="12" cy="5" rx="8" ry="3" stroke-width="1.7"/><path d="M4 5v7c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12v7c0 1.7 3.6 3 8 3s8-1.3 8-3v-7" stroke-width="1.7"/></svg>`
     };
-
-
-    /*
-     * ===========================================================
-     * STATE
-     * ===========================================================
-     */
 
     let currentProduct = "cdn";
     let currentChildIndex = 0;
-
     let railExpanded = false;
     let productOpen = true;
     let mobileNavigationOpen = false;
-
-
-    /*
-     * ===========================================================
-     * DOM
-     * ===========================================================
-     */
+    let mobileChildOpen = true;
+    let mobileParentExpanded = false;
 
     const rail = document.getElementById("globalRail");
     const productSidebar = document.getElementById("productSidebar");
     const mainContent = document.getElementById("mainContent");
+    const mobileNavigation = document.getElementById("mobileNavigation");
+    const mobileParentPane = document.getElementById("mobileParentPane");
+    const mobileChildPane = document.getElementById("mobileChildPane");
+    const mobileParentNavigation = document.getElementById("mobileParentNavigation");
+    const mobileChildNavigation = document.getElementById("mobileChildNavigation");
 
-    const mobileNavigation =
-      document.getElementById("mobileNavigation");
-
-    const mobileNavigationShell =
-      document.getElementById("mobileNavigationShell");
-
-    const mobileParentNavigation =
-      document.getElementById("mobileParentNavigation");
-
-    const mobileChildNavigation =
-      document.getElementById("mobileChildNavigation");
-
-
-    /*
-     * ===========================================================
-     * ICON HELPER
-     * ===========================================================
-     */
-
-    function getIcon(iconName, className = "") {
-      const icon = icons[iconName];
-
-      if (!icon) {
-        return "";
-      }
-
-      if (!className) {
-        return icon;
-      }
-
-      return icon.replace(
-        'class="h-5 w-5"',
-        `class="h-5 w-5 ${className}"`
-      );
-    }
-
-
-    /*
-     * ===========================================================
-     * DESKTOP PRODUCT RAIL
-     * ===========================================================
-     */
+    function getIcon(name) { return icons[name] || ""; }
 
     function renderDesktopProducts() {
-      const container =
-        document.getElementById("railProducts");
-
-      const html = Object.entries(products)
-        .map(([key, product]) => {
-          const active = key === currentProduct;
-
-          return `
-            <button
-              type="button"
-              data-product="${key}"
-              aria-current="${active ? "page" : "false"}"
-              aria-label="${product.title}"
-              class="desktop-product-trigger group relative flex h-11 w-full items-center gap-3 rounded-xl px-2.5 text-right transition
-                ${
-                  active
-                    ? "bg-arvan-50 text-arvan-700"
-                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
-                }"
-            >
-
-              ${
-                active
-                  ? `
-                    <span
-                      class="absolute right-0 top-1/2 h-6 w-0.5 -translate-y-1/2 rounded-full bg-arvan-600"
-                    ></span>
-                  `
-                  : ""
-              }
-
-              <span
-                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-              >
-                ${getIcon(product.icon)}
-              </span>
-
-              <span
-                class="desktop-product-label whitespace-nowrap text-sm font-medium opacity-0 transition-opacity"
-              >
-                ${product.title}
-              </span>
-
-            </button>
-          `;
-        })
-        .join("");
-
-      container.innerHTML = html;
-
-      container
-        .querySelectorAll(".desktop-product-trigger")
-        .forEach(button => {
-          button.addEventListener("click", () => {
-            const key = button.dataset.product;
-
-            if (!key) {
-              return;
-            }
-
-            setProduct(key);
-          });
-        });
-    }
-
-
-    /*
-     * ===========================================================
-     * DESKTOP PRODUCT NAVIGATION
-     * ===========================================================
-     */
-
-    function renderDesktopProductNavigation() {
-      const data = products[currentProduct];
-      const container =
-        document.getElementById("productNavigation");
-
-      const html = data.items
-        .map((item, index) => {
-          const active = index === currentChildIndex;
-
-          return `
-            <a
-              href="#"
-              data-child-index="${index}"
-              aria-current="${active ? "page" : "false"}"
-              class="desktop-child-trigger group relative flex min-h-10 items-center rounded-xl px-3 text-sm transition
-                ${
-                  active
-                    ? "bg-arvan-50 font-semibold text-arvan-700"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                }"
-            >
-
-              ${
-                active
-                  ? `
-                    <span
-                      class="absolute right-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-arvan-600"
-                    ></span>
-                  `
-                  : ""
-              }
-
-              <span class="truncate">
-                ${item}
-              </span>
-
-              ${
-                active
-                  ? `
-                    <span
-                      class="mr-auto h-1.5 w-1.5 shrink-0 rounded-full bg-arvan-600"
-                    ></span>
-                  `
-                  : ""
-              }
-
-            </a>
-          `;
-        })
-        .join("");
-
-      container.innerHTML = html;
-
-      container
-        .querySelectorAll(".desktop-child-trigger")
-        .forEach(link => {
-          link.addEventListener("click", event => {
-            event.preventDefault();
-
-            const index =
-              Number(link.dataset.childIndex);
-
-            if (Number.isNaN(index)) {
-              return;
-            }
-
-            selectChild(index);
-          });
-        });
-    }
-
-
-    /*
-     * ===========================================================
-     * MOBILE PARENT NAVIGATION
-     * ===========================================================
-     */
-
-    function renderMobileParents() {
-      const html = Object.entries(products)
-        .map(([key, product]) => {
-          const active = key === currentProduct;
-
-          return `
-            <button
-              type="button"
-              data-mobile-product="${key}"
-              aria-current="${active ? "page" : "false"}"
-              class="mobile-parent-item relative flex w-full items-center gap-2 rounded-xl px-1.5 py-1.5 text-right transition
-                ${
-                  active
-                    ? "is-active"
-                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
-                }"
-            >
-
-              <span
-                class="mobile-parent-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-xl
-                  ${
-                    active
-                      ? "bg-arvan-100 text-arvan-700"
-                      : "bg-slate-50 text-slate-500"
-                  }"
-              >
-                ${getIcon(product.icon)}
-              </span>
-
-              <span
-                class="mobile-parent-label min-w-0 truncate text-[11px] font-medium leading-4"
-              >
-                ${product.title}
-              </span>
-
-            </button>
-          `;
-        })
-        .join("");
-
-      mobileParentNavigation.innerHTML = html;
-
-      mobileParentNavigation
-        .querySelectorAll("[data-mobile-product]")
-        .forEach(button => {
-          button.addEventListener("click", () => {
-            const key =
-              button.dataset.mobileProduct;
-
-            if (!key) {
-              return;
-            }
-
-            selectMobileProduct(key);
-          });
-        });
-    }
-
-
-    /*
-     * ===========================================================
-     * MOBILE CHILD NAVIGATION
-     * ===========================================================
-     */
-
-    function renderMobileChildren() {
-      const data = products[currentProduct];
-
-      const html = data.items
-        .map((item, index) => {
-          const active =
-            index === currentChildIndex;
-
-          return `
-            <a
-              href="#"
-              data-mobile-child="${index}"
-              aria-current="${active ? "page" : "false"}"
-              class="mobile-child-item relative flex w-full items-center rounded-xl px-3 text-xs transition
-                ${
-                  active
-                    ? "is-active"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                }"
-            >
-
-              <span class="truncate">
-                ${item}
-              </span>
-
-              ${
-                active
-                  ? `
-                    <span
-                      class="mr-auto h-1.5 w-1.5 shrink-0 rounded-full bg-arvan-600"
-                    ></span>
-                  `
-                  : ""
-              }
-
-            </a>
-          `;
-        })
-        .join("");
-
-      mobileChildNavigation.innerHTML = html;
-
-      mobileChildNavigation
-        .querySelectorAll("[data-mobile-child]")
-        .forEach(link => {
-          link.addEventListener("click", event => {
-            event.preventDefault();
-
-            const index =
-              Number(link.dataset.mobileChild);
-
-            if (Number.isNaN(index)) {
-              return;
-            }
-
-            selectChild(index);
-          });
-        });
-    }
-
-
-    /*
-     * ===========================================================
-     * UPDATE PRODUCT CONTEXT
-     * ===========================================================
-     */
-
-    function updateProductContext() {
-      const data = products[currentProduct];
-
-      document.getElementById(
-        "productTitleDesktop"
-      ).textContent = data.title;
-
-      document.getElementById(
-        "desktopProductShort"
-      ).textContent = data.short;
-
-      document.getElementById(
-        "desktopProductSubtitle"
-      ).textContent = data.subtitle;
-
-      document.getElementById(
-        "desktopProductIcon"
-      ).innerHTML = getIcon(data.icon);
-
-      document.getElementById(
-        "mobileChildHeaderTitle"
-      ).textContent = data.title;
-
-      document.getElementById(
-        "mobileChildHeaderSubtitle"
-      ).textContent = data.subtitle;
-
-      document.getElementById(
-        "mobileChildHeaderIcon"
-      ).innerHTML = getIcon(data.icon);
-
-      document.getElementById(
-        "mobileChildContextTitle"
-      ).textContent =
-        data.items[currentChildIndex] || data.items[0];
-    }
-
-
-    /*
-     * ===========================================================
-     * PRODUCT SELECTION
-     * ===========================================================
-     */
-
-    function setProduct(key) {
-      if (!products[key]) {
-        return;
-      }
-
-      currentProduct = key;
-      currentChildIndex = 0;
-
-      updateProductContext();
-      renderDesktopProducts();
-      renderDesktopProductNavigation();
-      renderMobileParents();
-      renderMobileChildren();
-
-      if (!productOpen) {
-        openProduct();
-      }
-    }
-
-
-    /*
-     * ===========================================================
-     * MOBILE PRODUCT SELECTION
-     *
-     * Important:
-     * Parent pane DOES NOT disappear.
-     * Child pane updates beside it.
-     * ===========================================================
-     */
-
-    function selectMobileProduct(key) {
-      if (!products[key]) {
-        return;
-      }
-
-      currentProduct = key;
-      currentChildIndex = 0;
-
-      updateProductContext();
-      renderDesktopProducts();
-      renderDesktopProductNavigation();
-      renderMobileParents();
-      renderMobileChildren();
-
-      focusFirstMobileChild();
-    }
-
-
-    /*
-     * ===========================================================
-     * CHILD SELECTION
-     * ===========================================================
-     */
-
-    function selectChild(index) {
-      const data = products[currentProduct];
-
-      if (!data.items[index]) {
-        return;
-      }
-
-      currentChildIndex = index;
-
-      updateProductContext();
-      renderDesktopProductNavigation();
-      renderMobileChildren();
-    }
-
-
-    /*
-     * ===========================================================
-     * DESKTOP LAYOUT
-     * ===========================================================
-     */
-
-    function updateMainLayout() {
-      mainContent.classList.toggle(
-        "rail-wide",
-        railExpanded
-      );
-
-      mainContent.classList.toggle(
-        "product-closed",
-        !productOpen
-      );
-
-      rail.classList.toggle(
-        "rail-expanded",
-        railExpanded
-      );
-
-      document
-        .querySelectorAll(
-          ".desktop-product-label, .rail-label"
-        )
-        .forEach(label => {
-          label.classList.toggle(
-            "opacity-0",
-            !railExpanded
-          );
-        });
-
-      document
-        .getElementById("railToggle")
-        .setAttribute(
-          "aria-expanded",
-          String(railExpanded)
-        );
-    }
-
-
-    /*
-     * ===========================================================
-     * DESKTOP RAIL
-     * ===========================================================
-     */
-
-    function toggleRail() {
-      railExpanded = !railExpanded;
-
-      updateMainLayout();
-    }
-
-
-    /*
-     * ===========================================================
-     * DESKTOP PRODUCT SIDEBAR
-     * ===========================================================
-     */
-
-    function openProduct() {
-      productOpen = true;
-
-      productSidebar.classList.remove("closed");
-
-      updateMainLayout();
-    }
-
-
-    function closeProduct() {
-      productOpen = false;
-
-      productSidebar.classList.add("closed");
-
-      updateMainLayout();
-    }
-
-
-    /*
-     * ===========================================================
-     * MOBILE NAVIGATION
-     * ===========================================================
-     */
-
-    function openMobileNavigation() {
-      mobileNavigationOpen = true;
-
-      mobileNavigation.classList.add("is-open");
-      mobileNavigation.setAttribute(
-        "aria-hidden",
-        "false"
-      );
-
-      document.body.classList.add(
-        "mobile-nav-open"
-      );
-
-      document
-        .getElementById("mobileMenuButton")
-        .setAttribute(
-          "aria-expanded",
-          "true"
-        );
-
-      requestAnimationFrame(() => {
-        focusFirstMobileChild();
+      const container = document.getElementById("railProducts");
+      container.innerHTML = Object.entries(products).map(([key, product]) => {
+        const active = key === currentProduct;
+        return `
+          <button type="button" data-product="${key}" aria-current="${active ? "page" : "false"}"
+            class="desktop-product-trigger group relative flex h-11 w-full items-center gap-3 rounded-xl px-2.5 text-right transition
+              ${active ? "bg-arvan-50 text-arvan-700" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"}">
+            ${active ? `<span class="absolute right-0 top-1/2 h-6 w-0.5 -translate-y-1/2 rounded-full bg-arvan-600"></span>` : ""}
+            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">${getIcon(product.icon)}</span>
+            <span class="desktop-product-label whitespace-nowrap text-sm font-medium opacity-0 transition-opacity">${product.title}</span>
+          </button>`;
+      }).join("");
+      container.querySelectorAll(".desktop-product-trigger").forEach(btn => {
+        btn.addEventListener("click", () => setProduct(btn.dataset.product));
       });
     }
 
+    function renderDesktopProductNavigation() {
+      const data = products[currentProduct];
+      const container = document.getElementById("productNavigation");
+      container.innerHTML = data.items.map((item, index) => {
+        const active = index === currentChildIndex;
+        return `
+          <a href="#" data-child-index="${index}" aria-current="${active ? "page" : "false"}"
+            class="desktop-child-trigger group relative flex min-h-10 items-center rounded-xl px-3 text-sm transition
+              ${active ? "bg-arvan-50 font-semibold text-arvan-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}">
+            ${active ? `<span class="absolute right-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-arvan-600"></span>` : ""}
+            <span class="truncate">${item}</span>
+            ${active ? `<span class="mr-auto h-1.5 w-1.5 shrink-0 rounded-full bg-arvan-600"></span>` : ""}
+          </a>`;
+      }).join("");
+      container.querySelectorAll(".desktop-child-trigger").forEach(link => {
+        link.addEventListener("click", e => {
+          e.preventDefault();
+          selectChild(Number(link.dataset.childIndex));
+        });
+      });
+    }
+
+    function renderMobileParents() {
+      mobileParentNavigation.innerHTML = Object.entries(products).map(([key, product]) => {
+        const active = key === currentProduct;
+        return `
+          <button type="button" data-mobile-product="${key}" aria-current="${active ? "page" : "false"}"
+            class="mobile-parent-item relative flex w-full items-center gap-2 rounded-xl px-1.5 py-1.5 text-right transition
+              ${active ? "is-active" : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"}">
+            <span class="mobile-parent-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-xl
+              ${active ? "bg-arvan-100 text-arvan-700" : "bg-slate-50 text-slate-500"}">
+              ${getIcon(product.icon)}
+            </span>
+            <span class="mobile-parent-label min-w-0 truncate text-[11px] font-medium leading-4">${product.title}</span>
+          </button>`;
+      }).join("");
+      mobileParentNavigation.querySelectorAll("[data-mobile-product]").forEach(btn => {
+        btn.addEventListener("click", () => selectMobileProduct(btn.dataset.mobileProduct));
+      });
+    }
+
+    function renderMobileChildren() {
+      const data = products[currentProduct];
+      mobileChildNavigation.innerHTML = data.items.map((item, index) => {
+        const active = index === currentChildIndex;
+        return `
+          <a href="#" data-mobile-child="${index}" aria-current="${active ? "page" : "false"}"
+            class="mobile-child-item relative flex w-full items-center rounded-xl px-3 text-xs transition
+              ${active ? "is-active" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"}">
+            <span class="truncate">${item}</span>
+            ${active ? `<span class="mr-auto h-1.5 w-1.5 shrink-0 rounded-full bg-arvan-600"></span>` : ""}
+          </a>`;
+      }).join("");
+      mobileChildNavigation.querySelectorAll("[data-mobile-child]").forEach(link => {
+        link.addEventListener("click", e => {
+          e.preventDefault();
+          selectChild(Number(link.dataset.mobileChild));
+        });
+      });
+    }
+
+    function updateProductContext() {
+      const data = products[currentProduct];
+      document.getElementById("productTitleDesktop").textContent = data.title;
+      document.getElementById("desktopProductShort").textContent = data.short;
+      document.getElementById("desktopProductSubtitle").textContent = data.subtitle;
+      document.getElementById("desktopProductIcon").innerHTML = getIcon(data.icon);
+      document.getElementById("mobileChildHeaderTitle").textContent = data.title;
+      document.getElementById("mobileChildHeaderSubtitle").textContent = data.subtitle;
+      document.getElementById("mobileChildHeaderIcon").innerHTML = getIcon(data.icon);
+      document.getElementById("mobileChildContextTitle").textContent = data.items[currentChildIndex] || data.items[0];
+    }
+
+    function setProduct(key) {
+      if (!products[key]) return;
+      currentProduct = key;
+      currentChildIndex = 0;
+      updateProductContext();
+      renderDesktopProducts();
+      renderDesktopProductNavigation();
+      renderMobileParents();
+      renderMobileChildren();
+      if (!productOpen) openProduct();
+    }
+
+    function selectMobileProduct(key) {
+      if (!products[key]) return;
+      currentProduct = key;
+      currentChildIndex = 0;
+      updateProductContext();
+      renderDesktopProducts();
+      renderDesktopProductNavigation();
+      renderMobileParents();
+      renderMobileChildren();
+      openMobileChild();
+    }
+
+    function selectChild(index) {
+      const data = products[currentProduct];
+      if (!data.items[index]) return;
+      currentChildIndex = index;
+      updateProductContext();
+      renderDesktopProductNavigation();
+      renderMobileChildren();
+    }
+
+    function updateMainLayout() {
+      mainContent.classList.toggle("rail-wide", railExpanded);
+      mainContent.classList.toggle("product-closed", !productOpen);
+      rail.classList.toggle("rail-expanded", railExpanded);
+      document.querySelectorAll(".desktop-product-label, .rail-label").forEach(label => {
+        label.classList.toggle("opacity-0", !railExpanded);
+      });
+      const icon = document.getElementById("railToggleIcon");
+      if (railExpanded) {
+        icon.innerHTML = `<path d="M9 6l6 6-6 6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`;
+      } else {
+        icon.innerHTML = `<path d="M15 6l-6 6 6 6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`;
+      }
+      document.getElementById("railToggle").setAttribute("aria-expanded", String(railExpanded));
+    }
+
+    function toggleRail() {
+      railExpanded = !railExpanded;
+      updateMainLayout();
+    }
+
+    function openProduct() {
+      productOpen = true;
+      productSidebar.classList.remove("closed");
+      updateMainLayout();
+    }
+
+    function closeProduct() {
+      productOpen = false;
+      productSidebar.classList.add("closed");
+      updateMainLayout();
+    }
+
+    function openMobileNavigation() {
+      mobileNavigationOpen = true;
+      mobileChildOpen = true;
+      mobileNavigation.classList.add("is-open");
+      mobileNavigation.setAttribute("aria-hidden", "false");
+      mobileChildPane.classList.remove("is-closed");
+      document.body.classList.add("mobile-nav-open");
+      document.getElementById("mobileMenuButton").setAttribute("aria-expanded", "true");
+    }
 
     function closeMobileNavigation() {
       mobileNavigationOpen = false;
-
+      mobileChildOpen = false;
+      mobileParentExpanded = false;
+      mobileParentPane.classList.remove("is-expanded");
+      updateMobileParentIcon();
       mobileNavigation.classList.remove("is-open");
-      mobileNavigation.setAttribute(
-        "aria-hidden",
-        "true"
-      );
-
-      document.body.classList.remove(
-        "mobile-nav-open"
-      );
-
-      document
-        .getElementById("mobileMenuButton")
-        .setAttribute(
-          "aria-expanded",
-          "false"
-        );
-
-      document
-        .getElementById("mobileMenuButton")
-        .focus();
+      mobileNavigation.setAttribute("aria-hidden", "true");
+      mobileChildPane.classList.add("is-closed");
+      document.body.classList.remove("mobile-nav-open");
+      document.getElementById("mobileMenuButton").setAttribute("aria-expanded", "false");
+      document.getElementById("mobileMenuButton").focus();
     }
 
+    function openMobileChild() {
+      mobileChildOpen = true;
+      mobileChildPane.classList.remove("is-closed");
+    }
 
-    /*
-     * ===========================================================
-     * MOBILE CHILD FOCUS
-     * ===========================================================
-     */
+    function closeMobileChild() {
+      mobileChildOpen = false;
+      mobileChildPane.classList.add("is-closed");
+    }
 
-    function focusFirstMobileChild() {
-      if (!mobileNavigationOpen) {
+    function toggleMobileParent() {
+      mobileParentExpanded = !mobileParentExpanded;
+      mobileParentPane.classList.toggle("is-expanded", mobileParentExpanded);
+      updateMobileParentIcon();
+      document.getElementById("mobileParentToggle").setAttribute("aria-expanded", String(mobileParentExpanded));
+    }
+
+    function updateMobileParentIcon() {
+      const icon = document.getElementById("mobileParentToggleIcon");
+      if (mobileParentExpanded) {
+        icon.innerHTML = `<path d="M9 6l6 6-6 6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`;
+      } else {
+        icon.innerHTML = `<path d="M15 6l-6 6 6 6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>`;
+      }
+    }
+
+    document.getElementById("railToggle").addEventListener("click", toggleRail);
+    document.getElementById("closeProductSidebar").addEventListener("click", closeProduct);
+    document.getElementById("mobileMenuButton").addEventListener("click", openMobileNavigation);
+    document.getElementById("mobileBottomProducts").addEventListener("click", openMobileNavigation);
+    document.getElementById("mobileNavigationBackdrop").addEventListener("click", closeMobileNavigation);
+    document.getElementById("mobileCloseChildButton").addEventListener("click", closeMobileChild);
+    document.getElementById("mobileParentToggle").addEventListener("click", toggleMobileParent);
+
+    document.addEventListener("keydown", event => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "b") {
+        event.preventDefault();
+        if (window.innerWidth >= 1024) toggleRail();
         return;
       }
-
-      const firstChild =
-        mobileChildNavigation.querySelector(
-          "[data-mobile-child]"
-        );
-
-      if (firstChild) {
-        firstChild.focus();
-      }
-    }
-
-
-    /*
-     * ===========================================================
-     * MOBILE EVENTS
-     * ===========================================================
-     */
-
-    document
-      .getElementById("railToggle")
-      .addEventListener(
-        "click",
-        toggleRail
-      );
-
-
-    document
-      .getElementById("closeProductSidebar")
-      .addEventListener(
-        "click",
-        closeProduct
-      );
-
-
-    document
-      .getElementById("mobileMenuButton")
-      .addEventListener(
-        "click",
-        openMobileNavigation
-      );
-
-
-    document
-      .getElementById("mobileBottomProducts")
-      .addEventListener(
-        "click",
-        openMobileNavigation
-      );
-
-
-    document
-      .getElementById("mobileCloseButton")
-      .addEventListener(
-        "click",
-        closeMobileNavigation
-      );
-
-
-    document
-      .getElementById("mobileNavigationBackdrop")
-      .addEventListener(
-        "click",
-        closeMobileNavigation
-      );
-
-
-    /*
-     * ===========================================================
-     * KEYBOARD
-     * ===========================================================
-     */
-
-    document.addEventListener(
-      "keydown",
-      event => {
-
-        /*
-         * shadcn-style sidebar shortcut.
-         */
-        if (
-          (event.ctrlKey || event.metaKey) &&
-          event.key.toLowerCase() === "b"
-        ) {
-          event.preventDefault();
-
-          if (window.innerWidth >= 1024) {
-            toggleRail();
-          }
-
+      if (event.key === "Escape") {
+        if (window.innerWidth < 1024 && mobileNavigationOpen) {
+          if (mobileChildOpen) closeMobileChild();
+          else closeMobileNavigation();
           return;
         }
-
-
-        /*
-         * Close mobile navigation.
-         */
-        if (event.key === "Escape") {
-
-          if (
-            window.innerWidth < 1024 &&
-            mobileNavigationOpen
-          ) {
-            closeMobileNavigation();
-            return;
-          }
-
-
-          if (
-            window.innerWidth >= 1024 &&
-            productOpen
-          ) {
-            closeProduct();
-          }
-        }
+        if (window.innerWidth >= 1024 && productOpen) closeProduct();
       }
-    );
+    });
 
-
-    /*
-     * ===========================================================
-     * MOBILE KEYBOARD PRODUCT NAVIGATION
-     * ===========================================================
-     */
-
-    mobileParentNavigation.addEventListener(
-      "keydown",
-      event => {
-
-        if (
-          event.key !== "ArrowDown" &&
-          event.key !== "ArrowUp"
-        ) {
-          return;
-        }
-
-        const items = [
-          ...mobileParentNavigation.querySelectorAll(
-            "[data-mobile-product]"
-          )
-        ];
-
-        const current =
-          items.indexOf(document.activeElement);
-
-        if (current === -1) {
-          return;
-        }
-
-        event.preventDefault();
-
-        const direction =
-          event.key === "ArrowDown" ? 1 : -1;
-
-        const next =
-          (current + direction + items.length) %
-          items.length;
-
-        items[next].focus();
-      }
-    );
-
-
-    mobileChildNavigation.addEventListener(
-      "keydown",
-      event => {
-
-        if (
-          event.key !== "ArrowDown" &&
-          event.key !== "ArrowUp"
-        ) {
-          return;
-        }
-
-        const items = [
-          ...mobileChildNavigation.querySelectorAll(
-            "[data-mobile-child]"
-          )
-        ];
-
-        const current =
-          items.indexOf(document.activeElement);
-
-        if (current === -1) {
-          return;
-        }
-
-        event.preventDefault();
-
-        const direction =
-          event.key === "ArrowDown" ? 1 : -1;
-
-        const next =
-          (current + direction + items.length) %
-          items.length;
-
-        items[next].focus();
-      }
-    );
-
-
-    /*
-     * ===========================================================
-     * VIEWPORT SAFETY
-     * ===========================================================
-     */
-
-    window.addEventListener(
-      "resize",
-      () => {
-
-        if (
-          window.innerWidth >= 1024 &&
-          mobileNavigationOpen
-        ) {
-          closeMobileNavigation();
-        }
-      }
-    );
-
-
-    /*
-     * ===========================================================
-     * INITIAL RENDER
-     * ===========================================================
-     */
+    window.addEventListener("resize", () => {
+      if (window.innerWidth >= 1024 && mobileNavigationOpen) closeMobileNavigation();
+    });
 
     updateProductContext();
-
     renderDesktopProducts();
     renderDesktopProductNavigation();
-
     renderMobileParents();
     renderMobileChildren();
-
     updateMainLayout();
-
+    updateMobileParentIcon();
   </script>
-
 </body>
 </html>

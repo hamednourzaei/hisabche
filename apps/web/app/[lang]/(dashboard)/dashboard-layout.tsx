@@ -91,6 +91,8 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
    * the page, because the layout renders above the page and cannot read it.
    */
   const isFullscreenWorkflow = /\/invoices\/new(\/|$)/.test(pathname ?? '')
+  // The signed-in person, for the header identity block and the account menu.
+  const user = useAuthStore((s) => s.user)
   const isDark = useThemeStore((s) => s.isDark)
   const toggle = useThemeStore((s) => s.toggle)
   const [optimisticPath, setOptimisticPath] = useState<string | null>(null)
@@ -264,6 +266,12 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
         <DashboardHeader
           variant="dashboard"
           appName={t('app.name')}
+          appSubtitle={t('nav.adminPanel')}
+          // Real values or nothing. The header renders no control at all for a
+          // business name it does not have, rather than showing a placeholder.
+          organizationName={user?.businessName || undefined}
+          userName={user?.fullName || undefined}
+          userEmail={user?.email || undefined}
           lastSyncedAt={lastSyncedAt.current}
           isOnline={true}
           isSyncing={false}

@@ -1105,7 +1105,11 @@
     "customer_list": "Customer list",
     "customer_list_description": "Search, sort and page through customers",
     "product_list": "Product list",
-    "product_list_description": "Search, sort and page through products"
+    "product_list_description": "Search, sort and page through products",
+    "adminPanel": "Admin panel",
+    "organization": "Organization:",
+    "teamMembers": "Team members",
+    "account": "Account"
   },
   "dateRange": {
     "today": "Today",
@@ -2675,7 +2679,8 @@
   },
   "action": {
     "clear": "Clear",
-    "reload": "Reload the page"
+    "reload": "Reload the page",
+    "back": "Back"
   },
   "unit": {
     "piece": "pcs",
@@ -3918,5 +3923,18 @@
     "saleDefault": "Default for sales",
     "title": "Units for this product",
     "unit": "Unit"
+  },
+  "team": {
+    "hasAccessTitle": "Should this person be able to sign in?",
+    "hasAccessHint": "Turning this on creates an account, and this person can sign in to Hisabche with the email and password you enter.",
+    "accessEmail": "Sign-in email",
+    "accessPassword": "Password",
+    "accessPasswordHint": "At least 8 characters.",
+    "accessRole": "Access level",
+    "roleViewer": "View only",
+    "roleMember": "Staff",
+    "roleAdmin": "Manager",
+    "accountFailed": "The employee was saved, but the account could not be created",
+    "accountNeedsWorkspace": "The employee was saved, but no account was created: no workspace was found."
   }
 }

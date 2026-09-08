@@ -60,7 +60,17 @@ export function useExchangeRates(currency?: string) {
   return useQuery({
     queryKey: rateKeys.list(currency),
     queryFn: async (): Promise<RateQuote[]> => {
-      const { data } = await apiClient.get('/currency/rates', {
+      // ⚠️ `/finance/currency/rates`, NOT `/currency/rates`.
+      //
+      // These handlers live in `finance-ops.routes.ts`, which
+      // `backend/src/index.ts` registers with `{ prefix: '/api/finance' }`.
+      // Both calls here were missing that segment, so every one of them 404ed
+      // in production — silently, because the query returns `[]` on failure
+      // and «no rates yet» looks exactly like «the endpoint does not exist».
+      //
+      // Every other finance hook in this directory already writes the prefix;
+      // see `assets.ts` and `bank.ts`.
+      const { data } = await apiClient.get('/finance/currency/rates', {
         params: currency ? { currency } : {},
       })
       return (data as RateQuote[]) ?? []
@@ -78,7 +88,8 @@ export function useSetExchangeRate() {
 
   return useMutation({
     mutationFn: async (input: { currency: string; rate: number; onDate: string }) => {
-      const { data } = await apiClient.put('/currency/rates', input)
+      // Same missing prefix as the read above — saving a rate 404ed too.
+      const { data } = await apiClient.put('/finance/currency/rates', input)
       return data as RateQuote
     },
     onSuccess: () => {

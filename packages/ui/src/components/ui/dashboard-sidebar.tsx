@@ -1,7 +1,7 @@
 'use client'
 
-import { memo, useState, useRef, useEffect, useCallback, useId } from 'react'
-import { ChevronDown, PanelLeft } from 'lucide-react'
+import { memo, useState, useRef, useEffect, useCallback, useId, useMemo } from 'react'
+import { ChevronLeft, LayoutGrid, X } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import type { ElementType, ReactElement } from 'react'
 import { useAuthStore } from '@hisabche/store'
@@ -201,8 +201,14 @@ ItemIcon.displayName = 'ItemIcon'
 /** Where the expanded/collapsed choice is remembered. */
 export const SIDEBAR_STORAGE_KEY = 'hisabche.sidebar.state'
 
-const SIDEBAR_WIDTH_EXPANDED = 240
-const SIDEBAR_WIDTH_COLLAPSED = 72
+/** Rail: icons only. Expanded, it carries the domain names too. */
+const RAIL_WIDTH = 68
+const RAIL_WIDTH_EXPANDED = 220
+/** The contextual panel — wide enough for the longest destination name. */
+const PANEL_WIDTH = 264
+
+/** The synthesised domain holding the daily destinations. */
+const PRIMARY_SECTION = 'primary'
 
 /**
  * Is `event` coming from somewhere a person is typing?
@@ -219,40 +225,68 @@ function isTypingTarget(target: EventTarget | null): boolean {
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
 }
 
+interface SidebarState {
+  /** Rail shows names as well as icons. */
+  railExpanded: boolean
+  /** The contextual panel is showing. */
+  panelOpen: boolean
+  /** The domain the person chose. `null` = follow the current route. */
+  section: string | null
+}
+
+const DEFAULT_STATE: SidebarState = { railExpanded: false, panelOpen: true, section: null }
+
 /**
- * The expanded/collapsed choice, persisted per browser.
+ * The sidebar's shape, persisted per browser.
  *
  * ⚠️ READ IN AN EFFECT, NOT DURING RENDER. The server has no `localStorage`, so
- * seeding state from it directly renders one HTML on the server and another on
- * the client, and React discards the whole tree with a hydration error. Every
- * first paint is therefore expanded, and a collapsed preference applies on the
- * next tick — which is why the width transition is suppressed until the stored
- * value has been read, so a collapsed user does not watch the sidebar slide
- * shut on every page load.
+ * seeding state from it renders one HTML on the server and another on the
+ * client, and React discards the whole tree with a hydration error. Every first
+ * paint therefore uses the defaults and the stored shape applies on the next
+ * tick.
+ *
+ * ⚠️ `section` IS DELIBERATELY NOT PERSISTED. A domain chosen last Tuesday is
+ * not where the reader is today — restoring it would open the app showing a
+ * list that has nothing to do with the page on screen. Only the SHAPE is
+ * remembered; the content follows the route until the rail is clicked.
  */
-function useSidebarCollapsed(): [boolean, (next: boolean) => void, boolean] {
-  const [collapsed, setCollapsed] = useState(false)
-  const [hydrated, setHydrated] = useState(false)
+function useSidebarState(): [SidebarState, (patch: Partial<SidebarState>) => void] {
+  const [state, setStateRaw] = useState<SidebarState>(DEFAULT_STATE)
 
   useEffect(() => {
     try {
-      setCollapsed(window.localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'collapsed')
+      const raw = window.localStorage.getItem(SIDEBAR_STORAGE_KEY)
+      if (!raw) return
+      const stored = JSON.parse(raw) as Partial<SidebarState>
+      setStateRaw((prev) => ({
+        ...prev,
+        railExpanded: stored.railExpanded === true,
+        // `!== false` rather than `=== true`: the panel is open by DEFAULT, and
+        // a stored object written before this key existed must not close it.
+        panelOpen: stored.panelOpen !== false,
+      }))
     } catch {
-      // Private mode, or site data blocked. Not a reason to fail to render.
+      // Private mode, blocked site data, or a value from an older shape.
+      // None of these are a reason to fail to render a navigation bar.
     }
-    setHydrated(true)
   }, [])
 
-  const set = useCallback((next: boolean) => {
-    setCollapsed(next)
-    try {
-      window.localStorage.setItem(SIDEBAR_STORAGE_KEY, next ? 'collapsed' : 'expanded')
-    } catch {
-      // The preference is a convenience; losing it must not break navigating.
-    }
+  const setState = useCallback((patch: Partial<SidebarState>) => {
+    setStateRaw((prev) => {
+      const next = { ...prev, ...patch }
+      try {
+        window.localStorage.setItem(
+          SIDEBAR_STORAGE_KEY,
+          JSON.stringify({ railExpanded: next.railExpanded, panelOpen: next.panelOpen }),
+        )
+      } catch {
+        // The preference is a convenience; losing it must not break navigating.
+      }
+      return next
+    })
   }, [])
 
-  return [collapsed, set, hydrated]
+  return [state, setState]
 }
 
 /** One destination. Collapsed, its tooltip is the only label there is.
@@ -263,22 +297,38 @@ export const SidebarItem = memo(function SidebarItem({
   isActive,
   collapsed,
   nested,
+  href,
   onClick,
 }: {
   item: NavItem
   isActive: boolean
   collapsed: boolean
   nested: boolean
-  onClick: () => void
+  /**
+   * Render as a link rather than a button.
+   *
+   * ⚠️ A `<button>` IS NOT A LINK. It cannot be opened in a new tab, it has no
+   * URL to copy, and a crawler does not follow it — which for the public
+   * documentation means every article would be an orphan reachable only by
+   * typing its address. The dashboard has no such need (it is `noindex` and
+   * navigates through the router), so this stays optional and the dashboard
+   * keeps its buttons.
+   */
+  href?: string
+  /** Receives the event so a link variant can honour a modified click. */
+  onClick: (event: React.MouseEvent<HTMLElement>) => void
 }) {
   // ⚠️ `> 0`, not `!= null`. A badge is there to say «something is waiting for
   // you»; a grey circle reading «۰» says the opposite while still drawing the
   // eye, and every destination with a counter wore one permanently.
   const badge = item.badge != null && item.badge > 0 ? item.badge : null
 
+  const Tag = href ? 'a' : 'button'
+
   const button = (
-    <button
-      type="button"
+    <Tag
+      // `type` is meaningless on an anchor and React warns about it.
+      {...(href ? { href } : { type: 'button' as const })}
       onClick={onClick}
       aria-current={isActive ? 'page' : undefined}
       className={cn(
@@ -329,7 +379,7 @@ export const SidebarItem = memo(function SidebarItem({
           className="absolute end-3 top-2 size-1.5 rounded-full bg-[hsl(var(--color-primary))]"
         />
       ) : null}
-    </button>
+    </Tag>
   )
 
   if (!collapsed) return button
@@ -353,122 +403,160 @@ export const SidebarItem = memo(function SidebarItem({
 SidebarItem.displayName = 'SidebarItem'
 
 /**
- * A domain group — «مشتری‌ها», «کارها», «سامانه».
+ * A domain, as the rail understands it.
  *
- * ⚠️ AUTO-OPENS WHEN IT HOLDS THE CURRENT PAGE, even if the person closed it.
- * Landing on `/bank` from a bookmark with «کارها» collapsed would otherwise
- * show a sidebar where nothing is highlighted, which reads as «you are
- * nowhere». The user's own toggle still wins for as long as they stay inside
- * the group — `override` is only cleared by them.
+ * `primary` is synthesised from `primaryItems` so the rail has one shape to
+ * iterate: the daily destinations are a domain like any other, they simply
+ * happen to be the first one and the one a new workspace opens on.
  */
-const SidebarGroup = memo(function SidebarGroup({
-  group,
+interface RailSection {
+  id: string
+  label: string
+  icon: ElementType
+  items: NavItem[]
+}
+
+/** The rail: one icon per domain. */
+const SidebarRail = memo(function SidebarRail({
+  sections,
+  activeSectionId,
   activeNav,
-  collapsed,
-  open,
+  expanded,
+  onSelect,
   onToggle,
-  onNavigate,
+  toggleLabel,
 }: {
-  group: NavGroup
+  sections: RailSection[]
+  activeSectionId: string
   activeNav: string
-  collapsed: boolean
-  open: boolean
+  expanded: boolean
+  onSelect: (id: string) => void
   onToggle: () => void
-  onNavigate: (id: string, path: string) => void
+  toggleLabel: string
 }) {
-  const contentId = useId()
-  const hasActive = group.items.some((item) => isPathActive(activeNav, item.path))
-
-  // Collapsed there is no room for a group header, so the group becomes a
-  // divider and its items stand on their own with tooltips. A flyout would be
-  // a second navigation surface to build, test and keep in step; a tooltipped
-  // icon is already unambiguous.
-  if (collapsed) {
-    return (
-      <div className="flex flex-col gap-0.5 border-t border-[hsl(var(--border-default))] pt-1.5">
-        {group.items.map((item) => (
-          <SidebarItem
-            key={item.id}
-            item={item}
-            isActive={isPathActive(activeNav, item.path)}
-            collapsed
-            nested={false}
-            onClick={() => onNavigate(item.id, item.path)}
-          />
-        ))}
-      </div>
-    )
-  }
-
-  const GroupIcon = group.icon
-
   return (
-    <div className="flex flex-col">
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={open}
-        aria-controls={contentId}
-        className={cn(
-          'flex h-9 w-full items-center gap-2.5 rounded-lg px-3 text-start',
-          'text-xs font-semibold tracking-wide',
-          'transition-colors duration-150 motion-reduce:transition-none',
-          hasActive && !open
-            ? 'text-[hsl(var(--color-primary))]'
-            : 'text-[hsl(var(--fg-tertiary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-secondary))]',
-        )}
-      >
-        <GroupIcon className="size-4 shrink-0" aria-hidden="true" />
-        <span className="flex-1 truncate">{group.label}</span>
-        {/* A dot when the current page is inside a closed group — otherwise
-            closing a group hides the only sign of where you are. */}
-        {hasActive && !open ? (
-          <span
-            aria-hidden="true"
-            className="size-1.5 shrink-0 rounded-full bg-[hsl(var(--color-primary))]"
-          />
-        ) : null}
-        <ChevronDown
-          aria-hidden="true"
-          className={cn(
-            'size-3.5 shrink-0 transition-transform duration-150 motion-reduce:transition-none',
-            open ? 'rotate-0' : 'rtl:rotate-90 ltr:-rotate-90',
-          )}
-        />
-      </button>
-
-      {/* ⚠️ `grid-template-rows` 0fr→1fr, not `height: auto`.
-          Height cannot be transitioned from a measured value without either a
-          layout read on every frame or a JS-driven height, and both cost more
-          than this does. The child needs `overflow-hidden` or its content
-          spills while the row is still collapsing. */}
-      <div
-        id={contentId}
-        className={cn(
-          'grid transition-[grid-template-rows] duration-150 ease-out',
-          'motion-reduce:transition-none',
-          open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
-        )}
-      >
-        <div className="overflow-hidden">
-          <div className="flex flex-col gap-0.5 pt-0.5" hidden={!open}>
-            {group.items.map((item) => (
-              <SidebarItem
-                key={item.id}
-                item={item}
-                isActive={isPathActive(activeNav, item.path)}
-                collapsed={false}
-                nested
-                onClick={() => onNavigate(item.id, item.path)}
+    <div
+      style={{ width: expanded ? RAIL_WIDTH_EXPANDED : RAIL_WIDTH }}
+      className={cn(
+        'flex h-full shrink-0 flex-col',
+        'border-e border-[hsl(var(--border-default))]',
+        'bg-[hsl(var(--surface-base))]',
+        'transition-[width] duration-200 ease-out motion-reduce:transition-none',
+      )}
+    >
+      {/* The toggle sits in its own row at the top, aligned with the panel's
+          header, so the two columns share one horizontal rule rather than each
+          starting at a different height. */}
+      <div className="flex h-14 shrink-0 items-center justify-center border-b border-[hsl(var(--border-default))]">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={onToggle}
+              aria-label={toggleLabel}
+              aria-expanded={expanded}
+              className={cn(
+                'flex size-10 items-center justify-center rounded-xl',
+                'text-[hsl(var(--fg-tertiary))] transition-colors',
+                'hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
+                'motion-reduce:transition-none',
+              )}
+            >
+              {/* One chevron, rotated — not two icons. `rtl:rotate-180` puts it
+                  the right way round in Persian without a second asset. */}
+              <ChevronLeft
+                aria-hidden="true"
+                className={cn(
+                  'size-[18px] transition-transform duration-200 rtl:rotate-180',
+                  'motion-reduce:transition-none',
+                  expanded && 'rotate-180 rtl:rotate-0',
+                )}
               />
-            ))}
-          </div>
-        </div>
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right">{toggleLabel}</TooltipContent>
+        </Tooltip>
       </div>
+
+      <nav
+        aria-label={toggleLabel}
+        className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto overscroll-contain p-2"
+      >
+        {sections.map((section) => {
+          const Icon = section.icon
+          const isCurrent = section.id === activeSectionId
+          // A domain that CONTAINS the current page, which is not the same as
+          // the one being browsed: someone can open «سامانه» in the panel
+          // while still sitting on an invoice.
+          const holdsActive = section.items.some((item) => isPathActive(activeNav, item.path))
+
+          const button = (
+            <button
+              type="button"
+              onClick={() => onSelect(section.id)}
+              aria-current={isCurrent ? 'true' : undefined}
+              // ⚠️ ALWAYS LABELLED, NOT ONLY WHEN COLLAPSED.
+              //
+              // A collapsed rail button contains an icon and nothing else. Its
+              // name came from the tooltip — which Radix renders into a portal
+              // ONLY while the pointer is over it, so to a screen reader every
+              // one of these was an unnamed button. The label is also what
+              // `getByRole('button', { name })` finds, which is how this was
+              // caught at all.
+              aria-label={section.label}
+              className={cn(
+                'group relative flex h-11 w-full items-center rounded-xl',
+                'text-sm font-medium transition-colors duration-150',
+                'motion-reduce:transition-none',
+                expanded ? 'gap-3 px-2.5' : 'justify-center px-0',
+                isCurrent
+                  ? 'bg-[hsl(var(--color-primary)/0.10)] text-[hsl(var(--color-primary))]'
+                  : 'text-[hsl(var(--fg-tertiary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
+              )}
+            >
+              {isCurrent ? (
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-y-2.5 end-0 w-[3px] rounded-full bg-[hsl(var(--color-primary))]"
+                />
+              ) : null}
+
+              <span className="flex size-8 shrink-0 items-center justify-center">
+                <Icon className="size-[18px]" aria-hidden="true" />
+              </span>
+
+              {expanded ? <span className="truncate">{section.label}</span> : null}
+
+              {/* ⚠️ Where you ARE, when it is not where you are LOOKING.
+                  Without this, browsing another domain leaves no trace of the
+                  page actually open, and the rail claims you are somewhere you
+                  are not. */}
+              {holdsActive && !isCurrent ? (
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    'size-1.5 shrink-0 rounded-full bg-[hsl(var(--color-primary))]',
+                    expanded ? 'ms-auto' : 'absolute end-2 top-2.5',
+                  )}
+                />
+              ) : null}
+            </button>
+          )
+
+          if (expanded) return <div key={section.id}>{button}</div>
+
+          return (
+            <Tooltip key={section.id}>
+              <TooltipTrigger asChild>{button}</TooltipTrigger>
+              <TooltipContent side="right">{section.label}</TooltipContent>
+            </Tooltip>
+          )
+        })}
+      </nav>
     </div>
   )
 })
-SidebarGroup.displayName = 'SidebarGroup'
+SidebarRail.displayName = 'SidebarRail'
 
 export const DashboardSidebar = memo(function DashboardSidebar({
   primaryItems,
@@ -486,16 +574,39 @@ export const DashboardSidebar = memo(function DashboardSidebar({
 }) {
   const t = useTranslations()
   const user = useAuthStore((s) => s.user)
-  const [collapsed, setCollapsed, hydrated] = useSidebarCollapsed()
+  const [state, setState] = useSidebarState()
 
-  // Only the groups the person has explicitly toggled. Everything else follows
-  // the current route, which is what makes «auto-open the active group» work
-  // without fighting the user.
-  const [overrides, setOverrides] = useState<Record<string, boolean>>({})
+  const sections = useMemo<RailSection[]>(
+    () => [
+      // Synthesised, so the rail iterates ONE shape. The daily destinations are
+      // a domain like any other — the first one, and the one a workspace opens
+      // on — rather than a special case threaded through every branch below.
+      { id: PRIMARY_SECTION, label: t('nav.groups.main'), icon: LayoutGrid, items: primaryItems },
+      ...moreGroups.map((group) => ({
+        id: group.id,
+        label: group.label,
+        icon: group.icon,
+        items: group.items,
+      })),
+    ],
+    [primaryItems, moreGroups, t],
+  )
 
-  const toggleGroup = useCallback((id: string, next: boolean) => {
-    setOverrides((prev) => ({ ...prev, [id]: next }))
-  }, [])
+  /**
+   * ⚠️ THE ROUTE WINS UNTIL THE PERSON CHOOSES.
+   *
+   * `state.section` is null until the rail is clicked, and the panel follows
+   * the current page — so navigating from an invoice to a bank statement moves
+   * the panel with you. Once a domain is picked deliberately it stays picked,
+   * because browsing «سامانه» while sitting on an invoice is a thing people do
+   * on purpose and having the panel snap back would make it impossible.
+   */
+  const sectionOfRoute =
+    sections.find((section) => section.items.some((item) => isPathActive(activeNav, item.path)))
+      ?.id ?? PRIMARY_SECTION
+
+  const activeSectionId = state.section ?? sectionOfRoute
+  const activeSection = sections.find((s) => s.id === activeSectionId) ?? sections[0]!
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -503,162 +614,132 @@ export const DashboardSidebar = memo(function DashboardSidebar({
       if (!(event.metaKey || event.ctrlKey)) return
       if (isTypingTarget(event.target)) return
       event.preventDefault()
-      setCollapsed(!collapsed)
+      setState({ panelOpen: !state.panelOpen })
     }
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
-  }, [collapsed, setCollapsed])
+  }, [state.panelOpen, setState])
 
-  const toggleLabel = collapsed ? t('nav.expandSidebar') : t('nav.collapseSidebar')
+  const railToggleLabel = state.railExpanded ? t('nav.collapseSidebar') : t('nav.expandSidebar')
+  const panelToggleLabel = state.panelOpen ? t('nav.collapseSidebar') : t('nav.expandSidebar')
 
   return (
     <TooltipProvider delayDuration={200}>
-      <aside
-        aria-label={t('nav.mainNav')}
-        style={{ width: collapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED }}
-        className={cn(
-          'sticky top-0 hidden h-screen shrink-0 lg:flex lg:flex-col',
-          'border-e border-[hsl(var(--border-default))]',
-          'bg-[hsl(var(--surface-base))]',
-          // ⚠️ No transition until the stored preference has been applied, or
-          // a collapsed user watches it slide shut on every single page load.
-          hydrated && 'transition-[width] duration-150 ease-out motion-reduce:transition-none',
-        )}
-      >
-        {/* ── Header ── */}
-        <div
+      <div className="sticky top-0 hidden h-screen shrink-0 lg:flex" aria-label={t('nav.mainNav')}>
+        <SidebarRail
+          sections={sections}
+          activeSectionId={activeSectionId}
+          activeNav={activeNav}
+          expanded={state.railExpanded}
+          onSelect={(id) =>
+            // Choosing a domain always opens the panel: selecting one and
+            // seeing nothing happen (because it was closed) is the kind of
+            // dead click that makes people stop using a control.
+            setState({ section: id, panelOpen: true })
+          }
+          onToggle={() => setState({ railExpanded: !state.railExpanded })}
+          toggleLabel={railToggleLabel}
+        />
+
+        {/* ── The contextual panel ── */}
+        <aside
+          style={{ width: state.panelOpen ? PANEL_WIDTH : 0 }}
           className={cn(
-            'flex shrink-0 items-center gap-2.5 border-b border-[hsl(var(--border-default))]',
-            collapsed ? 'h-16 justify-center px-0' : 'h-16 px-4',
+            'flex h-full flex-col overflow-hidden',
+            'border-e border-[hsl(var(--border-default))]',
+            'bg-[hsl(var(--surface-base))]',
+            'transition-[width] duration-200 ease-out motion-reduce:transition-none',
           )}
         >
-          {collapsed ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <img
-                  src="/logo-icon.png"
-                  alt={t('app.name')}
-                  className="size-9 shrink-0 object-contain"
-                />
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                {user?.businessName || user?.fullName || t('app.name')}
-              </TooltipContent>
-            </Tooltip>
-          ) : (
-            <>
-              <img
-                src="/logo-icon.png"
-                alt=""
-                aria-hidden="true"
-                className="size-9 shrink-0 object-contain"
-              />
-              <div className="flex min-w-0 flex-col">
-                <span className="truncate text-sm font-semibold text-[hsl(var(--fg-primary))]">
-                  {t('app.name')}
+          {/* ⚠️ `w-[var]` on a fixed inner width, not on the aside's children.
+              The aside animates to 0, and content that reflows while it does
+              produces a visible squeeze of every label. A fixed-width inner
+              layer slides behind the edge instead. */}
+          {/* ⚠️ `hidden`, NOT JUST ZERO WIDTH.
+              A panel animated to `width: 0` under `overflow-hidden` is
+              invisible but still in the document: Tab walked through every
+              destination in it and a screen reader read them all out. `hidden`
+              takes them out of both. The width transition still runs on the
+              `aside`, so closing still animates — the content simply leaves
+              first, which is the correct order for something being removed. */}
+          <div
+            hidden={!state.panelOpen}
+            style={{ width: PANEL_WIDTH }}
+            className="flex h-full flex-col"
+          >
+            <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-[hsl(var(--border-default))] px-3">
+              <div className="flex min-w-0 flex-col leading-tight">
+                <span className="truncate text-[11px] text-[hsl(var(--fg-tertiary))]">
+                  {user?.businessName || user?.fullName || t('app.name')}
                 </span>
-                {/* Real data only. When there is no business name yet there is
-                    no second line — an invented one would be worse than none. */}
-                {user?.businessName || user?.fullName ? (
-                  <span className="truncate text-[11px] text-[hsl(var(--fg-tertiary))]">
-                    {user.businessName || user.fullName}
-                  </span>
-                ) : null}
+                <span className="truncate text-sm font-semibold text-[hsl(var(--fg-primary))]">
+                  {activeSection.label}
+                </span>
               </div>
-            </>
-          )}
-        </div>
+              <button
+                type="button"
+                onClick={() => setState({ panelOpen: false })}
+                aria-label={panelToggleLabel}
+                className={cn(
+                  'flex size-9 shrink-0 items-center justify-center rounded-lg',
+                  'text-[hsl(var(--fg-tertiary))] transition-colors',
+                  'hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
+                  'motion-reduce:transition-none',
+                )}
+              >
+                <X className="size-4" aria-hidden="true" />
+              </button>
+            </div>
 
-        {/* ── Navigation ──
-            Only this scrolls, so the header and the footer stay put. */}
-        <nav
-          className={cn(
-            'flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overscroll-contain py-3',
-            collapsed ? 'px-3' : 'px-3',
-          )}
-        >
-          {primaryItems.map((item) => (
-            <SidebarItem
-              key={item.id}
-              item={item}
-              isActive={isPathActive(activeNav, item.path)}
-              collapsed={collapsed}
-              nested={false}
-              onClick={() => onNavigate(item.id, item.path)}
-            />
-          ))}
-
-          <div className="mt-2 flex flex-col gap-1">
-            {moreGroups.map((group) => {
-              const hasActive = group.items.some((item) => isPathActive(activeNav, item.path))
-              const open = overrides[group.id] ?? hasActive
-              return (
-                <SidebarGroup
-                  key={group.id}
-                  group={group}
-                  activeNav={activeNav}
-                  collapsed={collapsed}
-                  open={open}
-                  onToggle={() => toggleGroup(group.id, !open)}
-                  onNavigate={onNavigate}
+            <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overscroll-contain p-2">
+              {activeSection.items.map((item) => (
+                <SidebarItem
+                  key={item.id}
+                  item={item}
+                  isActive={isPathActive(activeNav, item.path)}
+                  collapsed={false}
+                  nested={false}
+                  onClick={() => onNavigate(item.id, item.path)}
                 />
-              )
-            })}
+              ))}
+            </nav>
           </div>
-        </nav>
+        </aside>
 
-        {/* ── Footer ── */}
-        <div
-          className={cn(
-            'shrink-0 border-t border-[hsl(var(--border-default))] p-3',
-            collapsed && 'flex justify-center',
-          )}
-        >
+        {/* ── Reopening ──
+            ⚠️ WITHOUT THIS THE PANEL IS A ONE-WAY DOOR. Closing it leaves the
+            rail, and the rail's own toggle changes its WIDTH, not the panel —
+            so the only way back was to pick a domain, which also navigates the
+            panel somewhere you may not have wanted. A thin strip on the closed
+            edge puts it back exactly as it was. */}
+        {state.panelOpen ? null : (
           <Tooltip>
             <TooltipTrigger asChild>
               <button
                 type="button"
-                onClick={() => setCollapsed(!collapsed)}
-                aria-label={toggleLabel}
-                aria-expanded={!collapsed}
+                onClick={() => setState({ panelOpen: true })}
+                aria-label={panelToggleLabel}
                 className={cn(
-                  'flex h-9 items-center rounded-lg text-sm',
-                  'text-[hsl(var(--fg-tertiary))] transition-colors duration-150',
-                  'hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
-                  'motion-reduce:transition-none',
-                  collapsed ? 'w-9 justify-center' : 'w-full gap-2.5 px-3',
+                  'group flex w-3 shrink-0 items-center justify-center',
+                  'border-e border-[hsl(var(--border-default))]',
+                  'bg-[hsl(var(--surface-base))] transition-colors',
+                  'hover:bg-[hsl(var(--surface-muted))] motion-reduce:transition-none',
                 )}
               >
-                <PanelLeft aria-hidden="true" className="size-[18px] shrink-0 rtl:rotate-180" />
-                {collapsed ? null : <span className="truncate">{toggleLabel}</span>}
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    'h-8 w-[2px] rounded-full bg-transparent transition-colors',
+                    'group-hover:bg-[hsl(var(--color-primary)/0.4)]',
+                    'motion-reduce:transition-none',
+                  )}
+                />
               </button>
             </TooltipTrigger>
-            {/* Only useful when there is no visible label. */}
-            {collapsed ? <TooltipContent side="right">{toggleLabel}</TooltipContent> : null}
+            <TooltipContent side="right">{panelToggleLabel}</TooltipContent>
           </Tooltip>
-        </div>
-
-        {/* ── Rail ──
-            The full-height edge of the sidebar is a second, much larger target
-            for the same toggle. `end-0` and `translate-x` are logical, so it
-            sits on the inner edge in both directions. It is `aria-hidden`
-            because it duplicates the footer button, which is the accessible
-            one — announcing the same action twice is noise. */}
-        <button
-          type="button"
-          tabIndex={-1}
-          aria-hidden="true"
-          onClick={() => setCollapsed(!collapsed)}
-          title={toggleLabel}
-          className={cn(
-            'absolute inset-y-0 end-0 w-3 translate-x-1/2 cursor-pointer',
-            'after:absolute after:inset-y-0 after:start-1/2 after:w-[2px]',
-            'after:-translate-x-1/2 after:bg-transparent',
-            'hover:after:bg-[hsl(var(--color-primary)/0.35)]',
-            'after:transition-colors after:duration-150 motion-reduce:after:transition-none',
-          )}
-        />
-      </aside>
+        )}
+      </div>
     </TooltipProvider>
   )
 })

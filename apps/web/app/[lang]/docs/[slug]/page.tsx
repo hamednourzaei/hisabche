@@ -9,6 +9,7 @@ import { getMessages } from 'next-intl/server'
 import { findArticle } from '@hisabche/ui'
 
 import { DocsClient } from '../docs-client'
+import { DocsShell } from '../docs-shell'
 import { buildLegalMetadata } from '../../legal/legal-metadata'
 import { localeUrl, resolveLocale } from '../../i18n-config'
 
@@ -146,7 +147,9 @@ export default async function DocsArticlePage({
         // Serialised from values we control, not from user input.
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <DocsClient lang={lang} slug={slug} />
+      <DocsShell>
+        <DocsClient lang={lang} slug={slug} />
+      </DocsShell>
     </>
   )
 }

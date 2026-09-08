@@ -10,7 +10,7 @@ import { DocsView, ROUTE_DOCS_MAP } from '@hisabche/ui'
  * so `packages/ui` stays free of a next-intl dependency — desktop mounts the
  * same components through its own shim.
  */
-export function DocsClient({ lang, slug }: { lang: string; slug?: string }) {
+export function DocsClient({ lang, slug }: { lang: string; slug: string }) {
   const translate = useTranslations()
 
   /**
