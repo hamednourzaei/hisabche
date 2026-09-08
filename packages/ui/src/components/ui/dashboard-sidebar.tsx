@@ -1,10 +1,12 @@
 'use client'
 
 import { memo, useState, useRef, useEffect, useCallback, useId } from 'react'
+import { ChevronDown, PanelLeft } from 'lucide-react'
 import { cn } from '../../lib/utils'
 import type { ElementType, ReactElement } from 'react'
 import { useAuthStore } from '@hisabche/store'
 import { useTranslations } from 'next-intl'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tooltip'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    DashboardSidebar v7.3 — Memoized · Performance Optimized
@@ -13,7 +15,13 @@ import { useTranslations } from 'next-intl'
 
 export interface NavItem {
   id: string
-  icon: ElementType
+  /**
+   * Optional so this same item can render a docs article, which has no icon.
+   * The dashboard's own entries always carry one — `NAV_ICONS` in
+   * `lib/menu/nav-items.ts` is exhaustive over `NavId`, so the compiler still
+   * asks for an icon there.
+   */
+  icon?: ElementType
   label: string
   path: string
   badge?: number
@@ -26,9 +34,15 @@ export interface NavGroup {
   items: NavItem[]
 }
 
-function isPathActive(currentPath: string, itemPath: string): boolean {
-  // Locales are fa/af/en (see apps/web/app/[lang]/i18n-config.ts). `fa` is the
-  // default and unprefixed (localePrefix: 'as-needed'), `af`/`en` are prefixed.
+export function isPathActive(currentPath: string, itemPath: string): boolean {
+  // Locales are fa/af/en (see apps/web/app/[lang]/i18n-config.ts) and
+  // `localePrefix` is 'always', so every path carries one. Stripping it is
+  // still conditional because desktop's hash router serves unprefixed paths.
+  //
+  // ⚠️ The `+ '/'` and `+ '?'` are what stop a FALSE PREFIX MATCH:
+  // plain `startsWith('/accounting')` would light «حسابداری» up on
+  // `/accounting-workspace`, which is a different destination in this very
+  // sidebar.
   const normalized = currentPath.replace(/^\/(fa|af|en)(?=\/|$)/, '') || '/'
   if (normalized === itemPath) return true
   if (normalized.startsWith(itemPath + '/')) return true
@@ -132,6 +146,9 @@ const ItemIcon = memo(function ItemIcon({
   // truthy, and rejected by React with a message that names no destination.
   // A real component is a function, or an object carrying `$$typeof`
   // (memo/forwardRef).
+  // Deliberately absent — a docs article, say. Nothing to reserve room for.
+  if (item.icon === undefined) return null
+
   const Icon = item.icon as unknown
   const isRenderable =
     typeof Icon === 'function' || (typeof Icon === 'object' && Icon !== null && '$$typeof' in Icon)
@@ -158,308 +175,491 @@ const ItemIcon = memo(function ItemIcon({
 })
 ItemIcon.displayName = 'ItemIcon'
 
-// ✅ PrimaryNavButton با memo
-const PrimaryNavButton = memo(function PrimaryNavButton({
+// ─── Desktop Sidebar ─────────────────────────────────────────────────────────
+//
+// ⚠️ WHAT THIS REPLACED, AND WHY
+//
+// The desktop sidebar used to be five primary destinations plus a «More»
+// button that opened an ABSOLUTELY POSITIONED panel over the rest of the
+// sidebar, holding the other twenty-five. That panel could not extend the
+// sidebar's scroll area, so it needed a hand-tuned `max-height` and its own
+// click-outside and Escape handling, and a person looking for «بانک» had to
+// know it was hidden behind a word that names nothing.
+//
+// Twenty-five destinations behind one unlabelled door is not navigation.
+//
+// They are now collapsible GROUPS in the sidebar body, which is where the
+// contract already said they belong — `MORE_GROUPS_CONTRACT` has grouped them
+// as people/work/system all along and only the desktop renderer ignored it.
+// The panel, its outside-click listener, its Escape listener and its height
+// cap are all gone: a group that is part of the scrolling document needs none
+// of them.
+//
+// «More» still exists on MOBILE, where a bottom bar genuinely cannot hold
+// thirty destinations. See `BottomNav` below — it is deliberately unchanged.
+
+/** Where the expanded/collapsed choice is remembered. */
+export const SIDEBAR_STORAGE_KEY = 'hisabche.sidebar.state'
+
+const SIDEBAR_WIDTH_EXPANDED = 240
+const SIDEBAR_WIDTH_COLLAPSED = 72
+
+/**
+ * Is `event` coming from somewhere a person is typing?
+ *
+ * ⚠️ Without this, Ctrl/Cmd+B collapses the sidebar while someone is writing a
+ * customer note — and in a `contenteditable` it also races the browser's own
+ * bold shortcut. A global shortcut that fires inside a text field is a bug, not
+ * a feature.
+ */
+function isTypingTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false
+  if (target.isContentEditable) return true
+  const tag = target.tagName
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
+}
+
+/**
+ * The expanded/collapsed choice, persisted per browser.
+ *
+ * ⚠️ READ IN AN EFFECT, NOT DURING RENDER. The server has no `localStorage`, so
+ * seeding state from it directly renders one HTML on the server and another on
+ * the client, and React discards the whole tree with a hydration error. Every
+ * first paint is therefore expanded, and a collapsed preference applies on the
+ * next tick — which is why the width transition is suppressed until the stored
+ * value has been read, so a collapsed user does not watch the sidebar slide
+ * shut on every page load.
+ */
+function useSidebarCollapsed(): [boolean, (next: boolean) => void, boolean] {
+  const [collapsed, setCollapsed] = useState(false)
+  const [hydrated, setHydrated] = useState(false)
+
+  useEffect(() => {
+    try {
+      setCollapsed(window.localStorage.getItem(SIDEBAR_STORAGE_KEY) === 'collapsed')
+    } catch {
+      // Private mode, or site data blocked. Not a reason to fail to render.
+    }
+    setHydrated(true)
+  }, [])
+
+  const set = useCallback((next: boolean) => {
+    setCollapsed(next)
+    try {
+      window.localStorage.setItem(SIDEBAR_STORAGE_KEY, next ? 'collapsed' : 'expanded')
+    } catch {
+      // The preference is a convenience; losing it must not break navigating.
+    }
+  }, [])
+
+  return [collapsed, set, hydrated]
+}
+
+/** One destination. Collapsed, its tooltip is the only label there is.
+ *  Exported because the documentation sidebar renders through this exact
+ *  component — the two menus look identical because they ARE identical. */
+export const SidebarItem = memo(function SidebarItem({
   item,
   isActive,
+  collapsed,
+  nested,
   onClick,
 }: {
   item: NavItem
   isActive: boolean
+  collapsed: boolean
+  nested: boolean
   onClick: () => void
 }) {
-  return (
+  // ⚠️ `> 0`, not `!= null`. A badge is there to say «something is waiting for
+  // you»; a grey circle reading «۰» says the opposite while still drawing the
+  // eye, and every destination with a counter wore one permanently.
+  const badge = item.badge != null && item.badge > 0 ? item.badge : null
+
+  const button = (
     <button
       type="button"
       onClick={onClick}
+      aria-current={isActive ? 'page' : undefined}
       className={cn(
-        'group relative flex items-center gap-2.5 h-10 px-3 rounded-xl',
-        'text-sm font-medium text-start w-full',
-        'transition-all duration-200 motion-reduce:transition-none',
+        'group relative flex w-full items-center rounded-lg text-start text-sm',
+        'transition-colors duration-150 motion-reduce:transition-none',
+        // 40px tall, and never narrower than its icon when collapsed.
+        collapsed ? 'h-10 justify-center px-0' : 'h-10 gap-2.5 px-3',
+        nested && !collapsed && 'ps-9',
         isActive
-          ? 'bg-[hsl(var(--color-primary)/0.10)] text-[hsl(var(--color-primary))] font-semibold shadow-[0_0_20px_hsl(var(--color-primary)/0.06)]'
+          ? 'bg-[hsl(var(--color-primary)/0.10)] font-semibold text-[hsl(var(--color-primary))]'
           : 'text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
       )}
-      aria-current={isActive ? 'page' : undefined}
     >
-      {isActive && (
-        <span className="absolute end-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-full bg-[var(--gradient-brand)] shadow-[0_0_8px_hsl(var(--color-primary)/0.3)]" />
+      {/* ⚠️ A HAIRLINE, NOT A GLOW.
+          This used to be a 3px bar with `shadow-[0_0_8px_…]` and the icon
+          scaled to 110%. On a screen holding a trial balance, a navigation
+          item that pulses and grows competes with the numbers. */}
+      {isActive ? (
+        <span
+          aria-hidden="true"
+          className="absolute inset-y-2 end-0 w-[3px] rounded-full bg-[hsl(var(--color-primary))]"
+        />
+      ) : null}
+
+      <ItemIcon item={item} active={isActive} size={nested && !collapsed ? 16 : 18} />
+
+      {collapsed ? null : (
+        <>
+          <span className="flex-1 truncate">{item.label}</span>
+          {badge != null ? (
+            <span
+              className={cn(
+                'shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
+                'bg-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))]',
+              )}
+            >
+              {badge}
+            </span>
+          ) : null}
+        </>
       )}
-      <span
+
+      {/* Collapsed, the label is gone but the count still has to be visible —
+          a dot, because two digits do not fit on a 72px rail. */}
+      {collapsed && badge != null ? (
+        <span
+          aria-hidden="true"
+          className="absolute end-3 top-2 size-1.5 rounded-full bg-[hsl(var(--color-primary))]"
+        />
+      ) : null}
+    </button>
+  )
+
+  if (!collapsed) return button
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>{button}</TooltipTrigger>
+      {/* ⚠️ RADIX SIDES ARE PHYSICAL — there is no `start`/`end` here, and
+          hardcoding `right` would put every tooltip off-screen in Persian.
+          `avoidCollisions` (on by default) does the work: the collapsed
+          sidebar is 72px against the edge of the viewport, so in RTL there is
+          no room on the right and Radix flips to the left on its own. In LTR
+          the whole page is to the right and it never flips. */}
+      <TooltipContent side="right">
+        {item.label}
+        {badge != null ? ` (${badge})` : ''}
+      </TooltipContent>
+    </Tooltip>
+  )
+})
+SidebarItem.displayName = 'SidebarItem'
+
+/**
+ * A domain group — «مشتری‌ها», «کارها», «سامانه».
+ *
+ * ⚠️ AUTO-OPENS WHEN IT HOLDS THE CURRENT PAGE, even if the person closed it.
+ * Landing on `/bank` from a bookmark with «کارها» collapsed would otherwise
+ * show a sidebar where nothing is highlighted, which reads as «you are
+ * nowhere». The user's own toggle still wins for as long as they stay inside
+ * the group — `override` is only cleared by them.
+ */
+const SidebarGroup = memo(function SidebarGroup({
+  group,
+  activeNav,
+  collapsed,
+  open,
+  onToggle,
+  onNavigate,
+}: {
+  group: NavGroup
+  activeNav: string
+  collapsed: boolean
+  open: boolean
+  onToggle: () => void
+  onNavigate: (id: string, path: string) => void
+}) {
+  const contentId = useId()
+  const hasActive = group.items.some((item) => isPathActive(activeNav, item.path))
+
+  // Collapsed there is no room for a group header, so the group becomes a
+  // divider and its items stand on their own with tooltips. A flyout would be
+  // a second navigation surface to build, test and keep in step; a tooltipped
+  // icon is already unambiguous.
+  if (collapsed) {
+    return (
+      <div className="flex flex-col gap-0.5 border-t border-[hsl(var(--border-default))] pt-1.5">
+        {group.items.map((item) => (
+          <SidebarItem
+            key={item.id}
+            item={item}
+            isActive={isPathActive(activeNav, item.path)}
+            collapsed
+            nested={false}
+            onClick={() => onNavigate(item.id, item.path)}
+          />
+        ))}
+      </div>
+    )
+  }
+
+  const GroupIcon = group.icon
+
+  return (
+    <div className="flex flex-col">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        aria-controls={contentId}
         className={cn(
-          'transition-transform duration-200 motion-reduce:transition-none',
-          isActive && 'scale-110',
+          'flex h-9 w-full items-center gap-2.5 rounded-lg px-3 text-start',
+          'text-xs font-semibold tracking-wide',
+          'transition-colors duration-150 motion-reduce:transition-none',
+          hasActive && !open
+            ? 'text-[hsl(var(--color-primary))]'
+            : 'text-[hsl(var(--fg-tertiary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-secondary))]',
         )}
       >
-        <ItemIcon item={item} active={isActive} />
-      </span>
-      <span className="flex-1 truncate">{item.label}</span>
-      {item.badge != null && (
-        <span
+        <GroupIcon className="size-4 shrink-0" aria-hidden="true" />
+        <span className="flex-1 truncate">{group.label}</span>
+        {/* A dot when the current page is inside a closed group — otherwise
+            closing a group hides the only sign of where you are. */}
+        {hasActive && !open ? (
+          <span
+            aria-hidden="true"
+            className="size-1.5 shrink-0 rounded-full bg-[hsl(var(--color-primary))]"
+          />
+        ) : null}
+        <ChevronDown
+          aria-hidden="true"
           className={cn(
-            'text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0',
-            'bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))]',
-            'border border-[hsl(var(--border-default))]',
+            'size-3.5 shrink-0 transition-transform duration-150 motion-reduce:transition-none',
+            open ? 'rotate-0' : 'rtl:rotate-90 ltr:-rotate-90',
           )}
-        >
-          {item.badge}
-        </span>
-      )}
-    </button>
+        />
+      </button>
+
+      {/* ⚠️ `grid-template-rows` 0fr→1fr, not `height: auto`.
+          Height cannot be transitioned from a measured value without either a
+          layout read on every frame or a JS-driven height, and both cost more
+          than this does. The child needs `overflow-hidden` or its content
+          spills while the row is still collapsing. */}
+      <div
+        id={contentId}
+        className={cn(
+          'grid transition-[grid-template-rows] duration-150 ease-out',
+          'motion-reduce:transition-none',
+          open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
+        )}
+      >
+        <div className="overflow-hidden">
+          <div className="flex flex-col gap-0.5 pt-0.5" hidden={!open}>
+            {group.items.map((item) => (
+              <SidebarItem
+                key={item.id}
+                item={item}
+                isActive={isPathActive(activeNav, item.path)}
+                collapsed={false}
+                nested
+                onClick={() => onNavigate(item.id, item.path)}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
   )
 })
-PrimaryNavButton.displayName = 'PrimaryNavButton'
-
-// ✅ MorePanelItem با memo
-const MorePanelItem = memo(function MorePanelItem({
-  item,
-  isActive,
-  onClick,
-}: {
-  item: NavItem
-  isActive: boolean
-  onClick: () => void
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'group flex items-center gap-2.5 h-9 px-3 rounded-lg w-full text-start',
-        'text-sm transition-colors duration-150 motion-reduce:transition-none',
-        isActive
-          ? 'bg-[hsl(var(--color-primary)/0.10)] text-[hsl(var(--color-primary))] font-semibold'
-          : 'text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
-      )}
-      aria-current={isActive ? 'page' : undefined}
-    >
-      <ItemIcon item={item} active={isActive} size={16} />
-      <span className="flex-1 truncate">{item.label}</span>
-      {isActive && (
-        <svg
-          width={14}
-          height={14}
-          viewBox="0 0 20 20"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2.5}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="text-[hsl(var(--color-primary))] shrink-0"
-        >
-          <path d="M5 10l3.5 3.5L15 7" />
-        </svg>
-      )}
-    </button>
-  )
-})
-MorePanelItem.displayName = 'MorePanelItem'
-
-// ─── Desktop Sidebar ─────────────────────────────────────────────────────────
+SidebarGroup.displayName = 'SidebarGroup'
 
 export const DashboardSidebar = memo(function DashboardSidebar({
   primaryItems,
   moreGroups,
-  moreIcon: MoreIcon,
   activeNav,
   onNavigate,
 }: {
   primaryItems: NavItem[]
   moreGroups: NavGroup[]
-  moreIcon: ElementType
+  /** Kept for the callers that also render `BottomNav`; the desktop sidebar no
+   *  longer has a «More» button to put it on. */
+  moreIcon?: ElementType
   activeNav: string
   onNavigate: (id: string, path: string) => void
 }) {
   const t = useTranslations()
   const user = useAuthStore((s) => s.user)
-  const [isMoreOpen, setIsMoreOpen] = useState(true)
-  const morePanelRef = useRef<HTMLDivElement>(null)
-  const moreBtnRef = useRef<HTMLButtonElement>(null)
+  const [collapsed, setCollapsed, hydrated] = useSidebarCollapsed()
 
-  const hasMoreActive = moreGroups.some((g) => g.items.some((i) => isPathActive(activeNav, i.path)))
+  // Only the groups the person has explicitly toggled. Everything else follows
+  // the current route, which is what makes «auto-open the active group» work
+  // without fighting the user.
+  const [overrides, setOverrides] = useState<Record<string, boolean>>({})
 
-  useEffect(() => {
-    if (!isMoreOpen) return
-    function handleClickOutside(e: MouseEvent) {
-      const target = e.target as Node
-      if (
-        morePanelRef.current &&
-        !morePanelRef.current.contains(target) &&
-        moreBtnRef.current &&
-        !moreBtnRef.current.contains(target)
-      ) {
-        setIsMoreOpen(false)
-      }
-    }
-    const timer = setTimeout(() => document.addEventListener('mousedown', handleClickOutside), 10)
-    return () => {
-      clearTimeout(timer)
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [isMoreOpen])
+  const toggleGroup = useCallback((id: string, next: boolean) => {
+    setOverrides((prev) => ({ ...prev, [id]: next }))
+  }, [])
 
   useEffect(() => {
-    if (!isMoreOpen) return
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        setIsMoreOpen(false)
-        moreBtnRef.current?.focus()
-      }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'b' && event.key !== 'B') return
+      if (!(event.metaKey || event.ctrlKey)) return
+      if (isTypingTarget(event.target)) return
+      event.preventDefault()
+      setCollapsed(!collapsed)
     }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isMoreOpen])
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [collapsed, setCollapsed])
+
+  const toggleLabel = collapsed ? t('nav.expandSidebar') : t('nav.collapseSidebar')
 
   return (
-    <aside
-      aria-label={t('nav.mainNav')}
-      className={cn(
-        'hidden lg:flex lg:flex-col shrink-0',
-        'w-56 h-screen sticky top-0 overflow-y-auto',
-        'border-e border-[hsl(var(--border-default))]',
-        'bg-[hsl(var(--surface-base))]',
-      )}
-    >
-      {/* Header */}
-      <div className="flex flex-col items-center gap-1 pt-6 pb-4">
-        <div className="transition-all duration-300 motion-reduce:transition-none hover:scale-105 hover:filter hover:drop-shadow-[0_0_18px_hsl(var(--color-primary)/0.25)]">
-          <img src="/logo-icon.png" alt={t('app.name')} className="h-16 w-16 object-contain" />
-        </div>
-        <span className="text-xs font-semibold text-[hsl(var(--fg-primary))] truncate max-w-[140px] text-center">
-          {user?.businessName || user?.fullName || t('app.name')}
-        </span>
-      </div>
-
-      <div className="mx-4 h-px bg-[hsl(var(--border-default))] opacity-60" />
-
-      {/* Navigation */}
-      <nav className="flex flex-col gap-0.5 px-3 pt-3">
-        {primaryItems.map((item) => (
-          <PrimaryNavButton
-            key={item.id}
-            item={item}
-            isActive={isPathActive(activeNav, item.path)}
-            onClick={() => onNavigate(item.id, item.path)}
-          />
-        ))}
-      </nav>
-
-      <div className="mx-4 my-3 h-px bg-[hsl(var(--border-default))] opacity-40" />
-
-      {/* More section */}
-      <div className="px-3 relative">
-        <button
-          ref={moreBtnRef}
-          type="button"
-          onClick={() => setIsMoreOpen((p) => !p)}
-          className={cn(
-            'group relative flex items-center gap-2.5 h-10 px-3 rounded-xl w-full text-start',
-            'text-sm font-medium transition-all duration-200 motion-reduce:transition-none',
-            isMoreOpen
-              ? 'bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-primary))]'
-              : hasMoreActive
-                ? 'text-[hsl(var(--color-primary))]'
-                : 'text-[hsl(var(--fg-tertiary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
-          )}
-          aria-expanded={isMoreOpen}
-          aria-haspopup="true"
-        >
-          <MoreIcon
-            className={cn(
-              'size-[18px] shrink-0 transition-transform duration-200 motion-reduce:transition-none',
-              isMoreOpen && 'rotate-90',
-            )}
-          />
-          <span className="flex-1 truncate">{t('nav.more')}</span>
-          {hasMoreActive && !isMoreOpen && (
-            <span className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--color-primary))] shrink-0" />
-          )}
-          <svg
-            width={14}
-            height={14}
-            viewBox="0 0 20 20"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            strokeLinecap="round"
-            className={cn(
-              'shrink-0 transition-transform duration-200 motion-reduce:transition-none',
-              isMoreOpen ? 'rotate-90' : '-rotate-90',
-            )}
-          >
-            <path d="M12 5l-5 5 5 5" />
-          </svg>
-        </button>
-
-        {isMoreOpen && (
-          <div
-            ref={morePanelRef}
-            className={cn(
-              'absolute start-3 end-3 top-full mt-1 z-10',
-              'w-[calc(100%-24px)]',
-              'rounded-xl overflow-hidden',
-              'border border-[hsl(var(--border-default))]',
-              'bg-[hsl(var(--surface-elevated)/0.99)] backdrop-blur-xl',
-              'shadow-xl shadow-black/10',
-              'animate-in slide-in-from-top-1 fade-in-0 duration-150 motion-reduce:animate-none',
-              // Same defect as the mobile panel, opening the other way: this
-              // one grows DOWNWARD from a button partway down the sidebar, so
-              // on a short laptop screen the last groups fell past the bottom
-              // and the sidebar's own scroll could not reach them — the panel
-              // is absolutely positioned, so it does not extend its parent's
-              // scrollable area.
-              //
-              // The cap is an INLINE STYLE, not `max-h-[60vh]`. Tailwind
-              // generates arbitrary-value classes by scanning source, and this
-              // package is not in the web app's content globs — the class was
-              // emitted into the markup and no rule ever existed for it, so
-              // the computed `max-height` stayed `none` and the panel still
-              // ran 529px past the bottom of an 800px screen. Verified in the
-              // browser before and after.
-              'flex flex-col',
-            )}
-            style={{ maxHeight: '60vh' }}
-          >
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-2 px-1">
-              {moreGroups.map((group, idx) => (
-                <div key={group.id}>
-                  <div className="flex items-center gap-2 px-2 pt-2 pb-1">
-                    <span className="text-[10px] font-semibold text-[hsl(var(--fg-tertiary))] tracking-wide">
-                      {group.label}
-                    </span>
-                    <span className="flex-1 h-px bg-[hsl(var(--border-default))] opacity-30" />
-                  </div>
-                  <div className="flex flex-col gap-0.5 px-1">
-                    {group.items.map((item) => (
-                      <MorePanelItem
-                        key={item.id}
-                        item={item}
-                        isActive={isPathActive(activeNav, item.path)}
-                        onClick={() => {
-                          setIsMoreOpen(false)
-                          onNavigate(item.id, item.path)
-                        }}
-                      />
-                    ))}
-                  </div>
-                  {idx < moreGroups.length - 1 && (
-                    <div className="my-1.5 mx-2 h-px bg-[hsl(var(--border-default))] opacity-30" />
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
+    <TooltipProvider delayDuration={200}>
+      <aside
+        aria-label={t('nav.mainNav')}
+        style={{ width: collapsed ? SIDEBAR_WIDTH_COLLAPSED : SIDEBAR_WIDTH_EXPANDED }}
+        className={cn(
+          'sticky top-0 hidden h-screen shrink-0 lg:flex lg:flex-col',
+          'border-e border-[hsl(var(--border-default))]',
+          'bg-[hsl(var(--surface-base))]',
+          // ⚠️ No transition until the stored preference has been applied, or
+          // a collapsed user watches it slide shut on every single page load.
+          hydrated && 'transition-[width] duration-150 ease-out motion-reduce:transition-none',
         )}
-      </div>
+      >
+        {/* ── Header ── */}
+        <div
+          className={cn(
+            'flex shrink-0 items-center gap-2.5 border-b border-[hsl(var(--border-default))]',
+            collapsed ? 'h-16 justify-center px-0' : 'h-16 px-4',
+          )}
+        >
+          {collapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <img
+                  src="/logo-icon.png"
+                  alt={t('app.name')}
+                  className="size-9 shrink-0 object-contain"
+                />
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                {user?.businessName || user?.fullName || t('app.name')}
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <>
+              <img
+                src="/logo-icon.png"
+                alt=""
+                aria-hidden="true"
+                className="size-9 shrink-0 object-contain"
+              />
+              <div className="flex min-w-0 flex-col">
+                <span className="truncate text-sm font-semibold text-[hsl(var(--fg-primary))]">
+                  {t('app.name')}
+                </span>
+                {/* Real data only. When there is no business name yet there is
+                    no second line — an invented one would be worse than none. */}
+                {user?.businessName || user?.fullName ? (
+                  <span className="truncate text-[11px] text-[hsl(var(--fg-tertiary))]">
+                    {user.businessName || user.fullName}
+                  </span>
+                ) : null}
+              </div>
+            </>
+          )}
+        </div>
 
-      <div className="flex-1" />
-      <div className="px-3 py-4">
-        <div className="h-px bg-[hsl(var(--border-default))] mb-3 opacity-50" />
-        <p className="text-center text-[10px] text-[hsl(var(--fg-tertiary))] tracking-wider">
-          v3.0
-        </p>
-      </div>
-    </aside>
+        {/* ── Navigation ──
+            Only this scrolls, so the header and the footer stay put. */}
+        <nav
+          className={cn(
+            'flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overscroll-contain py-3',
+            collapsed ? 'px-3' : 'px-3',
+          )}
+        >
+          {primaryItems.map((item) => (
+            <SidebarItem
+              key={item.id}
+              item={item}
+              isActive={isPathActive(activeNav, item.path)}
+              collapsed={collapsed}
+              nested={false}
+              onClick={() => onNavigate(item.id, item.path)}
+            />
+          ))}
+
+          <div className="mt-2 flex flex-col gap-1">
+            {moreGroups.map((group) => {
+              const hasActive = group.items.some((item) => isPathActive(activeNav, item.path))
+              const open = overrides[group.id] ?? hasActive
+              return (
+                <SidebarGroup
+                  key={group.id}
+                  group={group}
+                  activeNav={activeNav}
+                  collapsed={collapsed}
+                  open={open}
+                  onToggle={() => toggleGroup(group.id, !open)}
+                  onNavigate={onNavigate}
+                />
+              )
+            })}
+          </div>
+        </nav>
+
+        {/* ── Footer ── */}
+        <div
+          className={cn(
+            'shrink-0 border-t border-[hsl(var(--border-default))] p-3',
+            collapsed && 'flex justify-center',
+          )}
+        >
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={() => setCollapsed(!collapsed)}
+                aria-label={toggleLabel}
+                aria-expanded={!collapsed}
+                className={cn(
+                  'flex h-9 items-center rounded-lg text-sm',
+                  'text-[hsl(var(--fg-tertiary))] transition-colors duration-150',
+                  'hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
+                  'motion-reduce:transition-none',
+                  collapsed ? 'w-9 justify-center' : 'w-full gap-2.5 px-3',
+                )}
+              >
+                <PanelLeft aria-hidden="true" className="size-[18px] shrink-0 rtl:rotate-180" />
+                {collapsed ? null : <span className="truncate">{toggleLabel}</span>}
+              </button>
+            </TooltipTrigger>
+            {/* Only useful when there is no visible label. */}
+            {collapsed ? <TooltipContent side="right">{toggleLabel}</TooltipContent> : null}
+          </Tooltip>
+        </div>
+
+        {/* ── Rail ──
+            The full-height edge of the sidebar is a second, much larger target
+            for the same toggle. `end-0` and `translate-x` are logical, so it
+            sits on the inner edge in both directions. It is `aria-hidden`
+            because it duplicates the footer button, which is the accessible
+            one — announcing the same action twice is noise. */}
+        <button
+          type="button"
+          tabIndex={-1}
+          aria-hidden="true"
+          onClick={() => setCollapsed(!collapsed)}
+          title={toggleLabel}
+          className={cn(
+            'absolute inset-y-0 end-0 w-3 translate-x-1/2 cursor-pointer',
+            'after:absolute after:inset-y-0 after:start-1/2 after:w-[2px]',
+            'after:-translate-x-1/2 after:bg-transparent',
+            'hover:after:bg-[hsl(var(--color-primary)/0.35)]',
+            'after:transition-colors after:duration-150 motion-reduce:after:transition-none',
+          )}
+        />
+      </aside>
+    </TooltipProvider>
   )
 })
 

@@ -1028,6 +1028,8 @@
     "mainNav": "منوی اصلی",
     "mobileNav": "منوی موبایل",
     "more": "بیشتر",
+    "collapseSidebar": "جمع کردن منو",
+    "expandSidebar": "باز کردن منو",
     "today": "امروز",
     "today_description": "امروز چه خبر است",
     "sell": "فروش",
@@ -3825,6 +3827,7 @@
       "seoTitle": "راهنمای پشتیبان‌گیری و خروجی داده حسابداری"
     },
     "related": "ادامه بخوانید",
+    "browseAll": "همه مقالات",
     "breadcrumbHome": "خانه",
     "helpFor": "راهنمای",
     "openInApp": "باز کردن در برنامه"

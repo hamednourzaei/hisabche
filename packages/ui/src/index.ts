@@ -86,6 +86,7 @@ export { AccountingPage } from './components/ui/accounting'
 
 // ---------- Navigation — Dashboard ----------
 export { DashboardSidebar, BottomNav, type NavItem } from './components/ui/dashboard-sidebar'
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './components/ui/tooltip'
 export { DashboardHeader } from './components/ui/dashboard-header'
 export { CommandPalette } from './components/ui/command-palette'
 export { GlobalSearch, type SearchPageItem } from './components/ui/global-search'

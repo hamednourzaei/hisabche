@@ -1,0 +1,555 @@
+{
+  "capturedAt": "2026-09-08T10:15:11.150Z",
+  "note": "Frozen BEFORE the Fumadocs migration. Diff the post-migration state against this.",
+  "locales": ["fa", "af", "en"],
+  "sources": {
+    "contentSource": "packages/ui/src/lib/docs/docs-content.ts (DOCS_ARTICLES)",
+    "helpFor": "packages/ui/src/components/ui/docs/docs-help-link.tsx (ROUTE_DOCS_MAP)",
+    "productLink": "apps/web/app/[lang]/docs/docs-client.tsx (inverts ROUTE_DOCS_MAP)",
+    "sitemap": "apps/web/app/sitemap.ts",
+    "internalLinks": "DOCS_ARTICLES[].related / .outbound",
+    "otherPublic": "packages/ui/src/components/ui/landing/site-footer.tsx"
+  },
+  "counts": {
+    "articles": 11,
+    "locales": 3,
+    "routes": 36,
+    "productToDocsEntries": 32,
+    "docsToProductEntries": 10,
+    "internalLinks": 33,
+    "outboundLinks": 5
+  },
+  "flags": {
+    "sitemapHasDocs": true,
+    "sitemapMapsArticles": true,
+    "footerLinksToDocs": true
+  },
+  "productToDocs": {
+    "invoices": "invoices",
+    "invoice-detail": "invoices",
+    "quick-invoice": "invoices",
+    "customers": "customers",
+    "customer-list": "customers",
+    "crm": "customers",
+    "warehouse": "inventory",
+    "inventory-workspace": "inventory",
+    "product-list": "inventory",
+    "products": "inventory",
+    "stock-count": "inventory",
+    "expiry": "inventory",
+    "operations": "inventory",
+    "accounting": "accounting",
+    "accounting-workspace": "accounting",
+    "payments": "invoices",
+    "till": "pos",
+    "pos": "pos",
+    "bank": "accounting",
+    "budgets": "accounting",
+    "assets": "accounting",
+    "permissions": "permissions",
+    "governance": "permissions",
+    "people-workspace": "permissions",
+    "human-resources": "permissions",
+    "timesheets": "permissions",
+    "branches": "branches",
+    "data-and-sync": "offline",
+    "conflicts": "offline",
+    "data-migration": "data-and-backup",
+    "settings": "data-and-backup",
+    "dashboard": "getting-started"
+  },
+  "docsToProduct": {
+    "invoices": "invoices",
+    "customers": "customers",
+    "inventory": "warehouse",
+    "accounting": "accounting",
+    "pos": "till",
+    "permissions": "permissions",
+    "branches": "branches",
+    "offline": "data-and-sync",
+    "data-and-backup": "data-migration",
+    "getting-started": "dashboard"
+  },
+  "internalLinks": [
+    {
+      "from": "getting-started",
+      "to": "invoices"
+    },
+    {
+      "from": "getting-started",
+      "to": "inventory"
+    },
+    {
+      "from": "getting-started",
+      "to": "data-and-backup"
+    },
+    {
+      "from": "invoices",
+      "to": "customers"
+    },
+    {
+      "from": "invoices",
+      "to": "inventory"
+    },
+    {
+      "from": "invoices",
+      "to": "accounting"
+    },
+    {
+      "from": "customers",
+      "to": "invoices"
+    },
+    {
+      "from": "customers",
+      "to": "accounting"
+    },
+    {
+      "from": "customers",
+      "to": "pos"
+    },
+    {
+      "from": "inventory",
+      "to": "invoices"
+    },
+    {
+      "from": "inventory",
+      "to": "pos"
+    },
+    {
+      "from": "inventory",
+      "to": "accounting"
+    },
+    {
+      "from": "accounting",
+      "to": "invoices"
+    },
+    {
+      "from": "accounting",
+      "to": "customers"
+    },
+    {
+      "from": "accounting",
+      "to": "branches"
+    },
+    {
+      "from": "pos",
+      "to": "inventory"
+    },
+    {
+      "from": "pos",
+      "to": "customers"
+    },
+    {
+      "from": "pos",
+      "to": "permissions"
+    },
+    {
+      "from": "offline",
+      "to": "pos"
+    },
+    {
+      "from": "offline",
+      "to": "data-and-backup"
+    },
+    {
+      "from": "offline",
+      "to": "getting-started"
+    },
+    {
+      "from": "branches",
+      "to": "permissions"
+    },
+    {
+      "from": "branches",
+      "to": "accounting"
+    },
+    {
+      "from": "branches",
+      "to": "inventory"
+    },
+    {
+      "from": "permissions",
+      "to": "branches"
+    },
+    {
+      "from": "permissions",
+      "to": "pos"
+    },
+    {
+      "from": "permissions",
+      "to": "assistant"
+    },
+    {
+      "from": "assistant",
+      "to": "accounting"
+    },
+    {
+      "from": "assistant",
+      "to": "inventory"
+    },
+    {
+      "from": "assistant",
+      "to": "permissions"
+    },
+    {
+      "from": "data-and-backup",
+      "to": "getting-started"
+    },
+    {
+      "from": "data-and-backup",
+      "to": "offline"
+    },
+    {
+      "from": "data-and-backup",
+      "to": "accounting"
+    }
+  ],
+  "outboundLinks": [
+    {
+      "from": "getting-started",
+      "href": "/features/offline"
+    },
+    {
+      "from": "invoices",
+      "href": "/features/customer-debt"
+    },
+    {
+      "from": "customers",
+      "href": "/features/customer-debt"
+    },
+    {
+      "from": "pos",
+      "href": "/features/offline"
+    },
+    {
+      "from": "offline",
+      "href": "/features/offline"
+    }
+  ],
+  "routes": [
+    {
+      "route": "/fa/docs",
+      "locale": "fa",
+      "source": "index",
+      "productRoute": null,
+      "docsSlug": null,
+      "reverseProductLink": null,
+      "expectedStatus": 200
+    },
+    {
+      "route": "/fa/docs/getting-started",
+      "locale": "fa",
+      "source": "i18n-key",
+      "productRoute": "/fa/dashboard",
+      "docsSlug": "getting-started",
+      "reverseProductLink": "/fa/dashboard",
+      "expectedStatus": 200
+    },
+    {
+      "route": "/fa/docs/invoices",
+      "locale": "fa",
+      "source": "i18n-key",
+      "productRoute": "/fa/invoices",
+      "docsSlug": "invoices",
+      "reverseProductLink": "/fa/invoices",
+      "expectedStatus": 200
+    },
+    {
+      "route": "/fa/docs/customers",
+      "locale": "fa",
+      "source": "i18n-key",
+      "productRoute": "/fa/customers",
+      "docsSlug": "customers",
+      "reverseProductLink": "/fa/customers",
+      "expectedStatus": 200
+    },
+    {
+      "route": "/fa/docs/inventory",
+      "locale": "fa",
+      "source": "i18n-key",
+      "productRoute": "/fa/warehouse",
+      "docsSlug": "inventory",
+      "reverseProductLink": "/fa/warehouse",
+      "expectedStatus": 200
+    },
+    {
+      "route": "/fa/docs/accounting",
+      "locale": "fa",
+      "source": "i18n-key",
+      "productRoute": "/fa/accounting",
+      "docsSlug": "accounting",
+      "reverseProductLink": "/fa/accounting",
+      "expectedStatus": 200
+    },
+    {
+      "route": "/fa/docs/pos",
+      "locale": "fa",
+      "source": "i18n-key",
+      "productRoute": "/fa/till",
+      "docsSlug": "pos",
+      "reverseProductLink": "/fa/till",
+      "expectedStatus": 200
+    },
+    {
+      "route": "/fa/docs/offline",
+      "locale": "fa",
+      "source": "i18n-key",
+      "productRoute": "/fa/data-and-sync",
+      "docsSlug": "offline",
+      "reverseProductLink": "/fa/data-and-sync",
+      "expectedStatus": 200
+    },
+    {
+      "route": "/fa/docs/branches",
+      "locale": "fa",
+      "source": "i18n-key",
+      "productRoute": "/fa/branches",
+      "docsSlug": "branches",
+      "reverseProductLink": "/fa/branches",
+      "expectedStatus": 200
+    },
+    {
+      "route": "/fa/docs/permissions",
+      "locale": "fa",
+      "source": "i18n-key",
+      "productRoute": "/fa/permissions",
+      "docsSlug": "permissions",
+      "reverseProductLink": "/fa/permissions",
+      "expectedStatus": 200
+    },
+    {
+      "route": "/fa/docs/assistant",
+      "locale": "fa",
+      "source": "i18n-key",
+      "productRoute": null,
+      "docsSlug": "assistant",
+      "reverseProductLink": null,
+      "expectedStatus": 200
+    },
+    {
+      "route": "/fa/docs/data-and-backup",
+      "locale": "fa",
+      "source": "i18n-key",
+      "productRoute": "/fa/data-migration",
+      "docsSlug": "data-and-backup",
+      "reverseProductLink": "/fa/data-migration",
+      "expectedStatus": 200
+    },
+    {
+      "route": "/af/docs",
+      "locale": "af",
+      "source": "index",
+      "productRoute": null,
+      "docsSlug": null,
+      "reverseProductLink": null,
+      "expectedStatus": 200
+    },
+    {
+      "route": "/af/docs/getting-started",
+      "locale": "af",
+      "source": "i18n-key",
+      "productRoute": "/af/dashboard",
+      "docsSlug": "getting-started",
+      "reverseProductLink": "/af/dashboard",
+      "expectedStatus": 200
+    },
+    {
+      "route": "/af/docs/invoices",
+      "locale": "af",
+      "source": "i18n-key",
+      "productRoute": "/af/invoices",
+      "docsSlug": "invoices",
+      "reverseProductLink": "/af/invoices",
+      "expectedStatus": 200
+    },
+    {
+      "route": "/af/docs/customers",
+      "locale": "af",
+      "source": "i18n-key",
+      "productRoute": "/af/customers",
+      "docsSlug": "customers",
+      "reverseProductLink": "/af/customers",
+      "expectedStatus": 200
+    },
+    {
+      "route": "/af/docs/inventory",
+      "locale": "af",
+      "source": "i18n-key",
+      "productRoute": "/af/warehouse",
+      "docsSlug": "inventory",
+      "reverseProductLink": "/af/warehouse",
+      "expectedStatus": 200
+    },
+    {
+      "route": "/af/docs/accounting",
+      "locale": "af",
+      "source": "i18n-key",
+      "productRoute": "/af/accounting",
+      "docsSlug": "accounting",
+      "reverseProductLink": "/af/accounting",
+      "expectedStatus": 200
+    },
+    {
+      "route": "/af/docs/pos",
+      "locale": "af",
+      "source": "i18n-key",
+      "productRoute": "/af/till",
+      "docsSlug": "pos",
+      "reverseProductLink": "/af/till",
+      "expectedStatus": 200
+    },
+    {
+      "route": "/af/docs/offline",
+      "locale": "af",
+      "source": "i18n-key",
+      "productRoute": "/af/data-and-sync",
+      "docsSlug": "offline",
+      "reverseProductLink": "/af/data-and-sync",
+      "expectedStatus": 200
+    },
+    {
+      "route": "/af/docs/branches",
+      "locale": "af",
+      "source": "i18n-key",
+      "productRoute": "/af/branches",
+      "docsSlug": "branches",
+      "reverseProductLink": "/af/branches",
+      "expectedStatus": 200
+    },
+    {
+      "route": "/af/docs/permissions",
+      "locale": "af",
+      "source": "i18n-key",
+      "productRoute": "/af/permissions",
+      "docsSlug": "permissions",
+      "reverseProductLink": "/af/permissions",
+      "expectedStatus": 200
+    },
+    {
+      "route": "/af/docs/assistant",
+      "locale": "af",
+      "source": "i18n-key",
+      "productRoute": null,
+      "docsSlug": "assistant",
+      "reverseProductLink": null,
+      "expectedStatus": 200
+    },
+    {
+      "route": "/af/docs/data-and-backup",
+      "locale": "af",
+      "source": "i18n-key",
+      "productRoute": "/af/data-migration",
+      "docsSlug": "data-and-backup",
+      "reverseProductLink": "/af/data-migration",
+      "expectedStatus": 200
+    },
+    {
+      "route": "/en/docs",
+      "locale": "en",
+      "source": "index",
+      "productRoute": null,
+      "docsSlug": null,
+      "reverseProductLink": null,
+      "expectedStatus": 200
+    },
+    {
+      "route": "/en/docs/getting-started",
+      "locale": "en",
+      "source": "i18n-key",
+      "productRoute": "/en/dashboard",
+      "docsSlug": "getting-started",
+      "reverseProductLink": "/en/dashboard",
+      "expectedStatus": 200
+    },
+    {
+      "route": "/en/docs/invoices",
+      "locale": "en",
+      "source": "i18n-key",
+      "productRoute": "/en/invoices",
+      "docsSlug": "invoices",
+      "reverseProductLink": "/en/invoices",
+      "expectedStatus": 200
+    },
+    {
+      "route": "/en/docs/customers",
+      "locale": "en",
+      "source": "i18n-key",
+      "productRoute": "/en/customers",
+      "docsSlug": "customers",
+      "reverseProductLink": "/en/customers",
+      "expectedStatus": 200
+    },
+    {
+      "route": "/en/docs/inventory",
+      "locale": "en",
+      "source": "i18n-key",
+      "productRoute": "/en/warehouse",
+      "docsSlug": "inventory",
+      "reverseProductLink": "/en/warehouse",
+      "expectedStatus": 200
+    },
+    {
+      "route": "/en/docs/accounting",
+      "locale": "en",
+      "source": "i18n-key",
+      "productRoute": "/en/accounting",
+      "docsSlug": "accounting",
+      "reverseProductLink": "/en/accounting",
+      "expectedStatus": 200
+    },
+    {
+      "route": "/en/docs/pos",
+      "locale": "en",
+      "source": "i18n-key",
+      "productRoute": "/en/till",
+      "docsSlug": "pos",
+      "reverseProductLink": "/en/till",
+      "expectedStatus": 200
+    },
+    {
+      "route": "/en/docs/offline",
+      "locale": "en",
+      "source": "i18n-key",
+      "productRoute": "/en/data-and-sync",
+      "docsSlug": "offline",
+      "reverseProductLink": "/en/data-and-sync",
+      "expectedStatus": 200
+    },
+    {
+      "route": "/en/docs/branches",
+      "locale": "en",
+      "source": "i18n-key",
+      "productRoute": "/en/branches",
+      "docsSlug": "branches",
+      "reverseProductLink": "/en/branches",
+      "expectedStatus": 200
+    },
+    {
+      "route": "/en/docs/permissions",
+      "locale": "en",
+      "source": "i18n-key",
+      "productRoute": "/en/permissions",
+      "docsSlug": "permissions",
+      "reverseProductLink": "/en/permissions",
+      "expectedStatus": 200
+    },
+    {
+      "route": "/en/docs/assistant",
+      "locale": "en",
+      "source": "i18n-key",
+      "productRoute": null,
+      "docsSlug": "assistant",
+      "reverseProductLink": null,
+      "expectedStatus": 200
+    },
+    {
+      "route": "/en/docs/data-and-backup",
+      "locale": "en",
+      "source": "i18n-key",
+      "productRoute": "/en/data-migration",
+      "docsSlug": "data-and-backup",
+      "reverseProductLink": "/en/data-migration",
+      "expectedStatus": 200
+    }
+  ]
+}

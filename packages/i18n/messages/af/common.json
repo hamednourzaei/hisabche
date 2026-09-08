@@ -1032,6 +1032,8 @@
     "mainNav": "ناوبری اصلی",
     "mobileNav": "ناوبری موبایل",
     "more": "بیشتر",
+    "collapseSidebar": "جمع کردن منو",
+    "expandSidebar": "باز کردن منو",
     "today": "امروز",
     "today_description": "امروز چه خبر است",
     "sell": "فروش",
@@ -3829,6 +3831,7 @@
       "seoTitle": "رهنمای بک‌اپ و خروجی معلومات حسابداری"
     },
     "related": "ادامه بخوانید",
+    "browseAll": "همه مقالات",
     "breadcrumbHome": "خانه",
     "helpFor": "رهنمای",
     "openInApp": "باز کردن در برنامه"

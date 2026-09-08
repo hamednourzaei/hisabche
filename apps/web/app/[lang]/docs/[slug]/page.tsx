@@ -6,7 +6,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getMessages } from 'next-intl/server'
 
-import { DOCS_ARTICLES, findArticle } from '@hisabche/ui'
+import { findArticle } from '@hisabche/ui'
 
 import { DocsClient } from '../docs-client'
 import { buildLegalMetadata } from '../../legal/legal-metadata'
@@ -14,16 +14,29 @@ import { localeUrl, resolveLocale } from '../../i18n-config'
 
 export const revalidate = 3600
 
-/**
- * Every article, prerendered.
- *
- * The set is fixed and small, so there is no reason to render these on demand
- * — and a static page is what a search engine and a reader on a slow
- * connection both want.
- */
-export function generateStaticParams() {
-  return DOCS_ARTICLES.map((article) => ({ slug: article.slug }))
-}
+// ⚠️ NO `generateStaticParams` — AND THIS IS THE FIX FOR THE PRODUCTION 500.
+//
+// It used to be here, returning every article slug. That opts the route into
+// STATIC prerendering, and the page reads its text through next-intl's
+// `getMessages()`, which resolves the locale from the REQUEST. During a
+// prerender there is no request, so Next throws:
+//
+//     digest: 'DYNAMIC_SERVER_USAGE'
+//
+// …and every `/[lang]/docs/<slug>` URL returns 500 in production. The build
+// still succeeds, and dev still serves the page, which is why it was not
+// caught here.
+//
+// ⚠️ THIS EXACT MISTAKE WAS ALREADY MADE, DIAGNOSED AND FIXED ONCE, on
+// `app/[lang]/features/[slug]/page.tsx` — the comment there says the same
+// thing. It was reintroduced because the docs route was written without
+// reading it. Rendering on demand is what every other public page in this app
+// does, and the `revalidate` above still caches the result.
+//
+// To make these static later, the supported route is next-intl's
+// `setRequestLocale()` plus a `generateStaticParams` that returns `lang` AS
+// WELL AS `slug`. That is a deliberate change to the locale plumbing, not
+// something to reach for to shave a render.
 
 export async function generateMetadata({
   params,

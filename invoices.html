@@ -3,771 +3,3104 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>فاکتورها | حسابچه</title>
+
+  <title>آروان‌کلاد — Dashboard</title>
+
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
   <script>
     tailwind.config = {
       theme: {
         extend: {
-          fontFamily: { sans: ['Vazirmatn', 'system-ui', 'sans-serif'] },
           colors: {
-            primary: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' },
-            success: { 50: '#f0fdf4', 100: '#dcfce7', 600: '#16a34a', 700: '#15803d' },
-            warning: { 50: '#fffbeb', 100: '#fef3c7', 600: '#d97706', 700: '#b45309' },
-            danger:  { 50: '#fef2f2', 100: '#fee2e2', 600: '#dc2626', 700: '#b91c1c' }
+            arvan: {
+              50: "#effcf9",
+              100: "#d7f7f0",
+              500: "#13b8a6",
+              600: "#0f9f91",
+              700: "#087f73",
+              800: "#06675e"
+            }
+          },
+          boxShadow: {
+            panel: "0 1px 2px rgba(15,23,42,.04), 0 8px 30px rgba(15,23,42,.04)"
           }
         }
       }
-    }
+    };
   </script>
+
   <style>
-    * { font-family: 'Vazirmatn', system-ui, sans-serif; }
-    body { background: #f8fafc; }
-    .skeleton {
-      background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
-      background-size: 200% 100%;
-      animation: shimmer 1.5s infinite;
+    @import url("https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap");
+
+    :root {
+      --header-height: 64px;
+      --rail-width: 64px;
+      --rail-expanded-width: 220px;
+      --product-width: 272px;
+
+      /*
+       * Mobile navigation:
+       * Parent stays visible on the right.
+       * Child occupies the remaining viewport on the left.
+       */
+      --mobile-parent-width: clamp(132px, 38vw, 174px);
     }
-    @keyframes shimmer {
-      0% { background-position: -200% 0; }
-      100% { background-position: 200% 0; }
+
+    * {
+      box-sizing: border-box;
     }
-    .badge { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium; }
-    .table-scroll::-webkit-scrollbar { height: 6px; }
-    .table-scroll::-webkit-scrollbar-track { background: #f1f5f9; }
-    .table-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-    /* Drawer animation */
-    .drawer-enter { transform: translateX(100%); }
-    .drawer-enter-active { transform: translateX(0); transition: transform 0.25s ease-out; }
-    .drawer-exit { transform: translateX(0); }
-    .drawer-exit-active { transform: translateX(100%); transition: transform 0.2s ease-in; }
-    /* Focus ring */
-    *:focus-visible { outline: 2px solid #2563eb; outline-offset: 2px; }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Vazirmatn", system-ui, sans-serif;
+      background: #f8fafc;
+      color: #0f172a;
+    }
+
+    body.mobile-nav-open {
+      overflow: hidden;
+    }
+
+    button,
+    a,
+    input {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    button:focus-visible,
+    a:focus-visible,
+    input:focus-visible {
+      outline: 2px solid #0f9f91;
+      outline-offset: 2px;
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 999px;
+    }
+
+    .glass {
+      background: rgba(255, 255, 255, .92);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+
+    /* ========================================================= */
+    /* DESKTOP LAYOUT */
+    /* ========================================================= */
+
+    .main-shell {
+      transition:
+        margin-right .25s ease,
+        width .25s ease;
+    }
+
+    .rail {
+      width: var(--rail-width);
+    }
+
+    .rail-expanded {
+      width: var(--rail-expanded-width);
+    }
+
+    .product-sidebar {
+      width: var(--product-width);
+      right: var(--rail-width);
+    }
+
+    .product-sidebar.closed {
+      transform: translateX(calc(100% + var(--rail-width)));
+    }
+
+    .rail-expanded + .product-sidebar {
+      right: var(--rail-expanded-width);
+    }
+
+    .content-desktop {
+      margin-right: calc(var(--rail-width) + var(--product-width));
+    }
+
+    .content-desktop.product-closed {
+      margin-right: var(--rail-width);
+    }
+
+    .content-desktop.rail-wide {
+      margin-right: calc(
+        var(--rail-expanded-width) + var(--product-width)
+      );
+    }
+
+    .content-desktop.rail-wide.product-closed {
+      margin-right: var(--rail-expanded-width);
+    }
+
+    .table-row {
+      transition: background .15s ease;
+    }
+
+    .table-row:hover {
+      background: #f8fafc;
+    }
+
+    /* ========================================================= */
+    /* MOBILE NAVIGATION */
+    /* ========================================================= */
+
+    .mobile-navigation {
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .mobile-navigation.is-open {
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .mobile-navigation-backdrop {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s ease;
+    }
+
+    .mobile-navigation.is-open .mobile-navigation-backdrop {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .mobile-navigation-shell {
+      transform: translateX(105%);
+      transition: transform .3s cubic-bezier(.2, .8, .2, 1);
+    }
+
+    .mobile-navigation.is-open .mobile-navigation-shell {
+      transform: translateX(0);
+    }
+
+    /*
+     * RTL:
+     * Parent = right side
+     * Child = left side
+     */
+    .mobile-parent-pane {
+      width: var(--mobile-parent-width);
+      flex: 0 0 var(--mobile-parent-width);
+    }
+
+    .mobile-child-pane {
+      min-width: 0;
+      flex: 1 1 auto;
+    }
+
+    .mobile-parent-pane,
+    .mobile-child-pane {
+      height: 100%;
+      min-height: 0;
+    }
+
+    .mobile-parent-item {
+      min-height: 56px;
+    }
+
+    .mobile-parent-item .mobile-parent-icon {
+      transition:
+        background .18s ease,
+        color .18s ease,
+        transform .18s ease;
+    }
+
+    .mobile-parent-item.is-active {
+      background: #effcf9;
+      color: #087f73;
+    }
+
+    .mobile-parent-item.is-active .mobile-parent-icon {
+      background: #d7f7f0;
+      color: #087f73;
+    }
+
+    .mobile-parent-item.is-active::before {
+      content: "";
+      position: absolute;
+      right: 0;
+      top: 10px;
+      bottom: 10px;
+      width: 3px;
+      border-radius: 999px 0 0 999px;
+      background: #0f9f91;
+    }
+
+    .mobile-parent-item:active .mobile-parent-icon {
+      transform: scale(.96);
+    }
+
+    .mobile-child-item {
+      min-height: 48px;
+    }
+
+    .mobile-child-item.is-active {
+      background: #effcf9;
+      color: #087f73;
+      font-weight: 600;
+    }
+
+    .mobile-child-item.is-active::before {
+      content: "";
+      position: absolute;
+      right: 0;
+      top: 10px;
+      bottom: 10px;
+      width: 3px;
+      border-radius: 999px 0 0 999px;
+      background: #0f9f91;
+    }
+
+    .mobile-child-scroll,
+    .mobile-parent-scroll {
+      overscroll-behavior: contain;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .mobile-product-context {
+      background:
+        linear-gradient(
+          180deg,
+          rgba(248, 250, 252, .98),
+          rgba(255, 255, 255, .98)
+        );
+    }
+
+    .mobile-product-context-icon {
+      box-shadow:
+        0 1px 2px rgba(15, 23, 42, .05),
+        0 5px 14px rgba(15, 23, 42, .05);
+    }
+
+    .mobile-close-button {
+      min-width: 44px;
+      min-height: 44px;
+    }
+
+    .mobile-parent-item,
+    .mobile-child-item {
+      touch-action: manipulation;
+    }
+
+    /*
+     * Very narrow devices.
+     */
+    @media (max-width: 359px) {
+      :root {
+        --mobile-parent-width: 124px;
+      }
+
+      .mobile-parent-item {
+        min-height: 52px;
+      }
+
+      .mobile-parent-label {
+        font-size: 10px;
+      }
+
+      .mobile-parent-icon {
+        width: 32px !important;
+        height: 32px !important;
+      }
+    }
+
+    /*
+     * Landscape phones.
+     */
+    @media (
+      max-width: 1023px
+    ) and (
+      orientation: landscape
+    ) {
+      :root {
+        --mobile-parent-width: 150px;
+      }
+
+      .mobile-parent-pane-header {
+        height: 56px;
+      }
+
+      .mobile-parent-item {
+        min-height: 48px;
+      }
+
+      .mobile-child-pane-header {
+        height: 56px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        scroll-behavior: auto !important;
+        transition: none !important;
+        animation: none !important;
+      }
+    }
+
+    @media (max-width: 1023px) {
+      .content-desktop,
+      .content-desktop.product-closed,
+      .content-desktop.rail-wide,
+      .content-desktop.rail-wide.product-closed {
+        margin-right: 0;
+      }
+    }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen">
 
-  <!-- ============================================================
-       MAIN CONTENT AREA ONLY
-       ============================================================ -->
-  <main class="p-4 md:p-6 lg:p-8 max-w-[1400px] mx-auto" id="main-content">
+<body>
 
-    <!-- Demo State Switcher -->
-    <div class="mb-6 flex flex-wrap gap-2 items-center bg-white border border-slate-200 rounded-lg p-3 shadow-sm">
-      <span class="text-sm font-medium text-slate-500 ml-2">نمایش حالت:</span>
-      <button onclick="setState('ready')" class="state-btn px-3 py-1.5 text-sm rounded-md bg-primary-600 text-white font-medium" data-state="ready">آماده</button>
-      <button onclick="setState('empty')" class="state-btn px-3 py-1.5 text-sm rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200" data-state="empty">خالی</button>
-      <button onclick="setState('loading')" class="state-btn px-3 py-1.5 text-sm rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200" data-state="loading">بارگذاری</button>
-      <button onclick="setState('error')" class="state-btn px-3 py-1.5 text-sm rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200" data-state="error">خطا</button>
-      <button onclick="setState('offline')" class="state-btn px-3 py-1.5 text-sm rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200" data-state="offline">آفلاین</button>
-      <span class="text-xs text-slate-400 mr-auto">میانبرها: / جستجو · N ایجاد · Esc بستن</span>
-    </div>
+  <!-- ========================================================= -->
+  <!-- HEADER -->
+  <!-- ========================================================= -->
 
-    <!-- ========== 1. PAGE HEADER ========== -->
-    <div class="flex flex-col sm:flex-row-reverse sm:items-center sm:justify-between gap-4 mb-6">
-      <div>
-        <h1 class="text-2xl md:text-3xl font-bold text-slate-900">فاکتورها</h1>
-        <p class="text-sm text-slate-500 mt-1">مدیریت و پیگیری تمام فاکتورهای صادرشده</p>
+  <header
+    class="fixed inset-x-0 top-0 z-[70] h-16 border-b border-slate-200/80 glass"
+  >
+    <div class="flex h-full items-center justify-between px-3 sm:px-5 lg:px-6">
+
+      <!-- Right -->
+      <div class="flex min-w-0 items-center gap-2">
+
+        <!-- Mobile menu -->
+        <button
+          id="mobileMenuButton"
+          type="button"
+          aria-label="باز کردن منوی محصولات"
+          aria-controls="mobileNavigation"
+          aria-expanded="false"
+          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-600 transition hover:bg-slate-100 lg:hidden"
+        >
+          <svg
+            class="h-5 w-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+          >
+            <path
+              stroke-width="1.8"
+              stroke-linecap="round"
+              d="M4 6h16M4 12h16M4 18h16"
+            />
+          </svg>
+        </button>
+
+        <!-- Brand -->
+        <div class="hidden items-center gap-2 sm:flex">
+          <div
+            class="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-950 text-sm font-bold text-white"
+          >
+            ا
+          </div>
+
+          <div class="hidden leading-tight md:block">
+            <div class="text-sm font-semibold text-slate-900">
+              آروان‌کلاد
+            </div>
+
+            <div class="text-[11px] text-slate-500">
+              پنل مدیریت
+            </div>
+          </div>
+        </div>
+
+        <!-- Workspace -->
+        <button
+          type="button"
+          class="mr-1 flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50"
+        >
+          <span class="hidden text-slate-500 sm:inline">
+            سازمان:
+          </span>
+
+          <span class="font-medium">
+            HN Workspace
+          </span>
+
+          <svg
+            class="h-4 w-4 text-slate-400"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+          >
+            <path
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="m6 9 6 6 6-6"
+            />
+          </svg>
+        </button>
+
       </div>
-      <button id="btn-create" onclick="openCreate()" 
-              class="inline-flex items-center justify-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-medium px-4 py-2.5 rounded-lg shadow-sm transition-colors self-start sm:self-auto"
-              aria-label="ایجاد فاکتور جدید">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+
+      <!-- Center Search -->
+      <div class="hidden max-w-md flex-1 px-6 lg:block">
+
+        <button
+          type="button"
+          class="flex h-10 w-full items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 text-right text-sm text-slate-400 transition hover:border-slate-300 hover:bg-white"
+        >
+          <svg
+            class="h-4 w-4 shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+          >
+            <circle cx="11" cy="11" r="6" stroke-width="1.8"/>
+            <path
+              d="m16 16 4 4"
+              stroke-width="1.8"
+              stroke-linecap="round"
+            />
+          </svg>
+
+          <span class="flex-1">
+            جستجو در پنل...
+          </span>
+
+          <kbd
+            class="rounded-md border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] text-slate-400"
+          >
+            /
+          </kbd>
+        </button>
+
+      </div>
+
+      <!-- Left -->
+      <div class="flex items-center gap-1">
+
+        <!-- Balance -->
+        <div class="hidden items-center gap-2 rounded-xl px-3 py-2 md:flex">
+          <div class="text-left">
+            <div class="text-[10px] text-slate-400">
+              اعتبار
+            </div>
+
+            <div class="text-sm font-semibold text-slate-800">
+              ۱۰,۸۴۲,۶۳۴ ریال
+            </div>
+          </div>
+        </div>
+
+        <!-- Create -->
+        <button
+          type="button"
+          class="hidden h-10 items-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-medium text-white shadow-sm transition hover:bg-slate-800 sm:flex"
+        >
+          <svg
+            class="h-4 w-4"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+          >
+            <path
+              d="M12 5v14M5 12h14"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
+          </svg>
+
+          ایجاد
+        </button>
+
+        <!-- Notification -->
+        <button
+          type="button"
+          aria-label="اعلان‌ها"
+          class="relative flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100"
+        >
+          <svg
+            class="h-5 w-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+          >
+            <path
+              d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"
+              stroke-width="1.7"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+          </svg>
+
+          <span
+            class="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500 ring-2 ring-white"
+          ></span>
+        </button>
+
+        <!-- Avatar -->
+        <button
+          type="button"
+          aria-label="حساب کاربری"
+          class="flex h-10 items-center gap-2 rounded-xl px-1.5 transition hover:bg-slate-100"
+        >
+          <div
+            class="flex h-8 w-8 items-center justify-center rounded-full bg-slate-200 text-xs font-semibold text-slate-700"
+          >
+            HN
+          </div>
+
+          <svg
+            class="hidden h-4 w-4 text-slate-400 sm:block"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+          >
+            <path
+              d="m6 9 6 6 6-6"
+              stroke-width="1.8"
+              stroke-linecap="round"
+            />
+          </svg>
+        </button>
+
+      </div>
+
+    </div>
+  </header>
+
+
+  <!-- ========================================================= -->
+  <!-- DESKTOP GLOBAL RAIL -->
+  <!-- ========================================================= -->
+
+  <aside
+    id="globalRail"
+    class="rail fixed bottom-0 right-0 top-16 z-50 hidden flex-col border-l border-slate-200 bg-white lg:flex"
+  >
+
+    <!-- Toggle -->
+    <div
+      class="flex h-14 items-center justify-center border-b border-slate-100"
+    >
+
+      <button
+        id="railToggle"
+        type="button"
+        aria-label="باز و بسته کردن منوی اصلی"
+        aria-expanded="false"
+        class="flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100"
+      >
+        <svg
+          id="railToggleIcon"
+          class="h-5 w-5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+        >
+          <path
+            d="M8 6l6 6-6 6M14 6l6 6-6 6"
+            stroke-width="1.8"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
         </svg>
-        ایجاد فاکتور جدید
       </button>
+
     </div>
 
-    <!-- ========== 2. SUMMARY CARDS ========== -->
-    <div id="summary-cards" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-      <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-slate-500">تعداد کل فاکتورها</p>
-            <p class="text-2xl font-bold text-slate-900 mt-1" id="stat-total">۰</p>
-          </div>
-          <div class="w-10 h-10 rounded-lg bg-primary-50 flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-          </div>
-        </div>
-      </div>
-      <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-slate-500">مبلغ کل پرداخت‌نشده</p>
-            <p class="text-2xl font-bold text-slate-900 mt-1" id="stat-unpaid">۰ <span class="text-sm font-normal text-slate-500">تومان</span></p>
-          </div>
-          <div class="w-10 h-10 rounded-lg bg-warning-50 flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-warning-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-        </div>
-      </div>
-      <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-slate-500">مبلغ کل سررسیدشده</p>
-            <p class="text-2xl font-bold text-slate-900 mt-1" id="stat-overdue">۰ <span class="text-sm font-normal text-slate-500">تومان</span></p>
-          </div>
-          <div class="w-10 h-10 rounded-lg bg-danger-50 flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-danger-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-        </div>
-      </div>
-      <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm">
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm font-medium text-slate-500">میانگین روزانه</p>
-            <p class="text-2xl font-bold text-slate-900 mt-1" id="stat-avg">۰ <span class="text-sm font-normal text-slate-500">فاکتور</span></p>
-          </div>
-          <div class="w-10 h-10 rounded-lg bg-success-50 flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-success-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-            </svg>
-          </div>
-        </div>
-      </div>
-    </div>
+    <!-- Products -->
+    <nav
+      class="flex-1 overflow-y-auto p-2"
+      aria-label="محصولات"
+    >
 
-    <!-- ========== 3. TOOLBAR ========== -->
-    <div id="toolbar" class="bg-white rounded-xl border border-slate-200 p-3 md:p-4 mb-4 shadow-sm">
-      <div class="flex flex-col lg:flex-row lg:items-center gap-3">
-        <div class="relative flex-1 max-w-md">
-          <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </div>
-          <input type="search" id="searchInput" placeholder="جستجوی شماره، مشتری، ..."
-                 class="w-full pr-10 pl-4 py-2.5 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-slate-50 hover:bg-white transition-colors"
-                 aria-label="جستجوی فاکتورها"
-                 oninput="applyFilters()" />
-        </div>
-        <div class="flex flex-wrap items-center gap-2">
-          <div class="flex flex-wrap gap-1.5" id="filter-toggles" role="group" aria-label="فیلتر وضعیت">
-            <button class="filter-btn active px-3 py-1.5 text-sm rounded-full border border-primary-600 bg-primary-50 text-primary-700 font-medium" data-filter="all" onclick="setFilter('all')">همه</button>
-            <button class="filter-btn px-3 py-1.5 text-sm rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50" data-filter="paid" onclick="setFilter('paid')">پرداخت‌شده</button>
-            <button class="filter-btn px-3 py-1.5 text-sm rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50" data-filter="unpaid" onclick="setFilter('unpaid')">پرداخت‌نشده</button>
-            <button class="filter-btn px-3 py-1.5 text-sm rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50" data-filter="debtor" onclick="setFilter('debtor')">بدهکار</button>
-            <button class="filter-btn px-3 py-1.5 text-sm rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-50" data-filter="draft" onclick="setFilter('draft')">پیش‌نویس</button>
-          </div>
-          <button class="hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 font-medium" onclick="alert('فیلتر پیشرفته (در نسخه واقعی Drawer باز می‌شود)')">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-            </svg>
-            فیلتر پیشرفته
-          </button>
-        </div>
+      <div
+        class="mb-2 px-2 text-[10px] font-semibold text-slate-400"
+      >
+        محصولات
       </div>
-    </div>
 
-    <!-- ========== BULK ACTION BAR ========== -->
-    <div id="bulk-bar" class="hidden mb-4 bg-primary-50 border border-primary-200 rounded-xl px-4 py-3 flex flex-wrap items-center justify-between gap-3 shadow-sm">
-      <div class="flex items-center gap-3">
-        <span class="text-sm font-medium text-primary-800">
-          <span id="bulk-count">۰</span> فاکتور انتخاب شده
+      <div
+        id="railProducts"
+        class="space-y-1"
+      ></div>
+
+    </nav>
+
+    <!-- Bottom -->
+    <div class="border-t border-slate-100 p-2">
+
+      <button
+        type="button"
+        class="rail-button group relative flex h-11 w-full items-center gap-3 rounded-xl px-2.5 text-sm text-slate-500 transition hover:bg-slate-50"
+      >
+
+        <span
+          class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+        >
+          <svg
+            class="h-5 w-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+          >
+            <path
+              d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"
+              stroke-width="1.7"
+            />
+
+            <path
+              d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-1.7 1.7-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V20h-2.4v-.2a1.7 1.7 0 0 0-1.03-1.56 1.7 1.7 0 0 0-1.88.34l-.06.06-1.7-1.7.06-.06A1.7 1.7 0 0 0 8.46 15a1.7 1.7 0 0 0-1.56-1.03H6.7v-2.4h.2A1.7 1.7 0 0 0 8.46 10a1.7 1.7 0 0 0-.34-1.88l-.06-.06 1.7-1.7.06.06a1.7 1.7 0 0 0 1.88.34 1.7 1.7 0 0 0 1.03-1.56V5h2.4v.2A1.7 1.7 0 0 0 16.36 6.76a1.7 1.7 0 0 0 1.88-.34l.06-.06 1.7 1.7-.06.06A1.7 1.7 0 0 0 19.6 10a1.7 1.7 0 0 0 1.56 1.03h.2v2.4h-.2A1.7 1.7 0 0 0 19.4 15Z"
+              stroke-width="1.5"
+              stroke-linejoin="round"
+            />
+          </svg>
         </span>
-        <button onclick="clearSelection()" class="text-sm text-primary-600 hover:underline">لغو انتخاب</button>
-      </div>
-      <div class="flex flex-wrap gap-2">
-        <button onclick="bulkAction('pay')" class="px-3 py-1.5 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 font-medium">ثبت پرداخت</button>
-        <button onclick="bulkAction('send')" class="px-3 py-1.5 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 font-medium">ارسال</button>
-        <button onclick="bulkAction('status')" class="px-3 py-1.5 text-sm bg-white border border-slate-200 rounded-lg hover:bg-slate-50 font-medium">تغییر وضعیت</button>
-        <button onclick="bulkAction('delete')" class="px-3 py-1.5 text-sm bg-danger-50 text-danger-700 border border-danger-200 rounded-lg hover:bg-danger-100 font-medium">حذف</button>
-      </div>
-    </div>
 
-    <!-- ========== 4. CONTENT AREA ========== -->
-    <div id="content-area" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <span
+          class="rail-label whitespace-nowrap opacity-0 transition-opacity"
+        >
+          تنظیمات
+        </span>
 
-      <!-- READY STATE -->
-      <div id="state-ready" class="block">
-        <!-- Desktop Table -->
-        <div class="hidden md:block overflow-x-auto table-scroll">
-          <table class="w-full text-sm text-right" role="table" aria-label="لیست فاکتورها">
-            <thead class="bg-slate-50 border-b border-slate-200">
-              <tr>
-                <th class="px-3 py-3 w-10">
-                  <input type="checkbox" id="select-all" class="rounded border-slate-300 text-primary-600 focus:ring-primary-500"
-                         onchange="toggleSelectAll(this.checked)" aria-label="انتخاب همه">
-                </th>
-                <th class="px-4 py-3 font-semibold text-slate-600 whitespace-nowrap">شماره فاکتور</th>
-                <th class="px-4 py-3 font-semibold text-slate-600 whitespace-nowrap">مشتری</th>
-                <th class="px-4 py-3 font-semibold text-slate-600 whitespace-nowrap">تاریخ</th>
-                <th class="px-4 py-3 font-semibold text-slate-600 whitespace-nowrap">مبلغ نهایی (تومان)</th>
-                <th class="px-4 py-3 font-semibold text-slate-600 whitespace-nowrap">وضعیت</th>
-                <th class="px-4 py-3 font-semibold text-slate-600 whitespace-nowrap text-center">عملیات</th>
-              </tr>
-            </thead>
-            <tbody id="table-body" class="divide-y divide-slate-100">
-              <!-- Rows injected by JS -->
-            </tbody>
-          </table>
-        </div>
-
-        <!-- Mobile Cards -->
-        <div id="mobile-cards" class="md:hidden divide-y divide-slate-100">
-          <!-- Cards injected by JS -->
-        </div>
-
-        <!-- Pagination -->
-        <div id="pagination" class="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 border-t border-slate-200 bg-slate-50">
-          <p id="pagination-info" class="text-sm text-slate-600">نمایش <span class="font-medium">۰</span> تا <span class="font-medium">۰</span> از <span class="font-medium">۰</span> فاکتور</p>
-          <div class="flex items-center gap-1">
-            <button id="prev-page" class="px-3 py-1.5 text-sm rounded-md border border-slate-200 bg-white text-slate-400 cursor-not-allowed" disabled aria-label="صفحه قبلی">قبلی</button>
-            <button id="page-indicator" class="px-3 py-1.5 text-sm rounded-md border border-primary-600 bg-primary-50 text-primary-700 font-medium" aria-current="page">۱</button>
-            <button id="next-page" class="px-3 py-1.5 text-sm rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-50" aria-label="صفحه بعدی">بعدی</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- EMPTY STATE -->
-      <div id="state-empty" class="hidden py-16 px-6 text-center">
-        <div class="mx-auto w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-        </div>
-        <h3 class="text-lg font-semibold text-slate-900 mb-1">هیچ فاکتوری ثبت نشده است</h3>
-        <p class="text-sm text-slate-500 mb-6 max-w-sm mx-auto">برای شروع، اولین فاکتور خود را ایجاد کنید و مدیریت مالی را ساده کنید.</p>
-        <button onclick="openCreate()" class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-medium px-5 py-2.5 rounded-lg shadow-sm transition-colors">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-          </svg>
-          ایجاد اولین فاکتور
-        </button>
-      </div>
-
-      <!-- NO RESULTS (search/filter) -->
-      <div id="state-no-results" class="hidden py-16 px-6 text-center">
-        <div class="mx-auto w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        </div>
-        <h3 class="text-lg font-semibold text-slate-900 mb-1">نتیجه‌ای یافت نشد</h3>
-        <p class="text-sm text-slate-500 mb-6 max-w-sm mx-auto">هیچ فاکتوری با این فیلتر یا جستجو مطابقت ندارد.</p>
-        <button onclick="clearFilters()" class="inline-flex items-center gap-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium px-5 py-2.5 rounded-lg shadow-sm transition-colors">
-          پاک کردن فیلترها
-        </button>
-      </div>
-
-      <!-- LOADING STATE -->
-      <div id="state-loading" class="hidden">
-        <div class="hidden md:block">
-          <div class="px-4 py-3 bg-slate-50 border-b border-slate-200 flex gap-4">
-            <div class="h-4 w-6 skeleton rounded"></div>
-            <div class="h-4 w-24 skeleton rounded"></div>
-            <div class="h-4 w-32 skeleton rounded"></div>
-            <div class="h-4 w-20 skeleton rounded"></div>
-            <div class="h-4 w-28 skeleton rounded"></div>
-            <div class="h-4 w-20 skeleton rounded"></div>
-            <div class="h-4 w-16 skeleton rounded"></div>
-          </div>
-          <div class="divide-y divide-slate-100">
-            <div class="px-4 py-4 flex items-center gap-4"><div class="h-4 w-6 skeleton rounded"></div><div class="h-4 w-28 skeleton rounded"></div><div class="flex items-center gap-2 flex-1"><div class="w-8 h-8 rounded-full skeleton"></div><div class="h-4 w-36 skeleton rounded"></div></div><div class="h-4 w-24 skeleton rounded"></div><div class="h-4 w-28 skeleton rounded"></div><div class="h-6 w-20 skeleton rounded-full"></div><div class="h-4 w-16 skeleton rounded"></div></div>
-            <div class="px-4 py-4 flex items-center gap-4"><div class="h-4 w-6 skeleton rounded"></div><div class="h-4 w-28 skeleton rounded"></div><div class="flex items-center gap-2 flex-1"><div class="w-8 h-8 rounded-full skeleton"></div><div class="h-4 w-32 skeleton rounded"></div></div><div class="h-4 w-24 skeleton rounded"></div><div class="h-4 w-24 skeleton rounded"></div><div class="h-6 w-20 skeleton rounded-full"></div><div class="h-4 w-16 skeleton rounded"></div></div>
-            <div class="px-4 py-4 flex items-center gap-4"><div class="h-4 w-6 skeleton rounded"></div><div class="h-4 w-28 skeleton rounded"></div><div class="flex items-center gap-2 flex-1"><div class="w-8 h-8 rounded-full skeleton"></div><div class="h-4 w-40 skeleton rounded"></div></div><div class="h-4 w-24 skeleton rounded"></div><div class="h-4 w-32 skeleton rounded"></div><div class="h-6 w-20 skeleton rounded-full"></div><div class="h-4 w-16 skeleton rounded"></div></div>
-            <div class="px-4 py-4 flex items-center gap-4"><div class="h-4 w-6 skeleton rounded"></div><div class="h-4 w-28 skeleton rounded"></div><div class="flex items-center gap-2 flex-1"><div class="w-8 h-8 rounded-full skeleton"></div><div class="h-4 w-28 skeleton rounded"></div></div><div class="h-4 w-24 skeleton rounded"></div><div class="h-4 w-20 skeleton rounded"></div><div class="h-6 w-20 skeleton rounded-full"></div><div class="h-4 w-16 skeleton rounded"></div></div>
-            <div class="px-4 py-4 flex items-center gap-4"><div class="h-4 w-6 skeleton rounded"></div><div class="h-4 w-28 skeleton rounded"></div><div class="flex items-center gap-2 flex-1"><div class="w-8 h-8 rounded-full skeleton"></div><div class="h-4 w-36 skeleton rounded"></div></div><div class="h-4 w-24 skeleton rounded"></div><div class="h-4 w-28 skeleton rounded"></div><div class="h-6 w-20 skeleton rounded-full"></div><div class="h-4 w-16 skeleton rounded"></div></div>
-          </div>
-        </div>
-        <div class="md:hidden divide-y divide-slate-100">
-          <div class="p-4 space-y-3"><div class="flex justify-between"><div class="h-5 w-28 skeleton rounded"></div><div class="h-6 w-20 skeleton rounded-full"></div></div><div class="h-4 w-40 skeleton rounded"></div><div class="flex justify-between"><div class="h-4 w-24 skeleton rounded"></div><div class="h-4 w-28 skeleton rounded"></div></div><div class="flex gap-2 pt-2"><div class="h-9 flex-1 skeleton rounded-lg"></div><div class="h-9 flex-1 skeleton rounded-lg"></div></div></div>
-          <div class="p-4 space-y-3"><div class="flex justify-between"><div class="h-5 w-28 skeleton rounded"></div><div class="h-6 w-20 skeleton rounded-full"></div></div><div class="h-4 w-32 skeleton rounded"></div><div class="flex justify-between"><div class="h-4 w-24 skeleton rounded"></div><div class="h-4 w-24 skeleton rounded"></div></div><div class="flex gap-2 pt-2"><div class="h-9 flex-1 skeleton rounded-lg"></div><div class="h-9 flex-1 skeleton rounded-lg"></div></div></div>
-          <div class="p-4 space-y-3"><div class="flex justify-between"><div class="h-5 w-28 skeleton rounded"></div><div class="h-6 w-20 skeleton rounded-full"></div></div><div class="h-4 w-36 skeleton rounded"></div><div class="flex justify-between"><div class="h-4 w-24 skeleton rounded"></div><div class="h-4 w-32 skeleton rounded"></div></div><div class="flex gap-2 pt-2"><div class="h-9 flex-1 skeleton rounded-lg"></div><div class="h-9 flex-1 skeleton rounded-lg"></div></div></div>
-        </div>
-      </div>
-
-      <!-- ERROR STATE -->
-      <div id="state-error" class="hidden py-16 px-6 text-center">
-        <div class="mx-auto w-16 h-16 rounded-full bg-danger-50 flex items-center justify-center mb-4">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-danger-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-        </div>
-        <h3 class="text-lg font-semibold text-slate-900 mb-1">خطا در بارگذاری اطلاعات</h3>
-        <p class="text-sm text-slate-500 mb-6 max-w-sm mx-auto">متأسفانه مشکلی در دریافت لیست فاکتورها پیش آمد. لطفاً دوباره تلاش کنید.</p>
-        <button onclick="setState('ready')" class="inline-flex items-center gap-2 bg-primary-600 hover:bg-primary-700 text-white font-medium px-5 py-2.5 rounded-lg shadow-sm transition-colors">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          تلاش مجدد
-        </button>
-      </div>
-
-      <!-- OFFLINE STATE -->
-      <div id="state-offline" class="hidden py-16 px-6 text-center">
-        <div class="mx-auto w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a5 5 0 00-1.414-2.83" />
-          </svg>
-        </div>
-        <h3 class="text-lg font-semibold text-slate-900 mb-1">اتصال به اینترنت برقرار نیست</h3>
-        <p class="text-sm text-slate-500 mb-6 max-w-sm mx-auto">برای مشاهده و مدیریت فاکتورها، اتصال خود را بررسی کنید.</p>
-        <button onclick="setState('ready')" class="inline-flex items-center gap-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-medium px-5 py-2.5 rounded-lg shadow-sm transition-colors">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          بررسی مجدد اتصال
-        </button>
-      </div>
-    </div>
-  </main>
-
-  <!-- ========== DETAIL DRAWER ========== -->
-  <div id="drawer-overlay" class="fixed inset-0 bg-black/40 z-40 hidden" onclick="closeDrawer()"></div>
-  <aside id="detail-drawer" class="fixed top-0 left-0 h-full w-full max-w-md bg-white shadow-2xl z-50 transform translate-x-full transition-transform duration-250 ease-out overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="drawer-title" hidden>
-    <div class="sticky top-0 bg-white border-b border-slate-200 px-5 py-4 flex items-center justify-between z-10">
-      <h2 id="drawer-title" class="text-lg font-bold text-slate-900">جزئیات فاکتور</h2>
-      <button onclick="closeDrawer()" class="p-2 rounded-lg hover:bg-slate-100 text-slate-500" aria-label="بستن">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </svg>
       </button>
+
     </div>
-    <div id="drawer-content" class="p-5 space-y-5">
-      <!-- Content injected by JS -->
-    </div>
-    <div class="sticky bottom-0 bg-white border-t border-slate-200 px-5 py-4 flex gap-3">
-      <button onclick="closeDrawer()" class="flex-1 py-2.5 border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-50">بستن</button>
-      <button class="flex-1 py-2.5 bg-primary-600 text-white rounded-lg text-sm font-medium hover:bg-primary-700">ویرایش</button>
-    </div>
+
   </aside>
 
-  <!-- Toast -->
-  <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-5 py-3 rounded-lg shadow-lg text-sm font-medium opacity-0 pointer-events-none transition-opacity duration-300 z-50" role="status" aria-live="polite"></div>
+
+  <!-- ========================================================= -->
+  <!-- DESKTOP PRODUCT SIDEBAR -->
+  <!-- ========================================================= -->
+
+  <aside
+    id="productSidebar"
+    class="product-sidebar fixed bottom-0 top-16 z-40 hidden flex-col border-l border-slate-200 bg-white shadow-[4px_0_20px_rgba(15,23,42,.02)] transition-[transform,right] duration-300 lg:flex"
+  >
+
+    <!-- Header -->
+    <div
+      class="flex h-14 shrink-0 items-center justify-between border-b border-slate-100 px-4"
+    >
+
+      <div>
+        <div class="text-[11px] font-medium text-slate-400">
+          محصول
+        </div>
+
+        <div
+          id="productTitleDesktop"
+          class="mt-0.5 text-sm font-semibold text-slate-900"
+        >
+          شبکه توزیع محتوا
+        </div>
+      </div>
+
+      <button
+        id="closeProductSidebar"
+        type="button"
+        aria-label="بستن منوی محصول"
+        class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+      >
+        <svg
+          class="h-4 w-4"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+        >
+          <path
+            d="M6 6l12 12M18 6 6 18"
+            stroke-width="1.8"
+            stroke-linecap="round"
+          />
+        </svg>
+      </button>
+
+    </div>
+
+    <!-- Product Identity -->
+    <div class="border-b border-slate-100 p-4">
+
+      <div
+        class="flex items-center gap-3 rounded-xl bg-slate-50 p-3"
+      >
+
+        <div
+          id="desktopProductIcon"
+          class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-slate-800 shadow-sm"
+        ></div>
+
+        <div class="min-w-0">
+          <div
+            id="desktopProductShort"
+            class="truncate text-sm font-semibold"
+          >
+            CDN
+          </div>
+
+          <div
+            id="desktopProductSubtitle"
+            class="mt-0.5 truncate text-[11px] text-slate-500"
+          >
+            Content Delivery Network
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Navigation -->
+    <nav
+      id="productNavigation"
+      class="flex-1 overflow-y-auto p-3"
+      aria-label="ناوبری محصول"
+    ></nav>
+
+    <!-- Help -->
+    <div class="border-t border-slate-100 p-3">
+
+      <button
+        type="button"
+        class="flex h-10 w-full items-center gap-2 rounded-xl px-3 text-sm text-slate-500 transition hover:bg-slate-50"
+      >
+        <svg
+          class="h-4 w-4"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+        >
+          <circle
+            cx="12"
+            cy="12"
+            r="9"
+            stroke-width="1.7"
+          />
+
+          <path
+            d="M9.8 9a2.3 2.3 0 1 1 3.8 1.73c-.9.72-1.6 1.18-1.6 2.27"
+            stroke-width="1.7"
+            stroke-linecap="round"
+          />
+
+          <circle
+            cx="12"
+            cy="16.5"
+            r=".8"
+            fill="currentColor"
+          />
+        </svg>
+
+        راهنما و پشتیبانی
+      </button>
+
+    </div>
+
+  </aside>
+
+
+  <!-- ========================================================= -->
+  <!-- MAIN -->
+  <!-- ========================================================= -->
+
+  <main
+    id="mainContent"
+    class="content-desktop min-h-screen pt-16 transition-[margin] duration-300"
+  >
+
+    <div
+      class="mx-auto max-w-[1600px] px-4 py-5 sm:px-6 lg:px-8 lg:py-7"
+    >
+
+      <!-- Breadcrumb / Page Header -->
+      <div class="mb-6">
+
+        <div
+          class="mb-3 flex items-center gap-2 text-xs text-slate-400"
+        >
+          <span>CDN</span>
+
+          <svg
+            class="h-3.5 w-3.5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+          >
+            <path
+              d="m9 18 6-6-6-6"
+              stroke-width="1.7"
+              stroke-linecap="round"
+            />
+          </svg>
+
+          <span class="text-slate-600">
+            دامنه‌ها
+          </span>
+        </div>
+
+        <div
+          class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between"
+        >
+
+          <div>
+            <h1
+              class="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl"
+            >
+              دامنه‌های من
+            </h1>
+
+            <p
+              class="mt-2 max-w-2xl text-sm leading-6 text-slate-500"
+            >
+              دامنه‌های متصل به سرویس CDN خود را مدیریت و وضعیت آن‌ها را بررسی کنید.
+            </p>
+          </div>
+
+          <div class="flex items-center gap-2">
+
+            <button
+              type="button"
+              class="flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+            >
+              <svg
+                class="h-4 w-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+              >
+                <path
+                  d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+
+              گزارش
+            </button>
+
+            <button
+              type="button"
+              class="flex h-10 items-center gap-2 rounded-xl bg-arvan-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-arvan-700 active:scale-[.98]"
+            >
+              <svg
+                class="h-4 w-4"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+              >
+                <path
+                  d="M12 5v14M5 12h14"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+              </svg>
+
+              دامنه جدید
+            </button>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- Stats -->
+      <section class="mb-5 grid grid-cols-2 gap-3 xl:grid-cols-4">
+
+        <div
+          class="rounded-2xl border border-slate-200 bg-white p-4 shadow-panel"
+        >
+          <div class="text-xs text-slate-500">
+            مجموع دامنه‌ها
+          </div>
+
+          <div class="mt-2 text-2xl font-bold text-slate-950">
+            ۲
+          </div>
+        </div>
+
+        <div
+          class="rounded-2xl border border-slate-200 bg-white p-4 shadow-panel"
+        >
+          <div class="text-xs text-slate-500">
+            فعال
+          </div>
+
+          <div class="mt-2 flex items-center gap-2">
+            <span class="text-2xl font-bold text-slate-950">
+              ۲
+            </span>
+
+            <span
+              class="rounded-full bg-arvan-50 px-2 py-0.5 text-[11px] font-medium text-arvan-700"
+            >
+              ۱۰۰٪
+            </span>
+          </div>
+        </div>
+
+        <div
+          class="hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-panel sm:block"
+        >
+          <div class="text-xs text-slate-500">
+            پلن پایه
+          </div>
+
+          <div class="mt-2 text-2xl font-bold text-slate-950">
+            ۲
+          </div>
+        </div>
+
+        <div
+          class="hidden rounded-2xl border border-slate-200 bg-white p-4 shadow-panel sm:block"
+        >
+          <div class="text-xs text-slate-500">
+            آخرین بروزرسانی
+          </div>
+
+          <div class="mt-2 text-sm font-semibold text-slate-950">
+            امروز، ۱۲:۴۰
+          </div>
+        </div>
+
+      </section>
+
+
+      <!-- Main Panel -->
+      <section
+        class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-panel"
+      >
+
+        <!-- Panel Header -->
+        <div class="border-b border-slate-100 p-4 sm:p-5">
+
+          <div
+            class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
+          >
+
+            <div>
+              <h2 class="text-base font-bold text-slate-950">
+                دامنه‌های متصل
+              </h2>
+
+              <p class="mt-1 text-xs leading-5 text-slate-500">
+                وضعیت، پلن و تنظیمات دامنه‌های خود را مشاهده کنید.
+              </p>
+            </div>
+
+            <div class="flex flex-col gap-2 sm:flex-row">
+
+              <label class="relative block">
+
+                <span class="sr-only">
+                  جستجوی دامنه
+                </span>
+
+                <input
+                  type="search"
+                  placeholder="جستجوی دامنه..."
+                  class="h-10 w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pr-10 pl-3 text-sm outline-none transition placeholder:text-slate-400 focus:border-arvan-500 focus:bg-white focus:ring-2 focus:ring-arvan-500/10 sm:w-64"
+                />
+
+                <svg
+                  class="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                >
+                  <circle
+                    cx="11"
+                    cy="11"
+                    r="6"
+                    stroke-width="1.8"
+                  />
+
+                  <path
+                    d="m16 16 4 4"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                  />
+                </svg>
+
+              </label>
+
+              <button
+                type="button"
+                class="flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-600 transition hover:bg-slate-50"
+              >
+                <svg
+                  class="h-4 w-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                >
+                  <path
+                    d="M4 6h16M7 12h10M10 18h4"
+                    stroke-width="1.8"
+                    stroke-linecap="round"
+                  />
+                </svg>
+
+                فیلتر
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- Desktop Table -->
+        <div class="hidden overflow-x-auto md:block">
+
+          <table class="w-full min-w-[720px] text-sm">
+
+            <thead>
+              <tr
+                class="border-b border-slate-100 bg-slate-50/70 text-xs text-slate-500"
+              >
+                <th class="w-12 px-5 py-3 text-right font-medium">
+                  #
+                </th>
+
+                <th class="px-4 py-3 text-right font-medium">
+                  دامنه
+                </th>
+
+                <th class="px-4 py-3 text-right font-medium">
+                  وضعیت
+                </th>
+
+                <th class="px-4 py-3 text-right font-medium">
+                  پلن
+                </th>
+
+                <th class="px-4 py-3 text-right font-medium">
+                  آخرین بروزرسانی
+                </th>
+
+                <th class="w-16 px-4 py-3"></th>
+              </tr>
+            </thead>
+
+            <tbody class="divide-y divide-slate-100">
+
+              <tr class="table-row">
+
+                <td class="px-5 py-4 text-xs text-slate-400">
+                  ۰۱
+                </td>
+
+                <td class="px-4 py-4">
+
+                  <div class="flex items-center gap-3">
+
+                    <div
+                      class="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600"
+                    >
+                      <svg
+                        class="h-4 w-4"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                      >
+                        <circle
+                          cx="12"
+                          cy="12"
+                          r="9"
+                          stroke-width="1.7"
+                        />
+
+                        <path
+                          d="M3 12h18M12 3c2.2 2.5 3.3 5.5 3.3 9s-1.1 6.5-3.3 9c-2.2-2.5-3.3-5.5-3.3-9S9.8 5.5 12 3Z"
+                          stroke-width="1.5"
+                        />
+                      </svg>
+                    </div>
+
+                    <div>
+                      <div class="font-semibold text-slate-900">
+                        mooshhoshak.life
+                      </div>
+
+                      <div class="mt-0.5 text-[11px] text-slate-400">
+                        شناسه دامنه: ۱
+                      </div>
+                    </div>
+
+                  </div>
+
+                </td>
+
+                <td class="px-4 py-4">
+                  <span
+                    class="inline-flex items-center gap-1.5 rounded-full bg-arvan-50 px-2.5 py-1 text-xs font-medium text-arvan-700"
+                  >
+                    <span
+                      class="h-1.5 w-1.5 rounded-full bg-arvan-600"
+                    ></span>
+
+                    فعال
+                  </span>
+                </td>
+
+                <td class="px-4 py-4 text-slate-600">
+                  پایه
+                </td>
+
+                <td class="px-4 py-4 text-xs text-slate-500">
+                  امروز، ۱۲:۴۰
+                </td>
+
+                <td class="px-4 py-4">
+                  <button
+                    type="button"
+                    aria-label="عملیات دامنه"
+                    class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                  >
+                    <svg
+                      class="h-4 w-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                    >
+                      <circle
+                        cx="5"
+                        cy="12"
+                        r="1.3"
+                        fill="currentColor"
+                      />
+
+                      <circle
+                        cx="12"
+                        cy="12"
+                        r="1.3"
+                        fill="currentColor"
+                      />
+
+                      <circle
+                        cx="19"
+                        cy="12"
+                        r="1.3"
+                        fill="currentColor"
+                      />
+                    </svg>
+                  </button>
+                </td>
+
+              </tr>
+
+              <tr class="table-row">
+
+                <td class="px-5 py-4 text-xs text-slate-400">
+                  ۰۲
+                </td>
+
+                <td class="px-4 py-4">
+
+                  <div class="flex items-center gap-3">
+
+                    <div
+                      class="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-600"
+                    >
+                      <svg
+                        class="h-4 w-4"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                      >
+                        <circle
+                          cx="12"
+                          cy="12"
+                          r="9"
+                          stroke-width="1.7"
+                        />
+
+                        <path
+                          d="M3 12h18M12 3c2.2 2.5 3.3 5.5 3.3 9s-1.1 6.5-3.3 9c-2.2-2.5-3.3-5.5-3.3-9S9.8 5.5 12 3Z"
+                          stroke-width="1.5"
+                        />
+                      </svg>
+                    </div>
+
+                    <div>
+                      <div class="font-semibold text-slate-900">
+                        tangehurmoz.life
+                      </div>
+
+                      <div class="mt-0.5 text-[11px] text-slate-400">
+                        شناسه دامنه: ۲
+                      </div>
+                    </div>
+
+                  </div>
+
+                </td>
+
+                <td class="px-4 py-4">
+                  <span
+                    class="inline-flex items-center gap-1.5 rounded-full bg-arvan-50 px-2.5 py-1 text-xs font-medium text-arvan-700"
+                  >
+                    <span
+                      class="h-1.5 w-1.5 rounded-full bg-arvan-600"
+                    ></span>
+
+                    فعال
+                  </span>
+                </td>
+
+                <td class="px-4 py-4 text-slate-600">
+                  پایه
+                </td>
+
+                <td class="px-4 py-4 text-xs text-slate-500">
+                  دیروز، ۱۸:۲۲
+                </td>
+
+                <td class="px-4 py-4">
+                  <button
+                    type="button"
+                    aria-label="عملیات دامنه"
+                    class="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                  >
+                    <svg
+                      class="h-4 w-4"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                    >
+                      <circle
+                        cx="5"
+                        cy="12"
+                        r="1.3"
+                        fill="currentColor"
+                      />
+
+                      <circle
+                        cx="12"
+                        cy="12"
+                        r="1.3"
+                        fill="currentColor"
+                      />
+
+                      <circle
+                        cx="19"
+                        cy="12"
+                        r="1.3"
+                        fill="currentColor"
+                      />
+                    </svg>
+                  </button>
+                </td>
+
+              </tr>
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+
+        <!-- Mobile Cards -->
+        <div class="divide-y divide-slate-100 md:hidden">
+
+          <article class="p-4">
+
+            <div class="flex items-start justify-between gap-3">
+
+              <div class="flex min-w-0 items-center gap-3">
+
+                <div
+                  class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600"
+                >
+                  <svg
+                    class="h-4 w-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                  >
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="9"
+                      stroke-width="1.7"
+                    />
+
+                    <path
+                      d="M3 12h18M12 3c2.2 2.5 3.3 5.5 3.3 9s-1.1 6.5-3.3 9c-2.2-2.5-3.3-5.5-3.3-9S9.8 5.5 12 3Z"
+                      stroke-width="1.5"
+                    />
+                  </svg>
+                </div>
+
+                <div class="min-w-0">
+                  <h3 class="truncate text-sm font-semibold text-slate-900">
+                    mooshhoshak.life
+                  </h3>
+
+                  <div class="mt-1 flex items-center gap-2">
+
+                    <span
+                      class="inline-flex items-center gap-1 text-[11px] font-medium text-arvan-700"
+                    >
+                      <span
+                        class="h-1.5 w-1.5 rounded-full bg-arvan-600"
+                      ></span>
+
+                      فعال
+                    </span>
+
+                    <span class="text-[11px] text-slate-400">
+                      ·
+                    </span>
+
+                    <span class="text-[11px] text-slate-500">
+                      پایه
+                    </span>
+
+                  </div>
+                </div>
+
+              </div>
+
+              <button
+                type="button"
+                aria-label="عملیات دامنه"
+                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100"
+              >
+                <svg
+                  class="h-4 w-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                >
+                  <circle
+                    cx="5"
+                    cy="12"
+                    r="1.3"
+                    fill="currentColor"
+                  />
+
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="1.3"
+                    fill="currentColor"
+                  />
+
+                  <circle
+                    cx="19"
+                    cy="12"
+                    r="1.3"
+                    fill="currentColor"
+                  />
+                </svg>
+              </button>
+
+            </div>
+
+            <div
+              class="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-3"
+            >
+
+              <div>
+                <div class="text-[10px] text-slate-400">
+                  آخرین بروزرسانی
+                </div>
+
+                <div class="mt-1 text-xs font-medium text-slate-700">
+                  امروز، ۱۲:۴۰
+                </div>
+              </div>
+
+              <div>
+                <div class="text-[10px] text-slate-400">
+                  شناسه
+                </div>
+
+                <div class="mt-1 text-xs font-medium text-slate-700">
+                  ۰۱
+                </div>
+              </div>
+
+            </div>
+
+          </article>
+
+
+          <article class="p-4">
+
+            <div class="flex items-start justify-between gap-3">
+
+              <div class="flex min-w-0 items-center gap-3">
+
+                <div
+                  class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600"
+                >
+                  <svg
+                    class="h-4 w-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                  >
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="9"
+                      stroke-width="1.7"
+                    />
+
+                    <path
+                      d="M3 12h18M12 3c2.2 2.5 3.3 5.5 3.3 9s-1.1 6.5-3.3 9c-2.2-2.5-3.3-5.5-3.3-9S9.8 5.5 12 3Z"
+                      stroke-width="1.5"
+                    />
+                  </svg>
+                </div>
+
+                <div class="min-w-0">
+                  <h3 class="truncate text-sm font-semibold text-slate-900">
+                    tangehurmoz.life
+                  </h3>
+
+                  <div class="mt-1 flex items-center gap-2">
+
+                    <span
+                      class="inline-flex items-center gap-1 text-[11px] font-medium text-arvan-700"
+                    >
+                      <span
+                        class="h-1.5 w-1.5 rounded-full bg-arvan-600"
+                      ></span>
+
+                      فعال
+                    </span>
+
+                    <span class="text-[11px] text-slate-400">
+                      ·
+                    </span>
+
+                    <span class="text-[11px] text-slate-500">
+                      پایه
+                    </span>
+
+                  </div>
+                </div>
+
+              </div>
+
+              <button
+                type="button"
+                aria-label="عملیات دامنه"
+                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100"
+              >
+                <svg
+                  class="h-4 w-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                >
+                  <circle
+                    cx="5"
+                    cy="12"
+                    r="1.3"
+                    fill="currentColor"
+                  />
+
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="1.3"
+                    fill="currentColor"
+                  />
+
+                  <circle
+                    cx="19"
+                    cy="12"
+                    r="1.3"
+                    fill="currentColor"
+                  />
+                </svg>
+              </button>
+
+            </div>
+
+            <div
+              class="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-slate-50 p-3"
+            >
+
+              <div>
+                <div class="text-[10px] text-slate-400">
+                  آخرین بروزرسانی
+                </div>
+
+                <div class="mt-1 text-xs font-medium text-slate-700">
+                  دیروز، ۱۸:۲۲
+                </div>
+              </div>
+
+              <div>
+                <div class="text-[10px] text-slate-400">
+                  شناسه
+                </div>
+
+                <div class="mt-1 text-xs font-medium text-slate-700">
+                  ۰۲
+                </div>
+              </div>
+
+            </div>
+
+          </article>
+
+        </div>
+
+
+        <!-- Pagination -->
+        <div
+          class="flex flex-col gap-3 border-t border-slate-100 px-4 py-4 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between"
+        >
+
+          <span>
+            نمایش ۲ دامنه
+          </span>
+
+          <div class="flex items-center gap-1">
+
+            <button
+              type="button"
+              disabled
+              class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-300"
+              aria-label="صفحه قبل"
+            >
+              ‹
+            </button>
+
+            <button
+              type="button"
+              class="flex h-8 min-w-8 items-center justify-center rounded-lg bg-slate-900 px-2 text-xs font-medium text-white"
+            >
+              ۱
+            </button>
+
+            <button
+              type="button"
+              disabled
+              class="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-300"
+              aria-label="صفحه بعد"
+            >
+              ›
+            </button>
+
+          </div>
+
+        </div>
+
+      </section>
+
+    </div>
+
+  </main>
+
+
+  <!-- ========================================================= -->
+  <!-- MOBILE DUAL-PANE NAVIGATION -->
+  <!-- ========================================================= -->
+
+  <section
+    id="mobileNavigation"
+    class="mobile-navigation fixed inset-0 z-[100] lg:hidden"
+    aria-label="ناوبری محصولات"
+    aria-hidden="true"
+  >
+
+    <!-- Backdrop -->
+    <button
+      id="mobileNavigationBackdrop"
+      type="button"
+      aria-label="بستن منو"
+      class="mobile-navigation-backdrop absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]"
+      tabindex="-1"
+    ></button>
+
+
+    <!-- Navigation Shell -->
+    <div
+      id="mobileNavigationShell"
+      class="mobile-navigation-shell absolute inset-y-0 right-0 flex w-full max-w-none overflow-hidden bg-white shadow-2xl"
+    >
+
+      <!-- ===================================================== -->
+      <!-- PARENT PANE — RIGHT -->
+      <!-- ===================================================== -->
+
+      <aside
+        id="mobileParentPane"
+        class="mobile-parent-pane relative z-20 flex shrink-0 flex-col border-l border-slate-200 bg-white"
+        aria-label="محصولات"
+      >
+
+        <!-- Parent Header -->
+        <header
+          class="mobile-parent-pane-header flex h-16 shrink-0 items-center justify-between border-b border-slate-100 px-2.5"
+        >
+
+          <div class="flex min-w-0 items-center gap-2">
+
+            <div
+              class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-950 text-xs font-bold text-white"
+            >
+              ا
+            </div>
+
+            <span
+              class="mobile-parent-label truncate text-xs font-bold text-slate-900"
+            >
+              محصولات
+            </span>
+
+          </div>
+
+          <button
+            id="mobileCloseButton"
+            type="button"
+            aria-label="بستن منوی محصولات"
+            class="mobile-close-button flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+          >
+            <svg
+              class="h-5 w-5"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+            >
+              <path
+                d="M6 6l12 12M18 6 6 18"
+                stroke-width="1.8"
+                stroke-linecap="round"
+              />
+            </svg>
+          </button>
+
+        </header>
+
+
+        <!-- Parent Navigation -->
+        <div
+          class="mobile-parent-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain p-2"
+        >
+
+          <div
+            class="mb-2 px-1.5 text-[9px] font-semibold text-slate-400"
+          >
+            محصولات ابری
+          </div>
+
+          <nav
+            id="mobileParentNavigation"
+            class="space-y-1"
+            aria-label="انتخاب محصول"
+          ></nav>
+
+        </div>
+
+
+        <!-- Parent Footer -->
+        <footer
+          class="shrink-0 border-t border-slate-100 p-2"
+        >
+
+          <button
+            type="button"
+            class="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl px-1.5 text-[10px] font-medium text-slate-500 transition hover:bg-slate-50"
+          >
+            <svg
+              class="h-4 w-4 shrink-0"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+            >
+              <circle
+                cx="12"
+                cy="12"
+                r="9"
+                stroke-width="1.7"
+              />
+
+              <path
+                d="M9.8 9a2.3 2.3 0 1 1 3.8 1.73c-.9.72-1.6 1.18-1.6 2.27"
+                stroke-width="1.7"
+                stroke-linecap="round"
+              />
+
+              <circle
+                cx="12"
+                cy="16.5"
+                r=".8"
+                fill="currentColor"
+              />
+            </svg>
+
+            <span class="mobile-parent-label">
+              پشتیبانی
+            </span>
+          </button>
+
+        </footer>
+
+      </aside>
+
+
+      <!-- ===================================================== -->
+      <!-- CHILD PANE — LEFT -->
+      <!-- ===================================================== -->
+
+      <aside
+        id="mobileChildPane"
+        class="mobile-child-pane relative z-10 flex min-w-0 flex-1 flex-col bg-white"
+        aria-label="ناوبری محصول"
+      >
+
+        <!-- Child Header -->
+        <header
+          class="mobile-child-pane-header flex h-16 shrink-0 items-center border-b border-slate-100 px-3"
+        >
+
+          <div class="flex min-w-0 items-center gap-2.5">
+
+            <div
+              id="mobileChildHeaderIcon"
+              class="mobile-product-context-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-700"
+            ></div>
+
+            <div class="min-w-0">
+
+              <div
+                id="mobileChildHeaderTitle"
+                class="truncate text-sm font-bold text-slate-900"
+              >
+                شبکه توزیع محتوا
+              </div>
+
+              <div
+                id="mobileChildHeaderSubtitle"
+                class="mt-0.5 truncate text-[10px] text-slate-400"
+              >
+                Content Delivery Network
+              </div>
+
+            </div>
+
+          </div>
+
+        </header>
+
+
+        <!-- Child Context -->
+        <div
+          class="mobile-product-context shrink-0 border-b border-slate-100 px-3 py-3"
+        >
+
+          <div class="flex items-center justify-between gap-2">
+
+            <div class="min-w-0">
+
+              <div
+                class="text-[9px] font-medium uppercase tracking-wide text-slate-400"
+              >
+                بخش فعلی
+              </div>
+
+              <div
+                id="mobileChildContextTitle"
+                class="mt-0.5 truncate text-xs font-semibold text-slate-700"
+              >
+                دامنه‌های من
+              </div>
+
+            </div>
+
+            <span
+              class="shrink-0 rounded-full bg-arvan-50 px-2 py-1 text-[9px] font-medium text-arvan-700"
+            >
+              CDN
+            </span>
+
+          </div>
+
+        </div>
+
+
+        <!-- Child Navigation -->
+        <div
+          class="mobile-child-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain p-3"
+        >
+
+          <nav
+            id="mobileChildNavigation"
+            aria-label="منوی محصول"
+            class="space-y-1"
+          ></nav>
+
+        </div>
+
+
+        <!-- Child Footer -->
+        <footer
+          class="shrink-0 border-t border-slate-100 p-2.5"
+        >
+
+          <button
+            type="button"
+            class="flex min-h-11 w-full items-center gap-2 rounded-xl px-3 text-xs font-medium text-slate-500 transition hover:bg-slate-50"
+          >
+            <svg
+              class="h-4 w-4"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+            >
+              <circle
+                cx="12"
+                cy="12"
+                r="9"
+                stroke-width="1.7"
+              />
+
+              <path
+                d="M9.8 9a2.3 2.3 0 1 1 3.8 1.73c-.9.72-1.6 1.18-1.6 2.27"
+                stroke-width="1.7"
+                stroke-linecap="round"
+              />
+
+              <circle
+                cx="12"
+                cy="16.5"
+                r=".8"
+                fill="currentColor"
+              />
+            </svg>
+
+            راهنما و پشتیبانی
+          </button>
+
+        </footer>
+
+      </aside>
+
+    </div>
+
+  </section>
+
+
+  <!-- ========================================================= -->
+  <!-- MOBILE BOTTOM NAV -->
+  <!-- ========================================================= -->
+
+  <nav
+    class="fixed inset-x-3 bottom-3 z-50 flex h-16 items-center justify-around rounded-2xl border border-slate-200 bg-white/95 px-2 shadow-xl backdrop-blur-xl lg:hidden"
+    aria-label="ناوبری اصلی"
+  >
+
+    <button
+      type="button"
+      class="flex min-w-[64px] flex-col items-center justify-center gap-1 rounded-xl text-arvan-700"
+    >
+      <svg
+        class="h-5 w-5"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+      >
+        <path
+          d="m4 10 8-6 8 6v9a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-9Z"
+          stroke-width="1.7"
+        />
+      </svg>
+
+      <span class="text-[10px] font-medium">
+        خانه
+      </span>
+    </button>
+
+
+    <button
+      id="mobileBottomProducts"
+      type="button"
+      aria-label="باز کردن محصولات"
+      class="flex min-w-[64px] flex-col items-center justify-center gap-1 rounded-xl text-slate-500"
+    >
+      <svg
+        class="h-5 w-5"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+      >
+        <rect
+          x="4"
+          y="4"
+          width="6"
+          height="6"
+          rx="1"
+          stroke-width="1.7"
+        />
+
+        <rect
+          x="14"
+          y="4"
+          width="6"
+          height="6"
+          rx="1"
+          stroke-width="1.7"
+        />
+
+        <rect
+          x="4"
+          y="14"
+          width="6"
+          height="6"
+          rx="1"
+          stroke-width="1.7"
+        />
+
+        <rect
+          x="14"
+          y="14"
+          width="6"
+          height="6"
+          rx="1"
+          stroke-width="1.7"
+        />
+      </svg>
+
+      <span class="text-[10px] font-medium">
+        محصولات
+      </span>
+    </button>
+
+
+    <button
+      type="button"
+      class="flex min-w-[64px] flex-col items-center justify-center gap-1 rounded-xl text-slate-500"
+    >
+      <svg
+        class="h-5 w-5"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+      >
+        <path
+          d="M4 7h16M4 12h16M4 17h16"
+          stroke-width="1.7"
+          stroke-linecap="round"
+        />
+      </svg>
+
+      <span class="text-[10px] font-medium">
+        بیشتر
+      </span>
+    </button>
+
+  </nav>
+
+
+  <!-- ========================================================= -->
+  <!-- JAVASCRIPT -->
+  <!-- ========================================================= -->
 
   <script>
-    // ============================================================
-    // DATA
-    // ============================================================
-    const mockInvoices = [
-      { id: 1, number: 'INV-1403-0892', customer: 'شرکت آریا تجارت', date: '۱۴۰۳/۰۶/۱۲', amount: 12500000, status: 'paid', label: 'پرداخت‌شده' },
-      { id: 2, number: 'INV-1403-0891', customer: 'محمد رضایی', date: '۱۴۰۳/۰۶/۱۱', amount: 8750000, status: 'unpaid', label: 'در انتظار' },
-      { id: 3, number: 'INV-1403-0890', customer: 'پارس نوین', date: '۱۴۰۳/۰۶/۱۰', amount: 23400000, status: 'debtor', label: 'بدهکار' },
-      { id: 4, number: 'INV-1403-0889', customer: 'سارا کریمی', date: '۱۴۰۳/۰۶/۰۹', amount: 5200000, status: 'draft', label: 'پیش‌نویس' },
-      { id: 5, number: 'INV-1403-0888', customer: 'توسعه سامان', date: '۱۴۰۳/۰۶/۰۸', amount: 15800000, status: 'paid', label: 'پرداخت‌شده' },
-      { id: 6, number: 'INV-1403-0887', customer: 'علی محمدی', date: '۱۴۰۳/۰۶/۰۷', amount: 9300000, status: 'debtor', label: 'سررسیدشده' },
-      { id: 7, number: 'INV-1403-0886', customer: 'نسترن احمدی', date: '۱۴۰۳/۰۶/۰۶', amount: 4100000, status: 'unpaid', label: 'در انتظار' },
-      { id: 8, number: 'INV-1403-0885', customer: 'گروه صنعتی کیمیا', date: '۱۴۰۳/۰۶/۰۵', amount: 28700000, status: 'paid', label: 'پرداخت‌شده' },
-    ];
+    /*
+     * ===========================================================
+     * PRODUCT DATA
+     * ===========================================================
+     */
 
-    let currentData = [...mockInvoices];
-    let currentFilter = 'all';
-    let currentPage = 1;
-    const pageSize = 5;
-    let selectedIds = new Set();
+    const products = {
+      cdn: {
+        title: "شبکه توزیع محتوا",
+        short: "CDN",
+        subtitle: "Content Delivery Network",
+        icon: "cloud",
+        items: [
+          "دامنه‌های من",
+          "جابه‌جایی دامنه",
+          "لیست‌ها",
+          "متریک‌های دامنه",
+          "خرید گواهی‌نامه SSL",
+          "تنظیمات فایروال",
+          "گزارش‌ها",
+          "لاگ تغییرات پنل"
+        ]
+      },
 
-    // ============================================================
-    // HELPERS
-    // ============================================================
-    function formatAmount(amount) {
-      return amount.toLocaleString('fa-IR');
-    }
+      server: {
+        title: "سرور ابری",
+        short: "Cloud Server",
+        subtitle: "Cloud Compute",
+        icon: "server",
+        items: [
+          "سرورهای من",
+          "ایجاد سرور",
+          "تصاویر",
+          "شبکه‌ها",
+          "حجم‌ها"
+        ]
+      },
 
-    function getBadgeClass(status) {
-      const map = {
-        paid: 'bg-success-100 text-success-700',
-        unpaid: 'bg-warning-100 text-warning-700',
-        debtor: 'bg-danger-100 text-danger-700',
-        draft: 'bg-slate-100 text-slate-600'
-      };
-      return map[status] || 'bg-slate-100 text-slate-600';
-    }
+      storage: {
+        title: "فضای ذخیره‌سازی",
+        short: "Object Storage",
+        subtitle: "Object Storage",
+        icon: "storage",
+        items: [
+          "باکت‌ها",
+          "ایجاد باکت",
+          "دسترسی‌ها"
+        ]
+      },
 
-    function getAvatar(name) {
-      return name.slice(0, 2);
-    }
+      container: {
+        title: "کانتینر ابری",
+        short: "Cloud Container",
+        subtitle: "Container Platform",
+        icon: "container",
+        items: [
+          "کلاسترها",
+          "ایجاد کلاستر"
+        ]
+      },
 
-    function showToast(message, duration = 3000) {
-      const toast = document.getElementById('toast');
-      toast.textContent = message;
-      toast.classList.remove('opacity-0', 'pointer-events-none');
-      toast.classList.add('opacity-100');
-      setTimeout(() => {
-        toast.classList.add('opacity-0', 'pointer-events-none');
-        toast.classList.remove('opacity-100');
-      }, duration);
-    }
+      video: {
+        title: "پلتفرم ویدیو",
+        short: "Video Platform",
+        subtitle: "Video Platform",
+        icon: "video",
+        items: [
+          "کانال‌ها",
+          "ویدیوها"
+        ]
+      },
 
-    // ============================================================
-    // RENDER
-    // ============================================================
-    function render() {
-      // Filter
-      let filtered = currentData;
-      if (currentFilter !== 'all') {
-        filtered = filtered.filter(inv => inv.status === currentFilter);
+      database: {
+        title: "دیتابیس مدیریت‌شده",
+        short: "Managed DB",
+        subtitle: "Managed Database",
+        icon: "database",
+        items: [
+          "اینستنس‌ها",
+          "بک‌آپ‌ها"
+        ]
+      }
+    };
+
+
+    /*
+     * ===========================================================
+     * ICONS
+     * ===========================================================
+     */
+
+    const icons = {
+      cloud: `
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          class="h-5 w-5"
+          aria-hidden="true"
+        >
+          <path
+            d="M3 15a4 4 0 0 0 4 4h9a5 5 0 0 0-.1-10 5 5 0 0 0-9.78 2.1A4 4 0 0 0 3 15Z"
+            stroke-width="1.7"
+            stroke-linecap="round"
+          />
+        </svg>
+      `,
+
+      server: `
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          class="h-5 w-5"
+          aria-hidden="true"
+        >
+          <rect
+            x="3"
+            y="4"
+            width="18"
+            height="6"
+            rx="1.5"
+            stroke-width="1.7"
+          />
+
+          <rect
+            x="3"
+            y="14"
+            width="18"
+            height="6"
+            rx="1.5"
+            stroke-width="1.7"
+          />
+
+          <path
+            d="M7 7h.01M7 17h.01"
+            stroke-width="2.5"
+            stroke-linecap="round"
+          />
+        </svg>
+      `,
+
+      storage: `
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          class="h-5 w-5"
+          aria-hidden="true"
+        >
+          <path
+            d="M7 16a4 4 0 0 1-.88-7.9A5 5 0 0 1 15.9 6L16 6a5 5 0 0 1 1 9.9"
+            stroke-width="1.7"
+            stroke-linecap="round"
+          />
+
+          <path
+            d="m12 13-3 3m3-3 3 3m-3-3v8"
+            stroke-width="1.7"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+      `,
+
+      container: `
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          class="h-5 w-5"
+          aria-hidden="true"
+        >
+          <path
+            d="m12 3 8 4-8 4-8-4 8-4Z"
+            stroke-width="1.7"
+          />
+
+          <path
+            d="m4 12 8 4 8-4M4 17l8 4 8-4"
+            stroke-width="1.7"
+          />
+        </svg>
+      `,
+
+      video: `
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          class="h-5 w-5"
+          aria-hidden="true"
+        >
+          <rect
+            x="3"
+            y="5"
+            width="12"
+            height="14"
+            rx="2"
+            stroke-width="1.7"
+          />
+
+          <path
+            d="m15 10 5-3v10l-5-3v-4Z"
+            stroke-width="1.7"
+            stroke-linejoin="round"
+          />
+        </svg>
+      `,
+
+      database: `
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          class="h-5 w-5"
+          aria-hidden="true"
+        >
+          <ellipse
+            cx="12"
+            cy="5"
+            rx="8"
+            ry="3"
+            stroke-width="1.7"
+          />
+
+          <path
+            d="M4 5v7c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12v7c0 1.7 3.6 3 8 3s8-1.3 8-3v-7"
+            stroke-width="1.7"
+          />
+        </svg>
+      `
+    };
+
+
+    /*
+     * ===========================================================
+     * STATE
+     * ===========================================================
+     */
+
+    let currentProduct = "cdn";
+    let currentChildIndex = 0;
+
+    let railExpanded = false;
+    let productOpen = true;
+    let mobileNavigationOpen = false;
+
+
+    /*
+     * ===========================================================
+     * DOM
+     * ===========================================================
+     */
+
+    const rail = document.getElementById("globalRail");
+    const productSidebar = document.getElementById("productSidebar");
+    const mainContent = document.getElementById("mainContent");
+
+    const mobileNavigation =
+      document.getElementById("mobileNavigation");
+
+    const mobileNavigationShell =
+      document.getElementById("mobileNavigationShell");
+
+    const mobileParentNavigation =
+      document.getElementById("mobileParentNavigation");
+
+    const mobileChildNavigation =
+      document.getElementById("mobileChildNavigation");
+
+
+    /*
+     * ===========================================================
+     * ICON HELPER
+     * ===========================================================
+     */
+
+    function getIcon(iconName, className = "") {
+      const icon = icons[iconName];
+
+      if (!icon) {
+        return "";
       }
 
-      // Search
-      const searchTerm = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
-      if (searchTerm) {
-        filtered = filtered.filter(inv =>
-          inv.number.toLowerCase().includes(searchTerm) ||
-          inv.customer.toLowerCase().includes(searchTerm) ||
-          inv.label.includes(searchTerm)
-        );
+      if (!className) {
+        return icon;
       }
 
-      // Stats (always from full data)
-      const unpaid = currentData.filter(i => i.status === 'unpaid' || i.status === 'debtor').reduce((s, i) => s + i.amount, 0);
-      const overdue = currentData.filter(i => i.status === 'debtor').reduce((s, i) => s + i.amount, 0);
-      const avg = currentData.length > 0 ? (currentData.length / 30).toFixed(1) : 0;
+      return icon.replace(
+        'class="h-5 w-5"',
+        `class="h-5 w-5 ${className}"`
+      );
+    }
 
-      document.getElementById('stat-total').textContent = currentData.length.toLocaleString('fa-IR');
-      document.getElementById('stat-unpaid').innerHTML = `${formatAmount(unpaid)} <span class="text-sm font-normal text-slate-500">تومان</span>`;
-      document.getElementById('stat-overdue').innerHTML = `${formatAmount(overdue)} <span class="text-sm font-normal text-slate-500">تومان</span>`;
-      document.getElementById('stat-avg').innerHTML = `${avg} <span class="text-sm font-normal text-slate-500">فاکتور</span>`;
 
-      // Empty / No Results handling
-      const total = filtered.length;
-      if (currentData.length === 0) {
-        showOnlyState('empty');
+    /*
+     * ===========================================================
+     * DESKTOP PRODUCT RAIL
+     * ===========================================================
+     */
+
+    function renderDesktopProducts() {
+      const container =
+        document.getElementById("railProducts");
+
+      const html = Object.entries(products)
+        .map(([key, product]) => {
+          const active = key === currentProduct;
+
+          return `
+            <button
+              type="button"
+              data-product="${key}"
+              aria-current="${active ? "page" : "false"}"
+              aria-label="${product.title}"
+              class="desktop-product-trigger group relative flex h-11 w-full items-center gap-3 rounded-xl px-2.5 text-right transition
+                ${
+                  active
+                    ? "bg-arvan-50 text-arvan-700"
+                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+                }"
+            >
+
+              ${
+                active
+                  ? `
+                    <span
+                      class="absolute right-0 top-1/2 h-6 w-0.5 -translate-y-1/2 rounded-full bg-arvan-600"
+                    ></span>
+                  `
+                  : ""
+              }
+
+              <span
+                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+              >
+                ${getIcon(product.icon)}
+              </span>
+
+              <span
+                class="desktop-product-label whitespace-nowrap text-sm font-medium opacity-0 transition-opacity"
+              >
+                ${product.title}
+              </span>
+
+            </button>
+          `;
+        })
+        .join("");
+
+      container.innerHTML = html;
+
+      container
+        .querySelectorAll(".desktop-product-trigger")
+        .forEach(button => {
+          button.addEventListener("click", () => {
+            const key = button.dataset.product;
+
+            if (!key) {
+              return;
+            }
+
+            setProduct(key);
+          });
+        });
+    }
+
+
+    /*
+     * ===========================================================
+     * DESKTOP PRODUCT NAVIGATION
+     * ===========================================================
+     */
+
+    function renderDesktopProductNavigation() {
+      const data = products[currentProduct];
+      const container =
+        document.getElementById("productNavigation");
+
+      const html = data.items
+        .map((item, index) => {
+          const active = index === currentChildIndex;
+
+          return `
+            <a
+              href="#"
+              data-child-index="${index}"
+              aria-current="${active ? "page" : "false"}"
+              class="desktop-child-trigger group relative flex min-h-10 items-center rounded-xl px-3 text-sm transition
+                ${
+                  active
+                    ? "bg-arvan-50 font-semibold text-arvan-700"
+                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                }"
+            >
+
+              ${
+                active
+                  ? `
+                    <span
+                      class="absolute right-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-full bg-arvan-600"
+                    ></span>
+                  `
+                  : ""
+              }
+
+              <span class="truncate">
+                ${item}
+              </span>
+
+              ${
+                active
+                  ? `
+                    <span
+                      class="mr-auto h-1.5 w-1.5 shrink-0 rounded-full bg-arvan-600"
+                    ></span>
+                  `
+                  : ""
+              }
+
+            </a>
+          `;
+        })
+        .join("");
+
+      container.innerHTML = html;
+
+      container
+        .querySelectorAll(".desktop-child-trigger")
+        .forEach(link => {
+          link.addEventListener("click", event => {
+            event.preventDefault();
+
+            const index =
+              Number(link.dataset.childIndex);
+
+            if (Number.isNaN(index)) {
+              return;
+            }
+
+            selectChild(index);
+          });
+        });
+    }
+
+
+    /*
+     * ===========================================================
+     * MOBILE PARENT NAVIGATION
+     * ===========================================================
+     */
+
+    function renderMobileParents() {
+      const html = Object.entries(products)
+        .map(([key, product]) => {
+          const active = key === currentProduct;
+
+          return `
+            <button
+              type="button"
+              data-mobile-product="${key}"
+              aria-current="${active ? "page" : "false"}"
+              class="mobile-parent-item relative flex w-full items-center gap-2 rounded-xl px-1.5 py-1.5 text-right transition
+                ${
+                  active
+                    ? "is-active"
+                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+                }"
+            >
+
+              <span
+                class="mobile-parent-icon flex h-10 w-10 shrink-0 items-center justify-center rounded-xl
+                  ${
+                    active
+                      ? "bg-arvan-100 text-arvan-700"
+                      : "bg-slate-50 text-slate-500"
+                  }"
+              >
+                ${getIcon(product.icon)}
+              </span>
+
+              <span
+                class="mobile-parent-label min-w-0 truncate text-[11px] font-medium leading-4"
+              >
+                ${product.title}
+              </span>
+
+            </button>
+          `;
+        })
+        .join("");
+
+      mobileParentNavigation.innerHTML = html;
+
+      mobileParentNavigation
+        .querySelectorAll("[data-mobile-product]")
+        .forEach(button => {
+          button.addEventListener("click", () => {
+            const key =
+              button.dataset.mobileProduct;
+
+            if (!key) {
+              return;
+            }
+
+            selectMobileProduct(key);
+          });
+        });
+    }
+
+
+    /*
+     * ===========================================================
+     * MOBILE CHILD NAVIGATION
+     * ===========================================================
+     */
+
+    function renderMobileChildren() {
+      const data = products[currentProduct];
+
+      const html = data.items
+        .map((item, index) => {
+          const active =
+            index === currentChildIndex;
+
+          return `
+            <a
+              href="#"
+              data-mobile-child="${index}"
+              aria-current="${active ? "page" : "false"}"
+              class="mobile-child-item relative flex w-full items-center rounded-xl px-3 text-xs transition
+                ${
+                  active
+                    ? "is-active"
+                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                }"
+            >
+
+              <span class="truncate">
+                ${item}
+              </span>
+
+              ${
+                active
+                  ? `
+                    <span
+                      class="mr-auto h-1.5 w-1.5 shrink-0 rounded-full bg-arvan-600"
+                    ></span>
+                  `
+                  : ""
+              }
+
+            </a>
+          `;
+        })
+        .join("");
+
+      mobileChildNavigation.innerHTML = html;
+
+      mobileChildNavigation
+        .querySelectorAll("[data-mobile-child]")
+        .forEach(link => {
+          link.addEventListener("click", event => {
+            event.preventDefault();
+
+            const index =
+              Number(link.dataset.mobileChild);
+
+            if (Number.isNaN(index)) {
+              return;
+            }
+
+            selectChild(index);
+          });
+        });
+    }
+
+
+    /*
+     * ===========================================================
+     * UPDATE PRODUCT CONTEXT
+     * ===========================================================
+     */
+
+    function updateProductContext() {
+      const data = products[currentProduct];
+
+      document.getElementById(
+        "productTitleDesktop"
+      ).textContent = data.title;
+
+      document.getElementById(
+        "desktopProductShort"
+      ).textContent = data.short;
+
+      document.getElementById(
+        "desktopProductSubtitle"
+      ).textContent = data.subtitle;
+
+      document.getElementById(
+        "desktopProductIcon"
+      ).innerHTML = getIcon(data.icon);
+
+      document.getElementById(
+        "mobileChildHeaderTitle"
+      ).textContent = data.title;
+
+      document.getElementById(
+        "mobileChildHeaderSubtitle"
+      ).textContent = data.subtitle;
+
+      document.getElementById(
+        "mobileChildHeaderIcon"
+      ).innerHTML = getIcon(data.icon);
+
+      document.getElementById(
+        "mobileChildContextTitle"
+      ).textContent =
+        data.items[currentChildIndex] || data.items[0];
+    }
+
+
+    /*
+     * ===========================================================
+     * PRODUCT SELECTION
+     * ===========================================================
+     */
+
+    function setProduct(key) {
+      if (!products[key]) {
         return;
       }
-      if (total === 0) {
-        showOnlyState('no-results');
+
+      currentProduct = key;
+      currentChildIndex = 0;
+
+      updateProductContext();
+      renderDesktopProducts();
+      renderDesktopProductNavigation();
+      renderMobileParents();
+      renderMobileChildren();
+
+      if (!productOpen) {
+        openProduct();
+      }
+    }
+
+
+    /*
+     * ===========================================================
+     * MOBILE PRODUCT SELECTION
+     *
+     * Important:
+     * Parent pane DOES NOT disappear.
+     * Child pane updates beside it.
+     * ===========================================================
+     */
+
+    function selectMobileProduct(key) {
+      if (!products[key]) {
         return;
       }
 
-      showOnlyState('ready');
+      currentProduct = key;
+      currentChildIndex = 0;
 
-      // Pagination
-      const totalPages = Math.ceil(total / pageSize) || 1;
-      if (currentPage > totalPages) currentPage = totalPages;
-      const start = (currentPage - 1) * pageSize;
-      const end = Math.min(start + pageSize, total);
-      const pageItems = filtered.slice(start, end);
+      updateProductContext();
+      renderDesktopProducts();
+      renderDesktopProductNavigation();
+      renderMobileParents();
+      renderMobileChildren();
 
-      // Table rows
-      const tbody = document.getElementById('table-body');
-      tbody.innerHTML = pageItems.map(inv => {
-        const checked = selectedIds.has(inv.id) ? 'checked' : '';
-        return `
-          <tr class="hover:bg-slate-50 transition-colors ${selectedIds.has(inv.id) ? 'bg-primary-50/40' : ''}" data-id="${inv.id}">
-            <td class="px-3 py-3.5">
-              <input type="checkbox" class="row-checkbox rounded border-slate-300 text-primary-600 focus:ring-primary-500"
-                     ${checked} onchange="toggleRow(${inv.id}, this.checked)" aria-label="انتخاب فاکتور ${inv.number}">
-            </td>
-            <td class="px-4 py-3.5 font-medium text-primary-600">
-              <button onclick="openDrawer(${inv.id})" class="hover:underline focus:outline-none">${inv.number}</button>
-            </td>
-            <td class="px-4 py-3.5">
-              <div class="flex items-center gap-2">
-                <div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-medium text-slate-600">${getAvatar(inv.customer)}</div>
-                <span>${inv.customer}</span>
-              </div>
-            </td>
-            <td class="px-4 py-3.5 text-slate-600">${inv.date}</td>
-            <td class="px-4 py-3.5 font-medium">${formatAmount(inv.amount)}</td>
-            <td class="px-4 py-3.5"><span class="badge ${getBadgeClass(inv.status)}">${inv.label}</span></td>
-            <td class="px-4 py-3.5">
-              <div class="flex items-center justify-center gap-1">
-                <button onclick="openDrawer(${inv.id})" class="p-1.5 rounded-md text-slate-500 hover:bg-slate-100 hover:text-primary-600" title="مشاهده" aria-label="مشاهده">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                </button>
-                <button class="p-1.5 rounded-md text-slate-500 hover:bg-slate-100 hover:text-primary-600" title="ویرایش" aria-label="ویرایش">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                </button>
-              </div>
-            </td>
-          </tr>
-        `;
-      }).join('');
-
-      // Mobile cards
-      const mobileContainer = document.getElementById('mobile-cards');
-      mobileContainer.innerHTML = pageItems.map(inv => `
-        <div class="p-4 ${selectedIds.has(inv.id) ? 'bg-primary-50/30' : ''}">
-          <div class="flex items-start gap-3">
-            <input type="checkbox" class="mt-1 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
-                   ${selectedIds.has(inv.id) ? 'checked' : ''} onchange="toggleRow(${inv.id}, this.checked)">
-            <div class="flex-1 min-w-0">
-              <div class="flex items-start justify-between mb-1">
-                <div>
-                  <button onclick="openDrawer(${inv.id})" class="font-semibold text-primary-600 hover:underline">${inv.number}</button>
-                  <p class="text-sm text-slate-700 mt-0.5">${inv.customer}</p>
-                </div>
-                <span class="badge ${getBadgeClass(inv.status)} shrink-0">${inv.label}</span>
-              </div>
-              <div class="flex items-center justify-between text-sm text-slate-500 mt-2">
-                <span>${inv.date}</span>
-                <span class="font-medium text-slate-800">${formatAmount(inv.amount)} تومان</span>
-              </div>
-              <div class="flex gap-2 mt-3 pt-3 border-t border-slate-100">
-                <button onclick="openDrawer(${inv.id})" class="flex-1 flex items-center justify-center gap-1.5 py-2 text-sm text-slate-600 bg-slate-50 rounded-lg hover:bg-slate-100">
-                  مشاهده
-                </button>
-                <button class="flex-1 flex items-center justify-center gap-1.5 py-2 text-sm text-slate-600 bg-slate-50 rounded-lg hover:bg-slate-100">
-                  ویرایش
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      `).join('');
-
-      // Pagination info
-      document.getElementById('pagination-info').innerHTML =
-        `نمایش <span class="font-medium">${total === 0 ? 0 : start + 1}</span> تا <span class="font-medium">${end}</span> از <span class="font-medium">${total}</span> فاکتور`;
-      document.getElementById('page-indicator').textContent = currentPage.toLocaleString('fa-IR');
-      document.getElementById('prev-page').disabled = currentPage === 1;
-      document.getElementById('next-page').disabled = currentPage === totalPages || totalPages === 0;
-
-      // Select all checkbox state
-      const allOnPageSelected = pageItems.length > 0 && pageItems.every(i => selectedIds.has(i.id));
-      document.getElementById('select-all').checked = allOnPageSelected;
-      document.getElementById('select-all').indeterminate = !allOnPageSelected && pageItems.some(i => selectedIds.has(i.id));
-
-      updateBulkBar();
+      focusFirstMobileChild();
     }
 
-    function showOnlyState(stateName) {
-      ['ready', 'empty', 'loading', 'error', 'offline', 'no-results'].forEach(s => {
-        const el = document.getElementById('state-' + s);
-        if (el) el.classList.toggle('hidden', s !== stateName);
-      });
-    }
 
-    // ============================================================
-    // SELECTION & BULK
-    // ============================================================
-    function toggleRow(id, checked) {
-      if (checked) selectedIds.add(id);
-      else selectedIds.delete(id);
-      render();
-    }
+    /*
+     * ===========================================================
+     * CHILD SELECTION
+     * ===========================================================
+     */
 
-    function toggleSelectAll(checked) {
-      const filtered = getFiltered();
-      const start = (currentPage - 1) * pageSize;
-      const pageItems = filtered.slice(start, start + pageSize);
-      pageItems.forEach(inv => {
-        if (checked) selectedIds.add(inv.id);
-        else selectedIds.delete(inv.id);
-      });
-      render();
-    }
+    function selectChild(index) {
+      const data = products[currentProduct];
 
-    function clearSelection() {
-      selectedIds.clear();
-      render();
-    }
-
-    function updateBulkBar() {
-      const bar = document.getElementById('bulk-bar');
-      const count = selectedIds.size;
-      if (count > 0) {
-        bar.classList.remove('hidden');
-        document.getElementById('bulk-count').textContent = count.toLocaleString('fa-IR');
-      } else {
-        bar.classList.add('hidden');
+      if (!data.items[index]) {
+        return;
       }
+
+      currentChildIndex = index;
+
+      updateProductContext();
+      renderDesktopProductNavigation();
+      renderMobileChildren();
     }
 
-    function bulkAction(action) {
-      const count = selectedIds.size;
-      if (action === 'delete') {
-        if (confirm(`آیا از حذف ${count} فاکتور انتخاب‌شده مطمئن هستید؟`)) {
-          currentData = currentData.filter(i => !selectedIds.has(i.id));
-          selectedIds.clear();
-          showToast(`${count} فاکتور حذف شد. امکان بازگردانی وجود دارد.`);
-          render();
-        }
-      } else {
-        showToast(`عملیات «${action}» روی ${count} فاکتور انجام شد (دمو).`);
-        selectedIds.clear();
-        render();
-      }
-    }
 
-    function getFiltered() {
-      let filtered = currentData;
-      if (currentFilter !== 'all') filtered = filtered.filter(i => i.status === currentFilter);
-      const term = (document.getElementById('searchInput')?.value || '').trim().toLowerCase();
-      if (term) {
-        filtered = filtered.filter(i =>
-          i.number.toLowerCase().includes(term) ||
-          i.customer.toLowerCase().includes(term) ||
-          i.label.includes(term)
+    /*
+     * ===========================================================
+     * DESKTOP LAYOUT
+     * ===========================================================
+     */
+
+    function updateMainLayout() {
+      mainContent.classList.toggle(
+        "rail-wide",
+        railExpanded
+      );
+
+      mainContent.classList.toggle(
+        "product-closed",
+        !productOpen
+      );
+
+      rail.classList.toggle(
+        "rail-expanded",
+        railExpanded
+      );
+
+      document
+        .querySelectorAll(
+          ".desktop-product-label, .rail-label"
+        )
+        .forEach(label => {
+          label.classList.toggle(
+            "opacity-0",
+            !railExpanded
+          );
+        });
+
+      document
+        .getElementById("railToggle")
+        .setAttribute(
+          "aria-expanded",
+          String(railExpanded)
         );
-      }
-      return filtered;
     }
 
-    // ============================================================
-    // FILTERS
-    // ============================================================
-    function setFilter(filter) {
-      currentFilter = filter;
-      currentPage = 1;
-      document.querySelectorAll('.filter-btn').forEach(b => {
-        b.classList.remove('active', 'border-primary-600', 'bg-primary-50', 'text-primary-700');
-        b.classList.add('border-slate-200', 'bg-white', 'text-slate-600');
-      });
-      const activeBtn = document.querySelector(`.filter-btn[data-filter="${filter}"]`);
-      if (activeBtn) {
-        activeBtn.classList.add('active', 'border-primary-600', 'bg-primary-50', 'text-primary-700');
-        activeBtn.classList.remove('border-slate-200', 'bg-white', 'text-slate-600');
-      }
-      render();
+
+    /*
+     * ===========================================================
+     * DESKTOP RAIL
+     * ===========================================================
+     */
+
+    function toggleRail() {
+      railExpanded = !railExpanded;
+
+      updateMainLayout();
     }
 
-    function applyFilters() {
-      currentPage = 1;
-      render();
+
+    /*
+     * ===========================================================
+     * DESKTOP PRODUCT SIDEBAR
+     * ===========================================================
+     */
+
+    function openProduct() {
+      productOpen = true;
+
+      productSidebar.classList.remove("closed");
+
+      updateMainLayout();
     }
 
-    function clearFilters() {
-      document.getElementById('searchInput').value = '';
-      setFilter('all');
+
+    function closeProduct() {
+      productOpen = false;
+
+      productSidebar.classList.add("closed");
+
+      updateMainLayout();
     }
 
-    // ============================================================
-    // DRAWER
-    // ============================================================
-    function openDrawer(id) {
-      const inv = currentData.find(i => i.id === id);
-      if (!inv) return;
 
-      document.getElementById('drawer-content').innerHTML = `
-        <div class="space-y-4">
-          <div>
-            <p class="text-sm text-slate-500">شماره فاکتور</p>
-            <p class="text-lg font-bold text-primary-600">${inv.number}</p>
-          </div>
-          <div>
-            <p class="text-sm text-slate-500">مشتری</p>
-            <p class="font-medium">${inv.customer}</p>
-          </div>
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <p class="text-sm text-slate-500">تاریخ</p>
-              <p class="font-medium">${inv.date}</p>
-            </div>
-            <div>
-              <p class="text-sm text-slate-500">وضعیت</p>
-              <span class="badge ${getBadgeClass(inv.status)} mt-1">${inv.label}</span>
-            </div>
-          </div>
-          <div>
-            <p class="text-sm text-slate-500">مبلغ نهایی</p>
-            <p class="text-xl font-bold">${formatAmount(inv.amount)} <span class="text-sm font-normal text-slate-500">تومان</span></p>
-          </div>
-          <div class="pt-4 border-t border-slate-100">
-            <p class="text-sm text-slate-500 mb-2">عملیات سریع</p>
-            <div class="flex flex-wrap gap-2">
-              <button class="px-3 py-1.5 text-sm border border-slate-200 rounded-lg hover:bg-slate-50">ثبت پرداخت</button>
-              <button class="px-3 py-1.5 text-sm border border-slate-200 rounded-lg hover:bg-slate-50">ارسال ایمیل</button>
-              <button class="px-3 py-1.5 text-sm border border-slate-200 rounded-lg hover:bg-slate-50">دانلود PDF</button>
-            </div>
-          </div>
-        </div>
-      `;
+    /*
+     * ===========================================================
+     * MOBILE NAVIGATION
+     * ===========================================================
+     */
 
-      const drawer = document.getElementById('detail-drawer');
-      const overlay = document.getElementById('drawer-overlay');
-      drawer.hidden = false;
-      overlay.classList.remove('hidden');
+    function openMobileNavigation() {
+      mobileNavigationOpen = true;
+
+      mobileNavigation.classList.add("is-open");
+      mobileNavigation.setAttribute(
+        "aria-hidden",
+        "false"
+      );
+
+      document.body.classList.add(
+        "mobile-nav-open"
+      );
+
+      document
+        .getElementById("mobileMenuButton")
+        .setAttribute(
+          "aria-expanded",
+          "true"
+        );
+
       requestAnimationFrame(() => {
-        drawer.classList.remove('translate-x-full');
-      });
-      document.body.style.overflow = 'hidden';
-    }
-
-    function closeDrawer() {
-      const drawer = document.getElementById('detail-drawer');
-      const overlay = document.getElementById('drawer-overlay');
-      drawer.classList.add('translate-x-full');
-      setTimeout(() => {
-        drawer.hidden = true;
-        overlay.classList.add('hidden');
-        document.body.style.overflow = '';
-      }, 200);
-    }
-
-    // ============================================================
-    // STATE SWITCHER
-    // ============================================================
-    function setState(state) {
-      ['ready', 'empty', 'loading', 'error', 'offline', 'no-results'].forEach(s => {
-        const el = document.getElementById('state-' + s);
-        if (el) el.classList.add('hidden');
-      });
-
-      if (state === 'ready') {
-        document.getElementById('state-ready').classList.remove('hidden');
-        render();
-      } else {
-        document.getElementById('state-' + state).classList.remove('hidden');
-      }
-
-      const showMeta = (state === 'ready' || state === 'loading');
-      document.getElementById('summary-cards').style.display = showMeta ? '' : 'none';
-      document.getElementById('toolbar').style.display = showMeta ? '' : 'none';
-      document.getElementById('bulk-bar').classList.add('hidden');
-
-      document.querySelectorAll('.state-btn').forEach(btn => {
-        if (btn.dataset.state === state) {
-          btn.className = 'state-btn px-3 py-1.5 text-sm rounded-md bg-primary-600 text-white font-medium';
-        } else {
-          btn.className = 'state-btn px-3 py-1.5 text-sm rounded-md bg-slate-100 text-slate-700 hover:bg-slate-200';
-        }
+        focusFirstMobileChild();
       });
     }
 
-    function openCreate() {
-      showToast('فرم ایجاد فاکتور جدید باز می‌شود (در نسخه واقعی Modal یا صفحه جدید)');
+
+    function closeMobileNavigation() {
+      mobileNavigationOpen = false;
+
+      mobileNavigation.classList.remove("is-open");
+      mobileNavigation.setAttribute(
+        "aria-hidden",
+        "true"
+      );
+
+      document.body.classList.remove(
+        "mobile-nav-open"
+      );
+
+      document
+        .getElementById("mobileMenuButton")
+        .setAttribute(
+          "aria-expanded",
+          "false"
+        );
+
+      document
+        .getElementById("mobileMenuButton")
+        .focus();
     }
 
-    // ============================================================
-    // KEYBOARD SHORTCUTS
-    // ============================================================
-    document.addEventListener('keydown', (e) => {
-      // Ignore if typing in input
-      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
-        if (e.key === 'Escape') {
-          e.target.blur();
-          closeDrawer();
-        }
+
+    /*
+     * ===========================================================
+     * MOBILE CHILD FOCUS
+     * ===========================================================
+     */
+
+    function focusFirstMobileChild() {
+      if (!mobileNavigationOpen) {
         return;
       }
 
-      if (e.key === '/' ) {
-        e.preventDefault();
-        document.getElementById('searchInput').focus();
-      }
-      if (e.key === 'n' || e.key === 'N') {
-        e.preventDefault();
-        openCreate();
-      }
-      if (e.key === 'Escape') {
-        closeDrawer();
-        clearSelection();
-      }
-    });
+      const firstChild =
+        mobileChildNavigation.querySelector(
+          "[data-mobile-child]"
+        );
 
-    // Pagination listeners
-    document.getElementById('prev-page').addEventListener('click', () => {
-      if (currentPage > 1) { currentPage--; render(); }
-    });
-    document.getElementById('next-page').addEventListener('click', () => {
-      const total = getFiltered().length;
-      const totalPages = Math.ceil(total / pageSize) || 1;
-      if (currentPage < totalPages) { currentPage++; render(); }
-    });
+      if (firstChild) {
+        firstChild.focus();
+      }
+    }
 
-    // Init
-    setState('ready');
+
+    /*
+     * ===========================================================
+     * MOBILE EVENTS
+     * ===========================================================
+     */
+
+    document
+      .getElementById("railToggle")
+      .addEventListener(
+        "click",
+        toggleRail
+      );
+
+
+    document
+      .getElementById("closeProductSidebar")
+      .addEventListener(
+        "click",
+        closeProduct
+      );
+
+
+    document
+      .getElementById("mobileMenuButton")
+      .addEventListener(
+        "click",
+        openMobileNavigation
+      );
+
+
+    document
+      .getElementById("mobileBottomProducts")
+      .addEventListener(
+        "click",
+        openMobileNavigation
+      );
+
+
+    document
+      .getElementById("mobileCloseButton")
+      .addEventListener(
+        "click",
+        closeMobileNavigation
+      );
+
+
+    document
+      .getElementById("mobileNavigationBackdrop")
+      .addEventListener(
+        "click",
+        closeMobileNavigation
+      );
+
+
+    /*
+     * ===========================================================
+     * KEYBOARD
+     * ===========================================================
+     */
+
+    document.addEventListener(
+      "keydown",
+      event => {
+
+        /*
+         * shadcn-style sidebar shortcut.
+         */
+        if (
+          (event.ctrlKey || event.metaKey) &&
+          event.key.toLowerCase() === "b"
+        ) {
+          event.preventDefault();
+
+          if (window.innerWidth >= 1024) {
+            toggleRail();
+          }
+
+          return;
+        }
+
+
+        /*
+         * Close mobile navigation.
+         */
+        if (event.key === "Escape") {
+
+          if (
+            window.innerWidth < 1024 &&
+            mobileNavigationOpen
+          ) {
+            closeMobileNavigation();
+            return;
+          }
+
+
+          if (
+            window.innerWidth >= 1024 &&
+            productOpen
+          ) {
+            closeProduct();
+          }
+        }
+      }
+    );
+
+
+    /*
+     * ===========================================================
+     * MOBILE KEYBOARD PRODUCT NAVIGATION
+     * ===========================================================
+     */
+
+    mobileParentNavigation.addEventListener(
+      "keydown",
+      event => {
+
+        if (
+          event.key !== "ArrowDown" &&
+          event.key !== "ArrowUp"
+        ) {
+          return;
+        }
+
+        const items = [
+          ...mobileParentNavigation.querySelectorAll(
+            "[data-mobile-product]"
+          )
+        ];
+
+        const current =
+          items.indexOf(document.activeElement);
+
+        if (current === -1) {
+          return;
+        }
+
+        event.preventDefault();
+
+        const direction =
+          event.key === "ArrowDown" ? 1 : -1;
+
+        const next =
+          (current + direction + items.length) %
+          items.length;
+
+        items[next].focus();
+      }
+    );
+
+
+    mobileChildNavigation.addEventListener(
+      "keydown",
+      event => {
+
+        if (
+          event.key !== "ArrowDown" &&
+          event.key !== "ArrowUp"
+        ) {
+          return;
+        }
+
+        const items = [
+          ...mobileChildNavigation.querySelectorAll(
+            "[data-mobile-child]"
+          )
+        ];
+
+        const current =
+          items.indexOf(document.activeElement);
+
+        if (current === -1) {
+          return;
+        }
+
+        event.preventDefault();
+
+        const direction =
+          event.key === "ArrowDown" ? 1 : -1;
+
+        const next =
+          (current + direction + items.length) %
+          items.length;
+
+        items[next].focus();
+      }
+    );
+
+
+    /*
+     * ===========================================================
+     * VIEWPORT SAFETY
+     * ===========================================================
+     */
+
+    window.addEventListener(
+      "resize",
+      () => {
+
+        if (
+          window.innerWidth >= 1024 &&
+          mobileNavigationOpen
+        ) {
+          closeMobileNavigation();
+        }
+      }
+    );
+
+
+    /*
+     * ===========================================================
+     * INITIAL RENDER
+     * ===========================================================
+     */
+
+    updateProductContext();
+
+    renderDesktopProducts();
+    renderDesktopProductNavigation();
+
+    renderMobileParents();
+    renderMobileChildren();
+
+    updateMainLayout();
+
   </script>
+
 </body>
 </html>

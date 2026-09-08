@@ -79,12 +79,17 @@ export function Sidebar() {
   // `/` is the dashboard route on desktop; the contract calls it `/dashboard`.
   const activePath = location.pathname === '/' ? '/dashboard' : location.pathname
 
-  const activeNav = useMemo(() => {
-    const match = [...PRIMARY_ITEMS, ...MORE_GROUPS.flatMap((g) => g.items)].find(
-      (item) => activePath === item.path || activePath.startsWith(`${item.path}/`),
-    )
-    return match?.id ?? ''
-  }, [activePath])
+  // ⚠️ THE SIDEBAR WANTS A PATH, NOT AN ID.
+  //
+  // This used to resolve the matching nav entry and pass `match.id`, but
+  // `DashboardSidebar` feeds `activeNav` straight into `isPathActive(activeNav,
+  // item.path)` — so it was comparing `'today'` against `'/dashboard'`, which
+  // never matches. The desktop sidebar has had NO active item on any page,
+  // silently, because a string was a string and nothing failed.
+  //
+  // The lookup itself was doing the same prefix comparison the sidebar already
+  // does, so it is gone rather than corrected.
+  const activeNav = activePath
 
   // SPA navigation — never a renderer reload.
   const handleNavigate = useCallback(

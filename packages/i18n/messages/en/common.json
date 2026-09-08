@@ -1021,6 +1021,8 @@
     "mainNav": "Main navigation",
     "mobileNav": "Mobile navigation",
     "more": "More",
+    "collapseSidebar": "Collapse menu",
+    "expandSidebar": "Expand menu",
     "today": "Today",
     "today_description": "What's happening today",
     "sell": "Sell",
@@ -3820,6 +3822,7 @@
       "seoTitle": "Backups and data export — Hisabche guide"
     },
     "related": "Read next",
+    "browseAll": "All articles",
     "breadcrumbHome": "Home",
     "helpFor": "Documentation for",
     "openInApp": "Open in the app"
