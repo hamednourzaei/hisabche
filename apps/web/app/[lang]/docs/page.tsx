@@ -14,6 +14,7 @@ import { getMessages } from 'next-intl/server'
 
 import { DocsClient } from './docs-client'
 import { buildLegalMetadata } from '../legal/legal-metadata'
+import { resolveLocale } from '../i18n-config'
 
 export const revalidate = 3600
 
@@ -23,7 +24,9 @@ export async function generateMetadata({
   params: Promise<{ lang: string }>
 }): Promise<Metadata> {
   const { lang } = await params
-  const messages = (await getMessages({ locale: lang })) as Record<string, any>
+  // See the note in [slug]/page.tsx: `getMessages` throws on an unknown
+  // locale, and a throw here is a 500 rather than a 404.
+  const messages = (await getMessages({ locale: resolveLocale(lang) })) as Record<string, any>
   const docs = messages?.docs ?? {}
 
   return buildLegalMetadata({

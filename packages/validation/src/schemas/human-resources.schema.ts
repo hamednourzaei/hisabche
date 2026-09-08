@@ -208,6 +208,35 @@ export const leaveSchema = z.object({
   startDate: isoDateSchema,
   endDate: isoDateSchema,
   totalDays: positiveNumberSchema,
+  /**
+   * Leave length in HALF-DAY steps (Patch 3 / I1).
+   *
+   * ⚠️ Mirrors the `leaves_duration_half_day_steps` CHECK in the database, so
+   * a half-day request is refused here with a readable message rather than as
+   * a 23514 from Postgres.
+   *
+   * Optional: omitting it means «whole days», and the service falls back to
+   * the calendar-day count. `totalDays` is kept alongside for readers that
+   * have not moved over — see the migration.
+   */
+  durationUnits: z
+    .number()
+    .positive()
+    .refine((value) => value * 2 === Math.trunc(value * 2), {
+      message: 'validation.halfDaySteps',
+    })
+    .optional(),
+  /**
+   * The branch the leave belongs to.
+   *
+   * ⚠️ Resolved SERVER-SIDE from the employee's assignment active on the leave
+   * date — never accepted from the client, which is why it is omitted from
+   * `createLeaveSchema` below. A client-supplied branch would let a request
+   * name a branch the employee was never in.
+   */
+  branchId: uuidSchema.optional().nullable(),
+  /** The auth user who asked. Set server-side, like `approvedBy`. */
+  requestedBy: uuidSchema.optional().nullable(),
   reason: optionalStringSchema,
   status: z.enum(['pending', 'approved', 'rejected', 'cancelled']).default('pending'),
   approvedBy: uuidSchema.optional().nullable(),
@@ -226,6 +255,12 @@ export const createLeaveSchema = leaveSchema.omit({
   approvedAt: true,
   createdAt: true,
   updatedAt: true,
+  // ⚠️ Both are set by the server. `branchId` comes from the employee's
+  // assignment on the leave date, and `requestedBy` from the verified session
+  // — accepting either from the client would let a request name a branch the
+  // employee was never in, or claim to have been made by somebody else.
+  branchId: true,
+  requestedBy: true,
 })
 
 export type CreateLeave = z.infer<typeof createLeaveSchema>

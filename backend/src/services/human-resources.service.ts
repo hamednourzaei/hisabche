@@ -754,27 +754,132 @@ export class HumanResourcesService {
     const end = new Date(data.endDate)
     const totalDays = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
 
-    const { data: leave, error } = await supabase
+    // Patch 3 / I1 — which branch this leave belongs to.
+    const branchId = await this.branchForLeave(ctx, data.employeeId, data.startDate)
+
+    // The columns every database has, patched or not.
+    const base = {
+      employee_id: data.employeeId,
+      leave_type: data.leaveType,
+      start_date: data.startDate,
+      end_date: data.endDate,
+      total_days: totalDays,
+      reason: data.reason || null,
+      status: 'pending',
+      notes: data.notes || null,
+      workspace_id: workspaceId,
+      user_id: userId,
+    }
+
+    /**
+     * The three columns patch-03 adds.
+     *
+     * ⚠️ SPLIT OUT SO A DATABASE WITHOUT THE PATCH STILL ACCEPTS A LEAVE.
+     *
+     * Migrations here are applied by hand, so code and schema are not
+     * simultaneous. An INSERT naming a column that does not exist yet fails
+     * with 42703 — and that would take leave requests down completely on
+     * every environment between this deploy and that migration.
+     */
+    const patched = {
+      // Patch 3 / I1 — the half-day-capable figure. `total_days` is kept
+      // beside it for readers that have not moved over yet.
+      duration_units: data.durationUnits ?? totalDays,
+      // ⚠️ From the employee's assignment ACTIVE ON THE LEAVE DATE, never
+      // today's primary. A leave in March belongs to the branch the person
+      // worked in during March.
+      branch_id: branchId,
+      // ⚠️ Separate from `approved_by` so "the person who asked also approved
+      // it" is answerable (I1). Same actor model — the auth user.
+      requested_by: userId,
+    }
+
+    let { data: leave, error } = await supabase
       .from('leaves')
-      .insert({
-        employee_id: data.employeeId,
-        leave_type: data.leaveType,
-        start_date: data.startDate,
-        end_date: data.endDate,
-        total_days: totalDays,
-        reason: data.reason || null,
-        status: 'pending',
-        notes: data.notes || null,
-        workspace_id: workspaceId,
-        user_id: userId,
-      })
+      .insert({ ...base, ...patched })
       .select(LEAVE_COLUMNS)
       .single()
 
+    if (error && ['42703', 'PGRST204'].includes(error.code)) {
+      // patch-03 has not been applied on this database. Record what can be
+      // recorded rather than refusing the request — the leave itself is not
+      // the thing that is missing.
+      console.warn(
+        '[HumanResourcesService] leaves is missing the patch-03 columns; ' +
+          'recording without duration_units/branch_id/requested_by.',
+      )
+      ;({ data: leave, error } = await supabase
+        .from('leaves')
+        .insert(base)
+        .select(LEAVE_COLUMNS)
+        .single())
+    }
+
     if (error) throw new DatabaseError('Failed to create leave', error)
+    // `.single()` guarantees a row when there is no error; the narrowing is
+    // for the compiler, which cannot know that across the retry above.
+    if (!leave) throw new DatabaseError('Leave did not persist', null)
 
     await this.invalidateLeaveCache(workspaceId, data.employeeId)
+
+    // ⚠️ I1 REQUIRES AN AUDIT EVENT FOR EVERY LEAVE CHANGE, AND THERE WAS NONE.
+    //
+    // Before this patch the only audited action in this whole service was
+    // employee creation. Leave — which is time off work, approved by one
+    // person for another, and feeds payroll — produced no record of who did
+    // what. That is the gap I1 named.
+    logBusinessEvent({
+      userId,
+      entityType: 'leave',
+      entityId: leave.id,
+      action: 'created',
+      title: `درخواست مرخصی: ${data.leaveType}`,
+      description: `${data.startDate} → ${data.endDate}`,
+      notify: false,
+    }).catch((err) => console.error('[HumanResourcesService] leave audit failed:', err))
+
     return leave
+  }
+
+  /**
+   * The branch an employee belonged to ON A GIVEN DATE.
+   *
+   * ⚠️ NOT their current primary branch. `employee_branch_assignments` carries
+   * `starts_at`/`ends_at` precisely so «where did this person work in March»
+   * has an answer; using today's branch for a March leave would state that the
+   * leave happened somewhere the person had not started working.
+   *
+   * Returns null when no assignment covers the date. Null is «unknown», and
+   * the caller must not substitute a default — guardrail 12.
+   */
+  private async branchForLeave(
+    ctx: TenancyContext,
+    employeeId: string,
+    onDate: string,
+  ): Promise<string | null> {
+    const day = onDate.slice(0, 10)
+
+    const { data, error } = await supabase
+      .from('employee_branch_assignments')
+      .select('branch_id')
+      .eq('workspace_id', ctx.workspaceId)
+      .eq('employee_id', employeeId)
+      .eq('is_primary', true)
+      .lte('starts_at', day)
+      .or(`ends_at.is.null,ends_at.gte.${day}`)
+      .order('starts_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (error) {
+      // The assignments table may not exist on an older database. An absent
+      // branch is a supported state, so this degrades rather than failing a
+      // leave request.
+      if (['42P01', 'PGRST205', '42703', 'PGRST204'].includes(error.code)) return null
+      throw new DatabaseError('Failed to resolve the leave branch', error)
+    }
+
+    return (data as { branch_id: string } | null)?.branch_id ?? null
   }
 
   async updateLeaveStatus(ctx: TenancyContext, id: string, data: UpdateLeave) {
@@ -799,6 +904,21 @@ export class HumanResourcesService {
     if (error) throw new DatabaseError('Failed to update leave', error)
 
     await this.invalidateLeaveCache(workspaceId)
+
+    // The other half of the I1 audit requirement. Approval and rejection are
+    // the decisions worth being able to reconstruct later — who allowed this
+    // time off, and when.
+    if (data.status !== undefined) {
+      logBusinessEvent({
+        userId,
+        entityType: 'leave',
+        entityId: id,
+        action: data.status === 'approved' ? 'approved' : data.status,
+        title: `مرخصی: ${data.status}`,
+        notify: false,
+      }).catch((err) => console.error('[HumanResourcesService] leave audit failed:', err))
+    }
+
     return leave
   }
 

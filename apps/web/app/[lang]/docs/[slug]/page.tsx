@@ -10,7 +10,7 @@ import { DOCS_ARTICLES, findArticle } from '@hisabche/ui'
 
 import { DocsClient } from '../docs-client'
 import { buildLegalMetadata } from '../../legal/legal-metadata'
-import { localeUrl } from '../../i18n-config'
+import { localeUrl, resolveLocale } from '../../i18n-config'
 
 export const revalidate = 3600
 
@@ -31,7 +31,14 @@ export async function generateMetadata({
   params: Promise<{ lang: string; slug: string }>
 }): Promise<Metadata> {
   const { lang, slug } = await params
-  const messages = (await getMessages({ locale: lang })) as Record<string, any>
+  // ⚠️ RESOLVED, NOT PASSED THROUGH.
+  //
+  // `getMessages({ locale })` THROWS on a locale it does not know, and a
+  // throw inside `generateMetadata` is a 500 rather than a 404. Every other
+  // public page in this app resolves first; these two did not, which made
+  // `/xx/docs/anything` a 500 instead of a not-found.
+  const locale = resolveLocale(lang)
+  const messages = (await getMessages({ locale })) as Record<string, any>
   const article = messages?.docs?.[slug] ?? {}
 
   // ⚠️ `seoTitle`, not `title`.
@@ -60,7 +67,9 @@ export default async function DocsArticlePage({
   const article = findArticle(slug)
   if (!article) notFound()
 
-  const messages = (await getMessages({ locale: lang })) as Record<string, any>
+  // Resolved, not passed through — see generateMetadata above.
+  const locale = resolveLocale(lang)
+  const messages = (await getMessages({ locale })) as Record<string, any>
   const text = messages?.docs?.[slug] ?? {}
   const site = messages?.docs ?? {}
 
@@ -87,9 +96,9 @@ export default async function DocsArticlePage({
         isPartOf: {
           '@type': 'WebSite',
           name: lang === 'en' ? 'Hisabche' : 'حسابچه',
-          url: localeUrl(lang, ''),
+          url: localeUrl(locale, ''),
         },
-        url: localeUrl(lang, `/docs/${slug}`),
+        url: localeUrl(locale, `/docs/${slug}`),
       },
       {
         '@type': 'BreadcrumbList',
@@ -98,19 +107,19 @@ export default async function DocsArticlePage({
             '@type': 'ListItem',
             position: 1,
             name: site.breadcrumbHome ?? 'Home',
-            item: localeUrl(lang, ''),
+            item: localeUrl(locale, ''),
           },
           {
             '@type': 'ListItem',
             position: 2,
             name: site.title ?? 'Documentation',
-            item: localeUrl(lang, '/docs'),
+            item: localeUrl(locale, '/docs'),
           },
           {
             '@type': 'ListItem',
             position: 3,
             name: text.title ?? slug,
-            item: localeUrl(lang, `/docs/${slug}`),
+            item: localeUrl(locale, `/docs/${slug}`),
           },
         ],
       },

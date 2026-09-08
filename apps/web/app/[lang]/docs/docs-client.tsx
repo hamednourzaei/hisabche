@@ -11,11 +11,32 @@ import { DocsView, ROUTE_DOCS_MAP } from '@hisabche/ui'
  * same components through its own shim.
  */
 export function DocsClient({ lang, slug }: { lang: string; slug?: string }) {
-  const t = useTranslations()
+  const translate = useTranslations()
+
+  /**
+   * ⚠️ NON-THROWING ON PURPOSE.
+   *
+   * `next-intl`'s `t()` THROWS when a key is missing. `DocsView` reads roughly
+   * twenty keys per article, so one absent key — a language bundle that
+   * shipped a build behind, a slug added before its text — took the whole page
+   * down with a 500 rather than rendering the other nineteen.
+   *
+   * A docs page missing one heading is a defect worth fixing; a docs page
+   * returning 500 is an outage. The guard test still fails on any missing key,
+   * so this hides nothing from CI — it only stops a content gap becoming an
+   * error page for a reader.
+   */
+  const t = (key: string): string => {
+    try {
+      return translate(key)
+    } catch {
+      return ''
+    }
+  }
 
   return (
     <DocsView
-      t={(key) => t(key)}
+      t={t}
       hrefFor={(articleSlug) => `/${lang}/docs/${articleSlug}`}
       activeSlug={slug}
       // The reverse of the «?» in the dashboard. Built by inverting the same
