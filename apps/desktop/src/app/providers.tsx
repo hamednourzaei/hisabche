@@ -4,6 +4,7 @@
 
 import React, { useState, type ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ToastProvider } from '@hisabche/ui'
 import { bindActiveWorkspace } from '@hisabche/store'
 
 // Publish the active workspace into @hisabche/api, which scopes every realtime
@@ -33,5 +34,23 @@ function createQueryClient(): QueryClient {
 
 export function Providers({ children }: { children: ReactNode }) {
   const [client] = useState(createQueryClient)
-  return <QueryClientProvider client={client}>{children}</QueryClientProvider>
+  return (
+    <QueryClientProvider client={client}>
+      {/* ⚠️ THIS WAS MISSING, AND IT CRASHED WHOLE SCREENS.
+          `packages/ui` is shared with the web app, where `apps/web/app/[lang]/
+          providers.tsx` mounts this. Desktop mounted only the query client, so
+          every shared component that calls `useToast` threw
+
+              Error: useToast must be used within ToastProvider
+
+          and React Router's boundary replaced the page with an error. Settings
+          was one — `BusinessStampSection` calls it — and any other shared
+          component that reports success or failure through a toast was one
+          mis-click away from the same thing.
+
+          The two shells render the same components; they need the same
+          providers under them. */}
+      <ToastProvider>{children}</ToastProvider>
+    </QueryClientProvider>
+  )
 }

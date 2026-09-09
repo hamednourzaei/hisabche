@@ -158,307 +158,284 @@ const ItemIcon = memo(function ItemIcon({
 })
 ItemIcon.displayName = 'ItemIcon'
 
-// ✅ PrimaryNavButton با memo
-const PrimaryNavButton = memo(function PrimaryNavButton({
+// ─── Desktop Sidebar ─────────────────────────────────────────────────────────
+//
+// ⚠️ «بیشتر» IS GONE, AND THAT WAS THE WHOLE PROBLEM.
+//
+// Every destination outside the daily five lived behind one button labelled
+// «بیشتر», which opened an ABSOLUTELY POSITIONED panel floating over the rest
+// of the sidebar. That panel could not extend the sidebar's scroll area, so it
+// needed a hand-tuned `max-height`, its own click-outside listener and its own
+// Escape handler — and on a laptop screen the last groups still fell past the
+// bottom edge where the sidebar's own scrollbar could not reach them.
+//
+// Twenty-six destinations behind one word that names none of them is not
+// navigation. Somebody looking for «بانک» had no reason to guess it was there.
+//
+// The groups are now rows in the sidebar itself: click one and its
+// destinations open BENEATH it, in the document, where the scrollbar works.
+// Everything the panel needed — the height cap, the outside-click listener,
+// the Escape handler, the z-index — is deleted, because a section of a
+// scrolling list needs none of it.
+
+/** How many groups may stand open at once. */
+const OPEN_LIMIT = Infinity
+
+/** One destination row. */
+const NavRow = memo(function NavRow({
   item,
   isActive,
+  nested,
   onClick,
 }: {
   item: NavItem
   isActive: boolean
+  nested: boolean
   onClick: () => void
 }) {
+  // ⚠️ `> 0`, not `!= null`. A badge says «something is waiting for you»; a
+  // grey circle reading «۰» says the opposite while still drawing the eye.
+  const badge = item.badge != null && item.badge > 0 ? item.badge : null
+
   return (
     <button
       type="button"
       onClick={onClick}
+      aria-current={isActive ? 'page' : undefined}
       className={cn(
-        'group relative flex items-center gap-2.5 h-10 px-3 rounded-xl',
-        'text-sm font-medium text-start w-full',
-        'transition-all duration-200 motion-reduce:transition-none',
+        'group relative flex w-full items-center gap-2.5 rounded-lg text-start text-sm',
+        'transition-colors duration-150 motion-reduce:transition-none',
+        // ⚠️ ONE ROW, ALWAYS. 36px and `truncate` below: on a laptop the long
+        // Persian labels used to wrap onto a second line, so rows had two
+        // different heights and the list read as ragged rather than as a list.
+        'h-9 px-3',
+        nested && 'ps-9',
         isActive
-          ? 'bg-[hsl(var(--color-primary)/0.10)] text-[hsl(var(--color-primary))] font-semibold shadow-[0_0_20px_hsl(var(--color-primary)/0.06)]'
+          ? 'bg-[hsl(var(--color-primary)/0.10)] font-semibold text-[hsl(var(--color-primary))]'
           : 'text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
       )}
-      aria-current={isActive ? 'page' : undefined}
     >
-      {isActive && (
-        <span className="absolute end-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-full bg-[var(--gradient-brand)] shadow-[0_0_8px_hsl(var(--color-primary)/0.3)]" />
-      )}
-      <span
-        className={cn(
-          'transition-transform duration-200 motion-reduce:transition-none',
-          isActive && 'scale-110',
-        )}
-      >
-        <ItemIcon item={item} active={isActive} />
-      </span>
-      <span className="flex-1 truncate">{item.label}</span>
-      {item.badge != null && (
+      {/* A hairline, not a glow. On a screen holding a trial balance, a
+          navigation row that pulses competes with the numbers. */}
+      {isActive ? (
+        <span
+          aria-hidden="true"
+          className="absolute inset-y-1.5 end-0 w-[3px] rounded-full bg-[hsl(var(--color-primary))]"
+        />
+      ) : null}
+
+      <ItemIcon item={item} active={isActive} size={nested ? 16 : 18} />
+      <span className="min-w-0 flex-1 truncate">{item.label}</span>
+
+      {badge != null ? (
         <span
           className={cn(
-            'text-[10px] font-semibold px-1.5 py-0.5 rounded-full shrink-0',
-            'bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))]',
-            'border border-[hsl(var(--border-default))]',
+            'shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
+            'bg-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))]',
           )}
         >
-          {item.badge}
+          {badge}
         </span>
-      )}
+      ) : null}
     </button>
   )
 })
-PrimaryNavButton.displayName = 'PrimaryNavButton'
+NavRow.displayName = 'NavRow'
 
-// ✅ MorePanelItem با memo
-const MorePanelItem = memo(function MorePanelItem({
-  item,
-  isActive,
-  onClick,
+/**
+ * A group row that opens its destinations beneath itself.
+ *
+ * ⚠️ AUTO-OPENS WHEN IT HOLDS THE CURRENT PAGE, even if the person closed it.
+ * Landing on `/bank` from a bookmark with «کارها» collapsed would otherwise
+ * show a sidebar where nothing is highlighted, which reads as «you are
+ * nowhere». Their own toggle still wins while they stay inside the group.
+ */
+const NavGroupRow = memo(function NavGroupRow({
+  group,
+  activeNav,
+  open,
+  onToggle,
+  onNavigate,
 }: {
-  item: NavItem
-  isActive: boolean
-  onClick: () => void
+  group: NavGroup
+  activeNav: string
+  open: boolean
+  onToggle: () => void
+  onNavigate: (id: string, path: string) => void
 }) {
+  const contentId = useId()
+  const hasActive = group.items.some((item) => isPathActive(activeNav, item.path))
+  const GroupIcon = group.icon
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'group flex items-center gap-2.5 h-9 px-3 rounded-lg w-full text-start',
-        'text-sm transition-colors duration-150 motion-reduce:transition-none',
-        isActive
-          ? 'bg-[hsl(var(--color-primary)/0.10)] text-[hsl(var(--color-primary))] font-semibold'
-          : 'text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
-      )}
-      aria-current={isActive ? 'page' : undefined}
-    >
-      <ItemIcon item={item} active={isActive} size={16} />
-      <span className="flex-1 truncate">{item.label}</span>
-      {isActive && (
+    <div className="flex flex-col">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        aria-controls={contentId}
+        className={cn(
+          'flex h-9 w-full items-center gap-2.5 rounded-lg px-3 text-start text-sm',
+          'transition-colors duration-150 motion-reduce:transition-none',
+          hasActive && !open
+            ? 'text-[hsl(var(--color-primary))]'
+            : 'text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
+        )}
+      >
+        <GroupIcon className="size-[18px] shrink-0" aria-hidden="true" />
+        <span className="min-w-0 flex-1 truncate font-medium">{group.label}</span>
+
+        {/* Where you are, when the group that holds it is shut. Without this,
+            closing a group hides the only sign of the current page. */}
+        {hasActive && !open ? (
+          <span
+            aria-hidden="true"
+            className="size-1.5 shrink-0 rounded-full bg-[hsl(var(--color-primary))]"
+          />
+        ) : null}
+
         <svg
           width={14}
           height={14}
           viewBox="0 0 20 20"
           fill="none"
           stroke="currentColor"
-          strokeWidth={2.5}
+          strokeWidth={2}
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="text-[hsl(var(--color-primary))] shrink-0"
+          aria-hidden="true"
+          className={cn(
+            'shrink-0 transition-transform duration-150 motion-reduce:transition-none',
+            open ? 'rotate-0' : 'ltr:-rotate-90 rtl:rotate-90',
+          )}
         >
-          <path d="M5 10l3.5 3.5L15 7" />
+          <path d="M5 7.5l5 5 5-5" />
         </svg>
-      )}
-    </button>
+      </button>
+
+      {/* ⚠️ `grid-template-rows` 0fr→1fr, not `height: auto`.
+          Height cannot be transitioned from a measured value without a layout
+          read every frame. The inner wrapper needs `overflow-hidden` or the
+          content spills while the row is still collapsing.
+
+          ⚠️ `hidden` on the list, not just zero height: a collapsed group is
+          invisible but still focusable, so Tab walked through fifteen rows
+          that were not on screen and a screen reader read them all out. */}
+      <div
+        id={contentId}
+        className={cn(
+          'grid transition-[grid-template-rows] duration-150 ease-out',
+          'motion-reduce:transition-none',
+          open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
+        )}
+      >
+        <div className="overflow-hidden">
+          <div className="flex flex-col gap-0.5 py-0.5" hidden={!open}>
+            {group.items.map((item) => (
+              <NavRow
+                key={item.id}
+                item={item}
+                isActive={isPathActive(activeNav, item.path)}
+                nested
+                onClick={() => onNavigate(item.id, item.path)}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
   )
 })
-MorePanelItem.displayName = 'MorePanelItem'
-
-// ─── Desktop Sidebar ─────────────────────────────────────────────────────────
+NavGroupRow.displayName = 'NavGroupRow'
 
 export const DashboardSidebar = memo(function DashboardSidebar({
   primaryItems,
   moreGroups,
-  moreIcon: MoreIcon,
   activeNav,
   onNavigate,
 }: {
   primaryItems: NavItem[]
   moreGroups: NavGroup[]
-  moreIcon: ElementType
+  /** Kept so existing callers compile; there is no «More» button to put it on. */
+  moreIcon?: ElementType
   activeNav: string
   onNavigate: (id: string, path: string) => void
 }) {
   const t = useTranslations()
   const user = useAuthStore((s) => s.user)
-  const [isMoreOpen, setIsMoreOpen] = useState(true)
-  const morePanelRef = useRef<HTMLDivElement>(null)
-  const moreBtnRef = useRef<HTMLButtonElement>(null)
 
-  const hasMoreActive = moreGroups.some((g) => g.items.some((i) => isPathActive(activeNav, i.path)))
-
-  useEffect(() => {
-    if (!isMoreOpen) return
-    function handleClickOutside(e: MouseEvent) {
-      const target = e.target as Node
-      if (
-        morePanelRef.current &&
-        !morePanelRef.current.contains(target) &&
-        moreBtnRef.current &&
-        !moreBtnRef.current.contains(target)
-      ) {
-        setIsMoreOpen(false)
-      }
-    }
-    const timer = setTimeout(() => document.addEventListener('mousedown', handleClickOutside), 10)
-    return () => {
-      clearTimeout(timer)
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [isMoreOpen])
-
-  useEffect(() => {
-    if (!isMoreOpen) return
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        setIsMoreOpen(false)
-        moreBtnRef.current?.focus()
-      }
-    }
-    document.addEventListener('keydown', handleKeyDown)
-    return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isMoreOpen])
+  // Only the groups the person has explicitly toggled. Everything else follows
+  // the route, which is what makes «open the group holding this page» work
+  // without fighting them.
+  const [overrides, setOverrides] = useState<Record<string, boolean>>({})
 
   return (
     <aside
       aria-label={t('nav.mainNav')}
       className={cn(
-        'hidden lg:flex lg:flex-col shrink-0',
-        'w-56 h-screen sticky top-0 overflow-y-auto',
+        'sticky top-0 hidden h-screen w-60 shrink-0 lg:flex lg:flex-col',
         'border-e border-[hsl(var(--border-default))]',
         'bg-[hsl(var(--surface-base))]',
       )}
     >
-      {/* Header */}
-      <div className="flex flex-col items-center gap-1 pt-6 pb-4">
-        <div className="transition-all duration-300 motion-reduce:transition-none hover:scale-105 hover:filter hover:drop-shadow-[0_0_18px_hsl(var(--color-primary)/0.25)]">
-          <img src="/logo-icon.png" alt={t('app.name')} className="h-16 w-16 object-contain" />
+      {/* ── Header ──
+          ⚠️ 64px, matching the app header beside it. It used to be a 64px logo
+          with padding above and below — about 140px of a 768px laptop screen
+          spent on a picture, which is most of a group's worth of rows. */}
+      <div className="flex h-16 shrink-0 items-center gap-2.5 border-b border-[hsl(var(--border-default))] px-4">
+        <img
+          src="/logo-icon.png"
+          alt=""
+          aria-hidden="true"
+          className="size-9 shrink-0 object-contain"
+        />
+        <div className="flex min-w-0 flex-col leading-tight">
+          <span className="truncate text-sm font-semibold text-[hsl(var(--fg-primary))]">
+            {t('app.name')}
+          </span>
+          {/* Real data only: no business name means no second line, rather
+              than a placeholder pretending to be one. */}
+          {user?.businessName || user?.fullName ? (
+            <span className="truncate text-[11px] text-[hsl(var(--fg-tertiary))]">
+              {user.businessName || user.fullName}
+            </span>
+          ) : null}
         </div>
-        <span className="text-xs font-semibold text-[hsl(var(--fg-primary))] truncate max-w-[140px] text-center">
-          {user?.businessName || user?.fullName || t('app.name')}
-        </span>
       </div>
 
-      <div className="mx-4 h-px bg-[hsl(var(--border-default))] opacity-60" />
-
-      {/* Navigation */}
-      <nav className="flex flex-col gap-0.5 px-3 pt-3">
+      {/* ── Navigation ──
+          Only this scrolls, so the header stays put and the scrollbar belongs
+          to the list rather than to a floating panel. */}
+      <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto overscroll-contain p-3">
         {primaryItems.map((item) => (
-          <PrimaryNavButton
+          <NavRow
             key={item.id}
             item={item}
             isActive={isPathActive(activeNav, item.path)}
+            nested={false}
             onClick={() => onNavigate(item.id, item.path)}
           />
         ))}
+
+        {moreGroups.length > 0 ? (
+          <div className="my-1.5 h-px shrink-0 bg-[hsl(var(--border-default))]" />
+        ) : null}
+
+        {moreGroups.map((group) => {
+          const hasActive = group.items.some((item) => isPathActive(activeNav, item.path))
+          const open = overrides[group.id] ?? hasActive
+          return (
+            <NavGroupRow
+              key={group.id}
+              group={group}
+              activeNav={activeNav}
+              open={open}
+              onToggle={() => setOverrides((prev) => ({ ...prev, [group.id]: !open }))}
+              onNavigate={onNavigate}
+            />
+          )
+        })}
       </nav>
-
-      <div className="mx-4 my-3 h-px bg-[hsl(var(--border-default))] opacity-40" />
-
-      {/* More section */}
-      <div className="px-3 relative">
-        <button
-          ref={moreBtnRef}
-          type="button"
-          onClick={() => setIsMoreOpen((p) => !p)}
-          className={cn(
-            'group relative flex items-center gap-2.5 h-10 px-3 rounded-xl w-full text-start',
-            'text-sm font-medium transition-all duration-200 motion-reduce:transition-none',
-            isMoreOpen
-              ? 'bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-primary))]'
-              : hasMoreActive
-                ? 'text-[hsl(var(--color-primary))]'
-                : 'text-[hsl(var(--fg-tertiary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
-          )}
-          aria-expanded={isMoreOpen}
-          aria-haspopup="true"
-        >
-          <MoreIcon
-            className={cn(
-              'size-[18px] shrink-0 transition-transform duration-200 motion-reduce:transition-none',
-              isMoreOpen && 'rotate-90',
-            )}
-          />
-          <span className="flex-1 truncate">{t('nav.more')}</span>
-          {hasMoreActive && !isMoreOpen && (
-            <span className="w-1.5 h-1.5 rounded-full bg-[hsl(var(--color-primary))] shrink-0" />
-          )}
-          <svg
-            width={14}
-            height={14}
-            viewBox="0 0 20 20"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            strokeLinecap="round"
-            className={cn(
-              'shrink-0 transition-transform duration-200 motion-reduce:transition-none',
-              isMoreOpen ? 'rotate-90' : '-rotate-90',
-            )}
-          >
-            <path d="M12 5l-5 5 5 5" />
-          </svg>
-        </button>
-
-        {isMoreOpen && (
-          <div
-            ref={morePanelRef}
-            className={cn(
-              'absolute start-3 end-3 top-full mt-1 z-10',
-              'w-[calc(100%-24px)]',
-              'rounded-xl overflow-hidden',
-              'border border-[hsl(var(--border-default))]',
-              'bg-[hsl(var(--surface-elevated)/0.99)] backdrop-blur-xl',
-              'shadow-xl shadow-black/10',
-              'animate-in slide-in-from-top-1 fade-in-0 duration-150 motion-reduce:animate-none',
-              // Same defect as the mobile panel, opening the other way: this
-              // one grows DOWNWARD from a button partway down the sidebar, so
-              // on a short laptop screen the last groups fell past the bottom
-              // and the sidebar's own scroll could not reach them — the panel
-              // is absolutely positioned, so it does not extend its parent's
-              // scrollable area.
-              //
-              // The cap is an INLINE STYLE, not `max-h-[60vh]`. Tailwind
-              // generates arbitrary-value classes by scanning source, and this
-              // package is not in the web app's content globs — the class was
-              // emitted into the markup and no rule ever existed for it, so
-              // the computed `max-height` stayed `none` and the panel still
-              // ran 529px past the bottom of an 800px screen. Verified in the
-              // browser before and after.
-              'flex flex-col',
-            )}
-            style={{ maxHeight: '60vh' }}
-          >
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain py-2 px-1">
-              {moreGroups.map((group, idx) => (
-                <div key={group.id}>
-                  <div className="flex items-center gap-2 px-2 pt-2 pb-1">
-                    <span className="text-[10px] font-semibold text-[hsl(var(--fg-tertiary))] tracking-wide">
-                      {group.label}
-                    </span>
-                    <span className="flex-1 h-px bg-[hsl(var(--border-default))] opacity-30" />
-                  </div>
-                  <div className="flex flex-col gap-0.5 px-1">
-                    {group.items.map((item) => (
-                      <MorePanelItem
-                        key={item.id}
-                        item={item}
-                        isActive={isPathActive(activeNav, item.path)}
-                        onClick={() => {
-                          setIsMoreOpen(false)
-                          onNavigate(item.id, item.path)
-                        }}
-                      />
-                    ))}
-                  </div>
-                  {idx < moreGroups.length - 1 && (
-                    <div className="my-1.5 mx-2 h-px bg-[hsl(var(--border-default))] opacity-30" />
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="flex-1" />
-      <div className="px-3 py-4">
-        <div className="h-px bg-[hsl(var(--border-default))] mb-3 opacity-50" />
-        <p className="text-center text-[10px] text-[hsl(var(--fg-tertiary))] tracking-wider">
-          v3.0
-        </p>
-      </div>
     </aside>
   )
 })

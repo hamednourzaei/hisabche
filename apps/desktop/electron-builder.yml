@@ -94,6 +94,28 @@ nsis:
   differentialPackage: false
   oneClick: false
   perMachine: false
+
+  # ⚠️ WINDOWS DEFENDER QUARANTINES `elevate.exe`, AND THAT FAILED THE BUILD.
+  #
+  #     resources/elevate.exe : Operation did not complete successfully
+  #     because the file contains a virus or potentially unwanted software.
+  #
+  # It is a legitimate electron-builder helper, but Defender classes it as
+  # potentially-unwanted software and takes it mid-package. The symptom moved
+  # around and never named the cause: first `ENOENT …-x64.nsis.7z` (7-Zip
+  # aborted, so the archive was never finished), then `spawn UNKNOWN` from
+  # signtool (the file it was handed had been removed underneath it).
+  #
+  # The alternative was asking every developer to weaken their antivirus. This
+  # removes the file instead: the helper exists to request ELEVATION, and this
+  # is a per-user installer (`perMachine: false` above) — nothing it installs
+  # or updates needs administrator rights, so nothing here uses it.
+  #
+  # ⚠️ IF `perMachine` EVER BECOMES `true`, OR auto-updates need to elevate,
+  # this has to come back. electron-builder ignores the option entirely when
+  # `perMachine` is true, so the failure mode would be a silent return of the
+  # quarantine rather than a config error.
+  packElevateHelper: false
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true

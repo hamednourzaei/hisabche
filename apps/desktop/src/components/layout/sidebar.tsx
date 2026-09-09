@@ -22,22 +22,64 @@ import { MORE_GROUPS, MORE_ICON, PRIMARY_ITEMS } from '@hisabche/ui/menu'
 /**
  * Destinations this build serves.
  *
- * The navigation contract describes the whole product; desktop has not built
- * every screen yet. Filtering here rather than trimming the contract keeps one
- * document describing every platform, and stops the sidebar offering a route
- * the router would bounce to the dashboard.
+ * The navigation contract describes the whole product; desktop has not always
+ * built every screen. Filtering here rather than trimming the contract keeps
+ * one document describing every platform, and stops the sidebar offering a
+ * route the router would bounce to the dashboard.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * ⚠️ THIS LIST HELD TEN PATHS WHILE THE ROUTER SERVED ALL THIRTY-ONE.
+ *
+ * It was written when desktop really did have a handful of screens, and the
+ * screens kept being added to `app.tsx` without anyone coming back here. So
+ * twenty destinations that WORK — approvals, the till, banking, budgets,
+ * payroll, manufacturing, governance, every workspace view — were simply
+ * absent from the desktop menu. The only way to reach them was to type the
+ * hash URL.
+ *
+ * Nothing failed. A menu that is missing entries looks exactly like a menu.
+ *
+ * `desktop-routes.test.ts` now reads the router and fails when the two
+ * disagree in either direction: a path listed here that is not routed, and a
+ * routed destination that is not listed.
+ * ═══════════════════════════════════════════════════════════════════════════
  */
 const DESKTOP_ROUTES = new Set([
+  // ─── daily ───
   '/dashboard',
-  '/invoices/new',
   '/invoices',
   '/warehouse',
-  '/purchasing',
   '/accounting',
+  '/till',
+  // ─── people ───
   '/customers',
+  '/crm',
+  '/team-and-payroll',
+  '/sales-followup',
+  // ─── work ───
+  '/approvals',
+  '/expiry',
+  '/budgets',
+  '/timesheets',
+  '/assets',
+  '/bank',
+  '/accounting-workspace',
+  '/sales-workspace',
+  '/inventory-workspace',
+  '/people-workspace',
+  '/manufacturing',
+  '/purchasing',
+  '/workflow-templates',
+  // ─── system ───
   '/settings',
+  '/permissions',
   '/activities',
   '/sync-center',
+  '/conflicts',
+  '/data-and-sync',
+  '/data-migration',
+  '/billing',
+  '/governance',
 ])
 
 export function Sidebar() {
