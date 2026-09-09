@@ -10,14 +10,13 @@
 //
 //   < lg   a single grouped `Select`. Picking an article dismisses the menu
 //          and that article appears below it.
-//   ≥ lg   a sidebar built from the DASHBOARD's own `SidebarItem`, so the
-//          documentation navigates exactly like the application does.
+//   ≥ lg   a sidebar of real anchors, grouped, with a rule under each group.
 //
-// The desktop sidebar is not a lookalike: it imports `SidebarItem` from
-// `dashboard-sidebar.tsx`. Active state, the hairline indicator, hover, focus
-// and the 40px row are one implementation. That is also why `NavItem.icon` is
-// optional now — an article has no icon, and reserving a gutter for one it
-// will never have would leave the list hanging off its own margin.
+// ⚠️ THE ROWS ARE `<a>`, NOT `<button>`. A button cannot be opened in a new
+// tab, has no URL to copy, and a crawler does not follow it — which for public
+// documentation means every article would be reachable only by typing its
+// address. The `Select` renders no anchors at all, so this list is the only
+// thing making these pages linkable.
 //
 // This replaced two earlier attempts that were both wrong:
 //
@@ -45,7 +44,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '../select'
-import { SidebarItem } from '../dashboard-sidebar'
 import { cn } from '../../../lib/utils'
 import { DOCS_ARTICLES, DOCS_GROUPS, type DocsArticleDef } from '../../../lib/docs/docs-content'
 
@@ -105,8 +103,8 @@ export function DocsView({ t, hrefFor, activeSlug, appHrefFor }: DocsViewProps) 
 
       {/* ⚠️ THE SIDEBAR IS WHAT MAKES THESE PAGES CRAWLABLE.
           A `Select` renders no anchors and a `<button>` is not a link, so the
-          sidebar below carries a real `href` on every entry — see
-          `SidebarItem`'s `path`. Without it every article would be reachable
+          sidebar below carries a real `href` on every entry. Without it every
+          article would be reachable
           only by typing its URL, and each page would be an orphan to a
           crawler and to anyone wanting to open one in a new tab. */}
       {/* ⚠️ `1fr`, NOT `minmax(0,1fr)`. Tailwind v3's JIT does not extract an
@@ -121,47 +119,71 @@ export function DocsView({ t, hrefFor, activeSlug, appHrefFor }: DocsViewProps) 
             `border-e`, so it lands on the correct side in both directions
             without a second rule for LTR. The padding is what the gap was. */}
         <aside className="hidden lg:block lg:border-e lg:border-[hsl(var(--border-default))] lg:pe-6">
-          <nav aria-label={t('docs.title')} className="sticky top-6 flex flex-col gap-4">
-            {DOCS_GROUPS.map((group) => {
+          <nav aria-label={t('docs.title')} className="sticky top-6 flex flex-col">
+            {DOCS_GROUPS.map((group, index) => {
               const articles = DOCS_ARTICLES.filter((article) => article.group === group)
               if (articles.length === 0) return null
 
               return (
-                <div key={group} className="flex flex-col">
-                  <h2 className="mb-1 px-3 text-xs font-semibold tracking-wide text-[hsl(var(--fg-tertiary))]">
+                <div
+                  key={group}
+                  className={cn(
+                    'flex flex-col',
+                    // ⚠️ A RULE BETWEEN GROUPS, NOT AROUND THEM.
+                    // `border-t` on every group but the first: a rule above
+                    // the first would sit directly under the page chrome and
+                    // read as part of it, and one under the last would float
+                    // with nothing beneath it.
+                    index > 0 && 'mt-4 border-t border-[hsl(var(--border-default))] pt-4',
+                  )}
+                >
+                  <h2 className="mb-1.5 px-3 text-xs font-semibold tracking-wide text-[hsl(var(--fg-tertiary))]">
                     {t(`docs.group.${group}`)}
                   </h2>
                   <div className="flex flex-col gap-0.5">
-                    {articles.map((article) => (
-                      <SidebarItem
-                        key={article.slug}
-                        item={{
-                          id: article.slug,
-                          label: t(`docs.${article.slug}.title`),
-                          path: hrefFor(article.slug),
-                        }}
-                        isActive={article.slug === activeSlug}
-                        collapsed={false}
-                        nested={false}
-                        href={hrefFor(article.slug)}
-                        onClick={(event: React.MouseEvent<HTMLElement>) => {
-                          // Let the browser handle a modified click — a new
-                          // tab, a new window, a saved link. Calling
-                          // router.push() unconditionally would swallow all
-                          // three and defeat the point of using an anchor.
-                          if (
-                            event.metaKey ||
-                            event.ctrlKey ||
-                            event.shiftKey ||
-                            event.button !== 0
-                          ) {
-                            return
-                          }
-                          event.preventDefault()
-                          router.push(hrefFor(article.slug))
-                        }}
-                      />
-                    ))}
+                    {articles.map((article) => {
+                      const isActive = article.slug === activeSlug
+                      return (
+                        <a
+                          key={article.slug}
+                          href={hrefFor(article.slug)}
+                          aria-current={isActive ? 'page' : undefined}
+                          onClick={(event) => {
+                            // Let the browser handle a modified click — a new
+                            // tab, a new window, a saved link. Calling
+                            // router.push() unconditionally would swallow all
+                            // three and defeat the point of using an anchor.
+                            if (
+                              event.metaKey ||
+                              event.ctrlKey ||
+                              event.shiftKey ||
+                              event.button !== 0
+                            ) {
+                              return
+                            }
+                            event.preventDefault()
+                            router.push(hrefFor(article.slug))
+                          }}
+                          className={cn(
+                            'relative flex min-h-[2.25rem] items-center rounded-lg px-3 text-sm',
+                            'transition-colors duration-150 motion-reduce:transition-none',
+                            isActive
+                              ? 'bg-[hsl(var(--color-primary)/0.10)] font-semibold text-[hsl(var(--color-primary))]'
+                              : 'text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
+                          )}
+                        >
+                          {/* A hairline on the inline-start edge — `start`, so
+                              it lands correctly in both directions. */}
+                          {isActive ? (
+                            <span
+                              aria-hidden="true"
+                              className="absolute inset-y-1.5 start-0 w-[3px] rounded-full bg-[hsl(var(--color-primary))]"
+                            />
+                          ) : null}
+                          {t(`docs.${article.slug}.title`)}
+                        </a>
+                      )
+                    })}
                   </div>
                 </div>
               )

@@ -14,7 +14,7 @@ import {
   updateProfileSchema,
 } from '@hisabche/validation'
 import { createAuthClient, supabase } from '../db'
-import { authenticate } from '../middleware/auth.middleware'
+import { authenticate, invalidateAuthToken } from '../middleware/auth.middleware'
 import { passwordResetService } from '../services/password-reset.service'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 
@@ -342,14 +342,43 @@ export async function authRoutes(fastify: FastifyInstance) {
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
-        // ✅ FIX: supabase.auth.signOut() بدون پارامتر
-        // سرور-ساید session رو invalidate می‌کند
-        await supabase.auth.signOut().catch(() => {
-          // حتی اگر خطا داد، cache رو پاک کن
-        })
+        // ═══════════════════════════════════════════════════════════════
+        // ⚠️ LOGOUT USED TO REVOKE NOTHING AT ALL.
+        //
+        // It called `supabase.auth.signOut()` on the SERVICE-ROLE client —
+        // a client that has never signed anyone in and holds no session, so
+        // there was nothing for it to sign out of. The call succeeded and did
+        // nothing. The user's access token stayed valid until it expired on
+        // its own.
+        //
+        // Two things made that worse than it sounds:
+        //
+        //   1. `auth.middleware.ts` caches a verified token for up to an hour
+        //      (`AUTH_CACHE_MAX_TTL_SECONDS`). Even a token revoked upstream
+        //      kept being accepted from this backend's own cache.
+        //   2. «Log out» on a shared or borrowed computer is exactly the
+        //      moment a person believes they are safe.
+        //
+        // Both halves are now closed: the session is revoked at the identity
+        // provider, AND this backend's memory of having verified that token is
+        // dropped so the next request re-checks rather than trusting the cache.
+        // ═══════════════════════════════════════════════════════════════
+        const token = request.accessToken
+        const userId = request.userId
 
-        // پاک کردن کش کاربر
-        const userId = (request as any).userId
+        // `admin.signOut(jwt)` takes the caller's own token and revokes the
+        // session behind it. Failure is logged, never fatal — a logout that
+        // reports an error leaves people clicking it again on a machine they
+        // are trying to walk away from.
+        if (token) {
+          const { error } = await supabase.auth.admin.signOut(token)
+          if (error) fastify.log.error({ err: error }, 'signOut failed to revoke the session')
+
+          // The gate this backend actually enforces. Keyed by token, exactly
+          // as `authenticate` writes it.
+          await invalidateAuthToken(token)
+        }
+
         if (userId) {
           await clearCache(`user:${userId}`)
           await clearCache(`auth-me:${userId}:*`)

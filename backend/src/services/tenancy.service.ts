@@ -58,6 +58,70 @@ export function isWorkspaceRole(value: unknown): value is WorkspaceRole {
 }
 
 /**
+ * ═══════════════════════════════════════════════════════════════════════════
+ * ⚠️ TWO VOCABULARIES WRITE TO ONE COLUMN.
+ *
+ * `workspace_members.role` is written by `workspace.service.ts` — invites,
+ * `createMemberDirect`, `updateMemberRole` — using the client vocabulary:
+ *
+ *     owner | admin | member | viewer
+ *
+ * and read here, and by every route guard through `request.tenancy.role`,
+ * using the server vocabulary:
+ *
+ *     owner | manager | seller
+ *
+ * `isWorkspaceRole('admin')` is FALSE. So the old line —
+ *
+ *     role: isWorkspaceRole(row.role) ? row.role : 'seller'
+ *
+ * — silently gave an ADMIN the LOWEST privilege in the product. An owner
+ * granted someone admin, and that person could not post a journal entry, read
+ * the ledger, cancel a payment or manage the catalogue. Nothing failed; they
+ * were simply refused everywhere, and the members screen showed «admin».
+ *
+ * The degradation to least privilege is the right instinct for an UNKNOWN
+ * value and the wrong answer for a KNOWN one. Known values are now translated;
+ * genuinely unrecognised ones still degrade.
+ *
+ * ⚠️ `viewer` IS A KNOWN GAP, NOT A DECISION MADE HERE.
+ *
+ * There is no read-only rung in the server vocabulary: the lowest is `seller`,
+ * who may create invoices and record payments. So a member invited as
+ * «viewer» can sell. That is what happens TODAY through the degradation
+ * branch, and mapping it explicitly changes nothing — it makes the over-grant
+ * visible instead of accidental.
+ *
+ * Fixing it properly means a role below `seller` and a decision about what a
+ * read-only member may see, which is a product policy, not a translation.
+ * Until that policy exists, inventing a rung here would be guessing at it.
+ * `tenancy-role-vocabulary.test.ts` asserts this gap so it cannot be forgotten.
+ * ═══════════════════════════════════════════════════════════════════════════
+ */
+const CLIENT_ROLE_TO_SERVER: Record<string, WorkspaceRole> = {
+  owner: 'owner',
+  admin: 'manager',
+  member: 'seller',
+  // See the warning above. Not an endorsement — a record of the status quo.
+  viewer: 'seller',
+}
+
+/**
+ * The server role for a stored value, whichever vocabulary wrote it.
+ *
+ * An unrecognised value degrades to the least privilege, exactly as before:
+ * the old code defaulted a missing membership to 'admin', which
+ * `workflow.service.ts` then accepted as an approver override.
+ */
+export function resolveWorkspaceRole(stored: unknown): WorkspaceRole {
+  if (isWorkspaceRole(stored)) return stored
+  if (typeof stored === 'string' && stored in CLIENT_ROLE_TO_SERVER) {
+    return CLIENT_ROLE_TO_SERVER[stored]!
+  }
+  return 'seller'
+}
+
+/**
  * A verified answer to "this user may act in this workspace as this role".
  * Nothing downstream should construct one of these by hand.
  */
@@ -102,10 +166,9 @@ export async function listAuthorizedWorkspaces(userId: string): Promise<TenancyC
     .map((row) => ({
       workspaceId: row.workspace_id,
       userId,
-      // An unrecognised or NULL role degrades to the LEAST privilege, not the
-      // most. The old code defaulted a missing membership to 'admin', which
-      // workflow.service.ts then accepted as an approver override.
-      role: isWorkspaceRole(row.role) ? row.role : 'seller',
+      // Translates the client vocabulary and degrades anything genuinely
+      // unrecognised — see `resolveWorkspaceRole`.
+      role: resolveWorkspaceRole(row.role),
     }))
 }
 

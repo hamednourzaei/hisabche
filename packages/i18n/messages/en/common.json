@@ -3630,7 +3630,12 @@
       "not_own_record": "A colleague raised this record.",
       "sod_conflict": "The same person cannot do both steps — this control is deliberate.",
       "period_locked": "This accounting period is closed."
-    }
+    },
+    "forbidden": "You are not allowed to do this.",
+    "missingCapability": "This needs {role} access.",
+    "outOfBranchScope": "This record belongs to another branch, and you do not have access to that branch.",
+    "notOwnRecord": "You can only do this to records you created yourself.",
+    "notGuarded": "Record-level access is not configured for this area yet."
   },
   "docs": {
     "title": "Documentation",
@@ -3936,5 +3941,10 @@
     "roleAdmin": "Manager",
     "accountFailed": "The employee was saved, but the account could not be created",
     "accountNeedsWorkspace": "The employee was saved, but no account was created: no workspace was found."
+  },
+  "role": {
+    "owner": "Owner",
+    "manager": "Manager",
+    "seller": "Seller"
   }
 }

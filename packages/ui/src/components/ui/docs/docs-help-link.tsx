@@ -50,7 +50,11 @@ import { cn } from '../../../lib/utils'
 export const ROUTE_DOCS_MAP: Record<string, string> = {
   // Sales
   invoices: 'invoices',
-  'invoice-detail': 'invoices',
+  // Aliases below are deliberately absent: `invoice-detail`, `products`,
+  // `payments` and `pos` were mapped here but none of them is a route under
+  // `apps/web/app/[lang]/(dashboard)/`. They never matched a real path, so the
+  // «؟» never fired for them, and they only risked being picked as the reverse
+  // link for their article. `till` covers the POS screen that does exist.
   'quick-invoice': 'invoices',
   customers: 'customers',
   'customer-list': 'customers',
@@ -60,7 +64,6 @@ export const ROUTE_DOCS_MAP: Record<string, string> = {
   warehouse: 'inventory',
   'inventory-workspace': 'inventory',
   'product-list': 'inventory',
-  products: 'inventory',
   'stock-count': 'inventory',
   expiry: 'inventory',
   operations: 'inventory',
@@ -68,9 +71,7 @@ export const ROUTE_DOCS_MAP: Record<string, string> = {
   // Money
   accounting: 'accounting',
   'accounting-workspace': 'accounting',
-  payments: 'invoices',
   till: 'pos',
-  pos: 'pos',
   bank: 'accounting',
   budgets: 'accounting',
   assets: 'accounting',
@@ -81,7 +82,12 @@ export const ROUTE_DOCS_MAP: Record<string, string> = {
   'people-workspace': 'permissions',
   'human-resources': 'permissions',
   timesheets: 'permissions',
-  branches: 'branches',
+  // ⚠️ `branches` IS NOT A ROUTE. Branch management is a TAB on
+  // `/team-and-payroll` (`?tab=branches`, see its container). The key here was
+  // `branches`, which is the only product route mapped to the `branches`
+  // article — so `docs-client` inverted the map, built «باز کردن در برنامه» as
+  // `/fa/branches`, and that link was a 404 on the live site.
+  'team-and-payroll': 'branches',
 
   // Platform
   'data-and-sync': 'offline',

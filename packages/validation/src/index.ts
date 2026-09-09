@@ -50,6 +50,7 @@ export {
   invoiceItemSchema,
   invoiceItemDetailSchema,
   computeItemTotal,
+  computeInvoiceMoney,
   settlementDate,
   invoiceSchema,
   createInvoiceSchema,

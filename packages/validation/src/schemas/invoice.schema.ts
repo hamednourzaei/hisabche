@@ -112,6 +112,124 @@ export function computeItemTotal(item: {
   return gross - (gross * discount) / 100
 }
 
+/**
+ * The money on an invoice header, DERIVED FROM ITS LINES.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * ⚠️ WHY THIS EXISTS — THE CLIENT USED TO DICTATE THE TOTAL.
+ *
+ * `InvoiceService.create` wrote `subtotal`, `discount_total` and `total`
+ * straight from the request body, and `createAccountingEntries` booked the
+ * ledger from that same `total`. Nothing recomputed the header from the lines.
+ *
+ * So `POST /api/invoices` carrying items worth 5,000,000 and `"total": 1`
+ * removed the full stock, consumed the full cost layers, and booked revenue of
+ * ONE — while the COGS lines were computed from the real consumed cost, making
+ * the journal entry a guaranteed loss and the receivable wrong by the
+ * difference. `"total": 0` was worse: `createAccountingEntries` returns early
+ * on a non-positive total, so the goods left and NOTHING was booked at all.
+ *
+ * A total is not an input. It is what the lines add up to.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * IT MATCHES `summarize()`, DELIBERATELY
+ *
+ * The grid's own totals come from `summarize` in `invoice-grid.ts`, and the
+ * arithmetic here is the same one in the same order:
+ *
+ *     subtotal  = Σ line totals
+ *     discount  = clamped to [0, subtotal]
+ *     taxable   = subtotal − discount
+ *     tax       = taxable × rate / 100
+ *     total     = taxable + tax
+ *
+ * If the two disagreed, the number a person approved on screen and the number
+ * their books carry would differ — which is the same defect wearing a
+ * different hat.
+ *
+ * ⚠️ THE DISCOUNT IS CLAMPED, NOT RECOMPUTED. The server receives the discount
+ * as a settled AMOUNT (`discountTotal`), not as the value-and-type pair the
+ * grid holds, so it cannot re-derive a percentage. Clamping to the subtotal is
+ * what it can honestly enforce: a discount larger than the invoice, or a
+ * negative one, is not a discount.
+ */
+export function computeInvoiceMoney(input: {
+  // `| undefined` explicitly: `exactOptionalPropertyTypes` is on across this
+  // monorepo, so an optional property and one that may hold `undefined` are
+  // different types, and the caller has the latter.
+  // ⚠️ `quantity` and `amount` on a DETAIL are optional in `CreateInvoice`, and
+  // `undefined * undefined` is NaN — which would silently make the whole
+  // invoice total NaN and store it. They are coerced below, once, rather than
+  // trusted to be present.
+  items: readonly {
+    quantity: number
+    unitPrice: number
+    discount?: number | undefined
+    details?: readonly { quantity?: number | undefined; amount?: number | undefined }[] | undefined
+  }[]
+  /** The settled discount amount the client asked for. Clamped, never trusted. */
+  discountTotal?: number | undefined
+  /** Percent. When absent or zero, `taxTotal` below is used instead. */
+  taxRate?: number | undefined
+  /** Fallback when no rate is given — still clamped to be non-negative. */
+  taxTotal?: number | undefined
+}): { subtotal: number; discountTotal: number; taxTotal: number; total: number } {
+  const subtotal = round2(
+    input.items.reduce(
+      (sum, item) =>
+        sum +
+        computeItemTotal({
+          quantity: Number(item.quantity) || 0,
+          unitPrice: Number(item.unitPrice) || 0,
+          discount: Number(item.discount) || 0,
+          details: (item.details ?? []).map((detail) => ({
+            quantity: Number(detail.quantity) || 0,
+            amount: Number(detail.amount) || 0,
+          })),
+        }),
+      0,
+    ),
+  )
+
+  const requestedDiscount = Number(input.discountTotal) || 0
+  const discountTotal = round2(Math.min(subtotal, Math.max(0, requestedDiscount)))
+
+  const taxable = Math.max(0, round2(subtotal - discountTotal))
+
+  // ⚠️ THE CLAIMED TAX IS CLAMPED TO THE TAXABLE BASE.
+  //
+  // Without the upper bound, an invoice with NO LINES and `"taxTotal": 999`
+  // totalled 999 — tax on nothing, invented by the request, booked to the
+  // ledger. The bound also states the real invariant: tax is charged on an
+  // amount, so it cannot exceed the amount it is charged on. A zero base is
+  // therefore zero tax, which is what the empty-invoice case needs.
+  const rate = Number(input.taxRate) || 0
+  const taxTotal =
+    rate > 0
+      ? round2((taxable * Math.min(100, Math.max(0, rate))) / 100)
+      : round2(Math.min(taxable, Math.max(0, Number(input.taxTotal) || 0)))
+
+  return {
+    subtotal,
+    discountTotal,
+    taxTotal,
+    total: round2(Math.max(0, taxable + taxTotal)),
+  }
+}
+
+/**
+ * Two decimals.
+ *
+ * ⚠️ Matches `roundTo(value, ctx.precision)` in the grid for the ordinary
+ * two-decimal case. It is NOT currency-aware, and neither is the column it
+ * writes into — `invoices.total` is a `numeric`, while the tax lines carry
+ * genuine minor units. Reconciling those two representations is a separate
+ * piece of work; rounding differently here would only add a third.
+ */
+function round2(value: number): number {
+  return Math.round((Number(value) || 0) * 100) / 100
+}
+
 // ============================================
 // Invoice Status — ✅ اضافه کردن "paid" و "overdue"
 // ============================================

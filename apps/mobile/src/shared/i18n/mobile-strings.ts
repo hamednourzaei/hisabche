@@ -4,6 +4,22 @@
 // namespace so the web locale files stay untouched.
 // ============================================
 
+import { unitSchema } from '@hisabche/validation'
+
+/**
+ * Every unit the product actually has.
+ *
+ * ⚠️ DERIVED, NOT RETYPED. `MobileBundle['units']` was a hand-written union of
+ * nine literals while `unitSchema` had fifteen, so mg, ton, cm, km, ml and
+ * dozen had NO LABEL — a mobile invoice line rendered «۱۰» where it should say
+ * «۱۰ میلی‌گرم». On a gold invoice that is a materially different claim.
+ *
+ * Reading the enum means the next unit added to the schema breaks the build
+ * here instead of shipping a blank label. `unitSchema` is used only in type
+ * position, so TypeScript elides the import from the emitted bundle.
+ */
+type Unit = (typeof unitSchema.options)[number]
+
 interface MobileBundle {
   tabs: Record<'home' | 'sales' | 'inventory' | 'customers' | 'more', string>
   auth: Record<
@@ -197,33 +213,59 @@ interface MobileBundle {
    * platform. `custom` is the escape hatch — the user's own label lives in the
    * item's `unitLabel`, so this entry is only a placeholder in pickers.
    */
-  units: Record<
-    'piece' | 'gram' | 'kg' | 'meter' | 'liter' | 'box' | 'pack' | 'carton' | 'custom',
-    string
-  >
+  /**
+   * ⚠️ KEYED BY THE CANONICAL ENUM, NOT BY A HAND-WRITTEN SUBSET.
+   *
+   * This was nine literals while `unitSchema` in `@hisabche/validation` had
+   * fifteen. The six that were missing — mg, ton, cm, km, ml, dozen — rendered
+   * as a BARE NUMBER on mobile: «۱۰» where the invoice says «۱۰ میلی‌گرم».
+   * On a gold invoice that is a materially different claim, which is exactly
+   * what the guard in `__tests__/units.test.ts` was written to catch, and it
+   * had been failing.
+   *
+   * Deriving the key from `unitSchema` means adding a unit to the schema now
+   * breaks the build here rather than shipping a blank label.
+   */
+  units: Record<Unit, string>
 }
 
 const UNITS_FA: MobileBundle['units'] = {
-  piece: 'عدد',
+  // ─── weight ───
+  mg: 'میلی‌گرم',
   gram: 'گرم',
   kg: 'کیلوگرم',
+  ton: 'تن',
+  // ─── length ───
+  cm: 'سانتی‌متر',
   meter: 'متر',
+  km: 'کیلومتر',
+  // ─── volume ───
+  ml: 'میلی‌لیتر',
   liter: 'لیتر',
+  // ─── count ───
+  piece: 'عدد',
   box: 'جعبه',
   pack: 'بسته',
   carton: 'کارتن',
+  dozen: 'دوجین',
   custom: 'دلخواه',
 }
 
 const UNITS_EN: MobileBundle['units'] = {
-  piece: 'pcs',
+  mg: 'mg',
   gram: 'g',
   kg: 'kg',
+  ton: 't',
+  cm: 'cm',
   meter: 'm',
+  km: 'km',
+  ml: 'mL',
   liter: 'L',
+  piece: 'pcs',
   box: 'box',
   pack: 'pack',
   carton: 'carton',
+  dozen: 'dz',
   custom: 'Custom',
 }
 

@@ -5,6 +5,25 @@ copyright: Copyright © Hisabche
 # (@hisabche/desktop -> "@hisabchedesktop") and AppImage rejects the "@".
 executableName: hisabche
 
+# ⚠️ THE BUILD NAME, NOT THE APP NAME.
+#
+# The workspace package is `@hisabche/desktop`, and electron-builder names its
+# intermediates from it. A leading `@` is a real problem for the Linux AppImage
+# target (see `executableName` above), so the packaged metadata carries a plain
+# name instead. The workspace keeps its scoped name and every
+# `--filter=@hisabche/desktop` still works.
+#
+# ⚠️ This changes what Electron would call the app, and therefore where
+# `userData` would DEFAULT to. It is safe only because
+# `electron/main/index.ts` pins that path explicitly — without that line this
+# one would move every existing installation's SQLite database.
+#
+# ⚠️ IT IS NOT WHAT FIXED THE NSIS FAILURE. That was a wrong guess: the
+# packaging step failed identically with and without the `@`. See
+# `differentialPackage` below for the actual cause.
+extraMetadata:
+  name: hisabche
+
 directories:
   output: dist
   buildResources: resources
@@ -55,6 +74,24 @@ win:
   artifactName: ${productName}-${version}-setup.${ext}
 
 nsis:
+  # ⚠️ THE PACKAGING STEP FAILED HERE, REPRODUCIBLY.
+  #
+  #     ⨯ ENOENT: no such file or directory, stat '…-x64.nsis.7z'
+  #
+  # The archive is written and then, milliseconds later, stat'd by the
+  # DIFFERENTIAL PACKAGE step — the one that produces the `.blockmap` used for
+  # delta auto-updates. On this machine the file is not visible to that stat
+  # when it runs (a newly written archive being scanned by the on-access
+  # antivirus is the usual reason on Windows), so the whole build fails after
+  # the installer itself has already been assembled.
+  #
+  # The comment above `files:` records an earlier encounter with the same
+  # ENOENT and treated it as an asar-size problem. Shrinking the asar helped
+  # but did not remove it: the archive here is 386 kB and it still fails.
+  #
+  # Delta updates are the only thing lost. A full installer is still produced
+  # and `electron-updater` falls back to downloading it whole.
+  differentialPackage: false
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true

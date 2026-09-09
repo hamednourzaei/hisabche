@@ -317,18 +317,43 @@ export class WorkspaceService {
   async removeMember(userId: string, workspaceId: string, memberId: string) {
     await this.requireRole(userId, workspaceId, 'admin')
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // ⚠️ CROSS-TENANT DELETE. Both statements below were unscoped.
+    //
+    // The SELECT read `.eq('id', memberId)` alone, and the DELETE did the
+    // same. `memberId` is a membership-row id supplied by the caller — so the
+    // owner of workspace A, passing a membership id belonging to workspace B,
+    // read B's row and then DELETED it. B's member simply lost their access,
+    // and nothing in A's logs or B's would say why.
+    //
+    // `requireRole` above authorises the caller IN THEIR OWN workspace and
+    // says nothing about the row they named. `updateMemberRole` a few methods
+    // up already scopes both halves; `setMemberSuspension` does too. This was
+    // the one that did not.
+    //
+    // This is the codebase's first rule: `workspace_id` is the ONLY security
+    // boundary, and a row addressed by id alone has crossed it.
+    // ═══════════════════════════════════════════════════════════════════════
     const { data: m } = await supabase
       .from('workspace_members')
       .select('role, user_id')
       .eq('id', memberId)
-      .single()
+      .eq('workspace_id', workspaceId)
+      .maybeSingle()
 
+    // `maybeSingle`, not `single`: a foreign id now matches nothing, and
+    // `single` turns "no rows" into a thrown PostgREST error rather than the
+    // not-found this should report.
     if (!m) throw new DatabaseError('Member not found')
     if (m.role === 'owner' || m.user_id === userId) {
       throw new DatabaseError('Cannot remove')
     }
 
-    await supabase.from('workspace_members').delete().eq('id', memberId)
+    await supabase
+      .from('workspace_members')
+      .delete()
+      .eq('id', memberId)
+      .eq('workspace_id', workspaceId)
 
     // ✅ Invalidate cache
     await this.invalidateWorkspaceCache(workspaceId)

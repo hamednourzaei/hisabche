@@ -21,6 +21,22 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
 
+/**
+ * A list from the network, or an empty one.
+ *
+ * ⚠️ `(data as X[]) ?? []` IS NOT A CHECK. `??` substitutes only for `null`
+ * and `undefined`; anything else the endpoint returns — an error envelope, a
+ * wrapped payload, an HTML page from a misrouted request — passes through
+ * wearing the type of an array, and the first `for…of` or `.map` over it
+ * throws `is not iterable`.
+ *
+ * That exact shape crashed the desktop dashboard through
+ * `useExchangeRates`, so every sibling hook here that copied the pattern gets
+ * the real check instead.
+ */
+function asArray<T>(data: unknown): T[] {
+  return Array.isArray(data) ? (data as T[]) : []
+}
 // ─── L1 · product units ───────────────────────────────────────────────
 
 export interface ProductUnit {
@@ -63,7 +79,7 @@ export function useProductUnits(productId?: string) {
     queryKey: inventoryOpsKeys.productUnits(productId ?? ''),
     queryFn: async (): Promise<ProductUnit[]> => {
       const { data } = await apiClient.get(`/products/${productId}/units`)
-      return (data as ProductUnit[]) ?? []
+      return asArray<ProductUnit>(data)
     },
     enabled: ready && Boolean(productId),
   })
@@ -146,7 +162,7 @@ export function useCycleCounts(status?: CycleCountStatus) {
       const { data } = await apiClient.get('/cycle-counts', {
         params: status ? { status } : {},
       })
-      return (data as CycleCount[]) ?? []
+      return asArray<CycleCount>(data)
     },
     enabled: ready,
   })
@@ -255,7 +271,7 @@ export function useReorderSuggestions() {
     queryKey: inventoryOpsKeys.reorder(),
     queryFn: async (): Promise<ReorderSuggestion[]> => {
       const { data } = await apiClient.get('/inventory/reorder-suggestions')
-      return (data as ReorderSuggestion[]) ?? []
+      return asArray<ReorderSuggestion>(data)
     },
     enabled: ready,
     staleTime: 5 * 60 * 1000,
@@ -280,7 +296,7 @@ export function useDeadStock(days = 90) {
     queryKey: inventoryOpsKeys.deadStock(days),
     queryFn: async (): Promise<DeadStockItem[]> => {
       const { data } = await apiClient.get('/inventory/dead-stock', { params: { days } })
-      return (data as DeadStockItem[]) ?? []
+      return asArray<DeadStockItem>(data)
     },
     enabled: ready,
     staleTime: 10 * 60 * 1000,
@@ -307,7 +323,7 @@ export function useShiftHistory() {
     queryKey: inventoryOpsKeys.shiftHistory(),
     queryFn: async (): Promise<ShiftHistoryEntry[]> => {
       const { data } = await apiClient.get('/pos/sessions/history')
-      return (data as ShiftHistoryEntry[]) ?? []
+      return asArray<ShiftHistoryEntry>(data)
     },
     enabled: ready,
   })
@@ -356,7 +372,7 @@ export function useStaleOpportunities() {
     queryKey: inventoryOpsKeys.staleOpportunities(),
     queryFn: async (): Promise<StaleOpportunity[]> => {
       const { data } = await apiClient.get('/intelligence/stale-opportunities')
-      return (data as StaleOpportunity[]) ?? []
+      return asArray<StaleOpportunity>(data)
     },
     enabled: ready,
     staleTime: 5 * 60 * 1000,

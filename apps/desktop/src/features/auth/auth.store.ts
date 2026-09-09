@@ -151,14 +151,43 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   hydrate: async () => {
     try {
-      const session = await sessionStore.read()
-      const isValid = isSession(session)
+      const stored = await sessionStore.read()
+      const isValid = isSession(stored)
+
+      // ═══════════════════════════════════════════════════════════════════
+      // ⚠️ THE VALIDATION RESULT IS THE GATE — IT USED TO BE DISCARDED.
+      //
+      // This read `isAuthenticated: session !== null`. `isSession` was called,
+      // its answer stored in `isSessionValid` and used to pick an error
+      // message — and then the gate ignored it and asked only whether the
+      // secure store had returned ANYTHING.
+      //
+      // `RequireAuth` checks `isAuthenticated` alone, so any non-null blob on
+      // disk — a truncated write, a session from an older shape, a file left
+      // by a previous install — opened the app straight into the dashboard
+      // with no token behind it. Every request then 401s against a UI that
+      // believes it is signed in.
+      //
+      // A session that does not validate is not a session. It is dropped
+      // rather than kept, so nothing downstream can read a `session` the app
+      // has already decided not to trust, and the bad blob is cleared so the
+      // next launch starts clean instead of failing the same way forever.
+      // ═══════════════════════════════════════════════════════════════════
+      if (stored !== null && !isValid) {
+        await sessionStore.clear().catch(() => {
+          // Best effort. Failing to clear must not stop the app booting to
+          // the login screen, which is where it needs to be either way.
+        })
+      }
+
       set({
-        session,
-        isAuthenticated: session !== null,
+        session: isValid ? stored : null,
+        isAuthenticated: isValid,
         isHydrated: true,
         isSessionValid: isValid,
-        error: isValid ? null : 'INVALID_SESSION_DATA',
+        // Only an actual malformed payload is an error. An empty store is the
+        // ordinary state of a machine nobody has signed in on yet.
+        error: stored !== null && !isValid ? 'INVALID_SESSION_DATA' : null,
       })
     } catch (error) {
       set({

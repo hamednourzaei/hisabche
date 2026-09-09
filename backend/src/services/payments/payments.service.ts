@@ -14,7 +14,7 @@ import { ValidationError } from '../../errors/validation.error'
 import { memoryCache } from '../../utils/pagination'
 import type { TenancyContext } from '../tenancy.service'
 import { ledger } from '../accounting'
-import { sod } from '../authorization'
+import { scopes, sod } from '../authorization'
 
 import {
   ageInvoices,
@@ -272,6 +272,33 @@ export class PaymentsService {
   ) {
     const payment = await this.getPayment(ctx, paymentId)
     if (payment.status !== 'posted') throw new ConflictError('PAYMENT_NOT_CANCELLABLE')
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ⚠️ RECORD SCOPE — THE RULE WAS DECLARED AND NEVER ASKED HERE.
+    //
+    // `scope.service.ts` lists `payment` in its SHAPE table with both a branch
+    // and an owner column, and every other guarded resource calls it:
+    // invoice.update, invoice.delete, customer.write, product.write. Cancelling
+    // a payment — the most destructive thing this service does, since it
+    // reverses a posted ledger entry — was the one that did not.
+    //
+    // `getPayment` above filters by `workspace_id` alone, so tenancy was never
+    // broken. What was missing is the delegation INSIDE a workspace: a member
+    // pinned to the Kabul branch could cancel a Herat payment by knowing its
+    // id, and the branch rule applies to managers and owners too — it is not a
+    // seller-only restriction.
+    //
+    // The SoD check below is a DIFFERENT control and does not cover this. It
+    // asks «did you record this yourself», not «is this yours to touch»: a
+    // manager cancelling a colleague's payment in another branch passes SoD
+    // cleanly.
+    //
+    // Order matters. Scope first: being told «you cannot act on another
+    // branch's records» is the accurate refusal, and reaching the
+    // maker-checker rule first would report the wrong reason and offer an
+    // override for a control that was not the obstacle.
+    // ═══════════════════════════════════════════════════════════════════════
+    await scopes.assertMay(ctx, 'payment', paymentId, 'payment.cancel')
 
     // Refused if this actor recorded the payment and the workspace enforces
     // the separation. Throws with the rule id, so the client can say which

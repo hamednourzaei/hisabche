@@ -8,7 +8,22 @@ import { useTranslations } from 'next-intl'
 import { z } from 'zod'
 import { useAuthStore, type User } from '@hisabche/store'
 import { loginSchema, type LoginInput } from '@hisabche/validation'
-import { AuthShell } from '@hisabche/ui'
+// ⚠️ RELATIVE, NOT THE PACKAGE BARREL.
+//
+// This file lives INSIDE `@hisabche/ui`. Importing from the package by name
+// makes the barrel depend on this module and this module depend on the barrel
+// — a cycle whose evaluation order is decided by the bundler. When it puts the
+// barrel first, every `const` this file needs is still in its temporal dead
+// zone and the app throws
+//
+//     ReferenceError: Cannot access '…' before initialization
+//
+// from inside whichever hook runs first. It is stable until the export list in
+// `index.ts` changes, and then it moves — which is exactly the kind of fault
+// that appears to come from an unrelated edit.
+//
+// A file inside a package never imports that package by name.
+import { AuthShell } from '../AuthShell'
 
 /* ═══════════════════════════════════════════════════════════
    AuthContainer v3 — Full backend-auth migration

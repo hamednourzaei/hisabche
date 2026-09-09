@@ -271,19 +271,60 @@ export class CustomerService {
 
     if (error) throw new DatabaseError('Failed to create customer', error)
 
-    if (data.type === 'credit') {
+    // ═══════════════════════════════════════════════════════════════════════
+    // THE OPENING BALANCE OF A CREDIT PARTY
+    //
+    // ⚠️ 1. THE COMPENSATING DELETE IS GONE, AND IT WAS FORBIDDEN.
+    //
+    // On a failed transaction insert this used to run
+    //
+    //     await supabase.from('customers').delete().eq('id', customer.id)
+    //
+    // supabase-js has no transactions, so that DELETE is not a rollback — it
+    // is a second write that can itself fail, leaving exactly the half-state
+    // it was meant to prevent, and it was addressed by id with no
+    // `workspace_id` filter. This codebase's fourth rule names the pattern
+    // and forbids it: a multi-table write is a Postgres function called
+    // through `.rpc()`.
+    //
+    // ⚠️ 3. IT IS SKIPPED WHEN THERE IS NOTHING TO POST.
+    //
+    // A zero opening balance used to create a zero-amount «sale» on every
+    // credit customer, which is a row in the ledger that says nothing and
+    // shows up in every statement of account.
+    // ═══════════════════════════════════════════════════════════════════════
+    const opening = Number(data.openingBalance) || 0
+
+    if (data.type === 'credit' && opening !== 0) {
       const { error: txError } = await supabase.from('transactions').insert({
         customer_id: customer.id,
         type: 'sale',
-        amount: data.openingBalance || 0,
+        amount: opening,
+        // ⚠️ 'AFN' IS THE SYSTEM DEFAULT, NOT A MISTAKE HERE.
+        //
+        // There is no per-workspace currency column; `currency.service.ts`
+        // falls back to the same literal (`input.baseCurrency ?? 'AFN'`), so
+        // this row agrees with how the rest of the product reads it. Changing
+        // it to a workspace setting is a real improvement and a product
+        // decision — a books currency is not something to invent here, and
+        // guessing a different unit on a real amount would be worse than the
+        // shared default.
         currency: 'AFN',
         description: 'Credit sale - opening balance',
         workspace_id: workspaceId,
         user_id: userId,
       })
+
       if (txError) {
-        await supabase.from('customers').delete().eq('id', customer.id)
-        throw new DatabaseError('Failed to create credit transaction', txError)
+        // The customer stays. Deleting it here is the forbidden compensating
+        // write, and losing a record somebody just entered — with their name,
+        // phone and address — to recover from a failure on a DIFFERENT row is
+        // the worse of the two outcomes. The message says exactly what is
+        // missing so it can be added.
+        throw new DatabaseError(
+          'Customer created, but the opening balance transaction failed and must be entered manually',
+          txError,
+        )
       }
     }
 
@@ -349,14 +390,26 @@ export class CustomerService {
 
     const { workspaceId } = ctx
 
-    // ✅ count: estimated
-    const { count } = await supabase
+    // ⚠️ AN ESTIMATE MUST NOT DECIDE WHETHER A DELETE IS SAFE.
+    //
+    // This was `count: 'estimated'`, which PostgreSQL answers from table
+    // STATISTICS — a planner estimate that is routinely wrong and can read 0
+    // for a table that has rows, especially soon after an insert or before the
+    // next ANALYZE. A customer with real movements was therefore deletable,
+    // orphaning every transaction that pointed at them.
+    //
+    // The question is «are there ANY», so it is asked as an existence check:
+    // one row, exact, and cheaper than any count.
+    const { data: linked, error: linkedError } = await supabase
       .from('transactions')
-      .select('id', { count: 'estimated', head: true })
+      .select('id')
       .eq('customer_id', id)
       .eq('workspace_id', workspaceId)
+      .limit(1)
+      .maybeSingle()
 
-    if (count && count > 0) {
+    if (linkedError) throw new DatabaseError('Failed to check customer transactions', linkedError)
+    if (linked) {
       throw new DatabaseError('Customer has transactions, cannot delete')
     }
 
@@ -395,15 +448,41 @@ export class CustomerService {
     if (ownerError) throw new DatabaseError('Failed to verify customer', ownerError)
     if (!owned) throw new NotFoundError('Customer')
 
-    // ✅ فقط ستون‌های مورد نیاز + limit
-    const { data: transactions, error } = await supabase
-      .from('transactions_view')
-      .select('type, amount')
-      .eq('customer_id', customerId)
-      .limit(10000)
+    // ═══════════════════════════════════════════════════════════════════════
+    // ⚠️ A BALANCE MUST NOT BE COMPUTED FROM A TRUNCATED SET.
+    //
+    // This read was `.limit(10000)`. PostgREST returns the first ten thousand
+    // rows and says nothing about the rest, so a party with more movements
+    // than that got a balance summed from an arbitrary prefix — a number that
+    // is simply WRONG, with no error and no flag. A shop with a daily-trading
+    // customer reaches that in a few years, and the failure looks like an
+    // ordinary figure.
+    //
+    // Paged to exhaustion instead. The rows are two small columns, and a
+    // balance that is right matters more than one round trip saved.
+    //
+    // ⚠️ `PAGE` MUST STAY BELOW PostgREST's OWN `max-rows` or every page comes
+    // back short, the loop stops early, and the truncation returns silently in
+    // a new disguise. A short page is therefore treated as the last page ONLY
+    // when it is genuinely shorter than requested.
+    // ═══════════════════════════════════════════════════════════════════════
+    const PAGE = 1000
+    const transactions: Array<{ type: string; amount: unknown }> = []
 
-    if (error) {
-      throw new DatabaseError('Failed to fetch transactions', error)
+    for (let from = 0; ; from += PAGE) {
+      const { data: page, error } = await supabase
+        .from('transactions_view')
+        .select('type, amount')
+        .eq('customer_id', customerId)
+        // Ordered, so paging is deterministic. Without it PostgreSQL may
+        // return rows in any order and a row can be seen twice or never.
+        .order('id', { ascending: true })
+        .range(from, from + PAGE - 1)
+
+      if (error) throw new DatabaseError('Failed to fetch transactions', error)
+
+      transactions.push(...(page ?? []))
+      if (!page || page.length < PAGE) break
     }
 
     // ⚠️ SIGN — this used to read `sale || receipt` on the PLUS side, so money

@@ -33,18 +33,11 @@ interface LedgerContentProps extends React.ComponentPropsWithoutRef<
   tone?: Tone
 }
 
-// ─── Hooks ─────────────────────────────────────────────────────────────────
-
-function useIsRTL(): boolean {
-  const [isRTL, setIsRTL] = React.useState(false)
-
-  React.useEffect(() => {
-    const dir = document.documentElement.getAttribute('dir')
-    setIsRTL(dir === 'rtl')
-  }, [])
-
-  return isRTL
-}
+// `useIsRTL` used to live here: it read `document.documentElement.dir` into
+// state so a menu could pick a side. Nothing calls it any more — Radix reads
+// the direction itself and the logical `start`/`end` utilities handle the
+// rest — and it was the source of a `setState` inside an effect, which is a
+// cascading render for a value that never changes after mount.
 
 // ─── Primitives (internal, not exported) ───────────────────────────────────
 
@@ -67,7 +60,11 @@ const LedgerTrigger = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof TriggerPrimitive> & {
     tone?: Tone
   }
->(({ className, tone = 'filter', children, ...props }, ref) => {
+  // ⚠️ `tone` IS PULLED OUT AND NOT USED, ON PURPOSE. The trigger has no ink
+  // line — only the content does — but if it stayed in `...props` React would
+  // forward it to the DOM as an unknown `tone` attribute and warn on every
+  // render. The `_` prefix is what the lint rule reads as «deliberately unused».
+>(({ className, tone: _tone = 'filter', children, ...props }, ref) => {
   // `asChild` means the caller supplies the whole trigger element — an icon
   // button, a table header, a card. Radix's Slot requires exactly ONE child,
   // so the wrapper span and caret below would break it. Rendering the child
@@ -138,65 +135,94 @@ const LedgerContent = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Content>,
   LedgerContentProps
 >(({ className, sideOffset = 8, tone = 'filter', children, ...props }, ref) => {
+  // ═════════════════════════════════════════════════════════════════════════
+  // ⚠️ ONE CHILD PER PORTAL. THIS CRASHED EVERY DROPDOWN IN THE APP.
+  //
+  // Radix's `MenuPortal` renders `<PortalPrimitive asChild>{children}</…>`, and
+  // `asChild` means Slot — which requires exactly ONE React element child.
+  //
+  // The ink line was written as `{tone === 'finance' && <div/>}` INSIDE the
+  // same `<Portal>` as the content. For the default `filter` tone that
+  // expression is `false`, and `false` is still a child: React handed Slot an
+  // ARRAY of two, and Radix threw
+  //
+  //     Primitive.div failed to slot onto its children.
+  //     Expected a single React element child or `Slottable`.
+  //
+  // …on open, taking the surrounding error boundary with it. Every consumer
+  // was affected — the invoice grid toolbar, the mobile builder, the dashboard
+  // header — because the fault is in the wrapper, not in any call site. It
+  // stayed hidden while no menu sat on a page people open constantly.
+  //
+  // TWO PORTALS rather than moving the ink line inside the content: it is
+  // positioned with `--radix-dropdown-menu-*` variables against the viewport,
+  // so nesting it in the content would change what `absolute` resolves
+  // against. This keeps the rendered result identical and gives each Portal
+  // the single child Slot demands.
+  // ═════════════════════════════════════════════════════════════════════════
   return (
-    <Portal>
+    <>
       {/* ── Ink Line (only for finance tone) ── */}
       {tone === 'finance' && (
-        <div
-          aria-hidden="true"
-          className={cn(
-            'absolute z-[51] w-px',
-            'bg-[hsl(var(--color-primary))]',
-            'origin-top',
-            'animate-[ledgerInkReveal_300ms_cubic-bezier(0.22,1,0.36,1)_forwards]',
-            'motion-reduce:animate-none motion-reduce:hidden',
-          )}
-          style={
-            {
-              left: 'var(--radix-dropdown-menu-content-transform-origin)',
-              top: 'var(--radix-dropdown-menu-trigger-height)',
-              height: 'var(--radix-dropdown-menu-content-available-height)',
-              '--tw-translate-y': 'calc(-100% + 0px)',
-              transform: 'translateY(var(--tw-translate-y))',
-            } as React.CSSProperties
-          }
-        />
+        <Portal>
+          <div
+            aria-hidden="true"
+            className={cn(
+              'absolute z-[51] w-px',
+              'bg-[hsl(var(--color-primary))]',
+              'origin-top',
+              'animate-[ledgerInkReveal_300ms_cubic-bezier(0.22,1,0.36,1)_forwards]',
+              'motion-reduce:animate-none motion-reduce:hidden',
+            )}
+            style={
+              {
+                left: 'var(--radix-dropdown-menu-content-transform-origin)',
+                top: 'var(--radix-dropdown-menu-trigger-height)',
+                height: 'var(--radix-dropdown-menu-content-available-height)',
+                '--tw-translate-y': 'calc(-100% + 0px)',
+                transform: 'translateY(var(--tw-translate-y))',
+              } as React.CSSProperties
+            }
+          />
+        </Portal>
       )}
 
       {/* ── Content ── */}
-      <DropdownMenuPrimitive.Content
-        ref={ref}
-        sideOffset={sideOffset}
-        className={cn(
-          // Layout
-          'z-50 min-w-[180px] max-w-[320px]',
-          'overflow-hidden rounded-lg',
-          'p-1',
-          // Background & text
-          'bg-[hsl(var(--surface-overlay))]',
-          'text-[hsl(var(--fg-primary))]',
-          // Border
-          'border border-[hsl(var(--border-default))]',
-          // Shadow
-          'shadow-[var(--ledger-shadow,0_4px_24px_rgba(0,0,0,0.08))]',
-          // Animation: fade + slide
-          'data-[state=open]:animate-in',
-          'data-[state=closed]:animate-out',
-          'data-[state=closed]:fade-out-0',
-          'data-[state=open]:fade-in-0',
-          'data-[state=closed]:slide-out-to-top-1',
-          'data-[state=open]:slide-in-from-top-1',
-          // Reduced motion
-          'motion-reduce:animate-none',
-          // Ink reveal: delay slightly so ink line draws first
-          tone === 'finance' && 'data-[state=open]:animate-[ledgerContentReveal_350ms_ease-out]',
-          className,
-        )}
-        {...props}
-      >
-        {children}
-      </DropdownMenuPrimitive.Content>
-    </Portal>
+      <Portal>
+        <DropdownMenuPrimitive.Content
+          ref={ref}
+          sideOffset={sideOffset}
+          className={cn(
+            // Layout
+            'z-50 min-w-[180px] max-w-[320px]',
+            'overflow-hidden rounded-lg',
+            'p-1',
+            // Background & text
+            'bg-[hsl(var(--surface-overlay))]',
+            'text-[hsl(var(--fg-primary))]',
+            // Border
+            'border border-[hsl(var(--border-default))]',
+            // Shadow
+            'shadow-[var(--ledger-shadow,0_4px_24px_rgba(0,0,0,0.08))]',
+            // Animation: fade + slide
+            'data-[state=open]:animate-in',
+            'data-[state=closed]:animate-out',
+            'data-[state=closed]:fade-out-0',
+            'data-[state=open]:fade-in-0',
+            'data-[state=closed]:slide-out-to-top-1',
+            'data-[state=open]:slide-in-from-top-1',
+            // Reduced motion
+            'motion-reduce:animate-none',
+            // Ink reveal: delay slightly so ink line draws first
+            tone === 'finance' && 'data-[state=open]:animate-[ledgerContentReveal_350ms_ease-out]',
+            className,
+          )}
+          {...props}
+        >
+          {children}
+        </DropdownMenuPrimitive.Content>
+      </Portal>
+    </>
   )
 })
 LedgerContent.displayName = 'LedgerContent'

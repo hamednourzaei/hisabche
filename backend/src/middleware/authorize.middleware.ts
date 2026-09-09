@@ -14,7 +14,7 @@
 
 import { FastifyReply, FastifyRequest } from 'fastify'
 
-import { can, type Capability } from '../services/authorization'
+import { can, minRoleFor, type Capability } from '../services/authorization'
 
 /**
  * Refuse the request unless the caller's workspace role holds `capability`.
@@ -43,6 +43,15 @@ export function requireCapability(capability: Capability) {
         code: 'CAPABILITY_REQUIRED',
         capability,
         role: tenancy.role,
+        // ⚠️ THE ONE FIELD A PERSON CAN ACT ON.
+        //
+        // `capability` is an internal name — nobody outside this codebase
+        // knows what `ledger.post` is, and a name they cannot act on is not an
+        // explanation. `minRoleFor` is exported from the domain for exactly
+        // this purpose (see its docstring) and had no caller: the refusal
+        // could say "a manager can do this", and instead the client rendered
+        // the literal string «ForbiddenError».
+        requiredRole: minRoleFor(capability),
       })
     }
   }

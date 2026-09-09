@@ -88,6 +88,13 @@ export function useUnitsByDimension(dimension: UnitDimension) {
   const query = useUnits()
   return {
     ...query,
-    units: (query.data?.units ?? []).filter((u) => u.dimension === dimension),
+    // ⚠️ `u` IS ANNOTATED, NOT INFERRED.
+    //
+    // Under the mobile tsconfig `useQuery`'s generics do not resolve, so
+    // `query.data` is `any`, `query.data?.units` is `any`, and `u` was an
+    // implicit `any` — `apps/mobile` failed to type-check while every other
+    // package passed. Naming the type states what the row is regardless of how
+    // well the query types resolve in a given app.
+    units: (query.data?.units ?? []).filter((u: Unit) => u.dimension === dimension),
   }
 }

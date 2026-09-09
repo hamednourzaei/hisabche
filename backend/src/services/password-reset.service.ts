@@ -10,13 +10,13 @@ import { supabase } from '../db'
 import { emailService, type Language } from './email.service'
 import { AuditService } from './audit.service'
 import { memoryCache } from '../utils/pagination'
+import { invalidateSessionEpoch } from '../middleware/auth.middleware'
 
 const TOKEN_EXPIRY_MS = 60 * 60 * 1000 // 1 hour
 const auditService = new AuditService()
 
 // ─── Cache Keys ──────────────────────────────────────────────
-const getUserLanguageCacheKey = (userId: string) =>
-  `user:lang:${userId}`
+const getUserLanguageCacheKey = (userId: string) => `user:lang:${userId}`
 
 // ─── Detect user language with cache ──────────────────────────
 async function getUserLanguage(userId: string): Promise<Language> {
@@ -30,9 +30,7 @@ async function getUserLanguage(userId: string): Promise<Language> {
 
     const lang = data?.user?.user_metadata?.preferred_language
     const result: Language =
-      lang && ['fa-IR', 'fa-AF', 'en'].includes(String(lang))
-        ? (String(lang) as Language)
-        : 'fa-IR'
+      lang && ['fa-IR', 'fa-AF', 'en'].includes(String(lang)) ? (String(lang) as Language) : 'fa-IR'
 
     await memoryCache.set(cacheKey, result, 3600)
     return result
@@ -56,17 +54,14 @@ async function getUserByEmail(email: string): Promise<{
     if (!data?.users?.length) return null
 
     const normalizedEmail = email.toLowerCase().trim()
-    const user = data.users.find(
-      (u) => u.email?.toLowerCase() === normalizedEmail
-    )
+    const user = data.users.find((u) => u.email?.toLowerCase() === normalizedEmail)
 
     if (!user) return null
 
     return {
       id: user.id,
       email: user.email || email,
-      preferred_language:
-        user.user_metadata?.preferred_language || 'fa-IR',
+      preferred_language: user.user_metadata?.preferred_language || 'fa-IR',
     }
   } catch (err) {
     console.error('getUserByEmail error:', err)
@@ -75,14 +70,8 @@ async function getUserByEmail(email: string): Promise<{
 }
 
 export const passwordResetService = {
-  async requestReset(
-    email: string,
-    ip: string,
-    userAgent: string,
-    lang: Language = 'fa-IR'
-  ) {
-    const genericMessage =
-      'If an account exists with this email, a reset link has been sent.'
+  async requestReset(email: string, ip: string, userAgent: string, lang: Language = 'fa-IR') {
+    const genericMessage = 'If an account exists with this email, a reset link has been sent.'
 
     try {
       const user = await getUserByEmail(email)
@@ -103,22 +92,16 @@ export const passwordResetService = {
           .single(),
         supabase.from('password_reset_tokens').insert({
           user_id: user.id,
-          workspace_id:
-            '00000000-0000-0000-0000-000000000000',
+          workspace_id: '00000000-0000-0000-0000-000000000000',
           token_hash: tokenHash,
-          expires_at: new Date(
-            Date.now() + TOKEN_EXPIRY_MS
-          ).toISOString(),
+          expires_at: new Date(Date.now() + TOKEN_EXPIRY_MS).toISOString(),
           requested_ip: ip,
           requested_user_agent: userAgent,
         }),
       ])
 
       if (insertResult.error) {
-        console.error(
-          'Error saving reset token:',
-          insertResult.error
-        )
+        console.error('Error saving reset token:', insertResult.error)
         return {
           success: false,
           message: 'Failed to process request',
@@ -136,9 +119,7 @@ export const passwordResetService = {
 
       emailService
         .sendResetPassword(email, resetLink, userLang)
-        .catch((err) =>
-          console.error('Failed to send reset email:', err)
-        )
+        .catch((err) => console.error('Failed to send reset email:', err))
 
       auditService
         .log({
@@ -161,14 +142,8 @@ export const passwordResetService = {
     }
   },
 
-  async resetPassword(
-    token: string,
-    newPassword: string,
-    ip: string
-  ) {
-    const tokenHash = createHash('sha256')
-      .update(token)
-      .digest('hex')
+  async resetPassword(token: string, newPassword: string, ip: string) {
+    const tokenHash = createHash('sha256').update(token).digest('hex')
 
     try {
       // ۱. پیدا کردن توکن معتبر
@@ -196,8 +171,9 @@ export const passwordResetService = {
       }
 
       // ۳. ✅ دریافت اطلاعات کاربر (قبل از update)
-      const { data: userData, error: userError } =
-        await supabase.auth.admin.getUserById(resetToken.user_id)
+      const { data: userData, error: userError } = await supabase.auth.admin.getUserById(
+        resetToken.user_id,
+      )
 
       if (userError || !userData?.user) {
         console.error('User not found:', userError)
@@ -209,13 +185,9 @@ export const passwordResetService = {
 
       // ۴. ✅ تغییر رمز از طریق Admin SDK (نه fetch دستی)
       //    بدون email_confirm — Password Reset ≠ Email Verify
-      const { error: updateError } =
-        await supabase.auth.admin.updateUserById(
-          resetToken.user_id,
-          {
-            password: newPassword,
-          }
-        )
+      const { error: updateError } = await supabase.auth.admin.updateUserById(resetToken.user_id, {
+        password: newPassword,
+      })
 
       if (updateError) {
         console.error('Supabase admin update error:', updateError)
@@ -226,6 +198,35 @@ export const passwordResetService = {
       }
 
       // ۵. ✅ علامت‌گذاری توکن و باطل کردن سایر توکن‌ها
+      // ===============================================================
+      // INVALIDATE ACTIVE SESSIONS -- not only the reset tokens.
+      //
+      // Until now only the password-RESET tokens were revoked here; active
+      // sign-in sessions were left untouched. So someone who changes their
+      // password BECAUSE they believe another person is in their account did
+      // not put that person out -- they stayed in until their token expired
+      // on its own, which is the whole thing a reset is meant to stop.
+      //
+      // This timestamp is the line: `auth.middleware` rejects any token whose
+      // `iat` is earlier than it. Supabase exposes no "revoke every session
+      // for this user id" call, so a line in time does the same job.
+      //
+      // If the migration has not run the column does not exist. The error is
+      // logged and the reset still succeeds -- the password HAS changed, and
+      // telling the person it failed would be worse than the missing lock.
+      // ===============================================================
+      const { error: epochError } = await supabase
+        .from('profiles')
+        .update({ sessions_valid_from: new Date().toISOString() })
+        .eq('id', resetToken.user_id)
+
+      if (epochError) {
+        console.error('Failed to invalidate active sessions:', epochError)
+      } else {
+        // Drops the cached epoch so the lock applies now, not a minute from now.
+        await invalidateSessionEpoch(resetToken.user_id)
+      }
+
       const [updateResult, revokeResult] = await Promise.all([
         supabase
           .from('password_reset_tokens')
@@ -240,16 +241,10 @@ export const passwordResetService = {
       ])
 
       if (updateResult.error) {
-        console.error(
-          'Failed to mark token as used:',
-          updateResult.error
-        )
+        console.error('Failed to mark token as used:', updateResult.error)
       }
       if (revokeResult.error) {
-        console.error(
-          'Failed to revoke other tokens:',
-          revokeResult.error
-        )
+        console.error('Failed to revoke other tokens:', revokeResult.error)
       }
 
       // ۶. Audit log
@@ -265,9 +260,7 @@ export const passwordResetService = {
         .catch(() => {})
 
       // ۷. Invalidate cache
-      await memoryCache.invalidate(
-        getUserLanguageCacheKey(resetToken.user_id)
-      )
+      await memoryCache.invalidate(getUserLanguageCacheKey(resetToken.user_id))
 
       return {
         success: true,
@@ -303,9 +296,7 @@ export const passwordResetService = {
     used?: boolean
     revoked?: boolean
   }> {
-    const tokenHash = createHash('sha256')
-      .update(token)
-      .digest('hex')
+    const tokenHash = createHash('sha256').update(token).digest('hex')
 
     const { data, error } = await supabase
       .from('password_reset_tokens')
@@ -318,17 +309,13 @@ export const passwordResetService = {
     }
 
     if (data.used_at) return { valid: false, used: true }
-    if (data.revoked_at)
-      return { valid: false, revoked: true }
-    if (new Date(data.expires_at) < new Date())
-      return { valid: false, expired: true }
+    if (data.revoked_at) return { valid: false, revoked: true }
+    if (new Date(data.expires_at) < new Date()) return { valid: false, expired: true }
 
     return { valid: true }
   },
 
-  async invalidateUserLanguageCache(
-    userId: string
-  ): Promise<void> {
+  async invalidateUserLanguageCache(userId: string): Promise<void> {
     await memoryCache.invalidate(getUserLanguageCacheKey(userId))
   },
 }

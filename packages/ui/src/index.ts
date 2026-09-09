@@ -357,3 +357,9 @@ export { CycleCountView } from './components/ui/cycle-count/cycle-count-view'
 export { CycleCountContainer } from './components/ui/cycle-count/containers/cycle-count-container'
 export { InventoryOpsContainer } from './components/ui/inventory-ops/containers/inventory-ops-container'
 export { DocsHelpLink, ROUTE_DOCS_MAP, docsSlugForPath } from './components/ui/docs/docs-help-link'
+
+export {
+  authorizationMessage,
+  authorizationText,
+  type AuthorizationMessage,
+} from './lib/authorization-message'

@@ -12,6 +12,8 @@
 import { memo, useCallback, useState } from 'react'
 import { useTranslations } from 'next-intl'
 
+import { authorizationText } from '../../../../lib/authorization-message'
+
 import {
   usePermissionMatrix,
   useRoleMembers,
@@ -22,7 +24,25 @@ import {
 import { PermissionMatrixView } from '../permission-matrix-view'
 
 /** The server's message, or a generic fallback. Never a swallowed error. */
-function messageOf(error: unknown, fallback: string): string {
+/**
+ * ⚠️ `data.error` IS THE JAVASCRIPT CLASS NAME.
+ *
+ * The backend's global handler sends `error: err.name`, so this used to render
+ * the literal string «ForbiddenError» — in English, in a Persian interface,
+ * telling nobody anything. A refused permission is the single most likely
+ * failure on THIS screen, so it is the one that has to read properly.
+ *
+ * `authorizationText` is asked first and answers only for a 403; everything
+ * else falls through to the previous behaviour unchanged.
+ */
+function messageOf(
+  error: unknown,
+  fallback: string,
+  t: (key: string, fallback?: string) => string,
+): string {
+  const authorization = authorizationText(error, t)
+  if (authorization) return authorization
+
   const response = (error as { response?: { data?: { error?: string } } })?.response
   return response?.data?.error ?? (error as Error)?.message ?? fallback
 }
@@ -54,7 +74,7 @@ export const PermissionsContainer = memo(function PermissionsContainer() {
         // are shown: a dropdown that snaps back with no explanation is how
         // someone concludes the screen is broken.
         onError: (error) =>
-          setSaveError(messageOf(error, t('common.saveError', 'ذخیره ناموفق بود'))),
+          setSaveError(messageOf(error, t('common.saveError', 'ذخیره ناموفق بود'), t)),
       })
     },
     [setCell, t],
@@ -73,7 +93,7 @@ export const PermissionsContainer = memo(function PermissionsContainer() {
       cells={matrix?.cells ?? []}
       isLoading={isLoading}
       isSaving={setCell.isPending}
-      error={saveError ?? (loadError ? messageOf(loadError, '') : null)}
+      error={saveError ?? (loadError ? messageOf(loadError, '', t) : null)}
       onSetCell={handleSetCell}
       onSelectRole={toggleRole}
       selectedRoleId={selectedRoleId}

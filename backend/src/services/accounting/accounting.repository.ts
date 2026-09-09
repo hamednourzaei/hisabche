@@ -247,6 +247,36 @@ export class AccountingRepository {
   }
 
   /** The live entry a source document already produced, if there is one. */
+  /**
+   * An entry carrying this exact reference, if one exists.
+   *
+   * ⚠️ Used to make the YEAR-END CLOSE idempotent. `findEntryBySource` cannot
+   * do it: the close posts with `sourceType: 'manual'` and `sourceId: null`,
+   * and the source guard only applies when a source id is set. A deterministic
+   * reference is the key this document already has room for, and it needs no
+   * schema change to carry.
+   */
+  async findEntryByReference(
+    workspaceId: string,
+    reference: string,
+  ): Promise<{ id: string; entryNumber: string | null } | null> {
+    const { data, error } = await supabase
+      .from('journal_entries')
+      .select('id, entry_number')
+      .eq('workspace_id', workspaceId)
+      .eq('reference', reference)
+      .neq('status', 'cancelled')
+      .limit(1)
+      .maybeSingle()
+
+    if (error) throw new DatabaseError('Failed to look up the entry by reference', error)
+    if (!data) return null
+    return {
+      id: (data as { id: string }).id,
+      entryNumber: (data as { entry_number: string | null }).entry_number ?? null,
+    }
+  }
+
   async findEntryBySource(
     workspaceId: string,
     sourceType: string,

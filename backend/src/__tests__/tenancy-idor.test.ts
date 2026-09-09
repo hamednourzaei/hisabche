@@ -520,11 +520,29 @@ describe('a financial row carries both ids', () => {
   })
 
   it('a created invoice has workspace_id and user_id', async () => {
+    // ⚠️ THE INVOICE IS FOUND BY ITS NUMBER, NOT BY ITS TOTAL.
+    //
+    // This used to look the row up with `r.total === 33`, having passed
+    // `{ total: 33, items: [] }`. That stopped working the moment the header
+    // money became DERIVED from the lines — and the reason it stopped is the
+    // point: an invoice with no items totals zero, whatever the request said.
+    // Before, a request could claim any total and the ledger believed it.
     await new InvoiceService().create(CTX_A, { total: 33, items: [] } as never)
 
-    const created = rowsOf('invoices').find((r) => r.total === 33)
+    const created = rowsOf('invoices')[0]
     expect(created?.workspace_id).toBe(WS_A)
     expect(created?.user_id).toBe('user-a')
+  })
+
+  it('⚠️ the total a request CLAIMS is ignored when it has no lines', async () => {
+    // The narrow version of the worst defect in this module: items worth
+    // 5,000,000 with `"total": 1` removed the full stock, consumed the full
+    // cost layers, and booked revenue of one.
+    await new InvoiceService().create(CTX_A, { total: 999_999, items: [] } as never)
+
+    const created = rowsOf('invoices').at(-1)
+    expect(created?.total).toBe(0)
+    expect(created?.subtotal).toBe(0)
   })
 
   it('a created product has workspace_id and user_id', async () => {

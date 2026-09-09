@@ -73,7 +73,27 @@ export function useExchangeRates(currency?: string) {
       const { data } = await apiClient.get('/finance/currency/rates', {
         params: currency ? { currency } : {},
       })
-      return (data as RateQuote[]) ?? []
+      // ═══════════════════════════════════════════════════════════════════
+      // ⚠️ `as RateQuote[]` WAS A LIE, AND IT CRASHED THE DESKTOP APP.
+      //
+      //     TypeError: (quotes ?? []) is not iterable
+      //
+      // `??` only substitutes for `null`/`undefined`. Anything else the
+      // endpoint returns — an error envelope, a wrapped payload, an HTML page
+      // from a misrouted request — passes straight through with the shape of
+      // an array asserted over it, and the first `for (const quote of quotes)`
+      // in `use-display-basis.ts` throws. On desktop that took the whole
+      // dashboard down through the router's error boundary.
+      //
+      // ⚠️ MY OWN PREFIX FIX ABOVE IS WHAT EXPOSED IT. While the path 404ed,
+      // the query always errored, `data` was `undefined`, and `?? []` covered
+      // it. Correcting the path let a real response through for the first
+      // time — which is exactly when a wrong assumption about its shape
+      // becomes a crash.
+      //
+      // A cast is not a check. This is the check.
+      // ═══════════════════════════════════════════════════════════════════
+      return Array.isArray(data) ? (data as RateQuote[]) : []
     },
     enabled: ready,
     // Rates change during a trading day, but not every thirty seconds, and a

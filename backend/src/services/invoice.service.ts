@@ -26,6 +26,7 @@ import {
   CreateInvoice,
   UpdateInvoice,
   InvoiceFilters,
+  computeInvoiceMoney,
   type AccountRole,
 } from '@hisabche/validation'
 import { ledger, type DraftLine } from './accounting'
@@ -619,6 +620,70 @@ export class InvoiceService {
    */
   async create(ctx: TenancyContext, data: CreateInvoice, branchId: string | null = null) {
     const { workspaceId, userId } = ctx
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ⚠️ THE MONEY IS DERIVED FROM THE LINES BEFORE ANYTHING IS WRITTEN.
+    //
+    // `subtotal`, `discount_total`, `tax_total` and `total` used to be taken
+    // straight from the request body, and `createAccountingEntries` booked the
+    // ledger from that same `total`. Nothing recomputed the header.
+    //
+    // A request carrying items worth 5,000,000 and `"total": 1` therefore
+    // removed the full stock, consumed the full cost layers, and booked
+    // revenue of ONE — with COGS computed from the real consumed cost, making
+    // the journal entry a guaranteed loss and the receivable wrong by the
+    // difference. `"total": 0` was worse still: `createAccountingEntries`
+    // returns early on a non-positive total, so the goods left the shelf and
+    // nothing at all was booked.
+    //
+    // `computeInvoiceMoney` uses the same arithmetic as the grid's own
+    // `summarize`, so the figure a person approved on screen is the figure
+    // their books carry.
+    // ═══════════════════════════════════════════════════════════════════════
+    const money = computeInvoiceMoney({
+      items: data.items ?? [],
+      discountTotal: data.discountTotal,
+      taxRate: data.taxRate,
+      taxTotal: data.taxTotal,
+    })
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ⚠️ THE CUSTOMER IS VERIFIED BEFORE ANYTHING IS WRITTEN.
+    //
+    // This check used to sit AFTER the invoice row, its items, their details
+    // and `batchUpdateStock` had all been written — and on a miss it ran
+    //
+    //     await supabase.from('invoices').delete()...
+    //
+    // So `POST /api/invoices` with a valid product and a `customerId` from
+    // another workspace deducted the stock, wrote `stock_movements` rows
+    // pointing at the invoice, consumed the cost layers, and then deleted the
+    // invoice. The movements' `reference_id` pointed at a row that no longer
+    // existed, the goods were gone with no document explaining where, and the
+    // consumed layers were never released.
+    //
+    // The compensating DELETE is also forbidden outright by this codebase's
+    // fourth rule: supabase-js has no transactions, so it is not a rollback —
+    // it is a second write that can fail on its own.
+    //
+    // Validating first makes all of that unreachable. Nothing to compensate.
+    // ═══════════════════════════════════════════════════════════════════════
+    let customerName: string | null = null
+    if (data.customerId) {
+      // The tenancy filter is the point: without it a client could attach ANY
+      // customer id to its invoice — a cross-workspace write that also leaked
+      // the other shop's customer name back through the activity feed.
+      const { data: customer } = await supabase
+        .from('customers')
+        .select('full_name')
+        .eq('id', data.customerId)
+        .eq('workspace_id', workspaceId)
+        .maybeSingle()
+
+      if (!customer) throw new NotFoundError('Customer')
+      customerName = (customer as { full_name: string }).full_name
+    }
+
     const invoiceNumber = await this.generateInvoiceNumber()
 
     const { data: invoice, error: invoiceError } = await supabase
@@ -631,15 +696,16 @@ export class InvoiceService {
         due_date: data.dueDate || null,
         customer_id: data.customerId || null,
         supplier_id: data.supplierId || null,
-        subtotal: data.subtotal || 0,
-        discount_total: data.discountTotal || 0,
+        // ⚠️ DERIVED, NOT ACCEPTED. See `money` above.
+        subtotal: money.subtotal,
+        discount_total: money.discountTotal,
         discount_type: data.discountType || 'fixed',
         // The flat rate the client sent is kept for backward compatibility with
         // screens that still show it, but it decides nothing: the tax core
         // computes the real figures below and they overwrite these.
         tax_rate: data.taxRate || 0,
-        tax_total: data.taxTotal || 0,
-        total: data.total || 0,
+        tax_total: money.taxTotal,
+        total: money.total,
         // ⚠️ T9 — ALWAYS ZERO AT INSERT, AND THAT IS THE FIX.
         //
         // This line used to read `paid_amount: data.paidAmount || 0`. Phase F
@@ -696,6 +762,36 @@ export class InvoiceService {
 
     if (invoiceError || !invoice) throw new DatabaseError('Failed to create invoice', invoiceError)
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // ⚠️ APPROVAL IS DECIDED BEFORE THE STOCK MOVES, NOT AFTER.
+    //
+    // This decision used to run AFTER the items block — which had already
+    // called `batchUpdateStock`. So an invoice a rule routed to approval moved
+    // the stock once at creation and `postApprovedInvoice` moved it AGAIN at
+    // approval: a ten-unit sale removed twenty units, leaving two
+    // `stock_movements` rows against one invoice and the ledger's inventory
+    // account permanently disagreeing with the shelf.
+    //
+    // The held branch below claims «nothing was ever booked», and for the
+    // ledger that was true — but the goods had already left. A REJECTED
+    // invoice therefore took the stock with it and nothing gave it back.
+    //
+    // ⚠️ IT ALSO READ `data.total` — THE CLIENT'S NUMBER.
+    //
+    // The approval threshold was compared against a figure the request
+    // supplied, so `"total": 1` on a five-million invoice walked past any
+    // «anything above X needs a manager» rule. It reads the derived total now,
+    // like the document and the ledger do.
+    // ═══════════════════════════════════════════════════════════════════════
+    const approval = await this.routeForApproval(ctx, invoice.id, money.total, {
+      type: data.type,
+      currency: data.currency,
+      customerId: data.customerId ?? null,
+    })
+
+    /** Held for approval: the goods must not move until somebody says so. */
+    const isHeld = !mayPostDocument(approval)
+
     // ─── ایجاد آیتم‌های فاکتور ──────────────────────────────────────────
     if (data.items?.length) {
       const items = data.items.map((item) => ({
@@ -721,12 +817,30 @@ export class InvoiceService {
         .select('id')
 
       if (itemsError || !insertedItems) {
-        await supabase
-          .from('invoices')
-          .delete()
-          .eq('id', invoice.id)
-          .eq('workspace_id', workspaceId)
-        throw new DatabaseError('Failed to create invoice items', itemsError)
+        // ⚠️ THE INVOICE IS NOT DELETED HERE.
+        //
+        // It used to be, and that is the forbidden compensating write: with no
+        // transaction, the DELETE is a second statement that can fail on its
+        // own or never run at all if the process dies — leaving exactly the
+        // half-state it was meant to prevent.
+        //
+        // Deleting it does not even undo the visible damage. The invoice
+        // number has already been taken from `get_next_invoice_number`, so the
+        // gap in the series exists either way; all the DELETE adds is the loss
+        // of the header somebody just entered.
+        //
+        // So the row stays, with no items, which is a state the invoice screen
+        // can show and a person can correct. The error says what happened.
+        //
+        // ⚠️ THE REAL FIX IS AN RPC. `invoices` + `invoice_items` +
+        // `invoice_item_details` + `stock_movements` is one write and belongs
+        // in one Postgres function — the pattern this codebase already uses
+        // for `product_units_replace`. That is a larger piece of work; this
+        // stops the current behaviour making things worse in the meantime.
+        throw new DatabaseError(
+          `Invoice ${invoiceNumber} was created but its items could not be saved`,
+          itemsError,
+        )
       }
 
       await this.insertItemDetails(data.items, insertedItems, invoice.id, workspaceId)
@@ -734,69 +848,13 @@ export class InvoiceService {
       // A purchase moves stock too — it just moves it the other way. Guarding
       // this on `type === "sale"` meant every purchase left inventory
       // untouched, which is why bought goods never appeared in the warehouse.
-      await this.batchUpdateStock(data.items, ctx, data.type === 'purchase' ? 1 : -1, invoice.id)
-    }
-
-    // ─── ✅ دریافت نام مشتری ──────────────────────────────────────────────
-    let customerName: string | null = null
-    if (data.customerId) {
-      // ⚠️ SECURITY — this lookup had no tenancy filter, so a client could put
-      // ANY customer id in the body and have it attached to its invoice: a
-      // cross-workspace write that also leaked the other shop's customer name
-      // back in the activity feed. The customer must be in the same book.
-      const { data: customer } = await supabase
-        .from('customers')
-        .select('full_name')
-        .eq('id', data.customerId)
-        .eq('workspace_id', workspaceId)
-        .maybeSingle()
-
-      if (!customer) {
-        await supabase
-          .from('invoices')
-          .delete()
-          .eq('id', invoice.id)
-          .eq('workspace_id', workspaceId)
-        throw new NotFoundError('Customer')
+      // ⚠️ NOT WHILE THE DOCUMENT IS HELD. `postApprovedInvoice` runs the same
+      // call on approval; doing it here too moved every held invoice's stock
+      // twice. A document waiting for a decision has had no effect yet — that
+      // is what waiting means.
+      if (!isHeld) {
+        await this.batchUpdateStock(data.items, ctx, data.type === 'purchase' ? 1 : -1, invoice.id)
       }
-
-      customerName = customer.full_name || null
-    }
-
-    // ─── ✅ دریافت نام کاربر و workspace ────────────────────────────────
-    const actorName = await this.getUserDisplayName(userId)
-
-    // ─── ✅ ایجاد Activity ──────────────────────────────────────────────────
-    const isPurchaseInvoice = invoice.type === 'purchase'
-    try {
-      await this.activityService.createActivity({
-        actorId: userId,
-        actorName: actorName,
-        workspaceId: workspaceId,
-        entityType: 'invoice',
-        entityId: invoice.id,
-        action: 'created',
-        // Activity must name the transaction it describes. Every invoice used
-        // to read "فاکتور ... ایجاد شد" with a "مشتری:" prefix, so a purchase
-        // from a supplier was indistinguishable from a sale in the feed.
-        title: `${isPurchaseInvoice ? 'خرید' : 'فروش'} #${invoice.invoice_number} ثبت شد`,
-        description: `${isPurchaseInvoice ? 'فروشنده' : 'مشتری'}: ${
-          customerName || (isPurchaseInvoice ? 'بدون فروشنده' : 'بدون مشتری')
-        } • مبلغ: ${invoice.total} ${invoice.currency}`,
-        metadata: {
-          invoice_number: invoice.invoice_number,
-          // Consumers filter on this; without it the feed cannot tell the two
-          // transaction types apart.
-          transaction_type: invoice.type ?? 'sale',
-          customer_name: customerName,
-          total: invoice.total,
-          currency: invoice.currency,
-          status: invoice.status,
-        },
-        importance: 4,
-      })
-    } catch (activityError) {
-      console.error('[InvoiceService] Failed to create activity:', activityError)
     }
 
     // ─── ✅ ایجاد نوتیفیکیشن ──────────────────────────────────────────────
@@ -884,13 +942,7 @@ export class InvoiceService {
     // instance was still at step one, so «در انتظار تأیید» described a document
     // that had already had its full financial effect. Approving it changed a
     // status column; rejecting it changed a status column.
-    const approval = await this.routeForApproval(ctx, invoice.id, Number(data.total || 0), {
-      type: data.type,
-      currency: data.currency,
-      customerId: data.customerId ?? null,
-    })
-
-    if (mayPostDocument(approval)) {
+    if (!isHeld) {
       // Costing FIRST, then the ledger: the journal entry needs the cost that
       // was actually consumed, and only the costing core can say what that was.
       // Chaining them also stops a failed costing run from booking a sale with
@@ -900,7 +952,10 @@ export class InvoiceService {
           this.createAccountingEntries(ctx, invoice.id, {
             ...data,
             invoiceNumber,
-            total: data.total || 0,
+            // The SAME derived total the document carries. Booking
+            // `data.total` here is what let a request say «total: 1» on a
+            // five-million invoice and have the books believe it.
+            total: money.total,
             costOfGoodsSold: cogs,
           }),
         )

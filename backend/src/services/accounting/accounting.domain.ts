@@ -302,6 +302,25 @@ export function evaluatePeriodLock(
 }
 
 /** The ledger stores accounting dates, never instants. */
+/**
+ * The day before `date`, as `YYYY-MM-DD`.
+ *
+ * ⚠️ Exists for ONE reason: an opening balance must cover everything STRICTLY
+ * BEFORE a window, while the RPC that computes it takes an INCLUSIVE upper
+ * bound. Passing the window's own start date therefore included the first day
+ * in both the opening balance and the listed lines, and every entry on that
+ * day was counted twice.
+ *
+ * `Date.UTC` rather than the local constructor: a date-only string parsed
+ * locally lands at midnight in the server's zone, and subtracting a day in a
+ * zone with a DST shift can return the same calendar date.
+ */
+export function dayBefore(date: string): string {
+  const [year, month, day] = dateOnly(date).split('-').map(Number)
+  const previous = new Date(Date.UTC(year!, (month ?? 1) - 1, (day ?? 1) - 1))
+  return previous.toISOString().slice(0, 10)
+}
+
 export function dateOnly(value: string | Date): string {
   if (value instanceof Date) return value.toISOString().slice(0, 10)
   return String(value).slice(0, 10)

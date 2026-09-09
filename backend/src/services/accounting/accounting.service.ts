@@ -27,6 +27,7 @@ import { logBusinessEvent } from '../event-log.service'
 import {
   collapseLines,
   dateOnly,
+  dayBefore,
   evaluatePeriodLock,
   nextEntryNumber,
   normaliseLines,
@@ -661,8 +662,23 @@ export class AccountingService implements LedgerPort {
     // What the account held before this window opened. Without it the first
     // row's running balance starts at zero and every figure below it is wrong
     // by the opening amount — while still looking perfectly self-consistent.
+    //
+    // ═══════════════════════════════════════════════════════════════════════
+    // ⚠️ STRICTLY BEFORE `from`, NOT UP TO IT.
+    //
+    // This read `ledgerTotals(..., to = from)`, and `p_to_date` is INCLUSIVE —
+    // the same `.lte` convention every other bound in this file uses. Meanwhile
+    // `ledgerLines` filters `.gte('date', from)`. So every entry dated exactly
+    // on the first day of the window was inside the opening balance AND listed
+    // again as a line: counted twice.
+    //
+    // Ask for the cash account from the 1st and every entry booked on the 1st
+    // is double-counted, so the closing balance disagrees with the trial
+    // balance by exactly that day's movement — in the drill-down report people
+    // open precisely to check the trial balance.
+    // ═══════════════════════════════════════════════════════════════════════
     const opening = from
-      ? (await this.repo.ledgerTotals(ctx.workspaceId, null, from, null)).find(
+      ? (await this.repo.ledgerTotals(ctx.workspaceId, null, dayBefore(from), null)).find(
           (row) => row.accountId === accountId,
         )
       : undefined
@@ -763,9 +779,49 @@ export class AccountingService implements LedgerPort {
    * posted back could be minutes stale, and a closing entry built from stale
    * balances leaves the year open by exactly the amount that moved since.
    */
+  /**
+   * The idempotency key of a year-end close.
+   *
+   * Deterministic in the period, so the same close always produces the same
+   * reference and a second attempt is recognisable.
+   */
+  private static yearEndReferenceOf(from: string, to: string): string {
+    return `YEC:${from}:${to}`
+  }
+
   async postYearEndClose(ctx: TenancyContext, fromDate: string, toDate: string) {
     const plan = await this.planYearEndClose(ctx, fromDate, toDate)
     if (!plan.ok) throw new ValidationError(`YEAR_END_${plan.reason}`)
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ⚠️ CLOSING A YEAR TWICE USED TO DOUBLE RETAINED EARNINGS.
+    //
+    // `createJournalEntry` posts with `sourceType: 'manual'` and
+    // `sourceId: null`, and `postDocument`'s idempotency guard only applies
+    // when a source id is set. So pressing «close year» a second time — or a
+    // client retrying after a timed-out response — posted the whole closing
+    // entry again: every revenue and expense account was driven to the
+    // NEGATIVE of its balance and retained earnings was credited with twice
+    // the profit.
+    //
+    // ⚠️ AND IT LOOKED FINE. The second entry balances like the first, so the
+    // trial balance still footed and the balance sheet still balanced. The
+    // only symptom was a year's profit that was wrong by a factor of two.
+    //
+    // The close is now keyed by its own period. `reference` is a column this
+    // document already has, so this needs no schema change — and unlike the
+    // description it is not free text somebody might edit.
+    // ═══════════════════════════════════════════════════════════════════════
+    const reference = AccountingService.yearEndReferenceOf(plan.from, plan.to)
+    const existing = await this.repo.findEntryByReference(ctx.workspaceId, reference)
+
+    if (existing) {
+      // Refused, not silently returned. A close that already happened is a
+      // fact the person needs to see — and the entry number tells them where
+      // to look. Returning it quietly would make a genuine second attempt
+      // indistinguishable from a retry.
+      throw new ValidationError(`YEAR_END_ALREADY_CLOSED:${existing.entryNumber ?? existing.id}`)
+    }
 
     // `createJournalEntry` — the same door every other posting uses. It runs
     // the period lock and the postable-lines checks, which a closing entry
@@ -773,6 +829,7 @@ export class AccountingService implements LedgerPort {
     return this.createJournalEntry(ctx, {
       date: plan.to,
       description: `Year-end close ${plan.from} — ${plan.to}`,
+      reference,
       lines: plan.lines,
     } as CreateJournalEntry)
   }
