@@ -79,7 +79,7 @@ export function DocsView({ t, hrefFor, activeSlug, appHrefFor }: DocsViewProps) 
       {/* ── The article list ──
           `Select` below lg, sidebar at lg and up. Never both. */}
       <Select value={activeSlug} onValueChange={(slug) => router.push(hrefFor(slug))}>
-        <SelectTrigger className="h-11 w-full text-sm lg:hidden" aria-label={t('docs.browseAll')}>
+        <SelectTrigger className="w-full lg:hidden" aria-label={t('docs.browseAll')}>
           <SelectValue placeholder={t('docs.browseAll')} />
         </SelectTrigger>
         <SelectContent>

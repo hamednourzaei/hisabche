@@ -16,6 +16,8 @@ export interface UiState {
   searchRequestId: number
 
   toggleSidebar: () => void
+  /** Set it outright — the collapsed rail expands itself when a group is clicked. */
+  setSidebarCollapsed: (collapsed: boolean) => void
   setPaletteOpen: (open: boolean) => void
   setCurrency: (currency: CurrencyCode) => void
   /** Bumped by Ctrl+F so the active page focuses its search field. */
@@ -41,6 +43,7 @@ export const useUiStore = create<UiState>()(
       searchRequestId: 0,
 
       toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+      setSidebarCollapsed: (sidebarCollapsed) => set({ sidebarCollapsed }),
       setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
       setCurrency: (currency) => set({ currency }),
       requestSearchFocus: () => set((state) => ({ searchRequestId: state.searchRequestId + 1 })),
@@ -53,8 +56,8 @@ export const useUiStore = create<UiState>()(
         sidebarCollapsed: state.sidebarCollapsed,
         currency: state.currency,
       }),
-    }
-  )
+    },
+  ),
 )
 
 export const useCurrency = (): CurrencyCode => useUiStore((s) => s.currency)

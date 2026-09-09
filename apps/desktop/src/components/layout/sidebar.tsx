@@ -19,6 +19,8 @@ import { useTranslations } from 'next-intl'
 import { DashboardSidebar } from '@hisabche/ui'
 import { MORE_GROUPS, MORE_ICON, PRIMARY_ITEMS } from '@hisabche/ui/menu'
 
+import { useUiStore } from '@/shared/stores/ui.store'
+
 /**
  * Destinations this build serves.
  *
@@ -133,6 +135,16 @@ export function Sidebar() {
   // does, so it is gone rather than corrected.
   const activeNav = activePath
 
+  // ⚠️ THE STORE ALREADY HELD `sidebarCollapsed`, PERSISTED, AND NOTHING READ
+  // IT. The desktop sidebar had no collapse control at all, so the flag was
+  // written by nobody and obeyed by nobody — it survived only because a
+  // persisted boolean that is never read costs nothing and fails nothing. The
+  // toggle now lives in the header, matching web.
+  const collapsed = useUiStore((s) => s.sidebarCollapsed)
+  const expand = useCallback(() => useUiStore.getState().setSidebarCollapsed(false), [])
+
+  const openSettings = useCallback(() => navigate('/settings'), [navigate])
+
   // SPA navigation — never a renderer reload.
   const handleNavigate = useCallback(
     (_id: string, path: string) => navigate(path === '/dashboard' ? '/' : path),
@@ -146,6 +158,9 @@ export function Sidebar() {
       moreIcon={MORE_ICON}
       activeNav={activeNav}
       onNavigate={handleNavigate}
+      collapsed={collapsed}
+      onExpand={expand}
+      onOpenSettings={openSettings}
     />
   )
 }

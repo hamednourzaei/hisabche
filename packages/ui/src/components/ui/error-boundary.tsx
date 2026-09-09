@@ -2,7 +2,8 @@
 
 import React from 'react'
 import { useTranslations } from 'next-intl'
-import { AlertTriangle, RefreshCw } from 'lucide-react'
+import { AlertTriangle, RefreshCw, Home, LayoutDashboard } from 'lucide-react'
+import { useAuthStore } from '@hisabche/store'
 import { cn } from '../../lib/utils'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -22,6 +23,62 @@ interface Props {
    * screen they left.
    */
   resetKeys?: readonly unknown[]
+  /**
+   * Where to send the user when the screen itself is broken.
+   *
+   * ⚠️ THE DESTINATION IS DECIDED HERE, THE ROUTE IS NOT. This package knows
+   * whether someone is signed in; it does NOT know that web prefixes every
+   * path with a locale (`/fa/dashboard`) or that desktop routes through a hash
+   * router. So the boundary answers `'dashboard' | 'landing'` and each app
+   * turns that into its own address. A hard-coded `/dashboard` here would drop
+   * a Persian user onto the default locale, or onto a path desktop cannot
+   * resolve.
+   */
+  onNavigateHome?: ((destination: EscapeDestination) => void) | undefined
+}
+
+/** Where a user with a broken screen is sent. */
+export type EscapeDestination = 'dashboard' | 'landing'
+
+/**
+ * The way out of a broken screen.
+ *
+ * Authentication is read from the ONE auth store — not from a cookie, a prop
+ * or a fresh request. The destination is resolved again at CLICK time because
+ * the persisted store may still have been rehydrating when the fallback first
+ * rendered, and sending a signed-in user to the landing page because a
+ * millisecond had not passed yet is the exact bug this is meant to avoid.
+ */
+function EscapeButton({
+  onNavigateHome,
+  dashboardLabel,
+  landingLabel,
+}: {
+  onNavigateHome: (destination: EscapeDestination) => void
+  dashboardLabel: string
+  landingLabel: string
+}) {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  const Icon = isAuthenticated ? LayoutDashboard : Home
+
+  return (
+    <button
+      type="button"
+      onClick={() =>
+        onNavigateHome(useAuthStore.getState().isAuthenticated ? 'dashboard' : 'landing')
+      }
+      className={cn(
+        'inline-flex items-center gap-2 rounded-full px-4 py-2.5',
+        'text-sm font-medium text-white',
+        'bg-[hsl(var(--color-primary))]',
+        'transition-colors duration-150 hover:brightness-110',
+        'motion-reduce:transition-none',
+      )}
+    >
+      <Icon className="size-4" aria-hidden="true" />
+      {isAuthenticated ? dashboardLabel : landingLabel}
+    </button>
+  )
 }
 
 interface State {
@@ -48,6 +105,7 @@ function FallbackUI({
   onReload,
   error,
   exhausted,
+  escape,
 }: {
   title: string
   description: string
@@ -65,6 +123,8 @@ function FallbackUI({
    * is a reload, which throws away the state that is probably the cause.
    */
   exhausted: boolean
+  /** The «take me somewhere that works» control, already built by the caller. */
+  escape?: React.ReactNode
 }) {
   return (
     <div className="flex min-h-[400px] items-center justify-center p-8">
@@ -85,22 +145,25 @@ function FallbackUI({
             {error.name}: {error.message}
           </pre>
         ) : null}
-        <button
-          type="button"
-          onClick={exhausted ? onReload : onReset}
-          className={cn(
-            'inline-flex items-center gap-2 rounded-full px-4 py-2.5',
-            'text-sm font-medium',
-            'border border-[hsl(var(--border-default))]',
-            'text-[hsl(var(--fg-secondary))]',
-            'hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
-            'transition-colors duration-150',
-            'motion-reduce:transition-none',
-          )}
-        >
-          <RefreshCw className="size-4" aria-hidden="true" />
-          {exhausted ? reload : retry}
-        </button>
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={exhausted ? onReload : onReset}
+            className={cn(
+              'inline-flex items-center gap-2 rounded-full px-4 py-2.5',
+              'text-sm font-medium',
+              'border border-[hsl(var(--border-default))]',
+              'text-[hsl(var(--fg-secondary))]',
+              'hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
+              'transition-colors duration-150',
+              'motion-reduce:transition-none',
+            )}
+          >
+            <RefreshCw className="size-4" aria-hidden="true" />
+            {exhausted ? reload : retry}
+          </button>
+          {escape}
+        </div>
       </div>
     </div>
   )
@@ -112,6 +175,8 @@ const STATIC_TEXT = {
   description: 'در نمایش این بخش خطایی رخ داد. لطفاً دوباره تلاش کنید.',
   retry: 'تلاش دوباره',
   reload: 'بارگذاری دوباره‌ی صفحه',
+  dashboard: 'رفتن به داشبورد',
+  landing: 'رفتن به صفحه‌ی اصلی',
 }
 
 // ✅ FIX: نسخه‌ی ترجمه‌شده useTranslations() صدا می‌زند. اگر این کامپوننت
@@ -123,11 +188,13 @@ function TranslatedFallback({
   onReload,
   error,
   exhausted,
+  onNavigateHome,
 }: {
   onReset: () => void
   onReload: () => void
   error?: Error | null | undefined
   exhausted: boolean
+  onNavigateHome?: ((destination: EscapeDestination) => void) | undefined
 }) {
   const t = useTranslations()
   const tr = (key: string, fallback: string) => {
@@ -148,27 +215,31 @@ function TranslatedFallback({
       onReload={onReload}
       error={error}
       exhausted={exhausted}
+      escape={
+        onNavigateHome ? (
+          <EscapeButton
+            onNavigateHome={onNavigateHome}
+            dashboardLabel={tr('error.backToDashboard', STATIC_TEXT.dashboard)}
+            landingLabel={tr('error.backToLanding', STATIC_TEXT.landing)}
+          />
+        ) : undefined
+      }
     />
   )
 }
 
+interface ErrorFallbackProps {
+  onReset: () => void
+  onReload: () => void
+  error?: Error | null | undefined
+  exhausted: boolean
+  onNavigateHome?: ((destination: EscapeDestination) => void) | undefined
+}
+
 // boundary داخلی: اگر ترجمه‌ها در دسترس نبودند، متن ثابت نمایش داده می‌شود
 // به‌جای این‌که کل اپلیکیشن از کار بیفتد.
-class ErrorFallback extends React.Component<
-  {
-    onReset: () => void
-    onReload: () => void
-    error?: Error | null | undefined
-    exhausted: boolean
-  },
-  { intlFailed: boolean }
-> {
-  constructor(props: {
-    onReset: () => void
-    onReload: () => void
-    error?: Error | null | undefined
-    exhausted: boolean
-  }) {
+class ErrorFallback extends React.Component<ErrorFallbackProps, { intlFailed: boolean }> {
+  constructor(props: ErrorFallbackProps) {
     super(props)
     this.state = { intlFailed: false }
   }
@@ -181,11 +252,23 @@ class ErrorFallback extends React.Component<
     if (this.state.intlFailed) {
       return (
         <FallbackUI
-          {...STATIC_TEXT}
+          title={STATIC_TEXT.title}
+          description={STATIC_TEXT.description}
+          retry={STATIC_TEXT.retry}
+          reload={STATIC_TEXT.reload}
           onReset={this.props.onReset}
           onReload={this.props.onReload}
           error={this.props.error}
           exhausted={this.props.exhausted}
+          escape={
+            this.props.onNavigateHome ? (
+              <EscapeButton
+                onNavigateHome={this.props.onNavigateHome}
+                dashboardLabel={STATIC_TEXT.dashboard}
+                landingLabel={STATIC_TEXT.landing}
+              />
+            ) : undefined
+          }
         />
       )
     }
@@ -195,6 +278,7 @@ class ErrorFallback extends React.Component<
         onReload={this.props.onReload}
         error={this.props.error}
         exhausted={this.props.exhausted}
+        onNavigateHome={this.props.onNavigateHome}
       />
     )
   }
@@ -292,6 +376,7 @@ class ErrorBoundary extends React.Component<Props, State> {
           onReload={this.handleReload}
           error={this.state.error}
           exhausted={this.state.failures >= 2}
+          onNavigateHome={this.props.onNavigateHome}
         />
       )
     }
@@ -300,3 +385,14 @@ class ErrorBoundary extends React.Component<Props, State> {
 }
 
 export { ErrorBoundary }
+
+/**
+ * The same fallback the boundary renders, for places that catch errors through
+ * a FRAMEWORK mechanism instead of a React boundary — Next's `error.tsx` and
+ * react-router's `errorElement`.
+ *
+ * Exported rather than reimplemented: a second error screen beside this one
+ * would drift in copy, in tone and in whether it offers a way out at all.
+ */
+export { ErrorFallback as ErrorFallbackView }
+export type { ErrorFallbackProps }

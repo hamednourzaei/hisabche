@@ -5,6 +5,7 @@ import { memo, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { invoiceListHref } from '../../../lib/invoices/invoice-filter-link'
 import { cn } from '../../../lib/utils'
+import { roleTone, roleLabelKey } from '../../../lib/role-tone'
 import {
   Sparkles,
   TrendingUp,
@@ -278,6 +279,19 @@ AIInsightsPanel.displayName = 'AIInsightsPanel'
 
 // ─── Recent Activities (پایین صفحه) ─────────────────────────────────────────
 
+/**
+ * Emergency copy only — every one of these keys exists in fa, af and en.
+ * `t()` here is the wrapper that falls back rather than throwing, and a role
+ * cell with no text at all would read as «no role» instead of «unknown».
+ */
+const ROLE_LABEL_FALLBACK: Record<string, string> = {
+  owner: 'مالک',
+  admin: 'مدیر',
+  member: 'کارمند',
+  viewer: 'فقط مشاهده',
+  unknown: 'نامشخص',
+}
+
 const RecentActivities = memo(function RecentActivities({
   groups,
   isLoading,
@@ -339,27 +353,53 @@ const RecentActivities = memo(function RecentActivities({
             {t('dashboard.noActivities', 'فعالیتی ثبت نشده است')}
           </p>
         ) : (
-          <ul className="divide-y divide-[hsl(var(--border-default)/0.6)]">
-            {items.map((a) => (
-              <li key={a.id}>
-                <button
-                  type="button"
-                  onClick={() => a.entitySummary.route && onNavigate(a.entitySummary.route)}
-                  className="w-full flex items-center justify-between gap-3 py-2.5 text-start hover:bg-[hsl(var(--surface-muted)/0.5)] rounded-lg px-2 -mx-2 transition-colors duration-150"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm text-[hsl(var(--fg-primary))] truncate">{a.title}</p>
-                    <p className="text-[11px] text-[hsl(var(--fg-tertiary))] truncate">
-                      {a.entitySummary.label}
-                    </p>
-                  </div>
-                  <span className="text-[11px] text-[hsl(var(--fg-tertiary))] shrink-0">
-                    {new Date(a.timestamp).toLocaleDateString('fa-AF')}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
+          <>
+            {/* Column header. The role cell is a new column, so it is named —
+                an unlabelled coloured chip beside a date is a guess for the
+                reader. */}
+            <div className="flex items-center justify-between gap-3 px-2 pb-1.5 text-[10px] font-medium uppercase tracking-wide text-[hsl(var(--fg-tertiary))]">
+              <span className="min-w-0 text-start">
+                {t('dashboard.activityColumnEvent', 'رویداد')}
+              </span>
+              <span className="shrink-0 text-end">{t('dashboard.activityColumnRole', 'نقش')}</span>
+            </div>
+            <ul className="divide-y divide-[hsl(var(--border-default)/0.6)]">
+              {items.map((a) => (
+                <li key={a.id}>
+                  <button
+                    type="button"
+                    onClick={() => a.entitySummary.route && onNavigate(a.entitySummary.route)}
+                    className="w-full flex items-center justify-between gap-3 py-2.5 text-start hover:bg-[hsl(var(--surface-muted)/0.5)] rounded-lg px-2 -mx-2 transition-colors duration-150"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm text-[hsl(var(--fg-primary))] truncate">{a.title}</p>
+                      <p className="text-[11px] text-[hsl(var(--fg-tertiary))] truncate">
+                        {a.entitySummary.label}
+                      </p>
+                    </div>
+                    {/* Who did it, as a role.
+                      ⚠️ An activity whose actor has no CURRENT membership
+                      arrives with `actorRole: null` and is rendered neutral
+                      and «unknown». It is never coloured as `member` or
+                      `viewer`: guessing the lowest role would put a false
+                      statement about a real person on the dashboard. */}
+                    <span
+                      className={cn(
+                        'shrink-0 rounded-md px-2 py-0.5 text-[11px] font-medium',
+                        roleTone(a.actorRole),
+                      )}
+                      title={a.actor}
+                    >
+                      {t(roleLabelKey(a.actorRole), ROLE_LABEL_FALLBACK[a.actorRole ?? 'unknown'])}
+                    </span>
+                    <span className="text-[11px] text-[hsl(var(--fg-tertiary))] shrink-0">
+                      {new Date(a.timestamp).toLocaleDateString('fa-AF')}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </>
         )}
       </div>
     </div>

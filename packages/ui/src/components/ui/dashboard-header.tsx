@@ -2,7 +2,9 @@
 
 import { memo, useState, useEffect, useRef, useSyncExternalStore } from 'react'
 import { cn } from '../../lib/utils'
+import { roleTone } from '../../lib/role-tone'
 import { ChevronDown, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { BrandMark } from './brand-mark'
 import { NotificationBell } from './notification-bell'
 import {
   DropdownMenu,
@@ -56,37 +58,6 @@ const IconLogout = (
     }
   />
 )
-
-/**
- * The product mark.
- *
- * The same `/logo-icon.png` the sidebar shows, not a letter tile. Two marks
- * for one product read as two products, and the tile was a placeholder that
- * outlived the real logo. `onError` falls back to the tile so a missing file
- * degrades to the old look instead of a broken-image icon.
- */
-const BrandMark = memo(function BrandMark({ alt }: { alt: string }) {
-  const [failed, setFailed] = useState(false)
-
-  if (failed) {
-    return (
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--gradient-brand)]">
-        <span className="text-xs font-bold text-white">ح</span>
-      </div>
-    )
-  }
-
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src="/logo-icon.png"
-      alt={alt}
-      onError={() => setFailed(true)}
-      className="h-8 w-8 shrink-0 object-contain"
-    />
-  )
-})
-BrandMark.displayName = 'BrandMark'
 
 // ✅ SyncPill با memo
 /**
@@ -378,13 +349,13 @@ function initialsOf(name?: string, email?: string): string {
  * I sign out», which is what people opened it for.
  */
 
-/** Per-role colour for the «پنل مدیریت» label. */
-const ROLE_TONE: Record<string, string> = {
-  owner: 'text-[hsl(var(--color-primary))] bg-[hsl(var(--color-primary)/0.10)]',
-  admin: 'text-[hsl(var(--color-warning))] bg-[hsl(var(--color-warning)/0.12)]',
-  member: 'text-[hsl(var(--color-info))] bg-[hsl(var(--color-info)/0.12)]',
-  viewer: 'text-[hsl(var(--fg-tertiary))] bg-[hsl(var(--surface-muted))]',
-}
+/**
+ * Per-role colour for the «پنل مدیریت» label.
+ *
+ * The map itself moved to `lib/role-tone.ts` when the recent-activities feed
+ * needed the same colours: two copies of a palette drift, and the same person
+ * ends up two colours on one screen.
+ */
 
 /**
  * What the app calls itself here, tinted by who is looking at it.
@@ -403,8 +374,7 @@ const RolePill = memo(function RolePill({
   role?: string | null | undefined
   roleLabel?: string | undefined
 }) {
-  const tone =
-    (role && ROLE_TONE[role]) || 'text-[hsl(var(--fg-tertiary))] bg-[hsl(var(--surface-muted))]'
+  const tone = roleTone(role)
 
   return (
     <span

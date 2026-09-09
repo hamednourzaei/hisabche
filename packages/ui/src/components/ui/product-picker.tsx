@@ -87,8 +87,16 @@ export const ProductPicker = forwardRef<HTMLButtonElement, ProductPickerProps>(
           </div>
         </SelectTrigger>
 
-        <SelectContent className="max-h-80">
-          {/* Search input */}
+        {/*
+          `searchable={false}`: SelectContent grows its own client-side filter
+          above eight options, and this picker must NOT get it. The box below
+          is a SERVER search — it feeds `useProducts({ search })`, so it can
+          find a product that is not among the 25 currently loaded. Filtering
+          the loaded page as well would make the list look empty for a product
+          that does exist.
+        */}
+        <SelectContent searchable={false}>
+          {/* Search input — debounced, sent to the API. */}
           <div className="sticky top-0 z-10 p-2 border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]">
             <div className="relative">
               <Search

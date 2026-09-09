@@ -1,7 +1,10 @@
 'use client'
 
 import { useState, useCallback, memo } from 'react'
+import { formatDate as formatIntlDate } from '@hisabche/formatting'
+
 import { cn } from '../../../lib/utils'
+import { useDateFormat } from '../../../hooks/use-date-format'
 import { X, User, Phone, Clock, CheckCircle2, Loader2, Share2, Check } from 'lucide-react'
 import type { Interaction, TaskStatus } from '@hisabche/api'
 import { TaskCustomerOutcomes } from './task-customer-outcomes'
@@ -31,10 +34,15 @@ const STATUS_BADGE_MAP: Record<TaskStatus, string> = {
   completed: 'bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))]',
 }
 
-function formatDateTime(iso?: string): string {
+// ⚠️ THE CALENDAR IS NOT A CONSTANT. This was pinned to `'fa-AF'`, so an
+// English reader got the Afghan solar calendar in Persian digits and an
+// Iranian Persian reader got «سنبله» where their own calendar says «شهریور» —
+// the right calendar with the wrong month names, which reads as a typo rather
+// than a bug and so was never reported as one. It follows the UI language now.
+function formatDateTime(lang: string, iso?: string): string {
   if (!iso) return '-'
   try {
-    return new Date(iso).toLocaleDateString('fa-AF', {
+    return formatIntlDate(iso, lang, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -56,6 +64,9 @@ export const TaskDetailModal = memo(function TaskDetailModal({
   onRecordOutcome,
   pendingCustomerId = null,
 }: TaskDetailModalProps) {
+  // The reader's calendar — see the helper above.
+  const { lang } = useDateFormat()
+
   const [copied, setCopied] = useState(false)
 
   const handleCopyLink = useCallback(async () => {
@@ -176,7 +187,7 @@ export const TaskDetailModal = memo(function TaskDetailModal({
                         {t(...STATUS_LABEL_KEY[event.status])}
                       </p>
                       <p className="text-xs text-[hsl(var(--fg-tertiary))]">
-                        {formatDateTime(event.changedAt)}
+                        {formatDateTime(lang, event.changedAt)}
                         {event.changedBy &&
                           ` · ${event.changedBy === 'employee' ? t('crm.byEmployee', 'توسط پرسنل') : t('crm.byOwner', 'توسط شما')}`}
                       </p>

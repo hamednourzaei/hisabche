@@ -5,6 +5,7 @@ import { cn } from '../../lib/utils'
 import type { ElementType, ReactElement } from 'react'
 import { useAuthStore } from '@hisabche/store'
 import { useTranslations } from 'next-intl'
+import { BrandMark } from './brand-mark'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tooltip'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -518,12 +519,11 @@ export const DashboardSidebar = memo(function DashboardSidebar({
           collapsed ? 'justify-center px-2' : 'gap-2.5 px-4',
         )}
       >
-        <img
-          src="/logo-icon.png"
-          alt=""
-          aria-hidden="true"
-          className="size-9 shrink-0 object-contain"
-        />
+        {/* ⚠️ NOT A BARE `<img src="/logo-icon.png">`. That path is the root of
+            the DRIVE in the packaged desktop build, and this one had no
+            `onError`, so it rendered the broken-image glyph. See
+            `brand-mark.tsx`. */}
+        <BrandMark alt="" className="size-9" />
 
         {/* ⚠️ THE BUSINESS NAME USED TO BE A SECOND LINE HERE, AND IS GONE.
             It was the same string the header repeated three centimetres to the

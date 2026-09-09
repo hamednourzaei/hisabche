@@ -123,16 +123,33 @@ describe('the missing-name mark', () => {
 })
 
 describe('the role is decoration', () => {
+  // ⚠️ THE PALETTE MOVED, AND THAT IS CORRECT. It was defined inside the
+  // header, where only the header could reach it; the recent-activities feed
+  // needed the same colours, and the choice was to copy the map or to share
+  // it. A copied palette drifts — one surface gets a new role colour, the
+  // other keeps the old one, and the same person is two colours on one screen.
+  // These assertions follow it to `lib/role-tone.ts` rather than being
+  // relaxed: the rule they protect has not changed.
+  const tone = code(join(__dirname, '..', 'lib', 'role-tone.ts'))
+
   it('⚠️ never gates a control in the header', () => {
     // The only permitted uses are the tone lookup and the label.
-    const uses = header.match(/\brole\b/g) ?? []
-    expect(uses.length).toBeGreaterThan(0)
+    expect(header).toMatch(/roleTone\(role\)/)
     expect(header).not.toMatch(/role === 'owner' \?\s*<[A-Z]/)
-    expect(header).toMatch(/ROLE_TONE\[role\]/)
   })
 
-  it('an unknown role is uncoloured, not «viewer»', () => {
-    expect(header).toMatch(/\(role && ROLE_TONE\[role\]\) \|\|/)
+  it('⚠️ an unknown role is uncoloured, not «viewer»', () => {
+    // Falling back to the lowest role states something about a real person
+    // that may be false — an owner shown as view-only while their role loads,
+    // or someone who has LEFT the workspace described as a member.
+    expect(tone).toMatch(/isRoleName\(role\) \? ROLE_TONE\[role\] : ROLE_TONE_UNKNOWN/)
+    expect(tone).toMatch(/roleLabelKey/)
+    expect(tone).toMatch(/return 'team\.roleUnknown'/)
+  })
+
+  it('there is exactly one role palette', () => {
+    // A second literal map is the drift this extraction exists to prevent.
+    expect(header).not.toMatch(/const ROLE_TONE/)
   })
 })
 
@@ -149,6 +166,9 @@ describe('every new string exists in every locale', () => {
     ['team', 'roleAdmin'],
     ['team', 'roleMember'],
     ['team', 'roleViewer'],
+    // The label for a role the client cannot name. `t()` THROWS on a missing
+    // key, so an absent one here takes out the header AND the activity feed.
+    ['team', 'roleUnknown'],
   ] as const
 
   for (const locale of ['fa', 'af', 'en']) {
@@ -163,4 +183,40 @@ describe('every new string exists in every locale', () => {
       expect(bundle[group]?.[key]).toBeTruthy()
     })
   }
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// The logo, and the URL that only worked on the web.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('the product mark', () => {
+  const brand = code(join(UI, 'brand-mark.tsx'))
+
+  it('⚠️ the shell components do not hardcode a root-absolute path', () => {
+    // `file:///C:/logo-icon.png` is where `/logo-icon.png` points in the
+    // packaged desktop build. The file ships beside index.html.
+    expect(header).not.toMatch(/src="\/logo-icon\.png"/)
+    expect(sidebar).not.toMatch(/src="\/logo-icon\.png"/)
+  })
+
+  it('⚠️ chooses the path by protocol, not by platform', () => {
+    // The desktop DEV server is http, where the absolute path is right; only
+    // the packaged build reads from disk.
+    expect(brand).toMatch(/window\.location\.protocol === 'file:'/)
+    expect(brand).toMatch(/'\.\/logo-icon\.png'/)
+  })
+
+  it('the server and the browser agree, so hydration survives', () => {
+    // `typeof window === 'undefined'` must fall through to the SAME value the
+    // browser computes over http, or React 19 throws the tree away.
+    expect(brand).toMatch(/typeof window !== 'undefined'/)
+  })
+
+  it('⚠️ both surfaces fall back instead of showing a broken image', () => {
+    // The sidebar had no `onError` — that is what rendered the broken-image
+    // glyph while the header quietly showed its tile.
+    expect(brand).toMatch(/onError=\{\(\) => setFailed\(true\)\}/)
+    expect(sidebar).toMatch(/<BrandMark/)
+    expect(header).toMatch(/<BrandMark/)
+  })
 })

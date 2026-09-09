@@ -6,7 +6,10 @@ import { memo, useState, useCallback, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import { ChevronDown } from 'lucide-react'
+import { formatDate as formatIntlDate } from '@hisabche/formatting'
+
 import { cn } from '../../../../lib/utils'
+import { useDateFormat } from '../../../../hooks/use-date-format'
 import { routeForEntity } from '../../../../lib/entity-route'
 import type { JournalEntry, Account } from '@hisabche/api'
 
@@ -15,9 +18,14 @@ interface JournalEntryRowProps {
   accounts: Account[]
 }
 
-function formatDate(date: string): string {
+// ⚠️ THE CALENDAR IS NOT A CONSTANT. This was pinned to `'fa-AF'`, so an
+// English reader got the Afghan solar calendar in Persian digits and an
+// Iranian Persian reader got «سنبله» where their own calendar says «شهریور» —
+// the right calendar with the wrong month names, which reads as a typo rather
+// than a bug and so was never reported as one. It follows the UI language now.
+function formatDate(date: string, lang: string): string {
   try {
-    return new Date(date).toLocaleDateString('fa-AF', {
+    return formatIntlDate(date, lang, {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -32,6 +40,9 @@ export const JournalEntryRow = memo(function JournalEntryRow({
   accounts,
 }: JournalEntryRowProps) {
   const t = useTranslations()
+  // The reader's calendar — see the helper above.
+  const { lang } = useDateFormat()
+
   const router = useRouter()
   const n = useLedgerNumber()
   const [isOpen, setIsOpen] = useState(false)
@@ -78,7 +89,7 @@ export const JournalEntryRow = memo(function JournalEntryRow({
       >
         <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
           <span className="shrink-0 whitespace-nowrap text-xs text-[hsl(var(--fg-tertiary))]">
-            {formatDate(entry.date)}
+            {formatDate(entry.date, lang)}
           </span>
           <span className="truncate text-sm font-medium text-[hsl(var(--fg-primary))]">
             {entry.description}

@@ -12,15 +12,32 @@ import { memoryCache } from '../utils/pagination'
 
 // ─── DTOs ────────────────────────────────────────────────────────────────────
 
+/**
+ * The four role words the CLIENT vocabulary uses — the same ones
+ * `workspace_members.role` is written with by `workspace.service.ts` and the
+ * same ones `ROLE_TONE` in `packages/ui` colours.
+ *
+ * `null` is a real answer, not a missing one: see `resolveActorRoles`.
+ */
+export type ActorRole = 'owner' | 'admin' | 'member' | 'viewer'
+
 export interface ActivityItemDto {
   id: string
   action: string
   title: string
   description?: string
   actor: string
-  timestamp: string
-  isRead: boolean
-  importance: number
+  /**
+   * The role the actor holds in the workspace that owns this activity, or
+   * `null` when they hold none.
+   *
+   * ⚠️ `null` MEANS UNKNOWN AND MUST STAY UNKNOWN. An actor who has left the
+   * workspace, whose access was revoked, or whose row predates memberships has
+   * no role to report. Defaulting such a row to `member` or `viewer` would put
+   * a false statement about a real person on the screen, so it is not done
+   * here and must not be done in the client either.
+   */
+  actorRole?: ActorRole | null
 }
 
 export interface EntitySummaryDto {
@@ -118,6 +135,80 @@ const detailRouteByEntityType: Record<string, (id: string) => string> = {
 function detailRoute(entityType: string, entityId: string): string {
   const build = detailRouteByEntityType[entityType]
   return build ? build(entityId) : `/activities`
+}
+
+// ─── Actor Roles ────────────────────────────────────────────────────────────
+
+/**
+ * Stored role values, normalised to the client vocabulary the UI colours.
+ *
+ * TWO VOCABULARIES WRITE TO ONE COLUMN — see the long note in
+ * `tenancy.service.ts`. `workspace.service.ts` writes
+ * `owner | admin | member | viewer`; parts of the server speak
+ * `owner | manager | seller`. Both are TRANSLATED here, because translating a
+ * value that was actually stored is not a guess.
+ *
+ * Anything else returns `undefined` and the caller reports NO ROLE. That is
+ * deliberate: degrading an unrecognised value to the lowest role is the right
+ * instinct for an authorization decision (fail closed) and the wrong one for a
+ * LABEL, which would then assert something false about a person.
+ */
+const STORED_ROLE_TO_ACTOR_ROLE: Record<string, ActorRole> = {
+  owner: 'owner',
+  admin: 'admin',
+  member: 'member',
+  viewer: 'viewer',
+  manager: 'admin',
+  seller: 'member',
+}
+
+export function toActorRole(stored: unknown): ActorRole | null {
+  if (typeof stored !== 'string') return null
+  return STORED_ROLE_TO_ACTOR_ROLE[stored] ?? null
+}
+
+/**
+ * The role each of these actors currently holds in ONE workspace.
+ *
+ * ⚠️ `workspace_id` IS THE FILTER. `user_id` narrows the lookup to the actors
+ * we are about to render and is never the security boundary — the same rule
+ * the rest of this file follows. Without the workspace predicate this would
+ * return a person's role in somebody else's business.
+ *
+ * Membership is judged exactly as `tenancy.service.ts` judges it: `has_access`
+ * true and not suspended. An actor missing from the result has no CURRENT
+ * membership, and the caller renders «unknown» rather than inventing one.
+ */
+async function resolveActorRoles(
+  workspaceId: string,
+  actorIds: readonly string[],
+): Promise<Map<string, ActorRole>> {
+  const roles = new Map<string, ActorRole>()
+  const ids = Array.from(new Set(actorIds.filter((id): id is string => Boolean(id))))
+  if (!workspaceId || ids.length === 0) return roles
+
+  const { data, error } = await supabase
+    .from('workspace_members')
+    .select('user_id, role')
+    .eq('workspace_id', workspaceId)
+    .in('user_id', ids)
+    .eq('has_access', true)
+    .is('suspended_at', null)
+
+  if (error) {
+    // A failed role lookup must not take the feed down. Every row then renders
+    // as «unknown», which is what an unanswered question looks like.
+    console.warn('⚠️ [ActivityService] Failed to resolve actor roles:', error.message)
+    return roles
+  }
+
+  for (const row of data ?? []) {
+    const role = toActorRole((row as { role?: unknown }).role)
+    const userId = (row as { user_id?: unknown }).user_id
+    if (role && typeof userId === 'string') roles.set(userId, role)
+  }
+
+  return roles
 }
 
 // ─── Main Service ──────────────────────────────────────────────────────────
@@ -278,6 +369,13 @@ export class ActivityService {
 
       const result: ActivityGroupDto[] = []
 
+      // Who performed each event, as a role. One query for the whole page,
+      // scoped to the authorized workspace — see `resolveActorRoles`.
+      const actorRoles = await resolveActorRoles(
+        workspaceId,
+        items.map((item) => item.actor_id as string),
+      )
+
       // ✅ FIX (کندی): getEntitySummary قبلاً داخل حلقه با await صدا زده
       // می‌شد، یعنی برای هر گروه یک رفت‌وبرگشت جداگانه و **ترتیبی** به
       // دیتابیس. با ۱۴ گروه این یعنی ۱۴ کوئری پشت‌سرهم و پاسخ ۳.۵ ثانیه‌ای.
@@ -340,6 +438,8 @@ export class ActivityService {
             title: item.title,
             description: item.description,
             actor: item.actor_name,
+            // `null`, never a default role — see `ActivityItemDto.actorRole`.
+            actorRole: actorRoles.get(item.actor_id) ?? null,
             timestamp: item.created_at,
             isRead: item.is_read,
             importance: item.importance || 0,

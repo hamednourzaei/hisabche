@@ -8,7 +8,10 @@
 'use client'
 
 import { useState, useCallback, useMemo, memo } from 'react'
+import { formatDate } from '@hisabche/formatting'
+
 import { cn } from '../../../lib/utils'
+import { useDateFormat } from '../../../hooks/use-date-format'
 import { routeForEntity } from '../../../lib/entity-route'
 import { Check, X, Forward, Clock, User, Loader2 } from 'lucide-react'
 
@@ -84,9 +87,13 @@ const actionLabels: Record<string, string> = {
   cancelled: 'workflow.cancelled',
 }
 
-function formatDateTime(isoString: string): string {
-  const date = new Date(isoString)
-  return date.toLocaleDateString('fa-IR', {
+// ⚠️ THIS FILE SHOWED TWO CALENDARS AT ONCE. This helper was pinned to
+// `'fa-IR'` (Iranian month names) while the «started at» line thirty lines
+// below used `'fa-AF'` (Afghan month names) — same screen, same event, two
+// vocabularies, neither of them the reader's choice. Both now follow the UI
+// language.
+function formatDateTime(isoString: string, lang: string): string {
+  return formatDate(isoString, lang, {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -190,6 +197,9 @@ export const ApprovalCard = memo(function ApprovalCard({
   const [showReject, setShowReject] = useState(false)
   const [loading, setLoading] = useState<WorkflowAction | null>(null)
 
+  // The reader's calendar — see `formatDateTime` above.
+  const { lang } = useDateFormat()
+
   // ✅ useMemo برای stepsWithActions (فقط زمانی که actions یا steps تغییر کنند)
   const stepsWithActions = useMemo(
     () =>
@@ -261,7 +271,7 @@ export const ApprovalCard = memo(function ApprovalCard({
           ) : null}
           {startedAt ? (
             <span>
-              {t('workflow.startedAt', 'شروع')}: {new Date(startedAt).toLocaleDateString('fa-AF')}
+              {t('workflow.startedAt', 'شروع')}: {formatDate(startedAt, lang)}
             </span>
           ) : null}
           <span className="text-[hsl(var(--fg-tertiary))]">
@@ -355,7 +365,7 @@ export const ApprovalCard = memo(function ApprovalCard({
                           )}
                         </span>
                         <span className="ms-2 text-[11px] text-[hsl(var(--fg-tertiary))]">
-                          {formatDateTime(step.action.created_at)}
+                          {formatDateTime(step.action.created_at, lang)}
                         </span>
                       </div>
                     )}

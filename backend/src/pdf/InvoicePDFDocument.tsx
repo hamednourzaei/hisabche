@@ -12,6 +12,8 @@ import React from 'react'
 import { Document, Page, Text, View, StyleSheet, Font, Image } from '@react-pdf/renderer'
 import path from 'path'
 
+import { formatDate, formatNumber, resolveIntlLocale, type UiLanguage } from '@hisabche/formatting'
+
 // ─── Register Font ──────────────────────────────────────────
 const fontPath = path.resolve(__dirname, '../fonts')
 Font.register({
@@ -24,13 +26,27 @@ Font.register({
 
 // ─── Styles ────────────────────────────────────────────────
 const s = StyleSheet.create({
-  page: { fontFamily: 'Vazirmatn', direction: 'rtl', padding: 30, backgroundColor: '#ffffff', fontSize: 11 },
+  page: {
+    fontFamily: 'Vazirmatn',
+    direction: 'rtl',
+    padding: 30,
+    backgroundColor: '#ffffff',
+    fontSize: 11,
+  },
   header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
   brand: { fontSize: 22, fontWeight: 700, color: '#00b97a' },
   brandSub: { fontSize: 10, color: '#94a3b8', marginTop: 2 },
   invoiceNum: { fontSize: 16, fontWeight: 700 },
   invoiceMeta: { fontSize: 10, color: '#64748b', marginTop: 4 },
-  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10, marginTop: 6, alignSelf: 'flex-end', fontSize: 9, fontWeight: 700 },
+  badge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10,
+    marginTop: 6,
+    alignSelf: 'flex-end',
+    fontSize: 9,
+    fontWeight: 700,
+  },
   qr: { width: 56, height: 56, marginTop: 8, alignSelf: 'flex-end' },
 
   infoRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12, marginBottom: 16 },
@@ -39,8 +55,19 @@ const s = StyleSheet.create({
   infoLine: { fontSize: 10, color: '#1e293b', marginTop: 2 },
 
   table: { marginTop: 8 },
-  tableHeader: { flexDirection: 'row', borderBottomWidth: 2, borderBottomColor: '#e2e8f0', paddingBottom: 8, marginBottom: 8 },
-  tableRow: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: '#f1f5f9', paddingVertical: 6 },
+  tableHeader: {
+    flexDirection: 'row',
+    borderBottomWidth: 2,
+    borderBottomColor: '#e2e8f0',
+    paddingBottom: 8,
+    marginBottom: 8,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#f1f5f9',
+    paddingVertical: 6,
+  },
   thNum: { width: '5%', textAlign: 'right' },
   thName: { width: '30%', textAlign: 'right', fontWeight: 700 },
   thQty: { width: '10%', textAlign: 'center', fontWeight: 700 },
@@ -60,7 +87,15 @@ const s = StyleSheet.create({
   totalRow: { flexDirection: 'row', justifyContent: 'flex-end', width: '55%', marginBottom: 4 },
   totalLabel: { width: '50%', textAlign: 'right', color: '#64748b' },
   totalValue: { width: '50%', textAlign: 'right' },
-  grandRow: { flexDirection: 'row', justifyContent: 'flex-end', width: '55%', borderTopWidth: 2, borderTopColor: '#e2e8f0', paddingTop: 8, marginTop: 4 },
+  grandRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    width: '55%',
+    borderTopWidth: 2,
+    borderTopColor: '#e2e8f0',
+    paddingTop: 8,
+    marginTop: 4,
+  },
   grandLabel: { width: '50%', textAlign: 'right', fontWeight: 700, fontSize: 14 },
   grandValue: { width: '50%', textAlign: 'right', fontWeight: 700, fontSize: 14, color: '#00b97a' },
 
@@ -70,7 +105,13 @@ const s = StyleSheet.create({
 
   signatureRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 40, gap: 24 },
   signatureBox: { flexGrow: 1, flexBasis: 0, alignItems: 'center' },
-  signatureLine: { width: '100%', borderBottomWidth: 1, borderBottomColor: '#94a3b8', borderStyle: 'dashed', height: 40 },
+  signatureLine: {
+    width: '100%',
+    borderBottomWidth: 1,
+    borderBottomColor: '#94a3b8',
+    borderStyle: 'dashed',
+    height: 40,
+  },
   signatureLabel: { fontSize: 9, color: '#94a3b8', marginTop: 6 },
 
   footer: { marginTop: 30, textAlign: 'center', fontSize: 9, color: '#94a3b8' },
@@ -96,13 +137,35 @@ const STATUS_LABEL: Record<string, string> = {
 
 const DEFAULT_STATUS = STATUS_STYLE.pending!
 
-const fmt = (n: number) => (n ?? 0).toLocaleString('fa-AF')
-const fmtDate = (d: string) => { try { return new Date(d).toLocaleDateString('fa-AF') } catch { return d } }
+// ⚠️ THE CALENDAR IS A PROPERTY OF THE READER, NOT OF THIS FILE.
+//
+// Both of these were hardcoded to `'fa-AF'`, so every invoice PDF this server
+// has ever produced carried the Afghan solar calendar and Persian digits —
+// including the ones downloaded by an English-speaking customer, and the ones
+// read by an Iranian user whose own calendar names that month «شهریور», not
+// «سنبله». A printed date is the worst place for this: it leaves the app and
+// becomes a document somebody files.
+//
+// `'af'` remains the DEFAULT on purpose. Every existing caller renders exactly
+// what it rendered before; only a caller that actually knows the reader's
+// language changes anything. Flipping the default would silently re-date every
+// invoice in the archive.
+const fmt = (n: number, lang: UiLanguage) => formatNumber(n ?? 0, resolveIntlLocale(lang))
+const fmtDate = (d: string, lang: UiLanguage) => formatDate(d, lang) || d
 
 // ─── PDF Document ──────────────────────────────────────────
 // `qrDataUrl` — optional PNG data URI (from qrcode.toDataURL) encoding
 // the same public-view share link used by the on-page QR code.
-export function InvoicePDFDocument({ invoice, qrDataUrl }: { invoice: any; qrDataUrl?: string | null }) {
+export function InvoicePDFDocument({
+  invoice,
+  qrDataUrl,
+  lang = 'af',
+}: {
+  invoice: any
+  qrDataUrl?: string | null
+  /** The reader's UI language. Defaults to Dari — see `fmtDate` above. */
+  lang?: UiLanguage
+}) {
   const inv = invoice as any
   const items = inv.invoice_items ?? inv.items ?? []
   const status: string = inv.status || 'pending'
@@ -142,9 +205,9 @@ export function InvoicePDFDocument({ invoice, qrDataUrl }: { invoice: any; qrDat
         <View style={s.infoRow}>
           <View style={s.infoBox}>
             <Text style={s.infoTitle}>اطلاعات فاکتور</Text>
-            <Text style={s.infoLine}>تاریخ: {fmtDate(inv.date ?? '')}</Text>
+            <Text style={s.infoLine}>تاریخ: {fmtDate(inv.date ?? '', lang)}</Text>
             {inv.due_date || inv.dueDate ? (
-              <Text style={s.infoLine}>سررسید: {fmtDate(inv.due_date ?? inv.dueDate)}</Text>
+              <Text style={s.infoLine}>سررسید: {fmtDate(inv.due_date ?? inv.dueDate, lang)}</Text>
             ) : null}
           </View>
           <View style={s.infoBox}>
@@ -178,9 +241,13 @@ export function InvoicePDFDocument({ invoice, qrDataUrl }: { invoice: any; qrDat
               <Text style={s.tdName}>{item.product_name ?? item.productName ?? ''}</Text>
               <Text style={s.tdQty}>{item.quantity ?? 1}</Text>
               <Text style={s.tdUnit}>{item.unit ?? '—'}</Text>
-              <Text style={s.tdUnitPrice}>{fmt(item.unit_price ?? item.unitPrice ?? 0)} {inv.currency ?? 'AFN'}</Text>
+              <Text style={s.tdUnitPrice}>
+                {fmt(item.unit_price ?? item.unitPrice ?? 0, lang)} {inv.currency ?? 'AFN'}
+              </Text>
               <Text style={s.tdDiscount}>{item.discount ? `${item.discount}%` : '—'}</Text>
-              <Text style={s.tdTotal}>{fmt(item.total_price ?? item.totalPrice ?? 0)} {inv.currency ?? 'AFN'}</Text>
+              <Text style={s.tdTotal}>
+                {fmt(item.total_price ?? item.totalPrice ?? 0, lang)} {inv.currency ?? 'AFN'}
+              </Text>
             </View>
           ))}
         </View>
@@ -188,34 +255,46 @@ export function InvoicePDFDocument({ invoice, qrDataUrl }: { invoice: any; qrDat
         <View style={s.totals}>
           <View style={s.totalRow}>
             <Text style={s.totalLabel}>جمع</Text>
-            <Text style={s.totalValue}>{fmt(subtotal)} {inv.currency ?? 'AFN'}</Text>
+            <Text style={s.totalValue}>
+              {fmt(subtotal, lang)} {inv.currency ?? 'AFN'}
+            </Text>
           </View>
           {discountTotal > 0 && (
             <View style={s.totalRow}>
               <Text style={s.totalLabel}>تخفیف</Text>
-              <Text style={{ ...s.totalValue, color: '#dc2626' }}>-{fmt(discountTotal)} {inv.currency ?? 'AFN'}</Text>
+              <Text style={{ ...s.totalValue, color: '#dc2626' }}>
+                -{fmt(discountTotal, lang)} {inv.currency ?? 'AFN'}
+              </Text>
             </View>
           )}
           {taxTotal > 0 && (
             <View style={s.totalRow}>
               <Text style={s.totalLabel}>مالیات</Text>
-              <Text style={s.totalValue}>{fmt(taxTotal)} {inv.currency ?? 'AFN'}</Text>
+              <Text style={s.totalValue}>
+                {fmt(taxTotal, lang)} {inv.currency ?? 'AFN'}
+              </Text>
             </View>
           )}
           <View style={s.grandRow}>
             <Text style={s.grandLabel}>مجموع</Text>
-            <Text style={s.grandValue}>{fmt(total)} {inv.currency ?? 'AFN'}</Text>
+            <Text style={s.grandValue}>
+              {fmt(total, lang)} {inv.currency ?? 'AFN'}
+            </Text>
           </View>
           {paidAmount > 0 && (
             <View style={s.totalRow}>
               <Text style={s.totalLabel}>پرداخت شده</Text>
-              <Text style={{ ...s.totalValue, color: '#16a34a' }}>-{fmt(paidAmount)} {inv.currency ?? 'AFN'}</Text>
+              <Text style={{ ...s.totalValue, color: '#16a34a' }}>
+                -{fmt(paidAmount, lang)} {inv.currency ?? 'AFN'}
+              </Text>
             </View>
           )}
           {remaining > 0 && (
             <View style={s.totalRow}>
               <Text style={s.totalLabel}>باقی‌مانده</Text>
-              <Text style={{ ...s.totalValue, color: '#dc2626' }}>{fmt(remaining)} {inv.currency ?? 'AFN'}</Text>
+              <Text style={{ ...s.totalValue, color: '#dc2626' }}>
+                {fmt(remaining, lang)} {inv.currency ?? 'AFN'}
+              </Text>
             </View>
           )}
         </View>
@@ -243,7 +322,7 @@ export function InvoicePDFDocument({ invoice, qrDataUrl }: { invoice: any; qrDat
         <Text style={s.footer}>
           از خرید شما سپاسگزاریم{'\n'}
           ایجاد شده توسط Hisabche — hisabche.com{'\n'}
-          {fmtDate(inv.created_at ?? inv.createdAt ?? inv.date ?? '')}
+          {fmtDate(inv.created_at ?? inv.createdAt ?? inv.date ?? '', lang)}
         </Text>
       </Page>
     </Document>

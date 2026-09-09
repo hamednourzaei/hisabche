@@ -1891,7 +1891,9 @@
     "vsLastMonth": "vs last month",
     "dateRange": "Date range",
     "noSalesInPeriod": "No sales in this period",
-    "tryWiderRange": "Try another range, or record a sale"
+    "tryWiderRange": "Try another range, or record a sale",
+    "activityColumnEvent": "Event",
+    "activityColumnRole": "Role"
   },
   "quickInvoice": {
     "title": "Quick Invoice",
@@ -2358,7 +2360,9 @@
   },
   "error": {
     "title": "Something went wrong",
-    "description": "Your data is safe. Please try again."
+    "description": "Your data is safe. Please try again.",
+    "backToDashboard": "Go to dashboard",
+    "backToLanding": "Go to the home page"
   },
   "notifications": {
     "bell": "Notifications",
@@ -2696,7 +2700,8 @@
   "action": {
     "clear": "Clear",
     "reload": "Reload the page",
-    "back": "Back"
+    "back": "Back",
+    "retry": "Try again"
   },
   "unit": {
     "piece": "pcs",
@@ -3975,7 +3980,8 @@
     "roleAdmin": "Manager",
     "roleOwner": "Owner",
     "accountFailed": "The employee was saved, but the account could not be created",
-    "accountNeedsWorkspace": "The employee was saved, but no account was created: no workspace was found."
+    "accountNeedsWorkspace": "The employee was saved, but no account was created: no workspace was found.",
+    "roleUnknown": "Unknown"
   },
   "role": {
     "owner": "Owner",
@@ -3995,5 +4001,9 @@
     "failed": "The update failed",
     "devBuild": "Updates are not checked in development.",
     "noFeed": "This build is not configured for automatic updates."
+  },
+  "select": {
+    "searchPlaceholder": "Search…",
+    "noResults": "No results found"
   }
 }

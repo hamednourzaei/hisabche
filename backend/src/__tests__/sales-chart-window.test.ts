@@ -155,3 +155,39 @@ describe('the empty state says what it actually knows', () => {
     }
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// «You sold nothing» is a claim about the business. It has to be true.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('a failed query is not an empty shop', () => {
+  it('⚠️ the error branch and the no-rows branch are separate', () => {
+    // `if (error || rows.length === 0) return empty` served a BROKEN query as
+    // a truthful-looking 200 — zero revenue, zero invoices, an empty chart —
+    // and `withCacheKey` then stored that for two minutes, so the log said
+    // «Cache HIT» while the shop had data. The owner went looking through
+    // their own invoices for something that was never missing.
+    expect(service).toMatch(/if \(error\) \{\s*throw error/)
+    expect(service).not.toMatch(/if \(error \|\| !invoices \|\| invoices\.length === 0\)/)
+  })
+
+  it('⚠️ a thrown error is never cached', () => {
+    // `withCacheKey` awaits the fetcher and only then calls `set`, so a throw
+    // leaves the key empty. If that order ever changes, a single failure
+    // becomes a two-minute outage that looks like real data.
+    const cache = readFileSync(join(__dirname, '..', 'utils', 'cache.ts'), 'utf8')
+    const body = cache.slice(cache.indexOf('export async function withCacheKey'))
+    expect(body.indexOf('await fetcher()')).toBeLessThan(body.indexOf('memoryCache.set'))
+  })
+
+  it('⚠️ no embedded resource, which needs a foreign key to resolve', () => {
+    // `customers!left (…)` was the only embed in this file and the only place
+    // this table pair was joined through PostgREST.
+    expect(service).not.toMatch(/customers!left/)
+    expect(service).toMatch(/\.from\('customers'\)[\s\S]{0,120}\.eq\('workspace_id', workspaceId\)/)
+  })
+
+  it('says which kind of empty it found', () => {
+    expect(service).toMatch(/unfiltered: \$\{count/)
+  })
+})

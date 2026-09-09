@@ -20,6 +20,9 @@ import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tansta
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
 import { asList } from '../lib/as-list'
+import type { ActorRole } from '../types/activity.types'
+
+export type { ActorRole }
 
 // ═══ Types ═══
 
@@ -30,6 +33,14 @@ export interface ActivityItemDto {
   description?: string
   actor: string
   actorId?: string
+  /**
+   * The actor's role in the workspace that owns the activity, resolved
+   * server-side from `workspace_members`.
+   *
+   * ⚠️ `null`/absent MEANS UNKNOWN, not «the lowest role». Render it neutral
+   * and uncoloured — see `types/activity.types.ts`.
+   */
+  actorRole?: ActorRole | null
   timestamp: string
   isRead: boolean
   importance: number

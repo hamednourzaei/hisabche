@@ -3,7 +3,10 @@
 
 import { memo, useMemo, useState, useCallback } from 'react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../select'
+import { formatDate as formatIntlDate } from '@hisabche/formatting'
+
 import { cn } from '../../../lib/utils'
+import { useDateFormat } from '../../../hooks/use-date-format'
 import {
   Handshake,
   MessageSquare,
@@ -78,10 +81,15 @@ const STATUS_BADGE_MAP: Record<TaskStatus, string> = {
   completed: 'bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))]',
 }
 
-function formatDate(date?: string): string {
+// ⚠️ THE CALENDAR IS NOT A CONSTANT. This was pinned to `'fa-AF'`, so an
+// English reader got the Afghan solar calendar in Persian digits and an
+// Iranian Persian reader got «سنبله» where their own calendar says «شهریور» —
+// the right calendar with the wrong month names, which reads as a typo rather
+// than a bug and so was never reported as one. It follows the UI language now.
+function formatDate(lang: string, date?: string): string {
   if (!date) return '-'
   try {
-    return new Date(date).toLocaleDateString('fa-AF', {
+    return formatIntlDate(date, lang, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -109,6 +117,9 @@ export const CrmView = memo(function CrmView({
   getPublicTaskUrl,
 }: CrmViewProps) {
   const [isFormOpen, setIsFormOpen] = useState(false)
+  // The reader's calendar — see the helper above.
+  const { lang } = useDateFormat()
+
   const [customers, setCustomers] = useState<CustomerOption[]>([])
   const [employeeId, setEmployeeId] = useState<string>('')
   const [type, setType] = useState<string>('call')
@@ -392,7 +403,7 @@ export const CrmView = memo(function CrmView({
                           {t(`crm.interactions.type.${interaction.type}`, interaction.type)}
                         </td>
                         <td className="px-4 py-3 text-xs text-[hsl(var(--fg-secondary))] whitespace-nowrap">
-                          {formatDate(interaction.interactionDate)}
+                          {formatDate(lang, interaction.interactionDate)}
                         </td>
                         <td className="px-4 py-3">
                           <span

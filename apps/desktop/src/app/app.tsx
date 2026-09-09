@@ -17,6 +17,7 @@ import { createHashRouter, Navigate, RouterProvider, useParams } from 'react-rou
 import { Providers } from './providers'
 import { AppShell } from '@/components/layout/app-shell'
 import { RequireAuth } from '@/features/auth/require-auth'
+import { RouteErrorBoundary } from './route-error'
 import { LoginPage } from '@/features/auth/login-page'
 
 // ---------- Shared screens (identical module as web renders) ----------
@@ -81,7 +82,12 @@ function LegacyEmployeeRedirect() {
 
 // Hash routing: file:// URLs in a packaged app have no server to rewrite paths.
 const router = createHashRouter([
-  { path: '/login', element: <LoginPage /> },
+  // `errorElement` on both top-level routes covers EVERY screen: react-router
+  // walks up from the route that threw to the nearest one, so the entry on `/`
+  // catches all of its children — a failed render, a lazy chunk that will not
+  // load, or an action that throws. Without it the router's own bare default
+  // page appears, with no way back into the app.
+  { path: '/login', element: <LoginPage />, errorElement: <RouteErrorBoundary /> },
   {
     path: '/',
     element: (
@@ -89,6 +95,7 @@ const router = createHashRouter([
         <AppShell />
       </RequireAuth>
     ),
+    errorElement: <RouteErrorBoundary />,
     children: [
       { index: true, element: <DashboardPage /> },
       { path: 'dashboard', element: <Navigate to="/" replace /> },

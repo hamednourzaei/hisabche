@@ -81,12 +81,25 @@ export { Toaster } from './components/ui/sonner'
 // ---------- Feedback ----------
 export { SaveIndicator, type SaveIndicatorProps } from './components/ui/save-indicator'
 export { Celebration, type CelebrationProps } from './components/ui/celebration'
-export { ErrorBoundary } from './components/ui/error-boundary'
+export {
+  ErrorBoundary,
+  ErrorFallbackView,
+  type EscapeDestination,
+} from './components/ui/error-boundary'
+export {
+  ROLE_TONE,
+  ROLE_TONE_UNKNOWN,
+  roleTone,
+  roleLabelKey,
+  isRoleName,
+  type RoleName,
+} from './lib/role-tone'
 export { AccountingPage } from './components/ui/accounting'
 
 // ---------- Navigation — Dashboard ----------
 export { DashboardSidebar, BottomNav, type NavItem } from './components/ui/dashboard-sidebar'
 export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from './components/ui/tooltip'
+export { BrandMark, LOGO_SRC } from './components/ui/brand-mark'
 export { DashboardHeader } from './components/ui/dashboard-header'
 export { CommandPalette } from './components/ui/command-palette'
 export { GlobalSearch, type SearchPageItem } from './components/ui/global-search'
@@ -277,6 +290,7 @@ export { PhoneInput } from './components/ui/phone-input'
 // ---------- Utils & Hooks ----------
 export { exportToCSV } from './lib/export'
 export { useCurrency } from './hooks/use-currency'
+export { useDateFormat, type DateFormatters } from './hooks/use-date-format'
 export { toPersianNumbers, toArabicNumbers, usePersianNumbers } from './lib/persian-numbers'
 
 // ---------- Types ----------

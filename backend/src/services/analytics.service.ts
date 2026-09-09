@@ -328,21 +328,25 @@ export class AnalyticsService {
     return withCacheKey(cacheKey, 120_000, async () => {
       const { data: invoices, error } = await supabase
         .from('invoices')
-        .select(
-          `
-          id,
-          total,
-          paid_amount,
-          status,
-          currency,
-          date,
-          customer_id,
-          customers!left (
-            id,
-            full_name
-          )
-        `,
-        )
+        // ⚠️ NO EMBEDDED RESOURCE. `customers!left (…)` used to be here, and it
+        // is why every number on this screen was zero.
+        //
+        // PostgREST resolves an embed through FOREIGN KEY metadata. This
+        // database HAS NO FOREIGN KEYS AT ALL — `REFERENCES` does not appear
+        // once in `docs/base-schema-migration.sql` — so the embed could never
+        // resolve, and the request came back `PGRST200: Could not find a
+        // relationship between 'invoices' and 'customers'`.
+        //
+        // ⚠️ AND NOTHING REPORTED IT, because the check below read
+        // `if (error || rows.length === 0) return empty` — one branch for «the
+        // query failed» and «this shop has not sold anything». So a broken
+        // query was served as a truthful-looking 200 saying zero revenue, zero
+        // invoices, an empty chart — and CACHED for two minutes, which is why
+        // the log line said «Cache HIT» while the shop had data.
+        //
+        // Names are fetched separately below, for the handful of customers that
+        // actually appear.
+        .select('id, total, paid_amount, status, currency, date, customer_id')
         .eq('workspace_id', workspaceId)
         // ⚠️ FIX: این خلاصه «فروش» است — نمودار درآمد و رتبه‌بندی مشتریان از
         // همین می‌آید. بدون این فیلتر، هر فاکتور خرید هم به‌عنوان درآمد در
@@ -359,7 +363,34 @@ export class AnalyticsService {
         .lt('date', endOfDayExclusive(endDate))
         .order('date', { ascending: false })
 
-      if (error || !invoices || invoices.length === 0) {
+      // ⚠️ THESE TWO ARE NOT THE SAME THING, AND MERGING THEM HID THE BUG
+      // ABOVE FOR AS LONG AS IT EXISTED. A failed query must fail: the
+      // dashboard can say «could not load» and be believed, but «you sold
+      // nothing» is a claim about the business, and it sent its owner looking
+      // through their invoices for data that was never missing.
+      if (error) {
+        throw error
+      }
+
+      if (!invoices || invoices.length === 0) {
+        // ⚠️ SAYS WHICH KIND OF EMPTY, IN THE LOG.
+        //
+        // «No sales in this window» and «no sales at all» look identical in
+        // the response and lead to completely different investigations — one
+        // is a date range, the other is data that never carried a
+        // `workspace_id`, or a `type` this filter does not recognise. One
+        // cheap count answers it, and it runs ONLY on the empty path, so it
+        // costs nothing on a shop that has data.
+        const { count } = await supabase
+          .from('invoices')
+          .select('id', { count: 'exact', head: true })
+          .eq('workspace_id', workspaceId)
+
+        console.warn(
+          `[analytics] empty sales summary for workspace ${workspaceId} ` +
+            `(${startDate}..${endDate}) — invoices in this workspace, unfiltered: ${count ?? 'unknown'}`,
+        )
+
         return this.emptySalesSummary()
       }
 
@@ -390,19 +421,44 @@ export class AnalyticsService {
 
         const customerId = inv.customer_id
         if (customerId) {
-          const customersArray = inv.customers as any[] | null
-          const customerName = customersArray?.[0]?.full_name || ''
-
           if (!customerMap[customerId]) {
             customerMap[customerId] = {
               id: customerId,
-              name: customerName,
+              // Filled in after the loop, from one query for the ids that
+              // actually appear. An id with no name resolves to '' — the same
+              // value the embed produced for a deleted customer.
+              name: '',
               revenue: 0,
               count: 0,
             }
           }
           customerMap[customerId].revenue += total
           customerMap[customerId].count++
+        }
+      }
+
+      // ─── Customer names, in one query ───
+      //
+      // ⚠️ SCOPED TO THE WORKSPACE, not just filtered by id. The ids come from
+      // this workspace's own invoices so they should already belong to it, but
+      // «should» is not a boundary — `workspace_id` is the only one, and it is
+      // applied at every read, including the ones that look redundant.
+      const customerIds = Object.keys(customerMap)
+      if (customerIds.length > 0) {
+        const { data: customerRows, error: customerError } = await supabase
+          .from('customers')
+          .select('id, full_name')
+          .eq('workspace_id', workspaceId)
+          .in('id', customerIds)
+
+        // A name is a label. Losing it must not lose the revenue beside it —
+        // the rows stay, with an empty name, exactly as they did for a
+        // customer the embed could not resolve.
+        if (!customerError && customerRows) {
+          for (const row of customerRows) {
+            const entry = customerMap[row.id as string]
+            if (entry) entry.name = (row.full_name as string) || ''
+          }
         }
       }
 

@@ -27,7 +27,10 @@
 
 import { History } from 'lucide-react'
 
+import { formatDate as formatIntlDate } from '@hisabche/formatting'
+
 import { cn } from '../../../lib/utils'
+import { useDateFormat } from '../../../hooks/use-date-format'
 
 export interface RecordHistoryEntry {
   id: string
@@ -55,9 +58,14 @@ const ACTION_LABEL: Record<string, string> = {
   logout: 'خروج',
 }
 
-function formatDateTime(value: string): string {
+// ⚠️ THE CALENDAR IS NOT A CONSTANT. This was pinned to `'fa-AF'`, so an
+// English reader got the Afghan solar calendar in Persian digits and an
+// Iranian Persian reader got «سنبله» where their own calendar says «شهریور» —
+// the right calendar with the wrong month names, which reads as a typo rather
+// than a bug and so was never reported as one. It follows the UI language now.
+function formatDateTime(value: string, lang: string): string {
   try {
-    return new Date(value).toLocaleString('fa-AF', {
+    return formatIntlDate(value, lang, {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -70,6 +78,9 @@ function formatDateTime(value: string): string {
 }
 
 export function RecordHistoryPanel({ t, isLoading, entries, className }: RecordHistoryPanelProps) {
+  // The reader's calendar — see the helper above.
+  const { lang } = useDateFormat()
+
   return (
     <section
       className={cn(
@@ -114,7 +125,7 @@ export function RecordHistoryPanel({ t, isLoading, entries, className }: RecordH
                 ) : null}
               </div>
               <time className="shrink-0 text-xs tabular-nums text-[hsl(var(--fg-tertiary))]">
-                {formatDateTime(entry.createdAt)}
+                {formatDateTime(entry.createdAt, lang)}
               </time>
             </li>
           ))}

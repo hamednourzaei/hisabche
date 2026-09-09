@@ -106,6 +106,27 @@ async function uploadPdf(path: string, buffer: Buffer): Promise<void> {
 }
 
 // ─── Routes ────────────────────────────────────────
+
+/**
+ * The UI language behind an `Accept-Language` header.
+ *
+ * ⚠️ DELIBERATELY NARROW. It recognises the three languages this product
+ * actually ships and returns Dari for everything else — the value only picks a
+ * calendar and a numeral system, so a wrong guess is a cosmetic error, while
+ * pulling in a full language-negotiation dependency for it would not be.
+ *
+ * `fa-AF` is checked BEFORE `fa`, or every Dari reader would be handed the
+ * Iranian month names by a prefix match.
+ */
+function uiLanguageFromHeader(header: string | string[] | undefined): 'fa' | 'af' | 'en' {
+  const value = (Array.isArray(header) ? header[0] : header)?.toLowerCase() ?? ''
+
+  if (value.startsWith('fa-af') || value.startsWith('af')) return 'af'
+  if (value.startsWith('fa')) return 'fa'
+  if (value.startsWith('en')) return 'en'
+  return 'af'
+}
+
 export async function invoicePdfRoutes(fastify: FastifyInstance) {
   fastify.get<{ Params: { id: string } }>(
     '/api/invoices/:id/pdf',
@@ -173,8 +194,21 @@ export async function invoicePdfRoutes(fastify: FastifyInstance) {
           )
         }
 
+        // ⚠️ THE READER'S CALENDAR, NOT THE SERVER'S.
+        //
+        // The document used to be rendered with a hardcoded `'fa-AF'`, so an
+        // English-speaking customer received an invoice dated in the Afghan
+        // solar calendar with Persian digits. `Accept-Language` is what the
+        // browser already sends on this exact request — the client does not
+        // have to be changed to start being correct.
+        //
+        // An unrecognised or absent header falls through to Dari, which is
+        // what every PDF produced so far already used, so nothing in the
+        // archive changes meaning.
+        const lang = uiLanguageFromHeader(request.headers['accept-language'])
+
         const stream = await renderToStream(
-          InvoicePDFDocument({ invoice: invoice as any, qrDataUrl }),
+          InvoicePDFDocument({ invoice: invoice as any, qrDataUrl, lang }),
         )
 
         const chunks: Buffer[] = []

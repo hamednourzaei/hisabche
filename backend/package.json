@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@hisabche/formatting": "workspace:*",
     "@hisabche/validation": "workspace:*",
     "@arcjet/node": "^1.0.0",
     "@fastify/compress": "^9.0.0",

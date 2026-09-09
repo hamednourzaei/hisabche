@@ -80,7 +80,7 @@ export function DisplayBasisPicker({
         options={available.map((code) => ({ value: code, label: label(code) }))}
         aria-label={tr('display.basis', 'نمایش مبلغ بر مبنای')}
         disabled={Boolean(disabled)}
-        className="h-9 w-auto min-w-[10rem] text-xs"
+        className="w-auto min-w-[10rem]"
       />
 
       {basis !== base ? (
@@ -217,7 +217,6 @@ export function ExchangeRateForm({
           onChange={setCurrency}
           options={currencies.map((code) => ({ value: code, label: LABEL[code] ?? code }))}
           aria-label={tr('display.rateCurrency', 'ارز')}
-          className="h-9 text-xs"
         />
 
         <input

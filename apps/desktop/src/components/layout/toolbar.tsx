@@ -52,6 +52,9 @@ const SearchTrigger = memo(function SearchTrigger() {
   )
 })
 
+/** The roles this build has a word for. Anything else is left unnamed. */
+const TRANSLATED_ROLES = ['owner', 'admin', 'member', 'viewer']
+
 export const Toolbar = memo(function Toolbar({ title }: { title: string }) {
   const t = useTranslations()
   const navigate = useNavigate()
@@ -59,6 +62,17 @@ export const Toolbar = memo(function Toolbar({ title }: { title: string }) {
   const { pendingCount, isOffline, isSyncing } = useSyncStatus()
   const user = useCurrentUser()
   const logout = useAuthStore((s) => s.logout)
+
+  const sidebarCollapsed = useUiStore((s) => s.sidebarCollapsed)
+  const toggleSidebar = useUiStore((s) => s.toggleSidebar)
+
+  // Only the roles this build has a word for. `t()` throws on a missing key,
+  // so an unexpected role would replace the window with an error boundary over
+  // a caption — see the same guard in the web shell.
+  const roleLabel =
+    user?.role && TRANSLATED_ROLES.includes(user.role)
+      ? (t(`team.role${user.role.charAt(0).toUpperCase()}${user.role.slice(1)}` as never) as string)
+      : undefined
 
   const { theme, setTheme } = useTheme()
   const isDark = theme === 'dark'
@@ -93,6 +107,18 @@ export const Toolbar = memo(function Toolbar({ title }: { title: string }) {
       <DashboardHeader
         variant="dashboard"
         appName={title}
+        // ⚠️ THESE WERE SIMPLY NOT PASSED, WHICH IS WHY THE WINDOWS HEADER
+        // LOOKED LIKE A DIFFERENT PRODUCT. The component is the same one the
+        // browser renders; it was being handed a third of its props, so the
+        // account menu had no name and no address to show, the admin label was
+        // absent, and there was no sidebar control.
+        appSubtitle={t('nav.adminPanel' as never)}
+        role={user?.role ?? null}
+        roleLabel={roleLabel}
+        userName={user?.fullName || undefined}
+        userEmail={user?.email || undefined}
+        isSidebarCollapsed={sidebarCollapsed}
+        onToggleSidebar={toggleSidebar}
         isOnline={!isOffline}
         isSyncing={isSyncing}
         pendingCount={pendingCount}

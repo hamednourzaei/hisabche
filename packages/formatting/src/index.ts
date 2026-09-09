@@ -19,6 +19,8 @@ export {
 
 export { resolveIntlLocale, usesLatinDigits, type UiLanguage } from './locale'
 
+export { formatDate, formatDateLong, formatDateTime, toIsoDay, type DateInput } from './dates'
+
 export { toCSV, csvFilename, UTF8_BOM, type CsvColumn } from './csv'
 
 export {
