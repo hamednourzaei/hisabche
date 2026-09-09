@@ -132,11 +132,19 @@ export const SalesChart = memo(function SalesChart({
           <FileText className="h-8 w-8 text-[hsl(var(--color-primary))]" />
         </div>
         <div className="text-center">
+          {/* ⚠️ «IN THIS PERIOD», NOT «EVER».
+              This said «هنوز فروشی ثبت نشده است» — a claim about the whole
+              history — while the data behind it is one window. A shop whose
+              last sale was three weeks ago was told it had never sold
+              anything, and went looking for a bug in its invoices.
+
+              `allZero` is the same window with real rows that all total zero,
+              which is also «in this period», not «never». */}
           <p className="text-sm font-medium text-[hsl(var(--fg-primary))]">
-            {t('dashboard.noSalesYet')}
+            {t('dashboard.noSalesInPeriod')}
           </p>
           <p className="text-xs text-[hsl(var(--fg-tertiary))] mt-1">
-            {t('dashboard.startSelling')}
+            {t('dashboard.tryWiderRange')}
           </p>
         </div>
         <button

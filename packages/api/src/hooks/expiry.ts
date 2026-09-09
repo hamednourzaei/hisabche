@@ -16,6 +16,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
+import { asList } from '../lib/as-list'
 
 // ═══ Types ═══
 
@@ -109,7 +110,7 @@ export function useBatches(productId?: string) {
       const { data } = await apiClient.get('/operations/batches', {
         params: productId ? { productId } : {},
       })
-      return data as StockBatch[]
+      return asList<StockBatch>(data)
     },
     enabled: ready,
     staleTime: 30_000,
@@ -125,7 +126,7 @@ export function useSerials(productId?: string, status?: SerialStatus) {
       const { data } = await apiClient.get('/operations/serials', {
         params: { ...(productId ? { productId } : {}), ...(status ? { status } : {}) },
       })
-      return data as SerialUnit[]
+      return asList<SerialUnit>(data)
     },
     enabled: ready,
     staleTime: 30_000,
@@ -227,7 +228,7 @@ export function useReceiveSerials() {
       warehouseId?: string | null
     }) => {
       const { data } = await apiClient.post('/operations/serials', input)
-      return data as SerialUnit[]
+      return asList<SerialUnit>(data)
     },
     // A serial number is unique by definition, so a duplicated retry is
     // rejected by the database rather than silently doubling stock. Still not

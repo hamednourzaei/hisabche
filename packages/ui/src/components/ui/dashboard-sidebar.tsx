@@ -5,6 +5,7 @@ import { cn } from '../../lib/utils'
 import type { ElementType, ReactElement } from 'react'
 import { useAuthStore } from '@hisabche/store'
 import { useTranslations } from 'next-intl'
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './tooltip'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    DashboardSidebar v7.3 — Memoized · Performance Optimized
@@ -187,11 +188,13 @@ const NavRow = memo(function NavRow({
   isActive,
   nested,
   onClick,
+  collapsed = false,
 }: {
   item: NavItem
   isActive: boolean
   nested: boolean
   onClick: () => void
+  collapsed?: boolean
 }) {
   // ⚠️ `> 0`, not `!= null`. A badge says «something is waiting for you»; a
   // grey circle reading «۰» says the opposite while still drawing the eye.
@@ -202,14 +205,28 @@ const NavRow = memo(function NavRow({
       type="button"
       onClick={onClick}
       aria-current={isActive ? 'page' : undefined}
+      aria-label={collapsed ? item.label : undefined}
+      title={collapsed ? item.label : undefined}
       className={cn(
         'group relative flex w-full items-center gap-2.5 rounded-lg text-start text-sm',
         'transition-colors duration-150 motion-reduce:transition-none',
         // ⚠️ ONE ROW, ALWAYS. 36px and `truncate` below: on a laptop the long
         // Persian labels used to wrap onto a second line, so rows had two
         // different heights and the list read as ragged rather than as a list.
-        'h-9 px-3',
-        nested && 'ps-9',
+        //
+        // ⚠️ `shrink-0` IS LOAD-BEARING. The nav is a flex COLUMN, so with the
+        // default `flex-shrink: 1` every row gives up height once the content
+        // is taller than the container — open three groups at once and the
+        // five permanent rows at the top squeezed shorter and shorter until
+        // they were unreadable, while the list still did not scroll. Fixed
+        // height plus `shrink-0` makes the overflow become scroll, which is
+        // what the `overflow-y-auto` on the nav was always for.
+        'h-9 shrink-0',
+        // ⚠️ THE LABEL IS THE ONLY THING THE ICON HAD. Collapsed, `title` and
+        // `aria-label` carry it — an unlabelled icon button is unusable with a
+        // screen reader and a guess with a mouse.
+        collapsed ? 'justify-center px-0' : 'px-3',
+        !collapsed && nested && 'ps-9',
         isActive
           ? 'bg-[hsl(var(--color-primary)/0.10)] font-semibold text-[hsl(var(--color-primary))]'
           : 'text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
@@ -225,9 +242,9 @@ const NavRow = memo(function NavRow({
       ) : null}
 
       <ItemIcon item={item} active={isActive} size={nested ? 16 : 18} />
-      <span className="min-w-0 flex-1 truncate">{item.label}</span>
+      {!collapsed && <span className="min-w-0 flex-1 truncate">{item.label}</span>}
 
-      {badge != null ? (
+      {badge != null && !collapsed ? (
         <span
           className={cn(
             'shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
@@ -268,14 +285,16 @@ const NavGroupRow = memo(function NavGroupRow({
   const GroupIcon = group.icon
 
   return (
-    <div className="flex flex-col">
+    // `shrink-0` again: the wrapper is also a flex child of the nav column.
+    <div className="flex shrink-0 flex-col">
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={open}
         aria-controls={contentId}
         className={cn(
-          'flex h-9 w-full items-center gap-2.5 rounded-lg px-3 text-start text-sm',
+          // `shrink-0` for the same reason as the destination rows above.
+          'flex h-9 w-full shrink-0 items-center gap-2.5 rounded-lg px-3 text-start text-sm',
           'transition-colors duration-150 motion-reduce:transition-none',
           hasActive && !open
             ? 'text-[hsl(var(--color-primary))]'
@@ -348,11 +367,107 @@ const NavGroupRow = memo(function NavGroupRow({
 })
 NavGroupRow.displayName = 'NavGroupRow'
 
+/**
+ * A red «!» beside the app name when this account has no name to show.
+ *
+ * ---------------------------------------------------------------------------
+ * ⚠️ IT SAYS WHO CAN FIX IT, BECAUSE THAT IS NOT THE SAME PERSON.
+ *
+ * An owner sets their own name and their business's name, and the mark takes
+ * them to the settings page that holds both. A member does NOT: their name is
+ * whatever the owner typed when adding them, and there is no field for it in
+ * their own settings. Telling a member to «go set your name» sends them
+ * looking for a control that does not exist for them — so for them the mark is
+ * not a button, and the text names the owner instead.
+ *
+ * ⚠️ AN UNKNOWN ROLE SHOWS NOTHING. `role` is `null` while /auth/me is in
+ * flight and for anyone with several memberships. Guessing «owner» would put a
+ * red mark and an instruction in front of someone who cannot act on either.
+ */
+const MissingNameMark = memo(function MissingNameMark({
+  user,
+  t,
+  onOpenSettings,
+}: {
+  user: { fullName?: string | null; businessName?: string | null; role?: string | null } | null
+  t: (key: string) => string
+  onOpenSettings?: () => void
+}) {
+  // ⚠️ TRIMMED. A profile saved with a space in the name field is not a name,
+  // and `Boolean(' ')` is `true`.
+  const hasName = Boolean(user?.fullName?.trim())
+  const hasBusiness = Boolean(user?.businessName?.trim())
+  const role = user?.role ?? null
+
+  if (!user || role === null || (hasName && hasBusiness)) return null
+
+  const isOwner = role === 'owner'
+
+  const what =
+    !hasName && !hasBusiness
+      ? t('nav.missingBoth')
+      : !hasName
+        ? t('nav.missingYourName')
+        : t('nav.missingBusinessName')
+
+  const hint = isOwner ? t('nav.missingFixOwner') : t('nav.missingFixStaff')
+
+  const mark = (
+    <span
+      aria-hidden="true"
+      className={cn(
+        'inline-flex size-4 shrink-0 items-center justify-center rounded-full',
+        'text-[10px] font-bold leading-none',
+        'bg-[hsl(var(--color-destructive)/0.14)] text-[hsl(var(--color-destructive))]',
+      )}
+    >
+      !
+    </span>
+  )
+
+  const body = (
+    <TooltipContent side="bottom" align="start" className="max-w-[15rem] leading-relaxed">
+      <p className="font-medium">{what}</p>
+      <p className="mt-1 text-[hsl(var(--fg-secondary))]">{hint}</p>
+    </TooltipContent>
+  )
+
+  return (
+    <TooltipProvider delayDuration={150}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          {isOwner && onOpenSettings ? (
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              aria-label={`${what} — ${hint}`}
+              className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-destructive)/0.5)]"
+            >
+              {mark}
+            </button>
+          ) : (
+            // Not a button for a member: there is nothing behind it for them.
+            // A control that opens nothing is worse than a plain mark.
+            <span tabIndex={0} role="img" aria-label={`${what} — ${hint}`} className="rounded-full">
+              {mark}
+            </span>
+          )}
+        </TooltipTrigger>
+        {body}
+      </Tooltip>
+    </TooltipProvider>
+  )
+})
+MissingNameMark.displayName = 'MissingNameMark'
+
 export const DashboardSidebar = memo(function DashboardSidebar({
   primaryItems,
   moreGroups,
   activeNav,
   onNavigate,
+  collapsed = false,
+  onExpand,
+  onOpenSettings,
 }: {
   primaryItems: NavItem[]
   moreGroups: NavGroup[]
@@ -360,6 +475,15 @@ export const DashboardSidebar = memo(function DashboardSidebar({
   moreIcon?: ElementType
   activeNav: string
   onNavigate: (id: string, path: string) => void
+  /** Icon rail. The toggle lives in the header, so the state is the shell's. */
+  collapsed?: boolean
+  /**
+   * Re-open the rail. A group cannot show its children in 64px, so clicking
+   * one while collapsed expands the sidebar instead of silently doing nothing.
+   */
+  onExpand?: (() => void) | undefined
+  /** Where the owner goes to fix a missing name. */
+  onOpenSettings?: (() => void) | undefined
 }) {
   const t = useTranslations()
   const user = useAuthStore((s) => s.user)
@@ -373,7 +497,13 @@ export const DashboardSidebar = memo(function DashboardSidebar({
     <aside
       aria-label={t('nav.mainNav')}
       className={cn(
-        'sticky top-0 hidden h-screen w-60 shrink-0 lg:flex lg:flex-col',
+        'sticky top-0 hidden h-screen shrink-0 lg:flex lg:flex-col',
+        // ⚠️ A WIDTH, NOT A TRANSFORM. Sliding the rail with `translate-x`
+        // leaves it occupying its old 240px in the layout, so the content
+        // beside it does not reclaim the space — which is the entire point of
+        // collapsing it.
+        collapsed ? 'w-16' : 'w-60',
+        'transition-[width] duration-200 motion-reduce:transition-none',
         'border-e border-[hsl(var(--border-default))]',
         'bg-[hsl(var(--surface-base))]',
       )}
@@ -382,25 +512,32 @@ export const DashboardSidebar = memo(function DashboardSidebar({
           ⚠️ 64px, matching the app header beside it. It used to be a 64px logo
           with padding above and below — about 140px of a 768px laptop screen
           spent on a picture, which is most of a group's worth of rows. */}
-      <div className="flex h-16 shrink-0 items-center gap-2.5 border-b border-[hsl(var(--border-default))] px-4">
+      <div
+        className={cn(
+          'flex h-16 shrink-0 items-center border-b border-[hsl(var(--border-default))]',
+          collapsed ? 'justify-center px-2' : 'gap-2.5 px-4',
+        )}
+      >
         <img
           src="/logo-icon.png"
           alt=""
           aria-hidden="true"
           className="size-9 shrink-0 object-contain"
         />
-        <div className="flex min-w-0 flex-col leading-tight">
-          <span className="truncate text-sm font-semibold text-[hsl(var(--fg-primary))]">
-            {t('app.name')}
-          </span>
-          {/* Real data only: no business name means no second line, rather
-              than a placeholder pretending to be one. */}
-          {user?.businessName || user?.fullName ? (
-            <span className="truncate text-[11px] text-[hsl(var(--fg-tertiary))]">
-              {user.businessName || user.fullName}
+
+        {/* ⚠️ THE BUSINESS NAME USED TO BE A SECOND LINE HERE, AND IS GONE.
+            It was the same string the header repeated three centimetres to the
+            right in the «سازمان: …» chip. One of the two had to go; this is the
+            one nobody clicks. What remains is the thing the person can ACT on:
+            a name that was never set. */}
+        {!collapsed && (
+          <div className="flex min-w-0 flex-1 items-center gap-1.5">
+            <span className="truncate text-sm font-semibold text-[hsl(var(--fg-primary))]">
+              {t('app.name')}
             </span>
-          ) : null}
-        </div>
+            <MissingNameMark user={user} t={t} {...(onOpenSettings ? { onOpenSettings } : {})} />
+          </div>
+        )}
       </div>
 
       {/* ── Navigation ──
@@ -413,6 +550,7 @@ export const DashboardSidebar = memo(function DashboardSidebar({
             item={item}
             isActive={isPathActive(activeNav, item.path)}
             nested={false}
+            collapsed={collapsed}
             onClick={() => onNavigate(item.id, item.path)}
           />
         ))}
@@ -424,6 +562,37 @@ export const DashboardSidebar = memo(function DashboardSidebar({
         {moreGroups.map((group) => {
           const hasActive = group.items.some((item) => isPathActive(activeNav, item.path))
           const open = overrides[group.id] ?? hasActive
+
+          // ⚠️ COLLAPSED, A GROUP IS A BUTTON THAT RE-OPENS THE RAIL.
+          // Its children are labels, and there is no room for a label — an
+          // accordion that expands into 64px of nothing looks broken. So the
+          // click does the only useful thing: gives the labels somewhere to go,
+          // and opens the group once they are back.
+          if (collapsed) {
+            const Icon = group.icon
+            return (
+              <button
+                key={group.id}
+                type="button"
+                onClick={() => {
+                  setOverrides((prev) => ({ ...prev, [group.id]: true }))
+                  onExpand?.()
+                }}
+                aria-label={group.label}
+                title={group.label}
+                className={cn(
+                  'group flex h-9 w-full shrink-0 items-center justify-center rounded-lg',
+                  'transition-colors duration-150 motion-reduce:transition-none',
+                  hasActive
+                    ? 'bg-[hsl(var(--color-primary)/0.10)] text-[hsl(var(--color-primary))]'
+                    : 'text-[hsl(var(--fg-tertiary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
+                )}
+              >
+                {Icon ? <Icon className="size-[18px] shrink-0" aria-hidden="true" /> : null}
+              </button>
+            )
+          }
+
           return (
             <NavGroupRow
               key={group.id}

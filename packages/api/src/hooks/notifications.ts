@@ -7,56 +7,57 @@
 // از قبل با subscribeToChannel روی event: '*' پیاده‌سازی شده)
 // حالا هر تغییر (INSERT/UPDATE/DELETE) در notifications بلافاصله
 // queryKey های مرتبط را invalidate می‌کند.
-"use client";
+'use client'
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import apiClient from "../lib/client";
-import { useAuthReady } from "./useAuthReady";
-import { useRealtime } from "./useRealtime";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import apiClient from '../lib/client'
+import { useAuthReady } from './useAuthReady'
+import { useRealtime } from './useRealtime'
+import { asList } from '../lib/as-list'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface Notification {
-  id: string;
-  title: string;
-  body?: string | null;
-  type: "info" | "success" | "warning" | "approval_required";
-  action_url?: string | null;
-  entity_type?: string | null;
-  entity_id?: string | null;
-  is_read: boolean;
-  created_at: string;
+  id: string
+  title: string
+  body?: string | null
+  type: 'info' | 'success' | 'warning' | 'approval_required'
+  action_url?: string | null
+  entity_type?: string | null
+  entity_id?: string | null
+  is_read: boolean
+  created_at: string
   // ✅ اضافه کردن metadata برای اطلاعات فاکتور و سایر Entity‌ها
   metadata?: {
-    invoice_number?: string;
-    customer_name?: string;
-    total?: number;
-    currency?: string;
-    status?: string;
-    product_name?: string;
-    quantity?: number;
-    payment_amount?: number;
-    [key: string]: unknown;
-  };
+    invoice_number?: string
+    customer_name?: string
+    total?: number
+    currency?: string
+    status?: string
+    product_name?: string
+    quantity?: number
+    payment_amount?: number
+    [key: string]: unknown
+  }
 }
 
 // ✅ تایپ پاسخ Backend
 interface NotificationsResponse {
-  data: Notification[];
-  total: number;
+  data: Notification[]
+  total: number
 }
 
 interface UnreadCountResponse {
-  count: number;
+  count: number
 }
 
 // ─── Keys ────────────────────────────────────────────────────────────────────
 
 export const notificationKeys = {
-  all: ["notifications"] as const,
-  list: () => [...notificationKeys.all, "list"] as const,
-  unread: () => [...notificationKeys.all, "unread"] as const,
-};
+  all: ['notifications'] as const,
+  list: () => [...notificationKeys.all, 'list'] as const,
+  unread: () => [...notificationKeys.all, 'unread'] as const,
+}
 
 // ─── Hooks ──────────────────────────────────────────────────────────────────
 
@@ -70,41 +71,39 @@ export const notificationKeys = {
  * }
  */
 export function useNotifications() {
-  const authReady = useAuthReady();
+  const authReady = useAuthReady()
 
   // ✅ FIX: به‌جای refetchInterval، subscribe مستقیم به جدول
   // notifications — با هر تغییر، لیست بلافاصله invalidate می‌شود.
-  useRealtime({ table: "notifications", queryKey: notificationKeys.list() as unknown as string[] });
+  useRealtime({ table: 'notifications', queryKey: notificationKeys.list() as unknown as string[] })
 
   return useQuery({
     queryKey: notificationKeys.list(),
     queryFn: async (): Promise<Notification[]> => {
       try {
-        const response = await apiClient.get<NotificationsResponse>(
-          "/v1/notifications"
-        );
+        const response = await apiClient.get<NotificationsResponse>('/v1/notifications')
 
         // ✅ استخراج آرایه از response.data.data
         if (response.data?.data && Array.isArray(response.data.data)) {
-          return response.data.data;
+          return asList<Notification>(response.data.data)
         }
 
         // Fallback: اگر داده به شکل دیگری بود
         if (Array.isArray(response.data)) {
-          return response.data;
+          return response.data
         }
 
-        return [];
+        return []
       } catch (error) {
-        console.error("Failed to fetch notifications:", error);
-        return [];
+        console.error('Failed to fetch notifications:', error)
+        return []
       }
     },
     enabled: authReady,
     staleTime: 60_000,
     // ✅ FIX: بدون refetchInterval — Realtime جایگزین شده.
     placeholderData: [],
-  });
+  })
 }
 
 /**
@@ -116,36 +115,37 @@ export function useNotifications() {
  * }
  */
 export function useUnreadCount() {
-  const authReady = useAuthReady();
+  const authReady = useAuthReady()
 
   // ✅ FIX: همان جدول notifications، همان منطق —
   // یک تغییر (مثلاً mark-as-read) هم شمارش را بلافاصله به‌روز می‌کند.
-  useRealtime({ table: "notifications", queryKey: notificationKeys.unread() as unknown as string[] });
+  useRealtime({
+    table: 'notifications',
+    queryKey: notificationKeys.unread() as unknown as string[],
+  })
 
   return useQuery({
     queryKey: notificationKeys.unread(),
     queryFn: async (): Promise<number> => {
       try {
-        const response = await apiClient.get<UnreadCountResponse>(
-          "/v1/notifications/unread-count"
-        );
+        const response = await apiClient.get<UnreadCountResponse>('/v1/notifications/unread-count')
 
         // ✅ استخراج count از response.data.count
         if (response.data?.count !== undefined && typeof response.data.count === 'number') {
-          return response.data.count;
+          return response.data.count
         }
 
-        return 0;
+        return 0
       } catch (error) {
-        console.error("Failed to fetch unread count:", error);
-        return 0;
+        console.error('Failed to fetch unread count:', error)
+        return 0
       }
     },
     enabled: authReady,
     staleTime: 60_000,
     // ✅ FIX: بدون refetchInterval — Realtime جایگزین شده.
     placeholderData: 0,
-  });
+  })
 }
 
 /**
@@ -155,40 +155,40 @@ export function useUnreadCount() {
  * Body: { "ids": string[] }
  */
 export function useMarkAsRead() {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (ids: string[]) => {
-      if (!ids || ids.length === 0) return;
-      await apiClient.patch("/v1/notifications/mark-read", { ids });
+      if (!ids || ids.length === 0) return
+      await apiClient.patch('/v1/notifications/mark-read', { ids })
     },
     onSuccess: () => {
       // ✅ Invalidating هر دو کوئری
-      queryClient.invalidateQueries({ queryKey: notificationKeys.list() });
-      queryClient.invalidateQueries({ queryKey: notificationKeys.unread() });
+      queryClient.invalidateQueries({ queryKey: notificationKeys.list() })
+      queryClient.invalidateQueries({ queryKey: notificationKeys.unread() })
     },
     onError: (error) => {
-      console.error("Failed to mark notifications as read:", error);
+      console.error('Failed to mark notifications as read:', error)
     },
-  });
+  })
 }
 
 /**
  * علامت‌گذاری همه‌ی نوتیفیکیشن‌ها به‌عنوان خوانده‌شده
  */
 export function useMarkAllAsRead() {
-  const queryClient = useQueryClient();
+  const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async () => {
-      await apiClient.patch("/v1/notifications/mark-all-read");
+      await apiClient.patch('/v1/notifications/mark-all-read')
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: notificationKeys.list() });
-      queryClient.invalidateQueries({ queryKey: notificationKeys.unread() });
+      queryClient.invalidateQueries({ queryKey: notificationKeys.list() })
+      queryClient.invalidateQueries({ queryKey: notificationKeys.unread() })
     },
     onError: (error) => {
-      console.error("Failed to mark all notifications as read:", error);
+      console.error('Failed to mark all notifications as read:', error)
     },
-  });
+  })
 }

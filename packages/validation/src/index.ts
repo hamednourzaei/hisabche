@@ -16,6 +16,7 @@ export {
   CURRENCY_CODES,
   currencyCodeSchema,
   paymentMethodSchema,
+  paymentMethodLabelSchema,
   transactionTypeSchema,
   productCategorySchema,
   unitSchema,
@@ -51,6 +52,9 @@ export {
   invoiceItemDetailSchema,
   computeItemTotal,
   computeInvoiceMoney,
+  emptyPaymentValue,
+  paidAmountOf,
+  tranchesTotal,
   settlementDate,
   invoiceSchema,
   createInvoiceSchema,
@@ -540,3 +544,5 @@ export {
   type CheckoutInput,
   type StripeWebhook,
 } from './schemas/billing.schema'
+
+export type { InvoicePaymentValue, PaymentMode, PaymentTranche } from './schemas/invoice.schema'

@@ -54,32 +54,53 @@ import { Label } from '../label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../select'
 import { cn } from '../../../lib/utils'
 
-export const PAYMENT_METHODS = ['cash', 'bank', 'credit', 'mobile_money'] as const
+// ⚠️ THE TYPES LIVE IN `@hisabche/validation`, NOT HERE.
+//
+// They were declared in this file, which meant the DRAFT STORE could not hold
+// a payment value — `packages/store` cannot import from `packages/ui`. So the
+// choice lived in `useState` inside the PREVIEW container: invisible on the
+// builder at `/invoices/new`, and thrown away by walking back from preview.
+//
+// Re-exported here so every existing importer keeps working.
+export type { InvoicePaymentValue, PaymentMode, PaymentTranche } from '@hisabche/validation'
+export { emptyPaymentValue, paidAmountOf, tranchesTotal } from '@hisabche/validation'
+
+import {
+  paidAmountOf,
+  tranchesTotal,
+  type InvoicePaymentValue,
+  type PaymentMode,
+  type PaymentTranche,
+} from '@hisabche/validation'
+
+/**
+ * ⚠️ `'other'` IS NEW, AND IT KEEPS THE ENUM CLOSED.
+ *
+ * A shop settling in cheques needs somewhere to write «چک». Making the method
+ * free text would turn «چک», «چک بانکی» and «Cheque» into three different
+ * payment methods to every report that groups by one — so the enum gains one
+ * member and the typed name goes in a sibling `methodLabel`, exactly the shape
+ * `unit` uses for `'custom'`.
+ *
+ * No migration: `invoices.payment_method` is a plain `text` column with no
+ * CHECK constraint (`docs/base-schema-migration.sql`).
+ */
+export const PAYMENT_METHODS = ['cash', 'bank', 'credit', 'mobile_money', 'other'] as const
 export type InvoicePaymentMethod = (typeof PAYMENT_METHODS)[number]
 
+/**
+ * Fallbacks only — `t('payment.method.<x>')` is what renders.
+ *
+ * ⚠️ Those keys existed in NO bundle, so every one of these Persian strings was
+ * what an English user saw. They are real translations now; these stay so a
+ * bundle one build behind renders a word rather than a key.
+ */
 const METHOD_LABEL: Record<InvoicePaymentMethod, string> = {
   cash: 'نقدی',
   bank: 'بانکی / حواله',
   credit: 'نسیه',
   mobile_money: 'پول موبایلی',
-}
-
-export type PaymentMode = 'full' | 'partial' | 'split' | 'unpaid'
-
-export interface PaymentTranche {
-  id: string
-  method: InvoicePaymentMethod
-  amount: string
-}
-
-export interface InvoicePaymentValue {
-  mode: PaymentMode
-  /** Single-method modes. */
-  method: InvoicePaymentMethod
-  /** `partial` only — what was handed over now. */
-  paidNow: string
-  /** `split` only. */
-  tranches: PaymentTranche[]
+  other: 'روش دیگر',
 }
 
 export interface InvoicePaymentSectionProps {
@@ -98,32 +119,6 @@ const MODES: Array<{ mode: PaymentMode; label: string; hint: string }> = [
   { mode: 'split', label: 'چند روش', hint: 'مثلاً بخشی نقد، بخشی حواله' },
   { mode: 'unpaid', label: 'پرداخت نشد', hint: 'کل مبلغ بدهکار است' },
 ]
-
-/** Total of the split rows, in major units. */
-export function tranchesTotal(tranches: PaymentTranche[]): number {
-  return tranches.reduce((sum, tranche) => sum + (Number(tranche.amount) || 0), 0)
-}
-
-/**
- * What will actually be paid, given the mode. The single place that answers
- * it, so the section and the submitting container cannot disagree.
- */
-export function paidAmountOf(value: InvoicePaymentValue, total: number): number {
-  if (value.mode === 'unpaid') return 0
-  if (value.mode === 'full') return total
-  if (value.mode === 'split') return tranchesTotal(value.tranches)
-  return Number(value.paidNow) || 0
-}
-
-export const emptyPaymentValue = (): InvoicePaymentValue => ({
-  // ⚠️ NOT 'full'. The slice defaulted `isPaid: true`, and that default is the
-  // bug: it asserted every sale was settled without anyone saying so. The
-  // person chooses, and until they do nothing is claimed.
-  mode: 'full',
-  method: 'cash',
-  paidNow: '',
-  tranches: [],
-})
 
 let trancheSeq = 0
 const newTranche = (): PaymentTranche => ({
@@ -214,6 +209,23 @@ export function InvoicePaymentSection({
             </Select>
           </div>
 
+          {/* ⚠️ ONLY FOR `other`, AND IT DOES NOT REPLACE THE METHOD.
+              Free-text methods would make «چک», «چک بانکی» and «Cheque» three
+              different payment methods to every report that groups by one. */}
+          {value.method === 'other' ? (
+            <div className="space-y-1">
+              <Label htmlFor="method-label">{t('invoiceBuilder.methodLabel', 'نام روش')}</Label>
+              <Input
+                id="method-label"
+                value={value.methodLabel ?? ''}
+                onChange={(event) => set({ methodLabel: event.target.value })}
+                placeholder={t('invoiceBuilder.methodLabelPlaceholder', 'مثلاً چک')}
+                maxLength={40}
+                disabled={disabled}
+              />
+            </div>
+          ) : null}
+
           {value.mode === 'partial' ? (
             <div className="space-y-1">
               <Label htmlFor="paid-now">{t('invoiceBuilder.paidNow', 'مبلغ دریافتی')}</Label>
@@ -237,65 +249,88 @@ export function InvoicePaymentSection({
       {value.mode === 'split' ? (
         <div className="space-y-2">
           {value.tranches.map((tranche) => (
-            <div key={tranche.id} className="flex items-end gap-2">
-              <div className="flex-1 space-y-1">
-                <Label>{t('invoiceBuilder.method', 'روش')}</Label>
-                <Select
-                  value={tranche.method}
-                  onValueChange={(next) =>
+            <div key={tranche.id}>
+              <div className="flex items-end gap-2">
+                <div className="flex-1 space-y-1">
+                  <Label>{t('invoiceBuilder.method', 'روش')}</Label>
+                  <Select
+                    value={tranche.method}
+                    onValueChange={(next) =>
+                      set({
+                        tranches: value.tranches.map((item) =>
+                          item.id === tranche.id
+                            ? { ...item, method: next as InvoicePaymentMethod }
+                            : item,
+                        ),
+                      })
+                    }
+                    disabled={Boolean(disabled)}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PAYMENT_METHODS.map((method) => (
+                        <SelectItem key={method} value={method}>
+                          {t(`payment.method.${method}`, METHOD_LABEL[method])}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex-1 space-y-1">
+                  <Label>{t('invoiceBuilder.amount', 'مبلغ')}</Label>
+                  <Input
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    step="any"
+                    value={tranche.amount}
+                    onChange={(event) =>
+                      set({
+                        tranches: value.tranches.map((item) =>
+                          item.id === tranche.id ? { ...item, amount: event.target.value } : item,
+                        ),
+                      })
+                    }
+                    disabled={disabled}
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  disabled={disabled || value.tranches.length <= 1}
+                  onClick={() =>
+                    set({ tranches: value.tranches.filter((item) => item.id !== tranche.id) })
+                  }
+                  aria-label={t('common.remove', 'حذف')}
+                  className="mb-1 rounded-lg p-2 text-[hsl(var(--fg-tertiary))] transition-colors hover:bg-[hsl(var(--color-destructive)/0.1)] hover:text-[hsl(var(--color-destructive))] disabled:opacity-40"
+                >
+                  <Trash2 className="size-4" aria-hidden="true" />
+                </button>
+              </div>
+
+              {/* Each row names its own «other»: a split can be part cheque and
+                  part transfer, and one shared label could describe only one. */}
+              {tranche.method === 'other' ? (
+                <Input
+                  value={tranche.methodLabel ?? ''}
+                  onChange={(event) =>
                     set({
                       tranches: value.tranches.map((item) =>
                         item.id === tranche.id
-                          ? { ...item, method: next as InvoicePaymentMethod }
+                          ? { ...item, methodLabel: event.target.value }
                           : item,
                       ),
                     })
                   }
-                  disabled={Boolean(disabled)}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PAYMENT_METHODS.map((method) => (
-                      <SelectItem key={method} value={method}>
-                        {t(`payment.method.${method}`, METHOD_LABEL[method])}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="flex-1 space-y-1">
-                <Label>{t('invoiceBuilder.amount', 'مبلغ')}</Label>
-                <Input
-                  type="number"
-                  inputMode="decimal"
-                  min={0}
-                  step="any"
-                  value={tranche.amount}
-                  onChange={(event) =>
-                    set({
-                      tranches: value.tranches.map((item) =>
-                        item.id === tranche.id ? { ...item, amount: event.target.value } : item,
-                      ),
-                    })
-                  }
+                  placeholder={t('invoiceBuilder.methodLabelPlaceholder', 'مثلاً چک')}
+                  maxLength={40}
                   disabled={disabled}
+                  className="mt-1.5"
                 />
-              </div>
-
-              <button
-                type="button"
-                disabled={disabled || value.tranches.length <= 1}
-                onClick={() =>
-                  set({ tranches: value.tranches.filter((item) => item.id !== tranche.id) })
-                }
-                aria-label={t('common.remove', 'حذف')}
-                className="mb-1 rounded-lg p-2 text-[hsl(var(--fg-tertiary))] transition-colors hover:bg-[hsl(var(--color-destructive)/0.1)] hover:text-[hsl(var(--color-destructive))] disabled:opacity-40"
-              >
-                <Trash2 className="size-4" aria-hidden="true" />
-              </button>
+              ) : null}
             </div>
           ))}
 

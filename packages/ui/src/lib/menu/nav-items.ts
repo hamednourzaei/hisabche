@@ -40,6 +40,7 @@ import {
   Workflow,
   CreditCard,
   ShieldCheck,
+  Sparkles,
   type LucideIcon,
   DatabaseZap,
 } from 'lucide-react'
@@ -114,6 +115,7 @@ const NAV_ICONS: Record<NavId, LucideIcon> = {
   'workflow-templates': Workflow,
   billing: CreditCard,
   governance: ShieldCheck,
+  assistant: Sparkles,
 }
 
 const GROUP_ICONS: Record<Exclude<NavGroupId, 'primary'>, LucideIcon> = {

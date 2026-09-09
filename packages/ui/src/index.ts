@@ -332,6 +332,7 @@ export { ExpiryView } from './components/ui/expiry/expiry-view'
 // ─── AI assistant (T13) ───
 export { AiAssistantLauncher } from './components/ui/ai/ai-assistant-launcher'
 export { AiAssistantPanel } from './components/ui/ai/ai-assistant-panel'
+export { AiAssistantContainer } from './components/ui/ai/containers/ai-assistant-container'
 
 // ─── T11 — screens for backend that had no UI ───
 export {

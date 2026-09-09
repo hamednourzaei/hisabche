@@ -17,6 +17,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
 import { useRealtime } from './useRealtime'
+import { asList } from '../lib/as-list'
 
 // ═══ Types ═══
 export type AccountRootType = 'asset' | 'liability' | 'equity' | 'revenue' | 'expense'
@@ -187,7 +188,7 @@ export function useAccounts() {
     queryKey: accountingKeys.accounts(),
     queryFn: async (): Promise<Account[]> => {
       const { data } = await apiClient.get('/accounting/accounts')
-      return data
+      return asList<Account>(data)
     },
     enabled: authReady,
     staleTime: 5 * 60_000,
@@ -219,7 +220,7 @@ export function useJournalEntries() {
     queryKey: accountingKeys.journalEntries(),
     queryFn: async (): Promise<JournalEntry[]> => {
       const { data } = await apiClient.get('/accounting/journal')
-      return data
+      return asList<JournalEntry>(data)
     },
     enabled: authReady,
     staleTime: 2 * 60_000,

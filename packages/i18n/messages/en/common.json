@@ -1021,8 +1021,8 @@
     "mainNav": "Main navigation",
     "mobileNav": "Mobile navigation",
     "more": "More",
-    "collapseSidebar": "Collapse menu",
-    "expandSidebar": "Expand menu",
+    "collapseSidebar": "Collapse sidebar",
+    "expandSidebar": "Expand sidebar",
     "today": "Today",
     "today_description": "What's happening today",
     "sell": "Sell",
@@ -1109,7 +1109,14 @@
     "adminPanel": "Admin panel",
     "organization": "Organization:",
     "teamMembers": "Team members",
-    "account": "Account"
+    "account": "Account",
+    "assistant": "AI Assistant",
+    "assistant_description": "Ask about your business",
+    "missingBoth": "Your name and your business name are not set",
+    "missingYourName": "Your name is not set",
+    "missingBusinessName": "Your business name is not set",
+    "missingFixOwner": "Open settings to add or change it.",
+    "missingFixStaff": "The owner enters your name when adding staff. Ask them to correct it."
   },
   "dateRange": {
     "today": "Today",
@@ -1882,7 +1889,9 @@
     "customerDebt": "Customer Debt",
     "warehouseValue": "Total Warehouse Value",
     "vsLastMonth": "vs last month",
-    "dateRange": "Date range"
+    "dateRange": "Date range",
+    "noSalesInPeriod": "No sales in this period",
+    "tryWiderRange": "Try another range, or record a sale"
   },
   "quickInvoice": {
     "title": "Quick Invoice",
@@ -1924,7 +1933,14 @@
     "record": "Record Payment",
     "recorded": "Payment recorded",
     "undone": "Payment undone",
-    "undoneDescription": "Payment amount has been reversed"
+    "undoneDescription": "Payment amount has been reversed",
+    "method": {
+      "cash": "Cash",
+      "bank": "Bank / transfer",
+      "credit": "On account",
+      "mobile_money": "Mobile money",
+      "other": "Other method"
+    }
   },
   "debt": {
     "total": "Total Debt",
@@ -2950,7 +2966,21 @@
     "paidNow": "Amount received",
     "payment": "Payment",
     "willBePaid": "Paid",
-    "willRemain": "Remaining"
+    "willRemain": "Remaining",
+    "payMode": {
+      "full": "Paid in full",
+      "partial": "Partly paid",
+      "split": "Several methods",
+      "unpaid": "Not paid"
+    },
+    "payModeHint": {
+      "full": "The whole amount was received now",
+      "partial": "The rest stays owed",
+      "split": "e.g. part cash, part transfer",
+      "unpaid": "The whole amount is owed"
+    },
+    "methodLabel": "Method name",
+    "methodLabelPlaceholder": "e.g. cheque"
   },
   "admin": {
     "dashboard": {
@@ -3846,7 +3876,11 @@
     "quotaExceeded": "This month’s question allowance is used up.",
     "send": "Send",
     "title": "Hisabche assistant",
-    "topupHint": "To raise the limit, get in touch:"
+    "topupHint": "To raise the limit, get in touch:",
+    "remaining": "Questions left",
+    "notConfiguredTitle": "The assistant is not enabled yet",
+    "notConfiguredBody": "A platform administrator has to configure the AI provider before this works. Until then this page cannot answer.",
+    "openFullPage": "Open full page"
   },
   "display": {
     "basis": "Show amounts in",
@@ -3939,6 +3973,7 @@
     "roleViewer": "View only",
     "roleMember": "Staff",
     "roleAdmin": "Manager",
+    "roleOwner": "Owner",
     "accountFailed": "The employee was saved, but the account could not be created",
     "accountNeedsWorkspace": "The employee was saved, but no account was created: no workspace was found."
   },
@@ -3946,5 +3981,19 @@
     "owner": "Owner",
     "manager": "Manager",
     "seller": "Seller"
+  },
+  "update": {
+    "title": "Updates",
+    "check": "Check for updates",
+    "download": "Download update",
+    "installAndRestart": "Install and restart",
+    "idle": "Check to see whether a newer version is available.",
+    "upToDate": "You are on the latest version.",
+    "available": "Update available",
+    "downloading": "Downloading",
+    "ready": "Ready to install",
+    "failed": "The update failed",
+    "devBuild": "Updates are not checked in development.",
+    "noFeed": "This build is not configured for automatic updates."
   }
 }

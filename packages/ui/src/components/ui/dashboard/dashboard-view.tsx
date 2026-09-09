@@ -16,8 +16,9 @@ import {
 import { SalesChart, type ChartDataPoint } from './sales-chart'
 import { DateRangePicker, type DateRange, type PresetKey } from './date-range-picker'
 import type { AIInsight } from '@hisabche/api'
-import type { ActivityGroupDto } from '@hisabche/api'
+import type { ActivityGroupDto, ActivityItemDto } from '@hisabche/api'
 import dynamic from 'next/dynamic'
+import { asList } from '@hisabche/api'
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -301,7 +302,7 @@ const RecentActivities = memo(function RecentActivities({
     () =>
       (Array.isArray(groups) ? groups : [])
         .flatMap((g) =>
-          (g.activities ?? []).map((a) => ({
+          asList<ActivityItemDto>(g.activities).map((a) => ({
             ...a,
             entitySummary: g.entitySummary ?? { route: '', label: '' },
           })),

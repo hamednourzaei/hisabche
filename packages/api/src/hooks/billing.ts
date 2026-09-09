@@ -9,6 +9,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
 import type { Plan, Subscription } from '@hisabche/validation'
+import { asList } from '../lib/as-list'
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -79,7 +80,7 @@ export function usePlans() {
     queryKey: billingKeys.plans(),
     queryFn: async (): Promise<BillingPlan[]> => {
       const { data } = await apiClient.get('/billing/plans')
-      return data
+      return asList<BillingPlan>(data)
     },
     staleTime: 10 * 60 * 1000, // ۱۰ دقیقه
   })

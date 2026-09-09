@@ -18,6 +18,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
+import { asList } from '../lib/as-list'
 
 // ═══ Types ═══
 
@@ -106,7 +107,7 @@ export function useBankStatements(accountId?: string) {
       const { data } = await apiClient.get('/finance/bank/statements', {
         params: accountId ? { accountId } : {},
       })
-      return data as BankStatement[]
+      return asList<BankStatement>(data)
     },
     enabled: ready,
     staleTime: 60_000,

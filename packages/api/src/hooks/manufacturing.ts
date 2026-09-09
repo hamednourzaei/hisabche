@@ -14,22 +14,35 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
 import { useRealtime } from './useRealtime'
+import { asList } from '../lib/as-list'
 
 // ═══ Types ═══
 export interface BOM {
-  id: string; productId: string; version: number; isActive: boolean;
-  product?: { name: string }; items: BOMItem[];
+  id: string
+  productId: string
+  version: number
+  isActive: boolean
+  product?: { name: string }
+  items: BOMItem[]
 }
 
 export interface BOMItem {
-  id: string; rawMaterialId: string; quantity: number; unitCost: number;
-  rawMaterial?: { name: string; unit: string };
+  id: string
+  rawMaterialId: string
+  quantity: number
+  unitCost: number
+  rawMaterial?: { name: string; unit: string }
 }
 
 export interface WorkOrder {
-  id: string; productId: string; quantity: number; bomId?: string;
-  status: string; startDate?: string; endDate?: string;
-  product?: { name: string };
+  id: string
+  productId: string
+  quantity: number
+  bomId?: string
+  status: string
+  startDate?: string
+  endDate?: string
+  product?: { name: string }
 }
 
 // ═══ Query Keys ═══
@@ -54,7 +67,7 @@ export function useBOMs(productId?: string) {
       const { data } = await apiClient.get('/boms', {
         params: productId ? { productId } : {},
       })
-      return data
+      return asList<BOM>(data)
     },
     enabled: authReady,
     staleTime: 2 * 60_000,
@@ -88,7 +101,7 @@ export function useWorkOrders(status?: string) {
       const { data } = await apiClient.get('/work-orders', {
         params: status ? { status } : {},
       })
-      return data
+      return asList<WorkOrder>(data)
     },
     enabled: authReady,
     staleTime: 30_000,

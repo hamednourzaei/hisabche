@@ -16,6 +16,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
+import { asList } from '../lib/as-list'
 
 // ═══ Types ═══
 
@@ -86,7 +87,7 @@ export function useBudgets() {
     queryKey: budgetKeys.list(),
     queryFn: async () => {
       const { data } = await apiClient.get('/operations/budgets')
-      return data as Budget[]
+      return asList<Budget>(data)
     },
     enabled: ready,
     staleTime: 5 * 60_000,
@@ -110,7 +111,7 @@ export function useBudgetVariance(onDate?: string) {
       const { data } = await apiClient.get('/operations/budgets/variance', {
         params: { onDate: date },
       })
-      return data as VarianceRow[]
+      return asList<VarianceRow>(data)
     },
     enabled: ready,
     staleTime: 60_000,

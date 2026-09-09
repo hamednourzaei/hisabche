@@ -2,7 +2,7 @@
 
 import { memo, useState, useEffect, useRef, useSyncExternalStore } from 'react'
 import { cn } from '../../lib/utils'
-import { ChevronDown } from 'lucide-react'
+import { ChevronDown, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { NotificationBell } from './notification-bell'
 import {
   DropdownMenu,
@@ -315,20 +315,28 @@ interface HeaderProps {
   // one of these is passed as `value || undefined` by the caller, which is
   // how it says «there is no business name» rather than inventing one.
   appSubtitle?: string | undefined
-  /** The business, from real data. Absent means it is not known — not «—». */
-  organizationName?: string | undefined
+  /**
+   * The signed-in person's workspace role, used ONLY to colour `appSubtitle`
+   * and to label it.
+   *
+   * ⚠️ IT AUTHORIZES NOTHING. `null`/absent means «not known» or «not
+   * unambiguous» (several memberships) — never «no role» — and the label is
+   * simply left uncoloured. Every actual permission is decided server-side
+   * from the workspace the request names; a role that travelled to a browser
+   * is a value the browser can edit.
+   */
+  role?: string | null | undefined
+  /** Localized name for `role`, e.g. «مالک». The package holds no strings. */
+  roleLabel?: string | undefined
   /** The signed-in person's address, shown in the account menu. */
   userEmail?: string | undefined
   userName?: string | undefined
   /**
-   * People in this workspace, for the organization menu.
-   *
-   * ⚠️ NOT A PERMISSION CHECK. Passing an empty list is what hides the list;
-   * the caller decides who may see it, and the SERVER decides who may fetch
-   * it. A header is never a security boundary — see `packages/ui`'s rule that
-   * the workspace is the only boundary and it is enforced server-side.
+   * Collapse/expand the sidebar. Both are passed together or neither: without
+   * a handler the control is not rendered, rather than rendered inert.
    */
-  organizationMembers?: { id: string; name: string; role?: string }[] | undefined
+  isSidebarCollapsed?: boolean | undefined
+  onToggleSidebar?: (() => void) | undefined
   lastSyncedAt?: number | null
   isOnline?: boolean
   isSyncing?: boolean
@@ -361,76 +369,152 @@ function initialsOf(name?: string, email?: string): string {
 }
 
 /**
- * «سازمان: نام شرکت», and the people in it.
+ * ⚠️ THE «سازمان: …» CHIP USED TO BE HERE, AND IT IS GONE ON PURPOSE.
  *
- * ⚠️ THE LIST IS NOT AN ACCESS CONTROL. It renders whatever `members` holds;
- * an empty list simply shows the organization name with no menu. Who is
- * allowed to READ that list is decided by the endpoint that produces it, on
- * the server, where it cannot be bypassed by opening devtools. A header that
- * hides a control is a courtesy, never a boundary.
+ * It repeated the business name that the sidebar already shows, next to a
+ * dropdown of team members that NO CALLER EVER PASSED — so in practice it was
+ * a bordered box restating one word, taking the widest slot in the header from
+ * the search. The account menu beside it already answers «who am I, and how do
+ * I sign out», which is what people opened it for.
  */
-const OrganizationMenu = memo(function OrganizationMenu({
-  organizationName,
-  members,
-  t,
+
+/** Per-role colour for the «پنل مدیریت» label. */
+const ROLE_TONE: Record<string, string> = {
+  owner: 'text-[hsl(var(--color-primary))] bg-[hsl(var(--color-primary)/0.10)]',
+  admin: 'text-[hsl(var(--color-warning))] bg-[hsl(var(--color-warning)/0.12)]',
+  member: 'text-[hsl(var(--color-info))] bg-[hsl(var(--color-info)/0.12)]',
+  viewer: 'text-[hsl(var(--fg-tertiary))] bg-[hsl(var(--surface-muted))]',
+}
+
+/**
+ * What the app calls itself here, tinted by who is looking at it.
+ *
+ * ⚠️ AN UNKNOWN ROLE IS UNCOLOURED, NOT «viewer». Falling back to the lowest
+ * role would read as a statement about the account — someone with full access
+ * would see themselves described as view-only while the role was still
+ * loading. No colour says «not known», which is the truth.
+ */
+const RolePill = memo(function RolePill({
+  subtitle,
+  role,
+  roleLabel,
 }: {
-  organizationName: string
-  members: { id: string; name: string; role?: string }[]
-  t: (key: string) => string
+  subtitle: string
+  role?: string | null | undefined
+  roleLabel?: string | undefined
 }) {
-  const label = (
-    <>
-      <span className="hidden text-[hsl(var(--fg-tertiary))] sm:inline">
-        {t('nav.organization')}
-      </span>
-      <span className="truncate font-medium text-[hsl(var(--fg-primary))]">{organizationName}</span>
-    </>
-  )
-
-  const shell = cn(
-    'inline-flex h-9 max-w-[10rem] items-center gap-1.5 rounded-xl px-2.5 text-xs',
-    'border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]',
-    'transition-colors motion-reduce:transition-none',
-  )
-
-  // Nothing to open. A dropdown arrow on a menu with no items is a promise the
-  // control cannot keep, so it is not rendered.
-  if (members.length === 0) {
-    return <div className={shell}>{label}</div>
-  }
+  const tone =
+    (role && ROLE_TONE[role]) || 'text-[hsl(var(--fg-tertiary))] bg-[hsl(var(--surface-muted))]'
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        className={cn(
-          shell,
-          'hover:border-[hsl(var(--border-strong))] hover:bg-[hsl(var(--surface-muted))]',
-        )}
-      >
-        {label}
-        <ChevronDown
-          className="size-3.5 shrink-0 text-[hsl(var(--fg-tertiary))]"
-          aria-hidden="true"
-        />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start" className="w-60">
-        <DropdownMenuLabel>{t('nav.teamMembers')}</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        {members.map((member) => (
-          <DropdownMenuItem key={member.id} className="flex items-center justify-between gap-3">
-            <span className="min-w-0 truncate">{member.name}</span>
-            {member.role ? (
-              <span className="shrink-0 text-[10px] text-[hsl(var(--fg-tertiary))]">
-                {member.role}
-              </span>
-            ) : null}
-          </DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <span
+      className={cn(
+        'inline-flex h-7 shrink-0 items-center gap-1.5 rounded-lg px-2 text-[11px] font-medium',
+        tone,
+      )}
+    >
+      <span className="truncate">{subtitle}</span>
+      {roleLabel ? (
+        <>
+          <span aria-hidden="true" className="opacity-40">
+            ·
+          </span>
+          <span className="truncate">{roleLabel}</span>
+        </>
+      ) : null}
+    </span>
   )
 })
-OrganizationMenu.displayName = 'OrganizationMenu'
+RolePill.displayName = 'RolePill'
+
+/**
+ * Collapse or expand the sidebar.
+ *
+ * ⚠️ THE ICON IS CHOSEN, NOT MIRRORED. `PanelLeftClose` under `dir="rtl"` is
+ * still a panel on the LEFT while the sidebar is on the RIGHT, and flipping it
+ * with `scale-x-[-1]` makes it point the wrong way the moment the state
+ * changes. So the direction is read explicitly and the icon that actually
+ * matches the sidebar's edge is rendered — in Persian and Dari «باز» points
+ * left, in English it points right.
+ */
+const SidebarToggle = memo(function SidebarToggle({
+  collapsed,
+  onToggle,
+  label,
+}: {
+  collapsed: boolean
+  onToggle: () => void
+  label: string
+}) {
+  const [node, setNode] = useState<HTMLElement | null>(null)
+  const isRtl = useIsRtl(node)
+
+  // Expanding always points AWAY from the sidebar's edge; collapsing points
+  // toward it. Two booleans, one icon — no transform anywhere.
+  const pointsStart = collapsed ? !isRtl : isRtl
+  const Icon = pointsStart ? PanelLeftOpen : PanelLeftClose
+
+  return (
+    <button
+      ref={setNode}
+      type="button"
+      onClick={onToggle}
+      aria-label={label}
+      aria-expanded={!collapsed}
+      title={label}
+      className={cn(
+        'hidden shrink-0 items-center justify-center rounded-lg p-1.5 lg:inline-flex',
+        'text-[hsl(var(--fg-tertiary))] hover:bg-[hsl(var(--surface-muted))]',
+        'hover:text-[hsl(var(--fg-primary))]',
+        'transition-colors duration-150 motion-reduce:transition-none',
+      )}
+    >
+      <Icon className="size-[18px]" aria-hidden="true" />
+    </button>
+  )
+})
+SidebarToggle.displayName = 'SidebarToggle'
+
+/**
+ * The writing direction THIS BUTTON is actually rendered in.
+ *
+ * ⚠️ NOT `document.documentElement.dir`, AND NOT THE LANGUAGE PROP.
+ *
+ * The dashboard sets `dir` on its own wrapper, not on `<html>` — reading the
+ * root would have returned `ltr` on a Persian dashboard and pointed the arrow
+ * the wrong way, which is exactly the flip this is meant to prevent. And the
+ * language prop says which LANGUAGE, not which direction; the two part company
+ * for any locale added later.
+ *
+ * `getComputedStyle().direction` answers the only question that matters: which
+ * side is the sidebar on, here, now.
+ */
+function useIsRtl(node: HTMLElement | null): boolean {
+  const [isRtl, setIsRtl] = useState(false)
+
+  useEffect(() => {
+    // After mount only. Touching layout during render makes the server and the
+    // first client render disagree, and React 19 discards the whole tree on a
+    // hydration mismatch — for a header, the page flashes empty.
+    if (!node) return
+
+    const read = () => setIsRtl(getComputedStyle(node).direction === 'rtl')
+    read()
+
+    const root = node.ownerDocument.documentElement
+    const observer = new MutationObserver(read)
+    observer.observe(root, { attributes: true, attributeFilter: ['dir', 'lang'] })
+    // The dashboard's own wrapper is where `dir` actually lives.
+    const scope = node.closest('[dir]')
+    if (scope && scope !== root) {
+      observer.observe(scope, { attributes: true, attributeFilter: ['dir'] })
+    }
+
+    return () => observer.disconnect()
+  }, [node])
+
+  return isRtl
+}
 
 /** The avatar, the address behind it, and sign-out. */
 const AccountMenu = memo(function AccountMenu({
@@ -454,7 +538,12 @@ const AccountMenu = memo(function AccountMenu({
         aria-label={t('nav.account')}
         className={cn(
           // 40px — a touch target, not a 24px circle.
-          'flex size-10 items-center justify-center rounded-full',
+          //
+          // ⚠️ `shrink-0` AND `aspect-square`. `size-10` sets a BASIS, not a
+          // floor: as a flex child in a row that runs out of room it was
+          // compressed horizontally only, and a circle compressed on one axis
+          // is an egg. That is the «دایره بدفرم».
+          'flex size-10 shrink-0 aspect-square items-center justify-center rounded-full',
           'text-xs font-semibold',
           'bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))]',
           'transition-colors hover:bg-[hsl(var(--color-primary)/0.12)]',
@@ -494,10 +583,12 @@ export const DashboardHeader = memo(function DashboardHeader({
   variant = 'dashboard',
   appName,
   appSubtitle,
-  organizationName,
+  role,
+  roleLabel,
   userEmail,
   userName,
-  organizationMembers,
+  isSidebarCollapsed,
+  onToggleSidebar,
   lastSyncedAt = null,
   isOnline = true,
   isSyncing = false,
@@ -532,28 +623,32 @@ export const DashboardHeader = memo(function DashboardHeader({
       <div className="flex h-16 items-center gap-2 px-3 sm:gap-3 sm:px-5">
         {/* ── Identity ── */}
         <div className="flex min-w-0 shrink-0 items-center gap-2 sm:gap-2.5">
-          <BrandMark alt={appName} />
+          {variant === 'dashboard' && onToggleSidebar ? (
+            <SidebarToggle
+              collapsed={Boolean(isSidebarCollapsed)}
+              onToggle={onToggleSidebar}
+              label={t(isSidebarCollapsed ? 'nav.expandSidebar' : 'nav.collapseSidebar')}
+            />
+          ) : null}
+
+          {/* ⚠️ THE MARK AND THE NAME ARE MOBILE-ONLY ON THE DASHBOARD.
+              From `lg` up the sidebar is on screen with the same mark and the
+              same word directly beneath this row — two «حسابچه» a centimetre
+              apart, paid for out of the search's width. Below `lg` the sidebar
+              is replaced by the bottom bar and the header is the only place
+              the app is named, so there it stays. The landing page has no
+              sidebar at all and keeps both unconditionally. */}
           {variant === 'dashboard' && (
             <>
-              <div className="hidden min-w-0 flex-col leading-tight sm:flex">
-                <span className="truncate text-sm font-semibold text-[hsl(var(--fg-primary))]">
-                  {appName}
-                </span>
-                {appSubtitle ? (
-                  <span className="truncate text-[11px] text-[hsl(var(--fg-tertiary))]">
-                    {appSubtitle}
-                  </span>
-                ) : null}
-              </div>
+              <span className="lg:hidden">
+                <BrandMark alt={appName} />
+              </span>
+              <span className="hidden truncate text-sm font-semibold text-[hsl(var(--fg-primary))] sm:inline lg:hidden">
+                {appName}
+              </span>
 
-              {/* Real data only: with no business name there is no control,
-                  rather than a button reading «سازمان: —». */}
-              {organizationName ? (
-                <OrganizationMenu
-                  organizationName={organizationName}
-                  members={organizationMembers ?? []}
-                  t={t}
-                />
+              {appSubtitle ? (
+                <RolePill subtitle={appSubtitle} role={role} roleLabel={roleLabel} />
               ) : null}
 
               <span className="mx-0.5 hidden h-6 w-px bg-[hsl(var(--border-default))] xl:block" />
@@ -568,6 +663,8 @@ export const DashboardHeader = memo(function DashboardHeader({
               </div>
             </>
           )}
+
+          {variant === 'landing' && <BrandMark alt={appName} />}
           {variant === 'landing' && (
             <span className="text-sm font-bold text-[hsl(var(--fg-primary))]">{appName}</span>
           )}

@@ -414,8 +414,15 @@ export class AnalyticsService {
         .order('total_price', { ascending: false })
         .limit(10)
 
+      // ⚠️ START OF DAY, NOT THIS MOMENT MINUS FOURTEEN DAYS.
+      //
+      // `new Date()` carries the current time, so the comparison below dropped
+      // every invoice from earlier in the day fourteen days ago — the window
+      // silently shifted with the hour the page was opened, and the oldest
+      // column of the chart changed size through the afternoon.
       const fourteenDaysAgo = new Date()
       fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14)
+      fourteenDaysAgo.setHours(0, 0, 0, 0)
 
       const chartData = invoices
         .filter((inv) => new Date(inv.date) >= fourteenDaysAgo)

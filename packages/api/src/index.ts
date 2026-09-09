@@ -4,6 +4,7 @@
 
 // ─── Core Client ──────────────────────────────────────────
 export { apiClient, normalizeBaseUrl } from './lib/client'
+export { asList } from './lib/as-list'
 export type { ApiResponse, ApiError } from './lib/client'
 
 // ✅ Token Provider + onUnauthorized

@@ -24,6 +24,17 @@ import '@hisabche/ui/globals.css'
    ✅ memo · useCallback · useMemo · prefetch بهینه
    ═══════════════════════════════════════════════════════════════════════════ */
 
+/** Where the sidebar's collapsed/expanded preference is remembered. */
+const SIDEBAR_KEY = 'hisabche.sidebar.collapsed'
+
+/** The roles this build has a word for. Anything else is left unnamed. */
+const TRANSLATED_ROLES = ['owner', 'admin', 'member', 'viewer']
+
+/** «owner» → «Owner», to build the `team.roleOwner` key. */
+function cap(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1)
+}
+
 // ─── Hook: Prefetch Routes ─────────────────────────────────────────────────
 
 function usePrefetchRoutes(pathname: string) {
@@ -226,6 +237,52 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
     [router, t, withLocale],
   )
 
+  // ⚠️ PERSISTED, AND READ AFTER MOUNT. Reading localStorage during render
+  // makes the server's HTML and the first client render disagree, and React 19
+  // throws the whole tree away on a hydration mismatch — the dashboard would
+  // flash empty. So it starts expanded and corrects itself once.
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+
+  useEffect(() => {
+    try {
+      setSidebarCollapsed(window.localStorage.getItem(SIDEBAR_KEY) === '1')
+    } catch {
+      // Private mode, or storage disabled. An unremembered preference is not
+      // worth an error boundary.
+    }
+  }, [])
+
+  const toggleSidebar = useCallback(() => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev
+      try {
+        window.localStorage.setItem(SIDEBAR_KEY, next ? '1' : '0')
+      } catch {
+        /* see above */
+      }
+      return next
+    })
+  }, [])
+
+  const openSettings = useCallback(() => {
+    const localizedPath = withLocale('/settings')
+    setOptimisticPath(localizedPath)
+    router.push(localizedPath)
+  }, [router, withLocale])
+
+  // The role's own name, for the header pill.
+  //
+  // ⚠️ ONLY THE FOUR ROLES THAT HAVE A TRANSLATION. `t()` THROWS on a missing
+  // key, so a role this build has no word for — one added to the database
+  // later, or anything unexpected — would replace the entire dashboard with an
+  // error boundary, over a caption. An unnamed role simply shows «پنل مدیریت»
+  // with no suffix, which is what it did before the role existed at all.
+  const roleLabel = useMemo(() => {
+    const role = user?.role
+    if (!role || !TRANSLATED_ROLES.includes(role)) return undefined
+    return t(`team.role${cap(role)}` as never) as string
+  }, [t, user?.role])
+
   const hasHydrated = useAuthStore((s) => s.hasHydrated)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
 
@@ -254,6 +311,9 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
         moreIcon={MORE_ICON}
         activeNav={activeNav}
         onNavigate={handleNavigate}
+        collapsed={sidebarCollapsed}
+        onExpand={() => setSidebarCollapsed(false)}
+        onOpenSettings={openSettings}
       />
 
       {/* ✅ FIX (رسپانسیو): این یک flex item است و مقدار پیش‌فرض
@@ -267,9 +327,13 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
           variant="dashboard"
           appName={t('app.name')}
           appSubtitle={t('nav.adminPanel')}
-          // Real values or nothing. The header renders no control at all for a
-          // business name it does not have, rather than showing a placeholder.
-          organizationName={user?.businessName || undefined}
+          // Display only — every permission is decided server-side. `null`
+          // (several memberships, or not yet loaded) leaves the label its
+          // neutral colour rather than guessing the lowest role.
+          role={user?.role ?? null}
+          roleLabel={roleLabel}
+          isSidebarCollapsed={sidebarCollapsed}
+          onToggleSidebar={toggleSidebar}
           userName={user?.fullName || undefined}
           userEmail={user?.email || undefined}
           lastSyncedAt={lastSyncedAt.current}

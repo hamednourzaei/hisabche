@@ -8,13 +8,14 @@
 
 import { contextBridge, ipcRenderer } from 'electron'
 
-import { IPC } from '../shared/ipc-contract'
+import { IPC_EVENT, IPC } from '../shared/ipc-contract'
 import type {
   AppInfo,
   ImportedFile,
   LocalTable,
   QueueEntry,
   HttpRequestResponse,
+  UpdateStatus,
 } from '../shared/ipc-contract'
 
 export interface DesktopBridge {
@@ -79,7 +80,18 @@ export interface DesktopBridge {
   }
   app: {
     info(): Promise<AppInfo>
-    checkUpdates(): Promise<void>
+    checkUpdates(): Promise<UpdateStatus>
+    downloadUpdate(): Promise<UpdateStatus>
+    /** Quits and runs the installer. Ask before calling. */
+    installUpdate(): Promise<{ ok: boolean }>
+    /**
+     * Download progress, pushed from main.
+     *
+     * ⚠️ Returns its own unsubscribe. Without it every mount of the settings
+     * screen adds another listener to the same singleton emitter, and the
+     * progress bar jumps as N copies of each event arrive.
+     */
+    onUpdateStatus(listener: (status: UpdateStatus) => void): () => void
   }
   http: {
     request(input: {
@@ -120,6 +132,15 @@ const bridge: DesktopBridge = {
   app: {
     info: () => ipcRenderer.invoke(IPC.appInfo, {}),
     checkUpdates: () => ipcRenderer.invoke(IPC.checkUpdates, {}),
+    downloadUpdate: () => ipcRenderer.invoke(IPC.downloadUpdate, {}),
+    installUpdate: () => ipcRenderer.invoke(IPC.installUpdate, {}),
+    onUpdateStatus: (listener) => {
+      // The IpcRendererEvent is deliberately not forwarded: it carries a
+      // `sender` the renderer has no business holding.
+      const handler = (_event: unknown, status: UpdateStatus) => listener(status)
+      ipcRenderer.on(IPC_EVENT.updateStatus, handler)
+      return () => ipcRenderer.removeListener(IPC_EVENT.updateStatus, handler)
+    },
   },
   http: {
     request: (input) => ipcRenderer.invoke(IPC.httpRequest, input),

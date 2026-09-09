@@ -30,6 +30,7 @@ import { NavScreenHeader } from '../../../shared/components/nav-screen-header'
 import { useCommonT } from '../../../shared/i18n/use-common-t'
 import { currencySign, formatAmount, formatDate } from '../../../shared/lib/format'
 import { useCurrency } from '../../settings/preferences.store'
+import { asList } from '@hisabche/api'
 
 type TabId = 'accounts' | 'journal' | 'trialBalance' | 'balanceSheet' | 'incomeStatement'
 
@@ -153,7 +154,7 @@ function JournalList({ data, loading }: { data: JournalEntry[]; loading: boolean
             <Text variant="caption" tone="secondary">
               {entry.description}
             </Text>
-            {(entry.lines ?? []).map((line) => (
+            {asList<{ id: string; debit?: number; credit?: number }>(entry.lines).map((line) => (
               <Text key={line.id} variant="legal" tone="tertiary">
                 {`${line.debit ? `بدهکار ${line.debit}` : ''}${line.debit && line.credit ? ' · ' : ''}${line.credit ? `بستانکار ${line.credit}` : ''}`}
               </Text>

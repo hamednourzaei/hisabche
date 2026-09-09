@@ -47,6 +47,7 @@ import {
   type Tone,
 } from '../capability/capability-kit'
 import { EmptyState } from '../empty-state'
+import { asList } from '@hisabche/api'
 
 export interface DataMigrationViewProps {
   t: (key: string, fallback?: string) => string
@@ -119,7 +120,7 @@ export const DataMigrationView = memo(function DataMigrationView({
   const columnOptions = useMemo(
     () => [
       { value: '__none', label: t('migration.column_none', 'وارد نشود') },
-      ...(discovery?.headers ?? []).map((header, index) => ({
+      ...asList<string>(discovery?.headers).map((header, index) => ({
         value: String(index),
         label: header || t('migration.column_unnamed', 'ستون بی‌نام'),
       })),

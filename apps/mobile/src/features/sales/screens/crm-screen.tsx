@@ -56,6 +56,7 @@ import { AppScreen } from '../../../shared/components/app-screen'
 import { NavScreenHeader } from '../../../shared/components/nav-screen-header'
 import { useCommonT } from '../../../shared/i18n/use-common-t'
 import { formatDate } from '../../../shared/lib/format'
+import { asList } from '@hisabche/api'
 
 type CrmTab = 'interactions' | 'stats'
 type InteractionType = 'call' | 'meeting' | 'email' | 'note'
@@ -79,7 +80,7 @@ function useEmployeeOptions(): { id: string; name: string }[] {
   const { data } = useEmployees({ limit: 200 })
   return useMemo(
     () =>
-      (data?.employees ?? []).map((e: Record<string, unknown>) => {
+      asList<Record<string, unknown>>(data?.employees).map((e: Record<string, unknown>) => {
         const first = e.first_name as string | undefined
         const last = e.last_name as string | undefined
         const code = e.employee_code as string | undefined

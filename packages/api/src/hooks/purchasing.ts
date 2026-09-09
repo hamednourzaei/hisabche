@@ -6,19 +6,28 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
 import { useRealtime } from './useRealtime'
+import { asList } from '../lib/as-list'
 
 // ═══ Types ═══
 export interface PurchaseOrder {
-  id: string; supplierId: string; orderDate: string;
-  expectedDeliveryDate?: string; status: string; notes?: string;
-  receivedAt?: string; supplier?: { name: string; phone: string; email: string };
-  items: PurchaseOrderItem[];
+  id: string
+  supplierId: string
+  orderDate: string
+  expectedDeliveryDate?: string
+  status: string
+  notes?: string
+  receivedAt?: string
+  supplier?: { name: string; phone: string; email: string }
+  items: PurchaseOrderItem[]
 }
 
 export interface PurchaseOrderItem {
-  id: string; productId: string; quantity: number;
-  unitPrice: number; totalPrice: number;
-  product?: { name: string; unit: string };
+  id: string
+  productId: string
+  quantity: number
+  unitPrice: number
+  totalPrice: number
+  product?: { name: string; unit: string }
 }
 
 // ═══ Query Keys ═══
@@ -42,7 +51,7 @@ export function usePurchaseOrders() {
       // ✅ FIX: مسیر واقعی route در بک‌اند /api/purchase-orders است
       // (نه /api/purchasing/orders)
       const { data } = await apiClient.get('/purchase-orders')
-      return data
+      return asList<PurchaseOrder>(data)
     },
     enabled: authReady,
     staleTime: 60_000,

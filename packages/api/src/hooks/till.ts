@@ -17,6 +17,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
+import { asList } from '../lib/as-list'
 
 // ═══ Types ═══
 
@@ -117,7 +118,7 @@ export function useAbandonedSessions(hours = 24) {
     queryKey: [...tillKeys.abandoned(), hours],
     queryFn: async () => {
       const { data } = await apiClient.get('/pos/sessions/abandoned', { params: { hours } })
-      return data as AbandonedSession[]
+      return asList<AbandonedSession>(data)
     },
     enabled: ready,
     staleTime: 60_000,

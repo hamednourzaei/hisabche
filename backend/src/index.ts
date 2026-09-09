@@ -41,6 +41,7 @@ import { syncRoutes } from './routes/sync.routes'
 import { invoiceRoutes } from './routes/invoice.routes'
 import { invoicePdfRoutes } from './routes/invoice-pdf.routes'
 import { invoicePublicRoutes } from './routes/invoice-public.routes'
+import { updatesRoutes } from './routes/updates.routes'
 import { productRoutes } from './routes/product.routes'
 import { customerRoutes } from './routes/customer.routes'
 import { transactionRoutes } from './routes/transaction.routes'
@@ -467,6 +468,8 @@ export async function buildServer(): Promise<typeof server> {
   await server.register(invoiceRoutes)
   await server.register(invoicePdfRoutes)
   await server.register(invoicePublicRoutes)
+  // The desktop update feed. Unauthenticated on purpose — see the module.
+  await server.register(updatesRoutes)
   await server.register(productRoutes)
   await server.register(customerRoutes)
   await server.register(transactionRoutes)

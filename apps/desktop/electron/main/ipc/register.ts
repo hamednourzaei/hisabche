@@ -31,7 +31,7 @@ import type { AppInfo, ImportedFile } from '../../shared/ipc-contract'
 import * as db from '../db/database'
 import { secureDelete, secureGet, secureSet } from '../services/secure-store'
 import { printEscPos, printHtml } from '../services/printing'
-import { checkForUpdates } from '../services/updater'
+import { checkForUpdates, downloadUpdate, quitAndInstall } from '../services/updater'
 import { writeExport } from '../services/files'
 import { httpRequest } from '../services/http'
 
@@ -243,10 +243,29 @@ export function registerIpcHandlers(): void {
     locale: app.getLocale(),
     databaseReady: db.isReady(),
   }))
+  // ⚠️ THESE RETURN A RESULT. `checkForUpdates` used to return `void`, so the
+  // button that called it could report nothing and the person learned only
+  // from an OS notification they had no reason to expect.
   handle(
     IPC.checkUpdates,
     anySchema,
-    authenticateAndAuthorize('workspace.manage', false)((_, event) => checkForUpdates()),
+    authenticateAndAuthorize('workspace.manage', false)(() => checkForUpdates()),
+  )
+  handle(
+    IPC.downloadUpdate,
+    anySchema,
+    authenticateAndAuthorize('workspace.manage', false)(() => downloadUpdate()),
+  )
+  handle(
+    IPC.installUpdate,
+    anySchema,
+    authenticateAndAuthorize(
+      'workspace.manage',
+      false,
+    )(() => {
+      quitAndInstall()
+      return { ok: true }
+    }),
   )
 
   // ─── Outbound HTTP ──────────────────────────────────── (Renderer proxy)

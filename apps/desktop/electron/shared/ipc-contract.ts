@@ -33,9 +33,41 @@ export const IPC = {
   windowControl: 'window:control',
   appInfo: 'app:info',
   checkUpdates: 'app:checkUpdates',
+  // Downloading is separate from checking on purpose: looking for an update
+  // must not pull ~80 MB over a connection that may be metered.
+  downloadUpdate: 'app:downloadUpdate',
+  installUpdate: 'app:installUpdate',
 
   // Outbound HTTP (main-process proxy: renders without browser CORS)
   httpRequest: 'http:request',
+} as const
+
+/**
+ * Pushed from main to the renderer — not a request/response channel.
+ *
+ * A download has no natural request to answer with progress, so main sends
+ * and the renderer subscribes.
+ */
+/**
+ * What the renderer is told about an update.
+ *
+ * ⚠️ Lives HERE, not in `main/services/updater.ts`. The preload bridge cannot
+ * import from main — they are different processes with different module
+ * graphs — and duplicating the union would let the two halves of one channel
+ * drift apart.
+ *
+ * Nothing in it leaks a file path or a feed URL.
+ */
+export type UpdateStatus =
+  | { state: 'unsupported'; reason: 'development' | 'no-feed' }
+  | { state: 'none'; currentVersion: string }
+  | { state: 'available'; version: string; notes: string | null }
+  | { state: 'downloading'; version: string; percent: number }
+  | { state: 'ready'; version: string }
+  | { state: 'error'; message: string }
+
+export const IPC_EVENT = {
+  updateStatus: 'app:updateStatus',
 } as const
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC]

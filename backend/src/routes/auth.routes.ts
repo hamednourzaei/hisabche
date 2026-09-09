@@ -24,6 +24,17 @@ type JsonSchema = Record<string, unknown>
 interface SanitizedUser {
   id: string
   email: string
+  /**
+   * The caller's role in their workspace, or `null`.
+   *
+   * ⚠️ `null` MEANS «NOT UNAMBIGUOUS», NOT «NO ROLE». A user with several
+   * memberships has several roles, and picking one here would be the same
+   * fail-open guess `auth.middleware.ts` was fixed for. The client uses this
+   * to colour a label and to decide whether to offer a settings link — never
+   * to authorize anything, which the server does per request from
+   * `request.tenancy.role`.
+   */
+  role: string | null
   fullName: string | null
   businessName: string | null
   avatarUrl: string | null
@@ -42,9 +53,10 @@ interface SanitizedUser {
  * `z.any().optional()` is a ZodOptional around a ZodAny — without unwrapping,
  * the typeName is `ZodOptional` and every such field was typed as `string`.
  */
-function unwrap(schema: any): { inner: any; optional: boolean } {
+function unwrap(schema: any): { inner: any; optional: boolean; nullable: boolean } {
   let inner = schema
   let optional = false
+  let nullable = false
 
   // `ZodEffects` wraps a schema carrying `.transform()`. Without unwrapping it,
   // the typeName is `ZodEffects`, `jsonTypeOf` returns undefined and the field
@@ -64,11 +76,18 @@ function unwrap(schema: any): { inner: any; optional: boolean } {
 
     // A field with a default is always present in the output, so it is not
     // optional for serialization purposes — but it must still be unwrapped.
-    if (inner._def.typeName !== 'ZodDefault') optional = true
+    // ⚠️ NULLABLE IS NOT OPTIONAL, AND THE DIFFERENCE IS VISIBLE ON THE WIRE.
+    // fast-json-stringify serializes `null` against `{ type: 'string' }` as
+    // `""` — it does not fail, it substitutes. So `businessName: null` («this
+    // account never set one») reached the client as an empty string, which is
+    // «they set it to nothing». The header could not tell the two apart, and
+    // neither could the prompt that asks the owner to fill it in.
+    if (inner._def.typeName === 'ZodNullable') nullable = true
+    else if (inner._def.typeName !== 'ZodDefault') optional = true
     inner = inner._def.innerType
   }
 
-  return { inner, optional }
+  return { inner, optional, nullable }
 }
 
 function jsonTypeOf(typeName: string | undefined): string | undefined {
@@ -91,33 +110,80 @@ function jsonTypeOf(typeName: string | undefined): string | undefined {
   }
 }
 
+/**
+ * ⚠️ IT RECURSES. IT DID NOT, AND THAT EMPTIED EVERY USER OBJECT.
+ *
+ * A nested `z.object()` used to produce `{ type: 'object' }` with NO
+ * `properties`. Fastify hands the result to fast-json-stringify, which
+ * serializes strictly from the schema and DROPS every field the schema does
+ * not declare — so `{ user: { id, email, fullName, … } }` went out as
+ *
+ *     { "user": {} }
+ *
+ * from `POST /auth/login`, `GET /auth/me` and `PATCH /auth/profile` alike.
+ *
+ * Nothing failed. The token is a sibling of `user`, so sign-in worked, the
+ * session persisted, and every request authenticated — while the client's
+ * cached user had no id, no email and no name. The visible symptom was an
+ * account menu with nothing in it but «خروج», and a header that could not show
+ * which business you were in.
+ *
+ * ⚠️ THE SAME APPLIES TO ARRAYS. `z.array(z.object(...))` without `items`
+ * serializes as `[]`, which is the identical failure wearing an empty list.
+ */
 function toJsonSchema(schema: z.ZodTypeAny): JsonSchema {
-  const shape = ((schema as any).shape || {}) as Record<string, unknown>
-  const required: string[] = []
+  return describe(schema)
+}
 
-  const properties = Object.fromEntries(
-    Object.entries(shape).map(([key, value]) => {
-      const { inner, optional } = unwrap(value)
-      if (!optional) required.push(key)
+/** One zod node, as JSON Schema. Recursive — see `toJsonSchema`. */
+function describe(schema: unknown): JsonSchema {
+  const { inner, nullable } = unwrap(schema)
+  const typeName = (inner as any)?._def?.typeName as string | undefined
+  const type = jsonTypeOf(typeName)
 
-      const type = jsonTypeOf(inner?._def?.typeName)
-      const isEmail =
-        inner?._def?.typeName === 'ZodString' &&
-        inner._def?.checks?.some((c: any) => c.kind === 'email')
+  if (typeName === 'ZodObject') {
+    const shape = ((inner as any).shape || {}) as Record<string, unknown>
+    const required: string[] = []
 
-      return [key, { ...(type ? { type } : {}), ...(isEmail ? { format: 'email' } : {}) }]
-    }),
-  )
+    const properties = Object.fromEntries(
+      Object.entries(shape).map(([key, value]) => {
+        const { optional } = unwrap(value)
+        // A key with a `.default()` is always present in the output, so it is
+        // not optional for serialization even though it is for input.
+        if (!optional) required.push(key)
+        return [key, describe(value)]
+      }),
+    )
 
-  return {
-    type: 'object',
-    properties,
-    // Previously every key was listed as required, including `.optional()`
-    // ones. On a response schema that made fast-json-stringify throw when an
-    // optional field was absent — so a 400 validation error was serialized as
-    // a 500, hiding the real status and the validation details from clients.
-    required,
+    return {
+      type: 'object',
+      properties,
+      // Previously every key was listed as required, including `.optional()`
+      // ones. On a response schema that made fast-json-stringify throw when an
+      // optional field was absent — so a 400 validation error was serialized as
+      // a 500, hiding the real status and the validation details from clients.
+      required,
+    }
   }
+
+  if (typeName === 'ZodArray') {
+    // Without `items` the array serializes as empty — the same defect as a
+    // property-less object, one container out.
+    return { type: 'array', items: describe((inner as any)._def?.type) }
+  }
+
+  const isEmail =
+    typeName === 'ZodString' && (inner as any)._def?.checks?.some((c: any) => c.kind === 'email')
+
+  // `ZodAny`/`ZodUnknown` deliberately get no `type`: constraining them to
+  // `string` is what made `details` (an arbitrary validation payload)
+  // unserializable.
+  // A nullable field is declared as a union so `null` survives as `null`.
+  // No `type` at all (ZodAny) stays unconstrained — adding 'null' there would
+  // constrain it.
+  const declared = type ? (nullable ? [type, 'null'] : type) : undefined
+
+  return { ...(declared ? { type: declared } : {}), ...(isEmail ? { format: 'email' } : {}) }
 }
 
 // ─── Helper: Get profile from public.profiles ───────────────
@@ -156,10 +222,14 @@ function sanitizeUser(
     store_size?: string | null
     business_note?: string | null
   } | null,
+  // ⚠️ LAST, AND DEFAULTED. Four call sites pass `(user, profile)`; adding a
+  // parameter anywhere but the end would have silently bound `profile` to it.
+  role: string | null = null,
 ): SanitizedUser {
   return {
     id: authUser.id,
     email: authUser.email,
+    role,
     fullName: profile?.full_name || authUser.user_metadata?.full_name || '',
     businessName: profile?.business_name || authUser.user_metadata?.business_name || null,
     avatarUrl: profile?.avatar_url || null,
@@ -171,6 +241,36 @@ function sanitizeUser(
     storeSize: profile?.store_size ?? null,
     businessNote: profile?.business_note ?? null,
   }
+}
+
+/**
+ * The caller's role, ONLY when it is unambiguous.
+ *
+ * ⚠️ THIS IS FOR DISPLAY. It colours the «پنل مدیریت» label and decides whether
+ * the sidebar offers a settings link. It authorizes NOTHING: every request is
+ * authorized server-side from `request.tenancy.role`, resolved against the
+ * workspace that request actually names. A role sent to a client is a claim the
+ * client can edit.
+ *
+ * The rules are copied from `auth.middleware.ts` deliberately, because they are
+ * the rules that matter: revoked and suspended memberships are excluded, and a
+ * user with several memberships gets `null` rather than the first row — picking
+ * one would be the arbitrary-choice defect that middleware was fixed for.
+ */
+async function resolveSoleRole(userId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('workspace_members')
+    .select('role')
+    .eq('user_id', userId)
+    .eq('has_access', true)
+    .is('suspended_at', null)
+    .order('joined_at', { ascending: true })
+
+  // A failed lookup is «unknown», not «no role». Returning a role here on an
+  // error would be a fail-open guess.
+  if (error) return null
+
+  return data?.length === 1 ? ((data[0] as any).role ?? null) : null
 }
 
 // ─── Routes ─────────────────────────────────────────────────
@@ -189,6 +289,10 @@ export async function authRoutes(fastify: FastifyInstance) {
               user: z.object({
                 id: z.string().uuid(),
                 email: z.string().email(),
+                // ⚠️ DECLARED, OR IT IS DROPPED. fast-json-stringify emits
+                // only what the schema names — this is the same omission that
+                // sent `{ "user": {} }`.
+                role: z.string().nullable(),
                 fullName: z.string(),
                 businessName: z.string().nullable(),
                 createdAt: z.string().datetime(),
@@ -281,6 +385,10 @@ export async function authRoutes(fastify: FastifyInstance) {
               user: z.object({
                 id: z.string().uuid(),
                 email: z.string().email(),
+                // ⚠️ DECLARED, OR IT IS DROPPED. fast-json-stringify emits
+                // only what the schema names — this is the same omission that
+                // sent `{ "user": {} }`.
+                role: z.string().nullable(),
                 fullName: z.string(),
                 businessName: z.string().nullable(),
                 createdAt: z.string().datetime(),
@@ -311,10 +419,15 @@ export async function authRoutes(fastify: FastifyInstance) {
           return reply.code(401).send({ error: 'Invalid email or password' })
         }
 
-        const profile = await getProfile(data.user.id)
+        // Resolved at sign-in too, so the header is right on the first paint
+        // instead of correcting itself when /auth/me lands.
+        const [profile, role] = await Promise.all([
+          getProfile(data.user.id),
+          resolveSoleRole(data.user.id),
+        ])
 
         return reply.send({
-          user: sanitizeUser(data.user, profile),
+          user: sanitizeUser(data.user, profile, role),
           token: data.session.access_token,
         })
       } catch (err) {
@@ -406,6 +519,10 @@ export async function authRoutes(fastify: FastifyInstance) {
               user: z.object({
                 id: z.string().uuid(),
                 email: z.string().email(),
+                // ⚠️ DECLARED, OR IT IS DROPPED. fast-json-stringify emits
+                // only what the schema names — this is the same omission that
+                // sent `{ "user": {} }`.
+                role: z.string().nullable(),
                 fullName: z.string(),
                 businessName: z.string().nullable(),
                 createdAt: z.string().datetime(),
@@ -426,10 +543,10 @@ export async function authRoutes(fastify: FastifyInstance) {
           return reply.code(401).send({ error: 'User not found' })
         }
 
-        const profile = await getProfile(userId)
+        const [profile, role] = await Promise.all([getProfile(userId), resolveSoleRole(userId)])
 
         return reply.send({
-          user: sanitizeUser(data.user, profile),
+          user: sanitizeUser(data.user, profile, role),
         })
       } catch (err) {
         fastify.log.error(err)
@@ -513,6 +630,10 @@ export async function authRoutes(fastify: FastifyInstance) {
               user: z.object({
                 id: z.string().uuid(),
                 email: z.string().email(),
+                // ⚠️ DECLARED, OR IT IS DROPPED. fast-json-stringify emits
+                // only what the schema names — this is the same omission that
+                // sent `{ "user": {} }`.
+                role: z.string().nullable(),
                 fullName: z.string(),
                 businessName: z.string().nullable(),
                 avatarUrl: z.string().nullable(),
@@ -587,13 +708,13 @@ export async function authRoutes(fastify: FastifyInstance) {
 
         // ۳. گرفتن user به‌روزشده
         const { data: authUser } = await supabase.auth.admin.getUserById(userId)
-        const profile = await getProfile(userId)
+        const [profile, role] = await Promise.all([getProfile(userId), resolveSoleRole(userId)])
 
         // ۴. پاک کردن کش
         await clearCache(`auth-me:${userId}:*`)
 
         return reply.send({
-          user: sanitizeUser(authUser?.user || (request as any).user, profile),
+          user: sanitizeUser(authUser?.user || (request as any).user, profile, role),
         })
       } catch (err) {
         if (err instanceof z.ZodError) {

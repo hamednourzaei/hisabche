@@ -19,6 +19,7 @@
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
+import { asList } from '../lib/as-list'
 
 // ═══ Types ═══
 
@@ -215,7 +216,7 @@ export function useEntityActivities(entityType: string, entityId: string) {
       const { data } = await apiClient.get<ActivityItemDto[]>(
         `/v1/activities/entity/${entityType}/${entityId}`,
       )
-      return data
+      return asList<ActivityItemDto>(data)
     },
     enabled: authReady && !!entityType && !!entityId,
     staleTime: 30_000,

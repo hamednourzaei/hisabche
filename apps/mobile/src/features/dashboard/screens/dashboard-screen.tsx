@@ -33,6 +33,7 @@ import { DateRangeControl } from '../components/date-range-control'
 import { RecentActivitiesCard } from '../components/recent-activities-card'
 import { formatAmount } from '../../../shared/lib/format'
 import { InsightCard } from '../components/insight-card'
+import { asList } from '@hisabche/api'
 
 // ─── Shared catalog keys ─────────────────────────────────────────────────
 // `tCommon` reads the same message catalogs the web app renders through, so
@@ -107,12 +108,15 @@ export function DashboardScreen() {
   const data = kpis.data
 
   const series = useMemo(
-    () => (sales.data?.data ?? []).map((point: SalesDataPoint) => point.value),
+    () => asList<SalesDataPoint>(sales.data?.data).map((point: SalesDataPoint) => point.value),
     [sales.data],
   )
   // Web's SalesChart computes today's change against the previous point in the
   // series; the greeting header and KPI grid use the same data.
-  const todayChange = useMemo(() => percentChange(sales.data?.data ?? []), [sales.data])
+  const todayChange = useMemo(
+    () => percentChange(asList<SalesDataPoint>(sales.data?.data)),
+    [sales.data],
+  )
   const salesEmpty = useMemo(
     () => !sales.data?.data || sales.data.data.length === 0 || series.every((v: number) => v === 0),
     [sales.data, series],

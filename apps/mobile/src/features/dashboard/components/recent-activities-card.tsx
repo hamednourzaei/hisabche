@@ -11,12 +11,13 @@
 import React, { useCallback, useMemo } from 'react'
 import { Pressable, View } from 'react-native'
 import { useRouter } from 'expo-router'
-import { useActivities, type ActivityGroup } from '@hisabche/api'
+import { useActivities, type ActivityGroup, type ActivityItemDto } from '@hisabche/api'
 import { MobileCard, Skeleton, Text, useTheme } from '@hisabche/mobile-ui'
 
 import { useCommonT } from '../../../shared/i18n/use-common-t'
 import { formatDate } from '../../../shared/lib/format'
 import { hrefFor } from '../../../shared/navigation/nav'
+import { asList } from '@hisabche/api'
 
 /** Web shows eight; a phone row costs more vertical space than a table row. */
 const PREVIEW_ROWS = 5
@@ -32,7 +33,7 @@ interface FlatActivity {
 function flatten(groups: ActivityGroup[] | undefined): FlatActivity[] {
   return (Array.isArray(groups) ? groups : [])
     .flatMap((group) =>
-      (group.activities ?? []).map((activity) => ({
+      asList<ActivityItemDto>(group.activities).map((activity) => ({
         id: activity.id,
         title: activity.title,
         timestamp: activity.timestamp,

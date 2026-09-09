@@ -139,4 +139,36 @@ linux:
   synopsis: Hisabche accounting and inventory
   syncDesktopName: true
 
-publish: null
+# ═══════════════════════════════════════════════════════════════════════════
+# WHERE UPDATES COME FROM
+#
+# The feed is this product's own backend — `backend/src/routes/updates.routes.ts`
+# serves `latest.yml` from the `app_releases` table and redirects the installer
+# download to wherever the binary was uploaded. Nothing third-party is
+# involved, and no placeholder host is baked into a shipped build.
+#
+# ⚠️ AN EARLIER VERSION OF THIS BLOCK USED `${env.UPDATE_FEED_URL}`, and
+# electron-builder expands that EAGERLY: with the variable unset every build
+# failed with «cannot expand pattern», so a developer with no release
+# infrastructure could not build at all. A literal URL avoids that entirely.
+#
+# ⚠️ IT IS THE PRODUCTION API ON PURPOSE. A desktop install checks for updates
+# from wherever it was installed to, which is never a local dev server. The
+# updater refuses any file whose sha512 does not match the manifest, so the
+# channel is only as trustworthy as the hash in the database — not as the host.
+#
+# A RELEASE, once built:
+#   1. upload  dist/Hisabche-<version>-setup.exe  to your file host
+#   2. insert the row into `app_releases` — version, file name, size, sha512
+#      (all four come out of the `latest.yml` beside the installer)
+#   3. flip `is_published` once the download is confirmed
+#
+# ⚠️ BUMP `version` IN package.json FOR EACH RELEASE. electron-updater compares
+# it against the feed; two releases sharing a version are invisible to it.
+# ═══════════════════════════════════════════════════════════════════════════
+publish:
+  provider: generic
+  url: https://api.hisabche.com/api/updates/win
+  # The manifest names the file; electron-updater then asks this same base URL
+  # for it, which the backend redirects to the real host.
+  channel: latest

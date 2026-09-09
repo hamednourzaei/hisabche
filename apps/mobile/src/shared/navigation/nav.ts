@@ -80,6 +80,9 @@ const ICONS: Record<NavId, readonly [IconName, IconName]> = {
   'workflow-templates': ['git-branch-outline', 'git-branch'],
   billing: ['pricetag-outline', 'pricetag'],
   governance: ['shield-checkmark-outline', 'shield-checkmark'],
+  // Icon required by the exhaustive map; the destination is not implemented on
+  // mobile yet, so 'assistant' is deliberately absent from IMPLEMENTED below.
+  assistant: ['sparkles-outline', 'sparkles'],
 }
 
 /**

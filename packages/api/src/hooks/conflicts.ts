@@ -21,6 +21,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
+import { asList } from '../lib/as-list'
 
 // ═══ Types ═══
 
@@ -87,7 +88,7 @@ export function useConflicts(status: 'open' | 'resolved' | 'all' = 'open') {
     queryKey: conflictKeys.list(status),
     queryFn: async () => {
       const { data } = await apiClient.get('/conflicts', { params: { status } })
-      return data as Conflict[]
+      return asList<Conflict>(data)
     },
     enabled: ready,
     // Short, and refetched on focus: a conflict can arrive the moment another

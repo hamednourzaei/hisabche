@@ -20,6 +20,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
+import { asList } from '../lib/as-list'
 
 export type SoDMode = 'off' | 'warn' | 'strict'
 
@@ -82,7 +83,7 @@ export function useSoDOverrides() {
     queryKey: governanceKeys.overrides(),
     queryFn: async () => {
       const { data } = await apiClient.get('/governance/sod/overrides')
-      return data as SoDOverride[]
+      return asList<SoDOverride>(data)
     },
     enabled: ready,
     staleTime: 60_000,

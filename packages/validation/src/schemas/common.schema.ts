@@ -119,7 +119,30 @@ export const CURRENCY_CODES = [
 export const currencyCodeSchema = z.enum(CURRENCY_CODES)
 
 /** Payment methods */
-export const paymentMethodSchema = z.enum(['cash', 'credit', 'bank', 'mobile_money'])
+/**
+ * How money moved.
+ *
+ * ⚠️ `'other'` CARRIES ITS LABEL IN A SIBLING FIELD — the same shape `unit`
+ * uses for `'custom'`, and for the same reason. Making this free text would
+ * mean «چک», «چک بانکی» and «Cheque» are three different payment methods to
+ * every report that groups by it. Keeping the enum closed and putting the
+ * typed name in `paymentMethodLabel` lets a shop write whatever it settles in
+ * while «other» stays one bucket that can be counted.
+ *
+ * Safe to add without a migration: `invoices.payment_method` is a plain `text`
+ * column with no CHECK constraint (see `docs/base-schema-migration.sql`).
+ */
+export const paymentMethodSchema = z.enum(['cash', 'credit', 'bank', 'mobile_money', 'other'])
+
+export type PaymentMethod = z.infer<typeof paymentMethodSchema>
+
+/**
+ * What the shop calls an `'other'` payment method — «چک», «کارت به کارت».
+ *
+ * Ignored for every other method: a label on `cash` would be a second name for
+ * a thing that already has one.
+ */
+export const paymentMethodLabelSchema = z.string().trim().max(40).optional()
 
 /** Transaction types */
 export const transactionTypeSchema = z.enum(['sale', 'purchase', 'payment', 'receipt', 'return'])

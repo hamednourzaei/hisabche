@@ -26,6 +26,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
+import { asList } from '../lib/as-list'
 
 // ═══ Types ═══
 
@@ -140,7 +141,7 @@ export function useMigrations() {
     queryKey: migrationKeys.list(),
     queryFn: async () => {
       const { data } = await apiClient.get('/migrations')
-      return data as MigrationJob[]
+      return asList<MigrationJob>(data)
     },
     enabled: ready,
     staleTime: 30_000,

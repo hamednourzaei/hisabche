@@ -20,7 +20,7 @@
 import * as React from 'react'
 
 import type { ThreadMessageLike } from '@assistant-ui/react'
-import { Sparkles, X } from 'lucide-react'
+import { Maximize2, Sparkles, X } from 'lucide-react'
 
 import { useAiAvailability, useAskAi, type AiQuotaExceeded } from '@hisabche/api'
 
@@ -29,9 +29,16 @@ import { cn } from '../../../lib/utils'
 
 export interface AiAssistantLauncherProps {
   t?: ((key: string, fallback?: string) => string) | undefined
+  /**
+   * Where the full-page assistant lives, already locale-prefixed.
+   *
+   * Optional: this package has no router, so the host builds it. Absent means
+   * no link rather than a link to the wrong place.
+   */
+  fullPageHref?: string | undefined
 }
 
-export function AiAssistantLauncher({ t }: AiAssistantLauncherProps) {
+export function AiAssistantLauncher({ t, fullPageHref }: AiAssistantLauncherProps) {
   const tr = (key: string, fallback: string) => (t ? t(key, fallback) : fallback)
 
   const [open, setOpen] = React.useState(false)
@@ -139,6 +146,29 @@ export function AiAssistantLauncher({ t }: AiAssistantLauncherProps) {
                 <span className="text-[11px] tabular-nums text-[hsl(var(--fg-tertiary))]">
                   {quota.used} / {quota.limit}
                 </span>
+
+                {/* ⚠️ A WAY OUT OF THE POPUP.
+                    The popup is right for a quick question about the screen
+                    behind it, and wrong for a long conversation: it is narrow,
+                    it sits over the page, and its thread is lost the moment the
+                    route changes. This hands the person the page, which can be
+                    bookmarked and kept open.
+
+                    `fullPageHref` is passed in rather than built here — this
+                    package has no router and no idea what the locale prefix
+                    is. When the host does not supply one, the link is simply
+                    absent instead of pointing somewhere wrong. */}
+                {fullPageHref ? (
+                  <a
+                    href={fullPageHref}
+                    aria-label={tr('ai.openFullPage', 'باز کردن در صفحه‌ی کامل')}
+                    title={tr('ai.openFullPage', 'باز کردن در صفحه‌ی کامل')}
+                    className="rounded-lg p-1 text-[hsl(var(--fg-tertiary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]"
+                  >
+                    <Maximize2 className="size-4" aria-hidden="true" />
+                  </a>
+                ) : null}
+
                 <button
                   type="button"
                   onClick={() => setOpen(false)}

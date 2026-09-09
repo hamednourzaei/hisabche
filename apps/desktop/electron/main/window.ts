@@ -6,6 +6,8 @@
 // ============================================
 
 import { BrowserWindow, app, shell } from 'electron'
+
+import { bindUpdaterWindow } from './services/updater'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 
@@ -74,6 +76,10 @@ export function createMainWindow(): BrowserWindow {
   } else {
     void window.loadFile(join(__dirname, '../renderer/index.html'))
   }
+
+  // Progress events need somewhere to go. Bound here rather than in the
+  // updater so the service holds no opinion about how many windows exist.
+  bindUpdaterWindow(window)
 
   return window
 }

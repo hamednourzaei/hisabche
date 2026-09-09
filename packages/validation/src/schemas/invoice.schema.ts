@@ -15,6 +15,7 @@ import {
   percentageSchema,
   nonEmptyStringSchema,
   optionalStringSchema,
+  type PaymentMethod,
 } from './common.schema'
 
 // ============================================
@@ -228,6 +229,78 @@ export function computeInvoiceMoney(input: {
  */
 function round2(value: number): number {
   return Math.round((Number(value) || 0) * 100) / 100
+}
+
+// ============================================
+// How an invoice was settled
+//
+// ⚠️ THESE LIVE HERE, NOT IN `packages/ui`.
+//
+// The payment choice used to be `useState` inside the PREVIEW container, so it
+// existed only on `/invoices/new/preview` — the builder had no way to show it,
+// and walking back from preview to the builder threw it away.
+//
+// Putting it in the draft store fixes both, and the store cannot import from
+// `packages/ui` (the dependency runs the other way). `validation` is the one
+// package both already depend on, which is where the grid's own types live for
+// the same reason.
+// ============================================
+
+export type PaymentMode = 'full' | 'partial' | 'split' | 'unpaid'
+
+export interface PaymentTranche {
+  id: string
+  method: PaymentMethod
+  /** Only read when `method` is `'other'`. */
+  methodLabel?: string
+  amount: string
+}
+
+export interface InvoicePaymentValue {
+  mode: PaymentMode
+  /** Single-method modes. */
+  method: PaymentMethod
+  /** What the shop calls an `'other'` method. Only read for `'other'`. */
+  methodLabel?: string
+  /** `partial` only — what was handed over now. */
+  paidNow: string
+  /** `split` only. */
+  tranches: PaymentTranche[]
+}
+
+/**
+ * A fresh payment value.
+ *
+ * ⚠️ A FUNCTION, NOT A CONSTANT. A shared object literal handed to `useState`
+ * would be mutated by the first draft, and every later invoice would start from
+ * whatever the last one left behind.
+ *
+ * ⚠️ `mode: 'full'` is the DEFAULT THE PERSON THEN CONFIRMS. The draft slice
+ * used to default `isPaid: true`, which asserted every sale was settled without
+ * anyone saying so — the section exists so the choice is made rather than
+ * assumed.
+ */
+export const emptyPaymentValue = (): InvoicePaymentValue => ({
+  mode: 'full',
+  method: 'cash',
+  paidNow: '',
+  tranches: [],
+})
+
+/** Total of the split rows, in major units. */
+export function tranchesTotal(tranches: readonly PaymentTranche[]): number {
+  return tranches.reduce((sum, tranche) => sum + (Number(tranche.amount) || 0), 0)
+}
+
+/**
+ * What will actually be paid, given the mode. The single place that answers it,
+ * so the section and the submitting container cannot disagree.
+ */
+export function paidAmountOf(value: InvoicePaymentValue, total: number): number {
+  if (value.mode === 'unpaid') return 0
+  if (value.mode === 'full') return total
+  if (value.mode === 'split') return tranchesTotal(value.tranches)
+  return Number(value.paidNow) || 0
 }
 
 // ============================================

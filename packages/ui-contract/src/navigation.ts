@@ -64,6 +64,7 @@ export type NavId =
   | 'history'
   | 'events'
   | 'sync'
+  | 'assistant'
 
 export type NavGroupId = 'primary' | 'people' | 'work' | 'system'
 
@@ -413,6 +414,21 @@ export const NAV_CONTRACT: readonly NavItemContract[] = [
     labelKey: 'nav.billing',
     descriptionKey: 'nav.billing_description',
     path: '/billing',
+    group: 'system',
+  },
+  {
+    // ⚠️ A ROUTE NOW, NOT ONLY A FLOATING BUTTON.
+    //
+    // The assistant used to be reachable only from a button on the dashboard.
+    // That button hides itself when no provider is configured — correct for a
+    // button, but it meant the feature had no address: it could not be
+    // bookmarked, linked to, opened beside another window, or found by anyone
+    // who never noticed it.
+    id: 'assistant',
+    emoji: '✨',
+    labelKey: 'nav.assistant',
+    descriptionKey: 'nav.assistant_description',
+    path: '/assistant',
     group: 'system',
   },
   {

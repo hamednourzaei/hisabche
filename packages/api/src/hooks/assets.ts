@@ -14,6 +14,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
+import { asList } from '../lib/as-list'
 
 // ═══ Types ═══
 
@@ -98,7 +99,7 @@ export function useAssets() {
     queryKey: assetKeys.list(),
     queryFn: async () => {
       const { data } = await apiClient.get('/finance/assets')
-      return data as FixedAsset[]
+      return asList<FixedAsset>(data)
     },
     enabled: ready,
     // A register of assets changes when somebody buys or sells one, which is
@@ -114,7 +115,7 @@ export function useAssetSchedule(assetId: string) {
     queryKey: assetKeys.schedule(assetId),
     queryFn: async () => {
       const { data } = await apiClient.get(`/finance/assets/${assetId}/schedule`)
-      return data as ScheduleRow[]
+      return asList<ScheduleRow>(data)
     },
     enabled: ready && Boolean(assetId),
     staleTime: 5 * 60_000,

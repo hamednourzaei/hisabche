@@ -22,6 +22,7 @@ import { useQuery } from '@tanstack/react-query'
 import { apiClient } from '../lib/client'
 import { useAuthReady } from './useAuthReady'
 import { useRealtime } from './useRealtime'
+import { asList } from '../lib/as-list'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export interface DashboardKPIs {
@@ -192,7 +193,7 @@ export function useAIInsights() {
     queryKey: dashboardKeys.insights(),
     queryFn: async (): Promise<AIInsight[]> => {
       const { data } = await apiClient.get('/ai/insights')
-      return data
+      return asList<AIInsight>(data)
     },
     enabled: authReady,
     staleTime: 120_000,

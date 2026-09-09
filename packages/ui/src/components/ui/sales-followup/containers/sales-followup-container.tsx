@@ -20,6 +20,7 @@ import {
   type CreateFollowUpInput,
   type UpdateFollowUpInput,
 } from '@hisabche/api'
+import { asList } from '@hisabche/api'
 
 export function SalesFollowupContainer() {
   const tOriginal = useTranslations()
@@ -54,7 +55,7 @@ export function SalesFollowupContainer() {
 
   const followups: FollowUp[] = useMemo(
     () =>
-      (followupsResponse?.data ?? []).map((f: ApiFollowUp) => ({
+      asList<ApiFollowUp>(followupsResponse?.data).map((f: ApiFollowUp) => ({
         id: f.id,
         customer: {
           id: f.customer_id,
@@ -82,7 +83,9 @@ export function SalesFollowupContainer() {
   // a `name`. Map explicitly, no casts.
   const customers = useMemo(
     () =>
-      (customersData?.customers ?? []).map((c) => ({
+      asList<{ id?: string; fullName: string; email?: string; phone?: string }>(
+        customersData?.customers,
+      ).map((c) => ({
         id: c.id ?? '',
         name: c.fullName,
         email: c.email || undefined,

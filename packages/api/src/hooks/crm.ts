@@ -11,6 +11,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
 import { useRealtime } from './useRealtime'
+import { asList } from '../lib/as-list'
 
 // ═══ Types ═══
 export type TaskStatus = 'pending' | 'in_progress' | 'completed'
@@ -94,7 +95,7 @@ export function useInteractions(customerId?: string) {
       const { data } = await apiClient.get('/interactions', {
         params: customerId ? { customerId } : {},
       })
-      return data
+      return asList<Interaction>(data)
     },
     enabled: authReady,
     staleTime: 60_000,
@@ -172,7 +173,7 @@ export function useSubjectSuggestions() {
     queryKey: [...crmKeys.all, 'subjects'] as const,
     queryFn: async () => {
       const { data } = await apiClient.get('/interactions/subjects')
-      return (data ?? []) as string[]
+      return asList<string>(data)
     },
     enabled: authReady,
     staleTime: 5 * 60 * 1000,
@@ -194,7 +195,7 @@ export function useOpportunities(customerId?: string) {
       const { data } = await apiClient.get('/opportunities', {
         params: customerId ? { customerId } : {},
       })
-      return data
+      return asList<Opportunity>(data)
     },
     enabled: authReady,
     staleTime: 60_000,

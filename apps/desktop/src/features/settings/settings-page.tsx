@@ -16,6 +16,8 @@ import { CURRENCY_CODES } from '@/shared/lib/currency'
 import { useUiStore } from '@/shared/stores/ui.store'
 import type { AppInfo } from '../../../electron/shared/ipc-contract'
 
+import { UpdateSection } from './update-section'
+
 export default function SettingsPage() {
   const { t, i18n } = useTranslation('desktop')
   const user = useCurrentUser()
@@ -117,16 +119,12 @@ export default function SettingsPage() {
               <span>{info?.platform ?? '—'}</span>
             </div>
           </div>
-
-          <Button
-            size="sm"
-            variant="secondary"
-            className="mt-4"
-            onClick={() => void bridge()?.app.checkUpdates()}
-          >
-            {t('common.refresh')}
-          </Button>
         </Card>
+
+        {/* ⚠️ The «تازه‌سازی» button that used to sit inside the card above is
+            gone. It called a main-process function that returned `void`, so it
+            could report nothing — see `update-section.tsx`. */}
+        <UpdateSection />
       </div>
     </div>
   )

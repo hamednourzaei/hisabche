@@ -2,7 +2,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useTranslations } from 'next-intl'
+import { useLocale, useTranslations } from 'next-intl'
 import { useCallback, useState } from 'react'
 
 import { DashboardView } from '../dashboard-view'
@@ -37,6 +37,7 @@ export function DashboardContainer() {
     [tOriginal],
   )
   const router = useRouter()
+  const locale = useLocale()
 
   // ─── State ──────────────────────────────────────────────────────────────
 
@@ -126,7 +127,9 @@ export function DashboardContainer() {
       <div className="flex flex-col items-end gap-2">
         <div className="flex flex-wrap items-center justify-end gap-2">
           {/* T13 — renders nothing until a provider is configured. */}
-          <AiAssistantLauncher t={t} />
+          {/* The locale prefix comes from the router, not from this package —
+              `useLocale` is next-intl's, which desktop shims. */}
+          <AiAssistantLauncher t={t} fullPageHref={`/${locale}/assistant`} />
           <DisplayBasisPicker
             t={t}
             base={display.base}
