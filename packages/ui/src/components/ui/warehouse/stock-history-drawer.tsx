@@ -31,6 +31,9 @@ import { AlertTriangle, X } from 'lucide-react'
 
 import { routeForEntity } from '../../../lib/entity-route'
 import { cn } from '../../../lib/utils'
+import { formatDate as formatIntlDate } from '@hisabche/formatting'
+
+import { useDateFormat } from '../../../hooks/use-date-format'
 
 export interface StockHistoryMovement {
   id: string
@@ -67,10 +70,11 @@ const TYPE_LABEL: Record<string, string> = {
   opening: 'مانده‌ی اول دوره',
 }
 
-function formatDate(value: string | null): string {
+// ⚠️ Was pinned to `'fa-AF'` — the Afghan solar calendar for every reader.
+function formatDate(value: string | null, lang: string): string {
   if (!value) return '—'
   try {
-    return new Date(value).toLocaleDateString('fa-AF')
+    return formatIntlDate(value, lang)
   } catch {
     return value
   }
@@ -87,6 +91,12 @@ export function StockHistoryDrawer({
   onClose,
   onNavigate,
 }: StockHistoryDrawerProps) {
+  // ⚠️ ABOVE THE EARLY RETURN. `if (!product) return null` is two lines down,
+  // and a hook after it runs on some renders and not others — React throws
+  // «rendered fewer hooks than expected» and the drawer takes the page with
+  // it. `conditional-hook-call.test.ts` in this package exists for this.
+  const { lang: dateLang } = useDateFormat()
+
   if (!product) return null
 
   // Compared as numbers, and only when the history is complete. A truncated
@@ -191,7 +201,7 @@ export function StockHistoryDrawer({
                       className="border-b border-[hsl(var(--border-default)/0.5)] last:border-0"
                     >
                       <td className="px-5 py-2 text-[hsl(var(--fg-secondary))]">
-                        {formatDate(movement.createdAt)}
+                        {formatDate(movement.createdAt, dateLang)}
                       </td>
                       <td className="px-2 py-2 text-[hsl(var(--fg-primary))]">
                         {TYPE_LABEL[movement.type] ?? movement.type}

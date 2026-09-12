@@ -1,7 +1,10 @@
 // packages/ui/src/components/ui/dashboard/date-range-picker.tsx
 'use client'
 
+import { resolveIntlLocale } from '@hisabche/formatting'
+
 import { cn } from '../../../lib/utils'
+import { useDateFormat } from '../../../hooks/use-date-format'
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { CalendarDays, ChevronDown, ChevronLeft, X } from 'lucide-react'
@@ -81,12 +84,24 @@ const PRESET_GROUPS = [
 // dashboard resolves "7 days" to the same seven days this picker does.
 const getPresetRange = (preset: PresetKey): DateRange => presetRange(preset)
 
-function formatDate(date: Date, format: DateFormat): string {
+// ⚠️ «gregorian» WAS RENDERING THE AFGHAN SOLAR CALENDAR.
+//
+// The picker lets the reader choose between «gregorian» and «jalali», and the
+// gregorian branch formatted with `'fa-AF'` — whose DEFAULT CALENDAR is
+// `persian`. So picking «gregorian» changed the month names and nothing else:
+// still 1405, still سنبله. The locale tag does not carry the calendar; the
+// calendar has to be asked for.
+//
+// The locale still comes from the reader's language, so «gregorian» in English
+// is «September 2026» and in Persian is «سپتامبر ۲۰۲۶» — the same calendar,
+// their own script. That is the difference between a calendar and a language.
+function formatDate(date: Date, format: DateFormat, lang: string): string {
   if (format === 'jalali') {
     const j = toJalaali(date)
     return `${j.jy}/${String(j.jm).padStart(2, '0')}/${String(j.jd).padStart(2, '0')}`
   }
-  return new Intl.DateTimeFormat('fa-AF', {
+  return new Intl.DateTimeFormat(resolveIntlLocale(lang), {
+    calendar: 'gregory',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -141,6 +156,7 @@ export function DateRangePicker({ value, onChange, t, disabled = false }: DateRa
   const [isOpen, setIsOpen] = useState(false)
   const [activePreset, setActivePreset] = useState<PresetKey>('7days')
   const [dateFormat, setDateFormat] = useState<DateFormat>('jalali')
+  const { lang: dateLang } = useDateFormat()
   const [customFrom, setCustomFrom] = useState<Date | undefined>(undefined)
   const [customTo, setCustomTo] = useState<Date | undefined>(undefined)
   const [focusedIndex, setFocusedIndex] = useState(-1)
@@ -234,7 +250,7 @@ export function DateRangePicker({ value, onChange, t, disabled = false }: DateRa
 
   const currentLabel =
     activePreset === 'custom'
-      ? `${formatDate(value.from, dateFormat)} — ${formatDate(value.to, dateFormat)}`
+      ? `${formatDate(value.from, dateFormat, dateLang)} — ${formatDate(value.to, dateFormat, dateLang)}`
       : t(`dateRange.${activePreset}`)
 
   return (

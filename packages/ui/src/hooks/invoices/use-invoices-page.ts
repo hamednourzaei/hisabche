@@ -3,7 +3,7 @@
 
 import { useState, useCallback, useMemo } from 'react'
 import { useSearchParams } from 'next/navigation'
-import { useTranslations } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import { useInvoices, useDeleteInvoice } from '@hisabche/api'
 import { mapInvoices } from '../../lib/invoices/invoices-mappers'
 import { STATUS_MAP } from '../../lib/invoices/invoices-format'
@@ -62,11 +62,17 @@ export function useInvoicesPage() {
   const deleteInvoice = useDeleteInvoice()
 
   // ─── Transformations ────────────────────────────────────────────────────
-  const invoices = useMemo(() => mapInvoices(data?.invoices as any[] | undefined), [data])
+  // The reader's calendar. `mapInvoices` formats dates, so it needs it.
+  const lang = useLocale()
+
+  const invoices = useMemo(
+    () => mapInvoices(data?.invoices as any[] | undefined, lang),
+    [data, lang],
+  )
 
   /** همه‌ی فاکتورهای منطبق با فیلتر — فقط برای کارت‌های آمار. */
   const statsInvoices = useMemo(
-    () => mapInvoices(statsData?.invoices as any[] | undefined),
+    () => mapInvoices(statsData?.invoices as any[] | undefined, lang),
     [statsData],
   )
 

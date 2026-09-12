@@ -20,6 +20,7 @@ import InvoicePDFDownload from '../InvoicePDFDownload'
 import { InvoiceRelatedPanel } from '../invoice-related-panel'
 import { RecordHistoryPanel } from '../../activity/record-history-panel'
 import { useQueryClient } from '@tanstack/react-query'
+import { useDateFormat } from '../../../../hooks/use-date-format'
 
 /* ═══════════════════════════════════════════════════════════
    CONSTANTS
@@ -60,6 +61,9 @@ interface WorkflowStep {
 
 export function InvoiceDetailContainer() {
   const t = useTranslations()
+  // ⚠️ THE CALENDAR FOLLOWS THE LANGUAGE. These were hardcoded to `'fa-AF'`,
+  // so every reader got the Afghan solar calendar whatever they chose.
+  const { date: fmtIntlDate, lang: dateLang } = useDateFormat()
   const router = useRouter()
   const { id } = useParams<{ id: string }>()
   const searchParams = useSearchParams()
@@ -202,7 +206,7 @@ export function InvoiceDetailContainer() {
 
   const buildMessage = useCallback(
     (inv: Record<string, unknown>) =>
-      `🧾 ${t('invoices.title')}: #${getField(inv.invoiceNumber, inv.invoice_number)}\n📅 ${new Date(inv.date as string).toLocaleDateString('fa-AF')}\n${getField(inv.customerName, inv.customer_name) ? `👤 ${getField(inv.customerName, inv.customer_name)}\n` : ''}💰 *${((inv.total as number) ?? 0).toLocaleString()} ${(inv.currency as string) || 'AFN'}*\n📌 ${t(`invoices.${(inv.status as string) || 'pending'}`)}`,
+      `🧾 ${t('invoices.title')}: #${getField(inv.invoiceNumber, inv.invoice_number)}\n📅 ${fmtIntlDate(inv.date as string)}\n${getField(inv.customerName, inv.customer_name) ? `👤 ${getField(inv.customerName, inv.customer_name)}\n` : ''}💰 *${((inv.total as number) ?? 0).toLocaleString()} ${(inv.currency as string) || 'AFN'}*\n📌 ${t(`invoices.${(inv.status as string) || 'pending'}`)}`,
     [t],
   )
 
@@ -296,7 +300,7 @@ export function InvoiceDetailContainer() {
     if (!invoice) return
     const inv = invoice as unknown as Record<string, unknown>
     window.open(
-      `mailto:?subject=${encodeURIComponent(`${t('invoices.title')} #${getField(inv.invoiceNumber, inv.invoice_number)}`)}&body=${encodeURIComponent(`${t('invoices.title')}: #${getField(inv.invoiceNumber, inv.invoice_number)}\n${t('invoices.date')}: ${new Date(inv.date as string).toLocaleDateString('fa-AF')}\n${t('invoices.total')}: ${((inv.total as number) ?? 0).toLocaleString()} ${(inv.currency as string) || 'AFN'}`)}`,
+      `mailto:?subject=${encodeURIComponent(`${t('invoices.title')} #${getField(inv.invoiceNumber, inv.invoice_number)}`)}&body=${encodeURIComponent(`${t('invoices.title')}: #${getField(inv.invoiceNumber, inv.invoice_number)}\n${t('invoices.date')}: ${fmtIntlDate(inv.date as string)}\n${t('invoices.total')}: ${((inv.total as number) ?? 0).toLocaleString()} ${(inv.currency as string) || 'AFN'}`)}`,
       '_blank',
     )
   }, [invoice, t])
@@ -338,7 +342,7 @@ export function InvoiceDetailContainer() {
           <InvoiceRelatedPanel
             t={safeT}
             fmtMoney={(value) => value.toLocaleString('fa-AF')}
-            fmtDate={(value) => new Date(value).toLocaleDateString('fa-AF')}
+            fmtDate={(value) => fmtIntlDate(value)}
             currency={display.currency}
             isLoading={relatedLoading}
             payments={related?.payments ?? []}

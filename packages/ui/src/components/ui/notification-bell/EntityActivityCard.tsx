@@ -22,6 +22,7 @@ import { cn } from '../../../lib/utils'
 import { useCurrency } from '../../../hooks/use-currency'
 import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { useEntitySummary, useEntityActivities } from '@hisabche/api'
+import { useDateFormat } from '../../../hooks/use-date-format'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -197,6 +198,10 @@ export const EntityActivityCard = memo(function EntityActivityCard({
   onActivityClick,
 }: EntityActivityCardProps) {
   const t = useTranslations()
+  // ⚠️ THE CALENDAR FOLLOWS THE LANGUAGE. These were hardcoded to `'fa-AF'`,
+  // so every reader got the Afghan solar calendar whatever they chose.
+  const { date: fmtIntlDate, lang: dateLang } = useDateFormat()
+  const fmtIntlTime = (v: string | Date, o: Intl.DateTimeFormatOptions) => fmtIntlDate(v, o)
   const locale = useIntlLocale()
   const { currency: userCurrency } = useCurrency()
   const [isOpen, setIsOpen] = useState(false)
@@ -329,7 +334,7 @@ export const EntityActivityCard = memo(function EntityActivityCard({
                           </p>
                         )}
                         <p className="text-[10px] text-[hsl(var(--fg-tertiary))] mt-0.5">
-                          {new Date(activity.timestamp).toLocaleTimeString('fa-AF', {
+                          {fmtIntlTime(activity.timestamp, {
                             hour: '2-digit',
                             minute: '2-digit',
                           })}

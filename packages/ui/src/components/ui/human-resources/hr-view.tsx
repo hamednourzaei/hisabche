@@ -23,6 +23,7 @@ import { useSortFilter } from '../../../hooks/use-sort-filter'
 import { JalaliDatePicker } from '../../ui/jalali-datepicker'
 import { PhoneInput } from '../../ui/phone-input'
 import { MoneyInput } from '../../ui/money-input'
+import { useDateFormat } from '../../../hooks/use-date-format'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    HumanResourcesView v11 — تیم و حقوق (merged workspace + employees)
@@ -218,6 +219,9 @@ export const HumanResourcesView = memo(function HumanResourcesView({
   onDelete,
   onView,
 }: HumanResourcesViewProps) {
+  // ⚠️ The calendar follows the language; these were hardcoded to `'fa-AF'`.
+  const { date: fmtIntlDate, lang: dateLang } = useDateFormat()
+
   const [showForm, setShowForm] = useState(false)
   const [phoneValue, setPhoneValue] = useState('')
   const [grantAccess, setGrantAccess] = useState(false)
@@ -665,7 +669,7 @@ export const HumanResourcesView = memo(function HumanResourcesView({
                       {emp.first_name} {emp.last_name}
                     </td>
                     <td className="px-4 py-3 text-xs text-[hsl(var(--fg-secondary))] whitespace-nowrap">
-                      {emp.hire_date ? new Date(emp.hire_date).toLocaleDateString('fa-AF') : '-'}
+                      {emp.hire_date ? fmtIntlDate(emp.hire_date) : '-'}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">{getStatusBadge(emp.status, t)}</td>
                     <td className="px-4 py-3 text-xs font-medium whitespace-nowrap tabular-nums">

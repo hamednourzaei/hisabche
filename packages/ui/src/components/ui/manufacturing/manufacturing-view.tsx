@@ -5,6 +5,9 @@ import { memo, useMemo } from 'react'
 import { cn } from '../../../lib/utils'
 import { Factory, Layers, ClipboardList, Check, Plus } from 'lucide-react'
 import type { BOM, WorkOrder } from '@hisabche/api'
+import { formatDate as formatIntlDate } from '@hisabche/formatting'
+
+import { useDateFormat } from '../../../hooks/use-date-format'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    ManufacturingView — Memoized · Performance Optimized
@@ -34,10 +37,13 @@ const STATUS_BADGE_MAP: Record<string, string> = {
   cancelled: 'bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))]',
 }
 
-function formatDate(date?: string): string {
+// ⚠️ WAS PINNED TO `'fa-AF'`. The Afghan solar calendar was shown to every
+// reader regardless of the language they chose — Persian readers saw «سنبله»
+// where their own calendar says «شهریور», and English readers saw it too.
+function formatDate(lang: string, date?: string): string {
   if (!date) return '-'
   try {
-    return new Date(date).toLocaleDateString('fa-AF', {
+    return formatIntlDate(date, lang, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -60,6 +66,9 @@ export const ManufacturingView = memo(function ManufacturingView({
   onOpenCreateBom,
   onOpenCreateWorkOrder,
 }: ManufacturingViewProps) {
+  // ⚠️ The calendar follows the language; these were hardcoded to `'fa-AF'`.
+  const { date: fmtIntlDate, lang: dateLang } = useDateFormat()
+
   const statusLabel = useMemo(
     () => (status: string) => {
       const map: Record<string, string> = {
@@ -274,7 +283,7 @@ export const ManufacturingView = memo(function ManufacturingView({
                       </span>
                     </td>
                     <td className="px-4 py-3 text-xs text-[hsl(var(--fg-secondary))] hidden sm:table-cell whitespace-nowrap">
-                      {formatDate(workOrder.startDate)}
+                      {formatDate(dateLang, workOrder.startDate)}
                     </td>
                     <td className="px-4 py-3 text-center">
                       {workOrder.status !== 'completed' && workOrder.status !== 'cancelled' && (

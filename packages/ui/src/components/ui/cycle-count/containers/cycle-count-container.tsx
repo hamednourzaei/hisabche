@@ -19,9 +19,13 @@ import {
 } from '@hisabche/api'
 
 import { CycleCountView } from '../cycle-count-view'
+import { useDateFormat } from '../../../../hooks/use-date-format'
 
 export function CycleCountContainer() {
   const t = useTranslations()
+  // ⚠️ THE CALENDAR FOLLOWS THE LANGUAGE. These were hardcoded to `'fa-AF'`,
+  // so every reader got the Afghan solar calendar whatever they chose.
+  const { date: fmtIntlDate, lang: dateLang } = useDateFormat()
   const [activeId, setActiveId] = useState<string | undefined>(undefined)
 
   const counts = useCycleCounts()
@@ -69,7 +73,7 @@ export function CycleCountContainer() {
     <CycleCountView
       t={safeT}
       fmtMoney={(value) => value.toLocaleString('fa-AF')}
-      fmtDate={(value) => new Date(value).toLocaleDateString('fa-AF')}
+      fmtDate={(value) => fmtIntlDate(value)}
       productName={productName}
       counts={counts.data ?? []}
       activeCount={active.data ?? null}

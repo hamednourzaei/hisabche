@@ -1,6 +1,8 @@
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
+import { resolveIntlLocale } from '@hisabche/formatting'
+
 /**
  * Combines class names and resolves Tailwind CSS conflicts.
  * Uses clsx for conditional classes and tailwind-merge for deduplication.
@@ -38,10 +40,34 @@ export function formatCurrency(
 }
 
 /**
- * Formats a date string to Jalali (Shamsi) or Gregorian.
+ * A date, in the reader's calendar.
+ *
+ * ---------------------------------------------------------------------------
+ * ⚠️ `lang` IS REQUIRED, AND IT DID NOT EXIST.
+ *
+ * This function's own doc comment used to promise «Jalali (Shamsi) or
+ * Gregorian» while formatting with a hardcoded `'fa-AF'` and taking no
+ * language at all. The abstraction was here; the one input that decides the
+ * answer was not. So thirty-five call sites across fourteen screens rendered
+ * the Afghan solar calendar to everyone:
+ *
+ *   * an English reader saw «۱۸ سنبلهٔ ۱۴۰۵» — Afghan months, Persian digits
+ *   * an Iranian Persian reader saw «سنبله» where their calendar says
+ *     «شهریور» — the right calendar with the wrong month names, which reads
+ *     as a typo rather than as a bug, so nobody reported it
+ *
+ * Making it required rather than defaulted is the point: a default would have
+ * left every existing caller silently wrong, and the compiler would have found
+ * none of them. In a component, get it from `useDateFormat()`.
+ *
+ * ⚠️ AND IT MUST NOT BE READ FROM MODULE STATE. `apps/web` renders on the
+ * server, where one process handles a Persian request and an English one at
+ * the same time; a shared «current language» would let one request decide what
+ * the other renders.
  */
 export function formatDate(
   date: string | Date | null | undefined,
+  lang: string,
   options?: Intl.DateTimeFormatOptions,
 ): string {
   // `Intl.DateTimeFormat().format()` THROWS on an invalid date — it does not
@@ -52,12 +78,17 @@ export function formatDate(
   //
   // A missing date is an ordinary fact about a record that has not reached
   // that stage yet. It renders as a dash, and nothing else stops working.
+  //
+  // ⚠️ A DASH, NOT AN EMPTY STRING — unlike `@hisabche/formatting`, whose
+  // `formatDate` returns ''. This one is read inside table cells where a blank
+  // cell reads as a rendering failure. The difference is deliberate; the
+  // calendar decision is shared, the placeholder is not.
   if (date === null || date === undefined || date === '') return '—'
 
   const parsed = typeof date === 'string' ? new Date(date) : date
   if (Number.isNaN(parsed.getTime())) return '—'
 
-  return new Intl.DateTimeFormat('fa-AF', {
+  return new Intl.DateTimeFormat(resolveIntlLocale(lang), {
     year: 'numeric',
     month: 'long',
     day: 'numeric',

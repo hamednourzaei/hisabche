@@ -8,9 +8,13 @@ import { useCallback } from 'react'
 import { useTranslations } from 'next-intl'
 
 import { InventoryOpsView } from '../inventory-ops-view'
+import { useDateFormat } from '../../../../hooks/use-date-format'
 
 export function InventoryOpsContainer() {
   const t = useTranslations()
+  // ⚠️ THE CALENDAR FOLLOWS THE LANGUAGE. These were hardcoded to `'fa-AF'`,
+  // so every reader got the Afghan solar calendar whatever they chose.
+  const { date: fmtIntlDate, lang: dateLang } = useDateFormat()
 
   const safeT = useCallback(
     (key: string, fallback?: string): string => {
@@ -28,7 +32,7 @@ export function InventoryOpsContainer() {
     <InventoryOpsView
       t={safeT}
       fmtMoney={(value) => value.toLocaleString('fa-AF')}
-      fmtDate={(value) => new Date(value).toLocaleDateString('fa-AF')}
+      fmtDate={(value) => fmtIntlDate(value)}
     />
   )
 }

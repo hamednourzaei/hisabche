@@ -20,6 +20,7 @@ import type { AIInsight } from '@hisabche/api'
 import type { ActivityGroupDto, ActivityItemDto } from '@hisabche/api'
 import dynamic from 'next/dynamic'
 import { asList } from '@hisabche/api'
+import { useDateFormat } from '../../../hooks/use-date-format'
 
 // ─── Types ────────────────────────────────────────────────────────────────
 
@@ -302,6 +303,9 @@ const RecentActivities = memo(function RecentActivities({
   onNavigate: (route: string) => void
 }) {
   const tOriginal = useTranslations()
+
+  // ⚠️ The calendar follows the language; this was hardcoded to `'fa-AF'`.
+  const { date: fmtIntlDate } = useDateFormat()
   const t = (key: string, fallback?: string) => {
     try {
       const v = tOriginal(key as Parameters<typeof tOriginal>[0])
@@ -393,7 +397,7 @@ const RecentActivities = memo(function RecentActivities({
                       {t(roleLabelKey(a.actorRole), ROLE_LABEL_FALLBACK[a.actorRole ?? 'unknown'])}
                     </span>
                     <span className="text-[11px] text-[hsl(var(--fg-tertiary))] shrink-0">
-                      {new Date(a.timestamp).toLocaleDateString('fa-AF')}
+                      {fmtIntlDate(a.timestamp)}
                     </span>
                   </button>
                 </li>
@@ -410,6 +414,9 @@ RecentActivities.displayName = 'RecentActivities'
 // ─── Main Component ───────────────────────────────────────────────────────
 
 export const DashboardView = memo(function DashboardView(props: DashboardViewProps) {
+  // ⚠️ The calendar follows the language; these were hardcoded to `'fa-AF'`.
+  const { date: fmtIntlDate, lang: dateLang } = useDateFormat()
+
   const {
     t,
     fmt,

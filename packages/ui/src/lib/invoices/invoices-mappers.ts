@@ -3,7 +3,15 @@ import type { RawInvoice, Invoice } from './invoices-types'
 import { settlementDate } from '@hisabche/validation'
 import { fmtDate } from './invoices-format'
 
-export const mapInvoices = (rawInvoices: RawInvoice[] | undefined): Invoice[] => {
+// ⚠️ `lang` REACHES DOWN HERE BECAUSE THIS MAPPER FORMATS DATES.
+//
+// Turning a row into a view model and choosing a CALENDAR are two different
+// jobs, and this function has always quietly done both — which is why its
+// dates were stuck on the Afghan solar calendar for every reader. The clean
+// separation would be to carry the ISO value and format it in the view; that
+// is a larger change than this one, and `isoDate` is already carried beside
+// each formatted date for callers that want it.
+export const mapInvoices = (rawInvoices: RawInvoice[] | undefined, lang: string): Invoice[] => {
   if (!rawInvoices) return []
 
   return rawInvoices.map((inv) => {
@@ -11,8 +19,12 @@ export const mapInvoices = (rawInvoices: RawInvoice[] | undefined): Invoice[] =>
     return {
       id: inv.id ?? inv._id ?? inv.invoiceId ?? inv.invoice_id ?? '',
       invoiceNumber: inv.invoiceNumber ?? inv.invoice_number ?? '???',
-      date: inv.date ? fmtDate(inv.date) : '',
-      createdAt: inv.created_at ? fmtDate(inv.created_at) : inv.date ? fmtDate(inv.date) : '',
+      date: inv.date ? fmtDate(inv.date, lang) : '',
+      createdAt: inv.created_at
+        ? fmtDate(inv.created_at, lang)
+        : inv.date
+          ? fmtDate(inv.date, lang)
+          : '',
       isoDate: inv.date ?? inv.created_at ?? '',
       status: inv.status ?? '',
       total: inv.total ?? 0,
@@ -33,7 +45,7 @@ export const mapInvoices = (rawInvoices: RawInvoice[] | undefined): Invoice[] =>
       // the mobile card reads it from the same helper.
       paymentDate: (() => {
         const settled = settlementDate({ status: inv.status, updatedAt: inv.updated_at })
-        return settled ? fmtDate(settled) : ''
+        return settled ? fmtDate(settled, lang) : ''
       })(),
       itemsSent: inv.itemsSent ?? 0,
       ...(publicToken !== undefined && { publicToken }),

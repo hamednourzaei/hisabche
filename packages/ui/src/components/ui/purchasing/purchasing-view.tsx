@@ -6,6 +6,9 @@ import Link from 'next/link'
 import { cn } from '../../../lib/utils'
 import { ShoppingCart, PackageCheck, Plus } from 'lucide-react'
 import type { PurchaseOrder } from '@hisabche/api'
+import { formatDate as formatIntlDate } from '@hisabche/formatting'
+
+import { useDateFormat } from '../../../hooks/use-date-format'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    PurchasingView — Memoized · Performance Optimized
@@ -27,10 +30,13 @@ const STATUS_BADGE_MAP: Record<string, string> = {
   cancelled: 'bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))]',
 }
 
-function formatDate(date?: string): string {
+// ⚠️ WAS PINNED TO `'fa-AF'`. The Afghan solar calendar was shown to every
+// reader regardless of the language they chose — Persian readers saw «سنبله»
+// where their own calendar says «شهریور», and English readers saw it too.
+function formatDate(lang: string, date?: string): string {
   if (!date) return '-'
   try {
-    return new Date(date).toLocaleDateString('fa-AF', {
+    return formatIntlDate(date, lang, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -48,6 +54,9 @@ export const PurchasingView = memo(function PurchasingView({
   receivingId,
   onReceiveGoods,
 }: PurchasingViewProps) {
+  // ⚠️ The calendar follows the language; these were hardcoded to `'fa-AF'`.
+  const { date: fmtIntlDate, lang: dateLang } = useDateFormat()
+
   const statusLabel = useMemo(
     () => (status: string) => {
       const map: Record<string, string> = {
@@ -141,13 +150,13 @@ export const PurchasingView = memo(function PurchasingView({
                       {order.supplier?.name || order.supplierId.slice(0, 8)}
                     </td>
                     <td className="px-4 py-3 text-xs text-[hsl(var(--fg-secondary))] whitespace-nowrap">
-                      {formatDate(order.orderDate)}
+                      {formatDate(dateLang, order.orderDate)}
                     </td>
                     <td className="px-4 py-3 text-xs text-[hsl(var(--fg-secondary))]">
                       {order.items?.length ?? 0}
                     </td>
                     <td className="px-4 py-3 text-xs text-[hsl(var(--fg-secondary))] hidden sm:table-cell whitespace-nowrap">
-                      {formatDate(order.expectedDeliveryDate)}
+                      {formatDate(dateLang, order.expectedDeliveryDate)}
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span
