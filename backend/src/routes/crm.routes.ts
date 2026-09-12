@@ -264,6 +264,45 @@ export async function crmRoutes(fastify: FastifyInstance) {
     },
   )
 
+  // ─── GET /api/crm/funnel ─────────────────────────────────
+  //
+  // The dashboard's sales funnel. Counted by the database per stage — NOT
+  // derived from `GET /api/opportunities`, which is paginated and counts with
+  // `count: 'estimated'`. A funnel built on that endpoint would show the stage
+  // breakdown of one page and present it as the pipeline.
+  fastify.get(
+    '/api/crm/funnel',
+    {
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'workspace', ttl: 60, keyPrefix: 'crm-funnel' }),
+      ],
+      schema: {
+        response: {
+          200: toJsonSchema(
+            z.object({
+              stages: z.array(z.object({ stage: z.string(), count: z.number() })),
+              lost: z.number(),
+              // Nullable: an empty pipeline has no conversion rate, and «۰٪»
+              // would be a claim rather than an absence.
+              conversionRate: z.number().nullable(),
+            }),
+          ),
+        },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const result = await crmService.getFunnel(request.tenancy)
+        return reply.send(result)
+      } catch (err) {
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to build sales funnel' })
+      }
+    },
+  )
+
   // ─── GET /api/opportunities ──────────────────────────────
   fastify.get(
     '/api/opportunities',

@@ -1449,6 +1449,47 @@ export class InvoiceService {
    * when an on-hand figure looks wrong these rows are the only place the answer
    * lives — and half of them named no document.
    */
+  /**
+   * The warehouse a sale leaves from, when there is only one it could be.
+   *
+   * ---------------------------------------------------------------------------
+   * ⚠️ SALES MOVED NO WAREHOUSE STOCK AT ALL.
+   *
+   * Movements written here carried neither `from_warehouse_id` nor
+   * `to_warehouse_id`. The Phase C trigger maintains TWO figures from them:
+   *
+   *     products.quantity        ← updated for any non-transfer movement
+   *     warehouse_stock.quantity ← updated ONLY when the movement names a warehouse
+   *
+   * `warehouse.service.ts` reads `warehouse_stock`. So selling reduced the
+   * product total and left the warehouse figure untouched for ever — the shelf
+   * said the goods were still there, and the two numbers drifted apart by
+   * exactly everything that had ever been sold.
+   *
+   * ⚠️ AND THE AMBIGUOUS CASE IS NOT GUESSED.
+   *
+   * With several warehouses, nothing on an invoice line says which building the
+   * goods left. Picking one would move stock in a warehouse the goods were
+   * never in — a wrong figure in the source of truth, written confidently. With
+   * exactly one warehouse there is no choice to make, and that is the only case
+   * this resolves. Zero or several leaves the movement unattributed, exactly as
+   * before, and the product total still moves.
+   */
+  private async soleWarehouseId(workspaceId: string): Promise<string | null> {
+    const { data, error } = await supabase
+      .from('warehouses')
+      .select('id')
+      .eq('workspace_id', workspaceId)
+      .limit(2)
+
+    // A failed lookup is «unknown», not «none» — but both leave the movement
+    // unattributed, which is the safe direction: the product total still moves
+    // and no warehouse is debited on a guess.
+    if (error || !data || data.length !== 1) return null
+
+    return (data[0] as { id: string }).id
+  }
+
   private async batchUpdateStock(
     items: any[],
     ctx: TenancyContext,
@@ -1495,6 +1536,9 @@ export class InvoiceService {
     // historical «5 kg» line as 5000 and corrupt the source of truth for every
     // weighed product.
     const unitOptions = await this.loadProductUnits(workspaceId, productIds)
+
+    // Which warehouse the goods leave from / arrive at, when unambiguous.
+    const warehouseId = await this.soleWarehouseId(workspaceId)
 
     // ─── PHASE C — the movement IS the update ────────────────────────────────
     //
@@ -1556,6 +1600,13 @@ export class InvoiceService {
           // already holds for every historical row. Guessing one would be worse
           // (§12) — old rows stay unknown.
           reference_id: invoiceId ?? null,
+          // A sale leaves a warehouse; a purchase arrives at one. Null when the
+          // workspace has zero or several — see soleWarehouseId().
+          ...(warehouseId
+            ? direction === 1
+              ? { to_warehouse_id: warehouseId }
+              : { from_warehouse_id: warehouseId }
+            : {}),
           workspace_id: workspaceId,
           user_id: userId,
         }

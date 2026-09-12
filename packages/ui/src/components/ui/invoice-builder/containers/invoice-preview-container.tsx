@@ -167,6 +167,12 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
     .filter(Boolean)
     .join('\n')
 
+  // Lines that will move no stock, because they name no warehouse product.
+  const unlinkedLines = useMemo(
+    () => items.filter((item) => !item.productId).map((item) => item.productName),
+    [items],
+  )
+
   const handleConfirm = useCallback(async () => {
     if (issues.length || items.length === 0) return
     setError(null)
@@ -325,6 +331,46 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
                   </span>
                 </p>
               ))}
+            </div>
+          ) : null}
+
+          {/*
+            ⚠️ SAID AT THE MOMENT OF COMMITTING, NOT AS A MISSING ICON.
+
+            A line typed as free text is a legitimate invoice line — services,
+            one-off items, anything not in the catalogue — and it moves no
+            stock, correctly. The grid already marks a LINKED line with a green
+            package icon.
+
+            But the ABSENCE of a mark is not a signal. Somebody has to already
+            know the icon exists to notice that it is missing, and nobody
+            checking their warehouse afterwards was told anything at all. Three
+            invoices were entered with names that matched no product in the
+            catalogue; every one of them saved cleanly, and the stock figure
+            never moved. The person reasonably concluded the stock feature was
+            broken.
+
+            This is NOT an error and does not block the save — saying "you
+            cannot do this" would be false. It states what will happen, while
+            there is still a chance to link the line instead.
+          */}
+          {unlinkedLines.length > 0 ? (
+            <div className="rounded-[var(--radius-md)] border border-[hsl(var(--color-warning)/0.4)] bg-[hsl(var(--color-warning)/0.06)] p-3">
+              <p className="text-xs font-medium text-[hsl(var(--color-warning))]">
+                {t(
+                  'invoiceBuilder.notLinkedTitle',
+                  'این خط‌ها به محصول انبار وصل نیستند و موجودی را تغییر نمی‌دهند',
+                )}
+              </p>
+              <p className="mt-1 text-xs text-[hsl(var(--fg-secondary))]">
+                {unlinkedLines.join('، ')}
+              </p>
+              <p className="mt-1.5 text-[11px] text-[hsl(var(--fg-tertiary))]">
+                {t(
+                  'invoiceBuilder.notLinkedHint',
+                  'برای کم شدن موجودی، محصول را از فهرست انبار انتخاب کنید.',
+                )}
+              </p>
             </div>
           ) : null}
 

@@ -220,3 +220,50 @@ describe('the product mark', () => {
     expect(header).toMatch(/<BrandMark/)
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Where an expired session sends you, and in which language.
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('the redirect guard keeps the locale', () => {
+  const layout = code(
+    join(
+      __dirname,
+      '..',
+      '..',
+      '..',
+      '..',
+      'apps',
+      'web',
+      'app',
+      '[lang]',
+      '(dashboard)',
+      'dashboard-layout.tsx',
+    ),
+  )
+
+  it('⚠️ never sends a bare path to login', () => {
+    // `router.replace('/login')` in an app configured `localePrefix: 'always'`
+    // bounced an English or Dari user to the DEFAULT locale's login page. They
+    // signed in again and the product was suddenly in another language, with
+    // no indication why. Every other navigation in that file already went
+    // through `withLocale()`.
+    expect(layout).not.toMatch(/router\.replace\('\/login'\)/)
+    expect(layout).not.toMatch(/router\.replace\('\/onboarding'\)/)
+  })
+
+  it('prefixes both destinations with the active locale', () => {
+    expect(layout).toMatch(/const to = \(path: string\) => `\/\$\{currentLang\}\$\{path\}`/)
+    expect(layout).toMatch(/router\.replace\(to\('\/login'\)\)/)
+    expect(layout).toMatch(/router\.replace\(to\('\/onboarding'\)\)/)
+  })
+
+  it('⚠️ the guard reacts to a session that expires mid-visit', () => {
+    // `packages/store`'s `setOnUnauthorized` clears the session on any 401, so
+    // `isAuthenticated` flips and this effect runs. That is the path an
+    // EXPIRED token takes — valid at page load, invalid later, which is what
+    // «every request 401s while the dashboard keeps rendering» looked like.
+    expect(layout).toMatch(/isAuthenticated/)
+    expect(layout).toMatch(/currentLang\]\)/)
+  })
+})

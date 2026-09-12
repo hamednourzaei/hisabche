@@ -22,6 +22,7 @@ import {
   type TableColumn,
 } from '../data-table'
 import type { Invoice } from '../../../lib/invoices/invoices-types'
+import { partyLabel } from '../../../lib/anonymous-party'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    InvoicesView v3 — shared DataTable · collapsible search · column settings
@@ -442,7 +443,11 @@ function useInvoiceColumns(
               {inv.customerName}
             </button>
           ) : (
-            <span className="text-[hsl(var(--fg-primary))]">{inv.customerName || '—'}</span>
+            // ⚠️ One fact, one wording. A walk-in sale has no customer and
+            // the product said so four different ways — see `anonymous-party.ts`.
+            <span className="text-[hsl(var(--fg-primary))]">
+              {partyLabel(inv.customerId, inv.customerName, t)}
+            </span>
           ),
       },
       {

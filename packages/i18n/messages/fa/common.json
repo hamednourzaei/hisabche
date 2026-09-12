@@ -1581,7 +1581,8 @@
     "no_match_hint": "جست‌وجو را تغییر دهید یا پاکش کنید.",
     "empty_hint": "اولین مشتری را از صفحه‌ی مشتریان اضافه کنید.",
     "list": "فهرست",
-    "address": "آدرس"
+    "address": "آدرس",
+    "anonymous": "مشتری ناشناس"
   },
   "crm": {
     "type": "نوع",
@@ -1898,7 +1899,24 @@
     "noSalesInPeriod": "در این بازه فروشی ثبت نشده است",
     "tryWiderRange": "بازه‌ی دیگری را امتحان کنید یا فروش تازه‌ای ثبت کنید",
     "activityColumnEvent": "رویداد",
-    "activityColumnRole": "نقش"
+    "activityColumnRole": "نقش",
+    "funnel": {
+      "title": "قیف فروش",
+      "empty": "هنوز فرصت فروشی ثبت نشده است",
+      "emptyHint": "فرصت‌های فروش را در بخش ارتباط با مشتریان ثبت کنید تا مسیر تبدیل آن‌ها این‌جا دیده شود.",
+      "error": "اطلاعات قیف فروش گرفته نشد.",
+      "conversion": "نرخ تبدیل",
+      "lost": "از دست رفته",
+      "aria": "قیف فروش",
+      "stage": {
+        "lead": "سرنخ",
+        "qualified": "واجد شرایط",
+        "proposal": "پیشنهاد",
+        "negotiation": "مذاکره",
+        "won": "فروش نهایی"
+      }
+    },
+    "viewSwitch": "نمای نمودار"
   },
   "unit": {
     "piece": "عدد",
@@ -2990,7 +3008,9 @@
       "unpaid": "کل مبلغ بدهکار است"
     },
     "methodLabel": "نام روش",
-    "methodLabelPlaceholder": "مثلاً چک"
+    "methodLabelPlaceholder": "مثلاً چک",
+    "notLinkedTitle": "این خط‌ها به محصول انبار وصل نیستند و موجودی را تغییر نمی‌دهند",
+    "notLinkedHint": "برای کم شدن موجودی، محصول را از فهرست انبار انتخاب کنید."
   },
   "admin": {
     "dashboard": {

@@ -1576,7 +1576,8 @@
     "no_match_hint": "Change the search or clear it.",
     "empty_hint": "Add your first customer from the customers page.",
     "list": "List",
-    "address": "Address"
+    "address": "Address",
+    "anonymous": "Unknown customer"
   },
   "crm": {
     "type": "Type",
@@ -1893,7 +1894,24 @@
     "noSalesInPeriod": "No sales in this period",
     "tryWiderRange": "Try another range, or record a sale",
     "activityColumnEvent": "Event",
-    "activityColumnRole": "Role"
+    "activityColumnRole": "Role",
+    "funnel": {
+      "title": "Sales funnel",
+      "empty": "No sales opportunities recorded yet",
+      "emptyHint": "Record opportunities in the customer relations section to see how they convert.",
+      "error": "Could not load the sales funnel.",
+      "conversion": "Conversion rate",
+      "lost": "Lost",
+      "aria": "Sales funnel",
+      "stage": {
+        "lead": "Lead",
+        "qualified": "Qualified",
+        "proposal": "Proposal",
+        "negotiation": "Negotiation",
+        "won": "Won"
+      }
+    },
+    "viewSwitch": "Chart view"
   },
   "quickInvoice": {
     "title": "Quick Invoice",
@@ -2985,7 +3003,9 @@
       "unpaid": "The whole amount is owed"
     },
     "methodLabel": "Method name",
-    "methodLabelPlaceholder": "e.g. cheque"
+    "methodLabelPlaceholder": "e.g. cheque",
+    "notLinkedTitle": "These lines are not linked to a warehouse product and will not change stock",
+    "notLinkedHint": "To reduce stock, pick the product from the warehouse list."
   },
   "admin": {
     "dashboard": {

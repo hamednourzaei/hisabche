@@ -25,6 +25,9 @@ const INTERACTION_LEGACY_COLUMNS =
 
 const OPPORTUNITY_COLUMNS =
   'id, customer_id, title, description, stage, value, expected_close_date, probability, created_at, updated_at'
+/** The funnel body, in order. `lost` is deliberately not one of these. */
+const FUNNEL_STAGES = ['lead', 'qualified', 'proposal', 'negotiation', 'won'] as const
+
 const OPPORTUNITY_MINIMAL_COLUMNS =
   'id, customer_id, title, stage, value, probability, expected_close_date'
 
@@ -603,6 +606,95 @@ export class CrmService {
     await memoryCache.invalidate(this.getOpportunitiesCacheKey(workspaceId))
     await memoryCache.invalidate(`crm:pipeline:${workspaceId}`)
     await memoryCache.invalidate(`crm:opportunity:${workspaceId}:*`)
+  }
+  // ═══════════════════════════════════════════════════════════════════════
+  // Sales funnel
+  // ═══════════════════════════════════════════════════════════════════════
+
+  /**
+   * How many opportunities stand at each stage, right now.
+   *
+   * -------------------------------------------------------------------------
+   * ⚠️ COUNTED BY THE DATABASE, NOT BY READING ROWS.
+   *
+   * The obvious implementation is to call `getOpportunities()` and group the
+   * result. That function PAGINATES (`.range(offset, offset + limit - 1)`) and
+   * counts with `count: 'estimated'`. A funnel built on it would show the
+   * stage breakdown of ONE PAGE and call it the pipeline — the exact defect
+   * this codebase already has ~20 instances of, where a figure someone makes a
+   * decision from came out of a `.limit(N)`.
+   *
+   * `count: 'exact', head: true` asks Postgres for the count and transfers no
+   * rows at all. Six small counts against the `(workspace_id, stage)` index
+   * are cheaper than one unbounded read, and they are correct.
+   *
+   * ⚠️ AND `count: 'estimated'` IS NOT USED HERE. It reads the planner's row
+   * estimate, which is fine for «about how many pages» and wrong for a number
+   * a person reads as a fact.
+   *
+   * The stages are the ones `opportunitySchema` defines. `lost` is counted but
+   * is NOT part of the funnel body — a lost deal did not pass through the
+   * stages below it, and stacking it into the shape would make every stage
+   * below look larger than it is.
+   */
+  async getFunnel(ctx: TenancyContext): Promise<{
+    stages: Array<{ stage: string; count: number }>
+    lost: number
+    conversionRate: number | null
+  }> {
+    const { workspaceId } = ctx
+    if (!workspaceId) return { stages: [], lost: 0, conversionRate: null }
+
+    const cacheKey = `crm:funnel:${workspaceId}`
+    const cached = await memoryCache.get<{
+      stages: Array<{ stage: string; count: number }>
+      lost: number
+      conversionRate: number | null
+    }>(cacheKey)
+    if (cached) return cached
+
+    const countStage = async (stage: string): Promise<number> => {
+      const { count, error } = await supabase
+        .from('opportunities')
+        .select('id', { count: 'exact', head: true })
+        .eq('workspace_id', workspaceId)
+        .eq('stage', stage)
+
+      // ⚠️ A FAILED COUNT IS NOT ZERO. Returning 0 here would draw an empty
+      // funnel that looks like «you have no pipeline» — a claim about the
+      // business made out of a query error. It throws, and the client shows
+      // its error state.
+      if (error) throw new DatabaseError(`Failed to count opportunities in stage ${stage}`, error)
+
+      return count ?? 0
+    }
+
+    const [lead, qualified, proposal, negotiation, won, lost] = await Promise.all(
+      FUNNEL_STAGES.map(countStage).concat(countStage('lost')),
+    )
+
+    const stages = [
+      { stage: 'lead', count: lead ?? 0 },
+      { stage: 'qualified', count: qualified ?? 0 },
+      { stage: 'proposal', count: proposal ?? 0 },
+      { stage: 'negotiation', count: negotiation ?? 0 },
+      { stage: 'won', count: won ?? 0 },
+    ]
+
+    // Everything that ever entered the pipeline and is still visible in it.
+    const entered = stages.reduce((sum, s) => sum + s.count, 0) + (lost ?? 0)
+
+    const result = {
+      stages,
+      lost: lost ?? 0,
+      // ⚠️ `null`, NOT `0`, WHEN THE PIPELINE IS EMPTY. «۰٪ conversion» is a
+      // statement that nothing converts; an empty pipeline says nothing at
+      // all, and the client renders no figure rather than a discouraging one.
+      conversionRate: entered > 0 ? Math.round(((won ?? 0) / entered) * 1000) / 10 : null,
+    }
+
+    await memoryCache.set(cacheKey, result, 60)
+    return result
   }
 }
 

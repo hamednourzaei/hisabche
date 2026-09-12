@@ -59,7 +59,30 @@ function usePrefetchRoutes(pathname: string) {
 
 // ─── Hook: Redirect Guard ──────────────────────────────────────────────────
 
-function useRedirectGuard() {
+/**
+ * Where an unauthenticated visitor is sent, and in which language.
+ *
+ * ---------------------------------------------------------------------------
+ * ⚠️ IT DROPPED THE LOCALE, AND THAT IS A REAL REDIRECT BUG.
+ *
+ * This used to call `router.replace('/login')` — a bare path, with no locale
+ * prefix, in an app configured `localePrefix: 'always'`. Every other
+ * navigation in this file goes through `withLocale()`; the file even carries a
+ * comment explaining why, for `handleNavigate`. The guard itself did not.
+ *
+ * So an English or Dari user whose token expired was bounced to the DEFAULT
+ * locale's login page. They signed in again and the whole product was suddenly
+ * in a different language, with no indication of why. The same applied to the
+ * onboarding redirect.
+ *
+ * ⚠️ AND IT FIRES ON A 401, NOT ONLY ON A COLD LOAD. `packages/store`'s
+ * `setOnUnauthorized` clears the session when any request returns 401, so
+ * `isAuthenticated` flips to false and this effect runs. That is the path an
+ * EXPIRED token takes — the session is valid at page load and stops being
+ * valid mid-visit, which is exactly what was reported: every request failing
+ * with 401 while the dashboard kept rendering.
+ */
+function useRedirectGuard(currentLang: string) {
   const router = useRouter()
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const hasHydrated = useAuthStore((s) => s.hasHydrated)
@@ -69,22 +92,25 @@ function useRedirectGuard() {
   useEffect(() => {
     if (!hasHydrated) return
 
+    // The locale the person is actually reading, kept across the bounce.
+    const to = (path: string) => `/${currentLang}${path}`
+
     if (!isAuthenticated && !redirected.current) {
       redirected.current = true
-      router.replace('/login')
+      router.replace(to('/login'))
       return
     }
 
     if (isAuthenticated && !isOnboardingComplete && !redirected.current) {
       redirected.current = true
-      router.replace('/onboarding')
+      router.replace(to('/onboarding'))
       return
     }
 
     if (isAuthenticated && isOnboardingComplete) {
       redirected.current = false
     }
-  }, [hasHydrated, isAuthenticated, isOnboardingComplete, router])
+  }, [hasHydrated, isAuthenticated, isOnboardingComplete, router, currentLang])
 }
 
 // ─── Main Component ─────────────────────────────────────────────────────────
@@ -110,7 +136,7 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
   const lastSyncedAt = useRef(Date.now())
 
   usePrefetchRoutes(pathname)
-  useRedirectGuard()
+  useRedirectGuard(locale)
 
   const activeNav = optimisticPath ?? pathname
 
@@ -168,10 +194,15 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
 
   const handleLogout = useCallback(() => {
     useAuthStore.getState().logout()
-    router.replace('/login')
-  }, [router])
+    // Locale-prefixed, like every other navigation here. Signing out used to
+    // drop an English or Dari user onto the default locale's login page.
+    router.replace(withLocale('/login'))
+  }, [router, withLocale])
 
-  const handleNavigateLogin = useCallback(() => router.push('/login'), [router])
+  const handleNavigateLogin = useCallback(
+    () => router.push(withLocale('/login')),
+    [router, withLocale],
+  )
 
   const primaryItems = useMemo(
     () =>

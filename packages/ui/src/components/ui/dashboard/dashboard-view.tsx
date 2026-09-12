@@ -1,7 +1,7 @@
 // packages/ui/src/components/ui/dashboard/dashboard-view.tsx
 'use client'
 
-import { memo, useMemo } from 'react'
+import { memo, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { invoiceListHref } from '../../../lib/invoices/invoice-filter-link'
 import { cn } from '../../../lib/utils'
@@ -13,10 +13,12 @@ import {
   CreditCard,
   Boxes,
   Activity as ActivityIcon,
+  Filter,
 } from 'lucide-react'
 import { SalesChart, type ChartDataPoint } from './sales-chart'
 import { DateRangePicker, type DateRange, type PresetKey } from './date-range-picker'
-import type { AIInsight } from '@hisabche/api'
+import { SalesFunnel } from './sales-funnel'
+import { useSalesFunnel, type AIInsight } from '@hisabche/api'
 import type { ActivityGroupDto, ActivityItemDto } from '@hisabche/api'
 import dynamic from 'next/dynamic'
 import { asList } from '@hisabche/api'
@@ -417,6 +419,17 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
   // ⚠️ The calendar follows the language; these were hardcoded to `'fa-AF'`.
   const { date: fmtIntlDate, lang: dateLang } = useDateFormat()
 
+  /**
+   * Which of the two the card is showing.
+   *
+   * ⚠️ THE FUNNEL IS FETCHED ALWAYS, NOT ONLY WHEN SELECTED. Gating the hook
+   * on `view` would make it a CONDITIONAL HOOK — React throws «rendered fewer
+   * hooks than expected» and the dashboard goes with it. React Query keeps it
+   * cheap: one cached request per minute either way.
+   */
+  const [view, setView] = useState<'chart' | 'funnel'>('chart')
+  const funnel = useSalesFunnel()
+
   const {
     t,
     fmt,
@@ -524,34 +537,111 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
           >
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 mb-3 sm:mb-4">
               <div className="flex items-center gap-1.5 sm:gap-2">
-                <TrendingUp
-                  className="size-4 sm:size-5 text-[hsl(var(--color-primary))]"
-                  aria-hidden="true"
-                />
+                {view === 'chart' ? (
+                  <TrendingUp
+                    className="size-4 sm:size-5 text-[hsl(var(--color-primary))]"
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <Filter
+                    className="size-4 sm:size-5 text-[hsl(var(--color-primary))]"
+                    aria-hidden="true"
+                  />
+                )}
                 <h2 className="text-sm sm:text-base font-semibold text-[hsl(var(--fg-primary))]">
-                  {t('dashboard.salesChartTitle', 'نمودار فروش')}
+                  {view === 'chart'
+                    ? t('dashboard.salesChartTitle', 'نمودار فروش')
+                    : t('dashboard.funnel.title', 'قیف فروش')}
                 </h2>
+
+                {/*
+                  ⚠️ TWO BUTTONS, NOT ONE TOGGLE.
+
+                  A single button that swaps what it shows has to be labelled
+                  either with what you are looking at or with what pressing it
+                  does — and whichever is chosen, half the people read it the
+                  other way. A two-option switch with `aria-pressed` states
+                  both at once and needs no convention to decode.
+
+                  The date picker beside it is hidden on the funnel because it
+                  does not apply: the funnel is the pipeline as it stands now,
+                  not a window over time. Leaving it visible and inert would
+                  imply the funnel responds to it.
+                */}
+                <div
+                  role="group"
+                  aria-label={t('dashboard.viewSwitch', 'نمای نمودار')}
+                  className="ms-1 flex items-center gap-0.5 rounded-lg bg-[hsl(var(--surface-muted))] p-0.5"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setView('chart')}
+                    aria-pressed={view === 'chart'}
+                    title={t('dashboard.salesChartTitle', 'نمودار فروش')}
+                    className={cn(
+                      'inline-flex items-center justify-center rounded-md p-1.5',
+                      'transition-colors duration-150 motion-reduce:transition-none',
+                      view === 'chart'
+                        ? 'bg-[hsl(var(--surface-elevated))] text-[hsl(var(--color-primary))] shadow-sm'
+                        : 'text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--fg-primary))]',
+                    )}
+                  >
+                    <TrendingUp className="size-4" aria-hidden="true" />
+                    <span className="sr-only">{t('dashboard.salesChartTitle', 'نمودار فروش')}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setView('funnel')}
+                    aria-pressed={view === 'funnel'}
+                    title={t('dashboard.funnel.title', 'قیف فروش')}
+                    className={cn(
+                      'inline-flex items-center justify-center rounded-md p-1.5',
+                      'transition-colors duration-150 motion-reduce:transition-none',
+                      view === 'funnel'
+                        ? 'bg-[hsl(var(--surface-elevated))] text-[hsl(var(--color-primary))] shadow-sm'
+                        : 'text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--fg-primary))]',
+                    )}
+                  >
+                    <Filter className="size-4" aria-hidden="true" />
+                    <span className="sr-only">{t('dashboard.funnel.title', 'قیف فروش')}</span>
+                  </button>
+                </div>
               </div>
-              <DateRangePicker
-                value={dateRange}
-                onChange={onDateRangeChange}
-                t={t}
-                disabled={chartLoading}
-              />
+
+              {view === 'chart' ? (
+                <DateRangePicker
+                  value={dateRange}
+                  onChange={onDateRangeChange}
+                  t={t}
+                  disabled={chartLoading}
+                />
+              ) : null}
             </div>
-            <LazySalesChart
-              data={salesChartData}
-              isLoading={chartLoading}
-              fmt={fmt}
-              height={180}
-              previousPeriodTotal={previousDaySalesTotal}
-              currentPeriodTotal={todaySales}
-              // `/reports` was never a route — the chart's "full report" link
-              // 404'd on web and would have redirected to the dashboard on
-              // desktop's catch-all. Accounting («پول و سود») is the destination
-              // the navigation contract actually gives for revenue detail.
-              onViewFullReport={() => onNavigate('/accounting')}
-            />
+            {view === 'chart' ? (
+              <LazySalesChart
+                data={salesChartData}
+                isLoading={chartLoading}
+                fmt={fmt}
+                height={180}
+                previousPeriodTotal={previousDaySalesTotal}
+                currentPeriodTotal={todaySales}
+                // `/reports` was never a route — the chart's "full report" link
+                // 404'd on web and would have redirected to the dashboard on
+                // desktop's catch-all. Accounting («پول و سود») is the destination
+                // the navigation contract actually gives for revenue detail.
+                onViewFullReport={() => onNavigate('/accounting')}
+              />
+            ) : (
+              <SalesFunnel
+                stages={funnel.data?.stages ?? []}
+                lost={funnel.data?.lost ?? 0}
+                conversionRate={funnel.data?.conversionRate ?? null}
+                isLoading={funnel.isLoading}
+                isError={funnel.isError}
+                height={180}
+                t={t}
+              />
+            )}
           </div>
         </div>
 

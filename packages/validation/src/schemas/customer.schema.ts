@@ -16,13 +16,51 @@ import {
 // Customer
 // ============================================
 
+/**
+ * ⚠️ EVERY OPTIONAL FIELD ACCEPTS `null`, AND THAT WAS THE BUG.
+ *
+ * A form bound to a database row sends `null` for a field nobody filled in —
+ * so does any update round-trip that reads the row and writes it back. The
+ * previous schema accepted `undefined` and rejected `null`, which are the same
+ * fact in JSON and different values in zod. Measured against the real schema,
+ * not guessed:
+ *
+ *     { fullName: 'احمد', email: null }     → email: Invalid input
+ *     { fullName: 'احمد', phone: null }     → phone: Expected string, received null
+ *     { fullName: 'احمد', notes: null }     → notes: Invalid input
+ *     { fullName: 'احمد', address: 'کابل' } → address: Expected OBJECT, received string
+ *
+ * So a shopkeeper who typed only a name could still be rejected because of a
+ * field they never touched, and the error named a field the form does not even
+ * show them.
+ *
+ * ⚠️ AND `address` WAS AN OBJECT AGAINST A `text` COLUMN.
+ *
+ * `customers.address` is plain `text` in the database (see
+ * `docs/base-schema-migration.sql`), so the structured object could never
+ * round-trip — and nothing in the codebase reads `address.city` either. Text
+ * is what is actually stored; the structured shape stays in the union so that
+ * anything which ever does send one is not broken by this change.
+ *
+ * ⚠️ `fullName` STAYS REQUIRED, DELIBERATELY.
+ *
+ * A customer row with no name and no phone cannot be found again by the person
+ * who created it — it is an unreachable row, not a record. A walk-in with no
+ * details is not a customer record at all: the invoice simply carries no
+ * customer and renders as «مشتری ناشناس» (see
+ * `packages/ui/src/lib/anonymous-party.ts`). That path also keeps the customer
+ * COUNT honest, which a placeholder row would not.
+ */
 export const customerSchema = z.object({
   id: uuidSchema.optional(),
-  fullName: nonEmptyStringSchema,
-  phone: phoneSchema.optional(),
-  email: emailSchema.optional().or(z.literal('')),
-  address: addressSchema.optional(),
-  notes: optionalStringSchema,
+  // Trimmed: a name of '   ' passed `.min(1)` and produced a row nobody can
+  // find again. Trimming here rather than in the shared `nonEmptyStringSchema`
+  // keeps the change to the entity this was reported on.
+  fullName: nonEmptyStringSchema.trim().min(1, 'validation.required'),
+  phone: phoneSchema.nullish(),
+  email: emailSchema.or(z.literal('')).nullish(),
+  address: z.union([z.string().max(500), addressSchema]).nullish(),
+  notes: optionalStringSchema.nullish(),
   openingBalance: z.number().default(0),
   isActive: z.boolean().default(true),
   type: z.enum(['cash', 'credit']).default('cash'), // ✅ جدید
