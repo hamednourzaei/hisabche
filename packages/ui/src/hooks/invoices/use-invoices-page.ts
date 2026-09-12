@@ -73,7 +73,7 @@ export function useInvoicesPage() {
   /** همه‌ی فاکتورهای منطبق با فیلتر — فقط برای کارت‌های آمار. */
   const statsInvoices = useMemo(
     () => mapInvoices(statsData?.invoices as any[] | undefined, lang),
-    [statsData],
+    [statsData, lang],
   )
 
   const total = data?.total ?? 0

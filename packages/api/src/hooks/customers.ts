@@ -12,6 +12,7 @@
 // ============================================
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { asList } from '../lib/as-list'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
 import { useRealtime } from './useRealtime'
@@ -38,7 +39,9 @@ export const customerKeys = {
 // Hooks
 // ============================================
 
-export function useCustomers(filters: CustomerFilters = { page: 1, limit: 20, sortDirection: 'desc' }) {
+export function useCustomers(
+  filters: CustomerFilters = { page: 1, limit: 20, sortDirection: 'desc' },
+) {
   const authReady = useAuthReady()
 
   // ✅ FIX: تنها subscription realtime برای جدول customers — با
@@ -52,7 +55,13 @@ export function useCustomers(filters: CustomerFilters = { page: 1, limit: 20, so
       const { data } = await apiClient.get<{ customers: Customer[]; total: number }>('/customers', {
         params: filters,
       })
-      return data
+      // A type annotation is not a runtime check. Every picker and list slices
+      // `customers`, so the list is asked for, not assumed.
+      return {
+        ...(data && typeof data === 'object' ? data : {}),
+        customers: asList<Customer>(data?.customers, '/customers'),
+        total: typeof data?.total === 'number' ? data.total : 0,
+      }
     },
     enabled: authReady,
     staleTime: 60_000,

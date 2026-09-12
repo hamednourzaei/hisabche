@@ -43,7 +43,7 @@
 
 import * as React from 'react'
 
-import { AlertCircle, FileText, Minus, TrendingDown, TrendingUp, Users } from 'lucide-react'
+import { AlertCircle, Minus, TrendingDown, TrendingUp } from 'lucide-react'
 
 import { cn } from '../../../lib/utils'
 
@@ -108,13 +108,17 @@ const TREND_TEXT: Record<Trend, string> = {
   unknown: 'text-[hsl(var(--fg-tertiary))]',
 }
 
-/** One icon per band, so the pill is scannable without reading it. */
-const BAND_ICON = {
-  invoices: FileText,
-  customers: Users,
-} as const
+/**
+ * Brand colour, fading stage by stage — used only when a stage has no trend
+ * to report. Neutral shape, not a verdict.
+ */
+const FADE_TONE: Record<number, string> = {
+  0: 'bg-[hsl(var(--color-primary)/0.9)]',
+  1: 'bg-[hsl(var(--color-primary)/0.7)]',
+  2: 'bg-[hsl(var(--color-primary)/0.5)]',
+}
 
-const MIN_WIDTH_PERCENT = 22
+const MIN_WIDTH_PERCENT = 30
 
 export function SalesFunnel({
   data,
@@ -237,98 +241,110 @@ export function SalesFunnel({
     )
   }
 
+  /*
+   * ⚠️ ONE CONTINUOUS SHAPE, STACKED WITH NO GAPS.
+   *
+   * The previous version drew separate rows with a gap between them and a
+   * label pill beside each, which ate half the width — so it read as a list of
+   * bars, not a funnel. This follows the «flow / sharp» funnel pattern turned
+   * vertical: every segment's TOP edge is its own share of the first stage and
+   * its BOTTOM edge is the next segment's top, so the outline is one unbroken
+   * taper from the widest stage to the tip.
+   *
+   * ⚠️ THE TIP CARRIES MONEY BUT ITS WIDTH IS NOT MONEY. Invoices and customers
+   * are counts and share one scale; total sales is afghanis and has no width
+   * that means anything beside them. The tip is therefore a fixed closing
+   * segment — it shows the outcome, and its size claims nothing.
+   */
+  const firstCount = bands[0]?.count ?? 0
+  const share = (count: number) =>
+    firstCount > 0
+      ? Math.max(MIN_WIDTH_PERCENT, Math.round((count / firstCount) * 100))
+      : MIN_WIDTH_PERCENT
+
+  const tops = [...bands.map((band) => share(band.count))]
+  const tipTop = Math.max(MIN_WIDTH_PERCENT - 4, Math.round((tops[tops.length - 1] ?? 100) * 0.6))
+  const tipBottom = Math.max(10, Math.round(tipTop * 0.55))
+
+  const segments: Array<{
+    key: string
+    label: string
+    value: string
+    trend: Trend
+    changePercent: number | null
+    top: number
+    bottom: number
+    fade: number
+  }> = [
+    ...bands.map((band, index) => ({
+      key: band.key,
+      label: t(`dashboard.funnel.band.${band.key}`, band.key),
+      value: String(band.count),
+      trend: band.trend,
+      changePercent: band.changePercent,
+      top: tops[index] ?? 100,
+      bottom: index + 1 < tops.length ? (tops[index + 1] ?? tipTop) : tipTop,
+      fade: index,
+    })),
+    {
+      key: 'sales',
+      label: t('dashboard.totalSales', 'فروش کل'),
+      value: fmt(total),
+      trend: revenue.trend,
+      changePercent: revenue.changePercent,
+      top: tipTop,
+      bottom: tipBottom,
+      fade: bands.length,
+    },
+  ]
+
+  /** polygon() insets for a centred trapezoid, independent of pixel width. */
+  const clipFor = (top: number, bottom: number) => {
+    const topInset = (100 - top) / 2
+    const bottomInset = (100 - bottom) / 2
+    return `polygon(${topInset}% 0, ${100 - topInset}% 0, ${100 - bottomInset}% 100%, ${bottomInset}% 100%)`
+  }
+
   return (
     <div className="flex flex-col gap-2" style={{ minHeight: height }}>
-      <ul
-        className="flex flex-col items-stretch gap-1.5"
-        aria-label={t('dashboard.funnel.aria', 'قیف فروش')}
-      >
-        {bands.map((band, index) => {
-          const Icon = BAND_ICON[band.key]
+      <ul className="flex flex-col" aria-label={t('dashboard.funnel.aria', 'قیف فروش')}>
+        {segments.map((segment) => (
+          <li key={segment.key} className="group relative h-16">
+            {/* The segment. Unknown trend falls back to the brand colour,
+                fading stage by stage — a neutral shape, not a verdict. */}
+            <div
+              aria-hidden="true"
+              className={cn(
+                'absolute inset-0 transition-[filter] duration-150 motion-reduce:transition-none',
+                'group-hover:brightness-110',
+                segment.trend === 'unknown'
+                  ? (FADE_TONE[segment.fade] ?? FADE_TONE[2])
+                  : TREND_TONE[segment.trend],
+              )}
+              style={{ clipPath: clipFor(segment.top, segment.bottom) }}
+            />
 
-          // Each band's width is its share of the widest one, with a floor so
-          // a stage holding a single document is still readable.
-          const width = Math.max(
-            MIN_WIDTH_PERCENT,
-            widest > 0 ? Math.round((band.count / widest) * 100) : MIN_WIDTH_PERCENT,
-          )
-          const next = bands[index + 1]
-          const nextWidth = next
-            ? Math.max(
-                MIN_WIDTH_PERCENT,
-                widest > 0 ? Math.round((next.count / widest) * 100) : MIN_WIDTH_PERCENT,
-              )
-            : width
-
-          // ⚠️ THE TAPER IS THE REAL RATIO, NOT A FIXED ANGLE.
-          //
-          // A cone drawn with a constant slope looks like a funnel and means
-          // nothing — 10 → 9 would lean in exactly as hard as 1000 → 90. The
-          // bottom edge of each band is the width the NEXT band will have, so
-          // the slope IS the drop-off between the two stages. The last band
-          // has no successor and so has no taper.
-          const taper = width > 0 ? Math.max(0, (width - nextWidth) / width / 2) : 0
-          const inset = `${(taper * 100).toFixed(2)}%`
-
-          return (
-            <li key={band.key} className="flex items-center gap-2 sm:gap-3">
-              {/* The cone itself. Centred so both edges slope symmetrically,
-                  which is what makes it read as one shape rather than a stack
-                  of bars. */}
-              <div className="flex min-w-0 flex-1 justify-center">
-                <div
-                  className={cn(
-                    'flex h-11 items-center justify-center gap-2 px-4',
-                    'transition-[width] duration-300 motion-reduce:transition-none',
-                    TREND_TONE[band.trend],
-                  )}
-                  style={{
-                    width: `${width}%`,
-                    // `polygon()` contains commas, which compile correctly in
-                    // an inline style — and this is a style object, not a
-                    // Tailwind class, so the arbitrary-value rules do not
-                    // apply at all.
-                    clipPath: `polygon(0 0, 100% 0, calc(100% - ${inset}) 100%, ${inset} 100%)`,
-                  }}
-                >
-                  <span className="text-base font-bold tabular-nums text-white drop-shadow-sm">
-                    {band.count}
-                  </span>
-                  <TrendMark trend={band.trend} changePercent={band.changePercent} onBand />
-                </div>
-              </div>
-
-              {/* The label, as a pill beside the cone — the shape carries the
-                  proportion, the pill carries the name. */}
-              <div
-                className={cn(
-                  'flex h-11 w-32 shrink-0 items-center gap-2 rounded-xl px-2.5 sm:w-40 sm:px-3',
-                  'border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted)/0.6)]',
-                )}
-              >
-                <span
-                  className={cn(
-                    'flex size-7 shrink-0 items-center justify-center rounded-lg',
-                    TREND_TONE[band.trend],
-                  )}
-                >
-                  <Icon className="size-4 text-white" aria-hidden="true" />
-                </span>
-                <span className="min-w-0 truncate text-xs font-medium text-[hsl(var(--fg-primary))]">
-                  {t(`dashboard.funnel.band.${band.key}`, band.key)}
-                </span>
-              </div>
-            </li>
-          )
-        })}
+            {/* Text sits on a full-width row over the shape, so a narrow
+                segment near the tip never truncates its own number. */}
+            <div className="relative flex h-full items-center justify-between gap-2 px-1">
+              <span className="min-w-0 truncate text-xs font-medium text-[hsl(var(--fg-secondary))]">
+                {segment.label}
+              </span>
+              <span className="absolute inset-x-0 text-center text-base font-bold tabular-nums text-white drop-shadow">
+                {segment.value}
+              </span>
+              <span className="relative shrink-0">
+                <TrendMark trend={segment.trend} changePercent={segment.changePercent} />
+              </span>
+            </div>
+          </li>
+        ))}
       </ul>
 
       {/*
         ⚠️ THE COMPARISON NAMES ITS OWN WINDOW.
-        A coloured band with no caption is a claim with no stated basis — the
-        reader cannot tell whether green means «better than yesterday» or
-        «better than last quarter». The window follows the range picker above,
-        so this changes with it.
+        A coloured segment with no caption is a claim with no stated basis. The
+        window follows the range picker above, so this changes with it.
       */}
       {windowDays > 0 ? (
         <p className="text-center text-[11px] text-[hsl(var(--fg-tertiary))]">
@@ -337,18 +353,6 @@ export function SalesFunnel({
           {t('dashboard.funnel.daysBefore', 'روز پیش از آن')}
         </p>
       ) : null}
-
-      {/* ⚠️ THE OUTCOME, NOT A BAND. Money has no width that means anything
-          beside two counts — see the note at the top of this file. */}
-      <div className="flex flex-wrap items-baseline justify-center gap-2 pt-1">
-        <span className="text-xs text-[hsl(var(--fg-secondary))]">
-          {t('dashboard.totalSales', 'فروش کل')}
-        </span>
-        <span className={cn('text-lg font-bold tabular-nums', TREND_TEXT[revenue.trend])}>
-          {fmt(total)}
-        </span>
-        <TrendMark trend={revenue.trend} changePercent={revenue.changePercent} />
-      </div>
     </div>
   )
 }

@@ -71,6 +71,15 @@ export function LoginPage() {
    */
   const redirectTarget = new URLSearchParams(location.search).get('redirect') || '/'
 
+  // Declared ABOVE the early return: a hook after it runs on one render and
+  // not the next, and React throws once login flips isAuthenticated.
+  const switchMode = useCallback(() => {
+    clearError()
+    setFlipped((value) => !value)
+  }, [clearError])
+
+  const togglePassword = useCallback(() => setShowPassword((value) => !value), [])
+
   if (isAuthenticated) return <Navigate to={redirectTarget} replace />
 
   const submitLogin = loginForm.handleSubmit(async (data) => {
@@ -92,13 +101,6 @@ export function LoginPage() {
       // Same: surfaced through `serverError`.
     }
   })
-
-  const switchMode = useCallback(() => {
-    clearError()
-    setFlipped((value) => !value)
-  }, [clearError])
-
-  const togglePassword = useCallback(() => setShowPassword((value) => !value), [])
 
   return (
     <AuthShell

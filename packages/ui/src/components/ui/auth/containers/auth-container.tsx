@@ -101,7 +101,7 @@ export function AuthContainer({ initialMode = 'login' }: { initialMode?: 'login'
     if (s.isAuthenticated && !s.error) {
       router.push(redirectTarget)
     }
-  }, [loginStore, router])
+  }, [loginStore, router, redirectTarget])
 
   const loginProps = {
     st,

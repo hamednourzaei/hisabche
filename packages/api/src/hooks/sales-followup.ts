@@ -5,6 +5,7 @@
 'use client'
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { asList } from '../lib/as-list'
 import { apiClient } from '../lib/client'
 import { useAuthReady } from './useAuthReady'
 import { useRealtime } from './useRealtime'
@@ -161,7 +162,7 @@ export function useSalesFollowups(filters: FollowUpFilters = {}) {
         params: filters?.customer_id ? { customerId: filters.customer_id } : {},
       })
 
-      const all = (data ?? []).map(toFollowUp)
+      const all = asList<InteractionRow>(data, '/interactions').map(toFollowUp)
 
       // Filtered here rather than on the server: `/api/interactions` takes
       // only `customerId`, and inventing query parameters it does not
@@ -185,7 +186,9 @@ export function useFollowup(id: string | undefined) {
       // and already cached, so the row is taken from it rather than adding an
       // endpoint the server does not have.
       const { data } = await apiClient.get<InteractionRow[]>('/interactions')
-      const found = (data ?? []).map(toFollowUp).find((row) => row.id === id)
+      const found = asList<InteractionRow>(data, '/interactions')
+        .map(toFollowUp)
+        .find((row) => row.id === id)
 
       if (!found) throw new Error('FOLLOWUP_NOT_FOUND')
       return found

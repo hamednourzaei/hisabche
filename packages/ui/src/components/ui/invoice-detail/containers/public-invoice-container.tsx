@@ -105,7 +105,7 @@ export function PublicInvoiceContainer({ token }: { token: string }) {
           address: data.customer.address ?? null,
         }
       : null,
-    items: (data.items || []).map((item, i) => ({
+    items: (Array.isArray(data.items) ? data.items : []).map((item, i) => ({
       id: item.id ?? String(i),
       productName: item.product_name ?? '',
       quantity: item.quantity ?? 0,

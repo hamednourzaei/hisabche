@@ -12,6 +12,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { asList } from '../lib/as-list'
 import { apiClient } from '../lib/client'
 import { useAuthReady } from './useAuthReady'
 
@@ -128,7 +129,7 @@ export function useRoleMembers(roleId?: string) {
       const body = unwrap<{ members: RoleMember[] }>(
         await apiClient.get(`/permissions/roles/${roleId}/members`),
       )
-      return body?.members ?? []
+      return asList<RoleMember>(body?.members, '/permissions/roles/members')
     },
     enabled: authReady && !!roleId,
   })

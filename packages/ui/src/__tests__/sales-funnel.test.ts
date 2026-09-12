@@ -65,8 +65,8 @@ describe('the shape only claims what is true', () => {
     expect(bandKeys).toEqual(["key: 'invoices'", "key: 'customers'"])
   })
 
-  it('band widths are proportional to the widest count', () => {
-    expect(funnel).toMatch(/band\.count \/ widest/)
+  it('each stage is sized as its share of the first stage', () => {
+    expect(funnel).toContain('(count / firstCount) * 100')
   })
 
   it('a shop with one data point is still readable', () => {
@@ -130,36 +130,41 @@ describe('green and red are earned, not default', () => {
   })
 })
 
-describe('the cone', () => {
-  it('⚠️ the taper is the real drop-off, not a fixed angle', () => {
-    // A constant slope makes 10 → 9 lean in exactly as hard as 1000 → 90. The
-    // bottom edge of each band is the next band's width, so the slope IS the
-    // ratio between the two stages.
+describe('the funnel shape', () => {
+  it('⚠️ is one continuous taper: each bottom edge is the next top edge', () => {
+    // The previous version drew separate rows with gaps and a side pill, which
+    // read as a list of bars rather than a funnel. The outline is unbroken
+    // only if every segment closes onto the width of the one below it.
     expect(funnel).toContain(
-      'const taper = width > 0 ? Math.max(0, (width - nextWidth) / width / 2) : 0',
+      'bottom: index + 1 < tops.length ? (tops[index + 1] ?? tipTop) : tipTop',
     )
+    expect(funnel).toContain('<ul className="flex flex-col"')
   })
 
-  it('the last band has no successor, and so no taper', () => {
-    expect(funnel).toContain(': width')
+  it('⚠️ the money tip is a fixed closing segment, not a proportional width', () => {
+    // Afghanis have no width that means anything beside counts.
+    expect(funnel).toContain("key: 'sales'")
+    expect(funnel).toContain('value: fmt(total)')
+    expect(funnel).not.toContain('share(total)')
   })
 
-  it('the shape is drawn with clip-path in a style object, not a Tailwind class', () => {
-    // `polygon()` contains commas; in an inline style that is plain CSS and
-    // the arbitrary-value rules do not apply.
-    expect(funnel).toContain('clipPath: `polygon(')
+  it('trapezoids are drawn with clip-path in a style object', () => {
+    expect(funnel).toContain('clipPath: clipFor(segment.top, segment.bottom)')
+    expect(funnel).toContain('polygon(')
   })
 
-  it('each band has a labelled pill with its own icon', () => {
-    expect(funnel).toContain('const BAND_ICON')
-    expect(funnel).toContain('dashboard.funnel.band.')
-  })
-
-  it('⚠️ the band colour is the trend, not a decorative gradient', () => {
-    // The reference mock used a fixed teal→gold ramp. That would discard the
-    // one thing the colour was asked to carry: whether each stage improved.
-    expect(funnel).toContain('TREND_TONE[band.trend]')
+  it('⚠️ colour is the trend when there is one, never a decorative gradient', () => {
+    expect(funnel).toContain('TREND_TONE[segment.trend]')
     expect(funnel).not.toMatch(/bg-gradient-to|from-\[|to-\[/)
+  })
+
+  it('a stage with no trend is a neutral brand fade, not green', () => {
+    expect(funnel).toContain("segment.trend === 'unknown'")
+    expect(funnel).toContain('FADE_TONE[segment.fade]')
+  })
+
+  it('the number sits on a full-width row so a narrow tip never truncates it', () => {
+    expect(funnel).toContain('absolute inset-x-0 text-center')
   })
 })
 

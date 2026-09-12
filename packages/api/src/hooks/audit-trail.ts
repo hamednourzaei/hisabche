@@ -16,6 +16,7 @@
 
 import { useQuery } from '@tanstack/react-query'
 
+import { asList } from '../lib/as-list'
 import { apiClient } from '../lib/client'
 import { useAuthReady } from './useAuthReady'
 
@@ -96,7 +97,7 @@ export function useRecordHistory(entityType?: string, entityId?: string) {
       const body = unwrap<{ history: AuditEntry[] }>(
         await apiClient.get(`/audit/workspace/${entityType}/${entityId}`),
       )
-      return body?.history ?? []
+      return asList<AuditEntry>(body?.history, `/audit/workspace/${entityType}`)
     },
     enabled: authReady && !!entityType && !!entityId,
   })

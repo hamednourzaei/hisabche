@@ -128,7 +128,7 @@ export function TeamAndPayrollContainer() {
   // Profiles are the ones that widen — Accountant, Sales Manager, and so on.
   const { data: matrix } = usePermissionMatrix()
   const permissionProfiles = useMemo(
-    () => (matrix?.roles ?? []).filter((role) => !role.isEnforcedBase),
+    () => (Array.isArray(matrix?.roles) ? matrix.roles : []).filter((role) => !role.isEnforcedBase),
     [matrix],
   )
 

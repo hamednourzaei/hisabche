@@ -319,6 +319,7 @@ export const QuickInvoiceContainer = memo(function QuickInvoiceContainer() {
     setSaveStatus,
     addAuditEntry,
     productName,
+    transactionType,
   ])
 
   const handleViewInvoice = useCallback(

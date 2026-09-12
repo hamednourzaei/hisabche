@@ -16,6 +16,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { asList } from '../lib/as-list'
 import { apiClient } from '../lib/client'
 import { useAuthReady } from './useAuthReady'
 
@@ -77,7 +78,7 @@ export function useBranches() {
     queryKey: branchKeys.list(),
     queryFn: async () => {
       const body = unwrap<{ branches: Branch[] }>(await apiClient.get('/branches'))
-      return body?.branches ?? []
+      return asList<Branch>(body?.branches, '/branches')
     },
     enabled: authReady,
     // Branches change rarely — a shop adds one every few months — so this is
@@ -94,7 +95,7 @@ export function useBranchTree() {
     queryKey: branchKeys.tree(),
     queryFn: async () => {
       const body = unwrap<{ tree: BranchTreeNode[] }>(await apiClient.get('/branches/tree'))
-      return body?.tree ?? []
+      return asList<BranchTreeNode>(body?.tree, '/branches/tree')
     },
     enabled: authReady,
     staleTime: 1000 * 60,

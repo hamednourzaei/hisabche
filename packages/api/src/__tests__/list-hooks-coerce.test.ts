@@ -131,4 +131,29 @@ describe('every list hook coerces', () => {
 
     expect(offenders, '`?? []` does not make a non-array safe').toEqual([])
   })
+  it('⚠️ no network payload is iterated or returned through `?? []`', () => {
+    // The same defect not on a `return data` line: `(data ?? []).map(...)`
+    // inside a queryFn, `return body?.history ?? []`, and a derived
+    // `(query.data?.units ?? []).filter(...)`. All four shapes were in this
+    // directory — `/interactions`, `/units`, the record history and the
+    // workflow instances. Comments are stripped so an explanation of the bug
+    // does not read as the bug.
+    const ITERATED =
+      /\(\s*(?:data|body|query\.data)[\w?.]*\s*(?:\?\?|\|\|)\s*\[\]\s*\)\s*\.(?:map|filter|reduce|forEach|find|some|every|slice|sort|flatMap)\(/
+    const RETURNED = /return\s+(?:data|body)\??\.[\w?.]+\s*\?\?\s*\[\]\s*$/
+    const offenders: string[] = []
+
+    for (const file of files) {
+      const code = readFileSync(join(HOOKS, file), 'utf8')
+        .replace(/\/\*[\s\S]*?\*\//g, '')
+        .replace(/(^|[^:])\/\/.*$/gm, '$1')
+      code.split(String.fromCharCode(10)).forEach((line, index) => {
+        if ((ITERATED.test(line) || RETURNED.test(line)) && !/asList|Array\.isArray/.test(line)) {
+          offenders.push(`${file}:${index + 1}  ${line.trim()}`)
+        }
+      })
+    }
+
+    expect(offenders, '`?? []` does not make a non-array safe').toEqual([])
+  })
 })

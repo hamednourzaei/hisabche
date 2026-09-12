@@ -272,6 +272,8 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
     invoiceNotes,
     summary,
     currency,
+    paidAmount,
+    payment,
     createInvoice,
     preferences,
     markInvoiceCreated,

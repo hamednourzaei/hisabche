@@ -23,6 +23,7 @@
 // ============================================
 
 import { useQuery } from '@tanstack/react-query'
+import { asList } from '../lib/as-list'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
 
@@ -95,6 +96,6 @@ export function useUnitsByDimension(dimension: UnitDimension) {
     // implicit `any` — `apps/mobile` failed to type-check while every other
     // package passed. Naming the type states what the row is regardless of how
     // well the query types resolve in a given app.
-    units: (query.data?.units ?? []).filter((u: Unit) => u.dimension === dimension),
+    units: asList<Unit>(query.data?.units, '/units').filter((u: Unit) => u.dimension === dimension),
   }
 }
