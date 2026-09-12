@@ -96,6 +96,19 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
     .map((c) => c.name)
     .join('، ')
 
+  // ─── T9 — how this invoice was paid ─────────────────────────────────
+  //
+  // `draft.isPaid` defaulted to TRUE and no UI ever set it, so every invoice
+  // was submitted claiming the full amount had been received. That is the
+  // reported defect at its source: `paidAmount: summary.total` on a sale where
+  // nothing had been handed over.
+  //
+  // Held in local state rather than the draft slice because it describes an
+  // EVENT at submission, not a property of the document being edited — and
+  // because a persisted default is exactly what caused the bug.
+  const [payment, setPayment] = useState<InvoicePaymentValue>(emptyPaymentValue)
+  const paidAmount = paidAmountOf(payment, summary.total)
+
   const documentData: InvoiceDocumentData = useMemo(
     () => ({
       // Not saved yet, so there is no invoice number and none is invented.
@@ -142,21 +155,25 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
       paidAmount,
       notes: draft.notes,
     }),
-    [draft, primaryCustomer, otherCustomerNames, workspace, items, currency, summary, t],
+    // ⚠️ `paidAmount` IS A DEPENDENCY, AND IT WAS MISSING.
+    //
+    // The memo body reads it, so leaving it out froze the printed document on
+    // the paid amount from the FIRST render — zero. Someone could enter a
+    // payment, watch the total update beside the form, and print a document
+    // still saying nothing had been received. A stale number on a document
+    // that leaves the building is worse than a visibly wrong one on screen.
+    [
+      draft,
+      primaryCustomer,
+      otherCustomerNames,
+      workspace,
+      items,
+      currency,
+      summary,
+      paidAmount,
+      t,
+    ],
   )
-
-  // ─── T9 — how this invoice was paid ─────────────────────────────────
-  //
-  // `draft.isPaid` defaulted to TRUE and no UI ever set it, so every invoice
-  // was submitted claiming the full amount had been received. That is the
-  // reported defect at its source: `paidAmount: summary.total` on a sale where
-  // nothing had been handed over.
-  //
-  // Held in local state rather than the draft slice because it describes an
-  // EVENT at submission, not a property of the document being edited — and
-  // because a persisted default is exactly what caused the bug.
-  const [payment, setPayment] = useState<InvoicePaymentValue>(emptyPaymentValue)
-  const paidAmount = paidAmountOf(payment, summary.total)
 
   const invoiceNotes = [
     draft.notes.trim(),

@@ -130,6 +130,39 @@ describe('green and red are earned, not default', () => {
   })
 })
 
+describe('the cone', () => {
+  it('⚠️ the taper is the real drop-off, not a fixed angle', () => {
+    // A constant slope makes 10 → 9 lean in exactly as hard as 1000 → 90. The
+    // bottom edge of each band is the next band's width, so the slope IS the
+    // ratio between the two stages.
+    expect(funnel).toContain(
+      'const taper = width > 0 ? Math.max(0, (width - nextWidth) / width / 2) : 0',
+    )
+  })
+
+  it('the last band has no successor, and so no taper', () => {
+    expect(funnel).toContain(': width')
+  })
+
+  it('the shape is drawn with clip-path in a style object, not a Tailwind class', () => {
+    // `polygon()` contains commas; in an inline style that is plain CSS and
+    // the arbitrary-value rules do not apply.
+    expect(funnel).toContain('clipPath: `polygon(')
+  })
+
+  it('each band has a labelled pill with its own icon', () => {
+    expect(funnel).toContain('const BAND_ICON')
+    expect(funnel).toContain('dashboard.funnel.band.')
+  })
+
+  it('⚠️ the band colour is the trend, not a decorative gradient', () => {
+    // The reference mock used a fixed teal→gold ramp. That would discard the
+    // one thing the colour was asked to carry: whether each stage improved.
+    expect(funnel).toContain('TREND_TONE[band.trend]')
+    expect(funnel).not.toMatch(/bg-gradient-to|from-\[|to-\[/)
+  })
+})
+
 describe('the states it can be in', () => {
   it('⚠️ an error is not an empty period', () => {
     expect(funnel).toMatch(/dashboard\.funnel\.error/)

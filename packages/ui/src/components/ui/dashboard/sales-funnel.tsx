@@ -43,7 +43,7 @@
 
 import * as React from 'react'
 
-import { AlertCircle, Minus, TrendingDown, TrendingUp } from 'lucide-react'
+import { AlertCircle, FileText, Minus, TrendingDown, TrendingUp, Users } from 'lucide-react'
 
 import { cn } from '../../../lib/utils'
 
@@ -107,6 +107,12 @@ const TREND_TEXT: Record<Trend, string> = {
   flat: 'text-[hsl(var(--fg-tertiary))]',
   unknown: 'text-[hsl(var(--fg-tertiary))]',
 }
+
+/** One icon per band, so the pill is scannable without reading it. */
+const BAND_ICON = {
+  invoices: FileText,
+  customers: Users,
+} as const
 
 const MIN_WIDTH_PERCENT = 22
 
@@ -232,42 +238,91 @@ export function SalesFunnel({
   }
 
   return (
-    <div className="flex flex-col gap-3" style={{ minHeight: height }}>
-      <ul className="flex flex-col gap-2" aria-label={t('dashboard.funnel.aria', 'قیف فروش')}>
-        {bands.map((band) => {
+    <div className="flex flex-col gap-2" style={{ minHeight: height }}>
+      <ul
+        className="flex flex-col items-stretch gap-1.5"
+        aria-label={t('dashboard.funnel.aria', 'قیف فروش')}
+      >
+        {bands.map((band, index) => {
+          const Icon = BAND_ICON[band.key]
+
+          // Each band's width is its share of the widest one, with a floor so
+          // a stage holding a single document is still readable.
           const width = Math.max(
             MIN_WIDTH_PERCENT,
             widest > 0 ? Math.round((band.count / widest) * 100) : MIN_WIDTH_PERCENT,
           )
+          const next = bands[index + 1]
+          const nextWidth = next
+            ? Math.max(
+                MIN_WIDTH_PERCENT,
+                widest > 0 ? Math.round((next.count / widest) * 100) : MIN_WIDTH_PERCENT,
+              )
+            : width
+
+          // ⚠️ THE TAPER IS THE REAL RATIO, NOT A FIXED ANGLE.
+          //
+          // A cone drawn with a constant slope looks like a funnel and means
+          // nothing — 10 → 9 would lean in exactly as hard as 1000 → 90. The
+          // bottom edge of each band is the width the NEXT band will have, so
+          // the slope IS the drop-off between the two stages. The last band
+          // has no successor and so has no taper.
+          const taper = width > 0 ? Math.max(0, (width - nextWidth) / width / 2) : 0
+          const inset = `${(taper * 100).toFixed(2)}%`
 
           return (
-            <li key={band.key} className="flex items-center gap-3">
-              <span className="w-20 shrink-0 truncate text-xs text-[hsl(var(--fg-secondary))]">
-                {t(`dashboard.funnel.band.${band.key}`, band.key)}
-              </span>
-
-              <div className="min-w-0 flex-1">
+            <li key={band.key} className="flex items-center gap-2 sm:gap-3">
+              {/* The cone itself. Centred so both edges slope symmetrically,
+                  which is what makes it read as one shape rather than a stack
+                  of bars. */}
+              <div className="flex min-w-0 flex-1 justify-center">
                 <div
                   className={cn(
-                    'flex h-9 items-center justify-between gap-2 rounded-lg px-3',
+                    'flex h-11 items-center justify-center gap-2 px-4',
                     'transition-[width] duration-300 motion-reduce:transition-none',
                     TREND_TONE[band.trend],
                   )}
-                  style={{ width: `${width}%` }}
+                  style={{
+                    width: `${width}%`,
+                    // `polygon()` contains commas, which compile correctly in
+                    // an inline style — and this is a style object, not a
+                    // Tailwind class, so the arbitrary-value rules do not
+                    // apply at all.
+                    clipPath: `polygon(0 0, 100% 0, calc(100% - ${inset}) 100%, ${inset} 100%)`,
+                  }}
                 >
-                  <span className="text-sm font-semibold tabular-nums text-white">
+                  <span className="text-base font-bold tabular-nums text-white drop-shadow-sm">
                     {band.count}
                   </span>
                   <TrendMark trend={band.trend} changePercent={band.changePercent} onBand />
                 </div>
+              </div>
+
+              {/* The label, as a pill beside the cone — the shape carries the
+                  proportion, the pill carries the name. */}
+              <div
+                className={cn(
+                  'flex h-11 w-32 shrink-0 items-center gap-2 rounded-xl px-2.5 sm:w-40 sm:px-3',
+                  'border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted)/0.6)]',
+                )}
+              >
+                <span
+                  className={cn(
+                    'flex size-7 shrink-0 items-center justify-center rounded-lg',
+                    TREND_TONE[band.trend],
+                  )}
+                >
+                  <Icon className="size-4 text-white" aria-hidden="true" />
+                </span>
+                <span className="min-w-0 truncate text-xs font-medium text-[hsl(var(--fg-primary))]">
+                  {t(`dashboard.funnel.band.${band.key}`, band.key)}
+                </span>
               </div>
             </li>
           )
         })}
       </ul>
 
-      {/* ⚠️ THE OUTCOME, NOT A BAND. Money has no width that means anything
-          beside two counts — see the note at the top of this file. */}
       {/*
         ⚠️ THE COMPARISON NAMES ITS OWN WINDOW.
         A coloured band with no caption is a claim with no stated basis — the
@@ -276,23 +331,23 @@ export function SalesFunnel({
         so this changes with it.
       */}
       {windowDays > 0 ? (
-        <p className="text-[11px] text-[hsl(var(--fg-tertiary))]">
+        <p className="text-center text-[11px] text-[hsl(var(--fg-tertiary))]">
           {t('dashboard.funnel.comparedTo', 'نسبت به')}{' '}
           <span className="tabular-nums">{windowDays}</span>{' '}
           {t('dashboard.funnel.daysBefore', 'روز پیش از آن')}
         </p>
       ) : null}
 
-      <div className="flex flex-wrap items-baseline justify-between gap-2 border-t border-[hsl(var(--border-default))] pt-2.5">
+      {/* ⚠️ THE OUTCOME, NOT A BAND. Money has no width that means anything
+          beside two counts — see the note at the top of this file. */}
+      <div className="flex flex-wrap items-baseline justify-center gap-2 pt-1">
         <span className="text-xs text-[hsl(var(--fg-secondary))]">
           {t('dashboard.totalSales', 'فروش کل')}
         </span>
-        <span className="flex items-center gap-2">
-          <span className={cn('text-base font-bold tabular-nums', TREND_TEXT[revenue.trend])}>
-            {fmt(total)}
-          </span>
-          <TrendMark trend={revenue.trend} changePercent={revenue.changePercent} />
+        <span className={cn('text-lg font-bold tabular-nums', TREND_TEXT[revenue.trend])}>
+          {fmt(total)}
         </span>
+        <TrendMark trend={revenue.trend} changePercent={revenue.changePercent} />
       </div>
     </div>
   )
