@@ -1896,22 +1896,16 @@
     "activityColumnEvent": "Event",
     "activityColumnRole": "Role",
     "funnel": {
-      "title": "Sales funnel",
-      "empty": "No sales opportunities recorded yet",
-      "emptyHint": "Record opportunities in the customer relations section to see how they convert.",
-      "error": "Could not load the sales funnel.",
-      "conversion": "Conversion rate",
-      "lost": "Lost",
       "aria": "Sales funnel",
-      "stage": {
-        "lead": "Lead",
-        "qualified": "Qualified",
-        "proposal": "Proposal",
-        "negotiation": "Negotiation",
-        "won": "Won"
+      "title": "Sales funnel",
+      "error": "Could not load the sales funnel.",
+      "band": {
+        "invoices": "Invoices",
+        "customers": "Customers"
       }
     },
-    "viewSwitch": "Chart view"
+    "viewSwitch": "Chart view",
+    "activityColumnDate": "Date"
   },
   "quickInvoice": {
     "title": "Quick Invoice",

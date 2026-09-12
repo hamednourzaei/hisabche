@@ -1,23 +1,21 @@
 // ============================================
-// The funnel shows the pipeline, not an illustration.
+// The funnel is the chart's own data, and its colours are earned.
 //
 // ---------------------------------------------------------------------------
-// ⚠️ THE MOCK IT WAS BUILT FROM CONTAINED INVENTED NUMBERS
+// ⚠️ THE FIRST VERSION ANSWERED THE WRONG QUESTION
 //
-// 1,500 leads narrowing to 38 sales, on a dashboard whose own KPI says the
-// shop has 24 customers. There is no ratio that turns 24 customers into 1,500
-// leads; shipping those proportions would be a dashboard that lies
-// confidently, which is what G1 forbids.
+// It fetched a CRM pipeline from `/api/crm/funnel` — «what stage are my
+// opportunities in» — when the request was to show the CHART's numbers as a
+// funnel. It also cost the dashboard a separate request, measured at 1525ms
+// in the production log, for data the page already held in memory: every
+// point of `salesChartData` carries `value`, `invoiceCount` and
+// `customerCount`.
 //
-// `opportunitySchema` already defines exactly these stages, and the
-// `opportunities` table, service and route already exist — so the funnel is a
-// real count and a shop with no pipeline sees an empty state saying so.
+// ⚠️ AND THE SHAPE MUST NOT CLAIM A CONVERSION THAT DOES NOT EXIST
 //
-// ⚠️ AND IT IS NOT COUNTED FROM THE PAGINATED LIST ENDPOINT.
-// `GET /api/opportunities` uses `.range(offset, offset + limit - 1)` and
-// `count: 'estimated'`. Grouping its result would show the stage breakdown of
-// ONE PAGE and present it as the pipeline — the same class of defect as the
-// ~20 `.limit(N)` money reads already catalogued in this repo.
+// Invoices and customers are counts; total sales is money. «38 invoices» is
+// not a subset of «24 customers». Only the two counts are drawn as
+// proportional bands; revenue is the outcome beneath them.
 // ============================================
 
 import { readFileSync } from 'node:fs'
@@ -32,100 +30,122 @@ function code(path: string): string {
     .replace(/\/\/.*/g, '')
 }
 
-const ROOT = join(__dirname, '..', '..', '..', '..')
-const service = code(join(ROOT, 'backend', 'src', 'services', 'crm.service.ts'))
-const funnel = code(join(__dirname, '..', 'components', 'ui', 'dashboard', 'sales-funnel.tsx'))
-const view = code(join(__dirname, '..', 'components', 'ui', 'dashboard', 'dashboard-view.tsx'))
+const DASH = join(__dirname, '..', 'components', 'ui', 'dashboard')
+const funnel = code(join(DASH, 'sales-funnel.tsx'))
+const view = code(join(DASH, 'dashboard-view.tsx'))
 
-describe('the counts are real', () => {
-  it('⚠️ counted by the database, exactly — never estimated', () => {
-    const method = service.slice(service.indexOf('async getFunnel'))
-    expect(method).toMatch(/count: 'exact', head: true/)
-    expect(method).not.toMatch(/count: 'estimated'/)
+describe('it reuses the chart data', () => {
+  it('⚠️ makes no request of its own', () => {
+    expect(funnel).not.toMatch(/useQuery|apiClient|useSalesFunnel/)
+    expect(view).not.toMatch(/useSalesFunnel/)
   })
 
-  it('⚠️ not derived from the paginated list', () => {
-    const method = service.slice(service.indexOf('async getFunnel'))
-    expect(method).not.toMatch(/\.range\(/)
-    expect(method).not.toMatch(/listOpportunities/)
+  it('is fed the same array the chart is', () => {
+    expect(view).toMatch(/<SalesFunnel[\s\S]{0,200}data=\{salesChartData\}/)
+    expect(view).toMatch(/<LazySalesChart[\s\S]{0,200}data=\{salesChartData\}/)
   })
 
-  it('is scoped to the workspace', () => {
-    const method = service.slice(service.indexOf('async getFunnel'))
-    expect(method).toMatch(/\.eq\('workspace_id', workspaceId\)/)
-  })
-
-  it('⚠️ a failed count throws instead of drawing an empty funnel', () => {
-    // Returning 0 would state «you have no pipeline» out of a query error.
-    const method = service.slice(service.indexOf('async getFunnel'))
-    expect(method).toMatch(/if \(error\) throw new DatabaseError/)
-  })
-
-  it('there are no hardcoded stage counts anywhere in the component', () => {
-    expect(funnel).not.toMatch(/1500|1,500|\b380\b|\b120\b/)
+  it('⚠️ guards the array at runtime', () => {
+    // A type annotation is not a runtime check — this shape has taken down
+    // two production screens in this codebase.
+    expect(funnel).toMatch(/Array\.isArray\(data\) \? data : \[\]/)
   })
 })
 
-describe('what the shape claims', () => {
-  it('⚠️ lost deals are not a band in the cone', () => {
-    // A lost deal did not pass through the stages beneath it; stacking it in
-    // makes every lower stage look wider than it is.
-    expect(service).toMatch(
-      /const FUNNEL_STAGES = \['lead', 'qualified', 'proposal', 'negotiation', 'won'\]/,
+describe('the shape only claims what is true', () => {
+  it('⚠️ money is not a band', () => {
+    // A band whose width came from afghanis, beside bands whose width came
+    // from counts, is a picture of nothing.
+    // Only the array literal, not the union in the `Band` type above it.
+    const arrayRegion = funnel.slice(
+      funnel.indexOf('const nextBands: Band[]'),
+      funnel.indexOf('return {', funnel.indexOf('const nextBands: Band[]')),
     )
+    const bandKeys = arrayRegion.match(/key: '(invoices|customers|revenue|sales)'/g) ?? []
+    expect(bandKeys).toEqual(["key: 'invoices'", "key: 'customers'"])
   })
 
-  it('⚠️ bands are proportional to the top stage, not to the one above', () => {
-    // Scaling each against its predecessor makes 10 → 9 → 8 look identical to
-    // 1000 → 90 → 8.
-    expect(funnel).toMatch(/item\.count \/ top/)
+  it('band widths are proportional to the widest count', () => {
+    expect(funnel).toMatch(/band\.count \/ widest/)
   })
 
-  it('⚠️ an empty pipeline has no conversion rate, rather than «0%»', () => {
-    expect(service).toMatch(/entered > 0 \?/)
-    expect(funnel).toMatch(/conversionRate !== null \?/)
-  })
-
-  it('an error state is distinct from an empty one', () => {
-    expect(funnel).toMatch(/dashboard\.funnel\.error/)
-    expect(funnel).toMatch(/dashboard\.funnel\.empty/)
+  it('a shop with one data point is still readable', () => {
+    expect(funnel).toMatch(/MIN_WIDTH_PERCENT/)
   })
 })
 
-describe('the switch on the dashboard card', () => {
-  it('⚠️ the funnel hook is never called conditionally', () => {
-    // Gating it on `view` would be a conditional hook: React throws «rendered
-    // fewer hooks than expected» and the dashboard goes with it.
-    expect(view).not.toMatch(/view === 'funnel' && useSalesFunnel/)
-    expect(view).toMatch(/const funnel = useSalesFunnel\(\)/)
+describe('green and red are earned, not default', () => {
+  it('⚠️ no earlier half means no colour', () => {
+    // A green band by default tells someone their business is growing on the
+    // strength of no evidence.
+    expect(funnel).toMatch(/const comparable = earlier\.length > 0/)
+    expect(funnel).toMatch(/comparable \? compare\(/)
   })
 
-  it('states both options rather than relying on a convention', () => {
-    expect(view).toMatch(/aria-pressed=\{view === 'chart'\}/)
-    expect(view).toMatch(/aria-pressed=\{view === 'funnel'\}/)
+  it('⚠️ an unknown trend renders nothing at all', () => {
+    // A grey dash where a trend belongs reads as «no change», which is a
+    // measurement. Absent is the honest rendering of an unanswerable question.
+    expect(funnel).toMatch(/if \(trend === 'unknown'\) return null/)
+    expect(funnel).toMatch(/unknown: 'bg-\[hsl\(var\(--surface-muted\)\)\]'/)
   })
 
-  it('⚠️ the date picker is hidden on the funnel, not left inert', () => {
-    // The funnel is the pipeline as it stands now, not a window over time.
-    expect(view).toMatch(/\{view === 'chart' \? \(\s*<DateRangePicker/)
+  it('⚠️ growth from zero has a direction but no percentage', () => {
+    // «∞%» is not a number anyone can act on.
+    expect(funnel).toMatch(/if \(previous === 0\)/)
+    expect(funnel).toMatch(/return \{ trend: 'up', changePercent: null \}/)
   })
 
-  it('every string exists in all three locales', () => {
-    for (const locale of ['fa', 'af', 'en']) {
+  it('flat is distinguished from unknown', () => {
+    expect(funnel).toMatch(/trend: 'flat', changePercent: 0/)
+  })
+
+  it('⚠️ «more is better» is stated per metric, not inferred from the sign', () => {
+    // Customer debt and expenses invert. The map must be explicit so a future
+    // band for either cannot silently inherit the wrong direction.
+    expect(funnel).toMatch(/const TREND_TONE: Record<Trend, string>/)
+    expect(funnel).toMatch(/up: 'bg-\[hsl\(var\(--color-success\)/)
+    expect(funnel).toMatch(/down: 'bg-\[hsl\(var\(--color-destructive\)/)
+  })
+
+  it('the odd point goes to the recent half', () => {
+    // Newer information is the side the question is about.
+    expect(funnel).toMatch(/const split = Math\.floor\(points\.length \/ 2\)/)
+    expect(funnel).toMatch(/const recent = points\.slice\(split\)/)
+  })
+})
+
+describe('the states it can be in', () => {
+  it('⚠️ an error is not an empty period', () => {
+    expect(funnel).toMatch(/dashboard\.funnel\.error/)
+    expect(funnel).toMatch(/dashboard\.noSalesInPeriod/)
+  })
+
+  it('the empty state speaks about the window, not all history', () => {
+    // The same correction the chart's own empty state already carries.
+    expect(funnel).not.toMatch(/noSalesYet|startSelling/)
+  })
+})
+
+describe('every string exists in all three locales', () => {
+  for (const locale of ['fa', 'af', 'en']) {
+    it(`${locale}`, () => {
       const bundle = JSON.parse(
-        readFileSync(join(ROOT, 'packages', 'i18n', 'messages', locale, 'common.json'), 'utf8'),
-      ) as { dashboard: { funnel?: Record<string, unknown>; viewSwitch?: string } }
+        readFileSync(
+          join(__dirname, '..', '..', '..', 'i18n', 'messages', locale, 'common.json'),
+          'utf8',
+        ),
+      ) as { dashboard: Record<string, any> }
 
-      const f = bundle.dashboard.funnel as Record<string, unknown> | undefined
+      const f = bundle.dashboard.funnel
       expect(f, `${locale}.dashboard.funnel`).toBeTruthy()
-      for (const key of ['title', 'empty', 'emptyHint', 'error', 'conversion', 'lost', 'aria']) {
+      for (const key of ['aria', 'title', 'error']) {
         expect(f?.[key], `${locale}.funnel.${key}`).toBeTruthy()
       }
-      const stages = f?.['stage'] as Record<string, unknown> | undefined
-      for (const s of ['lead', 'qualified', 'proposal', 'negotiation', 'won']) {
-        expect(stages?.[s], `${locale}.funnel.stage.${s}`).toBeTruthy()
+      for (const band of ['invoices', 'customers']) {
+        expect(f?.band?.[band], `${locale}.funnel.band.${band}`).toBeTruthy()
       }
       expect(bundle.dashboard.viewSwitch, `${locale}.viewSwitch`).toBeTruthy()
-    }
-  })
+      expect(bundle.dashboard.totalSales, `${locale}.totalSales`).toBeTruthy()
+    })
+  }
 })

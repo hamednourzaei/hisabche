@@ -198,7 +198,7 @@ export function DataGrid<T extends { id: string }>(props: DataGridProps<T>) {
               type="checkbox"
               checked={selectedIds.size === sortedData.length && sortedData.length > 0}
               onChange={toggleSelectAll}
-              className="mr-2 size-4 accent-[hsl(var(--color-primary))]"
+              className="me-2 size-4 accent-[hsl(var(--color-primary))]"
             />
           )}
           {columns.map((col) => (
@@ -259,7 +259,7 @@ export function DataGrid<T extends { id: string }>(props: DataGridProps<T>) {
                           e.stopPropagation()
                           toggleSelect(row.id)
                         }}
-                        className="ml-4 mr-2 size-4 accent-[hsl(var(--color-primary))]"
+                        className="ms-4 me-2 size-4 accent-[hsl(var(--color-primary))]"
                       />
                     )}
                     {columns.map((col) => (

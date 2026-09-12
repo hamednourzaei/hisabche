@@ -18,7 +18,7 @@ import {
 import { SalesChart, type ChartDataPoint } from './sales-chart'
 import { DateRangePicker, type DateRange, type PresetKey } from './date-range-picker'
 import { SalesFunnel } from './sales-funnel'
-import { useSalesFunnel, type AIInsight } from '@hisabche/api'
+import type { AIInsight } from '@hisabche/api'
 import type { ActivityGroupDto, ActivityItemDto } from '@hisabche/api'
 import dynamic from 'next/dynamic'
 import { asList } from '@hisabche/api'
@@ -360,14 +360,34 @@ const RecentActivities = memo(function RecentActivities({
           </p>
         ) : (
           <>
-            {/* Column header. The role cell is a new column, so it is named —
-                an unlabelled coloured chip beside a date is a guess for the
-                reader. */}
-            <div className="flex items-center justify-between gap-3 px-2 pb-1.5 text-[10px] font-medium uppercase tracking-wide text-[hsl(var(--fg-tertiary))]">
+            {/*
+              ⚠️ A GRID, AND THE HEADER USES THE SAME TEMPLATE AS THE ROWS.
+
+              This was `flex justify-between` with a TWO-cell header over
+              THREE-cell rows. Two things were wrong and both were visible:
+
+                * «نقش» sat above the DATE, because the header had no third
+                  cell — the labels named the wrong columns.
+                * `justify-between` gives no column to anything. The role chip
+                  landed wherever the event text stopped, so the chips
+                  staggered left and right down the list instead of forming a
+                  column.
+
+              One shared template fixes both: the header cannot drift from the
+              rows because it is laid out by the same rule.
+
+              ⚠️ NO COMMA IN THE ARBITRARY VALUE. `grid-cols-[minmax(0,1fr)_…]`
+              would be the textbook way to write this, and Tailwind v3's JIT
+              emits NO CSS AT ALL for an arbitrary value containing a comma —
+              the class silently does nothing. `1fr` plus `min-w-0` on the
+              first cell is the same behaviour, spelled in a way that compiles.
+            */}
+            <div className="grid grid-cols-[1fr_5rem_6rem] items-center gap-3 px-2 pb-1.5 text-[10px] font-medium uppercase tracking-wide text-[hsl(var(--fg-tertiary))]">
               <span className="min-w-0 text-start">
                 {t('dashboard.activityColumnEvent', 'رویداد')}
               </span>
-              <span className="shrink-0 text-end">{t('dashboard.activityColumnRole', 'نقش')}</span>
+              <span className="text-start">{t('dashboard.activityColumnRole', 'نقش')}</span>
+              <span className="text-start">{t('dashboard.activityColumnDate', 'تاریخ')}</span>
             </div>
             <ul className="divide-y divide-[hsl(var(--border-default)/0.6)]">
               {items.map((a) => (
@@ -375,7 +395,7 @@ const RecentActivities = memo(function RecentActivities({
                   <button
                     type="button"
                     onClick={() => a.entitySummary.route && onNavigate(a.entitySummary.route)}
-                    className="w-full flex items-center justify-between gap-3 py-2.5 text-start hover:bg-[hsl(var(--surface-muted)/0.5)] rounded-lg px-2 -mx-2 transition-colors duration-150"
+                    className="w-full grid grid-cols-[1fr_5rem_6rem] items-center gap-3 py-2.5 text-start hover:bg-[hsl(var(--surface-muted)/0.5)] rounded-lg px-2 -mx-2 transition-colors duration-150"
                   >
                     <div className="min-w-0">
                       <p className="text-sm text-[hsl(var(--fg-primary))] truncate">{a.title}</p>
@@ -388,17 +408,22 @@ const RecentActivities = memo(function RecentActivities({
                       arrives with `actorRole: null` and is rendered neutral
                       and «unknown». It is never coloured as `member` or
                       `viewer`: guessing the lowest role would put a false
-                      statement about a real person on the dashboard. */}
+                      statement about a real person on the dashboard.
+
+                      `justify-self-start` so the chip sits at the column's
+                      edge and every chip lines up, whatever its text width. */}
                     <span
                       className={cn(
-                        'shrink-0 rounded-md px-2 py-0.5 text-[11px] font-medium',
+                        'justify-self-start rounded-md px-2 py-0.5 text-[11px] font-medium',
                         roleTone(a.actorRole),
                       )}
                       title={a.actor}
                     >
                       {t(roleLabelKey(a.actorRole), ROLE_LABEL_FALLBACK[a.actorRole ?? 'unknown'])}
                     </span>
-                    <span className="text-[11px] text-[hsl(var(--fg-tertiary))] shrink-0">
+                    {/* `tabular-nums` so the digits share a width and the
+                        dates form a straight edge rather than a ragged one. */}
+                    <span className="justify-self-start text-[11px] tabular-nums text-[hsl(var(--fg-tertiary))]">
                       {fmtIntlDate(a.timestamp)}
                     </span>
                   </button>
@@ -422,13 +447,13 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
   /**
    * Which of the two the card is showing.
    *
-   * ⚠️ THE FUNNEL IS FETCHED ALWAYS, NOT ONLY WHEN SELECTED. Gating the hook
-   * on `view` would make it a CONDITIONAL HOOK — React throws «rendered fewer
-   * hooks than expected» and the dashboard goes with it. React Query keeps it
-   * cheap: one cached request per minute either way.
+   * ⚠️ THE FUNNEL NEEDS NO REQUEST OF ITS OWN. It reads `salesChartData` —
+   * the same array the chart draws, whose points already carry `value`,
+   * `invoiceCount` and `customerCount`. An earlier version fetched a CRM
+   * pipeline instead and cost the dashboard a separate 1525ms request (seen
+   * in the production log) for data already in memory.
    */
   const [view, setView] = useState<'chart' | 'funnel'>('chart')
-  const funnel = useSalesFunnel()
 
   const {
     t,
@@ -633,11 +658,10 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
               />
             ) : (
               <SalesFunnel
-                stages={funnel.data?.stages ?? []}
-                lost={funnel.data?.lost ?? 0}
-                conversionRate={funnel.data?.conversionRate ?? null}
-                isLoading={funnel.isLoading}
-                isError={funnel.isError}
+                data={salesChartData}
+                total={totalSales}
+                fmt={fmt}
+                isLoading={chartLoading}
                 height={180}
                 t={t}
               />

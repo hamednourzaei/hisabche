@@ -251,13 +251,13 @@ export const AuditView = memo(function AuditView({
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[180px]">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))]" />
+          <Search className="absolute start-3 top-1/2 -translate-y-1/2 size-4 text-[hsl(var(--fg-tertiary))]" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder={t('audit.search', 'جستجو در گزارش‌ها...')}
-            className="w-full rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] pr-9 pl-3 py-2 text-xs focus:border-[hsl(var(--color-primary))] focus:outline-none"
+            className="w-full rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] ps-9 pe-3 py-2 text-xs focus:border-[hsl(var(--color-primary))] focus:outline-none"
           />
         </div>
 

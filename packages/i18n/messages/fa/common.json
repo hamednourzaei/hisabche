@@ -1901,22 +1901,16 @@
     "activityColumnEvent": "رویداد",
     "activityColumnRole": "نقش",
     "funnel": {
-      "title": "قیف فروش",
-      "empty": "هنوز فرصت فروشی ثبت نشده است",
-      "emptyHint": "فرصت‌های فروش را در بخش ارتباط با مشتریان ثبت کنید تا مسیر تبدیل آن‌ها این‌جا دیده شود.",
-      "error": "اطلاعات قیف فروش گرفته نشد.",
-      "conversion": "نرخ تبدیل",
-      "lost": "از دست رفته",
       "aria": "قیف فروش",
-      "stage": {
-        "lead": "سرنخ",
-        "qualified": "واجد شرایط",
-        "proposal": "پیشنهاد",
-        "negotiation": "مذاکره",
-        "won": "فروش نهایی"
+      "title": "قیف فروش",
+      "error": "اطلاعات قیف فروش گرفته نشد.",
+      "band": {
+        "invoices": "فاکتورها",
+        "customers": "مشتریان"
       }
     },
-    "viewSwitch": "نمای نمودار"
+    "viewSwitch": "نمای نمودار",
+    "activityColumnDate": "تاریخ"
   },
   "unit": {
     "piece": "عدد",

@@ -248,7 +248,7 @@ const LanguageSelect = memo(function LanguageSelect({
               <span className="text-base">{lang.flag}</span>
               <span>{lang.nativeLabel}</span>
               {lang.code === currentLang && (
-                <span className="mr-auto text-[hsl(var(--color-primary))]">
+                <span className="ms-auto text-[hsl(var(--color-primary))]">
                   <svg
                     width="14"
                     height="14"
