@@ -3,6 +3,7 @@
 import { cn } from '../../../lib/utils'
 import { ChevronRight, DollarSign, Download, FileText } from 'lucide-react'
 import { PaymentModal } from './PaymentModal'
+import { GHOST_ICON_BUTTON } from '../button-classes'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    CustomerDetailView v3 — Hisabche Design Language
@@ -44,8 +45,6 @@ export interface CustomerDetailViewProps {
   canExport?: boolean | undefined
 }
 
-const ghostBtn =
-  'inline-flex items-center justify-center rounded-full p-2 text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors duration-150 motion-reduce:transition-none'
 const outlineBtn =
   'inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors duration-150 motion-reduce:transition-none'
 const primaryBtn =
@@ -113,7 +112,7 @@ export function CustomerDetailView({
             type="button"
             onClick={onBack}
             aria-label={t('customers.backToList', 'بازگشت به طرف حساب‌ها')}
-            className={cn(ghostBtn, 'gap-1.5 rounded-full sm:px-3')}
+            className={cn(GHOST_ICON_BUTTON, 'gap-1.5 rounded-full sm:px-3')}
           >
             <ChevronRight className="size-5 shrink-0" aria-hidden="true" />
             <span className="hidden text-sm font-medium sm:inline">
@@ -235,7 +234,7 @@ export function CustomerDetailView({
                           'customers.payInvoice',
                           `پرداخت فاکتور #${inv.invoiceNumber}`,
                         )}
-                        className={ghostBtn}
+                        className={GHOST_ICON_BUTTON}
                       >
                         <DollarSign
                           className="size-4 text-[hsl(var(--color-success))]"

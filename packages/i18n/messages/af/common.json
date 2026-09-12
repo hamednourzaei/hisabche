@@ -1911,10 +1911,14 @@
       "band": {
         "invoices": "فاکتورها",
         "customers": "مشتریان"
-      }
+      },
+      "comparedTo": "نسبت به",
+      "daysBefore": "روز پیش از آن"
     },
     "viewSwitch": "نمای نمودار",
-    "activityColumnDate": "تاریخ"
+    "activityColumnDate": "تاریخ",
+    "viewTrend": "روند فروش",
+    "viewFunnel": "قیف تبدیل"
   },
   "quickInvoice": {
     "title": "فاکتور سریع",

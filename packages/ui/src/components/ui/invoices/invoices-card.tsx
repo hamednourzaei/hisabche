@@ -2,6 +2,7 @@
 
 import { memo, useCallback, useMemo } from 'react' // ✅ اضافه شد
 import { cn } from '../../../lib/utils'
+import { FOCUS_RING } from '../focus-ring'
 import { Eye, Trash2, FileText } from 'lucide-react'
 import type { Invoice } from '../../../lib/invoices/invoices-types'
 
@@ -73,7 +74,7 @@ export const InvoiceCard = memo(function InvoiceCard({
         'transition-all duration-200',
         'hover:shadow-lg hover:border-[hsl(var(--color-primary)/0.3)]',
         'active:scale-[0.98] sm:active:scale-[0.99]',
-        'focus-visible:ring-4 focus-visible:ring-[rgba(18,200,160,0.18)] focus-visible:outline-none',
+        FOCUS_RING,
         'motion-reduce:transition-none motion-reduce:active:scale-100',
       )}
     >
@@ -136,7 +137,7 @@ export const InvoiceCard = memo(function InvoiceCard({
               'hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
               'active:bg-[hsl(var(--surface-muted)/0.6)]',
               'transition-colors duration-150',
-              'focus-visible:ring-4 focus-visible:ring-[rgba(18,200,160,0.18)] focus-visible:outline-none',
+              FOCUS_RING,
               'motion-reduce:transition-none',
             )}
           >
@@ -154,7 +155,7 @@ export const InvoiceCard = memo(function InvoiceCard({
               'hover:bg-[hsl(var(--color-destructive)/0.1)] hover:text-[hsl(var(--color-destructive))]',
               'active:bg-[hsl(var(--color-destructive)/0.15)]',
               'transition-colors duration-150',
-              'focus-visible:ring-4 focus-visible:ring-[rgba(18,200,160,0.18)] focus-visible:outline-none',
+              FOCUS_RING,
               'motion-reduce:transition-none',
             )}
           >

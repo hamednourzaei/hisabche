@@ -107,10 +107,26 @@ describe('green and red are earned, not default', () => {
     expect(funnel).toMatch(/down: 'bg-\[hsl\(var\(--color-destructive\)/)
   })
 
-  it('the odd point goes to the recent half', () => {
-    // Newer information is the side the question is about.
-    expect(funnel).toMatch(/const split = Math\.floor\(points\.length \/ 2\)/)
-    expect(funnel).toMatch(/const recent = points\.slice\(split\)/)
+  it('⚠️ the two windows are the same length', () => {
+    // Splitting down the middle compared 4 days against 3 on a 7-day range
+    // and still captioned it «vs the previous days» — a 33% head start handed
+    // to the recent half and reported as growth. Both windows are now N long,
+    // taken from the end; a leftover oldest point is excluded from the
+    // COMPARISON while still counting toward the totals shown.
+    // `toContain`, not `toMatch`: these strings are dense with regex
+    // metacharacters (`?`, `*`, `(`, `[`) and escaping them by hand is how a
+    // guard silently becomes an invalid pattern that never runs.
+    expect(funnel).toContain('const recent = split > 0 ? points.slice(-split) : []')
+    expect(funnel).toContain('const earlier = split > 0 ? points.slice(-2 * split, -split) : []')
+  })
+
+  it('⚠️ the comparison states the window it used', () => {
+    // A coloured band with no caption is a claim with no stated basis: the
+    // reader cannot tell whether green means «better than yesterday» or
+    // «better than last quarter».
+    expect(funnel).toContain('windowDays > 0 ?')
+    expect(funnel).toContain('dashboard.funnel.comparedTo')
+    expect(funnel).toContain('dashboard.funnel.daysBefore')
   })
 })
 

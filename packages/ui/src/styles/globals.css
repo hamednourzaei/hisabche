@@ -144,7 +144,12 @@
   /* ═══════════════════════════════════════════════════════════════════════════
      FOCUS RING (Accessibility)
      ═══════════════════════════════════════════════════════════════════════════ */
-  --focus-ring: 0 0 0 4px rgba(36, 224, 176, 0.2);
+  /* Was the literal rgba(36, 224, 176, 0.2). That is exactly --color-primary
+     (165 75% 51% → rgb(36 224 177)) at 20%, so this is the same pixels in the
+     light theme — but the literal did NOT follow --color-primary when the dark
+     and high-contrast themes redefine it, and the ring stayed light-theme teal
+     while every brand affordance beside it shifted. See focus-ring.ts. */
+  --focus-ring: 0 0 0 4px hsl(var(--color-primary) / 0.2);
 
   /* ═══════════════════════════════════════════════════════════════════════════
      SHADOW

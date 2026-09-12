@@ -3,6 +3,7 @@
 
 import { memo, useMemo, useState } from 'react'
 import { cn } from '../../../lib/utils'
+import { FOCUS_RING } from '../focus-ring'
 import { EmptyState } from '../empty-state'
 import { BentoStats, type BentoStat } from '../bento-stats'
 import { WarehouseProductList } from './warehouse-product-list'
@@ -88,7 +89,7 @@ const WarehouseHeader = memo(function WarehouseHeader({
           'bg-[var(--gradient-brand)]',
           'shadow-sm shadow-[hsl(var(--color-primary)/0.15)]',
           'transition-all duration-200 hover:brightness-110 active:scale-[0.98]',
-          'focus-visible:ring-4 focus-visible:ring-[rgba(18,200,160,0.18)] focus-visible:outline-none',
+          FOCUS_RING,
           'motion-reduce:transition-none',
         )}
       >

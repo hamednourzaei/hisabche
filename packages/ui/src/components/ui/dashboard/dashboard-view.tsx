@@ -2,6 +2,7 @@
 'use client'
 
 import { memo, useMemo, useState } from 'react'
+import type { ElementType } from 'react'
 import { useTranslations } from 'next-intl'
 import { invoiceListHref } from '../../../lib/invoices/invoice-filter-link'
 import { cn } from '../../../lib/utils'
@@ -295,6 +296,45 @@ const ROLE_LABEL_FALLBACK: Record<string, string> = {
   unknown: 'نامشخص',
 }
 
+/**
+ * One option of the chart/funnel switch.
+ *
+ * ⚠️ THE LABEL IS PART OF THE CONTROL, NOT A TOOLTIP. A funnel glyph at 14px
+ * is a triangle; an icon-only pair makes the reader decode a picture and then
+ * infer the current view from which square is lit. `aria-pressed` states the
+ * selection to a screen reader — the word states it to everyone else.
+ */
+const ViewTab = memo(function ViewTab({
+  icon: Icon,
+  label,
+  active,
+  onClick,
+}: {
+  icon: ElementType
+  label: string
+  active: boolean
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={cn(
+        'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium',
+        'transition-colors duration-150 motion-reduce:transition-none',
+        active
+          ? 'bg-[hsl(var(--color-primary)/0.14)] text-[hsl(var(--color-primary))] shadow-sm'
+          : 'text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--fg-primary))]',
+      )}
+    >
+      <Icon className="size-3.5 shrink-0" aria-hidden="true" />
+      <span>{label}</span>
+    </button>
+  )
+})
+ViewTab.displayName = 'ViewTab'
+
 const RecentActivities = memo(function RecentActivities({
   groups,
   isLoading,
@@ -560,7 +600,7 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
               'p-4 sm:p-5',
             )}
           >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 mb-3 sm:mb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[hsl(var(--border-default)/0.6)] pb-3 mb-4">
               <div className="flex items-center gap-1.5 sm:gap-2">
                 {view === 'chart' ? (
                   <TrendingUp
@@ -574,98 +614,98 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
                   />
                 )}
                 <h2 className="text-sm sm:text-base font-semibold text-[hsl(var(--fg-primary))]">
-                  {view === 'chart'
-                    ? t('dashboard.salesChartTitle', 'نمودار فروش')
-                    : t('dashboard.funnel.title', 'قیف فروش')}
+                  {t('dashboard.salesChartTitle', 'نمودار فروش')}
                 </h2>
+              </div>
 
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                 {/*
-                  ⚠️ TWO BUTTONS, NOT ONE TOGGLE.
+                  ⚠️ A SEGMENTED CONTROL WITH WORDS, NOT TWO BARE ICONS.
 
-                  A single button that swaps what it shows has to be labelled
-                  either with what you are looking at or with what pressing it
-                  does — and whichever is chosen, half the people read it the
-                  other way. A two-option switch with `aria-pressed` states
-                  both at once and needs no convention to decode.
-
-                  The date picker beside it is hidden on the funnel because it
-                  does not apply: the funnel is the pipeline as it stands now,
-                  not a window over time. Leaving it visible and inert would
-                  imply the funnel responds to it.
+                  An icon-only pair forces the reader to decode a picture: a
+                  funnel glyph at 14px is a triangle, and «which one am I
+                  looking at» has to be inferred from which square is lit.
+                  `aria-pressed` states the selection for a screen reader; the
+                  LABEL states it for everyone else.
                 */}
                 <div
                   role="group"
                   aria-label={t('dashboard.viewSwitch', 'نمای نمودار')}
-                  className="ms-1 flex items-center gap-0.5 rounded-lg bg-[hsl(var(--surface-muted))] p-0.5"
+                  className={cn(
+                    'inline-flex items-center gap-0.5 rounded-lg p-0.5',
+                    'border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))]',
+                  )}
                 >
-                  <button
-                    type="button"
+                  <ViewTab
+                    icon={TrendingUp}
+                    label={t('dashboard.viewTrend', 'روند فروش')}
+                    active={view === 'chart'}
                     onClick={() => setView('chart')}
-                    aria-pressed={view === 'chart'}
-                    title={t('dashboard.salesChartTitle', 'نمودار فروش')}
-                    className={cn(
-                      'inline-flex items-center justify-center rounded-md p-1.5',
-                      'transition-colors duration-150 motion-reduce:transition-none',
-                      view === 'chart'
-                        ? 'bg-[hsl(var(--surface-elevated))] text-[hsl(var(--color-primary))] shadow-sm'
-                        : 'text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--fg-primary))]',
-                    )}
-                  >
-                    <TrendingUp className="size-4" aria-hidden="true" />
-                    <span className="sr-only">{t('dashboard.salesChartTitle', 'نمودار فروش')}</span>
-                  </button>
-                  <button
-                    type="button"
+                  />
+                  <ViewTab
+                    icon={Filter}
+                    label={t('dashboard.viewFunnel', 'قیف تبدیل')}
+                    active={view === 'funnel'}
                     onClick={() => setView('funnel')}
-                    aria-pressed={view === 'funnel'}
-                    title={t('dashboard.funnel.title', 'قیف فروش')}
-                    className={cn(
-                      'inline-flex items-center justify-center rounded-md p-1.5',
-                      'transition-colors duration-150 motion-reduce:transition-none',
-                      view === 'funnel'
-                        ? 'bg-[hsl(var(--surface-elevated))] text-[hsl(var(--color-primary))] shadow-sm'
-                        : 'text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--fg-primary))]',
-                    )}
-                  >
-                    <Filter className="size-4" aria-hidden="true" />
-                    <span className="sr-only">{t('dashboard.funnel.title', 'قیف فروش')}</span>
-                  </button>
+                  />
                 </div>
-              </div>
 
-              {view === 'chart' ? (
+                {/*
+                  ⚠️ THE RANGE PICKER STAYS ON BOTH VIEWS.
+
+                  An earlier version hid it on the funnel, reasoning that a
+                  funnel is a snapshot. That was wrong for THIS funnel: it is
+                  built from `salesChartData`, so the window the picker selects
+                  is exactly what it counts and compares. Hiding the control
+                  that drives it would leave the reader unable to see — or
+                  change — the period the numbers belong to.
+                */}
                 <DateRangePicker
                   value={dateRange}
                   onChange={onDateRangeChange}
                   t={t}
                   disabled={chartLoading}
                 />
-              ) : null}
+              </div>
             </div>
-            {view === 'chart' ? (
-              <LazySalesChart
-                data={salesChartData}
-                isLoading={chartLoading}
-                fmt={fmt}
-                height={180}
-                previousPeriodTotal={previousDaySalesTotal}
-                currentPeriodTotal={todaySales}
-                // `/reports` was never a route — the chart's "full report" link
-                // 404'd on web and would have redirected to the dashboard on
-                // desktop's catch-all. Accounting («پول و سود») is the destination
-                // the navigation contract actually gives for revenue detail.
-                onViewFullReport={() => onNavigate('/accounting')}
-              />
-            ) : (
-              <SalesFunnel
-                data={salesChartData}
-                total={totalSales}
-                fmt={fmt}
-                isLoading={chartLoading}
-                height={180}
-                t={t}
-              />
-            )}
+
+            {/*
+              One body, two views. `min-h` so switching does not make the card
+              jump, and a short fade so the swap reads as one surface changing
+              rather than two cards replacing each other.
+            */}
+            <div
+              key={view}
+              className={cn(
+                'relative min-h-[200px] w-full',
+                'animate-in fade-in-0 duration-200 motion-reduce:animate-none',
+              )}
+            >
+              {view === 'chart' ? (
+                <LazySalesChart
+                  data={salesChartData}
+                  isLoading={chartLoading}
+                  fmt={fmt}
+                  height={180}
+                  previousPeriodTotal={previousDaySalesTotal}
+                  currentPeriodTotal={todaySales}
+                  // `/reports` was never a route — the chart's "full report" link
+                  // 404'd on web and would have redirected to the dashboard on
+                  // desktop's catch-all. Accounting («پول و سود») is the destination
+                  // the navigation contract actually gives for revenue detail.
+                  onViewFullReport={() => onNavigate('/accounting')}
+                />
+              ) : (
+                <SalesFunnel
+                  data={salesChartData}
+                  total={totalSales}
+                  fmt={fmt}
+                  isLoading={chartLoading}
+                  height={180}
+                  t={t}
+                />
+              )}
+            </div>
           </div>
         </div>
 

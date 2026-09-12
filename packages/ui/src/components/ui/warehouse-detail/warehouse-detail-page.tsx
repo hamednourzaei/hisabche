@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { UnitSelect } from '../units/unit-select'
+import { GHOST_ICON_BUTTON, OUTLINE_BUTTON } from '../button-classes'
 import { cn } from '../../../lib/utils'
 import {
   ArrowRight,
@@ -66,12 +67,8 @@ interface ProductEditValues {
 const toUnitType = (unit: string): UnitType => unit
 
 // Shared style constants
-const outlineBtn =
-  'inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors duration-150 motion-reduce:transition-none'
 const primaryBtn =
   'inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-bold text-white bg-[var(--gradient-brand)] shadow-sm shadow-[hsl(var(--color-primary)/0.15)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed motion-reduce:transition-none'
-const ghostBtn =
-  'inline-flex items-center justify-center rounded-full p-2 text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors duration-150 motion-reduce:transition-none'
 const inputBase =
   'w-full rounded-xl px-3 py-2.5 text-sm border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))] focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)] transition-colors duration-200 motion-reduce:transition-none'
 const cardBase =
@@ -208,7 +205,7 @@ export function ProductDetailPage({
         <p className="text-lg text-[hsl(var(--fg-secondary))]">
           {t('warehouse.notFound', 'محصول پیدا نشد')}
         </p>
-        <button type="button" onClick={onBack} className={outlineBtn}>
+        <button type="button" onClick={onBack} className={OUTLINE_BUTTON}>
           {t('action.back', 'بازگشت به گدام')}
         </button>
       </div>
@@ -226,7 +223,7 @@ export function ProductDetailPage({
             type="button"
             onClick={onBack}
             aria-label={t('common.back', 'بازگشت')}
-            className={ghostBtn}
+            className={GHOST_ICON_BUTTON}
           >
             <ArrowRight className="size-5" aria-hidden="true" />
           </button>
@@ -248,7 +245,7 @@ export function ProductDetailPage({
         <div className="flex gap-2">
           {editing ? (
             <>
-              <button type="button" onClick={onCancelEditing} className={outlineBtn}>
+              <button type="button" onClick={onCancelEditing} className={OUTLINE_BUTTON}>
                 <X className="size-4" aria-hidden="true" />
                 <span className="hidden sm:inline">{t('action.cancel', 'انصراف')}</span>
               </button>
@@ -268,7 +265,7 @@ export function ProductDetailPage({
             </>
           ) : (
             <>
-              <button type="button" onClick={onStartEditing} className={outlineBtn}>
+              <button type="button" onClick={onStartEditing} className={OUTLINE_BUTTON}>
                 <Edit3 className="size-4" aria-hidden="true" />
                 <span className="hidden sm:inline">{t('action.edit', 'ویرایش')}</span>
               </button>
@@ -276,7 +273,7 @@ export function ProductDetailPage({
                 type="button"
                 onClick={onDelete}
                 className={cn(
-                  outlineBtn,
+                  OUTLINE_BUTTON,
                   'hover:bg-[hsl(var(--color-destructive)/0.1)] hover:text-[hsl(var(--color-destructive))] hover:border-[hsl(var(--color-destructive)/0.3)]',
                 )}
               >

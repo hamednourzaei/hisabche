@@ -12,6 +12,7 @@ import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from '
 import { Search, Settings2, X } from 'lucide-react'
 
 import { cn } from '../../../lib/utils'
+import { FOCUS_RING } from '../focus-ring'
 import type { TableColumn } from './table-types'
 
 export interface TableToolbarProps<T> {
@@ -170,7 +171,7 @@ const ToolbarButton = memo(function ToolbarButton({
         'border border-[hsl(var(--border-default))]',
         'text-[hsl(var(--fg-secondary))]',
         'hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
-        'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[rgba(18,200,160,0.18)]',
+        FOCUS_RING,
         'transition-colors duration-150 motion-reduce:transition-none',
         active && 'bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-primary))]',
       )}

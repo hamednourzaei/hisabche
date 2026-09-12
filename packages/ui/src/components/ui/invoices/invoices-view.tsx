@@ -2,6 +2,7 @@
 
 import { memo, useCallback, useEffect, useMemo } from 'react'
 import { cn } from '../../../lib/utils'
+import { FOCUS_RING } from '../focus-ring'
 import { EmptyState } from '../empty-state'
 import { InvoicesSkeleton } from './invoices-skeleton'
 import { Plus, FileText, DollarSign, CheckCircle2, Clock, Download, Trash2 } from 'lucide-react'
@@ -286,7 +287,7 @@ const InvoicesHeader = memo(function InvoicesHeader({
           'shadow-sm shadow-[hsl(var(--color-primary)/0.15)]',
           'transition-all duration-200',
           'hover:brightness-110 active:scale-[0.98]',
-          'focus-visible:ring-4 focus-visible:ring-[rgba(18,200,160,0.18)] focus-visible:outline-none',
+          FOCUS_RING,
           'motion-reduce:transition-none motion-reduce:active:scale-100',
         )}
       >
@@ -318,7 +319,7 @@ const PaginationControls = memo(function PaginationControls({
     'hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))]',
     'disabled:opacity-30 disabled:cursor-not-allowed',
     'transition-colors duration-150 motion-reduce:transition-none',
-    'focus-visible:ring-4 focus-visible:ring-[rgba(18,200,160,0.18)] focus-visible:outline-none',
+    FOCUS_RING,
   )
 
   return (

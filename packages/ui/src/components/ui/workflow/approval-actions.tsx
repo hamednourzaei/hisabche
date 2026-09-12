@@ -9,6 +9,7 @@
 
 import { useState, useCallback, memo } from 'react'
 import { cn } from '../../../lib/utils'
+import { FOCUS_RING } from '../focus-ring'
 import { Check, X, Loader2 } from 'lucide-react'
 
 /* ═══════════════════════════════════════════════════════════════
@@ -131,7 +132,7 @@ const RejectModal = memo(function RejectModal({
               'bg-[hsl(var(--color-destructive))]',
               'transition-all duration-200',
               'hover:brightness-110 active:scale-[0.98]',
-              'focus-visible:ring-4 focus-visible:ring-[rgba(18,200,160,0.18)] focus-visible:outline-none',
+              FOCUS_RING,
               'disabled:opacity-40 disabled:cursor-not-allowed',
             )}
           >
@@ -210,7 +211,7 @@ export const ApprovalActions = memo(function ApprovalActions({
             'shadow-sm shadow-[hsl(var(--color-success)/0.2)]',
             'transition-all duration-200',
             'hover:brightness-110 active:scale-[0.98]',
-            'focus-visible:ring-4 focus-visible:ring-[rgba(18,200,160,0.18)] focus-visible:outline-none',
+            FOCUS_RING,
             'motion-reduce:transition-none motion-reduce:active:scale-100',
             'disabled:opacity-40 disabled:cursor-not-allowed',
           )}
@@ -238,7 +239,7 @@ export const ApprovalActions = memo(function ApprovalActions({
             'hover:bg-[hsl(var(--color-destructive)/0.08)]',
             'active:bg-[hsl(var(--color-destructive)/0.12)]',
             'transition-colors duration-150',
-            'focus-visible:ring-4 focus-visible:ring-[rgba(18,200,160,0.18)] focus-visible:outline-none',
+            FOCUS_RING,
             'motion-reduce:transition-none',
             'disabled:opacity-40 disabled:cursor-not-allowed',
           )}

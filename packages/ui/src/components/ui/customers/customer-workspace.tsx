@@ -14,6 +14,7 @@ import { getInteractionColumns, type InteractionRow } from './datagrid/columns/i
 import { getOpportunityColumns, type OpportunityRow } from './datagrid/columns/opportunity-columns'
 import { getTimelineColumns, type TimelineRow } from './datagrid/columns/timeline-columns'
 import { PaymentModal } from './PaymentModal'
+import { GHOST_ICON_BUTTON } from '../button-classes'
 
 interface CustomerWorkspaceProps {
   t: (key: string, fallback?: string) => string
@@ -48,9 +49,6 @@ const tabs = [
   { id: 'crm', labelKey: 'customers.tabCrm', fallback: 'CRM', icon: Handshake },
   { id: 'timeline', labelKey: 'customers.tabTimeline', fallback: 'خط زمانی', icon: Clock },
 ]
-
-const ghostBtn =
-  'inline-flex items-center justify-center rounded-full p-2 text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors duration-150 motion-reduce:transition-none'
 
 export function customerWorkspace(props: CustomerWorkspaceProps) {
   const {
@@ -132,7 +130,12 @@ export function customerWorkspace(props: CustomerWorkspaceProps) {
       </Drawer>
 
       {/* Back Button */}
-      <button type="button" onClick={onBack} className={ghostBtn} aria-label={t('common.back')}>
+      <button
+        type="button"
+        onClick={onBack}
+        className={GHOST_ICON_BUTTON}
+        aria-label={t('common.back')}
+      >
         <ChevronRight className="size-5" aria-hidden="true" />
       </button>
 

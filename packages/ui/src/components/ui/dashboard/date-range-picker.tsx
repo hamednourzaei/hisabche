@@ -314,13 +314,13 @@ export function DateRangePicker({ value, onChange, t, disabled = false }: DateRa
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="absolute top-2.5 right-2.5 p-1 rounded-lg hover:bg-[hsl(var(--surface-muted))] transition-colors z-10"
+                className="absolute top-2.5 end-2.5 p-1 rounded-lg hover:bg-[hsl(var(--surface-muted))] transition-colors z-10"
                 aria-label={t('common.close')}
               >
                 <X className="size-4 text-[hsl(var(--fg-tertiary))]" />
               </button>
 
-              <div ref={selectRef} className="absolute top-2.5 left-2.5 z-10">
+              <div ref={selectRef} className="absolute top-2.5 start-2.5 z-10">
                 <Select
                   value={dateFormat}
                   dir="rtl"

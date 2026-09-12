@@ -1902,10 +1902,14 @@
       "band": {
         "invoices": "Invoices",
         "customers": "Customers"
-      }
+      },
+      "comparedTo": "vs the previous",
+      "daysBefore": "days"
     },
     "viewSwitch": "Chart view",
-    "activityColumnDate": "Date"
+    "activityColumnDate": "Date",
+    "viewTrend": "Sales trend",
+    "viewFunnel": "Conversion funnel"
   },
   "quickInvoice": {
     "title": "Quick Invoice",

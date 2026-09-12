@@ -2,6 +2,8 @@
 
 import type { ReactNode } from 'react'
 import { usePathname, useParams, useRouter } from 'next/navigation'
+import * as Sentry from '@sentry/nextjs'
+
 import { ErrorBoundary, type EscapeDestination } from '@hisabche/ui'
 
 import { localePath, resolveLocale } from './i18n-config'
@@ -50,8 +52,39 @@ export function ClientErrorBoundary({ children }: { children: ReactNode }) {
   // they have left. The only way out was a manual reload.
   //
   // Since this wraps the WHOLE application, that was every route.
+  /**
+   * ⚠️ THE BOUNDARY NEVER TOLD SENTRY, AND SENTRY WAS ALREADY SET UP.
+   *
+   * Three Sentry configs ship with this app (`sentry.client.config.ts` and its
+   * server/edge siblings), and the one place that catches EVERY React crash
+   * reported to none of them. `ErrorBoundary` logged to `console.error` — and
+   * `next.config` strips `console.log` in production while keeping `error`, so
+   * the message survived into a console nobody reads and was then lost.
+   *
+   * That is why a live `ReferenceError: Cannot access 'Y' before
+   * initialization` could not be diagnosed: `'Y'` is a minified name, and
+   * without the report there was no source map, no component stack and no
+   * route to resolve it against. Sentry has the source maps; this hands it the
+   * error.
+   *
+   * `componentStack` goes in as context rather than in the message, so Sentry
+   * still groups by the real stack instead of treating every screen as a
+   * separate issue.
+   */
+  const report = (error: Error, errorInfo: { componentStack?: string | null }) => {
+    Sentry.withScope((scope) => {
+      scope.setTag('boundary', 'app-root')
+      scope.setContext('react', {
+        componentStack: errorInfo?.componentStack ?? '(none)',
+        pathname,
+        locale: lang,
+      })
+      Sentry.captureException(error)
+    })
+  }
+
   return (
-    <ErrorBoundary resetKeys={[pathname]} onNavigateHome={goHome}>
+    <ErrorBoundary resetKeys={[pathname]} onNavigateHome={goHome} onError={report}>
       {children}
     </ErrorBoundary>
   )

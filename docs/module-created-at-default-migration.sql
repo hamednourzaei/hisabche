@@ -1,0 +1,76 @@
+-- ============================================================================
+-- created_at — restore the DEFAULT that CREATE TABLE IF NOT EXISTS never applied
+--
+-- ADDITIVE · IDEMPOTENT · RE-RUNNABLE
+--
+-- ---------------------------------------------------------------------------
+-- WHAT IS WRONG
+--
+-- `docs/base-schema-migration.sql` and `docs/SETUP-COMPLETE.sql` both declare
+--
+--     created_at timestamp with time zone DEFAULT now()
+--
+-- on `invoices` and `stock_movements`. But both files create those tables with
+-- `CREATE TABLE IF NOT EXISTS`. On a database where the table ALREADY EXISTED
+-- from an earlier schema, that statement does nothing at all — the column
+-- default was never added, and no error was raised.
+--
+-- Production rows confirm it. A real query returned:
+--
+--     invoice_number  | INV-000050 | created_at: null
+--     invoice_number  | INV-000051 | created_at: null
+--     invoice_number  | INV-000052 | created_at: null
+--     stock_movements | opening    | created_at: null
+--
+-- ---------------------------------------------------------------------------
+-- WHAT IT BROKE
+--
+-- `invoice.service.ts` computed «فروش امروز» with
+--
+--     i.created_at >= today && i.created_at < tomorrow
+--
+-- and in JavaScript `null >= '2026-09-12T00:00:00Z'` is **false**, not an
+-- error. So every invoice with a null `created_at` fell out of the filter and
+-- today's sales read zero on a day with sales — indistinguishable from a shop
+-- that sold nothing.
+--
+-- The application side is already fixed: those figures now use `date`, which
+-- is `NOT NULL` and is the document's business date, which is the right thing
+-- to ask «was this sold today» about anyway.
+--
+-- ---------------------------------------------------------------------------
+-- ⚠️ NO BACKFILL. THIS MIGRATION DOES NOT INVENT A CREATION TIME.
+--
+-- It would be easy to write `UPDATE invoices SET created_at = date WHERE
+-- created_at IS NULL`. That is a lie: `date` is when the business says the
+-- sale happened, `created_at` is when the row was written, and they are
+-- routinely different — an invoice entered tonight for yesterday's sale.
+-- Stamping one onto the other would produce an audit trail that reads as fact
+-- and is not. Old rows keep `created_at IS NULL`, which is the truth: nobody
+-- recorded when they were created.
+--
+-- (Project rule §12 — No Fake Backfill.)
+--
+-- ---------------------------------------------------------------------------
+-- ROLLBACK / MITIGATION
+--
+-- Setting a column default cannot fail forward and rewrites no existing rows —
+-- in Postgres this is a catalogue-only change on an existing nullable column,
+-- so it does not rewrite the table and takes only a brief ACCESS EXCLUSIVE
+-- lock. Nothing is deleted and no value changes.
+--
+-- To undo:
+--     ALTER TABLE invoices        ALTER COLUMN created_at DROP DEFAULT;
+--     ALTER TABLE stock_movements ALTER COLUMN created_at DROP DEFAULT;
+--
+-- Re-running this file is safe: SET DEFAULT is idempotent.
+-- ============================================================================
+
+ALTER TABLE invoices        ALTER COLUMN created_at SET DEFAULT now();
+ALTER TABLE stock_movements ALTER COLUMN created_at SET DEFAULT now();
+
+-- Same omission, same cause — these are the other tables the two schema files
+-- declare a `created_at` default for. Safe to run even where it is already set.
+ALTER TABLE invoice_items   ALTER COLUMN created_at SET DEFAULT now();
+ALTER TABLE customers       ALTER COLUMN created_at SET DEFAULT now();
+ALTER TABLE products        ALTER COLUMN created_at SET DEFAULT now();

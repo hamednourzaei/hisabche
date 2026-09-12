@@ -219,3 +219,170 @@ describe('the fixed call sites stay fixed', () => {
     expect(src).toMatch(/ps-9 pe-3 py-2/)
   })
 })
+
+// ============================================
+// ⚠️ THE ARBITRARY-VALUE TRAP IS A SPACE, NOT A COMMA.
+//
+// The header of this file explains why a comma ban would be wrong; the
+// compiled CSS proves commas work. What genuinely produces NO CSS AT ALL is an
+// unescaped space inside `[...]`, because the space ends the class token. The
+// class name still looks plausible in the source and in devtools' class list,
+// nothing errors, and the element simply falls back to its default layout.
+//
+// Tailwind's own answer is `_` for a space, which it converts back.
+// ============================================
+
+/** `[` … unescaped space … `]` inside an arbitrary value. */
+const ARBITRARY_WITH_SPACE = /(?:^|[\s"'`{(])((?:[a-z0-9-]+:)*[a-z-]+-\[[^\]"'`]*\s[^\]"'`]*\])/g
+
+describe('arbitrary values compile', () => {
+  it('⚠️ no unescaped space inside [...] — use _ , or the class emits nothing', () => {
+    const offences: string[] = []
+
+    for (const file of sources()) {
+      if (!/\.(tsx|ts|jsx|js)$/.test(file)) continue
+      const rel = file.slice(REPO.length + 1).replace(/\\/g, '/')
+      code(file)
+        .split('\n')
+        .forEach((line, i) => {
+          ARBITRARY_WITH_SPACE.lastIndex = 0
+          let m: RegExpExecArray | null
+          while ((m = ARBITRARY_WITH_SPACE.exec(line))) {
+            ARBITRARY_WITH_SPACE.lastIndex = m.index + 1
+            offences.push(`${rel}:${i + 1}  ${m[1]!}`)
+          }
+        })
+    }
+
+    expect(
+      offences,
+      `replace each space with _ — Tailwind emits NOTHING for these:\n${offences.join('\n')}`,
+    ).toEqual([])
+  })
+})
+
+// ============================================
+// ⚠️ RAW COLOUR LITERALS DO NOT FOLLOW THE THEME.
+//
+// `--color-primary`, `--surface-*`, `--fg-*` and the rest are redefined under
+// the dark and high-contrast themes. A literal `#14b8a6` or `rgba(18,200,160,
+// 0.18)` is not, so it stays its light-theme value while everything beside it
+// shifts — the defect that made the focus ring the wrong teal in dark mode on
+// ten controls (see `components/ui/focus-ring.ts`).
+//
+// Comments are stripped first: React error codes («throws #418», «error #300»)
+// and an example invoice id («فاکتور #a3f19c2b») all look like hex otherwise.
+// ============================================
+
+/** `#abc` / `#aabbcc` / `#aabbccdd`, and `rgb(…)` / `rgba(…)` with numbers. */
+const RAW_COLOUR =
+  /(#[0-9a-fA-F]{3}(?:[0-9a-fA-F]{3}(?:[0-9a-fA-F]{2})?)?\b|rgba?\(\s*[0-9][0-9\s.,%/]*\))/g
+
+/**
+ * ⚠️ ACHROMATIC DROP-SHADOW TINTS ARE NOT A THEME BUG, so they are not flagged.
+ *
+ * `rgba(0,0,0,0.04)` and friends appear in eight shadow utilities, including
+ * the canonical `stat-surface.ts`. Unlike the focus ring, a shadow tint has no
+ * token to drift away from: the stylesheet declares no `--shadow-tint`, and
+ * the nearest candidate `--color-black` is `213 29% 6%` — a BLUE-tinted near
+ * black, not `#000`. Rewriting eight shadows onto it would change how every
+ * card's shadow reads for no mechanism gain, which is exactly the visible
+ * churn this pass is meant to avoid. Introducing a real shadow token and
+ * migrating them is a separate, deliberate change — see the report.
+ */
+const ACHROMATIC_SHADOW = /^rgba?\(\s*0\s*,\s*0\s*,\s*0\s*[,)]/
+
+/**
+ * ⚠️ NOT A TODO LIST — the places where a raw literal is the correct answer,
+ * because the colour is consumed somewhere CSS custom properties do not reach.
+ *
+ * Everything else must use a token: `hsl(var(--color-primary) / 0.18)`,
+ * `bg-[hsl(var(--surface-elevated))]`, and so on. The token names are declared
+ * in `packages/ui/src/styles/globals.css` and `design-token-existence.test.ts`
+ * asserts the ones components name actually exist.
+ */
+const COLOUR_ALLOWED: Record<string, string> = {
+  'apps/admin/tailwind.config.ts':
+    'This IS the token definition. The admin panel deliberately carries its own blue/violet identity rather than the teal product brand; the scales have to be written out as literals somewhere, and this is that somewhere.',
+  'apps/web/app/[lang]/opengraph-image.tsx':
+    'Rendered by Satori into a static PNG on the server. There is no document, no stylesheet and no custom properties — an unresolved var() would render as nothing at all.',
+  'apps/web/app/[lang]/layout.tsx':
+    'theme-color meta and the pre-hydration background. Both are read by the browser chrome BEFORE any stylesheet loads, so a var() has nothing to resolve against.',
+  'apps/desktop/src/shared/print/invoice-template.ts':
+    'A standalone HTML document handed to the print process. It does not import globals.css, and printed output must not follow the app theme — a dark-mode invoice would print a black page.',
+  'packages/ui/src/components/ui/invoice-detail/containers/invoice-detail-container.tsx':
+    'html2canvas backgroundColor: a rasteriser option, not CSS. The exported PNG needs an opaque white ground whatever theme the app is in.',
+  'packages/ui/src/components/ui/chart.tsx':
+    "A SELECTOR, not a colour: [&_.recharts-dot[stroke='#fff']] matches the literal attribute Recharts writes. Changing it stops the rule matching.",
+  'packages/ui/src/components/ui/landing/use-scroll-narrative-store.ts':
+    'NARRATIVE_COLORS is a six-way CATEGORICAL palette for the landing scroll narrative (frustration, confusion, clarity, confidence, trust, action). The stylesheet has no token for pink, red or violet, and --color-purple is aliased to --color-primary, so mapping these onto tokens would collapse four of the six to the same teal. Needs six real tokens first — see the report.',
+}
+
+describe('colours come from tokens, not literals', () => {
+  it('⚠️ no raw #hex / rgb() outside the documented exceptions', () => {
+    const offences: string[] = []
+
+    for (const file of sources()) {
+      if (!/\.(tsx|ts|jsx|js)$/.test(file)) continue
+      const rel = file.slice(REPO.length + 1).replace(/\\/g, '/')
+      if (COLOUR_ALLOWED[rel]) continue
+      code(file)
+        .split('\n')
+        .forEach((line, i) => {
+          RAW_COLOUR.lastIndex = 0
+          let m: RegExpExecArray | null
+          while ((m = RAW_COLOUR.exec(line))) {
+            if (ACHROMATIC_SHADOW.test(m[1]!)) continue
+            offences.push(`${rel}:${i + 1}  ${m[1]!}`)
+          }
+        })
+    }
+
+    expect(
+      offences,
+      `use a design token — hsl(var(--color-…) / alpha) — or add a reasoned entry to COLOUR_ALLOWED:\n${offences.join('\n')}`,
+    ).toEqual([])
+  })
+
+  it('every colour exception carries a reason', () => {
+    for (const [file, why] of Object.entries(COLOUR_ALLOWED)) {
+      expect(why.length, `${file} has no reason`).toBeGreaterThan(40)
+    }
+  })
+})
+
+describe('shared class strings stay shared', () => {
+  const read = (...p: string[]) => code(join(__dirname, '..', ...p))
+
+  it('the brand focus ring has exactly one definition', () => {
+    // Ten call sites used to spell rgba(18,200,160,0.18) by hand.
+    expect(read('components', 'ui', 'focus-ring.ts')).toMatch(
+      /focus-visible:ring-\[hsl\(var\(--color-primary\)\/0\.18\)\]/,
+    )
+    const copies = sources().filter(
+      (f) => !/focus-ring\.ts$/.test(f) && /focus-visible:ring-\[(?!hsl\(var\()/.test(code(f)),
+    )
+    expect(copies.map((f) => f.slice(REPO.length + 1))).toEqual([])
+  })
+
+  it('the ghost icon button and the compact outline button each have one definition', () => {
+    const home = read('components', 'ui', 'button-classes.ts')
+    expect(home).toMatch(/export const GHOST_ICON_BUTTON/)
+    expect(home).toMatch(/export const OUTLINE_BUTTON/)
+
+    // Four identical `ghostBtn` and two identical `outlineBtn` used to sit in
+    // customers, invoice-detail and warehouse-detail with nothing linking them.
+    const copies = sources().filter((f) => /const (ghostBtn|outlineBtn)\s*=/.test(code(f)))
+    expect(copies.map((f) => f.slice(REPO.length + 1).replace(/\\/g, '/'))).toEqual([
+      // ⚠️ NOT THE SAME STRING — these three are genuinely different outline
+      // buttons, kept apart on purpose. The two in customers/ are the roomier
+      // px-4 py-2.5 pill; invoice-sidebar's is a full-width rounded-xl row.
+      // Folding any of them into OUTLINE_BUTTON would move real padding or
+      // real width on those screens, which is a design decision rather than a
+      // de-duplication. Reported, not silently changed.
+      'packages/ui/src/components/ui/customers/AddCustomerModal.tsx',
+      'packages/ui/src/components/ui/customers/customer-detail-view.tsx',
+      'packages/ui/src/components/ui/invoice-detail/invoice-sidebar.tsx',
+    ])
+  })
+})

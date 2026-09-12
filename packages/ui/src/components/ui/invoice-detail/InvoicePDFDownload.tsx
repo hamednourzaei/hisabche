@@ -5,6 +5,7 @@ import { useCallback, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { FileDown, Loader2 } from 'lucide-react'
 import { cn } from '../../../lib/utils'
+import { OUTLINE_BUTTON } from '../button-classes'
 import { apiClient } from '@hisabche/api'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -18,9 +19,6 @@ interface Invoice {
 interface Props {
   invoice: Invoice
 }
-
-const outlineBtn =
-  'inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors duration-150 motion-reduce:transition-none disabled:opacity-40 disabled:cursor-not-allowed'
 
 export default function InvoicePDFDownload({ invoice }: Props) {
   const t = useTranslations()
@@ -54,7 +52,7 @@ export default function InvoicePDFDownload({ invoice }: Props) {
       onClick={handleDownload}
       disabled={loading || !invoiceId}
       aria-label={t('invoices.downloadPDF')}
-      className={outlineBtn}
+      className={cn(OUTLINE_BUTTON, 'disabled:opacity-40 disabled:cursor-not-allowed')}
     >
       {loading ? (
         <Loader2 className="size-4 animate-spin" aria-hidden="true" />

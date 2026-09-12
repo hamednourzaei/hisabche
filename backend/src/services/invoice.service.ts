@@ -120,6 +120,21 @@ const schemaSupport = {
 
 // ============================================
 
+/**
+ * Is this document's business date inside [from, to)?
+ *
+ * ⚠️ A MISSING OR UNPARSEABLE DATE IS , NOT TODAY.
+ * The comparison it replaces was a bare  on a nullable column, where
+ *  is silently false — so the bug was invisible. Being explicit
+ * keeps the same safe answer while saying out loud that it was a decision.
+ */
+function isOnDay(value: unknown, from: Date, to: Date): boolean {
+  if (typeof value !== 'string' || value === '') return false
+  const at = new Date(value)
+  if (Number.isNaN(at.getTime())) return false
+  return at >= from && at < to
+}
+
 export class InvoiceService {
   private workflowService: WorkflowService
   private notificationService: NotificationService
@@ -1233,7 +1248,21 @@ export class InvoiceService {
 
     const { data: allInvoices } = await supabase
       .from('invoices')
-      .select('total, paid_amount, status, created_at, type')
+      // ⚠️ `date`, NOT `created_at`.
+      //
+      // `created_at` is NULLABLE and is null on real production rows: the
+      // schema files declare `DEFAULT now()`, but they create the table with
+      // `CREATE TABLE IF NOT EXISTS`, so on a database where `invoices`
+      // already existed the default was never added and nothing failed.
+      //
+      // `null >= '2026-09-12T00:00:00Z'` is false, so every such invoice fell
+      // out of the filter below and «فروش امروز» read zero on a day with
+      // sales. Silent, and it looks exactly like a shop that sold nothing.
+      //
+      // `date` is `NOT NULL` and is the business date of the document, which
+      // is the right thing to ask «was this sold today» about anyway — an
+      // invoice entered tonight for yesterday's sale belongs to yesterday.
+      .select('total, paid_amount, status, date, type')
       .eq('workspace_id', workspaceId)
 
     const { data: products } = await supabase
@@ -1248,11 +1277,11 @@ export class InvoiceService {
     const purchases = (allInvoices || []).filter((i: any) => i.type === 'purchase')
 
     const todaySales = invoices
-      .filter((i) => i.created_at >= today.toISOString() && i.created_at < tomorrow.toISOString())
+      .filter((i: any) => isOnDay(i.date, today, tomorrow))
       .reduce((sum: number, i: any) => sum + (i.total || 0), 0)
 
     const todayPurchases = purchases
-      .filter((i) => i.created_at >= today.toISOString() && i.created_at < tomorrow.toISOString())
+      .filter((i: any) => isOnDay(i.date, today, tomorrow))
       .reduce((sum: number, i: any) => sum + (i.total || 0), 0)
 
     const totalDebt = invoices

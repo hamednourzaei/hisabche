@@ -14,12 +14,25 @@
 // column. Both defects were plainly visible and neither was a rendering bug —
 // the markup said exactly this.
 //
-// ⚠️ THE ARBITRARY VALUE MUST NOT CONTAIN A COMMA.
-// `grid-cols-[minmax(0,1fr)_5rem_6rem]` is the textbook spelling, and
-// Tailwind v3's JIT emits NO CSS for an arbitrary value containing a comma —
-// the class silently does nothing and the grid falls back to one column. This
-// codebase has been bitten by that before; `1fr` + `min-w-0` is the same
-// behaviour, spelled so it compiles.
+// ---------------------------------------------------------------------------
+// ⚠️ CORRECTION — AN EARLIER VERSION OF THIS HEADER WAS WRONG
+//
+// It claimed Tailwind emits no CSS for an arbitrary value containing a comma,
+// and that `grid-cols-[minmax(0,1fr)_…]` therefore silently does nothing.
+// That is FALSE, and the repo's own build output disproves it:
+//
+//     apps/admin/.next/static/chunks/*.css
+//       .grid-cols-\[minmax\(0\,1fr\)…\]
+//         { grid-template-columns: minmax(0,1fr) … }
+//
+// plus 60 escaped commas (`\2c`) in the compiled desktop CSS. Commas compile.
+// The real silent-failure trap is an unescaped SPACE inside `[...]` — use `_`.
+//
+// The layout below still uses `1fr` + `min-w-0`, because that is what it
+// needs and it works; it is simply not a workaround for a bug that does not
+// exist. The assertion that used to forbid commas is gone: enforcing an
+// invented rule would make every future session rewrite ~40 working call
+// sites believing it was fixing something.
 // ============================================
 
 import { readFileSync } from 'node:fs'
@@ -44,8 +57,11 @@ describe('the header and the rows share one template', () => {
     expect(uses).toBe(2)
   })
 
-  it('⚠️ no comma in the arbitrary value — it would compile to nothing', () => {
-    expect(view).not.toMatch(/grid-cols-\[[^\]]*,/)
+  it('⚠️ no unescaped SPACE in the arbitrary value — that is the real trap', () => {
+    // A space inside `[...]` ends the class name, so the rest is dropped and
+    // the declaration is silently incomplete. `_` is the escape. (A comma is
+    // fine — see the correction in this file's header.)
+    expect(view).not.toMatch(/grid-cols-\[[^\]]* /)
   })
 
   it('the event cell can shrink, so a long title does not push the columns', () => {

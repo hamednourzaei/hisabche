@@ -129,16 +129,22 @@ export function SalesFunnel({
   height?: number | undefined
   t: (key: string, fallback?: string) => string
 }) {
-  const { bands, revenue } = React.useMemo(() => {
+  const { bands, revenue, windowDays } = React.useMemo(() => {
     // ⚠️ A type annotation is not a runtime check. This exact shape has taken
     // down two production screens in this codebase.
     const points = Array.isArray(data) ? data : []
 
-    // With an odd number of points the extra one belongs to the RECENT half —
-    // newer information is the side the question is about.
+    // ⚠️ TWO WINDOWS OF THE SAME LENGTH, BOTH TAKEN FROM THE END.
+    //
+    // An earlier version split the range down the middle, which on an odd
+    // number of days compared 4 days against 3 and still captioned it «vs the
+    // previous days» — a 33% head start handed to the recent half, reported as
+    // growth. The last N days are now compared against the N before them, and
+    // any leftover oldest point is excluded from the COMPARISON while still
+    // counting toward the totals shown.
     const split = Math.floor(points.length / 2)
-    const earlier = points.slice(0, split)
-    const recent = points.slice(split)
+    const recent = split > 0 ? points.slice(-split) : []
+    const earlier = split > 0 ? points.slice(-2 * split, -split) : []
 
     const sum = (rows: FunnelPoint[], pick: (p: FunnelPoint) => number) =>
       rows.reduce((acc, p) => acc + (Number(pick(p)) || 0), 0)
@@ -170,6 +176,7 @@ export function SalesFunnel({
     return {
       bands: nextBands,
       revenue: comparable ? compare(revenueBefore, revenueNow) : noTrend,
+      windowDays: split,
     }
   }, [data])
 
@@ -261,6 +268,21 @@ export function SalesFunnel({
 
       {/* ⚠️ THE OUTCOME, NOT A BAND. Money has no width that means anything
           beside two counts — see the note at the top of this file. */}
+      {/*
+        ⚠️ THE COMPARISON NAMES ITS OWN WINDOW.
+        A coloured band with no caption is a claim with no stated basis — the
+        reader cannot tell whether green means «better than yesterday» or
+        «better than last quarter». The window follows the range picker above,
+        so this changes with it.
+      */}
+      {windowDays > 0 ? (
+        <p className="text-[11px] text-[hsl(var(--fg-tertiary))]">
+          {t('dashboard.funnel.comparedTo', 'نسبت به')}{' '}
+          <span className="tabular-nums">{windowDays}</span>{' '}
+          {t('dashboard.funnel.daysBefore', 'روز پیش از آن')}
+        </p>
+      ) : null}
+
       <div className="flex flex-wrap items-baseline justify-between gap-2 border-t border-[hsl(var(--border-default))] pt-2.5">
         <span className="text-xs text-[hsl(var(--fg-secondary))]">
           {t('dashboard.totalSales', 'فروش کل')}

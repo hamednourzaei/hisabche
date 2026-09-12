@@ -3,6 +3,7 @@
 import { useState, type RefObject } from 'react'
 import { ArrowRight, Loader2, FileText } from 'lucide-react'
 import { ApprovalCard } from '../workflow/approval-timeline'
+import { GHOST_ICON_BUTTON, OUTLINE_BUTTON } from '../button-classes'
 import {
   InvoiceDocument,
   buildInvoiceShareUrl,
@@ -125,11 +126,6 @@ export interface InvoiceDetailPageProps {
   ) => Promise<void>
 }
 
-const ghostBtn =
-  'inline-flex items-center justify-center rounded-full p-2 text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors duration-150 motion-reduce:transition-none'
-const outlineBtn =
-  'inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors duration-150 motion-reduce:transition-none'
-
 const DEFAULT_DISPLAY: InvoiceDocumentDisplaySettings = {
   showSignature: true,
   showNotes: true,
@@ -176,7 +172,7 @@ export function InvoiceDetailPage({
         <p className="text-lg text-[hsl(var(--fg-secondary))]">
           {t('invoices.notFound', 'فاکتور پیدا نشد')}
         </p>
-        <button type="button" onClick={onBack} className={outlineBtn}>
+        <button type="button" onClick={onBack} className={OUTLINE_BUTTON}>
           {t('action.back', 'بازگشت')}
         </button>
       </div>
@@ -268,7 +264,7 @@ export function InvoiceDetailPage({
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3 no-print">
-        <button type="button" onClick={onBack} className={ghostBtn}>
+        <button type="button" onClick={onBack} className={GHOST_ICON_BUTTON}>
           <ArrowRight className="size-5" />
         </button>
         <h1 className="text-2xl font-bold text-[hsl(var(--fg-primary))]">
