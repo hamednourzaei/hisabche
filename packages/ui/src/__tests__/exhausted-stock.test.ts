@@ -60,7 +60,8 @@ describe('a negative quantity is out of stock', () => {
   it('⚠️ status and label treat <= 0 as out, not only === 0', () => {
     // -98 was being reported as merely «low».
     expect(hook).not.toContain('qty === 0')
-    expect(hook).toContain('if (qty <= 0) return "destructive"')
+    // Quote-agnostic: prettier normalises the quote style on commit.
+    expect(hook).toMatch(/if \(qty <= 0\) return ["']destructive["']/)
     // The client-side totals were later moved server-side, so the mapper may
     // no longer count at all — it just must never use the `=== 0` test again.
     expect(mappers).not.toContain('quantity === 0')

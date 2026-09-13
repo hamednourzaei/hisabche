@@ -14,6 +14,7 @@
 
 import { supabase } from '../../db'
 import { DatabaseError } from '../../errors/database.error'
+import { fetchAllPages } from '../../utils/fetch-all-pages'
 import type { TenancyContext } from '../tenancy.service'
 
 import type { AccountRootType, DraftLine, PeriodLock } from './accounting.domain'
@@ -556,25 +557,27 @@ export class AccountingRepository {
       credit: number
     }>
   > {
-    let query = supabase
-      .from('journal_lines')
-      .select(
-        'id, journal_id, debit, credit, journal_entries!inner(id, entry_number, date, description, reference, status, source_type, source_id, workspace_id)',
-      )
-      .eq('workspace_id', workspaceId)
-      .eq('account_id', accountId)
-      .eq('journal_entries.status', 'posted')
-      .order('id', { ascending: true })
-      .limit(5_000)
+    // ⚠️ EVERY line, in ordered pages. This was `.limit(5_000)`, which
+    // PostgREST silently caps at max-rows (1000): an account with more lines
+    // got a ledger — and a running balance — built from its first thousand.
+    const data = await fetchAllPages((from, to) => {
+      let query = supabase
+        .from('journal_lines')
+        .select(
+          'id, journal_id, debit, credit, journal_entries!inner(id, entry_number, date, description, reference, status, source_type, source_id, workspace_id)',
+        )
+        .eq('workspace_id', workspaceId)
+        .eq('account_id', accountId)
+        .eq('journal_entries.status', 'posted')
 
-    if (fromDate) query = query.gte('journal_entries.date', fromDate)
-    if (toDate) query = query.lte('journal_entries.date', toDate)
+      if (fromDate) query = query.gte('journal_entries.date', fromDate)
+      if (toDate) query = query.lte('journal_entries.date', toDate)
 
-    const { data, error } = await query
-    if (error) throw new DatabaseError('Failed to read the general ledger', error)
+      return query.order('id', { ascending: true }).range(from, to)
+    }, 'Failed to read the general ledger')
 
     return (
-      (data ?? [])
+      data
         .map((row: Record<string, any>) => {
           const entry = Array.isArray(row.journal_entries)
             ? row.journal_entries[0]

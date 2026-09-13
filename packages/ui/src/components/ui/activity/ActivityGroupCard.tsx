@@ -13,6 +13,7 @@ import { cn } from '../../../lib/utils'
 import type { ActivityGroupDto, ActivityItemDto } from '@hisabche/api'
 import { entityRegistry, type EntityType } from '../../../lib/activity/entity-registry'
 import { useIntlLocale } from '../../../hooks/use-intl-locale'
+import { useNow } from '../../../hooks/use-now'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -25,8 +26,11 @@ const STATUS_COLOR_CLASSES: Record<string, string> = {
   gray: 'text-gray-500 bg-gray-500/10',
 }
 
-function timeAgo(iso: string, t: (key: string) => string): string {
-  const minutes = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
+function timeAgo(iso: string, now: number | null, t: (key: string) => string): string {
+  // `now` is null until mounted (see useNow) — the server and the first client
+  // render then agree on empty text instead of on two different clocks.
+  if (now === null) return ''
+  const minutes = Math.floor((now - new Date(iso).getTime()) / 60000)
   if (!Number.isFinite(minutes) || minutes < 1) return t('time.justNow')
   if (minutes < 60) return t('time.minutesAgo')
   const hours = Math.floor(minutes / 60)
@@ -67,6 +71,7 @@ const ActivityRow = memo(function ActivityRow({
   onClick: () => void
 }) {
   const t = useTranslations()
+  const now = useNow(60_000)
 
   return (
     <button
@@ -101,7 +106,7 @@ const ActivityRow = memo(function ActivityRow({
             {t('activity.by', { actor: activity.actor })}
           </span>
         )}
-        <span>{timeAgo(activity.timestamp, t)}</span>
+        <span>{timeAgo(activity.timestamp, now, t)}</span>
       </div>
     </button>
   )
@@ -123,6 +128,7 @@ export const ActivityGroupCard = memo(function ActivityGroupCard({
 }: ActivityGroupCardProps) {
   const t = useTranslations()
   const locale = useIntlLocale()
+  const now = useNow(60_000)
   const [isOpen, setIsOpen] = useState(false)
 
   const config = getEntityConfig(group.entityType)
@@ -257,7 +263,7 @@ export const ActivityGroupCard = memo(function ActivityGroupCard({
             )}
             <span className="inline-flex items-center gap-1">
               <Clock className="size-2.5 md:size-3" aria-hidden="true" />
-              {timeAgo(entitySummary.lastActivity, t)}
+              {timeAgo(entitySummary.lastActivity, now, t)}
             </span>
           </div>
         </div>

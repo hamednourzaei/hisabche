@@ -3,6 +3,7 @@
 
 import { memo, useCallback, useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
+import { toIsoDay } from '@hisabche/formatting'
 import { cn } from '../../../../lib/utils'
 import { useBalanceSheet, type TrialBalance } from '@hisabche/api'
 import { SingleDatePicker } from '../components/DateRangePicker'
@@ -100,7 +101,7 @@ function SectionBlock({
 export const BalanceSheetTab = memo(function BalanceSheetTab() {
   const t = useTranslations()
   const n = useLedgerNumber()
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [date, setDate] = useState(() => toIsoDay(new Date()))
   const { branchId } = useBranchScope()
   const { data, isLoading } = useBalanceSheet(date, branchId)
 

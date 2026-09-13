@@ -3,6 +3,7 @@
 
 import Link from 'next/link'
 import { cn } from '../../../lib/utils'
+import { useNow } from '../../../hooks/use-now'
 import { Send } from 'lucide-react'
 import { FaInstagram, FaFacebook } from 'react-icons/fa6'
 
@@ -120,7 +121,9 @@ export default function SiteFooter({ t, localePrefix }: SiteFooterProps) {
     return `${prefix}${href}`
   }
 
-  const year = new Date().getFullYear()
+  const now = useNow()
+  const year = now === null ? null : new Date(now).getFullYear()
+  const copyright = t('landing.footerCopyright', '© {year} حسابچه. تمامی حقوق محفوظ است.')
 
   return (
     <footer
@@ -196,26 +199,18 @@ export default function SiteFooter({ t, localePrefix }: SiteFooterProps) {
             'flex flex-col sm:flex-row items-center justify-between gap-2 sm:gap-3 lg:gap-4',
           )}
         >
-          {/* ⚠️ `suppressHydrationWarning` — THE YEAR IS THE ONE THING HERE
-              THAT CAN LEGITIMATELY DIFFER.
+          {/* ⚠️ THE YEAR IS READ AFTER MOUNT (useNow), NOT DURING RENDER.
 
               These pages are cached (`revalidate = 3600` on the docs, ISR
-              elsewhere), so on the 1st of January the served HTML still says
-              last year while the browser computes this one. React treats that
-              as a corrupt tree and throws error #418 — «text content does not
-              match» — discarding and re-rendering the whole subtree.
-
-              This is React's own escape hatch for exactly this case: a value
-              derived from the clock. It suppresses the warning for this
-              element only, and the client's value wins on the next render. */}
-          <p
-            suppressHydrationWarning
-            className="text-[9px] sm:text-[10px] lg:text-xs text-[hsl(var(--fg-tertiary))] order-2 sm:order-1"
-          >
-            {t('landing.footerCopyright', `© ${year} حسابچه. تمامی حقوق محفوظ است.`).replace(
-              '{year}',
-              String(year),
-            )}
+              elsewhere), so the served HTML can carry last year while the
+              browser computes this one — React error #418, «text content does
+              not match», and the whole subtree is thrown away. The server and
+              the first client render both paint the line WITHOUT a year; the
+              effect then adds it. */}
+          <p className="text-[9px] sm:text-[10px] lg:text-xs text-[hsl(var(--fg-tertiary))] order-2 sm:order-1">
+            {year === null
+              ? copyright.replace('{year} ', '')
+              : copyright.replace('{year}', String(year))}
           </p>
           <p className="text-[9px] sm:text-[10px] lg:text-xs text-[hsl(var(--fg-tertiary))] order-1 sm:order-2">
             {t('landing.footer', 'سیستم مدیریت کسب‌وکار')}

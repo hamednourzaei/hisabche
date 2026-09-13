@@ -27,6 +27,7 @@
 // ============================================
 
 import { memo } from 'react'
+import { useNow } from '../../../hooks/use-now'
 import type { MigrationJob } from '@hisabche/api'
 
 import {
@@ -71,8 +72,8 @@ const MIGRATION_TONE: Record<string, Tone> = {
  * not by concatenation here — Persian and English disagree about where the
  * number sits, and `${n} minutes ago` bakes the English order in.
  */
-function since(timestamp: number): { key: string; value: number } {
-  const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000))
+function since(timestamp: number, now: number): { key: string; value: number } {
+  const seconds = Math.max(0, Math.floor((now - timestamp) / 1000))
   if (seconds < 60) return { key: 'dataSync.seconds_ago', value: seconds }
   const minutes = Math.floor(seconds / 60)
   if (minutes < 60) return { key: 'dataSync.minutes_ago', value: minutes }
@@ -95,7 +96,10 @@ export const DataAndSyncView = memo(function DataAndSyncView({
   onNavigate,
   onRefresh,
 }: DataAndSyncViewProps) {
-  const elapsed = lastSyncedAt === null ? null : since(lastSyncedAt)
+  // The clock is read after mount (see useNow). Until then a synced workspace
+  // shows a neutral dash — never «هرگز», which would be a false statement.
+  const now = useNow(10_000)
+  const elapsed = lastSyncedAt === null || now === null ? null : since(lastSyncedAt, now)
 
   return (
     <CapabilityPage>
@@ -147,9 +151,11 @@ export const DataAndSyncView = memo(function DataAndSyncView({
           <Stat
             label={t('dataSync.last_synced', 'آخرین همگام‌سازی')}
             value={
-              elapsed === null
+              lastSyncedAt === null
                 ? t('dataSync.never', 'هرگز')
-                : t(elapsed.key, String(elapsed.value)).replace('{n}', String(elapsed.value))
+                : elapsed === null
+                  ? '—'
+                  : t(elapsed.key, String(elapsed.value)).replace('{n}', String(elapsed.value))
             }
           />
         </StatGrid>

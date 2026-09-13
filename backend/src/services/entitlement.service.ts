@@ -246,7 +246,7 @@ export class EntitlementService {
         // plan's cap. An unreadable count must not widen the quota.
         const { count, error } = await supabase
           .from('invoices')
-          .select('id', { count: 'estimated', head: true })
+          .select('id', { count: 'exact', head: true })
           .eq('workspace_id', workspaceId)
 
         if (error) {
@@ -273,7 +273,7 @@ export class EntitlementService {
         // seat freed in another business block this one; the limit is per shop.
         const { count, error } = await supabase
           .from('workspace_members')
-          .select('id', { count: 'estimated', head: true })
+          .select('id', { count: 'exact', head: true })
           .eq('workspace_id', workspaceId)
 
         if (error) {
@@ -309,7 +309,7 @@ export class EntitlementService {
         // being a seller in someone else's shop is not running a business.
         const { count, error } = await supabase
           .from('workspaces')
-          .select('id', { count: 'estimated', head: true })
+          .select('id', { count: 'exact', head: true })
           .eq('owner_id', userId)
 
         if (error) {

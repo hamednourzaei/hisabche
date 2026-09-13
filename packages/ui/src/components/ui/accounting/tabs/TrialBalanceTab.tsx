@@ -3,6 +3,7 @@
 
 import { memo, useCallback, useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
+import { toIsoDay } from '@hisabche/formatting'
 import { useTrialBalance } from '@hisabche/api'
 import { SingleDatePicker } from '../components/DateRangePicker'
 import { ExportButton, type ExportColumn } from '../components/ExportButton'
@@ -33,7 +34,7 @@ const exportColumns: ExportColumn<TrialBalance>[] = [
 export const TrialBalanceTab = memo(function TrialBalanceTab() {
   const t = useTranslations()
   const n = useLedgerNumber()
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [date, setDate] = useState(() => toIsoDay(new Date()))
   const { branchId } = useBranchScope()
   const { data, isLoading } = useTrialBalance(date, branchId)
 

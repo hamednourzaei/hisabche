@@ -3,6 +3,7 @@
 
 import { memo, useCallback, useState, useMemo } from 'react'
 import { useTranslations } from 'next-intl'
+import { toIsoDay } from '@hisabche/formatting'
 import { cn } from '../../../../lib/utils'
 import { useIncomeStatement, type TrialBalance } from '@hisabche/api'
 import { DateRangePicker } from '../components/DateRangePicker'
@@ -23,13 +24,15 @@ const exportColumns: ExportColumn<SummaryRow>[] = [
   { key: 'value', header: 'مبلغ', accessor: (r) => r.value },
 ]
 
+// Local calendar day — never toISOString(): in UTC+ zones (Kabul +4:30) local
+// midnight on the 1st is still the previous month's last day in UTC.
 function getFirstDayOfMonth(): string {
   const d = new Date()
-  return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10)
+  return toIsoDay(new Date(d.getFullYear(), d.getMonth(), 1))
 }
 
 function getToday(): string {
-  return new Date().toISOString().slice(0, 10)
+  return toIsoDay(new Date())
 }
 
 /**

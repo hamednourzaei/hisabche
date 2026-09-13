@@ -15,6 +15,7 @@
 import { supabase } from '../../db'
 import { DatabaseError } from '../../errors/database.error'
 import { memoryCache } from '../../utils/pagination'
+import { fetchAllPages } from '../../utils/fetch-all-pages'
 import type { TenancyContext } from '../tenancy.service'
 
 import { round2 } from './accounting.domain'
@@ -46,21 +47,33 @@ export async function getCashFlow(ctx: TenancyContext, startDate: string, endDat
   const cached = await memoryCache.get(cacheKey)
   if (cached) return cached
 
-  const { data: transactions, error } = await supabase
-    .from('transactions')
-    .select('type, amount, description, date')
-    .eq('workspace_id', workspaceId)
-    .gte('date', startDate)
-    .lte('date', endDate)
-    .order('date', { ascending: true })
-
-  if (error) throw new DatabaseError('Failed to fetch cash flow', error)
+  // ⚠️ Every row in the period. A single read is capped at PostgREST's
+  // max-rows (1000) and the inflow/outflow sums were silently understated.
+  // Ordered by date, then id, so the pages neither overlap nor skip a row.
+  const transactions = await fetchAllPages<{
+    type: string
+    amount: unknown
+    description: string | null
+    date: string
+  }>(
+    (from, to) =>
+      supabase
+        .from('transactions')
+        .select('id, type, amount, description, date')
+        .eq('workspace_id', workspaceId)
+        .gte('date', startDate)
+        .lte('date', endDate)
+        .order('date', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, to),
+    'Failed to fetch cash flow',
+  )
 
   const operating = emptySection()
   const investing = emptySection()
   const financing = emptySection()
 
-  for (const tx of transactions ?? []) {
+  for (const tx of transactions) {
     const amount = Number(tx.amount) || 0
     const item = { description: tx.description || tx.type, amount, date: tx.date }
 

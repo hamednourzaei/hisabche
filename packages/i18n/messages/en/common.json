@@ -1442,7 +1442,8 @@
       "unknown": "Unknown unit"
     },
     "bulkDeleteConfirm": "Delete the selected products?",
-    "stockStatus": "Stock status"
+    "stockStatus": "Stock status",
+    "summaryUnavailable": "Unavailable"
   },
   "customers": {
     "title": "Customers",
@@ -1578,7 +1579,10 @@
     "empty_hint": "Add your first customer from the customers page.",
     "list": "List",
     "address": "Address",
-    "anonymous": "Unknown customer"
+    "anonymous": "Unknown customer",
+    "statsCoverage": "These figures cover the latest invoices and customers fetched, not the whole book",
+    "statsCoverageInvoices": "invoices",
+    "statsCoverageCustomers": "customers"
   },
   "crm": {
     "type": "Type",
@@ -1851,7 +1855,8 @@
       "morning": "Good Morning",
       "afternoon": "Good Afternoon",
       "evening": "Good Evening",
-      "night": "Good Night"
+      "night": "Good Night",
+      "day": "Welcome"
     },
     "subtitle": "How's your business today?",
     "lowStockHint": "Items to reorder",
@@ -3998,7 +4003,8 @@
     "allocatedTotal": "Total allocated",
     "journalEntry": "Accounting entry",
     "noJournalEntry": "This invoice has not been posted to the ledger yet.",
-    "paidAmountDrift": "The paid amount recorded on the invoice does not match the sum of its payments"
+    "paidAmountDrift": "The paid amount recorded on the invoice does not match the sum of its payments",
+    "paymentNeedsParty": "To record a payment, set the customer or supplier on this invoice first."
   },
   "ops": {
     "cashForecast": "Cash forecast",
@@ -4088,5 +4094,10 @@
   "select": {
     "searchPlaceholder": "Search…",
     "noResults": "No results found"
+  },
+  "subscriptionLock": {
+    "title": "Your subscription has ended",
+    "description": "You can still view the dashboard, invoices and billing. To create, edit or delete anything, renew or buy a subscription.",
+    "cta": "Renew or buy a subscription"
   }
 }

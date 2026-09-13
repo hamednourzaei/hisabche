@@ -15,6 +15,7 @@ import {
   useRecordPayment,
   useCancelPayment,
 } from '@hisabche/api'
+import { useSubscriptionLocked } from '../../billing/subscription-lock'
 import { InvoiceDetailPage, type InvoiceDetailDisplay } from '../invoice-detail-page'
 import InvoicePDFDownload from '../InvoicePDFDownload'
 import { InvoiceRelatedPanel } from '../invoice-related-panel'
@@ -121,6 +122,9 @@ export function InvoiceDetailContainer() {
   // from this screen. Without one, the only way an invoice got a paid amount
   // was the create form writing `paid_amount` onto the row — the drift the
   // owner reported on a real sale.
+  // Expired subscription: the invoice stays viewable, but the controls that
+  // would write (payments, workflow actions) are withheld.
+  const subscriptionLocked = useSubscriptionLocked()
   const recordPayment = useRecordPayment()
   const cancelPayment = useCancelPayment()
 
@@ -355,34 +359,59 @@ export function InvoiceDetailContainer() {
             recordPaymentError={
               recordPayment.error ? String((recordPayment.error as Error).message) : null
             }
-            onRecordPayment={(input) => {
-              const isPurchase = display.type === 'purchase'
-              recordPayment.mutate({
-                // A purchase pays OUT to a supplier; a sale takes money IN.
-                // Reversed, this lands on the wrong side of the ledger.
-                direction: isPurchase ? 'out' : 'in',
-                partyType: isPurchase ? 'supplier' : 'customer',
-                partyId: (isPurchase ? display.supplierId : display.customerId) as string,
-                amount: input.amount,
-                method: input.method,
-                reference: input.reference,
-                entryDate: input.date,
-                currency: display.currency,
-                // Explicit, always. Auto-allocation settles the OLDEST open
-                // invoice first — so paying here would quietly clear a
-                // different invoice and leave this one untouched.
-                allocations: [{ invoiceId: display.id, amount: input.amount }],
-              })
-            }}
-            onCancelPayment={(paymentId) => {
-              // The server requires a reason and refuses without one: a
-              // cancelled payment nobody explained is unauditable.
-              const reason = window.prompt(
-                safeT('invoiceDetail.cancelPaymentReason', 'دلیل حذف این پرداخت؟'),
-              )
-              if (!reason || !reason.trim()) return
-              cancelPayment.mutate({ paymentId, reason: reason.trim() })
-            }}
+            onRecordPayment={
+              subscriptionLocked
+                ? undefined
+                : (input) => {
+                    const isPurchase = display.type === 'purchase'
+                    const partyId = isPurchase ? display.supplierId : display.customerId
+                    // ⚠️ A payment belongs to a party. An invoice with no customer
+                    // (a walk-in sale) has nobody to allocate it to, and the server
+                    // rejects an empty id with a bare 400 the user cannot read. Say
+                    // what is actually wrong instead of sending a request that fails.
+                    if (!partyId) {
+                      window.alert(
+                        safeT(
+                          'invoiceDetail.paymentNeedsParty',
+                          'برای ثبت پرداخت، ابتدا مشتری یا تأمین‌کننده‌ی این فاکتور را مشخص کنید.',
+                        ),
+                      )
+                      return
+                    }
+                    recordPayment.mutate({
+                      // A purchase pays OUT to a supplier; a sale takes money IN.
+                      // Reversed, this lands on the wrong side of the ledger.
+                      direction: isPurchase ? 'out' : 'in',
+                      partyType: isPurchase ? 'supplier' : 'customer',
+                      partyId,
+                      amount: input.amount,
+                      // ⚠️ OMIT, DON'T SEND NULL. These fields are `.optional()` on
+                      // the server, which accepts a missing key and REJECTS `null` —
+                      // an invoice with no stored currency produced a 400 here.
+                      ...(input.method ? { method: input.method } : {}),
+                      ...(input.reference ? { reference: input.reference } : {}),
+                      ...(input.date ? { entryDate: input.date } : {}),
+                      ...(display.currency ? { currency: display.currency } : {}),
+                      // Explicit, always. Auto-allocation settles the OLDEST open
+                      // invoice first — so paying here would quietly clear a
+                      // different invoice and leave this one untouched.
+                      allocations: [{ invoiceId: display.id, amount: input.amount }],
+                    })
+                  }
+            }
+            onCancelPayment={
+              subscriptionLocked
+                ? undefined
+                : (paymentId) => {
+                    // The server requires a reason and refuses without one: a
+                    // cancelled payment nobody explained is unauditable.
+                    const reason = window.prompt(
+                      safeT('invoiceDetail.cancelPaymentReason', 'دلیل حذف این پرداخت؟'),
+                    )
+                    if (!reason || !reason.trim()) return
+                    cancelPayment.mutate({ paymentId, reason: reason.trim() })
+                  }
+            }
           />
         ) : null
       }
@@ -405,7 +434,7 @@ export function InvoiceDetailContainer() {
       documentRef={documentRef}
       statusVariant={statusVariant}
       workflowInstance={workflowData?.instance ?? null}
-      workflowActions={workflowData?.actions ?? []}
+      workflowActions={subscriptionLocked ? [] : (workflowData?.actions ?? [])}
       workflowSteps={workflowData?.steps ?? []}
       workflowPending={workflowData?.instance?.status === 'in_progress'}
       onWorkflowAction={handleWorkflowAction}

@@ -13,6 +13,10 @@ import {
   Breadcrumb,
   GlobalSearch,
   RouteProgress,
+  SubscriptionLockNotice,
+  SubscriptionLockDialog,
+  useSubscriptionLocked,
+  isRouteAllowedWhenExpired,
 } from '@hisabche/ui'
 import { useEffect, useRef, useCallback, useMemo, useState, memo } from 'react'
 import { NAV_ITEMS, PRIMARY_ITEMS, MORE_GROUPS, MORE_ICON, COMMAND_ITEMS } from '@hisabche/ui/menu'
@@ -134,6 +138,12 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
   const toggle = useThemeStore((s) => s.toggle)
   const [optimisticPath, setOptimisticPath] = useState<string | null>(null)
   const lastSyncedAt = useRef(Date.now())
+
+  // Expired subscription: only dashboard, invoices (view) and billing open.
+  // The server's verdict, not a browser flag — and the server refuses writes
+  // regardless of what renders here.
+  const subscriptionLocked = useSubscriptionLocked()
+  const routeLocked = subscriptionLocked && !isRouteAllowedWhenExpired(pathname ?? '')
 
   usePrefetchRoutes(pathname)
   useRedirectGuard(locale)
@@ -336,6 +346,8 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
 
       <CommandPalette commands={commands} />
 
+      <SubscriptionLockDialog />
+
       <DashboardSidebar
         primaryItems={primaryItems}
         moreGroups={moreGroups}
@@ -394,7 +406,7 @@ const DashboardLayout = memo(function DashboardLayout({ children }: { children: 
 
         <main className="min-w-0 flex-1 overflow-y-auto p-4 pb-20 lg:pb-4">
           <Breadcrumb className="mb-4" />
-          {children}
+          {routeLocked ? <SubscriptionLockNotice /> : children}
         </main>
 
         {/* The invoice builder owns the bottom of the screen on mobile: it

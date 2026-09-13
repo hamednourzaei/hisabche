@@ -23,6 +23,7 @@ import { cn } from '../../lib/utils'
 import { routeForEntityOrList } from '../../lib/entity-route'
 import { useCurrency } from '../../hooks/use-currency'
 import { useIntlLocale } from '../../hooks/use-intl-locale'
+import { useNow } from '../../hooks/use-now'
 import { useNotifications, useUnreadCount, useMarkAsRead, useMarkAllAsRead } from '@hisabche/api'
 import type { Notification } from '@hisabche/api'
 
@@ -90,8 +91,10 @@ const statusLabels: Record<string, string> = {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function timeAgo(d: string, t: (key: string) => string): string {
-  const m = Math.floor((Date.now() - new Date(d).getTime()) / 60000)
+function timeAgo(d: string, now: number | null, t: (key: string) => string): string {
+  // `now` is null until mounted (see useNow): no clock is read during render.
+  if (now === null) return ''
+  const m = Math.floor((now - new Date(d).getTime()) / 60000)
   if (m < 1) return t('time.justNow')
   if (m < 60) return t('time.minutesAgo')
   const h = Math.floor(m / 60)
@@ -234,6 +237,7 @@ const TimelineItem = memo(function TimelineItem({
   isLast: boolean
 }) {
   const t = useTranslations()
+  const now = useNow(60_000)
   const config =
     entityConfig[notification.entity_type as NotificationGroup['entityType']] ||
     entityConfig.invoice
@@ -262,7 +266,7 @@ const TimelineItem = memo(function TimelineItem({
           </p>
         )}
         <p className="text-[9px] md:text-[10px] text-[hsl(var(--fg-tertiary))] mt-1">
-          {timeAgo(notification.created_at, t)}
+          {timeAgo(notification.created_at, now, t)}
         </p>
       </div>
     </div>
@@ -284,6 +288,7 @@ const GroupCard = memo(function GroupCard({
   onItemClick: (n: Notification) => void
 }) {
   const t = useTranslations()
+  const now = useNow(60_000)
   const locale = useIntlLocale()
   const { currency: userCurrency } = useCurrency()
   const statusColor = group.status ? statusColors[group.status] || '' : ''
@@ -349,7 +354,8 @@ const GroupCard = memo(function GroupCard({
               )}
               <span className="text-[8px] md:text-[10px] text-[hsl(var(--fg-tertiary))] flex items-center gap-1">
                 <Clock className="w-2.5 h-2.5 md:w-3 md:h-3" aria-hidden="true" />
-                {group.items.length} {t('notifications.activities')} • {timeAgo(group.latestAt, t)}
+                {group.items.length} {t('notifications.activities')} •{' '}
+                {timeAgo(group.latestAt, now, t)}
               </span>
             </div>
           </div>

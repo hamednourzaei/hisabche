@@ -9,6 +9,7 @@ import { supabase } from '../../db'
 import { ConflictError, DatabaseError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
 import { memoryCache } from '../../utils/pagination'
+import { fetchAllPages } from '../../utils/fetch-all-pages'
 import type { TenancyContext } from '../tenancy.service'
 
 import {
@@ -222,23 +223,29 @@ export class DimensionsService {
   ) {
     const values = await this.listValues(ctx, input.dimensionId)
 
-    let query = supabase
-      .from('journal_lines')
-      .select(
-        'debit, credit, dimensions, journal:journal_entries!inner(date, status, workspace_id)',
-      )
-      .eq('workspace_id', ctx.workspaceId)
-      .eq('journal.status', 'posted')
-      .gte('journal.date', input.from.slice(0, 10))
-      .lte('journal.date', input.to.slice(0, 10))
-      .limit(20_000)
+    // ⚠️ EVERY posting, in ordered pages. `.limit(20_000)` was silently capped
+    // at PostgREST max-rows (1000), so totals and the coverage gap were
+    // computed from a prefix of the period.
+    const data = await fetchAllPages<{ debit: unknown; credit: unknown; dimensions: unknown }>(
+      (from, to) => {
+        let query = supabase
+          .from('journal_lines')
+          .select(
+            'id, debit, credit, dimensions, journal:journal_entries!inner(date, status, workspace_id)',
+          )
+          .eq('workspace_id', ctx.workspaceId)
+          .eq('journal.status', 'posted')
+          .gte('journal.date', input.from.slice(0, 10))
+          .lte('journal.date', input.to.slice(0, 10))
 
-    if (input.accountId) query = query.eq('account_id', input.accountId)
+        if (input.accountId) query = query.eq('account_id', input.accountId)
 
-    const { data, error } = await query
-    if (error) throw new DatabaseError('Failed to read postings', error)
+        return query.order('id', { ascending: true }).range(from, to)
+      },
+      'Failed to read postings',
+    )
 
-    let rows = (data ?? []).map((row: any) => ({
+    let rows = data.map((row) => ({
       dimensions: (row.dimensions ?? {}) as Record<string, string>,
       debitMinor: Math.round((Number(row.debit) || 0) * 100),
       creditMinor: Math.round((Number(row.credit) || 0) * 100),

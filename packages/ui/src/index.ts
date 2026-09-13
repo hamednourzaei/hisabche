@@ -295,6 +295,13 @@ export { toPersianNumbers, toArabicNumbers, usePersianNumbers } from './lib/pers
 
 // ---------- Types ----------
 export { PricingContainer, BillingContainer, BillingStatusContainer } from './components/ui/billing'
+export {
+  SubscriptionLockNotice,
+  SubscriptionLockDialog,
+  useSubscriptionLocked,
+  isRouteAllowedWhenExpired,
+  billingHref,
+} from './components/ui/billing'
 export type SupportedLanguage = 'fa-AF' | 'fa-IR'
 
 // ─── ✅ Activity Components ──────────────────────────────────────────────────

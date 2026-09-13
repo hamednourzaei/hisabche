@@ -19,11 +19,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { FakeDatabase, createFakeDb } from './helpers/fake-supabase'
 
-const hoisted = vi.hoisted(() => ({ fake: undefined as unknown }))
+const hoisted = vi.hoisted(() => ({ fake: {} as Record<string, unknown> }))
 vi.mock('../db', () => hoisted.fake)
 
 const db = new FakeDatabase()
-hoisted.fake = createFakeDb(db, new Map())
+hoisted.fake = createFakeDb(db, new Map()) as unknown as Record<string, unknown>
 
 const { callAggregate, isMissingFunctionError } =
   await import('../services/aggregates/aggregate-rpc')

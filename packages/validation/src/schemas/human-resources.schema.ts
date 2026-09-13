@@ -12,6 +12,9 @@ import {
   nonNegativeNumberSchema,
 } from './common.schema'
 
+/** YYYY-MM-DD, or a full ISO datetime. For fields that mean a day. */
+const calendarDaySchema = z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/), z.string().datetime()])
+
 // ============================================
 // Department (دپارتمان)
 // ============================================
@@ -56,7 +59,7 @@ export const employeeSchema = z.object({
   fatherName: optionalStringSchema,
   nationalId: optionalStringSchema,
   passportNumber: optionalStringSchema,
-  dateOfBirth: isoDateSchema.optional(),
+  dateOfBirth: calendarDaySchema.optional(),
   gender: z.enum(['male', 'female', 'other']).optional(),
   maritalStatus: z.enum(['single', 'married', 'divorced', 'widowed']).optional(),
   email: z.string().email().optional().nullable(),
@@ -73,8 +76,11 @@ export const employeeSchema = z.object({
   employmentType: z
     .enum(['full_time', 'part_time', 'contractor', 'intern', 'consultant'])
     .default('full_time'),
-  hireDate: isoDateSchema,
-  terminationDate: isoDateSchema.optional().nullable(),
+  // A calendar DAY, not an instant: the form sends YYYY-MM-DD, and requiring a
+  // full datetime rejected every new employee with a 400 ("body/hireDate must
+  // match format date-time"). A datetime is still accepted.
+  hireDate: calendarDaySchema,
+  terminationDate: calendarDaySchema.optional().nullable(),
   status: z.enum(['active', 'inactive', 'terminated', 'suspended', 'on_leave']).default('active'),
 
   // Compensation

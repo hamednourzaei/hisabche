@@ -21,6 +21,7 @@ import {
 import { cn } from '../../../lib/utils'
 import { useCurrency } from '../../../hooks/use-currency'
 import { useIntlLocale } from '../../../hooks/use-intl-locale'
+import { useNow } from '../../../hooks/use-now'
 import { useEntitySummary, useEntityActivities } from '@hisabche/api'
 import { useDateFormat } from '../../../hooks/use-date-format'
 
@@ -81,8 +82,9 @@ const activityLabels: Record<string, string> = {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function timeAgo(date: string, t: (key: string) => string): string {
-  const now = Date.now()
+function timeAgo(date: string, now: number | null, t: (key: string) => string): string {
+  // `now` is null until mounted (see useNow): no clock is read during render.
+  if (now === null) return ''
   const diff = now - new Date(date).getTime()
   const minutes = Math.floor(diff / 60000)
 
@@ -198,6 +200,7 @@ export const EntityActivityCard = memo(function EntityActivityCard({
   onActivityClick,
 }: EntityActivityCardProps) {
   const t = useTranslations()
+  const now = useNow(60_000)
   // ⚠️ THE CALENDAR FOLLOWS THE LANGUAGE. These were hardcoded to `'fa-AF'`,
   // so every reader got the Afghan solar calendar whatever they chose.
   const { date: fmtIntlDate, lang: dateLang } = useDateFormat()
@@ -279,7 +282,7 @@ export const EntityActivityCard = memo(function EntityActivityCard({
               </span>
               {summary.lastActivity && (
                 <span className="text-[10px] text-[hsl(var(--fg-tertiary))] flex items-center gap-1">
-                  •{timeAgo(summary.lastActivity, t)}
+                  •{timeAgo(summary.lastActivity, now, t)}
                 </span>
               )}
             </div>

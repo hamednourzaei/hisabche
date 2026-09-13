@@ -1,7 +1,7 @@
 // packages/ui/src/components/ui/dashboard/dashboard-view.tsx
 'use client'
 
-import { memo, useMemo, useState } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import type { ElementType } from 'react'
 import { useTranslations } from 'next-intl'
 import { invoiceListHref } from '../../../lib/invoices/invoice-filter-link'
@@ -79,16 +79,29 @@ const LazySalesChart = dynamic(() => import('./sales-chart').then((mod) => mod.S
 // ─── Greeting ──────────────────────────────────────────────────────────────
 
 const Greeting = memo(function Greeting({ t }: { t: Translate }) {
-  const h = new Date().getHours()
-  const k = h < 12 ? 'morning' : h < 17 ? 'afternoon' : h < 21 ? 'evening' : 'night'
+  // ⚠️ THE HOUR IS READ AFTER MOUNT, NOT DURING RENDER. React #418 (text).
+  //
+  // `new Date().getHours()` in render ran twice with different clocks: on the
+  // server in UTC, then in the browser in the reader's own zone — Kabul is
+  // +4:30. For hours of every day the server rendered «صبح بخیر» and the browser
+  // «ظهر بخیر», React saw different text, and threw the whole tree away. The
+  // first paint uses a fixed key both sides agree on; the effect corrects it.
+  const [h, setH] = useState<number | null>(null)
+  useEffect(() => {
+    setH(new Date().getHours())
+  }, [])
+  const k =
+    h === null ? 'day' : h < 12 ? 'morning' : h < 17 ? 'afternoon' : h < 21 ? 'evening' : 'night'
   const label =
-    k === 'morning'
-      ? 'صبح بخیر'
-      : k === 'afternoon'
-        ? 'ظهر بخیر'
-        : k === 'evening'
-          ? 'عصر بخیر'
-          : 'شب بخیر'
+    k === 'day'
+      ? 'خوش آمدید'
+      : k === 'morning'
+        ? 'صبح بخیر'
+        : k === 'afternoon'
+          ? 'ظهر بخیر'
+          : k === 'evening'
+            ? 'عصر بخیر'
+            : 'شب بخیر'
 
   return (
     <header className="space-y-1 sm:space-y-1.5">
@@ -535,13 +548,18 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
   // the range — a period that was actually fetched. With no such figure, or a
   // previous period of zero (growth from nothing has no meaningful ratio), no
   // percentage is shown rather than an invented one.
+  // ⚠️ «Today» is read after mount — same React #418 hazard as the greeting:
+  // the server's date and the browser's can differ around midnight.
+  const [today, setToday] = useState<string | null>(null)
+  useEffect(() => {
+    setToday(new Date().toDateString())
+  }, [])
   const rangeIsToday = useMemo(() => {
     const from = dateRange?.from
     const to = dateRange?.to
-    if (!from || !to) return false
-    const today = new Date().toDateString()
+    if (!from || !to || today === null) return false
     return from.toDateString() === today && to.toDateString() === today
-  }, [dateRange])
+  }, [dateRange, today])
 
   const rangeDays = useMemo(() => {
     const from = dateRange?.from

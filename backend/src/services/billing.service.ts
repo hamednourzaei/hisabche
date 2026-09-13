@@ -411,7 +411,7 @@ export class BillingService {
     const cfg = USAGE_TABLES[feature]
     if (!cfg) return 0 // unknown meters don't gate anything
 
-    let query = supabase.from(cfg.table).select('id', { count: 'estimated', head: true })
+    let query = supabase.from(cfg.table).select('id', { count: 'exact', head: true })
 
     if (cfg.scope === 'workspace') {
       // Workspace-owned meters REQUIRE a workspace. There is no user-shaped

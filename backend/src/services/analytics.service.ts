@@ -8,6 +8,7 @@ import type { TenancyContext } from './tenancy.service'
 import { DateRange } from '@hisabche/validation'
 import { CacheKeys, withCacheKey } from '../utils/cache'
 import { memoryCache } from '../utils/pagination'
+import { fetchAllPages } from '../utils/fetch-all-pages'
 import { isOutstanding } from './invoices/outstanding.domain'
 import {
   dashboardKpisFromAggregate,
@@ -658,27 +659,40 @@ export class AnalyticsService {
     const { startDate, endDate } = dateRange
     if (!workspaceId || !startDate || !endDate) return this.emptyFinancialSummary()
 
-    const { data: entries } = await supabase
-      .from('ledger_entries_view')
-      .select('debit, credit, account_id, entry_date')
-      .eq('workspace_id', workspaceId)
-      .gte('entry_date', startDate)
-      .lte('entry_date', endDate)
+    // ⚠️ Every row, not PostgREST's first 1000, and a failed read THROWS. It
+    // used to ignore `error` and answer «no activity» with a 200 (§7 #3).
+    const entries = await fetchAllPages<{
+      debit: unknown
+      credit: unknown
+      account_id: string
+      entry_date: string
+    }>(
+      (from, to) =>
+        supabase
+          .from('ledger_entries_view')
+          .select('id, debit, credit, account_id, entry_date')
+          .eq('workspace_id', workspaceId)
+          .gte('entry_date', startDate)
+          .lte('entry_date', endDate)
+          .order('id', { ascending: true })
+          .range(from, to),
+      'Failed to fetch ledger entries for the financial summary',
+    )
 
-    if (!entries || entries.length === 0) return this.emptyFinancialSummary()
+    if (entries.length === 0) return this.emptyFinancialSummary()
 
-    const totalRevenue = entries.reduce((sum: number, e: any) => sum + Number(e.credit), 0)
-    const totalExpenses = entries.reduce((sum: number, e: any) => sum + Number(e.debit), 0)
+    const totalRevenue = entries.reduce((sum, e) => sum + Number(e.credit), 0)
+    const totalExpenses = entries.reduce((sum, e) => sum + Number(e.debit), 0)
     const netProfit = totalRevenue - totalExpenses
 
     const byMonthMap: Record<string, { inflow: number; outflow: number }> = {}
     for (const e of entries) {
-      const month = ((e as any).entry_date as string).slice(0, 7)
+      const month = String(e.entry_date).slice(0, 7)
       if (!byMonthMap[month]) {
         byMonthMap[month] = { inflow: 0, outflow: 0 }
       }
-      byMonthMap[month].inflow += Number((e as any).credit)
-      byMonthMap[month].outflow += Number((e as any).debit)
+      byMonthMap[month].inflow += Number(e.credit)
+      byMonthMap[month].outflow += Number(e.debit)
     }
 
     return {

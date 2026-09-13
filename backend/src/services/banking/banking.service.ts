@@ -8,6 +8,7 @@ import { supabase } from '../../db'
 import { ConflictError, DatabaseError, NotFoundError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
 import { memoryCache } from '../../utils/pagination'
+import { fetchAllPages } from '../../utils/fetch-all-pages'
 import type { TenancyContext } from '../tenancy.service'
 import { learnPatterns, learnedBonus } from './match-learning.domain'
 
@@ -152,16 +153,22 @@ export class BankingService {
   }
 
   private async loadLines(ctx: TenancyContext, statementId: string): Promise<StatementLine[]> {
-    const { data, error } = await supabase
-      .from('bank_statement_lines')
-      .select('id, external_ref, on_date, amount_minor, description, matched_to')
-      .eq('workspace_id', ctx.workspaceId)
-      .eq('statement_id', statementId)
-      .order('on_date')
-      .limit(5000)
-
-    if (error) throw new DatabaseError('Failed to fetch statement lines', error)
-    return (data ?? []).map(mapLine)
+    // ⚠️ EVERY line, in ordered pages. `.limit(5000)` was silently capped at
+    // PostgREST max-rows (1000), and the reconciliation difference was then
+    // computed over a statement missing its tail.
+    const data = await fetchAllPages(
+      (from, to) =>
+        supabase
+          .from('bank_statement_lines')
+          .select('id, external_ref, on_date, amount_minor, description, matched_to')
+          .eq('workspace_id', ctx.workspaceId)
+          .eq('statement_id', statementId)
+          .order('on_date')
+          .order('id', { ascending: true })
+          .range(from, to),
+      'Failed to fetch statement lines',
+    )
+    return data.map(mapLine)
   }
 
   /**
@@ -189,35 +196,51 @@ export class BankingService {
     // safe. Journal entries are added first because they are what a bank fee,
     // an interest credit or a manual adjustment actually IS in this system —
     // the very lines a statement carries and `payments` never explains.
+    //
+    // ⚠️ Both read EVERY row, in ordered pages. They were `.limit(2000)`, which
+    // PostgREST silently caps at max-rows (1000) — and `getReconciliation` sums
+    // these entries into the book balance, so a busy month reconciled against
+    // a truncated book.
     const [payments, journals] = await Promise.all([
-      supabase
-        .from('payments')
-        .select('id, payment_number, direction, amount, entry_date, party_id')
-        .eq('workspace_id', ctx.workspaceId)
-        .eq('status', 'posted')
-        .gte('entry_date', from)
-        .lte('entry_date', to)
-        .limit(2000),
+      fetchAllPages(
+        (pageFrom, pageTo) =>
+          supabase
+            .from('payments')
+            .select('id, payment_number, direction, amount, entry_date, party_id')
+            .eq('workspace_id', ctx.workspaceId)
+            .eq('status', 'posted')
+            .gte('entry_date', from)
+            .lte('entry_date', to)
+            .order('id', { ascending: true })
+            .range(pageFrom, pageTo),
+        'Failed to fetch payments',
+      ),
 
       // Only entries touching THIS bank account, and only posted ones. A draft
       // is not money that moved, and an entry on an unrelated account is noise
       // that makes every suggestion worse.
-      supabase
-        .from('journal_entries')
-        .select(
-          'id, entry_number, date, description, journal_lines!inner(account_id, debit, credit)',
-        )
-        .eq('workspace_id', ctx.workspaceId)
-        .eq('status', 'posted')
-        .eq('journal_lines.account_id', accountId)
-        .gte('date', from)
-        .lte('date', to)
-        .limit(2000),
+      fetchAllPages(
+        (pageFrom, pageTo) =>
+          supabase
+            .from('journal_entries')
+            .select(
+              'id, entry_number, date, description, journal_lines!inner(account_id, debit, credit)',
+            )
+            .eq('workspace_id', ctx.workspaceId)
+            .eq('status', 'posted')
+            .eq('journal_lines.account_id', accountId)
+            .gte('date', from)
+            .lte('date', to)
+            .order('id', { ascending: true })
+            .range(pageFrom, pageTo),
+        'Failed to fetch journal candidates',
+      ).then(
+        (data) => ({ data, error: null }),
+        (error: unknown) => ({ data: null, error: error as Error }),
+      ),
     ])
 
-    if (payments.error) throw new DatabaseError('Failed to fetch payments', payments.error)
-
-    const entries: BookEntry[] = (payments.data ?? []).map((row) => ({
+    const entries: BookEntry[] = payments.map((row) => ({
       id: row.id,
       kind: 'payment' as const,
       onDate: String(row.entry_date ?? '').slice(0, 10),

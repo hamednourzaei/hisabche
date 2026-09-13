@@ -32,6 +32,20 @@ export type Row = Record<string, any>
 
 type Filter = (row: Row) => boolean
 
+/**
+ * A column, or a dotted path into an embedded resource (`journal_entries.date`
+ * on a row seeded with a nested `journal_entries` object) — how PostgREST
+ * filters on an `!inner` embed.
+ */
+function valueAt(row: Row, column: string): any {
+  if (column in row) return row[column]
+  const [head, ...rest] = column.split('.')
+  if (!head || rest.length === 0) return undefined
+  const nested = row[head]
+  const target = Array.isArray(nested) ? nested[0] : nested
+  return target == null ? undefined : valueAt(target, rest.join('.'))
+}
+
 interface OrderSpec {
   column: string
   ascending: boolean
@@ -47,6 +61,21 @@ export class FakeDatabase {
   readonly tables = new Map<string, Row[]>()
   readonly uniques: UniqueIndex[] = []
   readonly rpcs = new Map<string, (args: Row) => unknown>()
+
+  /**
+   * PostgREST's `max-rows`. When set, every select returns at most this many
+   * rows whatever `.limit()` asked for — silently, exactly like production.
+   * `null` (the default) keeps the older suites unchanged.
+   */
+  maxRows: number | null = null
+
+  /** Tables whose selects fail, so a test can prove an error is not swallowed. */
+  readonly failures = new Map<string, { code?: string; message: string }>()
+
+  fail(table: string, error: { code?: string; message: string }) {
+    this.failures.set(table, error)
+    return this
+  }
 
   /** Every query that ran, in order. Lets a test assert on tenant scoping. */
   readonly queries: Array<{ table: string; op: string; filters: string[] }> = []
@@ -138,8 +167,9 @@ export function fakeId(prefix = 'row'): string {
 class QueryBuilder implements PromiseLike<{ data: any; error: any }> {
   private filters: Filter[] = []
   private describedFilters: string[] = []
-  private orderSpec: OrderSpec | null = null
+  private orderSpecs: OrderSpec[] = []
   private limitCount: number | null = null
+  private rangeFrom = 0
   private mode: 'select' | 'insert' | 'update' | 'upsert' | 'delete' = 'select'
   private payload: Row[] = []
   private conflictColumns: string[] | null = null
@@ -201,27 +231,27 @@ class QueryBuilder implements PromiseLike<{ data: any; error: any }> {
   }
 
   eq(column: string, value: unknown) {
-    return this.push(`eq:${column}`, (row) => row[column] === value)
+    return this.push(`eq:${column}`, (row) => valueAt(row, column) === value)
   }
 
   neq(column: string, value: unknown) {
-    return this.push(`neq:${column}`, (row) => row[column] !== value)
+    return this.push(`neq:${column}`, (row) => valueAt(row, column) !== value)
   }
 
   gt(column: string, value: any) {
-    return this.push(`gt:${column}`, (row) => row[column] > value)
+    return this.push(`gt:${column}`, (row) => valueAt(row, column) > value)
   }
 
   gte(column: string, value: any) {
-    return this.push(`gte:${column}`, (row) => row[column] >= value)
+    return this.push(`gte:${column}`, (row) => valueAt(row, column) >= value)
   }
 
   lt(column: string, value: any) {
-    return this.push(`lt:${column}`, (row) => row[column] < value)
+    return this.push(`lt:${column}`, (row) => valueAt(row, column) < value)
   }
 
   lte(column: string, value: any) {
-    return this.push(`lte:${column}`, (row) => row[column] <= value)
+    return this.push(`lte:${column}`, (row) => valueAt(row, column) <= value)
   }
 
   /**
@@ -233,13 +263,13 @@ class QueryBuilder implements PromiseLike<{ data: any; error: any }> {
    */
   is(column: string, value: null | boolean) {
     return this.push(`is:${column}`, (row) =>
-      value === null ? row[column] == null : row[column] === value,
+      value === null ? valueAt(row, column) == null : valueAt(row, column) === value,
     )
   }
 
   in(column: string, values: unknown[]) {
     const set = new Set(values)
-    return this.push(`in:${column}`, (row) => set.has(row[column]))
+    return this.push(`in:${column}`, (row) => set.has(valueAt(row, column)))
   }
 
   not(column: string, operator: string, value: unknown) {
@@ -247,24 +277,24 @@ class QueryBuilder implements PromiseLike<{ data: any; error: any }> {
       throw new Error(`fake-supabase: .not(${operator}) is not implemented`)
     }
     return this.push(`not.is:${column}`, (row) =>
-      value === null ? row[column] != null : row[column] !== value,
+      value === null ? valueAt(row, column) != null : valueAt(row, column) !== value,
     )
   }
 
   like(column: string, pattern: string) {
     const regex = new RegExp(`^${pattern.replace(/%/g, '.*')}$`)
-    return this.push(`like:${column}`, (row) => regex.test(String(row[column] ?? '')))
+    return this.push(`like:${column}`, (row) => regex.test(String(valueAt(row, column) ?? '')))
   }
 
   ilike(column: string, pattern: string) {
     const regex = new RegExp(`^${pattern.replace(/%/g, '.*')}$`, 'i')
-    return this.push(`ilike:${column}`, (row) => regex.test(String(row[column] ?? '')))
+    return this.push(`ilike:${column}`, (row) => regex.test(String(valueAt(row, column) ?? '')))
   }
 
   // ─── Shaping ──────────────────────────────────────────────────────────────
 
   order(column: string, options?: { ascending?: boolean }) {
-    this.orderSpec = { column, ascending: options?.ascending ?? true }
+    this.orderSpecs.push({ column, ascending: options?.ascending ?? true })
     return this
   }
 
@@ -274,6 +304,7 @@ class QueryBuilder implements PromiseLike<{ data: any; error: any }> {
   }
 
   range(from: number, to: number) {
+    this.rangeFrom = from
     this.limitCount = to - from + 1
     return this
   }
@@ -303,19 +334,26 @@ class QueryBuilder implements PromiseLike<{ data: any; error: any }> {
     let result: Row[] = []
 
     if (this.mode === 'select') {
+      const failure = this.db.failures.get(this.table)
+      if (failure) return { data: null, error: failure }
+
       result = this.matching()
 
-      if (this.orderSpec) {
-        const { column, ascending } = this.orderSpec
+      if (this.orderSpecs.length > 0) {
         result = [...result].sort((a, b) => {
-          const left = a[column]
-          const right = b[column]
-          if (left === right) return 0
-          return (left > right ? 1 : -1) * (ascending ? 1 : -1)
+          for (const { column, ascending } of this.orderSpecs) {
+            const left = valueAt(a, column)
+            const right = valueAt(b, column)
+            if (left === right) continue
+            return (left > right ? 1 : -1) * (ascending ? 1 : -1)
+          }
+          return 0
         })
       }
 
-      if (this.limitCount != null) result = result.slice(0, this.limitCount)
+      const cap = [this.limitCount, this.db.maxRows].filter((n): n is number => n != null)
+      const count = cap.length > 0 ? Math.min(...cap) : result.length
+      result = result.slice(this.rangeFrom, this.rangeFrom + count)
     }
 
     if (this.mode === 'insert' || this.mode === 'upsert') {

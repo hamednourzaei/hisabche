@@ -12,7 +12,13 @@ import { Suspense, useCallback } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useTranslations } from 'next-intl'
 
-import { RouteProgress } from '@hisabche/ui'
+import {
+  RouteProgress,
+  SubscriptionLockDialog,
+  SubscriptionLockNotice,
+  isRouteAllowedWhenExpired,
+  useSubscriptionLocked,
+} from '@hisabche/ui'
 
 import { CommandPalette } from '@/components/layout/command-palette'
 import { Sidebar } from '@/components/layout/sidebar'
@@ -34,6 +40,10 @@ export function AppShell() {
   const t = useTranslations()
   const navigate = useNavigate()
   const location = useLocation()
+
+  // Same gate as web's dashboard layout: expired → only dashboard, invoices
+  // (view) and billing render; the server refuses writes either way.
+  const routeLocked = useSubscriptionLocked() && !isRouteAllowedWhenExpired(location.pathname)
 
   const setPaletteOpen = useUiStore((s) => s.setPaletteOpen)
   const requestSearchFocus = useUiStore((s) => s.requestSearchFocus)
@@ -71,13 +81,15 @@ export function AppShell() {
             the sidebar and the window edge. */}
         <main className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4">
           <Suspense fallback={<RouteFallback />}>
-            <Outlet />
+            {routeLocked ? <SubscriptionLockNotice hashRouter /> : <Outlet />}
           </Suspense>
         </main>
       </div>
 
       {/* Command palette — global Cmd+K overlay */}
       <CommandPalette />
+
+      <SubscriptionLockDialog hashRouter />
     </div>
   )
 }
