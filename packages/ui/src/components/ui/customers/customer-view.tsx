@@ -514,6 +514,7 @@ export function customersView(props: CustomersViewProps) {
     salesDelta = null,
     debtDelta = null,
     topCustomerDelta = null,
+    statsCoverage,
   } = props
 
   const isMobile = useIsMobile()
@@ -625,6 +626,7 @@ export function customersView(props: CustomersViewProps) {
         salesDelta,
         debtDelta,
         topCustomerDelta,
+        coverage: statsCoverage,
       })}
 
       {/* همه / مشتری / تأمین‌کننده — همان الگوی سوییچ صفحه‌ی فاکتورها.

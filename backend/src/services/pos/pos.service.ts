@@ -29,11 +29,17 @@ import {
   type SessionTotals,
 } from './pos.domain'
 
-// M3 — the frozen handover columns are selected too. They are NULL on any
-// session closed before phase-m-01, and the history read falls back to
-// recomputing for those rather than showing blanks.
+// The columns finance-gaps-migration created. Everything `mapSession` reads.
 const SESSION_COLUMNS =
-  'id, branch_id, status, opening_float_minor, opened_at, opened_by, counted_cash_minor, variance_reason, closed_at, closed_by, was_forced, journal_entry_id, expected_cash_minor, cash_sales_minor, cash_in_minor, cash_out_minor, variance_minor'
+  'id, branch_id, status, opening_float_minor, opened_at, opened_by, counted_cash_minor, variance_reason, closed_at, closed_by, was_forced, journal_entry_id'
+
+// M3 — the frozen handover columns, added by phase-m-01. Selected ONLY by the
+// history read, the one place that uses them.
+//
+// ⚠️ They used to be part of SESSION_COLUMNS, so /sessions/current and
+// /sessions/abandoned — which never read them — answered 42703 → 500 on any
+// database where phase-m-01 had not been applied.
+const HISTORY_COLUMNS = `${SESSION_COLUMNS}, expected_cash_minor, cash_sales_minor, cash_in_minor, cash_out_minor, variance_minor`
 
 function mapSession(raw: Record<string, any>): PosSession {
   return {
@@ -214,7 +220,7 @@ export class PosService {
   > {
     const { data, error } = await supabase
       .from('pos_sessions')
-      .select(SESSION_COLUMNS)
+      .select(HISTORY_COLUMNS)
       .eq('workspace_id', ctx.workspaceId)
       .in('status', ['closed', 'force_closed'])
       .order('closed_at', { ascending: false })

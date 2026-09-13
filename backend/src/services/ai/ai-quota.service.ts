@@ -129,15 +129,22 @@ export class AiQuotaService {
   /**
    * Questions asked this calendar month.
    *
-   * `head: true` with an exact count so no row bodies cross the wire — this
-   * runs on every question and the answers can be long.
+   * Exact count, one `id` column, one row — the total comes from the
+   * Content-Range header, so no question text crosses the wire.
+   *
+   * ⚠️ NOT `head: true`. A HEAD response has no body, so postgrest-js returns a
+   * failed HEAD as `{ message: '' }` with NO `code`. `SCHEMA_ABSENT` below could
+   * never match it, and GET /api/ai/quota answered 500 with an empty message
+   * that said nothing about why. A GET carries PostgREST's error body, so the
+   * code is real and a genuine failure is logged with its cause.
    */
   private async usedThisMonth(workspaceId: string): Promise<number> {
     const { count, error } = await supabase
       .from('ai_query_log')
-      .select('id', { count: 'exact', head: true })
+      .select('id', { count: 'exact' })
       .eq('workspace_id', workspaceId)
       .gte('created_at', monthStart())
+      .limit(1)
 
     if (error) {
       if (SCHEMA_ABSENT.has(error.code)) return 0

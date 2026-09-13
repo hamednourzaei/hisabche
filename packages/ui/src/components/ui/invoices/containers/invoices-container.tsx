@@ -12,6 +12,7 @@ export function InvoicesContainer() {
   const {
     invoices,
     statsInvoices,
+    statsSummary,
     isLoading,
     total,
     searchValue,
@@ -49,6 +50,7 @@ export function InvoicesContainer() {
       t={safeT}
       invoices={invoices}
       statsInvoices={statsInvoices}
+      statsSummary={statsSummary}
       isLoading={isLoading}
       total={total}
       searchValue={searchValue}

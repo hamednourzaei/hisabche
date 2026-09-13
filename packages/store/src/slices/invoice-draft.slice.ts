@@ -310,9 +310,26 @@ export const useInvoiceDraftStore = create<InvoiceDraftState>()(
           customer?: InvoiceDraftCustomer | null
         }
 
+        // ⚠️ A PRISTINE DRAFT'S DATE IS TODAY, NOT THE DAY IT WAS PERSISTED.
+        //
+        // `blankDraft()` stamps `date: new Date()` at the moment it runs — and
+        // it runs in `clearDraft()`, right after the PREVIOUS invoice is saved.
+        // That stamp is then persisted. So an invoice started three days later,
+        // with the date field never touched, was saved dated three days ago:
+        // outside the dashboard's 7-day chart window, and wrong on the
+        // document itself.
+        //
+        // Only a draft with nothing typed into it is refreshed. A draft with
+        // content keeps its date, because someone may have set it on purpose.
+        const savedRows = Array.isArray(saved.rows) ? saved.rows : []
+        const pristine = savedRows.every((row) =>
+          Object.values(row?.values ?? {}).every((value) => !String(value ?? '').trim()),
+        )
+
         return {
           ...current,
           ...saved,
+          ...(pristine ? { date: new Date().toISOString() } : {}),
           columns:
             Array.isArray(saved.columns) && saved.columns.length ? saved.columns : current.columns,
           rows: Array.isArray(saved.rows) && saved.rows.length ? saved.rows : current.rows,

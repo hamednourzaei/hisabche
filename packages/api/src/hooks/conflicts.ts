@@ -62,6 +62,8 @@ export interface Conflict {
   resolvedBy: string | null
   resolvedAt: string | null
   createdAt: string
+  /** Product name, customer name or invoice number — null when there is none. */
+  entityLabel: string | null
 }
 
 export interface ResolveConflictInput {

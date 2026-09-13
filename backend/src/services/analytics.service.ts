@@ -9,6 +9,15 @@ import { DateRange } from '@hisabche/validation'
 import { CacheKeys, withCacheKey } from '../utils/cache'
 import { memoryCache } from '../utils/pagination'
 import { isOutstanding } from './invoices/outstanding.domain'
+import {
+  dashboardKpisFromAggregate,
+  fetchDashboardAggregate,
+  fetchInventoryAggregate,
+  fetchSalesAggregate,
+  growthPercent,
+  inventoryFiguresFromAggregate,
+  salesSummaryFromAggregate,
+} from './aggregates/analytics-aggregates'
 
 // ستون invoices.date از نوع timestamptz است. مقایسه‌ی مستقیم با یک رشته‌ی
 // تاریخِ بدون ساعت («2026-08-02») یعنی «تا ساعت ۰۰:۰۰ آن روز»، که کل آن روز
@@ -27,6 +36,14 @@ function startOfTodayISO(): string {
   const d = new Date()
   d.setUTCHours(0, 0, 0, 0)
   return d.toISOString()
+}
+
+// شروع پنجره‌ی نمودار فروش: چهارده روز پیش، از نیمه‌شب.
+function chartWindowStart(): Date {
+  const fourteenDaysAgo = new Date()
+  fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14)
+  fourteenDaysAgo.setHours(0, 0, 0, 0)
+  return fourteenDaysAgo
 }
 
 // ─── Per-currency KPI decomposition ─────────────────────────────────────────
@@ -116,6 +133,28 @@ export class AnalyticsService {
     const cacheKey = `dashboard:v2:${workspaceId}`
 
     return withCacheKey(cacheKey, 60_000, async () => {
+      // ⚠️ AGGREGATED IN POSTGRES FIRST. The row path below is capped by
+      // PostgREST max-rows (1000), so past that every KPI came from one page.
+      // It runs only while `analytics_dashboard_kpis` is not installed.
+      {
+        const now = new Date()
+        const firstOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+        const firstOfPrevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+        const aggregate = await fetchDashboardAggregate(
+          workspaceId,
+          startOfTodayISO(),
+          firstOfThisMonth,
+          firstOfPrevMonth,
+        )
+        if (aggregate) {
+          const customerGrowth = await this.getCustomerGrowth(
+            workspaceId,
+            firstOfThisMonth.toISOString(),
+          )
+          return { ...dashboardKpisFromAggregate(aggregate), customerGrowth }
+        }
+      }
+
       // ✅ فراخوانی RPC حذف شد: خروجی‌اش دیگر استفاده نمی‌شود چون همه‌ی
       // KPIها از روی همین آرایه‌ی invoices محاسبه می‌شوند. نگه‌داشتنش فقط
       // یک رفت‌وبرگشت اضافی به دیتابیس بود.
@@ -259,12 +298,7 @@ export class AnalyticsService {
       // the signal the UI needs to show the breakdown instead of one figure.
       const mixedCurrency = currencies.length > 1
 
-      const monthlyGrowth =
-        prevMonthRevenue > 0
-          ? Math.round(((monthlyRevenue - prevMonthRevenue) / prevMonthRevenue) * 1000) / 10
-          : monthlyRevenue > 0
-            ? 100
-            : 0
+      const monthlyGrowth = growthPercent(monthlyRevenue, prevMonthRevenue)
 
       const customerGrowth = await this.getCustomerGrowth(
         workspaceId,
@@ -326,15 +360,33 @@ export class AnalyticsService {
     const cacheKey = CacheKeys.salesSummary(workspaceId, startDate, endDate)
 
     return withCacheKey(cacheKey, 120_000, async () => {
+      // ⚠️ AGGREGATED IN POSTGRES FIRST — same filters as the row path below
+      // (sales only, [startDate, end of endDate)), which is capped by PostgREST
+      // max-rows and runs only while `analytics_sales_summary` is not installed.
+      const aggregate = await fetchSalesAggregate(
+        workspaceId,
+        startDate,
+        endOfDayExclusive(endDate),
+        chartWindowStart(),
+      )
+      if (aggregate) {
+        if (aggregate.total_invoices === 0) {
+          return this.emptySalesSummaryWithDiagnostic(workspaceId, startDate, endDate)
+        }
+        return salesSummaryFromAggregate(aggregate)
+      }
+
       const { data: invoices, error } = await supabase
         .from('invoices')
         // ⚠️ NO EMBEDDED RESOURCE. `customers!left (…)` used to be here, and it
         // is why every number on this screen was zero.
         //
-        // PostgREST resolves an embed through FOREIGN KEY metadata. This
-        // database HAS NO FOREIGN KEYS AT ALL — `REFERENCES` does not appear
-        // once in `docs/base-schema-migration.sql` — so the embed could never
-        // resolve, and the request came back `PGRST200: Could not find a
+        // PostgREST resolves an embed through FOREIGN KEY metadata, and there
+        // is NO foreign key from `invoices.customer_id` to `customers` —
+        // the base schema declares none. (Some later modules DO have them:
+        // `boms`, `bom_items` and the `pos_*` tables were confirmed against the
+        // live database. Check the specific pair, never assume either way.)
+        // So this embed could never resolve, and the request came back `PGRST200: Could not find a
         // relationship between 'invoices' and 'customers'`.
         //
         // ⚠️ AND NOTHING REPORTED IT, because the check below read
@@ -373,25 +425,7 @@ export class AnalyticsService {
       }
 
       if (!invoices || invoices.length === 0) {
-        // ⚠️ SAYS WHICH KIND OF EMPTY, IN THE LOG.
-        //
-        // «No sales in this window» and «no sales at all» look identical in
-        // the response and lead to completely different investigations — one
-        // is a date range, the other is data that never carried a
-        // `workspace_id`, or a `type` this filter does not recognise. One
-        // cheap count answers it, and it runs ONLY on the empty path, so it
-        // costs nothing on a shop that has data.
-        const { count } = await supabase
-          .from('invoices')
-          .select('id', { count: 'exact', head: true })
-          .eq('workspace_id', workspaceId)
-
-        console.warn(
-          `[analytics] empty sales summary for workspace ${workspaceId} ` +
-            `(${startDate}..${endDate}) — invoices in this workspace, unfiltered: ${count ?? 'unknown'}`,
-        )
-
-        return this.emptySalesSummary()
+        return this.emptySalesSummaryWithDiagnostic(workspaceId, startDate, endDate)
       }
 
       let totalRevenue = 0
@@ -476,9 +510,7 @@ export class AnalyticsService {
       // every invoice from earlier in the day fourteen days ago — the window
       // silently shifted with the hour the page was opened, and the oldest
       // column of the chart changed size through the afternoon.
-      const fourteenDaysAgo = new Date()
-      fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14)
-      fourteenDaysAgo.setHours(0, 0, 0, 0)
+      const fourteenDaysAgo = chartWindowStart()
 
       const chartData = invoices
         .filter((inv) => new Date(inv.date) >= fourteenDaysAgo)
@@ -544,6 +576,18 @@ export class AnalyticsService {
   async getInventorySummary(ctx: TenancyContext) {
     const { workspaceId } = ctx
     return withCacheKey(CacheKeys.products(workspaceId), 120_000, async () => {
+      // ⚠️ AGGREGATED IN POSTGRES FIRST. The row path below is capped by
+      // PostgREST max-rows and runs only while `analytics_inventory_summary`
+      // is not installed.
+      const aggregate = await fetchInventoryAggregate(workspaceId)
+      if (aggregate) {
+        if (aggregate.total_products === 0) return this.emptyInventorySummary()
+        return {
+          ...inventoryFiguresFromAggregate(aggregate),
+          topMovements: await this.recentMovements(workspaceId),
+        }
+      }
+
       const { data: products } = await supabase
         .from('products')
         .select('id, name, quantity, buy_price, min_stock_level, category')
@@ -575,13 +619,6 @@ export class AnalyticsService {
         byCategoryMap[cat].totalValue += Number((p as any).quantity) * Number((p as any).buy_price)
       }
 
-      const { data: topMovements } = await supabase
-        .from('stock_movements')
-        .select('product_id, type, quantity, created_at')
-        .eq('workspace_id', workspaceId)
-        .order('created_at', { ascending: false })
-        .limit(10)
-
       return {
         totalProducts: products.length,
         totalStockValue: Math.round(totalStockValue * 100) / 100,
@@ -592,15 +629,27 @@ export class AnalyticsService {
           count: val.count,
           totalValue: Math.round(val.totalValue * 100) / 100,
         })),
-        topMovements: (topMovements || []).map((m: any) => ({
-          productId: m.product_id,
-          productName: '',
-          movementType: m.type,
-          quantity: Number(m.quantity),
-          date: m.created_at as string,
-        })),
+        topMovements: await this.recentMovements(workspaceId),
       }
     })
+  }
+
+  /** The ten most recent stock movements — a small, bounded read. */
+  private async recentMovements(workspaceId: string) {
+    const { data: topMovements } = await supabase
+      .from('stock_movements')
+      .select('product_id, type, quantity, created_at')
+      .eq('workspace_id', workspaceId)
+      .order('created_at', { ascending: false })
+      .limit(10)
+
+    return (topMovements || []).map((m: any) => ({
+      productId: m.product_id,
+      productName: '',
+      movementType: m.type,
+      quantity: Number(m.quantity),
+      date: m.created_at as string,
+    }))
   }
 
   // ─── Financial Summary ───
@@ -672,6 +721,32 @@ export class AnalyticsService {
       customerDebt: 0,
       warehouseValue: 0,
     }
+  }
+
+  private async emptySalesSummaryWithDiagnostic(
+    workspaceId: string,
+    startDate: string,
+    endDate: string,
+  ) {
+    // ⚠️ SAYS WHICH KIND OF EMPTY, IN THE LOG.
+    //
+    // «No sales in this window» and «no sales at all» look identical in
+    // the response and lead to completely different investigations — one
+    // is a date range, the other is data that never carried a
+    // `workspace_id`, or a `type` this filter does not recognise. One
+    // cheap count answers it, and it runs ONLY on the empty path, so it
+    // costs nothing on a shop that has data.
+    const { count } = await supabase
+      .from('invoices')
+      .select('id', { count: 'exact', head: true })
+      .eq('workspace_id', workspaceId)
+
+    console.warn(
+      `[analytics] empty sales summary for workspace ${workspaceId} ` +
+        `(${startDate}..${endDate}) — invoices in this workspace, unfiltered: ${count ?? 'unknown'}`,
+    )
+
+    return this.emptySalesSummary()
   }
 
   private emptySalesSummary() {

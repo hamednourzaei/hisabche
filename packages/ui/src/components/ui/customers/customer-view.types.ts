@@ -1,5 +1,6 @@
 // packages/ui/src/components/ui/customers/customer-view.types.ts
 // 🎯 Types for Customer View Component
+import type { CustomersStatsCoverage } from '../../../hooks/customers/use-customers-data'
 
 import type { CustomerWithDebt, InvoiceForDebt } from '../../../lib/customers/customers-types'
 
@@ -30,6 +31,8 @@ export interface CustomersViewProps {
   salesDelta?: number | null
   debtDelta?: number | null
   topCustomerDelta?: number | null
+  /** What the KPI figures were reduced from — shown when it is not everything. */
+  statsCoverage?: CustomersStatsCoverage | undefined
 
   // States
   isLoading: boolean

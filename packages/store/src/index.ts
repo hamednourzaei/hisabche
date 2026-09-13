@@ -31,6 +31,10 @@ export {
   type InvoiceDraftCustomer,
 } from './slices/invoice-draft.slice'
 export { useSyncStore } from './slices/sync.slice'
+export {
+  useSubscriptionLockStore,
+  type SubscriptionLockState,
+} from './slices/subscription-lock.slice'
 export { useDeviceStore } from './slices/device.slice'
 export type { PerformanceMode } from './slices/device.slice'
 export {

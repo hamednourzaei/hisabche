@@ -32,7 +32,13 @@ import { memoryCache } from '../utils/pagination'
 import type { TenancyContext } from './tenancy.service'
 import { logBusinessEvent } from './event-log.service'
 
-const BOM_COLUMNS = 'id, product_id, version, notes, is_active, created_at, updated_at'
+// ⚠️ NO `notes`. `boms.notes` is in the validation contract but no migration in
+// docs/ ever created the column (base schema: id, product_id, version,
+// is_active, user_id, created_at, updated_at; later: workspace_id). Selecting
+// it answered 42703 — not a PGRST200, so the embed fallback did not catch it —
+// and GET /api/boms returned 500 for every workspace. The column is added by
+// docs/phase-t4b-bom-notes-migration.sql (PENDING HUMAN CONFIRMATION).
+const BOM_COLUMNS = 'id, product_id, version, is_active, created_at, updated_at'
 const BOM_ITEM_COLUMNS = 'id, bom_id, raw_material_id, quantity, unit_cost'
 const WORK_ORDER_COLUMNS =
   'id, product_id, quantity, bom_id, status, start_date, end_date, created_at, updated_at'
@@ -205,7 +211,9 @@ export class ManufacturingService {
       .insert({
         product_id: data.productId,
         version: data.version ?? 1,
-        notes: data.notes ?? '',
+        // Written only when supplied: until the notes migration runs, an
+        // always-present `notes` key made every BOM create fail with 42703.
+        ...(data.notes !== undefined ? { notes: data.notes } : {}),
         is_active: data.isActive !== false,
         workspace_id: workspaceId,
         user_id: userId,

@@ -7,10 +7,13 @@
 import { memo, useCallback, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
+  asList,
   useAssetSchedule,
   useAssets,
   usePostDepreciation,
   type DepreciationRunResult,
+  type FixedAsset,
+  type ScheduleRow,
 } from '@hisabche/api'
 import { AssetsView } from '../assets-view'
 
@@ -54,11 +57,12 @@ export const AssetsContainer = memo(function AssetsContainer() {
   return (
     <AssetsView
       t={t}
-      assets={assets.data ?? []}
+      assets={asList<FixedAsset>(assets.data)}
       selectedId={selectedId}
-      schedule={schedule.data ?? []}
+      schedule={asList<ScheduleRow>(schedule.data)}
       isLoading={assets.isLoading}
       isScheduleLoading={Boolean(selectedId) && schedule.isLoading}
+      scheduleError={selectedId && schedule.error ? (schedule.error as Error).message : null}
       error={assets.error ? (assets.error as Error).message : null}
       actionError={actionError}
       isBusy={postDepreciation.isPending}

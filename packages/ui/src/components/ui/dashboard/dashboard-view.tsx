@@ -36,6 +36,11 @@ interface DashboardViewProps {
   // KPI Data
   totalSales: number
   todaySales: number
+  /** Sales total over the chart's selected range; null while unknown. */
+  rangeSalesTotal: number | null
+  /** Same-length period immediately before the range; null when unavailable. */
+  previousRangeSalesTotal: number | null
+  rangeLoading: boolean
   customerDebt: number
   warehouseValue: number
   monthlyGrowth?: number | null | undefined
@@ -500,6 +505,9 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
     fmt,
     totalSales,
     todaySales,
+    rangeSalesTotal,
+    previousRangeSalesTotal,
+    rangeLoading,
     customerDebt,
     warehouseValue,
     monthlyGrowth,
@@ -516,25 +524,47 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
     onDateRangeChange,
   } = props
 
-  // ✅ درصد تغییر واقعی به‌جای اسپارک‌لاین.
-  // کارت «فروش امروز» با دیروز مقایسه می‌شود (از داده‌ی روزانه‌ی نمودار).
-  const todayChange = useMemo(() => {
-    const series = Array.isArray(salesChartData) ? salesChartData : []
-    if (series.length < 2) return null
-    const sorted = [...series].sort((a, b) => String(a.date).localeCompare(String(b.date)))
-    const prev = sorted[sorted.length - 2]
-    const prevValue = Number(prev?.value) || 0
-    if (prevValue <= 0) return todaySales > 0 ? 100 : null
-    return ((todaySales - prevValue) / prevValue) * 100
-  }, [salesChartData, todaySales])
+  // ─── The range card ───────────────────────────────────────────────────
+  //
+  // ⚠️ IT FOLLOWS THE CHART'S RANGE. This card used to be pinned to «today»
+  // while the chart beside it showed whatever range was picked, so the two
+  // disagreed the moment the range changed. Its value is now the total for the
+  // selected range, and its label says which range that is.
+  //
+  // The percentage compares against the equally long period immediately before
+  // the range — a period that was actually fetched. With no such figure, or a
+  // previous period of zero (growth from nothing has no meaningful ratio), no
+  // percentage is shown rather than an invented one.
+  const rangeIsToday = useMemo(() => {
+    const from = dateRange?.from
+    const to = dateRange?.to
+    if (!from || !to) return false
+    const today = new Date().toDateString()
+    return from.toDateString() === today && to.toDateString() === today
+  }, [dateRange])
 
-  const previousDaySalesTotal = useMemo(() => {
-    if (!salesChartData || salesChartData.length === 0) return 0
-    const yesterday = new Date()
-    yesterday.setDate(yesterday.getDate() - 1)
-    const yesterdayStr = yesterday.toISOString().split('T')[0]
-    return salesChartData.find((d) => d.date === yesterdayStr)?.value ?? 0
-  }, [salesChartData])
+  const rangeDays = useMemo(() => {
+    const from = dateRange?.from
+    const to = dateRange?.to
+    if (!from || !to) return 0
+    const start = new Date(from.getFullYear(), from.getMonth(), from.getDate()).getTime()
+    const end = new Date(to.getFullYear(), to.getMonth(), to.getDate()).getTime()
+    return Math.max(1, Math.round((end - start) / 86_400_000) + 1)
+  }, [dateRange])
+
+  const rangeChange = useMemo(() => {
+    if (rangeSalesTotal === null || previousRangeSalesTotal === null) return null
+    if (previousRangeSalesTotal <= 0) return null
+    return ((rangeSalesTotal - previousRangeSalesTotal) / previousRangeSalesTotal) * 100
+  }, [rangeSalesTotal, previousRangeSalesTotal])
+
+  const rangeLabel = rangeIsToday
+    ? t('dashboard.todaySales', 'فروش امروز')
+    : `${t('dashboard.rangeSales', 'فروش')} ${fmtIntlDate(dateRange?.from ?? null)} – ${fmtIntlDate(dateRange?.to ?? null)}`
+
+  const rangeChangeLabel = rangeIsToday
+    ? t('dashboard.vsYesterday', 'نسبت به دیروز')
+    : `${t('dashboard.vsPrevious', 'نسبت به')} ${rangeDays} ${t('dashboard.daysBefore', 'روز قبل')}`
 
   return (
     <div className="space-y-4 sm:space-y-6">
@@ -562,12 +592,12 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
         />
         <KpiCard
           icon={Wallet}
-          label={t('dashboard.todaySales', 'فروش امروز')}
-          value={fmt(todaySales)}
-          change={todayChange}
-          changeLabel={t('dashboard.vsYesterday', 'نسبت به دیروز')}
-          isLoading={kpiLoading || chartLoading}
-          onOpen={() => onNavigate(invoiceListHref('todaySales'))}
+          label={rangeLabel}
+          value={fmt(rangeSalesTotal ?? 0)}
+          change={rangeChange}
+          changeLabel={rangeChangeLabel}
+          isLoading={rangeLoading || rangeSalesTotal === null}
+          onOpen={() => onNavigate(invoiceListHref(rangeIsToday ? 'todaySales' : 'totalSales'))}
           openLabel={t('dashboard.openTodayInvoices', 'فاکتورهای امروز')}
         />
         <KpiCard
@@ -687,8 +717,8 @@ export const DashboardView = memo(function DashboardView(props: DashboardViewPro
                   isLoading={chartLoading}
                   fmt={fmt}
                   height={180}
-                  previousPeriodTotal={previousDaySalesTotal}
-                  currentPeriodTotal={todaySales}
+                  previousPeriodTotal={previousRangeSalesTotal ?? 0}
+                  currentPeriodTotal={rangeSalesTotal ?? 0}
                   // `/reports` was never a route — the chart's "full report" link
                   // 404'd on web and would have redirected to the dashboard on
                   // desktop's catch-all. Accounting («پول و سود») is the destination

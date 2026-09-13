@@ -35,6 +35,17 @@ export const productKeys = {
 // Hooks
 // ============================================
 
+/**
+ * Stock figures computed by the server over EVERY product in the workspace —
+ * never reduce a fetched page of products for these.
+ */
+export interface StockSummary {
+  productCount: number
+  totalValue: number
+  lowStockCount: number
+  outOfStockCount: number
+}
+
 // ✅ گیت شده با authReady
 export function useProducts(filters: Partial<ProductFilters> = {}) {
   const authReady = useAuthReady()
@@ -55,6 +66,7 @@ export function useProducts(filters: Partial<ProductFilters> = {}) {
     category: filters.category,
     barcode: filters.barcode,
     lowStock: filters.lowStock,
+    includeSummary: filters.includeSummary,
     minPrice: filters.minPrice,
     maxPrice: filters.maxPrice,
     cursor: filters.cursor,
@@ -63,7 +75,12 @@ export function useProducts(filters: Partial<ProductFilters> = {}) {
   return useQuery({
     queryKey: productKeys.list(mergedFilters),
     queryFn: async () => {
-      const { data } = await apiClient.get<{ products: Product[]; total: number }>('/products', {
+      const { data } = await apiClient.get<{
+        products: Product[]
+        total: number
+        /** Present only when the request set `includeSummary: true`. */
+        summary?: StockSummary | undefined
+      }>('/products', {
         params: mergedFilters,
       })
       return data

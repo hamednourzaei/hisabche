@@ -1,7 +1,8 @@
 // packages/ui/src/components/ui/warehouse/warehouse-view.tsx
 'use client'
 
-import { memo, useMemo, useState } from 'react'
+import { memo, useMemo } from 'react'
+import type { StockSummary } from '@hisabche/api'
 import { cn } from '../../../lib/utils'
 import { FOCUS_RING } from '../focus-ring'
 import { EmptyState } from '../empty-state'
@@ -22,10 +23,13 @@ interface WarehouseViewProps {
   onOpenAddModal: () => void
   deletingId: string | null
   products: Product[]
-  total: number
   isLoading: boolean
-  totalValue: number
-  outOfStock: number
+  /**
+   * Stock value and counts over EVERY product, computed by the server.
+   * `null` = the server did not provide it; the cards say so instead of
+   * reducing the page of `products` (which is at most 100 rows).
+   */
+  summary: StockSummary | null
   currencies: Currency[]
   onNavigate: (id: string) => void
   /** H4 — open the movements behind a product's on-hand figure. */
@@ -110,8 +114,9 @@ const CurrencyChips = memo(function CurrencyChips({
 }: {
   fmt: (v: number) => string
   currencies: Currency[]
-  totalValue: number
+  totalValue: number | null
 }) {
+  if (totalValue === null) return null
   return (
     <div className="flex flex-wrap gap-2 text-xs text-[hsl(var(--fg-secondary))]">
       {currencies.map((c) => (
@@ -147,10 +152,8 @@ export const WarehouseView = memo(function WarehouseView({
   onOpenAddModal,
   deletingId,
   products,
-  total,
   isLoading,
-  totalValue,
-  outOfStock,
+  summary,
   currencies,
   onNavigate,
   onOpenHistory,
@@ -158,12 +161,14 @@ export const WarehouseView = memo(function WarehouseView({
   stockStatus,
   stockLabel,
 }: WarehouseViewProps) {
-  const [lowStockThreshold] = useState(5)
-
-  const lowStockCount = useMemo(
-    () => products.filter((p) => p.quantity > 0 && p.quantity < lowStockThreshold).length,
-    [products, lowStockThreshold],
-  )
+  // Loading shows the placeholder; a loaded response without a summary says
+  // the figure is unavailable. Neither shows a number that is not there.
+  const figure = (value: number | undefined) =>
+    isLoading
+      ? '…'
+      : value === undefined
+        ? t('warehouse.summaryUnavailable', 'نامعلوم')
+        : fmt(value)
 
   // ✅ دقیقاً همان BentoStats که /invoices استفاده میکند — در همه‌ی ابعاد.
   // ⚠️ عمداً از `text` استفاده شده (نه `amount`) چون BentoStats مقدار متنی
@@ -175,29 +180,29 @@ export const WarehouseView = memo(function WarehouseView({
         id: 'value',
         icon: DollarSign,
         label: t('warehouse.totalValue', 'ارزش کل (AFN)'),
-        text: fmt(totalValue),
-        suffix: 'AFN',
+        text: figure(summary?.totalValue),
+        ...(summary ? { suffix: 'AFN' } : {}),
       },
       {
         id: 'count',
         icon: Package,
         label: t('warehouse.totalProducts', 'تعداد محصولات'),
-        text: fmt(total),
+        text: figure(summary?.productCount),
       },
       {
         id: 'low',
         icon: AlertTriangle,
         label: t('warehouse.lowStock', 'موجودی کم'),
-        text: fmt(lowStockCount),
+        text: figure(summary?.lowStockCount),
       },
       {
         id: 'out',
         icon: AlertTriangle,
         label: t('warehouse.outOfStock', 'ناموجود'),
-        text: fmt(outOfStock),
+        text: figure(summary?.outOfStockCount),
       },
     ],
-    [t, fmt, totalValue, total, lowStockCount, outOfStock],
+    [t, fmt, summary, isLoading],
   )
 
   const showEmptyState = !isLoading && products.length === 0
@@ -210,7 +215,7 @@ export const WarehouseView = memo(function WarehouseView({
       {/* همان کامپوننت و گرید invoices — فقط داده‌ی warehouse */}
       <BentoStats t={t} stats={stats} />
 
-      <CurrencyChips fmt={fmt} currencies={currencies} totalValue={totalValue} />
+      <CurrencyChips fmt={fmt} currencies={currencies} totalValue={summary?.totalValue ?? null} />
 
       {isLoading ? (
         <LoadingSkeleton />

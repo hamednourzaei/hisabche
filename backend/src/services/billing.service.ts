@@ -113,6 +113,53 @@ export function mapStripeStatus(status: unknown): SubscriptionStatus {
   return mapped
 }
 
+/**
+ * Whether a workspace may still WRITE, as seen by the subscription guard.
+ *
+ * `expired` is true only when expiry is POSITIVELY known. A workspace with no
+ * subscription row, or a row with no readable `period_end`, is reported as not
+ * expired: locking a business out on the absence of data is a guess about a
+ * real person's account, not a fact about it.
+ */
+export interface SubscriptionAccess {
+  expired: boolean
+  /** ISO timestamp the paid (or trial) period ends, or null when unknown. */
+  periodEnd: string | null
+}
+
+/**
+ * THE definition of an expired subscription. One rule, used by the write guard
+ * (`middleware/subscription.middleware.ts`) and reported to the client through
+ * `GET /api/billing/subscription` so the UI never keeps a second copy.
+ *
+ * - `status` 'expired' or 'cancelled' → expired. Both are written only when the
+ *   subscription has actually ended (Stripe `canceled` maps to 'cancelled').
+ * - otherwise the period decides: `now` past `period_end` → expired. This is
+ *   the same predicate the platform admin already counts as "expired"
+ *   (`admin.service.ts`, `period_end < now`).
+ * - a still-running TRIAL (`is_trial && !trial_used`) keeps the grace window
+ *   `checkTrialStatus` already promises the user on /billing; locking during a
+ *   grace period the billing page is advertising would contradict it.
+ */
+export function isSubscriptionExpired(
+  sub: {
+    status: string | null | undefined
+    periodEnd: string | null | undefined
+    isTrial: boolean
+    trialUsed: boolean
+  },
+  now: Date,
+): boolean {
+  if (sub.status === 'expired' || sub.status === 'cancelled') return true
+  if (!sub.periodEnd) return false
+
+  const end = Date.parse(sub.periodEnd)
+  if (Number.isNaN(end)) return false
+
+  const graceMs = sub.isTrial && !sub.trialUsed ? GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000 : 0
+  return now.getTime() > end + graceMs
+}
+
 /** Shape of the /api/billing/usage payload. */
 export interface UsageReport {
   usage: {
@@ -139,6 +186,10 @@ export class BillingService {
   // workspace was resolvable on their request.
   private getWorkspaceSubscriptionCacheKey(workspaceId: string) {
     return `subscription:ws:${workspaceId}`
+  }
+
+  private getWorkspaceAccessCacheKey(workspaceId: string) {
+    return `subscription-access:ws:${workspaceId}`
   }
 
   private getPlanCacheKey(plan: string) {
@@ -270,6 +321,82 @@ export class BillingService {
     const subscription = this.mapSubscription(data)
     await memoryCache.set(cacheKey, subscription, 300)
     return subscription
+  }
+
+  // ─── Workspace access (read-only, never creates) ────────────
+  // The subscription guard's lookup. Unlike getCurrentSubscription it NEVER
+  // inserts a trial row: a guard on a write path must not have a write of its
+  // own as a side effect.
+  //
+  // Decided per WORKSPACE. A legacy row with no workspace_id is resolved
+  // through the workspace's OWNER — never through the acting user, whose own
+  // subscription says nothing about someone else's shop.
+  //
+  // Lookup errors THROW (DatabaseError), the same way the entitlement quota
+  // checks fail: an unreadable subscription neither grants nor locks.
+  async getWorkspaceAccess(
+    workspaceId: string,
+    now: Date = new Date(),
+  ): Promise<SubscriptionAccess> {
+    const cacheKey = this.getWorkspaceAccessCacheKey(workspaceId)
+    const cached = await memoryCache.get<SubscriptionAccess>(cacheKey)
+    if (cached) return cached
+
+    const row = await this.findWorkspaceSubscriptionRow(workspaceId)
+
+    const access: SubscriptionAccess = row
+      ? {
+          expired: isSubscriptionExpired(
+            {
+              status: row.status,
+              periodEnd: row.period_end,
+              isTrial: row.is_trial ?? false,
+              trialUsed: row.trial_used ?? false,
+            },
+            now,
+          ),
+          periodEnd: row.period_end ?? null,
+        }
+      : { expired: false, periodEnd: null }
+
+    // Short TTL: expiry is a moment in time, and renewal flushes this key
+    // (invalidateCache) so paying unlocks immediately rather than in a minute.
+    await memoryCache.set(cacheKey, access, 60)
+    return access
+  }
+
+  private async findWorkspaceSubscriptionRow(workspaceId: string) {
+    const { data, error } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('workspace_id', workspaceId)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+
+    const missingColumn = /column .*workspace_id.* does not exist/i.test(error?.message ?? '')
+    if (error && !missingColumn) throw new DatabaseError('Failed to fetch subscription', error)
+    if (data) return data
+
+    const { data: workspace, error: wsError } = await supabase
+      .from('workspaces')
+      .select('owner_id')
+      .eq('id', workspaceId)
+      .maybeSingle()
+
+    if (wsError) throw new DatabaseError('Failed to resolve workspace owner', wsError)
+    if (!workspace?.owner_id) return null
+
+    const { data: legacy, error: legacyError } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('user_id', workspace.owner_id)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle()
+
+    if (legacyError) throw new DatabaseError('Failed to fetch subscription', legacyError)
+    return legacy
   }
 
   // ─── Count a usage meter — shared by every quota check ──────
@@ -629,10 +756,19 @@ export class BillingService {
   // report written by getUsageReport). Bare-key prefixes fan out via
   // memoryCache.invalidate's prefix rule, so `usage:<userId>` also clears
   // `usage:<userId>:<feature>`.
+  //
+  // The write guard's access entries are flushed for EVERY workspace, not just
+  // this one: a legacy row with no workspace_id is resolved through its owner,
+  // so the row alone cannot name every workspace whose lock it decides.
+  // Renewals are rare; a missed flush would leave a paying business locked.
   async invalidateCache(userId: string, workspaceId?: string) {
     await memoryCache.invalidate(this.getSubscriptionCacheKey(userId))
+    await memoryCache.invalidate('subscription-access:')
     if (workspaceId) {
       await memoryCache.invalidate(this.getWorkspaceSubscriptionCacheKey(workspaceId))
+      // The route-level response cache of GET /api/billing/subscription
+      // (cacheMiddleware keyPrefix 'subscription', scope workspace).
+      await memoryCache.invalidate(`subscription:${workspaceId}:`)
       await memoryCache.invalidate(`usage:ws:${workspaceId}`)
     }
     await memoryCache.invalidate(this.getUsageCacheKey(userId))

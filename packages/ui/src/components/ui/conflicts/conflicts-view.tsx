@@ -3,7 +3,8 @@
 // ============================================
 // packages/ui/src/components/ui/conflicts/conflicts-view.tsx
 //
-// The offline conflict queue.
+// The offline conflict queue — one table row per conflict, on the shared
+// DataTable (the same one the warehouse list uses).
 //
 // ---------------------------------------------------------------------------
 // WHY THIS SCREEN EXISTS
@@ -12,29 +13,23 @@
 // and the server refused rather than guessing. BOTH versions are kept and
 // NEITHER is applied until a person decides.
 //
-// So a row here is not a notification. It is a sale, a payment or a stock
-// movement that has not been recorded yet, and every day it sits in this queue
-// is a day the books are wrong in a way the books themselves cannot show.
-//
 // ---------------------------------------------------------------------------
 // THREE RULES THIS SCREEN ENFORCES
 //
-// 1. Both sides are shown, always, side by side. A screen that displayed only
-//    the difference would hide which record is being changed.
+// 1. Both sides are shown, always. The row carries a compact per-field
+//    summary; the decision dialog shows the full side-by-side values.
 //
-// 2. Financial divergences are marked and cannot be resolved silently. Money,
-//    quantity and the identity of what was traded are what the server flags,
-//    from an explicit list — never a guess at the field name.
+// 2. Financial divergences are marked and cannot be resolved silently.
 //
 // 3. A reason is required, on every resolution, including "keep the server
-//    version". A financial correction with no reason is unauditable, and the
-//    person who has to explain it later is not the person deciding now.
+//    version". Every row action opens the dialog; nothing applies from a
+//    single click.
 //
-// There is deliberately no "resolve all". Each conflict is a separate question
-// about what actually happened.
+// There is deliberately no "resolve all" and no bulk selection.
 // ============================================
 
-import { memo, useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
+import { ExternalLink } from 'lucide-react'
 import type { Conflict, FieldDivergence, ResolutionChoice } from '@hisabche/api'
 import {
   ActionButton,
@@ -45,8 +40,6 @@ import {
   Field,
   Loading,
   Panel,
-  Stat,
-  StatGrid,
   Table,
   TableBody,
   TableCell,
@@ -54,10 +47,15 @@ import {
   TableHeader,
   TableRow,
 } from '../capability/capability-kit'
+import { DataTable, type TableColumn } from '../data-table'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../dialog'
 import { routeForEntity } from '../../../lib/entity-route'
+import { useDateFormat } from '../../../hooks/use-date-format'
+
+type Translate = (key: string, fallback?: string) => string
 
 export interface ConflictsViewProps {
-  t: (key: string, fallback?: string) => string
+  t: Translate
   conflicts: Conflict[]
   status: 'open' | 'resolved' | 'all'
   selected: Conflict | null
@@ -67,7 +65,8 @@ export interface ConflictsViewProps {
   isBusy: boolean
   canResolve: boolean
   onStatusChange: (status: 'open' | 'resolved' | 'all') => void
-  onSelect: (conflictId: string) => void
+  /** Open (id) or close (null) the decision dialog. */
+  onSelect: (conflictId: string | null) => void
   /** H8 — open the record a conflict is about. */
   onOpenRecord?: ((route: string) => void) | undefined
   onResolve: (input: {
@@ -78,20 +77,94 @@ export interface ConflictsViewProps {
   onRefresh: () => void
 }
 
+/** Operations and fields that have a plain-language label in every locale. */
+const KNOWN_OPERATIONS = new Set(['create', 'update', 'delete', 'negative_stock'])
+const KNOWN_FIELDS = new Set([
+  'quantity',
+  'shortfall',
+  'buy_price',
+  'sell_price',
+  'opening_balance',
+  'total',
+  'subtotal',
+  'discount_total',
+  'tax_total',
+  'paid_amount',
+  'currency',
+  'type',
+  'customer_id',
+  'supplier_id',
+  'status',
+  'date',
+  'items',
+  'amount',
+  'direction',
+  'party_id',
+  'party_type',
+  'entry_date',
+  'lines',
+  'entry_number',
+])
+
+function operationLabel(t: Translate, operation: string): string {
+  return KNOWN_OPERATIONS.has(operation) ? t(`conflicts.op_${operation}`) : operation
+}
+
+function fieldLabel(t: Translate, field: string): string {
+  return KNOWN_FIELDS.has(field) ? t(`conflicts.field_${field}`) : field
+}
+
 /**
- * A value from either side, rendered so the two are comparable.
+ * A value from either side. A missing value is said in words — a bare dash
+ * reads as "zero" or "broken" to a person.
  *
  * Objects and arrays are stringified rather than summarised: `items` on an
  * invoice IS the disagreement, and "3 items" on both sides would read as
  * agreement when the lines differ.
  */
-function renderValue(value: unknown): string {
-  if (value === null || value === undefined) return '—'
-  if (typeof value === 'object') return JSON.stringify(value, null, 1)
+function renderValue(t: Translate, value: unknown): string {
+  if (value === null || value === undefined || value === '') {
+    return t('conflicts.not_recorded')
+  }
+  if (typeof value === 'object') return JSON.stringify(value)
   return String(value)
 }
 
+function StatusBadge({ t, status }: { t: Translate; status: Conflict['status'] }) {
+  if (status === 'resolved') return <Badge tone="good">{t('conflicts.resolved')}</Badge>
+  if (status === 'superseded') return <Badge tone="neutral">{t('conflicts.superseded')}</Badge>
+  return <Badge tone="warn">{t('conflicts.open')}</Badge>
+}
+
+function DifferenceSummary({ t, divergences }: { t: Translate; divergences: FieldDivergence[] }) {
+  if (divergences.length === 0) {
+    return <span className="text-[hsl(var(--fg-tertiary))]">{t('conflicts.no_difference')}</span>
+  }
+  return (
+    <ul className="space-y-0.5 text-xs">
+      {divergences.map((d) => (
+        <li key={d.field} className="whitespace-normal">
+          <span className="font-medium text-[hsl(var(--fg-primary))]">
+            {fieldLabel(t, d.field)}
+          </span>
+          {': '}
+          <span className="text-[hsl(var(--fg-secondary))]">{t('conflicts.side_server')} </span>
+          <bdi dir="ltr" className="tabular-nums">
+            {renderValue(t, d.serverValue)}
+          </bdi>
+          <span className="text-[hsl(var(--fg-tertiary))]"> / </span>
+          <span className="text-[hsl(var(--fg-secondary))]">{t('conflicts.side_client')} </span>
+          <bdi dir="ltr" className="tabular-nums">
+            {renderValue(t, d.clientValue)}
+          </bdi>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 const STATUS_TABS: Array<'open' | 'resolved' | 'all'> = ['open', 'resolved', 'all']
+const CHOICES = ['keep_server', 'keep_client', 'merge'] as const
 
 export const ConflictsView = memo(function ConflictsView({
   t,
@@ -109,19 +182,163 @@ export const ConflictsView = memo(function ConflictsView({
   onOpenRecord,
   onRefresh,
 }: ConflictsViewProps) {
+  const { dateTime } = useDateFormat()
+  const [search, setSearch] = useState('')
   const [choice, setChoice] = useState<ResolutionChoice>('keep_server')
   const [fieldChoices, setFieldChoices] = useState<Record<string, 'server' | 'client'>>({})
   const [reason, setReason] = useState('')
 
-  // H8 — where the record in conflict lives, or null for a type with no
-  // detail screen. Computed once per render; no hook, so no ordering concern.
-  const recordRoute =
-    selected?.entityType && selected?.entityId
-      ? routeForEntity(selected.entityType, selected.entityId)
-      : null
+  // Every row action lands here: nothing is applied without the dialog, and
+  // the dialog cannot apply without a reason.
+  const openDialog = useCallback(
+    (conflictId: string, next: ResolutionChoice) => {
+      setChoice(next)
+      setFieldChoices({})
+      setReason('')
+      onSelect(conflictId)
+    },
+    [onSelect],
+  )
+
+  const columns = useMemo<TableColumn<Conflict>[]>(
+    () => [
+      {
+        id: 'what',
+        labelKey: 'conflicts.col_what',
+        labelFallback: 'چه چیزی',
+        locked: true,
+        sortValue: (c) => c.entityLabel ?? c.entityId,
+        render: (c) => {
+          const route = c.entityId ? routeForEntity(c.entityType, c.entityId) : null
+          const name = c.entityLabel ?? t('conflicts.unnamed_record')
+          return (
+            <div className="flex flex-col items-start gap-0.5">
+              <span className="text-xs text-[hsl(var(--fg-tertiary))]">
+                {t(`conflicts.entity_${c.entityType}`)}
+              </span>
+              {route && onOpenRecord ? (
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onOpenRecord(route)
+                  }}
+                  className="inline-flex items-center gap-1 rounded font-medium text-[hsl(var(--color-primary))] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))]"
+                  title={t('conflicts.openRecord')}
+                >
+                  {name}
+                  <ExternalLink className="size-3" aria-hidden="true" />
+                </button>
+              ) : (
+                <span className="font-medium text-[hsl(var(--fg-primary))]">{name}</span>
+              )}
+            </div>
+          )
+        },
+      },
+      {
+        id: 'happened',
+        labelKey: 'conflicts.col_happened',
+        labelFallback: 'چه شد',
+        sortValue: (c) => c.operation,
+        render: (c) => (
+          <span className="text-[hsl(var(--fg-secondary))]">{operationLabel(t, c.operation)}</span>
+        ),
+      },
+      {
+        id: 'difference',
+        labelKey: 'conflicts.col_difference',
+        labelFallback: 'اختلاف',
+        showFrom: 'md',
+        render: (c) => <DifferenceSummary t={t} divergences={c.divergences} />,
+      },
+      {
+        id: 'severity',
+        labelKey: 'conflicts.col_severity',
+        labelFallback: 'اهمیت',
+        showFrom: 'sm',
+        sortValue: (c) => (c.hasFinancialDivergence ? 1 : 0),
+        render: (c) =>
+          c.hasFinancialDivergence ? (
+            <Badge tone="bad">{t('conflicts.financial')}</Badge>
+          ) : (
+            <Badge tone="neutral">{t('conflicts.non_financial')}</Badge>
+          ),
+      },
+      {
+        id: 'status',
+        labelKey: 'conflicts.col_status',
+        labelFallback: 'وضعیت',
+        sortValue: (c) => c.status,
+        render: (c) => <StatusBadge t={t} status={c.status} />,
+      },
+      {
+        id: 'time',
+        labelKey: 'conflicts.col_time',
+        labelFallback: 'زمان',
+        showFrom: 'lg',
+        sortValue: (c) => c.createdAt,
+        render: (c) => (
+          <span className="tabular-nums text-xs text-[hsl(var(--fg-tertiary))]">
+            {dateTime(c.createdAt)}
+          </span>
+        ),
+      },
+      {
+        id: 'actions',
+        labelKey: 'conflicts.col_actions',
+        labelFallback: 'تصمیم',
+        locked: true,
+        align: 'end',
+        render: (c) =>
+          c.status === 'open' ? (
+            <div className="inline-flex flex-wrap justify-end gap-1">
+              {CHOICES.map((option) => (
+                <ActionButton
+                  key={option}
+                  variant="quiet"
+                  className="h-8 px-2 text-xs"
+                  disabled={!canResolve || isBusy}
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    openDialog(c.id, option)
+                  }}
+                >
+                  {t(`conflicts.choice_${option}`)}
+                </ActionButton>
+              ))}
+            </div>
+          ) : (
+            <ActionButton
+              variant="quiet"
+              className="h-8 px-2 text-xs"
+              onClick={(event) => {
+                event.stopPropagation()
+                onSelect(c.id)
+              }}
+            >
+              {t('conflicts.view_decision')}
+            </ActionButton>
+          ),
+      },
+    ],
+    [t, onOpenRecord, dateTime, canResolve, isBusy, onSelect, openDialog],
+  )
+
+  const rows = useMemo(() => {
+    const needle = search.trim().toLowerCase()
+    if (!needle) return conflicts
+    return conflicts.filter((c) =>
+      [
+        c.entityLabel ?? '',
+        t(`conflicts.entity_${c.entityType}`),
+        operationLabel(t, c.operation),
+        ...c.divergences.map((d) => fieldLabel(t, d.field)),
+      ].some((text) => text.toLowerCase().includes(needle)),
+    )
+  }, [conflicts, search, t])
 
   const divergences = selected?.divergences ?? []
-  const financialCount = divergences.filter((d) => d.financial).length
 
   // Every field must be decided before a merge can be applied. A merge with an
   // undecided field would silently take one side, which is the guess this
@@ -135,23 +352,16 @@ export const ConflictsView = memo(function ConflictsView({
   return (
     <CapabilityPage>
       <CapabilityHeader
-        title={t('conflicts.title', 'تعارض‌های آفلاین')}
-        description={t('conflicts.subtitle', 'نوشته‌هایی که سرور نپذیرفت و منتظر تصمیم‌اند')}
+        title={t('conflicts.title')}
+        description={t('conflicts.subtitle')}
         action={
           <ActionButton variant="quiet" onClick={onRefresh} disabled={isLoading}>
-            {t('common.refresh', 'تازه‌سازی')}
+            {t('common.refresh')}
           </ActionButton>
         }
       />
 
-      {error ? (
-        <ErrorNote
-          message={error}
-          onRetry={onRefresh}
-          retryLabel={t('common.retry', 'تلاش دوباره')}
-        />
-      ) : null}
-      {actionError ? <ErrorNote message={actionError} /> : null}
+      {actionError && !selected ? <ErrorNote message={actionError} /> : null}
 
       <div className="flex gap-2">
         {STATUS_TABS.map((tab) => (
@@ -160,287 +370,213 @@ export const ConflictsView = memo(function ConflictsView({
             variant={tab === status ? 'primary' : 'quiet'}
             onClick={() => onStatusChange(tab)}
           >
-            {t(`conflicts.status_${tab}`, tab)}
+            {t(`conflicts.status_${tab}`)}
           </ActionButton>
         ))}
       </div>
 
-      {isLoading ? <Loading label={t('common.loading', 'در حال بارگذاری…')} /> : null}
+      {error ? (
+        <ErrorNote message={error} onRetry={onRefresh} retryLabel={t('common.retry')} />
+      ) : isLoading ? (
+        <Loading label={t('common.loading')} />
+      ) : (
+        <DataTable
+          tableId="offline-conflicts"
+          t={t}
+          rows={rows}
+          columns={columns}
+          rowKey={(c) => c.id}
+          onRowClick={(c) => openDialog(c.id, 'keep_server')}
+          searchValue={search}
+          onSearchChange={setSearch}
+          minWidthClass="min-w-[520px] sm:min-w-[760px]"
+          emptyState={
+            <Panel title={t('conflicts.empty_title')}>
+              <p className="text-sm text-[hsl(var(--fg-tertiary))]">{t('conflicts.empty_hint')}</p>
+            </Panel>
+          }
+        />
+      )}
 
-      {!isLoading && conflicts.length === 0 ? (
-        <Panel title={t('conflicts.empty_title', 'تعارضی در انتظار نیست')}>
-          <p className="text-sm text-[hsl(var(--fg-tertiary))]">
-            {t(
-              'conflicts.empty_hint',
-              'هر نوشته‌ی آفلاینی که سرور نپذیرد اینجا می‌آید و تا تصمیم شما اعمال نمی‌شود.',
-            )}
-          </p>
-        </Panel>
-      ) : null}
+      <Dialog
+        open={selected != null}
+        onOpenChange={(open) => {
+          if (!open) onSelect(null)
+        }}
+      >
+        {selected ? (
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>
+                {t(`conflicts.entity_${selected.entityType}`)} —{' '}
+                {selected.entityLabel ?? t('conflicts.unnamed_record')}
+              </DialogTitle>
+              <DialogDescription>
+                {operationLabel(t, selected.operation)} · {t('conflicts.detail_hint')}
+              </DialogDescription>
+            </DialogHeader>
 
-      {conflicts.length > 0 ? (
-        <Panel
-          title={t('conflicts.queue', 'صف تعارض')}
-          description={t('conflicts.queue_hint', 'هیچ‌کدام هنوز اعمال نشده‌اند.')}
-        >
-          <ul className="divide-y divide-[hsl(var(--border-default))]">
-            {conflicts.map((conflict) => (
-              <li key={conflict.id}>
-                <button
-                  type="button"
-                  onClick={() => onSelect(conflict.id)}
-                  className={
-                    'flex w-full flex-wrap items-center justify-between gap-2 py-3 text-start text-sm transition hover:bg-[hsl(var(--surface-muted)/0.4)] ' +
-                    (conflict.id === selected?.id ? 'bg-[hsl(var(--surface-muted)/0.5)]' : '')
-                  }
-                >
-                  <span className="flex flex-wrap items-center gap-2">
-                    <Badge tone={conflict.hasFinancialDivergence ? 'bad' : 'warn'}>
-                      {t(`conflicts.entity_${conflict.entityType}`, conflict.entityType)}
-                    </Badge>
-                    {conflict.hasFinancialDivergence ? (
-                      <Badge tone="bad">{t('conflicts.financial', 'اختلاف مالی')}</Badge>
-                    ) : null}
-                    <span className="text-[hsl(var(--fg-tertiary))]">
-                      {conflict.divergences.length} {t('conflicts.fields', 'فیلد')}
-                    </span>
-                  </span>
-
-                  <span className="flex items-center gap-2">
-                    {conflict.status === 'resolved' ? (
-                      <Badge tone="good">{t('conflicts.resolved', 'حل‌شده')}</Badge>
-                    ) : conflict.status === 'superseded' ? (
-                      <Badge tone="neutral">{t('conflicts.superseded', 'منسوخ')}</Badge>
-                    ) : (
-                      <Badge tone="warn">{t('conflicts.open', 'باز')}</Badge>
-                    )}
-                    <span className="tabular-nums text-xs text-[hsl(var(--fg-tertiary))]" dir="ltr">
-                      {conflict.createdAt?.slice(0, 16).replace('T', ' ')}
-                    </span>
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </Panel>
-      ) : null}
-
-      {selected ? (
-        <>
-          <Panel
-            title={t('conflicts.detail', 'جزئیات تعارض')}
-            description={t(
-              'conflicts.detail_hint',
-              'هر دو نسخه نگه داشته شده‌اند. هیچ‌کدام هنوز اعمال نشده.',
-            )}
-            action={
-              selected.hasFinancialDivergence ? (
-                <Badge tone="bad">{t('conflicts.needs_review', 'نیازمند تصمیم انسان')}</Badge>
-              ) : null
-            }
-          >
-            <StatGrid>
-              <Stat
-                label={t('conflicts.entity', 'موجودیت')}
-                value={t(`conflicts.entity_${selected.entityType}`, selected.entityType)}
-                hint={selected.entityId?.slice(0, 8)}
-              />
-              <Stat
-                label={t('conflicts.operation', 'عملیات')}
-                value={t(`conflicts.op_${selected.operation}`, selected.operation)}
-              />
-              <Stat
-                label={t('conflicts.server_version', 'نسخه‌ی سرور')}
-                value={selected.serverVersion ?? '—'}
-              />
-              <Stat
-                label={t('conflicts.client_version', 'نسخه‌ی دستگاه')}
-                value={selected.clientVersion ?? '—'}
-                hint={
-                  financialCount > 0
-                    ? `${financialCount} ${t('conflicts.financial_fields', 'فیلد مالی')}`
-                    : undefined
-                }
-              />
-            </StatGrid>
-
-            {/* H8 — the record in conflict, openable.
-                A person deciding which version wins needs to see what the row
-                looks like now. `routeForEntity` returns null for a type with
-                no detail screen, and then nothing is offered rather than a
-                link to a list that answers a different question. */}
-            {recordRoute && onOpenRecord ? (
-              <button
-                type="button"
-                onClick={() => onOpenRecord(recordRoute)}
-                className="mt-3 rounded text-sm text-[hsl(var(--color-primary))] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary))]"
-              >
-                {t('conflicts.openRecord', 'مشاهده‌ی رکورد')}
-              </button>
-            ) : null}
-          </Panel>
-
-          <Panel
-            title={t('conflicts.divergences', 'اختلاف‌ها')}
-            description={t(
-              'conflicts.divergences_hint',
-              'فقط فیلدهایی که دستگاه فرستاده مقایسه می‌شوند.',
-            )}
-          >
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('conflicts.field', 'فیلد')}</TableHead>
-                  <TableHead>{t('conflicts.server_value', 'نسخه‌ی سرور')}</TableHead>
-                  <TableHead>{t('conflicts.client_value', 'نسخه‌ی دستگاه')}</TableHead>
-                  {choice === 'merge' ? (
-                    <TableHead>{t('conflicts.pick', 'انتخاب')}</TableHead>
-                  ) : null}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {divergences.map((divergence: FieldDivergence) => (
-                  <TableRow key={divergence.field}>
-                    <TableCell>
-                      <span className="font-mono text-xs" dir="ltr">
-                        {divergence.field}
-                      </span>
-                      {divergence.financial ? (
-                        <div className="mt-1">
-                          <Badge tone="bad">{t('conflicts.financial', 'اختلاف مالی')}</Badge>
-                        </div>
+            <div className="max-h-[60vh] space-y-4 overflow-y-auto">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t('conflicts.field')}</TableHead>
+                      <TableHead>{t('conflicts.server_value')}</TableHead>
+                      <TableHead>{t('conflicts.client_value')}</TableHead>
+                      {selected.status === 'open' && choice === 'merge' ? (
+                        <TableHead>{t('conflicts.pick')}</TableHead>
                       ) : null}
-                    </TableCell>
-                    <TableCell>
-                      <pre
-                        className="max-w-[16rem] overflow-x-auto whitespace-pre-wrap break-words text-xs"
-                        dir="ltr"
-                      >
-                        {renderValue(divergence.serverValue)}
-                      </pre>
-                    </TableCell>
-                    <TableCell>
-                      <pre
-                        className="max-w-[16rem] overflow-x-auto whitespace-pre-wrap break-words text-xs"
-                        dir="ltr"
-                      >
-                        {renderValue(divergence.clientValue)}
-                      </pre>
-                    </TableCell>
-                    {choice === 'merge' ? (
-                      <TableCell>
-                        <div className="flex gap-1">
-                          {(['server', 'client'] as const).map((side) => (
-                            <ActionButton
-                              key={side}
-                              variant={
-                                fieldChoices[divergence.field] === side ? 'primary' : 'quiet'
-                              }
-                              disabled={isBusy}
-                              onClick={() =>
-                                setFieldChoices((current) => ({
-                                  ...current,
-                                  [divergence.field]: side,
-                                }))
-                              }
-                            >
-                              {t(`conflicts.side_${side}`, side)}
-                            </ActionButton>
-                          ))}
-                        </div>
-                      </TableCell>
-                    ) : null}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Panel>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {divergences.map((d) => (
+                      <TableRow key={d.field}>
+                        <TableCell>
+                          <span className="font-medium">{fieldLabel(t, d.field)}</span>
+                          {d.financial ? (
+                            <div className="mt-1">
+                              <Badge tone="bad">{t('conflicts.financial')}</Badge>
+                            </div>
+                          ) : null}
+                        </TableCell>
+                        <TableCell>
+                          <pre
+                            className="max-w-[14rem] whitespace-pre-wrap break-words text-xs"
+                            dir="ltr"
+                          >
+                            {renderValue(t, d.serverValue)}
+                          </pre>
+                        </TableCell>
+                        <TableCell>
+                          <pre
+                            className="max-w-[14rem] whitespace-pre-wrap break-words text-xs"
+                            dir="ltr"
+                          >
+                            {renderValue(t, d.clientValue)}
+                          </pre>
+                        </TableCell>
+                        {selected.status === 'open' && choice === 'merge' ? (
+                          <TableCell>
+                            <div className="flex gap-1">
+                              {(['server', 'client'] as const).map((side) => (
+                                <ActionButton
+                                  key={side}
+                                  variant={fieldChoices[d.field] === side ? 'primary' : 'quiet'}
+                                  className="h-8 px-2 text-xs"
+                                  disabled={isBusy}
+                                  onClick={() =>
+                                    setFieldChoices((current) => ({ ...current, [d.field]: side }))
+                                  }
+                                >
+                                  {t(`conflicts.side_${side}`)}
+                                </ActionButton>
+                              ))}
+                            </div>
+                          </TableCell>
+                        ) : null}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
 
-          {selected.status === 'open' ? (
-            <Panel
-              title={t('conflicts.resolve', 'تصمیم')}
-              description={t(
-                'conflicts.resolve_hint',
-                'دلیل اجباری است — حتی برای نگه‌داشتن نسخه‌ی سرور.',
+              {selected.status === 'open' ? (
+                <>
+                  <div className="flex flex-wrap gap-2">
+                    {CHOICES.map((option) => (
+                      <ActionButton
+                        key={option}
+                        variant={choice === option ? 'primary' : 'quiet'}
+                        disabled={isBusy || !canResolve}
+                        onClick={() => setChoice(option)}
+                      >
+                        {t(`conflicts.choice_${option}`)}
+                      </ActionButton>
+                    ))}
+                  </div>
+
+                  {choice === 'merge' && undecided > 0 ? (
+                    <p className="text-sm text-[hsl(var(--color-warning))]">
+                      {undecided} {t('conflicts.undecided')}
+                    </p>
+                  ) : null}
+
+                  <div>
+                    <Field
+                      label={t('conflicts.reason')}
+                      value={reason}
+                      onChange={setReason}
+                      disabled={isBusy || !canResolve}
+                    />
+                    <p className="mt-1 text-xs text-[hsl(var(--fg-tertiary))]">
+                      {t('conflicts.resolve_hint')}
+                    </p>
+                  </div>
+
+                  {actionError ? <ErrorNote message={actionError} /> : null}
+
+                  <div className="flex justify-end gap-2">
+                    <ActionButton variant="quiet" onClick={() => onSelect(null)} disabled={isBusy}>
+                      {t('common.cancel')}
+                    </ActionButton>
+                    <ActionButton
+                      disabled={!canSubmit}
+                      onClick={() =>
+                        onResolve({
+                          choice,
+                          reason: reason.trim(),
+                          ...(choice === 'merge' ? { fieldChoices } : {}),
+                        })
+                      }
+                    >
+                      {t('conflicts.apply')}
+                    </ActionButton>
+                  </div>
+                </>
+              ) : (
+                <dl className="grid grid-cols-2 gap-3 text-sm">
+                  <div>
+                    <dt className="text-xs text-[hsl(var(--fg-tertiary))]">
+                      {t('conflicts.choice')}
+                    </dt>
+                    <dd>
+                      {selected.resolution &&
+                      (CHOICES as readonly string[]).includes(selected.resolution)
+                        ? t(`conflicts.choice_${selected.resolution}`)
+                        : (selected.resolution ?? t('conflicts.not_recorded'))}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-[hsl(var(--fg-tertiary))]">
+                      {t('conflicts.reason')}
+                    </dt>
+                    <dd>{selected.resolutionReason ?? t('conflicts.not_recorded')}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-[hsl(var(--fg-tertiary))]">
+                      {t('conflicts.resolved_by')}
+                    </dt>
+                    <dd dir="ltr" className="text-start">
+                      {selected.resolvedBy?.slice(0, 8) ?? t('conflicts.not_recorded')}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-[hsl(var(--fg-tertiary))]">
+                      {t('conflicts.resolved_at')}
+                    </dt>
+                    <dd className="tabular-nums">
+                      {selected.resolvedAt
+                        ? dateTime(selected.resolvedAt)
+                        : t('conflicts.not_recorded')}
+                    </dd>
+                  </div>
+                </dl>
               )}
-            >
-              {!canResolve ? (
-                <ErrorNote
-                  message={t(
-                    'conflicts.forbidden',
-                    'حل تعارض یک رکورد مالی را بازنویسی می‌کند و تصمیم مالک است.',
-                  )}
-                />
-              ) : null}
-
-              <div className="flex flex-wrap gap-2">
-                {(['keep_server', 'keep_client', 'merge'] as const).map((option) => (
-                  <ActionButton
-                    key={option}
-                    variant={choice === option ? 'primary' : 'quiet'}
-                    disabled={isBusy || !canResolve}
-                    onClick={() => setChoice(option)}
-                  >
-                    {t(`conflicts.choice_${option}`, option)}
-                  </ActionButton>
-                ))}
-              </div>
-
-              {choice === 'merge' && undecided > 0 ? (
-                <p className="mt-3 text-sm text-[hsl(var(--color-warning))]">
-                  {undecided} {t('conflicts.undecided', 'فیلد هنوز انتخاب نشده')}
-                </p>
-              ) : null}
-
-              <div className="mt-3">
-                <Field
-                  label={t('conflicts.reason', 'دلیل')}
-                  value={reason}
-                  onChange={setReason}
-                  disabled={isBusy || !canResolve}
-                />
-              </div>
-
-              <ActionButton
-                className="mt-4"
-                disabled={!canSubmit}
-                onClick={() => {
-                  onResolve({
-                    choice,
-                    reason: reason.trim(),
-                    ...(choice === 'merge' ? { fieldChoices } : {}),
-                  })
-                  setReason('')
-                  setFieldChoices({})
-                }}
-              >
-                {t('conflicts.apply', 'اعمال تصمیم')}
-              </ActionButton>
-            </Panel>
-          ) : (
-            <Panel title={t('conflicts.resolution', 'تصمیم ثبت‌شده')}>
-              <StatGrid>
-                <Stat
-                  label={t('conflicts.choice', 'انتخاب')}
-                  value={t(`conflicts.choice_${selected.resolution}`, selected.resolution ?? '—')}
-                />
-                <Stat
-                  label={t('conflicts.reason', 'دلیل')}
-                  value={selected.resolutionReason ?? '—'}
-                />
-                <Stat
-                  label={t('conflicts.resolved_by', 'توسط')}
-                  value={selected.resolvedBy?.slice(0, 8) ?? '—'}
-                />
-                <Stat
-                  label={t('conflicts.resolved_at', 'زمان')}
-                  value={selected.resolvedAt?.slice(0, 16).replace('T', ' ') ?? '—'}
-                />
-              </StatGrid>
-            </Panel>
-          )}
-        </>
-      ) : null}
+            </div>
+          </DialogContent>
+        ) : null}
+      </Dialog>
     </CapabilityPage>
   )
 })

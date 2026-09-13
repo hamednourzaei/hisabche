@@ -74,6 +74,20 @@ interface UseCustomersDataOptions {
   role?: 'buyer' | 'seller' | undefined
 }
 
+/**
+ * What the KPI figures were computed from. They are reduced HERE, over one
+ * server page of customers and one of invoices (the routes cap both at 100
+ * rows whatever `customerLimit`/`invoiceLimit` ask for). No endpoint returns
+ * per-party debt or sales over every invoice yet, so instead of presenting a
+ * page total as the whole business the cards say what they cover.
+ */
+export interface CustomersStatsCoverage {
+  customerRows: number
+  invoiceRows: number
+  /** True when the server holds more rows than were summed. */
+  isPartial: boolean
+}
+
 interface UseCustomersDataResult {
   customersWithDebt: CustomerWithDebt[]
   customersWithOpenInvoices: CustomerWithOpenInvoices[]
@@ -94,6 +108,7 @@ interface UseCustomersDataResult {
   topCustomerDelta: number | null
   /** درصد تغییر روزانه */
   todaySalesDelta: number | null
+  statsCoverage: CustomersStatsCoverage
   isLoading: boolean
   isError: boolean
   error: Error | null
@@ -307,6 +322,11 @@ export function useCustomersData(options: UseCustomersDataOptions = {}): UseCust
       debtDelta,
       topCustomerDelta,
       todaySalesDelta,
+      statsCoverage: {
+        customerRows: customers.length,
+        invoiceRows: invoices.length,
+        isPartial: invoicesData?.hasMore === true || (customersData?.total ?? 0) > customers.length,
+      },
     }
   }, [customersData, invoicesData])
 

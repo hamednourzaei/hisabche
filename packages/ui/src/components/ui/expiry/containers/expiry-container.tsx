@@ -6,7 +6,14 @@
 
 import { memo, useCallback, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { useBatches, useExpiryReport, usePlanIssue, type AllocationPlan } from '@hisabche/api'
+import {
+  asList,
+  useBatches,
+  useExpiryReport,
+  usePlanIssue,
+  type AllocationPlan,
+  type StockBatch,
+} from '@hisabche/api'
 import { ExpiryView } from '../expiry-view'
 
 export const ExpiryContainer = memo(function ExpiryContainer() {
@@ -53,7 +60,7 @@ export const ExpiryContainer = memo(function ExpiryContainer() {
     <ExpiryView
       t={t}
       report={report.data ?? null}
-      batches={batches.data ?? []}
+      batches={asList<StockBatch>(batches.data)}
       plan={plan}
       isLoading={report.isLoading}
       error={report.error ? (report.error as Error).message : null}

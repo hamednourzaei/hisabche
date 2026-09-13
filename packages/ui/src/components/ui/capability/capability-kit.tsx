@@ -462,17 +462,20 @@ export function CapabilityHeader({
   action?: React.ReactNode
 }) {
   return (
-    <header className="mb-6 flex flex-wrap items-start justify-between gap-3">
-      <div>
-        <h1 className="flex items-center gap-1.5 text-2xl font-semibold text-[hsl(var(--fg-primary))]">
-          {title}
+    // Same treatment as the invoices list header: title and action share one
+    // row at every width, so on mobile the action sits opposite the title
+    // instead of pushing the content down.
+    <header className="flex flex-row items-start justify-between gap-3">
+      <div className="min-w-0 space-y-1">
+        <h1 className="flex items-center gap-1.5 text-xl font-bold text-[hsl(var(--fg-primary))] sm:text-2xl lg:text-3xl">
+          <span className="truncate">{title}</span>
           {/* Reads the route itself — see DocsHelpLink. A route with no
               documentation article renders nothing. */}
           <DocsHelpLink />
         </h1>
-        <p className="mt-1 text-sm text-[hsl(var(--fg-tertiary))]">{description}</p>
+        <p className="text-xs text-[hsl(var(--fg-secondary))] sm:text-sm">{description}</p>
       </div>
-      {action}
+      {action ? <div className="flex shrink-0 flex-wrap justify-end gap-2">{action}</div> : null}
     </header>
   )
 }
@@ -504,6 +507,43 @@ export function CapabilityHeader({
  */
 export function CapabilityPage({ children }: { children: React.ReactNode }) {
   return <div className="space-y-5 sm:space-y-6">{children}</div>
+}
+
+/**
+ * A titled list on a capability screen: heading, optional hint, then the
+ * shared `DataTable` as its child.
+ *
+ * Not a `Panel`: `DataTable` already draws its own bordered surface, the way
+ * the invoices list does, and a card around it would be a border inside a
+ * border.
+ */
+export function ListSection({
+  title,
+  description,
+  action,
+  children,
+}: {
+  title: string
+  description?: string | undefined
+  action?: React.ReactNode
+  children: React.ReactNode
+}) {
+  return (
+    <section className="space-y-3">
+      <div className="flex flex-row items-start justify-between gap-3">
+        <div className="min-w-0 space-y-0.5">
+          <h2 className="text-base font-semibold text-[hsl(var(--fg-primary))] sm:text-lg">
+            {title}
+          </h2>
+          {description ? (
+            <p className="text-xs text-[hsl(var(--fg-tertiary))] sm:text-sm">{description}</p>
+          ) : null}
+        </div>
+        {action}
+      </div>
+      {children}
+    </section>
+  )
 }
 
 /* ─── Re-exports ──────────────────────────────────────────────────────────── */

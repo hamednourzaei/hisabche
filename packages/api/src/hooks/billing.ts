@@ -62,6 +62,23 @@ export interface TrialStatus {
   isInGracePeriod: boolean
 }
 
+/**
+ * The server's verdict on whether this workspace's subscription has ended —
+ * the same rule the backend write guard enforces. The client never recomputes
+ * expiry from dates.
+ */
+export interface SubscriptionAccess {
+  expired: boolean
+  periodEnd: string | null
+}
+
+/**
+ * `GET /billing/subscription`. `access` is optional only so a client built
+ * against an older server still renders; absent means "not known to be
+ * expired", never "expired".
+ */
+export type CurrentSubscription = Subscription & { access?: SubscriptionAccess | undefined }
+
 // ─── Query Keys ──────────────────────────────────────────────────
 
 export const billingKeys = {
@@ -92,7 +109,7 @@ export function useSubscription() {
 
   return useQuery({
     queryKey: billingKeys.subscription(),
-    queryFn: async (): Promise<Subscription> => {
+    queryFn: async (): Promise<CurrentSubscription> => {
       const { data } = await apiClient.get('/billing/subscription')
       return data
     },

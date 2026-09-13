@@ -6,7 +6,15 @@
 
 import { memo, useCallback, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { useBudgetVariance, useBudgets, useCheckSpend, type BudgetCheck } from '@hisabche/api'
+import {
+  asList,
+  useBudgetVariance,
+  useBudgets,
+  useCheckSpend,
+  type Budget,
+  type BudgetCheck,
+  type VarianceRow,
+} from '@hisabche/api'
 import { BudgetsView } from '../budgets-view'
 
 export const BudgetsContainer = memo(function BudgetsContainer() {
@@ -52,8 +60,10 @@ export const BudgetsContainer = memo(function BudgetsContainer() {
   return (
     <BudgetsView
       t={t}
-      budgets={budgets.data ?? []}
-      variance={variance.data ?? []}
+      budgets={asList<Budget>(budgets.data)}
+      variance={asList<VarianceRow>(variance.data)}
+      isVarianceLoading={variance.isLoading}
+      varianceError={variance.error ? (variance.error as Error).message : null}
       isLoading={budgets.isLoading}
       error={budgets.error ? (budgets.error as Error).message : null}
       actionError={actionError}

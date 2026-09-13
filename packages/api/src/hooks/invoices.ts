@@ -20,24 +20,19 @@ import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
 import { useRealtime } from './useRealtime'
 import { dashboardKeys } from './dashboard'
-import type {
-  Invoice,
-  CreateInvoice,
-  UpdateInvoice,
-  InvoiceFilters,
-} from '@hisabche/validation'
+import type { Invoice, CreateInvoice, UpdateInvoice, InvoiceFilters } from '@hisabche/validation'
 
 // ============================================
 // Types
 // ============================================
 export interface InvoiceWithCustomer extends Invoice {
-  customerName?: string | null;
+  customerName?: string | null
   customer?: {
-    id: string;
-    full_name: string;
-    phone?: string;
-    email?: string;
-  } | null;
+    id: string
+    full_name: string
+    phone?: string
+    email?: string
+  } | null
 }
 
 // ============================================
@@ -56,7 +51,27 @@ export const invoiceKeys = {
 // ============================================
 
 // ✅ گیت شده با authReady: تا session hydrate نشود، fire نمی‌شود (رفع 401 استورم اولیه)
-export function useInvoices(filters: InvoiceFilters = { page: 1, limit: 20, sortDirection: 'desc' }) {
+/**
+ * Stat-card figures computed by the server over EVERY invoice matching the
+ * filters — never reduce a fetched page for these. Amounts are not converted
+ * between currencies; `currencies` says which ones were added together.
+ */
+export interface InvoiceSummaryBucket {
+  count: number
+  totalAmount: number
+  pendingAmount: number
+  paidAmount: number
+}
+
+export interface InvoiceListSummary extends InvoiceSummaryBucket {
+  currentMonth: InvoiceSummaryBucket
+  previousMonth: InvoiceSummaryBucket
+  currencies: string[]
+}
+
+export function useInvoices(
+  filters: InvoiceFilters = { page: 1, limit: 20, sortDirection: 'desc' },
+) {
   const authReady = useAuthReady()
 
   // ✅ FIX: به‌جای polling، subscribe مستقیم به جدول invoices —
@@ -73,11 +88,13 @@ export function useInvoices(filters: InvoiceFilters = { page: 1, limit: 20, sort
     queryKey: invoiceKeys.list(filters),
     queryFn: async () => {
       const { data } = await apiClient.get<{
-        invoices: InvoiceWithCustomer[];
-        total: number;
-        hasMore: boolean;
-        nextCursor: string | null;
-        limit: number;
+        invoices: InvoiceWithCustomer[]
+        total: number
+        hasMore: boolean
+        nextCursor: string | null
+        limit: number
+        /** Present only when the request set `includeSummary: true`. */
+        summary?: InvoiceListSummary | undefined
       }>('/invoices', {
         params: filters,
       })

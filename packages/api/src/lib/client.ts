@@ -117,6 +117,21 @@ export function setOnUnauthorized(callback: () => void): void {
   onUnauthorized = callback
 }
 
+/**
+ * The server's code for a write refused because the workspace's subscription
+ * has ended (HTTP 402). Stable — the backend guard in
+ * `backend/src/middleware/subscription.middleware.ts` sends exactly this.
+ */
+export const SUBSCRIPTION_EXPIRED_CODE = 'SUBSCRIPTION_EXPIRED'
+
+// Same shape as onUnauthorized: the store registers it, so this package never
+// imports the store (which imports this package).
+let onSubscriptionExpired: (() => void) | null = null
+
+export function setOnSubscriptionExpired(callback: () => void): void {
+  onSubscriptionExpired = callback
+}
+
 // ✅ صبر با سقف زمانی؛ اگر Store هیچ‌وقت آماده نشد (مثلاً کاربر مهمان)،
 // درخواست بعد از timeout بدون توکن ارسال می‌شود (نه اینکه برای همیشه بلاک بماند)
 function waitForTokenReady(): Promise<void> {
@@ -204,6 +219,12 @@ apiClient.interceptors.response.use(
     if (apiError.status === 401) {
       devLog('[API Client] 401 — triggering onUnauthorized callback')
       onUnauthorized?.()
+    }
+
+    // 402 alone is not enough: only the subscription lock raises the notice,
+    // so an unrelated 402 is never explained as "your subscription ended".
+    if (apiError.status === 402 && apiError.code === SUBSCRIPTION_EXPIRED_CODE) {
+      onSubscriptionExpired?.()
     }
 
     return Promise.reject(apiError)

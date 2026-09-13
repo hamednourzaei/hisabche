@@ -5,6 +5,7 @@ import { memo, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import {
+  asList,
   useWorkflowInstances,
   useWorkflowInstanceDetail,
   useWorkflow,
@@ -127,18 +128,20 @@ export const ApprovalsContainer = memo(function ApprovalsContainer() {
     return v && v !== key ? v : (fallback ?? key)
   }
 
-  const { data, isLoading } = useWorkflowInstances()
+  const { data, isLoading, error, refetch } = useWorkflowInstances()
 
   const pendingInstances = useMemo(
-    () => (data?.data ?? []).filter((i) => NEEDS_ACTION_STATUSES.has(i.status)),
+    () => asList<WorkflowInstance>(data?.data).filter((i) => NEEDS_ACTION_STATUSES.has(i.status)),
     [data],
   )
 
-  const cards = useMemo(
+  const items = useMemo(
     () =>
-      pendingInstances.map((instance) => (
-        <ApprovalInstanceCard key={instance.id} instance={instance} t={t} />
-      )),
+      pendingInstances.map((instance) => ({
+        id: instance.id,
+        status: instance.status,
+        card: <ApprovalInstanceCard instance={instance} t={t} />,
+      })),
     [pendingInstances, t],
   )
 
@@ -146,8 +149,9 @@ export const ApprovalsContainer = memo(function ApprovalsContainer() {
     <ApprovalsView
       t={t}
       isLoading={isLoading}
-      isEmpty={pendingInstances.length === 0}
-      cards={cards}
+      error={error ? (error as Error).message : null}
+      items={items}
+      onRetry={() => void refetch()}
     />
   )
 })

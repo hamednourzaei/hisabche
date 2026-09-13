@@ -530,6 +530,17 @@ export const invoiceFiltersSchema = z.object({
       typeof value === 'boolean' ? value : ['true', '1', 'yes'].includes(value.toLowerCase()),
     )
     .optional(),
+  /**
+   * Ask the list to also return `summary` — the stat-card figures computed
+   * server-side over EVERY matching invoice, not the page. Parsed like
+   * `outstanding`: only affirmative strings turn it on.
+   */
+  includeSummary: z
+    .union([z.boolean(), z.string()])
+    .transform((value) =>
+      typeof value === 'boolean' ? value : ['true', '1', 'yes'].includes(value.toLowerCase()),
+    )
+    .optional(),
   minTotal: z
     .union([z.number(), z.string()])
     .transform((val) => (typeof val === 'string' ? parseFloat(val) : val))

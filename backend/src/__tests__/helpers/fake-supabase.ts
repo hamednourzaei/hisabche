@@ -87,7 +87,12 @@ export class FakeDatabase {
   callRpc(name: string, args: Row) {
     const handler = this.rpcs.get(name)
     if (!handler) {
-      return { data: null, error: { message: `RPC ${name} is not registered in the fake` } }
+      // The code real PostgREST returns for a function that does not exist, so
+      // a service's «not installed yet» fallback behaves here as in production.
+      return {
+        data: null,
+        error: { code: 'PGRST202', message: `RPC ${name} is not registered in the fake` },
+      }
     }
 
     try {

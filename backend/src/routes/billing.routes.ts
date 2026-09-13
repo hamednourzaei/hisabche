@@ -94,7 +94,10 @@ export async function billingRoutes(fastify: FastifyInstance) {
         request.tenancy.workspaceId,
       )
       const trial = await billingService.checkTrialStatus(request.userId)
-      return reply.send({ ...subscription, trial })
+      // The same verdict the write guard enforces, so the client shows the lock
+      // from the server's rule rather than recomputing expiry from dates.
+      const access = await billingService.getWorkspaceAccess(request.tenancy.workspaceId)
+      return reply.send({ ...subscription, trial, access })
     },
   )
 

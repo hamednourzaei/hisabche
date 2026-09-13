@@ -10,12 +10,14 @@
 import { memo, useCallback, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
+  asList,
   useAbandonedSessions,
   useCloseSession,
   useCurrentSession,
   useOpenSession,
   useRecordCashMovement,
 } from '@hisabche/api'
+import type { AbandonedSession } from '@hisabche/api'
 import { TillView } from '../till-view'
 
 export const TillContainer = memo(function TillContainer() {
@@ -84,7 +86,9 @@ export const TillContainer = memo(function TillContainer() {
       t={t}
       session={session}
       totals={current.data?.totals ?? null}
-      abandoned={abandoned.data ?? []}
+      abandoned={asList<AbandonedSession>(abandoned.data)}
+      abandonedError={abandoned.error ? (abandoned.error as Error).message : null}
+      isAbandonedLoading={abandoned.isLoading}
       isLoading={current.isLoading}
       error={current.error ? (current.error as Error).message : null}
       isBusy={openSession.isPending || cashMovement.isPending || closeSession.isPending}

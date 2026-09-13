@@ -21,17 +21,26 @@
 // is never editable here. A field a person can type into is a field that can
 // be made to agree with whatever is in the drawer, which is precisely the
 // control this screen exists to provide.
+//
+// ---------------------------------------------------------------------------
+// LAYOUT — the invoices list structure: header, stat strip, work, then the
+// list (abandoned drawers) on the shared DataTable.
 // ============================================
 
-import { memo, useState } from 'react'
+import { memo, useMemo, useState } from 'react'
+import { Banknote, Coins, ShoppingCart, Wallet } from 'lucide-react'
 import type { PosSession, SessionTotals, AbandonedSession, PosPaymentMethod } from '@hisabche/api'
+import { useDateFormat } from '../../../hooks/use-date-format'
+import { DataTable, matchesSearch, type TableColumn } from '../data-table'
 import {
   ActionButton,
   Badge,
   CapabilityHeader,
   CapabilityPage,
+  EmptyState,
   ErrorNote,
   Field,
+  ListSection,
   Loading,
   MinorInput,
   Money,
@@ -45,6 +54,9 @@ export interface TillViewProps {
   session: PosSession | null
   totals: SessionTotals | null
   abandoned: AbandonedSession[]
+  /** Kept apart from `abandoned`: a failed read must not read as «none». */
+  abandonedError: string | null
+  isAbandonedLoading: boolean
   isLoading: boolean
   error: string | null
   isBusy: boolean
@@ -66,6 +78,8 @@ export const TillView = memo(function TillView({
   session,
   totals,
   abandoned,
+  abandonedError,
+  isAbandonedLoading,
   isLoading,
   error,
   isBusy,
@@ -75,15 +89,71 @@ export const TillView = memo(function TillView({
   onCashMovement,
   onClose,
 }: TillViewProps) {
+  const { dateTime } = useDateFormat()
   const [floatMinor, setFloatMinor] = useState(0)
   const [movementMinor, setMovementMinor] = useState(0)
   const [movementReason, setMovementReason] = useState('')
   const [countedMinor, setCountedMinor] = useState(0)
   const [varianceReason, setVarianceReason] = useState('')
+  const [search, setSearch] = useState('')
 
   // Computed in the view because it is a preview of an unsaved count, not a
   // stored fact. The server recomputes it from its own totals on close.
   const previewVariance = totals != null ? countedMinor - totals.expectedCashMinor : null
+
+  const abandonedRows = useMemo(
+    () =>
+      abandoned.filter((item) =>
+        matchesSearch(search, [dateTime(item.openedAt), item.orderCount, item.openedBy]),
+      ),
+    [abandoned, dateTime, search],
+  )
+
+  const abandonedColumns = useMemo<TableColumn<AbandonedSession>[]>(
+    () => [
+      {
+        id: 'openedAt',
+        labelKey: 'till.opened_at',
+        labelFallback: 'زمان باز شدن',
+        locked: true,
+        sortValue: (item) => item.openedAt,
+        render: (item) => (
+          <span className="text-[hsl(var(--fg-primary))]">{dateTime(item.openedAt)}</span>
+        ),
+      },
+      {
+        id: 'hoursOpen',
+        labelKey: 'till.hours_open',
+        labelFallback: 'ساعت باز',
+        align: 'end',
+        sortValue: (item) => item.hoursOpen,
+        render: (item) => (
+          <span className="tabular-nums text-[hsl(var(--fg-secondary))]">
+            {Math.round(item.hoursOpen)}
+            {t('till.hours_short', 'س')}
+          </span>
+        ),
+      },
+      {
+        id: 'orderCount',
+        labelKey: 'till.orders',
+        labelFallback: 'فروش‌ها',
+        align: 'end',
+        showFrom: 'md',
+        sortValue: (item) => item.orderCount,
+        render: (item) => <span className="tabular-nums">{item.orderCount}</span>,
+      },
+      {
+        id: 'expectedCash',
+        labelKey: 'till.expected_cash',
+        labelFallback: 'نقد مورد انتظار',
+        align: 'end',
+        sortValue: (item) => item.expectedCashMinor,
+        render: (item) => <Money minor={item.expectedCashMinor} />,
+      },
+    ],
+    [dateTime, t],
+  )
 
   return (
     <CapabilityPage>
@@ -97,18 +167,50 @@ export const TillView = memo(function TillView({
         }
       />
 
-      {error ? (
+      {actionError ? <ErrorNote message={actionError} /> : null}
+
+      {isLoading ? (
+        <Loading label={t('common.loading', 'در حال بارگذاری…')} />
+      ) : error ? (
         <ErrorNote
           message={error}
           onRetry={onRefresh}
           retryLabel={t('common.retry', 'تلاش دوباره')}
         />
       ) : null}
-      {actionError ? <ErrorNote message={actionError} /> : null}
 
-      {isLoading ? <Loading label={t('common.loading', 'در حال بارگذاری…')} /> : null}
+      {session && totals ? (
+        <StatGrid>
+          <Stat
+            icon={ShoppingCart}
+            label={t('till.orders', 'فروش‌ها')}
+            value={totals.orderCount}
+            hint={
+              totals.voidedCount > 0
+                ? `${t('till.voided', 'ابطال‌شده')}: ${totals.voidedCount}`
+                : undefined
+            }
+          />
+          <Stat
+            icon={Banknote}
+            label={t('till.gross_sales', 'فروش ناخالص')}
+            value={<Money minor={totals.grossSalesMinor} />}
+          />
+          <Stat
+            icon={Wallet}
+            label={t('till.expected_cash', 'نقد مورد انتظار')}
+            value={<Money minor={totals.expectedCashMinor} />}
+            hint={t('till.expected_hint', 'محاسبه‌ی سرور — قابل ویرایش نیست')}
+          />
+          <Stat
+            icon={Coins}
+            label={t('till.opening_float', 'نقد اولیه')}
+            value={<Money minor={session.openingFloatMinor} tone="muted" />}
+          />
+        </StatGrid>
+      ) : null}
 
-      {!isLoading && !session ? (
+      {!isLoading && !error && !session ? (
         <Panel
           title={t('till.open_title', 'صندوق بسته است')}
           description={t('till.open_hint', 'مبلغ نقد اولیه‌ی داخل صندوق را وارد کنید.')}
@@ -133,39 +235,10 @@ export const TillView = memo(function TillView({
         <>
           <Panel
             title={t('till.session_title', 'صندوق باز')}
-            description={
-              t('till.opened_at', 'زمان باز شدن') +
-              ': ' +
-              session.openedAt.slice(0, 16).replace('T', ' ')
-            }
+            description={t('till.opened_at', 'زمان باز شدن') + ': ' + dateTime(session.openedAt)}
             action={<Badge tone="good">{t(`till.status_${session.status}`, session.status)}</Badge>}
           >
-            <StatGrid>
-              <Stat
-                label={t('till.orders', 'فروش‌ها')}
-                value={totals.orderCount}
-                hint={
-                  totals.voidedCount > 0
-                    ? `${t('till.voided', 'ابطال‌شده')}: ${totals.voidedCount}`
-                    : undefined
-                }
-              />
-              <Stat
-                label={t('till.gross_sales', 'فروش ناخالص')}
-                value={<Money minor={totals.grossSalesMinor} />}
-              />
-              <Stat
-                label={t('till.expected_cash', 'نقد مورد انتظار')}
-                value={<Money minor={totals.expectedCashMinor} />}
-                hint={t('till.expected_hint', 'محاسبه‌ی سرور — قابل ویرایش نیست')}
-              />
-              <Stat
-                label={t('till.opening_float', 'نقد اولیه')}
-                value={<Money minor={session.openingFloatMinor} tone="muted" />}
-              />
-            </StatGrid>
-
-            <div className="mt-4 grid gap-2 sm:grid-cols-5">
+            <div className="grid gap-2 sm:grid-cols-5">
               {METHOD_ORDER.map((method) => (
                 <div
                   key={method}
@@ -289,27 +362,37 @@ export const TillView = memo(function TillView({
         </>
       ) : null}
 
-      {abandoned.length > 0 ? (
-        <Panel
-          title={t('till.abandoned_title', 'صندوق‌های رها شده')}
-          description={t('till.abandoned_hint', 'پولی که در صندوقی است که کسی به آن دسترسی ندارد.')}
-        >
-          <ul className="divide-y divide-[hsl(var(--border-default))]">
-            {abandoned.map((item) => (
-              <li
-                key={item.sessionId}
-                className="flex items-center justify-between gap-3 py-2 text-sm"
-              >
-                <span className="text-[hsl(var(--fg-tertiary))]">
-                  {item.openedAt.slice(0, 10)} · {Math.round(item.hoursOpen)}
-                  {t('till.hours_short', 'س')} · {item.orderCount}
-                </span>
-                <Money minor={item.expectedCashMinor} />
-              </li>
-            ))}
-          </ul>
-        </Panel>
-      ) : null}
+      <ListSection
+        title={t('till.abandoned_title', 'صندوق‌های رها شده')}
+        description={t('till.abandoned_hint', 'پولی که در صندوقی است که کسی به آن دسترسی ندارد.')}
+      >
+        {isAbandonedLoading ? (
+          <Loading label={t('common.loading', 'در حال بارگذاری…')} />
+        ) : abandonedError ? (
+          <ErrorNote
+            message={abandonedError}
+            onRetry={onRefresh}
+            retryLabel={t('common.retry', 'تلاش دوباره')}
+          />
+        ) : (
+          <DataTable
+            tableId="till-abandoned"
+            t={t}
+            rows={abandonedRows}
+            columns={abandonedColumns}
+            rowKey={(item) => item.sessionId}
+            searchValue={search}
+            onSearchChange={setSearch}
+            minWidthClass="min-w-[420px]"
+            emptyState={
+              <EmptyState
+                icon="search"
+                title={t('till.abandoned_empty', 'صندوق رها شده‌ای نیست')}
+              />
+            }
+          />
+        )}
+      </ListSection>
     </CapabilityPage>
   )
 })

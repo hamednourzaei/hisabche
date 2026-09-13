@@ -15,7 +15,11 @@ export {
   isTokenProviderReady,
   tokenReady,
 } from './lib/tokenProvider'
-export { setOnUnauthorized } from './lib/client'
+export {
+  setOnUnauthorized,
+  setOnSubscriptionExpired,
+  SUBSCRIPTION_EXPIRED_CODE,
+} from './lib/client'
 
 // ─── Storage Adapter (platform agnostic) ──────────────────
 export {
@@ -41,6 +45,8 @@ export {
   useDeleteInvoice,
   invoiceKeys,
   type InvoiceWithCustomer,
+  type InvoiceListSummary,
+  type InvoiceSummaryBucket,
 } from './hooks/invoices'
 
 // ─── Products ─────────────────────────────────────────────
@@ -51,6 +57,7 @@ export {
   useUpdateProduct,
   useDeleteProduct,
   productKeys,
+  type StockSummary,
 } from './hooks/products'
 
 // ─── Customers ────────────────────────────────────────────
@@ -327,6 +334,8 @@ export {
   type BillingPlan,
   type UsageReport,
   type TrialStatus,
+  type SubscriptionAccess,
+  type CurrentSubscription,
 } from './hooks/billing'
 
 // ─── Notifications ─────────────────────────────────────────

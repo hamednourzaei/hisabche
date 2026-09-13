@@ -17,6 +17,7 @@ import { WorkspaceService } from '../services/workspace.service'
 import { BackupService } from '../services/workspace/backup.service'
 import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
+import { requireActiveSubscriptionForWorkspaceParam } from '../middleware/subscription.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 
@@ -154,7 +155,7 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/workspaces/:id',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireActiveSubscriptionForWorkspaceParam],
       schema: { body: toJsonSchema(updateWorkspaceBodySchema) },
     },
     async (req, reply) => {
@@ -203,7 +204,7 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/workspaces/:id/members/role',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireActiveSubscriptionForWorkspaceParam],
       schema: { body: toJsonSchema(updateMemberRoleSchema) },
     },
     async (req, reply) => {
@@ -230,7 +231,7 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
   fastify.delete(
     '/api/workspaces/:id/members/:memberId',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireActiveSubscriptionForWorkspaceParam],
     },
     async (req, reply) => {
       try {
@@ -293,7 +294,7 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/workspaces/:id/invites',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireActiveSubscriptionForWorkspaceParam],
       schema: { body: toJsonSchema(createInviteSchema.omit({ workspaceId: true })) },
     },
     async (req, reply) => {
@@ -355,7 +356,7 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/workspaces/:id/members/direct',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireActiveSubscriptionForWorkspaceParam],
       schema: { body: toJsonSchema(createMemberDirectBodySchema) },
     },
     async (req, reply) => {
@@ -388,7 +389,7 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
   fastify.patch(
     '/api/workspaces/:id/members/suspension',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireActiveSubscriptionForWorkspaceParam],
       schema: { body: toJsonSchema(setMemberSuspensionSchema) },
     },
     async (req, reply) => {
@@ -418,7 +419,7 @@ export async function workspaceRoutes(fastify: FastifyInstance) {
   fastify.delete(
     '/api/workspaces/:id/invites/:inviteId',
     {
-      preHandler: [authenticate],
+      preHandler: [authenticate, requireActiveSubscriptionForWorkspaceParam],
     },
     async (req, reply) => {
       try {

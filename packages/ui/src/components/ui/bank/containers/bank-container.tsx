@@ -7,10 +7,13 @@
 import { memo, useCallback, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
+  asList,
   useBankStatements,
   useMatchSuggestions,
   useReconcileLine,
   useReconciliation,
+  type BankStatement,
+  type MatchSuggestion,
 } from '@hisabche/api'
 import { BankView } from '../bank-view'
 
@@ -25,7 +28,7 @@ export const BankContainer = memo(function BankContainer() {
   const [actionError, setActionError] = useState<string | null>(null)
 
   const statements = useBankStatements()
-  const statementList = statements.data ?? []
+  const statementList = asList<BankStatement>(statements.data)
 
   // The newest statement is the default, DERIVED rather than stored. An effect
   // that writes state on load costs a cascading render, and a stored default
@@ -68,10 +71,15 @@ export const BankContainer = memo(function BankContainer() {
       t={t}
       statements={statementList}
       selectedId={selectedId}
-      suggestions={suggestions.data?.suggestions ?? []}
+      suggestions={asList<MatchSuggestion>(suggestions.data?.suggestions)}
       reconciliation={reconciliation.data ?? null}
       isLoading={statements.isLoading}
       isDetailLoading={Boolean(selectedId) && (suggestions.isLoading || reconciliation.isLoading)}
+      detailError={
+        selectedId && (suggestions.error || reconciliation.error)
+          ? ((suggestions.error ?? reconciliation.error) as Error).message
+          : null
+      }
       error={statements.error ? (statements.error as Error).message : null}
       actionError={actionError}
       isBusy={reconcile.isPending}

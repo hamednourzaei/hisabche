@@ -19,12 +19,14 @@ const DEFAULT_FILTERS: InvoicesQueryParams = {
 }
 
 /**
- * ✅ FIX: کارت‌های آمار قبلاً فقط روی همان صفحه‌ی جاری (۱۰ فاکتور) حساب
- * می‌شدند — یعنی کاربری با ۳۰ فاکتور، عدد ۱۰ می‌دید. حالا یک کوئری جدا با
- * سقف بالا فقط برای آمار زده می‌شود تا شمارش و مجموع‌ها کل فاکتورها را
- * پوشش دهند، بدون آن‌که اندازه‌ی صفحه‌ی جدول تغییر کند.
+ * The stat cards read `summary`, which the server computes over EVERY invoice
+ * matching the search. The rows of this query feed only the CSV export.
+ *
+ * ⚠️ This was `500` and the cards summed the rows. The route caps a page at
+ * 100 whatever is asked, so «۵۰۰» never happened: a business with more than
+ * 100 invoices read its latest hundred as its totals. 100 is what it gets.
  */
-const STATS_LIMIT = 500
+const STATS_LIMIT = 100
 
 // ─── Main Hook ─────────────────────────────────────────────────────────────
 
@@ -57,6 +59,7 @@ export function useInvoicesPage() {
     page: 1,
     limit: STATS_LIMIT,
     sortDirection: 'desc',
+    includeSummary: true,
     ...(filters.search ? { search: filters.search } : {}),
   })
   const deleteInvoice = useDeleteInvoice()
@@ -70,11 +73,14 @@ export function useInvoicesPage() {
     [data, lang],
   )
 
-  /** همه‌ی فاکتورهای منطبق با فیلتر — فقط برای کارت‌های آمار. */
+  /** One page of matching invoices — for the CSV export only, never for a figure. */
   const statsInvoices = useMemo(
     () => mapInvoices(statsData?.invoices as any[] | undefined, lang),
     [statsData, lang],
   )
+
+  /** `null` when the server sent no summary — the cards are then not shown. */
+  const statsSummary = statsData?.summary ?? null
 
   const total = data?.total ?? 0
 
@@ -135,6 +141,7 @@ export function useInvoicesPage() {
   return {
     invoices,
     statsInvoices,
+    statsSummary,
     isLoading,
     total,
     searchValue: filters.search ?? '',

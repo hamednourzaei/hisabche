@@ -146,6 +146,7 @@ cd apps/admin     && npx tsc --noEmit
 **سریالایز و داده**
 
 - fast-json-stringify فقط چیزی را می‌فرستد که schema نام برده باشد، و `null` را روی `{type:'string'}` به `""` **جایگزین** می‌کند (خطا نمی‌دهد). فیلد nullable باید `['string','null']` باشد.
+- embed در PostgREST (`table!left(...)`) فقط روی **foreign key واقعی** resolve می‌شود؛ وگرنه `PGRST200` و کل کوئری شکست. ⚠️ درباره‌ی FK **تعمیم نده**: `invoices→customers` ندارد، ولی `boms`/`bom_items`/`pos_*` دارند (روی دیتابیس زنده تأیید شد). همان جفت را با `pg_constraint` چک کن.
 - `toJsonSchema` باید **بازگشتی** باشد؛ یک `z.object()` تودرتو بدون `properties` یعنی کل آبجکت خالی می‌رود.
 
 **تقویم و زبان**

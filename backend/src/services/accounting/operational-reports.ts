@@ -18,6 +18,7 @@ import { memoryCache } from '../../utils/pagination'
 import type { TenancyContext } from '../tenancy.service'
 
 import { round2 } from './accounting.domain'
+import { fetchCustomerDebtAggregate } from '../aggregates/ledger-aggregates'
 
 interface CashFlowSection {
   inflow: number
@@ -98,6 +99,15 @@ export async function getCustomerDebtReport(ctx: TenancyContext) {
 
   const cached = await memoryCache.get(cacheKey)
   if (cached) return cached
+
+  // ⚠️ AGGREGATED IN POSTGRES FIRST. Both reads below are capped by PostgREST
+  // max-rows (1000): debtors past that vanished and totals were understated.
+  // They run only while `accounting_customer_debt` is not installed.
+  const aggregate = await fetchCustomerDebtAggregate(workspaceId)
+  if (aggregate) {
+    await memoryCache.set(cacheKey, aggregate, 120)
+    return aggregate
+  }
 
   const [customersResult, invoicesResult] = await Promise.all([
     supabase

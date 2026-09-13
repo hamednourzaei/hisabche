@@ -98,6 +98,17 @@ export const productFiltersSchema = z.object({
 
   barcode: z.string().optional(),
 
+  /**
+   * Ask the list to also return `summary` — stock value and stock-state counts
+   * computed server-side over EVERY product in the workspace, not the page.
+   */
+  includeSummary: z
+    .union([z.boolean(), z.string()])
+    .transform((value) =>
+      typeof value === 'boolean' ? value : ['true', '1', 'yes'].includes(value.toLowerCase()),
+    )
+    .optional(),
+
   // ✅ FIX: page با default و coerce
   page: z
     .union([z.number(), z.string()])

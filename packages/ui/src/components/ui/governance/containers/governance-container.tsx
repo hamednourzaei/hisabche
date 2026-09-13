@@ -6,7 +6,15 @@
 
 import { memo, useCallback, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { useSoD, useSoDOverrides, useSaveSoD, type SoDMode } from '@hisabche/api'
+import {
+  asList,
+  useSoD,
+  useSoDOverrides,
+  useSaveSoD,
+  type SoDMode,
+  type SoDOverride,
+  type SoDRule,
+} from '@hisabche/api'
 import { GovernanceView } from '../governance-view'
 
 export const GovernanceContainer = memo(function GovernanceContainer() {
@@ -62,8 +70,10 @@ export const GovernanceContainer = memo(function GovernanceContainer() {
     <GovernanceView
       t={t}
       settings={sod.data?.settings ?? null}
-      rules={sod.data?.rules ?? []}
-      overrides={overrides.data ?? []}
+      rules={asList<SoDRule>(sod.data?.rules)}
+      overrides={asList<SoDOverride>(overrides.data)}
+      isOverridesLoading={overrides.isLoading}
+      overridesError={overrides.error ? (overrides.error as Error).message : null}
       isLoading={sod.isLoading}
       error={sod.error ? (sod.error as Error).message : null}
       actionError={actionError}

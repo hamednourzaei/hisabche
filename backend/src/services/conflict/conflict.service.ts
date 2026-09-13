@@ -46,9 +46,57 @@ export interface ConflictRow {
   resolvedBy: string | null
   resolvedAt: string | null
   createdAt: string
+  /**
+   * A person-readable name for the record (product name, customer name,
+   * invoice number), or null when the type has none or the record is gone.
+   * Read from the record's own table, scoped by workspace — never from the
+   * device payload, which is the side under dispute.
+   */
+  entityLabel: string | null
 }
 
-function mapConflict(raw: Record<string, any>): ConflictRow {
+/** Which column names each entity, for the types that have one. */
+const LABEL_COLUMNS: Partial<Record<ConflictEntity, { table: string; column: string }>> = {
+  product: { table: 'products', column: 'name' },
+  customer: { table: 'customers', column: 'full_name' },
+  invoice: { table: 'invoices', column: 'invoice_number' },
+}
+
+async function attachLabels(
+  workspaceId: string,
+  rows: Omit<ConflictRow, 'entityLabel'>[],
+): Promise<ConflictRow[]> {
+  const labels = new Map<string, string>()
+
+  for (const [entity, target] of Object.entries(LABEL_COLUMNS)) {
+    if (!target) continue
+    const ids = [...new Set(rows.filter((r) => r.entityType === entity).map((r) => r.entityId))]
+    if (ids.length === 0) continue
+
+    const { data, error } = await supabase
+      .from(target.table)
+      .select(`id, ${target.column}`)
+      .eq('workspace_id', workspaceId)
+      .in('id', ids)
+
+    // A broken lookup is an error, not "this record has no name".
+    if (error) throw new DatabaseError('Failed to resolve conflict record names', error)
+
+    for (const record of (data ?? []) as unknown as Record<string, unknown>[]) {
+      const value = record[target.column]
+      if (typeof value === 'string' && value.trim() !== '') {
+        labels.set(`${entity}:${String(record.id)}`, value)
+      }
+    }
+  }
+
+  return rows.map((row) => ({
+    ...row,
+    entityLabel: labels.get(`${row.entityType}:${row.entityId}`) ?? null,
+  }))
+}
+
+function mapConflict(raw: Record<string, any>): Omit<ConflictRow, 'entityLabel'> {
   return {
     id: raw.id,
     entityType: raw.entity_type,
@@ -268,7 +316,7 @@ export class ConflictService {
 
     const { data, error } = await query
     if (error) throw new DatabaseError('Failed to fetch conflicts', error)
-    return (data ?? []).map(mapConflict)
+    return attachLabels(ctx.workspaceId, (data ?? []).map(mapConflict))
   }
 
   async get(ctx: TenancyContext, id: string): Promise<ConflictRow> {
@@ -281,7 +329,8 @@ export class ConflictService {
 
     if (error) throw new DatabaseError('Failed to fetch conflict', error)
     if (!data) throw new NotFoundError('Conflict')
-    return mapConflict(data)
+    const [row] = await attachLabels(ctx.workspaceId, [mapConflict(data)])
+    return row!
   }
 
   /**

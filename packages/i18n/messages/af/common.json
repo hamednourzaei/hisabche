@@ -1450,7 +1450,8 @@
       "pack": "بسته",
       "unknown": "واحد ناشناخته"
     },
-    "bulkDeleteConfirm": "اجناس انتخاب‌شده حذف شوند؟"
+    "bulkDeleteConfirm": "اجناس انتخاب‌شده حذف شوند؟",
+    "stockStatus": "وضعیت موجودی"
   },
   "customers": {
     "title": "مشتری‌ها",
@@ -1918,7 +1919,10 @@
     "viewSwitch": "نمای نمودار",
     "activityColumnDate": "تاریخ",
     "viewTrend": "روند فروش",
-    "viewFunnel": "قیف تبدیل"
+    "viewFunnel": "قیف تبدیل",
+    "rangeSales": "فروش",
+    "vsPrevious": "نسبت به",
+    "daysBefore": "روز قبل"
   },
   "quickInvoice": {
     "title": "فاکتور سریع",
@@ -2720,7 +2724,10 @@
       "approved": "تأیید شده",
       "rejected": "رد شده",
       "cancelled": "لغو شده"
-    }
+    },
+    "status_filter": "وضعیت درخواست",
+    "awaiting_total": "کل درخواست‌های منتظر",
+    "no_match": "درخواستی با این وضعیت نیست"
   },
   "action": {
     "clear": "پاک کردن",
@@ -3012,7 +3019,9 @@
     "methodLabel": "نام روش",
     "methodLabelPlaceholder": "مثلاً چک",
     "notLinkedTitle": "این خط‌ها به محصول انبار وصل نیستند و موجودی را تغییر نمی‌دهند",
-    "notLinkedHint": "برای کم شدن موجودی، محصول را از فهرست انبار انتخاب کنید."
+    "notLinkedHint": "برای کم شدن موجودی، محصول را از فهرست انبار انتخاب کنید.",
+    "oversoldTitle": "موجودی این کالاها با این فاکتور منفی می‌شود",
+    "oversoldHint": "ثبت انجام می‌شود، اما موجودی انبار منفی خواهد شد. اگر خرید ثبت نشده، ابتدا آن را ثبت کنید."
   },
   "admin": {
     "dashboard": {
@@ -3232,7 +3241,9 @@
     "method_card": "کارت",
     "method_transfer": "حواله",
     "method_credit": "نسیه",
-    "method_other": "سایر"
+    "method_other": "سایر",
+    "hours_open": "ساعت باز",
+    "abandoned_empty": "صندوق رها شده‌ای نیست"
   },
   "assets": {
     "title": "دارایی‌های ثابت",
@@ -3262,7 +3273,11 @@
     "empty_hint": "دارایی ثابت از فاکتور خرید یا از تنظیمات حسابداری ثبت می‌شود.",
     "method_straight_line": "خط مستقیم",
     "method_declining": "نزولی",
-    "method_declining_then_straight": "نزولی سپس خط مستقیم"
+    "method_declining_then_straight": "نزولی سپس خط مستقیم",
+    "stat_total": "تعداد دارایی‌ها",
+    "stat_active_cost": "قیمت تمام‌شده‌ی دارایی‌های فعال",
+    "no_match": "دارایی‌ای با این فیلتر نیست",
+    "schedule_empty": "دوره‌ای در جدول نیست"
   },
   "bank": {
     "title": "مغایرت‌گیری بانکی",
@@ -3293,7 +3308,9 @@
     "reason_exact_amount": "مبلغ یکسان",
     "reason_amount_within_tolerance": "مبلغ نزدیک",
     "reason_party_name": "نام طرف حساب",
-    "reason_date_proximity": "نزدیکی تاریخ"
+    "reason_date_proximity": "نزدیکی تاریخ",
+    "confidence": "اطمینان",
+    "reasons": "دلایل"
   },
   "budgets": {
     "title": "بودجه",
@@ -3326,7 +3343,12 @@
     "action_warn": "هشدار",
     "action_track": "فقط ثبت",
     "code_BUDGET_EXCEEDED": "از سقف بودجه عبور می‌کند",
-    "code_BUDGET_WARNING": "به آستانه‌ی هشدار رسیده"
+    "code_BUDGET_WARNING": "به آستانه‌ی هشدار رسیده",
+    "stat_total": "تعداد بودجه‌ها",
+    "stat_blocking": "بودجه‌های مسدودکننده",
+    "stat_overspent": "دوره‌های بیش از بودجه",
+    "no_match": "بودجه‌ای با این فیلتر نیست",
+    "variance_empty": "انحرافی ثبت نشده"
   },
   "timesheets": {
     "title": "کارکرد و صورتحساب",
@@ -3359,7 +3381,9 @@
     "unbillable": "کارکرد غیرقابل صورتحساب",
     "method_hourly": "ساعتی",
     "method_fixed": "مقطوع",
-    "method_non_billable": "غیرقابل صورتحساب"
+    "method_non_billable": "غیرقابل صورتحساب",
+    "amount": "مبلغ",
+    "preview_empty": "کارکرد بل‌نشده‌ای نیست"
   },
   "expiry": {
     "title": "انقضا و بچ",
@@ -3384,7 +3408,8 @@
     "state_expired": "منقضی",
     "state_near_expiry": "نزدیک انقضا",
     "state_fresh": "سالم",
-    "state_no_expiry": "بدون انقضا"
+    "state_no_expiry": "بدون انقضا",
+    "no_match": "بچی با این فیلتر نیست"
   },
   "conflicts": {
     "title": "تعارض‌های آفلاین",
@@ -3439,7 +3464,44 @@
     "op_create": "ایجاد",
     "op_update": "ویرایش",
     "op_delete": "حذف",
-    "openRecord": "مشاهده‌ی رکورد"
+    "openRecord": "مشاهده‌ی رکورد",
+    "col_what": "چه چیز",
+    "col_happened": "چه اتفاق افتاد",
+    "col_difference": "تفاوت",
+    "col_severity": "اهمیت",
+    "col_status": "وضعیت",
+    "col_time": "زمان",
+    "col_actions": "تصمیم",
+    "not_recorded": "ثبت نشده",
+    "no_difference": "تفاوتی ثبت نشده",
+    "non_financial": "غیرمالی",
+    "unnamed_record": "ریکارد بی‌نام",
+    "view_decision": "دیدن تصمیم",
+    "op_negative_stock": "موجودی منفی شد",
+    "field_quantity": "تعداد",
+    "field_shortfall": "کمبود",
+    "field_buy_price": "قیمت خرید",
+    "field_sell_price": "قیمت فروش",
+    "field_opening_balance": "بیلانس آغاز دوره",
+    "field_total": "مجموع",
+    "field_subtotal": "مجموع فرعی",
+    "field_discount_total": "تخفیف",
+    "field_tax_total": "مالیه",
+    "field_paid_amount": "مبلغ پرداخت‌شده",
+    "field_currency": "اسعار",
+    "field_type": "نوع",
+    "field_customer_id": "مشتری",
+    "field_supplier_id": "تأمین‌کننده",
+    "field_status": "وضعیت",
+    "field_date": "تاریخ",
+    "field_items": "اقلام",
+    "field_amount": "مبلغ",
+    "field_direction": "جهت",
+    "field_party_id": "طرف حساب",
+    "field_party_type": "نوع طرف حساب",
+    "field_entry_date": "تاریخ ثبت",
+    "field_lines": "سطرها",
+    "field_entry_number": "شماره‌ی سند"
   },
   "governance": {
     "title": "تفکیک وظایف",
@@ -3464,7 +3526,10 @@
     "overrides": "موارد نادیده‌گرفته‌شده",
     "overrides_hint": "کاری که با وجود تعارض انجام شد. کسی باید این را بخواند.",
     "no_overrides": "موردی ثبت نشده.",
-    "warn_hint": "در حالت هشدار، همین فهرست خودِ کنترل است."
+    "warn_hint": "در حالت هشدار، همین فهرست خودِ کنترل است.",
+    "conflicts": "در تعارض با",
+    "toggle": "روشن / خاموش",
+    "no_rules": "قاعده‌ای نیست"
   },
   "migration": {
     "title": "انتقال داده",

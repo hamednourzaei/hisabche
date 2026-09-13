@@ -10,7 +10,14 @@
 import { memo, useCallback, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { useConflict, useConflicts, useResolveConflict, type ResolutionChoice } from '@hisabche/api'
+import {
+  asList,
+  useConflict,
+  useConflicts,
+  useResolveConflict,
+  type Conflict,
+  type ResolutionChoice,
+} from '@hisabche/api'
 import { ConflictsView } from '../conflicts-view'
 
 export const ConflictsContainer = memo(function ConflictsContainer() {
@@ -27,7 +34,7 @@ export const ConflictsContainer = memo(function ConflictsContainer() {
   const [actionError, setActionError] = useState<string | null>(null)
 
   const conflicts = useConflicts(status)
-  const list = conflicts.data ?? []
+  const list = asList<Conflict>(conflicts.data)
 
   // Nothing is selected by default. Unlike a bank statement, the first row here
   // is not the one somebody came for — opening a financial decision the person
@@ -54,6 +61,9 @@ export const ConflictsContainer = memo(function ConflictsContainer() {
       resolve.mutate(
         { conflictId: selectedId, ...input },
         {
+          // The dialog closes only once the server has accepted the decision;
+          // a refusal keeps it open with the reason still typed.
+          onSuccess: () => setChosenId(null),
           onError: (err) => {
             // Server refusals are shown verbatim: CONFLICT_ALREADY_RESOLVED and
             // CONFLICT_MERGE_FIELD_UNKNOWN each tell the person something they
@@ -68,6 +78,11 @@ export const ConflictsContainer = memo(function ConflictsContainer() {
     },
     [resolve, selectedId],
   )
+
+  const handleSelect = useCallback((id: string | null) => {
+    setActionError(null)
+    setChosenId(id)
+  }, [])
 
   const handleRefresh = useCallback(() => {
     setActionError(null)
@@ -100,7 +115,7 @@ export const ConflictsContainer = memo(function ConflictsContainer() {
       // permissions is one that drifts from the server's.
       canResolve={true}
       onStatusChange={handleStatusChange}
-      onSelect={setChosenId}
+      onSelect={handleSelect}
       onResolve={handleResolve}
       onOpenRecord={(route) => router.push(route)}
       onRefresh={handleRefresh}

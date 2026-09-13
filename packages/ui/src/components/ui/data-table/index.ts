@@ -5,6 +5,7 @@ export { useBulkAction, type BulkActionResult, type BulkActionState } from './us
 export { TableToolbar, type TableToolbarProps } from './table-toolbar'
 export { SortableHeader } from './sortable-header'
 export { useTableState, type TableState } from './use-table-state'
+export { matchesSearch } from './match-search'
 export {
   VISIBILITY_CLASS,
   compareValues,

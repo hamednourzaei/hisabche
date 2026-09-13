@@ -1441,7 +1441,8 @@
       "pack": "Pack",
       "unknown": "Unknown unit"
     },
-    "bulkDeleteConfirm": "Delete the selected products?"
+    "bulkDeleteConfirm": "Delete the selected products?",
+    "stockStatus": "Stock status"
   },
   "customers": {
     "title": "Customers",
@@ -1909,7 +1910,10 @@
     "viewSwitch": "Chart view",
     "activityColumnDate": "Date",
     "viewTrend": "Sales trend",
-    "viewFunnel": "Conversion funnel"
+    "viewFunnel": "Conversion funnel",
+    "rangeSales": "Sales",
+    "vsPrevious": "vs the previous",
+    "daysBefore": "days"
   },
   "quickInvoice": {
     "title": "Quick Invoice",
@@ -2711,7 +2715,10 @@
       "approved": "Approved",
       "rejected": "Rejected",
       "cancelled": "Cancelled"
-    }
+    },
+    "status_filter": "Request status",
+    "awaiting_total": "Total awaiting",
+    "no_match": "No requests with this status"
   },
   "action": {
     "clear": "Clear",
@@ -3003,7 +3010,9 @@
     "methodLabel": "Method name",
     "methodLabelPlaceholder": "e.g. cheque",
     "notLinkedTitle": "These lines are not linked to a warehouse product and will not change stock",
-    "notLinkedHint": "To reduce stock, pick the product from the warehouse list."
+    "notLinkedHint": "To reduce stock, pick the product from the warehouse list.",
+    "oversoldTitle": "This invoice takes these products below zero stock",
+    "oversoldHint": "The invoice will save, but warehouse stock will go negative. If a purchase has not been recorded, record it first."
   },
   "admin": {
     "dashboard": {
@@ -3223,7 +3232,9 @@
     "method_card": "Card",
     "method_transfer": "Transfer",
     "method_credit": "Credit",
-    "method_other": "Other"
+    "method_other": "Other",
+    "hours_open": "Hours open",
+    "abandoned_empty": "No abandoned drawers"
   },
   "assets": {
     "title": "Fixed assets",
@@ -3253,7 +3264,11 @@
     "empty_hint": "An asset is created from a purchase invoice or from accounting settings.",
     "method_straight_line": "Straight line",
     "method_declining": "Declining balance",
-    "method_declining_then_straight": "Declining, then straight line"
+    "method_declining_then_straight": "Declining, then straight line",
+    "stat_total": "Assets",
+    "stat_active_cost": "Cost of active assets",
+    "no_match": "No assets match this filter",
+    "schedule_empty": "No periods in the schedule"
   },
   "bank": {
     "title": "Bank reconciliation",
@@ -3284,7 +3299,9 @@
     "reason_exact_amount": "Same amount",
     "reason_amount_within_tolerance": "Amount close",
     "reason_party_name": "Party name",
-    "reason_date_proximity": "Dates close"
+    "reason_date_proximity": "Dates close",
+    "confidence": "Confidence",
+    "reasons": "Reasons"
   },
   "budgets": {
     "title": "Budgets",
@@ -3317,7 +3334,12 @@
     "action_warn": "Warn",
     "action_track": "Track only",
     "code_BUDGET_EXCEEDED": "This exceeds the budget",
-    "code_BUDGET_WARNING": "This reaches the warning threshold"
+    "code_BUDGET_WARNING": "This reaches the warning threshold",
+    "stat_total": "Budgets",
+    "stat_blocking": "Blocking budgets",
+    "stat_overspent": "Periods over budget",
+    "no_match": "No budgets match this filter",
+    "variance_empty": "No variance recorded"
   },
   "timesheets": {
     "title": "Timesheets and billing",
@@ -3350,7 +3372,9 @@
     "unbillable": "Unbillable time",
     "method_hourly": "Hourly",
     "method_fixed": "Fixed price",
-    "method_non_billable": "Non-billable"
+    "method_non_billable": "Non-billable",
+    "amount": "Amount",
+    "preview_empty": "No unbilled time"
   },
   "expiry": {
     "title": "Expiry and batches",
@@ -3375,7 +3399,8 @@
     "state_expired": "Expired",
     "state_near_expiry": "Near expiry",
     "state_fresh": "Fresh",
-    "state_no_expiry": "No expiry"
+    "state_no_expiry": "No expiry",
+    "no_match": "No batches match this filter"
   },
   "conflicts": {
     "title": "Offline conflicts",
@@ -3430,7 +3455,44 @@
     "op_create": "Create",
     "op_update": "Update",
     "op_delete": "Delete",
-    "openRecord": "Open record"
+    "openRecord": "Open record",
+    "col_what": "What",
+    "col_happened": "What happened",
+    "col_difference": "Difference",
+    "col_severity": "Severity",
+    "col_status": "Status",
+    "col_time": "Time",
+    "col_actions": "Decision",
+    "not_recorded": "Not recorded",
+    "no_difference": "No difference recorded",
+    "non_financial": "Non-financial",
+    "unnamed_record": "Unnamed record",
+    "view_decision": "View decision",
+    "op_negative_stock": "Stock went negative",
+    "field_quantity": "Quantity",
+    "field_shortfall": "Shortfall",
+    "field_buy_price": "Buy price",
+    "field_sell_price": "Sell price",
+    "field_opening_balance": "Opening balance",
+    "field_total": "Total",
+    "field_subtotal": "Subtotal",
+    "field_discount_total": "Discount",
+    "field_tax_total": "Tax",
+    "field_paid_amount": "Paid amount",
+    "field_currency": "Currency",
+    "field_type": "Type",
+    "field_customer_id": "Customer",
+    "field_supplier_id": "Supplier",
+    "field_status": "Status",
+    "field_date": "Date",
+    "field_items": "Items",
+    "field_amount": "Amount",
+    "field_direction": "Direction",
+    "field_party_id": "Party",
+    "field_party_type": "Party type",
+    "field_entry_date": "Entry date",
+    "field_lines": "Lines",
+    "field_entry_number": "Entry number"
   },
   "governance": {
     "title": "Separation of duties",
@@ -3455,7 +3517,10 @@
     "overrides": "Overrides",
     "overrides_hint": "Work that went through despite a conflict. Somebody must read this.",
     "no_overrides": "Nothing recorded.",
-    "warn_hint": "In warn mode this list IS the control."
+    "warn_hint": "In warn mode this list IS the control.",
+    "conflicts": "Conflicts with",
+    "toggle": "On / off",
+    "no_rules": "No rules"
   },
   "migration": {
     "title": "Data migration",

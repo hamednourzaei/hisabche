@@ -19,29 +19,46 @@
 //
 // A shortfall is shown as a shortfall. Stock the shop does not have must read
 // as missing, never as a plan that quietly covers less than was asked for.
+//
+// ---------------------------------------------------------------------------
+// LAYOUT — the invoices list structure: header, state filter, stat strip, one
+// shared DataTable of every batch (expired first), then the issue planner.
 // ============================================
 
-import { memo, useState } from 'react'
-import type { AllocationPlan, ExpiryReport, StockBatch } from '@hisabche/api'
+import { memo, useMemo, useState } from 'react'
+import {
+  AlertTriangle,
+  Clock,
+  Infinity as InfinityIcon,
+  Leaf,
+  PackageX,
+  type LucideIcon,
+} from 'lucide-react'
+import type {
+  AllocationPlan,
+  ExpiryBucket,
+  ExpiryReport,
+  ExpiryState,
+  StockBatch,
+} from '@hisabche/api'
+import { useDateFormat } from '../../../hooks/use-date-format'
+import { DataTable, matchesSearch, type TableColumn } from '../data-table'
+import { SegmentedFilter } from '../segmented-filter'
 import {
   ActionButton,
   Badge,
   CapabilityHeader,
   CapabilityPage,
+  EmptyState,
   ErrorNote,
   Field,
+  ListSection,
   Loading,
   Money,
+  NumberField,
   Panel,
   Stat,
   StatGrid,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-  NumberField,
 } from '../capability/capability-kit'
 
 export interface ExpiryViewProps {
@@ -57,16 +74,27 @@ export interface ExpiryViewProps {
   onRefresh: () => void
 }
 
-const STATE_TONE: Record<string, string> = {
+const STATE_TONE: Record<ExpiryState, string> = {
   expired: 'bad',
   near_expiry: 'warn',
   fresh: 'good',
   no_expiry: 'neutral',
 }
 
+const STATE_ICON: Record<ExpiryState, LucideIcon> = {
+  expired: AlertTriangle,
+  near_expiry: Clock,
+  fresh: Leaf,
+  no_expiry: InfinityIcon,
+}
+
 // Expired first. The server already orders the buckets this way; the view
 // states the order it depends on rather than trusting an array's shape.
-const STATE_ORDER = ['expired', 'near_expiry', 'fresh', 'no_expiry']
+const STATE_ORDER: ExpiryState[] = ['expired', 'near_expiry', 'fresh', 'no_expiry']
+
+type StateFilter = 'all' | ExpiryState
+
+type BatchRow = ExpiryBucket['batches'][number] & { state: ExpiryState }
 
 export const ExpiryView = memo(function ExpiryView({
   t,
@@ -80,12 +108,112 @@ export const ExpiryView = memo(function ExpiryView({
   onPlanIssue,
   onRefresh,
 }: ExpiryViewProps) {
+  const { date } = useDateFormat()
   const [productId, setProductId] = useState('')
   const [quantity, setQuantity] = useState(1)
+  const [stateFilter, setStateFilter] = useState<StateFilter>('all')
+  const [search, setSearch] = useState('')
 
-  const buckets = [...(report?.buckets ?? [])].sort(
-    (a, b) => STATE_ORDER.indexOf(a.state) - STATE_ORDER.indexOf(b.state),
+  const buckets = useMemo(
+    () =>
+      [...(report?.buckets ?? [])].sort(
+        (a, b) => STATE_ORDER.indexOf(a.state) - STATE_ORDER.indexOf(b.state),
+      ),
+    [report],
   )
+
+  const rows = useMemo<BatchRow[]>(
+    () =>
+      buckets
+        .filter((bucket) => stateFilter === 'all' || bucket.state === stateFilter)
+        .flatMap((bucket) => bucket.batches.map((batch) => ({ ...batch, state: bucket.state })))
+        .filter((batch) => matchesSearch(search, [batch.batchNumber, batch.productId])),
+    [buckets, search, stateFilter],
+  )
+
+  const columns = useMemo<TableColumn<BatchRow>[]>(
+    () => [
+      {
+        id: 'state',
+        labelKey: 'common.status',
+        labelFallback: 'وضعیت',
+        sortValue: (row) => STATE_ORDER.indexOf(row.state),
+        render: (row) => (
+          <Badge tone={STATE_TONE[row.state]}>{t(`expiry.state_${row.state}`, row.state)}</Badge>
+        ),
+      },
+      {
+        id: 'batch',
+        labelKey: 'expiry.batch',
+        labelFallback: 'بچ',
+        locked: true,
+        sortValue: (row) => row.batchNumber,
+        render: (row) => (
+          <span className="font-mono text-xs" dir="ltr">
+            {row.batchNumber}
+          </span>
+        ),
+      },
+      {
+        id: 'quantity',
+        labelKey: 'expiry.quantity',
+        labelFallback: 'مقدار',
+        align: 'end',
+        sortValue: (row) => row.quantity,
+        render: (row) => <span className="tabular-nums">{row.quantity}</span>,
+      },
+      {
+        id: 'expiryDate',
+        labelKey: 'expiry.expiry_date',
+        labelFallback: 'تاریخ انقضا',
+        showFrom: 'md',
+        sortValue: (row) => row.expiryDate,
+        render: (row) => (
+          <span className="text-[hsl(var(--fg-secondary))]">
+            {row.expiryDate ? date(row.expiryDate) : '—'}
+          </span>
+        ),
+      },
+      {
+        id: 'daysRemaining',
+        labelKey: 'expiry.days_remaining',
+        labelFallback: 'روز باقی‌مانده',
+        align: 'end',
+        sortValue: (row) => row.daysRemaining,
+        render: (row) =>
+          row.daysRemaining == null ? (
+            '—'
+          ) : (
+            <span
+              className={
+                row.daysRemaining < 0
+                  ? 'tabular-nums text-[hsl(var(--color-destructive))]'
+                  : 'tabular-nums'
+              }
+            >
+              {row.daysRemaining}
+            </span>
+          ),
+      },
+    ],
+    [date, t],
+  )
+
+  const filterOptions = useMemo(
+    () => [
+      { value: 'all' as StateFilter, label: t('common.all', 'همه') },
+      ...STATE_ORDER.map((state) => ({
+        value: state as StateFilter,
+        label: t(`expiry.state_${state}`, state),
+      })),
+    ],
+    [t],
+  )
+
+  // «Nothing recorded» is said only when the data actually loaded and holds no
+  // batch at all. Anything else that empties the table is the filter/search.
+  const hasNoBatches =
+    batches.length === 0 && buckets.every((bucket) => bucket.batches.length === 0)
 
   return (
     <CapabilityPage>
@@ -99,93 +227,83 @@ export const ExpiryView = memo(function ExpiryView({
         }
       />
 
-      {error ? (
-        <ErrorNote
-          message={error}
-          onRetry={onRefresh}
-          retryLabel={t('common.retry', 'تلاش دوباره')}
-        />
-      ) : null}
       {actionError ? <ErrorNote message={actionError} /> : null}
 
-      {isLoading ? <Loading label={t('common.loading', 'در حال بارگذاری…')} /> : null}
-
       {report ? (
-        <Panel
-          title={t('expiry.report', 'گزارش انقضا')}
-          description={t('expiry.as_of', 'تا تاریخ') + ': ' + report.asOf}
-        >
-          <StatGrid>
-            <Stat
-              label={t('expiry.expired_value', 'ارزش کالای منقضی')}
-              value={
-                <Money
-                  minor={report.expiredValueMinor}
-                  tone={report.expiredValueMinor > 0 ? 'bad' : 'muted'}
-                />
-              }
-              hint={t('expiry.expired_value_hint', 'در ترازنامه هست، قابل فروش نیست.')}
-            />
-            {buckets.map((bucket) => (
-              <Stat
-                key={bucket.state}
-                label={t(`expiry.state_${bucket.state}`, bucket.state)}
-                value={bucket.totalQuantity}
-                hint={`${bucket.batches.length} ${t('expiry.batches', 'بچ')}`}
-              />
-            ))}
-          </StatGrid>
-        </Panel>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <SegmentedFilter
+            label={t('common.status', 'وضعیت')}
+            value={stateFilter}
+            options={filterOptions}
+            onChange={setStateFilter}
+          />
+          <span className="text-xs text-[hsl(var(--fg-tertiary))]">
+            {t('expiry.as_of', 'تا تاریخ')}: {date(report.asOf)}
+          </span>
+        </div>
       ) : null}
 
-      {buckets
-        .filter((bucket) => bucket.batches.length > 0 && bucket.state !== 'no_expiry')
-        .map((bucket) => (
-          <Panel
-            key={bucket.state}
-            title={t(`expiry.state_${bucket.state}`, bucket.state)}
-            action={
-              <Badge tone={STATE_TONE[bucket.state] ?? 'neutral'}>{bucket.totalQuantity}</Badge>
+      {report ? (
+        <StatGrid>
+          <Stat
+            icon={PackageX}
+            label={t('expiry.expired_value', 'ارزش کالای منقضی')}
+            value={
+              <Money
+                minor={report.expiredValueMinor}
+                tone={report.expiredValueMinor > 0 ? 'bad' : 'muted'}
+              />
             }
-          >
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t('expiry.batch', 'بچ')}</TableHead>
-                  <TableHead>{t('expiry.quantity', 'مقدار')}</TableHead>
-                  <TableHead>{t('expiry.expiry_date', 'تاریخ انقضا')}</TableHead>
-                  <TableHead>{t('expiry.days_remaining', 'روز باقی‌مانده')}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {bucket.batches.map((batch) => (
-                  <TableRow key={batch.batchId}>
-                    <TableCell className="py-2 font-mono text-xs" dir="ltr">
-                      {batch.batchNumber}
-                    </TableCell>
-                    <TableCell>{batch.quantity}</TableCell>
-                    <TableCell className="py-2 tabular-nums" dir="ltr">
-                      {batch.expiryDate ?? '—'}
-                    </TableCell>
-                    <TableCell>
-                      {batch.daysRemaining == null ? (
-                        '—'
-                      ) : (
-                        <span
-                          className={
-                            batch.daysRemaining < 0 ? 'text-[hsl(var(--color-destructive))]' : ''
-                          }
-                        >
-                          {batch.daysRemaining}
-                        </span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Panel>
-        ))}
+            hint={t('expiry.expired_value_hint', 'در ترازنامه هست، قابل فروش نیست.')}
+          />
+          {buckets.map((bucket) => (
+            <Stat
+              key={bucket.state}
+              icon={STATE_ICON[bucket.state]}
+              label={t(`expiry.state_${bucket.state}`, bucket.state)}
+              value={bucket.totalQuantity}
+              hint={`${bucket.batches.length} ${t('expiry.batches', 'بچ')}`}
+            />
+          ))}
+        </StatGrid>
+      ) : null}
+
+      <ListSection title={t('expiry.report', 'گزارش انقضا')}>
+        {isLoading ? (
+          <Loading label={t('common.loading', 'در حال بارگذاری…')} />
+        ) : error ? (
+          <ErrorNote
+            message={error}
+            onRetry={onRefresh}
+            retryLabel={t('common.retry', 'تلاش دوباره')}
+          />
+        ) : (
+          <DataTable
+            tableId="expiry-batches"
+            t={t}
+            rows={rows}
+            columns={columns}
+            rowKey={(row) => `${row.state}-${row.batchId}`}
+            searchValue={search}
+            onSearchChange={setSearch}
+            minWidthClass="min-w-[420px] sm:min-w-[640px]"
+            emptyState={
+              hasNoBatches ? (
+                <EmptyState
+                  icon="product"
+                  title={t('expiry.empty_title', 'بچی ثبت نشده')}
+                  description={t(
+                    'expiry.empty_hint',
+                    'بچ هنگام دریافت کالای تاریخ‌دار ثبت می‌شود.',
+                  )}
+                />
+              ) : (
+                <EmptyState icon="search" title={t('expiry.no_match', 'بچی با این فیلتر نیست')} />
+              )
+            }
+          />
+        )}
+      </ListSection>
 
       <Panel
         title={t('expiry.plan_title', 'برنامه‌ی مصرف')}
@@ -256,14 +374,6 @@ export const ExpiryView = memo(function ExpiryView({
           </div>
         ) : null}
       </Panel>
-
-      {!isLoading && batches.length === 0 && !report ? (
-        <Panel title={t('expiry.empty_title', 'بچی ثبت نشده')}>
-          <p className="text-sm text-[hsl(var(--fg-tertiary))]">
-            {t('expiry.empty_hint', 'بچ هنگام دریافت کالای تاریخ‌دار ثبت می‌شود.')}
-          </p>
-        </Panel>
-      ) : null}
     </CapabilityPage>
   )
 })

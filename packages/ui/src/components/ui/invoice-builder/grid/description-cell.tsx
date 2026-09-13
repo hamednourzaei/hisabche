@@ -30,6 +30,7 @@ import { createPortal } from 'react-dom'
 import type { KeyboardEvent } from 'react'
 import { ChevronDown, Package, Search } from 'lucide-react'
 import { useProducts } from '@hisabche/api'
+import { useInvoiceDraftStore } from '@hisabche/store'
 
 import { cn } from '../../../../lib/utils'
 import { productPrice, readProducts, type PickerProduct } from '../../../../lib/invoices/products'
@@ -96,6 +97,13 @@ export const DescriptionCell = memo(function DescriptionCell({
   })
 
   const products = useMemo<PickerProduct[]>(() => readProducts(data), [data])
+
+  // ⚠️ AN EXHAUSTED PRODUCT STAYS IN THE LIST — IT IS JUST NOT PICKABLE ON A SALE.
+  // Hiding it would make a shopkeeper think the item was deleted. And only a
+  // SALE is blocked: a purchase is exactly how an exhausted product comes back.
+  const transactionType = useInvoiceDraftStore((state) => state.transactionType)
+  const isExhausted = (product: PickerProduct) =>
+    transactionType !== 'purchase' && typeof product.quantity === 'number' && product.quantity <= 0
 
   /**
    * Measure the cell and decide which way the list opens.
@@ -168,6 +176,7 @@ export const DescriptionCell = memo(function DescriptionCell({
   }, [open])
 
   const pick = (product: PickerProduct) => {
+    if (isExhausted(product)) return
     const price = productPrice(product)
     onPickProduct({
       id: product.id,
@@ -316,6 +325,8 @@ export const DescriptionCell = memo(function DescriptionCell({
                       type="button"
                       role="option"
                       onClick={() => pick(product)}
+                      disabled={isExhausted(product)}
+                      aria-disabled={isExhausted(product)}
                       className={cn(
                         'flex w-full items-center justify-between gap-2 rounded-[var(--radius-sm)]',
                         // 44px: a finger target, not a mouse target. These rows
@@ -323,9 +334,17 @@ export const DescriptionCell = memo(function DescriptionCell({
                         'min-h-11 px-2.5 py-2 text-start text-sm',
                         'text-[hsl(var(--fg-primary))] hover:bg-[hsl(var(--surface-muted))]',
                         'transition-colors duration-150 motion-reduce:transition-none',
+                        'disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent',
                       )}
                     >
-                      <span className="min-w-0 truncate">{product.name}</span>
+                      <span className="flex min-w-0 items-center gap-1.5">
+                        <span className="min-w-0 truncate">{product.name}</span>
+                        {isExhausted(product) ? (
+                          <span className="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))]">
+                            {t('warehouse.outOfStock', 'تمام شده')}
+                          </span>
+                        ) : null}
+                      </span>
                       <span className="shrink-0 text-[11px] tabular-nums text-[hsl(var(--fg-tertiary))]">
                         {/* Stock on hand, so the user sees what they are drawing down. */}
                         {typeof product.quantity === 'number'

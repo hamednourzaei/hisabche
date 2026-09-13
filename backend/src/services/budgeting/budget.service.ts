@@ -10,6 +10,7 @@ import { ConflictError, DatabaseError, NotFoundError } from '../../errors/databa
 import { ValidationError } from '../../errors/validation.error'
 import { memoryCache } from '../../utils/pagination'
 import type { TenancyContext } from '../tenancy.service'
+import { fetchBudgetConsumptionAggregate } from '../aggregates/ledger-aggregates'
 
 import {
   applicableBudgets,
@@ -113,6 +114,19 @@ export class BudgetService {
    */
   private async consumptionFor(ctx: TenancyContext, budget: Budget, onDate: string) {
     const { start, end } = periodFor(budget, onDate)
+
+    // ⚠️ AGGREGATED IN POSTGRES FIRST. This figure decides whether spending is
+    // BLOCKED; the row reads below were `.limit(10_000)` / `.limit(5000)`,
+    // which PostgREST cuts to max-rows (1000), so an understated actual let
+    // spending through. They run only while `budget_consumption` is missing.
+    const aggregate = await fetchBudgetConsumptionAggregate(
+      ctx.workspaceId,
+      budget.id,
+      budget.accountId,
+      start,
+      end,
+    )
+    if (aggregate) return aggregate
 
     const [actual, committed] = await Promise.all([
       supabase

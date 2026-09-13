@@ -21,22 +21,31 @@
 // Profitability values labour at COST, not at the billing rate. Using the
 // billing rate on both sides makes every project look like it broke exactly
 // even, which is the most common way a loss is discovered at year end.
+//
+// ---------------------------------------------------------------------------
+// LAYOUT — the invoices list structure: header, the project picker in the
+// filter row, stat strip, the billing preview on the shared DataTable, then
+// the time entry form and profitability.
 // ============================================
 
-import { memo, useState } from 'react'
+import { memo, useMemo, useState } from 'react'
+import { Clock, FileCheck2, Hourglass, Receipt } from 'lucide-react'
 import type {
   BillableLine,
   ProjectProfitability,
   ProjectBillingConfig,
   TimeTotals,
 } from '@hisabche/api'
+import { DataTable, matchesSearch, type TableColumn } from '../data-table'
 import {
   ActionButton,
   Badge,
   CapabilityHeader,
   CapabilityPage,
+  EmptyState,
   ErrorNote,
   Field,
+  ListSection,
   Loading,
   Money,
   Panel,
@@ -63,6 +72,8 @@ export interface TimesheetsViewProps {
   profitability: ProjectProfitability | null
   isLoading: boolean
   isDetailLoading: boolean
+  /** A failed project read must not render as a project with no time. */
+  detailError: string | null
   error: string | null
   actionError: string | null
   isBusy: boolean
@@ -88,6 +99,7 @@ export const TimesheetsView = memo(function TimesheetsView({
   profitability,
   isLoading,
   isDetailLoading,
+  detailError,
   error,
   actionError,
   isBusy,
@@ -101,8 +113,44 @@ export const TimesheetsView = memo(function TimesheetsView({
   const [minutes, setMinutes] = useState(0)
   const [billable, setBillable] = useState(true)
   const [description, setDescription] = useState('')
+  const [search, setSearch] = useState('')
 
   const totalMinutes = Math.trunc(hours) * 60 + Math.trunc(minutes)
+
+  const previewRows = useMemo(
+    () => previewLines.filter((line) => matchesSearch(search, [line.description, line.employeeId])),
+    [previewLines, search],
+  )
+
+  const previewColumns = useMemo<TableColumn<BillableLine>[]>(
+    () => [
+      {
+        id: 'description',
+        labelKey: 'common.description',
+        labelFallback: 'شرح',
+        locked: true,
+        sortValue: (line) => line.description,
+        render: (line) => <span className="text-[hsl(var(--fg-primary))]">{line.description}</span>,
+      },
+      {
+        id: 'minutes',
+        labelKey: 'timesheets.duration',
+        labelFallback: 'مدت',
+        align: 'end',
+        sortValue: (line) => line.minutes,
+        render: (line) => <span className="tabular-nums">{formatMinutes(line.minutes)}</span>,
+      },
+      {
+        id: 'amount',
+        labelKey: 'timesheets.amount',
+        labelFallback: 'مبلغ',
+        align: 'end',
+        sortValue: (line) => line.amountMinor,
+        render: (line) => <Money minor={line.amountMinor} />,
+      },
+    ],
+    [],
+  )
 
   return (
     <CapabilityPage>
@@ -116,69 +164,114 @@ export const TimesheetsView = memo(function TimesheetsView({
         }
       />
 
-      {error ? (
+      {actionError ? <ErrorNote message={actionError} /> : null}
+
+      {isLoading ? (
+        <Loading label={t('common.loading', 'در حال بارگذاری…')} />
+      ) : error ? (
         <ErrorNote
           message={error}
           onRetry={onRefresh}
           retryLabel={t('common.retry', 'تلاش دوباره')}
         />
+      ) : projects.length === 0 ? (
+        <EmptyState
+          icon="search"
+          title={t('timesheets.no_projects', 'پروژه‌ای وجود ندارد')}
+          description={t(
+            'timesheets.no_projects_hint',
+            'زمان روی یک پروژه ثبت می‌شود. ابتدا پروژه بسازید.',
+          )}
+        />
+      ) : (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="w-full sm:w-72">
+            <SelectField
+              value={selectedProjectId ?? ''}
+              onChange={onSelectProject}
+              placeholder={t('timesheets.select_project', 'یک پروژه انتخاب کنید')}
+              options={projects.map((project) => ({ value: project.id, label: project.name }))}
+            />
+          </div>
+          {selectedProjectId && config ? (
+            <Badge tone={config.method === 'non_billable' ? 'neutral' : 'info'}>
+              {t(`timesheets.method_${config.method}`, config.method)}
+            </Badge>
+          ) : null}
+        </div>
+      )}
+
+      {selectedProjectId && isDetailLoading ? (
+        <Loading label={t('common.loading', 'در حال بارگذاری…')} />
       ) : null}
-      {actionError ? <ErrorNote message={actionError} /> : null}
 
-      {isLoading ? <Loading label={t('common.loading', 'در حال بارگذاری…')} /> : null}
-
-      {!isLoading && projects.length === 0 ? (
-        <Panel title={t('timesheets.no_projects', 'پروژه‌ای وجود ندارد')}>
-          <p className="text-sm text-[hsl(var(--fg-tertiary))]">
-            {t('timesheets.no_projects_hint', 'زمان روی یک پروژه ثبت می‌شود. ابتدا پروژه بسازید.')}
-          </p>
-        </Panel>
+      {selectedProjectId && detailError ? (
+        <ErrorNote
+          message={detailError}
+          onRetry={onRefresh}
+          retryLabel={t('common.retry', 'تلاش دوباره')}
+        />
       ) : null}
 
-      {projects.length > 0 ? (
-        <Panel title={t('timesheets.project', 'پروژه')}>
-          <SelectField
-            value={selectedProjectId ?? ''}
-            onChange={onSelectProject}
-            placeholder={t('timesheets.select_project', 'یک پروژه انتخاب کنید')}
-            options={projects.map((project) => ({ value: project.id, label: project.name }))}
+      {selectedProjectId && totals && !detailError ? (
+        <StatGrid>
+          <Stat
+            icon={Clock}
+            label={t('timesheets.recorded', 'ثبت‌شده')}
+            value={formatMinutes(totals.recordedMinutes)}
           />
-        </Panel>
+          <Stat
+            icon={Hourglass}
+            label={t('timesheets.billable', 'قابل صورتحساب')}
+            value={formatMinutes(totals.billableMinutes)}
+          />
+          <Stat
+            icon={FileCheck2}
+            label={t('timesheets.billed', 'صورتحساب‌شده')}
+            value={formatMinutes(totals.billedMinutes)}
+          />
+          <Stat
+            icon={Receipt}
+            label={t('timesheets.unbilled', 'در انتظار صورتحساب')}
+            value={formatMinutes(totals.unbilledMinutes)}
+            hint={<Money minor={totals.unbilledAmountMinor} />}
+          />
+        </StatGrid>
       ) : null}
 
-      {isDetailLoading ? <Loading label={t('common.loading', 'در حال بارگذاری…')} /> : null}
-
-      {selectedProjectId && totals ? (
-        <Panel
-          title={t('timesheets.totals', 'جمع کارکرد')}
-          action={
-            config ? (
-              <Badge tone={config.method === 'non_billable' ? 'neutral' : 'info'}>
-                {t(`timesheets.method_${config.method}`, config.method)}
-              </Badge>
-            ) : null
-          }
+      {selectedProjectId && !isDetailLoading && !detailError ? (
+        <ListSection
+          title={t('timesheets.preview', 'پیش‌نمایش صورتحساب')}
+          description={t(
+            'timesheets.preview_hint',
+            'چیزی صورتحساب نمی‌شود — فقط نشان می‌دهد چه می‌شد.',
+          )}
         >
-          <StatGrid>
-            <Stat
-              label={t('timesheets.recorded', 'ثبت‌شده')}
-              value={formatMinutes(totals.recordedMinutes)}
-            />
-            <Stat
-              label={t('timesheets.billable', 'قابل صورتحساب')}
-              value={formatMinutes(totals.billableMinutes)}
-            />
-            <Stat
-              label={t('timesheets.billed', 'صورتحساب‌شده')}
-              value={formatMinutes(totals.billedMinutes)}
-            />
-            <Stat
-              label={t('timesheets.unbilled', 'در انتظار صورتحساب')}
-              value={formatMinutes(totals.unbilledMinutes)}
-              hint={<Money minor={totals.unbilledAmountMinor} />}
-            />
-          </StatGrid>
-        </Panel>
+          {previewProblems.length > 0 ? (
+            <ul className="space-y-1 text-sm text-[hsl(var(--color-warning))]">
+              {previewProblems.map((problem) => (
+                <li key={problem}>{t(`timesheets.problem_${problem}`, problem)}</li>
+              ))}
+            </ul>
+          ) : null}
+
+          <DataTable
+            tableId="timesheets-preview"
+            t={t}
+            rows={previewRows}
+            columns={previewColumns}
+            rowKey={(line) => line.entryIds.join('-')}
+            searchValue={search}
+            onSearchChange={setSearch}
+            minWidthClass="min-w-[420px]"
+            emptyState={
+              <EmptyState
+                icon="search"
+                title={t('timesheets.preview_empty', 'کارکرد صورتحساب‌نشده‌ای نیست')}
+              />
+            }
+          />
+        </ListSection>
       ) : null}
 
       {selectedProjectId ? (
@@ -258,39 +351,6 @@ export const TimesheetsView = memo(function TimesheetsView({
               {t('timesheets.log_action', 'ثبت')}
             </ActionButton>
           </div>
-        </Panel>
-      ) : null}
-
-      {selectedProjectId && (previewLines.length > 0 || previewProblems.length > 0) ? (
-        <Panel
-          title={t('timesheets.preview', 'پیش‌نمایش صورتحساب')}
-          description={t(
-            'timesheets.preview_hint',
-            'چیزی صورتحساب نمی‌شود — فقط نشان می‌دهد چه می‌شد.',
-          )}
-        >
-          {previewProblems.length > 0 ? (
-            <ul className="mb-3 space-y-1 text-sm text-[hsl(var(--color-warning))]">
-              {previewProblems.map((problem) => (
-                <li key={problem}>{t(`timesheets.problem_${problem}`, problem)}</li>
-              ))}
-            </ul>
-          ) : null}
-
-          <ul className="divide-y divide-[hsl(var(--border-default))] text-sm">
-            {previewLines.map((line) => (
-              <li
-                key={line.entryIds.join('-')}
-                className="flex items-center justify-between gap-3 py-2"
-              >
-                <span>
-                  <span className="text-[hsl(var(--fg-tertiary))]">{line.description}</span>
-                  <span className="ms-2 tabular-nums">{formatMinutes(line.minutes)}</span>
-                </span>
-                <Money minor={line.amountMinor} />
-              </li>
-            ))}
-          </ul>
         </Panel>
       ) : null}
 

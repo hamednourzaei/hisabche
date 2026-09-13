@@ -74,18 +74,8 @@ export function warehouseContainer() {
     if (queryParam !== null && queryParam !== undefined) setSearch(queryParam)
   }, [queryParam])
 
-  const {
-    products,
-    total,
-    totalValue,
-    lowStock,
-    outOfStock,
-    isLoading,
-    stockStatus,
-    stockLabel,
-    handleDelete,
-    refetch,
-  } = useWarehouse(search)
+  const { products, summary, isLoading, stockStatus, stockLabel, handleDelete, refetch } =
+    useWarehouse(search)
 
   const onDelete = useCallback(
     async (product: { id: string; name?: string }) => {
@@ -131,11 +121,8 @@ export function warehouseContainer() {
     onOpenAddModal: handleOpenAddModal,
     deletingId,
     products,
-    total,
     isLoading,
-    totalValue,
-    lowStock,
-    outOfStock,
+    summary,
     currencies: CURRENCIES,
     onNavigate: handleNavigate,
     onOpenHistory: handleOpenHistory,

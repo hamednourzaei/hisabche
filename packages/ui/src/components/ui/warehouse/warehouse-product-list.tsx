@@ -62,6 +62,7 @@ function useProductColumns(
   t: (key: string, fallback?: string) => string,
   fmt: (v: number) => string,
   stockStatus: (qty: number, min: number) => StockStatus,
+  stockLabel: (qty: number, min: number) => string,
   onNavigate: (id: string) => void,
   onOpenHistory: WarehouseProductListProps['onOpenHistory'],
 ): TableColumn<Product>[] {
@@ -130,6 +131,26 @@ function useProductColumns(
           </span>
         ),
       },
+      // ⚠️ THE STATUS IS SPELLED OUT, NOT ONLY COLOURED. `stockLabel` was passed
+      // all the way down to this table and no column rendered it, so an
+      // oversold product (-98) was a red number with no word saying it was out.
+      {
+        id: 'stockStatus',
+        labelKey: 'warehouse.stockStatus',
+        labelFallback: 'وضعیت موجودی',
+        sortValue: (product) => product.quantity - product.minStockLevel,
+        render: (product) => (
+          <span
+            className={cn(
+              'inline-flex items-center whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium',
+              statusBadgeStyles[stockStatus(product.quantity, product.minStockLevel)] ??
+                statusBadgeStyles.secondary,
+            )}
+          >
+            {stockLabel(product.quantity, product.minStockLevel)}
+          </span>
+        ),
+      },
       {
         id: 'category',
         labelKey: 'warehouse.category',
@@ -192,7 +213,7 @@ function useProductColumns(
         ),
       },
     ],
-    [fmt, onNavigate, onOpenHistory, stockStatus, t],
+    [fmt, onNavigate, onOpenHistory, stockStatus, stockLabel, t],
   )
 }
 
@@ -201,6 +222,7 @@ export const WarehouseProductList = memo(function WarehouseProductList({
   fmt,
   products,
   stockStatus,
+  stockLabel,
   onNavigate,
   onOpenHistory,
   onDelete,
@@ -209,7 +231,7 @@ export const WarehouseProductList = memo(function WarehouseProductList({
   actions,
   emptyState,
 }: WarehouseProductListProps) {
-  const columns = useProductColumns(t, fmt, stockStatus, onNavigate, onOpenHistory)
+  const columns = useProductColumns(t, fmt, stockStatus, stockLabel, onNavigate, onOpenHistory)
 
   // Bulk delete reuses the same per-product delete the row menu calls, so the
   // stock and authorization side effects are identical to deleting one by one.

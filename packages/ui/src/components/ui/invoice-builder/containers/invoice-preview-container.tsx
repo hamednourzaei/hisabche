@@ -11,7 +11,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Check, Pencil, Printer } from 'lucide-react'
-import { useCreateInvoice, useWorkspaces } from '@hisabche/api'
+import { useCreateInvoice, useProducts, useWorkspaces } from '@hisabche/api'
 import {
   useBackupStore,
   useInvoiceDraftStore,
@@ -35,6 +35,7 @@ import {
 import { InvoiceSidebar } from '../../invoice-detail/invoice-sidebar'
 import { useInvoiceDraft } from '../../../../hooks/invoices/use-invoice-draft'
 import { PreviewItemsTable } from '../preview-items-table'
+import { readProducts } from '../../../../lib/invoices/products'
 
 const DEFAULT_DISPLAY: InvoiceDocumentDisplaySettings = {
   showSignature: true,
@@ -189,6 +190,43 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
     () => items.filter((item) => !item.productId).map((item) => item.productName),
     [items],
   )
+
+  // ─── Lines that would take stock below zero ─────────────────────────
+  //
+  // ⚠️ A WARNING, NOT A BLOCK. The owner asked to be TOLD when a sale drives a
+  // product negative — goods do get sold before the purchase is entered — so
+  // the save still goes through. What must not happen is it going through
+  // silently, which is how «kartoon» reached -98 with nobody noticing.
+  //
+  // ⚠️ ONLY WHEN THE UNITS AGREE. A line in grams against stock counted in
+  // kilograms cannot be compared by raw number; rather than raise a false
+  // alarm, such a line is not judged here. Lines for the same product are
+  // summed, because two lines of 60 against a stock of 100 is an oversell
+  // that neither line shows on its own.
+  const { data: stockData } = useProducts({ limit: 100 })
+  const oversoldLines = useMemo(() => {
+    if (draft.transactionType === 'purchase') return []
+    const stock = new Map(readProducts(stockData).map((product) => [product.id, product]))
+    const wanted = new Map<string, { name: string; quantity: number; unit: string | undefined }>()
+    for (const item of items) {
+      if (!item.productId) continue
+      const current = wanted.get(item.productId)
+      wanted.set(item.productId, {
+        name: item.productName,
+        quantity: (current?.quantity ?? 0) + (Number(item.quantity) || 0),
+        unit: item.unit,
+      })
+    }
+    const result: Array<{ name: string; onHand: number; after: number }> = []
+    for (const [id, line] of wanted) {
+      const product = stock.get(id)
+      if (!product || typeof product.quantity !== 'number') continue
+      if (line.unit && product.unit && line.unit !== product.unit) continue
+      const after = product.quantity - line.quantity
+      if (after < 0) result.push({ name: line.name, onHand: product.quantity, after })
+    }
+    return result
+  }, [items, stockData, draft.transactionType])
 
   const handleConfirm = useCallback(async () => {
     if (issues.length || items.length === 0) return
@@ -373,6 +411,32 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
             cannot do this" would be false. It states what will happen, while
             there is still a chance to link the line instead.
           */}
+          {oversoldLines.length > 0 ? (
+            <div
+              role="alert"
+              className="rounded-[var(--radius-md)] border border-[hsl(var(--color-destructive)/0.4)] bg-[hsl(var(--color-destructive)/0.06)] p-3"
+            >
+              <p className="text-xs font-medium text-[hsl(var(--color-destructive))]">
+                {t('invoiceBuilder.oversoldTitle', 'موجودی این کالاها با این فاکتور منفی می‌شود')}
+              </p>
+              <ul className="mt-1.5 flex flex-col gap-0.5 text-xs text-[hsl(var(--fg-secondary))]">
+                {oversoldLines.map((line) => (
+                  <li key={line.name} className="flex items-center justify-between gap-2">
+                    <span className="min-w-0 truncate">{line.name}</span>
+                    <span className="shrink-0 tabular-nums" dir="ltr">
+                      {line.onHand} → {line.after}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-1.5 text-[11px] text-[hsl(var(--fg-tertiary))]">
+                {t(
+                  'invoiceBuilder.oversoldHint',
+                  'ثبت انجام می‌شود، اما موجودی انبار منفی خواهد شد. اگر خرید ثبت نشده، ابتدا آن را ثبت کنید.',
+                )}
+              </p>
+            </div>
+          ) : null}
           {unlinkedLines.length > 0 ? (
             <div className="rounded-[var(--radius-md)] border border-[hsl(var(--color-warning)/0.4)] bg-[hsl(var(--color-warning)/0.06)] p-3">
               <p className="text-xs font-medium text-[hsl(var(--color-warning))]">

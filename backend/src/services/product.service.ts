@@ -6,6 +6,7 @@
 import { supabase } from '../db'
 import { scopes } from './authorization/scope.service'
 import { CreateProduct, UpdateProduct, ProductFilters } from '@hisabche/validation'
+import { summarizeStock, type StockSummaryRow } from './inventory/stock-summary.domain'
 import { DatabaseError, NotFoundError } from '../errors/database.error'
 import { mapProduct } from '../utils/product.mapper'
 import { memoryCache } from '../utils/pagination'
@@ -62,6 +63,7 @@ export class ProductService {
       minPrice,
       maxPrice,
       barcode,
+      includeSummary,
       limit = 20,
       cursor,
       sortBy = 'created_at',
@@ -98,12 +100,13 @@ export class ProductService {
       }
     }
 
-    const [{ data, error }, { count }] = await Promise.all([
+    const [{ data, error }, { count }, summary] = await Promise.all([
       query,
       supabase
         .from('products')
         .select('id', { count: 'estimated', head: true })
         .eq('workspace_id', workspaceId),
+      includeSummary ? this.summarizeStock(workspaceId) : Promise.resolve(undefined),
     ])
 
     if (error) throw new DatabaseError('Failed to fetch products', error)
@@ -125,10 +128,42 @@ export class ProductService {
       hasMore,
       total: count || 0,
       limit: maxLimit,
+      // Additive, and only when asked: pickers and searches keep the response
+      // they had and do not pay for a full scan.
+      ...(summary ? { summary } : {}),
     }
 
     await memoryCache.set(cacheKey, result, 30)
     return result
+  }
+
+  /**
+   * Stock value and stock-state counts over EVERY product in the workspace.
+   * Deliberately ignores the list's search/filters: the cards describe the
+   * warehouse, not the current search.
+   *
+   * Ordered 1000-row pages, because PostgREST truncates an unbounded select
+   * at max-rows without an error. See stock-summary.domain.ts.
+   */
+  private async summarizeStock(workspaceId: string) {
+    const PAGE = 1000
+    const rows: StockSummaryRow[] = []
+
+    for (let from = 0; ; from += PAGE) {
+      const { data: page, error } = await supabase
+        .from('products')
+        .select('quantity, sell_price, min_stock_level')
+        .eq('workspace_id', workspaceId)
+        .order('id', { ascending: true })
+        .range(from, from + PAGE - 1)
+
+      if (error) throw new DatabaseError('Failed to summarize stock', error)
+
+      rows.push(...((page ?? []) as StockSummaryRow[]))
+      if (!page || page.length < PAGE) break
+    }
+
+    return summarizeStock(rows)
   }
 
   // ─── Get By ID ──────────────────────────────────────────────

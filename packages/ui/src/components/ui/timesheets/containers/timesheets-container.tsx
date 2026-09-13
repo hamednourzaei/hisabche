@@ -7,11 +7,13 @@
 import { memo, useCallback, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
+  asList,
   useBillingPreview,
   useLogTime,
   useProjectProfitability,
   useProjects,
   useTimesheetSummary,
+  type BillableLine,
 } from '@hisabche/api'
 import { TimesheetsView, type TimesheetProjectOption } from '../timesheets-view'
 
@@ -90,11 +92,16 @@ export const TimesheetsContainer = memo(function TimesheetsContainer() {
       selectedProjectId={selectedProjectId}
       config={summary.data?.config ?? null}
       totals={summary.data?.totals ?? null}
-      previewLines={preview.data?.lines ?? []}
-      previewProblems={preview.data?.problems ?? []}
+      previewLines={asList<BillableLine>(preview.data?.lines)}
+      previewProblems={asList<string>(preview.data?.problems)}
       profitability={profitability.data ?? null}
       isLoading={projects.isLoading}
-      isDetailLoading={Boolean(selectedProjectId) && summary.isLoading}
+      isDetailLoading={Boolean(selectedProjectId) && (summary.isLoading || preview.isLoading)}
+      detailError={
+        selectedProjectId && (summary.error || preview.error)
+          ? ((summary.error ?? preview.error) as Error).message
+          : null
+      }
       error={projects.error ? (projects.error as Error).message : null}
       actionError={actionError}
       isBusy={logTime.isPending}

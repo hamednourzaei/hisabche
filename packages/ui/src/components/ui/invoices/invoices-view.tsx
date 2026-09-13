@@ -15,6 +15,7 @@ import {
 } from '@hisabche/ui-contract'
 import { InvoiceRowActions } from './invoice-row-actions'
 import { BentoStats, type BentoStat } from '../bento-stats'
+import type { InvoiceListSummary } from '@hisabche/api'
 import {
   BulkActionBar,
   DataTable,
@@ -32,8 +33,13 @@ import { partyLabel } from '../../../lib/anonymous-party'
 interface InvoicesViewProps {
   t: (key: string, fallback?: string) => string
   invoices: Invoice[]
-  /** All invoices matching the filter — the stat cards must not be paginated. */
+  /**
+   * One server page (at most 100 rows) of invoices matching the search — used
+   * for the CSV export only. Never reduce it into a figure; use `statsSummary`.
+   */
   statsInvoices: Invoice[]
+  /** Stat-card figures over EVERY matching invoice, from the server. */
+  statsSummary: InvoiceListSummary | null
   isLoading: boolean
   total: number
   searchValue: string
@@ -73,36 +79,29 @@ const statusBadgeStyles: Record<string, string> = {
 
 // ─── آمار (بنتو گرید) ───────────────────────────────────────────────────────
 
-const PAID_STATUSES = new Set(['paid', 'completed'])
-
-/** شماره‌ی ماه نسبی: 0 = ماه جاری، 1 = ماه قبل */
-function monthOffset(value: string, now: Date): number | null {
-  if (!value) return null
-  const d = new Date(value)
-  if (isNaN(d.getTime())) return null
-  return (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth())
-}
-
 /** درصد تغییر؛ null یعنی داده‌ای برای مقایسه نیست */
 function percentChange(current: number, previous: number): number | null {
   if (previous === 0) return current === 0 ? null : 100
   return ((current - previous) / Math.abs(previous)) * 100
 }
 
-function useInvoiceStats(invoices: Invoice[], t: (key: string, fallback?: string) => string) {
+/**
+ * The stat cards read the server's summary — computed over EVERY invoice that
+ * matches the search — never a reduction of a fetched page. They used to sum
+ * `statsInvoices`, which the route caps at 100 rows however many were asked
+ * for, so a business with more invoices saw its latest hundred as its total.
+ */
+function useInvoiceStats(
+  summary: InvoiceListSummary | null,
+  t: (key: string, fallback?: string) => string,
+) {
   return useMemo<BentoStat[]>(() => {
-    const now = new Date()
-    const active = invoices.filter((inv) => inv.status !== 'cancelled')
-    const inMonth = (offset: number) =>
-      active.filter((inv) => monthOffset(inv.isoDate, now) === offset)
-
-    const sum = (list: Invoice[]) => list.reduce((acc, inv) => acc + (inv.total || 0), 0)
-    const paid = (list: Invoice[]) => list.filter((inv) => PAID_STATUSES.has(inv.status))
-    const pending = (list: Invoice[]) => list.filter((inv) => !PAID_STATUSES.has(inv.status))
-
-    const cur = inMonth(0)
-    const prev = inMonth(1)
-    const currency = active[0]?.currency || 'AFN'
+    if (!summary) return []
+    const { currentMonth: cur, previousMonth: prev } = summary
+    // Amounts are not converted between currencies. A suffix is only honest
+    // when every counted invoice is in the same one.
+    const suffix = summary.currencies.length === 1 ? summary.currencies[0] : undefined
+    const withSuffix = suffix ? { suffix } : {}
     const monthly = t('common.vsLastMonth', 'نسبت به ماه قبل')
 
     // ترتیب کارت‌ها عمداً «مبلغ اول، شمارش دوم» است — مبلغ عدد اصلی کسب‌وکار
@@ -113,26 +112,26 @@ function useInvoiceStats(invoices: Invoice[], t: (key: string, fallback?: string
         id: 'amount',
         icon: DollarSign,
         label: t('invoices.totalAmount', 'مجموع مبلغ'),
-        amount: sum(active),
-        suffix: currency,
-        delta: percentChange(sum(cur), sum(prev)),
+        amount: summary.totalAmount,
+        ...withSuffix,
+        delta: percentChange(cur.totalAmount, prev.totalAmount),
         deltaLabel: monthly,
       },
       {
         id: 'count',
         icon: FileText,
         label: t('invoices.totalCount', 'تعداد فاکتورها'),
-        amount: active.length,
-        delta: percentChange(cur.length, prev.length),
+        amount: summary.count,
+        delta: percentChange(cur.count, prev.count),
         deltaLabel: monthly,
       },
       {
         id: 'pending',
         icon: Clock,
         label: t('invoices.pendingAmount', 'در انتظار پرداخت'),
-        amount: sum(pending(active)),
-        suffix: currency,
-        delta: percentChange(sum(pending(cur)), sum(pending(prev))),
+        amount: summary.pendingAmount,
+        ...withSuffix,
+        delta: percentChange(cur.pendingAmount, prev.pendingAmount),
         deltaLabel: monthly,
         invertDelta: true,
       },
@@ -140,13 +139,13 @@ function useInvoiceStats(invoices: Invoice[], t: (key: string, fallback?: string
         id: 'paid',
         icon: CheckCircle2,
         label: t('invoices.paidAmount', 'تسویه‌شده'),
-        amount: sum(paid(active)),
-        suffix: currency,
-        delta: percentChange(sum(paid(cur)), sum(paid(prev))),
+        amount: summary.paidAmount,
+        ...withSuffix,
+        delta: percentChange(cur.paidAmount, prev.paidAmount),
         deltaLabel: monthly,
       },
     ]
-  }, [invoices, t])
+  }, [summary, t])
 }
 
 // ─── Sub-components ─────────────────────────────────────────────────────────
@@ -530,6 +529,7 @@ export const InvoicesView = memo(function InvoicesView({
   t,
   invoices,
   statsInvoices,
+  statsSummary,
   isLoading,
   total,
   searchValue,
@@ -550,7 +550,7 @@ export const InvoicesView = memo(function InvoicesView({
     [total, filters.limit],
   )
 
-  const stats = useInvoiceStats(statsInvoices, t)
+  const stats = useInvoiceStats(statsSummary, t)
   const columns = useInvoiceColumns(
     t,
     statusVariant,
@@ -594,7 +594,7 @@ export const InvoicesView = memo(function InvoicesView({
         <ExportButton t={t} invoices={statsInvoices} />
       </div>
 
-      {statsInvoices.length > 0 && <BentoStats t={t} stats={stats} />}
+      {statsSummary && statsSummary.count > 0 && <BentoStats t={t} stats={stats} />}
 
       <DataTable
         tableId="invoices"

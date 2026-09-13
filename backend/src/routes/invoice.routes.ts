@@ -49,6 +49,9 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
           dateTo: q.dateTo || undefined,
           minTotal: q.minTotal ? Number(q.minTotal) : undefined,
           maxTotal: q.maxTotal ? Number(q.maxTotal) : undefined,
+          includeSummary: ['true', '1', 'yes'].includes(String(q.includeSummary).toLowerCase())
+            ? true
+            : undefined,
           page: Math.max(1, parseInt(q.page ?? '1')),
           limit: Math.min(100, parseInt(q.limit ?? '20')),
           sortBy: q.sortBy ?? 'created_at',

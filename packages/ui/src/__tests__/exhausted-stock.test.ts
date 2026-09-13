@@ -1,0 +1,120 @@
+// ============================================
+// A product whose stock runs out must stay visible.
+//
+// ---------------------------------------------------------------------------
+// ⚠️ WHAT THE OWNER SAW
+//
+// «kartoon» was oversold to -98. Its own page
+// (`/warehouse/846534ae-…`) still worked, but the warehouse LIST no longer
+// showed it at all — so it looked deleted.
+//
+// The cause was one line in `backend/src/routes/product.routes.ts`:
+//
+//     lowStock: query.lowStock === 'true'
+//
+// An ABSENT parameter became `false`, and the service reads `false` as «only
+// products ABOVE their minimum». Every plain list request therefore hid every
+// low, empty and negative product — exactly the items that needed attention.
+//
+// Three follow-ups the owner asked for:
+//   * the table spells the status out («تمام شده»), not only a red number —
+//     `stockLabel` had been passed all the way to the table and never rendered
+//   * an exhausted product stays in the invoice picker but cannot be picked on
+//     a SALE (a purchase is how it comes back, so purchases still allow it)
+//   * confirming an invoice that drives stock negative WARNS — it does not
+//     block, because goods genuinely get sold before the purchase is entered
+// ============================================
+
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
+import { describe, expect, it } from 'vitest'
+
+function code(path: string): string {
+  return readFileSync(path, 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\{\/\*[\s\S]*?\*\/\}/g, '')
+    .replace(/\/\/.*/g, '')
+}
+
+const ROOT = join(__dirname, '..', '..', '..', '..')
+const UI = join(__dirname, '..')
+
+const route = code(join(ROOT, 'backend', 'src', 'routes', 'product.routes.ts'))
+const hook = code(join(UI, 'hooks', 'warehouse', 'use-warehouse.ts'))
+const mappers = code(join(UI, 'lib', 'warehouse', 'warehouse-mappers.ts'))
+const list = code(join(UI, 'components', 'ui', 'warehouse', 'warehouse-product-list.tsx'))
+const picker = code(join(UI, 'components', 'ui', 'invoice-builder', 'grid', 'description-cell.tsx'))
+const preview = code(
+  join(UI, 'components', 'ui', 'invoice-builder', 'containers', 'invoice-preview-container.tsx'),
+)
+
+describe('the warehouse list does not hide low stock', () => {
+  it('⚠️ an absent lowStock parameter is undefined, not false', () => {
+    expect(route).not.toContain("lowStock: query.lowStock === 'true',")
+    expect(route).toContain("query.lowStock === 'false' ? false : undefined")
+  })
+})
+
+describe('a negative quantity is out of stock', () => {
+  it('⚠️ status and label treat <= 0 as out, not only === 0', () => {
+    // -98 was being reported as merely «low».
+    expect(hook).not.toContain('qty === 0')
+    expect(hook).toContain('if (qty <= 0) return "destructive"')
+    // The client-side totals were later moved server-side, so the mapper may
+    // no longer count at all — it just must never use the `=== 0` test again.
+    expect(mappers).not.toContain('quantity === 0')
+  })
+
+  it('the table has a status column that renders the label', () => {
+    expect(list).toContain("id: 'stockStatus'")
+    expect(list).toContain('stockLabel(product.quantity, product.minStockLevel)')
+  })
+})
+
+describe('the invoice picker', () => {
+  it('⚠️ keeps an exhausted product visible but unpickable on a sale', () => {
+    expect(picker).toContain("transactionType !== 'purchase'")
+    expect(picker).toContain('product.quantity <= 0')
+    expect(picker).toContain('disabled={isExhausted(product)}')
+    expect(picker).toContain('if (isExhausted(product)) return')
+  })
+
+  it('does not filter exhausted products out of the list', () => {
+    expect(picker).not.toMatch(/products\.filter\([^)]*quantity/)
+  })
+})
+
+describe('confirming an oversell', () => {
+  it('⚠️ warns but does not block', () => {
+    expect(preview).toContain('oversoldLines.length > 0 ?')
+    expect(preview).not.toContain('disabled={oversoldLines')
+  })
+
+  it('sums lines for the same product', () => {
+    // Two lines of 60 against a stock of 100 is an oversell neither shows alone.
+    expect(preview).toContain('(current?.quantity ?? 0) + (Number(item.quantity) || 0)')
+  })
+
+  it('⚠️ does not compare across different units', () => {
+    expect(preview).toContain('line.unit !== product.unit')
+  })
+
+  it('a purchase never warns', () => {
+    expect(preview).toContain("if (draft.transactionType === 'purchase') return []")
+  })
+})
+
+describe('strings exist in every locale', () => {
+  for (const locale of ['fa', 'af', 'en']) {
+    it(locale, () => {
+      const bundle = JSON.parse(
+        readFileSync(join(ROOT, 'packages', 'i18n', 'messages', locale, 'common.json'), 'utf8'),
+      ) as { warehouse: Record<string, string>; invoiceBuilder: Record<string, string> }
+      expect(bundle.warehouse.stockStatus).toBeTruthy()
+      expect(bundle.warehouse.outOfStock).toBeTruthy()
+      expect(bundle.invoiceBuilder.oversoldTitle).toBeTruthy()
+      expect(bundle.invoiceBuilder.oversoldHint).toBeTruthy()
+    })
+  }
+})

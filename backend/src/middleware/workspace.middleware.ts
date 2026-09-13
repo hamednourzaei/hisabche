@@ -33,6 +33,7 @@ import { FastifyReply, FastifyRequest } from 'fastify'
 
 import { requireWorkspace, type TenancyContext } from '../services/tenancy.service'
 import { BaseError } from '../errors/base.error'
+import { rejectIfSubscriptionExpired } from './subscription.middleware'
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -80,4 +81,8 @@ export async function requireWorkspaceContext(request: FastifyRequest, reply: Fa
 
     return reply.status(status).send({ error: message, code: 'WORKSPACE_FORBIDDEN' })
   }
+
+  // The expired-subscription lock (402 SUBSCRIPTION_EXPIRED on writes). Here,
+  // not per route, so every workspace-scoped write is covered by construction.
+  if (await rejectIfSubscriptionExpired(request, reply, request.tenancy.workspaceId)) return reply
 }

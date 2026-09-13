@@ -54,6 +54,9 @@ export function DashboardContainer() {
     kpis,
     insights,
     salesChartData,
+    rangeSalesTotal,
+    previousRangeSalesTotal,
+    rangeLoading,
     recentActivities,
     kpiLoading,
     insightsLoading,
@@ -170,6 +173,9 @@ export function DashboardContainer() {
         fmt={fmtInBasis}
         totalSales={kpis?.totalSales ?? 0}
         todaySales={kpis?.todaySales ?? 0}
+        rangeSalesTotal={rangeSalesTotal}
+        previousRangeSalesTotal={previousRangeSalesTotal}
+        rangeLoading={rangeLoading}
         customerDebt={kpis?.customerDebt ?? 0}
         warehouseValue={kpis?.warehouseValue ?? 0}
         monthlyGrowth={kpis?.monthlyGrowth ?? null}

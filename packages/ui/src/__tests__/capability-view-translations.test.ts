@@ -43,6 +43,7 @@ const VIEWS = [
   'timesheets/timesheets-view.tsx',
   'assets/assets-view.tsx',
   'bank/bank-view.tsx',
+  'workflow/approvals-view.tsx',
 ]
 
 const languages = readdirSync(MESSAGES).filter((entry) =>

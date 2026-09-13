@@ -17,6 +17,8 @@ import { supabase } from '../db'
 import { sod } from './authorization'
 import { scopes } from './authorization/scope.service'
 import { OUTSTANDING_OR_FILTER } from './invoices/outstanding.domain'
+import { fetchInvoiceSummaryAggregate } from './aggregates/analytics-aggregates'
+import { summarizeInvoices, type InvoiceSummaryRow } from './invoices/invoice-list-summary.domain'
 import { toBaseQuantity, type ProductUnitOption } from './inventory/unit-conversion.domain'
 import { conflicts } from './conflict'
 import { detectBreaches } from './pos/negative-stock.domain'
@@ -135,6 +137,39 @@ function isOnDay(value: unknown, from: Date, to: Date): boolean {
   return at >= from && at < to
 }
 
+/**
+ * The list filters, stated once. The page query, its count and the summary
+ * scan must select the same invoices — a count or a total over a different set
+ * than the table is the drift the count query already suffered once.
+ */
+interface InvoiceFilterable<Q> {
+  eq(column: string, value: string): Q
+  ilike(column: string, pattern: string): Q
+  or(filter: string): Q
+  gte(column: string, value: string | number): Q
+  lte(column: string, value: string | number): Q
+}
+
+function applyInvoiceListFilters<Q extends InvoiceFilterable<Q>>(
+  query: Q,
+  filters: InvoiceFilters,
+): Q {
+  let q = query
+  if (filters.search) q = q.ilike('invoice_number', `%${filters.search}%`)
+  if (filters.type) q = q.eq('type', filters.type)
+  if (filters.status) q = q.eq('status', filters.status)
+  // H1 — the rule is imported, not restated. See outstanding.domain.ts.
+  if (filters.outstanding) q = q.or(OUTSTANDING_OR_FILTER)
+  if (filters.customerId) q = q.eq('customer_id', filters.customerId)
+  if (filters.supplierId) q = q.eq('supplier_id', filters.supplierId)
+  if (filters.currency) q = q.eq('currency', filters.currency)
+  if (filters.dateFrom) q = q.gte('date', filters.dateFrom)
+  if (filters.dateTo) q = q.lte('date', filters.dateTo)
+  if (filters.minTotal !== undefined) q = q.gte('total', filters.minTotal)
+  if (filters.maxTotal !== undefined) q = q.lte('total', filters.maxTotal)
+  return q
+}
+
 export class InvoiceService {
   private workflowService: WorkflowService
   private notificationService: NotificationService
@@ -226,6 +261,7 @@ export class InvoiceService {
       outstanding,
       minTotal,
       maxTotal,
+      includeSummary,
       limit = 20,
       cursor,
       page = 1,
@@ -287,21 +323,7 @@ export class InvoiceService {
       query = query.limit(fetchLimit)
     }
 
-    if (search) query = query.ilike('invoice_number', `%${search}%`)
-    if (type) query = query.eq('type', type)
-    if (status) query = query.eq('status', status)
-
-    // H1 — «بدهی مشتریان» on the dashboard is now clickable and lands here.
-    // The rule is imported, not restated, so the list returns exactly the
-    // invoices the card summed. See outstanding.domain.ts.
-    if (outstanding) query = query.or(OUTSTANDING_OR_FILTER)
-    if (customerId) query = query.eq('customer_id', customerId)
-    if (supplierId) query = query.eq('supplier_id', supplierId)
-    if (currency) query = query.eq('currency', currency)
-    if (dateFrom) query = query.gte('date', dateFrom)
-    if (dateTo) query = query.lte('date', dateTo)
-    if (minTotal !== undefined) query = query.gte('total', minTotal)
-    if (maxTotal !== undefined) query = query.lte('total', maxTotal)
+    query = applyInvoiceListFilters(query, filters)
 
     if (cursor) {
       if (sortDirection === 'desc') {
@@ -349,7 +371,11 @@ export class InvoiceService {
     if (minTotal !== undefined) countQuery = countQuery.gte('total', minTotal)
     if (maxTotal !== undefined) countQuery = countQuery.lte('total', maxTotal)
 
-    const [queryResult, countResult] = await Promise.all([query, countQuery])
+    const [queryResult, countResult, summary] = await Promise.all([
+      query,
+      countQuery,
+      includeSummary ? this.summarizeList(workspaceId, filters) : Promise.resolve(undefined),
+    ])
 
     const { data, error } = queryResult
     if (error) {
@@ -377,10 +403,44 @@ export class InvoiceService {
       hasMore,
       total: countResult.count || 0,
       limit: maxLimit,
+      // Additive, and only when asked: every other caller of this list keeps
+      // the exact response it had, and does not pay for a full scan.
+      ...(summary ? { summary } : {}),
     }
 
     await memoryCache.set(cacheKey, result, 60)
     return result
+  }
+
+  /**
+   * The stat-card figures over EVERY invoice matching the filters.
+   *
+   * Paged through in ordered 1000-row pages rather than one unbounded select:
+   * PostgREST caps a response at its max-rows setting and returns the short
+   * page without an error, which would bring back exactly the silent
+   * truncation this exists to remove. See invoice-list-summary.domain.ts.
+   */
+  private async summarizeList(workspaceId: string, filters: InvoiceFilters) {
+    const PAGE = 1000
+    const rows: InvoiceSummaryRow[] = []
+
+    for (let from = 0; ; from += PAGE) {
+      let pageQuery = supabase
+        .from('invoices')
+        .select('total, status, date, created_at, currency')
+        .eq('workspace_id', workspaceId)
+        .order('id', { ascending: true })
+        .range(from, from + PAGE - 1)
+      pageQuery = applyInvoiceListFilters(pageQuery, filters)
+      const { data: page, error } = await pageQuery
+
+      if (error) throw new DatabaseError('Failed to summarize invoices', error)
+
+      rows.push(...((page ?? []) as InvoiceSummaryRow[]))
+      if (!page || page.length < PAGE) break
+    }
+
+    return summarizeInvoices(rows, new Date())
   }
 
   /**
@@ -1246,7 +1306,13 @@ export class InvoiceService {
     const tomorrow = new Date(today)
     tomorrow.setDate(tomorrow.getDate() + 1)
 
-    const { data: allInvoices } = await supabase
+    // ⚠️ AGGREGATED IN POSTGRES FIRST. The row path below is capped by
+    // PostgREST max-rows (1000) and runs only while `invoices_summary_kpis`
+    // is not installed.
+    const aggregate = await fetchInvoiceSummaryAggregate(workspaceId, today, tomorrow)
+    if (aggregate) return aggregate
+
+    const { data: allInvoices, error: invoicesError } = await supabase
       .from('invoices')
       // ⚠️ `date`, NOT `created_at`.
       //
@@ -1265,10 +1331,16 @@ export class InvoiceService {
       .select('total, paid_amount, status, date, type')
       .eq('workspace_id', workspaceId)
 
-    const { data: products } = await supabase
+    // §7 #3 — a failed read is not «no sales, no debt». These errors used to be
+    // dropped, so a broken query rendered as a row of zeros.
+    if (invoicesError) throw new DatabaseError('Failed to summarise invoices', invoicesError)
+
+    const { data: products, error: productsError } = await supabase
       .from('products')
       .select('quantity, min_stock_level')
       .eq('workspace_id', workspaceId)
+
+    if (productsError) throw new DatabaseError('Failed to count low stock', productsError)
 
     // «فروش امروز» و «بدهی» فقط از فروش می‌آیند. فاکتور خرید نه فروش است و نه
     // طلب ما از مشتری. فاکتورهای قدیمیِ بدون type فروش در نظر گرفته می‌شوند تا
