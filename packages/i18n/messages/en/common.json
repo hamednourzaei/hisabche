@@ -4251,7 +4251,9 @@
     "error_PAYMENT_OVER_ALLOCATED": "Allocations exceed the payment amount.",
     "error_PAYMENT_WORKSPACE_REQUIRED": "No business is selected.",
     "error_PAYMENT_WITHOUT_PARTY_NEEDS_ALLOCATION": "A payment without a customer must name an invoice.",
-    "paymentsReadFailed": "This invoice's payments could not be read; a payment can't be recorded until they are."
+    "paymentsReadFailed": "This invoice's payments could not be read; a payment can't be recorded until they are.",
+    "fullyPaid": "Fully paid",
+    "paidWithoutRecord": "This invoice is marked paid but has no payment record behind it; until one is recorded it does not appear in the till, ledger or receivables."
   },
   "ops": {
     "cashForecast": "Cash forecast",

@@ -147,7 +147,13 @@ export function InvoiceRelatedPanel({
 
   // Compared in minor units. A float comparison on money reports a difference
   // of 0.0000001 as drift and hides a real one of half a cent (lesson 9).
-  const drifted = Math.round(allocatedTotal * 100) !== Math.round(storedPaidAmount * 100)
+  // Unread payments are not «no payments»: no drift claim until they are read.
+  const drifted =
+    !relatedFailed && Math.round(allocatedTotal * 100) !== Math.round(storedPaidAmount * 100)
+  const fullyPaid =
+    !relatedFailed &&
+    (invoiceTotal ?? 0) > 0 &&
+    Math.round(allocatedTotal * 100) >= Math.round((invoiceTotal ?? 0) * 100)
 
   // ⚠️ FROM THE ALLOCATIONS, NEVER FROM `storedPaidAmount`.
   //
@@ -263,6 +269,13 @@ export function InvoiceRelatedPanel({
           </>
         )}
 
+        {fullyPaid && !drifted ? (
+          <p className="mt-3 flex items-center gap-2 rounded-xl bg-[hsl(var(--color-success)/0.12)] px-3 py-2 text-xs font-medium text-[hsl(var(--color-success))]">
+            <Receipt className="size-3.5 shrink-0" aria-hidden="true" />
+            {t('invoiceDetail.fullyPaid', 'پرداخت کامل شده است')}
+          </p>
+        ) : null}
+
         {drifted ? (
           // Phase F made `paid_amount` a projection of these rows. If the two
           // disagree the trigger did not run — silence here would leave a
@@ -270,12 +283,20 @@ export function InvoiceRelatedPanel({
           <p className="mt-3 flex items-start gap-2 rounded-xl bg-[hsl(var(--color-warning)/0.12)] px-3 py-2 text-xs text-[hsl(var(--color-warning))]">
             <AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
             <span>
-              {t(
-                'invoiceDetail.paidAmountDrift',
-                'مبلغ پرداخت‌شده‌ی ثبت‌شده روی فاکتور با مجموع پرداخت‌ها یکی نیست',
-              )}
+              {allocatedTotal === 0
+                ? // The common case: marked paid at creation, no payment record.
+                  t(
+                    'invoiceDetail.paidWithoutRecord',
+                    'این فاکتور «پرداخت‌شده» علامت خورده ولی هیچ رکورد پرداختی پشت آن نیست؛ تا ثبت نشود در صندوق، دفتر و گزارش بدهی دیده نمی‌شود.',
+                  )
+                : t(
+                    'invoiceDetail.paidAmountDrift',
+                    'مبلغ پرداخت‌شده‌ی ثبت‌شده روی فاکتور با مجموع پرداخت‌ها یکی نیست',
+                  )}
               {': '}
-              <span className="tabular-nums">{fmtMoney(storedPaidAmount)}</span>
+              <span className="tabular-nums">
+                {fmtMoney(storedPaidAmount)} ≠ {fmtMoney(allocatedTotal)}
+              </span>
             </span>
           </p>
         ) : null}
