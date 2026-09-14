@@ -95,8 +95,8 @@ describe('InvoiceService.create with a client request id', () => {
   })
 
   it('without the migration a keyed request is refused (never an unkeyed copy)', async () => {
-    const { InvoiceService, IdempotencyUnavailableError } =
-      await import('../services/invoice.service')
+    const { InvoiceService } = await import('../services/invoice.service')
+    const { IdempotencyUnavailableError } = await import('../utils/client-request')
     lookup = { data: null, error: { code: '42703' } }
     await expect(
       new InvoiceService().create(ctx, draft, null, { clientRequestId: 'inv_abc_12345678' }),
@@ -111,11 +111,11 @@ describe('route contract', () => {
     '',
   )
   it('reads Idempotency-Key and passes it to the service', () => {
-    expect(src).toContain("request.headers['idempotency-key']")
+    expect(src).toContain('readClientRequestId(request)')
     expect(src).toContain('clientRequestId,')
   })
   it('a replay answers 200 with a marker; migration missing answers 503 (retryable)', () => {
-    expect(src).toContain("reply.code(200).header('idempotent-replay', 'true')")
+    expect(src).toContain('sendCreated(reply, invoice)')
     expect(src).toContain('reply.code(503)')
   })
 })

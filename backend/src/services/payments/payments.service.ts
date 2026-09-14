@@ -10,6 +10,11 @@
 // ============================================
 
 import { ConflictError, NotFoundError } from '../../errors/database.error'
+import {
+  asReplay,
+  IdempotencyUnavailableError,
+  isMissingIdempotencySupport,
+} from '../../utils/client-request'
 import { ValidationError } from '../../errors/validation.error'
 import { memoryCache } from '../../utils/pagination'
 import type { TenancyContext } from '../tenancy.service'
@@ -110,7 +115,25 @@ export class PaymentsService {
    * the payment as an advance rather than being refused: a customer paying
    * more than they currently owe is a normal thing, not an error.
    */
-  async recordPayment(ctx: TenancyContext, input: RecordPaymentInput) {
+  async recordPayment(
+    ctx: TenancyContext,
+    input: RecordPaymentInput,
+    options: { clientRequestId?: string | null } = {},
+  ) {
+    const clientRequestId = options.clientRequestId ?? null
+
+    // ⚠️ A REPLAYED PAYMENT IS NOT A SECOND PAYMENT. The same key answers with
+    // the payment it already recorded. Its journal entry is (re)booked — the
+    // ledger is idempotent per payment — in case the first attempt died
+    // between the payment and the entry.
+    if (clientRequestId) {
+      const existingId = await this.repo.paymentIdByClientRequestId(
+        ctx.workspaceId,
+        clientRequestId,
+      )
+      if (existingId) return this.replayPayment(ctx, existingId)
+    }
+
     const amount = round2(input.amount)
     const entryDate = (input.entryDate ?? today()).slice(0, 10)
 
@@ -175,8 +198,9 @@ export class PaymentsService {
     const paymentNumber = `PMT-${year}-${String(sequence + 1).padStart(6, '0')}`
 
     let paymentId: string
+    let replayed = false
     try {
-      paymentId = await this.repo.recordPayment(
+      ;({ id: paymentId, replayed } = await this.repo.recordPayment(
         ctx,
         {
           paymentNumber,
@@ -191,10 +215,24 @@ export class PaymentsService {
           notes: input.notes ?? '',
         },
         allocations,
-      )
+        clientRequestId,
+      ))
     } catch (error) {
+      const code = (error as { code?: string } | null)?.code
+      if (clientRequestId && code === '23505') {
+        // A concurrent twin committed first; this attempt rolled back whole.
+        const winner = await this.repo.paymentIdByClientRequestId(ctx.workspaceId, clientRequestId)
+        if (winner) return this.replayPayment(ctx, winner)
+      }
+      if (clientRequestId && isMissingIdempotencySupport(error as { code?: string })) {
+        throw new IdempotencyUnavailableError('payment')
+      }
       this.rethrow(error)
     }
+
+    // The keyed function answered with a payment a twin committed between our
+    // lookup and our call: nothing new was written, so nothing is logged twice.
+    if (replayed) return this.replayPayment(ctx, paymentId)
 
     await this.bookPayment(ctx, paymentId, input.direction, amount, entryDate, paymentNumber)
 
@@ -230,6 +268,20 @@ export class PaymentsService {
 
     const payment = await this.getPayment(ctx, paymentId)
     return { ...payment, unallocated: unallocatedOf(amount, allocations) }
+  }
+
+  private async replayPayment(ctx: TenancyContext, paymentId: string) {
+    const payment = await this.getPayment(ctx, paymentId)
+    await this.bookPayment(
+      ctx,
+      payment.id,
+      payment.direction,
+      payment.amount,
+      payment.entryDate,
+      payment.paymentNumber ?? '',
+    )
+    const allocated = payment.allocations.reduce((sum, a) => sum + a.amount, 0)
+    return asReplay({ ...payment, unallocated: round2(payment.amount - allocated) })
   }
 
   /**

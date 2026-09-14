@@ -164,3 +164,14 @@
 | eslint فایل‌های تغییرکرده | ✅ 0 error (112 warning)                                                                               |
 | injection tests           | بودجه (remaining، علامت درآمد)، صندوق (دوبار ثبت نقد) — هر سه قرمز شدند و برگشتند                      |
 | QA بصری ۳۶۰→۱۹۲۰          | ❌ انجام نشد — صفحه‌ها پشت لاگین با داده‌ی واقعی‌اند و ورود رمز توسط Claude مجاز نیست                  |
+
+## Offline / sync round (late 2026-09-14)
+
+- **Cursor pagination was broken everywhere**: invoice/product/customer lists returned `nextCursor = id` and filtered `.lt(created_at, cursor)`. Fixed with `backend/src/utils/keyset-cursor.ts` (sort value + id). Products/customers also ignored `page` and capped `limit` at 100.
+- **`/api/auth/refresh` was not in `publicPaths`** (index.ts global preHandler) → every renewal 401. And login's response schema dropped `refreshToken` (fast-json-stringify). Both fixed.
+- **Idempotency-Key was sent but never read** on POST invoices/customers/products/transactions/payments. Now `client_request_id` + partial unique index; payments via `payments_record_keyed` (wraps live `payments_record` in one transaction, returns `{payment_id, replayed}`). Never use shared instance flags on singleton repos for per-request state.
+- Mobile fallback used a NEW clientId after a failed online attempt → duplicate sale. One id per sale now; only network/5xx/408/429 are queued.
+- Desktop pull: `/api/sync/pull` delta (cursor in localStorage per workspace, advanced after commit), snapshot by id cursor on first run/mustRehydrate/fallback.
+- WatermelonDB (`packages/offline`, `packages/db`) and `packages/sync` have NO importer — dead; removal needs user approval.
+- Tooling: bash heredoc of a big python script with many quotes failed ("unexpected EOF") — use Write/Edit for large edits. A formatter hook reflows code between edits; re-read anchors. Jest: `jest.mock` factories may only reference vars prefixed `mock`. QueryClient in jest: `gcTime: Infinity` to avoid open handles.
+- Unverified until staging: PostgREST behaviour of `.or()` keyset combined with other `.or()` filters (invoice search/outstanding) — `scripts/verify-idempotency-staging.mjs` checks cursor vs offset walks.

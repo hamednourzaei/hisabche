@@ -17,6 +17,11 @@ import {
 // books through — see services/payments/index.ts.
 import { partyBalance, payments as paymentsService } from '../services/payments'
 import { BaseError } from '../errors/base.error'
+import {
+  IdempotencyUnavailableError,
+  isMissingIdempotencySupport,
+  readClientRequestId,
+} from '../utils/client-request'
 
 // ─── Types ────────────────────────────────────────────────
 interface CreateTransactionBody {
@@ -187,6 +192,7 @@ export async function transactionRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       const body = request.body as CreateTransactionBody
       const { workspaceId, userId } = request.tenancy
+      const clientRequestId = readClientRequestId(request)
 
       if (!body.amount || body.amount <= 0) {
         return reply.code(400).send({ error: 'مبلغ معتبر نیست' })
@@ -222,23 +228,29 @@ export async function transactionRoutes(fastify: FastifyInstance) {
           // `type` — the caller is the thing that has been getting it wrong.
           // Money involving a customer comes in; money involving a supplier
           // goes out.
-          const payment = await paymentsService.recordPayment(request.tenancy, {
-            direction: isCustomer ? 'in' : 'out',
-            partyType: isCustomer ? 'customer' : 'supplier',
-            partyId: (body.customerId ?? body.supplierId) as string,
-            amount: body.amount,
-            ...(body.currency ? { currency: body.currency } : {}),
-            ...(body.date ? { entryDate: body.date.slice(0, 10) } : {}),
-            ...(body.reference ? { reference: body.reference } : {}),
-            ...(body.description ? { notes: body.description } : {}),
-          })
+          const payment = await paymentsService.recordPayment(
+            request.tenancy,
+            {
+              direction: isCustomer ? 'in' : 'out',
+              partyType: isCustomer ? 'customer' : 'supplier',
+              partyId: (body.customerId ?? body.supplierId) as string,
+              amount: body.amount,
+              ...(body.currency ? { currency: body.currency } : {}),
+              ...(body.date ? { entryDate: body.date.slice(0, 10) } : {}),
+              ...(body.reference ? { reference: body.reference } : {}),
+              ...(body.description ? { notes: body.description } : {}),
+            },
+            { clientRequestId },
+          )
 
           await clearCache(`transactions:${workspaceId}:*`)
           await clearCache(`transaction-balance:${workspaceId}:*`)
           await clearCache(`dashboard:${workspaceId}`)
           await clearCache(`sales:${workspaceId}:*`)
 
-          return reply.code(201).send({
+          const replayed = (payment as { idempotentReplay?: boolean }).idempotentReplay === true
+          if (replayed) reply.header('idempotent-replay', 'true')
+          return reply.code(replayed ? 200 : 201).send({
             id: payment.id,
             customer_id: isCustomer ? body.customerId : null,
             supplier_id: isCustomer ? null : body.supplierId,
@@ -255,6 +267,9 @@ export async function transactionRoutes(fastify: FastifyInstance) {
             source: 'payment',
           })
         } catch (err) {
+          if (err instanceof IdempotencyUnavailableError) {
+            return reply.code(503).send({ error: err.message, code: err.code })
+          }
           if (err instanceof BaseError && err.statusCode < 500) {
             const code = /^[A-Z][A-Z_]{6,}/.exec(err.message)?.[0]
             return reply.code(err.statusCode).send({ error: err.message, code: code ?? err.name })
@@ -264,9 +279,29 @@ export async function transactionRoutes(fastify: FastifyInstance) {
         }
       }
 
+      // A replayed offline create answers with the row it already wrote.
+      if (clientRequestId) {
+        const { data: existing, error: lookupError } = await supabase
+          .from('transactions')
+          .select()
+          .eq('workspace_id', workspaceId)
+          .eq('client_request_id', clientRequestId)
+          .maybeSingle()
+        if (lookupError && isMissingIdempotencySupport(lookupError)) {
+          const unavailable = new IdempotencyUnavailableError('transaction')
+          return reply.code(503).send({ error: unavailable.message, code: unavailable.code })
+        }
+        if (lookupError) {
+          fastify.log.error(lookupError)
+          return reply.code(500).send({ error: lookupError.message })
+        }
+        if (existing) return reply.code(200).header('idempotent-replay', 'true').send(existing)
+      }
+
       const { data, error } = await supabase
         .from('transactions')
         .insert({
+          ...(clientRequestId ? { client_request_id: clientRequestId } : {}),
           customer_id: body.customerId ?? null,
           supplier_id: body.supplierId ?? null,
           type: body.type,
@@ -281,6 +316,21 @@ export async function transactionRoutes(fastify: FastifyInstance) {
         .select()
         .single()
 
+      if (error && clientRequestId) {
+        if (error.code === '23505') {
+          const { data: winner } = await supabase
+            .from('transactions')
+            .select()
+            .eq('workspace_id', workspaceId)
+            .eq('client_request_id', clientRequestId)
+            .maybeSingle()
+          if (winner) return reply.code(200).header('idempotent-replay', 'true').send(winner)
+        }
+        if (isMissingIdempotencySupport(error)) {
+          const unavailable = new IdempotencyUnavailableError('transaction')
+          return reply.code(503).send({ error: unavailable.message, code: unavailable.code })
+        }
+      }
       if (error) {
         fastify.log.error(error)
         return reply.code(500).send({ error: error.message })

@@ -5,6 +5,10 @@
 // ============================================
 
 import { supabase } from '../../db'
+import {
+  IdempotencyUnavailableError,
+  isMissingIdempotencySupport,
+} from '../../utils/client-request'
 import { DatabaseError } from '../../errors/database.error'
 import type { TenancyContext } from '../tenancy.service'
 
@@ -81,6 +85,21 @@ export class PaymentsRepository {
     const { data, error } = await query
     if (error) throw new DatabaseError('Failed to fetch payments', error)
     return (data ?? []).map(mapPayment)
+  }
+
+  /** The payment a keyed request already recorded, in this workspace. */
+  async paymentIdByClientRequestId(workspaceId: string, key: string): Promise<string | null> {
+    const { data, error } = await supabase
+      .from('payments')
+      .select('id')
+      .eq('workspace_id', workspaceId)
+      .eq('client_request_id', key)
+      .maybeSingle()
+    if (error) {
+      if (isMissingIdempotencySupport(error)) throw new IdempotencyUnavailableError('payment')
+      throw new DatabaseError('Failed to look up the request', error)
+    }
+    return (data as { id: string } | null)?.id ?? null
   }
 
   async getPayment(workspaceId: string, id: string): Promise<PaymentRow | null> {
@@ -227,8 +246,13 @@ export class PaymentsRepository {
       notes: string
     },
     allocations: AllocationRequest[],
-  ): Promise<string> {
-    const { data, error } = await supabase.rpc('payments_record', {
+    clientRequestId: string | null = null,
+  ): Promise<{ id: string; replayed: boolean }> {
+    // Keyed: the wrapper calls `payments_record` and stamps the key in the
+    // same transaction (docs/offline-idempotency-migration.sql).
+    const fn = clientRequestId ? 'payments_record_keyed' : 'payments_record'
+    const { data, error } = await supabase.rpc(fn, {
+      ...(clientRequestId ? { p_client_request_id: clientRequestId } : {}),
       p_workspace_id: ctx.workspaceId,
       p_user_id: ctx.userId,
       p_payment: {
@@ -248,7 +272,13 @@ export class PaymentsRepository {
     })
 
     if (error) throw error
-    return data as string
+    if (clientRequestId) {
+      // payments_record_keyed answers { payment_id, replayed }.
+      const keyed = (data ?? {}) as { payment_id?: string; replayed?: boolean }
+      if (!keyed.payment_id) throw new DatabaseError('Keyed payment returned no id', null)
+      return { id: keyed.payment_id, replayed: keyed.replayed === true }
+    }
+    return { id: data as string, replayed: false }
   }
 
   async cancelPayment(ctx: TenancyContext, paymentId: string): Promise<{ unallocated: number }> {

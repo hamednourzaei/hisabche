@@ -40,6 +40,7 @@ export { useLogin, useSignUp, useLogout, useCurrentUser } from './hooks/auth'
 // ─── Invoices ─────────────────────────────────────────────
 export {
   useInvoices,
+  useInvoicesInfinite,
   useInvoice,
   useCreateInvoice,
   useUpdateInvoice,

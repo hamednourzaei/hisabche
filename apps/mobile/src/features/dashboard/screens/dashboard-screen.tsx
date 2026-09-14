@@ -25,7 +25,15 @@ import {
   type AIInsight,
   type SalesDataPoint,
 } from '@hisabche/api'
-import { MobileCard, Sparkline, Text, TrendPill, useLayout, useTheme } from '@hisabche/mobile-ui'
+import {
+  MobileCard,
+  OfflineBanner,
+  Sparkline,
+  Text,
+  TrendPill,
+  useLayout,
+  useTheme,
+} from '@hisabche/mobile-ui'
 
 import { AppScreen } from '../../../shared/components/app-screen'
 import { useCommonT } from '../../../shared/i18n/use-common-t'
@@ -33,6 +41,7 @@ import { DateRangeControl } from '../components/date-range-control'
 import { RecentActivitiesCard } from '../components/recent-activities-card'
 import { formatAmount } from '../../../shared/lib/format'
 import { InsightCard } from '../components/insight-card'
+import { useSyncRefresh } from '../../offline/use-sync-refresh'
 import { asList } from '@hisabche/api'
 
 // ─── Shared catalog keys ─────────────────────────────────────────────────
@@ -84,6 +93,7 @@ function GreetingHeader() {
 
 export function DashboardScreen() {
   const tCommon = useCommonT()
+  const { t: tMobile } = useTranslation('mobile')
   const { spacing, colors } = useTheme()
   const { columns } = useLayout()
   const router = useRouter()
@@ -98,11 +108,15 @@ export function DashboardScreen() {
   })
   const insights = useAIInsights()
 
-  const onRefresh = useCallback(() => {
-    void kpis.refetch()
-    void sales.refetch()
-    void insights.refetch()
-  }, [kpis, sales, insights])
+  // Pull-to-refresh through the sync: queued writes first, then the figures.
+  const { refetch: refetchKpis } = kpis
+  const { refetch: refetchSales } = sales
+  const { refetch: refetchInsights } = insights
+  const refetchAll = useCallback(
+    () => Promise.all([refetchKpis(), refetchSales(), refetchInsights()]),
+    [refetchKpis, refetchSales, refetchInsights],
+  )
+  const { refreshing, onRefresh, offlineNotice } = useSyncRefresh(refetchAll)
 
   const amount = useCallback((value: number | undefined) => formatAmount(value ?? 0), [])
   const data = kpis.data
@@ -185,7 +199,7 @@ export function DashboardScreen() {
         contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg, paddingBottom: 110 }}
         refreshControl={
           <RefreshControl
-            refreshing={kpis.isRefetching}
+            refreshing={refreshing}
             onRefresh={onRefresh}
             tintColor={colors.primary}
           />
@@ -194,6 +208,15 @@ export function DashboardScreen() {
       >
         {/* Level 1: Greeting */}
         <GreetingHeader />
+
+        {offlineNotice ? (
+          <OfflineBanner
+            offline
+            pendingCount={0}
+            offlineLabel={tMobile('common.offlineLocalData')}
+            pendingLabel=""
+          />
+        ) : null}
 
         {/* Level 2: 4 KPI cards — 2-col on phones, 4-col wide, same as web's
             `grid-cols-2 lg:grid-cols-4`. Web never stacks these single-column;

@@ -2,13 +2,14 @@
 // Outbox hooks — optimistic reads + automatic draining.
 // ============================================
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import NetInfo from '@react-native-community/netinfo'
 import { useQueryClient } from '@tanstack/react-query'
 import type { InvoiceWithCustomer } from '@hisabche/api'
 
 import { useOutboxStore, type OutboxEntry } from './outbox.store'
 import { runSync } from './sync-runner'
+import { persistQueryCache, restoreQueryCache } from './query-cache-persistence'
 
 /** Queued invoices projected into the shape the list already renders. */
 export function usePendingInvoices(): InvoiceWithCustomer[] {
@@ -16,10 +17,8 @@ export function usePendingInvoices(): InvoiceWithCustomer[] {
 
   return useMemo(
     () =>
-      entries
-        .filter((e) => e.kind === 'invoice.create')
-        .map((entry) => toInvoicePreview(entry)),
-    [entries]
+      entries.filter((e) => e.kind === 'invoice.create').map((entry) => toInvoicePreview(entry)),
+    [entries],
   )
 }
 
@@ -49,6 +48,36 @@ export function useIsOffline(): boolean {
   }, [])
 
   return offline
+}
+
+/**
+ * Restores this session's stored reads at start and keeps them current, so a
+ * screen opened without a connection shows real local data. Scoped per
+ * workspace (or user); the memory cache is emptied on sign-out.
+ */
+export function usePersistentQueryCache(scope: string | null): void {
+  const queryClient = useQueryClient()
+  const previous = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (!scope) {
+      // Signed out: nothing of the previous session stays in memory either.
+      if (previous.current) queryClient.clear()
+      previous.current = null
+      return
+    }
+    previous.current = scope
+
+    let cancelled = false
+    let stop: () => void = () => undefined
+    void restoreQueryCache(queryClient, scope).finally(() => {
+      if (!cancelled) stop = persistQueryCache(queryClient, scope)
+    })
+    return () => {
+      cancelled = true
+      stop()
+    }
+  }, [queryClient, scope])
 }
 
 /** Drains the queue on mount and whenever the device comes back online. */

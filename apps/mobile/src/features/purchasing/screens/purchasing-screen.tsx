@@ -34,7 +34,7 @@ export function PurchasingScreen() {
   const { spacing } = useTheme()
   const router = useRouter()
 
-  const { data, isLoading, isRefetching, error, refetch } = usePurchaseOrders()
+  const { data, isLoading, error, refetch } = usePurchaseOrders()
   const { mutate: receiveGoods, isPending, variables: receivingId } = useReceiveGoods()
 
   const onReceive = useCallback((id: string) => receiveGoods(id), [receiveGoods])
@@ -95,7 +95,6 @@ export function PurchasingScreen() {
         data={data}
         estimatedItemSize={148}
         isLoading={isLoading}
-        isRefetching={isRefetching}
         error={error}
         onRetry={refetch}
         keyExtractor={(item, index) => item.id ?? `po-${index}`}

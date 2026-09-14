@@ -12,6 +12,12 @@ import { mapProduct } from '../utils/product.mapper'
 import { memoryCache } from '../utils/pagination'
 import type { TenancyContext } from './tenancy.service'
 import { logBusinessEvent } from './event-log.service'
+import { applyKeyset, decodeCursor, encodeCursor } from '../utils/keyset-cursor'
+import {
+  asReplay,
+  IdempotencyUnavailableError,
+  isMissingIdempotencySupport,
+} from '../utils/client-request'
 
 // ✅ Column Selection Constants
 const PRODUCT_LIST_COLUMNS = `
@@ -65,6 +71,7 @@ export class ProductService {
       barcode,
       includeSummary,
       limit = 20,
+      page = 1,
       cursor,
       sortBy = 'created_at',
       sortDirection = 'desc',
@@ -83,7 +90,17 @@ export class ProductService {
       .select(PRODUCT_LIST_COLUMNS)
       .eq('workspace_id', workspaceId)
       .order(dbSortBy, { ascending: sortDirection === 'asc' })
-      .limit(fetchLimit)
+      .order('id', { ascending: sortDirection === 'asc' })
+
+    const keyset = cursor ? decodeCursor(cursor, dbSortBy) : null
+    // `page` used to be ignored: page 2 of the products table was page 1 again.
+    const pageNumber = Number(page) || 1
+    if (!keyset && pageNumber > 1) {
+      const offset = (pageNumber - 1) * maxLimit
+      query = query.range(offset, offset + maxLimit)
+    } else {
+      query = query.limit(fetchLimit)
+    }
 
     if (search) query = query.ilike('name', `%${search}%`)
     if (category) query = query.eq('category', category)
@@ -92,13 +109,7 @@ export class ProductService {
     if (minPrice !== undefined) query = query.gte('sell_price', minPrice)
     if (maxPrice !== undefined) query = query.lte('sell_price', maxPrice)
 
-    if (cursor) {
-      if (sortDirection === 'desc') {
-        query = query.lt(dbSortBy, cursor)
-      } else {
-        query = query.gt(dbSortBy, cursor)
-      }
-    }
+    if (keyset) query = applyKeyset(query, dbSortBy, sortDirection, keyset)
 
     const [{ data, error }, { count }, summary] = await Promise.all([
       query,
@@ -113,7 +124,9 @@ export class ProductService {
 
     const hasMore = (data?.length || 0) > maxLimit
     const items = hasMore ? data.slice(0, maxLimit) : data
-    const nextCursor = hasMore && items.length > 0 ? items[items.length - 1]?.id : null
+    const last =
+      items && items.length > 0 ? (items[items.length - 1] as Record<string, unknown>) : null
+    const nextCursor = hasMore && last ? encodeCursor(last, dbSortBy) : null
 
     let products = (items || []).map(mapProduct)
     if (lowStock !== undefined) {
@@ -188,8 +201,33 @@ export class ProductService {
   }
 
   // ─── Create ──────────────────────────────────────────────────
-  async create(ctx: TenancyContext, data: CreateProduct) {
+  private async findByClientRequestId(workspaceId: string, key: string) {
+    const { data, error } = await supabase
+      .from('products')
+      .select(PRODUCT_LIST_COLUMNS)
+      .eq('workspace_id', workspaceId)
+      .eq('client_request_id', key)
+      .maybeSingle()
+    if (error) {
+      if (isMissingIdempotencySupport(error)) throw new IdempotencyUnavailableError('product')
+      throw new DatabaseError('Failed to look up the request', error)
+    }
+    return data ? mapProduct(data) : null
+  }
+
+  async create(
+    ctx: TenancyContext,
+    data: CreateProduct,
+    options: { clientRequestId?: string | null } = {},
+  ) {
     const { workspaceId, userId } = ctx
+    const clientRequestId = options.clientRequestId ?? null
+
+    if (clientRequestId) {
+      const existing = await this.findByClientRequestId(workspaceId, clientRequestId)
+      if (existing) return asReplay(existing)
+    }
+
     const { data: product, error } = await supabase
       .from('products')
       .insert({
@@ -208,10 +246,18 @@ export class ProductService {
         is_active: data.isActive !== false,
         workspace_id: workspaceId,
         user_id: userId,
+        ...(clientRequestId ? { client_request_id: clientRequestId } : {}),
       })
       .select(PRODUCT_LIST_COLUMNS)
       .single()
 
+    if (error && clientRequestId) {
+      if (error.code === '23505') {
+        const winner = await this.findByClientRequestId(workspaceId, clientRequestId)
+        if (winner) return asReplay(winner)
+      }
+      if (isMissingIdempotencySupport(error)) throw new IdempotencyUnavailableError('product')
+    }
     if (error) throw new DatabaseError('Failed to create product', error)
 
     await this.invalidateWorkspaceCache(workspaceId)

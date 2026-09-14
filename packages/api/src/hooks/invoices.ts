@@ -15,9 +15,10 @@
 // invoiceKeys.all هستند.
 // ============================================
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
+import { asList } from '../lib/as-list'
 import { useRealtime } from './useRealtime'
 import { dashboardKeys } from './dashboard'
 import type { Invoice, CreateInvoice, UpdateInvoice, InvoiceFilters } from '@hisabche/validation'
@@ -106,6 +107,40 @@ export function useInvoices(
   })
 }
 
+/**
+ * The invoice list as an infinite scroll, paged by the server's keyset cursor.
+ *
+ * Offset pages shift when an invoice is created between two reads (a row
+ * repeats or disappears); the cursor continues from the last row actually seen.
+ * Same filters as `useInvoices`, minus `page`.
+ */
+export function useInvoicesInfinite(filters: Omit<InvoiceFilters, 'page' | 'cursor'>) {
+  const authReady = useAuthReady()
+  useRealtime({ table: 'invoices', queryKey: invoiceKeys.all as unknown as string[] })
+
+  return useInfiniteQuery({
+    queryKey: [...invoiceKeys.lists(), 'infinite', filters] as const,
+    initialPageParam: null as string | null,
+    queryFn: async ({ pageParam }) => {
+      const { data } = await apiClient.get<{
+        invoices: InvoiceWithCustomer[]
+        hasMore: boolean
+        nextCursor: string | null
+      }>('/invoices', {
+        params: { ...filters, ...(pageParam ? { cursor: pageParam } : {}) },
+      })
+      return {
+        invoices: asList<InvoiceWithCustomer>(data?.invoices),
+        hasMore: data?.hasMore === true,
+        nextCursor: typeof data?.nextCursor === 'string' ? data.nextCursor : null,
+      }
+    },
+    getNextPageParam: (last) => (last.hasMore && last.nextCursor ? last.nextCursor : undefined),
+    enabled: authReady,
+    staleTime: 1000 * 60 * 2,
+  })
+}
+
 // ⚠️ توجه: useInvoice عمداً subscription realtime جدای خودش را ندارد.
 // اگر این هوک بدون useInvoices در همان صفحه استفاده شود (مثلاً یک
 // صفحه‌ی جزئیات مستقل که هیچ‌جا لیست فاکتورها را mount نمی‌کند)،
@@ -131,8 +166,20 @@ export function useCreateInvoice() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (input: CreateInvoice) => {
-      const { data } = await apiClient.post<Invoice>('/invoices', input)
+    /**
+     * `idempotencyKey`: one per intended invoice, made by the caller ONCE and
+     * resent unchanged on retry — the server answers a repeat with the invoice
+     * it already created instead of a second sale.
+     */
+    mutationFn: async ({
+      idempotencyKey,
+      ...input
+    }: CreateInvoice & { idempotencyKey?: string | undefined }) => {
+      const { data } = await apiClient.post<Invoice>(
+        '/invoices',
+        input,
+        idempotencyKey ? { headers: { 'Idempotency-Key': idempotencyKey } } : undefined,
+      )
       return data
     },
     onSuccess: () => {

@@ -15,6 +15,11 @@ import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 
 import { PaymentsService } from '../services/payments'
+import {
+  IdempotencyUnavailableError,
+  readClientRequestId,
+  sendCreated,
+} from '../utils/client-request'
 import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
@@ -138,9 +143,14 @@ export async function paymentsRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const body = recordPaymentSchema.parse(request.body)
-        const payment = await paymentsService.recordPayment(request.tenancy, body)
-        return reply.code(201).send(payment)
+        const payment = await paymentsService.recordPayment(request.tenancy, body, {
+          clientRequestId: readClientRequestId(request),
+        })
+        return sendCreated(reply, payment)
       } catch (err) {
+        if (err instanceof IdempotencyUnavailableError) {
+          return reply.code(503).send({ error: err.message, code: err.code })
+        }
         return fail(reply, err, 'Failed to record payment')
       }
     },

@@ -48,23 +48,12 @@ import { ActivityService } from './activity.service'
 import type { TenancyContext } from './tenancy.service'
 import { requireWorkspace } from './tenancy.service'
 import { logBusinessEvent } from './event-log.service'
+import { applyKeyset, decodeCursor, encodeCursor } from '../utils/keyset-cursor'
+import { IdempotencyUnavailableError, isMissingIdempotencySupport } from '../utils/client-request'
 
 // ============================================
 // ✅ OPTIMIZED: فقط ستون‌های مورد نیاز
 // ============================================
-
-/**
- * Keyed invoice creation cannot be honoured (the column is missing). Answered
- * 503 so an offline client keeps the entry queued instead of writing an
- * unkeyed — duplicable — copy.
- */
-export class IdempotencyUnavailableError extends Error {
-  readonly code = 'INVOICE_IDEMPOTENCY_MIGRATION_REQUIRED'
-  constructor() {
-    super('INVOICE_IDEMPOTENCY_MIGRATION_REQUIRED')
-    this.name = 'IdempotencyUnavailableError'
-  }
-}
 
 const INVOICE_LIST_COLUMNS = `
   id, 
@@ -341,6 +330,10 @@ export class InvoiceService {
       )
       .eq('workspace_id', workspaceId)
       .order(sortBy, { ascending: sortDirection === 'asc' })
+      // Tiebreak: the keyset cursor is (sort value, id).
+      .order('id', { ascending: sortDirection === 'asc' })
+
+    const keyset = cursor ? decodeCursor(cursor, sortBy) : null
 
     // ✅ FIX: رابط کاربری فاکتورها صفحه‌محور است (قبلی/بعدی + «۱ / ۳») و
     // پارامتر page را می‌فرستد، ولی این سرویس فقط cursor را می‌شناخت و page
@@ -348,7 +341,7 @@ export class InvoiceService {
     // دکمه‌های صفحه‌بندی هیچ کاری نمی‌کردند. حالا وقتی cursor نباشد از
     // offset استفاده می‌شود. (cursor برای مصرف‌کننده‌های infinite-scroll
     // دست‌نخورده باقی می‌ماند.)
-    if (!cursor && page > 1) {
+    if (!keyset && page > 1) {
       const offset = (page - 1) * maxLimit
       query = query.range(offset, offset + maxLimit)
     } else {
@@ -357,13 +350,7 @@ export class InvoiceService {
 
     query = applyInvoiceListFilters(query, filters)
 
-    if (cursor) {
-      if (sortDirection === 'desc') {
-        query = query.lt(sortBy, cursor)
-      } else {
-        query = query.gt(sortBy, cursor)
-      }
-    }
+    if (keyset) query = applyKeyset(query, sortBy, sortDirection, keyset)
 
     // ✅ FIX: کوئری شمارش هیچ‌کدام از فیلترها را اعمال نمی‌کرد و همیشه کل
     // فاکتورهای کاربر را می‌شمرد؛ در نتیجه با فیلتر/جستجو تعداد صفحات
@@ -417,7 +404,9 @@ export class InvoiceService {
 
     const hasMore = (data?.length || 0) > maxLimit
     const items = hasMore ? data.slice(0, maxLimit) : data
-    const nextCursor = hasMore && items.length > 0 ? items[items.length - 1]?.id : null
+    const last =
+      items && items.length > 0 ? (items[items.length - 1] as Record<string, unknown>) : null
+    const nextCursor = hasMore && last ? encodeCursor(last, sortBy) : null
 
     const invoices = (items || []).map((inv: any) => ({
       ...inv,
@@ -734,8 +723,7 @@ export class InvoiceService {
       .eq('client_request_id', clientRequestId)
       .maybeSingle()
     if (error) {
-      if (error.code === '42703' || error.code === 'PGRST204')
-        throw new IdempotencyUnavailableError()
+      if (isMissingIdempotencySupport(error)) throw new IdempotencyUnavailableError('invoice')
       throw new DatabaseError('Failed to look up the request', error)
     }
     return data as Record<string, unknown> | null
@@ -912,8 +900,8 @@ export class InvoiceService {
         const winner = await this.findByClientRequestId(workspaceId, clientRequestId)
         if (winner) return { ...winner, idempotentReplay: true }
       }
-      if (invoiceError.code === '42703' || invoiceError.code === 'PGRST204') {
-        throw new IdempotencyUnavailableError()
+      if (isMissingIdempotencySupport(invoiceError)) {
+        throw new IdempotencyUnavailableError('invoice')
       }
     }
     if (invoiceError || !invoice) throw new DatabaseError('Failed to create invoice', invoiceError)

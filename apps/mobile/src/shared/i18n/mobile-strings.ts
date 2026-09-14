@@ -55,6 +55,7 @@ interface MobileBundle {
     | 'save'
     | 'delete'
     | 'offline'
+    | 'offlineLocalData'
     | 'total'
     | 'all'
     | 'today'
@@ -303,6 +304,7 @@ const faIR: MobileBundle = {
     save: 'ذخیره',
     delete: 'حذف',
     offline: 'آفلاین',
+    offlineLocalData: 'آفلاین — داده محلی نمایش داده شد',
     total: 'مجموع',
     all: 'همه',
     today: 'امروز',
@@ -537,6 +539,7 @@ const en: MobileBundle = {
     save: 'Save',
     delete: 'Delete',
     offline: 'Offline',
+    offlineLocalData: 'Offline — showing local data',
     total: 'Total',
     all: 'All',
     today: 'Today',

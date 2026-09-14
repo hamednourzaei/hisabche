@@ -9,7 +9,7 @@ import { Alert, Pressable, Share, View } from 'react-native'
 import { Ionicons } from '@expo/vector-icons'
 import { useRouter } from 'expo-router'
 import { useTranslation } from 'react-i18next'
-import { useInvoices, type InvoiceWithCustomer } from '@hisabche/api'
+import { useInvoicesInfinite, type InvoiceWithCustomer } from '@hisabche/api'
 import { csvFilename } from '@hisabche/formatting'
 import {
   INVOICE_EXPORT_COLUMNS,
@@ -165,7 +165,6 @@ export function InvoicesScreen() {
 
   const filters = useMemo(
     () => ({
-      page: 1,
       limit: PAGE_SIZE,
       sortDirection: 'desc' as const,
       search,
@@ -177,7 +176,13 @@ export function InvoicesScreen() {
     [search, status, type],
   )
 
-  const query = useInvoices(filters)
+  // Cursor-paged: scrolling loads the rows after the last one seen, so an
+  // invoice created meanwhile neither repeats a row nor pushes one out of view.
+  const query = useInvoicesInfinite(filters)
+  const { hasNextPage, isFetchingNextPage, fetchNextPage } = query
+  const loadMore = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) void fetchNextPage()
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
   const pending = usePendingInvoices()
   const { isWide } = useLayout()
 
@@ -190,7 +195,7 @@ export function InvoicesScreen() {
         ? pending.filter((invoice) => type === 'all' || (invoice.type ?? 'sale') === type)
         : []
 
-    return [...queued, ...(query.data?.invoices ?? [])]
+    return [...queued, ...(query.data?.pages ?? []).flatMap((page) => page.invoices)]
   }, [pending, query.data, status, type])
 
   // Web's BentoStats reads the *filtered* set (never paginated). The mobile
@@ -389,9 +394,10 @@ export function InvoicesScreen() {
         data={items}
         estimatedItemSize={96}
         isLoading={query.isLoading}
-        isRefetching={query.isRefetching}
         error={query.error}
         onRetry={query.refetch}
+        onEndReached={loadMore}
+        isFetchingMore={isFetchingNextPage}
         keyExtractor={(item, index) => item.id ?? `pending-${index}`}
         emptyTitle={t('sales.emptyTitle')}
         emptyDescription={t('sales.emptyDescription')}

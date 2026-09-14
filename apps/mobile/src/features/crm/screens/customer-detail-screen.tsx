@@ -2,8 +2,8 @@
 // Customer detail — profile header, ledger balance, transaction history.
 // ============================================
 
-import React, { useMemo } from 'react'
-import { ScrollView, View } from 'react-native'
+import React, { useCallback, useMemo } from 'react'
+import { RefreshControl, ScrollView, View } from 'react-native'
 import { useLocalSearchParams } from 'expo-router'
 import { useTranslation } from 'react-i18next'
 import { useCustomer, useLedger, useTransactions } from '@hisabche/api'
@@ -12,6 +12,7 @@ import type { Transaction } from '@hisabche/validation'
 import {
   ErrorState,
   MobileCard,
+  OfflineBanner,
   Money,
   SectionHeader,
   Skeleton,
@@ -26,11 +27,12 @@ import { ScreenHeader } from '../../../shared/components/screen-header'
 import { currencySign, formatAmount, formatDate } from '../../../shared/lib/format'
 import { useCurrency } from '../../settings/preferences.store'
 import { CustomerProfileHeader } from '../components/customer-profile-header'
+import { useSyncRefresh } from '../../offline/use-sync-refresh'
 
 export function CustomerDetailScreen() {
   const { t } = useTranslation('mobile')
   const tCommon = useCommonT()
-  const { spacing } = useTheme()
+  const { spacing, colors } = useTheme()
   const { id } = useLocalSearchParams<{ id: string }>()
   const currency = useCurrency()
 
@@ -39,6 +41,17 @@ export function CustomerDetailScreen() {
   const transactions = useTransactions(
     useMemo(() => ({ page: 1, limit: 20, sortDirection: 'desc' as const, customerId: id }), [id]),
   )
+
+  // Pull-to-refresh through the sync: queued writes first, then this
+  // customer's profile, ledger and transactions.
+  const { refetch: refetchCustomer } = customer
+  const { refetch: refetchLedger } = ledger
+  const { refetch: refetchTransactions } = transactions
+  const refetchAll = useCallback(
+    () => Promise.all([refetchCustomer(), refetchLedger(), refetchTransactions()]),
+    [refetchCustomer, refetchLedger, refetchTransactions],
+  )
+  const { refreshing, onRefresh, offlineNotice } = useSyncRefresh(refetchAll)
 
   if (customer.isLoading) {
     return (
@@ -79,7 +92,22 @@ export function CustomerDetailScreen() {
       <ScrollView
         contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg, paddingBottom: 48 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+          />
+        }
       >
+        {offlineNotice ? (
+          <OfflineBanner
+            offline
+            pendingCount={0}
+            offlineLabel={t('common.offlineLocalData')}
+            pendingLabel=""
+          />
+        ) : null}
         <CustomerProfileHeader
           fullName={customer.data.fullName}
           phone={customer.data.phone}

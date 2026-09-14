@@ -8,6 +8,11 @@ import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import { createCustomerSchema, updateCustomerSchema } from '@hisabche/validation'
 import { CustomerService } from '../services/customer.service'
+import {
+  IdempotencyUnavailableError,
+  readClientRequestId,
+  sendCreated,
+} from '../utils/client-request'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
@@ -103,11 +108,16 @@ export async function customerRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const body = request.body as any
-        const customer = await customerService.create(request.tenancy, body)
+        const customer = await customerService.create(request.tenancy, body, {
+          clientRequestId: readClientRequestId(request),
+        })
         await clearCache('customers:*')
         await clearCache('customer:*')
-        return reply.code(201).send(customer)
+        return sendCreated(reply, customer)
       } catch (err) {
+        if (err instanceof IdempotencyUnavailableError) {
+          return reply.code(503).send({ error: err.message, code: err.code })
+        }
         fastify.log.error(err)
         return reply.code(500).send({
           error: 'Failed to create customer',

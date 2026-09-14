@@ -11,6 +11,13 @@ import type { TenancyContext } from './tenancy.service'
 import { memoryCache } from '../utils/pagination'
 import { logBusinessEvent } from './event-log.service'
 import { partyBalance } from './payments'
+import { applyKeyset, decodeCursor, encodeCursor } from '../utils/keyset-cursor'
+import {
+  asReplay,
+  IdempotencyUnavailableError,
+  isMissingIdempotencySupport,
+  type Replayable,
+} from '../utils/client-request'
 
 // ✅ Types
 interface Customer {
@@ -106,6 +113,7 @@ export class CustomerService {
       type,
       role,
       limit = 20,
+      page = 1,
       cursor,
       sortBy = 'created_at',
       sortDirection = 'desc',
@@ -124,7 +132,17 @@ export class CustomerService {
       .select(LIST_COLUMNS)
       .eq('workspace_id', workspaceId)
       .order(sortBy, { ascending: sortDirection === 'asc' })
-      .limit(fetchLimit)
+      .order('id', { ascending: sortDirection === 'asc' })
+
+    const keyset = cursor ? decodeCursor(cursor, sortBy) : null
+    // `page` used to be ignored: page 2 of the customers table was page 1 again.
+    const pageNumber = Number(page) || 1
+    if (!keyset && pageNumber > 1) {
+      const offset = (pageNumber - 1) * maxLimit
+      query = query.range(offset, offset + maxLimit)
+    } else {
+      query = query.limit(fetchLimit)
+    }
 
     if (search) query = query.ilike('full_name', `%${search}%`)
     if (isActive !== undefined) query = query.eq('is_active', isActive)
@@ -133,13 +151,7 @@ export class CustomerService {
     }
     if (type !== undefined) query = query.eq('type', type)
 
-    if (cursor) {
-      if (sortDirection === 'desc') {
-        query = query.lt(sortBy, cursor)
-      } else {
-        query = query.gt(sortBy, cursor)
-      }
-    }
+    if (keyset) query = applyKeyset(query, sortBy, sortDirection, keyset)
 
     // ✅ موازی‌سازی: کوئری اصلی + count
     const [queryResult, countResult] = await Promise.all([
@@ -155,7 +167,9 @@ export class CustomerService {
 
     const hasMore = (data?.length || 0) > maxLimit
     const items = hasMore ? data.slice(0, maxLimit) : data
-    const nextCursor = hasMore && items.length > 0 ? items[items.length - 1]?.id : null
+    const last =
+      items && items.length > 0 ? (items[items.length - 1] as Record<string, unknown>) : null
+    const nextCursor = hasMore && last ? encodeCursor(last, sortBy) : null
 
     const roles = await this.resolveRoles(
       workspaceId,
@@ -248,8 +262,35 @@ export class CustomerService {
   }
 
   // ─── Create ──────────────────────────────────────────────
-  async create(ctx: TenancyContext, data: CreateCustomer): Promise<Customer> {
+  private async findByClientRequestId(workspaceId: string, key: string): Promise<Customer | null> {
+    const { data, error } = await supabase
+      .from('customers')
+      .select(DETAIL_COLUMNS)
+      .eq('workspace_id', workspaceId)
+      .eq('client_request_id', key)
+      .maybeSingle()
+    if (error) {
+      if (isMissingIdempotencySupport(error)) throw new IdempotencyUnavailableError('customer')
+      throw new DatabaseError('Failed to look up the request', error)
+    }
+    return data ? mapCustomer(data) : null
+  }
+
+  async create(
+    ctx: TenancyContext,
+    data: CreateCustomer,
+    options: { clientRequestId?: string | null } = {},
+  ): Promise<Replayable<Customer>> {
     const { workspaceId, userId } = ctx
+    const clientRequestId = options.clientRequestId ?? null
+
+    // A replayed offline create answers with the customer it already made —
+    // before the opening-balance transaction below could be written twice.
+    if (clientRequestId) {
+      const existing = await this.findByClientRequestId(workspaceId, clientRequestId)
+      if (existing) return asReplay(existing)
+    }
+
     const { data: customer, error } = await supabase
       .from('customers')
       .insert({
@@ -265,10 +306,18 @@ export class CustomerService {
         // are written, and only the first is ever a filter.
         workspace_id: workspaceId,
         user_id: userId,
+        ...(clientRequestId ? { client_request_id: clientRequestId } : {}),
       })
       .select(DETAIL_COLUMNS)
       .single()
 
+    if (error && clientRequestId) {
+      if (error.code === '23505') {
+        const winner = await this.findByClientRequestId(workspaceId, clientRequestId)
+        if (winner) return asReplay(winner)
+      }
+      if (isMissingIdempotencySupport(error)) throw new IdempotencyUnavailableError('customer')
+    }
     if (error) throw new DatabaseError('Failed to create customer', error)
 
     // ═══════════════════════════════════════════════════════════════════════

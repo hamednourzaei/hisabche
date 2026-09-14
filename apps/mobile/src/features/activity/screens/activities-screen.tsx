@@ -38,7 +38,7 @@ export function ActivitiesScreen() {
   const { spacing } = useTheme()
   const router = useRouter()
 
-  const { data, isLoading, isRefetching, error, refetch } = useActivities()
+  const { data, isLoading, error, refetch } = useActivities()
   const unread = useUnreadCount()
   const markAllAsRead = useMarkAllAsRead()
 
@@ -123,7 +123,6 @@ export function ActivitiesScreen() {
         data={data}
         estimatedItemSize={168}
         isLoading={isLoading}
-        isRefetching={isRefetching}
         error={error}
         onRetry={refetch}
         keyExtractor={(item, index) => `${item.entityType}-${item.entityId}-${index}`}

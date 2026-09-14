@@ -5,7 +5,12 @@
 // ============================================
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
-import { InvoiceService, IdempotencyUnavailableError } from '../services/invoice.service'
+import { InvoiceService } from '../services/invoice.service'
+import {
+  IdempotencyUnavailableError,
+  readClientRequestId,
+  sendCreated,
+} from '../utils/client-request'
 import { InvoiceRelatedService } from '../services/invoices/invoice-related.service'
 import { ActivityService } from '../services/activity.service'
 import { authenticate } from '../middleware/auth.middleware'
@@ -186,9 +191,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
         // The offline outbox sends one stable key per intended sale and resends
         // it unchanged. Anything that is not a sane key is ignored, never
         // echoed into a query.
-        const rawKey = request.headers['idempotency-key']
-        const clientRequestId =
-          typeof rawKey === 'string' && /^[A-Za-z0-9_.:-]{8,128}$/.test(rawKey) ? rawKey : null
+        const clientRequestId = readClientRequestId(request)
 
         const invoice = await invoiceService.create(request.tenancy, data, request.branchId, {
           clientRequestId,
@@ -197,8 +200,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
         if ((invoice as { idempotentReplay?: boolean }).idempotentReplay) {
           // Already created by an earlier attempt: no cache churn, no second
           // activity, and 200 rather than 201 so the client can tell.
-          const { idempotentReplay: _replay, ...existing } = invoice as Record<string, unknown>
-          return reply.code(200).header('idempotent-replay', 'true').send(existing)
+          return sendCreated(reply, invoice)
         }
 
         // ✅ FIX: Invalidate all related caches

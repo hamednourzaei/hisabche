@@ -16,7 +16,8 @@ import { initMobileI18n } from '../src/shared/i18n'
 import { initStorage } from '../src/shared/lib/storage'
 import { QueryProvider } from '../src/shared/providers/query-provider'
 import { useAuthStore } from '../src/features/auth/auth.store'
-import { useSyncOnReconnect } from '../src/features/offline/use-outbox'
+import { usePersistentQueryCache, useSyncOnReconnect } from '../src/features/offline/use-outbox'
+import { cacheScope } from '../src/features/offline/query-cache-persistence'
 
 void SplashScreen.preventAutoHideAsync()
 
@@ -48,6 +49,8 @@ function RootNavigator() {
 
   // Drains the offline outbox on mount and on every reconnect.
   useSyncOnReconnect()
+  // The read cache offline screens show; restored per session, cleared on sign-out.
+  usePersistentQueryCache(useAuthStore((s) => cacheScope(s.session)))
 
   return (
     <>

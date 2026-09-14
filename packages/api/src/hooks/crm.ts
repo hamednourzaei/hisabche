@@ -8,6 +8,7 @@
 // ============================================
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { applyOptimisticPatch, rollbackOptimisticPatch } from '../lib/optimistic'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
 import { useRealtime } from './useRealtime'
@@ -134,7 +135,10 @@ export function useUpdateInteractionStatus() {
       const { data } = await apiClient.patch(`/interactions/${id}/status`, { status })
       return data as Interaction
     },
-    onSuccess: () => {
+    // Optimistic: a status is not money. Shown at once, rolled back on refusal.
+    onMutate: ({ id, status }) => applyOptimisticPatch(queryClient, crmKeys.all, id, { status }),
+    onError: (_error, _vars, snapshot) => rollbackOptimisticPatch(queryClient, snapshot),
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: crmKeys.all })
     },
   })
@@ -222,7 +226,15 @@ export function useUpdateOpportunity() {
       const { data } = await apiClient.patch(`/opportunities/${id}`, input)
       return data
     },
-    onSuccess: () => {
+    // Optimistic: moving a deal between stages posts nothing to the books.
+    onMutate: ({ id, ...input }: { id: string } & Record<string, unknown>) =>
+      applyOptimisticPatch(queryClient, crmKeys.all, id, input),
+    onError: (
+      _error: unknown,
+      _vars: unknown,
+      snapshot: Awaited<ReturnType<typeof applyOptimisticPatch>> | undefined,
+    ) => rollbackOptimisticPatch(queryClient, snapshot),
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: crmKeys.all })
     },
   })

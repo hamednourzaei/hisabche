@@ -127,7 +127,6 @@ export function CustomersScreen() {
         data={customers}
         estimatedItemSize={88}
         isLoading={query.isLoading}
-        isRefetching={query.isRefetching}
         error={query.error}
         onRetry={query.refetch}
         keyExtractor={(item, index) => item.id ?? `customer-${index}`}

@@ -13,6 +13,9 @@
 - [x] زدن دکمه‌ی «ثبت فاکتورهای ثبت‌نشده در دفتر» در `/fa/accounting` و ارسال پیام نتیجه — نتیجه‌ی کاربر: بررسی‌شده ۶ · ثبت شد ۰ · از قبل ثبت‌شده ۶
 - [x] PASS ۵/۵ workspace-role-capabilities و PASS ۲/۲ till-bank-transfer
 - [x] linter-2026-09-14 — **PASS ۷/۷**
+- [x] invoice-idempotency — **PASS ۲/۲**
+- [ ] اجرای `docs/offline-idempotency-migration.sql` سپس `docs/VERIFY-offline-idempotency.sql` (قبل از دیپلوی بک‌اند)
+- [ ] staging با DB واقعی: `node scripts/verify-idempotency-staging.mjs` (قبل از publish)
 - [ ] روشن کردن Leaked Password Protection در داشبورد Auth
 - [ ] ارسال Response بدنه‌ی یک ۵۰۰ (invoices / ai / billing / analytics) پس از دیپلوی (فیلد `dbCode`)
 
@@ -94,4 +97,5 @@
 | 41 | رمزنگاری سمت کلاینت (E2EE) فیلدهای حساس | ⏸ تصمیم کاربر: «ج) الان هیچ‌کدام». بلوکه روی: recovery + تداخل با forgot-password. جایگزین پیشنهادی: رمزنگاری سمت سرور + masking + `hr.sensitive.read` |
 | 42 | هشدارهای Security Linter سوپابیس (۶ مورد) | ✅ `docs/linter-2026-09-14-migration.sql` + `docs/VERIFY-linter-2026-09-14.sql` — search_path دو تابع؛ سه helper RLS به schema `private` (policyها با OID کار می‌کنند؛ مرحله‌ی ۰ اگر caller نام‌محور باشد abort می‌کند). Leaked password: تنظیم داشبورد (کاربر). Post-migration Audit: PASS (7/7، تأیید کاربر)؛ باقی: تست RLS با لاگین + Leaked password در داشبورد |
 | 43 | رمزگذاری ورود/خروج — «الف»: refresh token وب در کوکی httpOnly | 🟡 کد + تست (backend 2038، store 9، api 100). کوکی `hisabche_rt` (HttpOnly; Secure; SameSite=Lax; Path=/api/auth) فقط با `X-Auth-Transport: cookie` (وب http/https)؛ دسکتاپ/موبایل همان body. ⚠️ دو باگ واقعی پیدا و رفع شد: `/api/auth/refresh` در publicPaths نبود (همه‌ی تمدیدها 401) و schema پاسخ login `refreshToken` را حذف می‌کرد. منتظر دیپلوی |
-| 44 | Pull-to-refresh موبایل (فاکتورها، مشتریان، محصولات، تراکنش‌ها) وصل به sync موجود | ⏳ |
+| 44 | Pull-to-refresh موبایل (فاکتورها، مشتریان، محصولات، تراکنش‌ها) وصل به sync موجود | 🟡 کد + تست. `useSyncRefresh` در QueryList (فاکتورها/مشتریان/محصولات/خرید/فعالیت‌ها)، جزئیات مشتری (تراکنش‌ها) و داشبورد. آنلاین: outbox → refetch؛ آفلاین: بدون شبکه + «آفلاین — داده محلی نمایش داده شد». دو pull هم‌زمان = یک drain (injection-tested). منتظر دیپلوی/بیلد موبایل |
+| 45 | تحلیل معماری sync و اجرای «همه فازها» | 🟡 کد + تست همه‌ی فازها. ف۰ idempotency فاکتور (PASS). ف۱ idempotency مشتری/کالا/تراکنش/پرداخت (`payments_record_keyed` در همان تراکنش) + موبایل یک clientId در fallback + دسکتاپ delete-404. ف۲ pull دسکتاپ با `/api/sync/pull` cursor + snapshot کامل (سقف ۱۰۰ رفع). ف۳ کش ماندگار موبایل per-workspace + پاک در خروج. ف۴ keyset cursor واقعی برای فاکتور/کالا/مشتری (باگ id در برابر created_at) + page برای کالا/مشتری + اسکرول بی‌پایان فاکتور موبایل. ف۵ optimistic برای وضعیت تسک CRM/فرصت/تسک پروژه + گارد «هرگز روی پول». migration آخر PENDING؛ staging الزامی |

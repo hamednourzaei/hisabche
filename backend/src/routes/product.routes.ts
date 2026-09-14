@@ -8,6 +8,11 @@ import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 import { createProductSchema, updateProductSchema } from '@hisabche/validation'
 import { ProductService } from '../services/product.service'
+import {
+  IdempotencyUnavailableError,
+  readClientRequestId,
+  sendCreated,
+} from '../utils/client-request'
 import { StockHistoryService } from '../services/inventory/stock-history.service'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
@@ -116,7 +121,9 @@ export async function productRoutes(fastify: FastifyInstance) {
       try {
         const body = request.body as any
         const { workspaceId } = request.tenancy
-        const product = await productService.create(request.tenancy, body)
+        const product = await productService.create(request.tenancy, body, {
+          clientRequestId: readClientRequestId(request),
+        })
 
         // Invalidation keys must match the cache identity exactly — these were
         // userId-keyed, which after the switch to workspace keys would leave
@@ -124,8 +131,11 @@ export async function productRoutes(fastify: FastifyInstance) {
         await clearCache(`products:${workspaceId}:*`)
         await clearCache(`low-stock:${workspaceId}:*`)
 
-        return reply.code(201).send(product)
+        return sendCreated(reply, product)
       } catch (err) {
+        if (err instanceof IdempotencyUnavailableError) {
+          return reply.code(503).send({ error: err.message, code: err.code })
+        }
         fastify.log.error(err)
         return reply.code(500).send({ error: 'Failed to create product' })
       }

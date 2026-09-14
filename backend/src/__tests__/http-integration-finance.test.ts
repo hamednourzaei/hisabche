@@ -188,6 +188,24 @@ function registerRpcs() {
 
     return id
   })
+
+  // Mirrors docs/offline-idempotency-migration.sql: the key is looked up first,
+  // otherwise payments_record runs and the key is stamped on its row.
+  db.rpc('payments_record_keyed', (args) => {
+    const existing = db
+      .rows('payments')
+      .find(
+        (row) =>
+          row.workspace_id === args.p_workspace_id &&
+          row.client_request_id === args.p_client_request_id,
+      )
+    if (existing) return { payment_id: existing.id, replayed: true }
+    const record = (db as any).rpcs.get('payments_record') as (a: Row) => string
+    const id = record(args)
+    const row = db.rows('payments').find((candidate) => candidate.id === id)!
+    row.client_request_id = args.p_client_request_id
+    return { payment_id: id, replayed: false }
+  })
 }
 
 let app: FastifyInstance
@@ -1014,5 +1032,150 @@ describe('till ↔ bank transfer, over real HTTP', () => {
       },
     })
     expect(response.statusCode).toBe(403)
+  })
+})
+
+describe('offline replay (Idempotency-Key), over real HTTP', () => {
+  const key = (name: string) => ({ 'idempotency-key': `test_${name}_0123456789` })
+
+  it('a payment sent twice with one key is recorded and booked ONCE', async () => {
+    const send = () =>
+      app.inject({
+        method: 'POST',
+        url: '/api/payments',
+        headers: { ...as(OWNER), ...key('payment') },
+        payload: {
+          direction: 'in',
+          partyType: 'customer',
+          partyId: CUSTOMER,
+          amount: 300,
+          entryDate: today,
+        },
+      })
+    const first = await send()
+    const second = await send()
+    expect(first.statusCode, first.body).toBe(201)
+    expect(second.statusCode, second.body).toBe(200)
+    expect(second.headers['idempotent-replay']).toBe('true')
+    expect(second.json().id).toBe(first.json().id)
+    expect(db.rows('payments')).toHaveLength(1)
+    const entries = db.rows('journal_entries').filter((row) => row.source_type === 'payment')
+    expect(entries).toHaveLength(1)
+  })
+
+  it('without a key two identical payments are two payments (unchanged behaviour)', async () => {
+    const send = () =>
+      app.inject({
+        method: 'POST',
+        url: '/api/payments',
+        headers: as(OWNER),
+        payload: {
+          direction: 'in',
+          partyType: 'customer',
+          partyId: CUSTOMER,
+          amount: 300,
+          entryDate: today,
+        },
+      })
+    await send()
+    await send()
+    expect(db.rows('payments')).toHaveLength(2)
+  })
+
+  it('the same key in ANOTHER workspace does not replay this one (tenancy)', async () => {
+    await app.inject({
+      method: 'POST',
+      url: '/api/payments',
+      headers: { ...as(OWNER), ...key('tenant') },
+      payload: {
+        direction: 'in',
+        partyType: 'customer',
+        partyId: CUSTOMER,
+        amount: 120,
+        entryDate: today,
+      },
+    })
+    const other = db.rows('payments')[0]!
+    other.workspace_id = fakeId('elsewhere')
+    const again = await app.inject({
+      method: 'POST',
+      url: '/api/payments',
+      headers: { ...as(OWNER), ...key('tenant') },
+      payload: {
+        direction: 'in',
+        partyType: 'customer',
+        partyId: CUSTOMER,
+        amount: 120,
+        entryDate: today,
+      },
+    })
+    expect(again.statusCode, again.body).toBe(201)
+    expect(db.rows('payments').filter((row) => row.workspace_id === SHOP)).toHaveLength(1)
+  })
+
+  it('a receipt through /api/transactions replays by key too', async () => {
+    const send = () =>
+      app.inject({
+        method: 'POST',
+        url: '/api/transactions',
+        headers: { ...as(OWNER), ...key('receipt') },
+        payload: { type: 'receipt', customerId: CUSTOMER, amount: 90 },
+      })
+    const first = await send()
+    const second = await send()
+    expect(first.statusCode, first.body).toBe(201)
+    expect(second.statusCode, second.body).toBe(200)
+    expect(db.rows('payments')).toHaveLength(1)
+  })
+
+  it('a customer created twice with one key exists once', async () => {
+    const before = db.rows('customers').length
+    const send = () =>
+      app.inject({
+        method: 'POST',
+        url: '/api/customers',
+        headers: { ...as(OWNER), ...key('customer') },
+        payload: { fullName: 'مشتری آفلاین', phone: '0700000000', type: 'cash' },
+      })
+    const first = await send()
+    const second = await send()
+    expect(first.statusCode, first.body).toBe(201)
+    expect(second.statusCode, second.body).toBe(200)
+    expect(second.headers['idempotent-replay']).toBe('true')
+    expect(db.rows('customers').length).toBe(before + 1)
+  })
+
+  it('a product created twice with one key exists once', async () => {
+    const send = () =>
+      app.inject({
+        method: 'POST',
+        url: '/api/products',
+        headers: { ...as(OWNER), ...key('product') },
+        payload: { name: 'کالای آفلاین', sellPrice: 10, buyPrice: 5, quantity: 0 },
+      })
+    const first = await send()
+    const second = await send()
+    expect(first.statusCode, first.body).toBe(201)
+    expect(second.statusCode, second.body).toBe(200)
+    expect(
+      db.rows('products').filter((row) => row.client_request_id === 'test_product_0123456789'),
+    ).toHaveLength(1)
+  })
+
+  it('a plain (non-money) transaction replays by key', async () => {
+    const send = () =>
+      app.inject({
+        method: 'POST',
+        url: '/api/transactions',
+        headers: { ...as(OWNER), ...key('sale') },
+        payload: { type: 'sale', customerId: CUSTOMER, amount: 40 },
+      })
+    const first = await send()
+    const second = await send()
+    expect(first.statusCode, first.body).toBe(201)
+    expect(second.statusCode, second.body).toBe(200)
+    expect(
+      db.rows('transactions').filter((row) => row.client_request_id === 'test_sale_0123456789'),
+    ).toHaveLength(1)
   })
 })
