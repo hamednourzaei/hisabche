@@ -254,6 +254,8 @@ export interface PaymentTranche {
   /** Only read when `method` is `'other'`. */
   methodLabel?: string
   amount: string
+  /** Free description of this payment — a transfer number, the bank, who paid. */
+  note?: string
 }
 
 export interface InvoicePaymentValue {
@@ -264,8 +266,14 @@ export interface InvoicePaymentValue {
   methodLabel?: string
   /** `partial` only — what was handed over now. */
   paidNow: string
-  /** `split` only. */
+  /**
+   * The payment rows. Every mode except `unpaid` uses them: `full` and
+   * `partial` may be paid through several methods too (part cash, part
+   * transfer), exactly like `split`.
+   */
   tranches: PaymentTranche[]
+  /** Description of the arrangement — most useful for `unpaid` («تا آخر ماه»). */
+  note?: string
 }
 
 /**
@@ -298,9 +306,57 @@ export function tranchesTotal(tranches: readonly PaymentTranche[]): number {
  */
 export function paidAmountOf(value: InvoicePaymentValue, total: number): number {
   if (value.mode === 'unpaid') return 0
-  if (value.mode === 'full') return total
-  if (value.mode === 'split') return tranchesTotal(value.tranches)
-  return Number(value.paidNow) || 0
+  // Full with one row is «all of it, this way»: the row's amount is the total.
+  if (value.mode === 'full' && value.tranches.length <= 1) return total
+  if (value.tranches.length > 0) return tranchesTotal(value.tranches)
+  // A draft saved before partial payments had rows.
+  return value.mode === 'partial' ? Number(value.paidNow) || 0 : 0
+}
+
+export interface PaymentEntry {
+  method: PaymentMethod
+  amount: number
+  /** The row's description, with the name of an `other` method in front. */
+  note: string
+}
+
+/**
+ * The payments this choice creates — one per row with money in it. The single
+ * answer the section shows and the submit sends.
+ */
+export function paymentEntriesOf(value: InvoicePaymentValue, total: number): PaymentEntry[] {
+  if (value.mode === 'unpaid') return []
+  const describe = (tranche: { method: PaymentMethod; methodLabel?: string; note?: string }) =>
+    [tranche.method === 'other' ? tranche.methodLabel?.trim() : '', tranche.note?.trim()]
+      .filter(Boolean)
+      .join(' — ')
+
+  if (value.tranches.length === 0) {
+    const amount = value.mode === 'full' ? total : Number(value.paidNow) || 0
+    return amount > 0
+      ? [
+          {
+            method: value.method,
+            amount,
+            note: describe({
+              method: value.method,
+              ...(value.methodLabel ? { methodLabel: value.methodLabel } : {}),
+            }),
+          },
+        ]
+      : []
+  }
+  if (value.mode === 'full' && value.tranches.length === 1) {
+    const only = value.tranches[0]!
+    return total > 0 ? [{ method: only.method, amount: total, note: describe(only) }] : []
+  }
+  return value.tranches
+    .map((tranche) => ({
+      method: tranche.method,
+      amount: Number(tranche.amount) || 0,
+      note: describe(tranche),
+    }))
+    .filter((entry) => entry.amount > 0)
 }
 
 // ============================================
@@ -419,6 +475,8 @@ export const invoiceSchema = z.object({
         method: paymentMethodSchema,
         amount: positiveNumberSchema,
         reference: z.string().max(120).optional(),
+        /** Description typed beside the amount; stored as the payment's notes. */
+        note: z.string().max(500).optional(),
       }),
     )
     .optional(),

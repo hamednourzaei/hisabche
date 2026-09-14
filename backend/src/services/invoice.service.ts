@@ -1211,6 +1211,7 @@ export class InvoiceService {
             method: p.method,
             amount: p.amount,
             reference: p.reference ?? data.reference ?? '',
+            note: p.note ?? '',
           }))
         : data.paidAmount && data.paidAmount > 0
           ? [
@@ -1218,6 +1219,7 @@ export class InvoiceService {
                 method: data.paymentMethod ?? 'cash',
                 amount: data.paidAmount,
                 reference: data.reference ?? '',
+                note: '',
               },
             ]
           : []
@@ -1244,7 +1246,8 @@ export class InvoiceService {
         currency: data.currency ?? 'AFN',
         method: tranche.method,
         reference: tranche.reference,
-        notes: '',
+        // What the person typed beside the amount (transfer number, bank…).
+        notes: tranche.note,
         // Explicit: this money settles THIS invoice. Without it the payment
         // would auto-allocate oldest-first and could land on a different
         // invoice entirely.

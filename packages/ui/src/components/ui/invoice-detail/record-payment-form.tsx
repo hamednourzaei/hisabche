@@ -37,6 +37,7 @@ import { Input } from '../input'
 import { Label } from '../label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../select'
 import { cn } from '../../../lib/utils'
+import { MoneyInput } from '../money-input'
 
 /** Mirrors `paymentMethodSchema`. Widening this without widening that is a 400. */
 export const PAYMENT_METHODS = ['cash', 'bank', 'credit', 'mobile_money'] as const
@@ -110,15 +111,10 @@ export function RecordPaymentForm({
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
           <Label htmlFor="payment-amount">{t('invoiceDetail.amount', 'مبلغ')}</Label>
-          <Input
+          <MoneyInput
             id="payment-amount"
-            type="number"
-            inputMode="decimal"
-            min={0}
-            max={outstanding}
-            step="any"
             value={amount}
-            onChange={(event) => setAmount(event.target.value)}
+            onChange={setAmount}
             disabled={isSubmitting}
           />
         </div>

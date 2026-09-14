@@ -30,6 +30,7 @@ import {
   InvoicePaymentSection,
   emptyPaymentValue,
   paidAmountOf,
+  paymentEntriesOf,
   type InvoicePaymentValue,
 } from '../invoice-payment-section'
 import { InvoiceSidebar } from '../../invoice-detail/invoice-sidebar'
@@ -109,6 +110,11 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
   // because a persisted default is exactly what caused the bug.
   const [payment, setPayment] = useState<InvoicePaymentValue>(emptyPaymentValue)
   const paidAmount = paidAmountOf(payment, summary.total)
+  // One payment per row with money in it — for EVERY paying mode, so a full or
+  // partial payment made through several methods is recorded as several.
+  const paymentEntries = paymentEntriesOf(payment, summary.total)
+  // More than the invoice is refused by the server; stop it here instead.
+  const paymentBlocked = Math.round(paidAmount * 100) > Math.round(summary.total * 100)
 
   const documentData: InvoiceDocumentData = useMemo(
     () => ({
@@ -181,6 +187,10 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
     otherCustomerNames
       ? `${t('invoiceBuilder.customer.otherParties', 'سایر طرف‌های فاکتور')}: ${otherCustomerNames}`
       : '',
+    // Unpaid has no payment row to carry its description; the invoice does.
+    payment.mode === 'unpaid' && payment.note?.trim()
+      ? `${t('invoiceBuilder.paymentNote', 'توضیحات')} (${t('invoiceBuilder.payMode.unpaid', 'پرداخت نشد')}): ${payment.note.trim()}`
+      : '',
   ]
     .filter(Boolean)
     .join('\n')
@@ -229,7 +239,7 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
   }, [items, stockData, draft.transactionType])
 
   const handleConfirm = useCallback(async () => {
-    if (issues.length || items.length === 0) return
+    if (issues.length || items.length === 0 || paymentBlocked) return
     setError(null)
     setSaveStatus('saving')
 
@@ -249,18 +259,17 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
         // `payment_allocations` rows. It no longer stamps `paid_amount` — see
         // `recordCreationPayments` in invoice.service.ts.
         paidAmount,
-        paymentMethod: payment.method,
-        // Split: one payment record per method. A single row carrying a
-        // blended method would make the till count and the bank
-        // reconciliation both wrong, and neither repairable afterwards.
-        ...(payment.mode === 'split'
+        paymentMethod: paymentEntries[0]?.method ?? payment.method,
+        // One payment record per method. A single row carrying a blended
+        // method would make the till count and the bank reconciliation both
+        // wrong, and neither repairable afterwards.
+        ...(paymentEntries.length > 0
           ? {
-              payments: payment.tranches
-                .filter((tranche) => (Number(tranche.amount) || 0) > 0)
-                .map((tranche) => ({
-                  method: tranche.method,
-                  amount: Number(tranche.amount),
-                })),
+              payments: paymentEntries.map((entry) => ({
+                method: entry.method,
+                amount: entry.amount,
+                ...(entry.note ? { note: entry.note } : {}),
+              })),
             }
           : {}),
         currency,
@@ -312,6 +321,8 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
     currency,
     paidAmount,
     payment,
+    paymentEntries,
+    paymentBlocked,
     createInvoice,
     preferences,
     markInvoiceCreated,
@@ -470,7 +481,7 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
             <Button
               onClick={handleConfirm}
               loading={createInvoice.isPending}
-              disabled={issues.length > 0}
+              disabled={issues.length > 0 || paymentBlocked}
               fullWidth
               className="gap-1.5"
             >
@@ -525,7 +536,7 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
             variant="success"
             onClick={handleConfirm}
             loading={createInvoice.isPending}
-            disabled={issues.length > 0}
+            disabled={issues.length > 0 || paymentBlocked}
             fullWidth
             className="h-12 gap-1.5 text-base"
           >

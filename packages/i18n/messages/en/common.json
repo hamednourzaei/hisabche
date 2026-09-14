@@ -3046,7 +3046,15 @@
     "notLinkedTitle": "These lines are not linked to a warehouse product and will not change stock",
     "notLinkedHint": "To reduce stock, pick the product from the warehouse list.",
     "oversoldTitle": "This invoice takes these products below zero stock",
-    "oversoldHint": "The invoice will save, but warehouse stock will go negative. If a purchase has not been recorded, record it first."
+    "oversoldHint": "The invoice will save, but warehouse stock will go negative. If a purchase has not been recorded, record it first.",
+    "invoiceTotal": "Invoice total",
+    "paymentRow": "Payment",
+    "paymentNote": "Description",
+    "paymentNotePlaceholder": "e.g. transfer number, bank or who paid",
+    "fillRemaining": "Fill with the remainder",
+    "unpaidNotePlaceholder": "e.g. to be paid by the end of the month",
+    "fullMismatch": "For “Paid in full” the methods must add up to the invoice total",
+    "partialCoversAll": "This amount covers the whole invoice"
   },
   "admin": {
     "dashboard": {

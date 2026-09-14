@@ -54,6 +54,8 @@ export {
   computeInvoiceMoney,
   emptyPaymentValue,
   paidAmountOf,
+  paymentEntriesOf,
+  type PaymentEntry,
   tranchesTotal,
   settlementDate,
   invoiceSchema,

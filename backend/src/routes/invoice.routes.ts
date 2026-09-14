@@ -152,6 +152,19 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
           total: body.total ?? 0,
           paidAmount: body.paidAmount ?? 0,
           paymentMethod: body.paymentMethod ?? 'cash',
+          // ⚠️ FORWARDED. This mapping dropped `payments`, so a sale paid part
+          // cash, part transfer reached the service as ONE payment carrying the
+          // first method — the till and the bank reconciliation both wrong.
+          ...(Array.isArray(body.payments)
+            ? {
+                payments: body.payments.map((p: any) => ({
+                  method: p.method,
+                  amount: Number(p.amount),
+                  ...(typeof p.reference === 'string' ? { reference: p.reference } : {}),
+                  ...(typeof p.note === 'string' ? { note: p.note.slice(0, 500) } : {}),
+                })),
+              }
+            : {}),
           currency: body.currency ?? 'AFN',
           notes: body.notes ?? '',
           reference: body.reference ?? '',
