@@ -151,3 +151,57 @@ describe('daily cash flow', () => {
     expect(rows.slice(0, 6).every((r) => r.netMinor === 0)).toBe(true)
   })
 })
+
+import { transfersNetMinor } from '../services/pos/pos.domain'
+
+describe('till ↔ bank transfers', () => {
+  const toBank: CashMovement = {
+    id: 't1',
+    kind: 'transfer_to_bank',
+    amountMinor: 300_000,
+    reason: 'واریز',
+    createdAt: '2026-09-14T12:00:00.000Z',
+  }
+  const fromBank: CashMovement = {
+    id: 't2',
+    kind: 'transfer_from_bank',
+    amountMinor: 100_000,
+    reason: 'برداشت',
+    createdAt: '2026-09-14T13:00:00.000Z',
+  }
+
+  it('are in expected cash', () => {
+    expect(transfersNetMinor([toBank, fromBank])).toBe(-200_000)
+    expect(expectedCashMinor(session(), [sale], [toBank, fromBank])).toBe(
+      1_000_000 + 500_000 - 200_000,
+    )
+  })
+
+  it('⚠️ are NOT booked again at close, and the close entry still balances', () => {
+    const movements = [out, toBank, fromBank]
+    const expected = expectedCashMinor(session(), [sale], movements)
+    const closed = session({ countedCashMinor: expected })
+    const totals = summarise(closed, [sale], movements)
+    const posting = buildPosting(closed, totals)
+
+    // movements (booked to purchase at close) are the ordinary cash_out only.
+    expect(posting.movementsMinor).toBe(-200_000)
+    // cash debit is the till's own cash: sales 500k − out 200k.
+    expect(posting.cashMinor).toBe(300_000)
+    const debits =
+      posting.cashMinor + posting.cardMinor + posting.transferMinor + posting.creditMinor
+    expect(debits - posting.varianceMinor).toBe(posting.revenueMinor + posting.movementsMinor)
+  })
+
+  it('appear in the drawer ledger with the right sign', () => {
+    const { entries, expectedCashMinor: end } = buildDrawerLedger(
+      session(),
+      [],
+      [toBank, fromBank],
+      [],
+    )
+    expect(entries.find((e) => e.kind === 'transfer_to_bank')?.amountMinor).toBe(-300_000)
+    expect(entries.find((e) => e.kind === 'transfer_from_bank')?.amountMinor).toBe(100_000)
+    expect(end).toBe(800_000)
+  })
+})

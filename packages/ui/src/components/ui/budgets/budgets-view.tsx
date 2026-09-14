@@ -48,6 +48,7 @@ import { DataTable, matchesSearch, type TableColumn } from '../data-table'
 import { SegmentedFilter } from '../segmented-filter'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../sheet'
 import { Skeleton } from '../skeleton'
+import { ExportButton } from '../accounting/components/ExportButton'
 import {
   ActionButton,
   Badge,
@@ -64,6 +65,64 @@ import {
   SelectField,
   Stat,
 } from '../capability/capability-kit'
+
+const DistributionChart = dynamic(() => import('../till/till-distribution-chart-internal'), {
+  ssr: false,
+  loading: () => <Skeleton className="mx-auto size-44 rounded-full" />,
+})
+
+/** Semantic tokens only; enough distinct hues for the ≤ 6 slices a donut shows. */
+const ALLOCATION_COLORS = [
+  'hsl(var(--color-primary))',
+  'hsl(var(--color-success))',
+  'hsl(var(--color-info))',
+  'hsl(var(--color-warning))',
+  'hsl(var(--color-destructive))',
+  'hsl(var(--fg-tertiary))',
+]
+
+/** A KPI's share of the total budget, as a bar and a percentage. */
+function ShareBar({
+  part,
+  whole,
+  tone,
+}: {
+  part: number
+  whole: number
+  tone: 'primary' | 'warning' | 'success'
+}) {
+  if (whole <= 0) return null
+  const pct = Math.round((part / whole) * 1000) / 10
+  const width = Math.max(0, Math.min(100, pct))
+  return (
+    <span className="mt-1 flex items-center gap-2">
+      <span
+        className="h-1.5 flex-1 overflow-hidden rounded-full bg-[hsl(var(--surface-muted))]"
+        role="img"
+        aria-label={`${pct}%`}
+      >
+        <span
+          className="block h-full rounded-full"
+          style={{ inlineSize: `${width}%`, backgroundColor: `hsl(var(--color-${tone}))` }}
+        />
+      </span>
+      <span dir="ltr" className="tabular-nums text-xs">
+        {pct}%
+      </span>
+    </span>
+  )
+}
+
+function TotalCell({ label, minor }: { label: string; minor: number }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-xs text-[hsl(var(--fg-tertiary))]">{label}</dt>
+      <dd className="truncate font-semibold">
+        <Money minor={minor} tone={minor < 0 ? 'bad' : undefined} />
+      </dd>
+    </div>
+  )
+}
 
 const BudgetChart = dynamic(() => import('./budget-chart-internal'), {
   ssr: false,
@@ -421,11 +480,21 @@ export const BudgetsView = memo(function BudgetsView(props: BudgetsViewProps) {
                 icon={TrendingUp}
                 label={t('budgets.actual', 'مصرف‌شده')}
                 value={<Money minor={expense.actualMinor} />}
+                hint={
+                  <ShareBar part={expense.actualMinor} whole={expense.budgetMinor} tone="primary" />
+                }
               />
               <Stat
                 icon={CircleDashed}
                 label={t('budgets.committed', 'تعهدشده')}
                 value={<Money minor={expense.openCommitmentMinor} />}
+                hint={
+                  <ShareBar
+                    part={expense.openCommitmentMinor}
+                    whole={expense.budgetMinor}
+                    tone="warning"
+                  />
+                }
               />
               <Stat
                 icon={expense.remainingMinor < 0 ? AlertTriangle : CheckCircle2}
@@ -437,7 +506,15 @@ export const BudgetsView = memo(function BudgetsView(props: BudgetsViewProps) {
                   />
                 }
                 hint={
-                  expense.remainingMinor < 0 ? t('budgets.state_over', 'بیش از بودجه') : undefined
+                  expense.remainingMinor < 0 ? (
+                    t('budgets.state_over', 'بیش از بودجه')
+                  ) : (
+                    <ShareBar
+                      part={expense.remainingMinor}
+                      whole={expense.budgetMinor}
+                      tone="success"
+                    />
+                  )
                 }
               />
               <Stat
@@ -567,41 +644,60 @@ export const BudgetsView = memo(function BudgetsView(props: BudgetsViewProps) {
                     title={t('budgets.chart_empty', 'داده‌ای برای نمودار نیست')}
                   />
                 ) : (
-                  <ul className="space-y-3">
-                    {allocation.slice(0, 8).map((a) => (
-                      <li key={a.accountId}>
-                        <div className="flex items-baseline justify-between gap-2 text-sm">
-                          <span className="truncate">{accountName(a.accountId)}</span>
-                          <span
-                            className="shrink-0 tabular-nums text-xs text-[hsl(var(--fg-tertiary))]"
-                            dir="ltr"
-                          >
-                            {Math.round(a.share * 100)}%
-                          </span>
-                        </div>
-                        <div
-                          className="mt-1 h-2 overflow-hidden rounded-full bg-[hsl(var(--surface-muted))]"
-                          role="img"
-                          aria-label={`${accountName(a.accountId)} ${Math.round(a.share * 100)}%`}
-                        >
+                  <>
+                    {allocation.length <= 6 ? (
+                      <div className="mb-4">
+                        <DistributionChart
+                          data={allocation.map((a, i) => ({
+                            key: a.accountId,
+                            label: accountName(a.accountId),
+                            count: a.budget / 100,
+                            color: ALLOCATION_COLORS[i % ALLOCATION_COLORS.length]!,
+                          }))}
+                          centerLabel={t('budgets.kpi_total', 'کل بودجه')}
+                          size={176}
+                        />
+                      </div>
+                    ) : null}
+                    <ul className="space-y-3">
+                      {allocation.slice(0, 8).map((a, index) => (
+                        <li key={a.accountId}>
+                          <div className="flex items-baseline justify-between gap-2 text-sm">
+                            <span className="truncate">{accountName(a.accountId)}</span>
+                            <span
+                              className="shrink-0 tabular-nums text-xs text-[hsl(var(--fg-tertiary))]"
+                              dir="ltr"
+                            >
+                              {Math.round(a.share * 100)}%
+                            </span>
+                          </div>
                           <div
-                            className={
-                              a.over
-                                ? 'h-full bg-[hsl(var(--color-destructive))]'
-                                : 'h-full bg-[hsl(var(--color-primary))]'
-                            }
-                            style={{ inlineSize: `${Math.max(2, Math.round(a.share * 100))}%` }}
-                          />
-                        </div>
-                        <div className="mt-1 flex justify-between gap-2 text-xs">
-                          <Money minor={a.budget} tone="muted" />
-                          {a.over ? (
-                            <Badge tone="bad">{t('budgets.state_over', 'بیش از بودجه')}</Badge>
-                          ) : null}
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+                            className="mt-1 h-2 overflow-hidden rounded-full bg-[hsl(var(--surface-muted))]"
+                            role="img"
+                            aria-label={`${accountName(a.accountId)} ${Math.round(a.share * 100)}%`}
+                          >
+                            <div
+                              className="h-full"
+                              style={{
+                                inlineSize: `${Math.max(2, Math.round(a.share * 100))}%`,
+                                backgroundColor: a.over
+                                  ? 'hsl(var(--color-destructive))'
+                                  : allocation.length <= 6
+                                    ? ALLOCATION_COLORS[index % ALLOCATION_COLORS.length]
+                                    : 'hsl(var(--color-primary))',
+                              }}
+                            />
+                          </div>
+                          <div className="mt-1 flex justify-between gap-2 text-xs">
+                            <Money minor={a.budget} tone="muted" />
+                            {a.over ? (
+                              <Badge tone="bad">{t('budgets.state_over', 'بیش از بودجه')}</Badge>
+                            ) : null}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
                 )}
               </Panel>
             </div>
@@ -629,6 +725,68 @@ export const BudgetsView = memo(function BudgetsView(props: BudgetsViewProps) {
                     onRowClick={(row) => props.onSelect(row.budget.id)}
                     searchValue={search}
                     onSearchChange={setSearch}
+                    actions={
+                      <ExportButton
+                        data={rows}
+                        filename="budgets"
+                        columns={[
+                          {
+                            key: 'name',
+                            header: t('budgets.account', 'حساب'),
+                            accessor: (r) => r.budget.name || accountName(r.budget.accountId),
+                          },
+                          {
+                            key: 'type',
+                            header: t('budgets.type', 'نوع'),
+                            accessor: (r) => t(`budgets.type_${r.budget.type}`, r.budget.type),
+                          },
+                          {
+                            key: 'period',
+                            header: t('budgets.period', 'دوره'),
+                            accessor: (r) => `${r.periodStart} – ${r.periodEnd}`,
+                          },
+                          {
+                            key: 'budget',
+                            header: t('budgets.budget', 'بودجه'),
+                            accessor: (r) => r.performance.budgetMinor / 100,
+                          },
+                          {
+                            key: 'actual',
+                            header: t('budgets.actual', 'مصرف‌شده'),
+                            accessor: (r) => r.performance.actualMinor / 100,
+                          },
+                          {
+                            key: 'committed',
+                            header: t('budgets.committed', 'تعهدشده'),
+                            accessor: (r) => r.performance.openCommitmentMinor / 100,
+                          },
+                          {
+                            key: 'remaining',
+                            header: t('budgets.remaining', 'باقی‌مانده'),
+                            accessor: (r) => r.performance.remainingMinor / 100,
+                          },
+                          {
+                            key: 'forecast',
+                            header: t('budgets.forecast', 'پیش‌بینی'),
+                            accessor: (r) =>
+                              r.performance.forecastMinor === null
+                                ? ''
+                                : r.performance.forecastMinor / 100,
+                          },
+                          {
+                            key: 'variance',
+                            header: t('budgets.variance_amount', 'انحراف'),
+                            accessor: (r) => r.performance.varianceMinor / 100,
+                          },
+                          {
+                            key: 'state',
+                            header: t('common.status', 'وضعیت'),
+                            accessor: (r) =>
+                              t(`budgets.state_${r.performance.state}`, r.performance.state),
+                          },
+                        ]}
+                      />
+                    }
                     minWidthClass="min-w-[720px]"
                     emptyState={
                       <EmptyState
@@ -638,6 +796,32 @@ export const BudgetsView = memo(function BudgetsView(props: BudgetsViewProps) {
                     }
                   />
                 </div>
+                {expense && expense.budgetMinor > 0 ? (
+                  <dl className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-[hsl(var(--surface-muted)/0.4)] p-3 text-sm sm:grid-cols-5">
+                    <TotalCell
+                      label={t('budgets.total_row', 'جمع کل (تصویب‌شده)')}
+                      minor={expense.budgetMinor}
+                    />
+                    <TotalCell
+                      label={t('budgets.actual', 'مصرف‌شده')}
+                      minor={expense.actualMinor}
+                    />
+                    <TotalCell
+                      label={t('budgets.committed', 'تعهدشده')}
+                      minor={expense.openCommitmentMinor}
+                    />
+                    <TotalCell
+                      label={t('budgets.remaining', 'باقی‌مانده')}
+                      minor={expense.remainingMinor}
+                    />
+                    {expense.forecastMinor !== null ? (
+                      <TotalCell
+                        label={t('budgets.forecast', 'پیش‌بینی')}
+                        minor={expense.forecastMinor}
+                      />
+                    ) : null}
+                  </dl>
+                ) : null}
                 <div className="space-y-3 md:hidden">
                   <Field label={t('common.search', 'جستجو')} value={search} onChange={setSearch} />
                   {rows.length === 0 ? (

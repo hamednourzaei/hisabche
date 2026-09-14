@@ -28,7 +28,7 @@
 
 import { memo } from 'react'
 import { useNow } from '../../../hooks/use-now'
-import type { Conflict, MigrationJob } from '@hisabche/api'
+import type { Conflict, DuplicateSummary, MigrationJob, SyncOverview } from '@hisabche/api'
 import { useDateFormat } from '../../../hooks/use-date-format'
 
 import {
@@ -57,6 +57,10 @@ export interface DataAndSyncViewProps {
   lastBackupAt: number | null
   lastMigration: MigrationJob | null
   migrationCount: number
+  /** Devices and rejected changes from the server's sync log. null = not read. */
+  syncOverview: SyncOverview | null
+  /** Duplicate candidates per entity. null = not read (or no access). */
+  duplicates: DuplicateSummary[] | null
   isLoading: boolean
   error: string | null
   onNavigate: (path: string) => void
@@ -98,6 +102,8 @@ export const DataAndSyncView = memo(function DataAndSyncView({
   lastBackupAt,
   lastMigration,
   migrationCount,
+  syncOverview,
+  duplicates,
   isLoading,
   error,
   onNavigate,
@@ -399,13 +405,77 @@ export const DataAndSyncView = memo(function DataAndSyncView({
             }
             unknownText="—"
           />
+          <DiagnosticRow
+            label={t('dataSync.failed_changes', 'تغییرات ناموفق (۳۰ روز)')}
+            ok={syncOverview?.failed.count === 0}
+            unknown={syncOverview === null}
+            okText={t('dataSync.none', 'ندارد')}
+            badText={String(syncOverview?.failed.count ?? '')}
+            unknownText="—"
+          />
+          <DiagnosticRow
+            label={t('dataSync.devices', 'دستگاه‌های همگام‌شده (۳۰ روز)')}
+            ok
+            unknown={syncOverview === null}
+            okText={String(syncOverview?.devices.length ?? '')}
+            badText=""
+            unknownText="—"
+          />
+          {(['customer', 'product'] as const).map((entity) => {
+            const row = duplicates?.find((d) => d.entity === entity)
+            return (
+              <DiagnosticRow
+                key={entity}
+                label={
+                  entity === 'customer'
+                    ? t('dataSync.duplicate_customers', 'مشتریان احتمالاً تکراری')
+                    : t('dataSync.duplicate_products', 'کالاهای احتمالاً تکراری')
+                }
+                ok={row?.candidates === 0}
+                unknown={row === undefined}
+                okText={t('dataSync.none', 'ندارد')}
+                badText={String(row?.candidates ?? '')}
+                unknownText="—"
+              />
+            )
+          })}
         </dl>
-        <p className="mt-3 text-xs text-[hsl(var(--fg-tertiary))]">
-          {t(
-            'dataSync.diagnostics_scope',
-            'بررسی تکراری‌ها و یکپارچگی ارجاعی هنوز سرویسی ندارد و به همین دلیل اینجا نمایش داده نمی‌شود.',
-          )}
-        </p>
+        {syncOverview && syncOverview.truncated ? (
+          <p className="mt-3 text-xs text-[hsl(var(--fg-tertiary))]">
+            {t('dataSync.overview_truncated', 'فعالیت زیاد بود؛ اعداد حداقل مقدار واقعی‌اند.')}
+          </p>
+        ) : null}
+        {syncOverview && syncOverview.devices.length > 0 ? (
+          <ul className="mt-3 space-y-1 text-xs">
+            {syncOverview.devices.slice(0, 10).map((device) => (
+              <li key={device.deviceId} className="flex flex-wrap justify-between gap-2">
+                <span className="font-mono text-[hsl(var(--fg-secondary))]">
+                  {device.deviceId === 'unknown'
+                    ? t('dataSync.device_unknown', 'دستگاه نامشخص')
+                    : device.deviceId.slice(0, 12)}
+                </span>
+                <span className="text-[hsl(var(--fg-tertiary))]">
+                  {dateTime(device.lastSeenAt)} · {device.applied} / {device.rejected}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+        {syncOverview && syncOverview.failed.recent.length > 0 ? (
+          <ul className="mt-3 space-y-1 text-xs">
+            {syncOverview.failed.recent.map((change) => (
+              <li key={change.mutationId} className="flex flex-wrap justify-between gap-2">
+                <span className="text-[hsl(var(--fg-secondary))]">
+                  {change.entityType} · {change.operation}
+                </span>
+                <span className="text-[hsl(var(--color-destructive))]">
+                  {change.errorCode ?? t('dataSync.read_failed', 'خوانده نشد')} ·{' '}
+                  {dateTime(change.at)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </details>
     </CapabilityPage>
   )

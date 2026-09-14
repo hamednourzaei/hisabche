@@ -417,6 +417,7 @@ export {
   useCloseSession,
   useVoidOrder,
   useSessionLedger,
+  useBankTransfer,
   useCashFlow,
   type CashFlowDay,
   type DrawerEntry,
@@ -564,6 +565,7 @@ export {
 export {
   governanceKeys,
   useSoD,
+  useMyCapabilities,
   useSoDOverrides,
   useSaveSoD,
   type SoDMode,
@@ -642,3 +644,12 @@ export {
   type CurrencyRecord,
   type CurrenciesResponse,
 } from './hooks/currencies'
+
+export {
+  useSyncOverview,
+  useDuplicateCounts,
+  type SyncOverview,
+  type SyncDeviceSummary,
+  type SyncFailedChange,
+  type DuplicateSummary,
+} from './hooks/sync-overview'

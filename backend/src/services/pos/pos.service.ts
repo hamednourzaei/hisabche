@@ -13,6 +13,7 @@ import { ConflictError, DatabaseError, NotFoundError } from '../../errors/databa
 import { ValidationError } from '../../errors/validation.error'
 import { memoryCache } from '../../utils/pagination'
 import type { TenancyContext } from '../tenancy.service'
+import { logBusinessEvent } from '../event-log.service'
 import { ledger } from '../accounting'
 
 import {
@@ -449,6 +450,111 @@ export class PosService {
 
     await this.invalidate(ctx.workspaceId)
     return mapMovement(data)
+  }
+
+  /**
+   * Move cash between this till and the bank.
+   *
+   * Two idempotent writes keyed by `transferId` (made ONCE by the client and
+   * resent unchanged on retry):
+   *   1. the journal entry — Dr bank / Cr cash (or the reverse) — through the
+   *      one posting path; journal_entries_source_key refuses a second one;
+   *   2. the drawer movement with the same id, upserted with ignoreDuplicates.
+   * supabase-js has no transaction, so the order matters: the ledger first.
+   * If the movement write fails after the entry, the same retry completes it —
+   * nothing is deleted to "undo" anything.
+   */
+  async recordBankTransfer(
+    ctx: TenancyContext,
+    sessionId: string,
+    input: {
+      transferId: string
+      direction: 'to_bank' | 'from_bank'
+      amountMinor: number
+      reason: string
+    },
+  ): Promise<{ transferId: string; entryId: string; alreadyRecorded: boolean }> {
+    const session = await this.getSession(ctx, sessionId)
+    const problems = validateMovement(session, input)
+    if (problems.length > 0) throw new ValidationError(problems.join(', '))
+
+    if (input.direction === 'to_bank') {
+      // The drawer cannot send more than it should hold.
+      const { orders, movements, settlements } = await this.loadContents(ctx, sessionId, session)
+      const expected = summarise(session, orders, movements, settlements).expectedCashMinor
+      const alreadyThis = movements.some((m) => m.id === input.transferId)
+      if (!alreadyThis && input.amountMinor > expected) {
+        throw new ValidationError('POS_TRANSFER_EXCEEDS_CASH')
+      }
+    }
+
+    const { accounts, missing } = await ledger.ensureAccountsForRoles(ctx, ['cash', 'bank'])
+    if (missing.length > 0 || !accounts.cash || !accounts.bank) {
+      throw new ValidationError(`POS_TRANSFER_ACCOUNTS_MISSING: ${missing.join(', ')}`)
+    }
+
+    const amount = input.amountMinor / 100
+    const toBank = input.direction === 'to_bank'
+    const outcome = await ledger.postDocument(ctx, {
+      sourceType: 'till_transfer',
+      sourceId: input.transferId,
+      date: new Date().toISOString().slice(0, 10),
+      description: toBank ? 'انتقال نقد صندوق به بانک' : 'برداشت از بانک به صندوق',
+      reference: input.reason.trim().slice(0, 200),
+      lines: toBank
+        ? [
+            { accountId: accounts.bank, debit: amount, credit: 0 },
+            { accountId: accounts.cash, debit: 0, credit: amount },
+          ]
+        : [
+            { accountId: accounts.cash, debit: amount, credit: 0 },
+            { accountId: accounts.bank, debit: 0, credit: amount },
+          ],
+    })
+
+    if (outcome.status === 'skipped') {
+      throw new ValidationError(`POS_TRANSFER_ACCOUNTS_MISSING: ${outcome.missing.join(', ')}`)
+    }
+
+    const { error } = await supabase.from('pos_cash_movements').upsert(
+      {
+        id: input.transferId,
+        workspace_id: ctx.workspaceId,
+        session_id: sessionId,
+        kind: toBank ? 'transfer_to_bank' : 'transfer_from_bank',
+        amount_minor: input.amountMinor,
+        reason: input.reason.trim(),
+        created_by: ctx.userId,
+      },
+      { onConflict: 'id', ignoreDuplicates: true },
+    )
+    if (error) {
+      if (error.code === '23514') throw new ConflictError('POS_TRANSFER_MIGRATION_REQUIRED')
+      throw new DatabaseError('Failed to record the transfer in the till', error)
+    }
+
+    await this.invalidate(ctx.workspaceId)
+
+    void logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+      entityType: 'pos_session',
+      entityId: sessionId,
+      action: toBank ? 'transfer_to_bank' : 'transfer_from_bank',
+      title: toBank ? 'انتقال نقد صندوق به بانک' : 'برداشت از بانک به صندوق',
+      metadata: {
+        transferId: input.transferId,
+        amountMinor: input.amountMinor,
+        entryId: outcome.entryId,
+      },
+      notify: false,
+    })
+
+    return {
+      transferId: input.transferId,
+      entryId: outcome.entryId,
+      alreadyRecorded: outcome.status === 'already_posted',
+    }
   }
 
   // ─── Closing ──────────────────────────────────────────────────────────────

@@ -580,17 +580,26 @@ export class AccountingService implements LedgerPort {
     const sequence = await this.repo.lastEntrySequence(ctx.workspaceId, year)
     const entryNumber = nextEntryNumber(year, sequence)
 
-    const entryId = await this.writeEntry(ctx, {
-      date,
-      description: request.description,
-      reference: request.reference ?? '',
-      status: 'posted',
-      sourceType: request.sourceType,
-      sourceId: request.sourceId,
-      reversalOf: null,
-      entryNumber,
-      lines,
-    })
+    const outcome = { reused: false }
+    const entryId = await this.writeEntry(
+      ctx,
+      {
+        date,
+        description: request.description,
+        reference: request.reference ?? '',
+        status: 'posted',
+        sourceType: request.sourceType,
+        sourceId: request.sourceId,
+        reversalOf: null,
+        entryNumber,
+        lines,
+      },
+      outcome,
+    )
+
+    // Lost the race to a concurrent posting of the same document: the unique
+    // index kept ONE entry, and that one is not ours to count.
+    if (outcome.reused) return { status: 'already_posted', entryId }
 
     await sod.recordAction(ctx, 'ledger.post', 'journal_entry', entryId)
     await this.invalidateWorkspace(ctx.workspaceId)
@@ -949,6 +958,13 @@ export class AccountingService implements LedgerPort {
       entryNumber?: string | undefined
       lines: DraftLine[]
     },
+    /**
+     * Set to true when a CONCURRENT writer booked the same source first and its
+     * entry id was returned instead. The caller then reports «already posted»,
+     * not «posted» — otherwise two tabs running the batch would both count the
+     * same invoice as newly posted (one journal entry, two «posted» counts).
+     */
+    outcome?: { reused: boolean },
   ): Promise<string> {
     const year = Number(entry.date.slice(0, 4))
     let entryNumber =
@@ -994,7 +1010,10 @@ export class AccountingService implements LedgerPort {
             entry.sourceType,
             entry.sourceId,
           )
-          if (existing) return existing.id
+          if (existing) {
+            if (outcome) outcome.reused = true
+            return existing.id
+          }
         }
 
         if (!entryNumber || attempt === 2) throw error

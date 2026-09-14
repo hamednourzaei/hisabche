@@ -3,6 +3,7 @@
 // FIXED: TypeScript error — signOut پارامتر string قبول نمی‌کند
 // ============================================
 
+import { createHash } from 'node:crypto'
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
@@ -387,7 +388,24 @@ export async function authRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/auth/refresh',
     {
-      config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
+      config: {
+        rateLimit: {
+          max: 30,
+          timeWindow: '1 minute',
+          // ⚠️ NOT by IP. The server has no `trustProxy`, so behind the host's
+          // proxy every user shares one address and an IP key would make 30
+          // refreshes a minute the limit for EVERYONE — the hour mark of a busy
+          // morning would lock people out. Keyed by a hash of the token itself:
+          // one session cannot hammer the endpoint, and sessions do not share a
+          // budget. The token is never used as the key in the clear.
+          keyGenerator: (request: FastifyRequest) => {
+            const token = (request.body as { refreshToken?: unknown } | undefined)?.refreshToken
+            return typeof token === 'string' && token.length > 0
+              ? `refresh:${createHash('sha256').update(token).digest('hex').slice(0, 32)}`
+              : `refresh:anonymous:${request.ip}`
+          },
+        },
+      },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
       const parsed = z

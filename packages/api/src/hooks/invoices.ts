@@ -235,6 +235,8 @@ export function usePostInvoiceToLedger() {
 export interface PostUnpostedSummary {
   checked: number
   posted: number
+  alreadyPosted?: number
+  excluded?: number
   skipped: Array<{ invoiceId: string; status: string; detail: string }>
   /** Server cursor; null once every invoice has been visited. */
   nextCursor?: string | null
@@ -253,7 +255,14 @@ export function usePostUnpostedInvoices() {
      * running total for the button's label.
      */
     mutationFn: async (onProgress?: (done: PostUnpostedSummary) => void) => {
-      const total: PostUnpostedSummary = { checked: 0, posted: 0, skipped: [], nextCursor: null }
+      const total: PostUnpostedSummary = {
+        checked: 0,
+        posted: 0,
+        alreadyPosted: 0,
+        excluded: 0,
+        skipped: [],
+        nextCursor: null,
+      }
       let afterId: string | null = null
       // A hard ceiling: 400 batches × 25 = 10 000 invoices per click.
       for (let round = 0; round < 400; round++) {
@@ -265,6 +274,8 @@ export function usePostUnpostedInvoices() {
         const batch: PostUnpostedSummary = response.data
         total.checked += batch.checked
         total.posted += batch.posted
+        total.alreadyPosted = (total.alreadyPosted ?? 0) + (batch.alreadyPosted ?? 0)
+        total.excluded = (total.excluded ?? 0) + (batch.excluded ?? 0)
         total.skipped.push(...(batch.skipped ?? []))
         onProgress?.({ ...total })
         afterId = batch.nextCursor ?? null

@@ -61,8 +61,15 @@ export interface PosOrder {
 export type CashMovementKind =
   /** Money put into the drawer mid-session (a float top-up). */
   | 'cash_in'
-  /** Money taken out mid-session (paying a delivery, banking excess). */
+  /** Money taken out mid-session (paying a delivery). */
   | 'cash_out'
+  /**
+   * Cash deposited in the bank / withdrawn from it. Posted to the ledger when
+   * it happens (Dr bank / Cr cash), so it is in expected cash but NOT in the
+   * close posting — booking it again there would count it twice.
+   */
+  | 'transfer_to_bank'
+  | 'transfer_from_bank'
 
 export interface CashMovement {
   id: string
@@ -135,12 +142,22 @@ export function cashTakenMinor(orders: PosOrder[]): number {
     }, 0)
 }
 
+/** Ordinary cash in / out — what the session close posts. Transfers excluded. */
 export function movementsNetMinor(movements: CashMovement[]): number {
-  return movements.reduce(
-    (sum, movement) =>
-      movement.kind === 'cash_in' ? sum + movement.amountMinor : sum - movement.amountMinor,
-    0,
-  )
+  return movements.reduce((sum, movement) => {
+    if (movement.kind === 'cash_in') return sum + movement.amountMinor
+    if (movement.kind === 'cash_out') return sum - movement.amountMinor
+    return sum
+  }, 0)
+}
+
+/** Till ↔ bank transfers, signed. Already posted when they happened. */
+export function transfersNetMinor(movements: CashMovement[]): number {
+  return movements.reduce((sum, movement) => {
+    if (movement.kind === 'transfer_from_bank') return sum + movement.amountMinor
+    if (movement.kind === 'transfer_to_bank') return sum - movement.amountMinor
+    return sum
+  }, 0)
 }
 
 /**
@@ -160,6 +177,7 @@ export function expectedCashMinor(
     session.openingFloatMinor +
     cashTakenMinor(orders) +
     movementsNetMinor(movements) +
+    transfersNetMinor(movements) +
     settlementsNetMinor(settlements)
   )
 }
@@ -191,6 +209,8 @@ export interface SessionTotals {
    * cash; NOT posted again at close (the payment already posted itself).
    */
   settlementsMinor: number
+  /** Till ↔ bank transfers, signed. In expected cash; posted separately. */
+  transfersMinor: number
 }
 
 export function summarise(
@@ -223,6 +243,7 @@ export function summarise(
     voidedCount: orders.length - completed.length,
     movementsMinor: movementsNetMinor(movements),
     settlementsMinor: settlementsNetMinor(settlements),
+    transfersMinor: transfersNetMinor(movements),
     grossSalesMinor: completed.reduce((sum, order) => sum + order.totalMinor, 0),
     byMethod,
     expectedCashMinor: expected,
@@ -447,7 +468,12 @@ export function buildPosting(session: PosSession, totals: SessionTotals): Sessio
     // Invoice settlements are subtracted too: each payment already debited
     // cash in its own entry, and debiting it again here would book the same
     // money twice. `?? 0` for totals frozen before settlements existed.
-    cashMinor: counted - session.openingFloatMinor - (totals.settlementsMinor ?? 0),
+    // Transfers likewise: each one already moved cash in its own entry.
+    cashMinor:
+      counted -
+      session.openingFloatMinor -
+      (totals.settlementsMinor ?? 0) -
+      (totals.transfersMinor ?? 0),
     cardMinor: totals.byMethod.card,
     transferMinor: totals.byMethod.transfer,
     creditMinor: totals.byMethod.credit,
@@ -460,7 +486,14 @@ export function buildPosting(session: PosSession, totals: SessionTotals): Sessio
 // ─── The drawer as a ledger ──────────────────────────────────────────────────
 
 export type DrawerEntryKind =
-  'opening_float' | 'sale' | 'cash_in' | 'cash_out' | 'settlement_in' | 'settlement_out'
+  | 'opening_float'
+  | 'sale'
+  | 'cash_in'
+  | 'cash_out'
+  | 'transfer_to_bank'
+  | 'transfer_from_bank'
+  | 'settlement_in'
+  | 'settlement_out'
 
 export interface DrawerEntry {
   kind: DrawerEntryKind
@@ -500,7 +533,8 @@ export function buildDrawerLedger(
       .filter((event) => event.amountMinor !== 0),
     ...movements.map((m) => ({
       kind: m.kind,
-      amountMinor: m.kind === 'cash_in' ? m.amountMinor : -m.amountMinor,
+      amountMinor:
+        m.kind === 'cash_in' || m.kind === 'transfer_from_bank' ? m.amountMinor : -m.amountMinor,
       at: m.createdAt,
       reference: m.reason,
       sourceId: m.id,

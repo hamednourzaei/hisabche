@@ -10,7 +10,13 @@
 // bypasses only the person who bypassed them can see is not a control.
 // ============================================
 
-import { CAPABILITIES, explain, minRoleFor, wouldAHigherRoleHelp } from '../services/authorization'
+import {
+  CAPABILITIES,
+  capabilitiesOf,
+  explain,
+  minRoleFor,
+  wouldAHigherRoleHelp,
+} from '../services/authorization'
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
@@ -154,6 +160,34 @@ export async function governanceRoutes(fastify: FastifyInstance) {
   // It also avoids naming the route-registration call in prose — that guard
   // counts occurrences without stripping comments, so a mention becomes a
   // phantom fifth route.)
+  // ─── GET /my-capabilities ───────────────────────────────────────────────
+  // What the caller may do in THIS workspace, answered by the server's own
+  // capability table — so a screen can skip a request that would only 403
+  // (a seller's dashboard asking for exchange rates and the conflict queue)
+  // without the client keeping a second copy of the table. A rendering hint:
+  // every endpoint still enforces its capability. Guarded with the floor every
+  // role holds, for the same reason as /why-not below.
+  fastify.get(
+    '/my-capabilities',
+    {
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        requireCapability('report.operational.read'),
+      ],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      return reply.send({
+        role: request.tenancy.role,
+        // The EFFECTIVE set — defaults with this workspace's changes applied.
+        capabilities: request.tenancy.capabilities
+          ? [...request.tenancy.capabilities]
+          : capabilitiesOf(request.tenancy.role),
+      })
+    },
+  )
+
   fastify.post(
     '/why-not',
     {

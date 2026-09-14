@@ -262,6 +262,40 @@ export function useRecordCashMovement() {
 }
 
 /**
+ * Cash between the till and the bank — one journal entry (Dr bank / Cr cash)
+ * plus the drawer movement, both keyed by `transferId`.
+ *
+ * ⚠️ `transferId` is made by the CALLER once and resent unchanged on retry,
+ * exactly like `orderRef`: a fresh id per attempt is a second transfer.
+ */
+export function useBankTransfer() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({
+      sessionId,
+      ...body
+    }: {
+      sessionId: string
+      transferId: string
+      direction: 'to_bank' | 'from_bank'
+      amountMinor: number
+      reason: string
+    }) => {
+      const { data } = await apiClient.post(`/pos/sessions/${sessionId}/bank-transfer`, body)
+      return data as { transferId: string; entryId: string; alreadyRecorded: boolean }
+    },
+    retry: false,
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: tillKeys.all })
+      queryClient.invalidateQueries({ queryKey: ['accounting'] })
+      queryClient.invalidateQueries({ queryKey: ['journal-entries'] })
+      void variables
+    },
+  })
+}
+
+/**
  * Count the drawer and close.
  *
  * NOT retried. The close posts the day to the ledger, and while the server

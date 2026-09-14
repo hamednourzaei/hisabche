@@ -75,6 +75,7 @@ export class ScopeService {
       userId: ctx.userId,
       role: ctx.role,
       branchIds,
+      capabilities: ctx.capabilities,
     }
   }
 

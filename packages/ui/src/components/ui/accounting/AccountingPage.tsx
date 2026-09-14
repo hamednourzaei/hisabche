@@ -67,6 +67,13 @@ function PostUnpostedAction() {
           {' · '}
           {t('accounting.postUnpostedResult')}{' '}
           <span className="tabular-nums">{summary.posted}</span>
+          {summary.alreadyPosted ? (
+            <>
+              {' · '}
+              {t('accounting.postUnpostedAlready')}{' '}
+              <span className="tabular-nums">{summary.alreadyPosted}</span>
+            </>
+          ) : null}
           {withoutCost > 0 ? (
             <>
               {' · '}

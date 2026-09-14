@@ -29,6 +29,7 @@
 // would travel with mutations and read as if it were part of the record.
 // ============================================
 
+import { roleCapabilities } from '../services/authorization/role-capabilities.service'
 import { FastifyReply, FastifyRequest } from 'fastify'
 
 import { requireWorkspace, type TenancyContext } from '../services/tenancy.service'
@@ -69,7 +70,11 @@ export async function requireWorkspaceContext(request: FastifyRequest, reply: Fa
   }
 
   try {
-    request.tenancy = await requireWorkspace(userId, requestedWorkspaceId(request))
+    const resolved = await requireWorkspace(userId, requestedWorkspaceId(request))
+    request.tenancy = {
+      ...resolved,
+      capabilities: await roleCapabilities.effective(resolved.workspaceId, resolved.role),
+    }
   } catch (error) {
     const status = error instanceof BaseError ? error.statusCode : 500
     const message = error instanceof Error ? error.message : 'Workspace resolution failed'

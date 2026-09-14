@@ -34,10 +34,13 @@ import { DatabaseError, NotFoundError } from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
 import { memoryCache } from '../../utils/pagination'
 import type { TenancyContext } from '../tenancy.service'
+import { roleCapabilities } from './role-capabilities.service'
+import { logBusinessEvent } from '../event-log.service'
 
 import {
   ACCESS_LEVELS,
   CAPABILITIES,
+  effectiveCapabilities,
   PERMISSION_MODULES,
   capabilitiesForLevel,
   capabilitiesOf,
@@ -175,13 +178,18 @@ export class PermissionMatrixService {
     }))
 
     const cells: MatrixCell[] = []
+    // This workspace's changes to owner / manager / seller, read once.
+    const overrides = await roleCapabilities.overrides(ctx.workspaceId)
 
     for (const role of roles) {
-      // The static table's answer, for the three roles it decides. For every
-      // other role the base is nothing — a profile grants on top of whatever
-      // workspace role the person already has.
+      // For the three enforced roles: the EFFECTIVE set in this workspace —
+      // the defaults with this workspace's changes applied, i.e. exactly what
+      // requireCapability enforces. For every other role the base is nothing —
+      // a profile grants on top of whatever workspace role the person has.
       const base = new Set<string>(
-        role.isEnforcedBase ? capabilitiesOf(role.code as WorkspaceRole) : [],
+        role.isEnforcedBase
+          ? [...effectiveCapabilities(role.code as WorkspaceRole, overrides)]
+          : [],
       )
       const granted = grantedByRole.get(role.id) ?? new Set<string>()
 
@@ -196,9 +204,10 @@ export class PermissionMatrixService {
           baseLevel,
           grantedLevel,
           effectiveLevel: HIGHER(baseLevel, grantedLevel),
-          // A cell whose base already reaches the top rung cannot be raised
-          // and cannot be lowered, so it is not a control.
-          editable: baseLevel !== maxLevel,
+          // Enforced roles are now editable in both directions (the owner's
+          // lock is refused on save, with a reason). A profile cell whose base
+          // already reaches the top rung is still not a control.
+          editable: role.isEnforcedBase ? true : baseLevel !== maxLevel,
         })
       }
     }
@@ -263,13 +272,49 @@ export class PermissionMatrixService {
     if (roleError) throw new DatabaseError('Failed to fetch the role', roleError)
     if (!role) throw new NotFoundError('Role')
 
-    // owner/manager/seller are what the static table enforces. Editing their
-    // grants would produce a matrix that shows one thing and enforces another
-    // for the three roles every member actually has.
-    if (isEnforcedRole((role as Record<string, any>).code ?? '')) {
-      throw new ValidationError(
-        'PERMISSION_ROLE_IS_ENFORCED_BASE: owner, manager and seller are decided by the enforced capability table, not by grants. Edit a profile role instead.',
-      )
+    // owner / manager / seller: written as THIS workspace's change to the role
+    // (workspace_role_capabilities), never to `role_permissions` — the system
+    // roles are global rows, and a grant there would change every business on
+    // the platform. The same effective set is what requireCapability enforces.
+    const roleCode = String((role as Record<string, any>).code ?? '')
+    if (isEnforcedRole(roleCode)) {
+      const scope = capabilitiesForLevel(module, 'full')
+      const wantedSet = new Set(capabilitiesForLevel(module, input.level))
+      let change
+      try {
+        change = await roleCapabilities.setForRole(
+          ctx.workspaceId,
+          ctx.userId,
+          roleCode as WorkspaceRole,
+          scope,
+          wantedSet,
+        )
+      } catch (err) {
+        const message = err instanceof Error ? err.message : ''
+        if (message.startsWith('PERMISSION_')) throw new ValidationError(message)
+        throw err
+      }
+
+      // Who changed which role's access, from what to what.
+      void logBusinessEvent({
+        userId: ctx.userId,
+        workspaceId: ctx.workspaceId,
+        entityType: 'role',
+        entityId: String((role as Record<string, any>).id),
+        action: 'permissions_changed',
+        title: `دسترسی نقش ${roleCode} در بخش ${module.key} تغییر کرد`,
+        metadata: {
+          role: roleCode,
+          module: module.key,
+          level: input.level,
+          before: change.before,
+          after: change.after,
+        },
+        notify: false,
+      })
+
+      await this.invalidate(ctx.workspaceId)
+      return this.matrix(ctx)
     }
 
     const wanted = capabilitiesForLevel(module, input.level)

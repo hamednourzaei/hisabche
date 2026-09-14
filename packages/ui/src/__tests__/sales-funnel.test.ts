@@ -144,8 +144,18 @@ describe('the funnel shape', () => {
   it('⚠️ the money tip is a fixed closing segment, not a proportional width', () => {
     // Afghanis have no width that means anything beside counts.
     expect(funnel).toContain("key: 'sales'")
-    expect(funnel).toContain('value: fmt(total)')
+    expect(funnel).toContain('value: fmt(shownTotal)')
     expect(funnel).not.toContain('share(total)')
+    expect(funnel).not.toContain('share(shownTotal)')
+  })
+
+  it('⚠️ totals cover EVERY chart point, not only the two comparison windows', () => {
+    // A single point (all sales on one day) or an odd-length range used to
+    // drop out of the counts, and the funnel read «فاکتورها 0 · مشتریان 0».
+    expect(funnel).toContain('count: invoicesAll')
+    expect(funnel).toContain('count: customersAll')
+    expect(funnel).toContain('sum(points, (p) => p.invoiceCount ?? 0)')
+    expect(funnel).not.toContain('count: invoicesNow + invoicesBefore')
   })
 
   it('trapezoids are drawn with clip-path in a style object', () => {

@@ -126,7 +126,17 @@ export function InvoiceDetailContainer() {
 
   // H2 — the payments behind `paid_amount`, and the journal entry this invoice
   // produced. Both lived in the database with nothing able to reach them.
-  const { data: related, isLoading: relatedLoading } = useInvoiceRelated(id)
+  const {
+    data: related,
+    isLoading: relatedLoading,
+    isError: relatedFailed,
+    refetch: refetchRelated,
+  } = useInvoiceRelated(id)
+  // ⚠️ «NOT READ» IS NOT «NOTHING PAID». Without the allocations the page used
+  // `allocatedTotal ?? 0`, showed a fully paid invoice as open and offered a
+  // payment the server then refused (PAYMENT_ALLOCATION_INVOICE_UNKNOWN on
+  // INV-000051, allocated 2 000 000 of 2 000 000).
+  const relatedKnown = related !== undefined && !relatedFailed
 
   // H6 — every recorded change to THIS invoice.
   const { data: recordHistory, isLoading: historyLoading } = useRecordHistory('invoice', id)
@@ -429,11 +439,11 @@ export function InvoiceDetailContainer() {
                 })}
             isPostingToLedger={postToLedger.isPending}
             ledgerPostMessage={ledgerPostMessageOf(ledgerResult, safeT)}
-            recordPaymentError={
-              recordPayment.error ? String((recordPayment.error as Error).message) : null
-            }
+            recordPaymentError={paymentErrorMessage(recordPayment.error, safeT)}
+            relatedFailed={!relatedLoading && !relatedKnown}
+            onRetryRelated={() => void refetchRelated()}
             onRecordPayment={
-              subscriptionLocked
+              subscriptionLocked || !relatedKnown
                 ? undefined
                 : (input) => {
                     const isPurchase = display.type === 'purchase'
@@ -505,4 +515,20 @@ export function InvoiceDetailContainer() {
       onWorkflowAction={handleWorkflowAction}
     />
   )
+}
+
+/**
+ * The server refuses a payment with a rule code (PAYMENT_ALLOCATION_…). The
+ * API client rejects with a plain object, not an Error. Codes are translated;
+ * anything else is shown as the server sent it — never «[object Object]».
+ */
+function paymentErrorMessage(
+  error: unknown,
+  t: (key: string, fallback?: string) => string,
+): string | null {
+  if (!error) return null
+  const { code, message } = error as { code?: string; message?: string }
+  const text = String(message ?? '')
+  const rule = /PAYMENT_[A-Z_]+/.exec(`${code ?? ''} ${text}`)?.[0]
+  return rule ? t(`invoiceDetail.error_${rule}`, text) : text || String(error)
 }

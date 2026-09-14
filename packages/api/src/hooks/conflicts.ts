@@ -21,6 +21,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
+import { useMyCapabilities } from './governance'
 import { asList } from '../lib/as-list'
 
 // ═══ Types ═══
@@ -84,6 +85,9 @@ export const conflictKeys = {
 // ═══ Queries ═══
 
 export function useConflicts(status: 'open' | 'resolved' | 'all' = 'open') {
+  // The conflict queue sits behind ledger.read; the dashboard's work queue
+  // asked for it for every role.
+  const allowed = useMyCapabilities().can('ledger.read') === true
   const ready = useAuthReady()
 
   return useQuery({
@@ -92,7 +96,7 @@ export function useConflicts(status: 'open' | 'resolved' | 'all' = 'open') {
       const { data } = await apiClient.get('/conflicts', { params: { status } })
       return asList<Conflict>(data)
     },
-    enabled: ready,
+    enabled: allowed && ready,
     // Short, and refetched on focus: a conflict can arrive the moment another
     // device syncs, and a queue that looks empty when it is not is the one
     // state this screen must never show.

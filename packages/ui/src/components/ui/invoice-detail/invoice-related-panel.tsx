@@ -89,6 +89,9 @@ export interface InvoiceRelatedPanelProps {
   /** The invoice total, so the form can cap a payment at what is still owed. */
   invoiceTotal?: number | undefined
   /** Provide to show «افزودن پرداخت». */
+  /** The payments could not be read: totals are unknown, not zero. */
+  relatedFailed?: boolean | undefined
+  onRetryRelated?: (() => void) | undefined
   onRecordPayment?:
     | ((input: { amount: number; method: string; reference: string; date: string }) => void)
     | undefined
@@ -119,6 +122,8 @@ export function InvoiceRelatedPanel({
   storedPaidAmount,
   onOpenJournalEntry,
   invoiceTotal,
+  relatedFailed,
+  onRetryRelated,
   onRecordPayment,
   onCancelPayment,
   isRecordingPayment,
@@ -128,6 +133,14 @@ export function InvoiceRelatedPanel({
   ledgerPostMessage,
 }: InvoiceRelatedPanelProps) {
   const [adding, setAdding] = React.useState(false)
+  // Close the form only once the server has ACCEPTED the payment. Closing on
+  // submit hid every refusal: the request failed with a 400 and the only trace
+  // was a line in the browser console.
+  const wasRecording = React.useRef(false)
+  React.useEffect(() => {
+    if (wasRecording.current && !isRecordingPayment && !recordPaymentError) setAdding(false)
+    wasRecording.current = Boolean(isRecordingPayment)
+  }, [isRecordingPayment, recordPaymentError])
   if (isLoading) {
     return <div className={cn(card, 'h-40 animate-pulse bg-[hsl(var(--surface-muted))]')} />
   }
@@ -164,6 +177,24 @@ export function InvoiceRelatedPanel({
           ) : null}
         </h2>
 
+        {relatedFailed ? (
+          <p
+            className="mb-3 flex flex-wrap items-center gap-2 rounded-xl bg-[hsl(var(--color-warning)/0.12)] px-3 py-2 text-xs text-[hsl(var(--color-warning))]"
+            role="alert"
+          >
+            <AlertCircle className="size-3.5 shrink-0" aria-hidden="true" />
+            {t(
+              'invoiceDetail.paymentsReadFailed',
+              'پرداخت‌های این فاکتور خوانده نشد؛ تا خوانده نشود ثبت پرداخت ممکن نیست.',
+            )}
+            {onRetryRelated ? (
+              <button type="button" className="underline" onClick={onRetryRelated}>
+                {t('common.retry', 'تلاش دوباره')}
+              </button>
+            ) : null}
+          </p>
+        ) : null}
+
         {onRecordPayment && adding ? (
           <div className="mb-3">
             <RecordPaymentForm
@@ -174,10 +205,7 @@ export function InvoiceRelatedPanel({
               isSubmitting={Boolean(isRecordingPayment)}
               error={recordPaymentError ?? null}
               onCancel={() => setAdding(false)}
-              onSubmit={(input) => {
-                onRecordPayment(input)
-                setAdding(false)
-              }}
+              onSubmit={(input) => onRecordPayment(input)}
             />
           </div>
         ) : null}

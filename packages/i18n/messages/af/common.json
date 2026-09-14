@@ -2103,7 +2103,8 @@
     "postUnpostedSkipped": "ثبت نشد",
     "postUnpostedError": "ثبت در دفتر انجام نشد. دوباره تلاش کنید.",
     "postUnpostedChecked": "بررسی‌شده:",
-    "postUnpostedWithoutCost": "ثبت‌شده بدون بهای تمام‌شده:"
+    "postUnpostedWithoutCost": "ثبت‌شده بدون بهای تمام‌شده:",
+    "postUnpostedAlready": "از قبل ثبت‌شده:"
   },
   "hr": {
     "title": "منابع انسانی",
@@ -2280,7 +2281,9 @@
     "description": "توضیحات",
     "forRole": "دسترسی‌های نقش",
     "selectRole": "انتخاب نقش",
-    "selectRoleHint": "یه نقش انتخاب کن تا دسترسی‌هاش رو ببینی"
+    "selectRoleHint": "یه نقش انتخاب کن تا دسترسی‌هاش رو ببینی",
+    "ownerLocked": "مالک همیشه دسترسی مدیریت اعضا و تنظیمات کسب‌وکار را حفظ می‌کند؛ این سطح برای مالک قابل کاهش نیست.",
+    "migrationRequired": "ویرایش نقش‌های اصلی پس از اجرای مهاجرت پایگاه‌داده فعال می‌شود."
   },
   "audit": {
     "title": "بازرسی",
@@ -3300,7 +3303,29 @@
     "range_7": "۷ روز",
     "range_30": "۳۰ روز",
     "range_90": "۹۰ روز",
-    "cash_flow_empty": "در این بازه جریان نقدی ثبت نشده"
+    "cash_flow_empty": "در این بازه جریان نقدی ثبت نشده",
+    "vs_yesterday": "نسبت به روز قبل",
+    "kpis": "خلاصه‌ی امروز صندوق",
+    "today_in": "کل دریافتی امروز",
+    "today_out": "کل پرداختی امروز",
+    "no_open_session": "صندوقی باز نیست",
+    "session_transactions": "تعداد تراکنش‌های این نوبت",
+    "distribution_title": "توزیع تراکنش‌ها",
+    "transactions": "تراکنش",
+    "col_time": "تاریخ و زمان",
+    "col_type": "نوع تراکنش",
+    "col_reference": "شرح / مرجع",
+    "col_amount": "مبلغ",
+    "showing": "نمایش",
+    "of": "از",
+    "prev_page": "صفحه‌ی قبل",
+    "next_page": "صفحه‌ی بعد",
+    "transfer_hint": "انتقال به بانک یا برداشت از بانک با سند حسابداری (بدهکار بانک / بستانکار صندوق) ثبت می‌شود.",
+    "transfer_to_bank": "انتقال به بانک",
+    "transfer_from_bank": "برداشت از بانک",
+    "kind_transfer_to_bank": "انتقال به بانک",
+    "kind_transfer_from_bank": "برداشت از بانک",
+    "error_POS_TRANSFER_EXCEEDS_CASH": "مبلغ انتقال از موجودی صندوق بیشتر است."
   },
   "assets": {
     "title": "دارایی‌های ثابت",
@@ -3512,7 +3537,9 @@
     "currency_PKR": "روپیه پاکستان (PKR)",
     "currency_IRR": "ریال ایران (IRR)",
     "currency_hint": "مبلغ با نرخ ثبت‌شده‌ی همین کسب‌وکار در تاریخ شروع دوره به افغانی تبدیل و کنترل می‌شود؛ مبلغ و نرخ اصلی نگهداری می‌شوند.",
-    "error_BUDGET_FX_RATE_MISSING": "برای این ارز در تاریخ شروع دوره نرخی ثبت نشده است. ابتدا نرخ ارز را ثبت کنید."
+    "error_BUDGET_FX_RATE_MISSING": "برای این ارز در تاریخ شروع دوره نرخی ثبت نشده است. ابتدا نرخ ارز را ثبت کنید.",
+    "no_access": "دسترسی مشاهده‌ی بودجه برای نقش شما فعال نیست.",
+    "total_row": "جمع کل (تصویب‌شده)"
   },
   "timesheets": {
     "title": "کارکرد و صورتحساب",
@@ -3897,7 +3924,12 @@
     "diagnostics": "تشخیص و سلامت فنی",
     "migration_engine": "موتور انتقال داده",
     "read_failed": "خوانده نشد",
-    "diagnostics_scope": "بررسی تکراری‌ها و یکپارچگی ارجاعی هنوز سرویسی ندارد و به همین دلیل اینجا نمایش داده نمی‌شود."
+    "failed_changes": "تغییرات ناموفق (۳۰ روز)",
+    "devices": "دستگاه‌های همگام‌شده (۳۰ روز)",
+    "duplicate_customers": "مشتریان احتمالاً تکراری",
+    "duplicate_products": "کالاهای احتمالاً تکراری",
+    "overview_truncated": "فعالیت زیاد بود؛ اعداد حداقل مقدار واقعی‌اند.",
+    "device_unknown": "دستگاه نامشخص"
   },
   "workQueue": {
     "title": "کارهای امروز",
@@ -4216,7 +4248,19 @@
     "reasonInsufficientStock": "موجودی کافی با بهای ثبت‌شده برای این کالا وجود ندارد",
     "reasonCancelled": "فاکتور لغو شده است",
     "ledgerPostedUncosted": "فاکتور در دفتر ثبت شد، ولی بهای تمام‌شده‌ی بعضی کالاها ثبت نشد چون موجودی آن‌ها بدون خرید (بدون لایه‌ی بها) وارد شده است. برای این کالاها فاکتور خرید یا موجودی اول دوره با بها ثبت کنید.",
-    "cancelPaymentReason": "دلیل حذف این پرداخت؟"
+    "cancelPaymentReason": "دلیل حذف این پرداخت؟",
+    "error_PAYMENT_ALLOCATION_AMOUNT_INVALID": "مبلغ تخصیص به فاکتور معتبر نیست.",
+    "error_PAYMENT_ALLOCATION_DUPLICATE": "این فاکتور دو بار در پرداخت آمده است.",
+    "error_PAYMENT_ALLOCATION_EXCEEDS_OUTSTANDING": "مبلغ پرداخت از مانده‌ی این فاکتور بیشتر است.",
+    "error_PAYMENT_ALLOCATION_INVOICE_UNKNOWN": "این فاکتور مانده‌ی باز ندارد یا در این کسب‌وکار پیدا نشد.",
+    "error_PAYMENT_ALLOCATION_PARTY_MISMATCH": "مشتری/تأمین‌کننده‌ی پرداخت با طرف فاکتور یکی نیست.",
+    "error_PAYMENT_AMOUNT_INVALID": "مبلغ پرداخت معتبر نیست.",
+    "error_PAYMENT_INVOICE_NOT_IN_WORKSPACE": "این فاکتور متعلق به این کسب‌وکار نیست.",
+    "error_PAYMENT_NOT_CANCELLABLE": "این پرداخت قابل حذف نیست.",
+    "error_PAYMENT_OVER_ALLOCATED": "جمع تخصیص‌ها از مبلغ پرداخت بیشتر است.",
+    "error_PAYMENT_WORKSPACE_REQUIRED": "کسب‌وکار انتخاب نشده است.",
+    "error_PAYMENT_WITHOUT_PARTY_NEEDS_ALLOCATION": "پرداخت بدون مشتری باید به یک فاکتور وصل باشد.",
+    "paymentsReadFailed": "پرداخت‌های این فاکتور خوانده نشد؛ تا خوانده نشود ثبت پرداخت ممکن نیست."
   },
   "ops": {
     "cashForecast": "پیش‌بینی نقدینگی",

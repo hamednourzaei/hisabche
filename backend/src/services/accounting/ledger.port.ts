@@ -37,6 +37,9 @@ export type LedgerSourceType =
   // A backdated cost recalculation. Its own entry, never a rewrite of the
   // entries it corrects.
   | 'cost_repost'
+  // Cash moved between a till and the bank. Keyed by the transfer id the client
+  // generated once, so a retried transfer posts nothing new.
+  | 'till_transfer'
   | 'manual'
   | 'reversal'
 

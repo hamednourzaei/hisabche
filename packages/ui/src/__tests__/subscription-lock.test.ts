@@ -73,7 +73,11 @@ describe('invoice detail withholds write controls when locked', () => {
       'packages/ui/src/components/ui/invoice-detail/containers/invoice-detail-container.tsx',
     )
     expect(src).toContain('onRecordPayment={')
-    expect(src).toMatch(/onRecordPayment=\{\s*subscriptionLocked\s*\?\s*undefined/)
+    expect(src).toMatch(
+      /onRecordPayment=\{\s*subscriptionLocked(\s*\|\|\s*!relatedKnown)?\s*\?\s*undefined/,
+    )
+    // Payments unread is not «nothing paid»: no payment form until they are.
+    expect(src).toContain('subscriptionLocked || !relatedKnown')
     expect(src).toMatch(/onCancelPayment=\{\s*subscriptionLocked\s*\?\s*undefined/)
     expect(src).toMatch(/workflowActions=\{\s*subscriptionLocked\s*\?\s*\[\]/)
   })

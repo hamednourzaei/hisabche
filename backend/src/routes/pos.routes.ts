@@ -264,6 +264,33 @@ export async function posRoutes(fastify: FastifyInstance) {
     },
   )
 
+  // ─── POST /sessions/:id/bank-transfer ──────────────────
+  // Cash between this till and the bank: a journal entry (Dr bank / Cr cash)
+  // plus the drawer movement, both keyed by `transferId`. Idempotent.
+  fastify.post(
+    '/sessions/:id/bank-transfer',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('ledger.post')],
+      schema: { response: { 201: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
+        const body = z
+          .object({
+            transferId: z.string().uuid(),
+            direction: z.enum(['to_bank', 'from_bank']),
+            amountMinor: z.number().int().positive(),
+            reason: z.string().trim().min(1).max(500),
+          })
+          .parse(request.body)
+        return reply.code(201).send(await posService.recordBankTransfer(request.tenancy, id, body))
+      } catch (err) {
+        return fail(reply, err, 'Failed to record the bank transfer')
+      }
+    },
+  )
+
   // ─── POST /sessions/:id/close ──────────────────────────
   // Posts the day once, keyed by the session id.
   fastify.post(

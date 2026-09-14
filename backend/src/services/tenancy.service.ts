@@ -131,6 +131,13 @@ export interface TenancyContext {
   /** The actor. Recorded on mutations; never used as a tenancy boundary. */
   readonly userId: string
   readonly role: WorkspaceRole
+  /**
+   * The role's EFFECTIVE capabilities in this workspace (defaults + this
+   * workspace's changes), resolved once per request by requireWorkspaceContext.
+   * Absent on contexts built elsewhere (jobs, tests) — `holds()` then falls
+   * back to the defaults.
+   */
+  readonly capabilities?: ReadonlySet<string> | undefined
 }
 
 interface MembershipRow {

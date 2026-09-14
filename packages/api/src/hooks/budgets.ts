@@ -16,6 +16,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
+import { useMyCapabilities } from './governance'
 import { asList } from '../lib/as-list'
 
 // ═══ Types ═══
@@ -226,6 +227,7 @@ export function useBudgetVariance(onDate?: string) {
  */
 export function useBudgetReport(onDate: string, filter: BudgetReportFilter = {}) {
   const ready = useAuthReady()
+  const allowed = useMyCapabilities().can('budget.read') === true
 
   return useQuery({
     queryKey: budgetKeys.report(onDate, filter),
@@ -235,7 +237,7 @@ export function useBudgetReport(onDate: string, filter: BudgetReportFilter = {})
       })
       return data as BudgetReport
     },
-    enabled: ready,
+    enabled: ready && allowed,
     staleTime: 60_000,
   })
 }

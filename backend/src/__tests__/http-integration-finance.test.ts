@@ -834,3 +834,185 @@ describe('offline conflicts, over real HTTP', () => {
     expect(response.statusCode).toBe(200)
   })
 })
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Per-workspace role capabilities — the matrix is what is enforced
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe('workspace role capabilities, over real HTTP', () => {
+  const OTHER_SHOP = fakeId('shop')
+
+  beforeEach(async () => {
+    const { memoryCache } = await import('../utils/pagination')
+    await memoryCache.invalidate('permissions')
+    await memoryCache.invalidate(`budget:${SHOP}`)
+  })
+
+  it('a capability GRANTED to seller in this workspace is enforced as granted', async () => {
+    // Default: seller has no budget.read.
+    const before = await app.inject({
+      method: 'GET',
+      url: '/api/operations/budgets',
+      headers: as(SELLER),
+    })
+    expect(before.statusCode).toBe(403)
+
+    db.seed('workspace_role_capabilities', [
+      { workspace_id: SHOP, role: 'seller', capability: 'budget.read', granted: true },
+    ])
+    const { memoryCache } = await import('../utils/pagination')
+    await memoryCache.invalidate('permissions')
+
+    const after = await app.inject({
+      method: 'GET',
+      url: '/api/operations/budgets',
+      headers: as(SELLER),
+    })
+    expect(after.statusCode, after.body).toBe(200)
+  })
+
+  it('a capability REVOKED from owner in this workspace is enforced as revoked', async () => {
+    db.seed('workspace_role_capabilities', [
+      { workspace_id: SHOP, role: 'owner', capability: 'budget.read', granted: false },
+    ])
+
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/operations/budgets',
+      headers: as(OWNER),
+    })
+    expect(response.statusCode).toBe(403)
+    expect(response.json()).toMatchObject({
+      code: 'CAPABILITY_REQUIRED',
+      capability: 'budget.read',
+    })
+  })
+
+  it('a change in ANOTHER workspace does not leak into this one', async () => {
+    db.seed('workspace_role_capabilities', [
+      { workspace_id: OTHER_SHOP, role: 'seller', capability: 'budget.read', granted: true },
+    ])
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/operations/budgets',
+      headers: as(SELLER),
+    })
+    expect(response.statusCode).toBe(403)
+  })
+
+  it('my-capabilities reports the effective set, not the defaults', async () => {
+    db.seed('workspace_role_capabilities', [
+      { workspace_id: SHOP, role: 'seller', capability: 'budget.read', granted: true },
+      { workspace_id: SHOP, role: 'seller', capability: 'invoice.create', granted: false },
+    ])
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/governance/my-capabilities',
+      headers: as(SELLER),
+    })
+    expect(response.statusCode, response.body).toBe(200)
+    const caps: string[] = response.json().capabilities
+    expect(caps).toContain('budget.read')
+    expect(caps).not.toContain('invoice.create')
+  })
+})
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Till ↔ bank transfer — one journal entry, however many retries
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe('till ↔ bank transfer, over real HTTP', () => {
+  const SESSION = fakeId('session')
+
+  beforeEach(async () => {
+    const { memoryCache } = await import('../utils/pagination')
+    await memoryCache.invalidate('permissions')
+    db.seed('pos_sessions', [
+      {
+        id: SESSION,
+        workspace_id: SHOP,
+        branch_id: null,
+        status: 'open',
+        opening_float_minor: 1_000_000,
+        opened_at: '2026-08-30T08:00:00Z',
+        opened_by: OWNER.id,
+        counted_cash_minor: null,
+        variance_reason: null,
+        closed_at: null,
+        closed_by: null,
+        was_forced: false,
+        journal_entry_id: null,
+      },
+    ])
+  })
+
+  it('posts Dr bank / Cr cash once and records the drawer movement; a retry adds nothing', async () => {
+    const transferId = fakeId('transfer')
+    const payload = {
+      transferId,
+      direction: 'to_bank',
+      amountMinor: 400_000,
+      reason: 'واریز به بانک',
+    }
+
+    const first = await app.inject({
+      method: 'POST',
+      url: `/api/pos/sessions/${SESSION}/bank-transfer`,
+      headers: as(OWNER),
+      payload,
+    })
+    expect(first.statusCode, first.body).toBe(201)
+    expect(first.json()).toMatchObject({ transferId, alreadyRecorded: false })
+
+    const retry = await app.inject({
+      method: 'POST',
+      url: `/api/pos/sessions/${SESSION}/bank-transfer`,
+      headers: as(OWNER),
+      payload,
+    })
+    expect(retry.statusCode, retry.body).toBe(201)
+    expect(retry.json()).toMatchObject({ transferId, alreadyRecorded: true })
+
+    const entries = db.rows('journal_entries').filter((e) => e.source_type === 'till_transfer')
+    expect(entries).toHaveLength(1)
+    const lines = db.rows('journal_lines').filter((l) => l.entry_id === entries[0]!.id)
+    expect(lines).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ account_id: BANK, debit: 4000, credit: 0 }),
+        expect.objectContaining({ account_id: CASH, debit: 0, credit: 4000 }),
+      ]),
+    )
+    expect(db.rows('pos_cash_movements').filter((m) => m.id === transferId)).toHaveLength(1)
+  })
+
+  it('refuses sending more cash than the drawer should hold', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/pos/sessions/${SESSION}/bank-transfer`,
+      headers: as(OWNER),
+      payload: {
+        transferId: fakeId('transfer'),
+        direction: 'to_bank',
+        amountMinor: 9_000_000,
+        reason: 'x',
+      },
+    })
+    expect(response.statusCode).toBe(400)
+    expect(response.json().error).toContain('POS_TRANSFER_EXCEEDS_CASH')
+  })
+
+  it('a seller cannot post a transfer (ledger.post)', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/pos/sessions/${SESSION}/bank-transfer`,
+      headers: as(SELLER),
+      payload: {
+        transferId: fakeId('transfer'),
+        direction: 'to_bank',
+        amountMinor: 1,
+        reason: 'x',
+      },
+    })
+    expect(response.statusCode).toBe(403)
+  })
+})

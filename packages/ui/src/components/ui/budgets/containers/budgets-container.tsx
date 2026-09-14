@@ -21,11 +21,11 @@ import {
   useReviseBudget,
   useSaveBudget,
   useSubmitBudget,
+  useMyCapabilities,
   type Account,
   type BudgetCheck,
   type SaveBudgetInput,
 } from '@hisabche/api'
-import { useAuthStore } from '@hisabche/store'
 
 import { BudgetsView, type BudgetFilters } from '../budgets-view'
 
@@ -69,6 +69,9 @@ export const BudgetsContainer = memo(function BudgetsContainer() {
     ...(filters.status !== 'all' ? { status: filters.status } : {}),
     ...(filters.branchId ? { branchId: filters.branchId } : {}),
   })
+  // A role without budget.read never fetches the report (it would 403); the
+  // page says so instead of rendering an empty body.
+  const canRead = useMyCapabilities().can('budget.read')
   const accounts = useAccounts()
   const branches = useBranches()
   const revisions = useBudgetRevisions(selectedId)
@@ -80,12 +83,13 @@ export const BudgetsContainer = memo(function BudgetsContainer() {
   const revise = useReviseBudget()
   const checkSpend = useCheckSpend()
 
-  // ⚠️ DISPLAY ONLY. Mirrors the server's capability table (budget.manage →
-  // manager, budget.approve → owner) to decide which buttons to show. The
-  // server re-checks every call and answers 403 regardless of what is shown.
-  const role = useAuthStore((s) => s.user?.role ?? null)
-  const canManage = role === 'owner' || role === 'manager'
-  const canApprove = role === 'owner'
+  // ⚠️ DISPLAY ONLY — from the server's EFFECTIVE capabilities for this
+  // workspace (roles are editable per workspace now, so a local copy of the
+  // default table would show the wrong buttons). The server re-checks every
+  // call and answers 403 regardless of what is shown.
+  const capabilities = useMyCapabilities()
+  const canManage = capabilities.can('budget.manage') === true
+  const canApprove = capabilities.can('budget.approve') === true
 
   // A refusal the person can act on is shown in words. The server's codes
   // (BUDGET_OVERLAP, SOD_BLOCKED, ...) are translated; anything unknown is
@@ -137,7 +141,13 @@ export const BudgetsContainer = memo(function BudgetsContainer() {
       t={t}
       report={report.data}
       isLoading={report.isLoading}
-      error={report.error ? errorMessage(report.error) : null}
+      error={
+        canRead === false
+          ? t('budgets.no_access', 'دسترسی مشاهده‌ی بودجه برای نقش شما فعال نیست.')
+          : report.error
+            ? errorMessage(report.error)
+            : null
+      }
       filters={filters}
       onFiltersChange={setFilters}
       accounts={asList<Account>(accounts.data)}

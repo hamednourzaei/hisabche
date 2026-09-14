@@ -206,9 +206,6 @@ export const PermissionMatrixView = memo(function PermissionMatrixView({
                     title={role.description ?? undefined}
                   >
                     <span className="text-[hsl(var(--fg-primary))]">{role.name}</span>
-                    {role.isEnforcedBase && (
-                      <Lock className="size-3 text-[hsl(var(--fg-tertiary))]" aria-hidden />
-                    )}
                   </button>
                 </th>
               ))}
@@ -229,9 +226,11 @@ export const PermissionMatrixView = memo(function PermissionMatrixView({
                   const cell = cellByKey.get(`${role.id}:${module.key}`)
                   if (!cell) return <td key={role.id} className="p-3" />
 
-                  // Locked when the role is one the static table decides, or
-                  // when the base already covers everything this module offers.
-                  const locked = role.isEnforcedBase || !cell.editable
+                  // Owner, manager and seller are editable per workspace: their
+                  // cell shows and sets the EFFECTIVE level (what is enforced).
+                  // A profile role's cell sets its grant on top of the base.
+                  const locked = !cell.editable
+                  const current = role.isEnforcedBase ? cell.effectiveLevel : cell.grantedLevel
 
                   return (
                     <td key={role.id} className="p-3">
@@ -254,7 +253,7 @@ export const PermissionMatrixView = memo(function PermissionMatrixView({
                         </span>
                       ) : (
                         <SelectField
-                          value={cell.grantedLevel}
+                          value={current}
                           onChange={(value) =>
                             handleChange(role.id, module.key, value as AccessLevel)
                           }
@@ -266,7 +265,7 @@ export const PermissionMatrixView = memo(function PermissionMatrixView({
                           ]}
                           className={cn(
                             'rounded-full border-0 px-2.5 py-1 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[hsl(var(--color-primary)/0.4)] disabled:opacity-50',
-                            LEVEL_STYLE[cell.grantedLevel],
+                            LEVEL_STYLE[current],
                           )}
                           disabled={isSaving}
                         />

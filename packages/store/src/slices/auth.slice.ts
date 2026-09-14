@@ -402,6 +402,11 @@ if (typeof window !== 'undefined') {
     if (!refreshToken || isDemo) return null
     const renewed = await apiRefresh(refreshToken)
     if (!renewed?.token) return null
+    // ⚠️ LOGOUT DURING THE REFRESH. If the user signed out (or another tab
+    // replaced the session) while the request was in flight, the stored
+    // refresh token is no longer the one we sent. Writing the renewed pair now
+    // would silently sign a logged-out user back in.
+    if (useAuthStore.getState().refreshToken !== refreshToken) return null
     useAuthStore.setState({ token: renewed.token, refreshToken: renewed.refreshToken })
     return renewed.token
   })

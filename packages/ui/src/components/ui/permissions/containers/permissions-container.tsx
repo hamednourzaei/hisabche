@@ -44,7 +44,22 @@ function messageOf(
   if (authorization) return authorization
 
   const response = (error as { response?: { data?: { error?: string } } })?.response
-  return response?.data?.error ?? (error as Error)?.message ?? fallback
+  const raw = response?.data?.error ?? (error as { message?: string })?.message ?? fallback
+  // The owner's own access to members and settings cannot be removed — said in
+  // words, not as the server's code.
+  if (String(raw).includes('PERMISSION_OWNER_LOCKED')) {
+    return t(
+      'permissions.ownerLocked',
+      'مالک همیشه دسترسی مدیریت اعضا و تنظیمات کسب‌وکار را حفظ می‌کند؛ این سطح برای مالک قابل کاهش نیست.',
+    )
+  }
+  if (String(raw).includes('PERMISSION_MIGRATION_REQUIRED')) {
+    return t(
+      'permissions.migrationRequired',
+      'ویرایش نقش‌های اصلی پس از اجرای مهاجرت پایگاه‌داده فعال می‌شود.',
+    )
+  }
+  return raw
 }
 
 export const PermissionsContainer = memo(function PermissionsContainer() {

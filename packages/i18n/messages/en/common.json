@@ -2094,7 +2094,8 @@
     "postUnpostedSkipped": "Not posted",
     "postUnpostedError": "Posting failed. Please try again.",
     "postUnpostedChecked": "Checked:",
-    "postUnpostedWithoutCost": "Posted without cost of goods:"
+    "postUnpostedWithoutCost": "Posted without cost of goods:",
+    "postUnpostedAlready": "Already posted:"
   },
   "hr": {
     "title": "Human Resources",
@@ -2271,7 +2272,9 @@
     "description": "Description",
     "forRole": "Permissions for",
     "selectRole": "Select a role",
-    "selectRoleHint": "Select a role to view its permissions"
+    "selectRoleHint": "Select a role to view its permissions",
+    "ownerLocked": "The owner always keeps member and business-settings management; this level cannot be lowered for the owner.",
+    "migrationRequired": "Editing the built-in roles becomes available once the database migration has run."
   },
   "audit": {
     "title": "Audit",
@@ -3291,7 +3294,29 @@
     "range_7": "7 days",
     "range_30": "30 days",
     "range_90": "90 days",
-    "cash_flow_empty": "No cash flow recorded in this range"
+    "cash_flow_empty": "No cash flow recorded in this range",
+    "vs_yesterday": "vs. yesterday",
+    "kpis": "Today's till summary",
+    "today_in": "Total received today",
+    "today_out": "Total paid out today",
+    "no_open_session": "No till is open",
+    "session_transactions": "Transactions this shift",
+    "distribution_title": "Transaction distribution",
+    "transactions": "transactions",
+    "col_time": "Date & time",
+    "col_type": "Type",
+    "col_reference": "Description / reference",
+    "col_amount": "Amount",
+    "showing": "Showing",
+    "of": "of",
+    "prev_page": "Previous page",
+    "next_page": "Next page",
+    "transfer_hint": "A transfer to or from the bank is recorded as an accounting entry (debit bank / credit cash).",
+    "transfer_to_bank": "Transfer to bank",
+    "transfer_from_bank": "Withdraw from bank",
+    "kind_transfer_to_bank": "Transfer to bank",
+    "kind_transfer_from_bank": "Withdrawal from bank",
+    "error_POS_TRANSFER_EXCEEDS_CASH": "The transfer is larger than the cash in the till."
   },
   "assets": {
     "title": "Fixed assets",
@@ -3503,7 +3528,9 @@
     "currency_PKR": "Pakistani rupee (PKR)",
     "currency_IRR": "Iranian rial (IRR)",
     "currency_hint": "The amount is converted to afghani at this business's recorded rate on the period start and controlled in afghani; the entered amount and rate are kept.",
-    "error_BUDGET_FX_RATE_MISSING": "No exchange rate is recorded for this currency on the period start. Record the rate first."
+    "error_BUDGET_FX_RATE_MISSING": "No exchange rate is recorded for this currency on the period start. Record the rate first.",
+    "no_access": "Your role does not have access to view budgets.",
+    "total_row": "Total (approved)"
   },
   "timesheets": {
     "title": "Timesheets and billing",
@@ -3888,7 +3915,12 @@
     "diagnostics": "Technical diagnostics",
     "migration_engine": "Data migration engine",
     "read_failed": "Could not be read",
-    "diagnostics_scope": "Duplicate and referential-integrity checks have no service yet, so they are not shown here."
+    "failed_changes": "Failed changes (30 days)",
+    "devices": "Synced devices (30 days)",
+    "duplicate_customers": "Possible duplicate customers",
+    "duplicate_products": "Possible duplicate products",
+    "overview_truncated": "Activity was high; figures are a lower bound.",
+    "device_unknown": "Unknown device"
   },
   "workQueue": {
     "title": "Today's work",
@@ -4207,7 +4239,19 @@
     "reasonInsufficientStock": "There is not enough stock with a recorded cost for this product",
     "reasonCancelled": "The invoice is cancelled",
     "ledgerPostedUncosted": "The invoice was posted to the ledger, but the cost of goods sold for some products was not, because their stock was entered without a purchase (no cost layer). Record a purchase invoice or an opening stock with cost for those products.",
-    "cancelPaymentReason": "Reason for cancelling this payment"
+    "cancelPaymentReason": "Reason for cancelling this payment",
+    "error_PAYMENT_ALLOCATION_AMOUNT_INVALID": "The amount allocated to the invoice is invalid.",
+    "error_PAYMENT_ALLOCATION_DUPLICATE": "This invoice appears twice in the payment.",
+    "error_PAYMENT_ALLOCATION_EXCEEDS_OUTSTANDING": "The payment is larger than this invoice's balance.",
+    "error_PAYMENT_ALLOCATION_INVOICE_UNKNOWN": "This invoice has no open balance or was not found in this business.",
+    "error_PAYMENT_ALLOCATION_PARTY_MISMATCH": "The payment's customer/supplier is not the invoice's party.",
+    "error_PAYMENT_AMOUNT_INVALID": "The payment amount is invalid.",
+    "error_PAYMENT_INVOICE_NOT_IN_WORKSPACE": "This invoice does not belong to this business.",
+    "error_PAYMENT_NOT_CANCELLABLE": "This payment cannot be cancelled.",
+    "error_PAYMENT_OVER_ALLOCATED": "Allocations exceed the payment amount.",
+    "error_PAYMENT_WORKSPACE_REQUIRED": "No business is selected.",
+    "error_PAYMENT_WITHOUT_PARTY_NEEDS_ALLOCATION": "A payment without a customer must name an invoice.",
+    "paymentsReadFailed": "This invoice's payments could not be read; a payment can't be recorded until they are."
   },
   "ops": {
     "cashForecast": "Cash forecast",

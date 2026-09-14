@@ -34,6 +34,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
+import { useMyCapabilities } from './governance'
 
 export interface RateQuote {
   /** ISO 4217 code this quote is for. */
@@ -56,6 +57,9 @@ export const rateKeys = {
 
 export function useExchangeRates(currency?: string) {
   const ready = useAuthReady()
+  // Rates sit behind report.financial.read. Every dashboard asked for them,
+  // so a seller's console showed a 403 on each load.
+  const allowed = useMyCapabilities().can('report.financial.read') === true
 
   return useQuery({
     queryKey: rateKeys.list(currency),
@@ -95,7 +99,7 @@ export function useExchangeRates(currency?: string) {
       // ═══════════════════════════════════════════════════════════════════
       return Array.isArray(data) ? (data as RateQuote[]) : []
     },
-    enabled: ready,
+    enabled: ready && allowed,
     // Rates change during a trading day, but not every thirty seconds, and a
     // stale-by-minutes rate on a DISPLAY toggle is not a correctness problem —
     // the books are never valued from this cache.

@@ -14,7 +14,7 @@
 
 import { FastifyReply, FastifyRequest } from 'fastify'
 
-import { can, minRoleFor, type Capability } from '../services/authorization'
+import { holds, minRoleFor, type Capability } from '../services/authorization'
 
 /**
  * Refuse the request unless the caller's workspace role holds `capability`.
@@ -37,7 +37,7 @@ export function requireCapability(capability: Capability) {
       return reply.status(500).send({ error: 'Internal Server Error' })
     }
 
-    if (!can(tenancy.role, capability)) {
+    if (!holds(tenancy, capability)) {
       return reply.status(403).send({
         error: 'Forbidden',
         code: 'CAPABILITY_REQUIRED',

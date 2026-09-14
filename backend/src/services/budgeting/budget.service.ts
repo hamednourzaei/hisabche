@@ -26,7 +26,7 @@ import { ConflictError, DatabaseError, NotFoundError } from '../../errors/databa
 import { ValidationError } from '../../errors/validation.error'
 import { memoryCache } from '../../utils/pagination'
 import type { TenancyContext } from '../tenancy.service'
-import { can, type Capability } from '../authorization/authorization.domain'
+import { holds, type Capability } from '../authorization/authorization.domain'
 import { callAggregate } from '../aggregates/aggregate-rpc'
 import { fetchBudgetConsumptionAggregate } from '../aggregates/ledger-aggregates'
 import { AuditService } from '../audit.service'
@@ -248,7 +248,7 @@ export class BudgetService {
 
   /** The existing capability table decides — never a role string compared here. */
   private assertCan(ctx: TenancyContext, capability: Capability) {
-    if (!can(ctx.role, capability)) {
+    if (!holds(ctx, capability)) {
       throw new ForbiddenError(`BUDGET_FORBIDDEN: ${capability}`)
     }
   }

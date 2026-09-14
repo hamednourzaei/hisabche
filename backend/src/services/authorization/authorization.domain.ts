@@ -161,6 +161,54 @@ export function capabilitiesOf(role: WorkspaceRole): Capability[] {
   return CAPABILITIES.filter((capability) => can(role, capability))
 }
 
+// ─── Per-workspace changes to the three roles ────────────────────────────────
+//
+// The static table above is the DEFAULT. A workspace may change what owner,
+// manager and seller hold (docs/workspace-role-capabilities-migration.sql);
+// the effective set is the default with that workspace's rows applied, and it
+// is what every check enforces.
+
+export interface CapabilityOverride {
+  role: WorkspaceRole
+  capability: Capability
+  granted: boolean
+}
+
+/**
+ * What the owner can never lose. Without these, one click on the matrix locks
+ * a business out of the only screen that could give them back.
+ */
+export const OWNER_LOCKED_CAPABILITIES: readonly Capability[] = [
+  'member.manage',
+  'workspace.manage',
+]
+
+export function effectiveCapabilities(
+  role: WorkspaceRole,
+  overrides: readonly CapabilityOverride[],
+): Set<Capability> {
+  const set = new Set<Capability>(capabilitiesOf(role))
+  for (const o of overrides) {
+    if (o.role !== role || !(CAPABILITIES as readonly string[]).includes(o.capability)) continue
+    if (o.granted) set.add(o.capability)
+    else set.delete(o.capability)
+  }
+  if (role === 'owner') for (const c of OWNER_LOCKED_CAPABILITIES) set.add(c)
+  return set
+}
+
+/**
+ * The one question every check asks. A context that carries its resolved set
+ * (every HTTP request, via requireWorkspaceContext) is answered from it; a
+ * context built without one (a job, a test) falls back to the defaults.
+ */
+export function holds(
+  actor: { role: WorkspaceRole; capabilities?: ReadonlySet<string> | undefined },
+  capability: Capability,
+): boolean {
+  return actor.capabilities ? actor.capabilities.has(capability) : can(actor.role, capability)
+}
+
 // ─── Record-level ────────────────────────────────────────────────────────────
 
 export type RecordScope =

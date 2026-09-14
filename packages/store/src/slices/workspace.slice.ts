@@ -3,7 +3,7 @@
 // ============================================
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import { supabaseClient } from '@hisabche/auth'
+import { apiClient } from '@hisabche/api'
 
 // ✅ نقش‌ها و رتبه‌بندی‌شان از @hisabche/auth-core می‌آیند (منبع واحد
 // برای وب و موبایل) — این فایل دیگر تعریف موازی ندارد.
@@ -78,23 +78,28 @@ export const useWorkspaceStore = create<WorkspaceState>()(
       fetchWorkspace: async (userId: string) => {
         set({ loading: true })
         try {
-          const token = (await supabaseClient.auth.getSession()).data.session?.access_token
-          if (!token) return
-
-          const base = 'https://hisabche.onrender.com/api'
-          const wsRes = await fetch(`${base}/workspaces`, {
-            headers: { Authorization: `Bearer ${token}` },
-          })
-
-          // A failed request says nothing about which workspaces exist — the
-          // network is down, or the token expired. Keep what is stored and try
-          // again later. Only a SUCCESSFUL empty answer is evidence.
-          if (!wsRes.ok) {
+          // ⚠️ THE SHARED CLIENT, NOT A SUPABASE BROWSER SESSION.
+          //
+          // This read `supabaseClient.auth.getSession()` for a token and posted to
+          // a hardcoded `https://hisabche.onrender.com/api`. The app signs in
+          // through its own backend and never creates a Supabase browser
+          // session, so there was never a token: the function returned early
+          // with `loading` still true, and «/governance?tab=members» sat on its
+          // skeleton forever. The same early return kept a stale workspace id
+          // alive (the long-failing workspace-staleness test). `apiClient`
+          // carries the real token, the configured base URL, and renews an
+          // expired session.
+          let workspaces: unknown
+          try {
+            workspaces = (await apiClient.get('/workspaces')).data
+          } catch {
+            // A failed request says nothing about which workspaces exist — the
+            // network is down, or the session could not be renewed. Keep what
+            // is stored and try again later. Only a SUCCESSFUL empty answer is
+            // evidence.
             set({ loading: false })
             return
           }
-
-          const workspaces = await wsRes.json()
 
           // ⚠️ THE SERVER IS THE AUTHORITY ON WHICH WORKSPACES EXIST.
           //
@@ -127,14 +132,14 @@ export const useWorkspaceStore = create<WorkspaceState>()(
           const storedId = get().workspaceId
           const ws = workspaces.find((w: any) => w.id === storedId) ?? workspaces[0]
 
-          const memRes = await fetch(`${base}/workspaces/${ws.id}/members`, {
-            headers: { Authorization: `Bearer ${token}` },
-          })
-          if (!memRes.ok) {
+          let members: any[]
+          try {
+            const body = (await apiClient.get(`/workspaces/${ws.id}/members`)).data
+            members = Array.isArray(body) ? body : []
+          } catch {
             set({ loading: false })
             return
           }
-          const members = await memRes.json()
 
           const me = members?.find((m: any) => m.user_id === userId)
           if (ws && members && me) {
@@ -145,8 +150,8 @@ export const useWorkspaceStore = create<WorkspaceState>()(
               members: members.map((m: any) => ({
                 id: m.id,
                 userId: m.user_id,
-                fullName: m.user?.full_name || m.user?.email || 'Unknown',
-                email: m.user?.email || '',
+                fullName: m.full_name || m.user?.full_name || m.user?.email || 'Unknown',
+                email: m.email || m.user?.email || '',
                 role: m.role,
                 joinedAt: new Date(m.joined_at || m.created_at).getTime(),
                 isActive: true,

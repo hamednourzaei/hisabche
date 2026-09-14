@@ -2262,8 +2262,19 @@ export class InvoiceService {
     ctx: TenancyContext,
     options: { afterId?: string | null | undefined; batchSize?: number | undefined } = {},
   ): Promise<{
+    /** Every invoice in this batch that was looked at. */
     checked: number
+    /** Newly booked by THIS call. */
     posted: number
+    /** Already had its journal entry (before, or booked by a concurrent call). */
+    alreadyPosted: number
+    /** Cancelled or awaiting approval — not postable by design. */
+    excluded: number
+    /**
+     * Problems, each with the invoice id and a safe reason. `posted_without_cost`
+     * is NOT a failure (the invoice is in posted) — it is the list of invoices
+     * whose cost of goods could not be drawn from stock layers.
+     */
     skipped: Array<{ invoiceId: string; status: string; detail: string }>
     nextCursor: string | null
   }> {
@@ -2296,13 +2307,25 @@ export class InvoiceService {
     }
 
     let posted = 0
+    let alreadyPosted = 0
+    let excluded = 0
     const skipped: Array<{ invoiceId: string; status: string; detail: string }> = []
     for (const row of rows) {
-      if (row.status === 'cancelled' || row.status === AWAITING_APPROVAL_STATUS) continue
-      if (bookedIds.has(row.id)) continue
+      if (row.status === 'cancelled' || row.status === AWAITING_APPROVAL_STATUS) {
+        excluded++
+        continue
+      }
+      if (bookedIds.has(row.id)) {
+        alreadyPosted++
+        continue
+      }
       try {
         const result = await this.postToLedger(row.id, ctx)
-        if (result.status === 'posted') {
+        if (result.status === 'already_posted') {
+          alreadyPosted++
+        } else if (result.status === 'nothing_to_post') {
+          excluded++
+        } else if (result.status === 'posted') {
           posted++
           if (result.uncostedProducts && result.uncostedProducts.length > 0) {
             skipped.push({
@@ -2317,10 +2340,16 @@ export class InvoiceService {
           skipped.push({ invoiceId: row.id, status: 'not_postable', detail: result.reason })
       } catch (err) {
         // One bad invoice must not stop the rest; its reason is reported.
+        // A safe reason only: the operational code at the front of a domain
+        // error (INVENTORY_…, ACCOUNTING_PERIOD_LOCKED, …). A database error's
+        // message can name tables and columns and is logged, not returned.
+        const message = err instanceof Error ? err.message : ''
+        const code = /^[A-Z][A-Z_]{5,}/.exec(message)?.[0]
+        console.error(`[InvoiceService] posting invoice ${row.id} failed:`, err)
         skipped.push({
           invoiceId: row.id,
           status: 'error',
-          detail: err instanceof Error ? err.message : String(err),
+          detail: code ?? 'POSTING_FAILED',
         })
       }
     }
@@ -2328,6 +2357,8 @@ export class InvoiceService {
     return {
       checked: rows.length,
       posted,
+      alreadyPosted,
+      excluded,
       skipped,
       nextCursor: rows.length === batchSize ? rows[rows.length - 1]!.id : null,
     }

@@ -31,7 +31,7 @@
 
 import { branchScopeFor, mayUseBranch, type BranchScope } from '../branch/branch.domain'
 import type { Capability, WorkspaceRole } from './authorization.domain'
-import { can } from './authorization.domain'
+import { holds } from './authorization.domain'
 
 /**
  * Where an actor may act.
@@ -46,6 +46,8 @@ export interface ActorScope {
   readonly userId: string
   readonly role: WorkspaceRole
   readonly branchIds: readonly string[]
+  /** The workspace's effective set for this role, when resolved. */
+  readonly capabilities?: ReadonlySet<string> | undefined
 }
 
 /**
@@ -106,7 +108,7 @@ export function authorize(input: {
   }
 
   // 2. Capability. May this role do this at all, anywhere.
-  if (!can(actor.role, input.action)) {
+  if (!holds(actor, input.action)) {
     return { allowed: false, reason: 'MISSING_CAPABILITY' }
   }
 

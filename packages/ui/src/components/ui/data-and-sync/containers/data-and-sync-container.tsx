@@ -14,7 +14,14 @@
 
 import { memo, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
-import { asList, useConflicts, useMigrations, type Conflict } from '@hisabche/api'
+import {
+  asList,
+  useConflicts,
+  useDuplicateCounts,
+  useMigrations,
+  useSyncOverview,
+  type Conflict,
+} from '@hisabche/api'
 import { useBackupStore, useSyncStore } from '@hisabche/store'
 
 import { DataAndSyncView } from '../data-and-sync-view'
@@ -44,17 +51,25 @@ export const DataAndSyncContainer = memo(function DataAndSyncContainer({
   const conflicts = useConflicts('open')
   const migrations = useMigrations()
   const lastBackupAt = useBackupStore((s) => s.lastBackupAt)
+  const syncOverview = useSyncOverview()
+  const duplicates = useDuplicateCounts()
 
   // A failed or in-flight count is `null`, never 0. The view renders the two
   // differently on purpose: "no conflicts" is a fact somebody may act on, and
   // "we could not check" is not.
   const conflictCount =
-    conflicts.isLoading || conflicts.isError ? null : (conflicts.data?.length ?? 0)
+    // `data === undefined` also covers a query that never ran (a role without
+    // access to the conflict queue): unknown, not «no conflicts».
+    conflicts.isLoading || conflicts.isError || conflicts.data === undefined
+      ? null
+      : conflicts.data.length
 
   const handleRefresh = useCallback(() => {
     conflicts.refetch()
     migrations.refetch()
-  }, [conflicts, migrations])
+    syncOverview.refetch()
+    duplicates.refetch()
+  }, [conflicts, migrations, syncOverview, duplicates])
 
   return (
     <DataAndSyncView
@@ -68,6 +83,8 @@ export const DataAndSyncContainer = memo(function DataAndSyncContainer({
       lastBackupAt={lastBackupAt}
       lastMigration={migrations.data?.[0] ?? null}
       migrationCount={migrations.data?.length ?? 0}
+      syncOverview={syncOverview.isError ? null : (syncOverview.data ?? null)}
+      duplicates={duplicates.isError ? null : (duplicates.data ?? null)}
       isLoading={migrations.isLoading}
       error={migrations.error ? (migrations.error as Error).message : null}
       onNavigate={onNavigate}

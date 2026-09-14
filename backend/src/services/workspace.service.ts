@@ -291,7 +291,25 @@ export class WorkspaceService {
 
     if (error) throw new DatabaseError('Failed to fetch members', error)
 
-    const result = data || []
+    // ⚠️ NAMES. Only (id, user_id, role) came back, so every member rendered
+    // as «Unknown». One read of `profiles` for exactly these users — never a
+    // query per member. A profile that cannot be read leaves the name null
+    // (shown as unknown), it does not fail the list.
+    const rows = (data || []) as Array<{ id: string; user_id: string; role: string }>
+    const userIds = [...new Set(rows.map((r) => r.user_id).filter(Boolean))]
+    const names = new Map<string, string>()
+    if (userIds.length > 0) {
+      const { data: profiles, error: profileError } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', userIds)
+      if (profileError) console.error('[WorkspaceService] member names unavailable:', profileError)
+      for (const p of (profiles ?? []) as Array<{ id: string; full_name: string | null }>) {
+        if (p.full_name) names.set(p.id, p.full_name)
+      }
+    }
+
+    const result = rows.map((r) => ({ ...r, full_name: names.get(r.user_id) ?? null }))
     await memoryCache.set(cacheKey, result, 60) // 1 minute
     return result
   }

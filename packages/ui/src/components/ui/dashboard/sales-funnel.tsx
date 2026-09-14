@@ -139,7 +139,7 @@ export function SalesFunnel({
   height?: number | undefined
   t: (key: string, fallback?: string) => string
 }) {
-  const { bands, revenue, windowDays } = React.useMemo(() => {
+  const { bands, revenue, revenueTotal, windowDays } = React.useMemo(() => {
     // ⚠️ A type annotation is not a runtime check. This exact shape has taken
     // down two production screens in this codebase.
     const points = Array.isArray(data) ? data : []
@@ -170,15 +170,24 @@ export function SalesFunnel({
     const comparable = earlier.length > 0
     const noTrend = { trend: 'unknown' as Trend, changePercent: null }
 
+    // ⚠️ TOTALS COVER EVERY POINT; ONLY THE TREND USES THE TWO WINDOWS.
+    // The counts were `now + before`, i.e. only the 2×⌊n/2⌋ newest points: on
+    // an odd-length range the oldest day vanished from the total, and with a
+    // single point (all sales on one day) BOTH windows were empty — the funnel
+    // said «فاکتورها 0 · مشتریان 0» beside a chart showing those very sales.
+    const invoicesAll = sum(points, (p) => p.invoiceCount ?? 0)
+    const customersAll = sum(points, (p) => p.customerCount ?? 0)
+    const revenueAll = sum(points, (p) => p.value)
+
     const nextBands: Band[] = [
       {
         key: 'invoices',
-        count: invoicesNow + invoicesBefore,
+        count: invoicesAll,
         ...(comparable ? compare(invoicesBefore, invoicesNow) : noTrend),
       },
       {
         key: 'customers',
-        count: customersNow + customersBefore,
+        count: customersAll,
         ...(comparable ? compare(customersBefore, customersNow) : noTrend),
       },
     ]
@@ -186,6 +195,7 @@ export function SalesFunnel({
     return {
       bands: nextBands,
       revenue: comparable ? compare(revenueBefore, revenueNow) : noTrend,
+      revenueTotal: revenueAll,
       windowDays: split,
     }
   }, [data])
@@ -222,7 +232,11 @@ export function SalesFunnel({
 
   const widest = Math.max(...bands.map((b) => b.count), 0)
 
-  if (widest === 0 && total === 0) {
+  // The chart's own revenue: the funnel describes what the chart draws. The
+  // KPI `total` is only a fallback for a window the chart has no points for.
+  const shownTotal = revenueTotal > 0 ? revenueTotal : total
+
+  if (widest === 0 && shownTotal === 0) {
     return (
       <div
         className="flex flex-col items-center justify-center gap-2 rounded-2xl bg-[hsl(var(--surface-muted)/0.4)] p-6 text-center"
@@ -289,7 +303,7 @@ export function SalesFunnel({
     {
       key: 'sales',
       label: t('dashboard.totalSales', 'فروش کل'),
-      value: fmt(total),
+      value: fmt(shownTotal),
       trend: revenue.trend,
       changePercent: revenue.changePercent,
       top: tipTop,

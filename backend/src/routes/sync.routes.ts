@@ -27,6 +27,8 @@ import { z } from 'zod'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { syncService, SyncError } from '../services/sync.service'
+import { supabase } from '../db'
+import { summariseSync, type MutationRow } from '../services/sync-overview.domain'
 
 /** The device header. Optional, but a client that sends one gets echo-skip. */
 const DEVICE_HEADER = 'x-hisabche-device'
@@ -250,6 +252,49 @@ export async function syncRoutes(fastify: FastifyInstance) {
         // user seeing stale data.
         lag: Math.max(0, cursor - since),
       })
+    },
+  )
+
+  /* ═══════════════════════════════════════════════════════════════════════
+     GET /api/sync/overview — devices and failed changes, from sync_mutations
+     ═══════════════════════════════════════════════════════════════════════
+     Workspace-scoped (the tenancy boundary), last 30 days, read in pages and
+     capped at 10 000 rows — a cap reported as `truncated`, never hidden. */
+  fastify.get(
+    '/api/sync/overview',
+    { preHandler: [authenticate, requireWorkspaceContext] },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const WINDOW_DAYS = 30
+      const PAGE = 1000
+      const MAX_PAGES = 10
+      const since = new Date(Date.now() - WINDOW_DAYS * 86_400_000).toISOString()
+      const rows: MutationRow[] = []
+      let truncated = false
+
+      for (let page = 0; page < MAX_PAGES; page++) {
+        const { data, error } = await supabase
+          .from('sync_mutations')
+          .select(
+            'mutation_id, device_id, entity_type, entity_id, operation, status, error_code, created_at',
+          )
+          .eq('workspace_id', request.tenancy.workspaceId)
+          .gte('created_at', since)
+          .order('created_at', { ascending: false })
+          .range(page * PAGE, page * PAGE + PAGE - 1)
+
+        if (error) {
+          // No sync table yet is «nothing synced», not an error.
+          if (error.code === '42P01' || error.code === 'PGRST205') break
+          request.log.error({ err: error }, 'sync overview read failed')
+          return reply.code(500).send({ error: 'Failed to read sync activity' })
+        }
+        const batch = (data ?? []) as MutationRow[]
+        rows.push(...batch)
+        if (batch.length < PAGE) break
+        if (page === MAX_PAGES - 1) truncated = true
+      }
+
+      return reply.send(summariseSync(rows, WINDOW_DAYS, truncated))
     },
   )
 }

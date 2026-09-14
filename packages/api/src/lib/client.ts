@@ -180,8 +180,14 @@ apiClient.interceptors.request.use(
 
     // ✅ فقط از Token Provider می‌خوانیم
     const token = getToken()
+    // A retry after a refresh already carries the renewed token; the store may
+    // not have been written yet, and overwriting it here would resend the
+    // expired one and end the session for no reason.
+    const retried = (config as { _retriedAfterRefresh?: boolean })._retriedAfterRefresh === true
 
-    if (token) {
+    const keepRenewed = retried && Boolean(config.headers.Authorization)
+
+    if (token && !keepRenewed) {
       config.headers.Authorization = `Bearer ${token}`
     } else {
       devLog('[API Client] no token — unauthenticated request')
@@ -232,7 +238,10 @@ apiClient.interceptors.response.use(
       error.response?.status === 401 &&
       original &&
       !original._retriedAfterRefresh &&
-      !String(original.url ?? '').includes('/auth/')
+      // Only the credential endpoints themselves are excluded: a 401 from
+      // /auth/login is a wrong password, not an expired session. /auth/me IS
+      // renewed — it is what a reload after an hour calls first.
+      !/\/auth\/(login|signup|refresh|logout)(\/|\?|$)/.test(String(original.url ?? ''))
     ) {
       original._retriedAfterRefresh = true
       return refreshOnce().then((token) => {

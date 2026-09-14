@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
+import { apiClient } from '@hisabche/api'
+import { AxiosError, AxiosHeaders, type InternalAxiosRequestConfig } from 'axios'
 import { useWorkspaceStore } from '../workspace.slice'
 
 /**
@@ -22,7 +24,9 @@ import { useWorkspaceStore } from '../workspace.slice'
  * leave stored state alone.
  */
 
-const ORIGINAL_FETCH = globalThis.fetch
+const ORIGINAL_ADAPTER = apiClient.defaults.adapter as NonNullable<
+  typeof apiClient.defaults.adapter
+>
 
 /** Puts the store in the state a returning user's browser would restore. */
 function withStoredWorkspace(id: string) {
@@ -35,11 +39,25 @@ function withStoredWorkspace(id: string) {
   })
 }
 
+/**
+ * The store now asks through the shared API client (real token, configured
+ * base URL, session renewal), so the server is simulated at its adapter.
+ */
 function mockFetch(handler: (url: string) => { ok: boolean; body?: unknown }) {
-  globalThis.fetch = vi.fn(async (input: unknown) => {
-    const { ok, body } = handler(String(input))
-    return { ok, json: async () => body } as Response
-  }) as unknown as typeof fetch
+  const adapter = async (config: InternalAxiosRequestConfig) => {
+    const { ok, body } = handler(String(config.url))
+    if (ok) return { data: body, status: 200, statusText: 'OK', headers: {}, config }
+    throw new AxiosError('failed', '503', config, null, {
+      status: 503,
+      statusText: '',
+      headers: {},
+      config: { ...config, headers: new AxiosHeaders() },
+      data: {},
+    })
+  }
+  // Two axios type copies (store vs api) disagree on optional-property
+  // strictness; the adapter's runtime contract is the same.
+  apiClient.defaults.adapter = adapter as unknown as NonNullable<typeof apiClient.defaults.adapter>
 }
 
 describe('workspace store — stale persisted id', () => {
@@ -48,7 +66,7 @@ describe('workspace store — stale persisted id', () => {
   })
 
   afterEach(() => {
-    globalThis.fetch = ORIGINAL_FETCH
+    apiClient.defaults.adapter = ORIGINAL_ADAPTER
     vi.restoreAllMocks()
   })
 
