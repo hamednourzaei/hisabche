@@ -18,6 +18,7 @@ import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
 import { useMyCapabilities } from './governance'
 import { asList } from '../lib/as-list'
+import { localDay } from '../lib/local-day'
 
 // ═══ Types ═══
 
@@ -206,7 +207,7 @@ export function useBudgets() {
  */
 export function useBudgetVariance(onDate?: string) {
   const ready = useAuthReady()
-  const date = onDate ?? new Date().toISOString().slice(0, 10)
+  const date = onDate ?? localDay()
 
   return useQuery({
     queryKey: budgetKeys.variance(date),

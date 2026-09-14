@@ -11,7 +11,7 @@ import { Analytics } from '@vercel/analytics/next'
 import Script from 'next/script'
 import { AnalyticsPageview } from './analytics-pageview'
 import { Suspense } from 'react'
-import { getLocale, getMessages } from 'next-intl/server'
+import { getMessages, setRequestLocale } from 'next-intl/server'
 import { IntlProvider } from './intl-provider'
 import {
   SITE_URL,
@@ -213,6 +213,19 @@ export const viewport: Viewport = {
   ],
 }
 
+/**
+ * ⚠️ THE LOCALE IS HANDED OVER, NOT READ FROM THE REQUEST.
+ *
+ * This layout called `getLocale()` / `getMessages()` with no locale, so
+ * next-intl resolved it from request HEADERS and every page under `[lang]`
+ * rendered per request: production served `/fa` as `private, no-store`
+ * (TTFB 1.1 s) and the build's prerender manifest held no page at all.
+ *
+ * `setRequestLocale(lang)` takes the locale from the ROUTE. Static params are
+ * NOT declared here: at layout level they prerender every page below it, and
+ * authenticated / token pages (e.g. `/fa/accept-invite`) cannot be built ahead
+ * — the build refused. Public pages declare their own `generateStaticParams`.
+ */
 export default async function RootLayout({
   children,
   params,
@@ -230,8 +243,10 @@ export default async function RootLayout({
   // declared on the same page, so the document used to contradict itself.
   const htmlLang = localeToBcp47[routeLocale]
   const config = siteConfig[routeLocale]
-  const locale = await getLocale()
-  const messages = await getMessages()
+  // Before ANY next-intl server call below — see generateStaticParams above.
+  setRequestLocale(routeLocale)
+  const locale = routeLocale
+  const messages = await getMessages({ locale: routeLocale })
 
   return (
     <html

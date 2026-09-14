@@ -27,7 +27,7 @@ import { supabase } from '../db'
 import { AuditService } from './audit.service'
 import { BillingService, PLANS } from './billing.service'
 import { Plan, SubscriptionStatus, planEnum, subscriptionStatusEnum } from '@hisabche/validation'
-import { DatabaseError, NotFoundError, ConflictError } from '../errors/database.error'
+import { DatabaseError, NotFoundError, ConflictError, isFailedRead } from '../errors/database.error'
 import { ForbiddenError } from '../errors/auth.error'
 
 // ─── Column projections ──────────────────────────────────────
@@ -655,7 +655,8 @@ export class AdminService {
       .eq('id', membershipId)
       .single()
 
-    if (error || !membership) throw new NotFoundError('Membership')
+    if (isFailedRead(error)) throw new DatabaseError('Failed to read membership', error)
+    if (!membership) throw new NotFoundError('Membership')
     if (membership.role === role) return this.getMemberView(membershipId)
 
     if (role === 'owner') {
@@ -697,7 +698,8 @@ export class AdminService {
       .eq('id', membershipId)
       .single()
 
-    if (error || !membership) throw new NotFoundError('Membership')
+    if (isFailedRead(error)) throw new DatabaseError('Failed to read membership', error)
+    if (!membership) throw new NotFoundError('Membership')
     if (membership.role === 'owner') throw new ForbiddenError('Cannot remove owner')
 
     const { error: deleteError } = await supabase
@@ -725,7 +727,8 @@ export class AdminService {
       .select(MEMBER_COLUMNS)
       .eq('id', membershipId)
       .single()
-    if (error || !m) throw new NotFoundError('Membership')
+    if (isFailedRead(error)) throw new DatabaseError('Failed to read membership', error)
+    if (!m) throw new NotFoundError('Membership')
 
     const user = (await this.resolveIdentities([m.user_id])).get(m.user_id)
     return {

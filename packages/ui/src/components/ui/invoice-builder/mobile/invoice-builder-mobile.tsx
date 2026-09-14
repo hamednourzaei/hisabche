@@ -49,6 +49,7 @@ import { NumberStepper } from '../../number-stepper'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../select'
 import { cn } from '../../../../lib/utils'
 import { InvoiceItemCard } from './invoice-item-card'
+import { toIsoDay } from '@hisabche/formatting'
 
 export interface InvoiceBuilderMobileProps {
   t: (key: string, fallback?: string) => string
@@ -106,7 +107,7 @@ const fieldShell = cn(
 function toDateValue(iso: string | null): string {
   if (!iso) return ''
   const parsed = new Date(iso)
-  return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString().slice(0, 10)
+  return Number.isNaN(parsed.getTime()) ? '' : toIsoDay(parsed)
 }
 
 function fromDateValue(value: string): string | null {

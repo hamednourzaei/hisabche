@@ -1,31 +1,43 @@
 // apps/web/app/[lang]/legal/accessibility/page.tsx
-import type { Metadata } from "next";
-import { LegalPageClient } from "../LegalPageClient";
-import { buildLegalMetadata } from "../legal-metadata";
+import type { Metadata } from 'next'
+import { setRequestLocale } from 'next-intl/server'
+import { locales, resolveLocale } from '../../i18n-config'
+import { LegalPageClient } from '../LegalPageClient'
+import { buildLegalMetadata } from '../legal-metadata'
 
 const titles: Record<string, string> = {
-  "fa": "بیانیه دسترسی‌پذیری — حسابچه",
-  "af": "بیانیه دسترسی‌پذیری — حسابچه",
-  en: "Accessibility Statement — Hisabche",
-};
-
-const descriptions: Record<string, string> = {
-  "fa": "تعهد حسابچه به دسترسی‌پذیری برای همه‌ی کاربران.",
-  "af": "تعهد حسابچه به دسترسی‌پذیری برای همه‌ی کاربران.",
-  en: "Hisabche's commitment to accessibility for all users.",
-};
-
-export async function generateMetadata({ params }: { params: Promise<{ lang: string }> }): Promise<Metadata> {
-  const { lang } = await params;
-  return buildLegalMetadata({
-    lang,
-    path: "/legal/accessibility",
-    title: titles[lang] || titles["fa"],
-    description: descriptions[lang] || descriptions["fa"],
-  });
+  fa: 'بیانیه دسترسی‌پذیری — حسابچه',
+  af: 'بیانیه دسترسی‌پذیری — حسابچه',
+  en: 'Accessibility Statement — Hisabche',
 }
 
-export default function AccessibilityPage() {
+const descriptions: Record<string, string> = {
+  fa: 'تعهد حسابچه به دسترسی‌پذیری برای همه‌ی کاربران.',
+  af: 'تعهد حسابچه به دسترسی‌پذیری برای همه‌ی کاربران.',
+  en: "Hisabche's commitment to accessibility for all users.",
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ lang: string }>
+}): Promise<Metadata> {
+  const { lang } = await params
+  return buildLegalMetadata({
+    lang,
+    path: '/legal/accessibility',
+    title: titles[lang] || titles['fa'],
+    description: descriptions[lang] || descriptions['fa'],
+  })
+}
+
+// Built ahead per locale; the locale comes from the route (see layout.tsx).
+export function generateStaticParams() {
+  return locales.map((lang) => ({ lang }))
+}
+
+export default async function AccessibilityPage({ params }: { params: Promise<{ lang: string }> }) {
+  setRequestLocale(resolveLocale((await params).lang))
   return (
     <LegalPageClient
       titleKey="landing.legalPage.accessibilityTitle"
@@ -34,5 +46,5 @@ export default function AccessibilityPage() {
       introFallback="Hisabche is committed to making its product usable by as many people as possible."
       sectionsKey="landing.legalPage.accessibilitySections"
     />
-  );
+  )
 }

@@ -50,6 +50,7 @@ import { useCallback, useMemo } from 'react'
 
 import { convertVia, useExchangeRates } from '@hisabche/api'
 import { isSupportedCurrency, useCurrencyStore, type CurrencyCode } from '@hisabche/store'
+import { toIsoDay } from '@hisabche/formatting'
 
 /** What a converted amount came out as, or why it did not. */
 export interface DisplayAmount {
@@ -63,7 +64,7 @@ export interface DisplayAmount {
   converted: boolean
 }
 
-const today = (): string => new Date().toISOString().slice(0, 10)
+const today = (): string => toIsoDay(new Date())
 
 export interface UseDisplayBasisOptions {
   /**

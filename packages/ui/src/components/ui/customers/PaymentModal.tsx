@@ -24,6 +24,7 @@ import { SaveIndicator } from '../save-indicator'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../dialog'
 import { useSyncStore, useBackupStore } from '@hisabche/store'
 import { DollarSign, AlertTriangle, RefreshCw } from 'lucide-react'
+import { toIsoDay } from '@hisabche/formatting'
 
 interface InvoiceRecord {
   id: string
@@ -126,7 +127,7 @@ export function PaymentModal({ open, onClose, onPaid, customer, openInvoices }: 
         partyId: parsed.data.customerId,
         amount: parsed.data.amount,
         currency: 'AFN',
-        entryDate: new Date().toISOString().slice(0, 10),
+        entryDate: toIsoDay(new Date()),
         // The invoice the shopkeeper picked, settled explicitly. Without this
         // the server settles the oldest open invoices first, which is the right
         // default but not what was chosen on screen.

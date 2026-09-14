@@ -222,18 +222,13 @@ export function useCreateOpportunity() {
 export function useUpdateOpportunity() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async ({ id, ...input }: any) => {
+    mutationFn: async ({ id, ...input }: { id: string } & Record<string, unknown>) => {
       const { data } = await apiClient.patch(`/opportunities/${id}`, input)
       return data
     },
     // Optimistic: moving a deal between stages posts nothing to the books.
-    onMutate: ({ id, ...input }: { id: string } & Record<string, unknown>) =>
-      applyOptimisticPatch(queryClient, crmKeys.all, id, input),
-    onError: (
-      _error: unknown,
-      _vars: unknown,
-      snapshot: Awaited<ReturnType<typeof applyOptimisticPatch>> | undefined,
-    ) => rollbackOptimisticPatch(queryClient, snapshot),
+    onMutate: ({ id, ...input }) => applyOptimisticPatch(queryClient, crmKeys.all, id, input),
+    onError: (_error, _vars, snapshot) => rollbackOptimisticPatch(queryClient, snapshot),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: crmKeys.all })
     },

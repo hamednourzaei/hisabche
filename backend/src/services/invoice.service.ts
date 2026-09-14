@@ -35,7 +35,7 @@ import { ledger, type DraftLine } from './accounting'
 import { costing } from './inventory-costing'
 import { rules } from './rules'
 import { tax } from './tax'
-import { DatabaseError, NotFoundError } from '../errors/database.error'
+import { DatabaseError, NotFoundError, isFailedRead } from '../errors/database.error'
 import { ValidationError } from '../errors/validation.error'
 import {
   AWAITING_APPROVAL_STATUS,
@@ -609,7 +609,8 @@ export class InvoiceService {
       ;({ data, error } = await read())
     }
 
-    if (error || !data) {
+    if (isFailedRead(error)) throw new DatabaseError('Failed to read invoice', error)
+    if (!data) {
       throw new NotFoundError('Invoice')
     }
 
@@ -685,7 +686,8 @@ export class InvoiceService {
       throw new NotFoundError('Invoice')
     }
 
-    if (error || !data) {
+    if (isFailedRead(error)) throw new DatabaseError('Failed to read invoice', error)
+    if (!data) {
       throw new NotFoundError('Invoice')
     }
 

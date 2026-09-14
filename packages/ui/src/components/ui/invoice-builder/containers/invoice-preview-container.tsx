@@ -70,6 +70,12 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
    * invoice exists, so the push is the only navigation in flight.
    */
   const submittedRef = useRef(false)
+  // ⚠️ ONE KEY PER INVOICE ON THIS SCREEN. The server may commit the invoice
+  // and then fail a later step (recording the payment, re-reading it) — the
+  // page said «failed», the person pressed confirm again, and a SECOND invoice
+  // was created. With the same key, the retry returns the invoice that exists.
+  // Editing the draft remounts this screen and so gets a new key.
+  const requestKeyRef = useRef(`inv_web_${crypto.randomUUID()}`)
 
   // Reaching the preview with nothing to preview means the draft was cleared
   // in another tab or the URL was opened directly. Go back rather than
@@ -245,6 +251,7 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
 
     try {
       const created = await createInvoice.mutateAsync({
+        idempotencyKey: requestKeyRef.current,
         // Sent explicitly from the draft, never inferred from the route.
         type: draft.transactionType,
         date: draft.date,
@@ -305,11 +312,12 @@ export const InvoicePreviewContainer = memo(function InvoicePreviewContainer() {
       clearDraft()
     } catch (cause) {
       setSaveStatus('idle')
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : t('invoiceBuilder.errors.createFailed', 'ثبت فاکتور ناموفق بود'),
-      )
+      // The API client rejects with a plain object ({ message, code, status }),
+      // not an Error — so the server's reason was always replaced by the
+      // generic sentence, and nobody could tell WHICH step failed.
+      const reason = (cause as { message?: unknown } | null)?.message
+      const generic = t('invoiceBuilder.errors.createFailed', 'ثبت فاکتور ناموفق بود')
+      setError(typeof reason === 'string' && reason.trim() ? `${generic}: ${reason}` : generic)
     }
   }, [
     issues.length,

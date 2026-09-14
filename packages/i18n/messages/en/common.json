@@ -420,7 +420,11 @@
       "dataDeletion": "Data Deletion Request",
       "customerDebt": "Customer debt tracking",
       "offline": "Offline accounting",
-      "docs": "Documentation"
+      "docs": "Documentation",
+      "shopAccountingPage": "Accounting for small shops",
+      "invoicingPage": "Invoice software",
+      "inventoryPage": "Inventory management",
+      "daybookPage": "Daybook & profit and loss"
     },
     "footerCopyright": "© {year} Hisabche. All rights reserved.",
     "valuePill": "Works without internet — always, everywhere",
@@ -979,7 +983,171 @@
       "backToHome": "Back to home",
       "faqTitle": "Common questions",
       "otherFeatures": "More pages",
-      "ctaButton": "Start free"
+      "ctaButton": "Start free",
+      "shopAccounting": {
+        "metaTitle": "Accounting Software for Small Shops — Invoices & Stock",
+        "metaDescription": "Run a small shop's books without an accountant: sales and purchase invoices, inventory, customer credit, a daily cash till and profit and loss — on the web, phone and Windows, with offline work on the apps.",
+        "h1": "Accounting software for small shops, built around how a shop actually works",
+        "intro": "Most small shops keep their books in a notebook or a spreadsheet, because accounting software is built for accountants. Hisabche starts from the shop's day — you sold, you bought, you gave credit, you got paid — and writes the double-entry records behind it automatically.",
+        "sections": [
+          {
+            "heading": "Everyday shop work, no accounting jargon",
+            "body": "Record a sale or a purchase, pick the customer, and say how it was paid: in full, partly (the rest becomes customer credit), split across methods, or not yet. Stock moves, the customer's balance updates and the journal entry is posted."
+          },
+          {
+            "heading": "Stock, customer credit and the till in one place",
+            "body": "Every item shows its stock and the history behind it; low and out-of-stock items stand out. Each customer shows what they owe, with the invoices and payments behind it. The till is opened and closed daily and shows any difference between counted and expected cash."
+          },
+          {
+            "heading": "Built for multi-currency and emerging markets",
+            "body": "Invoices can be written in Afghan afghani, US dollars, Pakistani rupees or Iranian rial, and the app works in English, Persian and Dari, with Gregorian, Iranian or Afghan calendar months to match."
+          },
+          {
+            "heading": "Web, phone and Windows",
+            "body": "Sign in from a browser or install the phone and Windows apps; all see the same account. The apps keep working with no connection and sync when it returns."
+          }
+        ],
+        "faq": [
+          {
+            "q": "Do I need to know accounting?",
+            "a": "No. You record sales, purchases and payments; the journal entries are created for you. An accountant can still read the same journal, trial balance and balance sheet."
+          },
+          {
+            "q": "Which shops is it for?",
+            "a": "Small and medium retail and trade businesses with invoices, stock and customer credit — groceries, clothing, hardware, parts. Count, weight and custom units are supported."
+          },
+          {
+            "q": "Does it work offline?",
+            "a": "Fully on the phone and Windows apps. The web version needs a connection to save."
+          },
+          {
+            "q": "How much does it cost?",
+            "a": "You can start free. Plans are listed in the pricing section of the home page."
+          }
+        ],
+        "ctaTitle": "Replace the shop notebook with something that adds up",
+        "ctaBody": "Start free and write your first invoice in minutes."
+      },
+      "invoicing": {
+        "metaTitle": "Invoice Software for Small Business — PDF & Payments",
+        "metaDescription": "Create sales and purchase invoices, print or download PDF, send customers a view link, and record full, partial or split payments on the same invoice — with stock and customer balances updated automatically.",
+        "h1": "Invoice software that follows the money after the invoice",
+        "intro": "An invoice that only prints is half the job. You also need to know whether it was paid, what left the shelf and what went into the books. In Hisabche the invoice is where sales, stock, customer credit and accounting meet.",
+        "sections": [
+          {
+            "heading": "Fast entry from your stock list",
+            "body": "Pick items from inventory so price and unit fill in and stock drops on save. Lines not linked to an item, or a sale that would take stock negative, are flagged before you confirm."
+          },
+          {
+            "heading": "Full, partial or split payments",
+            "body": "Say how the invoice was paid: in full, partly with the rest owed, or split across methods such as cash and bank transfer. Each method is its own payment with its own note, so the till and bank stay right. Later payments are added on the invoice itself."
+          },
+          {
+            "heading": "Print, PDF and share links",
+            "body": "Invoices carry your business name and logo, print cleanly and export to PDF. Send a customer a link that shows that one invoice and nothing else."
+          },
+          {
+            "heading": "Safe to retry on a bad connection",
+            "body": "Each invoice carries a unique request key, so a retry after a dropped connection returns the invoice that was already created instead of making a second one."
+          }
+        ],
+        "faq": [
+          {
+            "q": "Are invoice numbers automatic?",
+            "a": "Yes, each invoice gets the next sequential number."
+          },
+          {
+            "q": "Which currencies can I invoice in?",
+            "a": "Afghan afghani, US dollar, Pakistani rupee and Iranian rial."
+          },
+          {
+            "q": "Can I record a payment later?",
+            "a": "Yes, from the invoice page; the balance and the customer's credit update."
+          }
+        ],
+        "ctaTitle": "Send your first invoice today",
+        "ctaBody": "Start free — invoices, stock and customer credit are connected from day one."
+      },
+      "inventory": {
+        "metaTitle": "Simple Inventory Management Software for Small Shops",
+        "metaDescription": "See every item's stock and the movements behind it, spot low and out-of-stock items, transfer between warehouses and run stock counts. Stock updates automatically with every invoice.",
+        "h1": "Simple inventory management that updates itself with every sale",
+        "intro": "Stock numbers typed in by hand drift away from the shelf. In Hisabche the stock level is built from movements — sales, purchases, transfers, adjustments and counts — and every movement leaves a trace.",
+        "sections": [
+          {
+            "heading": "Every stock number has a history",
+            "body": "For each item you see which sale, purchase, transfer or adjustment changed it. Correcting stock from the item page records an adjustment instead of silently overwriting the number."
+          },
+          {
+            "heading": "Low, out and negative stock",
+            "body": "Items at their reorder level show as low; zero or negative show as out of stock. Negative stock is never hidden, because it means more was sold than was recorded as bought."
+          },
+          {
+            "heading": "Multiple warehouses and stock counts",
+            "body": "Move stock between warehouses and record periodic counts; the difference between the count and the system becomes an adjustment."
+          },
+          {
+            "heading": "Units, weights and barcode scanning",
+            "body": "Track items by piece, kilogram or a custom unit, and scan barcodes with the phone camera in the mobile app."
+          }
+        ],
+        "faq": [
+          {
+            "q": "Does selling reduce stock automatically?",
+            "a": "Yes, when the invoice line is linked to an inventory item."
+          },
+          {
+            "q": "Can I delete an item that has sales?",
+            "a": "No — items with sales or stock history are protected so past invoices stay intact. Deactivate them instead."
+          },
+          {
+            "q": "Does stock update offline?",
+            "a": "On the phone and Windows apps, yes, and it syncs when you reconnect."
+          }
+        ],
+        "ctaTitle": "Make the system match the shelf",
+        "ctaBody": "Start free, add your items, and stock updates from the first invoice."
+      },
+      "daybook": {
+        "metaTitle": "Daybook & Cash Book Software with Automatic P&L",
+        "metaDescription": "Journal entries are created from invoices and payments automatically. See the trial balance, profit and loss and balance sheet, drill from any figure to the invoice behind it, and run a daily cash till.",
+        "h1": "A daybook that fills itself, and reports you can trace to the source",
+        "intro": "Small businesses either keep no daybook or re-enter everything at month end. In Hisabche every sale, purchase and payment writes its own double-entry journal record the moment it happens, and the reports come from those records.",
+        "sections": [
+          {
+            "heading": "Automatic journal entries",
+            "body": "A sales invoice records revenue and what the customer owes; a payment records cash or bank; a purchase records stock and what you owe the supplier. Moving money between the till and the bank is one balanced entry. Manual entries are available for anything else."
+          },
+          {
+            "heading": "Trial balance, profit and loss, balance sheet",
+            "body": "All three are built from the same entries, and every figure drills down to the ledger lines and the invoices behind it."
+          },
+          {
+            "heading": "Daily cash till and cash flow",
+            "body": "Open the till with a float, see cash sales, cash in and out and bank transfers, and close with a count that shows any difference. A 7, 30 and 90-day cash flow chart is included."
+          },
+          {
+            "heading": "Budgets with commitments",
+            "body": "Set expense or revenue budgets per account; actual spend and open commitments are shown against them, with a warning or a block when a limit is crossed."
+          }
+        ],
+        "faq": [
+          {
+            "q": "Do I have to enter journal entries by hand?",
+            "a": "Not for sales, purchases or payments — they post automatically. Manual entries are for special cases."
+          },
+          {
+            "q": "What about invoices created before accounting was set up?",
+            "a": "One button posts all unposted invoices; an invoice that already has an entry is never posted twice."
+          },
+          {
+            "q": "Which currencies are supported?",
+            "a": "Afghan afghani, US dollar, Pakistani rupee and Iranian rial."
+          }
+        ],
+        "ctaTitle": "Stop keeping the daybook twice",
+        "ctaBody": "Start free — every invoice carries its own accounting entry from the start."
+      }
     },
     "builtFor": "Built for businesses in Afghanistan",
     "capabilitiesDesc": "You can try every one of these right now",
@@ -1444,7 +1612,10 @@
     },
     "bulkDeleteConfirm": "Delete the selected products?",
     "stockStatus": "Stock status",
-    "summaryUnavailable": "Unavailable"
+    "summaryUnavailable": "Unavailable",
+    "deleteHasSales": "This product appears on invoices and can’t be deleted; deactivate it instead.",
+    "deleteHasStockHistory": "This product has stock history and can’t be deleted; deactivate it instead.",
+    "deleteFailed": "The product could not be deleted."
   },
   "customers": {
     "title": "Customers",

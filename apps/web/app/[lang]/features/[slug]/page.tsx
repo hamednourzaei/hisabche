@@ -31,10 +31,10 @@
 
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { getMessages } from 'next-intl/server'
+import { getMessages, setRequestLocale } from 'next-intl/server'
 import { FeaturePageClient, type RelatedLink } from '../FeaturePageClient'
 import { buildLegalMetadata } from '../../legal/legal-metadata'
-import { localeUrl, resolveLocale, localeToBcp47 } from '../../i18n-config'
+import { localeUrl, resolveLocale, localeToBcp47, locales } from '../../i18n-config'
 
 export const revalidate = 3600
 
@@ -45,6 +45,87 @@ interface FeatureDef {
 }
 
 const FEATURES: Record<string, FeatureDef> = {
+  // Commercial-intent pages (Iran / Afghanistan / global), one per product area.
+  'shop-accounting': {
+    contentKey: 'shopAccounting',
+    related: [
+      {
+        href: '/features/invoicing',
+        labelKey: 'landing.footerLink.invoicingPage',
+        labelFallback: 'Invoicing',
+      },
+      {
+        href: '/features/inventory',
+        labelKey: 'landing.footerLink.inventoryPage',
+        labelFallback: 'Inventory',
+      },
+      {
+        href: '/features/daybook',
+        labelKey: 'landing.footerLink.daybookPage',
+        labelFallback: 'Daybook',
+      },
+    ],
+  },
+  invoicing: {
+    contentKey: 'invoicing',
+    related: [
+      {
+        href: '/features/customer-debt',
+        labelKey: 'landing.footerLink.customerDebt',
+        labelFallback: 'Customer debt',
+      },
+      {
+        href: '/features/inventory',
+        labelKey: 'landing.footerLink.inventoryPage',
+        labelFallback: 'Inventory',
+      },
+      {
+        href: '/features/shop-accounting',
+        labelKey: 'landing.footerLink.shopAccountingPage',
+        labelFallback: 'Shop accounting',
+      },
+    ],
+  },
+  inventory: {
+    contentKey: 'inventory',
+    related: [
+      {
+        href: '/features/invoicing',
+        labelKey: 'landing.footerLink.invoicingPage',
+        labelFallback: 'Invoicing',
+      },
+      {
+        href: '/features/offline',
+        labelKey: 'landing.footerLink.offline',
+        labelFallback: 'Offline accounting',
+      },
+      {
+        href: '/features/shop-accounting',
+        labelKey: 'landing.footerLink.shopAccountingPage',
+        labelFallback: 'Shop accounting',
+      },
+    ],
+  },
+  daybook: {
+    contentKey: 'daybook',
+    related: [
+      {
+        href: '/features/invoicing',
+        labelKey: 'landing.footerLink.invoicingPage',
+        labelFallback: 'Invoicing',
+      },
+      {
+        href: '/features/customer-debt',
+        labelKey: 'landing.footerLink.customerDebt',
+        labelFallback: 'Customer debt',
+      },
+      {
+        href: '/features/shop-accounting',
+        labelKey: 'landing.footerLink.shopAccountingPage',
+        labelFallback: 'Shop accounting',
+      },
+    ],
+  },
   'customer-debt': {
     contentKey: 'customerDebt',
     related: [
@@ -69,12 +150,14 @@ const FEATURES: Record<string, FeatureDef> = {
   },
 }
 
-// No `generateStaticParams` on purpose. Adding it made Next try to prerender
-// these pages at build time, but the content is read through next-intl's
-// `getMessages()`, which resolves the locale from the request — the combination
-// throws DYNAMIC_SERVER_USAGE and every feature URL 500s. Rendering on demand is
-// also what every other public page here does, and `revalidate` above still
-// caches the result.
+// Static, per locale × feature. This was deliberately on-demand: the content
+// was read through `getMessages()` with the locale resolved from the REQUEST,
+// and prerendering that throws DYNAMIC_SERVER_USAGE (every feature URL 500'd).
+// The locale now comes from the route (`setRequestLocale` + `getMessages({ locale })`),
+// which is the supported way to prerender — never one without the other.
+export function generateStaticParams() {
+  return locales.flatMap((lang) => Object.keys(FEATURES).map((slug) => ({ lang, slug })))
+}
 
 /**
  * Reads a `landing.featurePage.<key>.<field>` string straight from the request's
@@ -83,8 +166,10 @@ const FEATURES: Record<string, FeatureDef> = {
  * `Record<string, string>` literals while the body uses i18n keys, which lets
  * the two drift apart silently.
  */
-async function readContent(contentKey: string) {
-  const messages = (await getMessages()) as Record<string, unknown>
+async function readContent(contentKey: string, lang: string) {
+  const locale = resolveLocale(lang)
+  setRequestLocale(locale)
+  const messages = (await getMessages({ locale })) as Record<string, unknown>
   const landing = messages['landing'] as Record<string, unknown> | undefined
   const featurePage = landing?.['featurePage'] as Record<string, unknown> | undefined
   return (featurePage?.[contentKey] ?? {}) as {
@@ -104,7 +189,7 @@ export async function generateMetadata({
   const feature = FEATURES[slug]
   if (!feature) return {}
 
-  const content = await readContent(feature.contentKey)
+  const content = await readContent(feature.contentKey, lang)
 
   // Reuses the shared builder so canonical, hreflang, OG and robots stay
   // identical to every other standalone public page rather than being
@@ -179,7 +264,7 @@ export default async function FeaturePage({
   // is a soft 404 and Google treats it as a quality signal against the site.
   if (!feature) notFound()
 
-  const content = await readContent(feature.contentKey)
+  const content = await readContent(feature.contentKey, lang)
   const faq = Array.isArray(content.faq) ? content.faq : []
 
   return (

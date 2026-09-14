@@ -7,6 +7,9 @@ import { useProducts, useDeleteProduct, useRealtime, type StockSummary } from '@
 import { useSyncStore, useBackupStore } from '@hisabche/store'
 import { mapProducts } from '../../lib/warehouse/warehouse-mappers'
 import type { RawProduct } from '../../lib/warehouse/warehouse-types'
+import { productDeleteRefusal } from '../../lib/warehouse/delete-refusal'
+import { STOCK_LABEL_KEY, STOCK_TONE, stockStateOf } from '../../lib/warehouse/stock-state'
+import { useToast } from '../../components/ui/toast-provider'
 
 export function useWarehouse(search: string) {
   const t = useTranslations()
@@ -24,6 +27,7 @@ export function useWarehouse(search: string) {
   const deleteProduct = useDeleteProduct()
   const { setSaveStatus } = useSyncStore()
   const { moveToTrash } = useBackupStore()
+  const toast = useToast()
 
   // ✅ Real-time subscription for products
   useRealtime({ table: 'products', queryKey: ['products'] })
@@ -43,20 +47,13 @@ export function useWarehouse(search: string) {
   const summary: StockSummary | null = data?.summary ?? null
 
   const stockStatus = useCallback(
-    (qty: number, min: number): 'success' | 'warning' | 'destructive' | 'secondary' => {
-      if (qty <= 0) return 'destructive'
-      if (qty <= min) return 'warning'
-      return 'success'
-    },
+    (qty: number, min: number): 'success' | 'warning' | 'destructive' | 'secondary' =>
+      STOCK_TONE[stockStateOf(qty, min)],
     [],
   )
 
   const stockLabel = useCallback(
-    (qty: number, min: number) => {
-      if (qty <= 0) return t('warehouse.outOfStock')
-      if (qty <= min) return t('warehouse.lowStock')
-      return t('warehouse.inStock')
-    },
+    (qty: number, min: number) => t(STOCK_LABEL_KEY[stockStateOf(qty, min)]),
     [t],
   )
 
@@ -64,17 +61,26 @@ export function useWarehouse(search: string) {
     async (product: { id: string; name?: string }) => {
       if (!product.id) return
       setSaveStatus('saving')
+      try {
+        await deleteProduct.mutateAsync(product.id)
+      } catch (error) {
+        // ⚠️ REFUSED IS NOT DELETED. The product used to go to the trash BEFORE
+        // the request and stay there when the server refused (a product with
+        // sales), the status stuck on «saving», and nothing said why.
+        setSaveStatus('error')
+        toast.error(productDeleteRefusal(error, t))
+        return
+      }
       moveToTrash({
         entity: 'product',
         entityId: product.id,
         data: JSON.stringify(product),
       })
-      await deleteProduct.mutateAsync(product.id)
       setSaveStatus('saved')
       setTimeout(() => setSaveStatus('idle'), 2000)
       refetch()
     },
-    [deleteProduct, moveToTrash, setSaveStatus, refetch],
+    [deleteProduct, moveToTrash, setSaveStatus, refetch, toast, t],
   )
 
   return {

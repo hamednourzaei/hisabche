@@ -6,7 +6,7 @@
 import { supabase } from '../db'
 import { CreateInteraction, CreateOpportunity, UpdateOpportunity } from '@hisabche/validation'
 import type { TenancyContext } from './tenancy.service'
-import { DatabaseError, NotFoundError } from '../errors/database.error'
+import { DatabaseError, NotFoundError, isFailedRead } from '../errors/database.error'
 import { ValidationError } from '../errors/validation.error'
 import { memoryCache } from '../utils/pagination'
 import { logBusinessEvent } from './event-log.service'
@@ -211,7 +211,8 @@ export class CrmService {
       .eq('public_token', token)
       .single()
 
-    if (error || !data) throw new NotFoundError('Task')
+    if (isFailedRead(error)) throw new DatabaseError('Failed to read task', error)
+    if (!data) throw new NotFoundError('Task')
     return mapInteraction(data)
   }
 

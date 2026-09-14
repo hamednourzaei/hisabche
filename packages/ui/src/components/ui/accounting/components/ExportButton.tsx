@@ -5,6 +5,7 @@ import { memo, useCallback, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import { Download, Loader2 } from 'lucide-react'
 import { cn } from '../../../../lib/utils'
+import { toIsoDay } from '@hisabche/formatting'
 
 export interface ExportColumn<T> {
   key: string
@@ -48,7 +49,7 @@ function ExportButtonInner<T>({ data, columns, filename, className }: ExportButt
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = `${filename}-${new Date().toISOString().slice(0, 10)}.csv`
+      link.download = `${filename}-${toIsoDay(new Date())}.csv`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)

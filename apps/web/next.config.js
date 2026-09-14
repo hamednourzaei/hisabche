@@ -2,7 +2,10 @@ const path = require('path')
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
+  // `NEXT_STANDALONE=0` builds a plain `.next` for `next start` — standalone
+  // copying needs symlink rights a normal Windows account lacks (EPERM), which
+  // made a local production check impossible. Unset = standalone, as deployed.
+  ...(process.env.NEXT_STANDALONE === '0' ? {} : { output: 'standalone' }),
   reactStrictMode: true,
   poweredByHeader: false,
   compress: true,

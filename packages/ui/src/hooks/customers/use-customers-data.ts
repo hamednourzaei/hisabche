@@ -4,6 +4,7 @@
 import { useMemo } from 'react'
 import { useCustomers, useInvoices } from '@hisabche/api'
 import type { CustomerWithDebt, InvoiceForDebt } from '../../lib/customers/customers-types'
+import { toIsoDay } from '@hisabche/formatting'
 
 // ============================================================
 // 📦 Typeهای توسعه‌یافته (محلی - بدون تغییر فایل اصلی)
@@ -236,7 +237,7 @@ export function useCustomersData(options: UseCustomersDataOptions = {}): UseCust
     const vipCount = enrichedCustomers.filter((c) => c.tags?.includes('vip')).length
 
     // فروش امروز
-    const today = new Date().toISOString().slice(0, 10)
+    const today = toIsoDay(new Date())
     const todaySales = invoices
       .filter((inv) => {
         const invDate = (inv.date || '').slice(0, 10)

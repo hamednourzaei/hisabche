@@ -19,6 +19,7 @@ import { CURRENCY_SIGN } from '@hisabche/formatting'
 
 import { SelectField } from '../select-field'
 import { cn } from '../../../lib/utils'
+import { toIsoDay } from '@hisabche/formatting'
 
 /** Persian labels for the codes a shop is most likely to display in. */
 const LABEL: Record<string, string> = {
@@ -189,7 +190,7 @@ export function ExchangeRateForm({
 
   const [currency, setCurrency] = React.useState(currencies[0] ?? '')
   const [rate, setRate] = React.useState('')
-  const [onDate, setOnDate] = React.useState(() => new Date().toISOString().slice(0, 10))
+  const [onDate, setOnDate] = React.useState(() => toIsoDay(new Date()))
 
   const parsed = Number(rate)
   // The server rejects a non-positive rate too; refusing here saves a round

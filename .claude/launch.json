@@ -15,6 +15,13 @@
       "port": 10000
     },
     {
+      "//": "Production build of the web app (run `NEXT_STANDALONE=0 next build` in apps/web first). The only way to check prerendered pages and their cache headers locally.",
+      "name": "web-prod",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@hisabche/web", "exec", "next", "start", "-p", "3111"],
+      "port": 3111
+    },
+    {
       "name": "desktop",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "@hisabche/desktop", "dev"],

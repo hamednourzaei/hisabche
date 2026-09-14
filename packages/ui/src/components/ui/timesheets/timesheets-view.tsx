@@ -55,6 +55,7 @@ import {
   NumberField,
   SelectField,
 } from '../capability/capability-kit'
+import { toIsoDay } from '@hisabche/formatting'
 
 export interface TimesheetProjectOption {
   id: string
@@ -108,7 +109,7 @@ export const TimesheetsView = memo(function TimesheetsView({
   onRefresh,
 }: TimesheetsViewProps) {
   const [employeeId, setEmployeeId] = useState('')
-  const [onDate, setOnDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [onDate, setOnDate] = useState(() => toIsoDay(new Date()))
   const [hours, setHours] = useState(0)
   const [minutes, setMinutes] = useState(0)
   const [billable, setBillable] = useState(true)

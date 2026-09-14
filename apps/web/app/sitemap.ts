@@ -21,6 +21,10 @@ const routes = [
   // and no others.
   { path: '/features/customer-debt' },
   { path: '/features/offline' },
+  { path: '/features/shop-accounting' },
+  { path: '/features/invoicing' },
+  { path: '/features/inventory' },
+  { path: '/features/daybook' },
   { path: '/legal/terms' },
   { path: '/legal/privacy' },
   { path: '/legal/cookies' },
@@ -48,7 +52,7 @@ const routes = [
 // legal pages already display this same date via `landing.legalPage.lastUpdated`.
 // 2026-08-19: landing H1/subtitle rewritten, both /features/* pages rewritten,
 // /contact gained subheadings.
-const LAST_MODIFIED = '2026-08-19'
+const LAST_MODIFIED = '2026-09-15'
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const entries: MetadataRoute.Sitemap = []

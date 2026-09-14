@@ -67,6 +67,9 @@ const FEATURES: FeatureItem[] = [
     title: 'صدور فاکتور',
     description: 'فاکتور فروش سریع و چاپ PDF',
     status: 'active',
+    pageHref: '/features/invoicing',
+    pageLabelKey: 'landing.footerLink.invoicingPage',
+    pageLabelFallback: 'صدور فاکتور آنلاین',
   },
   {
     icon: Package,
@@ -74,6 +77,9 @@ const FEATURES: FeatureItem[] = [
     title: 'مدیریت انبار',
     description: 'موجودی، هشدار کمبود، انتقال کالا',
     status: 'active',
+    pageHref: '/features/inventory',
+    pageLabelKey: 'landing.footerLink.inventoryPage',
+    pageLabelFallback: 'انبارداری ساده',
   },
   {
     icon: Calculator,
@@ -81,6 +87,9 @@ const FEATURES: FeatureItem[] = [
     title: 'حسابداری و مالی',
     description: 'دفتر کل، سود و زیان، ترازنامه',
     status: 'active',
+    pageHref: '/features/daybook',
+    pageLabelKey: 'landing.footerLink.daybookPage',
+    pageLabelFallback: 'دفتر روزنامه و سود و زیان',
   },
   {
     icon: Users2,

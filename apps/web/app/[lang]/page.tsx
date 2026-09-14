@@ -5,6 +5,7 @@ import { BILLING_CURRENCY } from '@hisabche/ui-contract'
 import { AuthGate } from './auth-gate'
 import { cn } from '@/lib/utils'
 import type { Metadata } from 'next'
+import { setRequestLocale } from 'next-intl/server'
 import {
   localeUrl,
   localePath,
@@ -12,6 +13,7 @@ import {
   localeToBcp47,
   resolveLocale,
   SITE_URL,
+  locales,
 } from './i18n-config'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -218,8 +220,14 @@ function JsonLd({ lang }: { lang: string }) {
   )
 }
 
+// Built ahead per locale; the locale comes from the route (see layout.tsx).
+export function generateStaticParams() {
+  return locales.map((lang) => ({ lang }))
+}
+
 export default async function RootPage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params
+  setRequestLocale(resolveLocale(lang))
 
   return (
     <>

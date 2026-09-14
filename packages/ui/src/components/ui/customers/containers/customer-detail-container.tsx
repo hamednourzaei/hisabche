@@ -11,6 +11,7 @@ import {
   CUSTOMER_EXPORT_COLUMNS,
   type ExportableInvoiceItem,
 } from '../../../../lib/customers/customer-export'
+import { toIsoDay } from '@hisabche/formatting'
 
 const makeFmt =
   (locale: string) =>
@@ -141,11 +142,7 @@ export function CustomerDetailContainer({
       label: safeT(`customers.export.${key}`, key),
     }))
 
-    exportToCSV(
-      rows,
-      columns,
-      `statement-${customer.name}-${new Date().toISOString().slice(0, 10)}`,
-    )
+    exportToCSV(rows, columns, `statement-${customer.name}-${toIsoDay(new Date())}`)
   }, [customer, statementInvoices, safeT])
 
   return (

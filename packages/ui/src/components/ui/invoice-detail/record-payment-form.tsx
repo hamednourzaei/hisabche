@@ -38,6 +38,7 @@ import { Label } from '../label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../select'
 import { cn } from '../../../lib/utils'
 import { MoneyInput } from '../money-input'
+import { toIsoDay } from '@hisabche/formatting'
 
 /** Mirrors `paymentMethodSchema`. Widening this without widening that is a 400. */
 export const PAYMENT_METHODS = ['cash', 'bank', 'credit', 'mobile_money'] as const
@@ -68,7 +69,7 @@ export interface RecordPaymentFormProps {
   onCancel: () => void
 }
 
-const today = () => new Date().toISOString().slice(0, 10)
+const today = () => toIsoDay(new Date())
 
 export function RecordPaymentForm({
   t,

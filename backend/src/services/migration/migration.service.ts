@@ -35,7 +35,12 @@
 import { createHash } from 'node:crypto'
 
 import { supabase } from '../../db'
-import { ConflictError, DatabaseError, NotFoundError } from '../../errors/database.error'
+import {
+  ConflictError,
+  DatabaseError,
+  NotFoundError,
+  isFailedRead,
+} from '../../errors/database.error'
 import { ValidationError } from '../../errors/validation.error'
 import type { TenancyContext } from '../tenancy.service'
 
@@ -253,7 +258,8 @@ export class MigrationService {
       .eq('id', id)
       .single()
 
-    if (error || !data) throw new NotFoundError('Migration')
+    if (isFailedRead(error)) throw new DatabaseError('Failed to read migration', error)
+    if (!data) throw new NotFoundError('Migration')
     return mapJob(data)
   }
 
@@ -727,7 +733,8 @@ export class MigrationService {
       .eq('id', id)
       .single()
 
-    if (error || !data) throw new NotFoundError('Migration')
+    if (isFailedRead(error)) throw new DatabaseError('Failed to read migration', error)
+    if (!data) throw new NotFoundError('Migration')
 
     const digest = createHash('sha256').update(content).digest('hex')
     if (data.content_digest && data.content_digest !== digest) {

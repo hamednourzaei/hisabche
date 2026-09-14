@@ -255,7 +255,16 @@ describe('the docs are a linked graph, not a fan of orphans', () => {
   it('outbound links point at routes that exist', () => {
     // A docs page linking to a 404 is worse than not linking: it wastes the
     // crawl and loses the reader at the moment they were interested.
-    const REAL_ROUTES = ['/features/customer-debt', '/features/offline', '/about', '/contact']
+    const REAL_ROUTES = [
+      '/features/customer-debt',
+      '/features/offline',
+      '/features/shop-accounting',
+      '/features/invoicing',
+      '/features/inventory',
+      '/features/daybook',
+      '/about',
+      '/contact',
+    ]
 
     for (const article of DOCS_ARTICLES) {
       for (const link of article.outbound ?? []) {

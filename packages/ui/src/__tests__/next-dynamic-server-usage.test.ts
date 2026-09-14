@@ -28,8 +28,8 @@
 // ⚠️ THIS IS NOT "STATIC RENDERING IS BANNED"
 //
 // The supported route is next-intl's `setRequestLocale()` together with a
-// `generateStaticParams` that returns `lang` AS WELL AS `slug`. If that is
-// ever adopted, this test should be updated to require BOTH — not deleted.
+// `generateStaticParams` that returns `lang` AS WELL AS `slug`. It was adopted
+// (layout, features, docs), and the test below now requires BOTH.
 // ============================================
 
 import { readFileSync, readdirSync, statSync } from 'node:fs'
@@ -97,16 +97,49 @@ describe('no page mixes request-time locale with static prerendering', () => {
     ).toEqual([])
   })
 
-  it('the two pages this has already bitten stay dynamic', () => {
-    // Named explicitly: both were written with generateStaticParams, both
-    // 500ed in production, and the second one was written after the first was
-    // fixed. Naming them means a re-introduction fails with the history
-    // attached rather than as an anonymous rule violation.
-    for (const rel of ['[lang]/features/[slug]/page.tsx', '[lang]/docs/[slug]/page.tsx']) {
+  it('the two pages this has already bitten prerender ONLY with the locale from the route', () => {
+    // Both were once written with generateStaticParams while reading the
+    // locale from the request, and both 500ed in production. They are static
+    // again now, through the supported form — so the test requires every half
+    // of it, by name, with the history attached.
+    const publicPages = [
+      '[lang]/page.tsx',
+      '[lang]/about/page.tsx',
+      '[lang]/contact/page.tsx',
+      '[lang]/features/[slug]/page.tsx',
+      '[lang]/docs/[slug]/page.tsx',
+      ...[
+        'accessibility',
+        'cookies',
+        'copyright',
+        'data-deletion',
+        'disclaimer',
+        'gdpr',
+        'privacy',
+        'refund',
+        'security',
+        'terms',
+      ].map((name) => `[lang]/legal/${name}/page.tsx`),
+    ]
+    for (const rel of publicPages) {
       const source = code(join(APP, ...rel.split('/')))
-      expect(source, `${rel} must not prerender`).not.toMatch(
+      expect(source, `${rel}: generateStaticParams`).toMatch(
         /export\s+(?:async\s+)?function\s+generateStaticParams/,
       )
+      expect(source, `${rel}: setRequestLocale`).toMatch(/\bsetRequestLocale\s*\(/)
+      // A getMessages() with no locale reads it from the request — the 500.
+      expect(source, `${rel}: getMessages without a locale`).not.toMatch(/\bgetMessages\s*\(\s*\)/)
     }
+  })
+
+  it('the root layout hands over the locale but declares NO static params', () => {
+    // At layout level, static params prerender EVERY page below it — the build
+    // refused on `/fa/accept-invite`. The layout must still set the locale, or
+    // it reads request headers and makes every public page dynamic again.
+    const source = code(join(APP, '[lang]', 'layout.tsx'))
+    expect(source).toMatch(/\bsetRequestLocale\s*\(/)
+    expect(source).not.toMatch(/export\s+(?:async\s+)?function\s+generateStaticParams/)
+    expect(source).not.toMatch(/\bgetMessages\s*\(\s*\)/)
+    expect(source).not.toMatch(/\bgetLocale\s*\(\s*\)/)
   })
 })

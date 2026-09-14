@@ -17,6 +17,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
 import { asList } from '../lib/as-list'
+import { localDay } from '../lib/local-day'
 
 // ═══ Types ═══
 
@@ -136,7 +137,7 @@ export function useSerials(productId?: string, status?: SerialStatus) {
 /** What is expiring, grouped so a shopkeeper can act on it today. */
 export function useExpiryReport(asOf?: string, nearExpiryDays = 30) {
   const ready = useAuthReady()
-  const date = asOf ?? new Date().toISOString().slice(0, 10)
+  const date = asOf ?? localDay()
 
   return useQuery({
     queryKey: expiryKeys.report(date, nearExpiryDays),

@@ -16,6 +16,7 @@ import { mapRecentInvoices, mapLowStockItems } from '../../lib/dashboard/dashboa
 import { getTodayDate, getDaysAgo } from '../../lib/dashboard/dashboard-utils'
 import type { DateRange } from '../../components/ui/dashboard/date-range-picker'
 import type { ProductsResponse, RawInvoice } from '../../lib/dashboard/dashboard-types'
+import { toIsoDay } from '@hisabche/formatting'
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
@@ -44,9 +45,11 @@ export function useDashboardData(dateRange: DateRange) {
 
   const { data: insights, isPending: insightsLoading, refetch: refetchInsights } = useAIInsights()
 
-  // ✅ اصلاح: استفاده از تاریخ محلی
-  const fromDate = dateRange.from ? dateRange.from.toISOString().slice(0, 10) : getDaysAgo(30)
-  const toDate = dateRange.to ? dateRange.to.toISOString().slice(0, 10) : getTodayDate()
+  // ⚠️ LOCAL calendar days. `toISOString()` is UTC: local midnight east of
+  // Greenwich is the PREVIOUS day there, so every range started a day early
+  // (Kabul +4:30, Tehran +3:30) — the «7 days» chart summed eight.
+  const fromDate = dateRange.from ? toIsoDay(dateRange.from) : getDaysAgo(30)
+  const toDate = dateRange.to ? toIsoDay(dateRange.to) : getTodayDate()
 
   const {
     data: salesData,

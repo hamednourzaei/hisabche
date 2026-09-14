@@ -4,40 +4,32 @@
 
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { getMessages } from 'next-intl/server'
+import { getMessages, setRequestLocale } from 'next-intl/server'
 
-import { findArticle } from '@hisabche/ui'
+import { DOCS_ARTICLES, findArticle } from '@hisabche/ui'
 
 import { DocsClient } from '../docs-client'
 import { DocsShell } from '../docs-shell'
 import { buildLegalMetadata } from '../../legal/legal-metadata'
-import { localeUrl, resolveLocale } from '../../i18n-config'
+import { localeUrl, locales, resolveLocale } from '../../i18n-config'
 
 export const revalidate = 3600
 
-// ⚠️ NO `generateStaticParams` — AND THIS IS THE FIX FOR THE PRODUCTION 500.
+// ⚠️ STATIC — ONLY BECAUSE THE LOCALE COMES FROM THE ROUTE.
 //
-// It used to be here, returning every article slug. That opts the route into
-// STATIC prerendering, and the page reads its text through next-intl's
-// `getMessages()`, which resolves the locale from the REQUEST. During a
-// prerender there is no request, so Next throws:
+// This route once had `generateStaticParams` while reading messages with the
+// locale resolved from the REQUEST: a prerender has no request, Next threw
+// DYNAMIC_SERVER_USAGE, and every `/[lang]/docs/<slug>` returned 500 in
+// production (the build still passed). The same mistake had been made on the
+// features route first.
 //
-//     digest: 'DYNAMIC_SERVER_USAGE'
-//
-// …and every `/[lang]/docs/<slug>` URL returns 500 in production. The build
-// still succeeds, and dev still serves the page, which is why it was not
-// caught here.
-//
-// ⚠️ THIS EXACT MISTAKE WAS ALREADY MADE, DIAGNOSED AND FIXED ONCE, on
-// `app/[lang]/features/[slug]/page.tsx` — the comment there says the same
-// thing. It was reintroduced because the docs route was written without
-// reading it. Rendering on demand is what every other public page in this app
-// does, and the `revalidate` above still caches the result.
-//
-// To make these static later, the supported route is next-intl's
-// `setRequestLocale()` plus a `generateStaticParams` that returns `lang` AS
-// WELL AS `slug`. That is a deliberate change to the locale plumbing, not
-// something to reach for to shave a render.
+// The supported form is what is here now: `generateStaticParams` returns
+// `lang` AS WELL AS `slug`, and every next-intl server call gets the locale
+// explicitly (`setRequestLocale` + `getMessages({ locale })`). Never add the
+// first without the second.
+export function generateStaticParams() {
+  return locales.flatMap((lang) => DOCS_ARTICLES.map((article) => ({ lang, slug: article.slug })))
+}
 
 export async function generateMetadata({
   params,
@@ -52,6 +44,7 @@ export async function generateMetadata({
   // public page in this app resolves first; these two did not, which made
   // `/xx/docs/anything` a 500 instead of a not-found.
   const locale = resolveLocale(lang)
+  setRequestLocale(locale)
   const messages = (await getMessages({ locale })) as Record<string, any>
   const article = messages?.docs?.[slug] ?? {}
 
@@ -83,6 +76,7 @@ export default async function DocsArticlePage({
 
   // Resolved, not passed through — see generateMetadata above.
   const locale = resolveLocale(lang)
+  setRequestLocale(locale)
   const messages = (await getMessages({ locale })) as Record<string, any>
   const text = messages?.docs?.[slug] ?? {}
   const site = messages?.docs ?? {}

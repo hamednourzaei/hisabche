@@ -25,6 +25,7 @@ import { BulkActionBar, DataTable, useRowSelection, type TableColumn } from '../
 import { AddCustomerModal } from './AddCustomerModal'
 import { PaymentModal } from './PaymentModal'
 import { CustomerWorkspaceContainer } from './containers/customer-workspace-container'
+import { toIsoDay } from '@hisabche/formatting'
 
 // ============================================================
 // 🧰 Utilities
@@ -562,11 +563,7 @@ export function customersView(props: CustomersViewProps) {
 
   const exportCustomers = useCallback(
     (list: readonly CustomerWithDebt[]) => {
-      exportToCSV(
-        buildExportRows(list),
-        exportColumns,
-        `customers-${new Date().toISOString().slice(0, 10)}`,
-      )
+      exportToCSV(buildExportRows(list), exportColumns, `customers-${toIsoDay(new Date())}`)
     },
     [buildExportRows, exportColumns],
   )

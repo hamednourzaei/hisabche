@@ -27,3 +27,14 @@ export class ConflictError extends BaseError {
     this.name = 'ConflictError'
   }
 }
+/**
+ * A read that FAILED, as opposed to one that found nothing.
+ *
+ * `.single()` reports «no row» as error `PGRST116`; that one is a 404. Anything
+ * else — a timeout, a missing column, a dropped connection — is a database
+ * failure and must not reach the person as «this record does not exist»
+ * (lesson 3: error and empty are two branches).
+ */
+export function isFailedRead(error: { code?: string } | null | undefined): boolean {
+  return Boolean(error) && error?.code !== 'PGRST116'
+}

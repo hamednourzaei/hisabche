@@ -9,6 +9,9 @@ import { useTranslations } from 'next-intl'
 import { profitPerUnit, stockValue, totalProfit } from '@hisabche/validation'
 import { useProduct, useUpdateProduct, useDeleteProduct } from '@hisabche/api'
 import { ProductDetailPage } from '../warehouse-detail-page'
+import { productDeleteRefusal } from '../../../../lib/warehouse/delete-refusal'
+import { STOCK_LABEL_KEY, STOCK_TONE, stockStateOf } from '../../../../lib/warehouse/stock-state'
+import { useToast } from '../../toast-provider'
 
 /**
  * ⚠️ WAS `'piece' | 'kg' | 'liter' | 'meter' | 'box'` — FIVE OF FIFTEEN.
@@ -72,6 +75,7 @@ export function ProductDetailContainer() {
   const { data: product, isLoading } = useProduct(id)
   const updateProduct = useUpdateProduct()
   const deleteProduct = useDeleteProduct()
+  const toast = useToast()
 
   const [editing, setEditing] = useState(false)
 
@@ -122,9 +126,16 @@ export function ProductDetailContainer() {
 
   const handleDelete = useCallback(async () => {
     if (!confirm(t('warehouse.deleteConfirm'))) return
-    await deleteProduct.mutateAsync(id!)
+    try {
+      await deleteProduct.mutateAsync(id!)
+    } catch (error) {
+      // Stay on the product and say why (sales / stock history), instead of an
+      // unhandled rejection and a button that seems to do nothing.
+      toast.error(productDeleteRefusal(error, t))
+      return
+    }
     router.push('/warehouse')
-  }, [id, deleteProduct, router, t])
+  }, [id, deleteProduct, router, t, toast])
 
   const safeT = useCallback(
     (key: string, fallback?: string) => {
@@ -138,16 +149,12 @@ export function ProductDetailContainer() {
 
   const stockStatus: StockStatus = useMemo(() => {
     if (!productData) return 'secondary'
-    if (productData.quantity === 0) return 'destructive'
-    if (productData.quantity <= productData.minStockLevel) return 'warning'
-    return 'success'
+    return STOCK_TONE[stockStateOf(productData.quantity, productData.minStockLevel)]
   }, [productData])
 
   const stockLabel = useMemo(() => {
     if (!productData) return ''
-    if (productData.quantity === 0) return t('warehouse.outOfStock')
-    if (productData.quantity <= productData.minStockLevel) return t('warehouse.lowStock')
-    return t('warehouse.inStock')
+    return t(STOCK_LABEL_KEY[stockStateOf(productData.quantity, productData.minStockLevel)])
   }, [productData, t])
 
   const profit = productData ? profitPerUnit(productData) : 0

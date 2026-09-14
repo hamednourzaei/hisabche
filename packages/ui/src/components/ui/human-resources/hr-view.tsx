@@ -24,6 +24,7 @@ import { JalaliDatePicker } from '../../ui/jalali-datepicker'
 import { PhoneInput } from '../../ui/phone-input'
 import { MoneyInput } from '../../ui/money-input'
 import { useDateFormat } from '../../../hooks/use-date-format'
+import { toIsoDay } from '@hisabche/formatting'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    HumanResourcesView v11 — تیم و حقوق (merged workspace + employees)
@@ -322,7 +323,7 @@ export const HumanResourcesView = memo(function HumanResourcesView({
   )
 
   const handleExport = useCallback(() => {
-    exportToCSV(sortedEmployees, CSV_COLUMNS, `employees-${new Date().toISOString().split('T')[0]}`)
+    exportToCSV(sortedEmployees, CSV_COLUMNS, `employees-${toIsoDay(new Date())}`)
   }, [sortedEmployees])
 
   const toggleForm = useCallback(() => {

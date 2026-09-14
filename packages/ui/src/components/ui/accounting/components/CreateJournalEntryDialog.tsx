@@ -8,6 +8,7 @@ import { X, Loader2, Plus, Trash2 } from 'lucide-react'
 import { cn } from '../../../../lib/utils'
 import { MoneyInput } from '../../money-input'
 import type { Account } from '@hisabche/api'
+import { toIsoDay } from '@hisabche/formatting'
 
 interface JournalLineInput {
   accountId: string
@@ -40,14 +41,14 @@ export const CreateJournalEntryDialog = memo(function CreateJournalEntryDialog({
   accounts,
 }: CreateJournalEntryDialogProps) {
   const t = useTranslations()
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [date, setDate] = useState(() => toIsoDay(new Date()))
   const [description, setDescription] = useState('')
   const [reference, setReference] = useState('')
   const [lines, setLines] = useState<JournalLineInput[]>([emptyLine(), emptyLine()])
 
   useEffect(() => {
     if (isOpen) {
-      setDate(new Date().toISOString().slice(0, 10))
+      setDate(toIsoDay(new Date()))
       setDescription('')
       setReference('')
       setLines([emptyLine(), emptyLine()])

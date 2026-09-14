@@ -30,6 +30,7 @@ import { useState, useEffect, useCallback, useMemo, memo } from 'react'
 import { JalaliDatePicker } from '../../ui/jalali-datepicker'
 import { PhoneInput } from '../../ui/phone-input'
 import { MoneyInput } from '../../ui/money-input'
+import { toIsoDay } from '@hisabche/formatting'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    EmployeeDetailView v2 — Memoized · Performance Optimized
@@ -95,8 +96,8 @@ function generateTimeline(
   emp: EmployeeData,
   t: (key: string, fallback?: string) => string,
 ): TimelineEvent[] {
-  const hireDate = (emp.hire_date || new Date().toISOString().split('T')[0]) as string
-  const today = new Date().toISOString().split('T')[0] as string
+  const hireDate = (emp.hire_date || toIsoDay(new Date())) as string
+  const today = toIsoDay(new Date()) as string
 
   const events: TimelineEvent[] = [
     {

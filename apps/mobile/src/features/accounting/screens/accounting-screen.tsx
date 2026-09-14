@@ -31,6 +31,7 @@ import { useCommonT } from '../../../shared/i18n/use-common-t'
 import { currencySign, formatAmount, formatDate } from '../../../shared/lib/format'
 import { useCurrency } from '../../settings/preferences.store'
 import { asList } from '@hisabche/api'
+import { toIsoDay } from '@hisabche/formatting'
 
 type TabId = 'accounts' | 'journal' | 'trialBalance' | 'balanceSheet' | 'incomeStatement'
 
@@ -43,7 +44,7 @@ export function AccountingScreen() {
 
   const accounts = useAccounts()
   const journal = useJournalEntries()
-  const today = useMemo(() => new Date().toISOString().slice(0, 10), [])
+  const today = useMemo(() => toIsoDay(new Date()), [])
   const monthStart = useMemo(() => {
     const d = new Date()
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-01`

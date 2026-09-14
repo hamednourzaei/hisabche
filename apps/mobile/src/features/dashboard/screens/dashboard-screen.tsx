@@ -43,6 +43,7 @@ import { formatAmount } from '../../../shared/lib/format'
 import { InsightCard } from '../components/insight-card'
 import { useSyncRefresh } from '../../offline/use-sync-refresh'
 import { asList } from '@hisabche/api'
+import { toIsoDay } from '@hisabche/formatting'
 
 // ─── Shared catalog keys ─────────────────────────────────────────────────
 // `tCommon` reads the same message catalogs the web app renders through, so
@@ -103,8 +104,9 @@ export function DashboardScreen() {
 
   const kpis = useDashboardKPIs()
   const sales = useDashboardSales({
-    from: range.from.toISOString().slice(0, 10),
-    to: range.to.toISOString().slice(0, 10),
+    // Local calendar days — toISOString() is UTC and starts the range a day early.
+    from: toIsoDay(range.from),
+    to: toIsoDay(range.to),
   })
   const insights = useAIInsights()
 

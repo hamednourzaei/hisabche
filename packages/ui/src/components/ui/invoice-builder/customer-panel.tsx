@@ -28,6 +28,7 @@ import { JalaliDatePicker } from '../jalali-datepicker'
 import { NumberStepper } from '../number-stepper'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../select'
 import { cn } from '../../../lib/utils'
+import { toIsoDay } from '@hisabche/formatting'
 
 export interface CustomerPanelProps {
   t: (key: string, fallback?: string) => string
@@ -57,7 +58,7 @@ const fieldLabel = 'mb-1.5 block text-xs font-medium text-[hsl(var(--fg-secondar
 function toDateValue(iso: string | null): string {
   if (!iso) return ''
   const parsed = new Date(iso)
-  return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString().slice(0, 10)
+  return Number.isNaN(parsed.getTime()) ? '' : toIsoDay(parsed)
 }
 
 function fromDateValue(value: string): string | null {

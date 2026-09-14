@@ -100,6 +100,7 @@ export const DOCS_ARTICLES: readonly DocsArticleDef[] = [
     related: ['customers', 'inventory', 'accounting'],
     outbound: [
       { href: '/features/customer-debt', labelKey: 'landing.featurePage.customerDebt.h1' },
+      { href: '/features/invoicing', labelKey: 'landing.featurePage.invoicing.h1' },
     ],
   },
   {
@@ -123,6 +124,7 @@ export const DOCS_ARTICLES: readonly DocsArticleDef[] = [
       { id: 'insights', bodyCount: 2 },
     ],
     related: ['invoices', 'pos', 'accounting'],
+    outbound: [{ href: '/features/inventory', labelKey: 'landing.featurePage.inventory.h1' }],
   },
   {
     slug: 'accounting',
@@ -133,6 +135,7 @@ export const DOCS_ARTICLES: readonly DocsArticleDef[] = [
       { id: 'currency', bodyCount: 2 },
     ],
     related: ['invoices', 'customers', 'branches'],
+    outbound: [{ href: '/features/daybook', labelKey: 'landing.featurePage.daybook.h1' }],
   },
   {
     slug: 'pos',

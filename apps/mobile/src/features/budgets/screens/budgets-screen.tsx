@@ -27,6 +27,7 @@ import { AppScreen } from '../../../shared/components/app-screen'
 import { NavScreenHeader } from '../../../shared/components/nav-screen-header'
 import { useCommonT } from '../../../shared/i18n/use-common-t'
 import { MinorMoney, Section, StatRow, StateBadge } from '../../capability/capability-kit'
+import { toIsoDay } from '@hisabche/formatting'
 
 function toMinor(text: string): number {
   const value = Number(text.replace(/[^\d.-]/g, ''))
@@ -122,7 +123,7 @@ export function BudgetsScreen() {
                 checkSpend.mutate({
                   accountId: accountId.trim(),
                   amountMinor: toMinor(amount),
-                  onDate: new Date().toISOString().slice(0, 10),
+                  onDate: toIsoDay(new Date()),
                 })
               }}
               fullWidth

@@ -60,8 +60,12 @@ describe('a negative quantity is out of stock', () => {
   it('⚠️ status and label treat <= 0 as out, not only === 0', () => {
     // -98 was being reported as merely «low».
     expect(hook).not.toContain('qty === 0')
-    // Quote-agnostic: prettier normalises the quote style on commit.
-    expect(hook).toMatch(/if \(qty <= 0\) return ["']destructive["']/)
+    // The rule now lives once in lib/warehouse/stock-state.ts (BUG-003), shared
+    // with the product page; the hook must use it, and it must say <= 0.
+    expect(hook).toContain('STOCK_TONE[stockStateOf(qty, min)]')
+    expect(readFileSync(join(__dirname, '../lib/warehouse/stock-state.ts'), 'utf8')).toMatch(
+      /if \(quantity <= 0\) return ["']out["']/,
+    )
     // The client-side totals were later moved server-side, so the mapper may
     // no longer count at all — it just must never use the `=== 0` test again.
     expect(mappers).not.toContain('quantity === 0')

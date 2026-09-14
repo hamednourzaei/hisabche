@@ -7,7 +7,7 @@ import { supabase } from '../db'
 import { scopes } from './authorization/scope.service'
 import { CreateProduct, UpdateProduct, ProductFilters } from '@hisabche/validation'
 import { summarizeStock, type StockSummaryRow } from './inventory/stock-summary.domain'
-import { DatabaseError, NotFoundError } from '../errors/database.error'
+import { ConflictError, DatabaseError, NotFoundError, isFailedRead } from '../errors/database.error'
 import { ValidationError } from '../errors/validation.error'
 import { mapProduct } from '../utils/product.mapper'
 import { memoryCache } from '../utils/pagination'
@@ -194,7 +194,8 @@ export class ProductService {
       .eq('workspace_id', workspaceId)
       .single()
 
-    if (error || !product) throw new NotFoundError('Product')
+    if (isFailedRead(error)) throw new DatabaseError('Failed to read product', error)
+    if (!product) throw new NotFoundError('Product')
 
     const result = mapProduct(product)
     await memoryCache.set(cacheKey, result, 300)
@@ -380,23 +381,23 @@ export class ProductService {
     if (ownedError) throw new DatabaseError('Failed to verify product', ownedError)
     if (!owned) throw new NotFoundError('Product')
 
-    const [{ count }, { count: stockCount }] = await Promise.all([
-      supabase
-        .from('invoice_items')
-        .select('id', { count: 'estimated', head: true })
-        .eq('product_id', id),
-      supabase
-        .from('stock_movements')
-        .select('id', { count: 'estimated', head: true })
-        .eq('product_id', id),
+    // ⚠️ THIS CHECK IS THE ONLY GUARD. `invoice_items.product_id` and
+    // `stock_movements.product_id` have no foreign key, so the database lets
+    // a sold product be deleted and orphans its sales and stock history.
+    //
+    // It used to be `count: 'estimated'` with the error ignored: a failed read
+    // left `count` null, `null && …` is false, and the delete went ahead. An
+    // existence check, and a read that fails refuses (lesson 3).
+    const [sold, moved] = await Promise.all([
+      supabase.from('invoice_items').select('id').eq('product_id', id).limit(1).maybeSingle(),
+      supabase.from('stock_movements').select('id').eq('product_id', id).limit(1).maybeSingle(),
     ])
 
-    if (count && count > 0) {
-      throw new DatabaseError('Product has invoice items, cannot delete')
-    }
-    if (stockCount && stockCount > 0) {
-      throw new DatabaseError('Product has stock movements, cannot delete')
-    }
+    if (sold.error) throw new DatabaseError('Failed to check product sales', sold.error)
+    if (moved.error) throw new DatabaseError('Failed to check product stock history', moved.error)
+    // A conflict, not a server fault: the person can deactivate the product instead.
+    if (sold.data) throw new ConflictError('PRODUCT_HAS_INVOICE_ITEMS')
+    if (moved.data) throw new ConflictError('PRODUCT_HAS_STOCK_MOVEMENTS')
 
     const { error } = await supabase
       .from('products')

@@ -29,6 +29,7 @@ import {
   Upload,
   X,
 } from 'lucide-react'
+import { toIsoDay } from '@hisabche/formatting'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    SettingsPage v3 — Memoized · Performance Optimized
@@ -509,7 +510,7 @@ const BackupSection = memo(function BackupSection() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `hisabche-backup-${new Date().toISOString().slice(0, 10)}.json`
+      a.download = `hisabche-backup-${toIsoDay(new Date())}.json`
       a.click()
       URL.revokeObjectURL(url)
 

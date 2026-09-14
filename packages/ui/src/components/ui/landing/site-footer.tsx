@@ -57,6 +57,14 @@ const COLUMNS: FooterColumn[] = [
         href: '/features/customer-debt',
       },
       { key: 'offline', fallback: 'حسابداری آفلاین', href: '/features/offline' },
+      {
+        key: 'shopAccountingPage',
+        fallback: 'نرم‌افزار حسابداری فروشگاهی',
+        href: '/features/shop-accounting',
+      },
+      { key: 'invoicingPage', fallback: 'صدور فاکتور آنلاین', href: '/features/invoicing' },
+      { key: 'inventoryPage', fallback: 'انبارداری ساده', href: '/features/inventory' },
+      { key: 'daybookPage', fallback: 'دفتر روزنامه و سود و زیان', href: '/features/daybook' },
     ],
   },
   {

@@ -16,7 +16,7 @@ import {
 import { StockHistoryService } from '../services/inventory/stock-history.service'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
-import { NotFoundError } from '../errors/database.error'
+import { ConflictError, NotFoundError } from '../errors/database.error'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
 
 // ✅ تنظیمات برای حذف $schema از خروجی
@@ -196,6 +196,10 @@ export async function productRoutes(fastify: FastifyInstance) {
       } catch (err) {
         if (err instanceof NotFoundError) {
           return reply.code(404).send({ error: err.message })
+        }
+        if (err instanceof ConflictError) {
+          // In use (sales / stock history): the code tells the client why.
+          return reply.code(409).send({ error: err.message, code: err.message })
         }
         fastify.log.error(err)
         return reply.code(500).send({ error: 'Failed to delete product' })

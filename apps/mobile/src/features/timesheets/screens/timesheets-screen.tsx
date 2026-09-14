@@ -38,6 +38,7 @@ import { AppScreen } from '../../../shared/components/app-screen'
 import { NavScreenHeader } from '../../../shared/components/nav-screen-header'
 import { useCommonT } from '../../../shared/i18n/use-common-t'
 import { MinorMoney, Section, StatRow, formatMinutes } from '../../capability/capability-kit'
+import { toIsoDay } from '@hisabche/formatting'
 
 export function TimesheetsScreen() {
   useTranslation('mobile')
@@ -174,7 +175,7 @@ export function TimesheetsScreen() {
                   logTime.mutate({
                     projectId,
                     employeeId: employeeId.trim(),
-                    onDate: new Date().toISOString().slice(0, 10),
+                    onDate: toIsoDay(new Date()),
                     minutes: totalMinutes,
                     billable: true,
                     description: description.trim(),
