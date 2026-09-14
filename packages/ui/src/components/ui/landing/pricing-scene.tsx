@@ -1,10 +1,11 @@
 // packages/ui/src/components/ui/landing/pricing-scene.tsx
 'use client'
 
-import React, { useEffect, useRef, useState, useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useTranslations } from 'next-intl'
 import { cn } from '../../../lib/utils'
+import { LANDING_CONTAINER, LANDING_SECTION, SectionHeader } from './landing-primitives'
 import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { formatNumber } from '@hisabche/formatting'
 import { usePlans } from '@hisabche/api'
@@ -302,50 +303,18 @@ export default function PricingScene(props: PricingSceneProps) {
     }
   }
 
-  const ref = useRef<HTMLDivElement>(null)
-  const [animated, setAnimated] = useState(false)
   const [mobilePlan, setMobilePlan] = useState(1)
   const [mobileFeaturesOpen, setMobileFeaturesOpen] = useState(false)
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry?.isIntersecting) {
-          setAnimated(true)
-          observer.disconnect()
-        }
-      },
-      { threshold: 0.1, rootMargin: '0px 0px -40px 0px' },
-    )
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
 
   const allMobileFeatures = useMemo(() => FEATURE_GROUPS.flatMap((g) => g.rows), [])
 
   return (
-    <section
-      id="pricing"
-      ref={ref}
-      className="py-12 sm:py-16 lg:py-20 bg-[hsl(var(--surface-muted)/0.3)]"
-    >
-      <div className="container-narrow max-w-4xl px-4 sm:px-6">
-        <div
-          className={cn(
-            'text-center mb-10 sm:mb-12 lg:mb-16',
-            'transition-all duration-700 motion-reduce:transition-none',
-            animated ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5',
-          )}
-        >
-          <p className="text-[10px] sm:text-xs lg:text-sm uppercase tracking-[0.2em] mb-2 sm:mb-3 text-[hsl(var(--fg-tertiary))] font-semibold">
-            {st('landing.pricingLabel', 'تعرفه‌ها')}
-          </p>
-          <h2 className="text-xl sm:text-2xl lg:text-4xl font-bold text-[hsl(var(--fg-primary))] tracking-tight px-4 sm:px-0">
-            {st('landing.pricingTitle', 'از رایگان شروع کنید، هر زمان خواستید ارتقا دهید')}
-          </h2>
-        </div>
+    <section id="pricing" className={cn(LANDING_SECTION, 'bg-[hsl(var(--surface-muted)/0.3)]')}>
+      <div className={cn(LANDING_CONTAINER, 'max-w-5xl')}>
+        <SectionHeader
+          label={st('landing.pricingLabel', 'تعرفه‌ها')}
+          title={st('landing.pricingTitle', 'از رایگان شروع کنید، هر زمان خواستید ارتقا دهید')}
+        />
 
         {/* Mobile */}
         <div className="sm:hidden">
@@ -464,9 +433,7 @@ export default function PricingScene(props: PricingSceneProps) {
         {/* Desktop table */}
         <div
           className={cn(
-            'hidden sm:block rounded-[var(--radius-2xl)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]',
-            'transition-all duration-700 delay-100',
-            animated ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4',
+            'hidden sm:block rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] shadow-sm',
           )}
         >
           <div className="overflow-x-auto">
@@ -615,13 +582,7 @@ export default function PricingScene(props: PricingSceneProps) {
           </div>
         </div>
 
-        <p
-          className={cn(
-            'mt-6 sm:mt-8 text-center text-[10px] sm:text-xs lg:text-sm text-[hsl(var(--fg-tertiary))]',
-            'transition-all duration-700 delay-300',
-            animated ? 'opacity-100' : 'opacity-0',
-          )}
-        >
+        <p className="mt-8 text-center text-xs text-[hsl(var(--fg-tertiary))] sm:text-sm">
           {st('landing.pricingFooter', 'بدون قرارداد · لغو هر زمان · بدون کارت بانکی')}
         </p>
       </div>

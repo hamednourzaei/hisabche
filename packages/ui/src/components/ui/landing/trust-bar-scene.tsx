@@ -1,8 +1,6 @@
 // packages/ui/src/components/ui/landing/trust-bar-scene.tsx
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
-import { cn } from '../../../lib/utils'
 import { Marquee } from '../marquee'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -74,40 +72,16 @@ function IndustryChip({ label }: { label: string }) {
 }
 
 export default function TrustBarScene({ t }: TrustBarSceneProps) {
-  const ref = useRef<HTMLDivElement>(null)
-  const [animated, setAnimated] = useState(false)
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry?.isIntersecting) {
-          setAnimated(true)
-          observer.disconnect()
-        }
-      },
-      { threshold: 0.3 },
-    )
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
-
   const firstHalf = INDUSTRIES.slice(0, Math.ceil(INDUSTRIES.length / 2))
   const secondHalf = INDUSTRIES.slice(Math.ceil(INDUSTRIES.length / 2))
 
   return (
     <section
       id="trust-bar"
-      ref={ref}
-      className={cn(
-        'relative py-5 sm:py-6 lg:py-10 border-b border-[hsl(var(--border-default))] overflow-hidden',
-        'transition-opacity duration-700',
-        animated ? 'opacity-100' : 'opacity-0',
-      )}
+      className="relative overflow-hidden border-y border-[hsl(var(--border-default))] py-8 sm:py-10"
     >
-      <div className="container-narrow mb-4 sm:mb-5 lg:mb-8 px-4 sm:px-6">
-        <p className="text-center text-[9px] sm:text-[10px] lg:text-sm font-semibold uppercase tracking-[0.2em] text-[hsl(var(--fg-tertiary))]">
+      <div className="mx-auto mb-6 w-full max-w-6xl px-4 sm:px-6 lg:px-8">
+        <p className="text-center text-xs font-medium text-[hsl(var(--fg-tertiary))] sm:text-sm">
           {/*
             ⚠️ THIS SAID «Trusted by every type of business».
 

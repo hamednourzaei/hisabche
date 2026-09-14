@@ -140,64 +140,66 @@ export default function SiteFooter({ t, localePrefix }: SiteFooterProps) {
         'bg-[hsl(var(--surface-muted)/0.3)]',
       )}
     >
-      <div className="container-narrow px-4 sm:px-6 py-8 sm:py-10 lg:py-16">
-        {/* ── Brand block: centred above the columns at every width ── */}
-        <div className="mb-8 flex flex-col items-center text-center sm:mb-10">
-          <div className="mb-2 text-base font-bold text-[hsl(var(--fg-primary))] sm:mb-3 sm:text-lg">
-            {t('app.name', 'حسابچه')}
-            <span className="text-[hsl(var(--color-primary))]">.</span>
-          </div>
-          <p className="max-w-sm text-[11px] leading-relaxed text-[hsl(var(--fg-tertiary))] sm:text-xs lg:text-sm">
-            {t(
-              'landing.footerTagline',
-              'حافظه‌ی زنده‌ی کسب‌وکار تو — آفلاین، امن، همیشه در دسترس.',
-            )}
-          </p>
+      <div className="mx-auto w-full max-w-6xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+        <div className="grid gap-10 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:gap-16">
+          {/* ── Brand block: beside the columns on wide screens, above them on narrow ── */}
+          <div className="flex flex-col items-center text-center lg:items-start lg:text-start">
+            <div className="mb-2 text-base font-bold text-[hsl(var(--fg-primary))] sm:mb-3 sm:text-lg">
+              {t('app.name', 'حسابچه')}
+              <span className="text-[hsl(var(--color-primary))]">.</span>
+            </div>
+            <p className="max-w-sm text-[11px] leading-relaxed text-[hsl(var(--fg-tertiary))] sm:text-xs lg:text-sm">
+              {t(
+                'landing.footerTagline',
+                'حافظه‌ی زنده‌ی کسب‌وکار تو — آفلاین، امن، همیشه در دسترس.',
+              )}
+            </p>
 
-          {/* دکمه‌های ارتباطی مربع با گوشه‌ی نرم — دایره در موبایل ریز و بی‌ریخت بود. */}
-          <div className="mt-4 flex items-center justify-center gap-2.5 sm:gap-3">
-            {SOCIALS.map(({ icon: Icon, label, href }) => (
-              <a
-                key={label}
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={label}
-                className={cn(
-                  'flex size-10 items-center justify-center rounded-xl sm:size-11',
-                  'border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]',
-                  'text-[hsl(var(--fg-secondary))]',
-                  'hover:border-[hsl(var(--color-primary)/0.35)] hover:text-[hsl(var(--color-primary))]',
-                  'transition-colors duration-200',
-                )}
-              >
-                <Icon className="size-[18px]" aria-hidden="true" />
-              </a>
+            {/* دکمه‌های ارتباطی مربع با گوشه‌ی نرم — دایره در موبایل ریز و بی‌ریخت بود. */}
+            <div className="mt-4 flex items-center justify-center gap-2.5 sm:gap-3">
+              {SOCIALS.map(({ icon: Icon, label, href }) => (
+                <a
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={label}
+                  className={cn(
+                    'flex size-10 items-center justify-center rounded-xl sm:size-11',
+                    'border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]',
+                    'text-[hsl(var(--fg-secondary))]',
+                    'hover:border-[hsl(var(--color-primary)/0.35)] hover:text-[hsl(var(--color-primary))]',
+                    'transition-colors duration-200',
+                  )}
+                >
+                  <Icon className="size-[18px]" aria-hidden="true" />
+                </a>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Link columns: three across at every width ── */}
+          <div className="grid grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
+            {COLUMNS.map((col) => (
+              <nav key={col.titleKey} aria-label={t(col.titleKey, col.titleFallback)}>
+                <h3 className="mb-2 text-[11px] font-semibold text-[hsl(var(--fg-primary))] sm:mb-3 sm:text-xs lg:mb-4 lg:text-sm">
+                  {t(col.titleKey, col.titleFallback)}
+                </h3>
+                <ul className="space-y-1.5 sm:space-y-2 lg:space-y-2.5">
+                  {col.links.map((link) => (
+                    <li key={link.key}>
+                      <Link
+                        href={withLocale(link.href)}
+                        className="text-[10px] sm:text-xs lg:text-sm text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--fg-primary))] transition-colors duration-200"
+                      >
+                        {t(`landing.footerLink.${link.key}`, link.fallback)}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </nav>
             ))}
           </div>
-        </div>
-
-        {/* ── Link columns: three across at every width ── */}
-        <div className="grid grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-          {COLUMNS.map((col) => (
-            <nav key={col.titleKey} aria-label={t(col.titleKey, col.titleFallback)}>
-              <h3 className="mb-2 text-[11px] font-semibold text-[hsl(var(--fg-primary))] sm:mb-3 sm:text-xs lg:mb-4 lg:text-sm">
-                {t(col.titleKey, col.titleFallback)}
-              </h3>
-              <ul className="space-y-1.5 sm:space-y-2 lg:space-y-2.5">
-                {col.links.map((link) => (
-                  <li key={link.key}>
-                    <Link
-                      href={withLocale(link.href)}
-                      className="text-[10px] sm:text-xs lg:text-sm text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--fg-primary))] transition-colors duration-200"
-                    >
-                      {t(`landing.footerLink.${link.key}`, link.fallback)}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          ))}
         </div>
 
         {/* ── Bottom bar ── */}

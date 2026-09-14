@@ -29,9 +29,6 @@ const TrustBarScene = dynamic(() => import('./trust-bar-scene'), { loading: scen
 const SecurityScene = dynamic(() => import('./security-scene'), { loading: sceneLoading })
 const PricingScene = dynamic(() => import('./pricing-scene'), { loading: sceneLoading })
 const SiteFooter = dynamic(() => import('./site-footer'), { loading: sceneLoading })
-const DashboardShowcaseScene = dynamic(() => import('./dashboard-showcase-scene'), {
-  loading: sceneLoading,
-})
 
 const sectionFallbacks: Record<string, Record<string, string>> = {
   en: {
@@ -149,8 +146,6 @@ export function LandingPage() {
           <NavigationRegistry id="pain">
             <PainScene t={safeT} />
           </NavigationRegistry>
-
-          <DashboardShowcaseScene t={safeT} />
 
           {/* The "behind the scenes of every sale" scene (TransformScene) was
               removed from the landing page. The component file stays in place —

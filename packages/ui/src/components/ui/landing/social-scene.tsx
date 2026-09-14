@@ -2,8 +2,7 @@
 'use client'
 
 import { useSceneObserver } from './use-scene-observer'
-import { Marquee } from '../marquee'
-import { cn } from '../../../lib/utils'
+import { LANDING_CONTAINER, LANDING_SECTION, SectionHeader } from './landing-primitives'
 import { Check } from 'lucide-react'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -110,30 +109,17 @@ const CAPABILITIES: Capability[] = [
 
 function CapabilityCard({ item }: { item: Capability }) {
   return (
-    <figure
-      className={cn(
-        'w-56 sm:w-60 lg:w-72 shrink-0 rounded-xl sm:rounded-2xl p-3 sm:p-4 lg:p-5',
-        'border border-[hsl(var(--border-default))]',
-        'bg-[hsl(var(--surface-elevated)/0.75)] backdrop-blur-sm',
-        'shadow-[var(--shadow-premium)]',
-        'transition-colors duration-300',
-        'hover:border-[hsl(var(--color-primary)/0.3)]',
-      )}
-    >
+    <figure className="flex h-full flex-col rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated)/0.6)] p-5 sm:p-6">
       {/* A tick, not five stars. A star is a RATING, and there is no rating
           source in this product — inventing one is the defect this file was
           rewritten to remove. */}
-      <div className="mb-2 sm:mb-2.5">
-        <span className="inline-flex items-center justify-center size-5 sm:size-6 rounded-full bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))]">
-          <Check className="size-3 sm:size-3.5" aria-hidden="true" />
-        </span>
-      </div>
-
-      <blockquote className="text-[11px] sm:text-xs lg:text-sm text-[hsl(var(--fg-primary))] leading-relaxed mb-2.5 sm:mb-3 lg:mb-4">
+      <span className="mb-4 inline-flex size-8 items-center justify-center rounded-full bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))]">
+        <Check className="size-4" aria-hidden="true" />
+      </span>
+      <blockquote className="mb-4 text-sm leading-relaxed text-[hsl(var(--fg-primary))] sm:text-base">
         {item.claim}
       </blockquote>
-
-      <figcaption className="text-[9px] sm:text-[10px] lg:text-xs text-[hsl(var(--fg-tertiary))] truncate">
+      <figcaption className="mt-auto border-t border-[hsl(var(--border-default)/0.7)] pt-3 text-xs text-[hsl(var(--fg-tertiary))]">
         {item.where}
       </figcaption>
     </figure>
@@ -141,11 +127,8 @@ function CapabilityCard({ item }: { item: Capability }) {
 }
 
 export default function SocialScene({ t }: SocialSceneProps) {
-  const { ref, state } = useSceneObserver<HTMLDivElement>({
-    threshold: 0.3,
-    narrativeState: 'trust',
-  })
-  const animated = state === 'animated'
+  // Kept for the section navigator (it reads which scene is in view).
+  const { ref } = useSceneObserver<HTMLDivElement>({ threshold: 0.3, narrativeState: 'trust' })
 
   const items = CAPABILITIES.map((item) => ({
     ...item,
@@ -153,78 +136,23 @@ export default function SocialScene({ t }: SocialSceneProps) {
     where: t(`landing.capability.${item.key}.where`, item.where),
   }))
 
-  const rowA = items.slice(0, 4)
-  const rowB = items.slice(4, 8)
-
   return (
-    <section
-      id="testimonials"
-      ref={ref}
-      data-narrative="trust"
-      className="py-12 sm:py-16 lg:py-20 border-y border-[hsl(var(--border-default))] overflow-hidden"
-    >
-      <div className="container-narrow px-4 sm:px-6">
-        {/* ── Header ── */}
-        <div
-          className={cn(
-            'text-center mb-8 sm:mb-10 lg:mb-14 min-h-[100px] sm:min-h-[120px] lg:min-h-[140px]',
-            'transition-all duration-700 motion-reduce:transition-none',
-            animated ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5',
-          )}
-        >
-          {/*
-            ⚠️ THE RATING BADGE IS GONE.
-
-            It read «۴.۹ · ۳۴۰+ کسب‌وکار فعال» — a rating with no rating source
-            and a user count with no counter. Both were invented.
-
-            What replaced it says something true and unfalsifiable: this is
-            what the software does, not how many people like it.
-          */}
-          <div
-            className={cn(
-              'inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 lg:px-4 py-1 sm:py-1.5 text-[10px] sm:text-xs lg:text-sm mb-3 sm:mb-4 lg:mb-6',
-              'rounded-full',
-              'border border-[hsl(var(--border-default))]',
-              'bg-[hsl(var(--surface-muted))]',
-              'text-[hsl(var(--fg-secondary))]',
-            )}
-          >
-            {t('landing.builtFor', 'ساخته‌شده برای کسب‌وکارهای افغانستان')}
-          </div>
-
-          <h2 className="text-lg sm:text-2xl lg:text-4xl font-extrabold text-[hsl(var(--fg-primary))] tracking-tight px-4 sm:px-0">
-            {t('landing.capabilitiesTitle', 'چه کاری برایتان انجام می‌دهد')}
-          </h2>
-          <p className="mt-2 sm:mt-3 lg:mt-4 text-sm sm:text-base lg:text-lg text-[hsl(var(--fg-secondary))] leading-relaxed px-4 sm:px-0">
-            {t('landing.capabilitiesDesc', 'هر مورد را می‌توانید همین حالا امتحان کنید')}
-          </p>
-        </div>
-
-        {/* ── Two-row horizontal marquee (all breakpoints) ── */}
-        <div
-          className={cn(
-            'relative space-y-2 sm:space-y-3 lg:space-y-4',
-            'transition-opacity duration-700 motion-reduce:transition-none',
-            animated ? 'opacity-100' : 'opacity-0',
-          )}
-        >
-          <Marquee pauseOnHover repeat={4} className="[--duration:32s]">
-            {rowA.map((item) => (
-              <CapabilityCard key={item.key} item={item} />
-            ))}
-          </Marquee>
-
-          <Marquee reverse pauseOnHover repeat={4} className="[--duration:36s]">
-            {rowB.map((item) => (
-              <CapabilityCard key={item.key} item={item} />
-            ))}
-          </Marquee>
-
-          {/* Edge fades, so cards enter and leave rather than being clipped. */}
-          <div className="pointer-events-none absolute inset-y-0 start-0 w-12 sm:w-20 bg-gradient-to-r from-[hsl(var(--surface-base))] to-transparent" />
-          <div className="pointer-events-none absolute inset-y-0 end-0 w-12 sm:w-20 bg-gradient-to-l from-[hsl(var(--surface-base))] to-transparent" />
-        </div>
+    <section id="testimonials" ref={ref} data-narrative="trust" className={LANDING_SECTION}>
+      <div className={LANDING_CONTAINER}>
+        {/* ⚠️ No rating badge: «۴.۹ · ۳۴۰+ کسب‌وکار فعال» had no rating source
+            and no counter. The label says what is true instead. */}
+        <SectionHeader
+          label={t('landing.builtFor', 'ساخته‌شده برای کسب‌وکارهای افغانستان')}
+          title={t('landing.capabilitiesTitle', 'چه کاری برایتان انجام می‌دهد')}
+          description={t('landing.capabilitiesDesc', 'هر مورد را می‌توانید همین حالا امتحان کنید')}
+        />
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {items.map((item) => (
+            <li key={item.key}>
+              <CapabilityCard item={item} />
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
   )

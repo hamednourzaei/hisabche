@@ -3,6 +3,7 @@
 
 import { useState, useCallback } from 'react'
 import { cn } from '../../../lib/utils'
+import { LANDING_CONTAINER, LANDING_SECTION, SectionHeader } from './landing-primitives'
 import { ChevronDown, ExternalLink } from 'lucide-react'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -356,21 +357,18 @@ export default function FaqScene({ t }: FaqSceneProps) {
     : null
 
   return (
-    <section id="faq" className="py-12 sm:py-16 lg:py-20">
+    <section id="faq" className={LANDING_SECTION}>
       <FaqJsonLd t={t} />
 
-      <div className="container-narrow max-w-3xl px-4 sm:px-6">
-        <div className="text-center mb-10 sm:mb-12 lg:mb-14">
-          <p className="text-[10px] sm:text-xs lg:text-sm uppercase tracking-[0.2em] mb-2 sm:mb-3 text-[hsl(var(--fg-tertiary))] font-semibold">
-            {t('landing.faqLabel', 'پرسش‌های رایج')}
-          </p>
-          <h2 className="text-xl sm:text-2xl lg:text-4xl font-bold text-[hsl(var(--fg-primary))] tracking-tight mb-2 sm:mb-3">
-            {t('landing.faqTitle', 'هر سوالی داری، اینجا جوابش هست')}
-          </h2>
-          <p className="mx-auto max-w-xl text-sm sm:text-base text-[hsl(var(--fg-secondary))] leading-relaxed px-4 sm:px-0">
-            {t('landing.faqDesc', 'اگر پاسخت را پیدا نکردی، پشتیبانی حسابچه همیشه آماده کمک است.')}
-          </p>
-        </div>
+      <div className={cn(LANDING_CONTAINER, 'max-w-3xl')}>
+        <SectionHeader
+          label={t('landing.faqLabel', 'پرسش‌های رایج')}
+          title={t('landing.faqTitle', 'هر سوالی داری، اینجا جوابش هست')}
+          description={t(
+            'landing.faqDesc',
+            'اگر پاسخت را پیدا نکردی، پشتیبانی حسابچه همیشه آماده کمک است.',
+          )}
+        />
 
         <div className="space-y-2 sm:space-y-3">
           {!showAll &&

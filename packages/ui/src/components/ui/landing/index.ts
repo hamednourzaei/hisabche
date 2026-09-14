@@ -1,12 +1,11 @@
-export { default as FeaturesScene } from "./features-scene"
-export { default as PainScene } from "./pain-scene"
-export { default as TransformScene } from "./transform-scene"
-export { default as SocialScene } from "./social-scene"
-export { default as FaqScene } from "./faq-scene"
-export { default as CTAScene } from "./cta-scene"
-export { LandingPage } from "./landing-page"
-export { default as TrustBarScene } from "./trust-bar-scene"
-export { default as SecurityScene } from "./security-scene"
-export { default as PricingScene } from "./pricing-scene"
-export { default as SiteFooter } from "./site-footer"
-export { default as DashboardShowcaseScene } from "./dashboard-showcase-scene"
+export { default as FeaturesScene } from './features-scene'
+export { default as PainScene } from './pain-scene'
+export { default as TransformScene } from './transform-scene'
+export { default as SocialScene } from './social-scene'
+export { default as FaqScene } from './faq-scene'
+export { default as CTAScene } from './cta-scene'
+export { LandingPage } from './landing-page'
+export { default as TrustBarScene } from './trust-bar-scene'
+export { default as SecurityScene } from './security-scene'
+export { default as PricingScene } from './pricing-scene'
+export { default as SiteFooter } from './site-footer'

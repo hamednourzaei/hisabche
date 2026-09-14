@@ -4,6 +4,7 @@
 import NextLink from 'next/link'
 import { useSceneObserver } from './use-scene-observer'
 import { cn } from '../../../lib/utils'
+import { LANDING_CONTAINER, LANDING_SECTION, SectionHeader } from './landing-primitives'
 import type { LucideIcon } from 'lucide-react'
 import {
   Users,
@@ -154,60 +155,38 @@ const FEATURES: FeatureItem[] = [
 
 export default function FeaturesScene({ t, localePrefix }: FeaturesSceneProps) {
   const routePrefix = localePrefix ? `/${localePrefix}` : ''
-  const { ref, state } = useSceneObserver<HTMLDivElement>({
-    threshold: 0.2,
-    narrativeState: 'confidence',
-  })
-  const animated = state === 'animated'
+  // Kept for the section navigator (it reads which scene is in view).
+  const { ref } = useSceneObserver<HTMLDivElement>({ threshold: 0.2, narrativeState: 'confidence' })
 
   return (
-    <section
-      id="features"
-      ref={ref}
-      data-narrative="confidence"
-      className="py-12 sm:py-16 lg:py-20"
-    >
-      <div className="container-narrow max-w-6xl px-4 sm:px-6">
-        <div
-          className={cn(
-            'text-center mb-10 sm:mb-12 lg:mb-16',
-            'transition-all duration-700 motion-reduce:transition-none',
-            animated ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5',
-          )}
-        >
-          <p className="text-[10px] sm:text-xs lg:text-sm uppercase tracking-[0.2em] mb-2 sm:mb-3 text-[hsl(var(--fg-tertiary))] font-semibold">
-            {t('landing.featuresLabel', 'امکانات')}
-          </p>
-          <h2 className="text-xl sm:text-2xl lg:text-4xl font-bold text-[hsl(var(--fg-primary))] tracking-tight">
-            {t('landing.featuresTitle', 'همه ابزارهای کسب‌وکار، یکجا')}
-          </h2>
-          <p className="mt-2 sm:mt-3 lg:mt-4 text-sm sm:text-base text-[hsl(var(--fg-secondary))] leading-relaxed max-w-lg mx-auto px-4 sm:px-0">
-            {t('landing.featuresDesc', 'از فروش و انبار تا حسابداری و هوش مصنوعی.')}
-          </p>
-        </div>
+    <section id="features" ref={ref} data-narrative="confidence" className={LANDING_SECTION}>
+      <div className={LANDING_CONTAINER}>
+        <SectionHeader
+          label={t('landing.featuresLabel', 'امکانات')}
+          title={t('landing.featuresTitle', 'همه ابزارهای کسب‌وکار، یکجا')}
+          description={t('landing.featuresDesc', 'از فروش و انبار تا حسابداری و هوش مصنوعی.')}
+        />
 
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-5">
-          {FEATURES.map((feature, i) => {
+        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {FEATURES.map((feature) => {
             const Icon = feature.icon
             return (
-              <div
+              <li
                 key={feature.key}
                 className={cn(
-                  'group relative overflow-hidden rounded-[var(--radius-xl)] border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-3.5 sm:p-4 lg:p-6 transition-all duration-500',
-                  'hover:border-[hsl(var(--color-primary)/0.3)] hover:shadow-lg hover:-translate-y-1',
-                  'motion-reduce:hover:translate-y-0',
-                  animated ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4',
+                  'group flex flex-col rounded-xl border p-5 transition-colors sm:p-6',
+                  'border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated)/0.6)]',
+                  'hover:border-[hsl(var(--color-primary)/0.35)]',
                 )}
-                style={{ transitionDelay: `${i * 80}ms` }}
               >
-                <div className="flex items-center justify-between mb-2.5 sm:mb-3">
-                  <div className="w-8 h-8 sm:w-9 sm:h-9 lg:w-10 lg:h-10 rounded-lg sm:rounded-xl bg-[hsl(var(--color-primary)/0.1)] flex items-center justify-center text-[hsl(var(--color-primary))]">
-                    <Icon className="size-4 sm:size-4.5 lg:size-5" />
-                  </div>
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <span className="flex size-10 items-center justify-center rounded-lg bg-[hsl(var(--color-primary)/0.1)] text-[hsl(var(--color-primary))]">
+                    <Icon className="size-5" aria-hidden="true" />
+                  </span>
                   {feature.status !== undefined && (
                     <span
                       className={cn(
-                        'text-[8px] sm:text-[10px] lg:text-xs px-1.5 sm:px-2 py-0.5 rounded-full font-medium',
+                        'rounded-full px-2 py-0.5 text-xs font-medium',
                         feature.status === 'active'
                           ? 'bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))]'
                           : 'bg-[hsl(var(--color-warning)/0.12)] text-[hsl(var(--color-warning))]',
@@ -218,32 +197,27 @@ export default function FeaturesScene({ t, localePrefix }: FeaturesSceneProps) {
                   )}
                 </div>
 
-                <h3 className="font-semibold text-xs sm:text-sm lg:text-base leading-snug mb-0.5 sm:mb-1 text-[hsl(var(--fg-primary))] line-clamp-1 sm:line-clamp-2">
+                <h3 className="mb-1.5 text-base font-semibold text-[hsl(var(--fg-primary))]">
                   {t(`landing.feature.${feature.key}Title`, feature.title)}
                 </h3>
-                <p className="text-[10px] sm:text-xs lg:text-sm text-[hsl(var(--fg-secondary))] leading-relaxed line-clamp-2">
+                <p className="text-sm leading-relaxed text-[hsl(var(--fg-secondary))]">
                   {t(`landing.feature.${feature.key}Desc`, feature.description)}
                 </p>
 
-                {/* Contextual, in-content link to the feature's own page.
-                    Descriptive anchor text (the page's real subject), not
-                    "learn more" — the anchor is the strongest relevance signal
-                    a link carries, and a generic one wastes it. */}
+                {/* Contextual link to the feature's own page — descriptive
+                    anchor text (the page's real subject), not "learn more". */}
                 {feature.pageHref && feature.pageLabelKey && (
                   <NextLink
                     href={`${routePrefix}${feature.pageHref}`}
-                    className={cn(
-                      'mt-2 inline-flex text-[10px] sm:text-xs font-medium',
-                      'text-[hsl(var(--color-primary))] hover:underline',
-                    )}
+                    className="mt-auto inline-flex pt-4 text-sm font-medium text-[hsl(var(--color-primary))] hover:underline"
                   >
                     {t(feature.pageLabelKey, feature.pageLabelFallback)}
                   </NextLink>
                 )}
-              </div>
+              </li>
             )
           })}
-        </div>
+        </ul>
       </div>
     </section>
   )
