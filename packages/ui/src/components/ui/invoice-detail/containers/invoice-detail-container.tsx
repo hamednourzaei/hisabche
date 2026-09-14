@@ -66,6 +66,22 @@ interface WorkflowStep {
  * Why a ledger post did not book, in words the owner can act on.
  *  when there is nothing to say (never attempted, or it posted).
  */
+/** Known refusal codes in words; anything else as the server sent it. */
+function reasonText(reason: string, tr: (key: string, fallback: string) => string): string {
+  const code = /^([A-Z][A-Z_]{5,})/.exec(reason)?.[1]
+  if (code === 'ACCOUNTING_PERIOD_LOCKED') {
+    return tr('invoiceDetail.reasonPeriodLocked', 'دوره‌ی حسابداری این تاریخ بسته شده است')
+  }
+  if (code === 'INVENTORY_INSUFFICIENT_STOCK') {
+    return tr(
+      'invoiceDetail.reasonInsufficientStock',
+      'موجودی کافی با بهای ثبت‌شده برای این کالا وجود ندارد',
+    )
+  }
+  if (reason === 'cancelled') return tr('invoiceDetail.reasonCancelled', 'فاکتور لغو شده است')
+  return reason
+}
+
 function ledgerPostMessageOf(
   result: InvoiceLedgerPostResult | null,
   tr: (key: string, fallback: string) => string,
@@ -73,6 +89,12 @@ function ledgerPostMessageOf(
   if (!result) return null
   switch (result.status) {
     case 'posted':
+      return result.uncostedProducts && result.uncostedProducts.length > 0
+        ? tr(
+            'invoiceDetail.ledgerPostedUncosted',
+            'فاکتور در دفتر ثبت شد، ولی بهای تمام‌شده‌ی بعضی کالاها ثبت نشد چون موجودی آن‌ها بدون خرید (بدون لایه‌ی بها) وارد شده است. برای این کالاها فاکتور خرید یا موجودی اول دوره با بها ثبت کنید.',
+          )
+        : null
     case 'already_posted':
       return null
     case 'nothing_to_post':
@@ -83,7 +105,7 @@ function ledgerPostMessageOf(
     case 'skipped':
       return `${tr('invoiceDetail.ledgerMissingAccounts', 'در سرفصل حساب‌ها این حساب‌ها تعریف نشده‌اند و تا تعریف نشوند فاکتور در دفتر ثبت نمی‌شود')}: ${result.missing.join('، ')}`
     case 'not_postable':
-      return `${tr('invoiceDetail.ledgerNotPostable', 'این فاکتور الان قابل ثبت در دفتر نیست')}: ${result.reason}`
+      return `${tr('invoiceDetail.ledgerNotPostable', 'این فاکتور الان قابل ثبت در دفتر نیست')}: ${reasonText(result.reason, tr)}`
   }
 }
 
@@ -394,7 +416,14 @@ export function InvoiceDetailContainer() {
                       onError: (err) =>
                         setLedgerResult({
                           status: 'not_postable',
-                          reason: err instanceof Error ? err.message : String(err),
+                          // ⚠️ The API client rejects with a plain object
+                          // ({ message, code, status }), not an Error — so
+                          // `String(err)` rendered «[object Object]».
+                          reason:
+                            (err as { code?: string; message?: string })?.code &&
+                            (err as { code?: string }).code !== 'UNKNOWN_ERROR'
+                              ? String((err as { code?: string }).code)
+                              : String((err as { message?: string })?.message ?? err),
                         }),
                     }),
                 })}

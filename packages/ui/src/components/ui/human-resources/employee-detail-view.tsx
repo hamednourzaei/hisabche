@@ -97,7 +97,6 @@ function generateTimeline(
 ): TimelineEvent[] {
   const hireDate = (emp.hire_date || new Date().toISOString().split('T')[0]) as string
   const today = new Date().toISOString().split('T')[0] as string
-  const lastMonth = new Date(Date.now() - 86400000 * 30).toISOString().split('T')[0] as string
 
   const events: TimelineEvent[] = [
     {
@@ -105,7 +104,12 @@ function generateTimeline(
       action: 'create',
       date: hireDate,
       title: t('hr.hired', 'استخدام شد'),
-      description: t('hr.hiredDesc', `به عنوان ${emp.position || 'کارمند'} شروع به کار کرد`),
+      // The message has a {position} placeholder; this `t` takes no values, so
+      // it is filled here rather than shown to the user as «{position}».
+      description: t('hr.hiredDesc', 'به عنوان {position} شروع به کار کرد').replace(
+        '{position}',
+        emp.position || t('hr.employee', 'کارمند'),
+      ),
     },
   ]
 
@@ -119,16 +123,10 @@ function generateTimeline(
     })
   }
 
-  const salary = emp.salary as number
-  if (salary && salary > 0) {
-    events.push({
-      id: '3',
-      action: 'update',
-      date: lastMonth,
-      title: t('hr.salaryRecorded', 'معاش ثبت شد'),
-      description: t('hr.salaryAmount', `${salary.toLocaleString('fa-AF')} افغانی`),
-    })
-  }
+  // ⚠️ REMOVED: a «حقوق ثبت شد» event dated 30 days ago was generated for every
+  // employee with a salary. No payment stood behind it — it was invented, and
+  // showed «{amount}» besides. Real salary payments are listed in their own
+  // section from the payroll records.
 
   return events.sort((a, b) => b.date.localeCompare(a.date))
 }
@@ -142,11 +140,18 @@ const statusBadgeMap: Record<string, string> = {
   on_leave: 'bg-[hsl(var(--color-warning)/0.12)] text-[hsl(var(--color-warning))]',
 }
 
-function getStatusBadge(status: string, t: (key: string, fallback?: string) => string) {
-  const cls = statusBadgeMap[status] || statusBadgeMap.active
+function getStatusBadge(
+  status: string | null | undefined,
+  t: (key: string, fallback?: string) => string,
+) {
+  // A NULL status is «not recorded», not «active»: rows created before the
+  // column had a default have nothing, and rendering `hr.null` or guessing
+  // «فعال» are both wrong.
+  const known = status && statusBadgeMap[status] ? status : null
+  const cls = known ? statusBadgeMap[known] : statusBadgeMap.inactive
   return (
     <span className={cn('px-2 py-0.5 rounded-full text-xs font-medium', cls)}>
-      {t(`hr.${status}`, status)}
+      {known ? t(`hr.${known}`, known) : t('hr.status_unknown', 'وضعیت ثبت نشده')}
     </span>
   )
 }

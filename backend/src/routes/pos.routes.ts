@@ -16,12 +16,12 @@
 // id at the ledger.
 // ============================================
 
+import { sendFailure } from '../errors/http-failure'
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 
 import { PosService } from '../services/pos'
-import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
@@ -68,17 +68,10 @@ const closeSchema = z.object({
 export async function posRoutes(fastify: FastifyInstance) {
   const posService = new PosService()
 
-  const fail = (reply: FastifyReply, err: unknown, fallback: string) => {
-    if (err instanceof z.ZodError) {
-      return reply.code(400).send({ error: 'Validation failed', details: err.errors })
-    }
-    if (err instanceof BaseError && err.statusCode < 500) {
-      const code = /^[A-Z][A-Z_]{6,}/.exec(err.message)?.[0]
-      return reply.code(err.statusCode).send({ error: err.message, code: code ?? err.name })
-    }
-    fastify.log.error(err)
-    return reply.code(500).send({ error: fallback })
-  }
+  // Shared with the other routes: a 500 carries its database code (dbCode),
+  // so «Failed to fetch the current session» says WHICH table or column.
+  const fail = (reply: FastifyReply, err: unknown, fallback: string) =>
+    sendFailure(reply, fastify.log, err, fallback)
 
   // ─── GET /sessions/current ─────────────────────────────
   fastify.get(

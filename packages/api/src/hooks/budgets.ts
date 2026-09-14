@@ -53,6 +53,9 @@ export interface Budget {
   approvedBy?: string | null
   approvedAt?: string | null
   createdBy?: string | null
+  currency?: 'AFN' | 'USD' | 'PKR' | 'IRR'
+  amountCurrencyMinor?: number
+  fxRate?: number | null
 }
 
 /** What the page shows. Computed on the server, never in the browser. */
@@ -115,6 +118,8 @@ export interface BudgetRevisionRow {
 }
 
 export interface SaveBudgetInput extends Budget {
+  /** The currency `amountMinor` is entered in; the server converts to AFN. */
+  currency?: 'AFN' | 'USD' | 'PKR' | 'IRR'
   distributionWeightsBp?: number[] | null
   distributionMinor?: number[] | null
 }

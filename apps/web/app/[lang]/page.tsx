@@ -11,6 +11,7 @@ import {
   languageAlternates,
   localeToBcp47,
   resolveLocale,
+  SITE_URL,
 } from './i18n-config'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -198,7 +199,7 @@ function JsonLd({ lang }: { lang: string }) {
           inLanguage: localeToBcp47[resolveLocale(lang)],
           applicationCategory: 'BusinessApplication',
           operatingSystem: config.schemaOperatingSystem,
-          publisher: { '@id': 'https://www.hisabche.com/#organization' },
+          publisher: { '@id': `${SITE_URL}/#organization` },
           // The free tier is real (see PLANS in packages/ui .../pricing-scene.tsx).
           // Currency was "USD" while every price on the page is rendered in
           // افغانی, so the schema contradicted the visible pricing table. The

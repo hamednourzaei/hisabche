@@ -351,3 +351,15 @@ describe('commitment invariant with budget 50', () => {
     expect(after.remainingMinor).toBe(30)
   })
 })
+
+import { convertParts } from '../services/budgeting/budget.service'
+
+describe('foreign-currency budget entry', () => {
+  it('converted parts still sum exactly to the converted total', () => {
+    // 1,000.00 USD split 3/3/4 at 70.37 AFN
+    const rate = 70.37
+    const total = Math.round(100_000 * rate)
+    const parts = convertParts([33_333, 33_333, 33_334], rate, total)
+    expect(parts.reduce((s, x) => s + x, 0)).toBe(total)
+  })
+})

@@ -15,6 +15,7 @@ import { memoryCache } from '../../utils/pagination'
 import type { TenancyContext } from '../tenancy.service'
 import { ledger } from '../accounting'
 import { scopes, sod } from '../authorization'
+import { logBusinessEvent } from '../event-log.service'
 
 import {
   ageInvoices,
@@ -203,6 +204,30 @@ export class PaymentsService {
 
     await this.invalidate(ctx.workspaceId)
 
+    // On the payment, and on every invoice it settles — the invoice's own
+    // history is where a person looks for «who took this money».
+    for (const target of [
+      { entityType: 'payment', entityId: paymentId },
+      ...allocations.map((a) => ({ entityType: 'invoice', entityId: a.invoiceId })),
+    ]) {
+      void logBusinessEvent({
+        userId: ctx.userId,
+        workspaceId: ctx.workspaceId,
+        entityType: target.entityType,
+        entityId: target.entityId,
+        action: 'payment_recorded',
+        title: `پرداخت ${paymentNumber} ثبت شد`,
+        metadata: {
+          paymentId,
+          paymentNumber,
+          amount,
+          method: input.method ?? 'cash',
+          direction: input.direction,
+        },
+        notify: false,
+      })
+    }
+
     const payment = await this.getPayment(ctx, paymentId)
     return { ...payment, unallocated: unallocatedOf(amount, allocations) }
   }
@@ -321,6 +346,18 @@ export class PaymentsService {
       .catch((err) => console.error(`[Payments] reversal failed for ${paymentId}:`, err))
 
     await this.invalidate(ctx.workspaceId)
+
+    void logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+      entityType: 'payment',
+      entityId: paymentId,
+      action: 'cancelled',
+      title: 'پرداخت لغو شد',
+      metadata: { reason },
+      notify: false,
+    })
+
     return this.getPayment(ctx, paymentId)
   }
 

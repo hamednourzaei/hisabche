@@ -409,6 +409,16 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
     permissionProfileId: '',
     salary: '',
     hireDate: '',
+    // The same fields the employee detail page shows. A detail page that lists
+    // «کد ملی / تاریخ تولد / جنسیت / تماس / ایمیل / آدرس / نوع قرارداد» which
+    // the form could never fill was a page of permanent dashes.
+    nationalId: '',
+    dateOfBirth: '',
+    gender: '',
+    phone: '',
+    email: '',
+    address: '',
+    employmentType: 'full_time',
     // ─── Sign-in access ───
     // `hasAccess` false is the DEFAULT and the common case: most people on a
     // payroll never open the software. See the section in the form below.
@@ -440,6 +450,13 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
         permissionProfileId: '',
         salary: '',
         hireDate: '',
+        nationalId: '',
+        dateOfBirth: '',
+        gender: '',
+        phone: '',
+        email: '',
+        address: '',
+        employmentType: 'full_time',
         hasAccess: false,
         accessEmail: '',
         accessPassword: '',
@@ -487,6 +504,15 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
           position: form.position.trim() || undefined,
           hireDate: form.hireDate,
           salary: form.salary ? Number(form.salary) : 0,
+          employmentType: form.employmentType,
+          // Optional personal fields: '' is "not given" and is not sent, so the
+          // server's enum/email/date validation never sees an empty string.
+          ...(form.nationalId.trim() ? { nationalId: form.nationalId.trim() } : {}),
+          ...(form.dateOfBirth ? { dateOfBirth: form.dateOfBirth } : {}),
+          ...(form.gender ? { gender: form.gender } : {}),
+          ...(form.phone.trim() ? { phone: form.phone.trim() } : {}),
+          ...(form.email.trim() ? { email: form.email.trim() } : {}),
+          ...(form.address.trim() ? { address: form.address.trim() } : {}),
           // '' means "not chosen" — it must not reach the server as an empty uuid.
           branchId: form.branchId || undefined,
           // G3. The container decides what to do with it: a profile is a grant on
@@ -814,6 +840,103 @@ export const TeamAndPayrollView = memo(function TeamAndPayrollView({
                   'فقط برای کارمندی اعمال می‌شود که حساب کاربری دارد.',
                 )}
               </span>
+            </label>
+
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs text-[hsl(var(--fg-secondary))]">
+                {t('hr.nationalId', 'کد ملی')}
+              </span>
+              <input
+                value={form.nationalId}
+                onChange={(e) => setField('nationalId')(e.target.value)}
+                className={FORM_FIELD}
+                dir="ltr"
+                disabled={isSubmitting}
+              />
+            </label>
+
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs text-[hsl(var(--fg-secondary))]">
+                {t('hr.dateOfBirth', 'تاریخ تولد')}
+              </span>
+              <input
+                type="date"
+                value={form.dateOfBirth}
+                onChange={(e) => setField('dateOfBirth')(e.target.value)}
+                className={FORM_FIELD}
+                disabled={isSubmitting}
+              />
+            </label>
+
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs text-[hsl(var(--fg-secondary))]">
+                {t('hr.gender', 'جنسیت')}
+              </span>
+              <SelectField
+                value={form.gender}
+                onChange={(value) => setField('gender')(value)}
+                options={[
+                  { value: '', label: t('team.notSpecified', 'مشخص نشده') },
+                  { value: 'male', label: t('hr.gender_male', 'مرد') },
+                  { value: 'female', label: t('hr.gender_female', 'زن') },
+                  { value: 'other', label: t('hr.gender_other', 'دیگر') },
+                ]}
+                disabled={isSubmitting}
+              />
+            </label>
+
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs text-[hsl(var(--fg-secondary))]">
+                {t('hr.phone', 'شماره تماس')}
+              </span>
+              <input
+                type="tel"
+                value={form.phone}
+                onChange={(e) => setField('phone')(e.target.value)}
+                className={FORM_FIELD}
+                dir="ltr"
+                disabled={isSubmitting}
+              />
+            </label>
+
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs text-[hsl(var(--fg-secondary))]">
+                {t('hr.email', 'ایمیل')}
+              </span>
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => setField('email')(e.target.value)}
+                className={FORM_FIELD}
+                dir="ltr"
+                disabled={isSubmitting}
+              />
+            </label>
+
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs text-[hsl(var(--fg-secondary))]">
+                {t('hr.employmentType', 'نوع قرارداد')}
+              </span>
+              <SelectField
+                value={form.employmentType}
+                onChange={(value) => setField('employmentType')(value)}
+                options={(
+                  ['full_time', 'part_time', 'contractor', 'intern', 'consultant'] as const
+                ).map((type) => ({ value: type, label: t(`hr.employment_${type}`, type) }))}
+                disabled={isSubmitting}
+              />
+            </label>
+
+            <label className="flex flex-col gap-1.5 sm:col-span-2">
+              <span className="text-xs text-[hsl(var(--fg-secondary))]">
+                {t('hr.address', 'آدرس')}
+              </span>
+              <input
+                value={form.address}
+                onChange={(e) => setField('address')(e.target.value)}
+                className={FORM_FIELD}
+                disabled={isSubmitting}
+              />
             </label>
 
             <label className="flex flex-col gap-1.5">

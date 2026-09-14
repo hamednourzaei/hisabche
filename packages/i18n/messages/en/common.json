@@ -1116,7 +1116,8 @@
     "missingYourName": "Your name is not set",
     "missingBusinessName": "Your business name is not set",
     "missingFixOwner": "Open settings to add or change it.",
-    "missingFixStaff": "The owner enters your name when adding staff. Ask them to correct it."
+    "missingFixStaff": "The owner enters your name when adding staff. Ask them to correct it.",
+    "teamPayroll": "Team & payroll"
   },
   "dateRange": {
     "today": "Today",
@@ -2153,7 +2154,22 @@
     "sonOf": "Son of {name}",
     "changeStatus": "Change status:",
     "activityHistory": "Activity History",
-    "noActivity": "No activity"
+    "noActivity": "No activity",
+    "gender_male": "Male",
+    "gender_female": "Female",
+    "gender_other": "Other",
+    "employee": "Employee",
+    "status_unknown": "Status not recorded",
+    "paymentAmount": "Amount",
+    "paymentDate": "Payment date",
+    "salaryPayments": "Salary payments",
+    "addPayment": "Record payment",
+    "noPayments": "No payments recorded",
+    "employment_full_time": "Full-time",
+    "employment_part_time": "Part-time",
+    "employment_contractor": "Contractor",
+    "employment_intern": "Intern",
+    "employment_consultant": "Consultant"
   },
   "projects": {
     "title": "Projects",
@@ -2734,7 +2750,10 @@
     "clear": "Clear",
     "reload": "Reload the page",
     "back": "Back",
-    "retry": "Try again"
+    "retry": "Try again",
+    "cancel": "Cancel",
+    "save": "Save",
+    "edit": "Edit"
   },
   "unit": {
     "piece": "pcs",
@@ -3475,7 +3494,14 @@
     "error_BUDGET_REVISION_REASON_REQUIRED": "A reason for the revision is required.",
     "error_BUDGET_REVISION_NO_CHANGE": "The revision changes nothing.",
     "error_SOD_BLOCKED": "Separation of duties: whoever drafted the budget cannot approve it.",
-    "error_SOD_OVERRIDE_REQUIRED": "Separation of duties: approving your own budget requires a recorded reason."
+    "error_SOD_OVERRIDE_REQUIRED": "Separation of duties: approving your own budget requires a recorded reason.",
+    "currency": "Budget currency",
+    "currency_AFN": "Afghani (AFN)",
+    "currency_USD": "US dollar (USD)",
+    "currency_PKR": "Pakistani rupee (PKR)",
+    "currency_IRR": "Iranian rial (IRR)",
+    "currency_hint": "The amount is converted to afghani at this business's recorded rate on the period start and controlled in afghani; the entered amount and rate are kept.",
+    "error_BUDGET_FX_RATE_MISSING": "No exchange rate is recorded for this currency on the period start. Record the rate first."
   },
   "timesheets": {
     "title": "Timesheets and billing",
@@ -4174,7 +4200,12 @@
     "recordMissingPayment": "Record a payment for this amount",
     "ledgerNothingToPost": "This invoice totals zero, so there is nothing to post.",
     "ledgerMissingAccounts": "These accounts are not set up in the chart of accounts; the invoice cannot be posted until they are",
-    "ledgerNotPostable": "This invoice cannot be posted right now"
+    "ledgerNotPostable": "This invoice cannot be posted right now",
+    "reasonPeriodLocked": "The accounting period for this date is closed",
+    "reasonInsufficientStock": "There is not enough stock with a recorded cost for this product",
+    "reasonCancelled": "The invoice is cancelled",
+    "ledgerPostedUncosted": "The invoice was posted to the ledger, but the cost of goods sold for some products was not, because their stock was entered without a purchase (no cost layer). Record a purchase invoice or an opening stock with cost for those products.",
+    "cancelPaymentReason": "Reason for cancelling this payment"
   },
   "ops": {
     "cashForecast": "Cash forecast",
@@ -4240,7 +4271,31 @@
     "roleOwner": "Owner",
     "accountFailed": "The employee was saved, but the account could not be created",
     "accountNeedsWorkspace": "The employee was saved, but no account was created: no workspace was found.",
-    "roleUnknown": "Unknown"
+    "roleUnknown": "Unknown",
+    "addEmployee": "Add employee",
+    "employees": "Employees",
+    "branches": "Branches",
+    "payroll": "Payroll",
+    "totalEmployees": "Total employees",
+    "totalPayroll": "Total payroll",
+    "addNewEmployee": "Add new employee",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "employeeCode": "Employee code",
+    "employeeCodeAuto": "Leave empty to generate automatically",
+    "position": "Position",
+    "branch": "Branch",
+    "noBranch": "No branch",
+    "permissionProfile": "Access profile",
+    "noProfile": "No profile",
+    "permissionProfileHint": "Only applies to an employee who has a user account.",
+    "notSpecified": "Not specified",
+    "salary": "Salary",
+    "hireDate": "Hire date",
+    "noEmployees": "No employees yet",
+    "noPayroll": "No payroll yet",
+    "noEmployeesHint": "Add your first employee to start managing the team.",
+    "noPayrollHint": "Payroll payments appear here once recorded."
   },
   "role": {
     "owner": "Owner",

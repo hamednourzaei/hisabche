@@ -35,7 +35,17 @@ export const localeMeta: Record<
       `localeMeta` above.
 */
 
-export const SITE_URL = 'https://www.hisabche.com'
+/**
+ * The canonical origin — it MUST be the host Vercel actually serves.
+ *
+ * ⚠️ It was `https://www.hisabche.com` while Vercel's primary domain is the
+ * apex and `www` answers 307 → `hisabche.com`. So every sitemap <loc>, every
+ * canonical and every hreflang pointed at a redirect: Search Console reported
+ * «Page with redirect», «Duplicate, Google chose different canonical» and 42
+ * «Discovered – currently not indexed». If the primary domain in Vercel is
+ * ever switched to www, change this in the same deploy.
+ */
+export const SITE_URL = 'https://hisabche.com'
 
 /** Valid BCP-47 language tag for a locale segment. `af` (Afrikaans) ≠ Dari. */
 export const localeToBcp47: Record<Locale, string> = {

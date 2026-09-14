@@ -39,6 +39,8 @@ const budgetSchema = z.object({
   isActive: z.boolean().default(true),
   name: z.string().trim().max(120).nullable().optional(),
   type: z.enum(['expense', 'revenue']).default('expense'),
+  /** The currency the amount is entered in. The server converts to base. */
+  currency: z.enum(['AFN', 'USD', 'PKR', 'IRR']).default('AFN'),
   notes: z.string().max(2000).nullable().optional(),
   /** Basis points per sub-period, summing to 10 000. */
   distributionWeightsBp: z.array(z.number().int().min(0).max(10_000)).max(12).nullable().optional(),

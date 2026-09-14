@@ -47,6 +47,7 @@ import { memoryCache } from '../utils/pagination'
 import { ActivityService } from './activity.service'
 import type { TenancyContext } from './tenancy.service'
 import { requireWorkspace } from './tenancy.service'
+import { logBusinessEvent } from './event-log.service'
 
 // ============================================
 // ✅ OPTIMIZED: فقط ستون‌های مورد نیاز
@@ -172,7 +173,12 @@ function applyInvoiceListFilters<Q extends InvoiceFilterable<Q>>(
 
 /** What posting an invoice to the ledger actually did. */
 export type LedgerPostResult =
-  | { status: 'posted' }
+  /**
+   * `uncostedProducts`: sold lines whose cost could not be drawn from stock
+   * layers (stock entered without a purchase). Revenue IS booked; their cost
+   * of goods sold is NOT, and the products are named so it can be fixed.
+   */
+  | { status: 'posted'; uncostedProducts?: string[] | undefined }
   | { status: 'already_posted' }
   | { status: 'nothing_to_post' }
   | { status: 'skipped'; missing: string[] }
@@ -1035,7 +1041,15 @@ export class InvoiceService {
       // was actually consumed, and only the costing core can say what that was.
       // Chaining them also stops a failed costing run from booking a sale with
       // a made-up cost of goods.
-      this.applyCosting(ctx, invoice.id, String(data.type ?? 'sale'), data.items ?? [], data.date)
+      const uncosted: string[] = []
+      this.applyCosting(
+        ctx,
+        invoice.id,
+        String(data.type ?? 'sale'),
+        data.items ?? [],
+        data.date,
+        uncosted,
+      )
         .then((cogs) =>
           this.createAccountingEntries(ctx, invoice.id, {
             ...data,
@@ -1059,6 +1073,14 @@ export class InvoiceService {
             ? this.markPosted(ctx, invoice.id)
             : undefined,
         )
+        .then(() => {
+          if (uncosted.length > 0) {
+            console.warn(
+              `[InvoiceService] invoice ${invoice.id} posted without cost of goods for products without cost layers:`,
+              uncosted,
+            )
+          }
+        })
         .catch((err) => console.error('Accounting entry failed:', err))
     } else {
       // Held. The invoice exists and is visible — it is a draft, not a hidden
@@ -1079,6 +1101,25 @@ export class InvoiceService {
 
     // ─── T9 — the money, recorded as money ──────────────────────────────
     await this.recordCreationPayments(ctx, invoice.id, data)
+
+    // Who raised it, when, for how much — the first line of its history.
+    // Fire-and-forget by contract: a failed log never fails the invoice.
+    void logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId: ctx.workspaceId,
+      entityType: 'invoice',
+      entityId: invoice.id,
+      action: 'created',
+      title: `فاکتور ${invoiceNumber} صادر شد`,
+      metadata: {
+        invoiceNumber,
+        type: data.type ?? 'sale',
+        total: money.total,
+        currency: data.currency ?? 'AFN',
+        status: isHeld ? AWAITING_APPROVAL_STATUS : 'issued',
+      },
+      notify: false,
+    })
 
     return this.getById(invoice.id, ctx)
   }
@@ -1272,6 +1313,21 @@ export class InvoiceService {
     }
 
     this.invalidateWorkspaceCache(workspaceId)
+
+    void logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId,
+      entityType: 'invoice',
+      entityId: id,
+      action: data.status === 'cancelled' ? 'cancelled' : 'updated',
+      title:
+        data.status === 'cancelled'
+          ? `فاکتور ${currentInvoice?.invoiceNumber ?? ''} لغو شد`
+          : `فاکتور ${currentInvoice?.invoiceNumber ?? ''} ویرایش شد`,
+      metadata: { changed: Object.keys(data) },
+      notify: false,
+    })
+
     return invoice
   }
 
@@ -1306,6 +1362,17 @@ export class InvoiceService {
       .eq('workspace_id', workspaceId)
     if (error) throw new DatabaseError('Failed to delete invoice', error)
     this.invalidateWorkspaceCache(workspaceId)
+
+    void logBusinessEvent({
+      userId: ctx.userId,
+      workspaceId,
+      entityType: 'invoice',
+      entityId: id,
+      action: 'deleted',
+      title: 'فاکتور حذف شد',
+      ...(options.override ? { metadata: { overrideReason: options.override.reason } } : {}),
+      notify: false,
+    })
   }
 
   // ─── Invalidate Cache ────────────────────────────────────────────────────
@@ -1971,6 +2038,17 @@ export class InvoiceService {
     type: string,
     items: any[],
     date?: string,
+    /**
+     * When given, a sale line refused with INVENTORY_INSUFFICIENT_STOCK is
+     * recorded here and skipped instead of aborting the whole posting.
+     *
+     * ⚠️ WHY. Stock entered directly (opening quantity, manual adjustment) has
+     * no cost layer. Every sale of it threw here, the caller's `.catch` only
+     * logged, and the invoice NEVER reached the ledger — so the accounting
+     * screens stayed empty while sales were being made. Revenue is a fact the
+     * books must hold; an unknown cost is reported, never invented.
+     */
+    uncosted?: string[],
   ): Promise<number> {
     const entryDate = date ? String(date).slice(0, 10) : new Date().toISOString().slice(0, 10)
     // Lines without a product are services; they hold no stock and cost
@@ -2015,6 +2093,14 @@ export class InvoiceService {
           costOfGoodsSold += result.totalCost
         }
       } catch (err) {
+        if (
+          uncosted &&
+          type !== 'purchase' &&
+          String((err as Error)?.message ?? '').includes('INVENTORY_INSUFFICIENT_STOCK')
+        ) {
+          uncosted.push(String(item.productId))
+          continue
+        }
         // One line failing must not silently cost the whole invoice nothing.
         // The invoice already exists; what is reported here is that its books
         // are incomplete, which is a fact somebody has to see.
@@ -2223,7 +2309,8 @@ export class InvoiceService {
     }))
     const date = String(invoice?.date ?? '')
 
-    const cogs = await this.applyCosting(ctx, id, type, items, date || undefined)
+    const uncosted: string[] = []
+    const cogs = await this.applyCosting(ctx, id, type, items, date || undefined, uncosted)
     const result = await this.createAccountingEntries(ctx, id, {
       type,
       total: Number(invoice?.total) || 0,
@@ -2235,6 +2322,21 @@ export class InvoiceService {
 
     if (result.status === 'posted' || result.status === 'already_posted') {
       await this.markPosted(ctx, id)
+    }
+    if (result.status === 'posted') {
+      void logBusinessEvent({
+        userId: ctx.userId,
+        workspaceId: ctx.workspaceId,
+        entityType: 'invoice',
+        entityId: id,
+        action: 'posted_to_ledger',
+        title: 'سند حسابداری فاکتور در دفتر ثبت شد',
+        metadata: uncosted.length > 0 ? { uncostedProducts: [...new Set(uncosted)] } : {},
+        notify: false,
+      })
+    }
+    if (result.status === 'posted' && uncosted.length > 0) {
+      return { status: 'posted', uncostedProducts: [...new Set(uncosted)] }
     }
     return result
   }

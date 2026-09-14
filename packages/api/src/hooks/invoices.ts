@@ -199,7 +199,7 @@ export function useDeleteInvoice() {
 
 /** What `POST /invoices/:id/post-to-ledger` reports back. */
 export type InvoiceLedgerPostResult =
-  | { status: 'posted' }
+  | { status: 'posted'; uncostedProducts?: string[] }
   | { status: 'already_posted' }
   | { status: 'nothing_to_post' }
   | { status: 'skipped'; missing: string[] }

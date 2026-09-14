@@ -9,6 +9,19 @@
 import { supabase } from '../db'
 import { ActivityService } from './activity.service'
 import { NotificationService } from './notification.service'
+import { AuditService } from './audit.service'
+
+const auditService = new AuditService()
+
+/**
+ * The audit column accepts a closed vocabulary; business events speak freely.
+ * «created» is a create, «deleted» a delete, everything else changes a record.
+ */
+function auditActionOf(action: string): 'create' | 'update' | 'delete' {
+  if (/^(create|created|issued|recorded)$/.test(action)) return 'create'
+  if (/^(delete|deleted|removed)$/.test(action)) return 'delete'
+  return 'update'
+}
 
 const activityService = new ActivityService()
 const notificationService = new NotificationService()
@@ -105,6 +118,25 @@ export async function logBusinessEvent(input: LogBusinessEventInput): Promise<vo
     const workspaceId = resolvedWorkspaceId
 
     const tasks: Promise<unknown>[] = [
+      // ⚠️ THE RECORD HISTORY. «تاریخچه‌ی تغییرات این رکورد» reads audit_logs by
+      // (entity_type, entity_id), and no business action wrote there — only
+      // admin, SoD and budgets did — so every invoice, payment, customer and
+      // product showed «تغییری ثبت نشده» however much had happened to it.
+      // Written here, at the one place business events already pass through,
+      // rather than as a second logging path in each service.
+      auditService.log({
+        userId: input.userId,
+        workspaceId,
+        action: auditActionOf(input.action),
+        entityType: input.entityType,
+        entityId: input.entityId,
+        newData: {
+          event: input.action,
+          title: input.title,
+          ...(input.description !== undefined ? { description: input.description } : {}),
+          ...(input.metadata ?? {}),
+        },
+      } as Parameters<AuditService['log']>[0]),
       activityService.createActivity({
         actorId: input.userId,
         actorName,

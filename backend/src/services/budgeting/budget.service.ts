@@ -31,6 +31,7 @@ import { callAggregate } from '../aggregates/aggregate-rpc'
 import { fetchBudgetConsumptionAggregate } from '../aggregates/ledger-aggregates'
 import { AuditService } from '../audit.service'
 import { sod } from '../authorization'
+import { CurrencyService } from '../currency/currency.service'
 import { z } from 'zod'
 
 import {
@@ -61,7 +62,15 @@ import {
 const LEGACY_COLUMNS =
   'id, account_id, dimension_value_id, branch_id, period, starts_on, amount_minor, action, warn_at_percent, is_active'
 
-const COLUMNS = `${LEGACY_COLUMNS}, name, budget_type, status, version, distribution, notes, approved_by, approved_at, created_by`
+const PLANNING_COLUMNS = `${LEGACY_COLUMNS}, name, budget_type, status, version, distribution, notes, approved_by, approved_at, created_by`
+
+/** docs/budget-currency-migration.sql. */
+const COLUMNS = `${PLANNING_COLUMNS}, currency, amount_currency_minor, fx_rate`
+
+/** The ledger's currency. Every actual a budget is compared with is in it. */
+export const BASE_CURRENCY = 'AFN'
+export const BUDGET_CURRENCIES = ['AFN', 'USD', 'PKR', 'IRR'] as const
+export type BudgetCurrency = (typeof BUDGET_CURRENCIES)[number]
 
 export type BudgetStatusCode = 'draft' | 'pending_approval' | 'approved' | 'archived'
 
@@ -77,6 +86,12 @@ export interface PlannedBudget extends Budget {
   approvedBy: string | null
   approvedAt: string | null
   createdBy: string | null
+  /** The currency the amount was ENTERED in. `amountMinor` is always base. */
+  currency: BudgetCurrency
+  /** The entered amount, in `currency` minor units. */
+  amountCurrencyMinor: number
+  /** Base units per 1 unit of `currency`, fixed at save. null for AFN. */
+  fxRate: number | null
 }
 
 /** 42703 undefined column / 42P01 undefined table — the migration has not run. */
@@ -114,6 +129,15 @@ function mapBudget(raw: Record<string, any>): PlannedBudget {
     approvedBy: raw.approved_by ?? null,
     approvedAt: raw.approved_at ?? null,
     createdBy: raw.created_by ?? null,
+    currency: (BUDGET_CURRENCIES as readonly string[]).includes(raw.currency)
+      ? raw.currency
+      : BASE_CURRENCY,
+    // NULL on rows entered before the column existed: they were entered in AFN.
+    amountCurrencyMinor:
+      raw.amount_currency_minor === null || raw.amount_currency_minor === undefined
+        ? Number(raw.amount_minor) || 0
+        : Number(raw.amount_currency_minor) || 0,
+    fxRate: raw.fx_rate === null || raw.fx_rate === undefined ? null : Number(raw.fx_rate),
   }
 }
 
@@ -162,6 +186,18 @@ export function planFor(budget: PlannedBudget, onDate: string) {
   }
 }
 
+/**
+ * Convert entered sub-period amounts to base currency so they still sum to
+ * exactly `baseTotal`: each part is rounded, the remainder lands on the last.
+ */
+export function convertParts(parts: number[], rate: number, baseTotal: number): number[] {
+  const converted = parts.map((part) => Math.round(part * rate))
+  const drift = baseTotal - converted.reduce((s, x) => s + x, 0)
+  if (converted.length > 0)
+    converted[converted.length - 1] = Math.max(0, converted[converted.length - 1]! + drift)
+  return converted
+}
+
 export interface BudgetReportRow {
   budget: PlannedBudget
   periodStart: string
@@ -204,6 +240,7 @@ const batchSchema = z.object({
 
 export class BudgetService {
   private audit = new AuditService()
+  private currencies = new CurrencyService()
 
   private async invalidate(workspaceId: string) {
     await memoryCache.invalidate(`budget:${workspaceId}`)
@@ -254,7 +291,10 @@ export class BudgetService {
         .order('starts_on', { ascending: false })
         .limit(500)
 
+    // Newest schema first, then each older one — a missing currency migration
+    // must not also hide the planning columns.
     let { data, error } = await read(COLUMNS)
+    if (error && isMissingSchema(error)) ({ data, error } = await read(PLANNING_COLUMNS))
     if (error && isMissingSchema(error)) ({ data, error } = await read(LEGACY_COLUMNS))
 
     if (error) throw new DatabaseError('Failed to fetch budgets', error)
@@ -283,9 +323,15 @@ export class BudgetService {
       /** Basis points per sub-period (sum 10 000), or explicit minor units. */
       distributionWeightsBp?: number[] | null | undefined
       distributionMinor?: number[] | null | undefined
+      /** The currency `amountMinor` (and `distributionMinor`) were entered in. */
+      currency?: BudgetCurrency | undefined
     },
   ): Promise<PlannedBudget> {
     this.assertCan(ctx, 'budget.manage')
+
+    const currency: BudgetCurrency = input.currency ?? BASE_CURRENCY
+    const enteredMinor = input.amountMinor
+    let fxRate: number | null = null
 
     if (!Number.isSafeInteger(input.amountMinor) || input.amountMinor < 0) {
       throw new ValidationError('BUDGET_AMOUNT_INVALID')
@@ -319,6 +365,30 @@ export class BudgetService {
         .maybeSingle()
       if (branchError) throw new DatabaseError('Failed to verify the branch', branchError)
       if (!branch) throw new ValidationError('BUDGET_BRANCH_INVALID')
+    }
+
+    // ─── Currency ─────────────────────────────────────────────────────────
+    // The control figure is base currency, because the actuals are. A foreign
+    // entry is converted at the workspace's own quote for the period start —
+    // the most recent ON OR BEFORE it, never a later one — and the rate is
+    // stored so the conversion can be re-done by hand.
+    if (currency !== BASE_CURRENCY) {
+      const quote = await this.currencies.getRateFor(ctx, currency, input.startsOn)
+      if ('error' in quote) throw new ValidationError(`BUDGET_FX_RATE_MISSING: ${currency}`)
+      fxRate = quote.rate
+      input = {
+        ...input,
+        amountMinor: Math.round(enteredMinor * quote.rate),
+        ...(input.distributionMinor && input.distributionMinor.length > 0
+          ? {
+              distributionMinor: convertParts(
+                input.distributionMinor,
+                quote.rate,
+                Math.round(enteredMinor * quote.rate),
+              ),
+            }
+          : {}),
+      }
     }
 
     const months = MONTHS_IN[input.period]
@@ -359,14 +429,29 @@ export class BudgetService {
         ? periodStarts.map((start, i) => ({ start, amount_minor: amounts![i] }))
         : null,
       updated_at: new Date().toISOString(),
+      currency,
+      amount_currency_minor: enteredMinor,
+      fx_rate: fxRate,
       ...(existing ? {} : { status: 'draft', version: 1, created_by: ctx.userId }),
     }
 
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('budgets')
       .upsert(row, { onConflict: 'id' })
       .select(COLUMNS)
       .single()
+
+    // Before the currency migration an AFN budget still saves; a foreign one
+    // cannot, because dropping its currency would store a dollar figure as
+    // afghanis.
+    if (error && isMissingSchema(error) && currency === BASE_CURRENCY) {
+      const { currency: _c, amount_currency_minor: _a, fx_rate: _f, ...planningRow } = row
+      ;({ data, error } = await supabase
+        .from('budgets')
+        .upsert(planningRow, { onConflict: 'id' })
+        .select(PLANNING_COLUMNS)
+        .single())
+    }
 
     if (error && isMissingSchema(error)) throw new ConflictError('BUDGET_MIGRATION_REQUIRED')
     if (error) throw new DatabaseError('Failed to save the budget', error)

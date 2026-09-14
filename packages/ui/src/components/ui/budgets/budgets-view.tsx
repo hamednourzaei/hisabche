@@ -42,6 +42,8 @@ import type {
 
 import { useDateFormat } from '../../../hooks/use-date-format'
 import { formatSelectedMoney } from '../../../lib/money-display'
+import { formatMoney } from '@hisabche/formatting'
+import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { DataTable, matchesSearch, type TableColumn } from '../data-table'
 import { SegmentedFilter } from '../segmented-filter'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '../sheet'
@@ -1040,6 +1042,10 @@ function CreateBudget({
   const [period, setPeriod] = useState<'monthly' | 'quarterly' | 'yearly'>('yearly')
   const [startsOn, setStartsOn] = useState(onDate.slice(0, 8) + '01')
   const [amountMinor, setAmountMinor] = useState(0)
+  // The currency the amount is TYPED in. The server converts to the ledger's
+  // base currency at the workspace's own rate for the period start.
+  const [currency, setCurrency] = useState<'AFN' | 'USD' | 'PKR' | 'IRR'>('AFN')
+  const intlLocale = useIntlLocale()
   const [action, setAction] = useState<BudgetAction>('warn')
   const [warnAtPercent, setWarnAtPercent] = useState(80)
   const [custom, setCustom] = useState(false)
@@ -1124,8 +1130,26 @@ function CreateBudget({
           disabled={isBusy}
         />
       </div>
+      <SelectField
+        label={t('budgets.currency', 'ارز بودجه')}
+        value={currency}
+        onChange={(v) => setCurrency(v as typeof currency)}
+        options={(['AFN', 'USD', 'PKR', 'IRR'] as const).map((code) => ({
+          value: code,
+          label: t(`budgets.currency_${code}`, code),
+        }))}
+        disabled={isBusy}
+      />
+      {currency !== 'AFN' ? (
+        <p className="-mt-2 text-xs text-[hsl(var(--fg-tertiary))]">
+          {t(
+            'budgets.currency_hint',
+            'مبلغ با نرخ ثبت‌شده‌ی همین کسب‌وکار در تاریخ شروع دوره به افغانی تبدیل و کنترل می‌شود؛ مبلغ و نرخ اصلی نگهداری می‌شوند.',
+          )}
+        </p>
+      ) : null}
       <MinorInput
-        label={t('budgets.amount_total', 'مبلغ کل دوره')}
+        label={`${t('budgets.amount_total', 'مبلغ کل دوره')} (${currency})`}
         value={amountMinor}
         onChange={setAmountMinor}
         disabled={isBusy}
@@ -1201,8 +1225,11 @@ function CreateBudget({
       <div className="rounded-lg bg-[hsl(var(--surface-muted)/0.4)] p-3 text-xs">
         <p className="font-medium">{t('budgets.preview', 'پیش‌نمایش')}</p>
         <p className="mt-1">
-          {t('budgets.amount_total', 'مبلغ کل دوره')}: <Money minor={amountMinor} /> ·{' '}
-          {t(`budgets.action_${action}`, action)} · {t('budgets.status_draft', 'پیش‌نویس')}
+          {t('budgets.amount_total', 'مبلغ کل دوره')}:{' '}
+          <span dir="ltr" className="tabular-nums font-medium">
+            {formatMoney(amountMinor / 100, currency, intlLocale)}
+          </span>{' '}
+          · {t(`budgets.action_${action}`, action)} · {t('budgets.status_draft', 'پیش‌نویس')}
         </p>
         <p className="mt-1 text-[hsl(var(--fg-tertiary))]">
           {t(
@@ -1228,6 +1255,7 @@ function CreateBudget({
             isActive: true,
             name: name.trim() || null,
             type,
+            currency,
             distributionWeightsBp: custom && months > 1 ? bp : null,
           })
         }

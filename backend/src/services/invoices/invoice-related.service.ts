@@ -64,13 +64,18 @@ export interface InvoiceRelated {
  * so this endpoint works against a database that has not had every migration
  * applied instead of failing the whole page.
  */
+/**
+ * ONLY «the table is not there» (a database before Phase F).
+ *
+ * ⚠️ It used to include 42703 (undefined column) and PGRST204. The payments
+ * read below asked for `payment_date` / `payment_method` — columns that never
+ * existed (they are `entry_date` / `method`) — so every invoice page answered
+ * «هنوز پرداختی ثبت نشده» beside a paid invoice, and the drift warning said
+ * the stored paid amount did not match «the payments». A wrong column is a
+ * bug to surface, not an old database to excuse.
+ */
 function isMissingRelation(error: { code?: string } | null): boolean {
-  return (
-    error?.code === '42P01' ||
-    error?.code === 'PGRST205' ||
-    error?.code === '42703' ||
-    error?.code === 'PGRST204'
-  )
+  return error?.code === '42P01' || error?.code === 'PGRST205'
 }
 
 export class InvoiceRelatedService {
@@ -104,7 +109,7 @@ export class InvoiceRelatedService {
       .from('payment_allocations')
       .select(
         `id, amount, payment_id,
-         payment:payments(id, payment_date, payment_method, reference, status)`,
+         payment:payments(id, payment_number, entry_date, method, reference, status)`,
       )
       .eq('workspace_id', ctx.workspaceId)
       .eq('invoice_id', invoiceId)
@@ -129,8 +134,8 @@ export class InvoiceRelatedService {
         allocationId: String(row.id),
         paymentId: String(row.payment_id),
         amount: Number(row.amount) || 0,
-        date: payment?.payment_date ?? null,
-        method: payment?.payment_method ?? null,
+        date: payment?.entry_date ?? null,
+        method: payment?.method ?? null,
         reference: payment?.reference ?? null,
         status: payment?.status ?? null,
       }

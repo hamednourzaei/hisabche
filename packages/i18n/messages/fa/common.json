@@ -1123,7 +1123,8 @@
     "missingYourName": "نام شما تنظیم نشده است",
     "missingBusinessName": "نام کسب‌وکار تنظیم نشده است",
     "missingFixOwner": "برای افزودن یا تغییر، به تنظیمات بروید.",
-    "missingFixStaff": "نام شما را مالک کسب‌وکار هنگام افزودن پرسنل وارد می‌کند. از او بخواهید اصلاحش کند."
+    "missingFixStaff": "نام شما را مالک کسب‌وکار هنگام افزودن پرسنل وارد می‌کند. از او بخواهید اصلاحش کند.",
+    "teamPayroll": "تیم و حقوق"
   },
   "dateRange": {
     "today": "امروز",
@@ -2169,7 +2170,22 @@
     "sonOf": "فرزند {name}",
     "changeStatus": "تغییر وضعیت:",
     "activityHistory": "تاریخچه فعالیت",
-    "noActivity": "بدون فعالیت"
+    "noActivity": "بدون فعالیت",
+    "gender_male": "مرد",
+    "gender_female": "زن",
+    "gender_other": "دیگر",
+    "employee": "کارمند",
+    "status_unknown": "وضعیت ثبت نشده",
+    "paymentAmount": "مبلغ پرداخت",
+    "paymentDate": "تاریخ پرداخت",
+    "salaryPayments": "پرداخت‌های حقوق",
+    "addPayment": "ثبت پرداخت",
+    "noPayments": "هنوز پرداختی ثبت نشده",
+    "employment_full_time": "تمام‌وقت",
+    "employment_part_time": "پاره‌وقت",
+    "employment_contractor": "قراردادی",
+    "employment_intern": "کارآموز",
+    "employment_consultant": "مشاور"
   },
   "projects": {
     "title": "پروژه‌ها",
@@ -2750,7 +2766,10 @@
     "clear": "پاک کردن",
     "reload": "بارگذاری دوباره‌ی صفحه",
     "back": "بازگشت",
-    "retry": "تلاش دوباره"
+    "retry": "تلاش دوباره",
+    "cancel": "لغو",
+    "save": "ذخیره",
+    "edit": "ویرایش"
   },
   "faq": {
     "start1Q": "شروع کار با حسابچه چقدر وقت می‌برد؟",
@@ -3480,7 +3499,14 @@
     "error_BUDGET_REVISION_REASON_REQUIRED": "دلیل اصلاحیه الزامی است.",
     "error_BUDGET_REVISION_NO_CHANGE": "اصلاحیه هیچ تغییری ندارد.",
     "error_SOD_BLOCKED": "طبق قانون تفکیک وظایف، تهیه‌کننده‌ی بودجه نمی‌تواند آن را تصویب کند.",
-    "error_SOD_OVERRIDE_REQUIRED": "طبق قانون تفکیک وظایف، تصویب بودجه‌ی خودتان نیازمند ثبت دلیل است."
+    "error_SOD_OVERRIDE_REQUIRED": "طبق قانون تفکیک وظایف، تصویب بودجه‌ی خودتان نیازمند ثبت دلیل است.",
+    "currency": "ارز بودجه",
+    "currency_AFN": "افغانی (AFN)",
+    "currency_USD": "دلار آمریکا (USD)",
+    "currency_PKR": "روپیه پاکستان (PKR)",
+    "currency_IRR": "ریال ایران (IRR)",
+    "currency_hint": "مبلغ با نرخ ثبت‌شده‌ی همین کسب‌وکار در تاریخ شروع دوره به افغانی تبدیل و کنترل می‌شود؛ مبلغ و نرخ اصلی نگهداری می‌شوند.",
+    "error_BUDGET_FX_RATE_MISSING": "برای این ارز در تاریخ شروع دوره نرخی ثبت نشده است. ابتدا نرخ ارز را ثبت کنید."
   },
   "timesheets": {
     "title": "کارکرد و صورتحساب",
@@ -4179,7 +4205,12 @@
     "recordMissingPayment": "ثبت رکورد پرداخت برای این مبلغ",
     "ledgerNothingToPost": "مبلغ این فاکتور صفر است و چیزی برای ثبت در دفتر ندارد.",
     "ledgerMissingAccounts": "در سرفصل حساب‌ها این حساب‌ها تعریف نشده‌اند و تا تعریف نشوند فاکتور در دفتر ثبت نمی‌شود",
-    "ledgerNotPostable": "این فاکتور الان قابل ثبت در دفتر نیست"
+    "ledgerNotPostable": "این فاکتور الان قابل ثبت در دفتر نیست",
+    "reasonPeriodLocked": "دوره‌ی حسابداری این تاریخ بسته شده است",
+    "reasonInsufficientStock": "موجودی کافی با بهای ثبت‌شده برای این کالا وجود ندارد",
+    "reasonCancelled": "فاکتور لغو شده است",
+    "ledgerPostedUncosted": "فاکتور در دفتر ثبت شد، ولی بهای تمام‌شده‌ی بعضی کالاها ثبت نشد چون موجودی آن‌ها بدون خرید (بدون لایه‌ی بها) وارد شده است. برای این کالاها فاکتور خرید یا موجودی اول دوره با بها ثبت کنید.",
+    "cancelPaymentReason": "دلیل حذف این پرداخت؟"
   },
   "ops": {
     "cashForecast": "پیش‌بینی نقدینگی",
@@ -4245,7 +4276,31 @@
     "roleOwner": "مالک",
     "accountFailed": "کارمند ثبت شد، ولی ساخت حساب کاربری ناموفق بود",
     "accountNeedsWorkspace": "کارمند ثبت شد، ولی حساب کاربری ساخته نشد: فضای کاری پیدا نشد.",
-    "roleUnknown": "نامشخص"
+    "roleUnknown": "نامشخص",
+    "addEmployee": "کارمند جدید",
+    "employees": "کارمندان",
+    "branches": "شعب",
+    "payroll": "حقوق",
+    "totalEmployees": "جمع کارمندان",
+    "totalPayroll": "جمع حقوق پرداختی",
+    "addNewEmployee": "افزودن کارمند جدید",
+    "firstName": "نام",
+    "lastName": "تخلص",
+    "employeeCode": "کد پرسنلی",
+    "employeeCodeAuto": "خالی بگذارید تا خودکار ساخته شود",
+    "position": "موقعیت",
+    "branch": "شعبه",
+    "noBranch": "بدون شعبه",
+    "permissionProfile": "پروفایل دسترسی",
+    "noProfile": "بدون پروفایل",
+    "permissionProfileHint": "فقط برای کارمندی اعمال می‌شود که حساب کاربری دارد.",
+    "notSpecified": "مشخص نشده",
+    "salary": "حقوق",
+    "hireDate": "تاریخ استخدام",
+    "noEmployees": "هیچ کارمندی ثبت نشده",
+    "noPayroll": "هیچ سابقه حقوقی وجود ندارد",
+    "noEmployeesHint": "با افزودن کارمندان جدید، شروع کنید",
+    "noPayrollHint": "با ثبت پرداخت حقوق، شروع کنید"
   },
   "role": {
     "owner": "مالک",

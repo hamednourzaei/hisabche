@@ -172,11 +172,10 @@ export class PosService {
     for (let from = 0; ; from += PAGE) {
       let query = supabase
         .from('payments')
-        .select('id, payment_number, direction, amount, created_at, recorded_by:user_id')
+        .select('id, payment_number, direction, amount, created_at, recorded_by:created_by')
         .eq('workspace_id', ctx.workspaceId)
         .eq('method', 'cash')
         .eq('status', 'posted')
-        .is('deleted_at', null)
         .gte('created_at', session.openedAt)
         .order('created_at', { ascending: true })
         .order('id', { ascending: true })
@@ -691,7 +690,6 @@ export class PosService {
           .eq('workspace_id', ctx.workspaceId)
           .eq('method', 'cash')
           .eq('status', 'posted')
-          .is('deleted_at', null)
           .gte('created_at', since)
           .order('id')
           .range(from, to),

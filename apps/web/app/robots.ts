@@ -65,8 +65,7 @@ export default function robots(): MetadataRoute.Robots {
     sitemap: `${SITE_URL}/sitemap.xml`,
     // No `host:` directive. It is not part of the robots.txt standard — it was a
     // Yandex extension — and Search Console flags it as "Rule ignored by
-    // Googlebot". Canonical host is already enforced properly by the apex→www
-    // 308 redirect in next.config.js and by the self-referencing canonical tags,
+    // Googlebot". Canonical host is enforced by Vercel's www→apex redirect and by the self-referencing canonical tags,
     // which is what Google actually reads.
   }
 }
