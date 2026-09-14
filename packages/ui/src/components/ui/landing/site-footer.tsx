@@ -140,7 +140,7 @@ export default function SiteFooter({ t, localePrefix }: SiteFooterProps) {
         'bg-[hsl(var(--surface-muted)/0.3)]',
       )}
     >
-      <div className="mx-auto w-full max-w-6xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+      <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 sm:py-16 lg:px-8">
         <div className="grid gap-10 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:gap-16">
           {/* ── Brand block: beside the columns on wide screens, above them on narrow ── */}
           <div className="flex flex-col items-center text-center lg:items-start lg:text-start">
@@ -148,7 +148,7 @@ export default function SiteFooter({ t, localePrefix }: SiteFooterProps) {
               {t('app.name', 'حسابچه')}
               <span className="text-[hsl(var(--color-primary))]">.</span>
             </div>
-            <p className="max-w-sm text-[11px] leading-relaxed text-[hsl(var(--fg-tertiary))] sm:text-xs lg:text-sm">
+            <p className="max-w-sm text-sm leading-relaxed text-[hsl(var(--fg-tertiary))]">
               {t(
                 'landing.footerTagline',
                 'حافظه‌ی زنده‌ی کسب‌وکار تو — آفلاین، امن، همیشه در دسترس.',
@@ -178,19 +178,31 @@ export default function SiteFooter({ t, localePrefix }: SiteFooterProps) {
             </div>
           </div>
 
-          {/* ── Link columns: three across at every width ── */}
-          <div className="grid grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
-            {COLUMNS.map((col) => (
-              <nav key={col.titleKey} aria-label={t(col.titleKey, col.titleFallback)}>
-                <h3 className="mb-2 text-[11px] font-semibold text-[hsl(var(--fg-primary))] sm:mb-3 sm:text-xs lg:mb-4 lg:text-sm">
+          {/* ── Link columns. MOBILE FIRST: two short columns side by side and
+              the long legal list across the full width in two columns of its
+              own; three columns from `sm`. The old layout forced three 98px
+              columns with 10px links on a 360px phone. ── */}
+          <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-6 lg:gap-8">
+            {COLUMNS.map((col, index) => (
+              <nav
+                key={col.titleKey}
+                aria-label={t(col.titleKey, col.titleFallback)}
+                className={cn(index === COLUMNS.length - 1 && 'col-span-2 sm:col-span-1')}
+              >
+                <h3 className="mb-2 text-sm font-semibold text-[hsl(var(--fg-primary))] sm:mb-3 lg:mb-4">
                   {t(col.titleKey, col.titleFallback)}
                 </h3>
-                <ul className="space-y-1.5 sm:space-y-2 lg:space-y-2.5">
+                <ul
+                  className={cn(
+                    'sm:space-y-2 lg:space-y-2.5',
+                    index === COLUMNS.length - 1 && 'grid grid-cols-2 gap-x-4 sm:block',
+                  )}
+                >
                   {col.links.map((link) => (
                     <li key={link.key}>
                       <Link
                         href={withLocale(link.href)}
-                        className="text-[10px] sm:text-xs lg:text-sm text-[hsl(var(--fg-tertiary))] hover:text-[hsl(var(--fg-primary))] transition-colors duration-200"
+                        className="block py-1 text-sm text-[hsl(var(--fg-tertiary))] transition-colors duration-200 hover:text-[hsl(var(--fg-primary))] sm:py-0 sm:text-xs lg:text-sm"
                       >
                         {t(`landing.footerLink.${link.key}`, link.fallback)}
                       </Link>
@@ -217,12 +229,12 @@ export default function SiteFooter({ t, localePrefix }: SiteFooterProps) {
               not match», and the whole subtree is thrown away. The server and
               the first client render both paint the line WITHOUT a year; the
               effect then adds it. */}
-          <p className="text-[9px] sm:text-[10px] lg:text-xs text-[hsl(var(--fg-tertiary))] order-2 sm:order-1">
+          <p className="text-xs text-[hsl(var(--fg-tertiary))] order-2 sm:order-1">
             {year === null
               ? copyright.replace('{year} ', '')
               : copyright.replace('{year}', String(year))}
           </p>
-          <p className="text-[9px] sm:text-[10px] lg:text-xs text-[hsl(var(--fg-tertiary))] order-1 sm:order-2">
+          <p className="text-xs text-[hsl(var(--fg-tertiary))] order-1 sm:order-2">
             {t('landing.footer', 'سیستم مدیریت کسب‌وکار')}
           </p>
         </div>

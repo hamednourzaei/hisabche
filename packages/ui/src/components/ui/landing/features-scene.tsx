@@ -1,10 +1,17 @@
 // packages/ui/src/components/ui/landing/features-scene.tsx
 'use client'
 
+import Image from 'next/image'
 import NextLink from 'next/link'
 import { useSceneObserver } from './use-scene-observer'
 import { cn } from '../../../lib/utils'
-import { LANDING_CONTAINER, LANDING_SECTION, SectionHeader } from './landing-primitives'
+import {
+  ForwardArrow,
+  LANDING_CONTAINER,
+  LANDING_SECTION,
+  LANDING_TYPE,
+  SectionHeader,
+} from './landing-primitives'
 import type { LucideIcon } from 'lucide-react'
 import {
   Users,
@@ -153,13 +160,49 @@ const FEATURES: FeatureItem[] = [
   },
 ]
 
+/**
+ * The two alternating image/text blocks (layout adapted from
+ * shadcn-dashboard-landing-template, MIT). Headline and lead come from the
+ * feature page each block links to, so the landing never states something that
+ * page does not.
+ */
+const SHOWCASE_BLOCKS = [
+  {
+    id: 'shop',
+    pageKey: 'shopAccounting',
+    pageHref: '/features/shop-accounting',
+    linkKey: 'landing.footerLink.shopAccountingPage',
+    linkFallback: 'نرم‌افزار حسابداری فروشگاهی',
+    featureKeys: ['customers', 'invoices', 'inventory', 'accounting'],
+    image: { src: '/dashboard-desktop.png', width: 1920, height: 1020, frame: 'desktop' },
+  },
+  {
+    id: 'offline',
+    pageKey: 'offline',
+    pageHref: '/features/offline',
+    linkKey: 'landing.footerLink.offline',
+    linkFallback: 'حسابداری آفلاین',
+    featureKeys: ['offline', 'mobile', 'workspace', 'security'],
+    image: { src: '/dashboard-mobile.png', width: 1183, height: 2560, frame: 'phone' },
+  },
+] as const
+
+const SHOWCASED = new Set<string>(SHOWCASE_BLOCKS.flatMap((b) => [...b.featureKeys]))
+
 export default function FeaturesScene({ t, localePrefix }: FeaturesSceneProps) {
   const routePrefix = localePrefix ? `/${localePrefix}` : ''
   // Kept for the section navigator (it reads which scene is in view).
   const { ref } = useSceneObserver<HTMLDivElement>({ threshold: 0.2, narrativeState: 'confidence' })
+  const byKey = new Map(FEATURES.map((f) => [f.key, f]))
+  const rest = FEATURES.filter((f) => !SHOWCASED.has(f.key))
 
   return (
-    <section id="features" ref={ref} data-narrative="confidence" className={LANDING_SECTION}>
+    <section
+      id="features"
+      ref={ref}
+      data-narrative="confidence"
+      className={cn(LANDING_SECTION, 'bg-[hsl(var(--surface-muted)/0.3)]')}
+    >
       <div className={LANDING_CONTAINER}>
         <SectionHeader
           label={t('landing.featuresLabel', 'امکانات')}
@@ -167,53 +210,137 @@ export default function FeaturesScene({ t, localePrefix }: FeaturesSceneProps) {
           description={t('landing.featuresDesc', 'از فروش و انبار تا حسابداری و هوش مصنوعی.')}
         />
 
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map((feature) => {
+        <div className="space-y-12 sm:space-y-20 lg:space-y-24">
+          {SHOWCASE_BLOCKS.map((block, index) => (
+            <div key={block.id} className="grid items-center gap-8 lg:grid-cols-2 lg:gap-16">
+              {/* Every second block puts the image on the END side on wide
+                  screens. Grid order follows the writing direction, so this
+                  reads correctly in RTL and LTR alike. */}
+              {/* Hidden on phones: the Hero already shows the legible phone screenshot,
+                  and a 1920px dashboard at 328px has no readable word in it. */}
+              <div className={cn('hidden justify-center sm:flex', index % 2 === 1 && 'lg:order-2')}>
+                <div
+                  className={cn(
+                    'relative w-full overflow-hidden border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] shadow-xl',
+                    block.image.frame === 'phone'
+                      ? 'max-w-[16rem] rounded-[2rem] p-2'
+                      : 'rounded-xl',
+                  )}
+                >
+                  <Image
+                    src={block.image.src}
+                    alt={t(`landing.featurePage.${block.pageKey}.h1`)}
+                    width={block.image.width}
+                    height={block.image.height}
+                    sizes={
+                      block.image.frame === 'phone' ? '256px' : '(min-width: 1024px) 560px, 100vw'
+                    }
+                    className={cn(
+                      'block h-auto w-full',
+                      block.image.frame === 'phone' && 'rounded-[1.5rem]',
+                    )}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <h3
+                  className={cn(
+                    'mb-3 text-balance font-semibold tracking-tight text-[hsl(var(--fg-primary))] sm:mb-4',
+                    LANDING_TYPE.h3,
+                  )}
+                >
+                  {t(`landing.featurePage.${block.pageKey}.h1`)}
+                </h3>
+                <p
+                  className={cn(
+                    'mb-6 text-pretty text-[hsl(var(--fg-secondary))] sm:mb-8',
+                    LANDING_TYPE.lead,
+                  )}
+                >
+                  {t(`landing.featurePage.${block.pageKey}.metaDescription`)}
+                </p>
+
+                <ul className="mb-6 grid gap-4 sm:mb-8 sm:grid-cols-2 sm:gap-5">
+                  {block.featureKeys.map((key) => {
+                    const feature = byKey.get(key)
+                    if (!feature) return null
+                    const Icon = feature.icon
+                    return (
+                      <li key={key} className="flex items-start gap-3">
+                        <Icon
+                          className="mt-0.5 size-5 shrink-0 text-[hsl(var(--color-primary))]"
+                          aria-hidden="true"
+                        />
+                        <div className="min-w-0">
+                          <p className="font-medium text-[hsl(var(--fg-primary))]">
+                            {t(`landing.feature.${key}Title`, feature.title)}
+                          </p>
+                          <p className="mt-1 text-sm leading-relaxed text-[hsl(var(--fg-secondary))]">
+                            {t(`landing.feature.${key}Desc`, feature.description)}
+                          </p>
+                          {/* Descriptive in-content link to the feature's own page. */}
+                          {feature.pageHref &&
+                            feature.pageLabelKey &&
+                            feature.pageHref !== block.pageHref && (
+                              <NextLink
+                                href={`${routePrefix}${feature.pageHref}`}
+                                className="mt-1 inline-flex text-sm font-medium text-[hsl(var(--color-primary))] hover:underline"
+                              >
+                                {t(feature.pageLabelKey, feature.pageLabelFallback)}
+                              </NextLink>
+                            )}
+                        </div>
+                      </li>
+                    )
+                  })}
+                </ul>
+
+                <NextLink
+                  href={`${routePrefix}${block.pageHref}`}
+                  className="btn-secondary inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-6 text-sm sm:w-auto"
+                >
+                  {t(block.linkKey, block.linkFallback)}
+                  <ForwardArrow />
+                </NextLink>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Everything not shown in a block above. */}
+        {/* Grouped compact rows on phones; cards from `sm`. */}
+        <ul
+          className={cn(
+            'mt-10 divide-y divide-[hsl(var(--border-default)/0.7)] overflow-hidden rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated)/0.6)]',
+            'sm:mt-20 sm:grid sm:grid-cols-2 sm:gap-4 sm:divide-y-0 sm:overflow-visible sm:border-0 sm:bg-transparent lg:mt-24 lg:grid-cols-4',
+          )}
+        >
+          {rest.map((feature) => {
             const Icon = feature.icon
             return (
               <li
                 key={feature.key}
-                className={cn(
-                  'group flex flex-col rounded-xl border p-5 transition-colors sm:p-6',
-                  'border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated)/0.6)]',
-                  'hover:border-[hsl(var(--color-primary)/0.35)]',
-                )}
+                className="flex items-start gap-3 px-4 py-4 sm:flex-col sm:gap-0 sm:rounded-xl sm:border sm:border-[hsl(var(--border-default))] sm:bg-[hsl(var(--surface-elevated)/0.6)] sm:p-6"
               >
-                <div className="mb-4 flex items-center justify-between gap-3">
-                  <span className="flex size-10 items-center justify-center rounded-lg bg-[hsl(var(--color-primary)/0.1)] text-[hsl(var(--color-primary))]">
-                    <Icon className="size-5" aria-hidden="true" />
+                <div className="sm:mb-4 sm:flex sm:w-full sm:items-center sm:justify-between sm:gap-3">
+                  <span className="flex size-9 items-center justify-center rounded-lg bg-[hsl(var(--color-primary)/0.1)] text-[hsl(var(--color-primary))] sm:size-10">
+                    <Icon className="size-[1.125rem] sm:size-5" aria-hidden="true" />
                   </span>
-                  {feature.status !== undefined && (
-                    <span
-                      className={cn(
-                        'rounded-full px-2 py-0.5 text-xs font-medium',
-                        feature.status === 'active'
-                          ? 'bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))]'
-                          : 'bg-[hsl(var(--color-warning)/0.12)] text-[hsl(var(--color-warning))]',
-                      )}
-                    >
-                      {feature.status === 'active' ? 'فعال' : 'به‌زودی'}
+                  {feature.status === 'active' && (
+                    <span className="hidden shrink-0 rounded-full bg-[hsl(var(--color-success)/0.12)] px-2 py-0.5 text-xs font-medium text-[hsl(var(--color-success))] sm:inline">
+                      {t('landing.featureStatus.active', 'فعال')}
                     </span>
                   )}
                 </div>
-
-                <h3 className="mb-1.5 text-base font-semibold text-[hsl(var(--fg-primary))]">
-                  {t(`landing.feature.${feature.key}Title`, feature.title)}
-                </h3>
-                <p className="text-sm leading-relaxed text-[hsl(var(--fg-secondary))]">
-                  {t(`landing.feature.${feature.key}Desc`, feature.description)}
-                </p>
-
-                {/* Contextual link to the feature's own page — descriptive
-                    anchor text (the page's real subject), not "learn more". */}
-                {feature.pageHref && feature.pageLabelKey && (
-                  <NextLink
-                    href={`${routePrefix}${feature.pageHref}`}
-                    className="mt-auto inline-flex pt-4 text-sm font-medium text-[hsl(var(--color-primary))] hover:underline"
-                  >
-                    {t(feature.pageLabelKey, feature.pageLabelFallback)}
-                  </NextLink>
-                )}
+                <div className="min-w-0">
+                  <h3 className="mb-1 text-[0.9375rem] font-semibold text-[hsl(var(--fg-primary))] sm:mb-1.5 sm:text-base">
+                    {t(`landing.feature.${feature.key}Title`, feature.title)}
+                  </h3>
+                  <p className={cn('text-[hsl(var(--fg-secondary))]', LANDING_TYPE.body)}>
+                    {t(`landing.feature.${feature.key}Desc`, feature.description)}
+                  </p>
+                </div>
               </li>
             )
           })}

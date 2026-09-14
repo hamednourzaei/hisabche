@@ -3,6 +3,16 @@
 import { useEffect, useLayoutEffect, useRef, useState, useCallback, memo } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import Link from 'next/link'
+import { Menu, X } from 'lucide-react'
+import {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from '../sheet'
 import { useNavigation } from '../../../hooks/menu/use-navigation-state'
 import { useAuthStore } from '@hisabche/store'
 import { cn } from '../../../lib/utils'
@@ -119,6 +129,14 @@ export const TopNav = memo(function TopNav({
   const user = useAuthStore((s) => s.user)
   const navListRef = useRef<HTMLUListElement>(null)
   const [indicatorStyle, setIndicatorStyle] = useState({ width: 0, offset: 0 })
+  // Phone menu — the project's Sheet (Radix Dialog: focus trap, Escape, scroll
+  // lock, RTL side). The section pills do not fit beside the logo and the CTA
+  // below `md`; at 360px they sat in a horizontally scrolling strip, clipped
+  // mid-word. Phones get a drawer instead of a squeezed copy of the desktop bar.
+  const [menuOpen, setMenuOpen] = useState(false)
+  // The drawer locks page scroll while open, so a section jump has to wait
+  // until it has closed — otherwise the smooth scroll runs against the lock.
+  const pendingSection = useRef<string | null>(null)
 
   // Was `getLocaleFromPathname`, matching /^\/(fa-IR|fa-AF|en)/ — segments this
   // app has never served. The real route segments are fa | af | en (see
@@ -152,19 +170,10 @@ export const TopNav = memo(function TopNav({
 
     setIndicatorStyle({
       width: btnRect.width,
-      // ⚠️ `+ scrollLeft` MATTERS, AND ONLY ON NARROW SCREENS.
-      //
-      // The indicator is absolutely positioned inside the list, so `left` is
-      // measured against the list's SCROLLED CONTENT. Both rects come from
-      // `getBoundingClientRect`, which reports VIEWPORT positions — their
-      // difference is how far the button is from the list's visible edge, not
-      // from its content origin.
-      //
-      // The list is `overflow-x-auto`. On a desktop the pills fit, scrollLeft
-      // is 0, and the two happen to agree. On a phone they do not fit, and the
-      // pill highlight lands under the wrong pill by exactly the scroll
-      // distance.
-      offset: btnRect.left - listRect.left + navListRef.current.scrollLeft,
+      // The list never scrolls: it is shown only from `md`, where the pills
+      // fit, and phones use the drawer. Both rects are viewport positions, so
+      // their difference is the pill's offset inside the list.
+      offset: btnRect.left - listRect.left,
     })
   }, [activeSection])
 
@@ -199,24 +208,29 @@ export const TopNav = memo(function TopNav({
   return (
     <header
       className={cn(
-        'sticky top-0 z-[var(--z-sticky)] w-full',
-        'bg-[hsl(var(--surface-base)/0.6)] backdrop-blur-md',
-        'border-b border-transparent',
-        'transition-all duration-300',
-        'lg:top-4 lg:w-[90%] lg:mx-auto lg:rounded-full lg:py-0.5',
-        'lg:bg-[hsl(var(--surface-base)/0.7)] lg:backdrop-blur-xl',
-        'lg:border-[hsl(var(--border-default))]',
-        'max-lg:py-3 max-lg:bg-[hsl(var(--surface-base))] max-lg:backdrop-blur-none',
-        'max-lg:border-b max-lg:border-[hsl(var(--border-default))]',
+        'sticky top-0 z-[var(--z-sticky)] w-full transition-all duration-300',
+        variant === 'landing'
+          ? // Full-width bar with a bottom rule — layout adapted from
+            // shadcn-dashboard-landing-template (MIT, see landing-primitives.tsx).
+            'border-b border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base)/0.85)] backdrop-blur-md'
+          : cn(
+              'bg-[hsl(var(--surface-base)/0.6)] backdrop-blur-md',
+              'border-b border-transparent',
+              'lg:top-4 lg:w-[90%] lg:mx-auto lg:rounded-full lg:py-0.5',
+              'lg:bg-[hsl(var(--surface-base)/0.7)] lg:backdrop-blur-xl',
+              'lg:border-[hsl(var(--border-default))]',
+              'max-lg:py-3 max-lg:bg-[hsl(var(--surface-base))] max-lg:backdrop-blur-none',
+              'max-lg:border-b max-lg:border-[hsl(var(--border-default))]',
+            ),
       )}
       dir={isRTL ? 'rtl' : 'ltr'}
     >
       <div
         className={cn(
-          'mx-auto flex items-center justify-between',
-          'h-14 px-4',
-          'lg:h-[52px] lg:px-0 lg:w-[90%]',
-          'max-lg:h-14',
+          'mx-auto flex items-center justify-between gap-3',
+          variant === 'landing'
+            ? 'h-14 w-full max-w-6xl px-4 sm:px-6 lg:h-16 lg:px-8'
+            : 'h-14 px-4 lg:h-[52px] lg:px-0 lg:w-[90%] max-lg:h-14',
         )}
       >
         {/* Logo — a real link to the locale home page. Google treats the site
@@ -237,10 +251,15 @@ export const TopNav = memo(function TopNav({
         </Link>
 
         {/* Navigation menu */}
-        <nav className="flex-1 flex justify-center px-2 overflow-hidden">
+        <nav
+          className={cn(
+            'flex-1 justify-center px-2',
+            variant === 'landing' ? 'hidden md:flex' : 'flex',
+          )}
+        >
           <ul
             ref={navListRef}
-            className="relative flex items-center gap-1 list-none m-0 px-1 py-1 rounded-full bg-[hsl(var(--fg-primary)/0.04)] border border-[hsl(var(--fg-primary)/0.07)] max-w-full overflow-x-auto"
+            className="relative flex items-center gap-1 list-none m-0 px-1 py-1 rounded-full bg-[hsl(var(--fg-primary)/0.04)] border border-[hsl(var(--fg-primary)/0.07)]"
           >
             {/* Active indicator */}
             <span
@@ -277,18 +296,109 @@ export const TopNav = memo(function TopNav({
             section pills. Compact on mobile (no arrow, tighter padding), full
             size from `lg` up. */}
         {variant === 'landing' && (
-          <Link
-            href={`${routePrefix}/signup`}
-            // Spread rather than pass `undefined`: `exactOptionalPropertyTypes`
-            // makes `onClick={undefined}` a type error on LinkProps.
-            {...(onNavigateCta ? { onClick: onNavigateCta } : {})}
-            className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold text-white bg-[var(--gradient-brand)] hover:brightness-110 transition-all shrink-0 lg:px-5 lg:py-2 lg:text-sm"
-          >
-            <span className="cta-text">{ctaText}</span>
-            <span aria-hidden="true" className="hidden lg:inline">
-              {isRTL ? '←' : '→'}
-            </span>
-          </Link>
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+            <Link
+              href={`${routePrefix}/login`}
+              className="hidden rounded-full px-3 py-1.5 text-sm font-medium text-[hsl(var(--fg-secondary))] transition-colors hover:text-[hsl(var(--fg-primary))] md:inline-flex"
+            >
+              {t('auth.signIn', locale === 'en' ? 'Sign In' : 'ورود')}
+            </Link>
+            <Link
+              href={`${routePrefix}/signup`}
+              // Spread rather than pass `undefined`: `exactOptionalPropertyTypes`
+              // makes `onClick={undefined}` a type error on LinkProps.
+              {...(onNavigateCta ? { onClick: onNavigateCta } : {})}
+              className="inline-flex min-h-9 items-center gap-1 rounded-full px-4 text-sm font-bold text-white bg-[var(--gradient-brand)] hover:brightness-110 transition-all shrink-0 lg:min-h-10 lg:px-5"
+            >
+              <span className="cta-text">{ctaText}</span>
+              <span aria-hidden="true" className="hidden lg:inline">
+                {isRTL ? '←' : '→'}
+              </span>
+            </Link>
+            <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+              <SheetTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={t('landing.menuOpen', locale === 'en' ? 'Open menu' : 'باز کردن منو')}
+                  className="flex size-10 items-center justify-center rounded-full text-[hsl(var(--fg-primary))] hover:bg-[hsl(var(--surface-muted))] md:hidden"
+                >
+                  <Menu className="size-5" aria-hidden="true" />
+                </button>
+              </SheetTrigger>
+              <SheetContent
+                side="end"
+                dir={isRTL ? 'rtl' : 'ltr'}
+                showCloseButton={false}
+                className="flex w-[85%] flex-col p-0 md:hidden"
+                onCloseAutoFocus={(event) => {
+                  const id = pendingSection.current
+                  if (!id) return
+                  pendingSection.current = null
+                  event.preventDefault()
+                  handleSetSection(id)
+                }}
+              >
+                <SheetHeader className="flex-row items-center justify-between space-y-0 border-b border-[hsl(var(--border-default))] px-5 py-4">
+                  <SheetTitle className="text-lg font-bold">
+                    {displayName}
+                    <span className="text-[hsl(var(--color-primary))]" aria-hidden="true">
+                      .
+                    </span>
+                  </SheetTitle>
+                  <SheetDescription className="sr-only">
+                    {t('landing.menuOpen', locale === 'en' ? 'Open menu' : 'باز کردن منو')}
+                  </SheetDescription>
+                  <SheetClose
+                    aria-label={t('landing.menuClose', locale === 'en' ? 'Close menu' : 'بستن منو')}
+                    className="flex size-10 items-center justify-center rounded-full text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]"
+                  >
+                    <X className="size-5" aria-hidden="true" />
+                  </SheetClose>
+                </SheetHeader>
+
+                <nav className="flex-1 px-5">
+                  <ul className="flex flex-col">
+                    {sections.map(({ id, label }) => (
+                      <li key={id}>
+                        <a
+                          href={`#${id}`}
+                          aria-current={activeSection === id ? 'true' : undefined}
+                          onClick={(event) => {
+                            event.preventDefault()
+                            pendingSection.current = id
+                            setMenuOpen(false)
+                          }}
+                          className={cn(
+                            'flex min-h-12 items-center border-b border-[hsl(var(--border-default)/0.6)] text-base',
+                            activeSection === id
+                              ? 'font-semibold text-[hsl(var(--color-primary))]'
+                              : 'text-[hsl(var(--fg-primary))]',
+                          )}
+                        >
+                          {label}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </nav>
+
+                <div className="flex flex-col gap-3 border-t border-[hsl(var(--border-default))] p-5">
+                  <Link
+                    href={`${routePrefix}/login`}
+                    className="btn-secondary flex min-h-12 w-full items-center justify-center rounded-xl text-base"
+                  >
+                    {t('auth.signIn', locale === 'en' ? 'Sign In' : 'ورود')}
+                  </Link>
+                  <Link
+                    href={`${routePrefix}/signup`}
+                    className="btn-primary flex min-h-12 w-full items-center justify-center rounded-xl text-base"
+                  >
+                    {ctaText}
+                  </Link>
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
         )}
 
         {/* Logout button — Desktop (Dashboard) */}

@@ -1,11 +1,12 @@
 // packages/ui/src/components/ui/landing/pricing-scene.tsx
 'use client'
 
-import React, { useState, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
-import { useTranslations } from 'next-intl'
+import React, { useState } from 'react'
+import Link from 'next/link'
+import { useLocale, useTranslations } from 'next-intl'
 import { cn } from '../../../lib/utils'
 import { LANDING_CONTAINER, LANDING_SECTION, SectionHeader } from './landing-primitives'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../tabs'
 import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { formatNumber } from '@hisabche/formatting'
 import { usePlans } from '@hisabche/api'
@@ -15,14 +16,7 @@ import { Check, Minus, ChevronDown } from 'lucide-react'
    PricingScene v8 — Fully self-contained · Zero external dependencies
    ═══════════════════════════════════════════════════════════════════════════ */
 
-// پراپز کاملاً آپشنال — کامپوننت خودش همه چی رو handle میکنه
-export interface PricingSceneProps {
-  t?: (key: string, fallback?: string) => string
-  onNavigateLogin?: () => void
-}
-
 const POPULAR_BG = 'bg-[hsl(var(--color-primary)/0.04)]'
-const POPULAR_BORDER = 'border-[hsl(var(--color-primary)/0.25)]'
 const STRIPE_ROW = 'bg-[hsl(var(--surface-muted)/0.2)]'
 
 interface Plan {
@@ -87,7 +81,7 @@ const PLANS: Plan[] = [
 interface FeatureRow {
   labelKey: string
   fallback: string
-  values: ('check' | 'dash' | string)[]
+  values: CellValue[]
 }
 
 interface FeatureGroup {
@@ -104,7 +98,7 @@ const FEATURE_GROUPS: FeatureGroup[] = [
       {
         labelKey: 'invoices',
         fallback: 'فاکتور فروش',
-        values: ['۵۰ در ماه', 'نامحدود', 'نامحدود'],
+        values: [{ count: 50, perMonth: true }, 'unlimited', 'unlimited'],
       },
       { labelKey: 'pos', fallback: 'ثبت سریع فروش', values: ['check', 'check', 'check'] },
       { labelKey: 'debt', fallback: 'مدیریت بدهی', values: ['check', 'check', 'check'] },
@@ -142,7 +136,11 @@ const FEATURE_GROUPS: FeatureGroup[] = [
     rows: [
       { labelKey: 'offline', fallback: 'آفلاین کامل', values: ['check', 'check', 'check'] },
       { labelKey: 'backup', fallback: 'بک‌آپ خودکار', values: ['check', 'check', 'check'] },
-      { labelKey: 'users', fallback: 'تعداد کاربران', values: ['۵', '۵', 'نامحدود'] },
+      {
+        labelKey: 'users',
+        fallback: 'تعداد کاربران',
+        values: [{ count: 5 }, { count: 5 }, 'unlimited'],
+      },
       { labelKey: 'branches', fallback: 'چند شعبه', values: ['dash', 'dash', 'check'] },
       { labelKey: 'api', fallback: 'دسترسی API', values: ['check', 'check', 'check'] },
     ],
@@ -166,7 +164,21 @@ const FEATURE_GROUPS: FeatureGroup[] = [
   },
 ]
 
-function Cell({ value }: { value: 'check' | 'dash' | string }) {
+/**
+ * A comparison value. Counts are numbers, not pre-formatted Persian strings —
+ * «۵۰ در ماه» used to render on /en exactly as written.
+ */
+type CellValue = 'check' | 'dash' | 'unlimited' | { count: number; perMonth?: true }
+
+function Cell({
+  value,
+  locale,
+  st,
+}: {
+  value: CellValue
+  locale: string
+  st: (key: string, fallback?: string) => string
+}) {
   if (value === 'check')
     return (
       <Check
@@ -181,11 +193,13 @@ function Cell({ value }: { value: 'check' | 'dash' | string }) {
         aria-hidden="true"
       />
     )
-  return (
-    <span className="text-[10px] sm:text-xs lg:text-sm tabular-nums text-[hsl(var(--fg-secondary))]">
-      {value}
-    </span>
-  )
+  const text =
+    value === 'unlimited'
+      ? st('landing.pricing.unlimited', 'نامحدود')
+      : value.perMonth
+        ? `${formatNumber(value.count, locale)} ${st('landing.pricing.perMonthSuffix', 'در ماه')}`
+        : formatNumber(value.count, locale)
+  return <span className="text-sm tabular-nums text-[hsl(var(--fg-secondary))]">{text}</span>
 }
 
 /**
@@ -236,15 +250,14 @@ function PlanPrice({
   return (
     <>
       <span className={amountClassName}>{formatNumber(price.amount, locale)}</span>
-      <span className="mb-0.5 text-[10px] text-[hsl(var(--fg-tertiary))]">
+      <span className="mb-0.5 text-xs text-[hsl(var(--fg-tertiary))]">
         {perMonth(price.currency)}
       </span>
     </>
   )
 }
 
-export default function PricingScene(props: PricingSceneProps) {
-  const router = useRouter()
+export default function PricingScene() {
   const t = useTranslations()
   // Plan prices used to render through `toLocaleString('fa-AF')`, so an
   // English visitor was shown Persian digits. The digits follow the reader's
@@ -295,18 +308,62 @@ export default function PricingScene(props: PricingSceneProps) {
     return fallback ?? key
   }
 
-  const onNavigateLogin = () => {
-    if (typeof props.onNavigateLogin === 'function') {
-      props.onNavigateLogin()
-    } else {
-      router.push('/login')
-    }
+  const [featuresOpen, setFeaturesOpen] = useState(false)
+  const activeLocale = useLocale()
+  const routePrefix = activeLocale ? `/${activeLocale}` : ''
+
+  const renderPlan = (plan: Plan, i: number) => {
+    // Quoted plans go to the real contact page — there is no contact form on
+    // the landing page, and signup is not how to ask for a quote.
+    const ctaHref =
+      plan.billingPlan === 'enterprise' ? `${routePrefix}/contact` : `${routePrefix}/signup`
+    return (
+      <>
+        <div>
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <h3 className="text-lg font-semibold text-[hsl(var(--fg-primary))]">
+              {st(`landing.pricing.${plan.key}.name`, plan.fallbackName)}
+            </h3>
+            {plan.popular && (
+              <span className="rounded-full bg-[hsl(var(--color-primary)/0.12)] px-2.5 py-0.5 text-xs font-semibold text-[hsl(var(--color-primary))]">
+                {st('landing.pricingPopular', 'محبوب‌ترین')}
+              </span>
+            )}
+          </div>
+          <p className="text-sm text-[hsl(var(--fg-tertiary))]">
+            {st('landing.pricing.bestIfLabel', 'مناسب اگر')}:{' '}
+            {st(`landing.pricing.${plan.key}.bestIf`, plan.fallbackBestIf)}
+          </p>
+          {/* `who` carries the enterprise offer — "tell us what to add, remove
+              or change" — the whole pitch for a plan with no listed price. */}
+          <p className="mt-1 text-sm leading-snug text-[hsl(var(--fg-secondary))]">
+            {st(`landing.pricing.${plan.key}.who`, plan.fallbackWho)}
+          </p>
+        </div>
+
+        <div className="flex min-h-10 items-end gap-1.5">
+          <PlanPrice
+            price={priceOf(plan)}
+            locale={locale}
+            st={st}
+            perMonth={perMonth}
+            amountClassName="text-3xl font-bold tabular-nums text-[hsl(var(--fg-primary))] lg:text-4xl"
+            contactClassName="text-2xl font-bold text-[hsl(var(--fg-primary))]"
+          />
+        </div>
+
+        <Link
+          href={ctaHref}
+          className={cn(
+            'inline-flex min-h-12 w-full items-center justify-center rounded-xl px-4 text-sm font-semibold',
+            plan.popular ? 'btn-primary' : 'btn-secondary',
+          )}
+        >
+          {st(`landing.pricing.${plan.key}.cta`, plan.ctaFallback)}
+        </Link>
+      </>
+    )
   }
-
-  const [mobilePlan, setMobilePlan] = useState(1)
-  const [mobileFeaturesOpen, setMobileFeaturesOpen] = useState(false)
-
-  const allMobileFeatures = useMemo(() => FEATURE_GROUPS.flatMap((g) => g.rows), [])
 
   return (
     <section id="pricing" className={cn(LANDING_SECTION, 'bg-[hsl(var(--surface-muted)/0.3)]')}>
@@ -316,124 +373,96 @@ export default function PricingScene(props: PricingSceneProps) {
           title={st('landing.pricingTitle', 'از رایگان شروع کنید، هر زمان خواستید ارتقا دهید')}
         />
 
-        {/* Mobile */}
-        <div className="sm:hidden">
-          <div className="flex bg-[hsl(var(--surface-muted))] rounded-xl p-1 mb-5">
-            {PLANS.map((plan, i) => (
-              <button
-                key={plan.key}
-                type="button"
-                onClick={() => {
-                  setMobilePlan(i)
-                  setMobileFeaturesOpen(false)
-                }}
+        {/* PHONES AND TABLETS — one plan at a time behind the project's Tabs.
+            Three full cards stacked were 1021px at 360px, and the comparison
+            table needs 800px; below `lg` each tab carries its own column of it. */}
+        <Tabs defaultValue="pro" className="lg:hidden" onValueChange={() => setFeaturesOpen(false)}>
+          <TabsList className="mb-4 grid w-full grid-cols-3 overflow-visible">
+            {PLANS.map((plan) => (
+              <TabsTrigger key={plan.key} value={plan.key} className="min-h-10 w-full text-sm">
+                {st(`landing.pricing.${plan.key}.name`, plan.fallbackName)}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          {PLANS.map((plan, i) => (
+            <TabsContent key={plan.key} value={plan.key}>
+              <div
                 className={cn(
-                  'flex-1 py-2 rounded-lg text-xs font-semibold transition-all',
-                  mobilePlan === i
-                    ? 'bg-[hsl(var(--surface-elevated))] text-[hsl(var(--fg-primary))] shadow-sm'
-                    : 'text-[hsl(var(--fg-tertiary))]',
+                  'flex flex-col gap-5 rounded-2xl border p-5 sm:p-8',
+                  plan.popular
+                    ? 'border-[hsl(var(--color-primary)/0.35)] bg-[hsl(var(--surface-elevated))] shadow-xl'
+                    : 'border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base)/0.5)]',
                 )}
               >
-                {st(`landing.pricing.${plan.key}.name`, plan.fallbackName)}
-              </button>
-            ))}
-          </div>
+                {renderPlan(plan, i)}
 
-          {PLANS.map(
-            (plan, i) =>
-              mobilePlan === i && (
-                <div
-                  key={plan.key}
-                  className={cn(
-                    'relative rounded-[var(--radius-xl)] border p-5 space-y-3.5',
-                    plan.popular
-                      ? `${POPULAR_BORDER} ${POPULAR_BG} shadow-[var(--shadow-premium)]`
-                      : 'border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))]',
-                  )}
-                >
-                  {plan.popular && (
-                    <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                      <span className="px-2.5 py-1 rounded-full text-[10px] font-semibold text-white bg-[var(--gradient-brand)] shadow-sm">
-                        {st('landing.pricingPopular', 'محبوب‌ترین')}
-                      </span>
-                    </div>
-                  )}
-                  <div>
-                    <h3 className="text-base font-bold text-[hsl(var(--fg-primary))]">
-                      {st(`landing.pricing.${plan.key}.name`, plan.fallbackName)}
-                    </h3>
-                    <p className="text-xs text-[hsl(var(--fg-tertiary))]">
-                      {st(`landing.pricing.${plan.key}.bestIf`, plan.fallbackBestIf)}
-                    </p>
-                    {/* `who` was declared on every plan but never rendered. It
-                        carries the enterprise offer — "tell us what to add,
-                        remove or change" — which is the whole pitch for a plan
-                        that has no listed price. */}
-                    <p className="mt-1 text-[11px] leading-snug text-[hsl(var(--fg-secondary))]">
-                      {st(`landing.pricing.${plan.key}.who`, plan.fallbackWho)}
-                    </p>
-                  </div>
-
-                  <div className="min-h-[2rem] flex items-end gap-1">
-                    <PlanPrice
-                      price={priceOf(plan)}
-                      locale={locale}
-                      st={st}
-                      perMonth={perMonth}
-                      amountClassName="text-2xl font-extrabold tabular-nums"
-                      contactClassName="text-lg font-bold"
-                    />
-                  </div>
-
+                <div className="border-t border-[hsl(var(--border-default))] pt-4">
                   <button
                     type="button"
-                    onClick={onNavigateLogin}
-                    className={cn(
-                      'w-full rounded-xl py-2.5 text-xs font-semibold min-h-[40px] transition-all duration-200',
-                      plan.popular
-                        ? 'text-white bg-[var(--gradient-brand)] hover:opacity-90'
-                        : 'border border-[hsl(var(--border-default))] text-[hsl(var(--fg-primary))] hover:bg-[hsl(var(--surface-muted))]',
-                    )}
-                  >
-                    {st(`landing.pricing.${plan.key}.cta`, plan.ctaFallback)}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setMobileFeaturesOpen(!mobileFeaturesOpen)}
-                    className="flex items-center gap-1 text-xs text-[hsl(var(--fg-secondary))]"
+                    onClick={() => setFeaturesOpen((open) => !open)}
+                    aria-expanded={featuresOpen}
+                    className="flex min-h-10 w-full items-center justify-between gap-2 text-sm font-medium text-[hsl(var(--fg-secondary))]"
                   >
                     {st('landing.pricing.seeFeatures', 'مشاهده امکانات')}
                     <ChevronDown
-                      className={cn(
-                        'size-3.5 transition-transform',
-                        mobileFeaturesOpen && 'rotate-180',
-                      )}
+                      className={cn('size-4 transition-transform', featuresOpen && 'rotate-180')}
+                      aria-hidden="true"
                     />
                   </button>
-
-                  {mobileFeaturesOpen && (
-                    <ul className="space-y-1.5">
-                      {allMobileFeatures.map((row) => (
-                        <li
-                          key={row.labelKey}
-                          className="flex items-center gap-2 text-[11px] text-[hsl(var(--fg-secondary))]"
-                        >
-                          <Cell value={row.values[i]!} />
-                          <span>{st(`landing.pricing.row.${row.labelKey}`, row.fallback)}</span>
-                        </li>
+                  {featuresOpen && (
+                    <div className="mt-2 space-y-4">
+                      {FEATURE_GROUPS.map((group) => (
+                        <div key={group.groupKey}>
+                          <p className="mb-1.5 text-xs font-semibold text-[hsl(var(--fg-tertiary))]">
+                            {st(`landing.pricing.group.${group.groupKey}`, group.fallbackGroup)}
+                          </p>
+                          <ul className="space-y-2">
+                            {group.rows.map((row) => (
+                              <li
+                                key={row.labelKey}
+                                className="flex items-center justify-between gap-3 text-sm text-[hsl(var(--fg-secondary))]"
+                              >
+                                <span>
+                                  {st(`landing.pricing.row.${row.labelKey}`, row.fallback)}
+                                </span>
+                                <span className="shrink-0">
+                                  <Cell value={row.values[i]!} locale={locale} st={st} />
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       ))}
-                    </ul>
+                    </div>
                   )}
                 </div>
-              ),
-          )}
+              </div>
+            </TabsContent>
+          ))}
+        </Tabs>
+
+        {/* DESKTOP — the template's frame with the popular plan raised (MIT). */}
+        <div className="hidden rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base)/0.5)] lg:block">
+          <ul className="grid grid-cols-3">
+            {PLANS.map((plan, i) => (
+              <li
+                key={plan.key}
+                className={cn(
+                  'relative flex flex-col gap-6 p-8',
+                  plan.popular &&
+                    'm-2 rounded-xl bg-[hsl(var(--surface-elevated))] shadow-xl ring-1 ring-[hsl(var(--color-primary)/0.35)]',
+                )}
+              >
+                {renderPlan(plan, i)}
+              </li>
+            ))}
+          </ul>
         </div>
 
         {/* Desktop table */}
         <div
           className={cn(
-            'hidden sm:block rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] shadow-sm',
+            'mt-10 hidden lg:block rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] shadow-sm',
           )}
         >
           <div className="overflow-x-auto">
@@ -451,7 +480,7 @@ export default function PricingScene(props: PricingSceneProps) {
                       )}
                     >
                       {plan.popular && (
-                        <span className="inline-block px-2.5 sm:px-3 py-1 rounded-full text-[10px] sm:text-[11px] font-semibold text-white bg-[var(--gradient-brand)] mb-1.5">
+                        <span className="inline-block px-2.5 sm:px-3 py-1 rounded-full text-xs font-semibold text-white bg-[var(--gradient-brand)] mb-1.5">
                           {st('landing.pricingPopular', 'محبوب‌ترین')}
                         </span>
                       )}
@@ -459,79 +488,6 @@ export default function PricingScene(props: PricingSceneProps) {
                         {st(`landing.pricing.${plan.key}.name`, plan.fallbackName)}
                       </p>
                     </th>
-                  ))}
-                </tr>
-
-                <tr className="border-b border-[hsl(var(--border-default))]">
-                  <th
-                    scope="row"
-                    className="px-4 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-sm font-normal text-[hsl(var(--fg-secondary))] text-start"
-                  >
-                    {st('landing.pricing.bestIfLabel', 'مناسب اگر')}
-                  </th>
-                  {PLANS.map((plan) => (
-                    <td
-                      key={plan.key}
-                      className={cn(
-                        'px-4 sm:px-6 py-2.5 sm:py-3 text-xs sm:text-sm text-[hsl(var(--fg-secondary))] text-center',
-                        plan.popular && POPULAR_BG,
-                      )}
-                    >
-                      {st(`landing.pricing.${plan.key}.bestIf`, plan.fallbackBestIf)}
-                    </td>
-                  ))}
-                </tr>
-
-                <tr className="border-b border-[hsl(var(--border-default))]">
-                  <th
-                    scope="row"
-                    className="px-4 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-normal text-[hsl(var(--fg-secondary))] text-start"
-                  >
-                    {st('landing.pricing.priceHeader', 'قیمت')}
-                  </th>
-                  {PLANS.map((plan) => (
-                    <td
-                      key={plan.key}
-                      className={cn(
-                        'px-4 sm:px-6 py-3 sm:py-4 text-center',
-                        plan.popular && POPULAR_BG,
-                      )}
-                    >
-                      <PlanPrice
-                        price={priceOf(plan)}
-                        locale={locale}
-                        st={st}
-                        perMonth={perMonth}
-                        amountClassName="text-xl font-extrabold tabular-nums"
-                        contactClassName="text-base font-bold"
-                      />
-                    </td>
-                  ))}
-                </tr>
-
-                <tr className="border-b border-[hsl(var(--border-default))]">
-                  <td />
-                  {PLANS.map((plan) => (
-                    <td
-                      key={plan.key}
-                      className={cn(
-                        'px-4 sm:px-6 py-3 sm:py-4 text-center',
-                        plan.popular && POPULAR_BG,
-                      )}
-                    >
-                      <button
-                        type="button"
-                        onClick={onNavigateLogin}
-                        className={cn(
-                          'w-full rounded-xl py-2 sm:py-2.5 text-xs sm:text-sm font-semibold min-h-[40px] sm:min-h-[44px] transition-all duration-200',
-                          plan.popular
-                            ? 'text-white bg-[var(--gradient-brand)] hover:opacity-90'
-                            : 'border border-[hsl(var(--border-default))] text-[hsl(var(--fg-primary))] hover:bg-[hsl(var(--surface-muted))]',
-                        )}
-                      >
-                        {st(`landing.pricing.${plan.key}.cta`, plan.ctaFallback)}
-                      </button>
-                    </td>
                   ))}
                 </tr>
               </thead>
@@ -542,7 +498,7 @@ export default function PricingScene(props: PricingSceneProps) {
                     <tr className="border-b border-[hsl(var(--border-default))]">
                       <td
                         colSpan={4}
-                        className="px-4 sm:px-6 py-2.5 sm:py-3 text-[10px] sm:text-xs font-semibold uppercase tracking-[0.15em] text-[hsl(var(--fg-tertiary))]"
+                        className="px-4 sm:px-6 py-2.5 sm:py-3 text-xs font-semibold uppercase tracking-[0.15em] text-[hsl(var(--fg-tertiary))]"
                       >
                         {st(`landing.pricing.group.${group.groupKey}`, group.fallbackGroup)}
                       </td>
@@ -558,7 +514,7 @@ export default function PricingScene(props: PricingSceneProps) {
                       >
                         <th
                           scope="row"
-                          className="px-4 sm:px-6 py-2.5 sm:py-3 text-[10px] sm:text-xs lg:text-sm font-normal text-[hsl(var(--fg-secondary))] text-start"
+                          className="px-4 sm:px-6 py-2.5 sm:py-3 text-sm font-normal text-[hsl(var(--fg-secondary))] text-start"
                         >
                           {st(`landing.pricing.row.${row.labelKey}`, row.fallback)}
                         </th>
@@ -570,7 +526,7 @@ export default function PricingScene(props: PricingSceneProps) {
                               PLANS[j]?.popular && POPULAR_BG,
                             )}
                           >
-                            <Cell value={val} />
+                            <Cell value={val} locale={locale} st={st} />
                           </td>
                         ))}
                       </tr>

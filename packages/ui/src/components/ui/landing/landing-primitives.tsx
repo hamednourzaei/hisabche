@@ -12,14 +12,31 @@
 // ============================================
 
 import type { ReactNode } from 'react'
+import { ArrowLeft, ArrowRight } from 'lucide-react'
 
 import { cn } from '../../../lib/utils'
 
 /** One content width for every landing section. */
 export const LANDING_CONTAINER = 'mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8'
 
-/** Vertical rhythm shared by the full sections. */
-export const LANDING_SECTION = 'relative py-16 sm:py-24'
+/**
+ * Vertical rhythm shared by the full sections — MOBILE FIRST.
+ * The default is the phone: 40px. Desktop gaps (96px) on a 360px screen only
+ * add scrolling, so they arrive at `lg`, not by proportion.
+ */
+export const LANDING_SECTION = 'relative py-10 sm:py-16 lg:py-24'
+
+/**
+ * Type scale. Defaults are the phone sizes, chosen for Persian script at 360px
+ * (a 30px h2 broke a four-word title over two lines); larger steps are opt-in.
+ */
+export const LANDING_TYPE = {
+  h1: 'text-[1.875rem] leading-[1.25] sm:text-5xl sm:leading-[1.2] lg:text-6xl',
+  h2: 'text-[1.5rem] leading-snug sm:text-3xl lg:text-4xl',
+  h3: 'text-lg leading-snug sm:text-2xl lg:text-3xl',
+  lead: 'text-base leading-relaxed sm:text-lg',
+  body: 'text-sm leading-relaxed',
+} as const
 
 /**
  * A faint dot grid, faded out towards the edges. Pure CSS — no SVG, no image.
@@ -74,20 +91,39 @@ export function SectionHeader({
   className?: string | undefined
 }) {
   return (
-    <div className={cn('mx-auto mb-12 max-w-2xl text-center sm:mb-16', className)}>
+    <div className={cn('mx-auto mb-8 max-w-2xl text-center sm:mb-12 lg:mb-16', className)}>
       {label ? (
         <div className="mb-4">
           <SectionLabel>{label}</SectionLabel>
         </div>
       ) : null}
-      <h2 className="mb-4 text-balance text-3xl font-bold tracking-tight text-[hsl(var(--fg-primary))] sm:text-4xl">
+      <h2
+        className={cn(
+          'mb-3 text-balance font-bold tracking-tight text-[hsl(var(--fg-primary))] sm:mb-4',
+          LANDING_TYPE.h2,
+        )}
+      >
         {title}
       </h2>
       {description ? (
-        <p className="text-pretty text-base leading-relaxed text-[hsl(var(--fg-secondary))] sm:text-lg">
+        <p className={cn('text-pretty text-[hsl(var(--fg-secondary))]', LANDING_TYPE.lead)}>
           {description}
         </p>
       ) : null}
     </div>
+  )
+}
+
+/**
+ * An arrow that points FORWARD in the reading direction: ← in fa/af, → in en.
+ * The icon is SELECTED by `dir`, not mirrored with a transform — a mirrored
+ * glyph and a rotated one are different shapes.
+ */
+export function ForwardArrow({ className }: { className?: string | undefined }) {
+  return (
+    <>
+      <ArrowLeft className={cn('size-4 ltr:hidden', className)} aria-hidden="true" />
+      <ArrowRight className={cn('size-4 rtl:hidden', className)} aria-hidden="true" />
+    </>
   )
 }

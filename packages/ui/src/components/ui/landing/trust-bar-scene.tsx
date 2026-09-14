@@ -65,7 +65,7 @@ const INDUSTRIES = [
 
 function IndustryChip({ label }: { label: string }) {
   return (
-    <span className="inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-[9px] sm:text-xs lg:text-sm font-medium text-[hsl(var(--fg-secondary))] bg-[hsl(var(--surface-muted))] border border-[hsl(var(--border-default))] whitespace-nowrap hover:border-[hsl(var(--color-primary)/0.3)] hover:text-[hsl(var(--fg-primary))] transition-colors duration-200">
+    <span className="inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium text-[hsl(var(--fg-secondary))] bg-[hsl(var(--surface-muted))] border border-[hsl(var(--border-default))] whitespace-nowrap hover:border-[hsl(var(--color-primary)/0.3)] hover:text-[hsl(var(--fg-primary))] transition-colors duration-200">
       {label}
     </span>
   )

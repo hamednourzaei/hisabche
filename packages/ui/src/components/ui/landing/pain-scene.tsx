@@ -1,10 +1,18 @@
 // packages/ui/src/components/ui/landing/pain-scene.tsx
 'use client'
 
+import { formatNumber } from '@hisabche/formatting'
 import { useSceneObserver } from './use-scene-observer'
+import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { cn } from '../../../lib/utils'
-import { ArrowLeft, Clock } from 'lucide-react'
-import { LANDING_CONTAINER, LANDING_SECTION, SectionHeader } from './landing-primitives'
+import { Clock } from 'lucide-react'
+import {
+  ForwardArrow,
+  LANDING_CONTAINER,
+  LANDING_SECTION,
+  LANDING_TYPE,
+  SectionLabel,
+} from './landing-primitives'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    PainScene v13 — Card grid (layout adapted from shadcn-dashboard-landing-template, MIT)
@@ -15,7 +23,6 @@ export interface PainSceneProps {
 }
 
 interface PainItem {
-  number: string
   /** Translation key for the timeline chip; the literal below is the fa fallback. */
   timelineKey: string
   timelineLabel: string
@@ -23,13 +30,13 @@ interface PainItem {
   headlineFallback: string
   descriptionKey: string
   descriptionFallback: string
-  intensity: 1 | 2 | 3 | 4 | 5
+  /** Carries the «hours lost» figure under its description. */
+  showsTimeStat?: boolean
   climax?: boolean
 }
 
 const PAIN_POINTS: PainItem[] = [
   {
-    number: '۰۱',
     timelineKey: 'landing.painTimeline1',
     timelineLabel: 'امروز صبح',
     headlineKey: 'landing.pain1Title',
@@ -37,10 +44,8 @@ const PAIN_POINTS: PainItem[] = [
     descriptionKey: 'landing.pain1Desc',
     descriptionFallback:
       'تمام حساب‌هایت را در یک دفتر می‌نویسی. یک روز دفتر پاره، خیس یا گم می‌شود — سال‌ها اطلاعات در چند دقیقه از بین می‌رود.',
-    intensity: 1,
   },
   {
-    number: '۰۲',
     timelineKey: 'landing.painTimeline2',
     timelineLabel: 'آخر شب',
     headlineKey: 'landing.pain2Title',
@@ -48,10 +53,8 @@ const PAIN_POINTS: PainItem[] = [
     descriptionKey: 'landing.pain2Desc',
     descriptionFallback:
       'خسته‌ای، اما نیم ساعت جمع و تفریق می‌کنی. یک اشتباه کوچک یعنی سود امروز را اشتباه می‌بینی و تصمیم غلط می‌گیری.',
-    intensity: 1,
   },
   {
-    number: '۰۳',
     timelineKey: 'landing.painTimeline3',
     timelineLabel: 'یک هفته بعد',
     headlineKey: 'landing.pain3Title',
@@ -59,10 +62,8 @@ const PAIN_POINTS: PainItem[] = [
     descriptionKey: 'landing.pain3Desc',
     descriptionFallback:
       'مشتری نسیه می‌برد، تو ثبت می‌کنی. یک هفته بعد نه تو به یاد می‌آوری، نه او. پولت در هوا می‌ماند.',
-    intensity: 2,
   },
   {
-    number: '۰۴',
     timelineKey: 'landing.painTimeline4',
     timelineLabel: 'آخر ماه',
     headlineKey: 'landing.pain4Title',
@@ -70,10 +71,8 @@ const PAIN_POINTS: PainItem[] = [
     descriptionKey: 'landing.pain4Desc',
     descriptionFallback:
       'فقط پول صندوق را می‌بینی. نمی‌دانی چه مقدار از فروش واقعاً سود بوده و کجا ضرر کرده‌ای.',
-    intensity: 3,
   },
   {
-    number: '۰۵',
     timelineKey: 'landing.painTimeline5',
     timelineLabel: 'وسط هفته',
     headlineKey: 'landing.pain5Title',
@@ -81,10 +80,8 @@ const PAIN_POINTS: PainItem[] = [
     descriptionKey: 'landing.pain5Desc',
     descriptionFallback:
       'مشتری جنس می‌خواهد، ولی همان لحظه می‌فهمی کالا تمام شده. فروش از دست می‌رود، اعتبارت خدشه‌دار می‌شود.',
-    intensity: 3,
   },
   {
-    number: '۰۶',
     timelineKey: 'landing.painTimeline6',
     timelineLabel: 'هر روز',
     headlineKey: 'landing.pain6Title',
@@ -92,10 +89,9 @@ const PAIN_POINTS: PainItem[] = [
     descriptionKey: 'landing.pain6Desc',
     descriptionFallback:
       'هیچ ثبت دقیقی نیست. نمی‌دانی چه کسی چه فروخته، چه مبلغی گرفته، یا چه چیزی کم شده است.',
-    intensity: 3,
   },
   {
-    number: '۰۷',
+    showsTimeStat: true,
     timelineKey: 'landing.painTimeline7',
     timelineLabel: 'هر روز',
     headlineKey: 'landing.pain7Title',
@@ -103,10 +99,8 @@ const PAIN_POINTS: PainItem[] = [
     descriptionKey: 'landing.pain7Desc',
     descriptionFallback:
       'به جای فروش بیشتر، وقتت تلف نوشتن، جمع زدن و جستجوی اطلاعات می‌شود. روزانه ۲ ساعت، سالانه ۷۳۰ ساعت.',
-    intensity: 4,
   },
   {
-    number: '۰۸',
     timelineKey: 'landing.painTimeline8',
     timelineLabel: 'همیشه در نگرانی',
     headlineKey: 'landing.pain8Title',
@@ -114,12 +108,13 @@ const PAIN_POINTS: PainItem[] = [
     descriptionKey: 'landing.pain8Desc',
     descriptionFallback:
       'خراب شدن گوشی، گم شدن دفتر، یا پاک شدن فایل اکسل می‌تواند کل کسب‌وکارت را نابود کند.',
-    intensity: 5,
     climax: true,
   },
 ]
 
 export default function PainScene({ t }: PainSceneProps) {
+  // Digits follow the reader's language: «۱» in fa/af, «1» in en.
+  const locale = useIntlLocale()
   // Kept for the section navigator (it reads which scene is in view).
   const { ref } = useSceneObserver<HTMLDivElement>({ threshold: 0.3, narrativeState: 'confusion' })
 
@@ -130,71 +125,103 @@ export default function PainScene({ t }: PainSceneProps) {
   return (
     <section id="pain" ref={ref} data-narrative="confusion" className={LANDING_SECTION}>
       <div className={LANDING_CONTAINER}>
-        <SectionHeader
-          label={t('landing.painLabel', 'دنیای بدون حسابچه')}
-          title={t('landing.painTitle', 'هر روز که می‌گذرد، کنترل کمتری داری')}
-        />
-
-        <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {PAIN_POINTS.map((item) => (
-            <li
-              key={item.number}
+        {/* MOBILE FIRST: heading → list → conclusion, one column. From `lg`
+            the template's About layout: heading and conclusion share the
+            narrow column, the list takes the wide one across both rows. */}
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:gap-x-16 lg:gap-y-8">
+          <div className="lg:col-start-1 lg:row-start-1">
+            <SectionLabel>{t('landing.painLabel', 'دنیای بدون حسابچه')}</SectionLabel>
+            <h2
               className={cn(
-                'flex flex-col rounded-xl border p-5 sm:p-6',
-                item.climax
-                  ? 'border-[hsl(var(--color-primary)/0.35)] bg-[hsl(var(--color-primary)/0.06)]'
-                  : 'border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated)/0.6)]',
+                'mt-3 text-balance font-bold tracking-tight text-[hsl(var(--fg-primary))] sm:mt-4',
+                LANDING_TYPE.h2,
               )}
             >
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <span
-                  className={cn(
-                    'flex size-9 items-center justify-center rounded-full text-sm font-bold tabular-nums',
-                    item.climax
-                      ? 'bg-[hsl(var(--color-primary)/0.15)] text-[hsl(var(--color-primary))]'
-                      : 'bg-[hsl(var(--color-destructive)/0.1)] text-[hsl(var(--color-destructive))]',
-                  )}
-                >
-                  {item.number}
-                </span>
-                <span className="text-xs text-[hsl(var(--fg-tertiary))]">
-                  {t(item.timelineKey, item.timelineLabel)}
-                </span>
-              </div>
-              <h3 className="mb-2 text-base font-semibold text-[hsl(var(--fg-primary))]">
-                {t(item.headlineKey, item.headlineFallback)}
-              </h3>
-              <p className="text-sm leading-relaxed text-[hsl(var(--fg-secondary))]">
-                {t(item.descriptionKey, item.descriptionFallback)}
-              </p>
-              {item.number === '۰۷' && (
-                <p className="mt-auto flex items-center gap-1.5 pt-4 text-xs text-[hsl(var(--fg-tertiary))]">
-                  <Clock className="size-3.5" aria-hidden="true" />
-                  {t('landing.pain7Stat', '۲ ساعت در روز · ۷۳۰ ساعت در سال')}
-                </p>
-              )}
-            </li>
-          ))}
-        </ol>
+              {t('landing.painTitle', 'هر روز که می‌گذرد، کنترل کمتری داری')}
+            </h2>
+          </div>
 
-        <div className="mx-auto mt-14 max-w-xl text-center">
-          <p className="mb-3 text-xl font-bold text-[hsl(var(--fg-primary))] sm:text-2xl">
-            {t('landing.painClimaxTitle', 'دیگر ادامه دادن این روش اشتباه است')}
-          </p>
-          <p className="mb-6 text-sm leading-relaxed text-[hsl(var(--fg-secondary))] sm:text-base">
-            {t(
-              'landing.painClimaxDesc',
-              'تو هر روز بیشتر کار می‌کنی، اما هر روز کنترل کمتری روی کسب‌وکارت داری. وقت تغییر است.',
+          {/* One grouped list of compact rows on phones (a card per item was
+              1634px of scrolling); separate cards in two columns from `sm`. */}
+          <ol
+            className={cn(
+              'divide-y divide-[hsl(var(--border-default)/0.7)] overflow-hidden rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated)/0.6)]',
+              'sm:grid sm:grid-cols-2 sm:gap-4 sm:divide-y-0 sm:overflow-visible sm:border-0 sm:bg-transparent',
+              'lg:col-start-2 lg:row-span-2 lg:row-start-1',
             )}
-          </p>
-          <button
-            type="button"
-            onClick={scrollToSolution}
-            className="btn-secondary inline-flex min-h-11 items-center gap-2 rounded-xl px-6 text-sm"
           >
-            {t('landing.painSeeSolution', 'حسابچه چطور کمک می‌کند')}
-            <ArrowLeft className="size-4 rtl:rotate-180" aria-hidden="true" />
-          </button>
+            {PAIN_POINTS.map((item, index) => (
+              <li
+                key={item.headlineKey}
+                className={cn(
+                  'flex gap-3 px-4 py-4',
+                  'sm:flex-col sm:gap-0 sm:rounded-xl sm:border sm:p-6',
+                  item.climax
+                    ? 'bg-[hsl(var(--color-primary)/0.06)] sm:border-[hsl(var(--color-primary)/0.35)]'
+                    : 'sm:border-[hsl(var(--border-default))] sm:bg-[hsl(var(--surface-elevated)/0.6)]',
+                )}
+              >
+                <div className="sm:mb-4 sm:flex sm:items-center sm:justify-between sm:gap-3">
+                  <span
+                    className={cn(
+                      'flex size-8 shrink-0 items-center justify-center rounded-full text-sm font-bold tabular-nums sm:size-9',
+                      item.climax
+                        ? 'bg-[hsl(var(--color-primary)/0.15)] text-[hsl(var(--color-primary))]'
+                        : 'bg-[hsl(var(--color-destructive)/0.1)] text-[hsl(var(--color-destructive))]',
+                    )}
+                  >
+                    {formatNumber(index + 1, locale)}
+                  </span>
+                  <span className="hidden text-xs text-[hsl(var(--fg-tertiary))] sm:inline">
+                    {t(item.timelineKey, item.timelineLabel)}
+                  </span>
+                </div>
+                <div className="min-w-0 sm:flex sm:flex-1 sm:flex-col">
+                  {/* On phones the timeline chip rides above the headline. */}
+                  <p className="text-xs text-[hsl(var(--fg-tertiary))] sm:hidden">
+                    {t(item.timelineKey, item.timelineLabel)}
+                  </p>
+                  <h3 className="mb-1 text-[0.9375rem] font-semibold text-[hsl(var(--fg-primary))] sm:mb-2 sm:text-base">
+                    {t(item.headlineKey, item.headlineFallback)}
+                  </h3>
+                  <p className={cn('text-[hsl(var(--fg-secondary))]', LANDING_TYPE.body)}>
+                    {t(item.descriptionKey, item.descriptionFallback)}
+                  </p>
+                  {item.showsTimeStat && (
+                    <p className="mt-2 flex items-center gap-1.5 text-xs text-[hsl(var(--fg-tertiary))] sm:mt-auto sm:pt-4">
+                      <Clock className="size-3.5" aria-hidden="true" />
+                      {t('landing.pain7Stat', '۲ ساعت در روز · ۷۳۰ ساعت در سال')}
+                    </p>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ol>
+
+          <div className="lg:col-start-1 lg:row-start-2 lg:self-start">
+            <p className="mb-2 text-base font-semibold text-[hsl(var(--fg-primary))] sm:mb-3 sm:text-lg">
+              {t('landing.painClimaxTitle', 'دیگر ادامه دادن این روش اشتباه است')}
+            </p>
+            <p
+              className={cn(
+                'mb-5 text-pretty text-[hsl(var(--fg-secondary))] sm:mb-8',
+                LANDING_TYPE.lead,
+              )}
+            >
+              {t(
+                'landing.painClimaxDesc',
+                'تو هر روز بیشتر کار می‌کنی، اما هر روز کنترل کمتری روی کسب‌وکارت داری. وقت تغییر است.',
+              )}
+            </p>
+            <button
+              type="button"
+              onClick={scrollToSolution}
+              className="btn-secondary inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-6 text-sm sm:w-auto"
+            >
+              {t('landing.painSeeSolution', 'حسابچه چطور کمک می‌کند')}
+              <ForwardArrow />
+            </button>
+          </div>
         </div>
       </div>
     </section>

@@ -85,17 +85,24 @@ export default function SecurityScene({ t }: SecuritySceneProps) {
           )}
         />
 
-        <ul className="grid gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid gap-x-8 gap-y-6 sm:grid-cols-2 sm:gap-y-10 lg:grid-cols-3">
           {PILLARS.map(({ icon: Icon, key, title, bullets }) => (
-            <li key={key} className="flex gap-4">
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--color-primary)/0.1)] text-[hsl(var(--color-primary))]">
+            <li key={key} className="flex gap-3 sm:gap-4">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--color-primary)/0.1)] text-[hsl(var(--color-primary))] sm:size-11">
                 <Icon className="size-5" aria-hidden="true" />
               </span>
               <div>
-                <h3 className="mb-2 text-base font-semibold text-[hsl(var(--fg-primary))]">
+                <h3 className="mb-1 text-base font-semibold text-[hsl(var(--fg-primary))] sm:mb-2">
                   {t(`landing.security.${key}.title`, title)}
                 </h3>
-                <ul className="space-y-1.5">
+                {/* Phones: the three points as one line — eighteen ticked rows
+                    were most of this section's 880px. The list from `sm`. */}
+                <p className="text-sm leading-relaxed text-[hsl(var(--fg-secondary))] sm:hidden">
+                  {bullets
+                    .map((bullet, j) => t(`landing.security.${key}.bullet${j + 1}`, bullet))
+                    .join(' · ')}
+                </p>
+                <ul className="hidden space-y-1.5 sm:block">
                   {bullets.map((bullet, j) => (
                     <li
                       key={j}

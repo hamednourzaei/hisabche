@@ -302,7 +302,10 @@
         "bestIf": "Several branches",
         "cta": "Talk to sales",
         "who": "Tell us if you want items added, removed or changed"
-      }
+      },
+      "month": "month",
+      "unlimited": "Unlimited",
+      "perMonthSuffix": "per month"
     },
     "dashboardLabel": "Product",
     "dashboardTitle": "This is what you'll see every day",
@@ -334,7 +337,7 @@
     "demoInventoryAlert": "Sunflower oil is running low",
     "demoReportsWeek": "This Week",
     "demoReportsGrowth": "+18% vs last week",
-    "trustBarLabel": "Trusted by every type of business",
+    "trustBarLabel": "Built for every type of business",
     "industry": {
       "retail": "Retail",
       "pharmacy": "Pharmacy",
@@ -443,7 +446,14 @@
       "start1Q": "Is Hisabche free?",
       "start1A": "Yes, the free version of Hisabche is completely free for one business and core features. You can purchase the business version for advanced features.",
       "related": {
-        "access": "User Management"
+        "access": "User Management",
+        "pricing": "See pricing",
+        "signup": "Start free",
+        "offlineFlow": "How offline works",
+        "security": "More about security",
+        "debt": "Customer debt",
+        "inventory": "Inventory management",
+        "reports": "Live reports"
       },
       "start2Q": "How do I start with Hisabche?",
       "start2A": "Just click the 'Start Free' button and enter your mobile number. No credit card is needed. After verifying your number, Hisabche is ready immediately.",
@@ -1149,9 +1159,56 @@
         "ctaBody": "Start free — every invoice carries its own accounting entry from the start."
       }
     },
-    "builtFor": "Built for businesses in Afghanistan",
+    "builtFor": "Built for businesses in Iran and Afghanistan",
     "capabilitiesDesc": "You can try every one of these right now",
-    "capabilitiesTitle": "What it does for you"
+    "capabilitiesTitle": "What it does for you",
+    "featureStatus": {
+      "active": "Available"
+    },
+    "factOffline": "Offline",
+    "factOfflineLabel": "Record sales with no internet",
+    "factLedger": "Double-entry",
+    "factLedgerLabel": "Real accounting, not a notebook",
+    "factMulti": "Multi-branch",
+    "factMultiLabel": "Separate or combined",
+    "factRtl": "Persian/Dari",
+    "factRtlLabel": "Right-to-left, Solar Hijri calendar",
+    "capability": {
+      "c1": {
+        "claim": "Works without internet, then syncs on its own",
+        "where": "Offline queue and conflict resolution"
+      },
+      "c2": {
+        "claim": "Every sale, purchase and payment posts a double-entry journal",
+        "where": "General ledger"
+      },
+      "c3": {
+        "claim": "Stock is calculated from real warehouse movements, not typed in",
+        "where": "Inventory"
+      },
+      "c4": {
+        "claim": "Each customer’s balance comes from the payments allocated to it",
+        "where": "Customers"
+      },
+      "c5": {
+        "claim": "Every figure you see traces back to its source document",
+        "where": "Reports"
+      },
+      "c6": {
+        "claim": "Multiple branches, with separate or combined reports",
+        "where": "Accounting"
+      },
+      "c7": {
+        "claim": "Each employee can access exactly what you allow",
+        "where": "Permission matrix"
+      },
+      "c8": {
+        "claim": "A full backup of your data, whenever you want",
+        "where": "Settings"
+      }
+    },
+    "menuOpen": "Open menu",
+    "menuClose": "Close menu"
   },
   "nav": {
     "dashboard": "Dashboard",

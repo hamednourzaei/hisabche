@@ -37,7 +37,7 @@ interface FaqCategory {
 const FAQ_CATEGORIES: FaqCategory[] = [
   {
     id: 'start',
-    titleKey: 'faq.category.start',
+    titleKey: 'landing.faq.category.start',
     fallbackTitle: 'شروع کار',
     items: [
       {
@@ -48,7 +48,7 @@ const FAQ_CATEGORIES: FaqCategory[] = [
         fallbackAnswer:
           'بله، نسخه رایگان حسابچه برای یک کسب‌وکار و امکانات اصلی کاملاً رایگان است. برای امکانات پیشرفته می‌توانید نسخه تجاری را تهیه کنید.',
         relatedLink: '#pricing',
-        relatedLabelKey: 'faq.related.pricing',
+        relatedLabelKey: 'landing.faq.related.pricing',
         relatedFallback: 'مشاهده قیمت‌ها',
       },
       {
@@ -59,14 +59,14 @@ const FAQ_CATEGORIES: FaqCategory[] = [
         fallbackAnswer:
           'کافی است روی دکمه «شروع رایگان» کلیک کنید و شماره موبایل خود را وارد کنید. هیچ کارت بانکی لازم ندارید. بعد از تأیید شماره، حسابچه بلافاصله آماده است.',
         relatedLink: '#hero',
-        relatedLabelKey: 'faq.related.signup',
+        relatedLabelKey: 'landing.faq.related.signup',
         relatedFallback: 'شروع رایگان',
       },
     ],
   },
   {
     id: 'offline',
-    titleKey: 'faq.category.offline',
+    titleKey: 'landing.faq.category.offline',
     fallbackTitle: 'آفلاین و همگام‌سازی',
     items: [
       {
@@ -81,7 +81,7 @@ const FAQ_CATEGORIES: FaqCategory[] = [
         // exists, so the link was a dead in-page jump. #security is the section
         // that actually covers offline storage and sync.
         relatedLink: '#security',
-        relatedLabelKey: 'faq.related.offlineFlow',
+        relatedLabelKey: 'landing.faq.related.offlineFlow',
         relatedFallback: 'نحوه کار آفلاین',
       },
       {
@@ -92,7 +92,7 @@ const FAQ_CATEGORIES: FaqCategory[] = [
         fallbackAnswer:
           'خیر. تمام اطلاعات شما در سرور امن حسابچه بک‌آپ می‌شود. همچنین نسخه‌ای امن روی خود گوشی ذخیره می‌شود. پس با خیال راحت کار کنید.',
         relatedLink: '#security',
-        relatedLabelKey: 'faq.related.security',
+        relatedLabelKey: 'landing.faq.related.security',
         relatedFallback: 'بیشتر درباره امنیت',
       },
       {
@@ -107,7 +107,7 @@ const FAQ_CATEGORIES: FaqCategory[] = [
   },
   {
     id: 'accounting',
-    titleKey: 'faq.category.accounting',
+    titleKey: 'landing.faq.category.accounting',
     fallbackTitle: 'حسابداری و فروش',
     items: [
       {
@@ -118,7 +118,7 @@ const FAQ_CATEGORIES: FaqCategory[] = [
         fallbackAnswer:
           'هنگام ثبت فروش، گزینه «نسیه» را انتخاب کنید. حسابچه به‌طور خودکار بدهی مشتری را ثبت می‌کند و در موعد مقرر به شما یادآوری می‌فرستد.',
         relatedLink: '#features',
-        relatedLabelKey: 'faq.related.debt',
+        relatedLabelKey: 'landing.faq.related.debt',
         relatedFallback: 'ویژگی بدهکاران',
       },
       {
@@ -129,7 +129,7 @@ const FAQ_CATEGORIES: FaqCategory[] = [
         fallbackAnswer:
           'بله. هر محصولی که تعریف کنید، موجودی آن به‌طور خودکار با هر فروش کاهش می‌یابد. همچنین قبل از تمام شدن کالا به شما هشدار داده می‌شود.',
         relatedLink: '#features',
-        relatedLabelKey: 'faq.related.inventory',
+        relatedLabelKey: 'landing.faq.related.inventory',
         relatedFallback: 'مدیریت انبار',
       },
       {
@@ -140,14 +140,14 @@ const FAQ_CATEGORIES: FaqCategory[] = [
         fallbackAnswer:
           'در داشبورد حسابچه، نمودار سود و زیان به‌طور لحظه‌ای قابل مشاهده است. می‌توانید سود روزانه، هفتگی و ماهانه خود را ببینید.',
         relatedLink: '#features',
-        relatedLabelKey: 'faq.related.reports',
+        relatedLabelKey: 'landing.faq.related.reports',
         relatedFallback: 'گزارش‌های لحظه‌ای',
       },
     ],
   },
   {
     id: 'security',
-    titleKey: 'faq.category.security',
+    titleKey: 'landing.faq.category.security',
     fallbackTitle: 'امنیت و پشتیبانی',
     items: [
       {
@@ -158,7 +158,7 @@ const FAQ_CATEGORIES: FaqCategory[] = [
         fallbackAnswer:
           'تمام داده‌ها در حال انتقال و ذخیره‌سازی رمزنگاری می‌شوند. همچنین نسخه پشتیبان روزانه گرفته می‌شود و شما مالک کامل داده‌های خود هستید.',
         relatedLink: '#security',
-        relatedLabelKey: 'faq.related.security',
+        relatedLabelKey: 'landing.faq.related.security',
         relatedFallback: 'جزئیات امنیت',
       },
       {
@@ -169,14 +169,14 @@ const FAQ_CATEGORIES: FaqCategory[] = [
         fallbackAnswer:
           'بسته به پلن، می‌توانید کاربران متعدد با دسترسی‌های متفاوت اضافه کنید. حتی در پلن رایگان نیز می‌توانید یک حسابدار اضافی تعریف کنید.',
         relatedLink: '#features',
-        relatedLabelKey: 'faq.related.access',
+        relatedLabelKey: 'landing.faq.related.access',
         relatedFallback: 'مدیریت کاربران',
       },
     ],
   },
   {
     id: 'device',
-    titleKey: 'faq.category.device',
+    titleKey: 'landing.faq.category.device',
     fallbackTitle: 'دستگاه و سازگاری',
     items: [
       {
@@ -207,7 +207,7 @@ const FAQ_CATEGORIES: FaqCategory[] = [
   },
   {
     id: 'payment',
-    titleKey: 'faq.category.payment',
+    titleKey: 'landing.faq.category.payment',
     fallbackTitle: 'هزینه و اشتراک',
     items: [
       {
@@ -223,7 +223,7 @@ const FAQ_CATEGORIES: FaqCategory[] = [
         fallbackAnswer:
           'پلن رایگان برای شروع کاملاً رایگان است. پلن حرفه‌ای ۴۹۹ افغانی در ماه است و برای کسب‌وکارهایی مناسب است که فروش روزانه دارند. پلن تجاری برای چند شعبه به‌صورت اختصاصی قیمت‌گذاری می‌شود — با تیم فروش تماس بگیرید.',
         relatedLink: '#pricing',
-        relatedLabelKey: 'faq.related.pricing',
+        relatedLabelKey: 'landing.faq.related.pricing',
         relatedFallback: 'مشاهده تعرفه‌ها',
       },
       {
@@ -289,7 +289,7 @@ function FaqAccordionItem({
             {item.relatedLink && (
               <a
                 href={item.relatedLink}
-                className="mt-2 inline-flex items-center gap-1 text-[10px] sm:text-xs font-medium text-[hsl(var(--color-primary))] hover:underline"
+                className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-[hsl(var(--color-primary))] hover:underline"
               >
                 {item.relatedFallback ?? 'بیشتر بدانید'}
                 <ExternalLink className="size-2.5 sm:size-3" />

@@ -61,11 +61,13 @@ describe('top-nav is crawlable', () => {
   })
 
   it('has no <button> used purely for navigation in the landing header', () => {
-    // Only the dashboard variant's sign-out — a genuine action, not navigation
-    // — may remain a button.
+    // Two genuine actions may be buttons, and nothing else: the dashboard
+    // variant's sign-out, and the phone menu's drawer trigger (it opens a
+    // panel; every destination inside the drawer is still an <a> / <Link>).
     const buttons = [...topNav.matchAll(/<button\b/g)]
-    expect(buttons).toHaveLength(1)
+    expect(buttons).toHaveLength(2)
     expect(topNav).toMatch(/onClick=\{onLogout\}/)
+    expect(topNav).toMatch(/<SheetTrigger asChild>\s*<button/)
   })
 
   it('derives the locale from segments this app actually serves', () => {

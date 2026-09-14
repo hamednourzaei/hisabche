@@ -34,7 +34,6 @@ const sectionFallbacks: Record<string, Record<string, string>> = {
   en: {
     hero: 'Home',
     pain: 'Problem',
-    transform: 'Solution',
     features: 'Features',
     testimonials: 'Trust',
     cta: 'Start',
@@ -42,7 +41,6 @@ const sectionFallbacks: Record<string, Record<string, string>> = {
   fa: {
     hero: 'خانه',
     pain: 'مشکل',
-    transform: 'راه‌حل',
     features: 'امکانات',
     testimonials: 'اعتماد',
     cta: 'شروع',
@@ -50,7 +48,6 @@ const sectionFallbacks: Record<string, Record<string, string>> = {
   af: {
     hero: 'خانه',
     pain: 'مشکل',
-    transform: 'راه حل',
     features: 'امکانات',
     testimonials: 'اعتماد',
     cta: 'شروع',
@@ -92,11 +89,6 @@ export function LandingPage() {
         narrative: 'confusion' as const,
       },
       {
-        id: 'transform' as const,
-        label: safeT('landing.navTransform', fallbacks?.transform ?? 'Solution'),
-        narrative: 'clarity' as const,
-      },
-      {
         id: 'features' as const,
         label: safeT('landing.navFeatures', fallbacks?.features ?? 'Features'),
         narrative: 'confidence' as const,
@@ -132,8 +124,14 @@ export function LandingPage() {
           (`pricing-scene`'s 800px table, `pain-scene`'s translate-x-full
           connector) are both `hidden sm:block` and so are not on a phone at
           all. What this guarantees is that no element CAN cause it, which for
-          a landing page is the correct rule regardless of which one did. */}
-      <div className="min-h-screen overflow-x-hidden bg-[hsl(var(--surface-base))]">
+          a landing page is the correct rule regardless of which one did.
+
+          ⚠️ `clip`, NOT `hidden`. `overflow-x: hidden` turns this wrapper into a
+          scroll container, and a `position: sticky` descendant sticks to its
+          nearest scroll container — so the header scrolled away with the page
+          (measured at 360px: top −3520 after a section jump). `clip` cuts the
+          overflow the same way without creating one. */}
+      <div className="min-h-screen overflow-x-clip bg-[hsl(var(--surface-base))]">
         <TopNav variant="landing" localePrefix={locale} />
 
         <main>
@@ -161,7 +159,7 @@ export function LandingPage() {
             <SocialScene t={safeT} />
           </NavigationRegistry>
 
-          <PricingScene t={safeT} onNavigateLogin={navigateSignup} />
+          <PricingScene />
 
           <FaqScene t={safeT} />
 

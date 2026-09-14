@@ -109,19 +109,21 @@ const CAPABILITIES: Capability[] = [
 
 function CapabilityCard({ item }: { item: Capability }) {
   return (
-    <figure className="flex h-full flex-col rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated)/0.6)] p-5 sm:p-6">
+    <figure className="flex h-full gap-3 px-4 py-4 sm:flex-col sm:gap-0 sm:rounded-xl sm:border sm:border-[hsl(var(--border-default))] sm:bg-[hsl(var(--surface-elevated)/0.6)] sm:p-6">
       {/* A tick, not five stars. A star is a RATING, and there is no rating
           source in this product — inventing one is the defect this file was
           rewritten to remove. */}
-      <span className="mb-4 inline-flex size-8 items-center justify-center rounded-full bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))]">
+      <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--color-success)/0.12)] text-[hsl(var(--color-success))] sm:mb-4 sm:size-8">
         <Check className="size-4" aria-hidden="true" />
       </span>
-      <blockquote className="mb-4 text-sm leading-relaxed text-[hsl(var(--fg-primary))] sm:text-base">
-        {item.claim}
-      </blockquote>
-      <figcaption className="mt-auto border-t border-[hsl(var(--border-default)/0.7)] pt-3 text-xs text-[hsl(var(--fg-tertiary))]">
-        {item.where}
-      </figcaption>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <blockquote className="mb-1 text-sm leading-relaxed text-[hsl(var(--fg-primary))] sm:mb-4 sm:text-base">
+          {item.claim}
+        </blockquote>
+        <figcaption className="text-xs text-[hsl(var(--fg-tertiary))] sm:mt-auto sm:border-t sm:border-[hsl(var(--border-default)/0.7)] sm:pt-3">
+          {item.where}
+        </figcaption>
+      </div>
     </figure>
   )
 }
@@ -142,11 +144,13 @@ export default function SocialScene({ t }: SocialSceneProps) {
         {/* ⚠️ No rating badge: «۴.۹ · ۳۴۰+ کسب‌وکار فعال» had no rating source
             and no counter. The label says what is true instead. */}
         <SectionHeader
-          label={t('landing.builtFor', 'ساخته‌شده برای کسب‌وکارهای افغانستان')}
+          label={t('landing.builtFor', 'ساخته‌شده برای کسب‌وکارهای ایران و افغانستان')}
           title={t('landing.capabilitiesTitle', 'چه کاری برایتان انجام می‌دهد')}
           description={t('landing.capabilitiesDesc', 'هر مورد را می‌توانید همین حالا امتحان کنید')}
         />
-        <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* Grouped compact rows on phones (eight stacked cards were 1511px);
+            cards in a grid from `sm`. */}
+        <ul className="divide-y divide-[hsl(var(--border-default)/0.7)] overflow-hidden rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated)/0.6)] sm:grid sm:grid-cols-2 sm:gap-4 sm:divide-y-0 sm:overflow-visible sm:border-0 sm:bg-transparent lg:grid-cols-4">
           {items.map((item) => (
             <li key={item.key}>
               <CapabilityCard item={item} />
