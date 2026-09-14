@@ -8,6 +8,7 @@ import { scopes } from './authorization/scope.service'
 import { CreateProduct, UpdateProduct, ProductFilters } from '@hisabche/validation'
 import { summarizeStock, type StockSummaryRow } from './inventory/stock-summary.domain'
 import { DatabaseError, NotFoundError } from '../errors/database.error'
+import { ValidationError } from '../errors/validation.error'
 import { mapProduct } from '../utils/product.mapper'
 import { memoryCache } from '../utils/pagination'
 import type { TenancyContext } from './tenancy.service'
@@ -292,13 +293,50 @@ export class ProductService {
     if (data.category !== undefined) updates.category = data.category
     if (data.description !== undefined) updates.description = data.description
     if (data.imageUrl !== undefined) updates.image_url = data.imageUrl
-    if (data.quantity !== undefined) updates.quantity = data.quantity
+    // ⚠️ QUANTITY IS NOT WRITTEN HERE. Since Phase C `products.quantity` is a
+    // projection of `stock_movements` (trigger stock_movements_project). A
+    // direct write left the movement history — the stock drawer, the per-
+    // warehouse stock, a later recount — disagreeing with the number, and a
+    // refill recorded nowhere. The edit becomes an `adjustment` movement for the
+    // difference; the trigger moves the stock.
+    const quantityTarget = data.quantity
     if (data.unit !== undefined) updates.unit = data.unit
     if (data.minStockLevel !== undefined) updates.min_stock_level = data.minStockLevel
     if (data.buyPrice !== undefined) updates.buy_price = data.buyPrice
     if (data.sellPrice !== undefined) updates.sell_price = data.sellPrice
     if (data.wholesalePrice !== undefined) updates.wholesale_price = data.wholesalePrice
     if (data.isActive !== undefined) updates.is_active = data.isActive
+
+    if (quantityTarget !== undefined) {
+      const target = Number(quantityTarget)
+      if (!Number.isFinite(target)) throw new ValidationError('PRODUCT_QUANTITY_INVALID')
+
+      const { data: current, error: readError } = await supabase
+        .from('products')
+        .select('quantity')
+        .eq('id', id)
+        .eq('workspace_id', workspaceId)
+        .maybeSingle()
+      if (readError) throw new DatabaseError('Failed to read product stock', readError)
+      if (!current) throw new NotFoundError('Product')
+
+      const delta = target - (Number((current as { quantity: unknown }).quantity) || 0)
+      if (delta !== 0) {
+        const { error: movementError } = await supabase.from('stock_movements').insert({
+          product_id: id,
+          type: 'adjustment',
+          quantity: delta,
+          reference_type: 'product_edit',
+          reference_id: id,
+          workspace_id: workspaceId,
+          user_id: ctx.userId,
+          notes: `stock set to ${target} from the product page`,
+        })
+        // Not swallowed: a stock edit that did not land must not report success.
+        if (movementError)
+          throw new DatabaseError('Failed to record the stock adjustment', movementError)
+      }
+    }
 
     const { data: product, error } = await supabase
       .from('products')

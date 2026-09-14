@@ -93,6 +93,7 @@ import adminRoutes from './routes/admin.routes'
 import { jobSchedulerPlugin } from './plugins/job-scheduler.plugin'
 import { startScheduler } from './scheduler'
 import { getMetrics, enterMetricsContext } from './utils/request-metrics'
+import { slowestCalls, waitingMs } from './utils/supabase-fetch-metrics'
 
 // ──────────────────────────────────────────────
 // Environment
@@ -142,20 +143,29 @@ server.log.info(`📦 Environment: ${process.env.NODE_ENV || 'development'}`)
 // ──────────────────────────────────────────────
 // 1. PERFORMANCE MONITORING MIDDLEWARE
 // ──────────────────────────────────────────────
+let inflightRequests = 0
+
 server.addHook('onRequest', async (request) => {
   ;(request as any).startTime = Date.now()
   // context شمارنده‌ی کوئری را برای این درخواست فعال می‌کند.
-  enterMetricsContext()
+  enterMetricsContext(inflightRequests)
+  inflightRequests += 1
+  ;(request as any).countedInflight = true
 })
 
 server.addHook('onResponse', async (request, reply) => {
   // فاز ۰ — یک خط ساختاریافته به‌ازای هر درخواست، تا بتوان جدول
   // «Endpoint / تعداد Query / زمان DB / زمان کل» را مستقیماً از لاگ Render
   // ساخت. OPTIONS ها حذف می‌شوند چون نویز محض‌اند.
+  if ((request as any).countedInflight) {
+    inflightRequests = Math.max(0, inflightRequests - 1)
+    ;(request as any).countedInflight = false
+  }
   if (request.method === 'OPTIONS') return
 
   const total = Date.now() - ((request as any).startTime || Date.now())
   const m = getMetrics()
+  const db = m?.db
 
   request.log.info(
     {
@@ -178,8 +188,23 @@ server.addHook('onResponse', async (request, reply) => {
       // `GET /api/workspaces` as overhead, which reads as "the time is in
       // middleware or serialisation" and sends whoever acts on it to optimise
       // the wrong layer. Null says "not known", which is the truth.
-      overheadMs: m && m.queryCount > 0 ? total - m.dbTimeMs : null,
-      dbInstrumented: m ? m.queryCount > 0 : false,
+      // Everything spent waiting on Supabase (PostgREST + RPC + GoTrue). The
+      // calls of one request can run in parallel, so this may exceed totalMs.
+      supabaseMs: db ? db.restMs + db.rpcMs + db.authMs + db.otherMs : null,
+      restCalls: db?.restCalls ?? null,
+      restMs: db?.restMs ?? null,
+      rpcCalls: db?.rpcCalls ?? null,
+      rpcMs: db?.rpcMs ?? null,
+      authCalls: db?.authCalls ?? null,
+      authMs: db?.authMs ?? null,
+      newConnections: db?.newConnections ?? null,
+      inflightAtStart: m?.inflightAtStart ?? null,
+      slowest: m ? slowestCalls() : null,
+      // Wall time with a Supabase call open (parallel calls counted once), and
+      // what is left: our own code, serialisation, and waiting for a turn.
+      waitingMs: db ? waitingMs() : null,
+      overheadMs: db ? Math.max(0, total - waitingMs()) : null,
+      dbInstrumented: Boolean(db),
 
       cacheHits: m?.cacheHits ?? null,
       cacheMisses: m?.cacheMisses ?? null,

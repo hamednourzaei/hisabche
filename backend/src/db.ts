@@ -10,6 +10,7 @@
 // ============================================
 
 import { createClient, SupabaseClientOptions } from '@supabase/supabase-js'
+import { installConnectionCounter, instrumentFetch } from './utils/supabase-fetch-metrics'
 
 const isLocal = !process.env.RENDER
 
@@ -76,6 +77,17 @@ if (isLocal) {
     console.log('ℹ️ undici not installed, skipping proxy setup')
   }
 }
+
+// Every database round-trip is an HTTPS call made through this fetch — the one
+// place it can be measured (utils/supabase-fetch-metrics.ts). Timing only.
+clientOptions.global = {
+  ...clientOptions.global,
+  fetch: instrumentFetch(
+    (clientOptions.global?.fetch as ((input: any, init?: any) => Promise<Response>) | undefined) ??
+      ((input: any, init?: any) => fetch(input, init)),
+  ),
+}
+installConnectionCounter()
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, clientOptions)
 

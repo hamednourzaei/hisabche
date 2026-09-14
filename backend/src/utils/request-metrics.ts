@@ -11,17 +11,63 @@
 
 import { AsyncLocalStorage } from 'node:async_hooks'
 
+export interface DbCallMetrics {
+  restCalls: number
+  restMs: number
+  rpcCalls: number
+  rpcMs: number
+  authCalls: number
+  authMs: number
+  otherCalls: number
+  otherMs: number
+  newConnections: number
+  samples: Array<{
+    kind: string
+    target: string
+    method: string
+    status: number
+    ms: number
+    at: number
+  }>
+}
+
 export interface RequestMetrics {
   queryCount: number
   dbTimeMs: number
   cacheHits: number
   cacheMisses: number
+  /** Every Supabase round-trip (see supabase-fetch-metrics.ts). */
+  db: DbCallMetrics
+  /** Requests already in flight when this one started — the burst it joined. */
+  inflightAtStart: number
+}
+
+function freshMetrics(inflightAtStart = 0): RequestMetrics {
+  return {
+    queryCount: 0,
+    dbTimeMs: 0,
+    cacheHits: 0,
+    cacheMisses: 0,
+    inflightAtStart,
+    db: {
+      restCalls: 0,
+      restMs: 0,
+      rpcCalls: 0,
+      rpcMs: 0,
+      authCalls: 0,
+      authMs: 0,
+      otherCalls: 0,
+      otherMs: 0,
+      newConnections: 0,
+      samples: [],
+    },
+  }
 }
 
 const storage = new AsyncLocalStorage<RequestMetrics>()
 
 export function runWithMetrics<T>(fn: () => T): T {
-  return storage.run({ queryCount: 0, dbTimeMs: 0, cacheHits: 0, cacheMisses: 0 }, fn)
+  return storage.run(freshMetrics(), fn)
 }
 
 /**
@@ -29,8 +75,8 @@ export function runWithMetrics<T>(fn: () => T): T {
  * storage.run() اینجا جواب نمی‌دهد. enterWith از همین نقطه به بعد در همان
  * زنجیره‌ی async، context را فعال می‌کند — یعنی از onRequest تا onResponse.
  */
-export function enterMetricsContext(): void {
-  storage.enterWith({ queryCount: 0, dbTimeMs: 0, cacheHits: 0, cacheMisses: 0 })
+export function enterMetricsContext(inflightAtStart = 0): void {
+  storage.enterWith(freshMetrics(inflightAtStart))
 }
 
 export function getMetrics(): RequestMetrics | undefined {

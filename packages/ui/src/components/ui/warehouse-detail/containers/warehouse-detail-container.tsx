@@ -74,13 +74,6 @@ export function ProductDetailContainer() {
   const deleteProduct = useDeleteProduct()
 
   const [editing, setEditing] = useState(false)
-  const [editName, setName] = useState('')
-  const [editSellPrice, setSellPrice] = useState('')
-  const [editBuyPrice, setBuyPrice] = useState('')
-  const [editQuantity, setQuantity] = useState('')
-  const [editMinStock, setMinStock] = useState('')
-  const [editCategory, setCategory] = useState('general')
-  const [editUnit, setUnit] = useState<UnitType>('piece')
 
   const getProduct = useCallback(
     (p: RawProduct) => ({
@@ -96,43 +89,36 @@ export function ProductDetailContainer() {
   )
 
   const startEditing = useCallback(() => {
-    if (!product) return
-    const p = getProduct(product)
-    setName(p.name)
-    setSellPrice(p.sellPrice.toString())
-    setBuyPrice(p.buyPrice.toString())
-    setQuantity(p.quantity.toString())
-    setMinStock(p.minStockLevel.toString())
-    setCategory(p.category)
-    setUnit(p.unit)
-    setEditing(true)
-  }, [product, getProduct])
+    if (product) setEditing(true)
+  }, [product])
 
-  const handleSave = useCallback(async () => {
-    await updateProduct.mutateAsync({
-      id: id!,
-      name: editName.trim(),
-      sellPrice: num(editSellPrice),
-      buyPrice: num(editBuyPrice),
-      quantity: Math.floor(num(editQuantity)),
-      minStockLevel: Math.floor(num(editMinStock)) || 5,
-      category: editCategory as
-        'general' | 'food' | 'electronics' | 'clothing' | 'construction' | 'medicine',
-      // Refused rather than defaulted — see toValidUnit (T2).
-      unit: toValidUnit(editUnit) ?? undefined,
-    })
-    setEditing(false)
-  }, [
-    id,
-    editName,
-    editSellPrice,
-    editBuyPrice,
-    editQuantity,
-    editMinStock,
-    editCategory,
-    editUnit,
-    updateProduct,
-  ])
+  /**
+   * ⚠️ THE VALUES ARE PASSED IN, NOT READ FROM STATE.
+   *
+   * `onSave` used to copy the form into seven `useState`s and call the save in
+   * the same tick. React had not re-rendered yet, so the save closure still
+   * held the values from when editing STARTED: changing the stock from −98 to
+   * 99 sent −98 back, the request succeeded, and nothing changed. Every other
+   * edited field was lost the same way.
+   */
+  const handleSave = useCallback(
+    async (values: ProductEditValues) => {
+      await updateProduct.mutateAsync({
+        id: id!,
+        name: values.name.trim(),
+        sellPrice: num(values.sellPrice),
+        buyPrice: num(values.buyPrice),
+        quantity: Math.floor(num(values.quantity)),
+        minStockLevel: Math.floor(num(values.minStockLevel)) || 5,
+        category: values.category as
+          'general' | 'food' | 'electronics' | 'clothing' | 'construction' | 'medicine',
+        // Refused rather than defaulted — see toValidUnit (T2).
+        unit: toValidUnit(values.unit) ?? undefined,
+      })
+      setEditing(false)
+    },
+    [id, updateProduct],
+  )
 
   const handleDelete = useCallback(async () => {
     if (!confirm(t('warehouse.deleteConfirm'))) return
@@ -172,15 +158,8 @@ export function ProductDetailContainer() {
 
   const onSave = useCallback(
     (data: ProductEditValues) => {
-      // This will be called from ProductDetailPage with the edit values
-      setName(data.name)
-      setSellPrice(data.sellPrice.toString())
-      setBuyPrice(data.buyPrice.toString())
-      setQuantity(data.quantity.toString())
-      setMinStock(data.minStockLevel.toString())
-      setCategory(data.category)
-      setUnit(data.unit)
-      handleSave()
+      // A refused save keeps the form open with what was typed.
+      void handleSave(data).catch(() => undefined)
     },
     [handleSave],
   )
