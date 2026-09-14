@@ -2245,48 +2245,92 @@ export class InvoiceService {
    * already booked comes back `already_posted` and nothing is written twice.
    * Read in ordered 1000-row pages so PostgREST's row cap cannot drop any.
    */
-  async postAllUnposted(ctx: TenancyContext): Promise<{
+  /**
+   * Book invoices that have no journal entry yet — ONE BATCH per call.
+   *
+   * ⚠️ WHY BATCHED. It used to walk every invoice in one request. Each posting
+   * is several round trips (costing, accounts, the posting RPC), so a shop
+   * with a few dozen invoices took longer than the client's 15-second
+   * timeout: the button always answered «ثبت در دفتر انجام نشد» while the
+   * server was still working. Now each call handles at most `batchSize`
+   * invoices after `afterId` (ordered by id) and returns `nextCursor`; the
+   * client repeats until it is null. The cursor — not «is it posted yet» — is
+   * what guarantees progress, so an invoice that cannot be posted is reported
+   * once and never loops.
+   */
+  async postAllUnposted(
+    ctx: TenancyContext,
+    options: { afterId?: string | null | undefined; batchSize?: number | undefined } = {},
+  ): Promise<{
     checked: number
     posted: number
     skipped: Array<{ invoiceId: string; status: string; detail: string }>
+    nextCursor: string | null
   }> {
-    const PAGE = 1000
-    const ids: string[] = []
-    for (let from = 0; ; from += PAGE) {
-      const { data, error } = await supabase
-        .from('invoices')
-        .select('id, status')
+    const batchSize = Math.min(50, Math.max(1, options.batchSize ?? 25))
+
+    let query = supabase
+      .from('invoices')
+      .select('id, status')
+      .eq('workspace_id', ctx.workspaceId)
+      .order('id', { ascending: true })
+      .limit(batchSize)
+    if (options.afterId) query = query.gt('id', options.afterId)
+
+    const { data, error } = await query
+    if (error) throw new DatabaseError('Failed to list invoices for posting', error)
+    const rows = (data ?? []) as Array<{ id: string; status: string | null }>
+
+    // Already booked ones are skipped without the costly posting path.
+    const ids = rows.map((r) => r.id)
+    const bookedIds = new Set<string>()
+    if (ids.length > 0) {
+      const { data: entries, error: entriesError } = await supabase
+        .from('journal_entries')
+        .select('source_id')
         .eq('workspace_id', ctx.workspaceId)
-        .order('id', { ascending: true })
-        .range(from, from + PAGE - 1)
-      if (error) throw new DatabaseError('Failed to list invoices for posting', error)
-      const rows = data ?? []
-      for (const row of rows) {
-        if (row.status !== 'cancelled' && row.status !== AWAITING_APPROVAL_STATUS) ids.push(row.id)
-      }
-      if (rows.length < PAGE) break
+        .eq('source_type', 'invoice')
+        .in('source_id', ids)
+      if (entriesError) throw new DatabaseError('Failed to read posted invoices', entriesError)
+      for (const e of (entries ?? []) as Array<{ source_id: string }>) bookedIds.add(e.source_id)
     }
 
     let posted = 0
     const skipped: Array<{ invoiceId: string; status: string; detail: string }> = []
-    for (const id of ids) {
+    for (const row of rows) {
+      if (row.status === 'cancelled' || row.status === AWAITING_APPROVAL_STATUS) continue
+      if (bookedIds.has(row.id)) continue
       try {
-        const result = await this.postToLedger(id, ctx)
-        if (result.status === 'posted') posted++
-        else if (result.status === 'skipped')
-          skipped.push({ invoiceId: id, status: 'skipped', detail: result.missing.join(', ') })
+        const result = await this.postToLedger(row.id, ctx)
+        if (result.status === 'posted') {
+          posted++
+          if (result.uncostedProducts && result.uncostedProducts.length > 0) {
+            skipped.push({
+              invoiceId: row.id,
+              status: 'posted_without_cost',
+              detail: result.uncostedProducts.join(', '),
+            })
+          }
+        } else if (result.status === 'skipped')
+          skipped.push({ invoiceId: row.id, status: 'skipped', detail: result.missing.join(', ') })
         else if (result.status === 'not_postable')
-          skipped.push({ invoiceId: id, status: 'not_postable', detail: result.reason })
+          skipped.push({ invoiceId: row.id, status: 'not_postable', detail: result.reason })
       } catch (err) {
         // One bad invoice must not stop the rest; its reason is reported.
         skipped.push({
-          invoiceId: id,
+          invoiceId: row.id,
           status: 'error',
           detail: err instanceof Error ? err.message : String(err),
         })
       }
     }
-    return { checked: ids.length, posted, skipped }
+
+    return {
+      checked: rows.length,
+      posted,
+      skipped,
+      nextCursor: rows.length === batchSize ? rows[rows.length - 1]!.id : null,
+    }
   }
 
   async postToLedger(id: string, ctx: TenancyContext): Promise<LedgerPostResult> {

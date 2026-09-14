@@ -2101,7 +2101,9 @@
     "postingUnposted": "در حال ثبت در دفتر…",
     "postUnpostedResult": "ثبت شد:",
     "postUnpostedSkipped": "ثبت نشد",
-    "postUnpostedError": "ثبت در دفتر انجام نشد. دوباره تلاش کنید."
+    "postUnpostedError": "ثبت در دفتر انجام نشد. دوباره تلاش کنید.",
+    "postUnpostedChecked": "بررسی‌شده:",
+    "postUnpostedWithoutCost": "ثبت‌شده بدون بهای تمام‌شده:"
   },
   "hr": {
     "title": "منابع انسانی",

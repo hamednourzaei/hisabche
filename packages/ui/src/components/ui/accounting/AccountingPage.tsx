@@ -1,10 +1,10 @@
 // packages/ui/src/components/ui/accounting/AccountingPage.tsx
 'use client'
 
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
-import { usePostUnpostedInvoices } from '@hisabche/api'
+import { usePostUnpostedInvoices, type PostUnpostedSummary } from '@hisabche/api'
 import { AccountingTabs, type AccountingTabId } from './AccountingTabs'
 import { AccountsTab } from './tabs/AccountsTab'
 import { JournalTab } from './tabs/JournalTab'
@@ -39,29 +39,48 @@ function isValidTab(value: string | null): value is AccountingTabId {
 function PostUnpostedAction() {
   const t = useTranslations()
   const postAll = usePostUnpostedInvoices()
-  const summary = postAll.data
+  const [progress, setProgress] = useState<PostUnpostedSummary | null>(null)
+  const summary = postAll.data ?? progress
+  const errorText = postAll.isError
+    ? String((postAll.error as { message?: string } | null)?.message ?? '')
+    : ''
+  const withoutCost = summary?.skipped.filter((s) => s.status === 'posted_without_cost').length ?? 0
+  const failed = summary?.skipped.filter((s) => s.status !== 'posted_without_cost') ?? []
 
   return (
     <div className="mt-3 flex flex-wrap items-center gap-2">
       <button
         type="button"
-        onClick={() => postAll.mutate()}
+        onClick={() => {
+          setProgress(null)
+          postAll.mutate(setProgress)
+        }}
         disabled={postAll.isPending}
-        className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-medium bg-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))] hover:bg-[hsl(var(--color-primary)/0.2)] disabled:opacity-60"
+        className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-3 text-xs font-medium bg-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))] hover:bg-[hsl(var(--color-primary)/0.2)] disabled:opacity-60"
       >
         {postAll.isPending ? t('accounting.postingUnposted') : t('accounting.postUnposted')}
       </button>
       {summary ? (
         <span role="status" className="text-xs text-[hsl(var(--fg-secondary))]">
+          {t('accounting.postUnpostedChecked')}{' '}
+          <span className="tabular-nums">{summary.checked}</span>
+          {' · '}
           {t('accounting.postUnpostedResult')}{' '}
           <span className="tabular-nums">{summary.posted}</span>
-          {summary.skipped.length > 0 ? (
+          {withoutCost > 0 ? (
+            <>
+              {' · '}
+              {t('accounting.postUnpostedWithoutCost')}{' '}
+              <span className="tabular-nums">{withoutCost}</span>
+            </>
+          ) : null}
+          {failed.length > 0 ? (
             <>
               {' · '}
               {t('accounting.postUnpostedSkipped')}{' '}
-              <span className="tabular-nums">{summary.skipped.length}</span>
+              <span className="tabular-nums">{failed.length}</span>
               {': '}
-              {summary.skipped[0]?.detail}
+              {failed[0]?.detail}
             </>
           ) : null}
         </span>
@@ -69,6 +88,7 @@ function PostUnpostedAction() {
       {postAll.isError ? (
         <span role="alert" className="text-xs text-[hsl(var(--color-destructive))]">
           {t('accounting.postUnpostedError')}
+          {errorText ? ` (${errorText})` : ''}
         </span>
       ) : null}
     </div>

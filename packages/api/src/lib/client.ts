@@ -118,6 +118,34 @@ export function setOnUnauthorized(callback: () => void): void {
 }
 
 /**
+ * Exchanges the stored refresh token for a new access token and returns it,
+ * or null when the session cannot be renewed. Registered by the store, like
+ * `onUnauthorized`, so this package never imports the store.
+ */
+let refreshSession: (() => Promise<string | null>) | null = null
+
+export function setRefreshSession(fn: () => Promise<string | null>): void {
+  refreshSession = fn
+}
+
+// Single flight: ten requests failing together trigger ONE refresh, not ten —
+// Supabase rotates refresh tokens, so parallel refreshes would invalidate
+// each other and log the user out.
+let refreshInFlight: Promise<string | null> | null = null
+
+function refreshOnce(): Promise<string | null> {
+  if (!refreshSession) return Promise.resolve(null)
+  if (!refreshInFlight) {
+    refreshInFlight = refreshSession()
+      .catch(() => null)
+      .finally(() => {
+        refreshInFlight = null
+      })
+  }
+  return refreshInFlight
+}
+
+/**
  * The server's code for a write refused because the workspace's subscription
  * has ended (HTTP 402). Stable — the backend guard in
  * `backend/src/middleware/subscription.middleware.ts` sends exactly this.
@@ -196,6 +224,31 @@ apiClient.interceptors.response.use(
     }>,
   ) => {
     const responseData = error.response?.data as any
+
+    // ─── Expired access token → renew once, retry once ───────────────────
+    const original = error.config as
+      (typeof error.config & { _retriedAfterRefresh?: boolean }) | undefined
+    if (
+      error.response?.status === 401 &&
+      original &&
+      !original._retriedAfterRefresh &&
+      !String(original.url ?? '').includes('/auth/')
+    ) {
+      original._retriedAfterRefresh = true
+      return refreshOnce().then((token) => {
+        if (!token) {
+          onUnauthorized?.()
+          return Promise.reject({
+            message: responseData?.error || 'Session expired',
+            code: responseData?.code || 'UNAUTHORIZED',
+            status: 401,
+          } satisfies ApiError)
+        }
+        original.headers = original.headers ?? {}
+        ;(original.headers as Record<string, string>).Authorization = `Bearer ${token}`
+        return apiClient.request(original)
+      })
+    }
 
     const apiError: ApiError = {
       // ✅ FIX: اکثر route های بک‌اند خطا رو با کلید `error` برمی‌گردونن

@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 import CryptoJS from 'crypto-js'
 import type { AuthUser } from '@hisabche/auth-core'
 import { registerTokenGetter } from '@hisabche/api'
-import { setOnUnauthorized } from '@hisabche/api'
+import { setOnUnauthorized, setRefreshSession } from '@hisabche/api'
 import { useWorkspaceStore } from './workspace.slice'
 
 // ============================================
@@ -61,6 +61,8 @@ export type User = AuthUser
 export interface AuthState {
   user: User | null
   token: string | null
+  /** Exchanged at /auth/refresh when the one-hour access token expires. */
+  refreshToken: string | null
   isAuthenticated: boolean
   isDemo: boolean
   isLoading: boolean
@@ -113,7 +115,17 @@ async function apiLogin(email: string, password: string) {
     throw new Error(err.error || 'ورود ناموفق بود')
   }
 
-  return res.json() as Promise<{ user: User; token: string }>
+  return res.json() as Promise<{ user: User; token: string; refreshToken?: string }>
+}
+
+async function apiRefresh(refreshToken: string) {
+  const res = await fetch(`${API_BASE}/auth/refresh`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken }),
+  })
+  if (!res.ok) return null
+  return res.json() as Promise<{ token: string; refreshToken: string }>
 }
 
 async function apiSignup(data: {
@@ -133,7 +145,7 @@ async function apiSignup(data: {
     throw new Error(err.error || 'ثبت‌نام ناموفق بود')
   }
 
-  return res.json() as Promise<{ user: User; token: string }>
+  return res.json() as Promise<{ user: User; token: string; refreshToken?: string }>
 }
 
 async function apiLogout(token: string) {
@@ -155,6 +167,7 @@ export const useAuthStore = create<AuthState>()(
     (set, get) => ({
       user: null,
       token: null,
+      refreshToken: null,
       isAuthenticated: false,
       isDemo: false,
       isLoading: false,
@@ -269,6 +282,7 @@ export const useAuthStore = create<AuthState>()(
           set({
             user: result.user,
             token: result.token,
+            refreshToken: result.refreshToken ?? null,
             isAuthenticated: true,
             isDemo: false,
             isLoading: false,
@@ -279,6 +293,7 @@ export const useAuthStore = create<AuthState>()(
           set({
             user: null,
             token: null,
+            refreshToken: null,
             isAuthenticated: false,
             isDemo: false,
             isLoading: false,
@@ -300,6 +315,7 @@ export const useAuthStore = create<AuthState>()(
           set({
             user: result.user,
             token: result.token,
+            refreshToken: result.refreshToken ?? null,
             isAuthenticated: true,
             isDemo: false,
             isLoading: false,
@@ -310,6 +326,7 @@ export const useAuthStore = create<AuthState>()(
           set({
             user: null,
             token: null,
+            refreshToken: null,
             isAuthenticated: false,
             isDemo: false,
             isLoading: false,
@@ -345,6 +362,7 @@ export const useAuthStore = create<AuthState>()(
           set({
             user: null,
             token: null,
+            refreshToken: null,
             isAuthenticated: false,
             isDemo: false,
             isLoading: false,
@@ -360,6 +378,7 @@ export const useAuthStore = create<AuthState>()(
       partialize: (s) => ({
         user: s.user,
         token: s.token,
+        refreshToken: s.refreshToken,
         isDemo: s.isDemo,
       }),
       onRehydrateStorage: () => () => {
@@ -378,12 +397,22 @@ export const useAuthStore = create<AuthState>()(
 if (typeof window !== 'undefined') {
   registerTokenGetter(() => useAuthStore.getState().token)
 
+  setRefreshSession(async () => {
+    const { refreshToken, isDemo } = useAuthStore.getState()
+    if (!refreshToken || isDemo) return null
+    const renewed = await apiRefresh(refreshToken)
+    if (!renewed?.token) return null
+    useAuthStore.setState({ token: renewed.token, refreshToken: renewed.refreshToken })
+    return renewed.token
+  })
+
   setOnUnauthorized(() => {
     // ✅ فقط state رو پاک می‌کنیم، logout API call نمی‌کنیم
     clearAuthStorage()
     useAuthStore.setState({
       user: null,
       token: null,
+      refreshToken: null,
       isAuthenticated: false,
       isDemo: false,
       error: null,

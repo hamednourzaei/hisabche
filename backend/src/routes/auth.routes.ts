@@ -360,6 +360,8 @@ export async function authRoutes(fastify: FastifyInstance) {
         return reply.code(201).send({
           user: sanitizeUser(newUser.user, profile),
           token: session.session.access_token,
+          refreshToken: session.session.refresh_token,
+          expiresAt: session.session.expires_at ?? null,
         })
       } catch (err) {
         if (err instanceof z.ZodError) {
@@ -367,6 +369,49 @@ export async function authRoutes(fastify: FastifyInstance) {
         }
         fastify.log.error(err)
         return reply.code(500).send({ error: 'Internal server error' })
+      }
+    },
+  )
+
+  // ═══════════════════════════════════════════════════════
+  // POST /api/auth/refresh
+  //
+  // ⚠️ THERE WAS NO RENEWAL. Sign-in handed the browser a Supabase access token
+  // (one hour) and nothing else, so an hour after login every request answered
+  // 401 «Invalid or expired token» and the user was dropped to the login page
+  // mid-work — the stream of 401s on billing, invoices, conflicts, analytics.
+  // The refresh token is exchanged here for a new pair. Unauthenticated by
+  // design: the refresh token IS the credential, and Supabase rotates it (a
+  // used one cannot be replayed).
+  // ═══════════════════════════════════════════════════════
+  fastify.post(
+    '/api/auth/refresh',
+    {
+      config: { rateLimit: { max: 30, timeWindow: '1 minute' } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      const parsed = z
+        .object({ refreshToken: z.string().min(10).max(4096) })
+        .safeParse(request.body ?? {})
+      if (!parsed.success) {
+        return reply.code(400).send({ error: 'Validation failed', code: 'REFRESH_TOKEN_REQUIRED' })
+      }
+
+      try {
+        const { data, error } = await createAuthClient().auth.refreshSession({
+          refresh_token: parsed.data.refreshToken,
+        })
+        if (error || !data.session) {
+          return reply.code(401).send({ error: 'Session expired', code: 'REFRESH_TOKEN_INVALID' })
+        }
+        return reply.send({
+          token: data.session.access_token,
+          refreshToken: data.session.refresh_token,
+          expiresAt: data.session.expires_at ?? null,
+        })
+      } catch (err) {
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to refresh the session' })
       }
     },
   )
@@ -429,6 +474,8 @@ export async function authRoutes(fastify: FastifyInstance) {
         return reply.send({
           user: sanitizeUser(data.user, profile, role),
           token: data.session.access_token,
+          refreshToken: data.session.refresh_token,
+          expiresAt: data.session.expires_at ?? null,
         })
       } catch (err) {
         if (err instanceof z.ZodError) {

@@ -2092,7 +2092,9 @@
     "postingUnposted": "Posting to ledger…",
     "postUnpostedResult": "Posted:",
     "postUnpostedSkipped": "Not posted",
-    "postUnpostedError": "Posting failed. Please try again."
+    "postUnpostedError": "Posting failed. Please try again.",
+    "postUnpostedChecked": "Checked:",
+    "postUnpostedWithoutCost": "Posted without cost of goods:"
   },
   "hr": {
     "title": "Human Resources",

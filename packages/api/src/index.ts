@@ -17,6 +17,7 @@ export {
 } from './lib/tokenProvider'
 export {
   setOnUnauthorized,
+  setRefreshSession,
   setOnSubscriptionExpired,
   SUBSCRIPTION_EXPIRED_CODE,
 } from './lib/client'

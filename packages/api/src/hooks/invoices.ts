@@ -236,6 +236,8 @@ export interface PostUnpostedSummary {
   checked: number
   posted: number
   skipped: Array<{ invoiceId: string; status: string; detail: string }>
+  /** Server cursor; null once every invoice has been visited. */
+  nextCursor?: string | null
 }
 
 /**
@@ -245,9 +247,30 @@ export interface PostUnpostedSummary {
 export function usePostUnpostedInvoices() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async () => {
-      const { data } = await apiClient.post<PostUnpostedSummary>('/invoices/post-unposted', {})
-      return data
+    /**
+     * Repeats one server batch at a time until the cursor runs out, so no
+     * single request approaches the client timeout. `onProgress` reports the
+     * running total for the button's label.
+     */
+    mutationFn: async (onProgress?: (done: PostUnpostedSummary) => void) => {
+      const total: PostUnpostedSummary = { checked: 0, posted: 0, skipped: [], nextCursor: null }
+      let afterId: string | null = null
+      // A hard ceiling: 400 batches × 25 = 10 000 invoices per click.
+      for (let round = 0; round < 400; round++) {
+        const response: { data: PostUnpostedSummary } = await apiClient.post<PostUnpostedSummary>(
+          '/invoices/post-unposted',
+          { afterId, batchSize: 25 },
+          { timeout: 60_000 },
+        )
+        const batch: PostUnpostedSummary = response.data
+        total.checked += batch.checked
+        total.posted += batch.posted
+        total.skipped.push(...(batch.skipped ?? []))
+        onProgress?.({ ...total })
+        afterId = batch.nextCursor ?? null
+        if (!afterId) break
+      }
+      return total
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ledger'] })

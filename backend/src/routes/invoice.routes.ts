@@ -230,7 +230,14 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const { workspaceId } = request.tenancy
-        const summary = await invoiceService.postAllUnposted(request.tenancy)
+        const body = (request.body ?? {}) as { afterId?: unknown; batchSize?: unknown }
+        const summary = await invoiceService.postAllUnposted(request.tenancy, {
+          afterId:
+            typeof body.afterId === 'string' && /^[0-9a-f-]{36}$/i.test(body.afterId)
+              ? body.afterId
+              : null,
+          batchSize: typeof body.batchSize === 'number' ? body.batchSize : undefined,
+        })
         await clearCache(`invoices:${workspaceId}:*`)
         await clearCache(`dashboard:v2:${workspaceId}`)
         return reply.send(summary)
