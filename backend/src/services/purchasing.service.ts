@@ -25,6 +25,9 @@ import { costing } from './inventory-costing'
 import { DatabaseError, NotFoundError } from '../errors/database.error'
 import { memoryCache } from '../utils/pagination'
 import { logBusinessEvent } from './event-log.service'
+import { ledger } from './accounting'
+import { budgets } from './budgeting'
+import { ValidationError } from '../errors/validation.error'
 
 const PO_LIST_COLUMNS =
   'id, supplier_id, order_date, expected_delivery_date, status, notes, received_at, created_at, updated_at'
@@ -71,10 +74,59 @@ export class PurchasingService {
     return result
   }
 
+  // ─── Budget control ──────────────────────────────────────────
+  /**
+   * The account a purchase order will eventually hit, and the order's value.
+   *
+   * A purchase invoice debits the INVENTORY account, so that is where a budget
+   * for buying stock lives and where the commitment is reserved. Resolved, not
+   * created: no chart of accounts means no budget can exist on it.
+   */
+  private async budgetTarget(ctx: TenancyContext, items: any[]) {
+    const totalMinor = items.reduce(
+      (sum, item) =>
+        sum +
+        Math.round(
+          (Number(
+            item.totalPrice ?? (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0),
+          ) || 0) * 100,
+        ),
+      0,
+    )
+    const { accounts } = await ledger.resolveAccountsByRole(ctx, ['inventory'])
+    return { accountId: accounts.inventory ?? null, totalMinor }
+  }
+
   // ─── Create ──────────────────────────────────────────────────
   async createPurchaseOrder(ctx: TenancyContext, data: CreatePurchaseOrder) {
     const { workspaceId, userId } = ctx
     const items = data.items || []
+
+    // ⚠️ ASKED BEFORE THE ORDER EXISTS. The budget engine had checkSpend and
+    // commit and nothing called them, so a purchase order could spend any
+    // amount against a `block` budget. The server decides; the client is told.
+    const target = await this.budgetTarget(ctx, items)
+    const orderDate = String(data.orderDate || new Date().toISOString()).slice(0, 10)
+    const control =
+      target.accountId && target.totalMinor > 0
+        ? await budgets.checkSpend(ctx, {
+            accountId: target.accountId,
+            amountMinor: target.totalMinor,
+            onDate: orderDate,
+          })
+        : null
+
+    if (control && control.decision === 'block') {
+      const over = Math.max(...control.impacts.map((i) => i.exceededByMinor))
+      throw new ValidationError(`BUDGET_EXCEEDED: over by ${over}`)
+    }
+    if (control && control.decision === 'require_approval') {
+      // There is no purchase-order approval workflow to park it in. Refusing
+      // with the reason is honest; creating it and calling it "pending
+      // approval" would be a status nobody can act on.
+      const over = Math.max(...control.impacts.map((i) => i.exceededByMinor))
+      throw new ValidationError(`BUDGET_APPROVAL_REQUIRED: over by ${over}`)
+    }
 
     const { data: order, error } = await supabase
       .from('purchase_orders')
@@ -112,6 +164,33 @@ export class PurchasingService {
     }
 
     await this.invalidate(workspaceId)
+
+    if (control && target.accountId) {
+      // Reserve against every controlling budget, and record any warn breach.
+      // supabase-js has no transaction: a failure here leaves the order without
+      // its reservation, which is logged loudly rather than hidden.
+      for (const impact of control.impacts) {
+        try {
+          await budgets.commit(ctx, {
+            budgetId: impact.budgetId,
+            sourceType: 'purchase_order',
+            sourceId: order.id,
+            amountMinor: target.totalMinor,
+          })
+          if (impact.exceeds) {
+            await budgets.recordBreach(ctx, {
+              budgetId: impact.budgetId,
+              sourceType: 'purchase_order',
+              sourceId: order.id,
+              overByMinor: impact.exceededByMinor,
+              actionTaken: impact.decision,
+            })
+          }
+        } catch (err) {
+          console.error('[PurchasingService] budget reservation failed for order', order.id, err)
+        }
+      }
+    }
 
     logBusinessEvent({
       userId,
@@ -290,6 +369,10 @@ export class PurchasingService {
       throw new DatabaseError('Failed to update purchase order status', updateError)
     }
 
+    // The goods arrived; the purchase invoice that pays for them posts the
+    // actual. Holding the reservation too would count the same money twice.
+    await budgets.release(ctx, 'purchase_order', id)
+
     await this.invalidate(workspaceId)
     return updated
   }
@@ -322,6 +405,9 @@ export class PurchasingService {
       .eq('workspace_id', ctx.workspaceId)
 
     if (error) throw new DatabaseError('Failed to delete purchase order', error)
+
+    // A cancelled order promises nothing any more.
+    await budgets.release(ctx, 'purchase_order', id)
 
     await this.invalidate(ctx.workspaceId)
   }

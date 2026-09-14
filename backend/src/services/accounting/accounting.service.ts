@@ -79,6 +79,30 @@ const LEGACY_CODE_ROLES: Record<string, AccountRole> = {
   '5000': 'cogs',
 }
 
+/**
+ * The account created for a role that has none — see `ensureAccountsForRoles`.
+ * Codes follow the legacy numbering the poster already understood.
+ */
+const STANDARD_ACCOUNT_FOR_ROLE: Partial<
+  Record<
+    AccountRole,
+    { code: string; name: string; type: 'asset' | 'liability' | 'equity' | 'revenue' | 'expense' }
+  >
+> = {
+  cash: { code: '1010', name: 'صندوق', type: 'asset' },
+  bank: { code: '1020', name: 'بانک', type: 'asset' },
+  inventory: { code: '1000', name: 'موجودی کالا', type: 'asset' },
+  receivable: { code: '1200', name: 'حساب‌های دریافتنی', type: 'asset' },
+  payable: { code: '2000', name: 'حساب‌های پرداختنی', type: 'liability' },
+  tax: { code: '2100', name: 'مالیات', type: 'liability' },
+  retained_earnings: { code: '3000', name: 'سود انباشته', type: 'equity' },
+  current_year_earnings: { code: '3100', name: 'سود سال جاری', type: 'equity' },
+  sales: { code: '4000', name: 'فروش', type: 'revenue' },
+  cogs: { code: '5000', name: 'بهای تمام‌شده‌ی کالای فروش‌رفته', type: 'expense' },
+  purchase: { code: '5100', name: 'خرید', type: 'expense' },
+  salary_expense: { code: '6000', name: 'هزینه‌ی حقوق', type: 'expense' },
+}
+
 function roleOf(account: AccountRow): AccountRole | null {
   if (account.role) return account.role as AccountRole
   return LEGACY_CODE_ROLES[account.code] ?? null
@@ -222,6 +246,57 @@ export class AccountingService implements LedgerPort {
     const account = await this.repo.updateAccount(ctx.workspaceId, id, values)
     await this.invalidateWorkspace(ctx.workspaceId)
     return account
+  }
+
+  /**
+   * Create the standard account for each role that has none, then resolve.
+   *
+   * ---------------------------------------------------------------------------
+   * ⚠️ WHY THE LEDGER WAS EMPTY
+   *
+   * Invoice posting looks accounts up by ROLE (receivable, sales, cogs,
+   * inventory…). Nothing ever created those accounts: there is no default
+   * chart, so a new workspace had none, `resolveAccountsByRole` reported them
+   * missing, and every invoice was skipped with only a console line. The
+   * journal, trial balance, balance sheet and P&L are all built from journal
+   * entries — so all of them stayed empty while invoices kept being issued.
+   *
+   * This provisions ONLY what is missing, once, in this workspace. An owner
+   * who has built their own chart and tagged the roles is untouched. A code
+   * already taken by another account gets a numeric suffix rather than being
+   * overwritten.
+   */
+  async ensureAccountsForRoles(
+    ctx: TenancyContext,
+    roles: AccountRole[],
+  ): Promise<{ accounts: Partial<Record<AccountRole, string>>; missing: AccountRole[] }> {
+    const first = await this.resolveAccountsByRole(ctx, roles)
+    if (first.missing.length === 0) return first
+
+    const existing = await this.repo.listAccounts(ctx.workspaceId)
+    const takenCodes = new Set(existing.map((a) => a.code))
+
+    for (const role of first.missing) {
+      const template = STANDARD_ACCOUNT_FOR_ROLE[role]
+      if (!template) continue
+
+      let code = template.code
+      for (let n = 1; takenCodes.has(code); n++) code = `${template.code}${n}`
+      takenCodes.add(code)
+
+      await this.repo.insertAccount(ctx, {
+        code,
+        name: template.name,
+        type: template.type,
+        role,
+        parent_id: null,
+        is_group: false,
+        is_active: true,
+      })
+    }
+
+    await this.invalidateWorkspace(ctx.workspaceId)
+    return this.resolveAccountsByRole(ctx, roles)
   }
 
   async resolveAccountsByRole(

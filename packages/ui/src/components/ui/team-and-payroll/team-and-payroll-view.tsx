@@ -19,7 +19,7 @@ import {
   AlertCircle,
 } from 'lucide-react'
 import { useState, useMemo, useCallback, memo } from 'react'
-import { format } from 'date-fns'
+import { useDateFormat } from '../../../hooks/use-date-format'
 import { JalaliDatePicker } from '../jalali-datepicker'
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -231,6 +231,13 @@ const EmployeeCard = memo(function EmployeeCard({
   onDelete?: ((id: string) => Promise<void>) | undefined
   t: (key: string, fallback?: string) => string
 }) {
+  // ⚠️ SAFE AND CALENDAR-AWARE. date-fns `format(new Date(x))` THROWS «RangeError:
+  // Invalid time value» on a missing or malformed date — a newly added employee
+  // arrives with `hire_date` (snake_case), so `hireDate` was undefined and the
+  // whole page fell into the error boundary. This returns «—» instead, and follows
+  // the reader's calendar (Shamsi / Afghan / Gregorian).
+  const { date: fmtDay } = useDateFormat()
+  const dateText = (value: string | null | undefined) => fmtDay(value) || '—'
   const statusInfo = EMPLOYEE_STATUSES.find((s) => s.value === employee.status)
   const StatusIcon = statusInfo?.icon
 
@@ -281,7 +288,7 @@ const EmployeeCard = memo(function EmployeeCard({
           </span>
           <span className="flex items-center gap-1">
             <Calendar className="size-3" />
-            {format(new Date(employee.hireDate), 'MMM dd, yyyy')}
+            {dateText(employee.hireDate ?? (employee as { hire_date?: string }).hire_date)}
           </span>
           <span className="tabular-nums font-medium text-[hsl(var(--fg-primary))]">
             {employee.salary.toLocaleString('fa-AF')} AFN
@@ -302,6 +309,13 @@ const PayrollCard = memo(function PayrollCard({
   onView?: ((id: string) => void) | undefined
   t: (key: string, fallback?: string) => string
 }) {
+  // ⚠️ SAFE AND CALENDAR-AWARE. date-fns `format(new Date(x))` THROWS «RangeError:
+  // Invalid time value» on a missing or malformed date — a newly added employee
+  // arrives with `hire_date` (snake_case), so `hireDate` was undefined and the
+  // whole page fell into the error boundary. This returns «—» instead, and follows
+  // the reader's calendar (Shamsi / Afghan / Gregorian).
+  const { date: fmtDay } = useDateFormat()
+  const dateText = (value: string | null | undefined) => fmtDay(value) || '—'
   const statusInfo = PAYROLL_STATUSES.find((s) => s.value === payroll.status)
   const StatusIcon = statusInfo?.icon
 
@@ -337,13 +351,13 @@ const PayrollCard = memo(function PayrollCard({
           </span>
           <span className="text-xs text-[hsl(var(--fg-tertiary))] flex items-center gap-1">
             <Calendar className="size-3" />
-            سررسید: {format(new Date(payroll.dueDate), 'MMM dd, yyyy')}
+            سررسید: {dateText(payroll.dueDate)}
           </span>
         </div>
         {payroll.paidDate && (
           <div className="text-xs text-[hsl(var(--color-success))] flex items-center gap-1">
             <Wallet className="size-3" />
-            پرداخته در: {format(new Date(payroll.paidDate), 'MMM dd, yyyy')}
+            پرداخته در: {dateText(payroll.paidDate)}
           </div>
         )}
       </div>

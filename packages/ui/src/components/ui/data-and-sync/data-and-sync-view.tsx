@@ -28,7 +28,8 @@
 
 import { memo } from 'react'
 import { useNow } from '../../../hooks/use-now'
-import type { MigrationJob } from '@hisabche/api'
+import type { Conflict, MigrationJob } from '@hisabche/api'
+import { useDateFormat } from '../../../hooks/use-date-format'
 
 import {
   ActionButton,
@@ -50,6 +51,10 @@ export interface DataAndSyncViewProps {
   lastSyncedAt: number | null
   /** null means "could not be read", which is not the same as zero. */
   conflictCount: number | null
+  /** The open conflicts themselves, for the preview. null = not read. */
+  conflicts: Conflict[] | null
+  /** Last local backup (sync-center owns backups). null = never. */
+  lastBackupAt: number | null
   lastMigration: MigrationJob | null
   migrationCount: number
   isLoading: boolean
@@ -89,6 +94,8 @@ export const DataAndSyncView = memo(function DataAndSyncView({
   pendingCount,
   lastSyncedAt,
   conflictCount,
+  conflicts,
+  lastBackupAt,
   lastMigration,
   migrationCount,
   isLoading,
@@ -96,6 +103,12 @@ export const DataAndSyncView = memo(function DataAndSyncView({
   onNavigate,
   onRefresh,
 }: DataAndSyncViewProps) {
+  const { dateTime } = useDateFormat()
+  const financialConflicts =
+    conflicts === null ? null : conflicts.filter((c) => c.hasFinancialDivergence).length
+  const migrationRunning =
+    lastMigration !== null &&
+    !['completed', 'completed_with_warnings', 'failed', 'cancelled'].includes(lastMigration.status)
   // The clock is read after mount (see useNow). Until then a synced workspace
   // shows a neutral dash — never «هرگز», which would be a false statement.
   const now = useNow(10_000)
@@ -127,6 +140,72 @@ export const DataAndSyncView = memo(function DataAndSyncView({
         actionLabelKey="dataSync.open_conflicts"
       />
 
+      {/* ─── Summary — each card is a way in, and says so ────────────────── */}
+      <section
+        aria-label={t('dataSync.summary', 'خلاصه‌ی وضعیت')}
+        className="grid grid-cols-2 gap-3 lg:grid-cols-4"
+      >
+        <button type="button" className="text-start" onClick={() => onNavigate('/sync-center')}>
+          <Stat
+            label={t('dataSync.sync_title', 'همگام‌سازی')}
+            value={
+              <Badge
+                tone={
+                  !isOnline ? 'neutral' : isSyncing ? 'info' : pendingCount > 0 ? 'warn' : 'good'
+                }
+              >
+                {!isOnline
+                  ? t('state.offline', 'آفلاین')
+                  : isSyncing
+                    ? t('dataSync.syncing', 'در حال همگام‌سازی')
+                    : pendingCount > 0
+                      ? t('dataSync.pending_short', 'در انتظار ارسال')
+                      : t('dataSync.synced', 'همگام')}
+              </Badge>
+            }
+            hint={
+              !isOnline
+                ? t(
+                    'dataSync.offline_hint',
+                    'تغییرات محلی ذخیره می‌شوند و پس از اتصال ارسال می‌شوند.',
+                  )
+                : undefined
+            }
+          />
+        </button>
+        <button type="button" className="text-start" onClick={() => onNavigate('/sync-center')}>
+          <Stat label={t('dataSync.pending', 'در صف ارسال')} value={String(pendingCount)} />
+        </button>
+        <button type="button" className="text-start" onClick={() => onNavigate('/conflicts')}>
+          <Stat
+            label={t('dataSync.conflicts_title', 'تعارض‌ها')}
+            value={conflictCount === null ? '—' : String(conflictCount)}
+            hint={
+              financialConflicts
+                ? `${t('dataSync.financial_conflicts', 'مالی')}: ${financialConflicts}`
+                : undefined
+            }
+          />
+        </button>
+        <button type="button" className="text-start" onClick={() => onNavigate('/data-migration')}>
+          <Stat
+            label={t('dataSync.last_migration', 'آخرین انتقال')}
+            value={
+              isLoading ? (
+                '—'
+              ) : lastMigration ? (
+                <Badge tone={MIGRATION_TONE[lastMigration.status] ?? 'info'}>
+                  {t(`migration.status_${lastMigration.status}`, lastMigration.status)}
+                </Badge>
+              ) : (
+                t('dataSync.none', 'ندارد')
+              )
+            }
+            hint={migrationRunning ? t('dataSync.migration_running', 'در حال انجام') : undefined}
+          />
+        </button>
+      </section>
+
       {/* ─── Sync ───────────────────────────────────────────────────────── */}
 
       <Panel
@@ -147,7 +226,10 @@ export const DataAndSyncView = memo(function DataAndSyncView({
               </Badge>
             }
           />
-          <Stat label={t('dataSync.pending', 'در صف ارسال')} value={String(pendingCount)} />
+          <Stat
+            label={t('dataSync.last_backup', 'آخرین پشتیبان محلی')}
+            value={lastBackupAt === null ? t('dataSync.never', 'هرگز') : dateTime(lastBackupAt)}
+          />
           <Stat
             label={t('dataSync.last_synced', 'آخرین همگام‌سازی')}
             value={
@@ -181,15 +263,37 @@ export const DataAndSyncView = memo(function DataAndSyncView({
           <p className="text-sm text-[hsl(var(--fg-tertiary))]">
             {t('dataSync.conflicts_unknown', 'تعداد تعارض‌ها خوانده نشد.')}
           </p>
+        ) : conflictCount === 0 ? (
+          <p className="text-sm text-[hsl(var(--fg-tertiary))]">
+            {t('dataSync.no_conflicts', 'تعارضی برای بررسی وجود ندارد.')}
+          </p>
         ) : (
-          <StatGrid>
-            <Stat
-              label={t('dataSync.open_count', 'باز')}
-              value={
-                <Badge tone={conflictCount > 0 ? 'warn' : 'good'}>{String(conflictCount)}</Badge>
-              }
-            />
-          </StatGrid>
+          <ul className="divide-y divide-[hsl(var(--border-default))] text-sm">
+            {(conflicts ?? []).slice(0, 3).map((conflict) => (
+              <li
+                key={conflict.id}
+                className="flex flex-wrap items-center justify-between gap-2 py-2"
+              >
+                <span className="min-w-0">
+                  <span className="font-medium">
+                    {conflict.entityLabel ??
+                      t(`conflicts.entity_${conflict.entityType}`, conflict.entityType)}
+                  </span>
+                  <span className="ms-2 text-xs text-[hsl(var(--fg-tertiary))]">
+                    {t('dataSync.fields_changed', 'فیلد متفاوت')}: {conflict.divergences.length}
+                  </span>
+                </span>
+                <span className="flex items-center gap-2">
+                  {conflict.hasFinancialDivergence ? (
+                    <Badge tone="bad">{t('dataSync.financial_conflicts', 'مالی')}</Badge>
+                  ) : null}
+                  <span className="text-xs text-[hsl(var(--fg-tertiary))]">
+                    {dateTime(conflict.createdAt)}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
         )}
       </Panel>
 
@@ -256,8 +360,85 @@ export const DataAndSyncView = memo(function DataAndSyncView({
           )}
         </p>
       </Panel>
+      {/* ─── Diagnostics — collapsed; every row is a real state ─────────── */}
+      <details className="rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-4">
+        <summary className="min-h-11 cursor-pointer text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(var(--color-primary)/0.5)]">
+          {t('dataSync.diagnostics', 'تشخیص و سلامت فنی')}
+        </summary>
+        <dl className="mt-3 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
+          <DiagnosticRow
+            label={t('dataSync.connection', 'اتصال')}
+            ok={isOnline}
+            okText={t('state.ready', 'آماده')}
+            badText={t('state.offline', 'آفلاین')}
+            neutralWhenBad
+          />
+          <DiagnosticRow
+            label={t('dataSync.pending', 'در صف ارسال')}
+            ok={pendingCount === 0}
+            okText={t('dataSync.synced', 'همگام')}
+            badText={String(pendingCount)}
+          />
+          <DiagnosticRow
+            label={t('dataSync.conflicts_title', 'تعارض‌ها')}
+            ok={conflictCount === 0}
+            unknown={conflictCount === null}
+            okText={t('dataSync.none', 'ندارد')}
+            badText={String(conflictCount ?? '')}
+            unknownText={t('dataSync.conflicts_unknown', 'تعداد تعارض‌ها خوانده نشد.')}
+          />
+          <DiagnosticRow
+            label={t('dataSync.migration_engine', 'موتور انتقال داده')}
+            ok={!error && lastMigration?.status !== 'failed'}
+            unknown={isLoading}
+            okText={t('state.ready', 'آماده')}
+            badText={
+              error
+                ? t('dataSync.read_failed', 'خوانده نشد')
+                : t('migration.status_failed', 'failed')
+            }
+            unknownText="—"
+          />
+        </dl>
+        <p className="mt-3 text-xs text-[hsl(var(--fg-tertiary))]">
+          {t(
+            'dataSync.diagnostics_scope',
+            'بررسی تکراری‌ها و یکپارچگی ارجاعی هنوز سرویسی ندارد و به همین دلیل اینجا نمایش داده نمی‌شود.',
+          )}
+        </p>
+      </details>
     </CapabilityPage>
   )
 })
 
 DataAndSyncView.displayName = 'DataAndSyncView'
+
+function DiagnosticRow({
+  label,
+  ok,
+  unknown = false,
+  okText,
+  badText,
+  unknownText,
+  neutralWhenBad = false,
+}: {
+  label: string
+  ok: boolean
+  unknown?: boolean
+  okText: string
+  badText: string
+  unknownText?: string
+  /** Offline is an operating state, not a fault — never shown as an error. */
+  neutralWhenBad?: boolean
+}) {
+  return (
+    <div className="flex items-center justify-between gap-2 rounded-lg bg-[hsl(var(--surface-muted)/0.4)] px-3 py-2">
+      <dt>{label}</dt>
+      <dd>
+        <Badge tone={unknown ? 'neutral' : ok ? 'good' : neutralWhenBad ? 'neutral' : 'warn'}>
+          {unknown ? (unknownText ?? '—') : ok ? okText : badText}
+        </Badge>
+      </dd>
+    </div>
+  )
+}

@@ -40,6 +40,7 @@ const OVERRIDE_AUDIT_ACTION: Partial<Record<Capability, 'update' | 'delete'>> = 
   'payment.cancel': 'delete',
   'invoice.delete': 'delete',
   'ledger.reverse': 'update',
+  'budget.approve': 'update',
 }
 
 const audit = new AuditService()

@@ -24,7 +24,6 @@ import {
   Factory,
   ClipboardCheck,
   Settings,
-  Key,
   Bell,
   RefreshCw,
   EllipsisVertical,
@@ -86,7 +85,6 @@ const NAV_ICONS: Record<NavId, LucideIcon> = {
   production: Factory,
   approvals: ClipboardCheck,
   settings: Settings,
-  access: Key,
   // `history` is declared in the contract's id union but has no destination
   // yet; the map stays exhaustive so adding one needs no icon archaeology.
   history: History,
@@ -111,7 +109,6 @@ const NAV_ICONS: Record<NavId, LucideIcon> = {
   'data-and-sync': RefreshCw,
   'data-migration': DatabaseZap,
   coworkers: Wallet,
-  'sales-followup': PhoneCall,
   'workflow-templates': Workflow,
   billing: CreditCard,
   governance: ShieldCheck,

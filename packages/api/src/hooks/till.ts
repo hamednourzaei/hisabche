@@ -43,6 +43,28 @@ export interface SessionTotals {
   countedCashMinor: number | null
   /** counted − expected. Null until somebody has counted. */
   varianceMinor: number | null
+  /** Net cash put in / taken out during the session, signed. */
+  movementsMinor?: number
+  /** Net cash from invoice payments at this drawer, signed. */
+  settlementsMinor?: number
+}
+
+export type DrawerEntryKind =
+  'opening_float' | 'sale' | 'cash_in' | 'cash_out' | 'settlement_in' | 'settlement_out'
+
+export interface DrawerEntry {
+  kind: DrawerEntryKind
+  /** Signed: positive into the drawer. */
+  amountMinor: number
+  balanceMinor: number
+  at: string
+  reference: string
+  sourceId: string | null
+}
+
+export interface DrawerLedger {
+  entries: DrawerEntry[]
+  expectedCashMinor: number
 }
 
 export interface AbandonedSession {
@@ -69,9 +91,58 @@ export const tillKeys = {
   current: () => [...tillKeys.all, 'current'] as const,
   session: (id: string) => [...tillKeys.all, 'session', id] as const,
   abandoned: () => [...tillKeys.all, 'abandoned'] as const,
+  ledger: (id: string) => [...tillKeys.all, 'ledger', id] as const,
+  cashFlow: (days: number) => [...tillKeys.all, 'cash-flow', days] as const,
+}
+
+export interface CashFlowDay {
+  day: string
+  inMinor: number
+  outMinor: number
+  netMinor: number
 }
 
 // ═══ Queries ═══
+
+/** Daily cash in/out/net, aggregated on the server from real movements. */
+export function useCashFlow(days: 7 | 30 | 90) {
+  const ready = useAuthReady()
+
+  return useQuery({
+    queryKey: tillKeys.cashFlow(days),
+    queryFn: async () => {
+      // The browser's own offset, so «today» is the shop's day.
+      const offsetMinutes = -new Date().getTimezoneOffset()
+      const { data } = await apiClient.get('/pos/cash-flow', { params: { days, offsetMinutes } })
+      return asList<CashFlowDay>((data as { days?: unknown } | null)?.days)
+    },
+    enabled: ready,
+    staleTime: 60_000,
+  })
+}
+
+/**
+ * Every cash event in a drawer with its running balance — computed by the
+ * server from the same rows as the totals.
+ */
+export function useSessionLedger(sessionId: string | null) {
+  const ready = useAuthReady()
+
+  return useQuery({
+    queryKey: tillKeys.ledger(sessionId ?? ''),
+    queryFn: async () => {
+      const { data } = await apiClient.get(`/pos/sessions/${sessionId}/ledger`)
+      const body = data as Partial<DrawerLedger> | null
+      return {
+        entries: asList<DrawerEntry>(body?.entries),
+        expectedCashMinor: Number(body?.expectedCashMinor) || 0,
+      } satisfies DrawerLedger
+    },
+    enabled: ready && !!sessionId,
+    staleTime: 5_000,
+    refetchOnWindowFocus: true,
+  })
+}
 
 /** The caller's own open drawer, with its running totals. */
 export function useCurrentSession() {

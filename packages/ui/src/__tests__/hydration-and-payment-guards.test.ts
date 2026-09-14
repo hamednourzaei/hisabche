@@ -66,14 +66,18 @@ describe('recording a payment from an invoice', () => {
     expect(uses).toBe(guarded)
   })
 
-  it('refuses to send a payment with no party', () => {
-    expect(invoice).toContain('if (!partyId)')
-    expect(invoice).not.toContain(
-      'partyId: (isPurchase ? display.supplierId : display.customerId) as string',
+  it('⚠️ a walk-in invoice sends a null party instead of refusing', () => {
+    // An invoice with no customer is a cash sale; the server records its
+    // payment with no party when the invoice is named. Refusing sent the user
+    // looking for a customer field that does not exist on this page.
+    expect(invoice).toContain(
+      'const partyId = (isPurchase ? display.supplierId : display.customerId) || null',
     )
+    expect(invoice).not.toContain('if (!partyId)')
+    expect(invoice).toContain('allocations: [{ invoiceId: display.id, amount: input.amount }]')
   })
 
-  it('the no-party message exists in every locale', () => {
+  it('the ledger retry and its reasons exist in every locale', () => {
     for (const lang of ['fa', 'af', 'en']) {
       const messages = JSON.parse(
         readFileSync(
@@ -81,7 +85,14 @@ describe('recording a payment from an invoice', () => {
           'utf8',
         ),
       ) as { invoiceDetail?: Record<string, unknown> }
-      expect(typeof messages.invoiceDetail?.['paymentNeedsParty']).toBe('string')
+      for (const key of [
+        'postToLedger',
+        'recordMissingPayment',
+        'ledgerMissingAccounts',
+        'ledgerNotPostable',
+      ]) {
+        expect(typeof messages.invoiceDetail?.[key], lang + '.' + key).toBe('string')
+      }
     }
   })
 })

@@ -206,7 +206,7 @@ export class CurrencyService {
   ) {
     if (netMinor === 0) return
 
-    const { accounts, missing } = await ledger.resolveAccountsByRole(ctx, ['receivable', 'sales'])
+    const { accounts, missing } = await ledger.ensureAccountsForRoles(ctx, ['receivable', 'sales'])
     if (missing.length > 0) {
       console.warn(
         `[Currency] revaluation ${revaluationId} not booked: missing ${missing.join(', ')}`,

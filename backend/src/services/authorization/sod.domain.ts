@@ -104,6 +104,13 @@ export const SOD_RULES: SoDRule[] = [
     entityType: 'journal_entry',
     rationale: 'Posting an entry and reversing it unobserved leaves no net trace of either.',
   },
+  {
+    id: 'budget.draft-then-approve',
+    capability: 'budget.approve',
+    conflictsWith: ['budget.manage'],
+    entityType: 'budget',
+    rationale: 'Whoever sets a spending limit should not be the only person who agrees to it.',
+  },
 ]
 
 // ---------------------------------------------------------------------------

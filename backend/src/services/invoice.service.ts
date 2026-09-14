@@ -170,6 +170,19 @@ function applyInvoiceListFilters<Q extends InvoiceFilterable<Q>>(
   return q
 }
 
+/** What posting an invoice to the ledger actually did. */
+export type LedgerPostResult =
+  | { status: 'posted' }
+  | { status: 'already_posted' }
+  | { status: 'nothing_to_post' }
+  | { status: 'skipped'; missing: string[] }
+  | { status: 'not_postable'; reason: string }
+
+/** A list from a row that may carry it under either key, or not at all. */
+function asArray(value: unknown): any[] {
+  return Array.isArray(value) ? value : []
+}
+
 export class InvoiceService {
   private workflowService: WorkflowService
   private notificationService: NotificationService
@@ -1038,7 +1051,14 @@ export class InvoiceService {
         // the first moment it is true. An invoice marked posted whose ledger
         // write then failed would be a document claiming an effect it does not
         // have, which is exactly the drift V3 in the migration checks for.
-        .then(() => this.markPosted(ctx, invoice.id))
+        // ⚠️ ONLY WHEN SOMETHING WAS ACTUALLY BOOKED. This used to mark the
+        // invoice posted even when the ledger SKIPPED it for a missing account,
+        // so the document claimed an entry that did not exist.
+        .then((result) =>
+          result.status === 'posted' || result.status === 'already_posted'
+            ? this.markPosted(ctx, invoice.id)
+            : undefined,
+        )
         .catch((err) => console.error('Accounting entry failed:', err))
     } else {
       // Held. The invoice exists and is visible — it is a draft, not a hidden
@@ -1127,7 +1147,7 @@ export class InvoiceService {
         // null for a walk-in cash sale. `openInvoicesByIds` is what makes this
         // work — the party-based lookup filters `customer_id = null` and
         // matches nothing, which is why there was no working path before.
-        partyId: partyId as string,
+        partyId,
         amount: tranche.amount,
         entryDate: (data.date ?? new Date().toISOString()).slice(0, 10),
         currency: data.currency ?? 'AFN',
@@ -2047,16 +2067,16 @@ export class InvoiceService {
        */
       costOfGoodsSold?: number
     },
-  ): Promise<void> {
+  ): Promise<LedgerPostResult> {
     const isPurchase = data.type === 'purchase'
     const total = Number(data.total) || 0
-    if (total <= 0) return
+    if (total <= 0) return { status: 'nothing_to_post' }
 
     const needed: AccountRole[] = isPurchase
       ? ['inventory', 'payable']
       : ['receivable', 'sales', 'cogs', 'inventory']
 
-    const { accounts, missing } = await ledger.resolveAccountsByRole(ctx, needed)
+    const { accounts, missing } = await ledger.ensureAccountsForRoles(ctx, needed)
 
     if (missing.length > 0) {
       // Not an error the shopkeeper caused, and not a reason to refuse the
@@ -2065,7 +2085,7 @@ export class InvoiceService {
       console.warn(
         `[InvoiceService] invoice ${invoiceId} not booked: no account for ${missing.join(', ')}`,
       )
-      return
+      return { status: 'skipped', missing: missing.map(String) }
     }
 
     const lines: DraftLine[] = isPurchase
@@ -2112,7 +2132,111 @@ export class InvoiceService {
       console.warn(
         `[InvoiceService] invoice ${invoiceId} not booked: ${outcome.missing.join(', ')}`,
       )
+      return { status: 'skipped', missing: outcome.missing.map(String) }
     }
+    return { status: outcome.status === 'already_posted' ? 'already_posted' : 'posted' }
+  }
+
+  /**
+   * Post an existing invoice to the ledger — the retry for one whose automatic
+   * posting at creation did not happen.
+   *
+   * ⚠️ WHY THIS EXISTS. Posting at creation runs after the response, and its
+   * failures were only a console line: a missing receivable/sales account, a
+   * closed period, anything. The invoice then said «not in the ledger» with no
+   * reason and no way to try again. This returns the real reason and can be
+   * re-run.
+   *
+   * Safe to repeat: costing is idempotent per invoice line, and the ledger
+   * refuses a second entry for the same source (`already_posted`).
+   */
+  /**
+   * Post every invoice in the workspace that has no journal entry yet.
+   *
+   * The history case: invoices issued while posting was being skipped (no
+   * chart of accounts) never reached the ledger, so the journal, trial
+   * balance, balance sheet and P&L stayed empty. Idempotent — an invoice
+   * already booked comes back `already_posted` and nothing is written twice.
+   * Read in ordered 1000-row pages so PostgREST's row cap cannot drop any.
+   */
+  async postAllUnposted(ctx: TenancyContext): Promise<{
+    checked: number
+    posted: number
+    skipped: Array<{ invoiceId: string; status: string; detail: string }>
+  }> {
+    const PAGE = 1000
+    const ids: string[] = []
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await supabase
+        .from('invoices')
+        .select('id, status')
+        .eq('workspace_id', ctx.workspaceId)
+        .order('id', { ascending: true })
+        .range(from, from + PAGE - 1)
+      if (error) throw new DatabaseError('Failed to list invoices for posting', error)
+      const rows = data ?? []
+      for (const row of rows) {
+        if (row.status !== 'cancelled' && row.status !== AWAITING_APPROVAL_STATUS) ids.push(row.id)
+      }
+      if (rows.length < PAGE) break
+    }
+
+    let posted = 0
+    const skipped: Array<{ invoiceId: string; status: string; detail: string }> = []
+    for (const id of ids) {
+      try {
+        const result = await this.postToLedger(id, ctx)
+        if (result.status === 'posted') posted++
+        else if (result.status === 'skipped')
+          skipped.push({ invoiceId: id, status: 'skipped', detail: result.missing.join(', ') })
+        else if (result.status === 'not_postable')
+          skipped.push({ invoiceId: id, status: 'not_postable', detail: result.reason })
+      } catch (err) {
+        // One bad invoice must not stop the rest; its reason is reported.
+        skipped.push({
+          invoiceId: id,
+          status: 'error',
+          detail: err instanceof Error ? err.message : String(err),
+        })
+      }
+    }
+    return { checked: ids.length, posted, skipped }
+  }
+
+  async postToLedger(id: string, ctx: TenancyContext): Promise<LedgerPostResult> {
+    await scopes.assertMay(ctx, 'invoice', id, 'invoice.update')
+    const invoice: any = await this.getById(id, ctx)
+
+    const status = String(invoice?.status ?? '')
+    if (status === 'cancelled' || status === AWAITING_APPROVAL_STATUS) {
+      return { status: 'not_postable', reason: status }
+    }
+
+    const type = String(invoice?.type ?? 'sale')
+    const items = asArray(invoice?.items ?? invoice?.invoice_items).map((item: any) => ({
+      id: item.id,
+      productId: item.productId ?? item.product_id ?? null,
+      warehouseId: item.warehouseId ?? item.warehouse_id ?? null,
+      quantity: Number(item.quantity) || 0,
+      unitPrice: Number(item.unitPrice ?? item.unit_price) || 0,
+      totalPrice: Number(item.totalPrice ?? item.total_price) || 0,
+    }))
+    const date = String(invoice?.date ?? '')
+
+    const cogs = await this.applyCosting(ctx, id, type, items, date || undefined)
+    const result = await this.createAccountingEntries(ctx, id, {
+      type,
+      total: Number(invoice?.total) || 0,
+      items,
+      invoiceNumber: invoice?.invoiceNumber ?? invoice?.invoice_number,
+      ...(date ? { date } : {}),
+      costOfGoodsSold: cogs,
+    })
+
+    if (result.status === 'posted' || result.status === 'already_posted') {
+      await this.markPosted(ctx, id)
+    }
+    return result
   }
 
   // ─── Generate Invoice Number ─────────────────────────────────────────────

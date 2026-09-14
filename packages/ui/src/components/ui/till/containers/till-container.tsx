@@ -16,6 +16,8 @@ import {
   useCurrentSession,
   useOpenSession,
   useRecordCashMovement,
+  useSessionLedger,
+  useCashFlow,
 } from '@hisabche/api'
 import type { AbandonedSession } from '@hisabche/api'
 import { TillView } from '../till-view'
@@ -36,6 +38,9 @@ export const TillContainer = memo(function TillContainer() {
   const closeSession = useCloseSession()
 
   const session = current.data?.session ?? null
+  const ledger = useSessionLedger(session?.id ?? null)
+  const [cashFlowDays, setCashFlowDays] = useState<7 | 30 | 90>(7)
+  const cashFlow = useCashFlow(cashFlowDays)
 
   /**
    * Server refusals are shown verbatim rather than replaced with a generic
@@ -79,7 +84,9 @@ export const TillContainer = memo(function TillContainer() {
     setActionError(null)
     current.refetch()
     abandoned.refetch()
-  }, [abandoned, current])
+    if (session) ledger.refetch()
+    cashFlow.refetch()
+  }, [abandoned, cashFlow, current, ledger, session])
 
   return (
     <TillView
@@ -97,6 +104,14 @@ export const TillContainer = memo(function TillContainer() {
       onOpen={handleOpen}
       onCashMovement={handleCashMovement}
       onClose={handleClose}
+      ledger={ledger.data?.entries ?? []}
+      isLedgerLoading={!!session && ledger.isLoading}
+      ledgerError={ledger.error ? (ledger.error as Error).message : null}
+      dailyCashFlow={cashFlow.data ?? []}
+      cashFlowDays={cashFlowDays}
+      onCashFlowDaysChange={setCashFlowDays}
+      isCashFlowLoading={cashFlow.isLoading}
+      cashFlowError={cashFlow.error ? (cashFlow.error as Error).message : null}
     />
   )
 })

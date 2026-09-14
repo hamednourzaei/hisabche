@@ -41,10 +41,8 @@ const ApprovalsPage = lazy(() => import('@/features/approvals/approvals-page'))
 const BillingPage = lazy(() => import('@/features/billing/billing-page'))
 const OnboardingPage = lazy(() => import('@/features/onboarding/onboarding-page'))
 const ManufacturingPage = lazy(() => import('@/features/manufacturing/manufacturing-page'))
-const PermissionsPage = lazy(() => import('@/features/permissions/permissions-page'))
 const TeamAndPayrollPage = lazy(() => import('@/features/team-and-payroll/tap-page'))
 const WorkflowPage = lazy(() => import('@/features/workflow/workflow-page'))
-const SalesFollowupPage = lazy(() => import('@/features/sales-followup/sales-followup-page'))
 const AuditPage = lazy(() => import('@/features/audit/audit-page'))
 
 // Tier 1/2 capabilities. Same containers the web routes mount — desktop owns
@@ -123,13 +121,13 @@ const router = createHashRouter([
       { path: 'billing', element: <BillingPage /> },
       { path: 'onboarding', element: <OnboardingPage /> },
       { path: 'manufacturing', element: <ManufacturingPage /> },
-      { path: 'permissions', element: <PermissionsPage /> },
+      { path: 'permissions', element: <Navigate to="/governance?tab=permissions" replace /> },
       // G1: /human-resources folded into /team-and-payroll — see the legacy
       // block at the bottom of this list, where the redirect lives.
       { path: 'team-and-payroll', element: <TeamAndPayrollPage /> },
       { path: 'team-and-payroll/:id', element: <EmployeeDetailPage /> },
       { path: 'workflow', element: <WorkflowPage /> },
-      { path: 'sales-followup', element: <SalesFollowupPage /> },
+      { path: 'sales-followup', element: <Navigate to="/crm" replace /> },
       { path: 'audit', element: <AuditPage /> },
 
       // Paths mirror the web routes exactly, so no container needs a

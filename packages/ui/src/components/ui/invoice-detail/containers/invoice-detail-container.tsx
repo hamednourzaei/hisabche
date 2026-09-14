@@ -14,6 +14,8 @@ import {
   useRecordHistory,
   useRecordPayment,
   useCancelPayment,
+  usePostInvoiceToLedger,
+  type InvoiceLedgerPostResult,
 } from '@hisabche/api'
 import { useSubscriptionLocked } from '../../billing/subscription-lock'
 import { InvoiceDetailPage, type InvoiceDetailDisplay } from '../invoice-detail-page'
@@ -59,6 +61,31 @@ interface WorkflowStep {
 /* ═══════════════════════════════════════════════════════════
    COMPONENT
    ═══════════════════════════════════════════════════════════ */
+
+/**
+ * Why a ledger post did not book, in words the owner can act on.
+ *  when there is nothing to say (never attempted, or it posted).
+ */
+function ledgerPostMessageOf(
+  result: InvoiceLedgerPostResult | null,
+  tr: (key: string, fallback: string) => string,
+): string | null {
+  if (!result) return null
+  switch (result.status) {
+    case 'posted':
+    case 'already_posted':
+      return null
+    case 'nothing_to_post':
+      return tr(
+        'invoiceDetail.ledgerNothingToPost',
+        'مبلغ این فاکتور صفر است و چیزی برای ثبت در دفتر ندارد.',
+      )
+    case 'skipped':
+      return `${tr('invoiceDetail.ledgerMissingAccounts', 'در سرفصل حساب‌ها این حساب‌ها تعریف نشده‌اند و تا تعریف نشوند فاکتور در دفتر ثبت نمی‌شود')}: ${result.missing.join('، ')}`
+    case 'not_postable':
+      return `${tr('invoiceDetail.ledgerNotPostable', 'این فاکتور الان قابل ثبت در دفتر نیست')}: ${result.reason}`
+  }
+}
 
 export function InvoiceDetailContainer() {
   const t = useTranslations()
@@ -127,6 +154,8 @@ export function InvoiceDetailContainer() {
   const subscriptionLocked = useSubscriptionLocked()
   const recordPayment = useRecordPayment()
   const cancelPayment = useCancelPayment()
+  const postToLedger = usePostInvoiceToLedger()
+  const [ledgerResult, setLedgerResult] = useState<InvoiceLedgerPostResult | null>(null)
 
   // ✅ FIX: استفاده از unknown به عنوان واسط
   const display: InvoiceDetailDisplay | null = useMemo(() => {
@@ -356,6 +385,21 @@ export function InvoiceDetailContainer() {
             onOpenJournalEntry={handleOpenJournalEntry}
             invoiceTotal={display.total}
             isRecordingPayment={recordPayment.isPending}
+            {...(subscriptionLocked
+              ? {}
+              : {
+                  onPostToLedger: () =>
+                    postToLedger.mutate(id, {
+                      onSuccess: (result) => setLedgerResult(result),
+                      onError: (err) =>
+                        setLedgerResult({
+                          status: 'not_postable',
+                          reason: err instanceof Error ? err.message : String(err),
+                        }),
+                    }),
+                })}
+            isPostingToLedger={postToLedger.isPending}
+            ledgerPostMessage={ledgerPostMessageOf(ledgerResult, safeT)}
             recordPaymentError={
               recordPayment.error ? String((recordPayment.error as Error).message) : null
             }
@@ -364,20 +408,12 @@ export function InvoiceDetailContainer() {
                 ? undefined
                 : (input) => {
                     const isPurchase = display.type === 'purchase'
-                    const partyId = isPurchase ? display.supplierId : display.customerId
-                    // ⚠️ A payment belongs to a party. An invoice with no customer
-                    // (a walk-in sale) has nobody to allocate it to, and the server
-                    // rejects an empty id with a bare 400 the user cannot read. Say
-                    // what is actually wrong instead of sending a request that fails.
-                    if (!partyId) {
-                      window.alert(
-                        safeT(
-                          'invoiceDetail.paymentNeedsParty',
-                          'برای ثبت پرداخت، ابتدا مشتری یا تأمین‌کننده‌ی این فاکتور را مشخص کنید.',
-                        ),
-                      )
-                      return
-                    }
+                    // ⚠️ NULL FOR A WALK-IN, NOT A BLOCK. An invoice with no customer is an
+                    // ordinary cash sale; the server records its payment with no party as
+                    // long as the payment names this invoice, which it always does below.
+                    // The earlier version refused here and asked for a customer on a page
+                    // that has no customer field.
+                    const partyId = (isPurchase ? display.supplierId : display.customerId) || null
                     recordPayment.mutate({
                       // A purchase pays OUT to a supplier; a sale takes money IN.
                       // Reversed, this lands on the wrong side of the ledger.

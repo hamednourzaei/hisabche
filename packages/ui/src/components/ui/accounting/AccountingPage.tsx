@@ -4,6 +4,7 @@
 import { useCallback, useMemo } from 'react'
 import { useRouter, useSearchParams, usePathname } from 'next/navigation'
 import { useTranslations } from 'next-intl'
+import { usePostUnpostedInvoices } from '@hisabche/api'
 import { AccountingTabs, type AccountingTabId } from './AccountingTabs'
 import { AccountsTab } from './tabs/AccountsTab'
 import { JournalTab } from './tabs/JournalTab'
@@ -23,6 +24,55 @@ const DEFAULT_TAB: AccountingTabId = 'accounts'
 
 function isValidTab(value: string | null): value is AccountingTabId {
   return value !== null && (VALID_TABS as string[]).includes(value)
+}
+
+/**
+ * «ثبت فاکتورهای ثبت‌نشده در دفتر».
+ *
+ * ⚠️ WHY THIS BUTTON EXISTS. Every report on this page is built from journal
+ * entries, and invoices issued before the chart of accounts existed were
+ * skipped by the automatic poster — so these tabs stayed empty while sales
+ * kept being recorded. New invoices now post automatically (the missing
+ * standard accounts are created on first use); this books the history. It is
+ * idempotent: an invoice already in the ledger is not booked twice.
+ */
+function PostUnpostedAction() {
+  const t = useTranslations()
+  const postAll = usePostUnpostedInvoices()
+  const summary = postAll.data
+
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        onClick={() => postAll.mutate()}
+        disabled={postAll.isPending}
+        className="inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-medium bg-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))] hover:bg-[hsl(var(--color-primary)/0.2)] disabled:opacity-60"
+      >
+        {postAll.isPending ? t('accounting.postingUnposted') : t('accounting.postUnposted')}
+      </button>
+      {summary ? (
+        <span role="status" className="text-xs text-[hsl(var(--fg-secondary))]">
+          {t('accounting.postUnpostedResult')}{' '}
+          <span className="tabular-nums">{summary.posted}</span>
+          {summary.skipped.length > 0 ? (
+            <>
+              {' · '}
+              {t('accounting.postUnpostedSkipped')}{' '}
+              <span className="tabular-nums">{summary.skipped.length}</span>
+              {': '}
+              {summary.skipped[0]?.detail}
+            </>
+          ) : null}
+        </span>
+      ) : null}
+      {postAll.isError ? (
+        <span role="alert" className="text-xs text-[hsl(var(--color-destructive))]">
+          {t('accounting.postUnpostedError')}
+        </span>
+      ) : null}
+    </div>
+  )
 }
 
 export function AccountingPage() {
@@ -59,6 +109,7 @@ export function AccountingPage() {
           <p className="text-sm text-[hsl(var(--fg-tertiary))] mt-0.5 md:mt-1">
             {t('nav.money_description')}
           </p>
+          <PostUnpostedAction />
         </div>
 
         {/* ─── Tabs ───────────────────────────────────────────── */}

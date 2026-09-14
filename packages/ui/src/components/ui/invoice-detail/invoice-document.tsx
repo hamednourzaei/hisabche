@@ -568,7 +568,9 @@ export const InvoiceDocument = forwardRef<HTMLDivElement, InvoiceDocumentProps>(
                         {t('invoices.paid', 'پرداخت شده')}
                       </td>
                       <td className="px-2 py-2 text-end text-[hsl(var(--color-success))] tabular-nums">
-                        -{paidAmount.toLocaleString()} {currency}
+                        {/* No leading «-»: it read as a NEGATIVE payment
+                            («پرداخت شده -۱۴۸٬۵۰۰٬۰۰۰») rather than a deduction. */}
+                        {paidAmount.toLocaleString()} {currency}
                       </td>
                     </tr>
                   )}

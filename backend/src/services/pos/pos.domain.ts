@@ -73,6 +73,33 @@ export interface CashMovement {
   createdAt: string
 }
 
+/**
+ * Cash that changed hands at this drawer through an INVOICE payment — the
+ * «ثبت دریافت» on an invoice, or a supplier paid in cash — recorded by the
+ * cashier while their session was open.
+ *
+ * The payment is the settlement and already has its own ledger entry. The
+ * drawer only needs to KNOW the cash is in it: without this, every invoice
+ * paid in cash made the close read as «over» by exactly that amount, and the
+ * cashier was pushed to record it a second time as a cash_in to make the
+ * count agree — the duplicate entry this model exists to prevent.
+ */
+export interface CashSettlement {
+  id: string
+  paymentNumber: string
+  /** 'in' = money received into the drawer, 'out' = paid out of it. */
+  direction: 'in' | 'out'
+  amountMinor: number
+  createdAt: string
+}
+
+export function settlementsNetMinor(settlements: CashSettlement[]): number {
+  return settlements.reduce(
+    (sum, s) => (s.direction === 'in' ? sum + s.amountMinor : sum - s.amountMinor),
+    0,
+  )
+}
+
 export interface PosSession {
   id: string
   status: SessionStatus
@@ -127,8 +154,14 @@ export function expectedCashMinor(
   session: PosSession,
   orders: PosOrder[],
   movements: CashMovement[],
+  settlements: CashSettlement[] = [],
 ): number {
-  return session.openingFloatMinor + cashTakenMinor(orders) + movementsNetMinor(movements)
+  return (
+    session.openingFloatMinor +
+    cashTakenMinor(orders) +
+    movementsNetMinor(movements) +
+    settlementsNetMinor(settlements)
+  )
 }
 
 export interface SessionTotals {
@@ -153,12 +186,18 @@ export interface SessionTotals {
    * does not balance.
    */
   movementsMinor: number
+  /**
+   * Net cash from invoice payments at this drawer, signed. Part of expected
+   * cash; NOT posted again at close (the payment already posted itself).
+   */
+  settlementsMinor: number
 }
 
 export function summarise(
   session: PosSession,
   orders: PosOrder[],
   movements: CashMovement[],
+  settlements: CashSettlement[] = [],
 ): SessionTotals {
   const completed = orders.filter((order) => order.status === 'completed')
 
@@ -176,13 +215,14 @@ export function summarise(
     }
   }
 
-  const expected = expectedCashMinor(session, orders, movements)
+  const expected = expectedCashMinor(session, orders, movements, settlements)
   const counted = session.countedCashMinor ?? null
 
   return {
     orderCount: completed.length,
     voidedCount: orders.length - completed.length,
     movementsMinor: movementsNetMinor(movements),
+    settlementsMinor: settlementsNetMinor(settlements),
     grossSalesMinor: completed.reduce((sum, order) => sum + order.totalMinor, 0),
     byMethod,
     expectedCashMinor: expected,
@@ -333,6 +373,7 @@ export function findAbandoned(
     session: PosSession
     orders: PosOrder[]
     movements: CashMovement[]
+    settlements?: CashSettlement[] | undefined
   }>,
   asOf: string,
   staleAfterHours = 24,
@@ -346,7 +387,12 @@ export function findAbandoned(
       openedBy: entry.session.openedBy,
       openedAt: entry.session.openedAt,
       hoursOpen: (now - Date.parse(entry.session.openedAt)) / 3_600_000,
-      expectedCashMinor: expectedCashMinor(entry.session, entry.orders, entry.movements),
+      expectedCashMinor: expectedCashMinor(
+        entry.session,
+        entry.orders,
+        entry.movements,
+        entry.settlements ?? [],
+      ),
       orderCount: entry.orders.filter((order) => order.status === 'completed').length,
     }))
     .filter((entry) => entry.hoursOpen >= staleAfterHours)
@@ -397,7 +443,11 @@ export function buildPosting(session: PosSession, totals: SessionTotals): Sessio
     sourceId: session.id,
     // Net of the float, which was already the business's money and is not
     // revenue arriving today.
-    cashMinor: counted - session.openingFloatMinor,
+    //
+    // Invoice settlements are subtracted too: each payment already debited
+    // cash in its own entry, and debiting it again here would book the same
+    // money twice. `?? 0` for totals frozen before settlements existed.
+    cashMinor: counted - session.openingFloatMinor - (totals.settlementsMinor ?? 0),
     cardMinor: totals.byMethod.card,
     transferMinor: totals.byMethod.transfer,
     creditMinor: totals.byMethod.credit,
@@ -405,4 +455,131 @@ export function buildPosting(session: PosSession, totals: SessionTotals): Sessio
     revenueMinor: totals.grossSalesMinor,
     movementsMinor: totals.movementsMinor,
   }
+}
+
+// ─── The drawer as a ledger ──────────────────────────────────────────────────
+
+export type DrawerEntryKind =
+  'opening_float' | 'sale' | 'cash_in' | 'cash_out' | 'settlement_in' | 'settlement_out'
+
+export interface DrawerEntry {
+  kind: DrawerEntryKind
+  /** Signed minor units: positive into the drawer, negative out of it. */
+  amountMinor: number
+  /** Running expected balance after this entry. */
+  balanceMinor: number
+  at: string
+  /** pos order ref, movement reason, or payment number — never blank context. */
+  reference: string
+  /** For settlements: the payment id, so the UI can link to the document. */
+  sourceId: string | null
+}
+
+/**
+ * Every cash event, oldest first, with a running balance. The last balance is
+ * exactly `expectedCashMinor` — the invariant the tests hold it to.
+ */
+export function buildDrawerLedger(
+  session: PosSession,
+  orders: PosOrder[],
+  movements: CashMovement[],
+  settlements: CashSettlement[],
+): { entries: DrawerEntry[]; expectedCashMinor: number } {
+  const events: Array<Omit<DrawerEntry, 'balanceMinor'>> = [
+    ...orders
+      .filter((order) => order.status === 'completed')
+      .map((order) => ({
+        kind: 'sale' as const,
+        amountMinor:
+          order.payments.filter((p) => p.method === 'cash').reduce((s, p) => s + p.amountMinor, 0) -
+          order.changeMinor,
+        at: order.createdAt,
+        reference: order.orderRef,
+        sourceId: order.id,
+      }))
+      .filter((event) => event.amountMinor !== 0),
+    ...movements.map((m) => ({
+      kind: m.kind,
+      amountMinor: m.kind === 'cash_in' ? m.amountMinor : -m.amountMinor,
+      at: m.createdAt,
+      reference: m.reason,
+      sourceId: m.id,
+    })),
+    ...settlements.map((s) => ({
+      kind: s.direction === 'in' ? ('settlement_in' as const) : ('settlement_out' as const),
+      amountMinor: s.direction === 'in' ? s.amountMinor : -s.amountMinor,
+      at: s.createdAt,
+      reference: s.paymentNumber,
+      sourceId: s.id,
+    })),
+  ].sort((a, b) => a.at.localeCompare(b.at))
+
+  let balance = session.openingFloatMinor
+  const entries: DrawerEntry[] = [
+    {
+      kind: 'opening_float',
+      amountMinor: session.openingFloatMinor,
+      balanceMinor: balance,
+      at: session.openedAt,
+      reference: '',
+      sourceId: null,
+    },
+  ]
+  for (const event of events) {
+    balance += event.amountMinor
+    entries.push({ ...event, balanceMinor: balance })
+  }
+
+  return { entries, expectedCashMinor: balance }
+}
+
+// ─── Cash flow by day ────────────────────────────────────────────────────────
+
+export interface CashEvent {
+  /** ISO timestamp. */
+  at: string
+  /** Signed minor units: positive in, negative out. */
+  amountMinor: number
+}
+
+export interface CashFlowDay {
+  /** Local calendar day, YYYY-MM-DD. */
+  day: string
+  inMinor: number
+  outMinor: number
+  netMinor: number
+}
+
+/**
+ * Daily in/out/net over the last `days` local days ending `today`.
+ *
+ * Every day in the window is present — a day with no cash is a real zero,
+ * not a gap the chart must interpolate. `offsetMinutes` is the shop's UTC
+ * offset (Kabul +270), so 23:00 local does not land on tomorrow.
+ */
+export function dailyCashFlow(
+  events: CashEvent[],
+  days: number,
+  today: string,
+  offsetMinutes: number,
+): CashFlowDay[] {
+  const out: CashFlowDay[] = []
+  const index = new Map<string, CashFlowDay>()
+  const end = new Date(`${today}T00:00:00Z`)
+  for (let i = days - 1; i >= 0; i -= 1) {
+    const d = new Date(end)
+    d.setUTCDate(d.getUTCDate() - i)
+    const row = { day: d.toISOString().slice(0, 10), inMinor: 0, outMinor: 0, netMinor: 0 }
+    out.push(row)
+    index.set(row.day, row)
+  }
+  for (const event of events) {
+    const local = new Date(Date.parse(event.at) + offsetMinutes * 60_000).toISOString().slice(0, 10)
+    const row = index.get(local)
+    if (!row) continue
+    if (event.amountMinor >= 0) row.inMinor += event.amountMinor
+    else row.outMinor -= event.amountMinor
+    row.netMinor += event.amountMinor
+  }
+  return out
 }

@@ -164,6 +164,58 @@ export async function posRoutes(fastify: FastifyInstance) {
     },
   )
 
+  // ─── GET /cash-flow ────────────────────────────────────
+  // Daily cash in/out/net for the last 7, 30 or 90 local days.
+  fastify.get(
+    '/cash-flow',
+    {
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        requireCapability('report.financial.read'),
+      ],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const query = z
+          .object({
+            days: z.coerce
+              .number()
+              .int()
+              .refine((d) => d === 7 || d === 30 || d === 90)
+              .default(7),
+            offsetMinutes: z.coerce.number().int().min(-720).max(840).default(270),
+          })
+          .parse(request.query ?? {})
+        return reply.send(
+          await posService.cashFlow(request.tenancy, query.days, query.offsetMinutes),
+        )
+      } catch (err) {
+        return fail(reply, err, 'Failed to build the cash flow')
+      }
+    },
+  )
+
+  // ─── GET /sessions/:id/ledger ──────────────────────────
+  // Every cash event in the drawer with its running balance. The last balance
+  // is the session's expected cash.
+  fastify.get(
+    '/sessions/:id/ledger',
+    {
+      preHandler: [authenticate, requireWorkspaceContext, requireCapability('invoice.read')],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = z.object({ id: z.string().uuid() }).parse(request.params)
+        return reply.send(await posService.sessionLedger(request.tenancy, id))
+      } catch (err) {
+        return fail(reply, err, 'Failed to build the drawer ledger')
+      }
+    },
+  )
+
   // ─── POST /sessions/:id/orders ─────────────────────────
   // Idempotent on `orderRef`: a retry returns the order that already exists.
   fastify.post(

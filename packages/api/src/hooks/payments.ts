@@ -32,7 +32,8 @@ export interface RecordPaymentInput {
   /** 'in' — received from a customer. 'out' — paid to a supplier. */
   direction: PaymentDirection
   partyType: PaymentPartyType
-  partyId: string
+  /** null only for a walk-in invoice — then `allocations` must name it. */
+  partyId: string | null
   amount: number
   /** ISO date (YYYY-MM-DD). Defaults to today on the server. */
   entryDate?: string
@@ -148,6 +149,9 @@ export function useRecordPayment() {
 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: paymentKeys.all })
+      // A cash payment is money in the cashier's drawer: the till must show it
+      // without anyone entering it again.
+      queryClient.invalidateQueries({ queryKey: ['till'] })
       queryClient.invalidateQueries({ queryKey: ['invoices'] })
       queryClient.invalidateQueries({ queryKey: ['customers'] })
       queryClient.invalidateQueries({ queryKey: ['transactions'] })

@@ -16,6 +16,9 @@ import type { TenancyContext } from '../tenancy.service'
 import { ledger } from '../accounting'
 
 import {
+  buildDrawerLedger,
+  dailyCashFlow,
+  type CashEvent,
   buildPosting,
   findAbandoned,
   summarise,
@@ -23,6 +26,7 @@ import {
   validateMovement,
   validateOrder,
   type CashMovement,
+  type CashSettlement,
   type PaymentMethod,
   type PosOrder,
   type PosSession,
@@ -148,11 +152,65 @@ export class PosService {
     return data ? mapSession(data) : null
   }
 
+  /**
+   * Cash invoice payments recorded at this drawer while the session was open.
+   *
+   * The query is scoped by WORKSPACE only — `payments` is a shared book and
+   * user_id is never its filter (tenancy-static-guard). Which drawer a cash
+   * payment went into is then decided by who recorded it: that is actor
+   * attribution (the person holding the drawer), applied after the tenant
+   * boundary, not access control. Paged, so a long session in a busy shop is
+   * not silently cut at PostgREST max-rows.
+   */
+  private async loadSettlements(
+    ctx: TenancyContext,
+    session: PosSession,
+  ): Promise<CashSettlement[]> {
+    const PAGE = 1000
+    const rows: Record<string, any>[] = []
+
+    for (let from = 0; ; from += PAGE) {
+      let query = supabase
+        .from('payments')
+        .select('id, payment_number, direction, amount, created_at, recorded_by:user_id')
+        .eq('workspace_id', ctx.workspaceId)
+        .eq('method', 'cash')
+        .eq('status', 'posted')
+        .is('deleted_at', null)
+        .gte('created_at', session.openedAt)
+        .order('created_at', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, from + PAGE - 1)
+
+      if (session.closedAt) query = query.lte('created_at', session.closedAt)
+
+      const { data, error } = await query
+      if (error) throw new DatabaseError('Failed to fetch cash settlements', error)
+
+      const page = (data ?? []) as Record<string, any>[]
+      rows.push(...page)
+      if (page.length < PAGE) break
+    }
+
+    return rows
+      .filter((row) => row.recorded_by === session.openedBy)
+      .map((row) => ({
+        id: row.id,
+        paymentNumber: row.payment_number ?? '',
+        direction: row.direction === 'out' ? ('out' as const) : ('in' as const),
+        // payments.amount is major units (numeric); the drawer counts minor.
+        amountMinor: Math.round((Number(row.amount) || 0) * 100),
+        createdAt: row.created_at,
+      }))
+  }
+
   private async loadContents(
     ctx: TenancyContext,
     sessionId: string,
-  ): Promise<{ orders: PosOrder[]; movements: CashMovement[] }> {
-    const [orders, movements] = await Promise.all([
+    session?: PosSession,
+  ): Promise<{ orders: PosOrder[]; movements: CashMovement[]; settlements: CashSettlement[] }> {
+    const resolved = session ?? (await this.getSession(ctx, sessionId))
+    const [orders, movements, settlements] = await Promise.all([
       supabase
         .from('pos_orders')
         .select(
@@ -167,6 +225,7 @@ export class PosService {
         .eq('workspace_id', ctx.workspaceId)
         .eq('session_id', sessionId)
         .limit(1000),
+      this.loadSettlements(ctx, resolved),
     ])
 
     if (orders.error) throw new DatabaseError('Failed to fetch till orders', orders.error)
@@ -175,13 +234,26 @@ export class PosService {
     return {
       orders: (orders.data ?? []).map(mapOrder),
       movements: (movements.data ?? []).map(mapMovement),
+      settlements,
     }
   }
 
   async getTotals(ctx: TenancyContext, sessionId: string): Promise<SessionTotals> {
     const session = await this.getSession(ctx, sessionId)
-    const { orders, movements } = await this.loadContents(ctx, sessionId)
-    return summarise(session, orders, movements)
+    const { orders, movements, settlements } = await this.loadContents(ctx, sessionId, session)
+    return summarise(session, orders, movements, settlements)
+  }
+
+  /**
+   * Every cash event in the drawer, in order, with the running balance —
+   * float, sales, cash in/out, and invoice settlements — so a cashier can see
+   * WHY the drawer should hold what it should. Derived from the same rows as
+   * the totals; the final balance equals `expectedCashMinor`.
+   */
+  async sessionLedger(ctx: TenancyContext, sessionId: string) {
+    const session = await this.getSession(ctx, sessionId)
+    const { orders, movements, settlements } = await this.loadContents(ctx, sessionId, session)
+    return buildDrawerLedger(session, orders, movements, settlements)
   }
 
   /**
@@ -398,14 +470,14 @@ export class PosService {
     },
   ): Promise<{ session: PosSession; totals: SessionTotals; posted: boolean }> {
     const session = await this.getSession(ctx, sessionId)
-    const { orders, movements } = await this.loadContents(ctx, sessionId)
-    const totals = summarise(session, orders, movements)
+    const { orders, movements, settlements } = await this.loadContents(ctx, sessionId, session)
+    const totals = summarise(session, orders, movements, settlements)
 
     const problems = validateClose(session, totals, { ...input, role: ctx.role })
     if (problems.length > 0) throw new ValidationError(problems.join(', '))
 
     const closed: PosSession = { ...session, countedCashMinor: input.countedCashMinor }
-    const finalTotals = summarise(closed, orders, movements)
+    const finalTotals = summarise(closed, orders, movements, settlements)
 
     const { data, error } = await supabase
       .from('pos_sessions')
@@ -467,7 +539,7 @@ export class PosService {
 
     // `bank` is asked for alongside the rest because card and transfer takings
     // are money the shop has, and cash is not where it sits.
-    const { accounts, missing } = await ledger.resolveAccountsByRole(ctx, [
+    const { accounts, missing } = await ledger.ensureAccountsForRoles(ctx, [
       'cash',
       'sales',
       'receivable',
@@ -583,6 +655,92 @@ export class PosService {
    * Surfaced, never auto-closed: closing decides where the money went, and
    * that is a person's call.
    */
+  /**
+   * Cash in and out of the business's drawers per local day.
+   *
+   * Three sources, all workspace-scoped and paged past PostgREST max-rows:
+   * posted CASH invoice payments, till cash movements, and the cash portion of
+   * completed till orders (net of change). Card and transfer never touched a
+   * drawer and are not counted.
+   */
+  async cashFlow(ctx: TenancyContext, days: number, offsetMinutes: number) {
+    const now = Date.now() + offsetMinutes * 60_000
+    const today = new Date(now).toISOString().slice(0, 10)
+    const since = new Date(
+      Date.parse(`${today}T00:00:00Z`) - (days - 1) * 86_400_000 - offsetMinutes * 60_000,
+    ).toISOString()
+
+    const pageAll = async (build: (from: number, to: number) => any) => {
+      const PAGE = 1000
+      const rows: Record<string, any>[] = []
+      for (let from = 0; ; from += PAGE) {
+        const { data, error } = await build(from, from + PAGE - 1)
+        if (error) throw new DatabaseError('Failed to read cash flow', error)
+        const page = (data ?? []) as Record<string, any>[]
+        rows.push(...page)
+        if (page.length < PAGE) break
+      }
+      return rows
+    }
+
+    const [payments, movements, orders] = await Promise.all([
+      pageAll((from, to) =>
+        supabase
+          .from('payments')
+          .select('id, direction, amount, created_at')
+          .eq('workspace_id', ctx.workspaceId)
+          .eq('method', 'cash')
+          .eq('status', 'posted')
+          .is('deleted_at', null)
+          .gte('created_at', since)
+          .order('id')
+          .range(from, to),
+      ),
+      pageAll((from, to) =>
+        supabase
+          .from('pos_cash_movements')
+          .select('id, kind, amount_minor, created_at')
+          .eq('workspace_id', ctx.workspaceId)
+          .gte('created_at', since)
+          .order('id')
+          .range(from, to),
+      ),
+      pageAll((from, to) =>
+        supabase
+          .from('pos_orders')
+          .select(
+            'id, change_minor, status, created_at, payments:pos_order_payments(method, amount_minor)',
+          )
+          .eq('workspace_id', ctx.workspaceId)
+          .eq('status', 'completed')
+          .gte('created_at', since)
+          .order('id')
+          .range(from, to),
+      ),
+    ])
+
+    const events: CashEvent[] = [
+      ...payments.map((p) => ({
+        at: p.created_at,
+        amountMinor: (p.direction === 'out' ? -1 : 1) * Math.round((Number(p.amount) || 0) * 100),
+      })),
+      ...movements.map((m) => ({
+        at: m.created_at,
+        amountMinor: (m.kind === 'cash_out' ? -1 : 1) * (Number(m.amount_minor) || 0),
+      })),
+      ...orders.map((o) => ({
+        at: o.created_at,
+        amountMinor:
+          ((o.payments ?? []) as Array<{ method: string; amount_minor: number }>)
+            .filter((p) => p.method === 'cash')
+            .reduce((sum, p) => sum + (Number(p.amount_minor) || 0), 0) -
+          (Number(o.change_minor) || 0),
+      })),
+    ]
+
+    return { days: dailyCashFlow(events, days, today, offsetMinutes), today }
+  }
+
   async findAbandonedSessions(ctx: TenancyContext, staleAfterHours = 24) {
     const { data, error } = await supabase
       .from('pos_sessions')
@@ -596,7 +754,7 @@ export class PosService {
     const sessions = await Promise.all(
       (data ?? []).map(async (row) => {
         const session = mapSession(row)
-        const contents = await this.loadContents(ctx, session.id)
+        const contents = await this.loadContents(ctx, session.id, session)
         return { session, ...contents }
       }),
     )

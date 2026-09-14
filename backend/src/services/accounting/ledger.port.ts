@@ -84,4 +84,14 @@ export interface LedgerPort {
     ctx: TenancyContext,
     roles: AccountRole[],
   ): Promise<{ accounts: Partial<Record<AccountRole, string>>; missing: AccountRole[] }>
+
+  /**
+   * Like `resolveAccountsByRole`, but first creates the standard account for any
+   * role that has none. Automatic posting uses this so a workspace with no
+   * chart of accounts still gets its entries instead of being silently skipped.
+   */
+  ensureAccountsForRoles(
+    ctx: TenancyContext,
+    roles: AccountRole[],
+  ): Promise<{ accounts: Partial<Record<AccountRole, string>>; missing: AccountRole[] }>
 }

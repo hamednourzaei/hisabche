@@ -429,6 +429,172 @@ describe('budgets, over real HTTP', () => {
 
     expect(response.statusCode).toBe(403)
   })
+
+  // The budget list is cached per workspace; these tests seed rows directly.
+  beforeEach(async () => {
+    const { memoryCache } = await import('../utils/pagination')
+    await memoryCache.invalidate(`budget:${SHOP}`)
+  })
+
+  const budgetRow = (id: string, extra: Row = {}): Row => ({
+    id,
+    workspace_id: SHOP,
+    account_id: SALES,
+    period: 'monthly',
+    starts_on: '2026-08-01',
+    amount_minor: 100_000,
+    action: 'block',
+    warn_at_percent: 80,
+    is_active: true,
+    dimension_value_id: null,
+    branch_id: null,
+    name: null,
+    budget_type: 'expense',
+    status: 'approved',
+    version: 1,
+    distribution: null,
+    notes: null,
+    approved_by: null,
+    approved_at: null,
+    created_by: null,
+    ...extra,
+  })
+
+  it('a permission denial is 403, never 409', async () => {
+    for (const [method, url] of [
+      ['GET', '/api/operations/budgets/report'],
+      ['PUT', `/api/operations/budgets/${fakeId('budget')}`],
+      ['POST', `/api/operations/budgets/${fakeId('budget')}/approve`],
+    ] as const) {
+      const response = await app.inject({
+        method,
+        url,
+        headers: as(SELLER),
+        ...(method === 'PUT'
+          ? {
+              payload: {
+                accountId: SALES,
+                period: 'monthly',
+                startsOn: '2026-08-01',
+                amountMinor: 1,
+                action: 'warn',
+              },
+            }
+          : {}),
+      })
+      expect(response.statusCode, `${method} ${url}`).toBe(403)
+    }
+  })
+
+  it('an approved budget is revised, never overwritten (409)', async () => {
+    const id = fakeId('budget')
+    db.seed('budgets', [budgetRow(id)])
+
+    const response = await app.inject({
+      method: 'PUT',
+      url: `/api/operations/budgets/${id}`,
+      headers: as(OWNER),
+      payload: {
+        accountId: SALES,
+        period: 'monthly',
+        startsOn: '2026-08-01',
+        amountMinor: 999_999,
+        action: 'warn',
+      },
+    })
+
+    expect(response.statusCode, response.body).toBe(409)
+    expect(response.json().error).toContain('BUDGET_APPROVED_REQUIRES_REVISION')
+    expect(db.rows('budgets').find((r) => r.id === id)?.amount_minor).toBe(100_000)
+  })
+
+  it('approving a draft that overlaps an approved budget is a 409 conflict', async () => {
+    const approved = fakeId('budget')
+    const draft = fakeId('budget')
+    db.seed('budgets', [budgetRow(approved), budgetRow(draft, { status: 'draft' })])
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/operations/budgets/${draft}/approve`,
+      headers: as(OWNER),
+    })
+
+    expect(response.statusCode, response.body).toBe(409)
+    expect(response.json().error).toContain('BUDGET_OVERLAP')
+    expect(db.rows('budgets').find((r) => r.id === draft)?.status).toBe('draft')
+  })
+
+  it('strict separation of duties: the drafter cannot approve their own budget', async () => {
+    const draft = fakeId('budget')
+    db.seed('budgets', [budgetRow(draft, { status: 'draft', account_id: CASH })])
+    db.seed('sod_settings', [{ workspace_id: SHOP, mode: 'strict', disabled_rules: [] }])
+    db.seed('sod_actions', [
+      {
+        id: fakeId('sod'),
+        workspace_id: SHOP,
+        entity_type: 'budget',
+        entity_id: draft,
+        capability: 'budget.manage',
+        actor_id: OWNER.id,
+        actor_role: 'owner',
+        created_at: '2026-08-01T00:00:00Z',
+      },
+    ])
+    const { memoryCache } = await import('../utils/pagination')
+    await memoryCache.invalidate('sod')
+
+    const response = await app.inject({
+      method: 'POST',
+      url: `/api/operations/budgets/${draft}/approve`,
+      headers: as(OWNER),
+      payload: {},
+    })
+
+    expect(response.statusCode, response.body).toBe(409)
+    expect(response.json().error).toContain('SOD_BLOCKED:budget.draft-then-approve')
+    expect(db.rows('budgets').find((r) => r.id === draft)?.status).toBe('draft')
+  })
+
+  it('the report is ONE aggregate call however many budgets exist, with revenue sign normalised', async () => {
+    const expense = fakeId('budget')
+    const revenue = fakeId('budget')
+    db.seed('budgets', [
+      budgetRow(expense, { account_id: CASH }),
+      budgetRow(revenue, { account_id: SALES, budget_type: 'revenue' }),
+    ])
+
+    let calls = 0
+    db.rpc('budget_performance_batch', () => {
+      calls += 1
+      return {
+        actuals: [
+          { account_id: CASH, day: '2026-08-10', net_minor: 30_000 },
+          // Revenue is credit: debit − credit is negative.
+          { account_id: SALES, day: '2026-08-10', net_minor: -120_000 },
+        ],
+        commitments: [{ budget_id: expense, open_minor: 20_000 }],
+      }
+    })
+
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/operations/budgets/report?onDate=${today}`,
+      headers: as(OWNER),
+    })
+
+    expect(response.statusCode, response.body).toBe(200)
+    expect(calls).toBe(1)
+    const body = response.json()
+    const byId = new Map<string, any>(body.rows.map((r: any) => [r.budget.id, r.performance]))
+    expect(byId.get(expense)).toMatchObject({
+      actualMinor: 30_000,
+      openCommitmentMinor: 20_000,
+      remainingMinor: 50_000,
+      varianceMinor: 70_000,
+    })
+    expect(byId.get(revenue)).toMatchObject({ actualMinor: 120_000, varianceMinor: 20_000 })
+    expect(body.source).toBe('batch')
+  })
 })
 
 // ═══════════════════════════════════════════════════════════════════════════

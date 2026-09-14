@@ -42,6 +42,10 @@ export {
   useInvoice,
   useCreateInvoice,
   useUpdateInvoice,
+  usePostInvoiceToLedger,
+  usePostUnpostedInvoices,
+  type PostUnpostedSummary,
+  type InvoiceLedgerPostResult,
   useDeleteInvoice,
   invoiceKeys,
   type InvoiceWithCustomer,
@@ -239,20 +243,6 @@ export {
 // ─── Audit ────────────────────────────────────────────────
 export { useAuditLogs, auditKeys, type AuditLog, type AuditResponse } from './hooks/audit'
 
-// ─── Sales Follow-up ──────────────────────────────────────
-export {
-  useSalesFollowups,
-  useFollowup,
-  useCreateFollowup,
-  useUpdateFollowup,
-  useDeleteFollowup,
-  salesFollowupKeys,
-  type FollowUp,
-  type CreateFollowUpInput,
-  type UpdateFollowUpInput,
-  type FollowUpFilters,
-} from './hooks/sales-followup'
-
 // ─── Accounting ───────────────────────────────────────────
 export {
   useAccounts,
@@ -425,6 +415,12 @@ export {
   useRecordCashMovement,
   useCloseSession,
   useVoidOrder,
+  useSessionLedger,
+  useCashFlow,
+  type CashFlowDay,
+  type DrawerEntry,
+  type DrawerEntryKind,
+  type DrawerLedger,
   type PosSession,
   type PosPaymentMethod,
   type SessionTotals,
@@ -468,7 +464,21 @@ export {
   useBudgetVariance,
   useSaveBudget,
   useCheckSpend,
+  useBudgetReport,
+  useBudgetRevisions,
+  useSubmitBudget,
+  useApproveBudget,
+  useArchiveBudget,
+  useReviseBudget,
   type Budget,
+  type BudgetType,
+  type BudgetStatusCode,
+  type BudgetPerformance,
+  type BudgetReport,
+  type BudgetReportRow,
+  type BudgetReportFilter,
+  type BudgetRevisionRow,
+  type SaveBudgetInput,
   type BudgetAction,
   type BudgetPeriod,
   type BudgetStatus,

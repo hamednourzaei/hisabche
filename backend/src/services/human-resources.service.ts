@@ -298,6 +298,23 @@ export class HumanResourcesService {
 
   async createEmployee(ctx: TenancyContext, data: CreateEmployee) {
     const { workspaceId, userId } = ctx
+
+    // The branch is verified BEFORE the employee row exists. It used to be
+    // checked after the insert, so a branch from another workspace (or a
+    // deleted one) left the employee created and answered 500 — and the retry
+    // then failed again on the now-duplicate employee code.
+    if (data.branchId) {
+      const { data: branch, error: branchError } = await supabase
+        .from('branches')
+        .select('id')
+        .eq('id', data.branchId)
+        .eq('workspace_id', workspaceId)
+        .is('deleted_at', null)
+        .maybeSingle()
+      if (branchError) throw new DatabaseError('Failed to verify branch', branchError)
+      if (!branch) throw new NotFoundError('Branch')
+    }
+
     const { data: emp, error } = await supabase
       .from('employees')
       .insert({
@@ -676,7 +693,7 @@ export class HumanResourcesService {
     }
 
     const needed = [...new Set(lines.map((line) => line.role))] as AccountRole[]
-    const { accounts, missing } = await ledger.resolveAccountsByRole(ctx, needed)
+    const { accounts, missing } = await ledger.ensureAccountsForRoles(ctx, needed)
 
     if (missing.length > 0) {
       console.warn(

@@ -27,21 +27,32 @@ const toJsonSchema = (schema: any) => {
   return result
 }
 
-const recordPaymentSchema = z.object({
-  direction: z.enum(['in', 'out']),
-  partyType: z.enum(['customer', 'supplier']),
-  partyId: z.string().uuid(),
-  amount: z.number().positive(),
-  entryDate: z.string().optional(),
-  currency: z.string().max(8).optional(),
-  method: z.string().max(32).optional(),
-  reference: z.string().max(200).optional(),
-  notes: z.string().max(1000).optional(),
-  /** Omit to settle the oldest open invoices first. */
-  allocations: z
-    .array(z.object({ invoiceId: z.string().uuid(), amount: z.number().positive() }))
-    .optional(),
-})
+const recordPaymentSchema = z
+  .object({
+    direction: z.enum(['in', 'out']),
+    partyType: z.enum(['customer', 'supplier']),
+    // ⚠️ NULLABLE. A walk-in sale has no customer, and the service already
+    // supports paying it («both null is the walk-in cash sale» in
+    // payments.service.ts) when the payment names the invoice explicitly. This
+    // schema still required a uuid, so the invoice page could not record a
+    // payment on such an invoice at all.
+    partyId: z.string().uuid().nullable(),
+    amount: z.number().positive(),
+    entryDate: z.string().optional(),
+    currency: z.string().max(8).optional(),
+    method: z.string().max(32).optional(),
+    reference: z.string().max(200).optional(),
+    notes: z.string().max(1000).optional(),
+    /** Omit to settle the oldest open invoices first. */
+    allocations: z
+      .array(z.object({ invoiceId: z.string().uuid(), amount: z.number().positive() }))
+      .optional(),
+  })
+  .refine((body) => body.partyId !== null || (body.allocations?.length ?? 0) > 0, {
+    // No party means nothing to auto-allocate against: the invoice must be named.
+    message: 'PAYMENT_WITHOUT_PARTY_NEEDS_ALLOCATION',
+    path: ['allocations'],
+  })
 
 const cancelSchema = z.object({
   reason: z.string().min(1).max(500),

@@ -8,12 +8,12 @@
 // is verified per request, the same way the workspace is.
 // ============================================
 
+import { sendFailure } from '../errors/http-failure'
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
 
 import { BranchService } from '../services/branch'
-import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
@@ -50,17 +50,8 @@ const assignSchema = z.object({
 export async function branchRoutes(fastify: FastifyInstance) {
   const branchService = new BranchService()
 
-  const fail = (reply: FastifyReply, err: unknown, fallback: string) => {
-    if (err instanceof z.ZodError) {
-      return reply.code(400).send({ error: 'Validation failed', details: err.errors })
-    }
-    if (err instanceof BaseError && err.statusCode < 500) {
-      const code = /^[A-Z][A-Z_]{6,}/.exec(err.message)?.[0]
-      return reply.code(err.statusCode).send({ error: err.message, code: code ?? err.name })
-    }
-    fastify.log.error(err)
-    return reply.code(500).send({ error: fallback })
-  }
+  const fail = (reply: FastifyReply, err: unknown, fallback: string) =>
+    sendFailure(reply, fastify.log, err, fallback)
 
   // ─── GET / ─────────────────────────────────────────────
   fastify.get(

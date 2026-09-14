@@ -49,7 +49,6 @@ export default function robots(): MetadataRoute.Robots {
     '/*/activities',
     '/*/sync-center',
     '/*/quick-invoice',
-    '/*/sales-followup',
     '/*/workflow-templates',
     '/*/onboarding',
     '/*/accept-invite',

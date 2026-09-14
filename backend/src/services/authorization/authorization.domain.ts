@@ -75,6 +75,10 @@ export const CAPABILITIES = [
   // Reporting
   'report.operational.read',
   'report.financial.read',
+  // Planning and control
+  'budget.read',
+  'budget.manage',
+  'budget.approve',
   // Bringing an existing business in
   'data.import',
   // The workspace itself
@@ -121,6 +125,13 @@ const MIN_ROLE: Record<Capability, WorkspaceRole> = {
 
   'report.operational.read': 'seller',
   'report.financial.read': 'manager',
+
+  // A budget exposes the shop's financial plan, so reading it is a manager's
+  // view like the P&L. Approving or revising one changes a spending limit
+  // everyone else is held to — the owner's decision.
+  'budget.read': 'manager',
+  'budget.manage': 'manager',
+  'budget.approve': 'owner',
 
   // An import creates thousands of rows with opening balances in one act. A
   // seller creates customers one at a time at a counter; this is a different
@@ -390,6 +401,13 @@ export const PERMISSION_MODULES: readonly ModuleSpec[] = [
     read: ['report.operational.read'],
     write: [],
     full: ['report.financial.read'],
+  },
+  {
+    key: 'budgets',
+    label: 'بودجه',
+    read: ['budget.read'],
+    write: ['budget.manage'],
+    full: ['budget.approve'],
   },
   {
     key: 'workspace',

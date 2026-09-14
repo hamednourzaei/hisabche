@@ -2,75 +2,175 @@
 
 // ============================================
 // packages/ui/src/components/ui/budgets/containers/budgets-container.tsx
+//
+// Queries and mutations for the budgets page. Every figure comes from
+// `useBudgetReport`; nothing is recomputed here.
 // ============================================
 
 import { memo, useCallback, useState } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   asList,
-  useBudgetVariance,
-  useBudgets,
+  useAccounts,
+  useApproveBudget,
+  useArchiveBudget,
+  useBranches,
+  useBudgetReport,
+  useBudgetRevisions,
   useCheckSpend,
-  type Budget,
+  useReviseBudget,
+  useSaveBudget,
+  useSubmitBudget,
+  type Account,
   type BudgetCheck,
-  type VarianceRow,
+  type SaveBudgetInput,
 } from '@hisabche/api'
-import { BudgetsView } from '../budgets-view'
+import { useAuthStore } from '@hisabche/store'
+
+import { BudgetsView, type BudgetFilters } from '../budgets-view'
+
+function errorMessage(err: unknown): string | null {
+  const response = (err as { response?: { data?: { error?: string; code?: string } } })?.response
+  return response?.data?.error ?? (err as Error)?.message ?? null
+}
+
+function localToday(): string {
+  // The shop's calendar day, not UTC's: Kabul is UTC+4:30 and a UTC day would
+  // report tomorrow's budget position after 19:30.
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, '0')
+  const d = String(now.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
 
 export const BudgetsContainer = memo(function BudgetsContainer() {
   const translate = useTranslations()
-  const t = (key: string, fallback?: string): string => {
-    const value = translate(key as Parameters<typeof translate>[0])
-    return value && value !== key ? value : (fallback ?? key)
-  }
+  const t = useCallback(
+    (key: string, fallback?: string): string => {
+      const value = translate(key as Parameters<typeof translate>[0])
+      return value && value !== key ? value : (fallback ?? key)
+    },
+    [translate],
+  )
 
+  const [filters, setFilters] = useState<BudgetFilters>(() => ({
+    type: 'all',
+    status: 'all',
+    branchId: '',
+    onDate: localToday(),
+  }))
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [checkResult, setCheckResult] = useState<BudgetCheck | null>(null)
 
-  const budgets = useBudgets()
-  const variance = useBudgetVariance()
+  const report = useBudgetReport(filters.onDate, {
+    ...(filters.type !== 'all' ? { type: filters.type } : {}),
+    ...(filters.status !== 'all' ? { status: filters.status } : {}),
+    ...(filters.branchId ? { branchId: filters.branchId } : {}),
+  })
+  const accounts = useAccounts()
+  const branches = useBranches()
+  const revisions = useBudgetRevisions(selectedId)
+
+  const save = useSaveBudget()
+  const submit = useSubmitBudget()
+  const approve = useApproveBudget()
+  const archive = useArchiveBudget()
+  const revise = useReviseBudget()
   const checkSpend = useCheckSpend()
+
+  // ⚠️ DISPLAY ONLY. Mirrors the server's capability table (budget.manage →
+  // manager, budget.approve → owner) to decide which buttons to show. The
+  // server re-checks every call and answers 403 regardless of what is shown.
+  const role = useAuthStore((s) => s.user?.role ?? null)
+  const canManage = role === 'owner' || role === 'manager'
+  const canApprove = role === 'owner'
+
+  // A refusal the person can act on is shown in words. The server's codes
+  // (BUDGET_OVERLAP, SOD_BLOCKED, ...) are translated; anything unknown is
+  // shown as the server sent it rather than swallowed.
+  const onError = useCallback(
+    (err: unknown) => {
+      const raw = errorMessage(err)
+      const code = raw ? /^([A-Z][A-Z_]{5,})/.exec(raw)?.[1] : undefined
+      setActionError(code ? t(`budgets.error_${code}`, raw ?? code) : raw)
+    },
+    [t],
+  )
+
+  const handleSave = useCallback(
+    (input: SaveBudgetInput) => {
+      setActionError(null)
+      save.mutate(input, { onError })
+    },
+    [onError, save],
+  )
 
   const handleCheckSpend = useCallback(
     (input: { accountId: string; amountMinor: number; onDate: string }) => {
       setActionError(null)
-      // The previous answer is cleared first: a stale "allowed" left on screen
-      // while a new check runs is the one thing this control must never show.
+      // A stale "allowed" left on screen while a new check runs is the one
+      // thing this control must never show.
       setCheckResult(null)
-      checkSpend.mutate(input, {
-        onSuccess: setCheckResult,
-        onError: (err) => {
-          const message =
-            (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
-            (err as Error)?.message
-          setActionError(message ?? null)
-        },
-      })
+      checkSpend.mutate(input, { onSuccess: setCheckResult, onError })
     },
-    [checkSpend],
+    [checkSpend, onError],
   )
 
   const handleRefresh = useCallback(() => {
     setActionError(null)
     setCheckResult(null)
-    budgets.refetch()
-    variance.refetch()
-  }, [budgets, variance])
+    report.refetch()
+  }, [report])
+
+  const isBusy =
+    save.isPending ||
+    submit.isPending ||
+    approve.isPending ||
+    archive.isPending ||
+    revise.isPending ||
+    checkSpend.isPending
 
   return (
     <BudgetsView
       t={t}
-      budgets={asList<Budget>(budgets.data)}
-      variance={asList<VarianceRow>(variance.data)}
-      isVarianceLoading={variance.isLoading}
-      varianceError={variance.error ? (variance.error as Error).message : null}
-      isLoading={budgets.isLoading}
-      error={budgets.error ? (budgets.error as Error).message : null}
+      report={report.data}
+      isLoading={report.isLoading}
+      error={report.error ? errorMessage(report.error) : null}
+      filters={filters}
+      onFiltersChange={setFilters}
+      accounts={asList<Account>(accounts.data)}
+      branches={asList<{ id: string; name: string }>(branches.data)}
+      canManage={canManage}
+      canApprove={canApprove}
       actionError={actionError}
-      isBusy={checkSpend.isPending}
+      isBusy={isBusy}
+      onRefresh={handleRefresh}
+      onSave={handleSave}
+      onSubmit={(id) => {
+        setActionError(null)
+        submit.mutate(id, { onError })
+      }}
+      onApprove={(id) => {
+        setActionError(null)
+        approve.mutate(id, { onError })
+      }}
+      onArchive={(id) => {
+        setActionError(null)
+        archive.mutate(id, { onError })
+      }}
+      onRevise={(input) => {
+        setActionError(null)
+        revise.mutate(input, { onError })
+      }}
+      selectedId={selectedId}
+      onSelect={setSelectedId}
+      revisions={revisions.data ?? []}
+      isRevisionsLoading={revisions.isLoading}
       checkResult={checkResult}
       onCheckSpend={handleCheckSpend}
-      onRefresh={handleRefresh}
+      newId={() => crypto.randomUUID()}
     />
   )
 })

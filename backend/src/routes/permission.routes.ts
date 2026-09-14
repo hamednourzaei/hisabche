@@ -2,6 +2,7 @@
 // backend/src/routes/permission.routes.ts
 // ============================================
 
+import { sendFailure } from '../errors/http-failure'
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
@@ -13,7 +14,6 @@ import {
 } from '@hisabche/validation'
 import { PermissionService } from '../services/permission.service'
 import { permissionMatrix } from '../services/authorization/permission-matrix.service'
-import { BaseError } from '../errors/base.error'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { requireCapability } from '../middleware/authorize.middleware'
@@ -52,17 +52,8 @@ export async function permissionRoutes(fastify: FastifyInstance) {
    * FORBIDDEN, PERMISSION_CATALOGUE_INCOMPLETE. Passing them through as a 500
    * would turn "the migration has not run" into "something went wrong".
    */
-  const failMatrix = (reply: FastifyReply, err: unknown, fallback: string) => {
-    if (err instanceof z.ZodError) {
-      return reply.code(400).send({ error: 'Validation failed', details: err.errors })
-    }
-    if (err instanceof BaseError && err.statusCode < 500) {
-      const code = /^[A-Z][A-Z_]{6,}/.exec(err.message)?.[0]
-      return reply.code(err.statusCode).send({ error: err.message, code: code ?? err.name })
-    }
-    fastify.log.error(err)
-    return reply.code(500).send({ error: fallback })
-  }
+  const failMatrix = (reply: FastifyReply, err: unknown, fallback: string) =>
+    sendFailure(reply, fastify.log, err, fallback)
 
   // ═══════════════════════════════════════════════════════════
   // PERMISSIONS

@@ -39,7 +39,8 @@ import { PaymentsRepository, domainErrorCode, type PaymentRow } from './payments
 export interface RecordPaymentInput {
   direction: PaymentDirection
   partyType: PartyType
-  partyId: string
+  /** null only for a walk-in invoice, and then allocations must name it. */
+  partyId: string | null
   amount: number
   entryDate?: string | undefined
   currency?: string | undefined
@@ -133,7 +134,9 @@ export class PaymentsService {
           ctx.workspaceId,
           input.allocations!.map((a) => a.invoiceId),
         )
-      : await this.repo.openInvoicesFor(ctx.workspaceId, input.partyType, input.partyId)
+      : input.partyId
+        ? await this.repo.openInvoicesFor(ctx.workspaceId, input.partyType, input.partyId)
+        : []
 
     // ⚠️ AN INVOICE ADDRESSED BY ID MUST BELONG TO THE PARTY BEING CREDITED.
     //
@@ -226,7 +229,7 @@ export class PaymentsService {
     const isIncoming = direction === 'in'
     const needed = isIncoming ? (['cash', 'receivable'] as const) : (['payable', 'cash'] as const)
 
-    const { accounts, missing } = await ledger.resolveAccountsByRole(ctx, [...needed])
+    const { accounts, missing } = await ledger.ensureAccountsForRoles(ctx, [...needed])
 
     if (missing.length > 0) {
       console.warn(

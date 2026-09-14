@@ -28,8 +28,19 @@
 // ============================================
 
 import { memo, useMemo, useState } from 'react'
-import { Banknote, Coins, ShoppingCart, Wallet } from 'lucide-react'
-import type { PosSession, SessionTotals, AbandonedSession, PosPaymentMethod } from '@hisabche/api'
+import dynamic from 'next/dynamic'
+import { Skeleton } from '../skeleton'
+import { formatSelectedMoney } from '../../../lib/money-display'
+import { ArrowDownLeft, ArrowUpRight, Banknote, ShoppingCart, Wallet } from 'lucide-react'
+import type {
+  PosSession,
+  SessionTotals,
+  AbandonedSession,
+  PosPaymentMethod,
+  DrawerEntry,
+  CashFlowDay,
+} from '@hisabche/api'
+import { SegmentedFilter } from '../segmented-filter'
 import { useDateFormat } from '../../../hooks/use-date-format'
 import { DataTable, matchesSearch, type TableColumn } from '../data-table'
 import {
@@ -69,7 +80,23 @@ export interface TillViewProps {
     reason: string
   }) => void
   onClose: (input: { countedCashMinor: number; varianceReason?: string }) => void
+  /** The drawer as a ledger, from the server. Last balance = expected cash. */
+  ledger: DrawerEntry[]
+  isLedgerLoading: boolean
+  ledgerError: string | null
+  dailyCashFlow: CashFlowDay[]
+  cashFlowDays: 7 | 30 | 90
+  onCashFlowDaysChange: (days: 7 | 30 | 90) => void
+  isCashFlowLoading: boolean
+  cashFlowError: string | null
 }
+
+type LedgerFilter = 'all' | 'in' | 'out' | 'invoices'
+
+const CashFlowChart = dynamic(() => import('./till-cash-flow-chart-internal'), {
+  ssr: false,
+  loading: () => <Skeleton className="h-60 w-full rounded-xl" />,
+})
 
 const METHOD_ORDER: PosPaymentMethod[] = ['cash', 'card', 'transfer', 'credit', 'other']
 
@@ -88,14 +115,60 @@ export const TillView = memo(function TillView({
   onOpen,
   onCashMovement,
   onClose,
+  ledger,
+  isLedgerLoading,
+  ledgerError,
+  dailyCashFlow,
+  cashFlowDays,
+  onCashFlowDaysChange,
+  isCashFlowLoading,
+  cashFlowError,
 }: TillViewProps) {
-  const { dateTime } = useDateFormat()
+  const { dateTime, date } = useDateFormat()
+
+  const chartData = useMemo(
+    () =>
+      dailyCashFlow.map((d) => ({
+        label: date(d.day, { month: 'short', day: 'numeric' }),
+        in: d.inMinor / 100,
+        out: d.outMinor / 100,
+        net: d.netMinor / 100,
+      })),
+    [dailyCashFlow, date],
+  )
   const [floatMinor, setFloatMinor] = useState(0)
   const [movementMinor, setMovementMinor] = useState(0)
   const [movementReason, setMovementReason] = useState('')
   const [countedMinor, setCountedMinor] = useState(0)
   const [varianceReason, setVarianceReason] = useState('')
   const [search, setSearch] = useState('')
+  const [ledgerFilter, setLedgerFilter] = useState<LedgerFilter>('all')
+
+  // Presentation of the server's entries: which ones to show, and the in/out
+  // sums of the session. The balance column is the server's own.
+  const cashFlow = useMemo(() => {
+    const events = ledger.filter((entry) => entry.kind !== 'opening_float')
+    return {
+      inMinor: events.filter((e) => e.amountMinor > 0).reduce((s, e) => s + e.amountMinor, 0),
+      outMinor: events.filter((e) => e.amountMinor < 0).reduce((s, e) => s - e.amountMinor, 0),
+    }
+  }, [ledger])
+
+  const ledgerRows = useMemo(
+    () =>
+      [...ledger]
+        .reverse()
+        .filter((entry) =>
+          ledgerFilter === 'all'
+            ? true
+            : ledgerFilter === 'in'
+              ? entry.amountMinor > 0 && entry.kind !== 'opening_float'
+              : ledgerFilter === 'out'
+                ? entry.amountMinor < 0
+                : entry.kind === 'settlement_in' || entry.kind === 'settlement_out',
+        ),
+    [ledger, ledgerFilter],
+  )
 
   // Computed in the view because it is a preview of an unsaved count, not a
   // stored fact. The server recomputes it from its own totals on close.
@@ -180,34 +253,143 @@ export const TillView = memo(function TillView({
       ) : null}
 
       {session && totals ? (
-        <StatGrid>
-          <Stat
-            icon={ShoppingCart}
-            label={t('till.orders', 'فروش‌ها')}
-            value={totals.orderCount}
-            hint={
-              totals.voidedCount > 0
-                ? `${t('till.voided', 'ابطال‌شده')}: ${totals.voidedCount}`
-                : undefined
-            }
-          />
-          <Stat
-            icon={Banknote}
-            label={t('till.gross_sales', 'فروش ناخالص')}
-            value={<Money minor={totals.grossSalesMinor} />}
-          />
-          <Stat
-            icon={Wallet}
-            label={t('till.expected_cash', 'نقد مورد انتظار')}
-            value={<Money minor={totals.expectedCashMinor} />}
-            hint={t('till.expected_hint', 'محاسبه‌ی سرور — قابل ویرایش نیست')}
-          />
-          <Stat
-            icon={Coins}
-            label={t('till.opening_float', 'نقد اولیه')}
-            value={<Money minor={session.openingFloatMinor} tone="muted" />}
-          />
-        </StatGrid>
+        <>
+          <section
+            aria-label={t('till.balance_now', 'موجودی فعلی صندوق')}
+            className="rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-4 sm:p-5"
+          >
+            <p className="text-sm text-[hsl(var(--fg-secondary))]">
+              {t('till.balance_now', 'موجودی فعلی صندوق')}
+            </p>
+            <p className="mt-1 text-2xl font-bold sm:text-3xl">
+              <Money minor={totals.expectedCashMinor} />
+            </p>
+            <p className="mt-1 text-xs text-[hsl(var(--fg-tertiary))]">
+              {t('till.expected_hint', 'محاسبه‌ی سرور — قابل ویرایش نیست')}
+            </p>
+          </section>
+          <StatGrid>
+            <Stat
+              icon={ArrowDownLeft}
+              label={t('till.cash_in_session', 'ورود نقد در این نوبت')}
+              value={isLedgerLoading || ledgerError ? '—' : <Money minor={cashFlow.inMinor} />}
+            />
+            <Stat
+              icon={ArrowUpRight}
+              label={t('till.cash_out_session', 'خروج نقد در این نوبت')}
+              value={isLedgerLoading || ledgerError ? '—' : <Money minor={cashFlow.outMinor} />}
+            />
+            <Stat
+              icon={Wallet}
+              label={t('till.net_session', 'خالص جریان نقد')}
+              value={
+                isLedgerLoading || ledgerError ? (
+                  '—'
+                ) : (
+                  <Money minor={cashFlow.inMinor - cashFlow.outMinor} signed tone="auto" />
+                )
+              }
+            />
+            <Stat
+              icon={ShoppingCart}
+              label={t('till.orders', 'فروش‌ها')}
+              value={totals.orderCount}
+              hint={
+                totals.voidedCount > 0
+                  ? `${t('till.voided', 'ابطال‌شده')}: ${totals.voidedCount}`
+                  : undefined
+              }
+            />
+          </StatGrid>
+          <p className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-[hsl(var(--fg-tertiary))]">
+            <span>
+              {t('till.opening_float', 'نقد اولیه')}:{' '}
+              <Money minor={session.openingFloatMinor} tone="muted" />
+            </span>
+            <span>
+              <Banknote className="me-1 inline size-3.5" aria-hidden="true" />
+              {t('till.gross_sales', 'فروش ناخالص')}:{' '}
+              <Money minor={totals.grossSalesMinor} tone="muted" />
+            </span>
+            {typeof totals.settlementsMinor === 'number' && totals.settlementsMinor !== 0 ? (
+              <span>
+                {t('till.settlements', 'پرداخت‌های نقدی فاکتور')}:{' '}
+                <Money minor={totals.settlementsMinor} signed tone="muted" />
+              </span>
+            ) : null}
+          </p>
+
+          <ListSection
+            title={t('till.ledger_title', 'تراکنش‌های صندوق')}
+            description={t(
+              'till.ledger_hint',
+              'هر ورود و خروج نقد با موجودی پس از آن. پرداخت‌های نقدی فاکتور خودکار اینجا می‌آیند.',
+            )}
+          >
+            <SegmentedFilter
+              label={t('till.ledger_filter', 'نوع')}
+              value={ledgerFilter}
+              onChange={setLedgerFilter}
+              options={[
+                { value: 'all', label: t('common.all', 'همه') },
+                { value: 'in', label: t('till.filter_in', 'ورود') },
+                { value: 'out', label: t('till.filter_out', 'خروج') },
+                { value: 'invoices', label: t('till.filter_invoices', 'فاکتورها') },
+              ]}
+            />
+            {isLedgerLoading ? (
+              <Loading label={t('common.loading', 'در حال بارگذاری…')} />
+            ) : ledgerError ? (
+              <ErrorNote
+                message={ledgerError}
+                onRetry={onRefresh}
+                retryLabel={t('common.retry', 'تلاش دوباره')}
+              />
+            ) : ledgerRows.length === 0 ? (
+              <EmptyState
+                icon="search"
+                title={t('till.ledger_empty', 'تراکنشی با این فیلتر نیست')}
+              />
+            ) : (
+              <ul className="mt-3 divide-y divide-[hsl(var(--border-default))] rounded-xl border border-[hsl(var(--border-default))]">
+                {ledgerRows.map((entry, index) => (
+                  <li
+                    key={`${entry.kind}-${entry.sourceId ?? 'float'}-${index}`}
+                    className="grid grid-cols-[1fr_auto] items-center gap-x-3 gap-y-0.5 px-3 py-2.5 text-sm sm:grid-cols-[9rem_1fr_9rem_9rem]"
+                  >
+                    <span className="order-3 text-xs text-[hsl(var(--fg-tertiary))] sm:order-none">
+                      {dateTime(entry.at)}
+                    </span>
+                    <span className="order-1 min-w-0 sm:order-none">
+                      <span className="font-medium">
+                        {t(`till.kind_${entry.kind}`, entry.kind)}
+                      </span>
+                      {entry.reference ? (
+                        <span
+                          className="ms-2 truncate text-xs text-[hsl(var(--fg-secondary))]"
+                          dir="auto"
+                        >
+                          {entry.reference}
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="order-2 text-end sm:order-none">
+                      <Money
+                        minor={entry.amountMinor}
+                        signed
+                        tone={entry.kind === 'opening_float' ? 'muted' : 'auto'}
+                      />
+                    </span>
+                    <span className="order-4 text-end text-xs sm:order-none sm:text-sm">
+                      <span className="sm:hidden">{t('till.balance_after', 'موجودی')}: </span>
+                      <Money minor={entry.balanceMinor} tone="muted" />
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </ListSection>
+        </>
       ) : null}
 
       {!isLoading && !error && !session ? (
@@ -361,6 +543,52 @@ export const TillView = memo(function TillView({
           </Panel>
         </>
       ) : null}
+
+      <Panel
+        title={t('till.cash_flow_title', 'جریان نقدی')}
+        description={t(
+          'till.cash_flow_hint',
+          'دریافت و پرداخت نقدی همه‌ی صندوق‌ها و فاکتورها، به تفکیک روز.',
+        )}
+      >
+        <SegmentedFilter
+          label={t('till.cash_flow_range', 'بازه')}
+          value={String(cashFlowDays)}
+          onChange={(v) => onCashFlowDaysChange(Number(v) as 7 | 30 | 90)}
+          options={[
+            { value: '7', label: t('till.range_7', '۷ روز') },
+            { value: '30', label: t('till.range_30', '۳۰ روز') },
+            { value: '90', label: t('till.range_90', '۹۰ روز') },
+          ]}
+        />
+        <div className="mt-3">
+          {isCashFlowLoading ? (
+            <Skeleton className="h-60 w-full rounded-xl" />
+          ) : cashFlowError ? (
+            <ErrorNote
+              message={cashFlowError}
+              onRetry={onRefresh}
+              retryLabel={t('common.retry', 'تلاش دوباره')}
+            />
+          ) : dailyCashFlow.every((d) => d.inMinor === 0 && d.outMinor === 0) ? (
+            <EmptyState
+              icon="search"
+              title={t('till.cash_flow_empty', 'در این بازه جریان نقدی ثبت نشده')}
+            />
+          ) : (
+            <CashFlowChart
+              data={chartData}
+              labels={{
+                in: t('till.filter_in', 'ورود'),
+                out: t('till.filter_out', 'خروج'),
+                net: t('till.net_session', 'خالص جریان نقد'),
+              }}
+              fmt={(v) => formatSelectedMoney(v)}
+              height={240}
+            />
+          )}
+        </div>
+      </Panel>
 
       <ListSection
         title={t('till.abandoned_title', 'صندوق‌های رها شده')}

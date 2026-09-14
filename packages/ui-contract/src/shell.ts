@@ -115,7 +115,7 @@ export const DOMAIN_SPECS: readonly DomainSpec[] = [
     labelKey: 'domain.sales',
     // 'sell' is a command-palette ACTION, not a destination — there is no
     // page at /sell. A hub linking to it would be a dead door.
-    destinations: ['till', 'get-paid', 'buyers', 'follow-up', 'sales-followup'],
+    destinations: ['till', 'get-paid', 'buyers', 'follow-up'],
     primaryActions: ['till'],
   },
   {
@@ -130,7 +130,7 @@ export const DOMAIN_SPECS: readonly DomainSpec[] = [
     // G1: 'team' (/human-resources) folded into 'coworkers'
     // (/team-and-payroll). They listed the same people twice, and the People
     // workspace showed both as separate destinations.
-    destinations: ['coworkers', 'timesheets', 'access'],
+    destinations: ['coworkers', 'timesheets'],
     primaryActions: ['coworkers'],
   },
 ]

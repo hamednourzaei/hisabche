@@ -2,6 +2,7 @@
 // backend/src/routes/human-resources.routes.ts
 // ============================================
 
+import { sendFailure } from '../errors/http-failure'
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
@@ -143,8 +144,7 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
         )) as unknown[]
         return reply.send({ employees, total: employees.length })
       } catch (err) {
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to fetch employees' })
+        return sendFailure(reply, fastify.log, err, 'Failed to fetch employees')
       }
     },
   )
@@ -166,11 +166,9 @@ export async function humanResourcesRoutes(fastify: FastifyInstance) {
         await clearCache('employees:*')
         return reply.code(201).send(emp)
       } catch (err) {
-        if (err instanceof z.ZodError) {
-          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
-        }
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to create employee' })
+        // A known refusal (branch not in this workspace, validation) keeps its
+        // own status; a database failure says which code it was.
+        return sendFailure(reply, fastify.log, err, 'Failed to create employee')
       }
     },
   )

@@ -14,8 +14,8 @@
 
 import { memo, useCallback } from 'react'
 import { useTranslations } from 'next-intl'
-import { useConflicts, useMigrations } from '@hisabche/api'
-import { useSyncStore } from '@hisabche/store'
+import { asList, useConflicts, useMigrations, type Conflict } from '@hisabche/api'
+import { useBackupStore, useSyncStore } from '@hisabche/store'
 
 import { DataAndSyncView } from '../data-and-sync-view'
 
@@ -43,6 +43,7 @@ export const DataAndSyncContainer = memo(function DataAndSyncContainer({
   // difference between 'none' and 'not known'.
   const conflicts = useConflicts('open')
   const migrations = useMigrations()
+  const lastBackupAt = useBackupStore((s) => s.lastBackupAt)
 
   // A failed or in-flight count is `null`, never 0. The view renders the two
   // differently on purpose: "no conflicts" is a fact somebody may act on, and
@@ -63,6 +64,8 @@ export const DataAndSyncContainer = memo(function DataAndSyncContainer({
       pendingCount={pendingCount}
       lastSyncedAt={lastSyncedAt}
       conflictCount={conflictCount}
+      conflicts={conflictCount === null ? null : asList<Conflict>(conflicts.data)}
+      lastBackupAt={lastBackupAt}
       lastMigration={migrations.data?.[0] ?? null}
       migrationCount={migrations.data?.length ?? 0}
       isLoading={migrations.isLoading}

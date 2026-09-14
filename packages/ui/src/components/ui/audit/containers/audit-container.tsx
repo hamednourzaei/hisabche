@@ -116,12 +116,16 @@ export const AuditContainer = memo(function AuditContainer() {
   const formatDate = useCallback(
     (iso: string) => {
       if (!iso) return '—'
+      // ⚠️ `format` THROWS «RangeError: Invalid time value» on a malformed
+      // timestamp, which takes the whole audit page into the error boundary.
+      const parsed = new Date(iso)
+      if (Number.isNaN(parsed.getTime())) return '—'
       // An explicit locale, not the browser's — the same defect the accounting
       // tabs had, where two people in one shop saw two different renderings.
       return new Intl.DateTimeFormat(locale, {
         dateStyle: 'short',
         timeStyle: 'short',
-      }).format(new Date(iso))
+      }).format(parsed)
     },
     [locale],
   )

@@ -196,3 +196,64 @@ export function useDeleteInvoice() {
     },
   })
 }
+
+/** What `POST /invoices/:id/post-to-ledger` reports back. */
+export type InvoiceLedgerPostResult =
+  | { status: 'posted' }
+  | { status: 'already_posted' }
+  | { status: 'nothing_to_post' }
+  | { status: 'skipped'; missing: string[] }
+  | { status: 'not_postable'; reason: string }
+
+/**
+ * Retry the ledger posting for one invoice.
+ *
+ * Automatic posting at creation can be skipped (e.g. the chart of accounts has
+ * no receivable/sales account) and used to fail silently. This runs it again
+ * and returns the reason when it still cannot post.
+ */
+export function usePostInvoiceToLedger() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { data } = await apiClient.post<InvoiceLedgerPostResult>(
+        `/invoices/${id}/post-to-ledger`,
+        {},
+      )
+      return data
+    },
+    onSuccess: (_result, id) => {
+      queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(id) })
+      queryClient.invalidateQueries({ queryKey: ['ledger'] })
+      queryClient.invalidateQueries({ queryKey: ['journal-entries'] })
+    },
+  })
+}
+
+/** What `POST /invoices/post-unposted` reports back. */
+export interface PostUnpostedSummary {
+  checked: number
+  posted: number
+  skipped: Array<{ invoiceId: string; status: string; detail: string }>
+}
+
+/**
+ * Book every invoice that has no journal entry yet — the history that never
+ * reached the ledger. Idempotent on the server.
+ */
+export function usePostUnpostedInvoices() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await apiClient.post<PostUnpostedSummary>('/invoices/post-unposted', {})
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ledger'] })
+      queryClient.invalidateQueries({ queryKey: ['accounting'] })
+      queryClient.invalidateQueries({ queryKey: ['journal-entries'] })
+      queryClient.invalidateQueries({ queryKey: invoiceKeys.all })
+    },
+  })
+}

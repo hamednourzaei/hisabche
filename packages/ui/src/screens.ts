@@ -82,7 +82,6 @@ export { BranchTreeView } from './components/ui/team-and-payroll/branch-tree-vie
 export { BranchForm } from './components/ui/team-and-payroll/branch-form'
 
 // ---------- Sales Follow-up ----------
-export { SalesFollowupContainer } from './components/ui/sales-followup/containers/sales-followup-container'
 
 // ---------- Audit ----------
 export { AuditContainer } from './components/ui/audit/containers/audit-container'
@@ -116,3 +115,4 @@ export { ConflictsContainer } from './components/ui/conflicts/containers/conflic
 
 // ---------- Separation of duties ----------
 export { GovernanceContainer } from './components/ui/governance/containers/governance-container'
+export { GovernanceHubContainer } from './components/ui/governance/containers/governance-hub-container'

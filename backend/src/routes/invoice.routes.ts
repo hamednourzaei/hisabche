@@ -219,6 +219,55 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
   // ─── PATCH /api/invoices/:id ────────────────────────────
   // ✅ FIX: Invalidate analytics cache
   // ✅ FIX: Create activity record (previously missing)
+  // ─── POST /api/invoices/post-unposted ───────────────────
+  // Book every invoice that has no journal entry yet (history from before the
+  // chart of accounts existed). Registered BEFORE `/:id/...` routes.
+  fastify.post(
+    '/api/invoices/post-unposted',
+    {
+      preHandler: [authenticate, requireWorkspaceContext],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { workspaceId } = request.tenancy
+        const summary = await invoiceService.postAllUnposted(request.tenancy)
+        await clearCache(`invoices:${workspaceId}:*`)
+        await clearCache(`dashboard:v2:${workspaceId}`)
+        return reply.send(summary)
+      } catch (err) {
+        fastify.log.error(err)
+        return reply.code(500).send({ error: 'Failed to post unposted invoices' })
+      }
+    },
+  )
+
+  // ─── POST /api/invoices/:id/post-to-ledger ──────────────
+  // Retry the ledger posting for an invoice whose automatic posting did not
+  // happen, and say WHY when it still can't (e.g. the chart of accounts has no
+  // receivable/sales account). Idempotent — see InvoiceService#postToLedger.
+  fastify.post(
+    '/api/invoices/:id/post-to-ledger',
+    {
+      preHandler: [authenticate, requireWorkspaceContext],
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { id } = request.params as { id: string }
+        const { workspaceId } = request.tenancy
+        const result = await invoiceService.postToLedger(id, request.tenancy)
+        await clearCache(`invoice:${workspaceId}:${id}`)
+        await clearCache(`invoices:${workspaceId}:*`)
+        return reply.send(result)
+      } catch (err) {
+        fastify.log.error(err)
+        const status = (err as { statusCode?: number })?.statusCode ?? 500
+        return reply
+          .code(status)
+          .send({ error: err instanceof Error ? err.message : 'Failed to post invoice to ledger' })
+      }
+    },
+  )
+
   fastify.patch(
     '/api/invoices/:id',
     {

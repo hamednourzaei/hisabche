@@ -96,6 +96,12 @@ export interface InvoiceRelatedPanelProps {
   onCancelPayment?: ((paymentId: string) => void) | undefined
   isRecordingPayment?: boolean | undefined
   recordPaymentError?: string | null | undefined
+
+  /** Provide to offer «ثبت در دفتر» when the invoice has no journal entry. */
+  onPostToLedger?: (() => void) | undefined
+  isPostingToLedger?: boolean | undefined
+  /** Why the last post attempt did not book, already translated. */
+  ledgerPostMessage?: string | null | undefined
 }
 
 const card =
@@ -117,6 +123,9 @@ export function InvoiceRelatedPanel({
   onCancelPayment,
   isRecordingPayment,
   recordPaymentError,
+  onPostToLedger,
+  isPostingToLedger,
+  ledgerPostMessage,
 }: InvoiceRelatedPanelProps) {
   const [adding, setAdding] = React.useState(false)
   if (isLoading) {
@@ -242,6 +251,37 @@ export function InvoiceRelatedPanel({
             </span>
           </p>
         ) : null}
+
+        {/* ⚠️ THE USUAL CAUSE, AND ITS FIX. An invoice marked «paid» when it
+            was created carries a paid amount with no payment record behind it
+            — so the page says it is paid AND offers «افزودن پرداخت». Recording
+            the missing amount as a payment makes the two agree; the invoice's
+            paid amount is recomputed from the payments, not added to. */}
+        {drifted && onRecordPayment && storedPaidAmount > allocatedTotal ? (
+          <button
+            type="button"
+            disabled={Boolean(isRecordingPayment)}
+            onClick={() =>
+              onRecordPayment({
+                amount: Math.round((storedPaidAmount - allocatedTotal) * 100) / 100,
+                method: '',
+                reference: '',
+                date: '',
+              })
+            }
+            className={cn(
+              'mt-2 inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-medium',
+              'bg-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))]',
+              'hover:bg-[hsl(var(--color-primary)/0.2)] disabled:opacity-60',
+            )}
+          >
+            <Receipt className="size-3.5" aria-hidden="true" />
+            {t('invoiceDetail.recordMissingPayment', 'ثبت رکورد پرداخت برای این مبلغ')}
+            <span className="tabular-nums">
+              {fmtMoney(storedPaidAmount - allocatedTotal)} {currency}
+            </span>
+          </button>
+        ) : null}
       </section>
 
       {/* ─── Journal entry ────────────────────────────────────────────── */}
@@ -275,12 +315,44 @@ export function InvoiceRelatedPanel({
             </span>
           </button>
         ) : (
-          <p className="text-sm text-[hsl(var(--fg-tertiary))]">
-            {t(
-              'invoiceDetail.noJournalEntry',
-              'این فاکتور هنوز در دفتر ثبت نشده است — یا در انتظار تأیید است، یا ثبت آن انجام نشده.',
-            )}
-          </p>
+          <div className="space-y-2">
+            <p className="text-sm text-[hsl(var(--fg-tertiary))]">
+              {t(
+                'invoiceDetail.noJournalEntry',
+                'این فاکتور هنوز در دفتر ثبت نشده است — یا در انتظار تأیید است، یا ثبت آن انجام نشده.',
+              )}
+            </p>
+            {/* ⚠️ A WAY OUT, AND A REASON. Posting at creation could be
+                skipped (no receivable/sales account in the chart) or fail,
+                and both were silent — the invoice said «not in the ledger»
+                with nothing anyone could do about it. */}
+            {onPostToLedger ? (
+              <button
+                type="button"
+                onClick={onPostToLedger}
+                disabled={Boolean(isPostingToLedger)}
+                className={cn(
+                  'inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-xs font-medium',
+                  'bg-[hsl(var(--color-primary)/0.12)] text-[hsl(var(--color-primary))]',
+                  'hover:bg-[hsl(var(--color-primary)/0.2)] disabled:opacity-60',
+                )}
+              >
+                <BookOpen className="size-3.5" aria-hidden="true" />
+                {isPostingToLedger
+                  ? t('invoiceDetail.postingToLedger', 'در حال ثبت در دفتر…')
+                  : t('invoiceDetail.postToLedger', 'ثبت در دفتر')}
+              </button>
+            ) : null}
+            {ledgerPostMessage ? (
+              <p
+                role="status"
+                className="flex items-start gap-2 rounded-xl bg-[hsl(var(--color-warning)/0.12)] px-3 py-2 text-xs text-[hsl(var(--color-warning))]"
+              >
+                <AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
+                <span>{ledgerPostMessage}</span>
+              </p>
+            ) : null}
+          </div>
         )}
       </section>
     </div>

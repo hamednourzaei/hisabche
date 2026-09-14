@@ -1,5 +1,5 @@
 // apps/web/app/[lang]/(dashboard)/governance/page.tsx
-import { GovernanceContainer } from '@hisabche/ui'
+import { GovernanceHubContainer } from '@hisabche/ui'
 
 const titles: Record<string, string> = {
   fa: 'تفکیک وظایف',
@@ -22,5 +22,5 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
 }
 
 export default function GovernancePage() {
-  return <GovernanceContainer />
+  return <GovernanceHubContainer />
 }

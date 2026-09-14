@@ -32,7 +32,6 @@ export type NavId =
   | 'buyers'
   | 'follow-up'
   | 'coworkers'
-  | 'sales-followup'
   // secondary — work
   // `projects` is gone: the module was deleted, not hidden.
   | 'production'
@@ -60,7 +59,6 @@ export type NavId =
   | 'data-and-sync'
   | 'data-migration'
   | 'settings'
-  | 'access'
   | 'history'
   | 'events'
   | 'sync'
@@ -173,14 +171,6 @@ export const NAV_CONTRACT: readonly NavItemContract[] = [
     labelKey: 'nav.settings',
     descriptionKey: 'nav.settings_description',
     path: '/settings',
-    group: 'system',
-  },
-  {
-    id: 'access',
-    emoji: '🔑',
-    labelKey: 'nav.access',
-    descriptionKey: 'nav.access_description',
-    path: '/permissions',
     group: 'system',
   },
   {
@@ -374,14 +364,6 @@ export const NAV_CONTRACT: readonly NavItemContract[] = [
     labelKey: 'nav.coworkers',
     descriptionKey: 'nav.coworkers_description',
     path: '/team-and-payroll',
-    group: 'people',
-  },
-  {
-    id: 'sales-followup',
-    emoji: '📞',
-    labelKey: 'nav.sales_followup',
-    descriptionKey: 'nav.sales_followup_description',
-    path: '/sales-followup',
     group: 'people',
   },
   {

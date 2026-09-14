@@ -64,7 +64,7 @@ export const Money = React.memo(function Money({
   /** Show an explicit + on positives, where the sign IS the meaning. */
   signed?: boolean
   /** 'auto' colours by sign; otherwise say it explicitly. */
-  tone?: 'auto' | 'good' | 'bad' | 'muted'
+  tone?: 'auto' | 'good' | 'bad' | 'muted' | undefined
   className?: string
 }) {
   const resolved = tone === 'auto' ? (minor > 0 ? 'good' : minor < 0 ? 'bad' : 'muted') : tone

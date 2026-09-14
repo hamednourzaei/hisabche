@@ -184,15 +184,6 @@ export { InvoicesView } from './components/ui/invoices/invoices-view'
 export { InvoicesSkeleton } from './components/ui/invoices/invoices-skeleton'
 export { InvoiceDetailPage } from './components/ui/invoice-detail/invoice-detail-page'
 
-// ---------- Pages — Sales & Follow-up ----------
-export { SalesFollowupContainer } from './components/ui/sales-followup/containers/sales-followup-container'
-export { SalesFollowupView } from './components/ui/sales-followup/sales-followup-view'
-export type {
-  FollowUpStatus,
-  FollowUp,
-  Customer,
-} from './components/ui/sales-followup/sales-followup-view'
-
 // ---------- Pages — Settings & Others ----------
 export { SettingsPage, BusinessStampSection } from './components/ui/settings'
 export { QuickInvoicePage } from './components/ui/quick-invoice'
@@ -347,6 +338,7 @@ export { ExpiryContainer } from './components/ui/expiry/containers/expiry-contai
 export { ConflictsContainer } from './components/ui/conflicts/containers/conflicts-container'
 export { ConflictsView } from './components/ui/conflicts/conflicts-view'
 export { GovernanceContainer } from './components/ui/governance/containers/governance-container'
+export { GovernanceHubContainer } from './components/ui/governance/containers/governance-hub-container'
 export { GovernanceView } from './components/ui/governance/governance-view'
 export { ExpiryView } from './components/ui/expiry/expiry-view'
 

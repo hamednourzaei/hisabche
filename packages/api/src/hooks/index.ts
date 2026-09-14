@@ -9,18 +9,6 @@ export * from './invoices'
 export * from './products'
 export * from './customers'
 export * from './useAuthReady'
-export {
-  salesFollowupKeys,
-  useSalesFollowups,
-  useFollowup,
-  useCreateFollowup,
-  useUpdateFollowup,
-  useDeleteFollowup,
-  type FollowUp,
-  type CreateFollowUpInput,
-  type UpdateFollowUpInput,
-  type FollowUpFilters,
-} from './sales-followup'
 
 // ─── Tier 1/2 capabilities ───────────────────────────────────────────────────
 // Each of these backs exactly one destination in NAV_CONTRACT.

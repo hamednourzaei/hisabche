@@ -57,7 +57,6 @@ const DESKTOP_ROUTES = new Set([
   '/customers',
   '/crm',
   '/team-and-payroll',
-  '/sales-followup',
   // ─── work ───
   '/approvals',
   '/expiry',
@@ -74,7 +73,6 @@ const DESKTOP_ROUTES = new Set([
   '/workflow-templates',
   // ─── system ───
   '/settings',
-  '/permissions',
   '/activities',
   '/sync-center',
   '/conflicts',
