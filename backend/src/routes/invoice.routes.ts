@@ -5,7 +5,7 @@
 // ============================================
 
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
-import { InvoiceService } from '../services/invoice.service'
+import { InvoiceService, IdempotencyUnavailableError } from '../services/invoice.service'
 import { InvoiceRelatedService } from '../services/invoices/invoice-related.service'
 import { ActivityService } from '../services/activity.service'
 import { authenticate } from '../middleware/auth.middleware'
@@ -183,7 +183,23 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
             })) ?? [],
         }
 
-        const invoice = await invoiceService.create(request.tenancy, data, request.branchId)
+        // The offline outbox sends one stable key per intended sale and resends
+        // it unchanged. Anything that is not a sane key is ignored, never
+        // echoed into a query.
+        const rawKey = request.headers['idempotency-key']
+        const clientRequestId =
+          typeof rawKey === 'string' && /^[A-Za-z0-9_.:-]{8,128}$/.test(rawKey) ? rawKey : null
+
+        const invoice = await invoiceService.create(request.tenancy, data, request.branchId, {
+          clientRequestId,
+        })
+
+        if ((invoice as { idempotentReplay?: boolean }).idempotentReplay) {
+          // Already created by an earlier attempt: no cache churn, no second
+          // activity, and 200 rather than 201 so the client can tell.
+          const { idempotentReplay: _replay, ...existing } = invoice as Record<string, unknown>
+          return reply.code(200).header('idempotent-replay', 'true').send(existing)
+        }
 
         // ✅ FIX: Invalidate all related caches
         await clearCache(`invoices:${workspaceId}:*`)
@@ -210,6 +226,11 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
 
         return reply.code(201).send(invoice)
       } catch (err: any) {
+        if (err instanceof IdempotencyUnavailableError) {
+          // 503, not 4xx: the mobile runner treats 4xx as permanent and would
+          // give up on a sale that only needs the migration to go through.
+          return reply.code(503).send({ error: err.message, code: err.code })
+        }
         fastify.log.error(err)
         return reply.code(500).send({ error: err.message })
       }

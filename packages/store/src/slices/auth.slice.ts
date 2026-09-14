@@ -101,14 +101,39 @@ const API_BASE =
   'http://localhost:10000'
 
 // ============================================
+// Refresh-token transport
+// ============================================
+// On an http(s) page the refresh token lives in an httpOnly cookie set by the
+// API (backend/src/utils/refresh-cookie.ts) — no script on the page can read it.
+// Desktop (file://) and non-browser hosts cannot use a SameSite cookie and keep
+// the token in the response body, as before.
+function usesCookieTransport(): boolean {
+  if (typeof window === 'undefined' || !window.location) return false
+  const protocol = window.location.protocol
+  return protocol === 'http:' || protocol === 'https:'
+}
+
+function authFetchInit(init: RequestInit): RequestInit {
+  if (!usesCookieTransport()) return init
+  return {
+    ...init,
+    credentials: 'include',
+    headers: { ...(init.headers as Record<string, string>), 'X-Auth-Transport': 'cookie' },
+  }
+}
+
+// ============================================
 // API calls
 // ============================================
 async function apiLogin(email: string, password: string) {
-  const res = await fetch(`${API_BASE}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  })
+  const res = await fetch(
+    `${API_BASE}/auth/login`,
+    authFetchInit({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    }),
+  )
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
@@ -118,14 +143,21 @@ async function apiLogin(email: string, password: string) {
   return res.json() as Promise<{ user: User; token: string; refreshToken?: string }>
 }
 
-async function apiRefresh(refreshToken: string) {
-  const res = await fetch(`${API_BASE}/auth/refresh`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refreshToken }),
-  })
+/**
+ * `refreshToken` is null in cookie transport; a web session saved before the
+ * cookie existed still sends its stored token once and is moved to the cookie.
+ */
+async function apiRefresh(refreshToken: string | null) {
+  const res = await fetch(
+    `${API_BASE}/auth/refresh`,
+    authFetchInit({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(refreshToken ? { refreshToken } : {}),
+    }),
+  )
   if (!res.ok) return null
-  return res.json() as Promise<{ token: string; refreshToken: string }>
+  return res.json() as Promise<{ token: string; refreshToken?: string }>
 }
 
 async function apiSignup(data: {
@@ -134,11 +166,14 @@ async function apiSignup(data: {
   fullName: string
   businessName?: string
 }) {
-  const res = await fetch(`${API_BASE}/auth/signup`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  })
+  const res = await fetch(
+    `${API_BASE}/auth/signup`,
+    authFetchInit({
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }),
+  )
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
@@ -149,14 +184,17 @@ async function apiSignup(data: {
 }
 
 async function apiLogout(token: string) {
-  await fetch(`${API_BASE}/auth/logout`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: '{}', // ✅ بدنه خالی ولی معتبر
-  }).catch(() => {})
+  await fetch(
+    `${API_BASE}/auth/logout`,
+    authFetchInit({
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: '{}', // ✅ بدنه خالی ولی معتبر
+    }),
+  ).catch(() => {})
 }
 
 // ============================================
@@ -398,16 +436,25 @@ if (typeof window !== 'undefined') {
   registerTokenGetter(() => useAuthStore.getState().token)
 
   setRefreshSession(async () => {
-    const { refreshToken, isDemo } = useAuthStore.getState()
-    if (!refreshToken || isDemo) return null
+    const { refreshToken, token, isDemo } = useAuthStore.getState()
+    if (isDemo) return null
+    // Cookie transport holds no refresh token in JS; a signed-in session (an
+    // access token exists) is enough to ask. Elsewhere the token is required.
+    if (!refreshToken && !(usesCookieTransport() && token)) return null
     const renewed = await apiRefresh(refreshToken)
     if (!renewed?.token) return null
     // ⚠️ LOGOUT DURING THE REFRESH. If the user signed out (or another tab
     // replaced the session) while the request was in flight, the stored
-    // refresh token is no longer the one we sent. Writing the renewed pair now
-    // would silently sign a logged-out user back in.
-    if (useAuthStore.getState().refreshToken !== refreshToken) return null
-    useAuthStore.setState({ token: renewed.token, refreshToken: renewed.refreshToken })
+    // session is no longer the one we renewed. Writing the new pair now would
+    // silently sign a logged-out user back in.
+    const now = useAuthStore.getState()
+    if (now.refreshToken !== refreshToken || now.token !== token) return null
+    useAuthStore.setState({
+      token: renewed.token,
+      // Cookie transport answers without one: the stored token (if a session
+      // from before the cookie had one) is dropped here, for good.
+      refreshToken: renewed.refreshToken ?? null,
+    })
     return renewed.token
   })
 

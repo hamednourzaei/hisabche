@@ -65,24 +65,21 @@ export interface DuplicateSummary {
   candidates: number
 }
 
+async function readDuplicates(entity: 'customer' | 'product'): Promise<DuplicateSummary> {
+  const { data } = await apiClient.get(`/intelligence/duplicates/${entity}`)
+  const body = (data ?? {}) as { scanned?: number; candidates?: unknown }
+  const candidates = asList(body.candidates)
+  return { entity, scanned: Number(body.scanned) || 0, candidates: candidates.length }
+}
+
 /** Candidate duplicates for customers and products (counts only on this page). */
 export function useDuplicateCounts() {
   const ready = useAuthReady()
   const allowed = useMyCapabilities().can('customer.read') === true
   return useQuery({
     queryKey: ['mdm', 'duplicate-counts'],
-    queryFn: async (): Promise<DuplicateSummary[]> => {
-      const read = async (entity: 'customer' | 'product') => {
-        const { data } = await apiClient.get(`/intelligence/duplicates/${entity}`)
-        const body = (data ?? {}) as { scanned?: number; candidates?: unknown }
-        return {
-          entity,
-          scanned: Number(body.scanned) || 0,
-          candidates: asList(body.candidates).length,
-        }
-      }
-      return Promise.all([read('customer'), read('product')])
-    },
+    queryFn: async (): Promise<DuplicateSummary[]> =>
+      Promise.all([readDuplicates('customer'), readDuplicates('product')]),
     enabled: ready && allowed,
     staleTime: 5 * 60_000,
   })

@@ -54,7 +54,8 @@ const source = readFileSync(SERVICE, 'utf8')
 
 /** The body of `create`, up to the next method. */
 const createBody = (() => {
-  const start = source.indexOf('async create(ctx: TenancyContext, data: CreateInvoice')
+  // Signature may wrap across lines (an options parameter was added).
+  const start = source.search(/async create\(\s*ctx: TenancyContext,\s*data: CreateInvoice/)
   expect(start, 'create() not found').toBeGreaterThan(-1)
   const rest = source.slice(start + 1)
   const next = rest.search(/\n {2}(?:private |protected )?async \w+\(/)

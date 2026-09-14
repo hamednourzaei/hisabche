@@ -53,6 +53,19 @@ import { logBusinessEvent } from './event-log.service'
 // ✅ OPTIMIZED: فقط ستون‌های مورد نیاز
 // ============================================
 
+/**
+ * Keyed invoice creation cannot be honoured (the column is missing). Answered
+ * 503 so an offline client keeps the entry queued instead of writing an
+ * unkeyed — duplicable — copy.
+ */
+export class IdempotencyUnavailableError extends Error {
+  readonly code = 'INVOICE_IDEMPOTENCY_MIGRATION_REQUIRED'
+  constructor() {
+    super('INVOICE_IDEMPOTENCY_MIGRATION_REQUIRED')
+    this.name = 'IdempotencyUnavailableError'
+  }
+}
+
 const INVOICE_LIST_COLUMNS = `
   id, 
   invoice_number, 
@@ -712,8 +725,43 @@ export class InvoiceService {
    * a two-shop business can ask how each shop did; it is NOT a security
    * boundary, and it never widens what the workspace already authorized.
    */
-  async create(ctx: TenancyContext, data: CreateInvoice, branchId: string | null = null) {
+  /** The invoice a keyed request already created, scoped to the workspace. */
+  private async findByClientRequestId(workspaceId: string, clientRequestId: string) {
+    const { data, error } = await supabase
+      .from('invoices')
+      .select(INVOICE_LIST_COLUMNS)
+      .eq('workspace_id', workspaceId)
+      .eq('client_request_id', clientRequestId)
+      .maybeSingle()
+    if (error) {
+      if (error.code === '42703' || error.code === 'PGRST204')
+        throw new IdempotencyUnavailableError()
+      throw new DatabaseError('Failed to look up the request', error)
+    }
+    return data as Record<string, unknown> | null
+  }
+
+  async create(
+    ctx: TenancyContext,
+    data: CreateInvoice,
+    branchId: string | null = null,
+    options: { clientRequestId?: string | null } = {},
+  ) {
     const { workspaceId, userId } = ctx
+    const clientRequestId = options.clientRequestId ?? null
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ⚠️ A REPLAYED REQUEST RETURNS THE INVOICE IT ALREADY CREATED.
+    //
+    // The mobile outbox resends a queued sale with the same key until it sees
+    // a response. Without this, a request whose RESPONSE was lost created the
+    // sale again on every retry. Checked before the invoice number is taken
+    // and before anything is written.
+    // ═══════════════════════════════════════════════════════════════════════
+    if (clientRequestId) {
+      const existing = await this.findByClientRequestId(workspaceId, clientRequestId)
+      if (existing) return { ...existing, idempotentReplay: true }
+    }
 
     // ═══════════════════════════════════════════════════════════════════════
     // ⚠️ THE MONEY IS DERIVED FROM THE LINES BEFORE ANYTHING IS WRITTEN.
@@ -850,10 +898,24 @@ export class InvoiceService {
         // workspace_id is the tenancy boundary; user_id records the actor.
         workspace_id: workspaceId,
         user_id: userId,
+        // Only a keyed request names the column, so unkeyed creation keeps
+        // working on a database that has not run the idempotency migration.
+        ...(clientRequestId ? { client_request_id: clientRequestId } : {}),
       })
       .select(INVOICE_LIST_COLUMNS)
       .single()
 
+    if (invoiceError && clientRequestId) {
+      // A concurrent copy of the same request won the insert: answer with its
+      // invoice. Nothing after this point has run for this attempt.
+      if (invoiceError.code === '23505') {
+        const winner = await this.findByClientRequestId(workspaceId, clientRequestId)
+        if (winner) return { ...winner, idempotentReplay: true }
+      }
+      if (invoiceError.code === '42703' || invoiceError.code === 'PGRST204') {
+        throw new IdempotencyUnavailableError()
+      }
+    }
     if (invoiceError || !invoice) throw new DatabaseError('Failed to create invoice', invoiceError)
 
     // ═══════════════════════════════════════════════════════════════════════

@@ -225,6 +225,9 @@ server.addHook('preHandler', async (request, reply) => {
     '/api/slo',
     '/api/auth/login',
     '/api/auth/signup',
+    // ⚠️ The refresh token IS the credential here; there is no valid access
+    // token by definition. Without this entry every renewal answered 401.
+    '/api/auth/refresh',
     '/api/auth/forgot-password',
     '/api/auth/reset-password',
     '/api/auth/verify-email',
@@ -389,7 +392,7 @@ export async function buildServer(): Promise<typeof server> {
         ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-client-id', 'Accept'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-client-id', 'Accept', 'X-Auth-Transport'],
     // ✅ FIX (کندی): بدون maxAge مرورگر برای هر درخواست یک OPTIONS جداگانه
     // می‌فرستد (در لاگ‌ها به‌وضوح دیده می‌شود). خود OPTIONS سریع است، اما
     // یک رفت‌وبرگشت شبکه‌ی کامل تا سرور اضافه می‌کند. با کش ۲۴ ساعته‌ی

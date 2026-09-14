@@ -18,6 +18,12 @@ import { createAuthClient, supabase } from '../db'
 import { authenticate, invalidateAuthToken } from '../middleware/auth.middleware'
 import { passwordResetService } from '../services/password-reset.service'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
+import {
+  clearRefreshCookie,
+  readRefreshCookie,
+  sessionBody,
+  wantsCookieTransport,
+} from '../utils/refresh-cookie'
 
 // ─── Types ──────────────────────────────────────────────────
 type JsonSchema = Record<string, unknown>
@@ -299,6 +305,11 @@ export async function authRoutes(fastify: FastifyInstance) {
                 createdAt: z.string().datetime(),
               }),
               token: z.string(),
+              // ⚠️ DECLARED, OR DROPPED: without these two the login answer
+              // never carried a refresh token, so renewal after an hour had
+              // nothing to renew with and the session died with a 401.
+              refreshToken: z.string().optional(),
+              expiresAt: z.number().nullable().optional(),
             }),
           ),
           400: toJsonSchema(
@@ -360,9 +371,7 @@ export async function authRoutes(fastify: FastifyInstance) {
 
         return reply.code(201).send({
           user: sanitizeUser(newUser.user, profile),
-          token: session.session.access_token,
-          refreshToken: session.session.refresh_token,
-          expiresAt: session.session.expires_at ?? null,
+          ...sessionBody(request, reply, session.session),
         })
       } catch (err) {
         if (err instanceof z.ZodError) {
@@ -399,7 +408,9 @@ export async function authRoutes(fastify: FastifyInstance) {
           // one session cannot hammer the endpoint, and sessions do not share a
           // budget. The token is never used as the key in the clear.
           keyGenerator: (request: FastifyRequest) => {
-            const token = (request.body as { refreshToken?: unknown } | undefined)?.refreshToken
+            const token =
+              (request.body as { refreshToken?: unknown } | undefined)?.refreshToken ??
+              readRefreshCookie(request)
             return typeof token === 'string' && token.length > 0
               ? `refresh:${createHash('sha256').update(token).digest('hex').slice(0, 32)}`
               : `refresh:anonymous:${request.ip}`
@@ -408,25 +419,31 @@ export async function authRoutes(fastify: FastifyInstance) {
       },
     },
     async (request: FastifyRequest, reply: FastifyReply) => {
-      const parsed = z
-        .object({ refreshToken: z.string().min(10).max(4096) })
-        .safeParse(request.body ?? {})
+      // Body first: a web session from before the cookie existed still holds
+      // its token in storage, sends it once, and is moved onto the cookie by
+      // this very answer. After that the body is empty and the cookie speaks.
+      const fromBody = (request.body as { refreshToken?: unknown } | undefined)?.refreshToken
+      const candidate =
+        typeof fromBody === 'string' && fromBody.length > 0
+          ? fromBody
+          : wantsCookieTransport(request)
+            ? readRefreshCookie(request)
+            : null
+      const parsed = z.string().min(10).max(4096).safeParse(candidate)
       if (!parsed.success) {
         return reply.code(400).send({ error: 'Validation failed', code: 'REFRESH_TOKEN_REQUIRED' })
       }
 
       try {
         const { data, error } = await createAuthClient().auth.refreshSession({
-          refresh_token: parsed.data.refreshToken,
+          refresh_token: parsed.data,
         })
         if (error || !data.session) {
+          // A dead cookie is removed rather than resent on every attempt.
+          if (wantsCookieTransport(request)) clearRefreshCookie(reply)
           return reply.code(401).send({ error: 'Session expired', code: 'REFRESH_TOKEN_INVALID' })
         }
-        return reply.send({
-          token: data.session.access_token,
-          refreshToken: data.session.refresh_token,
-          expiresAt: data.session.expires_at ?? null,
-        })
+        return reply.send(sessionBody(request, reply, data.session))
       } catch (err) {
         fastify.log.error(err)
         return reply.code(500).send({ error: 'Failed to refresh the session' })
@@ -457,6 +474,10 @@ export async function authRoutes(fastify: FastifyInstance) {
                 createdAt: z.string().datetime(),
               }),
               token: z.string(),
+              // ⚠️ DECLARED, OR DROPPED: the login answer never carried a
+              // refresh token, so renewal had nothing to renew with.
+              refreshToken: z.string().optional(),
+              expiresAt: z.number().nullable().optional(),
             }),
           ),
           400: toJsonSchema(
@@ -491,9 +512,7 @@ export async function authRoutes(fastify: FastifyInstance) {
 
         return reply.send({
           user: sanitizeUser(data.user, profile, role),
-          token: data.session.access_token,
-          refreshToken: data.session.refresh_token,
-          expiresAt: data.session.expires_at ?? null,
+          ...sessionBody(request, reply, data.session),
         })
       } catch (err) {
         if (err instanceof z.ZodError) {
@@ -511,6 +530,12 @@ export async function authRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/api/auth/logout',
     {
+      // The cookie is cleared in onRequest — before the global auth hook and
+      // `authenticate` — so it goes even when an expired access token is
+      // refused: logging out must never leave the long-lived credential behind.
+      onRequest: async (_request: FastifyRequest, reply: FastifyReply) => {
+        clearRefreshCookie(reply)
+      },
       preHandler: [authenticate],
       schema: {
         response: {
