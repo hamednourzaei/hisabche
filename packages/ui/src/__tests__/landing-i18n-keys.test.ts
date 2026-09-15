@@ -44,7 +44,7 @@ describe('landing i18n', () => {
 
   it('found the keys (the scan itself works)', () => {
     expect(keys.size).toBeGreaterThan(40)
-    expect([...keys]).toContain('landing.featureStatus.active')
+    expect([...keys]).toContain('landing.modules.label')
   })
 
   it.each(['fa', 'af', 'en'])('every literal key exists in %s', (locale) => {
@@ -101,10 +101,32 @@ describe('landing i18n — data-driven key families', () => {
     [...src.matchAll(new RegExp(String.raw`\b${field}:\s*'(\w+)'`, 'g'))].map((m) => m[1]!)
 
   const families: string[] = []
-  for (const k of ids(read('social-scene.tsx'), 'key'))
-    families.push(`landing.capability.${k}.claim`, `landing.capability.${k}.where`)
-  for (const k of ids(read('features-scene.tsx'), 'key'))
-    families.push(`landing.feature.${k}Title`, `landing.feature.${k}Desc`)
+  // Chapters: counts come from the CHAPTERS table (cards / chips / examples).
+  const chapterSrc = read('chapter-scene.tsx')
+  for (const m of chapterSrc.matchAll(
+    /^ {2}(\w+): \{\s*cards: \[([^\]]*)\][^,]*,\s*chips: (\d+),\s*examples: (\d+)/gm,
+  )) {
+    const base = `landing.chapter.${m[1]}`
+    families.push(`${base}.label`, `${base}.title`, `${base}.desc`)
+    const cards = m[2]!.split(',').filter((x) => x.trim()).length
+    for (let i = 1; i <= cards; i++)
+      families.push(`${base}.card${i}.title`, `${base}.card${i}.desc`)
+    for (let i = 1; i <= Number(m[3]); i++) families.push(`${base}.chip${i}`)
+    for (let i = 1; i <= Number(m[4]); i++) families.push(`${base}.example${i}`)
+    if (Number(m[4]) > 0) families.push(`${base}.note`)
+  }
+  const modulesSrc = read('modules-scene.tsx')
+  const groups = [...modulesSrc.matchAll(/key: '(\w+)',\r?\n\s*icon:/g)].map((m) => m[1]!)
+  for (const g of groups) families.push(`landing.modules.group.${g}`)
+  for (const k of ids(modulesSrc, 'key'))
+    if (!groups.includes(k)) families.push(`landing.modules.item.${k}`)
+  for (const m of read('cta-scene.tsx').matchAll(/'(\w+)'/g))
+    for (const k of (read('cta-scene.tsx').match(/const PROOF = \[([^\]]*)\]/)?.[1] ?? '').match(
+      /\w+/g,
+    ) ?? [])
+      families.push(`landing.proof.${k}`)
+  for (const k of ids(read('system-scene.tsx'), 'key'))
+    for (const f of ['title', 'desc']) families.push(`landing.system.step.${k}.${f}`)
   for (const k of ids(read('site-footer-view.tsx'), 'key')) families.push(`landing.footerLink.${k}`)
   for (const k of ids(read('trust-bar-scene.tsx'), 'key')) families.push(`landing.industry.${k}`)
   const pricing = read('pricing-scene.tsx')
@@ -122,7 +144,13 @@ describe('landing i18n — data-driven key families', () => {
 
   it('expanded every family', () => {
     expect(families.length).toBeGreaterThan(150)
-    expect(families).toContain('landing.capability.c8.where')
+    expect(families).toContain('landing.chapter.reports.card5.desc')
+    expect(families).toContain('landing.chapter.money.chip4')
+    expect(families).toContain('landing.chapter.ai.example4')
+    expect(families).toContain('landing.modules.group.management')
+    expect(families).toContain('landing.proof.languages')
+    expect(families).toContain('landing.system.step.report.desc')
+    expect(families).toContain('landing.security.sod.bullet3')
   })
 
   it.each(['fa', 'af', 'en'])('every data-driven key exists in %s', (locale) => {
@@ -176,10 +204,10 @@ describe('landing is mobile-first', () => {
 describe('static landing sections stay server components', () => {
   it.each([
     'cinematic-hero.tsx',
-    'pain-scene.tsx',
-    'features-scene.tsx',
+    'system-scene.tsx',
+    'chapter-scene.tsx',
+    'modules-scene.tsx',
     'security-scene.tsx',
-    'social-scene.tsx',
     'cta-scene.tsx',
     'trust-bar-scene.tsx',
     'faq-scene.tsx',
@@ -202,7 +230,7 @@ describe('landing links do not prefetch other routes', () => {
   it.each([
     'landing/cinematic-hero.tsx',
     'landing/cta-scene.tsx',
-    'landing/features-scene.tsx',
+    'landing/modules-scene.tsx',
     'landing/pricing-scene.tsx',
     'landing/site-footer-view.tsx',
     'navigation/landing-mobile-menu.tsx',

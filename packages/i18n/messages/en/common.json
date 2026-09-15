@@ -13,9 +13,9 @@
     "heroSub": "For businesses in Iran and Afghanistan",
     "offline": "Offline",
     "badge": "340+ active businesses",
-    "headline": "Simple accounting software for",
-    "headlineHighlight": "your shop",
-    "subtitle": "Sales, credit, inventory and profit — worked out automatically. Built for shopkeepers in Afghanistan and Iran.",
+    "headline": "Run your sales, finance and operations",
+    "headlineHighlight": "in one place",
+    "subtitle": "From invoices and customers to stock, cash and double-entry accounting — one integrated system that keeps working without internet.",
     "learnMore": "Learn more",
     "trustText": "No credit card · Active in 30 seconds",
     "trustOffline": "True Offline",
@@ -23,20 +23,14 @@
     "trustMobile": "Mobile + Web",
     "multiCurrency": "Multi-Currency",
     "fastMobile": "Fast on Mobile",
-    "cta": "Start Free",
+    "cta": "Start Hisabche free",
     "ctaSecondary": "Watch Product Demo",
-    "microProof": "No training needed · Activation in 30 seconds · Persian support",
+    "microProof": "Double-entry accounting · Sales · Inventory · Customers · Cash · Reports · AI assistant",
     "invoicesIssued": "Invoices Issued",
     "activeBusinesses": "Active Businesses",
     "navHero": "Home",
-    "navPain": "Problem",
-    "navTransform": "Solution",
-    "navFeatures": "Features",
-    "navTestimonials": "Trust",
-    "navCTA": "Start",
+    "navFeatures": "Modules",
     "cities": "Supported Cities",
-    "featuresTitle": "All Tools in One Place",
-    "featuresDesc": "No need for multiple apps",
     "mobileTitle": "Works on Any Device",
     "mobile1": "Even on budget phones",
     "mobile2": "Fully offline — works without internet",
@@ -71,8 +65,6 @@
     "faq3Q": "Does it work on older phones?",
     "faq3A": "Yes. Runs smoothly on phones with 2GB RAM. Lightweight design.",
     "rating": "4.9 · 340+ active businesses",
-    "testimonialsTitle": "Real Trust",
-    "testimonialsDesc": "People just like you",
     "testimonial1Name": "Ahmad Rahimi",
     "testimonial1Role": "Store Manager",
     "testimonial1Text": "Since I started using Hisabche, I don't use paper ledgers anymore. Everything is at my fingertips.",
@@ -82,29 +74,6 @@
     "testimonial3Name": "Mohammad Azimi",
     "testimonial3Role": "Wholesaler",
     "testimonial3Text": "I have 3 warehouses. With Hisabche I see them all in one place.",
-    "painLabel": "Before Hisabche",
-    "painTitle": "The Old World of Accounting",
-    "painDesc": "You might experience these problems every day",
-    "pain1Title": "The ledger gets lost",
-    "pain1Desc": "You write all your accounts in one notebook. One day it tears, gets wet, or is lost — years of information vanish in minutes.",
-    "pain2Title": "Late-night mistakes",
-    "pain2Desc": "You're tired but spend half an hour adding and subtracting. One small mistake means you see today's profit incorrectly and make a wrong decision.",
-    "pain3Title": "Credit that is forgotten",
-    "pain3Desc": "A customer takes goods on credit, you record it. A week later, neither you nor they remember. Your money hangs in the air.",
-    "pain4Title": "Real profit is unclear",
-    "pain4Desc": "You only see the cash in the register. You don't know how much of the sales was actual profit and where you suffered losses.",
-    "pain5Title": "Stock suddenly runs out",
-    "pain5Desc": "A customer wants an item, but you realize at that moment it's out of stock. The sale is lost, your reputation is tarnished.",
-    "pain6Title": "Employees report verbally",
-    "pain6Desc": "There's no precise record. You don't know who sold what, what amount was received, or what went missing.",
-    "pain7Title": "Hours are spent writing",
-    "pain7Desc": "Instead of making more sales, your time is wasted writing, adding up, and searching for information. 2 hours a day, 730 hours a year.",
-    "pain7Stat": "2 hours a day · 730 hours a year",
-    "pain8Title": "Fear of losing all data",
-    "pain8Desc": "A broken phone, a lost notebook, or a deleted Excel file can destroy your entire business.",
-    "painClimaxTitle": "Continuing this way is a mistake",
-    "painClimaxDesc": "You work more every day, but you have less control over your business every day. It's time for a change.",
-    "painSeeSolution": "How Hisabche helps",
     "transformLabel": "After Hisabche",
     "transformTitle": "Your business is finally under your control",
     "transformBridge": "These very problems were the reason Hisabche was built. Now take back control of your business.",
@@ -124,7 +93,6 @@
     "solution3Title": "Clear Debts",
     "solution3Sub": "Every debt tracked",
     "solution3Desc": "Your money never gets lost",
-    "featuresLabel": "Features",
     "feature1Title": "Invoice in 30 Seconds",
     "feature1Desc": "Product from stock, customer from contacts.",
     "feature2Title": "Auto Inventory",
@@ -154,51 +122,23 @@
       "backup": "Automatic data backup",
       "setup": "Setup without technical training"
     },
-    "securityLabel": "Data Security",
-    "securityTitle": "Your business data is always safe",
-    "securityDesc": "Whether you have internet or not, your data is stored, synchronized, backed up, and only authorized people will have access to it.",
+    "securityLabel": "Control & security",
+    "securityTitle": "Your business data stays under your control",
+    "securityDesc": "Each user can do only what their role allows, and important changes leave a trail.",
     "securityOfflineTitle": "True Offline",
     "securityOfflineDesc": "Work without internet. Data stays on your device until you're connected.",
-    "securityEncryptionTitle": "Encrypted Storage",
-    "securityEncryptionDesc": "Your data is encrypted on device and in transit. Only you have the key.",
-    "securityBackupTitle": "Auto Backup",
-    "securityBackupDesc": "Automatic local backups with 30-day recovery. No data loss.",
     "security": {
-      "offline": {
-        "title": "True Offline",
-        "bullet1": "Works without internet",
-        "bullet2": "Secure local storage",
-        "bullet3": "Continue work without interruption"
-      },
-      "sync": {
-        "title": "Automatic Sync",
-        "bullet1": "Sync upon connection",
-        "bullet2": "No action needed from you",
-        "bullet3": "Always up to date"
-      },
-      "backup": {
-        "title": "Auto Backup",
-        "bullet1": "Automatic backup copies",
-        "bullet2": "Easy data recovery",
-        "bullet3": "Prevent data deletion"
-      },
-      "encryption": {
-        "title": "Security & Encryption",
-        "bullet1": "Data encryption",
-        "bullet2": "Secure communication",
-        "bullet3": "Data protection"
-      },
       "access": {
-        "title": "Access Control",
-        "bullet1": "Multi-user",
-        "bullet2": "Roles & permissions",
-        "bullet3": "Defined access levels"
+        "title": "Roles and permissions",
+        "bullet1": "A role for every team member",
+        "bullet2": "Checked on the server",
+        "bullet3": "No permission, no action"
       },
       "audit": {
-        "title": "Event Logging",
-        "bullet1": "Activity logs",
-        "bullet2": "Change history",
-        "bullet3": "Traceability"
+        "title": "Change history",
+        "bullet1": "Who, what and when",
+        "bullet2": "History for every document",
+        "bullet3": "Reviewable by managers"
       },
       "badge": {
         "Offline First": "Offline First",
@@ -208,6 +148,18 @@
         "Event Logging": "Event Logging",
         "Multi-user": "Multi-user",
         "99_9% Available": "99_9% Available"
+      },
+      "isolation": {
+        "title": "Isolated business data",
+        "bullet1": "A separate workspace",
+        "bullet2": "Enforced in the database itself",
+        "bullet3": "No visibility across accounts"
+      },
+      "sod": {
+        "title": "Segregation of duties",
+        "bullet1": "Preparer and approver are different people",
+        "bullet2": "Document approval flows",
+        "bullet3": "Every override is logged"
       }
     },
     "pricingLabel": "Pricing",
@@ -339,7 +291,7 @@
     "demoInventoryAlert": "Sunflower oil is running low",
     "demoReportsWeek": "This Week",
     "demoReportsGrowth": "+18% vs last week",
-    "trustBarLabel": "Built for every type of business",
+    "trustBarLabel": "Built for your kind of business",
     "industry": {
       "retail": "Retail",
       "pharmacy": "Pharmacy",
@@ -432,9 +384,9 @@
       "daybookPage": "Daybook & profit and loss"
     },
     "footerCopyright": "© {year} Hisabche. All rights reserved.",
-    "valuePill": "Works without internet — always, everywhere",
-    "ctaTitle": "When your workday ends, everything should already be clear",
-    "ctaSubtitle": "With Hisabche, the end of the day means reviewing results — not hours of adding up and finding mistakes.",
+    "valuePill": "Business management & operations system",
+    "ctaTitle": "Bring your business together in Hisabche",
+    "ctaSubtitle": "Manage sales, customers, inventory and finance in one system and see your business more clearly.",
     "ctaButton": "Start Free",
     "faq": {
       "category": {
@@ -491,79 +443,6 @@
       "faqTitle": "Every question you have, answered here",
       "faqDesc": "If you don't find your answer, Hisabche support is always ready to help.",
       "faqLabel": "Frequently Asked Questions"
-    },
-    "features": {
-      "feature": {
-        "customersTitle": "Customer Management",
-        "customersDesc": "Customer info, purchase history, and debts",
-        "invoicesTitle": "Invoicing",
-        "invoicesDesc": "Quick sales invoices and PDF printing",
-        "inventoryTitle": "Inventory Management",
-        "inventoryDesc": "Stock, low stock alerts, goods transfer",
-        "accountingTitle": "Accounting & Finance",
-        "accountingDesc": "General ledger, profit & loss, balance sheet",
-        "hrTitle": "Human Resources",
-        "hrDesc": "Employees, salaries, attendance",
-        "reportsTitle": "Reports & Analytics",
-        "reportsDesc": "Sales dashboard, profit, charts",
-        "offlineTitle": "True Offline",
-        "offlineDesc": "Work without internet, automatic sync",
-        "aiTitle": "Artificial Intelligence",
-        "aiDesc": "Smart reminders, sales suggestions, data analysis",
-        "workspaceTitle": "Multi-Business",
-        "workspaceDesc": "Manage multiple stores or companies simultaneously",
-        "integrationsTitle": "Integrations & API",
-        "integrationsDesc": "Connect to gateways, webhooks, connectors",
-        "securityTitle": "Security & Backup",
-        "securityDesc": "Encryption, auto backup, two-factor login",
-        "mobileTitle": "Mobile & Web",
-        "mobileDesc": "Mobile application and web version"
-      },
-      "featuresLabel": "Features",
-      "featuresTitle": "All Business Tools, in One Place",
-      "featuresDesc": "From sales and inventory to accounting and artificial intelligence."
-    },
-    "social": {
-      "r1": {
-        "name": "Ahmad Rezaei",
-        "role": "Supermarket Owner, Kabul",
-        "quote": "No more lost invoices. I see everything on my phone."
-      },
-      "r2": {
-        "name": "Maryam Ahmadi",
-        "role": "Boutique Owner, Herat",
-        "quote": "It works even when the power and internet are out. That's enough for me."
-      },
-      "r3": {
-        "name": "Najibullah Karimi",
-        "role": "Pharmacy, Mazar-i-Sharif",
-        "quote": "Customer debt reminders have made things so much easier."
-      },
-      "r4": {
-        "name": "Fatemeh Nouri",
-        "role": "Restaurant, Kabul",
-        "quote": "I was tired of notebooks and Excel. Now everything is organized."
-      },
-      "r5": {
-        "name": "Abdul Wahab Safi",
-        "role": "Food Wholesaler, Nangarhar",
-        "quote": "I see my warehouse stock report in seconds, not hours."
-      },
-      "r6": {
-        "name": "Zahra Mohammadi",
-        "role": "Salon Owner, Kabul",
-        "quote": "Installation took two minutes. No special training needed."
-      },
-      "r7": {
-        "name": "Hikmatullah Walizada",
-        "role": "Home Appliance Store, Balkh",
-        "quote": "I finally know the exact real profit every month."
-      },
-      "r8": {
-        "name": "Somaya Yousufi",
-        "role": "Bookstore Owner, Herat",
-        "quote": "Their support responds quickly, even at night."
-      }
     },
     "transformStep": {
       "sale": {
@@ -864,40 +743,6 @@
       "contactChannelsTitle": "Ways to reach us",
       "contactResponseTitle": "Response time"
     },
-    "painTimeline1": "This morning",
-    "painTimeline2": "Late at night",
-    "painTimeline3": "A week later",
-    "painTimeline4": "End of month",
-    "painTimeline5": "Midweek",
-    "painTimeline6": "Every day",
-    "painTimeline7": "Every day",
-    "painTimeline8": "Always worrying",
-    "feature": {
-      "customersTitle": "Customer management",
-      "customersDesc": "Customer details, purchase history and debts",
-      "invoicesTitle": "Invoicing",
-      "invoicesDesc": "Fast sales invoices and PDF printing",
-      "inventoryTitle": "Stock management",
-      "inventoryDesc": "Stock levels, low-stock alerts, transfers",
-      "accountingTitle": "Accounting and finance",
-      "accountingDesc": "General ledger, profit and loss, balance sheet",
-      "hrTitle": "Human resources",
-      "hrDesc": "Employees, payroll, attendance",
-      "reportsTitle": "Reports and analytics",
-      "reportsDesc": "Sales dashboard, profit, charts",
-      "offlineTitle": "Genuinely offline",
-      "offlineDesc": "Works without internet, syncs automatically",
-      "aiTitle": "Artificial intelligence",
-      "aiDesc": "Smart reminders, sales suggestions, data analysis",
-      "workspaceTitle": "Multi-business",
-      "workspaceDesc": "Run several shops or companies at once",
-      "integrationsTitle": "Integrations and API",
-      "integrationsDesc": "Payment gateways, webhooks, connectors",
-      "securityTitle": "Security and backup",
-      "securityDesc": "Encryption, automatic backup, two-factor sign-in",
-      "mobileTitle": "Mobile and web",
-      "mobileDesc": "Mobile app and web version"
-    },
     "pricingFooter": "No contract · cancel anytime · no bank card",
     "featurePage": {
       "customerDebt": {
@@ -1164,9 +1009,6 @@
     "builtFor": "Built for businesses in Iran and Afghanistan",
     "capabilitiesDesc": "You can try every one of these right now",
     "capabilitiesTitle": "What it does for you",
-    "featureStatus": {
-      "active": "Available"
-    },
     "factOffline": "Offline",
     "factOfflineLabel": "Record sales with no internet",
     "factLedger": "Double-entry",
@@ -1175,43 +1017,222 @@
     "factMultiLabel": "Separate or combined",
     "factRtl": "Persian/Dari",
     "factRtlLabel": "Right-to-left, Solar Hijri calendar",
-    "capability": {
-      "c1": {
-        "claim": "Works without internet, then syncs on its own",
-        "where": "Offline queue and conflict resolution"
-      },
-      "c2": {
-        "claim": "Every sale, purchase and payment posts a double-entry journal",
-        "where": "General ledger"
-      },
-      "c3": {
-        "claim": "Stock is calculated from real warehouse movements, not typed in",
-        "where": "Inventory"
-      },
-      "c4": {
-        "claim": "Each customer’s balance comes from the payments allocated to it",
-        "where": "Customers"
-      },
-      "c5": {
-        "claim": "Every figure you see traces back to its source document",
-        "where": "Reports"
-      },
-      "c6": {
-        "claim": "Multiple branches, with separate or combined reports",
-        "where": "Accounting"
-      },
-      "c7": {
-        "claim": "Each employee can access exactly what you allow",
-        "where": "Permission matrix"
-      },
-      "c8": {
-        "claim": "A full backup of your data, whenever you want",
-        "where": "Settings"
-      }
-    },
     "menuOpen": "Open menu",
     "menuClose": "Close menu",
-    "ctaDocs": "Read the docs"
+    "ctaDocs": "Read the docs",
+    "navSystem": "System",
+    "navTrust": "Security",
+    "navLedger": "Accounting",
+    "navOffline": "Offline",
+    "proof": {
+      "offline": "Offline-first",
+      "ledger": "Double-entry accounting",
+      "multiBusiness": "Multi-business",
+      "multiBranch": "Multi-branch",
+      "platforms": "Web · Mobile · Desktop",
+      "languages": "Persian · Dari · English"
+    },
+    "modules": {
+      "label": "One system",
+      "title": "Every tool your business needs, in one system",
+      "desc": "Finance, sales, operations and management — on one ledger and one stock.",
+      "group": {
+        "finance": "Finance",
+        "sales": "Sales & customers",
+        "operations": "Operations",
+        "management": "Management"
+      },
+      "item": {
+        "ledger": "Double-entry ledger",
+        "receivables": "Receivables",
+        "payables": "Payables",
+        "till": "Cash till",
+        "bank": "Bank",
+        "budget": "Budgets",
+        "statements": "Financial statements",
+        "invoices": "Invoices",
+        "pos": "Point of sale",
+        "purchasing": "Purchasing",
+        "customers": "Customers",
+        "payments": "Receipts & payments",
+        "inventory": "Inventory",
+        "manufacturing": "Manufacturing",
+        "people": "Staff & payroll",
+        "branches": "Branches",
+        "offline": "Offline work",
+        "dashboard": "Dashboard",
+        "reports": "Reports & analytics",
+        "permissions": "Permissions",
+        "audit": "Audit trail",
+        "ai": "AI assistant"
+      }
+    },
+    "system": {
+      "label": "One flow",
+      "title": "Sales, stock and accounting — one flow",
+      "desc": "Every operation is connected to your business finances from the moment it is recorded.",
+      "step": {
+        "sell": {
+          "title": "Sale",
+          "desc": "At the till or on an invoice"
+        },
+        "invoice": {
+          "title": "Invoice",
+          "desc": "Sales or purchase document"
+        },
+        "pay": {
+          "title": "Payment",
+          "desc": "Cash, credit or partial"
+        },
+        "cash": {
+          "title": "Till / Bank",
+          "desc": "The real cash balance"
+        },
+        "stock": {
+          "title": "Stock",
+          "desc": "Moves with every item"
+        },
+        "post": {
+          "title": "General ledger",
+          "desc": "Automatic double entry"
+        },
+        "report": {
+          "title": "Report",
+          "desc": "From the same records"
+        }
+      },
+      "truth": {
+        "title": "Your data does not live in separate systems",
+        "desc": "In Hisabche, sales, purchases, receipts, payments and stock feed the same financial flow — the number on the dashboard is the number in the ledger."
+      }
+    },
+    "chapter": {
+      "ledger": {
+        "label": "Accounting core",
+        "title": "Double-entry accounting at the core",
+        "desc": "Hisabche does more than record invoices. Financial transactions post to the accounting core, so the ledger and financial reports rest on what really happened.",
+        "card1": {
+          "title": "General ledger",
+          "desc": "Follow every account’s movements and balance."
+        },
+        "card2": {
+          "title": "Receivables & payables",
+          "desc": "Know what you are owed and what you owe."
+        },
+        "card3": {
+          "title": "Financial statements",
+          "desc": "Profit & loss, balance sheet and trial balance in one view."
+        }
+      },
+      "money": {
+        "label": "Money",
+        "title": "Full control of your business cash",
+        "desc": "Know where the money is, where it comes from and where it goes.",
+        "card1": {
+          "title": "Receivables",
+          "desc": "Who owes you, and since when?"
+        },
+        "card2": {
+          "title": "Payables",
+          "desc": "Whom do you owe, and when is it due?"
+        },
+        "card3": {
+          "title": "Liquidity",
+          "desc": "Where is the cash and how is it moving?"
+        },
+        "chip1": "Cash till",
+        "chip2": "Bank",
+        "chip3": "Transfers",
+        "chip4": "Payments"
+      },
+      "inventory": {
+        "label": "Inventory",
+        "title": "Real stock levels, always in view",
+        "desc": "Track purchases, sales and transfers; stock comes from real item movements, not a typed-in number.",
+        "card1": {
+          "title": "Stock movements",
+          "desc": "Every in and out is recorded with its document."
+        },
+        "card2": {
+          "title": "Low-stock alerts",
+          "desc": "See what is running out before it does."
+        },
+        "card3": {
+          "title": "Transfers & counts",
+          "desc": "Move stock between warehouses and count it."
+        }
+      },
+      "offline": {
+        "label": "Offline-first",
+        "title": "No internet? Your business keeps going",
+        "desc": "An outage should not stop sales. The Hisabche desktop app works offline and syncs in a controlled way once it reconnects.",
+        "card1": {
+          "title": "Record without internet",
+          "desc": "Data is stored on the device itself."
+        },
+        "card2": {
+          "title": "Automatic sync",
+          "desc": "Changes are sent once you reconnect."
+        },
+        "card3": {
+          "title": "Conflict review",
+          "desc": "Conflicting changes are shown for you to decide."
+        },
+        "badge": "OFFLINE-FIRST"
+      },
+      "reports": {
+        "label": "Reports & analytics",
+        "title": "Turn numbers into decisions",
+        "desc": "Reports are built from the data you record every day.",
+        "card1": {
+          "title": "Profit & loss",
+          "desc": "Are you really making money?"
+        },
+        "card2": {
+          "title": "Cash flow",
+          "desc": "How is your cash moving?"
+        },
+        "card3": {
+          "title": "Receivables",
+          "desc": "How much are you still owed?"
+        },
+        "card4": {
+          "title": "Inventory",
+          "desc": "What do you have, and what is running out?"
+        },
+        "card5": {
+          "title": "Budgets",
+          "desc": "Where is spending against plan?"
+        }
+      },
+      "ai": {
+        "label": "AI assistant",
+        "title": "An AI assistant for your business",
+        "desc": "Ask questions and see where your business stands, answered from your own data.",
+        "example1": "How much did we sell this month?",
+        "example2": "Which customers owe us the most?",
+        "example3": "Which products are running low?",
+        "example4": "Which invoices are still unpaid?",
+        "note": "The assistant reads only this business’s data and never changes anything."
+      },
+      "multi": {
+        "label": "Multi-business",
+        "title": "One business or many — one experience",
+        "desc": "Organise businesses, branches, users and access, and see each unit on its own or consolidated.",
+        "card1": {
+          "title": "Multiple businesses",
+          "desc": "Each business in its own space with its own data."
+        },
+        "card2": {
+          "title": "Branches",
+          "desc": "Reports per branch, or the whole business consolidated."
+        },
+        "card3": {
+          "title": "Users & access",
+          "desc": "Every team member with their own role."
+        }
+      }
+    }
   },
   "nav": {
     "dashboard": "Dashboard",

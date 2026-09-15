@@ -3,15 +3,7 @@
 import { cn } from '../../../lib/utils'
 import { LANDING_CONTAINER, LANDING_SECTION, SectionHeader } from './landing-primitives'
 import type { LucideIcon } from 'lucide-react'
-import {
-  WifiOff,
-  RefreshCw,
-  DatabaseBackup,
-  ShieldCheck,
-  UsersRound,
-  History,
-  CheckCircle2,
-} from 'lucide-react'
+import { Lock, ShieldCheck, UsersRound, History, CheckCircle2 } from 'lucide-react'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    SecurityScene v3 — Trust Center · 6 pillars · Bullet scanning
@@ -28,42 +20,37 @@ interface TrustPillar {
   bullets: string[]
 }
 
+// ⚠️ TRUST CLAIMS ARE THE MOST EXPENSIVE ONES TO GET WRONG. Each pillar is
+// backed by code: workspace isolation proven with RLS on the live database
+// (.claude/STATE.md), server-side authorization capabilities, the
+// segregation-of-duties domain + override log, /api/audit, the desktop SQLite
+// store and the conflict review queue. Two-step login, "30-day restore" and
+// "only you hold the key" used to be claimed here and nothing implements them.
+// Never add a security claim without the code that makes it true.
 const PILLARS: TrustPillar[] = [
   {
-    icon: WifiOff,
-    key: 'offline',
-    title: 'آفلاین واقعی',
-    bullets: ['بدون اینترنت کار می‌کند', 'ذخیره محلی امن', 'ادامه کار بدون قطعی'],
-  },
-  {
-    icon: RefreshCw,
-    key: 'sync',
-    title: 'همگام‌سازی خودکار',
-    bullets: ['همگام‌سازی پس از اتصال', 'بدون نیاز به اقدام شما', 'همیشه به‌روز'],
-  },
-  {
-    icon: DatabaseBackup,
-    key: 'backup',
-    title: 'بک‌آپ خودکار',
-    bullets: ['نسخه پشتیبان خودکار', 'بازیابی آسان اطلاعات', 'جلوگیری از حذف داده'],
-  },
-  {
-    icon: ShieldCheck,
-    key: 'encryption',
-    title: 'امنیت و رمزنگاری',
-    bullets: ['رمزنگاری داده‌ها', 'ارتباط امن', 'محافظت از اطلاعات'],
+    icon: Lock,
+    key: 'isolation',
+    title: 'جداسازی داده‌ی هر کسب‌وکار',
+    bullets: ['فضای کاری جدا', 'مرز امنیتی در خود دیتابیس', 'بدون دید بین حساب‌ها'],
   },
   {
     icon: UsersRound,
     key: 'access',
-    title: 'کنترل دسترسی',
-    bullets: ['چند کاربره', 'نقش‌ها و مجوزها', 'سطح دسترسی مشخص'],
+    title: 'نقش‌ها و مجوزها',
+    bullets: ['نقش برای هر عضو تیم', 'مجوز روی سرور بررسی می‌شود', 'دکمه‌ی بی‌مجوز کاری نمی‌کند'],
+  },
+  {
+    icon: ShieldCheck,
+    key: 'sod',
+    title: 'تفکیک وظایف',
+    bullets: ['ثبت‌کننده و تأییدکننده جدا', 'گردش تأیید اسناد', 'هر استثنا ثبت می‌شود'],
   },
   {
     icon: History,
     key: 'audit',
-    title: 'ثبت رویدادها',
-    bullets: ['ثبت فعالیت‌ها', 'تاریخچه تغییرات', 'قابلیت پیگیری'],
+    title: 'ردپای تغییرات',
+    bullets: ['چه کسی، چه چیزی، چه وقت', 'تاریخچه‌ی هر سند', 'قابل مرور برای مدیر'],
   },
 ]
 
@@ -84,7 +71,7 @@ export default function SecurityScene({ t }: SecuritySceneProps) {
           )}
         />
 
-        <ul className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+        <ul className="grid gap-3 sm:grid-cols-2 sm:gap-4">
           {PILLARS.map(({ icon: Icon, key, title, bullets }) => (
             <li
               key={key}

@@ -113,13 +113,9 @@ const ALLOWED: Record<string, { classes: string[]; why: string }> = {
     classes: ['left-4', 'right-4'],
     why: 'Both edges at once — the mobile panel is inset equally from each side. The desktop branch beside it already uses end-0.',
   },
-  'packages/ui/src/components/ui/landing/pain-scene.tsx': {
-    classes: ['left-4', 'sm:left-1/2', 'ml-10', 'sm:ml-0', 'left-0', 'right-0'],
-    why: 'Alternating timeline. sm:left-1/2 centres the rail; left-0/right-0 on the connector stubs are selected by `isLeft` and pair with a physical translateX. The mobile rail (left-4 + ml-10) IS direction-blind — see the report; flipping it moves the rail in Persian, so it is a layout decision, not a mechanism fix.',
-  },
   'packages/ui/src/components/ui/landing/transform-scene.tsx': {
     classes: ['left-4', 'sm:left-1/2', 'right-2', 'sm:right-3'],
-    why: 'Same mobile rail as pain-scene, plus the alert card close button. Both flip visibly in Persian if changed — reported, not silently altered.',
+    why: 'Alternating timeline rail, plus the alert card close button. Both flip visibly in Persian if changed — reported, not silently altered.',
   },
   'packages/ui/src/components/ui/customers/datagrid/drawer.tsx': {
     classes: ['right-0', 'border-l'],

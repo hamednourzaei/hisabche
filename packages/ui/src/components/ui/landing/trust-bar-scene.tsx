@@ -10,21 +10,21 @@ export interface TrustBarSceneProps {
   t: (key: string, fallback?: string) => string
 }
 
+// Only business types whose day-to-day workflow the product covers (stock,
+// invoices, till, purchasing, production). Hotels, clinics, fuel stations and
+// the like were listed before — nothing here handles bookings, patients or
+// pumps, so saying it is "built for" them was not true.
 const INDUSTRIES = [
   { key: 'retail', fallback: 'Retail Store' },
   { key: 'wholesale', fallback: 'Wholesale' },
   { key: 'supermarket', fallback: 'Supermarket' },
   { key: 'grocery', fallback: 'Grocery Store' },
   { key: 'pharmacy', fallback: 'Pharmacy' },
-  { key: 'clinic', fallback: 'Clinic' },
   { key: 'restaurant', fallback: 'Restaurant' },
-  { key: 'cafe', fallback: 'Cafe' },
   { key: 'bakery', fallback: 'Bakery' },
-  { key: 'fastfood', fallback: 'Fast Food' },
   { key: 'boutique', fallback: 'Boutique' },
   { key: 'fashion', fallback: 'Fashion Store' },
   { key: 'cosmetics', fallback: 'Cosmetics Store' },
-  { key: 'jewelry', fallback: 'Jewelry Store' },
   { key: 'electronics', fallback: 'Electronics Store' },
   { key: 'mobile', fallback: 'Mobile Shop' },
   { key: 'computer', fallback: 'Computer Store' },
@@ -35,31 +35,10 @@ const INDUSTRIES = [
   { key: 'stationery', fallback: 'Stationery' },
   { key: 'bookstore', fallback: 'Bookstore' },
   { key: 'autoParts', fallback: 'Auto Parts' },
-  { key: 'workshop', fallback: 'Repair Workshop' },
   { key: 'service', fallback: 'Service Business' },
-  { key: 'beauty', fallback: 'Beauty Salon' },
-  { key: 'barbershop', fallback: 'Barbershop' },
-  { key: 'laundry', fallback: 'Laundry' },
-  { key: 'printing', fallback: 'Printing Shop' },
-  { key: 'travel', fallback: 'Travel Agency' },
-  { key: 'hotel', fallback: 'Hotel & Guesthouse' },
-  { key: 'logistics', fallback: 'Logistics' },
   { key: 'distribution', fallback: 'Distribution' },
   { key: 'warehouse', fallback: 'Warehouse' },
   { key: 'manufacturing', fallback: 'Manufacturing' },
-  { key: 'factory', fallback: 'Factory' },
-  { key: 'agriculture', fallback: 'Agriculture' },
-  { key: 'livestock', fallback: 'Livestock' },
-  { key: 'feed', fallback: 'Animal Feed' },
-  { key: 'fuel', fallback: 'Fuel Station' },
-  { key: 'medical', fallback: 'Medical Supply' },
-  { key: 'optical', fallback: 'Optical Store' },
-  { key: 'sports', fallback: 'Sports Store' },
-  { key: 'toys', fallback: 'Toy Store' },
-  { key: 'gift', fallback: 'Gift Shop' },
-  { key: 'florist', fallback: 'Florist' },
-  { key: 'pet', fallback: 'Pet Shop' },
-  { key: 'ecommerce', fallback: 'Online Store' },
 ]
 
 function IndustryChip({ label }: { label: string }) {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useLayoutEffect, useRef, useState, useCallback, memo } from 'react'
+import { useEffect, useRef, useState, useCallback, memo } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import Link from 'next/link'
 import dynamic from 'next/dynamic'
@@ -125,6 +125,7 @@ export const TopNav = memo(function TopNav({
   const user = useAuthStore((s) => s.user)
   const navListRef = useRef<HTMLUListElement>(null)
   const [indicatorStyle, setIndicatorStyle] = useState({ width: 0, offset: 0 })
+  const [indicatorReady, setIndicatorReady] = useState(false)
   // Phone menu — the project's Sheet (Radix Dialog: focus trap, Escape, scroll
   // lock, RTL side). The section pills do not fit beside the logo and the CTA
   // below `md`; at 360px they sat in a horizontally scrolling strip, clipped
@@ -173,26 +174,30 @@ export const TopNav = memo(function TopNav({
   }, [activeSection])
 
   /**
-   * ⚠️ LAYOUT EFFECT, NOT EFFECT — this is a visible flash, not a preference.
+   * ⚠️ MEASURED IN THE NEXT FRAME, NOT IN A LAYOUT EFFECT.
    *
-   * `indicatorStyle` starts at `{ width: 0, offset: 0 }`. A plain `useEffect`
-   * runs AFTER the browser has painted, so the first frame shows the highlight
-   * collapsed at the start of the bar and the second frame shows it jump to
-   * the active pill. On a phone, where the bar is also horizontally scrolled,
-   * that jump is the width of the whole bar.
+   * This used `useLayoutEffect`, which runs inside React's hydration commit —
+   * before the browser has computed layout for the freshly hydrated page — so
+   * the two getBoundingClientRect() calls forced a synchronous layout of the
+   * whole document there (PageSpeed "Forced reflow"; a headless-Chrome profile
+   * showed ~31 ms of forced layout inside the hydration task).
    *
-   * `useLayoutEffect` measures and sets before paint, so the first frame is
-   * already correct.
-   *
-   * Guarded for SSR: `useLayoutEffect` warns during server rendering, and this
-   * component is server-rendered on the landing page.
+   * The old reason for the layout effect no longer applies: the pill starts at
+   * width 0, which is invisible, and the bar only exists from `md` up (phones
+   * use the drawer, so there is no horizontally scrolled bar to jump across).
+   * The transition is switched on only after the first placement, so the pill
+   * appears in place instead of sliding in from the edge.
    */
-  const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
-
-  useIsomorphicLayoutEffect(() => {
-    updateIndicator()
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      updateIndicator()
+      requestAnimationFrame(() => setIndicatorReady(true))
+    })
     window.addEventListener('resize', updateIndicator)
-    return () => window.removeEventListener('resize', updateIndicator)
+    return () => {
+      cancelAnimationFrame(frame)
+      window.removeEventListener('resize', updateIndicator)
+    }
   }, [updateIndicator])
 
   const handleSetSection = useCallback((id: string) => setSection(id), [setSection])
@@ -267,7 +272,10 @@ export const TopNav = memo(function TopNav({
               // and `width`, which a Chrome trace flagged as non-composited.
               // Physical `left-0` on purpose, in RTL too: the offset is measured
               // from getBoundingClientRect().left, a physical coordinate.
-              className="absolute left-0 top-1 z-0 h-[calc(100%-8px)] rounded-full bg-[hsl(var(--color-primary)/0.15)] transition-transform duration-300"
+              className={cn(
+                'absolute left-0 top-1 z-0 h-[calc(100%-8px)] rounded-full bg-[hsl(var(--color-primary)/0.15)]',
+                indicatorReady && 'transition-transform duration-300',
+              )}
               style={{
                 width: indicatorStyle.width || 0,
                 transform: `translateX(${indicatorStyle.offset || 0}px)`,

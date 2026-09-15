@@ -79,11 +79,28 @@ describe('no fabricated testimonial', () => {
       expect(hasQuoteWithIdentity).toBe(false)
     },
   )
+})
 
-  it('the social scene carries capability statements, not people', () => {
-    const social = scenes.find((s) => s.name === 'social-scene.tsx')!.source
-    expect(social).toContain('CAPABILITIES')
-    expect(social).not.toContain('REVIEWS')
+// Repositioning audit (15 Sep 2026): the landing claimed two-step login, a
+// 30-day restore, "only you hold the key" encryption and webhooks/API. None is
+// implemented anywhere in backend/ or apps/. Checked against the rendered copy
+// in every locale, not just the source, because the claims lived in messages.
+describe('no security or integration claim the product does not implement', () => {
+  const messages = ['fa', 'af', 'en'].map((l) => [
+    l,
+    JSON.stringify(
+      JSON.parse(
+        readFileSync(
+          join(__dirname, '..', '..', '..', 'i18n', 'messages', l, 'common.json'),
+          'utf8',
+        ),
+      ).landing,
+    ),
+  ])
+  const UNBUILT = ['دو مرحله', 'two-factor', '2FA', 'وب‌هوک', 'webhook', 'بازیابی ۳۰ روزه', 'کلیدش']
+
+  it.each(messages)('%s landing copy', (_locale, copy) => {
+    for (const claim of UNBUILT) expect(copy, claim).not.toContain(claim)
   })
 })
 

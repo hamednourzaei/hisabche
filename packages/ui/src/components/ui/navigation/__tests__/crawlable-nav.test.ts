@@ -41,7 +41,8 @@ const read = (...parts: string[]) =>
 const topNav = read('navigation', 'top-nav.tsx')
 // The footer markup lives in the hook-free view; site-footer.tsx only wraps it.
 const siteFooter = read('landing', 'site-footer-view.tsx')
-const featuresScene = read('landing', 'features-scene.tsx')
+// The landing's module overview carries the in-content links to /features/*.
+const featuresScene = read('landing', 'modules-scene.tsx')
 
 describe('top-nav is crawlable', () => {
   it('renders the logo as a link, not a button', () => {
@@ -88,7 +89,7 @@ describe('internal links keep their locale segment', () => {
   const chrome: Array<[string, string]> = [
     ['top-nav', topNav],
     ['site-footer', siteFooter],
-    ['features-scene', featuresScene],
+    ['modules-scene', featuresScene],
   ]
 
   for (const [name, source] of chrome) {
@@ -106,7 +107,7 @@ describe('internal links keep their locale segment', () => {
 })
 
 describe('landing page links to its feature pages in content', () => {
-  it('links the two feature cards that have a dedicated indexable page', () => {
+  it('links the modules that have a dedicated indexable page', () => {
     // Before this, the footer was the ONLY inbound link to either feature page
     // anywhere on the site — no in-content link, so no topical context around
     // the link and nothing tying the page to the section it belongs to.
@@ -118,8 +119,9 @@ describe('landing page links to its feature pages in content', () => {
     // The anchor is the strongest relevance signal a link carries; a generic
     // one wastes it. Labels come from the message catalogue, so fa / af / en
     // each get market-correct wording (قرض / گدام for Dari, not بدهی / انبار).
-    expect(featuresScene).toMatch(/landing\.footerLink\.customerDebt/)
-    expect(featuresScene).toMatch(/landing\.footerLink\.offline/)
+    // The anchor text is the module's own name (landing.modules.item.*), which
+    // is descriptive in every locale.
+    expect(featuresScene).toMatch(/landing\.modules\.item\.\$\{item\.key\}/)
     expect(featuresScene).not.toMatch(/learnMore|clickHere/i)
   })
 })

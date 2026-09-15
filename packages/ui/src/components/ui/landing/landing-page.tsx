@@ -12,19 +12,18 @@
 //   • PricingScene  — plan tabs + live prices from the billing API
 //   (FAQ is native <details>; the footer is server-rendered with the year.)
 import { getTranslations } from 'next-intl/server'
-import { resolveIntlLocale } from '@hisabche/formatting'
 
 import { NavigationRegistry } from '../navigation/navigation-registry'
 import CinematicHero from './cinematic-hero'
 import CTAScene from './cta-scene'
 import FaqScene from './faq-scene'
-import FeaturesScene from './features-scene'
+import ChapterScene from './chapter-scene'
 import { LandingShell } from './landing-shell'
-import PainScene from './pain-scene'
+import ModulesScene from './modules-scene'
 import PricingScene from './pricing-scene'
 import SecurityScene from './security-scene'
 import SiteFooterView from './site-footer-view'
-import SocialScene from './social-scene'
+import SystemScene from './system-scene'
 import TrustBarScene from './trust-bar-scene'
 
 export async function LandingPage({ locale }: { locale: string }) {
@@ -41,21 +40,34 @@ export async function LandingPage({ locale }: { locale: string }) {
         <CinematicHero t={t} locale={locale} />
       </NavigationRegistry>
 
+      {/* Story order (IA of 15 Sep 2026): one system → how an operation flows →
+          the accounting core → money → stock → offline → reports → who it is
+          built for → AI → control → many businesses → price → questions → CTA. */}
+      <NavigationRegistry id="features">
+        <ModulesScene t={t} localePrefix={locale} />
+      </NavigationRegistry>
+
+      <SystemScene t={t} />
+
+      <NavigationRegistry id="ledger">
+        <ChapterScene t={t} chapter="ledger" muted />
+      </NavigationRegistry>
+      <ChapterScene t={t} chapter="money" />
+      <ChapterScene t={t} chapter="inventory" muted />
+
+      <NavigationRegistry id="offline">
+        <ChapterScene t={t} chapter="offline" />
+      </NavigationRegistry>
+      <ChapterScene t={t} chapter="reports" muted />
+
       <TrustBarScene t={t} />
 
-      <NavigationRegistry id="pain">
-        <PainScene t={t} intlLocale={resolveIntlLocale(locale)} />
-      </NavigationRegistry>
+      <ChapterScene t={t} chapter="ai" />
 
-      <NavigationRegistry id="features">
-        <FeaturesScene t={t} localePrefix={locale} />
+      <NavigationRegistry id="security">
+        <SecurityScene t={t} />
       </NavigationRegistry>
-
-      <SecurityScene t={t} />
-
-      <NavigationRegistry id="testimonials">
-        <SocialScene t={t} />
-      </NavigationRegistry>
+      <ChapterScene t={t} chapter="multi" />
 
       <PricingScene />
 

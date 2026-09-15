@@ -195,9 +195,13 @@ export default function SiteFooterView({ t, localePrefix, year }: SiteFooterView
                   // first in its row — no boxes, no horizontal lines.
                   'px-4 sm:px-6',
                   index > 0 && 'border-s border-[hsl(var(--border-default))]',
-                  index === COLUMNS.length - 1 &&
-                    'col-span-2 border-s-0 px-0 sm:col-span-1 sm:border-s sm:px-6',
                   index === 0 && 'ps-0',
+                  // Phones: «قانونی» sits beside «محصول» and «شرکت» takes the
+                  // full-width row under them (visual order only — DOM and
+                  // tab order stay Product → Company → Legal). From `sm` the
+                  // three columns return to source order.
+                  col.titleKey === 'landing.footerColCompany' &&
+                    'order-last col-span-2 border-s-0 px-0 sm:order-none sm:col-span-1 sm:border-s sm:px-6',
                 )}
               >
                 <h3 className="mb-2 text-sm font-semibold text-[hsl(var(--fg-primary))] sm:mb-3 lg:mb-4">
@@ -206,7 +210,8 @@ export default function SiteFooterView({ t, localePrefix, year }: SiteFooterView
                 <ul
                   className={cn(
                     'sm:space-y-2 lg:space-y-2.5',
-                    index === COLUMNS.length - 1 && 'grid grid-cols-2 gap-x-4 sm:block',
+                    col.titleKey === 'landing.footerColCompany' &&
+                      'grid grid-cols-3 gap-x-4 sm:block',
                   )}
                 >
                   {col.links.map((link) => (

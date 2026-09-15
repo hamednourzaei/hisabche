@@ -1,7 +1,7 @@
 // packages/ui/src/components/ui/landing/pricing-scene.tsx
 'use client'
 
-import React, { useState } from 'react'
+import React, { memo, useState } from 'react'
 import Link from 'next/link'
 import { useLocale, useTranslations } from 'next-intl'
 import { cn } from '../../../lib/utils'
@@ -266,6 +266,99 @@ function PlanPrice({
   )
 }
 
+/**
+ * The feature comparison table (wide screens). `memo` with only `locale` as a
+ * prop: it holds no prices, so the live-price response (`usePlans`) — which
+ * used to re-render the whole section, ~200 table elements included, as a
+ * 120 ms task after load — no longer touches it.
+ */
+const ComparisonTable = memo(function ComparisonTable({ locale }: { locale: string }) {
+  const t = useTranslations()
+  const st = (key: string, fallback?: string): string => {
+    const result = t(key as Parameters<typeof t>[0])
+    return typeof result === 'string' && result !== key ? result : (fallback ?? key)
+  }
+  return (
+    <div
+      className={cn(
+        'mt-10 hidden lg:block rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] shadow-sm',
+      )}
+    >
+      <div className="overflow-x-auto">
+        <table className="min-w-[800px] w-full border-collapse">
+          <thead>
+            <tr className="border-b border-[hsl(var(--border-default))]">
+              <th className="px-4 sm:px-6 py-4 sm:py-5" />
+              {PLANS.map((plan) => (
+                <th
+                  key={plan.key}
+                  scope="col"
+                  className={cn(
+                    'px-4 sm:px-6 py-4 sm:py-5 text-center relative',
+                    plan.popular && POPULAR_BG,
+                  )}
+                >
+                  {plan.popular && (
+                    <span className="inline-block px-2.5 sm:px-3 py-1 rounded-full text-xs font-semibold text-white bg-[image:var(--gradient-brand)] mb-1.5">
+                      {st('landing.pricingPopular', 'محبوب‌ترین')}
+                    </span>
+                  )}
+                  <p className="text-base sm:text-lg font-bold text-[hsl(var(--fg-primary))]">
+                    {st(`landing.pricing.${plan.key}.name`, plan.fallbackName)}
+                  </p>
+                </th>
+              ))}
+            </tr>
+          </thead>
+
+          <tbody>
+            {FEATURE_GROUPS.map((group) => (
+              <React.Fragment key={`group-${group.groupKey}`}>
+                <tr className="border-b border-[hsl(var(--border-default))]">
+                  <td
+                    colSpan={4}
+                    className="px-4 sm:px-6 py-2.5 sm:py-3 text-xs font-semibold uppercase tracking-[0.15em] text-[hsl(var(--fg-tertiary))]"
+                  >
+                    {st(`landing.pricing.group.${group.groupKey}`, group.fallbackGroup)}
+                  </td>
+                </tr>
+
+                {group.rows.map((row, ri) => (
+                  <tr
+                    key={row.labelKey}
+                    className={cn(
+                      'border-b border-[hsl(var(--border-default))] last:border-0',
+                      ri % 2 === 0 ? 'bg-transparent' : STRIPE_ROW,
+                    )}
+                  >
+                    <th
+                      scope="row"
+                      className="px-4 sm:px-6 py-2.5 sm:py-3 text-sm font-normal text-[hsl(var(--fg-secondary))] text-start"
+                    >
+                      {st(`landing.pricing.row.${row.labelKey}`, row.fallback)}
+                    </th>
+                    {row.values.map((val, j) => (
+                      <td
+                        key={j}
+                        className={cn(
+                          'px-4 sm:px-6 py-2.5 sm:py-3 text-center',
+                          PLANS[j]?.popular && POPULAR_BG,
+                        )}
+                      >
+                        <Cell value={val} locale={locale} st={st} />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </React.Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+})
+
 export default function PricingScene() {
   const t = useTranslations()
   // Plan prices used to render through `toLocaleString('fa-AF')`, so an
@@ -469,84 +562,7 @@ export default function PricingScene() {
           </ul>
         </div>
 
-        {/* Desktop table */}
-        <div
-          className={cn(
-            'mt-10 hidden lg:block rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] shadow-sm',
-          )}
-        >
-          <div className="overflow-x-auto">
-            <table className="min-w-[800px] w-full border-collapse">
-              <thead>
-                <tr className="border-b border-[hsl(var(--border-default))]">
-                  <th className="px-4 sm:px-6 py-4 sm:py-5" />
-                  {PLANS.map((plan) => (
-                    <th
-                      key={plan.key}
-                      scope="col"
-                      className={cn(
-                        'px-4 sm:px-6 py-4 sm:py-5 text-center relative',
-                        plan.popular && POPULAR_BG,
-                      )}
-                    >
-                      {plan.popular && (
-                        <span className="inline-block px-2.5 sm:px-3 py-1 rounded-full text-xs font-semibold text-white bg-[image:var(--gradient-brand)] mb-1.5">
-                          {st('landing.pricingPopular', 'محبوب‌ترین')}
-                        </span>
-                      )}
-                      <p className="text-base sm:text-lg font-bold text-[hsl(var(--fg-primary))]">
-                        {st(`landing.pricing.${plan.key}.name`, plan.fallbackName)}
-                      </p>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-
-              <tbody>
-                {FEATURE_GROUPS.map((group) => (
-                  <React.Fragment key={`group-${group.groupKey}`}>
-                    <tr className="border-b border-[hsl(var(--border-default))]">
-                      <td
-                        colSpan={4}
-                        className="px-4 sm:px-6 py-2.5 sm:py-3 text-xs font-semibold uppercase tracking-[0.15em] text-[hsl(var(--fg-tertiary))]"
-                      >
-                        {st(`landing.pricing.group.${group.groupKey}`, group.fallbackGroup)}
-                      </td>
-                    </tr>
-
-                    {group.rows.map((row, ri) => (
-                      <tr
-                        key={row.labelKey}
-                        className={cn(
-                          'border-b border-[hsl(var(--border-default))] last:border-0',
-                          ri % 2 === 0 ? 'bg-transparent' : STRIPE_ROW,
-                        )}
-                      >
-                        <th
-                          scope="row"
-                          className="px-4 sm:px-6 py-2.5 sm:py-3 text-sm font-normal text-[hsl(var(--fg-secondary))] text-start"
-                        >
-                          {st(`landing.pricing.row.${row.labelKey}`, row.fallback)}
-                        </th>
-                        {row.values.map((val, j) => (
-                          <td
-                            key={j}
-                            className={cn(
-                              'px-4 sm:px-6 py-2.5 sm:py-3 text-center',
-                              PLANS[j]?.popular && POPULAR_BG,
-                            )}
-                          >
-                            <Cell value={val} locale={locale} st={st} />
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </React.Fragment>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <ComparisonTable locale={locale} />
 
         <p className="mt-8 text-center text-xs text-[hsl(var(--fg-tertiary))] sm:text-sm">
           {st('landing.pricingFooter', 'بدون قرارداد · لغو هر زمان · بدون کارت بانکی')}

@@ -116,6 +116,28 @@ JS `/en`: ۳۹۲ → ۳۰۵KB؛ prefetch صفر؛ `dir`/`lang` درست.
 - **تشخیص:** `curl page | python: s.find('<div hidden id="S:')` و مقایسه با جای `<h1`.
 - **درس:** «render delay» بزرگ با TBT کم = محتوای LCP پشت boundary استریم/hydration است، نه JS سنگین.
 
+### 1.13 ⚠️ PSI را محلی بازتولید کن، نه حدس — اسکریپت CDP
+
+- ابزار: `scratchpad/cdp-tbt.mjs` (Chrome نصب‌شده + WebSocket داخلی Node 22؛ بدون دانلود). Long Tasks + **Long Animation Frames** با نام اسکریپت، تابع و `forcedStyleAndLayoutDuration`.
+- **کالیبراسیون:** CPU این ماشین خیلی سریع‌تر از سرور PSI است؛ 4× اینجا TBT ≈ صفر نشان داد. **12× موبایل / 6× دسکتاپ** به اعداد PSI نزدیک شد.
+- پنل مرورگر Claude برای main-thread بی‌کاربرد است (مخفی ⇒ ۱ فریم در ثانیه).
+- `scratchpad/cdp-anim-trace.mjs`: trace واقعی و `compositeFailed` هر انیمیشن.
+
+### 1.14 یافته‌های این دور (همه با اندازه‌گیری)
+
+| علت                                                                                                           | شاهد                               | رفع                                                                                |
+| ------------------------------------------------------------------------------------------------------------- | ---------------------------------- | ---------------------------------------------------------------------------------- |
+| حلقه‌ی rAF دائمی نوار پیشرفت (`startScrollLoop` روی mount، بدون scroll متوقف نمی‌شد)                          | LoAF: 108ms با 107ms forced layout | scroll listener + یک rAF + ResizeObserver                                          |
+| نوشتن روی `<html>` بعد از hydration (AdaptiveUI: ۳ CSS var بی‌مصرف + data-perf؛ lite-mode؛ applyTheme تکراری) | ۳ فریم style+layout ۱۰۰–۲۳۰ms      | حذف کد مرده، lite-mode در inline script قبل از paint، applyTheme فقط در صورت تغییر |
+| `left`/`width` transition نشانگر منو + `animate-pulse` placeholder قیمت                                       | trace: compositeFailed (۵ انیمیشن) | transform؛ placeholder ثابت → **۰ non-composited**                                 |
+| DOM تکراری (bullet امنیت ×۲، timeline pain ×۲، ۵۱ SVG تیک جدول)                                               | ۱۳۹۴ المان، ۳۹۷ نود SVG            | یک نسخه + متن ✓/— با aria-label → ۱۳۱۷                                             |
+| پاسخ `usePlans` کل بخش تعرفه (+جدول ۲۰۰ المان) را دوباره رندر می‌کرد                                          | long task دیررس ~۱۲۰ms             | جدول `memo` با فقط `locale`                                                        |
+| `useLayoutEffect` + getBoundingClientRect در commit hydration                                                 | forced layout 31ms                 | اندازه‌گیری در rAF بعدی                                                            |
+| FAQ کلاینت با state                                                                                           | بخشی از hydration                  | `<details>` سرور (بدون JS)، JSON-LD همه‌ی سوال‌ها                                  |
+
+- **درس کلیدی:** Server Component هزینه‌ی **hydration walk** را صفر نمی‌کند — React همه‌ی نودهای RSC را هم می‌پیماید. اهرم واقعی = **تعداد المان** + کارهای بعد از hydration، نه فقط اندازه‌ی JS.
+- **نتیجه‌ی محلی (دسکتاپ 6×):** TBT میانه ~۱۴۰ → ~۷۸ms.
+
 ## ۲. باگ‌های واقعی که هم‌زمان پیدا شد
 
 | باگ                                                                              | علت                                                                  | رفع/گارد                                                                                  |

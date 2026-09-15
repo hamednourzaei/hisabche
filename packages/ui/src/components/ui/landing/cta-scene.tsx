@@ -23,6 +23,15 @@ export interface CTASceneProps {
   locale: string
 }
 
+const PROOF = [
+  'offline',
+  'ledger',
+  'multiBusiness',
+  'multiBranch',
+  'platforms',
+  'languages',
+] as const
+
 export default function CTAScene({ t, locale }: CTASceneProps) {
   return (
     <section id="cta" data-narrative="action" className={LANDING_SECTION}>
@@ -30,6 +39,18 @@ export default function CTAScene({ t, locale }: CTASceneProps) {
         <div className="relative overflow-hidden rounded-2xl border border-[hsl(var(--color-primary)/0.25)] bg-[hsl(var(--color-primary)/0.06)] px-5 py-10 text-center sm:px-12 sm:py-16 lg:py-20">
           <DotPattern />
           <div className="relative mx-auto max-w-2xl">
+            {/* Product proof, not marketing claims: each is a property of the
+                shipped software. No customer counts — none are measured. */}
+            <ul className="mb-6 flex flex-wrap justify-center gap-2">
+              {PROOF.map((key) => (
+                <li
+                  key={key}
+                  className="rounded-full border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 py-1 text-xs font-medium text-[hsl(var(--fg-secondary))] sm:text-sm"
+                >
+                  {t(`landing.proof.${key}`)}
+                </li>
+              ))}
+            </ul>
             <h2
               className={cn(
                 'mb-3 text-balance font-bold tracking-tight text-[hsl(var(--fg-primary))] sm:mb-4',

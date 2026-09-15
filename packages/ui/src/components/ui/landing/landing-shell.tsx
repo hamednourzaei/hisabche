@@ -6,27 +6,6 @@ import { useTranslations, useLocale } from 'next-intl'
 import { NavigationProvider } from '../../../hooks/menu/use-navigation-state'
 import { TopNav } from '../navigation/top-nav'
 
-const sectionFallbacks: Record<string, Record<string, string>> = {
-  en: {
-    hero: 'Home',
-    pain: 'Problem',
-    features: 'Features',
-    testimonials: 'Trust',
-  },
-  fa: {
-    hero: 'خانه',
-    pain: 'مشکل',
-    features: 'امکانات',
-    testimonials: 'اعتماد',
-  },
-  af: {
-    hero: 'خانه',
-    pain: 'مشکل',
-    features: 'امکانات',
-    testimonials: 'اعتماد',
-  },
-}
-
 // ─── Main LandingPage ──────────────────────────────────────────────────────
 
 /**
@@ -44,8 +23,6 @@ export function LandingShell({ children }: { children: React.ReactNode }) {
   // "ready" برای منتظرماندن آن sync نیست.
   const locale = useLocale()
 
-  const fallbacks = sectionFallbacks[locale] || sectionFallbacks.fa
-
   const safeT = useCallback(
     (key: string, fallback?: string) => {
       const result = t(key as Parameters<typeof t>[0])
@@ -58,26 +35,31 @@ export function LandingShell({ children }: { children: React.ReactNode }) {
     () => [
       {
         id: 'hero' as const,
-        label: safeT('landing.navHero', fallbacks?.hero ?? 'Home'),
+        label: safeT('landing.navHero', 'Home'),
         narrative: 'frustration' as const,
       },
       {
-        id: 'pain' as const,
-        label: safeT('landing.navPain', fallbacks?.pain ?? 'Problem'),
+        id: 'features' as const,
+        label: safeT('landing.navSystem', 'System'),
         narrative: 'confusion' as const,
       },
       {
-        id: 'features' as const,
-        label: safeT('landing.navFeatures', fallbacks?.features ?? 'Features'),
+        id: 'ledger' as const,
+        label: safeT('landing.navLedger', 'Accounting'),
         narrative: 'confidence' as const,
       },
       {
-        id: 'testimonials' as const,
-        label: safeT('landing.navTestimonials', fallbacks?.testimonials ?? 'Trust'),
+        id: 'offline' as const,
+        label: safeT('landing.navOffline', 'Offline'),
+        narrative: 'confidence' as const,
+      },
+      {
+        id: 'security' as const,
+        label: safeT('landing.navTrust', 'Trust'),
         narrative: 'trust' as const,
       },
     ],
-    [safeT, fallbacks],
+    [safeT],
   )
 
   return (

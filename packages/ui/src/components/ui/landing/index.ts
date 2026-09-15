@@ -1,7 +1,4 @@
-export { default as FeaturesScene } from './features-scene'
-export { default as PainScene } from './pain-scene'
 export { default as TransformScene } from './transform-scene'
-export { default as SocialScene } from './social-scene'
 export { default as FaqScene } from './faq-scene'
 export { default as CTAScene } from './cta-scene'
 export { default as TrustBarScene } from './trust-bar-scene'

@@ -37,7 +37,7 @@ interface PageConfigEntry {
 
 const pageConfig = {
   fa: {
-    title: 'حسابچه — نرم‌افزار حسابداری و مدیریت کسب‌وکار',
+    title: 'حسابچه — سیستم مدیریت کسب‌وکار و حسابداری',
     description:
       'نرم‌افزار حسابداری، فاکتور، انبار و مدیریت بدهی برای کسب‌وکارهای کوچک و متوسط. رایگان شروع کنید.',
     keywords: [
@@ -56,17 +56,19 @@ const pageConfig = {
       'فاکتور آنلاین',
       'مدیریت مشتریان',
     ],
-    ogTitle: 'حسابچه — نرم‌افزار حسابداری و مدیریت کسب‌وکار',
-    ogDescription: 'حسابداری، فاکتور، انبار و مدیریت بدهی در یک اپ. بدون اینترنت، رایگان.',
+    ogTitle: 'حسابچه — سیستم مدیریت کسب‌وکار و حسابداری',
+    ogDescription:
+      'فروش، خرید، انبار، صندوق و حسابداری دوطرفه در یک سیستم یکپارچه — حتی بدون اینترنت.',
     siteName: 'حسابچه',
     ogLocale: 'fa_IR',
     schemaName: 'حسابچه',
     schemaAlternateName: 'Hisabche',
-    schemaDescription: 'نرم‌افزار حسابداری، مدیریت انبار و فاکتور برای کسب‌وکارهای کوچک و متوسط',
+    schemaDescription:
+      'سیستم مدیریت کسب‌وکار با حسابداری دوطرفه، فروش، انبار و گزارش مالی برای کسب‌وکارهای کوچک و متوسط',
     schemaOperatingSystem: 'Web, iOS, Android',
   },
   af: {
-    title: 'حسابچه — نرم‌افزار حسابداری و مدیریت تجارت',
+    title: 'حسابچه — سیستم مدیریت تجارت و حسابداری',
     description:
       'نرم‌افزار حسابداری، فاکتور، گدام و مدیریت قرض برای تجارت‌های کوچک و متوسط. رایگان شروع کنید.',
     keywords: [
@@ -85,19 +87,21 @@ const pageConfig = {
       'فاکتور آنلاین',
       'مدیریت مشتریان',
     ],
-    ogTitle: 'حسابچه — نرم‌افزار حسابداری و مدیریت تجارت',
-    ogDescription: 'حسابداری، فاکتور، گدام و مدیریت قرض در یک اپ. بدون انترنت، رایگان.',
+    ogTitle: 'حسابچه — سیستم مدیریت تجارت و حسابداری',
+    ogDescription:
+      'فروش، خرید، گدام، صندوق و حسابداری دوطرفه در یک سیستم یکپارچه — حتی بدون انترنت.',
     siteName: 'حسابچه',
     ogLocale: 'fa_AF',
     schemaName: 'حسابچه',
     schemaAlternateName: 'Hisabche',
-    schemaDescription: 'نرم‌افزار حسابداری، مدیریت گدام و فاکتور برای تجارت‌های کوچک و متوسط',
+    schemaDescription:
+      'سیستم مدیریت تجارت با حسابداری دوطرفه، فروش، گدام و گزارش مالی برای تجارت‌های کوچک و متوسط',
     schemaOperatingSystem: 'Web, iOS, Android',
   },
   en: {
-    title: 'Hisabche — Free Accounting & Business Management Software',
+    title: 'Hisabche — Business Management & Accounting System',
     description:
-      'Free accounting, invoicing, inventory and debt management software for small and medium businesses. Start free.',
+      'Run sales, purchasing, inventory, cash and double-entry accounting in one integrated system for small and mid-sized businesses — even offline. Start free.',
     keywords: [
       'accounting software',
       'free accounting',
@@ -113,15 +117,15 @@ const pageConfig = {
       'online invoicing',
       'customer management',
     ],
-    ogTitle: 'Hisabche — Free Accounting & Business Management Software',
+    ogTitle: 'Hisabche — Business Management & Accounting System',
     ogDescription:
-      'Accounting, invoicing, inventory and debt management in one app. Works offline, free.',
+      'Sales, purchasing, inventory, cash and double-entry accounting in one integrated system — even offline.',
     siteName: 'Hisabche',
     ogLocale: 'en_US',
     schemaName: 'Hisabche',
     schemaAlternateName: 'حسابچه',
     schemaDescription:
-      'Accounting, inventory and invoicing software for small and medium businesses',
+      'Business management system with double-entry accounting, sales, inventory and financial reporting for small and mid-sized businesses',
     schemaOperatingSystem: 'Web, iOS, Android',
   },
 } satisfies Record<'fa' | 'af' | 'en', PageConfigEntry>
