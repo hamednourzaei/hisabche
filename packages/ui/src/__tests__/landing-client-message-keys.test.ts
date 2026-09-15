@@ -19,10 +19,7 @@ const prefixes = [
 
 const CLIENT_FILES = [
   'landing/pricing-scene.tsx',
-  'landing/faq-scene.tsx',
-  'landing/site-footer.tsx',
   'landing/landing-shell.tsx',
-  'landing/landing-client-sections.tsx',
   'navigation/top-nav.tsx',
 ]
 

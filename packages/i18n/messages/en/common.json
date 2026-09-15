@@ -305,7 +305,9 @@
       },
       "month": "month",
       "unlimited": "Unlimited",
-      "perMonthSuffix": "per month"
+      "perMonthSuffix": "per month",
+      "included": "Included",
+      "notIncluded": "Not included"
     },
     "dashboardLabel": "Product",
     "dashboardTitle": "This is what you'll see every day",

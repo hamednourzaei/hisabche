@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../tabs'
 import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { formatNumber } from '@hisabche/formatting'
 import { usePlans } from '@hisabche/api'
-import { Check, Minus, ChevronDown } from 'lucide-react'
+import { ChevronDown } from 'lucide-react'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    PricingScene v8 — Fully self-contained · Zero external dependencies
@@ -179,19 +179,28 @@ function Cell({
   locale: string
   st: (key: string, fallback?: string) => string
 }) {
+  // A text mark, not an SVG: the comparison table has ~50 of these, and every
+  // SVG is 2+ DOM nodes React hydrates on load. The label is what a screen
+  // reader announces — the aria-hidden icons used to announce nothing.
   if (value === 'check')
     return (
-      <Check
-        className="size-3.5 sm:size-4 text-[hsl(var(--color-success))] mx-auto"
-        aria-hidden="true"
-      />
+      <span
+        role="img"
+        aria-label={st('landing.pricing.included', 'دارد')}
+        className="font-bold text-[hsl(var(--color-success))]"
+      >
+        ✓
+      </span>
     )
   if (value === 'dash')
     return (
-      <Minus
-        className="size-3.5 sm:size-4 text-[hsl(var(--fg-tertiary))] mx-auto"
-        aria-hidden="true"
-      />
+      <span
+        role="img"
+        aria-label={st('landing.pricing.notIncluded', 'ندارد')}
+        className="text-[hsl(var(--fg-tertiary))]"
+      >
+        —
+      </span>
     )
   const text =
     value === 'unlimited'
@@ -230,7 +239,7 @@ function PlanPrice({
   if (price === undefined) {
     return (
       <span
-        className="inline-block h-7 w-20 animate-pulse rounded bg-[hsl(var(--surface-muted))]"
+        className="inline-block h-7 w-20 rounded bg-[hsl(var(--surface-muted))]"
         aria-hidden="true"
       />
     )

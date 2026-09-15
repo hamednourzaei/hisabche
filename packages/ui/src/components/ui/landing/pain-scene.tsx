@@ -170,15 +170,13 @@ export default function PainScene({ t, intlLocale }: PainSceneProps) {
                   >
                     {formatNumber(index + 1, locale)}
                   </span>
-                  <span className="hidden text-xs text-[hsl(var(--fg-tertiary))] sm:inline">
+                  {/* One label: beside the number from `sm`, above the headline
+                      on phones (it used to be rendered twice, one per size). */}
+                  <span className="mt-2 block text-xs text-[hsl(var(--fg-tertiary))] sm:mt-0 sm:inline">
                     {t(item.timelineKey, item.timelineLabel)}
                   </span>
                 </div>
                 <div className="min-w-0 sm:flex sm:flex-1 sm:flex-col">
-                  {/* On phones the timeline chip rides above the headline. */}
-                  <p className="text-xs text-[hsl(var(--fg-tertiary))] sm:hidden">
-                    {t(item.timelineKey, item.timelineLabel)}
-                  </p>
                   <h3 className="mb-1 text-[0.9375rem] font-semibold text-[hsl(var(--fg-primary))] sm:mb-2 sm:text-base">
                     {t(item.headlineKey, item.headlineFallback)}
                   </h3>

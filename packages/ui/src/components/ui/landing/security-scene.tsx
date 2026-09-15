@@ -97,26 +97,20 @@ export default function SecurityScene({ t }: SecuritySceneProps) {
                 <h3 className="mb-1 text-base font-semibold text-[hsl(var(--fg-primary))] sm:mb-2">
                   {t(`landing.security.${key}.title`, title)}
                 </h3>
-                {/* Phones: the three points as one line — eighteen ticked rows
-                    were most of this section's 880px. The list from `sm`. */}
-                <p className="text-sm leading-relaxed text-[hsl(var(--fg-secondary))] sm:hidden">
-                  {bullets
-                    .map((bullet, j) => t(`landing.security.${key}.bullet${j + 1}`, bullet))
-                    .join(' · ')}
-                </p>
-                <ul className="hidden space-y-1.5 sm:block">
+                {/* ONE list for every size. Phones show it as a single line
+                    joined by « · » (CSS), wider screens as ticked rows — the
+                    phone version used to be a second copy of the same text. */}
+                <ul className="text-sm leading-relaxed text-[hsl(var(--fg-secondary))] sm:space-y-1.5">
                   {bullets.map((bullet, j) => (
                     <li
                       key={j}
-                      className="flex items-start gap-2 text-sm text-[hsl(var(--fg-secondary))]"
+                      className="inline after:content-['_·_'] last:after:content-none sm:flex sm:items-start sm:gap-2 sm:after:content-none"
                     >
                       <CheckCircle2
-                        className="mt-0.5 size-4 shrink-0 text-[hsl(var(--color-success))]"
+                        className="mt-0.5 hidden size-4 shrink-0 text-[hsl(var(--color-success))] sm:block"
                         aria-hidden="true"
                       />
-                      <span className="leading-relaxed">
-                        {t(`landing.security.${key}.bullet${j + 1}`, bullet)}
-                      </span>
+                      {t(`landing.security.${key}.bullet${j + 1}`, bullet)}
                     </li>
                   ))}
                 </ul>

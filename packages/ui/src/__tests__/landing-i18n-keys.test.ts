@@ -105,7 +105,7 @@ describe('landing i18n — data-driven key families', () => {
     families.push(`landing.capability.${k}.claim`, `landing.capability.${k}.where`)
   for (const k of ids(read('features-scene.tsx'), 'key'))
     families.push(`landing.feature.${k}Title`, `landing.feature.${k}Desc`)
-  for (const k of ids(read('site-footer.tsx'), 'key')) families.push(`landing.footerLink.${k}`)
+  for (const k of ids(read('site-footer-view.tsx'), 'key')) families.push(`landing.footerLink.${k}`)
   for (const k of ids(read('trust-bar-scene.tsx'), 'key')) families.push(`landing.industry.${k}`)
   const pricing = read('pricing-scene.tsx')
   for (const k of ids(pricing, 'key'))
@@ -182,6 +182,8 @@ describe('static landing sections stay server components', () => {
     'social-scene.tsx',
     'cta-scene.tsx',
     'trust-bar-scene.tsx',
+    'faq-scene.tsx',
+    'site-footer-view.tsx',
     'landing-page.tsx',
   ])('%s has no use client and no hooks', (file) => {
     const src = strip(readFileSync(join(LANDING, file), 'utf8'))
@@ -202,7 +204,7 @@ describe('landing links do not prefetch other routes', () => {
     'landing/cta-scene.tsx',
     'landing/features-scene.tsx',
     'landing/pricing-scene.tsx',
-    'landing/site-footer.tsx',
+    'landing/site-footer-view.tsx',
     'navigation/landing-mobile-menu.tsx',
     'navigation/top-nav.tsx',
   ])('%s: every <Link> has prefetch={false}', (file) => {

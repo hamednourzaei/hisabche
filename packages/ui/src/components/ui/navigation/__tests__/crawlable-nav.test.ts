@@ -39,7 +39,8 @@ const read = (...parts: string[]) =>
   stripComments(readFileSync(join(__dirname, '..', '..', ...parts), 'utf8'))
 
 const topNav = read('navigation', 'top-nav.tsx')
-const siteFooter = read('landing', 'site-footer.tsx')
+// The footer markup lives in the hook-free view; site-footer.tsx only wraps it.
+const siteFooter = read('landing', 'site-footer-view.tsx')
 const featuresScene = read('landing', 'features-scene.tsx')
 
 describe('top-nav is crawlable', () => {

@@ -1,7 +1,10 @@
 // packages/ui/src/components/ui/landing/faq-scene.tsx
-'use client'
-
-import { useState, useCallback } from 'react'
+//
+// SERVER COMPONENT. The accordion is native <details>/<summary>: the same
+// open/close behaviour, keyboard and screen-reader support built in, and no
+// JavaScript to hydrate. As a client component with useState it was one of the
+// larger trees React had to hydrate on load (headless-Chrome profile at
+// PageSpeed-like CPU speed: ~340 ms of hydration across the landing).
 import { cn } from '../../../lib/utils'
 import { LANDING_CONTAINER, LANDING_SECTION, SectionHeader } from './landing-primitives'
 import { ChevronDown, ExternalLink } from 'lucide-react'
@@ -241,88 +244,63 @@ const FAQ_CATEGORIES: FaqCategory[] = [
 const ALL_ITEMS = FAQ_CATEGORIES.flatMap((cat) => cat.items)
 const INITIAL_COUNT = 6
 
-function FaqAccordionItem({
-  item,
-  isOpen,
-  onToggle,
-}: {
-  item: FaqItem
-  isOpen: boolean
-  onToggle: () => void
-}) {
+type TranslatedItem = FaqItem & { question: string; answer: string; related?: string | undefined }
+
+function translate(item: FaqItem, t: FaqSceneProps['t']): TranslatedItem {
+  return {
+    ...item,
+    question: t(item.questionKey, item.fallbackQuestion),
+    answer: t(item.answerKey, item.fallbackAnswer),
+    related:
+      item.relatedFallback !== undefined && item.relatedLabelKey
+        ? t(item.relatedLabelKey, item.relatedFallback)
+        : undefined,
+  }
+}
+
+function FaqAccordionItem({ item }: { item: TranslatedItem }) {
   return (
-    <div
+    <details
       className={cn(
-        'group border rounded-xl sm:rounded-2xl overflow-hidden transition-all duration-300',
-        isOpen
-          ? 'border-[hsl(var(--color-primary)/0.3)] bg-[hsl(var(--color-primary)/0.03)] shadow-[var(--shadow-premium)]'
-          : 'border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated)/0.5)] hover:border-[hsl(var(--border-strong))]',
+        'group overflow-hidden rounded-xl border transition-colors sm:rounded-2xl',
+        'border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated)/0.5)] hover:border-[hsl(var(--border-strong))]',
+        'open:border-[hsl(var(--color-primary)/0.3)] open:bg-[hsl(var(--color-primary)/0.03)]',
       )}
     >
-      <button
-        type="button"
-        onClick={onToggle}
-        className="flex w-full items-center justify-between gap-3 sm:gap-4 px-4 sm:px-5 py-3 sm:py-4 text-start font-semibold text-[hsl(var(--fg-primary))] min-h-[40px] sm:min-h-[44px]"
-        aria-expanded={isOpen}
-      >
-        <span className="text-xs sm:text-sm lg:text-base leading-snug sm:leading-normal">
-          {item.fallbackQuestion}
-        </span>
+      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-start font-semibold text-[hsl(var(--fg-primary))] sm:gap-4 sm:px-5 sm:py-4 [&::-webkit-details-marker]:hidden">
+        <span className="text-sm leading-snug sm:text-base sm:leading-normal">{item.question}</span>
         <ChevronDown
-          className={cn(
-            'size-4 sm:size-5 shrink-0 text-[hsl(var(--fg-tertiary))] transition-transform duration-300',
-            isOpen && 'rotate-180',
-          )}
+          className="size-4 shrink-0 text-[hsl(var(--fg-tertiary))] transition-transform duration-300 group-open:rotate-180 sm:size-5"
           aria-hidden="true"
         />
-      </button>
-
-      <div
-        className={cn(
-          'grid transition-[grid-template-rows] duration-300',
-          isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
+      </summary>
+      <div className="px-4 pb-3 text-sm leading-relaxed text-[hsl(var(--fg-secondary))] sm:px-5 sm:pb-4">
+        {item.answer}
+        {item.relatedLink && (
+          <a
+            href={item.relatedLink}
+            className="mt-2 flex items-center gap-1 text-xs font-medium text-[hsl(var(--color-primary))] hover:underline"
+          >
+            {item.related ?? 'بیشتر بدانید'}
+            <ExternalLink className="size-3" aria-hidden="true" />
+          </a>
         )}
-      >
-        <div className="overflow-hidden">
-          <div className="px-4 sm:px-5 pb-3 sm:pb-4 text-xs sm:text-sm text-[hsl(var(--fg-secondary))] leading-relaxed">
-            {item.fallbackAnswer}
-            {item.relatedLink && (
-              <a
-                href={item.relatedLink}
-                className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-[hsl(var(--color-primary))] hover:underline"
-              >
-                {item.relatedFallback ?? 'بیشتر بدانید'}
-                <ExternalLink className="size-2.5 sm:size-3" />
-              </a>
-            )}
-          </div>
-        </div>
       </div>
-    </div>
+    </details>
   )
 }
 
-function FaqJsonLd({ t }: { t: (key: string, fallback?: string) => string }) {
-  // Structured data must mirror the visible, translated text — otherwise Google
-  // sees a mismatch between the FAQPage schema (previously always Persian) and
-  // the on-page content for en/af locales, which disqualifies the page from
-  // FAQ rich results.
-  // Only the questions actually present in the served HTML may appear here.
-  // This used to map ALL_ITEMS (16), but the accordion renders
-  // `ALL_ITEMS.slice(0, INITIAL_COUNT)` until the user clicks "show all" — the
-  // other 10 are not in the DOM at all, not merely collapsed. Declaring Q&As
-  // that a crawler cannot find on the page is exactly the mismatch that
-  // disqualifies a page from FAQ rich results.
+function FaqJsonLd({ items }: { items: TranslatedItem[] }) {
+  // Structured data must mirror the text actually in the served HTML. Every
+  // question is in the document now (collapsed ones inside <details>, not
+  // mounted on click), so every question is declared.
   const faqData = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
-    mainEntity: ALL_ITEMS.slice(0, INITIAL_COUNT).map((item) => ({
+    mainEntity: items.map((item) => ({
       '@type': 'Question',
-      name: t(item.questionKey, item.fallbackQuestion),
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: t(item.answerKey, item.fallbackAnswer),
-      },
+      name: item.question,
+      acceptedAnswer: { '@type': 'Answer', text: item.answer },
     })),
   }
 
@@ -335,30 +313,16 @@ function FaqJsonLd({ t }: { t: (key: string, fallback?: string) => string }) {
 }
 
 export default function FaqScene({ t }: FaqSceneProps) {
-  const [openIds, setOpenIds] = useState<Set<string>>(new Set())
-  const [showAll, setShowAll] = useState(false)
-
-  const toggleItem = useCallback((id: string) => {
-    setOpenIds((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }, [])
-
-  const visibleItems = showAll ? ALL_ITEMS : ALL_ITEMS.slice(0, INITIAL_COUNT)
-
-  const categorizedView = showAll
-    ? FAQ_CATEGORIES.map((cat) => ({
-        ...cat,
-        items: cat.items,
-      }))
-    : null
+  const first = ALL_ITEMS.slice(0, INITIAL_COUNT)
+  const firstIds = new Set(first.map((item) => item.id))
+  const rest = FAQ_CATEGORIES.map((category) => ({
+    ...category,
+    items: category.items.filter((item) => !firstIds.has(item.id)),
+  })).filter((category) => category.items.length > 0)
 
   return (
     <section id="faq" className={LANDING_SECTION}>
-      <FaqJsonLd t={t} />
+      <FaqJsonLd items={ALL_ITEMS.map((item) => translate(item, t))} />
 
       <div className={cn(LANDING_CONTAINER, 'max-w-3xl')}>
         <SectionHeader
@@ -371,72 +335,41 @@ export default function FaqScene({ t }: FaqSceneProps) {
         />
 
         <div className="space-y-2 sm:space-y-3">
-          {!showAll &&
-            visibleItems.map((item) => (
-              <FaqAccordionItem
-                key={item.id}
-                item={{
-                  ...item,
-                  fallbackQuestion: t(item.questionKey, item.fallbackQuestion),
-                  fallbackAnswer: t(item.answerKey, item.fallbackAnswer),
-                  relatedFallback:
-                    item.relatedFallback !== undefined
-                      ? t(item.relatedLabelKey!, item.relatedFallback)
-                      : undefined,
-                }}
-                isOpen={openIds.has(item.id)}
-                onToggle={() => toggleItem(item.id)}
-              />
-            ))}
-
-          {showAll &&
-            categorizedView!.map((category) => (
-              <div key={category.id} className="mb-6 sm:mb-8">
-                <h3 className="text-xs sm:text-sm font-semibold text-[hsl(var(--fg-secondary))] uppercase tracking-[0.15em] mb-2 sm:mb-3 px-1">
-                  {t(category.titleKey, category.fallbackTitle)}
-                </h3>
-                <div className="space-y-2 sm:space-y-3">
-                  {category.items.map((item) => (
-                    <FaqAccordionItem
-                      key={item.id}
-                      item={{
-                        ...item,
-                        fallbackQuestion: t(item.questionKey, item.fallbackQuestion),
-                        fallbackAnswer: t(item.answerKey, item.fallbackAnswer),
-                        relatedFallback:
-                          item.relatedFallback !== undefined
-                            ? t(item.relatedLabelKey!, item.relatedFallback)
-                            : undefined,
-                      }}
-                      isOpen={openIds.has(item.id)}
-                      onToggle={() => toggleItem(item.id)}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
+          {first.map((item) => (
+            <FaqAccordionItem key={item.id} item={translate(item, t)} />
+          ))}
         </div>
 
-        {!showAll && ALL_ITEMS.length > INITIAL_COUNT && (
-          <div className="mt-6 sm:mt-8 text-center">
-            <button
-              onClick={() => setShowAll(true)}
-              className="inline-flex items-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 rounded-full border border-[hsl(var(--border-default))] text-xs sm:text-sm font-medium text-[hsl(var(--fg-secondary))] hover:border-[hsl(var(--color-primary)/0.4)] hover:text-[hsl(var(--fg-primary))] transition-colors"
-            >
+        {rest.length > 0 && (
+          <details className="group/more mt-6 sm:mt-8">
+            <summary className="mx-auto flex w-fit cursor-pointer list-none items-center gap-2 rounded-full border border-[hsl(var(--border-default))] px-5 py-2.5 text-sm font-medium text-[hsl(var(--fg-secondary))] transition-colors hover:border-[hsl(var(--color-primary)/0.4)] hover:text-[hsl(var(--fg-primary))] group-open/more:hidden sm:px-6 sm:py-3 [&::-webkit-details-marker]:hidden">
               {t('faq.showMore', 'مشاهده همه سوالات')}
-              <ChevronDown className="size-3.5 sm:size-4" />
-            </button>
-          </div>
+              <ChevronDown className="size-4" aria-hidden="true" />
+            </summary>
+            <div className="space-y-6 sm:space-y-8">
+              {rest.map((category) => (
+                <div key={category.id}>
+                  <h3 className="mb-2 px-1 text-sm font-semibold text-[hsl(var(--fg-secondary))] sm:mb-3">
+                    {t(category.titleKey, category.fallbackTitle)}
+                  </h3>
+                  <div className="space-y-2 sm:space-y-3">
+                    {category.items.map((item) => (
+                      <FaqAccordionItem key={item.id} item={translate(item, t)} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </details>
         )}
 
-        <div className="mt-8 sm:mt-10 text-center">
-          <p className="text-xs sm:text-sm text-[hsl(var(--fg-secondary))]">
+        <div className="mt-8 text-center sm:mt-10">
+          <p className="text-sm text-[hsl(var(--fg-secondary))]">
             {t('faq.supportText', 'پاسخت را پیدا نکردی؟')}{' '}
             <a
-              // Same address as /contact and the Organization JSON-LD. This was
-              // support@hisabche.af, which contradicted the structured data.
+              // Same address as /contact and the Organization JSON-LD.
               href="mailto:support@hisabche.com"
-              className="text-[hsl(var(--color-primary))] font-medium underline"
+              className="font-medium text-[hsl(var(--color-primary))] underline"
             >
               {t('faq.supportLink', 'با پشتیبانی تماس بگیر')}
             </a>

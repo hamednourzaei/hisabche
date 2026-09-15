@@ -25,7 +25,10 @@ describe('analytics start on engagement only', () => {
 
   it('PostHog/Sentry bootstrap: engagement events, no timer, no idle callback', () => {
     const src = web('heavy-providers.tsx')
-    const fn = src.slice(src.indexOf('function loadAnalytics'), src.indexOf('// ─── Adaptive UI'))
+    const fn = src.slice(
+      src.indexOf('function loadAnalytics'),
+      src.indexOf('// ⚠️ NO ROOT STYLE WRITES'),
+    )
     expect(fn).toContain("['pointerdown', 'keydown', 'touchstart', 'wheel']")
     expect(fn).not.toMatch(/setTimeout|requestIdleCallback/)
   })

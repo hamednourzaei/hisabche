@@ -263,10 +263,14 @@ export const TopNav = memo(function TopNav({
             {/* Active indicator */}
             <span
               aria-hidden="true"
-              className="absolute top-1 h-[calc(100%-8px)] rounded-full bg-[hsl(var(--color-primary)/0.15)] transition-all duration-300 z-0"
+              // Slides with `transform` (composited). It transitioned `left`
+              // and `width`, which a Chrome trace flagged as non-composited.
+              // Physical `left-0` on purpose, in RTL too: the offset is measured
+              // from getBoundingClientRect().left, a physical coordinate.
+              className="absolute left-0 top-1 z-0 h-[calc(100%-8px)] rounded-full bg-[hsl(var(--color-primary)/0.15)] transition-transform duration-300"
               style={{
                 width: indicatorStyle.width || 0,
-                left: indicatorStyle.offset || 0,
+                transform: `translateX(${indicatorStyle.offset || 0}px)`,
               }}
             />
             {sections.map(({ id, label }) => (

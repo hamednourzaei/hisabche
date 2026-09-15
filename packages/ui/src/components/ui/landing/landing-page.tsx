@@ -10,20 +10,20 @@
 //   • LandingShell  — header, section menu, mobile drawer
 //   • NavigationRegistry — marks a section active while it is in view
 //   • PricingScene  — plan tabs + live prices from the billing API
-//   • LandingFaq    — accordion
-//   • LandingFooter — the year (read after mount)
+//   (FAQ is native <details>; the footer is server-rendered with the year.)
 import { getTranslations } from 'next-intl/server'
 import { resolveIntlLocale } from '@hisabche/formatting'
 
 import { NavigationRegistry } from '../navigation/navigation-registry'
 import CinematicHero from './cinematic-hero'
 import CTAScene from './cta-scene'
+import FaqScene from './faq-scene'
 import FeaturesScene from './features-scene'
-import { LandingFaq, LandingFooter } from './landing-client-sections'
 import { LandingShell } from './landing-shell'
 import PainScene from './pain-scene'
 import PricingScene from './pricing-scene'
 import SecurityScene from './security-scene'
+import SiteFooterView from './site-footer-view'
 import SocialScene from './social-scene'
 import TrustBarScene from './trust-bar-scene'
 
@@ -59,11 +59,13 @@ export async function LandingPage({ locale }: { locale: string }) {
 
       <PricingScene />
 
-      <LandingFaq />
+      <FaqScene t={t} />
 
       <CTAScene t={t} locale={locale} />
 
-      <LandingFooter localePrefix={locale} />
+      {/* Server-rendered: the year is fixed when the page is built or
+          revalidated, and this markup is never hydrated. */}
+      <SiteFooterView t={t} localePrefix={locale} year={new Date().getFullYear()} />
     </LandingShell>
   )
 }

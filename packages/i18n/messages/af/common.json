@@ -567,7 +567,9 @@
       },
       "month": "ماه",
       "unlimited": "نامحدود",
-      "perMonthSuffix": "در ماه"
+      "perMonthSuffix": "در ماه",
+      "included": "دارد",
+      "notIncluded": "ندارد"
     },
     "faqDesc": "اگر پاسخت را پیدا نکردی، پشتیبانی حسابچه همیشه آماده کمک است.",
     "transformStep": {

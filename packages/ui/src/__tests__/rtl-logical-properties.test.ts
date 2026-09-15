@@ -85,6 +85,10 @@ const PHYSICAL =
  * Adding an entry requires a reason. Growing this list is not a fix.
  */
 const ALLOWED: Record<string, { classes: string[]; why: string }> = {
+  'packages/ui/src/components/ui/navigation/top-nav.tsx': {
+    classes: ['left-0'],
+    why: 'Section-highlight pill: its sibling translateX is itself physical (offset = button.left − list.left from getBoundingClientRect), so the anchor must be the physical left edge in both directions.',
+  },
   'packages/ui/src/components/ui/dialog.tsx': {
     classes: ['left-1/2'],
     why: 'Centring: paired with -translate-x-1/2, so it is symmetric and identical under rtl and ltr.',
