@@ -243,17 +243,25 @@ const config: Config = {
           to: { transform: 'rotate(360deg)' },
         },
         // ✅ Marquee (Magic UI pattern) — powers the testimonials marquee
-        // `--marquee-shift` is -1 in LTR and +1 in RTL (set by <Marquee>). In
-        // RTL the copies flow LEFTWARD from the right edge, so the track must
-        // travel right; the old fixed -100% (and "reverse it for RTL") left a
-        // full group-width of empty ribbon on screen for part of every cycle.
+        // ⚠️ NO CSS VARIABLES IN THESE KEYFRAMES. Chrome cannot run a
+        // transform animation on the compositor when its keyframes contain
+        // var() — PageSpeed reported 113–157 non-composited animations, one per
+        // ribbon chip. The gap between copies is padding on each copy, so
+        // exactly one copy-width (100%) is travelled.
+        // RTL has its own keyframe: the copies flow LEFTWARD from the right
+        // edge, so the track travels right. Reversing the LTR animation instead
+        // starts it one copy to the left and leaves the ribbon empty.
         marquee: {
           from: { transform: 'translateX(0)' },
-          to: { transform: 'translateX(calc(var(--marquee-shift, -1) * (100% + var(--gap))))' },
+          to: { transform: 'translateX(-100%)' },
+        },
+        'marquee-rtl': {
+          from: { transform: 'translateX(0)' },
+          to: { transform: 'translateX(100%)' },
         },
         'marquee-vertical': {
           from: { transform: 'translateY(0)' },
-          to: { transform: 'translateY(calc(-100% - var(--gap)))' },
+          to: { transform: 'translateY(-100%)' },
         },
       },
 
@@ -269,6 +277,7 @@ const config: Config = {
         'auth-spin': 'auth-spin 0.8s linear infinite',
         // ✅ Marquee
         marquee: 'marquee var(--duration) linear infinite',
+        'marquee-rtl': 'marquee-rtl var(--duration) linear infinite',
         'marquee-vertical': 'marquee-vertical var(--duration) linear infinite',
       },
 

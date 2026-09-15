@@ -56,7 +56,7 @@ export function Marquee({
     <div
       {...props}
       className={cn(
-        'group flex overflow-hidden p-2 [--duration:40s] [--gap:1rem] [gap:var(--gap)]',
+        'group flex overflow-hidden p-2 [--duration:40s] [--gap:1rem]',
         vertical ? 'flex-col' : 'flex-row',
         className,
       )}
@@ -66,17 +66,17 @@ export function Marquee({
           key={i}
           aria-hidden={i > 0}
           className={cn(
+            // The gap BETWEEN copies is padding on each copy's end, so one copy
+            // (content + gap) is exactly the 100% the keyframe travels.
             'flex shrink-0 justify-around [gap:var(--gap)]',
-            vertical ? 'animate-marquee-vertical flex-col' : 'animate-marquee flex-row',
+            vertical
+              ? 'animate-marquee-vertical flex-col pb-[var(--gap)]'
+              : 'animate-marquee flex-row pe-[var(--gap)] rtl:animate-marquee-rtl',
             pauseOnHover && 'group-hover:[animation-play-state:paused]',
-            // ⚠️ RTL: MIRROR THE TRAVEL, DO NOT REVERSE THE ANIMATION.
-            // In RTL the copies are laid out leftward from the right edge. The
-            // earlier fix reversed `animation-direction`, which STARTS the track
-            // shifted one whole copy to the left — and a copy is wider than the
-            // screen, so the ribbon showed nothing for part of every loop (the
-            // «items run out» gap). The keyframe multiplies by --marquee-shift;
-            // RTL flips its sign, so the loop is seamless in both directions.
-            !vertical && 'rtl:[--marquee-shift:1]',
+            // ⚠️ RTL: MIRROR THE TRAVEL (marquee-rtl), DO NOT REVERSE IT.
+            // Reversing started the track one whole copy to the left — wider
+            // than the screen — so the ribbon showed nothing for part of every
+            // loop (the «items run out» gap).
             reverse && '[animation-direction:reverse]',
             'motion-reduce:animate-none',
           )}

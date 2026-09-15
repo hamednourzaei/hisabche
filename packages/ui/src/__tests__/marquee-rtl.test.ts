@@ -15,12 +15,16 @@ const marquee = readFileSync(join(__dirname, '../components/ui/marquee.tsx'), 'u
 )
 
 describe('marquee loops seamlessly in RTL', () => {
-  it('the keyframe travel is signed by --marquee-shift', () => {
-    expect(config).toContain('var(--marquee-shift, -1) * (100% + var(--gap))')
+  it('RTL has its own mirrored keyframe instead of a reversed animation', () => {
+    expect(config).toContain("'marquee-rtl'")
+    expect(config).toContain('translateX(100%)')
+    expect(marquee).toContain('rtl:animate-marquee-rtl')
+    expect(marquee).not.toContain('rtl:[animation-direction')
   })
 
-  it('RTL flips the sign instead of reversing the animation', () => {
-    expect(marquee).toContain('rtl:[--marquee-shift:1]')
-    expect(marquee).not.toContain('rtl:[animation-direction')
+  it('keyframes carry no var() — the compositor cannot run those', () => {
+    const block = config.slice(config.indexOf('marquee: {'), config.indexOf('animation: {'))
+    expect(block.length).toBeGreaterThan(50)
+    expect(block).not.toContain('var(')
   })
 })

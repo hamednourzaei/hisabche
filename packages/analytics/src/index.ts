@@ -1,24 +1,29 @@
-import type posthog from "posthog-js"
+import type posthog from 'posthog-js'
 
 let ph: typeof posthog | null = null
 
 export function initPostHog() {
   const key = process.env.NEXT_PUBLIC_POSTHOG_KEY
   const host = process.env.NEXT_PUBLIC_POSTHOG_HOST
-  if (typeof window === "undefined" || !key || !host) return
+  if (typeof window === 'undefined' || !key || !host) return
 
-  window.addEventListener("load", () => {
-    import("posthog-js").then(({ default: posthog }) => {
+  const start = () => {
+    import('posthog-js').then(({ default: posthog }) => {
       posthog.init(key, {
         api_host: host,
         autocapture: true,
         capture_pageview: true,
-        persistence: "localStorage",
+        persistence: 'localStorage',
         disable_session_recording: true, // surveys.js و recorder.js لود نمیشن
       })
       ph = posthog
     })
-  }, { once: true })
+  }
+  // ⚠️ This runs after the visitor's first interaction, long after `load` has
+  // fired — a bare `load` listener would never be called and PostHog would
+  // silently never start.
+  if (document.readyState === 'complete') start()
+  else window.addEventListener('load', start, { once: true })
 }
 
 export function identifyUser(userId: string, properties?: Record<string, unknown>) {

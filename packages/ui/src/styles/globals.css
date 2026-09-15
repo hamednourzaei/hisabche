@@ -214,6 +214,13 @@
   --color-primary-fg: 0 0% 100%;
   --color-primary-hover: 172 80% 18%;
   --color-primary-light: 170 65% 35%;
+  /* Status colours as TEXT on their own 12% tint over this ground. The dark
+     theme's values measured 2.5:1 (success) and 2.8:1 (warning) here —
+     PageSpeed flagged the «Available» badges. All ≥ 4.5:1 below. */
+  --color-success: 142 72% 24%;
+  --color-warning: 32 92% 26%;
+  --color-destructive: 0 74% 38%;
+  --color-info: 199 89% 28%;
   /* Buttons painted with the brand gradient carry --color-primary-fg (white
      here). The dark theme's gradient starts at #37e6c3, where white text is
      1.6:1 — so on a light ground the gradient runs through the deep end of the

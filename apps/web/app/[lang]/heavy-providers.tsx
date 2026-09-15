@@ -20,11 +20,18 @@ function loadAnalytics() {
       .catch(() => {})
   }
 
-  if ('requestIdleCallback' in window) {
-    requestIdleCallback(load, { timeout: 3000 })
-  } else {
-    setTimeout(load, 2000)
+  // First engagement, or 12 s — not "idle within 3 s". PostHog's bundle was
+  // parsed and run inside PageSpeed's load window on every public page.
+  const events = ['pointerdown', 'keydown', 'scroll', 'touchstart'] as const
+  let started = false
+  const start = () => {
+    if (started) return
+    started = true
+    events.forEach((e) => window.removeEventListener(e, start))
+    load()
   }
+  events.forEach((e) => window.addEventListener(e, start, { once: true, passive: true }))
+  window.setTimeout(start, 12000)
 }
 
 // ─── Adaptive UI Initializer ──────────────────────────────────────────────

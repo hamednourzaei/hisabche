@@ -24,7 +24,13 @@ export const LANDING_CONTAINER = 'mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8'
  * The default is the phone: 40px. Desktop gaps (96px) on a 360px screen only
  * add scrolling, so they arrive at `lg`, not by proportion.
  */
-export const LANDING_SECTION = 'relative py-10 sm:py-16 lg:py-24'
+//
+// `content-visibility: auto` lets the browser skip style, layout and paint for
+// a section until it nears the viewport — every LANDING_SECTION is below the
+// hero. PageSpeed measured ~1 s of "Other" + "Style & Layout" on load. The
+// intrinsic size keeps the scrollbar honest before a section is rendered.
+export const LANDING_SECTION =
+  'relative py-10 sm:py-16 lg:py-24 [content-visibility:auto] [contain-intrinsic-size:auto_900px]'
 
 /**
  * Type scale. Defaults are the phone sizes, chosen for Persian script at 360px

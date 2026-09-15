@@ -371,18 +371,18 @@ export default async function RootLayout({
             }),
           }}
         />
-        {/* `lazyOnload`, not `afterInteractive`: gtag is 168 KiB and ran two
-            long tasks (216 ms) inside the load window on PageSpeed's mobile
-            profile. Analytics can start after the page is usable. */}
-        <Script
-          strategy="lazyOnload"
-          src="https://www.googletagmanager.com/gtag/js?id=G-T5XG907W4R"
-        />
-        <Script
+        {/* ⚠️ GTAG LOADS ON FIRST ENGAGEMENT, NOT ON PAGE LOAD.
+            Even with `lazyOnload` the 168 KiB gtag bundle ran 190 ms of main
+            thread inside PageSpeed's window. The queue (`dataLayer` + `gtag`)
+            is defined immediately, so every `gtag(...)` call — including the
+            route page views — is kept and sent once the library arrives: on
+            the first scroll / tap / key press, or after 12 s. Trade-off: a
+            visitor who leaves within 12 s without touching the page is not
+            counted. */}
+        <script
           id="google-analytics"
-          strategy="lazyOnload"
           dangerouslySetInnerHTML={{
-            __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-T5XG907W4R');`,
+            __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-T5XG907W4R');(function(){var done=false,ev=['pointerdown','keydown','scroll','touchstart'];function load(){if(done)return;done=true;ev.forEach(function(e){removeEventListener(e,load)});var s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id=G-T5XG907W4R';document.head.appendChild(s)}ev.forEach(function(e){addEventListener(e,load,{once:true,passive:true})});setTimeout(load,12000)})();`,
           }}
         />
         <ClientErrorBoundary>
