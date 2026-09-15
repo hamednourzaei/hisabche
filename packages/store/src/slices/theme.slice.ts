@@ -39,10 +39,14 @@ function resolveIsDark(mode: ThemeMode): boolean {
 function applyTheme(isDark: boolean): void {
   if (typeof document === 'undefined') return
   const root = document.documentElement
-  root.classList.toggle('dark', isDark)
-  root.classList.toggle('light', !isDark)
-  root.dataset.theme = isDark ? 'dark' : 'light'
-  root.style.colorScheme = isDark ? 'dark' : 'light'
+  const theme = isDark ? 'dark' : 'light'
+  // The inline script in the web layout already applied this before first
+  // paint. Writing the same values again after hydration still invalidates
+  // style for the whole document, so only write what actually differs.
+  if (root.classList.contains('dark') !== isDark) root.classList.toggle('dark', isDark)
+  if (root.classList.contains('light') === isDark) root.classList.toggle('light', !isDark)
+  if (root.dataset.theme !== theme) root.dataset.theme = theme
+  if (root.style.colorScheme !== theme) root.style.colorScheme = theme
 }
 
 // ============================================

@@ -1,119 +1,104 @@
-"use client";
+'use client'
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from 'react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type SectionId =
-  | "hero"
-  | "pain"
-  | "transform"
-  | "features"
-  | "testimonials"
-  | "cta";
+export type SectionId = 'hero' | 'pain' | 'transform' | 'features' | 'testimonials' | 'cta'
 
 export type NarrativeState =
-  | "frustration"
-  | "confusion"
-  | "clarity"
-  | "confidence"
-  | "trust"
-  | "action";
+  'frustration' | 'confusion' | 'clarity' | 'confidence' | 'trust' | 'action'
 
 interface SectionMeta {
-  readonly y: number;
-  readonly narrative: NarrativeState;
+  readonly y: number
+  readonly narrative: NarrativeState
 }
 
 interface ScrollState {
-  readonly progress: number;
-  readonly activeSection: SectionId;
-  readonly narrativeState: NarrativeState;
+  readonly progress: number
+  readonly activeSection: SectionId
+  readonly narrativeState: NarrativeState
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const SECTION_MAP = {
-  hero:         { y: 0.05, narrative: "frustration" },
-  pain:         { y: 0.2,  narrative: "confusion"   },
-  transform:    { y: 0.4,  narrative: "clarity"     },
-  features:     { y: 0.55, narrative: "confidence"  },
-  testimonials: { y: 0.75, narrative: "trust"       },
-  cta:          { y: 0.9,  narrative: "action"      },
-} as const satisfies Record<SectionId, SectionMeta>;
+  hero: { y: 0.05, narrative: 'frustration' },
+  pain: { y: 0.2, narrative: 'confusion' },
+  transform: { y: 0.4, narrative: 'clarity' },
+  features: { y: 0.55, narrative: 'confidence' },
+  testimonials: { y: 0.75, narrative: 'trust' },
+  cta: { y: 0.9, narrative: 'action' },
+} as const satisfies Record<SectionId, SectionMeta>
 
-export const VALID_SECTION_IDS = Object.keys(SECTION_MAP) as SectionId[];
+export const VALID_SECTION_IDS = Object.keys(SECTION_MAP) as SectionId[]
 
 export const NARRATIVE_COLORS: Record<NarrativeState, string> = {
-  frustration: "#A855F7",
-  confusion:   "#EF4444",
-  clarity:     "#10B981",
-  confidence:  "#06B6D4",
-  trust:       "#8B5CF6",
-  action:      "#EC4899",
-};
+  frustration: '#A855F7',
+  confusion: '#EF4444',
+  clarity: '#10B981',
+  confidence: '#06B6D4',
+  trust: '#8B5CF6',
+  action: '#EC4899',
+}
 
 const INITIAL_STATE: ScrollState = {
-  progress:       0,
-  activeSection:  "hero",
-  narrativeState: "frustration",
-};
+  progress: 0,
+  activeSection: 'hero',
+  narrativeState: 'frustration',
+}
 
 // ─── Type Guards ──────────────────────────────────────────────────────────────
 
 export function isSectionId(value: string): value is SectionId {
-  return (VALID_SECTION_IDS as string[]).includes(value);
+  return (VALID_SECTION_IDS as string[]).includes(value)
 }
 
 // ─── Singleton Store ──────────────────────────────────────────────────────────
 
-let scrollState: ScrollState = INITIAL_STATE;
-let rafId: number | null = null;
-let lastProgress = -1;
-let frameCount = 0;
+let scrollState: ScrollState = INITIAL_STATE
+let lastProgress = -1
 
-// ✅ بهبود: افزایش skip برای کاهش مصرف CPU
-const PROGRESS_FRAME_SKIP = 4; // افزایش از 3 به 4
-const PROGRESS_MIN_DELTA = 0.003; // افزایش از 0.002 به 0.003
-const SECTION_COOLDOWN_MS = 200; // افزایش از 150 به 200
+const PROGRESS_MIN_DELTA = 0.003 // افزایش از 0.002 به 0.003
+const SECTION_COOLDOWN_MS = 200 // افزایش از 150 به 200
 
-const sectionListeners = new Set<(state: ScrollState) => void>();
-const progressListeners = new Set<(progress: number) => void>();
+const sectionListeners = new Set<(state: ScrollState) => void>()
+const progressListeners = new Set<(progress: number) => void>()
 
 function notifySection(): void {
-  sectionListeners.forEach((l) => l(scrollState));
+  sectionListeners.forEach((l) => l(scrollState))
 }
 
 function notifyProgress(p: number): void {
-  progressListeners.forEach((l) => l(p));
+  progressListeners.forEach((l) => l(p))
 }
 
 function applySection(section: SectionId): void {
-  if (scrollState.activeSection === section) return;
+  if (scrollState.activeSection === section) return
 
-  const meta = SECTION_MAP[section];
+  const meta = SECTION_MAP[section]
 
   scrollState = {
-    progress:       scrollState.progress,
-    activeSection:  section,
+    progress: scrollState.progress,
+    activeSection: section,
     narrativeState: meta.narrative,
-  };
-
-  if (typeof document !== "undefined") {
-    document.body.setAttribute("data-active-section", section);
-    document.body.setAttribute("data-narrative-state", meta.narrative);
   }
 
-  notifySection();
+  if (typeof document !== 'undefined') {
+    document.body.setAttribute('data-active-section', section)
+    document.body.setAttribute('data-narrative-state', meta.narrative)
+  }
+
+  notifySection()
 }
 
 // ─── Queue (RAF-aligned) ─────────────────────────────────────────────────────
 
 interface QueueState {
-  pending: SectionId | null;
-  isScheduled: boolean;
-  lastSection: SectionId | null;
-  lastTime: number;
+  pending: SectionId | null
+  isScheduled: boolean
+  lastSection: SectionId | null
+  lastTime: number
 }
 
 const queue: QueueState = {
@@ -121,161 +106,148 @@ const queue: QueueState = {
   isScheduled: false,
   lastSection: null,
   lastTime: 0,
-};
+}
 
 function scheduleFlush(): void {
-  if (queue.isScheduled) return;
-  queue.isScheduled = true;
+  if (queue.isScheduled) return
+  queue.isScheduled = true
 
   requestAnimationFrame(() => {
-    queue.isScheduled = false;
+    queue.isScheduled = false
 
-    const target = queue.pending;
-    if (target === null) return;
+    const target = queue.pending
+    if (target === null) return
 
-    queue.pending = null;
-    queue.lastSection = target;
-    queue.lastTime = Date.now();
+    queue.pending = null
+    queue.lastSection = target
+    queue.lastTime = Date.now()
 
-    applySection(target);
-  });
+    applySection(target)
+  })
 }
 
 export function queueSetActiveSection(section: SectionId): void {
-  if (
-    queue.lastSection === section &&
-    Date.now() - queue.lastTime < SECTION_COOLDOWN_MS
-  ) {
-    return;
+  if (queue.lastSection === section && Date.now() - queue.lastTime < SECTION_COOLDOWN_MS) {
+    return
   }
 
-  queue.pending = section;
-  scheduleFlush();
+  queue.pending = section
+  scheduleFlush()
 }
 
 export function setActiveSection(section: SectionId): void {
-  queue.pending = null;
-  queue.isScheduled = false;
-  applySection(section);
+  queue.pending = null
+  queue.isScheduled = false
+  applySection(section)
 }
 
-// ─── RAF scroll-progress loop (passive) ──────────────────────────────────────
+// ─── Scroll progress: one read per scroll, nothing when idle ─────────────────
+//
+// ⚠️ THIS WAS A requestAnimationFrame LOOP STARTED ON MOUNT. Both hooks called
+// `startScrollLoop()` in their effect, and the stop timer was only armed by a
+// scroll event — so on a page nobody scrolled the loop ran forever, and every
+// 4th frame read `document.body.scrollHeight`. Reading a layout property while
+// styles are dirty forces a synchronous layout: a headless Chrome profile at
+// PageSpeed-like CPU speed attributed a 108 ms long frame (107 ms of it forced
+// layout) to this callback, and PageSpeed reported "Forced reflow".
+//
+// Now: a passive scroll listener schedules at most ONE frame per burst; the
+// page height comes from a ResizeObserver (delivered after layout, so reading
+// it forces nothing); no work at all while the page is still.
 
-function scrollLoop(): void {
-  frameCount++;
+let maxScroll = 0
+let frameScheduled = false
+let resizeObserver: ResizeObserver | null = null
+let consumers = 0
 
-  if (frameCount % PROGRESS_FRAME_SKIP === 0) {
-    const maxScroll = document.body.scrollHeight - window.innerHeight;
-    const raw = maxScroll > 0 ? window.scrollY / maxScroll : 0;
-    const progress = Math.min(1, Math.max(0, raw));
+function measureMaxScroll(): void {
+  maxScroll = document.documentElement.scrollHeight - window.innerHeight
+}
 
-    if (Math.abs(progress - lastProgress) > PROGRESS_MIN_DELTA) {
-      lastProgress = progress;
-      scrollState = { ...scrollState, progress };
-      notifyProgress(progress);
-    }
+function publishProgress(): void {
+  frameScheduled = false
+  const raw = maxScroll > 0 ? window.scrollY / maxScroll : 0
+  const progress = Math.min(1, Math.max(0, raw))
+  if (Math.abs(progress - lastProgress) > PROGRESS_MIN_DELTA) {
+    lastProgress = progress
+    scrollState = { ...scrollState, progress }
+    notifyProgress(progress)
   }
-
-  rafId = requestAnimationFrame(scrollLoop);
 }
-
-function startScrollLoop(): void {
-  if (rafId !== null || typeof window === "undefined") return;
-  frameCount = 0;
-  rafId = requestAnimationFrame(scrollLoop);
-}
-
-function stopScrollLoop(): void {
-  if (rafId === null) return;
-  cancelAnimationFrame(rafId);
-  rafId = null;
-}
-
-// ─── Passive scroll listener (no RAF loop when idle) ────────────────────────
-
-let passiveScrollActive = false;
-let passiveScrollTimer: ReturnType<typeof setTimeout> | null = null;
-
-// ✅ بهبود: کاهش زمان idle برای صرفه‌جویی در باتری
-const IDLE_TIMEOUT_MS = 1500; // کاهش از 2000 به 1500
 
 function onPassiveScroll(): void {
-  if (!passiveScrollActive) {
-    passiveScrollActive = true;
-    startScrollLoop();
-  }
+  if (frameScheduled) return
+  frameScheduled = true
+  requestAnimationFrame(publishProgress)
+}
 
-  if (passiveScrollTimer) clearTimeout(passiveScrollTimer);
-  passiveScrollTimer = setTimeout(() => {
-    passiveScrollActive = false;
-    stopScrollLoop();
-  }, IDLE_TIMEOUT_MS);
+function attachScrollTracking(): void {
+  consumers++
+  if (consumers > 1 || typeof window === 'undefined') return
+  window.addEventListener('scroll', onPassiveScroll, { passive: true })
+  resizeObserver = new ResizeObserver(() => {
+    // Layout is already done when this fires — the read is free.
+    measureMaxScroll()
+  })
+  resizeObserver.observe(document.documentElement)
+}
+
+function detachScrollTracking(): void {
+  consumers = Math.max(0, consumers - 1)
+  if (consumers > 0) return
+  window.removeEventListener('scroll', onPassiveScroll)
+  resizeObserver?.disconnect()
+  resizeObserver = null
 }
 
 // ─── React Hooks ──────────────────────────────────────────────────────────────
 
 export function useScrollNarrative(): ScrollState {
-  const [state, setState] = useState<ScrollState>(scrollState);
+  const [state, setState] = useState<ScrollState>(scrollState)
 
   useEffect(() => {
-    setState(scrollState);
+    setState(scrollState)
 
-    const onSection = (s: ScrollState) => setState(s);
+    const onSection = (s: ScrollState) => setState(s)
     const onProgress = (p: number) => {
-      setState((prev) => ({ ...prev, progress: p }));
-    };
+      setState((prev) => ({ ...prev, progress: p }))
+    }
 
-    sectionListeners.add(onSection);
-    progressListeners.add(onProgress);
+    sectionListeners.add(onSection)
+    progressListeners.add(onProgress)
 
-    window.addEventListener("scroll", onPassiveScroll, { passive: true });
-    startScrollLoop();
+    attachScrollTracking()
 
     return () => {
-      sectionListeners.delete(onSection);
-      progressListeners.delete(onProgress);
-      window.removeEventListener("scroll", onPassiveScroll);
+      sectionListeners.delete(onSection)
+      progressListeners.delete(onProgress)
+      detachScrollTracking()
+    }
+  }, [])
 
-      if (passiveScrollTimer) clearTimeout(passiveScrollTimer);
-
-      if (sectionListeners.size === 0 && progressListeners.size === 0) {
-        stopScrollLoop();
-      }
-    };
-  }, []);
-
-  return state;
+  return state
 }
 
-export function useActiveSection(): Pick<ScrollState, "activeSection" | "narrativeState"> {
-  const [section, setSection] = useState(scrollState.activeSection);
-  const [narrative, setNarrative] = useState(scrollState.narrativeState);
+export function useActiveSection(): Pick<ScrollState, 'activeSection' | 'narrativeState'> {
+  const [section, setSection] = useState(scrollState.activeSection)
+  const [narrative, setNarrative] = useState(scrollState.narrativeState)
 
   useEffect(() => {
     const onSection = (s: ScrollState) => {
-      setSection(s.activeSection);
-      setNarrative(s.narrativeState);
-    };
+      setSection(s.activeSection)
+      setNarrative(s.narrativeState)
+    }
 
-    sectionListeners.add(onSection);
-    window.addEventListener("scroll", onPassiveScroll, { passive: true });
-    startScrollLoop();
+    sectionListeners.add(onSection)
 
     return () => {
-      sectionListeners.delete(onSection);
-      window.removeEventListener("scroll", onPassiveScroll);
+      sectionListeners.delete(onSection)
+    }
+  }, [])
 
-      if (passiveScrollTimer) clearTimeout(passiveScrollTimer);
-
-      if (sectionListeners.size === 0 && progressListeners.size === 0) {
-        stopScrollLoop();
-      }
-    };
-  }, []);
-
-  return { activeSection: section, narrativeState: narrative };
+  return { activeSection: section, narrativeState: narrative }
 }
 
 export function getActiveNodeColor(state: NarrativeState): string {
-  return NARRATIVE_COLORS[state];
+  return NARRATIVE_COLORS[state]
 }

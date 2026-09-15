@@ -34,23 +34,13 @@ function loadAnalytics() {
   events.forEach((e) => window.addEventListener(e, start, { once: true, passive: true }))
 }
 
-// ─── Adaptive UI Initializer ──────────────────────────────────────────────
-
-const AdaptiveUIInitializer = memo(function AdaptiveUIInitializer() {
-  useEffect(() => {
-    const root = document.documentElement
-    const cores = navigator.hardwareConcurrency ?? 4
-    const isLowPerf = cores <= 4
-
-    root.dataset.perf = isLowPerf ? 'low' : 'high'
-    root.style.setProperty('--motion-scale', isLowPerf ? '0.5' : '1')
-    root.style.setProperty('--shadow-intensity', isLowPerf ? '0.6' : '1')
-    root.style.setProperty('--glass-blur-scale', isLowPerf ? '0.5' : '1')
-  }, [])
-
-  return null
-})
-AdaptiveUIInitializer.displayName = 'AdaptiveUIInitializer'
+// ⚠️ NO ROOT STYLE WRITES AFTER HYDRATION. An `AdaptiveUIInitializer` used to
+// set `data-perf` and three CSS variables (--motion-scale, --shadow-intensity,
+// --glass-blur-scale) on <html> — none of which any stylesheet reads. Every
+// write to the root re-styles the whole document (~1,300 elements on the
+// landing); a headless-Chrome profile at PageSpeed-like CPU speed showed three
+// 100–230 ms style+layout frames during load. `lite-mode` / `data-saver` are now
+// decided before first paint by the inline script in layout.tsx.
 
 // ─── Theme Initializer ─────────────────────────────────────────────────────
 
@@ -70,19 +60,11 @@ const ThemeInitializer = memo(function ThemeInitializer({
     // و تم به حالت پیش‌فرض تیره برمی‌گشت. applyTheme داخل setMode این کار را می‌کند.
     setMode(mode)
 
-    const html = document.documentElement
-
-    // ✅ Device detection
-    const { detectDevice, performanceMode, reducedMotion, dataSaver } = useDeviceStore.getState()
-    detectDevice()
-
-    if (performanceMode === 'lite' || reducedMotion) {
-      html.classList.add('lite-mode')
-      html.dataset.perf = 'low'
-    }
-    if (dataSaver) {
-      html.classList.add('data-saver')
-    }
+    // Keeps the persisted device profile current for Settings. The html classes
+    // it implies (lite-mode, data-saver) were already applied before first
+    // paint by the inline script in layout.tsx — applying them here re-styled
+    // the whole page after hydration.
+    useDeviceStore.getState().detectDevice()
   }, [mode, setMode])
 
   return <>{children}</>
@@ -161,7 +143,6 @@ export const HeavyProviders = memo(function HeavyProviders({
 }) {
   return (
     <>
-      <AdaptiveUIInitializer />
       <AnalyticsBootstrap />
       <ThemeInitializer>
         <AuthInitializer>{children}</AuthInitializer>

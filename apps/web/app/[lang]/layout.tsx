@@ -301,7 +301,7 @@ export default async function RootLayout({
           id="theme-init"
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var mode='system';var raw=localStorage.getItem('hisabche-theme');if(raw){var parsed=JSON.parse(raw);mode=(parsed&&parsed.state&&parsed.state.mode)||'system'}var isDark=mode==='dark'||(mode==='system'&&window.matchMedia('(prefers-color-scheme:dark)').matches);var r=document.documentElement;r.classList.toggle('dark',isDark);r.classList.toggle('light',!isDark);r.setAttribute('data-theme',isDark?'dark':'light');r.style.colorScheme=isDark?'dark':'light'}catch(e){}})();`,
+            __html: `(function(){try{var mode='system';var raw=localStorage.getItem('hisabche-theme');if(raw){var parsed=JSON.parse(raw);mode=(parsed&&parsed.state&&parsed.state.mode)||'system'}var isDark=mode==='dark'||(mode==='system'&&window.matchMedia('(prefers-color-scheme:dark)').matches);var r=document.documentElement;r.classList.toggle('dark',isDark);r.classList.toggle('light',!isDark);r.setAttribute('data-theme',isDark?'dark':'light');r.style.colorScheme=isDark?'dark':'light';var d={};try{var dr=localStorage.getItem('hisabche-device');if(dr){d=(JSON.parse(dr)||{}).state||{}}}catch(e){}var n=navigator,mem=n.deviceMemory,cores=n.hardwareConcurrency||4;if(d.performanceMode==='lite'||d.reducedMotion||(mem&&mem<4)||cores<4){r.classList.add('lite-mode')}if(d.dataSaver||(n.connection&&n.connection.saveData)){r.classList.add('data-saver')}}catch(e){}})();`,
           }}
         />
         {/* Site-wide entity graph.
