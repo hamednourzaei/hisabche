@@ -1,20 +1,24 @@
 // packages/ui/src/components/ui/landing/chapter-scene.tsx
 //
-// One chapter of the product story: label, title, lead, then cards (or example
-// questions). The landing mounts it once per chapter, in the order set by
-// landing-page.tsx. SERVER COMPONENT — never hydrated.
+// One chapter of the product story: label, title, lead, a "how it works" panel
+// where one exists, then cards (or example questions). The landing mounts it
+// once per chapter, in the order set by landing-page.tsx.
+// SERVER COMPONENT — never hydrated.
 //
 // ⚠️ EVERY CARD NAMES SOMETHING THE CODE DOES (audit of 15 Sep 2026):
 //   ledger    → posting functions keep debit = credit; /trial-balance
 //   money     → /aging/:kind (receivable | payable), POS till, banking service
 //   inventory → stock_movements, /api/products/low-stock, warehouse transfers
-//   offline   → apps/desktop SQLite + sync engine + /conflicts review
+//   offline   → apps/desktop SQLite + sync engine, mobile outbox, /conflicts
 //   reports   → /income-statement, /cash-flow, aging, low-stock, budgeting
 //   ai        → ai-chat.service reads ONLY four reporting views
 //               (sales_summary, customer_balance, inventory_summary,
 //               outstanding_invoices) — the example questions stay inside them
 //   multi     → workspaces per user, /api/branch, consolidated reports
 // A planned feature is not a card. Remove the card before shipping a claim.
+//
+// Typography: titles `text-balance`, body `text-pretty` — no ragged
+// "staircase" lines in centred Persian text.
 import type { LucideIcon } from 'lucide-react'
 import {
   ArrowDownToLine,
@@ -24,9 +28,7 @@ import {
   Boxes,
   Building2,
   CircleDollarSign,
-  ClipboardList,
   Landmark,
-  MessageCircleQuestion,
   PackageMinus,
   PiggyBank,
   RefreshCw,
@@ -40,7 +42,13 @@ import {
 } from 'lucide-react'
 
 import { cn } from '../../../lib/utils'
-import { LANDING_CONTAINER, LANDING_SECTION, SectionHeader } from './landing-primitives'
+import { AiVisual, JournalVisual, OfflineVisual, StepChain, TillVisual } from './chapter-visuals'
+import {
+  LANDING_CONTAINER,
+  LANDING_SECTION,
+  LANDING_TYPE,
+  SectionHeader,
+} from './landing-primitives'
 
 export const CHAPTERS = {
   ledger: { cards: [BookOpen, WalletCards, BarChart3] as LucideIcon[], chips: 0, examples: 0 },
@@ -72,6 +80,43 @@ export interface ChapterSceneProps {
 export default function ChapterScene({ t, chapter, muted }: ChapterSceneProps) {
   const { cards, chips, examples } = CHAPTERS[chapter]
   const k = `landing.chapter.${chapter}`
+  // Chapters with a side panel put cards and panel side by side on desktop.
+  const side = chapter === 'ledger' || chapter === 'money'
+
+  const cardList = cards.length > 0 && (
+    <ul
+      className={cn(
+        'grid grid-cols-1 gap-3 sm:gap-4',
+        side
+          ? 'sm:grid-cols-3 lg:grid-cols-1'
+          : cards.length === 5
+            ? 'sm:grid-cols-2 lg:grid-cols-5'
+            : 'sm:grid-cols-3',
+      )}
+    >
+      {cards.map((Icon, i) => (
+        <li
+          key={i}
+          className={cn(
+            'flex gap-3 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated)/0.6)] p-4 sm:flex-col sm:p-5',
+            side && 'lg:flex-row lg:items-start',
+          )}
+        >
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[hsl(var(--color-primary)/0.1)] text-[hsl(var(--color-primary))] sm:size-10">
+            <Icon className="size-[1.125rem] sm:size-5" aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <h3 className="mb-1 text-balance text-base font-semibold text-[hsl(var(--fg-primary))]">
+              {t(`${k}.card${i + 1}.title`)}
+            </h3>
+            <p className={cn('text-pretty text-[hsl(var(--fg-secondary))]', LANDING_TYPE.body)}>
+              {t(`${k}.card${i + 1}.desc`)}
+            </p>
+          </div>
+        </li>
+      ))}
+    </ul>
+  )
 
   return (
     <section
@@ -80,7 +125,7 @@ export default function ChapterScene({ t, chapter, muted }: ChapterSceneProps) {
     >
       <div className={LANDING_CONTAINER}>
         {chapter === 'offline' && (
-          <p className="mb-3 text-center">
+          <p className="mb-4 text-center">
             <span className="rounded-full border border-[hsl(var(--color-primary)/0.35)] px-3 py-1 font-mono text-xs font-semibold tracking-wider text-[hsl(var(--color-primary))]">
               {t(`${k}.badge`)}
             </span>
@@ -92,32 +137,37 @@ export default function ChapterScene({ t, chapter, muted }: ChapterSceneProps) {
           description={t(`${k}.desc`)}
         />
 
-        {cards.length > 0 && (
-          <ul
+        {side ? (
+          <div className="grid items-start gap-4 lg:grid-cols-2 lg:gap-8">
+            {chapter === 'ledger' ? <JournalVisual t={t} /> : <TillVisual t={t} />}
+            {cardList}
+          </div>
+        ) : (
+          <>
+            {chapter === 'inventory' && (
+              <div className="mb-8 sm:mb-10">
+                <StepChain t={t} prefix={`${k}.flow`} count={6} />
+              </div>
+            )}
+            {chapter === 'offline' && (
+              <div className="mb-8 sm:mb-10">
+                <OfflineVisual t={t} />
+              </div>
+            )}
+            {chapter === 'ai' && <AiVisual t={t} />}
+            {cardList}
+          </>
+        )}
+
+        {chapter === 'ledger' && (
+          <p
             className={cn(
-              'grid grid-cols-1 gap-3 sm:gap-4',
-              cards.length === 5 ? 'sm:grid-cols-2 lg:grid-cols-5' : 'sm:grid-cols-3',
+              'mx-auto mt-8 max-w-2xl text-balance text-center font-semibold text-[hsl(var(--fg-primary))]',
+              LANDING_TYPE.lead,
             )}
           >
-            {cards.map((Icon, i) => (
-              <li
-                key={i}
-                className="flex gap-3 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated)/0.6)] p-4 sm:flex-col sm:p-5"
-              >
-                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[hsl(var(--color-primary)/0.1)] text-[hsl(var(--color-primary))] sm:size-10">
-                  <Icon className="size-[1.125rem] sm:size-5" aria-hidden="true" />
-                </span>
-                <div className="min-w-0">
-                  <h3 className="mb-1 font-semibold text-[hsl(var(--fg-primary))]">
-                    {t(`${k}.card${i + 1}.title`)}
-                  </h3>
-                  <p className="text-sm leading-relaxed text-[hsl(var(--fg-secondary))]">
-                    {t(`${k}.card${i + 1}.desc`)}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ul>
+            {t(`${k}.tagline`)}
+          </p>
         )}
 
         {chips > 0 && (
@@ -134,26 +184,21 @@ export default function ChapterScene({ t, chapter, muted }: ChapterSceneProps) {
         )}
 
         {examples > 0 && (
-          <ul className="mx-auto grid max-w-3xl gap-3 sm:grid-cols-2">
-            {Array.from({ length: examples }, (_, i) => (
-              <li
-                key={i}
-                className="flex items-start gap-3 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated)/0.6)] p-4"
-              >
-                <MessageCircleQuestion
-                  className="mt-0.5 size-5 shrink-0 text-[hsl(var(--color-primary))]"
-                  aria-hidden="true"
-                />
-                <q className="text-sm text-[hsl(var(--fg-primary))] sm:text-base">
+          <>
+            <ul className="mx-auto mt-5 flex max-w-3xl flex-wrap justify-center gap-2">
+              {Array.from({ length: examples }, (_, i) => (
+                <li
+                  key={i}
+                  className="rounded-full border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] px-3 py-1.5 text-sm text-[hsl(var(--fg-secondary))]"
+                >
                   {t(`${k}.example${i + 1}`)}
-                </q>
-              </li>
-            ))}
-            <li className="flex items-center gap-2 text-sm text-[hsl(var(--fg-tertiary))] sm:col-span-2 sm:justify-center">
-              <ClipboardList className="size-4 shrink-0" aria-hidden="true" />
+                </li>
+              ))}
+            </ul>
+            <p className="mx-auto mt-4 max-w-2xl text-pretty text-center text-sm text-[hsl(var(--fg-tertiary))]">
               {t(`${k}.note`)}
-            </li>
-          </ul>
+            </p>
+          </>
         )}
       </div>
     </section>

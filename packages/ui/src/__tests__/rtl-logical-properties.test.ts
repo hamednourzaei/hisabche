@@ -105,10 +105,6 @@ const ALLOWED: Record<string, { classes: string[]; why: string }> = {
     classes: ['left-1/2', 'left-0', 'right-0'],
     why: 'Decorative orbit: four dots at the compass points of a concentric ring, aria-hidden. The geometry is physical and does not mirror.',
   },
-  'packages/ui/src/components/ui/landing/trust-bar-scene.tsx': {
-    classes: ['left-0', 'right-0'],
-    why: 'Both edges at once — the two gradient fade masks over the marquee. A mirrored pair is direction-neutral.',
-  },
   'packages/ui/src/components/ui/notification-bell.tsx': {
     classes: ['left-4', 'right-4'],
     why: 'Both edges at once — the mobile panel is inset equally from each side. The desktop branch beside it already uses end-0.',

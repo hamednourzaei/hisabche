@@ -15,6 +15,7 @@ import { getTranslations } from 'next-intl/server'
 
 import { NavigationRegistry } from '../navigation/navigation-registry'
 import CinematicHero from './cinematic-hero'
+import CompareScene from './compare-scene'
 import CTAScene from './cta-scene'
 import FaqScene from './faq-scene'
 import ChapterScene from './chapter-scene'
@@ -68,6 +69,8 @@ export async function LandingPage({ locale }: { locale: string }) {
         <SecurityScene t={t} />
       </NavigationRegistry>
       <ChapterScene t={t} chapter="multi" />
+
+      <CompareScene t={t} />
 
       <PricingScene />
 

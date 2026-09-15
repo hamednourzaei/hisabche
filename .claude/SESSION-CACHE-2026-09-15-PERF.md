@@ -196,3 +196,15 @@ JS `/en`: ۳۹۲ → ۳۰۵KB؛ prefetch صفر؛ `dir`/`lang` درست.
 - صفحات dashboard، login، team-and-payroll، warehouse، governance (درخواست #58).
 - تبدیل بخش‌های ایستای لندینگ به Server Component (کاهش hydration) اگر TBT مانع شد.
 - WOFF2 فونت‌ها (نیازمند اجازه‌ی نصب ابزار).
+
+## 1.15 Bash tool hangs: a command waiting on stdin (3 times this session)
+
+`cat > file 2>/dev/null;` (no heredoc) and `python - <<EOF ... EOF < /dev/null` both sat until the
+120 s timeout — the tool's stdin never closes. Rule: write scripts with the Write tool into the
+scratchpad and run `python script.py </dev/null`. Never `cat >` without a heredoc, never `python -`.
+
+## 1.16 Landing copy claims are audited against code, including messages
+
+The fabricated claims (2FA, 30-day restore, webhooks) lived in common.json values, not in TSX — a
+source-only guard missed them. landing-claims.test.ts now scans the rendered landing messages of all
+three locales.

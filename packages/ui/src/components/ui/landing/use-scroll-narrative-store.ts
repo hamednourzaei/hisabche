@@ -4,7 +4,11 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type SectionId = 'hero' | 'pain' | 'transform' | 'features' | 'testimonials' | 'cta'
+// ⚠️ MUST MATCH the menu in landing-shell.tsx. The section observer ignores any
+// id not listed here — after the landing was restructured the list still named
+// pain/transform/testimonials, so «حسابداری», «آفلاین» and «امنیت» never lit up
+// (guard: landing-i18n-keys.test.ts › landing section menu).
+export type SectionId = 'hero' | 'features' | 'ledger' | 'offline' | 'security'
 
 export type NarrativeState =
   'frustration' | 'confusion' | 'clarity' | 'confidence' | 'trust' | 'action'
@@ -24,11 +28,10 @@ interface ScrollState {
 
 const SECTION_MAP = {
   hero: { y: 0.05, narrative: 'frustration' },
-  pain: { y: 0.2, narrative: 'confusion' },
-  transform: { y: 0.4, narrative: 'clarity' },
-  features: { y: 0.55, narrative: 'confidence' },
-  testimonials: { y: 0.75, narrative: 'trust' },
-  cta: { y: 0.9, narrative: 'action' },
+  features: { y: 0.2, narrative: 'confusion' },
+  ledger: { y: 0.4, narrative: 'confidence' },
+  offline: { y: 0.6, narrative: 'clarity' },
+  security: { y: 0.8, narrative: 'trust' },
 } as const satisfies Record<SectionId, SectionMeta>
 
 export const VALID_SECTION_IDS = Object.keys(SECTION_MAP) as SectionId[]

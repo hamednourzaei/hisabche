@@ -23,14 +23,8 @@ export interface CTASceneProps {
   locale: string
 }
 
-const PROOF = [
-  'offline',
-  'ledger',
-  'multiBusiness',
-  'multiBranch',
-  'platforms',
-  'languages',
-] as const
+// The hero proof bar carries the product facts; this closes on reach.
+const PROOF = ['multiBusiness', 'platforms', 'languages'] as const
 
 export default function CTAScene({ t, locale }: CTASceneProps) {
   return (

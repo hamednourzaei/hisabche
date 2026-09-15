@@ -75,6 +75,16 @@ describe('landing section menu', () => {
     expect(menu.length).toBeGreaterThan(3)
     expect(menu.filter((id) => !mounted.includes(id))).toEqual([])
   })
+
+  it('every menu anchor is a section id the scroll observer accepts', () => {
+    // The observer drops unknown ids silently: the highlight just never moves.
+    const shell = strip(readFileSync(join(LANDING, 'landing-shell.tsx'), 'utf8'))
+    const store = readFileSync(join(LANDING, 'use-scroll-narrative-store.ts'), 'utf8')
+    const accepted: string[] =
+      (store.match(/export type SectionId = ([^\n]+)/)?.[1] ?? '').match(/'([a-z-]+)'/g) ?? []
+    const menu = [...shell.matchAll(/id: '([a-z-]+)' as const/g)].map((m) => `'${m[1]}'`)
+    expect(menu.filter((id) => !accepted.includes(id))).toEqual([])
+  })
 })
 
 describe('landing data carries no pre-formatted Persian', () => {
@@ -120,15 +130,48 @@ describe('landing i18n — data-driven key families', () => {
   for (const g of groups) families.push(`landing.modules.group.${g}`)
   for (const k of ids(modulesSrc, 'key'))
     if (!groups.includes(k)) families.push(`landing.modules.item.${k}`)
-  for (const m of read('cta-scene.tsx').matchAll(/'(\w+)'/g))
-    for (const k of (read('cta-scene.tsx').match(/const PROOF = \[([^\]]*)\]/)?.[1] ?? '').match(
-      /\w+/g,
-    ) ?? [])
-      families.push(`landing.proof.${k}`)
+  for (const k of (read('cta-scene.tsx').match(/const PROOF = \[([^\]]*)\]/)?.[1] ?? '').match(
+    /\w+/g,
+  ) ?? [])
+    families.push(`landing.proof.${k}`)
+  // Worked-example panels and step chains (`${k}.pipe${i + 1}` etc.).
+  const visuals = read('chapter-visuals.tsx')
+  for (const m of visuals.matchAll(/const k = '([\w.]+)'/g)) {
+    const body = visuals.slice(m.index)
+    const end = body.indexOf('\nexport function', 1)
+    for (const s of (end > 0 ? body.slice(0, end) : body).matchAll(/t\(`\$\{k\}\.(\w+)`\)/g))
+      families.push(`${m[1]}.${s[1]}`)
+  }
+  for (const [prefix, count] of [
+    ['landing.visual.offline.pipe', 6],
+    ['landing.visual.offline.action', 4],
+    ['landing.chapter.inventory.flow', 6],
+    ['landing.system.trace.step', 6],
+  ] as const)
+    for (let i = 1; i <= count; i++) families.push(`${prefix}${i}`)
+  for (const row of ['opening', 'receipts', 'payments', 'transfer'])
+    families.push(`landing.visual.till.${row}`, `landing.visual.till.${row}Amount`)
+  families.push(
+    'landing.visual.example',
+    'landing.chapter.ledger.tagline',
+    'landing.chapter.offline.badge',
+  )
+  for (const m of read('faq-scene.tsx').matchAll(/(?:question|answer)Key: '([\w.]+)'/g))
+    families.push(m[1]!)
   for (const k of ids(read('system-scene.tsx'), 'key'))
     for (const f of ['title', 'desc']) families.push(`landing.system.step.${k}.${f}`)
   for (const k of ids(read('site-footer-view.tsx'), 'key')) families.push(`landing.footerLink.${k}`)
-  for (const k of ids(read('trust-bar-scene.tsx'), 'key')) families.push(`landing.industry.${k}`)
+  const trust = read('trust-bar-scene.tsx')
+  const industries = trust.slice(
+    trust.indexOf('const INDUSTRIES'),
+    trust.indexOf('const SCENARIOS'),
+  )
+  for (const k of ids(industries, 'key')) families.push(`landing.industry.${k}`)
+  for (const k of ids(trust.slice(trust.indexOf('const SCENARIOS')), 'key'))
+    families.push(`landing.industries.${k}.title`, `landing.industries.${k}.desc`)
+  const rows = read('compare-scene.tsx').match(/const ROWS = \[([^\]]*)\]/)?.[1] ?? ''
+  for (const k of rows.match(/\w+/g) ?? [])
+    families.push(`landing.compare.row.${k}.old`, `landing.compare.row.${k}.new`)
   const pricing = read('pricing-scene.tsx')
   for (const k of ids(pricing, 'key'))
     for (const f of ['name', 'bestIf', 'cta', 'who']) families.push(`landing.pricing.${k}.${f}`)
@@ -149,6 +192,8 @@ describe('landing i18n — data-driven key families', () => {
     expect(families).toContain('landing.chapter.ai.example4')
     expect(families).toContain('landing.modules.group.management')
     expect(families).toContain('landing.proof.languages')
+    expect(families).toContain('landing.industries.services.desc')
+    expect(families).toContain('landing.compare.row.changes.new')
     expect(families).toContain('landing.system.step.report.desc')
     expect(families).toContain('landing.security.sod.bullet3')
   })

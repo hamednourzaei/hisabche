@@ -36,12 +36,14 @@ export const NavigationRegistry = memo(function NavigationRegistry({
 
     let observer: IntersectionObserver | null = null
     if (isSectionId(id)) {
-      const desktop = window.matchMedia('(min-width: 1024px)').matches
+      // A section is active while it crosses a thin band in the middle of the
+      // viewport. A ratio threshold (0.25) never fires for a section taller
+      // than four screens — the offline chapter on a phone — so the menu stuck.
       observer = new IntersectionObserver(
         ([entry]) => {
           if (entry?.isIntersecting) queueSetActiveSection(id)
         },
-        desktop ? { threshold: 0.1 } : { threshold: 0.25, rootMargin: '0px 0px -40px 0px' },
+        { rootMargin: '-45% 0px -50% 0px', threshold: 0 },
       )
       observer.observe(element)
     }

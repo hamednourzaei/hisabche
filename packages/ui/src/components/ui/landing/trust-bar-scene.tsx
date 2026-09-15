@@ -1,9 +1,15 @@
 // packages/ui/src/components/ui/landing/trust-bar-scene.tsx
 
-import { Marquee } from '../marquee'
+import type { LucideIcon } from 'lucide-react'
+import { Briefcase, Factory, Store, Truck } from 'lucide-react'
+
+import { LANDING_CONTAINER, LANDING_SECTION, SectionHeader } from './landing-primitives'
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   TrustBarScene v7 — Infinite marquee · 50 business categories
+   TrustBarScene v8 — four business scenarios, then every business type as a
+   static list. The marquee (two infinitely animated ribbons) is gone: PageSpeed
+   counted 85–90 animated elements on the landing, and a list you have to wait
+   for is worse to scan than one you can read.
    ═══════════════════════════════════════════════════════════════════════════ */
 
 export interface TrustBarSceneProps {
@@ -41,61 +47,62 @@ const INDUSTRIES = [
   { key: 'manufacturing', fallback: 'Manufacturing' },
 ]
 
-function IndustryChip({ label }: { label: string }) {
-  return (
-    <span className="inline-flex items-center px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-xs sm:text-sm font-medium text-[hsl(var(--fg-secondary))] bg-[hsl(var(--surface-muted))] border border-[hsl(var(--border-default))] whitespace-nowrap hover:border-[hsl(var(--color-primary)/0.3)] hover:text-[hsl(var(--fg-primary))] transition-colors duration-200">
-      {label}
-    </span>
-  )
-}
+/** What each kind of business runs in the product — the modules, not a promise. */
+const SCENARIOS: Array<{ key: string; icon: LucideIcon }> = [
+  { key: 'shop', icon: Store },
+  { key: 'wholesale', icon: Truck },
+  { key: 'production', icon: Factory },
+  { key: 'services', icon: Briefcase },
+]
 
 export default function TrustBarScene({ t }: TrustBarSceneProps) {
-  const firstHalf = INDUSTRIES.slice(0, Math.ceil(INDUSTRIES.length / 2))
-  const secondHalf = INDUSTRIES.slice(Math.ceil(INDUSTRIES.length / 2))
-
   return (
-    <section
-      id="trust-bar"
-      className="relative overflow-hidden border-y border-[hsl(var(--border-default))] py-8 sm:py-10"
-    >
-      <div className="mx-auto mb-6 w-full max-w-6xl px-4 sm:px-6 lg:px-8">
-        <p className="text-center text-xs font-medium text-[hsl(var(--fg-tertiary))] sm:text-sm">
-          {/*
-            ⚠️ THIS SAID «Trusted by every type of business».
+    <section id="industries" className={LANDING_SECTION}>
+      <div className={LANDING_CONTAINER}>
+        {/*
+          ⚠️ THIS SAID «Trusted by every type of business».
 
-            The LIST below is honest — it is business TYPES (Supermarket,
-            Pharmacy, Bakery), not named customers. The CLAIM around it was
-            not: «trusted by» asserts that businesses of every one of these
-            types use the product, which nothing in this codebase knows.
+          The list is business TYPES (Supermarket, Pharmacy, Bakery), not named
+          customers. «Trusted by» asserted that businesses of every one of these
+          types use the product, which nothing in this codebase knows. The label
+          says what the software is BUILT for instead.
+        */}
+        <SectionHeader
+          label={t('landing.industries.label')}
+          title={t('landing.trustBarLabel', 'Built for every type of business')}
+        />
 
-            The list is a statement about what the software SUITS. The label
-            now says that, which is both true and the more useful thing for a
-            visitor deciding whether it fits their shop.
-          */}
-          {t('landing.trustBarLabel', 'Built for every type of business')}
+        <ul className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
+          {SCENARIOS.map(({ key, icon: Icon }) => (
+            <li
+              key={key}
+              className="rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated)/0.6)] p-4 sm:p-5"
+            >
+              <Icon className="mb-3 size-6 text-[hsl(var(--color-primary))]" aria-hidden="true" />
+              <h3 className="mb-1 text-balance text-base font-semibold text-[hsl(var(--fg-primary))]">
+                {t(`landing.industries.${key}.title`)}
+              </h3>
+              <p className="text-pretty text-sm leading-relaxed text-[hsl(var(--fg-secondary))]">
+                {t(`landing.industries.${key}.desc`)}
+              </p>
+            </li>
+          ))}
+        </ul>
+
+        <p className="mb-3 mt-8 text-center text-sm font-medium text-[hsl(var(--fg-tertiary))] sm:mt-10">
+          {t('landing.industries.all')}
         </p>
+        <ul className="mx-auto flex max-w-4xl flex-wrap justify-center gap-2">
+          {INDUSTRIES.map(({ key, fallback }) => (
+            <li
+              key={key}
+              className="rounded-full border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-muted))] px-3 py-1 text-xs font-medium text-[hsl(var(--fg-secondary))] sm:text-sm"
+            >
+              {t(`landing.industry.${key}`, fallback)}
+            </li>
+          ))}
+        </ul>
       </div>
-
-      <Marquee pauseOnHover repeat={2} className="[--duration:100s] py-0.5 sm:py-1">
-        {firstHalf.map(({ key, fallback }) => (
-          <IndustryChip key={key} label={t(`landing.industry.${key}`, fallback)} />
-        ))}
-      </Marquee>
-
-      <Marquee pauseOnHover repeat={2} reverse className="[--duration:90s] py-0.5 sm:py-1">
-        {secondHalf.map(({ key, fallback }) => (
-          <IndustryChip key={key} label={t(`landing.industry.${key}`, fallback)} />
-        ))}
-      </Marquee>
-
-      <div
-        className="pointer-events-none absolute inset-y-0 left-0 w-10 sm:w-12 lg:w-24 bg-gradient-to-r from-[hsl(var(--surface-base))] to-transparent z-10"
-        aria-hidden="true"
-      />
-      <div
-        className="pointer-events-none absolute inset-y-0 right-0 w-10 sm:w-12 lg:w-24 bg-gradient-to-l from-[hsl(var(--surface-base))] to-transparent z-10"
-        aria-hidden="true"
-      />
     </section>
   )
 }

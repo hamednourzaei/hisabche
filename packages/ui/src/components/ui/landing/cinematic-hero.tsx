@@ -2,15 +2,14 @@
 // packages/ui/src/components/ui/landing/cinematic-hero.tsx
 //
 // Hero: centred headline over a dot grid, two actions, then the real product
-// screenshot under a soft brand glow — followed by four facts about the
-// software. Layout adapted from shadcn-dashboard-landing-template (MIT, see
+// screenshot under a soft brand glow — followed by a six-item product proof bar. Layout adapted from shadcn-dashboard-landing-template (MIT, see
 // landing-primitives.tsx).
 //
 // MOBILE FIRST. Unprefixed classes are the phone layout; `sm:` and up add the
 // desktop one. The screenshot is ART-DIRECTED, not scaled: a 1920px dashboard
 // at 326px wide had no legible word in it, so phones get the phone screenshot.
 //
-// ⚠️ THE FOUR FIGURES BELOW ARE FACTS ABOUT THE SOFTWARE, NOT METRICS.
+// ⚠️ THE PROOF BAR ITEMS ARE FACTS ABOUT THE SOFTWARE, NOT METRICS.
 // This block once showed «۳۴۰+ کسب‌وکار فعال», «۱۲,۰۰۰+ تراکنش روزانه»,
 // «۱۰۰٪ آفلاین» and «۴.۹ رضایت» — none counted by anything. Each figure here
 // is checkable inside the product. Never put a number back that nobody counts.
@@ -25,7 +24,15 @@
 // phone has to run before it can respond (PageSpeed mobile TBT was 6.9 s).
 import Link from 'next/link'
 import { getImageProps } from 'next/image'
-import { BookOpen, Building2, BookOpenCheck, Languages, WifiOff } from 'lucide-react'
+import {
+  BarChart3,
+  BookOpen,
+  BookOpenCheck,
+  Building2,
+  Landmark,
+  Sparkles,
+  WifiOff,
+} from 'lucide-react'
 
 import { cn } from '../../../lib/utils'
 import { DotPattern, ForwardArrow, LANDING_CONTAINER, LANDING_TYPE } from './landing-primitives'
@@ -36,35 +43,14 @@ export interface CinematicHeroProps {
   locale: string
 }
 
+// Product proof bar: six properties of the shipped software, one line each.
 const FACTS = [
-  {
-    icon: WifiOff,
-    valueKey: 'landing.factOffline',
-    value: 'آفلاین',
-    labelKey: 'landing.factOfflineLabel',
-    label: 'بدون اینترنت هم ثبت می‌کنید',
-  },
-  {
-    icon: BookOpenCheck,
-    valueKey: 'landing.factLedger',
-    value: 'دوطرفه',
-    labelKey: 'landing.factLedgerLabel',
-    label: 'حسابداری استاندارد، نه دفترچه',
-  },
-  {
-    icon: Building2,
-    valueKey: 'landing.factMulti',
-    value: 'چندشعبه',
-    labelKey: 'landing.factMultiLabel',
-    label: 'تفکیک‌شده یا تجمیعی',
-  },
-  {
-    icon: Languages,
-    valueKey: 'landing.factRtl',
-    value: 'فارسی/دری',
-    labelKey: 'landing.factRtlLabel',
-    label: 'راست‌به‌چپ، با تقویم شمسی',
-  },
+  { icon: BookOpenCheck, valueKey: 'landing.factLedger' },
+  { icon: WifiOff, valueKey: 'landing.factOffline' },
+  { icon: Building2, valueKey: 'landing.factMulti' },
+  { icon: Landmark, valueKey: 'landing.factCash' },
+  { icon: BarChart3, valueKey: 'landing.factReports' },
+  { icon: Sparkles, valueKey: 'landing.factAi' },
 ] as const
 
 /** Breakpoint where the desktop screenshot replaces the phone one (Tailwind `sm`). */
@@ -219,28 +205,19 @@ export default function CinematicHero({ t, locale }: CinematicHeroProps) {
           </div>
         </div>
 
-        {/* Facts about the software (see header note). On phones one grouped
-            list of compact rows (icon beside text) — no horizontal scrolling,
-            and a quarter of the height the 2×2 card grid took. Cards from `sm`. */}
-        <ul className="mx-auto mt-8 grid max-w-5xl grid-cols-2 gap-3 sm:mt-14 sm:gap-4 lg:grid-cols-4 lg:gap-6">
-          {FACTS.map(({ icon: Icon, valueKey, value, labelKey, label }) => (
+        {/* Product proof bar (see header note): a quiet strip, not cards —
+            six facts that wrap as whole items, never mid-phrase. */}
+        <ul className="mx-auto mt-8 grid max-w-5xl grid-cols-2 gap-x-4 gap-y-3 rounded-2xl border border-[hsl(var(--border-default)/0.7)] bg-[hsl(var(--surface-base)/0.6)] px-4 py-4 sm:mt-14 sm:grid-cols-3 sm:px-6 lg:grid-cols-6 lg:py-5">
+          {FACTS.map(({ icon: Icon, valueKey }) => (
             <li
               key={valueKey}
-              className={cn(
-                'rounded-xl border border-[hsl(var(--border-default)/0.7)] bg-[hsl(var(--surface-base)/0.6)] p-4 text-center sm:p-6',
-              )}
+              className="flex items-center gap-2 whitespace-nowrap text-sm font-medium text-[hsl(var(--fg-primary))] lg:justify-center"
             >
-              <span className="mx-auto mb-2 flex size-9 items-center justify-center rounded-lg bg-[hsl(var(--color-primary)/0.1)] text-[hsl(var(--color-primary))] sm:mb-3 sm:size-11 sm:rounded-xl">
-                <Icon className="size-[1.125rem] sm:size-5" aria-hidden="true" />
-              </span>
-              <span className="block min-w-0">
-                <span className="block text-sm font-bold text-[hsl(var(--fg-primary))] sm:text-2xl">
-                  {t(valueKey, value)}
-                </span>
-                <span className="block text-xs text-[hsl(var(--fg-tertiary))] sm:mt-1 sm:text-sm">
-                  {t(labelKey, label)}
-                </span>
-              </span>
+              <Icon
+                className="size-4 shrink-0 text-[hsl(var(--color-primary))]"
+                aria-hidden="true"
+              />
+              {t(valueKey)}
             </li>
           ))}
         </ul>

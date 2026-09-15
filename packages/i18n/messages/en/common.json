@@ -42,9 +42,9 @@
     "finalCTATitle": "When your workday ends, everything should already be clear",
     "finalCTADesc": "With Hisabche, the end of the day means reviewing results — not hours of adding up and finding mistakes.",
     "finalCTAButton": "Start Free",
-    "ctaReassurance1": "30 seconds",
+    "ctaReassurance1": "No contract",
     "ctaReassurance2": "No credit card",
-    "ctaReassurance3": "Cancel anytime",
+    "ctaReassurance3": "Up and running in minutes",
     "footer": "Business Management System · Built for businesses",
     "stat1": "Invoices Issued",
     "stat2": "Active Businesses",
@@ -122,9 +122,9 @@
       "backup": "Automatic data backup",
       "setup": "Setup without technical training"
     },
-    "securityLabel": "Control & security",
-    "securityTitle": "Your business data stays under your control",
-    "securityDesc": "Each user can do only what their role allows, and important changes leave a trail.",
+    "securityLabel": "Governance",
+    "securityTitle": "Control, access and accountability",
+    "securityDesc": "Who has access, what they can do, and who changed what — always clear.",
     "securityOfflineTitle": "True Offline",
     "securityOfflineDesc": "Work without internet. Data stays on your device until you're connected.",
     "security": {
@@ -163,7 +163,7 @@
       }
     },
     "pricingLabel": "Pricing",
-    "pricingTitle": "Start free, upgrade whenever you want",
+    "pricingTitle": "Start with one shop. Grow without changing systems.",
     "pricingDesc": "Start free, no credit card needed. Upgrade anytime.",
     "pricingPopular": "Most popular",
     "pricingContactUs": "Contact Us",
@@ -191,17 +191,17 @@
       "plan": {
         "free": {
           "name": "Free",
-          "bestIf": "If you're just starting out",
+          "bestIf": "To get started",
           "cta": "Start Free"
         },
         "pro": {
           "name": "Professional",
-          "bestIf": "If you record sales every day",
+          "bestIf": "For day-to-day business",
           "cta": "Upgrade to Pro"
         },
         "business": {
           "name": "Business",
-          "bestIf": "If you have multiple branches",
+          "bestIf": "For teams and branches",
           "cta": "Contact Sales"
         }
       },
@@ -385,9 +385,9 @@
     },
     "footerCopyright": "© {year} Hisabche. All rights reserved.",
     "valuePill": "Business management & operations system",
-    "ctaTitle": "Bring your business together in Hisabche",
-    "ctaSubtitle": "Manage sales, customers, inventory and finance in one system and see your business more clearly.",
-    "ctaButton": "Start Free",
+    "ctaTitle": "Your business shouldn't depend on ledgers, spreadsheets or the internet",
+    "ctaSubtitle": "Hisabche keeps sales, stock, customers and finance in one connected system — from the first sale to the final report.",
+    "ctaButton": "Start free",
     "faq": {
       "category": {
         "start": "Getting Started",
@@ -412,31 +412,31 @@
       "start2Q": "How do I start with Hisabche?",
       "start2A": "Just click the 'Start Free' button and enter your mobile number. No credit card is needed. After verifying your number, Hisabche is ready immediately.",
       "offline1Q": "Do I absolutely need internet?",
-      "offline1A": "No. Hisabche works completely offline. You can create invoices, update inventory, and add customers even when the internet is down. As soon as you reconnect, everything syncs automatically.",
+      "offline1A": "Not for the desktop and mobile apps. There you can record invoices, customers and stock changes offline, and they sync when you reconnect. The web version needs internet.",
       "offline2Q": "If my phone breaks, will I lose my data?",
-      "offline2A": "No. All your data is backed up on Hisabche's secure servers. A secure copy is also saved on your phone itself. So you can work with peace of mind.",
+      "offline2A": "Anything already synced is on the Hisabche server, so a broken device does not lose it. Changes not yet synced stay on that device — which is why it is best to sync whenever you are online.",
       "offline3Q": "How many phones can I use it on?",
       "offline3A": "With one account, you can log in simultaneously on multiple devices (mobile, tablet, laptop). Synchronization between devices happens automatically.",
       "acc1Q": "How do I record credit (customer debt)?",
-      "acc1A": "When recording a sale, select the 'Credit' option. Hisabche automatically records the customer's debt and sends you a reminder when it's due.",
+      "acc1A": "When recording a sale, pick the customer and record the unpaid amount on credit. What they owe shows in accounts receivable and the customer balance report.",
       "acc2Q": "Can I manage my warehouse inventory?",
       "acc2A": "Yes. For every product you define, its inventory decreases automatically with each sale. You'll also be alerted before an item runs out.",
       "acc3Q": "How can I see my profit and loss?",
       "acc3A": "On the Hisabche dashboard, the profit and loss chart is visible in real-time. You can see your daily, weekly, and monthly profits.",
       "sec1Q": "How secure is my data?",
-      "sec1A": "All data is encrypted in transit and at rest. Daily backups are also taken, and you are the complete owner of your data.",
+      "sec1A": "Connections to the server are encrypted, each business's data is isolated in the database, and every user can do only what their role allows. Important changes leave a trail.",
       "sec2Q": "How many users can work simultaneously?",
       "sec2A": "Depending on the plan, you can add multiple users with different access levels. Even in the free plan, you can add an additional accountant.",
       "dev1Q": "Does it work on older Android phones?",
-      "dev1A": "Yes. Hisabche is designed to run smoothly on Android 7+ phones with 2GB of RAM. Even on budget devices.",
+      "dev1A": "Yes. The Hisabche mobile app is built for Android phones and designed to work offline.",
       "dev2Q": "Is there a Windows version?",
       "dev2A": "Hisabche is web-based and usable on any browser (Windows, Mac, Linux). It also has a dedicated Android app.",
       "dev3Q": "Can I print invoices?",
       "dev3A": "Yes. You can download all invoices as PDFs and print them on any printer. The invoice template is designed to be simple and elegant.",
       "pay1Q": "How much does Hisabche cost?",
-      "pay1A": "The Free plan for one business with 50 invoices per month is completely free. The Starter plan at $9 per month offers more features. All prices are in Afghani and payable through reputable exchanges.",
+      "pay1A": "The free plan is enough to get started. Each plan’s price and limits are in the pricing table on this page, read directly from the billing system.",
       "pay2Q": "Is there a trial period?",
-      "pay2A": "Yes, you can use the Professional version for free for 30 days. No credit card needed.",
+      "pay2A": "Yes — signing up starts a 7-day trial, no credit card needed.",
       "showMore": "View All Questions",
       "supportText": "Didn't find your answer?",
       "supportLink": "Contact Support",
@@ -1009,14 +1009,9 @@
     "builtFor": "Built for businesses in Iran and Afghanistan",
     "capabilitiesDesc": "You can try every one of these right now",
     "capabilitiesTitle": "What it does for you",
-    "factOffline": "Offline",
-    "factOfflineLabel": "Record sales with no internet",
-    "factLedger": "Double-entry",
-    "factLedgerLabel": "Real accounting, not a notebook",
+    "factOffline": "Offline-first",
+    "factLedger": "Double-entry accounting",
     "factMulti": "Multi-branch",
-    "factMultiLabel": "Separate or combined",
-    "factRtl": "Persian/Dari",
-    "factRtlLabel": "Right-to-left, Solar Hijri calendar",
     "menuOpen": "Open menu",
     "menuClose": "Close menu",
     "ctaDocs": "Read the docs",
@@ -1025,10 +1020,7 @@
     "navLedger": "Accounting",
     "navOffline": "Offline",
     "proof": {
-      "offline": "Offline-first",
-      "ledger": "Double-entry accounting",
       "multiBusiness": "Multi-business",
-      "multiBranch": "Multi-branch",
       "platforms": "Web · Mobile · Desktop",
       "languages": "Persian · Dari · English"
     },
@@ -1069,8 +1061,8 @@
     },
     "system": {
       "label": "One flow",
-      "title": "Sales, stock and accounting — one flow",
-      "desc": "Every operation is connected to your business finances from the moment it is recorded.",
+      "title": "One operation. One financial truth.",
+      "desc": "Sales, stock, payments and accounting are fed by one connected stream of data.",
       "step": {
         "sell": {
           "title": "Sale",
@@ -1101,9 +1093,15 @@
           "desc": "From the same records"
         }
       },
-      "truth": {
-        "title": "Your data does not live in separate systems",
-        "desc": "In Hisabche, sales, purchases, receipts, payments and stock feed the same financial flow — the number on the dashboard is the number in the ledger."
+      "trace": {
+        "title": "Every number has a story",
+        "desc": "Follow any number from the dashboard back to its source document.",
+        "step1": "Today's profit",
+        "step2": "Profit & loss",
+        "step3": "Sales",
+        "step4": "Invoice",
+        "step5": "Payment",
+        "step6": "Journal entry"
       }
     },
     "chapter": {
@@ -1122,7 +1120,8 @@
         "card3": {
           "title": "Financial statements",
           "desc": "Profit & loss, balance sheet and trial balance in one view."
-        }
+        },
+        "tagline": "You record the operation. Hisabche records its financial effect."
       },
       "money": {
         "label": "Money",
@@ -1147,7 +1146,7 @@
       },
       "inventory": {
         "label": "Inventory",
-        "title": "Real stock levels, always in view",
+        "title": "Every stock movement is part of your business's financial picture",
         "desc": "Track purchases, sales and transfers; stock comes from real item movements, not a typed-in number.",
         "card1": {
           "title": "Stock movements",
@@ -1160,12 +1159,18 @@
         "card3": {
           "title": "Transfers & counts",
           "desc": "Move stock between warehouses and count it."
-        }
+        },
+        "flow1": "Purchase",
+        "flow2": "Received into stock",
+        "flow3": "Stock +10",
+        "flow4": "Sale",
+        "flow5": "Stock −2",
+        "flow6": "Financial effect"
       },
       "offline": {
         "label": "Offline-first",
-        "title": "No internet? Your business keeps going",
-        "desc": "An outage should not stop sales. The Hisabche desktop app works offline and syncs in a controlled way once it reconnects.",
+        "title": "The internet is your tool, not a condition for doing business",
+        "desc": "The Hisabche desktop and mobile apps work without internet and sync changes in a controlled way once they reconnect.",
         "card1": {
           "title": "Record without internet",
           "desc": "Data is stored on the device itself."
@@ -1210,9 +1215,9 @@
         "title": "An AI assistant for your business",
         "desc": "Ask questions and see where your business stands, answered from your own data.",
         "example1": "How much did we sell this month?",
-        "example2": "Which customers owe us the most?",
-        "example3": "Which products are running low?",
-        "example4": "Which invoices are still unpaid?",
+        "example2": "Which products are running low?",
+        "example3": "Which invoices are still unpaid?",
+        "example4": "What is each customer's balance?",
         "note": "The assistant reads only this business’s data and never changes anything."
       },
       "multi": {
@@ -1230,6 +1235,110 @@
         "card3": {
           "title": "Users & access",
           "desc": "Every team member with their own role."
+        }
+      }
+    },
+    "factCash": "Cash & bank",
+    "factReports": "Financial reports",
+    "factAi": "AI assistant",
+    "visual": {
+      "example": "Example",
+      "journal": {
+        "title": "Entry for a credit sale",
+        "account": "Account",
+        "debit": "Debit",
+        "credit": "Credit",
+        "debitAccount": "Accounts receivable",
+        "creditAccount": "Sales revenue",
+        "amount": "10,000",
+        "balanced": "Debits equal credits"
+      },
+      "till": {
+        "title": "Main till — today",
+        "opening": "Opening balance",
+        "openingAmount": "23,450",
+        "receipts": "Receipts",
+        "receiptsAmount": "+8,200",
+        "payments": "Payments",
+        "paymentsAmount": "−4,100",
+        "transfer": "Transfer to bank",
+        "transferAmount": "−2,000",
+        "balance": "Balance",
+        "balanceAmount": "25,550"
+      },
+      "offline": {
+        "pipe1": "Record on device",
+        "pipe2": "Local database",
+        "pipe3": "Outbox",
+        "pipe4": "Sync",
+        "pipe5": "Conflict check",
+        "pipe6": "Server of record",
+        "title": "A day without internet",
+        "off": "Internet: off",
+        "on": "Internet: on",
+        "action1": "Sale recorded",
+        "action2": "Customer added",
+        "action3": "Payment recorded",
+        "action4": "Stock updated",
+        "syncing": "Syncing…",
+        "synced": "4 changes synced"
+      },
+      "ai": {
+        "title": "Ask about your business",
+        "question": "Which customers owe us the most?",
+        "answer": "Three customers hold the largest balances, 18.4 million in total; two of their invoices are still open."
+      }
+    },
+    "industries": {
+      "label": "Who it is for",
+      "all": "And also",
+      "shop": {
+        "title": "Shops",
+        "desc": "Fast sales, stock, customers and the till"
+      },
+      "wholesale": {
+        "title": "Wholesale",
+        "desc": "Purchasing, sales, receivables and multiple warehouses"
+      },
+      "production": {
+        "title": "Manufacturing",
+        "desc": "Materials, production orders, stock and cost"
+      },
+      "services": {
+        "title": "Services",
+        "desc": "Customers, invoices, receipts and expenses"
+      }
+    },
+    "compare": {
+      "label": "Compare",
+      "title": "From scattered methods to one real system",
+      "desc": "The same daily work — without re-entry and without guesswork.",
+      "old": "The old way",
+      "new": "Hisabche",
+      "row": {
+        "books": {
+          "old": "Ledgers and spreadsheets",
+          "new": "One integrated system"
+        },
+        "reentry": {
+          "old": "Entering data twice",
+          "new": "A connected flow"
+        },
+        "internet": {
+          "old": "Depends on the internet",
+          "new": "Offline-first"
+        },
+        "lateReports": {
+          "old": "Reports after closing",
+          "new": "Up-to-the-minute figures"
+        },
+        "access": {
+          "old": "Unclear access",
+          "new": "Role-based access"
+        },
+        "changes": {
+          "old": "Untraceable changes",
+          "new": "Audit trail"
         }
       }
     }
@@ -3029,34 +3138,44 @@
     "start2Q": "Do I have to pay to start?",
     "start2A": "No. The free plan has every professional feature and its only limit is 50 invoices a month. No card required.",
     "offline1Q": "What happens when I have no internet?",
-    "offline1A": "You keep working. Invoices, customers and stock are saved on the device itself, and everything syncs automatically once you are back online.",
+    "offline1A": "Not for the desktop and mobile apps. There you can record invoices, customers and stock changes offline, and they sync when you reconnect. The web version needs internet.",
     "offline2Q": "What if I record the same invoice on two devices?",
-    "offline2A": "Every change is stored with its time and origin. On sync the versions are reconciled, and no record is ever silently discarded.",
+    "offline2A": "Anything already synced is on the Hisabche server, so a broken device does not lose it. Changes not yet synced stay on that device — which is why it is best to sync whenever you are online.",
     "offline3Q": "Is my data kept on the phone too?",
     "offline3A": "Yes. A local copy lives on the device so that recording an order never stops, even if the server is unreachable.",
     "acc1Q": "Do I need to know accounting?",
-    "acc1A": "No. You record sales and purchases, and Hisabche builds the general ledger, profit and loss and balance sheet for you.",
+    "acc1A": "When recording a sale, pick the customer and record the unpaid amount on credit. What they owe shows in accounts receivable and the customer balance report.",
     "acc2Q": "Can I manage credit and debts?",
     "acc2A": "Yes. Every credit invoice sits in that party’s file and each partial payment reduces the balance, so you always know who owes what.",
     "acc3Q": "Can I record purchases as well?",
     "acc3A": "Yes. Purchases and sales share one form, and their direction is kept apart — a purchase is never counted as sales revenue.",
     "sec1Q": "Where is my data kept?",
-    "sec1A": "On encrypted servers with automatic backups, plus a copy on your own device.",
+    "sec1A": "Connections to the server are encrypted, each business's data is isolated in the database, and every user can do only what their role allows. Important changes leave a trail.",
     "sec2Q": "Can my employees see everything?",
     "sec2A": "No. You set a role and permissions per member, and can widen, narrow or suspend them at any time.",
     "dev1Q": "Which devices does it work on?",
-    "dev1A": "Browser, mobile app and a Windows desktop app. All three share one account and one set of data.",
+    "dev1A": "Yes. The Hisabche mobile app is built for Android phones and designed to work offline.",
     "dev2Q": "How many people can work at once?",
     "dev2A": "Up to 5 users on the free and professional plans, and unlimited on the business plan.",
     "dev3Q": "Can I run several shops separately?",
     "dev3A": "Yes. Each business gets its own space and you switch between them without the data mixing.",
     "pay1Q": "How do I pay?",
-    "pay1A": "The free plan needs no payment. To upgrade you pay from inside the app, and you can cancel whenever you like.",
+    "pay1A": "The free plan is enough to get started. Each plan’s price and limits are in the pricing table on this page, read directly from the billing system.",
     "pay2Q": "If I cancel, is my data deleted?",
-    "pay2A": "No. Your data stays and you return to the free plan.",
+    "pay2A": "Yes — signing up starts a 7-day trial, no credit card needed.",
     "showMore": "See all questions",
     "supportText": "Did not find your answer?",
-    "supportLink": "Contact support"
+    "supportLink": "Contact support",
+    "start3Q": "Can I use Hisabche without accounting knowledge?",
+    "start3A": "Yes. You record sales, purchases and payments; Hisabche posts the double-entry journal entry for you. Reports are ready to read, and your accountant has full access to the ledger.",
+    "offline4Q": "What happens to my data if the internet goes down?",
+    "offline4A": "In the desktop and mobile apps, every entry is saved on the device and queued. Once you reconnect, the queue is sent to the server — nothing is discarded because of an outage.",
+    "offline5Q": "What if two devices change the same record at the same time?",
+    "offline5A": "Hisabche never silently overwrites one change with the other. The conflict appears on the Conflicts page so you decide which version stays.",
+    "acc4Q": "Does Hisabche use double-entry accounting?",
+    "acc4A": "Yes. Every sale, purchase and payment posts an entry with equal debits and credits to the general ledger, and the balance is enforced in the database. Profit & loss, balance sheet and trial balance are built from those entries.",
+    "sec3Q": "Is each business's data kept separate?",
+    "sec3A": "Yes. Each business has its own workspace, and that boundary is enforced in the database itself — a user of one business cannot see another business’s data."
   },
   "businessType": {
     "grocery": "Grocery and supermarket",

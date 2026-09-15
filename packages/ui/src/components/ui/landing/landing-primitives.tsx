@@ -38,9 +38,9 @@ export const LANDING_SECTION =
  */
 export const LANDING_TYPE = {
   h1: 'text-[1.875rem] leading-[1.25] sm:text-5xl sm:leading-[1.2] lg:text-6xl',
-  h2: 'text-[1.5rem] leading-snug sm:text-3xl lg:text-4xl',
-  h3: 'text-lg leading-snug sm:text-2xl lg:text-3xl',
-  lead: 'text-base leading-relaxed sm:text-lg',
+  h2: 'text-[1.375rem] leading-snug sm:text-[1.75rem] lg:text-[2rem]',
+  h3: 'text-lg leading-snug sm:text-xl lg:text-2xl',
+  lead: 'text-[0.9375rem] leading-relaxed sm:text-base lg:text-[1.0625rem]',
   body: 'text-sm leading-relaxed',
 } as const
 
