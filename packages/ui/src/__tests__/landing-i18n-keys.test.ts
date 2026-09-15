@@ -212,3 +212,16 @@ describe('landing links do not prefetch other routes', () => {
     expect(links.filter((tag) => !tag.includes('prefetch={false}'))).toEqual([])
   })
 })
+
+// Live /fa HTML: spinner at byte 1,080, the whole landing (h1 + LCP image) in
+// `<div hidden id="S:0">` at byte 160,003, revealed by `$RC` at the end of the
+// document. PageSpeed mobile: LCP element render delay 2,050 ms; desktop CLS 0.02.
+describe('the landing is not behind a Suspense boundary', () => {
+  it('apps/web page.tsx renders LandingPage without <Suspense>', () => {
+    const page = strip(
+      readFileSync(join(__dirname, '../../../../apps/web/app/[lang]/page.tsx'), 'utf8'),
+    )
+    expect(page).toContain('<LandingPage')
+    expect(page).not.toMatch(/<Suspense\b/)
+  })
+})

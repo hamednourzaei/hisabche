@@ -108,6 +108,14 @@ JS `/en`: ۳۹۲ → ۳۰۵KB؛ prefetch صفر؛ `dir`/`lang` درست.
 
 قبل از هر «رفع»، **اول گزارش PSI را خط‌به‌خط بخوان** و برای هر مورد: چه چانکی، از کجا import، با `head -c` محتوا — نه حدس. هر رفع = یک گارد + اندازه‌گیری محلی قبل/بعد.
 
+### 1.12 ⚠️ `<Suspense>` دور صفحه‌ی ایستا = LCP «element render delay» ۲ ثانیه
+
+- **علامت:** PSI موبایل: TTFB 20ms، دانلود تصویر 70ms، ولی **element render delay 2,050ms**؛ دسکتاپ CLS 0.02.
+- **علت (در HTML زنده دیده شد):** `page.tsx` لندینگ async را در `<Suspense fallback={spinner}>` پیچیده بود → React اسپینر را اول HTML (بایت ۱٬۰۸۰) و کل صفحه (h1 + تصویر LCP) را در `<div hidden id="S:0">` (بایت ۱۶۰٬۰۰۳) می‌گذاشت و با اسکریپت `$RC` در **انتهای** سند نمایان می‌کرد. تصویر دانلود شده ولی رنگ نمی‌شد.
+- **رفع:** حذف Suspense (صفحه prerender ایستا است؛ چیزی برای انتظار نیست) + گارد «landing is not behind a Suspense boundary».
+- **تشخیص:** `curl page | python: s.find('<div hidden id="S:')` و مقایسه با جای `<h1`.
+- **درس:** «render delay» بزرگ با TBT کم = محتوای LCP پشت boundary استریم/hydration است، نه JS سنگین.
+
 ## ۲. باگ‌های واقعی که هم‌زمان پیدا شد
 
 | باگ                                                                              | علت                                                                  | رفع/گارد                                                                                  |

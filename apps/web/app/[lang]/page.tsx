@@ -1,10 +1,8 @@
 // apps/web/app/[lang]/page.tsx
-import { Suspense } from 'react'
 import { LandingPage } from '@hisabche/ui/landing/landing-page'
 import { BILLING_CURRENCY } from '@hisabche/ui-contract'
 import { AuthGate } from './auth-gate'
 import { ScopedMessages } from './scoped-messages'
-import { cn } from '@/lib/utils'
 import type { Metadata } from 'next'
 import { setRequestLocale } from 'next-intl/server'
 import {
@@ -234,21 +232,16 @@ export default async function RootPage({ params }: { params: Promise<{ lang: str
     <>
       <JsonLd lang={lang} />
       <ScopedMessages lang={lang} namespaces="landing-client">
+        {/* ⚠️ NO <Suspense> AROUND THE LANDING. With a boundary here, React put
+            a spinner first in the HTML and the whole page — <h1> and the LCP
+            image included — inside `<div hidden id="S:0">`, revealed by an
+            inline `$RC` script at the END of the document. The image was
+            downloaded by ~450 ms but painted at ~2.5 s (PageSpeed mobile
+            "element render delay 2,050 ms"), and the spinner→page swap was
+            desktop's CLS 0.02. LandingPage is statically prerendered: there is
+            nothing to wait for, so it renders inline. */}
         <AuthGate>
-          <Suspense
-            fallback={
-              <div className="flex min-h-screen items-center justify-center">
-                <div
-                  className={cn(
-                    'h-8 w-8 animate-spin rounded-full',
-                    'border-2 border-[hsl(var(--color-primary))] border-t-transparent',
-                  )}
-                />
-              </div>
-            }
-          >
-            <LandingPage locale={resolveLocale(lang)} />
-          </Suspense>
+          <LandingPage locale={resolveLocale(lang)} />
         </AuthGate>
       </ScopedMessages>
     </>
