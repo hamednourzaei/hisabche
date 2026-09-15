@@ -3,7 +3,6 @@
 
 import React, { useEffect, useRef, memo } from 'react'
 import { useThemeStore, useAuthStore, useDeviceStore } from '@hisabche/store'
-import { syncLanguageFromStorage } from '@hisabche/i18n'
 
 let analyticsLoaded = false
 
@@ -120,21 +119,12 @@ const AuthInitializer = memo(function AuthInitializer({ children }: { children: 
 })
 AuthInitializer.displayName = 'AuthInitializer'
 
-// ─── Language Initializer ──────────────────────────────────────────────────
-
-const LanguageInitializer = memo(function LanguageInitializer({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  useEffect(() => {
-    const timer = setTimeout(() => syncLanguageFromStorage(), 100)
-    return () => clearTimeout(timer)
-  }, [])
-
-  return <>{children}</>
-})
-LanguageInitializer.displayName = 'LanguageInitializer'
+// ⚠️ NO i18next HERE. A `LanguageInitializer` used to import `@hisabche/i18n`
+// (i18next + react-i18next + three legacy JSON catalogs, ~313 KB on every
+// page) only to call `syncLanguageFromStorage()` — which does
+// `document.documentElement.dir/lang = <localStorage 'hisabche-lang'>`. The web
+// app's language is the ROUTE (/fa, /af, /en, via next-intl), so on web that
+// call could only overwrite the correct direction with a stale one.
 
 // ─── Analytics Bootstrap ───────────────────────────────────────────────────
 
@@ -174,9 +164,7 @@ export const HeavyProviders = memo(function HeavyProviders({
       <AdaptiveUIInitializer />
       <AnalyticsBootstrap />
       <ThemeInitializer>
-        <AuthInitializer>
-          <LanguageInitializer>{children}</LanguageInitializer>
-        </AuthInitializer>
+        <AuthInitializer>{children}</AuthInitializer>
       </ThemeInitializer>
     </>
   )

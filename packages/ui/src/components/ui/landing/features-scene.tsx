@@ -286,6 +286,7 @@ export default function FeaturesScene({ t, localePrefix }: FeaturesSceneProps) {
                             feature.pageLabelKey &&
                             feature.pageHref !== block.pageHref && (
                               <NextLink
+                                prefetch={false}
                                 href={`${routePrefix}${feature.pageHref}`}
                                 className="mt-1 inline-flex text-sm font-medium text-[hsl(var(--color-primary))] hover:underline"
                               >
@@ -299,6 +300,7 @@ export default function FeaturesScene({ t, localePrefix }: FeaturesSceneProps) {
                 </ul>
 
                 <NextLink
+                  prefetch={false}
                   href={`${routePrefix}${block.pageHref}`}
                   className="btn-secondary inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-6 text-sm sm:w-auto"
                 >

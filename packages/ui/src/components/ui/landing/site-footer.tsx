@@ -209,6 +209,7 @@ export default function SiteFooter({ t, localePrefix }: SiteFooterProps) {
                   {col.links.map((link) => (
                     <li key={link.key}>
                       <Link
+                        prefetch={false}
                         href={withLocale(link.href)}
                         className="block py-1 text-sm text-[hsl(var(--fg-tertiary))] transition-colors duration-200 hover:text-[hsl(var(--fg-primary))] sm:py-0 sm:text-xs lg:text-sm"
                       >

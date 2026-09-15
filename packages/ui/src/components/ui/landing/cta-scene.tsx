@@ -50,6 +50,7 @@ export default function CTAScene({ t, locale }: CTASceneProps) {
               )}
             </p>
             <Link
+              prefetch={false}
               href={`/${locale}/signup`}
               className="btn-primary inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-8 text-base sm:w-auto"
             >

@@ -88,6 +88,9 @@ export default function CinematicHero({ t, locale }: CinematicHeroProps) {
     width: 1183,
     height: 2560,
     sizes: '13rem',
+    // The LCP image on phones. q=60 on a UI screenshot is visually the same at
+    // 13rem and noticeably smaller on slow 4G.
+    quality: 60,
     priority: true,
   })
 
@@ -167,6 +170,7 @@ export default function CinematicHero({ t, locale }: CinematicHeroProps) {
 
           <div className="flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center sm:gap-4">
             <Link
+              prefetch={false}
               href={`/${locale}/signup`}
               className="btn-primary inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-7 text-base"
             >
@@ -174,6 +178,7 @@ export default function CinematicHero({ t, locale }: CinematicHeroProps) {
               <ForwardArrow />
             </Link>
             <Link
+              prefetch={false}
               href={`/${locale}/docs/getting-started`}
               className="btn-secondary inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-7 text-base"
             >

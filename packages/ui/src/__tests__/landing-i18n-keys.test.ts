@@ -158,9 +158,14 @@ describe('landing is mobile-first', () => {
     expect(page).not.toContain('overflow-x-hidden')
   })
 
-  it('the header uses the project Sheet for the phone menu', () => {
+  it('the header uses the project Sheet for the phone menu, loaded on first tap', () => {
     const nav = sources.find(([name]) => name === 'top-nav.tsx')![1]
-    expect(nav).toContain("from '../sheet'")
+    const menu = strip(
+      readFileSync(join(__dirname, '../components/ui/navigation/landing-mobile-menu.tsx'), 'utf8'),
+    )
+    expect(menu).toContain("from '../sheet'")
+    expect(nav).not.toContain("from '../sheet'")
+    expect(nav).toContain("dynamic(() => import('./landing-mobile-menu')")
     expect(nav).toMatch(/variant === 'landing' \? 'hidden md:flex'/)
   })
 })
@@ -184,5 +189,26 @@ describe('static landing sections stay server components', () => {
     expect(src).not.toMatch(
       /\buse(State|Effect|Ref|Memo|Callback|SceneObserver|IntlLocale|Router)\(/,
     )
+  })
+})
+
+// PageSpeed desktop found a 400 KiB chunk that was 100% unused: Next.js
+// prefetches the JavaScript of every route linked from the viewport, and the
+// landing links to /login, /signup and /docs — routes that pull the dashboard UI.
+// On slow 4G that download also competed with the LCP image (mobile LCP 4.1 s).
+describe('landing links do not prefetch other routes', () => {
+  it.each([
+    'landing/cinematic-hero.tsx',
+    'landing/cta-scene.tsx',
+    'landing/features-scene.tsx',
+    'landing/pricing-scene.tsx',
+    'landing/site-footer.tsx',
+    'navigation/landing-mobile-menu.tsx',
+    'navigation/top-nav.tsx',
+  ])('%s: every <Link> has prefetch={false}', (file) => {
+    const src = strip(readFileSync(join(__dirname, '../components/ui', file), 'utf8'))
+    const links = src.match(/<(?:Next)?Link\b[^]*?>/g) ?? []
+    expect(links.length).toBeGreaterThan(0)
+    expect(links.filter((tag) => !tag.includes('prefetch={false}'))).toEqual([])
   })
 })

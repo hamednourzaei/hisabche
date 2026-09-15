@@ -119,4 +119,5 @@
 | 64 | بردر و جداسازی آیتم‌های امکانات، امنیت، ستون‌های فوتر | ✅ کد. کارت با بردر + hover، فقط CSS |
 | 65 | PSI: دسکتاپ ۹۱، موبایل ۵۸ (TBT 6.9s) → ۱۰۰ | 🟡 کد + بیلد، منتظر deploy. بخش‌های ایستای لندینگ Server Component شدند (hero, pain, features, security, social, cta, trust-bar)؛ فقط shell/pricing/faq/footer کلاینت. NavigationRegistry مشاهده‌ی بخش را برعهده گرفت (و id تکراری حذف شد). پیام‌های کلاینت لندینگ فقط کلیدهای مورد نیاز (+گارد). HTML fa 96KB gzip |
 | 66 | گرید ۲: hero facts موبایل/آیپد، pain موبایل، bullets امکانات همه‌جا؛ فوتر بدون قاب با خط عمودی؛ «رفتن به مستندات»؛ حذف «شروع کنید»؛ انیمیشن drawer؛ smooth scroll کل پروژه؛ دکمه‌ی تم در تم روشن | ✅ کد، رندر 390/768 تأیید (دکمه‌ی تم نیازمند لاگین — دیده نشد) |
+| 67 | PSI: دسکتاپ ۷۳ (TBT 790، چانک ۴۰۰KB unused)، موبایل ۸۴/۹۱ (LCP 4.1s) → ۱۰۰؛ «کار تکراری نکن» | 🟡 کد + بیلد، منتظر deploy. prefetch={false} همه‌ی لینک‌های لندینگ؛ حذف i18next قدیمی از وب (۳۱۳KB + باگ dir)؛ drawer lazy؛ PostHog surveys خاموش؛ LCP q=60. JS محلی ۳۹۲→۳۰۵KB، صفر prefetch. گاردها + درس در PERF cache |
 | 58 | PageSpeed 100 برای dashboard، login، team-and-payroll، warehouse، governance | ⬜ بعد از لندینگ |

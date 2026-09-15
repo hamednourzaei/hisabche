@@ -57,7 +57,7 @@ describe('top-nav is crawlable', () => {
   })
 
   it('points the CTA at the locale-prefixed signup route as a link', () => {
-    expect(topNav).toMatch(/<Link\s+href=\{`\$\{routePrefix\}\/signup`\}/)
+    expect(topNav).toMatch(/<Link\s+(?:prefetch=\{false\}\s+)?href=\{`\$\{routePrefix\}\/signup`\}/)
   })
 
   it('has no <button> used purely for navigation in the landing header', () => {
@@ -67,7 +67,7 @@ describe('top-nav is crawlable', () => {
     const buttons = [...topNav.matchAll(/<button\b/g)]
     expect(buttons).toHaveLength(2)
     expect(topNav).toMatch(/onClick=\{onLogout\}/)
-    expect(topNav).toMatch(/<SheetTrigger asChild>\s*<button/)
+    expect(topNav).toContain('aria-haspopup="dialog"')
   })
 
   it('derives the locale from segments this app actually serves', () => {

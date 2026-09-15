@@ -82,6 +82,32 @@
 - **تله:** `tailwindcss-animate` کلاس `slide-in-from-start/end` ندارد → Sheet بدون انیمیشن بود؛ left/right + `rtl:`.
 - **تله:** `scroll-behavior` ارث‌بری نمی‌شود؛ داشبورد container خودش را اسکرول می‌کند.
 
+### 1.9 prefetch خودکار Next = دانلود JS صفحه‌های دیگر (دسکتاپ TBT 790، چانک ۴۰۰KB «100% unused»)
+
+- **علت:** `<Link>` در viewport، JS مسیر مقصد را prefetch می‌کند؛ هدر دسکتاپ «ورود»/`/login` را نشان می‌دهد و login باندل سنگین UI را دارد. روی 4G کند با تصویر LCP هم رقابت کرد (موبایل LCP 4.1s).
+- **رفع:** همه‌ی لینک‌های لندینگ `prefetch={false}` + گارد «landing links do not prefetch other routes».
+- **تأیید:** بعد از ۶ ثانیه: صفر درخواست `_rsc` و صفر JS دیررس.
+- **درس:** «Reduce unused JS» با ۱۰۰٪ unused معمولاً یعنی **prefetch** یا import بی‌مصرف، نه کد صفحه.
+
+### 1.10 i18next قدیمی روی وب (۳۱۳KB) + بازنویسی `dir`
+
+- **علت:** `heavy-providers` از `@hisabche/i18n` فقط `syncLanguageFromStorage` را صدا می‌زد → i18next + react-i18next + ۳ کاتالوگ JSON؛ و `<html dir/lang>` را از localStorage روی زبان مسیر می‌نوشت.
+- **رفع:** حذف `LanguageInitializer` (وب با next-intl زبان را از مسیر می‌گیرد) + گارد.
+- **تشخیص:** سر چانک را بخوان: `head -c 300 chunk.js` → `JSON.parse('{"app":{…` یعنی کاتالوگ در JS است.
+
+### 1.11 drawer موبایل lazy
+
+- `landing-mobile-menu.tsx` با `next/dynamic` روی اولین لمس؛ Radix Dialog (۲۲KB) از بار اولیه خارج شد.
+- PostHog: `disable_surveys: true` (surveys.js ۳۳KB بدون survey). تصویر LCP موبایل `quality: 60`.
+
+### نتیجه‌ی این مرحله (محلی)
+
+JS `/en`: ۳۹۲ → ۳۰۵KB؛ prefetch صفر؛ `dir`/`lang` درست.
+
+### ⚠️ تکرار نکن (خواسته‌ی صریح کاربر)
+
+قبل از هر «رفع»، **اول گزارش PSI را خط‌به‌خط بخوان** و برای هر مورد: چه چانکی، از کجا import، با `head -c` محتوا — نه حدس. هر رفع = یک گارد + اندازه‌گیری محلی قبل/بعد.
+
 ## ۲. باگ‌های واقعی که هم‌زمان پیدا شد
 
 | باگ                                                                              | علت                                                                  | رفع/گارد                                                                                  |

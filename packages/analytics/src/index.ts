@@ -14,7 +14,10 @@ export function initPostHog() {
         autocapture: true,
         capture_pageview: true,
         persistence: 'localStorage',
-        disable_session_recording: true, // surveys.js و recorder.js لود نمیشن
+        disable_session_recording: true, // recorder.js لود نمی‌شود
+        // surveys.js (33 KiB, 4 h cache) was fetched on every public page — no
+        // survey is configured, so it bought nothing.
+        disable_surveys: true,
       })
       ph = posthog
     })

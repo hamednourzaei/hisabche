@@ -3,16 +3,12 @@
 import { useEffect, useLayoutEffect, useRef, useState, useCallback, memo } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import Link from 'next/link'
-import { Menu, X } from 'lucide-react'
-import {
-  Sheet,
-  SheetClose,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from '../sheet'
+import dynamic from 'next/dynamic'
+import { Menu } from 'lucide-react'
+
+// The phone drawer (Sheet → Radix Dialog) is fetched on the first tap of the
+// menu button, not with the page.
+const LandingMobileMenu = dynamic(() => import('./landing-mobile-menu'), { ssr: false })
 import { useNavigation } from '../../../hooks/menu/use-navigation-state'
 import { useAuthStore } from '@hisabche/store'
 import { cn } from '../../../lib/utils'
@@ -41,7 +37,7 @@ export interface TopNavProps {
   variant?: 'landing' | 'dashboard'
   /**
    * Optional click interceptor for the CTA. The CTA is now a real
-   * locale-prefixed `<Link href="…/signup">`, so navigation no longer depends
+   * locale-prefixed `<Link prefetch={false} href="…/signup">`, so navigation no longer depends
    * on a handler; this is for analytics or for a host that needs to override.
    * The removed `onNavigateLogin` prop pointed the "Start free" CTA at /login.
    */
@@ -134,9 +130,8 @@ export const TopNav = memo(function TopNav({
   // below `md`; at 360px they sat in a horizontally scrolling strip, clipped
   // mid-word. Phones get a drawer instead of a squeezed copy of the desktop bar.
   const [menuOpen, setMenuOpen] = useState(false)
-  // The drawer locks page scroll while open, so a section jump has to wait
-  // until it has closed — otherwise the smooth scroll runs against the lock.
-  const pendingSection = useRef<string | null>(null)
+  // False until the first tap: the drawer's code is not downloaded before then.
+  const [menuRequested, setMenuRequested] = useState(false)
 
   // Was `getLocaleFromPathname`, matching /^\/(fa-IR|fa-AF|en)/ — segments this
   // app has never served. The real route segments are fa | af | en (see
@@ -302,12 +297,14 @@ export const TopNav = memo(function TopNav({
         {variant === 'landing' && (
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             <Link
+              prefetch={false}
               href={`${routePrefix}/login`}
               className="hidden rounded-full px-3 py-1.5 text-sm font-medium text-[hsl(var(--fg-secondary))] transition-colors hover:text-[hsl(var(--fg-primary))] md:inline-flex"
             >
               {t('auth.signIn', locale === 'en' ? 'Sign In' : 'ورود')}
             </Link>
             <Link
+              prefetch={false}
               href={`${routePrefix}/signup`}
               // Spread rather than pass `undefined`: `exactOptionalPropertyTypes`
               // makes `onClick={undefined}` a type error on LinkProps.
@@ -319,89 +316,37 @@ export const TopNav = memo(function TopNav({
                 {isRTL ? '←' : '→'}
               </span>
             </Link>
-            <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
-              <SheetTrigger asChild>
-                <button
-                  type="button"
-                  aria-label={t('landing.menuOpen', locale === 'en' ? 'Open menu' : 'باز کردن منو')}
-                  className="flex size-10 items-center justify-center rounded-full text-[hsl(var(--fg-primary))] hover:bg-[hsl(var(--surface-muted))] md:hidden"
-                >
-                  <Menu className="size-5" aria-hidden="true" />
-                </button>
-              </SheetTrigger>
-              <SheetContent
-                side="end"
+            <button
+              type="button"
+              aria-haspopup="dialog"
+              aria-expanded={menuOpen}
+              aria-label={t('landing.menuOpen', locale === 'en' ? 'Open menu' : 'باز کردن منو')}
+              onClick={() => {
+                setMenuRequested(true)
+                setMenuOpen(true)
+              }}
+              className="flex size-10 items-center justify-center rounded-full text-[hsl(var(--fg-primary))] hover:bg-[hsl(var(--surface-muted))] md:hidden"
+            >
+              <Menu className="size-5" aria-hidden="true" />
+            </button>
+            {menuRequested && (
+              <LandingMobileMenu
+                open={menuOpen}
+                onOpenChange={setMenuOpen}
                 dir={isRTL ? 'rtl' : 'ltr'}
-                showCloseButton={false}
-                className="flex w-[85%] flex-col p-0 md:hidden"
-                onCloseAutoFocus={(event) => {
-                  const id = pendingSection.current
-                  if (!id) return
-                  pendingSection.current = null
-                  event.preventDefault()
-                  handleSetSection(id)
+                title={displayName}
+                sections={sections}
+                activeSection={activeSection}
+                onSelectSection={handleSetSection}
+                routePrefix={routePrefix}
+                labels={{
+                  open: t('landing.menuOpen', locale === 'en' ? 'Open menu' : 'باز کردن منو'),
+                  close: t('landing.menuClose', locale === 'en' ? 'Close menu' : 'بستن منو'),
+                  signIn: t('auth.signIn', locale === 'en' ? 'Sign In' : 'ورود'),
+                  signUp: ctaText,
                 }}
-              >
-                <SheetHeader className="flex-row items-center justify-between space-y-0 border-b border-[hsl(var(--border-default))] px-5 py-4">
-                  <SheetTitle className="text-lg font-bold">
-                    {displayName}
-                    <span className="text-[hsl(var(--color-primary))]" aria-hidden="true">
-                      .
-                    </span>
-                  </SheetTitle>
-                  <SheetDescription className="sr-only">
-                    {t('landing.menuOpen', locale === 'en' ? 'Open menu' : 'باز کردن منو')}
-                  </SheetDescription>
-                  <SheetClose
-                    aria-label={t('landing.menuClose', locale === 'en' ? 'Close menu' : 'بستن منو')}
-                    className="flex size-10 items-center justify-center rounded-full text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]"
-                  >
-                    <X className="size-5" aria-hidden="true" />
-                  </SheetClose>
-                </SheetHeader>
-
-                <nav className="flex-1 px-5">
-                  <ul className="flex flex-col">
-                    {sections.map(({ id, label }) => (
-                      <li key={id}>
-                        <a
-                          href={`#${id}`}
-                          aria-current={activeSection === id ? 'true' : undefined}
-                          onClick={(event) => {
-                            event.preventDefault()
-                            pendingSection.current = id
-                            setMenuOpen(false)
-                          }}
-                          className={cn(
-                            'flex min-h-12 items-center border-b border-[hsl(var(--border-default)/0.6)] text-base',
-                            activeSection === id
-                              ? 'font-semibold text-[hsl(var(--color-primary))]'
-                              : 'text-[hsl(var(--fg-primary))]',
-                          )}
-                        >
-                          {label}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                </nav>
-
-                <div className="flex flex-col gap-3 border-t border-[hsl(var(--border-default))] p-5">
-                  <Link
-                    href={`${routePrefix}/login`}
-                    className="btn-secondary flex min-h-12 w-full items-center justify-center rounded-xl text-base"
-                  >
-                    {t('auth.signIn', locale === 'en' ? 'Sign In' : 'ورود')}
-                  </Link>
-                  <Link
-                    href={`${routePrefix}/signup`}
-                    className="btn-primary flex min-h-12 w-full items-center justify-center rounded-xl text-base"
-                  >
-                    {ctaText}
-                  </Link>
-                </div>
-              </SheetContent>
-            </Sheet>
+              />
+            )}
           </div>
         )}
 

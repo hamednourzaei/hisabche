@@ -30,3 +30,17 @@ describe('analytics start on engagement only', () => {
     expect(fn).not.toMatch(/setTimeout|requestIdleCallback/)
   })
 })
+
+describe('web does not load the legacy i18next bundle', () => {
+  // `@hisabche/i18n` (i18next + three JSON catalogs) was a 313 KB chunk on every
+  // page, pulled in only to call syncLanguageFromStorage(), which rewrote the
+  // <html dir/lang> from localStorage over the route's own language.
+  it('heavy-providers does not import @hisabche/i18n', () => {
+    // Comments stripped: the file explains the removed import by name.
+    const src = web('heavy-providers.tsx')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '')
+    expect(src).not.toContain("from '@hisabche/i18n'")
+    expect(src).not.toContain('syncLanguageFromStorage')
+  })
+})

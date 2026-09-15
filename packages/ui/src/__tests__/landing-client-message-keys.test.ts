@@ -11,9 +11,11 @@ const scoped = readFileSync(
   join(__dirname, '../../../../apps/web/app/[lang]/scoped-messages.tsx'),
   'utf8',
 )
-const prefixes = JSON.parse(
-  scoped.match(/LANDING_CLIENT_KEY_PREFIXES = (\[[^\]]*\])/)![1]!.replace(/'/g, '"'),
-) as string[]
+// Read the quoted entries, not JSON.parse: Prettier writes the array across
+// lines with a trailing comma.
+const prefixes = [
+  ...scoped.match(/LANDING_CLIENT_KEY_PREFIXES = \[([^\]]*)\]/)![1]!.matchAll(/'([^']+)'/g),
+].map((m) => m[1]!)
 
 const CLIENT_FILES = [
   'landing/pricing-scene.tsx',

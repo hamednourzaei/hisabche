@@ -353,6 +353,7 @@ export default function PricingScene() {
         </div>
 
         <Link
+          prefetch={false}
           href={ctaHref}
           className={cn(
             'inline-flex min-h-12 w-full items-center justify-center rounded-xl px-4 text-sm font-semibold',
