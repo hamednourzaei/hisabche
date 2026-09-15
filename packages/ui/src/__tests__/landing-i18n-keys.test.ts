@@ -66,9 +66,12 @@ describe('landing i18n', () => {
 
 describe('landing section menu', () => {
   it('every menu anchor is a section the page actually mounts', () => {
-    const src = strip(readFileSync(join(LANDING, 'landing-page.tsx'), 'utf8'))
-    const menu = [...src.matchAll(/id: '([a-z-]+)' as const/g)].map((m) => m[1])
-    const mounted = [...src.matchAll(/<NavigationRegistry id="([a-z-]+)">/g)].map((m) => m[1])
+    // Menu entries live in the client shell; the sections are mounted by the
+    // server composition.
+    const shell = strip(readFileSync(join(LANDING, 'landing-shell.tsx'), 'utf8'))
+    const page = strip(readFileSync(join(LANDING, 'landing-page.tsx'), 'utf8'))
+    const menu = [...shell.matchAll(/id: '([a-z-]+)' as const/g)].map((m) => m[1])
+    const mounted = [...page.matchAll(/<NavigationRegistry id="([a-z-]+)">/g)].map((m) => m[1])
     expect(menu.length).toBeGreaterThan(3)
     expect(menu.filter((id) => !mounted.includes(id))).toEqual([])
   })
@@ -150,7 +153,7 @@ describe('landing is mobile-first', () => {
   })
 
   it('the page wrapper clips instead of hiding, so the sticky header stays stuck', () => {
-    const page = sources.find(([name]) => name === 'landing-page.tsx')![1]
+    const page = sources.find(([name]) => name === 'landing-shell.tsx')![1]
     expect(page).toContain('overflow-x-clip')
     expect(page).not.toContain('overflow-x-hidden')
   })
@@ -159,5 +162,27 @@ describe('landing is mobile-first', () => {
     const nav = sources.find(([name]) => name === 'top-nav.tsx')![1]
     expect(nav).toContain("from '../sheet'")
     expect(nav).toMatch(/variant === 'landing' \? 'hidden md:flex'/)
+  })
+})
+
+// PageSpeed mobile TBT reached 6.9 s with every landing section hydrating. The
+// static sections are server components; a stray 'use client' (or a hook) would
+// silently put them back into the client bundle.
+describe('static landing sections stay server components', () => {
+  it.each([
+    'cinematic-hero.tsx',
+    'pain-scene.tsx',
+    'features-scene.tsx',
+    'security-scene.tsx',
+    'social-scene.tsx',
+    'cta-scene.tsx',
+    'trust-bar-scene.tsx',
+    'landing-page.tsx',
+  ])('%s has no use client and no hooks', (file) => {
+    const src = strip(readFileSync(join(LANDING, file), 'utf8'))
+    expect(src).not.toMatch(/['"]use client['"]/)
+    expect(src).not.toMatch(
+      /\buse(State|Effect|Ref|Memo|Callback|SceneObserver|IntlLocale|Router)\(/,
+    )
   })
 })

@@ -1,7 +1,9 @@
 // packages/ui/src/components/ui/landing/cta-scene.tsx
-'use client'
 
-import { useSceneObserver } from './use-scene-observer'
+// SERVER COMPONENT — no hooks, no handlers. Rendered to HTML on the server and
+// never hydrated: every client component on the landing is JavaScript a slow
+// phone has to run before it can respond (PageSpeed mobile TBT was 6.9 s).
+import Link from 'next/link'
 import { cn } from '../../../lib/utils'
 import {
   DotPattern,
@@ -17,15 +19,13 @@ import {
 
 export interface CTASceneProps {
   t: (key: string, fallback?: string) => string
-  onNavigateLogin: () => void
+  /** Route locale segment (fa | af | en) for the signup link. */
+  locale: string
 }
 
-export default function CTAScene({ t, onNavigateLogin }: CTASceneProps) {
-  // Kept for the section navigator (it reads which scene is in view).
-  const { ref } = useSceneObserver<HTMLDivElement>({ threshold: 0.3, narrativeState: 'action' })
-
+export default function CTAScene({ t, locale }: CTASceneProps) {
   return (
-    <section id="cta" ref={ref} data-narrative="action" className={LANDING_SECTION}>
+    <section id="cta" data-narrative="action" className={LANDING_SECTION}>
       <div className={LANDING_CONTAINER}>
         <div className="relative overflow-hidden rounded-2xl border border-[hsl(var(--color-primary)/0.25)] bg-[hsl(var(--color-primary)/0.06)] px-5 py-10 text-center sm:px-12 sm:py-16 lg:py-20">
           <DotPattern />
@@ -49,14 +49,13 @@ export default function CTAScene({ t, onNavigateLogin }: CTASceneProps) {
                 'با حسابچه، پایان روز یعنی مرور نتایج — نه ساعت‌ها جمع‌زدن و پیدا کردن اشتباه‌ها',
               )}
             </p>
-            <button
-              type="button"
-              onClick={onNavigateLogin}
+            <Link
+              href={`/${locale}/signup`}
               className="btn-primary inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-8 text-base sm:w-auto"
             >
               {t('landing.ctaButton', 'شروع رایگان')}
               <ForwardArrow />
-            </button>
+            </Link>
             <p className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-[hsl(var(--fg-tertiary))] sm:text-sm">
               <span>{t('landing.ctaReassurance1', '۳۰ ثانیه')}</span>
               <span

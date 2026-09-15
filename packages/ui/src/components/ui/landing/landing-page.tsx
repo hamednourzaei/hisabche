@@ -1,175 +1,69 @@
 // packages/ui/src/components/ui/landing/landing-page.tsx
-'use client'
+//
+// ⚠️ SERVER COMPONENT. The landing page used to be one client tree: every
+// section hydrated on load, and PageSpeed's mobile run measured up to 6.9 s of
+// Total Blocking Time — most of it React hydrating sections that have no
+// interactivity at all (text, images, links).
+//
+// Now the static sections render on the server and ship NO JavaScript. The
+// client parts are limited to what actually responds to a person:
+//   • LandingShell  — header, section menu, mobile drawer
+//   • NavigationRegistry — marks a section active while it is in view
+//   • PricingScene  — plan tabs + live prices from the billing API
+//   • LandingFaq    — accordion
+//   • LandingFooter — the year (read after mount)
+import { getTranslations } from 'next-intl/server'
+import { resolveIntlLocale } from '@hisabche/formatting'
 
-import { useRouter } from 'next/navigation'
-import { useCallback, useMemo } from 'react'
-import { useTranslations, useLocale } from 'next-intl'
-import { NavigationProvider } from '../../../hooks/menu/use-navigation-state'
-import { TopNav } from '../navigation/top-nav'
 import { NavigationRegistry } from '../navigation/navigation-registry'
-
-import dynamic from 'next/dynamic'
-
-// ─── Components ──────────────────────────────────────────────────────────────
-// ✅ Hero is the LCP element — imported eagerly (no dynamic wrapper) so it
-// ships in the main bundle with no extra network round-trip.
-// Everything below the fold is dynamically imported so its JS is fetched
-// in a separate chunk and hydrated only once it reaches the viewport,
-// instead of blocking the initial script evaluation.
 import CinematicHero from './cinematic-hero'
+import CTAScene from './cta-scene'
+import FeaturesScene from './features-scene'
+import { LandingFaq, LandingFooter } from './landing-client-sections'
+import { LandingShell } from './landing-shell'
+import PainScene from './pain-scene'
+import PricingScene from './pricing-scene'
+import SecurityScene from './security-scene'
+import SocialScene from './social-scene'
+import TrustBarScene from './trust-bar-scene'
 
-const sceneLoading = () => <div className="min-h-[40vh]" aria-hidden="true" />
-
-const PainScene = dynamic(() => import('./pain-scene'), { loading: sceneLoading })
-const FeaturesScene = dynamic(() => import('./features-scene'), { loading: sceneLoading })
-const SocialScene = dynamic(() => import('./social-scene'), { loading: sceneLoading })
-const FaqScene = dynamic(() => import('./faq-scene'), { loading: sceneLoading })
-const CTAScene = dynamic(() => import('./cta-scene'), { loading: sceneLoading })
-const TrustBarScene = dynamic(() => import('./trust-bar-scene'), { loading: sceneLoading })
-const SecurityScene = dynamic(() => import('./security-scene'), { loading: sceneLoading })
-const PricingScene = dynamic(() => import('./pricing-scene'), { loading: sceneLoading })
-const SiteFooter = dynamic(() => import('./site-footer'), { loading: sceneLoading })
-
-const sectionFallbacks: Record<string, Record<string, string>> = {
-  en: {
-    hero: 'Home',
-    pain: 'Problem',
-    features: 'Features',
-    testimonials: 'Trust',
-    cta: 'Start',
-  },
-  fa: {
-    hero: 'خانه',
-    pain: 'مشکل',
-    features: 'امکانات',
-    testimonials: 'اعتماد',
-    cta: 'شروع',
-  },
-  af: {
-    hero: 'خانه',
-    pain: 'مشکل',
-    features: 'امکانات',
-    testimonials: 'اعتماد',
-    cta: 'شروع',
-  },
-}
-
-// ─── Main LandingPage ──────────────────────────────────────────────────────
-
-export function LandingPage() {
-  const router = useRouter()
-  const t = useTranslations()
-  // next-intl همیشه پیام‌های همان locale مسیر جاری را برمی‌گرداند —
-  // برخلاف react-i18next نیازی به sync دستی (changeLanguage) یا حالت
-  // "ready" برای منتظرماندن آن sync نیست.
-  const locale = useLocale()
-  // دکمه‌های «شروع کن» کاربر تازه را به ثبت‌نام می‌برند، نه صفحه‌ی ورود.
-  const navigateSignup = useCallback(() => router.push(`/${locale}/signup`), [router, locale])
-
-  const fallbacks = sectionFallbacks[locale] || sectionFallbacks.fa
-
-  const safeT = useCallback(
-    (key: string, fallback?: string) => {
-      const result = t(key as Parameters<typeof t>[0])
-      return result && result !== key ? result : (fallback ?? key)
-    },
-    [t],
-  )
-
-  const NAVIGATION_SECTIONS = useMemo(
-    () => [
-      {
-        id: 'hero' as const,
-        label: safeT('landing.navHero', fallbacks?.hero ?? 'Home'),
-        narrative: 'frustration' as const,
-      },
-      {
-        id: 'pain' as const,
-        label: safeT('landing.navPain', fallbacks?.pain ?? 'Problem'),
-        narrative: 'confusion' as const,
-      },
-      {
-        id: 'features' as const,
-        label: safeT('landing.navFeatures', fallbacks?.features ?? 'Features'),
-        narrative: 'confidence' as const,
-      },
-      {
-        id: 'testimonials' as const,
-        label: safeT('landing.navTestimonials', fallbacks?.testimonials ?? 'Trust'),
-        narrative: 'trust' as const,
-      },
-      {
-        id: 'cta' as const,
-        label: safeT('landing.navCTA', fallbacks?.cta ?? 'Start'),
-        narrative: 'action' as const,
-      },
-    ],
-    [safeT, fallbacks],
-  )
+export async function LandingPage({ locale }: { locale: string }) {
+  const translate = await getTranslations({ locale })
+  type Key = Parameters<typeof translate>[0]
+  // Same contract as the client `safeT`: a missing key shows the fallback, never
+  // the raw key and never an exception.
+  const t = (key: string, fallback?: string): string =>
+    translate.has(key as Key) ? translate(key as Key) : (fallback ?? key)
 
   return (
-    <NavigationProvider sections={NAVIGATION_SECTIONS}>
-      {/* ⚠️ `overflow-x-hidden` — T5.2, «صفحه اول به راست می‌پرد».
+    <LandingShell>
+      <NavigationRegistry id="hero">
+        <CinematicHero t={t} locale={locale} />
+      </NavigationRegistry>
 
-          Nothing on this page is meant to scroll sideways, and nothing here
-          previously stopped it. The document had no `overflow-x` guard, so any
-          decorative element that reached past the viewport for one frame —
-          a scene animating in from a translate, an absolutely positioned
-          connector, a marquee before its clamp applies — made the whole
-          document horizontally scrollable. In RTL that reads as the page
-          starting off to one side and then settling.
+      <TrustBarScene t={t} />
 
-          ⚠️ THIS IS CONTAINMENT, NOT A DIAGNOSIS. I could not pin it to one
-          element by reading: the two elements wide enough to do it
-          (`pricing-scene`'s 800px table, `pain-scene`'s translate-x-full
-          connector) are both `hidden sm:block` and so are not on a phone at
-          all. What this guarantees is that no element CAN cause it, which for
-          a landing page is the correct rule regardless of which one did.
+      <NavigationRegistry id="pain">
+        <PainScene t={t} intlLocale={resolveIntlLocale(locale)} />
+      </NavigationRegistry>
 
-          ⚠️ `clip`, NOT `hidden`. `overflow-x: hidden` turns this wrapper into a
-          scroll container, and a `position: sticky` descendant sticks to its
-          nearest scroll container — so the header scrolled away with the page
-          (measured at 360px: top −3520 after a section jump). `clip` cuts the
-          overflow the same way without creating one. */}
-      <div className="min-h-screen overflow-x-clip bg-[hsl(var(--surface-base))]">
-        <TopNav variant="landing" localePrefix={locale} />
+      <NavigationRegistry id="features">
+        <FeaturesScene t={t} localePrefix={locale} />
+      </NavigationRegistry>
 
-        <main>
-          <NavigationRegistry id="hero">
-            <CinematicHero t={safeT} onNavigateLogin={navigateSignup} />
-          </NavigationRegistry>
+      <SecurityScene t={t} />
 
-          <TrustBarScene t={safeT} />
+      <NavigationRegistry id="testimonials">
+        <SocialScene t={t} />
+      </NavigationRegistry>
 
-          <NavigationRegistry id="pain">
-            <PainScene t={safeT} />
-          </NavigationRegistry>
+      <PricingScene />
 
-          {/* The "behind the scenes of every sale" scene (TransformScene) was
-              removed from the landing page. The component file stays in place —
-              nothing else references it, and it is cheap to re-add. */}
+      <LandingFaq />
 
-          <NavigationRegistry id="features">
-            <FeaturesScene t={safeT} localePrefix={locale} />
-          </NavigationRegistry>
+      <CTAScene t={t} locale={locale} />
 
-          <SecurityScene t={safeT} />
-
-          <NavigationRegistry id="testimonials">
-            <SocialScene t={safeT} />
-          </NavigationRegistry>
-
-          <PricingScene />
-
-          <FaqScene t={safeT} />
-
-          <NavigationRegistry id="cta">
-            <CTAScene t={safeT} onNavigateLogin={navigateSignup} />
-          </NavigationRegistry>
-
-          <SiteFooter t={safeT} localePrefix={locale} />
-        </main>
-      </div>
-    </NavigationProvider>
+      <LandingFooter localePrefix={locale} />
+    </LandingShell>
   )
 }

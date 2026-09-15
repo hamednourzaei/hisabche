@@ -92,3 +92,15 @@ Authorization (سرور/RLS)  →  UI Visibility Profile  →  Runtime Policy
 | `size-limit` / `bundlewatch` در CI | نیازمند تصمیم درباره‌ی آستانه‌ها روی بیلد واقعی؛ قرارداد آماده است |
 | Worker برای محاسبات سنگین          | سمت کلاینت، و کلاینت طبق تصمیم فعلی بعد از بک‌اند می‌آید           |
 | اعمال policy در web/mobile/desktop | همان دلیل — قرارداد در `packages/ui-contract` آماده است            |
+
+## قواعد اثبات‌شده با PageSpeed (۱۵ سپتامبر ۲۰۲۶)
+
+جزئیات و اعداد: [../SESSION-CACHE-2026-09-15-PERF.md](../SESSION-CACHE-2026-09-15-PERF.md)
+
+1. زیر root layout هرگز از barrel `@hisabche/ui` import نکن — subpath (`@hisabche/ui/toast-provider` …). barrel یک چانک ۱.۶MB داشبورد را روی هر صفحه‌ی عمومی می‌آورد.
+2. root layout فقط `CORE_NAMESPACES` ترجمه را می‌فرستد؛ هر مسیر جدید زیر `[lang]` باید `layout.tsx` با `FullMessagesLayout` داشته باشد (`scoped-messages.tsx`).
+3. analytics (gtag، PostHog) فقط روی تعامل واقعی؛ بدون تایمر و بدون `scroll`.
+4. تصویر LCP داخل `<picture>`: preload دستی برای هر viewport + `fetchPriority="high"`.
+5. keyframe انیمیشن بدون `var()` (وگرنه non-composited).
+6. فایل‌های `public/` را با ابعاد واقعی بسنج (گارد `public-icon-sizes.test.ts`).
+7. گرادیان پس‌زمینه: `bg-[image:var(--x)]`، نه `bg-[var(--x)]`.

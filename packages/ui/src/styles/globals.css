@@ -281,6 +281,22 @@
 html {
   scroll-behavior: smooth;
   overflow-y: scroll;
+  /* Anchor jumps (#features, #pricing…) stop below the sticky header instead
+     of under it. */
+  scroll-padding-top: 4.5rem;
+}
+/* `scroll-behavior` is NOT inherited: the dashboard scrolls inside its own
+   container (<main class="overflow-y-auto">), where `html { smooth }` never
+   applied. Every scroll container gets it. Cost-free: it only affects
+   programmatic and anchor scrolling, not layout. */
+* {
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  html,
+  * {
+    scroll-behavior: auto;
+  }
 }
 
 /* ───────────────────────────────────────────────────────────────────────────

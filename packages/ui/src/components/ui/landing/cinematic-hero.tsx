@@ -1,5 +1,3 @@
-'use client'
-
 // ============================================
 // packages/ui/src/components/ui/landing/cinematic-hero.tsx
 //
@@ -22,16 +20,20 @@
 // crawler's first read) was invisible until hydration.
 // ============================================
 
+// SERVER COMPONENT — no hooks, no handlers. Rendered to HTML on the server and
+// never hydrated: every client component on the landing is JavaScript a slow
+// phone has to run before it can respond (PageSpeed mobile TBT was 6.9 s).
+import Link from 'next/link'
 import { getImageProps } from 'next/image'
-import { Building2, BookOpenCheck, Languages, PlayCircle, WifiOff } from 'lucide-react'
+import { BookOpen, Building2, BookOpenCheck, Languages, WifiOff } from 'lucide-react'
 
 import { cn } from '../../../lib/utils'
 import { DotPattern, ForwardArrow, LANDING_CONTAINER, LANDING_TYPE } from './landing-primitives'
-import { useSceneObserver } from './use-scene-observer'
 
 export interface CinematicHeroProps {
   t: (key: string, fallback?: string) => string
-  onNavigateLogin: () => void
+  /** Route locale segment (fa | af | en) for the signup link. */
+  locale: string
 }
 
 const FACTS = [
@@ -68,17 +70,7 @@ const FACTS = [
 /** Breakpoint where the desktop screenshot replaces the phone one (Tailwind `sm`). */
 const DESKTOP_MEDIA = '(min-width: 640px)'
 
-export default function CinematicHero({ t, onNavigateLogin }: CinematicHeroProps) {
-  // Kept for the section navigator (it reads which scene is in view).
-  const { ref } = useSceneObserver<HTMLDivElement>({
-    threshold: 0.1,
-    narrativeState: 'frustration',
-  })
-
-  const scrollToFeatures = () => {
-    document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })
-  }
-
+export default function CinematicHero({ t, locale }: CinematicHeroProps) {
   // One <picture>, two sources: the browser downloads only the one that
   // matches, so a phone never fetches the 1920px screenshot it cannot read.
   const alt = t('landing.dashboardAlt', 'نمای داشبورد حسابچه')
@@ -102,7 +94,6 @@ export default function CinematicHero({ t, onNavigateLogin }: CinematicHeroProps
   return (
     <section
       id="hero"
-      ref={ref}
       data-narrative="frustration"
       className="relative overflow-hidden pb-10 pt-8 sm:pb-20 sm:pt-20"
     >
@@ -175,22 +166,20 @@ export default function CinematicHero({ t, onNavigateLogin }: CinematicHeroProps
           </p>
 
           <div className="flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center sm:gap-4">
-            <button
-              type="button"
-              onClick={onNavigateLogin}
+            <Link
+              href={`/${locale}/signup`}
               className="btn-primary inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-7 text-base"
             >
               {t('landing.cta', 'شروع رایگان')}
               <ForwardArrow />
-            </button>
-            <button
-              type="button"
-              onClick={scrollToFeatures}
+            </Link>
+            <Link
+              href={`/${locale}/docs/getting-started`}
               className="btn-secondary inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-7 text-base"
             >
-              <PlayCircle className="size-4" aria-hidden="true" />
-              {t('landing.ctaSecondary', 'مشاهده دموی محصول')}
-            </button>
+              <BookOpen className="size-4" aria-hidden="true" />
+              {t('landing.ctaDocs', 'رفتن به مستندات')}
+            </Link>
           </div>
 
           <p className="mt-4 text-xs text-[hsl(var(--fg-tertiary))] sm:mt-5 sm:text-sm">
@@ -228,21 +217,15 @@ export default function CinematicHero({ t, onNavigateLogin }: CinematicHeroProps
         {/* Facts about the software (see header note). On phones one grouped
             list of compact rows (icon beside text) — no horizontal scrolling,
             and a quarter of the height the 2×2 card grid took. Cards from `sm`. */}
-        <ul
-          className={cn(
-            'mx-auto mt-8 max-w-5xl divide-y divide-[hsl(var(--border-default)/0.7)] overflow-hidden rounded-xl border border-[hsl(var(--border-default)/0.7)] bg-[hsl(var(--surface-base)/0.6)]',
-            'sm:mt-14 sm:grid sm:grid-cols-2 sm:gap-4 sm:divide-y-0 sm:overflow-visible sm:rounded-none sm:border-0 sm:bg-transparent lg:grid-cols-4 lg:gap-6',
-          )}
-        >
+        <ul className="mx-auto mt-8 grid max-w-5xl grid-cols-2 gap-3 sm:mt-14 sm:gap-4 lg:grid-cols-4 lg:gap-6">
           {FACTS.map(({ icon: Icon, valueKey, value, labelKey, label }) => (
             <li
               key={valueKey}
               className={cn(
-                'flex items-center gap-3 px-4 py-3 text-start',
-                'sm:block sm:rounded-xl sm:border sm:border-[hsl(var(--border-default)/0.7)] sm:bg-[hsl(var(--surface-base)/0.6)] sm:p-6 sm:text-center sm:backdrop-blur-sm',
+                'rounded-xl border border-[hsl(var(--border-default)/0.7)] bg-[hsl(var(--surface-base)/0.6)] p-4 text-center sm:p-6',
               )}
             >
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-[hsl(var(--color-primary)/0.1)] text-[hsl(var(--color-primary))] sm:mx-auto sm:mb-3 sm:size-11 sm:rounded-xl">
+              <span className="mx-auto mb-2 flex size-9 items-center justify-center rounded-lg bg-[hsl(var(--color-primary)/0.1)] text-[hsl(var(--color-primary))] sm:mb-3 sm:size-11 sm:rounded-xl">
                 <Icon className="size-[1.125rem] sm:size-5" aria-hidden="true" />
               </span>
               <span className="block min-w-0">

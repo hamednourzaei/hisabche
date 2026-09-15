@@ -1,5 +1,4 @@
 // packages/ui/src/components/ui/marquee.tsx
-'use client'
 
 import { cn } from '../../lib/utils'
 

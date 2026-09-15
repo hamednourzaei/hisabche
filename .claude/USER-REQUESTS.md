@@ -117,4 +117,6 @@
 | 62 | ریبون: دو ردیف هم‌جهت | ✅ کد. shorthand animation جهت reverse را reset می‌کرد → `!`؛ en: چپ/راست تأیید، fa: normal/reverse + گارد |
 | 63 | لپ‌تاپ: فاصله‌ی زیاد زیر «دنیای قدیمی حسابداری» | ✅ کد. lg:grid-rows-[auto_1fr] + gap 8px (اندازه‌گیری 1440: 8px) |
 | 64 | بردر و جداسازی آیتم‌های امکانات، امنیت، ستون‌های فوتر | ✅ کد. کارت با بردر + hover، فقط CSS |
+| 65 | PSI: دسکتاپ ۹۱، موبایل ۵۸ (TBT 6.9s) → ۱۰۰ | 🟡 کد + بیلد، منتظر deploy. بخش‌های ایستای لندینگ Server Component شدند (hero, pain, features, security, social, cta, trust-bar)؛ فقط shell/pricing/faq/footer کلاینت. NavigationRegistry مشاهده‌ی بخش را برعهده گرفت (و id تکراری حذف شد). پیام‌های کلاینت لندینگ فقط کلیدهای مورد نیاز (+گارد). HTML fa 96KB gzip |
+| 66 | گرید ۲: hero facts موبایل/آیپد، pain موبایل، bullets امکانات همه‌جا؛ فوتر بدون قاب با خط عمودی؛ «رفتن به مستندات»؛ حذف «شروع کنید»؛ انیمیشن drawer؛ smooth scroll کل پروژه؛ دکمه‌ی تم در تم روشن | ✅ کد، رندر 390/768 تأیید (دکمه‌ی تم نیازمند لاگین — دیده نشد) |
 | 58 | PageSpeed 100 برای dashboard، login، team-and-payroll، warehouse، governance | ⬜ بعد از لندینگ |

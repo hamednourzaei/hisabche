@@ -3,7 +3,7 @@ import { Suspense } from 'react'
 import { LandingPage } from '@hisabche/ui/landing/landing-page'
 import { BILLING_CURRENCY } from '@hisabche/ui-contract'
 import { AuthGate } from './auth-gate'
-import { LANDING_NAMESPACES, ScopedMessages } from './scoped-messages'
+import { ScopedMessages } from './scoped-messages'
 import { cn } from '@/lib/utils'
 import type { Metadata } from 'next'
 import { setRequestLocale } from 'next-intl/server'
@@ -233,7 +233,7 @@ export default async function RootPage({ params }: { params: Promise<{ lang: str
   return (
     <>
       <JsonLd lang={lang} />
-      <ScopedMessages lang={lang} namespaces={LANDING_NAMESPACES}>
+      <ScopedMessages lang={lang} namespaces="landing-client">
         <AuthGate>
           <Suspense
             fallback={
@@ -247,7 +247,7 @@ export default async function RootPage({ params }: { params: Promise<{ lang: str
               </div>
             }
           >
-            <LandingPage />
+            <LandingPage locale={resolveLocale(lang)} />
           </Suspense>
         </AuthGate>
       </ScopedMessages>

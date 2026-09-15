@@ -1,9 +1,10 @@
 // packages/ui/src/components/ui/landing/features-scene.tsx
-'use client'
 
 import Image from 'next/image'
 import NextLink from 'next/link'
-import { useSceneObserver } from './use-scene-observer'
+// SERVER COMPONENT — no hooks, no handlers. Rendered to HTML on the server and
+// never hydrated: every client component on the landing is JavaScript a slow
+// phone has to run before it can respond (PageSpeed mobile TBT was 6.9 s).
 import { cn } from '../../../lib/utils'
 import {
   ForwardArrow,
@@ -191,15 +192,13 @@ const SHOWCASED = new Set<string>(SHOWCASE_BLOCKS.flatMap((b) => [...b.featureKe
 
 export default function FeaturesScene({ t, localePrefix }: FeaturesSceneProps) {
   const routePrefix = localePrefix ? `/${localePrefix}` : ''
-  // Kept for the section navigator (it reads which scene is in view).
-  const { ref } = useSceneObserver<HTMLDivElement>({ threshold: 0.2, narrativeState: 'confidence' })
   const byKey = new Map(FEATURES.map((f) => [f.key, f]))
   const rest = FEATURES.filter((f) => !SHOWCASED.has(f.key))
 
   return (
     <section
       id="features"
-      ref={ref}
+
       data-narrative="confidence"
       className={cn(LANDING_SECTION, 'bg-[hsl(var(--surface-muted)/0.3)]')}
     >
@@ -261,7 +260,7 @@ export default function FeaturesScene({ t, localePrefix }: FeaturesSceneProps) {
                   {t(`landing.featurePage.${block.pageKey}.metaDescription`)}
                 </p>
 
-                <ul className="mb-6 grid gap-3 sm:mb-8 sm:grid-cols-2">
+                <ul className="mb-6 grid grid-cols-2 gap-3 sm:mb-8">
                   {block.featureKeys.map((key) => {
                     const feature = byKey.get(key)
                     if (!feature) return null

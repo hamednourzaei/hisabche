@@ -1,9 +1,9 @@
 // packages/ui/src/components/ui/landing/pain-scene.tsx
-'use client'
 
+// SERVER COMPONENT — no hooks, no handlers. Rendered to HTML on the server and
+// never hydrated: every client component on the landing is JavaScript a slow
+// phone has to run before it can respond (PageSpeed mobile TBT was 6.9 s).
 import { formatNumber } from '@hisabche/formatting'
-import { useSceneObserver } from './use-scene-observer'
-import { useIntlLocale } from '../../../hooks/use-intl-locale'
 import { cn } from '../../../lib/utils'
 import { Clock } from 'lucide-react'
 import {
@@ -20,6 +20,8 @@ import {
 
 export interface PainSceneProps {
   t: (key: string, fallback?: string) => string
+  /** BCP-47 locale for digits («۱» in fa/af, «1» in en). */
+  intlLocale: string
 }
 
 interface PainItem {
@@ -112,18 +114,11 @@ const PAIN_POINTS: PainItem[] = [
   },
 ]
 
-export default function PainScene({ t }: PainSceneProps) {
+export default function PainScene({ t, intlLocale }: PainSceneProps) {
   // Digits follow the reader's language: «۱» in fa/af, «1» in en.
-  const locale = useIntlLocale()
-  // Kept for the section navigator (it reads which scene is in view).
-  const { ref } = useSceneObserver<HTMLDivElement>({ threshold: 0.3, narrativeState: 'confusion' })
-
-  const scrollToSolution = () => {
-    document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })
-  }
-
+  const locale = intlLocale
   return (
-    <section id="pain" ref={ref} data-narrative="confusion" className={LANDING_SECTION}>
+    <section id="pain" data-narrative="confusion" className={LANDING_SECTION}>
       <div className={LANDING_CONTAINER}>
         {/* MOBILE FIRST: heading → list → conclusion, one column. From `lg`
             the template's About layout: heading and conclusion share the
@@ -150,8 +145,7 @@ export default function PainScene({ t }: PainSceneProps) {
               1634px of scrolling); separate cards in two columns from `sm`. */}
           <ol
             className={cn(
-              'divide-y divide-[hsl(var(--border-default)/0.7)] overflow-hidden rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated)/0.6)]',
-              'sm:grid sm:grid-cols-2 sm:gap-4 sm:divide-y-0 sm:overflow-visible sm:border-0 sm:bg-transparent',
+              'grid grid-cols-2 gap-3 sm:gap-4',
               'lg:col-start-2 lg:row-span-2 lg:row-start-1',
             )}
           >
@@ -159,11 +153,10 @@ export default function PainScene({ t }: PainSceneProps) {
               <li
                 key={item.headlineKey}
                 className={cn(
-                  'flex gap-3 px-4 py-4',
-                  'sm:flex-col sm:gap-0 sm:rounded-xl sm:border sm:p-6',
+                  'flex flex-col rounded-xl border p-3 sm:p-6',
                   item.climax
-                    ? 'bg-[hsl(var(--color-primary)/0.06)] sm:border-[hsl(var(--color-primary)/0.35)]'
-                    : 'sm:border-[hsl(var(--border-default))] sm:bg-[hsl(var(--surface-elevated)/0.6)]',
+                    ? 'border-[hsl(var(--color-primary)/0.35)] bg-[hsl(var(--color-primary)/0.06)]'
+                    : 'border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated)/0.6)]',
                 )}
               >
                 <div className="sm:mb-4 sm:flex sm:items-center sm:justify-between sm:gap-3">
@@ -218,14 +211,13 @@ export default function PainScene({ t }: PainSceneProps) {
                 'تو هر روز بیشتر کار می‌کنی، اما هر روز کنترل کمتری روی کسب‌وکارت داری. وقت تغییر است.',
               )}
             </p>
-            <button
-              type="button"
-              onClick={scrollToSolution}
+            <a
+              href="#features"
               className="btn-secondary inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-6 text-sm sm:w-auto"
             >
               {t('landing.painSeeSolution', 'حسابچه چطور کمک می‌کند')}
               <ForwardArrow />
-            </button>
+            </a>
           </div>
         </div>
       </div>

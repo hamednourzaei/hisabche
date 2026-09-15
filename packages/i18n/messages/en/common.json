@@ -1208,7 +1208,8 @@
       }
     },
     "menuOpen": "Open menu",
-    "menuClose": "Close menu"
+    "menuClose": "Close menu",
+    "ctaDocs": "Read the docs"
   },
   "nav": {
     "dashboard": "Dashboard",

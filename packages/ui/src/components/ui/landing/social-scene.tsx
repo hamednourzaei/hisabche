@@ -1,7 +1,8 @@
 // packages/ui/src/components/ui/landing/social-scene.tsx
-'use client'
 
-import { useSceneObserver } from './use-scene-observer'
+// SERVER COMPONENT — no hooks, no handlers. Rendered to HTML on the server and
+// never hydrated: every client component on the landing is JavaScript a slow
+// phone has to run before it can respond (PageSpeed mobile TBT was 6.9 s).
 import { LANDING_CONTAINER, LANDING_SECTION, SectionHeader } from './landing-primitives'
 import { Check } from 'lucide-react'
 
@@ -129,9 +130,6 @@ function CapabilityCard({ item }: { item: Capability }) {
 }
 
 export default function SocialScene({ t }: SocialSceneProps) {
-  // Kept for the section navigator (it reads which scene is in view).
-  const { ref } = useSceneObserver<HTMLDivElement>({ threshold: 0.3, narrativeState: 'trust' })
-
   const items = CAPABILITIES.map((item) => ({
     ...item,
     claim: t(`landing.capability.${item.key}.claim`, item.claim),
@@ -139,7 +137,7 @@ export default function SocialScene({ t }: SocialSceneProps) {
   }))
 
   return (
-    <section id="testimonials" ref={ref} data-narrative="trust" className={LANDING_SECTION}>
+    <section id="testimonials" data-narrative="trust" className={LANDING_SECTION}>
       <div className={LANDING_CONTAINER}>
         {/* ⚠️ No rating badge: «۴.۹ · ۳۴۰+ کسب‌وکار فعال» had no rating source
             and no counter. The label says what is true instead. */}

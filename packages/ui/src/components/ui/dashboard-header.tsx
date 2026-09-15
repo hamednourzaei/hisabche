@@ -654,10 +654,13 @@ export const DashboardHeader = memo(function DashboardHeader({
             aria-label={isDark ? t('settings.lightMode') : t('settings.darkMode')}
             className={cn(
               'inline-flex items-center rounded-lg p-1.5',
-              // آیکون در هر دو تم زرد کهربایی می‌ماند — قبلاً در حالت لایت
-              // خاکستری می‌شد و بین بقیه‌ی آیکون‌ها گم بود.
-              'text-[hsl(var(--color-warning))]',
-              'hover:bg-[hsl(var(--surface-muted))]',
+              // ⚠️ یک رنگ برای هر دو تم کار نمی‌کند. کهربایی روی زمینه‌ی تیره
+              // خوانا است (خورشید)، ولی روی زمینه‌ی روشن تقریباً محو می‌شد
+              // (گزارش کاربر). در تم روشن ماه با رنگ متن اصلی و یک زمینه‌ی
+              // ملایم کشیده می‌شود تا همیشه دیده شود.
+              isDark
+                ? 'text-[hsl(var(--color-warning))] hover:bg-[hsl(var(--surface-muted))]'
+                : 'bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-primary))] hover:bg-[hsl(var(--border-default))]',
               'transition-colors duration-150',
               'motion-reduce:transition-none',
             )}

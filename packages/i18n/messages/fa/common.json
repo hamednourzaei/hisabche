@@ -1223,7 +1223,8 @@
       }
     },
     "menuOpen": "باز کردن منو",
-    "menuClose": "بستن منو"
+    "menuClose": "بستن منو",
+    "ctaDocs": "رفتن به مستندات"
   },
   "nav": {
     "dashboard": "داشبورد",

@@ -25,6 +25,35 @@ export const CORE_NAMESPACES = ['app', 'auth', 'error', 'action', 'common'] as c
 /** Everything the landing page's client tree reads (see landing-i18n-keys.test.ts). */
 export const LANDING_NAMESPACES = [...CORE_NAMESPACES, 'landing', 'faq'] as const
 
+/**
+ * Inside `landing`, only the keys the landing's CLIENT parts read — header and
+ * menu, pricing, FAQ, footer. The hero, features, security and capability text
+ * is rendered by server components and never needs to reach the browser as a
+ * message (feature-page and legal-page copy alone is ~25 KB).
+ * Guarded by landing-client-message-keys.test.ts in packages/ui.
+ */
+export const LANDING_CLIENT_KEY_PREFIXES = [
+  'cta',
+  'faq',
+  'footer',
+  'menu',
+  'nav',
+  'pricing',
+] as const
+
+export function pickLandingClientMessages(messages: AbstractIntlMessages): AbstractIntlMessages {
+  const picked = pickNamespaces(messages, LANDING_NAMESPACES)
+  const landing = picked.landing
+  if (landing && typeof landing === 'object') {
+    picked.landing = Object.fromEntries(
+      Object.entries(landing).filter(([key]) =>
+        LANDING_CLIENT_KEY_PREFIXES.some((prefix) => key.startsWith(prefix)),
+      ),
+    ) as AbstractIntlMessages
+  }
+  return picked
+}
+
 export function pickNamespaces(
   messages: AbstractIntlMessages,
   namespaces: readonly string[],
@@ -43,17 +72,20 @@ export async function ScopedMessages({
   children,
 }: {
   lang: string
-  /** Omit for the full catalogue. */
-  namespaces?: readonly string[] | undefined
+  /** Omit for the full catalogue; `'landing-client'` for the landing page. */
+  namespaces?: readonly string[] | 'landing-client' | undefined
   children: ReactNode
 }) {
   const locale = resolveLocale(lang)
   const messages = await getMessages({ locale })
+  const scoped =
+    namespaces === 'landing-client'
+      ? pickLandingClientMessages(messages)
+      : namespaces
+        ? pickNamespaces(messages, namespaces)
+        : messages
   return (
-    <IntlProvider
-      locale={locale}
-      messages={namespaces ? pickNamespaces(messages, namespaces) : messages}
-    >
+    <IntlProvider locale={locale} messages={scoped}>
       {children}
     </IntlProvider>
   )

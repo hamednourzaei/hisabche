@@ -1,5 +1,4 @@
 // packages/ui/src/components/ui/landing/security-scene.tsx
-'use client'
 
 import { cn } from '../../../lib/utils'
 import { LANDING_CONTAINER, LANDING_SECTION, SectionHeader } from './landing-primitives'

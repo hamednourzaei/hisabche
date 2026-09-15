@@ -1,5 +1,4 @@
 // packages/ui/src/components/ui/landing/trust-bar-scene.tsx
-'use client'
 
 import { Marquee } from '../marquee'
 

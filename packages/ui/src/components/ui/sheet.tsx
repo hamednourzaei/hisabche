@@ -56,13 +56,18 @@ const sideStyles: Record<SheetSide, string> = {
     'inset-x-0 bottom-0 border-t',
     'data-[state=closed]:slide-out-to-bottom data-[state=open]:slide-in-from-bottom',
   ].join(' '),
+  // ⚠️ tailwindcss-animate defines slide-*-left/right, NOT start/end. The old
+  // `slide-in-from-end` classes did not exist, so every side sheet popped in and
+  // out with no motion. Physical sides, mirrored for RTL.
   start: [
     'inset-y-0 start-0 h-full w-3/4 border-e sm:max-w-sm',
-    'data-[state=closed]:slide-out-to-start data-[state=open]:slide-in-from-start',
+    'data-[state=open]:slide-in-from-left data-[state=closed]:slide-out-to-left',
+    'rtl:data-[state=open]:slide-in-from-right rtl:data-[state=closed]:slide-out-to-right',
   ].join(' '),
   end: [
     'inset-y-0 end-0 h-full w-3/4 border-s sm:max-w-sm',
-    'data-[state=closed]:slide-out-to-end data-[state=open]:slide-in-from-end',
+    'data-[state=open]:slide-in-from-right data-[state=closed]:slide-out-to-right',
+    'rtl:data-[state=open]:slide-in-from-left rtl:data-[state=closed]:slide-out-to-left',
   ].join(' '),
 }
 
@@ -82,7 +87,7 @@ const SheetContent = React.forwardRef<
         'bg-[hsl(var(--surface-elevated))] text-[hsl(var(--fg-primary))]',
         'border-[hsl(var(--border-default))]',
         // Animation
-        'transition ease-in-out',
+        'ease-out',
         'data-[state=open]:duration-300 data-[state=closed]:duration-200',
         'data-[state=open]:animate-in data-[state=closed]:animate-out',
         // Reduced motion

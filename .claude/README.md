@@ -7,24 +7,25 @@
 
 ## پیدا کردن جواب — جدول مسیریابی
 
-| سوال                                                 | فایل                                                                                 |
-| ---------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| **«الان کجای فازها هستیم؟ چه چیزی نیمه‌تمام است؟»**  | [HANDOFF-PHASES-G-TO-O.md](HANDOFF-PHASES-G-TO-O.md) — **اول این**                   |
-| **به باگ خوردم / چطور وریفای کنم؟**                  | [DEBUG-PLAYBOOK.md](DEBUG-PLAYBOOK.md) — اول این                                     |
-| «الان چه چیزی کار می‌کند و چه چیزی نه؟»              | [STATE.md](STATE.md)                                                                 |
-| «چرا این‌طوری نوشته شده؟» / «قبلاً چه اشتباهی شد؟»   | [lessons-learned.md](lessons-learned.md) — ۹۲ درس                                    |
-| «کد جدید را کجا بگذارم؟»                             | [architecture/core-modules.md](architecture/core-modules.md)                         |
-| «چه روتی هست؟ کدام hook به کدام endpoint می‌زند؟»    | [architecture/api-surface.md](architecture/api-surface.md)                           |
-| «جدول‌ها چه شکلی‌اند؟ RLS چطور کار می‌کند؟»          | [architecture/data-model.md](architecture/data-model.md)                             |
-| «چطور migration بزنم / تست کنم / commit کنم؟»        | [WORKFLOW.md](WORKFLOW.md)                                                           |
-| **«Source of Truth هر داده کدام است؟»**              | [SESSION-2026-09-05-CONSOLIDATION.md](SESSION-2026-09-05-CONSOLIDATION.md)           |
-| «کدام migration اجرا شده و کدام نه؟»                 | [SESSION-2026-09-05-CONSOLIDATION.md](SESSION-2026-09-05-CONSOLIDATION.md)           |
-| «سشن قبل چه شد؟»                                     | [SESSION-2026-08-31.md](SESSION-2026-08-31.md)                                       |
-| «فازهای نقشه‌راه UX چه شد؟ چه چیزی عمداً ساخته نشد؟» | [SESSION-2026-08-31-PHASES.md](SESSION-2026-08-31-PHASES.md)                         |
-| «قرارداد وضعیت / فهرست / نما / صف کار کجاست؟»        | `packages/ui-contract/src/{work-state,list-engine,entity-views,work-queue,shell}.ts` |
-| «کندی، بودجه‌ی عملکرد»                               | [architecture/performance-policy.md](architecture/performance-policy.md)             |
-| «مقایسه با ERPNext/Odoo»                             | [research/](research/)                                                               |
-| محصول، خواسته‌های اصلی                               | [detail.md](detail.md)                                                               |
+| سوال                                                    | فایل                                                                                 |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| **«الان کجای فازها هستیم؟ چه چیزی نیمه‌تمام است؟»**     | [HANDOFF-PHASES-G-TO-O.md](HANDOFF-PHASES-G-TO-O.md) — **اول این**                   |
+| **به باگ خوردم / چطور وریفای کنم؟**                     | [DEBUG-PLAYBOOK.md](DEBUG-PLAYBOOK.md) — اول این                                     |
+| «الان چه چیزی کار می‌کند و چه چیزی نه؟»                 | [STATE.md](STATE.md)                                                                 |
+| «چرا این‌طوری نوشته شده؟» / «قبلاً چه اشتباهی شد؟»      | [lessons-learned.md](lessons-learned.md) — ۹۲ درس                                    |
+| «کد جدید را کجا بگذارم؟»                                | [architecture/core-modules.md](architecture/core-modules.md)                         |
+| «چه روتی هست؟ کدام hook به کدام endpoint می‌زند؟»       | [architecture/api-surface.md](architecture/api-surface.md)                           |
+| «جدول‌ها چه شکلی‌اند؟ RLS چطور کار می‌کند؟»             | [architecture/data-model.md](architecture/data-model.md)                             |
+| «چطور migration بزنم / تست کنم / commit کنم؟»           | [WORKFLOW.md](WORKFLOW.md)                                                           |
+| **«Source of Truth هر داده کدام است؟»**                 | [SESSION-2026-09-05-CONSOLIDATION.md](SESSION-2026-09-05-CONSOLIDATION.md)           |
+| «کدام migration اجرا شده و کدام نه؟»                    | [SESSION-2026-09-05-CONSOLIDATION.md](SESSION-2026-09-05-CONSOLIDATION.md)           |
+| «سشن قبل چه شد؟»                                        | [SESSION-2026-08-31.md](SESSION-2026-08-31.md)                                       |
+| «فازهای نقشه‌راه UX چه شد؟ چه چیزی عمداً ساخته نشد؟»    | [SESSION-2026-08-31-PHASES.md](SESSION-2026-08-31-PHASES.md)                         |
+| «قرارداد وضعیت / فهرست / نما / صف کار کجاست؟»           | `packages/ui-contract/src/{work-state,list-engine,entity-views,work-queue,shell}.ts` |
+| «کندی، بودجه‌ی عملکرد»                                  | [architecture/performance-policy.md](architecture/performance-policy.md)             |
+| **«PageSpeed / LCP / TBT / لندینگ موبایل / RTL ریبون»** | [SESSION-CACHE-2026-09-15-PERF.md](SESSION-CACHE-2026-09-15-PERF.md)                 |
+| «مقایسه با ERPNext/Odoo»                                | [research/](research/)                                                               |
+| محصول، خواسته‌های اصلی                                  | [detail.md](detail.md)                                                               |
 
 ---
 
