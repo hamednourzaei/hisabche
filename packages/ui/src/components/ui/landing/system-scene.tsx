@@ -12,7 +12,6 @@
 //           (accounting/components/JournalEntryRow.tsx → routeForEntity)
 import type { LucideIcon } from 'lucide-react'
 import {
-  ArrowDown,
   BarChart3,
   BookOpenCheck,
   FileText,
@@ -21,12 +20,10 @@ import {
   Package,
   ShoppingCart,
 } from 'lucide-react'
-import { Fragment } from 'react'
 
 import { cn } from '../../../lib/utils'
 import { StepChain } from './chapter-visuals'
 import {
-  ForwardArrow,
   LANDING_CONTAINER,
   LANDING_SECTION,
   LANDING_TYPE,
@@ -47,6 +44,15 @@ const STEPS: Array<{ icon: LucideIcon; key: string }> = [
   { icon: BarChart3, key: 'report' },
 ]
 
+/**
+ * The arrow to the next step is each card's ::after — ↓ in the phone column,
+ * ← / → (by writing direction) in the desktop row. CSS text, no extra element.
+ */
+const STEP_ARROW = [
+  "after:absolute after:inset-x-0 after:top-full after:text-center after:text-sm after:leading-6 after:text-[hsl(var(--color-primary))] after:content-['↓'] last:after:content-none",
+  "lg:after:inset-x-auto lg:after:start-full lg:after:top-1/2 lg:after:w-5 lg:after:-translate-y-1/2 lg:after:leading-none lg:after:content-['←'] ltr:lg:after:content-['→'] lg:last:after:content-none",
+].join(' ')
+
 export default function SystemScene({ t }: SystemSceneProps) {
   return (
     <section id="system" className={LANDING_SECTION}>
@@ -57,37 +63,28 @@ export default function SystemScene({ t }: SystemSceneProps) {
           description={t('landing.system.desc')}
         />
 
-        {/* The flow: one row with arrows on desktop, a column with down-arrows
-            below `lg` — the arrow always points at the next thing that happens.
-            Arrows are decoration (aria-hidden); the <ol> carries the order. */}
-        <ol className="mx-auto flex max-w-md flex-col items-stretch lg:max-w-none lg:flex-row lg:items-stretch">
-          {STEPS.map(({ icon: Icon, key }, i) => (
-            <Fragment key={key}>
-              <li className="flex items-center gap-3 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] px-3.5 py-3 lg:min-w-0 lg:flex-1 lg:flex-col lg:items-start lg:gap-2 lg:p-3">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[hsl(var(--color-primary)/0.1)] text-[hsl(var(--color-primary))]">
-                  <Icon className="size-4" aria-hidden="true" />
-                </span>
-                <div className="min-w-0">
-                  <h3 className="text-sm font-semibold leading-snug text-[hsl(var(--fg-primary))]">
-                    {t(`landing.system.step.${key}.title`)}
-                  </h3>
-                  <p className="text-xs leading-relaxed text-[hsl(var(--fg-tertiary))]">
-                    {t(`landing.system.step.${key}.desc`)}
-                  </p>
-                </div>
-              </li>
-              {i < STEPS.length - 1 && (
-                <li
-                  aria-hidden="true"
-                  className="flex shrink-0 items-center justify-center py-1 text-[hsl(var(--color-primary))] lg:px-1 lg:py-0"
-                >
-                  <ArrowDown className="size-4 lg:hidden" />
-                  <span className="hidden lg:contents">
-                    <ForwardArrow />
-                  </span>
-                </li>
+        <ol className="mx-auto flex max-w-md flex-col gap-6 lg:max-w-none lg:flex-row lg:gap-5">
+          {STEPS.map(({ icon: Icon, key }) => (
+            <li
+              key={key}
+              className={cn(
+                'relative flex items-center gap-3 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] px-3.5 py-3',
+                'lg:min-w-0 lg:flex-1 lg:flex-col lg:items-start lg:gap-2 lg:p-3',
+                STEP_ARROW,
               )}
-            </Fragment>
+            >
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[hsl(var(--color-primary)/0.1)] text-[hsl(var(--color-primary))]">
+                <Icon className="size-4" aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <h3 className="text-sm font-semibold leading-snug text-[hsl(var(--fg-primary))]">
+                  {t(`landing.system.step.${key}.title`)}
+                </h3>
+                <p className="text-xs leading-relaxed text-[hsl(var(--fg-tertiary))]">
+                  {t(`landing.system.step.${key}.desc`)}
+                </p>
+              </div>
+            </li>
           ))}
         </ol>
 

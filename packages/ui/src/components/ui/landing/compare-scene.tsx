@@ -7,7 +7,6 @@
 // (connected posting, offline apps, role permissions, audit trail).
 // Rendered as a two-column grid, not a <table>: it must fit a 360px phone
 // without scrolling sideways (landing-i18n-keys.test.ts, mobile-first guard).
-import { Check, Minus } from 'lucide-react'
 
 import { LANDING_CONTAINER, LANDING_SECTION, SectionHeader } from './landing-primitives'
 
@@ -42,18 +41,11 @@ export default function CompareScene({ t }: CompareSceneProps) {
                 key={row}
                 className="grid grid-cols-2 border-t border-[hsl(var(--border-default))] text-sm sm:text-base"
               >
-                <span className="flex items-start gap-2 px-4 py-3 text-[hsl(var(--fg-secondary))] sm:px-6">
-                  <Minus
-                    className="mt-1 size-4 shrink-0 text-[hsl(var(--fg-tertiary))]"
-                    aria-hidden="true"
-                  />
+                {/* Marks are ::before text, not icons (DOM budget). */}
+                <span className="flex items-start gap-2 px-4 py-3 text-[hsl(var(--fg-secondary))] before:text-[hsl(var(--fg-tertiary))] before:content-['—'] sm:px-6">
                   {t(`landing.compare.row.${row}.old`)}
                 </span>
-                <span className="flex items-start gap-2 border-s border-[hsl(var(--border-default))] bg-[hsl(var(--color-primary)/0.04)] px-4 py-3 font-medium text-[hsl(var(--fg-primary))] sm:px-6">
-                  <Check
-                    className="mt-1 size-4 shrink-0 text-[hsl(var(--color-success))]"
-                    aria-hidden="true"
-                  />
+                <span className="flex items-start gap-2 border-s border-[hsl(var(--border-default))] bg-[hsl(var(--color-primary)/0.04)] px-4 py-3 font-medium text-[hsl(var(--fg-primary))] before:font-bold before:text-[hsl(var(--color-success))] before:content-['✓'] sm:px-6">
                   {t(`landing.compare.row.${row}.new`)}
                 </span>
               </li>

@@ -11,46 +11,52 @@
 //   journal → a sale posts a balanced double entry (posting functions)
 //   till    → receipts, payments and transfers move a till balance (POS/banking)
 //   offline → desktop SQLite + sync_queue, mobile outbox, /conflicts review
-//   ai      → the question is answerable from the customer_balance view,
-//             one of the four views the assistant can read
+//   ai      → the question is answerable from the customer_balance and
+//             outstanding_invoices views the assistant can read
+//
+// ⚠️ DOM BUDGET. Arrows and ticks are CSS characters (::before / ::after), not
+// lucide icons: every icon is an <svg> plus paths that React walks on hydration.
+// With SVG marks the landing reached 1780 elements and local TBT rose
+// (desktop ~120 → 215 ms). Add an icon here only where it carries meaning.
 import type { ReactNode } from 'react'
-import { Check, CloudOff, MessageCircleQuestion, Sparkles, Wifi } from 'lucide-react'
+import { CloudOff, MessageCircleQuestion, Sparkles, Wifi } from 'lucide-react'
 
 import { cn } from '../../../lib/utils'
-import { ForwardArrow } from './landing-primitives'
 
 type T = (key: string, fallback?: string) => string
 
 const PANEL =
   'rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] p-4 shadow-sm sm:p-6'
 
-function ExampleTag({ t }: { t: T }) {
-  return (
-    <span className="rounded-md bg-[hsl(var(--surface-muted))] px-2 py-0.5 text-xs font-medium text-[hsl(var(--fg-tertiary))]">
-      {t('landing.visual.example')}
-    </span>
-  )
-}
+/** A success tick drawn as text. */
+const TICK = "before:font-bold before:text-[hsl(var(--color-success))] before:content-['✓']"
 
 function PanelHead({ t, title }: { t: T; title: ReactNode }) {
   return (
     <div className="mb-4 flex items-center justify-between gap-3">
       <p className="font-semibold text-[hsl(var(--fg-primary))]">{title}</p>
-      <ExampleTag t={t} />
+      <span className="rounded-md bg-[hsl(var(--surface-muted))] px-2 py-0.5 text-xs font-medium text-[hsl(var(--fg-tertiary))]">
+        {t('landing.visual.example')}
+      </span>
     </div>
   )
 }
 
-/** A horizontal chain of steps joined by reading-direction arrows; wraps on phones. */
+/**
+ * A chain of steps joined by reading-direction arrows (← in RTL, → in LTR,
+ * as `::after` text). Wraps on phones as whole items, never mid-label.
+ */
 export function StepChain({ t, prefix, count }: { t: T; prefix: string; count: number }) {
   return (
     <ol className="flex flex-wrap items-center justify-center gap-x-2 gap-y-2.5">
       {Array.from({ length: count }, (_, i) => (
-        <li key={i} className="flex items-center gap-2">
-          <span className="whitespace-nowrap rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] px-2.5 py-1 text-[0.8125rem] font-medium sm:px-3 sm:py-1.5 sm:text-sm text-[hsl(var(--fg-primary))]">
+        <li
+          key={i}
+          className="flex items-center gap-2 whitespace-nowrap after:text-[hsl(var(--fg-tertiary))] after:content-['←'] last:after:content-none ltr:after:content-['→']"
+        >
+          <span className="rounded-lg border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] px-2.5 py-1 text-[0.8125rem] font-medium text-[hsl(var(--fg-primary))] sm:px-3 sm:py-1.5 sm:text-sm">
             {t(`${prefix}${i + 1}`)}
           </span>
-          {i < count - 1 && <ForwardArrow className="text-[hsl(var(--fg-tertiary))]" />}
         </li>
       ))}
     </ol>
@@ -59,14 +65,13 @@ export function StepChain({ t, prefix, count }: { t: T; prefix: string; count: n
 
 export function JournalVisual({ t }: { t: T }) {
   const k = 'landing.visual.journal'
-  const rows = [
-    { account: `${k}.debitAccount`, debit: `${k}.amount`, credit: '' },
-    { account: `${k}.creditAccount`, debit: '', credit: `${k}.amount` },
-  ]
+  const cell = 'border-t border-[hsl(var(--border-default))] py-2.5 text-[hsl(var(--fg-primary))]'
+  const empty = cn(cell, 'text-end text-[hsl(var(--fg-tertiary))]')
+  const amount = t(`${k}.amount`)
   return (
     <div className={PANEL}>
       <PanelHead t={t} title={t(`${k}.title`)} />
-      <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-x-4 text-sm tabular-nums sm:gap-x-8">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] text-sm tabular-nums [&>*:not(:nth-child(3n+1))]:ps-6 sm:[&>*:not(:nth-child(3n+1))]:ps-10">
         <span className="pb-2 text-xs text-[hsl(var(--fg-tertiary))]">{t(`${k}.account`)}</span>
         <span className="pb-2 text-end text-xs text-[hsl(var(--fg-tertiary))]">
           {t(`${k}.debit`)}
@@ -74,22 +79,19 @@ export function JournalVisual({ t }: { t: T }) {
         <span className="pb-2 text-end text-xs text-[hsl(var(--fg-tertiary))]">
           {t(`${k}.credit`)}
         </span>
-        {rows.map((r) => (
-          <div key={r.account} className="contents">
-            <span className="border-t border-[hsl(var(--border-default))] py-2.5 text-[hsl(var(--fg-primary))]">
-              {t(r.account)}
-            </span>
-            <span className="border-t border-[hsl(var(--border-default))] py-2.5 text-end font-medium text-[hsl(var(--fg-primary))]">
-              {r.debit ? t(r.debit) : '—'}
-            </span>
-            <span className="border-t border-[hsl(var(--border-default))] py-2.5 text-end font-medium text-[hsl(var(--fg-primary))]">
-              {r.credit ? t(r.credit) : '—'}
-            </span>
-          </div>
-        ))}
+        <span className={cell}>{t(`${k}.debitAccount`)}</span>
+        <span className={cn(cell, 'text-end font-medium')}>{amount}</span>
+        <span className={empty}>—</span>
+        <span className={cell}>{t(`${k}.creditAccount`)}</span>
+        <span className={empty}>—</span>
+        <span className={cn(cell, 'text-end font-medium')}>{amount}</span>
       </div>
-      <p className="mt-3 flex items-center gap-2 text-sm text-[hsl(var(--color-success))]">
-        <Check className="size-4 shrink-0" aria-hidden="true" />
+      <p
+        className={cn(
+          'mt-3 flex items-center gap-2 text-sm text-[hsl(var(--color-success))]',
+          TICK,
+        )}
+      >
         {t(`${k}.balanced`)}
       </p>
     </div>
@@ -136,11 +138,7 @@ export function OfflineVisual({ t }: { t: T }) {
             </p>
             <ul className="space-y-1.5 text-sm text-[hsl(var(--fg-secondary))]">
               {[1, 2, 3, 4].map((i) => (
-                <li key={i} className="flex items-center gap-2">
-                  <Check
-                    className="size-4 shrink-0 text-[hsl(var(--color-success))]"
-                    aria-hidden="true"
-                  />
+                <li key={i} className={cn('flex items-center gap-2', TICK)}>
                   {t(`${k}.action${i}`)}
                 </li>
               ))}
@@ -152,8 +150,12 @@ export function OfflineVisual({ t }: { t: T }) {
               {t(`${k}.on`)}
             </p>
             <p className="text-sm text-[hsl(var(--fg-secondary))]">{t(`${k}.syncing`)}</p>
-            <p className="mt-1.5 flex items-center gap-2 text-sm font-medium text-[hsl(var(--color-success))]">
-              <Check className="size-4 shrink-0" aria-hidden="true" />
+            <p
+              className={cn(
+                'mt-1.5 flex items-center gap-2 text-sm font-medium text-[hsl(var(--color-success))]',
+                TICK,
+              )}
+            >
               {t(`${k}.synced`)}
             </p>
           </div>

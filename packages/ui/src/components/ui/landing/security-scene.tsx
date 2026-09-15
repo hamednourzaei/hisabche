@@ -3,7 +3,7 @@
 import { cn } from '../../../lib/utils'
 import { LANDING_CONTAINER, LANDING_SECTION, SectionHeader } from './landing-primitives'
 import type { LucideIcon } from 'lucide-react'
-import { Lock, ShieldCheck, UsersRound, History, CheckCircle2 } from 'lucide-react'
+import { Lock, ShieldCheck, UsersRound, History } from 'lucide-react'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    SecurityScene v3 — Trust Center · 6 pillars · Bullet scanning
@@ -91,12 +91,8 @@ export default function SecurityScene({ t }: SecuritySceneProps) {
                   {bullets.map((bullet, j) => (
                     <li
                       key={j}
-                      className="inline after:content-['_·_'] last:after:content-none sm:flex sm:items-start sm:gap-2 sm:after:content-none"
+                      className="inline after:content-['_·_'] last:after:content-none sm:flex sm:items-start sm:gap-2 sm:before:font-bold sm:before:text-[hsl(var(--color-success))] sm:before:content-['✓'] sm:after:content-none"
                     >
-                      <CheckCircle2
-                        className="mt-0.5 hidden size-4 shrink-0 text-[hsl(var(--color-success))] sm:block"
-                        aria-hidden="true"
-                      />
                       {t(`landing.security.${key}.bullet${j + 1}`, bullet)}
                     </li>
                   ))}

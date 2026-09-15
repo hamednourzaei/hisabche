@@ -7,7 +7,6 @@
 // PageSpeed-like CPU speed: ~340 ms of hydration across the landing).
 import { cn } from '../../../lib/utils'
 import { LANDING_CONTAINER, LANDING_SECTION, SectionHeader } from './landing-primitives'
-import { ChevronDown, ExternalLink } from 'lucide-react'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    FaqScene v8 — SEO-optimised · 16 questions · categories · internal links
@@ -319,9 +318,12 @@ function FaqAccordionItem({ item }: { item: TranslatedItem }) {
     >
       <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-start font-semibold text-[hsl(var(--fg-primary))] sm:gap-4 sm:px-5 sm:py-4 [&::-webkit-details-marker]:hidden">
         <span className="text-sm leading-snug sm:text-base sm:leading-normal">{item.question}</span>
-        <ChevronDown
-          className="size-4 shrink-0 text-[hsl(var(--fg-tertiary))] transition-transform duration-300 group-open:rotate-180 sm:size-5"
+        {/* Chevron from two borders: one element instead of <svg> + <path> on
+            each of 21 questions. The borders are end/bottom, so RTL needs the
+            opposite rotation to point down. */}
+        <span
           aria-hidden="true"
+          className="me-1 size-2 shrink-0 rotate-45 border-b-2 border-e-2 border-[hsl(var(--fg-tertiary))] transition-transform duration-300 group-open:-rotate-[135deg] rtl:-rotate-45 rtl:group-open:rotate-[135deg]"
         />
       </summary>
       <div className="px-4 pb-3 text-sm leading-relaxed text-[hsl(var(--fg-secondary))] sm:px-5 sm:pb-4">
@@ -329,10 +331,11 @@ function FaqAccordionItem({ item }: { item: TranslatedItem }) {
         {item.relatedLink && (
           <a
             href={item.relatedLink}
-            className="mt-2 flex items-center gap-1 text-xs font-medium text-[hsl(var(--color-primary))] hover:underline"
+            className="mt-2 flex items-center gap-1 text-xs font-medium text-[hsl(var(--color-primary))] after:content-['←'] hover:underline ltr:after:content-['→']"
           >
+            {/* In-page link: a reading-direction arrow (CSS), not an
+                "external link" icon — it never leaves the site. */}
             {item.related ?? 'بیشتر بدانید'}
-            <ExternalLink className="size-3" aria-hidden="true" />
           </a>
         )}
       </div>
@@ -394,7 +397,10 @@ export default function FaqScene({ t }: FaqSceneProps) {
           <details className="group/more mt-6 sm:mt-8">
             <summary className="mx-auto flex w-fit cursor-pointer list-none items-center gap-2 rounded-full border border-[hsl(var(--border-default))] px-5 py-2.5 text-sm font-medium text-[hsl(var(--fg-secondary))] transition-colors hover:border-[hsl(var(--color-primary)/0.4)] hover:text-[hsl(var(--fg-primary))] group-open/more:hidden sm:px-6 sm:py-3 [&::-webkit-details-marker]:hidden">
               {t('faq.showMore', 'مشاهده همه سوالات')}
-              <ChevronDown className="size-4" aria-hidden="true" />
+              <span
+                aria-hidden="true"
+                className="size-2 rotate-45 border-b-2 border-e-2 border-current rtl:-rotate-45"
+              />
             </summary>
             <div className="space-y-6 sm:space-y-8">
               {rest.map((category) => (
