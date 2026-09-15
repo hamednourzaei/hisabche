@@ -77,7 +77,11 @@ export function Marquee({
             // Reversing started the track one whole copy to the left — wider
             // than the screen — so the ribbon showed nothing for part of every
             // loop (the «items run out» gap).
-            reverse && '[animation-direction:reverse]',
+            // `!` because `animate-*` / `rtl:animate-marquee-rtl` are the
+            // `animation` SHORTHAND, emitted later in the CSS, and a shorthand
+            // resets animation-direction to normal — both ribbon rows ran the
+            // same way.
+            reverse && '![animation-direction:reverse]',
             'motion-reduce:animate-none',
           )}
         >

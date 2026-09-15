@@ -85,9 +85,12 @@ export default function SecurityScene({ t }: SecuritySceneProps) {
           )}
         />
 
-        <ul className="grid gap-x-8 gap-y-6 sm:grid-cols-2 sm:gap-y-10 lg:grid-cols-3">
+        <ul className="grid gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
           {PILLARS.map(({ icon: Icon, key, title, bullets }) => (
-            <li key={key} className="flex gap-3 sm:gap-4">
+            <li
+              key={key}
+              className="flex gap-3 p-4 sm:gap-4 sm:p-5 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated)/0.6)] transition-colors hover:border-[hsl(var(--color-primary)/0.35)]"
+            >
               <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-[hsl(var(--color-primary)/0.1)] text-[hsl(var(--color-primary))] sm:size-11">
                 <Icon className="size-5" aria-hidden="true" />
               </span>

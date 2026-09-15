@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import DashboardLayout from './dashboard-layout'
+import { FullMessagesLayout } from '../scoped-messages'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    Authenticated dashboard group.
@@ -43,6 +44,17 @@ export async function generateMetadata({
   }
 }
 
-export default async function Layout({ children }: { children: React.ReactNode }) {
-  return <DashboardLayout>{children}</DashboardLayout>
+export default async function Layout({
+  children,
+  params,
+}: {
+  children: React.ReactNode
+  params: Promise<{ lang: string }>
+}) {
+  // Full message catalogue for the dashboard (the root layout ships only core).
+  return (
+    <FullMessagesLayout params={params}>
+      <DashboardLayout>{children}</DashboardLayout>
+    </FullMessagesLayout>
+  )
 }

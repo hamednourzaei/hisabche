@@ -128,7 +128,12 @@ export default function PainScene({ t }: PainSceneProps) {
         {/* MOBILE FIRST: heading → list → conclusion, one column. From `lg`
             the template's About layout: heading and conclusion share the
             narrow column, the list takes the wide one across both rows. */}
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:gap-x-16 lg:gap-y-8">
+        {/* `lg:grid-rows-[auto_1fr]`: the list spans both rows, and without
+            it the grid shared the list's height between them — the heading row
+            grew as tall as the cards and pushed the conclusion far below the
+            title. Now row 1 hugs the heading, row 2 takes the rest, and the
+            conclusion sits 8px under the title. */}
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:grid-rows-[auto_1fr] lg:gap-x-16 lg:gap-y-2">
           <div className="lg:col-start-1 lg:row-start-1">
             <SectionLabel>{t('landing.painLabel', 'دنیای بدون حسابچه')}</SectionLabel>
             <h2

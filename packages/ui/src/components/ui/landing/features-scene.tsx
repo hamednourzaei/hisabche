@@ -261,13 +261,16 @@ export default function FeaturesScene({ t, localePrefix }: FeaturesSceneProps) {
                   {t(`landing.featurePage.${block.pageKey}.metaDescription`)}
                 </p>
 
-                <ul className="mb-6 grid gap-4 sm:mb-8 sm:grid-cols-2 sm:gap-5">
+                <ul className="mb-6 grid gap-3 sm:mb-8 sm:grid-cols-2">
                   {block.featureKeys.map((key) => {
                     const feature = byKey.get(key)
                     if (!feature) return null
                     const Icon = feature.icon
                     return (
-                      <li key={key} className="flex items-start gap-3">
+                      <li
+                        key={key}
+                        className="flex items-start gap-3 p-4 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated)/0.6)] transition-colors hover:border-[hsl(var(--color-primary)/0.35)]"
+                      >
                         <Icon
                           className="mt-0.5 size-5 shrink-0 text-[hsl(var(--color-primary))]"
                           aria-hidden="true"

@@ -3,6 +3,7 @@ import { Suspense } from 'react'
 import { LandingPage } from '@hisabche/ui/landing/landing-page'
 import { BILLING_CURRENCY } from '@hisabche/ui-contract'
 import { AuthGate } from './auth-gate'
+import { LANDING_NAMESPACES, ScopedMessages } from './scoped-messages'
 import { cn } from '@/lib/utils'
 import type { Metadata } from 'next'
 import { setRequestLocale } from 'next-intl/server'
@@ -232,22 +233,24 @@ export default async function RootPage({ params }: { params: Promise<{ lang: str
   return (
     <>
       <JsonLd lang={lang} />
-      <AuthGate>
-        <Suspense
-          fallback={
-            <div className="flex min-h-screen items-center justify-center">
-              <div
-                className={cn(
-                  'h-8 w-8 animate-spin rounded-full',
-                  'border-2 border-[hsl(var(--color-primary))] border-t-transparent',
-                )}
-              />
-            </div>
-          }
-        >
-          <LandingPage />
-        </Suspense>
-      </AuthGate>
+      <ScopedMessages lang={lang} namespaces={LANDING_NAMESPACES}>
+        <AuthGate>
+          <Suspense
+            fallback={
+              <div className="flex min-h-screen items-center justify-center">
+                <div
+                  className={cn(
+                    'h-8 w-8 animate-spin rounded-full',
+                    'border-2 border-[hsl(var(--color-primary))] border-t-transparent',
+                  )}
+                />
+              </div>
+            }
+          >
+            <LandingPage />
+          </Suspense>
+        </AuthGate>
+      </ScopedMessages>
     </>
   )
 }

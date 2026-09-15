@@ -182,12 +182,15 @@ export default function SiteFooter({ t, localePrefix }: SiteFooterProps) {
               the long legal list across the full width in two columns of its
               own; three columns from `sm`. The old layout forced three 98px
               columns with 10px links on a 360px phone. ── */}
-          <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 sm:gap-6 lg:gap-8">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
             {COLUMNS.map((col, index) => (
               <nav
                 key={col.titleKey}
                 aria-label={t(col.titleKey, col.titleFallback)}
-                className={cn(index === COLUMNS.length - 1 && 'col-span-2 sm:col-span-1')}
+                className={cn(
+                  'p-4 sm:p-5 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated)/0.6)] transition-colors hover:border-[hsl(var(--color-primary)/0.35)]',
+                  index === COLUMNS.length - 1 && 'col-span-2 sm:col-span-1',
+                )}
               >
                 <h3 className="mb-2 text-sm font-semibold text-[hsl(var(--fg-primary))] sm:mb-3 lg:mb-4">
                   {t(col.titleKey, col.titleFallback)}

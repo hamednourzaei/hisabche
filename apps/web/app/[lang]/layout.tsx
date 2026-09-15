@@ -13,6 +13,7 @@ import { AnalyticsPageview } from './analytics-pageview'
 import { Suspense } from 'react'
 import { getMessages, setRequestLocale } from 'next-intl/server'
 import { IntlProvider } from './intl-provider'
+import { CORE_NAMESPACES, pickNamespaces } from './scoped-messages'
 import {
   SITE_URL,
   localeMeta,
@@ -392,7 +393,10 @@ export default async function RootLayout({
               "Functions cannot be passed directly to Client Components") —
               به همین خاطر در یک wrapper جدا و "use client" (IntlProvider)
               تعریف شده‌اند تا کاملاً سمت کلاینت بمانند. */}
-          <IntlProvider locale={locale} messages={messages}>
+          {/* Core namespaces only — each route tree re-provides what it needs
+              (see scoped-messages.tsx). The full catalogue here put ~160 KB of
+              dashboard strings into every public page's HTML. */}
+          <IntlProvider locale={locale} messages={pickNamespaces(messages, CORE_NAMESPACES)}>
             <Providers>{children}</Providers>
           </IntlProvider>
         </ClientErrorBoundary>

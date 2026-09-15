@@ -22,6 +22,10 @@ describe('marquee loops seamlessly in RTL', () => {
     expect(marquee).not.toContain('rtl:[animation-direction')
   })
 
+  it('reverse survives the animation shorthand (both rows ran the same way)', () => {
+    expect(marquee).toContain("reverse && '![animation-direction:reverse]'")
+  })
+
   it('keyframes carry no var() — the compositor cannot run those', () => {
     const block = config.slice(config.indexOf('marquee: {'), config.indexOf('animation: {'))
     expect(block.length).toBeGreaterThan(50)
