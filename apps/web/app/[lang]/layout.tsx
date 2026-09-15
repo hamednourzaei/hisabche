@@ -270,20 +270,10 @@ export default async function RootLayout({
             redirect rather than to a real section. Nothing in the app needs a
             <base>: every other href here and in packages/ui is already a
             root-absolute path. */}
-        {/* NOTE: /favicon.svg and /favicon.ico are both 2.2MB PNG files with the
-            wrong extension. The `type="image/svg+xml"` entry that used to sit
-            here made browsers fetch 2.2MB and then reject it as malformed SVG.
-            The correctly-typed PNG icons below are used instead. */}
-        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-        <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png" />
-        <link rel="icon" type="image/png" sizes="64x64" href="/favicon-64x64.png" />
-        <link rel="icon" type="image/png" sizes="128x128" href="/favicon-128x128.png" />
-        <link rel="icon" type="image/png" sizes="192x192" href="/android-chrome-192x192.png" />
-        <link rel="icon" type="image/png" sizes="512x512" href="/android-chrome-512x512.png" />
-        <link rel="shortcut icon" href="/favicon.ico" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
-        <link rel="manifest" href="/site.webmanifest" />
+        {/* ⚠️ NO HAND-WRITTEN ICON <link>s. `metadata.icons` above already emits
+            every icon, the apple-touch icon and the manifest. Repeating them here
+            made browsers request each favicon twice (Pingdom HAR: 16/32/48/64
+            each fetched once MISS, once HIT). */}
         <style>{`html{scroll-behavior:smooth}body{font-family:var(--font-sans,system-ui);background-color:hsl(var(--surface-base,192 55% 6%));color:hsl(var(--fg-primary,160 40% 98%));margin:0;padding:0;line-height:1.55;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}*{box-sizing:border-box;margin:0;padding:0}h1,.h1{font-size:clamp(2.25rem,5vw,4rem);line-height:1.2;font-weight:700}h2,.h2{font-size:clamp(1.75rem,4vw,2.5rem);line-height:1.2;font-weight:600}p,.body{font-size:clamp(.875rem,2vw,1rem);line-height:1.65}button,[role=button]{cursor:pointer;font-family:inherit}img{max-width:100%;height:auto;display:block}html{overflow-y:scroll}:focus-visible{outline:2px solid hsl(var(--color-primary,168 84% 43%) / .5);outline-offset:2px;border-radius:6px}`}</style>
         {/* Hardcoded <link rel="alternate"> tags used to live here. They pointed
             every page on the site — including /public-invoice/[token] and the

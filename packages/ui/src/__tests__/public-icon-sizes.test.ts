@@ -34,3 +34,26 @@ describe('public icons are what their names say', () => {
     expect(statSync(join(PUBLIC, 'favicon.ico')).size).toBeLessThan(20 * 1024)
   })
 })
+
+describe('icons are declared once and cached', () => {
+  const root = join(__dirname, '../../../../apps/web')
+  // Not comment-stripped: the layout contains '/*' inside strings, which a naive
+  // block-comment regex treats as a comment start and eats real code. The
+  // assertion below only matches real <link rel="icon"…> tags anyway.
+  const layout = readFileSync(join(root, 'app/[lang]/layout.tsx'), 'utf8')
+  const config = readFileSync(join(root, 'next.config.js'), 'utf8')
+
+  // Pingdom HAR: every favicon was fetched twice — `metadata.icons` plus a
+  // hand-written <link> for the same file.
+  it('no hand-written icon/manifest <link> next to metadata.icons', () => {
+    expect(layout).toContain('icons: {')
+    expect(layout).not.toMatch(/<link\s+rel="(?:icon|shortcut icon|apple-touch-icon|manifest)"/)
+  })
+
+  // Root-of-public files had no Cache-Control rule and were served max-age=0.
+  it('root icons, screenshots and the manifest have a Cache-Control rule', () => {
+    expect(config).toContain('favicon-.*')
+    expect(config).toContain('site\\.webmanifest')
+    expect(config).toContain('public, max-age=86400, stale-while-revalidate=604800')
+  })
+})
