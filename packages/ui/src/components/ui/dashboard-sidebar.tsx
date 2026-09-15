@@ -744,7 +744,7 @@ export const BottomNav = memo(function BottomNav({
                   >
                     <div
                       className={cn(
-                        'absolute start-1/2 -translate-x-1/2 h-[3px] rounded-full bg-[var(--gradient-brand)]',
+                        'absolute start-1/2 -translate-x-1/2 h-[3px] rounded-full bg-[image:var(--gradient-brand)]',
                         'transition-all duration-150 ease-out',
                         isActive ? 'w-8 opacity-100' : 'w-0 opacity-0',
                       )}

@@ -121,7 +121,7 @@ export const ShimmerCTA = memo(function ShimmerCTA({
         'inline-flex items-center justify-center gap-2',
         'rounded-full px-8 py-3',
         'text-sm font-bold text-white',
-        'bg-[var(--gradient-brand)]',
+        'bg-[image:var(--gradient-brand)]',
         'shadow-lg shadow-[hsl(var(--color-primary)/0.2)]',
         'transition-all duration-200',
         'hover:brightness-110',
@@ -269,7 +269,7 @@ export const GlassNavbar = memo(function GlassNavbar({
           className={cn(
             'rounded-full px-4 py-1.5',
             'text-xs font-semibold text-white',
-            'bg-[var(--gradient-brand)]',
+            'bg-[image:var(--gradient-brand)]',
             'transition-all duration-200',
             'hover:brightness-110',
             'motion-reduce:transition-none',

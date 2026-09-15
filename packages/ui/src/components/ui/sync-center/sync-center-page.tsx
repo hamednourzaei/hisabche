@@ -196,7 +196,7 @@ export function SyncCenterPage({
               className={cn(
                 'inline-flex items-center gap-2 rounded-full px-4 py-2.5',
                 'text-sm font-bold text-white',
-                'bg-[var(--gradient-brand)]',
+                'bg-[image:var(--gradient-brand)]',
                 'shadow-sm shadow-[hsl(var(--color-primary)/0.15)]',
                 'transition-all duration-200 hover:brightness-110 active:scale-[0.98]',
                 'disabled:opacity-40 disabled:cursor-not-allowed',
@@ -232,7 +232,7 @@ export function SyncCenterPage({
                 'text-sm font-medium transition-all duration-200',
                 'motion-reduce:transition-none',
                 autoBackupEnabled
-                  ? 'bg-[var(--gradient-brand)] text-white shadow-sm'
+                  ? 'bg-[image:var(--gradient-brand)] text-white shadow-sm'
                   : 'border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))]',
               )}
             >

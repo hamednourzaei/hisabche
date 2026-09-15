@@ -39,7 +39,9 @@ const nextConfig = {
     formats: ['image/avif', 'image/webp'],
     minimumCacheTTL: 31536000,
     deviceSizes: [640, 750, 828, 1080, 1200],
-    imageSizes: [16, 32, 48, 64, 96],
+    // 256/384/512 so a phone-width screenshot (13rem × DPR 2.6 ≈ 550px) is not
+    // served from the 640px device size — PageSpeed measured 15 KiB wasted there.
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384, 512],
     dangerouslyAllowSVG: false,
   },
 
@@ -65,6 +67,9 @@ const nextConfig = {
       'zod',
     ],
     optimizeCss: true,
+    // The three stylesheets (26 KiB) were render-blocking requests on every
+    // public page — ~300 ms of FCP on PageSpeed's mobile profile. Inline them.
+    inlineCss: true,
     serverActions: { bodySizeLimit: '2mb' },
   },
 

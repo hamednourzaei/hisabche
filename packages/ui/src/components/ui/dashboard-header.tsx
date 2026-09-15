@@ -687,7 +687,7 @@ export const DashboardHeader = memo(function DashboardHeader({
               className={cn(
                 'rounded-full px-4 py-2',
                 'text-xs font-bold text-white',
-                'bg-[var(--gradient-brand)]',
+                'bg-[image:var(--gradient-brand)]',
                 'transition-all duration-200',
                 'hover:brightness-110',
                 'active:scale-95',

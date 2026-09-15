@@ -282,7 +282,7 @@ export const CustomerMultiPicker = memo(function CustomerMultiPicker({
                     className={cn(
                       'flex shrink-0 items-center justify-center gap-1 rounded-lg px-3 py-2',
                       'text-sm font-medium text-white',
-                      'bg-[var(--gradient-brand)]',
+                      'bg-[image:var(--gradient-brand)]',
                       'transition-all duration-200',
                       'hover:brightness-110',
                       'disabled:opacity-40 disabled:cursor-not-allowed',

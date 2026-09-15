@@ -97,7 +97,7 @@ export function AiAssistantLauncher({ t, fullPageHref }: AiAssistantLauncherProp
         className={cn(
           'group relative inline-flex items-center gap-2 overflow-hidden rounded-full px-4 py-2',
           'text-sm font-bold text-white',
-          'bg-[var(--gradient-brand)]',
+          'bg-[image:var(--gradient-brand)]',
           'shadow-[0_4px_16px_-4px_hsl(var(--color-primary)/0.5)]',
           'transition-transform hover:scale-[1.02] active:scale-[0.98]',
           // The «shine»: a highlight that sweeps across on hover. Behind

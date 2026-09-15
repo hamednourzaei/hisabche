@@ -635,7 +635,7 @@ const ItemsStep = memo(function ItemsStep({
               type="button"
               onClick={handleAddCustom}
               disabled={!customName.trim()}
-              className="shrink-0 rounded-lg px-3 py-2 text-sm font-medium text-white bg-[var(--gradient-brand)] disabled:opacity-40"
+              className="shrink-0 rounded-lg px-3 py-2 text-sm font-medium text-white bg-[image:var(--gradient-brand)] disabled:opacity-40"
             >
               {t('action.add', 'افزودن')}
             </button>

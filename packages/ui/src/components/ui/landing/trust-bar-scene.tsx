@@ -98,13 +98,13 @@ export default function TrustBarScene({ t }: TrustBarSceneProps) {
         </p>
       </div>
 
-      <Marquee pauseOnHover repeat={4} className="[--duration:100s] py-0.5 sm:py-1">
+      <Marquee pauseOnHover repeat={2} className="[--duration:100s] py-0.5 sm:py-1">
         {firstHalf.map(({ key, fallback }) => (
           <IndustryChip key={key} label={t(`landing.industry.${key}`, fallback)} />
         ))}
       </Marquee>
 
-      <Marquee pauseOnHover repeat={4} reverse className="[--duration:90s] py-0.5 sm:py-1">
+      <Marquee pauseOnHover repeat={2} reverse className="[--duration:90s] py-0.5 sm:py-1">
         {secondHalf.map(({ key, fallback }) => (
           <IndustryChip key={key} label={t(`landing.industry.${key}`, fallback)} />
         ))}

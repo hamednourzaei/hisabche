@@ -68,7 +68,7 @@ const EmptyState: React.FC<EmptyStateProps> = ({
           className={cn(
             'rounded-full px-6 py-2.5',
             'text-sm font-bold text-white',
-            'bg-[var(--gradient-brand)]',
+            'bg-[image:var(--gradient-brand)]',
             'shadow-sm shadow-[hsl(var(--color-primary)/0.15)]',
             'transition-all duration-200',
             'hover:brightness-110',

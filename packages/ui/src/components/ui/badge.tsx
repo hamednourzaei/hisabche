@@ -21,7 +21,7 @@ export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
 // ─── Style Maps ────────────────────────────────────────────────────────────
 
 const variantStyles: Record<BadgeVariant, string> = {
-  default: 'border-transparent bg-[var(--gradient-brand)] text-white',
+  default: 'border-transparent bg-[image:var(--gradient-brand)] text-white',
   secondary: 'border-transparent bg-[hsl(var(--surface-muted))] text-[hsl(var(--fg-secondary))]',
   destructive:
     'border-transparent bg-[hsl(var(--color-destructive)/0.12)] text-[hsl(var(--color-destructive))] border-[hsl(var(--color-destructive)/0.2)]',

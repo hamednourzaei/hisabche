@@ -6,11 +6,11 @@ const config: Config = {
   content: [
     // ✅ اصلاح مسیرها برای ساختار واقعی پروژه
     './src/**/*.{js,ts,jsx,tsx,mdx}',
-    '../../apps/web/app/**/*.{js,ts,jsx,tsx,mdx}',      // ✅ Next.js App Router
+    '../../apps/web/app/**/*.{js,ts,jsx,tsx,mdx}', // ✅ Next.js App Router
     '../../apps/web/components/**/*.{js,ts,jsx,tsx,mdx}',
-    '../../apps/mobile/**/*.{js,ts,jsx,tsx,mdx}',       // ✅ Expo
-    '../../packages/ui/src/**/*.{js,ts,jsx,tsx,mdx}',   // ✅ UI package
-    '../../packages/**/src/**/*.{js,ts,jsx,tsx,mdx}',   // ✅ سایر packages
+    '../../apps/mobile/**/*.{js,ts,jsx,tsx,mdx}', // ✅ Expo
+    '../../packages/ui/src/**/*.{js,ts,jsx,tsx,mdx}', // ✅ UI package
+    '../../packages/**/src/**/*.{js,ts,jsx,tsx,mdx}', // ✅ سایر packages
   ],
   theme: {
     container: {
@@ -22,19 +22,19 @@ const config: Config = {
       colors: {
         primary: {
           DEFAULT: 'hsl(var(--hisab-primary))',
-          fg:      'hsl(var(--hisab-primary-fg))',
+          fg: 'hsl(var(--hisab-primary-fg))',
         },
         destructive: {
           DEFAULT: 'hsl(var(--hisab-destructive))',
-          fg:      'hsl(var(--hisab-destructive-fg))',
+          fg: 'hsl(var(--hisab-destructive-fg))',
         },
         success: {
           DEFAULT: 'hsl(var(--hisab-success))',
-          fg:      'hsl(var(--hisab-success-fg))',
+          fg: 'hsl(var(--hisab-success-fg))',
         },
         warning: {
           DEFAULT: 'hsl(var(--hisab-warning))',
-          fg:      'hsl(var(--hisab-warning-fg))',
+          fg: 'hsl(var(--hisab-warning-fg))',
         },
         purple: {
           DEFAULT: 'hsl(var(--color-purple))',
@@ -77,51 +77,51 @@ const config: Config = {
         foreground: 'hsl(var(--hisab-foreground))',
         card: {
           DEFAULT: 'hsl(var(--hisab-card))',
-          fg:      'hsl(var(--hisab-foreground))',
+          fg: 'hsl(var(--hisab-foreground))',
         },
         muted: {
           DEFAULT: 'hsl(var(--hisab-muted))',
-          fg:      'hsl(var(--hisab-muted-fg))',
+          fg: 'hsl(var(--hisab-muted-fg))',
         },
         border: 'hsl(var(--hisab-border))',
-        ring:   'hsl(var(--hisab-ring))',
+        ring: 'hsl(var(--hisab-ring))',
         surface: {
-          base:     'hsl(var(--surface-base))',
-          muted:    'hsl(var(--surface-muted))',
+          base: 'hsl(var(--surface-base))',
+          muted: 'hsl(var(--surface-muted))',
           elevated: 'hsl(var(--surface-elevated))',
         },
         narrative: {
           frustration: 'rgba(14, 110, 105, 0.10)',
-          confusion:   'rgba(239, 68, 68, 0.10)',
-          clarity:     'rgba(18, 200, 160, 0.10)',
-          confidence:  'rgba(99, 231, 200, 0.10)',
-          trust:       'rgba(14, 110, 105, 0.12)',
-          action:      'rgba(245, 158, 11, 0.15)',
+          confusion: 'rgba(239, 68, 68, 0.10)',
+          clarity: 'rgba(18, 200, 160, 0.10)',
+          confidence: 'rgba(99, 231, 200, 0.10)',
+          trust: 'rgba(14, 110, 105, 0.12)',
+          action: 'rgba(245, 158, 11, 0.15)',
         },
       },
 
       borderRadius: {
-        none:    'var(--radius-none)',
-        xxs:     'var(--radius-xxs)',
-        xs:      'var(--radius-xs)',
-        sm:      'var(--radius-sm)',
+        none: 'var(--radius-none)',
+        xxs: 'var(--radius-xxs)',
+        xs: 'var(--radius-xs)',
+        sm: 'var(--radius-sm)',
         DEFAULT: 'var(--radius-md)',
-        md:      'var(--radius-md)',
-        lg:      'var(--radius-lg)',
-        xl:      'var(--radius-xl)',
-        '2xl':   'var(--radius-2xl)',
-        '3xl':   'var(--radius-3xl)',
-        full:    'var(--radius-full)',
-        card:    'var(--radius-card)',
+        md: 'var(--radius-md)',
+        lg: 'var(--radius-lg)',
+        xl: 'var(--radius-xl)',
+        '2xl': 'var(--radius-2xl)',
+        '3xl': 'var(--radius-3xl)',
+        full: 'var(--radius-full)',
+        card: 'var(--radius-card)',
         'card-sm': 'var(--radius-card-sm)',
         'card-md': 'var(--radius-card-md)',
         'card-lg': 'var(--radius-card-lg)',
-        button:  'var(--radius-button)',
-        modal:   'var(--radius-modal)',
-        input:   'var(--radius-input)',
-        badge:   'var(--radius-badge)',
-        pill:    'var(--radius-full)',
-        avatar:  'var(--radius-full)',
+        button: 'var(--radius-button)',
+        modal: 'var(--radius-modal)',
+        input: 'var(--radius-input)',
+        badge: 'var(--radius-badge)',
+        pill: 'var(--radius-full)',
+        avatar: 'var(--radius-full)',
       },
 
       fontFamily: {
@@ -133,14 +133,14 @@ const config: Config = {
         'heading-1': 'var(--font-heading-1)',
         'heading-2': 'var(--font-heading-2)',
         'heading-3': 'var(--font-heading-3)',
-        'body':      'var(--font-body)',
+        body: 'var(--font-body)',
         'body-large': 'var(--font-body-large)',
       },
 
       lineHeight: {
-        tight:    'var(--leading-tight)',
-        normal:   'var(--leading-normal)',
-        relaxed:  'var(--leading-relaxed)',
+        tight: 'var(--leading-tight)',
+        normal: 'var(--leading-normal)',
+        relaxed: 'var(--leading-relaxed)',
       },
 
       boxShadow: {
@@ -157,140 +157,154 @@ const config: Config = {
       },
 
       spacing: {
-        xs:   'var(--space-xs)',
-        sm:   'var(--space-sm)',
-        md:   'var(--space-md)',
-        lg:   'var(--space-lg)',
-        xl:   'var(--space-xl)',
+        xs: 'var(--space-xs)',
+        sm: 'var(--space-sm)',
+        md: 'var(--space-md)',
+        lg: 'var(--space-lg)',
+        xl: 'var(--space-xl)',
         '2xl': 'var(--space-2xl)',
         '3xl': 'var(--space-3xl)',
-        18:   '4.5rem',
-        88:   '22rem',
-        128:  '32rem',
+        18: '4.5rem',
+        88: '22rem',
+        128: '32rem',
       },
 
       backdropBlur: {
-        xs:    '2px',
-        sm:    '4px',
-        md:    '8px',
+        xs: '2px',
+        sm: '4px',
+        md: '8px',
         glass: '18px',
       },
 
       transitionTimingFunction: {
-        'ease-out':      'var(--ease-out)',
-        'ease-soft':     'var(--ease-soft)',
+        'ease-out': 'var(--ease-out)',
+        'ease-soft': 'var(--ease-soft)',
         'ease-identity': 'var(--ease-identity)',
-        'hisab':         'var(--hisab-ease)',
+        hisab: 'var(--hisab-ease)',
       },
 
       transitionDuration: {
-        micro:  'var(--duration-micro)',
-        short:  'var(--duration-short)',
+        micro: 'var(--duration-micro)',
+        short: 'var(--duration-short)',
         medium: 'var(--duration-medium)',
-        long:   'var(--duration-long)',
+        long: 'var(--duration-long)',
         hisab: '200ms',
       },
 
       zIndex: {
-        base:            'var(--z-base)',
-        dropdown:        'var(--z-dropdown)',
-        sticky:          'var(--z-sticky)',
-        fixed:           'var(--z-fixed)',
+        base: 'var(--z-base)',
+        dropdown: 'var(--z-dropdown)',
+        sticky: 'var(--z-sticky)',
+        fixed: 'var(--z-fixed)',
         'modal-backdrop': 'var(--z-modal-backdrop)',
-        modal:           'var(--z-modal)',
-        popover:         'var(--z-popover)',
-        tooltip:         'var(--z-tooltip)',
-        toast:           'var(--z-toast)',
-        cmdk:            'var(--z-cmdk)',
-        fab:             'var(--z-fab)',
+        modal: 'var(--z-modal)',
+        popover: 'var(--z-popover)',
+        tooltip: 'var(--z-tooltip)',
+        toast: 'var(--z-toast)',
+        cmdk: 'var(--z-cmdk)',
+        fab: 'var(--z-fab)',
       },
 
       keyframes: {
         'fade-in-up': {
           from: { opacity: '0', transform: 'translateY(12px)' },
-          to:   { opacity: '1', transform: 'translateY(0)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
         },
         'fade-slide-up': {
           from: { opacity: '0', transform: 'translateY(15px)' },
-          to:   { opacity: '1', transform: 'translateY(0)' },
+          to: { opacity: '1', transform: 'translateY(0)' },
         },
-        'drift': {
-          '0%':   { transform: 'translate(0, 0)' },
+        drift: {
+          '0%': { transform: 'translate(0, 0)' },
           '100%': { transform: 'translate(-40px, -40px)' },
         },
         'ambient-pulse': {
           '0%, 100%': { opacity: '0.3', transform: 'scale(1) translate(0, 0)' },
-          '50%':      { opacity: '0.6', transform: 'scale(1.08) translate(20px, 10px)' },
+          '50%': { opacity: '0.6', transform: 'scale(1.08) translate(20px, 10px)' },
         },
         'fab-pulse': {
           '0%, 100%': { boxShadow: '0 0 0 0 rgba(36, 224, 176, 0.4)' },
-          '50%':      { boxShadow: '0 0 0 12px rgba(36, 224, 176, 0)' },
+          '50%': { boxShadow: '0 0 0 12px rgba(36, 224, 176, 0)' },
         },
         'draw-line': {
           from: { strokeDashoffset: '400' },
-          to:   { strokeDashoffset: '0' },
+          to: { strokeDashoffset: '0' },
         },
         'node-pop': {
-          '0%':   { opacity: '0', transform: 'scale(0.4)' },
-          '60%':  { opacity: '1', transform: 'scale(1.2)' },
+          '0%': { opacity: '0', transform: 'scale(0.4)' },
+          '60%': { opacity: '1', transform: 'scale(1.2)' },
           '100%': { opacity: '1', transform: 'scale(1)' },
         },
         'pipe-pulse': {
           '0%, 100%': { opacity: '0.6', transform: 'scale(1)' },
-          '50%':      { opacity: '1', transform: 'scale(1.15)' },
+          '50%': { opacity: '1', transform: 'scale(1.15)' },
         },
         'auth-spin': {
           to: { transform: 'rotate(360deg)' },
         },
         // ✅ Marquee (Magic UI pattern) — powers the testimonials marquee
-        'marquee': {
+        // `--marquee-shift` is -1 in LTR and +1 in RTL (set by <Marquee>). In
+        // RTL the copies flow LEFTWARD from the right edge, so the track must
+        // travel right; the old fixed -100% (and "reverse it for RTL") left a
+        // full group-width of empty ribbon on screen for part of every cycle.
+        marquee: {
           from: { transform: 'translateX(0)' },
-          to:   { transform: 'translateX(calc(-100% - var(--gap)))' },
+          to: { transform: 'translateX(calc(var(--marquee-shift, -1) * (100% + var(--gap))))' },
         },
         'marquee-vertical': {
           from: { transform: 'translateY(0)' },
-          to:   { transform: 'translateY(calc(-100% - var(--gap)))' },
+          to: { transform: 'translateY(calc(-100% - var(--gap)))' },
         },
       },
 
       animation: {
-        'fade-in-up':    'fade-in-up 0.45s var(--ease-out) both',
+        'fade-in-up': 'fade-in-up 0.45s var(--ease-out) both',
         'fade-slide-up': 'fade-slide-up 0.45s var(--ease-out) forwards',
-        'drift':         'drift 20s linear infinite',
+        drift: 'drift 20s linear infinite',
         'ambient-pulse': 'ambient-pulse 12s ease-in-out infinite',
-        'fab-pulse':     'fab-pulse 1.5s ease-in-out infinite',
-        'draw-line':     'draw-line 1.2s var(--ease-out) forwards',
-        'node-pop':      'node-pop 0.5s var(--ease-out) forwards',
-        'pipe-pulse':    'pipe-pulse 2s ease-in-out infinite',
-        'auth-spin':     'auth-spin 0.8s linear infinite',
+        'fab-pulse': 'fab-pulse 1.5s ease-in-out infinite',
+        'draw-line': 'draw-line 1.2s var(--ease-out) forwards',
+        'node-pop': 'node-pop 0.5s var(--ease-out) forwards',
+        'pipe-pulse': 'pipe-pulse 2s ease-in-out infinite',
+        'auth-spin': 'auth-spin 0.8s linear infinite',
         // ✅ Marquee
-        'marquee':          'marquee var(--duration) linear infinite',
+        marquee: 'marquee var(--duration) linear infinite',
         'marquee-vertical': 'marquee-vertical var(--duration) linear infinite',
       },
 
       backgroundImage: {
         'gradient-purple-cyan': 'linear-gradient(135deg, hsl(165 75% 51%), hsl(168 78% 56%))',
         'gradient-emerald-cyan': 'linear-gradient(135deg, hsl(165 75% 51%), hsl(168 78% 56%))',
-        'warehouse-purple': 'linear-gradient(135deg, hsl(165 75% 51% / 0.1), hsl(165 75% 51% / 0.02))',
-        'warehouse-emerald': 'linear-gradient(135deg, hsl(168 78% 56% / 0.1), hsl(168 78% 56% / 0.02))',
+        'warehouse-purple':
+          'linear-gradient(135deg, hsl(165 75% 51% / 0.1), hsl(165 75% 51% / 0.02))',
+        'warehouse-emerald':
+          'linear-gradient(135deg, hsl(168 78% 56% / 0.1), hsl(168 78% 56% / 0.02))',
         'warehouse-amber': 'linear-gradient(135deg, hsl(38 92% 55% / 0.1), hsl(38 92% 55% / 0.02))',
         'warehouse-rose': 'linear-gradient(135deg, hsl(0 84% 60% / 0.1), hsl(0 84% 60% / 0.02))',
-        'warehouse-blue': 'linear-gradient(135deg, hsl(210 90% 55% / 0.1), hsl(210 90% 55% / 0.02))',
-        'warehouse-teal': 'linear-gradient(135deg, hsl(174 79% 28% / 0.1), hsl(174 79% 28% / 0.02))',
-        'narrative-frustration': 'radial-gradient(circle at 50% 0%, rgba(168, 85, 247, 0.12), transparent 70%)',
-        'narrative-confusion':   'radial-gradient(circle at 50% 0%, rgba(239, 68, 68, 0.10), transparent 70%)',
-        'narrative-clarity':     'radial-gradient(circle at 50% 0%, rgba(36, 224, 176, 0.10), transparent 70%)',
-        'narrative-confidence':  'radial-gradient(circle at 50% 0%, rgba(6, 182, 212, 0.10), transparent 70%)',
-        'narrative-trust':       'radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.14), transparent 70%)',
-        'narrative-action':      'radial-gradient(circle at 50% 0%, rgba(236, 72, 153, 0.18), transparent 70%)',
+        'warehouse-blue':
+          'linear-gradient(135deg, hsl(210 90% 55% / 0.1), hsl(210 90% 55% / 0.02))',
+        'warehouse-teal':
+          'linear-gradient(135deg, hsl(174 79% 28% / 0.1), hsl(174 79% 28% / 0.02))',
+        'narrative-frustration':
+          'radial-gradient(circle at 50% 0%, rgba(168, 85, 247, 0.12), transparent 70%)',
+        'narrative-confusion':
+          'radial-gradient(circle at 50% 0%, rgba(239, 68, 68, 0.10), transparent 70%)',
+        'narrative-clarity':
+          'radial-gradient(circle at 50% 0%, rgba(36, 224, 176, 0.10), transparent 70%)',
+        'narrative-confidence':
+          'radial-gradient(circle at 50% 0%, rgba(6, 182, 212, 0.10), transparent 70%)',
+        'narrative-trust':
+          'radial-gradient(circle at 50% 0%, rgba(139, 92, 246, 0.14), transparent 70%)',
+        'narrative-action':
+          'radial-gradient(circle at 50% 0%, rgba(236, 72, 153, 0.18), transparent 70%)',
       },
 
       screens: {
-        'xs': '480px',
-        'sm': '640px',
-        'md': '768px',
-        'lg': '1024px',
-        'xl': '1280px',
+        xs: '480px',
+        sm: '640px',
+        md: '768px',
+        lg: '1024px',
+        xl: '1280px',
         '2xl': '1440px',
       },
     },

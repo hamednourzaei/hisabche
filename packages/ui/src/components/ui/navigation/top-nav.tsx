@@ -100,7 +100,7 @@ const NavItem = memo(function NavItem({
           'relative z-10 block px-2 sm:px-3 py-1.5 rounded-full text-xs sm:text-sm font-medium whitespace-nowrap transition-colors',
           isActive
             ? 'text-[hsl(var(--fg-primary))] font-semibold'
-            : 'text-[hsl(var(--fg-primary)/0.55)] hover:text-[hsl(var(--fg-primary)/0.85)]',
+            : 'text-[hsl(var(--fg-secondary))] hover:text-[hsl(var(--fg-primary))]',
         )}
         onClick={handleClick}
       >
@@ -308,7 +308,7 @@ export const TopNav = memo(function TopNav({
               // Spread rather than pass `undefined`: `exactOptionalPropertyTypes`
               // makes `onClick={undefined}` a type error on LinkProps.
               {...(onNavigateCta ? { onClick: onNavigateCta } : {})}
-              className="inline-flex min-h-9 items-center gap-1 rounded-full px-4 text-sm font-bold text-white bg-[var(--gradient-brand)] hover:brightness-110 transition-all shrink-0 lg:min-h-10 lg:px-5"
+              className="inline-flex min-h-9 items-center gap-1 rounded-full px-4 text-sm font-bold text-[hsl(var(--color-primary-fg))] bg-[image:var(--gradient-brand)] hover:brightness-110 transition-all shrink-0 lg:min-h-10 lg:px-5"
             >
               <span className="cta-text">{ctaText}</span>
               <span aria-hidden="true" className="hidden lg:inline">
@@ -416,7 +416,7 @@ export const TopNav = memo(function TopNav({
       {/* Progress bar */}
       <div className="absolute bottom-0 inset-x-0 h-0.5 bg-[hsl(var(--fg-primary)/0.06)] overflow-hidden">
         <div
-          className="h-full bg-[var(--gradient-brand)] transition-all duration-150"
+          className="h-full bg-[image:var(--gradient-brand)] transition-all duration-150"
           style={{ width: `${scrollProgress}%` }}
         />
       </div>

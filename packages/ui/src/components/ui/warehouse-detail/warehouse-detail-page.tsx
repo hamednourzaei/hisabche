@@ -68,7 +68,7 @@ const toUnitType = (unit: string): UnitType => unit
 
 // Shared style constants
 const primaryBtn =
-  'inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-bold text-white bg-[var(--gradient-brand)] shadow-sm shadow-[hsl(var(--color-primary)/0.15)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed motion-reduce:transition-none'
+  'inline-flex items-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-bold text-white bg-[image:var(--gradient-brand)] shadow-sm shadow-[hsl(var(--color-primary)/0.15)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed motion-reduce:transition-none'
 const inputBase =
   'w-full rounded-xl px-3 py-2.5 text-sm border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] text-[hsl(var(--fg-primary))] placeholder:text-[hsl(var(--fg-tertiary))] focus:outline-none focus:border-[hsl(var(--color-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--color-primary)/0.3)] transition-colors duration-200 motion-reduce:transition-none'
 const cardBase =

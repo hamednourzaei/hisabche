@@ -138,6 +138,7 @@ const ToastContainer = React.forwardRef<HTMLDivElement, ToastContainerProps>(
     <div
       ref={ref}
       className={cn('fixed z-50 flex flex-col gap-2', positionStyles[position], className)}
+      role="region"
       aria-label="Notifications"
       {...props}
     >

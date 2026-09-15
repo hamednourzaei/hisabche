@@ -28,7 +28,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 const variantStyles: Record<ButtonVariant, string> = {
   default:
-    'bg-[var(--gradient-brand)] text-white hover:brightness-110 shadow-sm shadow-[hsl(var(--color-primary)/0.15)]',
+    'bg-[image:var(--gradient-brand)] text-white hover:brightness-110 shadow-sm shadow-[hsl(var(--color-primary)/0.15)]',
   destructive:
     'bg-[hsl(var(--color-destructive))] text-white hover:brightness-110 shadow-sm shadow-[hsl(var(--color-destructive)/0.15)]',
   outline:

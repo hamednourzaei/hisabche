@@ -91,7 +91,7 @@ export const SideNav = memo(function SideNav({ items }: SideNavProps) {
     >
       {/* Header */}
       <div className="flex items-center gap-2.5 px-4 py-[11px] border-b border-[hsl(var(--border-default))]">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--gradient-brand)] text-white text-sm font-bold shrink-0">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[image:var(--gradient-brand)] text-white text-sm font-bold shrink-0">
           {t('app.name').charAt(0)}
         </div>
         <div className="min-w-0 leading-tight">

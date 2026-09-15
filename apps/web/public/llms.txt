@@ -1,0 +1,26 @@
+# Hisabche
+
+> Hisabche (حسابچه) is accounting and business-management software for small shops and businesses in Iran and Afghanistan. It records sales, credit (nasiya), stock and profit, works offline and syncs later, and runs in Persian, Dari and English on web, Windows and mobile.
+
+The site is served in three languages: `/fa` (Persian, Iran), `/af` (Dari, Afghanistan) and `/en` (English). Each page below exists in all three.
+
+## Product
+
+- [Home](https://hisabche.com/en): what the software does, pricing and FAQ
+- [Accounting for small shops](https://hisabche.com/en/features/shop-accounting): day-to-day shop accounting without accounting knowledge
+- [Invoice software](https://hisabche.com/en/features/invoicing): sales and purchase invoices, PDF printing
+- [Inventory management](https://hisabche.com/en/features/inventory): stock computed from real stock movements, low-stock alerts
+- [Daybook and profit & loss](https://hisabche.com/en/features/daybook): double-entry ledger, profit and loss
+- [Customer debt tracking](https://hisabche.com/en/features/customer-debt): customer balances from allocated payments
+- [Offline accounting](https://hisabche.com/en/features/offline): offline work on mobile and Windows with later sync
+
+## Documentation
+
+- [Getting started](https://hisabche.com/en/docs/getting-started): first steps after signing up
+
+## Company and policies
+
+- [About](https://hisabche.com/en/about)
+- [Contact](https://hisabche.com/en/contact)
+- [Terms of use](https://hisabche.com/en/legal/terms)
+- [Privacy policy](https://hisabche.com/en/legal/privacy)

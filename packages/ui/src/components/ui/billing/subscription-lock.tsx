@@ -75,7 +75,7 @@ export function SubscriptionLockNotice({ hashRouter, onNavigate }: SubscriptionL
       <Link
         href={billingHref(locale, Boolean(hashRouter))}
         {...(onNavigate ? { onClick: onNavigate } : {})}
-        className="mt-2 inline-flex w-full items-center justify-center rounded-xl bg-[var(--gradient-brand)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:brightness-110 sm:w-auto"
+        className="mt-2 inline-flex w-full items-center justify-center rounded-xl bg-[image:var(--gradient-brand)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:brightness-110 sm:w-auto"
       >
         {t('subscriptionLock.cta')}
       </Link>

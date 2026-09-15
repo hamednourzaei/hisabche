@@ -56,7 +56,7 @@ const Fab = React.forwardRef<HTMLDivElement, FabProps>(
                 'active:scale-95',
                 open
                   ? 'bg-[hsl(var(--color-destructive))] rotate-45'
-                  : 'bg-[var(--gradient-brand)] rotate-0 hover:scale-110 motion-reduce:hover:scale-100',
+                  : 'bg-[image:var(--gradient-brand)] rotate-0 hover:scale-110 motion-reduce:hover:scale-100',
               )}
             >
               <Plus className="size-6 text-white" aria-hidden="true" />
@@ -86,7 +86,7 @@ const Fab = React.forwardRef<HTMLDivElement, FabProps>(
                     'flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium outline-none min-h-[44px]',
                     'transition-colors duration-150 motion-reduce:transition-none',
                     action.variant === 'primary' &&
-                      'bg-[var(--gradient-brand)] text-white data-[highlighted]:brightness-110',
+                      'bg-[image:var(--gradient-brand)] text-white data-[highlighted]:brightness-110',
                     action.variant === 'destructive' &&
                       'text-[hsl(var(--color-destructive))] data-[highlighted]:bg-[hsl(var(--color-destructive)/0.1)]',
                     (!action.variant || action.variant === 'default') &&

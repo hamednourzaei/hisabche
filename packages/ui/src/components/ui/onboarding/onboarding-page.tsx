@@ -83,7 +83,7 @@ const WelcomeStep = memo(function WelcomeStep({
   return (
     <div className="mx-auto max-w-xl text-center">
       <div className="mb-4 flex justify-center sm:mb-6">
-        <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-[var(--gradient-brand)] shadow-lg shadow-[hsl(var(--color-primary)/0.2)] sm:h-20 sm:w-20">
+        <div className="flex h-16 w-16 items-center justify-center rounded-3xl bg-[image:var(--gradient-brand)] shadow-lg shadow-[hsl(var(--color-primary)/0.2)] sm:h-20 sm:w-20">
           <span className="text-2xl font-bold text-white sm:text-3xl">ح</span>
         </div>
       </div>
@@ -102,7 +102,7 @@ const WelcomeStep = memo(function WelcomeStep({
         className={cn(
           'inline-flex items-center gap-2 rounded-full px-6 py-3 sm:px-8 sm:py-3.5',
           'text-base font-bold text-white',
-          'bg-[var(--gradient-brand)]',
+          'bg-[image:var(--gradient-brand)]',
           'shadow-md shadow-[hsl(var(--color-primary)/0.15)]',
           'transition-all duration-200 hover:brightness-110 active:scale-[0.98]',
           'motion-reduce:transition-none',
@@ -230,7 +230,7 @@ const BusinessTypeStep = memo(function BusinessTypeStep({
           className={cn(
             'inline-flex items-center justify-center rounded-full px-6 py-2.5',
             'text-sm font-bold text-white',
-            'bg-[var(--gradient-brand)]',
+            'bg-[image:var(--gradient-brand)]',
             'transition-all duration-200 hover:brightness-110 active:scale-[0.98]',
             'disabled:opacity-40 disabled:cursor-not-allowed',
             'motion-reduce:transition-none',
@@ -378,7 +378,7 @@ const StoreSizeStep = memo(function StoreSizeStep({
           className={cn(
             'inline-flex items-center justify-center rounded-full px-6 py-2.5',
             'text-sm font-bold text-white',
-            'bg-[var(--gradient-brand)]',
+            'bg-[image:var(--gradient-brand)]',
             'transition-all duration-200 hover:brightness-110 active:scale-[0.98]',
             'disabled:opacity-40 disabled:cursor-not-allowed',
             'motion-reduce:transition-none',
@@ -531,7 +531,7 @@ const CurrencyStep = memo(function CurrencyStep({
           className={cn(
             'inline-flex items-center justify-center rounded-full px-6 py-2.5',
             'text-sm font-bold text-white',
-            'bg-[var(--gradient-brand)]',
+            'bg-[image:var(--gradient-brand)]',
             'transition-all duration-200 hover:brightness-110 active:scale-[0.98]',
             'disabled:opacity-40 disabled:cursor-not-allowed',
             'motion-reduce:transition-none',
@@ -589,7 +589,7 @@ const CompleteStep = memo(function CompleteStep({
         className={cn(
           'w-full inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 sm:px-8 sm:py-3.5',
           'text-base font-bold text-white',
-          'bg-[var(--gradient-brand)]',
+          'bg-[image:var(--gradient-brand)]',
           'shadow-md shadow-[hsl(var(--color-primary)/0.15)]',
           'transition-all duration-200 hover:brightness-110 active:scale-[0.98]',
           'motion-reduce:transition-none',

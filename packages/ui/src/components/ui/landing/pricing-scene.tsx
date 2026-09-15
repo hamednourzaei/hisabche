@@ -480,7 +480,7 @@ export default function PricingScene() {
                       )}
                     >
                       {plan.popular && (
-                        <span className="inline-block px-2.5 sm:px-3 py-1 rounded-full text-xs font-semibold text-white bg-[var(--gradient-brand)] mb-1.5">
+                        <span className="inline-block px-2.5 sm:px-3 py-1 rounded-full text-xs font-semibold text-white bg-[image:var(--gradient-brand)] mb-1.5">
                           {st('landing.pricingPopular', 'محبوب‌ترین')}
                         </span>
                       )}

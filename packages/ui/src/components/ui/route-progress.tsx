@@ -49,7 +49,7 @@ export const RouteProgress = memo(function RouteProgress({ pathname }: RouteProg
     >
       <div
         className={cn(
-          'h-full w-full origin-[left] bg-[var(--gradient-brand)] rtl:origin-[right]',
+          'h-full w-full origin-[left] bg-[image:var(--gradient-brand)] rtl:origin-[right]',
           visible && 'animate-[route-progress_600ms_ease-out_forwards]',
           'motion-reduce:animate-none',
         )}

@@ -26,7 +26,7 @@
 import { useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import * as Sentry from '@sentry/nextjs'
-import { ErrorFallbackView, type EscapeDestination } from '@hisabche/ui'
+import { ErrorFallbackView, type EscapeDestination } from '@hisabche/ui/error-boundary'
 
 import { localePath, resolveLocale } from './i18n-config'
 

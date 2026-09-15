@@ -4,7 +4,7 @@ import type { ReactNode } from 'react'
 import { usePathname, useParams, useRouter } from 'next/navigation'
 import * as Sentry from '@sentry/nextjs'
 
-import { ErrorBoundary, type EscapeDestination } from '@hisabche/ui'
+import { ErrorBoundary, type EscapeDestination } from '@hisabche/ui/error-boundary'
 
 import { localePath, resolveLocale } from './i18n-config'
 

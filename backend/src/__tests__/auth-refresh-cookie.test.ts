@@ -210,3 +210,23 @@ describe('CORS', () => {
     expect(res.headers['access-control-allow-credentials']).toBe('true')
   })
 })
+
+describe('public plan list', () => {
+  // Production answered 401 «Missing authorization header» here, so the public
+  // pricing section never showed a price and every visit logged a console error.
+  it('GET /api/billing/plans needs no token', async () => {
+    const res = await app.inject({ method: 'GET', url: '/api/billing/plans?limit=50' })
+    expect(res.statusCode).not.toBe(401)
+  })
+
+  it('the exception is exact: the rest of billing still requires a token', async () => {
+    for (const url of [
+      '/api/billing/subscription',
+      '/api/billing/plans/extra',
+      '/api/billing/plansX',
+    ]) {
+      const res = await app.inject({ method: 'GET', url })
+      expect(res.statusCode, url).toBe(401)
+    }
+  })
+})

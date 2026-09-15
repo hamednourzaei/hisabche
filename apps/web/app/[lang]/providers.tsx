@@ -3,7 +3,9 @@
 
 import React, { Suspense, lazy, useMemo } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { ToastProvider } from '@hisabche/ui'
+// Subpath, not the '@hisabche/ui' barrel: this file is in the root layout, and the
+// barrel dragged the whole dashboard (1.6 MB) into every public page's JS.
+import { ToastProvider } from '@hisabche/ui/toast-provider'
 import { bindActiveWorkspace } from '@hisabche/store'
 
 // Publish the active workspace into @hisabche/api, which scopes every realtime

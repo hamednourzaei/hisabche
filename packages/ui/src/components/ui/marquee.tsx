@@ -69,16 +69,15 @@ export function Marquee({
             'flex shrink-0 justify-around [gap:var(--gap)]',
             vertical ? 'animate-marquee-vertical flex-col' : 'animate-marquee flex-row',
             pauseOnHover && 'group-hover:[animation-play-state:paused]',
-            // ✅ FIX (RTL): کی‌فریم مارکی جهت‌ثابت است (translateX منفی). در
-            // چیدمان RTL محتوای ردیفِ بدون reverse از دید خارج می‌شد و ردیف
-            // خالی به‌نظر می‌رسید — دقیقاً چیزی که در فارسی/دری دیده می‌شد و
-            // در انگلیسی نه. در RTL جهت هر دو ردیف برعکس می‌شود تا رفتار با
-            // LTR یکسان بماند.
-            !vertical &&
-              (reverse
-                ? '[animation-direction:reverse] rtl:[animation-direction:normal]'
-                : 'rtl:[animation-direction:reverse]'),
-            vertical && reverse && '[animation-direction:reverse]',
+            // ⚠️ RTL: MIRROR THE TRAVEL, DO NOT REVERSE THE ANIMATION.
+            // In RTL the copies are laid out leftward from the right edge. The
+            // earlier fix reversed `animation-direction`, which STARTS the track
+            // shifted one whole copy to the left — and a copy is wider than the
+            // screen, so the ribbon showed nothing for part of every loop (the
+            // «items run out» gap). The keyframe multiplies by --marquee-shift;
+            // RTL flips its sign, so the loop is seamless in both directions.
+            !vertical && 'rtl:[--marquee-shift:1]',
+            reverse && '[animation-direction:reverse]',
             'motion-reduce:animate-none',
           )}
         >

@@ -459,7 +459,7 @@ function CinematicStory({ t }: { t: (key: string, fallback?: string) => string }
                 'mt-4 w-full',
                 'inline-flex items-center justify-center gap-2',
                 'px-4 py-2 sm:py-2.5 rounded-xl',
-                'bg-[var(--gradient-brand)] text-white font-semibold text-xs sm:text-sm',
+                'bg-[image:var(--gradient-brand)] text-white font-semibold text-xs sm:text-sm',
                 'shadow-[0_4px_16px_hsl(var(--color-primary)/0.25)]',
                 'hover:shadow-[0_8px_24px_hsl(var(--color-primary)/0.60)] hover:-translate-y-0.5',
                 'transition-all duration-200',

@@ -90,7 +90,7 @@ const WarehouseHeader = memo(function WarehouseHeader({
           'inline-flex shrink-0 items-center gap-2 rounded-full px-4 py-2.5 sm:px-5',
           'min-h-[44px] sm:min-h-[40px]',
           'text-sm font-bold text-white',
-          'bg-[var(--gradient-brand)]',
+          'bg-[image:var(--gradient-brand)]',
           'shadow-sm shadow-[hsl(var(--color-primary)/0.15)]',
           'transition-all duration-200 hover:brightness-110 active:scale-[0.98]',
           FOCUS_RING,

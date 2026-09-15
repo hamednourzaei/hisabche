@@ -80,7 +80,8 @@
   /* ── Dark Theme Text ── */
   --fg-primary: 165 35% 97%;
   --fg-secondary: 168 15% 65%;
-  --fg-tertiary: 168 10% 50%;
+  /* 56%, not 50%: 50% measured 4.2:1 on --surface-muted, under WCAG AA. */
+  --fg-tertiary: 168 10% 56%;
 
   /* ── Dark Theme Borders ── */
   --border-default: 206 26% 19%;
@@ -200,7 +201,25 @@
      AA را نگه می‌دارد و هم لبه‌ها را نرم می‌کند. */
   --fg-primary: 220 18% 13%;
   --fg-secondary: 220 9% 40%;
-  --fg-tertiary: 220 7% 55%;
+  /* 40%, not 55%: 55% measured 3.1:1 on --surface-muted (WCAG AA is 4.5). */
+  --fg-tertiary: 220 7% 40%;
+
+  /* ── Brand on a light ground ──
+     The dark theme's teal (165 75% 51%) measured 1.6:1 as TEXT on this
+     off-white — Lighthouse flagged every link, badge and label in it. On a
+     light surface the brand has to be a deep teal to be readable; fills that
+     carry text flip to white text to match. 22% keeps 5.2:1 even on the 10%
+     brand tint used behind badges. */
+  --color-primary: 172 80% 22%;
+  --color-primary-fg: 0 0% 100%;
+  --color-primary-hover: 172 80% 18%;
+  --color-primary-light: 170 65% 35%;
+  /* Buttons painted with the brand gradient carry --color-primary-fg (white
+     here). The dark theme's gradient starts at #37e6c3, where white text is
+     1.6:1 — so on a light ground the gradient runs through the deep end of the
+     same teal: white is 4.9:1 at #0f7f74 and 6.8:1 at #0a6664. */
+  --gradient-brand: linear-gradient(135deg, #0f7f74 0%, #0c726c 50%, #0a6664 100%);
+  --gradient-brand-hover: linear-gradient(135deg, #0c726c 0%, #0a6664 50%, #085553 100%);
 
   /* ── Lines ──
      مرزها باید حس «جداکننده» بدهند نه «قاب». اشباع پایین، روشنایی بالا. */
@@ -229,7 +248,8 @@
   --surface-overlay: 207 30% 12%;
   --fg-primary: 165 35% 97%;
   --fg-secondary: 168 15% 65%;
-  --fg-tertiary: 168 10% 50%;
+  /* 56%, not 50%: 50% measured 4.2:1 on --surface-muted, under WCAG AA. */
+  --fg-tertiary: 168 10% 56%;
   --border-default: 206 26% 19%;
   --border-strong: 206 26% 26%;
   --glass-bg: rgba(16, 24, 32, 0.8);

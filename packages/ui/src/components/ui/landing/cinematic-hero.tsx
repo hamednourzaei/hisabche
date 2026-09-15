@@ -95,7 +95,7 @@ export default function CinematicHero({ t, onNavigateLogin }: CinematicHeroProps
     alt,
     width: 1183,
     height: 2560,
-    sizes: '240px',
+    sizes: '13rem',
     priority: true,
   })
 
@@ -106,6 +106,28 @@ export default function CinematicHero({ t, onNavigateLogin }: CinematicHeroProps
       data-narrative="frustration"
       className="relative overflow-hidden pb-10 pt-8 sm:pb-20 sm:pt-20"
     >
+      {/* ⚠️ THE SCREENSHOT IS THE LCP ELEMENT, AND IT SITS IN A <picture>.
+          next/image's `priority` only preloads an <Image>; through
+          getImageProps it does not, so PageSpeed found the LCP request
+          undiscoverable and without fetchpriority=high. React 19 hoists these
+          <link>s into <head>. One per viewport: a phone must not preload the
+          desktop shot, or the art direction is undone. */}
+      <link
+        rel="preload"
+        as="image"
+        fetchPriority="high"
+        imageSrcSet={phoneImg.srcSet}
+        imageSizes={phoneImg.sizes}
+        media="(max-width: 639px)"
+      />
+      <link
+        rel="preload"
+        as="image"
+        fetchPriority="high"
+        imageSrcSet={desktopImg.srcSet}
+        imageSizes={desktopImg.sizes}
+        media={DESKTOP_MEDIA}
+      />
       <DotPattern />
 
       <div className={cn(LANDING_CONTAINER, 'relative')}>
@@ -189,6 +211,8 @@ export default function CinematicHero({ t, onNavigateLogin }: CinematicHeroProps
                 <source media={DESKTOP_MEDIA} srcSet={desktopImg.srcSet} sizes={desktopImg.sizes} />
                 <img
                   {...phoneImg}
+                  fetchPriority="high"
+                  loading="eager"
                   alt={alt}
                   className="block h-auto w-full rounded-[1.5rem] sm:rounded-none"
                 />

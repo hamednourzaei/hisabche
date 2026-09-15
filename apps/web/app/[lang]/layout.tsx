@@ -5,7 +5,7 @@ import { Providers } from './providers'
 import { ClientErrorBoundary } from './client-error-boundary'
 import '@hisabche/ui/globals.css'
 import localFont from 'next/font/local'
-import { cn } from '@hisabche/ui'
+import { cn } from '@hisabche/ui/utils'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import { Analytics } from '@vercel/analytics/next'
 import Script from 'next/script'
@@ -371,13 +371,16 @@ export default async function RootLayout({
             }),
           }}
         />
+        {/* `lazyOnload`, not `afterInteractive`: gtag is 168 KiB and ran two
+            long tasks (216 ms) inside the load window on PageSpeed's mobile
+            profile. Analytics can start after the page is usable. */}
         <Script
-          strategy="afterInteractive"
+          strategy="lazyOnload"
           src="https://www.googletagmanager.com/gtag/js?id=G-T5XG907W4R"
         />
         <Script
           id="google-analytics"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
           dangerouslySetInnerHTML={{
             __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-T5XG907W4R');`,
           }}

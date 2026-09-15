@@ -258,7 +258,16 @@ server.addHook('preHandler', async (request, reply) => {
     '/api/auth/verify-email',
   ]
 
+  // Exact-match public endpoints (no prefix matching: `/api/billing/plans` must
+  // not open `/api/billing/plans/...` or anything else under billing).
+  // The plan list is public by design — `usePlans()` is deliberately not
+  // auth-gated so the landing page can quote the same prices `/billing` shows.
+  // Without this entry every visitor's pricing section got a 401 and no price.
+  const exactPublicPaths = ['/api/billing/plans']
+  const path = url.split('?')[0]
+
   if (publicPaths.some((p) => url.startsWith(p))) return
+  if (path !== undefined && exactPublicPaths.includes(path)) return
   if (request.method === 'OPTIONS') return
 
   await authenticate(request, reply)

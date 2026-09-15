@@ -72,7 +72,7 @@ export const BrandMark = memo(function BrandMark({
     return (
       <div
         className={cn(
-          'flex shrink-0 items-center justify-center rounded-lg bg-[var(--gradient-brand)]',
+          'flex shrink-0 items-center justify-center rounded-lg bg-[image:var(--gradient-brand)]',
           className ?? 'size-8',
         )}
       >
