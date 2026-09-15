@@ -20,9 +20,11 @@ function loadAnalytics() {
       .catch(() => {})
   }
 
-  // First engagement, or 12 s — not "idle within 3 s". PostHog's bundle was
-  // parsed and run inside PageSpeed's load window on every public page.
-  const events = ['pointerdown', 'keydown', 'scroll', 'touchstart'] as const
+  // First real engagement only — no timer, no `scroll`. Both an "idle within
+  // 3 s" start and a 12 s fallback ran PostHog (autocapture on) inside
+  // PageSpeed's slow-4G trace: TBT went from 0.56 s to 6.1 s. Layout changes
+  // fire scroll events by themselves, so scroll is not proof of a person.
+  const events = ['pointerdown', 'keydown', 'touchstart', 'wheel'] as const
   let started = false
   const start = () => {
     if (started) return
@@ -31,7 +33,6 @@ function loadAnalytics() {
     load()
   }
   events.forEach((e) => window.addEventListener(e, start, { once: true, passive: true }))
-  window.setTimeout(start, 12000)
 }
 
 // ─── Adaptive UI Initializer ──────────────────────────────────────────────

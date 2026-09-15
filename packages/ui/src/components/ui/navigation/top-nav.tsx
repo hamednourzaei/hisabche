@@ -242,6 +242,10 @@ export const TopNav = memo(function TopNav({
             strongest link in the header. It is smaller on mobile, not absent. */}
         <Link
           href={routePrefix || '/'}
+          // The logo points at the page it sits on (the landing). Prefetching it
+          // downloaded the page's own RSC payload again during load — 88 KiB on
+          // PageSpeed's mobile run.
+          prefetch={false}
           className="flex items-center gap-1 text-[hsl(var(--fg-primary))] font-bold text-base lg:text-lg shrink-0"
         >
           <span>{displayName}</span>

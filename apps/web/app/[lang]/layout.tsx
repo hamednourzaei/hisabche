@@ -376,13 +376,14 @@ export default async function RootLayout({
             thread inside PageSpeed's window. The queue (`dataLayer` + `gtag`)
             is defined immediately, so every `gtag(...)` call — including the
             route page views — is kept and sent once the library arrives: on
-            the first scroll / tap / key press, or after 12 s. Trade-off: a
-            visitor who leaves within 12 s without touching the page is not
-            counted. */}
+            the first tap / click / key press / wheel. NO TIMER: a 12 s
+            fallback fired inside Lighthouse's slow-4G trace and put TBT back
+            at 6 s. NO `scroll`: layout changes fire scroll events on their own.
+            Trade-off: a visitor who never touches the page is not counted. */}
         <script
           id="google-analytics"
           dangerouslySetInnerHTML={{
-            __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-T5XG907W4R');(function(){var done=false,ev=['pointerdown','keydown','scroll','touchstart'];function load(){if(done)return;done=true;ev.forEach(function(e){removeEventListener(e,load)});var s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id=G-T5XG907W4R';document.head.appendChild(s)}ev.forEach(function(e){addEventListener(e,load,{once:true,passive:true})});setTimeout(load,12000)})();`,
+            __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-T5XG907W4R');(function(){var done=false,ev=['pointerdown','keydown','touchstart','wheel'];function load(){if(done)return;done=true;ev.forEach(function(e){removeEventListener(e,load)});var s=document.createElement('script');s.async=true;s.src='https://www.googletagmanager.com/gtag/js?id=G-T5XG907W4R';document.head.appendChild(s)}ev.forEach(function(e){addEventListener(e,load,{once:true,passive:true})})})();`,
           }}
         />
         <ClientErrorBoundary>
