@@ -3,7 +3,7 @@ import type { MetadataRoute } from 'next'
 import { SITE_URL } from './[lang]/i18n-config'
 
 /**
- * Two things this file must get right, both of which it previously got wrong:
+ * Two things this file must get right, both of which it previously got wrong
  *
  * 1. `/_next/` must NOT be disallowed. Those are the JS and CSS chunks the page
  *    needs to render. Blocking them means any crawler outside the two
