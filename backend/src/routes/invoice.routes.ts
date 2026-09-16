@@ -18,6 +18,7 @@ import { requireWorkspaceContext } from '../middleware/workspace.middleware'
 import { resolveBranchContext } from '../middleware/branch.middleware'
 import { BaseError } from '../errors/base.error'
 import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
+import { invalidateMoneyCaches } from '../utils/money-cache'
 
 const invoiceService = new InvoiceService()
 const invoiceRelatedService = new InvoiceRelatedService()
@@ -217,10 +218,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
         }
 
         // ✅ FIX: Invalidate all related caches
-        await clearCache(`invoices:${workspaceId}:*`)
-        await clearCache(`dashboard:v2:${workspaceId}`)
-        await clearCache(`sales:${workspaceId}:*`)
-        await clearCache(`insights:${workspaceId}`)
+        await invalidateMoneyCaches(workspaceId)
 
         // ⚠️ FIX (duplicate activity): this route used to create a SECOND
         // activity record for an invoice that `invoiceService.create` had
@@ -274,8 +272,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
               : null,
           batchSize: typeof body.batchSize === 'number' ? body.batchSize : undefined,
         })
-        await clearCache(`invoices:${workspaceId}:*`)
-        await clearCache(`dashboard:v2:${workspaceId}`)
+        await invalidateMoneyCaches(workspaceId)
         return reply.send(summary)
       } catch (err) {
         fastify.log.error(err)
@@ -298,8 +295,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
         const { id } = request.params as { id: string }
         const { workspaceId } = request.tenancy
         const result = await invoiceService.postToLedger(id, request.tenancy)
-        await clearCache(`invoice:${workspaceId}:${id}`)
-        await clearCache(`invoices:${workspaceId}:*`)
+        await invalidateMoneyCaches(workspaceId)
         return reply.send(result)
       } catch (err) {
         fastify.log.error(err)
@@ -324,11 +320,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
         const invoice = await invoiceService.update(id, request.tenancy, body)
 
         // ✅ FIX: Invalidate all related caches
-        await clearCache(`invoice:${workspaceId}:${id}`)
-        await clearCache(`invoices:${workspaceId}:*`)
-        await clearCache(`dashboard:v2:${workspaceId}`)
-        await clearCache(`sales:${workspaceId}:*`)
-        await clearCache(`insights:${workspaceId}`)
+        await invalidateMoneyCaches(workspaceId)
 
         // ✅ FIX: Create activity record
         try {
@@ -388,11 +380,7 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
         await invoiceService.delete(id, request.tenancy, { override })
 
         // ✅ FIX: Invalidate all related caches
-        await clearCache(`invoice:${workspaceId}:${id}`)
-        await clearCache(`invoices:${workspaceId}:*`)
-        await clearCache(`dashboard:v2:${workspaceId}`)
-        await clearCache(`sales:${workspaceId}:*`)
-        await clearCache(`insights:${workspaceId}`)
+        await invalidateMoneyCaches(workspaceId)
 
         // ✅ FIX: Create activity record
         try {

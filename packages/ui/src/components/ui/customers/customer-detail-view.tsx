@@ -1,254 +1,588 @@
 'use client'
 
+// ============================================
+// Customer 360 — view. Presentational only; every figure arrives from the
+// container, which gets it from the server (see customer-detail-container.tsx).
+//
+// Layout: identity + actions → the money picture (net balance, receivable,
+// overdue, sales, receipts, open invoices) → what is owed by due date and by
+// age → tabs: statement with running balance, invoices, payments.
+// ============================================
+
+import { useTranslations } from 'next-intl'
+import {
+  AlertTriangle,
+  ChevronRight,
+  DollarSign,
+  Download,
+  FilePlus2,
+  FileText,
+} from 'lucide-react'
+import type { PartyLedger, PartySummary, PaymentRecord } from '@hisabche/api'
+import { CURRENCY_SIGN, formatMoney, formatNumber, type KnownCurrency } from '@hisabche/formatting'
+
 import { cn } from '../../../lib/utils'
-import { ChevronRight, DollarSign, Download, FileText } from 'lucide-react'
-import { PaymentModal } from './PaymentModal'
 import { GHOST_ICON_BUTTON } from '../button-classes'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../tabs'
+import { PaymentModal } from './PaymentModal'
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   CustomerDetailView v3 — Hisabche Design Language
-   ✅ Light mode fixed — all backgrounds visible
-   ✅ Zero hardcoded colors — all tokens from design system
-   ✅ No external component dependencies
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-interface InvoiceRecord {
+export interface CustomerInvoiceRow {
   id: string
   invoiceNumber: string
+  type: 'sale' | 'purchase'
+  status: string
+  date: string
+  dueDate: string
   total: number
   paidAmount: number
-  remaining: number
-  date: string
-  status: string
+  currency: string
 }
 
-interface CustomerInfo {
+interface ModalInvoice {
   id: string
-  name: string
-  phone?: string
+  invoiceNumber?: string
+  total: number
+  paidAmount: number
+  date: string
+  status: string
+  customerId: string
 }
 
 export interface CustomerDetailViewProps {
-  t: (key: string, fallback?: string) => string
-  fmt: (v: number) => string
-  customer: CustomerInfo | null
-  openInvoices: InvoiceRecord[]
-  totalDebt: number
+  locale: string
+  formatDate: (value: string | null) => string
+  customer: { id: string; name: string; phone: string; email: string; address: string } | null
+  customerLoading: boolean
+  summary: PartySummary | null
+  summaryError: boolean
+  ledger: PartyLedger | null
+  ledgerLoading: boolean
+  invoices: CustomerInvoiceRow[]
+  invoicesTotal: number
+  invoicePage: number
+  invoicePageSize: number
+  onInvoicePage: (page: number) => void
+  payments: PaymentRecord[]
+  openInvoices: ModalInvoice[]
   payOpen: boolean
   onBack: () => void
+  onRetry: () => void
   onOpenPayment: () => void
   onClosePayment: () => void
   onPaymentSuccess: () => void
-  /** Omit to hide the export action entirely (e.g. a renderer with no download). */
-  onExport?: (() => void) | undefined
-  /** False when the statement is still loading or has nothing to write. */
-  canExport?: boolean | undefined
+  onNewInvoice: () => void
+  onOpenInvoice: (id: string) => void
+  onExport: () => void
 }
 
-const outlineBtn =
-  'inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium border border-[hsl(var(--border-default))] text-[hsl(var(--fg-secondary))] hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] transition-colors duration-150 motion-reduce:transition-none'
-const primaryBtn =
-  'inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold text-white bg-[hsl(var(--color-primary))] shadow-sm shadow-[hsl(var(--color-primary)/0.15)] transition-all duration-200 hover:brightness-110 active:scale-[0.98] motion-reduce:transition-none'
-const cardBase =
+const card =
   'rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-elevated))] shadow-sm'
+const outlineBtn =
+  'inline-flex min-h-10 items-center justify-center gap-1.5 rounded-full border border-[hsl(var(--border-default))] px-4 text-sm font-medium text-[hsl(var(--fg-secondary))] transition-colors hover:bg-[hsl(var(--surface-muted))] hover:text-[hsl(var(--fg-primary))] disabled:opacity-50'
+const primaryBtn =
+  'inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-[hsl(var(--color-primary))] px-5 text-sm font-bold text-[hsl(var(--color-primary-fg))] shadow-sm transition hover:brightness-110'
+const th = 'px-3 py-2 text-start text-xs font-medium text-[hsl(var(--fg-tertiary))]'
+const td = 'px-3 py-2.5 text-sm text-[hsl(var(--fg-primary))]'
 
-export function CustomerDetailView({
-  t,
-  fmt,
-  customer,
-  openInvoices,
-  totalDebt,
-  payOpen,
-  onBack,
-  onOpenPayment,
-  onClosePayment,
-  onPaymentSuccess,
-  onExport,
-  canExport = true,
-}: CustomerDetailViewProps) {
+// Statuses with a label under customer360.status (desktop's next-intl shim has no `t.has`).
+const KNOWN_STATUS = new Set(['paid', 'pending', 'completed', 'cancelled', 'draft'])
+
+function isKnown(currency: string): currency is KnownCurrency {
+  return currency in CURRENCY_SIGN
+}
+
+export function CustomerDetailView(props: CustomerDetailViewProps) {
+  const t = useTranslations('customer360')
+  const tc = useTranslations()
+  const { customer, summary, locale } = props
+
+  // One currency → show it; several → numbers only, with the notice below.
+  const summaryCurrency = summary?.currencies.length === 1 ? (summary.currencies[0] ?? '') : ''
+  const money = (value: number, currency = summaryCurrency) =>
+    isKnown(currency)
+      ? formatMoney(value, currency, locale)
+      : `${formatNumber(value, locale, 2)}${currency ? ` ${currency}` : ''}`
+
   if (!customer) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-12 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[hsl(var(--surface-muted))]">
+        <div className="flex size-16 items-center justify-center rounded-2xl bg-[hsl(var(--surface-muted))]">
           <FileText className="size-7 text-[hsl(var(--fg-tertiary))]" aria-hidden="true" />
         </div>
-        <div className="space-y-1">
-          <p className="font-semibold text-[hsl(var(--fg-primary))]">{t('customers.notFound')}</p>
-          <p className="text-sm text-[hsl(var(--fg-secondary))]">
-            {t('customers.notFoundDesc', 'مشتری مورد نظر یافت نشد')}
-          </p>
-        </div>
-        <button type="button" onClick={onBack} className={outlineBtn}>
-          {t('common.back')}
+        <p className="font-semibold text-[hsl(var(--fg-primary))]">
+          {props.customerLoading ? tc('common.loading') : tc('customers.notFound')}
+        </p>
+        <button type="button" onClick={props.onBack} className={outlineBtn}>
+          {tc('common.back')}
         </button>
       </div>
     )
   }
 
-  const paymentCustomer = {
-    id: customer.id,
-    fullName: customer.name,
-    name: customer.name,
-    phone: customer.phone || '',
-  }
+  const net = summary?.netBalance ?? 0
+  const netLabel = net > 0 ? t('netOwesUs') : net < 0 ? t('netWeOwe') : t('netSettled')
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <PaymentModal
-        open={payOpen}
-        onClose={onClosePayment}
-        onPaid={onPaymentSuccess}
-        customer={paymentCustomer}
-        openInvoices={openInvoices as any}
+        open={props.payOpen}
+        onClose={props.onClosePayment}
+        onPaid={props.onPaymentSuccess}
+        customer={{
+          id: customer.id,
+          fullName: customer.name,
+          name: customer.name,
+          phone: customer.phone,
+        }}
+        openInvoices={props.openInvoices}
       />
 
-      {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          {/* A bare chevron gave no clue where it led. The visible label names
-              the destination; it collapses to the icon alone on narrow screens
-              where the customer's name needs the room. */}
+      {/* ── Identity and actions ─────────────────────────────────────────── */}
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex min-w-0 items-start gap-3">
           <button
             type="button"
-            onClick={onBack}
-            aria-label={t('customers.backToList', 'بازگشت به طرف حساب‌ها')}
-            className={cn(GHOST_ICON_BUTTON, 'gap-1.5 rounded-full sm:px-3')}
+            onClick={props.onBack}
+            aria-label={tc('customers.backToList')}
+            className={cn(GHOST_ICON_BUTTON, 'mt-0.5 shrink-0 rounded-full')}
           >
-            <ChevronRight className="size-5 shrink-0" aria-hidden="true" />
-            <span className="hidden text-sm font-medium sm:inline">
-              {t('customers.backToList', 'بازگشت به طرف حساب‌ها')}
-            </span>
+            <ChevronRight className="size-5 ltr:rotate-180" aria-hidden="true" />
           </button>
-          <div>
-            <h1 className="text-2xl font-bold text-[hsl(var(--fg-primary))]">{customer.name}</h1>
-            {customer.phone && (
-              <p className="text-sm text-[hsl(var(--fg-secondary))]">{customer.phone}</p>
-            )}
+          <div className="min-w-0">
+            <h1 className="truncate text-2xl font-bold text-[hsl(var(--fg-primary))]">
+              {customer.name}
+            </h1>
+            <p className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm text-[hsl(var(--fg-secondary))]">
+              {customer.phone && <span dir="ltr">{customer.phone}</span>}
+              {customer.email && <span dir="ltr">{customer.email}</span>}
+              {customer.address && <span>{customer.address}</span>}
+            </p>
+            <p className="mt-1 flex flex-wrap gap-x-4 text-xs text-[hsl(var(--fg-tertiary))]">
+              <span>
+                {t('lastSale')}: {props.formatDate(summary?.lastSaleAt ?? null)}
+              </span>
+              <span>
+                {t('lastPayment')}: {props.formatDate(summary?.lastPaymentAt ?? null)}
+              </span>
+            </p>
           </div>
         </div>
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-          {onExport && (
-            <button
-              type="button"
-              onClick={onExport}
-              disabled={!canExport}
+        <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={props.onNewInvoice} className={outlineBtn}>
+            <FilePlus2 className="size-4" aria-hidden="true" />
+            {t('newInvoice')}
+          </button>
+          <button
+            type="button"
+            onClick={props.onExport}
+            disabled={!props.ledger || props.ledger.movements.length === 0}
+            className={outlineBtn}
+          >
+            <Download className="size-4" aria-hidden="true" />
+            {t('exportStatement')}
+          </button>
+          {(summary?.receivable ?? 0) > 0 && props.openInvoices.length > 0 && (
+            <button type="button" onClick={props.onOpenPayment} className={primaryBtn}>
+              <DollarSign className="size-4" aria-hidden="true" />
+              {t('recordReceipt')}
+            </button>
+          )}
+        </div>
+      </header>
+
+      {props.summaryError && (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[hsl(var(--color-destructive)/0.4)] bg-[hsl(var(--color-destructive)/0.06)] p-3 text-sm text-[hsl(var(--color-destructive))]"
+        >
+          {t('loadError')}
+          <button type="button" onClick={props.onRetry} className={outlineBtn}>
+            {t('retry')}
+          </button>
+        </div>
+      )}
+
+      {summary && summary.currencies.length > 1 && (
+        <p className="flex items-start gap-2 rounded-xl border border-[hsl(var(--color-warning)/0.4)] bg-[hsl(var(--color-warning)/0.06)] p-3 text-sm text-[hsl(var(--fg-secondary))]">
+          <AlertTriangle
+            className="mt-0.5 size-4 shrink-0 text-[hsl(var(--color-warning))]"
+            aria-hidden="true"
+          />
+          {t('mixedCurrency', { currencies: summary.currencies.join('، ') })}
+        </p>
+      )}
+
+      {/* ── The money picture ─────────────────────────────────────────────── */}
+      {summary && (
+        <section className="grid grid-cols-2 gap-3 lg:grid-cols-6">
+          <div
+            className={cn(
+              card,
+              'col-span-2 p-4',
+              net > 0 && 'border-[hsl(var(--color-destructive)/0.35)]',
+            )}
+          >
+            <p className="text-xs text-[hsl(var(--fg-secondary))]">{t('netBalance')}</p>
+            <p
               className={cn(
-                outlineBtn,
-                'w-full justify-center sm:w-auto',
-                !canExport && 'opacity-50',
+                'mt-1 text-2xl font-bold tabular-nums',
+                net > 0
+                  ? 'text-[hsl(var(--color-destructive))]'
+                  : net < 0
+                    ? 'text-[hsl(var(--color-success))]'
+                    : 'text-[hsl(var(--fg-primary))]',
               )}
             >
-              <Download className="size-4" aria-hidden="true" />
-              {t('customers.exportStatement', 'خروجی صورتحساب')}
-            </button>
+              {money(Math.abs(net))}
+            </p>
+            <p className="text-xs text-[hsl(var(--fg-tertiary))]">{netLabel}</p>
+          </div>
+          <Stat label={t('receivable')} value={money(summary.receivable)} />
+          <Stat
+            label={t('overdue')}
+            value={money(summary.overdue)}
+            tone={summary.overdue > 0 ? 'danger' : undefined}
+            hint={
+              summary.overdueInvoiceCount > 0
+                ? t('overdueInvoices', { count: summary.overdueInvoiceCount })
+                : undefined
+            }
+          />
+          <Stat label={t('totalSales')} value={money(summary.totalSales)} />
+          <Stat label={t('totalReceived')} value={money(summary.totalReceived)} />
+          {(summary.totalPurchases > 0 || summary.payable > 0) && (
+            <>
+              <Stat label={t('totalPurchases')} value={money(summary.totalPurchases)} />
+              <Stat label={t('payable')} value={money(summary.payable)} />
+            </>
           )}
-          {totalDebt > 0 && (
-            <button
-              type="button"
-              onClick={onOpenPayment}
-              className={cn(primaryBtn, 'w-full justify-center sm:w-auto')}
-            >
-              <DollarSign className="size-4" aria-hidden="true" />
-              {t('customers.recordPayment')}
-            </button>
+          <Stat
+            label={t('openInvoices')}
+            value={formatNumber(summary.openInvoiceCount, locale)}
+            hint={t('invoiceCount', { count: summary.invoiceCount })}
+          />
+          {summary.openingBalance !== 0 && (
+            <Stat label={tc('customers.openingBalance')} value={money(summary.openingBalance)} />
           )}
-        </div>
-      </div>
+        </section>
+      )}
 
-      {/* Total Debt Card */}
-      <div
-        className={cn(
-          cardBase,
-          'bg-gradient-to-br from-[hsl(var(--color-destructive)/0.12)] to-[hsl(var(--color-destructive)/0.03)]',
-        )}
-      >
-        <div className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+      {/* ── What is owed: by due date and by age ─────────────────────────── */}
+      {summary && summary.receivable > 0 && (
+        <section className={cn(card, 'grid gap-5 p-4 md:grid-cols-2')}>
           <div>
-            <p className="text-xs font-medium text-[hsl(var(--fg-secondary))]">
-              {t('customers.totalDebt')}
-            </p>
-            <p className="text-3xl font-bold tabular-nums text-[hsl(var(--color-destructive))]">
-              {fmt(totalDebt)} AFN
-            </p>
+            <h2 className="mb-3 text-sm font-semibold text-[hsl(var(--fg-primary))]">
+              {t('receivable')}
+            </h2>
+            <dl className="space-y-2 text-sm">
+              <Row label={t('overdue')} value={money(summary.overdue)} tone="danger" />
+              <Row label={t('dueToday')} value={money(summary.dueToday)} tone="warning" />
+              <Row label={t('dueLater')} value={money(summary.dueLater)} />
+            </dl>
           </div>
-          <div className="flex gap-3 text-xs text-[hsl(var(--fg-secondary))]">
-            <span>{t('customers.openInvoicesCount', `${openInvoices.length} فاکتور باز`)}</span>
+          <div>
+            <h2 className="mb-3 text-sm font-semibold text-[hsl(var(--fg-primary))]">
+              {t('aging')}
+            </h2>
+            <dl className="space-y-2 text-sm">
+              <Row label={t('agingCurrent')} value={money(summary.aging.current)} />
+              <Row label={t('aging1to30')} value={money(summary.aging.days1to30)} tone="warning" />
+              <Row label={t('aging31to60')} value={money(summary.aging.days31to60)} tone="danger" />
+              <Row label={t('aging61to90')} value={money(summary.aging.days61to90)} tone="danger" />
+              <Row label={t('agingOver90')} value={money(summary.aging.over90)} tone="danger" />
+            </dl>
           </div>
-        </div>
-      </div>
+        </section>
+      )}
 
-      {/* Open Invoices */}
-      <div className={cardBase}>
-        <div className="p-5">
-          <h2 className="mb-4 text-lg font-semibold text-[hsl(var(--fg-primary))]">
-            {t('customers.openDealsTitle')}
-          </h2>
+      {/* ── Statement / invoices / payments ─────────────────────────────── */}
+      <Tabs defaultValue="statement" className={cn(card, 'p-3 sm:p-4')}>
+        <TabsList className="mb-3">
+          <TabsTrigger value="statement">{t('tabStatement')}</TabsTrigger>
+          <TabsTrigger value="invoices">{t('tabSales')}</TabsTrigger>
+          <TabsTrigger value="payments">{t('tabPayments')}</TabsTrigger>
+        </TabsList>
 
-          {openInvoices.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[hsl(var(--border-default))] bg-[hsl(var(--color-success)/0.08)]">
-                <FileText className="size-6 text-[hsl(var(--color-success))]" aria-hidden="true" />
-              </div>
-              <p className="text-sm text-[hsl(var(--fg-secondary))]">
-                {t('customers.noOpenDeals')}
-              </p>
-            </div>
+        <TabsContent value="statement">
+          <Statement {...props} money={money} />
+        </TabsContent>
+
+        <TabsContent value="invoices">
+          <InvoicesTable {...props} money={money} />
+        </TabsContent>
+
+        <TabsContent value="payments">
+          {props.payments.length === 0 ? (
+            <Empty text={t('noPayments')} />
           ) : (
-            <div className="space-y-3">
-              {openInvoices.map((inv) => (
-                <div
-                  key={inv.id}
-                  className="flex flex-col gap-2 rounded-xl border border-[hsl(var(--border-default))] bg-[hsl(var(--surface-base))] p-4 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[hsl(var(--color-destructive)/0.1)]">
-                      <FileText
-                        className="size-4 text-[hsl(var(--color-destructive))]"
-                        aria-hidden="true"
-                      />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-[hsl(var(--fg-primary))]">
-                        #{inv.invoiceNumber}
-                      </p>
-                      <p className="text-xs text-[hsl(var(--fg-secondary))]">{inv.date}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between gap-3 sm:text-end">
-                    <div>
-                      <p className="font-bold tabular-nums text-[hsl(var(--color-destructive))]">
-                        {fmt(inv.remaining)} AFN
-                      </p>
-                      <p className="text-xs text-[hsl(var(--fg-secondary))]">
-                        {t(
-                          'customers.ofPaid',
-                          `از ${fmt(inv.total)} مبلغ ${fmt(inv.paidAmount)} پرداخت شده`,
-                        )}
-                      </p>
-                    </div>
-                    {inv.remaining > 0 && (
-                      <button
-                        type="button"
-                        onClick={onOpenPayment}
-                        aria-label={t(
-                          'customers.payInvoice',
-                          `پرداخت فاکتور #${inv.invoiceNumber}`,
-                        )}
-                        className={GHOST_ICON_BUTTON}
-                      >
-                        <DollarSign
-                          className="size-4 text-[hsl(var(--color-success))]"
-                          aria-hidden="true"
-                        />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[36rem] text-sm">
+                <thead>
+                  <tr className="border-b border-[hsl(var(--border-default))]">
+                    <th className={th}>{t('colDate')}</th>
+                    <th className={th}>{t('colReference')}</th>
+                    <th className={th}>{t('colType')}</th>
+                    <th className={th}>{t('colMethod')}</th>
+                    <th className={cn(th, 'text-end')}>{t('colTotal')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {props.payments.map((payment) => (
+                    <tr
+                      key={payment.id}
+                      className="border-b border-[hsl(var(--border-default)/0.6)]"
+                    >
+                      <td className={td}>{props.formatDate(payment.entryDate)}</td>
+                      <td className={td}>{payment.paymentNumber ?? '—'}</td>
+                      <td className={td}>
+                        {t(`kind.${payment.direction === 'in' ? 'payment_in' : 'payment_out'}`)}
+                      </td>
+                      <td className={td}>{payment.method}</td>
+                      <td className={cn(td, 'text-end tabular-nums')}>
+                        {money(payment.amount, payment.currency)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
-        </div>
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   )
+}
+
+type Money = (value: number, currency?: string) => string
+
+function Statement(props: CustomerDetailViewProps & { money: Money }) {
+  const t = useTranslations('customer360')
+  const tc = useTranslations()
+  const { ledger } = props
+  if (props.ledgerLoading) return <Empty text={tc('common.loading')} />
+  if (!ledger || ledger.movements.length === 0) return <Empty text={t('statementEmpty')} />
+
+  // Newest first on screen; the running balance is the server's, after each row.
+  const rows = [...ledger.movements].reverse()
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[40rem] text-sm">
+        <thead>
+          <tr className="border-b border-[hsl(var(--border-default))]">
+            <th className={th}>{t('colDate')}</th>
+            <th className={th}>{t('colType')}</th>
+            <th className={th}>{t('colReference')}</th>
+            <th className={cn(th, 'text-end')}>{t('colDebit')}</th>
+            <th className={cn(th, 'text-end')}>{t('colCredit')}</th>
+            <th className={cn(th, 'text-end')}>{t('colBalance')}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, index) => {
+            // Debit raises what they owe us (a sale, or money we paid out).
+            const debit = row.kind === 'sale' || row.kind === 'payment_out'
+            const clickable = row.sourceType === 'invoice' && row.sourceId
+            return (
+              <tr
+                key={`${row.sourceId ?? row.reference}-${index}`}
+                className="border-b border-[hsl(var(--border-default)/0.6)]"
+              >
+                <td className={td}>{props.formatDate(row.date)}</td>
+                <td className={td}>{t(`kind.${row.kind}`)}</td>
+                <td className={td}>
+                  {clickable ? (
+                    <button
+                      type="button"
+                      onClick={() => props.onOpenInvoice(row.sourceId!)}
+                      className="font-medium text-[hsl(var(--color-primary))] hover:underline"
+                    >
+                      {row.reference}
+                    </button>
+                  ) : (
+                    row.reference
+                  )}
+                </td>
+                <td className={cn(td, 'text-end tabular-nums')}>
+                  {debit ? props.money(row.amount, row.currency) : '—'}
+                </td>
+                <td className={cn(td, 'text-end tabular-nums')}>
+                  {debit ? '—' : props.money(row.amount, row.currency)}
+                </td>
+                <td
+                  className={cn(
+                    td,
+                    'text-end font-medium tabular-nums',
+                    row.balance > 0 && 'text-[hsl(var(--color-destructive))]',
+                  )}
+                >
+                  {props.money(row.balance)}
+                </td>
+              </tr>
+            )
+          })}
+          {ledger.openingBalance !== 0 && (
+            <tr>
+              <td className={td} colSpan={5}>
+                {tc('customers.openingBalance')}
+              </td>
+              <td className={cn(td, 'text-end tabular-nums')}>
+                {props.money(ledger.openingBalance)}
+              </td>
+            </tr>
+          )}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
+function InvoicesTable(props: CustomerDetailViewProps & { money: Money }) {
+  const t = useTranslations('customer360')
+  if (props.invoices.length === 0) return <Empty text={t('noInvoices')} />
+  const pages = Math.max(1, Math.ceil(props.invoicesTotal / props.invoicePageSize))
+  return (
+    <div className="space-y-3">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[44rem] text-sm">
+          <thead>
+            <tr className="border-b border-[hsl(var(--border-default))]">
+              <th className={th}>{t('colReference')}</th>
+              <th className={th}>{t('colDate')}</th>
+              <th className={th}>{t('colDue')}</th>
+              <th className={th}>{t('colStatus')}</th>
+              <th className={cn(th, 'text-end')}>{t('colTotal')}</th>
+              <th className={cn(th, 'text-end')}>{t('colPaid')}</th>
+              <th className={cn(th, 'text-end')}>{t('colRemaining')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {props.invoices.map((invoice) => {
+              const remaining = Math.max(0, invoice.total - invoice.paidAmount)
+              return (
+                <tr
+                  key={invoice.id}
+                  onClick={() => props.onOpenInvoice(invoice.id)}
+                  className="cursor-pointer border-b border-[hsl(var(--border-default)/0.6)] hover:bg-[hsl(var(--surface-muted)/0.5)]"
+                >
+                  <td className={cn(td, 'font-medium text-[hsl(var(--color-primary))]')}>
+                    {t(`kind.${invoice.type}`)} #{invoice.invoiceNumber}
+                  </td>
+                  <td className={td}>{props.formatDate(invoice.date)}</td>
+                  <td className={td}>
+                    {invoice.dueDate ? props.formatDate(invoice.dueDate) : '—'}
+                  </td>
+                  <td className={td}>
+                    {KNOWN_STATUS.has(invoice.status)
+                      ? t(`status.${invoice.status}`)
+                      : invoice.status}
+                  </td>
+                  <td className={cn(td, 'text-end tabular-nums')}>
+                    {props.money(invoice.total, invoice.currency)}
+                  </td>
+                  <td className={cn(td, 'text-end tabular-nums')}>
+                    {props.money(invoice.paidAmount, invoice.currency)}
+                  </td>
+                  <td
+                    className={cn(
+                      td,
+                      'text-end font-medium tabular-nums',
+                      remaining > 0 && 'text-[hsl(var(--color-destructive))]',
+                    )}
+                  >
+                    {props.money(remaining, invoice.currency)}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+      {pages > 1 && (
+        <div className="flex items-center justify-between gap-2 text-sm">
+          <button
+            type="button"
+            disabled={props.invoicePage <= 1}
+            onClick={() => props.onInvoicePage(props.invoicePage - 1)}
+            className={outlineBtn}
+          >
+            {t('previous')}
+          </button>
+          <span className="text-[hsl(var(--fg-secondary))]">
+            {t('pageOf', { page: props.invoicePage, pages })}
+          </span>
+          <button
+            type="button"
+            disabled={props.invoicePage >= pages}
+            onClick={() => props.onInvoicePage(props.invoicePage + 1)}
+            className={outlineBtn}
+          >
+            {t('next')}
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function Stat({
+  label,
+  value,
+  hint,
+  tone,
+}: {
+  label: string
+  value: string
+  hint?: string | undefined
+  tone?: 'danger' | undefined
+}) {
+  return (
+    <div className={cn(card, 'p-4')}>
+      <p className="text-xs text-[hsl(var(--fg-secondary))]">{label}</p>
+      <p
+        className={cn(
+          'mt-1 text-lg font-bold tabular-nums',
+          tone === 'danger'
+            ? 'text-[hsl(var(--color-destructive))]'
+            : 'text-[hsl(var(--fg-primary))]',
+        )}
+      >
+        {value}
+      </p>
+      {hint && <p className="text-xs text-[hsl(var(--fg-tertiary))]">{hint}</p>}
+    </div>
+  )
+}
+
+function Row({
+  label,
+  value,
+  tone,
+}: {
+  label: string
+  value: string
+  tone?: 'danger' | 'warning'
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-b border-[hsl(var(--border-default)/0.5)] pb-2 last:border-0">
+      <dt className="flex items-center gap-2 text-[hsl(var(--fg-secondary))]">
+        <span
+          aria-hidden="true"
+          className={cn(
+            'size-2 rounded-full',
+            tone === 'danger'
+              ? 'bg-[hsl(var(--color-destructive))]'
+              : tone === 'warning'
+                ? 'bg-[hsl(var(--color-warning))]'
+                : 'bg-[hsl(var(--color-success))]',
+          )}
+        />
+        {label}
+      </dt>
+      <dd className="font-medium tabular-nums text-[hsl(var(--fg-primary))]">{value}</dd>
+    </div>
+  )
+}
+
+function Empty({ text }: { text: string }) {
+  return <p className="py-10 text-center text-sm text-[hsl(var(--fg-secondary))]">{text}</p>
 }

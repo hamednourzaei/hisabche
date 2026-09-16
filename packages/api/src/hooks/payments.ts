@@ -66,11 +66,18 @@ export interface PaymentRecord {
   unallocated?: number
 }
 
+/**
+ * Shape of GET /payments/open-invoices/:partyType/:partyId — the server's
+ * `OpenInvoice` plus `outstanding` (payments.service#getOpenInvoices).
+ * This type used to declare `id` / `date`, which the server never sends; it
+ * had no consumer until Customer 360, so nothing noticed.
+ */
 export interface OpenInvoice {
-  id: string
+  invoiceId: string
   invoiceNumber: string
-  date: string
-  dueDate: string | null
+  invoiceDate: string
+  /** Falls back to the invoice date on the server when unset. */
+  dueDate: string
   total: number
   allocated: number
   outstanding: number
@@ -82,6 +89,68 @@ export const paymentKeys = {
   list: (filters: Record<string, unknown> = {}) => [...paymentKeys.lists(), filters] as const,
   openInvoices: (partyType: string, partyId?: string) =>
     [...paymentKeys.all, 'open-invoices', partyType, partyId] as const,
+  // Under `payments` on purpose: recording or cancelling a payment invalidates
+  // `paymentKeys.all`, so the party page refreshes with it.
+  summary: (partyType: string, partyId?: string) =>
+    [...paymentKeys.all, 'summary', partyType, partyId] as const,
+  ledger: (partyType: string, partyId?: string) =>
+    [...paymentKeys.all, 'ledger', partyType, partyId] as const,
+}
+
+export interface AgingBuckets {
+  current: number
+  days1to30: number
+  days31to60: number
+  days61to90: number
+  over90: number
+  total: number
+}
+
+/** Authoritative money figures for one party (GET /payments/summary/...). */
+export interface PartySummary {
+  asOf: string
+  totalSales: number
+  totalPurchases: number
+  totalReceived: number
+  totalPaid: number
+  /** customers.opening_balance; already included in receivable/netBalance. */
+  openingBalance: number
+  receivable: number
+  payable: number
+  /** Positive: they owe us. */
+  netBalance: number
+  overdue: number
+  dueToday: number
+  dueLater: number
+  aging: AgingBuckets
+  invoiceCount: number
+  openInvoiceCount: number
+  overdueInvoiceCount: number
+  lastSaleAt: string | null
+  lastPaymentAt: string | null
+  currencies: string[]
+}
+
+export interface PartyLedgerRow {
+  date: string
+  kind: 'sale' | 'purchase' | 'payment_in' | 'payment_out' | 'return'
+  amount: number
+  reference: string
+  /** Running balance after this row. Positive: they owe us. */
+  balance: number
+  sourceType?: 'invoice' | 'payment'
+  sourceId?: string
+  currency?: string
+  method?: string
+}
+
+export interface PartyLedger {
+  partyType: PaymentPartyType
+  partyId: string
+  /** The running balance starts from this. */
+  openingBalance: number
+  movements: PartyLedgerRow[]
+  balance: number
 }
 
 /**
@@ -107,6 +176,28 @@ export function usePayments(
       unwrap<PaymentRecord[]>(await apiClient.get('/payments', { params: filters })),
     enabled: authReady,
     staleTime: 1000 * 30,
+  })
+}
+
+/** Customer 360: totals, receivable/payable, overdue and aging — computed on the server. */
+export function usePartySummary(partyType: PaymentPartyType, partyId?: string) {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: paymentKeys.summary(partyType, partyId),
+    queryFn: async () =>
+      unwrap<PartySummary>(await apiClient.get(`/payments/summary/${partyType}/${partyId}`)),
+    enabled: authReady && !!partyId,
+  })
+}
+
+/** Every invoice and payment of the party with a running balance, oldest first. */
+export function usePartyLedger(partyType: PaymentPartyType, partyId?: string) {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: paymentKeys.ledger(partyType, partyId),
+    queryFn: async () =>
+      unwrap<PartyLedger>(await apiClient.get(`/payments/ledger/${partyType}/${partyId}`)),
+    enabled: authReady && !!partyId,
   })
 }
 

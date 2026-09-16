@@ -14,6 +14,25 @@ import type { TenancyContext } from '../tenancy.service'
 
 import type { AllocationRequest, OpenInvoice, PartyType, PaymentDirection } from './payments.domain'
 
+const PAGE = 1000
+
+/** Reads a query page by page until a short page; stops on the first error. */
+async function readAll(
+  label: string,
+  page: (
+    from: number,
+    to: number,
+  ) => PromiseLike<{ data: Record<string, any>[] | null; error: { message: string } | null }>,
+): Promise<Record<string, any>[]> {
+  const rows: Record<string, any>[] = []
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await page(from, from + PAGE - 1)
+    if (error) throw new DatabaseError(`Failed to fetch ${label}`, error)
+    rows.push(...(data ?? []))
+    if (!data || data.length < PAGE) return rows
+  }
+}
+
 export interface PaymentRow {
   id: string
   paymentNumber: string | null
@@ -317,30 +336,57 @@ export class PaymentsRepository {
   }
 
   /** Movements that make up a party's ledger: their invoices and payments. */
+  /**
+   * Every invoice and posted payment of one party — ALL of them.
+   *
+   * ⚠️ PAGED, NOT `.limit(1000)`. The statement used to read the first 1000
+   * rows and build a running balance from them: a party past that point got a
+   * wrong closing balance with no error (CLAUDE.md pattern 4). Pages of 1000
+   * are read until one comes back short.
+   *
+   * ⚠️ Cancelled invoices are excluded: a cancelled bill is not debt.
+   */
   async partyMovements(workspaceId: string, partyType: PartyType, partyId: string) {
     const partyColumn = partyType === 'customer' ? 'customer_id' : 'supplier_id'
 
     const [invoices, payments] = await Promise.all([
-      supabase
-        .from('invoices')
-        .select('id, invoice_number, type, total, date')
-        .eq('workspace_id', workspaceId)
-        .eq(partyColumn, partyId)
-        .order('date', { ascending: true })
-        .limit(1000),
-      supabase
-        .from('payments')
-        .select('id, payment_number, direction, amount, entry_date')
-        .eq('workspace_id', workspaceId)
-        .eq('party_id', partyId)
-        .eq('status', 'posted')
-        .order('entry_date', { ascending: true })
-        .limit(1000),
+      readAll('party invoices', (from, to) =>
+        supabase
+          .from('invoices')
+          .select('id, invoice_number, type, status, total, paid_amount, date, due_date, currency')
+          .eq('workspace_id', workspaceId)
+          .eq(partyColumn, partyId)
+          .neq('status', 'cancelled')
+          .order('date', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, to),
+      ),
+      readAll('party payments', (from, to) =>
+        supabase
+          .from('payments')
+          .select('id, payment_number, direction, amount, entry_date, currency, method, reference')
+          .eq('workspace_id', workspaceId)
+          .eq('party_id', partyId)
+          .eq('status', 'posted')
+          .order('entry_date', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, to),
+      ),
     ])
 
-    if (invoices.error) throw new DatabaseError('Failed to fetch party invoices', invoices.error)
-    if (payments.error) throw new DatabaseError('Failed to fetch party payments', payments.error)
+    // Only customers carry an opening balance (customers.opening_balance).
+    let openingBalance = 0
+    if (partyType === 'customer') {
+      const { data, error } = await supabase
+        .from('customers')
+        .select('opening_balance')
+        .eq('workspace_id', workspaceId)
+        .eq('id', partyId)
+        .maybeSingle()
+      if (error) throw new DatabaseError('Failed to fetch opening balance', error)
+      openingBalance = Number(data?.opening_balance) || 0
+    }
 
-    return { invoices: invoices.data ?? [], payments: payments.data ?? [] }
+    return { invoices, payments, openingBalance }
   }
 }

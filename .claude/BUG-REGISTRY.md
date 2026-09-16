@@ -96,7 +96,30 @@
 - **تست:** `invoice-oversold-warning.test.ts` (6) · `exhausted-stock.test.ts` به‌روز شد · ui 743 ✅ · tsc ui/api ✅
 - **مرورگر:** ❌ انجام نشد — نیازمند ورود کاربر.
 
+## BUG-008 — بعد از پرداخت کامل، صفحه‌ی فاکتور هنوز «باقی‌مانده ۳٬۰۰۰٬۰۰۰» نشان می‌داد
+
+- **وضعیت:** 🟡 کد + تست؛ منتظر انتشار backend
+- **الگو:** «کلید کش حدسی» — invalidation با شکل کلیدی که هیچ‌کس نمی‌نویسد، بی‌صدا هیچ کاری نمی‌کند.
+- **علامت:** فهرست فاکتورها «پرداخت شده» (درست)، صفحه‌ی جزئیات باقی‌مانده = کل مبلغ و «۰ ≠ ۳٬۰۰۰٬۰۰۰»؛ با هارد رفرش درست شد (کاربر تأیید کرد). دیتابیس درست بود (trigger `invoices_project_settlement`).
+- **ریشه:** `GET /api/invoices/:id` با `cacheMiddleware` به کلید `invoice:<workspace>:<url>` برای ۱۲۰ ثانیه کش می‌شد. `PaymentsService.invalidate` فقط `memoryCache` با پیشوندهای `payments/invoices/accounting` را پاک می‌کرد → لیست (`invoices:`) تازه شد، جزئیات (`invoice:` مفرد) نه. در routeهای فاکتور هم `clearCache(invoice:<ws>:<id>)`، `dashboard:v2:<ws>` و `insights:<ws>` با هیچ کلید واقعی جور نبودند؛ در customer.routes هم `customer:<id>`.
+- **رفع:** `backend/src/utils/money-cache.ts#invalidateMoneyCaches` — یک فهرست از پیشوندهای کش که عدد پولی/موجودی دارند، با شکل درست `<prefix>:<workspace>:*`، روی هر دو کش. استفاده در payments.service، invoice.routes (۵ جا)، customer.routes (۲ جا).
+- **گارد:** `backend/src/__tests__/money-cache-invalidation.test.ts` — کلید واقعی میدل‌ور را می‌نویسد و پاک شدنش را ثابت می‌کند؛ workspace دیگر دست نمی‌خورد؛ هر `keyPrefix` در routeهای پولی باید در فهرست باشد (injection-tested؛ `warehouses` را همان لحظه پیدا کرد).
+- **تست:** backend 2082 ✅ · tsc ✅
+- **HTTP واقعی:** ❌ نیازمند ورود کاربر؛ بعد از انتشار: پرداخت → صفحه‌ی فاکتور بدون رفرش.
+- **باز:** `activities:${workspaceId}:*` در invoice.routes هم با کلید user-scoped (`activities:<userId>:…`) جور نیست — پولی نیست، ثبت شد.
+
+## BUG-009 — صفحه‌ی مشتری: فقط ۵۰ مشتری و ۲۰۰ فاکتور اول، جمع در مرورگر، ارز ثابت «AFN»
+
+- **وضعیت:** 🟡 کد + تست؛ منتظر انتشار (Customer 360 فاز ۱)
+- **الگو:** ۴ (عدد بی‌صدا غلط با `limit`) + جمع مالی در frontend
+- **ریشه:** `customer-detail-container.tsx` مشتری را در `useCustomers({limit: 50})` پیدا می‌کرد (مشتری ۵۱ام «پیدا نشد»)، فاکتورها را از `useInvoices({limit: 200})` کل workspace جمع می‌زد، دنبال وضعیت ناموجود `partial` بود و همه‌ی مبالغ را «AFN» می‌نوشت (فاکتور کاربر IRR بود). `partyMovements` (صورت‌حساب) با `.limit(1000)` و بدون حذف فاکتورهای باطل.
+- **رفع:** `payments.domain#summarizeParty` + `GET /api/payments/summary/:partyType/:partyId` (بدون کش)؛ `partyMovements` صفحه‌بندی کامل + `neq('status','cancelled')` + مانده‌ی اول دوره؛ ledger با `sourceType/sourceId/currency`؛ hookهای `usePartySummary`/`usePartyLedger`؛ container/view جدید.
+- **نقص جانبی رفع‌شده:** نوع `OpenInvoice` در `packages/api` (`id`/`date`) با پاسخ واقعی سرور (`invoiceId`/`invoiceDate`) نمی‌خواند — مصرف‌کننده‌ای نداشت.
+- **تست:** backend `party-summary.test.ts` (10) · ui `customer-360.test.ts` (7) · backend 2091 ✅ · ui 743 ✅ · tsc api/ui/web/desktop ✅ · build وب ✅ · route محلی 401 بدون توکن ✅
+- **مرورگر:** ❌ نیازمند ورود کاربر.
+
 ## صف کاندیدها (هنوز بررسی نشده — فرضیه، نه باگ)
 
-| #   | کاندید | الگو |
-| --- | ------ | ---- |
+| #                | کاندید                                                                                                                                                                                        | الگو |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- |
+| C-cancelled-debt | `operational-reports.ts` (گزارش بدهی مشتریان) فاکتورها را با `.neq('status','paid')` می‌خواند → فاکتور **باطل‌شده** هم بدهی حساب می‌شود؛ view `invoice_outstanding` هم وضعیت را فیلتر نمی‌کند | ۳/۵  |

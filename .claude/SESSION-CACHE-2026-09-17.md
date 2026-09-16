@@ -17,10 +17,12 @@
 | `robots.ts` باید همه‌ی مسیرهای `(dashboard)` را disallow کند           | ۲۱ مسیر فراموش شده بود؛ SEMrush آن‌ها را crawl کرد                                                       | `robots-dashboard-routes.test.ts`                    |
 | لینک درون‌سایتی همیشه با پیشوند locale                                 | `/features/x` → 307 → زنجیره‌ی ریدایرکت + خواننده‌ی en به صفحه‌ی fa                                      | `crawlable-nav.test.ts`                              |
 | لینک به صفحه‌ی خصوصی از صفحه‌ی عمومی `rel="nofollow"`                  | دکمه‌ی «باز کردن در برنامه» در docs ربات را به داشبورد می‌برد                                            | —                                                    |
-| عنوان صفحه برند ندارد                                                  | template layout خودش `                                                                                   | حسابچه` اضافه می‌کند → برند دو بار                   | crawl |
+| عنوان صفحه برند ندارد                                                  | template layout خودش «\| حسابچه» اضافه می‌کند → برند دو بار                                              | crawl                                                |
 | هر ادعا در متن لندینگ/FAQ با کد تطبیق داده شود                         | ورود دو مرحله‌ای، بک‌آپ ۳۰ روزه، وب‌هوک، «آزمایشی ۳۰ روزه» (کد: ۷)، Starter ۹ دلار — هیچ‌کدام واقعی نبود | `landing-claims.test.ts` (روی messages هر ۳ زبان)    |
 | لیست‌های whitelist دستی کنار مصرف‌کننده گارد می‌خواهند                 | `SectionId` هنوز pain/testimonials بود → هدر با اسکرول عوض نمی‌شد                                        | `landing-i18n-keys.test.ts`                          |
 | صفحات عمومی فقط زیرمجموعه‌ی پیام‌ها را می‌گیرند                        | `FullMessagesLayout` کل ۱۶۰KB کاتالوگ را در هر صفحه‌ی legal می‌ریخت (513→373KB)                          | `public-page-message-keys.test.ts`                   |
+
+| invalidation کش فقط با `invalidateMoneyCaches` | کلید دستی `invoice:<ws>:<id>` با کلید واقعی `invoice:<ws>:<url>` جور نبود → فاکتور بعد از پرداخت ۲ دقیقه «پرداخت‌نشده» | `money-cache-invalidation.test.ts` |
 
 ## ۲. پرفورمنس لندینگ — چیزهایی که واقعاً اثر داشت
 

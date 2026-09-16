@@ -257,3 +257,137 @@ export function runningLedger(movements: LedgerMovement[]) {
     return { ...movement, balance: round2(balance) }
   })
 }
+
+// ─── Party summary (Customer 360) ────────────────────────────────────────────
+
+export interface SummaryInvoice {
+  id: string
+  type: 'sale' | 'purchase'
+  status: string
+  total: number
+  /** Projection of SUM(payment_allocations) — kept by the settlement trigger. */
+  paidAmount: number
+  invoiceDate: string
+  dueDate: string
+  currency: string
+}
+
+export interface SummaryPayment {
+  direction: PaymentDirection
+  amount: number
+  entryDate: string
+  currency: string
+}
+
+export interface PartySummary {
+  asOf: string
+  totalSales: number
+  totalPurchases: number
+  totalReceived: number
+  totalPaid: number
+  /**
+   * Balance carried in when the customer was created (customers.opening_balance;
+   * positive: they owe us). Part of `receivable` and `netBalance`, shown apart.
+   */
+  openingBalance: number
+  /** What the party still owes us: open sale invoices plus a positive opening balance. */
+  receivable: number
+  /** What we still owe the party on purchase invoices. */
+  payable: number
+  /** Positive: they owe us. Same sign convention as `partyBalance`. */
+  netBalance: number
+  overdue: number
+  dueToday: number
+  dueLater: number
+  aging: AgingBuckets
+  invoiceCount: number
+  openInvoiceCount: number
+  overdueInvoiceCount: number
+  lastSaleAt: string | null
+  lastPaymentAt: string | null
+  /** Every currency seen. More than one means the totals mix currencies. */
+  currencies: string[]
+}
+
+/**
+ * The money picture of one party, from its invoices and posted payments.
+ *
+ * ⚠️ A CANCELLED INVOICE IS NOT DEBT. It is excluded from every figure here.
+ * (`invoice_outstanding` does not filter status, so reading open amounts from
+ * it would count a cancelled bill as still owed.)
+ *
+ * Outstanding comes from `paidAmount`, the trigger-kept projection of the
+ * allocations — never from «sales − receipts», which would treat an unapplied
+ * advance as settling a specific invoice.
+ */
+export function summarizeParty(
+  invoices: SummaryInvoice[],
+  payments: SummaryPayment[],
+  asOf: string,
+  openingBalance = 0,
+): PartySummary {
+  const live = invoices.filter((invoice) => invoice.status !== 'cancelled')
+  const sales = live.filter((invoice) => invoice.type === 'sale')
+  const purchases = live.filter((invoice) => invoice.type === 'purchase')
+
+  const outstanding = (invoice: SummaryInvoice) =>
+    Math.max(0, round2(invoice.total - invoice.paidAmount))
+
+  const open = live.filter((invoice) => outstanding(invoice) > 0)
+  const openSales = sales.filter((invoice) => outstanding(invoice) > 0)
+
+  let overdue = 0
+  let dueToday = 0
+  let dueLater = 0
+  let overdueInvoiceCount = 0
+  for (const invoice of openSales) {
+    const due = daysBetween(invoice.dueDate || invoice.invoiceDate, asOf)
+    if (due > 0) {
+      overdue += outstanding(invoice)
+      overdueInvoiceCount++
+    } else if (due === 0) dueToday += outstanding(invoice)
+    else dueLater += outstanding(invoice)
+  }
+
+  const sum = (values: number[]) => round2(values.reduce((acc, value) => acc + value, 0))
+  const opening = round2(openingBalance)
+  const receivable = sum([...sales.map(outstanding), Math.max(0, opening)])
+  const payable = sum([...purchases.map(outstanding), Math.max(0, -opening)])
+  const latest = (dates: string[]) => dates.filter(Boolean).sort().at(-1) ?? null
+
+  return {
+    asOf,
+    totalSales: sum(sales.map((invoice) => invoice.total)),
+    totalPurchases: sum(purchases.map((invoice) => invoice.total)),
+    totalReceived: sum(payments.filter((p) => p.direction === 'in').map((p) => p.amount)),
+    totalPaid: sum(payments.filter((p) => p.direction === 'out').map((p) => p.amount)),
+    openingBalance: opening,
+    receivable,
+    payable,
+    netBalance: round2(receivable - payable),
+    overdue: round2(overdue),
+    dueToday: round2(dueToday),
+    dueLater: round2(dueLater),
+    aging: ageInvoices(
+      openSales.map((invoice) => ({
+        invoiceId: invoice.id,
+        invoiceNumber: '',
+        total: invoice.total,
+        allocated: invoice.paidAmount,
+        dueDate: invoice.dueDate,
+        invoiceDate: invoice.invoiceDate,
+      })),
+      asOf,
+    ),
+    invoiceCount: live.length,
+    openInvoiceCount: open.length,
+    overdueInvoiceCount,
+    lastSaleAt: latest(sales.map((invoice) => invoice.invoiceDate)),
+    lastPaymentAt: latest(payments.map((payment) => payment.entryDate)),
+    currencies: [
+      ...new Set(
+        [...live.map((i) => i.currency), ...payments.map((p) => p.currency)].filter(Boolean),
+      ),
+    ].sort(),
+  }
+}

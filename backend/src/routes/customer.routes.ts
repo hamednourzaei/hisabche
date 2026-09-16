@@ -3,6 +3,7 @@
 // FIXED: Removed phone and email from filters
 // ============================================
 
+import { invalidateMoneyCaches } from '../utils/money-cache'
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { zodToJsonSchema } from 'zod-to-json-schema'
@@ -138,8 +139,9 @@ export async function customerRoutes(fastify: FastifyInstance) {
         const { id } = request.params as { id: string }
         const body = request.body as any
         const customer = await customerService.update(id, request.tenancy, body)
-        await clearCache(`customer:${id}`)
-        await clearCache('customers:*')
+        // `customer:${id}` matched no key (the route cache is keyed
+        // `customer:<workspace>:<url>`), so an edited customer stayed stale.
+        await invalidateMoneyCaches(request.tenancy.workspaceId)
         return reply.send(customer)
       } catch (err) {
         fastify.log.error(err)
@@ -158,8 +160,9 @@ export async function customerRoutes(fastify: FastifyInstance) {
       try {
         const { id } = request.params as { id: string }
         await customerService.delete(id, request.tenancy)
-        await clearCache(`customer:${id}`)
-        await clearCache('customers:*')
+        // `customer:${id}` matched no key (the route cache is keyed
+        // `customer:<workspace>:<url>`), so an edited customer stayed stale.
+        await invalidateMoneyCaches(request.tenancy.workspaceId)
         return reply.code(204).send()
       } catch (err) {
         fastify.log.error(err)

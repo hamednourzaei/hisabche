@@ -117,3 +117,14 @@ reject the preflight — the request never reaches the server and the log shows
 nothing (BUG-006: invoice creation broke on the web). Same commit, both sides.
 Guard: `backend/src/__tests__/cors-allowed-headers.test.ts`. Prove with a real
 preflight: `curl -X OPTIONS … -H "Access-Control-Request-Headers: …"`.
+
+## Cache invalidation: never hand-write the key
+
+`cacheMiddleware` writes `${keyPrefix}:${workspaceId|userId}:${request.url}`.
+Hand-written clears like `invoice:${ws}:${id}` or `dashboard:v2:${ws}` match
+nothing and fail silently. After any change to invoices, payments, balances,
+the ledger or stock call `invalidateMoneyCaches(workspaceId)`
+(`backend/src/utils/money-cache.ts`); a new money-bearing `keyPrefix` must be
+added to `MONEY_CACHE_PREFIXES` (guard: `money-cache-invalidation.test.ts`).
+BUG-008: a fully paid invoice showed its whole amount as outstanding for two
+minutes because the payment never cleared the `invoice:` route cache.

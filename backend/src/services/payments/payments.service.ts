@@ -17,6 +17,7 @@ import {
 } from '../../utils/client-request'
 import { ValidationError } from '../../errors/validation.error'
 import { memoryCache } from '../../utils/pagination'
+import { invalidateMoneyCaches } from '../../utils/money-cache'
 import type { TenancyContext } from '../tenancy.service'
 import { ledger } from '../accounting'
 import { scopes, sod } from '../authorization'
@@ -31,6 +32,7 @@ import {
   partyBalance,
   round2,
   runningLedger,
+  summarizeParty,
   unallocatedOf,
   validateAllocations,
   type AgingBuckets,
@@ -38,6 +40,7 @@ import {
   type LedgerMovement,
   type OpenInvoice,
   type PartyType,
+  type PartySummary,
   type PaymentDirection,
 } from './payments.domain'
 import { PaymentsRepository, domainErrorCode, type PaymentRow } from './payments.repository'
@@ -67,11 +70,11 @@ export class PaymentsService {
   }
 
   private async invalidate(workspaceId: string) {
-    await memoryCache.invalidate(`payments:${workspaceId}`)
-    // An invoice's outstanding balance and the debt report both change with
-    // every payment, and they live under other prefixes.
-    await memoryCache.invalidate(`invoices:${workspaceId}`)
-    await memoryCache.invalidate(`accounting:${workspaceId}`)
+    // A payment changes the invoice's remaining balance, the customer's debt,
+    // the ledger and the dashboard. It used to clear only the service caches,
+    // so GET /api/invoices/:id (route cache, `invoice:` prefix, 120 s) kept
+    // showing the pre-payment balance — see utils/money-cache.ts.
+    await invalidateMoneyCaches(workspaceId)
   }
 
   private rethrow(error: unknown): never {
@@ -479,32 +482,101 @@ export class PaymentsService {
    * the customer's debt, so taking money from a customer made them owe MORE.
    */
   async getPartyLedger(ctx: TenancyContext, partyType: PartyType, partyId: string) {
-    const { invoices, payments } = await this.repo.partyMovements(
+    const { invoices, payments, openingBalance } = await this.repo.partyMovements(
       ctx.workspaceId,
       partyType,
       partyId,
     )
 
+    // Each row keeps what the statement needs to link back to its document.
+    const sources = new Map<
+      string,
+      { sourceType: 'invoice' | 'payment'; sourceId: string; currency: string; method?: string }
+    >()
     const movements: LedgerMovement[] = [
-      ...invoices.map((invoice: Record<string, any>) => ({
-        date: String(invoice.date ?? '').slice(0, 10),
-        kind: (invoice.type === 'purchase' ? 'purchase' : 'sale') as LedgerMovement['kind'],
-        amount: Number(invoice.total) || 0,
-        reference: invoice.invoice_number ?? invoice.id,
-      })),
-      ...payments.map((payment: Record<string, any>) => ({
-        date: String(payment.entry_date ?? '').slice(0, 10),
-        kind: (payment.direction === 'in' ? 'payment_in' : 'payment_out') as LedgerMovement['kind'],
-        amount: Number(payment.amount) || 0,
-        reference: payment.payment_number ?? payment.id,
-      })),
+      ...invoices.map((invoice) => {
+        const reference = invoice.invoice_number ?? invoice.id
+        sources.set(`i:${invoice.id}`, {
+          sourceType: 'invoice',
+          sourceId: invoice.id,
+          currency: invoice.currency ?? '',
+        })
+        return {
+          date: String(invoice.date ?? '').slice(0, 10),
+          kind: (invoice.type === 'purchase' ? 'purchase' : 'sale') as LedgerMovement['kind'],
+          amount: Number(invoice.total) || 0,
+          reference,
+          key: `i:${invoice.id}`,
+        }
+      }),
+      ...payments.map((payment) => {
+        sources.set(`p:${payment.id}`, {
+          sourceType: 'payment',
+          sourceId: payment.id,
+          currency: payment.currency ?? '',
+          method: payment.method ?? undefined,
+        })
+        return {
+          date: String(payment.entry_date ?? '').slice(0, 10),
+          kind: (payment.direction === 'in'
+            ? 'payment_in'
+            : 'payment_out') as LedgerMovement['kind'],
+          amount: Number(payment.amount) || 0,
+          reference: payment.payment_number ?? payment.id,
+          key: `p:${payment.id}`,
+        }
+      }),
     ]
 
+    // The running balance starts from the opening balance, not from zero.
+    const opening = round2(openingBalance)
     return {
       partyType,
       partyId,
-      movements: runningLedger(movements),
-      balance: partyBalance(movements),
+      openingBalance: opening,
+      movements: runningLedger(movements).map((row) => {
+        const { key, ...rest } = row as typeof row & { key: string }
+        return { ...rest, balance: round2(rest.balance + opening), ...sources.get(key) }
+      }),
+      balance: round2(partyBalance(movements) + opening),
     }
+  }
+
+  /**
+   * Customer 360 money summary — the authoritative figures for the party page.
+   * The page must not add invoices up in the browser: it used to read the first
+   * 200 invoices of the whole workspace and total those.
+   */
+  async getPartySummary(
+    ctx: TenancyContext,
+    partyType: PartyType,
+    partyId: string,
+    asOf: string = today(),
+  ): Promise<PartySummary> {
+    const { invoices, payments, openingBalance } = await this.repo.partyMovements(
+      ctx.workspaceId,
+      partyType,
+      partyId,
+    )
+    return summarizeParty(
+      invoices.map((invoice) => ({
+        id: invoice.id,
+        type: invoice.type === 'purchase' ? 'purchase' : 'sale',
+        status: String(invoice.status ?? ''),
+        total: Number(invoice.total) || 0,
+        paidAmount: Number(invoice.paid_amount) || 0,
+        invoiceDate: String(invoice.date ?? '').slice(0, 10),
+        dueDate: String(invoice.due_date ?? '').slice(0, 10),
+        currency: String(invoice.currency ?? ''),
+      })),
+      payments.map((payment) => ({
+        direction: payment.direction === 'out' ? 'out' : 'in',
+        amount: Number(payment.amount) || 0,
+        entryDate: String(payment.entry_date ?? '').slice(0, 10),
+        currency: String(payment.currency ?? ''),
+      })),
+      asOf,
+      openingBalance,
+    )
   }
 }

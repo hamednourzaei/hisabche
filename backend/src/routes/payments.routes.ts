@@ -230,6 +230,41 @@ export async function paymentsRoutes(fastify: FastifyInstance) {
     },
   )
 
+  // ─── GET /summary/:partyType/:partyId ──────────────────
+  // Customer 360 money summary. NOT cached: a payment must show immediately
+  // (BUG-008 was a cached money figure).
+  fastify.get(
+    '/summary/:partyType/:partyId',
+    {
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        requireCapability('report.financial.read'),
+      ],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const params = z
+          .object({ partyType: z.enum(['customer', 'supplier']), partyId: z.string().uuid() })
+          .safeParse(request.params)
+        if (!params.success) return reply.code(400).send({ error: 'Invalid party' })
+        const { asOf } = request.query as { asOf?: string }
+        const day = asOf && /^\d{4}-\d{2}-\d{2}$/.test(asOf) ? asOf : undefined
+        return reply.send(
+          await paymentsService.getPartySummary(
+            request.tenancy,
+            params.data.partyType,
+            params.data.partyId,
+            day,
+          ),
+        )
+      } catch (err) {
+        return fail(reply, err, 'Failed to build the party summary')
+      }
+    },
+  )
+
   // ─── GET /ledger/:partyType/:partyId ───────────────────
   fastify.get(
     '/ledger/:partyType/:partyId',

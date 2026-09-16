@@ -1,56 +1,43 @@
 'use client'
 
+// ============================================
+// Customer 360 — container.
+//
+// ⚠️ EVERY MONEY FIGURE ON THIS PAGE COMES FROM THE SERVER.
+// This container used to load the first 50 customers of the workspace and look
+// the customer up in that list (a customer past the fiftieth showed «not
+// found»), then load the first 200 invoices of the WHOLE workspace and add the
+// customer's rows up in the browser (totals silently wrong past that point, and
+// every amount labelled «AFN» whatever the invoice's currency).
+//
+// Now:
+//   customer            GET /customers/:id
+//   summary             GET /payments/summary/customer/:id   (payments.domain#summarizeParty)
+//   statement           GET /payments/ledger/customer/:id    (every row, paged on the server)
+//   open invoices       GET /payments/open-invoices/customer/:id (payment modal targets)
+//   invoices tab        GET /invoices?customerId=…            (paginated)
+//   payments tab        GET /payments?partyId=…
+// ============================================
+
 import { useCallback, useMemo, useState } from 'react'
 import { useTranslations } from 'next-intl'
-import { useCustomers, useInvoices } from '@hisabche/api'
-import { CustomerDetailView } from '../customer-detail-view'
-import { exportToCSV } from '../../../../lib/export'
-import { useIntlLocale } from '../../../../hooks/use-intl-locale'
+import { useRouter } from 'next/navigation'
 import {
-  buildCustomerExportRows,
-  CUSTOMER_EXPORT_COLUMNS,
-  type ExportableInvoiceItem,
-} from '../../../../lib/customers/customer-export'
+  useCustomer,
+  useInvoices,
+  useOpenInvoices,
+  usePartyLedger,
+  usePartySummary,
+  usePayments,
+} from '@hisabche/api'
 import { toIsoDay } from '@hisabche/formatting'
 
-const makeFmt =
-  (locale: string) =>
-  (v: number): string =>
-    v.toLocaleString(locale)
+import { exportToCSV } from '../../../../lib/export'
+import { useDateFormat } from '../../../../hooks/use-date-format'
+import { useIntlLocale } from '../../../../hooks/use-intl-locale'
+import { CustomerDetailView } from '../customer-detail-view'
 
-const rem = (inv: { total: number; paidAmount: number }): number =>
-  Math.max(0, inv.total - inv.paidAmount)
-
-const makeFmtDate =
-  (locale: string) =>
-  (d: string): string => {
-    try {
-      return new Date(d).toLocaleDateString(locale)
-    } catch {
-      return d
-    }
-  }
-
-interface ApiInvoiceRecord {
-  id: string
-  invoiceNumber?: string
-  total: number
-  paidAmount: number
-  date: string
-  status: string
-  customerId: string
-  /** Legacy rows predate the split and are read as sales. */
-  type?: string
-  currency?: string
-  items?: readonly ExportableInvoiceItem[]
-}
-
-interface CustomerRecord {
-  id: string
-  fullName?: string
-  name?: string
-  phone?: string
-}
+const INVOICE_PAGE_SIZE = 20
 
 export function CustomerDetailContainer({
   customerId,
@@ -60,105 +47,155 @@ export function CustomerDetailContainer({
   onBack: () => void
 }) {
   const t = useTranslations()
+  const router = useRouter()
   const locale = useIntlLocale()
-  const fmt = useMemo(() => makeFmt(locale), [locale])
-  const fmtDate = useMemo(() => makeFmtDate(locale), [locale])
+  const { date: formatDate } = useDateFormat()
   const [payOpen, setPayOpen] = useState(false)
+  const [invoicePage, setInvoicePage] = useState(1)
 
-  const { data: customersData } = useCustomers({
-    page: 1,
-    limit: 50,
+  const customerQuery = useCustomer(customerId)
+  const summaryQuery = usePartySummary('customer', customerId)
+  const ledgerQuery = usePartyLedger('customer', customerId)
+  const openInvoicesQuery = useOpenInvoices('customer', customerId)
+  const invoicesQuery = useInvoices({
+    page: invoicePage,
+    limit: INVOICE_PAGE_SIZE,
     sortDirection: 'desc',
+    customerId,
   })
-
-  const { data: invoicesData, refetch } = useInvoices({
-    page: 1,
-    limit: 200,
-    sortDirection: 'desc',
-  })
+  const paymentsQuery = usePayments({ partyId: customerId, limit: 100 })
 
   const customer = useMemo(() => {
-    const list = (customersData?.customers ?? []) as unknown as CustomerRecord[]
-    const found = list.find((c) => c.id === customerId)
-    if (!found) return null
+    const raw = customerQuery.data as
+      | {
+          id: string
+          fullName?: string
+          name?: string
+          phone?: string
+          email?: string
+          address?: string
+        }
+      | undefined
+    if (!raw) return null
     return {
-      id: found.id,
-      name: found.fullName || found.name || t('common.noName'),
-      phone: found.phone || '',
+      id: raw.id,
+      name: raw.fullName || raw.name || t('common.noName'),
+      phone: raw.phone || '',
+      email: raw.email || '',
+      address: raw.address || '',
     }
-  }, [customersData, customerId, t])
+  }, [customerQuery.data, t])
 
-  const openInvoices = useMemo(() => {
-    const list = (invoicesData?.invoices ?? []) as unknown as ApiInvoiceRecord[]
-    return list
-      .filter(
-        (inv) =>
-          inv.customerId === customerId && (inv.status === 'pending' || inv.status === 'partial'),
-      )
-      .map((inv) => ({
-        id: inv.id,
-        invoiceNumber: inv.invoiceNumber ?? '',
-        total: inv.total,
-        paidAmount: inv.paidAmount,
-        remaining: rem(inv),
-        date: fmtDate(inv.date),
-        status: inv.status,
-      }))
-  }, [invoicesData, customerId, fmtDate])
-
-  const totalDebt = useMemo(
-    () => openInvoices.reduce((s, inv) => s + inv.remaining, 0),
-    [openInvoices],
+  // The payment modal's allocation targets — from the server, not a filtered list.
+  const openInvoices = useMemo(
+    () =>
+      (openInvoicesQuery.data ?? []).map((invoice) => ({
+        id: invoice.invoiceId,
+        invoiceNumber: invoice.invoiceNumber,
+        total: invoice.total,
+        paidAmount: invoice.allocated,
+        date: invoice.invoiceDate,
+        status: 'pending',
+        customerId,
+      })),
+    [openInvoicesQuery.data, customerId],
   )
 
-  const safeT = useCallback(
-    (key: string, fallback?: string) => {
-      const v = t(key)
-      return v && v !== key ? v : (fallback ?? key)
-    },
-    [t],
-  )
-
-  const handleOpenPayment = useCallback(() => setPayOpen(true), [])
-  const handleClosePayment = useCallback(() => setPayOpen(false), [])
-
-  // صورتحساب کامل — نه فقط فاکتورهای باز. خروجی باید تاریخچه‌ی کامل معامله با
-  // این طرف را نشان دهد، و خرید و فروش هر کدام با نوع خودشان می‌مانند.
-  const statementInvoices = useMemo(() => {
-    const list = (invoicesData?.invoices ?? []) as unknown as ApiInvoiceRecord[]
-    return list.filter((inv) => inv.customerId === customerId)
-  }, [invoicesData, customerId])
+  const invoiceList = useMemo(() => {
+    const data = invoicesQuery.data as
+      { invoices?: Array<Record<string, unknown>>; total?: number } | undefined
+    return {
+      rows: (data?.invoices ?? []).map((row) => ({
+        id: String(row['id']),
+        invoiceNumber: String(row['invoiceNumber'] ?? ''),
+        type: row['type'] === 'purchase' ? ('purchase' as const) : ('sale' as const),
+        status: String(row['status'] ?? ''),
+        date: String(row['date'] ?? ''),
+        dueDate: row['dueDate'] ? String(row['dueDate']) : '',
+        total: Number(row['total']) || 0,
+        paidAmount: Number(row['paidAmount']) || 0,
+        currency: String(row['currency'] ?? ''),
+      })),
+      total: Number(data?.total) || 0,
+    }
+  }, [invoicesQuery.data])
 
   const handleExport = useCallback(() => {
-    if (!customer || statementInvoices.length === 0) return
+    const ledger = ledgerQuery.data
+    if (!customer || !ledger) return
+    const kind = (k: string) => t(`customer360.kind.${k}`)
+    const rows = [
+      {
+        date: '',
+        type: t('customers.openingBalance'),
+        reference: '',
+        debit: ledger.openingBalance > 0 ? ledger.openingBalance : '',
+        credit: ledger.openingBalance < 0 ? -ledger.openingBalance : '',
+        balance: ledger.openingBalance,
+        currency: '',
+      },
+      ...ledger.movements.map((row) => {
+        const increases = row.kind === 'sale' || row.kind === 'payment_out'
+        return {
+          date: row.date,
+          type: kind(row.kind),
+          reference: row.reference,
+          debit: increases ? row.amount : '',
+          credit: increases ? '' : row.amount,
+          balance: row.balance,
+          currency: row.currency ?? '',
+        }
+      }),
+    ]
+    exportToCSV(
+      rows,
+      [
+        { key: 'date', label: t('customer360.colDate') },
+        { key: 'type', label: t('customer360.colType') },
+        { key: 'reference', label: t('customer360.colReference') },
+        { key: 'debit', label: t('customer360.colDebit') },
+        { key: 'credit', label: t('customer360.colCredit') },
+        { key: 'balance', label: t('customer360.colBalance') },
+        { key: 'currency', label: 'currency' },
+      ],
+      `statement-${customer.name}-${toIsoDay(new Date())}`,
+    )
+  }, [customer, ledgerQuery.data, t])
 
-    const rows = buildCustomerExportRows(statementInvoices, {
-      party: customer.name,
-      unitLabel: (unit, label) => (unit === 'custom' ? (label ?? '') : safeT(`unit.${unit}`, unit)),
-    })
-
-    const columns = CUSTOMER_EXPORT_COLUMNS.map((key) => ({
-      key,
-      label: safeT(`customers.export.${key}`, key),
-    }))
-
-    exportToCSV(rows, columns, `statement-${customer.name}-${toIsoDay(new Date())}`)
-  }, [customer, statementInvoices, safeT])
+  const refetchMoney = useCallback(() => {
+    void summaryQuery.refetch()
+    void ledgerQuery.refetch()
+    void openInvoicesQuery.refetch()
+    void invoicesQuery.refetch()
+    void paymentsQuery.refetch()
+  }, [summaryQuery, ledgerQuery, openInvoicesQuery, invoicesQuery, paymentsQuery])
 
   return (
     <CustomerDetailView
-      t={safeT}
-      fmt={fmt}
+      locale={locale}
+      formatDate={(value) => (value ? formatDate(value) : t('customer360.never'))}
       customer={customer}
+      customerLoading={customerQuery.isLoading}
+      summary={summaryQuery.data ?? null}
+      summaryError={summaryQuery.isError}
+      ledger={ledgerQuery.data ?? null}
+      ledgerLoading={ledgerQuery.isLoading}
+      invoices={invoiceList.rows}
+      invoicesTotal={invoiceList.total}
+      invoicePage={invoicePage}
+      invoicePageSize={INVOICE_PAGE_SIZE}
+      onInvoicePage={setInvoicePage}
+      payments={paymentsQuery.data ?? []}
       openInvoices={openInvoices}
-      totalDebt={totalDebt}
       payOpen={payOpen}
       onBack={onBack}
-      onOpenPayment={handleOpenPayment}
-      onClosePayment={handleClosePayment}
-      onPaymentSuccess={refetch}
+      onRetry={refetchMoney}
+      onOpenPayment={() => setPayOpen(true)}
+      onClosePayment={() => setPayOpen(false)}
+      onPaymentSuccess={refetchMoney}
+      onNewInvoice={() => router.push('/invoices/new')}
+      onOpenInvoice={(id) => router.push(`/invoices/${id}`)}
       onExport={handleExport}
-      canExport={statementInvoices.length > 0}
     />
   )
 }

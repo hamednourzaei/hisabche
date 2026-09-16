@@ -171,6 +171,7 @@ cd apps/admin     && npx tsc --noEmit
 **وب، سئو و API (از باگ‌های واقعی سپتامبر)**
 
 - ⚠️ هر هدر جدیدی که `packages/api` می‌فرستد باید **در همان commit** به `allowedHeaders` در `backend/src/index.ts` اضافه شود. `Idempotency-Key` اضافه شد و CORS نه → ثبت فاکتور در وب کامل قطع شد (BUG-006).
+- ⚠️ کش سرور کلید `<keyPrefix>:<workspaceId یا userId>:<url>` دارد. هرگز کلید invalidation را دستی حدس نزن — بعد از هر تغییر پول/فاکتور/پرداخت/موجودی `invalidateMoneyCaches(workspaceId)` (`backend/src/utils/money-cache.ts`). کلید دستی `invoice:<ws>:<id>` هیچ‌وقت چیزی پاک نمی‌کرد و بعد از پرداخت، فاکتور ۲ دقیقه «پرداخت‌نشده» می‌ماند (BUG-008).
 - خواندنی که **هشدار یا تصمیم** می‌سازد `limit` نمی‌گیرد: هشدار موجودی از `useProducts({ limit: 100 })` کالای ۱۰۱ام را نمی‌دید (BUG-007).
 - root layout هرگز `alternates`/canonical پیش‌فرض نمی‌دهد — به همه‌ی صفحات noindex ارث می‌رسد.
 - هر مسیر جدید در `(dashboard)` باید در `app/robots.ts` هم disallow شود (گارد: `robots-dashboard-routes.test.ts`).
