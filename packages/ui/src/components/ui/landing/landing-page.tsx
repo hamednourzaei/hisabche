@@ -51,24 +51,24 @@ export async function LandingPage({ locale }: { locale: string }) {
       <SystemScene t={t} />
 
       <NavigationRegistry id="ledger">
-        <ChapterScene t={t} chapter="ledger" muted />
+        <ChapterScene t={t} localePrefix={locale} chapter="ledger" muted />
       </NavigationRegistry>
-      <ChapterScene t={t} chapter="money" />
-      <ChapterScene t={t} chapter="inventory" muted />
+      <ChapterScene t={t} localePrefix={locale} chapter="money" />
+      <ChapterScene t={t} localePrefix={locale} chapter="inventory" muted />
 
       <NavigationRegistry id="offline">
-        <ChapterScene t={t} chapter="offline" />
+        <ChapterScene t={t} localePrefix={locale} chapter="offline" />
       </NavigationRegistry>
-      <ChapterScene t={t} chapter="reports" muted />
+      <ChapterScene t={t} localePrefix={locale} chapter="reports" muted />
 
       <TrustBarScene t={t} />
 
-      <ChapterScene t={t} chapter="ai" />
+      <ChapterScene t={t} localePrefix={locale} chapter="ai" />
 
       <NavigationRegistry id="security">
         <SecurityScene t={t} />
       </NavigationRegistry>
-      <ChapterScene t={t} chapter="multi" />
+      <ChapterScene t={t} localePrefix={locale} chapter="multi" />
 
       <CompareScene t={t} />
 

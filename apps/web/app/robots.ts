@@ -51,6 +51,31 @@ export default function robots(): MetadataRoute.Robots {
     '/*/quick-invoice',
     '/*/workflow-templates',
     '/*/onboarding',
+    // These 21 were missing, so crawlers reached /en/till and
+    // /en/data-migration (SEMrush: noindex + nofollow + canonical-elsewhere).
+    // Every folder under app/[lang]/(dashboard) must be listed — guarded by
+    // packages/ui/src/__tests__/robots-dashboard-routes.test.ts.
+    '/*/accounting-workspace',
+    '/*/assets',
+    '/*/assistant',
+    '/*/bank',
+    '/*/budgets',
+    '/*/conflicts',
+    '/*/customer-list',
+    '/*/data-and-sync',
+    '/*/data-migration',
+    '/*/domain',
+    '/*/expiry',
+    '/*/governance',
+    '/*/inventory-workspace',
+    '/*/operations',
+    '/*/people-workspace',
+    '/*/product-list',
+    '/*/sales-followup',
+    '/*/sales-workspace',
+    '/*/stock-count',
+    '/*/till',
+    '/*/timesheets',
     '/*/accept-invite',
     // Stray Vercel smoke-test file in public/.
     '/test.html',

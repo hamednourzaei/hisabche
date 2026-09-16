@@ -38,6 +38,7 @@ export function DocsClient({ lang, slug }: { lang: string; slug: string }) {
     <DocsView
       t={t}
       hrefFor={(articleSlug) => `/${lang}/docs/${articleSlug}`}
+      siteHrefFor={(path) => `/${lang}${path}`}
       activeSlug={slug}
       // The reverse of the «?» in the dashboard. Built by inverting the same
       // table, so the two directions cannot point at different screens.

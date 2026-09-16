@@ -6,15 +6,15 @@ import { LegalPageClient } from '../LegalPageClient'
 import { buildLegalMetadata } from '../legal-metadata'
 
 const titles: Record<string, string> = {
-  fa: 'حقوق حریم خصوصی (GDPR) — حسابچه',
-  af: 'حقوق محرمیت (GDPR) — حسابچه',
-  en: 'GDPR & Privacy Rights — Hisabche',
+  fa: 'حقوق حریم خصوصی (GDPR)',
+  af: 'حقوق محرمیت (GDPR)',
+  en: 'GDPR and Privacy Rights',
 }
 
 const descriptions: Record<string, string> = {
-  fa: 'حقوق شما بر داده‌های شخصی خود و نحوه‌ی اعمال آن‌ها در حسابچه.',
-  af: 'حقوق شما بر معلومات شخصی خود و نحوه‌ی اعمال آن‌ها در حسابچه.',
-  en: 'Your rights over your personal data and how to exercise them at Hisabche.',
+  fa: 'حقوق شما بر داده‌های شخصی‌تان در حسابچه — دسترسی، اصلاح، انتقال و حذف — و این‌که هر درخواست را چطور ثبت کنید.',
+  af: 'حقوق شما بر معلومات شخصی‌تان در حسابچه — دسترسی، اصلاح، انتقال و حذف — و این‌که هر درخواست را چطور ثبت کنید.',
+  en: 'Your rights over your personal data in Hisabche — access, correction, portability and deletion — and how to make each request.',
 }
 
 export async function generateMetadata({

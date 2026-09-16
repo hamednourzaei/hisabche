@@ -6,15 +6,15 @@ import { LegalPageClient } from '../LegalPageClient'
 import { buildLegalMetadata } from '../legal-metadata'
 
 const titles: Record<string, string> = {
-  fa: 'سیاست بازگشت وجه — حسابچه',
-  af: 'سیاست بازگشت پول — حسابچه',
-  en: 'Refund Policy — Hisabche',
+  fa: 'سیاست بازگشت وجه',
+  af: 'سیاست بازگشت پول',
+  en: 'Refund Policy',
 }
 
 const descriptions: Record<string, string> = {
-  fa: 'شرایط بازگشت وجه برای پلن‌های پولی حسابچه.',
-  af: 'شرایط بازگشت پول برای پلان‌های پولی حسابچه.',
-  en: "Refund terms for Hisabche's paid plans.",
+  fa: 'شرایط بازگشت وجه برای اشتراک‌های پولی حسابچه: در چه مواردی بازپرداخت انجام می‌شود و درخواست آن را چطور ثبت کنید.',
+  af: 'شرایط بازگشت پول برای اشتراک‌های پولی حسابچه: در کدام حالت‌ها پول بازگردانده می‌شود و درخواست آن را چطور ثبت کنید.',
+  en: "Refund terms for Hisabche's paid subscriptions: when a refund applies, how cancelling works, and how to request one.",
 }
 
 export async function generateMetadata({

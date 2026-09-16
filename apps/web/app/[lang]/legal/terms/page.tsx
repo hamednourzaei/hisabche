@@ -6,15 +6,15 @@ import { LegalPageClient } from '../LegalPageClient'
 import { buildLegalMetadata } from '../legal-metadata'
 
 const titles: Record<string, string> = {
-  fa: 'شرایط استفاده — حسابچه',
-  af: 'شرایط استفاده — حسابچه',
-  en: 'Terms of Use — Hisabche',
+  fa: 'شرایط استفاده',
+  af: 'شرایط استفاده',
+  en: 'Terms of Use',
 }
 
 const descriptions: Record<string, string> = {
-  fa: 'شرایط و ضوابط استفاده از نرم‌افزار حسابداری حسابچه.',
-  af: 'شرایط و ضوابط استفاده از نرم‌افزار حسابداری حسابچه.',
-  en: 'Terms and conditions for using the Hisabche accounting software.',
+  fa: 'شرایط و ضوابط استفاده از نرم‌افزار حسابداری حسابچه: حساب کاربری، اشتراک، مسئولیت‌ها و قوانین استفاده از سرویس.',
+  af: 'شرایط و ضوابط استفاده از نرم‌افزار حسابداری حسابچه: حساب کاربری، اشتراک، مسئولیت‌ها و قواعد استفاده از خدمات.',
+  en: 'Terms and conditions for using the Hisabche accounting software: your account, subscriptions, responsibilities and acceptable use.',
 }
 
 export async function generateMetadata({

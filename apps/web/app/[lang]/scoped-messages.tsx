@@ -91,6 +91,46 @@ export async function ScopedMessages({
   )
 }
 
+/**
+ * `landing.*` keys the standalone public pages (about, contact, legal/*,
+ * features/*) read on the client: LegalPageClient, ContactPageClient,
+ * FeaturePageClient and SiteFooter. Guarded by public-page-message-keys.test.ts.
+ */
+export const PUBLIC_PAGE_KEY_PREFIXES = ['legalPage', 'featurePage', 'footer'] as const
+
+/**
+ * Layout body for about / contact / legal / features.
+ *
+ * ⚠️ These pages used FullMessagesLayout: the whole catalogue (~160 KB of
+ * dashboard, admin and invoice-builder strings) was serialised into every
+ * page's HTML — SEMrush "large page" on 30 URLs per locale, 513–522 KB each.
+ */
+export async function PublicPageMessagesLayout({
+  params,
+  children,
+}: {
+  params: Promise<{ lang: string }>
+  children: ReactNode
+}) {
+  const { lang } = await params
+  const locale = resolveLocale(lang)
+  const messages = await getMessages({ locale })
+  const picked = pickNamespaces(messages, CORE_NAMESPACES)
+  const landing = messages.landing
+  if (landing && typeof landing === 'object') {
+    picked.landing = Object.fromEntries(
+      Object.entries(landing).filter(([key]) =>
+        PUBLIC_PAGE_KEY_PREFIXES.some((prefix) => key.startsWith(prefix)),
+      ),
+    ) as AbstractIntlMessages
+  }
+  return (
+    <IntlProvider locale={locale} messages={picked}>
+      {children}
+    </IntlProvider>
+  )
+}
+
 /** Layout body for route trees that need the full catalogue. */
 export async function FullMessagesLayout({
   params,

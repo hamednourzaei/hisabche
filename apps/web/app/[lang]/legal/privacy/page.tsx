@@ -6,15 +6,15 @@ import { LegalPageClient } from '../LegalPageClient'
 import { buildLegalMetadata } from '../legal-metadata'
 
 const titles: Record<string, string> = {
-  fa: 'حریم خصوصی — حسابچه',
-  af: 'حریم خصوصی — حسابچه',
-  en: 'Privacy Policy — Hisabche',
+  fa: 'سیاست حریم خصوصی',
+  af: 'سیاست محرمیت',
+  en: 'Privacy Policy',
 }
 
 const descriptions: Record<string, string> = {
-  fa: 'این‌که حسابچه چه داده‌ای جمع‌آوری می‌کند، چرا، و چگونه از آن محافظت می‌کند.',
-  af: 'این‌که حسابچه چه معلوماتی جمع‌آوری می‌کند، چرا، و چگونه از آن محافظت می‌کند.',
-  en: "What data Hisabche collects, why, and how it's protected.",
+  fa: 'حسابچه چه داده‌هایی از شما و کسب‌وکارتان جمع‌آوری می‌کند، برای چه از آن‌ها استفاده می‌شود و چگونه از آن‌ها محافظت می‌شود.',
+  af: 'حسابچه چه معلوماتی از شما و تجارت‌تان جمع‌آوری می‌کند، برای چه از آن استفاده می‌شود و چگونه از آن محافظت می‌شود.',
+  en: 'What data Hisabche collects about you and your business, what it is used for, and how it is protected.',
 }
 
 export async function generateMetadata({

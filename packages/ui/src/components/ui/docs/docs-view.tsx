@@ -53,6 +53,14 @@ export interface DocsViewProps {
   /** Builds an href for an article, so the host owns locale prefixing. */
   hrefFor: (slug: string) => string
   /**
+   * Prefixes a site path (`/features/offline`) with the locale segment.
+   *
+   * ⚠️ The outbound feature links were written as bare `/features/…`: every one
+   * was a 307 to `/fa/features/…` (SEMrush «redirect chain»), and /en readers
+   * were sent to the Persian page.
+   */
+  siteHrefFor: (path: string) => string
+  /**
    * The article to show.
    *
    * ⚠️ REQUIRED. `/docs` is a permanent redirect to the first article, so
@@ -69,7 +77,7 @@ export interface DocsViewProps {
   appHrefFor?: ((slug: string) => string | null) | undefined
 }
 
-export function DocsView({ t, hrefFor, activeSlug, appHrefFor }: DocsViewProps) {
+export function DocsView({ t, hrefFor, siteHrefFor, activeSlug, appHrefFor }: DocsViewProps) {
   const router = useRouter()
 
   const active = DOCS_ARTICLES.find((article) => article.slug === activeSlug)
@@ -195,7 +203,13 @@ export function DocsView({ t, hrefFor, activeSlug, appHrefFor }: DocsViewProps) 
           {/* `findArticle` already rejected an unknown slug with a 404 before
               this rendered, so `active` cannot be missing here. */}
           {active ? (
-            <DocsArticle t={t} article={active} hrefFor={hrefFor} appHrefFor={appHrefFor} />
+            <DocsArticle
+              t={t}
+              article={active}
+              hrefFor={hrefFor}
+              siteHrefFor={siteHrefFor}
+              appHrefFor={appHrefFor}
+            />
           ) : null}
         </main>
       </div>
@@ -207,11 +221,13 @@ function DocsArticle({
   t,
   article,
   hrefFor,
+  siteHrefFor,
   appHrefFor,
 }: {
   t: DocsViewProps['t']
   article: DocsArticleDef
   hrefFor: DocsViewProps['hrefFor']
+  siteHrefFor: DocsViewProps['siteHrefFor']
   appHrefFor?: DocsViewProps['appHrefFor']
 }) {
   const appHref = appHrefFor?.(article.slug) ?? null
@@ -236,8 +252,12 @@ function DocsArticle({
 
       {appHref ? (
         <div className="mt-4 border-t border-[hsl(var(--border-default))] pt-4">
+          {/* `nofollow`: the target is an authenticated, noindex screen. For a
+              crawler it is a login redirect; following it filled audits with
+              11 noindex / nofollow / canonical-elsewhere dashboard URLs. */}
           <a
             href={appHref}
+            rel="nofollow"
             className={cn(
               'inline-flex min-h-[40px] items-center gap-2 rounded-xl px-3.5 text-sm font-medium',
               // A real border and a real surface — the vocabulary every other
@@ -338,7 +358,7 @@ function DocsArticle({
           {(article.outbound ?? []).map((link) => (
             <li key={link.href}>
               <a
-                href={link.href}
+                href={siteHrefFor(link.href)}
                 className={cn(
                   'block rounded-xl px-3 py-2.5 text-sm transition-colors',
                   'border border-[hsl(var(--color-primary)/0.3)] bg-[hsl(var(--color-primary)/0.04)]',

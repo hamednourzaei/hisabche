@@ -6,15 +6,15 @@ import { LegalPageClient } from '../LegalPageClient'
 import { buildLegalMetadata } from '../legal-metadata'
 
 const titles: Record<string, string> = {
-  fa: 'سیاست کوکی — حسابچه',
-  af: 'سیاست کوکی — حسابچه',
-  en: 'Cookie Policy — Hisabche',
+  fa: 'سیاست کوکی',
+  af: 'سیاست کوکی‌ها',
+  en: 'Cookie Policy',
 }
 
 const descriptions: Record<string, string> = {
-  fa: 'این‌که حسابچه از چه کوکی‌هایی استفاده می‌کند و چرا.',
-  af: 'این‌که حسابچه از چه کوکی‌هایی استفاده می‌کند و چرا.',
-  en: 'What cookies Hisabche uses and why.',
+  fa: 'حسابچه از چه کوکی‌هایی استفاده می‌کند، هر کدام برای چه کاری است و چطور می‌توانید آن‌ها را در مرورگر خود مدیریت کنید.',
+  af: 'حسابچه از کدام کوکی‌ها استفاده می‌کند، هر کدام برای چه کاری است و چطور می‌توانید آن‌ها را در مرورگر خود مدیریت کنید.',
+  en: 'Which cookies Hisabche uses, what each one is for, and how you can view, block or clear them in your own browser.',
 }
 
 export async function generateMetadata({

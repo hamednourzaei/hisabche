@@ -4,9 +4,9 @@ import { FullMessagesLayout } from '../scoped-messages'
 // ═══════════════════════════════════════════════════════════
 
 const titles: Record<string, string> = {
-  fa: 'ورود',
-  af: 'ورود',
-  en: 'Login',
+  fa: 'ورود به حساب کاربری',
+  af: 'ورود به حساب کاربری',
+  en: 'Log In to Your Account',
 }
 
 const descriptions: Record<string, string> = {

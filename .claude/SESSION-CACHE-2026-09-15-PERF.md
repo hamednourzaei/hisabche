@@ -208,3 +208,42 @@ scratchpad and run `python script.py </dev/null`. Never `cat >` without a heredo
 The fabricated claims (2FA, 30-day restore, webhooks) lived in common.json values, not in TSX — a
 source-only guard missed them. landing-claims.test.ts now scans the rendered landing messages of all
 three locales.
+
+## 1.17 Landing DOM budget: icons are the hidden cost
+
+Adding the "how it works" panels took the landing from 1385 to 1780 elements and local TBT from
+~120 to ~215 ms (6× desktop). Most of it was lucide SVGs used as arrows/ticks/chevrons (svg + paths
+per mark). Replacing them with CSS `::before/::after` characters (←/→ by `ltr:` variant, ↓, ✓) and
+border chevrons brought DOM to 1469 with no visual loss. Rule: decorative marks on server-rendered
+marketing sections are CSS text, never icons.
+
+## 1.18 Section observer whitelist
+
+`SectionId` in use-scroll-narrative-store.ts silently rejects unknown ids — renaming landing
+sections broke the header highlight without any error. Guard in landing-i18n-keys.test.ts.
+Also: IntersectionObserver ratio thresholds never fire for sections taller than 1/threshold
+viewports; use a mid-viewport rootMargin band.
+
+## 1.19 A formatter rewrites files after every save here
+
+Exact-string Python replacements written before a save fail on the reformatted file. Use the
+Edit tool (re-read first) or Write the whole file.
+
+## 1.20 SEO: what the SEMrush report really was
+
+- "canonical points elsewhere" ×11 + noindex + nofollow: a DEFAULT canonical in app/[lang]/layout.tsx was
+  inherited by every noindex dashboard page (pointing at home). Root layouts must not set `alternates`.
+- Those pages were crawled at all because docs "open in app" links had no rel=nofollow and robots.ts
+  (hand-kept) missed 21 dashboard routes. Guard: robots-dashboard-routes.test.ts.
+- "redirect chains": docs outbound links were `/features/x` without locale → 307.
+- "title words not in text" was mostly the brand twice: page titles ending «— حسابچه» plus the layout
+  template «%s | حسابچه». Page titles never contain the brand.
+- `/_next/image` 400 is Next's correct answer to a parameterless request (crawler parsed a srcset);
+  not blocked in robots — that would stop Google fetching optimised images.
+- Large HTML (500–700 KB) = inline CSS twice (<style> + RSC payload, `experimental.inlineCss`) + full
+  message catalogue on FullMessagesLayout pages (~170 KB). Not changed in the SEO pass (perf risk).
+
+## 1.21 Bash stdin trap — third variant
+
+`python - </dev/null` still hung in this harness (4th occurrence). Never use `python -` at all; always
+Write a script file and run `python file.py </dev/null`.

@@ -13,9 +13,9 @@
     "heroSub": "For businesses in Iran and Afghanistan",
     "offline": "Offline",
     "badge": "340+ active businesses",
-    "headline": "Run your sales, finance and operations",
-    "headlineHighlight": "in one place",
-    "subtitle": "From invoices and customers to stock, cash and double-entry accounting — one integrated system that keeps working without internet.",
+    "headline": "Online and offline accounting software",
+    "headlineHighlight": "for sales, finance and operations",
+    "subtitle": "Hisabche is online and offline accounting software: invoices, customers, stock, cash and double-entry accounting in one integrated system — online on the web, and without internet on the mobile and Windows apps.",
     "learnMore": "Learn more",
     "trustText": "No credit card · Active in 30 seconds",
     "trustOffline": "True Offline",
@@ -124,7 +124,7 @@
     },
     "securityLabel": "Governance",
     "securityTitle": "Control, access and accountability",
-    "securityDesc": "Who has access, what they can do, and who changed what — always clear.",
+    "securityDesc": "Connections use HTTPS (TLS), each business’s data is isolated with PostgreSQL Row-Level Security, every user can do only what their role allows, and important changes leave a trail.",
     "securityOfflineTitle": "True Offline",
     "securityOfflineDesc": "Work without internet. Data stays on your device until you're connected.",
     "security": {
@@ -746,7 +746,7 @@
     "pricingFooter": "No contract · cancel anytime · no bank card",
     "featurePage": {
       "customerDebt": {
-        "metaTitle": "Customer debt tracking",
+        "metaTitle": "Customer Debt Tracking — Balances and Payments",
         "metaDescription": "See what every customer still owes you, straight from your unpaid invoices. Record partial payments and know your total receivables. Works without internet.",
         "h1": "Know who owes you what",
         "intro": "Selling on credit is normal. The problem is not the credit — it is losing track of who still owes you, and since when. Hisabche works each customer's balance out from your invoices, so there is no separate ledger to keep. To be clear: this page is about the credit you extend to your own customers — not bank loans or formal instalment finance.",
@@ -795,7 +795,7 @@
       },
       "offline": {
         "metaTitle": "Offline-first accounting with cloud sync",
-        "metaDescription": "Write invoices, adjust stock and record payments with no connection on the phone and Windows apps, then have everything sync itself to your account — and see the same data on the web.",
+        "metaDescription": "Write invoices, adjust stock and record payments with no connection on the phone and Windows apps, then let everything sync to your account.",
         "h1": "Work offline, sync when you can",
         "intro": "Browser-based accounting tools stop working when the connection drops, and traditional installed software traps your records on one machine. Hisabche does both halves: the work happens on your device, and it syncs to your account afterwards.",
         "sections": [
@@ -842,8 +842,8 @@
       "otherFeatures": "More pages",
       "ctaButton": "Start free",
       "shopAccounting": {
-        "metaTitle": "Accounting Software for Small Shops — Invoices & Stock",
-        "metaDescription": "Run a small shop's books without an accountant: sales and purchase invoices, inventory, customer credit, a daily cash till and profit and loss — on the web, phone and Windows, with offline work on the apps.",
+        "metaTitle": "Small Shop Accounting Software",
+        "metaDescription": "Run a small shop's books without an accountant: invoices, inventory, customer credit, a daily cash till and profit and loss, on web, phone and Windows.",
         "h1": "Accounting software for small shops, built around how a shop actually works",
         "intro": "Most small shops keep their books in a notebook or a spreadsheet, because accounting software is built for accountants. Hisabche starts from the shop's day — you sold, you bought, you gave credit, you got paid — and writes the double-entry records behind it automatically.",
         "sections": [
@@ -862,6 +862,10 @@
           {
             "heading": "Web, phone and Windows",
             "body": "Sign in from a browser or install the phone and Windows apps; all see the same account. The apps keep working with no connection and sync when it returns."
+          },
+          {
+            "heading": "Staff with limited access",
+            "body": "Invite a salesperson to the business as owner, manager or seller. Each role’s access can be changed in the permissions matrix — for example, a seller can record invoices without seeing profit and loss."
           }
         ],
         "faq": [
@@ -886,8 +890,8 @@
         "ctaBody": "Start free and write your first invoice in minutes."
       },
       "invoicing": {
-        "metaTitle": "Invoice Software for Small Business — PDF & Payments",
-        "metaDescription": "Create sales and purchase invoices, print or download PDF, send customers a view link, and record full, partial or split payments on the same invoice — with stock and customer balances updated automatically.",
+        "metaTitle": "Invoicing Software for Small Businesses",
+        "metaDescription": "Create sales and purchase invoices, print or download PDF, send customers a view link, and record full, partial or split payments on one invoice.",
         "h1": "Invoice software that follows the money after the invoice",
         "intro": "An invoice that only prints is half the job. You also need to know whether it was paid, what left the shelf and what went into the books. In Hisabche the invoice is where sales, stock, customer credit and accounting meet.",
         "sections": [
@@ -920,14 +924,18 @@
           {
             "q": "Can I record a payment later?",
             "a": "Yes, from the invoice page; the balance and the customer's credit update."
+          },
+          {
+            "q": "Can I choose the invoice currency?",
+            "a": "Yes — Afghani, US dollar, Pakistani rupee and Iranian rial are supported."
           }
         ],
         "ctaTitle": "Send your first invoice today",
         "ctaBody": "Start free — invoices, stock and customer credit are connected from day one."
       },
       "inventory": {
-        "metaTitle": "Simple Inventory Management Software for Small Shops",
-        "metaDescription": "See every item's stock and the movements behind it, spot low and out-of-stock items, transfer between warehouses and run stock counts. Stock updates automatically with every invoice.",
+        "metaTitle": "Inventory Management Software for Small Shops",
+        "metaDescription": "See every item's stock and the movements behind it, spot low stock, transfer between warehouses and run stock counts that update with every invoice.",
         "h1": "Simple inventory management that updates itself with every sale",
         "intro": "Stock numbers typed in by hand drift away from the shelf. In Hisabche the stock level is built from movements — sales, purchases, transfers, adjustments and counts — and every movement leaves a trace.",
         "sections": [
@@ -967,7 +975,7 @@
       },
       "daybook": {
         "metaTitle": "Daybook & Cash Book Software with Automatic P&L",
-        "metaDescription": "Journal entries are created from invoices and payments automatically. See the trial balance, profit and loss and balance sheet, drill from any figure to the invoice behind it, and run a daily cash till.",
+        "metaDescription": "Journal entries are created from invoices and payments automatically. See the trial balance, P&L and balance sheet, and trace any figure to its invoice.",
         "h1": "A daybook that fills itself, and reports you can trace to the source",
         "intro": "Small businesses either keep no daybook or re-enter everything at month end. In Hisabche every sale, purchase and payment writes its own double-entry journal record the moment it happens, and the reports come from those records.",
         "sections": [
@@ -1236,7 +1244,8 @@
           "title": "Users & access",
           "desc": "Every team member with their own role."
         }
-      }
+      },
+      "guide": "Full guide:"
     },
     "factCash": "Cash & bank",
     "factReports": "Financial reports",
@@ -4391,7 +4400,8 @@
         "heading": "If you already have data",
         "body1": "Coming from paper or another program, the data-migration screen takes your file and shows a preview before anything is saved. Nothing enters your books until you confirm."
       },
-      "seoTitle": "Getting started with Hisabche accounting software"
+      "seoTitle": "Getting Started with Accounting Software — Guide",
+      "seoDescription": "Getting started with Hisabche: create your account, set your business name, language and currency, issue a first invoice and bring in existing data."
     },
     "invoices": {
       "title": "Invoices",
@@ -4416,7 +4426,8 @@
         "body2": "You can add or remove payments later from the invoice itself. Removing one cancels it and reverses its effect; the record stays for audit.",
         "body3": "The paid amount on an invoice is always read from the actual payments, so the two cannot disagree."
       },
-      "seoTitle": "Invoicing guide — sales and purchase invoices in Hisabche"
+      "seoTitle": "Invoicing Guide — Sales and Purchase Invoices",
+      "seoDescription": "How sales and purchase invoices work in Hisabche: one screen for both, your own columns, and recording full, partial or split payments."
     },
     "customers": {
       "title": "Customers and debt",
@@ -4430,7 +4441,8 @@
         "heading": "Overdue",
         "body1": "A list of unsettled invoices with their age shows which debts have been waiting longest."
       },
-      "seoTitle": "Customer accounts and credit — Hisabche guide"
+      "seoTitle": "Customer Accounts and Credit — Guide",
+      "seoDescription": "Customer accounts in Hisabche: how each customer's balance is built from invoices and payments, and how to follow up overdue debts."
     },
     "inventory": {
       "title": "Inventory",
@@ -4454,7 +4466,8 @@
         "body1": "Hisabche suggests what to reorder based on your real sales.",
         "body2": "The dead-stock list shows what has not moved for a while and how much money is tied up in it."
       },
-      "seoTitle": "Inventory guide — stock, units and stock counts"
+      "seoTitle": "Inventory guide — stock, units and stock counts",
+      "seoDescription": "Inventory in Hisabche: stock on hand from real movements, buying and selling in several units, stock counts and reorder suggestions."
     },
     "accounting": {
       "title": "Accounting",
@@ -4473,7 +4486,8 @@
         "body1": "If you deal in more than one currency you can record the day’s rate. A rate belongs to its day, so past figures are read at the rate of that day rather than today’s.",
         "body2": "You can switch what currency amounts are displayed in. That is display only — your books and invoices are untouched."
       },
-      "seoTitle": "Accounting and the general ledger — Hisabche guide"
+      "seoTitle": "Double-Entry Accounting and the Ledger — Guide",
+      "seoDescription": "Double-entry accounting in Hisabche: entries posted automatically from every sale and payment, period closing, and daily rates for several currencies."
     },
     "pos": {
       "title": "Till and shifts",
@@ -4484,7 +4498,8 @@
         "body2": "The reason is required. A till that comes up short with no explanation is a shortfall nobody can account for later.",
         "body3": "A closed shift is fixed and does not change afterwards."
       },
-      "seoTitle": "Point of sale and shifts — Hisabche guide"
+      "seoTitle": "Point of Sale and Shifts — Guide",
+      "seoDescription": "Point of sale in Hisabche: quick sales, opening a shift with starting cash, closing the till with a cash count, and seeing any difference."
     },
     "offline": {
       "title": "Working offline",
@@ -4498,7 +4513,8 @@
         "heading": "In the browser",
         "body1": "The web version needs a connection to work. If your power or connection comes and goes, the mobile app or the Windows version is the better choice."
       },
-      "seoTitle": "Offline accounting — working without a connection"
+      "seoTitle": "Offline accounting — working without a connection",
+      "seoDescription": "Working offline with Hisabche: record on the mobile and Windows apps with no connection and sync later; the web version needs a connection."
     },
     "branches": {
       "title": "Multiple branches",
@@ -4508,7 +4524,8 @@
         "body1": "You can run more than one branch and tie each employee to theirs. Reports can be seen per branch or combined.",
         "body2": "A branch is a reporting boundary, not a separate security boundary — all branches of one business share one set of books."
       },
-      "seoTitle": "Multi-branch accounting — Hisabche guide"
+      "seoTitle": "Multi-Branch Accounting — Guide",
+      "seoDescription": "Running several branches in Hisabche: set up branches, tie each employee to theirs, and report per branch or for the whole business."
     },
     "permissions": {
       "title": "Staff access",
@@ -4523,7 +4540,8 @@
         "body1": "You can require that one person does not do both halves of a task — whoever raises an invoice does not also record its payment.",
         "body2": "For a one-person shop, leaving this off is the right answer. A control that refuses the owner their own till teaches them to share a login, and that destroys every other control at once."
       },
-      "seoTitle": "Staff permissions and access levels — Hisabche guide"
+      "seoTitle": "Staff Permissions and Access Levels — Guide",
+      "seoDescription": "Staff permissions in Hisabche: what each role opens up, and how to require that one person does not both raise and approve a task."
     },
     "assistant": {
       "title": "The assistant",
@@ -4543,7 +4561,8 @@
         "heading": "How many questions",
         "body1": "Each account has a monthly allowance of questions. When it runs out, you are shown how to get in touch for more."
       },
-      "seoTitle": "The AI accounting assistant — Hisabche guide"
+      "seoTitle": "AI Accounting Assistant — Guide",
+      "seoDescription": "Hisabche's AI assistant: ask about your business in plain words, what the assistant cannot see, and the monthly question allowance."
     },
     "data-and-backup": {
       "title": "Data and backups",
@@ -4556,7 +4575,8 @@
         "heading": "Exports",
         "body1": "Reports and lists can be exported to use elsewhere."
       },
-      "seoTitle": "Backups and data export — Hisabche guide"
+      "seoTitle": "Backups and Data Export — Guide",
+      "seoDescription": "Backups and exports in Hisabche: take a full backup of your data whenever you want, and export reports and lists to use elsewhere."
     },
     "related": "Read next",
     "browseAll": "All articles",

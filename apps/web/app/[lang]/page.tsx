@@ -37,9 +37,9 @@ interface PageConfigEntry {
 
 const pageConfig = {
   fa: {
-    title: 'حسابچه — سیستم مدیریت کسب‌وکار و حسابداری',
+    title: 'نرم‌افزار حسابداری آنلاین و آفلاین — حسابچه',
     description:
-      'نرم‌افزار حسابداری، فاکتور، انبار و مدیریت بدهی برای کسب‌وکارهای کوچک و متوسط. رایگان شروع کنید.',
+      'نرم‌افزار حسابداری آنلاین و آفلاین برای کسب‌وکار: فروش، خرید، انبار، صندوق و حسابداری دوطرفه در یک سیستم؛ آنلاین در وب و بدون اینترنت در اپ.',
     keywords: [
       'حسابداری',
       'نرم‌افزار حسابداری',
@@ -56,7 +56,7 @@ const pageConfig = {
       'فاکتور آنلاین',
       'مدیریت مشتریان',
     ],
-    ogTitle: 'حسابچه — سیستم مدیریت کسب‌وکار و حسابداری',
+    ogTitle: 'نرم‌افزار حسابداری آنلاین و آفلاین — حسابچه',
     ogDescription:
       'فروش، خرید، انبار، صندوق و حسابداری دوطرفه در یک سیستم یکپارچه — حتی بدون اینترنت.',
     siteName: 'حسابچه',
@@ -68,9 +68,9 @@ const pageConfig = {
     schemaOperatingSystem: 'Web, iOS, Android',
   },
   af: {
-    title: 'حسابچه — سیستم مدیریت تجارت و حسابداری',
+    title: 'نرم‌افزار حسابداری آنلاین و آفلاین — حسابچه',
     description:
-      'نرم‌افزار حسابداری، فاکتور، گدام و مدیریت قرض برای تجارت‌های کوچک و متوسط. رایگان شروع کنید.',
+      'نرم‌افزار حسابداری آنلاین و آفلاین برای تجارت: فروش، خرید، گدام، صندوق و حسابداری دوطرفه در یک سیستم؛ آنلاین در ویب و بدون انترنت در اپ.',
     keywords: [
       'حسابداری',
       'نرم‌افزار حسابداری',
@@ -87,7 +87,7 @@ const pageConfig = {
       'فاکتور آنلاین',
       'مدیریت مشتریان',
     ],
-    ogTitle: 'حسابچه — سیستم مدیریت تجارت و حسابداری',
+    ogTitle: 'نرم‌افزار حسابداری آنلاین و آفلاین — حسابچه',
     ogDescription:
       'فروش، خرید، گدام، صندوق و حسابداری دوطرفه در یک سیستم یکپارچه — حتی بدون انترنت.',
     siteName: 'حسابچه',
@@ -99,9 +99,9 @@ const pageConfig = {
     schemaOperatingSystem: 'Web, iOS, Android',
   },
   en: {
-    title: 'Hisabche — Business Management & Accounting System',
+    title: 'Online and Offline Accounting Software — Hisabche',
     description:
-      'Run sales, purchasing, inventory, cash and double-entry accounting in one integrated system for small and mid-sized businesses — even offline. Start free.',
+      'Online and offline accounting software for small and mid-sized businesses: sales, purchasing, inventory, cash and double-entry accounting in one system.',
     keywords: [
       'accounting software',
       'free accounting',
@@ -117,7 +117,7 @@ const pageConfig = {
       'online invoicing',
       'customer management',
     ],
-    ogTitle: 'Hisabche — Business Management & Accounting System',
+    ogTitle: 'Online and Offline Accounting Software — Hisabche',
     ogDescription:
       'Sales, purchasing, inventory, cash and double-entry accounting in one integrated system — even offline.',
     siteName: 'Hisabche',

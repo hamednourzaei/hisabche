@@ -6,15 +6,15 @@ import { LegalPageClient } from '../LegalPageClient'
 import { buildLegalMetadata } from '../legal-metadata'
 
 const titles: Record<string, string> = {
-  fa: 'سلب مسئولیت — حسابچه',
-  af: 'سلب مسئولیت — حسابچه',
-  en: 'Disclaimer — Hisabche',
+  fa: 'سلب مسئولیت',
+  af: 'سلب مسئولیت',
+  en: 'Disclaimer',
 }
 
 const descriptions: Record<string, string> = {
-  fa: 'محدودیت‌های مسئولیت حسابچه در استفاده از نرم‌افزار.',
-  af: 'محدودیت‌های مسئولیت حسابچه در استفاده از نرم‌افزار.',
-  en: 'Limitations of liability for using the Hisabche software.',
+  fa: 'حدود مسئولیت حسابچه در استفاده از نرم‌افزار و گزارش‌های مالی آن، و مواردی که تصمیم نهایی با خود کسب‌وکار یا حسابدار آن است.',
+  af: 'حدود مسئولیت حسابچه در استفاده از نرم‌افزار و گزارش‌های مالی آن، و مواردی که تصمیم آخر با خود تجارت یا حسابدار آن است.',
+  en: "The limits of Hisabche's liability for the software and its financial reports, and where final decisions rest with the business or its accountant.",
 }
 
 export async function generateMetadata({

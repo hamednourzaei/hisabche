@@ -6,15 +6,15 @@ import { LegalPageClient } from '../legal/LegalPageClient'
 import { buildLegalMetadata } from '../legal/legal-metadata'
 
 const titles: Record<string, string> = {
-  fa: 'درباره ما — حسابچه',
-  af: 'درباره ما — حسابچه',
-  en: 'About Us — Hisabche',
+  fa: 'درباره ما؛ نرم‌افزار حسابداری و مدیریت کسب‌وکار',
+  af: 'درباره ما؛ نرم‌افزار حسابداری و مدیریت تجارت',
+  en: 'About Us — Accounting and Business Software',
 }
 
 const descriptions: Record<string, string> = {
-  fa: 'حسابچه چیست و برای چه کسانی ساخته شده است.',
-  af: 'حسابچه چیست و برای چه کسانی ساخته شده است.',
-  en: "What Hisabche is and who it's built for.",
+  fa: 'حسابچه چیست، برای چه کسب‌وکارهایی ساخته شده و چرا فروش، انبار و حسابداری دوطرفه را در یک سیستم آفلاین‌محور جمع کرده است.',
+  af: 'حسابچه چیست، برای کدام تجارت‌ها ساخته شده و چرا فروش، گدام و حسابداری دوطرفه را در یک سیستم آفلاین‌محور یکجا کرده است.',
+  en: 'What Hisabche is, which businesses it is built for, and why it brings sales, inventory and double-entry accounting into one offline-first system.',
 }
 
 export async function generateMetadata({

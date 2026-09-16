@@ -6,15 +6,15 @@ import { LegalPageClient } from '../LegalPageClient'
 import { buildLegalMetadata } from '../legal-metadata'
 
 const titles: Record<string, string> = {
-  fa: 'بیانیه دسترسی‌پذیری — حسابچه',
-  af: 'بیانیه دسترسی‌پذیری — حسابچه',
-  en: 'Accessibility Statement — Hisabche',
+  fa: 'بیانیه دسترسی‌پذیری',
+  af: 'بیانیه دسترسی‌پذیری',
+  en: 'Accessibility Statement',
 }
 
 const descriptions: Record<string, string> = {
-  fa: 'تعهد حسابچه به دسترسی‌پذیری برای همه‌ی کاربران.',
-  af: 'تعهد حسابچه به دسترسی‌پذیری برای همه‌ی کاربران.',
-  en: "Hisabche's commitment to accessibility for all users.",
+  fa: 'تعهد حسابچه به دسترسی‌پذیری: کنتراست رنگ، پشتیبانی صفحه‌کلید و ساختار معنایی، محدودیت‌های فعلی و راه گزارش یک مانع.',
+  af: 'تعهد حسابچه به دسترسی‌پذیری: کنتراست رنگ، پشتیبانی کیبورد و ساختار معنایی، محدودیت‌های فعلی و راه گزارش یک مانع.',
+  en: "Hisabche's commitment to accessibility — colour contrast, keyboard support and semantic structure — its known limits, and how to report a barrier.",
 }
 
 export async function generateMetadata({

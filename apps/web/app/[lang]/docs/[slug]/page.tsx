@@ -58,8 +58,11 @@ export async function generateMetadata({
   return buildLegalMetadata({
     lang,
     path: `/docs/${slug}`,
-    title: article.seoTitle ?? `${article.title ?? slug} — Hisabche`,
-    description: article.summary ?? '',
+    // No brand suffix: the root layout's title template appends it.
+    title: article.seoTitle ?? article.title ?? slug,
+    // `seoDescription` is written for search; the one-line sidebar summary
+    // (26–69 chars, identical in fa and af) was too thin for a snippet.
+    description: article.seoDescription ?? article.summary ?? '',
   })
 }
 

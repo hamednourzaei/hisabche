@@ -6,15 +6,15 @@ import { LegalPageClient } from '../LegalPageClient'
 import { buildLegalMetadata } from '../legal-metadata'
 
 const titles: Record<string, string> = {
-  fa: 'درخواست حذف داده — حسابچه',
-  af: 'درخواست حذف معلومات — حسابچه',
-  en: 'Data Deletion Request — Hisabche',
+  fa: 'درخواست حذف حساب و داده',
+  af: 'درخواست حذف حساب و معلومات',
+  en: 'Account and Data Deletion Request',
 }
 
 const descriptions: Record<string, string> = {
-  fa: 'چگونه درخواست حذف کامل حساب و داده‌های خود در حسابچه را ثبت کنید.',
-  af: 'چگونه درخواست حذف کامل حساب و معلومات خود در حسابچه را ثبت کنید.',
-  en: 'How to request deletion of your Hisabche account and data.',
+  fa: 'مراحل درخواست حذف کامل حساب کاربری و داده‌های کسب‌وکار در حسابچه، و آنچه پس از ثبت درخواست اتفاق می‌افتد.',
+  af: 'مراحل درخواست حذف کامل حساب کاربری و معلومات تجارت در حسابچه، و آنچه بعد از ثبت درخواست اتفاق می‌افتد.',
+  en: 'The steps to request full deletion of your Hisabche account and business data, and what happens after you submit the request.',
 }
 
 export async function generateMetadata({

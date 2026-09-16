@@ -6,15 +6,15 @@ import { LegalPageClient } from '../LegalPageClient'
 import { buildLegalMetadata } from '../legal-metadata'
 
 const titles: Record<string, string> = {
-  fa: 'امنیت — حسابچه',
-  af: 'امنیت — حسابچه',
-  en: 'Security — Hisabche',
+  fa: 'امنیت داده‌های کسب‌وکار',
+  af: 'امنیت معلومات تجارت',
+  en: 'Business Data Security',
 }
 
 const descriptions: Record<string, string> = {
-  fa: 'این‌که حسابچه چگونه از داده‌های شما محافظت می‌کند.',
-  af: 'این‌که حسابچه چگونه از معلومات شما محافظت می‌کند.',
-  en: 'How Hisabche protects your data.',
+  fa: 'حسابچه چگونه از داده‌های کسب‌وکار شما محافظت می‌کند: جداسازی داده‌ی هر کسب‌وکار، ارتباط رمزنگاری‌شده و کنترل دسترسی بر اساس نقش.',
+  af: 'حسابچه چگونه از معلومات تجارت شما محافظت می‌کند: جداسازی معلومات هر تجارت، ارتباط رمزگذاری‌شده و کنترل دسترسی بر اساس نقش.',
+  en: 'How Hisabche protects your business data: per-business isolation, encrypted connections and role-based access control.',
 }
 
 export async function generateMetadata({

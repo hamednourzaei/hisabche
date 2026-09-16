@@ -6,15 +6,15 @@ import { ContactPageClient } from './ContactPageClient'
 import { buildLegalMetadata } from '../legal/legal-metadata'
 
 const titles: Record<string, string> = {
-  fa: 'تماس با ما — حسابچه',
-  af: 'تماس با ما — حسابچه',
-  en: 'Contact Us — Hisabche',
+  fa: 'تماس با پشتیبانی',
+  af: 'تماس با بخش پشتیبانی',
+  en: 'Contact Support',
 }
 
 const descriptions: Record<string, string> = {
-  fa: 'با تیم پشتیبانی حسابچه از طریق ایمیل یا شبکه‌های اجتماعی در ارتباط باشید.',
-  af: 'با تیم پشتیبانی حسابچه از طریق ایمیل یا شبکه‌های اجتماعی در تماس شوید.',
-  en: 'Get in touch with the Hisabche support team by email or social media.',
+  fa: 'راه‌های تماس با تیم پشتیبانی حسابچه از طریق ایمیل و شبکه‌های اجتماعی، و زمان معمول پاسخ‌گویی به پرسش‌های شما.',
+  af: 'راه‌های تماس با تیم پشتیبانی حسابچه از طریق ایمیل و شبکه‌های اجتماعی، و زمان معمول جواب‌دادن به سوال‌های شما.',
+  en: 'How to reach the Hisabche support team by email or social media, and how quickly you can usually expect a reply.',
 }
 
 export async function generateMetadata({

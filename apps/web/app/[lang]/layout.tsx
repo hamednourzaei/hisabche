@@ -14,15 +14,7 @@ import { Suspense } from 'react'
 import { getMessages, setRequestLocale } from 'next-intl/server'
 import { IntlProvider } from './intl-provider'
 import { CORE_NAMESPACES, pickNamespaces } from './scoped-messages'
-import {
-  SITE_URL,
-  localeMeta,
-  localeToBcp47,
-  localeUrl,
-  languageAlternates,
-  localePath,
-  resolveLocale,
-} from './i18n-config'
+import { SITE_URL, localeMeta, localeToBcp47, localeUrl, resolveLocale } from './i18n-config'
 
 /* ═══════════════════════════════════════════════════════════════════════════
    RootLayout v8 — Fixed Favicons + PWA manifest
@@ -196,10 +188,12 @@ export async function generateMetadata({
       other: [{ rel: 'manifest', url: '/site.webmanifest' }],
     },
     metadataBase: new URL(SITE_URL),
-    alternates: {
-      canonical: localePath(locale),
-      languages: languageAlternates(),
-    },
+    // ⚠️ NO DEFAULT `alternates` HERE. A canonical set in the root layout is
+    // inherited by every route that does not set its own — the ~40 noindex
+    // dashboard, login and signup pages all declared the locale HOME page as
+    // their canonical (SEMrush: "canonical points to another page" ×11), plus
+    // hreflang to the home pages. Every indexable page sets its own canonical
+    // (page.tsx, features/[slug], legal-metadata.ts); noindex pages need none.
   }
 }
 

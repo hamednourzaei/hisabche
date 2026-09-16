@@ -41,6 +41,8 @@ import {
   WifiOff,
 } from 'lucide-react'
 
+import NextLink from 'next/link'
+
 import { cn } from '../../../lib/utils'
 import { AiVisual, JournalVisual, OfflineVisual, StepChain, TillVisual } from './chapter-visuals'
 import {
@@ -70,14 +72,31 @@ export const CHAPTERS = {
 
 export type ChapterKey = keyof typeof CHAPTERS
 
+/**
+ * The docs article that explains each chapter in depth. An in-content link with
+ * the article's own title as anchor text — the Mizfa report found the landing
+ * body had no path to the deeper guides.
+ */
+const GUIDE: Record<ChapterKey, string> = {
+  ledger: 'accounting',
+  money: 'pos',
+  inventory: 'inventory',
+  offline: 'offline',
+  reports: 'accounting',
+  ai: 'assistant',
+  multi: 'branches',
+}
+
 export interface ChapterSceneProps {
   t: (key: string, fallback?: string) => string
   chapter: ChapterKey
   /** Alternate grounds so consecutive chapters read as separate sections. */
   muted?: boolean | undefined
+  /** Locale segment for the guide link. */
+  localePrefix: string
 }
 
-export default function ChapterScene({ t, chapter, muted }: ChapterSceneProps) {
+export default function ChapterScene({ t, chapter, muted, localePrefix }: ChapterSceneProps) {
   const { cards, chips, examples } = CHAPTERS[chapter]
   const k = `landing.chapter.${chapter}`
   // Chapters with a side panel put cards and panel side by side on desktop.
@@ -200,6 +219,15 @@ export default function ChapterScene({ t, chapter, muted }: ChapterSceneProps) {
             </p>
           </>
         )}
+        <p className="mt-6 text-center text-sm">
+          <NextLink
+            prefetch={false}
+            href={`/${localePrefix}/docs/${GUIDE[chapter]}`}
+            className="font-medium text-[hsl(var(--color-primary))] underline-offset-4 hover:underline"
+          >
+            {t('landing.chapter.guide')} {t(`docs.${GUIDE[chapter]}.title`)}
+          </NextLink>
+        </p>
       </div>
     </section>
   )
