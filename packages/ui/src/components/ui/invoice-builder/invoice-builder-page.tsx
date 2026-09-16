@@ -7,7 +7,7 @@
 // ============================================
 'use client'
 
-import { memo, useCallback, useMemo, useState } from 'react'
+import { memo, useCallback, useMemo, useState, type ReactNode } from 'react'
 import { ChevronLeft, FileText, Save } from 'lucide-react'
 import {
   canDeleteColumn,
@@ -49,6 +49,8 @@ export interface InvoiceBuilderPageProps {
   invalidRowIds: ReadonlySet<string>
   /** Blocking problems, already translated. */
   issues: string[]
+  /** Non-blocking "stock goes below zero" notice, shown while typing. */
+  stockWarning?: ReactNode
 
   customers: readonly InvoiceDraftCustomer[]
   transactionType: 'sale' | 'purchase'
@@ -104,6 +106,7 @@ export const InvoiceBuilderPage = memo(function InvoiceBuilderPage({
   summary,
   invalidRowIds,
   issues,
+  stockWarning,
   customers,
   transactionType,
   currency,
@@ -219,6 +222,7 @@ export const InvoiceBuilderPage = memo(function InvoiceBuilderPage({
           summary={summary}
           invalidRowIds={invalidRowIds}
           issues={issues}
+          stockWarning={stockWarning}
           customers={customers}
           transactionType={transactionType}
           currency={currency}
@@ -419,6 +423,8 @@ export const InvoiceBuilderPage = memo(function InvoiceBuilderPage({
               taxRate={taxRate}
               onTaxRateChange={onTaxRateChange}
             />
+
+            {stockWarning}
 
             {issues.length ? (
               <ul

@@ -100,3 +100,27 @@ rule in CLAUDE.md.
 - `grep -c` on minified HTML.
 - Building a URL without the locale prefix, or emitting `hreflang="af"`.
 - JSON-LD describing content the page does not render.
+
+## SEO and landing rules (September 2026, each from a real defect)
+
+- **No default canonical in a root layout.** `app/[lang]/layout.tsx` set
+  `alternates.canonical` → every noindex dashboard page declared the home page
+  as canonical. Each indexable page sets its own (page.tsx, legal-metadata.ts,
+  features/[slug]).
+- **robots.ts lists every `(dashboard)` route.** Guard:
+  `packages/ui/src/__tests__/robots-dashboard-routes.test.ts`.
+- **Page titles carry no brand** — the layout template appends `| حسابچه`.
+- **Links from public pages into the app get `rel="nofollow"`**; internal links
+  always carry the locale prefix (a bare `/features/x` is a 307 chain).
+- **Verify SEO with a crawl of the production build** that honours robots.txt
+  and nofollow (scratchpad `crawl.mjs` pattern), not by reading source.
+- **Public pages ship a message subset**: `PublicPageMessagesLayout` in
+  `scoped-messages.tsx` (guard `public-page-message-keys.test.ts`). The full
+  catalogue is ~160 KB per page.
+- **Landing sections are server components.** Decorative arrows/ticks are CSS
+  characters, not lucide icons (DOM budget ~1500). `prefetch={false}` on every
+  landing link. No `<Suspense>` around the page.
+- **Every claim on the landing, FAQ and meta must exist in code.** Guard:
+  `landing-claims.test.ts` scans the landing messages of all three locales.
+- **Whitelists next to their consumer need a guard**: `SectionId` in
+  `use-scroll-narrative-store.ts` silently ignored renamed sections.

@@ -426,7 +426,19 @@ export async function buildServer(): Promise<typeof server> {
         ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-client-id', 'Accept', 'X-Auth-Transport'],
+    // ⚠️ Every custom header a client sends must be listed. `Idempotency-Key`
+    // (packages/api/src/hooks/invoices.ts, read in utils/client-request.ts) was
+    // missing: the browser's preflight rejected it and POST /api/invoices never
+    // left the browser — creating an invoice on the web failed with a CORS error.
+    // Guarded by __tests__/cors-allowed-headers.test.ts.
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'x-client-id',
+      'Accept',
+      'X-Auth-Transport',
+      'Idempotency-Key',
+    ],
     // ✅ FIX (کندی): بدون maxAge مرورگر برای هر درخواست یک OPTIONS جداگانه
     // می‌فرستد (در لاگ‌ها به‌وضوح دیده می‌شود). خود OPTIONS سریع است، اما
     // یک رفت‌وبرگشت شبکه‌ی کامل تا سرور اضافه می‌کند. با کش ۲۴ ساعته‌ی

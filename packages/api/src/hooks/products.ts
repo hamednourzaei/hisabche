@@ -14,7 +14,7 @@
 // صورت باید یک useRealtime مستقل به useProduct اضافه شود.
 // ============================================
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQueries, useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import apiClient from '../lib/client'
 import { useAuthReady } from './useAuthReady'
 import { useRealtime } from './useRealtime'
@@ -103,6 +103,28 @@ export function useProduct(id: string | undefined) {
       return data
     },
     enabled: authReady && !!id,
+  })
+}
+
+/**
+ * Several products by id — each one its own cached detail query, shared with
+ * `useProduct`. For the invoice form's stock check: a list query with a limit
+ * (the old `useProducts({ limit: 100 })`) silently skipped every product past
+ * the first hundred, so an oversell on those raised no warning at all.
+ */
+export function useProductsByIds(ids: readonly string[]) {
+  const authReady = useAuthReady()
+  useRealtime({ table: 'products', queryKey: productKeys.all as unknown as string[] })
+
+  return useQueries({
+    queries: ids.map((id) => ({
+      queryKey: productKeys.detail(id),
+      queryFn: async () => {
+        const { data } = await apiClient.get<Product>(`/products/${id}`)
+        return data
+      },
+      enabled: authReady && !!id,
+    })),
   })
 }
 

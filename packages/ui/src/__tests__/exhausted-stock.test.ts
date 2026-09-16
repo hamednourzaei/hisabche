@@ -91,22 +91,34 @@ describe('the invoice picker', () => {
 })
 
 describe('confirming an oversell', () => {
+  // The check moved into use-oversold-lines.ts, shared by the form and the
+  // preview (behaviour tested in invoice-oversold-warning.test.ts).
+  const hook = readFileSync(
+    join(ROOT, 'packages/ui/src/components/ui/invoice-builder/use-oversold-lines.ts'),
+    'utf8',
+  )
+  const warning = readFileSync(
+    join(ROOT, 'packages/ui/src/components/ui/invoice-builder/oversold-warning.tsx'),
+    'utf8',
+  )
+
   it('⚠️ warns but does not block', () => {
-    expect(preview).toContain('oversoldLines.length > 0 ?')
+    expect(preview).toContain('<OversoldWarning t={t} lines={oversoldLines} />')
+    expect(warning).toContain('role="alert"')
     expect(preview).not.toContain('disabled={oversoldLines')
   })
 
   it('sums lines for the same product', () => {
     // Two lines of 60 against a stock of 100 is an oversell neither shows alone.
-    expect(preview).toContain('(current?.quantity ?? 0) + (Number(item.quantity) || 0)')
+    expect(hook).toContain('(current?.quantity ?? 0) + (Number(item.quantity) || 0)')
   })
 
   it('⚠️ does not compare across different units', () => {
-    expect(preview).toContain('line.unit !== product.unit')
+    expect(hook).toContain('line.unit !== product.unit')
   })
 
   it('a purchase never warns', () => {
-    expect(preview).toContain("if (draft.transactionType === 'purchase') return []")
+    expect(hook).toContain("if (transactionType === 'purchase') return []")
   })
 })
 

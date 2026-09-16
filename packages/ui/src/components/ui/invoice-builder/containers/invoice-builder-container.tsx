@@ -16,12 +16,14 @@ import {
 
 import { useInvoiceDraft } from '../../../../hooks/invoices/use-invoice-draft'
 import { InvoiceBuilderPage } from '../invoice-builder-page'
+import { OversoldWarning } from '../oversold-warning'
+import { useOversoldLines } from '../use-oversold-lines'
 
 export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { setSaveStatus } = useSyncStore()
-  const { t, locale, currency, ctx, summary, invalidRowIds, issues } = useInvoiceDraft()
+  const { t, locale, currency, ctx, summary, invalidRowIds, issues, items } = useInvoiceDraft()
 
   const draft = useInvoiceDraftStore()
   const setPrimaryCurrency = useCurrencyStore((s) => s.setPrimaryCurrency)
@@ -97,6 +99,9 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
     }, 300)
   }, [setSaveStatus])
 
+  // Warn while the quantity is typed, not only on the preview (see the hook).
+  const oversoldLines = useOversoldLines(items, draft.transactionType)
+
   const handleContinue = useCallback(() => router.push('/invoices/new/preview'), [router])
   const handleBackToList = useCallback(() => router.push('/invoices'), [router])
 
@@ -110,6 +115,7 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
       summary={summary}
       invalidRowIds={invalidRowIds}
       issues={issues}
+      stockWarning={<OversoldWarning t={t} lines={oversoldLines} />}
       customers={draft.customers}
       transactionType={draft.transactionType}
       currency={currency}

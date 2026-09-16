@@ -59,6 +59,7 @@ export {
 export {
   useProducts,
   useProduct,
+  useProductsByIds,
   useCreateProduct,
   useUpdateProduct,
   useDeleteProduct,

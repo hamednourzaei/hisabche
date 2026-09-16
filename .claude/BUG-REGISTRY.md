@@ -75,6 +75,27 @@
 
 ---
 
+## BUG-006 — ثبت فاکتور در وب با خطای CORS: `idempotency-key is not allowed`
+
+- **وضعیت:** 🟡 کد + تست + HTTP محلی ✅؛ منتظر انتشار backend
+- **الگو:** «رفعِ یک باگ، باگ بعدی را ساخت» — رفع BUG-005 (نقص ۲) هدر `Idempotency-Key` را به `POST /api/invoices` اضافه کرد، ولی `allowedHeaders` در CORS بک‌اند به‌روز نشد.
+- **کد:** `backend/src/index.ts` (`@fastify/cors` → `allowedHeaders`)؛ فرستنده: `packages/api/src/hooks/invoices.ts`؛ خواننده: `backend/src/utils/client-request.ts`.
+- **علامت:** preflight رد می‌شد → درخواست اصلاً از مرورگر خارج نمی‌شد (`net::ERR_FAILED`)؛ از دید کاربر «تازه لاگین کردم ولی ثبت نمی‌شود».
+- **رفع:** افزودن `Idempotency-Key` به `allowedHeaders`.
+- **گارد:** `backend/src/__tests__/cors-allowed-headers.test.ts` — هر هدر غیر-safelisted که `packages/api` می‌فرستد باید در allow-list باشد (injection-tested: حذف هدر → قرمز).
+- **HTTP واقعی (محلی):** `OPTIONS /api/invoices` با `Access-Control-Request-Headers: authorization,content-type,idempotency-key` → `204` و `access-control-allow-headers: …, Idempotency-Key`.
+- **قاعده:** هر هدر جدید در کلاینت API = همان commit در CORS بک‌اند.
+
+## BUG-007 — تعداد بیشتر از موجودی در `/invoices/new` هیچ هشداری نمی‌داد
+
+- **وضعیت:** 🟡 کد + تست؛ منتظر انتشار
+- **الگو:** ۵ (نبودِ نشانه) + `.limit(N)` روی خواندنی که تصمیم می‌سازد
+- **کد:** `packages/ui/src/components/ui/invoice-builder/use-oversold-lines.ts` (جدید)، `oversold-warning.tsx` (جدید)، `containers/invoice-builder-container.tsx`، `invoice-builder-page.tsx`، `mobile/invoice-builder-mobile.tsx`، `containers/invoice-preview-container.tsx`؛ `packages/api/src/hooks/products.ts#useProductsByIds`.
+- **ریشه:** (۱) هشدار فقط در مرحله‌ی پیش‌نمایش بود، نه هنگام تایپ تعداد. (۲) موجودی از `useProducts({ limit: 100 })` خوانده می‌شد → کالاهای بعد از صدم هرگز بررسی نمی‌شدند.
+- **رفع:** یک hook مشترک برای فرم و پیش‌نمایش؛ موجودی از query جزئیات هر محصول لینک‌شده (cache مشترک با `useProduct`). **هشدار، نه مسدودسازی** — ثبت همچنان ممکن است (خواسته‌ی کاربر). فروش واحدِ متفاوت (گرم در برابر کیلو) قضاوت نمی‌شود؛ خطوط یک کالا جمع می‌شوند؛ خرید هشدار نمی‌دهد.
+- **تست:** `invoice-oversold-warning.test.ts` (6) · `exhausted-stock.test.ts` به‌روز شد · ui 743 ✅ · tsc ui/api ✅
+- **مرورگر:** ❌ انجام نشد — نیازمند ورود کاربر.
+
 ## صف کاندیدها (هنوز بررسی نشده — فرضیه، نه باگ)
 
 | #   | کاندید | الگو |

@@ -13,7 +13,7 @@
 // ============================================
 'use client'
 
-import { memo, useMemo, useState } from 'react'
+import { memo, useMemo, useState, type ReactNode } from 'react'
 import {
   ChevronDown,
   ChevronLeft,
@@ -60,6 +60,7 @@ export interface InvoiceBuilderMobileProps {
   summary: InvoiceSummary
   invalidRowIds: ReadonlySet<string>
   issues: string[]
+  stockWarning?: ReactNode
 
   customers: readonly InvoiceDraftCustomer[]
   transactionType: 'sale' | 'purchase'
@@ -125,6 +126,7 @@ export const InvoiceBuilderMobile = memo(function InvoiceBuilderMobile({
   summary,
   invalidRowIds,
   issues,
+  stockWarning,
   customers,
   transactionType,
   currency,
@@ -599,6 +601,7 @@ export const InvoiceBuilderMobile = memo(function InvoiceBuilderMobile({
         </dl>
       </section>
 
+      {stockWarning}
       {issues.length ? (
         <ul
           role="alert"

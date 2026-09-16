@@ -68,24 +68,26 @@ docs/             فایل‌های SQL + گزارش‌ها. Migration ها ای
 
 ## ۴. دانش پروژه — کجا را باز کنی
 
-| سؤال                                                | فایل                                             |
-| --------------------------------------------------- | ------------------------------------------------ |
-| **درس‌ها و باگ‌های سشن اخیر**                       | `.claude/SESSION-CACHE-2026-09.md` — **اول این** |
-| **پرفورمنس، PageSpeed، لندینگ موبایل (۱۵ سپتامبر)** | `.claude/SESSION-CACHE-2026-09-15-PERF.md`       |
-| **درخواست‌های باز کاربر — قبل از هر کار**           | `.claude/USER-REQUESTS.md`                       |
-| بودجه/صندوق/حاکمیت/۵۰۰ها (۱۴ سپتامبر)               | `.claude/SESSION-CACHE-2026-09-14.md`            |
-| نقشه‌ی کل دانش                                      | `.claude/README.md`                              |
-| باگ خوردم / چطور وریفای کنم                         | `.claude/DEBUG-PLAYBOOK.md`                      |
-| تله‌های قدیمی‌تر                                    | `.claude/SESSION-CACHE.md`                       |
-| چرا این‌طوری نوشته شده                              | `.claude/lessons-learned.md`                     |
-| الان چه کار می‌کند و چه نه                          | `.claude/STATE.md`                               |
-| کد جدید کجا برود                                    | `.claude/architecture/core-modules.md`           |
-| کدام hook به کدام endpoint                          | `.claude/architecture/api-surface.md`            |
-| جدول‌ها و RLS                                       | `.claude/architecture/data-model.md`             |
-| Source of Truth / کدام migration اجرا شده           | `.claude/SESSION-2026-09-05-CONSOLIDATION.md`    |
-| migration/تست/commit چطور                           | `.claude/WORKFLOW.md`                            |
-| مقایسه با ERPNext و Odoo                            | `.claude/research/`                              |
-| خواسته‌های محصول                                    | `.claude/detail.md`                              |
+| سؤال                                                | فایل                                                |
+| --------------------------------------------------- | --------------------------------------------------- |
+| **درس‌ها و باگ‌های سشن اخیر (۱۵–۱۷ سپتامبر)**       | `.claude/SESSION-CACHE-2026-09-17.md` — **اول این** |
+| درس‌ها و باگ‌های اوایل سپتامبر                      | `.claude/SESSION-CACHE-2026-09.md`                  |
+| **فهرست باگ‌ها با ریشه و گارد**                     | `.claude/BUG-REGISTRY.md`                           |
+| **پرفورمنس، PageSpeed، لندینگ موبایل (۱۵ سپتامبر)** | `.claude/SESSION-CACHE-2026-09-15-PERF.md`          |
+| **درخواست‌های باز کاربر — قبل از هر کار**           | `.claude/USER-REQUESTS.md`                          |
+| بودجه/صندوق/حاکمیت/۵۰۰ها (۱۴ سپتامبر)               | `.claude/SESSION-CACHE-2026-09-14.md`               |
+| نقشه‌ی کل دانش                                      | `.claude/README.md`                                 |
+| باگ خوردم / چطور وریفای کنم                         | `.claude/DEBUG-PLAYBOOK.md`                         |
+| تله‌های قدیمی‌تر                                    | `.claude/SESSION-CACHE.md`                          |
+| چرا این‌طوری نوشته شده                              | `.claude/lessons-learned.md`                        |
+| الان چه کار می‌کند و چه نه                          | `.claude/STATE.md`                                  |
+| کد جدید کجا برود                                    | `.claude/architecture/core-modules.md`              |
+| کدام hook به کدام endpoint                          | `.claude/architecture/api-surface.md`               |
+| جدول‌ها و RLS                                       | `.claude/architecture/data-model.md`                |
+| Source of Truth / کدام migration اجرا شده           | `.claude/SESSION-2026-09-05-CONSOLIDATION.md`       |
+| migration/تست/commit چطور                           | `.claude/WORKFLOW.md`                               |
+| مقایسه با ERPNext و Odoo                            | `.claude/research/`                                 |
+| خواسته‌های محصول                                    | `.claude/detail.md`                                 |
 
 ---
 
@@ -166,8 +168,22 @@ cd apps/admin     && npx tsc --noEmit
 - `${env.X}` در `electron-builder.yml` زودهنگام expand می‌شود و بیلد را می‌شکند.
 - `nsis.packElevateHelper: false` — Defender وسط بسته‌بندی `elevate.exe` را قرنطینه می‌کند. ⚠️ راه‌حل، اضافه‌کردن exclusion به آنتی‌ویروس **نیست**.
 
+**وب، سئو و API (از باگ‌های واقعی سپتامبر)**
+
+- ⚠️ هر هدر جدیدی که `packages/api` می‌فرستد باید **در همان commit** به `allowedHeaders` در `backend/src/index.ts` اضافه شود. `Idempotency-Key` اضافه شد و CORS نه → ثبت فاکتور در وب کامل قطع شد (BUG-006).
+- خواندنی که **هشدار یا تصمیم** می‌سازد `limit` نمی‌گیرد: هشدار موجودی از `useProducts({ limit: 100 })` کالای ۱۰۱ام را نمی‌دید (BUG-007).
+- root layout هرگز `alternates`/canonical پیش‌فرض نمی‌دهد — به همه‌ی صفحات noindex ارث می‌رسد.
+- هر مسیر جدید در `(dashboard)` باید در `app/robots.ts` هم disallow شود (گارد: `robots-dashboard-routes.test.ts`).
+- لینک داخلی همیشه با پیشوند locale؛ لینک از صفحه‌ی عمومی به صفحه‌ی خصوصی `rel="nofollow"`.
+- عنوان صفحه برند نمی‌گیرد؛ template layout `| حسابچه` اضافه می‌کند.
+- هر ادعا در لندینگ/FAQ/متا باید در کد وجود داشته باشد (ورود دو مرحله‌ای، بک‌آپ ۳۰ روزه، وب‌هوک و «۳۰ روز آزمایشی» دروغ بودند). گارد: `landing-claims.test.ts`.
+- لندینگ: بخش‌های ایستا server component؛ آیکون تزئینی = کاراکتر CSS نه SVG (بودجه‌ی DOM)؛ `prefetch={false}`؛ بدون `Suspense` دور صفحه.
+
 **ابزار**
 
+- ⚠️ در این محیط `python -`، `cat > file` بدون heredoc، و heredoc پایتون با `</dev/null` **hang می‌کنند** (۴ بار). اسکریپت را با Write بنویس و `python file.py </dev/null` اجرا کن.
+- یک formatter بعد از هر ذخیره فایل را بازنویسی می‌کند: replace دقیق بعد از ذخیره شکست می‌خورد → Read + Edit، یا Write کامل.
+- `next start` بیلد را فقط هنگام شروع می‌خواند؛ بعد از build سرور preview را restart کن.
 - ⚠️ `git checkout -- <file>` کار انجام‌نشده‌ی سشن را نابود می‌کند. قبل از هر بازگردانی diff را ببین.
 - `\n` و `\r` داخل رشته‌ی پایتون در heredoc به کاراکتر واقعی تبدیل می‌شوند و فایل را خراب می‌کنند. برای فایل بزرگ از ابزار Write استفاده کن.
 - در تست، برای رشته‌های پر از metacharacter از `toContain` استفاده کن نه `toMatch` — الگوی نامعتبر تست را «no tests» می‌کند، نه قرمز.

@@ -108,3 +108,12 @@ cd backend && npx tsc --noEmit && npx vitest run
 - Swallowing an operational error message.
 - `signInWithPassword` on the shared client — see the `hisabche-auth` skill.
 - Forgetting `clearCache` after a write.
+
+## CORS: a new client header needs the allow-list
+
+`backend/src/index.ts` → `@fastify/cors` `allowedHeaders`. Adding a header in
+`packages/api` (e.g. `Idempotency-Key`) without listing it makes the browser
+reject the preflight — the request never reaches the server and the log shows
+nothing (BUG-006: invoice creation broke on the web). Same commit, both sides.
+Guard: `backend/src/__tests__/cors-allowed-headers.test.ts`. Prove with a real
+preflight: `curl -X OPTIONS … -H "Access-Control-Request-Headers: …"`.
