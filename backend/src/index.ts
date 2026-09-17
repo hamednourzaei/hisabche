@@ -44,6 +44,7 @@ import { invoicePublicRoutes } from './routes/invoice-public.routes'
 import { updatesRoutes } from './routes/updates.routes'
 import { productRoutes } from './routes/product.routes'
 import { customerRoutes } from './routes/customer.routes'
+import { customerProfileRoutes } from './routes/customer-profile.routes'
 import { transactionRoutes } from './routes/transaction.routes'
 import { warehouseRoutes } from './routes/warehouse.routes'
 import { cycleCountRoutes } from './routes/cycle-count.routes'
@@ -521,6 +522,7 @@ export async function buildServer(): Promise<typeof server> {
   await server.register(updatesRoutes)
   await server.register(productRoutes)
   await server.register(customerRoutes)
+  await server.register(customerProfileRoutes)
   await server.register(transactionRoutes)
   await server.register(warehouseRoutes)
   await server.register(cycleCountRoutes)

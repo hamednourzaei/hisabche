@@ -435,6 +435,23 @@ export class AccountingService implements LedgerPort {
     return entries
   }
 
+  /** Entries for a set of documents, e.g. one party's invoices and payments. Not cached. */
+  async entriesForDocuments(
+    ctx: TenancyContext,
+    sources: { sourceType: 'invoice' | 'payment'; sourceId: string }[],
+  ): Promise<JournalEntryRow[]> {
+    const byType = new Map<string, string[]>()
+    for (const source of sources) {
+      byType.set(source.sourceType, [...(byType.get(source.sourceType) ?? []), source.sourceId])
+    }
+    const results = await Promise.all(
+      [...byType].map(([type, ids]) =>
+        this.repo.entriesForSources(ctx.workspaceId, type, [...new Set(ids)]),
+      ),
+    )
+    return results.flat()
+  }
+
   async getJournalEntry(ctx: TenancyContext, id: string): Promise<JournalEntryRow> {
     const entry = await this.repo.getEntry(ctx.workspaceId, id)
     if (!entry) throw new NotFoundError('Journal entry')

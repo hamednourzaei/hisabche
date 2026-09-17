@@ -162,3 +162,5 @@ invoice · customer · product · transaction · time_entry
 «اگر همه‌چیز روی دیتابیس خالی اجرا می‌شد درست بود؟». برای «آیا با دیتابیس
 واقعی می‌خواند؟» از `compare-live-schema.mjs` با دامپ استفاده کن. تفاوت این
 دو، ۲۱ ناسازگاری را نشان داد.
+
+> ⚠️ **۲۰۲۶-۰۹-۱۷ — روی دیتابیس زنده `auth_workspace_ids()` وجود ندارد** (خطای 42883 هنگام اجرای `docs/customer-360-phase3-migration.sql`). تا کاربر وجودش را با `SELECT proname FROM pg_proc WHERE proname = 'auth_workspace_ids'` تأیید نکرده، در migration جدید از الگوی زنده‌ی `tenant-isolation-closure-migration.sql` استفاده کن: `workspace_id IN (SELECT workspace_id FROM workspace_members WHERE user_id = auth.uid() AND has_access = true AND suspended_at IS NULL)`.

@@ -3439,7 +3439,10 @@
     "fillRemaining": "پر کردن با باقی‌مانده",
     "unpaidNotePlaceholder": "مثلاً قرار پرداخت تا آخر ماه",
     "fullMismatch": "برای «کامل پرداخت شد» جمع روش‌ها باید برابر مبلغ فاکتور باشد",
-    "partialCoversAll": "این مبلغ کل فاکتور را پوشش می‌دهد"
+    "partialCoversAll": "این مبلغ کل فاکتور را پوشش می‌دهد",
+    "creditLimitTitle": "این فروش بدهی مشتری را از سقف اعتبارش بیشتر می‌کند",
+    "creditAfter": "بعد از این فاکتور",
+    "creditLimitHint": "ثبت انجام می‌شود؛ پیش از تحویل، دریافت یا تأیید را بررسی کنید."
   },
   "admin": {
     "dashboard": {
@@ -4861,7 +4864,10 @@
     "printStatement": "چاپ / PDF صورت‌حساب",
     "statementTitle": "صورت‌حساب مشتری",
     "statementPrinted": "تاریخ چاپ",
-    "closingBalance": "مانده‌ی پایانی"
+    "closingBalance": "مانده‌ی پایانی",
+    "tabAccount": "اعتبار و مدارک",
+    "tabAccounting": "حسابداری",
+    "tabInsights": "تحلیل"
   },
   "crmPanel": {
     "loading": "در حال بارگذاری…",
@@ -4880,5 +4886,110 @@
     "noTasks": "کاری برای این مشتری ثبت نشده است.",
     "noOpportunities": "فرصت فروشی برای این مشتری ثبت نشده است.",
     "openCrm": "باز کردن CRM"
+  },
+  "customerProfile": {
+    "loading": "در حال بارگذاری…",
+    "loadError": "اطلاعات حساب مشتری خوانده نشد.",
+    "retry": "تلاش دوباره",
+    "notConfigured": "سقف اعتبار، مهلت پرداخت و پیوست‌ها پس از اجرای migration فاز ۳ روی پایگاه داده فعال می‌شوند.",
+    "creditTitle": "کنترل اعتبار",
+    "creditLimit": "سقف اعتبار",
+    "creditUsed": "استفاده‌شده",
+    "creditAvailable": "باقی‌مانده",
+    "overLimit": "بدهی این مشتری از سقف اعتبارش بیشتر است.",
+    "noLimit": "سقف اعتباری تعیین نشده است.",
+    "creditLimitInput": "سقف اعتبار",
+    "paymentTermsInput": "مهلت پرداخت (روز)",
+    "emptyMeansNone": "خالی یعنی تعیین نشده؛ صفر یعنی فقط نقدی.",
+    "save": "ذخیره",
+    "saved": "ذخیره شد.",
+    "supplierTitle": "همین طرف به‌عنوان تأمین‌کننده",
+    "linkedTo": "وصل به تأمین‌کننده",
+    "asCustomer": "مانده به‌عنوان مشتری",
+    "asSupplier": "بدهی ما به‌عنوان تأمین‌کننده",
+    "combinedNet": "مانده‌ی خالص مشترک",
+    "mixedCurrencies": "دو طرف ارزهای متفاوت دارند؛ مانده‌ی خالص تقریبی است.",
+    "unlink": "قطع اتصال",
+    "supplierHint": "اگر از این مشتری خرید هم می‌کنید، تأمین‌کننده‌ی مربوط را وصل کنید تا مانده‌ی خالص هر دو طرف دیده شود.",
+    "searchSupplier": "جستجوی تأمین‌کننده (حداقل ۲ حرف)",
+    "noSuppliers": "تأمین‌کننده‌ای پیدا نشد.",
+    "documentsTitle": "پیوست‌ها و مدارک",
+    "upload": "افزودن فایل",
+    "uploading": "در حال بارگذاری…",
+    "uploadHint": "PDF یا تصویر، حداکثر ۵ مگابایت. فایل خصوصی است و فقط با لینک موقت باز می‌شود.",
+    "uploaded": "فایل اضافه شد.",
+    "noDocuments": "هنوز مدرکی برای این مشتری ثبت نشده است.",
+    "remove": "حذف فایل",
+    "confirmRemove": "این فایل از پرونده‌ی مشتری حذف شود؟",
+    "errors": {
+      "CUSTOMER_PROFILE_MIGRATION_PENDING": "این بخش هنوز در پایگاه داده فعال نشده است (migration فاز ۳ اجرا نشده).",
+      "CUSTOMER_SUPPLIER_ALREADY_LINKED": "این تأمین‌کننده قبلاً به مشتری دیگری وصل شده است.",
+      "CUSTOMER_DOCUMENT_TYPE_NOT_ALLOWED": "فقط PDF و تصویر (JPG، PNG، WebP) پذیرفته می‌شود.",
+      "CUSTOMER_DOCUMENT_TOO_LARGE": "حجم فایل بیشتر از ۵ مگابایت است.",
+      "invalidTerms": "سقف اعتبار باید صفر یا بیشتر و مهلت پرداخت عددی صحیح بین ۰ و ۳۶۵۰ روز باشد.",
+      "generic": "ذخیره نشد. دوباره تلاش کنید."
+    }
+  },
+  "customerAnalysis": {
+    "loading": "در حال بارگذاری…",
+    "loadError": "اطلاعات خوانده نشد.",
+    "retry": "تلاش دوباره",
+    "noDocuments": "این مشتری هنوز فاکتور یا پرداختی ندارد.",
+    "postedSummary": "{posted} سند در دفتر، {unposted} سند ثبت‌نشده",
+    "onlyUnposted": "فقط ثبت‌نشده‌ها",
+    "allPosted": "همه‌ی اسناد در دفتر ثبت شده‌اند.",
+    "colDate": "تاریخ",
+    "colDocument": "سند",
+    "colEntry": "سند حسابداری",
+    "colAccount": "حساب",
+    "colDebit": "بدهکار",
+    "colCredit": "بستانکار",
+    "unposted": "ثبت‌نشده در دفتر",
+    "postNow": "ثبت در دفتر",
+    "reversal": "برگشتی",
+    "status": {
+      "draft": "پیش‌نویس",
+      "other": "غیرقطعی"
+    },
+    "insightsDisclaimer": "تحلیل قاعده‌محور از ارقام همین مشتری تا {date} — نه پیش‌بینی مدل هوش مصنوعی.",
+    "noInsights": "نکته‌ی قابل توجهی درباره‌ی این مشتری پیدا نشد.",
+    "insight": {
+      "SALES_UP": {
+        "title": "فروش رو به افزایش",
+        "body": "فروش ۳ ماه اخیر ({recent}) نسبت به ۳ ماه قبل ({previous}) {percent}٪ بیشتر است."
+      },
+      "SALES_DOWN": {
+        "title": "فروش رو به کاهش",
+        "body": "فروش ۳ ماه اخیر ({recent}) نسبت به ۳ ماه قبل ({previous}) {percent}٪ کمتر است."
+      },
+      "LOW_COLLECTION": {
+        "title": "وصول پایین",
+        "body": "در ۱۲ ماه اخیر از {sales} فروش، فقط {receipts} دریافت شده ({percent}٪)."
+      },
+      "OVERDUE_SHARE_HIGH": {
+        "title": "بخش بزرگی از طلب سررسید گذشته است",
+        "body": "{percent}٪ از طلب ({overdue}) در {invoices} فاکتور از سررسید گذشته است."
+      },
+      "OVER_CREDIT_LIMIT": {
+        "title": "بالاتر از سقف اعتبار",
+        "body": "بدهی {used} است و از سقف {limit} به اندازه‌ی {over} بیشتر است."
+      },
+      "NEAR_CREDIT_LIMIT": {
+        "title": "نزدیک سقف اعتبار",
+        "body": "{percent}٪ از سقف اعتبار استفاده شده است."
+      },
+      "INACTIVE": {
+        "title": "مشتری غیرفعال",
+        "body": "{days} روز از آخرین فروش به این مشتری گذشته است."
+      },
+      "UNPOSTED_DOCUMENTS": {
+        "title": "سند ثبت‌نشده در دفتر",
+        "body": "{count} سند این مشتری سند حسابداری فعال ندارد؛ تب حسابداری را ببینید."
+      },
+      "NO_ACTIVITY": {
+        "title": "بدون فعالیت",
+        "body": "این مشتری در ۱۲ ماه اخیر فروش، دریافت یا طلبی ندارد."
+      }
+    }
   }
 }

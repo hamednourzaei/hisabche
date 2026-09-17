@@ -110,36 +110,38 @@ accounting:<workspaceId>:trial:<from>:<to>
 
 ## ۸. Coreهای فعلی و وضعیتشان
 
-| Core                                   | مسیر                                                      | وضعیت                                                 |
-| -------------------------------------- | --------------------------------------------------------- | ----------------------------------------------------- |
-| Accounting / Ledger                    | `backend/src/services/accounting/`                        | ✅ Tier 1، مورد ۱                                     |
-| Inventory Costing                      | `backend/src/services/inventory-costing/`                 | ✅ Tier 1، مورد ۲                                     |
-| Payments / AR / AP                     | `backend/src/services/payments/`                          | ✅ Tier 1، مورد ۳                                     |
-| Authorization                          | `backend/src/services/authorization/`                     | ✅ Tier 1، موارد ۴ و ۵                                |
-| Offline Conflict Resolution            | `backend/src/services/conflict/`                          | ✅ Tier 1، مورد ۶                                     |
-| RLS                                    | `docs/*.sql` + `scripts/verify-rls.mjs`                   | ✅ Tier 1، مورد ۷ — اثبات دو نیمه‌ای                  |
-| SoD                                    | `backend/src/services/authorization/sod.*`                | ✅ Tier 2، مورد ۱                                     |
-| Branch (Multi-company)                 | `backend/src/services/branch/`                            | ✅ Tier 2، مورد ۲                                     |
-| Supplier                               | `backend/src/services/supplier/`                          | ✅ Tier 2، مورد ۳                                     |
-| Subscription / Billing                 | `backend/src/services/billing.service.ts`                 | ✅ Tier 2، مورد ۴ (DECISION A تکمیل شد)               |
-| Personalization (UI Visibility)        | `backend/src/services/personalization/`                   | ✅ Tier 3، مورد ۱                                     |
-| Adaptive Runtime                       | `packages/ui-contract/src/runtime-policy.ts`              | ✅ Tier 3، مورد ۲ (قرارداد؛ اعمال در کلاینت باقی)     |
-| Manufacturing                          | `backend/src/services/manufacturing.service.ts`           | ✅ Tier 3، مورد ۳                                     |
-| Rules Engine                           | `backend/src/services/rules/`                             | ✅ (`detail.md` بند ۵)                                |
-| MDM                                    | `backend/src/services/mdm/`                               | ✅ (`detail.md` بند ۷)                                |
-| Insights (پایه‌ی AI Copilot)           | `backend/src/services/insights/`                          | ✅ (`detail.md` بند ۹)                                |
-| Plugin / Marketplace contract          | `backend/src/services/plugins/plugin.domain.ts`           | ✅ قرارداد (`detail.md` بند ۱۰)                       |
-| Tax                                    | `backend/src/services/tax/`                               | ✅ Tier 1 گپ ۱ — پول در واحد صحیح + انجماد نرخ آفلاین |
-| Traceability (Batch / Serial / Expiry) | `backend/src/services/traceability/`                      | ✅ Tier 1 گپ ۲ — FEFO پیش‌فرض                         |
-| POS                                    | `backend/src/services/pos/`                               | ✅ گپ ۳ — بازیابی session رهاشده                      |
-| Fixed Assets                           | `backend/src/services/assets/`                            | ✅ گپ ۴ — جدول استهلاک از پیش محاسبه‌شده              |
-| Bank Reconciliation                    | `backend/src/services/banking/`                           | ✅ گپ ۵ — تطبیق پیشنهادی، نه خودکار                   |
-| FX Revaluation                         | `backend/src/services/currency/`                          | ✅ گپ ۶ — تحقق‌یافته جدا از تحقق‌نیافته               |
-| Accounting Dimensions                  | `backend/src/services/dimensions/`                        | ✅ گپ ۷ — الزام per-account                           |
-| Budgeting                              | `backend/src/services/budgeting/`                         | ✅ Tier 2 گپ ۸ — تعهد، نه فقط هزینه                   |
-| Repost / Landed Cost / Reorder         | `backend/src/services/inventory-costing/repost.domain.ts` | ✅ Tier 2 گپ ۹-۱۱                                     |
-| Timesheet Billing                      | `backend/src/services/timesheets/`                        | ✅ Tier 2 گپ ۱۴                                       |
-| Workflow Engine                        | `backend/src/services/workflow.service.ts`                | ✅ trigger از Rules Engine می‌آید                     |
+| Core                                   | مسیر                                                      | وضعیت                                                                                                          |
+| -------------------------------------- | --------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Accounting / Ledger                    | `backend/src/services/accounting/`                        | ✅ Tier 1، مورد ۱                                                                                              |
+| Inventory Costing                      | `backend/src/services/inventory-costing/`                 | ✅ Tier 1، مورد ۲                                                                                              |
+| Payments / AR / AP                     | `backend/src/services/payments/`                          | ✅ Tier 1، مورد ۳                                                                                              |
+| CRM (tasks, opportunities)             | `backend/src/services/crm/` — port: `CrmPort`             | ✅ مصرف بین‌هسته‌ای فقط از port؛ UI: `CustomerCrmPanel`                                                        |
+| Customer Profile (credit, terms, docs) | `backend/src/services/customer-profile/`                  | ✅ فاز ۳ و ۴ Customer 360؛ پول از Payments Core، اسناد از Accounting (`entriesForDocuments`)، تحلیل قاعده‌محور |
+| Authorization                          | `backend/src/services/authorization/`                     | ✅ Tier 1، موارد ۴ و ۵                                                                                         |
+| Offline Conflict Resolution            | `backend/src/services/conflict/`                          | ✅ Tier 1، مورد ۶                                                                                              |
+| RLS                                    | `docs/*.sql` + `scripts/verify-rls.mjs`                   | ✅ Tier 1، مورد ۷ — اثبات دو نیمه‌ای                                                                           |
+| SoD                                    | `backend/src/services/authorization/sod.*`                | ✅ Tier 2، مورد ۱                                                                                              |
+| Branch (Multi-company)                 | `backend/src/services/branch/`                            | ✅ Tier 2، مورد ۲                                                                                              |
+| Supplier                               | `backend/src/services/supplier/`                          | ✅ Tier 2، مورد ۳                                                                                              |
+| Subscription / Billing                 | `backend/src/services/billing.service.ts`                 | ✅ Tier 2، مورد ۴ (DECISION A تکمیل شد)                                                                        |
+| Personalization (UI Visibility)        | `backend/src/services/personalization/`                   | ✅ Tier 3، مورد ۱                                                                                              |
+| Adaptive Runtime                       | `packages/ui-contract/src/runtime-policy.ts`              | ✅ Tier 3، مورد ۲ (قرارداد؛ اعمال در کلاینت باقی)                                                              |
+| Manufacturing                          | `backend/src/services/manufacturing.service.ts`           | ✅ Tier 3، مورد ۳                                                                                              |
+| Rules Engine                           | `backend/src/services/rules/`                             | ✅ (`detail.md` بند ۵)                                                                                         |
+| MDM                                    | `backend/src/services/mdm/`                               | ✅ (`detail.md` بند ۷)                                                                                         |
+| Insights (پایه‌ی AI Copilot)           | `backend/src/services/insights/`                          | ✅ (`detail.md` بند ۹)                                                                                         |
+| Plugin / Marketplace contract          | `backend/src/services/plugins/plugin.domain.ts`           | ✅ قرارداد (`detail.md` بند ۱۰)                                                                                |
+| Tax                                    | `backend/src/services/tax/`                               | ✅ Tier 1 گپ ۱ — پول در واحد صحیح + انجماد نرخ آفلاین                                                          |
+| Traceability (Batch / Serial / Expiry) | `backend/src/services/traceability/`                      | ✅ Tier 1 گپ ۲ — FEFO پیش‌فرض                                                                                  |
+| POS                                    | `backend/src/services/pos/`                               | ✅ گپ ۳ — بازیابی session رهاشده                                                                               |
+| Fixed Assets                           | `backend/src/services/assets/`                            | ✅ گپ ۴ — جدول استهلاک از پیش محاسبه‌شده                                                                       |
+| Bank Reconciliation                    | `backend/src/services/banking/`                           | ✅ گپ ۵ — تطبیق پیشنهادی، نه خودکار                                                                            |
+| FX Revaluation                         | `backend/src/services/currency/`                          | ✅ گپ ۶ — تحقق‌یافته جدا از تحقق‌نیافته                                                                        |
+| Accounting Dimensions                  | `backend/src/services/dimensions/`                        | ✅ گپ ۷ — الزام per-account                                                                                    |
+| Budgeting                              | `backend/src/services/budgeting/`                         | ✅ Tier 2 گپ ۸ — تعهد، نه فقط هزینه                                                                            |
+| Repost / Landed Cost / Reorder         | `backend/src/services/inventory-costing/repost.domain.ts` | ✅ Tier 2 گپ ۹-۱۱                                                                                              |
+| Timesheet Billing                      | `backend/src/services/timesheets/`                        | ✅ Tier 2 گپ ۱۴                                                                                                |
+| Workflow Engine                        | `backend/src/services/workflow.service.ts`                | ✅ trigger از Rules Engine می‌آید                                                                              |
 
 ## ۹. Portهای موجود
 

@@ -13,7 +13,6 @@
 // ============================================
 
 import { supabase } from '../../db'
-import { DatabaseError } from '../../errors/database.error'
 import { memoryCache } from '../../utils/pagination'
 import { fetchAllPages } from '../../utils/fetch-all-pages'
 import type { TenancyContext } from '../tenancy.service'
@@ -122,29 +121,38 @@ export async function getCustomerDebtReport(ctx: TenancyContext) {
     return aggregate
   }
 
-  const [customersResult, invoicesResult] = await Promise.all([
-    supabase
-      .from('customers')
-      .select('id, full_name, opening_balance')
-      .eq('workspace_id', workspaceId)
-      .eq('is_active', true),
-    supabase
-      .from('invoices')
-      .select('customer_id, total, paid_amount')
-      .eq('workspace_id', workspaceId)
-      .neq('status', 'paid'),
+  // BUG-011: cancelled invoices are not debt, and a purchase invoice is money
+  // WE owe — same rule as payments.domain#summarizeParty. Paged: no 1000-row cap.
+  const [customers, invoices] = await Promise.all([
+    fetchAllPages<{ id: string; full_name: string; opening_balance: number | null }>(
+      (from, to) =>
+        supabase
+          .from('customers')
+          .select('id, full_name, opening_balance')
+          .eq('workspace_id', workspaceId)
+          .eq('is_active', true)
+          .order('id')
+          .range(from, to),
+      'Failed to fetch customers',
+    ),
+    fetchAllPages<{ customer_id: string | null; total: number; paid_amount: number | null }>(
+      (from, to) =>
+        supabase
+          .from('invoices')
+          .select('customer_id, total, paid_amount')
+          .eq('workspace_id', workspaceId)
+          .not('status', 'in', '("paid","cancelled")')
+          // .neq() would also drop a NULL type (legacy rows are sales).
+          .or('type.is.null,type.neq.purchase')
+          .order('id')
+          .range(from, to),
+      'Failed to fetch open invoices',
+    ),
   ])
-
-  if (customersResult.error) {
-    throw new DatabaseError('Failed to fetch customers', customersResult.error)
-  }
-  if (invoicesResult.error) {
-    throw new DatabaseError('Failed to fetch open invoices', invoicesResult.error)
-  }
 
   const debtMap: Record<string, { name: string; balance: number; totalInvoices: number }> = {}
 
-  for (const customer of customersResult.data ?? []) {
+  for (const customer of customers) {
     debtMap[customer.id] = {
       name: customer.full_name,
       balance: Number(customer.opening_balance) || 0,
@@ -152,7 +160,7 @@ export async function getCustomerDebtReport(ctx: TenancyContext) {
     }
   }
 
-  for (const invoice of invoicesResult.data ?? []) {
+  for (const invoice of invoices) {
     const entry = invoice.customer_id ? debtMap[invoice.customer_id] : undefined
     if (!entry) continue
     entry.balance += (Number(invoice.total) || 0) - (Number(invoice.paid_amount) || 0)

@@ -29,6 +29,8 @@ import { GHOST_ICON_BUTTON } from '../button-classes'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../tabs'
 import { PaymentModal } from './PaymentModal'
 import { CustomerCrmPanel } from '../crm/customer-crm-panel'
+import { CustomerProfilePanel } from './customer-profile-panel'
+import { CustomerAccountingPanel, CustomerInsightsPanel } from './customer-analysis-panels'
 
 export interface CustomerInvoiceRow {
   id: string
@@ -327,6 +329,9 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
           <TabsTrigger value="invoices">{t('tabSales')}</TabsTrigger>
           <TabsTrigger value="payments">{t('tabPayments')}</TabsTrigger>
           <TabsTrigger value="activity">{t('tabActivity')}</TabsTrigger>
+          <TabsTrigger value="insights">{t('tabInsights')}</TabsTrigger>
+          <TabsTrigger value="accounting">{t('tabAccounting')}</TabsTrigger>
+          <TabsTrigger value="account">{t('tabAccount')}</TabsTrigger>
           <TabsTrigger value="crm">{t('tabCrm')}</TabsTrigger>
           <TabsTrigger value="history">{t('tabHistory')}</TabsTrigger>
         </TabsList>
@@ -379,6 +384,27 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
 
         <TabsContent value="activity">
           <Activity {...props} money={money} />
+        </TabsContent>
+
+        <TabsContent value="insights">
+          <CustomerInsightsPanel
+            customerId={customer.id}
+            formatMoney={(value) => money(value)}
+            formatDate={props.formatDate}
+          />
+        </TabsContent>
+
+        <TabsContent value="accounting">
+          <CustomerAccountingPanel
+            customerId={customer.id}
+            formatMoney={(value) => money(value)}
+            formatDate={props.formatDate}
+            onOpenInvoice={props.onOpenInvoice}
+          />
+        </TabsContent>
+
+        <TabsContent value="account">
+          <CustomerProfilePanel customerId={customer.id} formatMoney={(value) => money(value)} />
         </TabsContent>
 
         <TabsContent value="crm">

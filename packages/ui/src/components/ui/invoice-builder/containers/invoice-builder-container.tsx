@@ -7,6 +7,7 @@
 import { memo, useCallback, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { COLUMN, currencyPrecision, moveColumn, type InvoiceColumn } from '@hisabche/validation'
+import { formatNumber } from '@hisabche/formatting'
 import {
   useCurrencyStore,
   useInvoiceDraftStore,
@@ -18,6 +19,8 @@ import { useInvoiceDraft } from '../../../../hooks/invoices/use-invoice-draft'
 import { InvoiceBuilderPage } from '../invoice-builder-page'
 import { OversoldWarning } from '../oversold-warning'
 import { useOversoldLines } from '../use-oversold-lines'
+import { CreditLimitWarning } from '../credit-limit-warning'
+import { useCustomerTerms } from '../use-customer-terms'
 
 export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
   const router = useRouter()
@@ -102,6 +105,17 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
   // Warn while the quantity is typed, not only on the preview (see the hook).
   const oversoldLines = useOversoldLines(items, draft.transactionType)
 
+  // Customer terms: fill an empty due date, warn past the credit limit.
+  const setDueDate = useCallback((value: string) => draft.setField('dueDate', value), [draft])
+  const creditBreachInfo = useCustomerTerms({
+    customerId: draft.customers[0]?.id,
+    transactionType: draft.transactionType,
+    date: draft.date,
+    dueDate: draft.dueDate,
+    invoiceTotal: summary.total,
+    setDueDate,
+  })
+
   const handleContinue = useCallback(() => router.push('/invoices/new/preview'), [router])
   const handleBackToList = useCallback(() => router.push('/invoices'), [router])
 
@@ -115,7 +129,16 @@ export const InvoiceBuilderContainer = memo(function InvoiceBuilderContainer() {
       summary={summary}
       invalidRowIds={invalidRowIds}
       issues={issues}
-      stockWarning={<OversoldWarning t={t} lines={oversoldLines} />}
+      stockWarning={
+        <>
+          <OversoldWarning t={t} lines={oversoldLines} />
+          <CreditLimitWarning
+            t={t}
+            breach={creditBreachInfo}
+            formatMoney={(value) => formatNumber(value, locale, 2)}
+          />
+        </>
+      }
       customers={draft.customers}
       transactionType={draft.transactionType}
       currency={currency}

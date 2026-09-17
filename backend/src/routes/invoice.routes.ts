@@ -231,8 +231,8 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
         // resolved customer/supplier name, the workspace id and the
         // transaction type. This route only invalidates the caches.
         try {
-          await clearCache(`activities:${workspaceId}:*`)
-          await clearCache(`activities-unread:${workspaceId}`)
+          await clearCache(`activities:${request.tenancy.userId}:*`)
+          await clearCache(`activities-unread:${request.tenancy.userId}:*`)
         } catch (activityErr) {
           fastify.log.error(activityErr, 'Failed to clear activity cache after invoice create')
         }
@@ -340,8 +340,8 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
             },
             importance: 1,
           })
-          await clearCache(`activities:${workspaceId}:*`)
-          await clearCache(`activities-unread:${workspaceId}`)
+          await clearCache(`activities:${request.tenancy.userId}:*`)
+          await clearCache(`activities-unread:${request.tenancy.userId}:*`)
         } catch (activityErr) {
           fastify.log.error(activityErr, 'Failed to create activity for invoice update')
         }
@@ -394,8 +394,8 @@ export async function invoiceRoutes(fastify: FastifyInstance) {
             title: 'فاکتور حذف شد',
             importance: 2,
           })
-          await clearCache(`activities:${workspaceId}:*`)
-          await clearCache(`activities-unread:${workspaceId}`)
+          await clearCache(`activities:${request.tenancy.userId}:*`)
+          await clearCache(`activities-unread:${request.tenancy.userId}:*`)
         } catch (activityErr) {
           fastify.log.error(activityErr, 'Failed to create activity for invoice delete')
         }

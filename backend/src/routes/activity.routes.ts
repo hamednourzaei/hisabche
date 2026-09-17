@@ -82,7 +82,7 @@ export async function activityRoutes(fastify: FastifyInstance) {
 
         await activityService.markAsRead(userId, ids)
         await clearCache(`activities:${userId}:*`)
-        await clearCache(`activities-unread:${userId}`)
+        await clearCache(`activities-unread:${userId}:*`)
 
         return reply.send({ success: true })
       } catch (err: any) {
@@ -104,7 +104,7 @@ export async function activityRoutes(fastify: FastifyInstance) {
 
         await activityService.markAllAsRead(userId)
         await clearCache(`activities:${userId}:*`)
-        await clearCache(`activities-unread:${userId}`)
+        await clearCache(`activities-unread:${userId}:*`)
 
         return reply.send({ success: true })
       } catch (err: any) {

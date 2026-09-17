@@ -3434,7 +3434,10 @@
     "fillRemaining": "Fill with the remainder",
     "unpaidNotePlaceholder": "e.g. to be paid by the end of the month",
     "fullMismatch": "For “Paid in full” the methods must add up to the invoice total",
-    "partialCoversAll": "This amount covers the whole invoice"
+    "partialCoversAll": "This amount covers the whole invoice",
+    "creditLimitTitle": "This sale takes the customer past their credit limit",
+    "creditAfter": "After this invoice",
+    "creditLimitHint": "Saving is allowed; check payment or approval before handing over goods."
   },
   "admin": {
     "dashboard": {
@@ -4856,7 +4859,10 @@
     "printStatement": "Print / PDF statement",
     "statementTitle": "Customer statement",
     "statementPrinted": "Printed",
-    "closingBalance": "Closing balance"
+    "closingBalance": "Closing balance",
+    "tabAccount": "Credit & documents",
+    "tabAccounting": "Accounting",
+    "tabInsights": "Insights"
   },
   "crmPanel": {
     "loading": "Loading…",
@@ -4875,5 +4881,110 @@
     "noTasks": "No tasks recorded for this customer.",
     "noOpportunities": "No opportunities recorded for this customer.",
     "openCrm": "Open CRM"
+  },
+  "customerProfile": {
+    "loading": "Loading…",
+    "loadError": "Couldn't load this customer's account settings.",
+    "retry": "Try again",
+    "notConfigured": "Credit limit, payment terms and documents become available once the phase 3 database migration has been run.",
+    "creditTitle": "Credit control",
+    "creditLimit": "Credit limit",
+    "creditUsed": "Used",
+    "creditAvailable": "Available",
+    "overLimit": "This customer's balance is over their credit limit.",
+    "noLimit": "No credit limit set.",
+    "creditLimitInput": "Credit limit",
+    "paymentTermsInput": "Payment terms (days)",
+    "emptyMeansNone": "Empty means not set; 0 means cash only.",
+    "save": "Save",
+    "saved": "Saved.",
+    "supplierTitle": "Same party as a supplier",
+    "linkedTo": "Linked to supplier",
+    "asCustomer": "Balance as customer",
+    "asSupplier": "We owe as supplier",
+    "combinedNet": "Combined net balance",
+    "mixedCurrencies": "The two sides use different currencies; the net figure is approximate.",
+    "unlink": "Unlink",
+    "supplierHint": "If you also buy from this customer, link their supplier record to see the net balance of both sides.",
+    "searchSupplier": "Search suppliers (at least 2 characters)",
+    "noSuppliers": "No suppliers found.",
+    "documentsTitle": "Documents",
+    "upload": "Add file",
+    "uploading": "Uploading…",
+    "uploadHint": "PDF or image, up to 5 MB. Files are private and open only through a temporary link.",
+    "uploaded": "File added.",
+    "noDocuments": "No documents for this customer yet.",
+    "remove": "Remove file",
+    "confirmRemove": "Remove this file from the customer's record?",
+    "errors": {
+      "CUSTOMER_PROFILE_MIGRATION_PENDING": "This isn't enabled on the database yet (phase 3 migration not run).",
+      "CUSTOMER_SUPPLIER_ALREADY_LINKED": "This supplier is already linked to another customer.",
+      "CUSTOMER_DOCUMENT_TYPE_NOT_ALLOWED": "Only PDF and images (JPG, PNG, WebP) are accepted.",
+      "CUSTOMER_DOCUMENT_TOO_LARGE": "The file is larger than 5 MB.",
+      "invalidTerms": "Credit limit must be 0 or more and payment terms a whole number from 0 to 3650 days.",
+      "generic": "Couldn't save. Try again."
+    }
+  },
+  "customerAnalysis": {
+    "loading": "Loading…",
+    "loadError": "Couldn't load this data.",
+    "retry": "Try again",
+    "noDocuments": "This customer has no invoices or payments yet.",
+    "postedSummary": "{posted} in the ledger, {unposted} not posted",
+    "onlyUnposted": "Only not posted",
+    "allPosted": "Every document is in the ledger.",
+    "colDate": "Date",
+    "colDocument": "Document",
+    "colEntry": "Journal entry",
+    "colAccount": "Account",
+    "colDebit": "Debit",
+    "colCredit": "Credit",
+    "unposted": "Not in ledger",
+    "postNow": "Post to ledger",
+    "reversal": "reversal",
+    "status": {
+      "draft": "draft",
+      "other": "not final"
+    },
+    "insightsDisclaimer": "Rule-based analysis of this customer's figures up to {date} — not an AI model prediction.",
+    "noInsights": "Nothing notable found for this customer.",
+    "insight": {
+      "SALES_UP": {
+        "title": "Sales rising",
+        "body": "Sales in the last 3 months ({recent}) are {percent}% above the 3 months before ({previous})."
+      },
+      "SALES_DOWN": {
+        "title": "Sales falling",
+        "body": "Sales in the last 3 months ({recent}) are {percent}% below the 3 months before ({previous})."
+      },
+      "LOW_COLLECTION": {
+        "title": "Low collection",
+        "body": "Of {sales} sold in the last 12 months, only {receipts} has been received ({percent}%)."
+      },
+      "OVERDUE_SHARE_HIGH": {
+        "title": "Much of the balance is overdue",
+        "body": "{percent}% of the receivable ({overdue}) across {invoices} invoices is past due."
+      },
+      "OVER_CREDIT_LIMIT": {
+        "title": "Over credit limit",
+        "body": "The balance is {used}, {over} over the {limit} limit."
+      },
+      "NEAR_CREDIT_LIMIT": {
+        "title": "Close to credit limit",
+        "body": "{percent}% of the credit limit is used."
+      },
+      "INACTIVE": {
+        "title": "Inactive customer",
+        "body": "{days} days since the last sale to this customer."
+      },
+      "UNPOSTED_DOCUMENTS": {
+        "title": "Documents missing from the ledger",
+        "body": "{count} of this customer's documents have no live journal entry; see the Accounting tab."
+      },
+      "NO_ACTIVITY": {
+        "title": "No activity",
+        "body": "No sales, receipts or balance in the last 12 months."
+      }
+    }
   }
 }

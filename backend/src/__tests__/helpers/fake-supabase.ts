@@ -272,7 +272,39 @@ class QueryBuilder implements PromiseLike<{ data: any; error: any }> {
     return this.push(`in:${column}`, (row) => set.has(valueAt(row, column)))
   }
 
+  /**
+   * Only `col.is.null` and `col.neq.value`, comma-separated — what the code
+   * uses. PostgREST semantics: neq on NULL is not a match.
+   */
+  or(filter: string) {
+    const parts = filter.split(',').map((part) => {
+      const [column, operator, ...rest] = part.split('.')
+      const value = rest.join('.')
+      if (operator === 'is' && value === 'null')
+        return (row: Record<string, unknown>) => valueAt(row, column!) == null
+      if (operator === 'neq') {
+        return (row: Record<string, unknown>) => {
+          const cell = valueAt(row, column!)
+          return cell != null && String(cell) !== value
+        }
+      }
+      throw new Error(`fake-supabase: .or(${part}) is not implemented`)
+    })
+    return this.push(`or:${filter}`, (row) => parts.some((test) => test(row)))
+  }
+
   not(column: string, operator: string, value: unknown) {
+    if (operator === 'in') {
+      // '("paid","cancelled")' → NOT IN; a NULL cell is not a match, as in SQL.
+      const values = String(value)
+        .replace(/^\(|\)$/g, '')
+        .split(',')
+        .map((item) => item.trim().replace(/^"|"$/g, ''))
+      return this.push(`not.in:${column}`, (row) => {
+        const cell = valueAt(row, column)
+        return cell != null && !values.includes(String(cell))
+      })
+    }
     if (operator !== 'is') {
       throw new Error(`fake-supabase: .not(${operator}) is not implemented`)
     }

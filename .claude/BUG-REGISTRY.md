@@ -118,8 +118,29 @@
 - **تست:** backend `party-summary.test.ts` (10) · ui `customer-360.test.ts` (7) · backend 2091 ✅ · ui 743 ✅ · tsc api/ui/web/desktop ✅ · build وب ✅ · route محلی 401 بدون توکن ✅
 - **مرورگر:** ❌ نیازمند ورود کاربر.
 
+## BUG-010 — CRM بدون هسته: کش اشتباه، شکل داده‌ی ناهمگون، سقف‌های بی‌صدا
+
+- **الگو:** ۱ + ۴ + معماری موازی (خواندن مستقیم جدول در forecast)
+- **ریشه‌ها (همه در `crm.service.ts` قدیمی / `crm.routes.ts`):** invalidate کش با `user_id` به‌جای workspace؛ `clearCache('interactions:*')` سراسری (کش همه‌ی workspaceها)؛ opportunities به‌صورت snake_case برمی‌گشت؛ تغییر وضعیت از لینک عمومی کش صاحب کار را پاک نمی‌کرد؛ `customerSnapshot` خطا را نادیده می‌گرفت؛ `.limit(2000/10000)` روی خواندن‌ها؛ `count: 'estimated'`؛ متدهای مرده؛ `forecast.service.ts` جدول‌ها را مستقیم می‌خواند و فرصت‌های won/lost را «راکد» نشان می‌داد.
+- **رفع:** CRM Core در `backend/src/services/crm/{domain,repository,service,port,index}.ts` — فقط repository نام جدول را می‌داند؛ `CrmPort` (`listOpenOpportunityActivity`، `getCustomerCrm`) برای مصرف بین‌هسته‌ای؛ forecast از port؛ route جدید `GET /api/crm/customers/:customerId`؛ UI مشترک `CustomerCrmPanel` روی `useCustomerCrm`.
+- **تست:** `crm-core.test.ts` (نگاشت، قواعد، خلاصه، گارد «فقط هسته جدول می‌خواند»، شمارش دقیق) · backend 2105 ✅ · ui 754 ✅ · tsc api/ui/web/desktop/mobile ✅
+- **مرورگر:** ❌ نیازمند ورود کاربر.
+
+## BUG-011 — گزارش بدهی مشتریان فاکتور باطل‌شده و خرید را بدهی حساب می‌کرد (کاندید C-cancelled-debt)
+
+- **الگو:** ۴ (عدد بی‌صدا غلط) + دو صفحه، دو قاعده
+- **ریشه:** `operational-reports.ts#getCustomerDebtReport` و تابع SQL `accounting_customer_debt` با `status <> 'paid'` می‌خواندند → `cancelled` هم بدهی بود؛ فاکتور `purchase` با customer_id هم بدهی مشتری حساب می‌شد؛ مسیر JS بدون صفحه‌بندی (سقف ۱۰۰۰). Customer 360 (`summarizeParty`) هر دو را حذف می‌کند، پس دو صفحه برای یک مشتری عدد متفاوت می‌دادند.
+- **رفع:** مسیر JS: `.not('status','in','("paid","cancelled")')` + `.or('type.is.null,type.neq.purchase')` + `fetchAllPages`. SQL: `docs/customer-debt-cancelled-fix-migration.sql` (CREATE OR REPLACE، grant‌ها بدون تغییر، verify داخل فایل) — PENDING HUMAN CONFIRMATION. fake-supabase: `.not(in)` و `.or()` با معنای PostgREST (NULL match نیست).
+- **تست:** `customer-debt-report.test.ts` (injection-tested) · `perf-aggregates.test.ts` سبز.
+
+## BUG-012 — پاک‌کردن کش فید فعالیت هیچ‌وقت چیزی پاک نمی‌کرد
+
+- **الگو:** ۱ (قانون هست، اثر ندارد) — همان خانواده‌ی BUG-008
+- **ریشه:** کش `activities`/`activities-unread` با scope `user` است (`<prefix>:<userId>:<url>`). `invoice.routes` با `workspaceId` پاک می‌کرد، و `activities-unread:${userId}` بدون `:*` بود → هیچ کلیدی match نمی‌شد.
+- **رفع:** همه‌ی clearها `activities(-unread):<userId>:*`؛ در invoice routes کاربر عامل (`request.tenancy.userId`). فید بقیه‌ی اعضای workspace با TTL ۱۵–۳۰ ثانیه تازه می‌شود.
+- **تست:** `activity-cache-keys.test.ts` (injection-tested).
+
 ## صف کاندیدها (هنوز بررسی نشده — فرضیه، نه باگ)
 
-| #                | کاندید                                                                                                                                                                                        | الگو |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---- |
-| C-cancelled-debt | `operational-reports.ts` (گزارش بدهی مشتریان) فاکتورها را با `.neq('status','paid')` می‌خواند → فاکتور **باطل‌شده** هم بدهی حساب می‌شود؛ view `invoice_outstanding` هم وضعیت را فیلتر نمی‌کند | ۳/۵  |
+| #   | کاندید | الگو |
+| --- | ------ | ---- |

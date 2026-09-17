@@ -300,6 +300,41 @@ export class AccountingRepository {
     return data ? mapEntry(data) : null
   }
 
+  /**
+   * Every non-deleted entry for these source documents (Customer 360 phase 4).
+   * Ids in chunks of 200 and rows in pages of 1000 — no silent cap (pattern 4).
+   */
+  async entriesForSources(
+    workspaceId: string,
+    sourceType: string,
+    sourceIds: string[],
+  ): Promise<JournalEntryRow[]> {
+    const rows: JournalEntryRow[] = []
+    for (let i = 0; i < sourceIds.length; i += 200) {
+      const chunk = sourceIds.slice(i, i + 200)
+      for (let from = 0; ; from += 1000) {
+        const { data, error } = await supabase
+          .from('journal_entries')
+          .select(
+            `id, entry_number, date, description, reference, status, source_type, source_id,
+             reversal_of, posted_at, created_at,
+             lines:journal_lines(id, account_id, debit, credit, account:accounts(id, code, name, type))`,
+          )
+          .eq('workspace_id', workspaceId)
+          .eq('source_type', sourceType)
+          .in('source_id', chunk)
+          .is('deleted_at', null)
+          .order('date', { ascending: true })
+          .order('id', { ascending: true })
+          .range(from, from + 999)
+        if (error) throw new DatabaseError('Failed to fetch entries for documents', error)
+        rows.push(...(data ?? []).map(mapEntry))
+        if (!data || data.length < 1000) break
+      }
+    }
+    return rows
+  }
+
   /** Highest sequence used this year, so the next number continues it. */
   async lastEntrySequence(workspaceId: string, year: number): Promise<number> {
     const { data, error } = await supabase

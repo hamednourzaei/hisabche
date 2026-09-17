@@ -668,3 +668,28 @@ export {
   type SyncFailedChange,
   type DuplicateSummary,
 } from './hooks/sync-overview'
+
+// ─── Customer Profile (Customer 360 phase 3) ─────────────
+export {
+  useCustomerProfile,
+  useUpdateCustomerTerms,
+  useCustomerDocuments,
+  useUploadCustomerDocument,
+  useRemoveCustomerDocument,
+  fetchCustomerDocumentUrl,
+  useSupplierSearch,
+  useCustomerAccounting,
+  useCustomerInsights,
+  customerAnalysisKeys,
+  type CustomerAccounting,
+  type CustomerDocumentAccounting,
+  type CustomerEntryLine,
+  type CustomerInsight,
+  type CustomerInsightCode,
+  customerProfileKeys,
+  type CustomerProfile,
+  type CustomerTermsInput,
+  type CustomerDocument,
+  type CreditControl,
+  type SupplierOption,
+} from './hooks/customer-profile'
