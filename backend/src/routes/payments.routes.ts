@@ -265,6 +265,36 @@ export async function paymentsRoutes(fastify: FastifyInstance) {
     },
   )
 
+  // ─── GET /activity/:partyType/:partyId ─────────────────
+  fastify.get(
+    '/activity/:partyType/:partyId',
+    {
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        requireCapability('report.financial.read'),
+      ],
+      schema: { response: { 200: toJsonSchema(z.any()) } },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const params = z
+          .object({ partyType: z.enum(['customer', 'supplier']), partyId: z.string().uuid() })
+          .safeParse(request.params)
+        if (!params.success) return reply.code(400).send({ error: 'Invalid party' })
+        return reply.send(
+          await paymentsService.getPartyActivity(
+            request.tenancy,
+            params.data.partyType,
+            params.data.partyId,
+          ),
+        )
+      } catch (err) {
+        return fail(reply, err, 'Failed to build the party activity')
+      }
+    },
+  )
+
   // ─── GET /ledger/:partyType/:partyId ───────────────────
   fastify.get(
     '/ledger/:partyType/:partyId',

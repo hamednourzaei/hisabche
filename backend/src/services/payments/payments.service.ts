@@ -32,6 +32,8 @@ import {
   partyBalance,
   round2,
   runningLedger,
+  monthlyActivity,
+  rankPartyProducts,
   summarizeParty,
   unallocatedOf,
   validateAllocations,
@@ -40,6 +42,8 @@ import {
   type LedgerMovement,
   type OpenInvoice,
   type PartyType,
+  type MonthlyActivity,
+  type PartyProduct,
   type PartySummary,
   type PaymentDirection,
 } from './payments.domain'
@@ -578,5 +582,56 @@ export class PaymentsService {
       asOf,
       openingBalance,
     )
+  }
+
+  /**
+   * Customer 360 activity: sales vs receipts for the last 12 months, and the
+   * products this party buys (or supplies) most, by amount.
+   */
+  async getPartyActivity(
+    ctx: TenancyContext,
+    partyType: PartyType,
+    partyId: string,
+    asOf: string = today(),
+  ): Promise<{ monthly: MonthlyActivity[]; products: PartyProduct[] }> {
+    const { invoices, payments } = await this.repo.partyMovements(
+      ctx.workspaceId,
+      partyType,
+      partyId,
+    )
+    const documentType = partyType === 'customer' ? 'sale' : 'purchase'
+    const relevant = invoices.filter((invoice) => (invoice.type ?? 'sale') === documentType)
+    const lines = await this.repo.invoiceLines(
+      ctx.workspaceId,
+      relevant.map((invoice) => invoice.id),
+    )
+    return {
+      monthly: monthlyActivity(
+        invoices.map((invoice) => ({
+          type: invoice.type === 'purchase' ? 'purchase' : 'sale',
+          total: Number(invoice.total) || 0,
+          invoiceDate: String(invoice.date ?? ''),
+        })),
+        payments.map((payment) => ({
+          direction: payment.direction === 'out' ? 'out' : 'in',
+          amount: Number(payment.amount) || 0,
+          entryDate: String(payment.entry_date ?? ''),
+        })),
+        asOf,
+      ),
+      products: rankPartyProducts(
+        lines.map((line) => ({
+          invoiceId: String(line.invoice_id),
+          productId: line.product_id ?? null,
+          name: String(line.product_name ?? ''),
+          unit: String(line.unit === 'custom' ? (line.unit_label ?? 'custom') : (line.unit ?? '')),
+          quantity: Number(line.quantity) || 0,
+          amount: Number(line.total_price) || 0,
+        })),
+        new Map(
+          relevant.map((invoice) => [String(invoice.id), String(invoice.date ?? '').slice(0, 10)]),
+        ),
+      ),
+    }
   }
 }

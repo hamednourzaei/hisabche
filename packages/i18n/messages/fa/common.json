@@ -4843,6 +4843,42 @@
       "completed": "تکمیل",
       "cancelled": "باطل",
       "draft": "پیش‌نویس"
-    }
+    },
+    "tabActivity": "فعالیت و کالاها",
+    "tabCrm": "CRM",
+    "tabHistory": "تاریخچه‌ی تغییرات",
+    "chartTitle": "فروش و دریافت — ۱۲ ماه اخیر",
+    "chartSales": "فروش",
+    "chartReceipts": "دریافت",
+    "chartEmpty": "در ۱۲ ماه اخیر فروش یا دریافتی ثبت نشده است.",
+    "topProducts": "کالاهای پرخرید",
+    "noProducts": "هنوز کالایی به این مشتری فروخته نشده است.",
+    "colProduct": "کالا",
+    "colQuantity": "مقدار",
+    "colAmount": "مبلغ",
+    "colInvoices": "فاکتور",
+    "colLastSold": "آخرین خرید",
+    "printStatement": "چاپ / PDF صورت‌حساب",
+    "statementTitle": "صورت‌حساب مشتری",
+    "statementPrinted": "تاریخ چاپ",
+    "closingBalance": "مانده‌ی پایانی"
+  },
+  "crmPanel": {
+    "loading": "در حال بارگذاری…",
+    "loadError": "اطلاعات CRM این مشتری خوانده نشد.",
+    "retry": "تلاش دوباره",
+    "openTasks": "کارهای باز",
+    "completedTasks": "{count} انجام‌شده",
+    "openPipeline": "فرصت‌های باز",
+    "openDeals": "{count} فرصت",
+    "weightedPipeline": "ارزش وزنی فرصت‌ها",
+    "won": "فروش‌های موفق",
+    "lostCount": "{count} ازدست‌رفته",
+    "nextTask": "کار بعدی",
+    "tasks": "کارها و تماس‌ها",
+    "opportunities": "فرصت‌های فروش",
+    "noTasks": "کاری برای این مشتری ثبت نشده است.",
+    "noOpportunities": "فرصت فروشی برای این مشتری ثبت نشده است.",
+    "openCrm": "باز کردن CRM"
   }
 }

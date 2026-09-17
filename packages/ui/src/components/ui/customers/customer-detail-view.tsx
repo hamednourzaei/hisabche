@@ -6,9 +6,11 @@
 //
 // Layout: identity + actions → the money picture (net balance, receivable,
 // overdue, sales, receipts, open invoices) → what is owed by due date and by
-// age → tabs: statement with running balance, invoices, payments.
+// age → tabs: statement with running balance, invoices, payments, activity
+// (12-month chart + top products), CRM (shared CustomerCrmPanel), history.
 // ============================================
 
+import { useState, type ReactNode } from 'react'
 import { useTranslations } from 'next-intl'
 import {
   AlertTriangle,
@@ -17,14 +19,16 @@ import {
   Download,
   FilePlus2,
   FileText,
+  Printer,
 } from 'lucide-react'
-import type { PartyLedger, PartySummary, PaymentRecord } from '@hisabche/api'
+import type { PartyActivity, PartyLedger, PartySummary, PaymentRecord } from '@hisabche/api'
 import { CURRENCY_SIGN, formatMoney, formatNumber, type KnownCurrency } from '@hisabche/formatting'
 
 import { cn } from '../../../lib/utils'
 import { GHOST_ICON_BUTTON } from '../button-classes'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../tabs'
 import { PaymentModal } from './PaymentModal'
+import { CustomerCrmPanel } from '../crm/customer-crm-panel'
 
 export interface CustomerInvoiceRow {
   id: string
@@ -73,6 +77,10 @@ export interface CustomerDetailViewProps {
   onNewInvoice: () => void
   onOpenInvoice: (id: string) => void
   onExport: () => void
+  activity: PartyActivity | null
+  activityLoading: boolean
+  /** The record's audit trail, rendered by the container (RecordHistoryPanel). */
+  history: ReactNode
 }
 
 const card =
@@ -95,6 +103,13 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
   const t = useTranslations('customer360')
   const tc = useTranslations()
   const { customer, summary, locale } = props
+  const [tab, setTab] = useState('statement')
+
+  // Print / «Save as PDF» prints the statement: switch to it, then print after the render.
+  const printStatement = () => {
+    setTab('statement')
+    setTimeout(() => window.print(), 50)
+  }
 
   // One currency → show it; several → numbers only, with the notice below.
   const summaryCurrency = summary?.currencies.length === 1 ? (summary.currencies[0] ?? '') : ''
@@ -167,7 +182,16 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 print:hidden">
+          <button
+            type="button"
+            onClick={printStatement}
+            disabled={!props.ledger || props.ledger.movements.length === 0}
+            className={outlineBtn}
+          >
+            <Printer className="size-4" aria-hidden="true" />
+            {t('printStatement')}
+          </button>
           <button type="button" onClick={props.onNewInvoice} className={outlineBtn}>
             <FilePlus2 className="size-4" aria-hidden="true" />
             {t('newInvoice')}
@@ -296,11 +320,15 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
       )}
 
       {/* ── Statement / invoices / payments ─────────────────────────────── */}
-      <Tabs defaultValue="statement" className={cn(card, 'p-3 sm:p-4')}>
-        <TabsList className="mb-3">
+      <Tabs value={tab} onValueChange={setTab} className={cn(card, 'p-3 sm:p-4')}>
+        <p className="mb-2 hidden text-base font-bold print:block">{t('statementTitle')}</p>
+        <TabsList className="mb-3 flex-wrap print:hidden">
           <TabsTrigger value="statement">{t('tabStatement')}</TabsTrigger>
           <TabsTrigger value="invoices">{t('tabSales')}</TabsTrigger>
           <TabsTrigger value="payments">{t('tabPayments')}</TabsTrigger>
+          <TabsTrigger value="activity">{t('tabActivity')}</TabsTrigger>
+          <TabsTrigger value="crm">{t('tabCrm')}</TabsTrigger>
+          <TabsTrigger value="history">{t('tabHistory')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="statement">
@@ -348,6 +376,16 @@ export function CustomerDetailView(props: CustomerDetailViewProps) {
             </div>
           )}
         </TabsContent>
+
+        <TabsContent value="activity">
+          <Activity {...props} money={money} />
+        </TabsContent>
+
+        <TabsContent value="crm">
+          <CustomerCrmPanel customerId={customer.id} formatMoney={(value) => money(value)} />
+        </TabsContent>
+
+        <TabsContent value="history">{props.history}</TabsContent>
       </Tabs>
     </div>
   )
@@ -579,6 +617,116 @@ function Row({
         {label}
       </dt>
       <dd className="font-medium tabular-nums text-[hsl(var(--fg-primary))]">{value}</dd>
+    </div>
+  )
+}
+
+// Sales vs receipts per month (server figures) as paired bars, then top products.
+function Activity(props: CustomerDetailViewProps & { money: Money }) {
+  const t = useTranslations('customer360')
+  const tc = useTranslations()
+  if (props.activityLoading) return <Empty text={tc('common.loading')} />
+  const monthly = props.activity?.monthly ?? []
+  const products = props.activity?.products ?? []
+  const peak = Math.max(0, ...monthly.map((m) => Math.max(m.sales, m.receipts)))
+
+  return (
+    <div className="space-y-6">
+      <section>
+        <h3 className="mb-2 text-sm font-semibold text-[hsl(var(--fg-primary))]">
+          {t('chartTitle')}
+        </h3>
+        {peak === 0 ? (
+          <Empty text={t('chartEmpty')} />
+        ) : (
+          <>
+            <div className="flex h-40 items-end gap-1.5 overflow-x-auto" role="list">
+              {monthly.map((m) => (
+                <div
+                  key={m.month}
+                  role="listitem"
+                  aria-label={`${m.month}: ${t('chartSales')} ${props.money(m.sales)}, ${t('chartReceipts')} ${props.money(m.receipts)}`}
+                  className="flex min-w-8 flex-1 flex-col items-center gap-1"
+                >
+                  <div className="flex h-32 w-full items-end justify-center gap-0.5">
+                    <span
+                      className="w-2.5 rounded-t bg-[hsl(var(--color-primary))]"
+                      style={{ height: `${(m.sales / peak) * 100}%` }}
+                    />
+                    <span
+                      className="w-2.5 rounded-t bg-[hsl(var(--color-success))]"
+                      style={{ height: `${(m.receipts / peak) * 100}%` }}
+                    />
+                  </div>
+                  <span
+                    className="text-[0.625rem] tabular-nums text-[hsl(var(--fg-tertiary))]"
+                    dir="ltr"
+                  >
+                    {m.month.slice(2)}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p className="mt-2 flex gap-4 text-xs text-[hsl(var(--fg-secondary))]">
+              <span className="flex items-center gap-1.5">
+                <span
+                  aria-hidden="true"
+                  className="size-2.5 rounded-sm bg-[hsl(var(--color-primary))]"
+                />
+                {t('chartSales')}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span
+                  aria-hidden="true"
+                  className="size-2.5 rounded-sm bg-[hsl(var(--color-success))]"
+                />
+                {t('chartReceipts')}
+              </span>
+            </p>
+          </>
+        )}
+      </section>
+
+      <section>
+        <h3 className="mb-2 text-sm font-semibold text-[hsl(var(--fg-primary))]">
+          {t('topProducts')}
+        </h3>
+        {products.length === 0 ? (
+          <Empty text={t('noProducts')} />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[36rem] text-sm">
+              <thead>
+                <tr className="border-b border-[hsl(var(--border-default))]">
+                  <th className={th}>{t('colProduct')}</th>
+                  <th className={cn(th, 'text-end')}>{t('colQuantity')}</th>
+                  <th className={cn(th, 'text-end')}>{t('colAmount')}</th>
+                  <th className={cn(th, 'text-end')}>{t('colInvoices')}</th>
+                  <th className={th}>{t('colLastSold')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {products.map((p) => (
+                  <tr
+                    key={p.productId ?? p.name}
+                    className="border-b border-[hsl(var(--border-default)/0.5)]"
+                  >
+                    <td className={td}>{p.name}</td>
+                    <td className={cn(td, 'text-end tabular-nums')}>
+                      {formatNumber(p.quantity, props.locale)} {p.unit}
+                    </td>
+                    <td className={cn(td, 'text-end tabular-nums')}>{props.money(p.amount)}</td>
+                    <td className={cn(td, 'text-end tabular-nums')}>
+                      {formatNumber(p.invoiceCount, props.locale)}
+                    </td>
+                    <td className={td}>{props.formatDate(p.lastSoldAt)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   )
 }

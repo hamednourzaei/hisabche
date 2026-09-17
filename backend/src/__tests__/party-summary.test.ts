@@ -127,3 +127,59 @@ describe('the statement reads every row', () => {
     expect(movements).toContain(".neq('status', 'cancelled')")
   })
 })
+
+import { monthlyActivity, rankPartyProducts } from '../services/payments/payments.domain'
+
+describe('monthlyActivity', () => {
+  it('twelve months, oldest first, gaps kept, only sales and receipts', () => {
+    const rows = monthlyActivity(
+      [
+        { type: 'sale', total: 100, invoiceDate: '2026-09-03' },
+        { type: 'sale', total: 50, invoiceDate: '2026-09-20' },
+        { type: 'purchase', total: 999, invoiceDate: '2026-09-05' },
+        { type: 'sale', total: 70, invoiceDate: '2025-01-01' }, // outside the window
+      ],
+      [
+        { direction: 'in', amount: 30, entryDate: '2026-08-15' },
+        { direction: 'out', amount: 999, entryDate: '2026-08-15' },
+      ],
+      '2026-09-17',
+    )
+    expect(rows).toHaveLength(12)
+    expect(rows[0]!.month).toBe('2025-10')
+    expect(rows.at(-1)).toEqual({ month: '2026-09', sales: 150, receipts: 0 })
+    expect(rows.at(-2)).toEqual({ month: '2026-08', sales: 0, receipts: 30 })
+  })
+})
+
+describe('rankPartyProducts', () => {
+  it('groups by product and unit, ranks by amount, counts invoices', () => {
+    const dates = new Map([
+      ['i1', '2026-09-01'],
+      ['i2', '2026-09-10'],
+    ])
+    const products = rankPartyProducts(
+      [
+        { invoiceId: 'i1', productId: 'p1', name: 'Rice', unit: 'kg', quantity: 10, amount: 500 },
+        { invoiceId: 'i2', productId: 'p1', name: 'Rice', unit: 'kg', quantity: 5, amount: 250 },
+        { invoiceId: 'i2', productId: 'p1', name: 'Rice', unit: 'bag', quantity: 1, amount: 900 },
+        {
+          invoiceId: 'i1',
+          productId: null,
+          name: 'Delivery',
+          unit: 'piece',
+          quantity: 1,
+          amount: 20,
+        },
+      ],
+      dates,
+    )
+    expect(
+      products.map((p) => [p.name, p.unit, p.quantity, p.amount, p.invoiceCount, p.lastSoldAt]),
+    ).toEqual([
+      ['Rice', 'bag', 1, 900, 1, '2026-09-10'],
+      ['Rice', 'kg', 15, 750, 2, '2026-09-10'],
+      ['Delivery', 'piece', 1, 20, 1, '2026-09-01'],
+    ])
+  })
+})

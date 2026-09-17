@@ -13,10 +13,11 @@ import {
   createOpportunitySchema,
   updateOpportunitySchema,
 } from '@hisabche/validation'
-import { CrmService } from '../services/crm.service'
+import { BaseError } from '../errors/base.error'
+import { crm } from '../services/crm'
 import { authenticate } from '../middleware/auth.middleware'
 import { requireWorkspaceContext } from '../middleware/workspace.middleware'
-import { cacheMiddleware, clearCache } from '../middleware/cache.middleware'
+import { cacheMiddleware } from '../middleware/cache.middleware'
 
 const toJsonSchema = (schema: any) => {
   const result = zodToJsonSchema(schema, { target: 'jsonSchema7' })
@@ -25,7 +26,23 @@ const toJsonSchema = (schema: any) => {
 }
 
 export async function crmRoutes(fastify: FastifyInstance) {
-  const crmService = new CrmService()
+  // The CRM Core (services/crm). It invalidates its own route caches for the
+  // workspace that owns the row — the routes used to clear `interactions:*`
+  // and `opportunities:*` across EVERY workspace instead.
+  const crmService = crm
+
+  /** Domain refusals keep their status and code; anything else is a logged 500. */
+  const fail = (reply: FastifyReply, err: unknown, fallback: string) => {
+    if (err instanceof z.ZodError) {
+      return reply.code(400).send({ error: 'Validation failed', details: err.errors })
+    }
+    if (err instanceof BaseError && err.statusCode < 500) {
+      const code = /^[A-Z][A-Z_]{6,}/.exec(err.message)?.[0]
+      return reply.code(err.statusCode).send({ error: err.message, code: code ?? err.name })
+    }
+    fastify.log.error(err)
+    return reply.code(500).send({ error: fallback })
+  }
 
   // ─── GET /api/interactions ───────────────────────────────
   fastify.get(
@@ -75,14 +92,9 @@ export async function crmRoutes(fastify: FastifyInstance) {
       try {
         const data = createInteractionSchema.parse(request.body)
         const interaction = await crmService.createInteraction(request.tenancy, data)
-        await clearCache('interactions:*')
         return reply.code(201).send(interaction)
       } catch (err) {
-        if (err instanceof z.ZodError) {
-          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
-        }
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to create interaction' })
+        return fail(reply, err, 'Failed to create interaction')
       }
     },
   )
@@ -105,14 +117,9 @@ export async function crmRoutes(fastify: FastifyInstance) {
         const { id } = request.params as { id: string }
         const { status } = updateInteractionStatusSchema.parse(request.body)
         const interaction = await crmService.updateInteractionStatus(request.tenancy, id, status)
-        await clearCache('interactions:*')
         return reply.send(interaction)
       } catch (err) {
-        if (err instanceof z.ZodError) {
-          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
-        }
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to update task status' })
+        return fail(reply, err, 'Failed to update task status')
       }
     },
   )
@@ -159,14 +166,9 @@ export async function crmRoutes(fastify: FastifyInstance) {
           input,
           'owner',
         )
-        await clearCache('interactions:*')
         return reply.send(task)
       } catch (err) {
-        if (err instanceof z.ZodError) {
-          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
-        }
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to record customer outcome' })
+        return fail(reply, err, 'Failed to record customer outcome')
       }
     },
   )
@@ -312,14 +314,9 @@ export async function crmRoutes(fastify: FastifyInstance) {
       try {
         const data = createOpportunitySchema.parse(request.body)
         const opportunity = await crmService.createOpportunity(request.tenancy, data)
-        await clearCache('opportunities:*')
         return reply.code(201).send(opportunity)
       } catch (err) {
-        if (err instanceof z.ZodError) {
-          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
-        }
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to create opportunity' })
+        return fail(reply, err, 'Failed to create opportunity')
       }
     },
   )
@@ -342,14 +339,36 @@ export async function crmRoutes(fastify: FastifyInstance) {
         const { id } = request.params as { id: string }
         const data = updateOpportunitySchema.parse(request.body)
         const opportunity = await crmService.updateOpportunity(request.tenancy, id, data)
-        await clearCache('opportunities:*')
         return reply.send(opportunity)
       } catch (err) {
-        if (err instanceof z.ZodError) {
-          return reply.code(400).send({ error: 'Validation failed', details: err.errors })
-        }
-        fastify.log.error(err)
-        return reply.code(500).send({ error: 'Failed to update opportunity' })
+        return fail(reply, err, 'Failed to update opportunity')
+      }
+    },
+  )
+
+  // ─── GET /api/crm/customers/:customerId ──────────────────
+  // Every task (primary or on a multi-customer task) and opportunity of one
+  // customer, with totals — the CRM tab of Customer 360 and any other page
+  // that shows a party.
+  fastify.get(
+    '/api/crm/customers/:customerId',
+    {
+      preHandler: [
+        authenticate,
+        requireWorkspaceContext,
+        cacheMiddleware({ scope: 'workspace', ttl: 60, keyPrefix: 'crm' }),
+      ],
+      schema: {
+        params: toJsonSchema(z.object({ customerId: z.string().uuid() })),
+        response: { 200: toJsonSchema(z.any()) },
+      },
+    },
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        const { customerId } = request.params as { customerId: string }
+        return reply.send(await crmService.getCustomerCrm(request.tenancy, customerId))
+      } catch (err) {
+        return fail(reply, err, 'Failed to fetch customer CRM')
       }
     },
   )

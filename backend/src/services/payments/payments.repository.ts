@@ -389,4 +389,24 @@ export class PaymentsRepository {
 
     return { invoices, payments, openingBalance }
   }
+
+  /** Every line of the given invoices, in chunks of ids and pages of rows. */
+  async invoiceLines(workspaceId: string, invoiceIds: string[]) {
+    const lines: Record<string, any>[] = []
+    for (let i = 0; i < invoiceIds.length; i += 200) {
+      const chunk = invoiceIds.slice(i, i + 200)
+      lines.push(
+        ...(await readAll('invoice lines', (from, to) =>
+          supabase
+            .from('invoice_items')
+            .select('invoice_id, product_id, product_name, unit, unit_label, quantity, total_price')
+            .eq('workspace_id', workspaceId)
+            .in('invoice_id', chunk)
+            .order('id', { ascending: true })
+            .range(from, to),
+        )),
+      )
+    }
+    return lines
+  }
 }

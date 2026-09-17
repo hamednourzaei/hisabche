@@ -10,6 +10,7 @@
 
 import { supabase } from '../../db'
 import { DatabaseError } from '../../errors/database.error'
+import { crm } from '../crm'
 import type { TenancyContext } from '../tenancy.service'
 
 import {
@@ -43,23 +44,16 @@ export class ForecastService {
     ctx: TenancyContext,
     days: number = STALE_AFTER_DAYS,
   ): Promise<StaleOpportunity[]> {
-    const { data, error } = await supabase
-      .from('opportunities')
-      .select('id, title, stage, created_at, updated_at')
-      .eq('workspace_id', ctx.workspaceId)
-      .limit(2000)
-
-    if (error) throw new DatabaseError('Failed to read opportunities', error)
-
-    const lastActivity = await this.lastInteractionByOpportunity(ctx)
+    // Through the CRM Core's port: open deals only, every row, no silent cap.
+    const opportunities = await crm.listOpenOpportunityActivity(ctx)
 
     return findStaleOpportunities(
-      (data ?? []).map((row: Record<string, any>) => ({
-        id: String(row.id),
-        name: String(row.title ?? ''),
-        stage: row.stage ?? null,
-        lastActivityAt: lastActivity.get(String(row.id)) ?? null,
-        createdAt: String(row.created_at),
+      opportunities.map((row) => ({
+        id: row.id,
+        name: row.title,
+        stage: row.stage,
+        lastActivityAt: row.lastActivityAt,
+        createdAt: row.createdAt,
       })),
       new Date(),
       days,
@@ -155,28 +149,5 @@ export class ForecastService {
       minor -= Math.round((Number(line.credit) || 0) * 100)
     }
     return minor
-  }
-
-  /** The most recent interaction per opportunity. */
-  private async lastInteractionByOpportunity(ctx: TenancyContext): Promise<Map<string, string>> {
-    const { data, error } = await supabase
-      .from('interactions')
-      .select('opportunity_id, created_at')
-      .eq('workspace_id', ctx.workspaceId)
-      .not('opportunity_id', 'is', null)
-      .order('created_at', { ascending: false })
-      .limit(10000)
-
-    // No interactions is a valid state, and a missing column on an older
-    // database must not fail the whole read — every opportunity then measures
-    // from its creation date, which is the correct fallback.
-    if (error || !data) return new Map()
-
-    const latest = new Map<string, string>()
-    for (const row of data as Record<string, any>[]) {
-      const id = String(row.opportunity_id)
-      if (!latest.has(id)) latest.set(id, String(row.created_at))
-    }
-    return latest
   }
 }

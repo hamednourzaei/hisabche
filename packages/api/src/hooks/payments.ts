@@ -95,6 +95,30 @@ export const paymentKeys = {
     [...paymentKeys.all, 'summary', partyType, partyId] as const,
   ledger: (partyType: string, partyId?: string) =>
     [...paymentKeys.all, 'ledger', partyType, partyId] as const,
+  activity: (partyType: string, partyId?: string) =>
+    [...paymentKeys.all, 'activity', partyType, partyId] as const,
+}
+
+export interface PartyMonthlyActivity {
+  /** YYYY-MM */
+  month: string
+  sales: number
+  receipts: number
+}
+
+export interface PartyProduct {
+  productId: string | null
+  name: string
+  unit: string
+  quantity: number
+  amount: number
+  invoiceCount: number
+  lastSoldAt: string
+}
+
+export interface PartyActivity {
+  monthly: PartyMonthlyActivity[]
+  products: PartyProduct[]
 }
 
 export interface AgingBuckets {
@@ -186,6 +210,17 @@ export function usePartySummary(partyType: PaymentPartyType, partyId?: string) {
     queryKey: paymentKeys.summary(partyType, partyId),
     queryFn: async () =>
       unwrap<PartySummary>(await apiClient.get(`/payments/summary/${partyType}/${partyId}`)),
+    enabled: authReady && !!partyId,
+  })
+}
+
+/** Sales vs receipts for the last 12 months and the party's top products (server-computed). */
+export function usePartyActivity(partyType: PaymentPartyType, partyId?: string) {
+  const authReady = useAuthReady()
+  return useQuery({
+    queryKey: paymentKeys.activity(partyType, partyId),
+    queryFn: async () =>
+      unwrap<PartyActivity>(await apiClient.get(`/payments/activity/${partyType}/${partyId}`)),
     enabled: authReady && !!partyId,
   })
 }

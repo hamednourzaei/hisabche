@@ -4838,6 +4838,42 @@
       "completed": "Completed",
       "cancelled": "Cancelled",
       "draft": "Draft"
-    }
+    },
+    "tabActivity": "Activity & products",
+    "tabCrm": "CRM",
+    "tabHistory": "Change history",
+    "chartTitle": "Sales and receipts — last 12 months",
+    "chartSales": "Sales",
+    "chartReceipts": "Receipts",
+    "chartEmpty": "No sales or receipts in the last 12 months.",
+    "topProducts": "Most-bought products",
+    "noProducts": "Nothing has been sold to this customer yet.",
+    "colProduct": "Product",
+    "colQuantity": "Quantity",
+    "colAmount": "Amount",
+    "colInvoices": "Invoices",
+    "colLastSold": "Last bought",
+    "printStatement": "Print / PDF statement",
+    "statementTitle": "Customer statement",
+    "statementPrinted": "Printed",
+    "closingBalance": "Closing balance"
+  },
+  "crmPanel": {
+    "loading": "Loading…",
+    "loadError": "Couldn't load this customer's CRM data.",
+    "retry": "Try again",
+    "openTasks": "Open tasks",
+    "completedTasks": "{count} completed",
+    "openPipeline": "Open pipeline",
+    "openDeals": "{count} deals",
+    "weightedPipeline": "Weighted pipeline",
+    "won": "Won",
+    "lostCount": "{count} lost",
+    "nextTask": "Next task",
+    "tasks": "Tasks and contacts",
+    "opportunities": "Opportunities",
+    "noTasks": "No tasks recorded for this customer.",
+    "noOpportunities": "No opportunities recorded for this customer.",
+    "openCrm": "Open CRM"
   }
 }

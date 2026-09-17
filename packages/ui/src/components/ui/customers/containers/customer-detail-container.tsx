@@ -17,6 +17,9 @@
 //   open invoices       GET /payments/open-invoices/customer/:id (payment modal targets)
 //   invoices tab        GET /invoices?customerId=…            (paginated)
 //   payments tab        GET /payments?partyId=…
+//   activity tab        GET /payments/activity/customer/:id
+//   CRM tab             GET /crm/customers/:id   (CustomerCrmPanel, CRM Core port)
+//   history tab         GET record history (useRecordHistory)
 // ============================================
 
 import { useCallback, useMemo, useState } from 'react'
@@ -26,9 +29,11 @@ import {
   useCustomer,
   useInvoices,
   useOpenInvoices,
+  usePartyActivity,
   usePartyLedger,
   usePartySummary,
   usePayments,
+  useRecordHistory,
 } from '@hisabche/api'
 import { toIsoDay } from '@hisabche/formatting'
 
@@ -36,6 +41,7 @@ import { exportToCSV } from '../../../../lib/export'
 import { useDateFormat } from '../../../../hooks/use-date-format'
 import { useIntlLocale } from '../../../../hooks/use-intl-locale'
 import { CustomerDetailView } from '../customer-detail-view'
+import { RecordHistoryPanel } from '../../activity/record-history-panel'
 
 const INVOICE_PAGE_SIZE = 20
 
@@ -64,6 +70,21 @@ export function CustomerDetailContainer({
     customerId,
   })
   const paymentsQuery = usePayments({ partyId: customerId, limit: 100 })
+  const activityQuery = usePartyActivity('customer', customerId)
+  const { data: recordHistory, isLoading: historyLoading } = useRecordHistory(
+    'customer',
+    customerId,
+  )
+  const safeT = useCallback(
+    (key: string, fallback?: string) => {
+      try {
+        return t(key)
+      } catch {
+        return fallback ?? key
+      }
+    },
+    [t],
+  )
 
   const customer = useMemo(() => {
     const raw = customerQuery.data as
@@ -168,7 +189,8 @@ export function CustomerDetailContainer({
     void openInvoicesQuery.refetch()
     void invoicesQuery.refetch()
     void paymentsQuery.refetch()
-  }, [summaryQuery, ledgerQuery, openInvoicesQuery, invoicesQuery, paymentsQuery])
+    void activityQuery.refetch()
+  }, [summaryQuery, ledgerQuery, openInvoicesQuery, invoicesQuery, paymentsQuery, activityQuery])
 
   return (
     <CustomerDetailView
@@ -196,6 +218,20 @@ export function CustomerDetailContainer({
       onNewInvoice={() => router.push('/invoices/new')}
       onOpenInvoice={(id) => router.push(`/invoices/${id}`)}
       onExport={handleExport}
+      activity={activityQuery.data ?? null}
+      activityLoading={activityQuery.isLoading}
+      history={
+        <RecordHistoryPanel
+          t={safeT}
+          isLoading={historyLoading}
+          entries={(recordHistory ?? []).map((entry) => ({
+            id: entry.id,
+            action: entry.action,
+            createdAt: entry.created_at,
+            userId: entry.user_id ?? null,
+          }))}
+        />
+      }
     />
   )
 }

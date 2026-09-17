@@ -61,16 +61,38 @@ export interface Interaction {
   customerOutcomes?: CustomerOutcome[]
 }
 
+/** API shape from the CRM Core's mapper (camelCase; the list once sent snake_case). */
 export interface Opportunity {
   id: string
-  customerId: string
+  customerId: string | null
   title: string
   description: string
   stage: string
   value: number
   probability: number
-  expectedCloseDate?: string
-  createdAt: string
+  expectedCloseDate: string | null
+  createdAt: string | null
+  updatedAt: string | null
+}
+
+/** GET /crm/customers/:customerId — crm.domain#summarizeCustomerCrm. */
+export interface CustomerCrmSummary {
+  openTasks: number
+  completedTasks: number
+  lastInteractionAt: string | null
+  nextTask: { id: string; subject: string | null; interactionDate: string | null } | null
+  openOpportunities: number
+  openPipelineValue: number
+  weightedPipelineValue: number
+  wonValue: number
+  lostCount: number
+}
+
+export interface CustomerCrm {
+  summary: CustomerCrmSummary
+  /** Tasks where the customer is primary OR on a multi-customer task. */
+  interactions: Interaction[]
+  opportunities: Opportunity[]
 }
 
 // ═══ Query Keys ═══
@@ -78,9 +100,31 @@ export const crmKeys = {
   all: ['crm'] as const,
   interactions: (customerId?: string) => [...crmKeys.all, 'interactions', customerId] as const,
   opportunities: (customerId?: string) => [...crmKeys.all, 'opportunities', customerId] as const,
+  // Under `crm` so every CRM mutation (they invalidate crmKeys.all) refreshes it.
+  customer: (customerId?: string) => [...crmKeys.all, 'customer', customerId] as const,
 }
 
 // ═══ Hooks ═══
+
+/**
+ * One customer's CRM picture — the CRM Core's customer port. Use this wherever
+ * a page shows a party (Customer 360, invoice, AI) instead of filtering the
+ * workspace-wide task and opportunity lists.
+ */
+export function useCustomerCrm(customerId: string | undefined) {
+  const authReady = useAuthReady()
+  useRealtime({ table: 'interactions', queryKey: crmKeys.all as unknown as string[] })
+
+  return useQuery({
+    queryKey: crmKeys.customer(customerId),
+    queryFn: async (): Promise<CustomerCrm> => {
+      const { data } = await apiClient.get(`/crm/customers/${customerId}`)
+      return data as CustomerCrm
+    },
+    enabled: authReady && !!customerId,
+    staleTime: 30_000,
+  })
+}
 export function useInteractions(customerId?: string) {
   const authReady = useAuthReady()
 

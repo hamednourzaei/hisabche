@@ -391,3 +391,93 @@ export function summarizeParty(
     ].sort(),
   }
 }
+
+// ─── Party activity (Customer 360 chart and products) ────────────────────────
+
+export interface MonthlyActivity {
+  /** YYYY-MM */
+  month: string
+  sales: number
+  receipts: number
+}
+
+/**
+ * Sales and receipts per calendar month for the last `months` months up to
+ * `asOf`, oldest first, with empty months present (a gap is information).
+ * Cancelled invoices are already excluded by the reader.
+ */
+export function monthlyActivity(
+  invoices: Array<{ type: string; total: number; invoiceDate: string }>,
+  payments: Array<{ direction: PaymentDirection; amount: number; entryDate: string }>,
+  asOf: string,
+  months = 12,
+): MonthlyActivity[] {
+  const [year, month] = asOf.slice(0, 7).split('-').map(Number) as [number, number]
+  const keys: string[] = []
+  for (let i = months - 1; i >= 0; i--) {
+    const d = new Date(Date.UTC(year, month - 1 - i, 1))
+    keys.push(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`)
+  }
+  const rows = new Map(keys.map((key) => [key, { month: key, sales: 0, receipts: 0 }]))
+  for (const invoice of invoices) {
+    if (invoice.type !== 'sale') continue
+    const row = rows.get(invoice.invoiceDate.slice(0, 7))
+    if (row) row.sales = round2(row.sales + invoice.total)
+  }
+  for (const payment of payments) {
+    if (payment.direction !== 'in') continue
+    const row = rows.get(payment.entryDate.slice(0, 7))
+    if (row) row.receipts = round2(row.receipts + payment.amount)
+  }
+  return keys.map((key) => rows.get(key)!)
+}
+
+export interface PartyProduct {
+  productId: string | null
+  name: string
+  unit: string
+  /** Summed only within one unit — pieces and kilos are separate rows. */
+  quantity: number
+  amount: number
+  invoiceCount: number
+  lastSoldAt: string
+}
+
+/** A party's most-bought products, by amount. Lines are grouped by product and unit. */
+export function rankPartyProducts(
+  items: Array<{
+    invoiceId: string
+    productId: string | null
+    name: string
+    unit: string
+    quantity: number
+    amount: number
+  }>,
+  invoiceDates: ReadonlyMap<string, string>,
+  limit = 10,
+): PartyProduct[] {
+  const groups = new Map<string, PartyProduct & { invoices: Set<string> }>()
+  for (const item of items) {
+    const key = `${item.productId ?? `name:${item.name.trim().toLowerCase()}`}|${item.unit}`
+    const date = invoiceDates.get(item.invoiceId) ?? ''
+    const group = groups.get(key) ?? {
+      productId: item.productId,
+      name: item.name,
+      unit: item.unit,
+      quantity: 0,
+      amount: 0,
+      invoiceCount: 0,
+      lastSoldAt: '',
+      invoices: new Set<string>(),
+    }
+    group.quantity = Math.round((group.quantity + item.quantity) * 1000) / 1000
+    group.amount = round2(group.amount + item.amount)
+    group.invoices.add(item.invoiceId)
+    if (date > group.lastSoldAt) group.lastSoldAt = date
+    groups.set(key, group)
+  }
+  return [...groups.values()]
+    .map(({ invoices, ...rest }) => ({ ...rest, invoiceCount: invoices.size }))
+    .sort((a, b) => b.amount - a.amount)
+    .slice(0, limit)
+}

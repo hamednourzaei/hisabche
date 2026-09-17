@@ -47,3 +47,37 @@ describe('customer360 strings exist in every locale', () => {
     })
   }
 })
+
+describe('customer 360 phase 2 — activity, CRM core panel, history', () => {
+  const panel = readFileSync(join(__dirname, '../components/ui/crm/customer-crm-panel.tsx'), 'utf8')
+  const invoiceHooks = readFileSync(join(__dirname, '../../../api/src/hooks/invoices.ts'), 'utf8')
+
+  it('activity and history come from the server', () => {
+    expect(container).toContain("usePartyActivity('customer', customerId)")
+    expect(container).toContain("useRecordHistory('customer', customerId)")
+  })
+
+  it('CRM tab uses the shared panel, which reads only the CRM core port', () => {
+    expect(code(view)).toContain('<CustomerCrmPanel customerId={customer.id}')
+    expect(code(panel)).toContain('useCustomerCrm(customerId)')
+    expect(code(panel)).not.toMatch(/useInteractions|useOpportunities|\.reduce\(/)
+  })
+
+  it('invoice create/update/delete refresh the party summary', () => {
+    expect(
+      code(invoiceHooks).match(/queryKey: paymentKeys\.all/g)?.length ?? 0,
+    ).toBeGreaterThanOrEqual(3)
+  })
+
+  it('crmPanel strings exist in every locale', () => {
+    const keys = [...new Set([...panel.matchAll(/\bt\('([a-zA-Z]+)'/g)].map((m) => m[1]!))]
+    expect(keys.length).toBeGreaterThan(10)
+    for (const locale of ['fa', 'af', 'en']) {
+      const bundle = JSON.parse(
+        readFileSync(join(__dirname, `../../../i18n/messages/${locale}/common.json`), 'utf8'),
+      )
+      for (const key of keys)
+        expect(bundle.crmPanel?.[key], `${locale}.crmPanel.${key}`).toBeTruthy()
+    }
+  })
+})

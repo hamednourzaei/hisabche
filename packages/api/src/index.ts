@@ -133,6 +133,7 @@ export {
   useOpenInvoices,
   usePartySummary,
   usePartyLedger,
+  usePartyActivity,
   useRecordPayment,
   useCancelPayment,
   paymentKeys,
@@ -144,6 +145,9 @@ export {
   type PartySummary,
   type PartyLedger,
   type PartyLedgerRow,
+  type PartyActivity,
+  type PartyMonthlyActivity,
+  type PartyProduct,
   type AgingBuckets,
 } from './hooks/payments'
 
@@ -279,6 +283,7 @@ export {
 // ─── CRM ──────────────────────────────────────────────────
 export {
   useInteractions,
+  useCustomerCrm,
   useCreateInteraction,
   useUpdateInteractionStatus,
   useRecordCustomerOutcome,
@@ -295,6 +300,8 @@ export {
   type CustomerOutcome,
   type RecordCustomerOutcomeInput,
   type Opportunity,
+  type CustomerCrm,
+  type CustomerCrmSummary,
 } from './hooks/crm'
 
 // ─── Manufacturing ────────────────────────────────────────
